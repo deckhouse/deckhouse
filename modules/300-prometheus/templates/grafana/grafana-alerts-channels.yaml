@@ -1,4 +1,4 @@
-{{- if .Values.prometheus.internal.deployGrafana }}
+{{- if .Values.prometheus.internal.grafana.enabled }}
 ---
 apiVersion: v1
 kind: Secret

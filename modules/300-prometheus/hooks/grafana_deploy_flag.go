@@ -30,7 +30,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func setGrafanaDeployFlag(input *go_hook.HookInput) error {
 	// Stub logic for future use
 	grafanaEnabled := input.ConfigValues.Get("prometheus.grafana.enabled").Bool()
-	input.Values.Set("prometheus.internal.deployGrafana", grafanaEnabled)
+	input.Values.Set("prometheus.internal.grafana.enabled", grafanaEnabled)
 
 	return nil
 }

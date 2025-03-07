@@ -1,4 +1,4 @@
-{{- if .Values.prometheus.internal.deployGrafana }}
+{{- if .Values.prometheus.internal.grafana.enabled }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor

@@ -1,4 +1,4 @@
-{{- if and .Values.prometheus.internal.deployGrafana .Values.global.modules.publicDomainTemplate }}
+{{- if and .Values.prometheus.internal.grafana.enabled .Values.global.modules.publicDomainTemplate }}
   {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
 ---
 apiVersion: cert-manager.io/v1

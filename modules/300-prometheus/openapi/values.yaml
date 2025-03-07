@@ -81,6 +81,9 @@ properties:
         type: object
         default: {}
         properties:
+          enabled:
+            type: boolean
+            default: true
           alertsChannelsConfig:
             type: object
             default: {}
@@ -374,9 +377,6 @@ properties:
       deployDexAuthenticator:
         type: boolean
         x-examples: [true]
-      deployGrafana:
-        type: boolean
-        default: true
       prometheusAPIClientTLS:
         type: object
         default: {}
