@@ -26,10 +26,7 @@ import:
   to: /src
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /root/go/pkg
-- from: tmp_dir
-  to: /root/.cache/go-build
+{{ include "mount points for golang builds" . }}
 shell:
   beforeInstall:
   - apt-get install -y golang make gcc build-essential librbd-devel librados-devel ceph-common ceph-fuse rbd-nbd e2fsprogs xfsprogs
