@@ -24,7 +24,7 @@ data:
         port_name dns
         expire 10s
         health_check 100ms
-        prefer_udp true
+        prefer_udp
       }
       reload 2s
       loop

@@ -22,10 +22,10 @@ index 12bb4ce15..b9b80109e 100644
  	_ "github.com/coredns/coredns/plugin/etcd"
 diff --git a/man/coredns-dynamicforward.7 b/man/coredns-dynamicforward.7
 new file mode 100644
-index 000000000..652e40567
+index 000000000..8b0e954b3
 --- /dev/null
 +++ b/man/coredns-dynamicforward.7
-@@ -0,0 +1,87 @@
+@@ -0,0 +1,90 @@
 +.Dd January 25, 2025
 +.Dt DYNAMICFORWARD 8
 +.Os
@@ -48,6 +48,8 @@ index 000000000..652e40567
 +    port_name <portname>
 +    expire <duration>
 +    health_check <duration>
++    force_tcp
++    prefer_udp
 +}
 +.Ed
 +
@@ -96,6 +98,7 @@ index 000000000..652e40567
 +        port_name dns
 +        expire 10m
 +        health_check 5s
++        prefer_udp
 +    }
 +}
 +.Ed
@@ -220,7 +223,7 @@ index 000000000..c8f3e3298
 +
 +func setup(c *caddy.Controller) error {
 +
-+	version := "0.3.3"
++	version := "0.3.6"
 +
 +	log.Printf("\033[34m[dynamicforward] version: %s\033[0m\n", version)
 +
@@ -274,17 +277,16 @@ index 000000000..c8f3e3298
 +}
 diff --git a/plugin/dynamicforward/utils.go b/plugin/dynamicforward/utils.go
 new file mode 100644
-index 000000000..68ed10021
+index 000000000..8be49dbd3
 --- /dev/null
 +++ b/plugin/dynamicforward/utils.go
-@@ -0,0 +1,100 @@
+@@ -0,0 +1,91 @@
 +package dynamicforward
 +
 +import (
 +	"fmt"
 +	"github.com/coredns/caddy"
 +	"github.com/coredns/coredns/plugin/pkg/proxy"
-+	"strconv"
 +	"time"
 +)
 +
@@ -351,20 +353,12 @@ index 000000000..68ed10021
 +			if !c.NextArg() {
 +				return nil, c.ArgErr()
 +			}
-+			forceTCP, err := strconv.ParseBool(c.Val())
-+			if err != nil {
-+				return nil, fmt.Errorf("invalid force_tcp: %v", err)
-+			}
-+			config.opts.ForceTCP = forceTCP
++			config.opts.ForceTCP = true
 +		case "prefer_udp":
 +			if !c.NextArg() {
 +				return nil, c.ArgErr()
 +			}
-+			preferUDP, err := strconv.ParseBool(c.Val())
-+			if err != nil {
-+				return nil, fmt.Errorf("invalid prefer_udp: %v", err)
-+			}
-+			config.opts.PreferUDP = preferUDP
++			config.opts.PreferUDP = true
 +
 +		default:
 +			return nil, c.Errf("unknown parameter: %s", c.Val())
@@ -661,7 +655,7 @@ index 000000000..470de4459
 +	}
 +
 +	// convert map in slice
-+	serverList := make([]string, 0, len(servers))
++	serverList := make([]string, 0, len(servers)) // в противном случае вызовет ненужные ресайзы слайса
 +	for server := range servers {
 +		serverList = append(serverList, server)
 +	}
