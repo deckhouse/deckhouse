@@ -310,7 +310,7 @@ status:
             "publicServices": [
               {
                 "hostname": "bbb",
-                "ports": [{"name": "ppp", "port": 123},{"name": "zzz", "port": 777}]
+                "ports": [{"name": "ppp", "port": 123, "protocol": "TCP" },{"name": "zzz", "port": 777, "protocol": "TCP"}]
               }
             ],
             "spiffeEndpoint": "https://some-proper-host/public/spiffe-bundle-endpoint",
@@ -329,11 +329,11 @@ status:
             "publicServices": [
               {
                 "hostname": "ccc",
-                "ports": [{"name": "ppp", "port": 123}]
+                "ports": [{"name": "ppp", "port": 123, "protocol": "TCP"}]
               },
               {
                 "hostname": "ddd",
-                "ports": [{"name": "xxx", "port": 555}]
+                "ports": [{"name": "xxx", "port": 555, "protocol": "TCP"}]
               }
             ],
             "spiffeEndpoint": "https://some-proper-host/public/spiffe-bundle-endpoint",

@@ -108,6 +108,15 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) error {
 	input.MetricsCollector.Expire(federationMetricsGroup)
+	protocolMap := map[string]string{
+		"https":    "TLS",
+		"tls":      "TLS",
+		"http":     "HTTP",
+		"http2":    "HTTP2",
+		"grpc":     "HTTP2",
+		"grpc-web": "HTTP2",
+	}
+	defaultProtocol := "TCP"
 
 	if !input.Values.Get("istio.federation.enabled").Bool() {
 		return nil
@@ -206,6 +215,18 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 			input.Logger.Warnf("bad private metadata format in endpoint %s for IstioFederation %s", federationInfo.PrivateMetadataEndpoint, federationInfo.Name)
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 1)
 			continue
+		}
+		for serviceIndex, service := range *privateMetadata.PublicServices {
+			for portIndex, port := range service.Ports {
+				port.Protocol = defaultProtocol
+				for keyword, protocol := range protocolMap {
+					if strings.Contains(port.Name, keyword) {
+						port.Protocol = protocol
+						break
+					}
+				}
+				(*privateMetadata.PublicServices)[serviceIndex].Ports[portIndex] = port
+			}
 		}
 		federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 0)
 		err = federationInfo.PatchMetadataCache(input.PatchCollector, "private", privateMetadata)
