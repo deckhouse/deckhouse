@@ -1,5 +1,9 @@
 type: object
 properties:
+  builtInRulesList:
+    type: array
+    description: |
+      Список правил по умолчанию. Можно указать пустой список `[]` для отключения встроенных правил.
   debugLogging:
     type: boolean
     description: |
