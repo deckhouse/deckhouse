@@ -17,3 +17,22 @@
 {{- $inhibitorVersion := "0.1" | replace "." "" }}
 
 bb-package-install "{{ $inhibitorPkgName }}:{{ index .images.registrypackages (printf "%s%s" $inhibitorIndex $inhibitorVersion) | toString }}"
+
+# Inhibitor will start after reboot, no need to start it right now.
+#if bb-flag? reboot; then
+#  exit 0
+#fi
+
+# Do nothing if already started.
+if systemctl is-active --quiet "node-shutdown-inhibitor.service"; then
+  exit 0
+fi
+
+bb-log-warning "Node shutdown inhibitor service is not running. Starting it..."
+if systemctl start "node-shutdown-inhibitor.service"; then
+  bb-log-info "Node shutdown inhibitor has started."
+else
+  systemctl status "node-shutdown-inhibitor.service"
+  bb-log-error "Node shutdown inhibitor has not started. Exit"
+  exit 1
+fi
