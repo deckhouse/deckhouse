@@ -223,7 +223,7 @@ index 000000000..c8f3e3298
 +
 +func setup(c *caddy.Controller) error {
 +
-+	version := "0.3.6"
++	version := "0.3.7"
 +
 +	log.Printf("\033[34m[dynamicforward] version: %s\033[0m\n", version)
 +
@@ -277,10 +277,10 @@ index 000000000..c8f3e3298
 +}
 diff --git a/plugin/dynamicforward/utils.go b/plugin/dynamicforward/utils.go
 new file mode 100644
-index 000000000..8be49dbd3
+index 000000000..7609dcd2d
 --- /dev/null
 +++ b/plugin/dynamicforward/utils.go
-@@ -0,0 +1,91 @@
+@@ -0,0 +1,85 @@
 +package dynamicforward
 +
 +import (
@@ -350,14 +350,8 @@ index 000000000..8be49dbd3
 +			}
 +			config.HealthCheck = duration
 +		case "force_tcp":
-+			if !c.NextArg() {
-+				return nil, c.ArgErr()
-+			}
 +			config.opts.ForceTCP = true
 +		case "prefer_udp":
-+			if !c.NextArg() {
-+				return nil, c.ArgErr()
-+			}
 +			config.opts.PreferUDP = true
 +
 +		default:
@@ -512,7 +506,7 @@ index 000000000..4db2d1069
 +}
 diff --git a/plugin/dynamicforward/watchslice.go b/plugin/dynamicforward/watchslice.go
 new file mode 100644
-index 000000000..470de4459
+index 000000000..a4d9708d7
 --- /dev/null
 +++ b/plugin/dynamicforward/watchslice.go
 @@ -0,0 +1,147 @@
@@ -655,7 +649,7 @@ index 000000000..470de4459
 +	}
 +
 +	// convert map in slice
-+	serverList := make([]string, 0, len(servers)) // в противном случае вызовет ненужные ресайзы слайса
++	serverList := make([]string, 0, len(servers))
 +	for server := range servers {
 +		serverList = append(serverList, server)
 +	}
