@@ -67,7 +67,7 @@ After 48 minutes (80% of 3607 seconds), Kubernetes will begin to refresh the iss
 
 **Important!** If you use [istio](../../modules/istio/) module, you have to restart all the application pods under istio control after changing `clusterDomain`.
 
-## How to Increase the Number of kube-dns Pods?
+## How to Increase the Number of kube-dns pods?
 
 Deckhouse distributes kube-dns pods based on the following principles. It searches for nodes with the labels node-role.deckhouse.io/ and node-role.kubernetes.io/, then applies the following rules:
 
