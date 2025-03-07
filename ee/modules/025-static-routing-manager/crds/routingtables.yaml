@@ -101,7 +101,7 @@ spec:
                 additionalProperties:
                   type: string
                   pattern: "^[A-Za-z0-9][A-Za-z0-9-._]*$"
-                  maxLength: 63"
+                  maxLength: 63
           status:
             type: object
             properties:
