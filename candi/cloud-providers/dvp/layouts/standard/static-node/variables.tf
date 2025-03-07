@@ -68,7 +68,7 @@ locals {
   region = lookup(var.providerClusterConfiguration, "region", "")
 
   actual_zones = lookup(var.providerClusterConfiguration, "zones", [])
-  zones        = lookup(local.ng, "zones", null) != null ? tolist(setintersection(local.actual_zones, local.static_node_group["zones"])) : local.actual_zones
+  zones        = lookup(local.ng, "zones", null) != null ? tolist(setintersection(local.actual_zones, local.ng["zones"])) : local.actual_zones
   zone         = length(local.actual_zones) > 0 ? element(local.zones, var.nodeIndex) : ""
 
   additional_labels      = lookup(local.instance_class.virtualMachine, "additionalLabels", {})
