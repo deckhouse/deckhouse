@@ -1,6 +1,6 @@
 ---
-title: Cluster Fault Tolerance Testing
-permalink: ru/admin/high-reliability-and-availability/chaos-testing.html
+title: Chaos engineering
+permalink: ru/admin/high-reliability-and-availability/chaos-engineering.html
 description: Cluster Fault Tolerance Testing
 lang: en
 ---
