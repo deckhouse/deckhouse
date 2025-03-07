@@ -17,8 +17,13 @@ Software-Defined Storage:
 
 External Storage:
 
-- Ceph cluster.
-- NFS (Network File System).
+- Ceph cluster;
+- HPE storage system;
+- Huawei storage system;
+- NFS (Network File System);
+- S3 storage system;
+- SCSI storage system;
+- TATLIN.UNIFIED storage system (Yadro).
 
 Created StorageClass objects can be used to organize virtual disks and images.
 

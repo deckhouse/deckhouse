@@ -4,11 +4,11 @@ permalink: ru/storage/admin/external/ceph.html
 lang: ru
 ---
 
-Чтобы создать объекты StorageClass на основе RBD (RADOS Block Device) или файловой системы Ceph, можно использовать модуль csi-ceph, который позволяет настроить подключение к одному или нескольким Ceph-кластерам.
+Чтобы создать объекты StorageClass на основе RBD (RADOS Block Device) или файловой системы Ceph, можно использовать модуль `csi-ceph`, который позволяет настроить подключение к одному или нескольким Ceph-кластерам.
 
 ## Включение модуля
 
-Чтобы включить модуль csi-ceph, примените ресурс `ModuleConfig`:
+Чтобы включить модуль `csi-ceph`, примените ресурс `ModuleConfig`:
 
 ```yaml
 d8 k apply -f - <<EOF

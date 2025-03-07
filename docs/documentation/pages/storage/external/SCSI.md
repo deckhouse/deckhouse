@@ -122,7 +122,7 @@ Note that the example above uses two SCSITargets. You can create multiple SCSITa
 - To verify that the object has been created (Phase should be `Created`), run:
 
 ```shell
-kubectl get scsitargets.storage.deckhouse.io <имя scsitarget>
+kubectl get scsitargets.storage.deckhouse.io <scsitarget name>
 ```
 
 ### Creating a StorageClass
@@ -148,7 +148,7 @@ Pay attention to the `scsiDeviceSelector`. This field is used to select the SCSI
 - To verify that the object has been created (Phase should be `Created`), run:
 
 ```shell
-kubectl get scsistorageclasses.storage.deckhouse.io <имя scsistorageclass>
+kubectl get scsistorageclasses.storage.deckhouse.io <scsistorageclass name>
 ```
 
 ### How to check module health?

@@ -89,5 +89,5 @@ EOF
 Проверить работоспособность модуля можно с помощью команды:
 
 ```shell
-kubectl -n d8-csi-yadro get pod -owide -w
+d8 k -n d8-csi-yadro get pod -owide -w
 ```

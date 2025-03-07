@@ -36,8 +36,8 @@ lang: ru
   - зарегистрирован CSI драйвер;
   - запущены служебные поды компонентов `csi-scsi-generic`.
 
-```shell
-kubectl apply -f - <<EOF
+```yaml
+d8 k apply -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -51,7 +51,7 @@ EOF
 - Дождаться, когда модуль перейдет в состояние `Ready`.
 
 ```shell
-kubectl get module csi-scsi-generic -w
+d8 k get module csi-scsi-generic -w
 ```
 
 ### Создание SCSITarget
@@ -59,7 +59,7 @@ kubectl get module csi-scsi-generic -w
 Для создания SCSITarget необходимо использовать ресурс `SCSITarget`. Пример команд для создания такого ресурса:
 
 ```yaml
-kubectl apply -f -<<EOF
+d8 k apply -f -<<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: SCSITarget
 metadata:
@@ -98,11 +98,10 @@ EOF
 
 ```
 
-
 Пример команд для FC ресурса:
 
-```shell
-kubectl apply -f -<<EOF
+```yaml
+d8 k apply -f -<<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: SCSITarget
 metadata:
@@ -120,16 +119,12 @@ EOF
 
 ```
 
-
-
-
-
 Обратите внимание, что в примере выше используются два SCSITarget. Таким образом можно создать несколько SCSITarget как для одного, так и для разных СХД. Это позволяет использовать multipath для повышения отказоустойчивости и производительности.
 
 - Проверить создание объекта можно командой (Phase должен быть `Created`):
 
 ```shell
-kubectl get scsitargets.storage.deckhouse.io <имя scsitarget>
+d8 k get scsitargets.storage.deckhouse.io <имя scsitarget>
 ```
 
 ### Создание StorageClass
@@ -137,7 +132,7 @@ kubectl get scsitargets.storage.deckhouse.io <имя scsitarget>
 Для создания StorageClass необходимо использовать ресурс `SCSIStorageClass`. Пример команд для создания такого ресурса:
 
 ```yaml
-kubectl apply -f -<<EOF
+d8 k apply -f -<<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: SCSIStorageClass
 metadata:
@@ -154,7 +149,7 @@ EOF
 - Проверить создание объекта можно командой (Phase должен быть `Created`):
 
 ```shell
-kubectl get scsistorageclasses.storage.deckhouse.io <имя scsistorageclass>
+d8 k get scsistorageclasses.storage.deckhouse.io <имя scsistorageclass>
 ```
 
 ### Как проверить работоспособность модуля?
@@ -162,6 +157,5 @@ kubectl get scsistorageclasses.storage.deckhouse.io <имя scsistorageclass>
 Для этого необходимо проверить состояние подов в namespace `d8-csi-scsi-generic`. Все поды должны быть в состоянии `Running` или `Completed` и запущены на всех узлах.
 
 ```shell
-kubectl -n d8-csi-scsi-generic get pod -owide -w
+d8 k -n d8-csi-scsi-generic get pod -owide -w
 ```
-

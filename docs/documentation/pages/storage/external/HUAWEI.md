@@ -8,7 +8,6 @@ The module installs and configures the CSI driver for Huawei SAN. The module all
 > **Caution!** The user is not allowed to create a `StorageClass` for the `csi.huawei.com` CSI driver.
 > **Caution!** Currently, supports 3par SAN devices. For other Huawei SAN support please contact tech support.
 
-
 ## System requirements and recommendations
 
 ### Requirements
@@ -26,8 +25,8 @@ Note that all commands must be run on a machine that has administrator access to
   - registration of the CSI driver;
   - launch of service pods for the `csi-huawei` components.
 
-```shell
-kubectl apply -f - <<EOF
+```yaml
+d8 k apply -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -49,7 +48,7 @@ kubectl get module csi-huawei -w
 To create a StorageClass, you need to use the [HuaweiStorageClass](./cr.html#huaweistorageclass) and [HuaweiStorageConnection](./cr.html#huaweistorageconnection) resource. Here is an example command to create such a resource:
 
 ```yaml
-kubectl apply -f -<<EOF
+d8 k apply -f -<<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: HuaweiStorageConnection
 metadata:
@@ -72,7 +71,7 @@ EOF
 ```
 
 ```yaml
-kubectl apply -f -<<EOF
+d8 k apply -f -<<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: HuaweiStorageClass
 metadata:
@@ -89,11 +88,11 @@ EOF
 - You can check objects creation (Phase must be `Created`):
 
 ```shell
-kubectl get huaweistorageconnections.storage.deckhouse.io <huaweistorageconnection name>
+d8 k get huaweistorageconnections.storage.deckhouse.io <huaweistorageconnection name>
 ```
 
 ```shell
-kubectl get huaweistorageclasses.storage.deckhouse.io <huaweistorageclass name>
+d8 k get huaweistorageclasses.storage.deckhouse.io <huaweistorageclass name>
 ```
 
 ### How to check module health?
@@ -101,7 +100,5 @@ kubectl get huaweistorageclasses.storage.deckhouse.io <huaweistorageclass name>
 To do this, you need to check the status of the pods in the `d8-csi-huawei` namespace. All pods should be in the `Running` or `Completed` state and should be running on all nodes.
 
 ```shell
-kubectl -n d8-csi-huawei get pod -owide -w
+d8 k -n d8-csi-huawei get pod -owide -w
 ```
-
-
