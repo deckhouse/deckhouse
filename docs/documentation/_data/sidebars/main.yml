@@ -109,6 +109,10 @@ entries:
                     ru: Общие настройки
                   url: /security_software_setup.html
                 - title:
+                    en: Sysctl parameters
+                    ru: Параметры sysctl
+                  url: /security/sysctl.html
+                - title:
                     en: KESL
                     ru: KESL
                   url: /security/kesl.html
