@@ -12,7 +12,7 @@ git:
   - url: {{ $.SOURCE_REPO }}/openssl/openssl.git
     add: /
     to: /src/openssl
-    tag: release-{{ $OpenSSLVersion }}
+    tag: openssl-{{ $OpenSSLVersion }}
 ---
 image: {{ $.ModuleName }}/build-nginx-static-artifact
 from: {{ $.Images.BASE_ALPINE }}
