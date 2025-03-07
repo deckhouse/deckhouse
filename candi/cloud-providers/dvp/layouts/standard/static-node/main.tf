@@ -30,7 +30,7 @@ module "ipv4-address" {
   ipv4_address = local.ipv4_address
 }
 
-module "master" {
+module "static-node" {
   source                 = "../../../terraform-modules/static-node/"
   prefix                 = local.prefix
   node_group             = local.node_group
