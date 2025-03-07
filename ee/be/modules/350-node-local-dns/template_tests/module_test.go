@@ -24,7 +24,6 @@ var _ = Describe("Module :: node-local-dns :: helm template", func() {
 
 	BeforeEach(func() {
 		hec.ValuesSet("global.discovery.kubernetesVersion", "1.15.6")
-		hec.ValuesSet("nodeLocalDns.internal.clusterDNSRedirectAddress", "192.168.0.20")
 	})
 
 	Context("Test helm render", func() {
