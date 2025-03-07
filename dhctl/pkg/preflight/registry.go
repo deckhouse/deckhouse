@@ -218,7 +218,7 @@ func prepareAuthHTTPClient(metaConfig *config.MetaConfig) (*http.Client, error) 
 		client.Transport = httpTransport
 		return client, nil
 	}
-
+	log.DebugF("Trying to load CA certificate:\n%s\n", metaConfig.Registry.CA)
 	certPool := x509.NewCertPool()
 	if ok := certPool.AppendCertsFromPEM([]byte(metaConfig.Registry.CA)); !ok {
 		return nil, fmt.Errorf("invalid cert in CA PEM")
@@ -228,7 +228,9 @@ func prepareAuthHTTPClient(metaConfig *config.MetaConfig) (*http.Client, error) 
 		RootCAs: certPool,
 	}
 
-	client.Transport = httpTransport
+	client = &http.Client{
+		Transport: httpTransport,
+	}
 
 	return client, nil
 }
