@@ -585,12 +585,11 @@ function cleanup() {
       -H "X-Auth-Token: ${COMMANDER_TOKEN}" |
       jq -r '.status')"
     >&2 echo "Check Cluster delete..."
+    echo "  Cluster status: $cluster_status"
     if [ "deleted" = "$cluster_status" ]; then
       return 0
     elif [ "deletion_failed" = "$cluster_status" ]; then
       return 1
-    else
-      echo "  Cluster status: $cluster_status"
     fi
     if [[ $i -lt $testRunAttempts ]]; then
       >&2 echo -n "  Cluster not deleted. Attempt $i/$testRunAttempts failed. Sleep for $sleep seconds..."

@@ -94,7 +94,6 @@ EOF
 
   if kubectl -n d8-istio get po | grep istiod | grep -q Running; then
     istio="ok"
-    echo "istio $istio"
   else
     istio=""
   fi
