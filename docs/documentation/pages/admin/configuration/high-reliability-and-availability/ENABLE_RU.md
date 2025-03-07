@@ -9,34 +9,38 @@ lang: ru
 Обратите внимание, что если в кластере **более одного master-узла**, режим отказоустойчивости **включается автоматически**. Это правило верно как при развёртывании кластера сразу с тремя master-узлами, так и при увеличении master-узлов с одного до трёх.
 {% endalert %}
 
-Чтобы включить режим HA, установите в `ModuleConfig/global` параметр `settings.highAvailability` в значение `true`:
+Включить режим HA можно двумя способами:
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: global
-spec:
-  version: 2
-  settings: 
-    highAvailability: true
-...
-```
+1. Установите в `ModuleConfig/global` параметр `settings.highAvailability` в значение `true`:
 
-Убедиться, что режим включился, можно, посмотрев, например, количество подов `deckhouse` в пространстве имён `d8-system`. Для этого выполните команду:
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: global
+   spec:
+     version: 2
+     settings: 
+       highAvailability: true
+   ...
+   ```
+   
+   Убедиться, что режим включился, можно, посмотрев, например, количество подов `deckhouse` в пространстве имён `d8-system`. Для этого выполните команду:
+   
+   ```text
+   $ sudo -i d8 k -n d8-system get po | grep deckhouse
+   ```
+   
+   Количество подов deckhouse должно быть больше одного:
+   
+   ```text
+   deckhouse-57695f4d68-8rk6l                           2/2     Running   0             3m49s
+   deckhouse-5764gfud68-76dsb                           2/2     Running   0             3m49s
+   deckhouse-fgrhy4536s-fhu6s                           2/2     Running   0             3m49s
+   ```
 
-```text
-$ sudo -i d8 k -n d8-system get po | grep deckhouse
-```
-
-Количество подов deckhouse должно быть больше одного:
-
-```text
-deckhouse-57695f4d68-8rk6l                           2/2     Running   0             3m49s
-deckhouse-5764gfud68-76dsb                           2/2     Running   0             3m49s
-deckhouse-fgrhy4536s-fhu6s                           2/2     Running   0             3m49s
-```
-
+2. Если в кластере включена [Console](/products/kubernetes-platform/modules/console/stable/), перейдите в раздел «Deckhouse» — «Глобальные настройки» — «Глобальные настройки модулей» и установки переключатель «Режим отказоустойчивости» в положение «Да».
+   
 Также доступно включение режима HA [для конкретных поддерживающих его модулей DKP](#включение-режима-ha-для-отдельных-компонентов).
 
 ## Включение режима HA для отдельных компонентов
