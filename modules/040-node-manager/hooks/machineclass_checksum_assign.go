@@ -119,7 +119,7 @@ func assignMachineClassChecksum(input *go_hook.HookInput) error {
 		}
 		input.PatchCollector.MergePatch(patch,
 			apiVersion, kind, namespace, md.Name,
-			object_patch.PatchWithIgnoreMissingObject(true))
+			object_patch.WithIgnoreMissingObject(true))
 	}
 
 	return nil

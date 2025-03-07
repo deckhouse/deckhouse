@@ -203,3 +203,5 @@ replace (
 )
 
 replace go.cypherpunks.ru/gogost/v5 v5.13.0 => github.com/flant/gogost/v5 v5.13.0
+
+replace github.com/deckhouse/deckhouse/pkg/log => ./pkg/log

@@ -239,7 +239,7 @@ func handleL2LoadBalancers(input *go_hook.HookInput) error {
 				"Service",
 				service.Namespace,
 				service.Name,
-				object_patch.PatchWithSubresource("/status"))
+				object_patch.WithSubresource("/status"))
 			input.Logger.Info("MetalLoadBalancerClass was selected and added to the service status",
 				"Service", service.Name,
 				"Namespace", service.Namespace,

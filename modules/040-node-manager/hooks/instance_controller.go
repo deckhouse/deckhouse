@@ -219,7 +219,7 @@ func instanceController(input *go_hook.HookInput) error {
 				patch := map[string]interface{}{
 					"status": statusPatch,
 				}
-				input.PatchCollector.MergePatch(patch, "deckhouse.io/v1alpha1", "Instance", "", ic.Name, object_patch.PatchWithSubresource("/status"))
+				input.PatchCollector.MergePatch(patch, "deckhouse.io/v1alpha1", "Instance", "", ic.Name, object_patch.WithSubresource("/status"))
 			}
 
 			if ic.DeletionTimestamp != nil && !ic.DeletionTimestamp.IsZero() {
@@ -248,7 +248,7 @@ func instanceController(input *go_hook.HookInput) error {
 				patch := map[string]interface{}{
 					"status": statusPatch,
 				}
-				input.PatchCollector.MergePatch(patch, "deckhouse.io/v1alpha1", "Instance", "", ic.Name, object_patch.PatchWithSubresource("/status"))
+				input.PatchCollector.MergePatch(patch, "deckhouse.io/v1alpha1", "Instance", "", ic.Name, object_patch.WithSubresource("/status"))
 			}
 
 			if ic.DeletionTimestamp != nil && !ic.DeletionTimestamp.IsZero() {

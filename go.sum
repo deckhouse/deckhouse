@@ -117,6 +117,8 @@ github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8Yc
 github.com/davecgh/go-xdr v0.0.0-20161123171359-e6a2ba005892/go.mod h1:CTDl0pzVzE5DEzZhPfvhY/9sPFMQIxaJ9VAMs9AagrE=
 github.com/deckhouse/module-sdk v0.1.1-0.20250306155143-efc505c729d0 h1:sZfJrKecyiGCxAP8sS7442psVMib08YpjtoSZkfDHJk=
 github.com/deckhouse/module-sdk v0.1.1-0.20250306155143-efc505c729d0/go.mod h1:xZuqvKXZunp9VNAiF70fgYiN/HQkLDo8tvGymXNpu0o=
+github.com/deckhouse/module-sdk v0.1.1-0.20250307130634-9796dba9b13b h1:jfJJrdXq4I+OpXJGFo5ogDYnm04hXTKM45xmIYmIs1w=
+github.com/deckhouse/module-sdk v0.1.1-0.20250307130634-9796dba9b13b/go.mod h1:xZuqvKXZunp9VNAiF70fgYiN/HQkLDo8tvGymXNpu0o=
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f h1:lO4WD4F/rVNCu3HqELle0jiPLLBs70cWOduZpkS1E78=
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f/go.mod h1:cuUVRXasLTGF7a8hSLbxyZXjz+1KgoB3wDUb6vlszIc=
 github.com/distribution/distribution/v3 v3.0.0-beta.1 h1:X+ELTxPuZ1Xe5MsD3kp2wfGUhc8I+MPfRis8dZ818Ic=
@@ -162,6 +164,8 @@ github.com/felixge/httpsnoop v1.0.4 h1:NFTV2Zj1bL4mc9sqWACXbQFVBBg2W3GPvqp8/ESS2
 github.com/felixge/httpsnoop v1.0.4/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
 github.com/flant/addon-operator v1.5.4-0.20250306155424-2293820269ec h1:vz0Rk0VylYGOChbXHN2+t0+wSV8sKD6xBhAv31x5d4g=
 github.com/flant/addon-operator v1.5.4-0.20250306155424-2293820269ec/go.mod h1:M9WG8kJ2NPJtjXmDvlCyLDU0LIb7CpMnzhaMEYq0AMU=
+github.com/flant/addon-operator v1.5.4-0.20250307131105-08c85735e7de h1:7zsiWlwmQyMB1JHPNNOT2kQt75DAWvirbJR1UXyoPCE=
+github.com/flant/addon-operator v1.5.4-0.20250307131105-08c85735e7de/go.mod h1:9JrutroYmLWRhlAvZDt28RT+Z0yH0t7axr0IyXz3uDg=
 github.com/flant/go-openapi-validate v0.19.12-flant.1 h1:GuB9XEfiLHq3M7fafRLq1AWkndSY/+/5MX7ad1xJ/8A=
 github.com/flant/go-openapi-validate v0.19.12-flant.1/go.mod h1:Rzou8hA/CBw8donlS6WNEUQupNvUZ0waH08tGe6kAQ4=
 github.com/flant/kube-client v1.2.2 h1:27LBs+PKJEFnkQXjPU9eIps7a7iyI13AKcSYj897DCU=
@@ -170,6 +174,8 @@ github.com/flant/libjq-go v1.6.3-0.20201126171326-c46a40ff22ee h1:evii83J+/6QGNv
 github.com/flant/libjq-go v1.6.3-0.20201126171326-c46a40ff22ee/go.mod h1:f+REaGl/+pZR97rbTcwHEka/MAipoQQ2Mc0iQUj4ak0=
 github.com/flant/shell-operator v1.5.4-0.20250306155329-cfb74a7483d6 h1:hsF3KlJw6xVYMewmy6QybBVExaztWa/WGWITdaxaQpY=
 github.com/flant/shell-operator v1.5.4-0.20250306155329-cfb74a7483d6/go.mod h1:PeWjvtzfcNvAaKaQ80Od5050XXJV3G7VScktV+JD58g=
+github.com/flant/shell-operator v1.5.4-0.20250307130945-eae880048052 h1:RmfGtLpdOYAX9NhoXS7UAOfG3VOjDEJcu/3EsSPMB8k=
+github.com/flant/shell-operator v1.5.4-0.20250307130945-eae880048052/go.mod h1:mdCz98kXAqFdb8+f43mY6BvH8pDU/yCllBPxprGHg7Y=
 github.com/fogleman/gg v1.3.0 h1:/7zJX8F6AaYQc57WQCyN9cAIz+4bCJGO9B+dyW29am8=
 github.com/fogleman/gg v1.3.0/go.mod h1:R/bRT+9gY/C5z7JzPU0zXsXHKM4/ayA+zqcVNZzPa1k=
 github.com/foxcpp/go-mockdns v1.0.0 h1:7jBqxd3WDWwi/6WhDvacvH1XsN3rOLXyHM1uhvIx6FI=

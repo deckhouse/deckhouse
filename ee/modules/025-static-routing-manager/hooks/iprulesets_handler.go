@@ -352,7 +352,7 @@ func ipRuleSetsHandler(input *go_hook.HookInput) error {
 			v1alpha1.IRSKind,
 			"",
 			irsName,
-			object_patch.PatchWithSubresource("/status"),
+			object_patch.WithSubresource("/status"),
 		)
 	}
 
