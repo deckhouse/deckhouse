@@ -3,7 +3,6 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
-fromCacheVersion: "2025-03-09"
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -73,7 +72,6 @@ shell:
 # dumb-init
 image: {{ $.ModuleName }}/{{ $.ImageName }}-dumb-init-artifact
 fromImage: common/alt-p11-artifact
-fromCacheVersion: "2025-03-09"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -91,7 +89,6 @@ shell:
 # luarocks
 image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact
 fromImage: common/alt-p11-artifact
-fromCacheVersion: "2025-03-09"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -116,7 +113,6 @@ shell:
 # opentelemetry
 image: {{ $.ModuleName }}/{{ $.ImageName }}-opentelemetry-artifact
 from: {{ $.Images.BASE_ALT_DEV }}
-fromCacheVersion: "2025-03-09"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -140,7 +136,6 @@ shell:
 # Controller artifact
 image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
-fromCacheVersion: "2025-03-09"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -170,7 +165,6 @@ shell:
 # NGINX PCRE
 image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
 from: {{ $.Images.BASE_ALT_DEV }}
-fromCacheVersion: "2025-03-09"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -203,7 +197,6 @@ shell:
 # chroot
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 from: {{ $.Images.BASE_ALT_DEV }}
-fromCacheVersion: "2025-03-09"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
@@ -359,7 +352,6 @@ shell:
 # Final image
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/alt-p11
-fromCacheVersion: "2025-03-09"
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
   add: /chroot
@@ -448,7 +440,7 @@ shell:
   - echo "jit support"
   - ln -sf libpcre.so.1.2.13 /chroot/lib64/libpcre.so.3
   # cve bash scripts
-  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/util
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs
 imageSpec:
   config:
     workingDir: /
