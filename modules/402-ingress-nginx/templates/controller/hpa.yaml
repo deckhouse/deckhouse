@@ -64,6 +64,7 @@ spec:
         app: hpa-scaler
         name: {{ $name }}
     spec:
+      automountServiceAccountToken: true
       {{- if $crd.spec.nodeSelector }}
       nodeSelector:
       {{ $crd.spec.nodeSelector | toYaml | nindent 8 }}

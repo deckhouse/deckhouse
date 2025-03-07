@@ -50,6 +50,7 @@ spec:
       {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized" "with-cloud-provider-uninitialized" "with-storage-problems") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      automountServiceAccountToken: true
       nodeSelector:
         egress-gateway.network.deckhouse.io/member: ""
       terminationGracePeriodSeconds: 1
