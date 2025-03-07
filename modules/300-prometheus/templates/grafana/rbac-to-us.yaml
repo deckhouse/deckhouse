@@ -1,4 +1,4 @@
-{{- if .Values.global.modules.publicDomainTemplate }}
+{{- if and .Values.prometheus.internal.deployGrafana .Values.global.modules.publicDomainTemplate }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -55,3 +55,4 @@ subjects:
 - kind: ServiceAccount
   name: prometheus
   namespace: d8-monitoring
+{{- end }}

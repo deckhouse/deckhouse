@@ -374,6 +374,9 @@ properties:
       deployDexAuthenticator:
         type: boolean
         x-examples: [true]
+      deployGrafana:
+        type: boolean
+        default: true
       prometheusAPIClientTLS:
         type: object
         default: {}
