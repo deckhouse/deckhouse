@@ -26,8 +26,8 @@ lang: ru
   - зарегистрирован CSI драйвер;
   - запущены служебные поды компонентов `csi-huawei`.
 
-```shell
-kubectl apply -f - <<EOF
+```yaml
+d8 k apply -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -49,7 +49,7 @@ kubectl get module csi-huawei -w
 Для создания StorageClass необходимо использовать ресурсы `HuaweiStorageClass` и `HuaweiStorageConnection`. Пример команд для создания таких ресурсов:
 
 ```yaml
-kubectl apply -f -<<EOF
+d8 k apply -f -<<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: HuaweiStorageConnection
 metadata:
@@ -72,7 +72,7 @@ EOF
 ```
 
 ```yaml
-kubectl apply -f -<<EOF
+d8 k apply -f -<<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: HuaweiStorageClass
 metadata:
@@ -89,11 +89,11 @@ EOF
 - Проверить создание объекта можно командой (Phase должен быть `Created`):
 
 ```shell
-kubectl get huaweistorageconnections.storage.deckhouse.io <имя huaweistorageconnection>
+d8 k get huaweistorageconnections.storage.deckhouse.io <имя huaweistorageconnection>
 ```
 
 ```shell
-kubectl get huaweistorageclasses.storage.deckhouse.io <имя huaweistorageclass>
+d8 k get huaweistorageclasses.storage.deckhouse.io <имя huaweistorageclass>
 ```
 
 ### Как проверить работоспособность модуля?
@@ -101,6 +101,5 @@ kubectl get huaweistorageclasses.storage.deckhouse.io <имя huaweistorageclass
 Для этого необходимо проверить состояние подов в namespace `d8-csi-huawei`. Все поды должны быть в состоянии `Running` или `Completed` и запущены на всех узлах.
 
 ```shell
-kubectl -n d8-csi-huawei get pod -owide -w
+d8 k -n d8-csi-huawei get pod -owide -w
 ```
-

@@ -26,8 +26,8 @@ lang: ru
   - зарегистрирован CSI драйвер;
   - запущены служебные поды компонентов `csi-hpe`.
 
-```shell
-kubectl apply -f - <<EOF
+```yaml
+d8 k apply -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -41,7 +41,7 @@ EOF
 - Дождаться, когда модуль перейдет в состояние `Ready`.
 
 ```shell
-kubectl get module csi-hpe -w
+d8 k get module csi-hpe -w
 ```
 
 ### Создание StorageClass
@@ -49,7 +49,7 @@ kubectl get module csi-hpe -w
 Для создания StorageClass необходимо использовать ресурсы `HPEStorageClass` и `HPEStorageConnection`. Пример команд для создания таких ресурсов:
 
 ```yaml
-kubectl apply -f -<<EOF
+d8 k apply -f -<<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: HPEStorageConnection
 metadata:
@@ -65,7 +65,7 @@ EOF
 ```
 
 ```yaml
-kubectl apply -f -<<EOF
+d8 k apply -f -<<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: HPEStorageClass
 metadata:
@@ -83,19 +83,17 @@ spec:
 - Проверить создание объекта можно командой (Phase должен быть `Created`):
 
 ```shell
-kubectl get hpestorageconnections.storage.deckhouse.io <имя hpestorageconnection>
+d8 k get hpestorageconnections.storage.deckhouse.io <имя hpestorageconnection>
 ```
 
 ```shell
-kubectl get hpestorageclasses.storage.deckhouse.io <имя hpestorageclass>
+d8 k get hpestorageclasses.storage.deckhouse.io <имя hpestorageclass>
 ```
-
 
 ### Как проверить работоспособность модуля?
 
 Для этого необходимо проверить состояние подов в namespace `d8-csi-hpe`. Все поды должны быть в состоянии `Running` или `Completed` и запущены на всех узлах.
 
 ```shell
-kubectl -n d8-csi-hpe get pod -owide -w
+d8 k -n d8-csi-hpe get pod -owide -w
 ```
-
