@@ -1,0 +1,12 @@
+type: object
+properties:
+  logLevel:
+    type: string
+    enum:
+      - ERROR
+      - WARN
+      - INFO
+      - DEBUG
+      - TRACE
+    description: Module log level
+    default: DEBUG

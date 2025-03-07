@@ -1,0 +1,22 @@
+type: object
+properties:
+  logLevel:
+    description: Уровень логирования для приложений модуля
+  dataNodes:
+    description: Настройки для узлов Linstor с данными
+    properties:
+      nodeSelector:
+        description: |
+          Настройка аналогична `spec.nodeSelector` в Kubernetes.
+
+          Если параметр не указан, поды для Linstor будут запущены на всех узлах.
+
+          **Внимание!** При изменении этого параметра не происходит переразмещение данных. Если узел с данными перестанет соответствовать `nodeSelector`, данные на нем будут недоступны.
+  backup:
+    properties:
+      enabled:
+        description: Включение резервного копирования БД модуля
+      retentionCount:
+        description: Количество  резервных копий для хранения
+      schedule:
+        description: Расписание резервного копирования
