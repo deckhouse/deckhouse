@@ -79,11 +79,11 @@ func applyModuleCRDFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 }
 
 func storageClasses(input *go_hook.HookInput) error {
-	var existedStorageClasses []StorageClass
-
 	if len(input.Snapshots["module_storageclasses"]) == 0 || len(input.Snapshots["module_crds"]) == 0 {
 		return nil
 	}
+
+	existedStorageClasses := make([]StorageClass, 0, len(input.Snapshots["module_storageclasses"]))
 
 	for _, snapshot := range input.Snapshots["module_storageclasses"] {
 		sc := snapshot.(StorageClass)

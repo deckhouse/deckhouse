@@ -1928,7 +1928,7 @@ internal:
 func verifyClusterAutoscalerDeploymentArgs(deployment object_store.KubeObject, mds ...object_store.KubeObject) error {
 	args := deployment.Field("spec.template.spec.containers.0.args").AsStringSlice()
 
-	var nodesArgs []string
+	nodesArgs := make([]string, 0)
 	for _, arg := range args {
 		if !strings.HasPrefix(arg, "--nodes") {
 			continue
@@ -1937,7 +1937,7 @@ func verifyClusterAutoscalerDeploymentArgs(deployment object_store.KubeObject, m
 		nodesArgs = append(nodesArgs, strings.Split(arg, ".")[1])
 	}
 
-	var mdsNames []string
+	mdsNames := make([]string, 0, len(mds))
 	for _, md := range mds {
 		mdsNames = append(mdsNames, md.Field("metadata.name").String())
 	}
