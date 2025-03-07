@@ -2,7 +2,7 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /src/oom-kills-exporter
   to: /bin/oom-kills-exporter
   before: setup
