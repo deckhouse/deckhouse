@@ -322,4 +322,3 @@ spec:
               path: deckhouse-logo.svg
       {{- end }}
 {{- end }}
-``
