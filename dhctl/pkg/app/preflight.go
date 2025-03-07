@@ -32,6 +32,7 @@ var (
 	PreflightSkipSystemRequirementsCheck   = false
 	PreflightSkipOneSSHHost                = false
 	PreflightSkipCloudAPIAccessibility     = false
+	PreflightSkipTimeDrift                 = false
 	PreflightSkipCIDRIntersection          = false
 	PreflightSkipDeckhouseUserCheck        = false
 )
@@ -50,31 +51,31 @@ const (
 	SudoAllowedCheckArgName          = "preflight-skip-sudo-allowed"
 	SystemRequirementsArgName        = "preflight-skip-system-requirements-check"
 	CloudAPIAccessibilityArgName     = "preflight-cloud-api-accesibility-check"
+	TimeDriftArgName                 = "preflight-time-drift-check"
 	OneSSHHostCheckArgName           = "preflight-skip-one-ssh-host"
 	CIDRIntersection                 = "preflight-skip-cidr-intersection"
 	DeckhouseUserCheckName           = "preflight-skip-deckhouse-user-check"
 )
 
-var (
-	PreflightSkipOptionsMap = map[string]*bool{
-		SSHForwardArgName:                &PreflightSkipSSHForward,
-		PortsAvailabilityArgName:         &PreflightSkipAvailabilityPorts,
-		ResolvingLocalhostArgName:        &PreflightSkipResolvingLocalhost,
-		DeckhouseVersionCheckArgName:     &PreflightSkipDeckhouseVersionCheck,
-		RegistryThroughProxyCheckArgName: &PreflightSkipRegistryThroughProxy,
-		PublicDomainTemplateCheckArgName: &PreflightSkipPublicDomainTemplateCheck,
-		SSHCredentialsCheckArgName:       &PreflightSkipSSHCredentialsCheck,
-		RegistryCredentialsCheckArgName:  &PreflightSkipRegistryCredentials,
-		CloudAPIAccessibilityArgName:     &PreflightSkipCloudAPIAccessibility,
-		ContainerdExistCheckArgName:      &PreflightSkipContainerdExistCheck,
-		PythonChecksArgName:              &PreflightSkipPythonChecks,
-		SudoAllowedCheckArgName:          &PreflightSkipSudoIsAllowedForUserCheck,
-		SystemRequirementsArgName:        &PreflightSkipSystemRequirementsCheck,
-		OneSSHHostCheckArgName:           &PreflightSkipOneSSHHost,
-		CIDRIntersection:                 &PreflightSkipCIDRIntersection,
-		DeckhouseUserCheckName:           &PreflightSkipDeckhouseUserCheck,
-	}
-)
+var PreflightSkipOptionsMap = map[string]*bool{
+	SSHForwardArgName:                &PreflightSkipSSHForward,
+	PortsAvailabilityArgName:         &PreflightSkipAvailabilityPorts,
+	ResolvingLocalhostArgName:        &PreflightSkipResolvingLocalhost,
+	DeckhouseVersionCheckArgName:     &PreflightSkipDeckhouseVersionCheck,
+	RegistryThroughProxyCheckArgName: &PreflightSkipRegistryThroughProxy,
+	PublicDomainTemplateCheckArgName: &PreflightSkipPublicDomainTemplateCheck,
+	SSHCredentialsCheckArgName:       &PreflightSkipSSHCredentialsCheck,
+	RegistryCredentialsCheckArgName:  &PreflightSkipRegistryCredentials,
+	CloudAPIAccessibilityArgName:     &PreflightSkipCloudAPIAccessibility,
+	ContainerdExistCheckArgName:      &PreflightSkipContainerdExistCheck,
+	PythonChecksArgName:              &PreflightSkipPythonChecks,
+	SudoAllowedCheckArgName:          &PreflightSkipSudoIsAllowedForUserCheck,
+	SystemRequirementsArgName:        &PreflightSkipSystemRequirementsCheck,
+	OneSSHHostCheckArgName:           &PreflightSkipOneSSHHost,
+	CIDRIntersection:                 &PreflightSkipCIDRIntersection,
+	DeckhouseUserCheckName:           &PreflightSkipDeckhouseUserCheck,
+	TimeDriftArgName:                 &PreflightSkipTimeDrift,
+}
 
 func ApplyPreflightSkips(skips []string) {
 	for _, skip := range skips {
@@ -115,6 +116,9 @@ func DefinePreflight(cmd *kingpin.CmdClause) {
 	cmd.Flag(CloudAPIAccessibilityArgName, "Skip verifying Cloud API").
 		Envar(configEnvName("PREFLIGHT_SKIP_CLOUD_API_CHECK")).
 		BoolVar(PreflightSkipOptionsMap[CloudAPIAccessibilityArgName])
+	cmd.Flag(TimeDriftArgName, "Skip verifying time drift").
+		Envar(configEnvName("PREFLIGHT_SKIP_TIME_DRIFT")).
+		BoolVar(PreflightSkipOptionsMap[TimeDriftArgName])
 	cmd.Flag(ContainerdExistCheckArgName, "Skip verifying contanerd exist").
 		Envar(configEnvName("PREFLIGHT_SKIP_CONTAINERD_EXIST")).
 		BoolVar(PreflightSkipOptionsMap[ContainerdExistCheckArgName])
