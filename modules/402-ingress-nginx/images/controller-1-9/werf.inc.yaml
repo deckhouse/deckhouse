@@ -3,6 +3,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
+fromCacheVersion: "2025-03-09"
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -72,6 +73,7 @@ shell:
 # dumb-init
 image: {{ $.ModuleName }}/{{ $.ImageName }}-dumb-init-artifact
 fromImage: common/alt-p11-artifact
+fromCacheVersion: "2025-03-09"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -89,6 +91,7 @@ shell:
 # luarocks
 image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact
 fromImage: common/alt-p11-artifact
+fromCacheVersion: "2025-03-09"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -113,6 +116,7 @@ shell:
 # opentelemetry
 image: {{ $.ModuleName }}/{{ $.ImageName }}-opentelemetry-artifact
 from: {{ $.Images.BASE_ALT_DEV }}
+fromCacheVersion: "2025-03-09"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -136,6 +140,7 @@ shell:
 # Controller artifact
 image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+fromCacheVersion: "2025-03-09"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -146,7 +151,7 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
-  beforeInstall:
+  install:
   {{- include "alpine packages proxy" . | nindent 2 }}
   # git needs for getting tag and commit sha for build purposes
   - apk --no-cache add make bash git openssh
@@ -165,6 +170,7 @@ shell:
 # NGINX PCRE
 image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
 from: {{ $.Images.BASE_ALT_DEV }}
+fromCacheVersion: "2025-03-09"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -180,8 +186,6 @@ import:
   to: /pcre
   before: install
 shell:
-  install:
- # - apt-get install -y bash gcc clang glibc-devel make automake openssl-devel libpcre-devel zlib-devel libxslt-devel gd-devel perl-devel libedit-devel mercurial build-essential findutils curl ca-certificates patch libaio-devel openssl cmake util-linux lmdb-utils wget libcurl-devel protobuf git g++ pkg-config flex bison doxygen yajl-devel lmdb-devel libtool autoconf libxml2 libxml2-devel python3 libmaxminddb-devel bc unzip dos2unix yaml-cpp coreutils ninja gtest-devel git build-base pkg-config c-ares-devel re2-devel grpc-devel protobuf-devel
   setup:
   - export SOURCE_REPO={{ $.SOURCE_REPO }}
   - export CONTROLLER_BRANCH={{ $controllerBranch }}
@@ -199,6 +203,7 @@ shell:
 # chroot
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 from: {{ $.Images.BASE_ALT_DEV }}
+fromCacheVersion: "2025-03-09"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
@@ -354,6 +359,7 @@ shell:
 # Final image
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/alt-p11
+fromCacheVersion: "2025-03-09"
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
   add: /chroot
