@@ -354,10 +354,17 @@ func (r *ServiceWithHealthchecksReconciler) RunTaskWorker(ctx context.Context) {
 			i, probe := i, probe
 			g.Go(func() error {
 				err := probe.PerformCheck()
+				var successful bool
 				successCount, failureCount := calculateCounts(err, probe.SuccessCount(), probe.FailureCount())
+				if successCount >= probe.SuccessThreshold() {
+					successful = true
+				}
+				if failureCount >= probe.FailureThreshold() {
+					successful = false
+				}
 				probesResultDetails[i] = ProbeResultDetail{
 					id:               probe.GetID(),
-					successful:       err == nil,
+					successful:       successful,
 					mode:             probe.GetMode(),
 					targetPort:       probe.GetPort(),
 					successCount:     successCount,
@@ -599,6 +606,11 @@ func (r *ServiceWithHealthchecksReconciler) syncResultsMapWithPodList(hc network
 
 	// add new pods IPs to targets slice
 	for _, pod := range podList.Items {
+		if pod.Status.PodIP == "" {
+			// pod has no IP address (for example, it's in pending state), skipping
+			r.logger.V(1).Info("pod has no IP address, skipping", "podName", pod.GetName(), "swhName", hc.Name, "namespace", hc.Namespace)
+			continue
+		}
 		targetNotFound := true
 		var oldIndex int
 		for i, target := range r.healthecksResultsByServiceWithHealthchecks[serviceWithHCKey] {
@@ -667,11 +679,11 @@ func (r *ServiceWithHealthchecksReconciler) buildRenewedStatus(hc *networkv1alph
 func areAllProbesSucceeed(probeResultDetail []ProbeResultDetail) *bool {
 	successfullCount := 0
 	for _, probeResultDetail := range probeResultDetail {
-		if probeResultDetail.successCount >= probeResultDetail.successThreshold || probeResultDetail.failureCount < probeResultDetail.failureThreshold {
+		if probeResultDetail.successful {
 			successfullCount++
 		}
 	}
-	result := successfullCount == len(probeResultDetail)
+	result := successfullCount > 0 && successfullCount == len(probeResultDetail)
 	return &result
 }
 
