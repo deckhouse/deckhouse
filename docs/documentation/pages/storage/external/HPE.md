@@ -1,7 +1,8 @@
- ---
+---
 title: "HPE storage"
 permalink: en/storage/admin/external/hpe.html
 ---
+
 This section installs and configures the CSI driver for HPE SAN. The module allows you to create a `StorageClass` in `Kubernetes` by creating [Kubernetes custom resources](./cr.html#yadrostorageclass) `YadroStorageClass`.
 
 > **Caution!** The user is not allowed to create a `StorageClass` for the `csi.hpe.com` CSI driver.
