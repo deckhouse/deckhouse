@@ -57,3 +57,12 @@ rules:
       - get
       - list
       - watch
+  - apiGroups:
+      - virtualization.deckhouse.io
+    resources:
+      - virtualmachineclasses
+      - clustervirtualimages
+    verbs:
+      - get
+      - list
+      - watch
