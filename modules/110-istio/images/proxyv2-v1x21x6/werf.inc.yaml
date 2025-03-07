@@ -154,6 +154,7 @@ shell:
   - bazel build --disk_cache=/tmp/bazel-cache --nofetch --stamp --config=release //:envoy
   - mkdir /src/proxy/bin
   - mv /src/proxy/bazel-bin/envoy /src/proxy/bin/
+  - rm -rf /src/proxy/.git
   - rm -rf /root/.cache /tmp/bazel-cache
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-libcxx-artifact
@@ -328,7 +329,6 @@ shell:
   - git clone --depth 1 --branch {{ $istioVersion }} {{ $.SOURCE_REPO }}/istio/proxy.git /src/proxy
   - cd /src/proxy/
   - git apply --verbose /patches/*.patch
-
   - git clone --branch "{{ $llvmRev }}" {{ $.SOURCE_REPO }}/llvm/llvm-project.git /src/llvm
   - rm -rf /src/llvm/.git
 
