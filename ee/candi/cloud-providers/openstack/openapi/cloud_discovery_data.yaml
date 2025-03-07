@@ -40,6 +40,28 @@ apiVersions:
         uniqueItems: true
       instances:
         type: object
+        additionalProperties: false
+        properties:
+          sshKeyPairName: &instancesSshKeyPairName
+            type: string
+            minLength: 1
+          imageName: &instancesImageName
+            type: string
+            minLength: 1
+          mainNetwork: &instancesMainNetwork
+            type: string
+            minLength: 1
+          additionalNetworks: &instancesAdditionalNetworks
+            type: array
+            items:
+              type: string
+              minLength: 1
+            minItems: 1
+            uniqueItems: true
+          securityGroups: &instancesSecurityGroups
+            type: array
+            items:
+              type: string
       loadBalancer:
         type: object
         additionalProperties: false
@@ -63,19 +85,10 @@ apiVersions:
           required: [sshKeyPairName, imageName, mainNetwork, securityGroups]
           additionalProperties: false
           properties:
-            sshKeyPairName:
-              type: string
-              minLength: 1
-            imageName:
-              type: string
-              minLength: 1
-            mainNetwork:
-              type: string
-              minLength: 1
-            securityGroups:
-              type: array
-              items:
-                type: string
+            sshKeyPairName: *instancesSshKeyPairName
+            imageName: *instancesImageName
+            mainNetwork: *instancesMainNetwork
+            securityGroups: *instancesSecurityGroups
         loadBalancer:
           required: [subnetID, floatingNetworkID]
     - required: [externalNetworkNames]
@@ -90,26 +103,11 @@ apiVersions:
           required: [sshKeyPairName, imageName, mainNetwork, additionalNetworks, securityGroups]
           additionalProperties: false
           properties:
-            sshKeyPairName:
-              type: string
-              minLength: 1
-            imageName:
-              type: string
-              minLength: 1
-            mainNetwork:
-              type: string
-              minLength: 1
-            additionalNetworks:
-              type: array
-              items:
-                type: string
-                minLength: 1
-              minItems: 1
-              uniqueItems: true
-            securityGroups:
-              type: array
-              items:
-                type: string
+            sshKeyPairName: *instancesSshKeyPairName
+            imageName: *instancesImageName
+            mainNetwork: *instancesMainNetwork
+            additionalNetworks: *instancesAdditionalNetworks
+            securityGroups: *instancesSecurityGroups
     - properties:
         layout:
           enum: [Simple]
@@ -119,15 +117,9 @@ apiVersions:
           required: [sshKeyPairName, imageName, mainNetwork]
           additionalProperties: false
           properties:
-            sshKeyPairName:
-              type: string
-              minLength: 1
-            imageName:
-              type: string
-              minLength: 1
-            mainNetwork:
-              type: string
-              minLength: 1
+            sshKeyPairName: *instancesSshKeyPairName
+            imageName: *instancesImageName
+            mainNetwork: *instancesMainNetwork
     - properties:
         layout:
           enum: [SimpleWithInternalNetwork]
@@ -137,12 +129,6 @@ apiVersions:
           required: [sshKeyPairName, imageName, mainNetwork]
           additionalProperties: false
           properties:
-            sshKeyPairName:
-              type: string
-              minLength: 1
-            imageName:
-              type: string
-              minLength: 1
-            mainNetwork:
-              type: string
-              minLength: 1
+            sshKeyPairName: *instancesSshKeyPairName
+            imageName: *instancesImageName
+            mainNetwork: *instancesMainNetwork

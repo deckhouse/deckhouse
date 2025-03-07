@@ -1,0 +1,1 @@
+Copy code from https://github.com/flant/addon-operator/tree/main/pkg/values/validation/schema
