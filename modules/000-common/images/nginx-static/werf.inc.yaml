@@ -8,11 +8,11 @@ git:
   - url: {{ $.SOURCE_REPO }}/nginx/nginx.git
     add: /
     to: /src/nginx
-    tag: {{ $NginxVersion }}
+    tag: release-{{ $NginxVersion }}
   - url: {{ $.SOURCE_REPO }}/openssl/openssl.git
     add: /
     to: /src/openssl
-    tag: {{ $OpenSSLVersion }}
+    tag: release-{{ $OpenSSLVersion }}
 ---
 image: {{ $.ModuleName }}/build-nginx-static-artifact
 from: {{ $.Images.BASE_ALPINE }}
