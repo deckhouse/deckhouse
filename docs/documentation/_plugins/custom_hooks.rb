@@ -133,7 +133,7 @@ Jekyll::Hooks.register :site, :pre_render do |site|
       insert_module_webiface_block(page)
     end
 
-    if page.data['module-kebab-name'] && !page.name.match?(/CR(\.ru|_RU)?\.md$/)
+    if page.data['module-kebab-name'] and !page.name.match?(/CR(\.ru|_RU)?\.md$/)
       insert_module_stage_block(site.data['sidebars'][page.data['sidebar']]['entries'], page)
     
       if page.name.match?(/^README(\.ru|_RU)?\.md$/i) ||
