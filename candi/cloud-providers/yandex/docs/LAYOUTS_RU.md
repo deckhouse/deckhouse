@@ -160,7 +160,7 @@ dhcpOptions:
 
 Если задан `withNATInstance.internalSubnetID` — NAT-инстанс будет создан в зоне этого subnet.
 
-Если задан `withNATInstance.internalSubnetCIDR` — тогда будет создана новая внутренняя подсеть. NAT-инстанс будет создан в этой подсети. 
+Если задан `withNATInstance.internalSubnetCIDR` — тогда будет создана новая внутренняя подсеть. NAT-инстанс будет создан в этой подсети.
 
 Один из параметров, `withNATInstance.internalSubnetID` или `withNATInstance.internalSubnetCIDR`, обязателен
 

@@ -160,9 +160,9 @@ This separate subnet is needed to avoid routing loop.
 
 If the `withNATInstance.internalSubnetID` parameter is set, the NAT instance will be created in this subnet.
 
-If the `withNATInstance.internalSubnetCIDR` parameter is set, then a new internal subnet will be created. The NAT instance will be created in this subnet. 
+If the `withNATInstance.internalSubnetCIDR` parameter is set, then a new internal subnet will be created. The NAT instance will be created in this subnet.
 
-Either `withNATInstance.internalSubnetID` or `withNATInstance.internalSubnetCIDR` parameter is required. 
+Either `withNATInstance.internalSubnetID` or `withNATInstance.internalSubnetCIDR` parameter is required.
 
 If the `withNATInstance.externalSubnetID` is provided in addition to previous ones, the NAT instance will be attached to it via secondary interface.
 
