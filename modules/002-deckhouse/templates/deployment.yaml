@@ -1,6 +1,11 @@
 {{- define "deckhouse_resources" }}
-cpu: 500m
+{{- if and (.Values.global.enabledModules | has "vertical-pod-autoscaler") (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
+cpu: 100m
 memory: 1000Mi
+{{- else }}
+cpu: 150m
+memory: 1000Mi
+{{- end }}
 {{- end }}
 
 {{- if and (.Values.global.enabledModules | has "vertical-pod-autoscaler") (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
