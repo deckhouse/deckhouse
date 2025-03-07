@@ -6,4 +6,4 @@ module-snake-name: sds_replicated_volume
 lang: ru
 ---
 
-{% include module-configuration.liquid %} 
+{% include module-configuration.liquid %}

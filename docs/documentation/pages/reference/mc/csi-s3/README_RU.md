@@ -6,4 +6,4 @@ module-snake-name: csi_s3
 lang: ru
 ---
 
-{% include module-configuration.liquid %} 
+{% include module-configuration.liquid %}

@@ -6,4 +6,4 @@ module-snake-name: sds_node_configurator
 lang: ru
 ---
 
-{% include module-configuration.liquid %} 
+{% include module-configuration.liquid %}

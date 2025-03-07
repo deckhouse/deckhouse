@@ -6,4 +6,4 @@ module-snake-name: csi_scsi_generic
 lang: ru
 ---
 
-{% include module-configuration.liquid %} 
+{% include module-configuration.liquid %}
