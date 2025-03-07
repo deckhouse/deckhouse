@@ -443,7 +443,6 @@ type bashibleContext struct {
 	CloudProviderType string                       `json:"cloudProviderType" yaml:"cloudProviderType"`
 	PackagesProxy     map[string]interface{}       `json:"packagesProxy" yaml:"packagesProxy"`
 	SystemRegistry    map[string]interface{}       `json:"systemRegistry" yaml:"systemRegistry"`
-	RegistryMode      string                       `json:"registryMode" yaml:"registryMode"`
 }
 
 func (bc *bashibleContext) AddToChecksum(checksumCollector hash.Hash) error {
