@@ -1606,7 +1606,7 @@ entries:
       - title:
           en: Description
           ru: Описание
-        url: /storage/admin/readme.html
+        url: /storage/admin/
       - title:
           en: SDS
           ru: Программно определяемые

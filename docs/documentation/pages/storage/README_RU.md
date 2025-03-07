@@ -1,6 +1,6 @@
 ---
 title: "Описание"
-permalink: ru/storage/admin/readme.html
+permalink: ru/storage/admin/
 lang: ru
 ---
 
