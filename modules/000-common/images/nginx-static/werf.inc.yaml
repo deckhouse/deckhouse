@@ -4,11 +4,15 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
-shell:
-  install:
-  - git clone -b release-{{ $NginxVersion }} --single-branch --depth=1 {{ $.SOURCE_REPO }}/nginx/nginx.git /src/nginx
-  - git clone -b openssl-{{ $OpenSSLVersion }} --single-branch --depth=1 {{ $.SOURCE_REPO }}/openssl/openssl.git /src/openssl
-  - rm -r /src/nginx/.git /src/openssl/.git
+git:
+  - url: {{ $.SOURCE_REPO }}/nginx/nginx.git
+    add: /
+    to: /src/nginx
+    tag: {{ $NginxVersion }}
+  - url: {{ $.SOURCE_REPO }}/openssl/openssl.git
+    add: /
+    to: /src/openssl
+    tag: {{ $OpenSSLVersion }}
 ---
 image: {{ $.ModuleName }}/build-nginx-static-artifact
 from: {{ $.Images.BASE_ALPINE }}
