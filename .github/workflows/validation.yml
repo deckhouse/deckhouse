@@ -610,7 +610,6 @@ jobs:
             const allowedModules = findIn('.');
 
             /**
-            *
             * @param {string} owner
             * @param {string} repo
             * @param {number} pullRequestID
@@ -631,7 +630,14 @@ jobs:
               const changelogEntries = findSectionInMarkdown(mdTokens, 'Changelog entries', 'lang', 'changes');
               validatePullRequestChangelog(changelogEntries, allowedModules);
             } catch(error) {
-              throw(error)
+              core.error(`
+              \u001B[1m\u001B[103m\u001B[30mPlease ensure your Pull Request includes a properly formatted Changelog entries block check that the section follows the changelog guidelines,
+              \u001B[1m\u001B[103m\u001B[30mincluding the Type of changes and other required fields. 
+              \u001B[1m\u001B[103m\u001B[30mThis helps maintain accurate release notes and ensures the changelog automation works smoothly. 
+              \u001B[1m\u001B[103m\u001B[30mThank you! 🙌 
+              \u001B[1m\u001B[103m\u001B[30mguide https://github.com/deckhouse/changelog-action?tab=readme-ov-file#how-to-add-to-changelog\u001B[39m\u001B[49m\u001B[22m
+              `);
+              throw(error);
             }
 
 
