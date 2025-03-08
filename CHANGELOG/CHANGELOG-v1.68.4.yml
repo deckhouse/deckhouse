@@ -1,0 +1,5 @@
+docs:
+  fixes:
+    - summary: Fixed typos at VMware configuration parameters.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12472
+
