@@ -32,6 +32,8 @@ module Jekyll
 
       return if !entry || ! entry.dig('title',lang)
 
+      validate_item(entry)
+
       result = []
       not_avail_in_this_edition = false
       avail_in_commercial_editions_only = false
@@ -162,6 +164,18 @@ module Jekyll
       end
     end
 
+    def validate_item(item)
+      if !item.has_key?('title')
+        puts "[DEBUG] Sidebar item: #{item}"
+        raise "Sidebar item must have a title."
+      elsif !(item['title'].has_key?('en') or item['title'].has_key?('ru') )
+        puts "[DEBUG] Sidebar item: #{item}"
+        raise "Sidebar item don't have a valid title."
+      elsif !(item.has_key?('url') or item.has_key?('external_url') or item.has_key?('folders'))
+        puts "[DEBUG] Sidebar item: #{item}"
+        raise "Sidebar item doesn't have url, external_url or folders parameters."
+      end
+    end
   end
 end
 
