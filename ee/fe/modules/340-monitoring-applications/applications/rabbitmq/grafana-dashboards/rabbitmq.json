@@ -4465,6 +4465,7 @@
         "type": "query"
       },
       {
+        "allValue": ".*",
         "current": {
           "selected": false,
           "text": "All",
@@ -4474,15 +4475,15 @@
           "type": "prometheus",
           "uid": "$ds_prometheus"
         },
-        "definition": "label_values(rabbitmq_queue_messages_published_total{namespace=~\"$namespace\",pod=~\"$pod\",queue_vhost=~\"$vhost\"}, queue)",
+        "definition": "label_values(rabbitmq_queue_messages_published_total{namespace=~\"$namespace\",pod=~\"$pod\",queue_vhost=~\"$vhost\"}, queue=~\".*\")",
         "hide": 0,
         "includeAll": true,
         "label": "Queue",
-        "multi": false,
+        "multi": true,
         "name": "queue",
         "options": [],
         "query": {
-          "query": "label_values(rabbitmq_queue_messages_published_total{namespace=~\"$namespace\",pod=~\"$pod\",queue_vhost=~\"$vhost\"}, queue)",
+          "query": "label_values(rabbitmq_queue_messages_published_total{namespace=~\"$namespace\",pod=~\"$pod\",queue_vhost=~\"$vhost\"}, queue=~\".*\")",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,
