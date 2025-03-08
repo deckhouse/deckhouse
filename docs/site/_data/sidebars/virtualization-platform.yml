@@ -203,7 +203,7 @@ entries:
                         - title:
                             en: CEPH storage
                             ru: CEPH-хранилище
-                      url: /virtualization-platform/documentation/admin/platform-management/storage/external/ceph.html
+                          url: /virtualization-platform/documentation/admin/platform-management/storage/external/ceph.html
             - title:
                 en: Virtualization
                 ru: Виртуализация
