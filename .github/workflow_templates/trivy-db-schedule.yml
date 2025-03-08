@@ -27,7 +27,7 @@ concurrency:
 jobs:
   download-and-repush-images:
     name: Download and repush images
-    runs-on: [self-hosted]
+    runs-on: [self-hosted, regular]
     steps:
 {!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 6 }!}

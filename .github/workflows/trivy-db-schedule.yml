@@ -31,7 +31,7 @@ concurrency:
 jobs:
   download-and-repush-images:
     name: Download and repush images
-    runs-on: [self-hosted]
+    runs-on: [self-hosted, regular]
     steps:
 
       # <template: checkout_step>
