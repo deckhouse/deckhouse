@@ -1,6 +1,6 @@
 {{- define "capcd_controller_manager_args" }}
 - "--leader-elect"
-{{- if semverCompare "<37.2" .Values.cloudProviderVcd.internal.discoveryData.vcdAPIVersion }}
+{{- if eq .Values.cloudProviderVcd.internal.providerClusterConfiguration.legacyMode true }}
 - "--metrics-bind-address=127.0.0.1:9446"
 {{- else }}
 - "--diagnostics-address=127.0.0.1:9446"
@@ -15,10 +15,10 @@ memory: 50Mi
 {{- end }}
 
 {{- $capcdImageName := ""}}
-{{- if semverCompare ">=37.2" .Values.cloudProviderVcd.internal.discoveryData.vcdAPIVersion -}}
-  {{- $capcdImageName = "capcdControllerManager" }}
-{{- else -}}
+{{- if eq .Values.cloudProviderVcd.internal.providerClusterConfiguration.legacyMode true -}}
   {{- $capcdImageName = "capcdControllerManagerLegacy" }}
+{{- else -}}
+  {{- $capcdImageName = "capcdControllerManager" }}
 {{- end }}
 
 {{- $capcdImage := include "helm_lib_module_image_no_fail" (list . $capcdImageName) }}
