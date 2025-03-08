@@ -30,6 +30,7 @@ type Client struct {
 	checkTaskManager     *taskManager
 	bootstrapTaskManager *taskManager
 	cleanupTaskManager   *taskManager
+	adoptTaskManager     *taskManager
 	tcpCheckTaskManager  *taskManager
 	tcpCheckRateLimiter  workqueue.RateLimiter
 
@@ -42,6 +43,7 @@ func NewClient(recorder *event.Recorder) *Client {
 		checkTaskManager:     newTaskManager(),
 		bootstrapTaskManager: newTaskManager(),
 		cleanupTaskManager:   newTaskManager(),
+		adoptTaskManager:     newTaskManager(),
 		tcpCheckTaskManager:  newTaskManager(),
 		tcpCheckRateLimiter:  workqueue.NewItemExponentialFailureRateLimiter(250*time.Millisecond, time.Minute),
 		recorder:             recorder,
