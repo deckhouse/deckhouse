@@ -24,11 +24,9 @@ import (
 
 	"github.com/go-logr/logr"
 	"go.uber.org/zap/zapcore"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
-
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
@@ -39,6 +37,7 @@ import (
 
 	"controller/apis/deckhouse.io/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha2"
+	namespacecontroller "controller/internal/controller/namespace"
 	projectcontroller "controller/internal/controller/project"
 	templatecontroller "controller/internal/controller/template"
 	"controller/internal/helm"
@@ -95,6 +94,11 @@ func main() {
 
 	// register template controller
 	if err = templatecontroller.Register(runtimeManager, templatesPath, logger); err != nil {
+		panic(err)
+	}
+
+	// register namespace controller
+	if err = namespacecontroller.Register(runtimeManager, logger); err != nil {
 		panic(err)
 	}
 
