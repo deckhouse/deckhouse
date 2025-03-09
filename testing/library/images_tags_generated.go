@@ -368,7 +368,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"mimir":                       "imageHash-prometheus-mimir",
 		"prometheus":                  "imageHash-prometheus-prometheus",
 		"promxy":                      "imageHash-prometheus-promxy",
-		"trickster":                   "imageHash-prometheus-trickster",
 	},
 	"prometheusMetricsAdapter": map[string]interface{}{
 		"k8sPrometheusAdapter":   "imageHash-prometheusMetricsAdapter-k8sPrometheusAdapter",
