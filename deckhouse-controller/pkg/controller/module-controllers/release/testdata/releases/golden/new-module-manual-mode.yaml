@@ -15,6 +15,7 @@ spec:
     dockerCfg: ""
     repo: ""
 status:
+  phase: ""
   message: ""
   modules: null
   modulesCount: 0
