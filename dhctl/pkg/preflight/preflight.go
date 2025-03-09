@@ -167,6 +167,11 @@ func (pc *Checker) Cloud() error {
 			successMessage: "cloud master node system requirements are met",
 			skipFlag:       app.SystemRequirementsArgName,
 		},
+		{
+			fun:            pc.CheckYandexWithNatInstanceConfig,
+			successMessage: "Yandex NAT instance config",
+			skipFlag:       app.YandexWithNatInstance,
+		},
 	})
 	if err != nil {
 		return err

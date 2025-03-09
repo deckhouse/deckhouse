@@ -86,7 +86,7 @@ dhcpOptions:
 
 In this layout, NAT (of any kind) is not used, and each node is assigned a public IP.
 
-> **Caution!** Currently, the cloud-provider-yandex module does not support Security Groups; thus, is why all cluster nodes connect directly to the Internet.
+> **Caution!** The cloud-provider-yandex module does not support Security Groups, so all cluster nodes will be available without connection restrictions.
 
 ![Yandex Cloud WithoutNAT Layout scheme](../../images/cloud-provider-yandex/layout-withoutnat.png)
 <!--- Source: https://docs.google.com/drawings/d/1I7M9DquzLNu-aTjqLx1_6ZexPckL__-501Mt393W1fw/edit --->
@@ -155,15 +155,16 @@ dhcpOptions:
 
 ## WithNATInstance
 
-In this placement strategy, Deckhouse creates a NAT instance and adds a rule to a route table containing a route to 0.0.0.0/0 with a NAT instance as the next hop.
+In this placement strategy, Deckhouse creates a NAT instance inside new separate subnet and adds a rule to a route table containing a route to `0.0.0.0/0` with a NAT instance as the next hop.
+This separate subnet is needed to avoid routing loop.
 
-If the `withNATInstance.externalSubnetID` parameter is set, the NAT instance will be created in this subnet.
+If the `withNATInstance.internalSubnetID` parameter is set, the NAT instance will be created in this subnet.
 
-IF the `withNATInstance.externalSubnetID` parameter is not set and `withNATInstance.internalSubnetID` is set, the NAT instance will be created in this last subnet.
+If the `withNATInstance.internalSubnetCIDR` parameter is set, then a new internal subnet will be created. The NAT instance will be created in this subnet.
 
-If neither `withNATInstance.externalSubnetID` nor `withNATInstance.internalSubnetID` is set, the NAT instance will be created in the  `ru-central1-a` zone.
+Either `withNATInstance.internalSubnetID` or `withNATInstance.internalSubnetCIDR` parameter is required.
 
-If the IP address of the NAT-instance does not matter, you can pass an empty object `withNATInstance: {}`, then the necessary networks and dynamic IP will be created automatically.
+If the `withNATInstance.externalSubnetID` is provided in addition to previous ones, the NAT instance will be attached to it via secondary interface.
 
 ![Yandex Cloud WithNATInstance Layout scheme](../../images/cloud-provider-yandex/layout-withnatinstance.png)
 <!--- Source: https://docs.google.com/drawings/d/1oVpZ_ldcuNxPnGCkx0dRtcAdL7BSEEvmsvbG8Aif1pE/edit --->

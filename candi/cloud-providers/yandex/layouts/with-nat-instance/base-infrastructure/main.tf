@@ -38,6 +38,7 @@ module "vpc_components" {
   nat_instance_external_address = local.nat_instance_external_address
   nat_instance_internal_address = local.nat_instance_internal_address
   nat_instance_internal_subnet_id = local.nat_instance_internal_subnet_id
+  nat_instance_internal_subnet_cidr = local.nat_instance_internal_subnet_cidr
   nat_instance_external_subnet_id = local.nat_instance_external_subnet_id
   nat_instance_cores = local.nat_instance_cores
   nat_instance_memory = local.nat_instance_memory

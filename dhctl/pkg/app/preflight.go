@@ -17,24 +17,25 @@ package app
 import "gopkg.in/alecthomas/kingpin.v2"
 
 var (
-	PreflightSkipAll                       = false
-	PreflightSkipSSHForward                = false
-	PreflightSkipAvailabilityPorts         = false
-	PreflightSkipResolvingLocalhost        = false
-	PreflightSkipDeckhouseVersionCheck     = false
-	PreflightSkipRegistryThroughProxy      = false
-	PreflightSkipPublicDomainTemplateCheck = false
-	PreflightSkipSSHCredentialsCheck       = false
-	PreflightSkipRegistryCredentials       = false
-	PreflightSkipContainerdExistCheck      = false
-	PreflightSkipPythonChecks              = false
-	PreflightSkipSudoIsAllowedForUserCheck = false
-	PreflightSkipSystemRequirementsCheck   = false
-	PreflightSkipOneSSHHost                = false
-	PreflightSkipCloudAPIAccessibility     = false
-	PreflightSkipTimeDrift                 = false
-	PreflightSkipCIDRIntersection          = false
-	PreflightSkipDeckhouseUserCheck        = false
+	PreflightSkipAll                        = false
+	PreflightSkipSSHForward                 = false
+	PreflightSkipAvailabilityPorts          = false
+	PreflightSkipResolvingLocalhost         = false
+	PreflightSkipDeckhouseVersionCheck      = false
+	PreflightSkipRegistryThroughProxy       = false
+	PreflightSkipPublicDomainTemplateCheck  = false
+	PreflightSkipSSHCredentialsCheck        = false
+	PreflightSkipRegistryCredentials        = false
+	PreflightSkipContainerdExistCheck       = false
+	PreflightSkipPythonChecks               = false
+	PreflightSkipSudoIsAllowedForUserCheck  = false
+	PreflightSkipSystemRequirementsCheck    = false
+	PreflightSkipOneSSHHost                 = false
+	PreflightSkipCloudAPIAccessibility      = false
+	PreflightSkipTimeDrift                  = false
+	PreflightSkipCIDRIntersection           = false
+	PreflightSkipDeckhouseUserCheck         = false
+	PreflightSkipYandexWithNatInstanceCheck = false
 )
 
 const (
@@ -55,6 +56,7 @@ const (
 	OneSSHHostCheckArgName           = "preflight-skip-one-ssh-host"
 	CIDRIntersection                 = "preflight-skip-cidr-intersection"
 	DeckhouseUserCheckName           = "preflight-skip-deckhouse-user-check"
+	YandexWithNatInstance            = "preflight-skip-yandex-with-nat-instance-check"
 )
 
 var PreflightSkipOptionsMap = map[string]*bool{
@@ -75,6 +77,7 @@ var PreflightSkipOptionsMap = map[string]*bool{
 	CIDRIntersection:                 &PreflightSkipCIDRIntersection,
 	DeckhouseUserCheckName:           &PreflightSkipDeckhouseUserCheck,
 	TimeDriftArgName:                 &PreflightSkipTimeDrift,
+	YandexWithNatInstance:            &PreflightSkipYandexWithNatInstanceCheck,
 }
 
 func ApplyPreflightSkips(skips []string) {
@@ -140,4 +143,7 @@ func DefinePreflight(cmd *kingpin.CmdClause) {
 	cmd.Flag(DeckhouseUserCheckName, "Skip verifying deckhouse user existence").
 		Envar(configEnvName("PREFLIGHT_SKIP_DECKHOUSE_USER")).
 		BoolVar(PreflightSkipOptionsMap[DeckhouseUserCheckName])
+	cmd.Flag(YandexWithNatInstance, "Skip verifying Yandex Cloud WithNatInstance configuration").
+		Envar(configEnvName("PREFLIGHT_SKIP_YANDEX_WITH_NAT_INSTANCE_CHECK")).
+		BoolVar(PreflightSkipOptionsMap[YandexWithNatInstance])
 }
