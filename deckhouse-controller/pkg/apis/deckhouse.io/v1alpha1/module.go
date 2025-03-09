@@ -68,8 +68,6 @@ const (
 	ModuleReasonModuleError                 = "ModuleError"
 	ModuleReasonReconciling                 = "Reconciling"
 	ModuleReasonInstalling                  = "Installing"
-	ModuleReasonHooksDisabled               = "HooksDisabled"
-	ModuleReasonWaitSyncTasks               = "WaitSyncTasks"
 	ModuleReasonError                       = "Error"
 
 	ModuleMessageBundle                      = "turned off by bundle"
@@ -86,9 +84,7 @@ const (
 	ModuleMessageDownloading                 = "downloading"
 	ModuleMessageReconciling                 = "reconciling"
 	ModuleMessageInstalling                  = "installing"
-	ModuleMessageWaitSyncTasks               = "run sync tasks"
 	ModuleMessageOnStartupHook               = "onStartup hooks done"
-	ModuleMessageHooksDisabled               = "hooks disabled"
 
 	DeckhouseRequirementFieldName        string = "deckhouse"
 	KubernetesRequirementFieldName       string = "kubernetes"
