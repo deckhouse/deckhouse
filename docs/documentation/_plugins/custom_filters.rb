@@ -108,6 +108,7 @@ module Jekyll
               gsub(/{{\s*\$labels\.revision\s*\}\}/m,'REVISION_NUMBER').
               gsub(/{{\s*\$labels\.scheme\s*\}\}/m,'SCHEME').
               gsub(/{{\s*\$labels\.secret_name\s*\}\}/m,'SECRET_NAME').
+              gsub(/{{\s*\$labels\.secret_namespace\s*\}\}/m,'SECRET_NAMESPACE').
               gsub(/{{\s*\$labels\.service\s*\}\}/m,'SERVICE_NAME').
               gsub(/{{\s*\$labels\.service_port\s*\}\}/m,'SERVICE_PORT').
               gsub(/{{\s*\$labels\.stage\s*\}\}/m,'STAGE_NAME').
