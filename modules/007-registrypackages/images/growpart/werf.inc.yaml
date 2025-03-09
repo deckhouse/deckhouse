@@ -35,12 +35,9 @@ import:
   - fdisk
   - sfdisk
   before: setup
-docker:
-  LABEL:
-    distro: all
-    version: all
-    growpart: {{ $version }}
-  USER: 64535
+imageSpec:
+  config:
+    labels: { "distro": "all", "version": "all", "growpart": "{{ $version }}" }
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-fdisk-{{ $image_version }}
 final: false

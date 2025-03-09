@@ -5,38 +5,38 @@ permalink: en/virtualization-platform/documentation/admin/install/steps/prepare.
 
 ## Cluster Configuration Planning
 
-Before installation, you need to plan the parameters of the virtualization platform:
+Before installing the virtualization platform, you need to plan its parameters:
 
 1. Choose the platform edition and update channel:
    - [Platform Editions](../../editions.html);
    - [Update Channels](../../release-channels.html).
 
-1. Define the IP address subnets:
+1. Determine the IP address subnets:
    - Subnet used by nodes for internal communication;
    - Subnet for pods;
    - Subnet for services (Service);
    - Subnets for virtual machine addresses.
 
-1. Determine the nodes where the Ingress controller will be deployed.
+1. Decide on the nodes where the Ingress controller will be deployed.
 
-1. Define the public domain for the cluster:
+1. Specify the public domain for the cluster:
    - A common practice is to use a wildcard domain that resolves to the address of the node with the Ingress controller;
    - The domain template for applications in this case will be `%s.<public wildcard domain of the cluster>`;
    - For test clusters, you can use a universal wildcard domain from the [sslip.io](https://sslip.io/) service.
 
      > The domain used in the template must not coincide with the domain specified in the `clusterDomain` parameter. For example, if `clusterDomain: cluster.local` (the default value) is used, then `publicDomainTemplate` cannot be `%s.cluster.local`.
 
-1. Determine the storage to be used:
-   - You can choose a storage system from the [supported list](../../platform-management/storage/supported-storage.html);
-   - Storage configuration will be done after the basic platform installation.
+1. Choose the storage to be used:
+   - You can select a storage system from the [supported list](../../install/requirements.html#supported-storage-systems);
+   - [Storage configuration](../../install/steps/storage.html) will be done after the basic platform installation.
 
 ## Node Preparation
 
 1. Check virtualization support:
-   - Make sure that Intel-VT (vmx) or AMD-V (svm) virtualization support is enabled in the BIOS/UEFI on all cluster nodes.
+   - Make sure that Intel-VT (VMX) or AMD-V (SVM) virtualization support is enabled in the BIOS/UEFI on all cluster nodes.
 
 1. Install the operating system:
-   - Install one of the [supported operating systems](../requirements.html#supported-os) on each cluster node. Pay attention to the version and architecture of the system.
+   - Install one of the [supported operating systems](../requirements.html#supported-os-for-platform-nodes) on each cluster node. Pay attention to the version and architecture of the system.
 
 1. Check access to the container image registry:
    - Ensure that each node has access to a container image registry. By default, the installer uses the public registry `registry.deckhouse.io`. Configure network connectivity and the necessary security policies to access this repository.
@@ -84,4 +84,4 @@ Before installation, you need to plan the parameters of the virtualization platf
      ssh-copy-id -i dvp-install-key dvpinstall@<master-node-address>
      ```
 
-After completing all the steps, the cluster nodes will be ready for further installation and platform configuration. Make sure each step is completed correctly to avoid issues during installation.
+After completing all the steps, the cluster nodes will be ready for further installation and platform configuration. Ensure each step is completed correctly to avoid issues during installation.

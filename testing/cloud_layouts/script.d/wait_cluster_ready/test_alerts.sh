@@ -25,7 +25,8 @@ allow_alerts=(
 "CertmanagerCertificateExpiredSoon" # Same as above
 "DeckhouseModuleUseEmptyDir" # TODO Need made split storage class
 "D8EtcdExcessiveDatabaseGrowth" # It may trigger during bootstrap due to a sudden increase in resource count
-# "D8CNIMisconfigured" # This alert may appear until we completely abandon the use of the `d8-cni-configuration` secret when configuring CNI.
+"D8CNIMisconfigured" # This alert may appear until we completely abandon the use of the `d8-cni-configuration` secret when configuring CNI.
+"D8KubernetesVersionIsDeprecated" # Run test on deprecated version is OK
 )
 
 # In e2e tests with OS on older cores (AWS, Azure), ebpf_exporter does not initiliaze. Ignore this alerts

@@ -1,0 +1,26 @@
+diff --git a/cmd/kubeadm/app/cmd/join.go b/cmd/kubeadm/app/cmd/join.go
+index 67353120b5f..1ad7dd91881 100644
+--- a/cmd/kubeadm/app/cmd/join.go
++++ b/cmd/kubeadm/app/cmd/join.go
+@@ -434,6 +434,13 @@ func newJoinData(cmd *cobra.Command, args []string, opt *joinOptions, out io.Wri
+ 		return nil, err
+ 	}
+ 
++	initCfg, err := configutil.LoadInitConfigurationFromFile(opt.cfgPath, configutil.LoadOrDefaultConfigurationOptions{
++		SkipCRIDetect: true,
++	})
++	if err != nil {
++		return nil, err
++	}
++
+ 	ignorePreflightErrorsSet, err := validation.ValidateIgnorePreflightErrors(opt.ignorePreflightErrors, cfg.NodeRegistration.IgnorePreflightErrors)
+ 	if err != nil {
+ 		return nil, err
+@@ -465,6 +472,7 @@ func newJoinData(cmd *cobra.Command, args []string, opt *joinOptions, out io.Wri
+ 
+ 	return &joinData{
+ 		cfg:                   cfg,
++		initCfg:               initCfg,
+ 		dryRun:                cmdutil.ValueFromFlagsOrConfig(cmd.Flags(), options.DryRun, cfg.DryRun, opt.dryRun).(bool),
+ 		tlsBootstrapCfg:       tlsBootstrapCfg,
+ 		ignorePreflightErrors: ignorePreflightErrorsSet,

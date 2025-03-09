@@ -64,6 +64,7 @@
 | [helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add](#helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add) |
 | [helm_lib_module_container_security_context_capabilities_drop_all_and_add](#helm_lib_module_container_security_context_capabilities_drop_all_and_add) |
 | [helm_lib_module_container_security_context_capabilities_drop_all_and_run_as_user_custom](#helm_lib_module_container_security_context_capabilities_drop_all_and_run_as_user_custom) |
+| [helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted](#helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted) |
 | **Module Storage Class** |
 | [helm_lib_module_storage_class_annotations](#helm_lib_module_storage_class_annotations) |
 | **Monitoring Grafana Dashboards** |
@@ -156,7 +157,7 @@ list:
 ### helm_lib_envs_for_proxy
 
  Add HTTP_PROXY, HTTPS_PROXY and NO_PROXY environment variables for container 
- depends on [proxy settings](https://deckhouse.io/documentation/v1/deckhouse-configure-global.html#parameters-modules-proxy) 
+ depends on [proxy settings](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-proxy) 
 
 #### Usage
 
@@ -324,7 +325,7 @@ list:
 
 ### helm_lib_module_https_copy_custom_certificate
 
- Renders secret with [custom certificate](https://deckhouse.io/documentation/v1/deckhouse-configure-global.html#parameters-modules-https-customcertificate) 
+ Renders secret with [custom certificate](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-https-customcertificate) 
  in passed namespace with passed prefix 
 
 #### Usage
@@ -361,7 +362,7 @@ list:
 
 #### Usage
 
-`{{ include "helm_lib_module_image" (list . "<container-name>") }} `
+`{{ include "helm_lib_module_image" (list . "<container-name>" "<module-name>(optional)") }} `
 
 #### Arguments
 
@@ -733,6 +734,19 @@ list:
 -  User id 
 -  Group id 
 
+
+### helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted
+
+ returns SecurityContext parameters for Container with minimal required settings to comply with the Restricted mode of the Pod Security Standards 
+
+#### Usage
+
+`{{ include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted" . }} `
+
+#### Arguments
+
+-  Template context with .Values, .Chart, etc 
+
 ## Module Storage Class
 
 ### helm_lib_module_storage_class_annotations
@@ -1034,7 +1048,7 @@ list:
 #### Arguments
 
 list:
--  VPA resource configuration [example](https://deckhouse.io/documentation/v1/modules/110-istio/configuration.html#parameters-controlplane-resourcesmanagement) 
+-  VPA resource configuration [example](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/istio/configuration.html#parameters-controlplane-resourcesmanagement) 
 -  Ephemeral storage requests 
 
 
@@ -1048,7 +1062,7 @@ list:
 
 #### Arguments
 
--  VPA resource configuration [example](https://deckhouse.io/documentation/v1/modules/110-istio/configuration.html#parameters-controlplane-resourcesmanagement) 
+-  VPA resource configuration [example](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/istio/configuration.html#parameters-controlplane-resourcesmanagement) 
 
 
 ### helm_lib_resources_management_vpa_spec
@@ -1066,7 +1080,7 @@ list:
 -  Target Kind 
 -  Target Name 
 -  Target container name 
--  VPA resource configuration [example](https://deckhouse.io/documentation/v1/modules/110-istio/configuration.html#parameters-controlplane-resourcesmanagement) 
+-  VPA resource configuration [example](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/istio/configuration.html#parameters-controlplane-resourcesmanagement) 
 
 
 ### helm_lib_resources_management_cpu_units_to_millicores

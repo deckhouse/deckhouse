@@ -4,8 +4,6 @@ title: "The documentation module: examples"
 
 ## An example of the module configuration
 
-Below is a simple example of the module configuration:
-
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig

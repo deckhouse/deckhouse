@@ -31,6 +31,9 @@ const (
 
 	ModuleSourceEmbedded = "Embedded"
 
+	ModuleAnnotationDescriptionRu = "ru.meta.deckhouse.io/description"
+	ModuleAnnotationDescriptionEn = "en.meta.deckhouse.io/description"
+
 	ModuleConditionEnabledByModuleConfig  = "EnabledByModuleConfig"
 	ModuleConditionEnabledByModuleManager = "EnabledByModuleManager"
 	ModuleConditionIsReady                = "IsReady"
@@ -151,15 +154,22 @@ type ModulePlatformRequirements struct {
 }
 
 type ModuleProperties struct {
-	Weight           uint32              `json:"weight,omitempty"`
-	Source           string              `json:"source,omitempty"`
-	ReleaseChannel   string              `json:"releaseChannel,omitempty"`
-	Stage            string              `json:"stage,omitempty"`
-	Description      string              `json:"description,omitempty"`
-	Version          string              `json:"version,omitempty"`
-	UpdatePolicy     string              `json:"updatePolicy,omitempty"`
-	AvailableSources []string            `json:"availableSources,omitempty"`
-	Requirements     *ModuleRequirements `json:"requirements,omitempty" yaml:"requirements,omitempty"`
+	Weight           uint32                `json:"weight,omitempty"`
+	Source           string                `json:"source,omitempty"`
+	ReleaseChannel   string                `json:"releaseChannel,omitempty"`
+	Stage            string                `json:"stage,omitempty"`
+	Namespace        string                `json:"namespace,omitempty"`
+	Subsystems       []string              `json:"subsystems,omitempty"`
+	Version          string                `json:"version,omitempty"`
+	UpdatePolicy     string                `json:"updatePolicy,omitempty"`
+	AvailableSources []string              `json:"availableSources,omitempty"`
+	Requirements     *ModuleRequirements   `json:"requirements,omitempty" yaml:"requirements,omitempty"`
+	DisableOptions   *ModuleDisableOptions `json:"disableOptions,omitempty" yaml:"disableOptions,omitempty"`
+}
+
+type ModuleDisableOptions struct {
+	Confirmation bool   `json:"confirmation" yaml:"confirmation"`
+	Message      string `json:"message" yaml:"message"`
 }
 
 type ModuleStatus struct {
@@ -200,16 +210,6 @@ func (m *Module) ConditionStatus(condName string) bool {
 			return cond.Status == corev1.ConditionTrue
 		}
 	}
-	return false
-}
-
-func (m *Module) CheckConditionTrue(condName string) bool {
-	for _, cond := range m.Status.Conditions {
-		if cond.Type == condName {
-			return cond.Status == corev1.ConditionTrue
-		}
-	}
-
 	return false
 }
 

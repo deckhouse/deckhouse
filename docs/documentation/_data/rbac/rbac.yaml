@@ -324,6 +324,38 @@ modules:
     namespace: d8-cloud-provider-azure
     subsystems:
     - infrastructure
+  cloud-provider-dynamix:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:cloud-provider-dynamix:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - cloud-provider-dynamix
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:cloud-provider-dynamix:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - cloud-provider-dynamix
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-cloud-provider-dynamix
+    subsystems:
+    - infrastructure
   cloud-provider-gcp:
     capabilities:
       manage:
@@ -354,6 +386,38 @@ modules:
           - delete
       use: null
     namespace: d8-cloud-provider-gcp
+    subsystems:
+    - infrastructure
+  cloud-provider-huaweicloud:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:cloud-provider-huaweicloud:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - cloud-provider-huaweicloud
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:cloud-provider-huaweicloud:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - cloud-provider-huaweicloud
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-cloud-provider-huaweicloud
     subsystems:
     - infrastructure
   cloud-provider-openstack:
@@ -619,6 +683,14 @@ modules:
         rules:
         - apiGroups:
           - deckhouse.io
+          resources:
+          - kubeschedulerwebhookconfigurations
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - deckhouse.io
           resourceNames:
           - control-plane-manager
           resources:
@@ -629,6 +701,16 @@ modules:
           - watch
       - name: d8:manage:permission:module:control-plane-manager:edit
         rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - kubeschedulerwebhookconfigurations
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
         - apiGroups:
           - deckhouse.io
           resourceNames:
@@ -689,9 +771,9 @@ modules:
           - moduledocumentations
           - modulepulloverrides
           - modulereleases
+          - modules
           - modulesources
           - moduleupdatepolicies
-          - modules
           verbs:
           - get
           - list
@@ -706,9 +788,9 @@ modules:
           - moduledocumentations
           - modulepulloverrides
           - modulereleases
+          - modules
           - modulesources
           - moduleupdatepolicies
-          - modules
           verbs:
           - create
           - update
@@ -830,7 +912,7 @@ modules:
           - patch
           - delete
       use: null
-    namespace: none
+    namespace: d8-system
     subsystems:
     - kubernetes
     - networking
@@ -1593,8 +1675,8 @@ modules:
           resources:
           - instances
           - instancetypescatalogs
-          - nodegroups
           - nodegroupconfigurations
+          - nodegroups
           - nodeusers
           - sshcredentials
           - staticinstances
@@ -1619,8 +1701,8 @@ modules:
           resources:
           - instances
           - instancetypescatalogs
-          - nodegroups
           - nodegroupconfigurations
+          - nodegroups
           - nodeusers
           - sshcredentials
           - staticinstances
@@ -1894,7 +1976,7 @@ modules:
           - patch
           - delete
       use: null
-    namespace: none
+    namespace: d8-system
     subsystems:
     - kubernetes
   prometheus:
@@ -2164,7 +2246,7 @@ modules:
           - patch
           - delete
       use: null
-    namespace: none
+    namespace: ""
     subsystems:
     - security
   snapshot-controller:
@@ -2403,6 +2485,14 @@ modules:
         rules:
         - apiGroups:
           - deckhouse.io
+          resources:
+          - clusterauthorizationrules
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - deckhouse.io
           resourceNames:
           - user-authz
           resources:
@@ -2415,6 +2505,16 @@ modules:
         rules:
         - apiGroups:
           - deckhouse.io
+          resources:
+          - clusterauthorizationrules
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
+        - apiGroups:
+          - deckhouse.io
           resourceNames:
           - user-authz
           resources:
@@ -2424,8 +2524,30 @@ modules:
           - update
           - patch
           - delete
-      use: null
-    namespace: none
+      use:
+      - name: d8:use:capability:module:user-authz:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - authorizationrules
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:use:capability:module:user-authz:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - authorizationrules
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
+    namespace: ""
     subsystems:
     - security
   vertical-pod-autoscaler:
@@ -2470,6 +2592,8 @@ subsystems:
     - d8-system
   infrastructure:
     modules:
+    - cloud-provider-dynamix
+    - cloud-provider-huaweicloud
     - cloud-provider-openstack
     - cloud-provider-vcd
     - keepalived
@@ -2496,7 +2620,9 @@ subsystems:
     - d8-cloud-instance-manager
     - d8-cloud-provider-aws
     - d8-cloud-provider-azure
+    - d8-cloud-provider-dynamix
     - d8-cloud-provider-gcp
+    - d8-cloud-provider-huaweicloud
     - d8-cloud-provider-openstack
     - d8-cloud-provider-vcd
     - d8-cloud-provider-vsphere
@@ -2519,6 +2645,7 @@ subsystems:
     - control-plane-manager
     - kube-dns
     namespaces:
+    - d8-system
     - kube-system
   networking:
     modules:

@@ -61,6 +61,7 @@ First, prepare a JSON file with the configuration of the necessary privileges:
                 "ec2:DescribeInstanceCreditSpecifications",
                 "ec2:DescribeInstances",
                 "ec2:DescribeInstanceTypes",
+                "ec2:DescribeInstanceTopology",
                 "ec2:DescribeInternetGateways",
                 "ec2:DescribeKeyPairs",
                 "ec2:DescribeNatGateways",

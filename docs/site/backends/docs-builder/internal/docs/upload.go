@@ -18,11 +18,10 @@ import (
 	"archive/tar"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"k8s.io/klog/v2"
 )
 
 func (svc *Service) Upload(body io.ReadCloser, moduleName string, version string, channels []string) error {
@@ -36,7 +35,7 @@ func (svc *Service) Upload(body io.ReadCloser, moduleName string, version string
 	for {
 		header, err := reader.Next()
 		if err == io.EOF {
-			klog.Infof("EOF reading file")
+			svc.logger.Info("EOF reading file")
 			break
 		}
 
@@ -54,11 +53,11 @@ func (svc *Service) Upload(body io.ReadCloser, moduleName string, version string
 			for _, channel := range channels {
 				path, ok := svc.getLocalPath(moduleName, channel, header.Name)
 				if !ok {
-					klog.Infof("skipping tree %v in %s", header.Name, moduleName)
+					svc.logger.Info("skipping tree", slog.String("headerName", header.Name), slog.String("moduleName", moduleName))
 					continue
 				}
 
-				klog.Infof("creating dir %q", path)
+				svc.logger.Info("creating dir", slog.String("path", path))
 				if err := os.MkdirAll(path, 0700); err != nil {
 					return fmt.Errorf("mkdir %q failed: %w", path, err)
 				}
@@ -69,10 +68,10 @@ func (svc *Service) Upload(body io.ReadCloser, moduleName string, version string
 			for _, channel := range channels {
 				path, ok := svc.getLocalPath(moduleName, channel, header.Name)
 				if !ok {
-					klog.Infof("skipping file %v in %s", header.Name, moduleName)
+					svc.logger.Info("skipping file", slog.String("header_name", header.Name), slog.String("module_name", moduleName))
 					continue
 				}
-				klog.Infof("creating %s", path)
+				svc.logger.Info("creating file", slog.String("path", path))
 
 				outFile, err := os.OpenFile(
 					path,
@@ -95,7 +94,7 @@ func (svc *Service) Upload(body io.ReadCloser, moduleName string, version string
 			}
 
 		default:
-			return fmt.Errorf("extract uknown type: %d in %s", header.Typeflag, header.Name)
+			return fmt.Errorf("extract unknown type: %d in %s", header.Typeflag, header.Name)
 		}
 	}
 
@@ -111,7 +110,7 @@ func (svc *Service) generateChannelMapping(moduleName, version string, channels 
 	return svc.channelMappingEditor.edit(func(m channelMapping) {
 		var versions = make(map[string]versionEntity)
 		if _, ok := m[moduleName]; ok {
-			versions = m[moduleName]["channels"]
+			versions = m[moduleName][channelMappingChannels]
 		}
 
 		for _, ch := range channels {
@@ -119,7 +118,7 @@ func (svc *Service) generateChannelMapping(moduleName, version string, channels 
 		}
 
 		m[moduleName] = map[string]map[string]versionEntity{
-			"channels": versions,
+			channelMappingChannels: versions,
 		}
 	})
 }

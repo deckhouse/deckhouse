@@ -1,0 +1,36 @@
+cilium-hubble:
+    - version: 2
+dashboard:
+    - version: 2
+    - version: 3
+descheduler:
+    - version: 2
+      description:
+        en: Delete `settings`.
+        ru: Удалите `settings`.
+extended-monitoring:
+    - version: 2
+istio:
+    - version: 2
+metallb:
+    - version: 2
+node-manager:
+    - version: 2
+      description:
+        en: Delete `allowedKubernetesVersions` and `allowedBundles`.
+        ru: Удалите `allowedKubernetesVersions` и `allowedBundles`.
+openvpn:
+    - version: 2
+prometheus:
+    - version: 2
+      description:
+        en: todo en
+        ru: todo ru
+upmeter:
+    - version: 2
+    - version: 3
+user-authn:
+    - version: 2
+      description:
+        en: Replace `publishAPI.enable` with `publishAPI.enabled`.
+        ru: Замените `publishAPI.enable` на `publishAPI.enabled`.

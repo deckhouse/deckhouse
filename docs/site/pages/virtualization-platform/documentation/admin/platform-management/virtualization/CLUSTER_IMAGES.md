@@ -32,42 +32,99 @@ Images can also be created based on other images or virtual machine disks.
 
 For a complete description of the configuration parameters for the `ClusterVirtualImage` resource, refer to [the documentation](../../../../reference/cr/clustervirtualimage.html).
 
+## Increasing the size of DVCR
+
+To increase the disk size for DVCR, you need to set a larger size in the virtualization module configuration than the current size.
+
+1. Check the current DVCR size:
+
+    ```shell
+    d8 k get mc virtualization -o jsonpath='{.spec.settings.dvcr.storage.persistentVolumeClaim}'
+    ```
+
+    Example output:
+
+    ```txt
+    {"size":"58G","storageClass":"linstor-thick-data-r1"}
+    ```
+
+1. Set the new size:
+
+    ```shell
+    d8 k patch mc virtualization \
+      --type merge -p '{"spec": {"settings": {"dvcr": {"storage": {"persistentVolumeClaim": {"size":"59G"}}}}}}'
+    ```
+
+   Example output:
+
+    ```txt
+   moduleconfig.deckhouse.io/virtualization patched
+    ```
+
+1. Verify the size change:
+
+    ```shell
+    d8 k get mc virtualization -o jsonpath='{.spec.settings.dvcr.storage.persistentVolumeClaim}'
+    ```
+
+   Example output:
+
+    ```txt
+    {"size":"59G","storageClass":"linstor-thick-data-r1"}
+   ```
+
+1. Check the current status of the DVCR:
+
+    ```shell
+    d8 k get pvc dvcr -n d8-virtualization
+    ```
+
+   Example output:
+
+    ```console
+    NAME STATUS VOLUME                                    CAPACITY    ACCESS MODES   STORAGECLASS           AGE
+    dvcr Bound  pvc-6a6cedb8-1292-4440-b789-5cc9d15bbc6b  57617188Ki  RWO            linstor-thick-data-r1  7d
+    ```
+
 ### Creating an image from an HTTP server
 
 Let's explore how to create a cluster image.
 
-Run the following command to create a `ClusterVirtualImage`:
+1. Run the following command to create a `ClusterVirtualImage`:
 
-```yaml
-d8 k apply -f - <<EOF
-apiVersion: virtualization.deckhouse.io/v1alpha2
-kind: ClusterVirtualImage
-metadata:
-  name: ubuntu-22.04
-spec:
-  # Source for creating the image.
-  dataSource:
-    type: HTTP
-    http:
-      url: "https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img"
-EOF
-```
+    ```yaml
+    d8 k apply -f - <<EOF
+    apiVersion: virtualization.deckhouse.io/v1alpha2
+    kind: ClusterVirtualImage
+    metadata:
+      name: ubuntu-22.04
+    spec:
+      # Source for creating the image.
+      dataSource:
+        type: HTTP
+        http:
+          url: "https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img"
+    EOF
+    ```
 
-Check the result of creating the `ClusterVirtualImage` with the following command:
+1. Check the result of creating the `ClusterVirtualImage` with the following command:
 
-```shell
-d8 k get clustervirtualimage ubuntu-22.04
+    ```shell
+    d8 k get clustervirtualimage ubuntu-22.04
+    ```
 
-# A shorter version of the command
-d8 k get cvi ubuntu-22.04
-```
+    A shorter version of the command:
 
-In the output, you should see information about the `ClusterVirtualImage` resource:
+   ```shell
+    d8 k get cvi ubuntu-22.04
+    ```
 
-```console
-NAME           PHASE   CDROM   PROGRESS   AGE
-ubuntu-22.04   Ready   false   100%       23h
-```
+    In the output, you should see information about the `ClusterVirtualImage` resource:
+
+    ```console
+    NAME           PHASE   CDROM   PROGRESS   AGE
+    ubuntu-22.04   Ready   false   100%       23h
+    ```
 
 After creation, the `ClusterVirtualImage` resource may have the following states (phases):
 
@@ -107,56 +164,56 @@ Additional information about the downloaded image can be retrieved by describing
 d8 k describe cvi ubuntu-22.04
 ```
 
-### Creating an image from a Container Registry
+### Creating an image from a container registry
 
-An image stored in a container registry has a specific format. Let’s consider an example:
+An image stored in a container registry has a specific format. Let’s consider an example of this format:
 
-Download the image locally:
+1. Download the image locally:
 
-```shell
-curl -L https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img -o ubuntu2204.img
-```
+    ```shell
+    curl -L https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img -o ubuntu2204.img
+    ```
 
-Create a `Dockerfile` with the following content:
+1. Create a `Dockerfile` with the following content:
 
-```shell
-FROM scratch
-COPY ubuntu2204.img /disk/ubuntu2204.img
-```
+    ```shell
+    FROM scratch
+    COPY ubuntu2204.img /disk/ubuntu2204.img
+    ```
 
-Build the image and push it to a container registry. In this example, [docker.io](https://www.docker.com/) is used. To perform these steps, you need an account on the service and a properly configured environment:
+1. Build the image and push it to a container registry. In this example, [docker.io](https://www.docker.com/) is used. To perform these steps, you need an account on the service and a properly configured environment:
 
-```shell
-docker build -t docker.io/<username>/ubuntu2204:latest
-```
+    ```shell
+    docker build -t docker.io/<username>/ubuntu2204:latest
+    ```
 
-Where `username` is the username you specified during registration on docker.io.
+    where `username` is the username you specified during registration on docker.io.
 
-Push the created image to the container registry:
+1. Push the created image to the container registry:
 
-```shell
-docker push docker.io/<username>/ubuntu2204:latest
-```
+    ```shell
+    docker push docker.io/<username>/ubuntu2204:latest
+    ```
 
-To use this image, create a resource as an example:
+1. To use this image, create the following resource:
 
-```yaml
-d8 k apply -f - <<EOF
-apiVersion: virtualization.deckhouse.io/v1alpha2
-kind: ClusterVirtualImage
-metadata:
-  name: ubuntu-2204
-spec:
-  dataSource:
-    type: ContainerImage
-    containerImage:
-      image: docker.io/<username>/ubuntu2204:latest
-EOF
-```
+    ```yaml
+    d8 k apply -f - <<EOF
+    apiVersion: virtualization.deckhouse.io/v1alpha2
+    kind: ClusterVirtualImage
+    metadata:
+      name: ubuntu-2204
+    spec:
+      dataSource:
+        type: ContainerImage
+        containerImage:
+          image: docker.io/<username>/ubuntu2204:latest
+    EOF
+    ```
 
 ### Uploading an image from the command line
 
-To upload an image from the command line, first create the following resource as shown in the example `ClusterVirtualImage`:
+To upload an image from the command line, first create the resource as shown in the example `ClusterVirtualImage`:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -176,7 +233,11 @@ There are two options for uploading — from a cluster node or from any external
 
 ```shell
 d8 k get cvi some-image -o jsonpath="{.status.imageUploadURLs}"  | jq
+```
 
+Example output:
+
+```txt
 # {
 #   "external":"https://virtualization.example.com/upload/g2OuLgRhdAWqlJsCMyNvcdt4o5ERIwmm",
 #   "inCluster":"http://10.222.165.239/upload"

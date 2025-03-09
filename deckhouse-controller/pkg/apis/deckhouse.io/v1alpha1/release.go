@@ -35,12 +35,14 @@ type Release interface {
 	GetDisruptionApproved() bool
 	GetPhase() string
 	GetForce() bool
+	GetReinstall() bool
 	GetApplyNow() bool
 	GetApprovedStatus() bool
 	SetApprovedStatus(b bool)
 	GetSuspend() bool
 	GetManuallyApproved() bool
 	GetMessage() string
+	GetNotified() bool
 }
 
 type Changelog map[string]any

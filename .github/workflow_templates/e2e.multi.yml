@@ -34,7 +34,7 @@ $CI_COMMIT_REF_SLUG is a tag of published deckhouse images. It has a form
 
 {!{- $providerNames := slice "AWS" "Azure" "GCP" "Yandex.Cloud" "OpenStack" "vSphere" "VCD" "Static" "EKS" -}!}
 {!{- $criNames := slice "Containerd" -}!}
-{!{- $kubernetesVersions := slice "1.26" "1.27" "1.28" "1.29" "1.30" "1.31" "1.32" "Automatic" -}!}
+{!{- $kubernetesVersions := slice "1.28" "1.29" "1.30" "1.31" "1.32" "Automatic" -}!}
 
 {!{- range $providerName := $providerNames -}!}
 {!{-   $provider := $providerName | replaceAll "." "-" | toLower -}!}
@@ -118,6 +118,8 @@ jobs:
 {!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
 
 {!{ tmpl.Exec "git_info_job" . | strings.Indent 2 }!}
+
+{!{ tmpl.Exec "block-e2e-until-image-is-not-ready" . | strings.Indent 2 }!}
 
 {!{ tmpl.Exec "check_e2e_labels_job" $ctx | strings.Indent 2 }!}
 

@@ -6,7 +6,7 @@ properties:
     description: |
       Key to access Okmeter API.
 
-      You can get the key for your project on the `okmeter` installation page (`OKMETER_API_TOKEN`).
+      You can get the key from your personal Okmeter account (`OKMETER_API_TOKEN`).
     x-examples: [5ff9z2a3-9127-1sh4-2192-06a3fc6e13e3]
   disableAutoDiscovery:
     description: |

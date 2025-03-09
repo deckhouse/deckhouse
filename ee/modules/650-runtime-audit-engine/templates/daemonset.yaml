@@ -20,7 +20,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: {{ $.Chart.Name }}
   namespace: d8-{{ $.Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name)) | nindent 2 }}
 spec:
     {{- include "helm_lib_resources_management_vpa_spec"  (list "apps/v1" "DaemonSet" $.Chart.Name "falco" $.Values.runtimeAuditEngine.resourcesRequests ) | nindent 2}}
     {{- if eq (.Values.runtimeAuditEngine.resourcesRequests.mode) "VPA" }}

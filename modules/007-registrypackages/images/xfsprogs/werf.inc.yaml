@@ -27,16 +27,13 @@ import:
   - install
   - uninstall
   before: setup
-docker:
-  LABEL:
-    distro: all
-    version: all
-    xfsprogs: {{ $version }}
-  USER: 64535
+imageSpec:
+  config:
+    labels: {"distro": "all", "version": "all", "xfsprogs": "{{ $version }}" }
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
-from: {{ $.Images.BASE_UBUNTU }}
+from: {{ $.Images.BASE_GOLANG_23_BOOKWORM }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
   add: /src
@@ -44,7 +41,7 @@ import:
   before: install
 shell:
   beforeInstall:
-  {{- include "ubuntu packages proxy" . | nindent 2 }}
+  {{- include "debian packages proxy" . | nindent 2 }}
   - apt-get update && apt-get install -y make libinih-dev libblkid-dev gettext liburcu-dev libtool libicu-dev pkg-config
   setup:
   - cd /src/xfsprogs-dev

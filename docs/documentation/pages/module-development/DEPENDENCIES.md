@@ -74,13 +74,13 @@ Deckhouse checks whether the dependency is met in the following cases:
 
 This dependency defines the minimum or maximum Kubernetes version with which the module is compatible.
 
-Here is how you can enable the Kubernetes version dependency for Kubernetes 1.27 and higher in the `module.yaml` file:
+Here is how you can enable the Kubernetes version dependency for Kubernetes 1.28 and higher in the `module.yaml` file:
 
 ```yaml
 name: test
 weight: 901
 requirements:
-    kubernetes: ">= 1.27"
+    kubernetes: ">= 1.28"
 ```
 
 {% alert level="info" %}

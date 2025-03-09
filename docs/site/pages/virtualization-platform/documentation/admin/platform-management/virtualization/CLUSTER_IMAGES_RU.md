@@ -33,42 +33,99 @@ lang: ru
 
 С полным описанием параметров конфигурации ресурса `ClusterVirtualImage` можно ознакомиться [в документации](../../../../reference/cr/clustervirtualimage.html).
 
+## Увеличение размера DVCR
+
+Чтобы увеличить размер диска для DVCR, необходимо установить больший размер в конфигурации модуля `virtualization`, чем текущий размер.
+
+1. Проверьте текущий размер DVCR:
+
+    ```shell
+    d8 k get mc virtualization -o jsonpath='{.spec.settings.dvcr.storage.persistentVolumeClaim}'
+    ```
+
+   Пример вывода:
+
+    ```txt
+    {"size":"58G","storageClass":"linstor-thick-data-r1"}
+    ```
+
+1. Задайте размер:
+
+    ```shell
+    d8 k patch mc virtualization \
+      --type merge -p '{"spec": {"settings": {"dvcr": {"storage": {"persistentVolumeClaim": {"size":"59G"}}}}}}'
+    ```
+
+   Пример вывода:
+
+    ```txt
+   moduleconfig.deckhouse.io/virtualization patched
+    ```
+
+1. Проверьте изменение размера:
+
+    ```shell
+    d8 k get mc virtualization -o jsonpath='{.spec.settings.dvcr.storage.persistentVolumeClaim}'
+    ```
+
+   Пример вывода:
+
+    ```txt
+    {"size":"59G","storageClass":"linstor-thick-data-r1"}
+    ```
+
+1. Проверьте текущее состояние DVCR:
+
+    ```shell
+    d8 k get pvc dvcr -n d8-virtualization
+    ```
+
+   Пример вывода:
+
+    ```txt
+    NAME STATUS VOLUME                                    CAPACITY    ACCESS MODES   STORAGECLASS           AGE
+    dvcr Bound  pvc-6a6cedb8-1292-4440-b789-5cc9d15bbc6b  57617188Ki  RWO            linstor-thick-data-r1  7d
+    ```
+
 ### Создание образа с HTTP-сервера
 
 Рассмотрим вариант создания кластерного образа.
 
-Выполните следующую команду для создания `ClusterVirtualImage`:
+1. Выполните команду для создания образа`ClusterVirtualImage`:
 
-```yaml
-d8 k apply -f - <<EOF
-apiVersion: virtualization.deckhouse.io/v1alpha2
-kind: ClusterVirtualImage
-metadata:
-  name: ubuntu-22.04
-spec:
-  # Источник для создания образа.
-  dataSource:
-    type: HTTP
-    http:
-      url: "https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img"
-EOF
-```
+    ```yaml
+    d8 k apply -f - <<EOF
+    apiVersion: virtualization.deckhouse.io/v1alpha2
+    kind: ClusterVirtualImage
+    metadata:
+      name: ubuntu-22.04
+    spec:
+      # Источник для создания образа.
+      dataSource:
+        type: HTTP
+        http:
+          url: "https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img"
+    EOF
+    ```
 
-Проверьте результат создания `ClusterVirtualImage` с помощью следующей команды:
+1. Проверьте результат создания `ClusterVirtualImage` с помощью следующей команды:
 
-```shell
-d8 k get clustervirtualimage ubuntu-22.04
+    ```shell
+    d8 k get clustervirtualimage ubuntu-22.04
+   ```
 
-# Укороченный вариант команды
-d8 k get cvi ubuntu-22.04
-```
+    Есть укороченный вариант команды:
 
-В результате будет выведена информация о ресурсе `ClusterVirtualImage`:
+    ```shell
+    d8 k get cvi ubuntu-22.04
+    ```
 
-```console
-NAME           PHASE   CDROM   PROGRESS   AGE
-ubuntu-22.04   Ready   false   100%       23h
-```
+    В результате будет выведена информация о ресурсе `ClusterVirtualImage`:
+
+    ```console
+    NAME           PHASE   CDROM   PROGRESS   AGE
+    ubuntu-22.04   Ready   false   100%       23h
+    ```
 
 После создания ресурс `ClusterVirtualImage` может находиться в следующих состояниях (фазах):
 
@@ -79,7 +136,7 @@ ubuntu-22.04   Ready   false   100%       23h
 - `Failed` — произошла ошибка в процессе создания образа.
 - `Terminating` — идет процесс удаления образа. Образ может «зависнуть» в данном состоянии, если он еще подключен к виртуальной машине.
 
-До тех пор, пока образ не перейдет в фазу Ready, содержимое всего блока `.spec` можно изменять. В случае изменения будет инициирован повторный процесс создания образа.
+До тех пор, пока образ не перейдет в фазу `Ready`, содержимое всего блока `.spec` можно изменять. В случае изменения будет инициирован повторный процесс создания образа.
 После перехода в фазу `Ready` содержимое блока `.spec` менять нельзя, поскольку на этом этапе образ считается полностью созданным и готовым к использованию. Внесение изменений в этот блок после того, как образ достиг состояния `Ready`, может нарушить его целостность или повлиять на корректность его дальнейшего использования.
 
 Отследить процесс создания образа можно путем добавления ключа `-w` к предыдущей команде:
@@ -109,54 +166,54 @@ d8 k describe cvi ubuntu-22.04
 
 ### Создание образа из container registry
 
-Образ, хранящийся в container registry имеет определенный формат. Рассмотрим это на примере:
+Образ, хранящийся в container registry имеет определенный формат. Рассмотрим этот формат на примере:
 
-Загрузите образ локально:
+1. Загрузите образ локально:
 
-```shell
-curl -L https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img -o ubuntu2204.img
-```
+    ```shell
+    curl -L https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img -o ubuntu2204.img
+    ```
 
-Создайте `Dockerfile` со следующим содержимым:
+1. Создайте `Dockerfile` со следующим содержимым:
 
-```shell
-FROM scratch
-COPY ubuntu2204.img /disk/ubuntu2204.img
-```
+    ```shell
+    FROM scratch
+    COPY ubuntu2204.img /disk/ubuntu2204.img
+    ```
 
-Соберите образ и загрузите его в container registry. В качестве примера используется [docker.io](https://www.docker.com/).  Для выполнения этих шагов необходимо иметь учетную запись в сервисе и настроенную среду:
+1. Соберите образ и загрузите его в container registry. В качестве примера используется [docker.io](https://www.docker.com/).  Для выполнения этих шагов необходимо иметь учетную запись в сервисе и настроенную среду:
 
-```shell
-docker build -t docker.io/<username>/ubuntu2204:latest
-```
+    ```shell
+    docker build -t docker.io/<username>/ubuntu2204:latest
+    ```
 
-где `username` — имя пользователя, указанное при регистрации [в docker.io](https://www.docker.com/).
+    где `username` — имя пользователя, указанное при регистрации [в docker.io](https://www.docker.com/).
 
-Загрузите созданный образ в container registry:
+1. Загрузите созданный образ в container registry:
 
-```shell
-docker push docker.io/<username>/ubuntu2204:latest
-```
+    ```shell
+    docker push docker.io/<username>/ubuntu2204:latest
+    ```
 
-Чтобы использовать этот образ, создайте в качестве примера ресурс:
+1. Чтобы использовать этот образ, создайте в качестве примера ресурс:
 
-```yaml
-d8 k apply -f - <<EOF
-apiVersion: virtualization.deckhouse.io/v1alpha2
-kind: ClusterVirtualImage
-metadata:
-  name: ubuntu-2204
-spec:
-  dataSource:
-    type: ContainerImage
-    containerImage:
-      image: docker.io/<username>/ubuntu2204:latest
-EOF
-```
+    ```yaml
+    d8 k apply -f - <<EOF
+    apiVersion: virtualization.deckhouse.io/v1alpha2
+    kind: ClusterVirtualImage
+    metadata:
+      name: ubuntu-2204
+    spec:
+      dataSource:
+        type: ContainerImage
+        containerImage:
+          image: docker.io/<username>/ubuntu2204:latest
+    EOF
+    ```
 
 ### Загрузка образа из командной строки
 
-Чтобы загрузить образ из командной строки, предварительно создайте следующий ресурс, как показано ниже на примере `ClusterVirtualImage`:
+Чтобы загрузить образ из командной строки, предварительно создайте ресурс, как показано на примере `ClusterVirtualImage`:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -177,7 +234,11 @@ EOF
 
 ```shell
 d8 k get cvi some-image -o jsonpath="{.status.imageUploadURLs}"  | jq
+```
 
+Пример вывода:
+
+```txt
 # {
 #   "external":"https://virtualization.example.com/upload/g2OuLgRhdAWqlJsCMyNvcdt4o5ERIwmm",
 #   "inCluster":"http://10.222.165.239/upload"

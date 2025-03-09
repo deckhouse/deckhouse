@@ -19,8 +19,11 @@ lang: ru
 
 Примеры ресурсов для получения образов виртуальной машины:
 
-- [Ubuntu](https://cloud-images.ubuntu.com);
-- [Alt Linux](https://ftp.altlinux.ru/pub/distributions/ALTLinux/platform/images/cloud/x86_64);
+- [Ubuntu](https://cloud-images.ubuntu.com),
+- [Debian](https://cdimage.debian.org/images/cloud/),
+- [RockyLinux](https://download.rockylinux.org/pub/rocky/9.5/images/x86_64/),
+- [CentOS](https://cloud.centos.org/centos/7/images/),
+- [Alt Linux](https://ftp.altlinux.ru/pub/distributions/ALTLinux/platform/images/cloud/x86_64),
 - [Astra Linux](https://download.astralinux.ru/ui/native/mg-generic/alse/cloudinit).
 
 После создания ресурса, тип и размер образа определяются автоматически, и эта информация отражается в статусе ресурса.
@@ -55,7 +58,7 @@ spec:
 EOF
 ```
 
-Проверить результат создания [VirtualImage](../../../reference/cr/virtualimage.html):
+Проверьте результат создания [VirtualImage](../../../reference/cr/virtualimage.html):
 
 ```bash
 d8 k get virtualimage ubuntu-22.04
@@ -219,7 +222,7 @@ d8 k get vi some-image -o jsonpath="{.status.imageUploadURLs}"  | jq
 # }
 ```
 
-В качестве примера рассмотрим загрузку образ Cirros:
+В качестве примера загрузите образ Cirros:
 
 ```bash
 curl -L http://download.cirros-cloud.net/0.5.1/cirros-0.5.1-x86_64-disk.img -o cirros.img
@@ -268,3 +271,22 @@ spec:
       name: linux-vm-root
 EOF
 ```
+
+### Настройки классов хранения для образов
+
+Настройки классов хранения для образов определяется в параметре `.spec.settings.virtualImages` настроек модуля.
+Пример:
+
+```yaml
+spec:
+  ...
+  settings:
+    virtualImages:
+       allowedStorageClassNames:
+       - sc-1
+       - sc-2
+       defaultStorageClassName: sc-1
+```
+
+`allowedStorageClassNames` — (опционально) это список допустимых `StorageClass` для создания `VirtualImage`, которые можно явно указать в спецификации ресурса.
+`defaultStorageClassName` — (опционально) это `StorageClass`, используемый по умолчанию при создании `VirtualImage`, если параметр `.spec.persistentVolumeClaim.storageClassName` не задан.

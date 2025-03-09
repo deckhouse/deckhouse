@@ -33,8 +33,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
 
 func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
@@ -85,7 +85,7 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 			ManifestStub: ManifestStub,
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{&fakeLayer{}, &fakeLayer{
-					FilesContent: map[string]string{`version.json`: `{"version": "v1.25.3"}`}},
+					FilesContent: map[string]string{`version.json`: `{"version": "v1.16.3"}`}},
 				}, nil
 			},
 			DigestStub: func() (v1.Hash, error) {
@@ -106,7 +106,7 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{&fakeLayer{}, &fakeLayer{
 					FilesContent: map[string]string{
-						`version.json`: `{"version": "v1.25.0", "canary": {"stable": {"enabled": true, "waves": 5, "interval": "6m"}}}`,
+						`version.json`: `{"version": "v1.16.0", "canary": {"stable": {"enabled": true, "waves": 5, "interval": "6m"}}}`,
 					}}}, nil
 			},
 			DigestStub: func() (v1.Hash, error) {
@@ -126,7 +126,7 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{&fakeLayer{}, &fakeLayer{
 					FilesContent: map[string]string{
-						`version.json`: `{"version": "v1.25.5", "canary": {"stable": {"enabled": true, "waves": 5, "interval": "15m"}}}`,
+						`version.json`: `{"version": "v1.16.5", "canary": {"stable": {"enabled": true, "waves": 5, "interval": "15m"}}}`,
 					}}}, nil
 			},
 			DigestStub: func() (v1.Hash, error) {
@@ -144,7 +144,7 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 			ManifestStub: ManifestStub,
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{&fakeLayer{}, &fakeLayer{
-					FilesContent: map[string]string{`version.json`: `{"version": "v1.25.0", "suspend": true}`}}}, nil
+					FilesContent: map[string]string{`version.json`: `{"version": "v1.16.0", "suspend": true}`}}}, nil
 			},
 			DigestStub: func() (v1.Hash, error) {
 				return v1.NewHash("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
@@ -160,7 +160,7 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 			ManifestStub: ManifestStub,
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{&fakeLayer{}, &fakeLayer{
-					FilesContent: map[string]string{`version.json`: `{"version": "v1.25.0", "suspend": true}`}}}, nil
+					FilesContent: map[string]string{`version.json`: `{"version": "v1.16.0", "suspend": true}`}}}, nil
 			},
 			DigestStub: func() (v1.Hash, error) {
 				return v1.NewHash("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
@@ -178,7 +178,7 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 			ManifestStub: ManifestStub,
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{&fakeLayer{}, &fakeLayer{
-					FilesContent: map[string]string{`version.json`: `{"version": "v1.25.0", "suspend": true}`}}}, nil
+					FilesContent: map[string]string{`version.json`: `{"version": "v1.16.0", "suspend": true}`}}}, nil
 			},
 			DigestStub: func() (v1.Hash, error) {
 				return v1.NewHash("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
@@ -196,7 +196,7 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 			ManifestStub: ManifestStub,
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{&fakeLayer{}, &fakeLayer{
-					FilesContent: map[string]string{`version.json`: `{"version": "v1.25.0"}`}}}, nil
+					FilesContent: map[string]string{`version.json`: `{"version": "v1.16.0"}`}}}, nil
 			},
 			DigestStub: func() (v1.Hash, error) {
 				return v1.NewHash("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
@@ -214,7 +214,7 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 			ManifestStub: ManifestStub,
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{&fakeLayer{}, &fakeLayer{
-					FilesContent: map[string]string{`version.json`: `{"version": "v1.25.0"}`}}}, nil
+					FilesContent: map[string]string{`version.json`: `{"version": "v1.16.0"}`}}}, nil
 			},
 			DigestStub: func() (v1.Hash, error) {
 				return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f66857")
@@ -234,7 +234,7 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{&fakeLayer{}, &fakeLayer{
 					FilesContent: map[string]string{
-						`version.json`: `{"version": "v1.30.0", "requirements": {"k8s": "1.19", "req1": "dep1"}}`,
+						`version.json`: `{"version": "v1.16.0", "requirements": {"k8s": "1.19", "req1": "dep1"}}`,
 					}}}, nil
 			},
 			DigestStub: func() (v1.Hash, error) {
@@ -254,7 +254,7 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{&fakeLayer{}, &fakeLayer{
 					FilesContent: map[string]string{
-						"version.json": `{"canary":{"alpha":{"enabled":true,"interval":"5m","waves":2}, "beta":{"enabled":false,"interval":"1m","waves":1},"early-access":{"enabled":true,"interval":"30m","waves":6},"rock-solid":{"enabled":false,"interval":"5m","waves":5},"stable":{"enabled":true,"interval":"30m","waves":6}},"version":"v1.31.0"}`}}}, nil
+						"version.json": `{"version":"v1.16.1","canary":{"stable":{"enabled":true,"interval":"30m","waves":6},"alpha":{"enabled":true,"interval":"5m","waves":2}, "beta":{"enabled":false,"interval":"1m","waves":1},"early-access":{"enabled":true,"interval":"30m","waves":6},"rock-solid":{"enabled":false,"interval":"5m","waves":5}}}`}}}, nil
 			},
 			DigestStub: func() (v1.Hash, error) {
 				return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76859")
@@ -268,21 +268,19 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 
 	suite.Run("Release has cooldown", func() {
 		dependency.TestDC.CRClient.ListTagsMock.Return([]string{
-			"v1.31.0",
-			"v1.31.1",
-			"v1.32.0",
-			"v1.32.1",
-			"v1.32.2",
-			"v1.32.3",
-			"v1.33.0",
-			"v1.33.1",
+			"v1.16.0",
+			"v1.16.1",
+			"v1.16.2",
+			"v1.17.0",
+			"v1.17.1",
+			"v1.17.2",
 		}, nil)
 		dependency.TestDC.CRClient.ImageMock.When(testDeckhouseVersion).Then(testDeckhouseVersionImage, nil)
 		dependency.TestDC.CRClient.ImageMock.When("stable").Then(&fake.FakeImage{
 			ManifestStub: ManifestStub,
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{
-					"version.json": `{"version":"v1.31.0"}`,
+					"version.json": `{"version":"v1.16.0"}`,
 				}}}, nil
 			},
 			DigestStub: func() (v1.Hash, error) {
@@ -308,7 +306,7 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 			ManifestStub: ManifestStub,
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{
-					"version.json": `{"version":"v1.31.1"}`,
+					"version.json": `{"version":"v1.16.1"}`,
 				}}}, nil
 			},
 			DigestStub: func() (v1.Hash, error) {
@@ -334,7 +332,7 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 			ManifestStub: ManifestStub,
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{
-					"version.json": `{"version":"v1.31.2"}`,
+					"version.json": `{"version":"v1.16.2"}`,
 				}}}, nil
 			},
 			DigestStub: func() (v1.Hash, error) {
@@ -360,7 +358,7 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 			ManifestStub: ManifestStub,
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{
-					"version.json": `{"version": "v1.32.0", "disruptions":{"1.32":["ingressNginx"]}}`,
+					"version.json": `{"version": "v1.16.0", "disruptions":{"1.16":["ingressNginx"]}}`,
 				}}}, nil
 			},
 			DigestStub: func() (v1.Hash, error) {
@@ -406,7 +404,7 @@ global:
 				return []v1.Layer{
 					&fakeLayer{},
 					&fakeLayer{FilesContent: map[string]string{
-						"version.json":   `{"version": "v1.31.0"}`,
+						"version.json":   `{"version": "v1.16.0"}`,
 						"changelog.yaml": changelog,
 					}},
 				}, nil
@@ -438,11 +436,6 @@ global:
 				return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76879")
 			},
 		}, nil)
-		dependency.TestDC.CRClient.ImageMock.When("v1.32.3").Then(&fake.FakeImage{
-			LayersStub: func() ([]v1.Layer, error) {
-				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.32.3"}`}}}, nil
-			},
-		}, nil)
 
 		suite.setupController("step-by-step-update-failed.yaml", initValues, embeddedMUP)
 		err := suite.ctr.checkDeckhouseRelease(ctx)
@@ -469,6 +462,7 @@ global:
 				return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76879")
 			},
 		}, nil)
+
 		dependency.TestDC.CRClient.ImageMock.When("v1.32.3").Then(&fake.FakeImage{
 			ManifestStub: ManifestStub,
 			LayersStub: func() ([]v1.Layer, error) {
@@ -614,7 +608,8 @@ func TestSort(t *testing.T) {
 	}
 
 	releases := []*v1alpha1.DeckhouseRelease{s3, s4, s1, s5, s2}
-	sort.Sort(sort.Reverse(updater.ByVersion[*v1alpha1.DeckhouseRelease](releases)))
+
+	sort.Sort(sort.Reverse(releaseUpdater.ByVersion[*v1alpha1.DeckhouseRelease](releases)))
 
 	for i, rl := range releases {
 		if rl.GetVersion().String() != "1.29."+strconv.FormatInt(int64(4-i), 10) {

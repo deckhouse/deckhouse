@@ -26,7 +26,6 @@ import (
 )
 
 func main() {
-
 	var err error
 	config, err = NewConfig()
 	if err != nil {
@@ -85,6 +84,7 @@ func httpServerClose() {
 		log.Fatalf("HTTP close error: %v", err)
 	}
 }
+
 func runPhase(err error) {
 	if err == nil {
 		return

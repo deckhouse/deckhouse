@@ -15,13 +15,49 @@ metadata:
 rules:
 - apiGroups: [""]
   resources:
-  - services
-  - pods
-  - nodes
+  - services # public services and ingressgateway service
+  - nodes    # to discover ExternalIP
   verbs:
   - get
   - list
   - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: alliance:metadata-exporter
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "metadata-exporter")) | nindent 2 }}
+rules:
+  - apiGroups: [""]
+    resources:
+      - pods
+      - nodes
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups: [""]
+    resources:
+      - configmaps
+    resourceNames:
+      - metadata-exporter-ingressgateway-advertise
+      - istio-ca-root-cert
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups: [""]
+    resources:
+      - secrets
+    resourceNames:
+      - d8-remote-clusters-public-metadata
+      - d8-remote-authn-keypair
+    verbs:
+      - get
+      - list
+      - watch
+
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -36,4 +72,18 @@ subjects:
 - kind: ServiceAccount
   name: alliance-metadata-exporter
   namespace: d8-{{ $.Chart.Name }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: alliance:metadata-exporter
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "metadata-exporter")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: alliance:metadata-exporter
+subjects:
+- kind: ServiceAccount
+  name: alliance-metadata-exporter
 {{- end }}

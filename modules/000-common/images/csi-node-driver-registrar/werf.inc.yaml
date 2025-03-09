@@ -18,8 +18,9 @@ import:
   add: /csi-node-driver-registrar
   to: /csi-node-driver-registrar
   before: setup
-docker:
-  ENTRYPOINT: ["/csi-node-driver-registrar"]
+imageSpec:
+  config:
+    entrypoint: ["/csi-node-driver-registrar"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
 fromImage: common/src-artifact
@@ -39,7 +40,6 @@ shell:
   {{- if $patch }}
   - git apply /patches/*.patch --verbose
   {{- end }}
-  - rm -rf vendor
   - rm -rf .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
@@ -58,6 +58,7 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - cd /src
   - go mod download
+  - go mod vendor
   - make build
   - cp bin/csi-node-driver-registrar /csi-node-driver-registrar
   - chown 64535:64535 /csi-node-driver-registrar

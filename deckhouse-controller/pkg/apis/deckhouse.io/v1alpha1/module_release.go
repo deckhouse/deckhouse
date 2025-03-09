@@ -36,15 +36,19 @@ const (
 	ModuleReleasePhaseSuspended  = "Suspended"
 	ModuleReleasePhaseSkipped    = "Skipped"
 
-	ModuleReleaseApprovalAnnotation = "modules.deckhouse.io/approved"
+	ModuleReleaseApprovalAnnotation              = "modules.deckhouse.io/approved"
+	ModuleReleaseAnnotationIsUpdating            = "modules.deckhouse.io/isUpdating"
+	ModuleReleaseAnnotationNotified              = "modules.deckhouse.io/notified"
+	ModuleReleaseAnnotationApplyNow              = "modules.deckhouse.io/apply-now"
+	ModuleReleaseAnnotationRegistrySpecChanged   = "modules.deckhouse.io/registry-spec-changed"
+	ModuleReleaseLabelUpdatePolicy               = "modules.deckhouse.io/update-policy"
+	ModuleReleaseFinalizerExistOnFs              = "modules.deckhouse.io/exist-on-fs"
+	ModuleReleaseAnnotationNotificationTimeShift = "modules.deckhouse.io/notification-time-shift"
+	ModuleReleaseAnnotationForce                 = "modules.deckhouse.io/force"
+	ModuleReleaseAnnotationReinstall             = "modules.deckhouse.io/reinstall"
 
-	ModuleReleaseAnnotationApplyNow = "release.deckhouse.io/apply-now"
-
-	ModuleReleaseAnnotationRegistrySpecChanged = "modules.deckhouse.io/registry-spec-changed"
-
-	ModuleReleaseLabelUpdatePolicy = "modules.deckhouse.io/update-policy"
-
-	ModuleReleaseFinalizerExistOnFs = "modules.deckhouse.io/exist-on-fs"
+	ModuleReleaseAnnotationDryrun            = "dryrun"
+	ModuleReleaseAnnotationTriggeredByDryrun = "triggered_by_dryrun"
 
 	ModuleReleaseLabelStatus          = "status"
 	ModuleReleaseLabelSource          = "source"
@@ -97,7 +101,7 @@ type ModuleRelease struct {
 }
 
 func (mr *ModuleRelease) GetVersion() *semver.Version {
-	return mr.Spec.Version
+	return semver.MustParse(mr.Spec.Version)
 }
 
 func (mr *ModuleRelease) GetName() string {
@@ -158,8 +162,17 @@ func (mr *ModuleRelease) GetForce() bool {
 	return false
 }
 
+func (mr *ModuleRelease) GetReinstall() bool {
+	return mr.Annotations[ModuleReleaseAnnotationReinstall] == "true"
+}
+
 func (mr *ModuleRelease) GetApplyNow() bool {
 	return mr.Annotations[ModuleReleaseAnnotationApplyNow] == "true"
+}
+
+func (mr *ModuleRelease) GetNotified() bool {
+	v, ok := mr.Annotations[ModuleReleaseAnnotationNotified]
+	return ok && v == "true"
 }
 
 func (mr *ModuleRelease) SetApprovedStatus(val bool) {
@@ -191,6 +204,16 @@ func (mr *ModuleRelease) GetMessage() string {
 	return mr.Status.Message
 }
 
+func (mr *ModuleRelease) GetDryRun() bool {
+	v, ok := mr.Annotations[ModuleReleaseAnnotationDryrun]
+	return ok && v == "true"
+}
+
+func (mr *ModuleRelease) GetTriggeredByDryRun() bool {
+	v, ok := mr.Annotations[ModuleReleaseAnnotationTriggeredByDryrun]
+	return ok && v == "true"
+}
+
 // GetModuleSource returns module source for this release
 func (mr *ModuleRelease) GetModuleSource() string {
 	for _, ref := range mr.GetOwnerReferences() {
@@ -209,7 +232,7 @@ func (mr *ModuleRelease) GetModuleName() string {
 
 // GetReleaseVersion returns the version of the release in the form of "vx.y.z"
 func (mr *ModuleRelease) GetReleaseVersion() string {
-	return "v" + mr.Spec.Version.String()
+	return "v" + semver.MustParse(mr.Spec.Version).String()
 }
 
 // GetWeight returns the weight of the related module
@@ -247,9 +270,9 @@ type ModuleReleasePlatformRequirements struct {
 }
 
 type ModuleReleaseSpec struct {
-	ModuleName string          `json:"moduleName"`
-	Version    *semver.Version `json:"version,omitempty"`
-	Weight     uint32          `json:"weight,omitempty"`
+	ModuleName string `json:"moduleName"`
+	Version    string `json:"version,omitempty"`
+	Weight     uint32 `json:"weight,omitempty"`
 
 	ApplyAfter   *metav1.Time               `json:"applyAfter,omitempty"`
 	Requirements *ModuleReleaseRequirements `json:"requirements,omitempty"`

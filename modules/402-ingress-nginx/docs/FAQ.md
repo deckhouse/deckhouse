@@ -68,8 +68,8 @@ At the same time, the proxy listens on 0.0.0.0 and intercepts all external traff
 
 The proxy needs permissions to create `TokenReview` and `SubjectAccessReview` to authenticate and authorize users using the kube-apiserver.
 
-Our clusters have a [built-in ClusterRole](https://github.com/deckhouse/deckhouse/blob/main/modules/002-deckhouse/templates/common/rbac/kube-rbac-proxy.yaml) called **d8-rbac-proxy** that is ideal for this kind of situation.
-You don't need to create it yourself! Just attach it to the ServiceAccount of your Deployment.
+The DKP clusters have a [built-in ClusterRole](https://github.com/deckhouse/deckhouse/blob/main/modules/002-deckhouse/templates/common/rbac/kube-rbac-proxy.yaml) called **d8-rbac-proxy** that is ideal for this kind of situation.
+You don't need to create it yourself! It needs to be attached to the ServiceAccount of your Deployment.
 {% raw %}
 
 ```yaml
@@ -171,13 +171,14 @@ nginx.ingress.kubernetes.io/configuration-snippet: |
 In case an `IngressNginxController` is deployed behind a load balancer, it is advisable to configure your load balancer so that it would check
 the availability of the IngressNginxController's endpoints via a health check mechanism, periodically sending either HTTP-requests or TCP-packets.
 While it is possible to test the endpoints simply by checking if a relevant TCP port is open, we recommend implementing HTTP checks with the following parameters:
+
 - Protocol: `HTTP`
 - Path: `/healthz`
 - Port: `80` (or relevant [httpPort](cr.html#ingressnginxcontroller-v1-spec-hostport-httpport) value in case of using `HostPort` inlet).
 
 ## How do I configure MetalLB to be accessible from the internal network only?
 
-Below is an example of a MetalLB config with access from the internal network only.
+Below is an example of a MetalLB config with access from the internal network only:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -212,9 +213,11 @@ spec:
 
 ## How to enable HorizontalPodAutoscaling for IngressNginxController?
 
-> **Note.** HPA mode is possible only for controllers with inlet: `LoadBalancer` or `LoadBalancerWithProxyProtocol`.
->
-> **Note.** HPA mode is possible only for `minReplicas` != `maxReplicas` otherwise deployment `hpa-scaler` will not be created.
+{% alert level="warning" %}
+HPA mode is possible only for controllers with inlet: `LoadBalancer` or `LoadBalancerWithProxyProtocol`.
+
+HPA mode is possible only for `minReplicas` != `maxReplicas` otherwise deployment `hpa-scaler` will not be created.
+{% endalert %}
 
 HPA is set with attributes `minReplicas` and `maxReplicas` in a [IngressNginxController CR](cr.html#ingressnginxcontroller).
 
@@ -223,13 +226,14 @@ The IngressNginxController is deployed using DaemonSet. DaemonSet does not provi
 `hpa-scaler` Deployment has HardPodAntiAffinity, and it will order a new Node (inside its NodeGroup), where one more ingress-controller will be set.
 
 Notes:
+
 * The minimum actual number of ingressNginxController replicas cannot be less than the minimum number of nodes in the NodeGroup where ingressNginxController is deployed.
 * The maximum actual number of ingressNginxController replicas cannot be greater than the maximum number of nodes in the NodeGroup where ingressNginxController is deployed.
 
 ## How to use IngressClass with IngressClassParameters?
 
 Since version 1.1 IngressNginxController Deckhouse creates an IngressClass object. If you want to use your own IngressClass
-with your customized IngressClassParameters, you need to add the label `ingress-class.deckhouse.io/external: "true"`
+with your customized IngressClassParameters, you need to add the label `ingress-class.deckhouse.io/external: "true"`:
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -250,8 +254,7 @@ In this case Deckhouse will not create an IngressClass object and will use your 
 
 ## How to disable the collection of detailed Ingress resources statistics?
 
-By default, Deckhouse collects detailed statistics from all Ingress resources in the cluster. This behavior may generate
-high load on the monitoring system.
+By default, Deckhouse collects detailed statistics from all Ingress resources in the cluster, which generates a high load on the monitoring system.
 
 To disable statistics collection, add label `ingress.deckhouse.io/discard-metrics: "true"` to the corresponding Namespace or Ingress resource.
 

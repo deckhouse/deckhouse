@@ -4,7 +4,7 @@ title: "The snapshot-controller module: configuration examples"
 
 ### Using snapshots
 
-To use snapshots, you need to specify a `VolumeSnapshotClass`.
+To use snapshots, specify a `VolumeSnapshotClass`.
 To get a list of available VolumeSnapshotClasses in your cluster, run:
 
 ```shell
@@ -63,7 +63,7 @@ spec:
 ### CSI Volume Cloning
 
 Based on the concept of snapshots, you can also perform cloning of persistent volumes - or, more precisely, existing persistent volume claims (PVC).
-However, the CSI specification mentions some restrictions regarding cloning PVCs in different namespace and storage classes than the original PVC
+However, the CSI specification mentions some restrictions regarding cloning PVCs in different namespace and storage classes than the original PVC.
 (see [Kubernetes documentation](https://kubernetes.io/docs/concepts/storage/volume-pvc-datasource/) for details).
 
 To clone a volume create a new PVC and define the origin PVC in the dataSource:

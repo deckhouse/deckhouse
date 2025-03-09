@@ -98,6 +98,60 @@ git_info:
 # </template: git_info_job>
 {!{- end -}!}
 
+{!{ define "block-e2e-until-image-is-not-ready" }!}
+# </template: block-e2e-until-image-is-not-ready>
+{!{- $ctx := . }!}
+block-e2e-until-image-is-not-ready:
+  name: Block e2e until the docker image is not ready
+  runs-on: ubuntu-latest
+  steps:
+    - uses: {!{ index (ds "actions") "actions/checkout" }!}
+    - name: Block e2e until the docker image is not ready
+      id: block-e2e
+      uses: {!{ index (ds "actions") "actions/github-script" }!}
+      with:
+        script: |
+          const githubAction = require('./.github/scripts/js/helpers/github-actions')({github, context, core});
+          const { isReleaseBranch } = require('./.github/scripts/js/helpers/utils');
+
+          let branchName = context.payload.inputs.ci_commit_ref_name;
+          if (!branchName) {
+            branchName = githubAction.GetBranchNameFromContext(context);
+          }
+ 
+          if (branchName) {
+            let prNum = context.payload.inputs.issue_number;
+            // if the pull request id is not found, search it by the branch name
+            if (!prNum && branchName !== 'main') {
+              const prInfo = await githubAction.GetPullRequestByBranchName(branchName);
+              prNum = prInfo.number;
+            }
+
+            let infoText = `Check build workflow is completed for branch: ${branchName}`;
+            if (prNum) {
+              infoText +=  ` PR: ${context.payload.repository.html_url}/pull/${prNum}`;
+            }
+            core.info(infoText);
+
+            const { waitForJobInWorkflowIsCompletedWithSuccess } = require('./.github/scripts/js/validators/validate-job-in-workflow-is-ready')({ github, context, core });
+            try {
+              let workflowName = 'Build and test for dev branches';
+              let jobName = 'Build Deckhouse';
+              if (isReleaseBranch(branchName)) {
+                workflowName = 'Build and test for release branches';
+                jobName = 'Build Deckhouse FE';
+              }
+              if (branchName === 'main') {
+                return true;
+              }
+              await waitForJobInWorkflowIsCompletedWithSuccess(branchName, workflowName, jobName);
+            } catch(error) {
+              core.setFailed(error);
+            }
+          }
+
+# </template: block-e2e-until-image-is-not-ready>
+{!{- end -}!}
 
 # Check pull request state on push or pull_request_target events:
 # - find PR info on push event
@@ -117,6 +171,7 @@ pull_request_info:
     pr_description: ${{ steps.pr_props.outputs.pr_description }}
     diff_url: ${{ steps.pr_props.outputs.diff_url }}
     labels: ${{ steps.pr_props.outputs.labels }}
+    security_rootless_scan: ${{ steps.pr_props.outputs.security_rootless_scan }}
     changes_docs: ${{ steps.changes.outputs.docs }}
     changes_not_markdown: ${{ steps.changes.outputs.not_markdown }}
 
@@ -271,7 +326,8 @@ pull_request_info:
           }
           core.info(`Edition labels: 'edition/ce':${hasCE}, 'edition/ee':${hasEE}, 'edition/be':${hasBE}, 'edition/se':${hasSE}, 'edition/se+':${hasSE_plus}`);
           core.notice(`Enable '${edition}' edition for '${context.eventName}' trigger.`);
-
+          // Set security rootless scan from labels.
+          const security_rootless_scan = pr.labels.some((l) => l.name === 'security/rootless');
           // Construct head commit ref using pr number.
           const ref = `refs/pull/${ pr.number }/head`;
           core.notice(`Use ref: '${ref}'`)
@@ -294,6 +350,7 @@ pull_request_info:
           core.setOutput('pr_description', pr.body);
           core.setOutput('diff_url', diff_url);
           core.setOutput('labels', JSON.stringify(pr.labels));
+          core.setOutput('security_rootless_scan', security_rootless_scan);
           core.setCommandEcho(false);
 
     # Checkhout the head commit of the PR branch.

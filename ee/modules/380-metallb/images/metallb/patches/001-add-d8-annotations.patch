@@ -1,0 +1,33 @@
+diff --git a/controller/service.go b/controller/service.go
+index c22a4c88..4db2d8cd 100644
+--- a/controller/service.go
++++ b/controller/service.go
+@@ -244,7 +244,10 @@ func (c *controller) isServiceAllocated(key string) bool {
+ 
+ func getDesiredLbIPs(svc *v1.Service) ([]net.IP, ipfamily.Family, error) {
+ 	var desiredLbIPs []net.IP
+-	desiredLbIPsStr := svc.Annotations[AnnotationLoadBalancerIPs]
++	desiredLbIPsStr := svc.Annotations["network.deckhouse.io/load-balancer-ips"]
++	if desiredLbIPsStr == "" {
++		desiredLbIPsStr = svc.Annotations[AnnotationLoadBalancerIPs]
++	}
+ 
+ 	if desiredLbIPsStr == "" && svc.Spec.LoadBalancerIP == "" {
+ 		return nil, "", nil
+diff --git a/internal/allocator/k8salloc/k8salloc.go b/internal/allocator/k8salloc/k8salloc.go
+index 64712c1b..bb94d227 100644
+--- a/internal/allocator/k8salloc/k8salloc.go
++++ b/internal/allocator/k8salloc/k8salloc.go
+@@ -22,7 +22,11 @@ func Ports(svc *v1.Service) []allocator.Port {
+ 
+ // SharingKey extracts the sharing key for a service.
+ func SharingKey(svc *v1.Service) string {
+-	return svc.Annotations["metallb.universe.tf/allow-shared-ip"]
++	sharingKey := svc.Annotations["network.deckhouse.io/load-balancer-shared-ip-key"]
++	if sharingKey == "" {
++		sharingKey = svc.Annotations["metallb.universe.tf/allow-shared-ip"]
++	}
++	return sharingKey
+ }
+ 
+ // BackendKey extracts the backend key for a service.

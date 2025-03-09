@@ -29,17 +29,24 @@ import (
 	eventsv1 "k8s.io/api/events/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain"
+	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
 const (
 	drainingAnnotationKey = "update.node.deckhouse.io/draining"
 	drainedAnnotationKey  = "update.node.deckhouse.io/drained"
+	nodeGroupLabel        = "node.deckhouse.io/group"
+	defaultDrainTimeout   = 10 * time.Minute
 )
+
+var nodeGroupResource = schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1", Resource: "nodegroups"}
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/node-manager/draining",
@@ -54,7 +61,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			LabelSelector: &v1.LabelSelector{
 				MatchExpressions: []v1.LabelSelectorRequirement{
 					{
-						Key:      "node.deckhouse.io/group",
+						Key:      nodeGroupLabel,
 						Operator: v1.LabelSelectorOpExists,
 					},
 				},
@@ -78,6 +85,7 @@ func drainFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var (
 		drainingSource string
 		drainedSource  string
+		ngName         string
 	)
 	if source, ok := node.Annotations[drainingAnnotationKey]; ok {
 		// keep backward compatibility
@@ -97,8 +105,15 @@ func drainFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 		}
 	}
 
+	if drainingSource == "" && drainedSource == "" {
+		return nil, nil
+	}
+
+	ngName = node.Labels[nodeGroupLabel]
+
 	return drainingNode{
 		Name:           node.Name,
+		NodeGroupName:  ngName,
 		DrainingSource: drainingSource,
 		DrainedSource:  drainedSource,
 		Unschedulable:  node.Spec.Unschedulable,
@@ -112,16 +127,25 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 	if err != nil {
 		return err
 	}
-
-	drainHelper := drain.NewDrainer(k8sCli)
-	drainHelper.Ctx = context.Background()
-
-	var wg = &sync.WaitGroup{}
+	drainTimeoutCache := make(map[string]time.Duration)
+	wg := &sync.WaitGroup{}
 	drainingNodesC := make(chan drainedNodeRes, 1)
 
 	snap := input.Snapshots["nodes_for_draining"]
 	for _, s := range snap {
+		if s == nil {
+			continue
+		}
 		dNode := s.(drainingNode)
+
+		drainTimeout, exists := drainTimeoutCache[dNode.NodeGroupName]
+		if !exists {
+			drainTimeout = getDrainTimeout(input, k8sCli, dNode.NodeGroupName)
+			drainTimeoutCache[dNode.NodeGroupName] = drainTimeout
+		}
+
+		drainHelper := drain.NewDrainer(drain.HelperConfig{Client: k8sCli, Timeout: &drainTimeout})
+		drainHelper.Ctx = context.Background()
 		if !dNode.isDraining() {
 			// If the node became schedulable, but 'drained' annotation is still on it, remove the obsolete annotation
 			if !dNode.Unschedulable && dNode.DrainedSource == "user" {
@@ -153,6 +177,7 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 
 		wg.Add(1)
 		go func(node drainingNode) {
+			input.Logger.Info("Node draining: started", "node", node)
 			if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
 				if node.Name == "foo-2" {
 					drainHelper.PodSelector = "a: b._c"
@@ -165,6 +190,7 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 				DrainingSource: node.DrainingSource,
 				Err:            err,
 			}
+			input.Logger.Info("Node draining: finished", "node", node)
 			wg.Done()
 		}(dNode)
 	}
@@ -189,6 +215,37 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 	return nil
 }
 
+func getDrainTimeout(input *go_hook.HookInput, client k8s.Client, ngName string) time.Duration {
+	nodeGroups, err := client.Dynamic().Resource(nodeGroupResource).Namespace("").List(context.TODO(), v1.ListOptions{})
+	nodeGroup := new(ngv1.NodeGroup)
+
+	if err != nil {
+		input.Logger.Error("Failed to list node groups")
+		return defaultDrainTimeout
+	}
+
+	for _, group := range nodeGroups.Items {
+		err := sdk.FromUnstructured(&group, nodeGroup)
+		if err != nil {
+			input.Logger.Error("Error marshling NodeGroup", "ngName", ngName, "error", err)
+			return defaultDrainTimeout
+		}
+		groupName := nodeGroup.Name
+		if groupName != ngName {
+			continue
+		}
+
+		timeoutValue := nodeGroup.Spec.NodeDrainTimeoutSecond
+		if timeoutValue != nil {
+			drainTimeout := time.Duration(*timeoutValue) * time.Second
+			return drainTimeout
+		}
+	}
+
+	input.Logger.Info("Node group not found, use defaultDrainTimeout", "ngName", ngName)
+	return defaultDrainTimeout
+}
+
 func newDrainedAnnotationPatch(source string) map[string]interface{} {
 	return map[string]interface{}{
 		"metadata": map[string]interface{}{
@@ -200,18 +257,17 @@ func newDrainedAnnotationPatch(source string) map[string]interface{} {
 	}
 }
 
-var (
-	removeDrainedAnnotation = map[string]interface{}{
-		"metadata": map[string]interface{}{
-			"annotations": map[string]interface{}{
-				drainedAnnotationKey: nil,
-			},
+var removeDrainedAnnotation = map[string]interface{}{
+	"metadata": map[string]interface{}{
+		"annotations": map[string]interface{}{
+			drainedAnnotationKey: nil,
 		},
-	}
-)
+	},
+}
 
 type drainingNode struct {
 	Name           string
+	NodeGroupName  string
 	DrainingSource string
 	DrainedSource  string
 	Unschedulable  bool

@@ -4,10 +4,10 @@ approved: false
 kind: DeckhouseRelease
 metadata:
   creationTimestamp: null
-  name: v1.25.0
+  name: v1.16.0
   resourceVersion: "999"
 spec:
-  version: v1.25.0
+  version: v1.16.0
 status:
   approved: false
   message: ""

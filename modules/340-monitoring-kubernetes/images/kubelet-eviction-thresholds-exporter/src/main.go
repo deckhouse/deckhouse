@@ -106,8 +106,14 @@ func generateMetrics() error {
 		log.Fatal(err)
 	}
 
-	nodefsMountpoint := getMountpoint(filepath.Join(hostPath, kubeletRootDir))
-	imagefsMountpoint := getMountpoint(filepath.Join(hostPath, runtimeRootDir))
+	nodefsMountpoint, err := getMountpoint(filepath.Join(hostPath, kubeletRootDir))
+	if err != nil {
+		log.Printf("Error getting nodefs mountpoint: %s", err)
+	}
+	imagefsMountpoint, err := getMountpoint(filepath.Join(hostPath, runtimeRootDir))
+	if err != nil {
+		log.Printf("Error getting imagefs mountpoint: %s", err)
+	}
 
 	softEvictionMap := kubeletConfig.KubeletConfiguration.EvictionSoft
 	hardEvictionMap := kubeletConfig.KubeletConfiguration.EvictionHard
@@ -241,9 +247,9 @@ func getBytesAndInodeStatsFromPath(path string) (bytesTotal uint64, inodeTotal u
 	var stat unix.Statfs_t
 
 	err = unix.Statfs(path, &stat)
-	if err != nil {
-		return 0, 0, err
-	}
+    if err != nil {
+        return 0, 0, fmt.Errorf("statfs on %s: %w", path, err)
+    }
 
 	bytesTotal = stat.Blocks * uint64(stat.Bsize)
 	inodeTotal = stat.Files
@@ -254,13 +260,12 @@ func getBytesAndInodeStatsFromPath(path string) (bytesTotal uint64, inodeTotal u
 func getKubeletRootDir() (string, error) {
 	procs, err := process.Processes()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error getting processes: %s", err)
 	}
 
 	for _, p := range procs {
 		cmdLine, err := p.CmdlineSlice()
 		if err != nil {
-			log.Println(err.Error())
 
 			// Skip errors, as they are likely due to the process having terminated
 			continue
@@ -340,25 +345,27 @@ func getDockerRootDir() (string, error) {
 func getContainerdRootDir() (string, error) {
 	containerdConfig, err := os.ReadFile("/etc/containerd/config.toml")
 	if err != nil {
+         log.Printf("error reading containerd config: %v, using default /var/lib/containerd", err)
 		return "/var/lib/containerd", nil
 	}
 
 	matches := containerdConfigRootDirRegex.FindSubmatch(containerdConfig)
 	if len(matches) != 2 {
+        log.Println("containerd config does not contain root dir option, using default /var/lib/containerd")
 		return "/var/lib/containerd", nil
 	}
 
 	return string(matches[1]), err
 }
 
-func getMountpoint(path string) string {
+func getMountpoint(path string) (string, error) {
 	if ln, err := os.Readlink(path); err == nil {
 		path = ln
 	}
 
 	pi, err := os.Stat(path)
 	if err != nil {
-		return ""
+		return "", fmt.Errorf("failed to get file info for path %s: %w", path, err)
 	}
 
 	dev := pi.Sys().(*syscall.Stat_t).Dev
@@ -368,7 +375,7 @@ func getMountpoint(path string) string {
 
 		_pi, err := os.Stat(_path)
 		if err != nil {
-			return ""
+			return "", fmt.Errorf("failed to get file info for path %s: %w", _path, err)
 		}
 
 		if dev != _pi.Sys().(*syscall.Stat_t).Dev {
@@ -379,10 +386,10 @@ func getMountpoint(path string) string {
 	}
 
 	if path == hostPath {
-		return "/"
+		return "/", nil
 	}
 
-	return strings.TrimPrefix(path, hostPath)
+	return strings.TrimPrefix(path, hostPath), nil
 }
 
 func getContainerRuntimeAndKubeletConfig() (string, *KubeletConfig, error) {

@@ -107,6 +107,7 @@
  - **[common]** Fixed the displayed version of shell-operator. [#9281](https://github.com/deckhouse/deckhouse/pull/9281)
  - **[control-plane-manager]** D8EtcdExcessiveDatabaseGrowth alert fix [#9773](https://github.com/deckhouse/deckhouse/pull/9773)
  - **[control-plane-manager]** Two new etcd alerts with a low `severity_level` and an increase in the `severity_level` for one existing alert. [#9464](https://github.com/deckhouse/deckhouse/pull/9464)
+ - **[deckhouse]** Fix module requirements parsing. [#11753](https://github.com/deckhouse/deckhouse/pull/11753)
  - **[deckhouse]** Fix validation policy for update windows in kubernetes 1.26 [#10235](https://github.com/deckhouse/deckhouse/pull/10235)
  - **[deckhouse]** Fix `ValidatingAdmissionPolicy` for checking update windows. [#10151](https://github.com/deckhouse/deckhouse/pull/10151)
  - **[deckhouse]** Fixed the `deckhouse-leader` and `deckhouse` Services with multiple ports broken by Helm. [#9573](https://github.com/deckhouse/deckhouse/pull/9573)

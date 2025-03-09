@@ -14,55 +14,72 @@
 
 package log
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"log/slog"
+	"maps"
+	"slices"
+	"strings"
+)
+
+const (
+	LoggerNameKey = "logger"
+	StacktraceKey = "stacktrace"
+)
 
 type LogOutput struct {
-	Level      string `json:"level"`
-	Name       string `json:"logger"`
-	Message    string `json:"msg"`
-	Source     string `json:"source"`
-	FieldsJSON []byte `json:"-"`
-	Stacktrace string `json:"stacktrace"`
-	Time       string `json:"time"`
+	Level      string         `json:"level"`
+	Name       string         `json:"logger"`
+	Message    string         `json:"msg"`
+	Source     string         `json:"source"`
+	Fields     map[string]any `json:"-"`
+	Stacktrace string         `json:"stacktrace"`
+	Time       string         `json:"time"`
 }
 
 func (lo *LogOutput) MarshalJSON() ([]byte, error) {
 	render := Render{}
 	render.buf = append(render.buf, '{')
 
-	render.JSONKeyValue("level", lo.Level)
+	render.JSONKeyValue(slog.LevelKey, strings.ToLower(lo.Level))
 
 	render.buf = append(render.buf, ',')
 
 	if lo.Name != "" {
-		render.JSONKeyValue("logger", lo.Name)
+		render.JSONKeyValue(LoggerNameKey, lo.Name)
 		render.buf = append(render.buf, ',')
 	}
 
-	render.JSONKeyValue("msg", lo.Message)
+	render.JSONKeyValue(slog.MessageKey, lo.Message)
 	render.buf = append(render.buf, ',')
 
 	if lo.Source != "" {
-		render.JSONKeyValue("source", lo.Source)
+		render.JSONKeyValue(slog.SourceKey, lo.Source)
 		render.buf = append(render.buf, ',')
 	}
 
-	if len(lo.FieldsJSON) > 0 {
-		render.buf = append(render.buf, lo.FieldsJSON...)
+	if len(lo.Fields) > 0 {
+		b, err := json.Marshal(lo.Fields)
+		if err != nil {
+			return nil, err
+		}
+
+		// ignore first and last '{' and '}' symbols
+		render.buf = append(render.buf, b[1:len(b)-1]...)
 		render.buf = append(render.buf, ',')
 	}
 
 	if lo.Stacktrace != "" {
 		if json.Valid([]byte(lo.Stacktrace)) {
-			render.RawJsonKeyValue("stacktrace", lo.Stacktrace)
+			render.RawJsonKeyValue(StacktraceKey, lo.Stacktrace)
 		} else {
-			render.JSONKeyValue("stacktrace", lo.Stacktrace)
+			render.JSONKeyValue(StacktraceKey, lo.Stacktrace)
 		}
 
 		render.buf = append(render.buf, ',')
 	}
 
-	render.JSONKeyValue("time", lo.Time)
+	render.JSONKeyValue(slog.TimeKey, lo.Time)
 
 	render.buf = append(render.buf, '}')
 
@@ -164,4 +181,78 @@ func (r *Render) escapes(s string) {
 		}
 	}
 	r.buf = append(r.buf, s[j:]...)
+}
+
+func (lo *LogOutput) Text() ([]byte, error) {
+	render := Render{}
+
+	render.buf = append(render.buf, lo.Time...)
+	render.buf = append(render.buf, ' ')
+
+	render.buf = append(render.buf, strings.ToUpper(lo.Level)...)
+	render.buf = append(render.buf, ' ')
+
+	if lo.Name != "" {
+		render.TextKeyValue(LoggerNameKey, lo.Name)
+		render.buf = append(render.buf, ' ')
+	}
+
+	render.TextQuotedKeyValue(slog.MessageKey, lo.Message)
+	render.buf = append(render.buf, ' ')
+
+	if lo.Source != "" {
+		render.TextKeyValue(slog.SourceKey, lo.Source)
+		render.buf = append(render.buf, ' ')
+	}
+
+	render.FieldsToString(lo.Fields, "")
+
+	if lo.Stacktrace != "" {
+		render.TextKeyValue(StacktraceKey, lo.Stacktrace)
+	}
+
+	render.buf = append(render.buf, '\n')
+
+	return render.buf, nil
+}
+
+func (r *Render) TextKeyValue(key, value string) {
+	r.string(key)
+	r.buf = append(r.buf, '=')
+	r.string(value)
+}
+
+func (r *Render) TextQuotedKeyValue(key, value string) {
+	r.string(key)
+	r.buf = append(r.buf, '=', '\'')
+	r.string(value)
+	r.buf = append(r.buf, '\'')
+}
+
+func (r *Render) FieldsToString(m map[string]any, keyPrefix string) {
+	keys := slices.Collect(maps.Keys(m))
+	slices.Sort(keys)
+
+	for _, k := range keys {
+		v := m[k]
+
+		if keyPrefix != "" {
+			k = keyPrefix + "." + k
+		}
+
+		if str, ok := v.(string); ok {
+			r.TextQuotedKeyValue(k, str)
+			r.buf = append(r.buf, ' ')
+
+			continue
+		}
+
+		if nested, ok := v.(map[string]any); ok {
+			r.FieldsToString(nested, k)
+
+			continue
+		}
+
+		r.buf = append(r.buf, "!%SOMETHING GOES WRONG"...)
+	}
 }

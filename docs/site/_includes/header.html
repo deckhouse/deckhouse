@@ -184,15 +184,12 @@
         </ul>
       </div>
       <div class="header__right-box">
-        <!-- <div class="header__buttons">
+        <div class="header__buttons">
           {%- unless site.mode == "module" %}
             <a href="/products/kubernetes-platform/documentation/v1/deckhouse-overview.html" class="button button--outline">{{ site.data.i18n.common['documentation_title'][page.lang] }}</a>
-            <a href="#" class="button button--contact">{{ site.data.i18n.common['contact_us_button'][page.lang] }}</a>
+            <a data-open-modal="request_callback" href="#" class="button button--contact">{{ site.data.i18n.common['contact_us_button'][page.lang] }}</a>
           {%- endunless %}
-        </div> -->
-        {%- unless site.mode == "module" %}
-          <a href="/products/kubernetes-platform/documentation/v1/deckhouse-overview.html" class="button button--outline">{{ site.data.i18n.common['documentation_title'][page.lang] }}</a>
-        {%- endunless %}
+        </div>
         <!-- {%- unless site.mode == "module" %}
           <a href="/products/kubernetes-platform/documentation/v1/deckhouse-overview.html" class="button button--outline">{{ site.data.i18n.common['documentation_title'][page.lang] }}</a>
         {%- endunless %} -->
@@ -244,9 +241,9 @@
           </svg>
           <span>{{ productName }}</span>
         </div>
-        <ul class="nav">
+        <ul class="nav header__nav">
           {%- for item in productMenuData.items %}
-            {%- if item.rel == "doc" %}{% assign itemClass='class="active"' %}{% else %}{% assign itemClass='' %}{% endif %}
+            {%- if item.rel == "doc" %}{% assign itemClass='class="header__navigation-item active"' %}{% else %}{% assign itemClass='class="header__navigation-item"' %}{% endif %}
             <li {{ itemClass }}><a href="{{ item.url }}"{% if item.target.size > 0 %} target="{{ item.target }}"{% endif %}>{{ item.title }}</a></li>
           {%- endfor %}
         </ul>

@@ -72,8 +72,8 @@ Use three master nodes in all cases, as they are sufficient for fault tolerance.
 The master node configuration for cloud clusters can be configured using the [masterNodeGroup](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-masternodegroup) parameter.
 
 Reference:
-- [How do I add a master node to a cluster...](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/faq.html#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master)
-- [Working with static nodes...](https://deckhouse.io/products/kubernetes-platform/documentation/latest/modules/node-manager/#working-with-static-nodes)
+- [How do I add a master node to a cluster...](https://deckhouse.ru/products/virtualization-platform/documentation/admin/platform-management/control-plane-settings/etcd.html##how-to-add-master-nodes-to-a-cloud-cluster)
+- [Working with static nodes...](https://deckhouse.io/products/kubernetes-platform/documentation/modules/node-manager/#working-with-static-nodes)
 
 ### Frontend nodes
 

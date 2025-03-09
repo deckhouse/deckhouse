@@ -1,10 +1,13 @@
 # Next lines are for local build only
 entries:
-  folders:
     - title:
         en: Overview
         ru: Введение
       url: /virtualization-platform/documentation/
+    - title:
+        en: About the platform
+        ru: О платформе
+      url: /virtualization-platform/documentation/about.html
     - title:
         en: Administration
         ru: Администрирование
@@ -21,7 +24,6 @@ entries:
             en: Update channels
             ru: Каналы обновлений
           url: /virtualization-platform/documentation/admin/release-channels.html
-          folders:
         - title:
             en: Requirements
             ru: Требования
@@ -170,6 +172,10 @@ entries:
                     en: Supported storages
                     ru: Поддерживаемые хранилища
                   folders:
+                    - title:
+                         en: Supported storages
+                         ru: Поддерживаемые хранилища
+                      url: /virtualization-platform/documentation/admin/platform-management/storage/supported-storage.html
                     - title:
                         en: SDS
                         ru: Программно определяемые
@@ -350,6 +356,10 @@ entries:
                 en: d8 (Deckhouse CLI)
                 ru: d8 (Deckhouse CLI)
               url: /virtualization-platform/reference/console-utilities/d8.html
+        - title:
+            en: FAQ
+            ru: FAQ
+          url: /virtualization-platform/documentation/faq.html
     #- title:
     #    en: DVP editions
     #    ru: Список  DVP
@@ -358,7 +368,3 @@ entries:
     #        en: Configuration module
     #        ru: Конфигурации модуля
     #      url: /virtualization-platform/documentation/dvp-editions/changelog.html
-    #- title:
-    #    en: FAQ
-    #    ru: FAQ
-    #  url: /virtualization-platform/documentation/faq.html

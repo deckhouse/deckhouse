@@ -173,7 +173,7 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 
 	deckhouseConfigCh := make(chan utils.Values, 1)
 
-	configHandler := confighandler.New(runtimeManager.GetClient(), deckhouseConfigCh, logger.Named("config-handler"))
+	configHandler := confighandler.New(runtimeManager.GetClient(), deckhouseConfigCh)
 	operator.SetupKubeConfigManager(configHandler)
 
 	// init module manager
@@ -194,7 +194,7 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 		}
 
 		// set some version for the modules overridden by mpos
-		if module.CheckConditionTrue(v1alpha1.ModuleConditionIsOverridden) {
+		if module.ConditionStatus(v1alpha1.ModuleConditionIsOverridden) {
 			return "v2.0.0", nil
 		}
 

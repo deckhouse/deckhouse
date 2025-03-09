@@ -176,7 +176,7 @@ A similar action can be performed using the `d8` utility:
 d8 v restart  linux-vm
 ```
 
-The list of possible operations is shown in the table below:
+The possible operations:
 
 | d8             | vmop type | Action                                     |
 | -------------- | --------- | ------------------------------------------ |
@@ -213,6 +213,11 @@ Suppose we want to change the number of CPU cores. Currently, the virtual machin
 
 ```shell
 d8 v ssh cloud@linux-vm --local-ssh --command "nproc"
+```
+
+Example output:
+
+```console
 # 1
 ```
 
@@ -232,6 +237,11 @@ The configuration changes have been made, but they have not been applied to the 
 
 ```shell
 d8 v ssh cloud@linux-vm --local-ssh --command "nproc"
+```
+
+Example output:
+
+```console
 # 1
 ```
 
@@ -373,6 +383,8 @@ To manage the placement of virtual machines on nodes, you can use the following 
 - Preferred binding — `Affinity`;
 - Avoid co-location — `AntiAffinity`.
 
+> You can change the placement parameters of virtual machines in real time (available only in the Enterprise edition). However, if the new placement parameters do not match the current ones, the virtual machine will be moved to nodes that meet the new requirements.
+
 ### Simple label binding — `nodeSelector`
 
 `nodeSelector` is the simplest way to control the placement of virtual machines using a set of labels. It allows you to specify which nodes can run virtual machines by selecting nodes with the required labels.
@@ -383,7 +395,7 @@ spec:
     disktype: ssd
 ```
 
-![nodeSelector](/images/virtualization-platform/placement-node-affinity.png)
+![nodeSelector](/../../../../images/virtualization-platform/placement-nodeselector.png)
 
 In this example, the virtual machine will be placed only on nodes that have the label `disktype` with the value `ssd`.
 
@@ -408,7 +420,7 @@ spec:
                   - ssd
 ```
 
-![nodeAffinity](/images/virtualization-platform/placement-node-affinity.png)
+![nodeAffinity](/../../../../images/virtualization-platform/placement-node-affinity.png)
 
 In this example, the virtual machine will be placed only on nodes that have the label `disktype` with the value `ssd`.
 
@@ -452,7 +464,7 @@ spec:
           topologyKey: "kubernetes.io/hostname"
 ```
 
-![AntiAffinity](/images/virtualization-platform/placement-vm-antiaffinity.png)
+![AntiAffinity](/../../../../images/virtualization-platform/placement-vm-antiaffinity.png)
 
 In this example, the created virtual machine will not be placed on the same node as the virtual machine with the label `server: database`.
 
@@ -462,15 +474,28 @@ Block devices can be divided into two types based on how they are connected: sta
 
 ### Static Block Devices
 
-Static block devices are specified in the virtual machine's configuration under the `.spec.blockDeviceRefs` block. This block is a list, which can include the following block devices:
+Block devices and their features are presented in the table:
 
-- [VirtualImage](../../../reference/cr/virtualimage.html).
-- [ClusterVirtualImage](../../../reference/cr/clustervirtualimage.html).
-- [VirtualDisk](../../../reference/cr/virtualdisk.html).
+| Block device type | Comment |
+| ----------------------- |------------------------------------------------------------------|
+| `VirtualImage` | is connected in read-only mode, or as a cd-rom for iso images |
+| `ClusterVirtualImage` | is connected in read-only mode, or as a cd-rom for iso images |
+| `VirtualDisk` | is connected in read-write mode |
 
-The order of devices in this list determines their boot sequence. So, if a disk or image is listed first, the bootloader will attempt to boot from it. If it fails, the system will proceed to the next device in the list and try to boot from it, and so on, until it finds the first bootloader.
+Static block devices are specified in the virtual machine specification in the `.spec.blockDeviceRefs` block as a list. The order of devices in this list determines the sequence in which they are loaded. Thus, if a disk or image is specified first, the bootloader will first try to boot from it. If this fails, the system will move to the next device in the list and try to boot from it. And so on until the first bootloader is detected.
 
-Changes to the composition and order of devices in the `.spec.blockDeviceRefs` block can only be applied with a reboot of the virtual machine.
+Changing the composition and order of devices in the `.spec.blockDeviceRefs` block is only possible with a reboot of the virtual machine.
+
+A fragment of the VirtualMachine configuration with a statically connected disk and project image:
+
+```yaml
+spec:
+blockDeviceRefs:
+- kind: VirtualDisk
+name: <virtual-disk-name>
+- kind: VirtualImage
+name: <virtual-image-name>
+```
 
 ### Dynamic Block Devices
 
@@ -535,6 +560,22 @@ To detach the disk from the virtual machine, delete the previously created resou
 
 ```shell
 d8 k delete vmbda attach-blank-disk
+```
+
+Attaching images is done in a similar way. To do this, specify VirtualImage or ClusterVirtualImage and the image name as `kind`:
+
+```yaml
+d8 k apply -f - <<EOF
+apiVersion: virtualization.deckhouse.io/v1alpha2
+kind: VirtualMachineBlockDeviceAttachment
+metadata:
+name: attach-ubuntu-iso
+spec:
+blockDeviceRef:
+kind: VirtualImage # Or ClusterVirtualImage.
+name: ubuntu-iso
+virtualMachineName: linux-vm
+EOF
 ```
 
 ## Live migration of virtual machines
@@ -602,6 +643,31 @@ You can also perform the migration using the following command:
 d8 v evict <vm-name>
 ```
 
+## Maintenance mode
+
+When performing work on nodes with running virtual machines, there is a risk of disrupting their functionality. To avoid this, the node can be put into maintenance mode and the virtual machines can be migrated to other free nodes.
+To do this, run the following command:
+
+```bash
+d8 k drain <nodename> --ignore-daemonsets --delete-emptydir-dat
+```
+
+where `<nodename>` is the node on which the work is supposed to be performed and which must be freed from all resources (including system resources).
+
+If you need to evict only virtual machines from a node, run the following command:
+
+```bash
+d8 k drain <nodename> --pod-selector vm.kubevirt.internal.virtualization.deckhouse.io/name --delete-emptydir-data
+```
+
+After running the `d8 k drain` commands, the node will go into maintenance mode and virtual machines will not be able to start on it. To take it out of maintenance mode, run the following command:
+
+```bash
+d8 k uncordon <nodename>
+```
+
+![Maintenance mode](/../../../../images/virtualization-platform/drain.png)
+
 ## IP Addresses of virtual machines
 
 The `.spec.settings.virtualMachineCIDRs` block in the virtualization module configuration specifies a list of subnets for assigning IP addresses to virtual machines (a shared pool of IP addresses). All addresses in these subnets are available for use, except for the first (network address) and the last (broadcast address).
@@ -622,19 +688,6 @@ ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12
 ```
 
 The [VirtualMachineIPAddress](../../../reference/cr/virtualmachineipaddress.html) (`vmip`) resource is a project or namespace resource responsible for reserving allocated IP addresses and binding them to virtual machines. IP addresses can be assigned automatically or upon request.
-
-To view the list of `vmip`, use the following command:
-
-```shell
-d8 k get vmipl
-```
-
-Example output:
-
-```console
-NAME             VIRTUALMACHINEIPADDRESS                             STATUS   AGE
-ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12h
-```
 
 To check the assigned IP address, you can use the following command:
 
@@ -658,7 +711,7 @@ The algorithm for automatically assigning an IP address to a virtual machine wor
 
 By default, the IP address for the virtual machine is automatically assigned from the subnets defined in the module and is bound to it until the virtual machine is deleted. After the virtual machine is deleted, the `vmip` resource is also removed, but the IP address temporarily remains bound to the project/namespace and can be requested again.
 
-## How to request a specific IP address?
+## Requesting the required IP address
 
 Create the `vmip` resource:
 
@@ -681,7 +734,7 @@ spec:
   virtualMachineIPAddressName: linux-vm-custom-ip
 ```
 
-## How to retain the assigned IP address for a virtual machine?
+## Retaining the IP address assigned to a virtual machine
 
 To prevent the automatically assigned IP address of a virtual machine from being deleted along with the virtual machine itself, follow these steps.
 

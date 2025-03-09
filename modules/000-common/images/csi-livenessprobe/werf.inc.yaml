@@ -18,8 +18,9 @@ import:
   add: /livenessprobe
   to: /livenessprobe
   before: setup
-docker:
-  ENTRYPOINT: ["/livenessprobe"]
+imageSpec:
+  config:
+    entrypoint: ["/livenessprobe"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
 fromImage: common/src-artifact
@@ -39,7 +40,6 @@ shell:
   {{- if $patch }}
   - git apply /patches/*.patch --verbose
   {{- end }}
-  - rm -rf vendor
   - rm -rf .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}

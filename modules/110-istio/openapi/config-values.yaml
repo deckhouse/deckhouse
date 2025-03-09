@@ -73,6 +73,24 @@ properties:
         x-doc-d8Revision: ee
         default: {}
         properties:
+          advertise:
+            type: array
+            description: The actual addresses that will be announced to remote clusters for organizing intercluster application requests. If not specified, the addresses will be discovered automatically.
+            x-doc-d8Revision: ee
+            default: []
+            x-examples: [[{"ip": "172.16.0.5", "port": 15443}]]
+            items:
+              type: object
+              required: ["address", "port"]
+              properties:
+                address:
+                  type: string
+                  example: "172.16.0.5"
+                  pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
+                port:
+                  type: integer
+                  minimum: 1024
+                  maximum: 65535
           inlet:
             type: string
             enum: [LoadBalancer, NodePort]
@@ -782,6 +800,14 @@ properties:
             type: string
             x-examples: ["https://example.com/dex/sign_in"]
             description: The URL to redirect the user for authentication (if the authentication service returned a non-200 HTTP response code).
+      allowedUserEmails:
+        type: array
+        items:
+          type: string
+        description: |
+          An array of emails of users that can access module's public web interfaces.
+
+          This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
       allowedUserGroups:
         type: array
         items:

@@ -24,7 +24,7 @@ set -Eeo pipefail
 # For node-manager render this file include to place, where 'bb_package_install' already included on previous lines.
 */}}
 
-{{- if $bb_package_install := .Files.Get "/deckhouse/candi/bashible/bb_package_install.sh.tpl" -}}
+{{- if $bb_package_install := .Files.Get "deckhouse/candi/bashible/bb_package_install.sh.tpl" -}}
   {{- tpl ( $bb_package_install ) . | nindent 0 }}
 {{- end }}
 

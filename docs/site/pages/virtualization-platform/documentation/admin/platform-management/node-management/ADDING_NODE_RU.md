@@ -39,7 +39,7 @@ lang: ru
 1. Выполните предварительную настройку нового узла в соответствии с особенностями вашего окружения:
 
 - добавьте необходимые точки монтирования в файл `/etc/fstab` (NFS, Ceph и т. д.);
-- установите необходимые пакеты (например, `ceph-common`);
+- установите необходимые пакеты;
 - настройте сетевую связность между новым узлом и остальными узлами кластера.
 
 1. Подключитесь на новый узел по SSH и выполните следующую команду, вставив полученную в п.2 Base64-строку:
@@ -305,7 +305,7 @@ May 25 04:39:16 kube-master-0 systemd[1]: bashible.service: Succeeded.
 bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing
 ```
 
-### Как зачистить узел для последующего ввода в кластер?
+### Как очистить узел для последующего ввода в кластер?
 
 {% alert level="warning" %}
 Это необходимо только в том случае, если нужно переместить статический узел из одного кластера в другой. Имейте в виду, что эти операции удаляют данные локального хранилища. Если необходимо просто изменить NodeGroup, следуйте [инструкции по смене NodeGroup](#как-изменить-nodegroup-у-статического-узла).
@@ -313,7 +313,7 @@ bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-w
 Если на зачищаемом узле есть пулы хранения LINSTOR/DRBD, чтобы выгнать ресурсы с узла и удалить узел LINSTOR/DRBD, следуйте [соответствующей инструкции модуля `sds-replicated-volume`](https://deckhouse.ru/products/kubernetes-platform/modules/sds-replicated-volume/stable/faq.html#как-выгнать-drbd-ресурсы-с-узла).
 {% endalert %}
 
-Чтобы зачистить узел для последующего ввода в кластер, выполните следующие шаги:
+Чтобы очистить узел для последующего ввода в кластер, выполните следующие шаги:
 
 1. Удалите узел из кластера Kubernetes:
 
@@ -336,7 +336,8 @@ bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-w
 
 StaticInstance, находящийся в состоянии `Pending`, можно удалять без каких-либо проблем.
 
-Чтобы удалить StaticInstance находящийся в любом состоянии, отличном от `Pending` (`Running`, `Cleaning`, `Bootstrapping`):
+Чтобы удалить StaticInstance, находящийся в любом состоянии отличном от `Pending` (`Running`, `Cleaning`, `Bootstrapping`):
+
 1. Добавьте лейбл `"node.deckhouse.io/allow-bootstrap": "false"` в StaticInstance.
 1. Дождитесь, пока StaticInstance перейдет в статус `Pending`.
 1. Удалите StaticInstance.

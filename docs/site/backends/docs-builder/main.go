@@ -18,16 +18,16 @@ import (
 	"context"
 	"flag"
 	"net/http"
+	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/flant/docs-builder/internal/docs"
 	v1 "github.com/flant/docs-builder/internal/http/v1"
 	"github.com/flant/docs-builder/pkg/k8s"
 	"golang.org/x/sync/errgroup"
-
-	"k8s.io/klog/v2"
 )
 
 // flags
@@ -51,12 +51,16 @@ func main() {
 	ctx, stopNotify := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stopNotify()
 
-	lManager, err := k8s.NewLeasesManager()
+	logger := log.NewLogger(log.Options{
+		Level: log.LogLevelFromStr(os.Getenv("LOG_LEVEL")).Level(),
+	})
+
+	lManager, err := k8s.NewLeasesManager(logger)
 	if err != nil {
-		klog.Fatalf("new leases manager: %s", err)
+		logger.Fatalf("new leases manager: %s", err)
 	}
 
-	h := v1.NewHandler(docs.NewService(src, dst, highAvailability))
+	h := v1.NewHandler(docs.NewService(src, dst, highAvailability, logger), logger.Named("v1"))
 
 	srv := &http.Server{
 		Addr:    listenAddress,
@@ -65,34 +69,34 @@ func main() {
 
 	eg, ctx := errgroup.WithContext(ctx)
 
-	klog.Info("starting application")
+	logger.Info("starting application")
 
 	eg.Go(srv.ListenAndServe)
 	eg.Go(lManager.Run(ctx))
 
-	klog.Info("application started")
+	logger.Info("application started")
 
 	<-ctx.Done()
 
-	klog.Info("stopping application")
+	logger.Info("stopping application")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	err = lManager.Remove(ctx)
 	if err != nil {
-		klog.Errorf("lease removing failed: %v", err)
+		logger.Error("lease removing failed", log.Err(err))
 	}
 
 	err = srv.Shutdown(ctx)
 	if err != nil {
-		klog.Errorf("shutdown failed: %v", err)
+		logger.Error("shutdown failed", log.Err(err))
 	}
 
 	err = eg.Wait()
 	if err != nil {
-		klog.Errorf("error due stopping application%v", err)
+		logger.Error("error due stopping application", log.Err(err))
 	}
 
-	klog.Info("application stopped")
+	logger.Info("application stopped")
 }

@@ -36,6 +36,14 @@ spec:
                 weight:
                   type: integer
                   description: Module _weight_ (priority).
+                namespace:
+                  type: string
+                  description: Module namespace.
+                subsystems:
+                  type: array
+                  description: Module subsystems.
+                  items:
+                    type: string
                 source:
                   type: string
                   description: Source the module was downloaded from (otherwise will be blank).
@@ -51,9 +59,14 @@ spec:
                 updatePolicy:
                   type: string
                   description: Module update policy.
-                description:
-                  type: string
-                  description: Module description.
+                disableOptions:
+                  type: object
+                  description: Parameters of module disable protection.
+                  properties:
+                    confirmation:
+                      type: boolean
+                    message:
+                      type: string
                 requirements:
                   type: object
                   x-kubernetes-preserve-unknown-fields: true
@@ -91,10 +104,6 @@ spec:
                     - Conflict
                     - Ready
                     - Error
-                    # TODO(ipaqsa): delete after 1.68
-                    - Pending
-                    - Enqueued
-                    - NotInstalled
                 hooksState:
                   type: string
                   description: Hooks status report.

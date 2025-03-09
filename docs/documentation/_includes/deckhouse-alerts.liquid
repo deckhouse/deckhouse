@@ -14,13 +14,13 @@
 <div class="alertslist__summary-body">
 {% if alert["summary"].size > 0 and alert["description"].size > 0 %}
 <details>
-  <summary>{{ alert["summary"] }}</summary>
-  <span class="alertslist__description">{{ alert["description"]  | markdownify }}</span>
+  <summary>{{ alert["summary"] | normalizeAlertContent }}</summary>
+  <span class="alertslist__description">{{ alert["description"] | normalizeAlertContent | markdownify}}</span>
 </details>
 {% elsif alert["summary"].size > 0 %}
-  <span class="alertslist__summary">{{ alert["summary"] }}</span>
+  <span class="alertslist__summary">{{ alert["summary"] | normalizeAlertContent | markdownify }}</span>
 {% elsif alert["description"].size > 0 %}
-  <span class="alertslist__description">{{ alert["description"]  | markdownify }}</span>
+  <span class="alertslist__description">{{ alert["description"] | normalizeAlertContent | markdownify }}</span>
 {% endif %}
 </div>
 

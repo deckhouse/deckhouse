@@ -22,11 +22,14 @@
 
     <div class="post-content">
 
-        {{- if eq $d8Edition "ee" }}
-          {{- partial "alert" ( dict "level" "warn" "content" (T "module_is_available_in_ee_only") ) }}
+        {{- if and $currentModuleName (or (eq .File.ContentBaseName "README") (eq .File.ContentBaseName "CONFIGURATION")) }}
+         {{- partial "module-editions" (dict "moduleName" $currentModuleName "lang" .Language.Lang ) }}
         {{- end }}
+
         {{- if $moduleStatus }}
-          {{- partial "alert" ( dict "level" "warn" "content" (T (printf "module_alert_%s" (lower $moduleStatus))) ) }}
+          {{- if (T (printf "module_alert_%s_long" (lower $moduleStatus ))) }}
+            {{- partial "alert" ( dict "level" "warn" "content" (T (printf "module_alert_%s_long" (lower $moduleStatus))) ) }}
+          {{- end }}
         {{- end }}
 
         {{.Content}}

@@ -1,6 +1,7 @@
 ---
 title: "Мониторинг узлов"
 permalink: ru/virtualization-platform/documentation/admin/platform-management/monitoring/node.html
+lang: "ru"
 ---
 
 ## Мониторинг

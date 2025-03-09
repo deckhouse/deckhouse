@@ -71,9 +71,7 @@ func NewChecker(
 }
 
 func (pc *Checker) Static() error {
-
 	ready, err := pc.bootstrapState.StaticPreflightchecksWasRan()
-
 	if err != nil {
 		msg := fmt.Sprintf("Can not get state from cache: %v", err)
 		return errors.New(msg)
@@ -98,6 +96,11 @@ func (pc *Checker) Static() error {
 			fun:            pc.CheckSSHTunnel,
 			successMessage: "ssh tunnel between installer and node is possible",
 			skipFlag:       app.SSHForwardArgName,
+		},
+		{
+			fun:            pc.CheckDeckhouseUser,
+			successMessage: "deckhouse user and group aren't present on node",
+			skipFlag:       app.DeckhouseUserCheckName,
 		},
 		{
 			fun:            pc.CheckStaticNodeSystemRequirements,
@@ -129,8 +132,17 @@ func (pc *Checker) Static() error {
 			successMessage: "sudo is allowed for user",
 			skipFlag:       app.SudoAllowedCheckArgName,
 		},
+		{
+			fun:            pc.CheckTimeDrift,
+			successMessage: "server time drift has a acceptable value",
+			skipFlag:       app.TimeDriftArgName,
+		},
+		{
+			fun:            pc.CheckCidrIntersectionStatic,
+			successMessage: "CIDRs are not intersects",
+			skipFlag:       app.CIDRIntersection,
+		},
 	})
-
 	if err != nil {
 		return err
 	}
@@ -139,9 +151,7 @@ func (pc *Checker) Static() error {
 }
 
 func (pc *Checker) Cloud() error {
-
 	ready, err := pc.bootstrapState.CloudPreflightchecksWasRan()
-
 	if err != nil {
 		msg := fmt.Sprintf("Can not get state from cache: %v", err)
 		return errors.New(msg)
@@ -158,19 +168,15 @@ func (pc *Checker) Cloud() error {
 			skipFlag:       app.SystemRequirementsArgName,
 		},
 	})
-
 	if err != nil {
 		return err
 	}
 
 	return pc.bootstrapState.SetCloudPreflightchecksWasRan()
-
 }
 
 func (pc *Checker) PostCloud() error {
-
 	ready, err := pc.bootstrapState.PostCloudPreflightchecksWasRan()
-
 	if err != nil {
 		msg := fmt.Sprintf("Can not get state from cache: %v", err)
 		return errors.New(msg)
@@ -187,18 +193,15 @@ func (pc *Checker) PostCloud() error {
 			skipFlag:       app.CloudAPIAccessibilityArgName,
 		},
 	})
-
 	if err != nil {
 		return err
 	}
 
 	return pc.bootstrapState.SetPostCloudPreflightchecksWasRan()
-
 }
 
 func (pc *Checker) Global() error {
 	ready, err := pc.bootstrapState.GlobalPreflightchecksWasRan()
-
 	if err != nil {
 		msg := fmt.Sprintf("Can not get state from cache: %v", err)
 		return errors.New(msg)
@@ -219,14 +222,17 @@ func (pc *Checker) Global() error {
 			successMessage: "registry credentials are correct",
 			skipFlag:       app.RegistryCredentialsCheckArgName,
 		},
+		{
+			fun:            pc.CheckCidrIntersection,
+			successMessage: "CIDRs are not intersects",
+			skipFlag:       app.CIDRIntersection,
+		},
 	})
-
 	if err != nil {
 		return err
 	}
 
 	return pc.bootstrapState.SetGlobalPreflightchecksWasRan()
-
 }
 
 func (pc *Checker) do(title string, checks []checkStep) error {

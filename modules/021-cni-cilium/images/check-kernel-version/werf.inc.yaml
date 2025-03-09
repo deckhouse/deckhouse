@@ -14,8 +14,9 @@ import:
   add: /pause
   to: /pause
   before: install
-docker:
-  ENTRYPOINT: [ "/check-kernel-version" ]
+imageSpec:
+  config:
+    entrypoint: [ "/check-kernel-version" ]
 ---
 {{- $binaries := "/bin/true" }}
 ---

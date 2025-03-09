@@ -6,8 +6,9 @@ import:
   add: /controller-linux-amd64
   to: /bin/cert-manager-controller
   before: setup
-docker:
-  ENTRYPOINT: ["/bin/cert-manager-controller"]
+imageSpec:
+  config:
+    entrypoint: ["/bin/cert-manager-controller"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact

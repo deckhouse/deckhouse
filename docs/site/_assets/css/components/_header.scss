@@ -15,6 +15,7 @@ html {
 .header {
 @include bg-color($white);
 transition: .2s ease-in-out;
+font-family: 'Noto Sans', sans-serif;
 
 &_float {
   @include box-shadow;
@@ -76,15 +77,13 @@ transition: .2s ease-in-out;
 
 &__nav {
   &.nav {
-    display: none;
-
     @include min-w(xl) {
       display: flex;
       gap: .75rem .95rem;
     }
 
     @include min-w(xxl) {
-      gap: .75rem 1.25rem;
+      gap: .75rem 1.17rem;
     }
   }
 
@@ -271,12 +270,8 @@ transition: .2s ease-in-out;
   gap: .5rem;
   align-items: center;
 
-  @include max-w(l) {
-    display: none;
-  }
-
   @include min-w(xl) {
-    gap: 1.1rem;
+    gap: 1rem;
   }
 
   .header__nav {
@@ -291,8 +286,9 @@ transition: .2s ease-in-out;
     display: flex;
     align-items: center;
     font-size: .875rem;
+    font-weight: 400;
 
-    @include min-w(l) {
+    @include min-w(m) {
       padding: .25rem .4rem;
       font-size: .635rem;
     }
@@ -485,10 +481,7 @@ transition: .2s ease-in-out;
     display: flex;
     gap: 1.25rem 2.1rem;
     flex-direction: column;
-
-    @include min-w(l) {
-      flex-direction: row;
-    }
+    flex-direction: row;
   }
 
   &-logo {
@@ -500,7 +493,7 @@ transition: .2s ease-in-out;
     font-size: 16px;
 
     @include min-w(xxl) {
-      font-size: 1.2rem;
+      font-size: 1.1rem;
     }
 
     svg {
@@ -515,10 +508,17 @@ transition: .2s ease-in-out;
 
   ul {
     flex-wrap: wrap;
-    gap: 1.15rem 1.5rem;
 
-    @include min-w(xl) {
-      gap: .75rem 1.3rem;
+    &.nav {
+      gap: 1.15rem 1.5rem;
+
+      @include min-w(xl) {
+        gap: .75rem 1.3rem;
+      }
+
+      @include min-w(xxl) {
+        gap: .75rem 1.43rem;
+      }
     }
 
     li {

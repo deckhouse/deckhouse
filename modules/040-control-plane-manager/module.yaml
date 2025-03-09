@@ -1,0 +1,5 @@
+name: control-plane-manager
+weight: 40
+subsystems:
+  - kubernetes
+namespace: kube-system

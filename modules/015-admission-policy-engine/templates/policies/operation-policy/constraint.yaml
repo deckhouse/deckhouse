@@ -88,11 +88,11 @@ spec:
         kinds: ["Pod"]
     {{- include "constraint_selector" (list $cr) }}
   parameters:
-    {{- if gt (len $cr.spec.policies.requiredResources.limits) 0 }}
+    {{- if $cr.spec.policies.requiredResources.limits }}
     limits:
       {{- $cr.spec.policies.requiredResources.limits | toYaml | nindent 6 }}
     {{- end }}
-    {{- if gt (len $cr.spec.policies.requiredResources.requests) 0 }}
+    {{- if $cr.spec.policies.requiredResources.requests }}
     requests:
       {{- $cr.spec.policies.requiredResources.requests | toYaml | nindent 6 }}
     {{- end }}

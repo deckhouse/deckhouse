@@ -80,12 +80,9 @@ ln -fs /usr/bin/vim-console /usr/bin/vi
 
 # render docker parameters for installer image
 {{- define "dev_prebuild_docker_properties" }}
-docker:
-  ENV:
-    MODULES_DIR: /deckhouse/modules
-    GLOBAL_HOOKS_DIR: /deckhouse/global-hooks
-    PYTHONPATH: /deckhouse/python_lib
-    LC_ALL: C
+imageSpec:
+  config:
+    env: { "MODULES_DIR": "/deckhouse/modules", "GLOBAL_HOOKS_DIR": "/deckhouse/global-hooks", "PYTHONPATH": "/deckhouse/python_lib", "LC_ALL": "C" }
 {{- end }}
 
 

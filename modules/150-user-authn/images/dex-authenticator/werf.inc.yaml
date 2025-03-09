@@ -10,9 +10,10 @@ import:
     add: /src/url-exec-prober
     to: /usr/local/bin/url-exec-prober
     before: setup
-docker:
-  ENTRYPOINT: [ "/bin/oauth2_proxy" ]
-  CMD: [ "--upstream=http://0.0.0.0:8080/", "--http-address=0.0.0.0:4180" ]
+imageSpec:
+  config:
+    entrypoint: [ "/bin/oauth2_proxy" ]
+    cmd: [ "--upstream=http://0.0.0.0:8080/", "--http-address=0.0.0.0:4180" ]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-oauth2-proxy-src-artifact
 fromImage: common/src-artifact
@@ -20,6 +21,9 @@ final: false
 git:
   - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches/
     to: /patches
+    stageDependencies:
+      install:
+        - '**/*'
   - url: {{ $.SOURCE_REPO }}/oauth2-proxy/oauth2-proxy.git
     to: /src
     tag: v7.5.1
@@ -31,7 +35,8 @@ git:
 shell:
   install:
     - cd /src
-    - git apply -v /patches/*.patch
+    - git apply --verbose /patches/*.patch
+    - rm -rf .git docs
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-oauth2-proxy-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}

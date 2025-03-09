@@ -31,19 +31,13 @@ import:
   before: install
   includePaths:
   - '**/*'
-docker:
-  EXPOSE:
-  - "9090"
-  VOLUME:
-  - "/prometheus"
-  WORKDIR: "/prometheus"
-  ENTRYPOINT:
-  - "/bin/prometheus"
-  CMD:
-  - "--config.file=/etc/prometheus/prometheus.yml"
-  - "--storage.tsdb.path=/prometheus"
-  - "--web.console.libraries=/usr/share/prometheus/console_libraries"
-  - "--web.console.templates=/usr/share/prometheus/consoles"
+imageSpec:
+  config:
+    entrypoint: ["/bin/prometheus"]
+    expose: ["9090"]
+    volumes: ["/prometheus"]
+    workingDir: "/prometheus"
+    cmd: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus", "--web.console.libraries=/usr/share/prometheus/console_libraries", "--web.console.templates=/usr/share/prometheus/consoles"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact

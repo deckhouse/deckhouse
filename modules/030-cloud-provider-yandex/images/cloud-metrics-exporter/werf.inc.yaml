@@ -6,8 +6,9 @@ import:
   add: /src/exporter
   to: /exporter
   after: setup
-docker:
-  ENTRYPOINT: [ "/exporter"]
+imageSpec:
+  config:
+    entrypoint: [ "/exporter"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false

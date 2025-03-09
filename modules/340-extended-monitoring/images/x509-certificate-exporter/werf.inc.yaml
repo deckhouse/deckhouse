@@ -35,5 +35,6 @@ import:
     add: /src/x509-certificate-exporter
     to: /x509-certificate-exporter
     after: setup
-docker:
-  ENTRYPOINT: ["/x509-certificate-exporter"]
+imageSpec:
+  config:
+    entrypoint: ["/x509-certificate-exporter"]

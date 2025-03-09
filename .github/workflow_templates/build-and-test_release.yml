@@ -225,6 +225,15 @@ jobs:
       - git_info
 {!{ tmpl.Exec "tests_before_build_template" (slice $ctx "unit") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.tests) | strings.Indent 6 }!}
+{!{ $jobNames = coll.Merge $jobNames (dict "security_scan_images" "Security scan images") }!}
+  security_scan_images:
+    name: {!{ $jobNames.security_scan_images }!}
+    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' }}
+    runs-on: [ self-hosted, regular, selectel ]
+    needs:
+      - git_info
+      - build_fe
+{!{ tmpl.Exec "security_scan_template" (slice $ctx "main") | strings.Indent 4 }!}
 
 {!{ $jobNames = coll.Merge $jobNames (dict "tests_python_webhooks" "Tests python webhooks") }!}
   tests_python_webhooks:

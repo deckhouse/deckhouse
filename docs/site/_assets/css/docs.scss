@@ -358,7 +358,7 @@
 .sidebar__wrapper-inner {
   position: -webkit-sticky;
   position: sticky;
-  top: 162px;
+  top: 135.5px;
   //width: 260px;
   height: calc(100vh - 105px);
   overflow-x: hidden;
@@ -452,7 +452,6 @@
     transform: rotate(-180deg);
 }
 
-.sidebar__item_hot > a::after,
 .sidebar .sidebar__item_ee > a::after,
 .sidebar .sidebar__item_proprietaryOkmeter > a::after,
 .sidebar .sidebar__item_experimental > a::after,
@@ -473,6 +472,11 @@ a.comparison-table__module::after {
     white-space: nowrap;
 }
 
+.sidebar__submenu-title {
+  margin-right: 10px;
+}
+
+// The version used before DKP ~1.68
 .sidebar__badge {
   display: inline-flex;
   vertical-align: middle;
@@ -492,14 +496,42 @@ a.comparison-table__module::after {
   margin-left: 10px;
 }
 
+// The version used after DKP ~1.68
+
+.sidebar__badge--container {
+  display: inline-block;
+}
+
+.sidebar__badge_v2 {
+  display: inline-flex;
+  margin-right: 4px;
+  padding: 4px 5px;
+  border: 1px solid #bbb;
+  border-radius: 16px;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 7px;
+  letter-spacing: 1px;
+  color: $color-text-secondary;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: $background-blue;
+}
+
+.sidebar__badge_commercial {
+  padding: 3px 3px 4px 5px;
+  border: none;
+  font-weight: 400;
+  font-size: 12px;
+  text-align: center;
+  color: $white;
+  background-color: $color-text-secondary;
+}
+
 a.comparison-table__module {
     position: relative;
     display: inline-flex;
     align-items: center;
-}
-
-.sidebar__item_hot > a::after {
-    content: 'NEW!';
 }
 
 .sidebar .sidebar__item_experimental > a::after,
@@ -838,7 +870,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
         padding-left: 32px;
     }
 }
-  
+
 .docs .resources__prop_description > ol > li::before {
     content: none;
 }
@@ -1090,8 +1122,11 @@ a.comparison-table__module-proprietaryOkmeter::after {
     border-radius: 4px;
 }
 
+.docs div.highlight {
+  position: relative;
+}
+
 .docs pre {
-    position: relative;
     font-family: 'Source Code Pro', monospace;
     border-radius: 4px;
     padding: 10px;
@@ -1113,10 +1148,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
         background: url(/images/copy.svg) center/contain no-repeat;
         opacity: 0;
         transition: opacity .25s;
-    
+
         &.show {
             opacity: .75;
-      
+
             &:hover {
                 opacity: 1;
             }
@@ -1213,14 +1248,14 @@ a.comparison-table__module-proprietaryOkmeter::after {
     table {
         th, td {
             padding: 1em 1.5em;
-            border-bottom: 1px solid #C4CAD4;  
+            border-bottom: 1px solid #C4CAD4;
         }
     }
 
     .table-wrapper__small {
         table {
             th, td {
-                padding: 1em 1.2em; 
+                padding: 1em 1.2em;
             }
         }
     }

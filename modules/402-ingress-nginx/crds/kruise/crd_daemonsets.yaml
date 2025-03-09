@@ -80,7 +80,6 @@ spec:
                   type: integer
                   description: Replicas value equals to the number of desired pods and is set by the controller for compatibility with PDB requirements.
                   default: 1
-                  type: integer
                 burstReplicas:
                   anyOf:
                     - type: integer

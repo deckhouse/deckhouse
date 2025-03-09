@@ -51,19 +51,19 @@ from: {{ .Images.BASE_ALPINE }}
 final: false
 shell:
   install:
-    - apk add --no-cache jq curl
-    - mkdir -p /data
+  - apk add --no-cache jq curl
+  - mkdir -p /data
   setup:
-    - echo "Getting data from the API server..."
-    - curl --retry-delay 5 --retry 5 {{ env "DOC_API_URL" }}?api-key={{- env "DOC_API_KEY" }} -o /tmp/menus.json
-    - |
-      jq '.header | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty header array!") else ( . | {"topnav": { "en": [{"items": .en}], "ru": [ {"items": .ru}  ]}}) end ' /tmp/menus.json > /data/topnav.json
-    - |
-      jq '."header-products" | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty header array!") else . end' /tmp/menus.json > /data/topnav-l2-products.json
-    - |
-      jq '.footer | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty footer array!") else ( . | {"columns": . }) end ' /tmp/menus.json > /data/footer.json
-    - |
-      jq '.copyright | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty copyright array!") else . end ' /tmp/menus.json > /data/copyright.json
+  - echo "Getting data from the API server..."
+  - curl --retry-delay 5 --retry 5 {{ env "DOC_API_URL" }}?api-key={{- env "DOC_API_KEY" }} -o /tmp/menus.json
+  - |
+    jq '.header | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty header array!") else ( . | {"topnav": { "en": [{"items": .en}], "ru": [ {"items": .ru}  ]}}) end ' /tmp/menus.json > /data/topnav.json
+  - |
+    jq '."header-products" | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty header array!") else . end' /tmp/menus.json > /data/topnav-l2-products.json
+  - |
+    jq '.footer | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty footer array!") else ( . | {"columns": . }) end ' /tmp/menus.json > /data/footer.json
+  - |
+    jq '.copyright | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty copyright array!") else . end ' /tmp/menus.json > /data/copyright.json
 {{- end }}
 ---
 image: web-static
@@ -102,6 +102,8 @@ git:
   - _includes/rbac/
   - _plugins/jekyll_asset_pipeline.rb
   - _plugins/custom_filters.rb
+  - _plugins/custom_sidebar.rb
+  - _plugins/utils.rb
   - _plugins/offtopic.rb
   stageDependencies:
     setup: '**/*'
@@ -322,12 +324,12 @@ import:
 {{- end }}
 ---
 image: web-backend-srv
-from: {{ .Images.BASE_GOLANG_16_ALPINE }}
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 final: false
 shell:
   install:
   - cd /go/src/app
-  - go mod tidy
+  - go mod download
   setup:
   - cd /go/src/app
   - go build -ldflags "-w -s" -v -o /go/src/app/server /go/src/app/cmd/v-router
@@ -341,8 +343,9 @@ git:
       setup: '**/*'
 ---
 image: web-backend
-docker:
-  WORKDIR: /app
+imageSpec:
+  config:
+    workingDir: "/app"
 from: {{ .Images.BASE_ALPINE }}
 shell:
   install:
@@ -361,10 +364,13 @@ import:
     - ru/includes/
 ---
 image: web-frontend
-docker:
-  WORKDIR: /app
-from: {{ .Images.BASE_NGINX_ALPINE }}
+imageSpec:
+  config:
+    workingDir: "/app"
+from: {{ .Images.BASE_ALPINE }}
 shell:
+  beforeSetup:
+  - apk add --no-cache nginx
   setup:
   - |
       cat <<"EOD" > /etc/nginx/nginx.conf
@@ -394,7 +400,7 @@ from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 shell:
   install:
   - cd /go/src/app
-  - go mod tidy
+  - go mod download
   setup:
   - cd /go/src/app
   - go build -ldflags "-w -s" -v -o /go/src/app/registry-modules-watcher /go/src/app/cmd/
@@ -407,8 +413,9 @@ git:
 ---
 image: registry-modules-watcher
 from: {{ .Images.BASE_ALPINE }}
-docker:
-  WORKDIR: /app
+imageSpec:
+  config:
+    workingDir: "/app"
 import:
   - image: registry-modules-watcher-artifact
     add: /go/src/app/registry-modules-watcher

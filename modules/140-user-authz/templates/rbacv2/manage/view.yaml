@@ -12,6 +12,14 @@ metadata:
 rules:
 - apiGroups:
   - deckhouse.io
+  resources:
+  - clusterauthorizationrules
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - deckhouse.io
   resourceNames:
   - user-authz
   resources:

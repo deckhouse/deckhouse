@@ -52,7 +52,8 @@
       severity_level: "3"
     annotations:
       plk_protocol_version: "1"
-      description: There is no running K8S scheduler. New pods are not being assigned
-        to nodes.
+      summary: Scheduler is down.
+      description: |
+        The Kubernetes scheduler is not running.
+        As a result, new pods are not being assigned to nodes.
       runbook: https://coreos.com/tectonic/docs/latest/troubleshooting/controller-recovery.html#recovering-a-scheduler
-      summary: Scheduler is down

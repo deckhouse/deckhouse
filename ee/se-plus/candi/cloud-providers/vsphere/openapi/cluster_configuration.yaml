@@ -80,7 +80,7 @@ apiVersions:
         description: |
           The definition of the master's NodeGroup.
 
-          > Caution! After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
+          > For the changes to take effect, run `dhctl converge` after modifying the parameters of the `masterNodeGroup` section.
         properties:
           replicas:
             type: integer
@@ -93,7 +93,10 @@ apiVersions:
               type: string
             minItems: 1
             uniqueItems: true
-            description: A limited set of zones in which nodes can be created.
+            description: | 
+              A limited set of zones in which master nodes can be created.
+
+              The order in which zones are specified does not influence the sequence of node creation. Nodes are assigned to zones in alphabetical order: the first node is placed in the alphabetically first zone, the second node in the second zone, and so forth. If there are more nodes than zones, the assignment process restarts from the beginning of the zone list after placing a node in the last alphabetical zone.
           instanceClass:
             type: object
             additionalProperties: false
@@ -271,7 +274,7 @@ apiVersions:
                   description: |
                     The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
 
-                    > **Caution!** Only the `effect`, `key`, `values`  fields are available.
+                    > Available fields: `effect`, `key`, and `values`.
                   x-examples:
                   - - effect: NoExecute
                       key: ship-class

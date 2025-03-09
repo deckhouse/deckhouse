@@ -17,9 +17,9 @@
    - не менее 4 ядер CPU;
    - не менее 8 ГБ RAM;
    - не менее 60 ГБ дискового пространства на быстром диске (400+ IOPS);
-   - [поддерживаемая ОС](/products/virtualization-platform/documentation/admin/install/requirements.html#поддерживаемые-ос);
+   - [поддерживаемая ОС](/products/virtualization-platform/documentation/admin/install/requirements.html#поддерживаемые-ос-для-узлов-платформы);
    - ядро Linux версии `5.7` или новее;
-   - ЦП с архитектурой x86_64 с поддержкой инструкций Intel-VT (vmx) или AMD-V (svm);
+   - ЦП с архитектурой x86_64 с поддержкой инструкций Intel-VT (VMX) или AMD-V (SVM);
    - **Уникальный hostname** в пределах серверов (виртуальных машин) кластера;
    - HTTPS-доступ до хранилища образов контейнеров `registry.deckhouse.ru`;
    - доступ к стандартным для используемой ОС репозиториям пакетов;

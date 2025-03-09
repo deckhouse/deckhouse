@@ -18,9 +18,10 @@ There are different types of images:
 
 Examples of resources for obtaining virtual machine images:
 
-- [Ubuntu](https://cloud-images.ubuntu.com).
-- [Alt Linux](https://ftp.altlinux.ru/pub/distributions/ALTLinux/platform/images/cloud/x86_64).
-- [Astra Linux](https://download.astralinux.ru/ui/native/mg-generic/alse/cloudinit).
+- [Ubuntu](https://cloud-images.ubuntu.com)
+- [Debian](https://cdimage.debian.org/images/cloud/)
+- [RockyLinux](https://download.rockylinux.org/pub/rocky/9.5/images/x86_64/)
+- [CentOS](https://cloud.centos.org/centos/7/images/)
 
 After creating the resource, the type and size of the image are automatically determined, and this information is reflected in the resource's status.
 
@@ -218,7 +219,7 @@ d8 k get vi some-image -o jsonpath="{.status.imageUploadURLs}"  | jq
 # }
 ```
 
-As an example, let's consider uploading the Cirros image:
+Download the Cirros image as an example:
 
 ```bash
 curl -L http://download.cirros-cloud.net/0.5.1/cirros-0.5.1-x86_64-disk.img -o cirros.img
@@ -267,3 +268,22 @@ spec:
       name: linux-vm-root
 EOF
 ```
+
+### Storage class settings for images
+
+Storage class settings for images are defined in the `.spec.settings.virtualImages` parameter of the module settings.
+Example:
+
+```yaml
+spec:
+...
+settings:
+virtualImages:
+allowedStorageClassNames:
+- sc-1
+- sc-2
+defaultStorageClassName: sc-1
+```
+
+`allowedStorageClassNames` — (optional) is a list of valid `StorageClass` for creating `VirtualImage`, which can be explicitly specified in the resource specification.
+`defaultStorageClassName` — (optional) is the `StorageClass` used by default when creating `VirtualImage`, if the `.spec.persistentVolumeClaim.storageClassName` parameter is not specified.
