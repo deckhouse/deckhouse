@@ -25,7 +25,7 @@ Deckhouse Kubernetes Platform mTLS реализуется средствами I
 
 <!-- взято и немного изменено из ПМИ от архитекторов-->
 
-Включения модуля istio:
+Включите модуль istio:
 
 ```yaml
 kubectl create -f -<<EOF
@@ -39,7 +39,7 @@ spec:
 EOF
 ```
 
-Создание пространства имен, добавление лейблов:
+Создайте пространство имен, добавьте лейблы:
 
 ```bash
 kubectl create namespace test-istio-mtls
@@ -47,10 +47,10 @@ kubectl label namespace test-istio-mtls istio-injection=enabled
 kubectl label namespace test-istio-mtls security.deckhouse.io/pod-policy=privileged
 ```
 
-Добавление политики, определяющей режим работы  mTLS.
+Добавьте политику, определяющую режим работы  mTLS.
 Возможные режимы работы:
 
-- `PERMISSIVE` (используется по умолчанию) — в этом режиме между трафик будет зашифрован, но также будет возможность принимать не зашифрованный трафик.
+- `PERMISSIVE` (используется по умолчанию) — в этом режиме трафик между подами будет зашифрован, но также будет возможность принимать незашифрованный трафик.
 - `STRICT` — режим разрешает только зашифрованный трафик.
 
 ```yaml
@@ -65,7 +65,7 @@ spec:
 EOF
 ```
 
-Создание deployment:
+Создайте deployment:
 
 > При использовании образов из публичных registry:
 
@@ -79,13 +79,13 @@ kubectl -n test-istio-mtls create deployment webserver --image=docker.io/library
 kubectl -n test-istio-mtls create deployment webserver --image=registry.company.network/localrepo/all-in-one-image:0.1 --port 80 -- /bin/sh -c 'nginx -g "daemon off;"'
 ```
 
-Публикация:
+Опубликуйте deployment:
 
 ```bash
 kubectl -n test-istio-mtls expose deployment webserver --port=80
 ```
 
-Получение адреса пода и узла, на котором он запущен для запуска на данном узле tcpdump для анализа трафика:
+Получите адрес пода и узла, на котором он запущен, для запуска на данном узле tcpdump для анализа трафика:
 
 ```bash
 ~ $ kubectl -n test-istio-mtls get pods -l app=webserver -o wide
@@ -93,13 +93,13 @@ NAME                    READY   STATUS    RESTARTS   AGE   IP             NODE  
 webserver-76d6c9b8c-9mdtb   2/2     Running   0          48m   10.111.1.122   test-worker-e36e4712-5948b-sp9t8   <none>           <none>
 ```
 
-Подключение к узлу по SSH от root-пользователя и запуск tcpdump:
+Подключитесь к узлу по SSH от root-пользователя и запустите tcpdump:
 
 ```bash
 tcpdump -A -v -i any host 10.111.1.122 and port 80
 ```
 
-Создание deployment client в этом же пространстве имён, чтобы он был участником mesh-сети:
+Создайте deployment client в этом же пространстве имён, чтобы он был участником mesh-сети:
 
 > При использовании образов из публичных registry:
 
@@ -129,13 +129,13 @@ o[..P..'...;.i8...........
 ...
 ```
 
-Создание пространства без лейбла `istio-injection=enabled` и запрос к сервису `webserver.test-istio-mtls` (т.е. выполняется  запрос из пода, который не является участником mesh-сети).
+Создайте пространство без лейбла `istio-injection=enabled` и выполните запрос к сервису `webserver.test-istio-mtls` (т.е. выполняется запрос из пода, который не является участником mesh-сети).
 
 ```bash
 kubectl create namespace test-istio-mtls-without-injection
 ```
 
-Добавление deployment:
+Добавьте deployment:
 
 > При использовании образов из публичных registry:
 
