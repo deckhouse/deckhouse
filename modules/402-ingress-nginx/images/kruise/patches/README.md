@@ -1,6 +1,6 @@
 ## Patches
 
-## 000-gomod.patch
+## 001-go-mod.patch
 
 Fix vulnerabilities in components.
 

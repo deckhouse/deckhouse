@@ -1,5 +1,5 @@
 ## patches
 
-### 001-go_mod.patch
+### 001-go-mod.patch
 
 TODO: update readme

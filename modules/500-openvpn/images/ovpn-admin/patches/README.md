@@ -1,6 +1,6 @@
 ## Patches
 
-### 001-go_mod.patch
+### 001-go-mod.patch
 
 Update dependencies
 

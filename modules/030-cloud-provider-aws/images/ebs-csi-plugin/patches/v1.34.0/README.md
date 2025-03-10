@@ -1,5 +1,5 @@
 ## Patches
 
-### 001-bump-deps.patch
+### 001-go-mod.patch
 
 Update dependencies

@@ -1,6 +1,6 @@
 # Patches
 
-## 001-fix_cve.patch
+## 001-go-mod.patch
 
 Fixes several CVEs.
 
