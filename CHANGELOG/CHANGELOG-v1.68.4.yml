@@ -1,0 +1,9 @@
+candi:
+  fixes:
+    - summary: Fix add_node_users.sh search for sudoersd_path.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12474
+docs:
+  fixes:
+    - summary: Fixed typos at VMware configuration parameters.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12472
+
