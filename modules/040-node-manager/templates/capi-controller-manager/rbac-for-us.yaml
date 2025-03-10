@@ -114,6 +114,9 @@ rules:
       - huaweicloudclusters
       - huaweicloudmachines
       - huaweicloudmachinetemplates
+      - deckhouseclusters
+      - deckhousemachines
+      - deckhousemachinetemplates
     verbs:
       - create
       - delete
