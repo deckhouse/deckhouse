@@ -134,7 +134,7 @@ func handleAuditPolicy(input *go_hook.HookInput) error {
 }
 
 func appendBasicPolicyRules(policy *audit.Policy, extraData []go_hook.FilterResult) {
-	var appendDropResourcesRule = func(resource audit.GroupResources) {
+	appendDropResourcesRule := func(resource audit.GroupResources) {
 		rule := audit.PolicyRule{
 			Level: audit.LevelNone,
 			Resources: []audit.GroupResources{
@@ -273,6 +273,37 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []go_hook.FilterResu
 		}
 		policy.Rules = append(policy.Rules, rule)
 	}
+
+	policy.Rules = append(policy.Rules, audit.PolicyRule{
+		Level:      audit.LevelRequestResponse,
+		Verbs:      []string{"create", "delete", "patch", "update"},
+		Resources:  []audit.GroupResources{{Resources: []string{"pods"}}},
+		OmitStages: []audit.Stage{audit.StageRequestReceived},
+	})
+	policy.Rules = append(policy.Rules, audit.PolicyRule{
+		Level:      audit.LevelRequestResponse,
+		Verbs:      []string{"create", "delete"},
+		Resources:  []audit.GroupResources{{Group: "", Resources: []string{"serviceaccounts"}}},
+		OmitStages: []audit.Stage{audit.StageRequestReceived},
+	})
+	policy.Rules = append(policy.Rules, audit.PolicyRule{
+		Level:      audit.LevelRequestResponse,
+		Verbs:      []string{"create", "update", "delete", "patch"},
+		Resources:  []audit.GroupResources{{Group: "rbac.authorization.k8s.io", Resources: []string{"roles", "clusterroles"}}},
+		OmitStages: []audit.Stage{audit.StageRequestReceived},
+	})
+	policy.Rules = append(policy.Rules, audit.PolicyRule{
+		Level:      audit.LevelRequestResponse,
+		Verbs:      []string{"create", "update", "delete"},
+		Resources:  []audit.GroupResources{{Group: "rbac.authorization.k8s.io", Resources: []string{"clusterrolebindings"}}},
+		OmitStages: []audit.Stage{audit.StageRequestReceived},
+	})
+	policy.Rules = append(policy.Rules, audit.PolicyRule{
+		Level:      audit.LevelRequestResponse,
+		Verbs:      []string{"create"},
+		Resources:  []audit.GroupResources{{Resources: []string{"pods/exec", "pods/attach", "pods/ephemeralcontainers"}}},
+		OmitStages: []audit.Stage{audit.StageRequestReceived},
+	})
 }
 
 func appendAdditionalPolicyRules(policy *audit.Policy, data *[]byte) error {
