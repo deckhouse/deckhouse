@@ -32,7 +32,7 @@ import (
 
 var _ = Describe("User Authn hooks :: migration to Group object ::", func() {
 	f := HookExecutionConfigInit(`{"userAuthn":{"internal": {}}}`, "")
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "User", false)
+	f.RegisterCRD("deckhouse.io", "v1", "User", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "Group", false)
 
 	Context("Fresh cluster", func() {
@@ -70,7 +70,7 @@ metadata:
 		BeforeEach(func() {
 			f.KubeStateSet(`
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: User
 metadata:
   name: admin
@@ -81,7 +81,7 @@ spec:
   - Everyone
   password: password
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: User
 metadata:
   name: user
