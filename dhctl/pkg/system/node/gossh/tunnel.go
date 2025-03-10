@@ -138,7 +138,9 @@ func (t *Tunnel) HealthMonitor(errorOutCh chan<- error) {
 		case err := <-t.errCh:
 			errorOutCh <- err
 		case <-t.stopCh:
-			_ = t.remoteListener.Close()
+			if t.remoteListener != nil {
+				_ = t.remoteListener.Close()
+			}
 			return
 		}
 	}

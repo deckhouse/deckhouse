@@ -189,7 +189,7 @@ func (c *SSHCommand) ProcessWait() {
 				// The usual e.cmd.Process.Kill() is not working for the process
 				// started with the new process group (Setpgid: true).
 				// Negative pid number is used to send a signal to all processes in the group.
-				err := c.Session.Close()
+				err := c.Session.Signal(ssh.SIGKILL)
 				if err != nil {
 					c.killError = err
 				}
@@ -618,9 +618,10 @@ func (c *SSHCommand) Stop() {
 	if c.stopCh != nil {
 		close(c.stopCh)
 	}
-	<-c.waitCh
+	// <-c.waitCh
 	log.DebugF("Stopped '%s' \n", c.cmd)
 	c.closePipes()
+	c.Session.Signal(ssh.SIGKILL)
 }
 
 func (c *SSHCommand) setWaitError(err error) {
