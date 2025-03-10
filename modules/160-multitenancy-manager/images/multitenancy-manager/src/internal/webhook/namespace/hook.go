@@ -23,13 +23,11 @@ import (
 	"slices"
 
 	corev1 "k8s.io/api/core/v1"
-
-	"sigs.k8s.io/yaml"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+	"sigs.k8s.io/yaml"
 )
 
 func Register(runtimeManager manager.Manager, allowedServiceAccounts []string) {

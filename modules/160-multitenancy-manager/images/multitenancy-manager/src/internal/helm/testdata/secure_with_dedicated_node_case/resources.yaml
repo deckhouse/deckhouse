@@ -3,7 +3,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  annotations: null
+  annotations: {}
   labels:
     extended-monitoring.deckhouse.io/enabled: ""
     heritage: multitenancy-manager
@@ -13,9 +13,44 @@ metadata:
   name: test
 
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: AuthorizationRule
+metadata:
+  annotations: {}
+  labels:
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: secure-with-dedicated-nodes
+  name: user-gmail.com
+  namespace: test
+spec:
+  accessLevel: Admin
+  subjects:
+  - kind: User
+    name: user@gmail.com
+
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  annotations: {}
+  labels:
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: secure-with-dedicated-nodes
+  name: all-pods
+  namespace: test
+spec:
+  hard:
+    limits.memory: 20Gi
+    requests.cpu: 2
+    requests.memory: 10Gi
+
+---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
+  annotations: {}
   labels:
     heritage: multitenancy-manager
     projects.deckhouse.io/project: test
@@ -62,6 +97,7 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: OperationPolicy
 metadata:
+  annotations: {}
   labels:
     heritage: multitenancy-manager
     projects.deckhouse.io/project: test
@@ -84,6 +120,7 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: FalcoAuditRules
 metadata:
+  annotations: {}
   labels:
     heritage: multitenancy-manager
     projects.deckhouse.io/project: test
@@ -116,6 +153,7 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: SecurityPolicy
 metadata:
+  annotations: {}
   labels:
     heritage: multitenancy-manager
     projects.deckhouse.io/project: test
@@ -135,35 +173,3 @@ spec:
       - max: 100
         min: 10
       rule: MustRunAs
-
----
-apiVersion: deckhouse.io/v1alpha1
-kind: AuthorizationRule
-metadata:
-  labels:
-    heritage: multitenancy-manager
-    projects.deckhouse.io/project: test
-    projects.deckhouse.io/project-template: secure-with-dedicated-nodes
-  name: user-gmail.com
-  namespace: test
-spec:
-  accessLevel: Admin
-  subjects:
-  - kind: User
-    name: user@gmail.com
-
----
-apiVersion: v1
-kind: ResourceQuota
-metadata:
-  labels:
-    heritage: multitenancy-manager
-    projects.deckhouse.io/project: test
-    projects.deckhouse.io/project-template: secure-with-dedicated-nodes
-  name: all-pods
-  namespace: test
-spec:
-  hard:
-    limits.memory: 20Gi
-    requests.cpu: 2
-    requests.memory: 10Gi
