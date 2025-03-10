@@ -630,8 +630,8 @@ jobs:
               const changelogEntries = findSectionInMarkdown(mdTokens, 'Changelog entries', 'lang', 'changes');
               validatePullRequestChangelog(changelogEntries, allowedModules);
             } catch(error) {
-              core.error(`
-              \u001B[1m\u001B[103m\u001B[30mPlease ensure your Pull Request includes a properly formatted Changelog entries block check that the section follows the changelog guidelines,
+              core.info(`
+              \u001B[1m\u001B[103m\u001B[30mPlease ensure your Pull Request includes a properly formatted Changelog entries block. Check that the section follows the changelog guidelines,
               \u001B[1m\u001B[103m\u001B[30mincluding the Type of changes and other required fields. 
               \u001B[1m\u001B[103m\u001B[30mThis helps maintain accurate release notes and ensures the changelog automation works smoothly. 
               \u001B[1m\u001B[103m\u001B[30mThank you! 🙌 
