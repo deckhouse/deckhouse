@@ -26,6 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	genssh "github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 func NewClient(session *session.Session, privKeys []session.AgentPrivateKey) *Client {
@@ -135,7 +136,10 @@ func (s *Client) Start() error {
 		log.DebugF("Try to direct connect host master host %s\n", addr)
 
 		var err error
-		client, err = ssh.Dial("tcp", addr, config)
+		err = retry.NewSilentLoop("Get SSH client", 10, 15*time.Second).Run(func() error {
+			client, err = ssh.Dial("tcp", addr, config)
+			return err
+		})
 		if err != nil {
 			return fmt.Errorf("failed to connect to host: %w", err)
 		}

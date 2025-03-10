@@ -198,9 +198,10 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 			b.Params.NodeInterface = local.NewNodeInterface()
 		} else {
 			sshClient := gossh.NewClientFromFlags()
-			if err := sshClient.Start(); err != nil {
-				return fmt.Errorf("unable to start ssh client: %w", err)
+			if metaConfig.IsStatic() {
+
 			}
+
 			log.DebugF("Hosts is %v empty; static cluster is %v. Use ssh", len(app.SSHHosts), metaConfig.IsStatic())
 			b.Params.NodeInterface = ssh.NewNodeInterfaceWrapper(sshClient)
 		}
@@ -335,6 +336,9 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 					SaveBastionHostToCache(baseOutputs.BastionHost)
 				}
 				sshClient.Session().SetAvailableHosts([]session.Host{{Host: masterOutputs.MasterIPForSSH, Name: masterNodeName}})
+				if err := sshClient.Start(); err != nil {
+					return fmt.Errorf("unable to start ssh client: %w", err)
+				}
 			}
 
 			nodeIP = masterOutputs.NodeInternalIP
