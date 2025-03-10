@@ -3,17 +3,19 @@ title: "HPE storage"
 permalink: en/storage/admin/external/hpe.html
 ---
 
-This section installs and configures the CSI driver for HPE SAN. The module allows you to create a `StorageClass` in `Kubernetes` by creating [Kubernetes custom resources](./cr.html#yadrostorageclass) `YadroStorageClass`.
+This module provides a CSI driver for managing volumes on HPE 3PAR storage systems.. It allows you to create `StorageClass` in `Kubernetes` using `HPEStorageClass`.
 
-> **Caution!** The user is not allowed to create a `StorageClass` for the `csi.hpe.com` CSI driver.
-> **Caution!** Currently, supports 3par SAN devices. For other HPE SAN support please contact tech support.
-
+{% alert level="warning" %}
+The user is not allowed to create a `StorageClass` for the `csi.hpe.com` CSI driver.
+Module supports only HPE 3PAR SAN devices. For other HPE SAN configurations, please reach out to technical support.
+{% endalert %}
+>
 ## System requirements and recommendations
 
 ### Requirements
 
-- Presence of a deployed and configured HPE SAN.
-- Unique iqn in /etc/iscsi/initiatorname.iscsi on each of Kubernetes Nodes
+- A deployed and configured HPE storage system.
+- Unique IQNs in `/etc/iscsi/initiatorname.iscsi` on each Kubernetes node.
 
 ## Quickstart guide
 
@@ -21,9 +23,9 @@ Note that all commands must be run on a machine that has administrator access to
 
 ### Enabling module
 
-- Enable the `csi-hpe` module. This will result in the following actions across all cluster nodes:
-  - registration of the CSI driver;
-  - launch of service pods for the `csi-hpe` components.
+Enable the `csi-hpe` module. This will result in the following actions across all cluster nodes:
+- registration of the CSI driver;
+- launch of service pods for the `csi-hpe` components.
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -37,7 +39,7 @@ spec:
 EOF
 ```
 
-- Wait for the module to become `Ready`.
+Wait for the module to become `Ready`.
 
 ```shell
 kubectl get module csi-hpe -w
@@ -45,7 +47,7 @@ kubectl get module csi-hpe -w
 
 ### Creating a StorageClass
 
-To create a StorageClass, you need to use the [HPEStorageClass](./cr.html#hpestorageclass) and [HPEStorageConnection](./cr.html#hpestorageconnection) resource. Here is an example command to create such a resource:
+To create a `StorageClass`, you need to use the [HPEStorageClass](../../../reference/cr/hpestorageclass) and [HPEStorageConnection](../../../reference/cr/hpestorageconnection) resource. Here is an example command to create such a resource:
 
 ```yaml
 d8 k apply -f -<<EOF
@@ -79,7 +81,7 @@ spec:
 EOF
 ```
 
-- You can check objects creation (Phase must be `Created`):
+You can check objects creation (Phase must be `Created`):
 
 ```shell
 d8 k get hpestorageconnections.storage.deckhouse.io <hpestorageconnection name>

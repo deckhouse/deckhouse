@@ -1,9 +1,9 @@
 ---
-title: "CEPH Storage"
+title: "Ceph storage"
 permalink: en/storage/admin/external/ceph.html
 ---
 
-To create StorageClass objects based on RBD (RADOS Block Device) or Ceph file system, you can use the `csi-ceph` module, which allows you to configure connections to one or more Ceph clusters.
+To create `StorageClass` objects based on RBD (RADOS Block Device) or Ceph file system, you can use the `csi-ceph` module, which allows you to configure connections to one or more Ceph clusters.
 
 ## Enabling the module
 
@@ -22,7 +22,7 @@ EOF
 
 ## Connecting to a Ceph cluster
 
-To configure a connection to a Ceph cluster, apply the `CephClusterConnection` resource. Example command:
+To configure a connection to a Ceph cluster, apply the [CephClusterConnection](../../../reference/cr/cephclusterconnection) resource. Example usage:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -40,7 +40,7 @@ spec:
 EOF
 ```
 
-You can check the connection creation status with the following command (the phase should be in `Created` status):
+You can check the connection status with the following command (the phase should be in `Created` status):
 
 ```shell
 d8 k get cephclusterconnection ceph-cluster-1
@@ -48,7 +48,7 @@ d8 k get cephclusterconnection ceph-cluster-1
 
 ## Authentication
 
-To authenticate with the Ceph cluster, you need to define the authentication parameters in the `CephClusterAuthentication` resource:
+To authenticate with the Ceph cluster, you need to define the authentication parameters in the [CephClusterAuthentication](../../../reference/cr/cephclusterauthentication) resource:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -66,9 +66,7 @@ EOF
 
 ## Creating StorageClass
 
-The creation of StorageClass objects is done through the `CephStorageClass` resource, which defines the configuration for the desired storage class. Manually creating a StorageClass resource without `CephStorageClass` may lead to errors.
-
-Example of creating a StorageClass based on RBD (RADOS Block Device):
+The creation of `StorageClass` objects is done through the [CephStorageClass](../../../reference/cr/cephstorageclass) resource, which defines the configuration for the desired `StorageClass`. Manually creating a `StorageClass` resource without `CephStorageClass` may lead to errors. Example of creating a `StorageClass` based on RBD (RADOS Block Device):
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -87,7 +85,7 @@ spec:
 EOF
 ```
 
-Example of creating a StorageClass based on Ceph file system:
+Example of creating a `StorageClass` based on Ceph file system:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -119,13 +117,13 @@ ceph-rbd-sc   Created   1h
 ceph-fs-sc    Created   1h
 ```
 
-Check the created StorageClass using the following command:
+Check the created `StorageClass` using the following command:
 
 ```shell
 d8 k get sc
 ```
 
-In the output, you should see information about the created StorageClass:
+In the output, you should see information about the created `StorageClass`:
 
 ```console
 NAME          PROVISIONER        RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
@@ -133,4 +131,4 @@ ceph-rbd-sc   rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true    
 ceph-fs-sc    rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true                   15s
 ```
 
-If the StorageClass objects are listed, it means the csi-ceph module configuration is complete. Users can now create PersistentVolumes by specifying the created StorageClass objects.
+If the `StorageClass` objects appear, it means the `csi-ceph` module configuration is complete. Users can now create `PersistentVolumes` by specifying the created `StorageClass` objects.

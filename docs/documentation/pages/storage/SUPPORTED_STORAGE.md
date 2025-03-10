@@ -3,7 +3,7 @@ title: "Storage configuration"
 permalink: en/storage/admin/supported-storage.html
 ---
 
-To create StorageClass objects, it is necessary to connect one or more storage systems that will manage the `PersistentVolume` resources.
+To create `StorageClass` objects, it is necessary to connect one or more storage systems that will manage the `PersistentVolume` resources.
 
 All supported systems can be divided into two groups:
 
@@ -25,12 +25,11 @@ External Storage:
 - SCSI storage system;
 - TATLIN.UNIFIED storage system (Yadro).
 
-Created StorageClass objects can be used to organize virtual disks and images.
+Created `StorageClass` objects can be used to organize virtual disks and images.
 
 ## How to Set a Default StorageClass?
 
-To set a default StorageClass, specify the desired storage class in the global configuration.  
-Example command:
+To set a default `StorageClass`, specify the desired storage class in the global configuration. Example command:
 
 ```shell
 # Specify the name of your StorageClass object.
@@ -40,8 +39,7 @@ d8 k patch mc global --type='json' -p='[{"op": "replace", "path": "/spec/setting
 
 ### Default StorageClass for virtual images
 
-Alternatively, for virtual images with a storage type of PersistentVolumeClaim, you can set a separate default StorageClass that differs from the platform's default storage class.
-You also need to explicitly specify the list of storage classes that users can select when configuring the VirtualImage resource.
+Alternatively, for virtual images with a storage type of PersistentVolumeClaim, you can set a separate default `StorageClass` that differs from the platform's default storage class. You also need to explicitly specify the list of storage classes that users can select when configuring the `VirtualImage` resource.
 
 To do this, edit the `ModuleConfig` for `virtualization`:
 
@@ -61,8 +59,7 @@ spec:
 
 ### Default StorageClass for virtual disks
 
-Alternatively, you can set a separate default StorageClass for virtual disks that differs from the platform's default storage class.  
-You also need to explicitly define the list of storage classes that users can select when configuring the `VirtualDisk` resource.
+Alternatively, you can set a separate default `StorageClass` for virtual disks that differs from the platform's default storage class. You also need to explicitly define the list of storage classes that users can select when configuring the `VirtualDisk` resource.
 
 To do this, edit the `ModuleConfig` for `virtualization`:
 
@@ -83,11 +80,10 @@ spec:
 ### StorageClass for the Container Registry
 
 {% alert level="warning" %}
-Changing the default storage class for the DVCR container registry will only apply if the corresponding PersistentVolumeClaim has not yet been created.
+Changing the default storage class for the DVCR container registry will only apply if the corresponding `PersistentVolumeClaim` has not yet been created.
 {% endalert %}
 
-For images and disks, the DVCR container registry is used. If the DVCR container registry uses a PersistentVolumeClaim for storage,
-you can explicitly define the StorageClass to be used.
+For images and disks, the DVCR container registry is used. If the DVCR container registry uses a `PersistentVolumeClaim` for storage, you can explicitly define the `StorageClass` to be used.
 
 To do this, edit the ModuleConfig for `virtualization`:
 
