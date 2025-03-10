@@ -62,6 +62,7 @@
  - **[cni-cilium]** L2 neigh discovery (arp flood) disabled. [#12078](https://github.com/deckhouse/deckhouse/pull/12078)
  - **[common]** Fixed a security vulnerability in `task`. [#11572](https://github.com/deckhouse/deckhouse/pull/11572)
  - **[control-plane-manager]** Fixed a security vulnerability. [#11536](https://github.com/deckhouse/deckhouse/pull/11536)
+ - **[deckhouse]** Add initial module config validation. [#12465](https://github.com/deckhouse/deckhouse/pull/12465)
  - **[deckhouse]** Add initial module config validation. [#12227](https://github.com/deckhouse/deckhouse/pull/12227)
  - **[deckhouse]** Fix module.yaml ignored when weight == 0. [#12254](https://github.com/deckhouse/deckhouse/pull/12254)
  - **[deckhouse]** Trigger the ModuleConfig handling when a module created. [#12039](https://github.com/deckhouse/deckhouse/pull/12039)
