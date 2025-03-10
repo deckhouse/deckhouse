@@ -37,7 +37,7 @@ git:
         - '**/*'
 shell:
   install:
-  {{ - include "alpine packages proxy" . | nindent 2 }}
+  {{- include "alpine packages proxy" . | nindent 2 }}
   # git needs for getting tag and commit sha for build purposes
   - apk --no-cache add git
   - cd /src
