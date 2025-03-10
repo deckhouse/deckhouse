@@ -8,7 +8,7 @@ cpu: 10m
 memory: 60Mi
 {{- end }}
 
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+{{- if and .Values.prometheus.internal.grafana.enabled (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -39,6 +39,7 @@ spec:
         memory: 100Mi
     {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
+{{- if .Values.prometheus.internal.grafana.enabled }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -320,3 +321,4 @@ spec:
             - key: grafanaLogo
               path: deckhouse-logo.svg
       {{- end }}
+{{- end }}
