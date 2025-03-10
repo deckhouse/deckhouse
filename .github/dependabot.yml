@@ -376,7 +376,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/040-control-plane-manager/images/kube-apiserver-healthcheck"
+  directory: "/modules/040-control-plane-manager/images/kube-apiserver-healthcheck/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

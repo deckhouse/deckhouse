@@ -1,0 +1,131 @@
+
+# src-artifact image renderer
+#   The presence of patches and src paths is automatically recognized with the addition of the right parts of the yaml
+#
+# . is dict have keys:
+#   . is context
+#   git - dict
+#       path    - Path piece after SOURCE_REPO
+#       version - tag name
+#       rm      - delete directory
+{{- define "src-artifact" }}
+{{- $patches := (printf "/%smodules/%s-%s/images/%s" .ModulePath .ModulePriority .ModuleName .ImageName) }}
+{{- $src := false }}
+{{- $patch := false }}
+{{- range $path, $_ := .Files.Glob (printf "%s/*" $patches) }}
+{{-   if contains "/patches/" $path }}
+{{-     $patch = true }}
+{{-   end }}
+{{-   if contains "/src/" $path }}
+{{-     $src = true }}
+{{-   end }}
+{{- end }}
+---
+# src-artifact image renderer
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+{{- if or $src $patch }}
+git:
+{{-   if $src }}
+- add: {{ $patches }}/src
+  to: /src
+  stageDependencies:
+    install:
+    - '**/*'
+{{-   end }}
+{{-   if $patch }}
+- add: {{ $patches }}/patches
+  to: /patches
+  includePaths:
+  - '**/*.patch'
+  stageDependencies:
+    install:
+    - '**/*.patch'
+{{-   end }}
+{{- end }}
+{{- if .git }}
+secrets:
+- env: SOURCE_REPO
+{{- end }}
+shell:
+  install:
+  - cd /src
+{{- if .git }}
+  - export SOURCE_REPO=$(cat /run/secrets/SOURCE_REPO)
+  - git clone --depth 1 --branch {{ .git.version }} ${SOURCE_REPO}/{{ .git.path }} .
+  - git describe --tags > VERSION
+  - git rev-parse HEAD > REVISION
+  - git describe --dirty --long --always > COMMIT
+{{- end }}
+{{- if $patch }}
+  - git apply /patches/*.patch --verbose
+{{- end }}
+{{- if .git }}
+  - rm -rf .git vendor {{ if .git.rm }}{{ .git.rm }}{{ end }}
+{{- end }}
+{{- end }}
+
+# artifact-golang image renderer
+#
+# . is dict have keys:
+#   . is context
+#   build - dict
+#       file    - A file containing the main function
+#       ldflags - additional fields for assembly
+{{- define "artifact-golang" }}
+---
+# artifact-golang image renderer
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+final: false
+secrets:
+- env: GOPROXY
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{- include "mount points for golang builds" . }}
+shell:
+  install:
+  - cd /src
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0 GOPROXY=$(cat /run/secrets/GOPROXY)
+  - go mod download -x
+  - go build -trimpath -ldflags="-extldflags -static -s -w {{ if and .build .build.ldflags }}{{ .build.ldflags }}{{ end }}" -o /{{ .ImageName }} {{ if and .build .build.file }}{{ .build.file }}{{ end }}
+  - chown 64535:64535 /{{ .ImageName }}
+  - chmod 0700 /{{ .ImageName }}
+{{- end }}
+
+# image-distroless image renderer
+#
+# . is dict have keys:
+#   . is context
+#   import - string containing import 
+{{- define "image-distroless" }}
+---
+# image-distroless image renderer
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+{{- if .import }}{{- tpl .import . }}{{- end }}
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /{{ .ImageName }}
+  to: /bin/{{ .ImageName }}
+  before: setup
+imageSpec:
+  config:
+    entrypoint: ["/bin/{{ .ImageName }}"]
+{{- end }}
+
+# image-all renderer
+#
+# . is dict have keys:
+#   . is context
+{{- define "image-all" }}
+# image-all renderer
+{{- include "image-distroless" . }}
+{{- include "src-artifact" . }}
+{{- include "artifact-golang" . }}
+{{- end }}
