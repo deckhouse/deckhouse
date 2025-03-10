@@ -60,7 +60,7 @@ func (t *Tunnel) upNewTunnel(oldId int) (int, error) {
 	defer t.tunMutex.Unlock()
 
 	if t.started {
-		log.DebugF("[%d] Reverse tunnel already up\n", oldId)
+		log.DebugF("[%d] Tunnel already up\n", oldId)
 		return -1, fmt.Errorf("already up")
 	}
 
@@ -80,7 +80,6 @@ func (t *Tunnel) upNewTunnel(oldId int) (int, error) {
 	remoteAddress := net.JoinHostPort(remoteBind, remotePort)
 	localAddress := net.JoinHostPort(localBind, localPort)
 
-	// reverse listen on remote server port
 	listener, err := net.Listen("tcp", localAddress)
 	if err != nil {
 		return -1, errors.Wrap(err, fmt.Sprintf("failed to listen remote on %s", localAddress))
@@ -155,21 +154,21 @@ func (t *Tunnel) stop(id int, full bool) {
 	defer t.tunMutex.Unlock()
 
 	if !t.started {
-		log.DebugF("[%d] Reverse tunnel already stopped\n", id)
+		log.DebugF("[%d] Tunnel already stopped\n", id)
 		return
 	}
 
-	log.DebugF("[%d] Stop reverse tunnel\n", id)
-	defer log.DebugF("[%d] End stop reverse tunnel\n", id)
+	log.DebugF("[%d] Stop tunnel\n", id)
+	defer log.DebugF("[%d] End stop tunnel\n", id)
 
 	if full && t.stopCh != nil {
-		log.DebugF("[%d] Stop reverse tunnel health monitor\n", id)
+		log.DebugF("[%d] Stop tunnel health monitor\n", id)
 		t.stopCh <- struct{}{}
 	}
 
 	err := t.remoteListener.Close()
 	if err != nil {
-		log.WarnF("[%d] Cannot close remote listener: %s\n", id, err.Error())
+		log.WarnF("[%d] Cannot close listener: %s\n", id, err.Error())
 	}
 
 	t.remoteListener = nil
