@@ -44,7 +44,6 @@ shell:
   - go mod download
   beforeSetup:
   - BROTLI_PATH=$(find /go/pkg/mod/github.com/andybalholm/brotli@* -maxdepth 0 -type d | head -n 1)
-  - echo "brotli: $BROTLI_PATH"
   - cd "$BROTLI_PATH"
   - git apply /patches/*.patch --verbose
   setup:
