@@ -109,7 +109,7 @@ entries:
                     - title:
                         en: Switching from CNI flannel to cilium
                         ru: Переключение с CNI flannel на cilium
-                      url: /admin/network/flanel-cilium-switching.html
+                      url: /admin/network/flannel-cilium-switching.html
                 - title:
                     en: Incoming traffic balancing
                     ru: Балансировка входящего трафика
