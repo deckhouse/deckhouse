@@ -72,3 +72,7 @@ Fixes the problem with the controller when Ingress specifies `Service` with the 
 https://github.com/kubernetes/ingress-nginx/issues/12158
 https://github.com/kubernetes/ingress-nginx/issues/12173
 https://github.com/deckhouse/deckhouse/issues/9933
+
+### cve
+
+Fix cve vulnerabilities.
