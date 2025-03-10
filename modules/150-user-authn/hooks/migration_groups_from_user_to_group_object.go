@@ -44,7 +44,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:                         "users",
-			ApiVersion:                   "deckhouse.io/v1alpha1",
+			ApiVersion:                   "deckhouse.io/v1",
 			Kind:                         "User",
 			FilterFunc:                   applyDexUserFilter,
 			ExecuteHookOnEvents:          ptr.To(false),
