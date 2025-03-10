@@ -273,10 +273,14 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []go_hook.FilterResu
 		}
 		policy.Rules = append(policy.Rules, rule)
 	}
+
 	// fstec
+	// - K8s Pod created
+	// - K8s Pod deleted
+	// - Container tag is not @sha256
 	{
 		rule := audit.PolicyRule{
-			Level: audit.LevelRequestResponse,
+			Level: audit.LevelRequest,
 			Resources: []audit.GroupResources{
 				{
 					Resources: []string{"pods"},
@@ -289,9 +293,14 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []go_hook.FilterResu
 		}
 		policy.Rules = append(policy.Rules, rule)
 	}
+
+	// fstec
+	// - K8s ServiceAccount created
+	// - K8s ServiceAccount deleted
+	// - ServiceAccount created in a system namespace
 	{
 		rule := audit.PolicyRule{
-			Level: audit.LevelRequestResponse,
+			Level: audit.LevelMetadata,
 			Resources: []audit.GroupResources{
 				{
 					Group:     "",
@@ -305,9 +314,16 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []go_hook.FilterResu
 		}
 		policy.Rules = append(policy.Rules, rule)
 	}
+
+	// fstec
+	// - ClusterRole with wildcard created
+	// - ClusterRole with write privileges created
+	// - System ClusterRole modified/deleted
+	// - K8s Role/ClusterRole created
+	// - K8s Role/ClusterRole deleted
 	{
 		rule := audit.PolicyRule{
-			Level: audit.LevelRequestResponse,
+			Level: audit.LevelRequest,
 			Resources: []audit.GroupResources{
 				{
 					Group:     "rbac.authorization.k8s.io",
@@ -321,9 +337,14 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []go_hook.FilterResu
 		}
 		policy.Rules = append(policy.Rules, rule)
 	}
+
+	// fstec
+	// - Attach to cluster-admin Role
+	// - K8s Role/ClusterRole binding created
+	// - K8s Role/ClusterRole binding deleted
 	{
 		rule := audit.PolicyRule{
-			Level: audit.LevelRequestResponse,
+			Level: audit.LevelRequest,
 			Resources: []audit.GroupResources{
 				{
 					Group:     "rbac.authorization.k8s.io",
@@ -337,9 +358,13 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []go_hook.FilterResu
 		}
 		policy.Rules = append(policy.Rules, rule)
 	}
+
+	// fstec
+	// - Attach/Exec Pod fstec
+	// - EphemeralContainers created
 	{
 		rule := audit.PolicyRule{
-			Level: audit.LevelRequestResponse,
+			Level: audit.LevelMetadata,
 			Resources: []audit.GroupResources{
 				{
 					Resources: []string{"pods/exec", "pods/attach", "pods/ephemeralcontainers"},
