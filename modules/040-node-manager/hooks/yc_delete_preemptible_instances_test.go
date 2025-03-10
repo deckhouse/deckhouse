@@ -146,7 +146,7 @@ func generateNMachines(ngNodes, ngReady int, prefix string, machinesCount ...dur
 func generateNGsAndMCs(ngNodes, ngReady int, prefix string, durationStrings ...string) string {
 	timeNow := time.Now().UTC()
 
-	var offsets []time.Duration
+	offsets := make([]time.Duration, 0, len(durationStrings))
 	for i, d := range durationStrings {
 		duration, err := time.ParseDuration(d)
 		if err != nil {

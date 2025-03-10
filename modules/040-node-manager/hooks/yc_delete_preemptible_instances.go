@@ -221,7 +221,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func deleteMachines(input *go_hook.HookInput) error {
 	var (
 		timeNow                        = time.Now().UTC()
-		machines                       []*Machine
+		machines                       = make([]*Machine, 0)
 		preemptibleMachineClassesSet   = set.Set{}
 		nodeNameToNodeMap              = make(map[string]*Node)
 		nodeGroupNameToNodeGroupStatus = make(map[string]*NodeGroupStatus)

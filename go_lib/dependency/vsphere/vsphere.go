@@ -247,7 +247,7 @@ func getZonesInDC(ctx context.Context, client client, datacenter *object.Datacen
 		}
 	}
 
-	var matchingZones []string
+	matchingZones := make([]string, 0, len(matchingZonesMap))
 	for zone := range matchingZonesMap {
 		matchingZones = append(matchingZones, zone)
 	}
@@ -270,7 +270,7 @@ func getDataStoresInDC(ctx context.Context, client client, datacenter *object.Da
 		return nil, fmt.Errorf("not a single Datastore or DatastoreCluster found in the cluster:\n%s\n%s", dsNotFoundErr, dscNotFoundErr)
 	}
 
-	var datastoreReferences []mo.Reference
+	datastoreReferences := make([]mo.Reference, 0, len(datastores))
 	for _, ds := range datastores {
 		datastoreReferences = append(datastoreReferences, ds)
 	}
@@ -310,7 +310,7 @@ func getDataStoresInDC(ctx context.Context, client client, datacenter *object.Da
 		return nil, err
 	}
 
-	var zds []ZonedDataStore
+	zds := make([]ZonedDataStore, 0)
 	for _, attachedTags := range datastoresWithTags {
 		var dsZones []string
 		for _, tag := range attachedTags.Tags {
