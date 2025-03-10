@@ -29,10 +29,19 @@ import:
     add: /src
     to: /src
     before: install
+git:
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/patches
+    to: /patches
+    stageDependencies:
+      install:
+        - '**/*'
 shell:
   install:
   - cd /src
   - go mod download
+  beforeSetup:
+  - cd ~/go/pkg/mod/github.com/andybalholm/brotli@v1.1.1
+  - git apply /patches/*.patch --verbose
   setup:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
