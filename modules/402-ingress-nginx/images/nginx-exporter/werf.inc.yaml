@@ -13,7 +13,7 @@ shell:
   - git clone --depth 1 --branch v0.8.0 {{ $.SOURCE_REPO }}/nginxinc/nginx-prometheus-exporter.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
-  - rm -rf ./vendor
+  - rm -rf ./vendor ./.git
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}

@@ -6,7 +6,7 @@ lang: ru
 
 ## Настройка хранилища
 
-После добавления worker-узлов необходимо настроить хранилище, которое будет использоваться для создания дисков виртуальных машин и для хранения метрик компонентов кластера. Хранилище можно выбрать из [списка поддерживаемых](/products/virtualization-platform/documentation/admin/install/requirements.html).
+После добавления worker-узлов необходимо настроить хранилище, которое будет использоваться для создания дисков виртуальных машин и для хранения метрик компонентов кластера. Хранилище можно выбрать из [списка поддерживаемых](/products/virtualization-platform/documentation/admin/install/requirements.html#поддерживаемые-хранилища).
 
 Далее рассмотрим включение и настройку программно-определяемого хранилища `sds-replicated-volume`. Это хранилище позволяет создать реплицируемые тома на основе дискового пространства узлов. Для примера настроим StorageClass на основе томов с двумя репликами, которые располагаются на дисках `/dev/sda`.
 
@@ -181,5 +181,7 @@ sudo -i d8 k -n d8-sds-replicated-volume get pod -owide -w
 1. Установите StorageClass по умолчанию:
 
    ```shell
-   sudo -i d8 k annotate sc sds-r2 storageclass.kubernetes.io/is-default-class=true
+   # Укажите имя своего объекта StorageClass.
+   DEFAULT_STORAGE_CLASS=replicated-storage-class
+   sudo -i d8 k patch mc global --type='json' -p='[{"op": "replace", "path": "/spec/settings/defaultClusterStorageClass", "value": "'"$DEFAULT_STORAGE_CLASS"'"}]'
    ```
