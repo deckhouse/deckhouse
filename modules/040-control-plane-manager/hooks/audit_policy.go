@@ -345,7 +345,7 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []go_hook.FilterResu
 					Resources: []string{"pods/exec", "pods/attach", "pods/ephemeralcontainers"},
 				},
 			},
-			Verbs: []string{"create"},
+			Verbs: []string{"get", "patch"},
 			OmitStages: []audit.Stage{
 				audit.StageRequestReceived,
 			},
