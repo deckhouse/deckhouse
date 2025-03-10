@@ -32774,4 +32774,4 @@
 -	0,
 -	0,
 -}
-+var kStaticDictionaryHash = [32768]uint16{}
++var kStaticDictionaryHash = []uint16{}
