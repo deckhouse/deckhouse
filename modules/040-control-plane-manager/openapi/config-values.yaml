@@ -272,15 +272,6 @@ properties:
         format: int64
         minimum: 536870912
         maximum: 8589934592
-      externalMembersNames:
-        type: array
-        description: |
-          `etcd` external members array (they will not be deleted).
-        x-examples:
-          - ["main-master-1", "my-external-member"]
-        items:
-          type: string
-          pattern: '^[0-9a-zA-Z\.-:\-\/]+$'
   nodeMonitorGracePeriodSeconds:
     type: integer
     default: 40
