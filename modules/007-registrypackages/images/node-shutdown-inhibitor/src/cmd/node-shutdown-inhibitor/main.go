@@ -78,15 +78,21 @@ func main() {
 	maxDelay := 30 * 60 * time.Second // 30 minutes
 	podLabel := "pod.deckhouse.io/inhibit-node-shutdown"
 
+	nodeName, err := os.Hostname()
+	if err != nil {
+		fmt.Printf("START Error: get hostname: %v\n", err)
+		os.Exit(1)
+	}
+
 	// Start application.
-	app := app.NewApp(maxDelay, podLabel)
+	app := app.NewApp(maxDelay, podLabel, nodeName)
 
 	if checkOnlyPods {
 		app.CheckPods()
 		os.Exit(0)
 	}
 
-	err := app.Start()
+	err = app.Start()
 	if err != nil {
 		fmt.Printf("START Error: %s\n", err.Error())
 		os.Exit(1)
