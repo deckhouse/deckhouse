@@ -73,7 +73,7 @@ kubectl describe vpa my-app-vpa
 
 ## Как включить или отключить VPA
 
-Включить VPA можно двумя способами:
+Включить VPA можно следующими способами:
 
 1. Через ресурс ModuleConfig (например, ModuleConfig/vertical-pod-autoscaler). Установите параметр `spec.enabled` в значение `true` или `false`:
 
@@ -91,6 +91,14 @@ kubectl describe vpa my-app-vpa
    ```console
    kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable vertical-pod-autoscaler
    ```
+
+1. Через веб-интерфейс [Консоль (UI)](https://deckhouse.ru/products/kubernetes-platform/modules/console/stable/):
+
+   - Перейдите в раздел «Deckhouse - «Модули»;
+   - Найдите модуль `vertical-pod-autoscaler` и нажмите на него;
+   - Включите тумблер «Модуль включен».
+
+У модуля нет обязательных настроек, то есть можно включить его и не настраивать дополнительно. При этом он будет работать со значениями по умолчанию.
 
 ## Настройка VPA
 
