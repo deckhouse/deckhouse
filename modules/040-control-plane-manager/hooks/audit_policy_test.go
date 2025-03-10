@@ -199,11 +199,11 @@ rules:
 			Expect(saRule.Level).To(Equal(audit.LevelMetadata))
 			Expect(saRule.Users).To(Equal(allServiceAccounts))
 
-			namespaceRule := policy.Rules[len(policy.Rules)-7]
+			namespaceRule := policy.Rules[len(policy.Rules)-6]
 			Expect(namespaceRule.Level).To(Equal(audit.LevelMetadata))
 			Expect(namespaceRule.Namespaces).To(Equal(auditPolicyBasicNamespaces))
 
-			listRule := policy.Rules[len(policy.Rules)-6]
+			listRule := policy.Rules[len(policy.Rules)-5]
 			Expect(listRule.Level).To(Equal(audit.LevelMetadata))
 			Expect(listRule.Namespaces).To(BeEmpty())
 		})
