@@ -26,7 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 )
 
 func DefineTestSSHConnectionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
@@ -34,7 +34,7 @@ func DefineTestSSHConnectionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineBecomeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshCl, err := clissh.NewClientFromFlagsWithHosts()
+		sshCl, err := gossh.NewClientFromFlagsWithHosts()
 		if err != nil {
 			return err
 		}
@@ -71,7 +71,7 @@ func DefineTestSCPCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd.Flag("way", "transfer direction: 'up' to upload to remote or 'down' to download from remote").Short('w').StringVar(&Direction)
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		log.DebugLn("scp: start ssh-agent")
-		sshCl, err := clissh.NewClientFromFlagsWithHosts()
+		sshCl, err := gossh.NewClientFromFlagsWithHosts()
 		if err != nil {
 			return err
 		}
@@ -136,9 +136,14 @@ func DefineTestUploadExecCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		BoolVar(&Sudo)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient, err := clissh.NewInitClientFromFlagsWithHosts(true)
+		sshClient, err := gossh.NewInitClientFromFlagsWithHosts(true)
 		if err != nil {
 			return nil
+		}
+
+		err = sshClient.Start()
+		if err != nil {
+			return err
 		}
 
 		cmd := sshClient.UploadScript(ScriptPath)
@@ -176,9 +181,14 @@ func DefineTestBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		StringVar(&ScriptName)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient, err := clissh.NewInitClientFromFlagsWithHosts(true)
+		sshClient, err := gossh.NewInitClientFromFlagsWithHosts(true)
 		if err != nil {
 			return nil
+		}
+
+		err = sshClient.Start()
+		if err != nil {
+			return err
 		}
 
 		cmd := sshClient.UploadScript(ScriptName)

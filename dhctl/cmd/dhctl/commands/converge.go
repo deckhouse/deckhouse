@@ -22,7 +22,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
@@ -32,7 +32,11 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineKubeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient, err := clissh.NewInitClientFromFlags(true)
+		sshClient, err := gossh.NewInitClientFromFlags(true)
+		if err != nil {
+			return err
+		}
+		err = sshClient.Start()
 		if err != nil {
 			return err
 		}
