@@ -31,10 +31,11 @@ import (
 type App struct {
 	InhibitDelayMax time.Duration
 	PodLabel        string
+	NodeName        string
 	taskStarter     *taskstarter.Starter
 }
 
-func NewApp(maxDelay time.Duration, podLabel string) *App {
+func NewApp(maxDelay time.Duration, podLabel string, nodeName string) *App {
 	return &App{
 		InhibitDelayMax: maxDelay,
 		PodLabel:        podLabel,
@@ -209,6 +210,10 @@ func (a *App) wireAppTasks() []taskstarter.Task {
 				containerd.WithLabel(a.PodLabel),
 				containerd.WithReadyState(),
 			},
+		},
+		&tasks.NodeCordoner{
+			NodeName:         a.NodeName,
+			ShutdownSignalCh: shutdownSignalCh,
 		},
 		&tasks.StatusReporter{
 			UnlockInhibitorsCh: unlockInhibitorsCh,
