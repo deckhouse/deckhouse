@@ -274,10 +274,11 @@ spec:
           - fstec
           - rbac_drift
         source: K8sAudit
+
     - rule:
-        name: Attach/Exec Pod
+        name: Attach/Exec Pod fstec
         condition: |
-          kevt_started and pod_subresource and kcreate and ka.target.subresource in (exec,attach) and not user_known_exec_pod_activities
+          kevt_started and pod_subresource and (kcreate or kget) and ka.target.subresource in (exec,attach)
         desc: |
           Detect any attempt to attach/exec to a pod
         output: Attach/Exec to pod (user=%ka.user.name pod=%ka.target.name resource=%ka.target.resource ns=%ka.target.namespace action=%ka.target.subresource command=%ka.uri.param[command])
