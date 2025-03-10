@@ -37,13 +37,14 @@ git:
         - '**/*'
 shell:
   install:
-  { { - include "alpine packages proxy" . | nindent 2 } }
+  {{ - include "alpine packages proxy" . | nindent 2 }}
   # git needs for getting tag and commit sha for build purposes
   - apk --no-cache add git
   - cd /src
   - go mod download
   beforeSetup:
   - BROTLI_PATH=$(find /go/pkg/mod/github.com/andybalholm/brotli@* -maxdepth 0 -type d | head -n 1)
+  - echo "brotli: $BROTLI_PATH"
   - cd "$BROTLI_PATH"
   - git apply /patches/*.patch --verbose
   setup:
