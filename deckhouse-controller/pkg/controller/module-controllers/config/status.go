@@ -161,14 +161,6 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 			} else {
 				module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonInstalling, v1alpha1.ModuleMessageOnStartupHook)
 			}
-
-		case modules.WaitForSynchronization:
-			module.Status.Phase = v1alpha1.ModulePhaseWaitSyncTasks
-			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonWaitSyncTasks, v1alpha1.ModuleMessageWaitSyncTasks)
-
-		case modules.HooksDisabled:
-			module.Status.Phase = v1alpha1.ModulePhaseHooksDisabled
-			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonHooksDisabled, v1alpha1.ModuleMessageHooksDisabled)
 		}
 
 		return
