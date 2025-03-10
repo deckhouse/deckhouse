@@ -34,6 +34,11 @@ type PodObserver struct {
 	StopInhibitorsCh chan<- struct{}
 }
 
+const wallMessage = `Pods are still running, waiting for them to stop.
+Use 'kubectl get po -l pod.deckhouse.io/inhibit-node-shutdown' to list them or
+use 'kubectl drain' to move Pods to other Nodes.
+`
+
 func (p *PodObserver) Run(ctx context.Context, errCh chan error) {
 	// Stage 1. Wait for shutdown.
 	fmt.Printf("podObserver: wait for PrepareForShutdown signal or power key press\n")
@@ -62,7 +67,7 @@ func (p *PodObserver) Run(ctx context.Context, errCh chan error) {
 			return
 		}
 		fmt.Printf("podObserver(s2): %d pods are still running\n", matches)
-		err = system.WallMessage("Pods are still running, waiting for them to stop\nUse 'kubectl get po -l pod.deckhouse.io/inhibit-node-shutdown' to list them.")
+		err = system.WallMessage(wallMessage)
 		if err != nil {
 			fmt.Printf("podObserver(s2): error sending broadcast message: %v\n", err)
 		}
