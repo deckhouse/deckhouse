@@ -451,6 +451,7 @@ function run-test() {
     -H "X-Auth-Token: ${COMMANDER_TOKEN}" \
     -H 'Content-Type: application/json' \
     -d "$payload" \
+    --retry 3 --retry-delay 5 --retry-all-errors \
     -w "\n%{http_code}")
 
   http_code=$(echo "$response" | tail -n 1)
