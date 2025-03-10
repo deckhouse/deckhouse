@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 
 	"github.com/google/uuid"
@@ -37,7 +38,6 @@ import (
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh/frontend"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	tf "github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
@@ -246,14 +246,16 @@ func (d *StaticMastersDestroyer) DestroyCluster(autoApprove bool) error {
 		}
 	}
 
+	log.DebugLn("Starting static cluster destroy process")
 	mastersHosts := d.SSHClient.Session().AvailableHosts()
 	stdOutErrHandler := func(l string) {
 		log.WarnLn(l)
 	}
 
+	log.DebugLn("Discovering additional master nodes")
 	hostToExclude := ""
 	if len(d.IPs) > 0 {
-		file := frontend.NewFile(d.SSHClient.Session())
+		file := d.SSHClient.File()
 		bytes, err := file.DownloadBytes("/var/lib/bashible/discovered-node-ip")
 		if err != nil {
 
@@ -283,17 +285,18 @@ func (d *StaticMastersDestroyer) DestroyCluster(autoApprove bool) error {
 	cmd := "test -f /var/lib/bashible/cleanup_static_node.sh || exit 0 && bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing"
 
 	if len(additionalMastersHosts) > 0 {
+		log.DebugF("Found %d additional masters, destroying\n", len(additionalMastersHosts))
 		settings := d.SSHClient.Session().Copy()
 		settings.BastionHost = settings.AvailableHosts()[0].Host
 		settings.SetAvailableHosts(additionalMastersHosts)
-		err := processStaticHosts(additionalMastersHosts, settings, stdOutErrHandler, cmd)
+		err := processStaticHosts(additionalMastersHosts, settings, stdOutErrHandler, cmd, d.SSHClient.PrivateKeys())
 		if err != nil {
 
 			return err
 		}
 	}
 
-	err := processStaticHosts(mastersHosts, d.SSHClient.Session(), stdOutErrHandler, cmd)
+	err := processStaticHosts(mastersHosts, d.SSHClient.Session(), stdOutErrHandler, cmd, d.SSHClient.PrivateKeys())
 	if err != nil {
 
 		return err
@@ -302,17 +305,20 @@ func (d *StaticMastersDestroyer) DestroyCluster(autoApprove bool) error {
 	return nil
 }
 
-func processStaticHosts(hosts []session.Host, s *session.Session, stdOutErrHandler func(l string), cmd string) error {
+func processStaticHosts(hosts []session.Host, s *session.Session, stdOutErrHandler func(l string), cmd string, sshkeys []session.AgentPrivateKey) error {
 	for _, host := range hosts {
 		settings := s.Copy()
 		settings.SetAvailableHosts([]session.Host{host})
+		log.DebugF("Starting cleanup process for host %s\n", host)
 		err := retry.NewLoop(fmt.Sprintf("Clear master %s", host), 5, 10*time.Second).Run(func() error {
-			cmd := frontend.NewCommand(settings, cmd)
-			cmd.Sudo()
-			cmd.WithTimeout(5 * time.Minute)
-			cmd.WithStdoutHandler(stdOutErrHandler)
-			cmd.WithStderrHandler(stdOutErrHandler)
-			err := cmd.Run()
+			client := gossh.NewClient(settings, sshkeys)
+			client.Start()
+			c := gossh.NewSSHCommand(client.GetClient(), cmd)
+			c.Sudo()
+			c.WithTimeout(5 * time.Minute)
+			c.WithStdoutHandler(stdOutErrHandler)
+			c.WithStderrHandler(stdOutErrHandler)
+			err := c.Run()
 
 			if err != nil {
 				var ee *exec.ExitError

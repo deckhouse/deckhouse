@@ -213,7 +213,7 @@ func (s *Client) KubeProxy() node.KubeProxy {
 
 // File is used to upload and download files and directories
 func (s *Client) File() node.File {
-	return nil
+	return NewSSHFile(s.sshClient)
 }
 
 // UploadScript is used to upload script and execute it on remote server
@@ -273,4 +273,8 @@ func (s *Client) Loop(fn node.SSHLoopHandler) error {
 	}
 
 	return nil
+}
+
+func (s *Client) GetClient() *ssh.Client {
+	return s.sshClient
 }
