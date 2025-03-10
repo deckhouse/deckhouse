@@ -250,6 +250,25 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []go_hook.FilterResu
 
 		policy.Rules = append(policy.Rules, rule)
 	}
+	// fstec
+	// - K8s Pod created
+	// - K8s Pod deleted
+	// - Container tag is not @sha256
+	{
+		rule := audit.PolicyRule{
+			Level: audit.LevelRequest,
+			Resources: []audit.GroupResources{
+				{
+					Resources: []string{"pods"},
+				},
+			},
+			Verbs: []string{"create", "delete", "patch", "update"},
+			OmitStages: []audit.Stage{
+				audit.StageRequestReceived,
+			},
+		}
+		policy.Rules = append(policy.Rules, rule)
+	}
 	// A rule collecting logs about actions taken on the resources in system namespaces.
 	{
 		rule := audit.PolicyRule{
@@ -270,26 +289,6 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []go_hook.FilterResu
 			Verbs:      []string{"list"},
 			Namespaces: []string{}, // every namespace
 			// no stage omitted, since apiserver might crash with OOM before it responds, and we want to catch it
-		}
-		policy.Rules = append(policy.Rules, rule)
-	}
-
-	// fstec
-	// - K8s Pod created
-	// - K8s Pod deleted
-	// - Container tag is not @sha256
-	{
-		rule := audit.PolicyRule{
-			Level: audit.LevelRequest,
-			Resources: []audit.GroupResources{
-				{
-					Resources: []string{"pods"},
-				},
-			},
-			Verbs: []string{"create", "delete", "patch", "update"},
-			OmitStages: []audit.Stage{
-				audit.StageRequestReceived,
-			},
 		}
 		policy.Rules = append(policy.Rules, rule)
 	}
@@ -364,7 +363,7 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []go_hook.FilterResu
 	// - EphemeralContainers created
 	{
 		rule := audit.PolicyRule{
-			Level: audit.LevelMetadata,
+			Level: audit.LevelRequest,
 			Resources: []audit.GroupResources{
 				{
 					Resources: []string{"pods/exec", "pods/attach", "pods/ephemeralcontainers"},

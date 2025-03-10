@@ -293,7 +293,7 @@ spec:
           kevt and pod_subresource and kmodify and ka.target.subresource in (ephemeralcontainers) and not user_known_pod_debug_activities
         desc: |
           Detect any ephemeral container created
-        output: Ephemeral container is created in pod (user=%ka.user.name pod=%ka.target.name resource=%ka.target.resource ns=%ka.target.namespace ephemeral_container_name=%jevt.value[/requestObject/ephemeralContainers/0/name] ephemeral_container_image=%jevt.value[/requestObject/ephemeralContainers/0/image])
+        output: Ephemeral container is created in pod (user=%ka.user.name pod=%ka.target.name resource=%ka.target.resource ns=%ka.target.namespace ephemeral_container_name=%jevt.value[/requestObject/spec/ephemeralContainers/0/name] ephemeral_container_image=%jevt.value[/requestObject/spec/ephemeralContainers/0/image])
         priority: Notice
         tags:
           - fstec
@@ -326,7 +326,7 @@ spec:
         condition: |
           kevt and (role or clusterrole) and (kmodify or kdelete) and (ka.target.name startswith "system:") and not ka.target.name in (system:coredns, system:managed-certificate-controller)
         desc: Detect any attempt to modify/delete a ClusterRole/Role starting with system
-        output: System ClusterRole/Role modified or deleted (user=%ka.user.name role=%ka.target.name resource=%ka.target.resource ns=%ka.target.namespace action=%ka.verb)
+        output: System ClusterRole/Role modified or deleted (user=%ka.user.name role=%ka.target.name resource=%ka.target.resource action=%ka.verb)
         priority: Warning
         tags:
           - fstec
@@ -440,7 +440,7 @@ spec:
             or (evt.type in (recvfrom,recvmsg))
           ) and fd.sport=22
         desc: Detect Inbound SSH Connection
-        output: Inbound SSH Connection (command=%proc.cmdline pid=%proc.pid connection=%fd.name user=%user.name user_loginuid=%user.loginuid container_id=%container.id image=%container.image.repository type=%evt.type)
+        output: Inbound SSH Connection (command=%proc.cmdline pid=%proc.pid connection=%fd.name user=%user.name user_loginuid=%user.loginuid type=%evt.type)
         priority: Notice
         tags:
           - fstec
