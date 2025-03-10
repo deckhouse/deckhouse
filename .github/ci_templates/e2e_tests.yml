@@ -280,10 +280,6 @@ check_e2e_labels:
 {!{    tmpl.Exec "update_comment_on_start" $ctx.jobName | strings.Indent 4 }!}
 {!{- end }!}
 
-{!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 4 }!}
-{!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 4 }!}
-{!{ tmpl.Exec "werf_install_step" . | strings.Indent 4 }!}
-
     - name: Setup
       id: setup
       env:
@@ -546,9 +542,6 @@ check_e2e_labels:
 {!{    tmpl.Exec "update_comment_on_start" $ctx.jobName | strings.Indent 4 }!}
 {!{- end }!}
 
-{!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 4 }!}
-{!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 4 }!}
-
     - name: Setup
       id: setup
       env:
@@ -592,15 +585,6 @@ check_e2e_labels:
         echo "masters-count=${MASTERS_COUNT}" >> $GITHUB_OUTPUT
 
         echo '::echo::off'
-
-    - name: "Download state"
-      id: download_artifact_with_state
-      uses: dawidd6/action-download-artifact@v2.23.0
-      with:
-        github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-        run_id: ${{github.event.inputs.run_id}}
-        name: ${{github.event.inputs.state_artifact_name}}
-        path: ${{ steps.setup.outputs.tmp-dir-path}}
 
     - name: Cleanup bootstrapped cluster
       if: ${{ success() || cancelled() }}
