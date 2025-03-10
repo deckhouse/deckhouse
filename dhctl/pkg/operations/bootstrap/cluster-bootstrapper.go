@@ -199,7 +199,9 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		} else {
 			sshClient := gossh.NewClientFromFlags()
 			if metaConfig.IsStatic() {
-
+				if err := sshClient.Start(); err != nil {
+					return fmt.Errorf("unable to start ssh client: %w", err)
+				}
 			}
 
 			log.DebugF("Hosts is %v empty; static cluster is %v. Use ssh", len(app.SSHHosts), metaConfig.IsStatic())

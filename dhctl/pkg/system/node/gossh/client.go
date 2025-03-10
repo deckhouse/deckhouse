@@ -90,7 +90,10 @@ func (s *Client) Start() error {
 		bastionAddr := fmt.Sprintf("%s:%s", s.Settings.BastionHost, s.Settings.BastionPort)
 		var err error
 		log.DebugF("Connect to bastion host %s\n", bastionAddr)
-		bastionClient, err = ssh.Dial("tcp", bastionAddr, bastionConfig)
+		err = retry.NewSilentLoop("Get bastion SSH client", 10, 15*time.Second).Run(func() error {
+			bastionClient, err = ssh.Dial("tcp", bastionAddr, bastionConfig)
+			return err
+		})
 		if err != nil {
 			return fmt.Errorf("could not connect to bastion host")
 		}
@@ -151,7 +154,11 @@ func (s *Client) Start() error {
 
 	log.DebugF("Try to connect to through bastion host master host %s\n", addr)
 
-	targetConn, err := bastionClient.Dial("tcp", addr)
+	var err error
+	err = retry.NewSilentLoop("Get SSH client", 10, 15*time.Second).Run(func() error {
+		targetConn, err = bastionClient.Dial("tcp", addr)
+		return err
+	})
 	if err != nil {
 		return fmt.Errorf("failed to connect to target host through bastion host: %w", err)
 	}
