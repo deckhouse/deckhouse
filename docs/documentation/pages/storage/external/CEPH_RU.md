@@ -1,10 +1,10 @@
 ---
-title: "CEPH-хранилище"
+title: "Ceph хранилище"
 permalink: ru/storage/admin/external/ceph.html
 lang: ru
 ---
 
-Чтобы создать объекты StorageClass на основе RBD (RADOS Block Device) или файловой системы Ceph, можно использовать модуль `csi-ceph`, который позволяет настроить подключение к одному или нескольким Ceph-кластерам.
+Чтобы создать объекты `StorageClass` на основе RBD (RADOS Block Device) или файловой системы Ceph, можно использовать модуль `csi-ceph`, который позволяет настроить подключение к одному или нескольким Ceph-кластерам.
 
 ## Включение модуля
 
@@ -23,7 +23,7 @@ EOF
 
 ## Подключение к Ceph-кластеру
 
-Чтобы настроить подключение к Ceph-кластеру, необходимо применить ресурс `CephClusterConnection`. Пример команды:
+Чтобы настроить подключение к Ceph-кластеру, необходимо применить ресурс [CephClusterConnection](../../../reference/cr/cephclusterconnection). Пример команды:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -49,7 +49,7 @@ d8 k get cephclusterconnection ceph-cluster-1
 
 ## Аутентификация
 
-Чтобы пройти аутентификацию в Ceph-кластере, необходимо определить параметры аутентификации в ресурсе `CephClusterAuthentication`:
+Чтобы пройти аутентификацию в Ceph-кластере, необходимо определить параметры аутентификации в ресурсе [CephClusterAuthentication](../../../reference/cr/cephclusterauthentication):
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -67,9 +67,7 @@ EOF
 
 ## Создание StorageClass
 
-Создание объектов StorageClass осуществляется через ресурс `CephStorageClass`, который определяет конфигурацию для желаемого класса хранения. Ручное создание ресурса StorageClass без `CephStorageClass` может привести к ошибкам.
-
-Пример создания StorageClass на основе RBD (RADOS Block Device):
+Создание объектов `StorageClass` осуществляется через ресурс [CephStorageClass](../../../reference/cr/cephstorageclass), который определяет конфигурацию для желаемого класса хранения. Ручное создание ресурса `StorageClass` без `CephStorageClass` может привести к ошибкам. Пример создания `StorageClass` на основе RBD (RADOS Block Device):
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -88,7 +86,7 @@ spec:
 EOF
 ```
 
-Пример создания StorageClass на основе файловой системы Ceph:
+Пример создания `StorageClass` на основе файловой системы Ceph:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -120,13 +118,13 @@ ceph-rbd-sc   Created   1h
 ceph-fs-sc    Created   1h
 ```
 
-Проверьте созданный StorageClass с помощью следующей команды:
+Проверьте созданный `StorageClass` с помощью следующей команды:
 
 ```shell
 d8 k get sc
 ```
 
-В результате будет выведена информация о созданном StorageClass:
+В результате будет выведена информация о созданном `StorageClass`:
 
 ```console
 NAME          PROVISIONER        RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
@@ -134,5 +132,4 @@ ceph-rbd-sc   rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true    
 ceph-fs-sc    rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true                   15s
 ```
 
-Если объекты StorageClass появились, значит настройка модуля csi-ceph завершена.
-Теперь пользователи могут создавать PersistentVolume, указывая созданные объекты StorageClass.
+Если объекты `StorageClass` появились, значит настройка модуля `csi-ceph` завершена. Теперь пользователи могут создавать `PersistentVolume`, указывая созданные объекты `StorageClass`.

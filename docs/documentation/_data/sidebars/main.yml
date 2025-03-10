@@ -1608,6 +1608,10 @@ entries:
           ru: Описание
         url: /storage/admin/
       - title:
+          en: Storage configuration
+          ru: Настройка хранилищ
+        url: /storage/admin/supported-storage.html
+      - title:
           en: SDS
           ru: Программно определяемые
         folders:

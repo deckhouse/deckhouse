@@ -4,17 +4,19 @@ permalink: ru/storage/admin/external/huawei.html
 lang: ru
 ---
 
-Данный модуль хранилища предоставляет CSI для управления томами c использованием СХД Huawei. Модуль позволяет создавать `StorageClass` в `Kubernetes` через создание [пользовательских ресурсов Kubernetes](./cr.html#huaweistorageclass) `HuaweiStorageClass`.
+Данный модуль хранилища предоставляет CSI для управления томами c использованием СХД Huawei Dorado. Модуль позволяет создавать `StorageClass` в `Kubernetes` через создание пользовательских ресурсов `HuaweiStorageClass`.
 
-> **Внимание!** Создание `StorageClass` для CSI-драйвера `csi.huawei.com` пользователем запрещено.
-> **Внимание!** На данный момент модулем поддерживаются СХД Huawei 3par. Для поддержки других СХД Huawei, пожалуйста, свяжитесь с техподдержкой.
+{% alert level="warning" %}
+Создание `StorageClass` для CSI-драйвера `csi.huawei.com` пользователем запрещено.
+Модулем поддерживаются только СХД Huawei Dorado. Для использования других СХД Huawei, пожалуйста, свяжитесь с технической поддержкой.
+{% endalert %}
 
 ## Системные требования и рекомендации
 
 ### Требования
 
 - Наличие развернутой и настроенной СХД Huawei.
-- Уникальные iqn в /etc/iscsi/initiatorname.iscsi на каждой из Kubernetes Nodes
+- Уникальные IQN в `/etc/iscsi/initiatorname.iscsi` на каждой из Kubernetes Nodes.
 
 ## Быстрый старт
 
@@ -22,9 +24,9 @@ lang: ru
 
 ### Включение модуля
 
-- Включить модуль `csi-huawei`.  Это приведет к тому, что на всех узлах кластера будет:
-  - зарегистрирован CSI драйвер;
-  - запущены служебные поды компонентов `csi-huawei`.
+Включите модуль `csi-huawei`.  Это приведет к тому, что на всех узлах кластера будет:
+- зарегистрирован CSI драйвер;
+- запущены служебные поды компонентов `csi-huawei`.
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -38,15 +40,15 @@ spec:
 EOF
 ```
 
-- Дождаться, когда модуль перейдет в состояние `Ready`.
+Дождитесь, когда модуль перейдет в состояние `Ready`.
 
 ```shell
-kubectl get module csi-huawei -w
+d8 k get module csi-huawei -w
 ```
 
 ### Создание StorageClass
 
-Для создания StorageClass необходимо использовать ресурсы `HuaweiStorageClass` и `HuaweiStorageConnection`. Пример команд для создания таких ресурсов:
+Для создания `StorageClass` необходимо использовать ресурсы [HuaweiStorageClass](../../../reference/cr/huaweistorageclass) и [HuaweiStorageConnection](../../../reference/cr/huaweistorageconnection). Пример команд для создания таких ресурсов:
 
 ```yaml
 d8 k apply -f -<<EOF
@@ -86,7 +88,7 @@ spec:
 EOF
 ```
 
-- Проверить создание объекта можно командой (Phase должен быть `Created`):
+Проверить создание объекта можно командой (`Phase` должен быть `Created`):
 
 ```shell
 d8 k get huaweistorageconnections.storage.deckhouse.io <имя huaweistorageconnection>

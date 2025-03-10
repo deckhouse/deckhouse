@@ -3,40 +3,42 @@ title: "SCSI storage"
 permalink: en/storage/admin/external/scsi.html
 ---
 
-The module provides a CSI for managing volumes using storage systems connected via SCSI.
+The `csi-scsi-generic` module provides a CSI driver for managing volumes connected via `iSCSI` or `Fibre Channel`.
 
-Currently supported features:
-- LUN discovery via iSCSI
-- Creation of PV from pre-provisioned LUNs
-- Deletion of PV and wiping data on the LUN
-- Connecting LUN to nodes via iSCSI
-- Creating multipath devices and mounting them to pods
-- Detaching LUN from nodes
+### Supported Features
 
-Not supported:
-- LUN creation on the storage system
-- Resizing LUN
-- Creating snapshots
+- Detecting `LUN` via `iSCSI`/`FC`.
+- Creating `PersistentVolume` from pre-provisioned `LUN`.
+- Deleting `PersistentVolume` and wiping data on `LUN`.
+- Attaching `LUN` to nodes via `iSCSI`/`FC`.
+- Creating `multipath` devices and mounting them in pods.
+- Detaching `LUN` from nodes.
+
+### Limitations
+
+- Creating `LUN` on storage is not supported.
+- Resizing `LUN` is not possible.
+- Snapshots are not supported.
 
 ## System Requirements and Recommendations
 
 ### Requirements
 
-- A deployed and configured storage system with iSCSI/FC connections.
-- Unique iqn values in /etc/iscsi/initiatorname.iscsi on each Kubernetes Node.
+- A properly configured and available storage system with `iSCSI`/`FC` connectivity.
+- Unique `IQN` assigned to each `Kubernetes` node in `/etc/iscsi/initiatorname.iscsi`.
 
 ## Quick Start
 
-All commands should be executed on a machine with access to the Kubernetes API and administrator rights.
+All commands should be executed on a machine with administrative access to the Kubernetes API.
 
 ### Enabling the Module
 
-- Enable the `csi-scsi-generic` module. This will ensure that the following happens on all cluster nodes:
-  - The CSI driver is registered.
-  - Auxiliary pods for the `csi-scsi-generic` components are launched.
+Enable the `csi-scsi-generic` module. This will:
+- Register the CSI driver.
+- Launch `csi-scsi-generic` service pods.
 
 ```shell
-kubectl apply -f - <<EOF
+d8 k apply -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -47,18 +49,18 @@ spec:
 EOF
 ```
 
-- Wait for the module to transition to the `Ready` state.
+Wait for the module to transition to the `Ready` state.
 
 ```shell
-kubectl get module csi-scsi-generic -w
+d8 k get module csi-scsi-generic -w
 ```
 
 ### Creating an SCSITarget
 
-To create an SCSITarget, use the `SCSITarget`. An example of commands to create such a resource:
+To work with SCSI devices, [SCSITarget](../../../reference/cr/scsitarget) resources must be created.
 
 ```yaml
-kubectl apply -f -<<EOF
+d8 k apply -f -<<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: SCSITarget
 metadata:
@@ -100,7 +102,7 @@ EOF
 An example of commands to create a resource with FC connection:
 
 ```shell
-kubectl apply -f -<<EOF
+d8 k apply -f -<<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: SCSITarget
 metadata:
@@ -117,20 +119,20 @@ spec:
 EOF
 ```
 
-Note that the example above uses two SCSITargets. You can create multiple SCSITargets for either the same or different storage systems. This allows for the use of multipath to improve failover and performance.
+Note that the example above uses two `SCSITargets`. You can create multiple `SCSITargets` for either the same or different storage systems. This allows for the use of `multipath` to improve failover and performance.
 
-- To verify that the object has been created (Phase should be `Created`), run:
+After creating `SCSITarget`, verify their status. The `Phase` field should be `Created`.
 
 ```shell
-kubectl get scsitargets.storage.deckhouse.io <scsitarget name>
+d8 k get scsitargets.storage.deckhouse.io <scsitarget name>
 ```
 
 ### Creating a StorageClass
 
-To create a StorageClass, use the `SCSIStorageClass`. An example of commands to create such a resource:
+To create a `StorageClass`, use the [SCSIStorageClass](../../../reference/cr/scsistorageclass) resource. An example of commands to create such a resource:
 
 ```yaml
-kubectl apply -f -<<EOF
+d8 k apply -f -<<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: SCSIStorageClass
 metadata:
@@ -145,16 +147,16 @@ EOF
 
 Pay attention to the `scsiDeviceSelector`. This field is used to select the SCSITarget for PV creation based on labels. In the example above, all SCSITargets with the label `my-key: some-label-value` are selected. This label will be applied to all devices detected within the specified SCSITarget.
 
-- To verify that the object has been created (Phase should be `Created`), run:
+After creating `SCSIStorageClass`, check its status. The `Phase` field should be `Created`.
 
 ```shell
-kubectl get scsistorageclasses.storage.deckhouse.io <scsistorageclass name>
+d8 k get scsistorageclasses.storage.deckhouse.io <scsistorageclass name>
 ```
 
 ### How to check module health?
 
-To do this, you need to check the status of the pods in the `d8-csi-scsi-generic` namespace. All pods should be in the `Running` or `Completed` state and should be running on all nodes.
+Verify the module status by checking the state of pods in the `d8-csi-scsi-generic` namespace. All pods should be in the `Running` or `Completed` state and deployed on all cluster nodes.
 
 ```shell
-kubectl -n d8-csi-scsi-generic get pod -owide -w
+d8 k -n d8-csi-scsi-generic get pod -owide -w
 ```

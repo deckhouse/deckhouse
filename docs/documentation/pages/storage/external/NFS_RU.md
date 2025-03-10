@@ -4,7 +4,7 @@ permalink: ru/storage/admin/external/nfs.html
 lang: ru
 ---
 
-Для управления томами на основе протокола NFS (Network File System) можно использовать модуль `csi-nfs`, позволяющий создавать StorageClass через создание пользовательских ресурсов `NFSStorageClass`.
+Для управления томами на основе протокола NFS (Network File System) можно использовать модуль `csi-nfs`, позволяющий создавать `StorageClass` через создание пользовательских ресурсов `NFSStorageClass`.
 
 ## Включение модуля
 
@@ -22,8 +22,7 @@ spec:
 EOF
 ```
 
-Дождитесь, когда модуль `csi-nfs` перейдет в состояние `Ready`.
-Проверить состояние можно, выполнив следующую команду:
+Дождитесь, когда модуль `csi-nfs` перейдет в состояние `Ready`. Проверить состояние можно, выполнив следующую команду:
 
 ```shell
 d8 k get module csi-nfs -w
@@ -38,10 +37,7 @@ csi-nfs   910      Enabled   Embedded           Ready
 
 ## Создание StorageClass
 
-Для создания StorageClass необходимо использовать ресурс `NFSStorageClass`.
-Ручное создание ресурса StorageClass без `NFSStorageClass` может привести к ошибкам.
-
-Пример команды для создания класса хранения на базе NFS:
+Для создания `StorageClass` необходимо использовать ресурс [NFSStorageClas](../../../reference/cr/nfsstorageclass). Ручное создание ресурса `StorageClass` без `NFSStorageClass` может привести к ошибкам. Пример команды для создания класса хранения на базе NFS:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -83,36 +79,30 @@ NAME                PHASE     AGE
 nfs-storage-class   Created   1h
 ```
 
-Убедитесь, что был создан соответствующий StorageClass, выполнив следующую команду:
+Убедитесь, что был создан соответствующий `StorageClass`, выполнив следующую команду:
 
 ```shell
 d8 k get sc nfs-storage-class
 ```
 
-В результате будет выведена информация о созданном StorageClass:
+В результате будет выведена информация о созданном `StorageClass`:
 
 ```console
 NAME                PROVISIONER      RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
 nfs-storage-class   nfs.csi.k8s.io   Delete          WaitForFirstConsumer   true                   1h
 ```
 
-Если StorageClass с именем `nfs-storage-class` появился, значит настройка модуля csi-nfs завершена.
-Теперь пользователи могут создавать PersistentVolume, указывая StorageClass с именем `nfs-storage-class`.
-
-Для каждого ресурса PersistentVolume будет создаваться каталог `<директория из share>/<имя PersistentVolume>`.
+Если `StorageClass` с именем `nfs-storage-class` появился, значит настройка модуля `csi-nfs` завершена. Теперь пользователи могут создавать `PersistentVolume`, указывая `StorageClass` с именем `nfs-storage-class`. Для каждого ресурса `PersistentVolume` будет создаваться каталог `<директория из share>/<имя PersistentVolume>`.
 
 ## Проверка работоспособности модуля
 
-Для того, чтобы проверить работоспособность модуля csi-nfs, необходимо проверить состояние подов в пространстве имен d8-csi-nfs.
-Все поды должны быть в состоянии `Running` или `Completed`, поды csi-nfs должны быть запущены на всех узлах.
-
-Проверить работоспособность модуля можно с помощью следующей команды:
+Для того чтобы проверить работоспособность модуля `csi-nfs`, необходимо проверить состояние подов в пространстве имен `d8-csi-nfs`. Все поды должны быть в состоянии `Running` или `Completed`, поды `csi-nfs` должны быть запущены на всех узлах. Проверить работоспособность модуля можно с помощью следующей команды:
 
 ```shell
 d8 k -n d8-csi-nfs get pod -owide -w
 ```
 
-В результате будет выведен список всех подов в пространстве имен d8-csi-nfs:
+В результате будет выведен список всех подов в пространстве имен `d8-csi-nfs`:
 
 ```console
 NAME                             READY   STATUS    RESTARTS   AGE   IP             NODE       NOMINATED NODE   READINESS GATES

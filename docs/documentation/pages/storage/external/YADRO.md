@@ -4,8 +4,7 @@ permalink: en/storage/admin/external/yadro.html
 d8Revision: ee
 ---
 
-To manage volumes based on the [TATLIN.UNIFIED](https://yadro.com/ru/tatlin/unified) storage system,
-you can use the `csi-yadro` module to create StorageClass resources through custom YadroStorageClass resources.
+To manage volumes based on the [TATLIN.UNIFIED](https://yadro.com/ru/tatlin/unified) storage system, you can use the `csi-yadro` module to create `StorageClass` resources through the custom `YadroStorageClass` resources.
 
 ## Enable the module
 
@@ -23,8 +22,7 @@ spec:
 EOF
 ```
 
-Wait until `csi-yadro` is in the `Ready` status.
-To check the status, run the following command:
+Wait until `csi-yadro` is in the `Ready` status. To check the status, run the following command:
 
 ```shell
 d8 k get module csi-yadro -w
@@ -39,8 +37,7 @@ csi-yadro   910      Enabled   Embedded           Ready
 
 ## Connect to the TATLIN.UNIFIED storage system
 
-To connect to the TATLIN.UNIFIED storage system and enable configuring of StorageClass objects,
-apply the following YadroStorageConnection resource:
+To connect to the `TATLIN.UNIFIED` storage system and enable configuring of `StorageClass` objects, apply the following [YadroStorageConnection](../../../reference/cr/yadrostorageconnection) resource:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -64,10 +61,9 @@ EOF
 
 ## Create a StorageClass
 
-To create a StorageClass, use the YadroStorageClass resource.
-Creating a StorageClass resource manually without using YadroStorageClass can lead to errors.
+To create a `StorageClass`, use the [YadroStorageClass](../../../reference/cr/yadrostorageclass) resource. Creating a `StorageClass` resource manually without using `YadroStorageClass` can lead to errors.
 
-Example command to create a StorageClass based on the TATLIN.UNIFIED storage system:
+Example command to create a `StorageClass` based on the `TATLIN.UNIFIED` storage system:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -85,9 +81,7 @@ EOF
 
 ## Ensure the module works
 
-To make sure the `csi-yadro` is working properly, check the pod status in the `d8-csi-yadro` namespace.
-All pods must have the `Running` or `Completed` status.
-The `csi-yadro` pods must be running on all nodes.
+To make sure the `csi-yadro` is working properly, check the pod status in the `d8-csi-yadro` namespace. All pods must have the `Running` or `Completed` status. The `csi-yadro` pods must be running on all nodes.
 
 To check that the module works, run the following command:
 
