@@ -254,3 +254,20 @@
     done <<< "$HOST_KEYS"
 # </template: login_git_step>
 {!{- end -}!}
+
+
+{!{ define "send_fail_report" }!}
+# <template: send_fail_report>
+- name: Send fail report
+  if: failure()
+  env:
+    LOOP_TOKEN: ${{secrets.LOOP_CVE_REPORTS_SEND_TOKEN}}
+    LOOP_CHANNEL_ID: "ciaopox59pdc3cw6i96w91e34e"
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    GITHUB_REPOSITORY: ${{github.repository}}
+    JOB_ID: ${{github.job}}"
+    JOB_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/${{github.job}}"
+  run: |
+    bash ./.github/scripts/send-report.sh
+# </template: login_git_step>
+{!{- end -}!}
