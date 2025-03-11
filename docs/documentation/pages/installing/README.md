@@ -376,10 +376,6 @@ List of checks performed by the installer before starting Deckhouse installation
      - It does not contain special characters (hyphens `-` and periods `.` are allowed, but they cannot be at the beginning or end of the name).
    - The server (VM) does not have a CRI (containerd) installed.
    - The host name must be unique within the cluster.
-
-1. Checks for static and hybrid cluster installation:
-   - Only one `--ssh-host` parameter is specified. For static cluster configuration, only one IP address can be provided for configuring the first master node.
-   - SSH connection is possible using the specified authentication data.
    - SSH tunneling to the master node server (or VM) is possible.
    - The server (VM) meets the minimum requirements for setting up the master node.
    - Python and required libraries are installed on the master node server (VM).
@@ -387,9 +383,18 @@ List of checks performed by the installer before starting Deckhouse installation
    - Required installation ports are free on the master node server (VM) and the installer host.
    - DNS must resolve `localhost` to IP address 127.0.0.1.
    - The user has `sudo` privileges on the server (VM).
+	- The server (VM) has the correct time.
+	- The address spaces for Pods (`podSubnetCIDR`) and services (`serviceSubnetCIDR`) do not intersect.
+	- The user `deckhouse` must not exist on the server (VM).
+
+1. Checks for static and hybrid cluster installation:
+   - Only one `--ssh-host` parameter is specified. For static cluster configuration, only one IP address can be provided for configuring the first master node.
+   - SSH connection is possible using the specified authentication data.
 
 1. Checks for cloud cluster installation:
    - The configuration of the virtual machine for the master node meets the minimum requirements.
+   - The cloud provider API is accessible from the cluster nodes.
+   - For Yandex Cloud deployments with NAT Instance, the configuration for Yandex Cloud with NAT Instance is verified.
 
 {% offtopic title="List of preflight skip flags..." %}
 
@@ -407,6 +412,11 @@ List of checks performed by the installer before starting Deckhouse installation
 - `--preflight-skip-sudo-allowed` — skip the check for `sudo` privileges.
 - `--preflight-skip-system-requirements-check` — skip the system requirements check.
 - `--preflight-skip-one-ssh-host` — skip the check for the number of specified SSH hosts.
+- `--preflight-cloud-api-accesibility-check` — skip the Cloud API accessibility check.
+- `--preflight-time-drift-check` — skip the time drift check.
+- `--preflight-skip-cidr-intersection` — skip the CIDR intersection check.
+- `--preflight-skip-deckhouse-user-check` — skip the Deckhouse user existence check.
+- `--preflight-skip-yandex-with-nat-instance-check` — skip the Yandex Cloud with NAT Instance configuration check.
 
 Example of using the preflight skip flag:
 
