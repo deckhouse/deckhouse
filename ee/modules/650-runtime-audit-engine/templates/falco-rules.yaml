@@ -3,6 +3,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: FalcoAuditRules
 metadata:
   name: fstec
+  {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name)) | nindent 2 }}
 spec:
   rules:
     - macro:
