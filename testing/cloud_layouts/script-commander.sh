@@ -414,6 +414,57 @@ END_SCRIPT
   return 1
 }
 
+function update_comment() {
+  echo "Updating comment on pull request..."
+  comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
+
+  comment=$(curl -s -x GET \
+    --retry 3 --retry-delay 5 --retry-all-errors \
+    -H "Accept: application/vnd.github+json" \
+    -H "Authorization: Bearer $GITHUB_TOKEN" \
+    "$comment_url" \
+    -w "\n%{http_code}")
+
+  http_code=$(echo "$comment" | tail -n 1)
+  response=$(echo "$comment" | sed '$d')
+
+  # Check for HTTP errors
+  if [[ ${http_code} -ge 400 ]]; then
+    echo "Error: Getting comment error ${http_code}" >&2
+    echo "$response" >&2
+    return 1
+  fi
+
+  echo "Comment: $comment" # TODO debug
+
+  local connection_str_body="${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION} - Connection string: \`ssh ${bastion_connection} ${master_connection}\`"
+  local result_body
+
+  if ! result_body="$(echo "$comment" | jq -crM --arg a "$connection_str_body" '{body: (.body + "\r\n\r\n" + $a + "\r\n")}')"; then
+    return 1
+  fi
+
+  echo "Result body: $result_body" # TODO debug
+
+  update_comment_response=$(curl -s -X PATCH \
+    --retry 3 --retry-delay 5 --retry-all-errors \
+    -H "Accept: application/vnd.github+json" \
+    -H "Authorization: Bearer $GITHUB_TOKEN" \
+    -d "$result_body" \
+    "$comment_url" \
+    -w "\n%{http_code}")
+
+    http_code=$(echo "$update_comment_response" | tail -n 1)
+    response=$(echo "$update_comment_response" | sed '$d')
+
+    # Check for HTTP errors
+    if [[ ${http_code} -ge 400 ]]; then
+      echo "Error: Writing comment error ${http_code}" >&2
+      echo "$response" >&2
+      return 1
+    fi
+}
+
 function run-test() {
   local payload
   local response
@@ -483,14 +534,18 @@ function run-test() {
 
 
     # Get ssh connection string
+    # TODO add bastion logic
     if [[ "$master_ip_find" == "false" ]]; then
       master_ip=$(jq -r '.connection_hosts.masters[0].host' <<< "$response")
       master_user=$(jq -r '.connection_hosts.masters[0].user' <<< "$response")
       if [[ "$master_ip" != "null" && "$master_user" != "null" ]]; then
-        connection="      ssh ${master_user}@${master_ip}"
+        master_connection="      ssh ${master_user}@${master_ip}"
         master_ip_find=true
         echo "  SSH connection string:"
-        echo "$connection"
+        echo "$master_connection"
+        update_comment
+        # TODO ADD logs collect
+        # TODO add workflow template
       fi
     fi
 
