@@ -20,24 +20,31 @@ import (
 	"encoding/json"
 	"sort"
 
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 // NewFromSnapshot expects snapshot to contain only strings, otherwise it panics
-func NewFromSnapshot(snapshot []go_hook.FilterResult) Set {
+func NewFromSnapshot(snapshots []sdkpkg.Snapshot) Set {
 	s := Set{}
-	for _, v := range snapshot {
-		if v == nil {
+	for snap, err := range sdkobjectpatch.SnapshotIter[string](snapshots) {
+		if snap == "" {
 			continue
 		}
 
-		s.Add(v.(string))
+		// because old implementation was "must cast"
+		if err != nil {
+			panic(err)
+		}
+
+		s.Add(snap)
 	}
+
 	return s
 }
 
 // NewFromValues expects values array to contain only strings, otherwise it panics
-func NewFromValues(values go_hook.PatchableValuesCollector, path string) Set {
+func NewFromValues(values sdkpkg.PatchableValuesCollector, path string) Set {
 	s := Set{}
 	for _, m := range values.Get(path).Array() {
 		s.Add(m.String())

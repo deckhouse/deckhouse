@@ -6,16 +6,17 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package ee
 
 import (
+	"fmt"
 	"strings"
 	"time"
-
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
-	"github.com/flant/addon-operator/sdk"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	eeCrd "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee/lib/crd"
 	"github.com/deckhouse/deckhouse/go_lib/jwt"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/sdk"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 type IstioFederationMergeCrdInfo struct {
@@ -145,7 +146,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, metadataMerge)
 
 func metadataMerge(input *go_hook.HookInput) error {
-	var err error
 	var properFederations = make([]IstioFederationMergeCrdInfo, 0)
 	var properMulticlusters = make([]IstioMulticlusterMergeCrdInfo, 0)
 	var multiclustersNeedIngressGateway = false
@@ -155,8 +155,11 @@ func metadataMerge(input *go_hook.HookInput) error {
 	var myTrustDomain = input.Values.Get("global.discovery.clusterDomain").String()
 
 federationsLoop:
-	for _, federation := range input.Snapshots["federations"] {
-		federationInfo := federation.(IstioFederationMergeCrdInfo)
+	for federationInfo, err := range sdkobjectpatch.SnapshotIter[IstioFederationMergeCrdInfo](input.NewSnapshots.Get("federations")) {
+		if err != nil {
+			return fmt.Errorf("cannot iterate over federations: %w", err)
+		}
+
 		if federationInfo.TrustDomain == myTrustDomain {
 			input.Logger.Warnf("skipping IstioFederation %s with trustDomain equals to ours: %s", federationInfo.Name, federationInfo.TrustDomain)
 			continue federationsLoop
@@ -183,8 +186,10 @@ federationsLoop:
 	}
 
 multiclustersLoop:
-	for _, multicluster := range input.Snapshots["multiclusters"] {
-		multiclusterInfo := multicluster.(IstioMulticlusterMergeCrdInfo)
+	for multiclusterInfo, err := range sdkobjectpatch.SnapshotIter[IstioMulticlusterMergeCrdInfo](input.NewSnapshots.Get("multiclusters")) {
+		if err != nil {
+			return fmt.Errorf("cannot iterate over multiclusters: %w", err)
+		}
 
 		if multiclusterInfo.EnableIngressGateway {
 			multiclustersNeedIngressGateway = true

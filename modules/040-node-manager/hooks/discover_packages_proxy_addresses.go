@@ -77,7 +77,7 @@ func packagesProxyPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 }
 
 func handlePackagesProxyEndpoints(input *go_hook.HookInput) error {
-	endpointsSet := set.NewFromSnapshot(input.Snapshots["packages_proxy"])
+	endpointsSet := set.NewFromSnapshot(input.NewSnapshots.Get("packages_proxy"))
 	endpointsList := endpointsSet.Slice() // sorted
 
 	if len(endpointsList) == 0 {

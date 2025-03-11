@@ -7,22 +7,24 @@ package ee
 
 import (
 	"encoding/json"
+	"fmt"
 	"slices"
 	"strings"
 	"time"
-
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
-	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/ptr"
 
 	eeCrd "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee/lib/crd"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/http"
 	"github.com/deckhouse/deckhouse/go_lib/jwt"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
+	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/ptr"
 )
 
 var (
@@ -40,7 +42,7 @@ type IstioFederationDiscoveryCrdInfo struct {
 	PrivateMetadataEndpoint  string
 }
 
-func (i *IstioFederationDiscoveryCrdInfo) SetMetricMetadataEndpointError(mc go_hook.MetricsCollector, endpoint string, isError float64) {
+func (i *IstioFederationDiscoveryCrdInfo) SetMetricMetadataEndpointError(mc sdkpkg.MetricsCollector, endpoint string, isError float64) {
 	labels := map[string]string{
 		"federation_name": i.Name,
 		"endpoint":        endpoint,
@@ -120,15 +122,18 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 
 	var myTrustDomain = input.Values.Get("global.discovery.clusterDomain").String()
 
-	for _, federation := range input.Snapshots["federations"] {
-		federationInfo := federation.(IstioFederationDiscoveryCrdInfo)
+	federations, err := sdkobjectpatch.UnmarshalToStruct[IstioFederationDiscoveryCrdInfo](input.NewSnapshots, "federations")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal federations: %w", err)
+	}
+
+	for _, federationInfo := range federations {
 		if federationInfo.TrustDomain == myTrustDomain {
 			continue
 		}
 	}
 
-	for _, federation := range input.Snapshots["federations"] {
-		federationInfo := federation.(IstioFederationDiscoveryCrdInfo)
+	for _, federationInfo := range federations {
 		if federationInfo.TrustDomain == myTrustDomain {
 			continue
 		}

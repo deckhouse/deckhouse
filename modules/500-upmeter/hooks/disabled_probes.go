@@ -17,12 +17,11 @@ limitations under the License.
 package hooks
 
 import (
+	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
 var _ = sdk.RegisterFunc(
@@ -83,8 +82,8 @@ type appPresence struct {
 func collectDisabledProbes(input *go_hook.HookInput) error {
 	// Input
 	var (
-		deplyments   = set.NewFromSnapshot(input.Snapshots["deployments"])
-		statefulsets = set.NewFromSnapshot(input.Snapshots["statefulsets"])
+		deplyments   = set.NewFromSnapshot(input.NewSnapshots.Get("deployments"))
+		statefulsets = set.NewFromSnapshot(input.NewSnapshots.Get("statefulsets"))
 	)
 	presence := appPresence{
 		ccm:                deplyments.Has("cloud-controller-manager"),

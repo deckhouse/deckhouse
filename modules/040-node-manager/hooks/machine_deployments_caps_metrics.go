@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
@@ -117,7 +118,7 @@ func handleMachineDeploymentStatus(input *go_hook.HookInput) error {
 
 	input.MetricsCollector.Expire(capsMachineDeploymentMetricsGroup)
 
-	options := []metrics.Option{
+	options := []sdkpkg.MetricCollectorOption{
 		metrics.WithGroup(capsMachineDeploymentMetricsGroup),
 	}
 

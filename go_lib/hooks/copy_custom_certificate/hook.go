@@ -19,6 +19,7 @@ package copy_custom_certificate
 import (
 	"fmt"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -76,15 +77,18 @@ func RegisterHook(moduleName string) bool {
 
 func copyCustomCertificatesHandler(moduleName string) func(input *go_hook.HookInput) error {
 	return func(input *go_hook.HookInput) error {
-		snapshots, ok := input.Snapshots["custom_certificates"]
-		if !ok {
+		snapshots := input.NewSnapshots.Get("custom_certificates")
+		if len(snapshots) == 0 {
 			input.Logger.Info("No custom certificates received, skipping setting values")
 			return nil
 		}
 
 		customCertificates := make(map[string][]byte, len(snapshots))
-		for _, snapshot := range snapshots {
-			cs := snapshot.(*CustomCertificate)
+		for cs, err := range sdkobjectpatch.SnapshotIter[CustomCertificate](snapshots) {
+			if err != nil {
+				continue
+			}
+
 			customCertificates[cs.Name] = cs.Data
 		}
 

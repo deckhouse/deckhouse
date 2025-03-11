@@ -70,7 +70,7 @@ func filterYandexDeprecatedZoneNodes(obj *unstructured.Unstructured) (go_hook.Fi
 }
 
 func alertOnNodesInDeprecatedAvailabilityZones(input *go_hook.HookInput) error {
-	nodeGroupsWithDeprecatedZones := set.NewFromSnapshot(input.Snapshots[yandexDeprecatedZoneNodesKey])
+	nodeGroupsWithDeprecatedZones := set.NewFromSnapshot(input.NewSnapshots.Get(yandexDeprecatedZoneNodesKey))
 
 	if len(nodeGroupsWithDeprecatedZones) > 0 {
 		requirements.SaveValue(yandexDeprecatedZoneInNodesKey, true)

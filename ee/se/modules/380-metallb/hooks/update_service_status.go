@@ -9,6 +9,8 @@ package hooks
 import (
 	"fmt"
 
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -50,7 +52,7 @@ func applyL2LBServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 }
 
 func handleL2LBServices(input *go_hook.HookInput) error {
-	namespacedServicesWithIPs := getNamespacedNameOfServicesWithIPs(input.Snapshots["l2lb_services"])
+	namespacedServicesWithIPs := getNamespacedNameOfServicesWithIPs(input.NewSnapshots.Get("l2lb_services"))
 	for namespacedName, ips := range namespacedServicesWithIPs {
 		IPsForStatus := make([]map[string]string, 0, len(ips))
 		totalIPs := len(ips)
@@ -98,13 +100,13 @@ func handleL2LBServices(input *go_hook.HookInput) error {
 	return nil
 }
 
-func getNamespacedNameOfServicesWithIPs(snapshot []go_hook.FilterResult) map[types.NamespacedName][]string {
+func getNamespacedNameOfServicesWithIPs(snapshots []sdkpkg.Snapshot) map[types.NamespacedName][]string {
 	result := make(map[types.NamespacedName][]string)
-	for _, serviceSnap := range snapshot {
-		service, ok := serviceSnap.(L2LBServiceStatusInfo)
-		if !ok {
+	for service, err := range sdkobjectpatch.SnapshotIter[L2LBServiceStatusInfo](snapshots) {
+		if err != nil {
 			continue
 		}
+
 		namespacedNameKey := types.NamespacedName{Name: service.Name, Namespace: service.Namespace}
 		ips, exists := result[namespacedNameKey]
 		if !exists {
@@ -114,5 +116,6 @@ func getNamespacedNameOfServicesWithIPs(snapshot []go_hook.FilterResult) map[typ
 
 		result[namespacedNameKey] = ips
 	}
+
 	return result
 }

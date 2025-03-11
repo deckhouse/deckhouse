@@ -20,13 +20,13 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/deckhouse/deckhouse/go_lib/set"
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/tidwall/gjson"
-
-	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
-func getFirstDefined(values go_hook.PatchableValuesCollector, keys ...string) (gjson.Result, bool) {
+func getFirstDefined(values sdkpkg.PatchableValuesCollector, keys ...string) (gjson.Result, bool) {
 	var (
 		v  gjson.Result
 		ok bool

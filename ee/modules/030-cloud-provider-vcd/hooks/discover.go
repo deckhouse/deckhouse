@@ -12,6 +12,9 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -20,9 +23,6 @@ import (
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/json"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -78,21 +78,23 @@ func applyStorageClassFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 }
 
 func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
-	if len(input.Snapshots["cloud_provider_discovery_data"]) == 0 {
+	if len(input.NewSnapshots.Get("cloud_provider_discovery_data")) == 0 {
 		input.Logger.Warn("failed to find secret 'd8-cloud-provider-discovery-data' in namespace 'kube-system'")
 
-		if len(input.Snapshots["storage_classes"]) == 0 {
+		if len(input.NewSnapshots.Get("storage_classes")) == 0 {
 			input.Logger.Warn("failed to find storage classes for 'named-disk.csi.cloud-director.vmware.com' provisioner")
 
 			return nil
 		}
 
-		storageClassesSnapshots := input.Snapshots["storage_classes"]
+		storageClassesSnapshots := input.NewSnapshots.Get("storage_classes")
 
 		storageClasses := make([]storageClass, 0, len(storageClassesSnapshots))
 
-		for _, storageClassSnapshot := range storageClassesSnapshots {
-			sc := storageClassSnapshot.(*storage.StorageClass)
+		for sc, err := range sdkobjectpatch.SnapshotIter[*storage.StorageClass](storageClassesSnapshots) {
+			if err != nil {
+				return fmt.Errorf("failed to iterate over storage classes: %v", err)
+			}
 
 			storageClasses = append(storageClasses, storageClass{
 				Name:           sc.Name,
@@ -105,11 +107,21 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	secret := input.Snapshots["cloud_provider_discovery_data"][0].(*v1.Secret)
+	secret := new(v1.Secret)
+
+	snaps := input.NewSnapshots.Get("cloud_provider_discovery_data")
+	if len(snaps) == 0 {
+		return fmt.Errorf("cloud_provider_discovery_data snapshot is empty")
+	}
+
+	err := snaps[0].UnmarhalTo(secret)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal secret: %v", err)
+	}
 
 	discoveryDataJSON := secret.Data["discovery-data.json"]
 
-	_, err := config.ValidateDiscoveryData(&discoveryDataJSON, []string{"/deckhouse/ee/candi/cloud-providers/vcd/openapi"})
+	_, err = config.ValidateDiscoveryData(&discoveryDataJSON, []string{"/deckhouse/ee/candi/cloud-providers/vcd/openapi"})
 	if err != nil {
 		return fmt.Errorf("failed to validate 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
 	}

@@ -19,6 +19,7 @@ package generate_password
 import (
 	"testing"
 
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/stretchr/testify/require"
 )
@@ -32,49 +33,69 @@ func TestRestoreGeneratedPassword(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		snapshot   []go_hook.FilterResult
+		snapshot   []sdkpkg.Snapshot
 		expectPass string
 		expectErr  bool
 	}{
 		{
 			"generated password",
-			[]go_hook.FilterResult{map[string][]byte{
-				defaultBasicAuthPlainField: []byte("admin:{PLAIN}" + genPass),
-			}},
+			[]sdkpkg.Snapshot{
+				go_hook.Wrapped{
+					Wrapped: map[string][]byte{
+						defaultBasicAuthPlainField: []byte("admin:{PLAIN}" + genPass),
+					},
+				},
+			},
 			genPass,
 			expectNoError,
 		},
 		{
 			"custom password",
-			[]go_hook.FilterResult{map[string][]byte{
-				defaultBasicAuthPlainField: []byte("admin:{PLAIN}pass"),
-			}},
+			[]sdkpkg.Snapshot{
+				go_hook.Wrapped{
+					Wrapped: map[string][]byte{
+						defaultBasicAuthPlainField: []byte("admin:{PLAIN}pass"),
+					},
+				},
+			},
 			"pass",
 			expectNoError,
 		},
 		{
 			"no PLAIN marker",
-			[]go_hook.FilterResult{map[string][]byte{
-				defaultBasicAuthPlainField: []byte("admin:pass"),
-			}},
+			[]sdkpkg.Snapshot{
+				go_hook.Wrapped{
+					Wrapped: map[string][]byte{
+						defaultBasicAuthPlainField: []byte("admin:pass"),
+					},
+				},
+			},
 			"",
 			expectError,
 		},
 		{
 			"empty snapshot",
-			[]go_hook.FilterResult{},
+			[]sdkpkg.Snapshot{},
 			"",
 			expectError,
 		},
 		{
 			"empty data",
-			[]go_hook.FilterResult{map[string][]byte{}},
+			[]sdkpkg.Snapshot{
+				go_hook.Wrapped{
+					Wrapped: map[string][]byte{},
+				},
+			},
 			"",
 			expectError,
 		},
 		{
 			"multiple fields",
-			[]go_hook.FilterResult{map[string][]byte{"one": []byte(""), "two": []byte("")}},
+			[]sdkpkg.Snapshot{
+				go_hook.Wrapped{
+					Wrapped: map[string][]byte{"one": []byte(""), "two": []byte("")},
+				},
+			},
 			"",
 			expectError,
 		},

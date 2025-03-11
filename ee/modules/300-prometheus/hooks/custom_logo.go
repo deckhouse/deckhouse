@@ -49,14 +49,19 @@ func customLogoHandler(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	snap := input.Snapshots["logo-cm"]
-	if len(snap) == 0 || snap[0] == nil {
+	snaps := input.NewSnapshots.Get("logo-cm")
+	if len(snaps) == 0 || snaps[0] == nil {
 		input.Values.Set("prometheus.internal.grafana.customLogo.enabled", false)
 		input.PatchCollector.DeleteInBackground("v1", "ConfigMap", ns, cmName)
 		return nil
 	}
 
-	logoData := snap[0].(string)
+	var logoData string
+
+	err := snaps[0].UnmarhalTo(&logoData)
+	if err != nil {
+		return fmt.Errorf("cannot unmarshal logo data: %w", err)
+	}
 
 	cm := buildGrafanaLogoCM(logoData)
 

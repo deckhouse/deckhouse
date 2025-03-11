@@ -19,6 +19,8 @@ package copy_rbd_secret
 import (
 	"errors"
 
+	"github.com/deckhouse/deckhouse/go_lib/set"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -27,8 +29,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
-
-	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
 func RegisterHook(namespace string) bool {
@@ -98,7 +98,7 @@ func filterSecrets(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 }
 
 func copyRBDSecretHandlerWithArgs(input *go_hook.HookInput, namespace string) error {
-	secretSnap := input.Snapshots["rbd_secret"]
+	secretSnap := input.NewSnapshots.Get("rbd_secret")
 	if len(secretSnap) == 0 {
 		return nil
 	}
@@ -106,8 +106,10 @@ func copyRBDSecretHandlerWithArgs(input *go_hook.HookInput, namespace string) er
 	secretsToCopy := make(map[string]*v1.Secret)
 	d8Secrets := set.New()
 
-	for _, secret := range secretSnap {
-		secret := secret.(*v1.Secret)
+	for secret, err := range sdkobjectpatch.SnapshotIter[*v1.Secret](secretSnap) {
+		if err != nil {
+			continue
+		}
 
 		if secret.Namespace == namespace {
 			d8Secrets.Add(secret.Name)
@@ -125,13 +127,18 @@ func copyRBDSecretHandlerWithArgs(input *go_hook.HookInput, namespace string) er
 		}
 	}
 
-	storageClassSnap := input.Snapshots["rbd_storageclass"]
+	storageClassSnap := input.NewSnapshots.Get("rbd_storageclass")
 
-	for _, storageClass := range storageClassSnap {
-		userSecret := storageClass.(storageClassObject).UserSecretName
+	for storageClass, err := range sdkobjectpatch.SnapshotIter[storageClassObject](storageClassSnap) {
+		if err != nil {
+			continue
+		}
+
+		userSecret := storageClass.UserSecretName
 		if userSecret == "" {
 			continue // non-rbd StorageClass
 		}
+
 		if d8Secrets.Has(userSecret) {
 			continue
 		}

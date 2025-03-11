@@ -67,6 +67,8 @@ github.com/blang/semver/v4 v4.0.0 h1:1PFHFE6yCCTv8C1TeyNNarDzntLi7wMI5i/pzqYIsAM
 github.com/blang/semver/v4 v4.0.0/go.mod h1:IbckMUScFkM3pff0VJDNKRiT6TG/YpiHIM2yvyW5YoQ=
 github.com/bshuster-repo/logrus-logstash-hook v1.0.0 h1:e+C0SB5R1pu//O4MQ3f9cFuPGoOVeF2fE4Og9otCc70=
 github.com/bshuster-repo/logrus-logstash-hook v1.0.0/go.mod h1:zsTqEiSzDgAa/8GZR7E1qaXrhYNDKBYy5/dWPTIflbk=
+github.com/caarlos0/env/v11 v11.2.2 h1:95fApNrUyueipoZN/EhA8mMxiNxrBwDa+oAZrMWl3Kg=
+github.com/caarlos0/env/v11 v11.2.2/go.mod h1:JBfcdeQiBoI3Zh1QRAWfe+tpiNTmDtcCj/hHHHMx0vc=
 github.com/cenkalti/backoff/v4 v4.2.1 h1:y4OZtCnogmCPw98Zjyt5a6+QwPLGkiQsYW5oUqylYbM=
 github.com/cenkalti/backoff/v4 v4.2.1/go.mod h1:Y3VNntkOUPxTVeUxJ/G5vcM//AlwfmyYozVcomhLiZE=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
@@ -119,6 +121,10 @@ github.com/deckhouse/module-sdk v0.1.1-0.20250306155143-efc505c729d0 h1:sZfJrKec
 github.com/deckhouse/module-sdk v0.1.1-0.20250306155143-efc505c729d0/go.mod h1:xZuqvKXZunp9VNAiF70fgYiN/HQkLDo8tvGymXNpu0o=
 github.com/deckhouse/module-sdk v0.1.1-0.20250307130634-9796dba9b13b h1:jfJJrdXq4I+OpXJGFo5ogDYnm04hXTKM45xmIYmIs1w=
 github.com/deckhouse/module-sdk v0.1.1-0.20250307130634-9796dba9b13b/go.mod h1:xZuqvKXZunp9VNAiF70fgYiN/HQkLDo8tvGymXNpu0o=
+github.com/deckhouse/module-sdk v0.1.1-0.20250310120231-e366f9e48468 h1:BYB+P6dpSQjhb3t0zHl/fc8PIjYhgY/6x0mrbZyPXzU=
+github.com/deckhouse/module-sdk v0.1.1-0.20250310120231-e366f9e48468/go.mod h1:fbs0X7myE8zrPKxs3eoIoFWf68E7r1tZ64uJfYJCsKc=
+github.com/deckhouse/module-sdk v0.1.1-0.20250311074906-5e718f6c084a h1:2XxOMfOYUew9aAHJZQSFqJBZFVR3iysWeiJ7j+P/7U8=
+github.com/deckhouse/module-sdk v0.1.1-0.20250311074906-5e718f6c084a/go.mod h1:fbs0X7myE8zrPKxs3eoIoFWf68E7r1tZ64uJfYJCsKc=
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f h1:lO4WD4F/rVNCu3HqELle0jiPLLBs70cWOduZpkS1E78=
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f/go.mod h1:cuUVRXasLTGF7a8hSLbxyZXjz+1KgoB3wDUb6vlszIc=
 github.com/distribution/distribution/v3 v3.0.0-beta.1 h1:X+ELTxPuZ1Xe5MsD3kp2wfGUhc8I+MPfRis8dZ818Ic=
@@ -166,6 +172,10 @@ github.com/flant/addon-operator v1.5.4-0.20250306155424-2293820269ec h1:vz0Rk0Vy
 github.com/flant/addon-operator v1.5.4-0.20250306155424-2293820269ec/go.mod h1:M9WG8kJ2NPJtjXmDvlCyLDU0LIb7CpMnzhaMEYq0AMU=
 github.com/flant/addon-operator v1.5.4-0.20250307131105-08c85735e7de h1:7zsiWlwmQyMB1JHPNNOT2kQt75DAWvirbJR1UXyoPCE=
 github.com/flant/addon-operator v1.5.4-0.20250307131105-08c85735e7de/go.mod h1:9JrutroYmLWRhlAvZDt28RT+Z0yH0t7axr0IyXz3uDg=
+github.com/flant/addon-operator v1.5.4-0.20250311071455-a79528ac9d3d h1:dQEju4l5aVmnJwz68AJHrNpn/LTh/CPJVb88Zfht6EE=
+github.com/flant/addon-operator v1.5.4-0.20250311071455-a79528ac9d3d/go.mod h1:+XnNmlvDfF8bM5SmSb3C/P/8WnDSza4nFLi6D86qshs=
+github.com/flant/addon-operator v1.5.4-0.20250311100015-3de60a3e33b4 h1:GK3+OtXRSwOzLhB3ACYAmW56WKXJoDYB0ANh5COj2yg=
+github.com/flant/addon-operator v1.5.4-0.20250311100015-3de60a3e33b4/go.mod h1:+XnNmlvDfF8bM5SmSb3C/P/8WnDSza4nFLi6D86qshs=
 github.com/flant/go-openapi-validate v0.19.12-flant.1 h1:GuB9XEfiLHq3M7fafRLq1AWkndSY/+/5MX7ad1xJ/8A=
 github.com/flant/go-openapi-validate v0.19.12-flant.1/go.mod h1:Rzou8hA/CBw8donlS6WNEUQupNvUZ0waH08tGe6kAQ4=
 github.com/flant/kube-client v1.2.2 h1:27LBs+PKJEFnkQXjPU9eIps7a7iyI13AKcSYj897DCU=
@@ -176,6 +186,8 @@ github.com/flant/shell-operator v1.5.4-0.20250306155329-cfb74a7483d6 h1:hsF3KlJw
 github.com/flant/shell-operator v1.5.4-0.20250306155329-cfb74a7483d6/go.mod h1:PeWjvtzfcNvAaKaQ80Od5050XXJV3G7VScktV+JD58g=
 github.com/flant/shell-operator v1.5.4-0.20250307130945-eae880048052 h1:RmfGtLpdOYAX9NhoXS7UAOfG3VOjDEJcu/3EsSPMB8k=
 github.com/flant/shell-operator v1.5.4-0.20250307130945-eae880048052/go.mod h1:mdCz98kXAqFdb8+f43mY6BvH8pDU/yCllBPxprGHg7Y=
+github.com/flant/shell-operator v1.5.4-0.20250310122304-5ad36d7af950 h1:DbOkUflsgNMRf+G+gcRDYGkGHMkppSNMh50eC08E/uc=
+github.com/flant/shell-operator v1.5.4-0.20250310122304-5ad36d7af950/go.mod h1:CPgriZGOdlnnxanCI6EgGv5uZV9b9n90rGpBPZHSDEk=
 github.com/fogleman/gg v1.3.0 h1:/7zJX8F6AaYQc57WQCyN9cAIz+4bCJGO9B+dyW29am8=
 github.com/fogleman/gg v1.3.0/go.mod h1:R/bRT+9gY/C5z7JzPU0zXsXHKM4/ayA+zqcVNZzPa1k=
 github.com/foxcpp/go-mockdns v1.0.0 h1:7jBqxd3WDWwi/6WhDvacvH1XsN3rOLXyHM1uhvIx6FI=

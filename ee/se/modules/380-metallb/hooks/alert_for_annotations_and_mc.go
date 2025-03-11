@@ -9,6 +9,8 @@ package hooks
 import (
 	"fmt"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
@@ -70,12 +72,19 @@ func checkServicesForDeprecatedAnnotations(input *go_hook.HookInput) error {
 	// Check ModuleConfig version and pools
 	input.MetricsCollector.Expire("D8MetallbUpdateMCVersionRequired")
 
-	mcSnaps := input.Snapshots["module_config"]
+	mcSnaps := input.NewSnapshots.Get("module_config")
 	if len(mcSnaps) != 1 {
 		return nil
 	}
-	mc, ok := mcSnaps[0].(*ModuleConfig)
-	if ok && mc.Spec.Version >= 2 {
+
+	mc := new(ModuleConfig)
+
+	err := mcSnaps[0].UnmarhalTo(mc)
+	if err != nil {
+		return fmt.Errorf("cannot unmarshal ModuleConfig: %w", err)
+	}
+
+	if mc.Spec.Version >= 2 {
 		for _, pool := range mc.Spec.Settings.AddressPools {
 			if pool.Protocol == "layer2" {
 				input.MetricsCollector.Set("d8_metallb_obsolete_layer2_pools_are_used", 1,
@@ -83,6 +92,7 @@ func checkServicesForDeprecatedAnnotations(input *go_hook.HookInput) error {
 					metrics.WithGroup("D8MetallbObsoleteLayer2PoolsAreUsed"))
 			}
 		}
+
 		return nil
 	}
 
@@ -104,18 +114,21 @@ func checkServicesForDeprecatedAnnotations(input *go_hook.HookInput) error {
 		"metallb.universe.tf/allow-shared-ip",
 	}
 
-	serviceSnaps := input.Snapshots["services"]
-	for _, serviceSnap := range serviceSnaps {
-		if service, ok := serviceSnap.(ServiceInfoForAlert); ok {
-			for _, annotation := range deprecatedAnnotations {
-				if _, ok := service.Annotations[annotation]; ok {
-					input.MetricsCollector.Set("d8_metallb_not_supported_service_annotations_detected", 1,
-						map[string]string{
-							"name":       service.Name,
-							"namespace":  service.Namespace,
-							"annotation": annotation,
-						}, metrics.WithGroup("D8MetallbNotSupportedServiceAnnotationsDetected"))
-				}
+	serviceSnaps := input.NewSnapshots.Get("services")
+	for service, err := range sdkobjectpatch.SnapshotIter[ServiceInfoForAlert](serviceSnaps) {
+		if err != nil {
+			input.Logger.Warn("iterate over services", log.Err(err))
+			continue
+		}
+
+		for _, annotation := range deprecatedAnnotations {
+			if _, ok := service.Annotations[annotation]; ok {
+				input.MetricsCollector.Set("d8_metallb_not_supported_service_annotations_detected", 1,
+					map[string]string{
+						"name":       service.Name,
+						"namespace":  service.Namespace,
+						"annotation": annotation,
+					}, metrics.WithGroup("D8MetallbNotSupportedServiceAnnotationsDetected"))
 			}
 		}
 	}

@@ -19,6 +19,7 @@ package change_host_address
 import (
 	"fmt"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -83,14 +84,17 @@ func wrapChangeAddressHandler(namespace string) func(input *go_hook.HookInput) e
 }
 
 func changeHostAddressHandler(namespace string, input *go_hook.HookInput) error {
-	pods := input.Snapshots["pod"]
+	pods := input.NewSnapshots.Get("pod")
 	if len(pods) == 0 {
 		return nil
 	}
 
-	for _, pod := range pods {
-		podAddress := pod.(address)
+	addresses, err := sdkobjectpatch.UnmarshalToStruct[address](input.NewSnapshots, "pod")
+	if err != nil {
+		return fmt.Errorf("cannot unmarshal pods: %v", err)
+	}
 
+	for _, podAddress := range addresses {
 		if podAddress.Host == "" {
 			// Pod doesn't exist, we can skip it
 			continue
@@ -112,5 +116,6 @@ func changeHostAddressHandler(namespace string, input *go_hook.HookInput) error 
 			input.PatchCollector.Delete("v1", "Pod", namespace, podAddress.Name)
 		}
 	}
+
 	return nil
 }

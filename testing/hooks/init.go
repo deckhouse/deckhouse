@@ -29,6 +29,7 @@ import (
 	"runtime"
 	"strings"
 
+	sdkpatchablevalues "github.com/deckhouse/module-sdk/pkg/patchable-values"
 	. "github.com/flant/addon-operator/pkg/hook/types"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
@@ -873,10 +874,10 @@ func (hec *HookExecutionConfig) RunGoHook() {
 	convigValues, err := addonutils.NewValuesFromBytes(hec.configValues.JSONRepr)
 	Expect(err).ShouldNot(HaveOccurred())
 
-	patchableValues, err := go_hook.NewPatchableValues(values)
+	patchableValues, err := sdkpatchablevalues.NewPatchableValues(values)
 	Expect(err).ShouldNot(HaveOccurred())
 
-	patchableConfigValues, err := go_hook.NewPatchableValues(convigValues)
+	patchableConfigValues, err := sdkpatchablevalues.NewPatchableValues(convigValues)
 	Expect(err).ShouldNot(HaveOccurred())
 
 	var formattedSnapshots = make(go_hook.Snapshots, len(hec.BindingContexts.BindingContexts))

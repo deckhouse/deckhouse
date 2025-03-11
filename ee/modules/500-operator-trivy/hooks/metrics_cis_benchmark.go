@@ -6,16 +6,16 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
-	"errors"
+	"fmt"
 
+	"github.com/deckhouse/deckhouse/ee/modules/500-operator-trivy/hooks/internal/apis/v1alpha1"
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	"github.com/deckhouse/deckhouse/ee/modules/500-operator-trivy/hooks/internal/apis/v1alpha1"
 )
 
 const (
@@ -70,15 +70,17 @@ func filterClusterComplianceReport(obj *unstructured.Unstructured) (go_hook.Filt
 func cisBencmarkMetricHandler(input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire(metricGroupName)
 
-	snap := input.Snapshots[cisBenchmarkQueue]
-	if len(snap) == 0 {
+	snaps := input.NewSnapshots.Get(cisBenchmarkQueue)
+	if len(snaps) == 0 {
 		input.Logger.Error("No CIS benchmark found")
 		return nil
 	}
 
-	compReport, ok := snap[0].(filteredComplianceReport)
-	if !ok {
-		return errors.New("can't use snapshot as filteredComplianceReport")
+	compReport := new(filteredComplianceReport)
+
+	err := snaps[0].UnmarhalTo(compReport)
+	if err != nil {
+		return fmt.Errorf("cannot unmarshal filtered compliance report: %w", err)
 	}
 
 	switch {
@@ -92,7 +94,7 @@ func cisBencmarkMetricHandler(input *go_hook.HookInput) error {
 	return nil
 }
 
-func generateSummaryMetrics(metricsCollector go_hook.MetricsCollector, summaryChecks []v1alpha1.ControlCheckSummary) {
+func generateSummaryMetrics(metricsCollector sdkpkg.MetricsCollector, summaryChecks []v1alpha1.ControlCheckSummary) {
 	for _, controlCheck := range summaryChecks {
 		var (
 			totalFails float64
@@ -106,7 +108,7 @@ func generateSummaryMetrics(metricsCollector go_hook.MetricsCollector, summaryCh
 	}
 }
 
-func generateDetailedMetrics(metricsCollector go_hook.MetricsCollector, detailedChecks []*v1alpha1.ControlCheckResult) {
+func generateDetailedMetrics(metricsCollector sdkpkg.MetricsCollector, detailedChecks []*v1alpha1.ControlCheckResult) {
 	for _, controlCheck := range detailedChecks {
 		if controlCheck == nil {
 			continue
@@ -126,7 +128,7 @@ func countTotalFailsFromDetailedChecks(checks []v1alpha1.ComplianceCheck) float6
 	return totalFails
 }
 
-func generateCisBenchmarkMetric(metricsCollector go_hook.MetricsCollector, totalFails float64, id, name, severity string) {
+func generateCisBenchmarkMetric(metricsCollector sdkpkg.MetricsCollector, totalFails float64, id, name, severity string) {
 	metricsCollector.Set(
 		metricName,
 		totalFails,

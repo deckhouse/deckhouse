@@ -7,6 +7,7 @@ package hooks
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -78,9 +79,15 @@ func applyConfigFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 }
 
 func cleanUpReports(input *go_hook.HookInput, dc dependency.Container) error {
-	mc := input.Snapshots["module_config"]
-	if len(mc) > 0 {
-		disableSBOM := mc[0].(bool)
+	var disableSBOM bool
+
+	snaps := input.NewSnapshots.Get("module_config")
+	if len(snaps) > 0 {
+		err := snaps[0].UnmarhalTo(&disableSBOM)
+		if err != nil {
+			return fmt.Errorf("cannot unmarshal module config: %w", err)
+		}
+
 		moduleNsPatch := map[string]interface{}{
 			"metadata": map[string]interface{}{
 				"labels": map[string]interface{}{
@@ -97,7 +104,7 @@ func cleanUpReports(input *go_hook.HookInput, dc dependency.Container) error {
 		}
 
 		// cleanup was already done
-		if len(input.Snapshots["module_namespace"]) > 0 {
+		if len(input.NewSnapshots.Get("module_namespace")) > 0 {
 			return nil
 		}
 

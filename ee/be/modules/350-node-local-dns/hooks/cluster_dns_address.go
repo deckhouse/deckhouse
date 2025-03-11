@@ -8,6 +8,7 @@ package hooks
 import (
 	"fmt"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -52,8 +53,12 @@ func applyDNSServiceIPFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 }
 
 func discoveryDNSAddress(input *go_hook.HookInput) error {
-	dnsRedirAddressSnap := input.Snapshots["dns_redirect_cluster_ip"]
-	dnsRedirAddress := extractDNSAddressFromSnapshot(dnsRedirAddressSnap)
+	snaps, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, "dns_redirect_cluster_ip")
+	if err != nil {
+		return fmt.Errorf("unmarshal to struct: %v", err)
+	}
+
+	dnsRedirAddress := extractDNSAddressFromSnapshot(snaps)
 	if dnsRedirAddress == "" {
 		return fmt.Errorf("DNS redirect address not found")
 	}
@@ -63,9 +68,8 @@ func discoveryDNSAddress(input *go_hook.HookInput) error {
 	return nil
 }
 
-func extractDNSAddressFromSnapshot(snap []go_hook.FilterResult) string {
-	for _, addrRaw := range snap {
-		addr := addrRaw.(string)
+func extractDNSAddressFromSnapshot(snap []string) string {
+	for _, addr := range snap {
 		if addr == "None" || addr == "" {
 			continue
 		}

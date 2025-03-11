@@ -7,8 +7,10 @@ package hooks
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	corev1 "k8s.io/api/core/v1"
@@ -40,13 +42,15 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleAllMasterNodes)
 
 func handleAllMasterNodes(input *go_hook.HookInput) error {
-	nodesSnap := input.Snapshots["nodes"]
+	nodes, err := sdkobjectpatch.UnmarshalToStruct[uninitializedNode](input.NewSnapshots, "nodes")
+	if err != nil {
+		return fmt.Errorf("cannot unmarshal nodes: %v", err)
+	}
 
-	totalCount := len(nodesSnap)
+	totalCount := len(nodes)
 	var initializedCount int
 
-	for _, nodeS := range nodesSnap {
-		node := nodeS.(uninitializedNode)
+	for _, node := range nodes {
 		if node.Uninitialized {
 			continue
 		}

@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 )
 
 /*
@@ -146,7 +147,7 @@ type nodeGroupValue struct {
 	Raw  interface{}   `json:"-"`
 }
 
-func parseNodeGroupValues(values go_hook.PatchableValuesCollector) ([]*nodeGroupValue, error) {
+func parseNodeGroupValues(values sdkpkg.PatchableValuesCollector) ([]*nodeGroupValue, error) {
 	const nodeGroupsPath = "nodeManager.internal.nodeGroups"
 	var ng []*nodeGroupValue
 

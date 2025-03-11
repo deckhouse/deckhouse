@@ -51,14 +51,17 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, generateKeypair)
 
 func generateKeypair(input *go_hook.HookInput) error {
-	var keypair lib.Keypair
+	var secret = new(lib.Keypair)
 
-	secrets := input.Snapshots["secret"]
-	if len(secrets) == 1 {
-		var ok bool
-		keypair, ok = secrets[0].(lib.Keypair)
-		if !ok {
-			return fmt.Errorf("cannot convert keypair in secret to struct")
+	snaps := input.NewSnapshots.Get("secret")
+	if len(snaps) == 0 {
+		return fmt.Errorf("secret snapshot is empty")
+	}
+
+	if len(snaps) == 1 {
+		err := snaps[0].UnmarhalTo(secret)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal secret: %v", err)
 		}
 	} else {
 		pub, priv, err := ed25519.GenerateKey(rand.Reader)
@@ -86,14 +89,14 @@ func generateKeypair(input *go_hook.HookInput) error {
 		}
 		pubPEM := pem.EncodeToMemory(pubBlock)
 
-		keypair = lib.Keypair{
+		secret = &lib.Keypair{
 			Pub:  string(pubPEM),
 			Priv: string(privPEM),
 		}
 	}
 
-	input.Values.Set("istio.internal.remoteAuthnKeypair.pub", keypair.Pub)
-	input.Values.Set("istio.internal.remoteAuthnKeypair.priv", keypair.Priv)
+	input.Values.Set("istio.internal.remoteAuthnKeypair.pub", secret.Pub)
+	input.Values.Set("istio.internal.remoteAuthnKeypair.priv", secret.Priv)
 
 	return nil
 }

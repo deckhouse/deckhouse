@@ -56,7 +56,7 @@ var sbomGVR = schema.GroupVersionResource{
 }
 
 func handleReports(input *go_hook.HookInput, dc dependency.Container) error {
-	sn := input.Snapshots["namespaces"]
+	sn := input.NewSnapshots.Get("namespaces")
 	if len(sn) == 0 {
 		return nil
 	}

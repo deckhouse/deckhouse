@@ -110,7 +110,7 @@ func discoverNodeUsersForClear(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	nodes := golibset.NewFromSnapshot(input.Snapshots[nodeForClearSnapName])
+	nodes := golibset.NewFromSnapshot(input.NewSnapshots.Get(nodeForClearSnapName))
 
 	for _, item := range nodeUserSnap {
 		nuForClear := item.(nodeUsersForClear)
