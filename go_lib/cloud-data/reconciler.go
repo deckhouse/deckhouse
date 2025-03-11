@@ -44,6 +44,7 @@ type Discoverer interface {
 	InstanceTypes(ctx context.Context) ([]v1alpha1.InstanceType, error)
 	DiscoveryData(ctx context.Context, cloudProviderDiscoveryData []byte) ([]byte, error)
 	DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error)
+	CheckCloudConditions(ctx context.Context) ([]v1alpha1.CloudCondition, error)
 }
 
 type Reconciler struct {
@@ -212,9 +213,29 @@ func (c *Reconciler) reconcile(ctx context.Context) {
 	c.logger.Infoln("Start next data discovery")
 	defer c.logger.Infoln("Finish data discovery")
 
+	c.checkCloudConditions(ctx)
 	c.instanceTypesReconcile(ctx)
 	c.discoveryDataReconcile(ctx)
 	c.orphanedDisksReconcile(ctx)
+}
+
+func (c *Reconciler) checkCloudConditions(ctx context.Context) {
+	c.logger.Infoln("Start checking cloud conditions")
+	defer c.logger.Infoln("Finish checking cloud conditions")
+
+	conditions, err := c.discoverer.CheckCloudConditions(ctx)
+	if err != nil {
+		c.logger.Errorf("Error occurred while checking cloud conditions: %v", err)
+		return
+	}
+
+	for i := range conditions {
+		c.checkCondition(conditions[i], ctx)
+	}
+}
+
+func (c *Reconciler) checkCondition(condition v1alpha1.CloudCondition, ctx context.Context) {
+	// TODO
 }
 
 func (c *Reconciler) instanceTypesReconcile(ctx context.Context) {
