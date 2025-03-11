@@ -53,6 +53,7 @@ spec:
           failureThreshold: 105
           periodSeconds: 2
           successThreshold: 1
+          initialDelaySeconds: 5
         livenessProbe:
           httpGet:
             host: "127.0.0.1"
@@ -90,6 +91,11 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
+        - name: GOMEMLIMIT
+          valueFrom:
+            resourceFieldRef:
+              resource: limits.memory
+              divisor: '1'
         - name: KUBERNETES_SERVICE_HOST
           value: "127.0.0.1"
         - name: KUBERNETES_SERVICE_PORT
@@ -145,6 +151,9 @@ spec:
           mountPath: "/run/cilium/cgroupv2"
         - name: cilium-run
           mountPath: /var/run/cilium
+        - name: cilium-netns
+          mountPath: /var/run/cilium/netns
+          mountPropagation: HostToContainer
         - name: cni-path
           mountPath: /host/opt/cni/bin
         - name: etc-cni-netd
@@ -259,7 +268,7 @@ spec:
         image: {{ include "helm_lib_module_image" (list $context "agentDistroless") }}
         imagePullPolicy: IfNotPresent
         command:
-        - cilium
+        - cilium-dbg
         - build-config
         - --allow-config-keys=debug,single-cluster-route
         env:
@@ -390,6 +399,12 @@ spec:
               name: cilium-config
               key: clean-cilium-bpf-state
               optional: true
+        - name: WRITE_CNI_CONF_WHEN_READY
+          valueFrom:
+            configMapKeyRef:
+              name: cilium-config
+              key: write-cni-conf-when-ready
+              optional: true
         - name: KUBERNETES_SERVICE_HOST
           value: "127.0.0.1"
         - name: KUBERNETES_SERVICE_PORT
@@ -470,6 +485,10 @@ spec:
         hostPath:
           path: "/var/run/cilium"
           type: DirectoryOrCreate
+      - name: cilium-netns
+        hostPath:
+          path: /var/run/netns
+          type: DirectoryOrCreate
       - name: bpf-maps
         hostPath:
           path: /sys/fs/bpf
@@ -520,4 +539,26 @@ spec:
                 path: server.crt
               - key: tls.key
                 path: server.key
+      - name: hubble-metrics-tls
+        projected:
+          defaultMode: 0400
+          sources:
+          - secret:
+              name: hubble-server-certs
+              optional: true
+              items:
+              - key: ca.crt
+                path: client-ca.crt
+              - key: tls.crt
+                path: server.crt
+              - key: tls.key
+                path: server.key
+      - name: hubble-dynamic-metrics-config
+        configMap:
+          name: cilium-dynamic-metrics-config
+          optional: true
+      - name: hubble-flowlog-config
+        configMap:
+          name: cilium-flowlog-config
+          optional: true
 {{- end  }}
