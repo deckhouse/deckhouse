@@ -79,6 +79,6 @@ locals {
 
   node_group = local.ng.name
   hostname   = join("-", [local.prefix, local.node_group, local.node_index])
-  user_data  = var.cloudConfig == "" ? "" : base64decode(var.cloudConfig)
+  user_data  = var.cloudConfig == "" ? "" : var.cloudConfig
 }
 
