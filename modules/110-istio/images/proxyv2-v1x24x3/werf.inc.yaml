@@ -135,6 +135,7 @@ shell:
   # - git clone --depth 1 --branch {{ $istioProxyDepsRev }} {{ .SOURCE_REPO }}/istio/envoy-build-deps.git /tmp/bazel-deps
   # - rm -rf /tmp/bazel-deps/.git
   #
+  - ln -f -s llvm-17.0 "/usr/lib/llvm-17"
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - export ALTWRAP_LLVM_VERSION=17.0 GCC_VERSION=11
