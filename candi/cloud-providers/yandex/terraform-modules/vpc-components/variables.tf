@@ -93,6 +93,11 @@ variable "nat_instance_platform" {
   default = ""
 }
 
+variable "nat_instance_family_id" {
+  type = string
+  default = ""
+}
+
 variable "resourceManagementTimeout" {
   type = string
   default = "10m"
