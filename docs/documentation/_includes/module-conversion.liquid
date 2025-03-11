@@ -1,0 +1,17 @@
+{%- assign moduleName = page['module-kebab-name'] %}
+
+{%- assign moduleConversions = site.data.schemas[moduleName]['conversions'] | sort %}
+
+{%- if moduleConversions.size > 0 %}
+
+### конверсии
+
+{% for conversion in moduleConversions %}
+
+#### конверсия {{ conversion[0] }}
+
+{{ site.data.i18n.common.doit[page.lang] }}: {{ conversion[1].description[page.lang] }}
+
+{% endfor %}
+{% endif %}
+

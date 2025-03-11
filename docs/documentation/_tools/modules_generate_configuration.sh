@@ -76,3 +76,7 @@ if [ -d /src/global ]; then
     cat /src/global/crds/doc-ru-$(echo $i | sed 's#/src/global/crds/##' ) | sed 's/^/    /' >>_data/schemas/global/crds/$(echo $i | sed 's#/src/global/crds/##' )
   done
 fi
+
+
+mkdir -p /srv/jekyll-data/documentation/_data/schemas/user-authn/conversions/
+cp /src/modules/150-user-authn/openapi/conversions/* /srv/jekyll-data/documentation/_data/schemas/user-authn/conversions/
