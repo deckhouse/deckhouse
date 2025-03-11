@@ -33,6 +33,7 @@ func NewClient(session *session.Session, privKeys []session.AgentPrivateKey) *Cl
 	return &Client{
 		Settings:    session,
 		privateKeys: privKeys,
+		live:        false,
 	}
 }
 
@@ -48,6 +49,7 @@ type Client struct {
 	BastionClient *ssh.Client
 
 	stopChan chan struct{}
+	live     bool
 }
 
 func (s *Client) Start() error {
@@ -148,6 +150,7 @@ func (s *Client) Start() error {
 		}
 
 		s.sshClient = client
+		s.live = true
 
 		if s.stopChan == nil {
 			go s.keepAlive()
@@ -177,6 +180,7 @@ func (s *Client) Start() error {
 	s.BastionClient = bastionClient
 	s.NetConn = &targetConn
 	s.SSHConn = &clientConn
+	s.live = true
 
 	if s.stopChan == nil {
 		go s.keepAlive()
@@ -196,11 +200,13 @@ func (s *Client) keepAlive() {
 			session, err := s.sshClient.NewSession()
 			if err != nil {
 				log.DebugF("Keep-alive failed: %v", err)
+				s.live = false
 				s.Start()
 				return
 			}
 			if _, err := session.SendRequest("keepalive", false, nil); err != nil {
 				log.DebugF("Keep-alive failed: %v", err)
+				s.live = false
 				s.Start()
 				return
 			}
@@ -294,4 +300,8 @@ func (s *Client) Loop(fn node.SSHLoopHandler) error {
 
 func (s *Client) GetClient() *ssh.Client {
 	return s.sshClient
+}
+
+func (s *Client) Live() bool {
+	return s.live
 }

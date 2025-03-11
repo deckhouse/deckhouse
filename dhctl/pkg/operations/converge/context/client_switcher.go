@@ -26,8 +26,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
@@ -148,7 +148,7 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 
 	log.DebugLn("Create new ssh client for replacing kube client")
 
-	newSSHClient := clissh.NewClient(session.NewSession(session.Input{
+	newSSHClient := gossh.NewClient(session.NewSession(session.Input{
 		User:           convergeState.NodeUserCredentials.Name,
 		Port:           settings.Port,
 		BastionHost:    settings.BastionHost,
@@ -159,7 +159,7 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 		BecomePass:     convergeState.NodeUserCredentials.Password,
 	}), []session.AgentPrivateKey{privateKey})
 	// Avoid starting a new ssh agent
-	newSSHClient.InitializeNewAgent = false
+	// newSSHClient.InitializeNewAgent = false
 
 	err = newSSHClient.Start()
 	if err != nil {
@@ -168,10 +168,11 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 
 	log.DebugLn("ssh client started for replacing kube client")
 
-	err = newSSHClient.Agent.AddKeys(newSSHClient.PrivateKeys())
-	if err != nil {
-		return fmt.Errorf("failed to add keys to ssh agent: %w", err)
-	}
+	// adding keys to agent is not needed anymore
+	// err = newSSHClient.Agent.AddKeys(newSSHClient.PrivateKeys())
+	// if err != nil {
+	// 	return fmt.Errorf("failed to add keys to ssh agent: %w", err)
+	// }
 
 	log.DebugLn("private keys added for replacing kube client")
 

@@ -19,7 +19,7 @@ import (
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -88,10 +88,10 @@ func (c *KubeProxyChecker) IsReady(nodeName string) (bool, error) {
 	var sshClient node.SSHClient
 
 	if c.input != nil {
-		sshClient = clissh.NewClient(session.NewSession(*c.input), c.privateKeys)
+		sshClient = gossh.NewClient(session.NewSession(*c.input), c.privateKeys)
 		// Avoid starting a new ssh agent
 	} else {
-		sshClient = clissh.NewClientFromFlags()
+		sshClient = gossh.NewClientFromFlags()
 	}
 
 	if len(c.nodesExternalIPs) > 0 {

@@ -19,6 +19,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -30,7 +31,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	state_terraform "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
@@ -89,9 +89,15 @@ var (
 )
 
 func NewConvergeExporter(address, path string, interval time.Duration) *ConvergeExporter {
-	sshClient, err := clissh.NewInitClientFromFlags(false)
+	sshClient, err := gossh.NewInitClientFromFlags(false)
 	if err != nil {
 		panic(err)
+	}
+	if !sshClient.Live() {
+		err = sshClient.Start()
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	kubeCl := client.NewKubernetesClient().WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient))
