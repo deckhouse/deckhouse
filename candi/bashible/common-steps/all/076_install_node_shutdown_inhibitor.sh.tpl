@@ -16,12 +16,31 @@
 {{- $inhibitorIndex := "nodeShutdownInhibitor" }}
 {{- $inhibitorVersion := "0.1" | replace "." "" }}
 
+
+old_inhibitor_hash=""
+if [ -f "${BB_RP_INSTALLED_PACKAGES_STORE}/{{ $inhibitorPkgName }}/digest" ]; then
+  old_inhibitor_hash=$(<"${BB_RP_INSTALLED_PACKAGES_STORE}/{{ $inhibitorPkgName }}/digest")
+fi
+
 bb-package-install "{{ $inhibitorPkgName }}:{{ index .images.registrypackages (printf "%s%s" $inhibitorIndex $inhibitorVersion) | toString }}"
 
+new_inhibitor_hash=$(<"${BB_RP_INSTALLED_PACKAGES_STORE}/{{ $inhibitorPkgName }}/digest")
+if [[ "${old_inhibitor_hash}" != "${new_inhibitor_hash}" ]]; then
+  bb-flag-set inhibitor-need-restart
+fi
+
+if bb-flag? inhibitor-need-restart; then
+  bb-log-warning "'inhibitor-need-restart' flag was set, restarting {{ $inhibitorPkgName }}."
+
+  systemctl restart "{{ $inhibitorPkgName }}.service"
+
+  bb-flag-unset inhibitor-need-restart
+fi
+
 # Inhibitor will start after reboot, no need to start it right now.
-#if bb-flag? reboot; then
-#  exit 0
-#fi
+if bb-flag? reboot; then
+  exit 0
+fi
 
 # Do nothing if already started.
 if systemctl is-active --quiet "node-shutdown-inhibitor.service"; then

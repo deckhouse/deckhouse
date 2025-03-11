@@ -204,7 +204,6 @@ func (a *App) wireAppTasks() []taskstarter.Task {
 		&tasks.PodObserver{
 			CheckInterval:    5 * time.Second,
 			ShutdownSignalCh: shutdownSignalCh,
-			//PowerKeyPressedCh: powerKeyPressCh,
 			StopInhibitorsCh: unlockInhibitorsCh,
 			PodMatchers: []containerd.PodMatcher{
 				containerd.WithLabel(a.PodLabel),
