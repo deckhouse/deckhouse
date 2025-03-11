@@ -13,7 +13,6 @@ shell:
   install:
   - git clone -b {{ $PythonVersion }} --single-branch --depth=1 {{ .SOURCE_REPO }}/python/cpython.git /src
   - cd /src
-  - git apply /patches/*.patch --verbose
   - rm -r .git
   - mv /Setup.local Modules/Setup.local
 ---
