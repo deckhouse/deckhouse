@@ -179,18 +179,15 @@ oneOf:
       mode:
         enum: [Direct]
     not:
-      required: [proxy, detached]
+      required: [proxy]
   - required: [mode]
     properties:
       mode:
         enum: [Proxy]
       proxy: {}
-    not:
-      required: [detached]
   - required: [mode]
     properties:
       mode:
         enum: [Detached]
-      detached: {}
     not:
       required: [proxy]
