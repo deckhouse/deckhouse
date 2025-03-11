@@ -881,10 +881,13 @@ func (hec *HookExecutionConfig) RunGoHook() {
 	Expect(err).ShouldNot(HaveOccurred())
 
 	var formattedSnapshots = make(go_hook.Snapshots, len(hec.BindingContexts.BindingContexts))
+	newformattedSnapshots := make(go_hook.NewSnapshots, len(hec.BindingContexts.BindingContexts))
+
 	for _, bCtx := range hec.BindingContexts.BindingContexts {
 		for snapBindingName, snaps := range bCtx.Snapshots {
 			for _, snapshot := range snaps {
 				formattedSnapshots[snapBindingName] = append(formattedSnapshots[snapBindingName], snapshot.FilterResult)
+				newformattedSnapshots[snapBindingName] = append(newformattedSnapshots[snapBindingName], &go_hook.Wrapped{Wrapped: snapshot.FilterResult})
 			}
 		}
 	}
@@ -906,6 +909,7 @@ func (hec *HookExecutionConfig) RunGoHook() {
 
 	hookInput := &go_hook.HookInput{
 		Snapshots:        formattedSnapshots,
+		NewSnapshots:     newformattedSnapshots,
 		Values:           patchableValues,
 		ConfigValues:     patchableConfigValues,
 		MetricsCollector: metricsCollector,

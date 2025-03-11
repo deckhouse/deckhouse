@@ -91,7 +91,7 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 
 		storageClasses := make([]storageClass, 0, len(storageClassesSnapshots))
 
-		for sc, err := range sdkobjectpatch.SnapshotIter[*storage.StorageClass](storageClassesSnapshots) {
+		for sc, err := range sdkobjectpatch.SnapshotIter[storage.StorageClass](storageClassesSnapshots) {
 			if err != nil {
 				return fmt.Errorf("failed to iterate over storage classes: %v", err)
 			}

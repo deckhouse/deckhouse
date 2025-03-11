@@ -103,10 +103,10 @@ func copyRBDSecretHandlerWithArgs(input *go_hook.HookInput, namespace string) er
 		return nil
 	}
 
-	secretsToCopy := make(map[string]*v1.Secret)
+	secretsToCopy := make(map[string]v1.Secret)
 	d8Secrets := set.New()
 
-	for secret, err := range sdkobjectpatch.SnapshotIter[*v1.Secret](secretSnap) {
+	for secret, err := range sdkobjectpatch.SnapshotIter[v1.Secret](secretSnap) {
 		if err != nil {
 			continue
 		}
