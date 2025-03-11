@@ -1,3 +1,4 @@
+x-config-version: 2
 type: object
 x-doc-example:
   apiVersion: deckhouse.io/v1alpha1
