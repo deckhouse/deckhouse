@@ -40,7 +40,7 @@ shell:
   - rm -rf /opt/python-static/lib/python3.12/test
   - rm -rf /opt/python-static/lib/python3.12/unittest
   - rm -rf /opt/python-static/lib/python3.12/config-3.12-*
-  - find /opt/python-static/lib/python3.12 -type d -name __pycache__ -exec rm -rf \{} \;
+  - find /opt/python-static/lib/python3.12 -type d -name __pycache__ | xargs rm -rf
   - find /opt/python-static/lib/python3.12 -type f -name *.exe -delete
   - chown -R 64535:64535 /opt/python-static
   - chmod 0700 /opt/python-static/bin/python3
