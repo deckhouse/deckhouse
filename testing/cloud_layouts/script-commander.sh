@@ -418,12 +418,14 @@ function update_comment() {
   echo "Updating comment on pull request..."
   comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
 
-  comment=$(curl -s -x GET \
+  comment=$(curl -s -X GET \
     --retry 3 --retry-delay 5 --retry-all-errors \
     -H "Accept: application/vnd.github+json" \
     -H "Authorization: Bearer $GITHUB_TOKEN" \
     "$comment_url" \
     -w "\n%{http_code}")
+
+  echo "$comment" # TODO debug
 
   http_code=$(echo "$comment" | tail -n 1)
   comment=$(echo "$comment" | sed '$d')
