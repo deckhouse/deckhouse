@@ -62,7 +62,6 @@ spec:
       name: kubernetes-api-proxy-conf
     - mountPath: /tmp
       name: tmp
-  priority: 2000001001
   priorityClassName: system-node-critical
   volumes:
   - hostPath:
