@@ -188,12 +188,10 @@ jobs:
       - name: Send fail report
         if: failure()
         env:
-          LOOP_TOKEN: ${{secrets.LOOP_CVE_REPORTS_SEND_TOKEN}}
-          LOOP_CHANNEL_ID: "ciaopox59pdc3cw6i96w91e34e"
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_REPOSITORY: ${{github.repository}}
-          JOB_ID: ${{github.job}}"
-          JOB_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/${{github.job}}"
+          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          JOB_NAME: ${{ github.job }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
         run: |
           bash ./.github/scripts/send-report.sh
       # </template: login_git_step>
