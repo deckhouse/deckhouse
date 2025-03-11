@@ -24,7 +24,6 @@
   "description": "Dashboard for Cilium (https://cilium.io/) metrics",
   "editable": false,
   "fiscalYearStartMonth": 0,
-  "gnetId": 15513,
   "graphTooltip": 1,
   "id": 17,
   "links": [],
@@ -1079,7 +1078,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "cilium_bpf_map_pressure",
+          "expr": "cilium_bpf_map_pressure{job=\"cilium-agent\",pod=~\"$pod\"}",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -2145,10 +2144,12 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
+          "editorMode": "code",
           "expr": "avg(rate(cilium_bpf_syscall_duration_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, operation)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{operation}}",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -2287,7 +2288,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "max(rate(cilium_bpf_syscall_duration_seconds_count{k8s_app=\"cilium\", pod=~\"$pod\"}[1m])) by (pod, operation)",
+          "expr": "max(rate(cilium_bpf_syscall_duration_seconds_count{job=\"cilium-agent\", pod=~\"$pod\"}[$__rate_interval])) by (pod, operation)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{operation}}",
@@ -6799,7 +6800,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(cilium_policy_l7_denied_total{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval]))",
+          "expr": "sum(rate(cilium_policy_l7_total{job=\"cilium-agent\",pod=~\"$pod\", rule=\"denied\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "denied",
@@ -6810,7 +6811,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(cilium_policy_l7_forwarded_total{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval]))",
+          "expr": "sum(rate(cilium_policy_l7_total{job=\"cilium-agent\",pod=~\"$pod\", rule=\"forwarded\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "forwarded",
@@ -6821,7 +6822,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(cilium_policy_l7_received_total{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval]))",
+          "expr": "sum(rate(cilium_policy_l7_total{job=\"cilium-agent\",pod=~\"$pod\", rule=\"received\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "received",
@@ -7021,7 +7022,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "avg(cilium_policy_l7_parse_errors_total{pod=~\"cilium.*\"})"
+              "options": "avg(cilium_policy_l7_total{pod=~\"cilium.*\", rule=\"parse_errors\"})"
             },
             "properties": [
               {
@@ -7075,7 +7076,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "avg(cilium_policy_l7_parse_errors_total{pod=~\"cilium.*\"})"
+              "options": "avg(cilium_policy_l7_total{pod=~\"cilium.*\", rule=\"parse_errors\"})"
             },
             "properties": [
               {
@@ -7138,7 +7139,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "avg(cilium_policy_l7_parse_errors_total{job=\"cilium-agent\", pod=~\"$pod\"}) by (pod)",
+          "expr": "avg(cilium_policy_l7_total{job=\"cilium-agent\", pod=~\"$pod\", rule=\"parse_errors\"}) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "parse errors",
@@ -7635,7 +7636,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "max(rate(cilium_policy_l7_parse_errors_total{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod)",
+          "expr": "max(rate(cilium_policy_l7_total{job=\"cilium-agent\",pod=~\"$pod\", rule=\"parse_errors\"}[$__rate_interval])) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "parse errors",
