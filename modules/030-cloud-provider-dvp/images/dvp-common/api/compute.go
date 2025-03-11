@@ -240,13 +240,13 @@ func (c *ComputeService) GetVMHostname(vm *v1alpha2.VirtualMachine) (string, err
 	return "", cloudprovider.InstanceNotFound
 }
 
-func (d *ComputeService) AttachDiskToVM(ctx context.Context, diskName string, vmHostname string) error {
-	vm, err := d.GetVMByHostname(ctx, vmHostname)
+func (c *ComputeService) AttachDiskToVM(ctx context.Context, diskName string, vmHostname string) error {
+	vm, err := c.GetVMByHostname(ctx, vmHostname)
 	if err != nil {
 		return err
 	}
 
-	vmbda, err := d.getVMBDA(ctx, diskName, vmHostname)
+	vmbda, err := c.getVMBDA(ctx, diskName, vmHostname)
 	if vmbda != nil && err == nil {
 		return nil
 	}
@@ -262,7 +262,7 @@ func (d *ComputeService) AttachDiskToVM(ctx context.Context, diskName string, vm
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("vmbda-%s-%s", diskName, vmHostname),
-			Namespace: d.namespace,
+			Namespace: c.namespace,
 			Labels: map[string]string{
 				attachmentDiskNameLabel:    diskName,
 				attachmentMachineNameLabel: vmHostname,
@@ -285,8 +285,8 @@ func (d *ComputeService) AttachDiskToVM(ctx context.Context, diskName string, vm
 	return nil
 }
 
-func (d *ComputeService) DetachDiskFromVM(ctx context.Context, diskName string, vmName string) error {
-	vmbda, err := d.getVMBDA(ctx, diskName, vmName)
+func (c *ComputeService) DetachDiskFromVM(ctx context.Context, diskName string, vmName string) error {
+	vmbda, err := c.getVMBDA(ctx, diskName, vmName)
 	if err != nil {
 		return err
 	}
@@ -316,7 +316,7 @@ func (c *ComputeService) GetVMAttachedBlockDevices(ctx context.Context, computeN
 	return &vmbdas, nil
 }
 
-func (d *ComputeService) getVMBDA(ctx context.Context, diskName string, vmHostname string) (*v1alpha2.VirtualMachineBlockDeviceAttachment, error) {
+func (c *ComputeService) getVMBDA(ctx context.Context, diskName string, vmHostname string) (*v1alpha2.VirtualMachineBlockDeviceAttachment, error) {
 	selector, err := labels.Parse(fmt.Sprintf("%s=%s,%s=%s", attachmentDiskNameLabel, diskName, attachmentMachineNameLabel, vmHostname))
 	if err != nil {
 		return nil, err
