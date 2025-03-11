@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"strings"
 
-	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/sdk"
@@ -29,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/go_lib/pwgen"
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 )
 
 const (

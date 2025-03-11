@@ -20,16 +20,17 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini/internal/scheduler"
-	"github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot"
-	"github.com/deckhouse/deckhouse/pkg/log"
-	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"github.com/tidwall/gjson"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
+
+	"github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini/internal/scheduler"
+	"github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot"
+	"github.com/deckhouse/deckhouse/pkg/log"
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 )
 
 const (

@@ -22,11 +22,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
-	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 )
 
 /*

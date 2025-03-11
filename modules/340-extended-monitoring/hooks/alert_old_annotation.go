@@ -17,11 +17,12 @@ limitations under the License.
 package hooks
 
 import (
-	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 )
 
 const extendedMonitoringAnnotationKey = "extended-monitoring.flant.com/enabled"

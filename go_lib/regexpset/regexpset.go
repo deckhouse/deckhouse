@@ -20,8 +20,9 @@ import (
 	"fmt"
 	"regexp"
 
-	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 )
 
 // NewFromSnapshot expects snapshot to contain only strings, otherwise it panics

@@ -9,11 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/go_lib/telemetry"
-	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
-	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib/istio_versions"
-	sdkpkg "github.com/deckhouse/module-sdk/pkg"
-	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
@@ -21,6 +16,12 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/deckhouse/go_lib/telemetry"
+	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
+	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib/istio_versions"
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 const (

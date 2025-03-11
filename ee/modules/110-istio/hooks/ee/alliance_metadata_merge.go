@@ -10,13 +10,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/sdk"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
 	eeCrd "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee/lib/crd"
 	"github.com/deckhouse/deckhouse/go_lib/jwt"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
-	"github.com/flant/addon-operator/sdk"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 type IstioFederationMergeCrdInfo struct {

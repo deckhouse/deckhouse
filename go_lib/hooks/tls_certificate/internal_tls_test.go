@@ -19,10 +19,11 @@ package tls_certificate
 import (
 	"testing"
 
-	sdkpkg "github.com/deckhouse/module-sdk/pkg"
-	sdkpatchablevalues "github.com/deckhouse/module-sdk/pkg/patchable-values"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/stretchr/testify/require"
+
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
+	sdkpatchablevalues "github.com/deckhouse/module-sdk/pkg/patchable-values"
 )
 
 func testGetClusterDomainValues(t *testing.T, domain string) sdkpkg.PatchableValuesCollector {

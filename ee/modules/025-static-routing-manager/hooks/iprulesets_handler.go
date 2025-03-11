@@ -11,9 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/hooks/lib"
-	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/hooks/lib/v1alpha1"
-	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -21,6 +18,10 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+
+	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/hooks/lib"
+	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/hooks/lib/v1alpha1"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 const (

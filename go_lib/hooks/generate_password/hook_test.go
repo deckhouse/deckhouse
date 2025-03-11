@@ -19,9 +19,10 @@ package generate_password
 import (
 	"testing"
 
-	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/stretchr/testify/require"
+
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 )
 
 func TestRestoreGeneratedPassword(t *testing.T) {
