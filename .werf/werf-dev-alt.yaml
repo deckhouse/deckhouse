@@ -2,11 +2,16 @@
 image: dev-alt-artifact
 final: false
 fromImage: common/relocate-artifact
+import:
+- image: common/python-static
+  add: /opt/python-static
+  to: /opt/python-static
+  before: install
 shell:
   beforeInstall:
-    - apt-get install -y ca-certificates openssl vim-console bash-completion python3 pip python3-module-chardet gettext libexpat libcrypto3 glibc-pthread locale
-    - apt-get install -y python3-module-cryptography
-    - pip install pyOpenSSL==24.3.0
+  - apt-get install -y ca-certificates openssl vim-console bash-completion gettext libexpat libcrypto3 glibc-pthread locale git
   install:
-    - /binary_replace.sh -i "/usr/bin/envsubst" -o /relocate
----
+  - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
+  - /opt/python-static/bin/pip3 install -f file:///wheels --no-index -r pyOpenSSL==24.3.0 cryptography==44.0.1
+  - rm -rf /wheels
+  - /binary_replace.sh -i "/usr/bin/envsubst" -o /relocate
