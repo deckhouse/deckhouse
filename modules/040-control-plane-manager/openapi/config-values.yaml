@@ -5,7 +5,7 @@ x-doc-example:
   metadata:
     name: control-plane-manager
   spec:
-    version: 1
+    version: 2
     enabled: true
     settings:
       apiserver:
