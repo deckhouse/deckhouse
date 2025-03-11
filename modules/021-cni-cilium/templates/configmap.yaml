@@ -6,6 +6,12 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{ include "helm_lib_module_labels" (list .) | nindent 2 }}
 data:
+  policy-cidr-match-mode: "nodes"
+  bpf-lb-source-range-all-types: "true"
+  bpf-lb-algorithm-annotation: "true"
+  bpf-lb-mode-annotation: "true"
+  bpf-lb-sock-terminate-pod-connections: "true"
+
   identity-allocation-mode: crd
   cluster-name: default # make sense only for cluster mesh
 
@@ -124,7 +130,6 @@ data:
   enable-cilium-endpoint-slice: "true"
 
   enable-k8s-terminating-endpoint: "true"
-  enable-remote-node-identity: "true"
 
   bpf-map-dynamic-size-ratio: "0.005"
   bpf-policy-map-max: "65536"
