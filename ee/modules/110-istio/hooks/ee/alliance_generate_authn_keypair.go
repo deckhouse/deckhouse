@@ -54,10 +54,6 @@ func generateKeypair(input *go_hook.HookInput) error {
 	var secret = new(lib.Keypair)
 
 	snaps := input.NewSnapshots.Get("secret")
-	if len(snaps) == 0 {
-		return fmt.Errorf("secret snapshot is empty")
-	}
-
 	if len(snaps) == 1 {
 		err := snaps[0].UnmarhalTo(secret)
 		if err != nil {

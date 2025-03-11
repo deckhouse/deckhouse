@@ -9,6 +9,7 @@ import (
 	"crypto/md5"
 	"fmt"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -60,7 +61,8 @@ func customLogoHandler(input *go_hook.HookInput) error {
 
 	err := snaps[0].UnmarhalTo(&logoData)
 	if err != nil {
-		return fmt.Errorf("cannot unmarshal logo data: %w", err)
+		input.Logger.Warn("cannot unmarshal logo data", log.Err(err))
+		return nil
 	}
 
 	cm := buildGrafanaLogoCM(logoData)
