@@ -156,7 +156,10 @@ func (s *Service) bootstrap(
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
 	app.CacheDir = s.cacheDir
+
+	log.InfoF("Skip preflights specified: %v\n", request.Options.CommonOptions.SkipPreflightChecks)
 	app.ApplyPreflightSkips(request.Options.CommonOptions.SkipPreflightChecks)
+	log.InfoF("app.PreflightSkipSudoIsAllowedForUserCheck=%v after apply\n", app.PreflightSkipSudoIsAllowedForUserCheck)
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
 	defer func() {
