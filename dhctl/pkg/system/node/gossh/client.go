@@ -149,6 +149,10 @@ func (s *Client) Start() error {
 
 		s.sshClient = client
 
+		if s.stopChan == nil {
+			go s.keepAlive()
+		}
+
 		return nil
 	}
 
@@ -175,31 +179,33 @@ func (s *Client) Start() error {
 	s.SSHConn = &clientConn
 
 	if s.stopChan == nil {
-		go func() {
-			for {
-				select {
-				case <-s.stopChan:
-					log.DebugLn("Stopping keep-alive goroutine.")
-					return
-				default:
-					time.Sleep(30 * time.Second)
-					session, err := client.NewSession()
-					if err != nil {
-						log.DebugF("Keep-alive failed: %v", err)
-						s.Start()
-						return
-					}
-					if _, err := session.SendRequest("keepalive", false, nil); err != nil {
-						log.DebugF("Keep-alive failed: %v", err)
-						s.Start()
-						return
-					}
-				}
-			}
-		}()
+		go s.keepAlive()
 	}
 
 	return nil
+}
+
+func (s *Client) keepAlive() {
+	for {
+		select {
+		case <-s.stopChan:
+			log.DebugLn("Stopping keep-alive goroutine.")
+			return
+		default:
+			time.Sleep(30 * time.Second)
+			session, err := s.sshClient.NewSession()
+			if err != nil {
+				log.DebugF("Keep-alive failed: %v", err)
+				s.Start()
+				return
+			}
+			if _, err := session.SendRequest("keepalive", false, nil); err != nil {
+				log.DebugF("Keep-alive failed: %v", err)
+				s.Start()
+				return
+			}
+		}
+	}
 }
 
 // Tunnel is used to open local (L) and remote (R) tunnels

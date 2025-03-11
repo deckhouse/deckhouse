@@ -270,12 +270,12 @@ func (c *SSHCommand) Sudo() {
 			if !passSent {
 				// send pass through stdin
 				log.DebugLn("Send become pass to cmd")
-				var becomePass string
+				// var becomePass string
 
 				// if c.Session.BecomePass != "" {
 				// becomePass = c.Session.BecomePass
 				// } else {
-				becomePass = app.BecomePass
+				becomePass := app.BecomePass
 				// }
 
 				_, _ = c.Stdin.Write([]byte(becomePass + "\n"))
