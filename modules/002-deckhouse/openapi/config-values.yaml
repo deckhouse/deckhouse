@@ -271,3 +271,152 @@ properties:
       Manually enable the high availability mode.
 
       By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](../../deckhouse-configure-global.html#parameters) to learn more about the HA mode for modules.
+
+  registry:
+    type: object
+    x-examples:
+    - mode: Unmanaged
+    - mode: Direct
+    - mode: Proxy
+      proxy:
+        imagesRepo: registry.deckhouse.io/deckhouse/ee
+        username: user
+        password: password
+        scheme: HTTPS
+        ca: |
+          -----BEGIN CERTIFICATE-----
+          ...
+          -----END CERTIFICATE-----
+    - mode: Local
+    properties:
+      mode:
+        type: string
+        description: |
+          Registry mode
+        enum: [Unmanaged, Direct, Proxy, Local]
+        x-doc-default: Direct
+        default: Direct
+      direct:
+        type: object
+        description: |
+          Direct mode properties
+        x-example:
+          - imagesRepo: registry.deckhouse.io/deckhouse/ee
+            license: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+            scheme: HTTPS
+          - imagesRepo: registry.deckhouse.io/deckhouse/ee
+            username: user
+            password: password
+            scheme: HTTP
+          - imagesRepo: registry.deckhouse.io/deckhouse/ee
+            username: user
+            password: password
+            scheme: HTTPS
+            ca: |
+              -----BEGIN CERTIFICATE-----
+              ...
+              -----END CERTIFICATE-----
+        properties: &registryDirectProperties
+          imagesRepo:
+            type: string
+            pattern: '^[0-9a-zA-Z\.\-]+(\:[0-9]{1,5})?(\/[0-9a-zA-Z\.\-\_\/]+)?$'
+            description: |
+              Address of the container registry with Deckhouse images.
+
+              Specify it if Deckhouse Enterprise Edition edition or third-party registry (e.g. registry in a closed environment) is used.
+
+              The address matches the edition of Deckhouse used. The public container registry address for Deckhouse Enterprise Edition is `registry.deckhouse.io/deckhouse/ee`.
+            minLength: 1
+            x-example: registry.deckhouse.io/deckhouse/ee
+          license:
+            type: string
+            description: License key for accessing container registry with deckhouse images.
+            x-example:
+              - "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+          username:
+            type: string
+            description: Username for accessing container registry with deckhouse images.
+            x-example:
+              - "registry-user"
+          password:
+            type: string
+            description: Password for accessing container registry with deckhouse images.
+            x-example:
+              - "123456"
+          scheme:
+            type: string
+            description: Registry access scheme (HTTP or HTTPS).
+            enum: [HTTP, HTTPS]
+            default: HTTPS
+            x-example:
+              - HTTPS
+              - HTTP
+          ca:
+            type: string
+            description: |
+              Root CA certificate to validate the container registry’s HTTPS certificate (if self-signed certificates are used).
+
+      proxy:
+        type: object
+        description: |
+          Proxy mode properties
+        x-example:
+          - imagesRepo: registry.deckhouse.io/deckhouse/ee
+            license: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+            scheme: HTTPS
+          - imagesRepo: registry.deckhouse.io/deckhouse/ee
+            username: user
+            password: password
+            scheme: HTTP
+            ttl: "168h"
+          - imagesRepo: registry.deckhouse.io/deckhouse/ee
+            username: user
+            password: password
+            scheme: HTTPS
+            ca: |
+              -----BEGIN CERTIFICATE-----
+              ...
+              -----END CERTIFICATE-----
+            ttl: "168h10m5s"
+        properties:
+          <<: *registryDirectProperties
+          ttl:
+            type: string
+            pattern: '(^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?(?:(\d+)ms)?(?:(\d+)(µs|us))?(?:(\d+)ns)?$)|(^(0)$)'
+            description: |
+              TTL specifies the expiration time for cached content, after which it will be automatically cleaned up.
+
+              Default: If not set, the TTL defaults to 7 days (168 hours).
+
+              Persistent Cache: If set to 0, the cache will never expire.
+            x-example:
+              - "168h"
+              - "168h10m"
+              - "168h10m5s"
+    oneOf:
+      - required: [mode]
+        properties:
+          mode:
+            enum: [Unmanaged]
+        not:
+          required: [proxy, direct]
+      - required: [mode]
+        properties:
+          mode:
+            enum: [Direct]
+          direct: {}
+        not:
+          required: [proxy]
+      - required: [mode]
+        properties:
+          mode:
+            enum: [Proxy]
+          proxy: {}
+        not:
+          required: [direct]
+      - required: [mode]
+        properties:
+          mode:
+            enum: [Local]
+        not:
+          required: [proxy, direct]
