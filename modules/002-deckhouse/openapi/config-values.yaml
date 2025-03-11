@@ -274,20 +274,25 @@ properties:
 
   registry:
     type: object
+    default:
+      mode: Unmanaged
     x-examples:
-    - mode: Unmanaged
-    - mode: Direct
-    - mode: Proxy
-      proxy:
-        imagesRepo: registry.deckhouse.io/deckhouse/ee
-        username: user
-        password: password
-        scheme: HTTPS
-        ca: |
-          -----BEGIN CERTIFICATE-----
-          ...
-          -----END CERTIFICATE-----
-    - mode: Local
+      - mode: Unmanaged
+      - mode: Direct
+        direct:
+          imagesRepo: registry.deckhouse.io/deckhouse/ee
+          license: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+      - mode: Proxy
+        proxy:
+          imagesRepo: registry.deckhouse.io/deckhouse/ee
+          username: user
+          password: password
+          scheme: HTTPS
+          ca: |
+            -----BEGIN CERTIFICATE-----
+            ...
+            -----END CERTIFICATE-----
+      - mode: Local
     properties:
       mode:
         type: string
@@ -303,7 +308,6 @@ properties:
         x-example:
           - imagesRepo: registry.deckhouse.io/deckhouse/ee
             license: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-            scheme: HTTPS
           - imagesRepo: registry.deckhouse.io/deckhouse/ee
             username: user
             password: password
