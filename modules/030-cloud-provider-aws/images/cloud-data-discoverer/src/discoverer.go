@@ -49,6 +49,11 @@ func NewDiscoverer(logger *log.Entry) *Discoverer {
 	}
 }
 
+func (d *Discoverer) CheckCloudConditions(ctx context.Context) ([]v1alpha1.CloudCondition, error) {
+	// TODO implement me
+	return nil, nil
+}
+
 func (d *Discoverer) InstanceTypes(_ context.Context) ([]v1alpha1.InstanceType, error) {
 	sess, err := session.NewSessionWithOptions(session.Options{
 		Config: aws.Config{

@@ -45,6 +45,11 @@ func NewDiscoverer(logger *log.Entry, credsFile, project string, zones []string)
 	}
 }
 
+func (d *Discoverer) CheckCloudConditions(ctx context.Context) ([]v1alpha1.CloudCondition, error) {
+	// TODO implement me
+	return nil, nil
+}
+
 func (d *Discoverer) InstanceTypes(ctx context.Context) ([]v1alpha1.InstanceType, error) {
 	computeService, err := compute.NewService(ctx, option.WithCredentialsFile(d.credsFiles))
 	if err != nil {
