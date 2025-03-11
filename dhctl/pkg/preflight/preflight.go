@@ -70,8 +70,43 @@ func NewChecker(
 	}
 }
 
-func (pc *Checker) commonChecks() []checkStep {
-	return []checkStep{
+func (pc *Checker) Static() error {
+	ready, err := pc.bootstrapState.StaticPreflightchecksWasRan()
+	if err != nil {
+		msg := fmt.Sprintf("Can not get state from cache: %v", err)
+		return errors.New(msg)
+	}
+
+	if ready {
+		return nil
+	}
+
+	err = pc.do("Preflight checks for static-cluster", []checkStep{
+		{
+			fun:            pc.CheckSingleSSHHostForStatic,
+			successMessage: "only one --ssh-host parameter used",
+			skipFlag:       app.OneSSHHostCheckArgName,
+		},
+		{
+			fun:            pc.CheckSSHCredential,
+			successMessage: "ssh credential is correctly",
+			skipFlag:       app.SSHCredentialsCheckArgName,
+		},
+		{
+			fun:            pc.CheckSSHTunnel,
+			successMessage: "ssh tunnel between installer and node is possible",
+			skipFlag:       app.SSHForwardArgName,
+		},
+		{
+			fun:            pc.CheckDeckhouseUser,
+			successMessage: "deckhouse user and group aren't present on node",
+			skipFlag:       app.DeckhouseUserCheckName,
+		},
+		{
+			fun:            pc.CheckStaticNodeSystemRequirements,
+			successMessage: "that node meets system requirements",
+			skipFlag:       app.SystemRequirementsArgName,
+		},
 		{
 			fun:            pc.CheckPythonAndItsModules,
 			successMessage: "python and required modules are installed",
@@ -103,48 +138,11 @@ func (pc *Checker) commonChecks() []checkStep {
 			skipFlag:       app.TimeDriftArgName,
 		},
 		{
-			fun:            pc.CheckSSHTunnel,
-			successMessage: "ssh tunnel between installer and node is possible",
-			skipFlag:       app.SSHForwardArgName,
+			fun:            pc.CheckCidrIntersectionStatic,
+			successMessage: "CIDRs are not intersects",
+			skipFlag:       app.CIDRIntersection,
 		},
-		{
-			fun:            pc.CheckDeckhouseUser,
-			successMessage: "deckhouse user and group aren't present on node",
-			skipFlag:       app.DeckhouseUserCheckName,
-		},
-		{
-			fun:            pc.CheckStaticNodeSystemRequirements,
-			successMessage: "that node meets system requirements",
-			skipFlag:       app.SystemRequirementsArgName,
-		},
-	}
-}
-
-func (pc *Checker) Static() error {
-	ready, err := pc.bootstrapState.StaticPreflightchecksWasRan()
-	if err != nil {
-		msg := fmt.Sprintf("Can not get state from cache: %v", err)
-		return errors.New(msg)
-	}
-
-	if ready {
-		return nil
-	}
-
-	checks := append([]checkStep{
-		{
-			fun:            pc.CheckSingleSSHHostForStatic,
-			successMessage: "only one --ssh-host parameter used",
-			skipFlag:       app.OneSSHHostCheckArgName,
-		},
-		{
-			fun:            pc.CheckSSHCredential,
-			successMessage: "ssh credential is correctly",
-			skipFlag:       app.SSHCredentialsCheckArgName,
-		},
-	}, pc.commonChecks()...)
-
-	err = pc.do("Preflight checks for static-cluster", checks)
+	})
 	if err != nil {
 		return err
 	}
@@ -192,15 +190,14 @@ func (pc *Checker) PostCloud() error {
 	if ready {
 		return nil
 	}
-	checks := append([]checkStep{
+
+	err = pc.do("Cloud deployment preflight checks", []checkStep{
 		{
 			fun:            pc.CheckCloudAPIAccessibility,
 			successMessage: "access to cloud api from master host",
 			skipFlag:       app.CloudAPIAccessibilityArgName,
 		},
-	}, pc.commonChecks()...)
-
-	err = pc.do("Cloud deployment preflight checks", checks)
+	})
 	if err != nil {
 		return err
 	}
