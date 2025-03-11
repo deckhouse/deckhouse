@@ -1,5 +1,5 @@
 diff --git a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
-index 8469cecdc0e..b71c45b09bb 100644
+index 8469cecdc0e..62b92a2c45d 100644
 --- a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
 +++ b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
 @@ -22,6 +22,7 @@ package nodeshutdown
@@ -23,10 +23,12 @@ index 8469cecdc0e..b71c45b09bb 100644
  				m.nodeShuttingDownMutex.Lock()
  				m.nodeShuttingDownNow = isShuttingDown
  				m.nodeShuttingDownMutex.Unlock()
-@@ -352,6 +359,15 @@ func (m *managerImpl) processShutdownEvent() error {
+@@ -351,7 +358,16 @@ func (m *managerImpl) processShutdownEvent() error {
+ 		}()
  	}
  
- 	groups := groupByPriority(m.shutdownGracePeriodByPodPriority, activePods)
+-	groups := groupByPriority(m.shutdownGracePeriodByPodPriority, activePods)
++	groups := m.groupByPriority(m.shutdownGracePeriodByPodPriority, activePods)
 +
 +	m.logger.V(1).Info(fmt.Sprintf("Group pods: gracePeriods: %+v", m.shutdownGracePeriodByPodPriority))
 +	for i, group := range groups {
@@ -87,3 +89,45 @@ index 8469cecdc0e..b71c45b09bb 100644
  func (m *managerImpl) periodRequested() time.Duration {
  	var sum int64
  	for _, period := range m.shutdownGracePeriodByPodPriority {
+@@ -449,13 +506,16 @@ func migrateConfig(shutdownGracePeriodRequested, shutdownGracePeriodCriticalPods
+ 	}
+ }
+ 
+-func groupByPriority(shutdownGracePeriodByPodPriority []kubeletconfig.ShutdownGracePeriodByPodPriority, pods []*v1.Pod) []podShutdownGroup {
++func (m *managerImpl) groupByPriority(shutdownGracePeriodByPodPriority []kubeletconfig.ShutdownGracePeriodByPodPriority, pods []*v1.Pod) []podShutdownGroup {
++	m.logger.V(1).Info(fmt.Sprintf("Group pods: gracePeriods: %+v", shutdownGracePeriodByPodPriority))
++
+ 	groups := make([]podShutdownGroup, 0, len(shutdownGracePeriodByPodPriority))
+ 	for _, period := range shutdownGracePeriodByPodPriority {
+ 		groups = append(groups, podShutdownGroup{
+ 			ShutdownGracePeriodByPodPriority: period,
+ 		})
+ 	}
++	m.logger.V(1).Info(fmt.Sprintf("Group pods: groups: %+v", groups))
+ 
+ 	for _, pod := range pods {
+ 		var priority int32
+@@ -463,11 +523,14 @@ func groupByPriority(shutdownGracePeriodByPodPriority []kubeletconfig.ShutdownGr
+ 			priority = *pod.Spec.Priority
+ 		}
+ 
++		m.logger.V(1).Info(fmt.Sprintf("Group pods: pod %s %s, priority %d, spec.priority nil? %v", pod.Namespace, pod.Name, priority, pod.Spec.Priority == nil))
+ 		// Find the group index according to the priority.
+ 		index := sort.Search(len(groups), func(i int) bool {
+ 			return groups[i].Priority >= priority
+ 		})
+ 
++		m.logger.V(1).Info(fmt.Sprintf("Group pods: index after search %d", index))
++
+ 		// 1. Those higher than the highest priority default to the highest priority
+ 		// 2. Those lower than the lowest priority default to the lowest priority
+ 		// 3. Those boundary priority default to the lower priority
+@@ -482,6 +545,8 @@ func groupByPriority(shutdownGracePeriodByPodPriority []kubeletconfig.ShutdownGr
+ 			index--
+ 		}
+ 
++		m.logger.V(1).Info(fmt.Sprintf("Group pods: index adjusted %d", index))
++
+ 		groups[index].Pods = append(groups[index].Pods, pod)
+ 	}
+ 	return groups
