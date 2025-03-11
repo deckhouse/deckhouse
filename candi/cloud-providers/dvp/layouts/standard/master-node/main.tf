@@ -61,4 +61,5 @@ module "master" {
   tolerations            = local.tolerations
   region                 = local.region
   zone                   = local.zone
+  cloud_config           = local.user_data
 }
