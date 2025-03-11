@@ -29,15 +29,15 @@ type NodeCordoner struct {
 	ShutdownSignalCh <-chan struct{}
 }
 
-func (n *NodeCordoner) Run(ctx context.Context, errCh chan error) {
+func (n *NodeCordoner) Run(ctx context.Context, _ chan error) {
 	// Stage 1. Wait for shutdown.
 	fmt.Printf("nodeCordoner: wait for PrepareForShutdown signal or power key press\n")
 	select {
 	case <-ctx.Done():
-		fmt.Printf("nodeCordoner: stop on context cancel\n")
+		fmt.Printf("nodeCordoner: stop on global exit\n")
 		return
 	case <-n.ShutdownSignalCh:
-		fmt.Printf("nodeCordoner(s1): catch prepare shutdown signal, cordon node\n")
+		fmt.Printf("nodeCordoner: catch prepare shutdown signal, cordon node\n")
 	}
 
 	kubectl := kubernetes.NewDefaultKubectl()
