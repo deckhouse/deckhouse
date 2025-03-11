@@ -496,24 +496,31 @@ function run-test() {
 
   echo "Bootstrap payload: ${payload}"
 
-  response=$(curl -s -X POST  \
-    "https://${COMMANDER_HOST}/api/v1/clusters" \
-    -H 'accept: application/json' \
-    -H "X-Auth-Token: ${COMMANDER_TOKEN}" \
-    -H 'Content-Type: application/json' \
-    -d "$payload" \
-    --retry 3 --retry-delay 5 --retry-all-errors \
-    -w "\n%{http_code}")
+  sleep_second=0
+  for (( j=1; j<=5; j++ )); do
+    sleep "$sleep_second"
+    sleep_second=5
 
-  http_code=$(echo "$response" | tail -n 1)
-  response=$(echo "$response" | sed '$d')
+    response=$(curl -s -X POST  \
+      "https://${COMMANDER_HOST}/api/v1/clusters" \
+      -H 'accept: application/json' \
+      -H "X-Auth-Token: ${COMMANDER_TOKEN}" \
+      -H 'Content-Type: application/json' \
+      -d "$payload" \
+      -w "\n%{http_code}")
 
-  # Check for HTTP errors
-  if [[ ${http_code} -ge 400 ]]; then
-    echo "Error: HTTP error ${http_code}" >&2
-    echo "$response" >&2
-    return 1
-  fi
+    http_code=$(echo "$response" | tail -n 1)
+    response=$(echo "$response" | sed '$d')
+
+    # Check for HTTP errors
+    if [[ ${http_code} -ge 400 ]]; then
+      echo "Error: HTTP error ${http_code}" >&2
+      echo "$response" >&2
+      continue
+    else
+      break
+    fi
+  done
 
   cluster_id=$(jq -r '.id' <<< "$response")
   if [[ $cluster_id == "null" ]]; then
