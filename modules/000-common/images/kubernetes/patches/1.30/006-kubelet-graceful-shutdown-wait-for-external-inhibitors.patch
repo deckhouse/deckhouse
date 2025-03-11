@@ -1,5 +1,5 @@
 diff --git a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
-index 8469cecdc0e..0dc26047419 100644
+index 8469cecdc0e..b71c45b09bb 100644
 --- a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
 +++ b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
 @@ -22,6 +22,7 @@ package nodeshutdown
@@ -23,7 +23,23 @@ index 8469cecdc0e..0dc26047419 100644
  				m.nodeShuttingDownMutex.Lock()
  				m.nodeShuttingDownNow = isShuttingDown
  				m.nodeShuttingDownMutex.Unlock()
-@@ -417,6 +424,47 @@ func (m *managerImpl) processShutdownEvent() error {
+@@ -352,6 +359,15 @@ func (m *managerImpl) processShutdownEvent() error {
+ 	}
+ 
+ 	groups := groupByPriority(m.shutdownGracePeriodByPodPriority, activePods)
++
++	m.logger.V(1).Info(fmt.Sprintf("Group pods: gracePeriods: %+v", m.shutdownGracePeriodByPodPriority))
++	for i, group := range groups {
++		m.logger.V(1).Info(fmt.Sprintf("Group pods: group %d: priority %d, gracePeriod %d", i, group.Priority, group.ShutdownGracePeriodSeconds))
++		for _, pod := range group.Pods {
++			m.logger.V(1).Info(fmt.Sprintf("Group pods: group %d: pod %s %s", i, pod.Namespace, pod.Name))
++		}
++	}
++
+ 	for _, group := range groups {
+ 		// If there are no pods in a particular range,
+ 		// then do not wait for pods in that priority range.
+@@ -417,6 +433,47 @@ func (m *managerImpl) processShutdownEvent() error {
  	return nil
  }
  
