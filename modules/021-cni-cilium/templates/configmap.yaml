@@ -11,6 +11,7 @@ data:
   bpf-lb-algorithm-annotation: "true"
   bpf-lb-mode-annotation: "true"
   bpf-lb-sock-terminate-pod-connections: "true"
+  enable-runtime-device-detection: "true"
 
   identity-allocation-mode: crd
   cluster-name: default # make sense only for cluster mesh
@@ -89,7 +90,7 @@ data:
 
   enable-host-firewall: "true"
 
-  kube-proxy-replacement: "strict"
+  kube-proxy-replacement: "true"
   kube-proxy-replacement-healthz-bind-address: "0.0.0.0:10256"
 
   bpf-lb-sock: "true"
