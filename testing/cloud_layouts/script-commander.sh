@@ -426,7 +426,7 @@ function update_comment() {
     -w "\n%{http_code}")
 
   http_code=$(echo "$comment" | tail -n 1)
-  response=$(echo "$comment" | sed '$d')
+  comment=$(echo "$comment" | sed '$d')
 
   # Check for HTTP errors
   if [[ ${http_code} -ge 400 ]]; then
