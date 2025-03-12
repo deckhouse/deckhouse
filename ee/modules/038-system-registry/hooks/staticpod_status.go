@@ -81,7 +81,7 @@ func filterRegistryStaticPods(obj *unstructured.Unstructured) (go_hook.FilterRes
 func handleRegistryStaticPods(input *go_hook.HookInput) error {
 	pods := input.Snapshots["static_pods"]
 
-	input.Values.Set("systemRegistry.state.staticPods", pods)
+	input.Values.Set("systemRegistry.internal.state.staticPods", pods)
 
 	return nil
 }

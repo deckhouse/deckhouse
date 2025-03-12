@@ -21,3 +21,12 @@ properties:
             type: string
             x-examples:
               - plainstring
+      state:
+        type: object
+        additionalProperties: true
+        x-kubernetes-preserve-unknown-fields: true
+        properties:
+          staticPods:
+            type: object
+            additionalProperties: true
+            x-kubernetes-preserve-unknown-fields: true
