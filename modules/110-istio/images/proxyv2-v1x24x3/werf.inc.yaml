@@ -283,9 +283,9 @@ shell:
   - apt-get autoclean && apt-get clean
   install:
   - update-alternatives --install /usr/bin/python python /usr/bin/python3 1
-  # - ln -s -f /usr/lib/llvm-14.0/bin/clang /usr/bin/clang
-  # - ln -s -f /usr/lib/llvm-14.0/bin/clang++ /usr/bin/clang++
-  # - ln -s -f /usr/lib/llvm-14.0/bin/ld.lld /usr/bin/ld.lld
+  - ln -s -f /usr/lib/llvm-17.0/bin/clang /usr/bin/clang
+  - ln -s -f /usr/lib/llvm-17.0/bin/clang++ /usr/bin/clang++
+  - ln -s -f /usr/lib/llvm-17.0/bin/ld.lld /usr/bin/ld.lld
   # Install Go
   - export GOROOT=/usr/local/go GOPATH=/go
   - export PATH=${PATH}:${GOROOT}/bin:${GOPATH}/bin
