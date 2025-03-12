@@ -205,7 +205,7 @@ func (l *Loader) restoreAbsentModulesFromOverrides(ctx context.Context) error {
 				return fmt.Errorf("check the '%s' module symlink: %w", mpo.Name, err)
 			}
 			l.logger.Infof("the '%s' module symlink is absent on file system, restore it", mpo.Name)
-			if err = l.createModuleSymlink(mpo.Name, mpo.Spec.ImageTag, source, mpo.Status.Weight, true); err != nil {
+			if err = l.createModuleSymlink(ctx, mpo.Name, mpo.Spec.ImageTag, source, mpo.Status.Weight, true); err != nil {
 				return fmt.Errorf("create the '%s' module symlink: %w", mpo.Name, err)
 			}
 		} else {
@@ -217,7 +217,7 @@ func (l *Loader) restoreAbsentModulesFromOverrides(ctx context.Context) error {
 			// check if module symlink leads to current version
 			if filepath.Base(downloadedModulePath) != downloader.DefaultDevVersion {
 				l.logger.Infof("the '%s' module symlink is incorrect, restore it", mpo.Name)
-				if err = l.createModuleSymlink(mpo.Name, mpo.Spec.ImageTag, source, mpo.Status.Weight, true); err != nil {
+				if err = l.createModuleSymlink(ctx, mpo.Name, mpo.Spec.ImageTag, source, mpo.Status.Weight, true); err != nil {
 					return fmt.Errorf("create the '%s' module symlink: %w", mpo.Name, err)
 				}
 			}
@@ -315,7 +315,7 @@ func (l *Loader) restoreAbsentModulesFromReleases(ctx context.Context) error {
 				return fmt.Errorf("check the '%s' module symlink: %w", release.Spec.ModuleName, err)
 			}
 			l.logger.Infof("the '%s' module symlink is absent on file system, restore it", release.Spec.ModuleName)
-			if err = l.createModuleSymlink(release.Spec.ModuleName, moduleVersion, source, release.Spec.Weight, false); err != nil {
+			if err = l.createModuleSymlink(ctx, release.Spec.ModuleName, moduleVersion, source, release.Spec.Weight, false); err != nil {
 				return fmt.Errorf("create module symlink: %w", err)
 			}
 		} else {
@@ -333,7 +333,7 @@ func (l *Loader) restoreAbsentModulesFromReleases(ctx context.Context) error {
 			// check if module symlink leads to current version
 			if filepath.Base(downloadedModulePath) != moduleVersion {
 				l.logger.Infof("the '%s' module symlink is incorrect, restore it", release.Spec.ModuleName)
-				if err = l.createModuleSymlink(release.Spec.ModuleName, moduleVersion, source, release.Spec.Weight, false); err != nil {
+				if err = l.createModuleSymlink(ctx, release.Spec.ModuleName, moduleVersion, source, release.Spec.Weight, false); err != nil {
 					return fmt.Errorf("create the '%s' module symlink: %w", release.Spec.ModuleName, err)
 				}
 			}
@@ -392,7 +392,7 @@ func (l *Loader) deleteModulesWithAbsentRelease(ctx context.Context) error {
 
 // createModuleSymlink checks if there are any other symlinks for a module in the symlink dir and deletes them before
 // attempting to download version/tag of the module and creating correct symlink
-func (l *Loader) createModuleSymlink(moduleName, moduleVersion string, moduleSource *v1alpha1.ModuleSource, moduleWeight uint32, mpo bool) error {
+func (l *Loader) createModuleSymlink(ctx context.Context, moduleName, moduleVersion string, moduleSource *v1alpha1.ModuleSource, moduleWeight uint32, mpo bool) error {
 	l.logger.Infof("the '%s' module is absent on filesystem, restore it from the '%s' source", moduleName, moduleSource.Name)
 
 	// remove possible symlink doubles
@@ -416,7 +416,7 @@ func (l *Loader) createModuleSymlink(moduleName, moduleVersion string, moduleSou
 		if mpo {
 			_, _, err = md.DownloadDevImageTag(moduleName, moduleTag, "")
 		} else {
-			_, err = md.DownloadByModuleVersion(moduleName, moduleVersion)
+			_, err = md.DownloadByModuleVersion(ctx, moduleName, moduleVersion)
 		}
 		if err != nil {
 			return fmt.Errorf("download the '%s' module of the '%s' version/tag: %w", moduleName, moduleVersion, err)
