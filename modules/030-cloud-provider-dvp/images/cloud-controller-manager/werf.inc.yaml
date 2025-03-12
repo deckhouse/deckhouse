@@ -15,7 +15,7 @@ final: false
 fromImage: common/src-artifact
 git:
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
-  to:  /src/ccm/src
+  to:  /src
   stageDependencies:
     install:
       - go.mod
@@ -54,7 +54,8 @@ import:
 shell:
   install:
     - export GOPROXY={{ $.GOPROXY }}
-    - cd /src/ccm/src
+    - cd /src
+    - go mod download
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w " -o /dvp-cloud-controller-manager cmd/dvp-cloud-controller-manager/main.go
     - chown 64535:64535 /dvp-cloud-controller-manager
     - chmod 0755 /dvp-cloud-controller-manager
