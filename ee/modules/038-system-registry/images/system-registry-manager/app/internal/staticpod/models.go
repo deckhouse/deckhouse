@@ -22,6 +22,7 @@ type templateModel struct {
 
 // Config represents the configuration
 type Config struct {
+	Version  string         `json:"version,omitempty"`
 	Registry RegistryConfig `json:"registry,omitempty"`
 	Images   Images         `json:"images,omitempty"`
 	PKI      PKIModel       `json:"pki,omitempty"`

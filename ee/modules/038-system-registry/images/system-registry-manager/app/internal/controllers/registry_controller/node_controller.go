@@ -138,7 +138,7 @@ func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 		name := obj.GetName()
 		sub := state.NodePKISecretRegex.FindStringSubmatch(name)
 
-		if sub == nil || len(sub) < 2 {
+		if len(sub) < 2 {
 			return nil
 		}
 
@@ -174,7 +174,8 @@ func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 			name == state.UserROSecretName ||
 			name == state.UserRWSecretName ||
 			name == state.UserMirrorPullerName ||
-			name == state.UserMirrorPusherName
+			name == state.UserMirrorPusherName ||
+			name == state.StateSecretName
 	})
 
 	globalConfigMapsPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
@@ -409,6 +410,12 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 		return
 	}
 
+	stateSecret, err := nc.loadStateSecret(ctx)
+	if err != nil {
+		log.Error(err, "cannot load state secret, will use defaults")
+		stateSecret.InitWithDefaults()
+	}
+
 	globalPKI, err := nc.loadGlobalPKI(ctx)
 	if err != nil {
 		err = fmt.Errorf("cannot load global PKI: %w", err)
@@ -462,6 +469,7 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 		nodePKI,
 		ingressPKI,
 		mirrorerUpstreams,
+		stateSecret,
 	)
 
 	if err != nil {
@@ -487,6 +495,7 @@ func (nc *nodeController) contructStaticPodConfig(
 	nodePKI state.NodePKI,
 	ingressPKI *state.IngressPKI,
 	mirrorerUpstreams []string,
+	stateSecret state.StateSecret,
 ) (config staticpod.Config, err error) {
 	tokenKey, err := pki.EncodePrivateKey(globalPKI.Token.Key)
 	if err != nil {
@@ -509,6 +518,7 @@ func (nc *nodeController) contructStaticPodConfig(
 	registryHostPath := fmt.Sprintf("%s%s", nc.Settings.RegistryAddress, nc.Settings.RegistryPath)
 
 	config = staticpod.Config{
+		Version: stateSecret.Version,
 		Images: staticpod.Images{
 			Auth:         fmt.Sprintf("%s@%s", registryHostPath, nc.Settings.ImageAuth),
 			Distribution: fmt.Sprintf("%s@%s", registryHostPath, nc.Settings.ImageDistribution),
@@ -529,13 +539,13 @@ func (nc *nodeController) contructStaticPodConfig(
 			},
 		},
 		PKI: staticpod.PKIModel{
-			CACert:                 string(pki.EncodeCertificate(globalPKI.CA.Cert)),
-			TokenCert:              string(pki.EncodeCertificate(globalPKI.Token.Cert)),
-			TokenKey:               string(tokenKey),
-			AuthCert:               string(pki.EncodeCertificate(nodePKI.Auth.Cert)),
-			AuthKey:                string(authKey),
-			DistributionCert:       string(pki.EncodeCertificate(nodePKI.Distribution.Cert)),
-			DistributionKey:        string(distributionKey),
+			CACert:           string(pki.EncodeCertificate(globalPKI.CA.Cert)),
+			TokenCert:        string(pki.EncodeCertificate(globalPKI.Token.Cert)),
+			TokenKey:         string(tokenKey),
+			AuthCert:         string(pki.EncodeCertificate(nodePKI.Auth.Cert)),
+			AuthKey:          string(authKey),
+			DistributionCert: string(pki.EncodeCertificate(nodePKI.Distribution.Cert)),
+			DistributionKey:  string(distributionKey),
 		},
 		Mirrorer: staticpod.Mirrorer{
 			UserPuller: staticpod.User{
@@ -564,7 +574,7 @@ func (nc *nodeController) contructStaticPodConfig(
 		host, path := getRegistryAddressAndPathFromImagesRepo(moduleConfig.Settings.Proxy.ImagesRepo)
 
 		config.PKI.UpstreamRegistryCACert = moduleConfig.Settings.Proxy.CA
-	
+
 		config.Registry.Upstream = staticpod.UpstreamRegistry{
 			Scheme:   strings.ToLower(moduleConfig.Settings.Proxy.Scheme),
 			Host:     host,
@@ -766,6 +776,33 @@ func (nc *nodeController) loadGlobalSecrets(ctx context.Context) (ret state.Glob
 	secret := corev1.Secret{}
 	key := types.NamespacedName{
 		Name:      state.GlobalSecretsName,
+		Namespace: nc.Namespace,
+	}
+
+	if err = nc.Client.Get(ctx, key, &secret); err != nil {
+		err = fmt.Errorf("cannot get secret %v k8s object: %w", key.Name, err)
+		return
+	}
+
+	err = ret.DecodeSecret(&secret)
+	if err != nil {
+		err = fmt.Errorf("cannot decode from secret: %w", err)
+		return
+	}
+
+	err = ret.Validate()
+	if err != nil {
+		err = fmt.Errorf("valdiation error: %w", err)
+		return
+	}
+
+	return
+}
+
+func (nc *nodeController) loadStateSecret(ctx context.Context) (ret state.StateSecret, err error) {
+	secret := corev1.Secret{}
+	key := types.NamespacedName{
+		Name:      state.StateSecretName,
 		Namespace: nc.Namespace,
 	}
 

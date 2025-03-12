@@ -9,20 +9,25 @@ metadata:
     component: system-registry
     tier: control-plane
   annotations:
-    authConfigHash: {{ quote .Hashes.AuthTemplate }}
-    distributionConfigHash: {{ quote .Hashes.DistributionTemplate }}
+    registry.deckhouse.io/auth-config-hash: {{ quote .Hashes.AuthTemplate }}
+    registry.deckhouse.io/distribution-config-hash: {{ quote .Hashes.DistributionTemplate }}
     {{- if eq .Registry.Mode "Detached" }}
-    mirrorerConfigHash: {{ quote .Hashes.MirrorerTemplate }}
+    registry.deckhouse.io/mirrorer-config-hash: {{ quote .Hashes.MirrorerTemplate }}
     {{- end }}
-    caCertHash: {{ quote .Hashes.CACert }}
-    authCertHash: {{ quote .Hashes.AuthCert }}
-    authKeyHash: {{ quote .Hashes.AuthKey }}
-    authTokenCertHash: {{ quote .Hashes.TokenCert }}
-    authTokenKeyHash: {{ quote .Hashes.TokenKey }}
-    distributionCertHash: {{ quote .Hashes.DistributionCert }}
-    distributionKeyHash: {{ quote .Hashes.DistributionKey }}
-    ingressClientCACertHash: {{ quote .Hashes.IngressClientCACert }}
-    upstreamRegistryCACertHash: {{ quote .Hashes.UpstreamRegistryCACert }}
+    registry.deckhouse.io/ca-cert-hash: {{ quote .Hashes.CACert }}
+    registry.deckhouse.io/auth-cert-hash: {{ quote .Hashes.AuthCert }}
+    registry.deckhouse.io/auth-key-hash: {{ quote .Hashes.AuthKey }}
+    registry.deckhouse.io/auth-token-cert-hash: {{ quote .Hashes.TokenCert }}
+    registry.deckhouse.io/auth-token-key-hash: {{ quote .Hashes.TokenKey }}
+    registry.deckhouse.io/distribution-cert-hash: {{ quote .Hashes.DistributionCert }}
+    registry.deckhouse.io/distribution-key-hash: {{ quote .Hashes.DistributionKey }}
+    registry.deckhouse.io/ingress-client-ca-cert-hash: {{ quote .Hashes.IngressClientCACert }}
+    registry.deckhouse.io/upstream-registry-ca-cert-hash: {{ quote .Hashes.UpstreamRegistryCACert }}
+    {{- if .Version }}
+    registry.deckhouse.io/config-version: {{ quote .Version }}
+    {{- else }}
+    registry.deckhouse.io/config-version: "unknown"
+    {{- end }}
   name: system-registry
   namespace: d8-system
 spec:
