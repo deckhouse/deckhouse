@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"context"
+	"errors"
 	"os"
 	"sync"
 	"time"
@@ -201,29 +202,24 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 	}()
 
 	input.MetricsCollector.Expire("d8_node_draining")
+	var drainTimeoutErr *drain.DrainTimeoutError
+	var shouldIgnoreErr bool
 	for drainedNode := range drainingNodesC {
-		shouldIgnore := false
-
 		if drainedNode.Err != nil {
-			switch drainedNode.Err.(type) {
-			case *drain.DrainTimeoutError:
-				shouldIgnore = true
+			if errors.As(drainedNode.Err, &drainTimeoutErr) {
+				shouldIgnoreErr = true
 				input.Logger.Errorf("node %q drain timeout: %s", drainedNode.NodeName, drainedNode.Err)
-			default:
+			} else {
 				input.Logger.Errorf("node %q drain failed: %s", drainedNode.NodeName, drainedNode.Err)
 			}
-
 			event := drainedNode.buildEvent()
 			input.PatchCollector.Create(event, object_patch.UpdateIfExists())
-			input.MetricsCollector.Set("d8_node_draining", 1, map[string]string{
-				"node":    drainedNode.NodeName,
-				"message": drainedNode.Err.Error(),
-			})
-			if !shouldIgnore {
+			input.MetricsCollector.Set("d8_node_draining", 1, map[string]string{"node": drainedNode.NodeName, "message": drainedNode.Err.Error()})
+
+			if !shouldIgnoreErr {
 				continue
 			}
 		}
-
 		input.PatchCollector.MergePatch(newDrainedAnnotationPatch(drainedNode.DrainingSource), "v1", "Node", "", drainedNode.NodeName)
 	}
 
