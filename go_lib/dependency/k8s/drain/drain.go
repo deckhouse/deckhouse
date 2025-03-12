@@ -52,7 +52,7 @@ type DrainTimeoutError struct {
 }
 
 func (e *DrainTimeoutError) Error() string {
-	return fmt.Sprintf("error when evicting pod %q -n %q: global timeout reached: %v", e.PodName, e.Namespace, e.Timeout)
+	return fmt.Sprintf("drain timeout reached: %v", e.Timeout)
 }
 
 // Helper contains the parameters to control the behaviour of drainer
@@ -298,8 +298,8 @@ func (d *Helper) evictPods(pods []corev1.Pod, evictionGroupVersion schema.GroupV
 				}
 				select {
 				case <-ctx.Done():
-					returnCh <- &DrainTimeoutError{,
-						Timeout:   globalTimeout,
+					returnCh <- &DrainTimeoutError{
+						Timeout: globalTimeout,
 					}
 					return
 				default:
