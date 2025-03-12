@@ -9,11 +9,12 @@ import:
 docker:
   ENTRYPOINT: ["/dvp-cloud-controller-manager"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_23_BULLSEYE }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
 git:
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
-  to:  /src/ccm/src
+  to:  /src
   stageDependencies:
     install:
       - go.mod
@@ -26,14 +27,27 @@ git:
       - go.mod
       - go.sum
       - "**/*.go"
+shell:
+  install:
+  - cd /src
+  - sed -i -e 's# ../../dvp-common# /src/dvp-common#g' go.mod
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+final: false
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+    add: /src
+    to: /src
+    before: install
 shell:
   install:
-    - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}
-    - cd /src/ccm/src
+    - cd /src
+    - go mod download
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w " -o /dvp-cloud-controller-manager cmd/dvp-cloud-controller-manager/main.go
     - chown 64535:64535 /dvp-cloud-controller-manager
     - chmod 0755 /dvp-cloud-controller-manager

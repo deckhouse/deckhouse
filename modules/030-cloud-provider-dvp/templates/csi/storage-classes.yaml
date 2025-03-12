@@ -11,5 +11,5 @@ reclaimPolicy: Delete
 allowVolumeExpansion: true
 volumeBindingMode: WaitForFirstConsumer
 parameters:
-  dvpStorageClass: {{ $storageClass.type | quote }}
+  dvpStorageClass: {{ $storageClass.dvpStorageClass | quote }}
 {{- end }}

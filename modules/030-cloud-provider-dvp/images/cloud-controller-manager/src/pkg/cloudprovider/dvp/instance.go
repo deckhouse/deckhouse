@@ -94,9 +94,9 @@ func (c *Cloud) InstanceShutdownByProviderID(ctx context.Context, providerID str
 }
 
 func (c *Cloud) getVMByNodeName(ctx context.Context, nodeName types.NodeName) (*v1alpha2.VirtualMachine, error) {
-	vmName := MapNodeNameToVMName(nodeName)
+	vmHostname := MapNodeNameToVMName(nodeName)
 
-	vm, err := c.dvpService.ComputeService.GetVMByName(ctx, vmName)
+	vm, err := c.dvpService.ComputeService.GetVMByHostname(ctx, vmHostname)
 	if err != nil && errors.Is(err, api.ErrNotFound) {
 		return nil, cloudprovider.InstanceNotFound
 	} else if err != nil {
@@ -107,12 +107,12 @@ func (c *Cloud) getVMByNodeName(ctx context.Context, nodeName types.NodeName) (*
 }
 
 func (c *Cloud) getVMByProviderID(ctx context.Context, providerID string) (*v1alpha2.VirtualMachine, error) {
-	vmID, err := ParseProviderID(providerID)
+	vmName, err := ParseProviderID(providerID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse compute id [%s]: %v", vmID, err)
+		return nil, fmt.Errorf("failed to parse compute id [%s]: %v", vmName, err)
 	}
 
-	vm, err := c.dvpService.ComputeService.GetVMByID(ctx, vmID)
+	vm, err := c.dvpService.ComputeService.GetVMByName(ctx, vmName)
 	if err != nil && errors.Is(err, api.ErrNotFound) {
 		return nil, cloudprovider.InstanceNotFound
 	} else if err != nil {

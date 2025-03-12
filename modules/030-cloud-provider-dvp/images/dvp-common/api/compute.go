@@ -45,9 +45,21 @@ func NewComputeService(service *Service) *ComputeService {
 }
 
 func (c *ComputeService) GetVMByName(ctx context.Context, name string) (*v1alpha2.VirtualMachine, error) {
+	var instance v1alpha2.VirtualMachine
+
+	if err := c.client.Get(ctx, types.NamespacedName{Name: name, Namespace: c.namespace}, &instance); err != nil {
+		if k8serrors.IsNotFound(err) {
+			return nil, cloudprovider.InstanceNotFound
+		}
+		return nil, err
+	}
+	return &instance, nil
+}
+
+func (c *ComputeService) GetVMByHostname(ctx context.Context, hostname string) (*v1alpha2.VirtualMachine, error) {
 	var instanceList v1alpha2.VirtualMachineList
 
-	selector, err := labels.Parse(fmt.Sprintf("%s=%s", DVPVMHostnameLabel, name))
+	selector, err := labels.Parse(fmt.Sprintf("%s=%s", DVPVMHostnameLabel, hostname))
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +81,7 @@ func (c *ComputeService) GetVMByName(ctx context.Context, name string) (*v1alpha
 	}
 
 	if len(instanceList.Items) > 1 {
-		return nil, fmt.Errorf("found more than one VM with name %s", name)
+		return nil, fmt.Errorf("found more than one VM with name %s", hostname)
 	}
 
 	return &instanceList.Items[0], nil
@@ -115,8 +127,13 @@ func (c *ComputeService) GetVMHostname(vm *v1alpha2.VirtualMachine) (string, err
 	return "", cloudprovider.InstanceNotFound
 }
 
-func (d *ComputeService) AttachDiskToVM(ctx context.Context, diskName string, computeName string) error {
-	vmbda, err := d.getVMBDA(ctx, diskName, computeName)
+func (d *ComputeService) AttachDiskToVM(ctx context.Context, diskName string, vmHostname string) error {
+	vm, err := d.GetVMByHostname(ctx, vmHostname)
+	if err != nil {
+		return err
+	}
+
+	vmbda, err := d.getVMBDA(ctx, diskName, vmHostname)
 	if vmbda != nil && err == nil {
 		return nil
 	}
@@ -131,15 +148,15 @@ func (d *ComputeService) AttachDiskToVM(ctx context.Context, diskName string, co
 			APIVersion: v1alpha2.Version,
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("vmbda-%s-%s", diskName, computeName),
+			Name:      fmt.Sprintf("vmbda-%s-%s", diskName, vmHostname),
 			Namespace: d.namespace,
 			Labels: map[string]string{
 				attachmentDiskNameLabel:    diskName,
-				attachmentMachineNameLabel: computeName,
+				attachmentMachineNameLabel: vmHostname,
 			},
 		},
 		Spec: v1alpha2.VirtualMachineBlockDeviceAttachmentSpec{
-			VirtualMachineName: computeName,
+			VirtualMachineName: vm.Name,
 			BlockDeviceRef: v1alpha2.VMBDAObjectRef{
 				Kind: v1alpha2.VMBDAObjectRefKindVirtualDisk,
 				Name: diskName,
@@ -155,8 +172,8 @@ func (d *ComputeService) AttachDiskToVM(ctx context.Context, diskName string, co
 	return nil
 }
 
-func (d *ComputeService) DetachDiskFromVM(ctx context.Context, diskName string, computeName string) error {
-	vmbda, err := d.getVMBDA(ctx, diskName, computeName)
+func (d *ComputeService) DetachDiskFromVM(ctx context.Context, diskName string, vmName string) error {
+	vmbda, err := d.getVMBDA(ctx, diskName, vmName)
 	if err != nil {
 		return err
 	}
@@ -168,8 +185,8 @@ func (d *ComputeService) DetachDiskFromVM(ctx context.Context, diskName string, 
 	return nil
 }
 
-func (d *ComputeService) getVMBDA(ctx context.Context, diskName, computeName string) (*v1alpha2.VirtualMachineBlockDeviceAttachment, error) {
-	selector, err := labels.Parse(fmt.Sprintf("%s=%s,%s=%s", attachmentDiskNameLabel, diskName, attachmentMachineNameLabel, computeName))
+func (d *ComputeService) getVMBDA(ctx context.Context, diskName string, vmHostname string) (*v1alpha2.VirtualMachineBlockDeviceAttachment, error) {
+	selector, err := labels.Parse(fmt.Sprintf("%s=%s,%s=%s", attachmentDiskNameLabel, diskName, attachmentMachineNameLabel, vmHostname))
 	if err != nil {
 		return nil, err
 	}

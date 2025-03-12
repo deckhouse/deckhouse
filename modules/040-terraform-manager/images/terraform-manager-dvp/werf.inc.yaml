@@ -10,7 +10,7 @@ import:
   before: setup
 ---
 image: terraform-provider-kubernetes
-from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 final: false
 mount:
 - fromPath: ~/go-pkg-cache
