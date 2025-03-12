@@ -25,5 +25,5 @@ type DVPCloudProviderDiscoveryData struct {
 type DVPStorageClass struct {
 	Name      string `json:"name,omitempty"`
 	IsEnabled bool   `json:"isEnabled,omitempty"`
-	IsDefault bool   `json:"IsDefault,omitempty"`
+	IsDefault bool   `json:"isDefault,omitempty"`
 }
