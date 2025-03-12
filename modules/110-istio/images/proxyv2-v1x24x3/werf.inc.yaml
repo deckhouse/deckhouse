@@ -139,6 +139,7 @@ shell:
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - export TARGETARCH=amd64 ARCH="x86_64"
   - export BAZEL_VERSION="6.5.0" USE_BAZEL_VERSION="6.5.0"
+  - export GCC_VERSION=11
   - cd /src/proxy
   - go mod download
   - sed -i '/^build --enable_platform_specific_config/a build --linkopt=-L/opt/libcxx/lib'          envoy.bazelrc
