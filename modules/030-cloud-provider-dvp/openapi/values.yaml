@@ -426,6 +426,9 @@ properties:
           kind:
             type: string
             enum: [DVPCloudDiscoveryData]
+          layout:
+            type: string
+            enum: [Standard]
           zones:
             type: array
             items:
@@ -433,10 +436,25 @@ properties:
               minLength: 1
             minItems: 1
             uniqueItems: true
+          storageClasses:
+            type: array
+            description: |
+              A list of storage classes in the cloud.
+            items:
+              type: object
+              properties:
+                name:
+                  type: string
+                isEnabled:
+                  type: boolean
+                IsDefault:
+                  type: boolean
       storageClasses:
         type: array
         items:
           type: object
           properties:
+            name:
+              type: string
             dvpStorageClass:
               type: string
