@@ -34,5 +34,5 @@ apiVersions:
                 type: string
               isEnabled:
                 type: boolean
-              IsDefault:
+              isDefault:
                 type: boolean
