@@ -17,7 +17,7 @@ shell:
   - mv /Setup.local Modules/Setup.local
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ .Images.BASE_GOLANG_23_BOOKWORM }}
+from: {{ .Images.BASE_UBUNTU }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -26,11 +26,11 @@ import:
   before: install
 shell:
   beforeInstall:
-  {{- include "debian packages proxy" . | nindent 2 }}
-  - apt-get install -y build-essential gdb lcov pkg-config libbz2-dev libffi-dev libgdbm-dev libgdbm-compat-dev liblzma-dev libncurses5-dev libreadline6-dev libsqlite3-dev libssl-dev lzma lzma-dev tk-dev uuid-dev zlib1g-dev
+  {{- include "ubuntu packages proxy" . | nindent 2 }}
+  - apt-get install -y build-essential gdb lcov pkg-config libbz2-dev libffi-dev libgdbm-dev libgdbm-compat-dev liblzma-dev libncurses5-dev libreadline6-dev libsqlite3-dev libssl-dev lzma lzma-dev tk-dev uuid-dev zlib1g-dev libmpdec-dev
   install:
   - cd /src
-  - ./configure LDFLAGS="-static" --disable-shared --prefix=/opt/python-static --with-ensurepip=install
+  - ./configure LDFLAGS="-static" --disable-shared --prefix=/opt/python-static --enable-optimizations --with-ensurepip=install
   - make LDFLAGS="-static" LINKFORSHARED=" " -j ${BUILD_THREADS}
   - make install -j 4
   - rm -rf /opt/python-static/share
