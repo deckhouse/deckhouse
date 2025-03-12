@@ -205,18 +205,14 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 	var shouldIgnoreErr bool
 	for drainedNode := range drainingNodesC {
 		if drainedNode.Err != nil {
-			input.Logger.Errorf("Drain error type is %T with text: %v", drainedNode.Err, drainedNode.Err)
-			if strings.Contains(err.Error(), "drain timeout reached:") {
-				shouldIgnoreErr = true
-				input.Logger.Errorf("node %q drain timeout: %s", drainedNode.NodeName, drainedNode.Err)
-			} else {
-				input.Logger.Errorf("node %q drain failed: %s", drainedNode.NodeName, drainedNode.Err)
-			}
+			input.Logger.Errorf("node %q drain failed: %s", drainedNode.NodeName, drainedNode.Err)
+			shouldIgnoreErr = handleDrainError(err)
 			event := drainedNode.buildEvent()
 			input.PatchCollector.Create(event, object_patch.UpdateIfExists())
 			input.MetricsCollector.Set("d8_node_draining", 1, map[string]string{"node": drainedNode.NodeName, "message": drainedNode.Err.Error()})
-
-			if !shouldIgnoreErr {
+			if shouldIgnoreErr {
+				input.Logger.Errorf("node %q drain error skiped: %s", drainedNode.NodeName, drainedNode.Err)
+			} else {
 				continue
 			}
 		}
@@ -224,6 +220,15 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 
 	return nil
+}
+
+func handleDrainError(err error) bool {
+	switch {
+	case strings.Contains(err.Error(), "drain timeout reached:"):
+		return true
+	default:
+		return false
+	}
 }
 
 func getDrainTimeout(input *go_hook.HookInput, client k8s.Client, ngName string) time.Duration {
