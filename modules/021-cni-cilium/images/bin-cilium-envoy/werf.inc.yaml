@@ -34,7 +34,7 @@ fromImage: {{ .ModuleName }}/base-cilium-dev
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-  add: /src
+  add: /src/proxy
   to: /cilium
   before: install
   owner: 1337
