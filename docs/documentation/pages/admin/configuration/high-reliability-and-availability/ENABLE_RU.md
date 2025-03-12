@@ -31,7 +31,7 @@ lang: ru
    sudo -i d8 k -n d8-system get po | grep deckhouse
    ```
    
-   Количество подов deckhouse должно быть больше одного:
+   Количество подов `deckhouse` должно быть больше одного:
    
    ```text
    deckhouse-57695f4d68-8rk6l                           2/2     Running   0             3m49s
