@@ -27,7 +27,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -72,10 +71,9 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		}
 
 		destroyer, err := destroy.NewClusterDestroyer(&destroy.Params{
-			NodeInterface:    ssh.NewNodeInterfaceWrapper(sshClient),
-			StateCache:       cache.Global(),
-			SkipResources:    app.SkipResources,
-			TerraformContext: terraform.NewTerraformContext(),
+			NodeInterface: ssh.NewNodeInterfaceWrapper(sshClient),
+			StateCache:    cache.Global(),
+			SkipResources: app.SkipResources,
 		})
 		if err != nil {
 			return err

@@ -24,12 +24,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/gookit/color"
 	"github.com/werf/logboek"
 	"github.com/werf/logboek/pkg/level"
 	"github.com/werf/logboek/pkg/types"
 	"k8s.io/klog"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 )
@@ -174,7 +175,7 @@ func NewPrettyLogger(opts LoggerOptions) *PrettyLogger {
 	res := &PrettyLogger{
 		processTitles: map[string]styleEntry{
 			"common":           {"🎈 ~ Common: %s", CommonOptions},
-			"terraform":        {"🌱 ~ Terraform: %s", TerraformOptions},
+			"infrastructure":   {"🌱 ~ Infrastructure: %s", InfrastructureOptions},
 			"converge":         {"🛸 ~ Converge: %s", ConvergeOptions},
 			"bootstrap":        {"⛵ ~ Bootstrap: %s", BootstrapOptions},
 			"mirror":           {"🪞 ~ Mirror: %s", MirrorOptions},

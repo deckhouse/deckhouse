@@ -34,7 +34,7 @@ func DefineConvergeExporterFlags(cmd *kingpin.CmdClause) {
 	cmd.Flag("listen-address", "Address to expose metrics").
 		Envar(configEnvName("LISTEN_ADDRESS")).
 		StringVar(&ListenAddress)
-	cmd.Flag("check-interval", "Period to check terraform state converge").
+	cmd.Flag("check-interval", "Period to check infrastructure state converge").
 		Envar(configEnvName("CHECK_INTERVAL")).
 		DurationVar(&CheckInterval)
 }

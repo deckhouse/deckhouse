@@ -18,20 +18,22 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
-	state_terraform "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
+	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
-func DefineTerraformConvergeExporterCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineInfrastructureConvergeExporterCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineKubeFlags(cmd)
 	app.DefineConvergeExporterFlags(cmd)
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
@@ -45,7 +47,7 @@ func DefineTerraformConvergeExporterCommand(cmd *kingpin.CmdClause) *kingpin.Cmd
 	return cmd
 }
 
-func DefineTerraformCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineKubeFlags(cmd)
 	app.DefineOutputFlag(cmd)
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
@@ -75,13 +77,13 @@ func DefineTerraformCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		metaConfig.UUID, err = state_terraform.GetClusterUUID(ctx, kubeCl)
+		metaConfig.UUID, err = infrastructurestate.GetClusterUUID(ctx, kubeCl)
 		if err != nil {
 			return err
 		}
 
-		statistic, err := check.CheckState(
-			ctx, kubeCl, metaConfig, terraform.NewTerraformContext(), check.CheckStateOptions{},
+		statistic, needMigrationToTofu, err := check.CheckState(
+			ctx, kubeCl, metaConfig, infrastructure.NewContextWithProvider(infrastructureprovider.ExecutorProvider(metaConfig)), check.CheckStateOptions{},
 		)
 		if err != nil {
 			return err
@@ -93,6 +95,9 @@ func DefineTerraformCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		}
 
 		fmt.Print(string(data))
+		if infrastructureprovider.NeedToUseOpentofu(metaConfig) && needMigrationToTofu {
+			fmt.Printf("\nNeed migrate to tofu: %v\n", needMigrationToTofu)
+		}
 		return nil
 	})
 	return cmd

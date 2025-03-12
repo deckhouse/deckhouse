@@ -21,7 +21,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 )
 
 func TestDestructiveChangeID(t *testing.T) {
@@ -59,8 +59,8 @@ func TestDestructiveChangeID(t *testing.T) {
 						Group:  "master",
 						Name:   "kube-master-0",
 						Status: DestructiveStatus,
-						DestructiveChanges: &terraform.PlanDestructiveChanges{
-							ResourcesDeleted: []terraform.ValueChange{
+						DestructiveChanges: &infrastructure.PlanDestructiveChanges{
+							ResourcesDeleted: []infrastructure.ValueChange{
 								{
 									CurrentValue: map[string]any{
 										"type": "some_type",
@@ -85,8 +85,8 @@ func TestDestructiveChangeID(t *testing.T) {
 						Group:  "master",
 						Name:   "kube-master-0",
 						Status: DestructiveStatus,
-						DestructiveChanges: &terraform.PlanDestructiveChanges{
-							ResourcesRecreated: []terraform.ValueChange{
+						DestructiveChanges: &infrastructure.PlanDestructiveChanges{
+							ResourcesRecreated: []infrastructure.ValueChange{
 								{
 									NextValue: map[string]any{
 										"type": "some_type",
@@ -109,7 +109,7 @@ func TestDestructiveChangeID(t *testing.T) {
 				Node: []NodeCheckResult{},
 				Cluster: ClusterCheckResult{
 					Status: DestructiveStatus,
-					DestructiveChanges: &terraform.BaseInfrastructureDestructiveChanges{
+					DestructiveChanges: &infrastructure.BaseInfrastructureDestructiveChanges{
 						OutputBrokenReason: "some_reason",
 					},
 				},
@@ -121,8 +121,8 @@ func TestDestructiveChangeID(t *testing.T) {
 				Node: []NodeCheckResult{},
 				Cluster: ClusterCheckResult{
 					Status: DestructiveStatus,
-					DestructiveChanges: &terraform.BaseInfrastructureDestructiveChanges{
-						OutputZonesChanged: terraform.ValueChange{
+					DestructiveChanges: &infrastructure.BaseInfrastructureDestructiveChanges{
+						OutputZonesChanged: infrastructure.ValueChange{
 							NextValue: map[string]any{
 								"type": "some_type",
 								"name": "some_name",
@@ -138,9 +138,9 @@ func TestDestructiveChangeID(t *testing.T) {
 				Node: []NodeCheckResult{},
 				Cluster: ClusterCheckResult{
 					Status: DestructiveStatus,
-					DestructiveChanges: &terraform.BaseInfrastructureDestructiveChanges{
-						PlanDestructiveChanges: terraform.PlanDestructiveChanges{
-							ResourcesDeleted: []terraform.ValueChange{
+					DestructiveChanges: &infrastructure.BaseInfrastructureDestructiveChanges{
+						PlanDestructiveChanges: infrastructure.PlanDestructiveChanges{
+							ResourcesDeleted: []infrastructure.ValueChange{
 								{
 									CurrentValue: map[string]any{
 										"type": "some_type",
@@ -159,9 +159,9 @@ func TestDestructiveChangeID(t *testing.T) {
 				Node: []NodeCheckResult{},
 				Cluster: ClusterCheckResult{
 					Status: DestructiveStatus,
-					DestructiveChanges: &terraform.BaseInfrastructureDestructiveChanges{
-						PlanDestructiveChanges: terraform.PlanDestructiveChanges{
-							ResourcesRecreated: []terraform.ValueChange{
+					DestructiveChanges: &infrastructure.BaseInfrastructureDestructiveChanges{
+						PlanDestructiveChanges: infrastructure.PlanDestructiveChanges{
+							ResourcesRecreated: []infrastructure.ValueChange{
 								{
 									NextValue: map[string]any{
 										"type": "some_type",
@@ -182,8 +182,8 @@ func TestDestructiveChangeID(t *testing.T) {
 						Group:  "master",
 						Name:   "kube-master-0",
 						Status: DestructiveStatus,
-						DestructiveChanges: &terraform.PlanDestructiveChanges{
-							ResourcesDeleted: []terraform.ValueChange{
+						DestructiveChanges: &infrastructure.PlanDestructiveChanges{
+							ResourcesDeleted: []infrastructure.ValueChange{
 								{
 									CurrentValue: map[string]any{
 										"type": "some_type",
@@ -199,7 +199,7 @@ func TestDestructiveChangeID(t *testing.T) {
 									},
 								},
 							},
-							ResourcesRecreated: []terraform.ValueChange{
+							ResourcesRecreated: []infrastructure.ValueChange{
 								{
 									NextValue: map[string]any{
 										"type": "some_type",
@@ -220,15 +220,15 @@ func TestDestructiveChangeID(t *testing.T) {
 				},
 				Cluster: ClusterCheckResult{
 					Status: DestructiveStatus,
-					DestructiveChanges: &terraform.BaseInfrastructureDestructiveChanges{
-						OutputZonesChanged: terraform.ValueChange{
+					DestructiveChanges: &infrastructure.BaseInfrastructureDestructiveChanges{
+						OutputZonesChanged: infrastructure.ValueChange{
 							NextValue: map[string]any{
 								"type": "some_type",
 								"name": "some_name",
 							},
 						},
-						PlanDestructiveChanges: terraform.PlanDestructiveChanges{
-							ResourcesDeleted: []terraform.ValueChange{
+						PlanDestructiveChanges: infrastructure.PlanDestructiveChanges{
+							ResourcesDeleted: []infrastructure.ValueChange{
 								{
 									CurrentValue: map[string]any{
 										"type": "some_type",
@@ -242,7 +242,7 @@ func TestDestructiveChangeID(t *testing.T) {
 									},
 								},
 							},
-							ResourcesRecreated: []terraform.ValueChange{
+							ResourcesRecreated: []infrastructure.ValueChange{
 								{
 									NextValue: map[string]any{
 										"type": "some_type",

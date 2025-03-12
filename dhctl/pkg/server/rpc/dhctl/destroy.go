@@ -40,7 +40,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -249,7 +248,6 @@ func (s *Service) destroy(
 			[]byte(request.ClusterConfig),
 			[]byte(request.ProviderSpecificClusterConfig),
 		),
-		TerraformContext: terraform.NewTerraformContext(),
 	})
 	if err != nil {
 		return &pb.DestroyResult{Err: fmt.Errorf("unable to initialize cluster destroyer: %w", err).Error()}
