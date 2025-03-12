@@ -193,7 +193,7 @@ pull_request_info:
                 repo: context.repo.repo,
                 commit_sha: context.sha
             });
-            if (response.status !== 200 || !rgesponse.data || response.data.length === 0) {
+            if (response.status !== 200 || !response.data || response.data.length === 0) {
               return core.setFailed(`Bad response on listing PRs for commit ${context.sha}: ${JSON.stringify(response)}`);
             }
             // Get first associated pr.

@@ -41,7 +41,7 @@ Name                  Description
 \$MASTERS_COUNT         Number of master nodes in the cluster.
 \$KUBERNETES_VERSION   A version of Kubernetes to install.
 \$CRI                  Containerd.
-\$DECKHOUSE_iCKERCFG  Base64 encoded docker registry credentials.
+\$DECKHOUSE_DOCKERCFG  Base64 encoded docker registry credentials.
 \$DECKHOUSE_IMAGE_TAG  An image tag for deckhouse Deployment. A Git tag to
                       test prerelease and release images or pr<NUM> slug
                       to test changes in pull requests.
@@ -888,7 +888,7 @@ ENDSSH
       envsubst '\${b64_SSH_KEY} \${WORKER_REDOS_USER} \${WORKER_REDOS_IP} \${WORKER_OPENSUSE_USER} \${WORKER_OPENSUSE_IP} \${WORKER_ROSA_USER} \${WORKER_ROSA_IP}' \
       <"$cwd/resources.tpl.yaml" >"$cwd/resources.yaml"
   
-  # Bootstrap HERE
+  # Bootstrap
   >&2 echo "Run dhctl bootstrap ..."
   for ((i=1; i<=$testRunAttempts; i++)); do
     $scp_command -i "$ssh_private_key_path" $cwd/configuration.yaml "$ssh_user@$bastion_ip:/tmp/configuration.yaml"
