@@ -25,7 +25,7 @@ apiVersions:
           type: array
           items:
             type: string
-            minLength: 0  # Allows the array to contain empty strings, but this is not necessary for array emptiness
+            minLength: 0
           description: |
             List of datastores discovered from vSphere.
           uniqueItems: true
@@ -33,7 +33,7 @@ apiVersions:
           type: array
           items:
             type: string
-            minLength: 0  # Allows the array to contain empty strings
+            minLength: 0
           description: |
             List of networks available in the vSphere environment.
           uniqueItems: true
@@ -41,7 +41,7 @@ apiVersions:
           type: array
           items:
             type: string
-            minLength: 0  # Allows the array to contain empty strings
+            minLength: 0
           description: |
             Paths to available VM templates in vSphere.
           uniqueItems: true
@@ -49,7 +49,7 @@ apiVersions:
           type: array
           items:
             type: string
-            minLength: 0  # Allows the array to contain empty strings
+            minLength: 0
           description: |
             List of available resource pools in vSphere.
           uniqueItems: true

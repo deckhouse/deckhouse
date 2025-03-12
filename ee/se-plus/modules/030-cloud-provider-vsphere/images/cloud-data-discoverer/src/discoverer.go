@@ -149,7 +149,7 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryDa
 			return nil, fmt.Errorf("failed to list networks: %v", err)
 		}
 		for _, net := range networks {
-			discoveryData.Networks = append(discoveryData.Networks, net.Name())
+			discoveryData.Networks = append(discoveryData.Networks, net.GetInventoryPath())
 		}
 
 		vms, err := finder.VirtualMachineList(ctx, "*")
@@ -157,8 +157,14 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryDa
 			return nil, fmt.Errorf("failed to list VM templates: %v", err)
 		}
 		for _, vm := range vms {
-			if vm.Summary.Config.Template {
-				discoveryData.VMTemplatePaths = append(discoveryData.VMTemplatePaths, vm.InventoryPath)
+
+			isTemplate, err := vm.IsTemplate(ctx)
+			if err != nil {
+				log.Errorf("Failed to check if VM is a template: %v", err)
+				continue
+			}
+			if isTemplate {
+				discoveryData.VMTemplatePaths = append(discoveryData.VMTemplatePaths, vm.Name())
 			}
 		}
 
