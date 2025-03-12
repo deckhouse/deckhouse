@@ -1,7 +1,7 @@
 ---
 title: Хаос-инжиниринг
 permalink: ru/admin/high-reliability-and-availability/chaos-engineering.html
-description: Тестирование отказоустройчивости кластера
+description: Тестирование отказоустойчивости кластера
 lang: ru
 ---
 
