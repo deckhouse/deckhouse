@@ -33,7 +33,11 @@ import (
 )
 
 func IsSequentialNodesBootstrap() bool {
-	return os.Getenv("DHCTL_SEQUENTIAL_CLOUD_PERMANENT_NODES_BOOTSTRAP") == "yes"
+	if os.Getenv("DHCTL_PARALLEL_CLOUD_PERMANENT_NODES_BOOTSTRAP") == "yes" {
+		return false
+	}
+
+	return true
 }
 
 func NodeName(cfg *config.MetaConfig, nodeGroupName string, index int) string {
