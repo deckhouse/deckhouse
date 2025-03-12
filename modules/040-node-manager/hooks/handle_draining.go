@@ -206,7 +206,7 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 	for drainedNode := range drainingNodesC {
 		if drainedNode.Err != nil {
 			input.Logger.Errorf("node %q drain failed: %s", drainedNode.NodeName, drainedNode.Err)
-			shouldIgnoreErr = handleDrainError(err)
+			shouldIgnoreErr = handleDrainError(drainedNode.Err)
 			event := drainedNode.buildEvent()
 			input.PatchCollector.Create(event, object_patch.UpdateIfExists())
 			input.MetricsCollector.Set("d8_node_draining", 1, map[string]string{"node": drainedNode.NodeName, "message": drainedNode.Err.Error()})
