@@ -18,8 +18,8 @@ package hooks
 
 import (
 	"context"
-	"errors"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -202,11 +202,11 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 	}()
 
 	input.MetricsCollector.Expire("d8_node_draining")
-	var drainTimeoutErr *drain.DrainTimeoutError
 	var shouldIgnoreErr bool
 	for drainedNode := range drainingNodesC {
 		if drainedNode.Err != nil {
-			if errors.As(drainedNode.Err, &drainTimeoutErr) {
+			input.Logger.Errorf("Drain error type is %T with text: %v", drainedNode.Err, drainedNode.Err)
+			if strings.Contains(err.Error(), "drain timeout reached:") {
 				shouldIgnoreErr = true
 				input.Logger.Errorf("node %q drain timeout: %s", drainedNode.NodeName, drainedNode.Err)
 			} else {
