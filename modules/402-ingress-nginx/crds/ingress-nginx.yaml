@@ -616,7 +616,7 @@ spec:
                 inlet:
                   type: string
                   description: |
-                    The way how external traffic enters the cluster.
+                    The way traffic from the external network is routed to the cluster. Once you have set the method, you cannot change it later.
                     * `LoadBalancer` — The Ingress controller is deployed, and a `LoadBalancer`-type service is provisioned.
                     * `LoadBalancerWithProxyProtocol` — The Ingress controller is deployed, and a `LoadBalancer`-type service is provisioned. The Ingress controller uses the proxy-protocol to get a real IP address of the client.
                     * `LoadBalancerWithSSLPassthrough` — The Ingress controller is deployed, and a `LoadBalancer`-type service is provisioned. This option enables the SSL Passthrough feature, allowing backends to be configured to accept SSL traffic directly without termination at the Ingress controller.
@@ -651,8 +651,10 @@ spec:
                     * `HostWithFailover` — Two Ingress controllers are deployed: a primary and a backup. The primary controller runs in a hostNetwork. If the primary controller pods are unavailable, traffic is routed to the backup controller.
 
                       > **Caution.** There can be only one controller with this inlet type on a single host.
-                      >
-                      > Ensure the following ports are available on the node: 80, 81, 443, 444, 4207, 4208.
+
+                      > **Caution.** The following ports must be available on the node: 80, 81, 443, 444, 4207, 4208.
+
+                      > **Caution.** To change inlet, remove the iptables rules and restart the `kube-proxy` pods or reboot the nodes hosting Ingress controllers.
                   enum: ["LoadBalancer","LoadBalancerWithSSLPassthrough","LoadBalancerWithProxyProtocol","HostPort","HostPortWithSSLPassthrough","HostPortWithProxyProtocol", "HostWithFailover"]
                 controllerVersion:
                   type: string
