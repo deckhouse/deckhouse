@@ -46,7 +46,7 @@ func DefineBootstrapInstallDeckhouseCommand(cmd *kingpin.CmdClause) *kingpin.Cmd
 			NodeInterface:    ssh.NewNodeInterfaceWrapper(sshClient),
 			TerraformContext: terraform.NewTerraformContext(),
 		})
-		return bootstraper.InstallDeckhouse()
+		return bootstraper.InstallDeckhouse(context.Background())
 	})
 
 	return cmd
@@ -91,7 +91,7 @@ func DefineCreateResourcesCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			NodeInterface:    ssh.NewNodeInterfaceWrapper(sshClient),
 			TerraformContext: terraform.NewTerraformContext(),
 		})
-		return bootstraper.CreateResources()
+		return bootstraper.CreateResources(context.Background())
 	})
 
 	return cmd

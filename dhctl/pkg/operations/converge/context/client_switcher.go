@@ -15,6 +15,7 @@
 package context
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -174,7 +175,8 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 
 	log.DebugLn("private keys added for replacing kube client")
 
-	newKubeClient, err := kubernetes.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(newSSHClient))
+	// TODO(feat/dhctl-for-commander-bootstrap-context): pass ctx
+	newKubeClient, err := kubernetes.ConnectToKubernetesAPI(context.Background(), ssh.NewNodeInterfaceWrapper(newSSHClient))
 	if err != nil {
 		return fmt.Errorf("failed to connect to Kubernetes API: %w", err)
 	}

@@ -419,14 +419,12 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return nil
 	}
 
-	// TODO(feat/dhctl-for-commander-bootstrap-context): pass ctx
-	kubeCl, err := kubernetes.ConnectToKubernetesAPI(b.NodeInterface)
+	kubeCl, err := kubernetes.ConnectToKubernetesAPI(ctx, b.NodeInterface)
 	if err != nil {
 		return err
 	}
 
-	// TODO(feat/dhctl-for-commander-bootstrap-context): pass ctx
-	installDeckhouseResult, err := InstallDeckhouse(kubeCl, deckhouseInstallConfig)
+	installDeckhouseResult, err := InstallDeckhouse(ctx, kubeCl, deckhouseInstallConfig)
 	if err != nil {
 		return err
 	}
@@ -464,8 +462,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return err
 	}
 
-	// TODO(feat/dhctl-for-commander-bootstrap-context): pass ctx
-	err = createResources(kubeCl, resourcesToCreate, metaConfig, installDeckhouseResult)
+	err = createResources(ctx, kubeCl, resourcesToCreate, metaConfig, installDeckhouseResult)
 	if err != nil {
 		return err
 	}
@@ -493,8 +490,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return nil
 	}
 
-	// TODO(feat/dhctl-for-commander-bootstrap-context): pass ctx
-	if err := RunPostInstallTasks(kubeCl, installDeckhouseResult); err != nil {
+	if err = RunPostInstallTasks(ctx, kubeCl, installDeckhouseResult); err != nil {
 		return err
 	}
 
@@ -611,14 +607,20 @@ func bootstrapAdditionalNodesForCloudCluster(
 	})
 }
 
-func createResources(kubeCl *client.KubernetesClient, resourcesToCreate template.Resources, metaConfig *config.MetaConfig, result *InstallDeckhouseResult) error {
+func createResources(
+	ctx context.Context,
+	kubeCl *client.KubernetesClient,
+	resourcesToCreate template.Resources,
+	metaConfig *config.MetaConfig,
+	result *InstallDeckhouseResult,
+) error {
 	log.WarnLn("Some resources require at least one non-master node to be added to the cluster.")
 
 	tasks := result.ManifestResult.WithResourcesMCTasks
 
 	if resourcesToCreate == nil {
 		for _, task := range tasks {
-			return retry.NewLoop(task.Title, 60, 5*time.Second).Run(func() error {
+			return retry.NewLoop(task.Title, 60, 5*time.Second).RunCtx(ctx, func() error {
 				return task.Do(kubeCl)
 			})
 		}
@@ -632,7 +634,7 @@ func createResources(kubeCl *client.KubernetesClient, resourcesToCreate template
 			return err
 		}
 
-		return resources.CreateResourcesLoop(kubeCl, resourcesToCreate, checkers, tasks)
+		return resources.CreateResourcesLoop(ctx, kubeCl, resourcesToCreate, checkers, tasks)
 	})
 }
 

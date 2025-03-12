@@ -315,7 +315,13 @@ func (c *Creator) runSingleMCTask(task actions.ModuleConfigTask) error {
 	})
 }
 
-func CreateResourcesLoop(kubeCl *client.KubernetesClient, resources template.Resources, checkers []Checker, tasks []actions.ModuleConfigTask) error {
+func CreateResourcesLoop(
+	ctx context.Context,
+	kubeCl *client.KubernetesClient,
+	resources template.Resources,
+	checkers []Checker,
+	tasks []actions.ModuleConfigTask,
+) error {
 	endChannel := time.After(app.ResourcesTimeout)
 
 	ticker := time.NewTicker(10 * time.Second)
@@ -340,6 +346,8 @@ func CreateResourcesLoop(kubeCl *client.KubernetesClient, resources template.Res
 		}
 
 		select {
+		case <-ctx.Done():
+			return fmt.Errorf("creating resources: %w", ctx.Err())
 		case <-endChannel:
 			return fmt.Errorf("creating resources failed after %s waiting", app.ResourcesTimeout)
 		case <-ticker.C:

@@ -27,12 +27,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-func ConnectToKubernetesAPI(nodeInterface node.Interface) (*client.KubernetesClient, error) {
+func ConnectToKubernetesAPI(ctx context.Context, nodeInterface node.Interface) (*client.KubernetesClient, error) {
 	var kubeCl *client.KubernetesClient
 	err := log.Process("common", "Connect to Kubernetes API", func() error {
 		if wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper); ok && wrapper != nil {
-			// TODO(feat/dhctl-for-commander-bootstrap-context): pass ctx
-			if err := wrapper.Client().Check().WithDelaySeconds(1).AwaitAvailability(context.TODO()); err != nil {
+			if err := wrapper.Client().Check().WithDelaySeconds(1).AwaitAvailability(ctx); err != nil {
 				return fmt.Errorf("await master available: %v", err)
 			}
 		}

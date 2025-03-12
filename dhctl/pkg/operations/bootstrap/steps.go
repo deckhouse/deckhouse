@@ -653,15 +653,19 @@ type InstallDeckhouseResult struct {
 	ManifestResult *deckhouse.ManifestsResult
 }
 
-func InstallDeckhouse(kubeCl *client.KubernetesClient, config *config.DeckhouseInstaller) (*InstallDeckhouseResult, error) {
+func InstallDeckhouse(
+	ctx context.Context,
+	kubeCl *client.KubernetesClient,
+	config *config.DeckhouseInstaller,
+) (*InstallDeckhouseResult, error) {
 	res := &InstallDeckhouseResult{}
 	err := log.Process("bootstrap", "Install Deckhouse", func() error {
-		err := CheckPreventBreakAnotherBootstrappedCluster(kubeCl, config)
+		err := CheckPreventBreakAnotherBootstrappedCluster(ctx, kubeCl, config)
 		if err != nil {
 			return err
 		}
 
-		resManifests, err := deckhouse.CreateDeckhouseManifests(kubeCl, config)
+		resManifests, err := deckhouse.CreateDeckhouseManifests(ctx, kubeCl, config)
 		if err != nil {
 			return fmt.Errorf("deckhouse create manifests: %v", err)
 		}
@@ -817,10 +821,14 @@ func BootstrapGetNodesFromCache(metaConfig *config.MetaConfig, stateCache state.
 	return nodesFromCache, err
 }
 
-func applyPostBootstrapModuleConfigs(kubeCl *client.KubernetesClient, tasks []actions.ModuleConfigTask) error {
+func applyPostBootstrapModuleConfigs(
+	ctx context.Context,
+	kubeCl *client.KubernetesClient,
+	tasks []actions.ModuleConfigTask,
+) error {
 	for _, task := range tasks {
 		err := retry.NewLoop(task.Title, 15, 5*time.Second).
-			Run(func() error {
+			RunCtx(ctx, func() error {
 				return task.Do(kubeCl)
 			})
 		if err != nil {
@@ -831,18 +839,18 @@ func applyPostBootstrapModuleConfigs(kubeCl *client.KubernetesClient, tasks []ac
 	return nil
 }
 
-func RunPostInstallTasks(kubeCl *client.KubernetesClient, result *InstallDeckhouseResult) error {
+func RunPostInstallTasks(ctx context.Context, kubeCl *client.KubernetesClient, result *InstallDeckhouseResult) error {
 	if result == nil {
 		log.DebugF("Skip post install tasks because result is nil\n")
 		return nil
 	}
 
 	return log.Process("bootstrap", "Run post bootstrap actions", func() error {
-		err := deckhouse.ConfigureDeckhouseRelease(kubeCl)
+		err := deckhouse.ConfigureDeckhouseRelease(ctx, kubeCl)
 		if err != nil {
 			return err
 		}
 
-		return applyPostBootstrapModuleConfigs(kubeCl, result.ManifestResult.PostBootstrapMCTasks)
+		return applyPostBootstrapModuleConfigs(ctx, kubeCl, result.ManifestResult.PostBootstrapMCTasks)
 	})
 }
