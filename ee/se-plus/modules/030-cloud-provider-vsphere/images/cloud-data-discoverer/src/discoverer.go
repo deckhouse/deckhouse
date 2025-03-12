@@ -164,7 +164,7 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryDa
 				continue
 			}
 			if isTemplate {
-				discoveryData.VMTemplatePaths = append(discoveryData.VMTemplatePaths, vm.Name())
+				discoveryData.VMTemplatePaths = append(discoveryData.VMTemplatePaths, vm.InventoryPath)
 			}
 		}
 
@@ -173,7 +173,7 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryDa
 			return nil, fmt.Errorf("failed to list resource pools: %v", err)
 		}
 		for _, rp := range resourcePools {
-			discoveryData.ResourcePools = append(discoveryData.ResourcePools, rp.Name())
+			discoveryData.ResourcePools = append(discoveryData.ResourcePools, rp.InventoryPath)
 		}
 	}
 
