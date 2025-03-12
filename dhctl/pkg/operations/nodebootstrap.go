@@ -45,7 +45,7 @@ func NodeName(cfg *config.MetaConfig, nodeGroupName string, index int) string {
 	return fmt.Sprintf("%s-%s-%v", cfg.ClusterPrefix, nodeGroupName, index)
 }
 
-func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, step, nodeGroupName, cloudConfig string, isConverge bool, terraformContext *terraform.TerraformContext) error {
+func BootstrapAdditionalNode(ctx context.Context, kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, step, nodeGroupName, cloudConfig string, isConverge bool, terraformContext *terraform.TerraformContext) error {
 	nodeName := NodeName(cfg, nodeGroupName, index)
 
 	if isConverge {
@@ -73,8 +73,7 @@ func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaCo
 		RunnerLogger: log.GetDefaultLogger(),
 	})
 
-	// TODO(feat/dhctl-for-commander-bootstrap-context): pass ctx
-	outputs, err := terraform.ApplyPipeline(context.Background(), runner, nodeName, terraform.OnlyState)
+	outputs, err := terraform.ApplyPipeline(ctx, runner, nodeName, terraform.OnlyState)
 	if err != nil {
 		return err
 	}
@@ -91,9 +90,10 @@ func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaCo
 	return nil
 }
 
-func BootstrapSequentialTerraNodes(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraNodeGroups []config.TerraNodeGroupSpec, terraformContext *terraform.TerraformContext) error {
+func BootstrapSequentialTerraNodes(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraNodeGroups []config.TerraNodeGroupSpec, terraformContext *terraform.TerraformContext) error {
 	for _, ng := range terraNodeGroups {
 		err := log.Process("bootstrap", fmt.Sprintf("Create %s NodeGroup", ng.Name), func() error {
+			// TODO(feat/dhctl-for-commander-bootstrap-context): pass ctx
 			err := entity.CreateNodeGroup(kubeCl, ng.Name, log.GetDefaultLogger(), metaConfig.NodeGroupManifest(ng))
 			if err != nil {
 				return err
@@ -105,7 +105,7 @@ func BootstrapSequentialTerraNodes(kubeCl *client.KubernetesClient, metaConfig *
 			}
 
 			for i := 0; i < ng.Replicas; i++ {
-				err = BootstrapAdditionalNode(kubeCl, metaConfig, i, "static-node", ng.Name, cloudConfig, false, terraformContext)
+				err = BootstrapAdditionalNode(ctx, kubeCl, metaConfig, i, "static-node", ng.Name, cloudConfig, false, terraformContext)
 				if err != nil {
 					return err
 				}
@@ -119,7 +119,7 @@ func BootstrapSequentialTerraNodes(kubeCl *client.KubernetesClient, metaConfig *
 	return nil
 }
 
-func BootstrapAdditionalNodeForParallelRun(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, step, nodeGroupName, cloudConfig string, isConverge bool, terraformContext *terraform.TerraformContext, runnerLogger log.Logger) error {
+func BootstrapAdditionalNodeForParallelRun(ctx context.Context, kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, step, nodeGroupName, cloudConfig string, isConverge bool, terraformContext *terraform.TerraformContext, runnerLogger log.Logger) error {
 	nodeName := NodeName(cfg, nodeGroupName, index)
 	nodeGroupSettings := cfg.FindTerraNodeGroup(nodeGroupName)
 	// TODO pass cache as argument or better refact func
@@ -136,8 +136,7 @@ func BootstrapAdditionalNodeForParallelRun(kubeCl *client.KubernetesClient, cfg 
 		RunnerLogger: runnerLogger,
 	})
 
-	// TODO(feat/dhctl-for-commander-bootstrap-context): pass ctx
-	outputs, err := terraform.ApplyPipeline(context.Background(), runner, nodeName, terraform.OnlyState)
+	outputs, err := terraform.ApplyPipeline(ctx, runner, nodeName, terraform.OnlyState)
 	if err != nil {
 		return err
 	}
@@ -155,6 +154,7 @@ func BootstrapAdditionalNodeForParallelRun(kubeCl *client.KubernetesClient, cfg 
 }
 
 func ParallelBootstrapAdditionalNodes(
+	ctx context.Context,
 	kubeCl *client.KubernetesClient,
 	cfg *config.MetaConfig,
 	nodesIndexToCreate []int,
@@ -205,6 +205,7 @@ func ParallelBootstrapAdditionalNodes(
 				nodeLogger = ngLogger
 			}
 			err := BootstrapAdditionalNodeForParallelRun(
+				ctx,
 				kubeCl,
 				cfg,
 				indexCandidate,
@@ -246,7 +247,7 @@ func ParallelBootstrapAdditionalNodes(
 	return nodesToWait, nil
 }
 
-func ParallelCreateNodeGroup(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraNodeGroups []config.TerraNodeGroupSpec, terraformContext *terraform.TerraformContext) error {
+func ParallelCreateNodeGroup(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraNodeGroups []config.TerraNodeGroupSpec, terraformContext *terraform.TerraformContext) error {
 	msg := "Create NodeGroups "
 	for _, group := range terraNodeGroups {
 		msg += fmt.Sprintf("%s (replicas: %v)️; ", group.Name, group.Replicas)
@@ -310,7 +311,7 @@ func ParallelCreateNodeGroup(kubeCl *client.KubernetesClient, metaConfig *config
 					nodesIndexToCreate = append(nodesIndexToCreate, i)
 				}
 
-				_, err = ParallelBootstrapAdditionalNodes(kubeCl, metaConfig, nodesIndexToCreate, "static-node", group.Name, nodeCloudConfig, true, terraformContext, ngLogger, saveLogToBuffer)
+				_, err = ParallelBootstrapAdditionalNodes(ctx, kubeCl, metaConfig, nodesIndexToCreate, "static-node", group.Name, nodeCloudConfig, true, terraformContext, ngLogger, saveLogToBuffer)
 
 				resultsChan <- checkResult{
 					name:    group.Name,
@@ -346,7 +347,7 @@ func ParallelCreateNodeGroup(kubeCl *client.KubernetesClient, metaConfig *config
 	})
 }
 
-func BootstrapAdditionalMasterNode(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, cloudConfig string, isConverge bool, terraformContext *terraform.TerraformContext) (*terraform.PipelineOutputs, error) {
+func BootstrapAdditionalMasterNode(ctx context.Context, kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, cloudConfig string, isConverge bool, terraformContext *terraform.TerraformContext) (*terraform.PipelineOutputs, error) {
 	nodeName := NodeName(cfg, global.MasterNodeGroupName, index)
 
 	if isConverge {
@@ -372,8 +373,7 @@ func BootstrapAdditionalMasterNode(kubeCl *client.KubernetesClient, cfg *config.
 		RunnerLogger: log.GetDefaultLogger(),
 	})
 
-	// TODO(feat/dhctl-for-commander-bootstrap-context): pass ctx
-	outputs, err := terraform.ApplyPipeline(context.Background(), runner, nodeName, terraform.GetMasterNodeResult)
+	outputs, err := terraform.ApplyPipeline(ctx, runner, nodeName, terraform.GetMasterNodeResult)
 	if err != nil {
 		return nil, err
 	}

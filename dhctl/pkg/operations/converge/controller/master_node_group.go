@@ -187,7 +187,7 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 		candidateName := fmt.Sprintf("%s-%s-%v", metaConfig.ClusterPrefix, c.name, index)
 
 		if _, ok := c.state.State[candidateName]; !ok {
-			output, err := operations.BootstrapAdditionalMasterNode(ctx.KubeClient(), metaConfig, index, c.cloudConfig, true, ctx.Terraform())
+			output, err := operations.BootstrapAdditionalMasterNode(ctx.Ctx(), ctx.KubeClient(), metaConfig, index, c.cloudConfig, true, ctx.Terraform())
 			if err != nil {
 				return err
 			}

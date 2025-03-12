@@ -77,7 +77,7 @@ func (c *CloudPermanentNodeGroupController) addNodes(ctx *context.Context) error
 
 	err = log.Process("terraform", fmt.Sprintf("Pipelines %s for %s-%s-%v", c.layoutStep, metaConfig.ClusterPrefix, c.name, nodesIndexToCreate), func() error {
 		var err error
-		nodesToWait, err = operations.ParallelBootstrapAdditionalNodes(ctx.KubeClient(), metaConfig, nodesIndexToCreate, c.layoutStep, c.name, c.cloudConfig, true, ctx.Terraform(), log.GetDefaultLogger(), false)
+		nodesToWait, err = operations.ParallelBootstrapAdditionalNodes(ctx.Ctx(), ctx.KubeClient(), metaConfig, nodesIndexToCreate, c.layoutStep, c.name, c.cloudConfig, true, ctx.Terraform(), log.GetDefaultLogger(), false)
 		return err
 	})
 	if err != nil {

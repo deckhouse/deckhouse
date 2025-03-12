@@ -691,7 +691,6 @@ func InstallDeckhouse(
 	return res, nil
 }
 
-// TODO(feat/dhctl-for-commander-bootstrap-context): pass ctx
 func BootstrapTerraNodes(
 	ctx context.Context,
 	kubeCl *client.KubernetesClient,
@@ -700,7 +699,7 @@ func BootstrapTerraNodes(
 	terraformContext *terraform.TerraformContext,
 ) error {
 	return log.Process("bootstrap", "Create CloudPermanent NG", func() error {
-		return operations.ParallelCreateNodeGroup(kubeCl, metaConfig, terraNodeGroups, terraformContext)
+		return operations.ParallelCreateNodeGroup(ctx, kubeCl, metaConfig, terraNodeGroups, terraformContext)
 	})
 }
 
@@ -750,7 +749,6 @@ func GetBastionHostFromCache() (string, error) {
 	return string(host), nil
 }
 
-// TODO(feat/dhctl-for-commander-bootstrap-context): pass ctx
 func BootstrapAdditionalMasterNodes(
 	ctx context.Context,
 	kubeCl *client.KubernetesClient,
@@ -770,7 +768,7 @@ func BootstrapAdditionalMasterNodes(
 		}
 
 		for i := 1; i < metaConfig.MasterNodeGroupSpec.Replicas; i++ {
-			outputs, err := operations.BootstrapAdditionalMasterNode(kubeCl, metaConfig, i, masterCloudConfig, false, terraformContext)
+			outputs, err := operations.BootstrapAdditionalMasterNode(ctx, kubeCl, metaConfig, i, masterCloudConfig, false, terraformContext)
 			if err != nil {
 				return err
 			}
