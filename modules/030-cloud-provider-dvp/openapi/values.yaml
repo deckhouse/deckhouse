@@ -474,6 +474,8 @@ properties:
         items:
           type: object
           properties:
+            name:
+              type: string
             dvpStorageClass:
               type: string
             dvpStorageClass:
