@@ -542,9 +542,6 @@ func (f *DeckhouseReleaseFetcher) createRelease(
 				v1alpha1.DeckhouseReleaseAnnotationNotified:    "false",
 				v1alpha1.DeckhouseReleaseAnnotationChangeCause: changeCause,
 			},
-			Labels: map[string]string{
-				"heritage": "deckhouse",
-			},
 		},
 		Spec: v1alpha1.DeckhouseReleaseSpec{
 			Version:       releaseMetadata.Version,
