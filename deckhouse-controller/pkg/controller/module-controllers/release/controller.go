@@ -34,7 +34,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
-	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
+	"github.com/flant/shell-operator/pkg/metric"
 	cp "github.com/otiai10/copy"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -81,7 +81,7 @@ func RegisterController(
 	mm moduleManager,
 	dc dependency.Container,
 	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer,
-	ms *metricstorage.MetricStorage,
+	ms metric.Storage,
 	logger *log.Logger,
 ) error {
 	r := &reconciler{
@@ -135,7 +135,7 @@ type reconciler struct {
 	dependencyContainer  dependency.Container
 	embeddedPolicy       *helpers.ModuleUpdatePolicySpecContainer
 	moduleManager        moduleManager
-	metricStorage        *metricstorage.MetricStorage
+	metricStorage        metric.Storage
 	downloadedModulesDir string
 	symlinksDir          string
 	restartReason        string
