@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"os"
 
@@ -25,6 +26,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -32,21 +34,20 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	state_terraform "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
+	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
 type Params struct {
-	CommanderMode    bool
-	CommanderUUID    uuid.UUID
-	SSHClient        *ssh.Client
-	OnCheckResult    func(*check.CheckResult) error
-	TerraformContext *terraform.TerraformContext
-	OnPhaseFunc      OnPhaseFunc
-	AttachResources  AttachResources
-	ScanOnly         *bool
+	CommanderMode         bool
+	CommanderUUID         uuid.UUID
+	SSHClient             *ssh.Client
+	OnCheckResult         func(*check.CheckResult) error
+	InfrastructureContext *infrastructure.Context
+	OnPhaseFunc           OnPhaseFunc
+	AttachResources       AttachResources
+	ScanOnly              *bool
 }
 
 type AttachResources struct {
@@ -77,6 +78,7 @@ func NewAttacher(params *Params) *Attacher {
 
 func (i *Attacher) Attach(ctx context.Context) (*AttachResult, error) {
 	kubeClient, metaConfig, err := i.prepare(ctx)
+	i.Params.InfrastructureContext = infrastructure.NewContextWithProvider(infrastructureprovider.ExecutorProvider(metaConfig))
 	if err != nil {
 		return nil, fmt.Errorf("unable to prepare cluster attach to commander: %w", err)
 	}
@@ -201,7 +203,7 @@ func (i *Attacher) scan(
 
 		res = &ScanResult{}
 
-		metaConfig.UUID, err = state_terraform.GetClusterUUID(ctx, kubeClient)
+		metaConfig.UUID, err = infrastructurestate.GetClusterUUID(ctx, kubeClient)
 		if err != nil {
 			return fmt.Errorf("unable to get cluster uuid: %w", err)
 		}
@@ -237,12 +239,12 @@ func (i *Attacher) scan(
 			return fmt.Errorf("unable to get ssh public key: %w", err)
 		}
 
-		nodesState, err := state_terraform.GetNodesStateFromCluster(ctx, kubeClient)
+		nodesState, err := infrastructurestate.GetNodesStateFromCluster(ctx, kubeClient)
 		if err != nil {
 			return fmt.Errorf("unable to get nodes tf state: %w", err)
 		}
 
-		clusterState, err := state_terraform.GetClusterStateFromCluster(ctx, kubeClient)
+		clusterState, err := infrastructurestate.GetClusterStateFromCluster(ctx, kubeClient)
 		if err != nil {
 			return fmt.Errorf("unable get cluster tf state: %w", err)
 		}
@@ -326,7 +328,7 @@ func (i *Attacher) check(
 				[]byte(scanResult.ClusterConfiguration),
 				[]byte(scanResult.ProviderSpecificClusterConfiguration),
 			),
-			TerraformContext: i.Params.TerraformContext,
+			InfrastructureContext: i.Params.InfrastructureContext,
 		})
 
 		res, err = checker.Check(ctx)

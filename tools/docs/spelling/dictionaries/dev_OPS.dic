@@ -1,4 +1,4 @@
-2040
+2047
 1GB
 2GB
 5XX
@@ -6,6 +6,8 @@ AbsoluteVersion
 acceptRequestsFrom
 accessLevel
 ACS
+additionalAPIAudiences
+additionalAPIIssuers
 additionalPrinterColumns
 additionalProperties
 additionalSecurityGroups
@@ -836,6 +838,8 @@ OpenStackClusterConfiguration
 OpenStackEE
 OpenStackInstanceClass
 OpenStackInstanceClasses
+opentofu
+Opentofu
 openvpn
 OpenVPN
 openvpn-admin
@@ -1041,6 +1045,7 @@ SEMVER
 Sep
 sequelize
 sequelizerc
+serviceAccount
 ServiceAccount
 ServiceAccounts
 ServiceEntry
@@ -1300,6 +1305,7 @@ Yadro
 yaml
 yandex
 Yandex
+YandexCloud
 YandexClusterConfiguration
 YandexInstanceClass
 YandexInstanceClasses
@@ -1503,10 +1509,10 @@ zVirt
 инсталлятором
 инстанс
 инстанса
-инстансом
 инстансам
 инстансах
 инстансов
+инстансом
 инстансу
 инстансы
 интеграций
