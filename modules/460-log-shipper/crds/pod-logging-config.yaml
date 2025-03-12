@@ -121,7 +121,7 @@ spec:
                     - field: message
                       operator: Regex
                       values:
-                    - .*serch_text.*
+                    - .*search_text.*
                   items:
                     type: object
                     required:
