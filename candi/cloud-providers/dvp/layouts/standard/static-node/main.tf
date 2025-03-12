@@ -23,16 +23,6 @@ module "root-disk" {
   storage_class = local.root_disk_storage_class
 }
 
-module "kubernetes-data-disk" {
-  source        = "../../../terraform-modules/kubernetes-data-disk/"
-  prefix        = local.prefix
-  node_group    = local.node_group
-  node_index    = local.node_index
-  namespace     = local.namespace
-  storage_class = local.kubernetes_data_disk_storage_class
-  size          = local.kubernetes_data_disk_size
-}
-
 module "ipv4-address" {
   source       = "../../../terraform-modules/ipv4-address/"
   namespace    = local.namespace
@@ -40,14 +30,13 @@ module "ipv4-address" {
   ipv4_address = local.ipv4_address
 }
 
-module "master" {
-  source                 = "../../../terraform-modules/master"
+module "static-node" {
+  source                 = "../../../terraform-modules/static-node/"
   prefix                 = local.prefix
   node_group             = local.node_group
   namespace              = local.namespace
   node_index             = local.node_index
   root_disk              = module.root-disk
-  kubernetes_data_disk   = module.kubernetes-data-disk
   ipv4_address           = module.ipv4-address
   memory_size            = local.memory_size
   cpu                    = local.cpu
