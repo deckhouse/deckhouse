@@ -48,9 +48,10 @@ type Discoverer interface {
 }
 
 type Reconciler struct {
-	cloudRequestErrorMetric   *prometheus.GaugeVec
-	updateResourceErrorMetric *prometheus.GaugeVec
-	orphanedDiskMetric        *prometheus.GaugeVec
+	cloudRequestErrorMetric    *prometheus.GaugeVec
+	updateResourceErrorMetric  *prometheus.GaugeVec
+	orphanedDiskMetric         *prometheus.GaugeVec
+	cloudConditionsErrorMetric *prometheus.GaugeVec
 
 	discoverer       Discoverer
 	checkInterval    time.Duration
@@ -155,6 +156,16 @@ func (c *Reconciler) registerMetrics() {
 		[]string{"id", "name"},
 	)
 	prometheus.MustRegister(c.orphanedDiskMetric)
+
+	c.cloudConditionsErrorMetric = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "cloud_data",
+		Subsystem: "discovery",
+		Name:      "cloud_conditions_error",
+		Help:      "Indicates that there are unmet cloud conditions in the cluster",
+	},
+		[]string{"name", "message"},
+	)
+	prometheus.MustRegister(c.cloudConditionsErrorMetric)
 }
 
 func (c *Reconciler) setProbe(probe bool) {
@@ -229,13 +240,17 @@ func (c *Reconciler) checkCloudConditions(ctx context.Context) {
 		return
 	}
 
+	c.cloudConditionsErrorMetric.Reset()
 	for i := range conditions {
 		c.checkCondition(conditions[i], ctx)
 	}
 }
 
 func (c *Reconciler) checkCondition(condition v1alpha1.CloudCondition, ctx context.Context) {
-	// TODO
+	c.logger.Debugf("Condition (%s) message: %s, ok: %s", condition.Name, condition.Message, condition.Ok)
+	if !condition.Ok {
+		c.orphanedDiskMetric.WithLabelValues(condition.Name, condition.Message).Set(1.0)
+	}
 }
 
 func (c *Reconciler) instanceTypesReconcile(ctx context.Context) {
