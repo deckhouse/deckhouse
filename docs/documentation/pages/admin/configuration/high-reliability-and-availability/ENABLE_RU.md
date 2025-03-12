@@ -27,8 +27,8 @@ lang: ru
    
    Чтобы убедиться, что режим включился, можно, например, проверить количество подов `deckhouse` в пространстве имён `d8-system`. Для этого выполните команду:
    
-   ```text
-   $ sudo -i d8 k -n d8-system get po | grep deckhouse
+   ```shell
+   sudo -i d8 k -n d8-system get po | grep deckhouse
    ```
    
    Количество подов deckhouse должно быть больше одного:
