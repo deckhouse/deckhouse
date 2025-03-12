@@ -1,0 +1,32 @@
+- name: d8.migrate-to-tofu
+  rules:
+  - alert: D8NeedMigrateStateToOpenTofu
+    expr: |
+      d8_need_migrate_to_tofu == 1
+    for: 10m
+    labels:
+      severity_level: "4"
+      tier: cluster
+      d8_module: terraform-manager
+      d8_component: terraform-state-exporter
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: "Need migrate state from terraform to OpenTofu"
+      description: |
+        The Terraform version in the state does not match the current version, possibly because auto-migration to OpenTofu was canceled due to destructive changes in the cluster's state.
+        Please verify:
+        - Current version: `kubectl -n d8-system exec -it deployments/terraform-state-exporter -c exporter -- terraform version`
+        - State version: `kubectl -n d8-system get secret d8-cluster-terraform-state -o json | jq -r '.data["cluster-tf-state.json"] | @base64d | fromjson | .terraform_version'`
+        - Check Terraform state changes: `kubectl exec -it deploy/terraform-state-exporter -n d8-system -- dhctl terraform check`
+
+        To migrate to OpenTofu:
+        1. Using the `install` container with a version of the previous major Deckhouse release (e.g., 1.69.X while the cluster is now on 1.70.X) run `dhctl converge` and resolve all destructive changes in the cluster.
+        2. After time terraform-auto-converger pod should migrate automatically.
+        If auto-migration doesn't happen: using the `install` container with the current cluster's Deckhouse release version run `dhctl converge-migration` to migrate state to OpenTofu.
+
+        If this alert fires at a cluster created by the Deckhouse Commander that means that cluster has updated to a new Deckhouse version with not approved changes in state, like destructive changes, to resolve it:
+        1. At Deckhouse Commander press the `Delete manually` button to remove the cluster out of control temporarily.
+        2. Delete commander-agent module `kubectl delete mc commander-agent` from the cluster.
+        3. Using the `install` container with a version of the previous major Deckhouse release (e.g., 1.69.X while the cluster is now on 1.70.X) run `dhctl converge` and resolve all changes in the cluster.
+        4. At the Deckhouse Commander press the `Attach` button to attach the cluster back.

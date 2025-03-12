@@ -55,7 +55,7 @@ func BoldFailOptions(opts types.LogProcessOptionsInterface) {
 	opts.Style(boldStyle())
 }
 
-func TerraformOptions(opts types.LogProcessOptionsInterface) {
+func InfrastructureOptions(opts types.LogProcessOptionsInterface) {
 	opts.Style(color.New(color.FgGreen, color.Bold))
 }
 

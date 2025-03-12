@@ -14,7 +14,7 @@
 
 package state
 
-type NodeGroupTerraformState struct {
+type NodeGroupInfrastructureState struct {
 	State    map[string][]byte
 	Settings []byte
 }

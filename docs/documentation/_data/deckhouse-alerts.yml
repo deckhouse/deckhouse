@@ -2063,6 +2063,27 @@ alerts:
         Deckhouse suggests reducing quota-backend-bytes.
       severity: "6"
       markupFormat: markdown
+    - name: D8NeedMigrateStateToOpenTofu
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/migrate-to-tofu.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        The Terraform version in the state does not match the current version, possibly because auto-migration to OpenTofu was canceled due to destructive changes in the cluster's state.
+        Please verify:
+        - Current version: `kubectl -n d8-system exec -it deployments/terraform-state-exporter -c exporter -- terraform version`
+        - State version: `kubectl -n d8-system get secret d8-cluster-terraform-state -o json | jq -r '.data["cluster-tf-state.json"] | @base64d | fromjson | .terraform_version'`
+        - Check Terraform state changes: `kubectl exec -it deploy/terraform-state-exporter -n d8-system -- dhctl terraform check`
+
+        To migrate to OpenTofu:
+        1. Using the `install` container with a version of the previous major Deckhouse release (e.g., 1.69.X while the cluster is now on 1.70.X) run `dhctl converge` and resolve all destructive changes in the cluster.
+        2. After a time, the terraform-auto-converger pod should migrate automatically.
+
+        If auto-migration doesn't happen, use the `install` container with the current cluster's Deckhouse release version and run 'dhctl converge-migration` to migrate to OpenTofu.
+      summary: |
+        Need migrate state from terraform to OpenTofu
+      severity: "4"
+      markupFormat: markdown
     - name: D8NginxIngressKruiseControllerPodIsRestartingTooOften
       sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
       moduleUrl: 402-ingress-nginx
