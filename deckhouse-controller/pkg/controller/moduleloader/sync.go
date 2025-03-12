@@ -46,7 +46,7 @@ const (
 )
 
 func (l *Loader) runDeleteStaleModuleReleasesLoop(ctx context.Context) {
-	_ = wait.PollUntilContextCancel(ctx, deleteStaleModuleLoopInterval, true, func(ctx context.Context) (done bool, err error) {
+	_ = wait.PollUntilContextCancel(ctx, deleteStaleModuleLoopInterval, true, func(_ context.Context) (done bool, err error) {
 		if err = l.deleteStaleModuleReleases(ctx); err != nil {
 			l.logger.Warn("failed to delete stale modules: %v", err)
 		}
