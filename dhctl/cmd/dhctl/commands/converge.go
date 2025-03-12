@@ -36,10 +36,6 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		if err != nil {
 			return err
 		}
-		err = sshClient.Start()
-		if err != nil {
-			return err
-		}
 
 		converger := converge.NewConverger(&converge.Params{
 			SSHClient:        sshClient,

@@ -141,11 +141,6 @@ func DefineTestUploadExecCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return nil
 		}
 
-		err = sshClient.Start()
-		if err != nil {
-			return err
-		}
-
 		cmd := sshClient.UploadScript(ScriptPath)
 		if Sudo {
 			cmd.Sudo()
@@ -184,11 +179,6 @@ func DefineTestBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		sshClient, err := gossh.NewInitClientFromFlagsWithHosts(true)
 		if err != nil {
 			return nil
-		}
-
-		err = sshClient.Start()
-		if err != nil {
-			return err
 		}
 
 		cmd := sshClient.UploadScript(ScriptName)
