@@ -48,9 +48,7 @@ const (
 )
 
 type DrainTimeoutError struct {
-	PodName   string
-	Namespace string
-	Timeout   time.Duration
+	Timeout time.Duration
 }
 
 func (e *DrainTimeoutError) Error() string {
@@ -300,9 +298,7 @@ func (d *Helper) evictPods(pods []corev1.Pod, evictionGroupVersion schema.GroupV
 				}
 				select {
 				case <-ctx.Done():
-					returnCh <- &DrainTimeoutError{
-						PodName:   pod.Name,
-						Namespace: pod.Namespace,
+					returnCh <- &DrainTimeoutError{,
 						Timeout:   globalTimeout,
 					}
 					return
@@ -453,7 +449,9 @@ func waitForDelete(params waitForDeleteParams) ([]corev1.Pod, error) {
 		if len(pendingPods) > 0 {
 			select {
 			case <-params.ctx.Done():
-				return false, fmt.Errorf("global timeout reached: %v", params.globalTimeout)
+				return false, &DrainTimeoutError{
+					Timeout: params.globalTimeout,
+				}
 			default:
 				return false, nil
 			}
