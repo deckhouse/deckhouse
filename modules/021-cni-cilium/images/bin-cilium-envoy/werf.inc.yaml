@@ -27,7 +27,7 @@ shell:
   - cd /src/proxy
   - git checkout {{ $ciliumProxyRev }}
   - git apply --verbose /patches/*.patch
-  - rm -rf /src/proxy/.git
+  - rm -rf .git vendor
 ---
 image: {{ .ModuleName }}/cilium-envoy-artifact
 fromImage: {{ .ModuleName }}/base-cilium-dev
