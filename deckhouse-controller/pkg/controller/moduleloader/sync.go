@@ -48,7 +48,7 @@ const (
 func (l *Loader) runDeleteStaleModuleReleasesLoop(ctx context.Context) {
 	_ = wait.PollUntilContextCancel(ctx, deleteStaleModuleLoopInterval, true, func(ctx context.Context) (done bool, err error) {
 		if err = l.deleteStaleModuleReleases(ctx); err != nil {
-			l.log.Warn("failed to delete stale modules: %v", err)
+			l.logger.Warn("failed to delete stale modules: %v", err)
 		}
 		return false, nil
 	})
@@ -65,7 +65,7 @@ func (l *Loader) deleteStaleModuleReleases(ctx context.Context) error {
 		// handle too long disabled embedded modules
 		if module.DisabledByModuleConfigMoreThan(deleteReleasesAfter) && !module.IsEmbedded() {
 			// delete module releases of a stale module
-			l.log.Debugf("the %q module disabled too long, delete module releases", module.Name)
+			l.logger.Debugf("the %q module disabled too long, delete module releases", module.Name)
 			moduleReleases := new(v1alpha1.ModuleReleaseList)
 			if err := l.client.List(ctx, moduleReleases, &client.MatchingLabels{"module": module.Name}); err != nil {
 				return fmt.Errorf("list module releases for the '%s' module: %w", module.Name, err)
