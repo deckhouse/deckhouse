@@ -47,6 +47,16 @@ const (
 	podSkipMsgTemplate  = "pod %q has DeletionTimestamp older than %v seconds, skipping\n"
 )
 
+type DrainTimeoutError struct {
+	PodName   string
+	Namespace string
+	Timeout   time.Duration
+}
+
+func (e *DrainTimeoutError) Error() string {
+	return fmt.Sprintf("error when evicting pod %q -n %q: global timeout reached: %v", e.PodName, e.Namespace, e.Timeout)
+}
+
 // Helper contains the parameters to control the behaviour of drainer
 type Helper struct {
 	Ctx    context.Context
@@ -200,7 +210,6 @@ func (d *Helper) GetPodsForDeletion(nodeName string) (*PodDeleteList, []error) {
 		podList.Items = append(podList.Items, newPods.Items...)
 		return newPods, nil
 	})
-
 	if err != nil {
 		return nil, []error{err}
 	}
@@ -291,8 +300,11 @@ func (d *Helper) evictPods(pods []corev1.Pod, evictionGroupVersion schema.GroupV
 				}
 				select {
 				case <-ctx.Done():
-					// return here or we'll leak a goroutine.
-					returnCh <- fmt.Errorf("error when evicting pods/%q -n %q: global timeout reached: %v", pod.Name, pod.Namespace, globalTimeout)
+					returnCh <- &DrainTimeoutError{
+						PodName:   pod.Name,
+						Namespace: pod.Namespace,
+						Timeout:   globalTimeout,
+					}
 					return
 				default:
 				}

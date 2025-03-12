@@ -202,13 +202,28 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 
 	input.MetricsCollector.Expire("d8_node_draining")
 	for drainedNode := range drainingNodesC {
+		shouldIgnore := false
+
 		if drainedNode.Err != nil {
-			input.Logger.Errorf("node %q drain failed: %s", drainedNode.NodeName, drainedNode.Err)
+			switch drainedNode.Err.(type) {
+			case *drain.DrainTimeoutError:
+				shouldIgnore = true
+				input.Logger.Errorf("node %q drain timeout: %s", drainedNode.NodeName, drainedNode.Err)
+			default:
+				input.Logger.Errorf("node %q drain failed: %s", drainedNode.NodeName, drainedNode.Err)
+			}
+
 			event := drainedNode.buildEvent()
 			input.PatchCollector.Create(event, object_patch.UpdateIfExists())
-			input.MetricsCollector.Set("d8_node_draining", 1, map[string]string{"node": drainedNode.NodeName, "message": drainedNode.Err.Error()})
-			continue
+			input.MetricsCollector.Set("d8_node_draining", 1, map[string]string{
+				"node":    drainedNode.NodeName,
+				"message": drainedNode.Err.Error(),
+			})
+			if !shouldIgnore {
+				continue
+			}
 		}
+
 		input.PatchCollector.MergePatch(newDrainedAnnotationPatch(drainedNode.DrainingSource), "v1", "Node", "", drainedNode.NodeName)
 	}
 
