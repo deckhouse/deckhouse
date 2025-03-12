@@ -559,11 +559,11 @@ func generateSecret(name, namespace string, data map[string][]byte, labels map[s
 	}
 }
 
-const TerraformClusterStateName = "d8-cluster-terraform-state"
+const InfrastructureClusterStateName = "d8-cluster-terraform-state"
 
-func SecretWithTerraformState(data []byte) *apiv1.Secret {
+func SecretWithInfrastructureState(data []byte) *apiv1.Secret {
 	return generateSecret(
-		TerraformClusterStateName,
+		InfrastructureClusterStateName,
 		"d8-system",
 		map[string][]byte{
 			"cluster-tf-state.json": data,
@@ -574,7 +574,7 @@ func SecretWithTerraformState(data []byte) *apiv1.Secret {
 	)
 }
 
-func PatchWithTerraformState(stateData []byte) interface{} {
+func PatchWithInfrastructureState(stateData []byte) interface{} {
 	return map[string]interface{}{
 		"data": map[string]interface{}{
 			"cluster-tf-state.json": stateData,
@@ -622,17 +622,17 @@ func SecretWithStaticClusterConfig(configData []byte) *apiv1.Secret {
 	)
 }
 
-func SecretNameForNodeTerraformState(nodeName string) string {
+func SecretNameForNodeInfrastructureState(nodeName string) string {
 	return "d8-node-terraform-state-" + nodeName
 }
 
-func SecretWithNodeTerraformState(nodeName, nodeGroup string, data, settings []byte) *apiv1.Secret {
+func SecretWithNodeInfrastructureState(nodeName, nodeGroup string, data, settings []byte) *apiv1.Secret {
 	body := map[string][]byte{"node-tf-state.json": data}
 	if settings != nil {
 		body["node-group-settings.json"] = settings
 	}
 	return generateSecret(
-		SecretNameForNodeTerraformState(nodeName),
+		SecretNameForNodeInfrastructureState(nodeName),
 		"d8-system",
 		body,
 		map[string]string{
@@ -644,7 +644,7 @@ func SecretWithNodeTerraformState(nodeName, nodeGroup string, data, settings []b
 	)
 }
 
-func PatchWithNodeTerraformState(stateData []byte) interface{} {
+func PatchWithNodeInfrastructureState(stateData []byte) interface{} {
 	return map[string]interface{}{
 		"data": map[string]interface{}{
 			"node-tf-state.json": stateData,

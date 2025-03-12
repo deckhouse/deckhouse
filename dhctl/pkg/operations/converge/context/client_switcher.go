@@ -20,6 +20,9 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
@@ -28,7 +31,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
 type KubeClientSwitcher struct {
@@ -117,16 +119,23 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 	settings := sshCl.Settings
 
 	for nodeName, stateBytes := range state {
+		metaConfig, err := s.ctx.MetaConfig()
+		if err != nil {
+			return fmt.Errorf("failed to get meta config for node %s: %w", nodeName, err)
+		}
 		statePath := filepath.Join(tmpDir, fmt.Sprintf("%s.tfstate", nodeName))
 
 		log.DebugF("for extracting statePath: %s", statePath)
 
-		err := os.WriteFile(statePath, stateBytes, 0o644)
+		err = os.WriteFile(statePath, stateBytes, 0o644)
 		if err != nil {
-			return fmt.Errorf("failed to write terraform state: %w", err)
+			return fmt.Errorf("failed to write infrastructure state: %w", err)
 		}
 
-		ipAddress, err := terraform.GetMasterIPAddressForSSH(s.ctx.Ctx(), statePath)
+		// yes working dir for output is not required
+		executor := infrastructureprovider.ExecutorProvider(metaConfig)("", log.GetDefaultLogger())
+
+		ipAddress, err := infrastructure.GetMasterIPAddressForSSH(s.ctx.Ctx(), statePath, executor)
 		if err != nil {
 			log.WarnF("failed to get master IP address: %s", err)
 			continue

@@ -96,7 +96,7 @@ func GlobalFlags(cmd *kingpin.Application) {
 func DefineConfigFlags(cmd *kingpin.CmdClause) {
 	cmd.Flag("config", `Path to a file with bootstrap configuration and declared Kubernetes resources in YAML format.
 It can be go-template file (for only string keys!). Passed data contains next keys:
-  cloudDiscovery - the data discovered by applying Terraform and getting its output. It depends on the cloud provider.
+  cloudDiscovery - the data discovered by applying infrastructure creation utility and getting its output. It depends on the cloud provider.
 `).
 		Required().
 		Envar(configEnvName("CONFIG")).

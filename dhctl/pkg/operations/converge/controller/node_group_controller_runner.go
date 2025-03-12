@@ -24,7 +24,7 @@ type NodeGroupControllerRunner interface {
 	Run(ctx *context.Context) error
 }
 
-func NewNodeGroupControllerRunner(name string, state state.NodeGroupTerraformState, excludeNodes map[string]bool) NodeGroupControllerRunner {
+func NewNodeGroupControllerRunner(name string, state state.NodeGroupInfrastructureState, excludeNodes map[string]bool) NodeGroupControllerRunner {
 	controller := NewNodeGroupController(name, state, excludeNodes)
 
 	if name == global.MasterNodeGroupName {

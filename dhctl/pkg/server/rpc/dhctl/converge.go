@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"io"
 	"log/slog"
 
@@ -28,6 +29,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
@@ -40,7 +42,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -206,7 +207,7 @@ func (s *Service) converge(
 		return &pb.ConvergeResult{Err: err.Error()}
 	}
 
-	terraformContext := terraform.NewTerraformContext()
+	infrastructureContext := infrastructure.NewContextWithProvider(infrastructureprovider.ExecutorProvider(metaConfig))
 
 	var commanderUUID uuid.UUID
 	if request.Options.CommanderUuid != "" {
@@ -224,7 +225,6 @@ func (s *Service) converge(
 			[]byte(request.ClusterConfig),
 			[]byte(request.ProviderSpecificClusterConfig),
 		),
-		TerraformContext: terraform.NewTerraformContext(),
 	}
 
 	convergeParams := &converge.Params{
@@ -237,7 +237,7 @@ func (s *Service) converge(
 			[]byte(request.ClusterConfig),
 			[]byte(request.ProviderSpecificClusterConfig),
 		),
-		TerraformContext:           terraformContext,
+		InfrastructureContext:      infrastructureContext,
 		ApproveDestructiveChangeID: request.ApproveDestructionChangeId,
 		OnCheckResult:              onCheckResult,
 	}

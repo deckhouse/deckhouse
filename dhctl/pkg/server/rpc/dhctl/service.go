@@ -205,7 +205,7 @@ func (b *fsmPhaseSwitcher[T, OperationPhaseDataT]) switchPhase(ctx context.Conte
 
 func onCheckResult(checkRes *check.CheckResult) error {
 	printableCheckRes := *checkRes
-	printableCheckRes.StatusDetails.TerraformPlan = nil
+	printableCheckRes.StatusDetails.InfrastructurePlan = nil
 
 	printableCheckResDump, err := json.MarshalIndent(printableCheckRes, "", "  ")
 	if err != nil {

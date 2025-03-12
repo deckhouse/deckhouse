@@ -19,7 +19,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	state_terraform "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
+	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 )
 
 func GetMetaConfig(ctx context.Context, kubeCl *client.KubernetesClient) (*config.MetaConfig, error) {
@@ -28,7 +28,7 @@ func GetMetaConfig(ctx context.Context, kubeCl *client.KubernetesClient) (*confi
 		return nil, err
 	}
 
-	metaConfig.UUID, err = state_terraform.GetClusterUUID(ctx, kubeCl)
+	metaConfig.UUID, err = infrastructurestate.GetClusterUUID(ctx, kubeCl)
 	if err != nil {
 		return nil, err
 	}

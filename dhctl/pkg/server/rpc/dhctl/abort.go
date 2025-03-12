@@ -39,7 +39,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
 func (s *Service) Abort(server pb.DHCTL_AbortServer) error {
@@ -252,7 +251,6 @@ func (s *Service) abort(
 		OnPhaseFunc:       switchPhase,
 		CommanderMode:     request.Options.CommanderMode,
 		CommanderUUID:     commanderUUID,
-		TerraformContext:  terraform.NewTerraformContext(),
 	})
 
 	abortErr := bootstrapper.Abort(ctx, false)

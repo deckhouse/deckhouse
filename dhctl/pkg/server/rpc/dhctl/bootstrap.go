@@ -40,7 +40,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
 func (s *Service) Bootstrap(server pb.DHCTL_BootstrapServer) error {
@@ -261,7 +260,6 @@ func (s *Service) bootstrap(
 		OnPhaseFunc:                switchPhase,
 		CommanderMode:              request.Options.CommanderMode,
 		CommanderUUID:              commanderUUID,
-		TerraformContext:           terraform.NewTerraformContext(),
 		ConfigPaths:                configPaths,
 		ResourcesTimeout:           request.Options.ResourcesTimeout.AsDuration(),
 		DeckhouseTimeout:           request.Options.DeckhouseTimeout.AsDuration(),

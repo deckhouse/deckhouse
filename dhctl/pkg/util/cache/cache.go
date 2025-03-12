@@ -82,7 +82,7 @@ func NewStateCacheWithInitialState(dir string, initialState map[string][]byte) (
 // SaveStruct saves bytes to a file
 func (s *StateCache) Save(name string, content []byte) error {
 	if err := os.WriteFile(s.GetPath(name), content, 0o600); err != nil {
-		log.ErrorF("Can't save terraform state in cache: %v", err)
+		log.ErrorF("Can't save infrastructure state in cache: %v", err)
 	}
 
 	return nil
@@ -199,12 +199,12 @@ func (s *StateCache) Iterate(iterFunc func(string, []byte) error) error {
 }
 
 func (s *StateCache) NeedIntermediateSave() bool {
-	// cache use one file with terraform
+	// cache use one file with infrastructure state
 	return false
 }
 
 func (s *StateCache) Dir() string {
-	// cache use one file with terraform
+	// cache use one file with infrastructure state
 	return s.dir
 }
 

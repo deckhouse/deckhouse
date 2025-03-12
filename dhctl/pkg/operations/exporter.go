@@ -20,17 +20,19 @@ import (
 	"os"
 	"time"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
-	state_terraform "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
+	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
@@ -52,8 +54,8 @@ func (p *previouslyExistedEntities) AddNodeGroup(name string) {
 }
 
 type ConvergeExporter struct {
-	kubeCl           *client.KubernetesClient
-	terraformContext *terraform.TerraformContext
+	kubeCl                *client.KubernetesClient
+	infrastructureContext *infrastructure.Context
 
 	MetricsPath   string
 	ListenAddress string
@@ -99,11 +101,11 @@ func NewConvergeExporter(address, path string, interval time.Duration) *Converge
 	}
 
 	return &ConvergeExporter{
-		MetricsPath:      path,
-		ListenAddress:    address,
-		kubeCl:           kubeCl,
-		terraformContext: terraform.NewTerraformContext(),
-		CheckInterval:    interval,
+		MetricsPath:           path,
+		ListenAddress:         address,
+		kubeCl:                kubeCl,
+		infrastructureContext: infrastructure.NewContext(),
+		CheckInterval:         interval,
 
 		existedEntities: newPreviouslyExistedEntities(),
 
@@ -117,7 +119,7 @@ func (c *ConvergeExporter) registerMetrics() {
 		Namespace: "candi",
 		Subsystem: "converge",
 		Name:      "cluster_status",
-		Help:      "Terraform state status of Kubernetes cluster",
+		Help:      "Infrastructure state status of Kubernetes cluster",
 	},
 		[]string{"status"},
 	)
@@ -128,7 +130,7 @@ func (c *ConvergeExporter) registerMetrics() {
 		Namespace: "candi",
 		Subsystem: "converge",
 		Name:      "node_group_status",
-		Help:      "Terraform state status of NodeGroup",
+		Help:      "Infrastructure state status of NodeGroup",
 	},
 		[]string{"status", "name"},
 	)
@@ -139,7 +141,7 @@ func (c *ConvergeExporter) registerMetrics() {
 		Namespace: "candi",
 		Subsystem: "converge",
 		Name:      "node_status",
-		Help:      "Terraform state status of single Node",
+		Help:      "Infrastructure state status of single Node",
 	},
 		[]string{"status", "node_group", "name"},
 	)
@@ -226,20 +228,22 @@ func (c *ConvergeExporter) getStatistic(ctx context.Context) *check.Statistics {
 		return nil
 	}
 
-	metaConfig.UUID, err = state_terraform.GetClusterUUID(ctx, c.kubeCl)
+	metaConfig.UUID, err = infrastructurestate.GetClusterUUID(ctx, c.kubeCl)
 	if err != nil {
 		log.ErrorLn(err)
 		c.CounterMetrics["errors"].WithLabelValues().Inc()
 		return nil
 	}
 
-	statistic, err := check.CheckState(ctx, c.kubeCl, metaConfig, c.terraformContext, check.CheckStateOptions{})
+	c.infrastructureContext.SetExecutorProvider(infrastructureprovider.ExecutorProvider(metaConfig))
+
+	statistic, err := check.CheckState(ctx, c.kubeCl, metaConfig, c.infrastructureContext, check.CheckStateOptions{})
 	if err != nil {
 		log.ErrorLn(err)
 		c.CounterMetrics["errors"].WithLabelValues().Inc()
 
 		// We still want to return collected statistic in case of error, because the error returned from
-		// the CheckState call is a combination of errors from all terraform runs.
+		// the CheckState call is a combination of errors from all infrastructure utility runs.
 	}
 
 	return statistic

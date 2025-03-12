@@ -34,19 +34,19 @@ const (
 )
 
 type DeckhouseInstaller struct {
-	Registry              RegistryData
-	LogLevel              string
-	Bundle                string
-	DevBranch             string
-	UUID                  string
-	KubeDNSAddress        string
-	ClusterConfig         []byte
-	ProviderClusterConfig []byte
-	StaticClusterConfig   []byte
-	TerraformState        []byte
-	NodesTerraformState   map[string][]byte
-	CloudDiscovery        []byte
-	ModuleConfigs         []*ModuleConfig
+	Registry                 RegistryData
+	LogLevel                 string
+	Bundle                   string
+	DevBranch                string
+	UUID                     string
+	KubeDNSAddress           string
+	ClusterConfig            []byte
+	ProviderClusterConfig    []byte
+	StaticClusterConfig      []byte
+	InfrastructureState      []byte
+	NodesInfrastructureState map[string][]byte
+	CloudDiscovery           []byte
+	ModuleConfigs            []*ModuleConfig
 
 	KubeadmBootstrap   bool
 	MasterNodeSelector bool
