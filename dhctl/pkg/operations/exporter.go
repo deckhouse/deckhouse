@@ -25,12 +25,13 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
-	state_terraform "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
+	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
@@ -52,8 +53,8 @@ func (p *previouslyExistedEntities) AddNodeGroup(name string) {
 }
 
 type ConvergeExporter struct {
-	kubeCl           *client.KubernetesClient
-	terraformContext *terraform.TerraformContext
+	kubeCl                *client.KubernetesClient
+	infrastructureContext *infrastructure.Context
 
 	MetricsPath   string
 	ListenAddress string
@@ -61,8 +62,9 @@ type ConvergeExporter struct {
 
 	existedEntities *previouslyExistedEntities
 
-	GaugeMetrics   map[string]*prometheus.GaugeVec
-	CounterMetrics map[string]*prometheus.CounterVec
+	OneGaugeMetrics map[string]prometheus.Gauge
+	GaugeMetrics    map[string]*prometheus.GaugeVec
+	CounterMetrics  map[string]*prometheus.CounterVec
 }
 
 var (
@@ -99,25 +101,46 @@ func NewConvergeExporter(address, path string, interval time.Duration) *Converge
 	}
 
 	return &ConvergeExporter{
-		MetricsPath:      path,
-		ListenAddress:    address,
-		kubeCl:           kubeCl,
-		terraformContext: terraform.NewTerraformContext(),
-		CheckInterval:    interval,
+		MetricsPath:           path,
+		ListenAddress:         address,
+		kubeCl:                kubeCl,
+		infrastructureContext: infrastructure.NewContext(),
+		CheckInterval:         interval,
 
 		existedEntities: newPreviouslyExistedEntities(),
 
-		GaugeMetrics:   make(map[string]*prometheus.GaugeVec),
-		CounterMetrics: make(map[string]*prometheus.CounterVec),
+		OneGaugeMetrics: make(map[string]prometheus.Gauge),
+		GaugeMetrics:    make(map[string]*prometheus.GaugeVec),
+		CounterMetrics:  make(map[string]*prometheus.CounterVec),
 	}
 }
 
 func (c *ConvergeExporter) registerMetrics() {
+	needMigrateToOpentofu := prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace: "candi",
+		Subsystem: "converge",
+		Name:      "need_migrate_to_tofu",
+		Help:      "Infrastructure states have terraform instead of opentofu",
+	})
+	prometheus.MustRegister(needMigrateToOpentofu)
+	c.OneGaugeMetrics["need_migrate_to_tofu"] = needMigrateToOpentofu
+
+	terraformStateVersionVec := prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "candi",
+		Subsystem: "converge",
+		Name:      "terraform_state_version",
+		Help:      "terraform version in the state",
+	},
+		[]string{"version"},
+	)
+	prometheus.MustRegister(terraformStateVersionVec)
+	c.GaugeMetrics["terraform_state_version"] = terraformStateVersionVec
+
 	clusterStateVec := prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: "candi",
 		Subsystem: "converge",
 		Name:      "cluster_status",
-		Help:      "Terraform state status of Kubernetes cluster",
+		Help:      "Infrastructure state status of Kubernetes cluster",
 	},
 		[]string{"status"},
 	)
@@ -128,7 +151,7 @@ func (c *ConvergeExporter) registerMetrics() {
 		Namespace: "candi",
 		Subsystem: "converge",
 		Name:      "node_group_status",
-		Help:      "Terraform state status of NodeGroup",
+		Help:      "Infrastructure state status of NodeGroup",
 	},
 		[]string{"status", "name"},
 	)
@@ -139,7 +162,7 @@ func (c *ConvergeExporter) registerMetrics() {
 		Namespace: "candi",
 		Subsystem: "converge",
 		Name:      "node_status",
-		Help:      "Terraform state status of single Node",
+		Help:      "Infrastructure state status of single Node",
 	},
 		[]string{"status", "node_group", "name"},
 	)
@@ -218,36 +241,48 @@ func (c *ConvergeExporter) convergeLoop(ctx context.Context) {
 	}
 }
 
-func (c *ConvergeExporter) getStatistic(ctx context.Context) *check.Statistics {
+func (c *ConvergeExporter) getStatistic(ctx context.Context) (*check.Statistics, bool) {
 	metaConfig, err := config.ParseConfigInCluster(ctx, c.kubeCl)
 	if err != nil {
 		log.ErrorLn(err)
 		c.CounterMetrics["errors"].WithLabelValues().Inc()
-		return nil
+		return nil, false
 	}
 
-	metaConfig.UUID, err = state_terraform.GetClusterUUID(ctx, c.kubeCl)
+	metaConfig.UUID, err = infrastructurestate.GetClusterUUID(ctx, c.kubeCl)
 	if err != nil {
 		log.ErrorLn(err)
 		c.CounterMetrics["errors"].WithLabelValues().Inc()
-		return nil
+		return nil, false
 	}
 
-	statistic, err := check.CheckState(ctx, c.kubeCl, metaConfig, c.terraformContext, check.CheckStateOptions{})
+	c.infrastructureContext.SetExecutorProvider(infrastructureprovider.ExecutorProvider(metaConfig))
+
+	statistic, hasTerraformState, err := check.CheckState(ctx, c.kubeCl, metaConfig, c.infrastructureContext, check.CheckStateOptions{})
 	if err != nil {
 		log.ErrorLn(err)
 		c.CounterMetrics["errors"].WithLabelValues().Inc()
 
 		// We still want to return collected statistic in case of error, because the error returned from
-		// the CheckState call is a combination of errors from all terraform runs.
+		// the CheckState call is a combination of errors from all infrastructure utility runs.
 	}
 
-	return statistic
+	if !infrastructureprovider.NeedToUseOpentofu(metaConfig) {
+		hasTerraformState = false
+	}
+
+	return statistic, hasTerraformState
 }
 
-func (c *ConvergeExporter) recordStatistic(statistic *check.Statistics) {
+func (c *ConvergeExporter) recordStatistic(statistic *check.Statistics, hasTerraformState bool) {
 	if statistic == nil {
 		return
+	}
+
+	c.OneGaugeMetrics["need_migrate_to_tofu"].Set(0)
+
+	if hasTerraformState {
+		c.OneGaugeMetrics["need_migrate_to_tofu"].Set(1)
 	}
 
 	for _, status := range clusterStatuses {
