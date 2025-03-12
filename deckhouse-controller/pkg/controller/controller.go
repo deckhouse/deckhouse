@@ -176,7 +176,7 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 	configHandler := confighandler.New(runtimeManager.GetClient(), deckhouseConfigCh)
 	operator.SetupKubeConfigManager(configHandler)
 
-	// init module manager
+	// setup module manager
 	if err = operator.Setup(); err != nil {
 		return nil, fmt.Errorf("setup operator: %w", err)
 	}
