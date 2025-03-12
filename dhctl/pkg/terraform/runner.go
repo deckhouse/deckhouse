@@ -107,15 +107,16 @@ type Runner struct {
 }
 
 func NewRunner(provider, prefix, layout, step string, stateCache state.Cache) *Runner {
+	workingDir := buildTerraformPath(provider, layout, step)
 	r := &Runner{
 		prefix:            prefix,
 		step:              step,
 		name:              step,
-		workingDir:        buildTerraformPath(provider, layout, step),
+		workingDir:        workingDir,
 		confirm:           input.NewConfirmation,
 		stateCache:        stateCache,
 		changeSettings:    ChangeActionSettings{},
-		terraformExecutor: &CMDExecutor{},
+		terraformExecutor: &CMDExecutor{workingDir: workingDir},
 		logger:            log.GetDefaultLogger(),
 	}
 
@@ -313,10 +314,9 @@ func (r *Runner) Init(ctx context.Context) error {
 		args := []string{
 			"init",
 			fmt.Sprintf("-plugin-dir=%s/plugins", strings.TrimRight(dhctlPath, "/")),
-			"-get-plugins=false",
+			//"-get=false",
 			"-no-color",
 			"-input=false",
-			r.workingDir,
 		}
 
 		_, err := r.execTerraform(ctx, args...)

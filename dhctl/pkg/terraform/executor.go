@@ -41,8 +41,13 @@ type Executor interface {
 	Stop()
 }
 
-func terraformCmd(ctx context.Context, args ...string) *exec.Cmd {
-	cmd := exec.CommandContext(ctx, "terraform", args...)
+func terraformCmd(ctx context.Context, workingDir string, args ...string) *exec.Cmd {
+	fullArgs := args
+	if workingDir != "" {
+		fullArgs = append([]string{fmt.Sprintf("-chdir=%s", workingDir)}, args...)
+	}
+
+	cmd := exec.Command("opentofu", fullArgs...)
 	cmd.Cancel = func() error {
 		return syscall.Kill(-cmd.Process.Pid, syscall.SIGINT)
 	}
@@ -67,12 +72,13 @@ func terraformCmd(ctx context.Context, args ...string) *exec.Cmd {
 
 // CMDExecutor straightforward cmd executor which provides convenient output and handles quit signal.
 type CMDExecutor struct {
-	cmd    *exec.Cmd
-	logger log.Logger
+	cmd        *exec.Cmd
+	logger     log.Logger
+	workingDir string
 }
 
 func (c *CMDExecutor) Output(ctx context.Context, args ...string) ([]byte, error) {
-	return terraformCmd(ctx, args...).Output()
+	return terraformCmd(ctx, c.workingDir, args...).Output()
 }
 
 func (c *CMDExecutor) SetExecutorLogger(logger log.Logger) {
@@ -80,7 +86,11 @@ func (c *CMDExecutor) SetExecutorLogger(logger log.Logger) {
 }
 
 func (c *CMDExecutor) Exec(ctx context.Context, args ...string) (int, error) {
-	c.cmd = terraformCmd(ctx, args...)
+	if c.workingDir == "" {
+		panic("You must set workingDir")
+	}
+
+	c.cmd = terraformCmd(ctx, c.workingDir, args...)
 
 	// Start terraform as a leader of the new process group to prevent
 	// os.Interrupt (SIGINT) signal from the shell when Ctrl-C is pressed.
