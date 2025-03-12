@@ -1,12 +1,12 @@
 ---
-title: "HPE storage"
+title: "HPE data storage"
 permalink: en/storage/admin/external/hpe.html
 ---
 
-This module provides a CSI driver for managing volumes on HPE 3PAR storage systems.. It allows you to create `StorageClass` in `Kubernetes` using `HPEStorageClass`.
+This module provides a CSI driver for managing volumes on HPE 3PAR storage systems. It allows you to create StorageClass in Kubernetes using [HPEStorageClass](../../../reference/cr/hpestorageclass/).
 
 {% alert level="warning" %}
-The user is not allowed to create a `StorageClass` for the `csi.hpe.com` CSI driver.
+The user is not allowed to create a StorageClass for the `csi.hpe.com` CSI driver.
 Module supports only HPE 3PAR SAN devices. For other HPE SAN configurations, please reach out to technical support.
 {% endalert %}
 >
@@ -24,7 +24,7 @@ Note that all commands must be run on a machine that has administrator access to
 ### Enabling module
 
 Enable the `csi-hpe` module. This will result in the following actions across all cluster nodes:
-- registration of the CSI driver;
+- registration of the CSI driver.
 - launch of service pods for the `csi-hpe` components.
 
 ```yaml
@@ -47,7 +47,7 @@ kubectl get module csi-hpe -w
 
 ### Creating a StorageClass
 
-To create a `StorageClass`, you need to use the [HPEStorageClass](../../../reference/cr/hpestorageclass) and [HPEStorageConnection](../../../reference/cr/hpestorageconnection) resource. Here is an example command to create such a resource:
+To create a StorageClass, you need to use the [HPEStorageClass](../../../reference/cr/hpestorageclass/) and [HPEStorageConnection](../../../reference/cr/hpestorageconnection/) resource. Here is an example command to create such a resource:
 
 ```yaml
 d8 k apply -f -<<EOF

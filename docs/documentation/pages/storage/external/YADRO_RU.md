@@ -1,11 +1,11 @@
 ---
-title: "Хранилище YADRO"
+title: "Унифицированное хранилище TATLIN.UNIFIED (Yadro)"
 permalink: ru/storage/admin/external/yadro.html
 lang: ru
 d8Revision: ee
 ---
 
-Для управления томами на основе системы хранения данных [TATLIN.UNIFIED](https://yadro.com/ru/tatlin/unified) можно использовать модуль `csi-yadro`, позволяющий создавать ресурсы `StorageClass` через создание пользовательских ресурсов `YadroStorageClass`.
+Для управления томами на основе системы хранения данных [TATLIN.UNIFIED](https://yadro.com/ru/tatlin/unified) можно использовать модуль `csi-yadro`, позволяющий создавать ресурсы StorageClass через создание пользовательских ресурсов [YadroStorageClass](../../../reference/cr/yadrostorageclass/).
 
 ## Включение модуля
 
@@ -38,7 +38,7 @@ csi-yadro   910      Enabled   Embedded           Ready
 
 ## Подключение к системе хранения данных TATLIN.UNIFIED
 
-Чтобы создать подключение к системе хранения данных `TATLIN.UNIFIED` и иметь возможность настраивать объекты `StorageClass`, примените следующий ресурс [YadroStorageConnection](../../../reference/cr/yadrostorageconnection):
+Чтобы создать подключение к системе хранения данных `TATLIN.UNIFIED` и иметь возможность настраивать объекты StorageClass, примените следующий ресурс [YadroStorageConnection](../../../reference/cr/yadrostorageconnection/):
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -62,7 +62,7 @@ EOF
 
 ## Создание StorageClass
 
-Для создания `StorageClass` необходимо использовать ресурс [YadroStorageClass](../../../reference/cr/yadrostorageclass). Ручное создание ресурса `StorageClass` без `YadroStorageClass` может привести к ошибкам.
+Для создания StorageClass необходимо использовать ресурс [YadroStorageClass](../../../reference/cr/yadrostorageclass/). Ручное создание ресурса StorageClass без [YadroStorageClass](../../../reference/cr/yadrostorageclass/) может привести к ошибкам.
 
 Пример команды для создания класса хранения на основе системы хранения данных `TATLIN.UNIFIED`:
 

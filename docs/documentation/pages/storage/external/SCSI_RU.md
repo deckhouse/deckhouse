@@ -1,32 +1,32 @@
 ---
-title: "SCSI-хранилище"
+title: "Хранилище данных на основе протокола SCSI"
 permalink: ru/storage/admin/external/scsi.html
 lang: ru
 ---
 
-Модуль `csi-scsi-generic` предоставляет CSI-драйвер для управления томами, подключенными через `iSCSI` или `Fibre Channel`.
+Модуль `csi-scsi-generic` предоставляет CSI-драйвер для управления томами, подключенными через iSCSI или Fibre Channel.
 
 ### Поддерживаемые возможности
 
-- Обнаружение `LUN` через `iSCSI`/`FC`.
-- Создание `PersistentVolume` из заранее подготовленных `LUN`.
-- Удаление `PersistentVolume` и очистка данных на `LUN`.
-- Подключение `LUN` к узлам через `iSCSI`/`FC`.
+- Обнаружение LUN через iSCSI/FC.
+- Создание PersistentVolume из заранее подготовленных LUN.
+- Удаление PersistentVolume и очистка данных на LUN.
+- Подключение LUN к узлам через iSCSI/FC.
 - Создание `multipath`-устройств и их монтирование в поды.
-- Отключение `LUN` от узлов.
+- Отключение LUN от узлов.
 
 ### Ограничения
 
-- Невозможно создать `LUN` на СХД.
-- Нельзя изменить размер `LUN`.
+- Невозможно создать LUN на СХД.
+- Нельзя изменить размер LUN.
 - Снимки (snapshots) не поддерживаются.
 
 ## Системные требования и рекомендации
 
 ### Требования
 
-- Настроенная и доступная СХД с подключением через `iSCSI`/`FC`.
-- Уникальные `IQN` на каждом узле `Kubernetes` в файле `/etc/iscsi/initiatorname.iscsi`.
+- Настроенная и доступная СХД с подключением через iSCSI/FC.
+- Уникальные IQN на каждом узле Kubernetes в файле `/etc/iscsi/initiatorname.iscsi`.
 
 ## Быстрый старт
 
@@ -58,7 +58,7 @@ d8 k get module csi-scsi-generic -w
 
 ### Создание SCSITarget
 
-Для работы с SCSI-устройствами необходимо создать ресурсы [SCSITarget](../../../reference/cr/scsitarget).
+Для работы с SCSI-устройствами необходимо создать ресурсы [SCSITarget](../../../reference/cr/scsitarget/).
 
 ```yaml
 d8 k apply -f -<<EOF
@@ -121,7 +121,7 @@ EOF
 
 ```
 
-Обратите внимание, что в примере выше используются два `SCSITarget`. Таким образом можно создать несколько `SCSITarget` как для одного, так и для разных СХД. Это позволяет использовать `multipath` для повышения отказоустойчивости и производительности.
+Обратите внимание, что в примере выше используются два [SCSITarget](../../../reference/cr/scsitarget/). Таким образом можно создать несколько [SCSITarget](../../../reference/cr/scsitarget/) как для одного, так и для разных СХД. Это позволяет использовать `multipath` для повышения отказоустойчивости и производительности.
 
 Проверить создание объекта можно командой (`Phase` должен быть `Created`):
 
@@ -131,7 +131,7 @@ d8 k get scsitargets.storage.deckhouse.io <имя scsitarget>
 
 ### Создание StorageClass
 
-Для создания `StorageClass` необходимо использовать ресурс [SCSIStorageClass](../../../reference/cr/scsistorageclass). Пример команд для создания такого ресурса:
+Для создания StorageClass необходимо использовать ресурс [SCSIStorageClass](../../../reference/cr/scsistorageclass/). Пример команд для создания такого ресурса:
 
 ```yaml
 d8 k apply -f -<<EOF
@@ -147,7 +147,7 @@ spec:
 EOF
 ```
 
-Обратите внимание на `scsiDeviceSelector`. Этот параметр позволяет выбрать `SCSITarget` для создания `PersistentVolume` по меткам. В примере выше выбираются все `SCSITarget` с меткой `my-key: some-label-value`. Эта метка будет выставлена на все устройства, которые будут обнаружены в указанных `SCSITarget`.
+Обратите внимание на `scsiDeviceSelector`. Этот параметр позволяет выбрать [SCSITarget](../../../reference/cr/scsitarget/) для создания PersistentVolume по меткам. В примере выше выбираются все [SCSITarget](../../../reference/cr/scsitarget/) с меткой `my-key: some-label-value`. Эта метка будет выставлена на все устройства, которые будут обнаружены в указанных [SCSITarget](../../../reference/cr/scsitarget/).
 
 Проверить создание объекта можно командой (`Phase` должен быть `Created`):
 

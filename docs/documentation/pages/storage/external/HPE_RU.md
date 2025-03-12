@@ -1,13 +1,13 @@
 ---
-title: "HPE-хранилище"
+title: "Хранилище данных HPE"
 permalink: ru/storage/admin/external/hpe.html
 lang: ru
 ---
 
-Данный модуль хранилища предоставляет CSI для управления томами c использованием СХД HPE 3PAR. Модуль позволяет создавать `StorageClass` в `Kubernetes` через создание `HPEStorageClass`.
+Данный модуль хранилища предоставляет CSI для управления томами c использованием СХД HPE 3PAR. Модуль позволяет создавать StorageClass в Kubernetes через создание [HPEStorageClass](../../../reference/cr/hpestorageclass/).
 
 {% alert level="warning" %}
-Создание `StorageClass` для CSI-драйвера `csi.hpe.com` пользователем запрещено.
+Создание StorageClass для CSI-драйвера `csi.hpe.com` пользователем запрещено.
 Модулем поддерживаются только СХД HPE 3PAR. Для использования других СХД HPE, пожалуйста, свяжитесь с технической поддержкой.
 {% endalert %}
 
@@ -25,7 +25,7 @@ lang: ru
 ### Включение модуля
 
 Включите модуль `csi-hpe`.  Это приведет к тому, что на всех узлах кластера будет:
-- зарегистрирован CSI драйвер;
+- зарегистрирован CSI драйвер.
 - запущены служебные поды компонентов `csi-hpe`.
 
 ```yaml
@@ -48,7 +48,7 @@ d8 k get module csi-hpe -w
 
 ### Создание StorageClass
 
-Для создания `StorageClass` необходимо использовать ресурсы [HPEStorageClass](../../../reference/cr/hpestorageclass) и [HPEStorageConnection](../../../reference/cr/hpestorageconnection). Пример команд для создания таких ресурсов:
+Для создания StorageClass необходимо использовать ресурсы [HPEStorageClass](../../../reference/cr/hpestorageclass/) и [HPEStorageConnection](../../../reference/cr/hpestorageconnection/). Пример команд для создания таких ресурсов:
 
 ```yaml
 d8 k apply -f -<<EOF

@@ -1,31 +1,31 @@
 ---
-title: "SCSI storage"
+title: "SCSI-based data storage"
 permalink: en/storage/admin/external/scsi.html
 ---
 
-The `csi-scsi-generic` module provides a CSI driver for managing volumes connected via `iSCSI` or `Fibre Channel`.
+The `csi-scsi-generic` module provides a CSI driver for managing volumes connected via iSCSI or Fibre Channel.
 
 ### Supported Features
 
-- Detecting `LUN` via `iSCSI`/`FC`.
-- Creating `PersistentVolume` from pre-provisioned `LUN`.
-- Deleting `PersistentVolume` and wiping data on `LUN`.
-- Attaching `LUN` to nodes via `iSCSI`/`FC`.
+- Detecting LUN via iSCSI/FC.
+- Creating PersistentVolume from pre-provisioned LUN.
+- Deleting PersistentVolume and wiping data on LUN.
+- Attaching LUN to nodes via iSCSI/FC.
 - Creating `multipath` devices and mounting them in pods.
-- Detaching `LUN` from nodes.
+- Detaching LUN from nodes.
 
 ### Limitations
 
-- Creating `LUN` on storage is not supported.
-- Resizing `LUN` is not possible.
+- Creating LUN on storage is not supported.
+- Resizing LUN is not possible.
 - Snapshots are not supported.
 
 ## System Requirements and Recommendations
 
 ### Requirements
 
-- A properly configured and available storage system with `iSCSI`/`FC` connectivity.
-- Unique `IQN` assigned to each `Kubernetes` node in `/etc/iscsi/initiatorname.iscsi`.
+- A properly configured and available storage system with iSCSI/FC connectivity.
+- Unique IQN assigned to each Kubernetes node in `/etc/iscsi/initiatorname.iscsi`.
 
 ## Quick Start
 
@@ -57,7 +57,7 @@ d8 k get module csi-scsi-generic -w
 
 ### Creating an SCSITarget
 
-To work with SCSI devices, [SCSITarget](../../../reference/cr/scsitarget) resources must be created.
+To work with SCSI devices, [SCSITarget](../../../reference/cr/scsitarget/) resources must be created.
 
 ```yaml
 d8 k apply -f -<<EOF
@@ -119,9 +119,9 @@ spec:
 EOF
 ```
 
-Note that the example above uses two `SCSITargets`. You can create multiple `SCSITargets` for either the same or different storage systems. This allows for the use of `multipath` to improve failover and performance.
+Note that the example above uses two [SCSITargets](../../../reference/cr/scsitarget/). You can create multiple [SCSITargets](../../../reference/cr/scsitarget/) for either the same or different storage systems. This allows for the use of `multipath` to improve failover and performance.
 
-After creating `SCSITarget`, verify their status. The `Phase` field should be `Created`.
+After creating [SCSITarget](../../../reference/cr/scsitarget/), verify their status. The `Phase` field should be `Created`.
 
 ```shell
 d8 k get scsitargets.storage.deckhouse.io <scsitarget name>
@@ -129,7 +129,7 @@ d8 k get scsitargets.storage.deckhouse.io <scsitarget name>
 
 ### Creating a StorageClass
 
-To create a `StorageClass`, use the [SCSIStorageClass](../../../reference/cr/scsistorageclass) resource. An example of commands to create such a resource:
+To create a StorageClass, use the [SCSIStorageClass](../../../reference/cr/scsistorageclass/) resource. An example of commands to create such a resource:
 
 ```yaml
 d8 k apply -f -<<EOF
@@ -145,9 +145,9 @@ spec:
 EOF
 ```
 
-Pay attention to the `scsiDeviceSelector`. This field is used to select the SCSITarget for PV creation based on labels. In the example above, all SCSITargets with the label `my-key: some-label-value` are selected. This label will be applied to all devices detected within the specified SCSITarget.
+Pay attention to the `scsiDeviceSelector`. This field is used to select the [SCSITarget](../../../reference/cr/scsitarget/) for PV creation based on labels. In the example above, all [SCSITargets](../../../reference/cr/scsitarget/) with the label `my-key: some-label-value` are selected. This label will be applied to all devices detected within the specified [SCSITarget](../../../reference/cr/scsitarget/).
 
-After creating `SCSIStorageClass`, check its status. The `Phase` field should be `Created`.
+After creating [SCSIStorageClass](../../../reference/cr/scsistorageclass/), check its status. The `Phase` field should be `Created`.
 
 ```shell
 d8 k get scsistorageclasses.storage.deckhouse.io <scsistorageclass name>

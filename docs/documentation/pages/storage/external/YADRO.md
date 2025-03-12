@@ -1,10 +1,10 @@
 ---
-title: "YADRO Storage"
+title: "TATLIN.UNIFIED (Yadro) unified storage"
 permalink: en/storage/admin/external/yadro.html
 d8Revision: ee
 ---
 
-To manage volumes based on the [TATLIN.UNIFIED](https://yadro.com/ru/tatlin/unified) storage system, you can use the `csi-yadro` module to create `StorageClass` resources through the custom `YadroStorageClass` resources.
+To manage volumes based on the [TATLIN.UNIFIED](https://yadro.com/ru/tatlin/unified) storage system, you can use the `csi-yadro` module to create StorageClass resources through the custom [YadroStorageClass](../../../reference/cr/yadrostorageclass/) resources.
 
 ## Enable the module
 
@@ -37,7 +37,7 @@ csi-yadro   910      Enabled   Embedded           Ready
 
 ## Connect to the TATLIN.UNIFIED storage system
 
-To connect to the `TATLIN.UNIFIED` storage system and enable configuring of `StorageClass` objects, apply the following [YadroStorageConnection](../../../reference/cr/yadrostorageconnection) resource:
+To connect to the `TATLIN.UNIFIED` storage system and enable configuring of StorageClass objects, apply the following [YadroStorageConnection](../../../reference/cr/yadrostorageconnection/) resource:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -61,9 +61,9 @@ EOF
 
 ## Create a StorageClass
 
-To create a `StorageClass`, use the [YadroStorageClass](../../../reference/cr/yadrostorageclass) resource. Creating a `StorageClass` resource manually without using `YadroStorageClass` can lead to errors.
+To create a StorageClass, use the [YadroStorageClass](../../../reference/cr/yadrostorageclass/) resource. Creating a StorageClass resource manually without using [YadroStorageClass](../../../reference/cr/yadrostorageclass/) can lead to errors.
 
-Example command to create a `StorageClass` based on the `TATLIN.UNIFIED` storage system:
+Example command to create a StorageClass based on the `TATLIN.UNIFIED` storage system:
 
 ```yaml
 d8 k apply -f - <<EOF

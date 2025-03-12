@@ -1,12 +1,12 @@
 ---
-title: "Huawei Storage"
+title: "Huawei data storage"
 permalink: en/storage/admin/external/huawei.html
 ---
 
-This module provides a CSI driver for managing volumes on Huawei DORADO storage systems. The module allows you to create a `StorageClass` in `Kubernetes` using `HuaweiStorageClass`.
+This module provides a CSI driver for managing volumes on Huawei DORADO storage systems. The module allows you to create a StorageClass in Kubernetes using [HuaweiStorageClass](../../../reference/cr/huaweistorageclass/).
 
 {% alert level="warning" %}
-The user is not allowed to create a `StorageClass` for the `csi.huawei.com` CSI driver.
+The user is not allowed to create a StorageClass for the `csi.huawei.com` CSI driver.
 Module supports only Huawei Dorado SAN devices. For other Huawei SAN configurations, please reach out to technical support.
 {% endalert %}
 
@@ -24,7 +24,7 @@ Note that all commands must be run on a machine that has administrator access to
 ### Enabling the module
 
 Enable the `csi-huawei` module. This will result in the following actions across all cluster nodes:
-- registration of the CSI driver;
+- registration of the CSI driver.
 - launch of service pods for the `csi-huawei` components.
 
 ```yaml
@@ -47,7 +47,7 @@ d8 k get module csi-huawei -w
 
 ### Creating a StorageClass
 
-To create a `StorageClass`, you need to use the [HuaweiStorageClass](../../../reference/cr/huaweistorageclass) and [HuaweiStorageConnection](../../../reference/cr/huaweistorageconnection) resource. Here is an example command to create such a resource:
+To create a StorageClass, you need to use the [HuaweiStorageClass](../../../reference/cr/huaweistorageclass/) and [HuaweiStorageConnection](../../../reference/cr/huaweistorageconnection/) resource. Here is an example command to create such a resource:
 
 ```yaml
 d8 k apply -f -<<EOF

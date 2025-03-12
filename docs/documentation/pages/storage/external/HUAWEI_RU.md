@@ -1,13 +1,13 @@
 ---
-title: "Huawei-хранилище"
+title: "Хранилище данных Huawei"
 permalink: ru/storage/admin/external/huawei.html
 lang: ru
 ---
 
-Данный модуль хранилища предоставляет CSI для управления томами c использованием СХД Huawei Dorado. Модуль позволяет создавать `StorageClass` в `Kubernetes` через создание пользовательских ресурсов `HuaweiStorageClass`.
+Данный модуль хранилища предоставляет CSI для управления томами c использованием СХД Huawei Dorado. Модуль позволяет создавать StorageClass в Kubernetes через создание пользовательских ресурсов [HuaweiStorageClass](../../../reference/cr/huaweistorageclass/).
 
 {% alert level="warning" %}
-Создание `StorageClass` для CSI-драйвера `csi.huawei.com` пользователем запрещено.
+Создание StorageClass для CSI-драйвера `csi.huawei.com` пользователем запрещено.
 Модулем поддерживаются только СХД Huawei Dorado. Для использования других СХД Huawei, пожалуйста, свяжитесь с технической поддержкой.
 {% endalert %}
 
@@ -25,7 +25,7 @@ lang: ru
 ### Включение модуля
 
 Включите модуль `csi-huawei`.  Это приведет к тому, что на всех узлах кластера будет:
-- зарегистрирован CSI драйвер;
+- зарегистрирован CSI драйвер.
 - запущены служебные поды компонентов `csi-huawei`.
 
 ```yaml
@@ -48,7 +48,7 @@ d8 k get module csi-huawei -w
 
 ### Создание StorageClass
 
-Для создания `StorageClass` необходимо использовать ресурсы [HuaweiStorageClass](../../../reference/cr/huaweistorageclass) и [HuaweiStorageConnection](../../../reference/cr/huaweistorageconnection). Пример команд для создания таких ресурсов:
+Для создания StorageClass необходимо использовать ресурсы [HuaweiStorageClass](../../../reference/cr/huaweistorageclass/) и [HuaweiStorageConnection](../../../reference/cr/huaweistorageconnection/). Пример команд для создания таких ресурсов:
 
 ```yaml
 d8 k apply -f -<<EOF

@@ -1,10 +1,10 @@
 ---
-title: "NFS-хранилище"
+title: "Хранилище данных NFS"
 permalink: ru/storage/admin/external/nfs.html
 lang: ru
 ---
 
-Для управления томами на основе протокола NFS (Network File System) можно использовать модуль `csi-nfs`, позволяющий создавать `StorageClass` через создание пользовательских ресурсов `NFSStorageClass`.
+Для управления томами на основе протокола NFS (Network File System) можно использовать модуль `csi-nfs`, позволяющий создавать StorageClass через создание пользовательских ресурсов [NFSStorageClas](../../../reference/cr/nfsstorageclass/).
 
 ## Включение модуля
 
@@ -37,7 +37,7 @@ csi-nfs   910      Enabled   Embedded           Ready
 
 ## Создание StorageClass
 
-Для создания `StorageClass` необходимо использовать ресурс [NFSStorageClas](../../../reference/cr/nfsstorageclass). Ручное создание ресурса `StorageClass` без `NFSStorageClass` может привести к ошибкам. Пример команды для создания класса хранения на базе NFS:
+Для создания StorageClass необходимо использовать ресурс [NFSStorageClas](../../../reference/cr/nfsstorageclass/). Ручное создание ресурса StorageClass без [NFSStorageClas](../../../reference/cr/nfsstorageclass/) может привести к ошибкам. Пример команды для создания класса хранения на базе NFS:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -66,33 +66,33 @@ spec:
 EOF
 ```
 
-Проверьте, что созданный ресурс `NFSStorageClass` перешел в состояние `Created`, выполнив следующую команду:
+Проверьте, что созданный ресурс [NFSStorageClas](../../../reference/cr/nfsstorageclass/) перешел в состояние `Created`, выполнив следующую команду:
 
 ```shell
 d8 k get NFSStorageClass nfs-storage-class -w
 ```
 
-В результате будет выведена информация о созданном ресурсе `NFSStorageClass`:
+В результате будет выведена информация о созданном ресурсе [NFSStorageClas](../../../reference/cr/nfsstorageclass/):
 
 ```console
 NAME                PHASE     AGE
 nfs-storage-class   Created   1h
 ```
 
-Убедитесь, что был создан соответствующий `StorageClass`, выполнив следующую команду:
+Убедитесь, что был создан соответствующий StorageClass, выполнив следующую команду:
 
 ```shell
 d8 k get sc nfs-storage-class
 ```
 
-В результате будет выведена информация о созданном `StorageClass`:
+В результате будет выведена информация о созданном StorageClass:
 
 ```console
 NAME                PROVISIONER      RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
 nfs-storage-class   nfs.csi.k8s.io   Delete          WaitForFirstConsumer   true                   1h
 ```
 
-Если `StorageClass` с именем `nfs-storage-class` появился, значит настройка модуля `csi-nfs` завершена. Теперь пользователи могут создавать `PersistentVolume`, указывая `StorageClass` с именем `nfs-storage-class`. Для каждого ресурса `PersistentVolume` будет создаваться каталог `<директория из share>/<имя PersistentVolume>`.
+Если StorageClass с именем `nfs-storage-class` появился, значит настройка модуля `csi-nfs` завершена. Теперь пользователи могут создавать PersistentVolume, указывая StorageClass с именем `nfs-storage-class`. Для каждого ресурса PersistentVolume будет создаваться каталог `<директория из share>/<имя PersistentVolume>`.
 
 ## Проверка работоспособности модуля
 
