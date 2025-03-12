@@ -412,3 +412,56 @@ properties:
               type: string
       cniSecretData:
         type: string
+      discoveryData:
+        type: object
+        description: |
+          Contains information about data discovered from the vSphere cloud.
+        required:
+          - apiVersion
+          - kind
+          - datastores
+          - networks
+          - VMTemplatePaths
+          - resourcePools
+        properties:
+          apiVersion:
+            type: string
+            enum:
+              - deckhouse.io/v1alpha1
+          kind:
+            type: string
+            enum:
+              - VsphereCloudProviderDiscoveryData
+          datastores:
+            type: array
+            items:
+              type: string
+              minLength: 1
+            description: |
+              List of datastores discovered from vSphere.
+            uniqueItems: true
+          networks:
+            type: array
+            items:
+              type: string
+              minLength: 1
+            description: |
+              List of networks available in the vSphere environment.
+            uniqueItems: true
+          VMTemplatePaths:
+            type: array
+            items:
+              type: string
+              minLength: 1
+            description: |
+              Paths to available VM templates in vSphere.
+            uniqueItems: true
+          resourcePools:
+            type: array
+            items:
+              type: string
+              minLength: 1
+            description: |
+              List of available resource pools in vSphere.
+            uniqueItems: true
+

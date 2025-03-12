@@ -1,0 +1,55 @@
+kind: VsphereCloudProviderDiscoveryData
+apiVersions:
+  - apiVersion: deckhouse.io/v1alpha1
+    openAPISpec:
+      type: object
+      description: |
+        Contains information about data discovered from the vSphere cloud.
+      required:
+        - apiVersion
+        - kind
+        - datastores
+        - networks
+        - VMTemplatePaths
+        - resourcePools
+      properties:
+        apiVersion:
+          type: string
+          enum:
+            - deckhouse.io/v1alpha1
+        kind:
+          type: string
+          enum:
+            - VsphereCloudProviderDiscoveryData
+        datastores:
+          type: array
+          items:
+            type: string
+            minLength: 0  # Allows the array to contain empty strings, but this is not necessary for array emptiness
+          description: |
+            List of datastores discovered from vSphere.
+          uniqueItems: true
+        networks:
+          type: array
+          items:
+            type: string
+            minLength: 0  # Allows the array to contain empty strings
+          description: |
+            List of networks available in the vSphere environment.
+          uniqueItems: true
+        VMTemplatePaths:
+          type: array
+          items:
+            type: string
+            minLength: 0  # Allows the array to contain empty strings
+          description: |
+            Paths to available VM templates in vSphere.
+          uniqueItems: true
+        resourcePools:
+          type: array
+          items:
+            type: string
+            minLength: 0  # Allows the array to contain empty strings
+          description: |
+            List of available resource pools in vSphere.
+          uniqueItems: true

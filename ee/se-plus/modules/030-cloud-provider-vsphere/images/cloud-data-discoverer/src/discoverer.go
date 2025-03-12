@@ -7,7 +7,9 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"github.com/vmware/govmomi/find"
 	"net/url"
 	"os"
 	"strconv"
@@ -113,7 +115,68 @@ func (d *Discoverer) InstanceTypes(ctx context.Context) ([]v1alpha1.InstanceType
 
 // NotImplemented
 func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryData []byte) ([]byte, error) {
-	return nil, nil
+	//discoveryData := VsphereCloudDiscoveryData
+	//
+	//if len(cloudProviderDiscoveryData) > 0 {
+	//	err := json.Unmarshal(cloudProviderDiscoveryData, &discoveryData)
+	//	if err != nil {
+	//		return nil, fmt.Errorf("failed to unmarshal cloud provider discovery data: %v", err)
+	//	}
+	//}
+	discoveryData := v1alpha1.VsphereCloudProviderDiscoveryData{}
+	discoveryData.APIVersion = "deckhouse.io/v1alpha1"
+	discoveryData.Kind = "VsphereCloudProviderDiscoveryData"
+	finder := find.NewFinder(d.govmomiClient.Client, false)
+
+	datacenters, err := finder.DatacenterList(ctx, "*")
+	if err != nil {
+		return nil, fmt.Errorf("failed to list datacenters: %v", err)
+	}
+
+	for _, dc := range datacenters {
+		finder.SetDatacenter(dc)
+
+		datastores, err := finder.DatastoreList(ctx, "*")
+		if err != nil {
+			return nil, fmt.Errorf("failed to list datastores: %v", err)
+		}
+		for _, ds := range datastores {
+			discoveryData.Datastores = append(discoveryData.Datastores, ds.Name())
+		}
+
+		networks, err := finder.NetworkList(ctx, "*")
+		if err != nil {
+			return nil, fmt.Errorf("failed to list networks: %v", err)
+		}
+		for _, net := range networks {
+			discoveryData.Networks = append(discoveryData.Networks, net.Name())
+		}
+
+		vms, err := finder.VirtualMachineList(ctx, "*")
+		if err != nil {
+			return nil, fmt.Errorf("failed to list VM templates: %v", err)
+		}
+		for _, vm := range vms {
+			if vm.Summary.Config.Template {
+				discoveryData.VMTemplatePaths = append(discoveryData.VMTemplatePaths, vm.InventoryPath)
+			}
+		}
+
+		resourcePools, err := finder.ResourcePoolList(ctx, "*")
+		if err != nil {
+			return nil, fmt.Errorf("failed to list resource pools: %v", err)
+		}
+		for _, rp := range resourcePools {
+			discoveryData.ResourcePools = append(discoveryData.ResourcePools, rp.Name())
+		}
+	}
+
+	discoveryDataBytes, err := json.Marshal(discoveryData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal discovery data: %v", err)
+	}
+	fmt.Println(string(discoveryDataBytes))
+	return discoveryDataBytes, nil
 }
 
 func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error) {
