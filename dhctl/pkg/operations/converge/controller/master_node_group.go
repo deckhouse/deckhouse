@@ -202,7 +202,7 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 		index++
 	}
 
-	err = entity.WaitForNodesListBecomeReady(ctx.KubeClient(), nodesToWait, controlplane.NewManagerReadinessChecker(ctx))
+	err = entity.WaitForNodesListBecomeReady(ctx.Ctx(), ctx.KubeClient(), nodesToWait, controlplane.NewManagerReadinessChecker(ctx))
 	if err != nil {
 		return err
 	}

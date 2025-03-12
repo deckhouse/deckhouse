@@ -15,6 +15,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
@@ -54,7 +55,7 @@ func DefineTestKubernetesAPIConnectionCommand(cmd *kingpin.CmdClause) *kingpin.C
 		}
 
 		// ip is empty because we want check via ssh-hosts passed via cm args
-		ready, err := checker.IsReady("")
+		ready, err := checker.IsReady(context.Background(), "")
 		if err != nil {
 			proxyClose()
 			return err

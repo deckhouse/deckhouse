@@ -265,13 +265,13 @@ func WaitForNodesBecomeReady(kubeCl *client.KubernetesClient, nodeGroupsMap map[
 	})
 }
 
-func WaitForNodesListBecomeReady(kubeCl *client.KubernetesClient, nodes []string, checker hook.NodeChecker) error {
+func WaitForNodesListBecomeReady(ctx context.Context, kubeCl *client.KubernetesClient, nodes []string, checker hook.NodeChecker) error {
 	return retry.NewLoop("Waiting for nodes to become Ready", 100, 20*time.Second).Run(func() error {
 		desiredReadyNodes := len(nodes)
 		var nodesList apiv1.NodeList
 
 		for _, nodeName := range nodes {
-			node, err := kubeCl.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
+			node, err := kubeCl.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 			if err != nil {
 				return err
 			}
@@ -287,7 +287,7 @@ func WaitForNodesListBecomeReady(kubeCl *client.KubernetesClient, nodes []string
 						ready := true
 						if checker != nil {
 							var err error
-							ready, err = checker.IsReady(node.Name)
+							ready, err = checker.IsReady(ctx, node.Name)
 							if err != nil {
 								log.InfoF("While doing check '%s' node %s has error: %v\n", checker.Name(), node.Name, err)
 							} else if !ready {

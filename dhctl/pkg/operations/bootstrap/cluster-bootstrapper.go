@@ -160,7 +160,6 @@ func (b *ClusterBootstrapper) applyParams() (func(), error) {
 	return restoreFunc, nil
 }
 
-// TODO(feat/dhctl-for-commander-bootstrap-context): use ctx in network operations
 func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	if restore, err := b.applyParams(); err != nil {
 		return err
@@ -457,8 +456,8 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return nil
 	}
 
-	// TODO(feat/dhctl-for-commander-bootstrap-context): pass ctx
-	if err := controlplane.NewManagerReadinessChecker(kubernetes.NewSimpleKubeClientGetter(kubeCl)).IsReadyAll(); err != nil {
+	if err = controlplane.NewManagerReadinessChecker(kubernetes.NewSimpleKubeClientGetter(kubeCl)).
+		IsReadyAll(ctx); err != nil {
 		return err
 	}
 
@@ -478,7 +477,6 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		postScriptExecutor := NewPostBootstrapScriptExecutor(sshNodeInterfaceWrapper.Client(), app.PostBootstrapScriptPath, bootstrapState).
 			WithTimeout(app.PostBootstrapScriptTimeout)
 
-		// TODO(feat/dhctl-for-commander-bootstrap-context): pass ctx
 		if err := postScriptExecutor.Execute(); err != nil {
 			return err
 		}

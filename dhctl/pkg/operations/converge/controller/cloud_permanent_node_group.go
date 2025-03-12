@@ -83,7 +83,7 @@ func (c *CloudPermanentNodeGroupController) addNodes(ctx *context.Context) error
 	if err != nil {
 		return err
 	}
-	return entity.WaitForNodesListBecomeReady(ctx.KubeClient(), nodesToWait, nil)
+	return entity.WaitForNodesListBecomeReady(ctx.Ctx(), ctx.KubeClient(), nodesToWait, nil)
 }
 
 func (c *CloudPermanentNodeGroupController) updateNode(ctx *context.Context, nodeName string) error {
