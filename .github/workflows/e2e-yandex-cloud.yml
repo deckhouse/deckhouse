@@ -415,6 +415,10 @@ jobs:
             export CIS_ENABLED=${CIS_ENABLED}
           bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
       - name: Create Deckhouse debug logs
@@ -493,6 +497,10 @@ jobs:
             export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
             export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
           bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
+
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
         # </template: e2e_run_template>
 
@@ -753,6 +761,10 @@ jobs:
             export CIS_ENABLED=${CIS_ENABLED}
           bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
       - name: Create Deckhouse debug logs
@@ -831,6 +843,10 @@ jobs:
             export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
             export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
           bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
+
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
         # </template: e2e_run_template>
 
@@ -1091,6 +1107,10 @@ jobs:
             export CIS_ENABLED=${CIS_ENABLED}
           bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
       - name: Create Deckhouse debug logs
@@ -1169,6 +1189,10 @@ jobs:
             export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
             export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
           bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
+
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
         # </template: e2e_run_template>
 
@@ -1429,6 +1453,10 @@ jobs:
             export CIS_ENABLED=${CIS_ENABLED}
           bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
       - name: Create Deckhouse debug logs
@@ -1507,6 +1535,10 @@ jobs:
             export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
             export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
           bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
+
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
         # </template: e2e_run_template>
 
@@ -1767,6 +1799,10 @@ jobs:
             export CIS_ENABLED=${CIS_ENABLED}
           bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
       - name: Create Deckhouse debug logs
@@ -1845,6 +1881,10 @@ jobs:
             export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
             export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
           bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
+
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
         # </template: e2e_run_template>
 
@@ -2105,6 +2145,10 @@ jobs:
             export CIS_ENABLED=${CIS_ENABLED}
           bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
       - name: Create Deckhouse debug logs
@@ -2183,6 +2227,10 @@ jobs:
             export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
             export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
           bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
+
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
         # </template: e2e_run_template>
 

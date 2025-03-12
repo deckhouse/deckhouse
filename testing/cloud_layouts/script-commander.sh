@@ -549,7 +549,7 @@ function run-test() {
         echo "  SSH connection string:"
         echo "      ssh $master_connection"
         update_comment
-        # TODO ADD logs collect
+        echo "$master_connection" > ssh-connect_str-"${PREFIX}"
         # TODO add workflow template
       fi
     fi

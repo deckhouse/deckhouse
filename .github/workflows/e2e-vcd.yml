@@ -419,6 +419,10 @@ jobs:
             export CIS_ENABLED=${CIS_ENABLED}
           bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
       - name: Create Deckhouse debug logs
@@ -501,6 +505,10 @@ jobs:
             export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
             export LAYOUT_STATIC_BASTION_IP=80.249.129.56
           bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
+
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
         # </template: e2e_run_template>
 
@@ -765,6 +773,10 @@ jobs:
             export CIS_ENABLED=${CIS_ENABLED}
           bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
       - name: Create Deckhouse debug logs
@@ -847,6 +859,10 @@ jobs:
             export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
             export LAYOUT_STATIC_BASTION_IP=80.249.129.56
           bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
+
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
         # </template: e2e_run_template>
 
@@ -1111,6 +1127,10 @@ jobs:
             export CIS_ENABLED=${CIS_ENABLED}
           bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
       - name: Create Deckhouse debug logs
@@ -1193,6 +1213,10 @@ jobs:
             export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
             export LAYOUT_STATIC_BASTION_IP=80.249.129.56
           bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
+
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
         # </template: e2e_run_template>
 
@@ -1457,6 +1481,10 @@ jobs:
             export CIS_ENABLED=${CIS_ENABLED}
           bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
       - name: Create Deckhouse debug logs
@@ -1539,6 +1567,10 @@ jobs:
             export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
             export LAYOUT_STATIC_BASTION_IP=80.249.129.56
           bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
+
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
         # </template: e2e_run_template>
 
@@ -1803,6 +1835,10 @@ jobs:
             export CIS_ENABLED=${CIS_ENABLED}
           bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
       - name: Create Deckhouse debug logs
@@ -1885,6 +1921,10 @@ jobs:
             export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
             export LAYOUT_STATIC_BASTION_IP=80.249.129.56
           bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
+
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
         # </template: e2e_run_template>
 
@@ -2149,6 +2189,10 @@ jobs:
             export CIS_ENABLED=${CIS_ENABLED}
           bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
       - name: Create Deckhouse debug logs
@@ -2231,6 +2275,10 @@ jobs:
             export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
             export LAYOUT_STATIC_BASTION_IP=80.249.129.56
           bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
+
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
         # </template: e2e_run_template>
 

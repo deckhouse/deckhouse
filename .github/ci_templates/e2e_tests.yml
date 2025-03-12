@@ -184,6 +184,10 @@ run: |
     export CIS_ENABLED=${CIS_ENABLED}
 {!{- end }!}
   bash $(pwd)/testing/cloud_layouts/{!{ $script }!} {!{ $script_arg }!}
+
+  # for logs upload
+  ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+  echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 {!{- end }!}
 
 # </template: e2e_run_template>
