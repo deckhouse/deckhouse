@@ -49,16 +49,16 @@ lang: ru
 
 Перечень модулей, для которых доступно управление режимом HA:
 
-* deckhouse;
-* openvpn;
-* istio;
-* dashboard;
-* multitenancy-manager;
-* user-authn;
-* ingress-nginx;
-* Prometheus-монитонинг;
-* monitoring-kubernetes;
-* snapshot-controller.
+* `deckhouse`;
+* `openvpn`;
+* `istio`;
+* `dashboard`;
+* `multitenancy-manager`;
+* `user-authn`;
+* `ingress-nginx`;
+* `prometheus-monitoring`;
+* `monitoring-kubernetes`;
+* `snapshot-controller`.
 
 Например, чтобы вручную включить режим HA для модуля deckhouse добавьте в его конфигурацию параметр `settings.highAvailability`:
 
