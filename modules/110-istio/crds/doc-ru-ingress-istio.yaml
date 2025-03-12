@@ -20,7 +20,7 @@ spec:
                     * `NodePort` — устанавливается Ingress-контроллер, который доступен на портах узлов через `NodePort`;
                     * `HostPort` — устанавливается Ingress-контроллер, который доступен на портах узлов через `HostPort`.
 
-                    **Внимание!** На одном хосте может быть только один контроллер с данным типом inlet'а.
+                    **Внимание!** На одном хосте может быть только один контроллер с данным типом инлета.
                 nodeSelector:
                   description: |
                     Как в `spec.nodeSelector` у подов.
@@ -37,14 +37,14 @@ spec:
                     **Формат**: стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Поды инстанса унаследуют это поле как есть.
                 loadBalancer:
                   description: |
-                    Секция настроек для inlet'а `LoadBalancer`.
+                    Секция настроек для инлета `LoadBalancer`.
                   properties:
                     annotations:
                       description: |
                         Аннотации, которые будут проставлены сервису для гибкой настройки балансировщика.
                 hostPort:
                   description: |
-                    Секция настроек для inlet'а `HostPort`.
+                    Секция настроек для инлета `HostPort`.
                   properties:
                     httpPort:
                       description: |
@@ -62,7 +62,7 @@ spec:
                         **Обязательный параметр**, если не указан `httpPort`.
                 nodePort:
                   description: |
-                    Секция настроек для inlet'а `NodePort`.
+                    Секция настроек для инлета `NodePort`.
                   properties:
                     httpPort:
                       description: |
