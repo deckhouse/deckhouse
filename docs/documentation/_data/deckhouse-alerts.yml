@@ -2694,6 +2694,31 @@ alerts:
         One or more Upmeter agent pods is NOT Running
       severity: "6"
       markupFormat: markdown
+    - name: D8UpmeterDiskUsage
+      sourceFile: modules/500-upmeter/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 500-upmeter
+      module: upmeter
+      edition: ce
+      description: |
+        The only way to resolve is to recreate the PVC using the following steps:
+
+        1. Save the PVC data if you need it.
+
+        1. Delete the PVC and restart `upmeter`:
+
+           ```shell
+           kubectl -n d8-upmeter delete persistentvolumeclaim/data-upmeter-0 pod/upmeter-0
+           ```
+
+        1. Check the status of the created PVC:
+
+           ```shell
+           kubectl -n d8-upmeter get pvc
+           ```
+      summary: |
+        Upmeter disk usage is over 80%.
+      severity: "5"
+      markupFormat: markdown
     - name: D8UpmeterProbeGarbageConfigmap
       sourceFile: modules/500-upmeter/monitoring/prometheus-rules/alerting.yaml
       moduleUrl: 500-upmeter
