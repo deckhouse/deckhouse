@@ -67,7 +67,7 @@ internal:
     ca: c
   currentReleaseImageName: test
 registry:
-	mode: Unmanaged
+  mode: Unmanaged
 `
 
 	moduleValuesForDeckhouseNode = `
@@ -89,7 +89,7 @@ internal:
     ca: c
   currentReleaseImageName: test
 registry:
-	mode: Unmanaged
+  mode: Unmanaged
 `
 )
 
