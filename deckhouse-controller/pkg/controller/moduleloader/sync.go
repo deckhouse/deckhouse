@@ -27,6 +27,7 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -41,20 +42,20 @@ const (
 	// if a module is disabled more than three days, it will be uninstalled
 	deleteReleasesAfter = 72 * time.Hour
 
-	deleteStaleModuleLoopSleep = 5 * time.Hour
+	deleteStaleModuleLoopInterval = 3 * time.Hour
 )
 
-func (l *Loader) runDeleteStaleModulesLoop(ctx context.Context) {
-	for {
-		if err := l.deleteStaleModules(ctx); err != nil {
-			l.log.Warnf("failed to delete stale modules: %v", err)
+func (l *Loader) runDeleteStaleModuleReleasesLoop(ctx context.Context) {
+	_ = wait.PollUntilContextCancel(ctx, deleteStaleModuleLoopInterval, true, func(ctx context.Context) (done bool, err error) {
+		if err = l.deleteStaleModuleReleases(ctx); err != nil {
+			l.log.Warn("failed to delete stale modules: %v", err)
 		}
-		time.Sleep(deleteStaleModuleLoopSleep)
-	}
+		return false, nil
+	})
 }
 
-// deleteStaleModules deletes module releases for modules that disabled too long
-func (l *Loader) deleteStaleModules(ctx context.Context) error {
+// deleteStaleModuleReleases deletes module releases for modules that disabled too long
+func (l *Loader) deleteStaleModuleReleases(ctx context.Context) error {
 	modules := new(v1alpha1.ModuleList)
 	if err := l.client.List(ctx, modules); err != nil {
 		return fmt.Errorf("list all modules: %w", err)
