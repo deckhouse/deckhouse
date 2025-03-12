@@ -15,12 +15,14 @@
 package retry
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 func TestLoop_Run_SuccessOnFirstAttempt(t *testing.T) {
@@ -55,4 +57,38 @@ func TestLoop_Run_BreakIfPredicate(t *testing.T) {
 	})
 	assert.Error(t, err)
 	assert.Equal(t, "Timeout while \"test loop\": last error: break error", err.Error())
+}
+
+func TestLoop_RunCtx_SuccessAfterRetries(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	log.InitLogger("json")
+	attempt := 0
+	loop := NewLoop("test loop", 3, time.Millisecond)
+	err := loop.RunCtx(ctx, func() error {
+		attempt++
+		if attempt < 3 {
+			return errors.New("temporary error")
+		}
+		return nil
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, 3, attempt)
+}
+
+func TestLoop_RunCtx_ContextCancelled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	log.InitLogger("json")
+	attempt := 0
+	loop := NewLoop("test loop", 3, time.Millisecond)
+	err := loop.RunCtx(ctx, func() error {
+		attempt++
+		cancel()
+		return errors.New("temporary error")
+	})
+	assert.ErrorIs(t, context.Canceled, err)
+	assert.Equal(t, 1, attempt)
 }

@@ -68,7 +68,7 @@ func DefineBootstrapExecuteBashibleCommand(cmd *kingpin.CmdClause) *kingpin.CmdC
 			NodeInterface:    ssh.NewNodeInterfaceWrapper(sshClient),
 			TerraformContext: terraform.NewTerraformContext(),
 		})
-		return bootstraper.ExecuteBashible()
+		return bootstraper.ExecuteBashible(context.Background())
 	})
 
 	return cmd

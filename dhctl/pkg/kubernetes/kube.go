@@ -15,6 +15,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -30,7 +31,8 @@ func ConnectToKubernetesAPI(nodeInterface node.Interface) (*client.KubernetesCli
 	var kubeCl *client.KubernetesClient
 	err := log.Process("common", "Connect to Kubernetes API", func() error {
 		if wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper); ok && wrapper != nil {
-			if err := wrapper.Client().Check().WithDelaySeconds(1).AwaitAvailability(); err != nil {
+			// TODO(feat/dhctl-for-commander-bootstrap-context): pass ctx
+			if err := wrapper.Client().Check().WithDelaySeconds(1).AwaitAvailability(context.TODO()); err != nil {
 				return fmt.Errorf("await master available: %v", err)
 			}
 		}

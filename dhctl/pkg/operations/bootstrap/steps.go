@@ -635,14 +635,14 @@ func CheckDHCTLDependencies(nodeInteface node.Interface) error {
 	})
 }
 
-func WaitForSSHConnectionOnMaster(sshClient *ssh.Client) error {
+func WaitForSSHConnectionOnMaster(ctx context.Context, sshClient *ssh.Client) error {
 	return log.Process("bootstrap", "Wait for SSH on Master become Ready", func() error {
 		availabilityCheck := sshClient.Check()
 		_ = log.Process("default", "Connection string", func() error {
 			log.InfoLn(availabilityCheck.String())
 			return nil
 		})
-		if err := availabilityCheck.WithDelaySeconds(1).AwaitAvailability(); err != nil {
+		if err := availabilityCheck.WithDelaySeconds(1).AwaitAvailability(ctx); err != nil {
 			return fmt.Errorf("await master to become available: %v", err)
 		}
 		return nil
