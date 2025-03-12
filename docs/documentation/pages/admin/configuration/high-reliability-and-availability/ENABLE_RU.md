@@ -60,7 +60,7 @@ lang: ru
 * `monitoring-kubernetes`;
 * `snapshot-controller`.
 
-Например, чтобы вручную включить режим HA для модуля deckhouse добавьте в его конфигурацию параметр `settings.highAvailability`:
+Например, чтобы вручную включить режим HA для модуля `deckhouse`, добавьте в его конфигурацию параметр `settings.highAvailability`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
