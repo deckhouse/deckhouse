@@ -128,13 +128,13 @@ func SetupHelmConfig(values string) *Config {
 func GetModulesImages() map[string]interface{} {
 	return map[string]interface{}{
 		"registry": map[string]interface{}{
-			"base":         "registry.example.com",
-			"dockercfg":    "Y2ZnCg==",
-			"address":      "registry.deckhouse.io",
-			"path":         "/deckhouse/fe",
-			"CA":           "CACACA",
-			"scheme":       "https",
-			"registryMode": "Direct",
+			"base":      "registry.example.com",
+			"dockercfg": "Y2ZnCg==",
+			"address":   "registry.deckhouse.io",
+			"path":      "/deckhouse/fe",
+			"CA":        "CACACA",
+			"scheme":    "https",
+			"mode":      "Direct",
 		},
 		"digests": library.DefaultImagesDigests,
 	}
