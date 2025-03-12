@@ -3,7 +3,7 @@
 {{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioVersion)) }} {{- /* 1.24.3 -> v1x24x3 */}}
 {{- $istioProxyCacheRev := "v1.21.6-5c3dc559371181d5baa4a7533c36f2370fc97581-alt-v1" }}
 {{- $istioProxyDepsRev := "v1.21.6-5c3dc559371181d5baa4a7533c36f2370fc97581-alt-v1" }}
-{{- $llvmRev := "llvmorg-17.0.6" }}
+{{- $llvmRev := "llvmorg-14.0.0" }}
 {{- $goVersion := "1.23.1" }}
 {{- $protocVersion := "22.3" }}
 {{- $bazelVersions := "6.5.0" }}
@@ -143,7 +143,7 @@ shell:
   - go mod download
   - sed -i '/^build --enable_platform_specific_config/a build --linkopt=-L/opt/libcxx/lib'          envoy.bazelrc
   - sed -i '/^build --enable_platform_specific_config/a build --linkopt=-Wl,-rpath,/opt/libcxx/lib' envoy.bazelrc
-  - sed -i '/build --incompatible_merge_fixed_and_default_shell_env/d' envoy.bazelrc
+  # - sed -i '/build --incompatible_merge_fixed_and_default_shell_env/d' envoy.bazelrc
   - sed -i 's|build:libc++ --action_env=BAZEL_LINKOPTS=-lm:-pthread|build:libc++ --action_env=BAZEL_LINKOPTS=-lm:-lpthread|' envoy.bazelrc
   # - sed -i '/^build:clang --action_env=CXX=clang++ --host_action_env=CXX=clang++/a build:clang --action_env=CCC_OVERRIDE_OPTIONS="^--gcc-install-dir=/usr/bin/../lib64/gcc/x86_64-alt-linux/11"' envoy.bazelrc
   # - sed -i 's|ENVOY_SHA = "35c166bb5c90573151afbd94a0936741f9fab8bc"|ENVOY_SHA = "b3ba121ee22d3f77d6f2f7e5d4722d752093da15"|' WORKSPACE
@@ -275,8 +275,7 @@ shell:
     libcap-devel libpcap-devel \
     clang17.0 clang17.0-tools lld17.0 llvm17.0-devel \
     libcxxabi-devel \
-    libcxx libcxx-static libcxxabi-static lld17.0 \
-    gcc11 gcc11-c++ libstdc++11-devel libstdc++11-devel-static
+    libcxx libcxx-static libcxxabi-static lld17.0
   # apt clean
   - apt-get autoclean && apt-get clean
   install:
