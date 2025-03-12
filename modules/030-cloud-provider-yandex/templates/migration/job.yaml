@@ -1,0 +1,33 @@
+{{- define "yandex_migration_job_resources" }}
+cpu: 25m
+memory: 60Mi
+{{- end }}
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cloud-migration
+  namespace: d8-cloud-provider-yandex
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-migrator")) | nindent 2 }}
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: cloud-migration
+    spec:
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      restartPolicy: Never
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+      - name: migrator
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        image:  {{ include "helm_lib_module_image" (list . "cloudMigrator") }}
+        command:
+          - /true
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" 10 | nindent 12 }}
+            {{- include "yandex_migration_job_resources" . | nindent 12 }}
