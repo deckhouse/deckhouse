@@ -66,6 +66,8 @@ internal:
     key: b
     ca: c
   currentReleaseImageName: test
+registry:
+	mode: Unmanaged
 `
 
 	moduleValuesForDeckhouseNode = `
@@ -86,6 +88,8 @@ internal:
     key: b
     ca: c
   currentReleaseImageName: test
+registry:
+	mode: Unmanaged
 `
 )
 
