@@ -24,7 +24,7 @@ import (
 )
 
 var _ = Describe("Modules :: flow-schema :: hooks :: discover deckhouse namespaces ::", func() {
-	f := HookExecutionConfigInit(`{"flowSchema":{"internal": {"namespaces": []}}}`, `{}`)
+	f := HookExecutionConfigInit(`{"deckhouse":{"internal": {"namespaces": []}}}`, `{}`)
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
