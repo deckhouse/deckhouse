@@ -118,6 +118,10 @@ spec:
                       values:
                       - prod-.+
                       - stage-.+
+                    - field: message
+                      operator: Regex
+                      values:
+                      - .*search_text.*
                   items:
                     type: object
                     required:

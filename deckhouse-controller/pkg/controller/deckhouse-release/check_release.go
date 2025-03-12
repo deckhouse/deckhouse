@@ -412,15 +412,11 @@ func (f *DeckhouseReleaseFetcher) createReleases(
 	releasesInCluster []*v1alpha1.DeckhouseRelease,
 	newSemver *semver.Version) (*ReleaseMetadata, error) {
 	var (
-		cooldownUntil, notificationShiftTime *metav1.Time
+		notificationShiftTime *metav1.Time
 	)
 
-	if releaseMetadata.Cooldown != nil {
-		cooldownUntil = releaseMetadata.Cooldown
-	}
-
 	if len(releasesInCluster) == 0 {
-		err := f.createRelease(ctx, releaseMetadata, cooldownUntil, notificationShiftTime, "no releases in cluster")
+		err := f.createRelease(ctx, releaseMetadata, notificationShiftTime, "no releases in cluster")
 		if err != nil {
 			return nil, fmt.Errorf("create release %s: %w", releaseMetadata.Version, err)
 		}
@@ -431,7 +427,7 @@ func (f *DeckhouseReleaseFetcher) createReleases(
 	// create release if deployed release and new release are in updating sequence
 	actual := releaseForUpdate
 	if isUpdatingSequence(actual.GetVersion(), newSemver) {
-		err := f.createRelease(ctx, releaseMetadata, cooldownUntil, notificationShiftTime, "from deployed")
+		err := f.createRelease(ctx, releaseMetadata, notificationShiftTime, "from deployed")
 		if err != nil {
 			return nil, fmt.Errorf("create release %s: %w", releaseMetadata.Version, err)
 		}
@@ -454,22 +450,13 @@ func (f *DeckhouseReleaseFetcher) createReleases(
 		// create release if last release and new release are in updating sequence
 		if isUpdatingSequence(actual.GetVersion(), newSemver) {
 			// TODO: remove cooldown?
-			err := f.createRelease(ctx, releaseMetadata, cooldownUntil, notificationShiftTime, "from last release in cluster")
+			err := f.createRelease(ctx, releaseMetadata, notificationShiftTime, "from last release in cluster")
 			if err != nil {
 				return nil, fmt.Errorf("create release %s: %w", releaseMetadata.Version, err)
 			}
 
 			return releaseMetadata, nil
 		}
-	}
-
-	// inherit cooldown from previous patch release
-	// we need this to automatically set cooldown for next patch releases
-	if cooldownUntil == nil &&
-		actual.GetCooldownUntil() != nil &&
-		actual.GetVersion().Major() == newSemver.Major() &&
-		actual.GetVersion().Minor() == newSemver.Minor() {
-		cooldownUntil = &metav1.Time{Time: *actual.GetCooldownUntil()}
 	}
 
 	if actual.GetNotificationShift() &&
@@ -495,13 +482,9 @@ func (f *DeckhouseReleaseFetcher) createReleases(
 	for _, meta := range metas {
 		releaseMetadata = &meta
 
-		err = f.createRelease(ctx, releaseMetadata, cooldownUntil, notificationShiftTime, "step-by-step")
+		err = f.createRelease(ctx, releaseMetadata, notificationShiftTime, "step-by-step")
 		if err != nil {
 			return nil, fmt.Errorf("create release %s: %w", releaseMetadata.Version, err)
-		}
-
-		if releaseMetadata.Cooldown != nil {
-			cooldownUntil = releaseMetadata.Cooldown
 		}
 	}
 
@@ -515,7 +498,6 @@ func (f *DeckhouseReleaseFetcher) createReleases(
 func (f *DeckhouseReleaseFetcher) createRelease(
 	ctx context.Context,
 	releaseMetadata *ReleaseMetadata,
-	cooldownUntil,
 	notificationShiftTime *metav1.Time,
 	createProcess string,
 ) error {
@@ -524,9 +506,6 @@ func (f *DeckhouseReleaseFetcher) createRelease(
 	ts := metav1.Time{Time: f.clock.Now()}
 	if releaseMetadata.IsCanaryRelease(f.GetReleaseChannel()) {
 		// if cooldown is set, calculate canary delay from cooldown time, not current
-		if cooldownUntil != nil && cooldownUntil.After(ts.Time) {
-			ts = *cooldownUntil
-		}
 		applyAfter = releaseMetadata.CalculateReleaseDelay(f.GetReleaseChannel(), ts, f.clusterUUID)
 	}
 
@@ -580,9 +559,6 @@ func (f *DeckhouseReleaseFetcher) createRelease(
 
 	if releaseMetadata.Suspend {
 		release.ObjectMeta.Annotations[v1alpha1.DeckhouseReleaseAnnotationSuspended] = "true"
-	}
-	if cooldownUntil != nil {
-		release.ObjectMeta.Annotations[v1alpha1.DeckhouseReleaseAnnotationCooldown] = cooldownUntil.UTC().Format(time.RFC3339)
 	}
 	if notificationShiftTime != nil {
 		release.ObjectMeta.Annotations[v1alpha1.DeckhouseReleaseAnnotationNotificationTimeShift] = "true"
