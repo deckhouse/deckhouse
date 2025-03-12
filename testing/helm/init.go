@@ -134,6 +134,7 @@ func GetModulesImages() map[string]interface{} {
 			"path":      "/deckhouse/fe",
 			"CA":        "CACACA",
 			"scheme":    "https",
+			"registryMode": "Direct"
 		},
 		"digests": library.DefaultImagesDigests,
 	}
