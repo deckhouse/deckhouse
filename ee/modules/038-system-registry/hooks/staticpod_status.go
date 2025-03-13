@@ -24,6 +24,12 @@ type registryStaticPod struct {
 	IsReady  bool
 }
 
+type registryMasterNode struct {
+	Name    string
+	IP      string
+	IsReady bool
+}
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
 	Queue:        "/modules/system-registry/staticpod-status",
@@ -53,10 +59,41 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			LabelSelector: &v1.LabelSelector{
 				MatchLabels: map[string]string{"node-role.kubernetes.io/control-plane": ""},
 			},
-			FilterFunc: nil,
+			FilterFunc: filterRegistryMasterNodes,
 		},
 	},
 }, handleRegistryStaticPods)
+
+func filterRegistryMasterNodes(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var node v1core.Node
+
+	err := sdk.FromUnstructured(obj, &node)
+	if err != nil {
+		return "", fmt.Errorf("failed to convert node to struct: %v", err)
+	}
+
+	isReady := false
+	for _, cond := range node.Status.Conditions {
+		if cond.Type == "Ready" && cond.Status == "True" {
+			isReady = true
+			break
+		}
+	}
+
+	ret := registryMasterNode{
+		Name:    node.Name,
+		IsReady: isReady,
+	}
+
+	for _, addr := range node.Status.Addresses {
+		if addr.Type == "InternalIP" {
+			ret.IP = addr.Address
+			break
+		}
+	}
+
+	return ret, nil
+}
 
 func filterRegistryStaticPods(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var pod v1core.Pod
