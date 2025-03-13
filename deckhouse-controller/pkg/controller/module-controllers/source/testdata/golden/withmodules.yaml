@@ -16,7 +16,8 @@ spec:
     repo: dev-registry.deckhouse.io/deckhouse/modules
     scheme: HTTPS
 status:
-  message: Ready
+  message: ""
+  phase: Active
   modules:
   - name: disabledmodule
   - checksum: 'sha256:'
