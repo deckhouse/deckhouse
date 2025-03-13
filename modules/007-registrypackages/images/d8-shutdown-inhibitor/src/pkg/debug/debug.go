@@ -18,19 +18,31 @@ package debug
 
 import (
 	"fmt"
-	"os"
 
+	"d8_shutdown_inhibitor/pkg/app"
 	"d8_shutdown_inhibitor/pkg/inputdev"
 )
 
-func ListInputDevices() {
-	devs, err := inputdev.ListInputDevicesWithAnyButton(inputdev.KEY_POWER, inputdev.KEY_POWER2)
-	if err != nil {
-		fmt.Printf("list power key devices: %w", err)
-		os.Exit(1)
+func RunDebugCommand(args []string) bool {
+	if len(args) < 1 {
+		return false
 	}
 
-	for _, dev := range devs {
-		fmt.Printf("Device: %s, %s\n", dev.Name, dev.DevPath)
+	switch args[1] {
+	case "node-name":
+		NodeName()
+	case "node-cordon":
+		NodeCordon()
+	case "list-pods":
+		ListPods(app.InhibitNodeShutdownLabel)
+	case "list-input-devices":
+		ListInputDevices()
+	case "watch-for-key":
+		fmt.Println("Use real tty (vm console) and press buttons Q W E or Enter")
+		WatchForKey(inputdev.KEY_Q, inputdev.KEY_E, inputdev.KEY_W, inputdev.KEY_ENTER)
+	default:
+		return false
 	}
+
+	return true
 }

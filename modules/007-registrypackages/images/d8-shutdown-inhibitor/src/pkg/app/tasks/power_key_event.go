@@ -22,7 +22,7 @@ import (
 	"os/exec"
 	"time"
 
-	"graceful_shutdown/pkg/inputdev"
+	"d8_shutdown_inhibitor/pkg/inputdev"
 )
 
 // PowerKeyEvent is a task that listens for power key events.

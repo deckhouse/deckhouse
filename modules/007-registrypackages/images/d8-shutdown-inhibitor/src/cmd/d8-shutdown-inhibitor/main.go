@@ -21,29 +21,11 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
-	"graceful_shutdown/pkg/app"
-	"graceful_shutdown/pkg/debug"
-	"graceful_shutdown/pkg/inputdev"
-)
-
-// Settings
-const (
-	InhibitDelayMaxSec       = 3 * 24 * time.Hour // 3 days
-	InhibitNodeShutdownLabel = "pod.deckhouse.io/inhibit-node-shutdown"
-	WallBroadcastPeriod      = 30 * time.Second
+	"d8_shutdown_inhibitor/pkg/app"
 )
 
 func main() {
-	if RunDebugCommand(os.Args) {
-		return
-	}
-
-	RunInhibitorApp()
-}
-
-func RunInhibitorApp() {
 	nodeName, err := os.Hostname()
 	if err != nil {
 		fmt.Printf("START Error: get hostname: %v\n", err)
@@ -52,10 +34,11 @@ func RunInhibitorApp() {
 
 	// Start application.
 	app := app.NewApp(app.AppConfig{
-		InhibitDelayMax:     InhibitDelayMaxSec,
-		WallBroadcastPeriod: WallBroadcastPeriod,
-		PodLabel:            InhibitNodeShutdownLabel,
-		NodeName:            nodeName,
+		PodLabel:              app.InhibitNodeShutdownLabel,
+		InhibitDelayMax:       app.InhibitDelayMaxSec,
+		PodsCheckingInterval:  app.PodsCheckingInterval,
+		WallBroadcastInterval: app.WallBroadcastInterval,
+		NodeName:              nodeName,
 	})
 
 	err = app.Start()
@@ -82,23 +65,4 @@ func RunInhibitorApp() {
 		fmt.Printf("ERROR: %s\n", err.Error())
 		os.Exit(1)
 	}
-}
-
-func RunDebugCommand(args []string) bool {
-	if len(args) < 1 {
-		return false
-	}
-
-	switch args[1] {
-	case "list-pods":
-		debug.ListPods(InhibitNodeShutdownLabel)
-	case "list-input-devices":
-		debug.ListInputDevices()
-	case "watch-for-key":
-		debug.WatchForKey(inputdev.KEY_Q, inputdev.KEY_E, inputdev.KEY_W, inputdev.KEY_ENTER)
-	default:
-		return false
-	}
-
-	return true
 }

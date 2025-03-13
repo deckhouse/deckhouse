@@ -22,18 +22,11 @@ import (
 	"sort"
 	"time"
 
-	"graceful_shutdown/pkg/app/containerd"
-	"graceful_shutdown/pkg/app/tasks"
-	"graceful_shutdown/pkg/systemd"
-	"graceful_shutdown/pkg/taskstarter"
+	"d8_shutdown_inhibitor/pkg/app/containerd"
+	"d8_shutdown_inhibitor/pkg/app/tasks"
+	"d8_shutdown_inhibitor/pkg/systemd"
+	"d8_shutdown_inhibitor/pkg/taskstarter"
 )
-
-type AppConfig struct {
-	InhibitDelayMax     time.Duration
-	WallBroadcastPeriod time.Duration
-	PodLabel            string
-	NodeName            string
-}
 
 type App struct {
 	config      AppConfig
@@ -196,9 +189,10 @@ func (a *App) wireAppTasks() []taskstarter.Task {
 			UnlockInhibitorsCh: unlockInhibitorsCh,
 		},
 		&tasks.PodObserver{
-			CheckInterval:    5 * time.Second,
-			ShutdownSignalCh: shutdownSignalCh,
-			StopInhibitorsCh: unlockInhibitorsCh,
+			PodsCheckingInterval:  a.config.PodsCheckingInterval,
+			WallBroadcastInterval: a.config.WallBroadcastInterval,
+			ShutdownSignalCh:      shutdownSignalCh,
+			StopInhibitorsCh:      unlockInhibitorsCh,
 			PodMatchers: []containerd.PodMatcher{
 				containerd.WithLabel(a.config.PodLabel),
 				containerd.WithReadyState(),
