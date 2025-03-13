@@ -382,7 +382,7 @@ func handleEgressGateways(input *go_hook.HookInput) error {
 			"SDNInternalEgressGatewayInstance",
 			"",
 			egi.Name,
-			object_patch.WithIgnoreMissingObject(true),
+			object_patch.WithIgnoreMissingObject(),
 		)
 	}
 

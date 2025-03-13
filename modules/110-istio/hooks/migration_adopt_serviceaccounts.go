@@ -93,7 +93,7 @@ func migrateServiceAccounts(input *go_hook.HookInput) error {
 	for _, serviceAccountSnap := range input.Snapshots["istio_serviceaccounts"] {
 		serviceAccount := serviceAccountSnap.(ServiceAccountInfo)
 		if !serviceAccount.IsLabeledAndAnnotated {
-			input.PatchCollector.MergePatch(patch, "v1", "ServiceAccount", "d8-istio", serviceAccount.Name, object_patch.WithIgnoreMissingObject(true))
+			input.PatchCollector.MergePatch(patch, "v1", "ServiceAccount", "d8-istio", serviceAccount.Name, object_patch.WithIgnoreMissingObject())
 		}
 	}
 

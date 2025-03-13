@@ -116,7 +116,7 @@ func crdAndServicesAlertmanagerHandler(input *go_hook.HookInput, dc dependency.C
 		am := s.(Alertmanager)
 
 		// set observed status
-		input.PatchCollector.PatchWithMutatingFunc(set_cr_statuses.SetObservedStatus(s, applyAlertmanagerCRDFilter), "deckhouse.io/v1alpha1", "customalertmanager", "", am.Name, object_patch.WithSubresource("/status"), object_patch.WithIgnoreHookError(true))
+		input.PatchCollector.PatchWithMutatingFunc(set_cr_statuses.SetObservedStatus(s, applyAlertmanagerCRDFilter), "deckhouse.io/v1alpha1", "customalertmanager", "", am.Name, object_patch.WithSubresource("/status"), object_patch.WithIgnoreHookError())
 
 		// External AlertManagers by service or address
 		if _, ok, _ := unstructured.NestedMap(am.Spec, "external"); ok {

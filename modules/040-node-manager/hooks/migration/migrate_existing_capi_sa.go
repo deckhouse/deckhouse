@@ -102,7 +102,7 @@ func migrateServiceAccounts(input *go_hook.HookInput) error {
 
 	serviceAccount := snap["capi_sa"][0].(ServiceAccountInfo)
 	if !serviceAccount.IsLabeledAndAnnotated {
-		input.PatchCollector.MergePatch(patch, "v1", "ServiceAccount", "d8-cloud-instance-manager", serviceAccount.Name, object_patch.WithIgnoreMissingObject(true))
+		input.PatchCollector.MergePatch(patch, "v1", "ServiceAccount", "d8-cloud-instance-manager", serviceAccount.Name, object_patch.WithIgnoreMissingObject())
 	}
 
 	return nil
