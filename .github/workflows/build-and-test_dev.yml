@@ -50,6 +50,8 @@ env:
   STRONGHOLD_PULL_TOKEN: "${{secrets.STRONGHOLD_PULL_TOKEN}}"
   # deckhouse private repo should contain the host address of proprietary parts of deckhouse ecosystem. Ex repo.my-repo.com
   DECKHOUSE_PRIVATE_REPO: "${{secrets.DECKHOUSE_PRIVATE_REPO}}"
+  #
+  CARGO_PROXY: ""
   # </template: git_source_envs>
 
 # Cancel in-progress jobs for the same PR (pull_request_target event) or for the same branch (push event).

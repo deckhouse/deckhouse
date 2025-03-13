@@ -27,5 +27,7 @@ OBSERVABILITY_SOURCE_REPO: "${{secrets.OBSERVABILITY_SOURCE_REPO}}"
 STRONGHOLD_PULL_TOKEN: "${{secrets.STRONGHOLD_PULL_TOKEN}}"
 # deckhouse private repo should contain the host address of proprietary parts of deckhouse ecosystem. Ex repo.my-repo.com
 DECKHOUSE_PRIVATE_REPO: "${{secrets.DECKHOUSE_PRIVATE_REPO}}"
+#
+CARGO_PROXY: ""
 # </template: git_source_envs>
 {!{- end -}!}
