@@ -23,10 +23,12 @@ properties:
               - plainstring
       state:
         type: object
+        default: {}
         additionalProperties: true
         x-kubernetes-preserve-unknown-fields: true
         properties:
           staticPods:
             type: object
+            default: {}
             additionalProperties: true
             x-kubernetes-preserve-unknown-fields: true
