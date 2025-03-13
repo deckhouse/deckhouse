@@ -22,6 +22,9 @@ import (
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -183,6 +186,11 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 }
 
 func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.ModuleSource) (ctrl.Result, error) {
+	ctx, span := otel.Tracer(controllerName).Start(ctx, "handleModuleSource")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("source", source.Name))
+
 	// generate options for connecting to the registry
 	opts := utils.GenerateRegistryOptionsFromModuleSource(source, r.clusterUUID, r.log)
 
@@ -216,6 +224,8 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 		return ctrl.Result{Requeue: true}, nil
 	}
 
+	span.AddEvent("fetch tags from the registry")
+
 	// list available modules(tags) from the registry
 	r.log.Debugf("fetch modules from the '%s' module source", source.Name)
 	pulledModules, err := registryClient.ListTags(ctx)
@@ -226,6 +236,9 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 		}
 		return ctrl.Result{RequeueAfter: defaultScanInterval}, nil
 	}
+
+	span.AddEvent("fetched the tags for the registry",
+		trace.WithAttributes(attribute.Int("count", len(pulledModules))))
 
 	// limit pulled module
 	if len(pulledModules) > maxModulesLimit {
@@ -257,6 +270,9 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 }
 
 func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.ModuleSource, opts []cr.Option, pulledModules []string) error {
+	ctx, span := otel.Tracer(controllerName).Start(ctx, "processModules")
+	defer span.End()
+
 	md := downloader.NewModuleDownloader(r.dependencyContainer, r.downloadedModulesDir, source, opts)
 	sort.Strings(pulledModules)
 
@@ -339,7 +355,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 
 		// download module metadata from the specified release channel
 		r.log.Debugf("download meta from the '%s' release channel for the '%s' module for the '%s' module source", policy.Spec.ReleaseChannel, moduleName, source.Name)
-		meta, err := md.DownloadMetadataFromReleaseChannel(moduleName, policy.Spec.ReleaseChannel, cachedChecksum)
+		meta, err := md.DownloadMetadataFromReleaseChannel(ctx, moduleName, policy.Spec.ReleaseChannel, cachedChecksum)
 		if err != nil {
 			r.log.Warnf("failed to downloaded the '%s' module: %v", moduleName, err)
 			availableModule.PullError = err.Error()
