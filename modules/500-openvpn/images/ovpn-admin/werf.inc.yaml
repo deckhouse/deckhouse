@@ -1,4 +1,4 @@
-{{- $gitCommit := "dbc48ef3f1141caa7769488dd3273cff530c9df7" }}
+{{- $gitCommit := "a2c41756a56eeb7c09a270700672a4154645cbc6" }}
 {{- $binaries := "/bin/bash" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}

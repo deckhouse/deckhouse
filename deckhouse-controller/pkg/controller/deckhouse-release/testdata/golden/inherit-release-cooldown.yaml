@@ -29,8 +29,6 @@ metadata:
     release.deckhouse.io/isUpdating: "false"
     release.deckhouse.io/notified: "false"
   creationTimestamp: null
-  labels:
-    heritage: deckhouse
   name: v1.16.1
   resourceVersion: "1"
 spec:

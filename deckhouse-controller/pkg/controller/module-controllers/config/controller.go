@@ -273,7 +273,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 			// set conflict if there are several available sources
 			err := utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
 				module.Status.Phase = v1alpha1.ModulePhaseConflict
-				module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, v1alpha1.ModuleReasonConflict, v1alpha1.ModuleMessageConflict)
+				module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, "", "")
 				module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonConflict, v1alpha1.ModuleMessageConflict)
 				return true
 			})

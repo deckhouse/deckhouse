@@ -229,7 +229,7 @@ jobs:
   security_scan_images:
     name: {!{ $jobNames.security_scan_images }!}
     if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' }}
-    runs-on: [ self-hosted, regular, selectel ]
+    runs-on: [self-hosted, selectel]
     needs:
       - git_info
       - build_fe

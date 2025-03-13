@@ -260,7 +260,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 	md := downloader.NewModuleDownloader(r.dependencyContainer, r.downloadedModulesDir, source, opts)
 	sort.Strings(pulledModules)
 
-	var availableModules []v1alpha1.AvailableModule
+	availableModules := make([]v1alpha1.AvailableModule, 0)
 	var pullErrorsExist bool
 	for _, moduleName := range pulledModules {
 		if moduleName == "modules" {
