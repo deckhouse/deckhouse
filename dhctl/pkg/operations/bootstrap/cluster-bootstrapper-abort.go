@@ -23,6 +23,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	terrastate "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
@@ -201,6 +202,27 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 
 	if err != nil {
 		return err
+	}
+
+	if err := terminal.AskBecomePassword(); err != nil {
+		return err
+	}
+
+	if metaConfig.IsStatic() {
+		deckhouseInstallConfig, err := config.PrepareDeckhouseInstallConfig(metaConfig)
+		if err != nil {
+			return err
+		}
+
+		if b.CommanderMode {
+			deckhouseInstallConfig.CommanderMode = b.CommanderMode
+			deckhouseInstallConfig.CommanderUUID = b.CommanderUUID
+		}
+		bootstrapState := NewBootstrapState(stateCache)
+		preflightChecker := preflight.NewChecker(b.NodeInterface, deckhouseInstallConfig, metaConfig, bootstrapState)
+		if err := preflightChecker.StaticSudo(); err != nil {
+			return err
+		}
 	}
 
 	if destroyer == nil {

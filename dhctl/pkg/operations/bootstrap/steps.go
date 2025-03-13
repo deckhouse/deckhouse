@@ -457,6 +457,9 @@ func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, n
 
 			return nil
 		})
+		if err != nil {
+			return fmt.Errorf("cannot create %s directories: %w", app.DeckhouseNodeTmpPath, err)
+		}
 
 		// in end of pipeline steps bashible write "OK" to this file
 		// we need creating it before because we do not want handle errors from cat
@@ -470,6 +473,9 @@ func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, n
 			return nil
 		})
 	})
+	if err != nil {
+		return err
+	}
 
 	if wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper); ok {
 		cleanUpTunnel, err := setupRPPTunnel(wrapper.Client())
