@@ -18,8 +18,15 @@ type VsphereCloudProviderDiscoveryData struct {
 	APIVersion string `json:"apiVersion,omitempty"`
 	Kind       string `json:"kind,omitempty"`
 
-	Datastores      []string `json:"datastores,omitempty"`
-	Networks        []string `json:"networks,omitempty"`
-	VMTemplatePaths []string `json:"VMTemplatePaths,omitempty"`
-	ResourcePools   []string `json:"resourcePools,omitempty"`
+	Datastores          []string      `json:"datastores,omitempty"`
+	Networks            []string      `json:"networks,omitempty"`
+	VMTemplatePaths     []string      `json:"VMTemplatePaths,omitempty"`
+	ResourcePools       []string      `json:"resourcePools,omitempty"`
+	RegionTagCategories []TagCategory `json:"regionTagCategories,omitempty"`
+	ZoneTagCategories   []TagCategory `json:"zoneTagCategories,omitempty"`
+}
+
+type TagCategory struct {
+	Name string   `json:"name"`
+	Tags []string `json:"tags"`
 }

@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/vmware/govmomi/find"
+	"github.com/vmware/govmomi/vapi/rest"
 	"net/url"
 	"os"
 	"strconv"
@@ -21,6 +22,7 @@ import (
 	"github.com/vmware/govmomi/cns"
 	"github.com/vmware/govmomi/cns/types"
 	"github.com/vmware/govmomi/session"
+	"github.com/vmware/govmomi/vapi/tags"
 	"github.com/vmware/govmomi/vim25"
 	"github.com/vmware/govmomi/vim25/soap"
 
@@ -115,15 +117,15 @@ func (d *Discoverer) InstanceTypes(ctx context.Context) ([]v1alpha1.InstanceType
 
 // NotImplemented
 func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryData []byte) ([]byte, error) {
-	//discoveryData := VsphereCloudDiscoveryData
-	//
-	//if len(cloudProviderDiscoveryData) > 0 {
-	//	err := json.Unmarshal(cloudProviderDiscoveryData, &discoveryData)
-	//	if err != nil {
-	//		return nil, fmt.Errorf("failed to unmarshal cloud provider discovery data: %v", err)
-	//	}
-	//}
 	discoveryData := v1alpha1.VsphereCloudProviderDiscoveryData{}
+
+	if len(cloudProviderDiscoveryData) > 0 {
+		err := json.Unmarshal(cloudProviderDiscoveryData, &discoveryData)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal cloud provider discovery data: %v", err)
+		}
+	}
+
 	discoveryData.APIVersion = "deckhouse.io/v1alpha1"
 	discoveryData.Kind = "VsphereCloudProviderDiscoveryData"
 	finder := find.NewFinder(d.govmomiClient.Client, false)
@@ -175,8 +177,12 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryDa
 		for _, rp := range resourcePools {
 			discoveryData.ResourcePools = append(discoveryData.ResourcePools, rp.InventoryPath)
 		}
-	}
 
+	}
+	err = d.populateTagCategories(ctx, &discoveryData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to populate tag categories: %v", err)
+	}
 	discoveryDataBytes, err := json.Marshal(discoveryData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal discovery data: %v", err)
@@ -212,4 +218,58 @@ func (d *Discoverer) getDisksCreatedByCSIDriver(ctx context.Context) ([]types.Cn
 	}
 
 	return diskList.Volumes, nil
+}
+func NewTagManager(ctx context.Context, client *govmomi.Client) (*tags.Manager, error) {
+
+	restClient := rest.NewClient(client.Client)
+	err := restClient.Login(ctx, client.URL().User)
+	if err != nil {
+		return nil, fmt.Errorf("failed to login to REST API: %v", err)
+	}
+
+	tagManager := tags.NewManager(restClient)
+	return tagManager, nil
+}
+
+func (d *Discoverer) populateTagCategories(ctx context.Context, discoveryData *v1alpha1.VsphereCloudProviderDiscoveryData) error {
+
+	tagManager, err := NewTagManager(ctx, d.govmomiClient)
+	if err != nil {
+		return fmt.Errorf("failed to create tag manager: %v", err)
+	}
+
+	categories, err := tagManager.GetCategories(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get tag categories: %v", err)
+	}
+
+	for _, category := range categories {
+		tagIDs, err := tagManager.ListTagsForCategory(ctx, category.ID)
+		if err != nil {
+			return fmt.Errorf("failed to get tags for category %s: %v", category.Name, err)
+		}
+
+		var tagNames []string
+		for _, tagID := range tagIDs {
+			tag, err := tagManager.GetTag(ctx, tagID)
+			if err != nil {
+				return fmt.Errorf("failed to get tag %s: %v", tagID, err)
+			}
+			tagNames = append(tagNames, tag.Name)
+		}
+
+		if strings.HasSuffix(category.Name, "region") {
+			discoveryData.RegionTagCategories = append(discoveryData.RegionTagCategories, v1alpha1.TagCategory{
+				Name: category.Name,
+				Tags: tagNames,
+			})
+		} else if strings.HasSuffix(category.Name, "zone") {
+			discoveryData.ZoneTagCategories = append(discoveryData.ZoneTagCategories, v1alpha1.TagCategory{
+				Name: category.Name,
+				Tags: tagNames,
+			})
+		}
+	}
+
+	return nil
 }

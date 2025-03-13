@@ -464,4 +464,53 @@ properties:
             description: |
               List of available resource pools in vSphere.
             uniqueItems: true
-
+          regionTagCategories:
+            type: array
+            items:
+              type: object
+              description: |
+                Represents a category of tags used for identifying regions.
+              required:
+                - name
+                - tags
+              properties:
+                name:
+                  type: string
+                  description: |
+                    The name of the tag category (e.g., "k8s-region").
+                tags:
+                  type: array
+                  items:
+                    type: string
+                    minLength: 1
+                  description: |
+                    List of tags belonging to this category.
+                  uniqueItems: true
+            description: |
+              List of tag categories used for identifying regions (vSphere Datacenters).
+            uniqueItems: true
+          zoneTagCategories:
+            type: array
+            items:
+              type: object
+              description: |
+                Represents a category of tags used for identifying availability zones.
+              required:
+                - name
+                - tags
+              properties:
+                name:
+                  type: string
+                  description: |
+                    The name of the tag category (e.g., "k8s-zone").
+                tags:
+                  type: array
+                  items:
+                    type: string
+                    minLength: 1
+                  description: |
+                    List of tags belonging to this category.
+                  uniqueItems: true
+            description: |
+              List of tag categories used for identifying availability zones.
+            uniqueItems: true
