@@ -3,11 +3,13 @@ title: "NFS data storage"
 permalink: en/storage/admin/external/nfs.html
 ---
 
-The `csi-nfs` module allows you to manage volumes based on the NFS (Network File System) protocol and create a StorageClass using the [NFSStorageClas](../../../reference/cr/nfsstorageclass/) resource.
+Deckhouse supports working with NFS (Network File System), providing the ability to connect and manage network file storage in Kubernetes. This allows for centralized data storage and file sharing between containers.
+
+This page provides instructions on connecting NFS storage to Deckhouse, configuring the connection, creating a StorageClass, and verifying system functionality.
 
 ## Enabling the module
 
-To enable the `csi-nfs` module, apply the following resource:
+To manage volumes based on the NFS (Network File System) protocol, the `csi-nfs` module is used, allowing the creation of StorageClass through custom resources like [NFSStorageClass](../../../reference/cr/nfsstorageclass/). To enable the module, run the following command:
 
 ```yaml
 d8 k apply -f - <<EOF

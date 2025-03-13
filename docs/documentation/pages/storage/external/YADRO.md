@@ -4,11 +4,13 @@ permalink: en/storage/admin/external/yadro.html
 d8Revision: ee
 ---
 
-To manage volumes based on the [TATLIN.UNIFIED](https://yadro.com/ru/tatlin/unified) storage system, you can use the `csi-yadro` module to create StorageClass resources through the custom [YadroStorageClass](../../../reference/cr/yadrostorageclass/) resources.
+Deckhouse supports integration with the [TATLIN.UNIFIED (Yadro)](https://yadro.com/ru/tatlin/unified) storage system, enabling volume management in Kubernetes. This allows the use of centralized storage for containerized workloads, ensuring high performance and fault tolerance.
 
-## Enable the module
+This page provides instructions on connecting TATLIN.UNIFIED (Yadro) to Deckhouse, configuring the connection, creating a StorageClass, and verifying system functionality.
 
-To enable the `csi-yadro` module, run the following command:
+## Enabling the module
+
+To manage volumes based on the [TATLIN.UNIFIED (Yadro)](https://yadro.com/ru/tatlin/unified) storage system in Deckhouse, the `csi-yadro` module is used. It allows the creation of StorageClass resources through custom resources like [YadroStorageClass](../../../reference/cr/yadrostorageclass/). To enable the module, run the following command:
 
 ```yaml
 d8 k apply -f - <<EOF

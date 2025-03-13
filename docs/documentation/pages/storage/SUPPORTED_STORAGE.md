@@ -3,7 +3,13 @@ title: "Storage configuration"
 permalink: en/storage/admin/supported-storage.html
 ---
 
-Storage configuration is carried out in several steps, depending on the selected storage type. The main stages include enabling and configuring the corresponding modules, creating volume groups (Volume Groups), preparing and creating StorageClass objects, as well as their subsequent assignment and use. It is important to note that each storage type may have its own specific requirements and configuration nuances, which are described in the relevant sections.
+Storage setup consists of several steps that depend on the selected storage type. The main configuration stages include:
+
+- Enabling and configuring the appropriate modules.
+- Creating Volume Groups.
+- Preparing and creating StorageClass objects, followed by their assignment and usage.
+
+Each storage type may have its own specific requirements and configuration nuances, which are described in the corresponding sections.
 
 To create StorageClass objects, you must connect one or more storages that manage PersistentVolume resources. Created StorageClass objects can be used to organize virtual disks and images.
 

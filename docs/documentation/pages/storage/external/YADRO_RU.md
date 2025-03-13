@@ -5,11 +5,13 @@ lang: ru
 d8Revision: ee
 ---
 
-Для управления томами на основе системы хранения данных [TATLIN.UNIFIED](https://yadro.com/ru/tatlin/unified) можно использовать модуль `csi-yadro`, позволяющий создавать ресурсы StorageClass через создание пользовательских ресурсов [YadroStorageClass](../../../reference/cr/yadrostorageclass/).
+Deckhouse поддерживает интеграцию с системой хранения данных [TATLIN.UNIFIED (Yadro)](https://yadro.com/ru/tatlin/unified), предоставляя возможность управления томами в Kubernetes. Это позволяет использовать централизованное хранилище для контейнеризированных рабочих нагрузок, обеспечивая высокую производительность и отказоустойчивость.
+
+На этой странице представлены инструкции по подключению TATLIN.UNIFIED (Yadro) к Deckhouse, настройке соединения, созданию StorageClass, а также проверке работоспособности системы.
 
 ## Включение модуля
 
-Чтобы включить модуль `csi-yadro`, выполните команду:
+Для управления томами на основе системы хранения данных [TATLIN.UNIFIED (Yadro)](https://yadro.com/ru/tatlin/unified) в Deckhouse используется модуль `csi-yadro`, позволяющий создавать ресурсы StorageClass через создание пользовательских ресурсов [YadroStorageClass](../../../reference/cr/yadrostorageclass/). Чтобы включить модуль, выполните команду:
 
 ```yaml
 d8 k apply -f - <<EOF

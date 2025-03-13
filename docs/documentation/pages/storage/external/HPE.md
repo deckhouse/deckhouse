@@ -3,13 +3,15 @@ title: "HPE data storage"
 permalink: en/storage/admin/external/hpe.html
 ---
 
-This module provides a CSI driver for managing volumes on HPE 3PAR storage systems. It allows you to create StorageClass in Kubernetes using [HPEStorageClass](../../../reference/cr/hpestorageclass/).
+Deckhouse provides support for HPE 3PAR storage systems, enabling volume management in Kubernetes using a CSI driver. This ensures a reliable, scalable, and high-performance storage solution suitable for mission-critical workloads. To support HPE 3PAR storage systems, the `csi-hpe` module is used, allowing the creation of StorageClass in Kubernetes through the [HPEStorageClass](../../../reference/cr/hpestorageclass/) resource.
 
 {% alert level="warning" %}
-The user is not allowed to create a StorageClass for the `csi.hpe.com` CSI driver.
-Module supports only HPE 3PAR SAN devices. For other HPE SAN configurations, please reach out to technical support.
+User-created StorageClass for the `csi.hpe.com` CSI driver is not allowed.  
+Only HPE 3PAR** storage systems are supported. For other HPE storage systems, please contact technical support.
 {% endalert %}
->
+
+This page provides instructions on connecting HPE 3PAR to Deckhouse, configuring the connection, creating StorageClass, and verifying storage functionality.
+
 ## System requirements and recommendations
 
 ### Requirements
@@ -21,7 +23,7 @@ Module supports only HPE 3PAR SAN devices. For other HPE SAN configurations, ple
 
 Note that all commands must be run on a machine that has administrator access to the Kubernetes API.
 
-### Enabling module
+### Enabling the module
 
 Enable the `csi-hpe` module. This will result in the following actions across all cluster nodes:
 - registration of the CSI driver.

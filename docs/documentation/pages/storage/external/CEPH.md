@@ -3,11 +3,13 @@ title: "Distributed Ceph storage"
 permalink: en/storage/admin/external/ceph.html
 ---
 
-To create StorageClass objects based on RBD (RADOS Block Device) or Ceph file system, you can use the `csi-ceph` module, which allows you to configure connections to one or more Ceph clusters.
+Ceph is a scalable distributed storage system that ensures high availability and fault tolerance of data. Deckhouse supports integration with Ceph clusters, enabling dynamic storage management and the use of StorageClass based on RBD (RADOS Block Device) or CephFS.
+
+This page provides instructions on connecting Ceph to Deckhouse, configuring authentication, creating StorageClass objects, and verifying storage functionality.
 
 ## Enabling the module
 
-To enable the `csi-ceph` module, apply the ModuleConfig resource:
+To connect a Ceph cluster in Deckhouse, you need to enable the `csi-ceph` module. To do this, apply the ModuleConfig resource:
 
 ```yaml
 d8 k apply -f - <<EOF

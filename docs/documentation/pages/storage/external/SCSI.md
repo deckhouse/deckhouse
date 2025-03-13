@@ -3,7 +3,9 @@ title: "SCSI-based data storage"
 permalink: en/storage/admin/external/scsi.html
 ---
 
-The `csi-scsi-generic` module provides a CSI driver for managing volumes connected via iSCSI or Fibre Channel.
+Deckhouse supports managing storage connected via iSCSI or Fibre Channel, enabling working with volumes at the block device level. This allows for the integration of storage systems with Kubernetes and management through a CSI driver.
+
+This page provides instructions for connecting SCSI devices in Deckhouse, creating SCSITarget, StorageClass, and verifying system functionality.
 
 ### Supported Features
 
@@ -31,11 +33,11 @@ The `csi-scsi-generic` module provides a CSI driver for managing volumes connect
 
 All commands should be executed on a machine with administrative access to the Kubernetes API.
 
-### Enabling the Module
+### Enabling the module
 
-Enable the `csi-scsi-generic` module. This will:
-- Register the CSI driver.
-- Launch `csi-scsi-generic` service pods.
+To work with storage connected via SCSI, enable the `csi-scsi-generic` module. This will result in:
+- CSI driver registration.
+- The launch of `csi-scsi-generic` service pods.
 
 ```shell
 d8 k apply -f - <<EOF

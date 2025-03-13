@@ -3,12 +3,14 @@ title: "Huawei data storage"
 permalink: en/storage/admin/external/huawei.html
 ---
 
-This module provides a CSI driver for managing volumes on Huawei DORADO storage systems. The module allows you to create a StorageClass in Kubernetes using [HuaweiStorageClass](../../../reference/cr/huaweistorageclass/).
+Deckhouse provides support for Huawei Dorado storage systems, enabling volume management in Kubernetes using a CSI driver through the creation of custom resources like [HuaweiStorageClass](../../../reference/cr/huaweistorageclass/). This solution ensures high-performance and fault-tolerant storage, making it an optimal choice for mission-critical workloads.
 
 {% alert level="warning" %}
-The user is not allowed to create a StorageClass for the `csi.huawei.com` CSI driver.
-Module supports only Huawei Dorado SAN devices. For other Huawei SAN configurations, please reach out to technical support.
+User-created StorageClass for the `csi.huawei.com` CSI driver is not allowed.  
+Only Huawei Dorado storage systems are supported. For other Huawei storage systems, please contact technical support.
 {% endalert %}
+
+This page provides instructions on connecting Huawei Dorado to Deckhouse, configuring the connection, creating StorageClass, and verifying storage functionality.
 
 ## System requirements and recommendations
 
@@ -23,7 +25,7 @@ Note that all commands must be run on a machine that has administrator access to
 
 ### Enabling the module
 
-Enable the `csi-huawei` module. This will result in the following actions across all cluster nodes:
+To support Huawei Dorado storage systems, enable the `csi-huawei` module. This will ensure that all cluster nodes have:
 - registration of the CSI driver.
 - launch of service pods for the `csi-huawei` components.
 
