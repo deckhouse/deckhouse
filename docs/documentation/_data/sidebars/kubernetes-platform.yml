@@ -87,10 +87,6 @@ entries:
                     ru: Получение changelog
                   url: /admin/configuration/update/changelog.html
                 - title:
-                    en: Module versioning
-                    ru: Версионирование модулей
-                  url: /admin/configuration/update/versioning.html
-                - title:
                     en: Control plane update
                     ru: Обновление control plane
                   url: /admin/configuration/update/control-plane-update.html
