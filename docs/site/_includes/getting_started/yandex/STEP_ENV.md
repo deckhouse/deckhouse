@@ -14,7 +14,7 @@ name: deckhouse
 
 Assign the required roles to the newly created user for your cloud:
 
-```console
+```yaml
 yc resource-manager folder add-access-binding --id <folderID> --role compute.editor --subject serviceAccount:<userID>
 yc resource-manager folder add-access-binding --id <folderID> --role api-gateway.editor --subject serviceAccount:<userID>
 yc resource-manager folder add-access-binding --id <folderID> --role connection-manager.editor --subject serviceAccount:<userID>

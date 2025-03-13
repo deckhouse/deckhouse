@@ -19,7 +19,7 @@ You need to create a service account with the editor role with the cloud provide
 
 1. Assign the required roles to the newly created user for your cloud:
 
-   ```console
+   ```yaml
    yc resource-manager folder add-access-binding --id <folderID> --role compute.editor --subject serviceAccount:<userID>
    yc resource-manager folder add-access-binding --id <folderID> --role api-gateway.editor --subject serviceAccount:<userID>
    yc resource-manager folder add-access-binding --id <folderID> --role connection-manager.editor --subject serviceAccount:<userID>
