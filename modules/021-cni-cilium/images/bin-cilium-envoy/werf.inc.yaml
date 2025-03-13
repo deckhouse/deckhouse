@@ -27,7 +27,7 @@ shell:
   - cd /src/proxy
   - git checkout {{ $ciliumProxyRev }}
   - git apply --verbose /patches/*.patch
-  - rm -rf .git vendor
+  - rm -rf /src/proxy.git
 ---
 image: {{ .ModuleName }}/cilium-envoy-artifact
 fromImage: {{ .ModuleName }}/base-cilium-dev
@@ -73,7 +73,7 @@ shell:
   # cache
   - git clone --depth 1 --branch {{ $ciliumProxyCacheRev }} {{ .SOURCE_REPO }}/cilium/proxy-build-cache.git /tmp/bazel-cache 
   - git clone --depth 1 --branch {{ $ciliumProxyDepsRev }} {{ .SOURCE_REPO }}/cilium/proxy-build-deps.git /tmp/bazel-deps
-  - chown -R cilium:cilium /tmp/bazel-cache /tmp/bazel-deps /home/cilium/.cache/bazel /home/cilium/.cache/go-build
+  - chown -R cilium:cilium /tmp/bazel-cache /tmp/bazel-deps /home/cilium/.cache/
 
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
