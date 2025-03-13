@@ -417,7 +417,7 @@ List of checks performed by the installer before starting Deckhouse installation
 - `--preflight-cloud-api-accesibility-check` — skip the Cloud API accessibility check.
 - `--preflight-time-drift-check` — skip the time drift check.
 - `--preflight-skip-cidr-intersection` — skip the CIDR intersection check.
-- `--preflight-skip-deckhouse-user-check` — skip the Deckhouse user existence check.
+- `--preflight-skip-deckhouse-user-check` — skip deckhouse user existence check.
 - `--preflight-skip-yandex-with-nat-instance-check` — skip the Yandex Cloud with NAT Instance configuration check.
 
 Example of using the preflight skip flag:
