@@ -123,6 +123,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   annotations:
+    modules.deckhouse.io/notified: "true"
     release.deckhouse.io/notified: "false"
   creationTimestamp: null
   finalizers:
@@ -140,7 +141,7 @@ metadata:
     kind: ModuleSource
     name: test
     uid: 94494a1a-868c-441f-a7a1-3c5e8ccf0957
-  resourceVersion: "1000"
+  resourceVersion: "1001"
 spec:
   moduleName: echo
   version: 0.4.54
