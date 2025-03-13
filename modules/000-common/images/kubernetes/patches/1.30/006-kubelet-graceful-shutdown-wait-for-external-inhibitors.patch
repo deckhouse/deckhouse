@@ -1,5 +1,5 @@
 diff --git a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
-index 8469cecdc0e..69cfc7512f8 100644
+index 8469cecdc0e..7d25da82e70 100644
 --- a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
 +++ b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
 @@ -22,6 +22,7 @@ package nodeshutdown
@@ -31,7 +31,7 @@ index 8469cecdc0e..69cfc7512f8 100644
 +func (m *managerImpl) waitForExternalInhibitorsToUnlock() {
 +	const (
 +		inhibitorsCheckInterval = 5 * time.Second
-+		delayLogInterval        = 2 * time.Second
++		progressLogInterval     = 20 * time.Second
 +	)
 +	// Do not wait if inhibitors not started.
 +	_, err := os.Stat("/var/run/d8-shutdown-inhibitor/enabled")
@@ -46,7 +46,7 @@ index 8469cecdc0e..69cfc7512f8 100644
 +	ticker := realClock.NewTicker(inhibitorsCheckInterval)
 +	defer ticker.Stop()
 +
-+	lastLogTime := time.Now()
++	var lastLogTime time.Time
 +
 +	for {
 +		_, err := os.Stat("/var/run/d8-shutdown-inhibitor/inhibited")
@@ -56,7 +56,7 @@ index 8469cecdc0e..69cfc7512f8 100644
 +		}
 +
 +		now := time.Now()
-+		if now.Sub(lastLogTime) > delayLogInterval {
++		if lastLogTime.IsZero() || now.Sub(lastLogTime) > progressLogInterval {
 +			lastLogTime = now
 +			m.logger.V(1).Info("Shutdown still locked by external inhibitors")
 +		}

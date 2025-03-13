@@ -73,7 +73,6 @@ func (a *App) Err() error {
 
 // ListPods list all pods for testing purposes.
 func (a *App) ListPods() {
-	//podMatcher := containerd.ByLabel(a.PodLabel)
 	podList, err := containerd.ListPods(context.Background())
 	if err != nil {
 		fmt.Printf("List pods error: %v\n", err)
@@ -102,38 +101,6 @@ func (a *App) overrideInhibitDelayMax() error {
 		return fmt.Errorf("get current inihibit delay: %v", err)
 	}
 
-	/**
-
-	currentInhibitDelay, err := m.dbusCon.CurrentInhibitDelay()
-	if err != nil {
-		return nil, err
-	}
-
-	// If the logind's InhibitDelayMaxUSec as configured in (logind.conf) is less than periodRequested, attempt to update the value to periodRequested.
-	if periodRequested := m.periodRequested(); periodRequested > currentInhibitDelay {
-		err := m.dbusCon.OverrideInhibitDelay(periodRequested)
-		if err != nil {
-			return nil, fmt.Errorf("unable to override inhibit delay by shutdown manager: %v", err)
-		}
-
-		err = m.dbusCon.ReloadLogindConf()
-		if err != nil {
-			return nil, err
-		}
-
-		// Read the current inhibitDelay again, if the override was successful, currentInhibitDelay will be equal to shutdownGracePeriodRequested.
-		updatedInhibitDelay, err := m.dbusCon.CurrentInhibitDelay()
-		if err != nil {
-			return nil, err
-		}
-
-		if periodRequested > updatedInhibitDelay {
-			return nil, fmt.Errorf("node shutdown manager was unable to update logind InhibitDelayMaxSec to %v (ShutdownGracePeriod), current value of InhibitDelayMaxSec (%v) is less than requested ShutdownGracePeriod", periodRequested, updatedInhibitDelay)
-		}
-	}
-
-	*/
-
 	if currentInhibitDelay >= a.config.InhibitDelayMax {
 		fmt.Printf("overrideInhibitDelayMax: current inhibit delay is already greater or equal to requested: %s >= %s\n", currentInhibitDelay.Truncate(time.Second).String(), a.config.InhibitDelayMax.Truncate(time.Second).String())
 		return nil
@@ -151,9 +118,6 @@ func (a *App) overrideInhibitDelayMax() error {
 		return fmt.Errorf("overrideInhibitDelayMax: unable to reload systemd conf: %v", err)
 	}
 
-	// Getting current delay without waiting for reload is not reliable and gives old value.
-	// Comment it for now until a better solution.
-	//
 	currentInhibitDelay, err = dbusCon.CurrentInhibitDelay()
 	if err != nil {
 		return fmt.Errorf("get current inhibit delay after override: %v", err)
@@ -175,9 +139,6 @@ func (a *App) wireAppTasks() []taskstarter.Task {
 	unlockInhibitorsCh := make(chan struct{})
 
 	return []taskstarter.Task{
-		//&tasks.ShutdownBlockInhibitor{
-		//	UnlockInhibitorsCh: unlockInhibitorsCh,
-		//},
 		&tasks.ShutdownInhibitor{
 			ShutdownSignalCh:   shutdownSignalCh,
 			UnlockInhibitorsCh: unlockInhibitorsCh,
