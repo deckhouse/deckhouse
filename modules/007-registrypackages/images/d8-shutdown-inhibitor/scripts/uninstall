@@ -15,12 +15,10 @@
 
 set -Eeo pipefail
 
-# Copy binary.
-mkdir -p /opt/deckhouse/bin
-cp -f node-shutdown-inhibitor /opt/deckhouse/bin
-
-# Install systemd unit.
-cp -f node-shutdown-inhibitor.service /lib/systemd/system
-chmod 600 /lib/systemd/system/node-shutdown-inhibitor.service
+# Disable and remove systemd unit.
+systemctl disable d8-shutdown-inhibitor.service
+rm -f /lib/systemd/system/d8-shutdown-inhibitor.service
 systemctl daemon-reload
-systemctl enable node-shutdown-inhibitor.service
+
+# Remove binary.
+rm -f /opt/deckhouse/bin/d8-shutdown-inhibitor
