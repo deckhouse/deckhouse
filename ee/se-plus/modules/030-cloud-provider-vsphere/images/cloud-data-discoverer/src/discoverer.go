@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"github.com/vmware/govmomi/find"
 	"github.com/vmware/govmomi/vapi/rest"
+	"net/http"
 	"net/url"
 	"os"
 	"strconv"
@@ -101,9 +102,8 @@ func NewDiscoverer(logger *log.Entry) *Discoverer {
 	if err != nil {
 		logger.Fatalf("Failed to create CNS client: %v", err)
 	}
-
 	restClient := rest.NewClient(govmomiClient.Client)
-	err = restClient.Login(context.TODO(), govmomiClient.Client.URL().User)
+	err = restClient.Login(context.TODO(), url.UserPassword(username, password))
 	if err != nil {
 		logger.Fatalf("Failed to create REST client: %v", err)
 	}
