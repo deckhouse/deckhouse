@@ -11,10 +11,15 @@ created_at: "YYYY-MM-DDTHH:MM:SSZ"
 name: deckhouse
 ```
 
-Assign the `editor` role to the newly created user:
+Assign the required roles to the newly created user for your cloud:
 
-```yaml
-yc resource-manager folder add-access-binding <folderID> --role editor --subject serviceAccount:<userID>
+```console
+yc resource-manager folder add-access-binding --id <folderID> --role compute.editor --subject serviceAccount:<userID>
+yc resource-manager folder add-access-binding --id <folderID> --role api-gateway.editor --subject serviceAccount:<userID>
+yc resource-manager folder add-access-binding --id <folderID> --role connection-manager.editor --subject serviceAccount:<userID>
+yc resource-manager folder add-access-binding --id <folderID> --role vpc.admin --subject serviceAccount:<userID>
+yc resource-manager folder add-access-binding --id <folderID> --role load-balancer.editor --subject serviceAccount:<userID>
+yc resource-manager folder add-access-binding --id <folderID> --role logging.editor --subject serviceAccount:<userID>
 ```
 
 Create a JSON file containing the parameters for user authorization in the cloud. These parameters will be used to log in to the cloud:
