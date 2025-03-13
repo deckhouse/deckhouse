@@ -182,7 +182,7 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryDa
 			return nil, fmt.Errorf("failed to list resource pools: %v", err)
 		}
 		for _, rp := range resourcePools {
-			discoveryData.ResourcePools = append(discoveryData.ResourcePools, rp.InventoryPath)
+			discoveryData.ResourcePools = append(discoveryData.ResourcePools, rp.Reference().Value)
 		}
 
 	}
