@@ -194,8 +194,8 @@ func (bus *DBusCon) CurrentInhibitDelay() (time.Duration, error) {
 }
 
 const (
-	logindConfigDirectory    = "/etc/systemd/logind.conf.d/"
-	deckhouseNodeManagerConf = "99-node-manager-deckhouse.conf"
+	logindConfigDirectory   = "/etc/systemd/logind.conf.d/"
+	d8ShutdownInhibitorConf = "99-node-d8-shutdown-inhibitor.conf" // "node" prefix to apply after 99-kubelet.conf
 )
 
 // OverrideInhibitDelay writes a config file to logind overriding InhibitDelayMaxSec to the value desired.
@@ -209,12 +209,12 @@ func (bus *DBusCon) OverrideInhibitDelay(inhibitDelayMax time.Duration) error {
 	// The corresponding logind config file property is named `InhibitDelayMaxSec` and is measured in seconds which is set via logind.conf config.
 	// Refer to https://www.freedesktop.org/software/systemd/man/logind.conf.html for more details.
 
-	inhibitOverride := fmt.Sprintf(`# Kubelet logind override
+	inhibitOverride := fmt.Sprintf(`# d8-shutdown-inhibitor logind override
 [Login]
 InhibitDelayMaxSec=%.0f
 `, inhibitDelayMax.Seconds())
 
-	logindOverridePath := filepath.Join(logindConfigDirectory, deckhouseNodeManagerConf)
+	logindOverridePath := filepath.Join(logindConfigDirectory, d8ShutdownInhibitorConf)
 	if err := os.WriteFile(logindOverridePath, []byte(inhibitOverride), 0644); err != nil {
 		return fmt.Errorf("failed writing logind shutdown inhibit override file %v: %w", logindOverridePath, err)
 	}
