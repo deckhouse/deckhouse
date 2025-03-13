@@ -42,12 +42,8 @@
     tbody {
         td {
             border: none;
-        }
-  
-        a {
-            text-decoration: underline;
-        }
-    }  
+        }  
+      }  
   
     thead {
         th {
@@ -84,7 +80,7 @@
     .icon {
         display: flex;
         margin: auto;
-        padding: .375rem;
+        padding: 1rem 0.5rem;
         width: 24px;
         height: 24px;
         align-items: center;
@@ -93,31 +89,6 @@
         @include min-w(m) {
             width: 28px;
             height: 28px;
-            padding: 1rem 1.5rem;
-        }
-
-        &:has(img[data-tippy-content]) {
-            position: relative;
-      
-            &:before {
-                content: '';
-                position: absolute;
-                width: 50%;
-                height: 60%;
-                left: 50%;
-                top: 50%;
-                border-radius: 50px;
-                transform: translate(-50%, -50%);
-                background-color: #969dc4;
-            }
-      
-            &:not(:hover):before {
-                animation: waves 3s ease-out infinite;
-            }
-      
-            img {
-                z-index: 1;
-            }
         }
     }
 }
@@ -139,9 +110,9 @@
 
 .table-wrapper {
     position: relative;
+    overflow: visible !important;
 
     &.more {
-        overflow: visible !important;
 
         &--on-right {
             table {
