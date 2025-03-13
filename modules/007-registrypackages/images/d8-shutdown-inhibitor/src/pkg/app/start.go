@@ -28,17 +28,21 @@ import (
 	"graceful_shutdown/pkg/taskstarter"
 )
 
-type App struct {
-	InhibitDelayMax time.Duration
-	PodLabel        string
-	NodeName        string
-	taskStarter     *taskstarter.Starter
+type AppConfig struct {
+	InhibitDelayMax     time.Duration
+	WallBroadcastPeriod time.Duration
+	PodLabel            string
+	NodeName            string
 }
 
-func NewApp(maxDelay time.Duration, podLabel string, nodeName string) *App {
+type App struct {
+	config      AppConfig
+	taskStarter *taskstarter.Starter
+}
+
+func NewApp(config AppConfig) *App {
 	return &App{
-		InhibitDelayMax: maxDelay,
-		PodLabel:        podLabel,
+		config: config,
 	}
 }
 
@@ -74,8 +78,8 @@ func (a *App) Err() error {
 	return a.taskStarter.Err()
 }
 
-// CheckPods list all pods for testing purposes.
-func (a *App) CheckPods() {
+// ListPods list all pods for testing purposes.
+func (a *App) ListPods() {
 	//podMatcher := containerd.ByLabel(a.PodLabel)
 	podList, err := containerd.ListPods(context.Background())
 	if err != nil {
@@ -87,18 +91,11 @@ func (a *App) CheckPods() {
 		return podList.Items[i].Metadata.Name < podList.Items[j].Metadata.Name
 	})
 
-	fmt.Printf("Pods with label %s:\n", a.PodLabel)
-	matched := containerd.FilterPods(podList.Items, containerd.WithLabel(a.PodLabel), containerd.WithReadyState())
+	fmt.Printf("Pods with label %s:\n", a.config.PodLabel)
+	matched := containerd.FilterPods(podList.Items, containerd.WithLabel(a.config.PodLabel), containerd.WithReadyState())
 	for _, pod := range matched {
 		fmt.Printf("  %s\n", pod.Metadata.Name)
 	}
-
-	//fmt.Printf("Other pods:\n")
-	//for _, pod := range podList.Items {
-	//	if !podMatcher(pod) {
-	//		fmt.Printf("  %s\n", pod.Metadata.Name)
-	//	}
-	//}
 }
 
 func (a *App) overrideInhibitDelayMax() error {
@@ -144,14 +141,14 @@ func (a *App) overrideInhibitDelayMax() error {
 
 	*/
 
-	if currentInhibitDelay >= a.InhibitDelayMax {
-		fmt.Printf("overrideInhibitDelayMax: current inhibit delay is already greater or equal to requested: %s >= %s\n", currentInhibitDelay.Truncate(time.Second).String(), a.InhibitDelayMax.Truncate(time.Second).String())
+	if currentInhibitDelay >= a.config.InhibitDelayMax {
+		fmt.Printf("overrideInhibitDelayMax: current inhibit delay is already greater or equal to requested: %s >= %s\n", currentInhibitDelay.Truncate(time.Second).String(), a.config.InhibitDelayMax.Truncate(time.Second).String())
 		return nil
 	}
 
-	fmt.Printf("overrideInhibitDelayMax: current inhibit delay: %s, override to %s\n", currentInhibitDelay.Truncate(time.Second).String(), a.InhibitDelayMax.Truncate(time.Second).String())
+	fmt.Printf("overrideInhibitDelayMax: current inhibit delay: %s, override to %s\n", currentInhibitDelay.Truncate(time.Second).String(), a.config.InhibitDelayMax.Truncate(time.Second).String())
 
-	err = dbusCon.OverrideInhibitDelay(a.InhibitDelayMax)
+	err = dbusCon.OverrideInhibitDelay(a.config.InhibitDelayMax)
 	if err != nil {
 		return fmt.Errorf("overrideInhibitDelayMax: unable to override: %v", err)
 	}
@@ -169,8 +166,8 @@ func (a *App) overrideInhibitDelayMax() error {
 		return fmt.Errorf("get current inhibit delay after override: %v", err)
 	}
 
-	if currentInhibitDelay < a.InhibitDelayMax {
-		return fmt.Errorf("overrideInhibitDelayMax: unable to override inhibit delay to %s, current value of InhibitDelayMaxSec (%v) is less than requested", a.InhibitDelayMax.Truncate(time.Second).String(), currentInhibitDelay.Truncate(time.Second).String())
+	if currentInhibitDelay < a.config.InhibitDelayMax {
+		return fmt.Errorf("overrideInhibitDelayMax: unable to override inhibit delay to %s, current value of InhibitDelayMaxSec (%v) is less than requested", a.config.InhibitDelayMax.Truncate(time.Second).String(), currentInhibitDelay.Truncate(time.Second).String())
 	}
 
 	fmt.Printf("overrideInhibitDelayMax: overridden inhibit delay: %s\n", currentInhibitDelay.Truncate(time.Second).String())
@@ -181,8 +178,6 @@ func (a *App) wireAppTasks() []taskstarter.Task {
 	// Create channels for events.
 	// Event on receiving ShutdownPrepareSignal.
 	shutdownSignalCh := make(chan struct{})
-	// Event from PowerKey observer.
-	//powerKeyPressCh := make(chan struct{})
 	// Event to unlock all inhibitors when shutdown requirements are met.
 	unlockInhibitorsCh := make(chan struct{})
 
@@ -198,7 +193,6 @@ func (a *App) wireAppTasks() []taskstarter.Task {
 			UnlockInhibitorsCh: unlockInhibitorsCh,
 		},
 		&tasks.PowerKeyEvent{
-			//PowerKeyPressedCh:  powerKeyPressCh,
 			UnlockInhibitorsCh: unlockInhibitorsCh,
 		},
 		&tasks.PodObserver{
@@ -206,12 +200,12 @@ func (a *App) wireAppTasks() []taskstarter.Task {
 			ShutdownSignalCh: shutdownSignalCh,
 			StopInhibitorsCh: unlockInhibitorsCh,
 			PodMatchers: []containerd.PodMatcher{
-				containerd.WithLabel(a.PodLabel),
+				containerd.WithLabel(a.config.PodLabel),
 				containerd.WithReadyState(),
 			},
 		},
 		&tasks.NodeCordoner{
-			NodeName:         a.NodeName,
+			NodeName:         a.config.NodeName,
 			ShutdownSignalCh: shutdownSignalCh,
 		},
 		&tasks.StatusReporter{
@@ -219,38 +213,3 @@ func (a *App) wireAppTasks() []taskstarter.Task {
 		},
 	}
 }
-
-func someTask(ctx context.Context, id string) {
-	tt := time.NewTicker(1 * time.Second)
-	ttt := 120
-	for {
-		select {
-		case <-tt.C:
-			fmt.Printf("ticker %s: %d\n", id, ttt)
-			ttt--
-			if ttt == 0 {
-				fmt.Printf("ticker %s done: %d\n", id, ttt)
-				return
-			}
-		case <-ctx.Done():
-			tt.Stop()
-			fmt.Printf("Got cancel. Ticker %s stopped. Will exit in 5 sec.\n", id)
-			time.Sleep(5 * time.Second)
-			return
-		}
-	}
-}
-
-//dbusConn, err := systemd.NewDBusCon()
-//if err != nil {
-//	fmt.Printf("open Dbus connection: %v\n", err)
-//	os.Exit(1)
-//}
-//inhibitDelay, err := dbusConn.CurrentInhibitDelay()
-//if err != nil {
-//	fmt.Printf("get inhibit delay: %v\n", err)
-//	os.Exit(1)
-//}
-//
-//fmt.Printf("Inhibit delay: %s\n", inhibitDelay.Truncate(time.Second).String())
-//

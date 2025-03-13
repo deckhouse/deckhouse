@@ -24,60 +24,26 @@ import (
 	"time"
 
 	"graceful_shutdown/pkg/app"
+	"graceful_shutdown/pkg/debug"
 	"graceful_shutdown/pkg/inputdev"
 )
 
+// Settings
+const (
+	InhibitDelayMaxSec       = 3 * 24 * time.Hour // 3 days
+	InhibitNodeShutdownLabel = "pod.deckhouse.io/inhibit-node-shutdown"
+	WallBroadcastPeriod      = 30 * time.Second
+)
+
 func main() {
-
-	args1 := ""
-	if len(os.Args) > 1 {
-		args1 = os.Args[1]
+	if RunDebugCommand(os.Args) {
+		return
 	}
 
-	if args1 == "list-input-devices" {
-		devs, err := inputdev.ListInputDevicesWithAnyButton(inputdev.KEY_POWER, inputdev.KEY_POWER2)
-		if err != nil {
-			fmt.Printf("list power key devices: %w", err)
-			os.Exit(1)
-		}
+	RunInhibitorApp()
+}
 
-		for _, dev := range devs {
-			fmt.Printf("Device: %s, %s\n", dev.Name, dev.DevPath)
-		}
-		os.Exit(0)
-	}
-
-	if args1 == "watch-for-key" {
-		buttons := []inputdev.Button{
-			inputdev.KEY_Q, inputdev.KEY_E, inputdev.KEY_W, inputdev.KEY_ENTER,
-		}
-		devs, err := inputdev.ListInputDevicesWithAnyButton(buttons...)
-		if err != nil {
-			fmt.Printf("list devices with Q W E Enter: %w", err)
-			os.Exit(1)
-		}
-
-		for _, dev := range devs {
-			fmt.Printf("Device: %s, %s\n", dev.Name, dev.DevPath)
-		}
-
-		watcher := inputdev.NewWatcher(devs, buttons...)
-		watcher.Start()
-		fmt.Printf("watch for button press\n")
-		<-watcher.Pressed()
-		fmt.Printf("button was pressed\n")
-		os.Exit(0)
-	}
-
-	checkOnlyPods := false
-	if args1 == "checkpods" {
-		checkOnlyPods = true
-	}
-
-	// Application settings
-	maxDelay := 30 * 60 * time.Second // 30 minutes
-	podLabel := "pod.deckhouse.io/inhibit-node-shutdown"
-
+func RunInhibitorApp() {
 	nodeName, err := os.Hostname()
 	if err != nil {
 		fmt.Printf("START Error: get hostname: %v\n", err)
@@ -85,12 +51,12 @@ func main() {
 	}
 
 	// Start application.
-	app := app.NewApp(maxDelay, podLabel, nodeName)
-
-	if checkOnlyPods {
-		app.CheckPods()
-		os.Exit(0)
-	}
+	app := app.NewApp(app.AppConfig{
+		InhibitDelayMax:     InhibitDelayMaxSec,
+		WallBroadcastPeriod: WallBroadcastPeriod,
+		PodLabel:            InhibitNodeShutdownLabel,
+		NodeName:            nodeName,
+	})
 
 	err = app.Start()
 	if err != nil {
@@ -116,4 +82,23 @@ func main() {
 		fmt.Printf("ERROR: %s\n", err.Error())
 		os.Exit(1)
 	}
+}
+
+func RunDebugCommand(args []string) bool {
+	if len(args) < 1 {
+		return false
+	}
+
+	switch args[1] {
+	case "list-pods":
+		debug.ListPods(InhibitNodeShutdownLabel)
+	case "list-input-devices":
+		debug.ListInputDevices()
+	case "watch-for-key":
+		debug.WatchForKey(inputdev.KEY_Q, inputdev.KEY_E, inputdev.KEY_W, inputdev.KEY_ENTER)
+	default:
+		return false
+	}
+
+	return true
 }

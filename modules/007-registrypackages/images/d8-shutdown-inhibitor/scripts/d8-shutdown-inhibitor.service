@@ -6,7 +6,7 @@ After=network-online.target
 
 [Service]
 Environment="PATH=/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
-ExecStart=/opt/deckhouse/bin/node-shutdown-inhibitor
+ExecStart=/opt/deckhouse/bin/d8-shutdown-inhibitor
 Restart=always
 StartLimitInterval=0
 RestartSec=10

@@ -1,5 +1,5 @@
 diff --git a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
-index 8469cecdc0e..0ce167e8a52 100644
+index 8469cecdc0e..69cfc7512f8 100644
 --- a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
 +++ b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
 @@ -22,6 +22,7 @@ package nodeshutdown
@@ -23,25 +23,7 @@ index 8469cecdc0e..0ce167e8a52 100644
  				m.nodeShuttingDownMutex.Lock()
  				m.nodeShuttingDownNow = isShuttingDown
  				m.nodeShuttingDownMutex.Unlock()
-@@ -351,7 +358,16 @@ func (m *managerImpl) processShutdownEvent() error {
- 		}()
- 	}
- 
--	groups := groupByPriority(m.shutdownGracePeriodByPodPriority, activePods)
-+	groups := m.groupByPriority(m.shutdownGracePeriodByPodPriority, activePods)
-+
-+	m.logger.V(1).Info(fmt.Sprintf("Group pods: gracePeriods: %+v", m.shutdownGracePeriodByPodPriority))
-+	for i, group := range groups {
-+		m.logger.V(1).Info(fmt.Sprintf("Group pods: group %d: priority %d, gracePeriod %d", i, group.Priority, group.ShutdownGracePeriodSeconds))
-+		for _, pod := range group.Pods {
-+			m.logger.V(1).Info(fmt.Sprintf("Group pods: group %d: pod %s %s", i, pod.Namespace, pod.Name))
-+		}
-+	}
-+
- 	for _, group := range groups {
- 		// If there are no pods in a particular range,
- 		// then do not wait for pods in that priority range.
-@@ -417,6 +433,47 @@ func (m *managerImpl) processShutdownEvent() error {
+@@ -417,6 +424,50 @@ func (m *managerImpl) processShutdownEvent() error {
  	return nil
  }
  
@@ -52,7 +34,7 @@ index 8469cecdc0e..0ce167e8a52 100644
 +		delayLogInterval        = 2 * time.Second
 +	)
 +	// Do not wait if inhibitors not started.
-+	_, err := os.Stat("/var/run/node-manager-graceful-shutdown/enabled")
++	_, err := os.Stat("/var/run/d8-shutdown-inhibitor/enabled")
 +	if os.IsNotExist(err) {
 +		m.logger.V(1).Info("No external inhibitor locks enabled, proceed with shutdown")
 +		return
@@ -67,7 +49,7 @@ index 8469cecdc0e..0ce167e8a52 100644
 +	lastLogTime := time.Now()
 +
 +	for {
-+		_, err := os.Stat("/var/run/node-manager-graceful-shutdown/inhibited")
++		_, err := os.Stat("/var/run/d8-shutdown-inhibitor/inhibited")
 +		if os.IsNotExist(err) {
 +			m.logger.V(1).Info("External inhibitors unlocked, proceed with shutdown")
 +			return
@@ -82,6 +64,9 @@ index 8469cecdc0e..0ce167e8a52 100644
 +		<-ticker.C()
 +	}
 +
++	// We have a rather long InhibitorsDelayMaxSec, but we should let kubelet to do its job,
++	// so global timer is added to kill Pods anyway some minutes before InhibitorsDelayMaxSec is passed.
++	// TODO It is still uncertain if we should implement this timer.
 +	m.logger.V(1).Info("Timeout while waiting for external inhibitors, proceed with shutdown")
 +	return
 +}
@@ -89,49 +74,3 @@ index 8469cecdc0e..0ce167e8a52 100644
  func (m *managerImpl) periodRequested() time.Duration {
  	var sum int64
  	for _, period := range m.shutdownGracePeriodByPodPriority {
-@@ -449,25 +506,35 @@ func migrateConfig(shutdownGracePeriodRequested, shutdownGracePeriodCriticalPods
- 	}
- }
- 
--func groupByPriority(shutdownGracePeriodByPodPriority []kubeletconfig.ShutdownGracePeriodByPodPriority, pods []*v1.Pod) []podShutdownGroup {
-+func (m *managerImpl) groupByPriority(shutdownGracePeriodByPodPriority []kubeletconfig.ShutdownGracePeriodByPodPriority, pods []*v1.Pod) []podShutdownGroup {
-+	m.logger.V(1).Info(fmt.Sprintf("Group pods: gracePeriods: %+v", shutdownGracePeriodByPodPriority))
-+
- 	groups := make([]podShutdownGroup, 0, len(shutdownGracePeriodByPodPriority))
- 	for _, period := range shutdownGracePeriodByPodPriority {
- 		groups = append(groups, podShutdownGroup{
- 			ShutdownGracePeriodByPodPriority: period,
- 		})
- 	}
-+	m.logger.V(1).Info(fmt.Sprintf("Group pods: groups: %+v", groups))
- 
- 	for _, pod := range pods {
- 		var priority int32
-+		// Ignore pod without priotity (an experiment with kubernetes-api-proxy).
-+		if pod.Spec.Priority == nil {
-+			continue
-+		}
- 		if pod.Spec.Priority != nil {
- 			priority = *pod.Spec.Priority
- 		}
- 
-+		m.logger.V(1).Info(fmt.Sprintf("Group pods: pod %s %s, priority %d, spec.priority nil? %v", pod.Namespace, pod.Name, priority, pod.Spec.Priority == nil))
- 		// Find the group index according to the priority.
- 		index := sort.Search(len(groups), func(i int) bool {
- 			return groups[i].Priority >= priority
- 		})
- 
-+		m.logger.V(1).Info(fmt.Sprintf("Group pods: index after search %d", index))
-+
- 		// 1. Those higher than the highest priority default to the highest priority
- 		// 2. Those lower than the lowest priority default to the lowest priority
- 		// 3. Those boundary priority default to the lower priority
-@@ -482,6 +549,8 @@ func groupByPriority(shutdownGracePeriodByPodPriority []kubeletconfig.ShutdownGr
- 			index--
- 		}
- 
-+		m.logger.V(1).Info(fmt.Sprintf("Group pods: index adjusted %d", index))
-+
- 		groups[index].Pods = append(groups[index].Pods, pod)
- 	}
- 	return groups

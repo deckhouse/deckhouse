@@ -23,8 +23,8 @@ import:
   add: /
   to: /
   includePaths:
-  - node-shutdown-inhibitor
-  - node-shutdown-inhibitor.service
+  - d8-shutdown-inhibitor
+  - d8-shutdown-inhibitor.service
   - install
   - uninstall
   before: setup
@@ -43,5 +43,5 @@ import:
 shell:
   setup:
   - cd /src/inhibitor
-  - GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /node-shutdown-inhibitor ./cmd/node-shutdown-inhibitor
+  - GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /d8-shutdown-inhibitor ./cmd/d8-shutdown-inhibitor
   - mv /src/scripts/* /
