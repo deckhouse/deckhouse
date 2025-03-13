@@ -22,7 +22,6 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
@@ -159,7 +158,7 @@ func fencingControllerHandler(input *go_hook.HookInput, dc dependency.Container)
 		}
 
 		input.Logger.Warnf("Delete node %s", node)
-		input.PatchCollector.Delete("v1", "Node", "", node, object_patch.InBackground())
+		input.PatchCollector.DeleteInBackground("v1", "Node", "", node)
 	}
 
 	return nil
