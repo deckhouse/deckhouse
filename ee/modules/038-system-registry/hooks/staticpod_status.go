@@ -21,6 +21,7 @@ type registryStaticPod struct {
 	PodIP    string
 	NodeName string
 	NodeIP   string
+	IsReady  bool
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -45,6 +46,15 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: filterRegistryStaticPods,
 		},
+		{
+			Name:       "nodes",
+			ApiVersion: "v1",
+			Kind:       "Node",
+			LabelSelector: &v1.LabelSelector{
+				MatchLabels: map[string]string{"node-role.kubernetes.io/control-plane": ""},
+			},
+			FilterFunc: nil,
+		},
 	},
 }, handleRegistryStaticPods)
 
@@ -68,11 +78,20 @@ func filterRegistryStaticPods(obj *unstructured.Unstructured) (go_hook.FilterRes
 		return "", nil
 	}
 
+	isReady := false
+	for _, cond := range pod.Status.Conditions {
+		if cond.Type == "Ready" && cond.Status == "True" {
+			isReady = true
+			break
+		}
+	}
+
 	ret := registryStaticPod{
 		PodName:  pod.Name,
 		PodIP:    pod.Status.PodIP,
 		NodeName: pod.Spec.NodeName,
 		NodeIP:   pod.Status.HostIP,
+		IsReady:  isReady,
 	}
 
 	return ret, nil
@@ -80,8 +99,10 @@ func filterRegistryStaticPods(obj *unstructured.Unstructured) (go_hook.FilterRes
 
 func handleRegistryStaticPods(input *go_hook.HookInput) error {
 	pods := input.Snapshots["static_pods"]
+	nodes := input.Snapshots["nodes"]
 
 	input.Values.Set("systemRegistry.internal.state.staticPods", pods)
+	input.Values.Set("systemRegistry.internal.state.masterNodes", nodes)
 
 	return nil
 }
