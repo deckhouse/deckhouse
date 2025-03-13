@@ -11,7 +11,7 @@ lang: ru
 
 Включить режим HA глобально для DKP можно одним из следующих способов:
 
-1. Установите в `ModuleConfig/global` параметр `settings.highAvailability` в значение `true`:
+-  Установите в `ModuleConfig/global` параметр `settings.highAvailability` в значение `true`:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -39,7 +39,7 @@ lang: ru
    deckhouse-fgrhy4536s-fhu6s                           2/2     Running   0             3m49s
    ```
 
-2. Если в кластере включен модуль [`console`](/products/kubernetes-platform/modules/console/stable/), откройте веб-консоль администратора, перейдите в раздел «Deckhouse» — «Глобальные настройки» — «Глобальные настройки модулей» и установите переключатель «Режим отказоустойчивости» в положение «Да».
+-  Если в кластере включен модуль [`console`](/products/kubernetes-platform/modules/console/stable/), откройте веб-консоль администратора, перейдите в раздел «Deckhouse» — «Глобальные настройки» — «Глобальные настройки модулей» и установите переключатель «Режим отказоустойчивости» в положение «Да».
    
 
 ## Включение режима HA для отдельных компонентов
