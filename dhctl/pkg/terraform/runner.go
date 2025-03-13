@@ -107,16 +107,15 @@ type Runner struct {
 }
 
 func NewRunner(provider, prefix, layout, step string, stateCache state.Cache) *Runner {
-	workingDir := buildTerraformPath(provider, layout, step)
 	r := &Runner{
 		prefix:            prefix,
 		step:              step,
 		name:              step,
-		workingDir:        workingDir,
+		workingDir:        buildTerraformPath(provider, layout, step),
 		confirm:           input.NewConfirmation,
 		stateCache:        stateCache,
 		changeSettings:    ChangeActionSettings{},
-		terraformExecutor: &CMDExecutor{workingDir: workingDir},
+		terraformExecutor: &CMDExecutor{},
 		logger:            log.GetDefaultLogger(),
 	}
 
@@ -312,6 +311,7 @@ func (r *Runner) Init(ctx context.Context) error {
 
 	return r.logger.LogProcess("default", "terraform init ...", func() error {
 		args := []string{
+			fmt.Sprintf("-chdir=%s", r.workingDir),
 			"init",
 			fmt.Sprintf("-plugin-dir=%s/plugins", strings.TrimRight(dhctlPath, "/")),
 			//"-get=false",
@@ -408,7 +408,15 @@ func (r *Runner) Apply(ctx context.Context) error {
 		}
 		defer r.stateSaver.Stop()
 
+		workDir := r.planPath
+		varFile := ""
+		if workDir == "" {
+			varFile = fmt.Sprintf("-var-file=%s", r.variablesPath)
+			workDir = r.workingDir
+		}
+
 		args := []string{
+			fmt.Sprintf("-chdir=%s", workDir),
 			"apply",
 			"-input=false",
 			"-no-color",
@@ -416,14 +424,8 @@ func (r *Runner) Apply(ctx context.Context) error {
 			fmt.Sprintf("-state=%s", r.statePath),
 			fmt.Sprintf("-state-out=%s", r.statePath),
 		}
-
-		if r.planPath != "" {
-			args = append(args, r.planPath)
-		} else {
-			args = append(args,
-				fmt.Sprintf("-var-file=%s", r.variablesPath),
-				r.workingDir,
-			)
+		if varFile != "" {
+			args = append(args, varFile)
 		}
 
 		_, err = r.execTerraform(ctx, args...)
@@ -452,6 +454,7 @@ func (r *Runner) Plan(ctx context.Context, opts PlanOptions) error {
 		}
 
 		args := []string{
+			fmt.Sprintf("-chdir=%s", r.workingDir),
 			"plan",
 			"-input=false",
 			"-no-color",
@@ -464,7 +467,6 @@ func (r *Runner) Plan(ctx context.Context, opts PlanOptions) error {
 		if opts.Destroy {
 			args = append(args, "-destroy")
 		}
-		args = append(args, r.workingDir)
 
 		exitCode, err := r.execTerraform(ctx, args...)
 		if exitCode == terraformHasChangesExitCode {
@@ -562,13 +564,13 @@ func (r *Runner) Destroy(ctx context.Context) error {
 		defer r.stateSaver.Stop()
 
 		args := []string{
+			fmt.Sprintf("-chdir=%s", r.workingDir),
 			"destroy",
 			"-no-color",
 			"-auto-approve",
 			fmt.Sprintf("-var-file=%s", r.variablesPath),
 			fmt.Sprintf("-state=%s", r.statePath),
 		}
-		args = append(args, r.workingDir)
 
 		_, err = r.execTerraform(ctx, args...)
 
