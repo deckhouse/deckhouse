@@ -211,7 +211,7 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 			input.PatchCollector.Create(event, object_patch.UpdateIfExists())
 			input.MetricsCollector.Set("d8_node_draining", 1, map[string]string{"node": drainedNode.NodeName, "message": drainedNode.Err.Error()})
 			if shouldIgnoreErr {
-				input.Logger.Errorf("node %q drain error skiped: %s", drainedNode.NodeName, drainedNode.Err)
+				input.Logger.Errorf("node %q drain error skipped: %s", drainedNode.NodeName, drainedNode.Err)
 			} else {
 				continue
 			}
