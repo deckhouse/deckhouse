@@ -460,7 +460,7 @@ properties:
             type: array
             items:
               type: string
-              minLength: 1
+              minLength: 0
             description: |
               List of available resource pools in vSphere.
             uniqueItems: true
