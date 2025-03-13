@@ -14,24 +14,30 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package interrupter
+package tools
 
 import (
 	"fmt"
 	"os"
-	"os/signal"
-	"syscall"
+	"time"
+
+	"d8_shutdown_inhibitor/pkg/app"
 )
 
-// WaitForProcessInterruption wait for SIGINT or SIGTERM and run a callback function.
-//
-// First signal start a callback function, which should call os.Exit(0).
-// Next signal will call os.Exit(128 + signal-value).
-// If no cb is given,
-func WaitForProcessInterruption(cb func()) {
-	interruptCh := make(chan os.Signal, 1)
-	signal.Notify(interruptCh, syscall.SIGINT, syscall.SIGTERM)
-	sig := <-interruptCh
-	fmt.Printf("Grace shutdown by '%s' signal\n", sig.String())
-	cb()
+func ListPods(podLabel string) {
+	nodeName, err := os.Hostname()
+	if err != nil {
+		fmt.Printf("START Error: get hostname: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Create application.
+	app := app.NewApp(app.AppConfig{
+		InhibitDelayMax:       30 * time.Minute,
+		WallBroadcastInterval: 30 * time.Second,
+		PodLabel:              podLabel,
+		NodeName:              nodeName,
+	})
+
+	app.ListPods()
 }

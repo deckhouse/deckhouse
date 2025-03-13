@@ -84,7 +84,7 @@ func (w *Watcher) readEvents(evCh chan *inputEvent) {
 	// Max fd to check for Select.
 	fdMax := fds[len(fds)-1] + 1
 
-	// Бесконечный цикл чтения событий
+	// Read events until stopped via channel.
 	for {
 		// Return if watcher was stopped.
 		select {

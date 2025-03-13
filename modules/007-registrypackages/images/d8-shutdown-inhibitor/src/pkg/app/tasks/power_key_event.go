@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
-	"time"
 
 	"d8_shutdown_inhibitor/pkg/inputdev"
 )
@@ -53,26 +52,16 @@ func (p *PowerKeyEvent) Run(ctx context.Context, errCh chan error) {
 		fmt.Printf("powerKeyReader(s1): stop on global exit\n")
 		return
 	case <-powerKeyWatcher.Pressed():
-		// Trigger pod checker.
+		// Trigger poweroff to ShutdownInhibitor catch the PrepareShutdownSignal from logind.
 		fmt.Printf("powerKeyReader(s1): power key press detected, initiate graceful shutdown\n")
 		err := exec.Command("systemctl", "poweroff", "--check-inhibitors=yes").Run()
 		if err != nil {
 			fmt.Printf("powerKeyReader(s1): poweroff error: %v\n", err)
 		}
-		//close(p.PowerKeyPressedCh)
 	case <-p.UnlockInhibitorsCh:
 		fmt.Printf("powerKeyReader(s1): shutdown initiated, stop power key reader loop\n")
 		return
 	}
-	//
-	//// Stage 2. Wait for pod checker and poweroff the system.
-	//select {
-	//case <-ctx.Done():
-	//	fmt.Printf("powerKeyReader(s2): stop on global exit\n")
-	//case <-p.UnlockInhibitorsCh:
-	//	fmt.Printf("powerKeyReader(s2): pod lister meet shutdown requirements, poweroff the system now\n")
-	//	fmt.Printf("/usr/sbin/systemctl poweroff --check-inhibitors=yes\n")
-	//}
 }
 
 // prepare lists input devices to detect devices with power key.
@@ -83,21 +72,4 @@ func (p *PowerKeyEvent) prepare() error {
 	}
 	p.powerKeyDevices = powerKeyDevices
 	return nil
-}
-
-func (p *PowerKeyEvent) powerKeyPressed() chan struct{} {
-	ch := make(chan struct{})
-
-	go func() {
-		// Open each device, select-read in loop to get input events, detect power key press.
-
-		fmt.Printf("powerKeyReaderLoop: Wait for power key press\n")
-
-		// time.Sleep(10 * time.Second)
-		time.Sleep(24 * time.Hour)
-		fmt.Printf("powerKeyReaderLoop: power key pressed\n")
-		close(ch)
-	}()
-
-	return ch
 }

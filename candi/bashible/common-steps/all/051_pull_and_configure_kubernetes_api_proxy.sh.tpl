@@ -64,6 +64,8 @@ spec:
       name: kubernetes-api-proxy-conf
     - mountPath: /tmp
       name: tmp
+  # Do not remove priority field.
+  # Kubelet will imply priority 0 if field is absent in this manifest.
   priority: 2000001000
   priorityClassName: system-node-critical
   priority: 2000001000

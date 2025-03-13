@@ -23,13 +23,14 @@ import (
 )
 
 const (
-	reportDir         = "/var/run/node-manager-graceful-shutdown"
-	enabledFilePath   = "/var/run/node-manager-graceful-shutdown/enabled"
-	inhibitedFilePath = "/var/run/node-manager-graceful-shutdown/inhibited"
+	reportDir         = "/var/run/d8-shutdown-inhibitor"
+	enabledFilePath   = "/var/run/d8-shutdown-inhibitor/enabled"
+	inhibitedFilePath = "/var/run/d8-shutdown-inhibitor/inhibited"
 )
 
 // StatusReporter is a task that reports status for external monitoring,
 // e.g. for kubelet.
+// TODO "enabled" file should be created via systemd unit configuration.
 type StatusReporter struct {
 	// UnlockInhibitorsCh is a channel to get event about unlocking inhibitors.
 	UnlockInhibitorsCh <-chan struct{}
@@ -77,7 +78,7 @@ func (s *StatusReporter) createFiles() error {
 
 	_, err = os.Create(inhibitedFilePath)
 	if err != nil {
-		return fmt.Errorf("create inhibitid file: %w", err)
+		return fmt.Errorf("create inhibited file: %w", err)
 	}
 
 	return nil
