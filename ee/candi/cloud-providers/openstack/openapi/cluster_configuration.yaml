@@ -158,7 +158,7 @@ apiVersions:
               additionalSecurityGroups: &instanceClassAdditionalSecurityGroups
                 type: array
                 description: |
-                  Security groups that will be applied to VM's network ports in addition to security groups set in a cloud provider configuration.
+                  Security groups that will be applied to VM's network ports. Default group should also be added to this list.
 
                   They allow you to set firewall rules for provisioned instances.
 
