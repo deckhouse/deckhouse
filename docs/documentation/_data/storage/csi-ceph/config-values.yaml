@@ -6,7 +6,7 @@ properties:
   cephfsEnabled:
     type: boolean
     default: true
-    description: Cephfs driver state
+    description: CephFS driver state
   rbdEnabled:
     type: boolean
     default: true
