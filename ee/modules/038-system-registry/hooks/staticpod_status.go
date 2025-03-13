@@ -45,9 +45,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			LabelSelector: &v1.LabelSelector{
 				MatchLabels: map[string]string{
+					"heritage":  "deckhouse",
 					"app":       "system-registry",
 					"module":    "system-registry",
 					"component": "system-registry",
+					"type":      "static-pod",
 				},
 			},
 			FilterFunc: filterRegistryStaticPods,

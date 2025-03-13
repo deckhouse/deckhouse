@@ -8,6 +8,7 @@ metadata:
     app: system-registry
     component: system-registry
     tier: control-plane
+    type: static-pod
   annotations:
     registry.deckhouse.io/auth-config-hash: {{ quote .Hashes.AuthTemplate }}
     registry.deckhouse.io/distribution-config-hash: {{ quote .Hashes.DistributionTemplate }}
