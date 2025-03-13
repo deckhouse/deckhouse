@@ -68,19 +68,19 @@ entries:
               folders:
                 - title:
                     en: Overview
-                    ru: Введение
+                    ru: Обзор
                   url: /admin/configuration/update/update/
                 - title:
-                    en: Alerts
-                    ru: Оповещения
-                  url: /admin/configuration/update/alerts.html
+                    en: Configuring notifications
+                    ru: Настройка уведомлений
+                  url: /admin/configuration/update/notifications.html
                 - title:
-                    en: Changelog
-                    ru: Список изменений
+                    en: Retrieving the changelog
+                    ru: Получение changelog
                   url: /admin/configuration/update/changelog.html
                 - title:
                     en: Update modes
-                    ru: Режимы обновлений
+                    ru: Режимы обновления
                   url: /admin/configuration/update/modes.html
                 - title:
                     en: Release channels
@@ -91,12 +91,12 @@ entries:
                     ru: Окна обновлений
                   url: /admin/configuration/update/update-windows.html
                 - title:
-                    en: Versioning
-                    ru: Версионирование
+                    en: Module versioning
+                    ru: Версионирование модулей
                   url: /admin/configuration/update/versioning.html
                 - title:
-                    en: Control Plane Update
-                    ru: Обновление Control Plane
+                    en: Control plane update
+                    ru: Обновление control plane
                   url: /admin/configuration/update/control-plane-update.html
                 - title:
                     en: FAQ

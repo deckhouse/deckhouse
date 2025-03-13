@@ -1,4 +1,4 @@
 ---
-title: Alerts
-permalink: en/admin/configuration/update/alerts.html
+title: Configuring notifications on new releases
+permalink: en/admin/configuration/update/notifications.html
 ---

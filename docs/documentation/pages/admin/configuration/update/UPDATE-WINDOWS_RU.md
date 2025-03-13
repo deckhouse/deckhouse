@@ -4,143 +4,60 @@ permalink: ru/admin/configuration/update/update-windows.html
 lang: ru
 ---
 
-## Настройка режима обновления
+Deckhouse Kubernetes Platform (DKP) позволяет задавать *окна обновлений* — временные интервалы,
+в которые будет выполняться установка обновлений в автоматическом режиме.
+Используя окна обновлений,
+вы исключаете вероятность установки нового релиза в неподходящее время или в периоды высокой нагрузки на кластер.
 
-Управлять обновлением Deckhouse Kubernetes Platform можно следующими способами:
-- С помощью параметра [settings.update](configuration.html#parameters-update) ModuleConfig `deckhouse`;
-- С помощью секции параметров [disruptions](../node-manager/cr.html#nodegroup-v1-spec-disruptions) NodeGroup.
+## Принцип работы окон обновлений
 
-### Конфигурация окон обновлений
+- Если окна обновлений настроены, DKP будет устанавливать новые версии только в указанные временные интервалы.
+- Если окна обновлений не настроены, установка начнется сразу после появления новой версии в настроенном канале обновлений.
 
-Управлять временными окнами, когда Deckhouse Kubernetes Platform будет устанавливать обновления автоматически, можно следующими способами:
-- в параметре [update.windows](configuration.html#parameters-update-windows) ModuleConfig `deckhouse`, для общего управления обновлениями;
-- в параметрах [disruptions.automatic.windows](../node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-windows) и [disruptions.rollingUpdate.windows](../node-manager/cr.html#nodegroup-v1-spec-disruptions-rollingupdate-windows) NodeGroup, для управления потенциально опасными обновлениями.
+## Настройка окон обновлений
 
-Пример настройки двух ежедневных окон обновлений: с 8:00 до 10:00 и c 20:00 до 22:00 (UTC):
+Управлять окнами обновлений DKP можно следующими способами:
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  version: 1
-  settings:
-    releaseChannel: EarlyAccess
-    update:
-      windows: 
-        - from: "8:00"
-          to: "10:00"
-        - from: "20:00"
-          to: "22:00"
-```
+- **для общего управления обновлениями** используйте параметр `update.windows` модуля `deckhouse`(#TODO);
+- **для управления потенциально опасными обновлениями (disruptive updates)** используйте параметры `disruptions.automatic.windows`(#TODO) и `disruptions.rollingUpdate.windows`(#TODO) ресурса NodeGroup.
 
-Также можно настроить обновления в определенные дни, например по вторникам и субботам с 18:00 до 19:30 (UTC):
+## Примеры конфигурации
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  version: 1
-  settings:
-    releaseChannel: Stable
-    update:
-      windows: 
-        - from: "18:00"
-          to: "19:30"
-          days:
-            - Tue
-            - Sat
-```
+- Два ежедневных окна обновлений с 8:00 до 10:00 и c 20:00 до 22:00 (UTC):
 
-<div id="ручное-подтверждение-потенциально-опасных-disruptive-обновлений"></div>
-
-### Ручное подтверждение обновлений
-
-Ручное подтверждение обновления версии Deckhouse предусмотрено в следующих случаях:
-- Включен режим подтверждения обновлений Deckhouse.
-
-  Это значит, что параметр [settings.update.mode](configuration.html#parameters-update-mode) ModuleConfig `deckhouse` установлен в `Manual` (подтверждение как patch-версии, так и минорной версии Deckhouse) или в `AutoPatch` (подтверждение минорной версии Deckhouse).
-
-  Для подтверждения обновления необходимо выполнить следующую команду, указав необходимую версию Deckhouse:
-
-  ```shell
-  kubectl patch DeckhouseRelease v1.66.2 --type=merge -p='{"approved": true}'
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  metadata:
+    name: deckhouse
+  spec:
+    version: 1
+    settings:
+      releaseChannel: EarlyAccess
+      update:
+        windows: 
+          - from: "8:00"
+            to: "10:00"
+          - from: "20:00"
+            to: "22:00"
   ```
 
-- Включено подтверждение потенциально опасных обновлений (disruptive-обновлений).
+- Окна обновлений по вторникам и субботам с 18:00 до 19:30 (UTC):
 
-  Это значит, что параметр [update.disruptionApprovalMode](configuration.html#parameters-update-disruptionapprovalmode) ModuleConfig `deckhouse` установлен в `Manual`. Вы можете использовать следующую команду, чтобы установить его в `Manual`:
-
-  ```shell
-  kubectl patch mc deckhouse --type=merge -p='{"spec":{"update":{"disruptionApprovalMode":"Manual"}}}'
-  ```
-
-  Для подтверждения потенциального опасного обновления необходимо установить аннотацию `release.deckhouse.io/disruption-approved=true` на соответствующем ресурсе [DeckhouseRelease](../../cr.html#deckhouserelease).
-
-  Пример:
-
-  ```shell
-  kubectl annotate DeckhouseRelease v1.66.2 release.deckhouse.io/disruption-approved=true
-  ```
-
-- Если для какой-либо группы узлов отключено автоматическое применение потенциально опасных обновлений.
-
-  Это значит, что у NodeGroup, соответствующего группе узлов, установлен параметр [spec.disruptions.approvalMode](../node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode) в `Manual`.
-
-  Для обновления **каждого** узла в такой группе на узел нужно установить аннотацию `update.node.deckhouse.io/disruption-approved=`.
-
-  Пример:
-
-  ```shell
-  kubectl annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
-  ```
-
-### Оповещение об обновлении Deckhouse
-
-В режиме обновлений `Auto` можно [настроить](configuration.html#parameters-update-notification) вызов webhook'а для получения оповещения о предстоящем обновлении минорной версии Deckhouse.
-
-Пример настройки оповещения:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  version: 1
-  settings:
-    update:
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  metadata:
+    name: deckhouse
+  spec:
+    version: 1
+    settings:
       releaseChannel: Stable
-      mode: Auto
-      notification:
-        webhook: https://release-webhook.mydomain.com
-```
-
-После появления новой минорной версии Deckhouse на используемом канале обновлений, но до момента применения ее в кластере на адрес webhook'а будет выполнен [POST-запрос](configuration.html#parameters-update-notification-webhook).
-
-Чтобы всегда иметь достаточно времени для реакции на оповещение об обновлении Deckhouse, достаточно настроить параметр [minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime). В этом случае обновление случится по прошествии указанного времени с учетом окон обновлений.
-
-Пример:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  version: 1
-  settings:
-    update:
-      releaseChannel: Stable
-      mode: Auto
-      notification:
-        webhook: https://release-webhook.mydomain.com
-        minimalNotificationTime: 8h
-```
-
-{% alert %}
-Если не указать адрес в параметре [update.notification.webhook](configuration.html#parameters-update-notification-webhook), но указать время в параметре [update.notification.minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime), применение новой версии все равно будет отложено как минимум на указанное в параметре `minimalNotificationTime` время. В этом случае оповещением о появлении новой версии можно считать появление в кластере ресурса [DeckhouseRelease](../../cr.html#deckhouserelease), имя которого соответствует новой версии.
-{% endalert %}
+      update:
+        windows: 
+          - from: "18:00"
+            to: "19:30"
+            days:
+              - Tue
+              - Sat
+  ```
