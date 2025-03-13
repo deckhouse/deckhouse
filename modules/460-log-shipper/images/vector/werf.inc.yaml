@@ -40,7 +40,8 @@ import:
   to: /src
   before: install
 secrets:
-- env: CARGO_PROXY
+- id: CARGO_PROXY
+  value: {{ .CargoProxy }}
 - env: SOURCE_REPO
 shell:
   beforeInstall:
@@ -51,7 +52,7 @@ shell:
   - cd /src
   - |
     export CARGO_PROXY=$(cat /run/secrets/CARGO_PROXY)
-    if ! [[ -z "${CARGO_PROXY}" ]]; then
+    if [[ "${CARGO_PROXY}" =! "false" ]]; then
       echo '[source.crates-io]' >> .cargo/config.toml
       echo 'replace-with = "crates-io-mirror"' >> .cargo/config.toml
       echo '[registries.crates-io-mirror]' >> .cargo/config.toml
