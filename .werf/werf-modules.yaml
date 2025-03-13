@@ -54,9 +54,7 @@
       {{- $_ := set $ctx "SOURCE_REPO" $Root.SOURCE_REPO }}
       {{- $_ := set $ctx "CLOUD_PROVIDERS_SOURCE_REPO" $Root.CLOUD_PROVIDERS_SOURCE_REPO }}
       {{- $_ := set $ctx "OBSERVABILITY_SOURCE_REPO" $Root.OBSERVABILITY_SOURCE_REPO }}
-      {{- $_ := set $ctx "STRONGHOLD_PULL_TOKEN" $Root.STRONGHOLD_PULL_TOKEN }}
       {{- $_ := set $ctx "DistroPackagesProxy" $Root.DistroPackagesProxy }}
-      {{- $_ := set $ctx "CargoProxy" $Root.CargoProxy }}
 ---
 {{ include "module_image_template" $ctx }}
   {{- range $ImageYamlMainfest := regexSplit "\n?---[ \t]*\n" (include "module_image_template" $ctx) -1 }}

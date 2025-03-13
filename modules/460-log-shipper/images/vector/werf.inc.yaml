@@ -39,6 +39,9 @@ import:
   add: /src/vector
   to: /src
   before: install
+secrets:
+- env: CARGO_PROXY
+- env: SOURCE_REPO
 shell:
   beforeInstall:
   {{- include "alt packages proxy" . | nindent 2 }}
@@ -46,13 +49,15 @@ shell:
   install:
   - export CARGO_NET_GIT_FETCH_WITH_CLI=true
   - cd /src
-{{- if $.CargoProxy }}
-  - echo '[source.crates-io]' >> .cargo/config.toml
-  - echo 'replace-with = "crates-io-mirror"' >> .cargo/config.toml
-  - echo '[registries.crates-io-mirror]' >> .cargo/config.toml
-  - echo 'index = "sparse+http://{{ $.CargoProxy }}/index/"' >> .cargo/config.toml
-{{- end }}
-  - git config --global url."{{ $.SOURCE_REPO }}".insteadOf https://github.com
+  - |
+    export CARGO_PROXY=$(cat /run/secrets/CARGO_PROXY)
+    if ! [[ -z "${CARGO_PROXY}" ]]; then
+      echo '[source.crates-io]' >> .cargo/config.toml
+      echo 'replace-with = "crates-io-mirror"' >> .cargo/config.toml
+      echo '[registries.crates-io-mirror]' >> .cargo/config.toml
+      echo 'index = "sparse+http://'${CARGO_PROXY}'/index/"' >> .cargo/config.toml
+    fi
+  - git config --global url."$(cat /run/secrets/SOURCE_REPO)".insteadOf https://github.com
   - |
     cargo build \
     --release \

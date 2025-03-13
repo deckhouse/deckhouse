@@ -9,8 +9,6 @@ config:
     - CLOUD_PROVIDERS_SOURCE_REPO
     - OBSERVABILITY_SOURCE_REPO
     - DISTRO_PACKAGES_PROXY
-    - CARGO_PROXY
-    - STRONGHOLD_PULL_TOKEN
     allowUncommittedFiles: [ "tools/build_includes/*" ]
   stapel:
     mount:
@@ -23,3 +21,4 @@ config:
     - GOPROXY
     - DECKHOUSE_PRIVATE_REPO
     - STRONGHOLD_PULL_TOKEN
+    - CARGO_PROXY
