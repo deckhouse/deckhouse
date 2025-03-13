@@ -1,4 +1,7 @@
 properties:
+  chrooted:
+    description: |
+      Определяет должен ли Deckhouse запускать модульные скрипты в изолированном окружении.
   logLevel:
     description: |
       Уровень логирования Deckhouse.
