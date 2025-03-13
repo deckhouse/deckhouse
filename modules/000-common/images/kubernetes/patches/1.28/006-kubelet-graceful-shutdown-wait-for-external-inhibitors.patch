@@ -3,7 +3,7 @@ index 8469cecdc0e..7d25da82e70 100644
 --- a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
 +++ b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
 @@ -22,6 +22,7 @@ package nodeshutdown
- 
+
  import (
  	"fmt"
 +	"os"
@@ -13,7 +13,7 @@ index 8469cecdc0e..7d25da82e70 100644
 @@ -277,6 +278,12 @@ func (m *managerImpl) start() (chan struct{}, error) {
  					m.recorder.Event(m.nodeRef, v1.EventTypeNormal, kubeletevents.NodeShutdown, "Shutdown manager detected shutdown cancellation")
  				}
- 
+
 +				if isShuttingDown {
 +					// Wait until external inhibitors are unlocked before proceeding with shutdown.
 +					// Do not set m.nodeShuttingDownNow yet to keep Ready status for Node.
@@ -26,7 +26,7 @@ index 8469cecdc0e..7d25da82e70 100644
 @@ -417,6 +424,50 @@ func (m *managerImpl) processShutdownEvent() error {
  	return nil
  }
- 
+
 +// waitForExternalInhibitorsToUnlock waits for external inhibitors to unlock before proceeding with shutdown.
 +func (m *managerImpl) waitForExternalInhibitorsToUnlock() {
 +	const (
