@@ -26,15 +26,17 @@ import:
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
+secrets:
+- env: GOPROXY
 shell:
   beforeInstall:
     - apt-get install -y ca-certificates golang libcap-utils
   install:
   - cd /src
-  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
   - go mod download
   setup:
-  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
+  - export GO_VERSION=${GOLANG_VERSION} 
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /src
   - go build -ldflags="-s -w" -o stale-dns-connections-cleaner .

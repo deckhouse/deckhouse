@@ -21,10 +21,12 @@ import:
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
+secrets:
+- env: GOPROXY
 shell:
   install:
     - cd /src
-    - GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o kubernetes-api-proxy-reloader cmd/main.go
+    - GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o kubernetes-api-proxy-reloader cmd/main.go
     - chown 64535:64535 kubernetes-api-proxy-reloader
     - chmod 0700 kubernetes-api-proxy-reloader
 ---

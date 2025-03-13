@@ -48,10 +48,12 @@ import:
   add: /go_lib/registry-packages-proxy
   to: /go_lib/registry-packages-proxy
   before: install
+secrets:
+- env: GOPROXY
 shell:
   install:
   - cd /src
-  - export GOPROXY={{ .GOPROXY }}
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - go mod download
   setup:
   - cd /src

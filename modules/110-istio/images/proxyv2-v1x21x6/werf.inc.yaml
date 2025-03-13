@@ -94,6 +94,8 @@ import:
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
+secrets:
+- env: GOPROXY
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
@@ -101,7 +103,7 @@ shell:
   install:
   - cd /src/istio/
   - echo {{ $istioVersion }} > version
-  - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64
   - export LDFLAGS='-extldflags -static -s -w'
   - go mod vendor
   - common/scripts/gobuild.sh /src/istio/out/ -tags=agent,disable_pgv /src/istio/pilot/cmd/pilot-agent
@@ -126,6 +128,8 @@ import:
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
+secrets:
+- env: GOPROXY
 shell:
   install:
   - mkdir -p /tmp/bazel-cache
@@ -135,7 +139,7 @@ shell:
   - git clone --depth 1 --branch {{ $istioProxyDepsRev }} {{ .SOURCE_REPO }}/istio/envoy-build-deps.git /tmp/bazel-deps
   - rm -rf /tmp/bazel-deps/.git
   #
-  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - export BAZEL_VERSION="6.3.2" USE_BAZEL_VERSION="6.3.2"
   - cd /src/proxy
@@ -238,6 +242,8 @@ import:
   add: /usr/local/go
   to: /usr/local/go
   before: install
+secrets:
+- env: GOPROXY
 shell:
   beforeInstall:
   - export DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC
@@ -276,7 +282,7 @@ shell:
   - export GOROOT=/usr/local/go GOPATH=/go
   - export PATH=${PATH}:${GOROOT}/bin:${GOPATH}/bin
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
   - go version
   # Install protoc and plugins
   - curl --fail --show-error --silent --location "{{ $source }}/protocolbuffers/protobuf/releases/download/v{{ $protocVersion }}/protoc-{{ $protocVersion }}-linux-x86_64.zip" --output /tmp/protoc.zip

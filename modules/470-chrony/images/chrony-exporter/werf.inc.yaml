@@ -34,9 +34,11 @@ mount:
   to: /go/pkg
 - from: tmp_dir
   to: /root/.cache/go-build
+secrets:
+- env: GOPROXY
 shell:
   install:
-  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - cd /src
   - go build -ldflags="-s -w" -o promu ./main.go
 ---
@@ -57,9 +59,11 @@ import:
   add: /src/promu
   to: /bin/promu
   before: install
+secrets:
+- env: GOPROXY
 shell:
   install:
-  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=1 GOOS=linux GOARCH=amd64
   - cd /chrony_exporter
   - promu build
 ---

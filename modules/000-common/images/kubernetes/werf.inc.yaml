@@ -54,12 +54,14 @@ mount:
   to: /root/.cache/go-build
 - from: tmp_dir
   to: /src/_output/local/go
+secrets:
+- env: GOPROXY
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" $ | nindent 2 }}
   - apk add --no-cache make bash rsync
   install:
-  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} GOWORK=off
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY) GOWORK=off
   - cd /src
   - export KUBE_GIT_VERSION_FILE=.kube-version
   - go mod vendor

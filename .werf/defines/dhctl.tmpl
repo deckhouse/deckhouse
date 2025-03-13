@@ -52,10 +52,12 @@ import:
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
+secrets:
+- env: GOPROXY
 shell:
   install:
   - cd /dhctl
-  - GOPROXY={{ $context.GOPROXY }} go mod download
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   - D8_VERSION={{- $context.CI_COMMIT_TAG }} make build
 
 {{- end }}

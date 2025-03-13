@@ -71,9 +71,11 @@ import:
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
+secrets:
+- env: GOPROXY
 shell:
   install:
-  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - cd /src
   - go build -ldflags="-s -w" -o promu ./main.go
 ---
@@ -92,9 +94,11 @@ import:
   add: /src/prometheus
   to: /src
   before: install
+secrets:
+- env: GOPROXY
 shell:
   install:
-  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - cd /src
   - go generate -tags plugins ./plugins
   - /bin/promu build --prefix /src

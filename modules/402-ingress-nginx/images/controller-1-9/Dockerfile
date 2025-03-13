@@ -80,7 +80,8 @@ RUN patch -p1 < /lua-info.patch && \
     patch -p1 < /geoip.patch && \
     patch -p1 < /new-metrics.patch && \
     patch -p1 < /default-backend-fix.patch
-RUN make GO111MODULE=on USE_DOCKER=false build
+RUN --mount=type=secret,env=GOPROXY \
+    make GO111MODULE=on USE_DOCKER=false build
 
 # Build nginx for ingress controller
 FROM $BASE_ALT_DEV as nginx-builder

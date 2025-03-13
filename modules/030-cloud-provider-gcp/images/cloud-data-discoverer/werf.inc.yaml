@@ -41,10 +41,12 @@ import:
   add: /src
   to: /src
   before: install
+secrets:
+- env: GOPROXY
 shell:
   install:
   - cd /src
-  - export GOPROXY={{ $.GOPROXY }}
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - go mod download
   setup:
   - cd /src

@@ -43,9 +43,11 @@ import:
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
+secrets:
+- env: GOPROXY
 shell:
   install:
-  - export GOPROXY={{ $.GOPROXY }}
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - cd /src
   - go mod download -x
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o /caps-controller-manager cmd/main.go

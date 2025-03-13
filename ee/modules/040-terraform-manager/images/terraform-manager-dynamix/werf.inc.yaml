@@ -36,9 +36,11 @@ import:
   add: /src
   to: /src
   before: install
+secrets:
+- env: GOPROXY
 shell:
   install:
-    - export GOPROXY={{ $.GOPROXY }}
+    - export GOPROXY=$(cat /run/secrets/GOPROXY)
     - cd /src
     - go mod download
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\" -X main.version={{ .TF.decort.version }} -X main.commit=00000000" -o terraform-provider-decort ./cmd/decort/

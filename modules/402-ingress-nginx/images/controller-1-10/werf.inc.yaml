@@ -112,13 +112,15 @@ import:
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
+secrets:
+- env: GOPROXY
 shell:
   install:
   {{- include "alpine packages proxy" . | nindent 2 }}
   # git needs for getting tag and commit sha for build purposes
   - apk --no-cache add make bash git
   setup:
-  - export GOPROXY={{ $.GOPROXY }}
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - export GOARCH=amd64
   - export PKG="k8s.io/ingress-nginx"
   - cd /src/

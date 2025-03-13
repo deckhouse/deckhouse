@@ -41,6 +41,8 @@ import:
   add: /src
   to: /src
   before: install
+secrets:
+- env: GOPROXY
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
@@ -48,7 +50,7 @@ shell:
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   - cd /src
-  - export GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - DIFF="" GIT_VERSION="$(cat GIT_VERSION)" GIT_HASH="$(cat GIT_HASH)" SOURCE_DATE_EPOCH="$(cat SOURCE_DATE_EPOCH)" make falcosidekick
   - chown -R 64535:64535 falcosidekick
   - chmod 0755 falcosidekick

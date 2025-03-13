@@ -40,13 +40,15 @@ import:
   add: /src
   to: /src
   before: install
+secrets:
+- env: GOPROXY
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache make bash
   install:
     - export GO_VERSION=${GOLANG_VERSION}
-    - export GOPROXY={{ $.GOPROXY }}
+    - export GOPROXY=$(cat /run/secrets/GOPROXY)
     - cd /src
     - make build
     - mv bin/events_exporter /events_exporter

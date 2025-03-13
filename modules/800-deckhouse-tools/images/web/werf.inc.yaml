@@ -62,16 +62,20 @@ mount:
   to: /go/pkg
 - from: tmp_dir
   to: /root/.cache/go-build
+secrets:
+- env: GOPROXY
+- env: DECKHOUSE_PRIVATE_REPO
+- env: STRONGHOLD_PULL_TOKEN
 shell:
   beforeInstall:
     {{- include "debian packages proxy" . | nindent 4 }}
     - apt-get install -y libbtrfs-dev jq
     - find /var/lib/apt/ /var/cache/apt/ -type f -delete
   install:
-    - export GOPROXY={{ $.GOPROXY }}
-    - export PRIVATE_REPO={{ $.DECKHOUSE_PRIVATE_REPO }}
-    - export PRIVATE_REPO_TOKEN={{ $.STRONGHOLD_PULL_TOKEN }}
-    - export GOPRIVATE={{ $.DECKHOUSE_PRIVATE_REPO }}
+    - export GOPROXY=$(cat /run/secrets/GOPROXY)
+    - export PRIVATE_REPO=$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO)
+    - export PRIVATE_REPO_TOKEN=$(cat /run/secrets/STRONGHOLD_PULL_TOKEN)
+    - export GOPRIVATE=$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO)
     - git config --global url."https://gitlab-ci-token:${PRIVATE_REPO_TOKEN}@${PRIVATE_REPO}/".insteadOf https://${PRIVATE_REPO}/
     - cd /src
     - task build:dist:all

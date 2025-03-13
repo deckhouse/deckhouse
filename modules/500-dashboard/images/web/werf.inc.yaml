@@ -33,10 +33,12 @@ mount:
   to: /go/pkg
 - from: tmp_dir
   to: /root/.cache/go-build
+secrets:
+- env: GOPROXY
 shell:
   install:
   - cd /src/modules/web
-  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - go mod download
   - go build -trimpath -ldflags="-s -w -X k8s.io/dashboard/web/pkg/environment.Version=v{{ $version }}" -o /dashboard-web .
   - chown 64535:64535 /dashboard-web

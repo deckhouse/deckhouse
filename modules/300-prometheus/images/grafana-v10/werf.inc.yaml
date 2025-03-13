@@ -34,6 +34,8 @@ import:
   add: /usr/src/app
   to: /usr/src/app
   before: install
+secrets:
+- env: GOPROXY
 shell:
   beforeInstall:
   {{- include "debian packages proxy" . | nindent 2 }}
@@ -41,7 +43,7 @@ shell:
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch v0.6.0 {{ $.SOURCE_REPO }}/google/wire.git /src/wire
   install:
-  - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=/usr/bin/musl-gcc
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=/usr/bin/musl-gcc
   - cd /src/wire/cmd/wire && go install
   - rm -rf /src/wire
   - cd /usr/src/app
@@ -60,10 +62,12 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- env: GOPROXY
 shell:
   install:
   - cd /app
-  - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - go build -ldflags="-s -w" -o entrypoint main.go
   - chown -R 64535:64535 /app/
   - chmod 0700 /app/entrypoint

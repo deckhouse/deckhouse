@@ -15,10 +15,12 @@ imageSpec:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+secrets:
+- env: GOPROXY
 shell:
   install:
     - cd {{ $discovererAbsPath }}
-    - export GOPROXY={{ $.GOPROXY }}
+    - export GOPROXY=$(cat /run/secrets/GOPROXY)
     - go mod download
   setup:
     - cd {{ $discovererAbsPath }}

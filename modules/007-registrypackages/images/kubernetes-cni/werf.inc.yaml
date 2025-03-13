@@ -74,12 +74,14 @@ import:
   add: /src
   to: /src
   before: install
+secrets:
+- env: GOPROXY
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache make bash
   setup:
-    - export GOPROXY={{ $.GOPROXY }}
+    - export GOPROXY=$(cat /run/secrets/GOPROXY)
     - cd /src/plugins
     - go mod vendor
     - CGO_ENABLED=0 ./build_linux.sh -ldflags '-extldflags -static -X github.com/containernetworking/plugins/pkg/utils/buildversion.BuildVersion={{ $cni_version }}'

@@ -35,12 +35,14 @@ import:
   to: /src
   before: install
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+secrets:
+- env: GOPROXY
 shell:
   install:
   - cd /src
   - GIT_COMMIT=$(cat GIT_COMMIT)
   - BUILD_DATE=$(date +%Y-%m-%dT%H:%M:%S%z)
-  - export GOPROXY={{ $.GOPROXY }}
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-X github.com/cloudnativelabs/kube-router/v2/pkg/version.Version=${GIT_COMMIT} -X github.com/cloudnativelabs/kube-router/v2/pkg/version.BuildDate=${BUILD_DATE}" -o kube-router cmd/kube-router/kube-router.go
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}

@@ -33,10 +33,12 @@ mount:
   to: /go/pkg
 - from: tmp_dir
   to: /root/.cache/go-build
+secrets:
+- env: GOPROXY
 shell:
   install:
     - cd /src/pushgateway
-    - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - /bin/promu build --prefix /src/pushgateway
     - mkdir /empty
     - chown -R 64535:64535 /empty

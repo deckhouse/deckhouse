@@ -24,13 +24,16 @@ import:
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
+secrets:
+- env: GOPROXY
 shell:
   install:
   - cd /src
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - go mod download
   setup:
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
+  - export GO_VERSION=${GOLANG_VERSION}
   - cd /src
   - go build -ldflags="-s -w" -o safe-agent-updater .
   - chown 64535:64535 /src/safe-agent-updater

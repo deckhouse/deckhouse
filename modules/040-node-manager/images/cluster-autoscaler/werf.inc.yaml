@@ -49,10 +49,12 @@ mount:
   to: /go/pkg
 - from: tmp_dir
   to: /root/.cache/go-build
+secrets:
+- env: GOPROXY
 shell:
   install:
   - cd /src
-  - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - go mod download
   - go build -ldflags="-s -w" -o cluster-autoscaler
   - echo "{{ $clusterAutoscalerVersion }}.{{ $value.clusterAutoscalerPatch }}-flant" > VERSION

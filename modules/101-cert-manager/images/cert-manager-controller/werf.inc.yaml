@@ -45,12 +45,14 @@ import:
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
+secrets:
+- env: GOPROXY
 shell:
   beforeInstall:
   {{- include "debian packages proxy" . | nindent 2 }}
   - apt-get install -y rsync
   install:
-  - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /src
   - export RELEASE_VERSION="v{{ $version }}-flant"
   - make VERSION="$(cat VERSION)" IS_PRERELEASE="$(cat IS_PRERELEASE)" GITCOMMIT="$(cat GITCOMMIT)" GITEPOCH="$(cat GITEPOCH)" CTR=jq _bin/server/controller-linux-amd64 _bin/server/acmesolver-linux-amd64 _bin/server/webhook-linux-amd64 _bin/server/cainjector-linux-amd64

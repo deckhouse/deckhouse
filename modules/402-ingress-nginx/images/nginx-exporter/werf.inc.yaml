@@ -26,11 +26,13 @@ import:
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
+secrets:
+- env: GOPROXY
 shell:
   install:
   - cd /src
   - go mod download
-  - GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags '-s -w -X main.version=0.8.0 -X main.gitCommit=f0173677183c840e90a56e48082e36ac687e1a30' -o exporter .
+  - GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags '-s -w -X main.version=0.8.0 -X main.gitCommit=f0173677183c840e90a56e48082e36ac687e1a30' -o exporter .
   - chown -R 64535:64535 exporter
   - chmod 0700 exporter
 ---
