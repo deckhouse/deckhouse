@@ -19,6 +19,7 @@ package drain
 import (
 	"context"
 	"errors"
+	goerr "errors"
 	"fmt"
 	"io"
 	"math"
@@ -33,7 +34,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/cli-runtime/pkg/resource"
 	"k8s.io/client-go/kubernetes"
@@ -293,7 +293,7 @@ func (d *Helper) evictPods(pods []corev1.Pod, evictionGroupVersion schema.GroupV
 				}
 				select {
 				case <-ctx.Done():
-					returnCh <- fmt.Errorf("failed to drain node: %w", ErrDrainTimeout)
+					returnCh <- ErrDrainTimeout
 					return
 				default:
 				}
@@ -374,7 +374,7 @@ func (d *Helper) evictPods(pods []corev1.Pod, evictionGroupVersion schema.GroupV
 		}
 	}
 
-	return utilerrors.NewAggregate(errors)
+	return goerr.Join(errors...)
 }
 
 func (d *Helper) deletePods(pods []corev1.Pod, getPodFn func(namespace, name string) (*corev1.Pod, error)) error {
@@ -442,7 +442,7 @@ func waitForDelete(params waitForDeleteParams) ([]corev1.Pod, error) {
 		if len(pendingPods) > 0 {
 			select {
 			case <-params.ctx.Done():
-				return false, fmt.Errorf("failed to drain node: %w", ErrDrainTimeout)
+				return false, ErrDrainTimeout
 			default:
 				return false, nil
 			}
