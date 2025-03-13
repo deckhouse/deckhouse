@@ -8,10 +8,6 @@ apiVersions:
       required:
         - apiVersion
         - kind
-        - datastores
-        - networks
-        - VMTemplatePaths
-        - resourcePools
       properties:
         apiVersion:
           type: string
