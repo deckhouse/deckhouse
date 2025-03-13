@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package registry_controller
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net/http"
@@ -98,6 +99,10 @@ func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 	}
 
 	nodePredicate := predicate.Funcs{
+		GenericFunc: func(e event.TypedGenericEvent[client.Object]) bool {
+			node := e.Object.(*corev1.Node)
+			return hasMasterLabel(node)
+		},
 		CreateFunc: func(e event.TypedCreateEvent[client.Object]) bool {
 			node := e.Object.(*corev1.Node)
 			return hasMasterLabel(node)
@@ -126,7 +131,7 @@ func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 		},
 	}
 
-	secretsPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
+	nodePKISecretsPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		if obj.GetNamespace() != nc.Namespace {
 			return false
 		}
@@ -134,7 +139,7 @@ func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 		return state.NodePKISecretRegex.MatchString(obj.GetName())
 	})
 
-	secretsHandler := handler.EnqueueRequestsFromMapFunc(func(_ context.Context, obj client.Object) []reconcile.Request {
+	nodePKISecretsHandler := handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
 		name := obj.GetName()
 		sub := state.NodePKISecretRegex.FindStringSubmatch(name)
 
@@ -174,9 +179,58 @@ func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 			name == state.UserROSecretName ||
 			name == state.UserRWSecretName ||
 			name == state.UserMirrorPullerName ||
-			name == state.UserMirrorPusherName ||
-			name == state.StateSecretName
+			name == state.UserMirrorPusherName
 	})
+
+	stateSecretPredicate := predicate.Funcs{
+		GenericFunc: func(e event.TypedGenericEvent[client.Object]) bool {
+			if e.Object.GetNamespace() != nc.Namespace {
+				return false
+			}
+
+			if e.Object.GetName() != state.StateSecretName {
+				return false
+			}
+
+			return true
+		},
+		CreateFunc: func(e event.TypedCreateEvent[client.Object]) bool {
+			if e.Object.GetNamespace() != nc.Namespace {
+				return false
+			}
+
+			if e.Object.GetName() != state.StateSecretName {
+				return false
+			}
+
+			return true
+		},
+		DeleteFunc: func(e event.TypedDeleteEvent[client.Object]) bool {
+			if e.Object.GetNamespace() != nc.Namespace {
+				return false
+			}
+
+			if e.Object.GetName() != state.StateSecretName {
+				return false
+			}
+
+			return true
+		},
+		UpdateFunc: func(e event.TypedUpdateEvent[client.Object]) bool {
+			if e.ObjectNew.GetNamespace() != nc.Namespace {
+				return false
+			}
+
+			if e.ObjectNew.GetName() != state.StateSecretName {
+				return false
+			}
+
+			old := e.ObjectOld.(*corev1.Secret)
+			new := e.ObjectNew.(*corev1.Secret)
+
+			return !bytes.Equal(old.Data["version"], new.Data["version"])
+		},
+	}
 
 	globalConfigMapsPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		if obj.GetNamespace() != nc.Namespace {
@@ -214,9 +268,21 @@ func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 		return []reconcile.Request{ret}
 	})
 
-	reprocessAllHandler := handler.EnqueueRequestsFromMapFunc(func(_ context.Context, _ client.Object) []reconcile.Request {
-		return []reconcile.Request{reprocessAllNodesRequest}
-	})
+	newReprocessAllHandler := func(objectType string) handler.EventHandler {
+		return handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
+			log := ctrl.LoggerFrom(ctx)
+
+			log.Info(
+				"Reprocess all nodes will be triggered by object change",
+				"name", obj.GetName(),
+				"namespace", obj.GetNamespace(),
+				"type", objectType,
+				"controller", controllerName,
+			)
+
+			return []reconcile.Request{reprocessAllNodesRequest}
+		})
+	}
 
 	err = ctrl.NewControllerManagedBy(mgr).
 		Named(controllerName).
@@ -226,8 +292,8 @@ func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 		).
 		Watches(
 			&corev1.Secret{},
-			secretsHandler,
-			builder.WithPredicates(secretsPredicate),
+			nodePKISecretsHandler,
+			builder.WithPredicates(nodePKISecretsPredicate),
 		).
 		Watches(
 			&corev1.Pod{},
@@ -237,17 +303,22 @@ func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 		WatchesRawSource(nc.reprocessChannelSource()).
 		Watches(
 			&moduleConfig,
-			reprocessAllHandler,
+			newReprocessAllHandler("ModuleConfig"),
 			builder.WithPredicates(moduleConfigPredicate),
 		).
 		Watches(
 			&corev1.Secret{},
-			reprocessAllHandler,
+			newReprocessAllHandler("Secret"),
 			builder.WithPredicates(globalSecretsPredicate),
 		).
 		Watches(
+			&corev1.Secret{},
+			newReprocessAllHandler("Secret"),
+			builder.WithPredicates(stateSecretPredicate),
+		).
+		Watches(
 			&corev1.ConfigMap{},
-			reprocessAllHandler,
+			newReprocessAllHandler("ConfigMap"),
 			builder.WithPredicates(globalConfigMapsPredicate),
 		).
 		WithOptions(controller.Options{
@@ -315,10 +386,14 @@ func (nc *nodeController) checkNodesAddressesChanged(ctx context.Context) error 
 		return fmt.Errorf("cannot get master nodes internal IPs: %w", err)
 	}
 
+	log := ctrl.LoggerFrom(ctx)
+
 	nc.masterNodeAddrsMu.Lock()
 	defer nc.masterNodeAddrsMu.Unlock()
 
 	if len(ips) != len(nc.masterNodeAddrs) {
+		log.Info("Reprocess all nodes will be triggered by master nodes IPs change")
+
 		nc.masterNodeAddrs = ips
 		if err = nc.triggerReconcile(ctx, reprocessAllNodesRequest); err != nil {
 			return fmt.Errorf("cannot trigger reprocess all nodes: %w", err)
@@ -329,6 +404,8 @@ func (nc *nodeController) checkNodesAddressesChanged(ctx context.Context) error 
 	// Addresses already sorted in getAllMasterNodesIPs
 	for i := range ips {
 		if ips[i] != nc.masterNodeAddrs[i] {
+			log.Info("Reprocess all nodes will be triggered by master nodes IPs change")
+
 			nc.masterNodeAddrs = ips
 			if err = nc.triggerReconcile(ctx, reprocessAllNodesRequest); err != nil {
 				return fmt.Errorf("cannot trigger reprocess all nodes: %w", err)
