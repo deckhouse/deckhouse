@@ -97,7 +97,7 @@ function prepareImageArgs() {
   fi
 
   if [ -z "$SEVERITY" ]; then
-    SEVERITY="CRITICAL,HIGH"
+    SEVERITY="UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
   fi
 
   if [ -z "$OUTPUT" ]; then
