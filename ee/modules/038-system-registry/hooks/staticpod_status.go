@@ -17,8 +17,8 @@ import (
 )
 
 type registryStaticPod struct {
-	PodName  string
-	PodIP    string
+	Name     string
+	IP       string
 	NodeName string
 	NodeIP   string
 	IsReady  bool
@@ -127,8 +127,8 @@ func filterRegistryStaticPods(obj *unstructured.Unstructured) (go_hook.FilterRes
 	}
 
 	ret := registryStaticPod{
-		PodName:  pod.Name,
-		PodIP:    pod.Status.PodIP,
+		Name:     pod.Name,
+		IP:       pod.Status.PodIP,
 		NodeName: pod.Spec.NodeName,
 		NodeIP:   pod.Status.HostIP,
 		IsReady:  isReady,
@@ -157,7 +157,7 @@ func handleRegistryStaticPods(input *go_hook.HookInput) error {
 			input.Logger.Warn(
 				"Node not found for static pod",
 				"node", pod.NodeName,
-				"pod", pod.PodName,
+				"pod", pod.Name,
 			)
 		}
 	}
