@@ -330,7 +330,7 @@ shell:
   - cd /src/proxy/
   - git apply --verbose /patches/*.patch
   - git clone --branch "{{ $llvmRev }}" {{ $.SOURCE_REPO }}/llvm/llvm-project.git /src/llvm
-  - rm -rf /src/llvm/.git /src/proxy/.git
+  - rm -rf /src/llvm/.git
 
   # getting rid of unused vulnerable code
   - rm -rf /src/llvm/llvm/utils/git
