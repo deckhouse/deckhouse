@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package debug
+package tools
 
 import (
 	"fmt"
@@ -23,7 +23,7 @@ import (
 	"d8_shutdown_inhibitor/pkg/inputdev"
 )
 
-func RunDebugCommand(args []string) bool {
+func Run(args []string) bool {
 	if len(args) < 1 {
 		return false
 	}
