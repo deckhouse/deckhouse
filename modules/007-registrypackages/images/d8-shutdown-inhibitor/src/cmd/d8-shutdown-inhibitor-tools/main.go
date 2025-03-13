@@ -14,23 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package debug
+package main
 
 import (
-	"fmt"
 	"os"
 
-	"d8_shutdown_inhibitor/pkg/inputdev"
+	"d8_shutdown_inhibitor/pkg/debug"
 )
 
-func ListInputDevices() {
-	devs, err := inputdev.ListInputDevicesWithAnyButton(inputdev.KEY_POWER, inputdev.KEY_POWER2)
-	if err != nil {
-		fmt.Printf("list power key devices: %w", err)
-		os.Exit(1)
-	}
-
-	for _, dev := range devs {
-		fmt.Printf("Device: %s, %s\n", dev.Name, dev.DevPath)
-	}
+func main() {
+	debug.RunDebugCommand(os.Args)
 }

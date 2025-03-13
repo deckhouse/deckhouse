@@ -21,21 +21,22 @@ import (
 	"fmt"
 	"time"
 
-	"graceful_shutdown/pkg/app/containerd"
-	"graceful_shutdown/pkg/system"
+	"d8_shutdown_inhibitor/pkg/app/containerd"
+	"d8_shutdown_inhibitor/pkg/system"
 )
 
 // PodObserver starts to check Pods on node and stops inhibitors when no pods to wait remain.
 type PodObserver struct {
-	CheckInterval    time.Duration
-	PodMatchers      []containerd.PodMatcher
-	ShutdownSignalCh <-chan struct{}
+	PodsCheckingInterval  time.Duration
+	WallBroadcastInterval time.Duration
+	PodMatchers           []containerd.PodMatcher
+	ShutdownSignalCh      <-chan struct{}
 	//PowerKeyPressedCh <-chan struct{}
 	StopInhibitorsCh chan<- struct{}
 }
 
-const wallMessage = `Pods are still running, waiting for them to stop.
-Use 'kubectl get po -l pod.deckhouse.io/inhibit-node-shutdown' to list them or
+const wallMessage = `Pods with shutdown inhibitor label are still running, waiting for them to stop.
+Use 'kubectl get po -A -l pod.deckhouse.io/inhibit-node-shutdown' to list them or
 use 'kubectl drain' to move Pods to other Nodes.
 `
 
@@ -52,24 +53,32 @@ func (p *PodObserver) Run(ctx context.Context, errCh chan error) {
 	}
 
 	// Stage 2. Wait for Pods to stop.
-	ticker := time.NewTicker(p.CheckInterval)
+	ticker := time.NewTicker(p.PodsCheckingInterval)
 	defer ticker.Stop()
 
+	lastWall := time.Time{}
 	for {
-		// Check pods immediately.
-		matches, err := p.podsToWait(ctx)
+		matchedPods, err := p.podsToWait(ctx)
 		if err != nil {
-
+			fmt.Printf("podObserver(s2): error listing Pods: %v\n", err)
+			// TODO add maximum retry count.
+			continue
 		}
-		if matches == 0 {
+		if matchedPods == 0 {
 			fmt.Printf("podObserver(s2): no pods to wait, unlock inhibitors and exit\n")
 			close(p.StopInhibitorsCh)
 			return
 		}
-		fmt.Printf("podObserver(s2): %d pods are still running\n", matches)
-		err = system.WallMessage(wallMessage)
-		if err != nil {
-			fmt.Printf("podObserver(s2): error sending broadcast message: %v\n", err)
+		fmt.Printf("podObserver(s2): %d pods are still running\n", matchedPods)
+
+		// Limit wall broadcast messages with longer interval than pods checking interval.
+		now := time.Now()
+		if lastWall.IsZero() || lastWall.Add(p.WallBroadcastInterval).Before(now) {
+			err = system.WallMessage(wallMessage)
+			if err != nil {
+				fmt.Printf("podObserver(s2): error sending broadcast message: %v\n", err)
+			}
+			lastWall = now
 		}
 
 		// Wait for ticker or global stop.

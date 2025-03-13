@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	"graceful_shutdown/pkg/systemd"
+	"d8_shutdown_inhibitor/pkg/systemd"
 )
 
 type ShutdownInhibitor struct {
