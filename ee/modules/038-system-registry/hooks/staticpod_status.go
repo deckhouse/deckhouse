@@ -153,6 +153,7 @@ func handleRegistryStaticPods(input *go_hook.HookInput) error {
 
 		if node, ok := nodes[pod.NodeName]; ok {
 			node.Pods = append(node.Pods, pod)
+			nodes[node.Name] = node
 		} else {
 			input.Logger.Warn(
 				"Node not found for static pod",
