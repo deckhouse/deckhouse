@@ -277,7 +277,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/007-registrypackages/images/node-shutdown-inhibitor/src"
+  directory: "/modules/007-registrypackages/images/d8-shutdown-inhibitor/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
