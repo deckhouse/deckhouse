@@ -18,6 +18,7 @@ package drain
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -47,13 +48,7 @@ const (
 	podSkipMsgTemplate  = "pod %q has DeletionTimestamp older than %v seconds, skipping\n"
 )
 
-type DrainTimeoutError struct {
-	Timeout time.Duration
-}
-
-func (e *DrainTimeoutError) Error() string {
-	return fmt.Sprintf("drain timeout reached: %v", e.Timeout)
-}
+var ErrDrainTimeout = errors.New("drain timeout")
 
 // Helper contains the parameters to control the behaviour of drainer
 type Helper struct {
@@ -298,9 +293,7 @@ func (d *Helper) evictPods(pods []corev1.Pod, evictionGroupVersion schema.GroupV
 				}
 				select {
 				case <-ctx.Done():
-					returnCh <- &DrainTimeoutError{
-						Timeout: globalTimeout,
-					}
+					returnCh <- fmt.Errorf("failed to drain node: %w", ErrDrainTimeout)
 					return
 				default:
 				}
@@ -449,9 +442,7 @@ func waitForDelete(params waitForDeleteParams) ([]corev1.Pod, error) {
 		if len(pendingPods) > 0 {
 			select {
 			case <-params.ctx.Done():
-				return false, &DrainTimeoutError{
-					Timeout: params.globalTimeout,
-				}
+				return false, fmt.Errorf("failed to drain node: %w", ErrDrainTimeout)
 			default:
 				return false, nil
 			}

@@ -18,8 +18,8 @@ package hooks
 
 import (
 	"context"
+	"errors"
 	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -206,7 +206,7 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 	for drainedNode := range drainingNodesC {
 		if drainedNode.Err != nil {
 			input.Logger.Errorf("node %q drain failed: %s", drainedNode.NodeName, drainedNode.Err)
-			shouldIgnoreErr = handleDrainError(drainedNode.Err)
+			shouldIgnoreErr = errors.Is(err, drain.ErrDrainTimeout)
 			event := drainedNode.buildEvent()
 			input.PatchCollector.Create(event, object_patch.UpdateIfExists())
 			input.MetricsCollector.Set("d8_node_draining", 1, map[string]string{"node": drainedNode.NodeName, "message": drainedNode.Err.Error()})
@@ -220,15 +220,6 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 
 	return nil
-}
-
-func handleDrainError(err error) bool {
-	switch {
-	case strings.Contains(err.Error(), "drain timeout reached:"):
-		return true
-	default:
-		return false
-	}
 }
 
 func getDrainTimeout(input *go_hook.HookInput, client k8s.Client, ngName string) time.Duration {
