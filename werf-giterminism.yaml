@@ -5,7 +5,6 @@ config:
     - /CI_.+/
     - /REPO_MCM_.+/
     - SOURCE_REPO
-    - GOPROXY
     - WERF_DISABLE_META_TAGS
     - CLOUD_PROVIDERS_SOURCE_REPO
     - OBSERVABILITY_SOURCE_REPO
