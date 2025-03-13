@@ -4,7 +4,7 @@ permalink: ru/admin/configuration/update/changelog.html
 lang: ru
 ---
 
-При каждом выпуске новой версии Deckhouse Kubernetes Platform (DKP) формируется **changelog** — подробный список изменений, включающий новые возможности, исправления ошибок, обновления компонентов, а также важные замечания по совместимости.
+При каждом выпуске новой версии Deckhouse Kubernetes Platform (DKP) формируется *changelog* — подробный список изменений, включающий новые возможности, исправления ошибок, обновления компонентов, а также важные замечания по совместимости.
 
 Changelog для конкретной версии DKP можно найти [в общем списке релизов проекта Deckhouse на GitHub](https://github.com/deckhouse/deckhouse/releases).
 
