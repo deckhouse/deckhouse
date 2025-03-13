@@ -4,7 +4,7 @@
     expr: |
       max by (secret_name, secret_namespace) (
         x509_cert_not_after{job="x509-certificate-exporter", secret_key!="ca.crt"} - time() < 1209600
-      ) * on (namespace) group_left() max by (secret_namespace) (extended_monitoring_enabled)
+      ) * on (secret_namespace) group_left() max by (secret_namespace) (label_replace(extended_monitoring_enabled, "secret_namespace", "$1", "namespace", "(.+)"))
     for: 1h
     labels:
       severity_level: "8"
@@ -37,7 +37,7 @@
     expr: |
       max by (secret_name, secret_namespace) (
         x509_cert_not_after{job="x509-certificate-exporter", secret_key!="ca.crt"} - time() < 0
-      ) * on (namespace) group_left() max by (secret_namespace) (extended_monitoring_enabled)
+      ) * on (secret_namespace) group_left() max by (secret_namespace) (label_replace(extended_monitoring_enabled, "secret_namespace", "$1", "namespace", "(.+)"))
     for: 1h
     labels:
       severity_level: "8"
