@@ -19,11 +19,11 @@ package validation
 import (
 	"net/http"
 
+	"github.com/flant/shell-operator/pkg/metric"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
-	"github.com/flant/shell-operator/pkg/metric"
 )
 
 type registerer interface {

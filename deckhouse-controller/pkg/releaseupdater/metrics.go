@@ -17,8 +17,9 @@ limitations under the License.
 package releaseupdater
 
 import (
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/flant/shell-operator/pkg/metric"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
 
 const D8ReleaseBlockedMetricName = "d8_release_info"
