@@ -1,6 +1,6 @@
 ---
 title: Версионирование модулей
-permalink: ru/admin/configuration/update/versioning.html
+permalink: ru/architecture/functional/module-versioning.html
 lang: ru
 ---
 

@@ -423,7 +423,11 @@ entries:
         - title:
             en: Functional specifications
             ru: Функциональные характеристики
-          url: /architecture/functional.html
+          folders:
+            - title:
+                en: Module versioning
+                ru: Версионирование модулей
+              url: /architecture/functional/module-versioning.html
         - title:
             en: Table
             ru: Таблица (Мэгтона)
