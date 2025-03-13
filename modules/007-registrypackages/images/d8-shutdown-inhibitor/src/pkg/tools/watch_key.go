@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package debug
+package tools
 
 import (
 	"fmt"
@@ -23,14 +23,21 @@ import (
 	"d8_shutdown_inhibitor/pkg/inputdev"
 )
 
-func ListInputDevices() {
-	devs, err := inputdev.ListInputDevicesWithAnyButton(inputdev.KEY_POWER, inputdev.KEY_POWER2)
+func WatchForKey(buttons ...inputdev.Button) {
+	devs, err := inputdev.ListInputDevicesWithAnyButton(buttons...)
 	if err != nil {
-		fmt.Printf("list power key devices: %w", err)
+		fmt.Printf("list devices with Q W E Enter: %w", err)
 		os.Exit(1)
 	}
 
 	for _, dev := range devs {
 		fmt.Printf("Device: %s, %s\n", dev.Name, dev.DevPath)
 	}
+
+	watcher := inputdev.NewWatcher(devs, buttons...)
+	watcher.Start()
+	fmt.Printf("watch for button press\n")
+	<-watcher.Pressed()
+	fmt.Printf("button was pressed\n")
+	os.Exit(0)
 }

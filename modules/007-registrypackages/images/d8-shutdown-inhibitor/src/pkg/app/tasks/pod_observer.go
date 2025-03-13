@@ -48,8 +48,6 @@ func (p *PodObserver) Run(ctx context.Context, errCh chan error) {
 		fmt.Printf("podObserver(s1): stop on context cancel\n")
 	case <-p.ShutdownSignalCh:
 		fmt.Printf("podObserver(s1): catch prepare shutdown signal, start pods checker\n")
-		//case <-p.PowerKeyPressedCh:
-		//	fmt.Printf("podObserver(s1): catch power key press, start pods checker\n")
 	}
 
 	// Stage 2. Wait for Pods to stop.
@@ -71,7 +69,7 @@ func (p *PodObserver) Run(ctx context.Context, errCh chan error) {
 		}
 		fmt.Printf("podObserver(s2): %d pods are still running\n", matchedPods)
 
-		// Limit wall broadcast messages with longer interval than pods checking interval.
+		// Reduce wall broadcast messages with longer interval than pods checking interval.
 		now := time.Now()
 		if lastWall.IsZero() || lastWall.Add(p.WallBroadcastInterval).Before(now) {
 			err = system.WallMessage(wallMessage)
@@ -106,11 +104,6 @@ func (p *PodObserver) podsToWait(ctx context.Context) (int, error) {
 	}
 
 	matchedPods := containerd.FilterPods(podList.Items, p.PodMatchers...) // := 0
-	//for _, pod := range podList.Items {
-	//	if p.PodMatcher(pod) {
-	//		matched++
-	//	}
-	//}
 
 	return len(matchedPods), nil
 }

@@ -19,9 +19,9 @@ package main
 import (
 	"os"
 
-	"d8_shutdown_inhibitor/pkg/debug"
+	"d8_shutdown_inhibitor/pkg/tools"
 )
 
 func main() {
-	debug.RunDebugCommand(os.Args)
+	tools.Run(os.Args)
 }

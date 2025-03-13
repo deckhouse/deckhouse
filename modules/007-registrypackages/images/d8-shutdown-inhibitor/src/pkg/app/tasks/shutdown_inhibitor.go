@@ -89,24 +89,10 @@ func (s *ShutdownInhibitor) acquireLock() error {
 }
 
 func (s *ShutdownInhibitor) waitForShutdownSignal() <-chan bool {
-
 	ch, err := s.dbusCon.MonitorShutdown()
 	if err != nil {
 		fmt.Printf("shutdownInhibitor: failed to monitor shutdown signal: %v\n", err)
 		return nil
 	}
-
 	return ch
-	//
-	//ch := make(chan struct{})
-	//
-	//go func() {
-	//	fmt.Printf("shutdownInhibitor: wait for prepare shutdown signal\n")
-	//	// time.Sleep(20 * time.Second)
-	//	time.Sleep(24 * time.Hour)
-	//	fmt.Printf("shutdownInhibitor: prepare shutdown signal received\n")
-	//	close(ch)
-	//}()
-	//
-	//return ch
 }
