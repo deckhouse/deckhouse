@@ -316,6 +316,26 @@ entries:
                 ru: Внутрикластерное взаимодействие
               url: /user/intra-cluster-interaction-using.html
             - title:
+                en: Managing authorization and access to workload with Istio
+                ru: Управление авторизацией и доступом к workload c Istio
+              url: /user/authorization-workload-istio.html
+            - title:
+                en: Request routing with Istio
+                ru: Маршрутизация запросов с Istio
+              url: /user/request_routing_istio.html
+            - title:
+                en: Managing request balancing between service Endpoints with Istio
+                ru: Управление балансировкой запросов между endpoint’ами сервиса с Istio
+              url: /user/managing_request_between_service_istio.html
+            - title:
+                en: Locality failover with Istio
+                ru: Locality failover с Istio
+              url: /user/locality_failower_istio.html
+            - title:
+                en: Configuring Retry for requests with Istio
+                ru: Настройка Retry для запросов с Istio
+              url: /user/retry_istio.html
+            - title:
                 en: Circuit Breaker
                 ru: Circuit Breaker
               url: /user/circuit-breaker.html
@@ -404,6 +424,14 @@ entries:
             en: Functional specifications
             ru: Функциональные характеристики
           url: /architecture/functional.html
+        - title:
+            en: Architecture of the cluster with Istio enabled
+            ru: Архитектура кластера с включенным Istio
+          url: /architecture/cluster-with-istio.html
+        - title:
+            en: Application service architecture with Istio enabled
+            ru: Архитектура прикладного сервиса с включенным Istio
+          url: /architecture/service-with-istio.html
         - title:
             en: Table
             ru: Таблица (Мэгтона)
