@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"strings"
 
 	"github.com/alessio/shellescape"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -26,6 +27,7 @@ import (
 )
 
 func (pc *Checker) CheckSudoIsAllowedForUser() error {
+	log.InfoF("app.PreflightSkipSudoIsAllowedForUserCheck=%v\n", app.PreflightSkipSudoIsAllowedForUserCheck)
 	if app.PreflightSkipSudoIsAllowedForUserCheck {
 		log.DebugLn("sudoers preflight check is skipped")
 		return nil
@@ -45,13 +47,13 @@ func callSudo(nodeInterface node.Interface, password string) error {
 		args = []string{"-n", "echo", "-n"}
 	}
 
-	err := nodeInterface.Command("sudo", args...).Run()
-	if err != nil {
+	cmd := nodeInterface.Command("sudo", args...)
+	if out, err := cmd.CombinedOutput(); err != nil {
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) && exitErr.ExitCode() != 255 {
-			return errors.New("Provided SSH user is not allowed to sudo, please check that your password is correct and that this user is in the sudoers file.")
+			return fmt.Errorf("provided SSH user is not allowed to sudo, please check that your password is correct and that this user is in the sudoers file: %w; password: %q; output:%q; command:%q", err, password, out, strings.Join(append([]string{"sudo"}, args...), " "))
 		}
-		return fmt.Errorf("Unexpected error when checking sudoers permissions for SSH user: %v", err)
+		return fmt.Errorf("unexpected error when checking sudoers permissions for SSH user: %v", err)
 	}
 
 	return nil
