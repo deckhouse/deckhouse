@@ -187,6 +187,8 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryDa
 			if resourcesIndex != -1 {
 				poolPath := inventoryPath[resourcesIndex+len("Resources/"):]
 				discoveryData.ResourcePools = append(discoveryData.ResourcePools, poolPath)
+			} else {
+				discoveryData.ResourcePools = append(discoveryData.ResourcePools, "")
 			}
 		}
 
