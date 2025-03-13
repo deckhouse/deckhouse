@@ -28,6 +28,7 @@ type registryMasterNode struct {
 	Name    string
 	IP      string
 	IsReady bool
+	Pods    []registryStaticPod
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -137,10 +138,30 @@ func filterRegistryStaticPods(obj *unstructured.Unstructured) (go_hook.FilterRes
 }
 
 func handleRegistryStaticPods(input *go_hook.HookInput) error {
-	pods := input.Snapshots["static_pods"]
-	nodes := input.Snapshots["nodes"]
+	podSnaps := input.Snapshots["static_pods"]
+	nodeSnaps := input.Snapshots["nodes"]
 
-	input.Values.Set("systemRegistry.internal.state.staticPods", pods)
+	nodes := make(map[string]registryMasterNode)
+
+	for _, snap := range nodeSnaps {
+		node := snap.(registryMasterNode)
+		nodes[node.Name] = node
+	}
+
+	for _, snap := range podSnaps {
+		pod := snap.(registryStaticPod)
+
+		if node, ok := nodes[pod.NodeName]; ok {
+			node.Pods = append(node.Pods, pod)
+		} else {
+			input.Logger.Warn(
+				"Node not found for static pod",
+				"node", pod.NodeName,
+				"pod", pod.PodName,
+			)
+		}
+	}
+
 	input.Values.Set("systemRegistry.internal.state.masterNodes", nodes)
 
 	return nil
