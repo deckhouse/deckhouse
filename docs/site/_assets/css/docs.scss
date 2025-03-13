@@ -1212,6 +1212,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
 .docs {
     .table-wrapper {
+        position: relative;
         overflow: auto;
 
         &.table-wrapper__small {
