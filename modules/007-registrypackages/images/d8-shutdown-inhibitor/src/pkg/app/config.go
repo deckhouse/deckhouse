@@ -1,0 +1,21 @@
+package app
+
+import (
+	"time"
+)
+
+// Default configuration
+const (
+	InhibitNodeShutdownLabel = "pod.deckhouse.io/inhibit-node-shutdown"
+	InhibitDelayMaxSec       = 3 * 24 * time.Hour // 3 days
+	WallBroadcastInterval    = 30 * time.Second
+	PodsCheckingInterval     = 5 * time.Second
+)
+
+type AppConfig struct {
+	InhibitDelayMax       time.Duration
+	WallBroadcastInterval time.Duration
+	PodsCheckingInterval  time.Duration
+	PodLabel              string
+	NodeName              string
+}

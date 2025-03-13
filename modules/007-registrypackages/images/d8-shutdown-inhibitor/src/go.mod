@@ -1,4 +1,4 @@
-module graceful_shutdown
+module d8_shutdown_inhibitor
 
 go 1.22.8
 

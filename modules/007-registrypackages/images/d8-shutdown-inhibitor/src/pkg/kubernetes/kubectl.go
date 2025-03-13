@@ -42,7 +42,7 @@ func NewKubectlWithConf(kubectlPath, kubeConfigPath string) *Kubectl {
 
 func (k *Kubectl) Cordon(nodeName string) ([]byte, error) {
 	cmd := k.cmd("cordon", nodeName)
-	return cmd.Output()
+	return cmd.CombinedOutput()
 }
 
 func (k *Kubectl) ListPods(nodeName string) ([]byte, error) {
@@ -53,6 +53,6 @@ func (k *Kubectl) ListPods(nodeName string) ([]byte, error) {
 
 func (k *Kubectl) cmd(args ...string) *exec.Cmd {
 	kArgs := append([]string{}, "--kubeconfig", KubeConfigPath)
-	kArgs = append([]string{}, args...)
+	kArgs = append(kArgs, args...)
 	return exec.Command(k.kubectlPath, kArgs...)
 }
