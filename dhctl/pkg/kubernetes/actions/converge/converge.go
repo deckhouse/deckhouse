@@ -262,7 +262,13 @@ func (r *Runner) converge() error {
 
 			nodeGroupsWithoutStateInCluster = append(nodeGroupsWithoutStateInCluster, group)
 		}
-		if err := r.parallelCreatePreviouslyNotExistedNodeGroup(nodeGroupsWithoutStateInCluster, metaConfig); err != nil {
+
+		bootstrapNewNodeGroups := ParallelCreateNodeGroup
+		if IsSequentialNodesBootstrap() {
+			bootstrapNewNodeGroups = BootstrapSequentialTerraNodes
+		}
+
+		if err := bootstrapNewNodeGroups(r.kubeCl, metaConfig, nodeGroupsWithoutStateInCluster, r.terraformContext); err != nil {
 			return err
 		}
 
