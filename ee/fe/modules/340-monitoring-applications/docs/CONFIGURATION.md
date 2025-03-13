@@ -25,7 +25,6 @@ title: "The monitoring-applications module: configuration"
 | rabbitmq        | <span class="doc-checkmark"></span> | <span class="doc-checkmark"></span> |
 | redis           | <span class="doc-checkmark"></span> | <span class="doc-checkmark"></span> |
 | sidekiq         | <span class="doc-checkmark"></span> |                                     |
-| trickster       |                                     |                                     |
 | grafana         |                                     |                                     |
 | uwsgi           | <span class="doc-checkmark"></span> |                                     |
 <!-- End Apps -->
