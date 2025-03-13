@@ -35,6 +35,7 @@ type Discoverer struct {
 	csiCompatibilityFlag string
 	govmomiClient        *govmomi.Client
 	cnsClient            *cns.Client
+	restClient           *rest.Client
 }
 
 func NewDiscoverer(logger *log.Entry) *Discoverer {
@@ -101,12 +102,19 @@ func NewDiscoverer(logger *log.Entry) *Discoverer {
 		logger.Fatalf("Failed to create CNS client: %v", err)
 	}
 
+	restClient := rest.NewClient(govmomiClient.Client)
+	err = restClient.Login(context.TODO(), govmomiClient.Client.URL().User)
+	if err != nil {
+		logger.Fatalf("Failed to create REST client: %v", err)
+	}
+
 	return &Discoverer{
 		logger:               logger,
 		clusterUUID:          clusterUUID,
 		csiCompatibilityFlag: csiCompatibilityFlag,
 		govmomiClient:        govmomiClient,
 		cnsClient:            cnsClient,
+		restClient:           restClient,
 	}
 }
 
@@ -219,24 +227,9 @@ func (d *Discoverer) getDisksCreatedByCSIDriver(ctx context.Context) ([]types.Cn
 
 	return diskList.Volumes, nil
 }
-func NewTagManager(ctx context.Context, client *govmomi.Client) (*tags.Manager, error) {
-
-	restClient := rest.NewClient(client.Client)
-	err := restClient.Login(ctx, client.URL().User)
-	if err != nil {
-		return nil, fmt.Errorf("failed to login to REST API: %v", err)
-	}
-
-	tagManager := tags.NewManager(restClient)
-	return tagManager, nil
-}
 
 func (d *Discoverer) populateTagCategories(ctx context.Context, discoveryData *v1alpha1.VsphereCloudProviderDiscoveryData) error {
-
-	tagManager, err := NewTagManager(ctx, d.govmomiClient)
-	if err != nil {
-		return fmt.Errorf("failed to create tag manager: %v", err)
-	}
+	tagManager := tags.NewManager(d.restClient)
 
 	categories, err := tagManager.GetCategories(ctx)
 	if err != nil {
