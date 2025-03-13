@@ -45,7 +45,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        "/modules/node-manager",
 	Schedule: []go_hook.ScheduleConfig{
 		{
-			Name:    "capi_static_kubeconfig_secret",
+			Name:    "capi_kubeconfig_secret",
 			Crontab: "0 1 * * *",
 		},
 	},
@@ -56,15 +56,24 @@ func handleCreateCAPIStaticKubeconfig(input *go_hook.HookInput, dc dependency.Co
 
 	if capiEnabledRaw.Exists() && capiEnabledRaw.Bool() {
 		capiClusterName := input.Values.Get("nodeManager.internal.cloudProvider.capiClusterName").String()
-		if capiClusterName == "" {
-			capiClusterName = clusterAPIStaticClusterName
+		if capiClusterName != "" {
+			err := generateStaticKubeconfigSecret(input, dc, hookParam{
+				serviceAccount: clusterAPIServiceAccountName,
+				cluster:        capiClusterName,
+			})
+			if err != nil {
+				return err
+			}
 		}
+	}
 
+	capsEnabledRaw := input.Values.Get("nodeManager.internal.capsControllerManagerEnabled")
+
+	if capsEnabledRaw.Exists() && capsEnabledRaw.Bool() {
 		err := generateStaticKubeconfigSecret(input, dc, hookParam{
 			serviceAccount: clusterAPIServiceAccountName,
-			cluster:        capiClusterName,
+			cluster:        clusterAPIStaticClusterName,
 		})
-
 		if err != nil {
 			return err
 		}
