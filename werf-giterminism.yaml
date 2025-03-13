@@ -19,8 +19,6 @@ config:
     allowEnvVariables:
     - SOURCE_REPO
     - GOPROXY
-    - CARGO_PROXY
-
-    # Stronghold repo access for building d8 cli
     - DECKHOUSE_PRIVATE_REPO
     - STRONGHOLD_PULL_TOKEN
+    - CARGO_PROXY
