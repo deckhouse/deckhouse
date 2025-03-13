@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- $inhibitorPkgName := "node-shutdown-inhibitor" }}
-{{- $inhibitorIndex := "nodeShutdownInhibitor" }}
+{{- $inhibitorPkgName := "d8-shutdown-inhibitor" }}
+{{- $inhibitorIndex := "d8ShutdownInhibitor" }}
 {{- $inhibitorVersion := "0.1" | replace "." "" }}
 
 
@@ -43,15 +43,15 @@ if bb-flag? reboot; then
 fi
 
 # Do nothing if already started.
-if systemctl is-active --quiet "node-shutdown-inhibitor.service"; then
+if systemctl is-active --quiet "d8-shutdown-inhibitor.service"; then
   exit 0
 fi
 
-bb-log-warning "Node shutdown inhibitor service is not running. Starting it..."
-if systemctl start "node-shutdown-inhibitor.service"; then
-  bb-log-info "Node shutdown inhibitor has started."
+bb-log-warning "Deckhouse shutdown inhibitor service is not running. Starting it..."
+if systemctl start "d8-shutdown-inhibitor.service"; then
+  bb-log-info "Deckhouse shutdown inhibitor has started."
 else
-  systemctl status "node-shutdown-inhibitor.service"
-  bb-log-error "Node shutdown inhibitor has not started. Exit"
+  systemctl status "d8-shutdown-inhibitor.service"
+  bb-log-error "Deckhouse shutdown inhibitor has not started. Exit"
   exit 1
 fi
