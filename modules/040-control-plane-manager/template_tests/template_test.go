@@ -18,16 +18,36 @@ package template_tests
 
 import (
 	"encoding/base64"
+	"fmt"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"gopkg.in/yaml.v2"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
 	"github.com/deckhouse/deckhouse/testing/library/object_store"
 )
 
-var _ = Describe("Module :: control-plane-manager :: helm template :: arguments secret", func() {
+type Arg struct {
+	Name  string
+	Value string
+}
 
+type ControlPlaneComponent struct {
+	ExtraArgs []Arg
+}
+
+type APIServer struct {
+	ControlPlaneComponent
+}
+
+type ClusterConfiguration struct {
+	APIVersion string    `yaml:"apiVersion"`
+	Kind       string    `yaml:"kind"`
+	APIServer  APIServer `yaml:"apiServer"`
+}
+
+var _ = Describe("Module :: control-plane-manager :: helm template :: arguments secret", func() {
 	const globalValues = `
   clusterConfiguration:
     apiVersion: deckhouse.io/v1
@@ -82,7 +102,6 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
 
 			Expect(groups.IsArray()).To(BeTrue())
 			Expect(groups.Array()).To(HaveLen(length))
-
 		}
 
 		Context("For etcd main", func() {
@@ -146,5 +165,22 @@ resources:
 `))
 		})
 	})
+	Context("kubeadm-config.yaml sa issuer check", func() {
+		BeforeEach(func() {
+			f.HelmRender()
+		})
 
+		It("should render correctly", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+			Expect(s.Exists()).To(BeTrue())
+			data, err := base64.StdEncoding.DecodeString(s.Field("data.kubeadm-config\\.yaml").String())
+			Expect(err).To(BeNil())
+			Expect(data).ToNot(BeNil())
+			var config ClusterConfiguration
+			err = yaml.Unmarshal(data, &config)
+			fmt.Printf("Parsed ClusterConfiguration: %+v\n", config)
+		})
+	})
 })
