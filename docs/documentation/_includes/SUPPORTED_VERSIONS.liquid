@@ -5,17 +5,17 @@
 {%- assign k8sVersions = site.data.supported_versions.k8s  %}
 {%- assign langSupportKey = page.lang | append: "_support" %}
 
-{%- assign supported_img_url = '/images/icons/supported.svg' %}
-{%- assign partially_supported_img_url = '/images/icons/intermediate.svg' %}
+{%- assign supported_img_url = '/images/icons/supported_new.svg' %}
+{%- assign partially_supported_img_url = '/images/icons/intermediate_new.svg' %}
 {%- assign notes_img_url = '/images/icons/note.svg' %}
-{%- assign not_supported_img_url = '/images/icons/not_supported.svg' %}
+{%- assign not_supported_img_url = '/images/icons/not_supported_new.svg' %}
 
 ## Linux
 
 {{ site.data.i18n.common['os_supported_phrase'][page.lang] }}:
 
 <div markdown="0">
-<table class="supported_versions">
+<table class="supported_versions fixed-header-table">
 <thead class="versioning-table">
     <tr class="header-row">
       <th class="name" style="white-space: nowrap;">{{site.data.i18n.common['linux_distro'][page.lang] }}</th>
@@ -31,11 +31,11 @@
       <td></td>
       <td></td>
       {%- if page.lang == 'ru' %}
-        <td style="text-align: center; width: 170px; font-weight: bold; padding: 0 10px;">CE</td>
-        <td style="text-align: center; width: 170px; font-weight: bold; padding: 0 10px;">CSE Lite, CSE Pro</td>
-        <td style="text-align: center; width: 170px; white-space: nowrap; font-weight: bold; padding: 0 10px;">BE, SE, SE+, EE</td>
+        <td style="text-align: center; width: 170px; font-weight: 600; padding: 0 10px;">CE</td>
+        <td style="text-align: center; width: 170px; font-weight: 600; padding: 0 10px;">CSE Lite, CSE Pro</td>
+        <td style="text-align: center; width: 170px; white-space: nowrap; font-weight: 600; padding: 0 10px;">BE, SE, SE+, EE</td>
       {%- else %}
-        <td style="text-align: center; width: 170px; font-weight: bold; padding: 0 10px;">CE, BE, SE, EE</td>
+        <td style="text-align: center; width: 170px; font-weight: 600; padding: 0 10px;">CE, BE, SE, EE</td>
       {%- endif %}
       <td></td>
     </tr>
@@ -72,21 +72,31 @@
   </td>
   {%- if page.lang == 'ru' %}
   <td style="text-align: center; width: 170px;">
-    {% if site.data.supported_versions.osDistributions[osKey]['ru_support'] == "true" %}
-      <img src="{{ partially_supported_img_url }}" data-tippy-content="{{ site.data.i18n.common['note_ce_notguaranteed'][page.lang] }}">
-    {% else %}
-      <img src="{{ supported_img_url }}">
-    {% endif %}
+    <div class="icon">
+      {% if site.data.supported_versions.osDistributions[osKey]['ru_support'] == "true" %}
+        <img src="{{ partially_supported_img_url }}" data-tippy-content="{{ site.data.i18n.common['note_ce_notguaranteed'][page.lang] }}">
+      {% else %}
+        <img src="{{ supported_img_url }}">
+      {% endif %}
+    </div>
   </td>
   <td style="text-align: center; width: 170px;">
-    <img src="{{ supported_img_url }}">
-  </td>
+    <div class="icon">
+      <img src="{{ supported_img_url }}">
+    </div>
+    </td>
   {%- endif %}
-  <td style="text-align: center; width: 170px;"><img src="{{ supported_img_url }}"></td>
+  <td style="text-align: center; width: 170px;">
+    <div class="icon">
+      <img src="{{ supported_img_url }}">
+    </div>
+  </td>
   <td style="text-align: center;">
-    {% if site.data.supported_versions.osDistributions[osKey]['cse_support']['note_content'] %}
-      <img src="{{ notes_img_url }}" data-tippy-content="{{ site.data.supported_versions.osDistributions[osKey]['cse_support']['note_content'][page.lang] }}">
-    {% endif %}
+    <div class="icon">
+      {% if site.data.supported_versions.osDistributions[osKey]['cse_support']['note_content'] %}
+        <img src="{{ notes_img_url }}" data-tippy-content="{{ site.data.supported_versions.osDistributions[osKey]['cse_support']['note_content'][page.lang] }}">
+      {% endif %}
+    </div>
   </td>
 </tr>
   <tr>
@@ -104,18 +114,27 @@
 {%- endfor %}
     </td>
     <td style="text-align: center; width: 170px;">
-      {% if site.data.supported_versions.osDistributions[osKey]['ru_support'] == "true" %}
-        <img src="{{ partially_supported_img_url }}" data-tippy-content="Работоспособность в Community Edition не гарантируется.">
-      {% else %}
-        <img src="{{ supported_img_url }}">
-      {% endif %}
+      <div class="icon">
+        {% if site.data.supported_versions.osDistributions[osKey]['ru_support'] == "true" %}
+          <img src="{{ partially_supported_img_url }}" data-tippy-content="Работоспособность в Community Edition не гарантируется.">
+        {% else %}
+          <img src="{{ supported_img_url }}">
+        {% endif %}
+      </div>
     </td>
-    <td style="text-align: center; width: 170px;"><img src="{{ not_supported_img_url }}"></td>
-    <td style="text-align: center; width: 170px;"><img src="{{ supported_img_url }}"></td>
+    <td style="text-align: center; width: 170px;">
+      <div class="icon"><img src="{{ not_supported_img_url }}"></div>
+    </td>
+    <td style="text-align: center; width: 170px;">
+      <div class="icon">
+        <img src="{{ not_supported_img_url }}">
+      </div></td>
     <td style="text-align: center;">
-      {% if site.data.supported_versions.osDistributions[osKey]['note_content'] %}
-        <img src="{{ notes_img_url }}" data-tippy-content="{{ site.data.supported_versions.osDistributions[osKey]['note_content'][page.lang] }}">
-      {% endif %}
+      <div class="icon">
+        {% if site.data.supported_versions.osDistributions[osKey]['note_content'] %}
+          <img src="{{ notes_img_url }}" data-tippy-content="{{ site.data.supported_versions.osDistributions[osKey]['note_content'][page.lang] }}">
+        {% endif %} 
+      </div>
     </td>
   </tr>
 {% else %}
@@ -137,25 +156,34 @@
     </td>
     {%- if page.lang == 'ru' %}
       <td style="text-align: center; width: 170px;">
-        {% if site.data.supported_versions.osDistributions[osKey]['ru_support'] == "true" %}
-          <img src="{{ partially_supported_img_url }}" data-tippy-content="Работоспособность в Community Edition не гарантируется.">
-        {% else %}
-          <img src="{{ supported_img_url }}">
-        {% endif %}
+        <div class="icon">
+          {% if site.data.supported_versions.osDistributions[osKey]['ru_support'] == "true" %}
+            <img src="{{ partially_supported_img_url }}" data-tippy-content="Работоспособность в Community Edition не гарантируется.">
+          {% else %}
+            <img src="{{ supported_img_url }}">
+          {% endif %}
+        </div>
       </td>
       <td style="text-align: center; width: 170px;">
-        {% if site.data.supported_versions.osDistributions[osKey]['cse_support'] == "true" %}
-          <img src="{{ supported_img_url }}">
-        {% else %}
-          <img src="{{ not_supported_img_url }}">
-        {% endif %}
+        <div class="icon">
+          {% if site.data.supported_versions.osDistributions[osKey]['cse_support'] == "true" %}
+            <img src="{{ supported_img_url }}">
+          {% else %}
+            <img src="{{ not_supported_img_url }}">
+          {% endif %}
+        </div>
       </td>
     {%- endif %}
-    <td style="text-align: center; width: 170px;"><img src="{{ supported_img_url }}"></td>
+    <td style="text-align: center; width: 170px;">
+      <div class="icon">
+        <img src="{{ supported_img_url }}">
+      </div></td>
     <td style="text-align: center;">
-      {% if site.data.supported_versions.osDistributions[osKey]['note_content'] %}
-        <img src="{{ notes_img_url }}" data-tippy-content="{{ site.data.supported_versions.osDistributions[osKey]['note_content'][page.lang] }}">
-      {% endif %}
+      <div class="icon">
+        {% if site.data.supported_versions.osDistributions[osKey]['note_content'] %}
+          <img src="{{ notes_img_url }}" data-tippy-content="{{ site.data.supported_versions.osDistributions[osKey]['note_content'][page.lang] }}">
+        {% endif %}
+      </div>
     </td>
   </tr>
 {% endif %}
@@ -185,7 +213,9 @@
 {%- assign iconStatus = k8sStatus| append: '.svg' | prepend: '/images/icons/' %}
 <tr {%- if k8sItem[0] == site.data.version_kubernetes.default %} class="highlight-default"{% endif %}>
   <td style="text-align: center">
-    <img src="{{ iconStatus }}" alt="" />
+    <div class="icon">
+      <img src="{{ iconStatus }}" alt="" />
+    </div>
   </td>
   <td style="text-align: center; font-weight:bold">{{ k8sItem[0] }}</td>
   <td style="text-align: left">
