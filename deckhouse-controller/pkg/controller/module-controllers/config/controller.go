@@ -24,7 +24,7 @@ import (
 	"github.com/flant/addon-operator/pkg/kube_config_manager/config"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
-	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
+	"github.com/flant/shell-operator/pkg/metric"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/ptr"
@@ -59,7 +59,7 @@ func RegisterController(
 	runtimeManager manager.Manager,
 	mm moduleManager,
 	handler *confighandler.Handler,
-	ms *metricstorage.MetricStorage,
+	ms metric.Storage,
 	logger *log.Logger,
 ) error {
 	r := &reconciler{
@@ -114,7 +114,7 @@ type reconciler struct {
 	log             *log.Logger
 	handler         *confighandler.Handler
 	moduleManager   moduleManager
-	metricStorage   *metricstorage.MetricStorage
+	metricStorage   metric.Storage
 	configValidator *configtools.Validator
 }
 

@@ -7,9 +7,11 @@ spec:
   type: KubernetesPods
   kubernetesPods:
     namespaceSelector:
-      matchNames:
-        - tests-whispers
-        - tests-whistlers
+      labelSelector:
+        matchExpressions:
+        - key: "kubernetes.io/metadata.name"
+          operator: In
+          values: [tests-whispers, tests-whistlers]
     labelSelector:
       matchLabels:
         app: test
