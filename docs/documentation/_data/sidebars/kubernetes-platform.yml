@@ -72,7 +72,7 @@ entries:
               folders:
                 - title:
                     en: Overview
-                    ru: Введение
+                    ru: Обзор
                   url: /admin/high-reliability-and-availability/overview.html
                 - title:
                     en: HA mode control
