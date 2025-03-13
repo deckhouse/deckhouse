@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"github.com/vmware/govmomi/find"
 	"github.com/vmware/govmomi/vapi/rest"
-	"net/http"
 	"net/url"
 	"os"
 	"strconv"
