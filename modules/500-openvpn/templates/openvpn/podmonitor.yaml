@@ -1,0 +1,34 @@
+{{- if (.Values.global.enabledModules | has "operator-prometheus") }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: openvpn
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "prometheus" "main" "app" "openvpn")) | nindent 2 }}
+spec:
+  jobLabel: app
+  podMetricsEndpoints:
+    - port: https
+      scheme: https
+      path: /metrics
+      bearerTokenSecret:
+        name: "prometheus-token"
+        key: "token"
+      tlsConfig:
+        insecureSkipVerify: true
+      relabelings:
+        - regex: endpoint
+          action: labeldrop
+        - targetLabel: tier
+          replacement: cluster
+        - sourceLabels: [__meta_kubernetes_pod_ready]
+          regex: "true"
+          action: keep
+  selector:
+    matchLabels:
+      app: openvpn
+  namespaceSelector:
+    matchNames:
+      - d8-{{ .Chart.Name }}
+{{- end }}
