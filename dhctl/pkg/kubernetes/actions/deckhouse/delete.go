@@ -83,12 +83,10 @@ func DeletePDBs(kubeCl *client.KubernetesClient) error {
 		for _, ns := range namespaces.Items {
 			pdbs, err := kubeCl.PolicyV1().PodDisruptionBudgets(ns.Name).List(context.TODO(), metav1.ListOptions{})
 			if err != nil {
-				// return err
 				continue
 			}
 
 			for _, pdb := range pdbs.Items {
-				fmt.Printf("Deleting PodDisruptionBudget %s in namespace %s\n", pdb.Name, ns.Name)
 				err := kubeCl.PolicyV1().PodDisruptionBudgets(ns.Name).Delete(context.TODO(), pdb.Name, metav1.DeleteOptions{PropagationPolicy: &foregroundPolicy})
 				if err != nil {
 					return err
