@@ -5,28 +5,19 @@ cleanup:
   keepImagesBuiltWithinLastNHours: 24 # don't touch fresh builds for 24h
   disableKubernetesBasedPolicy: true
   keepPolicies:
-  # keep 3 days dev builds
+  # keep dev builds
   - references:
-      branch: /.*/
-      limit:
-        in: 72h
+      branch: /^(?!.*\/release-.*\/)(?!.*main).*/
   # keep 4 pre-release builds
   - references:
       branch: /release-.*/
       limit:
         last: 4
-    imagesPerReference:
-      last: 1
   # keep 10 release builds
   - references:
       tag: /.*/
       limit:
         last: 10
-    imagesPerReference:
-      last: 1
-  # Keep 21 days of all builds in main.
-  # This should reduce what needs to be built for pr after the branch is cleared after 3 days.
+  # Keep  main
   - references:
       branch: main
-    imagesPerReference:
-      in: 504h
