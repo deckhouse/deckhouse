@@ -57,6 +57,8 @@ modules:
 bundle: Default
 logLevel: Info
 internal:
+  namespaces:
+    - test
   webhookHandlerCert:
     crt: a
     key: b
@@ -79,6 +81,8 @@ tolerations:
 - key: testkey
   operator: Exists
 internal:
+  namespaces:
+    - test
   webhookHandlerCert:
     crt: a
     key: b

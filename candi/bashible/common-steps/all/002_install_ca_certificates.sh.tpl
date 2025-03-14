@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-bb-package-install "d8-ca-updater:{{ .images.registrypackages.d8CaUpdater060824 }}"
+bb-package-install "d8-ca-updater:{{ .images.registrypackages.d8CaUpdater200225 }}"
 
 REGISTRY_CACERT_PATH="/opt/deckhouse/share/ca-certificates/registry-ca.crt"
 

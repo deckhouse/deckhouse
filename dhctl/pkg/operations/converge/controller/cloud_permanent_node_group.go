@@ -42,6 +42,13 @@ func NewCloudPermanentNodeGroupController(controller *NodeGroupController) *Clou
 }
 
 func (c *CloudPermanentNodeGroupController) Run(ctx *context.Context) error {
+	metaConfig, err := ctx.MetaConfig()
+	if err != nil {
+		return err
+	}
+
+	c.desiredReplicas = metaConfig.GetReplicasByNodeGroupName(c.name)
+
 	return c.NodeGroupController.Run(ctx)
 }
 
@@ -50,8 +57,6 @@ func (c *CloudPermanentNodeGroupController) addNodes(ctx *context.Context) error
 	if err != nil {
 		return err
 	}
-
-	c.desiredReplicas = metaConfig.GetReplicasByNodeGroupName(c.name)
 
 	count := len(c.state.State)
 	index := 0

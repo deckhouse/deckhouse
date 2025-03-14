@@ -29,6 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/hook/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
@@ -87,7 +88,6 @@ type Params struct {
 	TerraformContext           *terraform.TerraformContext
 
 	ConfigPaths             []string
-	ResourcesPath           string
 	ResourcesTimeout        time.Duration
 	DeckhouseTimeout        time.Duration
 	PostBootstrapScriptPath string
@@ -129,9 +129,6 @@ func (b *ClusterBootstrapper) applyParams() (func(), error) {
 
 	if len(b.ConfigPaths) > 0 {
 		restoreFuncs = append(restoreFuncs, setWithRestore(&app.ConfigPaths, b.ConfigPaths))
-	}
-	if b.ResourcesPath != "" {
-		restoreFuncs = append(restoreFuncs, setWithRestore(&app.ResourcesPath, b.ResourcesPath))
 	}
 	if b.ResourcesTimeout != 0 {
 		restoreFuncs = append(restoreFuncs, setWithRestore(&app.ResourcesTimeout, b.ResourcesTimeout))
@@ -587,12 +584,23 @@ func bootstrapAdditionalNodesForCloudCluster(kubeCl *client.KubernetesClient, me
 	}
 
 	terraNodeGroups := metaConfig.GetTerraNodeGroups()
-	if err := BootstrapTerraNodes(kubeCl, metaConfig, terraNodeGroups, terraformContext); err != nil {
+	bootstrapAdditionalTerraNodeGroups := BootstrapTerraNodes
+	if operations.IsSequentialNodesBootstrap() {
+		bootstrapAdditionalTerraNodeGroups = operations.BootstrapSequentialTerraNodes
+	}
+
+	if err := bootstrapAdditionalTerraNodeGroups(kubeCl, metaConfig, terraNodeGroups, terraformContext); err != nil {
 		return err
 	}
 
 	return log.Process("bootstrap", "Waiting for Node Groups are ready", func() error {
-		if err := entity.WaitForNodesBecomeReady(kubeCl, map[string]int{"master": metaConfig.MasterNodeGroupSpec.Replicas}); err != nil {
+		ngs := map[string]int{"master": metaConfig.MasterNodeGroupSpec.Replicas}
+		for _, ng := range terraNodeGroups {
+			if ng.Replicas > 0 {
+				ngs[ng.Name] = ng.Replicas
+			}
+		}
+		if err := entity.WaitForNodesBecomeReady(kubeCl, ngs); err != nil {
 			return err
 		}
 

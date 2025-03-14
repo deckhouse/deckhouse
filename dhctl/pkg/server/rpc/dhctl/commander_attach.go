@@ -144,7 +144,7 @@ func (s *Service) commanderAttach(
 	var err error
 
 	cleanuper := callback.NewCallback()
-	defer cleanuper.Call()
+	defer func() { _ = cleanuper.Call() }()
 
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
 		OutStream: logWriter,
@@ -158,9 +158,7 @@ func (s *Service) commanderAttach(
 	app.ApplyPreflightSkips(request.Options.CommonOptions.SkipPreflightChecks)
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
-	defer func() {
-		log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName)
-	}()
+	defer func() { log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName) }()
 
 	var sshClient *ssh.Client
 	err = log.Process("default", "Preparing SSH client", func() error {
