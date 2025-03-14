@@ -107,6 +107,9 @@ common:
   documents_found:
     en: Documents found
     ru: Найдено документов
+  doit:
+    en: Do it
+    ru: Сделай это
   parameters:
     en: Parameters
     ru: Параметры
