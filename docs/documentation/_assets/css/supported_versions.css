@@ -6,10 +6,15 @@
    vertical-align: middle;
 }
 
-.docs table.supported_versions tbody  td,
+.docs table.supported_versions tbody  td {
+   padding: 0 16px;
+}
+
+/* .docs table.supported_versions tbody  td, */
 .docs table.supported_versions__kubernetes tbody td {
   padding: 0 10px;
 }
+
 
 .supported_versions td.name {
    height: 50px;
