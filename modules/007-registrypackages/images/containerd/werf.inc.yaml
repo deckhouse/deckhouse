@@ -70,16 +70,13 @@ shell:
   {{- include "debian packages proxy" . | nindent 2 }}
   - apt-get update && apt-get install libseccomp-dev -y
   install:
-  - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - cd /src/containerd
   - git config --global user.email "builder@deckhouse.io"
-  - go mod download
-  - go mod vendor
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
   - make STATIC=1 VERSION="$(cat VERSION)" REVISION="$(cat REVISION)" all
   - mv bin/* /
   - cd /src/runc
-  - go mod download
-  - go mod vendor
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
   - git config --global user.email "builder@deckhouse.io"
   - make COMMIT="$(cat COMMIT)" static
   - mv runc /runc

@@ -24,9 +24,8 @@ secrets:
 shell:
   install:
     - cd /src
-    - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-    - go mod download -x
-    - go mod vendor
+    - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
     - go build -v -tags netgo,osusergo -o x509-certificate-exporter ./cmd/x509-certificate-exporter
     - chown -R 64535:64535 /src/x509-certificate-exporter
     - chmod 0700 /src/x509-certificate-exporter

@@ -33,10 +33,10 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   install:
-  - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - set -x
+  - export GO_VERSION=${GOLANG_VERSION} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - cd /src
-  - go mod download -x
-  - go mod vendor
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
   - go build -ldflags "-s -w -X sigs.k8s.io/descheduler/pkg/version.version={{ $version }}" -o /descheduler sigs.k8s.io/descheduler/cmd/descheduler
   - chown 64535:64535 /descheduler
   - chmod 0700 /descheduler

@@ -76,7 +76,7 @@ shell:
   install:
   - cd /src
   - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-  - go mod download
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   - RELEASE="$(cat RELEASE)" COMMIT="$(cat COMMIT)" make falcoctl
   - chown 64535:64535 falcoctl
   - chmod 0755 falcoctl

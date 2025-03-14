@@ -32,7 +32,7 @@ shell:
   install:
   - cd /src/modules/auth
   - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-  - go mod download
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   - go build -trimpath -ldflags="-s -w -X k8s.io/dashboard/auth/pkg/environment.Version=v{{ $version }}" -o /dashboard-auth .
   - chown 64535:64535 /dashboard-auth
   - chmod 0755 /dashboard-auth

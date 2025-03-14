@@ -69,7 +69,7 @@ shell:
   - go mod init deckhouse/3p/gofsutil
   - cd /src
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
-  - go mod download
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:
   - cd /src
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o vsphere-csi cmd/vsphere-csi/main.go

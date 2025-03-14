@@ -36,7 +36,7 @@ shell:
   setup:
     - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - cd /src
-    - go mod download
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
     - go mod vendor
     - go build -a -mod=vendor -o /tmp/manager main.go
     - chown -R 64535:64535 /tmp/manager

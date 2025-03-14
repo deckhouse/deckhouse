@@ -52,6 +52,6 @@ shell:
   install:
     - cd /src/
     - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-    - go mod download
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
     - cd server && go build -ldflags="-s -w" -o /etcd . && cd ..
     - cd etcdctl && go build -ldflags="-s -w" -o /etcdctl . && cd ..

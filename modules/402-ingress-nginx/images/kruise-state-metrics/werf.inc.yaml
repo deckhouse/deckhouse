@@ -36,7 +36,7 @@ shell:
   setup:
     - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - cd /src/
-    - go mod download
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
     - go build -a -o /tmp/kruise-state-metrics main.go
     - chown -R 64535:64535 /tmp/kruise-state-metrics
     - chmod 0700 /tmp/kruise-state-metrics

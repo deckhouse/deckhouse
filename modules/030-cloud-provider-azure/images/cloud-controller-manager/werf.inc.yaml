@@ -60,7 +60,7 @@ shell:
   install:
   - cd /src
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
-  - go mod download
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:
   - cd /src
   - go build -a -o bin/azure-cloud-controller-manager ./cmd/cloud-controller-manager

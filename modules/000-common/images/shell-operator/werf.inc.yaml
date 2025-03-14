@@ -91,7 +91,7 @@ shell:
   - chown -R 64535:64535 /jq
   - chmod 700 /jq/jq
   - cd /src/shell-operator
-  - go mod download -x
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download -x
   - CGO_CFLAGS="-I/libjq/include" CGO_LDFLAGS="-L/libjq/lib" go build -ldflags="-linkmode external -extldflags '-static' -s -w -X 'github.com/flant/shell-operator/pkg/app.Version={{ $shellOperatorVersion }}'" -tags use_libjq -o shell-operator ./cmd/shell-operator
   - mkdir -p /shell-operator
   - cp -r shell_lib.sh frameworks shell-operator /shell-operator

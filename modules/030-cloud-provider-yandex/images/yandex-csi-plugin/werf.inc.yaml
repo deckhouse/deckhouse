@@ -44,7 +44,7 @@ shell:
   install:
   - cd /go/src/app
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
-  - go mod download
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:
     - cd /go/src/app
     - |

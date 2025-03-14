@@ -46,7 +46,7 @@ shell:
   install:
   - cd /src
   - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-  - go mod download
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   - go build -ldflags '-s -w' .
   - chown -R 64535:64535 /src
   - chmod 0700 /src/docs-builder

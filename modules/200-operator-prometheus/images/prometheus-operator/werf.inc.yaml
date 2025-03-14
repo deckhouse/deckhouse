@@ -33,7 +33,7 @@ shell:
   install:
     - cd /src
     - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-    - go mod download -x
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
     - go mod vendor
     - export VERSION=$(cat VERSION | tr -d " \t\n\r")
     - export GO_BUILD_LDFLAGS="-X github.com/prometheus/common/version.Version=${VERSION} -X github.com/prometheus/common/version.BuildUser=deckhouse"
