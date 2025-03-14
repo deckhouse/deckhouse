@@ -43,24 +43,25 @@ apiServer:
 {{- end }}
   extraArgs:
 {{- $sa := .apiserver.serviceAccount | default dict }}
+{{- $primaryAud := $sa.issuer }}
 {{- $defaultAud := printf "https://kubernetes.default.svc.%s" .clusterConfiguration.clusterDomain }}
-{{- $primaryAud := (or $sa.issuer $defaultAud) }}
 {{- $audiences := list $primaryAud }}
 {{- if $sa.additionalAPIIssuers }}
-  {{- $uniqueIssuers := uniq $sa.additionalAPIIssuers }}
-  {{- range $uniqueIssuers }}
-    {{- if ne . $primaryAud }}
+  {{- range $sa.additionalAPIIssuers }}
+    {{- if and (ne . $primaryAud) (ne . $defaultAud) }}
       {{- $audiences = append $audiences . }}
     {{- end }}
   {{- end }}
 {{- else if $sa.additionalAPIAudiences }}
-  {{- $uniqueAuds := uniq $sa.additionalAPIAudiences }}
-  {{- range $uniqueAuds }}
-    {{- if ne . $primaryAud }}
+  {{- range $sa.additionalAPIAudiences }}
+    {{- if and (ne . $primaryAud) (ne . $defaultAud) }}
       {{- $audiences = append $audiences . }}
     {{- end }}
   {{- end }}
 {{- end }}
+{{- $audiences = $audiences | uniq }}
+{{- $audiences = without $audiences $defaultAud }}
+{{- $audiences = append $audiences $defaultAud }}
     api-audiences: {{ $audiences | join "," }}
     {{- if $sa.issuer }}
     service-account-issuer: {{ $sa.issuer }}

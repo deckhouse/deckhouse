@@ -18,6 +18,7 @@ package template_tests
 
 import (
 	"encoding/base64"
+	"fmt"
 	"strings"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
@@ -85,6 +86,8 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
     pkiChecksum: checksum
     rolloutEpoch: 1857
 `
+
+	const defultAudience = "https://kubernetes.default.svc.cluster.local"
 
 	const moduleValuesOnlyIssuer = `
 internal:
@@ -284,7 +287,7 @@ resources:
 				Expect(err).ShouldNot(HaveOccurred())
 
 				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("service-account-issuer", "https://api.example.com"))
-				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("api-audiences", "https://api.example.com"))
+				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("api-audiences", fmt.Sprintf("https://api.example.com,%s", defultAudience)))
 			})
 		})
 
@@ -305,7 +308,7 @@ resources:
 				Expect(err).ShouldNot(HaveOccurred())
 
 				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("service-account-issuer", "https://api.example.com"))
-				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("api-audiences", "https://api.example.com,https://bob.com"))
+				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("api-audiences", fmt.Sprintf("https://api.example.com,https://bob.com,%s", defultAudience)))
 
 				// kube-apiserver.yaml.tpl - contains patches for kube-api pod, including patches for adding additional service-account-issuer
 				kubeApiserver, err := base64.StdEncoding.DecodeString(s.Field("data.kube-apiserver\\.yaml\\.tpl").String())
@@ -332,7 +335,7 @@ resources:
 				Expect(err).ShouldNot(HaveOccurred())
 
 				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("service-account-issuer", "https://api.example.com"))
-				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("api-audiences", "https://api.example.com,https://api.bob.com"))
+				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("api-audiences", fmt.Sprintf("https://api.example.com,https://api.bob.com,%s", defultAudience)))
 
 				kubeApiserver, err := base64.StdEncoding.DecodeString(s.Field("data.kube-apiserver\\.yaml\\.tpl").String())
 				Expect(err).ShouldNot(HaveOccurred())
@@ -368,7 +371,7 @@ resources:
 				Expect(err).ShouldNot(HaveOccurred())
 
 				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("service-account-issuer", "https://api.example.com"))
-				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("api-audiences", "https://api.example.com,https://kubernetes.default.svc.cluster.local,https://flant.ru"))
+				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("api-audiences", fmt.Sprintf("https://api.example.com,https://flant.ru,%s", defultAudience)))
 
 				// kube-apiserver.yaml.tpl - contains patches for kube-api pod, including patches for adding additional service-account-issuer
 				kubeApiserver, err := base64.StdEncoding.DecodeString(s.Field("data.kube-apiserver\\.yaml\\.tpl").String())
@@ -406,7 +409,7 @@ resources:
 				Expect(err).ShouldNot(HaveOccurred())
 
 				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("service-account-issuer", "https://kubernetes.default.svc.cluster.local"))
-				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("api-audiences", "https://kubernetes.default.svc.cluster.local,https://flant.ru"))
+				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("api-audiences", fmt.Sprintf("https://flant.ru,%s", defultAudience)))
 
 				// kube-apiserver.yaml.tpl - contains patches for kube-api pod, including patches for adding additional service-account-issuer
 				kubeApiserver, err := base64.StdEncoding.DecodeString(s.Field("data.kube-apiserver\\.yaml\\.tpl").String())
@@ -442,7 +445,7 @@ resources:
 				Expect(err).ShouldNot(HaveOccurred())
 
 				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("service-account-issuer", "https://kubernetes.default.svc.cluster.local"))
-				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("api-audiences", "https://kubernetes.default.svc.cluster.local,https://flant.com"))
+				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("api-audiences", fmt.Sprintf("https://flant.com,%s", defultAudience)))
 
 				// kube-apiserver.yaml.tpl - contains patches for kube-api pod, including patches for adding additional service-account-issuer
 				kubeApiserver, err := base64.StdEncoding.DecodeString(s.Field("data.kube-apiserver\\.yaml\\.tpl").String())
