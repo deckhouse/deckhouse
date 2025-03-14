@@ -7,10 +7,9 @@
 }
 
 .docs table.supported_versions tbody  td {
-   padding: 0 16px;
+   padding: 0 15px;
 }
 
-/* .docs table.supported_versions tbody  td, */
 .docs table.supported_versions__kubernetes tbody td {
   padding: 0 10px;
 }
