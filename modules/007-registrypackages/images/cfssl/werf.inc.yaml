@@ -17,8 +17,8 @@ import:
   - install
   - uninstall
   before: setup
-docker:
-  LABEL:
+imageSpec:
+  labels:
     distro: all
     version: all
     cfssl: {{ $version }}
