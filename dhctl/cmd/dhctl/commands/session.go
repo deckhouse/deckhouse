@@ -16,6 +16,7 @@ package commands
 
 import (
 	"fmt"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
@@ -25,8 +26,9 @@ import (
 )
 
 func DefineSessionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineEditorConfigFlags(cmd)
-	app.DefineSanityFlags(cmd)
+	app.DefineKubeFlags(cmd)
+	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineBecomeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		sshClient, err := ssh.NewInitClientFromFlags(true)
