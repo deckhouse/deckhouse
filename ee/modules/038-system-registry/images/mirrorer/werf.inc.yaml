@@ -20,6 +20,7 @@ docker:
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+final: false
 shell:
   beforeInstall:
     - mkdir -m 1777 /tmp-tmp
