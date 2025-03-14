@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
@@ -26,7 +27,6 @@ import (
 )
 
 func DefineSessionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineKubeFlags(cmd)
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 
@@ -41,11 +41,20 @@ func DefineSessionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
+		// auto init
+		err = kubeCl.Init(client.AppKubernetesInitParams())
+		if err != nil {
+			return fmt.Errorf("open kubernetes connection: %v", err)
+		}
+
+		select {}
+
 		//restConfig := kubeCl.KubeProxy.LocalPort
 
-		fmt.Printf("local proxy port to k8s: %s", kubeCl.KubeProxy.LocalPort)
+		//localPort :=
+		//fmt.Printf("local proxy port to k8s: %v", localPort)
 
-		return nil
+		//return nil
 	})
 
 	return cmd
