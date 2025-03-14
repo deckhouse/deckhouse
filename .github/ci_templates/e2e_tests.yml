@@ -333,7 +333,7 @@ run: |
 {!{- end }!}
 
 # </template: e2e_run_template>
-{!{- end -}!}
+{!{ end -}!}
 
 
 
@@ -426,8 +426,7 @@ check_e2e_labels:
 {!{- if coll.Has $ctx "manualRun" }!}
 {!{    tmpl.Exec "update_comment_on_start" $ctx.jobName | strings.Indent 4 }!}
 {!{- end }!}
-
-{!{- if not (strings.Contains $commanderProviders $provider) -}!}
+{!{ if not (strings.Contains $commanderProviders $provider) }!}
   {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 4 }!}
   {!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 4 }!}
   {!{ tmpl.Exec "werf_install_step" . | strings.Indent 4 }!}
@@ -701,7 +700,7 @@ check_e2e_labels:
         else
           echo Not a directory.
         fi
-{!{- if not (strings.Contains $commanderProviders $provider) -}!}
+{!{- if not (strings.Contains $commanderProviders $provider) }!}
         if [ -n $USER_RUNNER_ID ]; then
           echo "Fix temp directories owner..."
           chown -R $USER_RUNNER_ID "$(pwd)/testing" || true

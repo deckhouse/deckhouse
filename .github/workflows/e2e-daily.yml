@@ -172,6 +172,8 @@ jobs:
           ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
           fetch-depth: 0
       # </template: checkout_from_event_ref_step>
+
+
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -421,6 +423,7 @@ jobs:
 
         # </template: e2e_run_template>
 
+
       - name: Cleanup bootstrapped cluster
         if: always()
         id: cleanup_cluster
@@ -493,6 +496,7 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
         # </template: e2e_run_template>
+
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
@@ -524,7 +528,8 @@ jobs:
             rm -rf "${TMPPATH}"
           else
             echo Not a directory.
-          fiif [ -n $USER_RUNNER_ID ]; then
+          fi
+          if [ -n $USER_RUNNER_ID ]; then
             echo "Fix temp directories owner..."
             chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
             chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
@@ -632,6 +637,8 @@ jobs:
           ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
           fetch-depth: 0
       # </template: checkout_from_event_ref_step>
+
+
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -927,6 +934,7 @@ jobs:
 
         # </template: e2e_run_template>
 
+
       - name: Cleanup bootstrapped cluster
         if: always()
         id: cleanup_cluster
@@ -998,6 +1006,7 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script_eks.sh cleanup
 
         # </template: e2e_run_template>
+
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
@@ -1029,7 +1038,8 @@ jobs:
             rm -rf "${TMPPATH}"
           else
             echo Not a directory.
-          fiif [ -n $USER_RUNNER_ID ]; then
+          fi
+          if [ -n $USER_RUNNER_ID ]; then
             echo "Fix temp directories owner..."
             chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
             chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
@@ -1137,6 +1147,8 @@ jobs:
           ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
           fetch-depth: 0
       # </template: checkout_from_event_ref_step>
+
+
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -1390,6 +1402,7 @@ jobs:
 
         # </template: e2e_run_template>
 
+
       - name: Cleanup bootstrapped cluster
         if: always()
         id: cleanup_cluster
@@ -1466,6 +1479,7 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
         # </template: e2e_run_template>
+
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
@@ -1497,7 +1511,8 @@ jobs:
             rm -rf "${TMPPATH}"
           else
             echo Not a directory.
-          fiif [ -n $USER_RUNNER_ID ]; then
+          fi
+          if [ -n $USER_RUNNER_ID ]; then
             echo "Fix temp directories owner..."
             chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
             chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
@@ -1605,6 +1620,8 @@ jobs:
           ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
           fetch-depth: 0
       # </template: checkout_from_event_ref_step>
+
+
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -1852,6 +1869,7 @@ jobs:
 
         # </template: e2e_run_template>
 
+
       - name: Cleanup bootstrapped cluster
         if: always()
         id: cleanup_cluster
@@ -1922,6 +1940,7 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
         # </template: e2e_run_template>
+
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
@@ -1953,7 +1972,8 @@ jobs:
             rm -rf "${TMPPATH}"
           else
             echo Not a directory.
-          fiif [ -n $USER_RUNNER_ID ]; then
+          fi
+          if [ -n $USER_RUNNER_ID ]; then
             echo "Fix temp directories owner..."
             chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
             chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
@@ -2061,6 +2081,7 @@ jobs:
           ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
           fetch-depth: 0
       # </template: checkout_from_event_ref_step>
+
 
       - name: Setup
         id: setup
@@ -2225,6 +2246,7 @@ jobs:
 
         # </template: e2e_run_template>
 
+
       - name: Cleanup bootstrapped cluster
         if: always()
         id: cleanup_cluster
@@ -2281,6 +2303,7 @@ jobs:
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
         # </template: e2e_run_template>
+
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v4.4.0
@@ -2400,6 +2423,8 @@ jobs:
           ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
           fetch-depth: 0
       # </template: checkout_from_event_ref_step>
+
+
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -2647,6 +2672,7 @@ jobs:
 
         # </template: e2e_run_template>
 
+
       - name: Cleanup bootstrapped cluster
         if: always()
         id: cleanup_cluster
@@ -2717,6 +2743,7 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
         # </template: e2e_run_template>
+
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
@@ -2748,7 +2775,8 @@ jobs:
             rm -rf "${TMPPATH}"
           else
             echo Not a directory.
-          fiif [ -n $USER_RUNNER_ID ]; then
+          fi
+          if [ -n $USER_RUNNER_ID ]; then
             echo "Fix temp directories owner..."
             chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
             chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
@@ -2856,6 +2884,8 @@ jobs:
           ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
           fetch-depth: 0
       # </template: checkout_from_event_ref_step>
+
+
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -3105,6 +3135,7 @@ jobs:
 
         # </template: e2e_run_template>
 
+
       - name: Cleanup bootstrapped cluster
         if: always()
         id: cleanup_cluster
@@ -3177,6 +3208,7 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
         # </template: e2e_run_template>
+
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
@@ -3208,7 +3240,8 @@ jobs:
             rm -rf "${TMPPATH}"
           else
             echo Not a directory.
-          fiif [ -n $USER_RUNNER_ID ]; then
+          fi
+          if [ -n $USER_RUNNER_ID ]; then
             echo "Fix temp directories owner..."
             chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
             chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
@@ -3316,6 +3349,8 @@ jobs:
           ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
           fetch-depth: 0
       # </template: checkout_from_event_ref_step>
+
+
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -3571,6 +3606,7 @@ jobs:
 
         # </template: e2e_run_template>
 
+
       - name: Cleanup bootstrapped cluster
         if: always()
         id: cleanup_cluster
@@ -3649,6 +3685,7 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
         # </template: e2e_run_template>
+
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
@@ -3680,7 +3717,8 @@ jobs:
             rm -rf "${TMPPATH}"
           else
             echo Not a directory.
-          fiif [ -n $USER_RUNNER_ID ]; then
+          fi
+          if [ -n $USER_RUNNER_ID ]; then
             echo "Fix temp directories owner..."
             chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
             chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
@@ -3788,6 +3826,8 @@ jobs:
           ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
           fetch-depth: 0
       # </template: checkout_from_event_ref_step>
+
+
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -4035,6 +4075,7 @@ jobs:
 
         # </template: e2e_run_template>
 
+
       - name: Cleanup bootstrapped cluster
         if: always()
         id: cleanup_cluster
@@ -4105,6 +4146,7 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
         # </template: e2e_run_template>
+
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
@@ -4136,7 +4178,8 @@ jobs:
             rm -rf "${TMPPATH}"
           else
             echo Not a directory.
-          fiif [ -n $USER_RUNNER_ID ]; then
+          fi
+          if [ -n $USER_RUNNER_ID ]; then
             echo "Fix temp directories owner..."
             chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
             chown -R $USER_RUNNER_ID "/deckhouse/testing" || true

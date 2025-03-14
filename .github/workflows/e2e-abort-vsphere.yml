@@ -335,6 +335,7 @@ jobs:
 
         # </template: e2e_run_template>
 
+
       - name: Remove failed cluster label
         if: ${{ success() }}
         uses: actions-ecosystem/action-remove-labels@v1
@@ -626,6 +627,7 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
         # </template: e2e_run_template>
+
 
       - name: Remove failed cluster label
         if: ${{ success() }}
@@ -919,6 +921,7 @@ jobs:
 
         # </template: e2e_run_template>
 
+
       - name: Remove failed cluster label
         if: ${{ success() }}
         uses: actions-ecosystem/action-remove-labels@v1
@@ -1210,6 +1213,7 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
         # </template: e2e_run_template>
+
 
       - name: Remove failed cluster label
         if: ${{ success() }}
@@ -1503,6 +1507,7 @@ jobs:
 
         # </template: e2e_run_template>
 
+
       - name: Remove failed cluster label
         if: ${{ success() }}
         uses: actions-ecosystem/action-remove-labels@v1
@@ -1794,6 +1799,7 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
         # </template: e2e_run_template>
+
 
       - name: Remove failed cluster label
         if: ${{ success() }}

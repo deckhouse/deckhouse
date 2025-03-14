@@ -258,6 +258,8 @@ jobs:
             return await ci.updateCommentOnStart({github, context, core, name})
 
       # </template: update_comment_on_start>
+
+
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -531,6 +533,7 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
+
   # </template: e2e_tests_create_debug_logs>
       - name: Create Deckhouse debug logs
         id: e2e_tests_create_debug_logs
@@ -637,6 +640,7 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
         # </template: e2e_run_template>
+
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
@@ -668,7 +672,8 @@ jobs:
             rm -rf "${TMPPATH}"
           else
             echo Not a directory.
-          fiif [ -n $USER_RUNNER_ID ]; then
+          fi
+          if [ -n $USER_RUNNER_ID ]; then
             echo "Fix temp directories owner..."
             chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
             chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
@@ -768,6 +773,8 @@ jobs:
             return await ci.updateCommentOnStart({github, context, core, name})
 
       # </template: update_comment_on_start>
+
+
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -1041,6 +1048,7 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
+
   # </template: e2e_tests_create_debug_logs>
       - name: Create Deckhouse debug logs
         id: e2e_tests_create_debug_logs
@@ -1147,6 +1155,7 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
         # </template: e2e_run_template>
+
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
@@ -1178,7 +1187,8 @@ jobs:
             rm -rf "${TMPPATH}"
           else
             echo Not a directory.
-          fiif [ -n $USER_RUNNER_ID ]; then
+          fi
+          if [ -n $USER_RUNNER_ID ]; then
             echo "Fix temp directories owner..."
             chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
             chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
@@ -1278,6 +1288,8 @@ jobs:
             return await ci.updateCommentOnStart({github, context, core, name})
 
       # </template: update_comment_on_start>
+
+
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -1551,6 +1563,7 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
+
   # </template: e2e_tests_create_debug_logs>
       - name: Create Deckhouse debug logs
         id: e2e_tests_create_debug_logs
@@ -1657,6 +1670,7 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
         # </template: e2e_run_template>
+
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
@@ -1688,7 +1702,8 @@ jobs:
             rm -rf "${TMPPATH}"
           else
             echo Not a directory.
-          fiif [ -n $USER_RUNNER_ID ]; then
+          fi
+          if [ -n $USER_RUNNER_ID ]; then
             echo "Fix temp directories owner..."
             chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
             chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
@@ -1788,6 +1803,8 @@ jobs:
             return await ci.updateCommentOnStart({github, context, core, name})
 
       # </template: update_comment_on_start>
+
+
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -2061,6 +2078,7 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
+
   # </template: e2e_tests_create_debug_logs>
       - name: Create Deckhouse debug logs
         id: e2e_tests_create_debug_logs
@@ -2167,6 +2185,7 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
         # </template: e2e_run_template>
+
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
@@ -2198,7 +2217,8 @@ jobs:
             rm -rf "${TMPPATH}"
           else
             echo Not a directory.
-          fiif [ -n $USER_RUNNER_ID ]; then
+          fi
+          if [ -n $USER_RUNNER_ID ]; then
             echo "Fix temp directories owner..."
             chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
             chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
@@ -2298,6 +2318,8 @@ jobs:
             return await ci.updateCommentOnStart({github, context, core, name})
 
       # </template: update_comment_on_start>
+
+
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -2571,6 +2593,7 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
+
   # </template: e2e_tests_create_debug_logs>
       - name: Create Deckhouse debug logs
         id: e2e_tests_create_debug_logs
@@ -2677,6 +2700,7 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
         # </template: e2e_run_template>
+
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
@@ -2708,7 +2732,8 @@ jobs:
             rm -rf "${TMPPATH}"
           else
             echo Not a directory.
-          fiif [ -n $USER_RUNNER_ID ]; then
+          fi
+          if [ -n $USER_RUNNER_ID ]; then
             echo "Fix temp directories owner..."
             chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
             chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
@@ -2808,6 +2833,8 @@ jobs:
             return await ci.updateCommentOnStart({github, context, core, name})
 
       # </template: update_comment_on_start>
+
+
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -3081,6 +3108,7 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
+
   # </template: e2e_tests_create_debug_logs>
       - name: Create Deckhouse debug logs
         id: e2e_tests_create_debug_logs
@@ -3187,6 +3215,7 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
         # </template: e2e_run_template>
+
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
@@ -3218,7 +3247,8 @@ jobs:
             rm -rf "${TMPPATH}"
           else
             echo Not a directory.
-          fiif [ -n $USER_RUNNER_ID ]; then
+          fi
+          if [ -n $USER_RUNNER_ID ]; then
             echo "Fix temp directories owner..."
             chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
             chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
