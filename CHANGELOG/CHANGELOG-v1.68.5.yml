@@ -1,0 +1,19 @@
+candi:
+  fixes:
+    - summary: Fix `disable_unattended_upgrades` bashible step
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12548
+docs:
+  fixes:
+    - summary: Update Deckhouse CLI installation guide
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12573
+    - summary: Fixed sidebar behaviour with links.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12566
+extended-monitoring:
+  fixes:
+    - summary: Minor certificate alerts improvements
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12459
+operator-trivy:
+  fixes:
+    - summary: Updated info about databases with vulnerabilities.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12536
+
