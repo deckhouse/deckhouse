@@ -508,14 +508,15 @@ func CreateDeckhouseDeploymentManifest(cfg *config.DeckhouseInstaller) *appsv1.D
 	return manifests.DeckhouseDeployment(params)
 }
 
-func WaitForKubernetesAPI(kubeCl *client.KubernetesClient) error {
-	return retry.NewLoop("Waiting for Kubernetes API to become Ready", 45, 5*time.Second).Run(func() error {
-		_, err := kubeCl.Discovery().ServerVersion()
-		if err == nil {
-			return nil
-		}
-		return fmt.Errorf("kubernetes API is not Ready: %w", err)
-	})
+func WaitForKubernetesAPI(ctx context.Context, kubeCl *client.KubernetesClient) error {
+	return retry.NewLoop("Waiting for Kubernetes API to become Ready", 45, 5*time.Second).
+		RunContext(ctx, func() error {
+			_, err := kubeCl.Discovery().ServerVersion()
+			if err == nil {
+				return nil
+			}
+			return fmt.Errorf("kubernetes API is not Ready: %w", err)
+		})
 }
 
 func ConfigureDeckhouseRelease(kubeCl *client.KubernetesClient) error {

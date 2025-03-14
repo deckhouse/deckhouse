@@ -18,6 +18,7 @@
 package bootstrap
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
@@ -641,7 +642,8 @@ func WaitForSSHConnectionOnMaster(sshClient *ssh.Client) error {
 			log.InfoLn(availabilityCheck.String())
 			return nil
 		})
-		if err := availabilityCheck.WithDelaySeconds(1).AwaitAvailability(); err != nil {
+		// TODO(dhctl-for-commander-cancels): pass ctx
+		if err := availabilityCheck.WithDelaySeconds(1).AwaitAvailability(context.TODO()); err != nil {
 			return fmt.Errorf("await master to become available: %v", err)
 		}
 		return nil

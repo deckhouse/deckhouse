@@ -15,17 +15,19 @@
 package retry
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 func TestLoop_Run_SuccessOnFirstAttempt(t *testing.T) {
 	log.InitLogger("json")
-	loop := NewLoop("test loop", 3, 1*time.Second)
+	loop := NewLoop("test loop", 3, 10*time.Millisecond)
 	err := loop.Run(func() error {
 		return nil
 	})
@@ -35,7 +37,7 @@ func TestLoop_Run_SuccessOnFirstAttempt(t *testing.T) {
 func TestLoop_Run_SuccessAfterRetries(t *testing.T) {
 	log.InitLogger("json")
 	attempt := 0
-	loop := NewLoop("test loop", 3, 1*time.Second)
+	loop := NewLoop("test loop", 3, 10*time.Millisecond)
 	err := loop.Run(func() error {
 		attempt++
 		if attempt < 3 {
@@ -49,10 +51,73 @@ func TestLoop_Run_SuccessAfterRetries(t *testing.T) {
 
 func TestLoop_Run_BreakIfPredicate(t *testing.T) {
 	log.InitLogger("json")
-	loop := NewLoop("test loop", 3, 1*time.Second).BreakIf(IsErr(errors.New("break error")))
+	loop := NewLoop("test loop", 3, 10*time.Millisecond).BreakIf(IsErr(errors.New("break error")))
 	err := loop.Run(func() error {
 		return errors.New("break error")
 	})
 	assert.Error(t, err)
 	assert.Equal(t, "Timeout while \"test loop\": last error: break error", err.Error())
+}
+
+func TestLoop_RunContext_SuccessOnFirstAttempt(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	log.InitLogger("json")
+	loop := NewLoop("test loop", 3, 10*time.Millisecond)
+	err := loop.RunContext(ctx, func() error {
+		return nil
+	})
+	assert.NoError(t, err)
+}
+
+func TestLoop_RunContext_SuccessAfterRetries(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	log.InitLogger("json")
+	attempt := 0
+	loop := NewLoop("test loop", 3, 10*time.Millisecond)
+	err := loop.RunContext(ctx, func() error {
+		attempt++
+		if attempt < 3 {
+			return errors.New("temporary error")
+		}
+		return nil
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, 3, attempt)
+}
+
+func TestLoop_Run_Cancelled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	log.InitLogger("json")
+	attempt := 0
+	loop := NewLoop("test loop", 3, 10*time.Millisecond)
+	err := loop.RunContext(ctx, func() error {
+		attempt++
+		if attempt > 1 {
+			cancel()
+		}
+		return errors.New("error")
+	})
+	assert.ErrorIs(t, err, context.Canceled)
+	assert.Equal(t, 2, attempt)
+}
+
+func TestLoop_Run_DeadlineExceeded(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
+	defer cancel()
+
+	log.InitLogger("json")
+	attempt := 0
+	loop := NewLoop("test loop", 3, 10*time.Millisecond)
+	err := loop.RunContext(ctx, func() error {
+		attempt++
+		return errors.New("error")
+	})
+	assert.ErrorIs(t, err, context.DeadlineExceeded)
+	assert.Equal(t, 1, attempt)
 }

@@ -15,6 +15,7 @@
 package bootstrap
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -416,7 +417,8 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return nil
 	}
 
-	kubeCl, err := kubernetes.ConnectToKubernetesAPI(b.NodeInterface)
+	// TODO(dhctl-for-commander-cancels): pass ctx
+	kubeCl, err := kubernetes.ConnectToKubernetesAPI(context.TODO(), b.NodeInterface)
 	if err != nil {
 		return err
 	}
