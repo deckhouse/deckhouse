@@ -21,9 +21,12 @@ import:
   add: /src
   to: /src/Lib/ensurepip/_bundled
   before: setup
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone -b {{ $PythonVersion }} --single-branch --depth=1 {{ .SOURCE_REPO }}/python/cpython.git /src
+  - git clone -b {{ $PythonVersion }} --single-branch --depth=1 $(cat /run/secrets/SOURCE_REPO)/python/cpython.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
   - rm -r .git

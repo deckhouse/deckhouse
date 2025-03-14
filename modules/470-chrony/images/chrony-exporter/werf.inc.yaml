@@ -12,11 +12,14 @@ git:
   stageDependencies:
     install:
     - '**/*.patch'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   - cd /src
-  - git clone --depth 1 --branch v{{$promuVersion}} {{ $.SOURCE_REPO }}/prometheus/promu.git promu
-  - git clone --depth 1 --branch v{{$chronyExproterVersion}} {{ .SOURCE_REPO }}/SuperQ/chrony_exporter.git chrony_exporter
+  - git clone --depth 1 --branch v{{$promuVersion}} $(cat /run/secrets/SOURCE_REPO)/prometheus/promu.git promu
+  - git clone --depth 1 --branch v{{$chronyExproterVersion}} $(cat /run/secrets/SOURCE_REPO)/SuperQ/chrony_exporter.git chrony_exporter
   - cd chrony_exporter
   - git apply /patches/*.patch --verbose
   - rm -rf /src/promu/.git /src/chrony_exporter/.git

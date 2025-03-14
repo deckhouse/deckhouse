@@ -32,13 +32,16 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}-basel-artifact
 fromImage: common/src-artifact
 final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   - mkdir -p /tmp/bazel-cache
-  - git clone --depth 1 --branch {{ $ciliumProxyCacheRev }} {{ $.SOURCE_REPO }}/cilium/proxy-build-cache.git /tmp/bazel-cache && rm -rf /tmp/bazel-cache/.git
+  - git clone --depth 1 --branch {{ $ciliumProxyCacheRev }} $(cat /run/secrets/SOURCE_REPO)/cilium/proxy-build-cache.git /tmp/bazel-cache && rm -rf /tmp/bazel-cache/.git
   - chown -R 1337:1337 /tmp/bazel-cache
   - mkdir -p /tmp/bazel-deps
-  - git clone --depth 1 --branch {{ $ciliumProxyDepsRev }} {{ .SOURCE_REPO }}/cilium/proxy-build-deps.git /tmp/bazel-deps && rm -rf /tmp/bazel-deps/.git
+  - git clone --depth 1 --branch {{ $ciliumProxyDepsRev }} $(cat /run/secrets/SOURCE_REPO)/cilium/proxy-build-deps.git /tmp/bazel-deps && rm -rf /tmp/bazel-deps/.git
   - chown -R 1337:1337 /tmp/bazel-deps
 ---
 image: {{ .ModuleName }}/cilium-envoy-artifact

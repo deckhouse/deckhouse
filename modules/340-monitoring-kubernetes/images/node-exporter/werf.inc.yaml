@@ -19,10 +19,13 @@ git:
   stageDependencies:
     install:
       - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   - cd /src
-  - git clone --depth 1 --branch v1.8.2 {{ .SOURCE_REPO }}/prometheus/node_exporter.git .
+  - git clone --depth 1 --branch v1.8.2 $(cat /run/secrets/SOURCE_REPO)/prometheus/node_exporter.git .
   - git apply /patches/*.patch --verbose
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact

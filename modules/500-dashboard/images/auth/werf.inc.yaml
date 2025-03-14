@@ -40,8 +40,11 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 final: false
 fromImage: common/src-artifact
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   - cd /src
-  - git clone --depth 1 -b auth/v{{ $version }} {{ .SOURCE_REPO }}/kubernetes/dashboard .
+  - git clone --depth 1 -b auth/v{{ $version }} $(cat /run/secrets/SOURCE_REPO)/kubernetes/dashboard .
   - rm -r .git .github charts docs hack

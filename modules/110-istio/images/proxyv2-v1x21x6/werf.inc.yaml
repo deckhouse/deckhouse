@@ -132,13 +132,15 @@ mount:
 secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   - mkdir -p /tmp/bazel-cache
-  - git clone --depth 1 --branch {{ $istioProxyCacheRev }} {{ $.SOURCE_REPO }}/istio/envoy-build-cache.git /tmp/bazel-cache
+  - git clone --depth 1 --branch {{ $istioProxyCacheRev }} $(cat /run/secrets/SOURCE_REPO)/istio/envoy-build-cache.git /tmp/bazel-cache
   - rm -rf /tmp/bazel-cache/.git
   - mkdir -p /tmp/bazel-deps
-  - git clone --depth 1 --branch {{ $istioProxyDepsRev }} {{ .SOURCE_REPO }}/istio/envoy-build-deps.git /tmp/bazel-deps
+  - git clone --depth 1 --branch {{ $istioProxyDepsRev }} $(cat /run/secrets/SOURCE_REPO)/istio/envoy-build-deps.git /tmp/bazel-deps
   - rm -rf /tmp/bazel-deps/.git
   #
   - export GO_VERSION=${GOLANG_VERSION}

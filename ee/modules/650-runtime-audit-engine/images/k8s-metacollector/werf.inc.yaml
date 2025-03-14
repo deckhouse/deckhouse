@@ -18,10 +18,13 @@ git:
   stageDependencies:
     install:
     - '**/*.patch'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   - cd /src
-  - git clone --depth 1 --branch v0.1.1 {{ .SOURCE_REPO }}/falcosecurity/k8s-metacollector.git .
+  - git clone --depth 1 --branch v0.1.1 $(cat /run/secrets/SOURCE_REPO)/falcosecurity/k8s-metacollector.git .
   - git apply /patches/*.patch --verbose
   - git describe --tags --always --dirty > GIT_VERSION
   - git rev-parse HEAD > GIT_HASH

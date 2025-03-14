@@ -45,10 +45,13 @@ git:
   stageDependencies:
     install:
     - '**/*.patch'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   - cd /src
-  - git clone {{ .SOURCE_REPO }}/palark/ovpn-admin.git .
+  - git clone $(cat /run/secrets/SOURCE_REPO)/palark/ovpn-admin.git .
   - git checkout {{ $gitCommit }}
   - git apply /patches/*.patch --verbose
   - rm -rf .git

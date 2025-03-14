@@ -19,10 +19,13 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   - cd /src
-  - git clone --depth 1 --branch v{{ .TF.gcp.version }} {{ .SOURCE_REPO }}/hashicorp/terraform-provider-google.git .
+  - git clone --depth 1 --branch v{{ .TF.gcp.version }} $(cat /run/secrets/SOURCE_REPO)/hashicorp/terraform-provider-google.git .
   - git apply /patches/*.patch --verbose
   - rm -rf .git google/test-fixtures/appengine/hello-world-flask
 ---

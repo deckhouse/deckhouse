@@ -11,9 +11,12 @@ git:
         - "**/*"
     includePaths:
       - patches
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-    - git clone --depth 1 --branch {{ $LokiVersion }} {{ .SOURCE_REPO }}/grafana/loki.git /src
+    - git clone --depth 1 --branch {{ $LokiVersion }} $(cat /run/secrets/SOURCE_REPO)/grafana/loki.git /src
     - cd /src
     - git apply --verbose /patches/*.patch
     - rm -r .git

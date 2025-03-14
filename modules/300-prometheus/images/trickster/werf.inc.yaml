@@ -34,9 +34,12 @@ git:
   stageDependencies:
     install:
       - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v1.1.5 {{ .SOURCE_REPO }}/trickstercache/trickster.git /src/trickster
+  - git clone --depth 1 --branch v1.1.5 $(cat /run/secrets/SOURCE_REPO)/trickstercache/trickster.git /src/trickster
   - cd /src/trickster
   - git apply /patches/*.patch --verbose
   - rm -r vendor

@@ -80,9 +80,12 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   - cd /src
-  - git clone --depth 1 -b web/v{{ $version }} {{ .SOURCE_REPO }}/kubernetes/dashboard .
+  - git clone --depth 1 -b web/v{{ $version }} $(cat /run/secrets/SOURCE_REPO)/kubernetes/dashboard .
   - cp /patches/* /src/modules/web/
   - rm -r .git .github charts docs

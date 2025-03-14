@@ -13,10 +13,13 @@ imageSpec:
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   - cd /src
-  - git clone --depth 1 --branch v2.15.0 {{ .SOURCE_REPO }}/kubernetes/kube-state-metrics.git .
+  - git clone --depth 1 --branch v2.15.0 $(cat /run/secrets/SOURCE_REPO)/kubernetes/kube-state-metrics.git .
   - rm -rf .git tools
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
