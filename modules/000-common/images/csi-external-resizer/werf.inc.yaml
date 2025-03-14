@@ -35,7 +35,7 @@ git:
     {{- end }}
 secrets:
 - id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
+  value: {{ $.SOURCE_REPO }}
 shell:
   install:
   - cd /src
