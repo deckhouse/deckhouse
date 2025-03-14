@@ -465,7 +465,7 @@ check_e2e_labels:
         # because it prefix will use for k8s resources names (nodes, for example)
         DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
-{!{- if not (strings.Contains $commanderProviders $provider) -}!}
+{!{- if not (strings.Contains $commanderProviders $provider) }!}
         # Create tmppath for test script.
         TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
         if [[ -d "${TMP_DIR_PATH}" ]] ; then
@@ -551,7 +551,7 @@ check_e2e_labels:
         fi
         echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
 
-{!{- if not (strings.Contains $commanderProviders $provider) }!}
+{!{ if not (strings.Contains $commanderProviders $provider) }!}
         # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
         echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
         docker pull "${INSTALL_IMAGE_NAME}"

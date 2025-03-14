@@ -343,7 +343,8 @@ jobs:
           fi
           # converts to DNS-like (all letters in lower case and replace all dots to dash)
           # because it prefix will use for k8s resources names (nodes, for example)
-          DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')# Create tmppath for test script.
+          DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+          # Create tmppath for test script.
           TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
           if [[ -d "${TMP_DIR_PATH}" ]] ; then
             echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
@@ -414,6 +415,8 @@ jobs:
             MASTERS_COUNT=1
           fi
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
+
+
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
           docker pull "${INSTALL_IMAGE_NAME}"
@@ -854,7 +857,8 @@ jobs:
           fi
           # converts to DNS-like (all letters in lower case and replace all dots to dash)
           # because it prefix will use for k8s resources names (nodes, for example)
-          DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')# Create tmppath for test script.
+          DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+          # Create tmppath for test script.
           TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
           if [[ -d "${TMP_DIR_PATH}" ]] ; then
             echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
@@ -925,6 +929,8 @@ jobs:
             MASTERS_COUNT=1
           fi
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
+
+
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
           docker pull "${INSTALL_IMAGE_NAME}"
@@ -1365,7 +1371,8 @@ jobs:
           fi
           # converts to DNS-like (all letters in lower case and replace all dots to dash)
           # because it prefix will use for k8s resources names (nodes, for example)
-          DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')# Create tmppath for test script.
+          DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+          # Create tmppath for test script.
           TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
           if [[ -d "${TMP_DIR_PATH}" ]] ; then
             echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
@@ -1436,6 +1443,8 @@ jobs:
             MASTERS_COUNT=1
           fi
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
+
+
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
           docker pull "${INSTALL_IMAGE_NAME}"
@@ -1876,7 +1885,8 @@ jobs:
           fi
           # converts to DNS-like (all letters in lower case and replace all dots to dash)
           # because it prefix will use for k8s resources names (nodes, for example)
-          DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')# Create tmppath for test script.
+          DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+          # Create tmppath for test script.
           TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
           if [[ -d "${TMP_DIR_PATH}" ]] ; then
             echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
@@ -1947,6 +1957,8 @@ jobs:
             MASTERS_COUNT=1
           fi
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
+
+
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
           docker pull "${INSTALL_IMAGE_NAME}"
@@ -2387,7 +2399,8 @@ jobs:
           fi
           # converts to DNS-like (all letters in lower case and replace all dots to dash)
           # because it prefix will use for k8s resources names (nodes, for example)
-          DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')# Create tmppath for test script.
+          DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+          # Create tmppath for test script.
           TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
           if [[ -d "${TMP_DIR_PATH}" ]] ; then
             echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
@@ -2458,6 +2471,8 @@ jobs:
             MASTERS_COUNT=1
           fi
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
+
+
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
           docker pull "${INSTALL_IMAGE_NAME}"
@@ -2898,7 +2913,8 @@ jobs:
           fi
           # converts to DNS-like (all letters in lower case and replace all dots to dash)
           # because it prefix will use for k8s resources names (nodes, for example)
-          DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')# Create tmppath for test script.
+          DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+          # Create tmppath for test script.
           TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
           if [[ -d "${TMP_DIR_PATH}" ]] ; then
             echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
@@ -2969,6 +2985,8 @@ jobs:
             MASTERS_COUNT=1
           fi
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
+
+
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
           docker pull "${INSTALL_IMAGE_NAME}"
