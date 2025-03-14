@@ -18,7 +18,7 @@ import:
 docker:
   ENTRYPOINT: ["/mirrorer"]
 ---
-artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 shell:
   beforeInstall:
