@@ -65,6 +65,8 @@
 {!{- $script := "script.sh" -}!}
 {!{- $script_eks := "script_eks.sh" -}!}
 {!{- $script_commander := "script_commander.sh" -}!}
+#{!{- $commanderProviders := "yandex-cloud,aws,azure" -}!} #example
+{!{- $commanderProviders := "yandex-cloud" -}!}
 {!{- if eq $provider "aws" }!}
   LAYOUT_AWS_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
   LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
@@ -108,9 +110,7 @@ run: |
 {!{- if eq $provider "eks" }!}
   echo "Execute '{!{ $script_eks }!} {!{ $script_arg }!}' via 'docker run', using environment:
     TERRAFORM_IMAGE_NAME=${TERRAFORM_IMAGE_NAME}
-
-#{!{- else if strings.Contains "yandex-cloud,aws,azure" $provider }!} # example
-{!{- else if strings.Contains "yandex-cloud" $provider }!}
+{!{- else if strings.Contains $commanderProviders $provider }!}
   echo "Execute '{!{ $script_commander }!} {!{ $script_arg }!}' via 'shell', using environment:
 {!{- else }!}
   echo "Execute '{!{ $script }!} {!{ $script_arg }!}' via 'docker run', using environment:
@@ -229,7 +229,7 @@ run: |
 
   {!{- end }!}
 
-{!{- else if strings.Contains "yandex-cloud" $provider }!}
+{!{- else if strings.Contains $commanderProviders $provider }!}
 
   export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
   export PROVIDER=${PROVIDER:-not_provided}
