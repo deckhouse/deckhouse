@@ -12,14 +12,12 @@ Only HPE 3PAR** storage systems are supported. For other HPE storage systems, pl
 
 This page provides instructions on connecting HPE 3PAR to Deckhouse, configuring the connection, creating StorageClass, and verifying storage functionality.
 
-## System requirements and recommendations
-
-### Requirements
+## System requirements
 
 - A deployed and configured HPE storage system.
 - Unique IQNs in `/etc/iscsi/initiatorname.iscsi` on each Kubernetes node.
 
-## Quickstart guide
+## Setup and Configuration
 
 Note that all commands must be run on a machine that has administrator access to the Kubernetes API.
 

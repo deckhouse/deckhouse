@@ -12,14 +12,12 @@ Only Huawei Dorado storage systems are supported. For other Huawei storage syste
 
 This page provides instructions on connecting Huawei Dorado to Deckhouse, configuring the connection, creating StorageClass, and verifying storage functionality.
 
-## System requirements and recommendations
-
-### Requirements
+## System requirements
 
 - Presence of a deployed and configured Huawei SAN.
 - Unique IQNs in `/etc/iscsi/initiatorname.iscsi` on each Kubernetes Nodes.
 
-## Quickstart guide
+## Setup and Configuration
 
 Note that all commands must be run on a machine that has administrator access to the Kubernetes API.
 

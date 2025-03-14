@@ -4,16 +4,16 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            Интерфейс управления Volume Group'ами и Thin pool'ами на узлах.
-            
-            > Этот тип ресурсов может быть создан как самим пользователем, так и контроллером sds-node-configurator. Контроллер sds-node-configurator автоматически создаст ресурс LVMVolumeGroup в случае, если найдет на узле существующую Volume Group со специальным тегом 'storage.deckhouse.io/enabled=true', при этом контроллер самостоятельно заполнит как `spec`, так и `status` поля.
+            Интерфейс управления Volume Group'ами и thin-пулами на узлах.
+
+            > Этот тип ресурсов может быть создан как самим пользователем, так и контроллером `sds-node-configurator`. Контроллер `sds-node-configurator` автоматически создаст ресурс LVMVolumeGroup в случае, если найдет на узле существующую Volume Group со специальным тегом 'storage.deckhouse.io/enabled=true', при этом контроллер самостоятельно заполнит как `spec`, так и `status` поля.
             > Поле `spec.thinPools` нужно заполнить самостоятельно.
           properties:
             spec:
               properties:
                 type:
                   description: |
-                    Тип Volume Group. Может быть: 
+                    Тип Volume Group.
                     - Local, то есть локальным, если используемые девайсы не являются распределенными (не Shared LUN).
                 local:
                   description: |
@@ -30,26 +30,26 @@ spec:
                 actualVGNameOnTheNode:
                   description: |
                     Желаемое имя для Volume Group. Должно быть уникальным в рамках узла, на котором будет располагаться.
-                    
+
                     > Неизменяемое поле.
                 thinPools:
                   description: |
-                    Желаемая конфигурация для Thin-pool'ов текущей Volume Group.
+                    Желаемая конфигурация для thin-пулов текущей Volume Group.
                   items:
                     properties:
                       name:
                         description: |
-                          Желаемое имя thin pool.
-                          
+                          Желаемое имя thin-пула.
+
                           > Неизменяемое поле.
                       size:
                         description: |
-                          Желаемый размер thin pool. Может быть указан как в численном, так и процентном отношении к общему размеру VG. 
-                          
-                          > Обратите внимание, что при указании размера в процентах thin pool будет автоматически расширен при расширении VG.
+                          Желаемый размер thin-пула. Может быть указан как в численном, так и процентном отношении к общему размеру VG.
+
+                          > Обратите внимание, что при указании размера в процентах thin-пул будет автоматически расширен при расширении VG.
                       allocationLimit:
                         description: |
-                          Максимальная степень расширения thin pool-а. По умолчанию 150%.
+                          Максимальная степень расширения thin-пула. По умолчанию 150%.
             status:
               properties:
                 phase:
@@ -62,7 +62,7 @@ spec:
                     properties:
                       thinPoolReady:
                         description: |
-                          Показывает количество здоровых Thin-pool к общему.
+                          Показывает количество здоровых thin-пулов к общему.
                       configurationApplied:
                         description: |
                           Показывает, была ли успешно применена последняя конфигурация.
@@ -98,29 +98,29 @@ spec:
                     Текущее занятое место на Volume Group.
                 thinPools:
                   description: |
-                    Текущее состояние Thin-pool'ов в Volume Group.
-                    
-                    > Поле может быть пустым в случае отсутствия Thin-pool'ов в Volume Group.
+                    Текущее состояние thin-пулов в Volume Group.
+
+                    > Поле может быть пустым в случае отсутствия thin-пулов в Volume Group.
                   items:
                     properties:
                       name:
                         description: |
-                          Имя Thin-pool.
+                          Имя thin-пула.
                       actualSize:
                         description: |
-                          Ёмкость Thin-pool.
+                          Ёмкость thin-пула.
                       usedSize:
                         description: |
-                          Используемый размер Thin-pool.
+                          Используемый размер thin-пула.
                       availableSpace:
                         description: |
-                          Свободное место в Thin-pool.
+                          Свободное место в thin-пуле.
                       ready:
                         description: |
-                          Текущее состояние Thin-pool.
+                          Текущее состояние thin-пула.
                       message:
                         description: |
-                          Дополнительная информация о состоянии Thin-pool.
+                          Дополнительная информация о состоянии thin-пула.
                 nodes:
                   description: |
                     Информация об узлах, на которых расположена Volume Group.

@@ -107,13 +107,13 @@ spec:
                 rota:
                   type: boolean
                   description: |
-                    The device media type. Might be:
+                    The device media type:
                     - 'true' (for HHD)
                     - 'false' (for SSD)
                 hotPlug:
                   type: boolean
                   description: |
-                    The device connection type. Might be:
+                    The device connection type:
                     - 'true' (if the device has been hotPlugged)
                     - 'false' (otherwise)
                 machineId:

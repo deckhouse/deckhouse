@@ -4,7 +4,7 @@ spec:
       schema:
         openAPIV3Schema:
           type: object
-          description: | 
+          description: |
             LVMLogicalVolume ресурс описывает, где будет выделено место при создании PV.
           properties:
             spec:
@@ -15,25 +15,25 @@ spec:
                     Имя LV на узле.
                 type:
                   description: |
-                    Тип LV: Thick или Thin.
+                    Тип LV.
                 size:
                   description: |
-                    Желаемый размер LV. Может быть указан как в численном, так и процентном отношении к общему размеру VG или thin pool (для thin pool общий размер - это реальный размер пула, умноженный на allocationLimit).
-                    
-                    > Обратите внимание, что при указании размера в процентах LV будет автоматически расширена при расширении VG, расширении thin pool или увеличения поля AllocationLimit для thin pool.
+                    Желаемый размер LV. Может быть указан как в численном, так и процентном отношении к общему размеру VG или thin-пула (для thin-пула общий размер - это реальный размер пула, умноженный на allocationLimit).
+
+                    > Обратите внимание, что при указании размера в процентах LV будет автоматически расширена при расширении VG, расширении thin-пула или увеличения поля AllocationLimit для thin-пула.
                 lvmVolumeGroupName:
                   description: |
                     Имя LVMVolumeGroup ресурса, VG которого будет использовано для создания LV.
                 thin:
                   description: |
-                    Описывает используемый Thin Pool. Указывается только при Thin LV.
+                    Описывает используемый thin-пул. Указывается только при thin LV.
                   properties:
                     poolName:
                       description: |
-                        Имя используемого Thin pool.
+                        Имя используемого thin-пула.
                 thick:
-                  description: | 
-                    Описывает настройки используемого Thick LV.
+                  description: |
+                    Описывает настройки используемого thick LV.
                   properties:
                     contiguous:
                       description: |
@@ -41,10 +41,9 @@ spec:
                     volumeCleanup:
                       description: |
                         Метод очистки тома после удаления PV.
-                        Если параметр не задан, после удаления PV данные могут удалиться, либо остаться. Гарантий удаления или неудаления нет.
-                        Допустимые значения:
+                        Если параметр не задан, после удаления PV данные могут удалиться, либо остаться. Гарантий удаления или неудаления нет:
                         - `RandomFillSinglePass` - том будет перезаписан случайными данными один раз перед удалением. Использовать эту опцию не рекомендуется для твердотельных накопителей, так как она уменьшает ресурс накопителя.
-                        - `RandomFillThreePass` - том будет перезаписан случайными данными три раза перед удалением. Использовать эту опцию не рекомендуется для твердотельных накопителей, так как она уменьшает ресурс накопителя. 
+                        - `RandomFillThreePass` - том будет перезаписан случайными данными три раза перед удалением. Использовать эту опцию не рекомендуется для твердотельных накопителей, так как она уменьшает ресурс накопителя.
                         - `Discard` - все блоки тома будут отмечены как свободные с использованием системного вызова `discard` перед удалением. Эта опция имеет смысл только для твердотельных накопителей.
             status:
               description: |
@@ -68,20 +67,20 @@ spec:
         - jsonPath: .status.phase
           name: Phase
           type: string
-          description: The current resource status.
+          description: Текущий статус ресурса.
         - jsonPath: .spec.lvmVolumeGroupName
           name: LVMVolumeGroup
           type: string
-          description: The selected LVMVolumeGroup resource.
+          description: Выбранный ресурс LVMVolumeGroup.
         - jsonPath: .spec.thin.poolName
           name: ThinPool
           type: string
-          description: The selected ThinPool in LVMVolumeGroup. Might be empty if the LVMVolumeGroup is thick.
+          description: Выбранный thin-пул в LVMVolumeGroup. Может быть пустым, если LVMVolumeGroup является thick.
         - jsonPath: .status.actualSize
           name: Size
           type: string
-          description: Actual LVMLogicalVolume size.
+          description: Фактический размер LVMLogicalVolume.
         - jsonPath: .metadata.creationTimestamp
           name: Age
           type: date
-          description: The age of this resource
+          description: Возраст этого ресурса.

@@ -22,14 +22,12 @@ This page provides instructions for connecting SCSI devices in Deckhouse, creati
 - Resizing LUN is not possible.
 - Snapshots are not supported.
 
-## System Requirements and Recommendations
-
-### Requirements
+## System Requirements
 
 - A properly configured and available storage system with iSCSI/FC connectivity.
 - Unique IQN assigned to each Kubernetes node in `/etc/iscsi/initiatorname.iscsi`.
 
-## Quick Start
+## Setup and Configuration
 
 All commands should be executed on a machine with administrative access to the Kubernetes API.
 
