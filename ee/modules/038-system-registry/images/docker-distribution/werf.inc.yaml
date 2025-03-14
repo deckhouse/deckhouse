@@ -52,6 +52,7 @@ import:
     to: /pause
     before: setup
 
-docker:
-  ENTRYPOINT: ["/registry"]
-  CMD: ["serve", "/config/config.yaml"]
+imageSpec:
+  config:
+    entrypoint: ["/registry"]
+    cmd: ["serve", "/config/config.yaml"]

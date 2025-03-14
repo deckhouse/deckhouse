@@ -20,8 +20,9 @@ import:
     add: /pause
     to: /pause
     before: setup
-docker:
-  ENTRYPOINT: ["/manager"]
+imageSpec:
+  config:
+    entrypoint: ["/manager"]
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}

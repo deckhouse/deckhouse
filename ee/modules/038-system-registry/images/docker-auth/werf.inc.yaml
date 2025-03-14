@@ -50,6 +50,7 @@ import:
     to: /pause
     before: setup
 
-docker:
-  ENTRYPOINT: ["/auth_server"]
+imageSpec:
+  config:
+    entrypoint: ["/auth_server"]
 

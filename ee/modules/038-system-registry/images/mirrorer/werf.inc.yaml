@@ -15,8 +15,9 @@ import:
     add: /pause
     to: /pause
     before: setup
-docker:
-  ENTRYPOINT: ["/mirrorer"]
+imageSpec:
+  config:
+    entrypoint: ["/mirrorer"]
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
