@@ -20,7 +20,10 @@ import (
 	"github.com/iancoleman/strcase"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 const (
@@ -92,4 +95,86 @@ func buildModuleConfig(
 	}
 
 	return mc, nil
+}
+
+func CheckOrSetupSystemRegistryModuleConfig(cfg *DeckhouseInstaller) error {
+	systemRegistryModuleName := "system-registry"
+
+	schemasStore := NewSchemaStore()
+	systemRegistryMC := &ModuleConfig{}
+	systemRegistryMC.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   ModuleConfigGroup,
+		Version: ModuleConfigVersion,
+		Kind:    ModuleConfigKind,
+	})
+	systemRegistryMC.SetName(systemRegistryModuleName)
+	systemRegistryMC.Spec.Enabled = pointer.Bool(true)
+	systemRegistryMC.Spec.Version = schemasStore.GetModuleConfigVersion(systemRegistryModuleName)
+
+	switch modeSpecificFields := cfg.Registry.ModeSpecificFields.(type) {
+	case ProxyModeRegistryData:
+		user, password, err := modeSpecificFields.UpstreamRegistryData.GetUserNameAndPasswordFromAuth()
+		if err != nil {
+			return err
+		}
+		systemRegistryMC.Spec.Settings = SettingsValues{
+			"mode": RegistryModeProxy,
+			"proxy": SettingsValues{
+				"imagesRepo": modeSpecificFields.UpstreamRegistryData.Address + modeSpecificFields.UpstreamRegistryData.Path,
+				"username":   user,
+				"password":   password,
+				"scheme":     modeSpecificFields.UpstreamRegistryData.Scheme,
+				"ca":         modeSpecificFields.UpstreamRegistryData.CA,
+				"ttl":        modeSpecificFields.TTL.String(),
+			},
+		}
+	case DetachedModeRegistryData:
+		systemRegistryMC.Spec.Settings = SettingsValues{
+			"mode": RegistryModeDetached,
+		}
+	default:
+		// Remove moduleConfig systemRegistry if init_config.registry.mode != "Proxy" or "Detached"
+		for i, moduleConfig := range cfg.ModuleConfigs {
+			switch moduleConfig.GetName() {
+			case systemRegistryModuleName:
+				log.InfoF(
+					"Found enabled ModuleConfig for '%s', skipping creation, because registry mode is '%s'.\n",
+					systemRegistryModuleName,
+					cfg.Registry.EmbeddedRegistryModuleMode(),
+				)
+				cfg.ModuleConfigs = append(cfg.ModuleConfigs[:i], cfg.ModuleConfigs[i+1:]...)
+				return nil
+			}
+		}
+		return nil
+	}
+
+	doc, err := yaml.Marshal(systemRegistryMC)
+	if err != nil {
+		return err
+	}
+
+	_, err = schemasStore.Validate(&doc)
+	if err != nil {
+		return err
+	}
+
+	if cfg.ModuleConfigs == nil {
+		cfg.ModuleConfigs = []*ModuleConfig{systemRegistryMC}
+		return nil
+	}
+
+	for _, moduleConfig := range cfg.ModuleConfigs {
+		switch moduleConfig.GetName() {
+		case systemRegistryModuleName:
+			log.InfoF(
+				"Found enabled ModuleConfig for '%s', updated settings according to init configuration.\n",
+				systemRegistryModuleName,
+			)
+			*moduleConfig = *systemRegistryMC
+			return nil
+		}
+	}
+	cfg.ModuleConfigs = append(cfg.ModuleConfigs, systemRegistryMC)
+	return nil
 }

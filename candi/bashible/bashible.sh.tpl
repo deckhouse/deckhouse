@@ -188,6 +188,7 @@ function main() {
   export FIRST_BASHIBLE_RUN="no"
   export NODE_GROUP="{{ .nodeGroup.name }}"
   export TMPDIR="/opt/deckhouse/tmp"
+  export RUN_TYPE="{{ .runType }}"
 {{- if .registry }}
   export REGISTRY_ADDRESS="{{ .registry.address }}"
   export SCHEME="{{ .registry.scheme }}"
@@ -198,11 +199,21 @@ function main() {
   export PACKAGES_PROXY_ADDRESSES="{{ .packagesProxy.addresses | join "," }}"
   export PACKAGES_PROXY_TOKEN="{{ .packagesProxy.token }}"
 {{- end }}
+{{- if .normal }}
+  {{- if .normal.apiserverEndpoints }}
+  export API_SERVER_ENDPOINTS="{{ .normal.apiserverEndpoints | join "," }}"
+  {{- end }}
+{{- end }}
 unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 {{- if and (ne .nodeGroup.nodeType "Static") (ne .nodeGroup.nodeType "CloudStatic" )}}
   export D8_NODE_HOSTNAME=$(hostname -s)
 {{- else }}
   export D8_NODE_HOSTNAME=$(hostname)
+{{- end }}
+{{- if eq .runType "ClusterBootstrap" }}
+{{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
+  export IGNITER_DIR="/opt/deckhouse/tmp/system_registry_igniter"
+{{- end }}
 {{- end }}
 
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then

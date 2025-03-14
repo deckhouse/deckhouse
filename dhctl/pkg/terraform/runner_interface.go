@@ -36,4 +36,5 @@ type RunnerInterface interface {
 	GetPlanPath() string
 	GetTerraformExecutor() Executor
 	GetLogger() log.Logger
+	GetInputVariables() []byte
 }

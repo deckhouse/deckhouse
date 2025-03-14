@@ -1,0 +1,32 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      customCertificateData:
+        type: object
+        properties:
+          tls.crt:
+            type: string
+            x-examples:
+              - plainstring
+          tls.key:
+            type: string
+            x-examples:
+              - plainstring
+          ca.crt:
+            type: string
+            x-examples:
+              - plainstring
+      state:
+        type: object
+        default: {}
+        additionalProperties: true
+        x-kubernetes-preserve-unknown-fields: true
+        properties:
+          version:
+            type: string
+            default: "unknown"

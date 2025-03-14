@@ -1,0 +1,75 @@
+type: object
+properties:
+  imagesOverride:
+    description: |
+      Переопределение образов
+    properties:
+      registryManager:
+        description: |
+          Образ registry manager-а
+  mode:
+    description: |
+      Тип регистри
+  proxy:
+    description: |
+      Параметры для proxy режима
+    properties:
+      imagesRepo:
+        description: |
+          Адрес container registry с образами Deckhouse.
+
+          Укажите его, если используется Deckhouse Enterprise Edition или сторонний container registry (например, registry в закрытой среде).
+
+          Адрес должен соответствовать используемой редакции Deckhouse. Публичный адрес container registry для Deckhouse Enterprise Edition — `registry.deckhouse.io/deckhouse/ee`.
+      username:
+              description: Имя пользователя для доступа к container registry с образами Deckhouse.
+      password:
+        description: Пароль для доступа к container registry с образами Deckhouse.
+      scheme:
+        description: |
+          Протокол доступа к container registry (HTTP или HTTPS).
+      ca:
+        description: |
+          Корневой сертификат, которым можно проверить сертификат container registry при работе по HTTPS (если registry использует самоподписанные SSL-сертификаты).
+      ttl:
+        description: |
+          TTL указывает время жизни кэшированного содержимого, по истечении которого оно будет автоматически очищено.
+
+          Значение по умолчанию: Если параметр не задан, TTL по умолчанию составляет 7 дней (168 часов).
+
+          Постоянный кэш: Если установить значение 0, кэш никогда не будет автоматически очищаться.
+
+  whitelistSourceRanges:
+    description: "Список адресов в формате CIDR, которым разрешено подключение к embedded registry. Если не указано, то разрешено подключение с любых адресов"
+  ingressClass:
+    description: |
+      Класс Ingress-контроллера, который используется для embedded registry.
+
+      Опциональный параметр, по умолчанию используется глобальное значение `modules.ingressClass`.
+  https:
+    description: |
+      Тип используемого сертификата.
+
+      При использовании этого параметра полностью переопределяются глобальные настройки `global.modules.https`.
+    properties:
+      mode:
+        description: |
+          Режим работы HTTPS:
+          - `CertManager` — доступ по HTTPS с заказом сертификата согласно ClusterIssuer'у, заданному в параметре `certManager.clusterIssuerName`.
+          - `CustomCertificate` — доступ по HTTPS с использованием сертификата из пространства имен `d8-system`.
+          - `Disabled` — доступ только по HTTP.
+          - `OnlyInURI` — доступ по HTTP, подразумевая, что перед ingress-ом стоит внешний HTTPS-балансер, который терминирует HTTPS. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
+      certManager:
+        description: "Настройки для certmanager."
+        properties:
+          clusterIssuerName:
+            description: |
+              Тип ClusterIssuer'а, используемого для заказа SSL-сертификата (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но возможно определить свои).
+      customCertificate:
+        description: Настройки для использования пользовательского сертификата.
+        properties:
+          secretName:
+            description: |
+              Имя Secret'а в пространстве имен `d8-system`, который будет использоваться для ingress-а embedded registry.
+
+              Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
