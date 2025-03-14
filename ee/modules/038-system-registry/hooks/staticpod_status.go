@@ -16,12 +16,17 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
+const (
+	registryStaticPodVersionAnnotation = "registry.deckhouse.io/config-version"
+)
+
 type registryStaticPod struct {
 	Name     string
 	IP       string
 	NodeName string
 	NodeIP   string
 	IsReady  bool
+	Verision string
 }
 
 type registryMasterNode struct {
@@ -165,6 +170,7 @@ func filterRegistryStaticPods(obj *unstructured.Unstructured) (go_hook.FilterRes
 		NodeName: pod.Spec.NodeName,
 		NodeIP:   pod.Status.HostIP,
 		IsReady:  isReady,
+		Verision: pod.Annotations[registryStaticPodVersionAnnotation],
 	}
 
 	return ret, nil
