@@ -45,6 +45,7 @@
 # </template: set_e2e_requirement_status>
 {!{- end -}!}
 
+
 {!{ define "e2e_send_alert_template" }!}
 {!{- $ctx := index . 0 -}!}
 
@@ -61,8 +62,9 @@
 {!{- $provider := index . 0 -}!}
 {!{- $script_arg := index . 1 -}!}
 {!{- $run_from_issue_or_pr := index . 2 -}!}
-{!{- $script := "script-commander.sh" -}!}
+{!{- $script := "script.sh" -}!}
 {!{- $script_eks := "script_eks.sh" -}!}
+{!{- $script_commander := "script_commander.sh" -}!}
 {!{- if eq $provider "aws" }!}
   LAYOUT_AWS_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
   LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
@@ -95,6 +97,7 @@
   COMMENT_ID: ${{ inputs.comment_id }}
   GITHUB_API_SERVER: ${{ github.api_url }}
   REPOSITORY: ${{ github.repository }}
+  DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
   GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
   COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
   COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
@@ -144,13 +147,13 @@ run: |
   ls -lh $(pwd)/testing
 
   dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-echo "DHCTL log file: $dhctl_log_file"
+  echo "DHCTL log file: $dhctl_log_file"
 
   user_runner_id=$(id -u):$(id -g)
   echo "user_runner_id $user_runner_id"
 
 
-  {!{- if and (eq $script_arg "run-test") $run_from_issue_or_pr }!}
+{!{- if and (eq $script_arg "run-test") $run_from_issue_or_pr }!}
   echo "Start waiting ssh connection string script"
   comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
   echo "Full comment url for updating ${comment_url}"
@@ -160,15 +163,15 @@ echo "DHCTL log file: $dhctl_log_file"
 
   bastion_ip_file=""
   if [[ "${PROVIDER}" == "Static" ]] ; then
-  bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+    bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
   elif [[ "${PROVIDER}" == "VCD" ]] ; then
-  bastion_ip_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+    bastion_ip_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
   fi
 
   echo "ssh_bastion_str_file=${bastion_ip_file}" >> $GITHUB_OUTPUT
 
   $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
-  {!{ end }!}
+{!{ end }!}
 
 {!{- if eq $provider "eks" }!}
   chmod 755 $(pwd)/testing/cloud_layouts/{!{ $script_eks }!}
@@ -208,11 +211,11 @@ echo "DHCTL log file: $dhctl_log_file"
   -v $(pwd)/release.yaml:/deckhouse/release.yaml \
   ${INSTALL_IMAGE_NAME} \
   bash -c "dhctl bootstrap-phase install-deckhouse \
-  --kubeconfig=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
-  --config=/deckhouse/testing/cloud_layouts/EKS/WithoutNAT/configuration.yaml && \
+    --kubeconfig=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
+    --config=/deckhouse/testing/cloud_layouts/EKS/WithoutNAT/configuration.yaml && \
   dhctl bootstrap-phase create-resources \
-  --kubeconfig=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
-  --resources=/deckhouse/testing/cloud_layouts/EKS/WithoutNAT/resources.yaml"
+    --kubeconfig=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
+    --resources=/deckhouse/testing/cloud_layouts/EKS/WithoutNAT/resources.yaml"
 
   docker run --rm \
   -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
@@ -228,9 +231,9 @@ echo "DHCTL log file: $dhctl_log_file"
   -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
   -e CRI=${CRI} \
   -e USER_RUNNER_ID=${user_runner_id} \
-  {!{ - if $run_from_issue_or_pr }!}
+  {!{- if $run_from_issue_or_pr }!}
   -e CIS_ENABLED=${CIS_ENABLED} \
-  {!{ - end }!}
+  {!{- end }!}
   -v $(pwd)/testing:/deckhouse/testing \
   -v $(pwd)/release.yaml:/deckhouse/release.yaml \
   -v ${TMP_DIR_PATH}:/tmp \
@@ -343,6 +346,8 @@ echo "DHCTL log file: $dhctl_log_file"
 
 # </template: e2e_run_template>
 {!{- end -}!}
+
+
 
 {!{/*
 A job to check what e2e label was activated and
@@ -465,6 +470,17 @@ check_e2e_labels:
         # because it prefix will use for k8s resources names (nodes, for example)
         DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
+        # Create tmppath for test script.
+        TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
+        if [[ -d "${TMP_DIR_PATH}" ]] ; then
+          echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
+          ls -la ${TMP_DIR_PATH}
+          exit 1
+        else
+          echo "Create temporary dir for job: ${TMP_DIR_PATH}."
+          mkdir -p "${TMP_DIR_PATH}"
+        fi
+
         ## Source: ci_templates/build.yml
 
         # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
@@ -497,7 +513,7 @@ check_e2e_labels:
           INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
         fi
 
-        # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script-commander.sh).
+        # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
         # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
         # Use it as image tag. Add suffix to not overlap with PRs in main repo.
         IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
@@ -538,9 +554,18 @@ check_e2e_labels:
         fi
         echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
 
+        # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+        echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
+        docker pull "${INSTALL_IMAGE_NAME}"
+        { !{ - if eq $provider "eks" }! }
+        docker pull "${TERRAFORM_IMAGE_NAME}"
+        { !{ - end }! }
+
         IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
         echo '::echo::on'
+        echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
+        echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
         echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
         echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
 {!{- if eq $provider "eks" }!}
@@ -567,6 +592,7 @@ check_e2e_labels:
 {!{- end }!}
         LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
         LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+        TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
         PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
         MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
         INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -628,6 +654,7 @@ check_e2e_labels:
 {!{- end }!}
         LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
         LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+        TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
         PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
         MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
         INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -636,6 +663,27 @@ check_e2e_labels:
 {!{- end }!}
         DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
   {!{- tmpl.Exec "e2e_run_template" (slice .provider "cleanup" (coll.Has $ctx "manualRun") ) | strings.Indent 6 }!}
+
+    - name: Save dhctl state
+      id: save_failed_cluster_state
+      if: ${{ failure() }}
+      uses: {!{ index (ds "actions") "actions/upload-artifact" }!}
+      with:
+        name: failed_cluster_state_{!{ printf "%s_%s_%s" $ctx.provider $ctx.cri $ctx.kubernetesVersionSlug }!}
+        path: |
+          ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
+          ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+          ${{ steps.setup.outputs.tmp-dir-path}}/logs
+    - name: Save test results
+      if: ${{ steps.setup.outputs.dhctl-log-file }}
+      uses: {!{ index (ds "actions") "actions/upload-artifact" }!}
+      with:
+        name: test_output_{!{ printf "%s_%s_%s" $ctx.provider $ctx.cri $ctx.kubernetesVersionSlug }!}
+        path: |
+          ${{ steps.setup.outputs.dhctl-log-file}}*
+          ${{ steps.setup.outputs.tmp-dir-path}}/logs
+          testing/cloud_layouts/
+          !testing/cloud_layouts/**/sshkey
 
     - name: Cleanup temp directory
       if: always()
@@ -647,6 +695,17 @@ check_e2e_labels:
           rm -rf "${TMPPATH}"
         else
           echo Not a directory.
+        fi
+        if [ -n $USER_RUNNER_ID ]; then
+          echo "Fix temp directories owner..."
+          chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
+          chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
+          chown -R $USER_RUNNER_ID /tmp || true
+        else
+          echo "Fix temp directories permissions..."
+          chmod -f -R 777 "$(pwd)/testing" || true
+          chmod -f -R 777 "/deckhouse/testing" || true
+          chmod -f -R 777 /tmp || true
         fi
 
 {!{- if coll.Has $ctx "manualRun" }!}
@@ -695,6 +754,10 @@ check_e2e_labels:
 {!{    tmpl.Exec "update_comment_on_start" $ctx.jobName | strings.Indent 4 }!}
 {!{- end }!}
 
+{!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 4 }!}
+{!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 4 }!}
+{!{ tmpl.Exec "werf_install_step" . | strings.Indent 4 }!}
+
     - name: Setup
       id: setup
       env:
@@ -703,6 +766,16 @@ check_e2e_labels:
         INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
         MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
       run: |
+        # Create tmppath for test script.
+        TMP_DIR_PATH="/tmp/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
+        if [[ -d "${TMP_DIR_PATH}" ]] ; then
+          echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
+          ls -la ${TMP_DIR_PATH}
+          exit 1
+        else
+          echo "Create temporary dir for job: ${TMP_DIR_PATH}."
+          mkdir -p "${TMP_DIR_PATH}"
+        fi
 
         INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
 
@@ -729,6 +802,7 @@ check_e2e_labels:
         echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
 
         echo '::echo::on'
+        echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
         echo "install-image-full=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
         echo "deckhouse-image-tag=${DECKHOUSE_IMAGE_TAG}" >> $GITHUB_OUTPUT
 {!{- if eq $provider "eks" }!}
@@ -738,6 +812,15 @@ check_e2e_labels:
         echo "masters-count=${MASTERS_COUNT}" >> $GITHUB_OUTPUT
 
         echo '::echo::off'
+
+    - name: "Download state"
+      id: download_artifact_with_state
+      uses: dawidd6/action-download-artifact@v2.23.0
+      with:
+        github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+        run_id: ${{github.event.inputs.run_id}}
+        name: ${{github.event.inputs.state_artifact_name}}
+        path: ${{ steps.setup.outputs.tmp-dir-path}}
 
     - name: Cleanup bootstrapped cluster
       if: ${{ success() || cancelled() }}
@@ -753,6 +836,7 @@ check_e2e_labels:
 {!{- end }!}
         LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
         LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+        TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
         PREFIX: ${{ github.event.inputs.cluster_prefix }}
         MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
         INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-full }}
@@ -760,7 +844,7 @@ check_e2e_labels:
 {!{- if eq $provider "eks" }!}
         TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
 {!{- end }!}
-
+        SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
   {!{- tmpl.Exec "e2e_run_template" (slice .provider "cleanup" (coll.Has $ctx "manualRun") ) | strings.Indent 6 }!}
 
     - name: Remove failed cluster label
