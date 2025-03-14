@@ -68,7 +68,7 @@ mount:
   to: /root/.cache/go-build
 secrets:
 - id: GOPROXY
-  value: {{ .GOPROXY }}
+  value: {{ $.GOPROXY }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" $ | nindent 2 }}

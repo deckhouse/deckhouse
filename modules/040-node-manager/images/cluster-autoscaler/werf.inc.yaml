@@ -51,7 +51,7 @@ mount:
   to: /root/.cache/go-build
 secrets:
 - id: GOPROXY
-  value: {{ .GOPROXY }}
+  value: {{ $.GOPROXY }}
 shell:
   install:
   - cd /src

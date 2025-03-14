@@ -52,7 +52,7 @@ import:
   before: install
 secrets:
 - id: GOPROXY
-  value: {{ .GOPROXY }}
+  value: {{ $.GOPROXY }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" $ | nindent 2 }}

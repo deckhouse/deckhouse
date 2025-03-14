@@ -34,7 +34,7 @@ mount:
     to: /go/pkg
 secrets:
 - id: GOPROXY
-  value: {{ .GOPROXY }}
+  value: {{ $.GOPROXY }}
 shell:
   install:
     - cd /src
