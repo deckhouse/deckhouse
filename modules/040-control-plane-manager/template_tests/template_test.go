@@ -131,6 +131,22 @@ apiserver:
       - https://api.bob.com
 `
 
+	const moduleValuesCombo = `
+internal:
+  effectiveKubernetesVersion: "1.29"
+  etcdServers:
+    - https://192.168.199.186:2379
+  pkiChecksum: checksum
+  rolloutEpoch: 1857
+apiserver:
+  serviceAccount:
+    additionalAPIIssuers:
+      - https://api.example.com
+      - https://bob.com
+    additionalAPIAudiences:
+      - https://flant.com
+`
+
 	const moduleValuesSuperCombo = `
 internal:
   effectiveKubernetesVersion: "1.29"
@@ -336,7 +352,7 @@ resources:
 			})
 		})
 
-		Context("apiserver.serviceAccount.issuer with apiserver.serviceAccount.additionalAPIIssuers", func() {
+		Context("apiserver.serviceAccount.issuer with apiserver.serviceAccount.additionalAPIIssuers: A", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("controlPlaneManager", moduleValuesAdditionalIssuerOnly)
 				f.HelmRender()
@@ -365,6 +381,43 @@ resources:
 				var pod corev1.Pod
 				expectedServiceAccountIssuers := []string{
 					"--service-account-issuer=https://api.bob.com",
+				}
+				err = yaml.Unmarshal(podWithExtraArgs, &pod)
+				Expect(pod.Spec.Containers[0].Args).To(Equal(expectedServiceAccountIssuers))
+			})
+		})
+
+		Context("apiserver.serviceAccount.issuer with apiserver.serviceAccount.additionalAPIIssuers: B", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("controlPlaneManager", moduleValuesCombo)
+				f.HelmRender()
+			})
+
+			It("should set issuer with additionalAPIIssuers in kube-apiserver.yaml.tpl", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+				Expect(s.Exists()).To(BeTrue())
+
+				data, err := base64.StdEncoding.DecodeString(s.Field("data.kubeadm-config\\.yaml").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				var config ClusterConfiguration
+				err = yaml.Unmarshal(data, &config)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("service-account-issuer", defultAudience))
+				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("api-audiences", fmt.Sprintf("https://api.example.com,https://bob.com,https://flant.com,%s", defultAudience)))
+
+				// kube-apiserver.yaml.tpl - contains patches for kube-api pod, including patches for adding additional service-account-issuer
+				kubeApiserver, err := base64.StdEncoding.DecodeString(s.Field("data.kube-apiserver\\.yaml\\.tpl").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(kubeApiserver).To(ContainSubstring("--service-account-issuer"))
+				documents := strings.Split(string(kubeApiserver), "---")
+				Expect(documents).To(HaveLen(8))
+				podWithExtraArgs := []byte(documents[6])
+				var pod corev1.Pod
+				expectedServiceAccountIssuers := []string{
+					"--service-account-issuer=https://api.example.com",
+					"--service-account-issuer=https://bob.com",
 				}
 				err = yaml.Unmarshal(podWithExtraArgs, &pod)
 				Expect(pod.Spec.Containers[0].Args).To(Equal(expectedServiceAccountIssuers))

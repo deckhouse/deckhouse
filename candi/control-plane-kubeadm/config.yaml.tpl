@@ -52,7 +52,8 @@ apiServer:
       {{- $audiences = append $audiences . }}
     {{- end }}
   {{- end }}
-{{- else if $sa.additionalAPIAudiences }}
+{{- end }}
+{{- if $sa.additionalAPIAudiences }}
   {{- range $sa.additionalAPIAudiences }}
     {{- if and (ne . $primaryAud) (ne . $defaultAud) }}
       {{- $audiences = append $audiences . }}
