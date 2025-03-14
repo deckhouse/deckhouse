@@ -33,7 +33,6 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   install:
-  - set -x
   - export GO_VERSION=${GOLANG_VERSION} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - cd /src
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
