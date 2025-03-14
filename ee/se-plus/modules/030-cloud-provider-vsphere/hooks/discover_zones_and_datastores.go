@@ -100,7 +100,9 @@ func doDiscover(input *go_hook.HookInput, dc dependency.Container) error {
 			})
 		}
 	}
-
+	if storageClasses == nil {
+		storageClasses = []vsphere.ZonedDataStore{}
+	}
 	input.Values.Set("cloudProviderVsphere.internal.storageClasses", storageClasses)
 
 	return nil
