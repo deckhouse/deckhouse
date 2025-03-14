@@ -33,10 +33,13 @@ git:
     install:
     - '**/*'
     {{- end }}
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   - cd /src
-  - git clone --depth 1 --branch {{ $src_version }} {{ $.SOURCE_REPO }}/kubernetes-csi/external-provisioner.git .
+  - git clone --depth 1 --branch {{ $src_version }} $(cat /run/secrets/SOURCE_REPO)/kubernetes-csi/external-provisioner.git .
   {{- if $patch }}
   - git apply /patches/*.patch --verbose
   {{- end }}

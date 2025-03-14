@@ -25,9 +25,12 @@ git:
   stageDependencies:
     install:
       - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $version }} {{ $.SOURCE_REPO }}/vmware/cluster-api-provider-cloud-director /src
+  - git clone --depth 1 --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/vmware/cluster-api-provider-cloud-director /src
   - cd /src
   - git apply /patches/*.patch --verbose
   - echo "replace github.com/vmware/cloud-provider-for-cloud-director => /src/ccm" >> go.mod

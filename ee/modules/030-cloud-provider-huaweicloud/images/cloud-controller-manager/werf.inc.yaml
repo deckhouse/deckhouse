@@ -19,9 +19,12 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v0.26.9 {{ $.SOURCE_REPO }}/kubernetes-sigs/cloud-provider-huaweicloud.git /src
+  - git clone --depth 1 --branch v0.26.9 $(cat /run/secrets/SOURCE_REPO)/kubernetes-sigs/cloud-provider-huaweicloud.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
   - rm -rf .git vendor

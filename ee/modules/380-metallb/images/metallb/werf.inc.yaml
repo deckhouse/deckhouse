@@ -8,10 +8,13 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   - cd /src
-  - git clone -b v0.14.8 {{ $.SOURCE_REPO }}/metallb/metallb.git .
+  - git clone -b v0.14.8 $(cat /run/secrets/SOURCE_REPO)/metallb/metallb.git .
   - git apply /patches/*.patch --verbose
   - rm -rf e2etest
   - rm -rf /src/.git

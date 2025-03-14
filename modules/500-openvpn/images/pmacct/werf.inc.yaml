@@ -21,7 +21,7 @@ shell:
   - cd /src
   - git clone --depth 1 -b 1.7.9 $(cat /run/secrets/SOURCE_REPO)/pmacct/pmacct.git .
   - |
-    cat > .gitmodules <<"EOF"
+    cat > .gitmodules <<EOF
     [submodule "src/external_libs/libcdada"]
       path = src/external_libs/libcdada
       url = $(cat /run/secrets/SOURCE_REPO)/msune/libcdada.git
