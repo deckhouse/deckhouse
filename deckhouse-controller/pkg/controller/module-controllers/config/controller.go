@@ -26,6 +26,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	"github.com/flant/shell-operator/pkg/metric"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -41,16 +42,12 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/confighandler"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
 	controllerName = "d8-module-config-controller"
-
-	// if a module is disabled more than three days, it will be uninstalled at next deckhouse restart
-	deleteReleasesAfter = 72 * time.Hour
 
 	maxConcurrentReconciles = 3
 
@@ -63,8 +60,6 @@ func RegisterController(
 	mm moduleManager,
 	handler *confighandler.Handler,
 	ms metric.Storage,
-	loader *moduleloader.Loader,
-	bundle string,
 	logger *log.Logger,
 ) error {
 	r := &reconciler{
@@ -74,15 +69,13 @@ func RegisterController(
 		handler:         handler,
 		moduleManager:   mm,
 		metricStorage:   ms,
-		moduleLoader:    loader,
-		bundle:          bundle,
 		configValidator: configtools.NewValidator(mm),
 	}
 
 	r.init.Add(1)
 
 	// sync modules
-	if err := runtimeManager.Add(manager.RunnableFunc(r.syncModules)); err != nil {
+	if err := runtimeManager.Add(manager.RunnableFunc(r.preflight)); err != nil {
 		return fmt.Errorf("add preflight: %w", err)
 	}
 
@@ -122,9 +115,7 @@ type reconciler struct {
 	handler         *confighandler.Handler
 	moduleManager   moduleManager
 	metricStorage   metric.Storage
-	moduleLoader    *moduleloader.Loader
 	configValidator *configtools.Validator
-	bundle          string
 }
 
 type moduleManager interface {
@@ -160,6 +151,32 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	// handle create/update events
 	return r.handleModuleConfig(ctx, moduleConfig)
+}
+
+// preflight waits until config kube config manager is started and runs module event loop
+func (r *reconciler) preflight(ctx context.Context) error {
+	r.log.Debug("wait until kube config manager is started")
+	if err := wait.PollUntilContextCancel(ctx, 100*time.Millisecond, true, func(_ context.Context) (bool, error) {
+		return r.handler.ModuleConfigChannelIsSet(), nil
+	}); err != nil {
+		return fmt.Errorf("wait kube config manager to start: %w", err)
+	}
+
+	r.init.Done()
+
+	return r.runModuleEventLoop(ctx)
+}
+
+// runModuleEventLoop triggers module refreshing at any event from addon-operator
+func (r *reconciler) runModuleEventLoop(ctx context.Context) error {
+	for moduleEvent := range r.moduleManager.GetModuleEventsChannel() {
+		if moduleEvent.ModuleName != "" {
+			if err := r.refreshModule(ctx, moduleEvent.ModuleName); err != nil {
+				r.log.Debugf("failed to handle the event for the '%s' module: %v", moduleEvent.ModuleName, err)
+			}
+		}
+	}
+	return nil
 }
 
 func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alpha1.ModuleConfig) (ctrl.Result, error) {
