@@ -32,7 +32,6 @@ type Device struct {
 
 // ListInputDevicesWithAnyButton returns a list of input devices that support any of the specified buttons.
 func ListInputDevicesWithAnyButton(buttons ...Button) ([]Device, error) {
-	// Получаем список устройств в /dev/input
 	dirEntries, err := os.ReadDir(DevInputDir)
 	if err != nil {
 		return nil, fmt.Errorf("read input devices directory %s: %w", DevInputDir, err)
