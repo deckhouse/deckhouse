@@ -30,7 +30,7 @@ imageSpec:
       cfssljson: {{ $version }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ $.Images.BASE_GOLANG_23_ALPINE_DEV }}
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 final: false
 mount:
 - fromPath: ~/go-pkg-cache
