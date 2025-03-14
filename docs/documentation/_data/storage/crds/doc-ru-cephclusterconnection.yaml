@@ -7,6 +7,8 @@ spec:
             Параметры подключения к кластеру Ceph.
           properties:
             spec:
+              description: |
+                Настройки подключения к кластеру Ceph.
               properties:
                 clusterID:
                   description: |
@@ -16,15 +18,15 @@ spec:
                 monitors:
                   description: |
                     Список IP-адресов ceph-mon в формате `10.0.0.10:6789`.
-                  userID:
-                    description: |
-                      Имя пользователя Ceph.
-                  userKey:
-                    description: |
-                      Ключ пользователя Ceph.
+                userID:
+                  description: |
+                    Имя пользователя Ceph.
+                userKey:
+                  description: |
+                    Ключ пользователя Ceph.
             status:
               description: |
-                Отображает текущую информацию о ресурсах, управляемых пользовательским ресурсом CephClusterConnection.
+                Отображает текущую информацию о ресурсах, управляемых ресурсом CephClusterConnection.
               properties:
                 phase:
                   description: |

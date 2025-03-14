@@ -1754,7 +1754,7 @@ entries:
           - title:
               en: ReplicatedStorageMetadataBackup
               ru: ReplicatedStorageMetadataBackup
-            url: /reference/cr/replicatedstoragebackup/
+            url: /reference/cr/replicatedstoragemetadatabackup/
           - title:
               en: ReplicatedStorageClass
               ru: ReplicatedStorageClass
@@ -1780,13 +1780,13 @@ entries:
               ru: SCSITarget
             url: /reference/cr/scsitarget/
           - title:
-              en: YadroStorageClass
-              ru: YadroStorageClass
-            url: /reference/cr/yadrostorageclass/
+              en: YadroTatlinUnifiedStorageClass
+              ru: YadroTatlinUnifiedStorageClass
+            url: /reference/cr/yadrotatlinunifiedstorageclass/
           - title:
-              en: YadroStorageConnection
-              ru: YadroStorageConnection
-            url: /reference/cr/yadrostorageconnection/
+              en: YadroTatlinUnifiedStorageConnection
+              ru: YadroTatlinUnifiedStorageConnection
+            url: /reference/cr/yadrotatlinunifiedstorageconnection/
     - title:
         en: Little things
         ru: Приятные мелочи

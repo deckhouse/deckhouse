@@ -12,7 +12,7 @@ spec:
                   description: |
                     Настройки подключения control plane.
                   properties:
-                    address:
+                    backendAddress:
                       description: |
                         Адрес для подключения.
                     username:
