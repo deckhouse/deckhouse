@@ -125,6 +125,11 @@ var (
 			DefineFunc: commands.DefineDestroyCommand,
 		},
 		{
+			Name:       "session",
+			Help:       "SSH tunnel proxy to Kubernetes cluster and save local kubeconfig for kubectl.",
+			DefineFunc: commands.DefineSessionCommand,
+		},
+		{
 			Name: "terraform",
 			Help: "Terraform commands.",
 		},
