@@ -1215,7 +1215,8 @@ a.comparison-table__module-proprietaryOkmeter::after {
         position: relative;
         overflow: auto;
 
-        &.table-wrapper__small {
+        &.table-wrapper__small,
+        &.table-wrapper__versions { 
             overflow: visible;
         }
     }
@@ -1250,6 +1251,12 @@ a.comparison-table__module-proprietaryOkmeter::after {
         th, td {
             padding: 1em 1.5em;
             border-bottom: 1px solid #C4CAD4;
+        }
+
+        &.supported_versions {
+            th {
+                padding: 1em;
+            }
         }
     }
 

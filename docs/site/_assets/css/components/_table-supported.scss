@@ -11,6 +11,8 @@
     @include min-w(m) {
         width: 28px;
         height: 28px;
+        border-radius: 8px;
+        overflow: hidden;
     }
 
     &:not(:first-child) {
@@ -21,33 +23,22 @@
         margin-bottom: 2em;
     }
 
-    th, td {
-        border: 1px solid #eaeaf9 !important;
-    }
-
     th {
         font-size: 12px;
         font-weight: 400;
         vertical-align: middle;
 
         @include min-w(m) {
-          font-size: 14px;
+            font-size: 14px;
         }
     }
 
-    tbody {
-        td {
-            border: none;
-        }  
-
-        // .versions {
-        //     font-weight: 600 !important;
-        // }
-      }  
-  
+    th, td {
+        border: 1px solid #eaeaf9 !important;
+    }
+    
     thead {
         th {
-            padding: 1em 15px !important;
             min-width: 12ch;
             font-size: .75rem;
             font-weight: 500;
@@ -99,7 +90,7 @@
     top: 0 !important;
     pointer-events: none;
     transition: margin-top .15s ease;
-  
+    
     &.sticky {
         padding: 10px;
         margin: -10px;
@@ -107,12 +98,9 @@
         transform: translateY(-10px);
         background: none;
     }
-  }
+}
 
-.table-wrapper {
-    position: relative;
-    overflow: visible !important;
-
+.table-wrapper__versions {
     &.more {
 
         &--on-right {
@@ -135,16 +123,7 @@
         margin: -10px;
         overflow-x: auto;
     }
-}
 
-.supported_versions {
-    @include min-w(m) {
-        border-radius: 8px;
-        overflow: hidden;
-    }
-}
-
-.table-wrapper:has(.supported_versions) {
     &.more table::before,
     &.more table::after {
         content: '';
