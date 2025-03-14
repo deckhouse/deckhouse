@@ -102,10 +102,6 @@ func filterRegistryState(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 		Version: string(secret.Data["version"]),
 	}
 
-	if ret.Version == "" {
-		ret.Version = "unknown"
-	}
-
 	return ret, nil
 }
 
@@ -211,6 +207,10 @@ func handleRegistryStaticPods(input *go_hook.HookInput) error {
 				"pod", pod.Name,
 			)
 		}
+	}
+
+	if state.Version == "" {
+		state.Version = "unknown"
 	}
 
 	input.Values.Set("systemRegistry.internal.state.masterNodes", nodes)
