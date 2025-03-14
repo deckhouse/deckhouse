@@ -201,6 +201,9 @@
             <a data-open-modal="request_callback" href="#" class="button button--contact">{{ site.data.i18n.common['contact_us_button'][page.lang] }}</a>
           {%- endunless %}
         </div>
+        <!-- {%- unless site.mode == "module" %}
+          <a href="/products/kubernetes-platform/documentation/v1/deckhouse-overview.html" class="button button--outline">{{ site.data.i18n.common['documentation_title'][page.lang] }}</a>
+        {%- endunless %} -->
         {%- if page.lang == "ru" %}
           <a class="lang-switcher" href="
             {%- if site.mode == 'module' %}/en
