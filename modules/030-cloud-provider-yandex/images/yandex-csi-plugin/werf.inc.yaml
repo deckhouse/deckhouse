@@ -35,8 +35,7 @@ import:
     to: /go/src/app
     before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
 shell:
   install:
   - cd /go/src/app
