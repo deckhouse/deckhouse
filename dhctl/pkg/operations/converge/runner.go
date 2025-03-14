@@ -198,7 +198,7 @@ func (r *runner) convergeTerraNodes(ctx *context.Context, metaConfig *config.Met
 		bootstrapNewNodeGroups = operations.BootstrapSequentialTerraNodes
 	}
 
-	if err := bootstrapNewNodeGroups(ctx.KubeClient(), metaConfig, nodeGroupsWithoutStateInCluster, ctx.Terraform()); err != nil {
+	if err := bootstrapNewNodeGroups(ctx.Ctx(), ctx.KubeClient(), metaConfig, nodeGroupsWithoutStateInCluster, ctx.Terraform()); err != nil {
 		return err
 	}
 

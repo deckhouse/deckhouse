@@ -288,7 +288,8 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, 
 		}
 	}
 
-	nodeTemplates, err := entity.GetNodeGroupTemplates(kubeCl)
+	// TODO(dhctl-for-commander-cancels): pass ctx
+	nodeTemplates, err := entity.GetNodeGroupTemplates(context.TODO(), kubeCl)
 	if err != nil {
 		allErrs = multierror.Append(allErrs, fmt.Errorf("node goups in Kubernetes cluster not found: %w", err))
 	}
@@ -465,7 +466,8 @@ func sortNodesByIndex(nodesState map[string][]byte) ([]string, error) {
 func getStatusForMissedNode(kubeCl *client.KubernetesClient, nodeName, nodeGroupName string, allErrs **multierror.Error) NodeCheckResult {
 	status := AbsentStatus
 
-	exists, err := entity.IsNodeExistsInCluster(kubeCl, nodeName, log.GetDefaultLogger())
+	// TODO(dhctl-for-commander-cancels): pass ctx
+	exists, err := entity.IsNodeExistsInCluster(context.TODO(), kubeCl, nodeName, log.GetDefaultLogger())
 	if err != nil {
 		*allErrs = multierror.Append(*allErrs, err)
 		status = ErrorStatus

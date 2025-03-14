@@ -15,6 +15,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -47,7 +48,7 @@ func DefineDeckhouseRemoveDeployment(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 				return fmt.Errorf("open kubernetes connection: %v", err)
 			}
 
-			err = deckhouse.DeleteDeckhouseDeployment(kubeCl)
+			err = deckhouse.DeleteDeckhouseDeployment(context.Background(), kubeCl)
 			if err != nil {
 				return err
 			}
@@ -110,12 +111,12 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 				return fmt.Errorf("open kubernetes connection: %v", err)
 			}
 
-			err = deckhouse.CreateDeckhouseDeployment(kubeCl, installConfig)
+			err = deckhouse.CreateDeckhouseDeployment(context.Background(), kubeCl, installConfig)
 			if err != nil {
 				return fmt.Errorf("deckhouse install: %v", err)
 			}
 
-			err = deckhouse.WaitForReadiness(kubeCl)
+			err = deckhouse.WaitForReadiness(context.Background(), kubeCl)
 			if err != nil {
 				return fmt.Errorf("deckhouse install: %v", err)
 			}

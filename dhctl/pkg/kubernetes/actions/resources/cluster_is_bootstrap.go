@@ -49,7 +49,7 @@ func (n *kubeNgGetter) NodeGroups() ([]*v1.NodeGroup, error) {
 	var ngs []unstructured.Unstructured
 	err := retry.NewSilentLoop("get machine failed events", 3, 3*time.Second).Run(func() error {
 		var err error
-		ngs, err = entity.GetNodeGroups(n.kubeCl)
+		ngs, err = entity.GetNodeGroups(context.TODO(), n.kubeCl)
 		return err
 	})
 

@@ -425,7 +425,8 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return err
 	}
 
-	installDeckhouseResult, err := InstallDeckhouse(kubeCl, deckhouseInstallConfig)
+	// TODO(dhctl-for-commander-cancels): pass ctx
+	installDeckhouseResult, err := InstallDeckhouse(context.TODO(), kubeCl, deckhouseInstallConfig)
 	if err != nil {
 		return err
 	}
@@ -445,7 +446,8 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		}
 
 		err := localBootstraper(func() error {
-			return bootstrapAdditionalNodesForCloudCluster(kubeCl, metaConfig, masterAddressesForSSH, b.TerraformContext)
+			// TODO(dhctl-for-commander-cancels): pass ctx
+			return bootstrapAdditionalNodesForCloudCluster(context.TODO(), kubeCl, metaConfig, masterAddressesForSSH, b.TerraformContext)
 		})
 		if err != nil {
 			return err
@@ -489,7 +491,8 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return nil
 	}
 
-	if err := RunPostInstallTasks(kubeCl, installDeckhouseResult); err != nil {
+	// TODO(dhctl-for-commander-cancels): pass ctx
+	if err := RunPostInstallTasks(context.TODO(), kubeCl, installDeckhouseResult); err != nil {
 		return err
 	}
 
@@ -570,8 +573,8 @@ func generateClusterUUID(stateCache state.Cache) (string, error) {
 	return clusterUUID, err
 }
 
-func bootstrapAdditionalNodesForCloudCluster(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, masterAddressesForSSH map[string]string, terraformContext *terraform.TerraformContext) error {
-	if err := BootstrapAdditionalMasterNodes(kubeCl, metaConfig, masterAddressesForSSH, terraformContext); err != nil {
+func bootstrapAdditionalNodesForCloudCluster(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, masterAddressesForSSH map[string]string, terraformContext *terraform.TerraformContext) error {
+	if err := BootstrapAdditionalMasterNodes(ctx, kubeCl, metaConfig, masterAddressesForSSH, terraformContext); err != nil {
 		return err
 	}
 
@@ -581,7 +584,7 @@ func bootstrapAdditionalNodesForCloudCluster(kubeCl *client.KubernetesClient, me
 		bootstrapAdditionalTerraNodeGroups = operations.BootstrapSequentialTerraNodes
 	}
 
-	if err := bootstrapAdditionalTerraNodeGroups(kubeCl, metaConfig, terraNodeGroups, terraformContext); err != nil {
+	if err := bootstrapAdditionalTerraNodeGroups(ctx, kubeCl, metaConfig, terraNodeGroups, terraformContext); err != nil {
 		return err
 	}
 
@@ -592,7 +595,7 @@ func bootstrapAdditionalNodesForCloudCluster(kubeCl *client.KubernetesClient, me
 				ngs[ng.Name] = ng.Replicas
 			}
 		}
-		if err := entity.WaitForNodesBecomeReady(kubeCl, ngs); err != nil {
+		if err := entity.WaitForNodesBecomeReady(ctx, kubeCl, ngs); err != nil {
 			return err
 		}
 
