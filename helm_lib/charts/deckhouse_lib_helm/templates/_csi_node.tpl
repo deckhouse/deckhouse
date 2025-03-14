@@ -75,7 +75,9 @@ metadata:
   {{- if eq $context.Chart.Name "csi-nfs" }}
   annotations:
     pod-reloader.deckhouse.io/auto: "true"
+  {{- if hasPrefix "cloud-provider-" $context.Chart.Name }}
     cloud-config-checksum: {{ include (print $context.Template.BasePath "/cloud-controller-manager/secret.yaml") $context | sha256sum }}
+  {{- end }}
   {{- end }}
 spec:
   updateStrategy:
