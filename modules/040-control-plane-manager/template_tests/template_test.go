@@ -114,6 +114,20 @@ apiserver:
       - https://bob.com
 `
 
+	const moduleValuesAdditionalIssuerOnly = `
+internal:
+  effectiveKubernetesVersion: "1.29"
+  etcdServers:
+    - https://192.168.199.186:2379
+  pkiChecksum: checksum
+  rolloutEpoch: 1857
+apiserver:
+  serviceAccount:
+    issuer: https://api.example.com
+    additionalAPIIssuers:
+      - https://api.bob.com
+`
+
 	const moduleValuesSuperCombo = `
 internal:
   effectiveKubernetesVersion: "1.29"
@@ -164,6 +178,15 @@ apiserver:
     additionalAPIAudiences:
       - https://kubernetes.default.svc.cluster.local
       - https://flant.com
+`
+
+	const emptyApiserverConfig = `
+internal:
+  effectiveKubernetesVersion: "1.29"
+  etcdServers:
+    - https://192.168.199.186:2379
+  pkiChecksum: checksum
+  rolloutEpoch: 1857
 `
 
 	f := SetupHelmConfig(`controlPlaneManager: {}`)
@@ -262,14 +285,14 @@ resources:
 `))
 		})
 	})
-	Context("ServiceAccount Issuer update tests", func() {
-		Context("only issuer", func() {
+	Context("apiserver tests", func() {
+		Context("only apiserver.serviceAccount.issuer", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("controlPlaneManager", moduleValuesOnlyIssuer)
 				f.HelmRender()
 			})
 
-			It("should render kubeadm-config.yaml with only issuer", func() {
+			It("should set issuer and default api-audiencesr", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 				s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
 				Expect(s.Exists()).To(BeTrue())
@@ -280,17 +303,17 @@ resources:
 				Expect(err).ShouldNot(HaveOccurred())
 
 				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("service-account-issuer", "https://api.example.com"))
-				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("api-audiences", "https://kubernetes.default.svc.cluster.local"))
+				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("api-audiences", "https://api.example.com"))
 			})
 		})
 
-		Context("issuer + additionalAPIAudiences", func() {
+		Context("apiserver.serviceAccount.issuer with apiserver.serviceAccount.additionalAPIAudiences", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("controlPlaneManager", moduleValuesIssuerAdditionalAudiences)
 				f.HelmRender()
 			})
 
-			It("should render kubeadm-config.yaml with issuer and additionalAPIAudiences", func() {
+			It("should set issuer and additionalAPIAudiences", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 				s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
 				Expect(s.Exists()).To(BeTrue())
@@ -301,7 +324,7 @@ resources:
 				Expect(err).ShouldNot(HaveOccurred())
 
 				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("service-account-issuer", "https://api.example.com"))
-				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("api-audiences", "https://kubernetes.default.svc.cluster.local,https://api.example.com,https://bob.com"))
+				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("api-audiences", "https://api.example.com,https://bob.com"))
 
 				// kube-apiserver.yaml.tpl - contains patches for kube-api pod, including patches for adding additional service-account-issuer
 				kubeApiserver, err := base64.StdEncoding.DecodeString(s.Field("data.kube-apiserver\\.yaml\\.tpl").String())
@@ -310,13 +333,48 @@ resources:
 			})
 		})
 
-		Context("additionalAPIIssuersSuperCombo", func() {
+		Context("apiserver.serviceAccount.issuer with apiserver.serviceAccount.additionalAPIIssuers", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("controlPlaneManager", moduleValuesAdditionalIssuerOnly)
+				f.HelmRender()
+			})
+
+			It("should set issuer with additionalAPIIssuers in kube-apiserver.yaml.tpl", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+				Expect(s.Exists()).To(BeTrue())
+
+				data, err := base64.StdEncoding.DecodeString(s.Field("data.kubeadm-config\\.yaml").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				var config ClusterConfiguration
+				err = yaml.Unmarshal(data, &config)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("service-account-issuer", "https://api.example.com"))
+				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("api-audiences", "https://api.example.com,https://api.bob.com"))
+
+				kubeApiserver, err := base64.StdEncoding.DecodeString(s.Field("data.kube-apiserver\\.yaml\\.tpl").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(kubeApiserver).To(ContainSubstring("--service-account-issuer"))
+				documents := strings.Split(string(kubeApiserver), "---")
+				Expect(documents).To(HaveLen(8))
+				podWithExtraArgs := []byte(documents[6])
+				var pod corev1.Pod
+				expectedServiceAccountIssuers := []string{
+					"--service-account-issuer=https://api.bob.com",
+				}
+				err = yaml.Unmarshal(podWithExtraArgs, &pod)
+				Expect(pod.Spec.Containers[0].Args).To(Equal(expectedServiceAccountIssuers))
+			})
+		})
+
+		Context("apiserver.serviceAccount.issuer with additionalAPIIssuers and additionalAPIAudiences (super combo)", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("controlPlaneManager", moduleValuesSuperCombo)
 				f.HelmRender()
 			})
 
-			It("additionalAPIIssuersSuperCombo", func() {
+			It("should set issuer, additional issuers and audiences", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 				s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
 				Expect(s.Exists()).To(BeTrue())
@@ -329,7 +387,7 @@ resources:
 				Expect(err).ShouldNot(HaveOccurred())
 
 				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("service-account-issuer", "https://api.example.com"))
-				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("api-audiences", "https://kubernetes.default.svc.cluster.local,https://flant.ru"))
+				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("api-audiences", "https://api.example.com,https://kubernetes.default.svc.cluster.local,https://flant.ru"))
 
 				// kube-apiserver.yaml.tpl - contains patches for kube-api pod, including patches for adding additional service-account-issuer
 				kubeApiserver, err := base64.StdEncoding.DecodeString(s.Field("data.kube-apiserver\\.yaml\\.tpl").String())
@@ -348,13 +406,13 @@ resources:
 			})
 		})
 
-		Context("additionalAPIIssuersSuperComboWithDublicates", func() {
+		Context("duplicate handling scenario: A", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("controlPlaneManager", additionalAPIIssuersSuperComboWithDublicates)
 				f.HelmRender()
 			})
 
-			It("additionalAPIIssuersSuperComboWithDublicates", func() {
+			It("should set issuer, additional issuers and audiences without duplicates", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 				s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
 				Expect(s.Exists()).To(BeTrue())
@@ -384,13 +442,13 @@ resources:
 				Expect(pod.Spec.Containers[0].Args).To(Equal(expectedServiceAccountIssuers))
 			})
 		})
-		Context("additionalAPIIssuersSuperComboWithDublicates: 2", func() {
+		Context("duplicate handling scenario: B", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("controlPlaneManager", additionalAPIIssuersSuperComboWithDublicates2)
 				f.HelmRender()
 			})
 
-			It("additionalAPIIssuersSuperComboWithDublicates: 2", func() {
+			It("should set issuer, additional issuers and audiences without duplicates", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 				s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
 				Expect(s.Exists()).To(BeTrue())
@@ -418,6 +476,32 @@ resources:
 				}
 				err = yaml.Unmarshal(podWithExtraArgs, &pod)
 				Expect(pod.Spec.Containers[0].Args).To(Equal(expectedServiceAccountIssuers))
+			})
+		})
+		Context("empty apiserver configuration", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("controlPlaneManager", emptyApiserverConfig)
+				f.HelmRender()
+			})
+
+			It("should set default issuer and audience", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+				Expect(s.Exists()).To(BeTrue())
+
+				// kubeadm-config.yaml
+				kubeadmConfig, err := base64.StdEncoding.DecodeString(s.Field("data.kubeadm-config\\.yaml").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				var config ClusterConfiguration
+				err = yaml.Unmarshal(kubeadmConfig, &config)
+				// fmt.Println(string(kubeadmConfig))
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("service-account-issuer", "https://kubernetes.default.svc.cluster.local"))
+				Expect(config.APIServer.ExtraArgs).To(HaveKeyWithValue("api-audiences", "https://kubernetes.default.svc.cluster.local"))
+				// kube-apiserver.yaml.tpl - contains patches for kube-api pod, including patches for adding additional service-account-issuer
+				kubeApiserver, err := base64.StdEncoding.DecodeString(s.Field("data.kube-apiserver\\.yaml\\.tpl").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(kubeApiserver).ToNot(ContainSubstring("--service-account-issuer"))
 			})
 		})
 	})
