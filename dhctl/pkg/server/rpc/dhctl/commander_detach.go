@@ -46,7 +46,8 @@ import (
 )
 
 func (s *Service) CommanderDetach(server pb.DHCTL_CommanderDetachServer) error {
-	ctx := operationCtx(server)
+	ctx, cancel := operationCtx(server)
+	defer cancel()
 
 	logger.L(ctx).Info("started")
 
@@ -93,6 +94,9 @@ connectionProcessor:
 					result := s.commanderDetachSafe(ctx, message.Start, logWriter)
 					sendCh <- &pb.CommanderDetachResponse{Message: &pb.CommanderDetachResponse_Result{Result: result}}
 				}()
+
+			case *pb.CommanderDetachRequest_Cancel:
+				cancel()
 
 			default:
 				logger.L(ctx).Error("got unprocessable message",
