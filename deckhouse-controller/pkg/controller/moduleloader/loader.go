@@ -346,6 +346,9 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 
 			if !module.HasCondition(v1alpha1.ModuleConditionEnabledByModuleConfig) {
 				module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
+				if err := l.client.Status().Update(ctx, module); err != nil {
+					return fmt.Errorf("update status for the '%s' module: %w", def.Name, err)
+				}
 			}
 
 			if !reflect.DeepEqual(moduleCopy.Properties, module.Properties) ||
