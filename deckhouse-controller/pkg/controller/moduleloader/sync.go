@@ -235,7 +235,13 @@ func (l *Loader) restoreAbsentModulesFromOverrides(ctx context.Context) error {
 // restoreAbsentModulesFromReleases checks ModuleReleases with Deployed status and restore them on the FS
 func (l *Loader) restoreAbsentModulesFromReleases(ctx context.Context) error {
 	releaseList := new(v1alpha1.ModuleReleaseList)
-	if err := l.client.List(ctx, releaseList); err != nil {
+	if err := l.client.List(
+		ctx,
+		releaseList,
+		client.MatchingLabels{
+			v1alpha1.ModuleReleaseLabelStatus: v1alpha1.ModuleReleaseLabelDeployed,
+		},
+	); err != nil {
 		return fmt.Errorf("list releases: %w", err)
 	}
 
