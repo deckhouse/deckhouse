@@ -323,7 +323,7 @@ jobs:
             INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           fi
 
-          # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script-commander.sh).
+          # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
           # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
@@ -400,19 +400,21 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
           "
 
-            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
-            export PROVIDER=${PROVIDER:-not_provided}
-            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
-            export LAYOUT=${LAYOUT:-not_provided}
-            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
-            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
-            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
-            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
-            export CIS_ENABLED=${CIS_ENABLED}
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+          export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+          export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
+          export CIS_ENABLED=${CIS_ENABLED}
+
           bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
           # for logs upload
@@ -485,17 +487,19 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
-            export PROVIDER=${PROVIDER:-not_provided}
-            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
-            export LAYOUT=${LAYOUT:-not_provided}
-            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
-            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
-            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
-            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+          export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+          export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
+
           bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
           # for logs upload
@@ -503,6 +507,16 @@ jobs:
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
         # </template: e2e_run_template>
+      - name: Save test results
+        if: ${{ steps.setup.outputs.dhctl-log-file }}
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: test_output_yandex-cloud_containerd_1_28
+          path: |
+            ${{ steps.setup.outputs.dhctl-log-file}}*
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
+            testing/cloud_layouts/
+            !testing/cloud_layouts/**/sshkey
 
       - name: Cleanup temp directory
         if: always()
@@ -669,7 +683,7 @@ jobs:
             INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           fi
 
-          # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script-commander.sh).
+          # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
           # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
@@ -746,19 +760,21 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
           "
 
-            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
-            export PROVIDER=${PROVIDER:-not_provided}
-            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
-            export LAYOUT=${LAYOUT:-not_provided}
-            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
-            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
-            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
-            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
-            export CIS_ENABLED=${CIS_ENABLED}
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+          export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+          export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
+          export CIS_ENABLED=${CIS_ENABLED}
+
           bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
           # for logs upload
@@ -831,17 +847,19 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
-            export PROVIDER=${PROVIDER:-not_provided}
-            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
-            export LAYOUT=${LAYOUT:-not_provided}
-            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
-            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
-            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
-            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+          export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+          export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
+
           bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
           # for logs upload
@@ -849,6 +867,16 @@ jobs:
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
         # </template: e2e_run_template>
+      - name: Save test results
+        if: ${{ steps.setup.outputs.dhctl-log-file }}
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: test_output_yandex-cloud_containerd_1_29
+          path: |
+            ${{ steps.setup.outputs.dhctl-log-file}}*
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
+            testing/cloud_layouts/
+            !testing/cloud_layouts/**/sshkey
 
       - name: Cleanup temp directory
         if: always()
@@ -1015,7 +1043,7 @@ jobs:
             INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           fi
 
-          # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script-commander.sh).
+          # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
           # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
@@ -1092,19 +1120,21 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
           "
 
-            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
-            export PROVIDER=${PROVIDER:-not_provided}
-            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
-            export LAYOUT=${LAYOUT:-not_provided}
-            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
-            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
-            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
-            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
-            export CIS_ENABLED=${CIS_ENABLED}
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+          export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+          export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
+          export CIS_ENABLED=${CIS_ENABLED}
+
           bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
           # for logs upload
@@ -1177,17 +1207,19 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
-            export PROVIDER=${PROVIDER:-not_provided}
-            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
-            export LAYOUT=${LAYOUT:-not_provided}
-            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
-            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
-            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
-            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+          export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+          export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
+
           bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
           # for logs upload
@@ -1195,6 +1227,16 @@ jobs:
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
         # </template: e2e_run_template>
+      - name: Save test results
+        if: ${{ steps.setup.outputs.dhctl-log-file }}
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: test_output_yandex-cloud_containerd_1_30
+          path: |
+            ${{ steps.setup.outputs.dhctl-log-file}}*
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
+            testing/cloud_layouts/
+            !testing/cloud_layouts/**/sshkey
 
       - name: Cleanup temp directory
         if: always()
@@ -1361,7 +1403,7 @@ jobs:
             INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           fi
 
-          # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script-commander.sh).
+          # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
           # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
@@ -1438,19 +1480,21 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
           "
 
-            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
-            export PROVIDER=${PROVIDER:-not_provided}
-            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
-            export LAYOUT=${LAYOUT:-not_provided}
-            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
-            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
-            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
-            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
-            export CIS_ENABLED=${CIS_ENABLED}
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+          export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+          export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
+          export CIS_ENABLED=${CIS_ENABLED}
+
           bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
           # for logs upload
@@ -1523,17 +1567,19 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
-            export PROVIDER=${PROVIDER:-not_provided}
-            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
-            export LAYOUT=${LAYOUT:-not_provided}
-            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
-            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
-            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
-            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+          export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+          export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
+
           bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
           # for logs upload
@@ -1541,6 +1587,16 @@ jobs:
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
         # </template: e2e_run_template>
+      - name: Save test results
+        if: ${{ steps.setup.outputs.dhctl-log-file }}
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: test_output_yandex-cloud_containerd_1_31
+          path: |
+            ${{ steps.setup.outputs.dhctl-log-file}}*
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
+            testing/cloud_layouts/
+            !testing/cloud_layouts/**/sshkey
 
       - name: Cleanup temp directory
         if: always()
@@ -1707,7 +1763,7 @@ jobs:
             INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           fi
 
-          # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script-commander.sh).
+          # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
           # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
@@ -1784,19 +1840,21 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
           "
 
-            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
-            export PROVIDER=${PROVIDER:-not_provided}
-            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
-            export LAYOUT=${LAYOUT:-not_provided}
-            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
-            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
-            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
-            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
-            export CIS_ENABLED=${CIS_ENABLED}
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+          export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+          export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
+          export CIS_ENABLED=${CIS_ENABLED}
+
           bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
           # for logs upload
@@ -1869,17 +1927,19 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
-            export PROVIDER=${PROVIDER:-not_provided}
-            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
-            export LAYOUT=${LAYOUT:-not_provided}
-            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
-            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
-            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
-            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+          export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+          export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
+
           bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
           # for logs upload
@@ -1887,6 +1947,16 @@ jobs:
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
         # </template: e2e_run_template>
+      - name: Save test results
+        if: ${{ steps.setup.outputs.dhctl-log-file }}
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: test_output_yandex-cloud_containerd_1_32
+          path: |
+            ${{ steps.setup.outputs.dhctl-log-file}}*
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
+            testing/cloud_layouts/
+            !testing/cloud_layouts/**/sshkey
 
       - name: Cleanup temp directory
         if: always()
@@ -2053,7 +2123,7 @@ jobs:
             INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           fi
 
-          # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script-commander.sh).
+          # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
           # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
@@ -2130,19 +2200,21 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
           "
 
-            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
-            export PROVIDER=${PROVIDER:-not_provided}
-            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
-            export LAYOUT=${LAYOUT:-not_provided}
-            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
-            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
-            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
-            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
-            export CIS_ENABLED=${CIS_ENABLED}
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+          export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+          export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
+          export CIS_ENABLED=${CIS_ENABLED}
+
           bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
           # for logs upload
@@ -2215,17 +2287,19 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
-            export PROVIDER=${PROVIDER:-not_provided}
-            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
-            export LAYOUT=${LAYOUT:-not_provided}
-            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
-            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
-            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
-            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+          export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+          export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
+
           bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
           # for logs upload
@@ -2233,6 +2307,16 @@ jobs:
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
         # </template: e2e_run_template>
+      - name: Save test results
+        if: ${{ steps.setup.outputs.dhctl-log-file }}
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: test_output_yandex-cloud_containerd_Automatic
+          path: |
+            ${{ steps.setup.outputs.dhctl-log-file}}*
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
+            testing/cloud_layouts/
+            !testing/cloud_layouts/**/sshkey
 
       - name: Cleanup temp directory
         if: always()

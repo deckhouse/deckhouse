@@ -150,6 +150,62 @@ jobs:
 
       # </template: update_comment_on_start>
 
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to dev registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to rw registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_rw_registry_step>
+
+      # <template: werf_install_step>
+      - name: Install werf CLI
+        uses: werf/actions/install@v2
+        with:
+          channel: ${{env.WERF_CHANNEL}}
+      # </template: werf_install_step>
+
       - name: Setup
         id: setup
         env:
@@ -158,6 +214,16 @@ jobs:
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
         run: |
+          # Create tmppath for test script.
+          TMP_DIR_PATH="/tmp/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
+          if [[ -d "${TMP_DIR_PATH}" ]] ; then
+            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
+            ls -la ${TMP_DIR_PATH}
+            exit 1
+          else
+            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
+            mkdir -p "${TMP_DIR_PATH}"
+          fi
 
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
 
@@ -182,6 +248,7 @@ jobs:
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
 
           echo '::echo::on'
+          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
           echo "install-image-full=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${DECKHOUSE_IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "terraform-image-name=${TERRAFORM_IMAGE_NAME}" >> $GITHUB_OUTPUT
@@ -189,6 +256,15 @@ jobs:
           echo "masters-count=${MASTERS_COUNT}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
+
+      - name: "Download state"
+        id: download_artifact_with_state
+        uses: dawidd6/action-download-artifact@v2.23.0
+        with:
+          github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          run_id: ${{github.event.inputs.run_id}}
+          name: ${{github.event.inputs.state_artifact_name}}
+          path: ${{ steps.setup.outputs.tmp-dir-path}}
 
       - name: Cleanup bootstrapped cluster
         if: ${{ success() || cancelled() }}
@@ -200,22 +276,24 @@ jobs:
           KUBERNETES_VERSION: "1.28"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-full }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
+          SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
           LAYOUT_AWS_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
-          REPOSITORY: ${{ github.repository }}
+          REPOSITORY: ${{ github.repository }}DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script_eks.sh cleanup' via 'shell', using environment:
+          echo "Execute 'script_eks.sh cleanup' via 'docker run', using environment:
             TERRAFORM_IMAGE_NAME=${TERRAFORM_IMAGE_NAME}
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
@@ -225,16 +303,35 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
-          "
+          "ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
           chmod 755 $(pwd)/testing/cloud_layouts/script_eks.sh
 
-          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
-          export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
-          export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
-          export LAYOUT_AWS_DEFAULT_REGION=eu-central-1
-          export USER_RUNNER_ID=${user_runner_id}
-          bash $(pwd)/testing/cloud_layouts/script_eks.sh cleanup
+          docker run --rm \
+          -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+          -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+          -e PREFIX=${PREFIX} \
+          -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
+          -e CRI=${CRI} \
+          -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
+          -e LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
+          -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
+          -e LAYOUT=${LAYOUT} \
+          -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+          -e CRI=${CRI} \
+          -e USER_RUNNER_ID=${user_runner_id} \
+          -v $(pwd)/testing:/deckhouse/testing \
+          -v $(pwd)/release.yaml:/deckhouse/release.yaml \
+          -v ${TMP_DIR_PATH}:/tmp \
+          ${TERRAFORM_IMAGE_NAME} \
+          bash /deckhouse/testing/cloud_layouts/script_eks.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -345,6 +442,62 @@ jobs:
 
       # </template: update_comment_on_start>
 
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to dev registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to rw registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_rw_registry_step>
+
+      # <template: werf_install_step>
+      - name: Install werf CLI
+        uses: werf/actions/install@v2
+        with:
+          channel: ${{env.WERF_CHANNEL}}
+      # </template: werf_install_step>
+
       - name: Setup
         id: setup
         env:
@@ -353,6 +506,16 @@ jobs:
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
         run: |
+          # Create tmppath for test script.
+          TMP_DIR_PATH="/tmp/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
+          if [[ -d "${TMP_DIR_PATH}" ]] ; then
+            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
+            ls -la ${TMP_DIR_PATH}
+            exit 1
+          else
+            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
+            mkdir -p "${TMP_DIR_PATH}"
+          fi
 
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
 
@@ -377,6 +540,7 @@ jobs:
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
 
           echo '::echo::on'
+          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
           echo "install-image-full=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${DECKHOUSE_IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "terraform-image-name=${TERRAFORM_IMAGE_NAME}" >> $GITHUB_OUTPUT
@@ -384,6 +548,15 @@ jobs:
           echo "masters-count=${MASTERS_COUNT}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
+
+      - name: "Download state"
+        id: download_artifact_with_state
+        uses: dawidd6/action-download-artifact@v2.23.0
+        with:
+          github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          run_id: ${{github.event.inputs.run_id}}
+          name: ${{github.event.inputs.state_artifact_name}}
+          path: ${{ steps.setup.outputs.tmp-dir-path}}
 
       - name: Cleanup bootstrapped cluster
         if: ${{ success() || cancelled() }}
@@ -395,22 +568,24 @@ jobs:
           KUBERNETES_VERSION: "1.29"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-full }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
+          SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
           LAYOUT_AWS_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
-          REPOSITORY: ${{ github.repository }}
+          REPOSITORY: ${{ github.repository }}DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script_eks.sh cleanup' via 'shell', using environment:
+          echo "Execute 'script_eks.sh cleanup' via 'docker run', using environment:
             TERRAFORM_IMAGE_NAME=${TERRAFORM_IMAGE_NAME}
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
@@ -420,16 +595,35 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
-          "
+          "ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
           chmod 755 $(pwd)/testing/cloud_layouts/script_eks.sh
 
-          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
-          export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
-          export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
-          export LAYOUT_AWS_DEFAULT_REGION=eu-central-1
-          export USER_RUNNER_ID=${user_runner_id}
-          bash $(pwd)/testing/cloud_layouts/script_eks.sh cleanup
+          docker run --rm \
+          -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+          -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+          -e PREFIX=${PREFIX} \
+          -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
+          -e CRI=${CRI} \
+          -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
+          -e LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
+          -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
+          -e LAYOUT=${LAYOUT} \
+          -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+          -e CRI=${CRI} \
+          -e USER_RUNNER_ID=${user_runner_id} \
+          -v $(pwd)/testing:/deckhouse/testing \
+          -v $(pwd)/release.yaml:/deckhouse/release.yaml \
+          -v ${TMP_DIR_PATH}:/tmp \
+          ${TERRAFORM_IMAGE_NAME} \
+          bash /deckhouse/testing/cloud_layouts/script_eks.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -540,6 +734,62 @@ jobs:
 
       # </template: update_comment_on_start>
 
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to dev registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to rw registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_rw_registry_step>
+
+      # <template: werf_install_step>
+      - name: Install werf CLI
+        uses: werf/actions/install@v2
+        with:
+          channel: ${{env.WERF_CHANNEL}}
+      # </template: werf_install_step>
+
       - name: Setup
         id: setup
         env:
@@ -548,6 +798,16 @@ jobs:
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
         run: |
+          # Create tmppath for test script.
+          TMP_DIR_PATH="/tmp/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
+          if [[ -d "${TMP_DIR_PATH}" ]] ; then
+            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
+            ls -la ${TMP_DIR_PATH}
+            exit 1
+          else
+            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
+            mkdir -p "${TMP_DIR_PATH}"
+          fi
 
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
 
@@ -572,6 +832,7 @@ jobs:
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
 
           echo '::echo::on'
+          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
           echo "install-image-full=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${DECKHOUSE_IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "terraform-image-name=${TERRAFORM_IMAGE_NAME}" >> $GITHUB_OUTPUT
@@ -579,6 +840,15 @@ jobs:
           echo "masters-count=${MASTERS_COUNT}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
+
+      - name: "Download state"
+        id: download_artifact_with_state
+        uses: dawidd6/action-download-artifact@v2.23.0
+        with:
+          github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          run_id: ${{github.event.inputs.run_id}}
+          name: ${{github.event.inputs.state_artifact_name}}
+          path: ${{ steps.setup.outputs.tmp-dir-path}}
 
       - name: Cleanup bootstrapped cluster
         if: ${{ success() || cancelled() }}
@@ -590,22 +860,24 @@ jobs:
           KUBERNETES_VERSION: "1.30"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-full }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
+          SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
           LAYOUT_AWS_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
-          REPOSITORY: ${{ github.repository }}
+          REPOSITORY: ${{ github.repository }}DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script_eks.sh cleanup' via 'shell', using environment:
+          echo "Execute 'script_eks.sh cleanup' via 'docker run', using environment:
             TERRAFORM_IMAGE_NAME=${TERRAFORM_IMAGE_NAME}
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
@@ -615,16 +887,35 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
-          "
+          "ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
           chmod 755 $(pwd)/testing/cloud_layouts/script_eks.sh
 
-          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
-          export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
-          export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
-          export LAYOUT_AWS_DEFAULT_REGION=eu-central-1
-          export USER_RUNNER_ID=${user_runner_id}
-          bash $(pwd)/testing/cloud_layouts/script_eks.sh cleanup
+          docker run --rm \
+          -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+          -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+          -e PREFIX=${PREFIX} \
+          -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
+          -e CRI=${CRI} \
+          -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
+          -e LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
+          -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
+          -e LAYOUT=${LAYOUT} \
+          -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+          -e CRI=${CRI} \
+          -e USER_RUNNER_ID=${user_runner_id} \
+          -v $(pwd)/testing:/deckhouse/testing \
+          -v $(pwd)/release.yaml:/deckhouse/release.yaml \
+          -v ${TMP_DIR_PATH}:/tmp \
+          ${TERRAFORM_IMAGE_NAME} \
+          bash /deckhouse/testing/cloud_layouts/script_eks.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -735,6 +1026,62 @@ jobs:
 
       # </template: update_comment_on_start>
 
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to dev registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to rw registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_rw_registry_step>
+
+      # <template: werf_install_step>
+      - name: Install werf CLI
+        uses: werf/actions/install@v2
+        with:
+          channel: ${{env.WERF_CHANNEL}}
+      # </template: werf_install_step>
+
       - name: Setup
         id: setup
         env:
@@ -743,6 +1090,16 @@ jobs:
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
         run: |
+          # Create tmppath for test script.
+          TMP_DIR_PATH="/tmp/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
+          if [[ -d "${TMP_DIR_PATH}" ]] ; then
+            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
+            ls -la ${TMP_DIR_PATH}
+            exit 1
+          else
+            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
+            mkdir -p "${TMP_DIR_PATH}"
+          fi
 
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
 
@@ -767,6 +1124,7 @@ jobs:
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
 
           echo '::echo::on'
+          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
           echo "install-image-full=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${DECKHOUSE_IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "terraform-image-name=${TERRAFORM_IMAGE_NAME}" >> $GITHUB_OUTPUT
@@ -774,6 +1132,15 @@ jobs:
           echo "masters-count=${MASTERS_COUNT}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
+
+      - name: "Download state"
+        id: download_artifact_with_state
+        uses: dawidd6/action-download-artifact@v2.23.0
+        with:
+          github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          run_id: ${{github.event.inputs.run_id}}
+          name: ${{github.event.inputs.state_artifact_name}}
+          path: ${{ steps.setup.outputs.tmp-dir-path}}
 
       - name: Cleanup bootstrapped cluster
         if: ${{ success() || cancelled() }}
@@ -785,22 +1152,24 @@ jobs:
           KUBERNETES_VERSION: "1.31"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-full }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
+          SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
           LAYOUT_AWS_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
-          REPOSITORY: ${{ github.repository }}
+          REPOSITORY: ${{ github.repository }}DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script_eks.sh cleanup' via 'shell', using environment:
+          echo "Execute 'script_eks.sh cleanup' via 'docker run', using environment:
             TERRAFORM_IMAGE_NAME=${TERRAFORM_IMAGE_NAME}
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
@@ -810,16 +1179,35 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
-          "
+          "ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
           chmod 755 $(pwd)/testing/cloud_layouts/script_eks.sh
 
-          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
-          export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
-          export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
-          export LAYOUT_AWS_DEFAULT_REGION=eu-central-1
-          export USER_RUNNER_ID=${user_runner_id}
-          bash $(pwd)/testing/cloud_layouts/script_eks.sh cleanup
+          docker run --rm \
+          -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+          -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+          -e PREFIX=${PREFIX} \
+          -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
+          -e CRI=${CRI} \
+          -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
+          -e LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
+          -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
+          -e LAYOUT=${LAYOUT} \
+          -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+          -e CRI=${CRI} \
+          -e USER_RUNNER_ID=${user_runner_id} \
+          -v $(pwd)/testing:/deckhouse/testing \
+          -v $(pwd)/release.yaml:/deckhouse/release.yaml \
+          -v ${TMP_DIR_PATH}:/tmp \
+          ${TERRAFORM_IMAGE_NAME} \
+          bash /deckhouse/testing/cloud_layouts/script_eks.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -930,6 +1318,62 @@ jobs:
 
       # </template: update_comment_on_start>
 
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to dev registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to rw registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_rw_registry_step>
+
+      # <template: werf_install_step>
+      - name: Install werf CLI
+        uses: werf/actions/install@v2
+        with:
+          channel: ${{env.WERF_CHANNEL}}
+      # </template: werf_install_step>
+
       - name: Setup
         id: setup
         env:
@@ -938,6 +1382,16 @@ jobs:
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
         run: |
+          # Create tmppath for test script.
+          TMP_DIR_PATH="/tmp/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
+          if [[ -d "${TMP_DIR_PATH}" ]] ; then
+            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
+            ls -la ${TMP_DIR_PATH}
+            exit 1
+          else
+            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
+            mkdir -p "${TMP_DIR_PATH}"
+          fi
 
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
 
@@ -962,6 +1416,7 @@ jobs:
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
 
           echo '::echo::on'
+          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
           echo "install-image-full=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${DECKHOUSE_IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "terraform-image-name=${TERRAFORM_IMAGE_NAME}" >> $GITHUB_OUTPUT
@@ -969,6 +1424,15 @@ jobs:
           echo "masters-count=${MASTERS_COUNT}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
+
+      - name: "Download state"
+        id: download_artifact_with_state
+        uses: dawidd6/action-download-artifact@v2.23.0
+        with:
+          github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          run_id: ${{github.event.inputs.run_id}}
+          name: ${{github.event.inputs.state_artifact_name}}
+          path: ${{ steps.setup.outputs.tmp-dir-path}}
 
       - name: Cleanup bootstrapped cluster
         if: ${{ success() || cancelled() }}
@@ -980,22 +1444,24 @@ jobs:
           KUBERNETES_VERSION: "1.32"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-full }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
+          SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
           LAYOUT_AWS_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
-          REPOSITORY: ${{ github.repository }}
+          REPOSITORY: ${{ github.repository }}DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script_eks.sh cleanup' via 'shell', using environment:
+          echo "Execute 'script_eks.sh cleanup' via 'docker run', using environment:
             TERRAFORM_IMAGE_NAME=${TERRAFORM_IMAGE_NAME}
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
@@ -1005,16 +1471,35 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
-          "
+          "ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
           chmod 755 $(pwd)/testing/cloud_layouts/script_eks.sh
 
-          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
-          export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
-          export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
-          export LAYOUT_AWS_DEFAULT_REGION=eu-central-1
-          export USER_RUNNER_ID=${user_runner_id}
-          bash $(pwd)/testing/cloud_layouts/script_eks.sh cleanup
+          docker run --rm \
+          -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+          -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+          -e PREFIX=${PREFIX} \
+          -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
+          -e CRI=${CRI} \
+          -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
+          -e LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
+          -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
+          -e LAYOUT=${LAYOUT} \
+          -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+          -e CRI=${CRI} \
+          -e USER_RUNNER_ID=${user_runner_id} \
+          -v $(pwd)/testing:/deckhouse/testing \
+          -v $(pwd)/release.yaml:/deckhouse/release.yaml \
+          -v ${TMP_DIR_PATH}:/tmp \
+          ${TERRAFORM_IMAGE_NAME} \
+          bash /deckhouse/testing/cloud_layouts/script_eks.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -1125,6 +1610,62 @@ jobs:
 
       # </template: update_comment_on_start>
 
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to dev registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to rw registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_rw_registry_step>
+
+      # <template: werf_install_step>
+      - name: Install werf CLI
+        uses: werf/actions/install@v2
+        with:
+          channel: ${{env.WERF_CHANNEL}}
+      # </template: werf_install_step>
+
       - name: Setup
         id: setup
         env:
@@ -1133,6 +1674,16 @@ jobs:
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
         run: |
+          # Create tmppath for test script.
+          TMP_DIR_PATH="/tmp/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
+          if [[ -d "${TMP_DIR_PATH}" ]] ; then
+            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
+            ls -la ${TMP_DIR_PATH}
+            exit 1
+          else
+            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
+            mkdir -p "${TMP_DIR_PATH}"
+          fi
 
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
 
@@ -1157,6 +1708,7 @@ jobs:
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
 
           echo '::echo::on'
+          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
           echo "install-image-full=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${DECKHOUSE_IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "terraform-image-name=${TERRAFORM_IMAGE_NAME}" >> $GITHUB_OUTPUT
@@ -1164,6 +1716,15 @@ jobs:
           echo "masters-count=${MASTERS_COUNT}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
+
+      - name: "Download state"
+        id: download_artifact_with_state
+        uses: dawidd6/action-download-artifact@v2.23.0
+        with:
+          github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          run_id: ${{github.event.inputs.run_id}}
+          name: ${{github.event.inputs.state_artifact_name}}
+          path: ${{ steps.setup.outputs.tmp-dir-path}}
 
       - name: Cleanup bootstrapped cluster
         if: ${{ success() || cancelled() }}
@@ -1175,22 +1736,24 @@ jobs:
           KUBERNETES_VERSION: "1.30"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-full }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
+          SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
           LAYOUT_AWS_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
-          REPOSITORY: ${{ github.repository }}
+          REPOSITORY: ${{ github.repository }}DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script_eks.sh cleanup' via 'shell', using environment:
+          echo "Execute 'script_eks.sh cleanup' via 'docker run', using environment:
             TERRAFORM_IMAGE_NAME=${TERRAFORM_IMAGE_NAME}
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
@@ -1200,16 +1763,35 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
-          "
+          "ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+
+          user_runner_id=$(id -u):$(id -g)
+          echo "user_runner_id $user_runner_id"
           chmod 755 $(pwd)/testing/cloud_layouts/script_eks.sh
 
-          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
-          export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
-          export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
-          export LAYOUT_AWS_DEFAULT_REGION=eu-central-1
-          export USER_RUNNER_ID=${user_runner_id}
-          bash $(pwd)/testing/cloud_layouts/script_eks.sh cleanup
+          docker run --rm \
+          -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+          -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+          -e PREFIX=${PREFIX} \
+          -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
+          -e CRI=${CRI} \
+          -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
+          -e LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
+          -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
+          -e LAYOUT=${LAYOUT} \
+          -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+          -e CRI=${CRI} \
+          -e USER_RUNNER_ID=${user_runner_id} \
+          -v $(pwd)/testing:/deckhouse/testing \
+          -v $(pwd)/release.yaml:/deckhouse/release.yaml \
+          -v ${TMP_DIR_PATH}:/tmp \
+          ${TERRAFORM_IMAGE_NAME} \
+          bash /deckhouse/testing/cloud_layouts/script_eks.sh cleanup
 
         # </template: e2e_run_template>
 
