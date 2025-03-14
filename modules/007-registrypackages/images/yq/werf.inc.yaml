@@ -18,7 +18,8 @@ docker:
     version: all
     yq: {{ $version }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
 from: {{ $.Images.BASE_GOLANG_23_ALPINE_DEV }}
 mount:
 - fromPath: ~/go-pkg-cache
