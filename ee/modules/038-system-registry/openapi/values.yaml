@@ -23,8 +23,7 @@ properties:
               - plainstring
       state:
         type: object
-        default:
-          version: ""
+        default: {}
         additionalProperties: true
         x-kubernetes-preserve-unknown-fields: true
         properties:
