@@ -49,7 +49,7 @@ shell:
   - git clone --depth 1 $(cat /run/secrets/SOURCE_REPO)/jqlang/jq --branch "jq-1.7.1" /src/jq
   - cd /src/jq
   - |
-    cat > .gitmodules <<"EOF"
+    cat > .gitmodules <<EOF
     [submodule "modules/oniguruma"]
         path = modules/oniguruma
         url = $(cat /run/secrets/SOURCE_REPO)/flant/oniguruma.git
