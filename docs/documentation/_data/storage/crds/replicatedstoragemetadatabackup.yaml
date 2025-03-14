@@ -23,16 +23,16 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            ReplicatedStorageMetadataBackup is a Kubernetes Custom Resource that stores Linstor control-plane database backup.
+            ReplicatedStorageMetadataBackup is a Kubernetes Custom Resource that stores LINSTOR control-plane database backup.
           required:
             - spec
           properties:
             spec:
               type: object
               description: |
-                Stores Linstor's control-plane database backup.
+                Stores LINSTOR's control-plane database backup.
               properties:
                 data:
                   type: string
                   description: |
-                    Part of the Linstor's control-plane database backup
+                    Part of the LINSTOR's control-plane database backup

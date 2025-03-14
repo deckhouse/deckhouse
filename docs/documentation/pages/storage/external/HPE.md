@@ -1,29 +1,31 @@
 ---
-title: "HPE storage"
+title: "HPE data storage"
 permalink: en/storage/admin/external/hpe.html
 ---
 
-This section installs and configures the CSI driver for HPE SAN. The module allows you to create a `StorageClass` in `Kubernetes` by creating [Kubernetes custom resources](./cr.html#yadrostorageclass) `YadroStorageClass`.
+Deckhouse provides support for HPE 3PAR storage systems, enabling volume management in Kubernetes using a CSI driver. This ensures a reliable, scalable, and high-performance storage solution suitable for mission-critical workloads. To support HPE 3PAR storage systems, the `csi-hpe` module is used, allowing the creation of StorageClass in Kubernetes through the [HPEStorageClass](../../../reference/cr/hpestorageclass/) resource.
 
-> **Caution!** The user is not allowed to create a `StorageClass` for the `csi.hpe.com` CSI driver.
-> **Caution!** Currently, supports 3par SAN devices. For other HPE SAN support please contact tech support.
+{% alert level="warning" %}
+User-created StorageClass for the `csi.hpe.com` CSI driver is not allowed.  
+Only HPE 3PAR** storage systems are supported. For other HPE storage systems, please contact technical support.
+{% endalert %}
 
-## System requirements and recommendations
+This page provides instructions on connecting HPE 3PAR to Deckhouse, configuring the connection, creating StorageClass, and verifying storage functionality.
 
-### Requirements
+## System requirements
 
-- Presence of a deployed and configured HPE SAN.
-- Unique iqn in /etc/iscsi/initiatorname.iscsi on each of Kubernetes Nodes
+- A deployed and configured HPE storage system.
+- Unique IQNs in `/etc/iscsi/initiatorname.iscsi` on each Kubernetes node.
 
-## Quickstart guide
+## Setup and Configuration
 
 Note that all commands must be run on a machine that has administrator access to the Kubernetes API.
 
-### Enabling module
+### Enabling the module
 
-- Enable the `csi-hpe` module. This will result in the following actions across all cluster nodes:
-  - registration of the CSI driver;
-  - launch of service pods for the `csi-hpe` components.
+Enable the `csi-hpe` module. This will result in the following actions across all cluster nodes:
+- registration of the CSI driver.
+- launch of service pods for the `csi-hpe` components.
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -37,7 +39,7 @@ spec:
 EOF
 ```
 
-- Wait for the module to become `Ready`.
+Wait for the module to become `Ready`.
 
 ```shell
 kubectl get module csi-hpe -w
@@ -45,7 +47,7 @@ kubectl get module csi-hpe -w
 
 ### Creating a StorageClass
 
-To create a StorageClass, you need to use the [HPEStorageClass](./cr.html#hpestorageclass) and [HPEStorageConnection](./cr.html#hpestorageconnection) resource. Here is an example command to create such a resource:
+To create a StorageClass, you need to use the [HPEStorageClass](../../../reference/cr/hpestorageclass/) and [HPEStorageConnection](../../../reference/cr/hpestorageconnection/) resource. Here is an example command to create such a resource:
 
 ```yaml
 d8 k apply -f -<<EOF
@@ -79,7 +81,7 @@ spec:
 EOF
 ```
 
-- You can check objects creation (Phase must be `Created`):
+You can check objects creation (Phase must be `Created`):
 
 ```shell
 d8 k get hpestorageconnections.storage.deckhouse.io <hpestorageconnection name>

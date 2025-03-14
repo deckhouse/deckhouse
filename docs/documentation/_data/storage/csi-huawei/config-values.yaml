@@ -8,7 +8,7 @@ properties:
       - INFO
       - DEBUG
       - TRACE
-    description: Module log level
+    description: Module log level.
     default: INFO
   nodeSelector:
     type: object

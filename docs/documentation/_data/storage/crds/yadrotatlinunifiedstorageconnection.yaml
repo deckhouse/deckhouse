@@ -1,18 +1,18 @@
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: yadrostorageconnections.storage.deckhouse.io
+  name: yadrotatlinunifiedstorageconnections.storage.deckhouse.io
   labels:
     heritage: deckhouse
-    module: csi-yadro
+    module: csi-yadro-tatlin-unified
     backup.deckhouse.io/cluster-config: "true"
 spec:
   group: storage.deckhouse.io
   scope: Cluster
   names:
-    plural: yadrostorageconnections
-    singular: yadrostorageconnection
-    kind: YadroStorageConnection
+    plural: yadrotatlinunifiedstorageconnections
+    singular: yadrotatlinunifiedstorageconnection
+    kind: YadroTatlinUnifiedStorageConnection
   preserveUnknownFields: false
   versions:
     - name: v1alpha1
@@ -43,23 +43,23 @@ spec:
                   properties:
                     address:
                       description: |
-                        Yadro storage address
+                        Yadro storage address.
                       type: string
                     username:
                       description: |
-                        Yadro storage username
+                        Yadro storage username.
                       type: string
                     password:
                       description: |
-                        Yadro storage password, base64 encoded
+                        Yadro storage password, Base64 encoded.
                       type: string
                     ca:
                       description: |
-                        Yadro CA certificate, in case of self-signed SSL certificates
+                        Yadro CA certificate, in case of self-signed SSL certificates.
                       type: string
                     skipCertificateValidation:
                       description: |
-                        Skip Yadro storage certificate check
+                        Skip Yadro storage certificate check.
                       type: boolean
                 dataPlane:
                   description: |
@@ -70,7 +70,7 @@ spec:
                   properties:
                     protocol:
                       description: |
-                        Supported connection protocols
+                        Supported connection protocols.
                       type: string
                       enum:
                         - iscsi
@@ -80,44 +80,44 @@ spec:
                           message: Value is immutable.
                     iscsi:
                       description: |
-                        iSCSI connection properties
+                        iSCSI connection properties.
                       type: object
                       required:
                         - volumeExportPort
                       properties:
                         volumeExportPort:
                           description: |
-                            Volume export ports for connection
+                            Volume export ports for connection.
                           type: string
                     fc:
                       description: |
-                        FC connection properties
+                        FC connection properties.
                       type: object
                       required:
                         - volumeExportPort
                       properties:
                         volumeExportPort:
                           description: |
-                            Volume export ports for connection
+                            Volume export ports for connection.
                           type: string
             status:
               type: object
               description: |
-                Displays current information about the resources managed by the YadroClusterConnection custom resource.
+                Displays current information about the resources managed by the YadroTatlinUnifiedClusterConnection custom resource.
               properties:
                 phase:
                   type: string
                   description: |
-                    The current state of resources managed by the YadroClusterConnection custom resource. Might be: 
-                    - Failed (if the controller received incorrect resource configuration or some errors occurred during the operation)
-                    - Created (if everything went fine)
+                    The current state of resources managed by the YadroTatlinUnifiedClusterConnection custom resource:
+                    - Failed (if the controller received incorrect resource configuration or some errors occurred during the operation).
+                    - Created (if everything went fine).
                   enum:
                     - Failed
                     - Created
                 reason:
                   type: string
                   description: |
-                    Additional information about the resources managed by the YadroClusterConnection custom resource.
+                    Additional information about the resources managed by the YadroTatlinUnifiedClusterConnection custom resource.
       subresources:
         status: {}
       additionalPrinterColumns:
@@ -131,4 +131,4 @@ spec:
         - jsonPath: .metadata.creationTimestamp
           name: Age
           type: date
-          description: The age of this resource
+          description: The age of this resource.

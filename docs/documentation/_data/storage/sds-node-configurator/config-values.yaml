@@ -5,7 +5,7 @@ properties:
   disableDs:
     type: boolean
     default: false
-    description: Disable sds-node-configurator daemonset
+    description: Disable sds-node-configurator daemonset.
   logLevel:
     type: string
     enum:
@@ -14,9 +14,9 @@ properties:
       - INFO
       - DEBUG
       - TRACE
-    description: Module log level
+    description: Module log level.
     default: INFO
   enableThinProvisioning:
     type: boolean
     default: false
-    description: Allow thin LVM volumes usage
+    description: Allow thin LVM volumes usage.
