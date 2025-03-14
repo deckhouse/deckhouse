@@ -38,7 +38,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
-var logTypeDHCTL = slog.String("type", "dhctl")
+var logTypeDHCTL = slog.String("type", "dhctl!")
 
 type Service struct {
 	pb.UnimplementedDHCTLServer
