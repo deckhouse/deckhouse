@@ -434,7 +434,7 @@
       ],
       "thresholds": [],
       "timeRegions": [],
-      "title": "Сlient bytes received",
+      "title": "Client bytes received",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -522,7 +522,7 @@
       ],
       "thresholds": [],
       "timeRegions": [],
-      "title": "Сlient bytes sent",
+      "title": "Client bytes sent",
       "tooltip": {
         "shared": true,
         "sort": 0,
