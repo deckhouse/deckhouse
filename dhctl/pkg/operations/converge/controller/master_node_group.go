@@ -187,7 +187,7 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 		candidateName := fmt.Sprintf("%s-%s-%v", metaConfig.ClusterPrefix, c.name, index)
 
 		if _, ok := c.state.State[candidateName]; !ok {
-			output, err := operations.BootstrapAdditionalMasterNode(ctx.KubeClient(), metaConfig, index, c.cloudConfig, true, ctx.Terraform())
+			output, err := operations.BootstrapAdditionalMasterNode(ctx.Ctx(), ctx.KubeClient(), metaConfig, index, c.cloudConfig, true, ctx.Terraform())
 			if err != nil {
 				return err
 			}
@@ -202,7 +202,7 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 		index++
 	}
 
-	err = entity.WaitForNodesListBecomeReady(ctx.KubeClient(), nodesToWait, controlplane.NewManagerReadinessChecker(ctx))
+	err = entity.WaitForNodesListBecomeReady(ctx.Ctx(), ctx.KubeClient(), nodesToWait, controlplane.NewManagerReadinessChecker(ctx))
 	if err != nil {
 		return err
 	}
@@ -268,7 +268,7 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 		Hook: hook,
 	})
 
-	outputs, err := terraform.ApplyPipeline(nodeRunner, nodeName, terraform.GetMasterNodeResult)
+	outputs, err := terraform.ApplyPipeline(ctx.Ctx(), nodeRunner, nodeName, terraform.GetMasterNodeResult)
 	if err != nil {
 		if errors.Is(err, controlplane.ErrSingleMasterClusterTerraformPlanHasDestructiveChanges) {
 			confirmation := input.NewConfirmation().WithMessage("A single-master cluster has disruptive changes in the Terraform plan. Trying to migrate to a multi-master cluster and back to a single-master cluster. Do you want to continue?")

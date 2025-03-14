@@ -109,7 +109,8 @@ func (h *HookForUpdatePipeline) BeforeAction(runner terraform.RunnerInterface) (
 		return false, ErrSingleMasterClusterTerraformPlanHasDestructiveChanges
 	}
 
-	err := h.IsAllNodesReady()
+	// TODO(feat/dhctl-for-commander-bootstrap-context): pass ctx
+	err := h.IsAllNodesReady(context.Background())
 	if err != nil {
 		return false, fmt.Errorf("not all nodes are ready: %v", err)
 	}
@@ -119,7 +120,8 @@ func (h *HookForUpdatePipeline) BeforeAction(runner terraform.RunnerInterface) (
 		return false, fmt.Errorf("failed to remove control plane role from node '%s': %v", h.nodeToConverge, err)
 	}
 
-	outputs, err := terraform.GetMasterNodeResult(runner)
+	// TODO(feat/dhctl-for-commander-bootstrap-context): pass ctx
+	outputs, err := terraform.GetMasterNodeResult(context.Background(), runner)
 	if err != nil {
 		log.ErrorF("Get master node pipeline outputs: %v", err)
 	}
@@ -134,7 +136,8 @@ func (h *HookForUpdatePipeline) AfterAction(runner terraform.RunnerInterface) er
 		return nil
 	}
 
-	outputs, err := terraform.GetMasterNodeResult(runner)
+	// TODO(feat/dhctl-for-commander-bootstrap-context): pass ctx
+	outputs, err := terraform.GetMasterNodeResult(context.Background(), runner)
 	if err != nil {
 		return fmt.Errorf("failed to get master node pipeline outputs: %v", err)
 	}
@@ -163,7 +166,8 @@ func (h *HookForUpdatePipeline) AfterAction(runner terraform.RunnerInterface) er
 	}
 
 	err = retry.NewLoop(fmt.Sprintf("Check the master node '%s' is ready", h.nodeToConverge), 45, 10*time.Second).Run(func() error {
-		ready, err := NewManagerReadinessChecker(h.kubeGetter).IsReady(h.nodeToConverge)
+		// TODO(feat/dhctl-for-commander-bootstrap-context): pass ctx
+		ready, err := NewManagerReadinessChecker(h.kubeGetter).IsReady(context.Background(), h.nodeToConverge)
 		if err != nil {
 			return fmt.Errorf("failed to check the master node '%s' readiness: %v", h.nodeToConverge, err)
 		}

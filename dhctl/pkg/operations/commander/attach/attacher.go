@@ -154,7 +154,7 @@ func (i *Attacher) Attach(ctx context.Context) (*AttachResult, error) {
 	}, nil
 }
 
-func (i *Attacher) prepare(_ context.Context) (*client.KubernetesClient, *config.MetaConfig, error) {
+func (i *Attacher) prepare(ctx context.Context) (*client.KubernetesClient, *config.MetaConfig, error) {
 	var (
 		kubeClient *client.KubernetesClient
 		metaConfig *config.MetaConfig
@@ -163,7 +163,7 @@ func (i *Attacher) prepare(_ context.Context) (*client.KubernetesClient, *config
 	err := log.Process("attach", "Prepare cluster attach", func() error {
 		var err error
 
-		kubeClient, err = kubernetes.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(i.Params.SSHClient))
+		kubeClient, err = kubernetes.ConnectToKubernetesAPI(ctx, ssh.NewNodeInterfaceWrapper(i.Params.SSHClient))
 		if err != nil {
 			return fmt.Errorf("unable to connect to kubernetes api over ssh: %w", err)
 		}
@@ -282,7 +282,7 @@ func (i *Attacher) scan(
 }
 
 func (i *Attacher) capture(
-	_ context.Context,
+	ctx context.Context,
 	kubeClient *client.KubernetesClient,
 ) error {
 	return log.Process("commander/attach", "Capture cluster", func() error {
@@ -299,7 +299,7 @@ func (i *Attacher) capture(
 			return fmt.Errorf("unable to get resource checkers: %w", err)
 		}
 
-		err = resources.CreateResourcesLoop(kubeClient, attachResources, checkers, nil)
+		err = resources.CreateResourcesLoop(ctx, kubeClient, attachResources, checkers, nil)
 		if err != nil {
 			return fmt.Errorf("unable to create resources: %w", err)
 		}

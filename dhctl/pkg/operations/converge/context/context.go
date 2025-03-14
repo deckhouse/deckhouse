@@ -100,6 +100,10 @@ func (c *Context) CommanderMode() bool {
 	return c.commanderParams != nil
 }
 
+func (c *Context) Ctx() context.Context {
+	return c.ctx
+}
+
 func (c *Context) StarExecutionPhase(phase phases.OperationPhase, isCritical bool) (bool, error) {
 	if c.phaseContext == nil {
 		return false, nil

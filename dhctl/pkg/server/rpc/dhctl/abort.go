@@ -43,7 +43,8 @@ import (
 )
 
 func (s *Service) Abort(server pb.DHCTL_AbortServer) error {
-	ctx := operationCtx(server)
+	ctx, cancel := operationCtx(server)
+	defer cancel()
 
 	logger.L(ctx).Info("started")
 
@@ -90,7 +91,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.abortSafe(ctx, message.Start, phaseSwitcher.switchPhase, logWriter)
+					result := s.abortSafe(ctx, message.Start, phaseSwitcher.switchPhase(ctx), logWriter)
 					sendCh <- &pb.AbortResponse{Message: &pb.AbortResponse_Result{Result: result}}
 				}()
 

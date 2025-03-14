@@ -28,8 +28,12 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-func CheckPreventBreakAnotherBootstrappedCluster(kubeCl *client.KubernetesClient, config *config.DeckhouseInstaller) error {
-	return retry.NewSilentLoop("Check prevent break another bootstrapped", 15, 3*time.Second).Run(func() error {
+func CheckPreventBreakAnotherBootstrappedCluster(
+	ctx context.Context,
+	kubeCl *client.KubernetesClient,
+	config *config.DeckhouseInstaller,
+) error {
+	return retry.NewSilentLoop("Check prevent break another bootstrapped", 15, 3*time.Second).RunCtx(ctx, func() error {
 		var uuidInCluster string
 		cmInCluster, err := kubeCl.CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).Get(context.TODO(), manifests.ClusterUUIDCm, metav1.GetOptions{})
 		if err != nil && !apierrors.IsNotFound(err) {

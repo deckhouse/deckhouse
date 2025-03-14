@@ -15,7 +15,9 @@
 package commands
 
 import (
+	"context"
 	"fmt"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
@@ -43,7 +45,7 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, name, secret, dataKey string) 
 			return err
 		}
 
-		kubeCl, err := kubernetes.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(sshClient))
+		kubeCl, err := kubernetes.ConnectToKubernetesAPI(context.Background(), ssh.NewNodeInterfaceWrapper(sshClient))
 		if err != nil {
 			return err
 		}
