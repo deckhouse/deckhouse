@@ -64,6 +64,7 @@
 | [helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add](#helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add) |
 | [helm_lib_module_container_security_context_capabilities_drop_all_and_add](#helm_lib_module_container_security_context_capabilities_drop_all_and_add) |
 | [helm_lib_module_container_security_context_capabilities_drop_all_and_run_as_user_custom](#helm_lib_module_container_security_context_capabilities_drop_all_and_run_as_user_custom) |
+| [helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted](#helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted) |
 | **Module Storage Class** |
 | [helm_lib_module_storage_class_annotations](#helm_lib_module_storage_class_annotations) |
 | **Monitoring Grafana Dashboards** |
@@ -361,7 +362,7 @@ list:
 
 #### Usage
 
-`{{ include "helm_lib_module_image" (list . "<container-name>") }} `
+`{{ include "helm_lib_module_image" (list . "<container-name>" "<module-name>(optional)") }} `
 
 #### Arguments
 
@@ -733,6 +734,19 @@ list:
 -  User id 
 -  Group id 
 
+
+### helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted
+
+ returns SecurityContext parameters for Container with minimal required settings to comply with the Restricted mode of the Pod Security Standards 
+
+#### Usage
+
+`{{ include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted" . }} `
+
+#### Arguments
+
+-  Template context with .Values, .Chart, etc 
+
 ## Module Storage Class
 
 ### helm_lib_module_storage_class_annotations
@@ -1013,7 +1027,7 @@ list:
 
 ### helm_lib_priority_class
 
- returns priority class if priority-class module enabled, otherwise returns nothing 
+ returns priority class
 
 #### Arguments
 

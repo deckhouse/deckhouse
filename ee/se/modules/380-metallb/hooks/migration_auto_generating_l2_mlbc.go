@@ -11,7 +11,6 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -152,17 +151,16 @@ func createMetalLoadBalancerClass(input *go_hook.HookInput, mlbcInfo *MetalLoadB
 	if err != nil {
 		return
 	}
-	input.PatchCollector.Create(mlbcUnstructured, object_patch.UpdateIfExists())
+	input.PatchCollector.CreateOrUpdate(mlbcUnstructured)
 	input.Logger.Info("MetalLoadBalancerClass created", "name", mlbcInfo.Name)
 }
 
 func deleteMetalLoadBalancerClass(input *go_hook.HookInput, mlbcName string) {
-	input.PatchCollector.Delete(
+	input.PatchCollector.DeleteInBackground(
 		"network.deckhouse.io/v1alpha1",
 		"MetalLoadBalancerClass",
 		"",
 		mlbcName,
-		object_patch.InBackground(),
 	)
 	input.Logger.Info("MetalLoadBalancerClass deleted", "name", mlbcName)
 }

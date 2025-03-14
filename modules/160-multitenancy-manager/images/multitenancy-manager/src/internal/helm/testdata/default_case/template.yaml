@@ -129,6 +129,9 @@ spec:
     kind: Namespace
     metadata:
       name: {{ .projectName }}
+      # to test adopt annotation deletion
+      annotations:
+        projects.deckhouse.io/adopt: ""
       labels:
         {{ with .parameters.podSecurityProfile }}security.deckhouse.io/pod-policy: "{{ lower . }}"{{ end }}
         {{ if .parameters.extendedMonitoringEnabled }}extended-monitoring.deckhouse.io/enabled: ""{{ end }}
