@@ -18,15 +18,16 @@ import:
   - uninstall
   before: setup
 imageSpec:
-  labels:
-    distro: all
-    version: all
-    cfssl: {{ $version }}
-    cfssl-bundle: {{ $version }}
-    cfssl-certinfo: {{ $version }}
-    cfssl-newkey: {{ $version }}
-    cfssl-scan: {{ $version }}
-    cfssljson: {{ $version }}
+  config:
+    labels:
+      distro: all
+      version: all
+      cfssl: {{ $version }}
+      cfssl-bundle: {{ $version }}
+      cfssl-certinfo: {{ $version }}
+      cfssl-newkey: {{ $version }}
+      cfssl-scan: {{ $version }}
+      cfssljson: {{ $version }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ $.Images.BASE_GOLANG_23_ALPINE_DEV }}
