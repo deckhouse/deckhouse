@@ -1,5 +1,6 @@
 {{- if .Values.global.modules.publicDomainTemplate }}
   {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
+    {{- if or .Values.prometheus.internal.grafana.enabled (has "console" .Values.global.enabledModules) }}
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
@@ -18,5 +19,6 @@ spec:
   issuerRef:
     name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
     kind: ClusterIssuer
+    {{- end }}
   {{- end }}
 {{- end }}
