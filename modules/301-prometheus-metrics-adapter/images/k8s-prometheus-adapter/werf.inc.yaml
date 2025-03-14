@@ -9,9 +9,12 @@ git:
   stageDependencies:
     install:
       - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ $k8sPrometheusAdapterVersion }} {{ $.SOURCE_REPO }}/kubernetes-sigs/prometheus-adapter.git /src
+  - git clone --depth 1 --branch v{{ $k8sPrometheusAdapterVersion }} $(cat /run/secrets/SOURCE_REPO)/kubernetes-sigs/prometheus-adapter.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
   - rm -rf /src/.git

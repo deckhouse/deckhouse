@@ -33,9 +33,12 @@ git:
       install:
         - '**/*'
 {{- end }}
+secrets:
+- id: SOURCE_REPO
+  value: {{ $.SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $value.ccm.gcp }} {{ $.SOURCE_REPO }}/kubernetes/cloud-provider-gcp.git /src
+  - git clone --depth 1 --branch {{ $value.ccm.gcp }} $(cat /run/secrets/SOURCE_REPO)/kubernetes/cloud-provider-gcp.git /src
   - cd /src
   {{- if $patch}}
   - git apply /patches/*.patch --verbose

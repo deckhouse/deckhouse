@@ -29,9 +29,12 @@ git:
   stageDependencies:
     setup:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} {{ $.SOURCE_REPO }}/deckhouse/deckhouse-cli.git /src/deckhouse-cli
+  - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} $(cat /run/secrets/SOURCE_REPO)/deckhouse/deckhouse-cli.git /src/deckhouse-cli
   - cd /src/deckhouse-cli
   - git describe --tags > VERSION
   - sed -i "s|sh:\ git describe --tags|sh:\ cat VERSION|" Taskfile.yml

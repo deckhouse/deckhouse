@@ -33,9 +33,12 @@ git:
     install:
       - '**/*'
 {{- end }}
+secrets:
+- id: SOURCE_REPO
+  value: {{ $.SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $value.ccm.azure }}  {{ $.SOURCE_REPO }}/kubernetes-sigs/cloud-provider-azure.git /src
+  - git clone --depth 1 --branch {{ $value.ccm.azure }}  $(cat /run/secrets/SOURCE_REPO)/kubernetes-sigs/cloud-provider-azure.git /src
   - cd /src
   {{- if $patch}}
   - git apply /patches/*.patch --verbose

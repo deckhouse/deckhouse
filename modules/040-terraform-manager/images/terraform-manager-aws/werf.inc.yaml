@@ -18,9 +18,12 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ .TF.aws.version }} {{ $.SOURCE_REPO }}/hashicorp/terraform-provider-aws.git /src
+  - git clone --depth 1 --branch v{{ .TF.aws.version }} $(cat /run/secrets/SOURCE_REPO)/hashicorp/terraform-provider-aws.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
   - rm -rf .git

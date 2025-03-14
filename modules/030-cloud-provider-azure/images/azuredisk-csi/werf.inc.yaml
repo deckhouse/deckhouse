@@ -38,9 +38,12 @@ git:
     install:
       - '**/*'
 {{- end }}
+secrets:
+- id: SOURCE_REPO
+  value: {{ $.SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $value.csi.azure }} {{ $.SOURCE_REPO }}/kubernetes-sigs/azuredisk-csi-driver.git /src
+  - git clone --depth 1 --branch {{ $value.csi.azure }} $(cat /run/secrets/SOURCE_REPO)/kubernetes-sigs/azuredisk-csi-driver.git /src
   - cd /src
   {{- if $patch }}
   - git apply /patches/*.patch --verbose

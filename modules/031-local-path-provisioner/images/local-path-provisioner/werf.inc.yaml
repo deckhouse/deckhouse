@@ -22,9 +22,12 @@ git:
   stageDependencies:
     install:
     - '**/*.patch'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{$localPathProvisionerVersion}} {{ $.SOURCE_REPO }}/rancher/local-path-provisioner.git /src
+  - git clone --depth 1 --branch v{{$localPathProvisionerVersion}} $(cat /run/secrets/SOURCE_REPO)/rancher/local-path-provisioner.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
   - rm -rf .git vendor

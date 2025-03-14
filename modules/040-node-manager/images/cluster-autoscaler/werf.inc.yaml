@@ -21,6 +21,9 @@ git:
     install:
     - '**/*'
     {{- end }}
+secrets:
+- id: SOURCE_REPO
+  value: {{ $.SOURCE_REPO }}
 shell:
   install:
   - mkdir -p /tmp/autoscaler
@@ -29,7 +32,7 @@ shell:
     {{- if semverCompare ">=1.30" $version }}
       {{- $clusterAutoscalerVersion = "1.30" }}
     {{- end }}
-  - git clone --depth 1 --branch v{{ $clusterAutoscalerVersion }}.{{ $value.clusterAutoscalerPatch }} {{ $.SOURCE_REPO }}/gardener/autoscaler.git .
+  - git clone --depth 1 --branch v{{ $clusterAutoscalerVersion }}.{{ $value.clusterAutoscalerPatch }} $(cat /run/secrets/SOURCE_REPO)/gardener/autoscaler.git .
     {{- if $patch }}
   - git apply /patches/*.patch --verbose
     {{- end }}

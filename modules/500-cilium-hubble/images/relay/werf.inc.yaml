@@ -10,9 +10,12 @@ git:
   stageDependencies:
     install:
       - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ $ciliumVersion }} {{ $.SOURCE_REPO }}/cilium/cilium.git /src
+  - git clone --depth 1 --branch v{{ $ciliumVersion }} $(cat /run/secrets/SOURCE_REPO)/cilium/cilium.git /src
   - rm -r /src/.git
   - cd /src
   - git apply /patches/*.patch --verbose

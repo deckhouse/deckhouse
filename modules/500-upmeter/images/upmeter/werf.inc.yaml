@@ -14,9 +14,12 @@ git:
     - go.sum
     setup:
     - "**/*.go"
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v4.18.2 {{ $.SOURCE_REPO }}/golang-migrate/migrate.git /src/migrate
+  - git clone --depth 1 --branch v4.18.2 $(cat /run/secrets/SOURCE_REPO)/golang-migrate/migrate.git /src/migrate
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false

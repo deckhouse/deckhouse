@@ -39,9 +39,12 @@ git:
     install:
       - '**/*'
 {{- end }}
+secrets:
+- id: SOURCE_REPO
+  value: {{ $.SOURCE_REPO }}
 shell:
   install:
-    - git clone --depth 1 --branch {{ $value.csi.aws }} {{ $.SOURCE_REPO }}/kubernetes-sigs/aws-ebs-csi-driver.git /src
+    - git clone --depth 1 --branch {{ $value.csi.aws }} $(cat /run/secrets/SOURCE_REPO)/kubernetes-sigs/aws-ebs-csi-driver.git /src
     - cd /src
     {{- if $patch}}
     - git apply /patches/*.patch --verbose

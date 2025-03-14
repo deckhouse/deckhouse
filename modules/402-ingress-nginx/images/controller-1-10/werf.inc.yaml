@@ -25,6 +25,9 @@ git:
   stageDependencies:
     install:
       - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   beforeInstall:
   {{- include "alt packages proxy" . | nindent 2 }}
@@ -32,9 +35,9 @@ shell:
   setup:
   - mkdir -p /src
   - cd /src
-  - git clone --branch v1.2.5 --depth 1 {{ $.SOURCE_REPO }}/yelp/dumb-init.git
-  - git clone --branch 0.5.1 {{ $.SOURCE_REPO }}/starwing/lua-protobuf
-  - git clone --branch 7-3 {{ $.SOURCE_REPO }}/luarocks-sorces/lua-iconv
+  - git clone --branch v1.2.5 --depth 1 $(cat /run/secrets/SOURCE_REPO)/yelp/dumb-init.git
+  - git clone --branch 0.5.1 $(cat /run/secrets/SOURCE_REPO)/starwing/lua-protobuf
+  - git clone --branch 7-3 $(cat /run/secrets/SOURCE_REPO)/luarocks-sorces/lua-iconv
   - git clone --branch {{ $controllerBranch }} --depth 1 {{$.SOURCE_REPO}}/kubernetes/ingress-nginx.git
   - cd /src/ingress-nginx
   - patch -p1 < /patches/lua-info.patch

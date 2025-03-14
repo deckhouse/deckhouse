@@ -9,9 +9,12 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone {{ $.SOURCE_REPO }}/kubernetes-sigs/descheduler.git /src
+  - git clone $(cat /run/secrets/SOURCE_REPO)/kubernetes-sigs/descheduler.git /src
   - cd /src
   - git checkout {{ $version }}
   - git apply /patches/*.patch --verbose

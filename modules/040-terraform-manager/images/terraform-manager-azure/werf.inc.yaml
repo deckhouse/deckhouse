@@ -18,9 +18,12 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ .TF.azure.version }} {{ $.SOURCE_REPO }}/hashicorp/terraform-provider-azurerm.git /src
+  - git clone --depth 1 --branch v{{ .TF.azure.version }} $(cat /run/secrets/SOURCE_REPO)/hashicorp/terraform-provider-azurerm.git /src
   - cd /src
   - rm -rf vendor/
   - rm -rf examples/

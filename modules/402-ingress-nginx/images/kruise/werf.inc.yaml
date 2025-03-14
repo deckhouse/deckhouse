@@ -10,9 +10,12 @@ git:
     stageDependencies:
       install:
         - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-    - git clone --depth 1 --branch v{{ $version }} {{ $.SOURCE_REPO }}/openkruise/kruise.git /src
+    - git clone --depth 1 --branch v{{ $version }} $(cat /run/secrets/SOURCE_REPO)/openkruise/kruise.git /src
     - rm -rf /src/tools
     - cd /src
     - git apply /patches/*.patch --verbose

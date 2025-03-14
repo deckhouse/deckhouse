@@ -20,9 +20,12 @@ git:
   stageDependencies:
     install:
       - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ $alertmanagerVersion }} {{ $.SOURCE_REPO }}/prometheus/alertmanager.git /src
+  - git clone --depth 1 --branch v{{ $alertmanagerVersion }} $(cat /run/secrets/SOURCE_REPO)/prometheus/alertmanager.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
   - rm -rf /src/.git
