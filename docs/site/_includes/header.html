@@ -75,9 +75,6 @@
               </li>
               <li>
                 <a href="/products/code/">
-                  <!-- <svg class="products__icon">
-                    <use xlink:href="/images/sprite.svg#code-icon"></use>
-                  </svg> -->
                   <svg width="20" height="20" viewBox="0 0 280 280" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M208.947 41.7573L250.705 0H0V250.757L41.8106 208.757L41.927 41.9269L208.947 41.7573Z" fill="#00003C"/>
                     <path d="M280 29.5309L238.447 71.2573L238.073 238.073L71.4473 238.088L29.5386 280H280V29.5309Z" fill="#00003C"/>
@@ -204,9 +201,6 @@
             <a data-open-modal="request_callback" href="#" class="button button--contact">{{ site.data.i18n.common['contact_us_button'][page.lang] }}</a>
           {%- endunless %}
         </div>
-        <!-- {%- unless site.mode == "module" %}
-          <a href="/products/kubernetes-platform/documentation/v1/deckhouse-overview.html" class="button button--outline">{{ site.data.i18n.common['documentation_title'][page.lang] }}</a>
-        {%- endunless %} -->
         {%- if page.lang == "ru" %}
           <a class="lang-switcher" href="
             {%- if site.mode == 'module' %}/en
