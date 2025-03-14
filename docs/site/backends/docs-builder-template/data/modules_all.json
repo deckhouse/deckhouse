@@ -71,6 +71,14 @@
       "ee"
     ]
   },
+    "csi-yadro-tatlin-unified": {
+      "editionMinimumAvailable": "ee",
+      "external": "true",
+      "path": "/products/kubernetes-platform/modules/csi-yadro-tatlin-unified/stable/",
+      "editions": [
+        "ee"
+    ]
+  },
   "csi-nfs": {
     "editionMinimumAvailable": "ce",
     "external": "true",
