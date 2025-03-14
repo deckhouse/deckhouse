@@ -405,6 +405,7 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
+
           export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
           export PROVIDER=${PROVIDER:-not_provided}
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
@@ -490,6 +491,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
+
 
           export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
           export PROVIDER=${PROVIDER:-not_provided}
@@ -765,6 +767,7 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
+
           export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
           export PROVIDER=${PROVIDER:-not_provided}
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
@@ -850,6 +853,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
+
 
           export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
           export PROVIDER=${PROVIDER:-not_provided}
@@ -1125,6 +1129,7 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
+
           export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
           export PROVIDER=${PROVIDER:-not_provided}
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
@@ -1210,6 +1215,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
+
 
           export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
           export PROVIDER=${PROVIDER:-not_provided}
@@ -1485,6 +1491,7 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
+
           export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
           export PROVIDER=${PROVIDER:-not_provided}
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
@@ -1570,6 +1577,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
+
 
           export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
           export PROVIDER=${PROVIDER:-not_provided}
@@ -1845,6 +1853,7 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
+
           export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
           export PROVIDER=${PROVIDER:-not_provided}
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
@@ -1930,6 +1939,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
+
 
           export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
           export PROVIDER=${PROVIDER:-not_provided}
@@ -2205,6 +2215,7 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
+
           export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
           export PROVIDER=${PROVIDER:-not_provided}
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
@@ -2290,6 +2301,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
+
 
           export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
           export PROVIDER=${PROVIDER:-not_provided}

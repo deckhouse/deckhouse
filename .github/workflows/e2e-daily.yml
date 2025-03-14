@@ -364,7 +364,8 @@ jobs:
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
-          REPOSITORY: ${{ github.repository }}DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
@@ -380,7 +381,9 @@ jobs:
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
-          "ls -lh $(pwd)/testing
+          "
+
+          ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
@@ -433,7 +436,8 @@ jobs:
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
-          REPOSITORY: ${{ github.repository }}DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
@@ -449,7 +453,9 @@ jobs:
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
-          "ls -lh $(pwd)/testing
+          "
+
+          ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
@@ -818,7 +824,8 @@ jobs:
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
-          REPOSITORY: ${{ github.repository }}DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
@@ -835,7 +842,9 @@ jobs:
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
-          "ls -lh $(pwd)/testing
+          "
+
+          ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
@@ -927,7 +936,8 @@ jobs:
           LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
-          REPOSITORY: ${{ github.repository }}DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
@@ -944,7 +954,9 @@ jobs:
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
-          "ls -lh $(pwd)/testing
+          "
+
+          ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
@@ -1305,7 +1317,8 @@ jobs:
           LAYOUT_AZURE_TENANT_ID: ${{ secrets.LAYOUT_AZURE_TENANT_ID }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
-          REPOSITORY: ${{ github.repository }}DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
@@ -1321,7 +1334,9 @@ jobs:
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
-          "ls -lh $(pwd)/testing
+          "
+
+          ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
@@ -1378,7 +1393,8 @@ jobs:
           LAYOUT_AZURE_TENANT_ID: ${{ secrets.LAYOUT_AZURE_TENANT_ID }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
-          REPOSITORY: ${{ github.repository }}DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
@@ -1394,7 +1410,9 @@ jobs:
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
-          "ls -lh $(pwd)/testing
+          "
+
+          ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
@@ -1757,7 +1775,8 @@ jobs:
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
-          REPOSITORY: ${{ github.repository }}DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
@@ -1773,7 +1792,9 @@ jobs:
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
-          "ls -lh $(pwd)/testing
+          "
+
+          ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
@@ -1824,7 +1845,8 @@ jobs:
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
-          REPOSITORY: ${{ github.repository }}DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
@@ -1840,7 +1862,9 @@ jobs:
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
-          "ls -lh $(pwd)/testing
+          "
+
+          ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
@@ -2154,6 +2178,7 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
+
           export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
           export PROVIDER=${PROVIDER:-not_provided}
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
@@ -2209,6 +2234,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
+
 
           export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
           export PROVIDER=${PROVIDER:-not_provided}
@@ -2536,7 +2562,8 @@ jobs:
           LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
-          REPOSITORY: ${{ github.repository }}DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
@@ -2552,7 +2579,9 @@ jobs:
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
-          "ls -lh $(pwd)/testing
+          "
+
+          ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
@@ -2603,7 +2632,8 @@ jobs:
           LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
-          REPOSITORY: ${{ github.repository }}DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
@@ -2619,7 +2649,9 @@ jobs:
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
-          "ls -lh $(pwd)/testing
+          "
+
+          ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
@@ -2980,7 +3012,8 @@ jobs:
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ secrets.LAYOUT_VSPHERE_BASE_DOMAIN }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
-          REPOSITORY: ${{ github.repository }}DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
@@ -2996,7 +3029,9 @@ jobs:
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
-          "ls -lh $(pwd)/testing
+          "
+
+          ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
@@ -3049,7 +3084,8 @@ jobs:
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ secrets.LAYOUT_VSPHERE_BASE_DOMAIN }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
-          REPOSITORY: ${{ github.repository }}DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
@@ -3065,7 +3101,9 @@ jobs:
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
-          "ls -lh $(pwd)/testing
+          "
+
+          ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
@@ -3430,7 +3468,8 @@ jobs:
           LAYOUT_VCD_ORG: ${{ secrets.LAYOUT_VCD_ORG }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
-          REPOSITORY: ${{ github.repository }}DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
@@ -3446,7 +3485,9 @@ jobs:
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
-          "ls -lh $(pwd)/testing
+          "
+
+          ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
@@ -3505,7 +3546,8 @@ jobs:
           LAYOUT_VCD_ORG: ${{ secrets.LAYOUT_VCD_ORG }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
-          REPOSITORY: ${{ github.repository }}DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
@@ -3521,7 +3563,9 @@ jobs:
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
-          "ls -lh $(pwd)/testing
+          "
+
+          ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
@@ -3885,7 +3929,8 @@ jobs:
           LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
-          REPOSITORY: ${{ github.repository }}DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
@@ -3901,7 +3946,9 @@ jobs:
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
-          "ls -lh $(pwd)/testing
+          "
+
+          ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"
@@ -3952,7 +3999,8 @@ jobs:
           LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
-          REPOSITORY: ${{ github.repository }}DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
@@ -3968,7 +4016,9 @@ jobs:
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
-          "ls -lh $(pwd)/testing
+          "
+
+          ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
           echo "DHCTL log file: $dhctl_log_file"

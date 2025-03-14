@@ -98,7 +98,7 @@
   COMMENT_ID: ${{ inputs.comment_id }}
   GITHUB_API_SERVER: ${{ github.api_url }}
   REPOSITORY: ${{ github.repository }}
-{!{- if not (strings.Contains $commanderProviders $provider) -}!}
+{!{- if not (strings.Contains $commanderProviders $provider) }!}
   DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
 {!{- end }!}
   GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
@@ -130,7 +130,7 @@ run: |
     CIS_ENABLED=${CIS_ENABLED}
 {!{- end }!}
   "
-{!{- if not (strings.Contains $commanderProviders $provider) -}!}
+{!{ if not (strings.Contains $commanderProviders $provider) }!}
   ls -lh $(pwd)/testing
 
   dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
