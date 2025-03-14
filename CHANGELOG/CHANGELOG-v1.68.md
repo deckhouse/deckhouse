@@ -75,6 +75,7 @@
  - **[dhctl]** Fix broken connection-config in CLI and support sudoPassword in SSHConfig. [#12036](https://github.com/deckhouse/deckhouse/pull/12036)
  - **[dhctl]** Fixed a bug that prevented PersistentVolumes from being properly deleted by the `dhctl destroy` command in Stronghold. [#11878](https://github.com/deckhouse/deckhouse/pull/11878)
  - **[dhctl]** Fixed the behavior of static cluster destruction. [#11059](https://github.com/deckhouse/deckhouse/pull/11059)
+ - **[docs]** Update Deckhouse CLI installation guide [#12573](https://github.com/deckhouse/deckhouse/pull/12573)
  - **[docs]** Fixed a security vulnerability in `docs-builder`. [#11583](https://github.com/deckhouse/deckhouse/pull/11583)
  - **[extended-monitoring]** Fixed security vulnerabilities in `events-exporter`. [#11442](https://github.com/deckhouse/deckhouse/pull/11442)
  - **[extended-monitoring]** Fixed security vulnerabilities in `extended-monitoring-exporter`. [#11425](https://github.com/deckhouse/deckhouse/pull/11425)
