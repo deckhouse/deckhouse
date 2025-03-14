@@ -418,7 +418,7 @@ jobs:
     env:
       WERF_ENV: "FE"
     # <template: build_template>
-    runs-on: [self-hosted, selectel]
+    runs-on: [self-hosted, large]
     outputs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
     steps:
@@ -779,7 +779,7 @@ jobs:
     env:
       WERF_ENV: "EE"
     # <template: build_template>
-    runs-on: [self-hosted, selectel]
+    runs-on: [self-hosted, large]
     outputs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
     steps:
@@ -1140,7 +1140,7 @@ jobs:
     env:
       WERF_ENV: "SE"
     # <template: build_template>
-    runs-on: [self-hosted, selectel]
+    runs-on: [self-hosted, large]
     outputs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
     steps:
@@ -1501,7 +1501,7 @@ jobs:
     env:
       WERF_ENV: "SE-plus"
     # <template: build_template>
-    runs-on: [self-hosted, selectel]
+    runs-on: [self-hosted, large]
     outputs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
     steps:
@@ -1862,7 +1862,7 @@ jobs:
     env:
       WERF_ENV: "BE"
     # <template: build_template>
-    runs-on: [self-hosted, selectel]
+    runs-on: [self-hosted, large]
     outputs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
     steps:
@@ -2223,7 +2223,7 @@ jobs:
     env:
       WERF_ENV: "CE"
     # <template: build_template>
-    runs-on: [self-hosted, selectel]
+    runs-on: [self-hosted, large]
     outputs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
     steps:
@@ -2931,7 +2931,7 @@ jobs:
   security_scan_images:
     name: Security scan images
     if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' }}
-    runs-on: [self-hosted, selectel]
+    runs-on: [self-hosted, large]
     needs:
       - git_info
       - build_fe

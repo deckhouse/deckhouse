@@ -85,7 +85,7 @@ jobs:
           echo "Triggered by: ${{ github.event_name }}"
           echo "Image tag: $image_tag"
   scan_images:
-    runs-on: [self-hosted, selectel]
+    runs-on: [self-hosted, large]
     needs: check_trigger
     if: ${{ needs.check_trigger.outputs.image_tag != 'unknown' }}
     steps:
