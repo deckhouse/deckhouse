@@ -1,6 +1,6 @@
 ---
 {{- $context := . }}
-{{- $_ := set $context "git" (dict "version" "7.4.0" "path" "redis/redis.git" "rm" "utils") }}
+{{- $_ := set $context "git" (dict "tag" "7.4.0" "path" "redis/redis.git" "rm" "utils") }}
 {{ include "src-artifact" $context }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact

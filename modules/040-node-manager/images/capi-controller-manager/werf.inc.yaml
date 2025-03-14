@@ -1,4 +1,4 @@
 {{- $context := . }}
-{{- $_ := set $context "git" (dict "version" "v1.7.5" "path" "kubernetes-sigs/cluster-api.git" "rm" "hack test") }}
+{{- $_ := set $context "git" (dict "tag" "v1.7.5" "path" "kubernetes-sigs/cluster-api.git" "rm" "hack test") }}
 {{- $_ := set $context "build" (dict "file" "sigs.k8s.io/cluster-api") }}
 {{- include "image-all" $context }}

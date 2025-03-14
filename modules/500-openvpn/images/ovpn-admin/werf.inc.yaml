@@ -15,7 +15,7 @@ import:
   to: /app/ovpn-admin
   before: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-  add: /src/version
+  add: /src/VERSION
   to: /app/version
   before: setup
 - image: {{ .ModuleName }}/openvpn-artifact
@@ -34,25 +34,9 @@ imageSpec:
   config:
     workingDir: "/app"
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-final: false
-fromImage: common/src-artifact
-git:
-- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
-  to: /patches
-  includePaths:
-  - '**/*.patch'
-  stageDependencies:
-    install:
-    - '**/*.patch'
-shell:
-  install:
-  - cd /src
-  - git clone {{ .SOURCE_REPO }}/palark/ovpn-admin.git .
-  - git checkout {{ $gitCommit }}
-  - git apply /patches/*.patch --verbose
-  - rm -rf .git
-  - echo {{ $gitCommit }} > version
+{{- $context := . }}
+{{- $_ := set $context "git" (dict "commit" $gitCommit "path" "palark/ovpn-admin.git") }}
+{{- include "src-artifact" $context }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-backend-artifact
 final: false

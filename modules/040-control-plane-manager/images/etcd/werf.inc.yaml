@@ -1,6 +1,6 @@
 ---
 {{- $context := . }}
-{{- $_ := set $context "git" (dict "version" "v3.5.17" "path" "etcd-io/etcd.git" "rm" "tools") }}
+{{- $_ := set $context "git" (dict "tag" "v3.5.17" "path" "etcd-io/etcd.git" "rm" "tools") }}
 {{ include "src-artifact" $context }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}

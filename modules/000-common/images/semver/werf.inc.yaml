@@ -1,6 +1,6 @@
 ---
 {{- $context := . }}
-{{- $_ := set $context "git" (dict "version" "2.1.0" "path" "fsaintjacques/semver-tool") }}
+{{- $_ := set $context "git" (dict "tag" "2.1.0" "path" "fsaintjacques/semver-tool") }}
 {{ include "src-artifact" $context }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact

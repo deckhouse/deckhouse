@@ -6,7 +6,8 @@
 #   . is context
 #   git - dict
 #       path    - Path piece after SOURCE_REPO
-#       version - tag name
+#       tag     - tag name
+#       commit  - commit sha
 #       rm      - delete directory
 {{- define "src-artifact" }}
 {{- $patches := (printf "/%smodules/%s-%s/images/%s" .ModulePath .ModulePriority .ModuleName .ImageName) }}
@@ -46,15 +47,24 @@ git:
 {{- end }}
 {{- if .git }}
 secrets:
-- env: SOURCE_REPO
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 {{- end }}
 shell:
   install:
   - cd /src
 {{- if .git }}
-  - export SOURCE_REPO=$(cat /run/secrets/SOURCE_REPO)
-  - git clone --depth 1 --branch {{ .git.version }} ${SOURCE_REPO}/{{ .git.path }} .
+{{-   if .git.tag }}
+  - git clone --depth 1 --branch {{ .git.tag }} $(cat /run/secrets/SOURCE_REPO)/{{ .git.path }} .
   - git describe --tags > VERSION
+{{-   end }}
+{{-   if .git.commit }}
+  - git init .
+  - git remote add origin $(cat /run/secrets/SOURCE_REPO)/{{ .git.path }}
+  - git fetch origin {{ .git.commit }}
+  - git checkout {{ .git.commit }}
+  - git describe --dirty --long --always > VERSION
+{{-   end }}
   - git rev-parse HEAD > REVISION
   - git describe --dirty --long --always > COMMIT
 {{- end }}
@@ -80,7 +90,8 @@ image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 final: false
 secrets:
-- env: GOPROXY
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
@@ -91,8 +102,8 @@ mount:
 shell:
   install:
   - cd /src
-  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0 GOPROXY=$(cat /run/secrets/GOPROXY)
-  - go mod download -x
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - go build -trimpath -ldflags="-extldflags -static -s -w {{ if and .build .build.ldflags }}{{ .build.ldflags }}{{ end }}" -o /{{ .ImageName }} {{ if and .build .build.file }}{{ .build.file }}{{ end }}
   - chown 64535:64535 /{{ .ImageName }}
   - chmod 0700 /{{ .ImageName }}
