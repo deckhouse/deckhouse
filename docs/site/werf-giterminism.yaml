@@ -6,5 +6,5 @@ config:
     git:
       allowBranch: true
   secrets:
-    allowEnvVariables:
+    allowValueIds:
     - GOPROXY
