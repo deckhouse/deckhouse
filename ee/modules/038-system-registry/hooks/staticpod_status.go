@@ -26,7 +26,7 @@ type registryStaticPod struct {
 	NodeName string
 	NodeIP   string
 	IsReady  bool
-	Verision string
+	Version  string
 }
 
 type registryMasterNode struct {
@@ -102,6 +102,10 @@ func filterRegistryState(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 		Version: string(secret.Data["version"]),
 	}
 
+	if ret.Version == "" {
+		ret.Version = "unknown"
+	}
+
 	return ret, nil
 }
 
@@ -170,7 +174,7 @@ func filterRegistryStaticPods(obj *unstructured.Unstructured) (go_hook.FilterRes
 		NodeName: pod.Spec.NodeName,
 		NodeIP:   pod.Status.HostIP,
 		IsReady:  isReady,
-		Verision: pod.Annotations[registryStaticPodVersionAnnotation],
+		Version:  pod.Annotations[registryStaticPodVersionAnnotation],
 	}
 
 	return ret, nil
