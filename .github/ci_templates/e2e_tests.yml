@@ -550,7 +550,6 @@ check_e2e_labels:
           MASTERS_COUNT=1
         fi
         echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
-
 {!{ if not (strings.Contains $commanderProviders $provider) }!}
         # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
         echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
@@ -657,7 +656,7 @@ check_e2e_labels:
 {!{- end }!}
         LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
         LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-{!{- if not (strings.Contains $commanderProviders $provider) -}!}
+{!{- if not (strings.Contains $commanderProviders $provider) }!}
         TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
 {!{- end }!}
         PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}

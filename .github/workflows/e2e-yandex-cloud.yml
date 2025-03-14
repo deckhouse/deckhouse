@@ -353,7 +353,6 @@ jobs:
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
 
 
-
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
@@ -715,7 +714,6 @@ jobs:
             MASTERS_COUNT=1
           fi
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
-
 
 
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
@@ -1081,7 +1079,6 @@ jobs:
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
 
 
-
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
@@ -1443,7 +1440,6 @@ jobs:
             MASTERS_COUNT=1
           fi
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
-
 
 
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
@@ -1809,7 +1805,6 @@ jobs:
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
 
 
-
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
@@ -2171,7 +2166,6 @@ jobs:
             MASTERS_COUNT=1
           fi
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
-
 
 
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
