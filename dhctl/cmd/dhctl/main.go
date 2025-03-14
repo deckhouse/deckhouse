@@ -125,6 +125,11 @@ var (
 			DefineFunc: commands.DefineDestroyCommand,
 		},
 		{
+			Name:       "session",
+			Help:       "Session proxy to Kubernetes cluster.",
+			DefineFunc: commands.DefineSessionCommand,
+		},
+		{
 			Name: "terraform",
 			Help: "Terraform commands.",
 		},
