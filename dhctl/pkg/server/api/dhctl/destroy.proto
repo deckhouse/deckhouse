@@ -25,6 +25,7 @@ message DestroyRequest {
   oneof message {
     DestroyStart start = 1;
     DestroyContinue continue = 2;
+    DestroyCancel cancel = 3;
   }
 }
 
@@ -56,6 +57,8 @@ message DestroyContinue {
   Continue continue = 1;
   string err = 2;
 }
+
+message DestroyCancel {}
 
 message DestroyStartOptions {
   bool commander_mode = 1;
