@@ -21,7 +21,6 @@ secrets:
 shell:
   install:
     - cd {{ $discovererAbsPath }}
-    - export GOPROXY=$(cat /run/secrets/GOPROXY)
     - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:
     - cd {{ $discovererAbsPath }}

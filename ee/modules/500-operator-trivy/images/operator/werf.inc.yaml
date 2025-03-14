@@ -54,7 +54,6 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   install:
-  - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - cd /src
   - ln -s ./trivy-db ./original-trivy-db
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download

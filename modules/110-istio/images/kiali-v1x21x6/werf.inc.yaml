@@ -47,7 +47,7 @@ shell:
   setup:
   - cd /src/kiali/
   - echo {{ $kialiVersion }} > version
-  - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64
+  - export GOOS=linux GOARCH=amd64
   - export LDFLAGS='-X main.version=${kialiVersion}'
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   - go build -o /src/kiali/out/kiali /src/kiali/

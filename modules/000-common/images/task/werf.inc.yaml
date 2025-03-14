@@ -26,7 +26,6 @@ shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
   install:
-  - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - cd /src
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   - go test ./... -v

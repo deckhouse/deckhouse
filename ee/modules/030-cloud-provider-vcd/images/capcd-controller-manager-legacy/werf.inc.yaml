@@ -49,7 +49,6 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   install:
-  - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - cd /src
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:

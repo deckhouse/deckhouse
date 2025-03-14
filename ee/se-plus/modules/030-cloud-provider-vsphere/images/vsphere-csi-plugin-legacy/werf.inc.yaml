@@ -54,7 +54,6 @@ secrets:
 shell:
   install:
   - cd /src
-  - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - go mod edit -replace=k8s.io/cloud-provider-vsphere=/src/ccm
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:

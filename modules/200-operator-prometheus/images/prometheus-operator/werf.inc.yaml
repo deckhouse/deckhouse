@@ -32,7 +32,7 @@ secrets:
 shell:
   install:
     - cd /src
-    - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
     - go mod vendor
     - export VERSION=$(cat VERSION | tr -d " \t\n\r")

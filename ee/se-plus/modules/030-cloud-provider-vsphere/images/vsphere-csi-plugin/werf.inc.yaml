@@ -68,7 +68,6 @@ shell:
   - cd /src/gofsutil
   - go mod init deckhouse/3p/gofsutil
   - cd /src
-  - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:
   - cd /src

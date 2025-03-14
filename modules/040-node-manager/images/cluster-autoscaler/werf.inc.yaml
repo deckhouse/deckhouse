@@ -55,7 +55,7 @@ secrets:
 shell:
   install:
   - cd /src
-  - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   - go build -ldflags="-s -w" -o cluster-autoscaler
   - echo "{{ $clusterAutoscalerVersion }}.{{ $value.clusterAutoscalerPatch }}-flant" > VERSION

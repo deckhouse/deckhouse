@@ -59,7 +59,7 @@ shell:
   {{- include "alpine packages proxy" $ | nindent 2 }}
   - apk add --no-cache make bash git
   install:
-  - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - export GO_VERSION=${GOLANG_VERSION} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - cd /src
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   - make build
