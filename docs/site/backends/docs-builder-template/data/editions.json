@@ -16,10 +16,7 @@
   },
   "ee": {
     "name": "EE",
-    "title": "Enterprise Edition",
-    "includeModules": [
-      "csi-yadro-tatlin-unified"
-    ]
+    "title": "Enterprise Edition"
   },
   "cse-lite": {
     "name": "CSE Lite",
