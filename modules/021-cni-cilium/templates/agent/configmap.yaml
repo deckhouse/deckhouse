@@ -1,0 +1,30 @@
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cilium-flowlog-config
+  namespace: d8-{{ .Chart.Name }}
+  {{ include "helm_lib_module_labels" (list . (dict "app" "agent")) | nindent 2 }}
+data:
+  flowlogs.yaml: |
+    flowLogs:
+    - name: all
+      fieldMask: []
+      includeFilters: []
+      excludeFilters: []
+      filePath: "/var/run/cilium/hubble/events.log"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cilium-dynamic-metrics-config
+  namespace: d8-{{ .Chart.Name }}
+  {{ include "helm_lib_module_labels" (list . (dict "app" "agent")) | nindent 2 }}
+data:
+  dynamic-metrics.yaml: |
+    metrics:
+    - name: all
+      contextOptions: []
+      includeFilters: []
+      excludeFilters: []
