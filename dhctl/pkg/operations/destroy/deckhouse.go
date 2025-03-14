@@ -106,67 +106,68 @@ func (g *DeckhouseDestroyer) DeleteResources(cloudType string) error {
 	}
 
 	return log.Process("common", "Delete resources from the Kubernetes cluster", func() error {
-		return g.deleteEntities(kubeCl)
+		// TODO(dhctl-for-commander-cancels): pass ctx
+		return g.deleteEntities(context.TODO(), kubeCl)
 	})
 }
 
-func (g *DeckhouseDestroyer) deleteEntities(kubeCl *client.KubernetesClient) error {
-	err := deckhouse.DeleteDeckhouseDeployment(kubeCl)
+func (g *DeckhouseDestroyer) deleteEntities(ctx context.Context, kubeCl *client.KubernetesClient) error {
+	err := deckhouse.DeleteDeckhouseDeployment(ctx, kubeCl)
 	if err != nil {
 		return err
 	}
 
-	err = deckhouse.WaitForDeckhouseDeploymentDeletion(kubeCl)
+	err = deckhouse.WaitForDeckhouseDeploymentDeletion(ctx, kubeCl)
 	if err != nil {
 		return err
 	}
 
-	err = deckhouse.DeleteServices(kubeCl)
+	err = deckhouse.DeleteServices(ctx, kubeCl)
 	if err != nil {
 		return err
 	}
 
-	err = deckhouse.WaitForServicesDeletion(kubeCl)
+	err = deckhouse.WaitForServicesDeletion(ctx, kubeCl)
 	if err != nil {
 		return err
 	}
 
-	err = deckhouse.DeleteAllD8StorageResources(kubeCl)
+	err = deckhouse.DeleteAllD8StorageResources(ctx, kubeCl)
 	if err != nil {
 		return err
 	}
 
-	err = deckhouse.DeleteStorageClasses(kubeCl)
+	err = deckhouse.DeleteStorageClasses(ctx, kubeCl)
 	if err != nil {
 		return err
 	}
 
-	err = deckhouse.DeletePVC(kubeCl)
+	err = deckhouse.DeletePVC(ctx, kubeCl)
 	if err != nil {
 		return err
 	}
 
-	err = deckhouse.DeletePods(kubeCl)
+	err = deckhouse.DeletePods(ctx, kubeCl)
 	if err != nil {
 		return err
 	}
 
-	err = deckhouse.WaitForPVCDeletion(kubeCl)
+	err = deckhouse.WaitForPVCDeletion(ctx, kubeCl)
 	if err != nil {
 		return err
 	}
 
-	err = deckhouse.DeletePV(kubeCl)
+	err = deckhouse.DeletePV(ctx, kubeCl)
 	if err != nil {
 		return err
 	}
 
-	err = deckhouse.WaitForPVDeletion(kubeCl)
+	err = deckhouse.WaitForPVDeletion(ctx, kubeCl)
 	if err != nil {
 		return err
 	}
 
-	err = deckhouse.DeleteMachinesIfResourcesExist(kubeCl)
+	err = deckhouse.DeleteMachinesIfResourcesExist(ctx, kubeCl)
 	if err != nil {
 		return err
 	}
