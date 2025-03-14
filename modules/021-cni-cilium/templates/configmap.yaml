@@ -9,7 +9,6 @@ data:
   policy-cidr-match-mode: "nodes"
   bpf-lb-source-range-all-types: "true"
   bpf-lb-algorithm-annotation: "true"
-  bpf-lb-mode-annotation: "true"
   bpf-lb-sock-terminate-pod-connections: "true"
   enable-runtime-device-detection: "true"
 
