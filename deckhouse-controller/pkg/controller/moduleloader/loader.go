@@ -344,6 +344,10 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 				module.Properties.Version = l.version
 			}
 
+			if !module.HasCondition(v1alpha1.ModuleConditionEnabledByModuleConfig) {
+				module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
+			}
+
 			if !reflect.DeepEqual(moduleCopy.Properties, module.Properties) ||
 				!reflect.DeepEqual(moduleCopy.Labels, module.Labels) ||
 				!reflect.DeepEqual(moduleCopy.Annotations, module.Annotations) {
