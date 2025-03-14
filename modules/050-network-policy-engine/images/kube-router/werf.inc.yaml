@@ -36,7 +36,8 @@ import:
   before: install
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 secrets:
-- env: GOPROXY
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
   - cd /src

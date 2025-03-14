@@ -85,7 +85,8 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 secrets:
-- env: GOPROXY
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
   - export GOPROXY=$(cat /run/secrets/GOPROXY)

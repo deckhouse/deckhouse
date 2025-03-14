@@ -26,7 +26,8 @@ mount:
 - from: tmp_dir
   to: /root/.cache/go-build
 secrets:
-- env: GOPROXY
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
   - cd /src/modules/auth

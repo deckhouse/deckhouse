@@ -33,7 +33,8 @@ import:
   to: /src
   before: install
 secrets:
-- env: GOPROXY
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
     - export GOPROXY=$(cat /run/secrets/GOPROXY)

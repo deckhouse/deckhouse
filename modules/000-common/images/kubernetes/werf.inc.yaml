@@ -55,7 +55,8 @@ mount:
 - from: tmp_dir
   to: /src/_output/local/go
 secrets:
-- env: GOPROXY
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" $ | nindent 2 }}

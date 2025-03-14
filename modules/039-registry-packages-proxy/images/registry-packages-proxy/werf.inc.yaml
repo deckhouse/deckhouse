@@ -49,7 +49,8 @@ import:
   to: /go_lib/registry-packages-proxy
   before: install
 secrets:
-- env: GOPROXY
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
   - cd /src

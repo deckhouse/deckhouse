@@ -40,7 +40,8 @@ import:
   before: install
 {{ end }}
 secrets:
-- env: GOPROXY
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
   - cd /src

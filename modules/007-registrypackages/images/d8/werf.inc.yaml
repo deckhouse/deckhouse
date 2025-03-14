@@ -47,9 +47,12 @@ git:
       setup:
       - '**/*'
 secrets:
-- env: GOPROXY
-- env: DECKHOUSE_PRIVATE_REPO
-- env: STRONGHOLD_PULL_TOKEN
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+- id: DECKHOUSE_PRIVATE_REPO
+  value: {{ .DECKHOUSE_PRIVATE_REPO }}
+- id: STRONGHOLD_PULL_TOKEN
+  value: {{ .STRONGHOLD_PULL_TOKEN }}
 shell:
   beforeInstall:
   {{- include "debian packages proxy" . | nindent 2 }}

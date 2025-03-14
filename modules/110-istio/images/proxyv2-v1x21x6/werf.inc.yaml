@@ -95,7 +95,8 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 secrets:
-- env: GOPROXY
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
@@ -129,7 +130,8 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 secrets:
-- env: GOPROXY
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
   - mkdir -p /tmp/bazel-cache
@@ -243,7 +245,8 @@ import:
   to: /usr/local/go
   before: install
 secrets:
-- env: GOPROXY
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
   - export DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC

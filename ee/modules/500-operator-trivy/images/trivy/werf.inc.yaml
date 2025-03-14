@@ -17,8 +17,10 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
 secrets:
-- env: SOURCE_REPO
-- env: DECKHOUSE_PRIVATE_REPO
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+- id: DECKHOUSE_PRIVATE_REPO
+  value: {{ .DECKHOUSE_PRIVATE_REPO }}
 shell:
   install:
   - git clone --depth 1 --branch {{ $trivyVersion }} $(cat /run/secrets/SOURCE_REPO)/aquasecurity/trivy-db.git /src/trivy-db
@@ -43,7 +45,8 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 secrets:
-- env: GOPROXY
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
   - export GOPROXY=$(cat /run/secrets/GOPROXY)

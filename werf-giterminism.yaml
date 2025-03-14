@@ -5,11 +5,14 @@ config:
     - /CI_.+/
     - /REPO_MCM_.+/
     - SOURCE_REPO
+    - GOPROXY
     - WERF_DISABLE_META_TAGS
     - CLOUD_PROVIDERS_SOURCE_REPO
     - OBSERVABILITY_SOURCE_REPO
     - DISTRO_PACKAGES_PROXY
     - CARGO_PROXY
+    - STRONGHOLD_PULL_TOKEN
+    - DECKHOUSE_PRIVATE_REPO
     allowUncommittedFiles: [ "tools/build_includes/*" ]
   stapel:
     mount:
@@ -17,10 +20,9 @@ config:
      allowFromPaths:
      - ~/go-pkg-cache
   secrets:
-    allowEnvVariables:
+    allowValueIds:
+    - CARGO_PROXY
     - SOURCE_REPO
     - GOPROXY
     - DECKHOUSE_PRIVATE_REPO
     - STRONGHOLD_PULL_TOKEN
-    allowValueIds:
-    - CARGO_PROXY

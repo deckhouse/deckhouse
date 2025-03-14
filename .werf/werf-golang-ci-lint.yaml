@@ -3,7 +3,8 @@ image: golangci-lint-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 final: false
 secrets:
-- env: GOPROXY
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
   - apk add --no-cache git openssh-client

@@ -35,7 +35,8 @@ import:
   to: /usr/src/app
   before: install
 secrets:
-- env: GOPROXY
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
   {{- include "debian packages proxy" . | nindent 2 }}
@@ -63,7 +64,8 @@ git:
     install:
     - '**/*'
 secrets:
-- env: GOPROXY
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
   - cd /app

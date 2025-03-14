@@ -42,12 +42,14 @@ import:
 secrets:
 - id: CARGO_PROXY
   value: {{ .CargoProxy }}
-- env: SOURCE_REPO
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   beforeInstall:
   {{- include "alt packages proxy" . | nindent 2 }}
   - apt-get install -y build-essential git openssl-devel wget perl-IPC-Cmd protobuf-compiler libsasl2-devel unzip zlib-devel rust rust-cargo
   install:
+  - set -x
   - export CARGO_NET_GIT_FETCH_WITH_CLI=true
   - cd /src
   - |
@@ -82,7 +84,8 @@ mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
 secrets:
-- env: GOPROXY
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
   - cd /src

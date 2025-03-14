@@ -113,7 +113,8 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 secrets:
-- env: GOPROXY
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
   {{- include "alpine packages proxy" . | nindent 2 }}
