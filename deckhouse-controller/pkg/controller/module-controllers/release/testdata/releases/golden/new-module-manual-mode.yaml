@@ -15,10 +15,10 @@ spec:
     dockerCfg: ""
     repo: ""
 status:
-  phase: ""
   message: ""
   modules: null
   modulesCount: 0
+  phase: ""
   syncTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
