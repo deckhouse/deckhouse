@@ -111,23 +111,23 @@ run: |
 
 #{!{- else if strings.Contains "yandex-cloud,aws,azure" $provider }!} # example
 {!{- else if strings.Contains "yandex-cloud" $provider }!}
-  echo "Execute '{!{ $script }!} {!{ $script_arg }!}' via 'shell', using environment:
+  echo "Execute '{!{ $script_commander }!} {!{ $script_arg }!}' via 'shell', using environment:
 {!{- else }!}
   echo "Execute '{!{ $script }!} {!{ $script_arg }!}' via 'docker run', using environment:
 {!{- end }!}
-  INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
-  DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
-  INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
-  PREFIX=${PREFIX}
-  PROVIDER=${PROVIDER}
-  CRI=${CRI}
-  LAYOUT=${LAYOUT}
-  KUBERNETES_VERSION=${KUBERNETES_VERSION}
-  TMP_DIR_PATH=${TMP_DIR_PATH}
-  MASTERS_COUNT=${MASTERS_COUNT}
-  {!{- if and (eq $script_arg "run-test") $run_from_issue_or_pr }!}
-  CIS_ENABLED=${CIS_ENABLED}
-  {!{- end }!}
+    INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
+    DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
+    INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
+    PREFIX=${PREFIX}
+    PROVIDER=${PROVIDER}
+    CRI=${CRI}
+    LAYOUT=${LAYOUT}
+    KUBERNETES_VERSION=${KUBERNETES_VERSION}
+    TMP_DIR_PATH=${TMP_DIR_PATH}
+    MASTERS_COUNT=${MASTERS_COUNT}
+{!{- if and (eq $script_arg "run-test") $run_from_issue_or_pr }!}
+    CIS_ENABLED=${CIS_ENABLED}
+{!{- end }!}
   "
 
   ls -lh $(pwd)/testing
@@ -226,6 +226,7 @@ run: |
   ${TERRAFORM_IMAGE_NAME} \
   bash -c "/deckhouse/testing/cloud_layouts/{!{ $script_eks }!} wait_deckhouse_ready && \
   /deckhouse/testing/cloud_layouts/{!{ $script_eks }!} wait_cluster_ready"
+  {!{- end }!}
 
 {!{- else if strings.Contains "yandex-cloud" $provider }!}
 
@@ -287,39 +288,39 @@ run: |
     -e LAYOUT=${LAYOUT:-not_provided} \
     -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
     -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-  {!{- if eq $provider "aws" }!}
+    {!{- if eq $provider "aws" }!}
     -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
     -e LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
-  {!{- else if eq $provider "eks" }!}
+    {!{- else if eq $provider "eks" }!}
     -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
     -e LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
-  {!{- else if eq $provider "gcp" }!}
+    {!{- else if eq $provider "gcp" }!}
     -e LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided} \
-  {!{- else if eq $provider "azure" }!}
+    {!{- else if eq $provider "azure" }!}
     -e LAYOUT_AZURE_SUBSCRIPTION_ID=${LAYOUT_AZURE_SUBSCRIPTION_ID:-not_provided} \
     -e LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided} \
     -e LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided} \
     -e LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided} \
-  {!{- else if eq $provider "yandex-cloud" }!}
+    {!{- else if eq $provider "yandex-cloud" }!}
     -e LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
     -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
     -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
-  {!{- else if or (eq $provider "openstack") (eq $provider "static") }!}
+    {!{- else if or (eq $provider "openstack") (eq $provider "static") }!}
     -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
-  {!{- else if eq $provider "vsphere" }!}
+    {!{- else if eq $provider "vsphere" }!}
     -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
     -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
-  {!{- else if eq $provider "vcd" }!}
+    {!{- else if eq $provider "vcd" }!}
     -e LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided} \
     -e LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided} \
     -e LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided} \
     -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
     -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
-  {!{- end }!}
+    {!{- end }!}
     -e USER_RUNNER_ID=${user_runner_id} \
-  {!{- if and (eq $script_arg "run-test") $run_from_issue_or_pr }!}
+    {!{- if and (eq $script_arg "run-test") $run_from_issue_or_pr }!}
     -e CIS_ENABLED=${CIS_ENABLED} \
-  {!{- end }!}
+    {!{- end }!}
     -v $(pwd)/testing:/deckhouse/testing \
     -v $(pwd)/release.yaml:/deckhouse/release.yaml \
     -v ${TMP_DIR_PATH}:/tmp \
@@ -545,9 +546,9 @@ check_e2e_labels:
         # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
         echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
         docker pull "${INSTALL_IMAGE_NAME}"
-{!{ - if eq $provider "eks" }!}
+{!{- if eq $provider "eks" }!}
         docker pull "${TERRAFORM_IMAGE_NAME}"
-{!{ - end }!}
+{!{- end }!}
 
         IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
