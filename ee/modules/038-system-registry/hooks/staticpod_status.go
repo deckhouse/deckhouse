@@ -31,6 +31,10 @@ type registryMasterNode struct {
 	Pods    []registryStaticPod
 }
 
+type registryState struct {
+	Version string
+}
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
 	Queue:        "/modules/system-registry/staticpod-status",
@@ -64,8 +68,37 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: filterRegistryMasterNodes,
 		},
+		{
+			Name:       "state",
+			ApiVersion: "v1",
+			Kind:       "Secret",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"registry-deckhouse-state"},
+			},
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"d8-system"},
+				},
+			},
+			FilterFunc: filterRegistryState,
+		},
 	},
 }, handleRegistryStaticPods)
+
+func filterRegistryState(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var secret v1core.Secret
+
+	err := sdk.FromUnstructured(obj, &secret)
+	if err != nil {
+		return "", fmt.Errorf("failed to convert secret to struct: %v", err)
+	}
+
+	ret := registryState{
+		Version: string(secret.Data["version"]),
+	}
+
+	return ret, nil
+}
 
 func filterRegistryMasterNodes(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var node v1core.Node
@@ -140,6 +173,13 @@ func filterRegistryStaticPods(obj *unstructured.Unstructured) (go_hook.FilterRes
 func handleRegistryStaticPods(input *go_hook.HookInput) error {
 	podSnaps := input.Snapshots["static_pods"]
 	nodeSnaps := input.Snapshots["nodes"]
+	stateSnaps := input.Snapshots["state"]
+
+	var state registryState
+
+	if len(stateSnaps) > 0 {
+		state = stateSnaps[0].(registryState)
+	}
 
 	nodes := make(map[string]registryMasterNode)
 
@@ -164,6 +204,7 @@ func handleRegistryStaticPods(input *go_hook.HookInput) error {
 	}
 
 	input.Values.Set("systemRegistry.internal.state.masterNodes", nodes)
+	input.Values.Set("systemRegistry.internal.state.version", state.Version)
 
 	return nil
 }
