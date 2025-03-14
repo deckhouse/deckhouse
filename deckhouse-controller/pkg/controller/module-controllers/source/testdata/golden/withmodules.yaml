@@ -17,7 +17,6 @@ spec:
     scheme: HTTPS
 status:
   message: ""
-  phase: Active
   modules:
   - name: disabledmodule
   - checksum: 'sha256:'
@@ -27,6 +26,7 @@ status:
     name: withpolicymodule
     policy: test-alpha
   modulesCount: 4
+  phase: Active
   syncTime: "2019-10-17T15:33:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
