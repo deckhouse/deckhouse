@@ -10,9 +10,12 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone -b {{ $version }} --depth 1 {{ $.SOURCE_REPO }}/flant/go-ec2-describe-tags.git /src/go-ec2-describe-tags
+  - git clone -b {{ $version }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/flant/go-ec2-describe-tags.git /src/go-ec2-describe-tags
   - rm -rf /src/go-ec2-describe-tags/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}

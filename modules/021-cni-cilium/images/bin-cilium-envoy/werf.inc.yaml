@@ -21,9 +21,12 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone {{ $.SOURCE_REPO }}/cilium/proxy.git /src/proxy
+  - git clone $(cat /run/secrets/SOURCE_REPO)/cilium/proxy.git /src/proxy
   - cd /src/proxy
   - git checkout {{ $ciliumProxyRev }}
   - git apply --verbose /patches/*.patch

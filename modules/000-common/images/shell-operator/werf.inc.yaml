@@ -46,7 +46,7 @@ shell:
   install:
   - git clone --branch {{ $shellOperatorVersion }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/flant/shell-operator.git /src/shell-operator
   - rm -r /src/shell-operator/.git
-  - git clone --depth 1 {{ $.SOURCE_REPO }}/jqlang/jq --branch "jq-1.7.1" /src/jq
+  - git clone --depth 1 $(cat /run/secrets/SOURCE_REPO)/jqlang/jq --branch "jq-1.7.1" /src/jq
   - cd /src/jq
   - |
     cat > .gitmodules <<"EOF"

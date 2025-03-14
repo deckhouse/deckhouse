@@ -22,9 +22,12 @@ git:
     install:
     - '**/*'
   {{- end }}
+secrets:
+- id: SOURCE_REPO
+  value: {{ $.SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ $full_version }} {{ $.SOURCE_REPO }}/kubernetes/kubernetes.git /src
+  - git clone --depth 1 --branch v{{ $full_version }} $(cat /run/secrets/SOURCE_REPO)/kubernetes/kubernetes.git /src
   - cd /src
   - |
     cat <<EOF > .kube-version

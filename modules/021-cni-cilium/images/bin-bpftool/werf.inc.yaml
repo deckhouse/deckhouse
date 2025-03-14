@@ -17,9 +17,12 @@
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone {{ $.SOURCE_REPO }}/bpf/bpf-next.git /src/linux
+  - git clone $(cat /run/secrets/SOURCE_REPO)/bpf/bpf-next.git /src/linux
   - cd /src/linux
   - git checkout {{ $bpftoolRev }}
   - rm -rf /src/linux/.git

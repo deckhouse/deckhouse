@@ -9,9 +9,12 @@
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $gopsVersion }} {{ $.SOURCE_REPO }}/google/gops.git /src/gops && rm -rf /src/gops/.git
+  - git clone --depth 1 --branch {{ $gopsVersion }} $(cat /run/secrets/SOURCE_REPO)/google/gops.git /src/gops && rm -rf /src/gops/.git
   - cd /src/gops
 ---
 image: {{ .ModuleName }}/gops-artifact
