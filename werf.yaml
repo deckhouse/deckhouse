@@ -74,9 +74,6 @@ cleanup:
 # use example.com as default because we can fail build without env
 {{- $_ := set . "CLOUD_PROVIDERS_SOURCE_REPO" (env "CLOUD_PROVIDERS_SOURCE_REPO" "https://example.com") }}
 
-# Source repo with observability private code
-{{- $_ := set . "OBSERVABILITY_SOURCE_REPO" (env "OBSERVABILITY_SOURCE_REPO" "https://example.com") }}
-
 # Stronghold repo access for building d8 cli
 {{- $_ := set . "STRONGHOLD_PULL_TOKEN" (env "STRONGHOLD_PULL_TOKEN" "false") }}
 {{- $_ := set . "DECKHOUSE_PRIVATE_REPO" (env "DECKHOUSE_PRIVATE_REPO" "https://example.com") }}

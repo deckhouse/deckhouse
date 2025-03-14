@@ -8,7 +8,6 @@ config:
     - GOPROXY
     - WERF_DISABLE_META_TAGS
     - CLOUD_PROVIDERS_SOURCE_REPO
-    - OBSERVABILITY_SOURCE_REPO
     - DISTRO_PACKAGES_PROXY
     - CARGO_PROXY
     - STRONGHOLD_PULL_TOKEN
@@ -21,8 +20,8 @@ config:
      - ~/go-pkg-cache
   secrets:
     allowValueIds:
-    - CARGO_PROXY
     - SOURCE_REPO
     - GOPROXY
+    - CARGO_PROXY
     - DECKHOUSE_PRIVATE_REPO
     - STRONGHOLD_PULL_TOKEN

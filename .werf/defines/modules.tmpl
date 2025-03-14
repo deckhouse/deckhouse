@@ -29,7 +29,6 @@ args:
 
   SOURCE_REPO: {{ .SOURCE_REPO }}
   CLOUD_PROVIDERS_SOURCE_REPO: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
-  OBSERVABILITY_SOURCE_REPO: {{ .OBSERVABILITY_SOURCE_REPO }}
   STRONGHOLD_PULL_TOKEN: {{ .STRONGHOLD_PULL_TOKEN }}
     {{- if not (has (list .ModuleName .ImageName | join "/") (list "common/distroless")) }}
 dependencies:

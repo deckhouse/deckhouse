@@ -53,7 +53,6 @@
       {{- $_ := set $ctx "TF" $Root.TF }}
       {{- $_ := set $ctx "SOURCE_REPO" $Root.SOURCE_REPO }}
       {{- $_ := set $ctx "CLOUD_PROVIDERS_SOURCE_REPO" $Root.CLOUD_PROVIDERS_SOURCE_REPO }}
-      {{- $_ := set $ctx "OBSERVABILITY_SOURCE_REPO" $Root.OBSERVABILITY_SOURCE_REPO }}
       {{- $_ := set $ctx "GOPROXY" $Root.GOPROXY }}
       {{- $_ := set $ctx "DECKHOUSE_PRIVATE_REPO" $Root.DECKHOUSE_PRIVATE_REPO }}
       {{- $_ := set $ctx "STRONGHOLD_PULL_TOKEN" $Root.STRONGHOLD_PULL_TOKEN }}
