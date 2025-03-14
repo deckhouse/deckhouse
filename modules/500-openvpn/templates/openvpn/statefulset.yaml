@@ -248,6 +248,8 @@ spec:
         - "8000"
         - --role
         - master
+        - --metrics.path
+        - "/metrics"
         - --ovpn.network
         - "{{ include "get_network_with_bitmask" (list . .Values.openvpn.tunnelNetwork) }}"
         {{- if hasKey .Values.openvpn "inlet" }}
@@ -337,6 +339,8 @@ spec:
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
             upstreams:
+            - upstream: http://127.0.0.1:8000/metrics
+              path: /metrics
             - upstream: http://127.0.0.1:8000/
               path: /
               authorization:
