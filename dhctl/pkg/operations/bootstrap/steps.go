@@ -660,7 +660,7 @@ type InstallDeckhouseResult struct {
 	ManifestResult *deckhouse.ManifestsResult
 }
 
-func InstallDeckhouse(kubeCl *client.KubernetesClient, config *config.DeckhouseInstaller) (*InstallDeckhouseResult, error) {
+func InstallDeckhouse(ctx context.Context, kubeCl *client.KubernetesClient, config *config.DeckhouseInstaller) (*InstallDeckhouseResult, error) {
 	res := &InstallDeckhouseResult{}
 	err := log.Process("bootstrap", "Install Deckhouse", func() error {
 		err := CheckPreventBreakAnotherBootstrappedCluster(kubeCl, config)
@@ -668,7 +668,7 @@ func InstallDeckhouse(kubeCl *client.KubernetesClient, config *config.DeckhouseI
 			return err
 		}
 
-		resManifests, err := deckhouse.CreateDeckhouseManifests(kubeCl, config)
+		resManifests, err := deckhouse.CreateDeckhouseManifests(ctx, kubeCl, config)
 		if err != nil {
 			return fmt.Errorf("deckhouse create manifests: %v", err)
 		}
@@ -680,7 +680,7 @@ func InstallDeckhouse(kubeCl *client.KubernetesClient, config *config.DeckhouseI
 			return fmt.Errorf("set manifests in cluster flag to cache: %v", err)
 		}
 
-		err = deckhouse.WaitForReadiness(kubeCl)
+		err = deckhouse.WaitForReadiness(ctx, kubeCl)
 		if err != nil {
 			return fmt.Errorf("deckhouse install: %v", err)
 		}
@@ -694,9 +694,9 @@ func InstallDeckhouse(kubeCl *client.KubernetesClient, config *config.DeckhouseI
 	return res, nil
 }
 
-func BootstrapTerraNodes(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraNodeGroups []config.TerraNodeGroupSpec, terraformContext *terraform.TerraformContext) error {
+func BootstrapTerraNodes(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraNodeGroups []config.TerraNodeGroupSpec, terraformContext *terraform.TerraformContext) error {
 	return log.Process("bootstrap", "Create CloudPermanent NG", func() error {
-		return operations.ParallelCreateNodeGroup(kubeCl, metaConfig, terraNodeGroups, terraformContext)
+		return operations.ParallelCreateNodeGroup(ctx, kubeCl, metaConfig, terraNodeGroups, terraformContext)
 	})
 }
 
@@ -746,20 +746,20 @@ func GetBastionHostFromCache() (string, error) {
 	return string(host), nil
 }
 
-func BootstrapAdditionalMasterNodes(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, addressTracker map[string]string, terraformContext *terraform.TerraformContext) error {
+func BootstrapAdditionalMasterNodes(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, addressTracker map[string]string, terraformContext *terraform.TerraformContext) error {
 	if metaConfig.MasterNodeGroupSpec.Replicas == 1 {
 		log.DebugF("Skip bootstrap additional master nodes because replicas == 1")
 		return nil
 	}
 
 	return log.Process("bootstrap", "Bootstrap additional master nodes", func() error {
-		masterCloudConfig, err := entity.GetCloudConfig(kubeCl, global.MasterNodeGroupName, global.ShowDeckhouseLogs, log.GetDefaultLogger())
+		masterCloudConfig, err := entity.GetCloudConfig(ctx, kubeCl, global.MasterNodeGroupName, global.ShowDeckhouseLogs, log.GetDefaultLogger())
 		if err != nil {
 			return err
 		}
 
 		for i := 1; i < metaConfig.MasterNodeGroupSpec.Replicas; i++ {
-			outputs, err := operations.BootstrapAdditionalMasterNode(kubeCl, metaConfig, i, masterCloudConfig, false, terraformContext)
+			outputs, err := operations.BootstrapAdditionalMasterNode(ctx, kubeCl, metaConfig, i, masterCloudConfig, false, terraformContext)
 			if err != nil {
 				return err
 			}
@@ -824,14 +824,14 @@ func applyPostBootstrapModuleConfigs(kubeCl *client.KubernetesClient, tasks []ac
 	return nil
 }
 
-func RunPostInstallTasks(kubeCl *client.KubernetesClient, result *InstallDeckhouseResult) error {
+func RunPostInstallTasks(ctx context.Context, kubeCl *client.KubernetesClient, result *InstallDeckhouseResult) error {
 	if result == nil {
 		log.DebugF("Skip post install tasks because result is nil\n")
 		return nil
 	}
 
 	return log.Process("bootstrap", "Run post bootstrap actions", func() error {
-		err := deckhouse.ConfigureDeckhouseRelease(kubeCl)
+		err := deckhouse.ConfigureDeckhouseRelease(ctx, kubeCl)
 		if err != nil {
 			return err
 		}
