@@ -103,9 +103,13 @@ func (m *Manager) setTemplateStatus(ctx context.Context, template *v1alpha1.Proj
 		if err := m.client.Get(ctx, client.ObjectKey{Name: template.Name}, template); err != nil {
 			return fmt.Errorf("get the '%s' project template: %w", template.Name, err)
 		}
+
+		original := template.DeepCopy()
+
 		template.Status.Message = message
 		template.Status.Ready = ready
-		return m.client.Status().Update(ctx, template)
+
+		return m.client.Status().Patch(ctx, template, client.StrategicMergeFrom(original))
 	})
 }
 
@@ -117,9 +121,11 @@ func (m *Manager) projectsByTemplate(ctx context.Context, template *v1alpha1.Pro
 	if len(projects.Items) == 0 {
 		return nil, nil
 	}
+
 	var result []*v1alpha2.Project
 	for _, project := range projects.Items {
 		result = append(result, project.DeepCopy())
 	}
+
 	return result, nil
 }

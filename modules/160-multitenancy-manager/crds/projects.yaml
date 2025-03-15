@@ -149,6 +149,8 @@ spec:
                           items:
                             type: string
                 conditions:
+                  x-kubernetes-patch-strategy: merge
+                  x-kubernetes-patch-merge-key: type
                   type: array
                   items:
                     type: object
@@ -166,5 +168,5 @@ spec:
                         format: date-time
                         type: string
                 state:
-                  description: Brief description of the project status, such as Error, Deploying, Deployed, etc.
+                  description: Brief description of the project status, such as Error, Deployed, etc.
                   type: string

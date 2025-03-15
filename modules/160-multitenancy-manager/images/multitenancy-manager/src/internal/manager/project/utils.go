@@ -30,16 +30,18 @@ import (
 	"controller/apis/deckhouse.io/v1alpha2"
 )
 
-func (m *Manager) updateVirtualProject(ctx context.Context, project *v1alpha2.Project, namespaces []string) error {
+func (m *Manager) updateVirtualProjectStatus(ctx context.Context, project *v1alpha2.Project, namespaces []string) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		if err := m.client.Get(ctx, client.ObjectKey{Name: project.Name}, project); err != nil {
 			return fmt.Errorf("get the '%s' project: %w", project.Name, err)
 		}
+
 		project.Status.Conditions = nil
 		project.Status.Namespaces = namespaces
 		project.Status.TemplateGeneration = 1
 		project.Status.ObservedGeneration = project.Generation
 		project.Status.State = v1alpha2.ProjectStateDeployed
+
 		return m.client.Status().Update(ctx, project)
 	})
 }
@@ -136,9 +138,7 @@ func (m *Manager) updateProjectStatus(ctx context.Context, project *v1alpha2.Pro
 				return fmt.Errorf("get the '%s' project: %w", project.Name, err)
 			}
 
-			existingProject.Status = project.Status
-
-			return m.client.Status().Update(ctx, project)
+			return m.client.Status().Patch(ctx, existingProject, client.StrategicMergeFrom(project))
 		})
 	})
 }
@@ -151,6 +151,8 @@ func (m *Manager) prepareProject(ctx context.Context, project *v1alpha2.Project)
 				return fmt.Errorf("get the '%s' project: %w", project.Name, err)
 			}
 
+			original := project.DeepCopy()
+
 			if len(project.Labels) == 0 {
 				project.Labels = make(map[string]string, 1)
 			}
@@ -162,7 +164,7 @@ func (m *Manager) prepareProject(ctx context.Context, project *v1alpha2.Project)
 				controllerutil.AddFinalizer(project, v1alpha2.ProjectFinalizer)
 			}
 
-			return m.client.Update(ctx, project)
+			return m.client.Patch(ctx, original, client.StrategicMergeFrom(project))
 		})
 	})
 }
@@ -173,11 +175,15 @@ func (m *Manager) removeFinalizer(ctx context.Context, project *v1alpha2.Project
 			if err := m.client.Get(ctx, client.ObjectKey{Name: project.Name}, project); err != nil {
 				return fmt.Errorf("get the '%s' project: %w", project.Name, err)
 			}
+
+			original := project.DeepCopy()
+
 			if !controllerutil.ContainsFinalizer(project, v1alpha2.ProjectFinalizer) {
 				return nil
 			}
 			controllerutil.RemoveFinalizer(project, v1alpha2.ProjectFinalizer)
-			return m.client.Update(ctx, project)
+
+			return m.client.Patch(ctx, original, client.StrategicMergeFrom(project))
 		})
 	})
 }

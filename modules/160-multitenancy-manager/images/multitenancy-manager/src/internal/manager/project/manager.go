@@ -187,7 +187,7 @@ func (m *Manager) HandleVirtual(ctx context.Context, project *v1alpha2.Project) 
 		}
 	}
 
-	if err := m.updateVirtualProject(ctx, project, involvedNamespaces); err != nil {
+	if err := m.updateVirtualProjectStatus(ctx, project, involvedNamespaces); err != nil {
 		m.logger.Error(err, "failed to update the virtual project", "project", project.Name)
 		return ctrl.Result{}, err
 	}

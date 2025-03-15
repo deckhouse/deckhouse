@@ -93,12 +93,16 @@ func (m *Manager) Handle(ctx context.Context, template *v1alpha1.ProjectTemplate
 				if err = m.client.Get(ctx, client.ObjectKey{Name: project.Name}, project); err != nil {
 					return fmt.Errorf("get the '%s' project: %w", project.Name, err)
 				}
+
+				original := project.DeepCopy()
+
 				m.logger.Info("trigger the project to update", "template", template.Name, "project", project.Name)
 				if project.Annotations == nil {
-					project.Annotations = map[string]string{}
+					project.Annotations = make(map[string]string, 1)
 				}
 				project.Annotations[v1alpha2.ProjectAnnotationRequireSync] = "true"
-				return m.client.Update(ctx, project)
+
+				return m.client.Patch(ctx, project, client.StrategicMergeFrom(original))
 			})
 			if err != nil {
 				m.logger.Error(err, "failed to trigger the project", "template", template.Name, "project", project.Name)

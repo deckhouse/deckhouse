@@ -72,10 +72,12 @@ func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.
 }
 
 func (m *Manager) Handle(ctx context.Context, namespace *corev1.Namespace) (ctrl.Result, error) {
+	original := namespace.DeepCopy()
+
 	// set adopt label
 	labels := namespace.GetLabels()
 	if len(labels) == 0 {
-		labels = make(map[string]string)
+		labels = make(map[string]string, 1)
 	}
 	labels[helm.ResourceLabelManagedBy] = managedByHelm
 	namespace.SetLabels(labels)
@@ -84,7 +86,7 @@ func (m *Manager) Handle(ctx context.Context, namespace *corev1.Namespace) (ctrl
 	namespace.Annotations[helm.ResourceAnnotationReleaseName] = namespace.GetName()
 	namespace.Annotations[helm.ResourceAnnotationReleaseNamespace] = ""
 
-	if err := m.client.Update(ctx, namespace); err != nil {
+	if err := m.client.Patch(ctx, original, client.StrategicMergeFrom(namespace)); err != nil {
 		m.logger.Error(err, "failed to update the namespace", "namespace", namespace.GetName())
 		return ctrl.Result{}, fmt.Errorf("failed to update the '%s' namespace: %w", namespace.GetName(), err)
 	}
@@ -107,10 +109,11 @@ func (m *Manager) Handle(ctx context.Context, namespace *corev1.Namespace) (ctrl
 		if apierrors.IsAlreadyExists(err) {
 			m.logger.Info("project already exists", "project", project.Name)
 			delete(namespace.Annotations, v1alpha2.NamespaceAnnotationAdopt)
-			if err = m.client.Update(ctx, namespace); err != nil {
+			if err = m.client.Patch(ctx, original, client.StrategicMergeFrom(namespace)); err != nil {
 				m.logger.Error(err, "failed to update the namespace", "namespace", project.Name)
 				return ctrl.Result{}, fmt.Errorf("failed to update the '%s' namespace: %w", namespace.GetName(), err)
 			}
+
 			return ctrl.Result{}, nil
 		}
 
