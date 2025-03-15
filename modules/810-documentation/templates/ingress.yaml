@@ -61,7 +61,7 @@ metadata:
       rewrite ^/modules/(.+) /en/modules/$1 redirect;
       rewrite ^/(ru|en)/modules$ /$1/modules/ permanent;
       # The old naming
-      rewrite ^/(ru|en)/(modules/[0-9]+-([^/]+/.*))$ /$1/platform/$2 permanent;
+      rewrite ^/(ru|en)/(platform/)?modules/[0-9]+-([^/]+/.*)$ /$1/platform/modules/$3 redirect;
   {{- if .Values.documentation.auth.satisfyAny }}
     nginx.ingress.kubernetes.io/satisfy: "any"
   {{- end }}
