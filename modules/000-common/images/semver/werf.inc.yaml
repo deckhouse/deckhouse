@@ -2,9 +2,12 @@
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 {{ .SOURCE_REPO }}/fsaintjacques/semver-tool --branch 2.1.0 /src && rm -rf /src/.git
+  - git clone --depth 1 $(cat /run/secrets/SOURCE_REPO)/fsaintjacques/semver-tool --branch 2.1.0 /src && rm -rf /src/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ $.Images.BASE_ALPINE }}

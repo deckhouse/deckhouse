@@ -21,9 +21,12 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone {{ $.SOURCE_REPO }}/cilium/proxy.git /src/proxy
+  - git clone $(cat /run/secrets/SOURCE_REPO)/cilium/proxy.git /src/proxy
   - cd /src/proxy
   - git checkout {{ $ciliumProxyRev }}
   - git apply --verbose /patches/*.patch
@@ -32,13 +35,16 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}-basel-artifact
 fromImage: common/src-artifact
 final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   - mkdir -p /tmp/bazel-cache
-  - git clone --depth 1 --branch {{ $ciliumProxyCacheRev }} {{ $.SOURCE_REPO }}/cilium/proxy-build-cache.git /tmp/bazel-cache && rm -rf /tmp/bazel-cache/.git
+  - git clone --depth 1 --branch {{ $ciliumProxyCacheRev }} $(cat /run/secrets/SOURCE_REPO)/cilium/proxy-build-cache.git /tmp/bazel-cache && rm -rf /tmp/bazel-cache/.git
   - chown -R 1337:1337 /tmp/bazel-cache
   - mkdir -p /tmp/bazel-deps
-  - git clone --depth 1 --branch {{ $ciliumProxyDepsRev }} {{ .SOURCE_REPO }}/cilium/proxy-build-deps.git /tmp/bazel-deps && rm -rf /tmp/bazel-deps/.git
+  - git clone --depth 1 --branch {{ $ciliumProxyDepsRev }} $(cat /run/secrets/SOURCE_REPO)/cilium/proxy-build-deps.git /tmp/bazel-deps && rm -rf /tmp/bazel-deps/.git
   - chown -R 1337:1337 /tmp/bazel-deps
 ---
 image: {{ .ModuleName }}/cilium-envoy-artifact
@@ -60,6 +66,9 @@ import:
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
   - |
@@ -81,7 +90,7 @@ shell:
   - chmod -R a+w /tmp
   - chown -R 1337:1337 /cilium/proxy
   setup:
-  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /cilium/proxy
   - go mod vendor && go mod verify
