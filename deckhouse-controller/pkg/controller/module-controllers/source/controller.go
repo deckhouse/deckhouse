@@ -389,6 +389,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		source.Status.SyncTime = metav1.NewTime(r.dependencyContainer.GetClock().Now().UTC())
 		source.Status.AvailableModules = availableModules
 		source.Status.ModulesCount = len(availableModules)
+		source.Status.Message = ""
 		if pullErrorsExist {
 			source.Status.Message = v1alpha1.ModuleSourceMessagePullErrors
 		}
