@@ -7,7 +7,7 @@ cleanup:
   keepPolicies:
   # keep dev builds
   - references:
-      branch: (?!release-.*)(?!main).*
+      branch: /(?!release-.*)(?!main).*/
     imagesPerReference:
       last: 1
   # keep 4 pre-release builds
