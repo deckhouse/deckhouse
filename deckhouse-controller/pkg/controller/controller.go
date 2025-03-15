@@ -19,6 +19,8 @@ package controller
 import (
 	"context"
 	"fmt"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"net/http"
 	"sync"
 	"time"
 
@@ -98,6 +100,11 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 			return nil, fmt.Errorf("add to scheme: %w", err)
 		}
 	}
+
+	// inject otel tripper
+	operator.KubeClient().RestConfig().Wrap(func(t http.RoundTripper) http.RoundTripper {
+		return otelhttp.NewTransport(t)
+	})
 
 	// Setting the controller-runtime logger to a no-op logger by default,
 	// unless debug mode is enabled. This is because the controller-runtime

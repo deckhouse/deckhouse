@@ -179,8 +179,8 @@ func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log
 
 	// block main thread by waiting signals from OS.
 	utilsignal.WaitForProcessInterruption(func() {
-		_ = telemetryShutdown(ctx)
 		operator.Stop()
+		_ = telemetryShutdown(ctx)
 		os.Exit(0)
 	})
 

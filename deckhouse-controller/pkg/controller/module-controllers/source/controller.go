@@ -356,7 +356,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 
 		// download module metadata from the specified release channel
 		r.logger.Debugf("download meta from the '%s' release channel for the '%s' module for the '%s' module source", policy.Spec.ReleaseChannel, moduleName, source.Name)
-		meta, err := md.DownloadMetadataFromReleaseChannel(moduleName, policy.Spec.ReleaseChannel, cachedChecksum)
+		meta, err := md.DownloadMetadataFromReleaseChannel(ctx, moduleName, policy.Spec.ReleaseChannel, cachedChecksum)
 		if err != nil {
 			r.logger.Warnf("failed to downloaded the '%s' module: %v", moduleName, err)
 			availableModule.PullError = err.Error()
