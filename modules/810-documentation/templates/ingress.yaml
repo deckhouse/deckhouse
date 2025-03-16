@@ -13,7 +13,7 @@ spec:
   - host: {{ include "helm_lib_module_public_domain" (list . "documentation") }}
     http:
       paths:
-      - path: /(android-chrome|apple-touch|favicon|mstile|safari-pinned)-([a-z0-9-]*)\.(png|ico|svg)
+      - path: /(android-chrome|apple-touch|favicon|mstile|safari-pinned)(-[a-z0-9-]*)?\.(png|ico|svg)
         pathType: ImplementationSpecific
         backend:
           service:

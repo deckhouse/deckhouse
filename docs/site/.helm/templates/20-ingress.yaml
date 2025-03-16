@@ -8,40 +8,6 @@
 {{- $hosts = append $hosts (dict "Lang" "ru" "URL" $hostRu) -}}
 
 {{- range $hosts }}
-{{- if ne $.Values.web.env "web-production" }}
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: main-free-assets-{{ .Lang }}
-  annotations:
-    nginx.ingress.kubernetes.io/from-to-www-redirect: "true"
-    nginx.ingress.kubernetes.io/use-regex: "true"
-spec:
-  ingressClassName: {{ pluck $.Values.web.dc_name $.Values.ingressClass | first | default $.Values.ingressClass._default | quote }}
-  tls:
-  - hosts:
-      - {{ .URL }}
-    secretName: tls-{{ .URL }}
-  rules:
-  - host: {{ .URL }}
-    http:
-      paths:
-      - path: /(android-chrome|apple-touch|favicon|mstile|safari-pinned)-([a-z0-9-]*)\.(png|ico|svg)
-        pathType: ImplementationSpecific
-        backend:
-          service:
-            name: frontend
-            port:
-              name: http
-      - path: /(site.webmanifest|browserconfig.xml)
-        pathType: ImplementationSpecific
-        backend:
-          service:
-            name: frontend
-            port:
-              name: http
-{{- end }}
----
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
