@@ -18,4 +18,9 @@ spec:
       paths:
       - path: /
         pathType: Prefix
+        backend:
+          service:
+            name: nonexistent-service
+            port:
+              number: 8080
 {{- end }}
