@@ -60,8 +60,6 @@ spec:
                 annotationValidationEnabled:
                   description: |
                     Включить валидацию аннотаций Ingress-правил.
-
-                    Требуется версия контроллера 1.9.
                 nodeSelector:
                   description: |
                     Как в `spec.nodeSelector` у подов.
@@ -337,7 +335,7 @@ spec:
       served: true
       storage: false
       subresources:
-        status: { }
+        status: {}
       schema:
         openAPIV3Schema:
           properties:
@@ -634,8 +632,6 @@ spec:
                 enableHTTP3:
                   description: |
                     Включить ли HTTP/3.
-
-                    **HTTP/3 доступен только в контролере версии 1.10.**
                 config:
                   description: |
                     Секция настроек Ingress-контроллера, в которую в формате `ключ: значение(строка)` можно записать [любые возможные опции](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/).
