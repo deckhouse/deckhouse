@@ -10,10 +10,70 @@ memory: 25Mi
 
 {{- define "calcTimeout" -}}
 {{- $duration := . }}
-{{- $unit := regexFind "[a-zA-Z]+" $duration }}
-{{- $value := regexFind "[0-9]+" $duration | int }}
-{{- $newValue := (div (mul $value 80) 100)}}
-{{- printf "%d%s" $newValue $unit }}
+{{- $totalSeconds := 0 }}
+{{- range $match := regexFindAll "([0-9]+)([a-zA-Z]+)" $duration -1 }}
+  {{- $value := regexFind "[0-9]+" $match | int }}
+  {{- $unit := regexFind "[a-zA-Z]+" $match }}
+  {{- if eq $unit "y" }}
+    {{- $totalSeconds = add $totalSeconds (mul $value 31536000) }}
+  {{- else if eq $unit "w" }}
+    {{- $totalSeconds = add $totalSeconds (mul $value 604800) }}
+  {{- else if eq $unit "d" }}
+    {{- $totalSeconds = add $totalSeconds (mul $value 86400) }}
+  {{- else if eq $unit "h" }}
+    {{- $totalSeconds = add $totalSeconds (mul $value 3600) }}
+  {{- else if eq $unit "m" }}
+    {{- $totalSeconds = add $totalSeconds (mul $value 60) }}
+  {{- else if eq $unit "s" }}
+    {{- $totalSeconds = add $totalSeconds $value }}
+  {{- else if eq $unit "ms" }}
+    {{- $totalSeconds = add $totalSeconds (div $value 1000) }}
+  {{- end }}
+{{- end }}
+{{- $result := div (mul $totalSeconds 80) 100 }}
+{{- if ge $result 31536000 }}
+  {{- $years := div $result 31536000 }}
+  {{- $remainder := mod $result 31536000 }}
+  {{- if eq $remainder 0 }}
+    {{- printf "%dy" $years }}
+  {{- else }}
+    {{- printf "%dy%dd" $years (div $remainder 86400) }}
+  {{- end }}
+{{- else if ge $result 604800 }}
+  {{- $weeks := div $result 604800 }}
+  {{- $remainder := mod $result 604800 }}
+  {{- if eq $remainder 0 }}
+    {{- printf "%dw" $weeks }}
+  {{- else }}
+    {{- printf "%dw%dd" $weeks (div $remainder 86400) }}
+  {{- end }}
+{{- else if ge $result 86400 }}
+  {{- $days := div $result 86400 }}
+  {{- $remainder := mod $result 86400 }}
+  {{- if eq $remainder 0 }}
+    {{- printf "%dd" $days }}
+  {{- else }}
+    {{- printf "%dd%dh" $days (div $remainder 3600) }}
+  {{- end }}
+{{- else if ge $result 3600 }}
+  {{- $hours := div $result 3600 }}
+  {{- $remainder := mod $result 3600 }}
+  {{- if eq $remainder 0 }}
+    {{- printf "%dh" $hours }}
+  {{- else }}
+    {{- printf "%dh%dm" $hours (div $remainder 60) }}
+  {{- end }}
+{{- else if ge $result 60 }}
+  {{- $minutes := div $result 60 }}
+  {{- $seconds := mod $result 60 }}
+  {{- if eq $seconds 0 }}
+    {{- printf "%dm" $minutes }}
+  {{- else }}
+    {{- printf "%dm%ds" $minutes $seconds }}
+  {{- end }}
+{{- else }}
+  {{- printf "%ds" $result }}
+{{- end }}
 {{- end }}
 
 {{- define "toSeconds" -}}
@@ -192,7 +252,7 @@ spec:
         topologyKey: kubernetes.io/hostname
 {{- end }}
   scrapeInterval: {{ .Values.prometheus.scrapeInterval | default "30s"}}
-  scrapeTimeout: {{ include "calcTimeout" (default "30s" .Values.prometheus.scrapeInterval) | default "24s" }}
+  scrapeTimeout: {{ include "calcTimeout" (.Values.prometheus.scrapeInterval) | default "24s" }}
   evaluationInterval: {{ .Values.prometheus.scrapeInterval | default "30s" }}
   minReadySeconds: {{ mul (include "toSeconds" .Values.prometheus.scrapeInterval) 2 }}
   # Empty field because when scraping metrics via the Federation API,
