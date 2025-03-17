@@ -346,6 +346,7 @@ jobs:
           # because it prefix will use for k8s resources names (nodes, for example)
           DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
+
           ## Source: ci_templates/build.yml
 
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
@@ -710,6 +711,7 @@ jobs:
           # converts to DNS-like (all letters in lower case and replace all dots to dash)
           # because it prefix will use for k8s resources names (nodes, for example)
           DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+
 
           ## Source: ci_templates/build.yml
 
@@ -1076,6 +1078,7 @@ jobs:
           # because it prefix will use for k8s resources names (nodes, for example)
           DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
+
           ## Source: ci_templates/build.yml
 
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
@@ -1440,6 +1443,7 @@ jobs:
           # converts to DNS-like (all letters in lower case and replace all dots to dash)
           # because it prefix will use for k8s resources names (nodes, for example)
           DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+
 
           ## Source: ci_templates/build.yml
 
@@ -1806,6 +1810,7 @@ jobs:
           # because it prefix will use for k8s resources names (nodes, for example)
           DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
+
           ## Source: ci_templates/build.yml
 
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
@@ -2170,6 +2175,7 @@ jobs:
           # converts to DNS-like (all letters in lower case and replace all dots to dash)
           # because it prefix will use for k8s resources names (nodes, for example)
           DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+
 
           ## Source: ci_templates/build.yml
 

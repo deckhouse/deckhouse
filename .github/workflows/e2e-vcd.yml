@@ -400,6 +400,7 @@ jobs:
           # converts to DNS-like (all letters in lower case and replace all dots to dash)
           # because it prefix will use for k8s resources names (nodes, for example)
           DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+
           # Create tmppath for test script.
           TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
           if [[ -d "${TMP_DIR_PATH}" ]] ; then
@@ -914,6 +915,7 @@ jobs:
           # converts to DNS-like (all letters in lower case and replace all dots to dash)
           # because it prefix will use for k8s resources names (nodes, for example)
           DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+
           # Create tmppath for test script.
           TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
           if [[ -d "${TMP_DIR_PATH}" ]] ; then
@@ -1428,6 +1430,7 @@ jobs:
           # converts to DNS-like (all letters in lower case and replace all dots to dash)
           # because it prefix will use for k8s resources names (nodes, for example)
           DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+
           # Create tmppath for test script.
           TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
           if [[ -d "${TMP_DIR_PATH}" ]] ; then
@@ -1942,6 +1945,7 @@ jobs:
           # converts to DNS-like (all letters in lower case and replace all dots to dash)
           # because it prefix will use for k8s resources names (nodes, for example)
           DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+
           # Create tmppath for test script.
           TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
           if [[ -d "${TMP_DIR_PATH}" ]] ; then
@@ -2456,6 +2460,7 @@ jobs:
           # converts to DNS-like (all letters in lower case and replace all dots to dash)
           # because it prefix will use for k8s resources names (nodes, for example)
           DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+
           # Create tmppath for test script.
           TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
           if [[ -d "${TMP_DIR_PATH}" ]] ; then
@@ -2970,6 +2975,7 @@ jobs:
           # converts to DNS-like (all letters in lower case and replace all dots to dash)
           # because it prefix will use for k8s resources names (nodes, for example)
           DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+
           # Create tmppath for test script.
           TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
           if [[ -d "${TMP_DIR_PATH}" ]] ; then
