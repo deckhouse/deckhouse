@@ -102,8 +102,10 @@
   DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
 {!{- end }!}
   GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+{!{- if strings.Contains $commanderProviders $provider }!}
   COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
   COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+{!{- end }!}
 {!{- if and (eq $script_arg "run-test") $run_from_issue_or_pr }!}
   CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
 {!{- end }!}
