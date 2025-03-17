@@ -1,6 +1,6 @@
 ---
 title: "Alertmanager-email"
-permalink: en/user/web/alertmanager1.html
+permalink: en/user/alertmanager1.html
 lang: ru
 ---
 
