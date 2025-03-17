@@ -670,7 +670,7 @@ check_e2e_labels:
 {!{- end }!}
         DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
   {!{- tmpl.Exec "e2e_run_template" (slice .provider "cleanup" (coll.Has $ctx "manualRun") ) | strings.Indent 6 }!}
-{!{- if not (strings.Contains $commanderProviders $provider) }!}
+{!{ if not (strings.Contains $commanderProviders $provider) }!}
     - name: Save dhctl state
       id: save_failed_cluster_state
       if: ${{ failure() }}
@@ -681,7 +681,7 @@ check_e2e_labels:
           ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
           ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
           ${{ steps.setup.outputs.tmp-dir-path}}/logs
-{!{- end }!}
+{!{ end }!}
     - name: Save test results
       if: ${{ steps.setup.outputs.dhctl-log-file }}
       uses: {!{ index (ds "actions") "actions/upload-artifact" }!}

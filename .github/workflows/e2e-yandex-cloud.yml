@@ -566,6 +566,7 @@ jobs:
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
         # </template: e2e_run_template>
+
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v4.4.0
@@ -932,6 +933,7 @@ jobs:
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
         # </template: e2e_run_template>
+
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v4.4.0
@@ -1298,6 +1300,7 @@ jobs:
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
         # </template: e2e_run_template>
+
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v4.4.0
@@ -1664,6 +1667,7 @@ jobs:
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
         # </template: e2e_run_template>
+
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v4.4.0
@@ -2030,6 +2034,7 @@ jobs:
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
         # </template: e2e_run_template>
+
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v4.4.0
@@ -2396,6 +2401,7 @@ jobs:
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
         # </template: e2e_run_template>
+
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v4.4.0

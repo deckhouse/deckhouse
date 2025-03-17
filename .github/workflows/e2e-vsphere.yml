@@ -682,6 +682,7 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
         # </template: e2e_run_template>
+
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
@@ -692,6 +693,7 @@ jobs:
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
             ${{ steps.setup.outputs.tmp-dir-path}}/logs
+
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v4.4.0
@@ -1185,6 +1187,7 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
         # </template: e2e_run_template>
+
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
@@ -1195,6 +1198,7 @@ jobs:
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
             ${{ steps.setup.outputs.tmp-dir-path}}/logs
+
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v4.4.0
@@ -1688,6 +1692,7 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
         # </template: e2e_run_template>
+
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
@@ -1698,6 +1703,7 @@ jobs:
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
             ${{ steps.setup.outputs.tmp-dir-path}}/logs
+
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v4.4.0
@@ -2191,6 +2197,7 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
         # </template: e2e_run_template>
+
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
@@ -2201,6 +2208,7 @@ jobs:
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
             ${{ steps.setup.outputs.tmp-dir-path}}/logs
+
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v4.4.0
@@ -2694,6 +2702,7 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
         # </template: e2e_run_template>
+
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
@@ -2704,6 +2713,7 @@ jobs:
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
             ${{ steps.setup.outputs.tmp-dir-path}}/logs
+
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v4.4.0
@@ -3197,6 +3207,7 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
         # </template: e2e_run_template>
+
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
@@ -3207,6 +3218,7 @@ jobs:
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
             ${{ steps.setup.outputs.tmp-dir-path}}/logs
+
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v4.4.0
