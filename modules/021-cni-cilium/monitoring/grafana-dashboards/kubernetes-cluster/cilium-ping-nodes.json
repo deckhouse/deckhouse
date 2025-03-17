@@ -83,7 +83,7 @@
       },
       "gridPos": {
         "h": 17,
-        "w": 24,
+        "w": 12,
         "x": 0,
         "y": 1
       },
@@ -115,7 +115,7 @@
           "mode": "single",
           "sort": "none"
         },
-        "txtLength": 50,
+        "txtLength": 25,
         "txtSize": 10,
         "value": "Value",
         "valueText": "Value"
@@ -135,6 +135,106 @@
         }
       ],
       "title": "Node Connectivity Status Matrix",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {},
+            "renameByName": {}
+          }
+        }
+      ],
+      "type": "esnet-matrix-panel"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "green",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "percent",
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 17,
+        "w": 12,
+        "x": 12,
+        "y": 1
+      },
+      "id": 793,
+      "options": {
+        "addUrl": false,
+        "cellPadding": 5,
+        "cellSize": 15,
+        "colWidth": 0.8,
+        "defaultColor": "#E6E6E6",
+        "destination": "target_name",
+        "inputList": false,
+        "legend": {
+          "displayMode": "list",
+          "height": 500,
+          "placement": "bottom",
+          "showLegend": true,
+          "width": 700
+        },
+        "nullColor": "#E6E6E6",
+        "rowHeight": 0.7,
+        "showValue": "never",
+        "source": "source_name",
+        "sourceField": "source_node_name",
+        "sourceText": "From",
+        "targetField": "target_node_name",
+        "targetText": "To",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "txtLength": 25,
+        "txtSize": 10,
+        "value": "Value",
+        "valueText": "Value"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "editorMode": "code",
+          "expr": "avg_over_time(cilium_node_connectivity_status{type=\"endpoint\",source_node_name=~\"${source_node:regex}\",target_node_name=~\"${destination_node:regex}\"}[$__range]) * 100",
+          "format": "table",
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Endpoint Connectivity Status Matrix",
       "transformations": [
         {
           "id": "organize",
