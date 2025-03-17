@@ -49,7 +49,7 @@ def validate(string, is_key = True):
     if is_key:
         if string in system_lables:
             return False
-        pattern = re.compile("^(?:(?:(?:[a-z0-9][a-z0-9-]+)\.)+[a-z0-9]+/)*[A-Za-z0-9][A-Za-z0-9-._]*$")
+        pattern = re.compile("^(?:(?:(?:[a-z0-9][a-z0-9-]+)[.])+[a-z0-9]+/)*[A-Za-z0-9][A-Za-z0-9-._]*$")
     else:
         pattern = re.compile("^[A-Za-z0-9][A-Za-z0-9-._]*$")
     if pattern.match(string):
