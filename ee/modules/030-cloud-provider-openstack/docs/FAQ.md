@@ -218,7 +218,7 @@ The `OpenStackInstanceClass` has a `rootDiskSize` parameter, and OpenStack flavo
 | **`rootDiskSize` is not specified** | ❗️*You need to set the size*. Without specifying the size, there will be an error creating a VM. | Local disk with size according to the flavor    |
 | **`rootDiskSize` is specified**     | Network disk with the `rootDiskSize` size                                         | ❗ Network disk (rootDiskSize) and local disk (according to the flavor). Avoid using this option, as the cloud provider will charge for both disks. |
 
-> When creating CloudEphemeral nodes in Selectel, it is worth considering that to create a node in a zone other than zone A, you must first create a flavor with a disk of the required size, and the rootDiskSize parameter does not need to be specified. For example, `openstack flavor create c4m8d50 --ram 8192 --disk 50 --vcpus 4 --private`.
+> Please note, that to create a node with the `CloudEphemeral` type in a zone other than zone A, you must first create a flavor with a disk of the required size. The [rootDiskSize](/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-rootdisksize) parameter does not need to be specified.
 
 #### Network disk is recommended for master nodes and bastion host
 

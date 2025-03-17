@@ -226,7 +226,7 @@ username = {{ nova_service_user_name }}
 | **`rootDiskSize` не указан** | ❗️*Необходимо задать размер*. Без указания размера будет ошибка создания ВМ. | Локальный диск с размером из flavor               |
 | **`rootDiskSize` указан**    | Сетевой диск размером `rootDiskSize`                                         | ❗ Сетевой (rootDiskSize) и локальный (из flavor). Избегайте использования этого варианта, так как cloud-провайдер будет взимать плату за оба диска. |
 
-> При создании CloudEphemeral узлов в Selectel стоит учесть, что для создания узла в зоне отличной от зоны A, необходимо заранее создать flavor с диском необходимого размера, а параметр rootDiskSize указывать не нужно. Например, `openstack flavor create c4m8d50 --ram 8192 --disk 50 --vcpus 4 --private`.
+> Обратите внимание, что при создании узлов с типом `CloudEphemeral` в облаке Selectel, для создания узла в зоне отличной от зоны A, необходимо заранее создать flavor с диском необходимого размера. Параметр [rootDiskSize](/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-rootdisksize) в этом случае указывать не нужно.
 
 #### Рекомендация для master-узлов и бастиона — сетевой диск
 
