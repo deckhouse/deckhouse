@@ -47,10 +47,6 @@ apiVersions:
       vcdInstallationVersion:
         type: string
         description: VCD installation version.
-        default: "10.3.3.4"
-        minLength: 1
       vcdAPIVersion:
         type: string
         description: VCD API version.
-        default: "36.0"
-        minLength: 1
