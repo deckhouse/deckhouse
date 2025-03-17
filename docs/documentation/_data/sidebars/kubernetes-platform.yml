@@ -73,7 +73,7 @@ entries:
                 - title:
                     en: Overview
                     ru: Обзор
-                  url: /admin/high-reliability-and-availability/overview.html
+                  url: /admin/high-reliability-and-availability/
                 - title:
                     en: HA mode control
                     ru: Управление режимом HA

@@ -1,6 +1,6 @@
 ---
 title: Высокая надежность и доступность
-permalink: ru/admin/high-reliability-and-availability/overview.html
+permalink: ru/admin/high-reliability-and-availability/
 description: Высокая надежность и доступность
 lang: ru
 ---
