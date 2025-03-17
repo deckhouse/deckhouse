@@ -4,7 +4,7 @@ permalink: en/security/sysctl.html
 lang: en
 ---
 
-Deckhouse automatically configures and controls a set of the server's kernel parameters using the `sysctl` utility.
+Deckhouse automatically configures and manages a set of the server's kernel parameters using the `sysctl` utility.
 The configured parameters improve network throughput, prevent resource depletion, and optimize memory management.
 
 {% alert level="note" %}
@@ -14,7 +14,7 @@ If you modify these parameters, Deckhouse will automatically revert them to the 
 | Parameter | Value set by Deckhouse | Description |
 | -------- | ----------------------- | ----------- |
 | `/sys/block/*/queue/nr_requests` | `256` | Number of queued requests for block devices. |
-| `/sys/block/*/queue/read_ahead_kb` | `256` | Amount of extra data that kernel reads from the disk to boost the reading in the future. |
+| `/sys/block/*/queue/read_ahead_kb` | `256` | Amount of extra data that kernel reads from the disk to improve future read performance. |
 | `/sys/kernel/mm/transparent_hugepage/enabled` | `never` | Disables Transparent HugePage. |
 | `/sys/kernel/mm/transparent_hugepage/defrag` | `never` | Disables the Transparent HugePage defragmentation. |
 | `/sys/kernel/mm/transparent_hugepage/use_zero_page` | `0` | Disables usage of huge zero pages. |
@@ -53,4 +53,4 @@ If you modify these parameters, Deckhouse will automatically revert them to the 
 | `vm.dirty_ratio` | `80` | Percentage of system memory that can be filled with dirty pages before all processes must stop and flush data to disk. |
 | `vm.min_free_kbytes` | `131072` | Minimum amount of free memory in kilobytes reserved by the kernel for critical operations. |
 | `vm.overcommit_memory` | `1` | Enables memory overcommitment. |
-| `vm.swappiness` | `0` | Disables using the swap file. |
+| `vm.swappiness` | `0` | Disables swap file usage. |
