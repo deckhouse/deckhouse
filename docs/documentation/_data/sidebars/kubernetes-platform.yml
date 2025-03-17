@@ -69,27 +69,15 @@ entries:
                 - title:
                     en: Overview
                     ru: Обзор
-                  url: /admin/configuration/update/update/
+                  url: /admin/configuration/update/
                 - title:
                     en: Configuring updates
                     ru: Настройка обновлений
                   url: /admin/configuration/update/configuration.html
                 - title:
-                    en: Release channels
-                    ru: Каналы обновлений
-                  url: /admin/configuration/update/release-channels.html
-                - title:
                     en: Configuring notifications
                     ru: Настройка уведомлений
                   url: /admin/configuration/update/notifications.html
-                - title:
-                    en: Retrieving the changelog
-                    ru: Получение changelog
-                  url: /admin/configuration/update/changelog.html
-                - title:
-                    en: Control plane update
-                    ru: Обновление control plane
-                  url: /admin/configuration/update/control-plane-update.html
                 - title:
                     en: FAQ
                     ru: FAQ
@@ -416,6 +404,10 @@ entries:
             en: Installation
             ru: Установка
           url: /architecture/installation.html
+        - title:
+            en: Updating
+            ru: Обновление
+          url: /architecture/updating.html
         - title:
             en: Functional specifications
             ru: Функциональные характеристики

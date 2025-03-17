@@ -1,6 +1,6 @@
 ---
 title: Обзор
-permalink: ru/admin/configuration/update/update/
+permalink: ru/admin/configuration/update/
 lang: ru
 ---
 
