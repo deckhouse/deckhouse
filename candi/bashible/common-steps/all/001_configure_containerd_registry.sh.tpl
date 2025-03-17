@@ -15,6 +15,31 @@
 {{- if eq .cri "Containerd" }}
 {{- $existRegistryHostList := list .registry.address }}
 
+# PR: https://github.com/deckhouse/deckhouse/pull/11939
+#
+# Enabled by settings in /etc/containerd/config.toml:
+# ```
+# [plugins."io.containerd.grpc.v1.cri".registry]
+#   config_path = "/etc/containerd/registry.d"
+# ```
+#
+# Example structure for /etc/containerd/registry.d:
+# ```
+# .
+# ├── deckhouse_hosts_state.json
+# ├── embedded-registry.d8-system.svc:5001
+# │   ├── ca.crt
+# │   └── hosts.toml
+# └── registry.deckhouse.ru
+#     ├── ca.crt
+#     └── hosts.toml
+# ```
+#
+# Operational principles:
+# - Create directories for hosts.toml configurations
+# - Remove old directories (based on information from deckhouse_hosts_state.json)
+# - Save the new state to deckhouse_hosts_state.json
+
 # Sync current registry host.toml and ca.crt
 mkdir -p "/etc/containerd/registry.d/{{ .registry.address }}"
 
