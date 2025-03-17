@@ -56,17 +56,18 @@
             }
         }
 
-        th:nth-child(odd), td:nth-child(odd) {
-            background-color: #F3F3FA;
-        }
+        // th:nth-child(odd), td:nth-child(odd) {
+        //     background-color: #F3F3FA;
+        // }
 
-        th:nth-child(even), td:nth-child(even) {
-            background-color: #F9F9FD;
-        }
+        // th:nth-child(even), td:nth-child(even) {
+        //     background-color: #F9F9FD;
+        // }
 
-        th:first-child, td:first-child {
-            background-color: #ffffff;
-        }
+        // th:first-child, td:first-child {
+        //     background-color: #ffffff;
+        // }
+        
     }
 
     .icon {
@@ -81,6 +82,30 @@
         @include min-w(m) {
             width: 28px;
             height: 28px;
+        }
+    }
+}
+
+.supported_versions:not(.supported_versions__kubernetes-container) {
+    thead {
+        th:nth-child(odd), td:nth-child(odd) {
+            background-color: #F3F3FA;
+        }
+
+        th:nth-child(even), td:nth-child(even) {
+            background-color: #F9F9FD;
+        }
+
+        th:first-child, td:first-child {
+            background-color: #ffffff;
+        }
+    }
+}
+
+.supported_versions__kubernetes-container {
+    thead {
+        th, td {
+            background-color: #eff3f9;
         }
     }
 }
