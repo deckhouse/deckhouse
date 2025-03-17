@@ -67,7 +67,7 @@ shell:
         export MODULES_SRC_DIR=/src/modules
         export MODULES_DST_EN=/srv/jekyll-data/documentation/modules_en
         export MODULES_DST_RU=/srv/jekyll-data/documentation/modules_ru
-        bash _tools/modules_prepare.sh
+        #bash _tools/modules_prepare.sh
 
         echo '[] Adding permalinks...'
         for i in $(find . -regex '.*.md' -print); do
