@@ -408,24 +408,24 @@ func (r *Runner) Apply(ctx context.Context) error {
 		}
 		defer r.stateSaver.Stop()
 
-		workDir := r.planPath
-		varFile := ""
-		if workDir == "" {
-			varFile = fmt.Sprintf("-var-file=%s", r.variablesPath)
-			workDir = r.workingDir
-		}
-
 		args := []string{
-			fmt.Sprintf("-chdir=%s", workDir),
+			fmt.Sprintf("-chdir=%s", r.workingDir),
 			"apply",
 			"-input=false",
 			"-no-color",
+			"-lock=false",
 			"-auto-approve",
 			fmt.Sprintf("-state=%s", r.statePath),
 			fmt.Sprintf("-state-out=%s", r.statePath),
 		}
-		if varFile != "" {
-			args = append(args, varFile)
+
+		if r.planPath != "" {
+			args = append(args, r.planPath)
+		} else {
+			args = append(args,
+				fmt.Sprintf("-var-file=%s", r.variablesPath),
+				r.workingDir,
+			)
 		}
 
 		_, err = r.execTerraform(ctx, args...)
@@ -532,13 +532,13 @@ func (r *Runner) Destroy(ctx context.Context) error {
 	}
 
 	planDestroyArgs := []string{
+		fmt.Sprintf("-chdir=%s", r.workingDir),
 		"plan",
 		"-destroy",
 		"-no-color",
 		fmt.Sprintf("-var-file=%s", r.variablesPath),
 		fmt.Sprintf("-state=%s", r.statePath),
 	}
-	planDestroyArgs = append(planDestroyArgs, r.workingDir)
 
 	_, err := r.execTerraform(ctx, planDestroyArgs...)
 	if err != nil {
@@ -680,6 +680,7 @@ type ValueChange struct {
 
 func (r *Runner) getPlanDestructiveChanges(ctx context.Context, planFile string) (*PlanDestructiveChanges, error) {
 	args := []string{
+		fmt.Sprintf("-chdir=%s", r.workingDir),
 		"show",
 		"-json",
 		planFile,

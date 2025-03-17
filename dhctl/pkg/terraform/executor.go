@@ -55,11 +55,12 @@ func terraformCmd(ctx context.Context, workingDir string, args ...string) *exec.
 	cmd.Env = append(
 		os.Environ(),
 		"TF_IN_AUTOMATION=yes",
+		"TF_SKIP_CREATING_DEPS_LOCK_FILE=yes",
 		"TF_DATA_DIR="+filepath.Join(app.TmpDirName, "tf_dhctl"),
 	)
 
 	// always use dug log for write its to debug log file
-	cmd.Env = append(cmd.Env, "TF_LOG=DEBUG")
+	cmd.Env = append(cmd.Env, "TF_LOG=TRACE")
 
 	cmd.Env = append(
 		cmd.Env,
