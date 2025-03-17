@@ -101,7 +101,7 @@ kubectl get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath=
    ```
    
 {% alert level="warning" %}
-Если нужно изменить шаблон проекта
+
 {% andalert %}
 
 ## Создание собственного шаблона для проекта
