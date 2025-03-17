@@ -50,22 +50,35 @@ EOF
 {{- end }}
 
 bb-sync-file "/etc/containerd/registry.d/{{ .registry.address }}/hosts.toml" - << EOF
-{{- $host := (printf "%s://%s" .registry.scheme .registry.address) }}
-{{- if ne .registry.registryMode "Direct" }}
-  {{- $host = "https://127.0.0.1:5001" }}
+# Server specifies the default server for this registry host namespace.
+# When host(s) are specified, the hosts are tried first in the order listed.
+# https://github.com/containerd/containerd/blob/v1.7.24/docs/hosts.md#hoststoml-content-description---detail
+
+server = {{ (printf "%s://%s" .registry.scheme .registry.address) | quote }}
+capabilities = ["pull", "resolve"]
+
+{{- if .registry.ca }}
+ca = ["/etc/containerd/registry.d/{{ .registry.address }}/ca.crt"]
+{{- end }}
+
+{{- if .registry.auth }}
+[auth]
+auth = {{ .registry.auth | quote }}
 {{- end }}
 
 [host]
-  [host.{{ $host | quote }}]
+{{- if ne .registry.registryMode "Direct" }}
+  [host."https://127.0.0.1:5001"]
   capabilities = ["pull", "resolve"]
   {{- if .registry.ca }}
   ca = ["/etc/containerd/registry.d/{{ .registry.address }}/ca.crt"]
   {{- end }}
 
     {{- if .registry.auth }}
-    [host.{{ $host | quote }}.auth]
+    [host."https://127.0.0.1:5001".auth]
     auth = {{ .registry.auth | quote }}
     {{- end }}
+{{- end }}
 EOF
 
 
@@ -83,17 +96,31 @@ EOF
 {{- end }}
 
 bb-sync-file "/etc/containerd/registry.d/{{ .systemRegistry.registryAddress }}/hosts.toml" - << EOF
-{{- $host := "https://127.0.0.1:5001" }}
+# Server specifies the default server for this registry host namespace.
+# When host(s) are specified, the hosts are tried first in the order listed.
+# https://github.com/containerd/containerd/blob/v1.7.24/docs/hosts.md#hoststoml-content-description---detail
+
+server = {{ .systemRegistry.registryAddress | quote }}
+capabilities = ["pull", "resolve"]
+
+{{- if .systemRegistry.registryCA }}
+ca = ["/etc/containerd/registry.d/{{ .systemRegistry.registryAddress }}/ca.crt"]
+{{- end }}
+
+{{- if .systemRegistry.auth }}
+[auth]
+auth = {{ .systemRegistry.auth | quote }}
+{{- end }}
 
 [host]
-  [host.{{ $host | quote }}]
+  [host."https://127.0.0.1:5001"]
   capabilities = ["pull", "resolve"]
   {{- if .systemRegistry.registryCA }}
   ca = ["/etc/containerd/registry.d/{{ .systemRegistry.registryAddress }}/ca.crt"]
   {{- end }}
 
     {{- if .systemRegistry.auth }}
-    [host.{{ $host | quote }}.auth]
+    [host."https://127.0.0.1:5001".auth]
     auth = {{ .systemRegistry.auth | quote }}
     {{- end }}
 EOF
@@ -114,6 +141,10 @@ bb-sync-file "/etc/containerd/registry.d/{{ $registryHost }}/ca.crt" - << EOF
 EOF
 
 bb-sync-file "/etc/containerd/registry.d/{{ $registryHost }}/hosts.toml" - << EOF
+# Server specifies the default server for this registry host namespace.
+# When host(s) are specified, the hosts are tried first in the order listed.
+# https://github.com/containerd/containerd/blob/v1.7.24/docs/hosts.md#hoststoml-content-description---detail
+
 server = {{ $registryHost | quote }}
 ca = ["/etc/containerd/registry.d/{{ $registryHost }}/ca.crt"]
 
