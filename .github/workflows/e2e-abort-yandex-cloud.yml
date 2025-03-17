@@ -320,7 +320,6 @@ jobs:
 
         # </template: e2e_run_template>
 
-
       - name: Remove failed cluster label
         if: ${{ success() }}
         uses: actions-ecosystem/action-remove-labels@v1
@@ -597,7 +596,6 @@ jobs:
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
         # </template: e2e_run_template>
-
 
       - name: Remove failed cluster label
         if: ${{ success() }}
@@ -876,7 +874,6 @@ jobs:
 
         # </template: e2e_run_template>
 
-
       - name: Remove failed cluster label
         if: ${{ success() }}
         uses: actions-ecosystem/action-remove-labels@v1
@@ -1153,7 +1150,6 @@ jobs:
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
         # </template: e2e_run_template>
-
 
       - name: Remove failed cluster label
         if: ${{ success() }}
@@ -1432,7 +1428,6 @@ jobs:
 
         # </template: e2e_run_template>
 
-
       - name: Remove failed cluster label
         if: ${{ success() }}
         uses: actions-ecosystem/action-remove-labels@v1
@@ -1709,7 +1704,6 @@ jobs:
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
         # </template: e2e_run_template>
-
 
       - name: Remove failed cluster label
         if: ${{ success() }}

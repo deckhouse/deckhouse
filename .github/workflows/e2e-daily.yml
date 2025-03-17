@@ -423,7 +423,6 @@ jobs:
 
         # </template: e2e_run_template>
 
-
       - name: Cleanup bootstrapped cluster
         if: always()
         id: cleanup_cluster
@@ -496,7 +495,6 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
         # </template: e2e_run_template>
-
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
@@ -934,7 +932,6 @@ jobs:
 
         # </template: e2e_run_template>
 
-
       - name: Cleanup bootstrapped cluster
         if: always()
         id: cleanup_cluster
@@ -1006,7 +1003,6 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script_eks.sh cleanup
 
         # </template: e2e_run_template>
-
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
@@ -1402,7 +1398,6 @@ jobs:
 
         # </template: e2e_run_template>
 
-
       - name: Cleanup bootstrapped cluster
         if: always()
         id: cleanup_cluster
@@ -1479,7 +1474,6 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
         # </template: e2e_run_template>
-
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
@@ -1869,7 +1863,6 @@ jobs:
 
         # </template: e2e_run_template>
 
-
       - name: Cleanup bootstrapped cluster
         if: always()
         id: cleanup_cluster
@@ -1940,7 +1933,6 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
         # </template: e2e_run_template>
-
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
@@ -2246,7 +2238,6 @@ jobs:
 
         # </template: e2e_run_template>
 
-
       - name: Cleanup bootstrapped cluster
         if: always()
         id: cleanup_cluster
@@ -2303,7 +2294,6 @@ jobs:
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
         # </template: e2e_run_template>
-
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v4.4.0
@@ -2672,7 +2662,6 @@ jobs:
 
         # </template: e2e_run_template>
 
-
       - name: Cleanup bootstrapped cluster
         if: always()
         id: cleanup_cluster
@@ -2743,7 +2732,6 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
         # </template: e2e_run_template>
-
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
@@ -3135,7 +3123,6 @@ jobs:
 
         # </template: e2e_run_template>
 
-
       - name: Cleanup bootstrapped cluster
         if: always()
         id: cleanup_cluster
@@ -3208,7 +3195,6 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
         # </template: e2e_run_template>
-
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
@@ -3606,7 +3592,6 @@ jobs:
 
         # </template: e2e_run_template>
 
-
       - name: Cleanup bootstrapped cluster
         if: always()
         id: cleanup_cluster
@@ -3685,7 +3670,6 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
         # </template: e2e_run_template>
-
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
@@ -4075,7 +4059,6 @@ jobs:
 
         # </template: e2e_run_template>
 
-
       - name: Cleanup bootstrapped cluster
         if: always()
         id: cleanup_cluster
@@ -4146,7 +4129,6 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
         # </template: e2e_run_template>
-
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}

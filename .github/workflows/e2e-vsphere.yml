@@ -529,7 +529,6 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
-
   # </template: e2e_tests_create_debug_logs>
       - name: Create Deckhouse debug logs
         id: e2e_tests_create_debug_logs
@@ -632,7 +631,6 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
         # </template: e2e_run_template>
-
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
@@ -1036,7 +1034,6 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
-
   # </template: e2e_tests_create_debug_logs>
       - name: Create Deckhouse debug logs
         id: e2e_tests_create_debug_logs
@@ -1139,7 +1136,6 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
         # </template: e2e_run_template>
-
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
@@ -1543,7 +1539,6 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
-
   # </template: e2e_tests_create_debug_logs>
       - name: Create Deckhouse debug logs
         id: e2e_tests_create_debug_logs
@@ -1646,7 +1641,6 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
         # </template: e2e_run_template>
-
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
@@ -2050,7 +2044,6 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
-
   # </template: e2e_tests_create_debug_logs>
       - name: Create Deckhouse debug logs
         id: e2e_tests_create_debug_logs
@@ -2153,7 +2146,6 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
         # </template: e2e_run_template>
-
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
@@ -2557,7 +2549,6 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
-
   # </template: e2e_tests_create_debug_logs>
       - name: Create Deckhouse debug logs
         id: e2e_tests_create_debug_logs
@@ -2660,7 +2651,6 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
         # </template: e2e_run_template>
-
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
@@ -3064,7 +3054,6 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
-
   # </template: e2e_tests_create_debug_logs>
       - name: Create Deckhouse debug logs
         id: e2e_tests_create_debug_logs
@@ -3167,7 +3156,6 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
 
         # </template: e2e_run_template>
-
       - name: Save dhctl state
         id: save_failed_cluster_state
         if: ${{ failure() }}
