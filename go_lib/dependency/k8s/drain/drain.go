@@ -19,7 +19,6 @@ package drain
 import (
 	"context"
 	"errors"
-	goerr "errors"
 	"fmt"
 	"io"
 	"math"
@@ -361,7 +360,7 @@ func (d *Helper) evictPods(pods []corev1.Pod, evictionGroupVersion schema.GroupV
 	}
 
 	doneCount := 0
-	var errors []error
+	var errs []error
 
 	numPods := len(pods)
 	for doneCount < numPods {
@@ -369,12 +368,12 @@ func (d *Helper) evictPods(pods []corev1.Pod, evictionGroupVersion schema.GroupV
 		case err := <-returnCh:
 			doneCount++
 			if err != nil {
-				errors = append(errors, err)
+				errs = append(errs, err)
 			}
 		}
 	}
 
-	return goerr.Join(errors...)
+	return errors.Join(errs...)
 }
 
 func (d *Helper) deletePods(pods []corev1.Pod, getPodFn func(namespace, name string) (*corev1.Pod, error)) error {
