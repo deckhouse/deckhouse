@@ -247,7 +247,7 @@ func (c *Reconciler) checkCloudConditions(ctx context.Context) {
 }
 
 func (c *Reconciler) checkCondition(condition v1alpha1.CloudCondition, ctx context.Context) {
-	c.logger.Debugf("Condition (%s) message: %s, ok: %s", condition.Name, condition.Message, condition.Ok)
+	c.logger.Infof("Condition (%s) message: %s, ok: %s\n", condition.Name, condition.Message, condition.Ok)
 	if !condition.Ok {
 		c.orphanedDiskMetric.WithLabelValues(condition.Name, condition.Message).Set(1.0)
 	}
