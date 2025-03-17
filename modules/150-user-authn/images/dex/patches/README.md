@@ -20,15 +20,3 @@ To avoid this, this patch makes refresh requests to declare and utilize their ow
 ### 004-static-user-groups.patch
 
 Adding group entity to kubernetes authentication.
-
-### 005-gitlab-refresh-context.patch
-
-Refresh can be called only one. By propagating a context of the user request, refresh can accidentally canceled.
-
-To avoid this, this patch makes refresh requests to declare and utilize their own contexts.
-
-### 006-static-user-groups.patch
-
-Allows setting groups for the `User` kind. It makes convenient authenticating as user alongside having another IdP.
-
-This problem is not solved in upstream, and our patch will not be accepted.
