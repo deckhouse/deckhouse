@@ -444,9 +444,33 @@ entries:
                 ru: WEB-интерфейсы
               folders:
                 - title:
+                    en: Grafana web interface
+                    ru: Веб-интерфейс Grafana
+                  url: /user/web/grafana.html
+                - title:
+                    en: Alertmanager-email web interface
+                    ru: Веб-интерфейс Alertmanager-email
+                  url: /user/web/alertmanager.html
+                - title:
+                    en: Kubeconfig web interface
+                    ru: Веб-интерфейс Kubeconfig
+                  url: /user/web/kubeconfig.html
+                - title:
+                    en: Console web interface
+                    ru: Веб-интерфейс Console
+                  url: /user/web/console.html
+                - title:
+                    en: Deckhouse tools web interface
+                    ru: Веб-интерфейс Deckhouse tools
+                  url: /user/web/deckhouse-tools.html
+                - title:
+                    en: Stronghold web interface
+                    ru: Веб-интерфейс Stronghold
+                  url: /user/web/stronghold.html
+                - title:
                     en: Hubble web interface
                     ru: Веб-интерфейс Hubble
-                  url: /user/hubble.html
+                  url: /user/web/hubble.html
         - title:
             en: Multitenancy
             ru: Мультитенантность
