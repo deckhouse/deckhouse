@@ -63,11 +63,13 @@ properties:
     default: false
     description: |
       Do not enforce any Network Policy. Just log allowed/disallowed connections.
-  cniExclusive:
+  removeOtherCNIConfigs:
     type: boolean
     default: true
     description: |
       Determines whether to remove other CNI configuration files for kubelet on nodes. If the Istio module's [`dataPlane.trafficRedirectionSetupMode` setting](../istio/configuration.html#parameters-dataplane-trafficredirectionsetupmode) is set to `CNIPlugin`, the option will be automatically set to `false`.
+
+      Explicitly disabling this option is recommended only when using an additional CNI or a specific CNI plugin in the cluster. An example of such a use case is the manual installation of Istio outside of the Deckhouse distribution.
   bpfLBMode:
     type: string
     default: "Hybrid"
