@@ -124,17 +124,18 @@ spec:
               - IPC_LOCK
               # Used in iptables. Consider removing once we are iptables-free
               - SYS_MODULE
+              # Needed to switch network namespaces (used for health endpoint, socket-LB).
               # We need it for now but might not need it for >= 5.11 specially
               # for the 'SYS_RESOURCE'.
               # In >= 5.8 there's already BPF and PERMON capabilities
-              - SYS_ADMIN
+              #- SYS_ADMIN
               # Could be an alternative for the SYS_ADMIN for the RLIMIT_NPROC
               - SYS_RESOURCE
               # Both PERFMON and BPF requires kernel 5.8, container runtime
               # cri-o >= v1.22.0 or containerd >= v1.5.0.
               # If available, SYS_ADMIN can be removed.
-              #- PERFMON
-              #- BPF
+              - PERFMON
+              - BPF
               # Allow discretionary access control (e.g. required for package installation)
               - DAC_OVERRIDE
               # Allow to set Access Control Lists (ACLs) on arbitrary files (e.g. required for package installation)
@@ -220,7 +221,7 @@ spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       initContainers:
-      {{- include "module_init_container_check_linux_kernel" (tuple $context ">= 5.4") | nindent 6 }}
+      {{- include "module_init_container_check_linux_kernel" (tuple $context ">= 5.8") | nindent 6 }}
       - name: clearing-unnecessary-iptables
         image: {{ include "helm_lib_module_image" (list $context "agentDistroless") }}
         imagePullPolicy: IfNotPresent
