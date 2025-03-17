@@ -419,7 +419,7 @@ function update_comment() {
   comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
 
   comment=$(curl -s -X GET \
-    --retry 3 --retry-delay 5 --retry-all-errors \
+    --retry 3 --retry-delay 5 \
     -H "Accept: application/vnd.github+json" \
     -H "Authorization: Bearer $GITHUB_TOKEN" \
     "$comment_url" \
@@ -443,7 +443,7 @@ function update_comment() {
   fi
 
   update_comment_response=$(curl -s -X PATCH \
-    --retry 3 --retry-delay 5 --retry-all-errors \
+    --retry 3 --retry-delay 5 \
     -H "Accept: application/vnd.github+json" \
     -H "Authorization: Bearer $GITHUB_TOKEN" \
     -d "$result_body" \
