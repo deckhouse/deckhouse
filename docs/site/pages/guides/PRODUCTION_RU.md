@@ -71,8 +71,8 @@ lang: ru
 Конфигурация мастер-узлов для облачных кластеров настраивается в параметре [masterNodeGroup](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-masternodegroup).
 
 Может быть полезно:
-- [Как добавить мастер-узлы в облачном кластере...](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/faq.html#как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master)
-- [Работа со статическими узлами...](https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/node-manager/#работа-со-статическими-узлами)
+- [Как добавить мастер-узлы в облачном кластере...](https://deckhouse.ru/products/virtualization-platform/documentation/admin/platform-management/control-plane-settings/etcd.html#как-добавить-master-узлы-в-облачном-кластере).
+- [Работа со статическими узлами...](https://deckhouse.ru/products/kubernetes-platform/documentation/modules/node-manager/#работа-со-статическими-узлами).
 
 ### Frontend-узлы
 

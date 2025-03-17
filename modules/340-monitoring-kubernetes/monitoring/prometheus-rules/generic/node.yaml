@@ -24,6 +24,6 @@
       severity_level: "3"
     annotations:
       plk_protocol_version: "1"
-      description: Prometheus could not scrape a node-exporter for more than 10m,
-        or node-exporters have disappeared from discovery
-      summary: Prometheus could not scrape a node-exporter
+      summary: Prometheus couldn't scrape a `node-exporter`.
+      description: Prometheus has been unable to scrape a `node-exporter` for more than 10 minutes,
+        or `node-exporters` have disappeared from service discovery.

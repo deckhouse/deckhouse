@@ -43,7 +43,7 @@ type Definition struct {
 	Descriptions *ModuleDescriptions          `json:"descriptions,omitempty" yaml:"descriptions,omitempty"`
 	Requirements *v1alpha1.ModuleRequirements `json:"requirements,omitempty" yaml:"requirements,omitempty"`
 
-	DisableOptions DisableOptions `json:"disable,omitempty" yaml:"disable,omitempty"`
+	DisableOptions *v1alpha1.ModuleDisableOptions `json:"disable,omitempty" yaml:"disable,omitempty"`
 
 	Path string `yaml:"-"`
 }
@@ -51,11 +51,6 @@ type Definition struct {
 type ModuleDescriptions struct {
 	Ru string `json:"ru,omitempty" yaml:"ru,omitempty"`
 	En string `json:"en,omitempty" yaml:"en,omitempty"`
-}
-
-type DisableOptions struct {
-	Confirmation bool   `json:"confirmation" yaml:"confirmation"`
-	Message      string `json:"message" yaml:"message"`
 }
 
 func (d *Definition) Validate(values addonutils.Values, logger *log.Logger) error {

@@ -53,7 +53,7 @@ type ServiceWithHealthchecksReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.18.2/pkg/reconcile
 func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.Logger.Info("reconciling ServiceWithHealthchecks", "name", req.Name, "namespace", req.Namespace)
+	r.Logger.V(1).Info("reconciling ServiceWithHealthchecks", "name", req.Name, "namespace", req.Namespace)
 	serviceWithHC := &networkv1alpha1.ServiceWithHealthchecks{}
 	if err := r.Get(ctx, req.NamespacedName, serviceWithHC); err != nil {
 		if errors.IsNotFound(err) {
@@ -65,22 +65,22 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 
 	// clear EPS for disappeared Nodes
 	deletedCount := r.clearNotUsedEPS(ctx, req)
-	r.Logger.Info("deleted orphan EndpointSlices", "namespace", req.Namespace, "count", deletedCount)
+	r.Logger.V(1).Info("deleted orphan EndpointSlices", "namespace", req.Namespace, "count", deletedCount)
 
 	var service corev1.Service
 	err := r.Get(ctx, req.NamespacedName, &service)
 	if err == nil && IsSpecForServiceEqual(service, serviceWithHC) {
-		r.Logger.Info("no need to update child Service", "name", req.Name, "namespace", req.Namespace)
+		r.Logger.V(1).Info("no need to update child Service", "name", req.Name, "namespace", req.Namespace)
 		return ctrl.Result{}, nil
 	}
 
 	// create or update child service
 	var childService corev1.Service
 	if err == nil {
-		r.Logger.Info("updating existing child Service", "name", req.Name, "namespace", req.Namespace)
+		r.Logger.V(1).Info("updating existing child Service", "name", req.Name, "namespace", req.Namespace)
 		childService = *service.DeepCopy()
 	} else {
-		r.Logger.Info("creating child Service", "name", req.Name, "namespace", req.Namespace)
+		r.Logger.V(1).Info("creating child Service", "name", req.Name, "namespace", req.Namespace)
 		childService = corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      req.Name,
@@ -105,13 +105,13 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 	if errUpdatingSvc != nil {
 		r.Logger.Error(errUpdatingSvc, "failed to create/update child Service for ServiceWithHealthchecks", "name", req.Name, "namespace", req.Namespace)
 	}
-	r.Logger.Info("child Service has been reconciled", "name", req.Name, "namespace", req.Namespace, "operation", op)
+	r.Logger.V(1).Info("child Service has been reconciled", "name", req.Name, "namespace", req.Namespace, "operation", op)
 
 	patch := client.MergeFrom(serviceWithHC.DeepCopy())
 
 	// update ServiceWithHealthchecks Status
 	if serviceWithHC.Spec.Type == corev1.ServiceTypeLoadBalancer {
-		r.Logger.Info("update status for ServiceWithHealtchecks", "name", req.Name, "namespace", req.Namespace, "operation", op)
+		r.Logger.V(1).Info("update status for ServiceWithHealtchecks", "name", req.Name, "namespace", req.Namespace, "operation", op)
 		err := r.Get(ctx, req.NamespacedName, &service)
 		if err != nil {
 			r.Logger.Error(err, "failed to get child Service for ServiceWithHealthchecks", "name", req.Name, "namespace", req.Namespace)
@@ -211,7 +211,7 @@ func (r *ServiceWithHealthchecksReconciler) clearNotUsedEPS(ctx context.Context,
 		if err != nil {
 			r.Logger.Error(err, "failed to delete EndpointSlice", "name", eps.Name, "namespace", eps.Namespace)
 		} else {
-			r.Logger.Info("deleted EndpointSlice", "name", eps.Name, "namespace", eps.Namespace)
+			r.Logger.V(1).Info("deleted EndpointSlice", "name", eps.Name, "namespace", eps.Namespace)
 			deletedCount++
 		}
 	}

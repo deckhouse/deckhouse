@@ -118,10 +118,18 @@ spec:
                                   - production
                                   - staging
                               items:
+                                oneOf:
+                                  - properties:
+                                      operator:
+                                        enum: [Exists, DoesNotExist]
+                                    required: [key, operator]
+                                    not:
+                                      required: [values]
+                                  - properties:
+                                      operator:
+                                        enum: [In, NotIn]
+                                    required: [key, operator, values]
                                 type: object
-                                required:
-                                  - key
-                                  - operator
                                 properties:
                                   key:
                                     description: A label name.
@@ -139,6 +147,9 @@ spec:
                                     type: array
                                     items:
                                       type: string
+                                      pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                                      minLength: 1
+                                      maxLength: 63
                     labelSelector:
                       type: object
                       description: |
