@@ -44,8 +44,8 @@ spec:
                             Обязательные метки для LVMVolumeGroup ресурсов.
                     type:
                       description: |
-                        Тип Volume Group.
-                        - Local, то есть локальным, если используемые девайсы не являются распределенными (не Shared LUN).
+                        Тип Volume Group:
+                        - `Local` — то есть локальным, если используемые девайсы не являются распределенными (не Shared LUN).
                     actualVGNameOnTheNode:
                       description: |
                         Желаемое имя для Volume Group. Должно быть уникальным в рамках узла, на котором будет располагаться.
