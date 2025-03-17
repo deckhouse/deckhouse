@@ -1,4 +1,4 @@
 ---
 title: "Alertmanager-email"
-permalink: en/user/web/alertmanager-email.html
+permalink: en/user/web/alertmanager.html
 ---
