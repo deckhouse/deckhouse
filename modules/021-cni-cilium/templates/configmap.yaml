@@ -157,7 +157,7 @@ data:
   {{- if .Values.cniCilium.internal.isIstioCNIEnabled }}
   cni-exclusive: "false"
   {{- else }}
-  cni-exclusive: {{ .Values.cniCilium.removeOtherCNIConfigs | quote }}
+  cni-exclusive: {{ .Values.cniCilium.exclusiveCNIPlugin | quote }}
   {{- end }}
 
   skip-crd-creation: "true"
