@@ -22,7 +22,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Yadro storage connection parameters.
+            TATLIN.UNIFIED (Yadro) storage connection parameters.
           required:
             - spec
           properties:
@@ -34,7 +34,7 @@ spec:
               properties:
                 controlPlane:
                   description: |
-                    Properties of control plane connection for Yadro storage.
+                    Properties of control plane connection.
                   type: object
                   required:
                     - address
@@ -43,27 +43,27 @@ spec:
                   properties:
                     address:
                       description: |
-                        Yadro storage address.
+                        Storage address.
                       type: string
                     username:
                       description: |
-                        Yadro storage username.
+                        Storage username.
                       type: string
                     password:
                       description: |
-                        Yadro storage password, Base64 encoded.
+                        Storage password, Base64 encoded.
                       type: string
                     ca:
                       description: |
-                        Yadro CA certificate, in case of self-signed SSL certificates.
+                        CA certificate, in case of self-signed SSL certificates.
                       type: string
                     skipCertificateValidation:
                       description: |
-                        Skip Yadro storage certificate check.
+                        Skip storage certificate check.
                       type: boolean
                 dataPlane:
                   description: |
-                    Properties of data plane connection for Yadro storage.
+                    Properties of data plane connection for storage.
                   type: object
                   required:
                     - protocol
