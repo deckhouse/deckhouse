@@ -20,6 +20,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -383,7 +384,7 @@ func (suite *ReleaseControllerTestSuite) loopUntilDeploy(dc *dependency.MockedCo
 		if i > maxIterations {
 			suite.T().Fatal("Too many iterations")
 		}
-		suite.ctr.log.Infof("Iteration %d result: %+v\n", i, result)
+		suite.ctr.log.Info("Iteration result:", slog.Int("iteration", i), slog.String("result", fmt.Sprintf("%v", result)))
 	}
 
 	suite.T().Fatal("Loop was broken")

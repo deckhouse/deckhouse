@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
+	"log/slog"
 	"strconv"
 	"time"
 
@@ -195,7 +196,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 	// Kind is changed, so objects in "dynamic-kind" can be ignored. Update kind and stop the hook.
 	if kindInUse != kindFromSecret {
 		if kindFromSecret == "" {
-			input.Logger.Infof("InstanceClassKind has changed from '%s' to '': disable binding 'ics'", kindInUse)
+			input.Logger.Info("InstanceClassKind has changed: disable binding 'ics'")
 			*input.BindingActions = append(*input.BindingActions, go_hook.BindingAction{
 				Name:       "ics",
 				Action:     "Disable",
@@ -203,7 +204,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 				ApiVersion: "",
 			})
 		} else {
-			input.Logger.Infof("InstanceClassKind has changed from '%s' to '%s': update kind for binding 'ics'", kindInUse, kindFromSecret)
+			input.Logger.Info("InstanceClassKind has changed: update kind for binding 'ics'", slog.String("from", kindInUse), slog.String("to", kindFromSecret))
 			*input.BindingActions = append(*input.BindingActions, go_hook.BindingAction{
 				Name:   "ics",
 				Action: "UpdateKind",
@@ -333,7 +334,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 					}
 				}
 
-				input.Logger.Errorf("Bad NodeGroup '%s': %s", nodeGroup.Name, errorMsg)
+				input.Logger.Error("Bad NodeGroup", slog.String("name", nodeGroup.Name), slog.String("msg", errorMsg))
 				setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, errorStatusField, errorMsg)
 				continue
 			}
@@ -361,7 +362,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 					}
 				}
 
-				input.Logger.Errorf("Bad NodeGroup '%s': %s", nodeGroup.Name, errorMsg)
+				input.Logger.Error("Bad NodeGroup", slog.String("name", nodeGroup.Name), slog.String("msg", errorMsg))
 				setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, errorStatusField, errorMsg)
 				continue
 			}

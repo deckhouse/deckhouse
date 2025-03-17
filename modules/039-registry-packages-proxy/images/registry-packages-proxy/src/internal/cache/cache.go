@@ -17,7 +17,6 @@ package cache
 import (
 	"context"
 	"io"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"sync"
@@ -162,7 +161,7 @@ func (c *Cache) Reconcile(ctx context.Context) {
 		case <-ticker.C:
 			err := c.ApplyRetentionPolicy()
 			if err != nil {
-				c.logger.Error("reconcile loop failed", slog.String("error", err.Error()))
+				c.logger.Error("reconcile loop failed", log.Err(err))
 				return
 			}
 		}

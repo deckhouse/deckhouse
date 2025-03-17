@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"log/slog"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -137,7 +139,7 @@ func systemReserve(input *go_hook.HookInput) error {
 	}, object_patch.IgnoreIfExists())
 
 	if cmSnapshot := input.Snapshots["cm"]; len(cmSnapshot) > 0 {
-		log.Debugf("Delete old migration configmap (d8-system/%s).", systemReserveMigrationCM)
+		log.Debug("Delete old migration configmap", slog.String("configmap", "(d8-system/"+systemReserveMigrationCM+")"))
 		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", systemReserveMigrationCM)
 	}
 

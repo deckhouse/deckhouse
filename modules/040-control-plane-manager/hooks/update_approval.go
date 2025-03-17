@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"log/slog"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -162,7 +164,7 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 
 		node, ok := nodeMap[pod.NodeName]
 		if !ok {
-			input.Logger.Warnf("Node %s not found", pod.NodeName)
+			input.Logger.Warn("Node not found", slog.String("name", pod.NodeName))
 			continue
 		}
 		if node.IsApproved {

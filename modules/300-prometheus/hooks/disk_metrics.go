@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"strings"
 	"time"
@@ -153,7 +154,7 @@ func getFsInfo(input *go_hook.HookInput, kubeClient k8s.Client, pod PodFilter) (
 
 	output, _, err := execToPodThroughAPI(kubeClient, command, containerName, pod.Name, pod.Namespace)
 	if err != nil {
-		input.Logger.Warnf("%s: %s", pod.Name, err.Error())
+		input.Logger.Warn("warn", slog.String(pod.Name, err.Error()))
 	} else {
 		for _, s := range strings.Split(output, "\n") {
 			if strings.Contains(s, "prometheus") {

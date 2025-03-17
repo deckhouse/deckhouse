@@ -17,6 +17,7 @@ package config
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -24,6 +25,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // syncModules syncs modules at start
@@ -48,7 +50,7 @@ func (r *reconciler) syncModules(ctx context.Context) error {
 		// handle too long disabled embedded modules
 		if module.DisabledByModuleConfigMoreThan(deleteReleasesAfter) && !module.IsEmbedded() {
 			// delete module releases of a stale module
-			r.log.Infof("the %q module disabled too long, delete module releases", module.Name)
+			r.log.Info("module disabled for too long, delete module releases", slog.String("name", module.Name))
 			moduleReleases := new(v1alpha1.ModuleReleaseList)
 			if err := r.client.List(ctx, moduleReleases, &client.MatchingLabels{"module": module.Name}); err != nil {
 				return fmt.Errorf("list module releases for the '%s' module: %w", module.Name, err)
@@ -96,7 +98,7 @@ func (r *reconciler) runModuleEventLoop(ctx context.Context) error {
 			continue
 		}
 		if err := r.refreshModule(ctx, event.ModuleName); err != nil {
-			r.log.Warnf("failed to handle the event for the '%s' module: %v", event.ModuleName, err)
+			r.log.Warn("failed to handle the event for the module", slog.String("name", event.ModuleName), log.Err(err))
 		}
 	}
 	return nil
