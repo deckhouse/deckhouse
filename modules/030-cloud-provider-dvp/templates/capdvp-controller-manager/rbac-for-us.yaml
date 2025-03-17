@@ -88,7 +88,7 @@ rules:
 - apiGroups:
     - infrastructure.cluster.x-k8s.io
   resources:
-    - dvpclusters
+    - deckhouseclusters
   verbs:
     - get
     - list
@@ -98,7 +98,7 @@ rules:
 - apiGroups:
     - infrastructure.cluster.x-k8s.io
   resources:
-    - dvpclusters/status
+    - deckhouseclusters/status
   verbs:
     - get
     - patch
@@ -106,7 +106,7 @@ rules:
 - apiGroups:
     - infrastructure.cluster.x-k8s.io
   resources:
-    - dvpmachines
+    - deckhousemachines
   verbs:
     - get
     - list
@@ -116,13 +116,13 @@ rules:
 - apiGroups:
     - infrastructure.cluster.x-k8s.io
   resources:
-    - dvpmachines/finalizers
+    - deckhousemachines/finalizers
   verbs:
     - update
 - apiGroups:
     - infrastructure.cluster.x-k8s.io
   resources:
-    - dvpmachines/status
+    - deckhousemachines/status
   verbs:
     - get
     - patch
