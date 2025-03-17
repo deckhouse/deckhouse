@@ -110,7 +110,7 @@ func handleRemoveCSI(input *go_hook.HookInput) error {
 			continue
 		}
 
-		input.PatchCollector.Filter(removeCSIFilterNode, "v1", "Node", "", csiName)
+		input.PatchCollector.PatchWithMutatingFunc(removeCSIFilterNode, "v1", "Node", "", csiName)
 	}
 
 	return nil

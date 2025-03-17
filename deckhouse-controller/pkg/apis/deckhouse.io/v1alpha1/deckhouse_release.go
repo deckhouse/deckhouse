@@ -45,9 +45,6 @@ const (
 
 	DeckhouseReleaseAnnotationDryrun            = "dryrun"
 	DeckhouseReleaseAnnotationTriggeredByDryrun = "triggered_by_dryrun"
-
-	// TODO: remove in entire code
-	DeckhouseReleaseAnnotationCooldown = "release.deckhouse.io/cooldown"
 )
 
 var DeckhouseReleaseGVK = schema.GroupVersionKind{
@@ -93,19 +90,6 @@ func (in *DeckhouseRelease) GetRequirements() map[string]string {
 
 func (in *DeckhouseRelease) GetChangelogLink() string {
 	return in.Spec.ChangelogLink
-}
-
-// TODO: remove cooldown from entire code
-func (in *DeckhouseRelease) GetCooldownUntil() *time.Time {
-	cooldown := new(time.Time)
-	if v, ok := in.Annotations[DeckhouseReleaseAnnotationCooldown]; ok {
-		cd, err := time.Parse(time.RFC3339, v)
-		if err == nil {
-			cooldown = &cd
-		}
-	}
-
-	return cooldown
 }
 
 func (in *DeckhouseRelease) GetDisruptions() []string {

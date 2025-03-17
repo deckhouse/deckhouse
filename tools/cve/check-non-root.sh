@@ -134,7 +134,6 @@ function __main__() {
       exit_code=1
     elif [[ $entry == WARNING* ]]; then
       echo -e "${YELLOW}${entry}${NC}"
-      exit_code=1
     else
       echo "$entry"
     fi

@@ -47,7 +47,7 @@ func newPostRenderer(project *v1alpha2.Project, versions map[string]struct{}, lo
 
 // Run post renderer which will remove all namespaces except the project one
 // or will add a project namespace if it does not exist in manifests
-func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *bytes.Buffer, err error) {
+func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	// clear resources
 	r.project.Status.Resources = make(map[string]map[string]v1alpha2.ResourceKind)
 
@@ -55,7 +55,7 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *
 	builder := strings.Builder{}
 	for _, manifest := range releaseutil.SplitManifests(renderedManifests.String()) {
 		object := new(unstructured.Unstructured)
-		if err = yaml.Unmarshal([]byte(manifest), object); err != nil {
+		if err := yaml.Unmarshal([]byte(manifest), object); err != nil {
 			r.logger.Info("failed to unmarshal manifest", "project", r.project.Name, "manifest", manifest, "error", err.Error())
 			return renderedManifests, err
 		}
@@ -75,17 +75,17 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *
 			}
 		}
 
-		// inject project annotations
-		if len(r.project.Spec.ResourceAnnotations) != 0 {
-			annotations := object.GetAnnotations()
-			if len(annotations) == 0 {
-				annotations = map[string]string{}
-			}
-			for k, v := range r.project.Spec.ResourceAnnotations {
-				annotations[k] = v
-			}
-			object.SetAnnotations(annotations)
+		annotations := object.GetAnnotations()
+		if len(annotations) == 0 {
+			annotations = make(map[string]string)
 		}
+
+		// inject project annotations
+		for k, v := range r.project.Spec.ResourceAnnotations {
+			annotations[k] = v
+		}
+
+		object.SetAnnotations(annotations)
 
 		labels := object.GetLabels()
 		if len(labels) == 0 {

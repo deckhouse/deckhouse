@@ -79,6 +79,7 @@ func CreateSSHClient(config *config.ConnectionConfig) (*ssh.Client, func() error
 	app.SSHBastionPort = util.PortToString(config.SSHConfig.SSHBastionPort)
 	app.SSHBastionUser = config.SSHConfig.SSHBastionUser
 	app.SSHUser = config.SSHConfig.SSHUser
+	app.BecomePass = config.SSHConfig.SudoPassword
 	app.SSHHosts = sshHosts
 	app.SSHPort = util.PortToString(config.SSHConfig.SSHPort)
 	app.SSHExtraArgs = config.SSHConfig.SSHExtraArgs

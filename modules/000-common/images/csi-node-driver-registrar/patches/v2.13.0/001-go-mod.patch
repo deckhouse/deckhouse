@@ -1,0 +1,39 @@
+diff --git a/go.mod b/go.mod
+index 5d2e5659..68c81ebe 100644
+--- a/go.mod
++++ b/go.mod
+@@ -52,7 +52,7 @@ require (
+ 	go.opentelemetry.io/otel/trace v1.33.0 // indirect
+ 	go.uber.org/multierr v1.11.0 // indirect
+ 	go.uber.org/zap v1.27.0 // indirect
+-	golang.org/x/net v0.32.0 // indirect
++	golang.org/x/net v0.33.0 // indirect
+ 	golang.org/x/text v0.21.0 // indirect
+ 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241216192217-9240e9c98484 // indirect
+ 	google.golang.org/protobuf v1.36.0 // indirect
+diff --git a/go.sum b/go.sum
+index 79246602..5500f404 100644
+--- a/go.sum
++++ b/go.sum
+@@ -126,6 +126,8 @@ golang.org/x/net v0.0.0-20200226121028-0de0cce0169b/go.mod h1:z5CRVTTTmAJ677TzLL
+ golang.org/x/net v0.0.0-20201021035429-f5854403a974/go.mod h1:sp8m0HH+o8qH0wwXwYZr8TS3Oi6o0r6Gce1SSxlDquU=
+ golang.org/x/net v0.32.0 h1:ZqPmj8Kzc+Y6e0+skZsuACbx+wzMgo5MQsJh9Qd6aYI=
+ golang.org/x/net v0.32.0/go.mod h1:CwU0IoeOlnQQWJ6ioyFrfRuomB8GKF6KbYXZVyeXNfs=
++golang.org/x/net v0.33.0 h1:74SYHlV8BIgHIFC/LrYkOGIwL19eTYXQ5wc6TBuO36I=
++golang.org/x/net v0.33.0/go.mod h1:HXLR5J+9DxmrqMwG9qjGCxZ+zKXxBru04zlTvWlWuN4=
+ golang.org/x/sync v0.0.0-20190423024810-112230192c58/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+ golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+ golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+diff --git a/vendor/modules.txt b/vendor/modules.txt
+index b11cdeda..22046061 100644
+--- a/vendor/modules.txt
++++ b/vendor/modules.txt
+@@ -177,7 +177,7 @@ go.uber.org/zap/internal/exit
+ go.uber.org/zap/internal/pool
+ go.uber.org/zap/internal/stacktrace
+ go.uber.org/zap/zapcore
+-# golang.org/x/net v0.32.0
++# golang.org/x/net v0.33.0
+ ## explicit; go 1.18
+ golang.org/x/net/http/httpguts
+ golang.org/x/net/http2

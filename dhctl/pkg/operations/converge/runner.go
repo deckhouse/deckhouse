@@ -193,7 +193,12 @@ func (r *runner) convergeTerraNodes(ctx *context.Context, metaConfig *config.Met
 
 	log.DebugF("NodeGroups for creating %v\n", nodeGroupsWithoutStateInCluster)
 
-	if err := operations.ParallelCreateNodeGroup(ctx.KubeClient(), metaConfig, nodeGroupsWithoutStateInCluster, ctx.Terraform()); err != nil {
+	bootstrapNewNodeGroups := operations.ParallelCreateNodeGroup
+	if operations.IsSequentialNodesBootstrap() {
+		bootstrapNewNodeGroups = operations.BootstrapSequentialTerraNodes
+	}
+
+	if err := bootstrapNewNodeGroups(ctx.KubeClient(), metaConfig, nodeGroupsWithoutStateInCluster, ctx.Terraform()); err != nil {
 		return err
 	}
 

@@ -106,7 +106,7 @@ func FindStatusCondition(conditions []v1alpha1.ExtendedCondition, conditionType 
 }
 
 func DeleteFinalizer(input *go_hook.HookInput, crName, crAPIVersion, crKind, finalizerToMatch string) {
-	input.PatchCollector.Filter(
+	input.PatchCollector.PatchWithMutatingFunc(
 		func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 			objCopy := obj.DeepCopy()
 			crFinalizers := objCopy.GetFinalizers()
