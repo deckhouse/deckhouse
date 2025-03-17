@@ -147,6 +147,30 @@ Authentication through the OIDC provider requires registering a client (or "crea
 
 Paste the generated `clientID` and `clientSecret` into the [DexProvider](cr.html#dexprovider) custom resource.
 
+#### Keycloak
+
+The example shows the provider's settings for integration with Keycloak.
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: DexProvider
+metadata:
+  name: keycloak
+spec:
+  type: OIDC
+  displayName: My Company Keycloak
+  oidc:
+    issuer: https://keycloak.my-company.com/realms/myrealm
+    clientID: plainstring
+    clientSecret: plainstring
+    getUserInfo: true
+    scopes:
+      - openid
+      - profile
+      - email
+      - groups
+```
+
 #### Okta
 
 The example shows the provider's settings for integration with Okta.

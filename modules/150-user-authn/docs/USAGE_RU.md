@@ -152,6 +152,30 @@ spec:
 
 Ниже можно ознакомиться с некоторыми примерами.
 
+#### Keycloak
+
+В примере представлены настройки провайдера для интеграции с Keycloak:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: DexProvider
+metadata:
+  name: keycloak
+spec:
+  type: OIDC
+  displayName: My Company Keycloak
+  oidc:
+    issuer: https://keycloak.my-company.com/realms/myrealm
+    clientID: plainstring
+    clientSecret: plainstring
+    getUserInfo: true
+    scopes:
+      - openid
+      - profile
+      - email
+      - groups
+```
+
 #### Okta
 
 В примере представлены настройки провайдера для интеграции с Okta:
