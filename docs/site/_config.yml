@@ -94,6 +94,10 @@ defaults:
     values:
       sidebar: kubernetes-platform
   - scope:
+      path: "pages/architecture"
+    values:
+      sidebar: kubernetes-platform
+  - scope:
       path: "pages/user"
     values:
       sidebar: kubernetes-platform
@@ -161,8 +165,8 @@ defaults:
   - scope:
       path: "*/030-cloud-provider-huaweicloud"
       type: "pages"
-    values:  
-      d8Revision: ee    
+    values:
+      d8Revision: ee
   - scope:
       path: "*/462-loki"
       type: "pages"
