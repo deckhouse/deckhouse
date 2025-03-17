@@ -7,7 +7,7 @@ lang: en
 Deckhouse automatically configures and manages a set of the server's kernel parameters using the `sysctl` utility.
 The configured parameters improve network throughput, prevent resource depletion, and optimize memory management.
 
-{% alert level="note" %}
+{% alert level="info" %}
 If you modify these parameters, Deckhouse will automatically revert them to the values listed below.
 {% endalert %}
 
