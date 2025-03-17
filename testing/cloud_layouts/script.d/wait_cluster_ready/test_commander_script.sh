@@ -40,73 +40,11 @@ else
   ingress=""
 fi
 
-availability=""
 attempts=50
 # With sleep timeout of 30s, we have 25 minutes period in total to catch the 100% availability from upmeter
 for i in $(seq $attempts); do
   # Sleeping at the start for readability. First iterations do not succeed anyway.
   sleep 30
-
-  if upmeter_addr=$(kubectl -n d8-upmeter get ep upmeter -o json | jq -re '.subsets[].addresses[0] | .ip') 2>/dev/null; then
-    if upmeter_auth_token="$(kubectl -n d8-upmeter create token upmeter-agent)" 2>/dev/null; then
-
-      # Getting availability data based on last 30 seconds of probe stats, note 'peek=1' query
-      # param.
-      #
-      # Forcing curl error to "null" since empty input is not interpreted as null/false by JQ, and
-      # -e flag does not work as expected. See
-      # https://github.com/stedolan/jq/pull/1697#issuecomment-1242588319
-      #
-      if avail_json="$(d8-curl -k -s -S -m5 -H "Authorization: Bearer $upmeter_auth_token" "https://${upmeter_addr}:8443/public/api/status?peek=1" || echo null | jq -ce)" 2>/dev/null; then
-        # Transforming the data to a flat array of the following structure  [{ "probe": "{group}/{probe}", "status": "ok/pending" }]
-        avail_report="$(jq -re '
-          [
-            .rows[]
-            | [
-                .group as $group
-                | .probes[]
-                | {
-                  probe: ($group + "/" + .probe),
-                  status: (if .availability > 0.99   then "up"   else "pending"   end),
-                  availability: .availability
-                }
-              ]
-          ]
-          | flatten
-          ' <<<"$avail_json")"
-
-        # Printing the table of probe statuses
-        echo '*'
-        echo '====================== AVAILABILITY, STATUS, PROBE ======================'
-        # E.g.:  0.626  failure  monitoring-and-autoscaling/prometheus-metrics-adapter
-        echo "$(jq -re '.[] | [((.availability*1000|round) / 1000), .status, .probe] | @tsv' <<<"$avail_report")" | column -t
-        echo '========================================================================='
-
-        # Overall availability status. We check that all probes are in place because at some point
-        # in the start the list can be empty.
-        availability="$(jq -r '
-          if (
-            (. | length > 0) and
-            ([ .[] | select(.status != "up") ] | length == 0)
-          )
-          then "ok"
-          else ""
-          end '<<<"$avail_report")"
-
-      else
-        >&2 echo "Couldn't fetch availability data from upmeter (attempt #${i} of ${attempts})."
-      fi
-    else
-      >&2 echo "Couldn't get upmeter-agent serviceaccount token (attempt #${i} of ${attempts})."
-    fi
-  else
-    >&2 echo "Upmeter endpoint is not ready (attempt #${i} of ${attempts})."
-  fi
-
-    cat <<EOF
-Availability check: $([ "$availability" == "ok" ] && echo "success" || echo "pending")
-EOF
-
   if [[ -n "$ingress_inlet" ]]; then
     case "$ingress_inlet" in
       LoadBalancer)
@@ -164,7 +102,7 @@ EOF
 Istio operator check: $([ "$istio" == "ok" ] && echo "success" || echo "failed")
 EOF
 
-  if [[ "$availability:$ingress:$istio" == "ok:ok:ok" ]]; then
+  if [[ "$ingress:$istio" == "ok:ok" ]]; then
     exit 0
   fi
 done

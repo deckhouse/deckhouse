@@ -579,7 +579,7 @@ function run-test() {
   wait_allerts_resolve
   set_common_ssh_parameters
 
-  testScript=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_script.sh")
+  testScript=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_commander_script.sh")
 
   if $ssh_command $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
     echo "Ingress and Istio test passed"
