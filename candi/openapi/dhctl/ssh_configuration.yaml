@@ -6,7 +6,9 @@ apiVersions:
     description: |
       General dhctl SSH config.
     additionalProperties: false
-    required: [apiVersion, kind, sshUser, sshAgentPrivateKeys]
+    oneOf:
+      - required: [apiVersion, kind, sshUser, sshAgentPrivateKeys]
+      - required: [apiVersion, kind, sshUser, sudoPassword]
     x-examples:
       - apiVersion: dhctl.deckhouse.io/v1
         kind: SSHConfig
