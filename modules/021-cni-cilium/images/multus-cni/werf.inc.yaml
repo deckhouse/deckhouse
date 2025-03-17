@@ -1,0 +1,27 @@
+---
+image: {{ .ModuleName }}/multus-binary
+from: golang:1.23
+final: false
+shell:
+  beforeInstall:
+    - apt-get update && apt-get install -y git
+  setup:
+    - mkdir -p /go/src
+    - cd /go/src
+    - git clone --depth 1 --branch v4.1.4 https://github.com/k8snetworkplumbingwg/multus-cni.git
+    - cd multus-cni
+    - ./hack/build-go.sh
+    - mkdir -p /build-output/bin
+    - cp -r bin/* /build-output/bin/
+    - cp LICENSE /build-output/
+---
+image: {{ .ModuleName }}/multus-cni
+from: debian:stable-slim
+import:
+- image: {{ .ModuleName }}/multus-binary
+  add: /build-output/bin
+  to: /usr/src/multus-cni/bin
+  before: install
+imageSpec:
+  config:
+    entrypoint: ["/usr/src/multus-cni/bin/multus-daemon"]
