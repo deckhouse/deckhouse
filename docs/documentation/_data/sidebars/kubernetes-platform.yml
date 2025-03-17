@@ -85,7 +85,19 @@ entries:
             - title:
                 en: High reliability and availability
                 ru: Высокая надежность и доступность
-              url: /admin/high-reliability-and-availability.html
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /admin/high-reliability-and-availability/
+                - title:
+                    en: HA mode control
+                    ru: Управление режимом HA
+                  url: /admin/high-reliability-and-availability/enable.html
+                - title:
+                    en: Chaos engineering
+                    ru: Хаос-инжиниринг
+                  url: /admin/high-reliability-and-availability/chaos-engineering.html
             - title:
                 en: Platform resource management
                 ru: Управление ресурсами платформы
