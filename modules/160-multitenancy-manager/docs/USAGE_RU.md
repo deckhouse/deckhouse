@@ -74,6 +74,36 @@ kubectl get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath=
 
    Успешно созданный проект должен отображаться в статусе `Deployed` (синхронизирован). Если отображается статус `Error` (ошибка), добавьте аргумент `-o yaml` к команде (например, `kubectl get projects my-project -o yaml`) для получения более подробной информации о причине ошибки.
 
+### Автоматическое создание проекта для пространства имён
+
+Для пространства имён возможно создать новый проект. Для этого пометьте пространство имён аннотацией `projects.deckhouse.io/adopt`. Например:
+
+1. Создайте новое пространство имён:
+   ```shell
+   kubectl create ns test
+   ```
+   
+1. Пометьте его аннотацией:
+   ```shell
+   kubectl annotate ns test projects.deckhouse.io/adopt=""
+   ```
+   
+1. Убедитесь, что проект создался:
+   ```shell
+   kubectl get projects
+   ```
+   В списке проектв появится новый проект, соответствующий пространству имён:
+   ```shell
+   NAME        STATE      PROJECT TEMPLATE   DESCRIPTION                                            AGE
+   deckhouse   Deployed   virtual            This is a virtual project                              181d
+   default     Deployed   virtual            This is a virtual project                              181d
+   test        Deployed   empty                                                                     1m
+   ```
+   
+{% alert level="warning" %}
+Если нужно изменить шаблон проекта
+{% andalert %}
+
 ## Создание собственного шаблона для проекта
 
 Шаблоны проектов по умолчанию включают базовые сценарии использования и служат примером возможностей шаблонов.
