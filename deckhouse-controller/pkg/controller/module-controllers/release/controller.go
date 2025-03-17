@@ -1040,7 +1040,7 @@ type TimeResult struct {
 // - Manual Approved
 func (r *reconciler) DeployTimeCalculate(ctx context.Context, mr v1alpha1.Release, task *releaseUpdater.Task, us *releaseUpdater.Settings, metricLabels releaseUpdater.MetricLabels) *TimeResult {
 	releaseNotifier := releaseUpdater.NewReleaseNotifier(us)
-	timeChecker := releaseUpdater.NewDeployTimeService(r.dependencyContainer, us, func(_ context.Context) bool { return true }, r.log)
+	timeChecker := releaseUpdater.NewDeployTimeService(r.dependencyContainer, us, r.log)
 
 	var deployTimeResult *releaseUpdater.DeployTimeResult
 
@@ -1122,6 +1122,11 @@ func (r *reconciler) updateReleaseStatus(ctx context.Context, mr *v1alpha1.Modul
 		Duration: 20 * time.Millisecond,
 		Factor:   1.0,
 		Jitter:   0.1,
+	}
+
+	switch status.Phase {
+	case v1alpha1.ModuleReleasePhaseSuperseded, v1alpha1.ModuleReleasePhaseSuspended, v1alpha1.ModuleReleasePhaseSkipped, v1alpha1.ModuleReleasePhaseTerminating:
+		r.metricsUpdater.PurgeReleaseMetric(mr.GetName())
 	}
 
 	return ctrlutils.UpdateStatusWithRetry(ctx, r.client, mr, func() error {

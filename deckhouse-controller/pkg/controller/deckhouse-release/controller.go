@@ -58,6 +58,7 @@ import (
 const (
 	metricReleasesGroup = "d8_releases"
 	metricUpdatingGroup = "d8_updating"
+	metricUpdatingName  = "d8_is_updating"
 
 	deckhouseNamespace          = "d8-system"
 	deckhouseDeployment         = "deckhouse"
@@ -334,12 +335,6 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		r.registrySecret = registrySecret
 	}
 
-	if r.isDeckhousePodReady(ctx) {
-		r.metricStorage.Grouped().ExpireGroupMetrics(metricUpdatingGroup)
-	} else {
-		r.metricStorage.Grouped().GaugeSet(metricUpdatingGroup, "d8_is_updating", 1, map[string]string{"releaseChannel": r.updateSettings.Get().ReleaseChannel})
-	}
-
 	taskCalculator := releaseUpdater.NewDeckhouseReleaseTaskCalculator(r.client, r.logger)
 
 	task, err := taskCalculator.CalculatePendingReleaseTask(ctx, dr)
@@ -381,6 +376,27 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		})
 		if err != nil {
 			r.logger.Warn("await order status update ", slog.String("name", dr.GetName()), log.Err(err))
+		}
+
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+	}
+
+	if !r.isDeckhousePodReady(ctx) && !task.IsPatch {
+		r.logger.Info("Deckhouse is not ready. Skipping upgrade")
+
+		drs := &v1alpha1.DeckhouseReleaseStatus{
+			Phase: v1alpha1.DeckhouseReleasePhasePending,
+		}
+
+		if task.DeployedReleaseInfo == nil {
+			drs.Message = "can not find deployed version, awaiting"
+		} else {
+			drs.Message = fmt.Sprintf("awaiting for Deckhouse v%s pod to be ready", task.DeployedReleaseInfo.Version.String())
+		}
+
+		updateErr := r.updateReleaseStatus(ctx, dr, drs)
+		if updateErr != nil {
+			r.logger.Warn("await deckhouse pod status update ", slog.String("name", dr.GetName()), log.Err(err))
 		}
 
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
@@ -534,7 +550,7 @@ func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr
 	}
 
 	releaseNotifier := releaseUpdater.NewReleaseNotifier(dus)
-	timeChecker := releaseUpdater.NewDeployTimeService(r.dc, dus, r.isDeckhousePodReady, r.logger)
+	timeChecker := releaseUpdater.NewDeployTimeService(r.dc, dus, r.logger)
 
 	var deployTimeResult *releaseUpdater.DeployTimeResult
 
@@ -980,6 +996,7 @@ func (r *deckhouseReleaseReconciler) reconcileDeployedRelease(ctx context.Contex
 
 			dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationIsUpdating] = "false"
 			dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationNotified] = "true"
+			r.metricStorage.Grouped().ExpireGroupMetrics(metricUpdatingGroup)
 
 			return nil
 		})
@@ -988,6 +1005,10 @@ func (r *deckhouseReleaseReconciler) reconcileDeployedRelease(ctx context.Contex
 		}
 
 		return res, nil
+	}
+
+	if dr.GetIsUpdating() {
+		r.metricStorage.Grouped().GaugeSet(metricUpdatingGroup, metricUpdatingName, 1, map[string]string{"releaseChannel": r.updateSettings.Get().ReleaseChannel})
 	}
 
 	return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
