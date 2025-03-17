@@ -150,6 +150,37 @@ func (pc *Checker) Static() error {
 	return pc.bootstrapState.SetStaticPreflightchecksWasRan()
 }
 
+func (pc *Checker) StaticSudo() error {
+	_, err := pc.bootstrapState.StaticPreflightchecksWasRan()
+	if err != nil {
+		msg := fmt.Sprintf("Can not get state from cache: %v", err)
+		return errors.New(msg)
+	}
+
+	err = pc.do("Preflight checks for SSH and sudo", []checkStep{
+		{
+			fun:            pc.CheckSSHCredential,
+			successMessage: "ssh credential is correctly",
+			skipFlag:       app.SSHCredentialsCheckArgName,
+		},
+		{
+			fun:            pc.CheckSSHTunnel,
+			successMessage: "ssh tunnel between installer and node is possible",
+			skipFlag:       app.SSHForwardArgName,
+		},
+		{
+			fun:            pc.CheckSudoIsAllowedForUser,
+			successMessage: "sudo is allowed for user",
+			skipFlag:       app.SudoAllowedCheckArgName,
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (pc *Checker) Cloud() error {
 	ready, err := pc.bootstrapState.CloudPreflightchecksWasRan()
 	if err != nil {
