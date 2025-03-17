@@ -40,8 +40,11 @@ spec:
   type: KubernetesPods
   kubernetesPods:
     namespaceSelector:
-      matchNames:
-        - whispers
+      labelSelector:
+        matchExpressions:
+        - key: "kubernetes.io/metadata.name"
+          operator: In
+          values: [whispers]
     labelSelector:
       matchLabels:
         app: booking
@@ -411,8 +414,11 @@ spec:
       matchLabels:
         app: events-exporter
     namespaceSelector:
-      matchNames:
-      - d8-monitoring
+      labelSelector:
+        matchExpressions:
+        - key: "kubernetes.io/metadata.name"
+          operator: In
+          values: [d8-monitoring]
   destinationRefs:
   - loki-storage
 ```

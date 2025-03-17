@@ -38,6 +38,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/autoscaler/capacity"
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -297,7 +298,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 		nodeGroup := v.(NodeGroupCrdInfo)
 		ngForValues := nodeGroupForValues(nodeGroup.Spec.DeepCopy())
 		// set observed status fields
-		input.PatchCollector.Filter(set_cr_statuses.SetObservedStatus(v, applyNodeGroupCrdFilter), "deckhouse.io/v1", "nodegroup", "", nodeGroup.Name, object_patch.WithSubresource("/status"), object_patch.IgnoreHookError())
+		input.PatchCollector.PatchWithMutatingFunc(set_cr_statuses.SetObservedStatus(v, applyNodeGroupCrdFilter), "deckhouse.io/v1", "nodegroup", "", nodeGroup.Name, object_patch.WithSubresource("/status"), object_patch.WithIgnoreHookError())
 		// Copy manualRolloutID and name.
 		ngForValues["name"] = nodeGroup.Name
 		ngForValues["manualRolloutID"] = nodeGroup.ManualRolloutID
@@ -334,7 +335,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 					}
 				}
 
-				input.Logger.Error("Bad NodeGroup", slog.String("name", nodeGroup.Name), slog.String("msg", errorMsg))
+				input.Logger.Error("Bad NodeGroup", slog.String("name", nodeGroup.Name), slog.String("error_msg", errorMsg))
 				setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, errorStatusField, errorMsg)
 				continue
 			}
@@ -362,7 +363,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 					}
 				}
 
-				input.Logger.Error("Bad NodeGroup", slog.String("name", nodeGroup.Name), slog.String("msg", errorMsg))
+				input.Logger.Error("Bad NodeGroup", slog.String("name", nodeGroup.Name), slog.String("error_msg", errorMsg))
 				setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, errorStatusField, errorMsg)
 				continue
 			}
@@ -374,7 +375,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 					// capacity calculation required only for scaling from zero, we can save some time in the other cases
 					nodeCapacity, err := capacity.CalculateNodeTemplateCapacity(nodeGroupInstanceClassKind, instanceClassSpec, instanceTypeCatalog)
 					if err != nil {
-						input.Logger.Errorf("Calculate capacity failed for: %s with spec: %v. Error: %s", nodeGroupInstanceClassKind, instanceClassSpec, err)
+						input.Logger.Error("Calculate capacity failed", slog.String("node_group", nodeGroupInstanceClassKind), slog.String("spec", fmt.Sprintf("%v", instanceClassSpec)), log.Err(err))
 						setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, errorStatusField, fmt.Sprintf("%s capacity is not set and instance type could not be found in the built-it types. ScaleFromZero would not work until you set a capacity spec into the %s/%s", nodeGroupInstanceClassKind, nodeGroupInstanceClassKind, nodeGroup.Spec.CloudInstances.ClassReference.Name))
 						continue
 					}
@@ -398,7 +399,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 				}
 				if containCount != len(nodeGroup.Spec.CloudInstances.Zones) {
 					errorMsg := fmt.Sprintf("unknown cloudInstances.zones: %v", unknownZones)
-					input.Logger.Errorf("Bad NodeGroup '%s': %s", nodeGroup.Name, errorMsg)
+					input.Logger.Error("Bad NodeGroup", slog.String("name", nodeGroup.Name), slog.String("error_msg", errorMsg))
 
 					setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, errorStatusField, errorMsg)
 					continue

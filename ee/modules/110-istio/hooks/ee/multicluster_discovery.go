@@ -182,7 +182,7 @@ func multiclusterDiscovery(input *go_hook.HookInput, dc dependency.Container) er
 			continue
 		}
 		if statusCode != 200 {
-			input.Logger.Warn("cannot fetch private metadata endpoint for IstioMulticluster", slog.String("endoint", multiclusterInfo.PrivateMetadataEndpoint), slog.String("name", multiclusterInfo.Name), slog.Int("http_code", statusCode))
+			input.Logger.Warn("cannot fetch private metadata endpoint for IstioMulticluster", slog.String("endpoint", multiclusterInfo.PrivateMetadataEndpoint), slog.String("name", multiclusterInfo.Name), slog.Int("http_code", statusCode))
 			multiclusterInfo.SetMetricMetadataEndpointError(input.MetricsCollector, multiclusterInfo.PrivateMetadataEndpoint, 1)
 			continue
 		}

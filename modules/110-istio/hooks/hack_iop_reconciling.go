@@ -30,7 +30,6 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -138,7 +137,7 @@ func hackIopReconcilingHook(input *go_hook.HookInput) error {
 			input.Logger.Info("iop with rev needs to punch.", slog.String("rev", iop.Revision))
 			if podName, ok := operatorPodMap[iop.Revision]; ok {
 				input.Logger.Info("Pod is allowed to punch.", slog.String("name", podName))
-				input.PatchCollector.Delete("v1", "Pod", "d8-istio", podName, object_patch.InBackground())
+				input.PatchCollector.DeleteInBackground("v1", "Pod", "d8-istio", podName)
 				input.Logger.Info("Pod deleted.", slog.String("name", podName))
 			}
 		}

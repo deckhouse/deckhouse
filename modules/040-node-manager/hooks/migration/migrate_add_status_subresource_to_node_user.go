@@ -72,7 +72,7 @@ func addStatusSubresourceForNodeUser(input *go_hook.HookInput) error {
 
 		input.Logger.Info("Add status for node user", slog.String("user", nu.UserName))
 
-		input.PatchCollector.Filter(func(u *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+		input.PatchCollector.PatchWithMutatingFunc(func(u *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 			objCopy := u.DeepCopy()
 			status := map[string]interface{}{
 				"errors": make(map[string]interface{}),

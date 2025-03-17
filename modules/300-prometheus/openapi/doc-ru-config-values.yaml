@@ -62,6 +62,8 @@ properties:
   grafana:
     description: Настройки для инсталляции Grafana.
     properties:
+      enabled:
+        description: Включить установку Grafana в кластер.
       useDarkTheme:
         description: Использование по умолчанию пользовательской темной темы.
       customPlugins:
