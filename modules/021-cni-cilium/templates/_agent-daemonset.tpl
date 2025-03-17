@@ -128,7 +128,7 @@ spec:
               # We need it for now but might not need it for >= 5.11 specially
               # for the 'SYS_RESOURCE'.
               # In >= 5.8 there's already BPF and PERMON capabilities
-              #- SYS_ADMIN
+              - SYS_ADMIN
               # Could be an alternative for the SYS_ADMIN for the RLIMIT_NPROC
               - SYS_RESOURCE
               # Both PERFMON and BPF requires kernel 5.8, container runtime
