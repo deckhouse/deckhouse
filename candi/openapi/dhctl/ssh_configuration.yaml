@@ -6,7 +6,7 @@ apiVersions:
     description: |
       General dhctl SSH config.
     additionalProperties: false
-    oneOf:
+    anyOf:
       - required: [apiVersion, kind, sshUser, sshAgentPrivateKeys]
       - required: [apiVersion, kind, sshUser, sudoPassword]
     x-examples:

@@ -37,7 +37,7 @@ const (
 type SSHConfig struct {
 	SSHUser             string               `json:"sshUser"`
 	SSHPort             *int32               `json:"sshPort,omitempty"`
-	SSHAgentPrivateKeys []SSHAgentPrivateKey `json:"sshAgentPrivateKeys"`
+	SSHAgentPrivateKeys []SSHAgentPrivateKey `json:"sshAgentPrivateKeys,omitempty"`
 	SSHExtraArgs        string               `json:"sshExtraArgs,omitempty"`
 	SSHBastionHost      string               `json:"sshBastionHost,omitempty"`
 	SSHBastionPort      *int32               `json:"sshBastionPort,omitempty"`
