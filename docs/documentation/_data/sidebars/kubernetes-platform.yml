@@ -87,7 +87,7 @@ entries:
                     ru: Управление узлами
                   url: /admin/configuration/node-management/node-management.html
             - title:
-                en: Platform scaling and node management
+                en: Application scaling and resource management
                 ru: Масштабирование приложений и управление ресурсами
               folders:
                 - title:
@@ -101,15 +101,15 @@ entries:
                 - title:
                     en: Vertical pod autoscaling
                     ru: Вертикальное масштабирование
-                  url: /admin/configuration/app-scaling/vpa.html  
+                  url: /admin/configuration/app-scaling/vpa.html
                 - title:
-                    en: Load redistribution and pod eviction
-                    ru: Распределение нагрузки и вытеснение подов
+                    en: Load distribution management
+                    ru: Управление распределением нагрузки
                   folders:
                     - title:
                         en: Scheduler
                         ru: Планировщик
-                      url: /admin/configuration/app-scaling/pod-eviction/scheduler.html  
+                      url: /admin/configuration/app-scaling/pod-eviction/scheduler.html
                     - title:
                         en: Priority classes
                         ru: Приоритеты подов
