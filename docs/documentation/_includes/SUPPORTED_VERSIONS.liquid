@@ -199,7 +199,7 @@
 {{ site.data.i18n.common['k8s_supported_phrase'][page.lang] }}:
 
 <div markdown="0">
-<table class="supported_versions__kubernetes">
+<table class="supported_versions supported_versions__kubernetes fixed-header-table">
 <thead>
     <tr>
       <th style="width: 5%;"></th>
@@ -239,7 +239,7 @@ Deckhouse should work with any container registry supporting Bearer authenticati
 {% endalert %}
 
 <div markdown="0">
-<table class="supported_versions__kubernetes">
+<table class="supported_versions supported_versions__kubernetes supported_versions__kubernetes-container fixed-header-table">
 <thead>
 <tr><th>
 {%- if page.lang == 'ru' %}
