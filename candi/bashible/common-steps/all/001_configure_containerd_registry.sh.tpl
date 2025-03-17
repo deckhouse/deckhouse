@@ -91,6 +91,8 @@ EOF
 bb-sync-file "/etc/containerd/registry.d/{{ $registryHost }}/hosts.toml" - << EOF
 server = {{ $registryHost | quote }}
 ca = ["/etc/containerd/registry.d/{{ $registryHost }}/ca.crt"]
+
+[host]
 EOF
       {{- end }}
     {{- end }}
@@ -103,16 +105,16 @@ hosts_state_file="/etc/containerd/registry.d/deckhouse_hosts_state.json"
 new_hosts='{{ $existRegistryHostList | uniq | toJson }}'
 old_hosts="[]"
 if [[ -f "$hosts_state_file" ]]; then
-    old_hosts=$(< "$hosts_state_file")
+  old_hosts=$(< "$hosts_state_file")
 fi
 
 # Remove old hosts
 echo "$old_hosts" | /opt/deckhouse/bin/jq -r --argjson new_hosts "$new_hosts" '
-    .[] | select( index($new_hosts[]) | not )' | while IFS= read -r old_host; do
-    host_dir="/etc/containerd/registry.d/$old_host"
-    if [[ -d "$host_dir" ]]; then
-      rm -rf "$host_dir"
-    fi
+  .[] | select(. as $host | $new_hosts | index($host) | not)' | while IFS= read -r old_host; do
+  host_dir="/etc/containerd/registry.d/$old_host"
+  if [[ -d "$host_dir" ]]; then
+    rm -rf "$host_dir"
+  fi
 done
 
 # Updated state
