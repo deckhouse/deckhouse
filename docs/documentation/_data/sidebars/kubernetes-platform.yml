@@ -406,16 +406,15 @@ entries:
                 - title:
                     en: Hubble web interface
                     ru: Веб-интерфейс Hubble
-                  url: /user/web/hubble.html
-              folders:
+                  url: /user/hubble.html
                 - title:
                     en: Alertmanager-email web interface
                     ru: Веб-интерфейс Alertmanager-email
-                  url: /user/web/alertmanager.html
+                  url: /user/alertmanager.html
                 - title:
                     en: Alertmanager1-email web interface
                     ru: Веб-интерфейс Alertmanager1-email
-                  url: /user/web/alertmanager1.html
+                  url: /user/alertmanager1.html
         - title:
             en: Multitenancy
             ru: Мультитенантность
