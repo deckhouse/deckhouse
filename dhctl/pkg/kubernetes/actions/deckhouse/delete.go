@@ -72,6 +72,32 @@ func DeleteDeckhouseDeployment(kubeCl *client.KubernetesClient) error {
 	})
 }
 
+func DeletePDBs(kubeCl *client.KubernetesClient) error {
+	return retry.NewLoop("Delete pdbs", 45, 5*time.Second).WithShowError(false).Run(func() error {
+		foregroundPolicy := metav1.DeletePropagationForeground
+		namespaces, err := kubeCl.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
+		if err != nil {
+			return err
+		}
+
+		for _, ns := range namespaces.Items {
+			pdbs, err := kubeCl.PolicyV1().PodDisruptionBudgets(ns.Name).List(context.TODO(), metav1.ListOptions{})
+			if err != nil {
+				continue
+			}
+
+			for _, pdb := range pdbs.Items {
+				err := kubeCl.PolicyV1().PodDisruptionBudgets(ns.Name).Delete(context.TODO(), pdb.Name, metav1.DeleteOptions{PropagationPolicy: &foregroundPolicy})
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		return nil
+	})
+}
+
 func ListD8StorageResources(kubeCl *client.KubernetesClient, cr schema.GroupVersionResource) (*unstructured.UnstructuredList, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
