@@ -574,12 +574,23 @@ func bootstrapAdditionalNodesForCloudCluster(kubeCl *client.KubernetesClient, me
 	}
 
 	terraNodeGroups := metaConfig.GetTerraNodeGroups()
-	if err := BootstrapTerraNodes(kubeCl, metaConfig, terraNodeGroups, terraformContext); err != nil {
+	bootstrapAdditionalTerraNodeGroups := BootstrapTerraNodes
+	if converge.IsSequentialNodesBootstrap() {
+		bootstrapAdditionalTerraNodeGroups = converge.BootstrapSequentialTerraNodes
+	}
+
+	if err := bootstrapAdditionalTerraNodeGroups(kubeCl, metaConfig, terraNodeGroups, terraformContext); err != nil {
 		return err
 	}
 
 	return log.Process("bootstrap", "Waiting for Node Groups are ready", func() error {
-		if err := converge.WaitForNodesBecomeReady(kubeCl, map[string]int{"master": metaConfig.MasterNodeGroupSpec.Replicas}); err != nil {
+		ngs := map[string]int{"master": metaConfig.MasterNodeGroupSpec.Replicas}
+		for _, ng := range terraNodeGroups {
+			if ng.Replicas > 0 {
+				ngs[ng.Name] = ng.Replicas
+			}
+		}
+		if err := converge.WaitForNodesBecomeReady(kubeCl, ngs); err != nil {
 			return err
 		}
 		return nil
