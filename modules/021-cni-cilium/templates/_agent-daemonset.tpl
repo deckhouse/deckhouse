@@ -137,6 +137,12 @@ spec:
               #- BPF
               # Allow discretionary access control (e.g. required for package installation)
               - DAC_OVERRIDE
+              # Allow to set Access Control Lists (ACLs) on arbitrary files (e.g. required for package installation)
+              - FOWNER
+              # Allow to execute program that changes GID (e.g. required for package installation)
+              - SETGID
+              # Allow to execute program that changes UID (e.g. required for package installation)
+              - SETUID
             drop:
               - ALL
         volumeMounts:
@@ -214,7 +220,7 @@ spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       initContainers:
-      {{- include "module_init_container_check_linux_kernel" (tuple $context ">= 4.9.17") | nindent 6 }}
+      {{- include "module_init_container_check_linux_kernel" (tuple $context ">= 5.4") | nindent 6 }}
       - name: clearing-unnecessary-iptables
         image: {{ include "helm_lib_module_image" (list $context "agentDistroless") }}
         imagePullPolicy: IfNotPresent
