@@ -15,6 +15,7 @@
 package frontend
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -34,7 +35,7 @@ func NewFile(sess *session.Session) *File {
 	return &File{Session: sess}
 }
 
-func (f *File) Upload(srcPath, remotePath string) error {
+func (f *File) Upload(ctx context.Context, srcPath, remotePath string) error {
 	fType, err := CheckLocalPath(srcPath)
 	if err != nil {
 		return err
@@ -49,7 +50,7 @@ func (f *File) Upload(srcPath, remotePath string) error {
 		SCP().
 		CaptureStdout(nil).
 		CaptureStderr(nil)
-	err = scp.Run()
+	err = scp.Run(ctx)
 	if err != nil {
 		return fmt.Errorf(
 			"upload file '%s': %w\n%s\nstderr: %s",
@@ -64,7 +65,7 @@ func (f *File) Upload(srcPath, remotePath string) error {
 }
 
 // UploadBytes creates a tmp file and upload it to remote dstPath
-func (f *File) UploadBytes(data []byte, remotePath string) error {
+func (f *File) UploadBytes(ctx context.Context, data []byte, remotePath string) error {
 	srcPath, err := CreateEmptyTmpFile()
 	if err != nil {
 		return fmt.Errorf("create source tmp file: %v", err)
@@ -87,7 +88,7 @@ func (f *File) UploadBytes(data []byte, remotePath string) error {
 		SCP().
 		CaptureStderr(nil).
 		CaptureStdout(nil)
-	err = scp.Run()
+	err = scp.Run(ctx)
 	if err != nil {
 		return fmt.Errorf(
 			"upload file '%s': %w\n%s\nstderr: %s",

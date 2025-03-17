@@ -47,7 +47,7 @@ const (
 	httpClientTimeoutSec = 20
 )
 
-func (pc *Checker) CheckRegistryAccessThroughProxy() error {
+func (pc *Checker) CheckRegistryAccessThroughProxy(ctx context.Context) error {
 	if app.PreflightSkipRegistryThroughProxy {
 		log.InfoLn("Checking if registry is accessible through proxy was skipped (via skip flag)")
 		return nil
@@ -130,7 +130,7 @@ func checkResponseIsFromDockerRegistry(resp *http.Response) error {
 	return nil
 }
 
-func (pc *Checker) CheckRegistryCredentials() error {
+func (pc *Checker) CheckRegistryCredentials(ctx context.Context) error {
 	if app.PreflightSkipRegistryCredentials {
 		log.InfoLn("Checking registry credentials was skipped")
 		return nil

@@ -312,7 +312,8 @@ func processStaticHosts(hosts []session.Host, s *session.Session, stdOutErrHandl
 			cmd.WithTimeout(5 * time.Minute)
 			cmd.WithStdoutHandler(stdOutErrHandler)
 			cmd.WithStderrHandler(stdOutErrHandler)
-			err := cmd.Run()
+			// TODO(dhctl-for-commander-cancels): pass ctx
+			err := cmd.Run(context.TODO())
 
 			if err != nil {
 				var ee *exec.ExitError
