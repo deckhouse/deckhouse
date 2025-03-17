@@ -26,7 +26,7 @@ spec:
     spec:
       containers:
         - name: deckhouse
-          image: my.registry.com/deckhouse:v1.31.0
+          image: my.registry.com/deckhouse:v1.25.0
 
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -41,35 +41,17 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1.31.1
-spec:
-  version: "v1.31.1"
-status:
-  phase: Pending
----
-apiVersion: deckhouse.io/v1alpha1
-kind: DeckhouseRelease
-metadata:
-  name: v1.31.2
-spec:
-  version: "v1.31.2"
-status:
-  phase: Pending
----
-apiVersion: deckhouse.io/v1alpha1
-kind: DeckhouseRelease
-metadata:
-  name: v1.31.3
-spec:
-  version: "v1.31.3"
-status:
-  phase: Pending
----
-apiVersion: deckhouse.io/v1alpha1
-kind: DeckhouseRelease
-metadata:
   name: v1.32.0
 spec:
   version: "v1.32.0"
+status:
+  phase: Pending
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1.32.1
+spec:
+  version: "v1.32.1"
 status:
   phase: Pending
