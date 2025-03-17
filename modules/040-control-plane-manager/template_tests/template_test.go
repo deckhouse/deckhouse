@@ -21,12 +21,13 @@ import (
 	"fmt"
 	"strings"
 
-	. "github.com/deckhouse/deckhouse/testing/helm"
-	"github.com/deckhouse/deckhouse/testing/library/object_store"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
+
+	. "github.com/deckhouse/deckhouse/testing/helm"
+	"github.com/deckhouse/deckhouse/testing/library/object_store"
 )
 
 type Arg struct {
