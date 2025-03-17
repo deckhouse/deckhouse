@@ -383,6 +383,7 @@ resources:
 					"--service-account-issuer=https://api.bob.com",
 				}
 				err = yaml.Unmarshal(podWithExtraArgs, &pod)
+				Expect(err).ShouldNot(HaveOccurred())
 				Expect(pod.Spec.Containers[0].Args).To(Equal(expectedServiceAccountIssuers))
 			})
 		})
@@ -420,6 +421,7 @@ resources:
 					"--service-account-issuer=https://bob.com",
 				}
 				err = yaml.Unmarshal(podWithExtraArgs, &pod)
+				Expect(err).ShouldNot(HaveOccurred())
 				Expect(pod.Spec.Containers[0].Args).To(Equal(expectedServiceAccountIssuers))
 			})
 		})
@@ -458,6 +460,7 @@ resources:
 					"--service-account-issuer=https://flant.ru",
 				}
 				err = yaml.Unmarshal(podWithExtraArgs, &pod)
+				Expect(err).ShouldNot(HaveOccurred())
 				Expect(pod.Spec.Containers[0].Args).To(Equal(expectedServiceAccountIssuers))
 			})
 		})
@@ -495,6 +498,7 @@ resources:
 					"--service-account-issuer=https://flant.ru",
 				}
 				err = yaml.Unmarshal(podWithExtraArgs, &pod)
+				Expect(err).ShouldNot(HaveOccurred())
 				Expect(pod.Spec.Containers[0].Args).To(Equal(expectedServiceAccountIssuers))
 			})
 		})
@@ -531,6 +535,7 @@ resources:
 					"--service-account-issuer=https://flant.com",
 				}
 				err = yaml.Unmarshal(podWithExtraArgs, &pod)
+				Expect(err).ShouldNot(HaveOccurred())
 				Expect(pod.Spec.Containers[0].Args).To(Equal(expectedServiceAccountIssuers))
 			})
 		})
