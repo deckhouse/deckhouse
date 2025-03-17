@@ -29,17 +29,21 @@ variable "cloudConfig" {
   default = ""
 }
 
+variable "nodeGroupName" {
+  type = string
+}
+
 variable "clusterUUID" {
   type = string
 }
 
 
 locals {
-  prefix            = var.clusterConfiguration.cloud.prefix
-  node_index        = var.nodeIndex
-  namespace         = var.providerClusterConfiguration.provider.namespace
-  master_node_group = var.providerClusterConfiguration.masterNodeGroup
-  instance_class    = local.master_node_group.instanceClass
+  prefix         = var.clusterConfiguration.cloud.prefix
+  node_index     = var.nodeIndex
+  namespace      = var.providerClusterConfiguration.provider.namespace
+  ng             = [for i in var.providerClusterConfiguration.nodeGroups : i if i.name == var.nodeGroupName][0]
+  instance_class = local.ng["instanceClass"]
 
 
   cluster_uuid = var.clusterUUID
@@ -61,13 +65,10 @@ locals {
 
   ipv4_address = lookup(local.instance_class.virtualMachine, "ipAddresses", null) == null ? "Auto" : local.node_index + 1 > length(local.instance_class.virtualMachine.ipAddresses) ? "Auto" : local.instance_class.virtualMachine.ipAddresses[local.node_index]
 
-  kubernetes_data_disk_storage_class = lookup(local.instance_class.etcdDisk, "storageClass", null)
-  kubernetes_data_disk_size          = local.instance_class.etcdDisk.size
-
   region = lookup(var.providerClusterConfiguration, "region", "")
 
   actual_zones = lookup(var.providerClusterConfiguration, "zones", [])
-  zones        = lookup(local.master_node_group, "zones", null) != null ? tolist(setintersection(local.actual_zones, local.master_node_group["zones"])) : local.actual_zones
+  zones        = lookup(local.ng, "zones", null) != null ? tolist(setintersection(local.actual_zones, local.ng["zones"])) : local.actual_zones
   zone         = length(local.actual_zones) > 0 ? element(local.zones, var.nodeIndex) : ""
 
   additional_labels      = lookup(local.instance_class.virtualMachine, "additionalLabels", {})
@@ -76,7 +77,7 @@ locals {
   node_selector          = lookup(local.instance_class.virtualMachine, "nodeSelector", {})
   tolerations            = lookup(local.instance_class.virtualMachine, "tolerations", null)
 
-  node_group = "master"
+  node_group = local.ng.name
   hostname   = join("-", [local.prefix, local.node_group, local.node_index])
   user_data  = var.cloudConfig == "" ? "" : var.cloudConfig
 }
