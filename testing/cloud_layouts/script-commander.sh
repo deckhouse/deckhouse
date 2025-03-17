@@ -81,26 +81,6 @@ set -Eeo pipefail
 shopt -s failglob
 
 function prepare_environment() {
-    root_wd="${PWD}/testing/cloud_layouts"
-
-    if [[ -z "$PROVIDER" || ! -d "$root_wd/$PROVIDER" ]]; then
-      >&2 echo "ERROR: Unknown provider \"$PROVIDER\""
-      return 1
-    fi
-
-    cwd="$root_wd/$PROVIDER/$LAYOUT"
-    if [[ "$PROVIDER" == "Static" ]]; then
-      cwd="$root_wd/$PROVIDER"
-    fi
-    if [[ ! -d "$cwd" ]]; then
-      >&2 echo "There is no '${LAYOUT}' layout configuration for '${PROVIDER}' provider by path: $cwd"
-      return 1
-    fi
-
-    if [ -z "$bootstrap_log" ]; then
-      bootstrap_log="$cwd/bootstrap.log"
-    fi
-
     if [[ -z "$KUBERNETES_VERSION" ]]; then
       # shellcheck disable=SC2016
       >&2 echo 'KUBERNETES_VERSION environment variable is required.'
