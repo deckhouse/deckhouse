@@ -6,7 +6,7 @@
       for: 1m
       labels:
         tier: cluster
-        severity_level: "5"
+        severity_level: "4"
       annotations:
         plk_markup_format: markdown
         plk_protocol_version: "1"
@@ -33,7 +33,7 @@
       for: 1m
       labels:
         tier: cluster
-        severity_level: "5"
+        severity_level: "4"
       annotations:
         plk_markup_format: markdown
         plk_protocol_version: "1"
@@ -60,7 +60,7 @@
       for: 1m
       labels:
         tier: cluster
-        severity_level: "5"
+        severity_level: "4"
       annotations:
         plk_markup_format: markdown
         plk_protocol_version: "1"

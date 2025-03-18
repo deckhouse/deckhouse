@@ -26,7 +26,7 @@ const (
 	CheckCloudProviderConfigRaw = "checkCloudProviderConfigRaw"
 	CheckStaticClusterConfigRaw = "checkStaticClusterConfigRaw"
 	CheckClusterConfigRaw       = "checkClusterConfigRaw"
-	CheckConfig                 = "checkConfig"
+	CheckConfig                 = "checkAdditionalPropertiesDhctlConfigs"
 )
 
 func init() {
