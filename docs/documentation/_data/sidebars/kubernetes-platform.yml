@@ -533,6 +533,10 @@ entries:
             ru: Архитектура прикладного сервиса с включенным Istio
           url: /architecture/service-with-istio.html
         - title:
+            en: Table
+            ru: Таблица (Мэгтона)
+          url: /architecture/functional-table.html
+        - title:
             en: Multitenancy
             ru: Мультитенантность
           url: /architecture/multitenancy.html
