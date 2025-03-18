@@ -21,23 +21,41 @@ const (
 )
 
 type registryStaticPod struct {
-	Name     string
-	IP       string
-	NodeName string
-	NodeIP   string
-	IsReady  bool
-	Version  string
-}
-
-type registryMasterNode struct {
 	Name    string
 	IP      string
 	IsReady bool
-	Pods    []registryStaticPod
+	Version string
+}
+
+type registryStaticPodObject struct {
+	registryStaticPod
+	NodeName string
+	NodeIP   string
+}
+
+type registryNodeObject struct {
+	Name     string
+	IP       string
+	IsReady  bool
+	IsMaster bool
+}
+
+type registryNode struct {
+	registryNodeObject
+	Pods []registryStaticPod
 }
 
 type registryState struct {
-	Version string
+	StaticPodVersion string
+	BashibleVersion  string
+}
+
+type registryConfig struct {
+	Mode       string `json:"mode"`
+	ImagesRepo string `json:"imageRepo"`
+	UserName   string `json:"username"`
+	Password   string `json:"password"`
+	TTL        string `json:"ttl"`
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -71,14 +89,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			LabelSelector: &v1.LabelSelector{
 				MatchLabels: map[string]string{"node-role.kubernetes.io/control-plane": ""},
 			},
-			FilterFunc: filterRegistryMasterNodes,
+			FilterFunc: filterRegistryNodes,
 		},
 		{
 			Name:       "state",
 			ApiVersion: "v1",
 			Kind:       "Secret",
 			NameSelector: &types.NameSelector{
-				MatchNames: []string{"registry-deckhouse-state"},
+				MatchNames: []string{"registry-state"},
 			},
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
@@ -87,8 +105,33 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: filterRegistryState,
 		},
+		{
+			Name:       "config",
+			ApiVersion: "v1",
+			Kind:       "Secret",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"registry-config"},
+			},
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"d8-system"},
+				},
+			},
+			FilterFunc: filterRegistryConfig,
+		},
 	},
 }, handleRegistryStaticPods)
+
+func filterRegistryConfig(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var config registryConfig
+
+	err := sdk.FromUnstructured(obj, &config)
+	if err != nil {
+		return "", fmt.Errorf("failed to convert secret to struct: %v", err)
+	}
+
+	return config, nil
+}
 
 func filterRegistryState(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var secret v1core.Secret
@@ -99,13 +142,14 @@ func filterRegistryState(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 	}
 
 	ret := registryState{
-		Version: string(secret.Data["version"]),
+		StaticPodVersion: string(secret.Data["static_pod_version"]),
+		BashibleVersion:  string(secret.Data["bashible_version"]),
 	}
 
 	return ret, nil
 }
 
-func filterRegistryMasterNodes(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func filterRegistryNodes(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var node v1core.Node
 
 	err := sdk.FromUnstructured(obj, &node)
@@ -121,7 +165,7 @@ func filterRegistryMasterNodes(obj *unstructured.Unstructured) (go_hook.FilterRe
 		}
 	}
 
-	ret := registryMasterNode{
+	ret := registryNodeObject{
 		Name:    node.Name,
 		IsReady: isReady,
 	}
@@ -131,6 +175,10 @@ func filterRegistryMasterNodes(obj *unstructured.Unstructured) (go_hook.FilterRe
 			ret.IP = addr.Address
 			break
 		}
+	}
+
+	if _, ok := node.Labels["node-role.kubernetes.io/control-plane"]; ok {
+		ret.IsMaster = true
 	}
 
 	return ret, nil
@@ -164,13 +212,15 @@ func filterRegistryStaticPods(obj *unstructured.Unstructured) (go_hook.FilterRes
 		}
 	}
 
-	ret := registryStaticPod{
-		Name:     pod.Name,
-		IP:       pod.Status.PodIP,
+	ret := registryStaticPodObject{
+		registryStaticPod: registryStaticPod{
+			Name:    pod.Name,
+			IP:      pod.Status.PodIP,
+			IsReady: isReady,
+			Version: pod.Annotations[registryStaticPodVersionAnnotation],
+		},
 		NodeName: pod.Spec.NodeName,
 		NodeIP:   pod.Status.HostIP,
-		IsReady:  isReady,
-		Version:  pod.Annotations[registryStaticPodVersionAnnotation],
 	}
 
 	return ret, nil
@@ -180,25 +230,41 @@ func handleRegistryStaticPods(input *go_hook.HookInput) error {
 	podSnaps := input.Snapshots["static_pods"]
 	nodeSnaps := input.Snapshots["nodes"]
 	stateSnaps := input.Snapshots["state"]
+	configSnaps := input.Snapshots["config"]
 
-	var state registryState
+	var (
+		state    registryState
+		config   registryConfig
+		messages []string
+	)
 
-	if len(stateSnaps) > 0 {
+	if len(stateSnaps) == 1 {
 		state = stateSnaps[0].(registryState)
+	} else {
+		messages = append(messages, fmt.Sprintf("State snaps count: %v", len(stateSnaps)))
 	}
 
-	nodes := make(map[string]registryMasterNode)
+	if len(configSnaps) == 1 {
+		config = configSnaps[0].(registryConfig)
+	} else {
+		messages = append(messages, fmt.Sprintf("Config snaps count: %v", len(configSnaps)))
+	}
+
+	nodes := make(map[string]registryNode)
 
 	for _, snap := range nodeSnaps {
-		node := snap.(registryMasterNode)
+		nodeObject := snap.(registryNodeObject)
+		node := registryNode{
+			registryNodeObject: nodeObject,
+		}
 		nodes[node.Name] = node
 	}
 
 	for _, snap := range podSnaps {
-		pod := snap.(registryStaticPod)
+		pod := snap.(registryStaticPodObject)
 
 		if node, ok := nodes[pod.NodeName]; ok {
-			node.Pods = append(node.Pods, pod)
+			node.Pods = append(node.Pods, pod.registryStaticPod)
 			nodes[node.Name] = node
 		} else {
 			input.Logger.Warn(
@@ -209,12 +275,19 @@ func handleRegistryStaticPods(input *go_hook.HookInput) error {
 		}
 	}
 
-	if state.Version == "" {
-		state.Version = "unknown"
+	if state.StaticPodVersion == "" {
+		state.StaticPodVersion = "unknown"
 	}
 
-	input.Values.Set("systemRegistry.internal.state.masterNodes", nodes)
-	input.Values.Set("systemRegistry.internal.state.version", state.Version)
+	if state.BashibleVersion == "" {
+		state.BashibleVersion = "unknown"
+	}
+
+	input.Values.Set("systemRegistry.internal.state.nodes", nodes)
+	input.Values.Set("systemRegistry.internal.state.config", config)
+	input.Values.Set("systemRegistry.internal.state.static_pod_version", state.StaticPodVersion)
+	input.Values.Set("systemRegistry.internal.state.bashible_version", state.BashibleVersion)
+	input.Values.Set("systemRegistry.internal.state.messages", messages)
 
 	return nil
 }

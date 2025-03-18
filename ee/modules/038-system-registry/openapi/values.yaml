@@ -24,9 +24,22 @@ properties:
       state:
         type: object
         default: {}
-        additionalProperties: true
-        x-kubernetes-preserve-unknown-fields: true
         properties:
-          version:
+          static_pod_version:
             type: string
             default: "unknown"
+          bashible_version:
+            type: string
+            default: "unknown"
+          nodes:
+            type: object
+            additionalProperties: true
+            x-kubernetes-preserve-unknown-fields: true
+          config:
+            type: object
+            additionalProperties: true
+            x-kubernetes-preserve-unknown-fields: true
+          messages:
+            type: array
+            items:
+              type: string
