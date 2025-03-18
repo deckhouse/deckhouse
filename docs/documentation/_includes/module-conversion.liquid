@@ -1,20 +1,29 @@
 {%- assign moduleName = page['module-kebab-name'] %}
 
-{%- assign moduleConversions = site.data.schemas[moduleName]['conversions'] %}
+{%- if site.data.schemas[moduleName]['conversions'].size > 0 %}
 
-{%- if moduleConversions.size > 0 %}
+{%- assign moduleConversions = site.data.schemas[moduleName]['conversions'] | sort %}
 
-## {% if page.lang == 'ru' %}Конверсии{% else %}Conversions{% endif %}
+## {{ site.data.i18n.common.conversions[page.lang] }}
 
-{% for conversion in moduleConversions %}
+{{ site.data.i18n.common.conversion_action_message[page.lang] }}:
 
-### {% if page.lang == 'ru' %}Конверсия{% else %}Conversion{% endif %} {{ conversion[0] }}
+{%- for conversion in moduleConversions %}
 
-{%- if conversion[1].description[page.lang] %}
-  {{ site.data.i18n.common.doit[page.lang] }}: {{ conversion[1].description[page.lang] }}
-{%- else %}
-  {% if page.lang == 'ru' %}Описание отсутствует{% else %}Description is missing{% endif %}
+{%- assign conversionVersion =  conversion[1]["version"] %}
+{%- assign conversionVersionPrev =  conversionVersion | minus: 1 %}
+
+- {{ site.data.i18n.common.conversion_from_version[page.lang] | capitalize }} **{{ conversionVersionPrev }}** {{ site.data.i18n.common.conversion_to[page.lang] }} **{{ conversionVersion }}**:
+
+  {% if conversion[1].description[page.lang] %}{{ conversion[1].description[page.lang] | strip_html }}
+  {% else %}{{ site.data.i18n.common.conversion_missing_description[page.lang] }}.
+
+  {% if conversion[1].conversions.size > 0 %}
+  {{ site.data.i18n.common.conversion_expressions[page.lang] }}:
+  {% for conversionRule in conversion[1].conversions %}
+  - `{{ conversionRule }}`
+  {% endfor %}
+  {% endif %}
+  {% endif %}
+{%- endfor %}
 {%- endif %}
-
-{% endfor %}
-{% endif %}

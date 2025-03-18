@@ -104,12 +104,30 @@ common:
   not_required_value_sentence:
     en: Not required value.
     ru: Необязательный параметр.
+  conversions:
+    en: Conversions
+    ru: Конверсии
   documents_found:
     en: Documents found
     ru: Найдено документов
-  doit:
-    en: To convert data from a previous version of the module parameter specification, proceed as follows
-    ru: Для преобразования данных из предыдущей версии спецификации параметров модуля выполните следующее
+  conversion_action_message:
+    en: "Perform the following actions if you need to convert data from one version of the module parameter schema to another"
+    ru: "При необходимости преобразования данных из одной версии схемы параметров модуля в другую, выполните следующие действия"
+  conversion_from_version:
+    en: "from version"
+    ru: "из версии"
+  conversion_to_version:
+    en: "to version"
+    ru: "в версию"
+  conversion_to:
+    en: "to"
+    ru: "в"
+  conversion_missing_description:
+    en: "Conversion description is missing"
+    ru: "Описание конверсии отсутствует"
+  conversion_expressions:
+    en: "Actions performed by conversion"
+    ru: "Преобразования, выполняемые конверсией"
   parameters:
     en: Parameters
     ru: Параметры
