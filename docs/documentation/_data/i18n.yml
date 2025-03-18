@@ -287,6 +287,9 @@ common:
   description_faq:
     ru: Deckhouse Kubernetes Platform, частые вопросы по использованию модуля <MODULENAME>.
     en: Deckhouse Kubernetes Platform — Frequently Asked Questions for the <MODULENAME> module.
+  crd_has_no_parameters:
+    en: The CRD has no fields for configuration.
+    ru: У CRD нет полей для настройки.
 
 comparison:
   except_parameters:

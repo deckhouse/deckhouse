@@ -63,11 +63,11 @@ shell:
         echo '[] Edition - {{ .Edition }}. Merging files of modules for different editions...'
         for dir in {be,se,ee,se-plus,fe}; do if [ -d /src/$dir/modules ];then cp -rf /src/$dir/modules /src >& /dev/null; fi; done
 
-        echo '[] Preparing modules structure...'
-        export MODULES_SRC_DIR=/src/modules
-        export MODULES_DST_EN=/srv/jekyll-data/documentation/modules_en
-        export MODULES_DST_RU=/srv/jekyll-data/documentation/modules_ru
-        bash _tools/modules_prepare.sh
+        #echo '[] Preparing modules structure...'
+        #export MODULES_SRC_DIR=/src/modules
+        #export MODULES_DST_EN=/srv/jekyll-data/documentation/modules_en
+        #export MODULES_DST_RU=/srv/jekyll-data/documentation/modules_ru
+        #bash _tools/modules_prepare.sh
 
         echo '[] Adding permalinks...'
         for i in $(find . -regex '.*.md' -print); do
@@ -80,9 +80,10 @@ shell:
         done
 
         echo '[] Generating configuration schemas...'
-        export MODULES_DIR=modules_en
-        bash _tools/modules_generate_configuration.sh
-        export MODULES_DIR=modules_ru MODULES_LANG=ru
+        export MODULES_DIR=/src/modules
+        #export MODULES_DIR=modules_en
+        #bash _tools/modules_generate_configuration.sh
+        #export MODULES_DIR=modules_ru MODULES_LANG=ru
         bash _tools/modules_generate_configuration.sh
 
         echo
@@ -94,10 +95,13 @@ shell:
 
         echo
         echo "[] Generating CR schemas..."
-        export MODULES_DIR=modules_en
-        bash _tools/modules_generate_cr.sh
-        export MODULES_DIR=modules_ru
-        bash _tools/modules_generate_cr.sh
+        #export MODULES_DIR=modules_en
+        #bash _tools/modules_generate_cr.sh
+        #export MODULES_DIR=modules_ru
+        #bash _tools/modules_generate_cr.sh
+
+        mkdir -p _data/schemas/crds/
+        find "/src/modules" -regex '^.*/crds/.*\.yaml$' -exec cp -f {} "_data/schemas/crds/" \;
 
         echo
         echo '[] Preparing OSS license info...'
