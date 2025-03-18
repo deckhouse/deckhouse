@@ -216,11 +216,13 @@ jobs:
         echo "TAG_NAME=${TAG_NAME}"
         MAJOR=$(echo "$TAG_NAME" | cut -d'.' -f1 | tr -d 'v')
         MINOR=$(echo "$TAG_NAME" | cut -d'.' -f2)
-        RELEASE_NAME="release-${MAJOR}-${MINOR}"
-        echo "RELEASE_NAME=${RELEASE_NAME}"
+        RELEASE_BRANCH_NAME="release-${MAJOR}.${MINOR}"
+        echo "RELEASE_BRANCH_NAME=${RELEASE_BRANCH_NAME}"
         echo "GITHUB_SHA=${GITHUB_SHA}"
+        echo "Current commit in branch:"
         git branch -r --contains ${GITHUB_SHA}
-        git branch -r --contains ${GITHUB_SHA} | grep $RELEASE_NAME
+        # grep returns exit code 1 if branch not found
+        git branch -r --contains ${GITHUB_SHA} | grep ${RELEASE_BRANCH_NAME}
 
   comment_on_start:
     name: Update issue comment
