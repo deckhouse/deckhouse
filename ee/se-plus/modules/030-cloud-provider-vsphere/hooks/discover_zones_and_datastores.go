@@ -51,6 +51,8 @@ func doDiscover(input *go_hook.HookInput, dc dependency.Container) error {
 		return fmt.Errorf("no providerClusterConfiguration present, discovery is not possible")
 	}
 
+	storageClasses := []vsphere.ZonedDataStore{}
+
 	var c v1.VsphereProviderClusterConfiguration
 	err := json.Unmarshal([]byte(configJSON.String()), &c)
 	if err != nil {
@@ -83,7 +85,6 @@ func doDiscover(input *go_hook.HookInput, dc dependency.Container) error {
 		Zones:      output.Zones,
 	})
 
-	storageClasses := []vsphere.ZonedDataStore{}
 	if output.ZonedDataStores != nil {
 		storageClasses = output.ZonedDataStores
 	}
