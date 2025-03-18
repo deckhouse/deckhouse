@@ -1,3 +1,4 @@
+{{- if .Values.prometheus.internal.grafana.enabled }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
@@ -24,3 +25,4 @@ spec:
   namespaceSelector:
     matchNames:
     - d8-monitoring
+{{- end }}

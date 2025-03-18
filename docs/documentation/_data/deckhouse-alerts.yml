@@ -16,7 +16,7 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        A certificate in Secret `{{$labels.namespace}}/{{$labels.name}}` has expired.
+        A certificate in Secret `{{$labels.secret_namespace}}/{{$labels.secret_name}}` has expired.
 
         Ways to resolve:
 
@@ -25,13 +25,13 @@ alerts:
           1. Retrieve the certificate name from the Secret:
 
              ```bash
-             cert=$(kubectl get secret -n {{$labels.namespace}} {{$labels.name}} -o 'jsonpath={.metadata.annotations.cert-manager\.io/certificate-name}')
+             cert=$(kubectl get secret -n {{$labels.secret_namespace}} {{$labels.secret_name}} -o 'jsonpath={.metadata.annotations.cert-manager\.io/certificate-name}')
              ```
 
           2. Check the certificate status and investigate why it hasn't been updated:
 
              ```bash
-             kubectl describe cert -m {{$labels.namespace}} "$cert"
+             kubectl describe cert -m {{$labels.secret_namespace}} "$cert"
              ```
       summary: |
         Certificate has expired.
@@ -43,7 +43,7 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        A certificate in Secret `{{$labels.namespace}}/{{$labels.name}}` will expire in less than two weeks.
+        A certificate in Secret `{{$labels.secret_namespace}}/{{$labels.secret_name}}` will expire in less than two weeks.
 
         Ways to resolve:
 
@@ -52,13 +52,13 @@ alerts:
           1. Retrieve the certificate name from the Secret:
 
              ```bash
-             cert=$(kubectl get secret -n {{$labels.namespace}} {{$labels.name}} -o 'jsonpath={.metadata.annotations.cert-manager\.io/certificate-name}')
+             cert=$(kubectl get secret -n {{$labels.secret_namespace}} {{$labels.secret_name}} -o 'jsonpath={.metadata.annotations.cert-manager\.io/certificate-name}')
              ```
 
           2. Check the certificate status and investigate why it hasn't been updated:
 
              ```bash
-             kubectl describe cert -n {{$labels.namespace}} "$cert"
+             kubectl describe cert -n {{$labels.secret_namespace}} "$cert"
              ```
       summary: |
         Certificate is expiring soon.
@@ -2769,6 +2769,31 @@ alerts:
         One or more Upmeter agent pods is NOT Running
       severity: "6"
       markupFormat: markdown
+    - name: D8UpmeterDiskUsage
+      sourceFile: modules/500-upmeter/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 500-upmeter
+      module: upmeter
+      edition: ce
+      description: |
+        The only way to resolve is to recreate the PVC using the following steps:
+
+        1. Save the PVC data if you need it.
+
+        1. Delete the PVC and restart `upmeter`:
+
+           ```shell
+           kubectl -n d8-upmeter delete persistentvolumeclaim/data-upmeter-0 pod/upmeter-0
+           ```
+
+        1. Check the status of the created PVC:
+
+           ```shell
+           kubectl -n d8-upmeter get pvc
+           ```
+      summary: |
+        Upmeter disk usage is over 80%.
+      severity: "5"
+      markupFormat: markdown
     - name: D8UpmeterProbeGarbageConfigmap
       sourceFile: modules/500-upmeter/monitoring/prometheus-rules/alerting.yaml
       moduleUrl: 500-upmeter
@@ -4092,23 +4117,6 @@ alerts:
         Current usage: {{ .Value }}%
       summary: |
         Soft eviction of nodefs on node {{$labels.node}} at mountpoint {{$labels.mountpoint}} is in progress.
-      severity: "9"
-      markupFormat: markdown
-    - name: KubernetesAPFRejectRequests
-      sourceFile: modules/011-flow-schema/monitoring/prometheus-rules/flow-schema.yaml
-      moduleUrl: 011-flow-schema
-      module: flow-schema
-      edition: ce
-      description: |
-        > This alert is experimental.
-
-        To display the APF schema queue requests, use the following expression:
-
-        ```promql
-        apiserver_flowcontrol_current_inqueue_requests{flow_schema="d8-serviceaccounts"}
-        ```
-      summary: |
-        APF flow schema d8-serviceaccounts has rejected API requests.
       severity: "9"
       markupFormat: markdown
     - name: KubernetesCoreDNSHasCriticalErrors
@@ -5753,7 +5761,6 @@ modules-having-alerts:
     - control-plane-manager
     - documentation
     - extended-monitoring
-    - flow-schema
     - ingress-nginx
     - istio
     - kube-dns

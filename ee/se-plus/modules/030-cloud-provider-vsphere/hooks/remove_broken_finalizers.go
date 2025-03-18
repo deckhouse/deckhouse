@@ -60,7 +60,7 @@ func handleVolumeAttachments(input *go_hook.HookInput) error {
 			continue
 		}
 
-		input.PatchCollector.Filter(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+		input.PatchCollector.PatchWithMutatingFunc(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 			var v storagev1.VolumeAttachment
 			err := sdk.FromUnstructured(obj, &v)
 			if err != nil {

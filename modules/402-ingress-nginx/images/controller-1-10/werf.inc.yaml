@@ -52,6 +52,16 @@ shell:
   - patch -p1 < /patches/balancer-lua.patch
   - patch -p1 < /patches/nginx-tmpl.patch
   - patch -p1 < /patches/auth-cookie-always.patch
+  # pass env for build
+  - cd /src/ingress-nginx
+  - echo "export COMMIT_SHA=git-$(git rev-parse --short HEAD)" > .env_pass
+  - echo "export REPO_INFO=$(git config --get remote.origin.url)" >> .env_pass
+  - echo "export TAG=$(git describe --tags --always)" >> .env_pass
+  - rm -rf /src/dumb-init/.git   
+  - rm -rf /src/lua-protobuf/.git   
+  - rm -rf /src/lua-iconv/.git   
+  - rm -rf /src/ingress-nginx/.git   
+  
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-dumb-init-artifact
 fromImage: common/alt-p11-artifact
@@ -110,8 +120,12 @@ shell:
   setup:
   - export GOPROXY={{ $.GOPROXY }}
   - export GOARCH=amd64
+  - export PKG="k8s.io/ingress-nginx"
   - cd /src/
-  - make GO111MODULE=on USE_DOCKER=false build
+  - |
+    source /src/.env_pass && \
+    echo "Loaded: COMMIT_SHA=$COMMIT_SHA, REPO_INFO=$REPO_INFO, ARCH=$GOARCH, PKG=$PKG TAG=$TAG" && \
+    make GO111MODULE=on USE_DOCKER=false build
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
 fromImage: common/alt-p11-artifact
@@ -333,6 +347,8 @@ shell:
 # remove ruby from libs because it has cve's but not using in image
 # ruby install with grpc-plugins packet it needs for building nginx
   - rm -rf /chroot/usr/lib64/ruby
+# remove owasp-modsecurity-crs/util bash scripts cve
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs
 imageSpec:
   config:
     workingDir: /

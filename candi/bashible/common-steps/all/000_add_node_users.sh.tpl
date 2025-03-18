@@ -173,7 +173,7 @@ function add_sudoer_group() {
     local path="/etc/sudoers"
     local groupname="$1"
     sudoers_filename="30-deckhouse-nodeadmins"
-    local sudoersd_path=$(cat $path |egrep "[@#]includedir" |awk '{ print $2}')
+    local sudoersd_path=$(cat $path |egrep "^[@#]includedir" |awk '{ print $2}')
 
     if [[ -z $sudoersd_path ]]
       then
@@ -185,10 +185,8 @@ function add_sudoer_group() {
 
     local sudoers_file="${sudoersd_path}/${sudoers_filename}"
     
-    if getent group $groupname >/dev/null
+    if ! getent group $groupname >/dev/null
       then
-	      continue
-      else
         groupadd $groupname
     fi
 

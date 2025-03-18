@@ -21,8 +21,11 @@ spec:
   - xxxx
   kubernetesPods:
     namespaceSelector:
-      matchNames:
-      - d8-runtime-audit-engine
+      labelSelector:
+        matchExpressions:
+        - key: "kubernetes.io/metadata.name"
+          operator: In
+          values: [d8-runtime-audit-engine]
   labelFilter:
   - operator: Regex
     values: ["\\{.*"] # to collect only JSON logs

@@ -17,43 +17,57 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-const deprecatedCRD = `
-apiVersion: apiextensions.k8s.io/v1
-kind: CustomResourceDefinition
-metadata:
-  name: addresspools.metallb.io
-spec: {}
-`
-
 var _ = Describe("MetalLB hooks :: delete deprecated AddressPool CRD", func() {
 	f := HookExecutionConfigInit(`{}`, `{}`)
-	Context("Empty cluster", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(``))
-			f.RunHook()
-		})
-
-		It("Must be executed successfully", func() {
-			Expect(f).To(ExecuteSuccessfully())
-		})
-	})
 	Context("Deprecated CRD exists", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(deprecatedCRD))
+			f.KubeStateSet("")
+
+			gvr := schema.GroupVersionResource{
+				Group:    "apiextensions.k8s.io",
+				Version:  "v1",
+				Resource: "customresourcedefinitions",
+			}
+
+			msObject := &unstructured.Unstructured{
+				Object: map[string]any{
+					"apiVersion": "apiextensions.k8s.io/v1",
+					"kind":       "CustomResourceDefinition",
+					"metadata": map[string]any{
+						"name": "addresspools.metallb.io",
+					},
+				},
+			}
+
+			k8sClient := dependency.TestDC.MustGetK8sClient().Dynamic().Resource(gvr)
+			_, err := k8sClient.Create(context.TODO(), msObject, metav1.CreateOptions{})
+			Expect(err).To(BeNil())
+
 			f.RunHook()
+
 		})
-		It("Must be executed successfully", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource(
-				"CustomResourceDefinition",
-				"addresspools.metallb.io",
-			).Exists()).To(BeFalse())
+		It("Must be run successfully and CRD deleted", func() {
+			gvr := schema.GroupVersionResource{
+				Group:    "apiextensions.k8s.io",
+				Version:  "v1",
+				Resource: "customresourcedefinitions",
+			}
+
+			k8sClient := dependency.TestDC.MustGetK8sClient().Dynamic().Resource(gvr)
+			_, err := k8sClient.Get(context.TODO(), "addresspools.metallb.io", metav1.GetOptions{})
+			Expect(err).To(Not(BeNil()))
 		})
 	})
 })

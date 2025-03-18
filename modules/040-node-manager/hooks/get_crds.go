@@ -296,7 +296,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 		nodeGroup := v.(NodeGroupCrdInfo)
 		ngForValues := nodeGroupForValues(nodeGroup.Spec.DeepCopy())
 		// set observed status fields
-		input.PatchCollector.Filter(set_cr_statuses.SetObservedStatus(v, applyNodeGroupCrdFilter), "deckhouse.io/v1", "nodegroup", "", nodeGroup.Name, object_patch.WithSubresource("/status"), object_patch.IgnoreHookError())
+		input.PatchCollector.PatchWithMutatingFunc(set_cr_statuses.SetObservedStatus(v, applyNodeGroupCrdFilter), "deckhouse.io/v1", "nodegroup", "", nodeGroup.Name, object_patch.WithSubresource("/status"), object_patch.WithIgnoreHookError())
 		// Copy manualRolloutID and name.
 		ngForValues["name"] = nodeGroup.Name
 		ngForValues["manualRolloutID"] = nodeGroup.ManualRolloutID
@@ -501,6 +501,12 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 	if !input.Values.Exists("nodeManager.internal") {
 		input.Values.Set("nodeManager.internal", map[string]interface{}{})
 	}
+
+	if len(input.Snapshots["ngs"]) != len(finalNodeGroups) {
+		return fmt.Errorf("incorrect final nodegroups count (%d) should be %d in snapshots. See errors above for additional information",
+			len(finalNodeGroups), len(input.Snapshots["ngs"]))
+	}
+
 	input.Values.Set("nodeManager.internal.nodeGroups", finalNodeGroups)
 	return nil
 }

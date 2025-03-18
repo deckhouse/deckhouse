@@ -42,6 +42,13 @@ func NewCloudPermanentNodeGroupController(controller *NodeGroupController) *Clou
 }
 
 func (c *CloudPermanentNodeGroupController) Run(ctx *context.Context) error {
+	metaConfig, err := ctx.MetaConfig()
+	if err != nil {
+		return err
+	}
+
+	c.desiredReplicas = metaConfig.GetReplicasByNodeGroupName(c.name)
+
 	return c.NodeGroupController.Run(ctx)
 }
 
@@ -50,8 +57,6 @@ func (c *CloudPermanentNodeGroupController) addNodes(ctx *context.Context) error
 	if err != nil {
 		return err
 	}
-
-	c.desiredReplicas = metaConfig.GetReplicasByNodeGroupName(c.name)
 
 	count := len(c.state.State)
 	index := 0
@@ -122,7 +127,7 @@ func (c *CloudPermanentNodeGroupController) updateNode(ctx *context.Context, nod
 		Hook: &terraform.DummyHook{},
 	})
 
-	outputs, err := terraform.ApplyPipeline(nodeRunner, nodeName, terraform.OnlyState)
+	outputs, err := terraform.ApplyPipeline(ctx.Ctx(), nodeRunner, nodeName, terraform.OnlyState)
 	if err != nil {
 		log.ErrorF("Terraform exited with an error:\n%s\n", err.Error())
 		return err
