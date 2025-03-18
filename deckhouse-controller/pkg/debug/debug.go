@@ -198,6 +198,21 @@ func createTarball() *bytes.Buffer {
 			Cmd:  "kubectl",
 			Args: []string{"get", "moduleconfig", "-o", "json"},
 		},
+		{
+			File: "d8-istio-resources.json",
+			Cmd:  "kubectl",
+			Args: []string{"-n", "d8-istio", "get", "all", "-o", "json"},
+		},
+		{
+			File: "d8-istio-custom-resources.json",
+			Cmd:  "bash",
+			Args: []string{"-c", `for crd in $(kubectl get crds | grep 'istio.io' | awk '{print $1}'); do echo "Listing resources for CRD: $crd" && kubectl get $crd -A -o json; done`},
+		},
+		{
+			File: "d8-istio-logs.txt",
+			Cmd:  "bash",
+			Args: []string{"-c", `for deployment in istiod-v1x21 istiod-v1x19; do echo "Logs for $deployment:" && kubectl -n d8-istio logs deployments/$deployment; done`},
+		},
 	}
 
 	for _, cmd := range debugCommands {
