@@ -26,6 +26,7 @@ import (
 	"github.com/deckhouse/virtualization/api/core/v1alpha2"
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -344,6 +345,23 @@ func (r *DeckhouseMachineReconciler) createVM(
 		return nil, fmt.Errorf("clusterv1b1.Machine does not contain bootstrap script")
 	}
 
+	bootstrapDataSecret := &corev1.Secret{}
+	if err := r.Client.Get(
+		ctx,
+		client.ObjectKey{
+			Namespace: machine.GetNamespace(),
+			Name:      *machine.Spec.Bootstrap.DataSecretName,
+		},
+		bootstrapDataSecret,
+	); err != nil {
+		return nil, fmt.Errorf("Cannot get cloud-init data secret: %w", err)
+	}
+
+	cloudInitScript, hasBootstrapScript := bootstrapDataSecret.Data["value"]
+	if !hasBootstrapScript {
+		return nil, fmt.Errorf("Expected to find a cloud-init script in secret %s/%s", bootstrapDataSecret.Namespace, bootstrapDataSecret.Name)
+	}
+
 	vm, err := r.DVP.ComputeService.CreateVM(ctx, &v1alpha2.VirtualMachine{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: dvpMachine.Name,
@@ -355,10 +373,8 @@ func (r *DeckhouseMachineReconciler) createVM(
 			VirtualMachineClassName:  dvpMachine.Spec.VMClassName,
 			EnableParavirtualization: true,
 			Provisioning: &v1alpha2.Provisioning{
-				UserDataRef: &v1alpha2.UserDataRef{
-					Kind: "Secret",
-					Name: *machine.Spec.Bootstrap.DataSecretName,
-				},
+				Type:     v1alpha2.ProvisioningTypeUserData,
+				UserData: string(cloudInitScript),
 			},
 			CPU: v1alpha2.CPUSpec{
 				Cores:        dvpMachine.Spec.CPU.Cores,
