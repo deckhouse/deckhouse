@@ -92,6 +92,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 {!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
+      with:
+        fetch-depth: 0
     - name: Check branch name
       id: check_branch_name
       run: |
