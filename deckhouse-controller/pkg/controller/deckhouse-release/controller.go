@@ -608,7 +608,7 @@ func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr
 		}
 	}
 
-	processedDTR := timeChecker.ProcessMinorReleaseDeployTime(dr, deployTimeResult, task.DeployedReleaseInfo)
+	processedDTR := timeChecker.ProcessMinorReleaseDeployTime(dr, deployTimeResult)
 	if processedDTR == nil {
 		return nil
 	}
@@ -1005,9 +1005,11 @@ func (r *deckhouseReleaseReconciler) reconcileDeployedRelease(ctx context.Contex
 
 	if dr.GetIsUpdating() {
 		r.metricStorage.Grouped().GaugeSet(metricUpdatingGroup, metricUpdatingName, 1, map[string]string{"releaseChannel": r.updateSettings.Get().ReleaseChannel})
+
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
-	return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+	return res, nil
 }
 
 func (r *deckhouseReleaseReconciler) updateReleaseStatus(ctx context.Context, dr *v1alpha1.DeckhouseRelease, status *v1alpha1.DeckhouseReleaseStatus) error {

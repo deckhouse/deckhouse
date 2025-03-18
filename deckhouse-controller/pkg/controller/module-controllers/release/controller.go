@@ -1101,7 +1101,7 @@ func (r *reconciler) DeployTimeCalculate(ctx context.Context, mr v1alpha1.Releas
 		}
 	}
 
-	processedDTR := timeChecker.ProcessMinorReleaseDeployTime(mr, deployTimeResult, task.DeployedReleaseInfo)
+	processedDTR := timeChecker.ProcessMinorReleaseDeployTime(mr, deployTimeResult)
 	if processedDTR == nil {
 		return nil
 	}

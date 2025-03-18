@@ -75,7 +75,7 @@ func (c *DeployTimeService) ProcessPatchReleaseDeployTime(release v1alpha1.Relea
 // for minor release we check:
 // - Deckhouse pod is ready
 // - No delay from calculated deploy time
-func (c *DeployTimeService) ProcessMinorReleaseDeployTime(release v1alpha1.Release, res *DeployTimeResult, dri *ReleaseInfo) *ProcessedDeployTimeResult {
+func (c *DeployTimeService) ProcessMinorReleaseDeployTime(release v1alpha1.Release, res *DeployTimeResult) *ProcessedDeployTimeResult {
 	if release.GetApplyNow() || res.Reason.IsNoDelay() {
 		return nil
 	}
