@@ -83,7 +83,10 @@ func doDiscover(input *go_hook.HookInput, dc dependency.Container) error {
 		Zones:      output.Zones,
 	})
 
-	storageClasses := output.ZonedDataStores
+	storageClasses := []vsphere.ZonedDataStore{}
+	if output.ZonedDataStores != nil {
+		storageClasses = output.ZonedDataStores
+	}
 
 	if exclude, ok := input.Values.GetOk("cloudProviderVsphere.storageClass.exclude"); ok {
 		var excludes []string
@@ -100,9 +103,7 @@ func doDiscover(input *go_hook.HookInput, dc dependency.Container) error {
 			})
 		}
 	}
-	if storageClasses == nil {
-		storageClasses = []vsphere.ZonedDataStore{}
-	}
+
 	input.Values.Set("cloudProviderVsphere.internal.storageClasses", storageClasses)
 
 	return nil
