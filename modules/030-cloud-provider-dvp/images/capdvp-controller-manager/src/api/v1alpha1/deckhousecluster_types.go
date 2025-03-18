@@ -67,5 +67,5 @@ type DeckhouseClusterList struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&DeckhouseCluster{}, &DeckhouseClusterList{})
+	objectTypes = append(objectTypes, &DeckhouseCluster{}, &DeckhouseClusterList{})
 }

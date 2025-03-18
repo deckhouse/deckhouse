@@ -162,5 +162,5 @@ type DeckhouseMachineList struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&DeckhouseMachine{}, &DeckhouseMachineList{})
+	objectTypes = append(objectTypes, &DeckhouseMachine{}, &DeckhouseMachineList{})
 }
