@@ -40,8 +40,6 @@ spec:
                         - VirtualImage
                         - VirtualDisk
                       default: VirtualImage
-                      x-doc-examples: [ VirtualImage, ClusterVirtualImage, VirtualDisk ]
-                      x-doc-default: VirtualImage
                       description: Kind of resource describing the image
                     name:
                       type: string
@@ -63,14 +61,10 @@ spec:
                       type: integer
                       minimum: 1
                       default: 4
-                      x-doc-examples: [ 4 ]
-                      x-doc-default: 4
                       description: Number of cores.
                     coreFraction:
                       type: string
                       default: 100%
-                      x-doc-examples: [ 10%, 25%, 100% ]
-                      x-doc-default: 100%
                       description: >
                         Guaranteed share of CPU time that will be allocated to
                         the VM. Specified as a percentage.
@@ -78,16 +72,12 @@ spec:
                   type: integer
                   default: 8192
                   minimum: 8
-                  x-doc-examples: [ 8192 ]
-                  x-doc-default: 8192
                   description: RAM amount in megabytes.
                 rootDiskSize:
                   description: |
                     Root disk size.
 
                     The disk will be automatically resized if its VirtualImage size differs from specified.
-                  x-doc-examples: [ 50Gi, 8192Mi ]
-                  x-doc-default: 50Gi
                   default: 50Gi
                   anyOf:
                     - type: integer
@@ -101,8 +91,6 @@ spec:
                     - EFI
                     - EFIWithSecureBoot
                   default: EFI
-                  x-doc-examples: [ EFI, BIOS ]
-                  x-doc-default: EFI
                   description: >
                     Defines a bootloader for a VM.
 
