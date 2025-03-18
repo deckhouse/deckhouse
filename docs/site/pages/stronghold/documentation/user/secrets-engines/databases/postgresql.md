@@ -30,7 +30,7 @@ options, including SSL options, can be found in the [pgx][pgxlib] and
 
 ## Setup
 
-1.  Enable the database secrets engine if it is not already enabled:
+1. Enable the database secrets engine if it is not already enabled:
 
     ```shell-session
     $ d8 stronghold secrets enable database
@@ -40,7 +40,7 @@ options, including SSL options, can be found in the [pgx][pgxlib] and
     By default, the secrets engine will enable at the name of the engine. To
     enable the secrets engine at a different path, use the `-path` argument.
 
-1.  Configure Stronghold with the proper plugin and connection information:
+1. Configure Stronghold with the proper plugin and connection information:
 
     ```shell-session
     $ d8 stronghold write database/config/my-postgresql-database \
@@ -52,7 +52,7 @@ options, including SSL options, can be found in the [pgx][pgxlib] and
         password_authentication="scram-sha-256"
     ```
 
-1.  Configure a role that maps a name in Stronghold to an SQL statement to execute to
+1. Configure a role that maps a name in Stronghold to an SQL statement to execute to
     create the database credential:
 
     ```shell-session
@@ -70,7 +70,7 @@ options, including SSL options, can be found in the [pgx][pgxlib] and
 After the secrets engine is configured and a user/machine has an Stronghold token with
 the proper permission, it can generate credentials.
 
-1.  Generate a new credential by reading from the `/creds` endpoint with the name
+1. Generate a new credential by reading from the `/creds` endpoint with the name
     of the role:
 
     ```shell-session

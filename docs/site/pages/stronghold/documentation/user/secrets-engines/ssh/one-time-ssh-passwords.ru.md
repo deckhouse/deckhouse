@@ -68,15 +68,15 @@ Create an OTP credential for an IP of the remote host that belongs to
 
 ```shell-session
 $ d8 stronghold write ssh/creds/otp_key_role ip=x.x.x.x
-Key            	Value
-lease_id       	ssh/creds/otp_key_role/73bbf513-9606-4bec-816c-5a2f009765a5
-lease_duration 	600
-lease_renewable	false
-port           	22
-username       	username
-ip             	x.x.x.x
-key            	2f7e25a2-24c9-4b7b-0d35-27d5e5203a5c
-key_type       	otp
+Key             Value
+lease_id        ssh/creds/otp_key_role/73bbf513-9606-4bec-816c-5a2f009765a5
+lease_duration  600
+lease_renewable false
+port            22
+username        username
+ip              x.x.x.x
+key             2f7e25a2-24c9-4b7b-0d35-27d5e5203a5c
+key_type        otp
 ```
 
 ### Establish an SSH session
@@ -87,7 +87,7 @@ Password: <Enter OTP>
 username@x.x.x.x:~$
 ```
 
-### Automate it!
+### Automate it
 
 A single CLI command can be used to create a new OTP and invoke SSH with the
 correct parameters to connect to the host.

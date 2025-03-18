@@ -35,7 +35,7 @@ The default path is `/jwt`. If this auth method was enabled at a
 different path, specify `-path=/my-path` in the CLI.
 
 ```shell-session
-$ d8 stronghold write auth/jwt/login role=demo jwt=...
+d8 stronghold write auth/jwt/login role=demo jwt=...
 ```
 
 ### Via the API
@@ -101,7 +101,7 @@ management tool.
       oidc_discovery_url="https://MYDOMAIN.eu.auth0.com/" \
       oidc_client_id="" \
       oidc_client_secret="" \
-  ```
+   ```
 
 1. Create a named role:
 

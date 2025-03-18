@@ -26,12 +26,13 @@ values set on keys are. You should not store sensitive information as part of a
 secret's path.
 
 {% endalert %}
+
 ## Setup
 
 To enable a version 1 kv store:
 
 ```shell-session
-$ d8 stronghold secrets enable -version=1 kv
+d8 stronghold secrets enable -version=1 kv
 ```
 
 ## Usage

@@ -97,9 +97,9 @@ the HMAC key type uses a 256-bit key.
 {% endalert %}
 RSA operations use one of the following methods:
 
- - OAEP (encrypt, decrypt), with SHA-256 hash function and MGF,
- - PSS (sign, verify), with configurable hash function also used for MGF, and
- - PKCS#1v1.5: (sign, verify), with configurable hash function.
+- OAEP (encrypt, decrypt), with SHA-256 hash function and MGF,
+- PSS (sign, verify), with configurable hash function also used for MGF, and
+- PKCS#1v1.5: (sign, verify), with configurable hash function.
 
 ## Convergent encryption
 
@@ -159,7 +159,7 @@ management tool.
 After the secrets engine is configured and a user/machine has an Stronghold token with
 the proper permission, it can use this secrets engine.
 
-1.  Encrypt some plaintext data using the `/encrypt` endpoint with a named key:
+1. Encrypt some plaintext data using the `/encrypt` endpoint with a named key:
 
     **NOTE:** All plaintext data **must be base64-encoded**. The reason for this
     requirement is that Stronghold does not require that the plaintext is "text". It
@@ -192,7 +192,7 @@ the proper permission, it can use this secrets engine.
     configuration.
 
 {% endalert %}
-1.  Decrypt a piece of data using the `/decrypt` endpoint with a named key:
+1. Decrypt a piece of data using the `/decrypt` endpoint with a named key:
 
     ```text
     $ d8 stronghold write transit/decrypt/my-key ciphertext=vault:v1:8SDd3WHDOjf7mq69CyCqYjBXAiQQAVZRkFM13ok481zoCmHnSeDX9vyf7w==
@@ -222,7 +222,7 @@ the proper permission, it can use this secrets engine.
     that trusted operators can manage the named keys, and applications can only
     encrypt or decrypt using the named keys they need access to.
 
-1.  Rotate the underlying encryption key. This will generate a new encryption key
+1. Rotate the underlying encryption key. This will generate a new encryption key
     and add it to the keyring for the named key:
 
     ```text
@@ -233,7 +233,7 @@ the proper permission, it can use this secrets engine.
     Future encryptions will use this new key. Old data can still be decrypted
     due to the use of a key ring.
 
-1.  Upgrade already-encrypted data to a new key. Stronghold will decrypt the value
+1. Upgrade already-encrypted data to a new key. Stronghold will decrypt the value
     using the appropriate key in the keyring and then encrypted the resulting
     plaintext with the newest key in the keyring.
 
@@ -262,7 +262,7 @@ have Transit generate and manage a key within Stronghold.
 First, the wrapping key needs to be read from transit:
 
 ```text
-$ d8 stronghold read transit/wrapping_key
+d8 stronghold read transit/wrapping_key
 ```
 
 The wrapping key will be a 4096-bit RSA public key.

@@ -27,13 +27,13 @@ management tool.
 A v2 `kv` secrets engine can be enabled by:
 
 ```shell-session
-$ d8 stronghold secrets enable -version=2 kv
+d8 stronghold secrets enable -version=2 kv
 ```
 
 Or, you can pass `kv-v2` as the secrets engine type:
 
 ```shell-session
-$ d8 stronghold secrets enable kv-v2
+d8 stronghold secrets enable kv-v2
 ```
 
 Additionally, when running a dev-mode server, the v2 `kv` secrets engine is enabled by default at the

@@ -39,71 +39,71 @@ signs the set of fields with its private key, thus creating the certificate.
 
 There are some important restrictions here:
 
- - One certificate can only have one Issuer, but this issuer is identified by
+- One certificate can only have one Issuer, but this issuer is identified by
    the Subject on the issuing certificate and its public key.
- - One key pair can be used for multiple certificates, but one certificate can
+- One key pair can be used for multiple certificates, but one certificate can
    only have one backing key material.
 
 The following fields on the final certificate are relevant to rotation:
 
- - The backing [public](https://datatracker.ietf.org/doc/html/rfc5280#section-4.1.2.7)
+- The backing [public](https://datatracker.ietf.org/doc/html/rfc5280#section-4.1.2.7)
    and private key material (Subject Public Key Info).
-   - Note that the private key is not included in the certificate but is
+  - Note that the private key is not included in the certificate but is
      uniquely determined by the public key material.
- - The [Subject](https://datatracker.ietf.org/doc/html/rfc5280#section-4.1.2.6) of the certificate.
-   - This identifies the entity to which the certificate was issued. While the
+- The [Subject](https://datatracker.ietf.org/doc/html/rfc5280#section-4.1.2.6) of the certificate.
+  - This identifies the entity to which the certificate was issued. While the
      SAN values (in the [Subject Alternative Name](https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.1.6)
      extension) is useful when validating TLS Server certificates against the
      negotiated hostname and URI, it isn't generally relevant for the purposes
      of validating intermediate certificate chains or in rotation.
- - The [Validity](https://datatracker.ietf.org/doc/html/rfc5280#section-4.1.2.5)
+- The [Validity](https://datatracker.ietf.org/doc/html/rfc5280#section-4.1.2.5)
    period of this certificate.
-   - Notably, RFC 5280 does not place any requirements around the issued
+  - Notably, RFC 5280 does not place any requirements around the issued
      certificate's validity period relative to the validity period of the
      issuing certificate. However, it [does state](https://datatracker.ietf.org/doc/html/rfc5280#section-4.1.2.5)
      that certificates ought to be revoked if their status cannot be maintained
      up to their notAfter date. This is why Stronghold's `/pki/issuer/:issuer_ref`
      configuration endpoint maintains the `leaf_not_after_behavior` per-issuer
      rather than per-role.
-   - Additionally, some browsers will place ultimate trust in the certificates
+  - Additionally, some browsers will place ultimate trust in the certificates
      in their trust stores, even when these certificates are expired.
-     - Note that this only applies to certificates in the trust store; validity
+    - Note that this only applies to certificates in the trust store; validity
        periods will still be enforced for certificates not in the store (such
        as intermediates).
- - The [Issuer](https://datatracker.ietf.org/doc/html/rfc5280#section-4.1.2.4) and
+- The [Issuer](https://datatracker.ietf.org/doc/html/rfc5280#section-4.1.2.4) and
    [signatureValue](https://datatracker.ietf.org/doc/html/rfc5280#section-4.1.1.3)
    of this certificate.
-   - In the issued certificate's Issuer field, the issuing certificate places
+  - In the issued certificate's Issuer field, the issuing certificate places
      its own Subject value. This allows the issuer to be identified later
      (without having to try signature validation against every known local
      certificate), when validating the presented certificate and chain.
-   - The signature over the entire certificate (by the issuer's private key)
+  - The signature over the entire certificate (by the issuer's private key)
      is then placed in the signatureValue field.
- - The optional [Authority Key Identifier](https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.1.1)
+- The optional [Authority Key Identifier](https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.1.1)
    field.
-   - This field can contain either (or both) of two values:
-     - The hash of the issuer's public key. This extension is set and this
+  - This field can contain either (or both) of two values:
+    - The hash of the issuer's public key. This extension is set and this
        value is filled in by Stronghold.
-     - The Issuer's Subject and Serial Number. This value is not set by Stronghold.
-   - The latter is a dangerous restriction for the purposes of rotation: it
+    - The Issuer's Subject and Serial Number. This value is not set by Stronghold.
+  - The latter is a dangerous restriction for the purposes of rotation: it
      prevents cross-signing and reissuance as the new issuing certificates
      (while having the same backing key material) will have different serial
      numbers. See the [Limitations of Primitives](#limitations-of-primitives)
      section below for more information on this restriction.
- - The [Serial Number](https://datatracker.ietf.org/doc/html/rfc5280#section-4.1.2.2)
+- The [Serial Number](https://datatracker.ietf.org/doc/html/rfc5280#section-4.1.2.2)
    of this certificate.
-   - This field is unique to a specific issuer; when a certificate is
+  - This field is unique to a specific issuer; when a certificate is
      reissued by its parent authority, it will always have a different serial
      number field.
- - The [CRL distribution](https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.1.13)
+- The [CRL distribution](https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.1.13)
    point field.
-   - This is a field detailing where a CRL is expected to exist for this
+  - This is a field detailing where a CRL is expected to exist for this
      certificate and under which CRL issuers (defaulting to the issuing
      certificate itself) the CRL is expected to be signed by. This is mostly
      informational and for server software like nginx, Stronghold's Cert Auth method,
      and Apache, CRLs are provided to the server, rather than having the
      server fetch CRLs for certificates automatically.
-   - Note that root certificates (in browsers trust stores) are generally not
+  - Note that root certificates (in browsers trust stores) are generally not
      considered revocable. However, if an intermediate is revoked by serial,
      it will appear on its parent's CRL, and may prevent rotation from
      happening.
@@ -158,6 +158,7 @@ Note: While certificates are added to the trust store, it is ultimately
    leaf certificate; only if the keys are the same can this occur.
 
 {% endalert %}
+
 ### Cross-Signed primitive
 
 This is the most common type of rotation primitive. A common CSR is signed by
@@ -240,9 +241,9 @@ conditionally validated based on which root is present in the trust store.
 
 This construct is documented and used in several places:
 
- - https://letsencrypt.org/certificates/
- - https://scotthelme.co.uk/cross-signing-alternate-trust-paths-how-they-work/
- - https://security.stackexchange.com/questions/14043/what-is-the-use-of-cross-signing-certificates-in-x-509
+- <https://letsencrypt.org/certificates/>
+- <https://scotthelme.co.uk/cross-signing-alternate-trust-paths-how-they-work/>
+- <https://security.stackexchange.com/questions/14043/what-is-the-use-of-cross-signing-certificates-in-x-509>
 
 #### Execution in Stronghold
 
@@ -270,6 +271,7 @@ Note: Regardless of issuer type, is important to provide all relevant
    material.
 
 {% endalert %}
+
 ##### Notes on `manual_chain`
 
 If an intermediate is cross-signed and imported into the same mount as its
@@ -284,9 +286,9 @@ to include the chains of both pairs. For instance, given `intA` signed by
 `rootA` and `intB` signed by `rootB` as its cross-signed version, one
 could do the following:
 
-```
-$ d8 stronghold patch pki/issuer/intA manual_chain=self,rootA,intB,rootB
-$ d8 stronghold patch pki/issuer/intB manual_chain=self,rootB,intA,rootA
+```shell
+d8 stronghold patch pki/issuer/intA manual_chain=self,rootA,intB,rootB
+d8 stronghold patch pki/issuer/intB manual_chain=self,rootB,intA,rootA
 ```
 
 This will ensure that issuance with either copy of the intermediate reports
@@ -311,7 +313,7 @@ types of certificates (including leaves, intermediates, and roots).
 
 #### Process flow
 
-```
+```console
           -------------------
          | generate key pair | ---------------> ...
           -------------------                   ...
@@ -335,7 +337,7 @@ continually reissued.
 
 #### Certificate hierarchy
 
-```
+```console
                           ------
               -----------| root |-------------
              /            ------              \
@@ -397,6 +399,7 @@ Note: Regardless of issuer type, is important to provide all relevant
    material.
 
 {% endalert %}
+
 ### Temporal primitives
 
 We can use the above primitive types to rotate roots and intermediates to new
@@ -409,9 +412,9 @@ wherein a new certificate is used to bless old key material. Both of these
 primitives are independently used by Let's Encrypt in the aforementioned
 chain of trust document:
 
- - The link from DST Root CA X3 to ISRG Root X1 is an example of a forward
+- The link from DST Root CA X3 to ISRG Root X1 is an example of a forward
    primitive.
- - The link from ISRG Root X1 to R3 (which was originally signed by DST Root
+- The link from ISRG Root X1 to R3 (which was originally signed by DST Root
    CA X3) is an example of a backwards primitive.
 
 For most organizations with a hierarchical structured CA setup, cross-signing

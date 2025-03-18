@@ -13,7 +13,6 @@ description: The KV secrets engine can store arbitrary secrets.
 
 Этот механизм секретов учитывает различие между операциями `create` и `update` в ACL-политиках.
 
-
 {% alert level="warning" %}
 
 **Примечание**: Пути и имена ключей _не_ обфусцируются и не шифруются; шифруются только
@@ -26,7 +25,7 @@ description: The KV secrets engine can store arbitrary secrets.
 Чтобы включить хранилище kv версии 1 выполните команду:
 
 ```shell-session
-$ d8 stronghold secrets enable -version=1 kv
+d8 stronghold secrets enable -version=1 kv
 ```
 
 ## Использование

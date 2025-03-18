@@ -41,19 +41,19 @@ written to disk.
 
 The PKI Secrets Engine documentation is split into the following pieces:
 
- - [Overview](/docs/secrets/pki) - this document.
- - [Setup and Usage](/docs/secrets/pki/setup) - a brief description of setting
+- [Overview](/docs/secrets/pki) - this document.
+- [Setup and Usage](/docs/secrets/pki/setup) - a brief description of setting
    up and using the PKI Secrets Engine to issue certificates.
- - [Quick Start - Root CA Setup](/docs/secrets/pki/quick-start-root-ca) - A
+- [Quick Start - Root CA Setup](/docs/secrets/pki/quick-start-root-ca) - A
    quick start guide for setting up a root CA.
- - [Quick Start - Intermediate CA Setup](/docs/secrets/pki/quick-start-intermediate-ca) - A
+- [Quick Start - Intermediate CA Setup](/docs/secrets/pki/quick-start-intermediate-ca) - A
    quick start guide for setting up an intermediate CA.
- - [Considerations](/docs/secrets/pki/considerations) - A list of helpful
+- [Considerations](/docs/secrets/pki/considerations) - A list of helpful
    considerations to keep in mind when using and operating the PKI Secrets
    Engine.
- - [Troubleshooting ACME](/docs/secrets/pki/troubleshooting-acme) - A list of
+- [Troubleshooting ACME](/docs/secrets/pki/troubleshooting-acme) - A list of
    advice for troubleshooting failures with ACME issuance and Stronghold PKI.
- - [Rotation Primitives](/docs/secrets/pki/rotation-primitives) - A document
+- [Rotation Primitives](/docs/secrets/pki/rotation-primitives) - A document
    which explains different types of certificates used to achieve rotation.
 
 ## API

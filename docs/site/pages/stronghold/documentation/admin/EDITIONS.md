@@ -24,4 +24,3 @@ The table below provides brief a comparison of editions listing its main feature
 | Runtime audit engine                                             | {{ not_supported }} | {{ supported }} | {{ supported }} |
 | [Extended technical support](https://deckhouse.io/tech-support/) | {{ supported }} | {{ supported }}  | {{ supported }} |
 | [Extended technical support](https://deckhouse.io/tech-support/) | {{ supported }} | {{ supported }}  | {{ supported }} |
-

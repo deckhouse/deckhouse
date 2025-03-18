@@ -34,7 +34,6 @@ d8 stronghold login -method=userpass \
 
 Токен задается непосредственно в виде заголовка для HTTP API. Заголовок должен иметь вид X-Vault-Token: &lt;token> или Authorization: Bearer &lt;token>.
 
-
 ```shell
 curl \
    --request POST \

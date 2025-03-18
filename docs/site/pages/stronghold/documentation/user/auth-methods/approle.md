@@ -1,13 +1,11 @@
 ---
-title: AppRole
+title: AppRole auth method
 permalink: en/stronghold/documentation/user/auth-methods/approle.html
 lang: en
 description: |-
   The AppRole auth method allows machines and services to authenticate with
   Stronghold.
 ---
-
-# AppRole auth method
 
 The `approle` auth method allows machines or _apps_ to authenticate with
 Stronghold-defined _roles_. The open design of `AppRole` enables a varied set of
@@ -77,6 +75,7 @@ for a code snippet demonstrating the authentication with Stronghold using the
 AppRole auth method.
 
 {% endalert %}
+
 ## Configuration
 
 Auth methods must be configured in advance before users or machines can
@@ -88,7 +87,7 @@ management tool.
 1. Enable the AppRole auth method:
 
    ```shell-session
-   $ d8 stronghold auth enable approle
+   d8 stronghold auth enable approle
    ```
 
 1. Create a named role:
@@ -268,9 +267,9 @@ The user lockout feature can be disabled as follows:
 **NOTE**: This feature is only supported by the userpass, ldap, and approle auth methods.
 
 {% endalert %}
+
 ## API
 
 The AppRole auth method has a full HTTP API. Please see the
 [AppRole API](/api-docs/auth/approle) for more
 details.
-

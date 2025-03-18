@@ -4,11 +4,10 @@ permalink: en/stronghold/documentation/user/auth-methods/oidc.html
 lang: en
 
 description: >-
-  The JWT/OIDC auth method allows authentication using OIDC and user-provided
-  JWTs
+  The JWT/OIDC auth method allows authentication using OIDC and user-provided JWTs
 ---
 
-# JWT/OIDC auth method
+### JWT/OIDC auth method
 
 {% alert level="warning" %}
 
@@ -187,4 +186,3 @@ EOF
 - Azure requires some additional configuration when a user is a member of more
   than 200 groups, described in [Azure-specific handling
   configuration](/docs/auth/jwt/oidc-providers/azuread#optional-azure-specific-configuration)
-

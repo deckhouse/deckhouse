@@ -8,6 +8,7 @@ description: |-
 ---
 
 {% raw %}
+
 # LDAP auth method
 
 The `ldap` auth method allows authentication using an existing LDAP
@@ -92,7 +93,7 @@ management tool.
 1. Enable the ldap auth method:
 
    ```text
-   $ d8 stronghold auth enable ldap
+   d8 stronghold auth enable ldap
    ```
 
 1. Configure connection details for your LDAP server, information on how to
@@ -174,7 +175,7 @@ _Note_: When using _Authenticated Search_ for binding parameters (see above) the
 - `username_as_alias` (bool, optional) - If set to true, forces the auth method to use the username passed by the user as the alias name.
 - `max_page_size` (int, optional) - If set to a value greater than 0, the LDAP backend will use the LDAP server's paged search control to request pages of up to the given size. This can be used to avoid hitting the LDAP server's maximum result size limit. Otherwise, the LDAP backend will not use the paged search control.
 
-## Examples:
+## Examples
 
 ### Scenario 1
 
@@ -255,10 +256,11 @@ $ d8 stronghold write auth/ldap/config \
 Next we want to create a mapping from an LDAP group to an Stronghold policy:
 
 ```shell-session
-$ d8 stronghold write auth/ldap/groups/scientists policies=foo,bar
+d8 stronghold write auth/ldap/groups/scientists policies=foo,bar
 ```
 
 This maps the LDAP group "scient
+
 ## Блокировка пользователя
 
 Если пользователь несколько раз подряд предоставит неверные учетные данные, Stronghold на некоторое время прекратит попытки проверить его учетные данные, а вместо этого сразу же вернет ошибку с отказом доступе. Мы называем такое поведение «блокировкой пользователя» (`user_lockout`). Время, на которое пользователь будет заблокирован, называется «длительностью блокировки» (`lockout_duration`). Пользователь сможет войти в систему после истечения срока блокировки. Количество неудачных попыток входа, после которых пользователь будет заблокирован, называется «порог блокировки» (`lockout_threshold`). Счетчик порога блокировки обнуляется через несколько минут без попыток входа или при успешной попытке входа. Время, в течение которого счетчик будет обнулен после отсутствия попыток входа, называется «сброс счетчика блокировки» (`lockout_counter_reset`). Это позволяет предотвратить атаки с целью подбора пароля.
@@ -281,8 +283,8 @@ We can also add specific LDAP users to additional (potentially non-LDAP)
 groups. Note that policies can also be specified on LDAP users as well.
 
 ```shell-session
-$ d8 stronghold write auth/ldap/groups/engineers policies=foobar
-$ d8 stronghold write auth/ldap/users/tesla groups=engineers policies=zoobar
+d8 stronghold write auth/ldap/groups/engineers policies=foobar
+d8 stronghold write auth/ldap/users/tesla groups=engineers policies=zoobar
 ```
 
 This adds the LDAP user "tesla" to the "engineers" group, which maps to

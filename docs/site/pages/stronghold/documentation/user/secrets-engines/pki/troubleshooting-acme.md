@@ -44,7 +44,7 @@ Using an Stronghold token, [fetch a new external account
 binding](/api-docs/secret/pki#get-acme-eab-binding-token) for
 the [desired directory](/api-docs/secret/pki#acme-directories):
 
-```
+```shell-session
 $ d8 stronghold write -f pki/roles/my-role-name/acme/new-eab
 ...
 directory roles/my-role-name/acme/directory
@@ -56,7 +56,7 @@ key       MHcCAQE... additional data elided ...
 Then pass this new EAB token into the ACME client. For example, with
 `certbot`:
 
-```
+```shell-session
 $ certbot [... additional parameters ...] \
     --server https://stronghold.example.com/v1/pki/roles/my-role-name/acme/directory \
     --eab-kid bc8088d9-3816-5177-ae8e-d8393265f7dd \
@@ -147,9 +147,9 @@ configuration and setup a new account, specifying any EABs as required.
 Please provide the following information when contacting Hashicorp Support
 or filing a GitHub issue to help with our investigation and reproducibility:
 
- - ACME client name and version
- - ACME client logs and/or output
- - Stronghold server **DEBUG** level logs
+- ACME client name and version
+- ACME client logs and/or output
+- Stronghold server **DEBUG** level logs
 
 ## API
 

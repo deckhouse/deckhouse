@@ -85,6 +85,7 @@ an entity with higher privileges. If a user can modify group membership, they
 can add their entity to a group with higher privileges.
 
 {% endalert %}
+
 ## Mount bound aliases
 
 Stronghold supports multiple authentication backends and also allows enabling the

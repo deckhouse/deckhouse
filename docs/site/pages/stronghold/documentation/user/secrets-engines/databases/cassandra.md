@@ -33,6 +33,7 @@ more information about setting up the database secrets engine.
 ## Setup
 
 1. Stronghold will need a Cassandra user with the following permissions:
+
    ```text
    GRANT CREATE ON ALL ROLES to '<YOUR USER>';
    GRANT ALTER ON ALL ROLES to '<YOUR USER>';
@@ -40,7 +41,7 @@ more information about setting up the database secrets engine.
    GRANT AUTHORIZE ON ALL ROLES to '<YOUR USER>';
    ```
 
-1.  Enable the database secrets engine if it is not already enabled:
+1. Enable the database secrets engine if it is not already enabled:
 
     ```text
     $ d8 stronghold secrets enable database
@@ -50,7 +51,7 @@ more information about setting up the database secrets engine.
     By default, the secrets engine will enable at the name of the engine. To
     enable the secrets engine at a different path, use the `-path` argument.
 
-1.  Configure Stronghold with the proper plugin and connection information:
+1. Configure Stronghold with the proper plugin and connection information:
 
     ```text
     $ d8 stronghold write database/config/my-cassandra-database \
@@ -62,7 +63,7 @@ more information about setting up the database secrets engine.
         allowed_roles=my-role
     ```
 
-1.  Configure a role that maps a name in Stronghold to an SQL statement to execute to
+1. Configure a role that maps a name in Stronghold to an SQL statement to execute to
     create the database credential:
 
     ```text
@@ -80,7 +81,7 @@ more information about setting up the database secrets engine.
 After the secrets engine is configured and a user/machine has an Stronghold token with
 the proper permission, it can generate credentials.
 
-1.  Generate a new credential by reading from the `/creds` endpoint with the name
+1. Generate a new credential by reading from the `/creds` endpoint with the name
     of the role:
 
     ```text

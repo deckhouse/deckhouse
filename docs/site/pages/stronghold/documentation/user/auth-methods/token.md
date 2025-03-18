@@ -26,7 +26,7 @@ to tokens.
 ### Via the CLI
 
 ```shell-session
-$ d8 stronghold login token=<token>
+d8 stronghold login token=<token>
 ```
 
 ### Via the API

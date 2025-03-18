@@ -107,6 +107,7 @@ spec:
 В дальнейшем можно создать пользователей в Stronghold с различными правами доступа к секретам с помощью встроенного механизма хранилища.
 
 ## Первый запуск
+
 Первый запуск подразумевает отсутствие папки `/var/lib/deckhouse/stronghold` в файловой системе узлов, на которых будут запускаться ноды *Stronghold* (по умолчанию это master-узлы) и [отключенный модуль *Stronghold*](#как-выключить-модуль).
 
 > Так же нужен опыт работы с утилитой `kubectl`
@@ -116,20 +117,24 @@ spec:
 ### Способы организации доступа через инлет Ingress
 
 #### ClusterIssuer LetsEncrypt
+
 Этот метод получения сертификата настроен по умолчанию. Однако, подойдёт только для сервисов доступных **из Интернета** (не для внутренних сетей). Выполняем проверку доступности:
 1. Получаем адрес платформы аутентификации командой:
+
     ```shell
     kubectl -n d8-user-authn get ing dex
     # Ожидаемый ответ
     # NAME   CLASS   HOSTS               ADDRESS         PORTS     AGE
     # dex    nginx   dex.mycompany.tld   34.85.243.109   80, 443   4d20h
     ```
+
     Под столбцом `HOSTS` наш проверяемый домен, а под `ADDRESS` – его IP адрес. Теперь нужно убедиться, что домен правильно резолвится на указанный IP адрес. Для этого выполняем команду:
+
     ```shell
     nslookup dex.mycompany.tld 8.8.8.8
     # Ожидаемый ответ
     # ...
-    # Name:	dex.mycompany.tld
+    # Name: dex.mycompany.tld
     # Address: 34.85.243.109
     # ...
 
@@ -138,20 +143,23 @@ spec:
     # Ожидаемый ответ
     # ...
     # ;; ANSWER SECTION:
-    # dex.mycompany.tld. 3600 IN A	34.85.243.109
+    # dex.mycompany.tld. 3600 IN A 34.85.243.109
     # ...
     ```
+
     Если ответом стала ошибка с кодом `NXDOMAIN`, нужно настроить DNS пользователя.
-2. В браузере открываем https://dex.mycompany.tld/healthz, либо выполняем команду `curl -kL https://dex.mycompany.tld/healthz`. Должен вернуться ответ `Health check passed`.
-3. Проверяем, что Ingress контроллер обрабатывает запросы на ваш поддомен `stronghold.mycompany.tld`. Снова в браузере, либо командой `curl -kL` открываем https://stronghold.mycompany.tld. Должна вернуться 404 ошибка.
+2. В браузере открываем <https://dex.mycompany.tld/healthz>, либо выполняем команду `curl -kL https://dex.mycompany.tld/healthz`. Должен вернуться ответ `Health check passed`.
+3. Проверяем, что Ingress контроллер обрабатывает запросы на ваш поддомен `stronghold.mycompany.tld`. Снова в браузере, либо командой `curl -kL` открываем <https://stronghold.mycompany.tld>. Должна вернуться 404 ошибка.
 
 #### ClusterIssuer с самоподписанным центром сертификации
+
 Эта опция подходит, если вы хотите использовать свой самоподписанный Центр сертификации. В качестве примера мы будем использовать уже созданный `ClusterIssuer` ресурс **selfsigned**. Для добавления Issuer или ClusterIssuer со своим самоподписанным Центром сертификации, воспользуйтесь [официальной документацией](https://cert-manager.io/docs/configuration/ca/)
 
 > Для этого способа подойдут как наличие публичного доменного имени, так и доступ только из внутренней сети.
 
 Редактируем настройки **global** модуля. Сделать это можно, например, командой `kubectl edit mc global`.
 Добавляем параметр `settings.modules.https.certManager.clusterIssuerName: selfsigned`. В результате конфигурация модуля должна выглядеть так:
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -168,6 +176,7 @@ spec:
 ```
 
 Далее редактируем настройки **user-authn** модуля. Выполняем команду `kubectl edit mc user-authn` и изменяем параметр `settings.controlPlaneConfigurator.dexCAMode` на `FromIngressSecret`:
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -183,18 +192,21 @@ spec:
 
 Перед запуском модуля убедимся, что ключевые сервисы доступны из **рабочей сети**.
 1. Получаем адрес платформы аутентификации командой:
+
     ```shell
     kubectl -n d8-user-authn get ing dex
     # Ожидаемый ответ
     # NAME   CLASS   HOSTS               ADDRESS         PORTS     AGE
     # dex    nginx   dex.mycompany.tld   34.85.243.109   80, 443   4d20h
     ```
+
     Под столбцом `HOSTS` наш проверяемый домен, а под `ADDRESS` – его IP адрес. Теперь нужно убедиться, что домен правильно резолвится на указанный IP адрес. Для этого выполняем команду:
+
     ```shell
     nslookup dex.mycompany.tld
     # Ожидаемый ответ
     # ...
-    # Name:	dex.mycompany.tld
+    # Name: dex.mycompany.tld
     # Address: 34.85.243.109
     # ...
 
@@ -203,19 +215,22 @@ spec:
     # Ожидаемый ответ
     # ...
     # ;; ANSWER SECTION:
-    # dex.mycompany.tld. 3600 IN A	34.85.243.109
+    # dex.mycompany.tld. 3600 IN A 34.85.243.109
     # ...
     ```
+
     Если ответом стала ошибка с кодом `NXDOMAIN`, нужно настроить DNS пользователя. Если домен не доступен из Интернета, дополнительно необходимо выполнить [дополнительный шаг](#не-резолвится-доменное-имя-dexmycompanytld)
     > Как временное решение можно добавить следующую строку в файл `/etc/hosts` вашей Unix системы
+    >
     > ```shell
     > 34.85.243.109 dex.mycompany.tld stronghold.mycompany.tld
     > ```
-2.  В браузере открываем https://dex.mycompany.tld/healthz, либо выполняем команду `curl -kL https://dex.mycompany.tld/healthz`. Должен вернуться ответ `Health check passed`.
-3. Проверяем, что Ingress контроллер обрабатывает запросы на ваш поддомен `stronghold.mycompany.tld`. Снова в браузере, либо командой `curl -kL` открываем https://stronghold.mycompany.tld. Должна вернуться 404 ошибка.
-
+    >
+2. В браузере открываем <https://dex.mycompany.tld/healthz>, либо выполняем команду `curl -kL https://dex.mycompany.tld/healthz`. Должен вернуться ответ `Health check passed`.
+3. Проверяем, что Ingress контроллер обрабатывает запросы на ваш поддомен `stronghold.mycompany.tld`. Снова в браузере, либо командой `curl -kL` открываем <https://stronghold.mycompany.tld>. Должна вернуться 404 ошибка.
 
 #### Используя файл сертификата
+
 Нужно создать СА, сертификат, и подписать его созданым СА. Если уже есть СА, сертификат можно подписать существущим.
 Важно сделать сертификат с цепочкой (fullchain).
 
@@ -285,6 +300,7 @@ spec:
 В этом случае CA будет получен из цепочки, которую мы поместили в файл `kubernetes_fullchain.crt`
 
 Пример
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -300,18 +316,21 @@ spec:
 
 Перед запуском модуля убедимся, что ключевые сервисы доступны из **рабочей сети**.
 1. Получаем адрес платформы аутентификации командой:
+
     ```shell
     kubectl -n d8-user-authn get ing dex
     # Ожидаемый ответ
     # NAME   CLASS   HOSTS               ADDRESS         PORTS     AGE
     # dex    nginx   dex.mycompany.tld   34.85.243.109   80, 443   4d20h
     ```
+
     Под столбцом `HOSTS` наш проверяемый домен, а под `ADDRESS` – его IP адрес. Теперь нужно убедиться, что домен правильно резолвится на указанный IP адрес. Для этого выполняем команду:
+
     ```shell
     nslookup dex.mycompany.tld
     # Ожидаемый ответ
     # ...
-    # Name:	dex.mycompany.tld
+    # Name: dex.mycompany.tld
     # Address: 34.85.243.109
     # ...
 
@@ -320,18 +339,22 @@ spec:
     # Ожидаемый ответ
     # ...
     # ;; ANSWER SECTION:
-    # dex.mycompany.tld. 3600 IN A	34.85.243.109
+    # dex.mycompany.tld. 3600 IN A 34.85.243.109
     # ...
     ```
+
     Если ответом стала ошибка с кодом `NXDOMAIN`, нужно настроить DNS пользователя. Если домен не доступен из Интернета, дополнительно необходимо выполнить [дополнительный шаг](#не-резолвится-доменное-имя-dexmycompanytld)
     > Как временное решение можно добавить следующую строку в файл `/etc/hosts` вашей Unix системы
+    >
     > ```shell
     > 34.85.243.109 dex.mycompany.tld stronghold.mycompany.tld
     > ```
-2.  В браузере открываем https://dex.mycompany.tld/healthz, либо выполняем команду `curl -kL https://dex.mycompany.tld/healthz`. Должен вернуться ответ `Health check passed`.
-3. Проверяем, что Ingress контроллер обрабатывает запросы на ваш поддомен `stronghold.mycompany.tld`. Снова в браузере, либо командой `curl -kL` открываем https://stronghold.mycompany.tld. Должна вернуться 404 ошибка.
+    >
+2. В браузере открываем <https://dex.mycompany.tld/healthz>, либо выполняем команду `curl -kL https://dex.mycompany.tld/healthz`. Должен вернуться ответ `Health check passed`.
+3. Проверяем, что Ingress контроллер обрабатывает запросы на ваш поддомен `stronghold.mycompany.tld`. Снова в браузере, либо командой `curl -kL` открываем <https://stronghold.mycompany.tld>. Должна вернуться 404 ошибка.
 
 ### Не резолвится доменное имя dex.mycompany.tld
+
 Если ваш домен не резолвится через DNS и вы планируете использвать файл hosts, то для работы dex нужно добавить
 адрес балансировщика или IP фронт-ноды в кластерный DNS. В его роли можно использовать [модуль kube-dns](../../../documentation/v1/modules/042-kube-dns/), чтобы поды могли получить доступ к домену `dex.mycompany.tld` по имени.
 
@@ -340,6 +363,7 @@ spec:
 ```shell
 d8 kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o jsonpath='{ .spec.clusterIP }'
 ```
+
 Допустим наш адрес `34.85.243.109`, тогда модуль-конфиг kube-dns будет выглядеть так
 
 ```yaml
@@ -355,7 +379,9 @@ spec:
     - domain: dex.mycompany.tld
       ip: 34.85.243.109
 ```
+
 ### Включаем модуль
+
 После этого можно включить модуль `stronghold`, инициализация и настройка интеграции с `dex` произойдет автоматически.
 
 ```shell
@@ -366,7 +392,7 @@ d8 kubectl -n d8-system exec deploy/deckhouse -c deckhouse -it -- deckhouse-cont
 1. убедиться в наличии сертификата для домена stronghold.*
     `d8 kubectl -n d8-stronghold get ingress-tls` (либо через Консоль)
   В разделе [Трудности](#трудности) есть описания решений возможных проблем с отсутствием сертификата.
-2. Убедиться в доступности адреса https://stronghold.mycompany.tld/v1/sys/health
+2. Убедиться в доступности адреса <https://stronghold.mycompany.tld/v1/sys/health>
 3. Проверить соответствие Издателя сертификата с CA сертификатом (Опционально)
 
 ### Трудности
@@ -376,6 +402,7 @@ d8 kubectl -n d8-system exec deploy/deckhouse -c deckhouse -it -- deckhouse-cont
 Проверьте статус пода Stronghold:
 `d8 kubectl -n d8-stronghold describe pod stronghold-0`
 Ищем строку:
+
 ```log
 MountVolume.SetUp failed for volume "certificates" : secret "ingress-tls" not found
 ```
@@ -387,9 +414,11 @@ MountVolume.SetUp failed for volume "certificates" : secret "ingress-tls" not fo
 ```bash
 d8 kubectl -n d8-stronghold get certificaterequest
 ```
+
 Ищем среди них объект начинающийся с **stronghold-**, для примера это будет **stronghold-b5wc6**
 
 Смотрим его статус
+
 ```bash
 d8 kubectl -n d8-stronghold describe certificaterequest stronghold-b5wc6
 ```
@@ -397,12 +426,12 @@ d8 kubectl -n d8-stronghold describe certificaterequest stronghold-b5wc6
 Одной из причин может быть ошибка `too many certificates already issued for mycompany.tld`, в особенности, если используется бесплатный dynDNS сервис наподобие `sslip.io` или `getmoss.site`. В таком случае нужно либо подождать, пока не пройдёт таймаут ограничения, либо сменить способ создания сертификата для домена `stronghold.mycompany.tld` (*ClusterIssuer* **selfsigned**, ручная подпись сертификата).
 
 При успешном завершении генерации сертификата в статусе *CertificateRequest* должны быть строчки:
+
 ```log
 Message:               Certificate fetched from issuer successfully
 Reason:                Issued
 Status:                True
 Type:                  Ready
 ```
-и присутствовать объект *Secret* типа `kubernetes.io/tls` с названием **ingress-tls**
 
-```
+и присутствовать объект *Secret* типа `kubernetes.io/tls` с названием **ingress-tls**

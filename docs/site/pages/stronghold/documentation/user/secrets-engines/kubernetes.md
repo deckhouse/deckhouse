@@ -35,6 +35,7 @@ documentation.
    generate many unique identities in Stronghold that will be hard to manage.
 
 {% endalert %}
+
 ## Setup
 
 The Kubernetes Secrets Engine must be configured in advance before it
@@ -52,6 +53,7 @@ management tool.
    Stronghold service account with a role binding or cluster role binding.
 
    For example, a minimal cluster role to create service account tokens is:
+
    ```yaml
    apiVersion: rbac.authorization.k8s.io/v1
    kind: ClusterRole
@@ -163,6 +165,7 @@ management tool.
 
    Here is a simple set up of a service account, role, and role binding in the Kubernetes `test`
    namespace with basic permissions we will use for this document:
+
    ```yaml
    apiVersion: v1
    kind: ServiceAccount
@@ -210,7 +213,7 @@ management tool.
 1. Configure the mount point. An empty config is allowed.
 
    ```shell-session
-   $ d8 stronghold write -f kubernetes/config
+   d8 stronghold write -f kubernetes/config
    ```
 
    Configuration options are available as specified in the
@@ -262,6 +265,7 @@ $ curl -sk $(kubectl config view --minify -o 'jsonpath={.clusters[].cluster.serv
 ```
 
 When the lease expires, you can verify that the token has been revoked.
+
 ```shell-session
 $ curl -sk $(kubectl config view --minify -o 'jsonpath={.clusters[].cluster.server}')/api/v1/namespaces/test/pods \
     --header "Authorization: Bearer eyJHbGci0iJSUzI1Ni..."
@@ -310,7 +314,6 @@ service_account_name       new-service-account-with-generated-token
 service_account_namespace  test
 service_account_token      eyJHbGci0iJSUzI1NiIsImtpZCI6ImlrUEE...
 ```
-
 
 You can verify the token's TTL by decoding the JWT token and extracting the `iat`
 (issued at) and `exp` (expiration time) claims.
@@ -386,6 +389,7 @@ You can read more in the
 
 {% endalert %}
 You can then get credentials with the automatically generated service account.
+
 ```shell-session
 $ d8 stronghold write kubernetes/creds/auto-managed-sa-role \
     kubernetes_namespace=test
@@ -408,7 +412,9 @@ $ d8 stronghold write kubernetes/roles/auto-managed-sa-and-role \
     allowed_kubernetes_namespaces="test" \
     generated_role_rules='{"rules":[{"apiGroups":[""],"resources":["pods"],"verbs":["list"]}]}'
 ```
+
 You can then get credentials in the same way as before.
+
 ```shell-session
 $ d8 stronghold write kubernetes/creds/auto-managed-sa-and-role \
     kubernetes_namespace=test

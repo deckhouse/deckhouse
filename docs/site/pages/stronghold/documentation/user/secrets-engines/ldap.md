@@ -30,7 +30,7 @@ The secrets engine has three primary features:
 1. Enable the LDAP secret engine:
 
    ```sh
-   $ d8 stronghold secrets enable ldap
+   d8 stronghold secrets enable ldap
    ```
 
    By default, the secrets engine will mount at the name of the engine. To
@@ -51,7 +51,7 @@ The secrets engine has three primary features:
 3. Rotate the root password so only Stronghold knows the credentials:
 
    ```sh
-   $ d8 stronghold write -f ldap/rotate-root
+   d8 stronghold write -f ldap/rotate-root
    ```
 
    Note: it's not possible to retrieve the generated password once rotated by Stronghold.
@@ -87,11 +87,11 @@ password can be configured using a [password policy](/docs/concepts/password-pol
 
 ```bash
 $ d8 stronghold write ldap/config \
-	binddn=$USERNAME \
-	bindpass=$PASSWORD \
-	url=ldaps://138.91.247.105 \
-	schema=racf \
-	password_policy=racf_password_policy
+ binddn=$USERNAME \
+ bindpass=$PASSWORD \
+ url=ldaps://138.91.247.105 \
+ schema=racf \
+ password_policy=racf_password_policy
 ```
 
 #### Active directory (AD)
@@ -101,10 +101,10 @@ schema `ad`.
 
 ```bash
 $ d8 stronghold write ldap/config \
-	binddn=$USERNAME \
-	bindpass=$PASSWORD \
-	url=ldaps://138.91.247.105 \
-	schema=ad
+ binddn=$USERNAME \
+ bindpass=$PASSWORD \
+ url=ldaps://138.91.247.105 \
+ schema=ad
 ```
 
 ## Static credentials
@@ -124,7 +124,7 @@ $ d8 stronghold write ldap/config \
 2. Request credentials for the "stronghold" role:
 
    ```sh
-   $ d8 stronghold read ldap/static-cred/lf-edge
+   d8 stronghold read ldap/static-cred/lf-edge
    ```
 
 ### Password rotation
@@ -440,7 +440,7 @@ policy). A ppolicy can enforce rules such as hashing plaintext passwords by defa
 The following is an example of an LDAP password policy to enforce hashing on the
 data information tree (DIT) `dc=example,dc=com`:
 
-```
+```console
 dn: cn=module{0},cn=config
 changetype: modify
 add: olcModuleLoad

@@ -25,7 +25,7 @@ toward users while others are targeted toward machines. Most authentication
 backends must be enabled before use. To enable an auth method:
 
 ```shell-session
-$ d8 stronghold write sys/auth/my-auth type=userpass
+d8 stronghold write sys/auth/my-auth type=userpass
 ```
 
 This enables the "userpass" auth method at the path "my-auth". This
@@ -109,4 +109,3 @@ how leasing is implemented.
 And just like secrets, identities can be renewed without having to
 completely reauthenticate. Just use `d8 stronghold token renew <token>` with the
 leased token associated with your identity to renew it.
-

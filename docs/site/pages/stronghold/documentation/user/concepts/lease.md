@@ -69,12 +69,12 @@ so often.
 As a result, the return value of renewals should be carefully inspected to
 determine what the new lease is.
 
-
 {% alert level="info" %}
 
 To implement token renewal logic in your application code, refer to the [code example in the Authentication doc](/docs/concepts/auth#code-example).
 
 {% endalert %}
+
 ## Prefix-based revocation
 
 In addition to revoking a single secret, operators with proper access control
@@ -90,4 +90,3 @@ command docs.
 This is very useful if there is an intrusion within a specific system: all
 secrets of a specific backend or a certain configured backend can be revoked
 quickly and easily.
-

@@ -18,13 +18,13 @@ description: The KV secrets engine can store arbitrary secrets.
 Механизам секретов v2 `kv` может быть включен с помощью команды:
 
 ```shell-session
-$ d8 stronghold secrets enable -version=2 kv
+d8 stronghold secrets enable -version=2 kv
 ```
 
 Или вы можете передать `kv-v2` в качестве типа механизма секретов:
 
 ```shell-session
-$ d8 stronghold secrets enable kv-v2
+d8 stronghold secrets enable kv-v2
 ```
 
 ## Обновление с версии 1 на версию 2
@@ -46,7 +46,6 @@ Success! Tuned the secrets engine at: secret/
 
 Пути для операцийчтения и записи имеют префикс `data/`. Например, следующую политику для kv-v1:
 
-
 ```plaintext
 path "secret/dev/team-1/*" {
   capabilities = ["create", "update", "read"]
@@ -60,6 +59,7 @@ path "secret/data/dev/team-1/*" {
   capabilities = ["create", "update", "read"]
 }
 ```
+
 Для kv-v2 существуют различные уровни удаления данных. Чтобы предоставить права на удаление последней версии ключа создайте такую политику:
 
 ```plaintext
@@ -172,7 +172,6 @@ path "secret/metadata/dev/team-1/*" {
    ```
 
 4. Чтение вернет самую свежую версию данных:
-
 
    ```shell-session
    $ d8 stronghold kv get -mount=secret my-secret
@@ -429,7 +428,6 @@ path "secret/metadata/dev/team-1/*" {
    ```
 
    Настройка `delete-version-after` будет применяться только к новым версиям, параметр `max-versions` будет применен при следующей операции записи.
-
 
    ```shell-session
    $ d8 stronghold kv put -mount=secret my-secret my-value=newer-s3cr3t

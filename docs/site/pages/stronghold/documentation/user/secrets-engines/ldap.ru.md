@@ -72,11 +72,11 @@ description: >-
 
 ```bash
 d8 stronghold write ldap/config \
-	binddn=$USERNAME \
-	bindpass=$PASSWORD \
-	url=ldaps://138.91.247.105 \
-	schema=racf \
-	password_policy=racf_password_policy
+ binddn=$USERNAME \
+ bindpass=$PASSWORD \
+ url=ldaps://138.91.247.105 \
+ schema=racf \
+ password_policy=racf_password_policy
 ```
 
 #### Active directory (AD)
@@ -85,10 +85,10 @@ d8 stronghold write ldap/config \
 
 ```bash
 d8 stronghold write ldap/config \
-	binddn=$USERNAME \
-	bindpass=$PASSWORD \
-	url=ldaps://138.91.247.105 \
-	schema=ad
+ binddn=$USERNAME \
+ bindpass=$PASSWORD \
+ url=ldaps://138.91.247.105 \
+ schema=ad
 ```
 
 ## Статические роли
@@ -206,9 +206,7 @@ username               v_token_testrole_FfH2i1c4dO_1611952635
 
 `sAMAccountName` - распространенное поле при работе с пользователями AD. Оно используется для обеспечения совместимости с устаревшими системами Windows NT и имеет ограничение в 20 символов. Имейте это в виду при определении шаблона `username_template`. Дополнительные сведения см. на [здесь](https://docs.microsoft.com/en-us/windows/win32/adschema/a-samaccountname).
 
-
 Поскольку стандартный `username_template` длиннее 20 символов и соответствует шаблону `v_{{.DisplayName}}_{{.RoleName}}_{{random 10}}_{{unix_time}}`, мы рекомендуем настроить `username_template` в конфигурации роли, чтобы генерировать учетные записи с именами менее 20 символов.
-
 
 AD не позволяет напрямую изменять атрибут `memberOf` пользователя. Атрибут `member` группы и атрибут `memberOf` пользователя являются [связанными атрибутами](https://docs.microsoft.com/en-us/windows/win32/ad/linked-attributes). Связанные атрибуты представляют собой пары прямая ссылка/обратная ссылка, причем прямая ссылка может быть изменена. В случае членства в группе AD атрибут `member` группы является прямой ссылкой. Чтобы добавить вновь созданного динамического пользователя в группу, нам также необходимо отправить запрос `modify` в нужную группу и добавить туда пользователя.
 
@@ -251,6 +249,7 @@ Stronghold может автоматически менять пароли дл�
 Сначала нам нужно включить механизм секретов LDAP и указать ему, как подключиться к серверу AD.
 
 Пример:
+
 ```shell-session
 $ d8 stronghold secrets enable ldap
 Success! Enabled the ad secrets engine at: ldap/
@@ -281,6 +280,7 @@ d8 stronghold write ldap/library/accounting-team \
 ```shell-session
 d8 stronghold read ldap/library/accounting-team/status
 ```
+
 Пример вывода:
 
 ```shell-session
@@ -352,7 +352,7 @@ lease_renewable    true
 
 Ниже приведен пример политики паролей LDAP для применения хэширования для `dc=example,dc=com`:
 
-```
+```console
 dn: cn=module{0},cn=config
 changetype: modify
 add: olcModuleLoad
@@ -368,4 +368,5 @@ olcPPolicyForwardUpdates: FALSE
 olcPPolicyHashCleartext: TRUE
 olcPPolicyUseLockout: TRUE
 ```
+
 {% endraw %}

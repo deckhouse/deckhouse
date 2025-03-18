@@ -25,7 +25,7 @@ Success! Enabled the transit secrets engine at: transit/
 ### Retrieve the transit wrapping key
 
 ```shell-session
-$ d8 stronghold read transit/wrapping_key
+d8 stronghold read transit/wrapping_key
 ```
 
 This returns a 4096-bit RSA key.
@@ -43,7 +43,7 @@ Once you have the wrapping key, you can parse it using the `encoding/pem`
 and `crypto/x509` libraries (the example code below assumes that the wrapping
 key has been written to a variable called `wrappingKeyString`):
 
-```
+```consol
 keyBlock, _ := pem.Decode([]byte(wrappingKeyString))
 parsedKey, err := x509.ParsePKIXPublicKey(keyBlock.Bytes)
 if err != nil {
@@ -54,7 +54,7 @@ if err != nil {
 Then generate an ephemeral AES key for wrapping the target key.
 This example uses Golang's `crypto/rand` library for generating the key:
 
-```
+```consol
 ephemeralAESKey := make([]byte, 32)
 _, err := rand.Read(ephemeralAESKey)
 if err != nil {
@@ -71,7 +71,7 @@ has been used!
 Google's [tink library](https://pkg.go.dev/github.com/tink-crypto/tink-go/kwp/subtle)
 provides a function for performing the key wrap operation:
 
-```
+```consol
 wrapKWP, err := subtle.NewKWP(aesKey)
 if err != nil {
         return err
@@ -84,7 +84,7 @@ if err != nil {
 
 Then encrypt the ephemeral AES key using the transit wrapping key:
 
-```
+```consol
 wrappedAESKey, err := rsa.EncryptOAEP(
         sha256.New(),
         rand.Reader,
@@ -106,7 +106,7 @@ The leftmost 4096 bits of the string should be the wrapped AES key, and
 the remaining bits should be the wrapped target key. Then the resulting
 bytes should be base64-encoded.
 
-```
+```consol
 combinedCiphertext := append(wrappedAESKey, wrappedTargetKey...)
 base64Ciphertext := base64.StdEncoding.EncodeToString(combinedCiphertext)
 ```
@@ -115,9 +115,8 @@ This is the ciphertext that should be provided to Stronghold when importing a
 key into the transit secrets engine.
 
 ```shell-session
-$ d8 stronghold write transit/keys/test-key/import ciphertext=$CIPHERTEXT hash_function=SHA256 type=$KEY_TYPE
+d8 stronghold write transit/keys/test-key/import ciphertext=$CIPHERTEXT hash_function=SHA256 type=$KEY_TYPE
 ```
-
 
 ### AWS CloudHSM example
 
@@ -136,7 +135,7 @@ creating a new RSA public key object with the key returned by transit's
 `wrapping_key` endpoint.
 
 ```shell-session
-$ importPubKey -f wrapping_key.pem -l "my-transit-wrapping-key"
+importPubKey -f wrapping_key.pem -l "my-transit-wrapping-key"
 ```
 
 This will create the public key in the HSM with all of the necessary permissions.
@@ -147,7 +146,7 @@ The next step is wrapping the target key using the wrapping key. If the
 ID of the target key is `1` and the wrapping key is `2`, the command looks like this:
 
 ```shell-session
-$ wrapKey -noheader -k 1 -w 2 -t 3 -m 7 -out ciphertext.key
+wrapKey -noheader -k 1 -w 2 -t 3 -m 7 -out ciphertext.key
 ```
 
 The `-m 7` flag specifies the mechanism to use for the key wrapping. For AWS CloudHSM,
@@ -160,8 +159,8 @@ The output from this is a binary file, which needs to be base64-encoded when it
 is provided to Stronghold.
 
 ```shell-session
-$ export CIPHERTEXT=$(base64 ciphertext.key)
-$ d8 stronghold write transit/keys/test-key/import ciphertext=$CIPHERTEXT hash_function=SHA256 type=$KEY_TYPE
+export CIPHERTEXT=$(base64 ciphertext.key)
+d8 stronghold write transit/keys/test-key/import ciphertext=$CIPHERTEXT hash_function=SHA256 type=$KEY_TYPE
 ```
 
 Once the key has been imported, it can be used like any other transit key.

@@ -83,7 +83,7 @@ management tool.
 After the secrets engine is configured and a user/machine has an Stronghold token with
 the proper permission, it can generate credentials.
 
-1.  Generate a new credential by writing to the `/issue` endpoint with the name
+1. Generate a new credential by writing to the `/issue` endpoint with the name
     of the role:
 
     ```text

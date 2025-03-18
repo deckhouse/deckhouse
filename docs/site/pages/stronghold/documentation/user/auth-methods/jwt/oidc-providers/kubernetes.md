@@ -20,6 +20,7 @@ risk, use short TTLs for service account tokens or use
 [Kubernetes auth](/docs/auth/kubernetes) which _does_ use the `TokenReview` API.
 
 {% endalert %}
+
 ### Using service account issuer discovery
 
 When using service account issuer discovery, you only need to provide the JWT
@@ -55,7 +56,7 @@ Configuration steps:
 
 1. Enable and configure JWT auth in Stronghold.
 
-  1. If Stronghold is running in Kubernetes:
+1. If Stronghold is running in Kubernetes:
 
      ```bash
      d8 stronghold auth enable jwt
@@ -64,23 +65,18 @@ Configuration steps:
         oidc_discovery_ca_pem=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
      ```
 
-  1. Alternatively, if Stronghold is _not_ running in Kubernetes:
+1. Alternatively, if Stronghold is _not_ running in Kubernetes:
 
-{% alert level="info" %}
+   > **Note:** When Stronghold is outside the cluster, the `$ISSUER` endpoint below may or may not be reachable. If not, you can configure JWT auth using [`jwt_validation_pubkeys`](#using-jwt-validation-public-keys) instead.
 
-**Note:** When Stronghold is outside the cluster, the `$ISSUER` endpoint below may
-     or may not be reachable. If not, you can configure JWT auth using
-     [`jwt_validation_pubkeys`](#using-jwt-validation-public-keys) instead.
-
-{% endalert %}
-     ```bash
-     d8 stronghold auth enable jwt
-     d8 stronghold write auth/jwt/config oidc_discovery_url="${ISSUER}"
-     ```
+   ```bash
+   d8 stronghold auth enable jwt
+   d8 stronghold write auth/jwt/config oidc_discovery_url="${ISSUER}"
+   ```
 
 1. Configure a role and log in as detailed [below](#creating-a-role-and-logging-in).
 
-[k8s-sa-issuer-discovery]: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#service-account-issuer-discovery
+   [k8s-sa-issuer-discovery]: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#service-account-issuer-discovery
 
 ### Using JWT validation public keys
 

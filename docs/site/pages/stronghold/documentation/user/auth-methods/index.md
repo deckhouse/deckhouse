@@ -26,7 +26,7 @@ To learn more about authentication, see the
 Auth methods can be enabled/disabled using the CLI or the API.
 
 ```shell-session
-$ d8 stronghold auth enable userpass
+d8 stronghold auth enable userpass
 ```
 
 When enabled, auth methods are similar to [secrets engines](/docs/secrets):
@@ -39,7 +39,7 @@ path is customizable, allowing users with advanced use cases to mount a single
 auth method multiple times.
 
 ```shell-session
-$ d8 stronghold auth enable -path=my-login userpass
+d8 stronghold auth enable -path=my-login userpass
 ```
 
 When an auth method is disabled, all users authenticated via that method are

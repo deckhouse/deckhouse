@@ -140,27 +140,27 @@ The [benchmark-vault](https://github.com/hashicorp/vault-benchmark) project
 can be used to measure the performance of an Stronghold PKI instance. In general,
 some considerations to be aware of:
 
- - RSA key generation is much slower and highly variable than EC key
+- RSA key generation is much slower and highly variable than EC key
    generation. If performance and throughput are a necessity, consider using
    EC keys (including NIST P-curves and Ed25519) instead of RSA.
 
- - Key signing requests (via `/pki/sign`) will be faster than (`/pki/issue`),
+- Key signing requests (via `/pki/sign`) will be faster than (`/pki/issue`),
    especially for RSA keys: this removes the necessity for Stronghold to generate
    key material and can sign the key material provided by the client. This
    signing step is common between both endpoints, so key generation is pure
    overhead if the client has a sufficiently secure source of entropy.
 
- - The CA's key type matters as well: using a RSA CA will result in a RSA
+- The CA's key type matters as well: using a RSA CA will result in a RSA
    signature and takes longer than a ECDSA or Ed25519 CA.
 
- - Storage is an important factor: with [BYOC Revocation](/api-docs/secret/pki#revoke-certificate),
+- Storage is an important factor: with [BYOC Revocation](/api-docs/secret/pki#revoke-certificate),
    using `no_store=true` still gives you the ability to revoke certificates
    and audit logs can be used to track issuance. Clusters using a remote
    storage over a slow network and using `no_store=false` will
    result in additional latency on issuance. Adding leases for every issued
    certificate compounds the problem.
 
-    - Storing too many certificates results in longer `LIST /pki/certs` time,
+  - Storing too many certificates results in longer `LIST /pki/certs` time,
       including the time to tidy the instance. As such, for large scale
       deployments (>= 250k active certificates) it is recommended to use audit
       logs to track certificates outside of Stronghold.
@@ -168,17 +168,17 @@ some considerations to be aware of:
 As a general comparison on unspecified hardware, using `benchmark-vault` for
 `30s` on a local, single node, raft-backed Stronghold instance:
 
-  - Stronghold can issue 300k certificates using EC P-256 for CA & leaf keys and
+- Stronghold can issue 300k certificates using EC P-256 for CA & leaf keys and
     without storage.
 
-    - But switching to storing these leaves drops that number to 65k, and only
+  - But switching to storing these leaves drops that number to 65k, and only
       20k with leases.
 
- - Using large, expensive RSA-4096 bit keys, Stronghold can only issue 160 leaves,
+- Using large, expensive RSA-4096 bit keys, Stronghold can only issue 160 leaves,
    regardless of whether or not storage or leases were used. The 95% key
    generation time is above 10s.
 
-    - In comparison, using P-521 keys, Stronghold can issue closer to 30k leaves
+  - In comparison, using P-521 keys, Stronghold can issue closer to 30k leaves
       without leases and 18k with leases.
 
 These numbers are for example only, to represent the impact different key types
@@ -221,10 +221,10 @@ correctly serve the cross-signed chain on issuance requests, the
 `manual_chain` override is required on either or both intermediates. This
 can be constructed in the following order:
 
- - this issuer (`self`)
- - this root
- - the other copy of this intermediate
- - the other root
+- this issuer (`self`)
+- this root
+- the other copy of this intermediate
+- the other root
 
 All requests to this issuer for signing will now present the full cross-signed
 chain.
@@ -244,6 +244,7 @@ clients to discover the URL of this cluster.
    via ACME) will fail.
 
 {% endalert %}
+
 ## Automate rotation with ACME
 
 The PKI Engine supports the [Automatic Certificate Management Environment
@@ -267,6 +268,7 @@ Note: Stronghold's PKI ACME server caps the certificate's validity at 90 days
    and `NotAfter` order request parameters.
 
 {% endalert %}
+
 ### ACME stores certificates
 
 Because ACME requires stored certificates in order to function, the notes
@@ -424,6 +426,7 @@ Note: Stronghold supports two complementary revocation mechanisms: Delta CRLs,
    certificates, it will be done on a schedule rather than on demand.
 
 {% endalert %}
+
 ### NotAfter behavior on leaf certificates
 
 The PKI Secrets Engine supports a `leaf_not_after_behavior` [parameter on
@@ -476,6 +479,7 @@ Note: The PKI Secret Engine's [Bring-Your-Own-Cert
    likelihood for revocation).
 
 {% endalert %}
+
 ## You must configure issuing/CRL/OCSP information _in advance_
 
 This secrets engine serves CRLs from a predictable location, but it is not
@@ -494,6 +498,7 @@ Note: When using multiple issuers in the same mount, it is suggested to use
    issuer's information, these applications may break.
 
 {% endalert %}
+
 ## Distribution of CRLs and OCSP
 
 Both CRLs and OCSP allow interrogating revocation status of certificates. Both
@@ -589,27 +594,27 @@ do _one_ thing; multiple roles should be preferable over having too permissive
 roles that allow arbitrary issuance (e.g., `allow_any_name` should generally
 be used sparingly, if at all).
 
- - `allow_any_name` should generally be set to `false`; this is the default.
- - `allow_localhost` should generally be set to `false` for production
+- `allow_any_name` should generally be set to `false`; this is the default.
+- `allow_localhost` should generally be set to `false` for production
    services, unless listening on `localhost` is expected.
- - Unless necessary, `allow_wildcard_certificates` should generally be set to
+- Unless necessary, `allow_wildcard_certificates` should generally be set to
    `false`. This is **not** the default due to backwards compatibility
    concerns.
-   - This is especially necessary when `allow_subdomains` or `allow_glob_domains`
+  - This is especially necessary when `allow_subdomains` or `allow_glob_domains`
      are enabled.
- - `enforce_hostnames` should generally be enabled for TLS services; this is
+- `enforce_hostnames` should generally be enabled for TLS services; this is
    the default.
- - `allow_ip_sans` should generally be set to `false` (but defaults to `true`),
+- `allow_ip_sans` should generally be set to `false` (but defaults to `true`),
    unless IP address certificates are explicitly required.
- - When using short TTLs (< 30 days) or with high issuance volume, it is
+- When using short TTLs (< 30 days) or with high issuance volume, it is
    generally recommend to set `no_store` to `true` (defaults to `false`).
    This prevents revocation but allows higher throughput as Stronghold no longer
    needs to store every issued certificate. This is discussed more in the
    [Replicated Datasets](#replicated-datasets) section below.
- - Do not use roles with root certificates (`issuer_ref`). Root certificates
+- Do not use roles with root certificates (`issuer_ref`). Root certificates
    should generally only issue intermediates (see the section on [CA hierarchy
    above](#use-a-ca-hierarchy)), which doesn't rely on roles.
- - Limit `key_usage` and `ext_key_usage`; don't attempt to allow all usages
+- Limit `key_usage` and `ext_key_usage`; don't attempt to allow all usages
    for all purposes. Generally the default values are useful for client and
    server TLS authentication.
 
@@ -649,42 +654,42 @@ Note: Depending on usage of Stronghold, CRLs (and rarely, CA chains) can grow to
 {% endalert %}
 Some suggested keys to un-HMAC for requests are as follows:
 
- - `csr` - the requested CSR to sign,
- - `certificate` - the requested self-signed certificate to re-sign or
+- `csr` - the requested CSR to sign,
+- `certificate` - the requested self-signed certificate to re-sign or
    when importing issuers,
- - Various issuance-related overriding parameters, such as:
-   - `issuer_ref` - the issuer requested to sign this certificate,
-   - `common_name` - the requested common name,
-   - `alt_names` - alternative requested DNS-type SANs for this certificate,
-   - `other_sans` - other (non-DNS, non-Email, non-IP, non-URI) requested SANs for this certificate,
-   - `ip_sans` - requested IP-type SANs for this certificate,
-   - `uri_sans` - requested URI-type SANs for this certificate,
-   - `ttl` - requested expiration date of this certificate,
-   - `not_after` - requested expiration date of this certificate,
-   - `serial_number` - the subject's requested serial number,
-   - `key_type` - the requested key type,
-   - `private_key_format` - the requested key format which is also
+- Various issuance-related overriding parameters, such as:
+  - `issuer_ref` - the issuer requested to sign this certificate,
+  - `common_name` - the requested common name,
+  - `alt_names` - alternative requested DNS-type SANs for this certificate,
+  - `other_sans` - other (non-DNS, non-Email, non-IP, non-URI) requested SANs for this certificate,
+  - `ip_sans` - requested IP-type SANs for this certificate,
+  - `uri_sans` - requested URI-type SANs for this certificate,
+  - `ttl` - requested expiration date of this certificate,
+  - `not_after` - requested expiration date of this certificate,
+  - `serial_number` - the subject's requested serial number,
+  - `key_type` - the requested key type,
+  - `private_key_format` - the requested key format which is also
      used for the public certificate format as well,
- - Various role- or issuer-related generation parameters, such as:
-   - `ou` - the subject's organizational unit,
-   - `organization` - the subject's organization,
-   - `country` - the subject's country code,
-   - `locality` - the subject's locality,
-   - `province` - the subject's province,
-   - `street_address` - the subject's street address,
-   - `postal_code` - the subject's postal code,
-   - `permitted_dns_domains` - permitted DNS domains,
-   - `policy_identifiers` - the requested policy identifiers when creating a role, and
-   - `ext_key_usage_oids` - the extended key usage OIDs for the requested certificate.
+- Various role- or issuer-related generation parameters, such as:
+  - `ou` - the subject's organizational unit,
+  - `organization` - the subject's organization,
+  - `country` - the subject's country code,
+  - `locality` - the subject's locality,
+  - `province` - the subject's province,
+  - `street_address` - the subject's street address,
+  - `postal_code` - the subject's postal code,
+  - `permitted_dns_domains` - permitted DNS domains,
+  - `policy_identifiers` - the requested policy identifiers when creating a role, and
+  - `ext_key_usage_oids` - the extended key usage OIDs for the requested certificate.
 
 Some suggested keys to un-HMAC for responses are as follows:
 
- - `certificate` - the certificate that was issued,
- - `issuing_ca` - the certificate of the CA which issued the requested
+- `certificate` - the certificate that was issued,
+- `issuing_ca` - the certificate of the CA which issued the requested
    certificate,
- - `serial_number` - the serial number of the certificate that was issued,
- - `error` - to show errors associated with the request, and
- - `ca_chain` - optional due to noise; the full CA chain of the issuer of
+- `serial_number` - the serial number of the certificate that was issued,
+- `error` - to show errors associated with the request, and
+- `ca_chain` - optional due to noise; the full CA chain of the issuer of
    the requested certificate.
 
 {% alert level="warning" %}
@@ -696,9 +701,9 @@ Note: These list of parameters to un-HMAC are provided as a suggestion and
 The following keys are suggested **NOT** to un-HMAC, due to their sensitive
 nature:
 
- - `private_key` - this response parameter contains the private keys
+- `private_key` - this response parameter contains the private keys
    generated by Stronghold during issuance, and
- - `pem_bundle` this request parameter is only used on the issuer-import
+- `pem_bundle` this request parameter is only used on the issuer-import
    paths and may contain sensitive private key material.
 
 ## Role-Based access
@@ -709,16 +714,16 @@ may also be valid.
 
 We suggest the following personas:
 
- - *Operator*;  a privileged user who manages the health of the PKI
+- _Operator_;  a privileged user who manages the health of the PKI
    subsystem; manages issuers and key material.
- - *Agent*; a semi-privileged user that manages roles and handles
+- _Agent_; a semi-privileged user that manages roles and handles
    revocation on behalf of an operator; may also handle delegated
-   issuance. This may also be called an *administrator* or *role
+   issuance. This may also be called an _administrator_ or *role
    manager*.
- - *Advanced*; potentially a power-user or service that has access to
+- _Advanced_; potentially a power-user or service that has access to
    additional issuance APIs.
- - *Requester*; a low-level user or service that simply requests certificates.
- - *Unauthed*; any arbitrary user or service that lacks an Stronghold token.
+- _Requester_; a low-level user or service that simply requests certificates.
+- _Unauthed_; any arbitrary user or service that lacks an Stronghold token.
 
 For these personas, we suggest the following ACLs, in condensed, tabular form:
 

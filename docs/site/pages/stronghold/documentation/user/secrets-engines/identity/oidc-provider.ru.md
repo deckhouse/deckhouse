@@ -36,7 +36,6 @@ Stronghold в качестве OIDC-провайдера.
 
 1. Включите метод аутентификации Stronghold:
 
-
    ```text
    $ d8 stronghold auth enable userpass
    Success! Enabled userpass auth method at: userpass/
@@ -57,7 +56,6 @@ Stronghold в качестве OIDC-провайдера.
 
 3. Создайте клиентское приложение:
 
-
    ```text
    $ d8 stronghold write identity/oidc/client/my-webapp \
      redirect_uris="https://localhost:9702/auth/oidc-callback" \
@@ -75,7 +73,6 @@ Stronghold в качестве OIDC-провайдера.
    назначение.
 
 4. Считывание учетных данных клиента:
-
 
    ```text
    $ d8 stronghold read identity/oidc/client/my-webapp
@@ -96,7 +93,6 @@ Stronghold в качестве OIDC-провайдера.
    значения обычно требуются при настройке доверяющей стороны OIDC.
 
 5. Прочитайте конфигурацию обнаружения OIDC:
-
 
    ```text
    $ curl -s http://127.0.0.1:8200/v1/identity/oidc/provider/default/.well-known/openid-configuration

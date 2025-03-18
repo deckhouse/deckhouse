@@ -26,6 +26,7 @@ can check with `d8 stronghold read -field disable_iss_validation auth/kubernetes
 See [Kubernetes 1.21](#kubernetes-1-21) below for more details.
 
 {% endalert %}
+
 ## Authentication
 
 ### Via the CLI
@@ -34,7 +35,7 @@ The default path is `/kubernetes`. If this auth method was enabled at a
 different path, specify `-path=/my-path` in the CLI.
 
 ```shell-session
-$ d8 stronghold write auth/kubernetes/login role=demo jwt=...
+d8 stronghold write auth/kubernetes/login role=demo jwt=...
 ```
 
 ### Via the API
@@ -174,7 +175,7 @@ short-lived tokens. If you would like to disable this, set
 [here](/docs/auth/jwt/oidc-providers/kubernetes#specifying-ttl-and-audience) for an example.
 
 {% endalert %}
-[k8s-extended-tokens]: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/#options
+[k8s-extended-tokens]: <https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/#options>
 
 #### Use local service account token as the reviewer JWT
 
@@ -324,4 +325,3 @@ The Kubernetes Auth Plugin has a full HTTP API. Please see the
 [API docs](/api-docs/auth/kubernetes) for more details.
 
 [k8s-tokenreview]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#tokenreview-v1-authentication-k8s-io
-

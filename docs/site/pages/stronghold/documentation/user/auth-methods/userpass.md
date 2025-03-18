@@ -67,13 +67,13 @@ management tool.
 1. Enable the userpass auth method:
 
    ```shell-session
-   $ d8 stronghold auth enable userpass
+   d8 stronghold auth enable userpass
    ```
 
    This enables the userpass auth method at `auth/userpass`. To enable it at a different path, use the `-path` flag:
 
    ```shell-session
-   $ d8 stronghold auth enable -path=<path> userpass
+   d8 stronghold auth enable -path=<path> userpass
    ```
 
 1. Configure it with users that are allowed to authenticate:
@@ -116,6 +116,7 @@ The user lockout feature can be disabled as follows:
 **NOTE**: This feature is only supported by the userpass, ldap, and approle auth methods.
 
 {% endalert %}
+
 ## API
 
 The Userpass auth method has a full HTTP API. Please see the [Userpass auth

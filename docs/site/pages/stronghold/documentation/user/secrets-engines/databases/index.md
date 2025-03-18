@@ -107,7 +107,7 @@ management tool.
    Stronghold itself:
 
    ```shell-session
-   $ d8 stronghold write -force database/rotate-root/my-database
+   d8 stronghold write -force database/rotate-root/my-database
    ```
 
 {% alert level="critical" %}
@@ -138,7 +138,7 @@ management tool.
 After the secrets engine is configured and a user/machine has an Stronghold token with
 the proper permission, it can generate credentials.
 
-1.  Generate a new credential by reading from the `/creds` endpoint with the name
+1. Generate a new credential by reading from the `/creds` endpoint with the name
     of the role:
 
     ```shell-session
@@ -158,7 +158,6 @@ All databases support dynamic roles and static roles. All plugins support rotati
 the root user's credentials.
 
 <a id="db-capabilities-table" />
-
 
 | Database                                                   | Root Credential Rotation | Dynamic Roles | Static Roles | Username Customization | Credential Types |
 |------------------------------------------------------------|--------------------------|---------------|--------------|------------------------|------------------|
@@ -199,26 +198,26 @@ The default password generation can be represented as the following password pol
 length = 20
 
 rule "charset" {
-	charset = "abcdefghijklmnopqrstuvwxyz"
-	min-chars = 1
+ charset = "abcdefghijklmnopqrstuvwxyz"
+ min-chars = 1
 }
 rule "charset" {
-	charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	min-chars = 1
+ charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+ min-chars = 1
 }
 rule "charset" {
-	charset = "0123456789"
-	min-chars = 1
+ charset = "0123456789"
+ min-chars = 1
 }
 rule "charset" {
-	charset = "-"
-	min-chars = 1
+ charset = "-"
+ min-chars = 1
 }
 ```
 
 ## Disable character escaping
 
-You can specify the option `disable_escaping` with a value of `true ` in some
+You can specify the option `disable_escaping` with a value of `true` in some
 secrets engines to prevent Stronghold from escaping special characters in the
 username and password fields. This is necessary for some alternate connection
 string formats. See the [databases secrets engine API

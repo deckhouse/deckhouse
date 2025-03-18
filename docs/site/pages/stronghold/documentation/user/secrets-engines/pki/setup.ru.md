@@ -69,7 +69,7 @@ description: The PKI secrets engine for Stronghold generates TLS certificates.
 
 После того как механизм секретов настроен и у пользователя/машины есть Stronghold-токен с соответствующими правами, можно генерировать учетные данные.
 
-1.  Сгенерируйте новые учетные данные, записав их в путь `/issue` с именем роли:
+1. Сгенерируйте новые учетные данные, записав их в путь `/issue` с именем роли:
 
     ```shell
     $ d8 stronghold write pki/issue/example-dot-ru \
