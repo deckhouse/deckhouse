@@ -56,7 +56,6 @@ import (
 )
 
 const (
-	metricReleasesGroup = "d8_releases"
 	metricUpdatingGroup = "d8_updating"
 	metricUpdatingName  = "d8_is_updating"
 
@@ -159,8 +158,6 @@ func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		r.logger.Debug("release channel not set")
 		return res, nil
 	}
-
-	r.metricStorage.Grouped().ExpireGroupMetrics(metricReleasesGroup)
 
 	release := new(v1alpha1.DeckhouseRelease)
 	err := r.client.Get(ctx, req.NamespacedName, release)
