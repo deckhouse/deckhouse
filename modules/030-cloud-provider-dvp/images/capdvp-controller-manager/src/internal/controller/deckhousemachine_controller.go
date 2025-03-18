@@ -353,7 +353,7 @@ func (r *DeckhouseMachineReconciler) createVM(
 				CoreFraction: strconv.Itoa(dvpMachine.Spec.CPU.Fraction) + "%",
 			},
 			Memory: v1alpha2.MemorySpec{
-				Size: *resource.NewQuantity(int64(dvpMachine.Spec.Memory), resource.BinarySI),
+				Size: *resource.NewQuantity(int64(dvpMachine.Spec.Memory*1024*1024), resource.BinarySI),
 			},
 			BlockDeviceRefs: []v1alpha2.BlockDeviceSpecRef{
 				{
