@@ -41,7 +41,7 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1.33.0
+  name: v1.32.0
 spec:
   version: "v1.32.0"
 status:
@@ -50,7 +50,7 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1.33.1
+  name: v1.32.1
 spec:
   version: "v1.32.1"
 status:

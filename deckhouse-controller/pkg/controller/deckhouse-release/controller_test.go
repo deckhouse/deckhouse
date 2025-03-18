@@ -447,29 +447,20 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("minor release and patch release", func() {
+		mup := embeddedMUP.DeepCopy()
+		mup.Update.Mode = v1alpha1.UpdateModeAuto.String()
+		mup.Update.Windows = update.Windows{{From: "8:00", To: "10:00"}}
+
 		dependency.TestDC.HTTPClient.DoMock.
 			Expect(&http.Request{}).
 			Return(&http.Response{
 				StatusCode: http.StatusOK,
 			}, nil)
 
-		suite.setupController("minor-release-and-patch-release.yaml", initValues, embeddedMUP)
+		suite.setupController("minor-release-and-patch-release.yaml", initValues, mup)
 		dr := suite.getDeckhouseRelease("v1.31.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
-		dr = suite.getDeckhouseRelease("v1.32.0")
-		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
-		require.NoError(suite.T(), err)
-		dr = suite.getDeckhouseRelease("v1.32.1")
-		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
-		require.NoError(suite.T(), err)
-
-		dependency.TestDC.HTTPClient.DoMock.
-			Expect(&http.Request{}).
-			Return(&http.Response{
-				StatusCode: http.StatusOK,
-			}, nil)
-
 		dr = suite.getDeckhouseRelease("v1.32.0")
 		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)

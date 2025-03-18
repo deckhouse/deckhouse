@@ -1015,6 +1015,11 @@ func (r *deckhouseReleaseReconciler) reconcileDeployedRelease(ctx context.Contex
 func (r *deckhouseReleaseReconciler) updateReleaseStatus(ctx context.Context, dr *v1alpha1.DeckhouseRelease, status *v1alpha1.DeckhouseReleaseStatus) error {
 	r.logger.Debug("refresh release status", slog.String("name", dr.GetName()))
 
+	switch status.Phase {
+	case v1alpha1.DeckhouseReleasePhaseSuperseded, v1alpha1.DeckhouseReleasePhaseSuspended, v1alpha1.DeckhouseReleasePhaseSkipped:
+		r.metricsUpdater.PurgeReleaseMetric(dr.GetName())
+	}
+
 	return ctrlutils.UpdateStatusWithRetry(ctx, r.client, dr, func() error {
 		if dr.Status.Phase != status.Phase {
 			dr.Status.TransitionTime = metav1.NewTime(r.dc.GetClock().Now().UTC())
