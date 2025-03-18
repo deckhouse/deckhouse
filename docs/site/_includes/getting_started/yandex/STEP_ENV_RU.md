@@ -20,7 +20,6 @@ yc resource-manager folder add-access-binding --id <folderID> --role api-gateway
 yc resource-manager folder add-access-binding --id <folderID> --role connection-manager.editor --subject serviceAccount:<userID>
 yc resource-manager folder add-access-binding --id <folderID> --role vpc.admin --subject serviceAccount:<userID>
 yc resource-manager folder add-access-binding --id <folderID> --role load-balancer.editor --subject serviceAccount:<userID>
-yc resource-manager folder add-access-binding --id <folderID> --role logging.editor --subject serviceAccount:<userID>
 ```
 
 Создайте JSON-файл с параметрами авторизации пользователя в облаке. В дальнейшем с помощью этих данных будем авторизовываться в облаке:
