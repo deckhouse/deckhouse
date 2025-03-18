@@ -578,8 +578,17 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
+	metricLabels := releaseUpdater.NewReleaseMetricLabels(mr)
+	defer func() {
+		if metricLabels[releaseUpdater.ManualApprovalRequired] == "true" {
+			metricLabels[releaseUpdater.ReleaseQueueDepth] = strconv.Itoa(task.QueueDepth)
+		}
+		r.metricsUpdater.UpdateReleaseMetric(mr.GetName(), metricLabels)
+	}()
+
 	reasons := checker.MetRequirements(release)
 	if len(reasons) > 0 {
+		metricLabels.SetTrue(releaseUpdater.RequirementsNotMet)
 		msgs := make([]string, 0, len(reasons))
 		for _, reason := range reasons {
 			msgs = append(msgs, reason.Message)
@@ -959,18 +968,8 @@ var ErrPreApplyCheckIsFailed = errors.New("pre apply check is failed")
 // PreApplyReleaseCheck checks final conditions before apply
 //
 // - Calculating deploy time (if zero - deploy)
-func (r *reconciler) PreApplyReleaseCheck(ctx context.Context, mr *v1alpha1.ModuleRelease, task *releaseUpdater.Task, us *releaseUpdater.Settings) error {
-	metricLabels := releaseUpdater.NewReleaseMetricLabels(mr)
-
+func (r *reconciler) PreApplyReleaseCheck(ctx context.Context, mr *v1alpha1.ModuleRelease, task *releaseUpdater.Task, us *releaseUpdater.Settings, metricLabels releaseUpdater.MetricLabels) error {
 	timeResult := r.DeployTimeCalculate(ctx, mr, task, us, metricLabels)
-
-	if metricLabels[releaseUpdater.ManualApprovalRequired] == "true" {
-		metricLabels[releaseUpdater.ReleaseQueueDepth] = strconv.Itoa(task.QueueDepth)
-	}
-
-	// if the predicted release has an index less than the number of awaiting releases
-	// calculate and set releaseDepthQueue label
-	r.metricsUpdater.UpdateReleaseMetric(mr.GetName(), metricLabels)
 
 	if timeResult == nil {
 		return nil

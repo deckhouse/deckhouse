@@ -415,8 +415,17 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
+	metricLabels := releaseUpdater.NewReleaseMetricLabels(dr)
+	defer func() {
+		if metricLabels[releaseUpdater.ManualApprovalRequired] == "true" {
+			metricLabels[releaseUpdater.ReleaseQueueDepth] = strconv.Itoa(task.QueueDepth)
+		}
+		r.metricsUpdater.UpdateReleaseMetric(dr.GetName(), metricLabels)
+	}()
+
 	reasons := checker.MetRequirements(dr)
 	if len(reasons) > 0 {
+		metricLabels.SetTrue(releaseUpdater.RequirementsNotMet)
 		msgs := make([]string, 0, len(reasons))
 		for _, reason := range reasons {
 			msgs = append(msgs, reason.Message)
@@ -447,7 +456,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	}
 
 	// handling error inside function
-	err = r.PreApplyReleaseCheck(ctx, dr, task)
+	err = r.PreApplyReleaseCheck(ctx, dr, task, metricLabels)
 	if err != nil {
 		// ignore this err, just requeue because of check failed
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
@@ -466,18 +475,8 @@ var ErrPreApplyCheckIsFailed = errors.New("pre apply check is failed")
 // PreApplyReleaseCheck checks final conditions before apply
 //
 // - Calculating deploy time (if zero - deploy)
-func (r *deckhouseReleaseReconciler) PreApplyReleaseCheck(ctx context.Context, dr *v1alpha1.DeckhouseRelease, task *releaseUpdater.Task) error {
-	metricLabels := releaseUpdater.NewReleaseMetricLabels(dr)
-
+func (r *deckhouseReleaseReconciler) PreApplyReleaseCheck(ctx context.Context, dr *v1alpha1.DeckhouseRelease, task *releaseUpdater.Task, metricLabels releaseUpdater.MetricLabels) error {
 	timeResult := r.DeployTimeCalculate(ctx, dr, task, metricLabels)
-
-	if metricLabels[releaseUpdater.ManualApprovalRequired] == "true" {
-		metricLabels[releaseUpdater.ReleaseQueueDepth] = strconv.Itoa(task.QueueDepth)
-	}
-
-	// if the predicted release has an index less than the number of awaiting releases
-	// calculate and set releaseDepthQueue label
-	r.metricsUpdater.UpdateReleaseMetric(dr.GetName(), metricLabels)
 
 	if timeResult == nil {
 		return nil
