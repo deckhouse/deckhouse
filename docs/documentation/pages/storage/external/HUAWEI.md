@@ -14,7 +14,7 @@ This page provides instructions on connecting Huawei Dorado to Deckhouse, config
 
 ## System requirements
 
-- Presence of a deployed and configured Huawei SAN.
+- Presence of a deployed and configured Huawei SAN;
 - Unique IQNs in `/etc/iscsi/initiatorname.iscsi` on each Kubernetes Nodes.
 
 ## Setup and Configuration
@@ -24,7 +24,7 @@ Note that all commands must be run on a machine that has administrator access to
 ### Enabling the module
 
 To support Huawei Dorado storage systems, enable the `csi-huawei` module. This will ensure that all cluster nodes have:
-- registration of the CSI driver.
+- registration of the CSI driver;
 - launch of service pods for the `csi-huawei` components.
 
 ```yaml
