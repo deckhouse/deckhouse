@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -123,11 +124,23 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleRegistryStaticPods)
 
 func filterRegistryConfig(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var secret v1core.Secret
+
+	err := sdk.FromUnstructured(obj, &secret)
+	if err != nil {
+		return "", fmt.Errorf("failed to convert config secret to struct: %v", err)
+	}
+
+	buf, err := json.Marshal(secret.Data)
+	if err != nil {
+		return nil, fmt.Errorf("cannot marshal config data to JSON: %w", err)
+	}
+
 	var config registryConfig
 
-	err := sdk.FromUnstructured(obj, &config)
+	err = json.Unmarshal(buf, &config)
 	if err != nil {
-		return "", fmt.Errorf("failed to convert secret to struct: %v", err)
+		return nil, fmt.Errorf("cannot unmarshal config data to JSON: %w", err)
 	}
 
 	return config, nil
@@ -138,7 +151,7 @@ func filterRegistryState(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 
 	err := sdk.FromUnstructured(obj, &secret)
 	if err != nil {
-		return "", fmt.Errorf("failed to convert secret to struct: %v", err)
+		return "", fmt.Errorf("failed to convert state secret to struct: %v", err)
 	}
 
 	ret := registryState{
@@ -241,13 +254,17 @@ func handleRegistryStaticPods(input *go_hook.HookInput) error {
 	if len(stateSnaps) == 1 {
 		state = stateSnaps[0].(registryState)
 	} else {
-		messages = append(messages, fmt.Sprintf("State snaps count: %v", len(stateSnaps)))
+		msg := fmt.Sprintf("State snaps count: %v", len(stateSnaps))
+		messages = append(messages, msg)
+		input.Logger.Warn(msg)
 	}
 
 	if len(configSnaps) == 1 {
 		config = configSnaps[0].(registryConfig)
 	} else {
-		messages = append(messages, fmt.Sprintf("Config snaps count: %v", len(configSnaps)))
+		msg := fmt.Sprintf("Config snaps count: %v", len(configSnaps))
+		messages = append(messages, msg)
+		input.Logger.Warn(msg)
 	}
 
 	nodes := make(map[string]registryNode)
