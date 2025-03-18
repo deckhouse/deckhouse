@@ -26,6 +26,7 @@ import (
 	"github.com/deckhouse/virtualization/api/core/v1alpha2"
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -199,7 +200,7 @@ func (r *DeckhouseMachineReconciler) reconcileUpdates(
 
 	logger.Info("Reconciling DeckhouseMachine")
 
-	vm, err := r.getOrCreateVM(ctx, dvpMachine)
+	vm, err := r.getOrCreateVM(ctx, machine, dvpMachine)
 	if err != nil {
 		logger.Info("No VM can be found or created for Machine, see DeckhouseMachine status for details")
 		conditions.MarkFalse(
@@ -317,6 +318,7 @@ func (r *DeckhouseMachineReconciler) reconcileDeleteOperation(
 
 func (r *DeckhouseMachineReconciler) getOrCreateVM(
 	ctx context.Context,
+	machine *clusterv1.Machine,
 	dvpMachine *infrastructurev1a1.DeckhouseMachine,
 ) (
 	vm *v1alpha2.VirtualMachine,
@@ -325,7 +327,7 @@ func (r *DeckhouseMachineReconciler) getOrCreateVM(
 	vm, err = r.DVP.ComputeService.GetVMByName(ctx, dvpMachine.Name)
 	if err != nil {
 		if errors.Is(err, cloudprovider.InstanceNotFound) {
-			vm, err = r.createVM(ctx, dvpMachine)
+			vm, err = r.createVM(ctx, machine, dvpMachine)
 			return vm, err
 		}
 		return nil, fmt.Errorf("cannot get VirtualMachine: %w", err)
@@ -336,8 +338,26 @@ func (r *DeckhouseMachineReconciler) getOrCreateVM(
 
 func (r *DeckhouseMachineReconciler) createVM(
 	ctx context.Context,
+	machine *clusterv1.Machine,
 	dvpMachine *infrastructurev1a1.DeckhouseMachine,
 ) (*v1alpha2.VirtualMachine, error) {
+	bootstrapDataSecret := &corev1.Secret{}
+	if err := r.Client.Get(
+		ctx,
+		client.ObjectKey{
+			Namespace: machine.GetNamespace(),
+			Name:      *machine.Spec.Bootstrap.DataSecretName,
+		},
+		bootstrapDataSecret,
+	); err != nil {
+		return nil, fmt.Errorf("Cannot get cloud-init data secret: %w", err)
+	}
+
+	cloudInitScript, hasBootstrapScript := bootstrapDataSecret.Data["value"]
+	if !hasBootstrapScript {
+		return nil, fmt.Errorf("Expected to find a cloud-init script in secret %s/%s", bootstrapDataSecret.Namespace, bootstrapDataSecret.Name)
+	}
+
 	vm, err := r.DVP.ComputeService.CreateVM(ctx, &v1alpha2.VirtualMachine{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: dvpMachine.Name,
@@ -348,6 +368,9 @@ func (r *DeckhouseMachineReconciler) createVM(
 			Bootloader:               v1alpha2.BootloaderType(dvpMachine.Spec.Bootloader),
 			VirtualMachineClassName:  dvpMachine.Spec.VMClassName,
 			EnableParavirtualization: true,
+			Provisioning: &v1alpha2.Provisioning{
+				UserData: string(cloudInitScript),
+			},
 			CPU: v1alpha2.CPUSpec{
 				Cores:        dvpMachine.Spec.CPU.Cores,
 				CoreFraction: strconv.Itoa(dvpMachine.Spec.CPU.Fraction) + "%",
