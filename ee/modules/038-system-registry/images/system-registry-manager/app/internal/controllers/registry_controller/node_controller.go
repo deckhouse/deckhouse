@@ -6,7 +6,6 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package registry_controller
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"net/http"
@@ -228,7 +227,17 @@ func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 			old := e.ObjectOld.(*corev1.Secret)
 			new := e.ObjectNew.(*corev1.Secret)
 
-			return !bytes.Equal(old.Data["version"], new.Data["version"])
+			var oldState, newState state.StateSecret
+
+			if err := oldState.DecodeSecret(old); err != nil {
+				return true
+			}
+
+			if err := newState.DecodeSecret(new); err != nil {
+				return true
+			}
+
+			return oldState != newState
 		},
 	}
 
