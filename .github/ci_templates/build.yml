@@ -74,7 +74,6 @@ steps:
       CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
 {!{- end }!}
     run: |
-      exit 1 # TODO debug
       # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
       REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
       if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
