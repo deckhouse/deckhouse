@@ -24,21 +24,20 @@ const (
 type registryStaticPod struct {
 	Name    string
 	IP      string
-	IsReady bool
+	Ready   bool
 	Version string
 }
 
 type registryStaticPodObject struct {
 	registryStaticPod
-	NodeName string
-	NodeIP   string
+	Node string
 }
 
 type registryNodeObject struct {
-	Name     string
-	IP       string
-	IsReady  bool
-	IsMaster bool
+	Name   string
+	IP     string
+	Ready  bool
+	Master bool
 }
 
 type registryNode struct {
@@ -184,8 +183,8 @@ func filterRegistryNodes(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 	}
 
 	ret := registryNodeObject{
-		Name:    node.Name,
-		IsReady: isReady,
+		Name:  node.Name,
+		Ready: isReady,
 	}
 
 	for _, addr := range node.Status.Addresses {
@@ -196,7 +195,7 @@ func filterRegistryNodes(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 	}
 
 	if _, ok := node.Labels["node-role.kubernetes.io/control-plane"]; ok {
-		ret.IsMaster = true
+		ret.Master = true
 	}
 
 	return ret, nil
@@ -234,11 +233,10 @@ func filterRegistryStaticPods(obj *unstructured.Unstructured) (go_hook.FilterRes
 		registryStaticPod: registryStaticPod{
 			Name:    pod.Name,
 			IP:      pod.Status.PodIP,
-			IsReady: isReady,
+			Ready:   isReady,
 			Version: pod.Annotations[registryStaticPodVersionAnnotation],
 		},
-		NodeName: pod.Spec.NodeName,
-		NodeIP:   pod.Status.HostIP,
+		Node: pod.Spec.NodeName,
 	}
 
 	return ret, nil
@@ -284,15 +282,15 @@ func handleRegistryStaticPods(input *go_hook.HookInput) error {
 	for _, snap := range podSnaps {
 		pod := snap.(registryStaticPodObject)
 
-		if node, ok := nodes[pod.NodeName]; ok {
+		if node, ok := nodes[pod.Node]; ok {
 			node.Pods = append(node.Pods, pod.registryStaticPod)
 			nodes[node.Name] = node
 		} else {
-			msg := fmt.Sprintf("Node \"%v\" not found for static pod \"%v\"", pod.NodeName, pod.Name)
+			msg := fmt.Sprintf("Node \"%v\" not found for static pod \"%v\"", pod.Node, pod.Name)
 			state.Messages = append(state.Messages, msg)
 			input.Logger.Warn(
 				msg,
-				"node", pod.NodeName,
+				"node", pod.Node,
 				"pod", pod.Name,
 			)
 		}
