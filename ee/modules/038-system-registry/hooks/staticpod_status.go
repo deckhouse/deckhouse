@@ -131,7 +131,7 @@ func filterRegistryConfig(obj *unstructured.Unstructured) (go_hook.FilterResult,
 
 	config := registryConfig{
 		Mode:       string(secret.Data["mode"]),
-		ImagesRepo: string(secret.Data["imageRepo"]),
+		ImagesRepo: string(secret.Data["imagesRepo"]),
 		UserName:   string(secret.Data["username"]),
 		Password:   string(secret.Data["password"]),
 		TTL:        string(secret.Data["ttl"]),
