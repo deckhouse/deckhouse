@@ -790,7 +790,7 @@
     ]
   },
   "timezone": "",
-  "title": "Cilium Nodes Connectivity Latency",
+  "title": "Cilium Nodes Connectivity Status&Latency",
   "uid": "vtuWtdunt",
   "version": 1,
   "weekStart": ""
