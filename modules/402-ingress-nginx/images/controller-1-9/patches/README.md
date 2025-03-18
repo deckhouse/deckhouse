@@ -1,6 +1,6 @@
 ## Patches
 
-### 001-healthcheck.patch
+### Healthcheck
 
 After catching SIGTERM, ingress stops responding to the readiness probe.
 The combination of this patch and the `EndpointSliceTerminatingCondition` feature gate for kube-proxy helps us avoid
@@ -10,7 +10,7 @@ Update: for external load balancers it's advisable to get 5xx if a SIGTERM was s
 Backport of the behavior of the later versions of ingress nginx controller.
 The `sleep` is needed to gracefully shut down ingress controllers behind a cloud load balancer.
 
-### 002-nginx-tmpl.patch
+### Nginx TPL
 
 * Enable our metrics collector instead of the default one.
 * Enable pcre_jit.
@@ -21,58 +21,58 @@ The `sleep` is needed to gracefully shut down ingress controllers behind a cloud
 
 We do not intend to make a PR to the upstream with these changes, because there are only our custom features.
 
-### 003-lua-info.patch
+### Ingress information
 
 There are two patches to fix the problem with ingress names in logs and metrics.
 Unfortunately, the PR was declined in the upstream.
 https://github.com/kubernetes/ingress-nginx/pull/4367
 
-### 004-makefile.patch
+### Makefile
 
 Run the build locally, not inside the container.
 
-### 005-metrics-SetSSLExpireTime.patch
+### metrics SetSSLExpireTime
 
 Fixes namespace which is given by metric nginx_ingress_controller_ssl_expire_time_seconds.
 
 https://github.com/kubernetes/ingress-nginx/pull/10274
 
-### 006-auth-cookie-always.patch
+### Always set auth cookie
 
 Without always option toggled, ingress-nginx does not set the cookie in case if backend returns >=400 code, which may lead to dex refresh token invalidation.
 Annotation `nginx.ingress.kubernetes.io/auth-always-set-cookie` does not work. Anyway, we can't use it, because we need this behavior for all ingresses.
 
 https://github.com/kubernetes/ingress-nginx/pull/8213
 
-### 007-util.patch
+### Util patch
 
 Adds "-e /dev/null" flags to the "nginx -t" invocations so that "nginx -t" logs aren't got saved to /var/log/nginx/error.log file, preventing fs bloating.
 
-### 008-fix-cleanup.patch
+### Fix cleanup
 
 Fix tmpDir path for the cleanup procedure.
 
 https://github.com/kubernetes/ingress-nginx/pull/10797
 
-### 009-nginx-build.patch
+### nginx-build
 
 Build nginx for controller on ALT Linux.
 
-### 010-geoip.patch
+### GeoIP
 
 https://github.com/kubernetes/ingress-nginx/pull/10495
 
-### 011-new-metrics.patch
+### new metrics
 
 This patch adds worker max connections, worker processes and worker max open files metrics.
 
-### 012-default-backend-fix.patch
+### default backend fix
 
 Fixes the problem with the controller when Ingress specifies `Service` with the `ExternalName` type as the main backend, and the default backend (using an annotation `nginx.ingress.kubernetes.io/default-backend `) - with the ClusterIP type. You can see the detailed cases here:
 https://github.com/kubernetes/ingress-nginx/issues/12158
 https://github.com/kubernetes/ingress-nginx/issues/12173
 https://github.com/deckhouse/deckhouse/issues/9933
 
-### 013-balancer-lua.patch
+### cve
 
-TODO: update readme with patch description
+Fix cve vulnerabilities  
