@@ -372,13 +372,13 @@ func (c *SSHCommand) SetupStreamHandlers() (err error) {
 		return
 	}
 
-	var stdoutReadPipe *os.File
+	var stdoutReadPipe io.Reader
 	var stdoutHandlerWritePipe *os.File
 	var stdoutHandlerReadPipe *os.File
 	if c.out != nil || c.stdoutHandler != nil || len(c.Matchers) > 0 {
 		// create pipe for stdout
 		var stdoutWritePipe *os.File
-		stdoutReadPipe, stdoutWritePipe, err = os.Pipe()
+		stdoutReadPipe, err = c.Session.StdoutPipe()
 		if err != nil {
 			return fmt.Errorf("unable to create os pipe for stdout: %s", err)
 		}
@@ -398,13 +398,15 @@ func (c *SSHCommand) SetupStreamHandlers() (err error) {
 		}
 	}
 
-	var stderrReadPipe *os.File
+	var stderrReadPipe io.Reader
 	var stderrHandlerWritePipe *os.File
 	var stderrHandlerReadPipe *os.File
-	if c.err != nil || c.stderrHandler != nil {
+	if c.err != nil || c.stderrHandler != nil || len(c.Matchers) > 0 {
 		// create pipe for stderr
 		var stderrWritePipe *os.File
-		stderrReadPipe, stderrWritePipe, err = os.Pipe()
+		// stderrReadPipe, stderrWritePipe, err = os.Pipe()
+		log.DebugF("creating err pipe\n")
+		stderrReadPipe, err = c.Session.StderrPipe()
 		if err != nil {
 			return fmt.Errorf("unable to create os pipe for stderr: %s", err)
 		}
@@ -437,6 +439,11 @@ func (c *SSHCommand) SetupStreamHandlers() (err error) {
 	// - Copy to pipe if StdoutHandler is set
 	go func() {
 		c.readFromStreams(stdoutReadPipe, stdoutHandlerWritePipe)
+	}()
+
+	// sudo hack, becouse of password promt is sent to STDERR, not STDOUT
+	go func() {
+		c.readFromStreams(stderrReadPipe, stdoutHandlerWritePipe)
 	}()
 
 	go func() {
@@ -495,6 +502,7 @@ func (c *SSHCommand) readFromStreams(stdoutReadPipe io.Reader, stdoutHandlerWrit
 	defer log.DebugLn("stop readFromStreams")
 
 	if stdoutReadPipe == nil || reflect.ValueOf(stdoutReadPipe).IsNil() {
+		log.DebugLn("pipe is nil")
 		return
 	}
 
@@ -504,6 +512,7 @@ func (c *SSHCommand) readFromStreams(stdoutReadPipe io.Reader, stdoutHandlerWrit
 	matchersDone := false
 	errorsCount := 0
 	for {
+		log.DebugLn("trying to read from pipe")
 		n, err := stdoutReadPipe.Read(buf)
 		if err != nil && err != io.EOF {
 			log.DebugF("Error reading from stdout: %s\n", err)
@@ -513,6 +522,7 @@ func (c *SSHCommand) readFromStreams(stdoutReadPipe io.Reader, stdoutHandlerWrit
 			}
 			continue
 		}
+		log.DebugF("read %d bytes\n", n)
 
 		m := 0
 		if !matchersDone {

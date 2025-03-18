@@ -144,7 +144,10 @@ func ParseSSHPrivateKeyPaths(pathSets []string) ([]string, error) {
 			if err != nil {
 				return nil, fmt.Errorf("get absolute path for '%s': %v", k, err)
 			}
-			res = append(res, keyPath)
+
+			if _, err := os.Stat(keyPath); err == nil {
+				res = append(res, keyPath)
+			}
 		}
 	}
 	return res, nil

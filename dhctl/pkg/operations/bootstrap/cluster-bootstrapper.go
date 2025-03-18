@@ -199,6 +199,10 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		} else {
 			sshClient := gossh.NewClientFromFlags()
 			if metaConfig.IsStatic() {
+				// ask become pass for SSH Client Dial() with password auth
+				if err := terminal.AskBecomePassword(); err != nil {
+					return err
+				}
 				if err := sshClient.Start(); err != nil {
 					return fmt.Errorf("unable to start ssh client: %w", err)
 				}
@@ -235,10 +239,10 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	b.lastState = nil
 	defer b.PhasedExecutionContext.Finalize(stateCache)
 
-	err = terminal.AskBecomePassword()
-	if err != nil {
-		return err
-	}
+	// err = terminal.AskBecomePassword()
+	// if err != nil {
+	// 	return err
+	// }
 
 	printBanner()
 
