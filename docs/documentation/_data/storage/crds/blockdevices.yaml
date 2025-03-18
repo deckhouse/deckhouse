@@ -108,14 +108,14 @@ spec:
                   type: boolean
                   description: |
                     The device media type:
-                    - 'true' — for HHD.
-                    - 'false' — for SSD.
+                    - `true` — for HHD;
+                    - `false` — for SSD.
                 hotPlug:
                   type: boolean
                   description: |
                     The device connection type:
-                    - 'true' — if the device has been hotPlugged.
-                    - 'false' — otherwise.
+                    - `true` — if the device has been hotPlugged;
+                    - `false` — otherwise.
                 machineId:
                   type: string
                   description: |

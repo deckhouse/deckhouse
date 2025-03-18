@@ -69,12 +69,12 @@ spec:
                 rota:
                   description: |
                     Медиатип девайса:
-                    - `true` — для HHD.
+                    - `true` — для HHD;
                     - `false` — для SSD.
                 hotPlug:
                   description: |
                     Тип подключения девайса:
-                    - `true` — если девайс был подключен как съемный.
+                    - `true` — если девайс был подключен как съемный;
                     - `false` — в иных случаях.
                 machineId:
                   description: |

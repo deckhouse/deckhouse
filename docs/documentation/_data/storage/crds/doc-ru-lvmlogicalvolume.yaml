@@ -51,7 +51,7 @@ spec:
                     kind:
                       description: |
                         Тип источника:
-                        - `LVMLogicalVolume` — текущий ресурс является клоном.
+                        - `LVMLogicalVolume` — текущий ресурс является клоном;
                         - `LVMLogicalVolumeSnapshot` — текущий ресурс является восстановленным томом.
                     name:
                       description: |

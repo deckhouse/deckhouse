@@ -60,7 +60,7 @@ spec:
                 reclaimPolicy:
                   description: |
                     The storage class's reclaim policy:
-                    - `Delete` — if the Persistent Volume Claim is deleted, deletes the Persistent Volume and its associated storage as well.
+                    - `Delete` — if the Persistent Volume Claim is deleted, deletes the Persistent Volume and its associated storage as well;
                     - `Retain` — if the Persistent Volume Claim is deleted, remains the Persistent Volume and its associated storage.
                   type: string
                   x-kubernetes-validations:

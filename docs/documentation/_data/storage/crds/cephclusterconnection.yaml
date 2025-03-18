@@ -67,7 +67,7 @@ spec:
                   type: string
                   description: |
                     The current state of resources managed by the CephClusterConnection custom resource:
-                    - `Failed` — if the controller received incorrect resource configuration or some errors occurred during the operation.
+                    - `Failed` — if the controller received incorrect resource configuration or some errors occurred during the operation;
                     - `Created` — if everything went fine.
                   enum:
                     - Failed

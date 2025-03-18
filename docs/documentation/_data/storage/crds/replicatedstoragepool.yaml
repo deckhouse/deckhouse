@@ -39,7 +39,7 @@ spec:
                   type: string
                   description: |
                     Defines the volumes type:
-                    - `LVM` — for thick.
+                    - `LVM` — for thick;
                     - `LVMThin` — for thin.
                   enum:
                     - LVM
@@ -77,8 +77,8 @@ spec:
                   type: string
                   description: |
                     The actual ReplicatedStoragePool resource's state:
-                    - `Completed` — if the controller received correct resource configuration and LINSTOR Storage-pools configuration is up-to-date.
-                    - `Updating` — if the controller received correct resource configuration and LINSTOR Storage-pools configuration needs to be updated.
+                    - `Completed` — if the controller received correct resource configuration and LINSTOR Storage-pools configuration is up-to-date;
+                    - `Updating` — if the controller received correct resource configuration and LINSTOR Storage-pools configuration needs to be updated;
                     - `Failed` — if the controller received incorrect resource configuration or an error occurs during the operation.
                   enum:
                     - Updating

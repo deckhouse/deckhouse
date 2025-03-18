@@ -113,7 +113,7 @@ spec:
                 type: string
                 description: |
                   The Storage class current state:
-                  - `Failed` — if the controller received incorrect resource configuration or some errors occurred during the operation.
+                  - `Failed` — if the controller received incorrect resource configuration or some errors occurred during the operation;
                   - `Create` — if everything went fine.
                 enum:
                   - Failed

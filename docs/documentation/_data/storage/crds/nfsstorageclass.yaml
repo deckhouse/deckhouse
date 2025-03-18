@@ -144,7 +144,7 @@ spec:
                       message: Value is immutable.
                   description: |
                     The StorageClass's reclaim policy:
-                    - `Delete` — if the Persistent Volume Claim is deleted, deletes the Persistent Volume and its associated storage as well.
+                    - `Delete` — if the Persistent Volume Claim is deleted, deletes the Persistent Volume and its associated storage as well;
                     - `Retain` — if the Persistent Volume Claim is deleted, remains the Persistent Volume and its associated storage.
                   enum:
                     - Delete
@@ -222,7 +222,7 @@ spec:
                   type: string
                   description: |
                     The StorageClass current state:
-                    - `Failed` — if the controller received incorrect resource configuration or some errors occurred during the operation.
+                    - `Failed` — if the controller received incorrect resource configuration or some errors occurred during the operation;
                     - `Create` — if everything went fine.
                   enum:
                     - Failed

@@ -62,7 +62,7 @@ spec:
                       message: Value is immutable.
                   description: |
                     The storage class's reclaim policy:
-                    - `Delete` — if the Persistent Volume Claim is deleted, deletes the Persistent Volume and its associated storage as well.
+                    - `Delete` — if the Persistent Volume Claim is deleted, deletes the Persistent Volume and its associated storage as well;
                     - `Retain` — if the Persistent Volume Claim is deleted, remains the Persistent Volume and its associated storage.
                   enum:
                     - Delete
@@ -74,8 +74,8 @@ spec:
                       message: Value is immutable.
                   description: |
                     The Storage class's replication mode:
-                    - `None` — in this mode the Storage class's 'placementCount' and 'AutoEvictMinReplicaCount' params equal '1').
-                    - `Availability` — in this mode the Storage class's 'placementCount' and 'AutoEvictMinReplicaCount' params equal '2').
+                    - `None` — in this mode the Storage class's 'placementCount' and 'AutoEvictMinReplicaCount' params equal '1');
+                    - `Availability` — in this mode the Storage class's 'placementCount' and 'AutoEvictMinReplicaCount' params equal '2');
                     - `ConsistencyAndAvailability` — in this mode the Storage class's 'placementCount' and 'AutoEvictMinReplicaCount' params equal '3').
 
                     > Note that default Replication mode is 'ConsistencyAndAvailability'.
@@ -92,14 +92,14 @@ spec:
                   description: |
                     The Storage class's access mode:
                     - `Local` — in this mode the Storage class's 'allowRemoteVolumeAccess' param equals 'false'
-                    and Volume Binding mode equals 'WaitForFirstConsumer').
+                    and Volume Binding mode equals 'WaitForFirstConsumer');
                     - `EventuallyLocal` — in this mode the Storage class's 'allowRemoteVolumeAccess' param
                     equals '- fromSame:\n  - topology.kubernetes.io/zone', 'auto-diskful' param equals '30' minutes,
                     'auto-diskful-allow-cleanup' param equals 'true',
-                    and Volume Binding mode equals 'WaitForFirstConsumer').
+                    and Volume Binding mode equals 'WaitForFirstConsumer');
                     - `PreferablyLocal` — in this mode the Storage class's 'allowRemoteVolumeAccess' param
                     equals '- fromSame:\n  - topology.kubernetes.io/zone',
-                    and Volume Binding mode equals 'WaitForFirstConsumer').
+                    and Volume Binding mode equals 'WaitForFirstConsumer');
                     - `Any` — in this mode the Storage class's 'allowRemoteVolumeAccess' param
                     equals '- fromSame:\n  - topology.kubernetes.io/zone',
                     and Volume Binding mode equals 'Immediate').
@@ -151,7 +151,7 @@ spec:
                   type: string
                   description: |
                     The Storage class current state:
-                    - `Failed` — if the controller received incorrect resource configuration or some errors occurred during the operation.
+                    - `Failed` — if the controller received incorrect resource configuration or some errors occurred during the operation;
                     - `Create` — if everything went fine.
                   enum:
                     - Failed

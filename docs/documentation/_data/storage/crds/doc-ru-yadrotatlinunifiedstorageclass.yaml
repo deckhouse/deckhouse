@@ -22,7 +22,7 @@ spec:
                 reclaimPolicy:
                   description: |
                     Политика возврата для класса хранилища:
-                    - `Delete` — если Persistent Volume Claim удаляется, также удаляется Persistent Volume и связанное с ним хранилище.
+                    - `Delete` — если Persistent Volume Claim удаляется, также удаляется Persistent Volume и связанное с ним хранилище;
                     - `Retain` — если Persistent Volume Claim удаляется, Persistent Volume и связанное с ним хранилище остаются.
             status:
               description: |
@@ -31,7 +31,7 @@ spec:
                 phase:
                   description: |
                     Текущее состояние класса хранилища:
-                    - `Failed` — если контроллер получил некорректную конфигурацию ресурса или произошли ошибки в процессе работы.
+                    - `Failed` — если контроллер получил некорректную конфигурацию ресурса или произошли ошибки в процессе работы;
                     - `Created` — если всё прошло успешно.
                 reason:
                   description: |
