@@ -738,6 +738,7 @@ check_e2e_labels:
 {!{- $ctx := . -}!}
 {!{- $runsOnLabel := "e2e-common" -}!}
 {!{- $provider := $ctx.provider -}!}
+{!{- $commanderProviders := $ctx.commanderProviders -}!}
 {!{- if eq $ctx.provider "vsphere"  -}!}
 {!{-   $runsOnLabel = "e2e-vsphere" -}!}
 {!{- end -}!}
@@ -822,7 +823,7 @@ check_e2e_labels:
         echo "masters-count=${MASTERS_COUNT}" >> $GITHUB_OUTPUT
 
         echo '::echo::off'
-
+{!{ if not (strings.Contains $commanderProviders $provider) }!}
     - name: "Download state"
       id: download_artifact_with_state
       uses: dawidd6/action-download-artifact@v2.23.0
@@ -831,7 +832,7 @@ check_e2e_labels:
         run_id: ${{github.event.inputs.run_id}}
         name: ${{github.event.inputs.state_artifact_name}}
         path: ${{ steps.setup.outputs.tmp-dir-path}}
-
+{!{ end }!}
     - name: Cleanup bootstrapped cluster
       if: ${{ success() || cancelled() }}
       id: cleanup_cluster
