@@ -17,13 +17,13 @@ spec:
       {{- end }}
       cpu:
         {{- if .nodeGroup.instanceClass.cpu.cores }}
-        cores: {{ .nodeGroup.instanceClass.cpu.cores | quote }}
+        cores: {{ .nodeGroup.instanceClass.cpu.cores }}
         {{- end }}
         {{- if .nodeGroup.instanceClass.cpu.cpuFraction }}
         cpuFraction: {{ .nodeGroup.instanceClass.cpu.cpuFraction | quote }}
         {{- end }}
       {{- if .nodeGroup.instanceClass.memory }}
-      memory: {{ .nodeGroup.instanceClass.memory | quote }}
+      memory: {{ .nodeGroup.instanceClass.memory }}
       {{- end }}
       {{- if .nodeGroup.instanceClass.rootDiskSize }}
       rootDiskSize: {{ .nodeGroup.instanceClass.rootDiskSize | quote }}
