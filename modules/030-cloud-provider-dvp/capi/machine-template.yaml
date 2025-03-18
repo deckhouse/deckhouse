@@ -20,7 +20,7 @@ spec:
         cores: {{ .nodeGroup.instanceClass.cpu.cores }}
         {{- end }}
         {{- if .nodeGroup.instanceClass.cpu.cpuFraction }}
-        cpuFraction: {{ .nodeGroup.instanceClass.cpu.cpuFraction | quote }}
+        cpuFraction: {{ .nodeGroup.instanceClass.cpu.cpuFraction }}
         {{- end }}
       {{- if .nodeGroup.instanceClass.memory }}
       memory: {{ .nodeGroup.instanceClass.memory }}

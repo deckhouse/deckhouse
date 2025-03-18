@@ -74,6 +74,7 @@ type DeckhouseMachineSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Name is the hostname and unique identifier of this VM within DVP.
+	// +optional
 	Name string `json:"name"`
 
 	// ProviderID is the UUID of the VM, prefixed with 'dvp://' proto.

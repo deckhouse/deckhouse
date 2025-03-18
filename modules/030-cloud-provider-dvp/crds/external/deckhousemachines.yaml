@@ -125,7 +125,6 @@ spec:
             - bootDiskImageRef
             - cpu
             - memory
-            - name
             - rootDiskSize
             - vmClassName
             type: object
