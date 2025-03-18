@@ -87,6 +87,23 @@ jobs:
           if [[ $EMPTY_EDITIONS == "yes" ]] ; then
             echo "No editions requested. Building only FE."
           fi
+  check_branch_name:
+    name: Check branch name
+    runs-on: ubuntu-latest
+    steps:
+{!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
+    - name: Check branch name
+      id: check_branch_name
+      run: |
+        TAG_NAME="${GITHUB_REF#refs/tags/}" # Remove "refs/tags/" prefix
+        echo "TAG_NAME=${TAG_NAME}"
+        MAJOR=$(echo "$TAG_NAME" | cut -d'.' -f1 | tr -d 'v')
+        MINOR=$(echo "$TAG_NAME" | cut -d'.' -f2)
+        RELEASE_NAME="release-${MAJOR}-${MINOR}"
+        echo "RELEASE_NAME=${RELEASE_NAME}"
+        echo "GITHUB_SHA=${GITHUB_SHA}"
+        git branch -r --contains ${GITHUB_SHA}
+        git branch -r --contains ${GITHUB_SHA} | grep $RELEASE_NAME
 
   comment_on_start:
     name: Update issue comment
@@ -100,6 +117,7 @@ jobs:
     name: {!{ $jobNames.go_generate }!}
     needs:
       - git_info
+      - check_branch_name
 {!{ tmpl.Exec "go_generate_template" $ctx | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.go_generate) | strings.Indent 6 }!}
 
@@ -108,6 +126,7 @@ jobs:
     name: {!{ $jobNames.workflow_render }!}
     needs:
       - git_info
+      - check_branch_name
 {!{ tmpl.Exec "workflow_render_template" $ctx | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.workflow_render) | strings.Indent 6 }!}
 
