@@ -1,0 +1,520 @@
+# Next lines are for local build only
+entries:
+    - title:
+        en: Overview
+        ru: Обзор
+      url: /deckhouse-overview.html
+# ------------- Administration -------------
+    - title:
+        en: Administration
+        ru: Администрирование
+      folders:
+        - title:
+            en: Overview
+            ru: TODO Обзор
+          url: /admin/administration-overview.html
+        - title:
+            en: Installation
+            ru: TODO Установка
+          folders:
+            - title:
+                en: Preparing for installation
+                ru: Подготовка к установке
+              url: /admin/preparing-for-installation.html
+            - title:
+                en: Configuration files preparing
+                ru: Подготовка файлов конфигурации
+              url: /admin/configuration-files-preparing.html
+            - title:
+                en: Platform installation
+                ru: Установка платформы
+              url: /admin/platform-installation.html
+            - title:
+                en: Possible problems and solutions
+                ru: Возможные проблемы и их решение
+              url: /admin/problems-and-solutions.html
+        - title:
+            en: Configuration
+            ru: Настройка
+          folders:
+            - title:
+                en: Access
+                ru: Доступ
+              folders:
+                - title:
+                    en: Overview
+                    ru: TODO Обзор
+                  url: /admin/configuration/access/
+                - title:
+                    en: Connection
+                    ru: TODO (переформулировать) Подключение
+                  url: /admin/configuration/access/connection.html
+                - title:
+                    en: Access to API
+                    ru: WIP Доступ к API
+                  url: /admin/configuration/access/api.html
+                - title:
+                    en: Authentication
+                    ru: Аутентификация
+                  url: /admin/configuration/access/authentication.html
+                - title:
+                    en: Authorization
+                    ru: TODO Авторизация
+                  url: /admin/configuration/access/authorization.html
+                - title:
+                    en: Intercluster
+                    ru: TODO Межкластерный доступ
+                  url: /admin/configuration/access/intercluster.html
+                - title:
+                    en: Service accounts
+                    ru: TODO Сервисные аккауты
+                  url: /admin/configuration/access/sa.html
+            - title:
+                en: Platform update
+                ru: Обновление платформы
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /admin/configuration/update/
+                - title:
+                    en: Configuring updates
+                    ru: Настройка обновлений
+                  url: /admin/configuration/update/configuration.html
+                - title:
+                    en: Configuring notifications
+                    ru: Настройка уведомлений
+                  url: /admin/configuration/update/notifications.html
+                - title:
+                    en: FAQ
+                    ru: FAQ
+                  url: /admin/configuration/update/faq.html
+            - title:
+                en: High reliability and availability
+                ru: Высокая надежность и доступность
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /admin/high-reliability-and-availability/
+                - title:
+                    en: HA mode control
+                    ru: Управление режимом HA
+                  url: /admin/high-reliability-and-availability/enable.html
+                - title:
+                    en: Chaos engineering
+                    ru: Хаос-инжиниринг
+                  url: /admin/high-reliability-and-availability/chaos-engineering.html
+            - title:
+                en: TODO Platform resource management
+                ru: TODO Управление ресурсами платформы
+              url: /admin/platform-resource-management.html
+            - title:
+                en: TODO Platform scaling and node management
+                ru: TODO Масштабирование платформы и управление узлами
+              url: /admin/platform-scaling-and-node-management.html
+            - title:
+                en: Network
+                ru: Сеть
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /admin/network/overview.html
+                - title:
+                    en: Internal network
+                    ru: Внутренняя сеть
+                  folders:
+                    - title:
+                        en: Internal network configuration
+                        ru: Настройка внутренней сети
+                      url: /admin/network/configuration.html
+                    - title:
+                        en: Encrypting traffic between nodes
+                        ru: Шифрование трафика между узлами
+                      url: /admin/network/encrypting-traffic-nodes.html
+                    - title:
+                        en: Encrypting traffic between pods
+                        ru: Шифрование трафика между подами
+                      url: /admin/network/encrypting-traffic-pods.html
+                    - title:
+                        en: Configuring Cluster Network Stack Visualization
+                        ru: Настройка визуализации сетевого стека кластера
+                      url: /admin/network/network-stack-visualization-cilium-hubble.html
+                    - title:
+                        en: Switching from CNI flannel to cilium
+                        ru: Переключение с CNI flannel на cilium
+                      url: /admin/network/flannel-cilium-switching.html
+                - title:
+                    en: Incoming traffic balancing
+                    ru: Балансировка входящего трафика
+                  folders:
+                    - title:
+                        en: Incoming traffic balancing
+                        ru: Балансировка входящего трафика
+                      url: /admin/network/incoming-traffic-balancing-overview.html
+                    - title:
+                        en: NLB
+                        ru: NLB
+                      folders:
+                        - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/network/nlb-balancing-overview.html
+                        - title:
+                            en: Balancing by MetalLB means
+                            ru: Балансировка средствами MetalLB
+                          url: /admin/network/metallb-balancing.html
+                        - title:
+                            en: External balancer
+                            ru: Внешний балансировщик
+                          url: /admin/network/cloud-balancing.html
+                    - title:
+                        en: ALB
+                        ru: ALB
+                      folders:
+                        - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/network/alb-overview.html
+                        - title:
+                            en: ALB means NGINX Ingress controller
+                            ru: ALB средствами NGINX Ingress controller
+                          url: /admin/network/alb-nginx.html
+                        - title:
+                            en: ALB means Istio
+                            ru: ALB средствами Istio
+                          url: /admin/network/alb-istio.html
+                    - title:
+                        en: Ensuring high availability and fault tolerance (keepalived)
+                        ru: Обеспечение высокой доступности и отказоустойчивости (keepalived)
+                      url: /admin/network/keepalived.html
+                - title:
+                    en: Outgoing traffic balancing
+                    ru: Балансировка исходящего трафика
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Обзор
+                      url: /admin/network/outgoing-traffic-balancing.html
+                    - title:
+                        en: Egress
+                        ru: Egress
+                      url: /admin/network/egress.html
+                    - title:
+                        en: Istio
+                        ru: Istio
+                      url: /admin/network/istio-outgoing-balancing.html
+                - title:
+                    en: Inter-cluster cooperation (alliance)
+                    ru: Межкластерное взаимодействие (альянс)
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Обзор
+                      url: /admin/network/inter-cluster-cooperation-overview.html
+                    - title:
+                        en: Multicluster
+                        ru: Мультикластер
+                      url: /admin/network/multicluster.html
+                    - title:
+                        en: Federation
+                        ru: Федерация
+                      url: /admin/network/cluster-federation.html
+                - title:
+                    en: Network policies
+                    ru: Сетевые политики
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Обзор
+                      url: /admin/network/network-policies-overview.html
+                    - title:
+                        en: Network policy configuration
+                        ru: Настройка сетевых политик
+                      url: /admin/network/network-policy-configuration.html
+                - title:
+                    en: Other network configuration options
+                    ru: Другие возможности настройки сети
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Обзор
+                      url: /admin/network/other-network-configuration-options-overview.html
+                    - title:
+                        en: Management of static routes and ip rules on cluster nodes
+                        ru: Управление статичными маршрутами и правилами ip rule на узлах кластера
+                      url: /admin/network/management-of-static-routes.html
+                    - title:
+                        en: Managing DNS in a Kubernetes cluster
+                        ru: Управление DNS в кластере Kubernetes
+                      url: /admin/network/dns-management-in-cluster.html
+                    - title:
+                        en: Building a network gateway from Kubernetes nodes
+                        ru: Постройка сетевого шлюза из Kubernetes-узлов
+                      url: /admin/network/building-network-gateway-from-nodes.html
+                    - title:
+                        en: Operation modes of bpfLB for external traffic processing
+                        ru: Режимы работы bpfLB для обработки внешнего трафика
+                      url: /admin/network/bpflb-external-traffic.html
+            - title:
+                en: Storage
+                ru: Хранение
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /admin/storage-overview.html
+            - title:
+                en: Platform security
+                ru: TODO Безопасность платформы
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /admin/security-overview.html
+                - title:
+                    en: SIEM and security software
+                    ru: SIEM и ПО безопасности
+                  url: /admin/siem-and-security-software.html
+                - title:
+                    en: Security policies
+                    ru: Политики безопасности
+                  url: /admin/security-policies.html
+                - title:
+                    en: Security events
+                    ru: События безопасности
+                  url: /admin/security-events.html
+                - title:
+                    en: Vulnerability scanning
+                    ru: Сканирование на уязвимости (operator-trivy)
+                  url: /admin/vulnerability-scanning.html
+            - title:
+                en: Platform monitoring
+                ru: TODO Мониторинг платформы
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /admin/monitoring-overview.html
+            - title:
+                en: Platform journaling
+                ru: TODO Журналирование платформы
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /admin/journaling-overview.html
+            - title:
+                en: Multitenancy
+                ru: TODO Мультенантность
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /admin/multitenancy-overview.html
+# ------------- Using -------------
+    - title:
+        en: Using
+        ru: Использование
+      folders:
+        - title:
+            en: Overview
+            ru: TODO Обзор
+          url: /user/using-overview.html
+        - title:
+            en: Access
+            ru: Доступ
+          folders:
+          - title:
+              en: Authentication
+              ru: Аутентификация
+            url: /user/access/authentication.html
+          - title:
+              en: Access to the platform
+              ru: TODO Доступ к платформе
+            url: /user/access-platform.html
+        - title:
+            en: Network
+            ru: Сеть
+          folders:
+            - title:
+                en: Incoming traffic processing
+                ru: Обработка входящего трафика
+              folders:
+                - title:
+                    en: General information about NLB and ALB
+                    ru: Общая информация про NLB и ALB
+                  url: /user/alb-nlb-overview.html
+                - title:
+                    en: NLB
+                    ru: NLB
+                  url: /user/incoming-traffic-processing-nlb.html
+                - title:
+                    en: ALB
+                    ru: ALB
+                  url: /user/incoming-traffic-processing-alb.html
+            - title:
+                en: Intra-cluster interaction
+                ru: Внутрикластерное взаимодействие
+              url: /user/intra-cluster-interaction-using.html
+            - title:
+                en: Managing authorization and access to workload with Istio
+                ru: Управление авторизацией и доступом к workload c Istio
+              url: /user/authorization-workload-istio.html
+            - title:
+                en: Request routing with Istio
+                ru: Маршрутизация запросов с Istio
+              url: /user/request_routing_istio.html
+            - title:
+                en: Managing request balancing between service Endpoints with Istio
+                ru: Управление балансировкой запросов между endpoint’ами сервиса с Istio
+              url: /user/managing_request_between_service_istio.html
+            - title:
+                en: Locality failover with Istio
+                ru: Locality failover с Istio
+              url: /user/locality_failower_istio.html
+            - title:
+                en: Configuring Retry for requests with Istio
+                ru: Настройка Retry для запросов с Istio
+              url: /user/retry_istio.html
+            - title:
+                en: Circuit Breaker
+                ru: Circuit Breaker
+              url: /user/circuit-breaker.html
+            - title:
+                en: Canary deployment
+                ru: Canary deployment
+              url: /user/canary-deployment.html
+        - title:
+            en: Interfaces
+            ru: Интерфейсы
+          folders:
+            - title:
+                en: TODO API
+                ru: TODO API
+              url: /user/api.html
+            - title:
+                en: TODO CLI
+                ru: TODO CLI
+              url: /user/cli.html
+            - title:
+                en: TODO IaC
+                ru: TODO IaC
+              url: /user/iac.html
+            - title:
+                en: WEB-interfaces
+                ru: WEB-интерфейсы
+              folders:
+                - title:
+                    en: Hubble web interface
+                    ru: Веб-интерфейс Hubble
+                  url: /user/hubble.html
+        - title:
+            en: Multitenancy
+            ru: TODO Мультитенантность
+          url: /user/multitenancy-user.html
+        - title:
+            en: Containerized applications
+            ru: TODO Контейнеризированные приложения
+          folders:
+            - title:
+                en: Running applications on the platform
+                ru: Запуск приложений на платформе
+              url: /user/running-containerized-applications.html
+            - title:
+                en: Migration from other platforms
+                ru: TODO  Переход с других платформ
+              url: /user/migration-from-other-platforms.html
+        - title:
+            en: Virtual machines
+            ru: TODO Виртуальные машины
+          url: /user/virtual-machines.html
+        - title:
+            en: Network capabilities
+            ru: TODO Сетевые возможности
+          folders:
+            - title:
+                en: Balancing and traffic management
+                ru: Балансировка и управление трафиком
+              url: /user/balancing-and-traffic-management.html
+            - title:
+                en: SSL certificate management
+                ru: Управление сертификатами (SSL)
+              url: /user/certificate-management.html
+            - title:
+                en: Istio-based service-mesh
+                ru: Service-mesh на базе Istio
+              url: /user/istio-based-service-mesh.html
+        - title:
+            en: Catastrophic resistance
+            ru: TODO Катастрофоустойчивость
+          url: /user/catastrophic-resistance.html
+# ------------- Architecture -------------
+    - title:
+        en: Architecture
+        ru: Архитектура
+      folders:
+        - title:
+            en: TODO Overview
+            ru: TODO Обзор
+          url: /architecture/architecture-overview.html
+        - title:
+            en: TODO Installation
+            ru: TODO Установка
+          url: /architecture/installation.html
+        - title:
+            en: Updating
+            ru: Обновление
+          url: /architecture/updating.html
+        - title:
+            en: Functional specifications
+            ru: Функциональные характеристики
+          folders:
+            - title:
+                en: Module versioning
+                ru: Версионирование модулей
+              url: /architecture/functional/module-versioning.html
+        - title:
+            en: Architecture of the cluster with Istio enabled
+            ru: Архитектура кластера с включенным Istio
+          url: /architecture/cluster-with-istio.html
+        - title:
+            en: Application service architecture with Istio enabled
+            ru: Архитектура прикладного сервиса с включенным Istio
+          url: /architecture/service-with-istio.html
+# ------------- Reference -------------
+    - title:
+        en: Reference
+        ru: TODO Справка
+      folders:
+        - title:
+            en: Overview
+            ru: Обзор
+          url: /reference/reference-overview.html
+        - title:
+            en: Modules
+            ru: Модули (общая информация)
+          url: /reference/Modules.html
+        - title:
+            en: Modules configuration
+            ru: Конфигурация модулей
+          url: /reference/modules-configuration.html
+        - title:
+            en: Custom resources
+            ru: Кастомные ресурсы
+          url: /reference/custom-resources.html
+        - title:
+            en: Console utilities
+            ru: Консольные утилиты
+          url: /reference/console-utilities.html
+# ------------- Versions -------------
+    - title:
+        en: DKP versions overview
+        ru: TODO Обзор версий DKP
+      url: /versions/versions-overview.html
+# ------------- FAQ -------------
+    - title:
+        en: FAQ
+        ru: TODO Вопросы и ответы
+      url: /faq/faq-overview.html
