@@ -75,6 +75,38 @@ kubectl get projecttemplates <PROJECT_TEMPLATE_NAME> -o jsonpath='{.spec.paramet
 
    A successfully created project should be in the `Deployed` state. If the state equals `Error`, add the `-o yaml` argument to the command (e.g., `kubectl get projects my-project -o yaml`) to get more detailed information about the error.
 
+### Automatic project creation for a namespace
+
+It is possible to create a new project for the namespace. To do this, mark the namespace with an annotation `projects.deckhouse.io/adopt`. For example:
+
+1. Create a new namespace:
+   ```shell
+   kubectl create ns test
+   ```
+
+1. Mark it with an annotation:
+   ```shell
+   kubectl annotate ns test projects.deckhouse.io/adopt=""
+   ```
+
+1. Make sure that the project was created:
+   ```shell
+   kubectl get projects
+   ```
+   A new project corresponding to the namespace will appear in the project list:
+   ```shell
+   NAME        STATE      PROJECT TEMPLATE   DESCRIPTION                                            AGE
+   deckhouse   Deployed   virtual            This is a virtual project                              181d
+   default     Deployed   virtual            This is a virtual project                              181d
+   test        Deployed   empty                                                                     1m
+   ```
+
+The template of the created project can be changed to an existing one.
+
+{% alert level="warning" %}
+Please note that when changing the template, a resource conflict may occur: if the template chart contains resources that are already present in the namespace, then you will not be able to apply the template, and Helm will issue an error.
+{% andalert %}
+
 ## Creating your own project template
 
 Default templates cover basic project use cases and serve as a good example of template capabilities.

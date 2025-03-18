@@ -92,16 +92,18 @@ kubectl get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath=
    ```shell
    kubectl get projects
    ```
-   В списке проектв появится новый проект, соответствующий пространству имён:
+   В списке проектов появится новый проект, соответствующий пространству имён:
    ```shell
    NAME        STATE      PROJECT TEMPLATE   DESCRIPTION                                            AGE
    deckhouse   Deployed   virtual            This is a virtual project                              181d
    default     Deployed   virtual            This is a virtual project                              181d
    test        Deployed   empty                                                                     1m
    ```
+
+Шаблон созданного проекта можно изменить на существующий.
    
 {% alert level="warning" %}
-
+Обратите внимание, что при смене шаблона может возникнуть конфликт ресурсов: если в чарте шаблона прописаны ресурсы, которые уже присутствуют в пространстве имён, то  применить шаблон не получится, и Helm выдаст ошибку.
 {% andalert %}
 
 ## Создание собственного шаблона для проекта
