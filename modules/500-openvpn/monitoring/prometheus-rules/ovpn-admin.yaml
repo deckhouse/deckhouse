@@ -1,7 +1,7 @@
 - name: openvpn.admin.info
   rules:
     - alert: OpenVPNClientCertificateExpired
-      expr: ovpn_clients_expired > 0
+      expr: ovpn_client_cert_expire > 0
       for: 1m
       labels:
         severity_level: "4"
