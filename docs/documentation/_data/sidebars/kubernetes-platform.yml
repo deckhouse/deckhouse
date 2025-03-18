@@ -304,8 +304,12 @@ entries:
               folders:
                 - title:
                     en: Overview
-                    ru: Введение
-                  url: /admin/multitenancy-overview.html
+                    ru: Обзор
+                  url: /admin/multitenancy/
+                - title:
+                    en: Project management
+                    ru: Управление проектами
+                  url: /admin/multitenancy/project-management.html
 # ------------- Using -------------
     - title:
         en: Using
@@ -472,6 +476,10 @@ entries:
             en: Table
             ru: Таблица (Мэгтона)
           url: /architecture/functional-table.html
+        - title:
+            en: Multitenancy architecture
+            ru: Архитектура мультитенантсности
+          url: /architecture/multitenancy.html
 # ------------- Reference -------------
     - title:
         en: Reference
