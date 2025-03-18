@@ -55,7 +55,7 @@ type registryState struct {
 
 type registryConfig struct {
 	Mode       string `json:"mode"`
-	ImagesRepo string `json:"imageRepo"`
+	ImagesRepo string `json:"imagesRepo"`
 	UserName   string `json:"username"`
 	Password   string `json:"password"`
 	TTL        string `json:"ttl"`
@@ -89,9 +89,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:       "nodes",
 			ApiVersion: "v1",
 			Kind:       "Node",
-			LabelSelector: &v1.LabelSelector{
-				MatchLabels: map[string]string{"node-role.kubernetes.io/control-plane": ""},
-			},
 			FilterFunc: filterRegistryNodes,
 		},
 		{
@@ -296,8 +293,10 @@ func handleRegistryStaticPods(input *go_hook.HookInput) error {
 			node.Pods = append(node.Pods, pod.registryStaticPod)
 			nodes[node.Name] = node
 		} else {
+			msg := fmt.Sprintf("Node \"%v\" not found for static pod \"%v\"", pod.NodeName, pod.Name)
+			state.Messages = append(state.Messages, msg)
 			input.Logger.Warn(
-				"Node not found for static pod",
+				msg,
 				"node", pod.NodeName,
 				"pod", pod.Name,
 			)
