@@ -241,7 +241,7 @@ func (l *LeaseLock) tryRenew(lease *coordinationv1.Lease, force bool) (*coordina
 			return nil, getCurrentLockerError(lease)
 		}
 
-		log.Warn("Lease finished, try to renew lease", slog.String("identity", l.config.Identity), slog.String("time", lease.Spec.RenewTime.Time.String()))
+		log.Warn("Lease finished, try to renew lease", slog.String("identity", l.config.Identity), slog.String("renew_time", lease.Spec.RenewTime.Time.String()))
 	}
 
 	var newLease *coordinationv1.Lease

@@ -316,7 +316,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 
 		if module.Properties.Source != source.Name {
 			availableModules = append(availableModules, availableModule)
-			r.logger.Debug("source not active source for'%s' module, skip it", slog.String("source_name", source.Name), slog.String("name", moduleName))
+			r.logger.Debug("source not active, skip it", slog.String("source_name", source.Name), slog.String("name", moduleName))
 			continue
 		}
 

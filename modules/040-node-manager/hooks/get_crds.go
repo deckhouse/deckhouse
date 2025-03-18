@@ -375,7 +375,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 					// capacity calculation required only for scaling from zero, we can save some time in the other cases
 					nodeCapacity, err := capacity.CalculateNodeTemplateCapacity(nodeGroupInstanceClassKind, instanceClassSpec, instanceTypeCatalog)
 					if err != nil {
-						input.Logger.Error("Calculate capacity failed", slog.String("node_group", nodeGroupInstanceClassKind), slog.String("spec", fmt.Sprintf("%v", instanceClassSpec)), log.Err(err))
+						input.Logger.Error("Calculate capacity failed", slog.String("node_group", nodeGroupInstanceClassKind), slog.Any("spec", instanceClassSpec), log.Err(err))
 						setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, errorStatusField, fmt.Sprintf("%s capacity is not set and instance type could not be found in the built-it types. ScaleFromZero would not work until you set a capacity spec into the %s/%s", nodeGroupInstanceClassKind, nodeGroupInstanceClassKind, nodeGroup.Spec.CloudInstances.ClassReference.Name))
 						continue
 					}
@@ -503,6 +503,12 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 	if !input.Values.Exists("nodeManager.internal") {
 		input.Values.Set("nodeManager.internal", map[string]interface{}{})
 	}
+
+	if len(input.Snapshots["ngs"]) != len(finalNodeGroups) {
+		return fmt.Errorf("incorrect final nodegroups count (%d) should be %d in snapshots. See errors above for additional information",
+			len(finalNodeGroups), len(input.Snapshots["ngs"]))
+	}
+
 	input.Values.Set("nodeManager.internal.nodeGroups", finalNodeGroups)
 	return nil
 }

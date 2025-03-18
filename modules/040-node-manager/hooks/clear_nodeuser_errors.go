@@ -19,7 +19,6 @@
 package hooks
 
 import (
-	"fmt"
 	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -117,11 +116,11 @@ func discoverNodeUsersForClear(input *go_hook.HookInput) error {
 
 	for _, item := range nodeUserSnap {
 		nuForClear := item.(nodeUsersForClear)
-		input.Logger.Debug("clearErrors", slog.String("NodeUsers", fmt.Sprintf("%v", nuForClear)), slog.String("Nodes", fmt.Sprintf("%v", nodes)))
+		input.Logger.Debug("clearErrors", slog.Any("NodeUsers", nuForClear), slog.Any("Nodes", nodes))
 		if incorrectNodes := hasIncorrectNodeUserErrors(nuForClear.StatusErrors, nodes); len(
 			incorrectNodes,
 		) > 0 {
-			input.Logger.Debug("clearErrors", slog.String("incorrectNodes", fmt.Sprintf("%v", incorrectNodes)))
+			input.Logger.Debug("clearErrors", slog.Any("incorrectNodes", incorrectNodes))
 			err := clearNodeUserIncorrectErrors(nuForClear.Name, incorrectNodes, input)
 			if err != nil {
 				return err
@@ -160,7 +159,7 @@ func clearNodeUserIncorrectErrors(
 		patch["status"]["errors"][node] = nil
 	}
 
-	input.Logger.Debug("clearErrors", slog.String("patch", fmt.Sprintf("%v", patch)))
+	input.Logger.Debug("clearErrors", slog.Any("patch", patch))
 	input.PatchCollector.MergePatch(
 		patch,
 		"deckhouse.io/v1",

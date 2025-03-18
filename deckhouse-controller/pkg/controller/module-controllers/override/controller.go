@@ -177,7 +177,7 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 		if mpo.Status.Message != v1alpha1.ModulePullOverrideMessageModuleEmbedded {
 			mpo.Status.Message = v1alpha1.ModulePullOverrideMessageModuleEmbedded
 			if uerr := r.updateModulePullOverrideStatus(ctx, mpo); uerr != nil {
-				r.log.Error("failed to update the '%s' module pull override: %v", mpo.Name, uerr)
+				r.log.Error("failed to update module pull override", slog.String("name", mpo.Name), log.Err(uerr))
 				return ctrl.Result{Requeue: true}, nil
 			}
 		}

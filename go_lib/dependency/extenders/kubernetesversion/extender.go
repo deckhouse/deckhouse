@@ -70,7 +70,7 @@ func (e *Extender) getKubernetesVersion() {
 				instance.versionMatcher.ChangeBaseVersion(parsed)
 				return
 			}
-			instance.logger.Warn("cannot parse TEST_EXTENDER_KUBERNETES_VERSION env variable value", slog.String(val, err.Error()))
+			instance.logger.Warn("cannot parse TEST_EXTENDER_KUBERNETES_VERSION env variable value", slog.String("value", val), log.Err(err))
 		}
 		content, err := e.waitForFileExists("/tmp/kubectl_version")
 		if err != nil {

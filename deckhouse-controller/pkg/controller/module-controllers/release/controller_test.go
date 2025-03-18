@@ -384,7 +384,7 @@ func (suite *ReleaseControllerTestSuite) loopUntilDeploy(dc *dependency.MockedCo
 		if i > maxIterations {
 			suite.T().Fatal("Too many iterations")
 		}
-		suite.ctr.log.Info("Iteration result:", slog.Int("iteration", i), slog.String("result", fmt.Sprintf("%v", result)))
+		suite.ctr.log.Info("Iteration result:", slog.Int("iteration", i), slog.Any("result", result))
 	}
 
 	suite.T().Fatal("Loop was broken")

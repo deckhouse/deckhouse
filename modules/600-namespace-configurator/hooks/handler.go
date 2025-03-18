@@ -217,7 +217,7 @@ LLOOP:
 			input.Logger.Debug("Label already unset for namespace", slog.String("key", ck), slog.String("namespace", ns.Name))
 			continue LLOOP
 		}
-		input.Logger.Debug("Setting label %s=%s for namespace: %s\n", slog.String("key", ck), slog.Any("value", cv), slog.String("namespace", ns.Name))
+		input.Logger.Debug("Setting label for namespace", slog.String("key", ck), slog.Any("value", cv), slog.String("namespace", ns.Name))
 		newLabels[ck] = cv
 	}
 

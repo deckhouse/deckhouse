@@ -200,7 +200,7 @@ func (mdr *moduleDocumentationReconciler) deleteReconcile(ctx context.Context, m
 
 	controllerutil.RemoveFinalizer(md, documentationExistsFinalizer)
 	if err := mdr.client.Update(ctx, md); err != nil {
-		mdr.logger.Error("update finalizer", slog.String("eror", err.Error()))
+		mdr.logger.Error("update finalizer", log.Err(err))
 
 		return result, fmt.Errorf("update finalizer: %w", err)
 	}
