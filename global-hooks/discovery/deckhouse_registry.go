@@ -65,10 +65,14 @@ func applyD8RegistrySecretFilter(obj *unstructured.Unstructured) (go_hook.Filter
 		return nil, err
 	}
 
-	var scheme []byte
 	scheme, ok := secret.Data["scheme"]
 	if !ok {
 		scheme = []byte("https")
+	}
+	
+	mode, ok := secret.Data["registryMode"]
+	if !ok {
+		mode = []byte("Direct")
 	}
 
 	return &registrySecret{
@@ -77,7 +81,7 @@ func applyD8RegistrySecretFilter(obj *unstructured.Unstructured) (go_hook.Filter
 		Path:              string(secret.Data["path"]),
 		Scheme:            string(scheme),
 		CA:                string(secret.Data["ca"]),
-		Mode:              string(secret.Data["registryMode"]),
+		Mode:              string(mode),
 	}, nil
 }
 
