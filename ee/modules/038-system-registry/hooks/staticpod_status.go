@@ -6,7 +6,6 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -54,11 +53,11 @@ type registryState struct {
 }
 
 type registryConfig struct {
-	Mode       string `json:"mode"`
-	ImagesRepo string `json:"imagesRepo"`
-	UserName   string `json:"username"`
-	Password   string `json:"password"`
-	TTL        string `json:"ttl"`
+	Mode       string
+	ImagesRepo string
+	UserName   string
+	Password   string
+	TTL        string
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -130,16 +129,12 @@ func filterRegistryConfig(obj *unstructured.Unstructured) (go_hook.FilterResult,
 		return "", fmt.Errorf("failed to convert config secret to struct: %v", err)
 	}
 
-	buf, err := json.Marshal(secret.Data)
-	if err != nil {
-		return nil, fmt.Errorf("cannot marshal config data to JSON: %w", err)
-	}
-
-	var config registryConfig
-
-	err = json.Unmarshal(buf, &config)
-	if err != nil {
-		return nil, fmt.Errorf("cannot unmarshal config data to JSON: %w", err)
+	config := registryConfig{
+		Mode:       string(secret.Data["mode"]),
+		ImagesRepo: string(secret.Data["imageRepo"]),
+		UserName:   string(secret.Data["username"]),
+		Password:   string(secret.Data["password"]),
+		TTL:        string(secret.Data["ttl"]),
 	}
 
 	return config, nil

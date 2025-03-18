@@ -32,7 +32,7 @@ func (cfg *StateSecret) DecodeSecret(secret *corev1.Secret) error {
 		return ErrSecretIsNil
 	}
 
-	cfg.Version = string(secret.Data["version"])
+	cfg.Version = string(secret.Data["static_pod_version"])
 
 	return nil
 }
