@@ -104,7 +104,7 @@ It is possible to create a new project for the namespace. To do this, mark the n
 The template of the created project can be changed to an existing one.
 
 {% alert level="warning" %}
-Please note that when changing the template, a resource conflict may occur: if the template chart contains resources that are already present in the namespace, then you will not be able to apply the template, and Helm will issue an error.
+Please note that when changing the template, a resource conflict may occur: if the template chart contains resources that are already present in the namespace, then you will not be able to apply the template.
 {% andalert %}
 
 ## Creating your own project template
