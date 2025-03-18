@@ -611,7 +611,7 @@ func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr
 		}
 	}
 
-	processedDTR := timeChecker.ProcessMinorReleaseDeployTime(ctx, dr, deployTimeResult, task.DeployedReleaseInfo)
+	processedDTR := timeChecker.ProcessMinorReleaseDeployTime(dr, deployTimeResult, task.DeployedReleaseInfo)
 	if processedDTR == nil {
 		return nil
 	}

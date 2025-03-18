@@ -578,12 +578,12 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
-	metricLabels := releaseUpdater.NewReleaseMetricLabels(mr)
+	metricLabels := releaseUpdater.NewReleaseMetricLabels(release)
 	defer func() {
 		if metricLabels[releaseUpdater.ManualApprovalRequired] == "true" {
 			metricLabels[releaseUpdater.ReleaseQueueDepth] = strconv.Itoa(task.QueueDepth)
 		}
-		r.metricsUpdater.UpdateReleaseMetric(mr.GetName(), metricLabels)
+		r.metricsUpdater.UpdateReleaseMetric(release.GetName(), metricLabels)
 	}()
 
 	reasons := checker.MetRequirements(release)
@@ -613,7 +613,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 	}
 
 	// handling error inside function
-	err = r.PreApplyReleaseCheck(ctx, release, task, us)
+	err = r.PreApplyReleaseCheck(ctx, release, task, us, metricLabels)
 	if err != nil {
 		// ignore this err, just requeue because of check failed
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
@@ -1101,7 +1101,7 @@ func (r *reconciler) DeployTimeCalculate(ctx context.Context, mr v1alpha1.Releas
 		}
 	}
 
-	processedDTR := timeChecker.ProcessMinorReleaseDeployTime(ctx, mr, deployTimeResult, task.DeployedReleaseInfo)
+	processedDTR := timeChecker.ProcessMinorReleaseDeployTime(mr, deployTimeResult, task.DeployedReleaseInfo)
 	if processedDTR == nil {
 		return nil
 	}
