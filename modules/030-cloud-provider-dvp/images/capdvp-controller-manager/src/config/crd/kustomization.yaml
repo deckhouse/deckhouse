@@ -7,6 +7,10 @@ resources:
 - bases/infrastructure.cluster.x-k8s.io_deckhousemachinetemplates.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
+labels:
+  - pairs:
+      cluster.x-k8s.io/v1beta1: v1alpha1
+
 patches:
 # [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix.
 # patches here are for enabling the conversion webhook for each CRD
@@ -16,3 +20,4 @@ patches:
 # the following config is for teaching kustomize how to do kustomization for CRDs.
 #configurations:
 #- kustomizeconfig.yaml
+
