@@ -304,7 +304,10 @@ func handleRegistryStaticPods(input *go_hook.HookInput) error {
 	input.Values.Set("systemRegistry.internal.state.config", config)
 	input.Values.Set("systemRegistry.internal.state.static_pod_version", state.StaticPodVersion)
 	input.Values.Set("systemRegistry.internal.state.bashible_version", state.BashibleVersion)
-	input.Values.Set("systemRegistry.internal.state.messages", messages)
+
+	if len(messages) > 0 {
+		input.Values.Set("systemRegistry.internal.state.messages", messages)
+	}
 
 	return nil
 }
