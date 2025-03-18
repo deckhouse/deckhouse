@@ -30,7 +30,7 @@ import:
     to: /src
     before: install
 git:
-  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/patches
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
     to: /patches
     stageDependencies:
       install:
@@ -44,9 +44,8 @@ shell:
   - go mod download
   - go mod vendor
   beforeSetup:
-  - BROTLI_PATH="/src/vendor/github.com/andybalholm/brotli"
-  - cd "$BROTLI_PATH"
-  - git apply /patches/*.patch --verbose
+  - cd /src
+  - git apply  /patches/*.patch --verbose
   setup:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0

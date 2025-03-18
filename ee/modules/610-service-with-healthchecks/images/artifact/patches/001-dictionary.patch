@@ -1,5 +1,5 @@
---- dictionary.go	2025-03-07 16:48:59.546162541 +0300
-+++ dictionary.go	2025-03-10 15:24:50.437686926 +0300
+--- /vendor/github.com/andybalholm/brotli/dictionary.go	2025-03-07 16:48:59.546162541 +0300
++++ /vendor/github.com/andybalholm/brotli/dictionary.go	2025-03-10 15:24:50.437686926 +0300
 @@ -15,122871 +15,37 @@
  }
 

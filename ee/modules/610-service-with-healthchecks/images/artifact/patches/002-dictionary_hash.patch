@@ -1,5 +1,5 @@
---- dictionary_hash.go	2025-03-07 16:48:59.547162573 +0300
-+++ dictionary_hash.go	2025-03-10 15:21:28.387431695 +0300
+--- /vendor/github.com/andybalholm/brotli/dictionary_hash.go	2025-03-07 16:48:59.547162573 +0300
++++ /vendor/github.com/andybalholm/brotli/dictionary_hash.go	2025-03-10 15:21:28.387431695 +0300
 @@ -7,32773 +7,4 @@
  */
 
