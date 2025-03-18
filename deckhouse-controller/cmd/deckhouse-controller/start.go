@@ -26,6 +26,11 @@ import (
 	"github.com/flant/kube-client/client"
 	shapp "github.com/flant/shell-operator/pkg/app"
 	utilsignal "github.com/flant/shell-operator/pkg/utils/signal"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	sdkresource "go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
 	"gopkg.in/alecthomas/kingpin.v2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -149,6 +154,8 @@ func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log
 		return fmt.Errorf("ensure crds: %w", err)
 	}
 
+	telemetryShutdown := registryTelemetry(ctx)
+
 	// we have to lock the controller run if dhctl lock configmap exists
 	if err := lockOnBootstrap(ctx, operator.KubeClient(), logger); err != nil {
 		return fmt.Errorf("lock on bootstrap: %w", err)
@@ -173,6 +180,7 @@ func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log
 	// block main thread by waiting signals from OS.
 	utilsignal.WaitForProcessInterruption(func() {
 		operator.Stop()
+		_ = telemetryShutdown(ctx)
 		os.Exit(0)
 	})
 
@@ -227,4 +235,25 @@ func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Log
 
 		return nil
 	})
+}
+
+func registryTelemetry(ctx context.Context) func(ctx context.Context) error {
+	var endpoint = "jaeger-inmemory-instance-collector.default.svc.cluster.local:4317"
+	exporter, _ := otlptracegrpc.New(ctx, otlptracegrpc.WithInsecure(), otlptracegrpc.WithEndpoint(endpoint))
+
+	resource := sdkresource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.ServiceNameKey.String(AppName),
+		semconv.ServiceVersionKey.String(DeckhouseVersion),
+		semconv.TelemetrySDKLanguageKey.String("en"),
+		semconv.K8SDeploymentName(AppName))
+
+	provider := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(exporter),
+		sdktrace.WithResource(resource),
+	)
+
+	otel.SetTracerProvider(provider)
+
+	return provider.Shutdown
 }
