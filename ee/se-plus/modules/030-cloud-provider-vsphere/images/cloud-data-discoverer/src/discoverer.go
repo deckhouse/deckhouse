@@ -7,7 +7,10 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"github.com/vmware/govmomi/find"
+	"github.com/vmware/govmomi/vapi/rest"
 	"net/url"
 	"os"
 	"strconv"
@@ -19,6 +22,7 @@ import (
 	"github.com/vmware/govmomi/cns"
 	"github.com/vmware/govmomi/cns/types"
 	"github.com/vmware/govmomi/session"
+	"github.com/vmware/govmomi/vapi/tags"
 	"github.com/vmware/govmomi/vim25"
 	"github.com/vmware/govmomi/vim25/soap"
 
@@ -31,6 +35,7 @@ type Discoverer struct {
 	csiCompatibilityFlag string
 	govmomiClient        *govmomi.Client
 	cnsClient            *cns.Client
+	restClient           *rest.Client
 }
 
 func NewDiscoverer(logger *log.Entry) *Discoverer {
@@ -96,6 +101,11 @@ func NewDiscoverer(logger *log.Entry) *Discoverer {
 	if err != nil {
 		logger.Fatalf("Failed to create CNS client: %v", err)
 	}
+	restClient := rest.NewClient(govmomiClient.Client)
+	err = restClient.Login(context.TODO(), url.UserPassword(username, password))
+	if err != nil {
+		logger.Fatalf("Failed to create REST client: %v", err)
+	}
 
 	return &Discoverer{
 		logger:               logger,
@@ -103,6 +113,7 @@ func NewDiscoverer(logger *log.Entry) *Discoverer {
 		csiCompatibilityFlag: csiCompatibilityFlag,
 		govmomiClient:        govmomiClient,
 		cnsClient:            cnsClient,
+		restClient:           restClient,
 	}
 }
 
@@ -113,7 +124,85 @@ func (d *Discoverer) InstanceTypes(ctx context.Context) ([]v1alpha1.InstanceType
 
 // NotImplemented
 func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryData []byte) ([]byte, error) {
-	return nil, nil
+	discoveryData := v1alpha1.VsphereCloudProviderDiscoveryData{}
+
+	if len(cloudProviderDiscoveryData) > 0 {
+		err := json.Unmarshal(cloudProviderDiscoveryData, &discoveryData)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal cloud provider discovery data: %v", err)
+		}
+	}
+
+	discoveryData.APIVersion = "deckhouse.io/v1alpha1"
+	discoveryData.Kind = "VsphereCloudProviderDiscoveryData"
+	finder := find.NewFinder(d.govmomiClient.Client, false)
+
+	datacenters, err := finder.DatacenterList(ctx, "*")
+	if err != nil {
+		return nil, fmt.Errorf("failed to list datacenters: %v", err)
+	}
+
+	for _, dc := range datacenters {
+		finder.SetDatacenter(dc)
+
+		datastores, err := finder.DatastoreList(ctx, "*")
+		if err != nil {
+			return nil, fmt.Errorf("failed to list datastores: %v", err)
+		}
+		for _, ds := range datastores {
+			discoveryData.Datastores = append(discoveryData.Datastores, ds.Name())
+		}
+
+		networks, err := finder.NetworkList(ctx, "*")
+		if err != nil {
+			return nil, fmt.Errorf("failed to list networks: %v", err)
+		}
+		for _, net := range networks {
+			discoveryData.Networks = append(discoveryData.Networks, net.GetInventoryPath())
+		}
+
+		vms, err := finder.VirtualMachineList(ctx, "*")
+		if err != nil {
+			return nil, fmt.Errorf("failed to list VM templates: %v", err)
+		}
+		for _, vm := range vms {
+
+			isTemplate, err := vm.IsTemplate(ctx)
+			if err != nil {
+				log.Errorf("Failed to check if VM is a template: %v", err)
+				continue
+			}
+			if isTemplate {
+				discoveryData.VMTemplatePaths = append(discoveryData.VMTemplatePaths, vm.InventoryPath)
+			}
+		}
+
+		resourcePools, err := finder.ResourcePoolList(ctx, "*")
+		if err != nil {
+			return nil, fmt.Errorf("failed to list resource pools: %v", err)
+		}
+		for _, rp := range resourcePools {
+			inventoryPath := rp.InventoryPath
+			resourcesIndex := strings.Index(inventoryPath, "Resources/")
+			if resourcesIndex != -1 {
+				poolPath := inventoryPath[resourcesIndex+len("Resources/"):]
+				discoveryData.ResourcePools = append(discoveryData.ResourcePools, poolPath)
+			} else {
+				discoveryData.ResourcePools = append(discoveryData.ResourcePools, "")
+			}
+		}
+
+	}
+	err = d.populateTagCategories(ctx, &discoveryData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to populate tag categories: %v", err)
+	}
+	discoveryDataBytes, err := json.Marshal(discoveryData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal discovery data: %v", err)
+	}
+	fmt.Println(string(discoveryDataBytes))
+	return discoveryDataBytes, nil
 }
 
 func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error) {
@@ -143,4 +232,43 @@ func (d *Discoverer) getDisksCreatedByCSIDriver(ctx context.Context) ([]types.Cn
 	}
 
 	return diskList.Volumes, nil
+}
+
+func (d *Discoverer) populateTagCategories(ctx context.Context, discoveryData *v1alpha1.VsphereCloudProviderDiscoveryData) error {
+	tagManager := tags.NewManager(d.restClient)
+
+	categories, err := tagManager.GetCategories(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get tag categories: %v", err)
+	}
+
+	for _, category := range categories {
+		tagIDs, err := tagManager.ListTagsForCategory(ctx, category.ID)
+		if err != nil {
+			return fmt.Errorf("failed to get tags for category %s: %v", category.Name, err)
+		}
+
+		var tagNames []string
+		for _, tagID := range tagIDs {
+			tag, err := tagManager.GetTag(ctx, tagID)
+			if err != nil {
+				return fmt.Errorf("failed to get tag %s: %v", tagID, err)
+			}
+			tagNames = append(tagNames, tag.Name)
+		}
+
+		if strings.HasSuffix(category.Name, "region") {
+			discoveryData.RegionTagCategories = append(discoveryData.RegionTagCategories, v1alpha1.TagCategory{
+				Name: category.Name,
+				Tags: tagNames,
+			})
+		} else if strings.HasSuffix(category.Name, "zone") {
+			discoveryData.ZoneTagCategories = append(discoveryData.ZoneTagCategories, v1alpha1.TagCategory{
+				Name: category.Name,
+				Tags: tagNames,
+			})
+		}
+	}
+
+	return nil
 }
