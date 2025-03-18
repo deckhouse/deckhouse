@@ -8,7 +8,7 @@ package state
 import corev1 "k8s.io/api/core/v1"
 
 const (
-	StateSecretName = "registry-deckhouse-state"
+	StateSecretName = "registry-state"
 )
 
 type StateSecret struct {
