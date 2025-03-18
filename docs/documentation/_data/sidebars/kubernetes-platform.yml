@@ -323,12 +323,8 @@ entries:
                   url: /admin/journaling-overview.html
             - title:
                 en: Multitenancy
-                ru: TODO Мультенантность
-              folders:
-                - title:
-                    en: Overview
-                    ru: Обзор
-                  url: /admin/multitenancy-overview.html
+                ru: Мультенантность
+              url: /admin/multitenancy-admin.html
 # ------------- Using -------------
     - title:
         en: Using
@@ -428,7 +424,7 @@ entries:
                   url: /user/hubble.html
         - title:
             en: Multitenancy
-            ru: TODO Мультитенантность
+            ru: Мультитенантность
           url: /user/multitenancy-user.html
         - title:
             en: Containerized applications
@@ -499,6 +495,10 @@ entries:
             en: Application service architecture with Istio enabled
             ru: Архитектура прикладного сервиса с включенным Istio
           url: /architecture/service-with-istio.html
+        - title:
+            en: Multitenancy
+            ru: Мультитенантность
+          url: /architecture/multitenancy.html
 # ------------- Reference -------------
     - title:
         en: Reference
