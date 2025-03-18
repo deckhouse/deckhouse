@@ -32,7 +32,7 @@ import (
 )
 
 func TryToDrainNode(kubeCl *client.KubernetesClient, nodeName string) error {
-	return retry.NewLoop(fmt.Sprintf("Drain node '%s'", nodeName), 45, 10*time.Second).Run(func() error {
+	return retry.NewLoop(fmt.Sprintf("Drain node '%s'", nodeName), 3, 10*time.Second).Run(func() error {
 		return drainNode(kubeCl, nodeName)
 	})
 }
