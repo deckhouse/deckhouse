@@ -94,16 +94,11 @@ spec:
                 description: |
                   VolumeCleanup defines the policy for cleaning up the SCSI device when the PersistentVolume is deleted. If ommited, no cleanup will be performed:
 
-                  - `Discard`:
-                    Sends a SCSI TRIM or discard command to the device, marking the blocks as free without necessarily overwriting
+                  - `Discard` — sends a SCSI TRIM or discard command to the device, marking the blocks as free without necessarily overwriting
                     the data. This option is typically faster but may not securely erase data.
-
-                  - `RandomFillSinglePass`:
-                    Overwrites the entire device with random data in a single pass.
+                  - `RandomFillSinglePass` — overwrites the entire device with random data in a single pass.
                     This option is not recommended for solid-state drives, as it reduces the lifespan of the drive.
-
-                  - `RandomFillThreePass`:
-                    Overwrites the device with random data in three separate passes.
+                  - `RandomFillThreePass` — overwrites the device with random data in three separate passes.
                     This option is not recommended for solid-state drives, as it reduces the lifespan of the drive.
                 enum:
                   - Discard
@@ -118,8 +113,8 @@ spec:
                 type: string
                 description: |
                   The Storage class current state:
-                  - Failed (if the controller received incorrect resource configuration or some errors occurred during the operation).
-                  - Create (if everything went fine).
+                  - `Failed` — if the controller received incorrect resource configuration or some errors occurred during the operation;
+                  - `Create` — if everything went fine.
                 enum:
                   - Failed
                   - Created
