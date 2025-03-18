@@ -96,6 +96,10 @@ spec:
         - containerPort: 5353
           name: dns-tcp
           protocol: TCP
+{{/*        mock port to trigger Deployment update via the helm. Remove after 1.70 Deckhouse release*/}}
+        - containerPort: 11111
+          name: tmp-mock
+          protocol: TCP
         livenessProbe:
           httpGet:
             path: /health
