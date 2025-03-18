@@ -37,13 +37,16 @@ bb-set-proxy
 # If embedded registry
 {{- $source_registry_port := "5001" }}
 {{- $source_registry_addresses := $.systemRegistry.addresses | join "," }}
-{{- $source_registry_cacert_path := "" }}
-{{- if $.registry.ca }}
-  {{- $source_registry_cacert_path = "/opt/deckhouse/share/ca-certificates/registry-ca.crt" }}
-{{- end }}
 {{- $source_registry_user_and_password := "" }}
 {{- if $.registry.auth }}
   {{- $source_registry_user_and_password = $.registry.auth | b64dec }}
+{{- end }}
+
+{{- if .registry.ca }}
+SOURCE_REGISTRY_CACERT_PATH="$(bb-tmp-file)"
+bb-sync-file $SOURCE_REGISTRY_CACERT_PATH - << "EOF"
+{{ .registry.ca }}
+EOF
 {{- end }}
 
 _pull_img_from_source_and_re_tag() {
@@ -56,8 +59,8 @@ _pull_img_from_source_and_re_tag() {
         {{- if $source_registry_user_and_password }}
         --user {{ $source_registry_user_and_password | quote }} \
         {{- end }}
-        {{- if $source_registry_cacert_path }}
-        --tlscacert {{ $source_registry_cacert_path | quote }} \
+        {{- if .registry.ca }}
+        --tlscacert $SOURCE_REGISTRY_CACERT_PATH \
         {{- end }}
         "$source_registry_image" || return 1
     /opt/deckhouse/bin/ctr --namespace=k8s.io images tag "$source_registry_image" "$target_registry_image" || return 1
