@@ -63,7 +63,7 @@ properties:
     default: false
     description: |
       Do not enforce any Network Policy. Just log allowed/disallowed connections.
-  removeOtherCNIConfigs:
+  exclusiveCNIPlugin:
     type: boolean
     default: true
     description: |
