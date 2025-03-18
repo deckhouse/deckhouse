@@ -12,6 +12,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	"gopkg.in/yaml.v3"
 	v1core "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -49,6 +50,7 @@ type registryNode struct {
 type registryState struct {
 	StaticPodVersion string
 	BashibleVersion  string
+	Messages         []string
 }
 
 type registryConfig struct {
@@ -159,6 +161,17 @@ func filterRegistryState(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 		BashibleVersion:  string(secret.Data["bashible_version"]),
 	}
 
+	if messagesData, ok := secret.Data["messages"]; ok {
+		var messages []string
+
+		err := yaml.Unmarshal(messagesData, &messages)
+		if err != nil {
+			return "", fmt.Errorf("cannot unmashal messages: %w", err)
+		}
+
+		ret.Messages = messages
+	}
+
 	return ret, nil
 }
 
@@ -246,16 +259,15 @@ func handleRegistryStaticPods(input *go_hook.HookInput) error {
 	configSnaps := input.Snapshots["config"]
 
 	var (
-		state    registryState
-		config   registryConfig
-		messages []string
+		state  registryState
+		config registryConfig
 	)
 
 	if len(stateSnaps) == 1 {
 		state = stateSnaps[0].(registryState)
 	} else {
 		msg := fmt.Sprintf("State snaps count: %v", len(stateSnaps))
-		messages = append(messages, msg)
+		state.Messages = append(state.Messages, msg)
 		input.Logger.Warn(msg)
 	}
 
@@ -263,7 +275,7 @@ func handleRegistryStaticPods(input *go_hook.HookInput) error {
 		config = configSnaps[0].(registryConfig)
 	} else {
 		msg := fmt.Sprintf("Config snaps count: %v", len(configSnaps))
-		messages = append(messages, msg)
+		state.Messages = append(state.Messages, msg)
 		input.Logger.Warn(msg)
 	}
 
@@ -305,8 +317,12 @@ func handleRegistryStaticPods(input *go_hook.HookInput) error {
 	input.Values.Set("systemRegistry.internal.state.static_pod_version", state.StaticPodVersion)
 	input.Values.Set("systemRegistry.internal.state.bashible_version", state.BashibleVersion)
 
-	if len(messages) > 0 {
-		input.Values.Set("systemRegistry.internal.state.messages", messages)
+	if len(state.Messages) > 0 {
+		if len(state.Messages) > 30 {
+			state.Messages = state.Messages[:30]
+		}
+
+		input.Values.Set("systemRegistry.internal.state.messages", state.Messages)
 	}
 
 	return nil
