@@ -89,7 +89,7 @@ spec:
         - jsonPath: .spec.lvmLogicalVolumeName
           name: Snapshotted LLV Name
           type: string
-          description: Snapshotted LLV name
+          description: Snapshotted LLV name.
         - jsonPath: .status.nodeName
           name: NodeName
           type: string
