@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"bytes"
 	"fmt"
 	"strconv"
 	"testing"
@@ -784,82 +785,10 @@ metadata:
 		})
 
 		It("Proper NGs must be stored to nodeManager.internal.nodeGroups, hook must warn user about improper NG", func() {
-			Expect(f).To(ExecuteSuccessfully())
+			Expect(f).NotTo(ExecuteSuccessfully())
 
-			expectedJSON := `
-				[
-				  {
-				    "cloudInstances": {
-				      "classReference": {
-				        "kind": "D8TestInstanceClass",
-				        "name": "proper1"
-				      },
-				      "zones": [
-				        "a",
-						"b",
-						"c"
-				      ]
-				    },
-                    "nodeType": "CloudEphemeral",
-				    "name": "proper1",
-				    "manualRolloutID": "",
-                    "kubernetesVersion": "1.28",
-					"cri": {
-                      "type": "Containerd"
-                    },
-				    "instanceClass": null,
-				    "kubelet": {
-					"containerLogMaxSize": "50Mi",
-					"containerLogMaxFiles": 4,
-					"resourceReservation": {
-						"mode": "Auto"
-					},
-					"topologyManager": {}
-				    },
-                    "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
-				  },
-				  {
-				    "cloudInstances": {
-				      "classReference": {
-				        "kind": "D8TestInstanceClass",
-				        "name": "proper2"
-				      },
-				      "zones": [
-				        "a",
-				        "b"
-				      ]
-				    },
-                    "nodeType": "CloudEphemeral",
-				    "name": "proper2",
-				    "manualRolloutID": "",
-                    "kubernetesVersion": "1.28",
-					"cri": {
-                      "type": "Containerd"
-                    },
-				    "instanceClass": null,
-				    "kubelet": {
-					"containerLogMaxSize": "50Mi",
-					"containerLogMaxFiles": 4,
-					"resourceReservation": {
-						"mode": "Auto"
-					},
-					"topologyManager": {}
-				    },
-                    "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
-				  }
-				]
-			`
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
-
-			Expect(f.LoggerOutput).Should(gbytes.Say("Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass."))
-
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(Equal(""))
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.kubernetesVersion").Value()).To(Equal("1.28"))
-
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").Value()).To(Equal(""))
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.kubernetesVersion").Value()).To(Equal("1.28"))
-
-			Expect(f.KubernetesGlobalResource("NodeGroup", "improper").Field("status.error").String()).To(Equal("Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass."))
+			Expect(bytes.Contains(f.LoggerOutput.Contents(), []byte("Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass.")))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`incorrect final nodegroups count (2) should be 3 in snapshots. See errors above for additional information`))
 		})
 	})
 
@@ -971,82 +900,10 @@ metadata:
 		})
 
 		It("Proper NGs must be stored to nodeManager.internal.nodeGroups, hook must warn user about improper NG", func() {
-			Expect(f).To(ExecuteSuccessfully())
+			Expect(f).NotTo(ExecuteSuccessfully())
 
-			expectedJSON := `
-				[
-				  {
-				    "cloudInstances": {
-				      "classReference": {
-				        "kind": "D8TestInstanceClass",
-				        "name": "proper1"
-				      },
-				      "zones": [
-				        "a",
-						"b",
-						"c"
-				      ]
-				    },
-                    "nodeType": "CloudEphemeral",
-				    "name": "proper1",
-				    "manualRolloutID": "",
-                    "kubernetesVersion": "1.28",
-					"cri": {
-                      "type": "Containerd"
-                    },
-				    "instanceClass": null,
-				    "kubelet": {
-					"containerLogMaxSize": "50Mi",
-					"containerLogMaxFiles": 4,
-					"resourceReservation": {
-						"mode": "Auto"
-					},
-					"topologyManager": {}
-				    },
-                    "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
-				  },
-				  {
-				    "cloudInstances": {
-				      "classReference": {
-				        "kind": "D8TestInstanceClass",
-				        "name": "proper2"
-				      },
-				      "zones": [
-				        "a",
-				        "b"
-				      ]
-				    },
-                    "nodeType": "CloudEphemeral",
-				    "name": "proper2",
-				    "manualRolloutID": "",
-                    "kubernetesVersion": "1.28",
-					"cri": {
-                      "type": "Containerd"
-                    },
-				    "instanceClass": null,
-				    "kubelet": {
-					"containerLogMaxSize": "50Mi",
-					"containerLogMaxFiles": 4,
-					"resourceReservation": {
-						"mode": "Auto"
-					},
-					"topologyManager": {}
-				    },
-                    "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
-				  }
-				]
-			`
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
-
-			Expect(f.LoggerOutput).Should(gbytes.Say(`Wrong classReference: There is no valid instance class improper of type D8TestInstanceClass.`))
-
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(Equal(""))
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.kubernetesVersion").Value()).To(Equal("1.28"))
-
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").Value()).To(Equal(""))
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.kubernetesVersion").Value()).To(Equal("1.28"))
-
-			Expect(f.KubernetesGlobalResource("NodeGroup", "improper").Field("status.error").String()).To(Equal("Wrong classReference: There is no valid instance class improper of type D8TestInstanceClass."))
+			Expect(bytes.Contains(f.LoggerOutput.Contents(), []byte("Wrong classReference: There is no valid instance class improper of type D8TestInstanceClass.")))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`incorrect final nodegroups count (2) should be 3 in snapshots. See errors above for additional information`))
 		})
 	})
 
@@ -1057,82 +914,10 @@ metadata:
 		})
 
 		It("Proper NGs must be stored to nodeManager.internal.nodeGroups, hook must warn user about improper NG", func() {
-			Expect(f).To(ExecuteSuccessfully())
+			Expect(f).NotTo(ExecuteSuccessfully())
 
-			expectedJSON := `
-				[
-				  {
-				    "cloudInstances": {
-				      "classReference": {
-				        "kind": "D8TestInstanceClass",
-				        "name": "proper1"
-				      },
-				      "zones": [
-				        "a",
-						"b",
-						"c"
-				      ]
-				    },
-                    "nodeType": "CloudEphemeral",
-				    "name": "proper1",
-				    "manualRolloutID": "",
-                    "kubernetesVersion": "1.28",
-					"cri": {
-                      "type": "Containerd"
-                    },
-				    "instanceClass": null,
-				    "kubelet": {
-					"containerLogMaxSize": "50Mi",
-					"containerLogMaxFiles": 4,
-					"resourceReservation": {
-						"mode": "Auto"
-					},
-					"topologyManager": {}
-				    },
-                    "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
-				  },
-				  {
-				    "cloudInstances": {
-				      "classReference": {
-				        "kind": "D8TestInstanceClass",
-				        "name": "proper2"
-				      },
-				      "zones": [
-				        "a",
-				        "b"
-				      ]
-				    },
-                    "nodeType": "CloudEphemeral",
-				    "name": "proper2",
-				    "manualRolloutID": "",
-                    "kubernetesVersion": "1.28",
-					"cri": {
-                      "type": "Containerd"
-                    },
-				    "instanceClass": null,
-				    "kubelet": {
-					"containerLogMaxSize": "50Mi",
-					"containerLogMaxFiles": 4,
-					"resourceReservation": {
-						"mode": "Auto"
-					},
-					"topologyManager": {}
-				    },
-                    "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
-				  }
-				]
-			`
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
-
-			Expect(f.LoggerOutput).Should(gbytes.Say(`unknown cloudInstances\.zones: \[xxx\]`))
-
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(Equal(""))
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.kubernetesVersion").Value()).To(Equal("1.28"))
-
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").Value()).To(Equal(""))
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.kubernetesVersion").Value()).To(Equal("1.28"))
-
-			Expect(f.KubernetesGlobalResource("NodeGroup", "improper").Field("status.error").String()).To(ContainSubstring("unknown cloudInstances.zones"))
+			Expect(bytes.Contains(f.LoggerOutput.Contents(), []byte("Wrong classReference: There is no valid instance class improper of type D8TestInstanceClass.")))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`incorrect final nodegroups count (2) should be 3 in snapshots. See errors above for additional information`))
 		})
 	})
 
@@ -1456,11 +1241,10 @@ spec: {}
 		})
 
 		It("NodeGroup values must be valid", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			// nodeGroup should not be rendered at all
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups").Array()).To(HaveLen(0))
-			// but we have an error in logs
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("Calculate capacity failed for: D8TestInstanceClass"))
+			Expect(f).NotTo(ExecuteSuccessfully())
+
+			Expect(bytes.Contains(f.LoggerOutput.Contents(), []byte("Calculate capacity failed for: D8TestInstanceClass")))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`incorrect final nodegroups count (0) should be 1 in snapshots. See errors above for additional information`))
 		})
 	})
 

@@ -501,6 +501,12 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 	if !input.Values.Exists("nodeManager.internal") {
 		input.Values.Set("nodeManager.internal", map[string]interface{}{})
 	}
+
+	if len(input.Snapshots["ngs"]) != len(finalNodeGroups) {
+		return fmt.Errorf("incorrect final nodegroups count (%d) should be %d in snapshots. See errors above for additional information",
+			len(finalNodeGroups), len(input.Snapshots["ngs"]))
+	}
+
 	input.Values.Set("nodeManager.internal.nodeGroups", finalNodeGroups)
 	return nil
 }
