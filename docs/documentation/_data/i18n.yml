@@ -108,8 +108,8 @@ common:
     en: Documents found
     ru: Найдено документов
   doit:
-    en: Do it
-    ru: Сделай это
+    en: To convert data from a previous version of the module parameter specification, proceed as follows
+    ru: Для преобразования данных из предыдущей версии спецификации параметров модуля выполните следующее
   parameters:
     en: Parameters
     ru: Параметры

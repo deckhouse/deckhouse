@@ -1,17 +1,20 @@
 {%- assign moduleName = page['module-kebab-name'] %}
 
-{%- assign moduleConversions = site.data.schemas[moduleName]['conversions'] | sort %}
+{%- assign moduleConversions = site.data.schemas[moduleName]['conversions'] %}
 
 {%- if moduleConversions.size > 0 %}
 
-### конверсии
+## {% if page.lang == 'ru' %}Конверсии{% else %}Conversions{% endif %}
 
 {% for conversion in moduleConversions %}
 
-#### конверсия {{ conversion[0] }}
+### {% if page.lang == 'ru' %}Конверсия{% else %}Conversion{% endif %} {{ conversion[0] }}
 
-{{ site.data.i18n.common.doit[page.lang] }}: {{ conversion[1].description[page.lang] }}
+{%- if conversion[1].description[page.lang] %}
+  {{ site.data.i18n.common.doit[page.lang] }}: {{ conversion[1].description[page.lang] }}
+{%- else %}
+  {% if page.lang == 'ru' %}Описание отсутствует{% else %}Description is missing{% endif %}
+{%- endif %}
 
 {% endfor %}
 {% endif %}
-
