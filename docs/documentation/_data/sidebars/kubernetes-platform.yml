@@ -291,12 +291,24 @@ entries:
                   url: /admin/vulnerability-scanning.html
             - title:
                 en: Platform monitoring
-                ru: TODO Мониторинг платформы
+                ru: Мониторинг платформы
               folders:
                 - title:
                     en: Overview
                     ru: Обзор
-                  url: /admin/monitoring-overview.html
+                  url: /admin/configuration/monitoring/
+                - title:
+                    en: Monitoring configuration
+                    ru: Настройка мониторинга
+                  url: /admin/configuration/monitoring/configuring.html
+                - title:
+                    en: Status page
+                    ru: Страница состояния
+                  url: /admin/configuration/monitoring/status.html
+                - title:
+                    en: Alerts
+                    ru: Алерты
+                  url: /admin/configuration/monitoring/alerts.html
             - title:
                 en: Platform journaling
                 ru: TODO Журналирование платформы
@@ -468,13 +480,13 @@ entries:
             ru: Обновление
           url: /architecture/updating.html
         - title:
-            en: Functional specifications
-            ru: Функциональные характеристики
-          folders:
-            - title:
-                en: Module versioning
-                ru: Версионирование модулей
-              url: /architecture/functional/module-versioning.html
+            en: Module versioning
+            ru: Версионирование модулей
+          url: /architecture/functional/module-versioning.html
+        - title:
+            en: Monitoring
+            ru: Мониторинг
+          url: /architecture/monitoring/
         - title:
             en: Architecture of the cluster with Istio enabled
             ru: Архитектура кластера с включенным Istio
