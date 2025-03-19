@@ -13,7 +13,7 @@ data:
   staticpod_version: {{ .staticpod_version | quote }}
   bashible_version: {{ .bashible_version | quote }}
   state: |-
-    {{- . | toYAML | nindent 4 }}
+    {{- . | toYaml | nindent 4 }}
   {{- if .nonexistent_value }}
   value: {{ .nonexistent_value | quote }}
   {{- end }}
