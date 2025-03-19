@@ -231,8 +231,6 @@ mount:
 {{ include "mount points for golang builds" . }}
 - from: tmp_dir
   to: /root/.cache/bazel
-- from: tmp_dir
-  to: /tmp/bazel-cache
 import:
 - image: {{ .ModuleName }}/golang-artifact
   add: /usr/local/go
