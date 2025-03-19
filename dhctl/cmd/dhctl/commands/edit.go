@@ -46,10 +46,9 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, name, secret, dataKey string) 
 			return err
 		}
 
-		defer sshClient.Stop()
-
 		var kubeCl *client.KubernetesClient
 		if sshClient != nil {
+			defer sshClient.Stop()
 			kubeCl, err = kubernetes.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(sshClient))
 		} else {
 			kubeCl, err = kubernetes.ConnectToKubernetesAPI(gossh.NewNodeInterfaceWrapper(sshClient))
