@@ -353,7 +353,7 @@ func (c *ComputeService) CreateCloudInitProvisioningSecret(ctx context.Context, 
 		Data: map[string][]byte{"userData": userData},
 	}
 
-	if err := c.client.Create(ctx, s); err != nil {
+	if _, err := c.clientset.CoreV1().Secrets(c.namespace).Create(ctx, s, metav1.CreateOptions{}); err != nil {
 		return fmt.Errorf("create '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, err)
 	}
 	return nil
