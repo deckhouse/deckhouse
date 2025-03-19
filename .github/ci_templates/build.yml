@@ -137,6 +137,7 @@ steps:
 
         werf build \
           ${SECONDARY_REPO} \
+          --verbose \
           --parallel=true --parallel-tasks-limit=5 \
           --save-build-report=true \
           --tmp-dir="$TEMP_WORKDIR" \
@@ -149,6 +150,7 @@ steps:
         # - branches to Dev registry to run e2e tests.
         # - semver tags to Github Container Registry for testing release process.
         werf build \
+          --verbose \
           --parallel=true --parallel-tasks-limit=5 \
           --save-build-report=true \
           --tmp-dir="$TEMP_WORKDIR" \
@@ -205,6 +207,7 @@ steps:
           # Copy stages to prod registry from dev registry.
           export WERF_DISABLE_META_TAGS=true
           werf build \
+            --verbose \
             --repo ${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX} \
             --secondary-repo $WERF_REPO \
             --parallel=true --parallel-tasks-limit=5 \
