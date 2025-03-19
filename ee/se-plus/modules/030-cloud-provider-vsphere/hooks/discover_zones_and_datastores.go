@@ -36,7 +36,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(doDiscover))
 
 func filter(arr []vsphere.ZonedDataStore, cond func(vsphere.ZonedDataStore) bool) []vsphere.ZonedDataStore {
-	var result []vsphere.ZonedDataStore
+	result := []vsphere.ZonedDataStore{}
 	for _, x := range arr {
 		if cond(x) {
 			result = append(result, x)
