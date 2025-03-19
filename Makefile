@@ -242,8 +242,8 @@ cve-base-images-check-default-user: bin/trivy bin/jq ## Check CVE in our base im
 .PHONY: docs
 docs: ## Run containers with the documentation.
 	docker network inspect deckhouse 2>/dev/null 1>/dev/null || docker network create deckhouse
-	cd docs/documentation/; werf compose up --docker-compose-command-options='-d' --env local --repo ":local"
-	cd docs/site/; werf compose up --docker-compose-command-options='-d' --env local --repo ":local"
+	cd docs/documentation/; werf compose up --docker-compose-command-options='-d' --env local --repo ":local" --skip-image-spec-stage=true
+	cd docs/site/; werf compose up --docker-compose-command-options='-d' --env local --repo ":local" --skip-image-spec-stage=true
 	echo "Open http://localhost to access the documentation..."
 
 .PHONY: docs-dev
