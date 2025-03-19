@@ -104,7 +104,7 @@ spec:
           env:
             - name: VROUTER_DOMAIN_MAP
               value: {{ .Values.global.domain_map | quote }}
-          {{- include "vrouter_envs" . | nindent 10 }}
+            {{- include "vrouter_envs" . | nindent 12 }}
           livenessProbe:
             httpGet:
               path: /health
@@ -167,32 +167,10 @@ spec:
   updatePolicy:
     updateMode: "Auto"
 ---
-apiVersion: autoscaling.k8s.io/v1
-kind: VerticalPodAutoscaler
-metadata:
-  name: backend
-spec:
-  targetRef:
-    apiVersion: "apps/v1"
-    kind: Deployment
-    name: frontend
-  updatePolicy:
-    updateMode: "Auto"
----
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: frontend
-spec:
-  maxUnavailable: 1
-  selector:
-    matchLabels:
-      service: frontend
----
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: backend
 spec:
   maxUnavailable: 1
   selector:
