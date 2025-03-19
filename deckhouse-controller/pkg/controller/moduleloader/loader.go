@@ -286,7 +286,7 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 		}
 
 		if !module.HasCondition(v1alpha1.ModuleConditionEnabledByModuleConfig) {
-			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
+			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
 			if err := l.client.Status().Update(ctx, &module); err != nil {
 				return fmt.Errorf("update status for the '%s' module: %w", module.Name, err)
 			}
