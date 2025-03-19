@@ -361,6 +361,10 @@ func (c *ComputeService) CreateCloudInitProvisioningSecret(ctx context.Context, 
 
 func (c *ComputeService) DeleteCloudInitProvisioningSecret(ctx context.Context, name string) error {
 	if err := c.clientset.CoreV1().Secrets(c.namespace).Delete(ctx, name, metav1.DeleteOptions{}); err != nil {
+		if k8serrors.IsNotFound(err) {
+			return nil
+		}
+
 		return fmt.Errorf("delete '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, err)
 	}
 	return nil
