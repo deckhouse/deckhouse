@@ -1,6 +1,6 @@
 ## Patches
 
-### Go mod
+### 001-go-mod.patch
 
 To create this patch run commands:
 
@@ -16,7 +16,14 @@ go get k8s.io/kubernetes@v1.29.12
 go get k8s.io/kubelet@v0.29.12
 #replase all in k8s.io  v0.29.6 -> v0.29.12
 go mod tidy
-git diff > patches/go_mod.patch
-#git apply patches/go_mod.patch
+git diff > patches/001-go_mod.patch
+#git apply patches/001-go_mod.patch
 ```
 
+### 002-kruise-ads.patch
+
+TODO: add description
+
+### 003-scale-from-zero.patch
+
+TODO: add description

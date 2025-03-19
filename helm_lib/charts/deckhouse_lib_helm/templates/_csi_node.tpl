@@ -26,6 +26,7 @@ memory: 25Mi
   {{- $customNodeSelector := $config.customNodeSelector }}
   {{- $additionalContainers := $config.additionalContainers }}
   {{- $initContainers := $config.initContainers }}
+  {{- $additionalPullSecrets := $config.additionalPullSecrets }}
 
   {{- $kubernetesSemVer := semver $context.Values.global.discovery.kubernetesVersion }}
   {{- $driverRegistrarImageName := join "" (list "csiNodeDriverRegistrar" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
@@ -109,6 +110,9 @@ spec:
       {{- end }}
       imagePullSecrets:
       - name: deckhouse-registry
+      {{- if $additionalPullSecrets }}
+      {{- $additionalPullSecrets | toYaml | nindent 6 }}
+      {{- end }}
       {{- include "helm_lib_priority_class" (tuple $context "system-node-critical") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple $context "any-node" "with-no-csi") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}

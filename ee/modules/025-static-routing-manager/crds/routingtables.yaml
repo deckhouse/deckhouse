@@ -98,8 +98,12 @@ spec:
                 type: object
                 description: |
                   A set of labels that determine the nodes on which the desired routes should be created.
+                  
+                  **Format**: the standard `nodeSelector` list.
                 additionalProperties:
                   type: string
+                  pattern: "^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$"
+                  maxLength: 63
           status:
             type: object
             properties:

@@ -1,12 +1,13 @@
-{{- /* Usage: {{ include "helm_lib_module_image" (list . "<container-name>") }} */ -}}
+{{- /* Usage: {{ include "helm_lib_module_image" (list . "<container-name>" "<module-name>(optional)") }} */ -}}
 {{- /* returns image name */ -}}
 {{- define "helm_lib_module_image" }}
   {{- $context := index . 0 }} {{- /* Template context with .Values, .Chart, etc */ -}}
   {{- $containerName := index . 1 | trimAll "\"" }} {{- /* Container name */ -}}
-  {{- $moduleName := (include "helm_lib_module_camelcase_name" $context) }}
+  {{- $rawModuleName := $context.Chart.Name }}
   {{- if ge (len .) 3 }}
-  {{- $moduleName = (include "helm_lib_module_camelcase_name" (index . 2)) }} {{- /* Optional module name */ -}}
+  {{- $rawModuleName = (index . 2) }} {{- /* Optional module name */ -}}
   {{- end }}
+  {{- $moduleName := (include "helm_lib_module_camelcase_name" $rawModuleName) }}
   {{- $imageDigest := index $context.Values.global.modulesImages.digests $moduleName $containerName }}
   {{- if not $imageDigest }}
   {{- $error := (printf "Image %s.%s has no digest" $moduleName $containerName ) }}
@@ -18,11 +19,12 @@
     {{- if index $context.Values $moduleName "registry" }}
       {{- if index $context.Values $moduleName "registry" "base" }}
         {{- $host := trimAll "/" (index $context.Values $moduleName "registry" "base") }}
-        {{- $path := trimAll "/" $context.Chart.Name }}
+        {{- $path := trimAll "/" (include "helm_lib_module_kebabcase_name" $rawModuleName) }}
         {{- $registryBase = join "/" (list $host $path) }}
       {{- end }}
     {{- end }}
   {{- end }}
+  {{- /* end of external module handling block */}}
   {{- printf "%s@%s" $registryBase $imageDigest }}
 {{- end }}
 

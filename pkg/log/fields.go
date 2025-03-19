@@ -16,6 +16,7 @@ package log
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 
 	"gopkg.in/yaml.v3"
@@ -27,6 +28,13 @@ const (
 	jsonFormatter = "json"
 	yamlFormatter = "yaml"
 )
+
+func Type(key string, t any) slog.Attr {
+	return slog.Attr{
+		Key:   key,
+		Value: slog.StringValue(fmt.Sprintf("%T", t)),
+	}
+}
 
 func Err(err error) slog.Attr {
 	return slog.Attr{

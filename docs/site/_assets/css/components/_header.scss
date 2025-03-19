@@ -146,7 +146,7 @@ font-family: 'Noto Sans', sans-serif;
       grid-template-columns: repeat(2, 300px);
 
       @include min-w(xl) {
-        grid-template-columns: repeat(3, 280px);
+        grid-template-columns: repeat(3, 290px);
       }
 
       a {
@@ -178,7 +178,7 @@ font-family: 'Noto Sans', sans-serif;
       }
 
       span {
-        font-weight: 600;
+        font-weight: 500;
       }
 
       p {

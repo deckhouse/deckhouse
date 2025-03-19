@@ -13,17 +13,10 @@ imageSpec:
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
-git:
-- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
-  to: /patches
-  stageDependencies:
-    install:
-      - '**/*'
 shell:
   install:
   - cd /src
-  - git clone --depth 1 --branch v2.14.0 {{ .SOURCE_REPO }}/kubernetes/kube-state-metrics.git .
-  - git apply /patches/*.patch --verbose
+  - git clone --depth 1 --branch v2.15.0 {{ .SOURCE_REPO }}/kubernetes/kube-state-metrics.git .
   - rm -rf .git tools
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact

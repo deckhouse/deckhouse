@@ -15,6 +15,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
@@ -62,7 +63,7 @@ func DefineTerraformCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return fmt.Errorf("Not enough flags were passed to perform the operation.\nUse dhctl terraform check --help to get available flags.\nSsh host is not provided. Need to pass --ssh-host, or specify SSHHost manifest in the --connection-config file")
 		}
 
-		kubeCl, err := kubernetes.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(sshClient))
+		kubeCl, err := kubernetes.ConnectToKubernetesAPI(context.Background(), ssh.NewNodeInterfaceWrapper(sshClient))
 		if err != nil {
 			return err
 		}

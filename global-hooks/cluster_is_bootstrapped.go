@@ -19,7 +19,6 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1core "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -109,7 +108,7 @@ func createBootstrapClusterCm(patchCollector go_hook.PatchCollector) {
 		},
 	}
 
-	patchCollector.Create(cm, object_patch.IgnoreIfExists())
+	patchCollector.CreateIfNotExists(cm)
 }
 
 func clusterIsBootstrapped(input *go_hook.HookInput) error {
