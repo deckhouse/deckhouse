@@ -42,35 +42,19 @@ data "vcd_vm_placement_policy" "vmpp" {
   vdc_id = data.vcd_org_vdc.vdc[0].id
 }
 
-
 resource "vcd_independent_disk" "kubernetes_data" {
   name             = "${local.prefix}-master-${var.nodeIndex}-etcd-disk"
   size_in_mb       = local.master_instance_class.etcdDiskSizeGb * 1024
   storage_profile  = data.vcd_storage_profile.sp.name
-  iops            = data.vcd_storage_profile.sp.iops_settings[0].disk_iops_per_gb_max > 0 ? data.vcd_storage_profile.sp.iops_settings[0].disk_iops_per_gb_max * local.master_instance_class.etcdDiskSizeGb : null
-}
-
-
-resource "vcd_vapp_vm_disk_attachment" "kubernetes_data" {
-  vapp_name  = local.vapp_name
-  vm_name    = vcd_vapp_vm.master.name
-  disk_id    = vcd_independent_disk.kubernetes_data.id
-
-  bus_type   = "paravirtual"
-  bus_number = 0
-  unit_number = 1
-  lifecycle {
-    create_before_destroy = true
-  }
+  bus_type        = "SCSI"
+  bus_sub_type    = "VirtualSCSI"
 }
 
 resource "vcd_vapp_vm" "master" {
   vapp_name        = local.vapp_name
   name             = join("-", [local.prefix, "master", var.nodeIndex])
-  computer_name    = join("-", [local.prefix, "master", var.nodeIndex])
+  computer_name = join("-", [local.prefix, "master", var.nodeIndex])
   vapp_template_id = data.vcd_catalog_vapp_template.template.id
-
-
   sizing_policy_id = data.vcd_vm_sizing_policy.vmsp.id
   placement_policy_id = local.placement_policy == "" ? "" : data.vcd_vm_placement_policy.vmpp[0].id
 
@@ -85,11 +69,17 @@ resource "vcd_vapp_vm" "master" {
 
   override_template_disk {
     bus_type        = "paravirtual"
-    size_in_mb      = local.master_instance_class.rootDiskSizeGb * 1024
+    size_in_mb      = (local.master_instance_class.rootDiskSizeGb * 1024) + 1
     bus_number      = 0
     unit_number     = 0
     storage_profile = data.vcd_storage_profile.sp.name
     iops            = data.vcd_storage_profile.sp.iops_settings[0].disk_iops_per_gb_max > 0 ? data.vcd_storage_profile.sp.iops_settings[0].disk_iops_per_gb_max * local.master_instance_class.rootDiskSizeGb : ( data.vcd_storage_profile.sp.iops_settings[0].default_disk_iops > 0 ?  data.vcd_storage_profile.sp.iops_settings[0].default_disk_iops : 0)
+  }
+
+  disk {
+    name        = vcd_independent_disk.kubernetes_data.name
+    bus_number  = 0
+    unit_number = 1
   }
 
   customization {
