@@ -206,7 +206,7 @@ func createTarball() *bytes.Buffer {
 		{
 			File: "d8-istio-custom-resources.json",
 			Cmd:  "bash",
-			Args: []string{"-c", `for crd in $(kubectl get crds | grep 'istio.io' | awk '{print $1}'); do echo "Listing resources for CRD: $crd" && kubectl get $crd -A -o json; done`},
+			Args: []string{"-c", `for crd in $(kubectl get crds | grep -E 'istio.io|gateway.networking.k8s.io' | awk '{print $1}'); do echo "Listing resources for CRD: $crd" && kubectl get $crd -A -o json; done`},
 		},
 		{
 			File: "d8-istio-system-logs.txt",
