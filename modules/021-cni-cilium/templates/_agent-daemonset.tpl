@@ -462,6 +462,8 @@ spec:
           - "/install-plugin.sh"
         resources:
           requests:
+            cpu: 100m
+            memory: 10Mi
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
         securityContext:
           seLinuxOptions:
@@ -533,20 +535,6 @@ spec:
             path: ip-masq-agent
       {{- end }}
       - name: hubble-tls
-        projected:
-          defaultMode: 0400
-          sources:
-          - secret:
-              name: hubble-server-certs
-              optional: true
-              items:
-              - key: ca.crt
-                path: client-ca.crt
-              - key: tls.crt
-                path: server.crt
-              - key: tls.key
-                path: server.key
-      - name: hubble-metrics-tls
         projected:
           defaultMode: 0400
           sources:
