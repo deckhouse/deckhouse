@@ -1016,7 +1016,7 @@ func (r *reconciler) updateReleaseStatus(ctx context.Context, mr *v1alpha1.Modul
 	}
 
 	switch status.Phase {
-	case v1alpha1.ModuleReleasePhaseSuperseded, v1alpha1.ModuleReleasePhaseSuspended, v1alpha1.ModuleReleasePhaseSkipped, v1alpha1.ModuleReleasePhaseTerminating:
+	case v1alpha1.ModuleReleasePhaseSuperseded, v1alpha1.ModuleReleasePhaseSuspended, v1alpha1.ModuleReleasePhaseSkipped:
 		r.metricsUpdater.PurgeReleaseMetric(mr.GetName())
 	}
 
