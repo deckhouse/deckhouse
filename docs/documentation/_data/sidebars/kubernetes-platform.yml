@@ -291,13 +291,41 @@ entries:
                     ru: Введение
                   url: /admin/monitoring-overview.html
             - title:
-                en: Platform journaling
-                ru: Журналирование платформы
+                en: Logging
+                ru: Логирование
               folders:
                 - title:
                     en: Overview
-                    ru: Введение
-                  url: /admin/journaling-overview.html
+                    ru: Обзор
+                  url: /admin/configuration/logging/
+                - title:
+                    en: Log delivery
+                    ru: Доставка логов
+                  folders:
+                    - title:
+                        en: How log delivery works
+                        ru: Как устроена доставка логов
+                      url: /admin/configuration/logging/log-shipper/overview.html
+                    - title:
+                        en: Configuration examples
+                        ru: Примеры конфигурации
+                      url: /admin/configuration/logging/log-shipper/configuration-examples.html
+                    - title:
+                        en: FAQ
+                        ru: FAQ
+                      url: /admin/configuration/logging/log-shipper/faq.html
+                - title:
+                    en: Short-term log storage
+                    ru: Кратковременное хранение логов
+                  folders:
+                    - title:
+                        en: How short-term storage works
+                        ru: Как устроено кратковременное хранение
+                      url: /admin/configuration/logging/loki/overview.html
+                    - title:
+                        en: Configuration examples
+                        ru: Примеры конфигурации
+                      url: /admin/configuration/logging/loki/configuration-examples.html
             - title:
                 en: Multitenancy
                 ru: Мультенантность
