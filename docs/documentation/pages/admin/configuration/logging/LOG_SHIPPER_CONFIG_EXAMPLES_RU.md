@@ -406,7 +406,113 @@ extraLabels:
 
 ## Фильтрация логов
 
-...
+В этом разделе рассмотрены варианты исключения ненужных сообщений для оптимизации процесса сбора логов.
+
+Для фильтрации данных в модуле `log-shipper` предусмотрены следующие фильтры:
+
+- `labelFilter` — применяется к метаданным, например, к имени контейнера (`container`),
+  пространству имён (`namespace`) или имени пода (`pod_name`);
+- `logFilter` — применяется к полям самого сообщения, если оно в JSON-формате.
+
+### Сборка логов только из контейнера `nginx`
+
+Пример конфигурации для сбора логов с фильтрацией через `labelFilter`,
+который отбирает логи с контейнеров с именем `nginx`, а затем отправляет их в `loki`.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: nginx-logs
+spec:
+  type: KubernetesPods
+  labelFilter:
+  - field: container
+    operator: In
+    values: [nginx]
+  destinationRefs:
+  - loki-storage
+```
+
+### Сборка логов без строки, содержащей `GET /status" 200`
+
+Пример конфигурации для сбора логов с фильтрацией через `labelFilter`,
+где оператор `NotRegex` исключает строки, соответствующие заданному регулярному выражению.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: all-logs
+spec:
+  type: KubernetesPods
+  destinationRefs:
+  - loki-storage
+  labelFilter:
+  - field: message
+    operator: NotRegex
+    values:
+    - .*GET /status" 200$
+```
+
+### Аудит событий kubelet
+
+Пример конфигурации для сбора и фильтрации событий аудита, связанных с работой kubelet,
+хранящихся в файле `/var/log/kube-audit/audit.log`.
+Фильтрация выполняется с помощью `logFilter`, который ищет в поле `userAgent` записи,
+соответствующие регулярному выражению `"kubelet.*"`.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: kubelet-audit-logs
+spec:
+  type: File
+  file:
+    include:
+    - /var/log/kube-audit/audit.log
+  logFilter:
+  - field: userAgent  
+    operator: Regex
+    values: ["kubelet.*"]
+  destinationRefs:
+  - loki-storage
+```
+
+### Системные логи Deckhouse
+
+Пример конфигурации для сбора системных логов Deckhouse, находящихся в файле `/var/log/syslog`.
+Фильтрация сообщений с помощью `labelFilter` позволяет выделить только те записи, которые относятся к следующим компонентам:
+`d8-kubelet-forker`, `containerd`, `bashible` и `kernel`.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: system-logs
+spec:
+  type: File
+  file:
+    include:
+    - /var/log/syslog
+  labelFilter:
+  - field: message
+    operator: Regex
+    values:
+    - .*d8-kubelet-forker.*
+    - .*containerd.*
+    - .*bashible.*
+    - .*kernel.*
+  destinationRefs:
+  - loki-storage
+```
+
+{% alert level="info" %}
+Если вам нужны логи только одного пода или небольшой группы подов,
+используйте `kubernetesPods`, чтобы ограничить область сбора.
+Фильтры следует применять только для тонкой настройки.
+{%- endalert %}
 
 ## Буферизация логов
 
