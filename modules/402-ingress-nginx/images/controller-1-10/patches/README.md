@@ -32,10 +32,6 @@ There are two patches to fix the problem with ingress names in logs and metrics.
 Unfortunately, the PR was declined in the upstream.
 https://github.com/kubernetes/ingress-nginx/pull/4367
 
-### 005-makefile.patch
-
-Run the build locally, not inside the container.
-
 ### 006-metrics-SetSSLExpireTime.patch
 
 Fixes namespace which is given by metric nginx_ingress_controller_ssl_expire_time_seconds.
