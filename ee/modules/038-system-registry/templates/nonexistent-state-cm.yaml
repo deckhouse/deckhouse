@@ -9,11 +9,11 @@ metadata:
   labels:
     app.kubernetes.io/managed-by: system-registry
 data:
-  nonexistent: {{ .nonexistent | quote }}
+  nonexistent: {{ .nonexistent | toString | quote }}
   staticpod_version: {{ .staticpod_version | quote }}
   bashible_version: {{ .bashible_version | quote }}
   state: |-
-    {{- . | indent 4 }}
+    {{- . | nindent 4 }}
   {{- if .nonexistent_value }}
   value: {{ .nonexistent_value | quote }}
   {{- end }}
