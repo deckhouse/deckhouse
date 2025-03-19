@@ -211,7 +211,7 @@ func createTarball() *bytes.Buffer {
 		{
 			File: "d8-istio-envoy-config.json",
 			Cmd:  "bash",
-			Args: []string{"-c", `kubectl exec daemonsets/ingressgateway -n d8-istio -- curl http://localhost:15000/config_dump?include_eds=true`},
+			Args: []string{"-c", `kubectl port-forward daemonset/ingressgateway -n d8-istio 15000:15000 & sleep 5 && curl http://localhost:15000/config_dump?include_eds=true && kill $!`},
 		},
 		{
 			File: "d8-istio-system-logs.txt",
