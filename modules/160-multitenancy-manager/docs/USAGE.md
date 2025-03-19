@@ -85,7 +85,7 @@ You can create a new project for a namespace. To do this, add the `projects.deck
    kubectl create ns test
    ```
 
-1. Mark it with an annotation:
+1. Add the annotation:
 
    ```shell
    kubectl annotate ns test projects.deckhouse.io/adopt=""
