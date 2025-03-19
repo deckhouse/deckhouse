@@ -232,6 +232,17 @@ func (r *DeckhouseMachineReconciler) reconcileUpdates(
 			{Type: clusterv1b1.MachineInternalIP, Address: vm.Status.IPAddress},
 			{Type: clusterv1b1.MachineExternalIP, Address: vm.Status.IPAddress},
 		}...)
+
+		// TODO DVP does not support detaching of provisioning secrets yet, but one day it will.
+		// We should detach and remove cloud-init secret we created after vm is bootstrapped and joined the cluster
+		// if machine.Status.NodeRef != nil && vm.Spec.Provisioning != nil {
+		// 	cloudInitSecretName := "cloud-init-" + dvpMachine.Name
+		// 	logger.Info("Removing Cloud-Init secret from VirtualMachine", "secret", cloudInitSecretName)
+		// 	vm.Spec.Provisioning = nil
+		// 	if err = r.DVP.ComputeService.DeleteCloudInitProvisioningSecret(ctx, cloudInitSecretName); err != nil {
+		// 		return ctrl.Result{}, fmt.Errorf("delete cloud-init secret %q: %w", cloudInitSecretName, err)
+		// 	}
+		// }
 	case v1alpha2.MachineStopped:
 		// VM is stopped, this is unexpected as we use "AlwaysOn" run policy for VM's here.
 		// Let's wait and see what happens as this may be a part of migration process or this is a bug in the DVP VM controller.
