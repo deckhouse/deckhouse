@@ -10,7 +10,7 @@ labels:
     {{- $deckhouse_additional_labels := index . 1 }}
     {{- range $key, $value := $deckhouse_additional_labels }}
       {{- if eq $value nil }}
-  {{ $key }}: nil
+  {{ $key }}: null
       {{- else }}
   {{ $key }}: {{ $value | quote }}
       {{- end }}
