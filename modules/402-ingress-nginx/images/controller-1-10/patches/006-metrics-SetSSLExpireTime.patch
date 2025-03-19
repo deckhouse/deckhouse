@@ -1,7 +1,7 @@
-diff --git a/internal/ingress/metric/collectors/controller.go b/internal/ingress/metric/collectors/controller.go
+diff --git i/internal/ingress/metric/collectors/controller.go w/internal/ingress/metric/collectors/controller.go
 index 4ee84bc56..2ff5e089a 100644
---- a/internal/ingress/metric/collectors/controller.go
-+++ b/internal/ingress/metric/collectors/controller.go
+--- i/internal/ingress/metric/collectors/controller.go
++++ w/internal/ingress/metric/collectors/controller.go
 @@ -305,6 +305,7 @@ func (cm *Controller) SetSSLExpireTime(servers []*ingress.Server) {
  		}
  		labels["host"] = s.Hostname

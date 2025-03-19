@@ -1,8 +1,8 @@
-diff --git a/internal/ingress/controller/controller.go b/internal/ingress/controller/controller.go
-index c1d4e4f..f105b9c 100644
---- a/internal/ingress/controller/controller.go
-+++ b/internal/ingress/controller/controller.go
-@@ -937,6 +937,7 @@ func (n *NGINXController) getBackendServers(ingresses []*ingress.Ingress) ([]*in
+diff --git i/internal/ingress/controller/controller.go w/internal/ingress/controller/controller.go
+index de8eb97fc..4245ce717 100644
+--- i/internal/ingress/controller/controller.go
++++ w/internal/ingress/controller/controller.go
+@@ -936,6 +936,7 @@ func (n *NGINXController) getBackendServers(ingresses []*ingress.Ingress) ([]*in
  					nb := upstream.DeepCopy()
  					nb.Name = name
  					nb.Endpoints = endps

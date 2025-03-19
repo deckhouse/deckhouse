@@ -1,8 +1,8 @@
-diff --git a/internal/ingress/controller/config/config.go b/internal/ingress/controller/config/config.go
-index 47f2120f1..10ddc5226 100644
---- a/internal/ingress/controller/config/config.go
-+++ b/internal/ingress/controller/config/config.go
-@@ -457,6 +457,11 @@ type Configuration struct {
+diff --git i/internal/ingress/controller/config/config.go w/internal/ingress/controller/config/config.go
+index 3098f5cba..7b6ed4ff8 100644
+--- i/internal/ingress/controller/config/config.go
++++ w/internal/ingress/controller/config/config.go
+@@ -454,6 +454,11 @@ type Configuration struct {
  	// Default: true
  	UseHTTP2 bool `json:"use-http2,omitempty"`
  
@@ -14,7 +14,7 @@ index 47f2120f1..10ddc5226 100644
  	// Disables gzipping of responses for requests with "User-Agent" header fields matching any of
  	// the specified regular expressions.
  	// http://nginx.org/en/docs/http/ngx_http_gzip_module.html#gzip_disable
-@@ -855,6 +860,7 @@ func NewDefault() Configuration {
+@@ -846,6 +851,7 @@ func NewDefault() Configuration {
  		VariablesHashBucketSize:          256,
  		VariablesHashMaxSize:             2048,
  		UseHTTP2:                         true,
@@ -22,11 +22,11 @@ index 47f2120f1..10ddc5226 100644
  		DisableProxyInterceptErrors:      false,
  		ProxyStreamTimeout:               "600s",
  		ProxyStreamNextUpstream:          true,
-diff --git a/internal/ingress/controller/template/template.go b/internal/ingress/controller/template/template.go
-index 7cd6a0604..f6df09b8b 100644
---- a/internal/ingress/controller/template/template.go
-+++ b/internal/ingress/controller/template/template.go
-@@ -276,6 +276,7 @@ var funcMap = text_template.FuncMap{
+diff --git i/internal/ingress/controller/template/template.go w/internal/ingress/controller/template/template.go
+index 8628f8090..9e73e9e92 100644
+--- i/internal/ingress/controller/template/template.go
++++ w/internal/ingress/controller/template/template.go
+@@ -290,6 +290,7 @@ var funcMap = text_template.FuncMap{
  	"shouldLoadModSecurityModule":        shouldLoadModSecurityModule,
  	"buildHTTPListener":                  buildHTTPListener,
  	"buildHTTPSListener":                 buildHTTPSListener,
@@ -34,7 +34,7 @@ index 7cd6a0604..f6df09b8b 100644
  	"buildOpentelemetryForLocation":      buildOpentelemetryForLocation,
  	"shouldLoadOpentelemetryModule":      shouldLoadOpentelemetryModule,
  	"buildModSecurityForLocation":        buildModSecurityForLocation,
-@@ -1380,7 +1381,7 @@ func buildHTTPListener(t, s interface{}) string {
+@@ -1394,7 +1395,7 @@ func buildHTTPListener(t, s interface{}) string {
  		addrV4 = tc.Cfg.BindAddressIpv4
  	}
  
@@ -43,7 +43,7 @@ index 7cd6a0604..f6df09b8b 100644
  
  	out = append(out, httpListener(addrV4, co, &tc)...)
  
-@@ -1413,7 +1414,7 @@ func buildHTTPSListener(t, s interface{}) string {
+@@ -1427,7 +1428,7 @@ func buildHTTPSListener(t, s interface{}) string {
  		return ""
  	}
  
@@ -52,7 +52,7 @@ index 7cd6a0604..f6df09b8b 100644
  
  	addrV4 := []string{""}
  	if len(tc.Cfg.BindAddressIpv4) > 0 {
-@@ -1436,7 +1437,45 @@ func buildHTTPSListener(t, s interface{}) string {
+@@ -1450,7 +1451,45 @@ func buildHTTPSListener(t, s interface{}) string {
  	return strings.Join(out, "\n")
  }
  
@@ -99,7 +99,7 @@ index 7cd6a0604..f6df09b8b 100644
  	var out []string
  
  	if template.Cfg.UseProxyProtocol {
-@@ -1455,7 +1494,11 @@ func commonListenOptions(template *config.TemplateConfig, hostname string) strin
+@@ -1469,7 +1508,11 @@ func commonListenOptions(template *config.TemplateConfig, hostname string) strin
  		out = append(out, "reuseport")
  	}
  
@@ -112,7 +112,7 @@ index 7cd6a0604..f6df09b8b 100644
  
  	return strings.Join(out, " ")
  }
-@@ -1509,6 +1552,24 @@ func httpsListener(addresses []string, co string, tc *config.TemplateConfig) []s
+@@ -1523,6 +1566,24 @@ func httpsListener(addresses []string, co string, tc *config.TemplateConfig) []s
  	return out
  }
  
