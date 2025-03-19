@@ -15,34 +15,19 @@
 package hooks
 
 import (
-	"fmt"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/ptr"
 )
 
 const (
 	snap          = "d8-kube-dns"
 	containerName = "coredns"
 )
-
-/*
-patch{
-										"containerPort": 5353,
-										"name":          "dns",
-										"protocol":      "UDP",
-									},
-									patch{
-										"containerPort": 5353,
-										"name":          "dns-tcp",
-										"protocol":      "TCP",
-									},
-								},
-*/
 
 var ports = []v1.ContainerPort{
 	{
@@ -58,6 +43,7 @@ var ports = []v1.ContainerPort{
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	OnAfterHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       snap,
@@ -71,7 +57,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					MatchNames: []string{"kube-system"},
 				},
 			},
-			FilterFunc: applyDeploymentCorednsPortsFilter,
+			FilterFunc:                   applyDeploymentCorednsPortsFilter,
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
 		},
 	},
 }, ensureCorednsPorts)
@@ -92,14 +80,10 @@ func applyDeploymentCorednsPortsFilter(obj *unstructured.Unstructured) (go_hook.
 }
 
 func ensureCorednsPorts(input *go_hook.HookInput) error {
-	fmt.Println("imput", input)
-
 	portsSnap := input.Snapshots[snap]
 	if len(portsSnap) == 0 {
 		return nil
 	}
-
-	fmt.Println(portsSnap)
 
 	applyPorts := func(u *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 		var depl appsv1.Deployment
@@ -107,7 +91,7 @@ func ensureCorednsPorts(input *go_hook.HookInput) error {
 		if err != nil {
 			return nil, err
 		}
-		fmt.Println(u)
+
 		for i, v := range depl.Spec.Template.Spec.Containers {
 			if v.Name == containerName {
 				depl.Spec.Template.Spec.Containers[i].Ports = ports
@@ -116,6 +100,8 @@ func ensureCorednsPorts(input *go_hook.HookInput) error {
 
 		return sdk.ToUnstructured(&depl)
 	}
+
 	input.PatchCollector.PatchWithMutatingFunc(applyPorts, "apps/v1", "Deployment", "kube-system", "d8-kube-dns")
+
 	return nil
 }

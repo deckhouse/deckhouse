@@ -44,9 +44,9 @@ spec:
         imagePullPolicy: IfNotPresent
         name: coredns
         ports:
-        - containerPort: 5353
-          name: dns
-          protocol: UDP`
+          - containerPort: 5353
+            name: dns-tcp
+            protocol: TCP`
 
 	deploymentRightPorts = `
   - image: deckhouse
@@ -67,7 +67,8 @@ var _ = Describe("KubeDns hooks :: migration_deployment", func() {
 
 	Context("There are broken deployment", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(deploymentYAML))
+			f.KubeStateSet(deploymentYAML)
+			f.BindingContexts.Set(f.GenerateAfterHelmContext())
 			f.RunHook()
 		})
 		It("Deployment has been fixed", func() {
@@ -76,7 +77,5 @@ var _ = Describe("KubeDns hooks :: migration_deployment", func() {
 
 			Expect(deployment.Field("spec.template.spec.containers").String()).To(MatchYAML(deploymentRightPorts))
 		})
-
 	})
-
 })

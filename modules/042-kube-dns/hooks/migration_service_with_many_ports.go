@@ -91,6 +91,5 @@ func patchServiceWithManyPorts(input *go_hook.HookInput) error {
 			service.name,
 		)
 	}
-
 	return nil
 }
