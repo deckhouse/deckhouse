@@ -3512,6 +3512,10 @@
       "title": "Receive",
       "transformations": [
         {
+          "filter": {
+            "id": "byRefId",
+            "options": "A"
+          },
           "id": "calculateField",
           "options": {}
         }
@@ -3672,6 +3676,10 @@
       "title": "Transmit",
       "transformations": [
         {
+          "filter": {
+            "id": "byRefId",
+            "options": "A"
+          },
           "id": "calculateField",
           "options": {}
         }
