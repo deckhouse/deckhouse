@@ -65,6 +65,7 @@ memory: 50Mi
   {{- $livenessProbePort := $config.livenessProbePort | default 9808 }}
   {{- $initContainers := $config.initContainers }}
   {{- $customNodeSelector := $config.customNodeSelector }}
+  {{- $additionalPullSecrets := $config.additionalPullSecrets }}
 
   {{- $kubernetesSemVer := semver $context.Values.global.discovery.kubernetesVersion }}
 
@@ -198,6 +199,9 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       imagePullSecrets:
       - name: deckhouse-registry
+      {{- if $additionalPullSecrets }}
+      {{- $additionalPullSecrets | toYaml | nindent 6 }}
+      {{- end }}
       {{- include "helm_lib_priority_class" (tuple $context "system-cluster-critical") | nindent 6 }}
       {{- if $customNodeSelector }}
       nodeSelector:

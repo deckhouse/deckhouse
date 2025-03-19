@@ -6,12 +6,10 @@ priorityClassName:
 ingressClass:
   _default: nginx
   prod-25: nginx
-  prod-sel: nginx-tfprod
 
 certificateClusterIssuer:
   _default: letsencrypt
   prod-25: letsencrypt-nginx
-  prod-sel: letsencrypt-nginx-tfprod
 
 moduleWatcher:
   registries:

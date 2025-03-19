@@ -129,7 +129,7 @@ func setInternalValues(input *go_hook.HookInput) error {
 	defaultControllerVersion := input.Values.Get("ingressNginx.defaultControllerVersion").String()
 	input.MetricsCollector.Expire("")
 
-	var controllers []Controller
+	controllers := make([]Controller, 0, len(controllersFilterResult))
 
 	for _, c := range controllersFilterResult {
 		controller := c.(Controller)

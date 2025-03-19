@@ -44,7 +44,7 @@ func applyKubernetesServicePortFilter(obj *unstructured.Unstructured) (go_hook.F
 	return ports[0].TargetPort.IntVal, nil
 }
 
-type KubernetesEndpoints []string
+type kubernetesEndpoints []string
 
 func applyKubernetesEndpointsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	endpoints := &v1.Endpoints{}
@@ -53,7 +53,7 @@ func applyKubernetesEndpointsFilter(obj *unstructured.Unstructured) (go_hook.Fil
 		return nil, fmt.Errorf("cannot convert kubernetes service endpoints to endpoints: %v", err)
 	}
 
-	var parsedEndpoints KubernetesEndpoints
+	parsedEndpoints := make(kubernetesEndpoints, 0, len(endpoints.Subsets))
 	for _, subset := range endpoints.Subsets {
 		for _, address := range subset.Addresses {
 			parsedEndpoints = append(parsedEndpoints, address.IP)

@@ -571,7 +571,7 @@ jobs:
     env:
       WERF_ENV: ${{ needs.pull_request_info.outputs.edition }}
     # <template: build_template>
-    runs-on: [self-hosted, regular, selectel]
+    runs-on: [self-hosted, large]
     outputs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
     steps:
@@ -954,7 +954,7 @@ jobs:
   security_scan_images:
     name: Security scan images
     if: ${{ needs.pull_request_info.outputs.security_rootless_scan == 'true' }}
-    runs-on: [ self-hosted, regular, selectel ]
+    runs-on: [self-hosted, large]
     needs:
       - git_info
       - pull_request_info

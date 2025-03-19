@@ -119,8 +119,9 @@ func ApplyCertificateSecretFilter(obj *unstructured.Unstructured) (go_hook.Filte
 }
 
 func RegisterOrderCertificateHook(requests []OrderCertificateRequest) bool {
-	var namespaces []string
-	var secretNames []string
+	namespaces := make([]string, 0, len(requests))
+	secretNames := make([]string, 0, len(requests))
+
 	for _, request := range requests {
 		namespaces = append(namespaces, request.Namespace)
 		secretNames = append(secretNames, request.SecretName)

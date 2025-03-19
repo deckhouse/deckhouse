@@ -4,7 +4,7 @@ go 1.23.1
 
 require (
 	github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy v0.0.0-20240626081445-38c0dcfd3af7
-	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20241203083636-caa103ce9ee1
+	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250318101108-490c52ef4de1
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.19.0
 	github.com/stretchr/testify v1.9.0
