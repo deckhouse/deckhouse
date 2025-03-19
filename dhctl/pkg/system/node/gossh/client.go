@@ -50,6 +50,8 @@ type Client struct {
 
 	stopChan chan struct{}
 	live     bool
+
+	kubeProxies []*KubeProxy
 }
 
 func (s *Client) Start() error {
@@ -231,7 +233,9 @@ func (s *Client) Command(name string, arg ...string) node.Command {
 
 // KubeProxy is used to start kubectl proxy and create a tunnel from local port to proxy port
 func (s *Client) KubeProxy() node.KubeProxy {
-	return NewKubeProxy(s.sshClient, s.Settings)
+	p := NewKubeProxy(s.sshClient, s.Settings)
+	s.kubeProxies = append(s.kubeProxies, p)
+	return p
 }
 
 // File is used to upload and download files and directories
@@ -253,7 +257,16 @@ func (s *Client) Check() node.Check {
 
 // Stop the client
 func (s *Client) Stop() {
-	close(s.stopChan)
+	for _, p := range s.kubeProxies {
+		// log.InfoF("found non-stoped kube-proxy: %-v\n", p)
+		p.StopAll()
+	}
+	s.kubeProxies = nil
+
+	if s.stopChan != nil {
+		close(s.stopChan)
+	}
+
 	s.sshClient.Close()
 	if s.SSHConn != nil {
 		sshconn := *s.SSHConn

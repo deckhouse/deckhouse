@@ -210,6 +210,7 @@ func (c *SSHCommand) Run() error {
 	// <-c.waitCh
 
 	c.closePipes()
+	c.Stop()
 
 	return c.WaitError()
 }
@@ -267,23 +268,15 @@ func (c *SSHCommand) Sudo() {
 	passSent := false
 	c.WithMatchHandler(func(pattern string) string {
 		if pattern == "SudoPassword" {
+			log.DebugLn("Send become pass to cmd")
+			becomePass := app.BecomePass
+			_, _ = c.Stdin.Write([]byte(becomePass + "\n"))
 			if !passSent {
-				// send pass through stdin
-				log.DebugLn("Send become pass to cmd")
-				// var becomePass string
-
-				// if c.Session.BecomePass != "" {
-				// becomePass = c.Session.BecomePass
-				// } else {
-				becomePass := app.BecomePass
-				// }
-
-				_, _ = c.Stdin.Write([]byte(becomePass + "\n"))
 				passSent = true
 			} else {
 				// Second prompt is error!
-				log.ErrorLn("Bad sudo password, exiting. TODO handle this correctly.")
-				os.Exit(1)
+				log.ErrorLn("Bad sudo password.")
+				// os.Exit(1)
 			}
 			return "reset"
 		}
@@ -631,7 +624,9 @@ func (c *SSHCommand) Stop() {
 	// <-c.waitCh
 	log.DebugF("Stopped '%s' \n", c.cmd)
 	c.closePipes()
-	c.Session.Signal(ssh.SIGKILL)
+	log.DebugF("Sending SIGINT to process '%s'\n", c.cmd)
+	c.Session.Signal(ssh.SIGINT)
+	log.DebugF("Signal sent\n")
 }
 
 func (c *SSHCommand) setWaitError(err error) {

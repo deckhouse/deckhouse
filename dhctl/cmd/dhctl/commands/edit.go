@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
@@ -25,6 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
 func connectionFlags(parent *kingpin.CmdClause) {
@@ -44,7 +46,15 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, name, secret, dataKey string) 
 			return err
 		}
 
-		kubeCl, err := kubernetes.ConnectToKubernetesAPI(gossh.NewNodeInterfaceWrapper(sshClient))
+		defer sshClient.Stop()
+
+		var kubeCl *client.KubernetesClient
+		if sshClient != nil {
+			kubeCl, err = kubernetes.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(sshClient))
+		} else {
+			kubeCl, err = kubernetes.ConnectToKubernetesAPI(gossh.NewNodeInterfaceWrapper(sshClient))
+		}
+
 		if err != nil {
 			return err
 		}
