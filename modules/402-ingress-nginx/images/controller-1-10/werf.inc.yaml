@@ -39,6 +39,7 @@ shell:
   - cd /src/ingress-nginx
   - git apply /patches/*.patch --verbose
   # pass env for build
+  - cd /src/ingress-nginx
   - echo "export COMMIT_SHA=git-$(git rev-parse --short HEAD)" > .env_pass
   - echo "export REPO_INFO=$(git config --get remote.origin.url)" >> .env_pass
   - echo "export TAG=$(git describe --tags --always)" >> .env_pass
