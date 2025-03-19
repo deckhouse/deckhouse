@@ -80,20 +80,25 @@ kubectl get projecttemplates <PROJECT_TEMPLATE_NAME> -o jsonpath='{.spec.paramet
 It is possible to create a new project for the namespace. To do this, mark the namespace with an annotation `projects.deckhouse.io/adopt`. For example:
 
 1. Create a new namespace:
+
    ```shell
    kubectl create ns test
    ```
 
 1. Mark it with an annotation:
+
    ```shell
    kubectl annotate ns test projects.deckhouse.io/adopt=""
    ```
 
 1. Make sure that the project was created:
+
    ```shell
    kubectl get projects
    ```
+
    A new project corresponding to the namespace will appear in the project list:
+
    ```shell
    NAME        STATE      PROJECT TEMPLATE   DESCRIPTION                                            AGE
    deckhouse   Deployed   virtual            This is a virtual project                              181d

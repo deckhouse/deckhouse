@@ -79,20 +79,25 @@ kubectl get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath=
 Для пространства имён возможно создать новый проект. Для этого пометьте пространство имён аннотацией `projects.deckhouse.io/adopt`. Например:
 
 1. Создайте новое пространство имён:
+
    ```shell
    kubectl create ns test
    ```
-   
+
 1. Пометьте его аннотацией:
+
    ```shell
    kubectl annotate ns test projects.deckhouse.io/adopt=""
    ```
-   
+
 1. Убедитесь, что проект создался:
+
    ```shell
    kubectl get projects
    ```
+
    В списке проектов появится новый проект, соответствующий пространству имён:
+
    ```shell
    NAME        STATE      PROJECT TEMPLATE   DESCRIPTION                                            AGE
    deckhouse   Deployed   virtual            This is a virtual project                              181d
@@ -101,7 +106,7 @@ kubectl get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath=
    ```
 
 Шаблон созданного проекта можно изменить на существующий.
-   
+
 {% alert level="warning" %}
 Обратите внимание, что при смене шаблона может возникнуть конфликт ресурсов: если в чарте шаблона прописаны ресурсы, которые уже присутствуют в пространстве имён, то  применить шаблон не получится.
 {% andalert %}
