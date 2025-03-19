@@ -53,49 +53,50 @@ lang: ru
      updatePolicy: code-policy
      version: 1
      settings:
-       gitData:
-         storageClass: localpath
-         storagePerReplicaGb: 1
-       network:
-         gitSsh:
-           hostname: ""
-           service:
-             type: NodePort
-       storages:
-         s3:
-           bucketNames:
-             artifacts: <REPLACE_ME>-artifacts
-             ciSecureFiles: <REPLACE_ME>-ci-secure-files
-             dependencyProxy: <REPLACE_ME>-dependency-proxy
-             externalDiffs: <REPLACE_ME>-mr-diffs
-             lfs: <REPLACE_ME>-lfs
-             packages: <REPLACE_ME>-packages
-             terraformState: <REPLACE_ME>-terraform-state
-             uploads: <REPLACE_ME>-uploads
-           external:
-             accessKey: <REPLACE_ME>
-             provider: YCloud
-             secretKey: <REPLACE_ME>
-           mode: External
-         postgres:
-           external:
-             database: app_db
-             host: <REPLACE_ME>
-             password: <REPLACE_ME>
-             praefectDatabase: praefect_db
-             praefectPassword: <REPLACE_ME>
-             praefectUsername: code_user
-             username: code_user
-           mode: External
-         redis:
-           external:
-             auth:
-               enabled: true
+       instanceSpec:
+         gitData:
+           storageClass: localpath
+           storagePerReplicaGb: 1
+         network:
+           gitSsh:
+             hostname: ""
+             service:
+               type: NodePort
+         storages:
+           s3:
+             bucketNames:
+               artifacts: <REPLACE_ME>-artifacts
+               ciSecureFiles: <REPLACE_ME>-ci-secure-files
+               dependencyProxy: <REPLACE_ME>-dependency-proxy
+               externalDiffs: <REPLACE_ME>-mr-diffs
+               lfs: <REPLACE_ME>-lfs
+               packages: <REPLACE_ME>-packages
+               terraformState: <REPLACE_ME>-terraform-state
+               uploads: <REPLACE_ME>-uploads
+             external:
+               accessKey: <REPLACE_ME>
+               provider: YCloud
+               secretKey: <REPLACE_ME>
+             mode: External
+           postgres:
+             external:
+               database: app_db
+               host: <REPLACE_ME>
                password: <REPLACE_ME>
-             host: <REPLACE_ME>
-             port: 6379
-           mode: External
-       targetUserCount: 10
+               praefectDatabase: praefect_db
+               praefectPassword: <REPLACE_ME>
+               praefectUsername: code_user
+               username: code_user
+             mode: External
+           redis:
+             external:
+               auth:
+                 enabled: true
+                 password: <REPLACE_ME>
+               host: <REPLACE_ME>
+               port: 6379
+             mode: External
+         targetUserCount: 10
    ```
 
    > `REPLACE_ME` — уникальные значения, требующие подстановки, такие как адреса зависимостей, имена пользователей и пароли.
