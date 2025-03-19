@@ -79,7 +79,7 @@ apiVersion: deckhouse.io/v1
 kind: GrafanaDashboardDefinition
 metadata:
   name: d8-{{ $resourceName }}
-  {{- include "helm_lib_module_labels" (list $context (dict "prometheus.deckhouse.io/grafana-dashboard" "")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "prometheus.deckhouse.io/grafana-dashboard" "" "observability.deckhouse.io/skip-dashboard-conversion" "")) | nindent 2 }}
 spec:
   folder: "{{ $folder }}"
   definition: |
@@ -90,7 +90,7 @@ apiVersion: observability.deckhouse.io/v1alpha1
 kind: {{ $propagated | ternary "ClusterObservabilityPropagatedDashboard" "ClusterObservabilityDashboard" }}
 metadata:
   name: d8-{{ $resourceName }}
-  {{- include "helm_lib_module_labels" (list $context (dict "observability.deckhouse.io/converted" nil "observability.deckhouse.io/skip-dashboard-conversion" "true")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "observability.deckhouse.io/converted" nil)) | nindent 2 }}
 spec:
   definition: |
     {{- $definition | nindent 4 }}
