@@ -1,78 +1,78 @@
-diff --git a/internal/ingress/controller/controller.go b/internal/ingress/controller/controller.go
-index dab507cdf..5cc65f0f3 100644
---- a/internal/ingress/controller/controller.go
-+++ b/internal/ingress/controller/controller.go
-@@ -707,7 +707,7 @@ func (n *NGINXController) getBackendServers(ingresses []*ingress.Ingress) ([]*in
+diff --git c/internal/ingress/controller/controller.go w/internal/ingress/controller/controller.go
+index cb8d3712c..c1d4e4ff5 100644
+--- c/internal/ingress/controller/controller.go
++++ w/internal/ingress/controller/controller.go
+@@ -772,7 +772,7 @@ func (n *NGINXController) getBackendServers(ingresses []*ingress.Ingress) ([]*in
  					continue
  				}
-
+ 
 -				upsName := upstreamName(ing.Namespace, path.Backend.Service)
 +				upsName := upstreamName(ing.Namespace, ing.Name, path.Backend.Service)
-
+ 
  				ups := upstreams[upsName]
-
-@@ -939,10 +939,11 @@ func (n *NGINXController) createUpstreams(data []*ingress.Ingress, du *ingress.B
-
+ 
+@@ -1004,10 +1004,11 @@ func (n *NGINXController) createUpstreams(data []*ingress.Ingress, du *ingress.B
+ 
  		var defBackend string
  		if ing.Spec.DefaultBackend != nil && ing.Spec.DefaultBackend.Service != nil {
 -			defBackend = upstreamName(ing.Namespace, ing.Spec.DefaultBackend.Service)
 +			defBackend = upstreamName(ing.Namespace, ing.Name, ing.Spec.DefaultBackend.Service)
-
+ 
  			klog.V(3).Infof("Creating upstream %q", defBackend)
  			upstreams[defBackend] = newUpstream(defBackend)
 +			upstreams[defBackend].Ingress = &ing.Ingress
-
+ 
  			upstreams[defBackend].UpstreamHashBy.UpstreamHashBy = anns.UpstreamHashBy.UpstreamHashBy
  			upstreams[defBackend].UpstreamHashBy.UpstreamHashBySubset = anns.UpstreamHashBy.UpstreamHashBySubset
-@@ -1006,7 +1007,7 @@ func (n *NGINXController) createUpstreams(data []*ingress.Ingress, du *ingress.B
+@@ -1064,7 +1065,7 @@ func (n *NGINXController) createUpstreams(data []*ingress.Ingress, du *ingress.B
  					continue
  				}
-
+ 
 -				name := upstreamName(ing.Namespace, path.Backend.Service)
 +				name := upstreamName(ing.Namespace, ing.Name, path.Backend.Service)
  				svcName, svcPort := upstreamServiceNameAndPort(path.Backend.Service)
  				if _, ok := upstreams[name]; ok {
  					continue
-@@ -1015,6 +1016,7 @@ func (n *NGINXController) createUpstreams(data []*ingress.Ingress, du *ingress.B
+@@ -1073,6 +1074,7 @@ func (n *NGINXController) createUpstreams(data []*ingress.Ingress, du *ingress.B
  				klog.V(3).Infof("Creating upstream %q", name)
  				upstreams[name] = newUpstream(name)
  				upstreams[name].Port = svcPort
 +				upstreams[name].Ingress = &ing.Ingress
-
+ 
  				upstreams[name].UpstreamHashBy.UpstreamHashBy = anns.UpstreamHashBy.UpstreamHashBy
  				upstreams[name].UpstreamHashBy.UpstreamHashBySubset = anns.UpstreamHashBy.UpstreamHashBySubset
-@@ -1253,7 +1255,7 @@ func (n *NGINXController) createServers(data []*ingress.Ingress,
+@@ -1305,7 +1307,7 @@ func (n *NGINXController) createServers(data []*ingress.Ingress,
  		}
-
+ 
  		if ing.Spec.DefaultBackend != nil && ing.Spec.DefaultBackend.Service != nil {
 -			defUpstream := upstreamName(ing.Namespace, ing.Spec.DefaultBackend.Service)
 +			defUpstream := upstreamName(ing.Namespace, ing.Name, ing.Spec.DefaultBackend.Service)
-
+ 
  			if backendUpstream, ok := upstreams[defUpstream]; ok {
  				// use backend specified in Ingress as the default backend for all its rules
-@@ -1529,7 +1531,7 @@ func mergeAlternativeBackends(ing *ingress.Ingress, upstreams map[string]*ingres
-
+@@ -1580,7 +1582,7 @@ func mergeAlternativeBackends(ing *ingress.Ingress, upstreams map[string]*ingres
+ ) {
  	// merge catch-all alternative backends
  	if ing.Spec.DefaultBackend != nil {
 -		upsName := upstreamName(ing.Namespace, ing.Spec.DefaultBackend.Service)
 +		upsName := upstreamName(ing.Namespace, ing.Name, ing.Spec.DefaultBackend.Service)
-
+ 
  		altUps := upstreams[upsName]
-
-@@ -1577,7 +1579,7 @@ func mergeAlternativeBackends(ing *ingress.Ingress, upstreams map[string]*ingres
+ 
+@@ -1627,7 +1629,7 @@ func mergeAlternativeBackends(ing *ingress.Ingress, upstreams map[string]*ingres
  				continue
  			}
-
+ 
 -			upsName := upstreamName(ing.Namespace, path.Backend.Service)
 +			upsName := upstreamName(ing.Namespace, ing.Name, path.Backend.Service)
-
+ 
  			altUps := upstreams[upsName]
-
-diff --git a/internal/ingress/controller/nginx.go b/internal/ingress/controller/nginx.go
-index 5575009ea..1b82b05f8 100644
---- a/internal/ingress/controller/nginx.go
-+++ b/internal/ingress/controller/nginx.go
-@@ -38,6 +38,8 @@ import (
+ 
+diff --git c/internal/ingress/controller/nginx.go w/internal/ingress/controller/nginx.go
+index 578d5b4e8..488a029dd 100644
+--- c/internal/ingress/controller/nginx.go
++++ w/internal/ingress/controller/nginx.go
+@@ -39,6 +39,8 @@ import (
  	proxyproto "github.com/armon/go-proxyproto"
  	"github.com/eapache/channels"
  	apiv1 "k8s.io/api/core/v1"
@@ -81,8 +81,8 @@ index 5575009ea..1b82b05f8 100644
  	"k8s.io/apimachinery/pkg/util/intstr"
  	"k8s.io/client-go/kubernetes/scheme"
  	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
-@@ -923,8 +925,12 @@ func configureBackends(rawBackends []*ingress.Backend) error {
-
+@@ -900,8 +902,12 @@ func configureBackends(rawBackends []*ingress.Backend) error {
+ 
  	for i, backend := range rawBackends {
  		var service *apiv1.Service
 +		var networkingIngress *networking.Ingress
@@ -95,7 +95,7 @@ index 5575009ea..1b82b05f8 100644
  		}
  		luaBackend := &ingress.Backend{
  			Name:                 backend.Name,
-@@ -934,6 +940,7 @@ func configureBackends(rawBackends []*ingress.Backend) error {
+@@ -911,6 +917,7 @@ func configureBackends(rawBackends []*ingress.Backend) error {
  			UpstreamHashBy:       backend.UpstreamHashBy,
  			LoadBalancing:        backend.LoadBalancing,
  			Service:              service,
@@ -103,13 +103,13 @@ index 5575009ea..1b82b05f8 100644
  			NoServer:             backend.NoServer,
  			TrafficShapingPolicy: backend.TrafficShapingPolicy,
  			AlternativeBackends:  backend.AlternativeBackends,
-diff --git a/internal/ingress/controller/util.go b/internal/ingress/controller/util.go
-index 6562dd17c..361e42f43 100644
---- a/internal/ingress/controller/util.go
-+++ b/internal/ingress/controller/util.go
+diff --git c/internal/ingress/controller/util.go w/internal/ingress/controller/util.go
+index 8851f323f..51f1ff8a2 100644
+--- c/internal/ingress/controller/util.go
++++ w/internal/ingress/controller/util.go
 @@ -47,13 +47,13 @@ func newUpstream(name string) *ingress.Backend {
  }
-
+ 
  // upstreamName returns a formatted upstream name based on namespace, service, and port
 -func upstreamName(namespace string, service *networking.IngressServiceBackend) string {
 +func upstreamName(namespace string, ingress string, service *networking.IngressServiceBackend) string {
@@ -124,11 +124,11 @@ index 6562dd17c..361e42f43 100644
  		}
  	}
  	return fmt.Sprintf("%s-INVALID", namespace)
-diff --git a/pkg/apis/ingress/types.go b/pkg/apis/ingress/types.go
-index 9395683ec..11f1f2daf 100644
---- a/pkg/apis/ingress/types.go
-+++ b/pkg/apis/ingress/types.go
-@@ -80,9 +80,10 @@ type Configuration struct {
+diff --git c/pkg/apis/ingress/types.go w/pkg/apis/ingress/types.go
+index 2ad17ec3d..64e732791 100644
+--- c/pkg/apis/ingress/types.go
++++ w/pkg/apis/ingress/types.go
+@@ -79,9 +79,10 @@ type Configuration struct {
  // +k8s:deepcopy-gen=true
  type Backend struct {
  	// Name represents an unique apiv1.Service name formatted as <namespace>-<name>-<port>
@@ -142,17 +142,17 @@ index 9395683ec..11f1f2daf 100644
  	// SSLPassthrough indicates that Ingress controller will delegate TLS termination to the endpoints.
  	SSLPassthrough bool `json:"sslPassthrough"`
  	// Endpoints contains the list of endpoints currently running
-diff --git a/pkg/apis/ingress/zz_generated.deepcopy.go b/pkg/apis/ingress/zz_generated.deepcopy.go
+diff --git c/pkg/apis/ingress/zz_generated.deepcopy.go w/pkg/apis/ingress/zz_generated.deepcopy.go
 index 410173e26..01ad86190 100644
---- a/pkg/apis/ingress/zz_generated.deepcopy.go
-+++ b/pkg/apis/ingress/zz_generated.deepcopy.go
+--- c/pkg/apis/ingress/zz_generated.deepcopy.go
++++ w/pkg/apis/ingress/zz_generated.deepcopy.go
 @@ -23,6 +23,7 @@ package ingress
-
+ 
  import (
  	v1 "k8s.io/api/core/v1"
 +	networking "k8s.io/api/networking/v1"
  )
-
+ 
  // DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
 @@ -33,6 +34,11 @@ func (in *Backend) DeepCopyInto(out *Backend) {
  		*out = new(v1.Service)
