@@ -162,6 +162,10 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 	})
 
 	releaseQueueDepth := len(releases) - 1 - releaseIdx
+	// max value for release queue depth is 3 due to the alert's logic, having queue depth greater than 3 breaks this logic
+	if releaseQueueDepth > 3 {
+		releaseQueueDepth = 3
+	}
 	isLatestRelease := releaseQueueDepth == 0
 	isPatch := true
 
