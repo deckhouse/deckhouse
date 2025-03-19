@@ -12,8 +12,8 @@ data:
   nonexistent: {{ .nonexistent | quote }}
   staticpod_version: {{ .staticpod_version | quote }}
   bashible_version: {{ .bashible_version | quote }}
-  state: |
-    {{ . | nindent 4 }}
+  state: |-
+    {{- . | indent 4 }}
   {{- if .nonexistent_value }}
   value: {{ .nonexistent_value | quote }}
   {{- end }}
