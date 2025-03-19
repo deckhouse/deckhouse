@@ -45,10 +45,10 @@ type Command interface {
 
 type File interface {
 	Upload(ctx context.Context, srcPath, dstPath string) error
-	Download(srcPath, dstPath string) error
+	Download(ctx context.Context, srcPath, dstPath string) error
 
 	UploadBytes(ctx context.Context, data []byte, remotePath string) error
-	DownloadBytes(remotePath string) ([]byte, error)
+	DownloadBytes(ctx context.Context, remotePath string) ([]byte, error)
 }
 
 type Script interface {

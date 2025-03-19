@@ -99,7 +99,7 @@ func DefineTestSCPCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		} else {
 			if DstPath == "stdout" {
 				log.InfoF("download bytes from remote '%s'\n", SrcPath)
-				data, err := sshCl.File().DownloadBytes(SrcPath)
+				data, err := sshCl.File().DownloadBytes(context.Background(), SrcPath)
 				if err != nil {
 					return err
 				}
@@ -107,7 +107,7 @@ func DefineTestSCPCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 				success = true
 			} else {
 				log.InfoF("download bytes from remote '%s' to local '%s'\n", SrcPath, DstPath)
-				err = sshCl.File().Download(SrcPath, DstPath)
+				err = sshCl.File().Download(context.Background(), SrcPath, DstPath)
 				if err != nil {
 					return err
 				}

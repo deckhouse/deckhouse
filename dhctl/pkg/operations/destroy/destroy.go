@@ -254,7 +254,8 @@ func (d *StaticMastersDestroyer) DestroyCluster(autoApprove bool) error {
 	hostToExclude := ""
 	if len(d.IPs) > 0 {
 		file := frontend.NewFile(d.SSHClient.Settings)
-		bytes, err := file.DownloadBytes("/var/lib/bashible/discovered-node-ip")
+		// TODO(dhctl-for-commander-cancels): pass ctx
+		bytes, err := file.DownloadBytes(context.TODO(), "/var/lib/bashible/discovered-node-ip")
 		if err != nil {
 
 			return err

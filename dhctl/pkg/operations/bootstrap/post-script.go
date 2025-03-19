@@ -107,7 +107,7 @@ func (e *PostBootstrapScriptExecutor) run(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("Running %s done with error: %w", e.path, err)
 	}
 
-	content, err := e.sshClient.File().DownloadBytes(outputFile)
+	content, err := e.sshClient.File().DownloadBytes(ctx, outputFile)
 	if err != nil {
 		return "", fmt.Errorf("Cannot get output from remote file %s: %w", e.path, err)
 	}

@@ -47,7 +47,7 @@ func (f *File) Upload(ctx context.Context, srcPath, remotePath string) error {
 	}
 	scp.WithSrc(srcPath).
 		WithRemoteDst(remotePath).
-		SCP().
+		SCP(ctx).
 		CaptureStdout(nil).
 		CaptureStderr(nil)
 	err = scp.Run(ctx)
@@ -85,7 +85,7 @@ func (f *File) UploadBytes(ctx context.Context, data []byte, remotePath string) 
 	scp := cmd.NewSCP(f.Session).
 		WithSrc(srcPath).
 		WithRemoteDst(remotePath).
-		SCP().
+		SCP(ctx).
 		CaptureStderr(nil).
 		CaptureStdout(nil)
 	err = scp.Run(ctx)
@@ -105,10 +105,10 @@ func (f *File) UploadBytes(ctx context.Context, data []byte, remotePath string) 
 	return nil
 }
 
-func (f *File) Download(remotePath, dstPath string) error {
+func (f *File) Download(ctx context.Context, remotePath, dstPath string) error {
 	scp := cmd.NewSCP(f.Session)
 	scp.WithRecursive(true)
-	scpCmd := scp.WithRemoteSrc(remotePath).WithDst(dstPath).SCP()
+	scpCmd := scp.WithRemoteSrc(remotePath).WithDst(dstPath).SCP(ctx)
 	log.DebugF("run scp: %s\n", scpCmd.Cmd().String())
 
 	stdout, err := scpCmd.Cmd().CombinedOutput()
@@ -123,7 +123,7 @@ func (f *File) Download(remotePath, dstPath string) error {
 }
 
 // Download remote file and returns its content as an array of bytes.
-func (f *File) DownloadBytes(remotePath string) ([]byte, error) {
+func (f *File) DownloadBytes(ctx context.Context, remotePath string) ([]byte, error) {
 	dstPath, err := CreateEmptyTmpFile()
 	if err != nil {
 		return nil, fmt.Errorf("create target tmp file: %v", err)
@@ -136,7 +136,7 @@ func (f *File) DownloadBytes(remotePath string) ([]byte, error) {
 	}()
 
 	scp := cmd.NewSCP(f.Session)
-	scpCmd := scp.WithRemoteSrc(remotePath).WithDst(dstPath).SCP()
+	scpCmd := scp.WithRemoteSrc(remotePath).WithDst(dstPath).SCP(ctx)
 	log.DebugF("run scp: %s\n", scpCmd.Cmd().String())
 
 	stdout, err := scpCmd.Cmd().CombinedOutput()
