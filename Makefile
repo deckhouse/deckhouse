@@ -251,8 +251,8 @@ docs-dev: ## Run containers with the documentation in the dev mode (allow uncomm
 	export DOC_API_URL=dev
 	export DOC_API_KEY=dev
 	docker network inspect deckhouse 2>/dev/null 1>/dev/null || docker network create deckhouse
-	cd docs/documentation/; werf compose up --docker-compose-command-options='-d' --dev --env development --repo ":local"
-	cd docs/site/; werf compose up --docker-compose-command-options='-d' --dev --env development --repo ":local"
+	cd docs/documentation/; werf compose up --docker-compose-command-options='-d' --dev --env development --repo ":local" --skip-image-spec-stage=true
+	cd docs/site/; werf compose up --docker-compose-command-options='-d' --dev --env development --repo ":local" --skip-image-spec-stage=true
 	echo "Open http://localhost to access the documentation..."
 
 .PHONY: docs-down
