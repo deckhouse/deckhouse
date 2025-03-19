@@ -47,9 +47,7 @@ shell:
   - echo "export COMMIT_SHA=git-$(git rev-parse --short HEAD)" > .env_pass
   - echo "export REPO_INFO=$(git config --get remote.origin.url)" >> .env_pass
   - echo "export TAG=$(git describe --tags --always)" >> .env_pass
-  - git apply /patches/ingress-nginx/*.patch --verbose
-  - cd /src/ingress-nginx/rootfs
-  - git apply /patches/rootfs/*.patch --verbose
+  - git apply /patches/*.patch --verbose
   - rm -r /src/dumb-init/.git
   - rm -r /src/lua-protobuf/.git
   - rm -r /src/lua-iconv/.git
