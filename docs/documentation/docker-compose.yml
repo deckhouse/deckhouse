@@ -8,6 +8,7 @@ services:
       WERF_LOG_VERBOSE: "on"
     networks:
       - deckhouse
+    entrypoint: [ "nginx", "-e", "/dev/stderr", "-g", "daemon off;" ]
 
 networks:
   deckhouse:
