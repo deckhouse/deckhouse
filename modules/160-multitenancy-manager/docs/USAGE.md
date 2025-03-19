@@ -109,7 +109,7 @@ You can create a new project for a namespace. To do this, add the `projects.deck
 You can change the template of the created project to the existing one.
 
 {% alert level="warning" %}
-Please note that when changing the template, a resource conflict may occur: if the template chart contains resources that are already present in the namespace, then you will not be able to apply the template.
+Note that changing the template may cause a resource conflict. If the template chart contains resources that are already present in the namespace, you will not be able to apply the template.
 {% andalert %}
 
 ## Creating your own project template
