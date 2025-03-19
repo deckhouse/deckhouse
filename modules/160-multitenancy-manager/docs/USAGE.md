@@ -77,7 +77,7 @@ kubectl get projecttemplates <PROJECT_TEMPLATE_NAME> -o jsonpath='{.spec.paramet
 
 ### Creating a project automatically for a namespace
 
-It is possible to create a new project for the namespace. To do this, mark the namespace with an annotation `projects.deckhouse.io/adopt`. For example:
+You can create a new project for a namespace. To do this, add the `projects.deckhouse.io/adopt` annotation to the namespace. For example:
 
 1. Create a new namespace:
 
