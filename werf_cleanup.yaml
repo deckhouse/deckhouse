@@ -8,8 +8,6 @@ cleanup:
   # keep dev builds
   - references:
       branch: /.*/
-    imagesPerReference:
-      last: 1
   # keep 4 pre-release builds
   - references:
       branch: /release-.*/
@@ -27,5 +25,3 @@ cleanup:
   # Keep  main
   - references:
       branch: main
-    imagesPerReference:
-      last: 10
