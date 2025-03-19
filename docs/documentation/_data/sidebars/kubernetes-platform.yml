@@ -47,28 +47,32 @@ entries:
                   url: /admin/configuration/access/
                 - title:
                     en: Connection
-                    ru: TODO (переформулировать) Подключение
-                  url: /admin/configuration/access/connection.html
+                    ru: Подключение
+                  url: /admin/connection.html
                 - title:
                     en: Access to API
-                    ru: WIP Доступ к API
+                    ru: TODO Доступ к API
                   url: /admin/configuration/access/api.html
                 - title:
                     en: Authentication
                     ru: Аутентификация
-                  url: /admin/configuration/access/authentication.html
+                  url: /admin/authentication.html
                 - title:
                     en: Authorization
-                    ru: TODO Авторизация
-                  url: /admin/configuration/access/authorization.html
-                - title:
-                    en: Intercluster
-                    ru: TODO Межкластерный доступ
-                  url: /admin/configuration/access/intercluster.html
-                - title:
-                    en: Service accounts
-                    ru: TODO Сервисные аккауты
-                  url: /admin/configuration/access/sa.html
+                    ru: Авторизация
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Обзор
+                      url: /admin/access/authorization-overview.html
+                    - title:
+                        en: Current authorization model
+                        ru: Текущая модель авторизации
+                      url: /admin/access/authorization-rbac-current.html
+                    - title:
+                        en: Experimental authorization model
+                        ru: Экспериментальная модель авторизации
+                      url: /admin/access/authorization-rbac-experimental.html
             - title:
                 en: Platform update
                 ru: Обновление платформы
