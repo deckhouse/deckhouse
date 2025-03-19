@@ -110,7 +110,7 @@ You can change the template of the created project to the existing one.
 
 {% alert level="warning" %}
 Note that changing the template may cause a resource conflict. If the template chart contains resources that are already present in the namespace, you will not be able to apply the template.
-{% andalert %}
+{% endalert %}
 
 ## Creating your own project template
 
