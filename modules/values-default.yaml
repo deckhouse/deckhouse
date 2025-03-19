@@ -31,7 +31,6 @@ priorityClassEnabled: true
 prometheusEnabled: true
 prometheusMetricsAdapterEnabled: true
 secretCopierEnabled: true
-smokeMiniEnabled: true
 snapshotControllerEnabled: true
 terraformManagerEnabled: true
 upmeterEnabled: true

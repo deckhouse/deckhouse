@@ -203,6 +203,9 @@ apiVersions:
           internalSubnetID:
             description: |
               ID подсети для внутреннего интерфейса.
+          internalSubnetCIDR:
+            description: |
+              CIDR автоматически создаваемой подсети для внутреннего интерфейса. Если указан вместе с `internalSubnetID`, internalSubnetCIDR имеет приоритет.
           externalSubnetID:
             description: |
               Подключаемый к узлу дополнительный сетевой интерфейс, в который будет идти маршрут по умолчанию.

@@ -5,7 +5,6 @@ priorityClassName:
 ingressClass:
   _default: nginx
   prod-25: nginx
-  prod-sel: nginx-tfprod
 
 resources:
   requests:

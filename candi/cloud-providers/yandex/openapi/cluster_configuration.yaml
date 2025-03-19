@@ -404,6 +404,9 @@ apiVersions:
             description: |
               ID of a subnet for the internal interface.
             type: string
+          internalSubnetCIDR:
+            description: |
+              CIDR of an automatically created subnet for the internal interface. Overrides `internalSubnetID` parameter.
           externalSubnetID:
             description: |
               If specified, an additional network interface will be added to the node (the node will use it as a default route).

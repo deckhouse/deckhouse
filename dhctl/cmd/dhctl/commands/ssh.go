@@ -15,6 +15,7 @@
 package commands
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os/exec"
@@ -43,7 +44,7 @@ func DefineTestSSHConnectionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		err = sshCl.Check().AwaitAvailability()
+		err = sshCl.Check().AwaitAvailability(context.Background())
 
 		if err != nil {
 			return fmt.Errorf("check connection: %v", err)

@@ -170,6 +170,16 @@ func (h *Handler) authorizeClusterScopedRequest(request *WebhookRequest, entry *
 				return h.fillDenyRequest(request, internalErrorReason, err.Error())
 			}
 		} else {
+			k8sCoreResources, err := h.cache.GetCoreResources()
+			if err != nil {
+				return h.fillDenyRequest(request, internalErrorReason, err.Error())
+			}
+			// if subjected resource has no group, check if it belongs to the core k8s resources, and if it isn't,
+			// permit the request for an unknown (non-existent) resource to let the RBAC decide
+			if _, found := k8sCoreResources[resource]; !found {
+				return request
+			}
+
 			// apiVersion and group both empty, which means that this is a core Kubernetes resource
 			apiVersion = "v1"
 		}

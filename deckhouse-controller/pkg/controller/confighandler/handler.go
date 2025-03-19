@@ -25,7 +25,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
-	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -37,14 +36,12 @@ var _ backend.ConfigHandler = &Handler{}
 
 type Handler struct {
 	client            client.Client
-	log               *log.Logger
 	deckhouseConfigCh chan<- utils.Values
 	configEventCh     chan<- config.Event
 }
 
-func New(client client.Client, deckhouseConfigCh chan<- utils.Values, logger *log.Logger) *Handler {
+func New(client client.Client, deckhouseConfigCh chan<- utils.Values) *Handler {
 	return &Handler{
-		log:               logger,
 		client:            client,
 		deckhouseConfigCh: deckhouseConfigCh,
 	}
@@ -126,8 +123,6 @@ func (h *Handler) LoadConfig(ctx context.Context, _ ...string) (*config.KubeConf
 			h.deckhouseConfigCh <- values
 		}
 	}
-
-	h.log.Debug("ConfigHandler loaded initial config")
 
 	return kubeConfig, nil
 }

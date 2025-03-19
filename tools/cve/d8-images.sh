@@ -36,7 +36,7 @@ if [ -z "$TAG" ]; then
 fi
 
 if [ -z "$SEVERITY" ]; then
-  SEVERITY="CRITICAL,HIGH"
+  SEVERITY="UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
 fi
 
 function __main__() {

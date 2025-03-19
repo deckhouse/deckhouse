@@ -159,19 +159,6 @@ func (c *DeployTimeService) processWindow(dtr *DeployTimeResult) {
 	dtr.Reason = dtr.Reason.add(outOfWindowReason)
 }
 
-func (c *DeployTimeService) checkCooldown(dtr *DeployTimeResult, release v1alpha1.Release) {
-	// check: release cooldown
-	if release.GetCooldownUntil() != nil {
-		cooldownUntil := *release.GetCooldownUntil()
-		if c.now.Before(cooldownUntil) {
-			c.logger.Warn("release in cooldown", slog.String("name", release.GetName()))
-
-			dtr.ReleaseApplyTime = *release.GetCooldownUntil()
-			dtr.Reason = dtr.Reason.add(cooldownDelayReason)
-		}
-	}
-}
-
 // CalculatePatchDeployTime calculates deploy time, returns deploy time or postpone time and reason.
 // To calculate deploy time, we need to check:
 //
@@ -230,8 +217,6 @@ func (c *DeployTimeService) CalculateMinorDeployTime(release v1alpha1.Release, m
 	if release.GetApplyNow() {
 		return result
 	}
-
-	c.checkCooldown(result, release)
 
 	if !c.settings.InManualMode() {
 		c.checkCanary(result, release)

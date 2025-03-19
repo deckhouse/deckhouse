@@ -110,9 +110,6 @@
     ]
   },
   "se-plus": {
-    "languages": [
-      "ru"
-    ],
     "name": "SE+",
     "title": "Standard Edition+",
     "excludeModules": [

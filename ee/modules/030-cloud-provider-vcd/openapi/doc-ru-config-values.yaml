@@ -2,7 +2,7 @@ type: object
 properties:
   storageClass:
     description: |
-      Автоматическое создание StorageClass'ов, которые есть в OpenStack.
+      Автоматическое создание StorageClass'ов, которые есть в VCD (VMware Cloud Director).
     properties:
       exclude:
         description: |
