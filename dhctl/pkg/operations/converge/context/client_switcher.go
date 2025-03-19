@@ -145,6 +145,8 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 	log.DebugLn("Stopping kube proxies for replacing kube client")
 
 	kubeCl.KubeProxy.StopAll()
+	log.DebugF("Old SSH Client: %-v\n", sshCl)
+	sshCl.Stop()
 
 	log.DebugLn("Create new ssh client for replacing kube client")
 
@@ -167,6 +169,8 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 	}
 
 	log.DebugLn("ssh client started for replacing kube client")
+	log.DebugF("New SSH Client: %-v\n", newSSHClient)
+	log.DebugF("New client become pass: %s\n", newSSHClient.Settings.BecomePass)
 
 	// adding keys to agent is not needed anymore
 	// err = newSSHClient.Agent.AddKeys(newSSHClient.PrivateKeys())
@@ -174,7 +178,7 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 	// 	return fmt.Errorf("failed to add keys to ssh agent: %w", err)
 	// }
 
-	log.DebugLn("private keys added for replacing kube client")
+	// log.DebugLn("private keys added for replacing kube client")
 
 	newKubeClient, err := kubernetes.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(newSSHClient))
 	if err != nil {

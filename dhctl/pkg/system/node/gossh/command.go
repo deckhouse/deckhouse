@@ -34,7 +34,7 @@ import (
 )
 
 type SSHCommand struct {
-	sshClient *ssh.Client
+	sshClient *Client
 	Session   *ssh.Session
 
 	Name string
@@ -78,7 +78,7 @@ type SSHCommand struct {
 	timeout time.Duration
 }
 
-func NewSSHCommand(client *ssh.Client, name string, arg ...string) *SSHCommand {
+func NewSSHCommand(client *Client, name string, arg ...string) *SSHCommand {
 	args := make([]string, len(arg))
 	copy(args, arg)
 	cmd := name + " "
@@ -90,7 +90,7 @@ func NewSSHCommand(client *ssh.Client, name string, arg ...string) *SSHCommand {
 			// cmd = cmd + args[i] + " "
 		}
 	}
-	session, err := client.NewSession()
+	session, err := client.GetClient().NewSession()
 	if err != nil {
 		panic(err)
 	}
@@ -269,7 +269,13 @@ func (c *SSHCommand) Sudo() {
 	c.WithMatchHandler(func(pattern string) string {
 		if pattern == "SudoPassword" {
 			log.DebugLn("Send become pass to cmd")
-			becomePass := app.BecomePass
+			var becomePass string
+
+			if c.sshClient.Settings.BecomePass != "" {
+				becomePass = c.sshClient.Settings.BecomePass
+			} else {
+				becomePass = app.BecomePass
+			}
 			_, _ = c.Stdin.Write([]byte(becomePass + "\n"))
 			if !passSent {
 				passSent = true
@@ -624,6 +630,7 @@ func (c *SSHCommand) Stop() {
 	// <-c.waitCh
 	log.DebugF("Stopped '%s' \n", c.cmd)
 	c.closePipes()
+	c.Session.Signal(ssh.SIGKILL)
 	log.DebugF("Sending SIGINT to process '%s'\n", c.cmd)
 	c.Session.Signal(ssh.SIGINT)
 	log.DebugF("Signal sent\n")

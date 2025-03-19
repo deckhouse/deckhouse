@@ -36,7 +36,7 @@ func NewNodeInterfaceWrapper(sshClient *Client) *NodeInterfaceWrapper {
 func (n *NodeInterfaceWrapper) Command(name string, args ...string) node.Command {
 	log.DebugLn("Starting NodeInterfaceWrapper.command")
 	defer log.DebugLn("Stop NodeInterfaceWrapper.command")
-	return NewSSHCommand(n.sshClient.sshClient, name, args...)
+	return NewSSHCommand(n.sshClient, name, args...)
 }
 
 func (n *NodeInterfaceWrapper) File() node.File {
@@ -46,7 +46,7 @@ func (n *NodeInterfaceWrapper) File() node.File {
 func (n *NodeInterfaceWrapper) UploadScript(scriptPath string, args ...string) node.Script {
 	log.DebugLn("Starting NodeInterfaceWrapper.UploadScript")
 	defer log.DebugLn("Stop NodeInterfaceWrapper.UploadScript")
-	return NewSSHUploadScript(n.sshClient.sshClient, scriptPath, args...)
+	return NewSSHUploadScript(n.sshClient, scriptPath, args...)
 }
 
 func (n *NodeInterfaceWrapper) Client() *Client {

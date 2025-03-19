@@ -228,12 +228,12 @@ func (s *Client) ReverseTunnel(address string) node.ReverseTunnel {
 
 // Command is used to run commands on remote server
 func (s *Client) Command(name string, arg ...string) node.Command {
-	return NewSSHCommand(s.sshClient, name, arg...)
+	return NewSSHCommand(s, name, arg...)
 }
 
 // KubeProxy is used to start kubectl proxy and create a tunnel from local port to proxy port
 func (s *Client) KubeProxy() node.KubeProxy {
-	p := NewKubeProxy(s.sshClient, s.Settings)
+	p := NewKubeProxy(s, s.Settings)
 	s.kubeProxies = append(s.kubeProxies, p)
 	return p
 }
@@ -245,13 +245,13 @@ func (s *Client) File() node.File {
 
 // UploadScript is used to upload script and execute it on remote server
 func (s *Client) UploadScript(scriptPath string, args ...string) node.Script {
-	return NewSSHUploadScript(s.sshClient, scriptPath, args...)
+	return NewSSHUploadScript(s, scriptPath, args...)
 }
 
 // UploadScript is used to upload script and execute it on remote server
 func (s *Client) Check() node.Check {
 	return genssh.NewCheck(func(sess *session.Session, cmd string) node.Command {
-		return NewSSHCommand(s.sshClient, cmd)
+		return NewSSHCommand(s, cmd)
 	}, s.Settings)
 }
 

@@ -24,14 +24,13 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
-	"golang.org/x/crypto/ssh"
 )
 
 const DefaultLocalAPIPort = 22322
 
 type KubeProxy struct {
 	Session   *session.Session
-	sshClient *ssh.Client
+	sshClient *Client
 
 	KubeProxyPort string
 	LocalPort     string
@@ -46,7 +45,7 @@ type KubeProxy struct {
 	healthMonitorsByStartID map[int]chan struct{}
 }
 
-func NewKubeProxy(client *ssh.Client, sess *session.Session) *KubeProxy {
+func NewKubeProxy(client *Client, sess *session.Session) *KubeProxy {
 	return &KubeProxy{
 		sshClient:               client,
 		Session:                 sess,
@@ -279,7 +278,7 @@ func (k *KubeProxy) upTunnel(
 		}
 
 		log.DebugF("[%d] Try up tunnel on %v\n", startID, tunnelAddress)
-		tun = NewTunnel(k.sshClient, tunnelAddress)
+		tun = NewTunnel(k.sshClient.sshClient, tunnelAddress)
 		err := tun.Up()
 		if err != nil {
 			log.DebugF("[%d] Start tunnel was failed. Cleaning...\n", startID)

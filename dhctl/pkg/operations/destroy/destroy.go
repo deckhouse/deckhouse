@@ -313,7 +313,7 @@ func processStaticHosts(hosts []session.Host, s *session.Session, stdOutErrHandl
 		err := retry.NewLoop(fmt.Sprintf("Clear master %s", host), 5, 10*time.Second).Run(func() error {
 			client := gossh.NewClient(settings, sshkeys)
 			client.Start()
-			c := gossh.NewSSHCommand(client.GetClient(), cmd)
+			c := gossh.NewSSHCommand(client, cmd)
 			c.Sudo()
 			c.WithTimeout(5 * time.Minute)
 			c.WithStdoutHandler(stdOutErrHandler)

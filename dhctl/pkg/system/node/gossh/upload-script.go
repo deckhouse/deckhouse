@@ -33,7 +33,7 @@ import (
 )
 
 type SSHUploadScript struct {
-	sshClient *ssh.Client
+	sshClient *Client
 
 	ScriptPath string
 	Args       []string
@@ -48,7 +48,7 @@ type SSHUploadScript struct {
 	timeout time.Duration
 }
 
-func NewSSHUploadScript(sshClient *ssh.Client, scriptPath string, args ...string) *SSHUploadScript {
+func NewSSHUploadScript(sshClient *Client, scriptPath string, args ...string) *SSHUploadScript {
 	return &SSHUploadScript{
 		sshClient:  sshClient,
 		ScriptPath: scriptPath,
@@ -88,7 +88,7 @@ func (u *SSHUploadScript) Execute() (stdout []byte, err error) {
 		remotePath = filepath.Join(app.DeckhouseNodeTmpPath, scriptName)
 	}
 	log.DebugF("Uploading script %s to %s\n", u.ScriptPath, remotePath)
-	err = NewSSHFile(u.sshClient).Upload(u.ScriptPath, remotePath)
+	err = NewSSHFile(u.sshClient.sshClient).Upload(u.ScriptPath, remotePath)
 	if err != nil {
 		return nil, fmt.Errorf("upload: %v", err)
 	}
@@ -175,7 +175,7 @@ func (u *SSHUploadScript) ExecuteBundle(parentDir, bundleDir string) (stdout []b
 	)
 
 	// upload to node's deckhouse tmp directory
-	err = NewSSHFile(u.sshClient).Upload(bundleLocalFilepath, app.DeckhouseNodeTmpPath)
+	err = NewSSHFile(u.sshClient.sshClient).Upload(bundleLocalFilepath, app.DeckhouseNodeTmpPath)
 	if err != nil {
 		return nil, fmt.Errorf("upload: %v", err)
 	}
