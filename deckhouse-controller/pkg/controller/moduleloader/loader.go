@@ -284,6 +284,13 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 				return fmt.Errorf("delete the '%s' emebedded module: %w", module.Name, err)
 			}
 		}
+
+		if !module.HasCondition(v1alpha1.ModuleConditionEnabledByModuleConfig) {
+			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
+			if err := l.client.Status().Update(ctx, &module); err != nil {
+				return fmt.Errorf("update status for the '%s' module: %w", module.Name, err)
+			}
+		}
 	}
 
 	return nil
@@ -342,13 +349,6 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 
 				// set deckhouse version to embedded modules
 				module.Properties.Version = l.version
-			}
-
-			if !module.HasCondition(v1alpha1.ModuleConditionEnabledByModuleConfig) {
-				module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
-				if err := l.client.Status().Update(ctx, module); err != nil {
-					return fmt.Errorf("update status for the '%s' module: %w", def.Name, err)
-				}
 			}
 
 			if !reflect.DeepEqual(moduleCopy.Properties, module.Properties) ||
