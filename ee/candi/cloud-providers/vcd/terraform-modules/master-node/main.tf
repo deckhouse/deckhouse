@@ -42,15 +42,26 @@ data "vcd_vm_placement_policy" "vmpp" {
   vdc_id = data.vcd_org_vdc.vdc[0].id
 }
 
-resource "vcd_vm_internal_disk" "kubernetes_data"{
-  vapp_name       = local.vapp_name
-  vm_name         = vcd_vapp_vm.master.name
-  size_in_mb      = local.master_instance_class.etcdDiskSizeGb * 1024
+
+resource "vcd_independent_disk" "kubernetes_data" {
+  name             = "${local.prefix}-master-${var.nodeIndex}-etcd-disk"
+  size_in_mb       = local.master_instance_class.etcdDiskSizeGb * 1024
+  storage_profile  = data.vcd_storage_profile.sp.name
   iops            = data.vcd_storage_profile.sp.iops_settings[0].disk_iops_per_gb_max > 0 ? data.vcd_storage_profile.sp.iops_settings[0].disk_iops_per_gb_max * local.master_instance_class.etcdDiskSizeGb : null
-  storage_profile = data.vcd_storage_profile.sp.name
-  bus_number      = 0
-  unit_number     = 1
-  bus_type        = "paravirtual"
+}
+
+
+resource "vcd_vapp_vm_disk_attachment" "kubernetes_data" {
+  vapp_name  = local.vapp_name
+  vm_name    = vcd_vapp_vm.master.name
+  disk_id    = vcd_independent_disk.kubernetes_data.id
+
+  bus_type   = "paravirtual"
+  bus_number = 0
+  unit_number = 1
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "vcd_vapp_vm" "master" {
@@ -89,10 +100,13 @@ resource "vcd_vapp_vm" "master" {
   lifecycle {
     ignore_changes = [
       guest_properties,
-      disk,
       metadata
     ]
   }
+
+  depends_on = [
+    vcd_independent_disk.kubernetes_data
+  ]
 
   guest_properties = merge({
     "instance-id"         = join("-", [local.prefix, "master", var.nodeIndex])
