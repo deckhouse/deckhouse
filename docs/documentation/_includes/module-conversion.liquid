@@ -8,12 +8,13 @@
 
 {{ site.data.i18n.common.conversion_action_message[page.lang] }}:
 
+<ul>
 {%- for conversion in moduleConversions %}
 
 {%- assign conversionVersion =  conversion[1]["version"] %}
 {%- assign conversionVersionPrev =  conversionVersion | minus: 1 %}
 
-- {{ site.data.i18n.common.conversion_from_version[page.lang] | capitalize }} **{{ conversionVersionPrev }}** {{ site.data.i18n.common.conversion_to[page.lang] }} **{{ conversionVersion }}**:
+<li>{{ site.data.i18n.common.conversion_from_version[page.lang] | capitalize }} **{{ conversionVersionPrev }}** {{ site.data.i18n.common.conversion_to[page.lang] }} **{{ conversionVersion }}**:
 
   {% if conversion[1].description[page.lang] %}{{ conversion[1].description[page.lang] | strip_html }}
   {% else %}{{ site.data.i18n.common.conversion_missing_description[page.lang] }}.
@@ -39,6 +40,8 @@
     </div>
   {% endif %}
   {% endif %}
+</li>
 {%- endfor %}
+</ul>
 {%- endif %}
 
