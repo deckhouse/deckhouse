@@ -16,7 +16,7 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        A certificate in Secret `{{$labels.namespace}}/{{$labels.name}}` has expired.
+        A certificate in Secret `{{$labels.secret_namespace}}/{{$labels.secret_name}}` has expired.
 
         Ways to resolve:
 
@@ -25,13 +25,13 @@ alerts:
           1. Retrieve the certificate name from the Secret:
 
              ```bash
-             cert=$(kubectl get secret -n {{$labels.namespace}} {{$labels.name}} -o 'jsonpath={.metadata.annotations.cert-manager\.io/certificate-name}')
+             cert=$(kubectl get secret -n {{$labels.secret_namespace}} {{$labels.secret_name}} -o 'jsonpath={.metadata.annotations.cert-manager\.io/certificate-name}')
              ```
 
           2. Check the certificate status and investigate why it hasn't been updated:
 
              ```bash
-             kubectl describe cert -m {{$labels.namespace}} "$cert"
+             kubectl describe cert -m {{$labels.secret_namespace}} "$cert"
              ```
       summary: |
         Certificate has expired.
@@ -43,7 +43,7 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        A certificate in Secret `{{$labels.namespace}}/{{$labels.name}}` will expire in less than two weeks.
+        A certificate in Secret `{{$labels.secret_namespace}}/{{$labels.secret_name}}` will expire in less than two weeks.
 
         Ways to resolve:
 
@@ -52,13 +52,13 @@ alerts:
           1. Retrieve the certificate name from the Secret:
 
              ```bash
-             cert=$(kubectl get secret -n {{$labels.namespace}} {{$labels.name}} -o 'jsonpath={.metadata.annotations.cert-manager\.io/certificate-name}')
+             cert=$(kubectl get secret -n {{$labels.secret_namespace}} {{$labels.secret_name}} -o 'jsonpath={.metadata.annotations.cert-manager\.io/certificate-name}')
              ```
 
           2. Check the certificate status and investigate why it hasn't been updated:
 
              ```bash
-             kubectl describe cert -n {{$labels.namespace}} "$cert"
+             kubectl describe cert -n {{$labels.secret_namespace}} "$cert"
              ```
       summary: |
         Certificate is expiring soon.
@@ -4339,6 +4339,19 @@ alerts:
         A LoadBalancer has not been created.
       severity: "4"
       markupFormat: default
+    - name: LokiRetentionPerionViolation
+      sourceFile: modules/462-loki/monitoring/prometheus-rules/alerts.tpl
+      moduleUrl: 462-loki
+      module: loki
+      edition: ce
+      description: |-
+        Not enough disk space to retain logs for 168 hours. Current effective retention period is {{ $value }} hours.
+
+        You need either decrease expected `retentionPeriodHours` or increase resize Loki PersistentVolumeClaim
+      summary: |
+        Not enough disk space to retain logs for 168 hours
+      severity: "4"
+      markupFormat: markdown
     - name: MigrationRequiredFromRBDInTreeProvisionerToCSIDriver
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/migration-alerts.tpl
       moduleUrl: 340-monitoring-deckhouse
@@ -5690,6 +5703,7 @@ modules-having-alerts:
     - istio
     - kube-dns
     - log-shipper
+    - loki
     - metallb
     - monitoring-applications
     - monitoring-custom

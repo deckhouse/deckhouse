@@ -1,10 +1,10 @@
 {
   "sources": {
-    "cluster_logging_config/test-source:tests-whispers": {
+    "cluster_logging_config/test-source": {
       "type": "kubernetes_logs",
       "extra_label_selector": "app=test,log-shipper.deckhouse.io/exclude notin (true),tier in (cache)",
-      "extra_field_selector": "metadata.namespace=tests-whispers,metadata.name!=$VECTOR_SELF_POD_NAME",
-      "extra_namespace_label_selector": "log-shipper.deckhouse.io/exclude notin (true)",
+      "extra_field_selector": "metadata.name!=$VECTOR_SELF_POD_NAME",
+      "extra_namespace_label_selector": "kubernetes.io/metadata.name in (tests-whispers),log-shipper.deckhouse.io/exclude notin (true)",
       "annotation_fields": {
         "container_image": "image",
         "container_name": "container",
@@ -58,7 +58,7 @@
     "transform/source/test-source/00_owner_ref": {
       "drop_on_abort": false,
       "inputs": [
-        "cluster_logging_config/test-source:tests-whispers"
+        "cluster_logging_config/test-source"
       ],
       "source": "if exists(.pod_owner) {\n    .pod_owner = string!(.pod_owner)\n\n    if starts_with(.pod_owner, \"ReplicaSet/\") {\n        hash = \"-\"\n        if exists(.pod_labels.\"pod-template-hash\") {\n            hash = hash + string!(.pod_labels.\"pod-template-hash\")\n        }\n\n        if hash != \"-\" \u0026\u0026 ends_with(.pod_owner, hash) {\n            .pod_owner = replace(.pod_owner, \"ReplicaSet/\", \"Deployment/\")\n            .pod_owner = replace(.pod_owner, hash, \"\")\n        }\n    }\n\n    if starts_with(.pod_owner, \"Job/\") {\n        if match(.pod_owner, r'-[0-9]{8,11}$') {\n            .pod_owner = replace(.pod_owner, \"Job/\", \"CronJob/\")\n            .pod_owner = replace(.pod_owner, r'-[0-9]{8,11}$', \"\")\n        }\n    }\n}",
       "type": "remap"
