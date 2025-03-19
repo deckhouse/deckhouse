@@ -18,6 +18,7 @@ package deckhouseversion
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 	"sync"
@@ -58,11 +59,11 @@ func Instance() *Extender {
 		if val := os.Getenv("TEST_EXTENDER_DECKHOUSE_VERSION"); val != "" {
 			parsed, err := semver.NewVersion(val)
 			if err == nil {
-				instance.logger.Debugf("setting deckhouse version to %s from env", parsed.String())
+				instance.logger.Debug("setting deckhouse version from env", slog.String("version", parsed.String()))
 				instance.versionMatcher.ChangeBaseVersion(parsed)
 				return
 			}
-			instance.logger.Warnf("cannot parse TEST_DECKHOUSE_VERSION env variable value %q: %v", val, err)
+			instance.logger.Warn("cannot parse TEST_DECKHOUSE_VERSION env variable value", slog.String("value", val), log.Err(err))
 		}
 		if raw, err := os.ReadFile("/deckhouse/version"); err == nil {
 			if strings.TrimSpace(string(raw)) == "dev" {
@@ -70,7 +71,7 @@ func Instance() *Extender {
 				return
 			}
 			if parsed, err := semver.NewVersion(strings.TrimSpace(string(raw))); err == nil {
-				instance.logger.Debugf("setting deckhouse version to %s from file", parsed.String())
+				instance.logger.Debug("setting deckhouse version from file", slog.String("version", parsed.String()))
 				instance.versionMatcher.ChangeBaseVersion(parsed)
 			} else {
 				instance.logger.Warn("failed to parse deckhouse version")
@@ -86,15 +87,15 @@ func Instance() *Extender {
 
 func (e *Extender) AddConstraint(name, rawConstraint string) error {
 	if err := e.versionMatcher.AddConstraint(name, rawConstraint); err != nil {
-		e.logger.Debugf("adding installed constraint for the '%s' module failed", name)
+		e.logger.Debug("adding installed constraint for module failed", slog.String("name", name))
 		return err
 	}
-	e.logger.Debugf("installed constraint for the '%s' module is added", name)
+	e.logger.Debug("installed constraint for module is added", slog.String("name", name))
 	return nil
 }
 
 func (e *Extender) DeleteConstraint(name string) {
-	e.logger.Debugf("deleting installed constraint for the '%s' module", name)
+	e.logger.Debug("deleting installed constraint for module", slog.String("name", name))
 	e.versionMatcher.DeleteConstraint(name)
 }
 
@@ -117,23 +118,23 @@ func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
 		return nil, &scherror.PermanentError{Err: fmt.Errorf("	parse deckhouse version failed: %s", e.err)}
 	}
 	if err := e.versionMatcher.Validate(name); err != nil {
-		e.logger.Debugf("requirements of the '%s' module are not satisfied: current deckhouse version is not suitable: %s", name, err.Error())
+		e.logger.Debug("requirements of module are not satisfied: current deckhouse version is not suitable", slog.String("name", name), log.Err(err))
 		return ptr.To(false), fmt.Errorf("requirements are not satisfied: current deckhouse version is not suitable: %s", err.Error())
 	}
-	e.logger.Debugf("requirements of the '%s' module are satisfied", name)
+	e.logger.Debug("requirements of module are satisfied", slog.String("name", name))
 	return ptr.To(true), nil
 }
 
 func (e *Extender) ValidateBaseVersion(baseVersion string) (string, error) {
 	if name, err := e.versionMatcher.ValidateBaseVersion(baseVersion); err != nil {
 		if name != "" {
-			e.logger.Debugf("requirements of the '%s' module are not satisfied: %s deckhouse version is not suitable: %s", name, baseVersion, err.Error())
+			e.logger.Debug("requirements of module are not satisfied; deckhouse version is not suitable", slog.String("name", name), slog.String("version", baseVersion), log.Err(err))
 			return name, fmt.Errorf("requirements of the '%s' module are not satisfied: %s deckhouse version is not suitable: %s", name, baseVersion, err.Error())
 		}
-		e.logger.Debugf("modules requirements cannot be checked: deckhouse version is invalid: %s", err.Error())
+		e.logger.Debug("modules requirements cannot be checked: deckhouse version is invalid", log.Err(err))
 		return "", fmt.Errorf("modules requirements cannot be checked: deckhouse version is invalid: %s", err.Error())
 	}
-	e.logger.Debugf("modules requirements for '%s' deckhouse version are satisfied", baseVersion)
+	e.logger.Debug("modules requirements for deckhouse version are satisfied", slog.String("version", baseVersion))
 	return "", nil
 }
 
@@ -142,9 +143,9 @@ func (e *Extender) ValidateRelease(releaseName, rawConstraint string) error {
 		return fmt.Errorf("parse deckhouse version failed: %s", e.err)
 	}
 	if err := e.versionMatcher.ValidateConstraint(rawConstraint); err != nil {
-		e.logger.Debugf("requirements of the '%s' module release are not satisfied: current deckhouse version is not suitable: %s", releaseName, err.Error())
+		e.logger.Debug("requirements of module release are not satisfied: current deckhouse version is not suitable", slog.String("name", releaseName), log.Err(err))
 		return fmt.Errorf("requirements are not satisfied: current deckhouse version is not suitable: %s", err.Error())
 	}
-	e.logger.Debugf("requirements of the '%s' module release are satisfied", releaseName)
+	e.logger.Debug("requirements of module release are satisfied", slog.String("name", releaseName))
 	return nil
 }

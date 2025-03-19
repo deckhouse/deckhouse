@@ -8,6 +8,7 @@ package ee
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
@@ -16,6 +17,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/http"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 var (
@@ -69,12 +71,12 @@ func monitoringAPIHosts(input *go_hook.HookInput, dc dependency.Container) error
 
 		bodyBytes, statusCode, err := lib.HTTPGet(dc.GetHTTPClient(options...), fmt.Sprintf("https://%s/api", apiHost), apiJWT)
 		if err != nil {
-			input.Logger.Warnf("cannot fetch api host %s for IstioMulticluster %s, error: %s", apiHost, name, err.Error())
+			input.Logger.Warn("cannot fetch api host for IstioMulticluster", slog.String("api_host", apiHost), slog.String("name", name), log.Err(err))
 			setAPIHostMetric(input.MetricsCollector, name, apiHost, 1)
 			continue
 		}
 		if statusCode != 200 {
-			input.Logger.Warnf("cannot fetch api host %s for IstioMulticluster %s (HTTP code %d)", apiHost, name, statusCode)
+			input.Logger.Warn("cannot fetch api host for IstioMulticluster", slog.String("api_host", apiHost), slog.String("name", name), slog.Int("http_code", statusCode))
 			setAPIHostMetric(input.MetricsCollector, name, apiHost, 1)
 			continue
 		}
@@ -82,13 +84,13 @@ func monitoringAPIHosts(input *go_hook.HookInput, dc dependency.Container) error
 		var response apiResponse
 		err = json.Unmarshal(bodyBytes, &response)
 		if err != nil {
-			input.Logger.Warnf("cannot unmarshal api host %s response for IstioMulticluster %s, error: %s", apiHost, name, err.Error())
+			input.Logger.Warn("cannot unmarshal api host response for IstioMulticluster", slog.String("api_host", apiHost), slog.String("name", name), log.Err(err))
 			setAPIHostMetric(input.MetricsCollector, name, apiHost, 1)
 			continue
 		}
 
 		if response.Kind != "APIVersions" {
-			input.Logger.Warnf("got wrong response format from api host %s for IstioMulticluster %s", apiHost, name)
+			input.Logger.Warn("got wrong response format from api host for IstioMulticluster", slog.String("api_host", apiHost), slog.String("name", name))
 			setAPIHostMetric(input.MetricsCollector, name, apiHost, 1)
 			continue
 		}

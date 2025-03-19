@@ -19,6 +19,7 @@ import (
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"path/filepath"
 	"slices"
 	"time"
@@ -149,11 +150,21 @@ func (r *reconciler) releaseExists(ctx context.Context, sourceName, moduleName, 
 		return false, fmt.Errorf("list module releases: %w", err)
 	}
 	if len(moduleReleases.Items) == 0 {
-		r.logger.Debugf("no module release with '%s' checksum for the '%s' module of the '%s' source", checksum, moduleName, sourceName)
+		r.logger.Debug(
+			"no module release with checksum for the module of source",
+			slog.String("checksum", checksum),
+			slog.String("name", moduleName),
+			slog.String("source_name", sourceName),
+		)
 		return false, nil
 	}
 
-	r.logger.Debugf("the module release with '%s' checksum exists for the '%s' module of the '%s' source", checksum, moduleName, sourceName)
+	r.logger.Debug(
+		"module release with checksum exists for the module of source",
+		slog.String("checksum", checksum),
+		slog.String("name", moduleName),
+		slog.String("source_name", sourceName),
+	)
 	return true, nil
 }
 
@@ -254,7 +265,7 @@ func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, r
 		if !apierrors.IsNotFound(err) {
 			return nil, fmt.Errorf("get the '%s' module: %w", moduleName, err)
 		}
-		r.logger.Debugf("the '%s' module not installed", moduleName)
+		r.logger.Debug("module not installed", slog.String("name", moduleName))
 		module = &v1alpha1.Module{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       v1alpha1.ModuleGVK.Kind,
@@ -267,7 +278,7 @@ func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, r
 				AvailableSources: []string{sourceName},
 			},
 		}
-		r.logger.Debugf("the '%s' module not found, create it", moduleName)
+		r.logger.Debug("module not found, create it", slog.String("name", moduleName))
 		if err = r.client.Create(ctx, module); err != nil {
 			return nil, fmt.Errorf("create the '%s' module: %w", moduleName, err)
 		}

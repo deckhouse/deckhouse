@@ -43,9 +43,9 @@ spec:
                     - rule: self == oldSelf
                       message: Value is immutable.
                   description: |
-                    The storage class's reclaim policy. Might be:
-                    - Delete (If the Persistent Volume Claim is deleted, deletes the Persistent Volume and its associated storage as well)
-                    - Retain (If the Persistent Volume Claim is deleted, remains the Persistent Volume and its associated storage)
+                    The storage class's reclaim policy:
+                    - `Delete` — if the Persistent Volume Claim is deleted, deletes the Persistent Volume and its associated storage as well;
+                    - `Retain` — if the Persistent Volume Claim is deleted, remains the Persistent Volume and its associated storage.
                   enum:
                     - Delete
                     - Retain
@@ -55,9 +55,9 @@ spec:
                     - rule: self == oldSelf
                       message: Value is immutable.
                   description: |
-                    The Storage class's binding mode. Might be:
-                    - Immediate (creates a PV as a PVC requested)
-                    - WaitForFirstConsumer (creates a PV after a Pod consumes PVC)
+                    The Storage class's binding mode:
+                    - `Immediate` — creates a PV as a PVC requested;
+                    - `WaitForFirstConsumer` — creates a PV after a Pod consumes PVC.
                   enum:
                     - Immediate
                     - WaitForFirstConsumer
@@ -71,7 +71,7 @@ spec:
                   x-kubernetes-validations:
                     - rule: |
                         (self.type == "Thin" && !has(self.thick)) || self.type != "Thin"
-                      message: Field spec.lvm.thick is forbidden for Thin type.
+                      message: Field spec.lvm.thick is forbidden for thin type.
                     - rule: |
                         (!has(self.thick) || !has(self.thick.contiguous) || (has(self.thick.contiguous) && self.thick.contiguous == oldSelf.thick.contiguous))
                       message: "Field 'contiguous' is immutable and cannot be added if not specified at creation."
@@ -141,9 +141,7 @@ spec:
                     - rule: self == oldSelf
                       message: Value is immutable.
                   description: |
-                    The storage class's file system type. Might be:
-                    - ext4 (default)
-                    - xfs
+                    The storage class's file system type.
                   enum:
                     - ext4
                     - xfs
@@ -155,9 +153,9 @@ spec:
                 phase:
                   type: string
                   description: |
-                    The Storage class current state. Might be: 
-                    - Failed (if the controller received incorrect resource configuration or some errors occurred during the operation)
-                    - Create (if everything went fine)
+                    The Storage class current state:
+                    - `Failed` — if the controller received incorrect resource configuration or some errors occurred during the operation;
+                    - `Create` — if everything went fine.
                   enum:
                     - Failed
                     - Created
@@ -176,4 +174,4 @@ spec:
         - jsonPath: .metadata.creationTimestamp
           name: Age
           type: date
-          description: The age of this resource
+          description: The age of this resource.

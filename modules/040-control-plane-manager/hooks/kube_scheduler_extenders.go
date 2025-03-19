@@ -28,6 +28,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const configPath = `controlPlaneManager.internal.kubeSchedulerExtenders`
@@ -70,7 +71,7 @@ func handleExtenders(input *go_hook.HookInput) error {
 		for _, config := range snapshot.([]KubeSchedulerWebhook) {
 			err := verifyCAChain(config.ClientConfig.CABundle)
 			if err != nil {
-				input.Logger.Warnf("failed to verify CA chain: %v, use default kubernetes CA", err)
+				input.Logger.Warn("failed to verify CA chain, use default kubernetes CA", log.Err(err))
 				config.ClientConfig.CABundle = kubernetesCABase64
 			}
 

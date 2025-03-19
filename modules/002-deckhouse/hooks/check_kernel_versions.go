@@ -24,6 +24,7 @@ package hooks
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -126,10 +127,10 @@ func handleNodes(input *go_hook.HookInput) error {
 
 	enabledModules := set.NewFromValues(input.Values, "global.enabledModules")
 
-	for _, constrant := range constraints {
+	for _, constraint := range constraints {
 		// check modules in use
 		check := true
-		for _, m := range constrant.ModulesListInUse {
+		for _, m := range constraint.ModulesListInUse {
 			if !enabledModules.Has(m) {
 				check = false
 				break
@@ -139,7 +140,7 @@ func handleNodes(input *go_hook.HookInput) error {
 			continue
 		}
 
-		c, err := semver.NewConstraint(constrant.KernelVersionConstraint)
+		c, err := semver.NewConstraint(constraint.KernelVersionConstraint)
 		if err != nil {
 			return err
 		}
@@ -148,14 +149,20 @@ func handleNodes(input *go_hook.HookInput) error {
 			node := n.(nodeKernelVersion)
 
 			if !c.Check(node.SemverVersion) {
-				modulesListInUse := strings.Join(constrant.ModulesListInUse, ",")
+				modulesListInUse := strings.Join(constraint.ModulesListInUse, ",")
 				input.MetricsCollector.Set(nodeKernelCheckMetricName, 1, map[string]string{
 					"node":            node.Name,
 					"kernel_version":  node.KernelVersion,
 					"affected_module": modulesListInUse,
-					"constraint":      constrant.KernelVersionConstraint,
+					"constraint":      constraint.KernelVersionConstraint,
 				}, metrics.WithGroup(nodeKernelCheckMetricsGroup))
-				input.Logger.Debugf("kernel %s on node %s does not satisfy kernel constraint %s for modules [%s]", node.KernelVersion, node.Name, constrant.KernelVersionConstraint, modulesListInUse)
+				input.Logger.Debug(
+					"kernel on node does not satisfy kernel constraint for modules",
+					slog.String("kernel_version", node.KernelVersion),
+					slog.String("node", node.Name),
+					slog.String("constraint", constraint.KernelVersionConstraint),
+					slog.String("modules", modulesListInUse),
+				)
 				hasAffectedNodes = true
 			}
 		}

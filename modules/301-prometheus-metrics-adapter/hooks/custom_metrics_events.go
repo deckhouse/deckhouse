@@ -16,6 +16,7 @@ package hooks
 
 import (
 	"fmt"
+	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -94,7 +95,7 @@ func addQueriesToStateFromSnapshots(state *internal.MetricsQueriesState, input *
 		metric := m.(internal.CustomMetric)
 
 		if _, ok := internal.AllMetricsTypes[metricType]; !ok {
-			input.Logger.Warnf("Incorrect custom metric type %s. Skip", metric.Type)
+			input.Logger.Warn("Incorrect custom metric type. Skip", slog.String("type", metric.Type))
 			continue
 		}
 

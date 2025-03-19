@@ -15,19 +15,19 @@ spec:
   scope: Cluster
   versions:
   - additionalPrinterColumns:
-    - description: The size of the device
+    - description: The size of the device.
       jsonPath: .status.size
       name: Size
       type: string
-    - description: The current lifecycle phase of the device
+    - description: The current lifecycle phase of the device.
       jsonPath: .status.phase
       name: Phase
       type: string
-    - description: The age of the device
+    - description: The age of the device.
       jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
-    - description: Overall status of the device
+    - description: Overall status of the device.
       jsonPath: .status.aggregatedStatus
       name: AggregatedStatus
       type: string
@@ -41,47 +41,39 @@ spec:
           apiVersion:
             description: |-
               APIVersion defines the versioned schema of this representation of an object.
-              Servers should convert recognized schemas to the latest internal value, and
-              may reject unrecognized values.
+              Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values.
               More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
             description: |-
               Kind is a string value representing the REST resource this object represents.
               Servers may infer this from the endpoint the client submits requests to.
-              Cannot be updated.
-              In CamelCase.
+              Cannot be updated. In CamelCase.
               More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
           status:
-            description: Status represents the current observed state of the SCSI
+            description: Status represents the current observed state of the SCSI.
               device.
             properties:
               aggregatedStatus:
-                description: AggregatedStatus represents the overall status of the
-                  device based on conditions.
+                description: AggregatedStatus represents the overall status of the device based on conditions.
                 type: string
               conditions:
-                description: Conditions represents the latest observed state of the
-                  device.
+                description: Conditions represents the latest observed state of the device.
                 items:
-                  description: Condition defines the observed state of a resource
-                    at a certain point in time.
+                  description: Condition defines the observed state of a resource at a certain point in time.
                   properties:
                     lastTransitionTime:
-                      description: LastTransitionTime is the last time the condition
-                        transitioned from one status to another.
+                      description: LastTransitionTime is the last time the condition transitioned from one status to another.
                       format: date-time
                       type: string
                     message:
-                      description: Message is a human-readable explanation containing
-                        details about the transition.
+                      description: Message is a human-readable explanation containing details about the transition.
                       type: string
                     reason:
-                      description: Reason is a brief machine-readable explanation
-                        for the condition's last transition.
+                      description: Reason is a brief machine-readable explanation for the condition's last transition.
                       type: string
                     status:
                       description: Status of the condition, one of True, False, Unknown.
@@ -95,12 +87,10 @@ spec:
                   type: object
                 type: array
               message:
-                description: Message provides additional details about the current
-                  state of the device, if available.
+                description: Message provides additional details about the current state of the device, if available.
                 type: string
               nodeName:
-                description: NodeName is the name of the Kubernetes node where the
-                  SCSI device is located.
+                description: NodeName is the name of the Kubernetes node where the SCSI device is located.
                 type: string
               path:
                 description: Path is the device's filesystem path.
@@ -109,19 +99,16 @@ spec:
                 description: Phase indicates the current lifecycle phase of the device.
                 type: string
               pvName:
-                description: PersistentVolumeName is the name of the PersistentVolume
-                  associated with the SCSI device.
+                description: PersistentVolumeName is the name of the PersistentVolume associated with the SCSI device.
                 type: string
               scsiTargets:
                 description: SCSITargets represents multiple SCSI targets associated
                   with the device.
                 items:
-                  description: SCSITargetInfo represents a single SCSI target associated
-                    with the device.
+                  description: SCSITargetInfo represents a single SCSI target associated with the device.
                   properties:
                     lastUpdated:
-                      description: LastUpdated is the timestamp when the target information
-                        was last refreshed.
+                      description: LastUpdated is the timestamp when the target information was last refreshed.
                       format: date-time
                       type: string
                     lun:
@@ -139,8 +126,7 @@ spec:
                       pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                       x-kubernetes-int-or-string: true
                     status:
-                      description: Status is the current state of the target (e.g.,
-                        Bound, Available, Failed).
+                      description: Status is the current state of the target (e.g., Bound, Available, Failed).
                       type: string
                   required:
                   - lastUpdated

@@ -30,13 +30,14 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func (r *deckhouseReleaseReconciler) cleanupDeckhouseReleaseLoop(ctx context.Context) {
 	wait.UntilWithContext(ctx, func(ctx context.Context) {
 		err := r.cleanupDeckhouseRelease(ctx)
 		if err != nil {
-			r.logger.Errorf("check Deckhouse release: %s", err)
+			r.logger.Error("check Deckhouse release", log.Err(err))
 		}
 	}, 24*time.Hour)
 }

@@ -1,7 +1,7 @@
 # Patches
 
+## 001-endpointslices.patch
 
-### 001-endpointslices
 EndpointSlices support for ServiceMonitor in the prometheus-operator is disabled by default. 
 We enable it by checking EndpointSlice API in a Kubernetes cluster. It's enabled from version 1.21 so it should work always.
 Also add Alertmanager support via EndpointSlice.
@@ -9,8 +9,8 @@ Upstream has 2 issues, why it's not enabled by default:
 - https://github.com/prometheus-operator/prometheus-operator/pull/5291
 - https://github.com/prometheus-operator/prometheus-operator/issues/3862#issuecomment-1068260430
 
+## 002-endpointslices_fallback.patch
 
-### 002-endpointslices_fallback
 Client ServiceMonitors could have labels based on `__meta_kubernetes_endpoints_` metric.
 So, we add labels mapping from `__meta_kubernetes_endpointslice_XXX` to `__meta_kubernetes_endpoints_XXX` and fire an alert
 for those ServiceMonitors
@@ -29,11 +29,11 @@ __meta_kubernetes_endpoint_address_target_kind - __meta_kubernetes_endpointslice
 __meta_kubernetes_endpoint_address_target_name - __meta_kubernetes_endpointslice_address_target_name
 ```
 
-### 003_alertmanager_tls_assets
+## 003-alertmanager_tls_assets.patch
+
 Prometheus operator does not save TLS assets for alertmanager Webhook and Email recievers in the secret which mounted in alert manager pod. This patch fix it.
 
-
-### 004_fix_cve
+## 004-fix_cve.patch
 
 Fixes several CVEs.
 

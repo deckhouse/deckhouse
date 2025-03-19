@@ -119,7 +119,8 @@ func (h *HookForUpdatePipeline) BeforeAction(runner terraform.RunnerInterface) (
 		return false, fmt.Errorf("failed to remove control plane role from node '%s': %v", h.nodeToConverge, err)
 	}
 
-	outputs, err := terraform.GetMasterNodeResult(runner)
+	// TODO(dhctl-for-commander-cancels): pass ctx
+	outputs, err := terraform.GetMasterNodeResult(context.TODO(), runner)
 	if err != nil {
 		log.ErrorF("Get master node pipeline outputs: %v", err)
 	}
@@ -134,7 +135,8 @@ func (h *HookForUpdatePipeline) AfterAction(runner terraform.RunnerInterface) er
 		return nil
 	}
 
-	outputs, err := terraform.GetMasterNodeResult(runner)
+	// TODO(dhctl-for-commander-cancels): pass ctx
+	outputs, err := terraform.GetMasterNodeResult(context.TODO(), runner)
 	if err != nil {
 		return fmt.Errorf("failed to get master node pipeline outputs: %v", err)
 	}

@@ -1,6 +1,6 @@
 # Patches
 
-## Update crypto/net packages
+## 001-go-mod.patch
 
     Fix CVEs in crypto/net packages.
     ```sh

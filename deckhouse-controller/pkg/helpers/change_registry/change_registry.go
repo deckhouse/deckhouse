@@ -22,6 +22,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -113,9 +114,9 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 		secretYaml, _ := yaml.Marshal(deckhouseSecret)
 		deploymentYaml, _ := yaml.Marshal(deckhouseDeploy)
 		logEntry.Info("------------------------------")
-		logEntry.Infof("New Secret will be applied:\n%s\n", secretYaml)
+		logEntry.Info(fmt.Sprintf("New Secret will be applied:\n%s\n", secretYaml))
 		logEntry.Info("------------------------------")
-		logEntry.Infof("New Deployment will be applied:\n%s\n", deploymentYaml)
+		logEntry.Info(fmt.Sprintf("New Deployment will be applied:\n%s\n", deploymentYaml))
 	} else {
 		logEntry.Info("Updating deckhouse image pull secret...")
 		if err := updateImagePullSecret(ctx, kubeCl, deckhouseSecret); err != nil {
@@ -413,7 +414,7 @@ func authHeader(headers http.Header) bool {
 			return true
 		}
 	}
-	log.Infof("WWW-Authenticate header has an incorrect value: %s", authHeader)
+	log.Info("WWW-Authenticate header has an incorrect value", slog.String("value", authHeader))
 	return false
 }
 

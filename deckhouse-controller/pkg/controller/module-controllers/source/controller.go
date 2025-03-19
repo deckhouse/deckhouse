@@ -162,20 +162,20 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// wait for init
 	r.init.Wait()
 
-	r.logger.Debugf("reconciling the '%s' module source", req.Name)
+	r.logger.Debug("reconciling module source", slog.String("name", req.Name))
 	moduleSource := new(v1alpha1.ModuleSource)
 	if err := r.client.Get(ctx, req.NamespacedName, moduleSource); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.logger.Warnf("the '%s' module source not found", req.Name)
+			r.logger.Warn("module source not found", slog.String("name", req.Name))
 			return ctrl.Result{}, nil
 		}
-		r.logger.Errorf("failed to get the '%s' module source: %v", req.Name, err)
+		r.logger.Error("failed to get module source", slog.String("name", req.Name), log.Err(err))
 		return ctrl.Result{Requeue: true}, nil
 	}
 
 	// handle delete event
 	if !moduleSource.DeletionTimestamp.IsZero() {
-		r.logger.Debugf("deleting the '%s' module source", req.Name)
+		r.logger.Debug("deleting module source", slog.String("name", req.Name))
 		return r.deleteModuleSource(ctx, moduleSource)
 	}
 
@@ -190,7 +190,7 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 	// create a registry client
 	registryClient, err := r.dependencyContainer.GetRegistryClient(source.Spec.Registry.Repo, opts...)
 	if err != nil {
-		r.logger.Errorf("failed to get registry client for the '%s' module source: %v", source.Name, err)
+		r.logger.Error("failed to get registry client for the module source", slog.String("source_name", source.Name), log.Err(err))
 		if uerr := r.updateModuleSourceStatusMessage(ctx, source, err.Error()); uerr != nil {
 			return ctrl.Result{Requeue: true}, nil
 		}
@@ -200,7 +200,7 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 
 	// sync registry settings
 	if err = r.syncRegistrySettings(ctx, source); err != nil && !errors.Is(err, ErrSettingsNotChanged) {
-		r.logger.Errorf("failed to sync registry settings for the '%s' module source: %v", source.Name, err)
+		r.logger.Error("failed to sync registry settings for module source", slog.String("source_name", source.Name), log.Err(err))
 		if uerr := r.updateModuleSourceStatusMessage(ctx, source, err.Error()); uerr != nil {
 			return ctrl.Result{Requeue: true}, nil
 		}
@@ -209,19 +209,19 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 	if err == nil {
 		// new registry settings checksum should be applied to module source
 		if err = r.client.Update(ctx, source); err != nil {
-			r.logger.Errorf("failed to update the '%s' module source status: %v", source.Name, err)
+			r.logger.Error("failed to update module source status", slog.String("source_name", source.Name), log.Err(err))
 			return ctrl.Result{Requeue: true}, nil
 		}
 		// requeue moduleSource after modifying annotation
-		r.logger.Debugf("the '%s' module source will be requeued", source.Name)
+		r.logger.Debug("module source will be requeued", slog.String("source_name", source.Name))
 		return ctrl.Result{Requeue: true}, nil
 	}
 
 	// list available modules(tags) from the registry
-	r.logger.Debugf("fetch modules from the '%s' module source", source.Name)
+	r.logger.Debug("fetch modules from the module source", slog.String("source_name", source.Name))
 	pulledModules, err := registryClient.ListTags(ctx)
 	if err != nil {
-		r.logger.Errorf("failed to list tags for the '%s' module source: %v", source.Name, err)
+		r.logger.Error("failed to list tags for the module source", slog.String("source_name", source.Name), log.Err(err))
 		if uerr := r.updateModuleSourceStatusMessage(ctx, source, err.Error()); uerr != nil {
 			return ctrl.Result{Requeue: true}, nil
 		}
@@ -241,17 +241,17 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 	for _, availableModule := range source.Status.AvailableModules {
 		if !namesSet[availableModule.Name] {
 			if err = r.cleanSourceInModule(ctx, source.Name, availableModule.Name); err != nil {
-				r.logger.Errorf("failed to clean the module from the '%s' module source: %v", availableModule.Name, err)
+				r.logger.Error("failed to clean the module from the module source", slog.String("name", availableModule.Name), log.Err(err))
 				return ctrl.Result{Requeue: true}, nil
 			}
 		}
 	}
 
 	if err = r.processModules(ctx, source, opts, pulledModules); err != nil {
-		r.logger.Errorf("failed to process modules for the '%s' module source: %v", source.Name, err)
+		r.logger.Error("failed to process modules for the module source", slog.String("source_name", source.Name), log.Err(err))
 		return ctrl.Result{Requeue: true}, nil
 	}
-	r.logger.Debugf("the '%s' module source reconciled", source.Name)
+	r.logger.Debug("module source reconciled", slog.String("source_name", source.Name))
 
 	// everything is ok, check source on the other iterations
 	return ctrl.Result{RequeueAfter: defaultScanInterval}, nil
@@ -316,13 +316,13 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 
 		if module.Properties.Source != source.Name {
 			availableModules = append(availableModules, availableModule)
-			r.logger.Debugf("the '%s' source not active source for the '%s' module, skip it", source.Name, moduleName)
+			r.logger.Debug("source not active, skip it", slog.String("source_name", source.Name), slog.String("name", moduleName))
 			continue
 		}
 
 		if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
 			availableModules = append(availableModules, availableModule)
-			r.logger.Debugf("skip the '%s' disabled module", moduleName)
+			r.logger.Debug("skip disabled module", slog.String("name", moduleName))
 			continue
 		}
 
@@ -339,10 +339,15 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		}
 
 		// download module metadata from the specified release channel
-		r.logger.Debugf("download meta from the '%s' release channel for the '%s' module for the '%s' module source", policy.Spec.ReleaseChannel, moduleName, source.Name)
+		r.logger.Debug(
+			"download meta from release channel for module from module source",
+			slog.String("release channel", policy.Spec.ReleaseChannel),
+			slog.String("name", moduleName),
+			slog.String("source_name", source.Name),
+		)
 		meta, err := md.DownloadMetadataFromReleaseChannel(moduleName, policy.Spec.ReleaseChannel, cachedChecksum)
 		if err != nil {
-			r.logger.Warnf("failed to downloaded the '%s' module: %v", moduleName, err)
+			r.logger.Warn("failed to download module", slog.String("name", moduleName), log.Err(err))
 			availableModule.PullError = err.Error()
 			availableModules = append(availableModules, availableModule)
 			pullErrorsExist = true
@@ -374,7 +379,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 				return fmt.Errorf("update the '%s' module: %w", moduleName, err)
 			}
 
-			r.logger.Debugf("ensure module release for the '%s' module for the '%s' module source", moduleName, source.Name)
+			r.logger.Debug("ensure module release for module for the module source", slog.String("name", moduleName), slog.String("source_name", source.Name))
 			if err = r.ensureModuleRelease(ctx, source.GetUID(), source.Name, moduleName, policy.Name, meta); err != nil {
 				return fmt.Errorf("ensure module release for the '%s' module: %w", moduleName, err)
 			}
@@ -389,6 +394,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		source.Status.SyncTime = metav1.NewTime(r.dependencyContainer.GetClock().Now().UTC())
 		source.Status.AvailableModules = availableModules
 		source.Status.ModulesCount = len(availableModules)
+		source.Status.Message = ""
 		if pullErrorsExist {
 			source.Status.Message = v1alpha1.ModuleSourceMessagePullErrors
 		}
@@ -440,7 +446,7 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 					return true
 				})
 				if err != nil {
-					r.logger.Errorf("failed to update the '%s' module source status: %v", source.Name, err)
+					r.logger.Error("failed to update module source status", slog.String("name", source.Name), log.Err(err))
 					return ctrl.Result{}, err
 				}
 
@@ -450,8 +456,7 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 
 		controllerutil.RemoveFinalizer(source, v1alpha1.ModuleSourceFinalizerReleaseExists)
 		if err := r.client.Update(ctx, source); err != nil {
-			r.logger.Errorf("failed to update the '%s' module source: %v", source.Name, err)
-
+			r.logger.Error("failed to update module source", slog.String("name", source.Name), log.Err(err))
 			return ctrl.Result{}, err
 		}
 	}
@@ -460,8 +465,7 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 		if source.GetAnnotations()[v1alpha1.ModuleSourceAnnotationForceDelete] != "true" {
 			for _, module := range source.Status.AvailableModules {
 				if err := r.cleanSourceInModule(ctx, source.Name, module.Name); err != nil {
-					r.logger.Errorf("failed to clean source in the %q module during deleting the %q module source: %v", module.Name, source.Name, err)
-
+					r.logger.Error("failed to clean source in module during deletion of module source", slog.String("name", module.Name), slog.String("source_name", source.Name), log.Err(err))
 					return ctrl.Result{}, err
 				}
 			}
@@ -469,8 +473,7 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 
 		controllerutil.RemoveFinalizer(source, v1alpha1.ModuleSourceFinalizerModuleExists)
 		if err := r.client.Update(ctx, source); err != nil {
-			r.logger.Errorf("failed to update the '%s' module source: %v", source.Name, err)
-
+			r.logger.Error("failed to update module source", slog.String("source_name", source.Name), log.Err(err))
 			return ctrl.Result{}, err
 		}
 	}

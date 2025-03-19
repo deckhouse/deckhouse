@@ -218,12 +218,12 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(input *go_hook.HookInp
 			// and we don't need to create Crontab schedule
 			caOutdated, err := isOutdatedCA(cert.CA)
 			if err != nil {
-				input.Logger.Errorf(err.Error())
+				input.Logger.Error(err.Error())
 			}
 
 			certOutdated, err := isIrrelevantCert(cert.Cert, sans)
 			if err != nil {
-				input.Logger.Errorf(err.Error())
+				input.Logger.Error(err.Error())
 			}
 
 			// In case of errors, both these flags are false to avoid regeneration loop for the

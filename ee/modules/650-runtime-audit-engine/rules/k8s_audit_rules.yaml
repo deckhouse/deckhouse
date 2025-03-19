@@ -9,122 +9,23 @@
     - name: json
       version: 0.3.0
 
-# Like always_true/always_false, but works with k8s audit events
-- macro: k8s_audit_always_true
-  condition: (jevt.rawtime exists)
-
-- macro: k8s_audit_never_true
-  condition: (jevt.rawtime=0)
-
-# Generally only consider audit events once the response has completed
 - list: k8s_audit_stages
   items: ["ResponseComplete"]
 
-# Generally exclude users starting with "system:"
-- macro: non_system_user
-  condition: (not ka.user.name startswith "system:")
-
-- macro: non_deckhouse_service_account_user
-  condition: (not ka.user.name startswith "system:serviceaccount:d8-")
-
-# This macro selects the set of Audit Events used by the below rules.
 - macro: kevt
   condition: (jevt.value[/stage] in (k8s_audit_stages))
-
-- macro: kevt_started
-  condition: (jevt.value[/stage]=ResponseStarted)
 
 - macro: response_successful
   condition: (ka.response.code startswith 2)
 
-# Verbs
-- macro: kget
-  condition: ka.verb=get
-
 - macro: kcreate
   condition: ka.verb=create
-
-- macro: kmodify
-  condition: (ka.verb in (create,update,patch))
 
 - macro: kdelete
   condition: ka.verb=delete
 
-# Resources
-- macro: pod
-  condition: ka.target.resource=pods and not ka.target.subresource exists
-
-- macro: pod_subresource
-  condition: ka.target.resource=pods and ka.target.subresource exists
-
-- macro: deployment
-  condition: ka.target.resource=deployments
-
-- macro: service
-  condition: ka.target.resource=services
-
-- macro: configmap
-  condition: ka.target.resource=configmaps
-
-- macro: namespace
-  condition: ka.target.resource=namespaces
-
-- macro: serviceaccount
-  condition: ka.target.resource=serviceaccounts
-
-- macro: clusterrole
-  condition: ka.target.resource=clusterroles
-
-- macro: clusterrolebinding
-  condition: ka.target.resource=clusterrolebindings
-
-- macro: role
-  condition: ka.target.resource=roles
-
-- macro: secret
-  condition: ka.target.resource=secrets
-
 - macro: falcoauditrules
   condition: ka.target.resource=falcoauditrules
-
-# Endpoints
-- macro: health_endpoint
-  condition: ka.uri=/healthz
-
-- macro: live_endpoint
-  condition: ka.uri=/livez
-
-- macro: ready_endpoint
-  condition: ka.uri=/readyz
-
-# Rules
-
-# Corresponds to K8s CIS Benchmark, 1.1.1.
-- rule: Anonymous Request Allowed
-  desc: >
-    Detect any request made by the anonymous user that was allowed
-  condition: kevt and ka.user.name=system:anonymous and ka.auth.decision="allow" and not health_endpoint and not live_endpoint and not ready_endpoint
-  output: Request by anonymous user allowed (user=%ka.user.name verb=%ka.verb uri=%ka.uri reason=%ka.auth.reason))
-  priority: WARNING
-  source: k8s_audit
-  tags: [k8s]
-
-- rule: Attach/Exec Pod
-  desc: >
-    Detect any attempt to attach/exec to a pod
-  condition: kevt_started and pod_subresource and kcreate and ka.target.subresource in (exec,attach)
-  output: Attach/Exec to pod (user=%ka.user.name pod=%ka.target.name resource=%ka.target.resource ns=%ka.target.namespace action=%ka.target.subresource command=%ka.uri.param[command])
-  priority: NOTICE
-  source: k8s_audit
-  tags: [k8s]
-
-# The rules below this point are less discriminatory and generally
-# represent a stream of activity for a cluster.
-# - macro: consider_activity_events
-#   condition: (k8s_audit_always_true)
-
-# - macro: kactivity
-#   condition: (kevt and consider_activity_events)
 
 - rule: FalcoAuditRules Created
   desc: Detect any attempt to create a FalcoAuditRules.

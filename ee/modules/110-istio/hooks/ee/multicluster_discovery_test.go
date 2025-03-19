@@ -549,12 +549,12 @@ status: {}
 		It("Hook must execute successfully with proper warnings", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("cannot fetch public metadata endpoint https://public-internal-error/metadata/public/public.json for IstioMulticluster public-internal-error (HTTP Code 500)"))
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("cannot unmarshal public metadata endpoint https://public-bad-json/metadata/public/public.json for IstioMulticluster public-bad-json, error: unexpected end of JSON input"))
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("bad public metadata format in endpoint https://public-wrong-format/metadata/public/public.json for IstioMulticluster public-wrong-format"))
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("cannot fetch private metadata endpoint https://private-internal-error/metadata/private/multicluster.json for IstioMulticluster private-internal-error (HTTP Code 500)"))
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("cannot unmarshal private metadata endpoint https://private-bad-json/metadata/private/multicluster.json for IstioMulticluster private-bad-json, error: unexpected end of JSON input"))
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("bad private metadata format in endpoint https://private-wrong-format/metadata/private/multicluster.json for IstioMulticluster private-wrong-format"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"cannot fetch private metadata endpoint for IstioMulticluster\",\"endpoint\":\"https://private-internal-error/metadata/private/multicluster.json\",\"http_code\":500,\"name\":\"private-internal-error\""))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"bad private metadata format in endpoint for IstioMulticluster\",\"endpoint\":\"https://private-wrong-format/metadata/private/multicluster.json\",\"name\":\"private-wrong-format\""))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"cannot unmarshal public metadata endpoint for IstioMulticluster\",\"endpoint\":\"https://public-bad-json/metadata/public/public.json\",\"error\":\"unexpected end of JSON input\",\"name\":\"public-bad-json\""))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"cannot fetch public metadata endpoint for IstioMulticluster\",\"endpoint\":\"https://public-internal-error/metadata/public/public.json\",\"http_code\":500,\"name\":\"public-internal-error\""))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"bad public metadata format in endpoint for IstioMulticluster\",\"endpoint\":\"https://public-wrong-format/metadata/public/public.json\",\"name\":\"public-wrong-format\""))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"cannot unmarshal private metadata endpoint for IstioMulticluster\",\"endpoint\":\"https://private-bad-json/metadata/private/multicluster.json\",\"error\":\"unexpected end of JSON input\",\"name\":\"private-bad-json\""))
 
 			Expect(f.KubernetesGlobalResource("IstioMulticluster", "public-internal-error").Field("status").String()).To(MatchJSON("{}"))
 			Expect(f.KubernetesGlobalResource("IstioMulticluster", "public-bad-json").Field("status").String()).To(MatchJSON("{}"))

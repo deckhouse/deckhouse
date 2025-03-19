@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"log/slog"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -150,7 +152,7 @@ func calculateReplicasAndPatchMachineDeployment(
 
 		ng, ok := nodeGroups[md.NodeGroup]
 		if !ok {
-			input.Logger.Warnf("can't find NodeGroup %s to get min and max instances per zone", md.NodeGroup)
+			input.Logger.Warn("can't find NodeGroup to get min and max instances per zone", slog.String("name", md.NodeGroup))
 			continue
 		}
 

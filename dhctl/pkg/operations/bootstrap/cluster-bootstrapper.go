@@ -15,6 +15,7 @@
 package bootstrap
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -285,7 +286,8 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		err = log.Process("bootstrap", "Cloud infrastructure", func() error {
 			baseRunner := b.TerraformContext.GetBootstrapBaseInfraRunner(metaConfig, stateCache)
 
-			baseOutputs, err := terraform.ApplyPipeline(baseRunner, "Kubernetes cluster", terraform.GetBaseInfraResult)
+			// TODO(dhctl-for-commander-cancels): pass ctx
+			baseOutputs, err := terraform.ApplyPipeline(context.TODO(), baseRunner, "Kubernetes cluster", terraform.GetBaseInfraResult)
 			if err != nil {
 				return err
 			}
@@ -313,7 +315,8 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 				RunnerLogger:    log.GetDefaultLogger(),
 			})
 
-			masterOutputs, err := terraform.ApplyPipeline(masterRunner, masterNodeName, terraform.GetMasterNodeResult)
+			// TODO(dhctl-for-commander-cancels): pass ctx
+			masterOutputs, err := terraform.ApplyPipeline(context.TODO(), masterRunner, masterNodeName, terraform.GetMasterNodeResult)
 			if err != nil {
 				return err
 			}
@@ -416,7 +419,8 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return nil
 	}
 
-	kubeCl, err := kubernetes.ConnectToKubernetesAPI(b.NodeInterface)
+	// TODO(dhctl-for-commander-cancels): pass ctx
+	kubeCl, err := kubernetes.ConnectToKubernetesAPI(context.TODO(), b.NodeInterface)
 	if err != nil {
 		return err
 	}

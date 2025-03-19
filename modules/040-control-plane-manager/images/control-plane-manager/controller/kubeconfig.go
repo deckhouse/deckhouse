@@ -21,6 +21,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -290,10 +291,10 @@ func checkEtcdManifest() error {
 		etcdManifestPath = "testdata/etcd.yaml"
 	}
 
-	log.Infof("phase: check etcd manifest %s", etcdManifestPath)
+	log.Info("phase: check etcd manifest", slog.String("path", etcdManifestPath))
 
 	if _, err := os.Stat(etcdManifestPath); err != nil {
-		log.Warnf("etcd manifest %s absent", etcdManifestPath)
+		log.Warn("etcd manifest absent", slog.String("path", etcdManifestPath))
 		return nil
 	}
 

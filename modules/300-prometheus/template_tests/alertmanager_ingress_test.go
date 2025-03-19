@@ -61,7 +61,8 @@ https:
 internal:
   vpa: {}
   prometheusMain: {}
-  grafana: {}
+  grafana:
+    enabled: true
   customCertificateData: {}
   alertmanagers: {}
   prometheusAPIClientTLS: {}

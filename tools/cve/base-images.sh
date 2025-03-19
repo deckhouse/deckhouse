@@ -28,7 +28,7 @@ source tools/cve/trivy-wrapper.sh
 # $SEVERITY - output only entries with specified severity levels (UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL)
 
 if [[ "x$SEVERITY" == "x" ]]; then
-  SEVERITY="CRITICAL,HIGH"
+  SEVERITY="UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
 fi
 
 # Hack to get the base images list.

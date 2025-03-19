@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"log/slog"
 	"os"
 	"strconv"
 	"strings"
@@ -272,7 +273,7 @@ func (ar *updateApprover) needDrainNode(input *go_hook.HookInput, node *updateAp
 
 	// we can not drain single node with deckhouse
 	if node.Name == ar.deckhouseNodeName && nodeNg.Status.Ready < 2 {
-		input.Logger.Warnf("Skip drain node %s with deckhouse pod because node-group %s contains single node and deckhouse will not run after drain", node.Name, nodeNg.Name)
+		input.Logger.Warn("Skip drain node with deckhouse pod because node-group contains single node and deckhouse will not run after drain", slog.String("node", node.Name), slog.String("node_group", nodeNg.Name))
 		return false
 	}
 

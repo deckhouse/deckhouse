@@ -1,3 +1,3 @@
-## 001-gomod_gosum.patch
+## 001-go-mod.patch
 
 Fix CVE

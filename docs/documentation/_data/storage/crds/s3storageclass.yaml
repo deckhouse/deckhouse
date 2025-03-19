@@ -39,7 +39,7 @@ spec:
                 bucketName:
                   type: string
                   description: |
-                    The name of the bucket in S3. If empty, a new bucket will be dynamically created for each PVC. 
+                    The name of the bucket in S3. If empty, a new bucket will be dynamically created for each PVC.
                     If not empty, folders (paths) will be dynamically created within the specified bucket for each PVC.
                   x-kubernetes-validations:
                     - rule: self == oldSelf
@@ -89,9 +89,9 @@ spec:
                 phase:
                   type: string
                   description: |
-                    The current state of the S3 storage class. Might be:
-                    - Failed (indicating errors in the configuration or setup)
-                    - Created (indicating successful creation and operation).
+                    The current state of the S3 storage class:
+                    - `Failed` — indicating errors in the configuration or setup;
+                    - `Created` — indicating successful creation and operation.
                   enum:
                     - Failed
                     - Created

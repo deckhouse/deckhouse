@@ -18,6 +18,8 @@ package hooks
 
 import (
 	"fmt"
+	"log/slog"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -84,7 +86,7 @@ func handlePackagesProxyEndpoints(input *go_hook.HookInput) error {
 		return fmt.Errorf("no packages proxy endpoints found")
 	}
 
-	input.Logger.Infof("found packages proxy endpoints: %v", endpointsList)
+	input.Logger.Info("found packages proxy endpoints", slog.String("endpoints", strings.Join(endpointsList, ",")))
 	input.Values.Set("nodeManager.internal.packagesProxy.addresses", endpointsList)
 
 	return nil

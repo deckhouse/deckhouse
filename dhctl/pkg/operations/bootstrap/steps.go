@@ -18,6 +18,7 @@
 package bootstrap
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
@@ -457,6 +458,9 @@ func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, n
 
 			return nil
 		})
+		if err != nil {
+			return fmt.Errorf("cannot create %s directories: %w", app.DeckhouseNodeTmpPath, err)
+		}
 
 		// in end of pipeline steps bashible write "OK" to this file
 		// we need creating it before because we do not want handle errors from cat
@@ -470,6 +474,9 @@ func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, n
 			return nil
 		})
 	})
+	if err != nil {
+		return err
+	}
 
 	if wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper); ok {
 		cleanUpTunnel, err := setupRPPTunnel(wrapper.Client())
@@ -641,7 +648,8 @@ func WaitForSSHConnectionOnMaster(sshClient *ssh.Client) error {
 			log.InfoLn(availabilityCheck.String())
 			return nil
 		})
-		if err := availabilityCheck.WithDelaySeconds(1).AwaitAvailability(); err != nil {
+		// TODO(dhctl-for-commander-cancels): pass ctx
+		if err := availabilityCheck.WithDelaySeconds(1).AwaitAvailability(context.TODO()); err != nil {
 			return fmt.Errorf("await master to become available: %v", err)
 		}
 		return nil

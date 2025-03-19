@@ -102,23 +102,24 @@ func (c *Command) Sudo() {
 	passSent := false
 	c.WithMatchHandler(func(pattern string) string {
 		if pattern == "SudoPassword" {
+			var becomePass string
+
+			if c.Session.BecomePass != "" {
+				becomePass = c.Session.BecomePass
+			} else {
+				becomePass = app.BecomePass
+			}
 			if !passSent {
 				// send pass through stdin
 				log.DebugLn("Send become pass to cmd")
-				var becomePass string
-
-				if c.Session.BecomePass != "" {
-					becomePass = c.Session.BecomePass
-				} else {
-					becomePass = app.BecomePass
-				}
-
 				_, _ = c.Executor.Stdin.Write([]byte(becomePass + "\n"))
 				passSent = true
 			} else {
 				// Second prompt is error!
-				log.ErrorLn("Bad sudo password, exiting. TODO handle this correctly.")
-				os.Exit(1)
+				log.ErrorLn("Bad sudo password")
+				// sending wrong password again will raise an error in process.Run()
+				_, _ = c.Executor.Stdin.Write([]byte(becomePass + "\n"))
+				// os.Exit(1)
 			}
 			return "reset"
 		}

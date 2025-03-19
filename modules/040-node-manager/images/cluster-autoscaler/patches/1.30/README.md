@@ -1,6 +1,6 @@
 ## Patches
 
-### Go mod
+### 001-go-mod.patch
 
 To create this patch run commands:
 
@@ -19,7 +19,14 @@ cd apis
 go get golang.org/x/net@v0.33.0
 cd ..
 go mod tidy
-git diff > patches/go_mod.patch
-#git apply patches/go_mod.patch
+git diff > patches/001-go_mod.patch
+#git apply patches/001-go_mod.patch
 ```
 
+### 002-kruise-ads.patch
+
+TODO: add description
+
+### 003-scale-from-zero.patch
+
+TODO: add description

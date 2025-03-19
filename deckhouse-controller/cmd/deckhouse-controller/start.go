@@ -137,7 +137,7 @@ func runHAMode(ctx context.Context, operator *addonoperator.AddonOperator, logge
 		<-ctx.Done()
 		log.Info("Context canceled received")
 		if err := syscall.Kill(1, syscall.SIGUSR2); err != nil {
-			log.Fatalf("Couldn't shutdown deckhouse: %s\n", err)
+			log.Fatal("Couldn't shutdown deckhouse", log.Err(err))
 		}
 	}()
 
@@ -194,7 +194,7 @@ func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Log
 	}
 
 	return retry.OnError(bk, func(err error) bool {
-		logger.Errorf("An error occurred during the bootstrap lock: %s. Retrying", err)
+		logger.Error("An error occurred during the bootstrap lock. Retrying", log.Err(err))
 		// retry on any error
 		return true
 	}, func() error {

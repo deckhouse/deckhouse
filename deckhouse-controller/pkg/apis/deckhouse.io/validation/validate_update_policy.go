@@ -36,7 +36,8 @@ func updatePolicyHandler(cli client.Client) http.Handler {
 	validator := kwhvalidating.ValidatorFunc(func(_ context.Context, _ *model.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
 		policy, ok := obj.(*v1alpha2.ModuleUpdatePolicy)
 		if !ok {
-			log.Debugf("unexpected type, expected %T, got %T", v1alpha2.ModuleUpdatePolicy{}, obj)
+			log.Debug("unexpected type", log.Type("expected", v1alpha2.ModuleUpdatePolicy{}), log.Type("got", obj))
+
 			return nil, fmt.Errorf("expect Secret as unstructured, got %T", obj)
 		}
 
