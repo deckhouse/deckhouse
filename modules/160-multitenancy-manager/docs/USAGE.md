@@ -75,7 +75,7 @@ kubectl get projecttemplates <PROJECT_TEMPLATE_NAME> -o jsonpath='{.spec.paramet
 
    A successfully created project should be in the `Deployed` state. If the state equals `Error`, add the `-o yaml` argument to the command (e.g., `kubectl get projects my-project -o yaml`) to get more detailed information about the error.
 
-### Automatic project creation for a namespace
+### Creating a project automatically for a namespace
 
 It is possible to create a new project for the namespace. To do this, mark the namespace with an annotation `projects.deckhouse.io/adopt`. For example:
 
