@@ -29,6 +29,8 @@ spec:
     metadata:
       labels:
         app: {{ .Chart.Name }}
+        threshold.extended-monitoring.deckhouse.io/disk-bytes-critical: "97"
+        threshold.extended-monitoring.deckhouse.io/disk-bytes-warning: "96"
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
     spec:
@@ -61,13 +63,21 @@ spec:
             path: /ready
             port: 3100
             scheme: HTTPS
-          initialDelaySeconds: 45
+          initialDelaySeconds: 10
         readinessProbe:
           httpGet:
             path: /ready
             port: 3100
             scheme: HTTPS
-          initialDelaySeconds: 45
+          initialDelaySeconds: 10
+        startupProbe:
+          httpGet:
+            path: /ready
+            port: 3100
+            scheme: HTTPS
+          initialDelaySeconds: 30
+          failureThreshold: 30
+          periodSeconds: 10
         resources:
           {{ include "helm_lib_resources_management_pod_resources" (list $.Values.loki.resourcesManagement) | nindent 10 }}
       - name: kube-rbac-proxy
@@ -167,10 +177,10 @@ spec:
       - ReadWriteOnce
       resources:
         requests:
-          storage: {{ .Values.loki.diskSizeGigabytes }}Gi
+          storage: {{ include "toGi" .Values.loki.internal.stsStorageSize }}Gi
       storageClassName: {{ $storageClass }}
 {{- else }}
       - name: storage
         emptyDir:
-          sizeLimit: {{ .Values.loki.diskSizeGigabytes }}Gi
+          sizeLimit: {{ include "toGi" .Values.loki.internal.stsStorageSize }}Gi
 {{- end }}
