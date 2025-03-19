@@ -11,6 +11,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	"gopkg.in/yaml.v3"
 	v1core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -50,6 +51,15 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	if len(valueSnaps) == 1 {
 		value := valueSnaps[0].(string)
 		input.Values.Set("systemRegistry.internal.state.nonexistent_value", value)
+	} else if len(valueSnaps) > 1 {
+		buf, err := yaml.Marshal(valueSnaps)
+		if err != nil {
+			return fmt.Errorf("cannot marshal YAML value snaps: %w", err)
+		}
+
+		input.Values.Set("systemRegistry.internal.state.nonexistent_value", fmt.Sprintf("# [MULTIPLE]\n%s", buf))
+	} else {
+		input.Values.Remove("systemRegistry.internal.state.nonexistent_value")
 	}
 
 	return nil
