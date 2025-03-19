@@ -51,17 +51,29 @@ entries:
                     ru: Введение
                   url: /admin/access-overview.html
                 - title:
-                    en: Подключение
-                    ru: Connection
+                    en: Connection
+                    ru: Подключение
                   url: /admin/connection.html
                 - title:
-                    en: Аутентификация
-                    ru: Authentication
+                    en: Authentication
+                    ru: Аутентификация
                   url: /admin/authentication.html
                 - title:
-                    en: Авторизация
-                    ru: Authorization
-                  url: /admin/authorization.html
+                    en: Authorization
+                    ru: Авторизация
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Обзор
+                      url: /admin/access/authorization-overview.html
+                    - title:
+                        en: Current authorization model
+                        ru: Текущая модель авторизации
+                      url: /admin/access/authorization-rbac-current.html
+                    - title:
+                        en: Experimental authorization model
+                        ru: Экспериментальная модель авторизации
+                      url: /admin/access/authorization-rbac-experimental.html
             - title:
                 en: Platform update
                 ru: Обновление платформы
