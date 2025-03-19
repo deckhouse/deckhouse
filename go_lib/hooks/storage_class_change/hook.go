@@ -308,7 +308,7 @@ func storageClassChangeWithArgs(input *go_hook.HookInput, dc dependency.Containe
 		}
 
 		if err != nil && !errors.IsNotFound(err) {
-			input.Logger.Errorf("%v", err)
+			input.Logger.Error(err.Error())
 		}
 	}
 	return nil
