@@ -209,6 +209,11 @@ func createTarball() *bytes.Buffer {
 			Args: []string{"-c", `for crd in $(kubectl get crds | grep -E 'istio.io|gateway.networking.k8s.io' | awk '{print $1}'); do echo "Listing resources for CRD: $crd" && kubectl get $crd -A -o json; done`},
 		},
 		{
+			File: "d8-istio-envoy-config.json",
+			Cmd:  "bash",
+			Args: []string{"-c", `kubectl exec daemonsets/ingressgateway -n d8-istio -- curl http://localhost:15000/config_dump`},
+		},
+		{
 			File: "d8-istio-system-logs.txt",
 			Cmd:  "bash",
 			Args: []string{"-c", `for deployment in istiod-v1x21 istiod-v1x19; do echo "Logs for $deployment:" && kubectl -n d8-istio logs deployments/$deployment; done`},
