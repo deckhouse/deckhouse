@@ -5,7 +5,7 @@ endif
 
 all: up
 
-network: registry
+network:
 		docker network inspect deckhouse 2>&1 1>/dev/null || docker network create deckhouse
 
 up: network
