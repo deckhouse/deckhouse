@@ -101,10 +101,6 @@ spec:
                 description: Memory is this machine's RAM amount in mebibytes (MiB).
                 minimum: 1
                 type: integer
-              name:
-                description: Name is the hostname and unique identifier of this VM
-                  within DVP.
-                type: string
               providerID:
                 description: ProviderID is the UUID of the VM, prefixed with 'dvp://'
                   proto.

@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"github.com/deckhouse/virtualization/api/core/v1alpha2"
+	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -340,4 +341,27 @@ func (c *ComputeService) getVMBDA(ctx context.Context, diskName string, vmHostna
 	}
 
 	return &vmbdas.Items[0], nil
+}
+
+func (c *ComputeService) CreateCloudInitProvisioningSecret(ctx context.Context, name string, userData []byte) error {
+	s := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: c.namespace,
+		},
+		Type: v1alpha2.SecretTypeCloudInit,
+		Data: map[string][]byte{"userData": userData},
+	}
+
+	if err := c.client.Create(ctx, s); err != nil {
+		return fmt.Errorf("create '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, err)
+	}
+	return nil
+}
+
+func (c *ComputeService) DeleteCloudInitProvisioningSecret(ctx context.Context, name string) error {
+	if err := c.clientset.CoreV1().Secrets(c.namespace).Delete(ctx, name, metav1.DeleteOptions{}); err != nil {
+		return fmt.Errorf("delete '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, err)
+	}
+	return nil
 }

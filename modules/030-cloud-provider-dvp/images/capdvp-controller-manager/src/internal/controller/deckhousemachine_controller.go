@@ -133,7 +133,7 @@ func (r *DeckhouseMachineReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	// Handle other kinds of changes
-	return r.reconcileUpdates(ctx, logger, cluster, machine, dvpMachine, dvpCluster)
+	return r.reconcileUpdates(ctx, logger, cluster, machine, dvpMachine)
 }
 
 func patchDeckhouseMachine(
@@ -162,7 +162,6 @@ func (r *DeckhouseMachineReconciler) reconcileUpdates(
 	cluster *clusterv1b1.Cluster,
 	machine *clusterv1b1.Machine,
 	dvpMachine *infrastructurev1a1.DeckhouseMachine,
-	dvpCluster *infrastructurev1a1.DeckhouseCluster,
 ) (ctrl.Result, error) {
 	if dvpMachine.Status.FailureReason != nil || dvpMachine.Status.FailureMessage != nil {
 		logger.Info("DeckhouseMachine has failed, will not reconcile. See DeckhouseMachine status for details.")
@@ -219,7 +218,7 @@ func (r *DeckhouseMachineReconciler) reconcileUpdates(
 	// The approval happens if the Machine InternalDNS matches the node name, so we add it here along with hostname.
 	dvpMachine.Status.Addresses = []infrastructurev1a1.VMAddress{
 		{Type: clusterv1b1.MachineHostName, Address: vm.Name},
-		// {Type: clusterv1b1.MachineInternalDNS, Address: fmt.Sprintf("%s.%s", vm.Name, vm.Namespace)}, TODO Validate correctness of dns name
+		// {Type: clusterv1b1.MachineInternalDNS, Address: fmt.Sprintf("%s.%s", vm.Name, vm.Namespace)}, TODO No DNS names in DVP yet
 	}
 	dvpMachine.Spec.ProviderID = ProviderIDPrefix + vm.Name
 
@@ -362,6 +361,11 @@ func (r *DeckhouseMachineReconciler) createVM(
 		return nil, fmt.Errorf("Expected to find a cloud-init script in secret %s/%s", bootstrapDataSecret.Namespace, bootstrapDataSecret.Name)
 	}
 
+	cloudInitSecretName := "cloud-init-" + dvpMachine.Name
+	if err := r.DVP.ComputeService.CreateCloudInitProvisioningSecret(ctx, cloudInitSecretName, cloudInitScript); err != nil {
+		return nil, fmt.Errorf("Cannot create cloud-init provisioning secret: %w", err)
+	}
+
 	vm, err := r.DVP.ComputeService.CreateVM(ctx, &v1alpha2.VirtualMachine{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: dvpMachine.Name,
@@ -373,8 +377,11 @@ func (r *DeckhouseMachineReconciler) createVM(
 			VirtualMachineClassName:  dvpMachine.Spec.VMClassName,
 			EnableParavirtualization: true,
 			Provisioning: &v1alpha2.Provisioning{
-				Type:     v1alpha2.ProvisioningTypeUserData,
-				UserData: string(cloudInitScript),
+				Type: v1alpha2.ProvisioningTypeUserDataRef,
+				UserDataRef: &v1alpha2.UserDataRef{
+					Kind: "Secret",
+					Name: cloudInitSecretName,
+				},
 			},
 			CPU: v1alpha2.CPUSpec{
 				Cores:        dvpMachine.Spec.CPU.Cores,
