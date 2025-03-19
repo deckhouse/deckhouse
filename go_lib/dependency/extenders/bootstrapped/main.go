@@ -15,6 +15,7 @@ package bootstrapped
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"strconv"
 	"sync"
@@ -56,18 +57,18 @@ func Instance() *Extender {
 func (e *Extender) AddConstraint(name string, value string) error {
 	parsed, err := strconv.ParseBool(value)
 	if err != nil {
-		e.logger.Debugf("adding installed constraint for the '%s' module failed", name)
+		e.logger.Debug("adding installed constraint for module failed", slog.String("name", name))
 		return err
 	}
 
 	e.modules[name] = parsed
-	e.logger.Debugf("installed constraint for the '%s' module is added", name)
+	e.logger.Debug("installed constraint for module is added", slog.String("name", name))
 
 	return nil
 }
 
 func (e *Extender) DeleteConstraint(name string) {
-	e.logger.Debugf("deleting installed constraint for the '%s' module", name)
+	e.logger.Debug("deleting installed constraint for module", slog.String("name", name))
 	delete(e.modules, name)
 }
 
@@ -85,7 +86,7 @@ func (e *Extender) IsTerminator() bool {
 func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
 	if req, ok := e.modules[name]; ok {
 		if !req {
-			e.logger.Debugf("the '%s' module does not require the cluster to be boostrapped", name)
+			e.logger.Debug("module does not require the cluster to be boostrapped", slog.String("name", name))
 			return nil, nil
 		}
 		bootstrapped, err := e.isBootstrapped("/tmp/cluster-is-bootstrapped")
@@ -93,10 +94,10 @@ func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
 			return nil, &scherror.PermanentError{Err: fmt.Errorf("failed to define bootstrapped: %s", err)}
 		}
 		if bootstrapped {
-			e.logger.Debugf("requirements of the '%s' module are satisfied", name)
+			e.logger.Debug("requirements of module are satisfied", slog.String("name", name))
 			return ptr.To(true), nil
 		}
-		e.logger.Errorf("requirements of the '%s' module are not satisfied: module requires the cluster to be bootstrapped", name)
+		e.logger.Error("requirements of the module are not satisfied: module requires the cluster to be bootstrapped", slog.String("name", name))
 		return ptr.To(false), fmt.Errorf("requirements are not satisfied: module requires the cluster to be bootstrapped")
 	}
 	return nil, nil
@@ -104,21 +105,21 @@ func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
 
 func (e *Extender) isBootstrapped(path string) (bool, error) {
 	if val := os.Getenv("TEST_EXTENDER_BOOTSTRAPPED"); val != "" {
-		instance.logger.Debugf("setting bootstrapped from env")
+		instance.logger.Debug("setting bootstrapped from env")
 		parsed, err := strconv.ParseBool(val)
 		if err == nil {
 			return parsed, nil
 		}
-		instance.logger.Errorf("parse boostrapped from env failed: %v", err)
+		instance.logger.Error("parse boostrapped from env failed", log.Err(err))
 	}
 	_, err := os.Stat(path)
 	if err == nil {
-		e.logger.Debugf("file %s exists, cluster is bootstrapped", path)
+		e.logger.Debug("file exists, cluster is bootstrapped", slog.String("path", path))
 		return true, nil
 	} else if os.IsNotExist(err) {
-		e.logger.Debugf("file %s does not exist, cluster is not bootstrapped", path)
+		e.logger.Debug("file does not exist, cluster is not bootstrapped", slog.String("path", path))
 		return false, nil
 	}
-	e.logger.Errorf("failed to read file %s: %v", path, err)
+	e.logger.Error("failed to read file", slog.String("path", path), log.Err(err))
 	return false, err
 }

@@ -14,7 +14,7 @@ This page provides instructions on connecting HPE 3PAR to Deckhouse, configuring
 
 ## System requirements
 
-- A deployed and configured HPE storage system.
+- A deployed and configured HPE storage system;
 - Unique IQNs in `/etc/iscsi/initiatorname.iscsi` on each Kubernetes node.
 
 ## Setup and Configuration
@@ -24,7 +24,7 @@ Note that all commands must be run on a machine that has administrator access to
 ### Enabling the module
 
 Enable the `csi-hpe` module. This will result in the following actions across all cluster nodes:
-- registration of the CSI driver.
+- registration of the CSI driver;
 - launch of service pods for the `csi-hpe` components.
 
 ```yaml

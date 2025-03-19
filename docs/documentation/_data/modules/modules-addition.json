@@ -108,11 +108,6 @@
     "path": "/products/kubernetes-platform/modules/sds-node-configurator/stable/",
     "editionMinimumAvailable": "ce"
   },
-  "sds-drbd": {
-    "external": "true",
-    "path": "/products/kubernetes-platform/modules/sds-drbd/stable/",
-    "editionMinimumAvailable": "ee"
-  },
   "sds-replicated-volume": {
     "external": "true",
     "path": "/products/kubernetes-platform/modules/sds-replicated-volume/stable/",
@@ -160,9 +155,9 @@
     "path": "/products/kubernetes-platform/modules/secrets-store-integration/stable/",
     "editionMinimumAvailable": "be"
   },
-  "csi-yadro": {
+  "csi-yadro-tatlin-unified": {
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/csi-yadro/stable/",
+    "path": "/products/kubernetes-platform/modules/csi-yadro-tatlin-unified/stable/",
     "editionMinimumAvailable": "ee"
   },
   "csi-huawei": {

@@ -9,9 +9,12 @@
 image: ssh-static-src-artifact
 final: false
 fromImage: common/src-artifact
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone -b V_9_9_P1 --single-branch --depth=1 {{ $context.SOURCE_REPO }}/openssh/openssh-portable /src
+  - git clone -b V_9_9_P1 --single-branch --depth=1 $(cat /run/secrets/SOURCE_REPO)/openssh/openssh-portable /src
   - rm -rf /src/.git
 ---
 image: ssh-static

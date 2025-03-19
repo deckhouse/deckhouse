@@ -15,6 +15,8 @@
 package destroy
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
@@ -69,7 +71,8 @@ func (g *DeckhouseDestroyer) GetKubeClient() (*client.KubernetesClient, error) {
 		return g.kubeCl, nil
 	}
 
-	kubeCl, err := kubernetes.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(g.sshClient))
+	// TODO(dhctl-for-commander-cancels): pass ctx
+	kubeCl, err := kubernetes.ConnectToKubernetesAPI(context.TODO(), ssh.NewNodeInterfaceWrapper(g.sshClient))
 	if err != nil {
 		return nil, err
 	}
@@ -114,6 +117,11 @@ func (g *DeckhouseDestroyer) deleteEntities(kubeCl *client.KubernetesClient) err
 	}
 
 	err = deckhouse.WaitForDeckhouseDeploymentDeletion(kubeCl)
+	if err != nil {
+		return err
+	}
+
+	err = deckhouse.DeletePDBs(kubeCl)
 	if err != nil {
 		return err
 	}
