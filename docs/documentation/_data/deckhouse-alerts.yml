@@ -606,7 +606,7 @@ alerts:
            ```
       summary: |
         Provider-cluster-configuration contains unsupported fields.
-      severity: "5"
+      severity: "4"
       markupFormat: markdown
     - name: D8CheckClusterConfig
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/check_config.yaml
@@ -631,7 +631,7 @@ alerts:
            ```
       summary: |
         Cluster-configuration contains unsupported fields.
-      severity: "5"
+      severity: "4"
       markupFormat: markdown
     - name: D8CheckStaticClusterConfig
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/check_config.yaml
@@ -656,7 +656,7 @@ alerts:
            ```
       summary: |
         Static-cluster-configuration contains unsupported fields.
-      severity: "5"
+      severity: "4"
       markupFormat: markdown
     - name: D8CloudDataDiscovererCloudRequestError
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/cloud-data-discovery.tpl
