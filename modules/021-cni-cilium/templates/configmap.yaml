@@ -6,12 +6,16 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{ include "helm_lib_module_labels" (list .) | nindent 2 }}
 data:
+  # For NetworkPolicy
   policy-cidr-match-mode: "nodes"
+  enable-node-selector-labels: "true"
+  #
   bpf-lb-source-range-all-types: "true"
-  bpf-lb-algorithm-annotation: "true"
   bpf-lb-sock-terminate-pod-connections: "true"
   enable-runtime-device-detection: "true"
-
+  # Disable ipam processing svc_loadBalancer if loadBalancerClass not specified&
+  default-lb-service-ipam: none
+  #
   identity-allocation-mode: crd
   cluster-name: default # make sense only for cluster mesh
 
@@ -36,8 +40,6 @@ data:
 
   enable-bpf-tproxy: "true"
 
-  bpf-lb-bypass-fib-lookup: "false" # TODO: https://docs.cilium.io/en/v1.11/gettingstarted/kubeproxy-free/#nodeport-with-fhrp-vpc
-
   {{- if .Values.cniCilium.labelsRegex }}
   labels: {{.Values.cniCilium.labelsRegex | join " " | quote }}
   {{- end }}
@@ -48,6 +50,7 @@ data:
   {{- else if eq .Values.cniCilium.internal.mode "DirectWithNodeRoutes" }}
   routing-mode: "native"
   auto-direct-node-routes: "true"
+  direct-routing-skip-unreachable: "true"
   {{- else if eq .Values.cniCilium.internal.mode "Direct" }}
   routing-mode: "native"
   auto-direct-node-routes: "false"
@@ -114,7 +117,6 @@ data:
   enable-session-affinity: "true"
   enable-svc-source-range-check: {{ .Values.cniCilium.svcSourceRangeCheck | quote }}
 
-  sockops-enable: "false"
   enable-icmp-rules: "true"
   enable-endpoint-health-checking: "true"
   enable-health-checking: "true"
@@ -150,10 +152,6 @@ data:
 
   # https://docs.cilium.io/en/v1.12/policy/language/#alpine-musl-deployments-and-dns-refused
   tofqdns-dns-reject-response-code: nameError
-
-  # disabled since they may generate absurd amount of requests in count and size
-  # we've found no use for status field of CNP and CCNP
-  disable-cnp-status-updates: "true"
 
   procfs: "/host/proc"
 
