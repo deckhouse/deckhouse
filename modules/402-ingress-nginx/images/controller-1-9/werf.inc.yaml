@@ -47,21 +47,9 @@ shell:
   - echo "export COMMIT_SHA=git-$(git rev-parse --short HEAD)" > .env_pass
   - echo "export REPO_INFO=$(git config --get remote.origin.url)" >> .env_pass
   - echo "export TAG=$(git describe --tags --always)" >> .env_pass
-  - patch -p1 < /patches/ingress-nginx/001-lua-info.patch
-  - patch -p1 < /patches/ingress-nginx/002-makefile.patch
-  - patch -p1 < /patches/ingress-nginx/003-healthcheck.patch
-  - patch -p1 < /patches/ingress-nginx/004-metrics-SetSSLExpireTime.patch
-  - patch -p1 < /patches/ingress-nginx/005-util.patch
-  - patch -p1 < /patches/ingress-nginx/006-fix-cleanup.patch
-  - patch -p1 < /patches/ingress-nginx/007-geoip.patch
-  - patch -p1 < /patches/ingress-nginx/008-new-metrics.patch
-  - patch -p1 < /patches/ingress-nginx/009-default-backend-fix.patch
-  - patch -p1 < /patches/ingress-nginx/010-cve.patch
-  - patch -p1 < /patches/ingress-nginx/011-nginx-build.patch
+  - git apply /patches/ingress-nginx/*.patch --verbose
   - cd /src/ingress-nginx/rootfs
-  - patch -p1 < /patches/rootfs/001-balancer-lua.patch
-  - patch -p1 < /patches/rootfs/002-nginx-tmpl.patch
-  - patch -p1 < /patches/rootfs/003-auth-cookie-always.patch
+  - git apply /patches/rootfs/*.patch --verbose
   - rm -r /src/dumb-init/.git
   - rm -r /src/lua-protobuf/.git
   - rm -r /src/lua-iconv/.git
