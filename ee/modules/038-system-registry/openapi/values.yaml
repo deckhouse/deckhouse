@@ -25,7 +25,7 @@ properties:
         type: object
         default: {}
         properties:
-          static_pod_version:
+          staticpod_version:
             type: string
             default: "unknown"
           bashible_version:
@@ -43,3 +43,8 @@ properties:
             type: array
             items:
               type: string
+          nonexistent:
+            type: boolean
+            default: false
+          nonexistent_value:
+            type: string

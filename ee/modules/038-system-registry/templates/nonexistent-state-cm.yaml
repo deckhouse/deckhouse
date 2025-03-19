@@ -1,0 +1,21 @@
+{{- with .Values.systemRegistry.internal.state }}
+{{- if .nonexistent }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: registry-nonexistent-state
+  namespace: d8-system
+  labels:
+    app.kubernetes.io/managed-by: system-registry
+data:
+  nonexistent: {{ .nonexistent | quote }}
+  staticpod_version: {{ .staticpod_version | quote }}
+  bashible_version: {{ .bashible_version | quote }}
+  state: |
+    {{ . | nindent 4 }}
+  {{- if .nonexistent_value }}
+  value: {{ .nonexistent_value | quote }}
+  {{- end }}
+{{- end }}
+{{- end }}
