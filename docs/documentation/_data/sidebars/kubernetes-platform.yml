@@ -332,12 +332,20 @@ entries:
                   url: /admin/configuration/monitoring/alerts.html
             - title:
                 en: Platform journaling
-                ru: TODO Журналирование платформы
+                ru: Журналирование платформы
               folders:
                 - title:
                     en: Overview
                     ru: Обзор
-                  url: /admin/journaling-overview.html
+                  url: /admin/configuration/logging/
+                - title:
+                    en: Collection and delivery
+                    ru: Сбор и доставка
+                  url: /admin/configuration/logging/delivery.html
+                - title:
+                    en: Short-term storage
+                    ru: Кратковременное хранение
+                  url: /admin/configuration/logging/storage.html
             - title:
                 en: Multitenancy
                 ru: Мультенантность
@@ -444,6 +452,14 @@ entries:
             ru: Мультитенантность
           url: /user/multitenancy-user.html
         - title:
+            en: Monitoring
+            ru: Мониторинг
+          folders:
+            - title:
+                en: Collecting application logs
+                ru: Сбор логов из приложения
+              url: /user/monitoring/logging.html
+        - title:
             en: Containerized applications
             ru: TODO Контейнеризированные приложения
           folders:
@@ -496,6 +512,10 @@ entries:
             en: Updating
             ru: Обновление
           url: /architecture/updating.html
+        - title:
+            en: Logging
+            ru: Логирование
+          url: /architecture/logging.html
         - title:
             en: VPA
             ru: VPA
