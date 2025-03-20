@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# TODO: Refactor this!
+
 # Checks if a file has a frontmatter section.
 page::has_frontmatter() {
     if [[ -f $1 ]]
