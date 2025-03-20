@@ -39,7 +39,7 @@ func DefineTerraformConvergeExporterCommand(cmd *kingpin.CmdClause) *kingpin.Cmd
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		exporter := operations.NewConvergeExporter(app.ListenAddress, app.MetricsPath, app.CheckInterval)
-		exporter.Start()
+		exporter.Start(context.Background())
 		return nil
 	})
 	return cmd
@@ -63,23 +63,25 @@ func DefineTerraformCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return fmt.Errorf("Not enough flags were passed to perform the operation.\nUse dhctl terraform check --help to get available flags.\nSsh host is not provided. Need to pass --ssh-host, or specify SSHHost manifest in the --connection-config file")
 		}
 
-		kubeCl, err := kubernetes.ConnectToKubernetesAPI(context.Background(), ssh.NewNodeInterfaceWrapper(sshClient))
+		ctx := context.Background()
+
+		kubeCl, err := kubernetes.ConnectToKubernetesAPI(ctx, ssh.NewNodeInterfaceWrapper(sshClient))
 		if err != nil {
 			return err
 		}
 
-		metaConfig, err := config.ParseConfigInCluster(kubeCl)
+		metaConfig, err := config.ParseConfigInCluster(ctx, kubeCl)
 		if err != nil {
 			return err
 		}
 
-		metaConfig.UUID, err = state_terraform.GetClusterUUID(context.Background(), kubeCl)
+		metaConfig.UUID, err = state_terraform.GetClusterUUID(ctx, kubeCl)
 		if err != nil {
 			return err
 		}
 
 		statistic, err := check.CheckState(
-			context.Background(), kubeCl, metaConfig, terraform.NewTerraformContext(), check.CheckStateOptions{},
+			ctx, kubeCl, metaConfig, terraform.NewTerraformContext(), check.CheckStateOptions{},
 		)
 		if err != nil {
 			return err

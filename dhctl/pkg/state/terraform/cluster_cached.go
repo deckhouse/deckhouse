@@ -65,7 +65,7 @@ func (s *KubeTerraStateLoader) PopulateMetaConfig(ctx context.Context) (*config.
 		return nil, err
 	}
 
-	metaConfig, err = config.ParseConfigFromCluster(kubeCl)
+	metaConfig, err = config.ParseConfigFromCluster(ctx, kubeCl)
 	if err != nil {
 		return nil, err
 	}

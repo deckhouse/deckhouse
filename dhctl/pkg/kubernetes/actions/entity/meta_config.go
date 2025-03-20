@@ -23,7 +23,7 @@ import (
 )
 
 func GetMetaConfig(ctx context.Context, kubeCl *client.KubernetesClient) (*config.MetaConfig, error) {
-	metaConfig, err := config.ParseConfigFromCluster(kubeCl)
+	metaConfig, err := config.ParseConfigFromCluster(ctx, kubeCl)
 	if err != nil {
 		return nil, err
 	}
