@@ -158,9 +158,6 @@ properties:
           Максимальное значение: 8GB.
 
           **Экспериментальный**. Может быть удален в будущем.
-      externalMembersNames:
-        description: |
-          Массив имен внешних etcd member'ов (эти member'ы не будут удаляться).
   nodeMonitorGracePeriodSeconds:
     description: |
       Число секунд, через которое узел перейдет в состояние `Unreachable` при потере с ним связи.
