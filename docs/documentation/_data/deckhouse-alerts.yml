@@ -5670,19 +5670,6 @@ alerts:
         The sampling limit is close.
       severity: "7"
       markupFormat: markdown
-    - name: TricksterIngressesDeprecated
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/deprecation.yaml
-      moduleUrl: 300-prometheus
-      module: prometheus
-      edition: ce
-      description: |
-        Some of the existing ingresses uses deprecated trickster service as its backend
-        Trickster service is no longer supported, we recommend you to migrate to Aggregation proxy
-        To list all potentially invalid ingresses use the expr `sum by (ingress, namespace, backed) (d8_trickster_deprecated_ingresses) > 0`
-      summary: |
-        Deprecated Trickster ingresses have been found.
-      severity: "8"
-      markupFormat: markdown
     - name: UnsupportedContainerRuntimeVersion
       sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/cri-version.tpl
       moduleUrl: 340-monitoring-kubernetes
