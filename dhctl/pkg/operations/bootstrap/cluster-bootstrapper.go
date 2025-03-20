@@ -264,7 +264,8 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	bootstrapState := NewBootstrapState(stateCache)
 
 	preflightChecker := preflight.NewChecker(b.NodeInterface, deckhouseInstallConfig, metaConfig, bootstrapState)
-	if err := preflightChecker.Global(); err != nil {
+	// TODO(dhctl-for-commander-cancels): pass ctx
+	if err := preflightChecker.Global(context.TODO()); err != nil {
 		return err
 	}
 
@@ -279,7 +280,8 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	var resourcesTemplateData map[string]interface{}
 
 	if metaConfig.ClusterType == config.CloudClusterType {
-		err = preflightChecker.Cloud()
+		// TODO(dhctl-for-commander-cancels): pass ctx
+		err = preflightChecker.Cloud(context.TODO())
 		if err != nil {
 			return err
 		}
@@ -349,7 +351,8 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 			return err
 		}
 	} else {
-		err = preflightChecker.Static()
+		// TODO(dhctl-for-commander-cancels): pass ctx
+		err = preflightChecker.Static(context.TODO())
 		if err != nil {
 			return err
 		}
@@ -391,13 +394,14 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	}
 
 	if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
-		if err := WaitForSSHConnectionOnMaster(wrapper.Client()); err != nil {
+		if err := WaitForSSHConnectionOnMaster(context.TODO(), wrapper.Client()); err != nil {
 			return fmt.Errorf("failed to wait for SSH connection on master: %v", err)
 		}
 	}
 
 	if metaConfig.ClusterType == config.CloudClusterType {
-		err = preflightChecker.PostCloud()
+		// TODO(dhctl-for-commander-cancels): pass ctx
+		err = preflightChecker.PostCloud(context.TODO())
 		if err != nil {
 			return err
 		}
@@ -409,7 +413,8 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return nil
 	}
 
-	if err := RunBashiblePipeline(b.NodeInterface, metaConfig, nodeIP, devicePath); err != nil {
+	// TODO(dhctl-for-commander-cancels): pass ctx
+	if err := RunBashiblePipeline(context.TODO(), b.NodeInterface, metaConfig, nodeIP, devicePath); err != nil {
 		return err
 	}
 

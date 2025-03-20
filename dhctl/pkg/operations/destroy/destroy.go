@@ -254,7 +254,8 @@ func (d *StaticMastersDestroyer) DestroyCluster(autoApprove bool) error {
 	hostToExclude := ""
 	if len(d.IPs) > 0 {
 		file := frontend.NewFile(d.SSHClient.Settings)
-		bytes, err := file.DownloadBytes("/var/lib/bashible/discovered-node-ip")
+		// TODO(dhctl-for-commander-cancels): pass ctx
+		bytes, err := file.DownloadBytes(context.TODO(), "/var/lib/bashible/discovered-node-ip")
 		if err != nil {
 
 			return err
@@ -312,7 +313,8 @@ func processStaticHosts(hosts []session.Host, s *session.Session, stdOutErrHandl
 			cmd.WithTimeout(5 * time.Minute)
 			cmd.WithStdoutHandler(stdOutErrHandler)
 			cmd.WithStderrHandler(stdOutErrHandler)
-			err := cmd.Run()
+			// TODO(dhctl-for-commander-cancels): pass ctx
+			err := cmd.Run(context.TODO())
 
 			if err != nil {
 				var ee *exec.ExitError
