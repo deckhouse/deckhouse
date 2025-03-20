@@ -14,9 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-shutdown_grace_period="0"
-shutdown_grace_period_critical_pods="0"
-
 if d8-curl --connect-timeout 10 -sS -H Metadata:true --noproxy "*" "http://169.254.169.254/metadata/instance?api-version=2021-12-13" | grep -q  '"priority":"Regular"'; then
   shutdown_grace_period="295"
   shutdown_grace_period_critical_pods="5"
