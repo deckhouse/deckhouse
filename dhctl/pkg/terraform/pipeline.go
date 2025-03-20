@@ -108,7 +108,13 @@ func CheckPipeline(
 		isChange = r.GetChangesInPlan()
 		destructiveChanges = r.GetPlanDestructiveChanges()
 
-		rawPlan, err := r.GetTerraformExecutor().Output(ctx, "show", "-json", r.GetPlanPath())
+		rawPlan, err := r.GetTerraformExecutor().Output(
+			ctx,
+			fmt.Sprintf("-chdir=%s", r.WorkerDir()),
+			"show",
+			"-json",
+			r.GetPlanPath(),
+		)
 		if err != nil {
 			var ee *exec.ExitError
 			if errors.As(err, &ee) {
@@ -195,7 +201,13 @@ func CheckBaseInfrastructurePipeline(
 			} `json:"output_changes"`
 		}
 
-		rawPlan, err := r.GetTerraformExecutor().Output(ctx, "show", "-json", r.GetPlanPath())
+		rawPlan, err := r.GetTerraformExecutor().Output(
+			ctx,
+			fmt.Sprintf("-chdir=%s", r.WorkerDir()),
+			"show",
+			"-json",
+			r.GetPlanPath(),
+		)
 		if err != nil {
 			var ee *exec.ExitError
 			if errors.As(err, &ee) {

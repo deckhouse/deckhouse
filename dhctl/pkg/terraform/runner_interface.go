@@ -40,4 +40,5 @@ type RunnerInterface interface {
 	GetPlanPath() string
 	GetTerraformExecutor() Executor
 	GetLogger() log.Logger
+	WorkerDir() string
 }

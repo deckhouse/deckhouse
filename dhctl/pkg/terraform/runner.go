@@ -162,6 +162,10 @@ func (r *Runner) WithHook(h InfraActionHook) *Runner {
 	return r
 }
 
+func (r *Runner) WorkerDir() string {
+	return r.workingDir
+}
+
 func (r *Runner) WithState(stateData []byte) *Runner {
 	tmpFile, err := os.CreateTemp(app.TmpDirName, r.step+deckhouseClusterStateSuffix)
 	if err != nil {
