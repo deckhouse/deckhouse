@@ -29,12 +29,6 @@ import:
     add: /src
     to: /src
     before: install
-git:
-  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-    to: /patches
-    stageDependencies:
-      install:
-        - '**/*'
 shell:
   install:
   {{- include "alpine packages proxy" . | nindent 2 }}
@@ -45,7 +39,7 @@ shell:
   - go mod vendor
   beforeSetup:
   - cd /src
-  - git apply  /patches/*.patch --verbose
+  - git apply  /src/patches/*.patch --verbose
   setup:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
