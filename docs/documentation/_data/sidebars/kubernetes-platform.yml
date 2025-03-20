@@ -527,24 +527,24 @@ entries:
 # ------------- Reference -------------
     - title:
         en: Reference
-        ru: TODO Справка
+        ru: Справка
       folders:
         - title:
-            en: Overview
-            ru: Обзор
+            en: TODO Overview
+            ru: TODO Обзор
           url: /reference/reference-overview.html
         - title:
-            en: Modules
-            ru: Модули (общая информация)
+            en: TODO Modules
+            ru: TODO Модули
           url: /reference/Modules.html
         - title:
             en: Modules configuration
             ru: Конфигурация модулей
-          url: /reference/modules-configuration.html
+          url: /reference/mc/
         - title:
             en: Custom resources
             ru: Кастомные ресурсы
-          url: /reference/custom-resources.html
+          url: /reference/cr/
         - title:
             en: Console utilities
             ru: Консольные утилиты

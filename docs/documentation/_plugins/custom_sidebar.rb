@@ -60,6 +60,7 @@ module Jekyll
 
       entry_with_lang = "/%s%s" % [lang, entry['url']]
       page_url = @context.registers[:page]['url'].sub(/\/index.html?$/, '/')
+      sidebar_group_page = @context.registers[:page]['sidebar_group_page']
 
       if not_avail_in_this_edition && site_mode == 'module' and !entry.has_key?('external_url')
            external_url = "%s%s%s" % [ @context.registers[:site].config['urls'][lang], @context.registers[:site].config['canonical_url_prefix_documentation'], entry['url'] ]
@@ -115,7 +116,7 @@ module Jekyll
         result.push("<li class='#{ parameters['item_entry_class']}'><a href='#{ entry['external_url'] }' target='_blank'>#{entry.dig('title', lang)} ↗</a></li>")
       elsif !external_url.nil? && external_url.size > 0
         result.push("<li class='#{ parameters['item_entry_class']}'><a href='#{ external_url }' target='_blank'>#{entry.dig('title', lang)} ↗</a></li>")
-      elsif page_url == entry['url'] or page_url == entry_with_lang
+      elsif page_url == entry['url'] or page_url == entry_with_lang or sidebar_group_page == entry['url']
         result.push("<li class='#{ parameters['item_entry_class']} active'><a href='#{ getTrueRelativeUrl(entry['url']) }'>#{entry.dig('title', lang)}</a></li>")
       else
         if @context.registers[:page]['url'] == '404.md'
@@ -124,9 +125,6 @@ module Jekyll
           result.push(%Q(<li class='#{ parameters['item_entry_class']}'><a href='#{ getTrueRelativeUrl(entry['url']) }'>#{entry.dig('title', lang)}</a></li>))
         end
       end
-      #entry.each do |entry|
-      #   result.push(entry.dig('title'))
-      #end
 
       result.join("\n")
     end
