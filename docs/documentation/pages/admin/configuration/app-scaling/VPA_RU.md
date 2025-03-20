@@ -45,7 +45,7 @@ VPA может работать в двух режимах:
    kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable vertical-pod-autoscaler
    ```
 
-1. Через [веб-интерфейс DKP](https://deckhouse.ru/products/kubernetes-platform/modules/console/stable/):
+1. Через [веб-интерфейс Deckhouse](https://deckhouse.ru/products/kubernetes-platform/modules/console/stable/):
 
    - Перейдите в раздел «Deckhouse - «Модули»;
    - Найдите модуль `vertical-pod-autoscaler` и нажмите на него;

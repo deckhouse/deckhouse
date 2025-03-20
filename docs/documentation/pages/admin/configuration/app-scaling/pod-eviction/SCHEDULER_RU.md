@@ -260,7 +260,7 @@ DKP позволяет точно настроить, на какие поды �
    kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module disable descheduler
    ```
 
-1. Через [веб-интерфейс DKP)](https://deckhouse.ru/products/kubernetes-platform/modules/console/stable/):
+1. Через [веб-интерфейс Deckhouse)](https://deckhouse.ru/products/kubernetes-platform/modules/console/stable/):
 
    - Перейдите в раздел «Deckhouse - «Модули»;
    - Найдите модуль `descheduler` и нажмите на него;
