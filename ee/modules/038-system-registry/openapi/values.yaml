@@ -96,6 +96,5 @@ properties:
                         type: string
                       schema:
                         type: string
-                        enum: [http, https]
                         default: https
           prepullHosts: *hosts
