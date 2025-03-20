@@ -49,7 +49,7 @@ import (
 
 const (
 	deckhouseControllerBinaryPath         = "/usr/bin/deckhouse-controller"
-	deckhouseControllerWithCapsBinaryPath = "/usr/bin/deckhouse-controller-with-caps"
+	deckhouseControllerWithCapsBinaryPath = "/usr/bin/caps-deckhouse-controller"
 
 	deckhouseBundleEnv = "DECKHOUSE_BUNDLE"
 	chrootDirEnv       = "ADDON_OPERATOR_SHELL_CHROOT_DIR"

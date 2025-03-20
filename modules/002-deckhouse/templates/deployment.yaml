@@ -139,7 +139,7 @@ spec:
 {{- end }}
           command:
 {{- if .Values.deckhouse.internal.chrootMode }}
-            - /usr/bin/deckhouse-controller-with-caps
+            - /usr/bin/caps-deckhouse-controller
 {{- else }}
             - /usr/bin/deckhouse-controller
 {{- end }}
