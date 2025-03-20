@@ -15,6 +15,8 @@
 package infrastructure
 
 import (
+	"context"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
@@ -60,7 +62,8 @@ func NewClusterInfraWithOptions(terraState StateLoader, cache state.Cache, terra
 	}
 }
 
-func (r *ClusterInfra) DestroyCluster(autoApprove bool) error {
+// TODO(dhctl-for-commander-cancels): use ctx
+func (r *ClusterInfra) DestroyCluster(ctx context.Context, autoApprove bool) error {
 	metaConfig, err := r.stateLoader.PopulateMetaConfig()
 	if err != nil {
 		return err
