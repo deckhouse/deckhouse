@@ -32,10 +32,11 @@ var (
 )
 
 type DVPCloudAPI struct {
-	Service        *Service
-	ComputeService *ComputeService
-	DiskService    *DiskService
-	PortalService  *PortalService
+	Service             *Service
+	ComputeService      *ComputeService
+	DiskService         *DiskService
+	PortalService       *PortalService
+	LoadBalancerService *LoadBalancerService
 }
 
 func NewDVPCloudAPI(config *config.CloudConfig) (*DVPCloudAPI, error) {
@@ -68,9 +69,10 @@ func NewDVPCloudAPI(config *config.CloudConfig) (*DVPCloudAPI, error) {
 	}
 
 	return &DVPCloudAPI{
-		Service:        service,
-		ComputeService: NewComputeService(service),
-		DiskService:    NewDiskService(service),
-		PortalService:  NewPortalService(service),
+		Service:             service,
+		ComputeService:      NewComputeService(service),
+		DiskService:         NewDiskService(service),
+		PortalService:       NewPortalService(service),
+		LoadBalancerService: NewLoadBalancerService(service),
 	}, nil
 }
