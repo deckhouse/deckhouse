@@ -12,7 +12,7 @@
         description: |-
           There are {{ $value }} expired OpenVPN client certificates.
 
-          Renew certificates if needed.
+          Renew the expired certificates if needed.
 
     - alert: OpenVPNServerCertificateExpiringSoon
       expr: ovpn_server_cert_expire < 30
@@ -54,7 +54,7 @@
         description: |-
           The OpenVPN server certificate has expired.
 
-          Renew it as soon as possible to restore VPN functionality.
+          To restore VPN functionality, renew the expired certificate as soon as possible.
 
     - alert: OpenVPNServerCACertificateExpiringSoon
       expr: ovpn_server_ca_cert_expire < 30
@@ -96,4 +96,4 @@
         description: |-
           The OpenVPN CA certificate has expired.
 
-          Renew it as soon as possible to restore VPN functionality.
+          To restore VPN functionality, renew the expired certificate as soon as possible.
