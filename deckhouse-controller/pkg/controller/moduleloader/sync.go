@@ -134,7 +134,7 @@ func (l *Loader) restoreAbsentModulesFromOverrides(ctx context.Context) error {
 
 		// skip embedded module
 		if module.IsEmbedded() {
-			l.logger.Info("the module is embbedded, skip restoring module pull override process", slog.String("name", mpo.Name))
+			l.logger.Info("the module is embedded, skip restoring module pull override process", slog.String("name", mpo.Name))
 			continue
 		}
 
@@ -161,7 +161,8 @@ func (l *Loader) restoreAbsentModulesFromOverrides(ctx context.Context) error {
 		// get relevant module source
 		source := new(v1alpha1.ModuleSource)
 		if err = l.client.Get(ctx, client.ObjectKey{Name: module.Properties.Source}, source); err != nil {
-			return fmt.Errorf("get the '%s' module source for the '%s' module: %w", module.Properties.Source, mpo.Name, err)
+			l.logger.Warn("failed to get module source for the module", slog.String("name", mpo.GetModuleName()), log.Err(err))
+			return nil
 		}
 
 		// mpo's status.weight field isn't set - get it from the module's definition
@@ -306,7 +307,8 @@ func (l *Loader) restoreAbsentModulesFromReleases(ctx context.Context) error {
 		// get relevant module source
 		source := new(v1alpha1.ModuleSource)
 		if err = l.client.Get(ctx, client.ObjectKey{Name: release.GetModuleSource()}, source); err != nil {
-			return fmt.Errorf("get the '%s' module source for the '%s' module: %w", source.Name, release.Spec.ModuleName, err)
+			l.logger.Warn("failed to get module source for the module", slog.String("name", release.GetModuleName()), log.Err(err))
+			return nil
 		}
 
 		moduleSymLink := filepath.Join(l.symlinksDir, fmt.Sprintf("%d-%s", release.Spec.Weight, release.Spec.ModuleName))
