@@ -11,6 +11,11 @@ locals {
   placement_policy = lookup(local.master_instance_class, "placementPolicy", "")
 }
 
+// hack to recreate VM when changing kubernetes_data.id, must be replaced with replace_triggered_by after tf upgrade
+locals {
+  disk_hash    = md5(vcd_independent_disk.kubernetes_data.id)
+  disk_offset  = parseint(local.disk_hash, 16) % 21
+}
 
 data "vcd_catalog" "catalog" {
   org  = local.org
@@ -69,7 +74,9 @@ resource "vcd_vapp_vm" "master" {
 
   override_template_disk {
     bus_type        = "paravirtual"
-    size_in_mb      = (local.master_instance_class.rootDiskSizeGb * 1024) + 1
+    // disk_offset is just a hack to recreate VM when changing kubernetes_data.id, must be replaced with replace_triggered_by after tf upgrade
+    // this will add 0-20 mbytes to etcd disk size
+    size_in_mb      = (local.master_instance_class.rootDiskSizeGb * 1024) + local.disk_offset
     bus_number      = 0
     unit_number     = 0
     storage_profile = data.vcd_storage_profile.sp.name
