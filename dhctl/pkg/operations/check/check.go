@@ -127,7 +127,8 @@ func checkClusterState(kubeCl *client.KubernetesClient, metaConfig *config.MetaC
 	// NOTE: Cluster state loaded from target kubernetes cluster in default dhctl-converge.
 	// NOTE: In the commander mode cluster state should exist in the local state cache.
 	if !opts.CommanderMode {
-		clusterState, err = state_terraform.GetClusterStateFromCluster(kubeCl)
+		// TODO(dhctl-for-commander-cancels): pass ctx
+		clusterState, err = state_terraform.GetClusterStateFromCluster(context.TODO(), kubeCl)
 		if err != nil {
 			return terraform.PlanHasNoChanges, nil, nil, fmt.Errorf("terraform cluster state in Kubernetes cluster not found: %w", err)
 		}

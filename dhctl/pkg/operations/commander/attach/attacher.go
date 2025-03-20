@@ -201,7 +201,7 @@ func (i *Attacher) scan(
 
 		res = &ScanResult{}
 
-		metaConfig.UUID, err = state_terraform.GetClusterUUID(kubeClient)
+		metaConfig.UUID, err = state_terraform.GetClusterUUID(ctx, kubeClient)
 		if err != nil {
 			return fmt.Errorf("unable to get cluster uuid: %w", err)
 		}
@@ -242,7 +242,7 @@ func (i *Attacher) scan(
 			return fmt.Errorf("unable to get nodes tf state: %w", err)
 		}
 
-		clusterState, err := state_terraform.GetClusterStateFromCluster(kubeClient)
+		clusterState, err := state_terraform.GetClusterStateFromCluster(ctx, kubeClient)
 		if err != nil {
 			return fmt.Errorf("unable get cluster tf state: %w", err)
 		}

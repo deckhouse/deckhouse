@@ -293,7 +293,7 @@ func WaitForNodesListBecomeReady(ctx context.Context, kubeCl *client.KubernetesC
 							ready := true
 							if checker != nil {
 								var err error
-								ready, err = checker.IsReady(node.Name)
+								ready, err = checker.IsReady(ctx, node.Name)
 								if err != nil {
 									log.InfoF("While doing check '%s' node %s has error: %v\n", checker.Name(), node.Name, err)
 								} else if !ready {

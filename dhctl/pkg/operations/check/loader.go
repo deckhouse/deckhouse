@@ -15,6 +15,7 @@
 package check
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -25,7 +26,8 @@ import (
 
 func LoadNodesStateForCommanderMode(stateCache dhctlstate.Cache, metaConfig *config.MetaConfig, kubeCl *client.KubernetesClient) (map[string]dhctlstate.NodeGroupTerraformState, error) {
 	stateLoader := state_terraform.NewFileTerraStateLoader(stateCache, metaConfig)
-	_, nodesState, err := stateLoader.PopulateClusterState()
+	// TODO(dhctl-for-commander-cancels): pass ctx
+	_, nodesState, err := stateLoader.PopulateClusterState(context.TODO())
 	if err != nil {
 		return nil, fmt.Errorf("state loader from cache failed: %w", err)
 	}

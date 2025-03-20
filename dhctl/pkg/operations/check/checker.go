@@ -124,7 +124,7 @@ func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.Kuberne
 		return "", fmt.Errorf("unable to get provider cluster config yaml: %w", err)
 	}
 
-	inClusterMetaConfig, err := entity.GetMetaConfig(kubeCl)
+	inClusterMetaConfig, err := entity.GetMetaConfig(ctx, kubeCl)
 	if err != nil {
 		return "", fmt.Errorf("unable to get in-cluster meta config: %w", err)
 	}
