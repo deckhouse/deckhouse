@@ -75,7 +75,7 @@ func initMonitoringAndAutoscaling(access kubernetes.Access, nodeLister node.List
 			config: checker.PrometheusApiAvailable{
 				Access:   access,
 				Timeout:  5 * time.Second,
-				Endpoint: "https://aggregating-proxy.d8-monitoring:443/aggregating-proxy/main/api/v1/query?query=vector(1)",
+				Endpoint: "https://aggregating-proxy.d8-monitoring:443/api/v1/query?query=vector(1)",
 			},
 		}, {
 			group:  groupMonitoringAndAutoscaling,
