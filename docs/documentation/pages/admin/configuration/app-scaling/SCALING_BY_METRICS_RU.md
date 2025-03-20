@@ -177,7 +177,7 @@ kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/se
 kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/metrics/my-ns-metric
 ```
 
-Для получения внешних (external) метрик используйте команду:
+Для получения внешних метрик используйте команду:
 
 ```console
 kubectl get --raw /apis/external.metrics.k8s.io/v1beta1
