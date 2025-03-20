@@ -342,7 +342,7 @@ spec:
     - `settings.instanceSpec.features.mail` - раздел с настройками для различных типов почты: входящей, исходящей, serviceDesk
       - `settings.instanceSpec.features.mail.outgoingEmail` - раздел с настройками для исходящей почты. Подробнее о параметрах можно прочитать [здесь](https://docs.gitlab.com/charts/installation/command-line-options.html#outgoing-email-configuration)
         - `settings.instanceSpec.features.mail.outgoingEmail.displayName`
-        - `settings.instanceSpec.features.mail.outgoingEmail.from` 
+        - `settings.instanceSpec.features.mail.outgoingEmail.from`
         - `settings.instanceSpec.features.mail.outgoingEmail.replyTo`
         - `settings.instanceSpec.features.mail.outgoingEmail.subjectSuffix`
         - `settings.instanceSpec.features.mail.outgoingEmail.smtp`
@@ -352,7 +352,7 @@ spec:
           - `settings.instanceSpec.features.mail.outgoingEmail.smtp.authentication`
           - `settings.instanceSpec.features.mail.outgoingEmail.smtp.username`
           - `settings.instanceSpec.features.mail.outgoingEmail.smtp.password`
-          - `settings.instanceSpec.features.mail.outgoingEmail.smtp.domain` 
+          - `settings.instanceSpec.features.mail.outgoingEmail.smtp.domain`
           - `settings.instanceSpec.features.mail.outgoingEmail.smtp.tls`
           - `settings.instanceSpec.features.mail.outgoingEmail.smtp.starttlsAuto`
           - `settings.instanceSpec.features.mail.outgoingEmail.smtp.opensslVerifyMode`
