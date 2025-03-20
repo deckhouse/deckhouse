@@ -36,15 +36,16 @@ if [ -f /var/lib/bashible/cgroup_config ] && [ "$(cat /var/lib/bashible/cgroup_c
   systemd_cgroup=false
 fi
 
-# generated using `containerd config default` by containerd version `containerd containerd.io 1.4.3 269548fa27e0089a8b8278fc4fc781d7f65a939b`
+# generated using `containerd config migrate` by containerd version `containerd containerd.io 2.0.4 1a43cb6a1035441f9aca8f5666a9b3ef9e70ab20`
 bb-sync-file /etc/containerd/deckhouse.toml - << EOF
-version = 2
+version = 3
 root = "/var/lib/containerd"
 state = "/run/containerd"
 plugin_dir = ""
 disabled_plugins = []
 required_plugins = []
 oom_score = 0
+
 [grpc]
   address = "/run/containerd/containerd.sock"
   tcp_address = ""
@@ -54,139 +55,178 @@ oom_score = 0
   gid = 0
   max_recv_message_size = 16777216
   max_send_message_size = 16777216
+
 [ttrpc]
   address = ""
   uid = 0
   gid = 0
+
 [debug]
   address = ""
   uid = 0
   gid = 0
   level = ""
+
 [metrics]
   address = ""
   grpc_histogram = false
-[cgroup]
-  path = ""
-[timeouts]
-  "io.containerd.timeout.shim.cleanup" = "5s"
-  "io.containerd.timeout.shim.load" = "5s"
-  "io.containerd.timeout.shim.shutdown" = "3s"
-  "io.containerd.timeout.task.state" = "2s"
+
 [plugins]
+  [plugins.'io.containerd.cri.v1.images']
+    snapshotter = "overlayfs"
+    disable_snapshot_annotations = true
+    discard_unpacked_layers = true
+    max_concurrent_downloads = {{ $max_concurrent_downloads }}
+    image_pull_with_sync_fs = false
+    image_pull_progress_timeout = '5m0s'
+    stats_collect_period = 10
+
+    [plugins.'io.containerd.cri.v1.images'.pinned_images]
+      sandbox_image = {{ $sandbox_image | quote }}
+
+    [plugins.'io.containerd.cri.v1.images'.registry]
+      config_path = ''
+
+      [plugins."io.containerd.cri.v1.images".registry.mirrors]
+        [plugins."io.containerd.cri.v1.images".registry.mirrors."docker.io"]
+          endpoint = ["https://registry-1.docker.io"]
+        [plugins."io.containerd.cri.v1.images".registry.mirrors."{{ .registry.address }}"]
+          endpoint = ["{{ .registry.scheme }}://{{ .registry.address }}"]
+      [plugins."io.containerd.cri.v1.images".registry.configs]
+        [plugins."io.containerd.cri.v1.images".registry.configs."{{ .registry.address }}".auth]
+          auth = "{{ .registry.auth | default "" }}"
+  {{- if .registry.ca }}
+        [plugins."io.containerd.cri.v1.images".registry.configs."{{ .registry.address }}".tls]
+          ca_file = "/opt/deckhouse/share/ca-certificates/registry-ca.crt"
+  {{- end }}
+  {{- if eq .registry.scheme "http" }}
+        [plugins."io.containerd.cri.v1.images".registry.configs."{{ .registry.address }}".tls]
+          insecure_skip_verify = true
+  {{- end }}
+  {{- if eq .runType "Normal" }}
+    {{- range $registryAddr,$ca := .normal.moduleSourcesCA }}
+      {{- if $ca }}
+        [plugins."io.containerd.cri.v1.images".registry.configs."{{ $registryAddr | lower }}".tls]
+          ca_file = "/opt/deckhouse/share/ca-certificates/{{ $registryAddr | lower }}-ca.crt"
+      {{- end }}
+    {{- end }}
+  {{- end }}
+
+    [plugins.'io.containerd.cri.v1.images'.image_decryption]
+      key_model = ''    
+    
+  [plugins.'io.containerd.cri.v1.runtime']
+    enable_selinux = false
+    selinux_category_range = 1024
+    max_container_log_line_size = 16384
+    disable_cgroup = false
+    disable_apparmor = false
+    restrict_oom_score_adj = false
+    disable_proc_mount = false
+    unset_seccomp_profile = ""
+    tolerate_missing_hugetlb_controller = true
+    disable_hugetlb_controller = true
+    device_ownership_from_security_context = true
+    ignore_image_defined_volumes = false
+    netns_mounts_under_state_dir = false
+    enable_unprivileged_ports = true
+    enable_unprivileged_icmp = true
+    enable_cdi = true
+    cdi_spec_dirs = ['/etc/cdi', '/var/run/cdi']
+    drain_exec_sync_io_timeout = '0s'
+    ignore_deprecation_warnings = []
+
+    [plugins.'io.containerd.cri.v1.runtime'.containerd]
+      default_runtime_name = "runc"
+      ignore_blockio_not_enabled_errors = false
+      ignore_rdt_not_enabled_errors = false
+
+      [plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes]
+        [plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes.runc]
+          runtime_type = 'io.containerd.runc.v2'
+          runtime_path = ''
+          pod_annotations = []
+          container_annotations = []
+          privileged_without_host_devices = false
+          privileged_without_host_devices_all_devices_allowed = false
+          base_runtime_spec = ''
+          cni_conf_dir = ''
+          cni_max_conf_num = 0
+          sandboxer = 'podsandbox'
+          io_type = ''
+
+          [plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes.runc.options]
+            BinaryName = ''
+            CriuImagePath = ''
+            CriuWorkPath = ''
+            IoGid = 0
+            IoUid = 0
+            NoNewKeyring = false
+            Root = ''
+            ShimCgroup = ''
+            SystemdCgroup = ${systemd_cgroup}
+
+    [plugins.'io.containerd.cri.v1.runtime'.cni]
+      bin_dir = '/opt/cni/bin'
+      conf_dir = '/etc/cni/net.d'
+      max_conf_num = 1
+      setup_serially = false
+      conf_template = ''
+      ip_pref = ''
+      use_internal_loopback = false
+
   [plugins."io.containerd.gc.v1.scheduler"]
     pause_threshold = 0.02
     deletion_threshold = 0
     mutation_threshold = 100
     schedule_delay = "0s"
     startup_delay = "100ms"
+
   [plugins."io.containerd.grpc.v1.cri"]
     disable_tcp_service = true
     stream_server_address = "127.0.0.1"
     stream_server_port = "0"
     stream_idle_timeout = "4h0m0s"
-    enable_selinux = false
-    selinux_category_range = 1024
-    sandbox_image = {{ $sandbox_image | quote }}
-    stats_collect_period = 10
-    systemd_cgroup = false
     enable_tls_streaming = false
-    max_container_log_line_size = 16384
-    disable_cgroup = false
-    disable_apparmor = false
-    restrict_oom_score_adj = false
-    max_concurrent_downloads = {{ $max_concurrent_downloads }}
-    disable_proc_mount = false
-    unset_seccomp_profile = ""
-    tolerate_missing_hugetlb_controller = true
-    disable_hugetlb_controller = true
-    ignore_image_defined_volumes = false
-    device_ownership_from_security_context = true
-    [plugins."io.containerd.grpc.v1.cri".containerd]
-      snapshotter = "overlayfs"
-      default_runtime_name = "runc"
-      no_pivot = false
-      disable_snapshot_annotations = true
-      discard_unpacked_layers = true
-      [plugins."io.containerd.grpc.v1.cri".containerd.default_runtime]
-        runtime_type = ""
-        runtime_engine = ""
-        runtime_root = ""
-        privileged_without_host_devices = false
-        base_runtime_spec = ""
-      [plugins."io.containerd.grpc.v1.cri".containerd.untrusted_workload_runtime]
-        runtime_type = ""
-        runtime_engine = ""
-        runtime_root = ""
-        privileged_without_host_devices = false
-        base_runtime_spec = ""
-      [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]
-        [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
-          runtime_type = "io.containerd.runc.v2"
-          runtime_engine = ""
-          runtime_root = ""
-          privileged_without_host_devices = false
-          base_runtime_spec = ""
-          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
-            SystemdCgroup = ${systemd_cgroup}
-    [plugins."io.containerd.grpc.v1.cri".cni]
-      bin_dir = "/opt/cni/bin"
-      conf_dir = "/etc/cni/net.d"
-      max_conf_num = 1
-      conf_template = ""
-    [plugins."io.containerd.grpc.v1.cri".registry]
-      [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
-        [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
-          endpoint = ["https://registry-1.docker.io"]
-        [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ .registry.address }}"]
-          endpoint = ["{{ .registry.scheme }}://{{ .registry.address }}"]
-      [plugins."io.containerd.grpc.v1.cri".registry.configs]
-        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".auth]
-          auth = "{{ .registry.auth | default "" }}"
-  {{- if .registry.ca }}
-        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".tls]
-          ca_file = "/opt/deckhouse/share/ca-certificates/registry-ca.crt"
-  {{- end }}
-  {{- if eq .registry.scheme "http" }}
-        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".tls]
-          insecure_skip_verify = true
-  {{- end }}
-  {{- if eq .runType "Normal" }}
-    {{- range $registryAddr,$ca := .normal.moduleSourcesCA }}
-      {{- if $ca }}
-        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ $registryAddr | lower }}".tls]
-          ca_file = "/opt/deckhouse/share/ca-certificates/{{ $registryAddr | lower }}-ca.crt"
-      {{- end }}
-    {{- end }}
-  {{- end }}
-    [plugins."io.containerd.grpc.v1.cri".image_decryption]
-      key_model = ""
+
     [plugins."io.containerd.grpc.v1.cri".x509_key_pair_streaming]
       tls_cert_file = ""
       tls_key_file = ""
+
   [plugins."io.containerd.internal.v1.opt"]
     path = "/opt/containerd"
-  [plugins."io.containerd.internal.v1.restart"]
-    interval = "10s"
+
   [plugins."io.containerd.metadata.v1.bolt"]
     content_sharing_policy = "shared"
-  [plugins."io.containerd.monitor.v1.cgroups"]
+
+  [plugins.'io.containerd.monitor.container.v1.restart']
+    interval = "10s"
+    
+  [plugins.'io.containerd.monitor.task.v1.cgroups']
     no_prometheus = false
-  [plugins."io.containerd.runtime.v1.linux"]
-    shim = "containerd-shim"
-    runtime = "runc"
-    runtime_root = ""
-    no_shim = false
-    shim_debug = false
+
   [plugins."io.containerd.runtime.v2.task"]
     platforms = ["linux/amd64"]
-  [plugins."io.containerd.service.v1.diff-service"]
-    default = ["walking"]
-  [plugins."io.containerd.snapshotter.v1.devmapper"]
-    root_path = ""
-    pool_name = ""
-    base_image_size = ""
-    async_remove = false
+
+  [plugins.'io.containerd.service.v1.diff-service']
+    default = ['walking']
+    sync_fs = false
+
+  [plugins.'io.containerd.service.v1.tasks-service']
+    blockio_config_file = ''
+    rdt_config_file = ''
+
+  [plugins.'io.containerd.shim.v1.manager']
+    env = []
+    
+[cgroup]
+  path = ""
+
+[timeouts]
+  "io.containerd.timeout.shim.cleanup" = "5s"
+  "io.containerd.timeout.shim.load" = "5s"
+  "io.containerd.timeout.shim.shutdown" = "3s"
+  "io.containerd.timeout.task.state" = "2s"
 EOF
 
 # Check additional configs
