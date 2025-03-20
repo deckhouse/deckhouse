@@ -61,11 +61,11 @@ func GetClusterUUID(ctx context.Context, kubeCl *client.KubernetesClient) (strin
 	return clusterUUID, err
 }
 
-func GetNodesStateFromCluster(kubeCl *client.KubernetesClient) (map[string]state.NodeGroupTerraformState, error) {
+func GetNodesStateFromCluster(ctx context.Context, kubeCl *client.KubernetesClient) (map[string]state.NodeGroupTerraformState, error) {
 	extractedState := make(map[string]state.NodeGroupTerraformState)
 
-	err := retry.NewLoop("Get Nodes Terraform state from Kubernetes cluster", 5, 5*time.Second).Run(func() error {
-		nodeStateSecrets, err := kubeCl.CoreV1().Secrets("d8-system").List(context.TODO(), metav1.ListOptions{LabelSelector: "node.deckhouse.io/terraform-state"})
+	err := retry.NewLoop("Get Nodes Terraform state from Kubernetes cluster", 5, 5*time.Second).RunContext(ctx, func() error {
+		nodeStateSecrets, err := kubeCl.CoreV1().Secrets("d8-system").List(ctx, metav1.ListOptions{LabelSelector: "node.deckhouse.io/terraform-state"})
 		if err != nil {
 			return err
 		}

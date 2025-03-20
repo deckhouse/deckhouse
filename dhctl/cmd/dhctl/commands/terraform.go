@@ -78,7 +78,9 @@ func DefineTerraformCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		statistic, err := check.CheckState(kubeCl, metaConfig, terraform.NewTerraformContext(), check.CheckStateOptions{})
+		statistic, err := check.CheckState(
+			context.Background(), kubeCl, metaConfig, terraform.NewTerraformContext(), check.CheckStateOptions{},
+		)
 		if err != nil {
 			return err
 		}

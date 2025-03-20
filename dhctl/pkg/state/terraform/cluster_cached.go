@@ -118,7 +118,7 @@ func (s *KubeTerraStateLoader) getNodesState(ctx context.Context) (map[string]st
 		if kubeCl, err = s.kubeGetter.GetKubeClient(ctx); err != nil {
 			return nil, err
 		}
-		nodesState, err = GetNodesStateFromCluster(kubeCl)
+		nodesState, err = GetNodesStateFromCluster(ctx, kubeCl)
 		if err != nil {
 			return nil, err
 		}

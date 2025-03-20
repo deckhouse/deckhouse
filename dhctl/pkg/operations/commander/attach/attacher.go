@@ -237,7 +237,7 @@ func (i *Attacher) scan(
 			return fmt.Errorf("unable to get ssh public key: %w", err)
 		}
 
-		nodesState, err := state_terraform.GetNodesStateFromCluster(kubeClient)
+		nodesState, err := state_terraform.GetNodesStateFromCluster(ctx, kubeClient)
 		if err != nil {
 			return fmt.Errorf("unable to get nodes tf state: %w", err)
 		}
