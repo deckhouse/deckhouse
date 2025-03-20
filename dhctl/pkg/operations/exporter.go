@@ -169,14 +169,14 @@ func (c *ConvergeExporter) registerMetrics() {
 	c.CounterMetrics["errors"] = errorsVec
 }
 
-func (c *ConvergeExporter) Start() {
+func (c *ConvergeExporter) Start(ctx context.Context) {
 	log.InfoLn("Start exporter")
 	log.InfoLn("Address: ", app.ListenAddress)
 	log.InfoLn("Metrics path: ", app.MetricsPath)
 	log.InfoLn("Checks interval: ", app.CheckInterval)
 	c.registerMetrics()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	go c.convergeLoop(ctx)
@@ -219,7 +219,7 @@ func (c *ConvergeExporter) convergeLoop(ctx context.Context) {
 }
 
 func (c *ConvergeExporter) getStatistic(ctx context.Context) *check.Statistics {
-	metaConfig, err := config.ParseConfigInCluster(c.kubeCl)
+	metaConfig, err := config.ParseConfigInCluster(ctx, c.kubeCl)
 	if err != nil {
 		log.ErrorLn(err)
 		c.CounterMetrics["errors"].WithLabelValues().Inc()

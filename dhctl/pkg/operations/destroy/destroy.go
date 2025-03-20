@@ -305,7 +305,7 @@ func processStaticHosts(ctx context.Context, hosts []session.Host, s *session.Se
 	for _, host := range hosts {
 		settings := s.Copy()
 		settings.SetAvailableHosts([]session.Host{host})
-		err := retry.NewLoop(fmt.Sprintf("Clear master %s", host), 5, 10*time.Second).Run(func() error {
+		err := retry.NewLoop(fmt.Sprintf("Clear master %s", host), 5, 10*time.Second).RunContext(ctx, func() error {
 			cmd := frontend.NewCommand(settings, cmd)
 			cmd.Sudo()
 			cmd.WithTimeout(5 * time.Minute)
@@ -349,7 +349,7 @@ func (d *ClusterDestroyer) GetMasterNodesIPs(ctx context.Context) ([]NodeIP, err
 	}
 
 	var nodes *v1.NodeList
-	err = retry.NewLoop("Get control plane nodes from Kubernetes cluster", 5, 5*time.Second).Run(func() error {
+	err = retry.NewLoop("Get control plane nodes from Kubernetes cluster", 5, 5*time.Second).RunContext(ctx, func() error {
 		nodes, err = kubeCl.CoreV1().Nodes().List(ctx, metav1.ListOptions{LabelSelector: "node-role.kubernetes.io/control-plane="})
 		if err != nil {
 			log.DebugF("Cannot get nodes. Got error: %v", err)

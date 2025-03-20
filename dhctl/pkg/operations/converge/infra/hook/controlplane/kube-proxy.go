@@ -108,7 +108,7 @@ func (c *KubeProxyChecker) IsReady(ctx context.Context, nodeName string) (bool, 
 	}
 
 	kubeCl := client.NewKubernetesClient().WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient))
-	err = kubeCl.Init(client.AppKubernetesInitParams())
+	err = kubeCl.InitContext(ctx, client.AppKubernetesInitParams())
 	if err != nil {
 		return false, fmt.Errorf("open kubernetes connection: %v", err)
 	}

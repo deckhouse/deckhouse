@@ -197,7 +197,7 @@ func (s *Service) check(
 		TerraformContext: terraform.NewTerraformContext(),
 	}
 
-	kubeClient, sshClient, cleanup, err := helper.InitializeClusterConnections(helper.ClusterConnectionsOptions{
+	kubeClient, sshClient, cleanup, err := helper.InitializeClusterConnections(ctx, helper.ClusterConnectionsOptions{
 		CommanderMode: request.Options.CommanderMode,
 		ApiServerUrl:  request.Options.ApiServerUrl,
 		ApiServerOptions: helper.ApiServerOptions{
