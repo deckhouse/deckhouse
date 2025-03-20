@@ -22,12 +22,12 @@ if type -p getenforce &>/dev/null && [[ $(getenforce) != Disabled ]]; then
   enable_selinux=true
 fi
 
-mkdir -p /etc/containerd
+mkdir -p /etc/containerd/certs.d/_default
 
 cat << EOF > /etc/containerd/config.toml
-version = 2
+version = 3
 [plugins]
-  [plugins."io.containerd.grpc.v1.cri"]
+  [plugins.'io.containerd.cri.v1.runtime']
     enable_selinux = ${enable_selinux}
 EOF
 

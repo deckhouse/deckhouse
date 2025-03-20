@@ -30,6 +30,39 @@ bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
     {{- end }}
   {{- end }}
 
+  {{- $with_ca := "" }}
+  {{- if .registry.ca }}
+    {{- $with_ca := "--tlscacert /opt/deckhouse/share/ca-certificates/registry-ca.crt" }}
+  {{- end }}
+
+ctr image pull --user {{ .registry.auth | b64dec }} {{ $with_ca }} {{ $sandbox_image -}}
+
+bb-sync-file /etc/containerd/certs.d/_default/hosts.toml - << EOF
+[host."https://registry-1.docker.io"]
+  capabilities = ["pull", "resolve"]
+
+[host."{{ .registry.scheme }}://{{ .registry.address }}"]
+  capabilities = ["pull", "resolve"]
+{{- if .registry.ca }}
+  ca = ["/opt/deckhouse/share/ca-certificates/registry-ca.crt"]
+{{- end }}
+
+{{- if eq .registry.scheme "http" }}
+  skip_verify = true
+{{- end }}
+
+{{- if eq .runType "Normal" }}
+  {{- range $registryAddr,$ca := .normal.moduleSourcesCA }}
+    {{- if $ca }}
+[host."https://{{ $registryAddr | lower }}"]
+  ca = "/opt/deckhouse/share/ca-certificates/{{ $registryAddr | lower }}-ca.crt"
+    {{- end }}
+  {{- end }}
+{{- end }}
+
+EOF
+
+
 systemd_cgroup=true
 # Overriding cgroup type from external config file
 if [ -f /var/lib/bashible/cgroup_config ] && [ "$(cat /var/lib/bashible/cgroup_config)" == "cgroupfs" ]; then
@@ -82,35 +115,10 @@ oom_score = 0
     stats_collect_period = 10
 
     [plugins.'io.containerd.cri.v1.images'.pinned_images]
-      sandbox_image = {{ $sandbox_image | quote }}
+      sandbox = {{ $sandbox_image | quote }}
 
     [plugins.'io.containerd.cri.v1.images'.registry]
-      config_path = ''
-
-      [plugins."io.containerd.cri.v1.images".registry.mirrors]
-        [plugins."io.containerd.cri.v1.images".registry.mirrors."docker.io"]
-          endpoint = ["https://registry-1.docker.io"]
-        [plugins."io.containerd.cri.v1.images".registry.mirrors."{{ .registry.address }}"]
-          endpoint = ["{{ .registry.scheme }}://{{ .registry.address }}"]
-      [plugins."io.containerd.cri.v1.images".registry.configs]
-        [plugins."io.containerd.cri.v1.images".registry.configs."{{ .registry.address }}".auth]
-          auth = "{{ .registry.auth | default "" }}"
-  {{- if .registry.ca }}
-        [plugins."io.containerd.cri.v1.images".registry.configs."{{ .registry.address }}".tls]
-          ca_file = "/opt/deckhouse/share/ca-certificates/registry-ca.crt"
-  {{- end }}
-  {{- if eq .registry.scheme "http" }}
-        [plugins."io.containerd.cri.v1.images".registry.configs."{{ .registry.address }}".tls]
-          insecure_skip_verify = true
-  {{- end }}
-  {{- if eq .runType "Normal" }}
-    {{- range $registryAddr,$ca := .normal.moduleSourcesCA }}
-      {{- if $ca }}
-        [plugins."io.containerd.cri.v1.images".registry.configs."{{ $registryAddr | lower }}".tls]
-          ca_file = "/opt/deckhouse/share/ca-certificates/{{ $registryAddr | lower }}-ca.crt"
-      {{- end }}
-    {{- end }}
-  {{- end }}
+      config_path = '/etc/containerd/certs.d'
 
     [plugins.'io.containerd.cri.v1.images'.image_decryption]
       key_model = ''    
@@ -119,7 +127,6 @@ oom_score = 0
     enable_selinux = false
     selinux_category_range = 1024
     max_container_log_line_size = 16384
-    disable_cgroup = false
     disable_apparmor = false
     restrict_oom_score_adj = false
     disable_proc_mount = false
