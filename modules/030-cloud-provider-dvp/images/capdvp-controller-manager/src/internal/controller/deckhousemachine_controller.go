@@ -372,6 +372,14 @@ func (r *DeckhouseMachineReconciler) createVM(
 		return nil, fmt.Errorf("Expected to find a cloud-init script in secret %s/%s", bootstrapDataSecret.Namespace, bootstrapDataSecret.Name)
 	}
 
+	cloudInitScript = append(cloudInitScript, `
+ssh_pwauth: true
+chpasswd:
+  expire: false
+  users:
+  - {name: ubuntu, password: pass, type: text}
+`...)
+
 	cloudInitSecretName := "cloud-init-" + dvpMachine.Name
 	if err := r.DVP.ComputeService.CreateCloudInitProvisioningSecret(ctx, cloudInitSecretName, cloudInitScript); err != nil {
 		return nil, fmt.Errorf("Cannot create cloud-init provisioning secret: %w", err)
