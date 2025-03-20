@@ -15,8 +15,8 @@
 # limitations under the License.
 
 if d8-curl --connect-timeout 10 -sS -H Metadata:true --noproxy "*" "http://169.254.169.254/metadata/instance?api-version=2021-12-13" | grep -q  '"priority":"Regular"'; then
-  shutdown_grace_period="295"
-  shutdown_grace_period_critical_pods="5"
+  shutdown_grace_period="285"
+  shutdown_grace_period_critical_pods="15"
 fi
 
 cat << EOF > /var/lib/bashible/cloud-provider-variables
