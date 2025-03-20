@@ -373,11 +373,11 @@ func (r *DeckhouseMachineReconciler) createVM(
 	}
 
 	cloudInitScript = append(cloudInitScript, `
+users:
+- name: usrr
+  plain_text_passwd: pass
+  sudo: ALL=(ALL) NOPASSWD:ALL
 ssh_pwauth: true
-chpasswd:
-  expire: false
-  users:
-  - {name: ubuntu, password: pass, type: text}
 `...)
 
 	cloudInitSecretName := "cloud-init-" + dvpMachine.Name
