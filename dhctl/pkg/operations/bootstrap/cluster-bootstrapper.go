@@ -160,7 +160,7 @@ func (b *ClusterBootstrapper) applyParams() (func(), error) {
 	return restoreFunc, nil
 }
 
-func (b *ClusterBootstrapper) Bootstrap() error {
+func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	if restore, err := b.applyParams(); err != nil {
 		return err
 	} else {
@@ -264,8 +264,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	bootstrapState := NewBootstrapState(stateCache)
 
 	preflightChecker := preflight.NewChecker(b.NodeInterface, deckhouseInstallConfig, metaConfig, bootstrapState)
-	// TODO(dhctl-for-commander-cancels): pass ctx
-	if err := preflightChecker.Global(context.TODO()); err != nil {
+	if err := preflightChecker.Global(ctx); err != nil {
 		return err
 	}
 
@@ -280,16 +279,14 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	var resourcesTemplateData map[string]interface{}
 
 	if metaConfig.ClusterType == config.CloudClusterType {
-		// TODO(dhctl-for-commander-cancels): pass ctx
-		err = preflightChecker.Cloud(context.TODO())
+		err = preflightChecker.Cloud(ctx)
 		if err != nil {
 			return err
 		}
 		err = log.Process("bootstrap", "Cloud infrastructure", func() error {
 			baseRunner := b.TerraformContext.GetBootstrapBaseInfraRunner(metaConfig, stateCache)
 
-			// TODO(dhctl-for-commander-cancels): pass ctx
-			baseOutputs, err := terraform.ApplyPipeline(context.TODO(), baseRunner, "Kubernetes cluster", terraform.GetBaseInfraResult)
+			baseOutputs, err := terraform.ApplyPipeline(ctx, baseRunner, "Kubernetes cluster", terraform.GetBaseInfraResult)
 			if err != nil {
 				return err
 			}
@@ -317,8 +314,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 				RunnerLogger:    log.GetDefaultLogger(),
 			})
 
-			// TODO(dhctl-for-commander-cancels): pass ctx
-			masterOutputs, err := terraform.ApplyPipeline(context.TODO(), masterRunner, masterNodeName, terraform.GetMasterNodeResult)
+			masterOutputs, err := terraform.ApplyPipeline(ctx, masterRunner, masterNodeName, terraform.GetMasterNodeResult)
 			if err != nil {
 				return err
 			}
@@ -351,8 +347,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 			return err
 		}
 	} else {
-		// TODO(dhctl-for-commander-cancels): pass ctx
-		err = preflightChecker.Static(context.TODO())
+		err = preflightChecker.Static(ctx)
 		if err != nil {
 			return err
 		}
@@ -394,14 +389,13 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	}
 
 	if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
-		if err := WaitForSSHConnectionOnMaster(context.TODO(), wrapper.Client()); err != nil {
+		if err := WaitForSSHConnectionOnMaster(ctx, wrapper.Client()); err != nil {
 			return fmt.Errorf("failed to wait for SSH connection on master: %v", err)
 		}
 	}
 
 	if metaConfig.ClusterType == config.CloudClusterType {
-		// TODO(dhctl-for-commander-cancels): pass ctx
-		err = preflightChecker.PostCloud(context.TODO())
+		err = preflightChecker.PostCloud(ctx)
 		if err != nil {
 			return err
 		}
@@ -413,8 +407,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return nil
 	}
 
-	// TODO(dhctl-for-commander-cancels): pass ctx
-	if err := RunBashiblePipeline(context.TODO(), b.NodeInterface, metaConfig, nodeIP, devicePath); err != nil {
+	if err := RunBashiblePipeline(ctx, b.NodeInterface, metaConfig, nodeIP, devicePath); err != nil {
 		return err
 	}
 
@@ -424,14 +417,12 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return nil
 	}
 
-	// TODO(dhctl-for-commander-cancels): pass ctx
-	kubeCl, err := kubernetes.ConnectToKubernetesAPI(context.TODO(), b.NodeInterface)
+	kubeCl, err := kubernetes.ConnectToKubernetesAPI(ctx, b.NodeInterface)
 	if err != nil {
 		return err
 	}
 
-	// TODO(dhctl-for-commander-cancels): pass ctx
-	installDeckhouseResult, err := InstallDeckhouse(context.TODO(), kubeCl, deckhouseInstallConfig)
+	installDeckhouseResult, err := InstallDeckhouse(ctx, kubeCl, deckhouseInstallConfig)
 	if err != nil {
 		return err
 	}
@@ -448,13 +439,11 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 				return action()
 			}
 			return lock.NewInLockLocalRunner(kubernetes.NewSimpleKubeClientGetter(kubeCl), "local-bootstraper").
-				// TODO(dhctl-for-commander-cancels): pass ctx
-				Run(context.TODO(), action)
+				Run(ctx, action)
 		}
 
 		err := localBootstraper(func() error {
-			// TODO(dhctl-for-commander-cancels): pass ctx
-			return bootstrapAdditionalNodesForCloudCluster(context.TODO(), kubeCl, metaConfig, masterAddressesForSSH, b.TerraformContext)
+			return bootstrapAdditionalNodesForCloudCluster(ctx, kubeCl, metaConfig, masterAddressesForSSH, b.TerraformContext)
 		})
 		if err != nil {
 			return err
@@ -471,8 +460,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return err
 	}
 
-	// TODO(dhctl-for-commander-cancels): pass ctx
-	err = createResources(context.TODO(), kubeCl, resourcesToCreate, metaConfig, installDeckhouseResult)
+	err = createResources(ctx, kubeCl, resourcesToCreate, metaConfig, installDeckhouseResult)
 	if err != nil {
 		return err
 	}
@@ -488,7 +476,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		postScriptExecutor := NewPostBootstrapScriptExecutor(sshNodeInterfaceWrapper.Client(), app.PostBootstrapScriptPath, bootstrapState).
 			WithTimeout(app.PostBootstrapScriptTimeout)
 
-		if err := postScriptExecutor.Execute(); err != nil {
+		if err := postScriptExecutor.Execute(ctx); err != nil {
 			return err
 		}
 	}
@@ -499,8 +487,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return nil
 	}
 
-	// TODO(dhctl-for-commander-cancels): pass ctx
-	if err := RunPostInstallTasks(context.TODO(), kubeCl, installDeckhouseResult); err != nil {
+	if err := RunPostInstallTasks(ctx, kubeCl, installDeckhouseResult); err != nil {
 		return err
 	}
 
@@ -536,11 +523,11 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 }
 
 // TODO(dhctl-for-commander): pass stateCache externally using params as in Destroyer, this method will be unneeded then
-func (c *ClusterBootstrapper) GetLastState() phases.DhctlState {
-	if c.lastState != nil {
-		return c.lastState
+func (b *ClusterBootstrapper) GetLastState() phases.DhctlState {
+	if b.lastState != nil {
+		return b.lastState
 	} else {
-		return c.PhasedExecutionContext.GetLastState()
+		return b.PhasedExecutionContext.GetLastState()
 	}
 }
 

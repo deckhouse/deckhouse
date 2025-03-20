@@ -138,7 +138,7 @@ func (s *Service) bootstrapSafe(
 }
 
 func (s *Service) bootstrap(
-	_ context.Context,
+	ctx context.Context,
 	request *pb.BootstrapStart,
 	switchPhase phases.DefaultOnPhaseFunc,
 	logWriter io.Writer,
@@ -267,7 +267,7 @@ func (s *Service) bootstrap(
 		KubernetesInitParams:       nil,
 	})
 
-	bootstrapErr := bootstrapper.Bootstrap()
+	bootstrapErr := bootstrapper.Bootstrap(ctx)
 	state := bootstrapper.GetLastState()
 	stateData, marshalErr := json.Marshal(state)
 	err = errors.Join(bootstrapErr, marshalErr)
