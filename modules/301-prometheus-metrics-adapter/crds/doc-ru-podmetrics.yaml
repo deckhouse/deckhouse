@@ -19,7 +19,7 @@ spec:
       storage: true
       schema: &schema
         openAPIV3Schema:
-          description: 'PodMetric это удобный интерфейс для настройки пользовательских метрик, связанных с подами в prometheus-metrics-adapter.'
+          description: 'Настройка пользовательских метрик, связанных с подами в prometheus-metrics-adapter.'
           properties:
             spec:
               properties:

@@ -20,7 +20,7 @@ spec:
       schema: &schema
         openAPIV3Schema:
           type: object
-          description: 'NamespaceMetric это удобный интерфейс для настройки пользовательских метрик, связанных с пространством имён в prometheus-metrics-adapter.'
+          description: 'Настройка пользовательских метрик, связанных с пространством имён в prometheus-metrics-adapter.'
           required:
             - spec
           properties:

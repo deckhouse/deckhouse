@@ -19,7 +19,7 @@ spec:
       storage: true
       schema: &schema
         openAPIV3Schema:
-          description: 'DeploymentMetric это удобный интерфейс для настройки пользовательских метрик, связанных с Deployment в  prometheus-metrics-adapter.'
+          description: 'Настройка пользовательских метрик, связанных с Deployment в  prometheus-metrics-adapter.'
           properties:
             spec:
               properties:

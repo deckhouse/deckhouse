@@ -17,7 +17,7 @@ spec:
     - name: v1alpha1
       schema: &schema
         openAPIV3Schema:
-          description: 'ClusterDeploymentMetric — это удобный интерфейс для настройки пользовательских метрик, связанных с Deployment в prometheus-metrics-adapter.'
+          description: 'Настройка пользовательских метрик, связанных с Deployment в prometheus-metrics-adapter.'
           properties:
             spec:
               properties:
