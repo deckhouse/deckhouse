@@ -124,14 +124,15 @@ spec:
         ports:
         - name: grpc
           containerPort: 8090
-        livenessProbe:
-          httpGet:
-            path: /healthz
-            port: 8090
-        readinessProbe:
-          httpGet:
-            path: /healthz
-            port: 8090
+        # https://github.com/cilium/hubble-ui/issues/853
+        #livenessProbe:
+        #  httpGet:
+        #    path: /healthz
+        #    port: 8090
+        #readinessProbe:
+        #  httpGet:
+        #    path: /healthz
+        #    port: 8090
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
