@@ -150,7 +150,7 @@ func getProxyFromMetaConfigSuccessNoProxy(t *testing.T) {
 	s.Nil(noProxyList)
 }
 
-func TestshouldSkipProxyCheck(t *testing.T) {
+func TestShouldSkipProxyCheck(t *testing.T) {
 	s := require.New(t)
 
 	var tests = []struct {

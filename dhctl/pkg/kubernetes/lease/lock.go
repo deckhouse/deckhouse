@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"math"
 	"os"
 	"os/user"
@@ -240,7 +241,7 @@ func (l *LeaseLock) tryRenew(lease *coordinationv1.Lease, force bool) (*coordina
 			return nil, getCurrentLockerError(lease)
 		}
 
-		log.Warnf("Lease for %v finished on %v, try to renew lease\n", l.config.Identity, lease.Spec.RenewTime.Time)
+		log.Warn("Lease finished, try to renew lease", slog.String("identity", l.config.Identity), slog.String("renew_time", lease.Spec.RenewTime.Time.String()))
 	}
 
 	var newLease *coordinationv1.Lease

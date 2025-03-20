@@ -70,7 +70,7 @@ resource "vcd_vapp_vm" "master" {
     is_primary         = true
     ip                 = local.ip_address
   }
-  network_dhcp_wait_seconds = 60
+  network_dhcp_wait_seconds = 120
 
   override_template_disk {
     bus_type        = "paravirtual"

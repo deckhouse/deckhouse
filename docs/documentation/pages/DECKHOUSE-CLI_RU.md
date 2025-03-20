@@ -57,9 +57,9 @@ Deckhouse CLI — это интерфейс командной строки дл
 
    ```bash
    URL=https://trrr.flant.dev/trdl-deckhouse-cli
-   ROOT_VERSION=1
-   ROOT_SHA512=$(curl -Ls ${URL}/${ROOT_VERSION}.root.json | sha512sum | tr -d '\-[:space:]\n')
-   REPO=trdl-deckhouse-cli
+   ROOT_VERSION=0
+   ROOT_SHA512=$(curl -Ls ${URL}/root.json | sha512sum | tr -d '\-[:space:]\n')
+   REPO=trdl-d8
    
    trdl add $REPO $URL $ROOT_VERSION $ROOT_SHA512
    ```

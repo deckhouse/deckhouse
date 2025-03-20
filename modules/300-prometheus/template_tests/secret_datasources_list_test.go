@@ -76,7 +76,8 @@ https:
 internal:
   vpa: {}
   prometheusMain: {}
-  grafana: {}
+  grafana:
+    enabled: true
   prometheusLongterm:
     retentionGigabytes: 1
   customCertificateData:
