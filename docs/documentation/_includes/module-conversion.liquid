@@ -19,11 +19,26 @@
   {% else %}{{ site.data.i18n.common.conversion_missing_description[page.lang] }}.
 
   {% if conversion[1].conversions.size > 0 %}
-  {{ site.data.i18n.common.conversion_expressions[page.lang] }}:
-  {% for conversionRule in conversion[1].conversions %}
-  - `{{ conversionRule }}`
-  {% endfor %}
+    <div class="details" markdown="0">
+      <p class="details__lnk">
+        <a href="javascript:void(0)" class="details__summary">
+          {{ site.data.i18n.common.conversion_expressions[page.lang] }}:
+        </a>
+      </p>
+      <div class="details__content" markdown="0">
+        <div class="expand" markdown="0">
+          <ul>
+            {% for conversionRule in conversion[1].conversions %}
+              <li>
+                <p><code class="language-plaintext highlighter-rouge">{{ conversionRule }}</code></p>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
   {% endif %}
   {% endif %}
 {%- endfor %}
 {%- endif %}
+
