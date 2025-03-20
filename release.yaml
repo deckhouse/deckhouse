@@ -34,6 +34,7 @@ requirements:
   "istioMinimalVersion": "1.19" # modules/110-istio/requirements/check.go
   "metallbHasStandardConfiguration": "true" # ee/se/modules/380-metallb/requirements/check.go
   # "checkAdditionalPropertiesDhctlConfigs": "true" # modules/040-node-manager/requirements/check_config.go
+  "unmetCloudConditions": "true" # modules/040-node-manager/requirements/check.go
 
 # map of disruptions, associated with a specific release. You have to register check functions before specified release
 disruptions:
