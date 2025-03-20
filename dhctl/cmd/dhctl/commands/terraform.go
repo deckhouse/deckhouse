@@ -73,7 +73,7 @@ func DefineTerraformCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		metaConfig.UUID, err = state_terraform.GetClusterUUID(kubeCl)
+		metaConfig.UUID, err = state_terraform.GetClusterUUID(context.Background(), kubeCl)
 		if err != nil {
 			return err
 		}

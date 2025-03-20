@@ -456,7 +456,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return nil
 	}
 
-	if err := controlplane.NewManagerReadinessChecker(kubernetes.NewSimpleKubeClientGetter(kubeCl)).IsReadyAll(); err != nil {
+	if err := controlplane.NewManagerReadinessChecker(kubernetes.NewSimpleKubeClientGetter(kubeCl)).IsReadyAll(ctx); err != nil {
 		return err
 	}
 

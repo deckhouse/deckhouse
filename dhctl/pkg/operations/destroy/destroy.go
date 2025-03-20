@@ -135,7 +135,6 @@ func NewClusterDestroyer(params *Params) (*ClusterDestroyer, error) {
 	}, nil
 }
 
-// TODO(dhctl-for-commander-cancels): use ctx
 func (d *ClusterDestroyer) DestroyCluster(ctx context.Context, autoApprove bool) error {
 	defer d.d8Destroyer.UnlockConverge(true)
 
@@ -145,19 +144,19 @@ func (d *ClusterDestroyer) DestroyCluster(ctx context.Context, autoApprove bool)
 	defer d.PhasedExecutionContext.Finalize(d.stateCache)
 
 	if d.CommanderMode {
-		kubeCl, err := d.d8Destroyer.GetKubeClient()
+		kubeCl, err := d.d8Destroyer.GetKubeClient(ctx)
 		if err != nil {
 			return err
 		}
 
-		_, err = commander.CheckShouldUpdateCommanderUUID(context.TODO(), kubeCl, d.CommanderUUID)
+		_, err = commander.CheckShouldUpdateCommanderUUID(ctx, kubeCl, d.CommanderUUID)
 		if err != nil {
 			return fmt.Errorf("uuid consistency check failed: %w", err)
 		}
 	}
 
 	// populate cluster state in cache
-	metaConfig, err := d.terrStateLoader.PopulateMetaConfig()
+	metaConfig, err := d.terrStateLoader.PopulateMetaConfig(ctx)
 	if err != nil {
 		return err
 	}
@@ -168,7 +167,7 @@ func (d *ClusterDestroyer) DestroyCluster(ctx context.Context, autoApprove bool)
 	case config.CloudClusterType:
 		infraDestroyer = d.cloudClusterInfra
 	case config.StaticClusterType:
-		nodeIPs, err := d.GetMasterNodesIPs()
+		nodeIPs, err := d.GetMasterNodesIPs(ctx)
 		if err != nil {
 			return err
 		}
@@ -194,7 +193,7 @@ func (d *ClusterDestroyer) DestroyCluster(ctx context.Context, autoApprove bool)
 	}
 
 	if clusterType == config.CloudClusterType {
-		_, _, err = d.terrStateLoader.PopulateClusterState()
+		_, _, err = d.terrStateLoader.PopulateClusterState(ctx)
 		if err != nil {
 			return err
 		}
@@ -239,7 +238,6 @@ func NewStaticMastersDestroyer(c *ssh.Client, ips []NodeIP) *StaticMastersDestro
 	}
 }
 
-// TODO(dhctl-for-commander-cancels): use ctx
 func (d *StaticMastersDestroyer) DestroyCluster(ctx context.Context, autoApprove bool) error {
 	if !autoApprove {
 		if !input.NewConfirmation().WithMessage("Do you really want to cleanup control-plane nodes?").Ask() {
@@ -338,13 +336,13 @@ func processStaticHosts(ctx context.Context, hosts []session.Host, s *session.Se
 	return nil
 }
 
-func (d *ClusterDestroyer) GetMasterNodesIPs() ([]NodeIP, error) {
+func (d *ClusterDestroyer) GetMasterNodesIPs(ctx context.Context) ([]NodeIP, error) {
 	var nodeIPs []NodeIP
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	kubeCl, err := d.d8Destroyer.GetKubeClient()
+	kubeCl, err := d.d8Destroyer.GetKubeClient(ctx)
 	if err != nil {
 		log.DebugF("Cannot get kubernetes client. Got error: %v", err)
 		return []NodeIP{}, err

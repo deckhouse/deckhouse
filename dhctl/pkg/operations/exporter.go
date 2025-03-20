@@ -15,6 +15,7 @@
 package operations
 
 import (
+	"context"
 	"net/http"
 	"os"
 	"time"
@@ -223,7 +224,8 @@ func (c *ConvergeExporter) getStatistic() *check.Statistics {
 		return nil
 	}
 
-	metaConfig.UUID, err = state_terraform.GetClusterUUID(c.kubeCl)
+	// TODO(dhctl-for-commander-cancels): pass ctx
+	metaConfig.UUID, err = state_terraform.GetClusterUUID(context.TODO(), c.kubeCl)
 	if err != nil {
 		log.ErrorLn(err)
 		c.CounterMetrics["errors"].WithLabelValues().Inc()
