@@ -10,9 +10,9 @@ import:
   add: /dhctl/bin/dhctl
   to: /dhctl
   before: setup
-- image: terraform
-  add: /terraform/terraform
-  to: /root/terraform
+- image: opentofu
+  add: /opentofu/opentofu
+  to: /root/opentofu
   before: setup
 git:
 - add: /{{ .ModulePath }}
@@ -31,13 +31,13 @@ git:
       - '**/*'
 shell:
   install:
-  - git clone --depth 1 --branch v{{ .TF.version }} {{ $.SOURCE_REPO }}/hashicorp/terraform.git /src
+  - git clone --depth 1 --branch v{{ .TF.version }} {{ $.SOURCE_REPO }}/opentofu/opentofu.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
   - rm -rf .git
 ---
 # use artifact for one place import for base and install images
-image: terraform
+image: opentofu
 final: false
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 import:
@@ -55,5 +55,5 @@ shell:
   install:
   - cd /src
   - export GOPROXY={{ $.GOPROXY }}
-  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\"" -o /terraform/terraform .
-  - chmod 755 /terraform/terraform
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\"" -o /opentofu/opentofu .
+  - chmod 755 /opentofu/opentofu
