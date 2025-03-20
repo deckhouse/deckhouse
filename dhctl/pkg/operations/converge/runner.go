@@ -338,7 +338,7 @@ func (r *runner) updateClusterState(ctx *context.Context, metaConfig *config.Met
 			AdditionalStateSaverDestinations: []terraform.SaverDestination{entity.NewClusterStateSaver(ctx)},
 		})
 
-		outputs, err := terraform.ApplyPipeline(baseRunner, "Kubernetes cluster", terraform.GetBaseInfraResult)
+		outputs, err := terraform.ApplyPipeline(ctx.Ctx(), baseRunner, "Kubernetes cluster", terraform.GetBaseInfraResult)
 		if err != nil {
 			return err
 		}

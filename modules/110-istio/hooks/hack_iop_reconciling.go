@@ -24,6 +24,7 @@ limitations under the License.
 package hooks
 
 import (
+	"log/slog"
 	"strings"
 	"time"
 
@@ -133,11 +134,11 @@ func hackIopReconcilingHook(input *go_hook.HookInput) error {
 	for _, iopRaw := range input.Snapshots["istio_operators"] {
 		iop := iopRaw.(IstioOperatorCrdSnapshot)
 		if iop.NeedPunch {
-			input.Logger.Infof("iop with rev %s needs to punch.", iop.Revision)
+			input.Logger.Info("iop with rev needs to punch.", slog.String("rev", iop.Revision))
 			if podName, ok := operatorPodMap[iop.Revision]; ok {
-				input.Logger.Infof("Pod %s is allowed to punch.", podName)
+				input.Logger.Info("Pod is allowed to punch.", slog.String("name", podName))
 				input.PatchCollector.DeleteInBackground("v1", "Pod", "d8-istio", podName)
-				input.Logger.Infof("Pod %s deleted.", podName)
+				input.Logger.Info("Pod deleted.", slog.String("name", podName))
 			}
 		}
 	}

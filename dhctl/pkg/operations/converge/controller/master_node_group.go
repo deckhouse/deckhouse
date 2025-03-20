@@ -268,7 +268,7 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 		Hook: hook,
 	})
 
-	outputs, err := terraform.ApplyPipeline(nodeRunner, nodeName, terraform.GetMasterNodeResult)
+	outputs, err := terraform.ApplyPipeline(ctx.Ctx(), nodeRunner, nodeName, terraform.GetMasterNodeResult)
 	if err != nil {
 		if errors.Is(err, controlplane.ErrSingleMasterClusterTerraformPlanHasDestructiveChanges) {
 			confirmation := input.NewConfirmation().WithMessage("A single-master cluster has disruptive changes in the Terraform plan. Trying to migrate to a multi-master cluster and back to a single-master cluster. Do you want to continue?")

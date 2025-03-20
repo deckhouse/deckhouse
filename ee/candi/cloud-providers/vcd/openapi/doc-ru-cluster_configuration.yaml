@@ -154,7 +154,7 @@ apiVersions:
           description: |
             Способ размещения ресурсов в облаке.
 
-            [Подробнее](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vcd/layouts.html) о возможных вариантах размещения.
+            [Подробнее](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vcd/layouts.html) о возможных вариантах размещения.
         provider:
           description: Параметры для подключения к VCD.
           properties:
@@ -171,3 +171,6 @@ apiVersions:
                 > **Внимание!** При использовании `apiToken` необходимо оставить `username` и `password` пустыми.
             insecure:
               description:  Устанавливается в `true`, VCD имеет self-signed-сертификат.
+        legacyMode:
+          description: |
+            Если задано значение `true`, будет использоваться версия API ниже `37.2`.

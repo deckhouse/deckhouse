@@ -114,8 +114,16 @@ func (l *Loop) WithShowError(flag bool) *Loop {
 	return l
 }
 
-// Run retries a task function until it succeeded or break task retries if break predicate returns true
 func (l *Loop) Run(task func() error) error {
+	return l.run(context.Background(), task)
+}
+
+// RunContext retries a task like Run but breaks if context done.
+func (l *Loop) RunContext(ctx context.Context, task func() error) error {
+	return l.run(ctx, task)
+}
+
+func (l *Loop) run(ctx context.Context, task func() error) error {
 	setupTests(&l.attemptsQuantity, &l.waitTime)
 
 	loopBody := func() error {
@@ -147,14 +155,10 @@ func (l *Loop) Run(task func() error) error {
 
 			// Do not waitTime after the last iteration.
 			if i < l.attemptsQuantity {
-				if l.ctx != nil {
-					select {
-					case <-l.ctx.Done():
-						return fmt.Errorf("timeout while %q: last error: %v", l.name, l.ctx.Err())
-					case <-time.After(l.waitTime):
-					}
-				} else {
-					time.Sleep(l.waitTime)
+				select {
+				case <-time.After(l.waitTime):
+				case <-ctx.Done():
+					return fmt.Errorf("Loop was canceled: %w", ctx.Err())
 				}
 			}
 		}

@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -351,4 +352,8 @@ func InitGlobalVars(pwd string) {
 	globalHooksModule = deckhouseDir + "/global-hooks"
 	versionMap = candiDir + "/version_map.yml"
 	imagesDigestsJSON = candiDir + "/images_digests.json"
+}
+
+func getTerraformModulesDir(provider string) string {
+	return filepath.Join(candiDir, "cloud-providers", provider, "terraform-modules")
 }

@@ -88,6 +88,10 @@ func (c *Context) Terraform() *terraform.TerraformContext {
 	return c.terraformContext
 }
 
+func (c *Context) Ctx() context.Context {
+	return c.ctx
+}
+
 func (c *Context) WithTimeout(timeout time.Duration) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(c.ctx, timeout)
 }
