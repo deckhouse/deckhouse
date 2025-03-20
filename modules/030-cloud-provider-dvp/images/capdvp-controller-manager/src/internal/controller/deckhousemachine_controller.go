@@ -26,7 +26,6 @@ import (
 	"github.com/deckhouse/virtualization/api/core/v1alpha2"
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -355,30 +354,38 @@ func (r *DeckhouseMachineReconciler) createVM(
 		return nil, fmt.Errorf("clusterv1b1.Machine does not contain bootstrap script")
 	}
 
-	bootstrapDataSecret := &corev1.Secret{}
-	if err := r.Client.Get(
-		ctx,
-		client.ObjectKey{
-			Namespace: machine.GetNamespace(),
-			Name:      *machine.Spec.Bootstrap.DataSecretName,
-		},
-		bootstrapDataSecret,
-	); err != nil {
-		return nil, fmt.Errorf("Cannot get cloud-init data secret: %w", err)
-	}
+	// bootstrapDataSecret := &corev1.Secret{}
+	// if err := r.Client.Get(
+	// 	ctx,
+	// 	client.ObjectKey{
+	// 		Namespace: machine.GetNamespace(),
+	// 		Name:      *machine.Spec.Bootstrap.DataSecretName,
+	// 	},
+	// 	bootstrapDataSecret,
+	// ); err != nil {
+	// 	return nil, fmt.Errorf("Cannot get cloud-init data secret: %w", err)
+	// }
+	//
+	// cloudInitScript, hasBootstrapScript := bootstrapDataSecret.Data["value"]
+	// if !hasBootstrapScript {
+	// 	return nil, fmt.Errorf("Expected to find a cloud-init script in secret %s/%s", bootstrapDataSecret.Namespace, bootstrapDataSecret.Name)
+	// }
 
-	cloudInitScript, hasBootstrapScript := bootstrapDataSecret.Data["value"]
-	if !hasBootstrapScript {
-		return nil, fmt.Errorf("Expected to find a cloud-init script in secret %s/%s", bootstrapDataSecret.Namespace, bootstrapDataSecret.Name)
-	}
+	// 	cloudInitScript = append(cloudInitScript, `
+	// users:
+	// - name: usrr
+	//   passwd: $6$rounds=4096$vln/.aPHBOI7BMYR$bBMkqQvuGs5Gyd/1H5DP4m9HjQSy.kgrxpaGEHwkX7KEFV8BS.HZWPitAtZ2Vd8ZqIZRqmlykRCagTgPejt1i.
+	//   sudo: ALL=(ALL) NOPASSWD:ALL
+	// ssh_pwauth: true
+	// `...)
 
-	cloudInitScript = append(cloudInitScript, `
+	cloudInitScript := []byte(`
 users:
 - name: usrr
-  plain_text_passwd: pass
+  passwd: $6$rounds=4096$vln/.aPHBOI7BMYR$bBMkqQvuGs5Gyd/1H5DP4m9HjQSy.kgrxpaGEHwkX7KEFV8BS.HZWPitAtZ2Vd8ZqIZRqmlykRCagTgPejt1i.
   sudo: ALL=(ALL) NOPASSWD:ALL
 ssh_pwauth: true
-`...)
+`)
 
 	cloudInitSecretName := "cloud-init-" + dvpMachine.Name
 	if err := r.DVP.ComputeService.CreateCloudInitProvisioningSecret(ctx, cloudInitSecretName, cloudInitScript); err != nil {
