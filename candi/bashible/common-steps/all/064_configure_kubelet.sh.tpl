@@ -346,8 +346,15 @@ containerLogMaxSize: {{ .nodeGroup.kubelet.containerLogMaxSize | default "50Mi" 
 containerLogMaxFiles: {{ .nodeGroup.kubelet.containerLogMaxFiles | default 4 }}
 {{- end }}
 allowedUnsafeSysctls:  ["net.*"]
-shutdownGracePeriod: ${shutdownGracePeriod}
-shutdownGracePeriodCriticalPods: ${shutdownGracePeriodCriticalPods}
+#shutdownGracePeriod: ${shutdownGracePeriod}
+#shutdownGracePeriodCriticalPods: ${shutdownGracePeriodCriticalPods}
+shutdownGracePeriodByPodPriority:
+- priority: 2000001001
+  shutdownGracePeriodSeconds: 120
+- priority: 2000000000
+  shutdownGracePeriodSeconds: 110
+- priority: 0
+  shutdownGracePeriodSeconds: 105
 {{- if hasKey .nodeGroup "staticInstances" }}
 providerID: $(cat /var/lib/bashible/node-spec-provider-id)
 {{- end }}

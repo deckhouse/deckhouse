@@ -42,6 +42,10 @@ spec:
     image: {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
     imagePullPolicy: IfNotPresent
     command: ["/opt/nginx-static/sbin/nginx", "-c", "/etc/nginx/config/nginx.conf", "-g", "daemon off;"]
+    lifecycle:
+      preStop:
+        exec:
+          command: ["/opt/nginx-static/sbin/nginx", "-s", "quit"]
     env:
     - name: PATH
       value: /opt/nginx-static/sbin
@@ -63,6 +67,7 @@ spec:
     - mountPath: /tmp
       name: tmp
   priorityClassName: system-node-critical
+  priority: 2000002000
   volumes:
   - hostPath:
       path: /etc/kubernetes/kubernetes-api-proxy
