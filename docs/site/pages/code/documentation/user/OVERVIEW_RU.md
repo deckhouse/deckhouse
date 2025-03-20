@@ -1,6 +1,6 @@
 ---
-title: "Введение"
-permalink: ru/code/documentation/user/overwiew.html
+title: "Обзор"
+permalink: ru/code/documentation/user/
 lang: ru
 ---
 
