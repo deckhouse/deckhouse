@@ -40,7 +40,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					return "", fmt.Errorf("failed to convert state secret to struct: %v", err)
 				}
 
-				value := string(cm.Data["value"])
+				value := cm.Data["value"]
 				return value, nil
 			},
 		},
