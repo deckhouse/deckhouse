@@ -26,8 +26,9 @@ const (
 )
 
 var (
-	RegistryProxyHost = fmt.Sprintf("127.0.0.1:%d", RegistryPort)
 	RegistryHost      = fmt.Sprintf("embedded-registry.d8-system.svc:%d", RegistryPort)
+	RegistryProxyHost = fmt.Sprintf("127.0.0.1:%d", RegistryPort)
+	RegistryBaseHost  = fmt.Sprintf("%s%s", RegistryHost, RegistryPath)
 )
 
 type RegistryPKI struct {
@@ -171,9 +172,9 @@ func handleBashibleConfig(input *go_hook.HookInput) error {
 	)
 
 	// Check module registry mode
-	rMode, ok := input.Values.GetOk("systemRegistry.internal.mode")
+	rMode, ok := input.Values.GetOk("systemRegistry.mode")
 	if !ok {
-		return fmt.Errorf("registry mode ('systemRegistry.internal.mode') not found")
+		return fmt.Errorf("registry mode ('systemRegistry.mode') not found")
 	}
 	if !isAllowedMode(rMode.String()) {
 		input.Values.Set("systemRegistry.internal.bashible", newEmptyBashibleConfig())
