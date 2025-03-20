@@ -308,7 +308,7 @@ func GetMasterNodeResult(ctx context.Context, r RunnerInterface) (*PipelineOutpu
 		return nil, err
 	}
 
-	systemRegistryDataDevicePath, err := getStringOrIntOutput(r, "system_registry_data_device_path")
+	systemRegistryDataDevicePath, err := getStringOrIntOutput(ctx, r, "system_registry_data_device_path")
 	if err != nil {
 		return nil, err
 	}
