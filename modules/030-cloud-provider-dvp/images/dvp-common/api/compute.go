@@ -349,8 +349,8 @@ func (c *ComputeService) CreateCloudInitProvisioningSecret(ctx context.Context, 
 			Name:      name,
 			Namespace: c.namespace,
 		},
-		Type: v1alpha2.SecretTypeCloudInit,
-		Data: map[string][]byte{"userData": userData},
+		Type:       v1alpha2.SecretTypeCloudInit,
+		StringData: map[string]string{"userData": string(userData)},
 	}
 
 	if _, err := c.clientset.CoreV1().Secrets(c.namespace).Create(ctx, s, metav1.CreateOptions{}); err != nil {
