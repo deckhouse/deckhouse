@@ -79,7 +79,8 @@ func (g *DeckhouseDestroyer) GetKubeClient() (*client.KubernetesClient, error) {
 	g.kubeCl = kubeCl
 
 	if !g.CommanderMode {
-		unlockConverge, err := lock.LockConverge(kubernetes.NewSimpleKubeClientGetter(kubeCl), "local-destroyer")
+		// TODO(dhctl-for-commander-cancels): pass ctx
+		unlockConverge, err := lock.LockConverge(context.TODO(), kubernetes.NewSimpleKubeClientGetter(kubeCl), "local-destroyer")
 		if err != nil {
 			return nil, err
 		}
@@ -89,7 +90,7 @@ func (g *DeckhouseDestroyer) GetKubeClient() (*client.KubernetesClient, error) {
 	return kubeCl, err
 }
 
-func (g *DeckhouseDestroyer) DeleteResources(cloudType string) error {
+func (g *DeckhouseDestroyer) DeleteResources(ctx context.Context, cloudType string) error {
 	resourcesDestroyed, err := g.state.IsResourcesDestroyed()
 	if err != nil {
 		return err
@@ -106,72 +107,72 @@ func (g *DeckhouseDestroyer) DeleteResources(cloudType string) error {
 	}
 
 	return log.Process("common", "Delete resources from the Kubernetes cluster", func() error {
-		return g.deleteEntities(kubeCl)
+		return g.deleteEntities(ctx, kubeCl)
 	})
 }
 
-func (g *DeckhouseDestroyer) deleteEntities(kubeCl *client.KubernetesClient) error {
-	err := deckhouse.DeleteDeckhouseDeployment(kubeCl)
+func (g *DeckhouseDestroyer) deleteEntities(ctx context.Context, kubeCl *client.KubernetesClient) error {
+	err := deckhouse.DeleteDeckhouseDeployment(ctx, kubeCl)
 	if err != nil {
 		return err
 	}
 
-	err = deckhouse.WaitForDeckhouseDeploymentDeletion(kubeCl)
+	err = deckhouse.WaitForDeckhouseDeploymentDeletion(ctx, kubeCl)
 	if err != nil {
 		return err
 	}
 
-	err = deckhouse.DeletePDBs(kubeCl)
+	err = deckhouse.DeletePDBs(ctx, kubeCl)
 	if err != nil {
 		return err
 	}
 
-	err = deckhouse.DeleteServices(kubeCl)
+	err = deckhouse.DeleteServices(ctx, kubeCl)
 	if err != nil {
 		return err
 	}
 
-	err = deckhouse.WaitForServicesDeletion(kubeCl)
+	err = deckhouse.WaitForServicesDeletion(ctx, kubeCl)
 	if err != nil {
 		return err
 	}
 
-	err = deckhouse.DeleteAllD8StorageResources(kubeCl)
+	err = deckhouse.DeleteAllD8StorageResources(ctx, kubeCl)
 	if err != nil {
 		return err
 	}
 
-	err = deckhouse.DeleteStorageClasses(kubeCl)
+	err = deckhouse.DeleteStorageClasses(ctx, kubeCl)
 	if err != nil {
 		return err
 	}
 
-	err = deckhouse.DeletePVC(kubeCl)
+	err = deckhouse.DeletePVC(ctx, kubeCl)
 	if err != nil {
 		return err
 	}
 
-	err = deckhouse.DeletePods(kubeCl)
+	err = deckhouse.DeletePods(ctx, kubeCl)
 	if err != nil {
 		return err
 	}
 
-	err = deckhouse.WaitForPVCDeletion(kubeCl)
+	err = deckhouse.WaitForPVCDeletion(ctx, kubeCl)
 	if err != nil {
 		return err
 	}
 
-	err = deckhouse.DeletePV(kubeCl)
+	err = deckhouse.DeletePV(ctx, kubeCl)
 	if err != nil {
 		return err
 	}
 
-	err = deckhouse.WaitForPVDeletion(kubeCl)
+	err = deckhouse.WaitForPVDeletion(ctx, kubeCl)
 	if err != nil {
 		return err
 	}
 
-	err = deckhouse.DeleteMachinesIfResourcesExist(kubeCl)
+	err = deckhouse.DeleteMachinesIfResourcesExist(ctx, kubeCl)
 	if err != nil {
 		return err
 	}

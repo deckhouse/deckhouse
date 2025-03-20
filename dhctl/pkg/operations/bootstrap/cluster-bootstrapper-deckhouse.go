@@ -71,6 +71,7 @@ func (b *ClusterBootstrapper) InstallDeckhouse() error {
 		return err
 	}
 
-	_, err = InstallDeckhouse(kubeCl, installConfig)
+	// TODO(dhctl-for-commander-cancels): pass ctx
+	_, err = InstallDeckhouse(context.TODO(), kubeCl, installConfig)
 	return err
 }

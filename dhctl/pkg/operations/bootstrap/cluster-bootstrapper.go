@@ -425,7 +425,8 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return err
 	}
 
-	installDeckhouseResult, err := InstallDeckhouse(kubeCl, deckhouseInstallConfig)
+	// TODO(dhctl-for-commander-cancels): pass ctx
+	installDeckhouseResult, err := InstallDeckhouse(context.TODO(), kubeCl, deckhouseInstallConfig)
 	if err != nil {
 		return err
 	}
@@ -441,11 +442,14 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 			if b.CommanderMode {
 				return action()
 			}
-			return lock.NewInLockLocalRunner(kubernetes.NewSimpleKubeClientGetter(kubeCl), "local-bootstraper").Run(action)
+			return lock.NewInLockLocalRunner(kubernetes.NewSimpleKubeClientGetter(kubeCl), "local-bootstraper").
+				// TODO(dhctl-for-commander-cancels): pass ctx
+				Run(context.TODO(), action)
 		}
 
 		err := localBootstraper(func() error {
-			return bootstrapAdditionalNodesForCloudCluster(kubeCl, metaConfig, masterAddressesForSSH, b.TerraformContext)
+			// TODO(dhctl-for-commander-cancels): pass ctx
+			return bootstrapAdditionalNodesForCloudCluster(context.TODO(), kubeCl, metaConfig, masterAddressesForSSH, b.TerraformContext)
 		})
 		if err != nil {
 			return err
@@ -462,7 +466,8 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return err
 	}
 
-	err = createResources(kubeCl, resourcesToCreate, metaConfig, installDeckhouseResult)
+	// TODO(dhctl-for-commander-cancels): pass ctx
+	err = createResources(context.TODO(), kubeCl, resourcesToCreate, metaConfig, installDeckhouseResult)
 	if err != nil {
 		return err
 	}
@@ -489,7 +494,8 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return nil
 	}
 
-	if err := RunPostInstallTasks(kubeCl, installDeckhouseResult); err != nil {
+	// TODO(dhctl-for-commander-cancels): pass ctx
+	if err := RunPostInstallTasks(context.TODO(), kubeCl, installDeckhouseResult); err != nil {
 		return err
 	}
 
@@ -570,8 +576,8 @@ func generateClusterUUID(stateCache state.Cache) (string, error) {
 	return clusterUUID, err
 }
 
-func bootstrapAdditionalNodesForCloudCluster(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, masterAddressesForSSH map[string]string, terraformContext *terraform.TerraformContext) error {
-	if err := BootstrapAdditionalMasterNodes(kubeCl, metaConfig, masterAddressesForSSH, terraformContext); err != nil {
+func bootstrapAdditionalNodesForCloudCluster(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, masterAddressesForSSH map[string]string, terraformContext *terraform.TerraformContext) error {
+	if err := BootstrapAdditionalMasterNodes(ctx, kubeCl, metaConfig, masterAddressesForSSH, terraformContext); err != nil {
 		return err
 	}
 
@@ -581,7 +587,7 @@ func bootstrapAdditionalNodesForCloudCluster(kubeCl *client.KubernetesClient, me
 		bootstrapAdditionalTerraNodeGroups = operations.BootstrapSequentialTerraNodes
 	}
 
-	if err := bootstrapAdditionalTerraNodeGroups(kubeCl, metaConfig, terraNodeGroups, terraformContext); err != nil {
+	if err := bootstrapAdditionalTerraNodeGroups(ctx, kubeCl, metaConfig, terraNodeGroups, terraformContext); err != nil {
 		return err
 	}
 
@@ -592,7 +598,7 @@ func bootstrapAdditionalNodesForCloudCluster(kubeCl *client.KubernetesClient, me
 				ngs[ng.Name] = ng.Replicas
 			}
 		}
-		if err := entity.WaitForNodesBecomeReady(kubeCl, ngs); err != nil {
+		if err := entity.WaitForNodesBecomeReady(ctx, kubeCl, ngs); err != nil {
 			return err
 		}
 
@@ -600,14 +606,14 @@ func bootstrapAdditionalNodesForCloudCluster(kubeCl *client.KubernetesClient, me
 	})
 }
 
-func createResources(kubeCl *client.KubernetesClient, resourcesToCreate template.Resources, metaConfig *config.MetaConfig, result *InstallDeckhouseResult) error {
+func createResources(ctx context.Context, kubeCl *client.KubernetesClient, resourcesToCreate template.Resources, metaConfig *config.MetaConfig, result *InstallDeckhouseResult) error {
 	log.WarnLn("Some resources require at least one non-master node to be added to the cluster.")
 
 	tasks := result.ManifestResult.WithResourcesMCTasks
 
 	if resourcesToCreate == nil {
 		for _, task := range tasks {
-			return retry.NewLoop(task.Title, 60, 5*time.Second).Run(func() error {
+			return retry.NewLoop(task.Title, 60, 5*time.Second).RunContext(ctx, func() error {
 				return task.Do(kubeCl)
 			})
 		}
@@ -621,7 +627,7 @@ func createResources(kubeCl *client.KubernetesClient, resourcesToCreate template
 			return err
 		}
 
-		return resources.CreateResourcesLoop(kubeCl, resourcesToCreate, checkers, tasks)
+		return resources.CreateResourcesLoop(ctx, kubeCl, resourcesToCreate, checkers, tasks)
 	})
 }
 
