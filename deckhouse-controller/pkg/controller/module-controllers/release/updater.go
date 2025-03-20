@@ -27,6 +27,7 @@ import (
 	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
 	cp "github.com/otiai10/copy"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -237,6 +238,9 @@ func (k *kubeAPI) IsKubernetesVersionAutomatic(ctx context.Context) (bool, error
 	key := client.ObjectKey{Namespace: "kube-system", Name: "d8-cluster-configuration"}
 	secret := new(corev1.Secret)
 	if err := k.client.Get(ctx, key, secret); err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
 		return false, fmt.Errorf("check kubernetes version: failed to get secret: %w", err)
 	}
 
