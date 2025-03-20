@@ -226,7 +226,7 @@ shell:
 ---
 #=====================================================================================================
 ---
-image: {{ .ModuleName }}/golang-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-golang-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 final: false
 ---
@@ -237,7 +237,7 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 import:
-- image: {{ .ModuleName }}/golang-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-golang-artifact
   add: /usr/local/go
   to: /usr/local/go
   before: install
