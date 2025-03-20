@@ -139,7 +139,7 @@ func (s *Service) destroySafe(
 }
 
 func (s *Service) destroy(
-	_ context.Context,
+	ctx context.Context,
 	request *pb.DestroyStart,
 	switchPhase phases.DefaultOnPhaseFunc,
 	logWriter io.Writer,
@@ -251,7 +251,7 @@ func (s *Service) destroy(
 		return &pb.DestroyResult{Err: fmt.Errorf("unable to initialize cluster destroyer: %w", err).Error()}
 	}
 
-	destroyErr := destroyer.DestroyCluster(true)
+	destroyErr := destroyer.DestroyCluster(ctx, true)
 	state := destroyer.PhasedExecutionContext.GetLastState()
 	data, marshalErr := json.Marshal(state)
 	err = errors.Join(destroyErr, marshalErr)

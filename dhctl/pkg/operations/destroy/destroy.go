@@ -44,7 +44,7 @@ import (
 )
 
 type Destroyer interface {
-	DestroyCluster(autoApprove bool) error
+	DestroyCluster(ctx context.Context, autoApprove bool) error
 }
 
 type Params struct {
@@ -135,7 +135,8 @@ func NewClusterDestroyer(params *Params) (*ClusterDestroyer, error) {
 	}, nil
 }
 
-func (d *ClusterDestroyer) DestroyCluster(autoApprove bool) error {
+// TODO(dhctl-for-commander-cancels): use ctx
+func (d *ClusterDestroyer) DestroyCluster(ctx context.Context, autoApprove bool) error {
 	defer d.d8Destroyer.UnlockConverge(true)
 
 	if err := d.PhasedExecutionContext.InitPipeline(d.stateCache); err != nil {
@@ -184,8 +185,7 @@ func (d *ClusterDestroyer) DestroyCluster(autoApprove bool) error {
 		} else if shouldStop {
 			return nil
 		}
-		// TODO(dhctl-for-commander-cancels): pass ctx
-		if err := d.d8Destroyer.DeleteResources(context.TODO(), clusterType); err != nil {
+		if err := d.d8Destroyer.DeleteResources(ctx, clusterType); err != nil {
 			return err
 		}
 		if err := d.PhasedExecutionContext.CompletePhase(d.stateCache, nil); err != nil {
@@ -214,7 +214,7 @@ func (d *ClusterDestroyer) DestroyCluster(autoApprove bool) error {
 	// Stop proxy because we have already got all info from kubernetes-api
 	d.d8Destroyer.StopProxy()
 
-	if err := infraDestroyer.DestroyCluster(autoApprove); err != nil {
+	if err := infraDestroyer.DestroyCluster(ctx, autoApprove); err != nil {
 		return err
 	}
 
@@ -239,7 +239,8 @@ func NewStaticMastersDestroyer(c *ssh.Client, ips []NodeIP) *StaticMastersDestro
 	}
 }
 
-func (d *StaticMastersDestroyer) DestroyCluster(autoApprove bool) error {
+// TODO(dhctl-for-commander-cancels): use ctx
+func (d *StaticMastersDestroyer) DestroyCluster(ctx context.Context, autoApprove bool) error {
 	if !autoApprove {
 		if !input.NewConfirmation().WithMessage("Do you really want to cleanup control-plane nodes?").Ask() {
 			return fmt.Errorf("Cleanup master nodes disallow")
@@ -254,8 +255,7 @@ func (d *StaticMastersDestroyer) DestroyCluster(autoApprove bool) error {
 	hostToExclude := ""
 	if len(d.IPs) > 0 {
 		file := frontend.NewFile(d.SSHClient.Settings)
-		// TODO(dhctl-for-commander-cancels): pass ctx
-		bytes, err := file.DownloadBytes(context.TODO(), "/var/lib/bashible/discovered-node-ip")
+		bytes, err := file.DownloadBytes(ctx, "/var/lib/bashible/discovered-node-ip")
 		if err != nil {
 
 			return err
@@ -287,14 +287,14 @@ func (d *StaticMastersDestroyer) DestroyCluster(autoApprove bool) error {
 		settings := d.SSHClient.Settings.Copy()
 		settings.BastionHost = settings.AvailableHosts()[0].Host
 		settings.SetAvailableHosts(additionalMastersHosts)
-		err := processStaticHosts(additionalMastersHosts, settings, stdOutErrHandler, cmd)
+		err := processStaticHosts(ctx, additionalMastersHosts, settings, stdOutErrHandler, cmd)
 		if err != nil {
 
 			return err
 		}
 	}
 
-	err := processStaticHosts(mastersHosts, d.SSHClient.Settings, stdOutErrHandler, cmd)
+	err := processStaticHosts(ctx, mastersHosts, d.SSHClient.Settings, stdOutErrHandler, cmd)
 	if err != nil {
 
 		return err
@@ -303,7 +303,7 @@ func (d *StaticMastersDestroyer) DestroyCluster(autoApprove bool) error {
 	return nil
 }
 
-func processStaticHosts(hosts []session.Host, s *session.Session, stdOutErrHandler func(l string), cmd string) error {
+func processStaticHosts(ctx context.Context, hosts []session.Host, s *session.Session, stdOutErrHandler func(l string), cmd string) error {
 	for _, host := range hosts {
 		settings := s.Copy()
 		settings.SetAvailableHosts([]session.Host{host})
@@ -313,8 +313,7 @@ func processStaticHosts(hosts []session.Host, s *session.Session, stdOutErrHandl
 			cmd.WithTimeout(5 * time.Minute)
 			cmd.WithStdoutHandler(stdOutErrHandler)
 			cmd.WithStderrHandler(stdOutErrHandler)
-			// TODO(dhctl-for-commander-cancels): pass ctx
-			err := cmd.Run(context.TODO())
+			err := cmd.Run(ctx)
 
 			if err != nil {
 				var ee *exec.ExitError

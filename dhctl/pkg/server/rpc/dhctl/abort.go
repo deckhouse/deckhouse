@@ -137,7 +137,7 @@ func (s *Service) abortSafe(
 }
 
 func (s *Service) abort(
-	_ context.Context,
+	ctx context.Context,
 	request *pb.AbortStart,
 	switchPhase phases.DefaultOnPhaseFunc,
 	logWriter io.Writer,
@@ -251,7 +251,7 @@ func (s *Service) abort(
 		TerraformContext:  terraform.NewTerraformContext(),
 	})
 
-	abortErr := bootstrapper.Abort(false)
+	abortErr := bootstrapper.Abort(ctx, false)
 	state := bootstrapper.GetLastState()
 	stateData, marshalErr := json.Marshal(state)
 	err = errors.Join(abortErr, marshalErr)

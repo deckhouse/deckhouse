@@ -111,7 +111,7 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			NodeInterface:    ssh.NewNodeInterfaceWrapper(sshClient),
 			TerraformContext: terraform.NewTerraformContext(),
 		})
-		return bootstraper.Abort(app.ForceAbortFromCache)
+		return bootstraper.Abort(context.Background(), app.ForceAbortFromCache)
 	})
 
 	return cmd
