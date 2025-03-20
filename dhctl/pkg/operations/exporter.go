@@ -176,8 +176,10 @@ func (c *ConvergeExporter) Start() {
 	log.InfoLn("Checks interval: ", app.CheckInterval)
 	c.registerMetrics()
 
-	stopCh := make(chan struct{})
-	go c.convergeLoop(stopCh)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go c.convergeLoop(ctx)
 
 	http.Handle(c.MetricsPath, promhttp.Handler())
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("ok")) })
@@ -193,13 +195,13 @@ func (c *ConvergeExporter) Start() {
 
 	if err := http.ListenAndServe(c.ListenAddress, nil); err != nil {
 		log.ErrorF("Error starting HTTP server: %v\n", err)
-		stopCh <- struct{}{}
+		cancel()
 		os.Exit(1)
 	}
 }
 
-func (c *ConvergeExporter) convergeLoop(stopCh chan struct{}) {
-	c.recordStatistic(c.getStatistic())
+func (c *ConvergeExporter) convergeLoop(ctx context.Context) {
+	c.recordStatistic(c.getStatistic(ctx))
 
 	ticker := time.NewTicker(c.CheckInterval)
 	defer ticker.Stop()
@@ -208,15 +210,15 @@ func (c *ConvergeExporter) convergeLoop(stopCh chan struct{}) {
 		select {
 		case <-ticker.C:
 			cache.ClearTemporaryDirs()
-			c.recordStatistic(c.getStatistic())
-		case <-stopCh:
+			c.recordStatistic(c.getStatistic(ctx))
+		case <-ctx.Done():
 			log.ErrorLn("Stop exporter...")
 			return
 		}
 	}
 }
 
-func (c *ConvergeExporter) getStatistic() *check.Statistics {
+func (c *ConvergeExporter) getStatistic(ctx context.Context) *check.Statistics {
 	metaConfig, err := config.ParseConfigInCluster(c.kubeCl)
 	if err != nil {
 		log.ErrorLn(err)
@@ -224,15 +226,14 @@ func (c *ConvergeExporter) getStatistic() *check.Statistics {
 		return nil
 	}
 
-	// TODO(dhctl-for-commander-cancels): pass ctx
-	metaConfig.UUID, err = state_terraform.GetClusterUUID(context.TODO(), c.kubeCl)
+	metaConfig.UUID, err = state_terraform.GetClusterUUID(ctx, c.kubeCl)
 	if err != nil {
 		log.ErrorLn(err)
 		c.CounterMetrics["errors"].WithLabelValues().Inc()
 		return nil
 	}
 
-	statistic, err := check.CheckState(c.kubeCl, metaConfig, c.terraformContext, check.CheckStateOptions{})
+	statistic, err := check.CheckState(ctx, c.kubeCl, metaConfig, c.terraformContext, check.CheckStateOptions{})
 	if err != nil {
 		log.ErrorLn(err)
 		c.CounterMetrics["errors"].WithLabelValues().Inc()

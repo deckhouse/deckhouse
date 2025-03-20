@@ -15,7 +15,6 @@
 package converge
 
 import (
-	gocontext "context"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -124,7 +123,7 @@ func loadNodesState(ctx *context.Context) (map[string]state.NodeGroupTerraformSt
 			return nil, nil
 		}
 
-		nodesState, err := check.LoadNodesStateForCommanderMode(ctx.StateCache(), metaConfig, kubeCl)
+		nodesState, err := check.LoadNodesStateForCommanderMode(ctx.Ctx(), ctx.StateCache(), metaConfig, kubeCl)
 		if err != nil {
 			return nil, fmt.Errorf("unable to load nodes state: %w", err)
 		}
@@ -132,7 +131,7 @@ func loadNodesState(ctx *context.Context) (map[string]state.NodeGroupTerraformSt
 		return nodesState, nil
 	}
 
-	nodesState, err := state_terraform.GetNodesStateFromCluster(kubeCl)
+	nodesState, err := state_terraform.GetNodesStateFromCluster(ctx.Ctx(), kubeCl)
 	if err != nil {
 		return nil, fmt.Errorf("terraform nodes state in Kubernetes cluster not found: %w", err)
 	}
@@ -243,7 +242,7 @@ func (r *runner) convergeDeckhouseConfiguration(ctx *context.Context, commanderU
 		return fmt.Errorf("unable to parse cluster uuid %q: %w", metaConfig.UUID, err)
 	}
 
-	if err := deckhouse.ConvergeDeckhouseConfiguration(gocontext.TODO(), ctx.KubeClient(), clusterUUID, commanderUUID, clusterConfigurationData, providerClusterConfigurationData); err != nil {
+	if err := deckhouse.ConvergeDeckhouseConfiguration(ctx.Ctx(), ctx.KubeClient(), clusterUUID, commanderUUID, clusterConfigurationData, providerClusterConfigurationData); err != nil {
 		return fmt.Errorf("unable to update deckhouse configuration: %w", err)
 	}
 
