@@ -189,6 +189,7 @@ func (c *kubernetesVersionCheck) initClusterKubernetesVersion(ctx context.Contex
 	key := client.ObjectKey{Namespace: systemNamespace, Name: deckhouseClusterConfigurationConfig}
 	secret := new(corev1.Secret)
 	if err := c.k8sclient.Get(ctx, key, secret); err != nil {
+		// the secret does not exist in managed cluster
 		if apierrors.IsNotFound(err) {
 			return nil
 		}
