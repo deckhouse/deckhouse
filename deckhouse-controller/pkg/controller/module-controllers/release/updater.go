@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"os"
 	"path"
 	"strconv"
@@ -237,6 +238,9 @@ func (k *kubeAPI) IsKubernetesVersionAutomatic(ctx context.Context) (bool, error
 	key := client.ObjectKey{Namespace: "kube-system", Name: "d8-cluster-configuration"}
 	secret := new(corev1.Secret)
 	if err := k.client.Get(ctx, key, secret); err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
 		return false, fmt.Errorf("check kubernetes version: failed to get secret: %w", err)
 	}
 
