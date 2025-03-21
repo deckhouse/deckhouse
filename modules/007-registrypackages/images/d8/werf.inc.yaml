@@ -8,9 +8,12 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} {{ $.SOURCE_REPO }}/deckhouse/deckhouse-cli.git /src/deckhouse-cli
+  - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} $(cat /run/secrets/SOURCE_REPO)/deckhouse/deckhouse-cli.git /src/deckhouse-cli
 #  - rm -rf /src/deckhouse-cli/.git # https://github.com/deckhouse/deckhouse-cli/blob/main/Taskfile.yml#L9
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
@@ -46,15 +49,22 @@ git:
     stageDependencies:
       setup:
       - '**/*'
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+- id: DECKHOUSE_PRIVATE_REPO
+  value: {{ .DECKHOUSE_PRIVATE_REPO }}
+- id: STRONGHOLD_PULL_TOKEN
+  value: {{ .STRONGHOLD_PULL_TOKEN }}
 shell:
   beforeInstall:
   {{- include "debian packages proxy" . | nindent 2 }}
   - apt-get update && apt-get install libbtrfs-dev -y
   install:
-  - export GOPROXY={{ $.GOPROXY }}
-  - export PRIVATE_REPO={{ $.DECKHOUSE_PRIVATE_REPO }}
-  - export PRIVATE_REPO_TOKEN={{ $.STRONGHOLD_PULL_TOKEN }}
-  - export GOPRIVATE={{ $.DECKHOUSE_PRIVATE_REPO }}
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
+  - export PRIVATE_REPO=$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO)
+  - export PRIVATE_REPO_TOKEN=$(cat /run/secrets/STRONGHOLD_PULL_TOKEN)
+  - export GOPRIVATE=$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO)
   - git config --global url."https://gitlab-ci-token:${PRIVATE_REPO_TOKEN}@${PRIVATE_REPO}/".insteadOf https://${PRIVATE_REPO}/
   - cd /src/deckhouse-cli
   - task build:dist:linux:amd64
