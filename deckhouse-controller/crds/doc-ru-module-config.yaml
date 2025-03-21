@@ -12,6 +12,9 @@ spec:
                 enabled:
                   description: |
                     Включить или выключить модуль.
+                selfService:
+                  description: |
+                    Включить для модуля режим self-service.
                 version:
                   description: |
                     Версия схемы настроек модуля.

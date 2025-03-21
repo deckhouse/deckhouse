@@ -44,7 +44,12 @@ spec:
                 enabled:
                   type: boolean
                   description: |
-                    Enables or disables a module.
+                    Enables or disables the module.
+                  x-doc-examples: ['false']
+                selfService:
+                  type: boolean
+                  description: |
+                    Enables self-service mode for the module.
                   x-doc-examples: ['false']
                 version:
                   type: number

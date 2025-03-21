@@ -10,8 +10,8 @@ require (
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/fatih/color v1.13.0 // indirect
-	github.com/flant/addon-operator v1.6.1
-	github.com/flant/kube-client v1.2.2
+	github.com/flant/addon-operator v1.6.1-0.20250401123116-955bc3d8cc14
+	github.com/flant/kube-client v1.2.3-0.20250320122654-cc319665c656
 	github.com/flant/shell-operator v1.6.1
 	github.com/go-openapi/spec v0.19.8
 	github.com/gojuno/minimock/v3 v3.4.5
@@ -122,9 +122,11 @@ require (
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
 	github.com/evanphx/json-patch/v5 v5.9.0 // indirect
 	github.com/exponent-io/jsonpath v0.0.0-20151013193312-d6023ce2651d // indirect
+	github.com/fatih/camelcase v1.0.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/flant/libjq-go v1.6.3-0.20201126171326-c46a40ff22ee // indirect
 	github.com/fogleman/gg v1.3.0 // indirect
+	github.com/fvbommel/sortorder v1.1.0 // indirect
 	github.com/go-chi/chi/v5 v5.2.1 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
 	github.com/go-gorp/gorp/v3 v3.1.0 // indirect
