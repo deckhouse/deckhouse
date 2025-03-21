@@ -156,6 +156,25 @@
         ```bash
         kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
         ```
+
+  - alert: ModuleIsInSelfServiceMode
+    expr: sum(deckhouse_mm_module_self_service) by (moduleName) > 0
+    labels:
+      severity_level: "6"
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_ignore_labels: "name"
+      summary: |
+        Module `{{ $labels.moduleName }}` is running in development mode (self-service mode).
+      description: |
+        Module `{{ $labels.moduleName }}` is running in a development mode and its state won't be reconciled after updating.
+
+        To switch the module to a normal mode, edit the corresponding module config using the following command:
+        
+        ```bash
+        kubectl edit moduleconfig {{ $labels.name }}
+        ```
       
   - alert: DeckhouseReleaseNotificationNotSent
     expr: sum by (name) (d8_release_info{notificationNotSent="true"})
