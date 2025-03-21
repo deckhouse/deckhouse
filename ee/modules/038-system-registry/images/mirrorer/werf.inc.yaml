@@ -30,8 +30,6 @@ shell:
     - export GOPROXY={{ $.GOPROXY }}
     - cd {{ $appAbsPath }}
     - go mod download
-    - cd /deckhouse/go_lib/system-registry-manager
-    - go mod download
     - cd /deckhouse/pkg/log
     - go mod download
   setup:
