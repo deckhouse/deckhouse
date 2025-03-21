@@ -157,7 +157,7 @@ func (l *Loader) LoadModule(_, modulePath string) (*modules.BasicModule, error) 
 		return nil, err
 	}
 
-	module, err := l.processModuleDefinition(def)
+	module, err := l.processModuleDefinition(context.Background(), def)
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +166,7 @@ func (l *Loader) LoadModule(_, modulePath string) (*modules.BasicModule, error) 
 	return module.GetBasicModule(), nil
 }
 
-func (l *Loader) processModuleDefinition(def *moduletypes.Definition) (*moduletypes.Module, error) {
+func (l *Loader) processModuleDefinition(ctx context.Context, def *moduletypes.Definition) (*moduletypes.Module, error) {
 	if err := validateModuleName(def.Name); err != nil {
 		return nil, fmt.Errorf("invalid name: %w", err)
 	}
@@ -211,6 +211,9 @@ func (l *Loader) processModuleDefinition(def *moduletypes.Definition) (*modulety
 	}
 
 	// ensure settings
+	if err = l.ensureModuleSettings(ctx, def.Name, rawConfig); err != nil {
+		return nil, fmt.Errorf("ensure the %q module settings: %w", def.Name, err)
+	}
 
 	return module, nil
 }
@@ -256,7 +259,7 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 		l.logger.Debug("parsed modules from the dir", slog.Int("count", len(definitions)), slog.String("path", dir))
 		for _, def := range definitions {
 			l.logger.Debug("process module definition from the dir", slog.String("name", def.Name), slog.String("path", dir))
-			module, err := l.processModuleDefinition(def)
+			module, err := l.processModuleDefinition(ctx, def)
 			if err != nil {
 				return fmt.Errorf("process the '%s' module definition: %w", def.Name, err)
 			}
@@ -365,7 +368,7 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 	})
 }
 
-func (l *Loader) ensureSettings(ctx context.Context, module string, rawConfig []byte) error {
+func (l *Loader) ensureModuleSettings(ctx context.Context, module string, rawConfig []byte) error {
 	settings := new(v1alpha1.ModuleSettings)
 	if err := l.client.Get(ctx, client.ObjectKey{Name: module}, settings); err != nil && !apierrors.IsNotFound(err) {
 		return fmt.Errorf("get the '%s' module settings: %w", module, err)
