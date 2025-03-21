@@ -30,38 +30,36 @@ bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
     {{- end }}
   {{- end }}
 
-  {{- $with_ca := "" }}
-  {{- if .registry.ca }}
-    {{- $with_ca := "--tlscacert /opt/deckhouse/share/ca-certificates/registry-ca.crt" }}
-  {{- end }}
-
-ctr image pull --user {{ .registry.auth | b64dec }} {{ $with_ca }} {{ $sandbox_image }}
-
 bb-sync-file /etc/containerd/certs.d/_default/hosts.toml - << EOF
 [host."https://registry-1.docker.io"]
   capabilities = ["pull", "resolve"]
 
 [host."{{ .registry.scheme }}://{{ .registry.address }}"]
   capabilities = ["pull", "resolve"]
-{{- if .registry.ca }}
+  {{- if .registry.ca }}
   ca = ["/opt/deckhouse/share/ca-certificates/registry-ca.crt"]
-{{- end }}
+  {{- end }}
 
-{{- if eq .registry.scheme "http" }}
+  {{- if eq .registry.scheme "http" }}
   skip_verify = true
-{{- end }}
+  {{- end }}
 
-{{- if eq .runType "Normal" }}
-  {{- range $registryAddr,$ca := .normal.moduleSourcesCA }}
-    {{- if $ca }}
+  {{- if eq .runType "Normal" }}
+    {{- range $registryAddr,$ca := .normal.moduleSourcesCA }}
+      {{- if $ca }}
 [host."https://{{ $registryAddr | lower }}"]
   ca = "/opt/deckhouse/share/ca-certificates/{{ $registryAddr | lower }}-ca.crt"
+      {{- end }}
     {{- end }}
   {{- end }}
-{{- end }}
-
 EOF
 
+  {{- $with_auth := "" }}
+  {{- with .registry.auth }}
+    {{- $with_auth = printf "--auth %s" . -}}
+  {{- end }}
+
+crictl pull {{ $with_auth }} {{ $sandbox_image }}
 
 systemd_cgroup=true
 # Overriding cgroup type from external config file
