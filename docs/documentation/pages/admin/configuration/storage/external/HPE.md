@@ -91,9 +91,9 @@ d8 k get hpestorageconnections.storage.deckhouse.io <hpestorageconnection name>
 d8 k get hpestorageclasses.storage.deckhouse.io <hpestorageclass name>
 ```
 
-### How to check module health?
+### Module Health Verification
 
-To do this, you need to check the status of the pods in the `d8-csi-hpe` namespace. All pods should be in the `Running` or `Completed` state and should be running on all nodes.
+To verify module health, ensure that all pods in the `d8-csi-hpe` namespace are in the `Running` or `Completed` state and are running on every node in the cluster:
 
 ```shell
 d8 k -n d8-csi-hpe get pod -owide -w

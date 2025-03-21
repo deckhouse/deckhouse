@@ -97,9 +97,9 @@ d8 k get huaweistorageconnections.storage.deckhouse.io <huaweistorageconnection 
 d8 k get huaweistorageclasses.storage.deckhouse.io <huaweistorageclass name>
 ```
 
-### How to check module health?
+### Module Health Verification
 
-To do this, you need to check the status of the pods in the `d8-csi-huawei` namespace. All pods should be in the `Running` or `Completed` state and should be running on all nodes.
+To verify module health, ensure that all pods in the `d8-csi-huawei` namespace are in the `Running` or `Completed` state and are running on every node in the cluster:
 
 ```shell
 d8 k -n d8-csi-huawei get pod -owide -w

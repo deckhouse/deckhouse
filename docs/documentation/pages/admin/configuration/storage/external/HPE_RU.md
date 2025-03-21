@@ -92,9 +92,9 @@ d8 k get hpestorageconnections.storage.deckhouse.io <имя hpestorageconnection
 d8 k get hpestorageclasses.storage.deckhouse.io <имя hpestorageclass>
 ```
 
-### Как проверить работоспособность модуля?
+### Проверка работоспособности модуля
 
-Для этого необходимо проверить состояние подов в namespace `d8-csi-hpe`. Все поды должны быть в состоянии `Running` или `Completed` и запущены на всех узлах.
+Для проверки работоспособности модуля убедитесь, что все поды в пространстве имён `d8-csi-hpe`находятся в статусе `Running` или `Completed` и запущены на каждом узле кластера:
 
 ```shell
 d8 k -n d8-csi-hpe get pod -owide -w
