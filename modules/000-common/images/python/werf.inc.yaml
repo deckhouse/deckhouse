@@ -1,2 +1,2 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: dev-registry.deckhouse.io/base_images/base/python@sha256:06e92ca4953709db36582edf9a0b9361a84d5fda177f8bacad2f50788188ce2a
+from: dev-registry.deckhouse.io/base_images/base/python@sha256:06708d2113c1f880e3ae6e94cfd79037b5488f33430990934a89e7194cc23383
