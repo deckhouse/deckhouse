@@ -35,15 +35,15 @@ shell:
 image: "{{ $.ModuleName }}/{{ $.ImageName }}"
 fromImage: common/distroless
 import:
-  - artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
     add: /tmp-tmp
     to: /tmp
     before: setup
-  - artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
     add: "{{ $GIT_CLONE_DEST_PATH }}/bin/registry"
     to: /registry
     before: setup
-  - artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
     add: /scripts
     to: /
     before: setup
