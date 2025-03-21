@@ -374,7 +374,7 @@ func (nc *nodeController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	}
 
 	if !moduleConfig.Enabled {
-		return ctrl.Result{}, nil
+		return nc.cleanupNodeState(ctx, node)
 	}
 
 	log := ctrl.LoggerFrom(ctx)
