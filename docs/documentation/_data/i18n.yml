@@ -126,8 +126,8 @@ common:
     en: "Conversion description is missing"
     ru: "Описание конверсии отсутствует"
   conversion_expressions:
-    en: "Actions performed by conversion"
-    ru: "Преобразования, выполняемые конверсией"
+    en: "Actions performed by the conversion (jq syntax)"
+    ru: "Преобразования, выполняемые конверсией (синтаксис jq)"
   parameters:
     en: Parameters
     ru: Параметры
