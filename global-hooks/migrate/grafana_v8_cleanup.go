@@ -19,12 +19,13 @@ limitations under the License.
 package hooks
 
 import (
-	"github.com/deckhouse/module-sdk/pkg/utils/ptr"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/module-sdk/pkg/utils/ptr"
 )
 
 type GrafanaV8Resource struct {
