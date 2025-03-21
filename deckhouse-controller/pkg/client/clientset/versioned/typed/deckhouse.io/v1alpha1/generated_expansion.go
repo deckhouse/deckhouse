@@ -30,6 +30,8 @@ type ModulePullOverrideExpansion interface{}
 
 type ModuleReleaseExpansion interface{}
 
+type ModuleSettingsExpansion interface{}
+
 type ModuleSourceExpansion interface{}
 
 type ModuleUpdatePolicyExpansion interface{}
