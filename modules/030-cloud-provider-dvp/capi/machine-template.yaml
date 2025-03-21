@@ -15,6 +15,9 @@ spec:
       {{- if .nodeGroup.instanceClass.vmClassName }}
       vmClassName: {{ .nodeGroup.instanceClass.vmClassName | quote }}
       {{- end }}
+      {{- if .nodeGroup.instanceClass.rootDiskStorageClass }}
+      rootDiskStorageClass: {{ .nodeGroup.instanceClass.rootDiskStorageClass | quote }}
+      {{- end }}
       cpu:
         {{- if .nodeGroup.instanceClass.cpu.cores }}
         cores: {{ .nodeGroup.instanceClass.cpu.cores }}

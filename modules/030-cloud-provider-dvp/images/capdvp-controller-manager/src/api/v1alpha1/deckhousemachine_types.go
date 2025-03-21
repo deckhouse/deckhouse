@@ -92,6 +92,9 @@ type DeckhouseMachineSpec struct {
 	// RootDiskSize holds the size of the bootable disk.
 	RootDiskSize resource.Quantity `json:"rootDiskSize"`
 
+	// RootDiskStorageClass holds the name of the StorageClass to use for bootable disk.
+	RootDiskStorageClass string `json:"rootDiskStorageClass"`
+
 	// BootDiskImageRef holds the image to boot this VM from.
 	BootDiskImageRef DiskImageRef `json:"bootDiskImageRef"`
 

@@ -358,7 +358,7 @@ func (r *DeckhouseMachineReconciler) createVM(
 		ctx,
 		dvpMachine.Name+"-boot",
 		dvpMachine.Spec.RootDiskSize,
-		"", // Default storage class
+		dvpMachine.Spec.RootDiskStorageClass,
 		&v1alpha2.VirtualDiskDataSource{
 			Type: v1alpha2.DataSourceTypeObjectRef,
 			ObjectRef: &v1alpha2.VirtualDiskObjectRef{

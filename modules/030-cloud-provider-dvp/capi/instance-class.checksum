@@ -3,6 +3,7 @@
 {{- $_ := set $options "vmClassName" .nodeGroup.instanceClass.vmClassName -}}
 {{- $_ := set $options "memory" .nodeGroup.instanceClass.memory -}}
 {{- $_ := set $options "rootDiskSize" .nodeGroup.instanceClass.rootDiskSize -}}
+{{- $_ := set $options "rootDiskStorageClass" .nodeGroup.instanceClass.rootDiskStorageClass -}}
 {{- $_ := set $options "rootDiskSize" .nodeGroup.instanceClass.bootloader -}}
 {{- $_ := set $options "cores" .nodeGroup.instanceClass.cpu.cores -}}
 {{- $_ := set $options "coreFraction" .nodeGroup.instanceClass.cpu.coreFraction -}}

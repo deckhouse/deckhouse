@@ -107,6 +107,10 @@ spec:
                 description: RootDiskSize holds the size of the bootable disk.
                 pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                 x-kubernetes-int-or-string: true
+              rootDiskStorageClass:
+                description: RootDiskStorageClass holds the name of the StorageClass
+                  to use for bootable disk.
+                type: string
               vmClassName:
                 description: |-
                   VMClassName defines the name of the VirtualMachineClass resource describing requirements
@@ -117,6 +121,7 @@ spec:
             - cpu
             - memory
             - rootDiskSize
+            - rootDiskStorageClass
             - vmClassName
             type: object
           status:

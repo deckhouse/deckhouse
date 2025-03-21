@@ -25,6 +25,7 @@ spec:
                 - memory
                 - vmClassName
                 - osImageRef
+                - rootDiskStorageClass
               properties:
                 osImageRef:
                   type: object
@@ -84,6 +85,9 @@ spec:
                     - type: string
                   pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                   x-kubernetes-int-or-string: true
+                rootDiskStorageClass:
+                  type: string
+                  description: Storage class to use for disks of virtual machines.
                 bootloader:
                   type: string
                   enum:
