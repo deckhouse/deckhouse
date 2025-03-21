@@ -76,3 +76,36 @@
   {{- printf "%s@%s" $context.Values.global.modulesImages.registry.base $imageDigest }}
   {{- end }}
 {{- end }}
+
+{{- /* Usage: {{ include "helm_lib_module_image_digest" (list . "<container-name>" "<module-name>(optional)") }} */ -}}
+{{- /* returns image digest */ -}}
+{{- define "helm_lib_module_image_digest" }}
+  {{- $context := index . 0 }} {{- /* Template context with .Values, .Chart, etc */ -}}
+  {{- $containerName := index . 1 | trimAll "\"" }} {{- /* Container name */ -}}
+  {{- $rawModuleName := $context.Chart.Name }}
+  {{- if ge (len .) 3 }}
+  {{- $rawModuleName = (index . 2) }} {{- /* Optional module name */ -}}
+  {{- end }}
+  {{- $moduleName := (include "helm_lib_module_camelcase_name" $rawModuleName) }}
+  {{- $moduleMap := index $context.Values.global.modulesImages.digests $moduleName | default dict }}
+  {{- $imageDigest := index $moduleMap $containerName | default "" }}
+  {{- if not $imageDigest }}
+  {{- $error := (printf "Image %s.%s has no digest" $moduleName $containerName ) }}
+  {{- fail $error }}
+  {{- end }}
+  {{- printf "%s" $imageDigest }}
+{{- end }}
+
+{{- /* Usage: {{ include "helm_lib_module_image_digest_no_fail" (list . "<container-name>" "<module-name>(optional)") }} */ -}}
+{{- /* returns image digest if found */ -}}
+{{- define "helm_lib_module_image_digest_no_fail" }}
+  {{- $context := index . 0 }} {{- /* Template context with .Values, .Chart, etc */ -}}
+  {{- $containerName := index . 1 | trimAll "\"" }} {{- /* Container name */ -}}
+  {{- $moduleName := (include "helm_lib_module_camelcase_name" $context) }}
+  {{- if ge (len .) 3 }}
+  {{- $moduleName = (include "helm_lib_module_camelcase_name" (index . 2)) }} {{- /* Optional module name */ -}}
+  {{- end }}
+  {{- $moduleMap := index $context.Values.global.modulesImages.digests $moduleName | default dict }}
+  {{- $imageDigest := index $moduleMap $containerName | default "" }}
+  {{- printf "%s" $imageDigest }}
+{{- end }}

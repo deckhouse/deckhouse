@@ -15,6 +15,7 @@
 package bootstrap
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -220,7 +221,8 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 		}
 		bootstrapState := NewBootstrapState(stateCache)
 		preflightChecker := preflight.NewChecker(b.NodeInterface, deckhouseInstallConfig, metaConfig, bootstrapState)
-		if err := preflightChecker.StaticSudo(); err != nil {
+		// TODO(dhctl-for-commander-cancels): pass ctx
+		if err := preflightChecker.StaticSudo(context.TODO()); err != nil {
 			return err
 		}
 	}

@@ -185,7 +185,7 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 
 	if s.lockRunner != nil {
 		log.DebugLn("starting reset lock after replacing kube client")
-		err := s.lockRunner.ResetLock()
+		err := s.lockRunner.ResetLock(s.ctx.Ctx())
 		if err != nil {
 			return fmt.Errorf("failed to reset lock: %w", err)
 		}

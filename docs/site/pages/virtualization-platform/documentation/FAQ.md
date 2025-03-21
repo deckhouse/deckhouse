@@ -350,9 +350,7 @@ spec:
 
 The virtual machine runs in a Kubernetes cluster, so directing network traffic is similar to directing traffic to pods.
 
-1. Create a service with the required settings.
-
-   As an example, here is a virtual machine with an HTTP service published on port 80 and the following set of labels:
+1. Create a service with the required settings. As an example, here is a virtual machine with an HTTP service published on port 80 and the following set of labels:
 
     ```yaml
     apiVersion: virtualization.deckhouse.io/v1alpha2
@@ -380,6 +378,8 @@ The virtual machine runs in a Kubernetes cluster, so directing network traffic i
     selector:
     app: old
     ```
+
+## Changing virtual machine labels without having to restart
 
 You can change the labels of a virtual machine without having to restart it, which allows you to configure real-time redirection of network traffic between different services.
 

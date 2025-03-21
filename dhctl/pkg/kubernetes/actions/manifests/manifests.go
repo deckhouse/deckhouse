@@ -271,7 +271,8 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		Image:           params.Registry,
 		ImagePullPolicy: apiv1.PullAlways,
 		Command: []string{
-			"/deckhouse/deckhouse",
+			"/usr/bin/deckhouse-controller",
+			"start",
 		},
 		WorkingDir: "/deckhouse",
 		ReadinessProbe: &apiv1.Probe{

@@ -6,6 +6,8 @@ title: "Cloud provider — GCP: настройки"
 
 {% include module-alerts.liquid %}
 
+{% include module-conversion.liquid %}
+
 Количество и параметры процесса заказа машин в облаке настраиваются в custom resource [`NodeGroup`](../../modules/node-manager/cr.html#nodegroup) модуля `node-manager`, в котором также указывается название используемого для этой группы узлов инстанс-класса (параметр `cloudInstances.classReference` NodeGroup). Инстанс-класс для cloud-провайдера GCP — это custom resource [`GCPInstanceClass`](cr.html#gcpinstanceclass), в котором указываются конкретные параметры самих машин.
 
 Модуль автоматически создает StorageClass'ы, покрывающие все варианты дисков в GCP:

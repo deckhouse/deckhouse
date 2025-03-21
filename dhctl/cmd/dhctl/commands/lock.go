@@ -15,6 +15,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
@@ -78,7 +79,7 @@ func DefineReleaseConvergeLockCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 		}
 
 		cnf := lock.GetLockLeaseConfig("lock-releaser")
-		return lease.RemoveLease(kubeCl, cnf, confirm)
+		return lease.RemoveLease(context.Background(), kubeCl, cnf, confirm)
 	})
 	return cmd
 }

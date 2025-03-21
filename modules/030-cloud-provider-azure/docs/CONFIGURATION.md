@@ -6,6 +6,8 @@ The module is configured automatically based on the chosen placement strategy (t
 
 {% include module-alerts.liquid %}
 
+{% include module-conversion.liquid %}
+
 You can configure the number and parameters of ordering machines in the cloud via the [`NodeGroup`](../node-manager/cr.html#nodegroup) custom resource of the node-manager module. Also, in this custom resource, you can specify the instance class's name for the above group of nodes (the [cloudInstances.ClassReference](../node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference) parameter). In the case of the Azure cloud provider, the instance class is the [`AzureInstanceClass`](cr.html#azureinstanceclass) custom resource that stores specific parameters of the machines.
 
 <div markdown="0" style="height: 0;" id="storage"></div>

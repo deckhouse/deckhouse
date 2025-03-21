@@ -15,6 +15,7 @@
 package resources
 
 import (
+	"context"
 	"reflect"
 
 	"github.com/hashicorp/go-multierror"
@@ -25,7 +26,7 @@ import (
 )
 
 type Checker interface {
-	IsReady() (bool, error)
+	IsReady(ctx context.Context) (bool, error)
 	Name() string
 	Single() bool
 }
@@ -87,11 +88,11 @@ func NewWaiter(checkers []Checker) *Waiter {
 	}
 }
 
-func (w *Waiter) ReadyAll() (bool, error) {
+func (w *Waiter) ReadyAll(ctx context.Context) (bool, error) {
 	checkersToStay := make([]Checker, 0)
 
 	for _, c := range w.checkers {
-		ready, err := c.IsReady()
+		ready, err := c.IsReady(ctx)
 		if err != nil {
 			return false, err
 		}

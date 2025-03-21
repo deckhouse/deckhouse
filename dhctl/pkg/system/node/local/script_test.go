@@ -15,6 +15,7 @@
 package local
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -38,7 +39,7 @@ func TestScriptExecute(t *testing.T) {
 	})
 
 	script := NewScript(scriptPath, "arg 1", "arg 2")
-	stdout, err := script.Execute()
+	stdout, err := script.Execute(context.Background())
 	s.NoError(err)
 	s.Equal(string(stdout), "arg 1 arg 2")
 }

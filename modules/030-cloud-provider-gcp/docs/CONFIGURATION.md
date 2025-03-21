@@ -6,6 +6,8 @@ The module is configured automatically based on the chosen placement strategy de
 
 {% include module-alerts.liquid %}
 
+{% include module-conversion.liquid %}
+
 You can configure the number and parameters of provisioning machines in the cloud via the [`NodeGroup`](../../modules/node-manager/cr.html#nodegroup) custom resource of the node-manager module. Also, in this custom resource, you can specify the instance class's name for the above group of nodes (the `cloudInstances.ClassReference` parameter of NodeGroup). In the case of the GCP cloud provider, the instance class is the [`GCPInstanceClass`](cr.html#gcpinstanceclass) custom resource that stores specific parameters of the machines.
 
 The module automatically creates StorageClasses that cover all the available disk types in GCP:

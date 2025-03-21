@@ -55,7 +55,7 @@ func resourceName(r *template.Resource) string {
 	return result + r.Object.GetName() + "'"
 }
 
-func (c *resourceReadinessChecker) IsReady() (bool, error) {
+func (c *resourceReadinessChecker) IsReady(ctx context.Context) (bool, error) {
 	defer func() {
 		c.attempt++
 		c.logger.LogInfoF("\n")
@@ -91,7 +91,7 @@ func (c *resourceReadinessChecker) IsReady() (bool, error) {
 		return false, nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.TODO(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
 	objectInCluster, err := c.kubeCl.Dynamic().

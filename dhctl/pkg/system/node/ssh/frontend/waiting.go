@@ -52,7 +52,7 @@ func (c *Check) AwaitAvailability(ctx context.Context) error {
 
 	return retry.NewLoop("Waiting for SSH connection", 50, 5*time.Second).RunContext(ctx, func() error {
 		log.InfoF("Try to connect to %v host\n", c.Session.Host())
-		output, err := c.ExpectAvailable()
+		output, err := c.ExpectAvailable(ctx)
 		if err == nil {
 			return nil
 		}
@@ -64,13 +64,13 @@ func (c *Check) AwaitAvailability(ctx context.Context) error {
 	})
 }
 
-func (c *Check) CheckAvailability() error {
+func (c *Check) CheckAvailability(ctx context.Context) error {
 	if c.Session.Host() == "" {
 		return fmt.Errorf("empty host for connection received")
 	}
 
 	log.InfoF("Try to connect to %v host\n", c.Session.Host())
-	output, err := c.ExpectAvailable()
+	output, err := c.ExpectAvailable(ctx)
 	if err != nil {
 		log.InfoF(string(output))
 		return err
@@ -78,10 +78,10 @@ func (c *Check) CheckAvailability() error {
 	return nil
 }
 
-func (c *Check) ExpectAvailable() ([]byte, error) {
+func (c *Check) ExpectAvailable(ctx context.Context) ([]byte, error) {
 	cmd := NewCommand(c.Session, "echo SUCCESS")
 	cmd.Cmd()
-	output, err := cmd.CombinedOutput()
+	output, err := cmd.CombinedOutput(ctx)
 	if err != nil {
 		return output, err
 	}

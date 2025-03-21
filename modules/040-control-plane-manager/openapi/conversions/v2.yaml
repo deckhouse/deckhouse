@@ -1,0 +1,6 @@
+version: 2
+conversions:
+  - del(.etcd.externalMembersNames) | if .etcd == {} then del(.etcd) end
+description:
+  ru: "Удалите `etcd.externalMembersNames`"
+  en: "Delete `etcd.externalMembersNames`"

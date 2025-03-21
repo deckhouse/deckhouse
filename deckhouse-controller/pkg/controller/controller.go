@@ -20,10 +20,13 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
 	"sync"
+	"syscall"
 	"time"
 
 	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
+	envmgr "github.com/flant/addon-operator/pkg/module_manager/environment_manager"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/go-logr/logr"
@@ -176,13 +179,17 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 	configHandler := confighandler.New(runtimeManager.GetClient(), deckhouseConfigCh)
 	operator.SetupKubeConfigManager(configHandler)
 
-	// init module manager
+	// setup module manager
 	if err = operator.Setup(); err != nil {
 		return nil, fmt.Errorf("setup operator: %w", err)
 	}
 
 	moduleEventCh := make(chan events.ModuleEvent, 350)
 	operator.ModuleManager.SetModuleEventsChannel(moduleEventCh)
+	// set chrooted environment for modules
+	if len(os.Getenv("ADDON_OPERATOR_SHELL_CHROOT_DIR")) > 0 {
+		setModulesEnvironment(operator)
+	}
 
 	// instantiate ModuleDependency extender
 	moduledependency.Instance().SetModulesVersionHelper(func(moduleName string) (string, error) {
@@ -274,6 +281,87 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 		settings:       settingsContainer,
 		log:            logger,
 	}, nil
+}
+
+func setModulesEnvironment(operator *addonoperator.AddonOperator) {
+	operator.ModuleManager.AddObjectsToChrootEnvironment([]envmgr.ObjectDescriptor{
+		{
+			Source:            "/deckhouse/python_lib",
+			Flags:             syscall.MS_BIND | syscall.MS_RDONLY,
+			Type:              envmgr.Mount,
+			TargetEnvironment: envmgr.ShellHookEnvironment,
+		},
+		{
+			Source:            "/deckhouse/candi",
+			Flags:             syscall.MS_BIND | syscall.MS_RDONLY,
+			Type:              envmgr.Mount,
+			TargetEnvironment: envmgr.ShellHookEnvironment,
+		},
+		{
+			Source:            "/deckhouse/helm_lib",
+			Flags:             syscall.MS_BIND | syscall.MS_RDONLY,
+			Type:              envmgr.Mount,
+			TargetEnvironment: envmgr.ShellHookEnvironment,
+		},
+		{
+			Source:            "/chroot/tmp",
+			Target:            "/tmp",
+			Flags:             syscall.MS_BIND,
+			Type:              envmgr.Mount,
+			TargetEnvironment: envmgr.EnabledScriptEnvironment,
+		},
+		{
+			Source:            "/usr",
+			Flags:             syscall.MS_BIND | syscall.MS_RDONLY,
+			Type:              envmgr.Mount,
+			TargetEnvironment: envmgr.EnabledScriptEnvironment,
+		},
+		{
+			Source:            "/bin",
+			Flags:             syscall.MS_BIND | syscall.MS_RDONLY,
+			Type:              envmgr.Mount,
+			TargetEnvironment: envmgr.EnabledScriptEnvironment,
+		},
+		{
+			Source:            "/lib",
+			Flags:             syscall.MS_BIND | syscall.MS_RDONLY,
+			Type:              envmgr.Mount,
+			TargetEnvironment: envmgr.EnabledScriptEnvironment,
+		},
+		{
+			Source:            "/lib64",
+			Flags:             syscall.MS_BIND | syscall.MS_RDONLY,
+			Type:              envmgr.Mount,
+			TargetEnvironment: envmgr.EnabledScriptEnvironment,
+		},
+		{
+			Source:            "/deckhouse/shell_lib",
+			Flags:             syscall.MS_BIND | syscall.MS_RDONLY,
+			Type:              envmgr.Mount,
+			TargetEnvironment: envmgr.EnabledScriptEnvironment,
+		},
+		{
+			Source:            "/deckhouse/shell-operator",
+			Flags:             syscall.MS_BIND | syscall.MS_RDONLY,
+			Type:              envmgr.Mount,
+			TargetEnvironment: envmgr.EnabledScriptEnvironment,
+		},
+		{
+			Source:            "/proc/sys/kernel/cap_last_cap",
+			Type:              envmgr.File,
+			TargetEnvironment: envmgr.EnabledScriptEnvironment,
+		},
+		{
+			Source:            "/deckhouse/shell_lib.sh",
+			Type:              envmgr.File,
+			TargetEnvironment: envmgr.EnabledScriptEnvironment,
+		},
+		{
+			Target:            "/dev/null",
+			Type:              envmgr.DevNull,
+			TargetEnvironment: envmgr.EnabledScriptEnvironment,
+		},
+	}...)
 }
 
 // Start loads and ensures modules from FS, starts controllers and runs deckhouse config event loop

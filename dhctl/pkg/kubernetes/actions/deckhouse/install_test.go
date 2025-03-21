@@ -32,6 +32,7 @@ import (
 )
 
 func TestDeckhouseInstall(t *testing.T) {
+	ctx := context.Background()
 	err := os.Setenv("DHCTL_TEST", "yes")
 	require.NoError(t, err)
 	err = os.Setenv("DHCTL_TEST_VERSION_TAG", "1.54.1")
@@ -52,7 +53,7 @@ func TestDeckhouseInstall(t *testing.T) {
 		{
 			"Empty config",
 			func() error {
-				_, err := CreateDeckhouseManifests(fakeClient, &config.DeckhouseInstaller{})
+				_, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{})
 				return err
 			},
 			false,
@@ -60,11 +61,11 @@ func TestDeckhouseInstall(t *testing.T) {
 		{
 			"Double install",
 			func() error {
-				_, err := CreateDeckhouseManifests(fakeClient, &config.DeckhouseInstaller{})
+				_, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{})
 				if err != nil {
 					return err
 				}
-				_, err = CreateDeckhouseManifests(fakeClient, &config.DeckhouseInstaller{})
+				_, err = CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{})
 				return err
 			},
 			false,
@@ -72,7 +73,7 @@ func TestDeckhouseInstall(t *testing.T) {
 		{
 			"With docker cfg",
 			func() error {
-				_, err := CreateDeckhouseManifests(fakeClient, &config.DeckhouseInstaller{
+				_, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
 					Registry: config.RegistryData{DockerCfg: "YW55dGhpbmc="},
 				})
 				if err != nil {
@@ -99,7 +100,7 @@ func TestDeckhouseInstall(t *testing.T) {
 					ProviderClusterConfig: []byte(`test`),
 					TerraformState:        []byte(`test`),
 				}
-				_, err := CreateDeckhouseManifests(fakeClient, &conf)
+				_, err := CreateDeckhouseManifests(ctx, fakeClient, &conf)
 				if err != nil {
 					return err
 				}
@@ -124,6 +125,7 @@ func TestDeckhouseInstall(t *testing.T) {
 }
 
 func TestDeckhouseInstallWithDevBranch(t *testing.T) {
+	ctx := context.Background()
 	err := os.Setenv("DHCTL_TEST", "yes")
 	require.NoError(t, err)
 	err = os.Setenv("DHCTL_TEST_VERSION_TAG", "dev")
@@ -135,7 +137,7 @@ func TestDeckhouseInstallWithDevBranch(t *testing.T) {
 
 	fakeClient := client.NewFakeKubernetesClient()
 
-	_, err = CreateDeckhouseManifests(fakeClient, &config.DeckhouseInstaller{
+	_, err = CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
 		DevBranch: "pr1111",
 	})
 
@@ -143,6 +145,7 @@ func TestDeckhouseInstallWithDevBranch(t *testing.T) {
 }
 
 func TestDeckhouseInstallWithModuleConfig(t *testing.T) {
+	ctx := context.Background()
 	err := os.Setenv("DHCTL_TEST", "yes")
 	require.NoError(t, err)
 	err = os.Setenv("DHCTL_TEST_VERSION_TAG", "dev")
@@ -169,7 +172,7 @@ func TestDeckhouseInstallWithModuleConfig(t *testing.T) {
 		"ha": true,
 	})
 
-	_, err = CreateDeckhouseManifests(fakeClient, &config.DeckhouseInstaller{
+	_, err = CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
 		DevBranch:     "pr1111",
 		ModuleConfigs: []*config.ModuleConfig{mc1},
 	})
@@ -187,6 +190,7 @@ func TestDeckhouseInstallWithModuleConfig(t *testing.T) {
 }
 
 func TestDeckhouseInstallWithModuleConfigs(t *testing.T) {
+	ctx := context.Background()
 	err := os.Setenv("DHCTL_TEST", "yes")
 	require.NoError(t, err)
 	err = os.Setenv("DHCTL_TEST_VERSION_TAG", "dev")
@@ -226,7 +230,7 @@ func TestDeckhouseInstallWithModuleConfigs(t *testing.T) {
 		"bundle": "Minimal",
 	})
 
-	_, err = CreateDeckhouseManifests(fakeClient, &config.DeckhouseInstaller{
+	_, err = CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
 		DevBranch:     "pr1111",
 		ModuleConfigs: []*config.ModuleConfig{mc1, mc2},
 	})
@@ -244,6 +248,7 @@ func TestDeckhouseInstallWithModuleConfigs(t *testing.T) {
 }
 
 func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
+	ctx := context.Background()
 	err := os.Setenv("DHCTL_TEST", "yes")
 	require.NoError(t, err)
 	err = os.Setenv("DHCTL_TEST_VERSION_TAG", "dev")
@@ -265,7 +270,7 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 				"releaseChannel": "Alpha",
 			})
 
-			res, err := CreateDeckhouseManifests(fakeClient, &config.DeckhouseInstaller{
+			res, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
 				DevBranch:     "pr1111",
 				ModuleConfigs: []*config.ModuleConfig{mc},
 			})
@@ -302,7 +307,7 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 				},
 			})
 
-			res, err := CreateDeckhouseManifests(fakeClient, &config.DeckhouseInstaller{
+			res, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
 				DevBranch:     "pr1111",
 				ModuleConfigs: []*config.ModuleConfig{mc},
 			})
@@ -331,7 +336,7 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 				"highAvailability": true,
 			})
 
-			res, err := CreateDeckhouseManifests(fakeClient, &config.DeckhouseInstaller{
+			res, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
 				DevBranch:     "pr1111",
 				ModuleConfigs: []*config.ModuleConfig{mc},
 			})
@@ -370,7 +375,7 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 				},
 			})
 
-			res, err := CreateDeckhouseManifests(fakeClient, &config.DeckhouseInstaller{
+			res, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
 				DevBranch:     "pr1111",
 				ModuleConfigs: []*config.ModuleConfig{mcDeckhouse, mcGlobal},
 			})

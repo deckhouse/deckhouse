@@ -17,6 +17,7 @@ package preflight
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -27,18 +28,18 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 )
 
-func (pc *Checker) CheckStaticNodeSystemRequirements() error {
+func (pc *Checker) CheckStaticNodeSystemRequirements(ctx context.Context) error {
 	if app.PreflightSkipSystemRequirementsCheck {
 		log.DebugLn("System requirements check is skipped")
 		return nil
 	}
 
-	ramKb, err := extractRAMCapacityFromNode(pc.nodeInterface)
+	ramKb, err := extractRAMCapacityFromNode(ctx, pc.nodeInterface)
 	if err != nil {
 		return err
 	}
 
-	coresCount, err := extractCPULogicalCoresCountFromNode(pc.nodeInterface)
+	coresCount, err := extractCPULogicalCoresCountFromNode(ctx, pc.nodeInterface)
 	if err != nil {
 		return err
 	}
@@ -67,9 +68,9 @@ func (pc *Checker) CheckStaticNodeSystemRequirements() error {
 	return nil
 }
 
-func extractRAMCapacityFromNode(sshCl node.Interface) (int, error) {
+func extractRAMCapacityFromNode(ctx context.Context, sshCl node.Interface) (int, error) {
 	cmd := sshCl.Command("cat", "/proc/meminfo")
-	memInfo, _, err := cmd.Output()
+	memInfo, _, err := cmd.Output(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("Failed to read MemTotal from /proc/meminfo: %w", err)
 	}
@@ -82,9 +83,9 @@ func extractRAMCapacityFromNode(sshCl node.Interface) (int, error) {
 	return ramKb, nil
 }
 
-func extractCPULogicalCoresCountFromNode(nodeInterface node.Interface) (int, error) {
+func extractCPULogicalCoresCountFromNode(ctx context.Context, nodeInterface node.Interface) (int, error) {
 	cmd := nodeInterface.Command("cat", "/proc/cpuinfo")
-	stdout, _, err := cmd.Output()
+	stdout, _, err := cmd.Output(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("Failed to read CPU info from /proc/cpuinfo: %w", err)
 	}

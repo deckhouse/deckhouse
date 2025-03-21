@@ -25,6 +25,7 @@ import "common.proto";
 message CommanderDetachRequest {
   oneof message {
     CommanderDetachStart start = 1;
+    CommanderDetachCancel cancel = 2;
   }
 }
 
@@ -46,6 +47,8 @@ message CommanderDetachStart {
   google.protobuf.Struct delete_resources_values = 8;
   CommanderDetachStartOptions options = 9;
 }
+
+message CommanderDetachCancel {}
 
 message CommanderDetachStartOptions {
   bool commander_mode = 1;

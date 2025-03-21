@@ -5,6 +5,8 @@ AbsoluteVersion
 acceptRequestsFrom
 accessLevel
 ACS
+additionalAPIAudiences
+additionalAPIIssuers
 additionalPrinterColumns
 additionalProperties
 additionalSecurityGroups
@@ -1040,6 +1042,7 @@ SEMVER
 Sep
 sequelize
 sequelizerc
+serviceAccount
 ServiceAccount
 ServiceAccounts
 ServiceEntry

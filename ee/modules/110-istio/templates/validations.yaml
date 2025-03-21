@@ -1,6 +1,7 @@
+{{- if and (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
 ---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
 kind: ValidatingAdmissionPolicy
-apiVersion: admissionregistration.k8s.io/v1beta1
 metadata:
   name: d8-istio-serviceentry-ports
   {{- include "helm_lib_module_labels" (list $) | nindent 2 }}
@@ -16,8 +17,8 @@ spec:
         operations: ["CREATE", "UPDATE"]
   failurePolicy: Ignore
 ---
-apiVersion: admissionregistration.k8s.io/v1beta1
 kind: ValidatingAdmissionPolicyBinding
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 metadata:
   name: d8-istio-serviceentry-ports-binding
   {{- include "helm_lib_module_labels" (list $) | nindent 2 }}
@@ -31,3 +32,4 @@ spec:
         operations: ["CREATE", "UPDATE"]
   validationActions: ["Warn"]
 ---
+{{- end }}

@@ -282,7 +282,7 @@ func (i *Attacher) scan(
 }
 
 func (i *Attacher) capture(
-	_ context.Context,
+	ctx context.Context,
 	kubeClient *client.KubernetesClient,
 ) error {
 	return log.Process("commander/attach", "Capture cluster", func() error {
@@ -299,7 +299,7 @@ func (i *Attacher) capture(
 			return fmt.Errorf("unable to get resource checkers: %w", err)
 		}
 
-		err = resources.CreateResourcesLoop(kubeClient, attachResources, checkers, nil)
+		err = resources.CreateResourcesLoop(ctx, kubeClient, attachResources, checkers, nil)
 		if err != nil {
 			return fmt.Errorf("unable to create resources: %w", err)
 		}

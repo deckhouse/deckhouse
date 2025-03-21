@@ -15,6 +15,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -77,7 +78,7 @@ func (s *SCP) WithPreserve(preserve bool) *SCP {
 	return s
 }
 
-func (s *SCP) SCP() *SCP {
+func (s *SCP) SCP(ctx context.Context) *SCP {
 	// env := append(os.Environ(), s.Env...)
 	env := append(os.Environ(), s.Session.AgentSettings.AuthSockEnv())
 
@@ -166,7 +167,7 @@ func (s *SCP) SCP() *SCP {
 	}...)
 
 	scpArgs := append(sshPathArgs, args...)
-	s.scpCmd = exec.Command("scp", scpArgs...)
+	s.scpCmd = exec.CommandContext(ctx, "scp", scpArgs...)
 	s.scpCmd.Env = env
 	// scpCmd.Stdout = os.Stdout
 	// scpCmd.Stderr = os.Stderr

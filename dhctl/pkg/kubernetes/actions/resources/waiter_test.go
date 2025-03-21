@@ -15,6 +15,7 @@
 package resources
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -302,7 +303,7 @@ func newTestChecker(returns bool, err error, single bool, name string) *testChec
 	}
 }
 
-func (n *testChecker) IsReady() (bool, error) {
+func (n *testChecker) IsReady(_ context.Context) (bool, error) {
 	return n.returns, n.err
 }
 
@@ -315,9 +316,11 @@ func (n *testChecker) Single() bool {
 }
 
 func TestWaiterStep(t *testing.T) {
+	ctx := context.Background()
+
 	t.Run("without checks", func(t *testing.T) {
 		w := NewWaiter(make([]Checker, 0))
-		ready, err := w.ReadyAll()
+		ready, err := w.ReadyAll(ctx)
 
 		require.NoError(t, err)
 		require.True(t, ready, "should ready")
@@ -325,7 +328,7 @@ func TestWaiterStep(t *testing.T) {
 
 	t.Run("with one ready check", func(t *testing.T) {
 		w := NewWaiter([]Checker{newTestChecker(true, nil, false, "Test 1")})
-		ready, err := w.ReadyAll()
+		ready, err := w.ReadyAll(ctx)
 
 		require.NoError(t, err)
 		require.True(t, ready, "should ready")
@@ -337,7 +340,7 @@ func TestWaiterStep(t *testing.T) {
 			newTestChecker(true, nil, false, "Test 2"),
 			newTestChecker(true, nil, false, "Test 3"),
 		})
-		ready, err := w.ReadyAll()
+		ready, err := w.ReadyAll(ctx)
 
 		require.NoError(t, err)
 		require.True(t, ready, "should ready")
@@ -349,7 +352,7 @@ func TestWaiterStep(t *testing.T) {
 			newTestChecker(false, fmt.Errorf("error"), false, "Test 2"),
 			newTestChecker(true, nil, false, "Test 3"),
 		})
-		ready, err := w.ReadyAll()
+		ready, err := w.ReadyAll(ctx)
 
 		require.Error(t, err, "should error")
 		require.False(t, ready)
@@ -361,7 +364,7 @@ func TestWaiterStep(t *testing.T) {
 			newTestChecker(false, nil, false, "Test 2"),
 			newTestChecker(true, nil, false, "Test 3"),
 		})
-		ready, err := w.ReadyAll()
+		ready, err := w.ReadyAll(ctx)
 
 		require.NoError(t, err)
 		require.False(t, ready, "should not ready")
@@ -374,7 +377,7 @@ func TestWaiterStep(t *testing.T) {
 			newTestChecker(true, nil, false, "Test 3"),
 		})
 
-		_, err := w.ReadyAll()
+		_, err := w.ReadyAll(ctx)
 
 		require.NoError(t, err)
 		require.Len(t, w.checkers, 1, "should remove ready checks")

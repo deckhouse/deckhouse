@@ -15,6 +15,7 @@
 package preflight
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -24,7 +25,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-func (pc *Checker) CheckCidrIntersection() error {
+func (pc *Checker) CheckCidrIntersection(_ context.Context) error {
 	if app.PreflightSkipCIDRIntersection {
 		log.DebugLn("Verification of CIDRs intersection is skipped")
 		return nil
@@ -43,7 +44,7 @@ func (pc *Checker) CheckCidrIntersection() error {
 	return nil
 }
 
-func (pc *Checker) CheckCidrIntersectionStatic() error {
+func (pc *Checker) CheckCidrIntersectionStatic(_ context.Context) error {
 	if app.PreflightSkipCIDRIntersection {
 		log.DebugLn("Verification of CIDRs intersection is skipped")
 		return nil

@@ -15,6 +15,7 @@
 package preflight
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os/exec"
@@ -25,7 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
-func (pc *Checker) CheckAvailabilityPorts() error {
+func (pc *Checker) CheckAvailabilityPorts(ctx context.Context) error {
 	if app.PreflightSkipAvailabilityPorts {
 		log.InfoLn("Availability ports preflight check was skipped")
 		return nil
@@ -39,7 +40,7 @@ func (pc *Checker) CheckAvailabilityPorts() error {
 	}
 
 	scriptCmd := pc.nodeInterface.UploadScript(file)
-	out, err := scriptCmd.Execute()
+	out, err := scriptCmd.Execute(ctx)
 	if err != nil {
 		log.ErrorLn(strings.Trim(string(out), "\n"))
 		var ee *exec.ExitError

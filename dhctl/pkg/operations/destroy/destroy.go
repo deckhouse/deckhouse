@@ -24,6 +24,9 @@ import (
 
 	"github.com/google/uuid"
 
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	infra "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -38,8 +41,6 @@ import (
 	tf "github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type Destroyer interface {
@@ -183,7 +184,8 @@ func (d *ClusterDestroyer) DestroyCluster(autoApprove bool) error {
 		} else if shouldStop {
 			return nil
 		}
-		if err := d.d8Destroyer.DeleteResources(clusterType); err != nil {
+		// TODO(dhctl-for-commander-cancels): pass ctx
+		if err := d.d8Destroyer.DeleteResources(context.TODO(), clusterType); err != nil {
 			return err
 		}
 		if err := d.PhasedExecutionContext.CompletePhase(d.stateCache, nil); err != nil {
@@ -252,7 +254,8 @@ func (d *StaticMastersDestroyer) DestroyCluster(autoApprove bool) error {
 	hostToExclude := ""
 	if len(d.IPs) > 0 {
 		file := frontend.NewFile(d.SSHClient.Settings)
-		bytes, err := file.DownloadBytes("/var/lib/bashible/discovered-node-ip")
+		// TODO(dhctl-for-commander-cancels): pass ctx
+		bytes, err := file.DownloadBytes(context.TODO(), "/var/lib/bashible/discovered-node-ip")
 		if err != nil {
 
 			return err
@@ -310,7 +313,8 @@ func processStaticHosts(hosts []session.Host, s *session.Session, stdOutErrHandl
 			cmd.WithTimeout(5 * time.Minute)
 			cmd.WithStdoutHandler(stdOutErrHandler)
 			cmd.WithStderrHandler(stdOutErrHandler)
-			err := cmd.Run()
+			// TODO(dhctl-for-commander-cancels): pass ctx
+			err := cmd.Run(context.TODO())
 
 			if err != nil {
 				var ee *exec.ExitError
