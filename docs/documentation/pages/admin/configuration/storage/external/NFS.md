@@ -95,15 +95,15 @@ nfs-storage-class   nfs.csi.k8s.io   Delete          WaitForFirstConsumer   true
 
 If the StorageClass named `nfs-storage-class` appears, it means the `csi-nfs` module has been configured successfully. Users can now create PersistentVolumes by specifying the `nfs-storage-class` StorageClass. For each PersistentVolume resource, a directory `<share-directory>/<PersistentVolume-name>` will be created.
 
-## Checking module functionality
+## Module Health Check
 
-To check the functionality of the `csi-nfs` module, you need to verify the pod statuses in the `d8-csi-nfs` namespace. All pods should be in the `Running` or `Completed` state, and the `csi-nfs` pods should be running on all nodes. You can check the module's functionality with the following command:
+To verify the health of the module, ensure that all pods in the `d8-csi-nfs` namespace are in the `Running` or `Completed` state and are running on every node in the cluster:
 
 ```shell
 d8 k -n d8-csi-nfs get pod -owide -w
 ```
 
-In the output, you should see a list of all pods in the `d8-csi-nfs` namespace.
+As a result, the list of all pods in the `d8-csi-nfs` namespace will be displayed:
 
 ```console
 NAME                             READY   STATUS    RESTARTS   AGE   IP             NODE       NOMINATED NODE   READINESS GATES
@@ -113,3 +113,71 @@ webhooks-7b5bf9dbdb-m5wxb        1/1     Running   0          1h    10.111.0.16 
 csi-nfs-8mpcd                    2/2     Running   0          1h    172.18.18.50   master     <none>           <none>
 csi-nfs-n6sks                    2/2     Running   0          1h    172.18.18.51   worker-1   <none>           <none>
 ```
+
+## Changing NFS Server Parameters for Existing PVs
+
+It is not possible to change NFS server connection parameters for already created PersistentVolumes. These parameters are stored directly in the PV manifest and cannot be modified. Changing the StorageClass will not update connection settings in existing PVs.
+
+## Creating Volume Snapshots
+
+In Deckhouse, snapshots are created by archiving the volume’s folder. The archive is saved in the root directory of the NFS server specified in the `spec.connection.share` parameter. To create snapshots:
+
+1. Enable the `snapshot-controller` module:
+
+   ```yaml
+   d8 k apply -f -<<EOF
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: snapshot-controller
+   spec:
+     enabled: true
+     version: 1
+   EOF
+   ```
+
+1. Create a volume snapshot by specifying the required parameters:
+
+   ```yaml
+   d8 k apply -f -<<EOF
+   apiVersion: snapshot.storage.k8s.io/v1
+   kind: VolumeSnapshot
+   metadata:
+     name: my-snapshot
+     namespace: <the namespace in which the PVC is located>
+   spec:
+     volumeSnapshotClassName: csi-nfs-snapshot-class
+     source:
+       persistentVolumeClaimName: <the namespace for which the snapshot needs to be created>
+   EOF
+   ```
+
+1. Check the snapshot status using the following command:
+
+   ```shell
+   d8 k get volumesnapshot
+   ```
+
+This command will display a list of all snapshots and their current statuses.
+
+## Why PVs Are Not Deleted When RPC-with-TLS Is Enabled
+
+If the [NFSStorageClass](../../../reference/cr/nfsstorageclass/) is configured with RPC-with-TLS support, it may be impossible to delete PVs. This can happen if the secret storing mount parameters is deleted (for example, after deleting the [NFSStorageClass](../../../reference/cr/nfsstorageclass/)). As a result, the controller is unable to mount the NFS path to delete the `<PV name>` directory.
+
+## Adding Multiple CAs to tlsParameters.ca in ModuleConfig
+
+To add multiple CA certificates to the `tlsParameters.ca` parameter, concatenate them into a single file and encode it using Base64:
+
+- For two CAs:
+
+```shell
+cat CA1.crt CA2.crt | base64 -w0
+```
+
+- For three CAs:
+
+```shell
+cat CA1.crt CA2.crt CA3.crt | base64 -w0
+```
+
+- And so on.
