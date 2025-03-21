@@ -55,5 +55,5 @@ shell:
   install:
   - cd /src
   - export GOPROXY={{ $.GOPROXY }}
-  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\"" -o /opentofu/opentofu .
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\" -X main.version={{ .TF.version }}" -o /opentofu/opentofu ./cmd/tofu
   - chmod 755 /opentofu/opentofu
