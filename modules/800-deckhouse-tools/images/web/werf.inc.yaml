@@ -69,10 +69,15 @@ shell:
     - find /var/lib/apt/ /var/cache/apt/ -type f -delete
   install:
     - export GOPROXY={{ $.GOPROXY }}
+
     - export PRIVATE_REPO={{ $.DECKHOUSE_PRIVATE_REPO }}
-    - export PRIVATE_REPO_TOKEN={{ $.STRONGHOLD_PULL_TOKEN }}
-    - export GOPRIVATE={{ $.DECKHOUSE_PRIVATE_REPO }}
-    - git config --global url."https://gitlab-ci-token:${PRIVATE_REPO_TOKEN}@${PRIVATE_REPO}/".insteadOf https://${PRIVATE_REPO}/
+    - GOPRIVATE="flant.internal"
+    - git config --global url."ssh://git@${PRIVATE_REPO}/".insteadOf "https://flant.internal/"
+    - git config --global --add safe.directory '*'
+    - mkdir -p ~/.ssh
+    - touch ~/.ssh/known_hosts
+    - ssh-keyscan -H ${PRIVATE_REPO} >> ~/.ssh/known_hosts
+
     - cd /src
     - task build:dist:all
     - mkdir -p /app/files/d8-cli
