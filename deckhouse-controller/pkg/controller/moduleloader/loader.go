@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/deckhouse/module-sdk/pkg/utils"
 	"io/fs"
 	"log/slog"
 	"os"
@@ -47,6 +46,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	"github.com/deckhouse/module-sdk/pkg/utils"
 )
 
 const (
