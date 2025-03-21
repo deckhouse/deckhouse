@@ -65,7 +65,7 @@
 {{- define "installer_and_installer_standalone_terraform_imports" }}
 {{- $context := . -}}
 
-- image: opentofu # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
+- image: opentofu # from modules/040-terraform-manager/images/base-terraform-manager/werf.inc.yaml
   add: /opentofu/opentofu
   to: /bin/opentofu
   before: setup
