@@ -39,35 +39,43 @@ image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
 fromImage: common/alt-p11-artifact
 final: false
 import:
+- image: common/python
+  add: /
+  to: /
+  before: install
+  includePaths:
+  - lib
+  - usr/local
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/monitoring-ping/requirements.txt
   to: /requirements.txt
-  before: install
-- image: common/python-static
-  add: /opt/python-static
   before: install
 shell:
   beforeInstall:
   - apt-get install -y git
   install:
   - git clone --depth 1 {{ .SOURCE_REPO }}/python-modules/wheels /wheels
-  - /opt/python-static/bin/pip3 install -f file:///wheels --no-index -r requirements.txt
+  - pip3 install -f file:///wheels --no-index -r requirements.txt
   - rm -rf /wheels
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-  add: /src/monitoring-ping
-  to: /src
-  before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
-  add: /opt/python-static
+  add: /src/monitoring-ping/monitoring-ping.py
+  to: /monitoring-ping.py
   before: install
 - image: {{ .ModuleName }}/{{ .ImageName }}-fping-artifact
   add: /opt/fping-static/sbin/fping
   to: /usr/sbin/fping
   before: setup
+- image: common/python
+  add: /
+  to: /
+  before: install
+  includePaths:
+  - lib
+  - usr/local
 imageSpec:
   config:
-    entrypoint: ["/opt/python-static/bin/python3", "/src/monitoring-ping.py"]
+    entrypoint: ["/usr/local/bin/python3", "/monitoring-ping.py"]

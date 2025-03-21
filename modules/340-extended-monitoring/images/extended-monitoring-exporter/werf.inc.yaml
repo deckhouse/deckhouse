@@ -1,6 +1,6 @@
 {{- $binaries := "/usr/bin/python3 /lib64/libz.so* /lib64/libexpat.so* /usr/lib64/libffi.so* /lib64/libcrypto.so* /lib64/libssl.so*" }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 final: false
 fromImage: common/alt-p11-artifact
 git:
@@ -10,39 +10,35 @@ git:
       install:
         - '**/*'
 import:
-- image: common/python-static
-  add: /opt/python-static
-  to: /opt/python-static
+- image: common/python
+  add: /
+  to: /
   before: install
+  includePaths:
+  - lib
+  - usr/local
 shell:
   beforeInstall:
   - apt-get install -y git
   install:
-    - export SOURCE_REPO={{ .SOURCE_REPO }}
-    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
     - rm -rf /wheels/.git
-    - /opt/python-static/bin/pip3 install -f file:///wheels --no-index -r /requirements.txt
+    - pip3 install -f file:///wheels --no-index -r /requirements.txt
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 git:
-  - add: /{{ $.ModulePath }}modules/340-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/extended-monitoring.py
-    to: /app/extended-monitoring.py
+- add: /{{ $.ModulePath }}modules/340-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/extended-monitoring.py
+  to: /app/extended-monitoring.py
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
-  add: /opt/python-static/bin
-  to: /usr/bin
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /usr/local
+  to: /usr/local
   before: install
-  includePaths:
-  - python3*
-  - python3
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
-  add: /opt/python-static/lib
-  to: /usr/lib
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /lib/ld-musl-x86_64.so.1
+  to: /lib/ld-musl-x86_64.so.1
   before: install
-  includePaths:
-  - python3*
 imageSpec:
   config:
     entrypoint: ["python3"]
