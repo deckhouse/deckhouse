@@ -50,3 +50,20 @@
       description: |
         Cloud data discoverer finds disks in the cloud for which there is no PersistentVolume in the cluster. You can manually delete these disks from your cloud:
           ID: {{`{{ $labels.id }}`}}, Name: {{`{{ $labels.name }}`}}
+
+  - alert: UnmetCloudConditions
+    for: 1h
+    expr: max by(job, id, name, namespace)(cloud_data_discovery_cloud_conditions_error == 1)
+    labels:
+      severity_level: "6"
+      d8_module: node-manager
+      d8_component: cloud-data-discoverer
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: Cloud data discoverer checks cloud conditions
+      plk_create_group_if_not_exists__main: "ClusterHasUnmetCloudConditionAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__main: "ClusterHasUnmetCloudConditionAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      description: |
+        Cloud data discoverer checks if cloud conditions are met.
+          Name: {{`{{ $labels.name }}`}}, Message: {{`{{ $labels.message }}`}}
