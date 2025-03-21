@@ -57,7 +57,7 @@ type DiskImageRef struct {
 	Name string `json:"name"`
 	// Kind is a block device type.
 	// +kubebuilder:default="VirtualImage"
-	// +kubebuilder:validation:Enum:={"ClusterVirtualImage", "VirtualImage", "VirtualDisk"}
+	// +kubebuilder:validation:Enum:={"ClusterVirtualImage", "VirtualImage", "VirtualDiskSnapshot"}
 	Kind string `json:"kind"`
 }
 

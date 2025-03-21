@@ -45,9 +45,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	dvpapi "dvp-common/api"
-
 	infrastructurev1a1 "cluster-api-provider-dvp/api/v1alpha1"
+	dvpapi "dvp-common/api"
 )
 
 const ProviderIDPrefix = "dvp://"
@@ -355,13 +354,27 @@ func (r *DeckhouseMachineReconciler) createVM(
 		return nil, fmt.Errorf("clusterv1b1.Machine does not contain bootstrap script")
 	}
 
+	bootDisk, err := r.DVP.DiskService.CreateDiskFromDataSource(
+		ctx,
+		dvpMachine.Name+"-boot",
+		dvpMachine.Spec.RootDiskSize,
+		"", // Default storage class
+		&v1alpha2.VirtualDiskDataSource{
+			Type: v1alpha2.DataSourceTypeObjectRef,
+			ObjectRef: &v1alpha2.VirtualDiskObjectRef{
+				Kind: v1alpha2.VirtualDiskObjectRefKind(dvpMachine.Spec.BootDiskImageRef.Kind),
+				Name: dvpMachine.Spec.BootDiskImageRef.Name,
+			},
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("Cannot create boot disk: %w", err)
+	}
+
 	bootstrapDataSecret := &corev1.Secret{}
 	if err := r.Client.Get(
 		ctx,
-		client.ObjectKey{
-			Namespace: machine.GetNamespace(),
-			Name:      *machine.Spec.Bootstrap.DataSecretName,
-		},
+		client.ObjectKey{Namespace: machine.GetNamespace(), Name: *machine.Spec.Bootstrap.DataSecretName},
 		bootstrapDataSecret,
 	); err != nil {
 		return nil, fmt.Errorf("Cannot get cloud-init data secret: %w", err)
@@ -372,6 +385,7 @@ func (r *DeckhouseMachineReconciler) createVM(
 		return nil, fmt.Errorf("Expected to find a cloud-init script in secret %s/%s", bootstrapDataSecret.Namespace, bootstrapDataSecret.Name)
 	}
 
+	// FIXME remove this after testing
 	cloudInitScript = append(cloudInitScript, []byte(`
 ssh_pwauth: true
 users:
@@ -412,10 +426,7 @@ users:
 				Size: *resource.NewQuantity(int64(dvpMachine.Spec.Memory*1024*1024), resource.BinarySI),
 			},
 			BlockDeviceRefs: []v1alpha2.BlockDeviceSpecRef{
-				{
-					Name: dvpMachine.Spec.BootDiskImageRef.Name,
-					Kind: v1alpha2.BlockDeviceKind(dvpMachine.Spec.BootDiskImageRef.Kind),
-				},
+				{Kind: v1alpha2.DiskDevice, Name: bootDisk.Name},
 			},
 		},
 	})

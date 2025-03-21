@@ -103,7 +103,7 @@ spec:
                             enum:
                             - ClusterVirtualImage
                             - VirtualImage
-                            - VirtualDisk
+                            - VirtualDiskSnapshot
                             type: string
                           name:
                             description: Name of the attached resource.
