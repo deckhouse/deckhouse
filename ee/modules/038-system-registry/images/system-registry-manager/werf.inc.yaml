@@ -70,6 +70,18 @@ git:
         - '**/*.sum'
       setup:
         - "**/*.go"
+  - add: /pkg/log
+    to: /deckhouse/pkg/log
+    includePaths:
+      - '**/*.go'
+      - '**/*.mod'
+      - '**/*.sum'
+    stageDependencies:
+      install:
+        - '**/*.mod'
+        - '**/*.sum'
+      setup:
+        - "**/*.go"
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg

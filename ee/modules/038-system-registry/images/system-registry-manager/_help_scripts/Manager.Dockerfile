@@ -2,10 +2,12 @@ FROM --platform=$BUILDPLATFORM golang:1.23-alpine AS builder
 
 ARG BUILD_TAGS=log_plain
 
-ENV MANAGER_PATH_FROM=./ee/modules/038-system-registry/images/system-registry-manager/app \
-    MANAGER_PATH_TO=/deckhouse/ee/modules/038-system-registry/images/system-registry-manager/app \
+ENV APP_PATH_FROM=./ee/modules/038-system-registry/images/system-registry-manager/app \
+    APP_PATH_TO=/deckhouse/ee/modules/038-system-registry/images/system-registry-manager/app \
     GO_LIB_PATH_FROM=./go_lib/system-registry-manager \
-    GO_LIB_PATH_TO=/deckhouse/go_lib/system-registry-manager
+    GO_LIB_PATH_TO=/deckhouse/go_lib/system-registry-manager \
+    LOGGER_PATH_FROM=./pkg/log \
+    LOGGER_PATH_TO=/deckhouse/pkg/log
 
 # Set GOPROXY and GOSUMDB
 #ENV GOPROXY=http://10.211.55.2:8081/repository/golang-proxy
@@ -15,18 +17,20 @@ ENV MANAGER_PATH_FROM=./ee/modules/038-system-registry/images/system-registry-ma
 RUN mkdir -m 1777 /tmp-tmp
 
 # Copy go.mod and go.sum
-RUN mkdir -p $MANAGER_PATH_TO $GO_LIB_PATH_TO
-COPY $MANAGER_PATH_FROM/go.mod $MANAGER_PATH_FROM/go.sum $MANAGER_PATH_TO/
-COPY $GO_LIB_PATH_FROM/go.mod $GO_LIB_PATH_FROM/go.sum $GO_LIB_PATH_TO/
+RUN mkdir -p ${APP_PATH_TO} ${GO_LIB_PATH_TO} ${LOGGER_PATH_TO}
+COPY ${APP_PATH_FROM}/go.mod ${APP_PATH_FROM}/go.sum ${APP_PATH_TO}/
+COPY ${GO_LIB_PATH_FROM}/go.mod ${GO_LIB_PATH_FROM}/go.sum ${GO_LIB_PATH_TO}/
+COPY ${LOGGER_PATH_FROM}/go.mod ${LOGGER_PATH_FROM}/go.sum ${LOGGER_PATH_TO}/
 
 # Download libs
-RUN cd $MANAGER_PATH_TO && go mod download -x && \
-    cd $GO_LIB_PATH_TO && go mod download -x
+RUN cd ${APP_PATH_TO} && go mod download -x && \
+    cd ${GO_LIB_PATH_TO} && go mod download -x && \
+    cd ${LOGGER_PATH_TO} && go mod download -x
 
 # Copy other files
-RUN mkdir -p $MANAGER_PATH_TO $GO_LIB_PATH_TO
-COPY $MANAGER_PATH_FROM/ $MANAGER_PATH_TO/
-COPY $GO_LIB_PATH_FROM/ $GO_LIB_PATH_TO/
+COPY ${APP_PATH_FROM}/ ${APP_PATH_TO}/
+COPY ${GO_LIB_PATH_FROM}/ ${GO_LIB_PATH_TO}/
+COPY ${LOGGER_PATH_FROM}/ ${LOGGER_PATH_TO}/
 
 # Run tests
 # RUN cd $MANAGER_PATH_TO && \
@@ -35,14 +39,14 @@ COPY $GO_LIB_PATH_FROM/ $GO_LIB_PATH_TO/
 # Build binary
 ARG TARGETOS TARGETARCH
 RUN --mount=type=cache,target=/root/.cache/go-build \
-    cd $MANAGER_PATH_TO && \
-    GOOS=$TARGETOS GOARCH=$TARGETARCH CGO_ENABLED=0 go build -tags "${BUILD_TAGS}" -o /manager ./cmd/manager && \
+    cd ${APP_PATH_TO} && \
+    GOOS=${TARGETOS} GOARCH=${TARGETARCH} CGO_ENABLED=0 go build -tags "${BUILD_TAGS}" -o /manager ./cmd/manager && \
     chown 64535:64535 /manager && \
     chmod 0755 /manager
 
 RUN --mount=type=cache,target=/root/.cache/go-build \
-    cd $MANAGER_PATH_TO && \
-    GOOS=$TARGETOS GOARCH=$TARGETARCH CGO_ENABLED=0 go build -tags "${BUILD_TAGS}" -o /staticpod ./cmd/staticpod && \
+    cd ${APP_PATH_TO} && \
+    GOOS=${TARGETOS} GOARCH=${TARGETARCH} CGO_ENABLED=0 go build -tags "${BUILD_TAGS}" -o /staticpod ./cmd/staticpod && \
     chown 64535:64535 /staticpod && \
     chmod 0755 /staticpod
 
@@ -54,7 +58,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 #FROM --platform=linux/amd64 scratch
 FROM --platform=linux/amd64 alpine:3.20
 RUN apk add --no-cache iproute2 curl vim bash
-ENV MANAGER_PATH_FROM=./ee/modules/038-system-registry/images/system-registry-manager
+ENV APP_PATH_FROM=./ee/modules/038-system-registry/images/system-registry-manager
 COPY --from=builder /tmp-tmp /tmp
 COPY --from=builder /manager /manager
 COPY --from=builder /staticpod /staticpod

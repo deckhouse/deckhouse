@@ -1,4 +1,5 @@
 {{ $appRelPath := printf "%s/modules/038-%s/images/%s/app" $.ModulePath $.ModuleName $.ImageName }}
+{{ $appAbsPath := printf "/deckhouse/ee/modules/038-%s/images/%s/app" $.ModuleName $.ImageName }}
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}"
 fromImage: common/distroless
@@ -26,7 +27,7 @@ shell:
   beforeInstall:
     - mkdir -m 1777 /tmp-tmp
   install:
-    - cd /src
+    - cd {{ $appAbsPath }}
     - export GOPROXY={{ $.GOPROXY }}
     - go mod download
   setup:
@@ -37,11 +38,23 @@ shell:
     - chmod 0755 /mirrorer
 git:
   - add: /{{ $appRelPath }}
-    to:  /src
+    to:  {{ $appAbsPath }}
     includePaths:
       - '**/*.mod'
       - '**/*.sum'
       - '**/*.go'
+    stageDependencies:
+      install:
+        - '**/*.mod'
+        - '**/*.sum'
+      setup:
+        - "**/*.go"
+  - add: /pkg/log
+    to: /deckhouse/pkg/log
+    includePaths:
+      - '**/*.go'
+      - '**/*.mod'
+      - '**/*.sum'
     stageDependencies:
       install:
         - '**/*.mod'

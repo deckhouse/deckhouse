@@ -1,9 +1,11 @@
 module mirrorer
 
-go 1.23
+go 1.23.1
+
+replace github.com/deckhouse/deckhouse/pkg/log => ../../../../../../pkg/log
 
 require (
-	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20241217181326-61486be4aa10
+	github.com/deckhouse/deckhouse/pkg/log v0.0.0-00010101000000-000000000000
 	github.com/go-ozzo/ozzo-validation v3.6.0+incompatible
 	github.com/google/go-containerregistry v0.20.2
 	golang.org/x/sync v0.10.0

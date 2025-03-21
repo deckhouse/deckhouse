@@ -1,10 +1,12 @@
 module embeded-registry-manager
 
-go 1.23
+go 1.23.1
+
+replace github.com/deckhouse/deckhouse/pkg/log => ../../../../../../pkg/log
 
 require (
 	github.com/cloudflare/cfssl v1.6.5
-	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20241118153122-73959200f55f
+	github.com/deckhouse/deckhouse/pkg/log v0.0.0-00010101000000-000000000000
 	github.com/go-chi/chi/v5 v5.1.0
 	github.com/go-chi/render v1.0.3
 	github.com/go-logr/logr v1.4.2
