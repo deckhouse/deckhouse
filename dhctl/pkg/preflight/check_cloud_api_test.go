@@ -75,7 +75,6 @@ apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
   imagesRepo: registry.deckhouse.io/deckhouse/ce
-  releaseChannel: Alpha
 `
 			metaConfig, err := config.ParseConfigFromData(clusterConfigYAML)
 			s.NoError(err)
