@@ -34,32 +34,39 @@ properties:
           issuer:
             type: string
             description: |
-              ServiceAccount issuer. This is the URL of the API server. The values of this field are used as the `iss` claim of the token and to verify Service Account JWT tokens.
+              ServiceAccount issuer. Represented as the API server's URL. The values of this field are used as the `iss` claim in tokens and for verifying ServiceAccount JWT tokens.
 
-              **Note**, all pods in the cluster using ServiceAccount tokens must be restarted upon changing this option.
+              By default, the issuer is automatically generated using the template: `https://kubernetes.default.svc.${clusterDomain}`. For example, `https://kubernetes.default.svc.cluster.local`.
+
+              **Note:** Any pods in the cluster that use ServiceAccount tokens must be restarted when this option is changed.
             x-examples:
               - "https://api.example.com"
           additionalAPIAudiences:
             type: array
             description: |
-              A list of API audiences to add when provisioning ServiceAccount tokens.
+              A list of additional API audiences to add when provisioning ServiceAccount tokens.
 
-              The defautl audiences is automatically generated based on the template `https://kubernetes.default.svc.${clusterDomain}`, for example, `https://kubernetes.default.svc.cluster.local`.
-              The service account token authenticator will validate that tokens used against the API are bound to at least one of these audiences.
+              The default audience list includes:
 
-              This option is beneficial when migrating from one API issuer to another.
+              - `serviceAccount.issuer`, if specified.
+              - `serviceAccount.additionalAPIIssuers`, if specified.
+              - `https://kubernetes.default.svc.${clusterDomain}`, for example, `https://kubernetes.default.svc.cluster.local` — this audience is always added for backward compatibility.
+
+              The ServiceAccount token authenticator verifies that tokens used with the API are bound to at least one of these audiences.
+
+              This option is useful when migrating from one API issuer to another.
             items:
               type: string
           additionalAPIIssuers:
             type: array
             description: |
-              A list of additional issuers to include when provisioning ServiceAccount tokens.
+              A list of additional API token issuers for ServiceAccounts to add when provisioning ServiceAccount tokens.
 
-              Issuers (`iss`) are used to verify the source of the tokens, ensuring they originate from trusted entities.
+              These issuers (`iss`) are used to verify the token source, ensuring they originate from trusted entities.
 
-              The first issuer is automatically generated based on the template `https://kubernetes.default.svc.${clusterDomain}`, for example, `https://kubernetes.default.svc.cluster.local`. When multiple issuers are specified, the first issuer is used to generate tokens, and all provided issuers are accepted for token verification.
+              If multiple issuers are specified, the first one is used to generate tokens, while all listed issuers are accepted for token verification.
 
-              This option is beneficial when migrating from one API issuer to another.
+              This option is useful when migrating from one API issuer to another.
             items:
               type: string
       admissionPlugins:
