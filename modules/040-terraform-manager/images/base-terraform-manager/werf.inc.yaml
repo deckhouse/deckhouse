@@ -1,5 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
+final: false
 fromImage: common/distroless
 imageSpec:
   config:

@@ -1,5 +1,4 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
-final: false
 fromImage: {{ .ModuleName }}/base-terraform-manager
 git:
 - add: /{{ .ModulePath }}candi/cloud-providers/yandex
