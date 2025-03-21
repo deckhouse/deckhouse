@@ -14,7 +14,7 @@ locals {
 // hack to recreate VM when changing kubernetes_data.id, must be replaced with replace_triggered_by after tf upgrade
 locals {
   disk_hash    = md5(vcd_independent_disk.kubernetes_data.id)
-  disk_offset  = parseint(local.disk_hash, 16) % 21
+  disk_offset  = parseint(local.disk_hash, 16) % 21 + 1
 }
 
 data "vcd_catalog" "catalog" {
