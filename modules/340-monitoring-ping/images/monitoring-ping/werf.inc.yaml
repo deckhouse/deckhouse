@@ -35,7 +35,7 @@ shell:
   - chown -R 64535:64535 /opt/fping-static
   - chmod 0700 /opt/fping-static/sbin/fping
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
 fromImage: common/alt-p11-artifact
 final: false
 import:
@@ -69,13 +69,14 @@ import:
   add: /opt/fping-static/sbin/fping
   to: /usr/sbin/fping
   before: setup
-- image: common/python
-  add: /
-  to: /
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /usr/local
+  to: /usr/local
   before: install
-  includePaths:
-  - lib
-  - usr/local
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /lib/ld-musl-x86_64.so.1
+  to: /lib/ld-musl-x86_64.so.1
+  before: install
 imageSpec:
   config:
     entrypoint: ["/usr/local/bin/python3", "/monitoring-ping.py"]
