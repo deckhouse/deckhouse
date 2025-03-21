@@ -301,15 +301,7 @@ entries:
             - title:
                 en: Multitenancy
                 ru: Мультенантность
-              folders:
-                - title:
-                    en: Overview
-                    ru: Обзор
-                  url: /admin/multitenancy/
-                - title:
-                    en: Project management
-                    ru: Управление проектами
-                  url: /admin/multitenancy/project-management.html
+              url: /admin/multitenancy-admin.html
 # ------------- Using -------------
     - title:
         en: Using
