@@ -66,21 +66,19 @@ func (g *DeckhouseDestroyer) StopProxy() {
 	g.kubeCl = nil
 }
 
-func (g *DeckhouseDestroyer) GetKubeClient() (*client.KubernetesClient, error) {
+func (g *DeckhouseDestroyer) GetKubeClient(ctx context.Context) (*client.KubernetesClient, error) {
 	if g.kubeCl != nil {
 		return g.kubeCl, nil
 	}
 
-	// TODO(dhctl-for-commander-cancels): pass ctx
-	kubeCl, err := kubernetes.ConnectToKubernetesAPI(context.TODO(), ssh.NewNodeInterfaceWrapper(g.sshClient))
+	kubeCl, err := kubernetes.ConnectToKubernetesAPI(ctx, ssh.NewNodeInterfaceWrapper(g.sshClient))
 	if err != nil {
 		return nil, err
 	}
 	g.kubeCl = kubeCl
 
 	if !g.CommanderMode {
-		// TODO(dhctl-for-commander-cancels): pass ctx
-		unlockConverge, err := lock.LockConverge(context.TODO(), kubernetes.NewSimpleKubeClientGetter(kubeCl), "local-destroyer")
+		unlockConverge, err := lock.LockConverge(ctx, kubernetes.NewSimpleKubeClientGetter(kubeCl), "local-destroyer")
 		if err != nil {
 			return nil, err
 		}
@@ -101,7 +99,7 @@ func (g *DeckhouseDestroyer) DeleteResources(ctx context.Context, cloudType stri
 		return nil
 	}
 
-	kubeCl, err := g.GetKubeClient()
+	kubeCl, err := g.GetKubeClient(ctx)
 	if err != nil {
 		return err
 	}

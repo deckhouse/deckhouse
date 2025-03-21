@@ -271,8 +271,7 @@ func (s *Service) bootstrap(
 		KubernetesInitParams:       nil,
 	})
 
-	// TODO(dhctl-for-commander-cancels): pass ctx
-	bootstrapErr := bootstrapper.Bootstrap()
+	bootstrapErr := bootstrapper.Bootstrap(ctx)
 	state := bootstrapper.GetLastState()
 	stateData, marshalErr := json.Marshal(state)
 	err = errors.Join(bootstrapErr, marshalErr)

@@ -19,25 +19,27 @@ import (
 	"fmt"
 	"time"
 
-	kubedrain "github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
+
+	kubedrain "github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-func tryToDrainNode(kubeCl *client.KubernetesClient, nodeName string) error {
-	return retry.NewLoop(fmt.Sprintf("Drain node '%s'", nodeName), 45, 10*time.Second).Run(func() error {
-		return drainNode(kubeCl, nodeName)
-	})
+func tryToDrainNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string) error {
+	return retry.NewLoop(fmt.Sprintf("Drain node '%s'", nodeName), 45, 10*time.Second).
+		RunContext(ctx, func() error {
+			return drainNode(ctx, kubeCl, nodeName)
+		})
 }
 
-func drainNode(kubeCl *client.KubernetesClient, nodeName string) error {
-	node, err := kubeCl.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
+func drainNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string) error {
+	node, err := kubeCl.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			log.InfoF("Node '%s' has been deleted. Skip\n", nodeName)
@@ -49,7 +51,7 @@ func drainNode(kubeCl *client.KubernetesClient, nodeName string) error {
 
 	drainer := &kubedrain.Helper{
 		Client:              kubeCl,
-		Ctx:                 context.TODO(),
+		Ctx:                 ctx,
 		IgnoreAllDaemonSets: true,
 		DeleteEmptyDirData:  true,
 		GracePeriodSeconds:  -1,
