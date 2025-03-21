@@ -14,9 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// ToDo can be deleted after 1.75
+
 package hooks
 
 import (
+	"github.com/deckhouse/module-sdk/pkg/utils/ptr"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -33,8 +36,12 @@ type GrafanaV8Resource struct {
 	} `json:"metadata"`
 }
 
+// We cannot delete resources directly; only resources with the "heritage: deckhouse" label should be removed.
+// This is important because users may create Services or Ingresses with the same names for backward compatibility.
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/prometheus/grafana_v8_cleanup",
+	OnAfterHelm: &go_hook.OrderedConfig{Order: 20},
+	Queue:       "/modules/prometheus/grafana_v8_cleanup",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "grafana-v8-deployments",
@@ -60,7 +67,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				"grafana",
 				"grafana-v8-dex-authenticator",
 			}},
-			FilterFunc: filterResources,
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
+			FilterFunc:                   filterResources,
 		},
 		{
 			Name:       "grafana-v8-services",
@@ -86,7 +95,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				"grafana",
 				"grafana-v8-dex-authenticator",
 			}},
-			FilterFunc: filterResources,
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
+			FilterFunc:                   filterResources,
 		},
 		{
 			Name:       "grafana-v8-ingresses",
@@ -113,7 +124,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				"grafana-v8-dex-authenticator",
 				"grafana-v8-dex-authenticator-sign-out",
 			}},
-			FilterFunc: filterResources,
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
+			FilterFunc:                   filterResources,
 		},
 		{
 			Name:       "grafana-v8-pdb",
@@ -138,32 +151,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{MatchNames: []string{
 				"grafana-v8-dex-authenticator",
 			}},
-			FilterFunc: filterResources,
-		},
-		{
-			Name:       "grafana-v8-dexauth",
-			ApiVersion: "deckhouse.io/v1",
-			Kind:       "DexAuthenticator",
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{"d8-monitoring"},
-				},
-			},
-			LabelSelector: &v1.LabelSelector{
-				MatchExpressions: []v1.LabelSelectorRequirement{
-					{
-						Key:      "heritage",
-						Operator: v1.LabelSelectorOpIn,
-						Values: []string{
-							"deckhouse",
-						},
-					},
-				},
-			},
-			NameSelector: &types.NameSelector{MatchNames: []string{
-				"grafana-v8",
-			}},
-			FilterFunc: filterResources,
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
+			FilterFunc:                   filterResources,
 		},
 	},
 }, grafanaV8ResourcesHandler)
@@ -188,15 +178,17 @@ func grafanaV8ResourcesHandler(input *go_hook.HookInput) error {
 	deployments := input.Snapshots["grafana-v8-deployments"]
 	services := input.Snapshots["grafana-v8-services"]
 	ingresses := input.Snapshots["grafana-v8-ingresses"]
-	pdb := input.Snapshots["grafana-v8-ingresses"]
-	dexAuth := input.Snapshots["grafana-v8-ingresses"]
+	pdb := input.Snapshots["grafana-v8-pdb"]
 
-	for _, snap := range [][]go_hook.FilterResult{deployments, services, ingresses, pdb, dexAuth} {
+	for _, snap := range [][]go_hook.FilterResult{deployments, services, ingresses, pdb} {
 		for _, s := range snap {
 			resource := s.(GrafanaV8Resource)
 			input.PatchCollector.Delete(resource.APIVersion, resource.Kind, resource.Metadata.Namespace, resource.Metadata.Name)
 		}
 	}
 
+	// This type of resource can only be deleted directly because in some configurations,
+	// such resources may be absent, causing the subscription process to error.
+	input.PatchCollector.Delete("deckhouse.io/v1", "DexAuthenticator", "d8-monitoring", "grafana-v8-dexauth")
 	return nil
 }
