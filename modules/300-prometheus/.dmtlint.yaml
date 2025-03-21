@@ -31,9 +31,6 @@ linters-settings:
         - kind: Deployment
           name: grafana-v10
           container: kube-rbac-proxy
-        - kind: Deployment
-          name: trickster
-          container: kube-rbac-proxy
         - kind: StatefulSet
           name: memcached
           container: exporter
