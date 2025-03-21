@@ -4,8 +4,10 @@ go 1.23.1
 
 replace github.com/deckhouse/deckhouse/pkg/log => ../../../../../../pkg/log
 
+replace github.com/deckhouse/deckhouse/go_lib/system-registry-manager => ../../../../../../go_lib/system-registry-manager
+
 require (
-	github.com/cloudflare/cfssl v1.6.5
+	github.com/deckhouse/deckhouse/go_lib/system-registry-manager v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/pkg/log v0.0.0-00010101000000-000000000000
 	github.com/go-chi/chi/v5 v5.1.0
 	github.com/go-chi/render v1.0.3
@@ -26,6 +28,7 @@ require (
 	github.com/ajg/form v1.5.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
+	github.com/cloudflare/cfssl v1.6.5 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
 	github.com/evanphx/json-patch/v5 v5.9.0 // indirect

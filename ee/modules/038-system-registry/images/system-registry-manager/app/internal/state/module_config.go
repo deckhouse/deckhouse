@@ -10,7 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	utiltime "embeded-registry-manager/internal/utils/time"
+	utiltime "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/time"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"

@@ -8,7 +8,7 @@ package state
 import (
 	"fmt"
 
-	"embeded-registry-manager/internal/utils/pki"
+	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/pki"
 
 	corev1 "k8s.io/api/core/v1"
 )

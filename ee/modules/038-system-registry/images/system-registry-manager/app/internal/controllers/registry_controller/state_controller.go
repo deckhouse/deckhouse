@@ -8,9 +8,10 @@ package registry_controller
 import (
 	"context"
 	"embeded-registry-manager/internal/state"
-	"embeded-registry-manager/internal/utils/pki"
 	"errors"
 	"fmt"
+
+	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/pki"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"

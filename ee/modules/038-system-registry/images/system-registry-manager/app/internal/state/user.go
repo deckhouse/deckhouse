@@ -12,7 +12,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	corev1 "k8s.io/api/core/v1"
 
-	"embeded-registry-manager/internal/utils/pki"
+	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/pki"
 )
 
 const (
