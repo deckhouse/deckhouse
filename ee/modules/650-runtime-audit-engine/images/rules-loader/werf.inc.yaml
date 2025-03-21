@@ -2,19 +2,14 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/shell-operator
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
-  add: /opt/python-static/bin
-  to: /usr/bin
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /usr/local
+  to: /usr/local
   before: install
-  includePaths:
-  - python3*
-  - python3
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
-  add: /opt/python-static/lib
-  to: /usr/lib
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /lib/ld-musl-x86_64.so.1
+  to: /lib/ld-musl-x86_64.so.1
   before: install
-  includePaths:
-  - python3*
 - image: {{ $.ModuleName }}/falco-artifact
   add: /falco-package
   to: /
@@ -38,7 +33,7 @@ imageSpec:
     entrypoint: ["tini", "--", "/shell-operator"]
     cmd: ["start"]
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 fromImage: common/alt-p11-artifact
 final: false
 git:
@@ -48,10 +43,13 @@ git:
     install:
     - '**/*'
 import:
-- image: common/python-static
-  add: /opt/python-static
-  to: /opt/python-static
+- image: common/python
+  add: /
+  to: /
   before: install
+  includePaths:
+  - lib
+  - usr/local
 shell:
   beforeInstall:
   - apt-get install -y git
@@ -59,5 +57,5 @@ shell:
   - export SOURCE_REPO={{ .SOURCE_REPO }}
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
-  - /opt/python-static/bin/pip3 install -f file:///wheels --no-index -r requirements.txt
+  - pip3 install -f file:///wheels --no-index -r requirements.txt
   - rm -rf /wheels
