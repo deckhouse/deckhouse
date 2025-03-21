@@ -358,7 +358,6 @@ func (nc *nodeController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	}
 
 	node := &corev1.Node{}
-
 	err = nc.Client.Get(ctx, req.NamespacedName, node)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -366,6 +365,10 @@ func (nc *nodeController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		}
 
 		return ctrl.Result{}, fmt.Errorf("cannot get node: %w", err)
+	}
+
+	if !hasMasterLabel(node) {
+		return nc.cleanupNodeState(ctx, node)
 	}
 
 	moduleConfig, err := state.LoadModuleConfig(ctx, nc.Client)
@@ -383,11 +386,7 @@ func (nc *nodeController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		return nc.cleanupNodeState(ctx, node)
 	}
 
-	if hasMasterLabel(node) {
-		return nc.handleMasterNode(ctx, node, moduleConfig)
-	} else {
-		return nc.cleanupNodeState(ctx, node)
-	}
+	return nc.handleMasterNode(ctx, node, moduleConfig)
 }
 
 func (nc *nodeController) checkNodesAddressesChanged(ctx context.Context) error {
