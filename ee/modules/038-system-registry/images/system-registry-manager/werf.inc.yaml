@@ -31,8 +31,12 @@ shell:
   beforeInstall:
     - mkdir -m 1777 /tmp-tmp
   install:
-    - cd {{ $managerAbsPath }}
     - export GOPROXY={{ $.GOPROXY }}
+    - cd {{ $managerAbsPath }}
+    - go mod download
+    - cd /deckhouse/go_lib/system-registry-manager
+    - go mod download
+    - cd /deckhouse/pkg/log
     - go mod download
   setup:
     - cd {{ $managerAbsPath }}
