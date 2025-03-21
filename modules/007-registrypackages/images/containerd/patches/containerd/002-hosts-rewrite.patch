@@ -1,0 +1,129 @@
+diff --git a/remotes/docker/config/hosts.go b/remotes/docker/config/hosts.go
+index c138c952e..ce655a587 100644
+--- a/remotes/docker/config/hosts.go
++++ b/remotes/docker/config/hosts.go
+@@ -28,6 +28,7 @@ import (
+ 	"os"
+ 	"path"
+ 	"path/filepath"
++	"regexp"
+ 	"sort"
+ 	"strings"
+ 	"time"
+@@ -55,9 +56,16 @@ type hostConfig struct {
+ 
+ 	header http.Header
+ 
++	rewrites []hostPathRewrite
++
+ 	// TODO: Add credential configuration (domain alias, username)
+ }
+ 
++type hostPathRewrite struct {
++	regexp      *regexp.Regexp
++	replacement string
++}
++
+ // HostOptions is used to configure registry hosts
+ type HostOptions struct {
+ 	HostDir       func(string) (string, error)
+@@ -266,6 +274,16 @@ func ConfigureHosts(ctx context.Context, options HostOptions) docker.RegistryHos
+ 			rhosts[i].Path = host.path
+ 			rhosts[i].Capabilities = host.capabilities
+ 			rhosts[i].Header = host.header
++
++			if len(host.rewrites) > 0 {
++				rhosts[i].RepoRewrites = make([]docker.RegistryHostRepoRewrite, len(host.rewrites))
++				for ri, rewrite := range host.rewrites {
++					rhosts[i].RepoRewrites[ri] = docker.RegistryHostRepoRewrite{
++						Regex:       rewrite.regexp,
++						Replacement: rewrite.replacement,
++					}
++				}
++			}
+ 		}
+ 
+ 		return rhosts, nil
+@@ -355,6 +373,11 @@ type hostFileConfig struct {
+ 	// API root endpoint.
+ 	OverridePath bool `toml:"override_path"`
+ 
++	Rewrites []struct {
++		Regex       string `toml:"regex"`
++		Replacement string `toml:"replace"`
++	} `toml:"rewrite"`
++
+ 	// TODO: Credentials: helper? name? username? alternate domain? token?
+ }
+ 
+@@ -524,6 +547,23 @@ func parseHostConfig(server string, baseDir string, config hostFileConfig) (host
+ 		result.header = header
+ 	}
+ 
++	if len(config.Rewrites) > 0 {
++		result.rewrites = make([]hostPathRewrite, len(config.Rewrites))
++
++		for i, item := range config.Rewrites {
++			re, err := regexp.Compile(item.Regex)
++			if err != nil {
++				return hostConfig{}, fmt.Errorf(
++					"failed to compile rewrite regex %q for %q, error: %w",
++					item.Regex, server, err,
++				)
++			}
++
++			result.rewrites[i].regexp = re
++			result.rewrites[i].replacement = item.Replacement
++		}
++	}
++
+ 	return result, nil
+ }
+ 
+diff --git a/remotes/docker/registry.go b/remotes/docker/registry.go
+index 98cafcd06..25458671a 100644
+--- a/remotes/docker/registry.go
++++ b/remotes/docker/registry.go
+@@ -20,6 +20,7 @@ import (
+ 	"errors"
+ 	"net"
+ 	"net/http"
++	"regexp"
+ )
+ 
+ // HostCapabilities represent the capabilities of the registry
+@@ -74,6 +75,12 @@ type RegistryHost struct {
+ 	Path         string
+ 	Capabilities HostCapabilities
+ 	Header       http.Header
++	RepoRewrites []RegistryHostRepoRewrite
++}
++
++type RegistryHostRepoRewrite struct {
++	Regex       *regexp.Regexp
++	Replacement string
+ }
+ 
+ func (h RegistryHost) isProxy(refhost string) bool {
+diff --git a/remotes/docker/resolver.go b/remotes/docker/resolver.go
+index 8ce4cccc0..3911f11f7 100644
+--- a/remotes/docker/resolver.go
++++ b/remotes/docker/resolver.go
+@@ -487,7 +487,16 @@ func (r *dockerBase) request(host RegistryHost, method string, ps ...string) *re
+ 	for key, value := range host.Header {
+ 		header[key] = append(header[key], value...)
+ 	}
+-	parts := append([]string{"/", host.Path, r.repository}, ps...)
++
++	repo := r.repository
++	for _, rewrite := range host.RepoRewrites {
++		if rewrite.Regex.MatchString(repo) {
++			repo = rewrite.Regex.ReplaceAllString(repo, rewrite.Replacement)
++			break
++		}
++	}
++
++	parts := append([]string{"/", host.Path, repo}, ps...)
+ 	p := path.Join(parts...)
+ 	// Join strips trailing slash, re-add ending "/" if included
+ 	if len(parts) > 0 && strings.HasSuffix(parts[len(parts)-1], "/") {
