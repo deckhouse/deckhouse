@@ -385,7 +385,7 @@ func (r *DeckhouseMachineReconciler) createVM(
 		return nil, fmt.Errorf("Expected to find a cloud-init script in secret %s/%s", bootstrapDataSecret.Namespace, bootstrapDataSecret.Name)
 	}
 
-	// FIXME remove this after testing
+	// FIXME remove this user after testing
 	cloudInitScript = append(cloudInitScript, []byte(`
 ssh_pwauth: true
 users:
