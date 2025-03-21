@@ -142,6 +142,7 @@ shell:
   - export TARGETARCH=amd64 ARCH="x86_64"
   - export BAZEL_VERSION="6.5.0" USE_BAZEL_VERSION="6.5.0"
   - export GCC_VERSION=11
+  - export ALTWRAP_LLVM_VERSION=17.0
   - cd /src/proxy
   - go mod download
   - sed -i '/^build --enable_platform_specific_config/a build --linkopt=-L/opt/libcxx/lib'          envoy.bazelrc
@@ -278,7 +279,7 @@ shell:
   # - ln -s -f /usr/lib/llvm-17.0/bin/clang++ /usr/bin/clang++
   # - ln -s -f /usr/lib/llvm-17.0/bin/ld.lld /usr/bin/ld.lld
   # - ln -s -f /usr/lib/llvm-17.0/bin/llvm-config /usr/bin/llvm-config
-  - export ALTWRAP_LLVM_VERSION=17
+  - export ALTWRAP_LLVM_VERSION=17.0
   # Install Go
   - export GOROOT=/usr/local/go GOPATH=/go
   - export PATH=${PATH}:${GOROOT}/bin:${GOPATH}/bin
