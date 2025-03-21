@@ -34,6 +34,7 @@ var kindToVersion = map[string]string{
 	"zvirtinstanceclass":       "deckhouse.io/v1",
 	"dynamixinstanceclass":     "deckhouse.io/v1",
 	"huaweicloudinstanceclass": "deckhouse.io/v1",
+	"dvpinstanceclass":         "deckhouse.io/v1alpha1",
 }
 
 var setInstanceClassNGUsageConfig = &go_hook.HookConfig{
