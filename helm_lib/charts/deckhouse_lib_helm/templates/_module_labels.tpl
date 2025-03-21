@@ -10,7 +10,7 @@ labels:
     {{- $deckhouse_additional_labels := index . 1 }}
     {{- range $key, $value := $deckhouse_additional_labels }}
       {{ if eq $value nil }}
-  {{ $key }}: null
+        {{- dict $key $value | toYaml | nindent 2 }}
       {{- else }}
   {{ $key }}: {{ $value | quote }}
       {{- end }}
