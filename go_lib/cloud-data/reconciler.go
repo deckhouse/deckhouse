@@ -242,15 +242,72 @@ func (c *Reconciler) checkCloudConditions(ctx context.Context) {
 
 	c.cloudConditionsErrorMetric.Reset()
 	for i := range conditions {
-		c.checkCondition(conditions[i], ctx)
+		c.checkCondition(conditions[i])
+	}
+
+	if err = retryFunc(15, 3*time.Second, 30*time.Second, c.logger, func() error {
+		cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		configMap, errGetting := c.k8sClient.CoreV1().ConfigMaps("kube-system").Get(cctx, "d8-cloud-provider-conditions", metav1.GetOptions{})
+		cancel()
+		if errors.IsNotFound(errGetting) {
+			configMap = &v1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "d8-cloud-provider-conditions",
+					Namespace: "kube-system",
+				},
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ConfigMap",
+					APIVersion: "v1",
+				},
+				Data: conditionsToMap(conditions),
+			}
+
+			cctx, cancel = context.WithTimeout(ctx, 10*time.Second)
+			_, err = c.k8sClient.CoreV1().ConfigMaps("kube-system").Create(cctx, configMap, metav1.CreateOptions{})
+			cancel()
+
+			if err != nil {
+				return fmt.Errorf("Cannot create d8-cloud-provider-conditions configMap: %v", err)
+			}
+
+		} else if errGetting != nil {
+			return fmt.Errorf("Cannot check d8-cloud-provider-conditions configMap before creating it: %v", errGetting)
+		} else {
+			configMap.Data = conditionsToMap(conditions)
+
+			cctx, cancel = context.WithTimeout(ctx, 10*time.Second)
+			_, err = c.k8sClient.CoreV1().ConfigMaps("kube-system").Update(cctx, configMap, metav1.UpdateOptions{})
+			cancel()
+
+			if err != nil {
+				return fmt.Errorf("Cannot update d8-cloud-provider-conditions configMap: %v", err)
+			}
+		}
+
+		if errGetting != nil {
+			return fmt.Errorf("Cannot get d8-cloud-provider-conditions configMap: %v", errGetting)
+		}
+		return nil
+	}); err != nil {
+		c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
+		c.logger.Errorln("Cannot update d8-cloud-provider-conditions configMap. Timed out. See error messages below.")
+		c.setProbe(false)
 	}
 }
 
-func (c *Reconciler) checkCondition(condition v1alpha1.CloudCondition, ctx context.Context) {
+func (c *Reconciler) checkCondition(condition v1alpha1.CloudCondition) {
 	c.logger.Infof("Condition (%s) message: %s, ok: %t\n", condition.Name, condition.Message, condition.Ok)
 	if !condition.Ok {
 		c.cloudConditionsErrorMetric.WithLabelValues(condition.Name, condition.Message).Set(1.0)
 	}
+}
+
+func conditionsToMap(conditions []v1alpha1.CloudCondition) map[string]string {
+	result := make(map[string]string)
+	for _, condition := range conditions {
+		result[condition.Name] = condition.Message
+	}
+	return result
 }
 
 func (c *Reconciler) instanceTypesReconcile(ctx context.Context) {
