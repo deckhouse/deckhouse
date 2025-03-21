@@ -9,10 +9,11 @@ labels:
   {{- if eq (len .) 2 }}
     {{- $deckhouse_additional_labels := index . 1 }}
     {{- range $key, $value := $deckhouse_additional_labels }}
-    {{ if eq $value nil }}
+      {{ if eq $value nil }}
   {{ $key }}: null
-    {{- else }}
+      {{- else }}
   {{ $key }}: {{ $value | quote }}
+      {{- end }}
     {{- end }}
   {{- end }}
 {{- end }}
