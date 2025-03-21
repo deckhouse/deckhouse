@@ -1,5 +1,5 @@
-{{ $managerRelPath := printf "%s/modules/038-%s/images/%s/app" $.ModulePath $.ModuleName $.ImageName }}
-{{ $managerAbsPath := printf "/deckhouse/ee/modules/038-%s/images/%s/app" $.ModuleName $.ImageName }}
+{{ $appRelPath := printf "%s/modules/038-%s/images/%s/app" $.ModulePath $.ModuleName $.ImageName }}
+{{ $appAbsPath := printf "/deckhouse/ee/modules/038-%s/images/%s/app" $.ModuleName $.ImageName }}
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}"
 fromImage: common/distroless
@@ -32,14 +32,14 @@ shell:
     - mkdir -m 1777 /tmp-tmp
   install:
     - export GOPROXY={{ $.GOPROXY }}
-    - cd {{ $managerAbsPath }}
+    - cd {{ $appAbsPath }}
     - go mod download
     - cd /deckhouse/go_lib/system-registry-manager
     - go mod download
     - cd /deckhouse/pkg/log
     - go mod download
   setup:
-    - cd {{ $managerAbsPath }}
+    - cd {{ $appAbsPath }}
     - go test ./...
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /manager ./cmd/manager
     - chown 64535:64535 /manager
@@ -48,8 +48,8 @@ shell:
     - chown 64535:64535 /staticpod
     - chmod 0755 /staticpod
 git:
-  - add: /{{ $managerRelPath }}
-    to:  {{ $managerAbsPath }}
+  - add: /{{ $appRelPath }}
+    to:  {{ $appAbsPath }}
     includePaths:
       - '**/*.mod'
       - '**/*.sum'
