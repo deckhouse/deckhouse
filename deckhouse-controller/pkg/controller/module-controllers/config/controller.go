@@ -367,7 +367,7 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 	}
 
 	if err := r.removeFinalizer(ctx, moduleConfig); err != nil {
-		r.log.Error("failed to remove finalizer from config", slog.String("module", moduleConfig.Name), log.Err(err))
+		r.log.Error("failed to remove finalizer from ModuleConfig", slog.String("module", moduleConfig.Name), log.Err(err))
 		return ctrl.Result{}, err
 	}
 
