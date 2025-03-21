@@ -1,0 +1,23 @@
+candi:
+  fixes:
+    - summary: Fix errors in bashible steps.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12631
+deckhouse:
+  fixes:
+    - summary: Fix checking automatic kubernetes version in managed clusters.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12685
+    - summary: Explicitly set ports in d8-kube-dns deployment.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12658
+    - summary: Set EnabledByModuleConfig condition by default for modules without this condition.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12558
+    - summary: Fix module condition race.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12525
+deckhouse-controller:
+  fixes:
+    - summary: Fix applying releases and their metrics.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12632
+log-shipper:
+  fixes:
+    - summary: Add delete parsed_data to final kafka transform render
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12659
+
