@@ -16,9 +16,12 @@ mkdir -p /etc/kubernetes/manifests
 
 bb-set-proxy
 
-if crictl version >/dev/null 2>/dev/null; then
-  crictl pull {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
-fi
+{{- $with_auth := "" }}
+{{- with .registry.auth }}
+  {{- $with_auth = printf "--auth %s" . -}}
+{{- end }}
+
+crictl pull {{ $with_auth }} {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
 
 bb-sync-file /etc/kubernetes/manifests/kubernetes-api-proxy.yaml - << EOF
 apiVersion: v1
