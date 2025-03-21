@@ -44,8 +44,6 @@ const (
 	ModulePhaseDownloadingError = "DownloadingError"
 	ModulePhaseReconciling      = "Reconciling"
 	ModulePhaseInstalling       = "Installing"
-	ModulePhaseHooksDisabled    = "HooksDisabled"
-	ModulePhaseWaitSyncTasks    = "WaitSyncTasks"
 	ModulePhaseDownloaded       = "Downloaded"
 	ModulePhaseConflict         = "Conflict"
 	ModulePhaseReady            = "Ready"

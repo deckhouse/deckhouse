@@ -134,7 +134,7 @@ func (l *Loader) restoreAbsentModulesFromOverrides(ctx context.Context) error {
 
 		// skip embedded module
 		if module.IsEmbedded() {
-			l.logger.Info("the module is embbedded, skip restoring module pull override process", slog.String("name", mpo.Name))
+			l.logger.Info("the module is embedded, skip restoring module pull override process", slog.String("name", mpo.Name))
 			continue
 		}
 
