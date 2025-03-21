@@ -188,8 +188,5 @@ func grafanaV8ResourcesHandler(input *go_hook.HookInput) error {
 		}
 	}
 
-	// This type of resource can only be deleted directly because in some configurations,
-	// such resources may be absent, causing the subscription process to error.
-	input.PatchCollector.Delete("deckhouse.io/v1", "DexAuthenticator", "d8-monitoring", "grafana-v8-dexauth")
 	return nil
 }
