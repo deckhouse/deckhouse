@@ -162,6 +162,10 @@ func (r *Runner) WithHook(h InfraActionHook) *Runner {
 	return r
 }
 
+func (r *Runner) WorkerDir() string {
+	return r.workingDir
+}
+
 func (r *Runner) WithState(stateData []byte) *Runner {
 	tmpFile, err := os.CreateTemp(app.TmpDirName, r.step+deckhouseClusterStateSuffix)
 	if err != nil {
@@ -311,12 +315,12 @@ func (r *Runner) Init(ctx context.Context) error {
 
 	return r.logger.LogProcess("default", "terraform init ...", func() error {
 		args := []string{
+			fmt.Sprintf("-chdir=%s", r.workingDir),
 			"init",
 			fmt.Sprintf("-plugin-dir=%s/plugins", strings.TrimRight(dhctlPath, "/")),
-			"-get-plugins=false",
+			//"-get=false",
 			"-no-color",
 			"-input=false",
-			r.workingDir,
 		}
 
 		_, err := r.execTerraform(ctx, args...)
@@ -409,9 +413,11 @@ func (r *Runner) Apply(ctx context.Context) error {
 		defer r.stateSaver.Stop()
 
 		args := []string{
+			fmt.Sprintf("-chdir=%s", r.workingDir),
 			"apply",
 			"-input=false",
 			"-no-color",
+			"-lock=false",
 			"-auto-approve",
 			fmt.Sprintf("-state=%s", r.statePath),
 			fmt.Sprintf("-state-out=%s", r.statePath),
@@ -452,6 +458,7 @@ func (r *Runner) Plan(ctx context.Context, opts PlanOptions) error {
 		}
 
 		args := []string{
+			fmt.Sprintf("-chdir=%s", r.workingDir),
 			"plan",
 			"-input=false",
 			"-no-color",
@@ -464,7 +471,6 @@ func (r *Runner) Plan(ctx context.Context, opts PlanOptions) error {
 		if opts.Destroy {
 			args = append(args, "-destroy")
 		}
-		args = append(args, r.workingDir)
 
 		exitCode, err := r.execTerraform(ctx, args...)
 		if exitCode == terraformHasChangesExitCode {
@@ -530,13 +536,13 @@ func (r *Runner) Destroy(ctx context.Context) error {
 	}
 
 	planDestroyArgs := []string{
+		fmt.Sprintf("-chdir=%s", r.workingDir),
 		"plan",
 		"-destroy",
 		"-no-color",
 		fmt.Sprintf("-var-file=%s", r.variablesPath),
 		fmt.Sprintf("-state=%s", r.statePath),
 	}
-	planDestroyArgs = append(planDestroyArgs, r.workingDir)
 
 	_, err := r.execTerraform(ctx, planDestroyArgs...)
 	if err != nil {
@@ -562,13 +568,13 @@ func (r *Runner) Destroy(ctx context.Context) error {
 		defer r.stateSaver.Stop()
 
 		args := []string{
+			fmt.Sprintf("-chdir=%s", r.workingDir),
 			"destroy",
 			"-no-color",
 			"-auto-approve",
 			fmt.Sprintf("-var-file=%s", r.variablesPath),
 			fmt.Sprintf("-state=%s", r.statePath),
 		}
-		args = append(args, r.workingDir)
 
 		_, err = r.execTerraform(ctx, args...)
 
@@ -678,6 +684,7 @@ type ValueChange struct {
 
 func (r *Runner) getPlanDestructiveChanges(ctx context.Context, planFile string) (*PlanDestructiveChanges, error) {
 	args := []string{
+		fmt.Sprintf("-chdir=%s", r.workingDir),
 		"show",
 		"-json",
 		planFile,

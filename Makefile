@@ -378,7 +378,7 @@ set-build-envs:
   ifeq ($(DECKHOUSE_PRIVATE_REPO),)
   	export DECKHOUSE_PRIVATE_REPO=https://github.com
   endif
-  
+
 	export WERF_REPO=$(DEV_REGISTRY_PATH)
 	export REGISTRY_SUFFIX=$(shell echo $(WERF_ENV) | tr '[:upper:]' '[:lower:]')
 	export SECONDARY_REPO=--secondary-repo $(DECKHOUSE_REGISTRY_HOST)/deckhouse/$(REGISTRY_SUFFIX)
@@ -414,9 +414,9 @@ build: set-build-envs ## Build Deckhouse images.
 				docker image push $$DST && \
 				docker image rmi $$DST || true
 
-				SRC="$(shell jq -r '.Images."e2e-terraform".DockerImageName' images_tags_werf.json)" && \
-				DST="$(DEV_REGISTRY_PATH)/e2e-terraform:pr$(CI_COMMIT_REF_SLUG)" && \
-				echo "⚓️ 💫 [$(date -u)] Publish 'e2e-terraform' image to dev-registry using tag 'pr$(CI_COMMIT_REF_SLUG)'" && \
+				SRC="$(shell jq -r '.Images."e2e-opentofu".DockerImageName' images_tags_werf.json)" && \
+				DST="$(DEV_REGISTRY_PATH)/e2e-opentofu:pr$(CI_COMMIT_REF_SLUG)" && \
+				echo "⚓️ 💫 [$(date -u)] Publish 'e2e-opentofu' image to dev-registry using tag 'pr$(CI_COMMIT_REF_SLUG)'" && \
 				docker pull $$SRC && \
 				docker image tag $$SRC $$DST && \
 				docker image push $$DST && \

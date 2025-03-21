@@ -1,6 +1,6 @@
 ---
 # use image for actual terraform version for infra deployment in e2e
-image: e2e-terraform
+image: e2e-opentofu
 # we use artifact with ubuntu because alpine can not unzip with `unzip` and `tar` command
 # current openstack zip-archive with error: "unzip: zip flag 8 (streaming) is not supported"
 fromImage: common/alt-p11-artifact
@@ -11,9 +11,9 @@ import:
     add: /src/_output/bin/kubectl
     to: /usr/local/bin/kubectl
     before: setup
-  - image: terraform # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
-    add: /terraform/terraform
-    to: /image/bin/terraform
+  - image: opentofu # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
+    add: /opentofu/opentofu
+    to: /image/bin/opentofu
     before: setup
     {{- range $_, $edition := $.Editions }}
       {{- if $edition.terraformProviders }}
@@ -23,13 +23,13 @@ import:
               {{- range $version := $tf.versions }}
   - image: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
     add: /{{ $tf.artifactBinary }}-v{{ $version }}
-    to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ $tf.namespace }}/{{ $tf.type }}/{{ $version }}//linux_amd64/{{ $tf.destinationBinary }}
+    to: /usr/local/share/opentofu/plugins/registry.opentofu.org/{{ $tf.namespace }}/{{ $tf.type }}/{{ $version }}//linux_amd64/{{ $tf.destinationBinary }}
     before: setup
               {{- end }}
             {{- else }}
   - image: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
     add: /{{ $tf.artifactBinary }}
-    to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ $tf.namespace }}/{{ $tf.type }}/{{ $tf.version }}//linux_amd64/{{ $tf.destinationBinary }}
+    to: /usr/local/share/opentofu/plugins/registry.opentofu.org/{{ $tf.namespace }}/{{ $tf.type }}/{{ $tf.version }}//linux_amd64/{{ $tf.destinationBinary }}
     before: setup
             {{- end }}
       {{- end }}
@@ -40,37 +40,37 @@ import:
   {{- end }}
   - image: e2e-eks-terraform-plugins
     add: /terraform-provider-random
-    to: /usr/local/share/terraform/plugins/registry.terraform.io/hashicorp/random/3.4.3/linux_amd64/terraform-provider-random_v3.4.3_x5
+    to: /usr/local/share/opentofu/plugins/registry.opentofu.org/hashicorp/random/3.4.3/linux_amd64/terraform-provider-random_v3.4.3_x5
     before: setup
   - image: e2e-eks-terraform-plugins
     add: /terraform-provider-tls
-    to: /usr/local/share/terraform/plugins/registry.terraform.io/hashicorp/tls/4.0.5/linux_amd64/terraform-provider-tls_v4.0.5_x5
+    to: /usr/local/share/opentofu/plugins/registry.opentofu.org/hashicorp/tls/4.0.5/linux_amd64/terraform-provider-tls_v4.0.5_x5
     before: setup
   - image: e2e-eks-terraform-plugins
     add: /terraform-provider-cloudinit
-    to: /usr/local/share/terraform/plugins/registry.terraform.io/hashicorp/cloudinit/2.2.0/linux_amd64/terraform-provider-cloudinit_v2.2.0_x5
+    to: /usr/local/share/opentofu/plugins/registry.opentofu.org/hashicorp/cloudinit/2.2.0/linux_amd64/terraform-provider-cloudinit_v2.2.0_x5
     before: setup
   - image: e2e-eks-terraform-plugins
     add: /terraform-provider-kubernetes
-    to: /usr/local/share/terraform/plugins/registry.terraform.io/hashicorp/kubernetes/2.31.0/linux_amd64/terraform-provider-kubernetes_v2.31.0_x5
+    to: /usr/local/share/opentofu/plugins/registry.opentofu.org/hashicorp/kubernetes/2.31.0/linux_amd64/terraform-provider-kubernetes_v2.31.0_x5
     before: setup
 shell:
   beforeInstall:
   - apt-get install -y wget unzip git python3 pip jq curl gettext-base
   - pip3 install awscli
   - |
-    mkdir /terraform
-    mkdir -p /usr/local/share/terraform/plugins
-    cat << EOD > /root/.terraformrc
+    mkdir /opentofu
+    mkdir -p /usr/local/share/opentofu/plugins
+    cat << EOD > /root/.tofurc
     provider_installation {
       filesystem_mirror {
-        path    = "/usr/local/share/terraform/plugins"
+        path    = "/usr/local/share/opentofu/plugins"
         include = ["*/*/*"]
       }
     }
     EOD
-    touch /terraform.log
-    chmod 755 /terraform.log
+    touch /opentofu.log
+    chmod 755 /opentofu.log
 ---
 image: e2e-eks-terraform-plugins-src-artifact
 final: false

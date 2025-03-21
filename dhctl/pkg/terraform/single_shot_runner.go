@@ -78,3 +78,7 @@ func (r *SingleShotRunner) Stop() {
 func (r *SingleShotRunner) GetLogger() log.Logger {
 	return r.Runner.logger
 }
+
+func (r *SingleShotRunner) WorkerDir() string {
+	return r.Runner.WorkerDir()
+}

@@ -97,11 +97,11 @@ index 6fdccca..26719ef 100644
 +	k8s.io/client-go v0.17.16
  	k8s.io/utils v0.0.0-20200411171748-3d5a2fe318e4
  )
- 
+
 -replace k8s.io/client-go => k8s.io/client-go v0.0.0-20190620085101-78d2af792bab
 -
  go 1.14
- 
+
  replace google.golang.org/grpc v1.31.1 => google.golang.org/grpc v1.27.1
 diff --git a/go.sum b/go.sum
 index ce0d1bc..f244813 100644
