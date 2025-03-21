@@ -1,7 +1,7 @@
-diff --git a/go.mod b/go.mod
-index 0868653..c4cc395 100644
---- a/go.mod
-+++ b/go.mod
+diff --git i/go.mod w/go.mod
+index 0868653cf..c4cc3954b 100644
+--- i/go.mod
++++ w/go.mod
 @@ -1,12 +1,14 @@
  module k8s.io/ingress-nginx
  
@@ -128,10 +128,10 @@ index 0868653..c4cc395 100644
  	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
  	gopkg.in/inf.v0 v0.9.1 // indirect
  	gopkg.in/yaml.v2 v2.4.0 // indirect
-diff --git a/go.sum b/go.sum
-index bb59dc8..7393224 100644
---- a/go.sum
-+++ b/go.sum
+diff --git i/go.sum w/go.sum
+index bb59dc862..7393224f2 100644
+--- i/go.sum
++++ w/go.sum
 @@ -30,8 +30,8 @@ cloud.google.com/go/storage v1.5.0/go.mod h1:tpKbwo567HUNpVclU5sGELwQWBDZ8gh0Zeo
  cloud.google.com/go/storage v1.6.0/go.mod h1:N7U0C8pVQ/+NIKOBQyamJIeKQKkZ+mxpohlUTyfDhBk=
  cloud.google.com/go/storage v1.8.0/go.mod h1:Wv1Oy7z6Yz3DshWRJFhqM/UCfaWIRTdp0RXyy7KQOVs=
@@ -391,10 +391,10 @@ index bb59dc8..7393224 100644
  gopkg.in/alecthomas/kingpin.v2 v2.2.6/go.mod h1:FMv+mEhP44yOT+4EoQTLFTRgOQ1FBLkstjWtayDeSgw=
  gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
  gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
-diff --git a/go.work b/go.work
-index 3dd9bfd..375c324 100644
---- a/go.work
-+++ b/go.work
+diff --git i/go.work w/go.work
+index 3dd9bfdee..375c324dc 100644
+--- i/go.work
++++ w/go.work
 @@ -1,4 +1,6 @@
 -go 1.21.5
 +go 1.23.0
@@ -403,10 +403,10 @@ index 3dd9bfd..375c324 100644
  
  use (
  	.
-diff --git a/go.work.sum b/go.work.sum
-index 2b31940..25214b4 100644
---- a/go.work.sum
-+++ b/go.work.sum
+diff --git i/go.work.sum w/go.work.sum
+index 2b31940aa..25214b48d 100644
+--- i/go.work.sum
++++ w/go.work.sum
 @@ -1,183 +1,724 @@
  cloud.google.com/go v0.97.0/go.mod h1:GF7l59pYBVlXQIBLx3a761cZ41F9bBH3JUlihCt2Udc=
  cloud.google.com/go v0.110.2/go.mod h1:k04UEeEtb6ZBRTv3dZz4CeJC3jKGxyhl0sAiVVquxiw=

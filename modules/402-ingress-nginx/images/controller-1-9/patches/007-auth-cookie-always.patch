@@ -1,7 +1,8 @@
-diff --git a/etc/nginx/template/nginx.tmpl b/etc/nginx/template/nginx.tmpl
---- a/etc/nginx/template/nginx.tmpl
-+++ b/etc/nginx/template/nginx.tmpl
-@@ -1367,11 +1367,7 @@ stream {
+diff --git i/rootfs/etc/nginx/template/nginx.tmpl w/rootfs/etc/nginx/template/nginx.tmpl
+index d58be2880..6a1bcb6f9 100644
+--- i/rootfs/etc/nginx/template/nginx.tmpl
++++ w/rootfs/etc/nginx/template/nginx.tmpl
+@@ -1339,11 +1339,7 @@ stream {
              {{ else }}
              auth_request        {{ $authPath }};
              auth_request_set    $auth_cookie $upstream_http_set_cookie;

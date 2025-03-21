@@ -1,7 +1,7 @@
-diff --git a/Makefile b/Makefile
+diff --git i/Makefile w/Makefile
 index cbda4dafb..8810a1876 100644
---- a/Makefile
-+++ b/Makefile
+--- i/Makefile
++++ w/Makefile
 @@ -27,7 +27,7 @@ endif
  SHELL=/bin/bash -o pipefail -o errexit
  

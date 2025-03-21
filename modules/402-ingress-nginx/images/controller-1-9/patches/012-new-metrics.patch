@@ -1,7 +1,7 @@
-diff --git a/internal/ingress/controller/store/store.go b/internal/ingress/controller/store/store.go
+diff --git i/internal/ingress/controller/store/store.go w/internal/ingress/controller/store/store.go
 index 284f53209..3e00ae2b5 100644
---- a/internal/ingress/controller/store/store.go
-+++ b/internal/ingress/controller/store/store.go
+--- i/internal/ingress/controller/store/store.go
++++ w/internal/ingress/controller/store/store.go
 @@ -55,6 +55,7 @@ import (
  	ngx_template "k8s.io/ingress-nginx/internal/ingress/controller/template"
  	"k8s.io/ingress-nginx/internal/ingress/defaults"
@@ -28,10 +28,10 @@ index 284f53209..3e00ae2b5 100644
  	s.writeSSLSessionTicketKey(cmap, "/etc/ingress-controller/tickets.key")
  }
  
-diff --git a/internal/ingress/metric/collectors/nginx_status.go b/internal/ingress/metric/collectors/nginx_status.go
+diff --git i/internal/ingress/metric/collectors/nginx_status.go w/internal/ingress/metric/collectors/nginx_status.go
 index f3afdc334..c9fe50594 100644
---- a/internal/ingress/metric/collectors/nginx_status.go
-+++ b/internal/ingress/metric/collectors/nginx_status.go
+--- i/internal/ingress/metric/collectors/nginx_status.go
++++ w/internal/ingress/metric/collectors/nginx_status.go
 @@ -17,13 +17,15 @@ limitations under the License.
  package collectors
  
