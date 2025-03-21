@@ -55,12 +55,12 @@ func NewCommand(program string, args ...string) *Command {
 	}
 }
 
-func (c *Command) Run() error {
+func (c *Command) Run(ctx context.Context) error {
 	if !c.used.CompareAndSwap(false, true) {
 		return fmt.Errorf("command instance reused")
 	}
 
-	cmd, cancel := c.prepareCmd()
+	cmd, cancel := c.prepareCmd(ctx)
 	defer cancel()
 
 	wg := &sync.WaitGroup{}
@@ -116,12 +116,12 @@ func (c *Command) OnCommandStart(fn func()) {
 	c.onStart = fn
 }
 
-func (c *Command) Output() ([]byte, []byte, error) {
+func (c *Command) Output(ctx context.Context) ([]byte, []byte, error) {
 	if !c.used.CompareAndSwap(false, true) {
 		return nil, nil, fmt.Errorf("command instance reused")
 	}
 
-	cmd, cancel := c.prepareCmd()
+	cmd, cancel := c.prepareCmd(ctx)
 	defer cancel()
 
 	var stdout bytes.Buffer
@@ -140,12 +140,12 @@ func (c *Command) Output() ([]byte, []byte, error) {
 	return stdout.Bytes(), nil, nil // stderr is ignored to preserve compatibility with ssh frontend
 }
 
-func (c *Command) CombinedOutput() ([]byte, error) {
+func (c *Command) CombinedOutput(ctx context.Context) ([]byte, error) {
 	if !c.used.CompareAndSwap(false, true) {
 		return nil, fmt.Errorf("command instance reused")
 	}
 
-	cmd, cancel := c.prepareCmd()
+	cmd, cancel := c.prepareCmd(ctx)
 	defer cancel()
 
 	var output bytes.Buffer
@@ -166,7 +166,7 @@ func (c *Command) CombinedOutput() ([]byte, error) {
 	return output.Bytes(), nil
 }
 
-func (c *Command) prepareCmd() (*exec.Cmd, context.CancelFunc) {
+func (c *Command) prepareCmd(ctx context.Context) (*exec.Cmd, context.CancelFunc) {
 	bashBuiltins := []string{"bind", "type", "command", "let", "mapfile", "printf", "readarray", "ulimit"}
 
 	program := c.program
@@ -179,10 +179,10 @@ func (c *Command) prepareCmd() (*exec.Cmd, context.CancelFunc) {
 		args = []string{"-c", strings.Join(append([]string{c.program}, c.args...), " ")}
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	if c.timeout > 0 {
 		cancel()
-		ctx, cancel = context.WithTimeout(context.Background(), c.timeout)
+		ctx, cancel = context.WithTimeout(ctx, c.timeout)
 	}
 
 	cmd := exec.CommandContext(ctx, program, args...)

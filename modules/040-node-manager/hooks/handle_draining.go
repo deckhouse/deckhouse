@@ -18,13 +18,13 @@ package hooks
 
 import (
 	"context"
+	"errors"
 	"os"
 	"sync"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -201,13 +201,19 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 	}()
 
 	input.MetricsCollector.Expire("d8_node_draining")
+	var shouldIgnoreErr bool
 	for drainedNode := range drainingNodesC {
 		if drainedNode.Err != nil {
 			input.Logger.Errorf("node %q drain failed: %s", drainedNode.NodeName, drainedNode.Err)
+			shouldIgnoreErr = errors.Is(drainedNode.Err, drain.ErrDrainTimeout)
 			event := drainedNode.buildEvent()
-			input.PatchCollector.Create(event, object_patch.UpdateIfExists())
+			input.PatchCollector.CreateOrUpdate(event)
 			input.MetricsCollector.Set("d8_node_draining", 1, map[string]string{"node": drainedNode.NodeName, "message": drainedNode.Err.Error()})
-			continue
+			if shouldIgnoreErr {
+				input.Logger.Errorf("node %q drain error skipped: %s", drainedNode.NodeName, drainedNode.Err)
+			} else {
+				continue
+			}
 		}
 		input.PatchCollector.MergePatch(newDrainedAnnotationPatch(drainedNode.DrainingSource), "v1", "Node", "", drainedNode.NodeName)
 	}

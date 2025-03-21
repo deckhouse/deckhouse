@@ -15,6 +15,7 @@
 package bootstrap
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -76,7 +77,8 @@ func (b *ClusterBootstrapper) CreateResources() error {
 	}
 
 	return log.Process("bootstrap", "Create resources", func() error {
-		kubeCl, err := kubernetes.ConnectToKubernetesAPI(b.NodeInterface)
+		// TODO(dhctl-for-commander-cancels): pass ctx
+		kubeCl, err := kubernetes.ConnectToKubernetesAPI(context.TODO(), b.NodeInterface)
 		if err != nil {
 			return err
 		}
@@ -86,6 +88,7 @@ func (b *ClusterBootstrapper) CreateResources() error {
 			return err
 		}
 
-		return resources.CreateResourcesLoop(kubeCl, resourcesToCreate, checkers, nil)
+		// TODO(dhctl-for-commander-cancels): pass ctx
+		return resources.CreateResourcesLoop(context.TODO(), kubeCl, resourcesToCreate, checkers, nil)
 	})
 }

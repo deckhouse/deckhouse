@@ -42,6 +42,7 @@ jobs:
 
 # Note: git_info is needed for werf.yaml
 {!{- $gitInfoJobCtx := coll.Merge . (dict "dependJobs" (slice "skip_tests_repos")) -}!}
+
 {!{ tmpl.Exec "git_info_job" $gitInfoJobCtx | strings.Indent 2 }!}
 
 {!{- $dependsJobsForAlert := slice "skip_tests_repos" "git_info" -}!}

@@ -46,7 +46,8 @@ import (
 )
 
 func (s *Service) CommanderDetach(server pb.DHCTL_CommanderDetachServer) error {
-	ctx := operationCtx(server)
+	ctx, cancel := operationCtx(server)
+	defer cancel()
 
 	logger.L(ctx).Info("started")
 
@@ -94,6 +95,9 @@ connectionProcessor:
 					sendCh <- &pb.CommanderDetachResponse{Message: &pb.CommanderDetachResponse_Result{Result: result}}
 				}()
 
+			case *pb.CommanderDetachRequest_Cancel:
+				cancel()
+
 			default:
 				logger.L(ctx).Error("got unprocessable message",
 					slog.String("message", fmt.Sprintf("%T", message)))
@@ -125,7 +129,7 @@ func (s *Service) commanderDetach(
 	var err error
 
 	cleanuper := callback.NewCallback()
-	defer cleanuper.Call()
+	defer func() { _ = cleanuper.Call() }()
 
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
 		OutStream: logWriter,
@@ -139,9 +143,7 @@ func (s *Service) commanderDetach(
 	app.ApplyPreflightSkips(request.Options.CommonOptions.SkipPreflightChecks)
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
-	defer func() {
-		log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName)
-	}()
+	defer func() { log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName) }()
 
 	var metaConfig *config.MetaConfig
 	err = log.Process("default", "Parsing cluster config", func() error {

@@ -101,7 +101,7 @@ func (suite *ControllerTestSuite) setupTestController(raw string) {
 		client:               suite.client,
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		dependencyContainer:  dependency.NewDependencyContainer(),
-		log:                  log.NewNop(),
+		logger:               log.NewNop(),
 
 		embeddedPolicy: helpers.NewModuleUpdatePolicySpecContainer(&v1alpha2.ModuleUpdatePolicySpec{
 			Update: v1alpha2.ModuleUpdatePolicySpecUpdate{

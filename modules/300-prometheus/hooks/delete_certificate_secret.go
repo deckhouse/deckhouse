@@ -15,6 +15,8 @@
 package hooks
 
 import (
+	"log/slog"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -68,7 +70,7 @@ func removeSecretGrfana(input *go_hook.HookInput) error {
 	if secretSnapshot := input.Snapshots["secret"]; len(secretSnapshot) > 0 {
 		for _, snap := range secretSnapshot {
 			secret := snap.(*Secret)
-			log.Debugf("Deleting secret: %s/%s", secret.namespace, secret.name)
+			log.Debug("Deleting secret", slog.String("namespace", secret.namespace), slog.String("name", secret.name))
 			input.PatchCollector.Delete(secret.apiVersion, secret.kind, secret.namespace, secret.name)
 		}
 	} else {

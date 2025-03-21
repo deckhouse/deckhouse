@@ -100,7 +100,7 @@ func (r *runner) isSkip(phase phases.OperationPhase) bool {
 
 func (r *runner) RunConverge(ctx *context.Context) error {
 	if r.lockRunner != nil {
-		err := r.lockRunner.Run(func() error {
+		err := r.lockRunner.Run(ctx.Ctx(), func() error {
 			return r.converge(ctx)
 		})
 
@@ -193,7 +193,12 @@ func (r *runner) convergeTerraNodes(ctx *context.Context, metaConfig *config.Met
 
 	log.DebugF("NodeGroups for creating %v\n", nodeGroupsWithoutStateInCluster)
 
-	if err := operations.ParallelCreateNodeGroup(ctx.KubeClient(), metaConfig, nodeGroupsWithoutStateInCluster, ctx.Terraform()); err != nil {
+	bootstrapNewNodeGroups := operations.ParallelCreateNodeGroup
+	if operations.IsSequentialNodesBootstrap() {
+		bootstrapNewNodeGroups = operations.BootstrapSequentialTerraNodes
+	}
+
+	if err := bootstrapNewNodeGroups(ctx.Ctx(), ctx.KubeClient(), metaConfig, nodeGroupsWithoutStateInCluster, ctx.Terraform()); err != nil {
 		return err
 	}
 
@@ -329,7 +334,7 @@ func (r *runner) updateClusterState(ctx *context.Context, metaConfig *config.Met
 			AdditionalStateSaverDestinations: []terraform.SaverDestination{entity.NewClusterStateSaver(ctx)},
 		})
 
-		outputs, err := terraform.ApplyPipeline(baseRunner, "Kubernetes cluster", terraform.GetBaseInfraResult)
+		outputs, err := terraform.ApplyPipeline(ctx.Ctx(), baseRunner, "Kubernetes cluster", terraform.GetBaseInfraResult)
 		if err != nil {
 			return err
 		}
@@ -338,7 +343,7 @@ func (r *runner) updateClusterState(ctx *context.Context, metaConfig *config.Met
 			return global.ErrConvergeInterrupted
 		}
 
-		return entity.SaveClusterTerraformState(ctx.KubeClient(), outputs)
+		return entity.SaveClusterTerraformState(ctx.Ctx(), ctx.KubeClient(), outputs)
 	})
 
 	if err != nil {
