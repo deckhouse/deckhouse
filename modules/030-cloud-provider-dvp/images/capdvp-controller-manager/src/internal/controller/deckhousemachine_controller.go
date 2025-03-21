@@ -217,7 +217,7 @@ func (r *DeckhouseMachineReconciler) reconcileUpdates(
 	// The approval happens if the Machine InternalDNS matches the node name, so we add it here along with hostname.
 	dvpMachine.Status.Addresses = []infrastructurev1a1.VMAddress{
 		{Type: clusterv1b1.MachineHostName, Address: vm.Name},
-		{Type: clusterv1b1.MachineInternalDNS, Address: fmt.Sprintf("%s.%s", vm.Name, vm.Namespace)}, // TODO No DNS names in DVP yet
+		{Type: clusterv1b1.MachineInternalDNS, Address: vm.Name},
 	}
 	dvpMachine.Spec.ProviderID = ProviderIDPrefix + vm.Name
 
