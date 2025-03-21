@@ -93,11 +93,11 @@ spec:
         - name: REGISTRY_PATH
           value: {{ $.Values.global.modulesImages.registry.path }}
         - name: IMAGE_DOCKER_AUTH
-          value: "{{ $.Values.global.modulesImages.digests.systemRegistry.dockerAuth }}"
+          value: {{ include "helm_lib_module_image_digest" (list . "dockerAuth") }}
         - name: IMAGE_DOCKER_DISTRIBUTION
-          value: "{{ $.Values.global.modulesImages.digests.systemRegistry.dockerDistribution }}"
+          value: {{ include "helm_lib_module_image_digest" (list . "dockerDistribution") }}
         - name: IMAGE_MIRRORER
-          value: "{{ $.Values.global.modulesImages.digests.systemRegistry.mirrorer }}"
+          value: {{ include "helm_lib_module_image_digest" (list . "mirrorer") }}
         {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
         ports:
         - name: http-healthz
