@@ -701,9 +701,9 @@ alerts:
       severity: "2"
       markupFormat: markdown
     - name: D8CNIMisconfigured
-      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/cni-checks.yaml
-      moduleUrl: 002-deckhouse
-      module: deckhouse
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/cni-checks.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
       edition: ce
       description: |
         Steps to troubleshoot:
@@ -5657,7 +5657,6 @@ modules-having-alerts:
     - cloud-provider-yandex
     - cni-cilium
     - control-plane-manager
-    - deckhouse
     - documentation
     - extended-monitoring
     - ingress-nginx
