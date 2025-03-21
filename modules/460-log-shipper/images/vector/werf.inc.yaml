@@ -39,10 +39,16 @@ import:
   add: /src/vector
   to: /src
   before: install
+mount:
+- from: tmp_dir
+  to: /root/.cargo
+- from: tmp_dir
+  to: /src/target
 shell:
   beforeInstall:
   {{- include "alt packages proxy" . | nindent 2 }}
   - apt-get install -y build-essential git openssl-devel wget perl-IPC-Cmd protobuf-compiler libsasl2-devel unzip zlib-devel rust rust-cargo
+  - find /var/lib/apt/ /var/cache/apt/ -type f -delete
   install:
   - export CARGO_NET_GIT_FETCH_WITH_CLI=true
   - cd /src
@@ -63,6 +69,7 @@ shell:
   - mkdir -p /relocate/etc /relocate/usr/bin
   - cp target/release/vector /relocate/usr/bin/vector
   - cp -pr /etc/pki /relocate/etc
+  - rm -rf /srv/.cargo/config.toml ~/.gitconfig
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-reloader-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
@@ -73,8 +80,7 @@ import:
   to: /src
   before: install
 mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
+{{ include "mount points for golang builds" . }}
 shell:
   install:
   - cd /src
