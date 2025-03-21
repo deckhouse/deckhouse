@@ -1,6 +1,6 @@
 ---
 # use image for actual terraform version for infra deployment in e2e
-image: e2e-terraform
+image: e2e-opentofu
 # we use artifact with ubuntu because alpine can not unzip with `unzip` and `tar` command
 # current openstack zip-archive with error: "unzip: zip flag 8 (streaming) is not supported"
 fromImage: common/alt-p11-artifact
@@ -23,7 +23,7 @@ import:
               {{- range $version := $tf.versions }}
   - image: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
     add: /{{ $tf.artifactBinary }}-v{{ $version }}
-    to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ $tf.namespace }}/{{ $tf.type }}/{{ $version }}//linux_amd64/{{ $tf.destinationBinary }}
+    to: /usr/local/share/opentofu/plugins/registry.opentofu.org/{{ $tf.namespace }}/{{ $tf.type }}/{{ $version }}//linux_amd64/{{ $tf.destinationBinary }}
     before: setup
               {{- end }}
             {{- else }}

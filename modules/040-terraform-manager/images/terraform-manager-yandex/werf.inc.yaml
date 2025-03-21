@@ -1,4 +1,5 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
+final: false
 fromImage: {{ .ModuleName }}/base-terraform-manager
 git:
 - add: /{{ .ModulePath }}candi/cloud-providers/yandex
@@ -8,6 +9,11 @@ import:
   add: /terraform-provider-yandex
   to: /plugins/registry.terraform.io/{{ .TF.yandex.namespace }}/{{ .TF.yandex.type }}/{{ .TF.yandex.version }}/linux_amd64/terraform-provider-yandex
   before: setup
+# TODO remove it after fully migration to opentofu
+shell:
+  install:
+  - rm -f /root/terraform
+
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false

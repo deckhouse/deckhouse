@@ -73,8 +73,8 @@ func terraformCmd(ctx context.Context, workingDir string, args ...string) *exec.
 
 // CMDExecutor straightforward cmd executor which provides convenient output and handles quit signal.
 type CMDExecutor struct {
-	cmd    *exec.Cmd
-	logger log.Logger
+	cmd        *exec.Cmd
+	logger     log.Logger
 	workingDir string
 }
 
