@@ -55,7 +55,6 @@
     "registrypackages",
     "registry-packages-proxy",
     "runtime-audit-engine",
-    "secrets-store-integration",
     "user-authn",
     "user-authn-crd",
     "user-authz"
@@ -102,7 +101,6 @@
     "registry-packages-proxy",
     "runtime-audit-engine",
     "snapshot-controller",
-    "secrets-store-integration",
     "vertical-pod-autoscaler",
     "user-authn",
     "user-authn-crd",
