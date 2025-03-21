@@ -31,7 +31,7 @@ shell:
     - export GOPROXY={{ $.GOPROXY }}
     - go mod download
   setup:
-    - cd /src
+    - cd {{ $appAbsPath }}
     - go test ./...
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /mirrorer ./cmd/mirrorer
     - chown 64535:64535 /mirrorer
