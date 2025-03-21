@@ -46,7 +46,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/pkg/log"
-	"github.com/deckhouse/module-sdk/pkg/utils"
 )
 
 const (
@@ -220,7 +219,7 @@ func (l *Loader) processModuleDefinition(ctx context.Context, def *moduletypes.D
 
 func validateModuleName(name string) error {
 	// check if name is consistent for conversions between kebab-case and camelCase.
-	restoredName := utils.ModuleNameFromValuesKey(utils.ModuleNameToValuesKey(name))
+	restoredName := addonutils.ModuleNameFromValuesKey(addonutils.ModuleNameToValuesKey(name))
 
 	if name != restoredName {
 		return fmt.Errorf("'%s' name should be in kebab-case and be restorable from camelCase: consider renaming to '%s'", name, restoredName)
