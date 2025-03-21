@@ -148,7 +148,6 @@ shell:
   - go mod download
   - sed -i '/^build --enable_platform_specific_config/a build --linkopt=-L/opt/libcxx/lib'          envoy.bazelrc
   - sed -i '/^build --enable_platform_specific_config/a build --linkopt=-Wl,-rpath,/opt/libcxx/lib' envoy.bazelrc
-  - sed -i '/^build --enable_platform_specific_config/a build --gcc-install-dir=/usr/bin/../lib64/gcc/x86_64-alt-linux/11' envoy.bazelrc
   - sed -i 's|build:libc++ --action_env=BAZEL_LINKOPTS=-lm:-pthread|build:libc++ --action_env=BAZEL_LINKOPTS=-lm:-lpthread|' envoy.bazelrc
   # - sed -i '/^build:clang --action_env=CXX=clang++ --host_action_env=CXX=clang++/a build:clang --action_env=CCC_OVERRIDE_OPTIONS="^--gcc-install-dir=/usr/bin/../lib64/gcc/x86_64-alt-linux/11"' envoy.bazelrc
   # - sed -i 's|ENVOY_SHA = "35c166bb5c90573151afbd94a0936741f9fab8bc"|ENVOY_SHA = "b3ba121ee22d3f77d6f2f7e5d4722d752093da15"|' WORKSPACE
