@@ -894,24 +894,24 @@ ENDSSH
     $scp_command -i "$ssh_private_key_path" $cwd/configuration.yaml "$ssh_user@$bastion_ip:/tmp/configuration.yaml"
     $scp_command -i "$ssh_private_key_path" $cwd/resources.yaml "$ssh_user@$bastion_ip:/tmp/resources.yaml"
     $scp_command -i "$ssh_private_key_path" $ssh_private_key_path "$ssh_user@$bastion_ip:/tmp/sshkey"
-    $scp_command -i "$ssh_private_key_path" /deckhouse/testing/cloud_layouts/Static/scripts/standalone-dhctl.sh "$ssh_user@$bastion_ip:/tmp/standalone-dhctl.sh"
     if $ssh_command -i "$ssh_private_key_path" "$ssh_user@$bastion_ip" sudo su -c /bin/bash <<ENDSSH; then
-      #### export dhctl standalone begin ####
       mkdir -p /etc/docker
       echo '{"insecure-registries":["192.168.199.254:5000"]}' > /etc/docker/daemon.json
       systemctl restart docker
       docker login -p ${LOCAL_REGISTRY_MIRROR_PASSWORD} -u mirror ${IMAGES_REPO}
-      /tmp/standalone-dhctl.sh ${DECKHOUSE_IMAGE_TAG} ${IMAGES_REPO}
-      tar -xzf dhctl-dev.x86_64.tar.gz
-      #### export dhctl standalone end ####
-      ./dhctl --do-not-write-debug-log-file bootstrap \
-        --resources-timeout="30m" --yes-i-want-to-drop-cache \
-        --ssh-host "$master_ip" \
-        --ssh-agent-private-keys "/tmp/sshkey" \
-        --ssh-user "$ssh_user" \
-        --ssh-extra-args="-S ssh" \
-        --config "/tmp/configuration.yaml" \
-        --config "/tmp/resources.yaml" | tee -a "$bootstrap_log" || return $?
+      docker run \
+        -v /tmp/sshkey:/tmp/sshkey \
+        -v /tmp/configuration.yaml:/tmp/configuration.yaml \
+        -v /tmp/resources.yaml:/tmp/resources.yaml \
+        ${IMAGES_REPO}/install:${DECKHOUSE_IMAGE_TAG} \
+        dhctl --do-not-write-debug-log-file bootstrap \
+            --resources-timeout="30m" --yes-i-want-to-drop-cache \
+            --ssh-host "$master_ip" \
+            --ssh-agent-private-keys "/tmp/sshkey" \
+            --ssh-user "$ssh_user" \
+            --ssh-extra-args="-S ssh" \
+            --config "/tmp/configuration.yaml" \
+            --config "/tmp/resources.yaml" | tee -a "$bootstrap_log" || return $?
 ENDSSH
       initial_setup_failed=""
       break
