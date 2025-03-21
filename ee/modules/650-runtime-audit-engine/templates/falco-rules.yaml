@@ -1,3 +1,10 @@
+{{- $rules := default (list) .Values.runtimeAuditEngine.builtInRulesList -}}
+{{- $ruleSet := dict -}}
+{{- range $rule := $rules -}}
+  {{- $ruleSet = set $ruleSet $rule true -}}
+{{- end -}}
+
+{{- if index $ruleSet "Fstec" -}}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: FalcoAuditRules
@@ -418,3 +425,4 @@ spec:
         tags:
           - fstec
           - auth_attempts
+{{- end }}
