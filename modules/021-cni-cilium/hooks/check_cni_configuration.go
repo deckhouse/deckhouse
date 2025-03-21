@@ -23,7 +23,6 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -286,7 +285,7 @@ func checkCni(input *go_hook.HookInput) error {
 			Data: data,
 		}
 		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
-		input.PatchCollector.Create(cm, object_patch.UpdateIfExists())
+		input.PatchCollector.CreateOrUpdate(cm)
 		setCNIMiscMetricAndReq(input, true)
 		return nil
 	}

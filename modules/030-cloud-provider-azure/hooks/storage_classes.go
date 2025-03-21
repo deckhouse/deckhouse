@@ -75,7 +75,7 @@ func storageClasses(input *go_hook.HookInput) error {
 		provision = input.Values.Get("cloudProviderAzure.storageClass.provision").Array()
 	}
 
-	var provisionStorageClasses []StorageClass
+	provisionStorageClasses := make([]StorageClass, 0, len(provision))
 
 	for _, sc := range provision {
 		tagsArray := sc.Get("tags").Array()

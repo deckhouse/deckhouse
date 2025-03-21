@@ -17,7 +17,6 @@ package hooks
 import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"github.com/google/uuid"
 	v1core "k8s.io/api/core/v1"
@@ -65,7 +64,7 @@ func createConfigMapWithUUID(patch go_hook.PatchCollector, clusterUUID string) {
 		"cluster-uuid": clusterUUID,
 	}
 
-	patch.Create(cm, object_patch.IgnoreIfExists())
+	patch.CreateIfNotExists(cm)
 }
 
 // discoveryClusterUUID

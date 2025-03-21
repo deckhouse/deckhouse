@@ -46,8 +46,8 @@ func enableExtendedMonitoring(input *go_hook.HookInput) error {
 	}
 	input.PatchCollector.MergePatch(kubeSystemPatch, "v1", "Namespace", "", "kube-system")
 
-	input.PatchCollector.Filter(removeDeprecatedAnnotation, "v1", "Namespace", "", "d8-system")
-	input.PatchCollector.Filter(removeDeprecatedAnnotation, "v1", "Namespace", "", "kube-system")
+	input.PatchCollector.PatchWithMutatingFunc(removeDeprecatedAnnotation, "v1", "Namespace", "", "d8-system")
+	input.PatchCollector.PatchWithMutatingFunc(removeDeprecatedAnnotation, "v1", "Namespace", "", "kube-system")
 
 	return nil
 }

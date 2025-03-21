@@ -17,6 +17,7 @@ package process
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -576,7 +577,7 @@ func (e *Executor) Stop() {
 }
 
 // Run executes a command and blocks until it is finished or stopped.
-func (e *Executor) Run() error {
+func (e *Executor) Run(_ context.Context) error {
 	log.DebugF("executor: run '%s'\n", e.cmd.String())
 
 	err := e.Start()

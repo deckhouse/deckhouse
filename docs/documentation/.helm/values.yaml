@@ -5,11 +5,10 @@ priorityClassName:
 ingressClass:
   _default: nginx
   prod-25: nginx
-  prod-sel: nginx-tfprod
 
 resources:
   requests:
     memory:
       _default: 30M
-      web-production: 50M
+      web-production: 150M
 

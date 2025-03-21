@@ -1,7 +1,9 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 {{ if eq .ModuleName "docs" }}
-from: {{ .Images.BASE_NGINX_ALPINE }}
+from: {{ .Images.BASE_ALPINE }}
 shell:
+  beforeSetup:
+  - apk add --no-cache nginx
   setup:
   - |
       cat <<"EOD" > /etc/nginx/nginx.conf

@@ -75,6 +75,7 @@ module Jekyll
               gsub(/{{\s*\$labels\.ingress\s*\}\}/m,'INGRESS').
               gsub(/{{\s*\$labels\.instance\s*\}\}/m,'INSTANCE_NAME').
               gsub(/{{\s*\$labels\.istio_version\s*\}\}/m,'VERSION_NUMBER').
+              gsub(/{{\s*\$labels\.job\s*\}\}/m,'JOB_NAME').
               gsub(/{{\s*\$labels\.job_name\s*\}\}/m,'JOB_NAME').
               gsub(/{{\s*\$labels\.k8s_version\s*\}\}/m,'VERSION_NUMBER').
               gsub(/{{\s*\$labels\.kubelet_version\s*\}\}/m,'VERSION_NUMBER').
@@ -93,6 +94,7 @@ module Jekyll
               gsub(/{{\s*\$labels\.name\s*\}\}/m,'NAME').
               gsub(/{{\s*\$labels\.node\s*\}\}/m,'NODE_NAME').
               gsub(/{{\s*\$labels\.node_group\s*\}\}/m,'NODE_GROUP_NAME').
+              gsub(/{{\s*\$labels\.node_group_name\s*\}\}/m,'NODE_GROUP_NAME').
               gsub(/{{\s*\$labels\.owner_name\s*\}\}/m,'CRONJOB').
               gsub(/{{\s*\$labels\.path\s*\}\}/m,'PATH').
               gsub(/{{\s*\$labels\.peer\s*\}\}/m,'PEER').
@@ -106,6 +108,7 @@ module Jekyll
               gsub(/{{\s*\$labels\.revision\s*\}\}/m,'REVISION_NUMBER').
               gsub(/{{\s*\$labels\.scheme\s*\}\}/m,'SCHEME').
               gsub(/{{\s*\$labels\.secret_name\s*\}\}/m,'SECRET_NAME').
+              gsub(/{{\s*\$labels\.secret_namespace\s*\}\}/m,'SECRET_NAMESPACE').
               gsub(/{{\s*\$labels\.service\s*\}\}/m,'SERVICE_NAME').
               gsub(/{{\s*\$labels\.service_port\s*\}\}/m,'SERVICE_PORT').
               gsub(/{{\s*\$labels\.stage\s*\}\}/m,'STAGE_NAME').
@@ -113,6 +116,7 @@ module Jekyll
               gsub(/{{\s*\$labels\.status\s*\}\}/m,'STATUS_REFERENCE').
               gsub(/{{\s*\$labels\.storageclass\s*\}\}/m,'STORAGECLASS_NAME').
               gsub(/{{\s*\$labels\.type\s*\}\}/m,'ERROR_TYPE').
+              gsub(/{{\s*\$labels\.updatePolicy\s*\}\}/m,'UPDATE_POLICY_NAME').
               gsub(/{{\s*\$labels\.vhost\s*\}\}/m,'VHOST/').
               gsub(/{{\s*\$labels\.version\s*\}\}/m,'VERSION_NUMBER').
               gsub(/{{\s*\$result\.Labels\.pod\s*\}\}/m,'POD_NAME').

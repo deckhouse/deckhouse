@@ -15,6 +15,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
@@ -103,7 +104,7 @@ func DefineWaitDeploymentReadyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 				return fmt.Errorf("open kubernetes connection: %v", err)
 			}
 
-			err = deckhouse.WaitForReadiness(kubeCl)
+			err = deckhouse.WaitForReadiness(context.Background(), kubeCl)
 			if err != nil {
 				return err
 			}

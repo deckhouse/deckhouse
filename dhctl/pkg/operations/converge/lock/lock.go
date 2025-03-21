@@ -15,6 +15,7 @@
 package lock
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -70,8 +71,8 @@ func (r *InLockRunner) WithFullUnlock(f bool) *InLockRunner {
 	return r
 }
 
-func (r *InLockRunner) setLock() error {
-	unlockConverge, err := lockLease(r.getter, r.lockConfig, r.forceLock)
+func (r *InLockRunner) setLock(ctx context.Context) error {
+	unlockConverge, err := lockLease(ctx, r.getter, r.lockConfig, r.forceLock)
 	if err != nil {
 		return err
 	}
@@ -84,8 +85,8 @@ func (r *InLockRunner) setLock() error {
 	return nil
 }
 
-func (r *InLockRunner) Run(action func() error) error {
-	err := r.setLock()
+func (r *InLockRunner) Run(ctx context.Context, action func() error) error {
+	err := r.setLock(ctx)
 	if err != nil {
 		return err
 	}
@@ -105,8 +106,8 @@ func (r *InLockRunner) Run(action func() error) error {
 	return action()
 }
 
-func (r *InLockRunner) ResetLock() error {
-	err := r.setLock()
+func (r *InLockRunner) ResetLock(ctx context.Context) error {
+	err := r.setLock(ctx)
 	if err != nil {
 		return err
 	}
@@ -120,10 +121,10 @@ func (r *InLockRunner) Stop() {
 	r.unlockConverge(true)
 }
 
-func LockConverge(getter kubernetes.KubeClientProvider, identity string) (func(bool), error) {
+func LockConverge(ctx context.Context, getter kubernetes.KubeClientProvider, identity string) (func(bool), error) {
 	localIdentity := getLocalConvergeLockIdentity(identity)
 	lockConfig := GetLockLeaseConfig(localIdentity)
-	unlockConverge, err := lockLease(getter, lockConfig, false)
+	unlockConverge, err := lockLease(ctx, getter, lockConfig, false)
 	if err != nil {
 		return nil, err
 	}
@@ -197,6 +198,7 @@ func getLocalConvergeLockIdentity(pref string) string {
 }
 
 func lockLease(
+	ctx context.Context,
 	getter kubernetes.KubeClientProvider,
 	config *lease.LeaseLockConfig,
 	forceLock bool,
@@ -206,7 +208,7 @@ func lockLease(
 	leaseLock := lease.NewLeaseLock(getter, *config)
 
 	log.DebugLn("Try to lock converge")
-	err = leaseLock.Lock(forceLock)
+	err = leaseLock.Lock(ctx, forceLock)
 	if err != nil {
 		return nil, err
 	}
@@ -225,7 +227,7 @@ func lockLease(
 
 		if fullUnlock {
 			log.DebugLn("Try to full release...")
-			leaseLock.Unlock()
+			leaseLock.Unlock(ctx)
 		} else {
 			log.DebugLn("Try to stop autorenew only...")
 			leaseLock.StopAutoRenew()

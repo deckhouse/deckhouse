@@ -15,6 +15,7 @@
 package bootstrap
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
@@ -64,11 +65,13 @@ func (b *ClusterBootstrapper) InstallDeckhouse() error {
 		return err
 	}
 
-	kubeCl, err := kubernetes.ConnectToKubernetesAPI(b.NodeInterface)
+	// TODO(dhctl-for-commander-cancels): pass ctx
+	kubeCl, err := kubernetes.ConnectToKubernetesAPI(context.TODO(), b.NodeInterface)
 	if err != nil {
 		return err
 	}
 
-	_, err = InstallDeckhouse(kubeCl, installConfig)
+	// TODO(dhctl-for-commander-cancels): pass ctx
+	_, err = InstallDeckhouse(context.TODO(), kubeCl, installConfig)
 	return err
 }

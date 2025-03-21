@@ -30,11 +30,11 @@ type Release interface {
 	GetVersion() *semver.Version
 	GetRequirements() map[string]string
 	GetChangelogLink() string
-	GetCooldownUntil() *time.Time
 	GetDisruptions() []string
 	GetDisruptionApproved() bool
 	GetPhase() string
 	GetForce() bool
+	GetReinstall() bool
 	GetApplyNow() bool
 	GetApprovedStatus() bool
 	SetApprovedStatus(b bool)
