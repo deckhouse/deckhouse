@@ -3,7 +3,7 @@ entries:
     - title:
         en: Overview
         ru: Обзор
-      url: /deckhouse-overview.html
+      url: /
 # ------------- Administration -------------
     - title:
         en: Administration

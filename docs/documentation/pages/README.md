@@ -1,6 +1,6 @@
 ---
 title: "Deckhouse Kubernetes Platform"
-permalink: en/deckhouse-overview.html
+permalink: en/
 sidebar: kubernetes-platform
 ---
 
