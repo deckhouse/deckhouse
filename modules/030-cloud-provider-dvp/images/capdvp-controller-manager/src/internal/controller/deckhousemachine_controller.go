@@ -404,6 +404,9 @@ users:
 	vm, err := r.DVP.ComputeService.CreateVM(ctx, &v1alpha2.VirtualMachine{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: dvpMachine.Name,
+			Labels: map[string]string{
+				"dvp.deckhouse.io/hostname": dvpMachine.Name,
+			},
 		},
 		Spec: v1alpha2.VirtualMachineSpec{
 			RunPolicy:                v1alpha2.AlwaysOnPolicy,
