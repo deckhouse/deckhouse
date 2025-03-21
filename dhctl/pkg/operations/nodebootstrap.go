@@ -416,7 +416,7 @@ func BootstrapAdditionalMasterNode(
 	}
 
 	// TODO(dhctl-for-commander-cancels): pass ctx
-	err = entity.SaveMasterNodeTerraformState(context.TODO(), kubeCl, nodeName, outputs.TerraformState, []byte(outputs.KubeDataDevicePath))
+	err = entity.SaveMasterNodeTerraformState(context.TODO(), kubeCl, nodeName, outputs.TerraformState, outputs.GetDataDevices())
 	if err != nil {
 		return outputs, err
 	}

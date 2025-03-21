@@ -35,6 +35,7 @@ type registrySecret struct {
 	Path              string
 	Scheme            string
 	CA                string
+	Mode              string
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -64,10 +65,14 @@ func applyD8RegistrySecretFilter(obj *unstructured.Unstructured) (go_hook.Filter
 		return nil, err
 	}
 
-	var scheme []byte
 	scheme, ok := secret.Data["scheme"]
 	if !ok {
 		scheme = []byte("https")
+	}
+
+	mode, ok := secret.Data["registryMode"]
+	if !ok {
+		mode = []byte("Direct")
 	}
 
 	return &registrySecret{
@@ -76,6 +81,7 @@ func applyD8RegistrySecretFilter(obj *unstructured.Unstructured) (go_hook.Filter
 		Path:              string(secret.Data["path"]),
 		Scheme:            string(scheme),
 		CA:                string(secret.Data["ca"]),
+		Mode:              string(mode),
 	}, nil
 }
 
@@ -106,5 +112,6 @@ func discoveryDeckhouseRegistry(input *go_hook.HookInput) error {
 	input.Values.Set("global.modulesImages.registry.CA", registrySecretRaw.CA)
 	input.Values.Set("global.modulesImages.registry.address", registrySecretRaw.Address)
 	input.Values.Set("global.modulesImages.registry.path", registrySecretRaw.Path)
+	input.Values.Set("global.modulesImages.registry.mode", registrySecretRaw.Mode)
 	return nil
 }

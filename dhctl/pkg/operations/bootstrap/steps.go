@@ -39,14 +39,18 @@ import (
 	"sync"
 	"time"
 
+	libmirrorCtx "github.com/deckhouse/deckhouse-cli/pkg/libmirror/contexts"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/proxy"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
+	"github.com/google/go-containerregistry/pkg/authn"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/imgbundle/mirror"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/imgbundle/pkgproxy"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
@@ -69,11 +73,16 @@ const (
 	MasterHostsCacheKey               = "cluster-hosts"
 	BastionHostCacheKey               = "bastion-hosts"
 	DHCTLEndBootstrapBashiblePipeline = app.NodeDeckhouseDirectoryPath + "/first-control-plane-bashible-ran"
+	SystemRegistrylockFile            = "/var/lib/bashible/wait_for_docker_img_push"
+)
+
+var (
+	errorRegistryConfigError = errors.New("registry config error")
 )
 
 func BootstrapMaster(ctx context.Context, nodeInterface node.Interface, controller *template.Controller) error {
 	return log.Process("bootstrap", "Initial bootstrap", func() error {
-		for _, bootstrapScript := range []string{"01-network-scripts.sh", "02-base-pkgs.sh"} {
+		for _, bootstrapScript := range []string{"01-network-scripts.sh", "02-base-pkgs.sh", "04-remove-flags.sh"} {
 			scriptPath := filepath.Join(controller.TmpDir, "bootstrap", bootstrapScript)
 
 			err := retry.NewLoop(fmt.Sprintf("Execute %s", bootstrapScript), 30, 5*time.Second).
@@ -108,9 +117,9 @@ func BootstrapMaster(ctx context.Context, nodeInterface node.Interface, controll
 	})
 }
 
-func PrepareBashibleBundle(nodeIP, devicePath string, metaConfig *config.MetaConfig, controller *template.Controller) error {
+func PrepareBashibleBundle(nodeIP string, dataDevices terraform.DataDevices, metaConfig *config.MetaConfig, controller *template.Controller) error {
 	return log.Process("bootstrap", "Prepare Bashible", func() error {
-		return template.PrepareBundle(controller, nodeIP, devicePath, metaConfig)
+		return template.PrepareBundle(controller, nodeIP, dataDevices, metaConfig)
 	})
 }
 
@@ -118,6 +127,7 @@ func ExecuteBashibleBundle(ctx context.Context, nodeInterface node.Interface, tm
 	bundleCmd := nodeInterface.UploadScript("bashible.sh", "--local")
 	bundleCmd.WithCleanupAfterExec(false)
 	bundleCmd.Sudo()
+
 	parentDir := tmpDir + "/var/lib"
 	bundleDir := "bashible"
 
@@ -132,8 +142,9 @@ func ExecuteBashibleBundle(ctx context.Context, nodeInterface node.Interface, tm
 			return frontend.ErrBashibleTimeout
 		}
 
-		return fmt.Errorf("bundle '%s' error: %v", bundleDir, err)
+		return fmt.Errorf("bundle '%s' error: %w", bundleDir, err)
 	}
+
 	return nil
 }
 
@@ -287,6 +298,175 @@ func SetupSSHTunnelToRegistryPackagesProxy(ctx context.Context, sshCl *ssh.Clien
 	return tun, nil
 }
 
+func setupSSHTunnelToSystemRegistryDistribution(sshCl *ssh.Client) (*frontend.Tunnel, error) {
+	log.DebugF("Running local ssh tunnel for system registry distribution")
+
+	port := "5001"
+	listenAddress := "127.0.0.1"
+
+	tun := sshCl.Tunnel("L", fmt.Sprintf("%s:%s:%s", port, listenAddress, port))
+	err := tun.Up()
+	if err != nil {
+		return tun, fmt.Errorf("failed to setup SSH tunnel to system registry distribution: %v", err)
+	}
+	return tun, nil
+}
+
+func pushDockerImagesToSystemRegistry(ctx context.Context, nodeInterface node.Interface, registryData *config.DetachedModeRegistryData) error {
+	var wg sync.WaitGroup
+
+	ctx, ctxCancel := context.WithCancelCause(ctx)
+
+	log.DebugLn("PushDockerImagesToSystemRegistry: Starting")
+
+	defer func() {
+		log.DebugLn("PushDockerImagesToSystemRegistry: Stopping")
+		ctxCancel(nil)
+
+		log.DebugLn("PushDockerImagesToSystemRegistry: Waiting for background operations stop")
+		wg.Wait()
+
+		log.DebugLn("PushDockerImagesToSystemRegistry: Stopped")
+	}()
+
+	distributionHost := "127.0.0.1:5001"
+
+	if wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper); ok {
+		sshClient := wrapper.Client()
+
+		if sshClient.Settings.BastionHost == "" {
+			distributionHost = fmt.Sprintf("%s:5001", sshClient.Settings.Host())
+		} else {
+			log.DebugLn("PushDockerImagesToSystemRegistry: Creating distribution tunnel")
+
+			// Create distribution tunnel, if BastionHost != ""
+			distributionTun, err := setupSSHTunnelToSystemRegistryDistribution(sshClient)
+			if err != nil {
+				return err
+			}
+
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				defer ctxCancel(nil)
+
+				err := frontend.RecreateSshTun(ctx, distributionTun, func() (*frontend.Tunnel, error) {
+					return setupSSHTunnelToSystemRegistryDistribution(sshClient)
+				})
+
+				if ctx.Err() != nil {
+					// Context was cancelled, skipping error processing
+					return
+				}
+
+				if err != nil {
+					log.ErrorF("error re-creating ssh tunnel for remote docker distribution service: %s", err.Error())
+					ctxCancel(fmt.Errorf("recreate docker distribution tunnel error: %w", err))
+				}
+			}()
+		}
+	}
+
+	if err := context.Cause(ctx); err != nil {
+		return err
+	}
+
+	log.InfoLn("Unpacking and validating images bundle")
+	unpackedBundlePath, err := mirror.UnpackAndValidateImgBundle(ctx, registryData.ImagesBundlePath)
+	if err != nil {
+		return fmt.Errorf("cannot unpack and validate images bundle: %w", err)
+	}
+
+	pushCtx := libmirrorCtx.PushContext{
+		BaseContext: libmirrorCtx.BaseContext{
+			RegistryAuth: authn.FromConfig(authn.AuthConfig{
+				Username: registryData.InternalRegistryAccess.UserRw.Name,
+				Password: registryData.InternalRegistryAccess.UserRw.Password,
+			}),
+			RegistryHost:        distributionHost,
+			RegistryPath:        registryData.RegistryPath,
+			BundlePath:          registryData.ImagesBundlePath,
+			UnpackedImagesPath:  unpackedBundlePath,
+			Insecure:            false,
+			SkipTLSVerification: true,
+			Logger:              &mirror.Logger{},
+		},
+		Parallelism: libmirrorCtx.ParallelismConfig{
+			Blobs:  4,
+			Images: 1,
+		},
+	}
+
+	log.InfoLn("Pushing images to registry")
+	return mirror.Push(ctx, &pushCtx)
+}
+
+func removeSystemRegistryLockFile(ctx context.Context, nodeInterface node.Interface) error {
+	isExist, err := isSystemRegistryLockFileExists(ctx, nodeInterface)
+	if err != nil {
+		return fmt.Errorf("isLockFileExists error: %v", err)
+	}
+
+	if !isExist {
+		return nil
+	}
+
+	cmd := nodeInterface.Command("rm", "-f", SystemRegistrylockFile)
+	cmd.Sudo()
+	return cmd.Run(ctx)
+}
+
+func isSystemRegistryLockFileExists(ctx context.Context, nodeInterface node.Interface) (bool, error) {
+	checkLockFileStdout := ""
+	checkLockFileStdoutHandler := func(l string) { checkLockFileStdout += l }
+
+	cmd := nodeInterface.Command("test", "-e", SystemRegistrylockFile, "&&", "echo", "true", "||", "echo", "false")
+	cmd.Sudo()
+	cmd.WithStdoutHandler(checkLockFileStdoutHandler)
+	err := cmd.Run(ctx)
+
+	if err != nil {
+		return false, err
+	}
+
+	if strings.TrimSpace(checkLockFileStdout) == "true" {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+func waitAndPushDockerImages(ctx context.Context, nodeInterface node.Interface, registryData *config.DetachedModeRegistryData) error {
+	for {
+		select {
+		case <-ctx.Done():
+			return context.Cause(ctx)
+		case <-time.After(5 * time.Second):
+			isExist, err := isSystemRegistryLockFileExists(ctx, nodeInterface)
+			if err != nil {
+				log.WarnF("RegistryImagesPusher: isLockFileExists error: %v\n", err)
+				continue
+			}
+
+			if !isExist {
+				continue
+			}
+
+			log.DebugLn("RegistryImagesPusher: Start pushing images")
+			err = pushDockerImagesToSystemRegistry(ctx, nodeInterface, registryData)
+			log.DebugLn("RegistryImagesPusher: Done pushing images")
+
+			if err != nil {
+				log.DebugF("RegistryImagesPusher: Pushing images error: %v\n", err)
+				return fmt.Errorf("push images error: %w", err)
+			}
+
+			log.DebugLn("RegistryImagesPusher: Removing lock")
+			return removeSystemRegistryLockFile(ctx, nodeInterface)
+		}
+	}
+}
+
 type registryClientConfigGetter struct {
 	registry.ClientConfig
 }
@@ -313,7 +493,38 @@ func (r *registryClientConfigGetter) Get(_ string) (*registry.ClientConfig, erro
 	return &r.ClientConfig, nil
 }
 
-func StartRegistryPackagesProxy(config config.RegistryData, clusterDomain string) error {
+func StartRegistryPackagesProxy(registryCfg config.Registry, clusterDomain string) error {
+	var clientConfigGetter registry.ClientConfigGetter
+	var client registry.Client
+	var err error
+
+	switch registryCfg.ModeSpecificFields.(type) {
+	case config.ProxyModeRegistryData:
+		client = &registry.DefaultClient{}
+		clientConfigGetter, err = newRegistryClientConfigGetter(
+			registryCfg.ModeSpecificFields.(config.ProxyModeRegistryData).UpstreamRegistryData,
+		)
+		if err != nil {
+			return fmt.Errorf("Failed to create registry client for registry proxy: %v", err)
+		}
+	case config.DetachedModeRegistryData:
+		unpackedImagesPath, err := mirror.UnpackAndValidateImgBundle(
+			context.Background(),
+			registryCfg.ModeSpecificFields.(config.DetachedModeRegistryData).ImagesBundlePath,
+		)
+		if err != nil {
+			return fmt.Errorf("Failed to create registry client for registry proxy: %v", err)
+		}
+		client = pkgproxy.NewClient(unpackedImagesPath)
+		clientConfigGetter = pkgproxy.ClientConfigGetter{}
+	default:
+		client = &registry.DefaultClient{}
+		clientConfigGetter, err = newRegistryClientConfigGetter(registryCfg.Data)
+		if err != nil {
+			return fmt.Errorf("Failed to create registry client for registry proxy: %v", err)
+		}
+	}
+
 	cert, err := generateTLSCertificate(clusterDomain)
 	if err != nil {
 		return fmt.Errorf("Failed to generate TLS certificate for registry proxy: %v", err)
@@ -325,14 +536,9 @@ func StartRegistryPackagesProxy(config config.RegistryData, clusterDomain string
 	if err != nil {
 		return fmt.Errorf("Failed to listen registry proxy socket: %v", err)
 	}
-
-	clientConfigGetter, err := newRegistryClientConfigGetter(config)
-	if err != nil {
-		return fmt.Errorf("Failed to create registry client for registry proxy: %v", err)
-	}
 	srv := &http.Server{}
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("ok")) })
-	proxy := proxy.NewProxy(srv, listener, clientConfigGetter, registryPackagesProxyLogger{}, &registry.DefaultClient{})
+	proxy := proxy.NewProxy(srv, listener, clientConfigGetter, registryPackagesProxyLogger{}, client)
 
 	go proxy.Serve()
 
@@ -408,14 +614,14 @@ func generateTLSCertificate(clusterDomain string) (*tls.Certificate, error) {
 	return tlsCert, nil
 }
 
-func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg *config.MetaConfig, nodeIP, devicePath string) error {
+func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg *config.MetaConfig, nodeIP string, dataDevices terraform.DataDevices) error {
 	var clusterDomain string
 	err := json.Unmarshal(cfg.ClusterConfig["clusterDomain"], &clusterDomain)
 	if err != nil {
 		return err
 	}
 
-	log.DebugF("Got cluster domain: %s", clusterDomain)
+	log.DebugF("Got cluster domain: %s\n", clusterDomain)
 	log.DebugLn("Starting registry packages proxy")
 
 	// we need clusterDomain to generate proper certificate for packages proxy
@@ -462,6 +668,10 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 			return fmt.Errorf("cannot create %s directories: %w", app.DeckhouseNodeTmpPath, err)
 		}
 
+		if err != nil {
+			return fmt.Errorf("cannot create %s directories: %w", app.DeckhouseNodeTmpPath, err)
+		}
+
 		// in end of pipeline steps bashible write "OK" to this file
 		// we need creating it before because we do not want handle errors from cat
 		return retry.NewLoop(fmt.Sprintf("Prepare %s", DHCTLEndBootstrapBashiblePipeline), 30, 10*time.Second).RunContext(ctx, func() error {
@@ -487,9 +697,10 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 		defer cleanUpTunnel()
 	}
 
-	if err = PrepareBashibleBundle(nodeIP, devicePath, cfg, templateController); err != nil {
+	if err = PrepareBashibleBundle(nodeIP, dataDevices, cfg, templateController); err != nil {
 		return err
 	}
+
 	tomb.RegisterOnShutdown("Delete templates temporary directory", func() {
 		if !app.IsDebug {
 			_ = os.RemoveAll(templateController.TmpDir)
@@ -500,11 +711,57 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 		return err
 	}
 
-	return retry.NewLoop("Execute bundle", 30, 10*time.Second).
-		BreakIf(func(err error) bool { return errors.Is(err, frontend.ErrBashibleTimeout) }).
-		RunContext(ctx, func() error {
-			// we do not need to restart tunnel because we have HealthMonitor
+	var tombWg sync.WaitGroup
+	tombCtx, tombCtxCancel := context.WithCancelCause(ctx)
+	tombWg.Add(1)
+	defer tombWg.Done()
 
+	tomb.RegisterOnShutdown("Stopping background processes", func() {
+		tombCtxCancel(errors.New("shutdown requested"))
+
+		log.DebugLn("Waiting for background processes")
+		tombWg.Wait()
+	})
+
+	if err = context.Cause(tombCtx); err != nil {
+		// context was cancelled
+		return err
+	}
+
+	return retry.NewLoop("Execute bundle", 30, 10*time.Second).
+		BreakIf(func(err error) bool {
+			if context.Cause(tombCtx) != nil {
+				// Context was cancelled
+				return true
+			}
+
+			if errors.Is(err, errorRegistryConfigError) {
+				return true
+			}
+
+			if errors.Is(err, frontend.ErrBashibleTimeout) {
+				return true
+			}
+
+			return false
+		}).
+		RunContext(tombCtx, func() error {
+			ctx, ctxCancel := context.WithCancelCause(tombCtx)
+			var wg sync.WaitGroup
+
+			defer func() {
+				log.InfoLn("Waiting for ExecuteBundle background operations done")
+				ctxCancel(nil)
+				wg.Wait()
+				log.DebugLn("All ExecuteBundle background operations done")
+			}()
+
+			if err = context.Cause(ctx); err != nil {
+				// Context was cancelled
+				return err
+			}
+
+			// we do not need to restart tunnel because we have HealthMonitor
 			log.DebugLn("Check bundle routine start")
 			ready, err := checkBashibleAlreadyRun(ctx, nodeInterface)
 			if err != nil {
@@ -520,9 +777,53 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 				return err
 			}
 
-			log.DebugLn("Start execute bashible bundle routine")
+			if err = context.Cause(ctx); err != nil {
+				// Context was cancelled
+				return err
+			}
 
-			return ExecuteBashibleBundle(ctx, nodeInterface, templateController.TmpDir)
+			detachedModeRegistryData, isDetachedRegistryMode := cfg.Registry.IsDetached()
+			if isDetachedRegistryMode {
+				// Run Docker pusher
+				log.DebugLn("Cleaning previous image push lock file if needed")
+				if cleanLockFileErr := removeSystemRegistryLockFile(ctx, nodeInterface); cleanLockFileErr != nil {
+					return fmt.Errorf("cannot clean images push lock file: %+v", cleanLockFileErr)
+				}
+
+				log.DebugLn("Starting SystemRegistry images pusher")
+				wg.Add(1)
+				go func(ctx context.Context, nodeInterface node.Interface, registryData *config.DetachedModeRegistryData) {
+					defer func() {
+						log.DebugLn("Stopped SystemRegistry images pusher")
+						wg.Done()
+					}()
+
+					if err := waitAndPushDockerImages(ctx, nodeInterface, registryData); err != nil {
+						log.DebugF("RegistryImagesPusher: Done, err: %+v\n", err)
+
+						if ctx.Err() != nil {
+							// if context was cancelled, stop silently
+							return
+						}
+
+						log.ErrorF("Cannot push images to system registry: %v\n", err)
+
+						// Cancel context in case of error to stop bashible bundle execution
+						ctxCancel(fmt.Errorf("cannot push to system registry: %w", err))
+					}
+				}(ctx, nodeInterface, detachedModeRegistryData)
+			}
+
+			if err = context.Cause(ctx); err != nil {
+				// Context was cancelled
+				return err
+			}
+
+			log.DebugLn("Start execute bashible bundle routine")
+			err = ExecuteBashibleBundle(ctx, nodeInterface, templateController.TmpDir)
+			log.DebugF("Done execute bashible bundle, err: %+v\n", err)
+
+			return err
 		})
 }
 
