@@ -134,3 +134,12 @@ ceph-fs-sc    rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true    
 ```
 
 If the StorageClass objects appear, it means the `csi-ceph` module configuration is complete. Users can now create PersistentVolumes by specifying the created StorageClass objects.
+
+## Listing RBD volumes mapped on each node
+
+To get a list of RBD volumes mounted on each node of the cluster, run the following command:
+
+```shell
+d8 k -n d8-csi-ceph get po -l app=csi-node-rbd -o custom-columns=NAME:.metadata.name,NODE:.spec.nodeName --no-headers \
+  | awk '{print "echo "$2"; kubectl -n d8-csi-ceph exec  "$1" -c node -- rbd showmapped"}' | bash
+```

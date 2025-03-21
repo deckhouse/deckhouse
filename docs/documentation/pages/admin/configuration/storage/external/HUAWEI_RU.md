@@ -98,9 +98,9 @@ d8 k get huaweistorageconnections.storage.deckhouse.io <имя huaweistorageconn
 d8 k get huaweistorageclasses.storage.deckhouse.io <имя huaweistorageclass>
 ```
 
-### Как проверить работоспособность модуля?
+### Проверка работоспособности модуля
 
-Для этого необходимо проверить состояние подов в namespace `d8-csi-huawei`. Все поды должны быть в состоянии `Running` или `Completed` и запущены на всех узлах.
+Для проверки работоспособности модуля убедитесь, что все поды в пространстве имён `d8-csi-huawei`находятся в статусе `Running` или `Completed` и запущены на каждом узле кластера:
 
 ```shell
 d8 k -n d8-csi-huawei get pod -owide -w

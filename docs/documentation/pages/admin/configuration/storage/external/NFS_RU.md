@@ -10,7 +10,7 @@ Deckhouse поддерживает работу с NFS (Network File System), о
 
 ## Включение модуля
 
-Для управления томами на основе протокола NFS (Network File System) используется модуль `csi-nfs`, позволяющий создавать StorageClass через создание пользовательских ресурсов [NFSStorageClas](../../../reference/cr/nfsstorageclass/). Чтобы включить модуль выполните команду:
+Для управления томами на основе протокола NFS (Network File System) используется модуль `csi-nfs`, позволяющий создавать StorageClass через создание пользовательских ресурсов [NFSStorageClass](../../../reference/cr/nfsstorageclass/). Чтобы включить модуль выполните команду:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -39,7 +39,7 @@ csi-nfs   910      Enabled   Embedded           Ready
 
 ## Создание StorageClass
 
-Для создания StorageClass необходимо использовать ресурс [NFSStorageClas](../../../reference/cr/nfsstorageclass/). Ручное создание ресурса StorageClass без [NFSStorageClas](../../../reference/cr/nfsstorageclass/) может привести к ошибкам. Пример команды для создания класса хранения на базе NFS:
+Для создания StorageClass необходимо использовать ресурс [NFSStorageClass](../../../reference/cr/nfsstorageclass/). Ручное создание ресурса StorageClass без [NFSStorageClass](../../../reference/cr/nfsstorageclass/) может привести к ошибкам. Пример команды для создания класса хранения на базе NFS:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -68,13 +68,13 @@ spec:
 EOF
 ```
 
-Проверьте, что созданный ресурс [NFSStorageClas](../../../reference/cr/nfsstorageclass/) перешел в состояние `Created`, выполнив следующую команду:
+Проверьте, что созданный ресурс [NFSStorageClass](../../../reference/cr/nfsstorageclass/) перешел в состояние `Created`, выполнив следующую команду:
 
 ```shell
 d8 k get NFSStorageClass nfs-storage-class -w
 ```
 
-В результате будет выведена информация о созданном ресурсе [NFSStorageClas](../../../reference/cr/nfsstorageclass/):
+В результате будет выведена информация о созданном ресурсе [NFSStorageClass](../../../reference/cr/nfsstorageclass/):
 
 ```console
 NAME                PHASE     AGE
@@ -96,9 +96,9 @@ nfs-storage-class   nfs.csi.k8s.io   Delete          WaitForFirstConsumer   true
 
 Если StorageClass с именем `nfs-storage-class` появился, значит настройка модуля `csi-nfs` завершена. Теперь пользователи могут создавать PersistentVolume, указывая StorageClass с именем `nfs-storage-class`. Для каждого ресурса PersistentVolume будет создаваться каталог `<директория из share>/<имя PersistentVolume>`.
 
-## Проверка работоспособности модуля
+### Проверка работоспособности модуля
 
-Для того чтобы проверить работоспособность модуля `csi-nfs`, необходимо проверить состояние подов в пространстве имен `d8-csi-nfs`. Все поды должны быть в состоянии `Running` или `Completed`, поды `csi-nfs` должны быть запущены на всех узлах. Проверить работоспособность модуля можно с помощью следующей команды:
+Для проверки работоспособности модуля убедитесь, что все поды в пространстве имён `d8-csi-nfs`находятся в статусе `Running` или `Completed` и запущены на каждом узле кластера:
 
 ```shell
 d8 k -n d8-csi-nfs get pod -owide -w
@@ -115,3 +115,71 @@ csi-nfs-8mpcd                    2/2     Running   0          1h    172.18.18.50
 csi-nfs-n6sks                    2/2     Running   0          1h    172.18.18.51   worker-1   <none>           <none>
 csi-nfs-6nqq8                    2/2     Running   0          1h    172.18.18.52   worker-2   <none>           <none>
 ```
+
+## Изменение параметров NFS-сервера для уже созданных PV
+
+Изменить параметры подключения к NFS-серверу для уже созданных PersistentVolume невозможно. Эти параметры сохраняются напрямую в манифесте PV и не подлежат изменению. Также изменение StorageClass не приведёт к обновлению настроек подключения в уже существующих PV.
+
+## Создание снимков томов
+
+В Deckhouse снимки создаются путём архивирования папки тома. Архив сохраняется в корне папки на NFS-сервере, указанной в параметре `spec.connection.share`. Для создания снимков:
+
+1. Включите модуль `snapshot-controller`:
+
+   ```yaml
+   d8 k apply -f -<<EOF
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: snapshot-controller
+   spec:
+     enabled: true
+     version: 1
+   EOF
+   ```
+
+1. Создайте снимок тома, указав необходимые параметры:
+
+   ```yaml
+   d8 k apply -f -<<EOF
+   apiVersion: snapshot.storage.k8s.io/v1
+   kind: VolumeSnapshot
+   metadata:
+     name: my-snapshot
+     namespace: <пространство имён, в котором находится PVC>
+   spec:
+     volumeSnapshotClassName: csi-nfs-snapshot-class
+     source:
+       persistentVolumeClaimName: <пространство имён, для которого необходимо создать снимок>
+   EOF
+   ```
+
+1. Проверьте состояние созданного снимка командой:
+
+   ```shell
+   d8 k get volumesnapshot
+   ```
+
+Команда выведет список всех снимков и их текущее состояние.
+
+## Почему не удаляются PV при включённой поддержке RPC-with-TLS
+
+Если ресурс [NFSStorageClass](../../../reference/cr/nfsstorageclass/) настроен с поддержкой RPC-with-TLS, возможно, не удастся удалить созданные PV. Это может произойти, если удалён секрет, содержащий параметры монтирования (например, после удаления [NFSStorageClass](../../../reference/cr/nfsstorageclass/)). В результате контроллер не сможет смонтировать папку на NFS-сервере для удаления каталога `<имя PV>`.
+
+## Как добавить несколько CA в параметр tlsParameters.ca в ModuleConfig
+
+Для добавления нескольких сертификатов CA в параметр `tlsParameters.ca` необходимо объединить их в один файл и закодировать в Base64:
+
+- Для двух CA:
+
+  ```shell
+  cat CA1.crt CA2.crt | base64 -w0
+  ```
+
+- Для трёх CA:
+
+  ```shell
+  cat CA1.crt CA2.crt CA3.crt | base64 -w0
+  ```
+
+- И так далее.
