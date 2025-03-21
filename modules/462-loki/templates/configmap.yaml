@@ -20,8 +20,8 @@ data:
 
     limits_config:
       retention_period: {{ .Values.loki.retentionPeriodHours | default 168 }}h
+      split_queries_by_interval: 0s
       {{- omit $lokiConfigSnakeCase "grpc_server_max_send_msg_size" "grpc_server_max_recv_msg_size" "grpc_server_max_concurrent_streams" | toYaml | nindent 6 }}
-      splitQueriesByInterval: 0s
 
     query_range:
       parallelise_shardable_queries: false
