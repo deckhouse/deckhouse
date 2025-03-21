@@ -363,9 +363,9 @@ func TestParseConfigFromFiles(t *testing.T) {
 	app.VersionFile = "./mocks/version"
 	t.Run("parse wildcard", func(t *testing.T) {
 		metaConfig, err := LoadConfigFromFile([]string{"./mocks/*.yml", "./mocks/3-ModuleConfig.yaml"})
+		require.NoError(t, err)
 		require.Equal(t, "Static", metaConfig.ClusterType)
 		require.Equal(t, "registry.deckhouse.io", metaConfig.Registry.Address)
 		require.Len(t, metaConfig.ModuleConfigs, 3)
-		require.NoError(t, err)
 	})
 }
