@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
@@ -188,7 +189,11 @@ func (c *kubernetesVersionCheck) initClusterKubernetesVersion(ctx context.Contex
 	key := client.ObjectKey{Namespace: systemNamespace, Name: deckhouseClusterConfigurationConfig}
 	secret := new(corev1.Secret)
 	if err := c.k8sclient.Get(ctx, key, secret); err != nil {
-		return fmt.Errorf("failed to get secret: %w", err)
+		// the secret does not exist in managed cluster
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("failed to get the 'd8-cluster-configuration' secret: %w", err)
 	}
 
 	clusterConfigurationRaw, ok := secret.Data["cluster-configuration.yaml"]
@@ -196,12 +201,12 @@ func (c *kubernetesVersionCheck) initClusterKubernetesVersion(ctx context.Contex
 		return fmt.Errorf("expected field 'cluster-configuration.yaml' not found in secret %s", secret.Name)
 	}
 
-	clusterConf := new(clusterConf)
-	if err := yaml.Unmarshal(clusterConfigurationRaw, clusterConf); err != nil {
+	conf := new(clusterConf)
+	if err := yaml.Unmarshal(clusterConfigurationRaw, conf); err != nil {
 		return fmt.Errorf("failed to unmarshal cluster configuration: %w", err)
 	}
 
-	c.clusterKubernetesVersion = clusterConf.KubernetesVersion
+	c.clusterKubernetesVersion = conf.KubernetesVersion
 
 	return nil
 }
