@@ -16,6 +16,7 @@ package preflight
 
 import (
 	"encoding/json"
+	"context"
 	"fmt"
 	"strings"
 
@@ -36,7 +37,7 @@ const (
 	reservedMemoryThresholdMB = 512
 )
 
-func (pc *Checker) CheckCloudMasterNodeSystemRequirements() error {
+func (pc *Checker) CheckCloudMasterNodeSystemRequirements(_ context.Context) error {
 	if app.PreflightSkipSystemRequirementsCheck {
 		log.DebugLn("System requirements check is skipped")
 		return nil
@@ -121,7 +122,7 @@ func (pc *Checker) CheckCloudMasterNodeSystemRequirements() error {
 	return nil
 }
 
-func (pc *Checker) CheckSystemRegistryModuleSupport() error {
+func (pc *Checker) CheckSystemRegistryModuleSupport(_ context.Context) error {
 	var cloud config.ClusterConfigCloudSpec
 	if err := json.Unmarshal(pc.metaConfig.ClusterConfig["cloud"], &cloud); err != nil {
 		return fmt.Errorf("unable to unmarshal cloud section from provider cluster configuration: %v", err)

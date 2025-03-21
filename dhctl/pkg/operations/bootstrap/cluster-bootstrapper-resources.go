@@ -88,6 +88,7 @@ func (b *ClusterBootstrapper) CreateResources() error {
 			return err
 		}
 
-		return resources.CreateResourcesLoop(kubeCl, resourcesToCreate, checkers, nil)
+		// TODO(dhctl-for-commander-cancels): pass ctx
+		return resources.CreateResourcesLoop(context.TODO(), kubeCl, resourcesToCreate, checkers, nil)
 	})
 }

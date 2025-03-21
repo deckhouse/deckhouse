@@ -26,6 +26,7 @@ message CommanderAttachRequest {
   oneof message {
     CommanderAttachStart start = 1;
     CommanderAttachContinue continue = 2;
+    CommanderAttachCancel cancel = 3;
   }
 }
 
@@ -57,6 +58,8 @@ message CommanderAttachContinue {
   Continue continue = 1;
   string err = 2;
 }
+
+message CommanderAttachCancel {}
 
 message CommanderAttachStartOptions {
   bool commander_mode = 1;

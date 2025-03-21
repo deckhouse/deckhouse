@@ -15,6 +15,7 @@
 package preflight
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
 	"testing"
@@ -76,7 +77,10 @@ func TestCloudMasterNodeSystemRequirementsCheck(t *testing.T) {
 			pc := &Checker{
 				installConfig: tt.fields.installConfig,
 			}
-			tt.wantErr(t, pc.CheckCloudMasterNodeSystemRequirements(), fmt.Sprintf("CheckCloudMasterNodeSystemRequirements()"))
+			tt.wantErr(t,
+				pc.CheckCloudMasterNodeSystemRequirements(context.Background()),
+				fmt.Sprintf("CheckCloudMasterNodeSystemRequirements()"),
+			)
 		})
 	}
 }

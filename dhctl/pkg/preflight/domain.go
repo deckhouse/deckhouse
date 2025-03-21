@@ -15,6 +15,7 @@
 package preflight
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -26,7 +27,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
-func (pc *Checker) CheckLocalhostDomain() error {
+func (pc *Checker) CheckLocalhostDomain(ctx context.Context) error {
 	if app.PreflightSkipResolvingLocalhost {
 		log.InfoLn("Resolving the localhost domain preflight check was skipped")
 		return nil
@@ -40,7 +41,7 @@ func (pc *Checker) CheckLocalhostDomain() error {
 	}
 
 	scriptCmd := pc.nodeInterface.UploadScript(file)
-	out, err := scriptCmd.Execute()
+	out, err := scriptCmd.Execute(ctx)
 	if err != nil {
 		log.ErrorLn(strings.Trim(string(out), "\n"))
 		var ee *exec.ExitError
@@ -54,7 +55,7 @@ func (pc *Checker) CheckLocalhostDomain() error {
 	return nil
 }
 
-func (pc *Checker) CheckPublicDomainTemplate() error {
+func (pc *Checker) CheckPublicDomainTemplate(_ context.Context) error {
 	if app.PreflightSkipPublicDomainTemplateCheck {
 		log.InfoLn("PublicDomainTemplate preflight check was skipped")
 		return nil

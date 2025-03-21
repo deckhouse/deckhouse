@@ -39,25 +39,26 @@ import (
 var ErrNoTerraformState = errors.New("Terraform state is not found in outputs.")
 
 // Create secret for node with group settings only.
-func CreateNodeTerraformState(kubeCl *client.KubernetesClient, nodeName, nodeGroup string, settings []byte) error {
+func CreateNodeTerraformState(ctx context.Context, kubeCl *client.KubernetesClient, nodeName, nodeGroup string, settings []byte) error {
 	task := actions.ManifestTask{
 		Name: fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
 		Manifest: func() interface{} {
 			return manifests.SecretWithNodeTerraformState(nodeName, nodeGroup, nil, settings)
 		},
 		CreateFunc: func(manifest interface{}) error {
-			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
+			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 			return err
 		},
 		UpdateFunc: func(manifest interface{}) error {
-			_, err := kubeCl.CoreV1().Secrets("d8-system").Update(context.TODO(), manifest.(*apiv1.Secret), metav1.UpdateOptions{})
+			_, err := kubeCl.CoreV1().Secrets("d8-system").Update(ctx, manifest.(*apiv1.Secret), metav1.UpdateOptions{})
 			return err
 		},
 	}
-	return retry.NewLoop(fmt.Sprintf("Create Terraform state for Node %q", nodeName), 45, 10*time.Second).Run(task.CreateOrUpdate)
+	return retry.NewLoop(fmt.Sprintf("Create Terraform state for Node %q", nodeName), 45, 10*time.Second).
+		RunContext(ctx, task.CreateOrUpdate)
 }
 
-func SaveNodeTerraformState(kubeCl *client.KubernetesClient, nodeName, nodeGroup string, tfState, settings []byte, logger log.Logger) error {
+func SaveNodeTerraformState(ctx context.Context, kubeCl *client.KubernetesClient, nodeName, nodeGroup string, tfState, settings []byte, logger log.Logger) error {
 	if len(tfState) == 0 {
 		return ErrNoTerraformState
 	}
@@ -68,18 +69,19 @@ func SaveNodeTerraformState(kubeCl *client.KubernetesClient, nodeName, nodeGroup
 			return manifests.SecretWithNodeTerraformState(nodeName, nodeGroup, tfState, settings)
 		},
 		CreateFunc: func(manifest interface{}) error {
-			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
+			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 			return err
 		},
 		UpdateFunc: func(manifest interface{}) error {
-			_, err := kubeCl.CoreV1().Secrets("d8-system").Update(context.TODO(), manifest.(*apiv1.Secret), metav1.UpdateOptions{})
+			_, err := kubeCl.CoreV1().Secrets("d8-system").Update(ctx, manifest.(*apiv1.Secret), metav1.UpdateOptions{})
 			return err
 		},
 	}
-	return retry.NewLoop(fmt.Sprintf("Save Terraform state for Node %q", nodeName), 45, 10*time.Second).WithLogger(logger).Run(task.CreateOrUpdate)
+	return retry.NewLoop(fmt.Sprintf("Save Terraform state for Node %q", nodeName), 45, 10*time.Second).
+		WithLogger(logger).RunContext(ctx, task.CreateOrUpdate)
 }
 
-func SaveMasterNodeTerraformState(kubeCl *client.KubernetesClient, nodeName string, tfState []byte, dataDevices terraform.DataDevices) error {
+func SaveMasterNodeTerraformState(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string, tfState []byte, dataDevices terraform.DataDevices) error {
 	if len(tfState) == 0 {
 		return ErrNoTerraformState
 	}
@@ -101,11 +103,11 @@ func SaveMasterNodeTerraformState(kubeCl *client.KubernetesClient, nodeName stri
 			Name:     fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
 			Manifest: getTerraformStateManifest,
 			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
+				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Secrets("d8-system").Update(context.TODO(), manifest.(*apiv1.Secret), metav1.UpdateOptions{})
+				_, err := kubeCl.CoreV1().Secrets("d8-system").Update(ctx, manifest.(*apiv1.Secret), metav1.UpdateOptions{})
 				return err
 			},
 		},
@@ -113,7 +115,7 @@ func SaveMasterNodeTerraformState(kubeCl *client.KubernetesClient, nodeName stri
 			Name:     `Secret "d8-masters-kubernetes-data-device-path"`,
 			Manifest: getKubernetesDataDevicePathManifest,
 			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
+				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
@@ -122,7 +124,7 @@ func SaveMasterNodeTerraformState(kubeCl *client.KubernetesClient, nodeName stri
 					return err
 				}
 				_, err = kubeCl.CoreV1().Secrets("d8-system").Patch(
-					context.TODO(),
+					ctx,
 					"d8-masters-kubernetes-data-device-path",
 					types.MergePatchType,
 					data,
@@ -155,7 +157,7 @@ func SaveMasterNodeTerraformState(kubeCl *client.KubernetesClient, nodeName stri
 		},
 	}
 
-	return retry.NewLoop(fmt.Sprintf("Save Terraform state for master Node %s", nodeName), 45, 10*time.Second).Run(func() error {
+	return retry.NewLoop(fmt.Sprintf("Save Terraform state for master Node %s", nodeName), 45, 10*time.Second).RunContext(ctx, func() error {
 		var allErrs *multierror.Error
 		for _, task := range tasks {
 			if err := task.CreateOrUpdate(); err != nil {
@@ -166,7 +168,7 @@ func SaveMasterNodeTerraformState(kubeCl *client.KubernetesClient, nodeName stri
 	})
 }
 
-func SaveClusterTerraformState(kubeCl *client.KubernetesClient, outputs *terraform.PipelineOutputs) error {
+func SaveClusterTerraformState(ctx context.Context, kubeCl *client.KubernetesClient, outputs *terraform.PipelineOutputs) error {
 	if outputs == nil || len(outputs.TerraformState) == 0 {
 		return ErrNoTerraformState
 	}
@@ -175,16 +177,16 @@ func SaveClusterTerraformState(kubeCl *client.KubernetesClient, outputs *terrafo
 		Name:     `Secret "d8-cluster-terraform-state"`,
 		Manifest: func() interface{} { return manifests.SecretWithTerraformState(outputs.TerraformState) },
 		CreateFunc: func(manifest interface{}) error {
-			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
+			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 			return err
 		},
 		UpdateFunc: func(manifest interface{}) error {
-			_, err := kubeCl.CoreV1().Secrets("d8-system").Update(context.TODO(), manifest.(*apiv1.Secret), metav1.UpdateOptions{})
+			_, err := kubeCl.CoreV1().Secrets("d8-system").Update(ctx, manifest.(*apiv1.Secret), metav1.UpdateOptions{})
 			return err
 		},
 	}
 
-	err := retry.NewLoop("Save Cluster Terraform state", 45, 10*time.Second).Run(task.CreateOrUpdate)
+	err := retry.NewLoop("Save Cluster Terraform state", 45, 10*time.Second).RunContext(ctx, task.CreateOrUpdate)
 	if err != nil {
 		return err
 	}
@@ -198,9 +200,9 @@ func SaveClusterTerraformState(kubeCl *client.KubernetesClient, outputs *terrafo
 		return err
 	}
 
-	return retry.NewLoop("Update cloud discovery data", 45, 10*time.Second).Run(func() error {
+	return retry.NewLoop("Update cloud discovery data", 45, 10*time.Second).RunContext(ctx, func() error {
 		_, err = kubeCl.CoreV1().Secrets("kube-system").Patch(
-			context.TODO(),
+			ctx,
 			"d8-provider-cluster-configuration",
 			types.MergePatchType,
 			patch,
@@ -210,10 +212,11 @@ func SaveClusterTerraformState(kubeCl *client.KubernetesClient, outputs *terrafo
 	})
 }
 
-func DeleteTerraformState(kubeCl *client.KubernetesClient, secretName string) error {
-	return retry.NewLoop(fmt.Sprintf("Delete Terraform state %s", secretName), 45, 10*time.Second).Run(func() error {
-		return kubeCl.CoreV1().Secrets("d8-system").Delete(context.TODO(), secretName, metav1.DeleteOptions{})
-	})
+func DeleteTerraformState(ctx context.Context, kubeCl *client.KubernetesClient, secretName string) error {
+	return retry.NewLoop(fmt.Sprintf("Delete Terraform state %s", secretName), 45, 10*time.Second).
+		RunContext(ctx, func() error {
+			return kubeCl.CoreV1().Secrets("d8-system").Delete(ctx, secretName, metav1.DeleteOptions{})
+		})
 }
 
 // NewClusterStateSaver returns StateSaver that saves intermediate terraform state to Secret.
@@ -231,6 +234,8 @@ func DeleteTerraformState(kubeCl *client.KubernetesClient, secretName string) er
 // '/tmp/dhctl/static-node-dhctl.043483477.tfstate' stat: 0 bytes, mode: -rw-------
 // got FS event "/tmp/dhctl/static-node-dhctl.043483477.tfstate": WRITE
 // '/tmp/dhctl/static-node-dhctl.043483477.tfstate' stat: 8840 bytes, mode: -rw-------
+
+// TODO(dhctl-for-commander-cancels): pass ctx to all kube client functions
 
 var (
 	_ terraform.SaverDestination = &ClusterStateSaver{}

@@ -133,7 +133,6 @@ type Executor struct {
 	killError error
 
 	timeout time.Duration
-	ctx     context.Context
 }
 
 func NewDefaultExecutor(cmd *exec.Cmd) *Executor {
@@ -200,11 +199,6 @@ func (e *Executor) CaptureStderr(buf *bytes.Buffer) *Executor {
 
 func (e *Executor) WithTimeout(timeout time.Duration) *Executor {
 	e.timeout = timeout
-	return e
-}
-
-func (e *Executor) WithContext(ctx context.Context) *Executor {
-	e.ctx = ctx
 	return e
 }
 
@@ -456,7 +450,7 @@ func (e *Executor) ConsumeLines(r io.Reader, fn func(l string)) {
 	}
 }
 
-func (e *Executor) Start() error {
+func (e *Executor) Start(ctx context.Context) error {
 	// setup stream handlers
 	log.DebugF("executor: start '%s'\n", e.cmd.String())
 	err := e.SetupStreamHandlers()
@@ -470,7 +464,7 @@ func (e *Executor) Start() error {
 	}
 	e.started = true
 
-	e.ProcessWait()
+	e.ProcessWait(ctx)
 
 	log.DebugF("Register stoppable: '%s'\n", e.cmd.String())
 	e.Session.RegisterStoppable(e)
@@ -478,7 +472,7 @@ func (e *Executor) Start() error {
 	return nil
 }
 
-func (e *Executor) ProcessWait() {
+func (e *Executor) ProcessWait(ctx context.Context) {
 	waitErrCh := make(chan error, 1)
 	e.waitCh = make(chan struct{}, 1)
 
@@ -487,16 +481,14 @@ func (e *Executor) ProcessWait() {
 		waitErrCh <- e.cmd.Wait()
 	}()
 
-	runCtx := e.ctx
-	if runCtx == nil {
-		runCtx = context.Background()
-	}
-
-	var runCtxCancel context.CancelFunc
+	var (
+		runCtx context.Context
+		runCtxCancel context.CancelFunc
+	)
 	if e.timeout > 0 {
-		runCtx, runCtxCancel = context.WithTimeout(runCtx, e.timeout)
+		runCtx, runCtxCancel = context.WithTimeout(ctx, e.timeout)
 	} else {
-		runCtx, runCtxCancel = context.WithCancel(runCtx)
+		runCtx, runCtxCancel = context.WithCancel(ctx)
 	}
 
 	e.doStop = runCtxCancel
@@ -591,10 +583,10 @@ func (e *Executor) Stop() {
 }
 
 // Run executes a command and blocks until it is finished or stopped.
-func (e *Executor) Run() error {
+func (e *Executor) Run(ctx context.Context) error {
 	log.DebugF("executor: run '%s'\n", e.cmd.String())
 
-	err := e.Start()
+	err := e.Start(ctx)
 	if err != nil {
 		return err
 	}

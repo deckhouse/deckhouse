@@ -15,6 +15,7 @@
 package preflight
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
 	"testing"
@@ -68,7 +69,10 @@ func TestCheckYandexWithNatInstanceConfig(t *testing.T) {
 			pc := &Checker{
 				installConfig: tt.fields.installConfig,
 			}
-			tt.wantErr(t, pc.CheckYandexWithNatInstanceConfig(), fmt.Sprintf("TestCheckYandexWithNatInstanceConfig()"))
+			tt.wantErr(t,
+				pc.CheckYandexWithNatInstanceConfig(context.Background()),
+				fmt.Sprintf("TestCheckYandexWithNatInstanceConfig()"),
+			)
 		})
 	}
 }

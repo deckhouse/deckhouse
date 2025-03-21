@@ -17,10 +17,10 @@ limitations under the License.
 package drain
 
 import (
+	"errors"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
 // This file contains default implementations of how to
@@ -34,7 +34,7 @@ func RunNodeDrain(drainer *Helper, nodeName string) error {
 	// TODO(justinsb): Ensure we have adequate e2e coverage of this function in library consumers
 	list, errs := drainer.GetPodsForDeletion(nodeName)
 	if errs != nil {
-		return utilerrors.NewAggregate(errs)
+		return errors.Join(errs...)
 	}
 	if warnings := list.Warnings(); warnings != "" {
 		fmt.Fprintf(drainer.ErrOut, "WARNING: %s\n", warnings)

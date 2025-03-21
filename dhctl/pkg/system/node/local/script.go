@@ -33,7 +33,6 @@ type Script struct {
 	sudo              bool
 	stdoutLineHandler func(line string)
 	timeout           time.Duration
-	ctx               context.Context
 	cleanupAfterRun   bool
 }
 
@@ -44,7 +43,7 @@ func NewScript(path string, args ...string) *Script {
 	}
 }
 
-func (s *Script) Execute() (stdout []byte, err error) {
+func (s *Script) Execute(ctx context.Context) (stdout []byte, err error) {
 	cmd := NewCommand(s.scriptPath, s.args...)
 	if s.sudo {
 		cmd.Sudo()
@@ -52,10 +51,6 @@ func (s *Script) Execute() (stdout []byte, err error) {
 
 	if s.timeout > 0 {
 		cmd.WithTimeout(s.timeout)
-	}
-
-	if s.ctx != nil {
-		cmd.WithContext(s.ctx)
 	}
 
 	if s.env != nil {
@@ -69,7 +64,7 @@ func (s *Script) Execute() (stdout []byte, err error) {
 		defer os.Remove(cmd.program)
 	}
 
-	err = cmd.Run()
+	err = cmd.Run(ctx)
 	if err != nil {
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) {
@@ -82,7 +77,7 @@ func (s *Script) Execute() (stdout []byte, err error) {
 	return cmd.StdoutBytes(), nil
 }
 
-func (s *Script) ExecuteBundle(parentDir, bundleDir string) (stdout []byte, err error) {
+func (s *Script) ExecuteBundle(ctx context.Context, parentDir, bundleDir string) (stdout []byte, err error) {
 	srcPath := filepath.Join(parentDir, bundleDir)
 	dstPath := filepath.Join("/var/lib/", bundleDir)
 	_ = os.RemoveAll(dstPath) // Cleanup from previous runs
@@ -103,11 +98,8 @@ func (s *Script) ExecuteBundle(parentDir, bundleDir string) (stdout []byte, err 
 	if s.sudo {
 		cmd.Sudo()
 	}
-	if s.ctx != nil {
-		cmd.WithContext(s.ctx)
-	}
 
-	if err = cmd.Run(); err != nil {
+	if err = cmd.Run(ctx); err != nil {
 		log.DebugF("stdout: %s\n\nstderr: %s\n", cmd.StdoutBytes(), cmd.StderrBytes())
 		return nil, fmt.Errorf("execute bundle: %w", err)
 	}
@@ -125,10 +117,6 @@ func (s *Script) WithStdoutHandler(handler func(string)) {
 
 func (s *Script) WithTimeout(timeout time.Duration) {
 	s.timeout = timeout
-}
-
-func (s *Script) WithContext(ctx context.Context) {
-	s.ctx = ctx
 }
 
 func (s *Script) WithEnvs(envs map[string]string) {

@@ -14,6 +14,8 @@
 
 package ssh
 
+import "context"
+
 type RunScriptReverseTunnelChecker struct {
 	client     *Client
 	scriptPath string
@@ -26,10 +28,10 @@ func NewRunScriptReverseTunnelChecker(c *Client, scriptPath string) *RunScriptRe
 	}
 }
 
-func (s *RunScriptReverseTunnelChecker) CheckTunnel() (string, error) {
+func (s *RunScriptReverseTunnelChecker) CheckTunnel(ctx context.Context) (string, error) {
 	script := s.client.UploadScript(s.scriptPath)
 	script.Sudo()
-	out, err := script.Execute()
+	out, err := script.Execute(ctx)
 	return string(out), err
 }
 
@@ -45,9 +47,9 @@ func NewRunScriptReverseTunnelKiller(c *Client, scriptPath string) *RunScriptRev
 	}
 }
 
-func (s *RunScriptReverseTunnelKiller) KillTunnel() (string, error) {
+func (s *RunScriptReverseTunnelKiller) KillTunnel(ctx context.Context) (string, error) {
 	script := s.client.UploadScript(s.scriptPath)
 	script.Sudo()
-	out, err := script.Execute()
+	out, err := script.Execute(ctx)
 	return string(out), err
 }
