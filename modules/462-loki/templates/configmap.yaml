@@ -19,7 +19,11 @@ data:
       {{- pick $lokiConfigSnakeCase "grpc_server_max_send_msg_size" "grpc_server_max_recv_msg_size" "grpc_server_max_concurrent_streams" | toYaml | nindent 6 }}
 
     limits_config:
+      split_queries_by_interval: 0s
       {{- omit $lokiConfigSnakeCase "grpc_server_max_send_msg_size" "grpc_server_max_recv_msg_size" "grpc_server_max_concurrent_streams" | toYaml | nindent 6 }}
+
+    query_range:
+      parallelise_shardable_queries: false
 
     common:
       path_prefix: /loki # WARNING: other data must be stored here too for force-expiration
