@@ -35,7 +35,7 @@ bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
     {{- $with_ca := "--tlscacert /opt/deckhouse/share/ca-certificates/registry-ca.crt" }}
   {{- end }}
 
-ctr image pull --user {{ .registry.auth | b64dec }} {{ $with_ca }} {{ $sandbox_image -}}
+ctr image pull --user {{ .registry.auth | b64dec }} {{ $with_ca }} {{ $sandbox_image }}
 
 bb-sync-file /etc/containerd/certs.d/_default/hosts.toml - << EOF
 [host."https://registry-1.docker.io"]
