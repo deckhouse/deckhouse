@@ -307,7 +307,6 @@ jobs:
 
           user_runner_id=$(id -u):$(id -g)
           echo "user_runner_id $user_runner_id"
-
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -597,7 +596,6 @@ jobs:
 
           user_runner_id=$(id -u):$(id -g)
           echo "user_runner_id $user_runner_id"
-
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -887,7 +885,6 @@ jobs:
 
           user_runner_id=$(id -u):$(id -g)
           echo "user_runner_id $user_runner_id"
-
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -1177,7 +1174,6 @@ jobs:
 
           user_runner_id=$(id -u):$(id -g)
           echo "user_runner_id $user_runner_id"
-
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -1467,7 +1463,6 @@ jobs:
 
           user_runner_id=$(id -u):$(id -g)
           echo "user_runner_id $user_runner_id"
-
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -1757,7 +1752,6 @@ jobs:
 
           user_runner_id=$(id -u):$(id -g)
           echo "user_runner_id $user_runner_id"
-
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
