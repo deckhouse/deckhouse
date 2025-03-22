@@ -63,25 +63,25 @@ The graphs are collected in convenient dashboards in Grafana, and there is a dri
 
 All the collected metrics have service labels that allow you to identify the controller's instance: `controller`, `app`, `instance`, and `endpoint` (displayed in `/prometheus/targets`).
 
-* All metrics (except for geo) exported by protobuf_exporter have three levels of detail:
-  * `ingress_nginx_overall_*` — the "bird's-eye view"; all the metrics have `namespace`, `vhost`, and `content_kind` labels attached;
-  * `ingress_nginx_detail_*` — — in addition to the `overall` level labels, `ingress`, `service`, `service_port` and `location` are added;
-  * `ingress_nginx_detail_backend_*` — some detailed data; they are collected on a per-backend basis. The `pod_ip` label is added to those listed for the detail level.
+- All metrics (except for geo) exported by protobuf_exporter have three levels of detail:
+  - `ingress_nginx_overall_*` — the "bird's-eye view"; all the metrics have `namespace`, `vhost`, and `content_kind` labels attached;
+  - `ingress_nginx_detail_*` — — in addition to the `overall` level labels, `ingress`, `service`, `service_port` and `location` are added;
+  - `ingress_nginx_detail_backend_*` — some detailed data; they are collected on a per-backend basis. The `pod_ip` label is added to those listed for the detail level.
 
-* The following metrics are collected for the overall and detail levels:
-  * `*_requests_total` — the total number of requests (additional labels: `scheme`, `method`);
-  * `*_responses_total` — the total number of responses (additional labels: `status`);
-  * `*_request_seconds_{sum,count,bucket}` — histogram of the response time;
-  * `*_bytes_received_{sum,count,bucket}` — histogram of the request size;
-  * `*_bytes_sent_{sum,count,bucket}` — histogram of the response size;
-  * `*_upstream_response_seconds_{sum,count,bucket}` — histogram of the upstream response time (the sum of the response times of all upstreams is used if several of them are present);
-  * `*_lowres_upstream_response_seconds_{sum,count,bucket}` — the same as above but less detailed (it is suitable for visualization, but not at all for calculating quantiles);
-  * `*_upstream_retries_{count,sum}` — the number of requests for which retries were sent to backends, and the number of retries;
+- The following metrics are collected for the overall and detail levels:
+  - `*_requests_total` — the total number of requests (additional labels: `scheme`, `method`);
+  - `*_responses_total` — the total number of responses (additional labels: `status`);
+  - `*_request_seconds_{sum,count,bucket}` — histogram of the response time;
+  - `*_bytes_received_{sum,count,bucket}` — histogram of the request size;
+  - `*_bytes_sent_{sum,count,bucket}` — histogram of the response size;
+  - `*_upstream_response_seconds_{sum,count,bucket}` — histogram of the upstream response time (the sum of the response times of all upstreams is used if several of them are present);
+  - `*_lowres_upstream_response_seconds_{sum,count,bucket}` — the same as above but less detailed (it is suitable for visualization, but not at all for calculating quantiles);
+  - `*_upstream_retries_{count,sum}` — the number of requests for which retries were sent to backends, and the number of retries;
 
-* The following metrics are collected for the overall level:
-  * `*_geohash_total` — the total number of requests with a specific geohash (additional labels: `geohash`, `place`);
+- The following metrics are collected for the overall level:
+  - `*_geohash_total` — the total number of requests with a specific geohash (additional labels: `geohash`, `place`);
 
-* The following metrics are collected for the detail_backend level:
-  * `*_lowres_upstream_response_seconds` — same as a similar metric for overall and detail;
-  * `*_responses_total` — the total number of responses (additional labels: `status_class` instead of `status`);
-  * `*_upstream_bytes_received_sum` — the sum of the backend's response sizes.
+- The following metrics are collected for the detail_backend level:
+  - `*_lowres_upstream_response_seconds` — same as a similar metric for overall and detail;
+  - `*_responses_total` — the total number of responses (additional labels: `status_class` instead of `status`);
+  - `*_upstream_bytes_received_sum` — the sum of the backend's response sizes.

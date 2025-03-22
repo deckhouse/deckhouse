@@ -1,0 +1,12 @@
+diff --git a/internal/ingress/controller/controller.go b/internal/ingress/controller/controller.go
+index 8a141f799..4aa94353f 100644
+--- a/internal/ingress/controller/controller.go
++++ b/internal/ingress/controller/controller.go
+@@ -938,6 +938,7 @@ func (n *NGINXController) getBackendServers(ingresses []*ingress.Ingress) ([]*in
+ 					nb := upstream.DeepCopy()
+ 					nb.Name = name
+ 					nb.Endpoints = endps
++					nb.Service = location.DefaultBackend
+ 					aUpstreams = append(aUpstreams, nb)
+ 					location.DefaultBackendUpstreamName = name
+ 
