@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -27,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/go_lib/pwgen"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 /*
@@ -112,7 +114,7 @@ func restoreOrGeneratePassword(input *go_hook.HookInput) error {
 		// Try to restore generated password from the Secret, or generate a new one.
 		pass, err := restoreGeneratedPasswordFromSnapshot(input.Snapshots[authSecretBinding], secretName)
 		if err != nil {
-			input.Logger.Infof("No password for '%s' in config values, generate new one: %s", appName, err)
+			input.Logger.Info("No password in config values, generate new one", slog.String("name", appName), log.Err(err))
 			pass = GeneratePassword()
 		}
 

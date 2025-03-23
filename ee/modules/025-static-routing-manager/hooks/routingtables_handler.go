@@ -7,6 +7,7 @@ package hooks
 
 import (
 	"fmt"
+	"log/slog"
 	"sort"
 	"strconv"
 	"strings"
@@ -22,6 +23,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/hooks/lib"
 	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/hooks/lib/v1alpha1"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -172,12 +174,12 @@ func routingTablesHandler(input *go_hook.HookInput) error {
 	// Init vars
 	routingTableIDMin, err := strconv.Atoi(input.Values.Get(routingTableIDMinPath).String())
 	if err != nil {
-		input.Logger.Errorf("unable to get routingTableIDMin from moduleConfig values")
+		input.Logger.Error("unable to get routingTableIDMin from moduleConfig values")
 		return nil
 	}
 	routingTableIDMax, err := strconv.Atoi(input.Values.Get(routingTableIDMaxPath).String())
 	if err != nil {
-		input.Logger.Errorf("unable to get routingTableIDMax from moduleConfig values")
+		input.Logger.Error("unable to get routingTableIDMax from moduleConfig values")
 		return nil
 	}
 	idi := idIterator{
@@ -242,7 +244,7 @@ func routingTablesHandler(input *go_hook.HookInput) error {
 			input.Logger.Infof("RoutingTable %v needs to be updated", rti.Name)
 			tmpDRTS.IPRoutingTableID, err = idi.pickNextFreeID()
 			if err != nil {
-				input.Logger.Warnf("can't pick free ID for RoutingTable %v, error: %v", rti.Name, err)
+				input.Logger.Warn("can't pick free ID for RoutingTable", slog.String("name", rti.Name), log.Err(err))
 				tmpDRTS.localErrors = append(tmpDRTS.localErrors, err.Error())
 			}
 		} else {
@@ -252,7 +254,7 @@ func routingTablesHandler(input *go_hook.HookInput) error {
 		// Generate desired AffectedNodeRoutingTables and ReadyNodeRoutingTables, and filling affectedNodes
 		validatedSelector, err := labels.ValidatedSelectorFromSet(rti.NodeSelector)
 		if err != nil {
-			input.Logger.Errorf("Invalid nodeSelector in RoutingTable %s: %v", rti.Name, err)
+			input.Logger.Error("Invalid nodeSelector in RoutingTable", slog.String("name", rti.Name), log.Err(err))
 			tmpDRTS.localErrors = append(tmpDRTS.localErrors, fmt.Sprintf("Invalid nodeSelector: %v", err))
 			continue
 		}

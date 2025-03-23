@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"fmt"
+	"log/slog"
 	"math/rand"
 	"os"
 	"strconv"
@@ -25,7 +26,6 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -97,7 +97,7 @@ func handleChaosMonkey(input *go_hook.HookInput) error {
 
 	nodeGroups, machines, nodes, err := prepareChaosData(input)
 	if err != nil {
-		input.Logger.Infof(err.Error()) // just info message, already have a victim
+		input.Logger.Info(err.Error()) // just info message, already have a victim
 		return nil
 	}
 
@@ -109,7 +109,7 @@ func handleChaosMonkey(input *go_hook.HookInput) error {
 
 		chaosPeriod, err := time.ParseDuration(ng.ChaosPeriod)
 		if err != nil {
-			input.Logger.Warnf("chaos period (%s) for NodeGroup:%s is invalid", ng.ChaosPeriod, ng.Name)
+			input.Logger.Warn("chaos period for NodeGroup is invalid", slog.String("period", ng.ChaosPeriod), slog.String("NodeGroup name", ng.Name))
 			continue
 		}
 
@@ -133,7 +133,7 @@ func handleChaosMonkey(input *go_hook.HookInput) error {
 
 		input.PatchCollector.MergePatch(victimAnnotationPatch, "machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", victimMachine.Name)
 
-		input.PatchCollector.Delete("machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", victimMachine.Name, object_patch.InBackground())
+		input.PatchCollector.DeleteInBackground("machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", victimMachine.Name)
 	}
 
 	return nil

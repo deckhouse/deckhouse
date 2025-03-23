@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"log/slog"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -22,6 +23,7 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 
 	"github.com/deckhouse/deckhouse/go_lib/filter"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -53,7 +55,7 @@ func discoveryPrometheusScrapeInterval(input *go_hook.HookInput) error {
 	if len(intervalScrapSnap) > 0 {
 		interval, err := time.ParseDuration(intervalScrapSnap[0].(string))
 		if err != nil {
-			input.Logger.Warnf("Prometheus scrape interval from ConfigMap was ignored. Use default: %vs. Cannot parse duration: %v", intervalInSeconds, err)
+			input.Logger.Warn("Prometheus scrape interval from ConfigMap was ignored. Use default. Cannot parse duration.", slog.Int("default_interval", intervalInSeconds), log.Err(err))
 		} else {
 			intervalInSeconds = int(interval.Seconds())
 		}

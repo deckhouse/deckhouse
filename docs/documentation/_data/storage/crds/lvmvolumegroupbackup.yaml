@@ -39,15 +39,15 @@ spec:
                 type:
                   type: string
                   description: |
-                    The type of a Volume Group. Might be:
-                    - Local, that is, local if the devices used are not distributed (not Shared LUN).
+                    The type of a Volume Group.
+                    - `Local` — that is, local if the devices used are not distributed (not Shared LUN).
                   enum:
                     - Local
                 blockDeviceNames:
                   type: array
                   description: |
                     An array of block device resource names to create a Volume Group.
-                    
+
                     > Note that the selected block devices must belong to the same node for a Local Volume Group.
                   items:
                     type: string
@@ -55,12 +55,12 @@ spec:
                   type: string
                   description: |
                     The desired name of a Volume Group. Must be unique for the node it is on.
-                    
+
                     > This field is immutable.
                 thinPools:
                   type: array
                   description: |
-                    The desired Thin-pool configuration.
+                    The desired thin-pool configuration.
                   items:
                     type: object
                     properties:
@@ -68,14 +68,14 @@ spec:
                         type: string
                         description: |
                           The desired thin pool name.
-                          
+
                           > This field is immutable.
                       size:
                         x-kubernetes-int-or-string: true
                         pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$|^[1-9][0-9]?%$|100%'
                         description: |
                           The desired thin pool size. Might be specified as number or percent size of total VG space.
-                          
+
                           > Note, that if you specify the percent size, the thin pool will be automatically extended when VG is extended.
                       allocationLimit:
                         type: string
@@ -92,7 +92,7 @@ spec:
                 thinPoolReady:
                   type: string
                   description: |
-                    Shows the healthy and total Thin-pool count.
+                    Shows the healthy and total thin-pool count.
                 configurationApplied:
                   type: string
                   description: |
@@ -163,9 +163,9 @@ spec:
                 thinPools:
                   type: array
                   description: |
-                    The current state of the Volume Group's Thin-pool.
-                    
-                    > Might be empty if there is no any Thin-pool in the Volume Group.
+                    The current state of the Volume Group's thin-pool.
+
+                    > Might be empty if there is no any thin-pool in the Volume Group.
                   items:
                     type: object
                     required:
@@ -176,15 +176,15 @@ spec:
                       name:
                         type: string
                         description: |
-                          The Thin-pool name.
+                          The thin-pool name.
                       actualSize:
                         type: string
                         description: |
-                          The Thin-pool capacity.
+                          The thin-pool capacity.
                       usedSize:
                         type: string
                         description: |
-                          The Thin-pool used size.
+                          The thin-pool used size.
                       allocatedSize:
                         type: string
                         description: |
@@ -202,7 +202,7 @@ spec:
                       ready:
                         type: boolean
                         description: |
-                          The Thin-pool health status.
+                          The thin-pool health status.
                       message:
                         type: string
                         description: |
@@ -251,7 +251,7 @@ spec:
         - jsonPath: .status.thinPoolReady
           name: ThinPools
           type: string
-          description: Current and total Thin pools count.
+          description: Current and total thin pools count.
         - jsonPath: .status.configurationApplied
           name: Configuration Applied
           type: string
@@ -284,4 +284,4 @@ spec:
         - jsonPath: .metadata.creationTimestamp
           name: Age
           type: date
-          description: The age of this resource
+          description: The age of this resource.

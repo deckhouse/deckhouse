@@ -15,6 +15,7 @@
 package check
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -149,7 +150,8 @@ func checkClusterState(kubeCl *client.KubernetesClient, metaConfig *config.MetaC
 		AdditionalStateSaverDestinations: stateSavers,
 	})
 
-	return terraform.CheckBaseInfrastructurePipeline(baseRunner, "Kubernetes cluster")
+	// TODO(dhctl-for-commander-cancels): pass ctx
+	return terraform.CheckBaseInfrastructurePipeline(context.TODO(), baseRunner, "Kubernetes cluster")
 }
 
 func checkAbandonedNodeState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, nodeGroup *NodeGroupOptions, nodeGroupState *state.NodeGroupTerraformState, nodeName string, terraformContext *terraform.TerraformContext, opts CheckStateOptions) (int, terraform.TerraformPlan, *terraform.PlanDestructiveChanges, error) {
@@ -196,7 +198,8 @@ func checkAbandonedNodeState(kubeCl *client.KubernetesClient, metaConfig *config
 		AdditionalStateSaverDestinations: stateSavers,
 	})
 
-	return terraform.CheckPipeline(nodeRunner, nodeName, terraform.PlanOptions{Destroy: true})
+	// TODO(dhctl-for-commander-cancels): pass ctx
+	return terraform.CheckPipeline(context.TODO(), nodeRunner, nodeName, terraform.PlanOptions{Destroy: true})
 }
 
 func checkNodeState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, nodeGroup *NodeGroupOptions, nodeName string, terraformContext *terraform.TerraformContext, opts CheckStateOptions) (int, terraform.TerraformPlan, *terraform.PlanDestructiveChanges, error) {
@@ -237,7 +240,8 @@ func checkNodeState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConf
 		AdditionalStateSaverDestinations: stateSavers,
 	})
 
-	return terraform.CheckPipeline(nodeRunner, nodeName, terraform.PlanOptions{})
+	// TODO(dhctl-for-commander-cancels): pass ctx
+	return terraform.CheckPipeline(context.TODO(), nodeRunner, nodeName, terraform.PlanOptions{})
 }
 
 type CheckStateOptions struct {
