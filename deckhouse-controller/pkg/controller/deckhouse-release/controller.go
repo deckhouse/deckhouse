@@ -21,11 +21,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/app"
 	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -45,6 +45,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
@@ -57,10 +58,6 @@ import (
 const (
 	metricUpdatingGroup = "d8_updating"
 	metricUpdatingName  = "d8_is_updating"
-
-	deckhouseNamespace          = "d8-system"
-	deckhouseDeployment         = "deckhouse"
-	deckhouseRegistrySecretName = "deckhouse-registry"
 )
 
 const defaultCheckInterval = 15 * time.Second
@@ -71,6 +68,7 @@ type MetricsUpdater interface {
 }
 
 type deckhouseReleaseReconciler struct {
+	init          *sync.WaitGroup
 	client        client.Client
 	dc            dependency.Container
 	logger        *log.Logger
@@ -98,6 +96,7 @@ func RegisterController(ctx context.Context, mgr manager.Manager, dc dependency.
 	}
 
 	r := &deckhouseReleaseReconciler{
+		init:             new(sync.WaitGroup),
 		client:           mgr.GetClient(),
 		dc:               dc,
 		logger:           logger,
@@ -108,6 +107,8 @@ func RegisterController(ctx context.Context, mgr manager.Manager, dc dependency.
 
 		metricsUpdater: releaseUpdater.NewMetricsUpdater(metricStorage, releaseUpdater.D8ReleaseBlockedMetricName),
 	}
+
+	r.init.Add(1)
 
 	// register preflight check
 	if err = mgr.Add(manager.RunnableFunc(r.preflight)); err != nil {
@@ -143,6 +144,8 @@ func RegisterController(ctx context.Context, mgr manager.Manager, dc dependency.
 }
 
 func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	r.init.Wait()
+
 	var res ctrl.Result
 
 	r.logger.Debug("release processing started", slog.String("resource_name", req.Name))
@@ -178,6 +181,8 @@ func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Req
 }
 
 func (r *deckhouseReleaseReconciler) preflight(ctx context.Context) error {
+	defer r.init.Done()
+
 	r.clusterUUID = utils.GetClusterUUID(ctx, r.client)
 
 	return nil
@@ -677,7 +682,7 @@ func (r *deckhouseReleaseReconciler) runReleaseDeploy(ctx context.Context, dr *v
 var ErrDeploymentContainerIsNotFound = errors.New("deployment container is not found")
 
 func (r *deckhouseReleaseReconciler) bumpDeckhouseDeployment(ctx context.Context, dr *v1alpha1.DeckhouseRelease) error {
-	key := client.ObjectKey{Namespace: deckhouseNamespace, Name: deckhouseDeployment}
+	key := client.ObjectKey{Namespace: app.NamespaceDeckhouse, Name: app.ModuleDeckhouse}
 
 	depl := new(appsv1.Deployment)
 
@@ -899,7 +904,7 @@ func (r *deckhouseReleaseReconciler) tagUpdate(ctx context.Context, leaderPod *c
 }
 
 func (r *deckhouseReleaseReconciler) getRegistrySecret(ctx context.Context) (*utils.DeckhouseRegistrySecret, error) {
-	key := types.NamespacedName{Namespace: deckhouseNamespace, Name: deckhouseRegistrySecretName}
+	key := types.NamespacedName{Namespace: app.NamespaceDeckhouse, Name: app.RegistrySecret}
 
 	secret := new(corev1.Secret)
 
