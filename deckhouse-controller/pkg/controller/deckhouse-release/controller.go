@@ -21,17 +21,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/app"
 	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
 	aoapp "github.com/flant/addon-operator/pkg/app"
 	"github.com/flant/shell-operator/pkg/metric"
-	"github.com/gofrs/uuid/v5"
 	gcr "github.com/google/go-containerregistry/pkg/name"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -80,7 +79,6 @@ type deckhouseReleaseReconciler struct {
 	updateSettings *helpers.DeckhouseSettingsContainer
 	metricStorage  metric.Storage
 
-	preflightCountDown      *sync.WaitGroup
 	clusterUUID             string
 	releaseVersionImageHash string
 
@@ -90,33 +88,31 @@ type deckhouseReleaseReconciler struct {
 	deckhouseVersion string
 }
 
-func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc dependency.Container,
+func RegisterController(ctx context.Context, mgr manager.Manager, dc dependency.Container,
 	moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer, metricStorage metric.Storage,
-	preflightCountDown *sync.WaitGroup, deckhouseVersion string, logger *log.Logger,
+	logger *log.Logger,
 ) error {
-	parsedVersion, err := semver.NewVersion(deckhouseVersion)
+	parsedVersion, err := semver.NewVersion(app.Version)
 	if err != nil {
 		return fmt.Errorf("parse deckhouse version: %w", err)
 	}
 
 	r := &deckhouseReleaseReconciler{
-		client:             mgr.GetClient(),
-		dc:                 dc,
-		logger:             logger,
-		moduleManager:      moduleManager,
-		updateSettings:     updateSettings,
-		metricStorage:      metricStorage,
-		preflightCountDown: preflightCountDown,
-		deckhouseVersion:   fmt.Sprintf("v%d.%d.%d", parsedVersion.Major(), parsedVersion.Minor(), parsedVersion.Patch()),
+		client:           mgr.GetClient(),
+		dc:               dc,
+		logger:           logger,
+		moduleManager:    moduleManager,
+		updateSettings:   updateSettings,
+		metricStorage:    metricStorage,
+		deckhouseVersion: fmt.Sprintf("v%d.%d.%d", parsedVersion.Major(), parsedVersion.Minor(), parsedVersion.Patch()),
 
 		metricsUpdater: releaseUpdater.NewMetricsUpdater(metricStorage, releaseUpdater.D8ReleaseBlockedMetricName),
 	}
 
-	// Add Preflight Check
-	if err = mgr.Add(manager.RunnableFunc(r.PreflightCheck)); err != nil {
+	// register preflight check
+	if err = mgr.Add(manager.RunnableFunc(r.preflight)); err != nil {
 		return fmt.Errorf("add a runnable function: %w", err)
 	}
-	r.preflightCountDown.Add(1)
 
 	// wait for cache sync
 	go func() {
@@ -181,29 +177,10 @@ func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	return r.createOrUpdateReconcile(ctx, release)
 }
 
-func (r *deckhouseReleaseReconciler) PreflightCheck(ctx context.Context) error {
-	r.clusterUUID = r.getClusterUUID(ctx)
-	r.preflightCountDown.Done()
+func (r *deckhouseReleaseReconciler) preflight(ctx context.Context) error {
+	r.clusterUUID = utils.GetClusterUUID(ctx, r.client)
 
 	return nil
-}
-
-func (r *deckhouseReleaseReconciler) getClusterUUID(ctx context.Context) string {
-	var secret corev1.Secret
-	key := types.NamespacedName{Namespace: "d8-system", Name: "deckhouse-discovery"}
-	err := r.client.Get(ctx, key, &secret)
-	if err != nil {
-		r.logger.Warn("read clusterUUID from secret", slog.Any("namespaced_name", key), log.Err(err))
-		r.logger.Warn("generating random uuid")
-
-		return uuid.Must(uuid.NewV4()).String()
-	}
-
-	if clusterUUID, ok := secret.Data["clusterUUID"]; ok {
-		return string(clusterUUID)
-	}
-
-	return uuid.Must(uuid.NewV4()).String()
 }
 
 func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context, dr *v1alpha1.DeckhouseRelease) (ctrl.Result, error) {

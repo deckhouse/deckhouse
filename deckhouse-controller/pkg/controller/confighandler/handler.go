@@ -17,6 +17,7 @@ package confighandler
 import (
 	"context"
 	"errors"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/app"
 	"sync"
 
 	"github.com/flant/addon-operator/pkg/kube_config_manager/backend"
@@ -28,18 +29,13 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 )
 
-const (
-	moduleDeckhouse = "deckhouse"
-	moduleGlobal    = "global"
-)
-
 var _ backend.ConfigHandler = &Handler{}
 
 type Handler struct {
 	client            client.Client
 	deckhouseConfigCh chan<- utils.Values
 
-	l             sync.Mutex
+	mtx           sync.Mutex
 	configEventCh chan<- config.Event
 }
 
@@ -51,8 +47,8 @@ func New(client client.Client, deckhouseConfigCh chan<- utils.Values) *Handler {
 }
 
 func (h *Handler) ModuleConfigChannelIsSet() bool {
-	h.l.Lock()
-	defer h.l.Unlock()
+	h.mtx.Lock()
+	defer h.mtx.Unlock()
 	return h.configEventCh != nil
 }
 
@@ -66,7 +62,7 @@ func (h *Handler) HandleEvent(moduleConfig *v1alpha1.ModuleConfig, op config.Op)
 		return
 	}
 
-	if moduleConfig.Name == moduleGlobal {
+	if moduleConfig.Name == app.ModuleGlobal {
 		kubeConfig.Global = &config.GlobalKubeConfig{
 			Values:   values,
 			Checksum: values.Checksum(),
@@ -80,7 +76,7 @@ func (h *Handler) HandleEvent(moduleConfig *v1alpha1.ModuleConfig, op config.Op)
 		}
 
 		// update deckhouse settings
-		if moduleConfig.Name == moduleDeckhouse {
+		if moduleConfig.Name == app.ModuleDeckhouse {
 			h.deckhouseConfigCh <- values
 		}
 	}
@@ -90,9 +86,9 @@ func (h *Handler) HandleEvent(moduleConfig *v1alpha1.ModuleConfig, op config.Op)
 
 // StartInformer does not start informer, it just registers channels, this name used just to implement interface
 func (h *Handler) StartInformer(_ context.Context, eventCh chan config.Event) {
-	h.l.Lock()
+	h.mtx.Lock()
 	h.configEventCh = eventCh
-	h.l.Unlock()
+	h.mtx.Unlock()
 }
 
 // LoadConfig loads initial modules config before starting
@@ -109,7 +105,7 @@ func (h *Handler) LoadConfig(ctx context.Context, _ ...string) (*config.KubeConf
 			return nil, err
 		}
 
-		if moduleConfig.Name == moduleGlobal {
+		if moduleConfig.Name == app.ModuleGlobal {
 			kubeConfig.Global = &config.GlobalKubeConfig{
 				Values:   values,
 				Checksum: values.Checksum(),
@@ -126,7 +122,7 @@ func (h *Handler) LoadConfig(ctx context.Context, _ ...string) (*config.KubeConf
 		}
 
 		// update deckhouse settings
-		if moduleConfig.Name == moduleDeckhouse {
+		if moduleConfig.Name == app.ModuleDeckhouse {
 			h.deckhouseConfigCh <- values
 		}
 	}
