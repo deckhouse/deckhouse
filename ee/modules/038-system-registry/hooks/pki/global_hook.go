@@ -220,5 +220,9 @@ func filterCertSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 	}
 
 	ret := secretDataToCertModel(secret, "tls")
-	return ret, nil
+
+	if ret != nil {
+		return *ret, nil
+	}
+	return "", nil
 }
