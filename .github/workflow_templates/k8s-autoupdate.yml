@@ -24,6 +24,9 @@ jobs:
       contents: write
     steps:
 {!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
+    - uses: {!{ index (ds "actions") "actions/setup-go" }!}
+      with:
+        go-version: '1.23.7'
     - name: Setup
       id: get_minimal_milestone
       uses: {!{ index (ds "actions") "actions/github-script" }!}
