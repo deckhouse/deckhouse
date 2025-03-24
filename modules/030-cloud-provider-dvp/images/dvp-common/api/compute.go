@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"github.com/deckhouse/virtualization/api/core/v1alpha2"
+	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -42,6 +43,42 @@ type ComputeService struct {
 
 func NewComputeService(service *Service) *ComputeService {
 	return &ComputeService{service}
+}
+
+func (c *ComputeService) CreateVM(ctx context.Context, machine *v1alpha2.VirtualMachine) (*v1alpha2.VirtualMachine, error) {
+	if machine.Namespace != "" && machine.Namespace != c.namespace {
+		return nil, fmt.Errorf("namespace mismatch: expected %s got %s", c.namespace, machine.ObjectMeta.Namespace)
+	}
+
+	machine.Namespace = c.namespace
+
+	if err := c.client.Create(ctx, machine); err != nil {
+		return nil, fmt.Errorf("create VirtualMachine resource: %w", err)
+	}
+
+	err := c.Wait(ctx, machine.Name, machine, func(obj client.Object) (bool, error) {
+		if obj == nil {
+			return false, nil
+		}
+
+		vm, ok := obj.(*v1alpha2.VirtualMachine)
+		if !ok {
+			return false, fmt.Errorf("expected a VirtualMachine but got a %T", obj)
+		}
+
+		expectedPhase := v1alpha2.MachineRunning
+		runPolicy := vm.Spec.RunPolicy
+		if runPolicy == v1alpha2.AlwaysOffPolicy || runPolicy == v1alpha2.ManualPolicy {
+			expectedPhase = v1alpha2.MachineStopped
+		}
+
+		return vm.Status.Phase == expectedPhase, nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("await VirtualMachine creation: %w", err)
+	}
+
+	return machine, nil
 }
 
 func (c *ComputeService) GetVMByName(ctx context.Context, name string) (*v1alpha2.VirtualMachine, error) {
@@ -110,6 +147,83 @@ func (c *ComputeService) GetVMByID(ctx context.Context, id string) (*v1alpha2.Vi
 	return instance, nil
 }
 
+func (c *ComputeService) DeleteVM(ctx context.Context, name string) error {
+	vm, err := c.GetVMByName(ctx, name)
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("get VirtualMachine resource: %w", err)
+	}
+
+	if err = c.client.Delete(ctx, vm); err != nil {
+		return fmt.Errorf("delete VirtualMachine resource: %w", err)
+	}
+
+	err = c.Wait(ctx, name, vm, func(obj client.Object) (bool, error) { return obj == nil, nil })
+	if err != nil {
+		return fmt.Errorf("await VirtualMachine deletion: %w", err)
+	}
+
+	return nil
+}
+
+func (c *ComputeService) StartVM(ctx context.Context, name string) error {
+	err := c.client.Create(ctx, &v1alpha2.VirtualMachineOperation{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: c.namespace,
+		},
+		Spec: v1alpha2.VirtualMachineOperationSpec{
+			Type:           v1alpha2.VMOPTypeStart,
+			VirtualMachine: name,
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("create VirtualMachineOperation resource: %w", err)
+	}
+
+	err = c.Wait(ctx, name, &v1alpha2.VirtualMachine{}, func(obj client.Object) (bool, error) {
+		if obj == nil {
+			return false, nil
+		}
+		return obj.(*v1alpha2.VirtualMachine).Status.Phase == v1alpha2.MachineRunning, nil
+	})
+	if err != nil {
+		return fmt.Errorf("wait for VM running phase: %w", err)
+	}
+
+	return nil
+}
+
+func (c *ComputeService) StopVM(ctx context.Context, name string) error {
+	err := c.client.Create(ctx, &v1alpha2.VirtualMachineOperation{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: c.namespace,
+		},
+		Spec: v1alpha2.VirtualMachineOperationSpec{
+			Type:           v1alpha2.VMOPTypeStop,
+			VirtualMachine: name,
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("create VirtualMachineOperation resource: %w", err)
+	}
+
+	err = c.Wait(ctx, name, &v1alpha2.VirtualMachine{}, func(obj client.Object) (bool, error) {
+		if obj == nil {
+			return false, nil
+		}
+		return obj.(*v1alpha2.VirtualMachine).Status.Phase == v1alpha2.MachineStopped, nil
+	})
+	if err != nil {
+		return fmt.Errorf("wait for VM starting phase: %w", err)
+	}
+
+	return nil
+}
+
 func (c *ComputeService) GetVMIPAddresses(vm *v1alpha2.VirtualMachine) ([]string, []string, error) {
 	if vm == nil {
 		return nil, nil, cloudprovider.InstanceNotFound
@@ -127,13 +241,13 @@ func (c *ComputeService) GetVMHostname(vm *v1alpha2.VirtualMachine) (string, err
 	return "", cloudprovider.InstanceNotFound
 }
 
-func (d *ComputeService) AttachDiskToVM(ctx context.Context, diskName string, vmHostname string) error {
-	vm, err := d.GetVMByHostname(ctx, vmHostname)
+func (c *ComputeService) AttachDiskToVM(ctx context.Context, diskName string, vmHostname string) error {
+	vm, err := c.GetVMByHostname(ctx, vmHostname)
 	if err != nil {
 		return err
 	}
 
-	vmbda, err := d.getVMBDA(ctx, diskName, vmHostname)
+	vmbda, err := c.getVMBDA(ctx, diskName, vmHostname)
 	if vmbda != nil && err == nil {
 		return nil
 	}
@@ -149,7 +263,7 @@ func (d *ComputeService) AttachDiskToVM(ctx context.Context, diskName string, vm
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("vmbda-%s-%s", diskName, vmHostname),
-			Namespace: d.namespace,
+			Namespace: c.namespace,
 			Labels: map[string]string{
 				attachmentDiskNameLabel:    diskName,
 				attachmentMachineNameLabel: vmHostname,
@@ -164,7 +278,7 @@ func (d *ComputeService) AttachDiskToVM(ctx context.Context, diskName string, vm
 		},
 	}
 
-	err = d.client.Create(ctx, vmbda)
+	err = c.client.Create(ctx, vmbda)
 	if err != nil && !k8serrors.IsAlreadyExists(err) {
 		return err
 	}
@@ -172,29 +286,29 @@ func (d *ComputeService) AttachDiskToVM(ctx context.Context, diskName string, vm
 	return nil
 }
 
-func (d *ComputeService) DetachDiskFromVM(ctx context.Context, diskName string, vmName string) error {
-	vmbda, err := d.getVMBDA(ctx, diskName, vmName)
+func (c *ComputeService) DetachDiskFromVM(ctx context.Context, diskName string, vmName string) error {
+	vmbda, err := c.getVMBDA(ctx, diskName, vmName)
 	if err != nil {
 		return err
 	}
 
-	err = d.client.Delete(ctx, vmbda)
+	err = c.client.Delete(ctx, vmbda)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (d *ComputeService) getVMBDA(ctx context.Context, diskName string, vmHostname string) (*v1alpha2.VirtualMachineBlockDeviceAttachment, error) {
+func (c *ComputeService) getVMBDA(ctx context.Context, diskName string, vmHostname string) (*v1alpha2.VirtualMachineBlockDeviceAttachment, error) {
 	selector, err := labels.Parse(fmt.Sprintf("%s=%s,%s=%s", attachmentDiskNameLabel, diskName, attachmentMachineNameLabel, vmHostname))
 	if err != nil {
 		return nil, err
 	}
 
 	var vmbdas v1alpha2.VirtualMachineBlockDeviceAttachmentList
-	err = d.client.List(ctx, &vmbdas, &client.ListOptions{
+	err = c.client.List(ctx, &vmbdas, &client.ListOptions{
 		LabelSelector: selector,
-		Namespace:     d.namespace,
+		Namespace:     c.namespace,
 	})
 	if err != nil {
 		return nil, err
@@ -209,4 +323,31 @@ func (d *ComputeService) getVMBDA(ctx context.Context, diskName string, vmHostna
 	}
 
 	return &vmbdas.Items[0], nil
+}
+
+func (c *ComputeService) CreateCloudInitProvisioningSecret(ctx context.Context, name string, userData []byte) error {
+	s := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: c.namespace,
+		},
+		Type:       v1alpha2.SecretTypeCloudInit,
+		StringData: map[string]string{"userData": string(userData)},
+	}
+
+	if _, err := c.clientset.CoreV1().Secrets(c.namespace).Create(ctx, s, metav1.CreateOptions{}); err != nil {
+		return fmt.Errorf("create '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, err)
+	}
+	return nil
+}
+
+func (c *ComputeService) DeleteCloudInitProvisioningSecret(ctx context.Context, name string) error {
+	if err := c.clientset.CoreV1().Secrets(c.namespace).Delete(ctx, name, metav1.DeleteOptions{}); err != nil {
+		if k8serrors.IsNotFound(err) {
+			return nil
+		}
+
+		return fmt.Errorf("delete '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, err)
+	}
+	return nil
 }

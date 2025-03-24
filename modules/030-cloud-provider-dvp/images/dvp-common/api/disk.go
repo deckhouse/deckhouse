@@ -105,6 +105,52 @@ func (d *DiskService) CreateDisk(ctx context.Context, diskName string, diskSize 
 	return newDisk, nil
 }
 
+func (d *DiskService) CreateDiskFromDataSource(
+	ctx context.Context,
+	diskName string,
+	diskSize resource.Quantity,
+	diskStorageClass string,
+	imageDataSource *v1alpha2.VirtualDiskDataSource,
+) (*v1alpha2.VirtualDisk, error) {
+	vmd := v1alpha2.VirtualDisk{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       v1alpha2.VirtualDiskKind,
+			APIVersion: v1alpha2.Version,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      diskName,
+			Namespace: d.namespace,
+			Labels: map[string]string{
+				diskNameLabel: diskName,
+			},
+		},
+		Spec: v1alpha2.VirtualDiskSpec{
+			DataSource: imageDataSource,
+			PersistentVolumeClaim: v1alpha2.VirtualDiskPersistentVolumeClaim{
+				StorageClass: &diskStorageClass,
+				Size:         &diskSize,
+			},
+		},
+	}
+
+	err := d.client.Create(ctx, &vmd)
+	if err != nil && !k8serrors.IsAlreadyExists(err) {
+		return nil, err
+	}
+
+	err = d.WaitDiskCreation(ctx, diskName)
+	if err != nil {
+		return nil, err
+	}
+
+	newDisk, err := d.GetDiskByName(ctx, diskName)
+	if err != nil {
+		return nil, err
+	}
+
+	return newDisk, nil
+}
+
 func (d *DiskService) GetDiskByName(ctx context.Context, diskName string) (*v1alpha2.VirtualDisk, error) {
 	disks, err := d.ListDisksByName(ctx, diskName)
 	if err != nil {
