@@ -152,8 +152,8 @@ shell:
   - sed -i '/^build --action_env=CC --host_action_env=CC/d' envoy.bazelrc
   - sed -i '/^build --action_env=CXX --host_action_env=CXX/d' envoy.bazelrc
   - sed -i '/^build --action_env=LLVM_CONFIG --host_action_env=LLVM_CONFIG/d' envoy.bazelrc
-  - sed -i '/^build --incompatible_merge_fixed_and_default_shell_env/a build --action_env=CC=/usr/lib/llvm-17.0/bin/clang --host_action_env=СС=/usr/lib/llvm-17.0/bin/clang' envoy.bazelrc
-  - sed -i '/^build --incompatible_merge_fixed_and_default_shell_env/a build --action_env=CCX=/usr/lib/llvm-17.0/bin/clang++ --host_action_env=ССX=/usr/lib/llvm-17.0/bin/clang++' envoy.bazelrc
+  - sed -i '/^build --incompatible_merge_fixed_and_default_shell_env/a build --action_env=CC=/usr/lib/llvm-17.0/bin/clang --host_action_env=CC=/usr/lib/llvm-17.0/bin/clang' envoy.bazelrc
+  - sed -i '/^build --incompatible_merge_fixed_and_default_shell_env/a build --action_env=CCX=/usr/lib/llvm-17.0/bin/clang++ --host_action_env=CCX=/usr/lib/llvm-17.0/bin/clang++' envoy.bazelrc
   - sed -i '/^build --incompatible_merge_fixed_and_default_shell_env/a build --action_env=LD=/usr/lib/llvm-17.0/bin/ld.lld --host_action_env=LD=/usr/lib/llvm-17.0/bin/ld.lld' envoy.bazelrc
   - sed -i '/^build --incompatible_merge_fixed_and_default_shell_env/a build --action_env=LLVM_CONFIG=/usr/lib/llvm-17.0/bin/llvm-config  --host_action_env=LLVM_CONFIG=/usr/lib/llvm-17.0/bin/llvm-config' envoy.bazelrc
   # - sed -i '/^build:clang --action_env=CXX=clang++ --host_action_env=CXX=clang++/a build:clang --action_env=CCC_OVERRIDE_OPTIONS="^--gcc-install-dir=/usr/bin/../lib64/gcc/x86_64-alt-linux/11"' envoy.bazelrc
