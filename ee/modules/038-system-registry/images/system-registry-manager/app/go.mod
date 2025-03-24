@@ -14,13 +14,11 @@ require (
 	github.com/go-logr/logr v1.4.2
 	github.com/go-ozzo/ozzo-validation v3.6.0+incompatible
 	github.com/samber/slog-chi v1.12.3
-	github.com/stretchr/testify v1.9.0
 	golang.org/x/crypto v0.21.0
 	k8s.io/api v0.30.3
 	k8s.io/apimachinery v0.30.3
 	k8s.io/client-go v0.30.3
 	sigs.k8s.io/controller-runtime v0.18.5
-	sigs.k8s.io/yaml v1.4.0
 )
 
 require (
@@ -54,7 +52,6 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pelletier/go-toml v1.9.3 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.19.0 // indirect
 	github.com/prometheus/client_model v0.5.0 // indirect
 	github.com/prometheus/common v0.48.0 // indirect
@@ -84,4 +81,5 @@ require (
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
+	sigs.k8s.io/yaml v1.4.0 // indirect
 )
