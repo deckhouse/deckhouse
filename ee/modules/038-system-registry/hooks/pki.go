@@ -15,7 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-type pkiSecretModel struct {
+type pkiLegacyModel struct {
 	CA    pkiCertModel
 	Token pkiCertModel
 }
@@ -30,7 +30,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        "/modules/system-registry/pki",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "pki",
+			Name:       "legacy",
 			ApiVersion: "v1",
 			Kind:       "Secret",
 			NameSelector: &types.NameSelector{
@@ -51,7 +51,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					return "", fmt.Errorf("failed to convert pki secret to struct: %v", err)
 				}
 
-				ret := pkiSecretModel{
+				ret := pkiLegacyModel{
 					CA: pkiCertModel{
 						Cert: string(secret.Data["registry-ca.crt"]),
 						Key:  string(secret.Data["registry-ca.key"]),
@@ -65,31 +65,124 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				return ret, nil
 			},
 		},
+		{
+			Name:       "ca",
+			ApiVersion: "v1",
+			Kind:       "Secret",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{
+					"registry-pki-ca",
+				},
+			},
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"d8-system"},
+				},
+			},
+			FilterFunc: pkiFilterCertSecret,
+		},
+		{
+			Name:       "token",
+			ApiVersion: "v1",
+			Kind:       "Secret",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{
+					"registry-pki-token",
+				},
+			},
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"d8-system"},
+				},
+			},
+			FilterFunc: pkiFilterCertSecret,
+		},
+		{
+			Name:       "proxy",
+			ApiVersion: "v1",
+			Kind:       "Secret",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{
+					"registry-pki-proxy",
+				},
+			},
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"d8-system"},
+				},
+			},
+			FilterFunc: pkiFilterCertSecret,
+		},
 	},
 }, func(input *go_hook.HookInput) error {
-	pkiSnaps := input.Snapshots["pki"]
+	caSnaps := input.Snapshots["ca"]
+	tokenSnaps := input.Snapshots["token"]
+	proxySnaps := input.Snapshots["proxy"]
+	legacySnaps := input.Snapshots["pki"]
 
-	var (
-		pkiSecret pkiSecretModel
-	)
+	var caCert, tokenCert, proxyCert *pkiCertModel
 
-	if len(pkiSnaps) == 1 {
-		pkiSecret = pkiSnaps[0].(pkiSecretModel)
+	if len(caSnaps) == 1 {
+		val := caSnaps[0].(pkiCertModel)
+		caCert = &val
 	}
 
-	if pkiSecret.CA.Cert == "" && pkiSecret.CA.Key == "" {
+	if len(tokenSnaps) == 1 {
+		val := tokenSnaps[0].(pkiCertModel)
+		tokenCert = &val
+	}
+
+	if len(proxySnaps) == 1 {
+		val := proxySnaps[0].(pkiCertModel)
+		proxyCert = &val
+	}
+
+	if caCert == nil && len(legacySnaps) == 1 {
+		val := legacySnaps[0].(pkiLegacyModel)
+
+		if val.CA.Cert != "" && val.CA.Key != "" {
+			caCert = &val.CA
+
+			if val.Token.Cert != "" && val.Token.Key != "" {
+				tokenCert = &val.Token
+			}
+		}
+	}
+
+	if caCert == nil {
 		// No CA = no show
 		input.Values.Remove("systemRegistry.internal.pki")
 		return nil
 	}
+	input.Values.Set("systemRegistry.internal.pki.ca", caCert)
 
-	input.Values.Set("systemRegistry.internal.pki.ca", pkiSecret.CA)
-
-	if pkiSecret.Token.Cert != "" && pkiSecret.Token.Key != "" {
-		input.Values.Set("systemRegistry.internal.pki.token", pkiSecret.CA)
+	if tokenCert != nil {
+		input.Values.Set("systemRegistry.internal.pki.token", tokenCert)
 	} else {
 		input.Values.Remove("systemRegistry.internal.pki.token")
 	}
 
+	if proxyCert != nil {
+		input.Values.Set("systemRegistry.internal.pki.proxy", tokenCert)
+	} else {
+		input.Values.Remove("systemRegistry.internal.pki.proxy")
+	}
+
 	return nil
 })
+
+func pkiFilterCertSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var secret v1core.Secret
+
+	err := sdk.FromUnstructured(obj, &secret)
+	if err != nil {
+		return "", fmt.Errorf("failed to convert pki secret to struct: %v", err)
+	}
+
+	ret := pkiCertModel{
+		Cert: string(secret.Data["tls.crt"]),
+		Key:  string(secret.Data["tls.key"]),
+	}
+
+	return ret, nil
+}
