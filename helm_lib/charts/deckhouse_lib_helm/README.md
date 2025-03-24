@@ -39,6 +39,8 @@
 | [helm_lib_module_image_digest_no_fail](#helm_lib_module_image_digest_no_fail) |
 | **Module Ingress Class** |
 | [helm_lib_module_ingress_class](#helm_lib_module_ingress_class) |
+| **Module Ingress Snippets** |
+| [helm_lib_module_ingress_configuration_snippet](#helm_lib_module_ingress_configuration_snippet) |
 | **Module Init Container** |
 | [helm_lib_module_init_container_chown_nobody_volume](#helm_lib_module_init_container_chown_nobody_volume) |
 | [helm_lib_module_init_container_chown_deckhouse_volume](#helm_lib_module_init_container_chown_deckhouse_volume) |
@@ -460,6 +462,17 @@ list:
 #### Arguments
 
 -  Template context with .Values, .Chart, etc 
+
+## Module Ingress Snippets
+
+### helm_lib_module_ingress_configuration_snippet
+
+ returns nginx ingress additional headers (e.g. HSTS) if HTTPS is enabled 
+
+#### Usage
+
+`nginx.ingress.kubernetes.io/configuration-snippet: | {{ include "helm_lib_module_ingress_configuration_snippet" . | nindent 6 }} `
+
 
 ## Module Init Container
 
