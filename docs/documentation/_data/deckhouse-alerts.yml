@@ -517,6 +517,17 @@ alerts:
         Bashible-apiserver is locked for too long
       severity: "6"
       markupFormat: markdown
+    - name: D8CephCsiModuleDeprecated
+      sourceFile: modules/031-ceph-csi/monitoring/prometheus-rules/deprecated-module-alert.yaml
+      moduleUrl: 031-ceph-csi
+      module: ceph-csi
+      edition: ce
+      description: |
+        CephCsi module is deprecated. Please, use [csi-ceph](https://deckhouse.io/products/kubernetes-platform/modules/csi-ceph/stable/) module instead.
+      summary: |
+        CephCsi module is deprecated.
+      severity: "5"
+      markupFormat: markdown      
     - name: D8CertExporterPodIsNotReady
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/certificates/certificates-exporter-health.yaml
       moduleUrl: 340-extended-monitoring
