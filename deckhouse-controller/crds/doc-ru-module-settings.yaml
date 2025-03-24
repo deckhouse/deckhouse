@@ -1,42 +1,26 @@
 spec:
 versions:
   - name: v1alpha1
-    served: true
-    storage: true
     schema:
       openAPIV3Schema:
         description: |
           CRD для отображения настроек модулей Deckhouse.
           Определяет список версий настроек модуля.
-        type: object
-        required:
-          - spec
         properties:
           apiVersion:
-            type: string
             description: Версия API объекта.
           kind:
-            type: string
             description: Тип объекта.
           metadata:
-            type: object
             description: Метаданные объекта, включая имя, метки и аннотации.
           spec:
-            type: object
             description: Спецификация настроек модуля.
             properties:
               versions:
-                type: array
                 description: Список версий настроек модуля. Каждая версия включает имя и схему.
                 items:
-                  type: object
-                  required:
-                    - name
                   properties:
                     name:
-                      type: string
                       description: Версия настроек модуля.
                     schema:
-                      type: object
                       description: Схема настроек для данной версии модуля.
-                      x-kubernetes-preserve-unknown-fields: true
