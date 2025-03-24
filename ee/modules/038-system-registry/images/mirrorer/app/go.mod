@@ -2,7 +2,9 @@ module mirrorer
 
 go 1.23.1
 
-replace github.com/deckhouse/deckhouse/pkg/log => ../../../../../../pkg/log
+replace (
+  github.com/deckhouse/deckhouse/pkg/log => ../../../../../../pkg/log
+)
 
 require (
 	github.com/deckhouse/deckhouse/pkg/log v0.0.0-00010101000000-000000000000

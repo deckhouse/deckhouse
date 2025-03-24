@@ -2,9 +2,10 @@ module embeded-registry-manager
 
 go 1.23.1
 
-replace github.com/deckhouse/deckhouse/pkg/log => ../../../../../../pkg/log
-
-replace github.com/deckhouse/deckhouse/go_lib/system-registry-manager => ../../../../../../go_lib/system-registry-manager
+replace (
+	github.com/deckhouse/deckhouse/go_lib/system-registry-manager => ../../../../../../go_lib/system-registry-manager
+	github.com/deckhouse/deckhouse/pkg/log => ../../../../../../pkg/log
+)
 
 require (
 	github.com/deckhouse/deckhouse/go_lib/system-registry-manager v0.0.0-00010101000000-000000000000
