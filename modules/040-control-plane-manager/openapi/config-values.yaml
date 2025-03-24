@@ -44,7 +44,12 @@ properties:
             description: |
               A list of API audiences to add when provisioning ServiceAccount tokens.
 
-              The defautl audiences is automatically generated based on the template `https://kubernetes.default.svc.${clusterDomain}`, for example, `https://kubernetes.default.svc.cluster.local`.
+              The default audiences list includes:
+
+              - `serviceAccount.issuer`, if specified.
+              - `serviceAccount.additionalAPIIssuers`, if specified.
+              - `https://kubernetes.default.svc.${clusterDomain}`, for example, `https://kubernetes.default.svc.cluster.local` – this audience is always added for backward compatibility.
+
               The service account token authenticator will validate that tokens used against the API are bound to at least one of these audiences.
 
               This option is beneficial when migrating from one API issuer to another.
