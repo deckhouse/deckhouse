@@ -19,12 +19,11 @@ package template
 import (
 	"context"
 	"crypto/sha256"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"hash"
 	"sort"
 
+	"bashible-apiserver/pkg/template/registry"
 	"github.com/mohae/deepcopy"
 	"github.com/pkg/errors"
 	"sigs.k8s.io/yaml"
@@ -35,7 +34,7 @@ type ContextBuilder struct {
 
 	stepsStorage *StepsStorage
 
-	registryData     registry
+	registryData     registry.RegistryData
 	clusterInputData inputData
 	versionMap       map[string]interface{}
 	imagesDigests    map[string]map[string]string // module: { image_name: tag }
@@ -65,7 +64,7 @@ type BashibleContextData struct {
 
 	Images     map[string]map[string]string `json:"images" yaml:"images"`
 	VersionMap map[string]interface{}       `json:"versionMap" yaml:"versionMap"`
-	Registry   registry                     `json:"registry" yaml:"registry"`
+	Registry   registry.RegistryData        `json:"registry" yaml:"registry"`
 	Proxy      map[string]interface{}       `json:"proxy" yaml:"proxy"`
 }
 
@@ -85,7 +84,7 @@ func (bd BashibleContextData) Map() map[string]interface{} {
 	return result
 }
 
-func (cb *ContextBuilder) SetRegistryData(rd registry) {
+func (cb *ContextBuilder) SetRegistryData(rd registry.RegistryData) {
 	cb.registryData = rd
 }
 
@@ -328,65 +327,6 @@ func (cb *ContextBuilder) getNodeUserConfigurations(nodeGroup string) []*UserCon
 	return users
 }
 
-func (rid *registryInputData) FromMap(m map[string][]byte) {
-	if v, ok := m["address"]; ok {
-		rid.Address = string(v)
-	}
-	if v, ok := m["path"]; ok {
-		rid.Path = string(v)
-	}
-
-	if v, ok := m["scheme"]; ok {
-		rid.Scheme = string(v)
-	}
-
-	if v, ok := m["ca"]; ok {
-		rid.CA = string(v)
-	}
-
-	if v, ok := m[".dockerconfigjson"]; ok {
-		rid.DockerConfig = v
-	}
-
-	if v, ok := m["registryMode"]; ok {
-		rid.RegistryMode = string(v)
-	} else {
-		rid.RegistryMode = "Direct"
-	}
-}
-
-func (rid registryInputData) toRegistry() registry {
-	var auth string
-
-	if len(rid.DockerConfig) > 0 {
-		var dcfg dockerCfg
-		err := json.Unmarshal(rid.DockerConfig, &dcfg)
-		if err != nil {
-			panic(err)
-		}
-
-		if registryObj, ok := dcfg.Auths[rid.Address]; ok {
-			switch {
-			case registryObj.Auth != "":
-				auth = registryObj.Auth
-			case registryObj.Username != "" && registryObj.Password != "":
-				authRaw := fmt.Sprintf("%s:%s", registryObj.Username, registryObj.Password)
-				auth = base64.StdEncoding.EncodeToString([]byte(authRaw))
-			}
-		}
-	}
-
-	return registry{
-		Address:      rid.Address,
-		Path:         rid.Path,
-		Scheme:       rid.Scheme,
-		CA:           rid.CA,
-		DockerCFG:    rid.DockerConfig,
-		Auth:         auth,
-		RegistryMode: rid.RegistryMode,
-	}
-}
-
 func versionMapFromMap(m map[string]interface{}) versionMapWrapper {
 	var res versionMapWrapper
 
@@ -438,7 +378,7 @@ type bashibleContext struct {
 
 	// Enrich with images and registry
 	Images            map[string]map[string]string `json:"images" yaml:"images"`
-	Registry          *registry                    `json:"registry" yaml:"registry"`
+	Registry          *registry.RegistryData       `json:"registry" yaml:"registry"`
 	Proxy             map[string]interface{}       `json:"proxy" yaml:"proxy"`
 	CloudProviderType string                       `json:"cloudProviderType" yaml:"cloudProviderType"`
 	PackagesProxy     map[string]interface{}       `json:"packagesProxy" yaml:"packagesProxy"`
@@ -485,7 +425,7 @@ type tplContextCommon struct {
 	Normal  normal `json:"normal" yaml:"normal"`
 
 	Images   map[string]map[string]string `json:"images" yaml:"images"`
-	Registry registry                     `json:"registry" yaml:"registry"`
+	Registry registry.RegistryData        `json:"registry" yaml:"registry"`
 
 	Proxy          map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
 	PackagesProxy  map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
@@ -521,34 +461,6 @@ type normal struct {
 	ApiserverEndpoints []string          `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
 	KubernetesCA       string            `json:"kubernetesCA" yaml:"kubernetesCA"`
 	ModuleSourcesCA    map[string]string `json:"moduleSourcesCA" yaml:"moduleSourcesCA"`
-}
-
-type registry struct {
-	Address      string `json:"address" yaml:"address"`
-	Path         string `json:"path" yaml:"path"`
-	Scheme       string `json:"scheme" yaml:"scheme"`
-	CA           string `json:"ca,omitempty" yaml:"ca,omitempty"`
-	DockerCFG    []byte `json:"dockerCfg" yaml:"dockerCfg"`
-	Auth         string `json:"auth" yaml:"auth"`
-	RegistryMode string `json:"registryMode" yaml:"registryMode"`
-}
-
-// input from secret
-type registryInputData struct {
-	Address      string `json:"address" yaml:"address"`
-	Path         string `json:"path" yaml:"path"`
-	Scheme       string `json:"scheme" yaml:"scheme"`
-	CA           string `json:"ca,omitempty" yaml:"ca,omitempty"`
-	DockerConfig []byte `json:".dockerconfigjson" yaml:".dockerconfigjson"`
-	RegistryMode string `json:"registryMode" yaml:"registryMode"`
-}
-
-type dockerCfg struct {
-	Auths map[string]struct {
-		Auth     string `json:"auth"`
-		Username string `json:"username"`
-		Password string `json:"password"`
-	} `json:"auths"`
 }
 
 type inputData struct {
