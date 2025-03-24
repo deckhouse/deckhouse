@@ -31,6 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/process"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 type SSHCommand struct {
@@ -90,7 +91,18 @@ func NewSSHCommand(client *Client, name string, arg ...string) *SSHCommand {
 			// cmd = cmd + args[i] + " "
 		}
 	}
-	session, err := client.GetClient().NewSession()
+
+	var session *ssh.Session
+	var err error
+
+	err = retry.NewSilentLoop("Get bastion SSH client", 10, 5*time.Second).Run(func() error {
+		session, err = client.sshClient.NewSession()
+		if err != nil {
+			client.Start()
+		}
+		return err
+	})
+
 	if err != nil {
 		panic(err)
 	}
@@ -138,6 +150,7 @@ func (c *SSHCommand) Start() error {
 	}
 
 	log.DebugF("Register stoppable: '%s'\n", command)
+	c.sshClient.RegisterSession(c.Session)
 
 	return nil
 }
@@ -630,10 +643,10 @@ func (c *SSHCommand) Stop() {
 	// <-c.waitCh
 	log.DebugF("Stopped '%s' \n", c.cmd)
 	c.closePipes()
-	c.Session.Signal(ssh.SIGKILL)
-	log.DebugF("Sending SIGINT to process '%s'\n", c.cmd)
+	// log.DebugF("Sending SIGINT to process '%s'\n", c.cmd)
 	c.Session.Signal(ssh.SIGINT)
-	log.DebugF("Signal sent\n")
+	// log.DebugF("Signal sent\n")
+	c.Session.Signal(ssh.SIGKILL)
 }
 
 func (c *SSHCommand) setWaitError(err error) {

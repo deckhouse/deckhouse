@@ -104,6 +104,8 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 		c.lastState = state
 	}
 
+	defer c.Params.SSHClient.Stop()
+
 	if err := c.applyParams(); err != nil {
 		return nil, err
 	}

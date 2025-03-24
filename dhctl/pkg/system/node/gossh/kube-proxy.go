@@ -19,6 +19,7 @@ import (
 	"math/rand"
 	"os"
 	"regexp"
+	"strconv"
 	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -71,10 +72,24 @@ func (k *KubeProxy) Start(useLocalPort int) (port string, err error) {
 	}()
 
 	proxyCommandErrorCh := make(chan error, 1)
-	proxy, port, err := k.runKubeProxy(proxyCommandErrorCh, startID)
-	if err != nil {
-		log.DebugF("[%d] Got error from runKubeProxy func: %v\n", startID, err)
-		return "", err
+	var proxy *SSHCommand
+	for {
+		proxy, port, err = k.runKubeProxy(proxyCommandErrorCh, startID)
+		if err != nil {
+			log.DebugF("[%d] Got error from runKubeProxy func: %v\n", startID, err)
+			return "", err
+		}
+
+		k.stop = false
+		portNum, err := strconv.Atoi(port)
+		if err != nil {
+			continue
+		}
+		if portNum > 1024 {
+			break
+		}
+		log.DebugF("Proxy run on priveleged port %s and will be stopped and restarted\n", port)
+		k.Stop(startID)
 	}
 
 	log.DebugF("[%d] Proxy was started successfully\n", startID)

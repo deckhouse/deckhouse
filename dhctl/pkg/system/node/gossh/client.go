@@ -34,6 +34,7 @@ func NewClient(session *session.Session, privKeys []session.AgentPrivateKey) *Cl
 		Settings:    session,
 		privateKeys: privKeys,
 		live:        false,
+		sessionList: make([]*ssh.Session, 5),
 	}
 }
 
@@ -52,6 +53,7 @@ type Client struct {
 	live     bool
 
 	kubeProxies []*KubeProxy
+	sessionList []*ssh.Session
 }
 
 func (s *Client) Start() error {
@@ -257,11 +259,24 @@ func (s *Client) Check() node.Check {
 
 // Stop the client
 func (s *Client) Stop() {
+	log.DebugLn("SSH Client is stopping now")
 	for _, p := range s.kubeProxies {
 		// log.InfoF("found non-stoped kube-proxy: %-v\n", p)
 		p.StopAll()
 	}
 	s.kubeProxies = nil
+
+	for _, sess := range s.sessionList {
+		if sess != nil {
+			sess.Signal(ssh.SIGKILL)
+			sess.Close()
+		}
+	}
+
+	// by starting kubeproxy on remote, there is one more process starts
+	// it cannot be killed by sending any signal to his parrent process
+	// so we need to use killall command to kill all this processes
+	s.stopKubeproxy()
 
 	if s.stopChan != nil {
 		close(s.stopChan)
@@ -279,6 +294,7 @@ func (s *Client) Stop() {
 	if s.BastionClient != nil {
 		s.BastionClient.Close()
 	}
+	log.DebugLn("SSH Client is stopped")
 }
 
 func (s *Client) Session() *session.Session {
@@ -317,4 +333,14 @@ func (s *Client) GetClient() *ssh.Client {
 
 func (s *Client) Live() bool {
 	return s.live
+}
+
+func (s *Client) RegisterSession(sess *ssh.Session) {
+	s.sessionList = append(s.sessionList, sess)
+}
+
+func (s *Client) stopKubeproxy() {
+	cmd := NewSSHCommand(s, "killall kubectl")
+	cmd.Sudo()
+	cmd.Run()
 }

@@ -494,6 +494,8 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		}
 	}
 
+	defer sshNodeInterfaceWrapper.Client().Stop()
+
 	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.FinalizationPhase, false, stateCache, nil); err != nil {
 		return err
 	} else if shouldStop {
