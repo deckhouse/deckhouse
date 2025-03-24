@@ -31,9 +31,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-func waitEtcdHasMember(client *flantkubeclient.Client, nodeName string) error {
-	return retry.NewLoop(fmt.Sprintf("Check the master node '%s' is listed as etcd cluster member", nodeName), 100, 20*time.Second).Run(func() error {
-		ok, err := isEtcdHasMember(client, nodeName, "")
+func waitEtcdHasMember(ctx context.Context, client *flantkubeclient.Client, nodeName string) error {
+	return retry.NewLoop(fmt.Sprintf("Check the master node '%s' is listed as etcd cluster member", nodeName), 100, 20*time.Second).RunContext(ctx, func() error {
+		ok, err := isEtcdHasMember(ctx, client, nodeName, "")
 		if err != nil {
 			return fmt.Errorf("failed to check etcd cluster member: %s", err)
 		}
@@ -46,12 +46,12 @@ func waitEtcdHasMember(client *flantkubeclient.Client, nodeName string) error {
 	})
 }
 
-func waitEtcdHasNoMember(client *flantkubeclient.Client, nodeName string) error {
-	return retry.NewLoop(fmt.Sprintf("Check the master node '%s' is no longer listed as etcd cluster member", nodeName), 45, 5*time.Second).Run(func() error {
+func waitEtcdHasNoMember(ctx context.Context, client *flantkubeclient.Client, nodeName string) error {
+	return retry.NewLoop(fmt.Sprintf("Check the master node '%s' is no longer listed as etcd cluster member", nodeName), 45, 5*time.Second).RunContext(ctx, func() error {
 		// exclude the node we are checking
 		fieldSelector := fields.OneTermNotEqualSelector("spec.nodeName", nodeName).String()
 
-		ok, err := isEtcdHasMember(client, nodeName, fieldSelector)
+		ok, err := isEtcdHasMember(ctx, client, nodeName, fieldSelector)
 		if err != nil {
 			return err
 		}
@@ -64,8 +64,8 @@ func waitEtcdHasNoMember(client *flantkubeclient.Client, nodeName string) error 
 	})
 }
 
-func isEtcdHasMember(client *flantkubeclient.Client, nodeName string, fieldSelector string) (bool, error) {
-	pods, err := client.CoreV1().Pods("kube-system").List(context.TODO(), v1.ListOptions{
+func isEtcdHasMember(ctx context.Context, client *flantkubeclient.Client, nodeName string, fieldSelector string) (bool, error) {
+	pods, err := client.CoreV1().Pods("kube-system").List(ctx, v1.ListOptions{
 		LabelSelector: "component=etcd,tier=control-plane",
 		FieldSelector: fieldSelector,
 	})
@@ -107,7 +107,7 @@ func isEtcdHasMember(client *flantkubeclient.Client, nodeName string, fieldSelec
 	}
 
 	var stdout bytes.Buffer
-	err = executor.StreamWithContext(context.TODO(), remotecommand.StreamOptions{
+	err = executor.StreamWithContext(ctx, remotecommand.StreamOptions{
 		Stdin:  nil,
 		Stdout: &stdout,
 		Stderr: nil,
