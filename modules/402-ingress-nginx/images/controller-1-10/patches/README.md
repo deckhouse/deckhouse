@@ -67,6 +67,17 @@ Build nginx for controller on ALT Linux.
 
 Add HTTP/3 support.
 
+We have made two PRs in upstream to bump ingress-nginx image and to enable http3 module. 
+But we did not add full support for http3 in upstream, because at that time OpenSSL did not fully support quic.
+
+Bump the image and enable http3 module: https://github.com/kubernetes/ingress-nginx/pull/11470
+README about next steps for upstream: https://github.com/kubernetes/ingress-nginx/pull/11513
+
+README: https://github.com/kubernetes/ingress-nginx/blob/main/images/nginx/README.md
+
+When OpenSSL fully supports quic, the work can be continued. 
+To add fully support - steps from the readme should be accomplished and after this the patch can be deleted.
+
 ### 012-new-metrics.patch
 
 This patch adds worker max connections, worker processes and worker max open files metrics.

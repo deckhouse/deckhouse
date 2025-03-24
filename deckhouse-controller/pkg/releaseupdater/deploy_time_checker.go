@@ -17,8 +17,6 @@ limitations under the License.
 package releaseupdater
 
 import (
-	"context"
-	"fmt"
 	"log/slog"
 	"time"
 
@@ -32,20 +30,18 @@ type DeployTimeService struct {
 
 	settings *Settings
 
-	now                   time.Time
-	deckhousePodReadyFunc func(ctx context.Context) bool
+	now time.Time
 
 	logger *log.Logger
 }
 
-func NewDeployTimeService(dc dependency.Container, settings *Settings, deckhousePodReadyFunc func(ctx context.Context) bool, logger *log.Logger) *DeployTimeService {
+func NewDeployTimeService(dc dependency.Container, settings *Settings, logger *log.Logger) *DeployTimeService {
 	return &DeployTimeService{
 		releaseNotifier: NewReleaseNotifier(settings),
 
 		settings: settings,
 
-		now:                   dc.GetClock().Now().UTC(),
-		deckhousePodReadyFunc: deckhousePodReadyFunc,
+		now: dc.GetClock().Now().UTC(),
 
 		logger: logger,
 	}
@@ -79,24 +75,7 @@ func (c *DeployTimeService) ProcessPatchReleaseDeployTime(release v1alpha1.Relea
 // for minor release we check:
 // - Deckhouse pod is ready
 // - No delay from calculated deploy time
-func (c *DeployTimeService) ProcessMinorReleaseDeployTime(ctx context.Context, release v1alpha1.Release, res *DeployTimeResult, dri *ReleaseInfo) *ProcessedDeployTimeResult {
-	// check: Deckhouse pod is ready
-	if !c.deckhousePodReadyFunc(ctx) {
-		c.logger.Info("Deckhouse is not ready. Skipping upgrade")
-
-		if dri == nil {
-			return &ProcessedDeployTimeResult{
-				Message:               "can not find deployed version, awaiting",
-				ReleaseApplyAfterTime: res.ReleaseApplyAfterTime,
-			}
-		}
-
-		return &ProcessedDeployTimeResult{
-			Message:               fmt.Sprintf("awaiting for Deckhouse v%s pod to be ready", dri.Version.String()),
-			ReleaseApplyAfterTime: res.ReleaseApplyAfterTime,
-		}
-	}
-
+func (c *DeployTimeService) ProcessMinorReleaseDeployTime(release v1alpha1.Release, res *DeployTimeResult) *ProcessedDeployTimeResult {
 	if release.GetApplyNow() || res.Reason.IsNoDelay() {
 		return nil
 	}

@@ -1182,10 +1182,6 @@ entries:
                     en: Configuration
                     ru: Настройки
                   url: /modules/operator-prometheus/configuration.html
-                - title:
-                    en: FAQ
-                    ru: FAQ
-                  url: /modules/operator-prometheus/faq.html
             - title:
                 en: okmeter
                 ru: okmeter

@@ -28,7 +28,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
-func (b *ClusterBootstrapper) CreateResources() error {
+func (b *ClusterBootstrapper) CreateResources(ctx context.Context) error {
 	if restore, err := b.applyParams(); err != nil {
 		return err
 	} else {
@@ -77,8 +77,7 @@ func (b *ClusterBootstrapper) CreateResources() error {
 	}
 
 	return log.Process("bootstrap", "Create resources", func() error {
-		// TODO(dhctl-for-commander-cancels): pass ctx
-		kubeCl, err := kubernetes.ConnectToKubernetesAPI(context.TODO(), b.NodeInterface)
+		kubeCl, err := kubernetes.ConnectToKubernetesAPI(ctx, b.NodeInterface)
 		if err != nil {
 			return err
 		}
@@ -88,6 +87,6 @@ func (b *ClusterBootstrapper) CreateResources() error {
 			return err
 		}
 
-		return resources.CreateResourcesLoop(kubeCl, resourcesToCreate, checkers, nil)
+		return resources.CreateResourcesLoop(ctx, kubeCl, resourcesToCreate, checkers, nil)
 	})
 }

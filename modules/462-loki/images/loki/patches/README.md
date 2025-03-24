@@ -8,3 +8,11 @@
     go get golang.org/x/net v0.33.0
     go mod tidy
     ```
+
+## 002-Allow-delete-logs.patch
+
+TODO
+
+## 003-Force-expiration.patch
+
+TODO

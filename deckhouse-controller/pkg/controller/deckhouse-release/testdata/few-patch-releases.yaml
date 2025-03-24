@@ -26,7 +26,7 @@ spec:
     spec:
       containers:
         - name: deckhouse
-          image: my.registry.com/deckhouse:v1.25.0
+          image: my.registry.com/deckhouse:v1.31.0
 
 ---
 apiVersion: deckhouse.io/v1alpha1

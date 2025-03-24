@@ -108,14 +108,15 @@ func ParseConfig(paths []string, opts ...ValidateOption) (*MetaConfig, error) {
 	return ParseConfigFromData(content, opts...)
 }
 
-func ParseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error) {
+func ParseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient) (*MetaConfig, error) {
 	var metaConfig *MetaConfig
 	var err error
 	err = log.Process("common", "Get Cluster configuration", func() error {
-		return retry.NewLoop("Get Cluster configuration from Kubernetes cluster", 10, 5*time.Second).Run(func() error {
-			metaConfig, err = parseConfigFromCluster(kubeCl)
-			return err
-		})
+		return retry.NewLoop("Get Cluster configuration from Kubernetes cluster", 10, 5*time.Second).
+			RunContext(ctx, func() error {
+				metaConfig, err = parseConfigFromCluster(ctx, kubeCl)
+				return err
+			})
 	})
 	if err != nil {
 		return nil, err
@@ -123,25 +124,26 @@ func ParseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error
 	return metaConfig, nil
 }
 
-func ParseConfigInCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error) {
+func ParseConfigInCluster(ctx context.Context, kubeCl *client.KubernetesClient) (*MetaConfig, error) {
 	var metaConfig *MetaConfig
 	var err error
 
-	err = retry.NewSilentLoop("Get Cluster configuration from inside Kubernetes cluster", 5, 5*time.Second).Run(func() error {
-		metaConfig, err = parseConfigFromCluster(kubeCl)
-		return err
-	})
+	err = retry.NewSilentLoop("Get Cluster configuration from inside Kubernetes cluster", 5, 5*time.Second).
+		RunContext(ctx, func() error {
+			metaConfig, err = parseConfigFromCluster(ctx, kubeCl)
+			return err
+		})
 	if err != nil {
 		return nil, err
 	}
 	return metaConfig, nil
 }
 
-func parseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error) {
+func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient) (*MetaConfig, error) {
 	metaConfig := MetaConfig{}
 	schemaStore := NewSchemaStore()
 
-	clusterConfig, err := kubeCl.CoreV1().Secrets("kube-system").Get(context.TODO(), "d8-cluster-configuration", metav1.GetOptions{})
+	clusterConfig, err := kubeCl.CoreV1().Secrets("kube-system").Get(ctx, "d8-cluster-configuration", metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +167,7 @@ func parseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error
 	}
 
 	if clusterType == CloudClusterType {
-		providerClusterConfig, err := kubeCl.CoreV1().Secrets("kube-system").Get(context.TODO(), "d8-provider-cluster-configuration", metav1.GetOptions{})
+		providerClusterConfig, err := kubeCl.CoreV1().Secrets("kube-system").Get(ctx, "d8-provider-cluster-configuration", metav1.GetOptions{})
 		if err != nil {
 			return nil, err
 		}

@@ -15,6 +15,7 @@
 package helper
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -33,9 +34,9 @@ type ClusterConnectionsOptions struct {
 	SSHConnectionConfig string
 }
 
-func InitializeClusterConnections(opts ClusterConnectionsOptions) (*client.KubernetesClient, *ssh.Client, func() error, error) {
+func InitializeClusterConnections(ctx context.Context, opts ClusterConnectionsOptions) (*client.KubernetesClient, *ssh.Client, func() error, error) {
 	if opts.CommanderMode && opts.ApiServerUrl != "" {
-		kubeCl, cleanup, err := CreateKubeClient(opts.ApiServerUrl, opts.ApiServerOptions)
+		kubeCl, cleanup, err := CreateKubeClient(ctx, opts.ApiServerUrl, opts.ApiServerOptions)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("error creating kubernetes client: %w", err)
 		}

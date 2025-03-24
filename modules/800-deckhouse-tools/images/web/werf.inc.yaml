@@ -70,8 +70,6 @@ secrets:
   value: {{ .GOPROXY }}
 - id: DECKHOUSE_PRIVATE_REPO
   value: {{ .DECKHOUSE_PRIVATE_REPO }}
-- id: STRONGHOLD_PULL_TOKEN
-  value: {{ .STRONGHOLD_PULL_TOKEN }}
 shell:
   beforeInstall:
     {{- include "debian packages proxy" . | nindent 4 }}
@@ -80,9 +78,13 @@ shell:
   install:
     - export GOPROXY=$(cat /run/secrets/GOPROXY)
     - export PRIVATE_REPO=$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO)
-    - export PRIVATE_REPO_TOKEN=$(cat /run/secrets/STRONGHOLD_PULL_TOKEN)
-    - export GOPRIVATE=$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO)
-    - git config --global url."https://gitlab-ci-token:${PRIVATE_REPO_TOKEN}@${PRIVATE_REPO}/".insteadOf https://${PRIVATE_REPO}/
+    - GOPRIVATE="flant.internal"
+    - git config --global url."ssh://git@${PRIVATE_REPO}/".insteadOf "https://flant.internal/"
+    - git config --global --add safe.directory '*'
+    - mkdir -p ~/.ssh
+    - touch ~/.ssh/known_hosts
+    - ssh-keyscan -H ${PRIVATE_REPO} >> ~/.ssh/known_hosts
+
     - cd /src
     - task build:dist:all
     - mkdir -p /app/files/d8-cli

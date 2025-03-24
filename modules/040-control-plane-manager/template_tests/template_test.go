@@ -18,6 +18,7 @@ package template_tests
 
 import (
 	"encoding/base64"
+	"slices"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -27,7 +28,6 @@ import (
 )
 
 var _ = Describe("Module :: control-plane-manager :: helm template :: arguments secret", func() {
-
 	const globalValues = `
   clusterConfiguration:
     apiVersion: deckhouse.io/v1
@@ -74,6 +74,23 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
 		f.ValuesSetFromYaml("controlPlaneManager", moduleValues)
 	})
 
+	Context("Image Holders", func() {
+		BeforeEach(func() {
+			f.HelmRender()
+		})
+
+		It("image holders must be properly named", func() {
+			ds := f.KubernetesResource("daemonset", "kube-system", "d8-control-plane-manager")
+			Expect(ds.Exists()).To(BeTrue())
+			containers := ds.Field("spec.template.spec.containers").Array()
+			var containerNames []string
+			for _, c := range containers {
+				containerNames = append(containerNames, c.Get("name").String())
+			}
+			Expect(slices.Contains(containerNames, "image-holder-kube-apiserver")).To(Equal(true))
+		})
+	})
+
 	Context("Prometheus rules", func() {
 		assertSpecDotGroupsArray := func(rule object_store.KubeObject, length int) {
 			Expect(rule.Exists()).To(BeTrue())
@@ -82,7 +99,6 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
 
 			Expect(groups.IsArray()).To(BeTrue())
 			Expect(groups.Array()).To(HaveLen(length))
-
 		}
 
 		Context("For etcd main", func() {
@@ -146,5 +162,4 @@ resources:
 `))
 		})
 	})
-
 })
