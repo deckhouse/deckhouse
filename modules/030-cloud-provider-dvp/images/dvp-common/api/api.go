@@ -21,6 +21,7 @@ import (
 	"errors"
 
 	"github.com/deckhouse/virtualization/api/core/v1alpha2"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -51,6 +52,11 @@ func NewDVPCloudAPI(config *config.CloudConfig) (*DVPCloudAPI, error) {
 
 	scheme := runtime.NewScheme()
 	err = v1alpha2.AddToScheme(scheme)
+	if err != nil {
+		return nil, err
+	}
+
+	err = corev1.AddToScheme(scheme)
 	if err != nil {
 		return nil, err
 	}
