@@ -9,7 +9,7 @@ memory: 25Mi
 {{- end }}
 
 {{- define "calcTimeout" -}}
-{{- $duration := . }}
+{{- $duration := . | default "30s" }}
 {{- $totalSeconds := 0 }}
 {{- range $match := regexFindAll "([0-9]+)([a-zA-Z]+)" $duration -1 }}
   {{- $value := regexFind "[0-9]+" $match | int }}
@@ -165,7 +165,7 @@ spec:
         topologyKey: kubernetes.io/hostname
 {{- end }}
   scrapeInterval: {{ .Values.prometheus.scrapeInterval | default "30s"}}
-  scrapeTimeout: {{ mulf (include "calcTimeout" .Values.prometheus.scrapeInterval | default "30s") 0.8 | int }}s
+  scrapeTimeout: {{ mulf (include "calcTimeout" .Values.prometheus.scrapeInterval) 0.8 | int }}s
   evaluationInterval: {{ .Values.prometheus.scrapeInterval | default "30s" }}
   minReadySeconds: {{ mul (include "toSeconds" .Values.prometheus.scrapeInterval) 2 }}
   # Empty field because when scraping metrics via the Federation API,
