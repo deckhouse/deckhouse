@@ -90,8 +90,7 @@ apiVersion: observability.deckhouse.io/v1alpha1
 kind: {{ $propagated | ternary "ClusterObservabilityPropagatedDashboard" "ClusterObservabilityDashboard" }}
 metadata:
   name: d8-{{ $resourceName }}
-  {{- include "helm_lib_module_labels" (list $context (dict "foo-label" nil)) | nindent 2 }}
-    observability.deckhouse.io/converted: null
+  {{- include "helm_lib_module_labels" (list $context (dict "observability.deckhouse.io/dashboard-origin" "module")) | nindent 2 }}
 spec:
   definition: |
     {{- $definition | nindent 4 }}
