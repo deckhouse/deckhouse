@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"encoding/base64"
 	"fmt"
 	"slices"
 	"strings"
@@ -23,7 +24,7 @@ import (
 const (
 	RegistryPort   = 5001
 	RegistryPath   = "/system/deckhouse"
-	RegistrySchema = "https"
+	RegistryScheme = "https"
 )
 
 var (
@@ -58,6 +59,11 @@ func (rUser *RegistryUser) Validate() error {
 	return nil
 }
 
+func (rUser *RegistryUser) Auth() string {
+	authRaw := fmt.Sprintf("%s:%s", rUser.Name, rUser.Password)
+	return base64.StdEncoding.EncodeToString([]byte(authRaw))
+}
+
 type BashibleConfig struct {
 	ProxyEndpoints []string      `json:"proxyEndpoints"`
 	Hosts          []HostsObject `json:"hosts"`
@@ -73,8 +79,9 @@ type MirrorHostObject struct {
 	Host     string `json:"host"`
 	Username string `json:"username"`
 	Password string `json:"password"`
+	Auth     string `json:"auth"`
 	CA       string `json:"ca"`
-	Schema   string `json:"schema"`
+	Scheme   string `json:"scheme"`
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -237,8 +244,9 @@ func createMirrors(rUser RegistryUser, rPKI RegistryPKI, hosts []string) []Mirro
 			Host:     host,
 			Username: rUser.Name,
 			Password: rUser.Password,
+			Auth:     rUser.Auth(),
 			CA:       rPKI.CA,
-			Schema:   RegistrySchema,
+			Scheme:   RegistryScheme,
 		})
 	}
 	return mirrors

@@ -93,8 +93,9 @@ properties:
                   - host: 127.0.0.1:5001
                     username: ...
                     password: ...
+                    auth: ...
                     ca: ...
-                    schema: ...
+                    scheme: ...
             items:
               type: object
               required:
@@ -116,9 +117,11 @@ properties:
                         type: string
                       password:
                         type: string
+                      auth:
+                        type: string
                       ca:
                         type: string
-                      schema:
+                      scheme:
                         type: string
                         default: https
           prepullHosts: *hosts
