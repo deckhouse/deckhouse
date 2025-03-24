@@ -1,0 +1,13 @@
+{{- with .Values.systemRegistry.internal }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: registry-internal
+  namespace: d8-system
+  labels:
+    app.kubernetes.io/managed-by: system-registry
+data:
+  value: |-
+    {{- . | toYaml | nindent 4 }}
+{{- end }}
