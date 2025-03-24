@@ -1,0 +1,14 @@
+{{- with .Values.systemRegistry.internal.playground }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: registry-playground
+  namespace: d8-system
+  labels:
+    app.kubernetes.io/managed-by: system-registry
+data:
+  value: {{ .value | toString | quote }}
+  state: |-
+    {{- . | toYaml | nindent 4 }}
+{{- end }}

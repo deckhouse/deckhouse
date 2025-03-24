@@ -7,7 +7,6 @@ package hooks
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -50,7 +49,6 @@ type registryState struct {
 	StaticPodVersion string
 	BashibleVersion  string
 	Messages         []string
-	NonExitent       bool
 	PkiMode          string
 }
 
@@ -154,13 +152,6 @@ func filterRegistryState(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 		StaticPodVersion: string(secret.Data["staticpod_version"]),
 		BashibleVersion:  string(secret.Data["bashible_version"]),
 		PkiMode:          string(secret.Data["pki_mode"]),
-	}
-
-	nonExitentStr := string(secret.Data["nonexistent"])
-	nonExitentStr = strings.ToLower(nonExitentStr)
-
-	if nonExitentStr == "yes" || nonExitentStr == "true" {
-		ret.NonExitent = true
 	}
 
 	if messagesData, ok := secret.Data["messages"]; ok {
@@ -315,7 +306,6 @@ func handleRegistryStaticPods(input *go_hook.HookInput) error {
 		state.BashibleVersion = "unknown"
 	}
 
-	input.Values.Set("systemRegistry.internal.state.nonexistent", state.NonExitent)
 	input.Values.Set("systemRegistry.internal.state.nodes", nodes)
 	input.Values.Set("systemRegistry.internal.state.config", config)
 	input.Values.Set("systemRegistry.internal.state.staticpod_version", state.StaticPodVersion)

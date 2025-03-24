@@ -21,6 +21,16 @@ properties:
             type: string
             x-examples:
               - plainstring
+      playground:
+        type: object
+        properties:
+          value:
+            type: integer
+            default: 0
+          data:
+            type: object
+            additionalProperties: true
+            x-kubernetes-preserve-unknown-fields: true
       pki:
         type: object
         default: {}
@@ -70,11 +80,6 @@ properties:
             type: array
             items:
               type: string
-          nonexistent:
-            type: boolean
-            default: false
-          nonexistent_value:
-            type: string
       bashible:
         type: object
         default: {}
