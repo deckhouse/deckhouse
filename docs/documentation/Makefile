@@ -12,7 +12,7 @@ network:
 registry:
 		@if ! docker ps | grep -q registry ; then \
 			docker rm -f registry 2>/dev/null 1>/dev/null; \
-			docker run -d -p 4999:5000 --restart=always --name registry registry:2 ; \
+			docker run -d -p 4999:5000 -e REGISTRY_STORAGE_DELETE_ENABLED=true --restart=always --name registry registry:2 ; \
 		fi
 
 .PHONY:
