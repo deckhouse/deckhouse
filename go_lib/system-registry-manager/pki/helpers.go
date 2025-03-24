@@ -60,6 +60,40 @@ func DecodeCertificate(pemData []byte) (*x509.Certificate, error) {
 	return helpers.ParseCertificatePEM(pemData)
 }
 
+// DecodeCertKey decodes a PEM-encoded X.509 certificate and it's private key to CertKey
+// validating that key is matches certificate
+func DecodeCertKey(certPEM []byte, keyPEM []byte) (ret CertKey, err error) {
+	if ret.Cert, err = DecodeCertificate(certPEM); err != nil {
+		err = fmt.Errorf("cannot decode certificate: %w", err)
+		return
+	}
+
+	if ret.Key, err = DecodePrivateKey(keyPEM); err != nil {
+		err = fmt.Errorf("cannot decode key: %w", err)
+		return
+	}
+
+	var equal bool
+	if equal, err = ComparePublicKeys(ret.Cert.PublicKey, ret.Key.Public()); err != nil {
+		err = fmt.Errorf("cannot match certificate and key: %w", err)
+	} else if !equal {
+		err = fmt.Errorf("certificate and key does not match")
+	}
+
+	return
+}
+
+// EncodeCertKey encodes CertKey to PEM-encoded bytes for X.509 Certificate and it's private key
+func EncodeCertKey(value CertKey) (certPEM, keyPEM []byte, err error) {
+	certPEM = EncodeCertificate(value.Cert)
+	keyPEM, err = EncodePrivateKey(value.Key)
+	if err != nil {
+		err = fmt.Errorf("cannot encode key: %w", err)
+	}
+
+	return
+}
+
 // ComparePublicKeys compares two public keys
 // Keys must implement
 //

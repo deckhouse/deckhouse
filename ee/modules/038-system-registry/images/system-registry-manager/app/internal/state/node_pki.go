@@ -46,14 +46,14 @@ type NodePKI struct {
 func GenerateNodePKI(ca pki.CertKey, hosts []string) (ret NodePKI, err error) {
 	var generatedPKI pki.CertKey
 
-	generatedPKI, err = pki.GenerateCertificate(nodeAuthCertCN, hosts, ca)
+	generatedPKI, err = pki.GenerateCertificate(nodeAuthCertCN, ca, hosts...)
 	if err != nil {
 		err = fmt.Errorf("cannot generate Auth PKI: %w", err)
 		return
 	}
 	ret.Auth = &generatedPKI
 
-	generatedPKI, err = pki.GenerateCertificate(nodeDistributionCertCN, hosts, ca)
+	generatedPKI, err = pki.GenerateCertificate(nodeDistributionCertCN, ca, hosts...)
 	if err != nil {
 		err = fmt.Errorf("cannot generate Distribution PKI: %w", err)
 		return

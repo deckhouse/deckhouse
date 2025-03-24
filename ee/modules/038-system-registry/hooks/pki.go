@@ -13,6 +13,8 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/pki"
 )
 
 type pkiLegacyModel struct {
@@ -23,6 +25,21 @@ type pkiLegacyModel struct {
 type pkiCertModel struct {
 	Cert string `json:"cert,omitempty"`
 	Key  string `json:"key,omitempty"`
+}
+
+func (pcm *pkiCertModel) ToPKICertKey() (pki.CertKey, error) {
+	if pcm == nil {
+		return pki.CertKey{}, fmt.Errorf("cannot convert nil to CertKey")
+	}
+	return pki.DecodeCertKey([]byte(pcm.Cert), []byte(pcm.Key))
+}
+
+func pkiCertKeyToModel(value pki.CertKey) (*pkiCertModel, error) {
+	cert, key, err := pki.EncodeCertKey(value)
+	if err != nil {
+		return nil, err
+	}
+	return &pkiCertModel{Cert: string(cert), Key: string(key)}, nil
 }
 
 const (
@@ -126,6 +143,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	tokenSnaps := input.Snapshots[pkiTokenSnapName]
 	proxySnaps := input.Snapshots[pkiProxySnapName]
 	legacySnaps := input.Snapshots[pkiLegacySnapName]
+	legacySnaps = []go_hook.FilterResult{}
 
 	var caCert, tokenCert, proxyCert *pkiCertModel
 
@@ -156,24 +174,63 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		}
 	}
 
-	if caCert == nil {
+	caPKI, err := caCert.ToPKICertKey()
+	if err != nil {
+		input.Logger.Warn("Cannot decode CA certificate and key", "error", err)
+
+		// TODO: add save/restore/generate
+
 		// No CA = no show
 		input.Values.Remove("systemRegistry.internal.pki")
 		return nil
 	}
 	input.Values.Set("systemRegistry.internal.pki.ca", caCert)
 
-	if tokenCert != nil {
-		input.Values.Set("systemRegistry.internal.pki.token", tokenCert)
+	tokenPKI, err := tokenCert.ToPKICertKey()
+	if err != nil {
+		input.Logger.Warn("Cannot decode Token certificate and key", "error", err)
 	} else {
-		input.Values.Remove("systemRegistry.internal.pki.token")
+		err = pki.ValidateCertWithCAChain(tokenPKI.Cert, caPKI.Cert)
+		if err != nil {
+			input.Logger.Warn("Token certificate is not belongs to CA certificate", "error", err)
+		}
 	}
 
-	if proxyCert != nil {
-		input.Values.Set("systemRegistry.internal.pki.proxy", proxyCert)
-	} else {
-		input.Values.Remove("systemRegistry.internal.pki.proxy")
+	if err != nil {
+		tokenPKI, err = pki.GenerateCertificate("registry-auth-token", caPKI)
+		if err != nil {
+			return fmt.Errorf("cannot generate Token certificate: %w", err)
+		}
+
+		tokenCert, err = pkiCertKeyToModel(tokenPKI)
+		if err != nil {
+			return fmt.Errorf("cannot convert Token PKI to model: %w", err)
+		}
 	}
+	input.Values.Set("systemRegistry.internal.pki.token", tokenCert)
+
+	proxyPKI, err := proxyCert.ToPKICertKey()
+	if err != nil {
+		input.Logger.Warn("Cannot decode Proxy certificate and key", "error", err)
+	} else {
+		err = pki.ValidateCertWithCAChain(proxyPKI.Cert, caPKI.Cert)
+		if err != nil {
+			input.Logger.Warn("Proxy certificate is not belongs to CA certificate", "error", err)
+		}
+	}
+
+	if err != nil {
+		proxyPKI, err = pki.GenerateCertificate("registry-proxy", caPKI, "registry.d8-system.svc")
+		if err != nil {
+			return fmt.Errorf("cannot generate Proxy certificate: %w", err)
+		}
+
+		proxyCert, err = pkiCertKeyToModel(proxyPKI)
+		if err != nil {
+			return fmt.Errorf("cannot convert Proxy PKI to model: %w", err)
+		}
+	}
+	input.Values.Set("systemRegistry.internal.pki.proxy", proxyCert)
 
 	return nil
 })

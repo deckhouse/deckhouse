@@ -32,8 +32,8 @@ func GenerateCACertificate(commonName string) (CertKey, error) {
 			Expiry: "87600h", // 10 years
 		},
 		KeyRequest: &csr.KeyRequest{
-			A: "rsa",
-			S: 2048,
+			A: "ecdsa",
+			S: 256,
 		},
 	}
 
@@ -56,7 +56,7 @@ func GenerateCACertificate(commonName string) (CertKey, error) {
 }
 
 // GenerateCertificate generates a new certificate and key signed by the provided CA certificate and key.
-func GenerateCertificate(commonName string, hosts []string, ca CertKey) (CertKey, error) {
+func GenerateCertificate(commonName string, ca CertKey, hosts ...string) (CertKey, error) {
 	var ret CertKey
 
 	req := csr.CertificateRequest{
@@ -65,7 +65,10 @@ func GenerateCertificate(commonName string, hosts []string, ca CertKey) (CertKey
 			A: "rsa",
 			S: 2048,
 		},
-		Hosts: hosts,
+	}
+
+	if len(hosts) > 0 {
+		req.Hosts = hosts
 	}
 
 	// generate a CSR and private key

@@ -18,25 +18,8 @@ type encodeDecodeSecret interface {
 	EncodeSecret(secret *corev1.Secret) error
 }
 
-func decodeCertKeyFromSecret(certField, keyField string, secret *corev1.Secret) (ret pki.CertKey, err error) {
-	if ret.Cert, err = pki.DecodeCertificate(secret.Data[certField]); err != nil {
-		err = fmt.Errorf("cannot decode certificate: %w", err)
-		return
-	}
-
-	if ret.Key, err = pki.DecodePrivateKey(secret.Data[keyField]); err != nil {
-		err = fmt.Errorf("cannot decode key: %w", err)
-		return
-	}
-
-	var equal bool
-	if equal, err = pki.ComparePublicKeys(ret.Cert.PublicKey, ret.Key.Public()); err != nil {
-		err = fmt.Errorf("cannot match CA certificate and key: %w", err)
-	} else if !equal {
-		err = fmt.Errorf("certificate and key does not match")
-	}
-
-	return
+func decodeCertKeyFromSecret(certField, keyField string, secret *corev1.Secret) (pki.CertKey, error) {
+	return pki.DecodeCertKey(secret.Data[certField], secret.Data[keyField])
 }
 
 func encodeCertKeyToSecret(value pki.CertKey, certField, keyField string, secret *corev1.Secret) error {
@@ -44,9 +27,7 @@ func encodeCertKeyToSecret(value pki.CertKey, certField, keyField string, secret
 		return fmt.Errorf("invalid secret")
 	}
 
-	certBytes := pki.EncodeCertificate(value.Cert)
-
-	keyBytes, err := pki.EncodePrivateKey(value.Key)
+	certBytes, keyBytes, err := pki.EncodeCertKey(value)
 	if err != nil {
 		return fmt.Errorf("cannot encode key: %w", err)
 	}
