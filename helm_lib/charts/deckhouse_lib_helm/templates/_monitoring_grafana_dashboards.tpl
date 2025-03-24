@@ -81,7 +81,7 @@ metadata:
   name: d8-{{ $resourceName }}
   {{- include "helm_lib_module_labels" (list $context (dict "prometheus.deckhouse.io/grafana-dashboard" "" "observability.deckhouse.io/skip-dashboard-conversion" "")) | nindent 2 }}
 spec:
-  folder: "{{ $folder }}"
+  folder: {{ $folder | quote }}
   definition: |
     {{- $definition | nindent 4 }}
   {{- if $context.Values.global.enabledModules | has "observability" }}
