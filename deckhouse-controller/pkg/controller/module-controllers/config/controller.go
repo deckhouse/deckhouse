@@ -17,6 +17,7 @@ package config
 import (
 	"context"
 	"fmt"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/app"
 	"log/slog"
 	"sync"
 	"time"
@@ -50,9 +51,6 @@ const (
 	controllerName = "d8-module-config-controller"
 
 	maxConcurrentReconciles = 3
-
-	moduleDeckhouse = "deckhouse"
-	moduleGlobal    = "global"
 )
 
 func RegisterController(
@@ -190,7 +188,7 @@ func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alp
 	module := new(v1alpha1.Module)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: moduleConfig.Name}, module); err != nil {
 		if apierrors.IsNotFound(err) {
-			if moduleConfig.Name != moduleGlobal {
+			if moduleConfig.Name != app.ModuleGlobal {
 				r.log.Warn("module is not found", slog.String("name", moduleConfig.Name))
 				err = utils.UpdateStatus[*v1alpha1.ModuleConfig](ctx, r.client, moduleConfig, func(moduleConfig *v1alpha1.ModuleConfig) bool {
 					moduleConfig.Status.Message = v1alpha1.ModuleConfigMessageUnknownModule
@@ -252,7 +250,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 	}
 
 	// skip system modules
-	if module.Name == moduleDeckhouse || module.Name == moduleGlobal {
+	if module.Name == app.ModuleDeckhouse || module.Name == app.ModuleGlobal {
 		r.log.Debug("skip the system module", slog.String("name", module.Name))
 		return ctrl.Result{}, nil
 	}
@@ -340,7 +338,7 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 	}
 
 	// skip system modules
-	if module.Name == moduleDeckhouse || module.Name == moduleGlobal {
+	if module.Name == app.ModuleDeckhouse || module.Name == app.ModuleGlobal {
 		r.log.Debug("skip system module", slog.String("name", module.Name))
 		return ctrl.Result{}, nil
 	}

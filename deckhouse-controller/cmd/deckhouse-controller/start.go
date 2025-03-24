@@ -28,20 +28,21 @@ import (
 	"time"
 
 	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
-	aoapp "github.com/flant/addon-operator/pkg/app"
+	addonapp "github.com/flant/addon-operator/pkg/app"
 	"github.com/flant/kube-client/client"
-	shapp "github.com/flant/shell-operator/pkg/app"
+	shellapp "github.com/flant/shell-operator/pkg/app"
 	"github.com/shirou/gopsutil/v3/process"
 	"gopkg.in/alecthomas/kingpin.v2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/client-go/util/retry"
 
-	d8Apis "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis"
+	d8apis "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller"
 	debugserver "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug-server"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -56,11 +57,9 @@ const (
 	modulesDirEnv      = "MODULES_DIR"
 	skipEntrypointEnv  = "SKIP_ENTRYPOINT_EXECUTION"
 
-	leaseName        = "deckhouse-leader-election"
-	defaultNamespace = "d8-system"
-	leaseDuration    = 35
-	renewalDeadline  = 30
-	retryPeriod      = 10
+	leaseDuration   = 35
+	renewalDeadline = 30
+	retryPeriod     = 10
 )
 
 type reaperMutex struct {
@@ -83,7 +82,7 @@ func start(logger *log.Logger) func(_ *kingpin.ParseContext) error {
 			}
 		}
 
-		shapp.AppStartMessage = version()
+		shellapp.AppStartMessage = version()
 
 		ctx := context.Background()
 
@@ -91,7 +90,7 @@ func start(logger *log.Logger) func(_ *kingpin.ParseContext) error {
 
 		operator.StartAPIServer()
 
-		if os.Getenv("DECKHOUSE_HA") == "true" {
+		if app.ModeHA {
 			logger.Info("Desckhouse is starting in HA mode")
 			runHAMode(ctx, operator, logger)
 			return nil
@@ -119,14 +118,14 @@ func entrypoint(logger *log.Logger) error {
 
 	chrootDirEnvValue, found := os.LookupEnv(chrootDirEnv)
 	if found && len(chrootDirEnvValue) > 0 {
-		chrootedTmpDirPath := filepath.Join(chrootDirEnvValue, aoapp.DefaultTempDir)
+		chrootedTmpDirPath := filepath.Join(chrootDirEnvValue, addonapp.DefaultTempDir)
 		if err := os.MkdirAll(chrootedTmpDirPath, 0750); err != nil {
 			return fmt.Errorf("create chroot dir: %w", err)
 		}
 
-		if _, err := os.Stat(aoapp.DefaultTempDir); err != nil {
+		if _, err := os.Stat(addonapp.DefaultTempDir); err != nil {
 			if errors.Is(err, os.ErrNotExist) {
-				if err := os.Symlink(chrootedTmpDirPath, aoapp.DefaultTempDir); err != nil {
+				if err = os.Symlink(chrootedTmpDirPath, addonapp.DefaultTempDir); err != nil {
 					return fmt.Errorf("create tmp directory symlink: %w", err)
 				}
 			} else {
@@ -147,7 +146,7 @@ func entrypoint(logger *log.Logger) error {
 		return fmt.Errorf("read bundle values file: %w", err)
 	}
 
-	if err := os.WriteFile("/tmp/values.yaml", bytes, 0644); err != nil {
+	if err = os.WriteFile("/tmp/values.yaml", bytes, 0644); err != nil {
 		return fmt.Errorf("write values file: %w", err)
 	}
 
@@ -158,35 +157,31 @@ func entrypoint(logger *log.Logger) error {
 
 func runHAMode(ctx context.Context, operator *addonoperator.AddonOperator, logger *log.Logger) {
 	var identity string
-	podName := os.Getenv("DECKHOUSE_POD")
-	if len(podName) == 0 {
+	if len(app.PodName) == 0 {
 		logger.Fatal("DECKHOUSE_POD env not set or empty")
 	}
 
-	podIP := os.Getenv("ADDON_OPERATOR_LISTEN_ADDRESS")
-	if len(podIP) == 0 {
+	if len(app.PodIP) == 0 {
 		logger.Fatal("ADDON_OPERATOR_LISTEN_ADDRESS env not set or empty")
 	}
 
-	podNs := os.Getenv("ADDON_OPERATOR_NAMESPACE")
-	if len(podNs) == 0 {
-		podNs = defaultNamespace
+	if len(app.PodNamespace) == 0 {
+		app.PodNamespace = app.NamespaceDeckhouse
 	}
 
-	clusterDomain := os.Getenv("KUBERNETES_CLUSTER_DOMAIN")
-	if len(clusterDomain) == 0 {
+	if len(app.ClusterDomain) == 0 {
 		logger.Warn("KUBERNETES_CLUSTER_DOMAIN env not set or empty - its value won't be used for the leader election")
-		identity = fmt.Sprintf("%s.%s.%s.pod", podName, strings.ReplaceAll(podIP, ".", "-"), podNs)
+		identity = fmt.Sprintf("%s.%s.%s.pod", app.PodName, strings.ReplaceAll(app.PodIP, ".", "-"), app.PodNamespace)
 	} else {
-		identity = fmt.Sprintf("%s.%s.%s.pod.%s", podName, strings.ReplaceAll(podIP, ".", "-"), podNs, clusterDomain)
+		identity = fmt.Sprintf("%s.%s.%s.pod.%s", app.PodName, strings.ReplaceAll(app.PodIP, ".", "-"), app.PodNamespace, app.ClusterDomain)
 	}
 
 	if err := operator.WithLeaderElector(&leaderelection.LeaderElectionConfig{
-		// Create a leaderElectionConfig for leader election
+		// create a leaderElectionConfig for leader election
 		Lock: &resourcelock.LeaseLock{
-			LeaseMeta: v1.ObjectMeta{
-				Name:      leaseName,
-				Namespace: podNs,
+			LeaseMeta: metav1.ObjectMeta{
+				Name:      app.LeaseName,
+				Namespace: app.PodNamespace,
 			},
 			Client: operator.KubeClient().CoordinationV1(),
 			LockConfig: resourcelock.ResourceLockConfig{
@@ -198,8 +193,7 @@ func runHAMode(ctx context.Context, operator *addonoperator.AddonOperator, logge
 		RetryPeriod:   time.Duration(retryPeriod) * time.Second,
 		Callbacks: leaderelection.LeaderCallbacks{
 			OnStartedLeading: func(ctx context.Context) {
-				err := run(ctx, operator, logger)
-				if err != nil {
+				if err := run(ctx, operator, logger); err != nil {
 					operator.Logger.Info("run", log.Err(err))
 					os.Exit(1)
 				}
@@ -231,7 +225,7 @@ func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log
 	operatorStarted := false
 	go signalHandler(ctx, exitCh, operator, &operatorStarted, logger)
 
-	if err := d8Apis.EnsureCRDs(ctx, operator.KubeClient(), "/deckhouse/deckhouse-controller/crds/*.yaml"); err != nil {
+	if err := d8apis.EnsureCRDs(ctx, operator.KubeClient(), app.PathToCRDs); err != nil {
 		return fmt.Errorf("ensure crds: %w", err)
 	}
 
@@ -240,17 +234,12 @@ func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log
 		return fmt.Errorf("lock on bootstrap: %w", err)
 	}
 
-	deckhouseController, err := controller.NewDeckhouseController(ctx, DeckhouseVersion, operator, logger.Named("deckhouse-controller"))
-	if err != nil {
-		return fmt.Errorf("create deckhouse controller: %w", err)
+	// load modules from FS, start subcontrollers and run deckhouse config event loop
+	if err := controller.Run(ctx, operator, logger.Named("deckhouse-controller")); err != nil {
+		return fmt.Errorf("run deckhouse controller: %w", err)
 	}
 
-	// load modules from FS, start controllers and run deckhouse config event loop
-	if err = deckhouseController.Start(ctx); err != nil {
-		return fmt.Errorf("start deckhouse controller: %w", err)
-	}
-
-	if err = operator.Start(ctx); err != nil {
+	if err := operator.Start(ctx); err != nil {
 		return fmt.Errorf("start operator: %w", err)
 	}
 	operatorStarted = true
@@ -368,11 +357,6 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 	}
 }
 
-const (
-	cmLockName  = "deckhouse-bootstrap-lock"
-	cmNamespace = "d8-system"
-)
-
 func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Logger) error {
 	bk := wait.Backoff{
 		Duration: 1 * time.Second,
@@ -387,20 +371,20 @@ func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Log
 		// retry on any error
 		return true
 	}, func() error {
-		if _, err := client.CoreV1().ConfigMaps(cmNamespace).Get(ctx, cmLockName, v1.GetOptions{}); err != nil {
+		if _, err := client.CoreV1().ConfigMaps(app.NamespaceDeckhouse).Get(ctx, app.LockName, metav1.GetOptions{}); err != nil {
 			if apierrors.IsNotFound(err) {
 				return nil
 			}
-			return fmt.Errorf("get the '%s' configmap: %w", cmLockName, err)
+			return fmt.Errorf("get the '%s' configmap: %w", app.LockName, err)
 		}
 
 		logger.Info("Bootstrap lock ConfigMap exists. Waiting for bootstrap process to be done")
 
-		listOpts := v1.ListOptions{
-			FieldSelector: "metadata.name=" + cmLockName,
+		listOpts := metav1.ListOptions{
+			FieldSelector: "metadata.name=" + app.LockName,
 			Watch:         true,
 		}
-		wch, err := client.CoreV1().ConfigMaps(cmNamespace).Watch(ctx, listOpts)
+		wch, err := client.CoreV1().ConfigMaps(app.NamespaceDeckhouse).Watch(ctx, listOpts)
 		if err != nil {
 			return fmt.Errorf("watch configmaps: %w", err)
 		}

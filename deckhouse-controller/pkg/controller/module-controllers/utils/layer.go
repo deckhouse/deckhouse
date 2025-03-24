@@ -20,11 +20,11 @@ import (
 	"io"
 	"strings"
 
-	v1 "github.com/google/go-containerregistry/pkg/v1"
+	crv1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
 type FakeLayer struct {
-	v1.Layer
+	crv1.Layer
 
 	FilesContent map[string]string // pair: filename - file content
 }

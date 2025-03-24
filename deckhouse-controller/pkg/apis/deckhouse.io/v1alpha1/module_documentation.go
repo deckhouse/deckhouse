@@ -21,6 +21,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+const (
+	DocsLeaseLabel = "deckhouse.io/documentation-builder-sync"
+)
+
 var (
 	ModuleDocumentationGVR = schema.GroupVersionResource{
 		Group:    SchemeGroupVersion.Group,

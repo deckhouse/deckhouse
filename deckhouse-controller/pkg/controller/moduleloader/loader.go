@@ -27,7 +27,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/flant/addon-operator/pkg/app"
+	addonapp "github.com/flant/addon-operator/pkg/app"
 	"github.com/flant/addon-operator/pkg/module_manager/loader"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/utils"
@@ -38,6 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/app"
 	d8utils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
@@ -53,8 +54,6 @@ const (
 
 	moduleOrderIdx = 2
 	moduleNameIdx  = 3
-
-	embeddedModulesDir = "/deckhouse/modules"
 )
 
 var (
@@ -77,7 +76,6 @@ type Loader struct {
 	logger         *log.Logger
 	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer
 	modules        map[string]*moduletypes.Module
-	version        string
 	modulesDirs    []string
 	// global module dir
 	globalDir string
@@ -89,7 +87,7 @@ type Loader struct {
 	clusterUUID          string
 }
 
-func New(client client.Client, version, modulesDir, globalDir string, dc dependency.Container, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, logger *log.Logger) *Loader {
+func New(client client.Client, modulesDir, globalDir string, dc dependency.Container, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, logger *log.Logger) *Loader {
 	return &Loader{
 		client:               client,
 		logger:               logger,
@@ -99,7 +97,6 @@ func New(client client.Client, version, modulesDir, globalDir string, dc depende
 		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
 		modules:              make(map[string]*moduletypes.Module),
 		embeddedPolicy:       embeddedPolicy,
-		version:              version,
 		dependencyContainer:  dc,
 	}
 }
@@ -174,7 +171,7 @@ func (l *Loader) processModuleDefinition(def *moduletypes.Definition) (*modulety
 	valuesModuleName := utils.ModuleNameToValuesKey(def.Name)
 
 	// 1. from static values.yaml inside the module
-	moduleStaticValues, err := utils.LoadValuesFileFromDir(def.Path, app.StrictModeEnabled)
+	moduleStaticValues, err := utils.LoadValuesFileFromDir(def.Path, addonapp.StrictModeEnabled)
 	if err != nil {
 		return nil, fmt.Errorf("load values file from the %q dir: %w", def.Path, err)
 	}
@@ -264,7 +261,7 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 			}
 
 			l.logger.Debug("ensure module", slog.String("name", def.Name))
-			if err = l.ensureModule(ctx, def, strings.HasPrefix(def.Path, embeddedModulesDir)); err != nil {
+			if err = l.ensureModule(ctx, def, strings.HasPrefix(def.Path, app.EmbeddedModulesDir)); err != nil {
 				return fmt.Errorf("ensure the '%s' embedded module: %w", def.Name, err)
 			}
 
@@ -348,7 +345,7 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 				module.Properties.ReleaseChannel = l.embeddedPolicy.Get().ReleaseChannel
 
 				// set deckhouse version to embedded modules
-				module.Properties.Version = l.version
+				module.Properties.Version = app.Version
 			}
 
 			if !reflect.DeepEqual(moduleCopy.Properties, module.Properties) ||
