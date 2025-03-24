@@ -25,12 +25,19 @@ type pkiCertModel struct {
 	Key  string `json:"key,omitempty"`
 }
 
+const (
+	pkiLegacySnapName = "legacy"
+	pkiCASnapName     = "ca"
+	pkiTokenSnapName  = "token"
+	pkiProxySnapName  = "proxy"
+)
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
 	Queue:        "/modules/system-registry/pki",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "legacy",
+			Name:       pkiLegacySnapName,
 			ApiVersion: "v1",
 			Kind:       "Secret",
 			NameSelector: &types.NameSelector{
@@ -66,7 +73,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 		},
 		{
-			Name:       "ca",
+			Name:       pkiCASnapName,
 			ApiVersion: "v1",
 			Kind:       "Secret",
 			NameSelector: &types.NameSelector{
@@ -82,7 +89,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: pkiFilterCertSecret,
 		},
 		{
-			Name:       "token",
+			Name:       pkiTokenSnapName,
 			ApiVersion: "v1",
 			Kind:       "Secret",
 			NameSelector: &types.NameSelector{
@@ -98,7 +105,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: pkiFilterCertSecret,
 		},
 		{
-			Name:       "proxy",
+			Name:       pkiProxySnapName,
 			ApiVersion: "v1",
 			Kind:       "Secret",
 			NameSelector: &types.NameSelector{
@@ -115,10 +122,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 	},
 }, func(input *go_hook.HookInput) error {
-	caSnaps := input.Snapshots["ca"]
-	tokenSnaps := input.Snapshots["token"]
-	proxySnaps := input.Snapshots["proxy"]
-	legacySnaps := input.Snapshots["pki"]
+	caSnaps := input.Snapshots[pkiCASnapName]
+	tokenSnaps := input.Snapshots[pkiTokenSnapName]
+	proxySnaps := input.Snapshots[pkiProxySnapName]
+	legacySnaps := input.Snapshots[pkiLegacySnapName]
 
 	var caCert, tokenCert, proxyCert *pkiCertModel
 
