@@ -189,7 +189,7 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 
 func newOnceSchemaStore(schemasDir []string) *SchemaStore {
 	once.Do(func() {
-		store = newSchemaStore(false, schemasDir)
+		store = newSchemaStore(schemasDir)
 	})
 	return store
 }
