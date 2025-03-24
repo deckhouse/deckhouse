@@ -1,5 +1,5 @@
 ---
-title: Multitenancy architecture
+title: Multitenancy
 permalink: en/architecture/multitenancy.html
 lang: ru
 ---

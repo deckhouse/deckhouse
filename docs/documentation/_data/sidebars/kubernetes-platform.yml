@@ -469,8 +469,8 @@ entries:
             ru: Таблица (Мэгтона)
           url: /architecture/functional-table.html
         - title:
-            en: Multitenancy architecture
-            ru: Архитектура мультитенантсности
+            en: Multitenancy
+            ru: Мультитенантность
           url: /architecture/multitenancy.html
 # ------------- Reference -------------
     - title:
