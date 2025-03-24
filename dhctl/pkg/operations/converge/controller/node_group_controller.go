@@ -334,7 +334,6 @@ func (c *NodeGroupController) updateNodes(ctx *context.Context) error {
 
 			return nil
 		})
-
 		if err != nil {
 			// We do not return an error immediately for the following reasons:
 			// - some nodes cannot be converged for some reason, but other nodes must be converged

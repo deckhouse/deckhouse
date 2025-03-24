@@ -336,10 +336,10 @@ func (r *Runner) getHook() InfraActionHook {
 	return r.hook
 }
 
-func (r *Runner) runBeforeActionAndWaitReady() error {
+func (r *Runner) runBeforeActionAndWaitReady(ctx context.Context) error {
 	hook := r.getHook()
 
-	runPostAction, err := hook.BeforeAction(r)
+	runPostAction, err := hook.BeforeAction(ctx, r)
 	if err != nil {
 		return err
 	}
@@ -349,7 +349,7 @@ func (r *Runner) runBeforeActionAndWaitReady() error {
 		resErr = multierror.Append(resErr, err)
 
 		if runPostAction {
-			err := hook.AfterAction(r)
+			err := hook.AfterAction(ctx, r)
 			if err != nil {
 				resErr = multierror.Append(resErr, err)
 			}
@@ -361,7 +361,7 @@ func (r *Runner) runBeforeActionAndWaitReady() error {
 	return nil
 }
 
-func (r *Runner) isSkipChanges() (skip bool, err error) {
+func (r *Runner) isSkipChanges(ctx context.Context) (skip bool, err error) {
 	// first verify destructive change
 	if r.changesInPlan == PlanHasDestructiveChanges && r.changeSettings.AutoDismissDestructive {
 		// skip plan
@@ -382,7 +382,7 @@ func (r *Runner) isSkipChanges() (skip bool, err error) {
 		}
 	}
 
-	err = r.runBeforeActionAndWaitReady()
+	err = r.runBeforeActionAndWaitReady(ctx)
 
 	return false, err
 }
@@ -393,7 +393,7 @@ func (r *Runner) Apply(ctx context.Context) error {
 	}
 
 	return r.logger.LogProcess("default", "terraform apply ...", func() error {
-		skip, err := r.isSkipChanges()
+		skip, err := r.isSkipChanges(ctx)
 		if err != nil {
 			return err
 		}
@@ -433,7 +433,7 @@ func (r *Runner) Apply(ctx context.Context) error {
 
 		// yes, do not check err from exec terraform
 		// always run post action if need
-		err = r.getHook().AfterAction(r)
+		err = r.getHook().AfterAction(ctx, r)
 		errRes = multierror.Append(errRes, err)
 
 		return errRes.ErrorOrNil()
@@ -549,7 +549,7 @@ func (r *Runner) Destroy(ctx context.Context) error {
 		}
 	}
 
-	err = r.runBeforeActionAndWaitReady()
+	err = r.runBeforeActionAndWaitReady(ctx)
 	if err != nil {
 		return err
 	}
@@ -577,7 +577,7 @@ func (r *Runner) Destroy(ctx context.Context) error {
 
 		// yes, do not check err from exec terraform
 		// always run post action if need
-		err = r.getHook().AfterAction(r)
+		err = r.getHook().AfterAction(ctx, r)
 		errRes = multierror.Append(errRes, err)
 
 		return errRes.ErrorOrNil()

@@ -78,7 +78,7 @@ resource "openstack_compute_instance_v2" "master" {
     update = var.resourceManagementTimeout
   }
 
-  metadata = local.metadata_tags
+  metadata = length(local.metadata_tags) > 0 ? local.metadata_tags : null
 
   dynamic "scheduler_hints" {
     for_each = (
