@@ -163,7 +163,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	}
 
 	if proxyCert != nil {
-		input.Values.Set("systemRegistry.internal.pki.proxy", tokenCert)
+		input.Values.Set("systemRegistry.internal.pki.proxy", proxyCert)
 	} else {
 		input.Values.Remove("systemRegistry.internal.pki.proxy")
 	}
