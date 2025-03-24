@@ -20,7 +20,7 @@ var (
 
 	inputValuesCA    = fmt.Sprintf("%s.ca", inputValuesPrefix)
 	inputValuesToken = fmt.Sprintf("%s.token", inputValuesPrefix)
-	inputValuesProxy = fmt.Sprintf("%s.token", inputValuesPrefix)
+	inputValuesProxy = fmt.Sprintf("%s.proxy", inputValuesPrefix)
 )
 
 var (

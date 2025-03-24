@@ -8,9 +8,10 @@ package pki
 import (
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/pki"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	v1core "k8s.io/api/core/v1"
+
+	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/pki"
 )
 
 type certModel struct {
