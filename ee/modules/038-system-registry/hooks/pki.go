@@ -83,7 +83,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		return nil
 	}
 
-	input.Values.Set(".Values.systemRegistry.internal.pki.ca", pkiSecret.CA)
+	input.Values.Set("systemRegistry.internal.pki.ca", pkiSecret.CA)
 
 	if pkiSecret.Token.Cert != "" && pkiSecret.Token.Key != "" {
 		input.Values.Set("systemRegistry.internal.pki.token", pkiSecret.CA)
