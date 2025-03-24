@@ -15,6 +15,7 @@ metadata:
   name: {{ .Chart.Name }}-{{ .VersionDNSNormalized }}
   annotations:
     nginx.ingress.kubernetes.io/configuration-snippet: |
+    {{ include "helm_lib_module_ingress_configuration_snippet" . | nindent 6 }}
       proxy_set_header X-Original-URI         $request_uri;
       ssi on;
       ssi_silent_errors on;
@@ -56,6 +57,7 @@ metadata:
   name: {{ $.Chart.Name }}-{{ .Lang }}-{{ $.VersionDNSNormalized }}
   annotations:
     nginx.ingress.kubernetes.io/configuration-snippet: |
+      {{ include "helm_lib_module_ingress_configuration_snippet" . | nindent 6 }}
       proxy_set_header X-Original-URI         $request_uri;
       ssi on;
       ssi_silent_errors on;
