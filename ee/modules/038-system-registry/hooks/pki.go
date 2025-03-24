@@ -79,16 +79,16 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 	if pkiSecret.CA.Cert == "" && pkiSecret.CA.Key == "" {
 		// No CA = no show
-		input.Values.Remove(".Values.systemRegistry.internal.pki")
+		input.Values.Remove("systemRegistry.internal.pki")
 		return nil
 	}
 
 	input.Values.Set(".Values.systemRegistry.internal.pki.ca", pkiSecret.CA)
 
 	if pkiSecret.Token.Cert != "" && pkiSecret.Token.Key != "" {
-		input.Values.Set(".Values.systemRegistry.internal.pki.token", pkiSecret.CA)
+		input.Values.Set("systemRegistry.internal.pki.token", pkiSecret.CA)
 	} else {
-		input.Values.Remove(".Values.systemRegistry.internal.pki.token")
+		input.Values.Remove("systemRegistry.internal.pki.token")
 	}
 
 	return nil
