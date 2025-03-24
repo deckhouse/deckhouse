@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package pki
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -19,7 +20,7 @@ type certModel struct {
 	Key  string `json:"key,omitempty"`
 }
 
-func (pcm *certModel) ToPKICertKey() (pki.CertKey, error) {
+func (pcm *certModel) ToPKI() (pki.CertKey, error) {
 	if pcm == nil {
 		return pki.CertKey{}, fmt.Errorf("cannot convert nil to CertKey")
 	}
@@ -35,13 +36,19 @@ func certKeyToCertModel(value pki.CertKey) (*certModel, error) {
 }
 
 func inputValuesToCertModel(input *go_hook.HookInput, key string) *certModel {
-	val := certModel{
-		Cert: input.Values.Get(fmt.Sprintf("%s.cert", key)).Str,
-		Key:  input.Values.Get(fmt.Sprintf("%s.key", key)).Str,
+	obj := input.Values.Get(key)
+
+	if !obj.Exists() {
+		return nil
 	}
 
-	if val.Cert != "" && val.Key != "" {
-		return &val
+	var ret certModel
+	if err := json.Unmarshal([]byte(obj.Raw), &ret); err != nil {
+		return nil
+	}
+
+	if ret.Cert != "" && ret.Key != "" {
+		return &ret
 	}
 
 	return nil

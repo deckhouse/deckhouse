@@ -98,48 +98,51 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 	},
 }, func(input *go_hook.HookInput) error {
-	mode := getMode(input)
+	type valuesModel struct {
+		Mode  modeType   `json:"mode"`
+		CA    *certModel `json:"ca,omitempty"`
+		Token *certModel `json:"token,omitempty"`
+		Proxy *certModel `json:"proxy,omitempty"`
+	}
 
-	if mode == modeUnmanaged {
-		input.Values.Remove(inputValuesCA)
-		input.Values.Remove(inputValuesToken)
-		input.Values.Remove(inputValuesProxy)
+	ret := valuesModel{
+		Mode: getMode(input),
+	}
 
+	if ret.Mode == modeUnmanaged {
+		input.Values.Set(inputValuesPrefix, ret)
 		return nil
 	}
 
-	legacySnaps := input.Snapshots[snapLegacyName]
-	caSnaps := input.Snapshots[snapCAName]
-	tokenSnaps := input.Snapshots[snapTokenName]
-
-	var caCert, tokenCert *certModel
-
-	if len(caSnaps) == 1 {
-		val := caSnaps[0].(certModel)
-		caCert = &val
+	if snaps := input.Snapshots[snapCAName]; len(snaps) == 1 {
+		val := snaps[0].(certModel)
+		ret.CA = &val
 	}
 
-	if len(tokenSnaps) == 1 {
-		val := tokenSnaps[0].(certModel)
-		tokenCert = &val
+	if snaps := input.Snapshots[snapTokenName]; len(snaps) == 1 {
+		val := snaps[0].(certModel)
+		ret.Token = &val
 	}
 
-	if caCert == nil && len(legacySnaps) == 1 {
-		val := legacySnaps[0].(legacyModel)
+	if ret.CA == nil {
+		if snaps := input.Snapshots[snapLegacyName]; len(snaps) == 1 {
+			val := snaps[0].(legacyModel)
 
-		if val.CA != nil {
-			caCert = val.CA
+			if val.CA != nil {
+				ret.CA = val.CA
 
-			if val.Token != nil {
-				tokenCert = val.Token
+				if val.Token != nil {
+					ret.Token = val.Token
+				}
 			}
 		}
 	}
 
-	caPKI, err := caCert.ToPKICertKey()
+	// CA
+	caPKI, err := ret.CA.ToPKI()
 	if err != nil {
 		prevErr := err
-		if caPKI, err = inputValuesToCertModel(input, inputValuesCA).ToPKICertKey(); err == nil {
+		if caPKI, err = inputValuesToCertModel(input, inputValuesCA).ToPKI(); err == nil {
 			input.Logger.Warn("Cannot decode CA certificate and key, restored from memory", "error", prevErr)
 		}
 	}
@@ -153,17 +156,16 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		}
 	}
 
-	caCert, err = certKeyToCertModel(caPKI)
+	ret.CA, err = certKeyToCertModel(caPKI)
 	if err != nil {
 		return fmt.Errorf("cannot convert CA PKI to model: %w", err)
 	}
 
-	input.Values.Set(inputValuesCA, caCert)
-
-	tokenPKI, err := tokenCert.ToPKICertKey()
+	// Token
+	tokenPKI, err := ret.Token.ToPKI()
 	if err != nil {
 		prevErr := err
-		if tokenPKI, err = inputValuesToCertModel(input, inputValuesToken).ToPKICertKey(); err == nil {
+		if tokenPKI, err = inputValuesToCertModel(input, inputValuesToken).ToPKI(); err == nil {
 			input.Logger.Warn("Cannot decode Token certificate and key, restored from memory", "error", prevErr)
 		}
 	}
@@ -180,25 +182,23 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		if err != nil {
 			return fmt.Errorf("cannot generate Token certificate: %w", err)
 		}
-
 	}
 
-	tokenCert, err = certKeyToCertModel(tokenPKI)
+	ret.Token, err = certKeyToCertModel(tokenPKI)
 	if err != nil {
 		return fmt.Errorf("cannot convert Token PKI to model: %w", err)
 	}
 
-	input.Values.Set(inputValuesToken, tokenCert)
+	if ret.Mode == modeDirect {
 
-	if mode == modeDirect {
-		var proxyCert *certModel
+		// Proxy
 		proxySnaps := input.Snapshots[snapProxyName]
 		if len(proxySnaps) == 1 {
 			val := proxySnaps[0].(certModel)
-			proxyCert = &val
+			ret.Proxy = &val
 		}
 
-		proxyPKI, err := proxyCert.ToPKICertKey()
+		proxyPKI, err := ret.Proxy.ToPKI()
 		if err != nil {
 			input.Logger.Warn("Cannot decode Proxy certificate and key", "error", err)
 		} else {
@@ -216,16 +216,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 		}
 
-		proxyCert, err = certKeyToCertModel(proxyPKI)
+		ret.Proxy, err = certKeyToCertModel(proxyPKI)
 		if err != nil {
 			return fmt.Errorf("cannot convert Proxy PKI to model: %w", err)
 		}
-
-		input.Values.Set(inputValuesProxy, proxyCert)
-	} else {
-		input.Values.Remove(inputValuesProxy)
 	}
 
+	input.Values.Set(inputValuesPrefix, ret)
 	return nil
 })
 
