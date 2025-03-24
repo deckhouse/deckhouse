@@ -21,6 +21,30 @@ properties:
             type: string
             x-examples:
               - plainstring
+      pki:
+        type: object
+        default: {}
+        properties:
+          ca: &pki_cert_property
+            type: object
+            properties:
+              cert:
+                type: string
+              key:
+                type: string
+          token:
+            <<: *pki_cert_property
+          proxy:
+            <<: *pki_cert_property
+          nodes:
+            type: array
+            items:
+              type: object
+              properties:
+                auth:
+                  <<: *pki_cert_property
+                distribution:
+                  <<: *pki_cert_property
       state:
         type: object
         default: {}
