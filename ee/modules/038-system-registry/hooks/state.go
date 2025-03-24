@@ -51,6 +51,7 @@ type registryState struct {
 	BashibleVersion  string
 	Messages         []string
 	NonExitent       bool
+	PkiMode          string
 }
 
 type registryConfig struct {
@@ -152,6 +153,7 @@ func filterRegistryState(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 	ret := registryState{
 		StaticPodVersion: string(secret.Data["staticpod_version"]),
 		BashibleVersion:  string(secret.Data["bashible_version"]),
+		PkiMode:          string(secret.Data["pki_mode"]),
 	}
 
 	nonExitentStr := string(secret.Data["nonexistent"])
@@ -318,6 +320,10 @@ func handleRegistryStaticPods(input *go_hook.HookInput) error {
 	input.Values.Set("systemRegistry.internal.state.config", config)
 	input.Values.Set("systemRegistry.internal.state.staticpod_version", state.StaticPodVersion)
 	input.Values.Set("systemRegistry.internal.state.bashible_version", state.BashibleVersion)
+
+	if state.PkiMode != "" {
+		input.Values.Set("systemRegistry.internal.pki.mode", state.PkiMode)
+	}
 
 	if len(state.Messages) > 0 {
 		if len(state.Messages) > 30 {

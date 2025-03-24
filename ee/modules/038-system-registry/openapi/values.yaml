@@ -25,6 +25,9 @@ properties:
         type: object
         default: {}
         properties:
+          mode:
+            type: string
+            default: "Unmanaged"
           ca: &pki_cert_property
             type: object
             properties:
