@@ -3,15 +3,19 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
+  name: dashboard
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dashboard")) | nindent 2 }}
   annotations:
     web.deckhouse.io/export-name: "dashboard"
     web.deckhouse.io/export-icon: "/public/img/dashboard.png"
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
-    nginx.ingress.kubernetes.io/configuration-snippet: |
+    nginx.ingress.kubernetes.io/configuration-snippet: |-
       proxy_ssl_certificate /etc/nginx/ssl/client.crt;
       proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
       proxy_ssl_protocols TLSv1.2;
       proxy_ssl_session_reuse on;
+      {{- include "helm_lib_module_ingress_configuration_snippet" . | trim | nindent 6 }}
     nginx.ingress.kubernetes.io/affinity: cookie
     nginx.ingress.kubernetes.io/affinity-mode: persistent
     nginx.ingress.kubernetes.io/session-cookie-name: d8-dashboard-affinity
@@ -26,9 +30,6 @@ metadata:
   {{- if .Values.dashboard.auth.whitelistSourceRanges }}
     nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.dashboard.auth.whitelistSourceRanges | join "," }}
   {{- end }}
-  name: dashboard
-  namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "dashboard")) | nindent 2 }}
 spec:
   ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
   rules:

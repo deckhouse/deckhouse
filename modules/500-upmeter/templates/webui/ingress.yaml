@@ -12,6 +12,8 @@ metadata:
 {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.upmeter.auth.webui.externalAuthentication }}
     nginx.ingress.kubernetes.io/auth-signin: {{ .Values.upmeter.auth.webui.externalAuthentication.authSignInURL }}
     nginx.ingress.kubernetes.io/auth-url: {{ .Values.upmeter.auth.webui.externalAuthentication.authURL }}
+    nginx.ingress.kubernetes.io/configuration-snippet: |-
+      {{- include "helm_lib_module_ingress_configuration_snippet" $ | trim | nindent 6 }}
 {{- else }}
     nginx.ingress.kubernetes.io/auth-type: basic
     nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
@@ -60,11 +62,12 @@ metadata:
     nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.upmeter.auth.webui.whitelistSourceRanges | join "," }}
 {{- end }}
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
-    nginx.ingress.kubernetes.io/configuration-snippet: |
+    nginx.ingress.kubernetes.io/configuration-snippet: |-
       proxy_ssl_certificate /etc/nginx/ssl/client.crt;
       proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
       proxy_ssl_protocols TLSv1.2;
       proxy_ssl_session_reuse on;
+      {{- include "helm_lib_module_ingress_configuration_snippet" . | trim | nindent 6 }}
 spec:
   ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}

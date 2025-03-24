@@ -2,8 +2,8 @@ apiVersion: v2
 type: library
 name: helm_lib
 version: 0.1.0
-description: "Helm helpers"
+description: Helm helpers
 dependencies:
   - name: deckhouse_lib_helm
-    version: "1.44.5"
+    version: 1.45.0
     repository: https://deckhouse.github.io/lib-helm
