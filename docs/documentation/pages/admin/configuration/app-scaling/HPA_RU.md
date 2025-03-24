@@ -14,12 +14,12 @@ Horizontal Pod Autoscaler (HPA) — это механизм автоматиче
 
 1. По потреблению CPU и памяти подов.
    - Настраивается с помощью ресурса [HorizontalPodAutoscaler](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale-walkthrough/).  
-   Например, можно указать метрику типа Resource с `averageUtilization = 70` для CPU, чтобы при среднем использовании 70% масштабировать приложение вверх (см. [Примеры настройки HPA](http://deckhouse.ru/products/kubernetes-platform/documentation/v1/admin/configuration/app-scaling/hpa.html#масштабирование-по-cpu-и-памяти)).
+   Например, можно указать метрику типа Resource с `averageUtilization = 70` для CPU, чтобы при среднем использовании 70% масштабировать приложение вверх (см. [Примеры настройки HPA](hpa.html#масштабирование-по-cpu-и-памяти)).
 
-1. По метрикам объектов DKP (Ingress, Service) или по метрикам самих подов (сумма или среднее по всем подам одного контроллера)(см. [Примеры настройки HPA](http://deckhouse.ru/products/kubernetes-platform/documentation/v1/admin/configuration/app-scaling/hpa.html#масштабирование-по-метрикам-объектов)).
+1. По метрикам объектов DKP (Ingress, Service) или по метрикам самих подов (сумма или среднее по всем подам одного контроллера) (см. [Примеры настройки HPA](hpa.html#масштабирование-по-метрикам-объектов)).
    - Позволяют масштабироваться на основе метрик, привязанных к объектам DKP (например, Ingress, Service), или рассчитанных на под (сумма или среднее по всем подам контроллера). Используются ресурсы ServiceMetric для сервисов и IngressMetric для Ingress.
 
-1. По любым другим метрикам, включая внешние данные (метрики Amazon SQS, облачных балансировщиков, SaaS-сервисов и т. п.)(см. [Примеры настройки HPA](http://deckhouse.ru/products/kubernetes-platform/documentation/v1/admin/configuration/app-scaling/hpa.html#масштабирование-на-основе-внешних-данных)).
+1. По любым другим метрикам, включая внешние данные (метрики Amazon SQS, облачных балансировщиков, SaaS-сервисов и т. п.) (см. [Примеры настройки HPA](hpa.html#масштабирование-на-основе-внешних-данных)).
    - Используются, когда источник метрик вне кластера (Amazon SQS, облачный Load Balancer, SaaS-сервисы). Настраивается с помощью ресурса `CustomPrometheusRules`.
 
 ## Рекомендации HPA
@@ -43,7 +43,7 @@ Horizontal Pod Autoscaler (HPA) — это механизм автоматиче
 
 ## Как включить или отключить HPA
 
-HPA не требует отдельного включения в DKP. Но, если необходимо маштабирование не только по метрикам по потреблению CPU и памяти подов, то необходимо модуль `prometheus-metrics-adapter`. Как включить модуль [см. в документации](http://deckhouse.ru/products/kubernetes-platform/documentation/v1/admin/configuration/app-scaling/scaling-by-metrics.html#как-включить-prometheus-metrics-adapter).
+HPA не требует отдельного включения в DKP. Но, если необходимо маштабирование не только по метрикам по потреблению CPU и памяти подов, то необходимо включить модуль `prometheus-metrics-adapter`. Как включить модуль [см. в документации](scaling-by-metrics.html#как-включить-prometheus-metrics-adapter).
 
 ## Настройка HPA
 
