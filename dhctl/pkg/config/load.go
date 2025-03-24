@@ -148,22 +148,12 @@ func newSchemaStore(checkAdditionalProperties bool, schemasDir []string) *Schema
 			if err != nil {
 				return err
 			}
-<<<<<<< HEAD
 
 			schema = transformer.TransformSchema(
 				schema,
 				&transformer.AdditionalPropertiesTransformer{},
 			)
 
-||||||| 0a516a927f
-=======
-			if checkAdditionalProperties {
-				schema = transformer.TransformSchema(
-					schema,
-					&transformer.AdditionalPropertiesTransformer{},
-				)
-			}
->>>>>>> origin/main
 			st.moduleConfigsCache[moduleName] = schema
 		} else if errors.Is(err, os.ErrNotExist) {
 			log.DebugF("Openapi spec not found for module %s\n", moduleName)
@@ -360,23 +350,12 @@ func (s *SchemaStore) upload(checkAdditionalProperties bool, fileContent []byte)
 		if err != nil {
 			return fmt.Errorf("expand the schema: %v", err)
 		}
-<<<<<<< HEAD
 
 		schema = transformer.TransformSchema(
 			schema,
 			&transformer.AdditionalPropertiesTransformer{},
 		)
 
-||||||| 0a516a927f
-
-=======
-		if checkAdditionalProperties {
-			schema = transformer.TransformSchema(
-				schema,
-				&transformer.AdditionalPropertiesTransformer{},
-			)
-		}
->>>>>>> origin/main
 		s.cache[SchemaIndex{Kind: openAPISchema.Kind, Version: parsedSchema.Version}] = schema
 	}
 
