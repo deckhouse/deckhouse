@@ -16,6 +16,12 @@ linters-settings:
         - kind: Deployment
           name: documentation
           container: web
+  templates:
+    exclude-rules:
+      ingress:
+        - kind: Ingress
+          name: documentation
+
   module:
     oss:
       disable: true
@@ -24,3 +30,4 @@ linters-settings:
       files:
         - images/web/site/_data/topnav.yml
         - images/docs-builder/modules-docs/hugo.yaml
+
