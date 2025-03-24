@@ -54,6 +54,8 @@ const (
 
 	maxConcurrentReconciles = 3
 
+	moduleNotFoundInterval = 3 * time.Minute
+
 	moduleDeckhouse = "deckhouse"
 	moduleGlobal    = "global"
 )
@@ -184,7 +186,7 @@ func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alp
 					return ctrl.Result{Requeue: true}, nil
 				}
 			}
-			return ctrl.Result{}, nil
+			return ctrl.Result{RequeueAfter: moduleNotFoundInterval}, nil
 		}
 		return ctrl.Result{Requeue: true}, nil
 	}
