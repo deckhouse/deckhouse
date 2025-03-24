@@ -25,9 +25,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"gopkg.in/yaml.v2"
-
-	. "github.com/deckhouse/deckhouse/testing/helm"
-	"github.com/deckhouse/deckhouse/testing/library/object_store"
 	corev1 "k8s.io/api/core/v1"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
