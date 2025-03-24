@@ -72,17 +72,18 @@ jobs:
     - name: Create Pull Request
       id: create-pull-request
       uses: {!{ index (ds "actions") "peter-evans/create-pull-request" }!}
-      commit-message: |
-        Automated Change: Update k8s patch version
+      with:
+        commit-message: |
+          Automated Change: Update k8s patch version
 
-        Signed-off-by: deckhouse-BOaTswain <89150800+deckhouse-boatswain@users.noreply.github.com>
-      title: "Automated Change: Update k8s patch version"
-      body-path: ".github/k8s_autoupdate_pull_request_template.md"
-      branch: chore/k8s-autoupdate
-      branch-suffix: timestamp
-      base: main
-      labels: e2e/run/yandex-cloud
-      milestone: ${{ steps.setup.outputs.milestone }}
+          Signed-off-by: deckhouse-BOaTswain <89150800+deckhouse-boatswain@users.noreply.github.com>
+        title: "Automated Change: Update k8s patch version"
+        body-path: ".github/k8s_autoupdate_pull_request_template.md"
+        branch: chore/k8s-autoupdate
+        branch-suffix: timestamp
+        base: main
+        labels: e2e/run/yandex-cloud
+        milestone: ${{ steps.setup.outputs.milestone }}
     - name: Send success report
       if: ${{ steps.create-pull-request.outputs.pull-request-url != '' }}
       env:
