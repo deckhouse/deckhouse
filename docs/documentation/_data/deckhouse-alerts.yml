@@ -527,7 +527,7 @@ alerts:
       summary: |
         CephCsi module is deprecated.
       severity: "5"
-      markupFormat: markdown      
+      markupFormat: markdown
     - name: D8CertExporterPodIsNotReady
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/certificates/certificates-exporter-health.yaml
       moduleUrl: 340-extended-monitoring
@@ -5776,6 +5776,7 @@ alerts:
       markupFormat: markdown
 modules-having-alerts:
     - admission-policy-engine
+    - ceph-csi
     - cert-manager
     - chrony
     - cloud-provider-yandex
