@@ -69,6 +69,7 @@ func applyServiceFilterForAlerts(obj *unstructured.Unstructured) (go_hook.Filter
 func checkServicesForDeprecatedAnnotations(input *go_hook.HookInput) error {
 	// Check ModuleConfig version and pools
 	input.MetricsCollector.Expire("D8MetallbUpdateMCVersionRequired")
+	input.MetricsCollector.Expire("D8MetallbObsoleteLayer2PoolsAreUsed")
 
 	mcSnaps := input.Snapshots["module_config"]
 	if len(mcSnaps) != 1 {

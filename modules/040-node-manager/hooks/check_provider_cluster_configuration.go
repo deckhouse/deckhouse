@@ -52,19 +52,20 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func CheckCloudProviderConfig(input *go_hook.HookInput) error {
 	snap := input.Snapshots["check_provider_cluster_configuration"]
-	if len(snap) > 0 {
-		secret := snap[0].(*v1.Secret)
-		if YAML, ok := secret.Data["cloud-provider-cluster-configuration.yaml"]; ok && len(YAML) > 0 {
-			err := config.ValidateConf(&YAML)
-			if err != nil {
-				requirements.SaveValue(CheckCloudProviderConfigRaw, true)
-				input.MetricsCollector.Set("d8_check_cloud_provider_config", 1, nil)
-				input.Logger.Error(findErrorLines(err.Error()))
-				return nil
-			}
-			requirements.SaveValue(CheckCloudProviderConfigRaw, false)
-			input.MetricsCollector.Expire("d8_check_cloud_provider_config")
+	if len(snap) == 0 {
+		return nil
+	}
+	secret := snap[0].(*v1.Secret)
+	if YAML, ok := secret.Data["cloud-provider-cluster-configuration.yaml"]; ok && len(YAML) > 0 {
+		err := config.ValidateConf(&YAML)
+		if err != nil {
+			requirements.SaveValue(CheckCloudProviderConfigRaw, true)
+			input.MetricsCollector.Set("d8_check_cloud_provider_config", 1, nil)
+			input.Logger.Error(findErrorLines(err.Error()))
+			return nil
 		}
+		requirements.SaveValue(CheckCloudProviderConfigRaw, false)
+		input.MetricsCollector.Expire("d8_check_cloud_provider_config")
 	}
 	return nil
 }

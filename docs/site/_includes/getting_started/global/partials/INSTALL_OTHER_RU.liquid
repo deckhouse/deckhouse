@@ -1,6 +1,6 @@
 {% assign revision=include.revision %}
 
-Для установки **Deckhouse Kubernetes Platform** используется Docker-образ, в который необходимо передать конфигурационные файлы{%- if page.platform_type != 'existing' %} и SSH-ключи доступа на **master-узел** (далее подразумевается что используется SSH-ключ `~/.ssh/id_rsa`){% endif %}.
+Для установки **Deckhouse Kubernetes Platform** используется образ контейнера, в который необходимо передать конфигурационные файлы{%- if page.platform_type != 'existing' %} и SSH-ключи доступа на **master-узел** (далее подразумевается что используется SSH-ключ `~/.ssh/id_rsa` пользователя персонального компьютера, с которого выполняется установка){% endif %}.
 
 {% if page.platform_code == 'bm-private' or page.platform_code == 'bm' %}
 **В операционных системах семейства Astra Linux**, при использовании модуля мандатного контроля целостности Parsec, сконфигурируйте максимальный уровень целостности для пользователя, под которым будет выполняться установка. Для этого выполните **на будущем master-узле** команду, заменив `<USERNAME>` на имя пользователя:
@@ -111,7 +111,7 @@ dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- el
 
 {%- if page.platform_type == "baremetal" or page.platform_type == "cloud" %}
 {%- if page.platform_type == "baremetal" %}
-В параметре `--ssh-user` укажите имя пользователя, от которого генерировался SSH-ключ для установки. Если для запуска sudo на сервере необходим пароль, то укажите его в ответ на запрос `[sudo] Password:`.
+В параметре `--ssh-user` укажите имя пользователя на master-узле. Если для выполнения `sudo` на сервере необходим пароль, то укажите его в ответ на запрос `[sudo] Password:`.
 {%- else %}
 В параметре `--ssh-user` укажите имя пользователя по умолчанию для выбранного образа виртуальной машины.
 {%- if page.platform_code == "azure" %} В случае c {{ page.platform_name[page.lang] }}, это `azureuser` (для используемого в этом руководстве образа).

@@ -223,7 +223,7 @@ func trimBlankLines(content string) string {
 	lines := strings.Split(content, "\n")
 
 	// Filter out blank lines
-	var filteredLines []string
+	filteredLines := make([]string, 0)
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
 		if trimmed == "" || strings.HasPrefix(trimmed, "#") {

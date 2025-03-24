@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"log/slog"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -88,13 +89,13 @@ func getDefaultPolicy(input *go_hook.HookInput) string {
 
 	// no version field found or invalid semver - something went wrong
 	if len(deckhouseVersion) == 0 || !semver.IsValid(deckhouseVersion) {
-		input.Logger.Warnf("deckhouseVersion isn't found or invalid: %s", deckhouseVersion)
+		input.Logger.Warn("deckhouseVersion isn't found or invalid", slog.String("version", deckhouseVersion))
 		return "Privileged"
 	}
 
 	// if deckhouse bootstrap release >= v1.55
 	if semver.Compare(semver.MajorMinor(deckhouseVersion), milestone) >= 0 {
-		input.Logger.Infof("PSS default policy for %v is set to baseline", deckhouseVersion)
+		input.Logger.Info("PSS default policy is set to baseline", slog.String("version", deckhouseVersion))
 		return "Baseline"
 	}
 

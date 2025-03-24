@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -106,7 +105,7 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 			m.logger.Error(updateErr, "failed to update project status", "project", project.Name, "template", project.Spec.ProjectTemplateName)
 			return ctrl.Result{}, updateErr
 		}
-		return ctrl.Result{}, nil
+		return ctrl.Result{}, err
 	}
 
 	// check if the project template exists
@@ -142,17 +141,14 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 	// upgrade project`s resources
 	m.logger.Info("upgrade resources for the project", "project", project.Name, "template", projectTemplate.Name)
 	if err = m.helmClient.Upgrade(ctx, project, projectTemplate); err != nil {
-		// to avoid helm flaky errors
-		m.logger.Info("failed to upgrade the project resources, try again", "project", project.Name, "template", projectTemplate.Name)
-		if err = m.helmClient.Upgrade(ctx, project, projectTemplate); err != nil {
-			project.SetState(v1alpha2.ProjectStateError)
-			project.SetConditionFalse(v1alpha2.ProjectConditionProjectResourcesUpgraded, err.Error())
-			if updateErr := m.updateProjectStatus(ctx, project); updateErr != nil {
-				m.logger.Error(updateErr, "failed to update the project status", "project", project.Name, "template", projectTemplate.Name)
-				return ctrl.Result{}, updateErr
-			}
-			return ctrl.Result{}, nil
+		m.logger.Error(err, "failed to upgrade the project resources", "project", project.Name, "template", projectTemplate.Name)
+		project.SetState(v1alpha2.ProjectStateError)
+		project.SetConditionFalse(v1alpha2.ProjectConditionProjectResourcesUpgraded, err.Error())
+		if updateErr := m.updateProjectStatus(ctx, project); updateErr != nil {
+			m.logger.Error(updateErr, "failed to update the project status", "project", project.Name, "template", projectTemplate.Name)
+			return ctrl.Result{}, updateErr
 		}
+		return ctrl.Result{}, err
 	}
 
 	project.SetState(v1alpha2.ProjectStateDeployed)

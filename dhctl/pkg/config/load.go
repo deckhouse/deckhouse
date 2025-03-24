@@ -413,13 +413,13 @@ func ValidateDiscoveryData(config *[]byte, paths []string, opts ...ValidateOptio
 
 func ValidateConf(conf *[]byte) error {
 	schemaStore := newSchemaStore([]string{
-		"/deckhouse/ee/se-plus/candi/cloud-providers/zvirt/openapi",
-		"/deckhouse/ee/se-plus/candi/cloud-providers/vsphere/openapi",
-		"/deckhouse/ee/candi/cloud-providers/huaweicloud/openapi",
-		"/deckhouse/ee/candi/cloud-providers/dynamix/openapi",
-		"/deckhouse/ee/candi/cloud-providers/openstack/openapi",
+		"/deckhouse/candi/cloud-providers/zvirt/openapi",
+		"/deckhouse/candi/cloud-providers/vsphere/openapi",
+		"/deckhouse/candi/cloud-providers/huaweicloud/openapi",
+		"/deckhouse/candi/cloud-providers/dynamix/openapi",
 		"/deckhouse/candi/cloud-providers/openstack/openapi",
-		"/deckhouse/ee/candi/cloud-providers/vcd/openapi",
+		"/deckhouse/candi/cloud-providers/openstack/openapi",
+		"/deckhouse/candi/cloud-providers/vcd/openapi",
 		"/deckhouse/candi/cloud-providers/gcp/openapi",
 		"/deckhouse/candi/cloud-providers/yandex/openapi",
 		"/deckhouse/candi/cloud-providers/aws/openapi",

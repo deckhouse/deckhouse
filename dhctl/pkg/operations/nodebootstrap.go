@@ -17,7 +17,9 @@ package operations
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
+	"os"
 	"sync"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -30,6 +32,14 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
+
+func IsSequentialNodesBootstrap() bool {
+	if os.Getenv("DHCTL_PARALLEL_CLOUD_PERMANENT_NODES_BOOTSTRAP") == "yes" {
+		return false
+	}
+
+	return true
+}
 
 func NodeName(cfg *config.MetaConfig, nodeGroupName string, index int) string {
 	return fmt.Sprintf("%s-%s-%v", cfg.ClusterPrefix, nodeGroupName, index)
@@ -63,7 +73,8 @@ func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaCo
 		RunnerLogger: log.GetDefaultLogger(),
 	})
 
-	outputs, err := terraform.ApplyPipeline(runner, nodeName, terraform.OnlyState)
+	// TODO(dhctl-for-commander-cancels): pass ctx
+	outputs, err := terraform.ApplyPipeline(context.TODO(), runner, nodeName, terraform.OnlyState)
 	if err != nil {
 		return err
 	}
@@ -77,6 +88,34 @@ func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaCo
 		return err
 	}
 
+	return nil
+}
+
+func BootstrapSequentialTerraNodes(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraNodeGroups []config.TerraNodeGroupSpec, terraformContext *terraform.TerraformContext) error {
+	for _, ng := range terraNodeGroups {
+		err := log.Process("bootstrap", fmt.Sprintf("Create %s NodeGroup", ng.Name), func() error {
+			err := entity.CreateNodeGroup(kubeCl, ng.Name, log.GetDefaultLogger(), metaConfig.NodeGroupManifest(ng))
+			if err != nil {
+				return err
+			}
+
+			cloudConfig, err := entity.GetCloudConfig(kubeCl, ng.Name, global.ShowDeckhouseLogs, log.GetDefaultLogger())
+			if err != nil {
+				return err
+			}
+
+			for i := 0; i < ng.Replicas; i++ {
+				err = BootstrapAdditionalNode(kubeCl, metaConfig, i, "static-node", ng.Name, cloudConfig, false, terraformContext)
+				if err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -97,7 +136,8 @@ func BootstrapAdditionalNodeForParallelRun(kubeCl *client.KubernetesClient, cfg 
 		RunnerLogger: runnerLogger,
 	})
 
-	outputs, err := terraform.ApplyPipeline(runner, nodeName, terraform.OnlyState)
+	// TODO(dhctl-for-commander-cancels): pass ctx
+	outputs, err := terraform.ApplyPipeline(context.TODO(), runner, nodeName, terraform.OnlyState)
 	if err != nil {
 		return err
 	}
@@ -332,7 +372,8 @@ func BootstrapAdditionalMasterNode(kubeCl *client.KubernetesClient, cfg *config.
 		RunnerLogger: log.GetDefaultLogger(),
 	})
 
-	outputs, err := terraform.ApplyPipeline(runner, nodeName, terraform.GetMasterNodeResult)
+	// TODO(dhctl-for-commander-cancels): pass ctx
+	outputs, err := terraform.ApplyPipeline(context.TODO(), runner, nodeName, terraform.GetMasterNodeResult)
 	if err != nil {
 		return nil, err
 	}

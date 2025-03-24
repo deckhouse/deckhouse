@@ -15,6 +15,7 @@
 package infrastructure
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -87,7 +88,8 @@ func (r *NodeGroupTerraformController) DestroyNode(name string, nodeState []byte
 		NodeIndex:     nodeIndex,
 	})
 
-	if err := terraform.DestroyPipeline(nodeRunner, name); err != nil {
+	// TODO(dhctl-for-commander-cancels): pass ctx
+	if err := terraform.DestroyPipeline(context.TODO(), nodeRunner, name); err != nil {
 		return fmt.Errorf("destroing of node %s failed: %v", name, err)
 	}
 

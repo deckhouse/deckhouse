@@ -21,7 +21,7 @@ import (
 	"os"
 	"os/signal"
 	"registry-modules-watcher/internal/backends"
-	registryscaner "registry-modules-watcher/internal/backends/pkg/registry-scaner"
+	registryscanner "registry-modules-watcher/internal/backends/pkg/registry-scanner"
 	"registry-modules-watcher/internal/backends/pkg/sender"
 	"registry-modules-watcher/internal/watcher"
 	registryclient "registry-modules-watcher/pkg/registry-client"
@@ -60,7 +60,7 @@ func main() {
 
 	// * * * * * * * * *
 	// Connect to registry
-	clients := make([]registryscaner.Client, 0)
+	clients := make([]registryscanner.Client, 0)
 	for _, registry := range strings.Split(*registries, ",") {
 		logger.Info("watch modules", slog.String("source", registry))
 
@@ -80,16 +80,16 @@ func main() {
 		logger.Fatal("no registries to watch")
 	}
 
-	registryScaner := registryscaner.New(logger, clients...)
-	registryScaner.Subscribe(ctx, *scanInterval)
+	registryscanner := registryscanner.New(logger.Named("registry-scanner"), clients...)
+	registryscanner.Subscribe(ctx, *scanInterval)
 
 	// * * * * * * * * *
 	// New sender
-	sender := sender.New(logger)
+	sender := sender.New(logger.Named("sender"))
 
 	// * * * * * * * * *
 	// New backends service
-	backends := backends.New(registryScaner, sender, logger)
+	backends := backends.New(registryscanner, sender, logger)
 
 	// * * * * * * * * *
 	// Init kube client
@@ -106,7 +106,7 @@ func main() {
 	// * * * * * * * * *
 	// Watch lease
 	namespace := os.Getenv("POD_NAMESPACE")
-	wather := watcher.New(kClient, namespace, logger)
+	wather := watcher.New(kClient, namespace, logger.Named("watcher"))
 	wather.Watch(ctx, backends.Add, backends.Delete)
 
 	<-ctx.Done()

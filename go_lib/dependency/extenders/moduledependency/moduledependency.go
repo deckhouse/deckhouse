@@ -18,6 +18,7 @@ package moduledependency
 
 import (
 	"fmt"
+	"log/slog"
 	"slices"
 	"strings"
 	"sync"
@@ -117,7 +118,7 @@ func (e *Extender) AddConstraint(name string, value map[string]string) error {
 	}
 
 	e.modules[name] = constraints
-	e.logger.Debugf("installed constraint for the '%s' module is added", name)
+	e.logger.Debug("installed constraint for the module is added", slog.String("name", name))
 
 	return nil
 }

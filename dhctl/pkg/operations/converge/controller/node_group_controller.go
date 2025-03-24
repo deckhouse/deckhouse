@@ -191,7 +191,7 @@ func (c *NodeGroupController) deleteRedundantNodes(
 			Hook: getHookByNodeName(nodeToDeleteInfo.name),
 		})
 
-		if err := terraform.DestroyPipeline(nodeRunner, nodeToDeleteInfo.name); err != nil {
+		if err := terraform.DestroyPipeline(ctx.Ctx(), nodeRunner, nodeToDeleteInfo.name); err != nil {
 			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %w", nodeToDeleteInfo.name, err))
 			continue
 		}

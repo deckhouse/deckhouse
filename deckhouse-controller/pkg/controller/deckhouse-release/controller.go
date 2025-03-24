@@ -30,7 +30,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	aoapp "github.com/flant/addon-operator/pkg/app"
-	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
+	"github.com/flant/shell-operator/pkg/metric"
 	"github.com/gofrs/uuid/v5"
 	gcr "github.com/google/go-containerregistry/pkg/name"
 	appsv1 "k8s.io/api/apps/v1"
@@ -78,7 +78,7 @@ type deckhouseReleaseReconciler struct {
 	moduleManager moduleManager
 
 	updateSettings *helpers.DeckhouseSettingsContainer
-	metricStorage  *metricstorage.MetricStorage
+	metricStorage  metric.Storage
 
 	preflightCountDown      *sync.WaitGroup
 	clusterUUID             string
@@ -91,7 +91,7 @@ type deckhouseReleaseReconciler struct {
 }
 
 func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc dependency.Container,
-	moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer, metricStorage *metricstorage.MetricStorage,
+	moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer, metricStorage metric.Storage,
 	preflightCountDown *sync.WaitGroup, deckhouseVersion string, logger *log.Logger,
 ) error {
 	parsedVersion, err := semver.NewVersion(deckhouseVersion)

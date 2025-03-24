@@ -25,7 +25,7 @@ The `d8 d` and `d8 mirror` command groups are not available for Community Editio
   - [Manually uploading images to an air-gapped registry](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#manually-uploading-images-to-an-air-gapped-registry).
   - [Manually uploading images of Deckhouse modules into an air-gapped registry](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#manually-uploading-images-of-deckhouse-modules-into-an-air-gapped-registry).
 
-* `d8 v` — the set of commands for managing virtual machines created by [Deckhouse Virtualization Platform](/modules/virtualization/stable/).  
+* `d8 v` — the set of commands for managing virtual machines created by [Deckhouse Virtualization Platform](https://deckhouse.io/products/virtualization-platform/documentation/).  
     For example, the `d8 virtualization console` command execs you into the VM console.
 
     <div markdown="0">
@@ -56,9 +56,9 @@ If you need to install one of the versions below 0.10, use the [outdated install
 
    ```bash
    URL=https://trrr.flant.dev/trdl-deckhouse-cli
-   ROOT_VERSION=1
-   ROOT_SHA512=$(curl -Ls ${URL}/${ROOT_VERSION}.root.json | sha512sum | tr -d '\-[:space:]\n')
-   REPO=trdl-deckhouse-cli
+   ROOT_VERSION=0
+   ROOT_SHA512=$(curl -Ls ${URL}/root.json | sha512sum | tr -d '\-[:space:]\n')
+   REPO=trdl-d8
    
    trdl add $REPO $URL $ROOT_VERSION $ROOT_SHA512
    ```

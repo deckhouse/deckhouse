@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"log/slog"
 	"os"
 	"strconv"
 	"strings"
@@ -24,7 +25,6 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -273,7 +273,7 @@ func (ar *updateApprover) needDrainNode(input *go_hook.HookInput, node *updateAp
 
 	// we can not drain single node with deckhouse
 	if node.Name == ar.deckhouseNodeName && nodeNg.Status.Ready < 2 {
-		input.Logger.Warnf("Skip drain node %s with deckhouse pod because node-group %s contains single node and deckhouse will not run after drain", node.Name, nodeNg.Name)
+		input.Logger.Warn("Skip drain node with deckhouse pod because node-group contains single node and deckhouse will not run after drain", slog.String("node", node.Name), slog.String("node_group", nodeNg.Name))
 		return false
 	}
 
@@ -320,7 +320,7 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 		// If approvalMode == RollingUpdate simply delete machine
 		if ng.Disruptions.ApprovalMode == "RollingUpdate" {
 			input.Logger.Infof("Delete machine d8-cloud-instance-manager/%s due to RollingUpdate strategy", node.Name)
-			input.PatchCollector.Delete("machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", node.Name, object_patch.InBackground())
+			input.PatchCollector.DeleteInBackground("machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", node.Name)
 			continue
 		}
 

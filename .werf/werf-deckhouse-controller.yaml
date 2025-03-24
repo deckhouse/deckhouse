@@ -34,7 +34,7 @@ import:
   before: install
 mount:
 - fromPath: ~/go-pkg-cache
-  to: /root/go/pkg
+  to: /go/pkg
 shell:
   beforeInstall:
   - mkdir /deckhouse /out

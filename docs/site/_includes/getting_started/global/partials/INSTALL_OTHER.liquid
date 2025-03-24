@@ -1,6 +1,6 @@
 {% assign revision=include.revision %}
 
-Use a Docker image to install the **Deckhouse Kubernetes Platform**. It is necessary to transfer configuration file to the container{%- if page.platform_type != 'existing' %} as well as SSH keys for accessing **the master node** (further, it is assumed that the SSH key `~/.ssh/id_rsa` is used){% endif %}.
+Use a container image to install the **Deckhouse Kubernetes Platform**. It is necessary to transfer configuration file to the container{%- if page.platform_type != 'existing' %} as well as SSH keys for accessing **the master node** (further, it is assumed that the SSH key `~/.ssh/id_rsa` from the personal computer of the user performing the installation is used){% endif %}.
 {% if page.platform_code == 'bm-private' %}
 Log in on the **personal computer** to the container image registry you specified in the previous step.
 {%- endif %}
@@ -103,7 +103,7 @@ dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- el
 
 {%- if page.platform_type == "baremetal" or page.platform_type == "cloud" %}
 {%- if page.platform_type == "baremetal" %}
-The `--ssh-user` parameter here refers to the user that generated the SSH key. If a password is required to run sudo on the server, then specify it in response to the request `[sudo] Password:`.
+The `--ssh-user` parameter here refers to the user on the master node. If a password is required to run `sudo` on the server, then specify it in response to the request `[sudo] Password:`.
 {%- else %}
 The `--ssh-user` parameter here refers to the default user for the relevant VM image.
 {%- if page.platform_code == "azure" %} It is `azureuser` in case of {{ page.platform_name[page.lang] }} (for the image suggested in this guide).

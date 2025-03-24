@@ -1,8 +1,39 @@
 
 ---
 apiVersion: v1
+kind: Namespace
+metadata:
+  annotations: {}
+  labels:
+    extended-monitoring.deckhouse.io/enabled: ""
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: secure-with-dedicated-nodes
+    security.deckhouse.io/pod-policy: baseline
+  name: test
+
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: AuthorizationRule
+metadata:
+  annotations: {}
+  labels:
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: secure-with-dedicated-nodes
+  name: user-gmail.com
+  namespace: test
+spec:
+  accessLevel: Admin
+  subjects:
+  - kind: User
+    name: user@gmail.com
+
+---
+apiVersion: v1
 kind: ResourceQuota
 metadata:
+  annotations: {}
   labels:
     heritage: multitenancy-manager
     projects.deckhouse.io/project: test
@@ -19,6 +50,7 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
+  annotations: {}
   labels:
     heritage: multitenancy-manager
     projects.deckhouse.io/project: test
@@ -65,6 +97,7 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: OperationPolicy
 metadata:
+  annotations: {}
   labels:
     heritage: multitenancy-manager
     projects.deckhouse.io/project: test
@@ -87,6 +120,7 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: FalcoAuditRules
 metadata:
+  annotations: {}
   labels:
     heritage: multitenancy-manager
     projects.deckhouse.io/project: test
@@ -119,6 +153,7 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: SecurityPolicy
 metadata:
+  annotations: {}
   labels:
     heritage: multitenancy-manager
     projects.deckhouse.io/project: test
@@ -138,32 +173,3 @@ spec:
       - max: 100
         min: 10
       rule: MustRunAs
-
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  annotations: null
-  labels:
-    extended-monitoring.deckhouse.io/enabled: ""
-    heritage: multitenancy-manager
-    projects.deckhouse.io/project: test
-    projects.deckhouse.io/project-template: secure-with-dedicated-nodes
-    security.deckhouse.io/pod-policy: baseline
-  name: test
-
----
-apiVersion: deckhouse.io/v1alpha1
-kind: AuthorizationRule
-metadata:
-  labels:
-    heritage: multitenancy-manager
-    projects.deckhouse.io/project: test
-    projects.deckhouse.io/project-template: secure-with-dedicated-nodes
-  name: user-gmail.com
-  namespace: test
-spec:
-  accessLevel: Admin
-  subjects:
-  - kind: User
-    name: user@gmail.com
