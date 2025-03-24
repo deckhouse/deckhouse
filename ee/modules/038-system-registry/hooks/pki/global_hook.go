@@ -138,8 +138,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 	caPKI, err := caCert.ToPKICertKey()
 	if err != nil {
+		prevErr := err
 		if caPKI, err = inputValuesToCertModel(input, inputValuesCA).ToPKICertKey(); err == nil {
-			input.Logger.Warn("Cannot decode CA certificate and key, restored from memory", "error", err)
+			input.Logger.Warn("Cannot decode CA certificate and key, restored from memory", "error", prevErr)
 		}
 	}
 
@@ -151,12 +152,19 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			return fmt.Errorf("cannot generate CA certificate: %w", err)
 		}
 	}
+
+	caCert, err = certKeyToCertModel(caPKI)
+	if err != nil {
+		return fmt.Errorf("cannot convert CA PKI to model: %w", err)
+	}
+
 	input.Values.Set(inputValuesCA, caCert)
 
 	tokenPKI, err := tokenCert.ToPKICertKey()
 	if err != nil {
+		prevErr := err
 		if tokenPKI, err = inputValuesToCertModel(input, inputValuesToken).ToPKICertKey(); err == nil {
-			input.Logger.Warn("Cannot decode Token certificate and key, restored from memory", "error", err)
+			input.Logger.Warn("Cannot decode Token certificate and key, restored from memory", "error", prevErr)
 		}
 	}
 
@@ -173,11 +181,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			return fmt.Errorf("cannot generate Token certificate: %w", err)
 		}
 
-		tokenCert, err = certKeyToCertModel(tokenPKI)
-		if err != nil {
-			return fmt.Errorf("cannot convert Token PKI to model: %w", err)
-		}
 	}
+
+	tokenCert, err = certKeyToCertModel(tokenPKI)
+	if err != nil {
+		return fmt.Errorf("cannot convert Token PKI to model: %w", err)
+	}
+
 	input.Values.Set(inputValuesToken, tokenCert)
 
 	if mode == modeDirect {
@@ -204,11 +214,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				return fmt.Errorf("cannot generate Proxy certificate: %w", err)
 			}
 
-			proxyCert, err = certKeyToCertModel(proxyPKI)
-			if err != nil {
-				return fmt.Errorf("cannot convert Proxy PKI to model: %w", err)
-			}
 		}
+
+		proxyCert, err = certKeyToCertModel(proxyPKI)
+		if err != nil {
+			return fmt.Errorf("cannot convert Proxy PKI to model: %w", err)
+		}
+
 		input.Values.Set(inputValuesProxy, proxyCert)
 	} else {
 		input.Values.Remove(inputValuesProxy)
