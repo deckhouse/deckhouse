@@ -54,20 +54,26 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, func(input *go_hook.HookInput) error {
 	valueSnaps := input.Snapshots["value"]
 
-	value := 3
+	type valuesModel struct {
+		value int
+		data  map[string]int
+	}
+
+	ret := valuesModel{
+		value: 3,
+	}
 	if len(valueSnaps) == 1 {
-		value = valueSnaps[0].(int)
+		ret.value = valueSnaps[0].(int)
 	}
 
-	model := make(map[string]int, value)
+	ret.data = make(map[string]int, ret.value)
 
-	for i := range value {
+	for i := range ret.value {
 		k := fmt.Sprintf("field_%v", i+1)
-		model[k] = i
+		ret.data[k] = i
 	}
 
-	input.Values.Set("systemRegistry.internal.playground.value", value)
-	input.Values.Set("systemRegistry.internal.playground.data", value)
+	input.Values.Set("systemRegistry.internal.playground", ret)
 
 	return nil
 })
