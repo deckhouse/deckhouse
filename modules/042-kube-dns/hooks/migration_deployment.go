@@ -101,7 +101,7 @@ func ensureCorednsPorts(input *go_hook.HookInput) error {
 		return sdk.ToUnstructured(&depl)
 	}
 
-	input.PatchCollector.PatchWithMutatingFunc(applyPorts, "apps/v1", "Deployment", "kube-system", "d8-kube-dns")
+	input.PatchCollector.Filter(applyPorts, "apps/v1", "Deployment", "kube-system", "d8-kube-dns")
 
 	return nil
 }
