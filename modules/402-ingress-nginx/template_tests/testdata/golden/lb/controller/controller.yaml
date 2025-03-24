@@ -38,7 +38,7 @@ apiVersion: apps.kruise.io/v1alpha1
 kind: DaemonSet
 metadata:
   annotations:
-    ingress-nginx-controller.deckhouse.io/checksum: 4581bb47c69c636a9fc46d9f940eb670f87b86ee63513780ad8a83cb0729dd6e
+    ingress-nginx-controller.deckhouse.io/checksum: 0d5b73f2368a63d2464f62f06a25fe5cff72bcc55089c34bb70f46de67b9be6e
     ingress-nginx-controller.deckhouse.io/controller-version: "1.9"
     ingress-nginx-controller.deckhouse.io/inlet: LoadBalancer
   labels:
@@ -57,6 +57,8 @@ spec:
       name: test
   template:
     metadata:
+      annotations:
+        cluster-autoscaler.kubernetes.io/enable-ds-eviction: "false"
       labels:
         app: controller
         name: test
@@ -91,7 +93,7 @@ spec:
               fieldPath: metadata.namespace
         - name: POD_IP
           value: 127.0.0.1
-        image: registry.example.com@imageHash-ingressNginx-controller16
+        image: registry.example.com@imageHash-ingressNginx-controller19
         lifecycle:
           preStop:
             exec:
@@ -130,21 +132,21 @@ spec:
             ephemeral-storage: 150Mi
             memory: 200Mi
         volumeMounts:
-        - mountPath: /var/lib/nginx/body
+        - mountPath: /chroot/var/lib/nginx/body
           name: client-body-temp-path
-        - mountPath: /var/lib/nginx/fastcgi
+        - mountPath: /chroot/var/lib/nginx/fastcgi
           name: fastcgi-temp-path
-        - mountPath: /var/lib/nginx/proxy
+        - mountPath: /chroot/var/lib/nginx/proxy
           name: proxy-temp-path
-        - mountPath: /var/lib/nginx/scgi
+        - mountPath: /chroot/var/lib/nginx/scgi
           name: scgi-temp-path
-        - mountPath: /var/lib/nginx/uwsgi
+        - mountPath: /chroot/var/lib/nginx/uwsgi
           name: uwsgi-temp-path
-        - mountPath: /etc/nginx/ssl/
+        - mountPath: /chroot/etc/nginx/ssl/
           name: secret-nginx-auth-tls
-        - mountPath: /tmp/nginx/
+        - mountPath: /chroot/tmp/nginx/
           name: tmp-nginx
-        - mountPath: /etc/nginx/webhook-ssl/
+        - mountPath: /chroot/etc/nginx/webhook-ssl/
           name: webhook-cert
           readOnly: true
       - image: registry.example.com@imageHash-ingressNginx-protobufExporter
@@ -213,6 +215,7 @@ spec:
       hostNetwork: false
       imagePullSecrets:
       - name: deckhouse-registry
+      - name: test-secret
       serviceAccountName: ingress-nginx
       terminationGracePeriodSeconds: 420
       tolerations:
