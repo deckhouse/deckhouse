@@ -15,7 +15,7 @@
 package registry
 
 import (
-	"encoding/json"
+	"sigs.k8s.io/yaml"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
@@ -33,16 +33,16 @@ type registryBashibleConfig struct {
 }
 
 func (d *registryBashibleConfig) DecodeSecret(secret *corev1.Secret) error {
-	if err := json.Unmarshal(secret.Data["version"], &d.Version); err != nil {
+	if err := yaml.Unmarshal(secret.Data["version"], &d.Version); err != nil {
 		return fmt.Errorf("failed to parse version: %w", err)
 	}
-	if err := json.Unmarshal(secret.Data["proxyEndpoints"], &d.ProxyEndpoints); err != nil {
+	if err := yaml.Unmarshal(secret.Data["proxyEndpoints"], &d.ProxyEndpoints); err != nil {
 		return fmt.Errorf("failed to parse proxyEndpoints: %w", err)
 	}
-	if err := json.Unmarshal(secret.Data["hosts"], &d.Hosts); err != nil {
+	if err := yaml.Unmarshal(secret.Data["hosts"], &d.Hosts); err != nil {
 		return fmt.Errorf("failed to parse hosts: %w", err)
 	}
-	if err := json.Unmarshal(secret.Data["prepullHosts"], &d.PrepullHosts); err != nil {
+	if err := yaml.Unmarshal(secret.Data["prepullHosts"], &d.PrepullHosts); err != nil {
 		return fmt.Errorf("failed to parse prepullHosts: %w", err)
 	}
 	return nil

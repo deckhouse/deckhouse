@@ -33,6 +33,7 @@ func SetupAndStartManager(ctx context.Context) chan RegistryDataWithHash {
 		klog.Fatalf("unable to create cluster config: %w", err)
 	}
 
+	ctrl.SetLogger(klog.Background())
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		LeaderElection:          false,
 		GracefulShutdownTimeout: &[]time.Duration{10 * time.Second}[0],
