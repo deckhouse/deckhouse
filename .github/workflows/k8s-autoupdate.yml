@@ -26,6 +26,7 @@ jobs:
     runs-on: [self-hosted, regular]
     permissions:
       contents: write
+      pull-requests: write
     steps:
 
     # <template: checkout_step>
@@ -85,10 +86,7 @@ jobs:
       id: create-pull-request
       uses: peter-evans/create-pull-request@v7.0.8
       with:
-        commit-message: |
-          Automated Change: Update k8s patch version
-
-          Signed-off-by: deckhouse-BOaTswain <89150800+deckhouse-boatswain@users.noreply.github.com>
+        commit-message: "Automated Change: Update k8s patch version"
         title: "Automated Change: Update k8s patch version"
         body-path: ".github/k8s_autoupdate_pull_request_template.md"
         branch: chore/k8s-autoupdate
