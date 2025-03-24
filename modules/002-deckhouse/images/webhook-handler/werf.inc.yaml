@@ -15,23 +15,7 @@ import:
     to: /usr/local/bin/promtool
     before: setup
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-    add: /usr/bin
-    to: /usr/bin
-    before: setup
-    includePaths:
-    - python3
-    - python3.12
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-    add: /usr/lib/python3
-    to: /usr/lib/python3
-    before: setup
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-    add: /usr/lib64/python3
-    to: /usr/lib64/python3
-    before: setup
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-    add: /usr/lib64/python3.12
-    to: /usr/lib64/python3.12
+    add: /opt/python-static
     before: setup
   - image: {{ $.ModuleName }}/{{ .ImageName }}-label-converter-artifact
     add: /label-converter
@@ -67,7 +51,7 @@ git:
       - '**/*'
 imageSpec:
   config:
-    env: {"PYTHONPATH": "/frameworks/python"}
+    env: {"PYTHONPATH": "/frameworks/python" ,"PATH": "/opt/python-static/bin:${PATH}"}
     entrypoint: ["/entrypoint.sh"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-label-converter-src-artifact
@@ -110,9 +94,15 @@ git:
   to: /requirements.txt
   stageDependencies:
     install:
-      - '**/*'
+    - '**/*'
+import:
+- image: common/python-static-artifact
+  add: /opt/python-static
+  before: install
 shell:
+  beforeInstall:
+  - apt-get install -y git
   install:
-    - apt-get update
-    - apt-get install -y python3 python3-module-pip-run
-    - pip3 install -r /requirements.txt
+  - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
+  - /opt/python-static/bin/pip3 install -f file:///wheels --no-index -r requirements.txt
+  - rm -rf /wheels
