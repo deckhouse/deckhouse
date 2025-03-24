@@ -36,7 +36,7 @@ func NewBaseInfraController(metaConfig *config.MetaConfig, stateCache state.Cach
 	}
 }
 
-func (r *BaseInfraTerraformController) Destroy(clusterState []byte, autoApprove bool) error {
+func (r *BaseInfraTerraformController) Destroy(ctx context.Context, clusterState []byte, autoApprove bool) error {
 	if err := saveInCacheIfNotExists(r.stateCache, "base-infrastructure.tfstate", clusterState); err != nil {
 		return err
 	}
@@ -45,6 +45,5 @@ func (r *BaseInfraTerraformController) Destroy(clusterState []byte, autoApprove 
 		AutoApprove: autoApprove,
 	})
 
-	// TODO(dhctl-for-commander-cancels): pass ctx
-	return terraform.DestroyPipeline(context.TODO(), baseRunner, "Kubernetes cluster")
+	return terraform.DestroyPipeline(ctx, baseRunner, "Kubernetes cluster")
 }

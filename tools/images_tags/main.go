@@ -83,7 +83,6 @@ func main() {
 		"GOPROXY=",
 		"CLOUD_PROVIDERS_SOURCE_REPO=",
 		"OBSERVABILITY_SOURCE_REPO=",
-		"STRONGHOLD_PULL_TOKEN=",
 		"DECKHOUSE_PRIVATE_REPO=",
 	)
 	cmd.Dir = path.Join("..")

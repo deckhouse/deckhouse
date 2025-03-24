@@ -34,6 +34,6 @@ This patch is for our case when we want to have a static Nodes in the cluster, m
 
 > Consider implementing a flag in CCM config and sending as a PR to the upstream.
 
-## go_mod.patch
+## 001-go-mod.patch
 
 This patch fixes cve.

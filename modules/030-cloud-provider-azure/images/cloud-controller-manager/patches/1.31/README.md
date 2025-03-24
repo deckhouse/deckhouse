@@ -5,3 +5,7 @@ This patch add NodeController options to main context object CloudControllerMana
 ### 001-go-mod.patch
 
 Fixes CVEs (bumps go mod)
+
+### 002-fix-disable-api-call-cache.patch
+
+Fix some issues with the disable API call cache feature.
