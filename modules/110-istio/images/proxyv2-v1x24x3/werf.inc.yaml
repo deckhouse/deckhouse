@@ -188,6 +188,7 @@ shell:
   - |
     cmake \
     -GNinja \
+    -DLLVM_ENABLE_RUNTIMES="libcxxabi;libcxx" \
     -DLLVM_USE_LINKER=lld \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_C_COMPILER=clang \
