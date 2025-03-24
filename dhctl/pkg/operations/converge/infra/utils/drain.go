@@ -31,10 +31,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-func TryToDrainNode(kubeCl *client.KubernetesClient, nodeName string) error {
-	return retry.NewLoop(fmt.Sprintf("Drain node '%s'", nodeName), 45, 10*time.Second).Run(func() error {
-		return drainNode(kubeCl, nodeName)
-	})
+func TryToDrainNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string) error {
+	return retry.NewLoop(fmt.Sprintf("Drain node '%s'", nodeName), 45, 10*time.Second).
+		RunContext(ctx, func() error {
+			return drainNode(ctx, kubeCl, nodeName)
+		})
 }
 
 func drainNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string) error {

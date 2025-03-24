@@ -15,6 +15,8 @@
 package controller
 
 import (
+	"context"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 
 	infra_utils "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/utils"
@@ -38,8 +40,8 @@ func NewHookForDestroyPipeline(getter kubernetes.KubeClientProvider, nodeToDestr
 	}
 }
 
-func (h *HookForDestroyPipeline) BeforeAction(runner terraform.RunnerInterface) (runPostAction bool, err error) {
-	err = infra_utils.TryToDrainNode(h.getter.KubeClient(), h.nodeToDestroy)
+func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner terraform.RunnerInterface) (runPostAction bool, err error) {
+	err = infra_utils.TryToDrainNode(ctx, h.getter.KubeClient(), h.nodeToDestroy)
 	if err != nil {
 		return false, err
 	}
