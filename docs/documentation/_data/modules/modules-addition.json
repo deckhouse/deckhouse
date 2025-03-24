@@ -21,7 +21,9 @@
   "istio": {
     "editionsWithRestrictions": [
       "ce",
-      "be"
+      "be",
+      "se",
+      "se-plus"
     ],
     "editionsWithRestrictionsComments": {
       "all": {
@@ -159,7 +161,7 @@
       "se",
       "se-plus",
       "ee"
-    ]  
+    ]
   },
   "csi-yadro-tatlin-unified": {
     "external": "true",
