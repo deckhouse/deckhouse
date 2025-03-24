@@ -117,15 +117,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	if len(caSnaps) == 1 {
 		val := caSnaps[0].(certModel)
 		caCert = &val
-	} else {
-		caCert = inputValuesToCertModel(input, inputValuesCA)
 	}
 
 	if len(tokenSnaps) == 1 {
 		val := tokenSnaps[0].(certModel)
 		tokenCert = &val
-	} else {
-		tokenCert = inputValuesToCertModel(input, inputValuesToken)
 	}
 
 	if caCert == nil && len(legacySnaps) == 1 {
@@ -142,6 +138,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 	caPKI, err := caCert.ToPKICertKey()
 	if err != nil {
+		if caPKI, err = inputValuesToCertModel(input, inputValuesCA).ToPKICertKey(); err == nil {
+			input.Logger.Warn("Cannot decode CA certificate and key, restored from memory", "error", err)
+		}
+	}
+
+	if err != nil {
 		input.Logger.Warn("Cannot decode CA certificate and key, will generate new", "error", err)
 
 		caPKI, err = pki.GenerateCACertificate("registry-ca")
@@ -153,8 +155,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 	tokenPKI, err := tokenCert.ToPKICertKey()
 	if err != nil {
-		input.Logger.Warn("Cannot decode Token certificate and key", "error", err)
-	} else {
+		if tokenPKI, err = inputValuesToCertModel(input, inputValuesToken).ToPKICertKey(); err == nil {
+			input.Logger.Warn("Cannot decode Token certificate and key, restored from memory", "error", err)
+		}
+	}
+
+	if err == nil {
 		err = pki.ValidateCertWithCAChain(tokenPKI.Cert, caPKI.Cert)
 		if err != nil {
 			input.Logger.Warn("Token certificate is not belongs to CA certificate", "error", err)
