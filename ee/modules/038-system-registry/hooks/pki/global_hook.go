@@ -225,10 +225,9 @@ func filterCertSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 		return "", fmt.Errorf("failed to convert secret \"%v\" to struct: %v", obj.GetName(), err)
 	}
 
-	ret := secretDataToCertModel(secret, "tls")
-
-	if ret != nil {
+	if ret := secretDataToCertModel(secret, "tls"); ret != nil {
 		return *ret, nil
 	}
+
 	return "", nil
 }
