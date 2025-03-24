@@ -16,6 +16,7 @@ package clouddata
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -242,7 +243,16 @@ func (c *Reconciler) checkCloudConditions(ctx context.Context) {
 
 	c.cloudConditionsErrorMetric.Reset()
 	for i := range conditions {
-		c.checkCondition(conditions[i])
+		c.logger.Infof("Condition (%s) message: %s, ok: %t\n", conditions[i].Name, conditions[i].Message, conditions[i].Ok)
+		if !conditions[i].Ok {
+			c.cloudConditionsErrorMetric.WithLabelValues(conditions[i].Name, conditions[i].Message).Set(1.0)
+		}
+	}
+
+	jsonConditions, err := json.Marshal(conditions)
+	if err != nil {
+		c.logger.Errorf("failed to marshal conditions: %v", err)
+		return
 	}
 
 	if err = retryFunc(15, 3*time.Second, 30*time.Second, c.logger, func() error {
@@ -259,7 +269,7 @@ func (c *Reconciler) checkCloudConditions(ctx context.Context) {
 					Kind:       "ConfigMap",
 					APIVersion: "v1",
 				},
-				Data: conditionsToMap(conditions),
+				Data: map[string]string{"conditions": string(jsonConditions)},
 			}
 
 			cctx, cancel = context.WithTimeout(ctx, 10*time.Second)
@@ -269,11 +279,10 @@ func (c *Reconciler) checkCloudConditions(ctx context.Context) {
 			if err != nil {
 				return fmt.Errorf("Cannot create d8-cloud-provider-conditions configMap: %v", err)
 			}
-
 		} else if errGetting != nil {
 			return fmt.Errorf("Cannot check d8-cloud-provider-conditions configMap before creating it: %v", errGetting)
 		} else {
-			configMap.Data = conditionsToMap(conditions)
+			configMap.Data["conditions"] = string(jsonConditions)
 
 			cctx, cancel = context.WithTimeout(ctx, 10*time.Second)
 			_, err = c.k8sClient.CoreV1().ConfigMaps("kube-system").Update(cctx, configMap, metav1.UpdateOptions{})
@@ -293,21 +302,6 @@ func (c *Reconciler) checkCloudConditions(ctx context.Context) {
 		c.logger.Errorln("Cannot update d8-cloud-provider-conditions configMap. Timed out. See error messages below.")
 		c.setProbe(false)
 	}
-}
-
-func (c *Reconciler) checkCondition(condition v1alpha1.CloudCondition) {
-	c.logger.Infof("Condition (%s) message: %s, ok: %t\n", condition.Name, condition.Message, condition.Ok)
-	if !condition.Ok {
-		c.cloudConditionsErrorMetric.WithLabelValues(condition.Name, condition.Message).Set(1.0)
-	}
-}
-
-func conditionsToMap(conditions []v1alpha1.CloudCondition) map[string]string {
-	result := make(map[string]string)
-	for _, condition := range conditions {
-		result[condition.Name] = condition.Message
-	}
-	return result
 }
 
 func (c *Reconciler) instanceTypesReconcile(ctx context.Context) {
