@@ -156,7 +156,7 @@ func (l *Loader) LoadModule(_, modulePath string) (*modules.BasicModule, error) 
 		return nil, err
 	}
 
-	module, err := l.processModuleDefinition(context.Background(), def)
+	module, err := l.processModuleDefinition(context.TODO(), def)
 	if err != nil {
 		return nil, err
 	}
