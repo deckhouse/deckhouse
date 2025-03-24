@@ -21,8 +21,8 @@ type pkiSecretModel struct {
 }
 
 type pkiCertModel struct {
-	Cert string
-	Key  string
+	Cert string `json:"cert,omitempty"`
+	Key  string `json:"key,omitempty"`
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
