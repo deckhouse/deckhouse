@@ -62,7 +62,7 @@ type registryConfig struct {
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Queue:        "/modules/system-registry/staticpod-status",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
