@@ -65,39 +65,39 @@ func (d *Discoverer) CheckCloudConditions(ctx context.Context) ([]v1alpha1.Cloud
 
 	var res []v1alpha1.CloudCondition
 
-	// check role for DescribeAddressesAttribute
-	log.Debugln("checking role for DescribeAddressesAttribute")
+	// check permission for DescribeAddressesAttribute
+	log.Debugln("checking permission for DescribeAddressesAttribute")
 	_, err = ec2Client.DescribeAddressesAttribute(&ec2.DescribeAddressesAttributeInput{
 		DryRun: aws.Bool(true),
 	})
 	if err != nil {
 		var awsErr awserr.Error
 		if !errors.As(err, &awsErr) {
-			return nil, fmt.Errorf("DescribeAddressesAttribute AWS IAM role check error: %v", err)
+			return nil, fmt.Errorf("DescribeAddressesAttribute AWS IAM permission check error: %v", err)
 		}
 
 		if awsErr.Code() != "DryRunOperation" {
 			res = append(res, v1alpha1.CloudCondition{
-				Name:    "insufficient AWS service account roles",
+				Name:    "INSUFFICIENT_AWS_SA_PERMISSIONS",
 				Message: "DescribeAddressesAttribute is not allowed",
 				Ok:      false,
 			})
 		}
 	}
 
-	// check role for DescribeInstanceTopology
-	log.Debugln("checking role for DescribeInstanceTopology")
+	// check permission for DescribeInstanceTopology
+	log.Debugln("checking permission for DescribeInstanceTopology")
 	_, err = ec2Client.DescribeInstanceTopology(&ec2.DescribeInstanceTopologyInput{
 		DryRun: aws.Bool(true),
 	})
 	if err != nil {
 		var awsErr awserr.Error
 		if !errors.As(err, &awsErr) {
-			return nil, fmt.Errorf("DescribeInstanceTopology AWS IAM role check error: %v", err)
+			return nil, fmt.Errorf("DescribeInstanceTopology AWS IAM permission check error: %v", err)
 		}
 		if awsErr.Code() != "DryRunOperation" {
 			res = append(res, v1alpha1.CloudCondition{
-				Name:    "insufficient AWS service account roles",
+				Name:    "INSUFFICIENT_AWS_SA_PERMISSIONS",
 				Message: "DescribeInstanceTopology is not allowed",
 				Ok:      false,
 			})
