@@ -99,8 +99,7 @@ jobs:
       if: ${{ steps.create-pull-request.outputs.pull-request-url != '' }}
       env:
         LOOP_TOKEN: ${{secrets.LOOP_CVE_REPORTS_SEND_TOKEN}}
-#        LOOP_CHANNEL_ID: ${{secrets.LOOP_E2E_REPORT_CHANEL_ID}}
-        LOOP_CHANNEL_ID: "rc4zcp9rp38z9xzy8cjmjtybdr"
+        LOOP_CHANNEL_ID: ${{secrets.LOOP_E2E_REPORT_CHANEL_ID}}
       run: |
         PULL_REQUEST_URL="${{ steps.create-pull-request.outputs.pull-request-url }}"
         bash ./.github/scripts/send-report.sh --message "✅Kubernetes has been automatically updated✅\n[URL]($PULL_REQUEST_URL)"
