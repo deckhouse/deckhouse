@@ -43,8 +43,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				valueStr := cm.Data["value"]
 
 				value, err := strconv.Atoi(valueStr)
-				if err != nil || value < 1 {
-					value = 3
+				if err != nil || value < 0 {
+					value = 0
 				}
 
 				return value, nil
@@ -52,25 +52,25 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 	},
 }, func(input *go_hook.HookInput) error {
-	valueSnaps := input.Snapshots["value"]
-
 	type valuesModel struct {
-		value int
-		data  map[string]int
+		Value int            `json:"value"`
+		Data  map[string]int `json:"data,omitempty"`
 	}
 
 	ret := valuesModel{
-		value: 3,
+		Value: 3,
 	}
+
+	valueSnaps := input.Snapshots["value"]
 	if len(valueSnaps) == 1 {
-		ret.value = valueSnaps[0].(int)
+		ret.Value = valueSnaps[0].(int)
 	}
 
-	ret.data = make(map[string]int, ret.value)
+	ret.Data = make(map[string]int, ret.Value)
 
-	for i := range ret.value {
+	for i := range ret.Value {
 		k := fmt.Sprintf("field_%v", i+1)
-		ret.data[k] = i
+		ret.Data[k] = i
 	}
 
 	input.Values.Set("systemRegistry.internal.playground", ret)

@@ -26,7 +26,6 @@ properties:
         properties:
           value:
             type: integer
-            default: 0
           data:
             type: object
             additionalProperties: true
