@@ -29,6 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	infra_utils "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/utils"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
@@ -99,7 +100,7 @@ func removeControlPlaneRoleFromNode(ctx context.Context, kubeCl *client.Kubernet
 		return fmt.Errorf("failed to check etcd has no member '%s': %v", nodeName, err)
 	}
 
-	err = tryToDrainNode(ctx, kubeCl, nodeName)
+	err = infra_utils.TryToDrainNode(ctx, kubeCl, nodeName)
 	if err != nil {
 		return fmt.Errorf("failed to drain node '%s': %v", nodeName, err)
 	}
