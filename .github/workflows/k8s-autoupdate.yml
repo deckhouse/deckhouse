@@ -1,0 +1,105 @@
+#
+# THIS FILE IS GENERATED, PLEASE DO NOT EDIT.
+#
+
+# Copyright 2025 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: K8S autoupdate
+on:
+  schedule:
+  - cron: '0 3 * * *'
+  workflow_dispatch:
+jobs:
+  update-k8s:
+    runs-on: [self-hosted, regular]
+    permissions:
+      contents: write
+    steps:
+
+    # <template: checkout_step>
+    - name: Checkout sources
+      uses: actions/checkout@v3.5.2
+
+    # </template: checkout_step>
+    - name: Setup
+      id: get_minimal_milestone
+      uses: actions/github-script@v6.4.1
+      with:
+        script: |
+          const owner = context.repo.owner;
+          const repo = context.repo.repo;
+
+          const milestones = await github.rest.issues.listMilestones({
+            owner: owner,
+            repo: repo,
+            state: 'open',
+          });
+
+          const filteredMilestones = milestones.data
+            .filter(milestone => /^v\d+\.\d+\.0$/.test(milestone.title))
+            .map(milestone => milestone.title);
+
+          if (filteredMilestones.length > 0) {
+            const minimalMilestone = filteredMilestones.sort((a, b) => {
+               // Custom version sorting
+              const partsA = a.substring(1).split('.').map(Number);
+              const partsB = b.substring(1).split('.').map(Number);
+
+              for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
+                const numA = partsA[i] || 0; // Default to 0 if a part is missing
+                const numB = partsB[i] || 0; // Default to 0 if a part is missing
+
+                if (numA !== numB) {
+                  return numA - numB;
+                }
+              }
+              return 0; // Equal
+            })[0];
+
+            core.setOutput('milestone', minimalMilestone);
+            console.log(`Milestone found: ${minimalMilestone}`);
+          } else {
+            core.setOutput('milestone', '');
+            console.log('No milestones found with patch version 0.');
+          }
+    - name: Update k8s patch version
+      run: |
+        make update-k8s-patch-versions
+        make generate
+    - name: Create Pull Request
+      id: create-pull-request
+      uses: peter-evans/create-pull-request@v7.0.8
+      commit-message: |
+        Automated Change: Update k8s patch version
+
+        Signed-off-by: deckhouse-BOaTswain <89150800+deckhouse-boatswain@users.noreply.github.com>
+      title: "Automated Change: Update k8s patch version"
+      body-path: ".github/k8s_autoupdate_pull_request_template.md"
+      branch: chore/k8s-autoupdate
+      branch-suffix: timestamp
+      base: main
+      labels: e2e/run/yandex-cloud
+      milestone: ${{ steps.setup.outputs.milestone }}
+    - name: Send success report
+      if: ${{ steps.create-pull-request.outputs.pull-request-url != '' }}
+      env:
+        LOOP_TOKEN: ${{secrets.LOOP_CVE_REPORTS_SEND_TOKEN}}
+#        LOOP_CHANNEL_ID: ${{secrets.LOOP_E2E_REPORT_CHANEL_ID}}
+        LOOP_CHANNEL_ID: "rc4zcp9rp38z9xzy8cjmjtybdr"
+      run: |
+        PULL_REQUEST_URL="${{ steps.create-pull-request.outputs.pull-request-url }}"
+        bash ./.github/scripts/send-report.sh --message "✅Kubernetes has been automatically updated✅\n[URL]($PULL_REQUEST_URL)"
+
+
