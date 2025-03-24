@@ -313,11 +313,7 @@ entries:
             - title:
                 en: Multitenancy
                 ru: Мультенантность
-              folders:
-                - title:
-                    en: Overview
-                    ru: Введение
-                  url: /admin/multitenancy-overview.html
+              url: /admin/multitenancy-admin.html
 # ------------- Using -------------
     - title:
         en: Using
@@ -484,6 +480,10 @@ entries:
             en: Table
             ru: Таблица (Мэгтона)
           url: /architecture/functional-table.html
+        - title:
+            en: Multitenancy
+            ru: Мультитенантность
+          url: /architecture/multitenancy.html
 # ------------- Reference -------------
     - title:
         en: Reference
