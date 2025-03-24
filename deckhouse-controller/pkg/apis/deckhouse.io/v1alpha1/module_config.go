@@ -108,7 +108,7 @@ type ModuleConfigSpec struct {
 	Enabled      *bool          `json:"enabled,omitempty"`
 	UpdatePolicy string         `json:"updatePolicy,omitempty"`
 	Source       string         `json:"source,omitempty"`
-	SelfService  bool           `json:"selfService"`
+	SelfService  bool           `json:"selfService,omitempty"`
 }
 
 type ModuleConfigStatus struct {
