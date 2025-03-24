@@ -29,14 +29,17 @@ type CloudPermanentNodeGroupHook struct {
 }
 
 type HookForDestroyPipeline struct {
-	getter        kubernetes.KubeClientProvider
-	nodeToDestroy string
+	getter            kubernetes.KubeClientProvider
+	nodeToDestroy     string
+	oldMasterIPForSSH string
+	commanderMode     bool
 }
 
-func NewHookForDestroyPipeline(getter kubernetes.KubeClientProvider, nodeToDestroy string) *HookForDestroyPipeline {
+func NewHookForDestroyPipeline(getter kubernetes.KubeClientProvider, nodeToDestroy string, commanderMode bool) *HookForDestroyPipeline {
 	return &HookForDestroyPipeline{
 		getter:        getter,
 		nodeToDestroy: nodeToDestroy,
+		commanderMode: commanderMode,
 	}
 }
 
@@ -52,14 +55,6 @@ func (h *HookForDestroyPipeline) IsReady() error {
 	return nil
 }
 
-func (h *HookForDestroyPipeline) AfterAction(terraform.RunnerInterface) error {
+func (h *HookForDestroyPipeline) AfterAction(ctx context.Context, runner terraform.RunnerInterface) error {
 	return nil
-}
-
-func NewCloudPermanentNodeGroupController(controller *NodeGroupController) *CloudPermanentNodeGroupController {
-	cloudPermanentNodeGroupController := &CloudPermanentNodeGroupController{NodeGroupController: controller}
-	cloudPermanentNodeGroupController.layoutStep = "static-node"
-	cloudPermanentNodeGroupController.nodeGroup = cloudPermanentNodeGroupController
-
-	return cloudPermanentNodeGroupController
 }
