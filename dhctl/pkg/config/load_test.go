@@ -22,7 +22,7 @@ import (
 )
 
 func TestVersionBackwardCompatibility(t *testing.T) {
-	newStore := newSchemaStore(false, []string{"/tmp"})
+	newStore := newSchemaStore([]string{"/tmp"})
 
 	schema := []byte(`
 kind: ClusterConfiguration

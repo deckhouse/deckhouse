@@ -92,7 +92,7 @@ func NewSchemaStore(paths ...string) *SchemaStore {
 	return newOnceSchemaStore(paths)
 }
 
-func newSchemaStore(checkAdditionalProperties bool, schemasDir []string) *SchemaStore {
+func newSchemaStore(schemasDir []string) *SchemaStore {
 	st := &SchemaStore{
 		cache:              make(map[SchemaIndex]*spec.Schema),
 		moduleConfigsCache: make(map[string]*spec.Schema),
@@ -112,7 +112,7 @@ func newSchemaStore(checkAdditionalProperties bool, schemasDir []string) *Schema
 			"cloud_provider_discovery_data.yaml",
 			"ssh_configuration.yaml",
 			"ssh_host_configuration.yaml":
-			uploadError := st.UploadByPath(checkAdditionalProperties, path)
+			uploadError := st.UploadByPath(path)
 			if uploadError != nil {
 				return uploadError
 			}
@@ -319,16 +319,16 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte, opts ..
 	return nil
 }
 
-func (s *SchemaStore) UploadByPath(checkAdditionalProperties bool, path string) error {
+func (s *SchemaStore) UploadByPath(path string) error {
 	fileContent, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("Loading schema file: %v", err)
 	}
 
-	return s.upload(checkAdditionalProperties, fileContent)
+	return s.upload(fileContent)
 }
 
-func (s *SchemaStore) upload(checkAdditionalProperties bool, fileContent []byte) error {
+func (s *SchemaStore) upload(fileContent []byte) error {
 	openAPISchema := new(OpenAPISchema)
 	if err := yaml.UnmarshalStrict(fileContent, openAPISchema); err != nil {
 		return fmt.Errorf("json unmarshal: %v", err)
