@@ -25,6 +25,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/hook/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
@@ -141,7 +142,7 @@ func (c *CloudPermanentNodeGroupController) deleteNodes(ctx *context.Context, no
 	title := fmt.Sprintf("Delete Nodes from NodeGroup %s (replicas: %v)", c.name, c.desiredReplicas)
 	return log.Process("converge", title, func() error {
 		return c.deleteRedundantNodes(ctx, c.state.Settings, nodesToDeleteInfo, func(nodeName string) terraform.InfraActionHook {
-			return NewHookForDestroyPipeline(ctx, nodeName)
+			return controlplane.NewHookForDestroyPipeline(ctx, nodeName, ctx.CommanderMode())
 		})
 	})
 }
