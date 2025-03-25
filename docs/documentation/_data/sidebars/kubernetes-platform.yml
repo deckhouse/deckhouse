@@ -431,7 +431,7 @@ entries:
             - title:
                 en: Vertical pod autoscaling
                 ru: Вертикальное масштабирование
-              url: /admin/configuration/app-scaling/vpa.html 
+              url: /user/configuration/app-scaling/vpa.html 
 # ------------- Architecture -------------
     - title:
         en: Architecture
