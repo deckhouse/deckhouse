@@ -21,10 +21,11 @@ set -e
 DECKHOUSE_PATH="/deckhouse/"
 IMG_PREFIX="$USER"
 DOCKER_REGISTRY="cr.yandex/crp8n201pre28pm81udl/sys/deckhouse-oss"
-PATCH_MODULE_CONFIG_BY_IMAGE_AMD64_NAME_DIGEST=true
+PATCH_MODULE_CONFIG_BY_IMG_NAME_WITH_TAG=true
 
+IMAGE_TAG=pr8229-ee
 IMG_NAME="$DOCKER_REGISTRY/$IMG_PREFIX-deckhouse"
-IMG_NAME_LATEST="$IMG_NAME:latest"
+IMG_NAME_WITH_TAG="$IMG_NAME:$IMAGE_TAG"
 
 log_stage() {
     local stage_name="$1"
@@ -93,21 +94,14 @@ log_stage "Build and push docker img"
 docker buildx build $DECKHOUSE_PATH \
     -f deckhouse.Dockerfile \
     --platform linux/amd64 \
-    -t $IMG_NAME_LATEST \
+    -t $IMG_NAME_WITH_TAG \
     --pull\
     --push
 
 log_stage "Show img with tag"
-echo "$IMG_NAME_LATEST"
+echo "$IMG_NAME_WITH_TAG"
 
-IMAGE_AMD64_DIGEST=$(docker buildx imagetools inspect $IMG_NAME_LATEST --raw | jq -r '.manifests[] | select(.platform.architecture == "amd64").digest')
-IMAGE_AMD64_NAME_DIGEST="$IMG_NAME@$IMAGE_AMD64_DIGEST"
-
-
-log_stage "Show img with digest"
-echo $IMAGE_AMD64_NAME_DIGEST
-
-if [ "$PATCH_MODULE_CONFIG_BY_IMAGE_AMD64_NAME_DIGEST" = "true" ]; then
+if [ "$PATCH_MODULE_CONFIG_BY_IMG_NAME_WITH_TAG" = "true" ]; then
 
     # Define the patch that will add or replace deckhouse
     PATCH=$(cat <<EOF
@@ -115,7 +109,7 @@ if [ "$PATCH_MODULE_CONFIG_BY_IMAGE_AMD64_NAME_DIGEST" = "true" ]; then
   "spec": {
     "settings": {
       "imagesOverride": {
-        "deckhouse": "$IMAGE_AMD64_NAME_DIGEST"
+        "deckhouse": "$IMG_NAME_WITH_TAG"
       }
     }
   }

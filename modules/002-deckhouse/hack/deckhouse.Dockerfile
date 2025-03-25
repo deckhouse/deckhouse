@@ -17,7 +17,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 # Build controller
 COPY --parents **/*.go **/*.sh ./
 
-ENV D8_VERSION="1.68.7-pr8229"
+ENV D8_VERSION="1.68.7-dev"
 RUN --mount=type=cache,target=/root/.cache/go-build \
         cd ./deckhouse-controller/ && \
         chmod +x *.sh && \
