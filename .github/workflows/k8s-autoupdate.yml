@@ -85,7 +85,7 @@ jobs:
         make generate
     - name: Create Pull Request
       id: create-pull-request
-      uses: peter-evans/create-pull-request@v3.10.1
+      uses: peter-evans/create-pull-request@v7.0.8
       with:
         commit-message: |
           "Automated Change: Update k8s patch version
