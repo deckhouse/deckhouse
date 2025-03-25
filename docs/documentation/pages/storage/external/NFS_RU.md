@@ -10,7 +10,7 @@ Deckhouse поддерживает работу с NFS (Network File System), о
 
 ## Включение модуля
 
-Для управления томами на основе протокола NFS (Network File System) используется модуль `csi-nfs`, позволяющий создавать StorageClass через создание пользовательских ресурсов [NFSStorageClas](../../../reference/cr/nfsstorageclass/). Чтобы включить модуль выполните команду:
+Для управления томами на основе протокола NFS (Network File System) используется модуль `csi-nfs`, позволяющий создавать StorageClass через создание пользовательских ресурсов [NFSStorageClass](../../../reference/cr/nfsstorageclass/). Чтобы включить модуль выполните команду:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -39,7 +39,7 @@ csi-nfs   910      Enabled   Embedded           Ready
 
 ## Создание StorageClass
 
-Для создания StorageClass необходимо использовать ресурс [NFSStorageClas](../../../reference/cr/nfsstorageclass/). Ручное создание ресурса StorageClass без [NFSStorageClas](../../../reference/cr/nfsstorageclass/) может привести к ошибкам. Пример команды для создания класса хранения на базе NFS:
+Для создания StorageClass необходимо использовать ресурс [NFSStorageClass](../../../reference/cr/nfsstorageclass/). Ручное создание ресурса StorageClass без [NFSStorageClass](../../../reference/cr/nfsstorageclass/) может привести к ошибкам. Пример команды для создания класса хранения на базе NFS:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -68,13 +68,13 @@ spec:
 EOF
 ```
 
-Проверьте, что созданный ресурс [NFSStorageClas](../../../reference/cr/nfsstorageclass/) перешел в состояние `Created`, выполнив следующую команду:
+Проверьте, что созданный ресурс [NFSStorageClass](../../../reference/cr/nfsstorageclass/) перешел в состояние `Created`, выполнив следующую команду:
 
 ```shell
 d8 k get NFSStorageClass nfs-storage-class -w
 ```
 
-В результате будет выведена информация о созданном ресурсе [NFSStorageClas](../../../reference/cr/nfsstorageclass/):
+В результате будет выведена информация о созданном ресурсе [NFSStorageClass](../../../reference/cr/nfsstorageclass/):
 
 ```console
 NAME                PHASE     AGE
