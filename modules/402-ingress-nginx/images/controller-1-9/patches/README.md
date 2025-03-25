@@ -84,3 +84,14 @@ Without always option toggled, ingress-nginx does not set the cookie in case if 
 Annotation `nginx.ingress.kubernetes.io/auth-always-set-cookie` does not work. Anyway, we can't use it, because we need this behavior for all ingresses.
 
 https://github.com/kubernetes/ingress-nginx/pull/8213
+
+### 012-fix-validating-webhook-cve.patch
+
+Backports several security fixes for the following CVE:
+CVE-2025-1097
+CVE-2025-1098
+CVE-2025-1974
+CVE-2025-24513
+CVE-2025-24514
+
+Sourced from https://github.com/kubernetes/ingress-nginx/commit/cfe3923bd657a82226eb58d3307204a8a8802db4
