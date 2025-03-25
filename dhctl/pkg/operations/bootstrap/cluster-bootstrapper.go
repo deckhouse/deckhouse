@@ -575,7 +575,9 @@ func bootstrapAdditionalNodesForCloudCluster(ctx context.Context, kubeCl *client
 
 	terraNodeGroups := metaConfig.GetTerraNodeGroups()
 	bootstrapAdditionalTerraNodeGroups := BootstrapTerraNodes
-	if operations.IsSequentialNodesBootstrap() {
+	if operations.IsSequentialNodesBootstrap() || metaConfig.ProviderName == "vcd" {
+		// vcd doesn't support parrallel creating nodes in same vapp
+		// https://github.com/vmware/terraform-provider-vcd/issues/530
 		bootstrapAdditionalTerraNodeGroups = operations.BootstrapSequentialTerraNodes
 	}
 
