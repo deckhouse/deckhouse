@@ -144,7 +144,11 @@ spec:
             - /usr/bin/deckhouse-controller
 {{- end }}
             - start
+          {{- if and (hasKey $.Values.deckhouse "imagesOverride") (hasKey $.Values.deckhouse.imagesOverride "deckhouse") (ne $.Values.deckhouse.imagesOverride.deckhouse "") }}
+          image: "{{ $.Values.deckhouse.imagesOverride.deckhouse }}"
+          {{- else }}
           image: "{{ .Values.deckhouse.internal.currentReleaseImageName }}"
+          {{- end }}
           imagePullPolicy: Always
           env:
 # KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT are needed on the bootstrap phase to make Deckhouse work without kube-proxy
