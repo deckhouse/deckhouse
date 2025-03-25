@@ -84,6 +84,15 @@ jobs:
           echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
+  # <template: skip_tests_repos>
+  skip_tests_repos:
+    name: Skip tests repos
+    runs-on: ubuntu-latest
+    if: ${{ false || github.repository == 'deckhouse/deckhouse' }}
+    steps:
+    - name: Do nothing
+      run: echo "Empty action to fulfil Github requirements."
+  # </template: skip_tests_repos>
 
   # <template: git_info_job>
 
@@ -409,6 +418,7 @@ jobs:
     name: Build FE
     needs:
       - git_info
+      - skip_tests_repos
       - go_generate
       - workflow_render
     env:

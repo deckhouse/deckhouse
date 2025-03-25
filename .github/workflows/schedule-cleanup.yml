@@ -45,6 +45,16 @@ concurrency:
   group: schedule-cleanup
 
 jobs:
+
+  # <template: skip_tests_repos>
+  skip_tests_repos:
+    name: Skip tests repos
+    runs-on: ubuntu-latest
+    if: ${{ false || github.repository == 'deckhouse/deckhouse' }}
+    steps:
+    - name: Do nothing
+      run: echo "Empty action to fulfil Github requirements."
+  # </template: skip_tests_repos>
 # Note: git_info is needed for werf.yaml
 
   # <template: git_info_job>
@@ -128,6 +138,7 @@ jobs:
   cleanup_registry:
     name: Cleanup registry
     needs:
+      - skip_tests_repos
       - git_info
     runs-on: [self-hosted, regular]
     steps:

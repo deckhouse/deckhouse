@@ -398,3 +398,15 @@ pull_request_info:
 
 # </template: pull_request_info>
 {!{- end -}!}
+
+{!{ define "skip_tests_repos" }!}
+# <template: skip_tests_repos>
+skip_tests_repos:
+  name: Skip tests repos
+  runs-on: ubuntu-latest
+  if: ${{ false || github.repository == 'deckhouse/deckhouse' }}
+  steps:
+  - name: Do nothing
+    run: echo "Empty action to fulfil Github requirements."
+# </template: skip_tests_repos>
+{!{- end -}!}
