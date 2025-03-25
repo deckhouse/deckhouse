@@ -340,8 +340,8 @@ features:
     en: This feature is available in Enterprise Edition only.
     ru: Доступно только в Enterprise Edition.
   commercial:
-    en: Available in commercial editions.
-    ru: Доступно в коммерческих редакциях.
+    en: Available in some commercial editions.
+    ru: Доступно в некоторых коммерческих редакциях.
   notAvailableInThisEdition:
     en: Available in other commercial editions.
     ru: Доступно в других коммерческих редакциях.
