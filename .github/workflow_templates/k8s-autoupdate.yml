@@ -44,14 +44,12 @@ jobs:
           });
 
           const filteredMilestones = milestones.data
-            .filter(milestone => /^v\d+\.\d+\.0$/.test(milestone.title))
-            .map(milestone => milestone.title);
+          .filter(milestone => /^v\d+\.\d+\.0$/.test(milestone.title));
 
           if (filteredMilestones.length > 0) {
             const minimalMilestone = filteredMilestones.sort((a, b) => {
-               // Custom version sorting
-              const partsA = a.substring(1).split('.').map(Number);
-              const partsB = b.substring(1).split('.').map(Number);
+              const partsA = a.title.substring(1).split('.').map(Number);
+              const partsB = b.title.substring(1).split('.').map(Number);
 
               for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
                 const numA = partsA[i] || 0; // Default to 0 if a part is missing
@@ -64,8 +62,8 @@ jobs:
               return 0; // Equal
             })[0];
 
-            core.setOutput('milestone', minimalMilestone);
-            console.log(`Milestone found: ${minimalMilestone}`);
+            core.setOutput('milestone', minimalMilestone.id);
+            console.log(`Milestone ID found: ${minimalMilestone.id}`);
           } else {
             core.setOutput('milestone', '');
             console.log('No milestones found with patch version 0.');
@@ -89,8 +87,7 @@ jobs:
         token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
         base: main
         labels: e2e/run/yandex-cloud
-#        milestone: ${{ steps.get_milestone.outputs.milestone }}
-        milestone: 8
+        milestone: ${{ steps.get_milestone.outputs.milestone }}
         delete-branch: true
     - name: Send success report
       if: ${{ steps.create-pull-request.outputs.pull-request-url != '' }}
