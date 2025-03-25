@@ -1375,10 +1375,12 @@ jobs:
 
       # </template: checkout_step>
 
+      # <template: python_setup_step>
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v5.4.0
         with:
-          python-version: '3.12.3'
+          python-version: '3.12.8'
+      # </template: python_setup_step>
 
       - name: Install dependencies
         run: pip install ghapi=1.0.6 fastcore=1.7.28 kubernetes=32.0.1
@@ -1411,7 +1413,7 @@ jobs:
           KUBECONFIG_BASE64_PROD_25: ${{ secrets.KUBECONFIG_BASE64_PROD_25 }}
           NAMESPACE_KUBECONFIG_BASE64_PROD_25: "deckhouse-web-production"
           KUBECONFIG_BASE64_DEV: ${{ secrets.KUBECONFIG_BASE64_DEV }}
-          NAMESPACE_KUBECONFIG_BASE64_DEV: "deckhouse-web-stage"          
+          NAMESPACE_KUBECONFIG_BASE64_DEV: "deckhouse-web-stage"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4.4.0
