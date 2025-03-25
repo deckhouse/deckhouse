@@ -62,7 +62,6 @@
  - **[cloud-provider-zvirt]** Fixed a bug that prevented zVirt SDK API token from refreshing upon expiration. [#11040](https://github.com/deckhouse/deckhouse/pull/11040)
  - **[cni-cilium]** L2 neigh discovery (arp flood) disabled. [#12078](https://github.com/deckhouse/deckhouse/pull/12078)
  - **[common]** Fixed a security vulnerability in `task`. [#11572](https://github.com/deckhouse/deckhouse/pull/11572)
- - **[control-plane-manager]** additionalAPIIssuers/additionalAPIAudiences fix and tests [#12576](https://github.com/deckhouse/deckhouse/pull/12576)
  - **[control-plane-manager]** Fixed a security vulnerability. [#11536](https://github.com/deckhouse/deckhouse/pull/11536)
  - **[deckhouse]** Fix checking automatic kubernetes version in managed clusters. [#12685](https://github.com/deckhouse/deckhouse/pull/12685)
  - **[deckhouse]** Explicitly set ports in d8-kube-dns deployment. [#12658](https://github.com/deckhouse/deckhouse/pull/12658)
