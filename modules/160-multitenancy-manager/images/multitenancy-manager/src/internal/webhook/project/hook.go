@@ -95,6 +95,11 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 		}
 	}
 
+	// skip project with empty template
+	if project.Spec.ProjectTemplateName == "" {
+		return admission.Allowed("")
+	}
+
 	template, err := v.projectTemplateByName(context.Background(), project.Spec.ProjectTemplateName)
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
