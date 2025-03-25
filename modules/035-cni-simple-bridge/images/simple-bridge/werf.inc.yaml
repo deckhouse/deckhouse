@@ -43,6 +43,8 @@ import:
 imageSpec:
   config:
     entrypoint: ["/sbin/iptables-wrapper"]
+shell:
+  setup:
 ---
 {{ $simpleBridgeBinaries := "/bin/awk /bin/cat /bin/rm /bin/echo /usr/bin/tee /bin/sleep /bin/hostname /bin/bash /bin/grep /sbin/ip /usr/sbin/bridge" }}
 ---
