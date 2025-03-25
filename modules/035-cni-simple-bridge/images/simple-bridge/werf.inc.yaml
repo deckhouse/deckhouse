@@ -34,6 +34,8 @@ import:
   before: setup
   includePaths:
   - python3*
+  owner: root
+  group: root
 - image: registrypackages/d8-curl-artifact-8-9-1
   add: /d8-curl
   to: /usr/bin/curl
