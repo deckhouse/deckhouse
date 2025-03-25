@@ -131,4 +131,6 @@ EOF
     if diff --color=auto <(echo "$before_patch") <(echo "$after_patch"); then
         echo "No changes were made."
     fi
+
+    kubectl -n d8-system rollout restart deployment/deckhouse
 fi
