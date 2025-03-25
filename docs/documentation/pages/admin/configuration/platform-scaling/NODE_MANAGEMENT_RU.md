@@ -17,28 +17,36 @@ lang: ru
 
 ## Включение node-manager
 
-Модуль включается и выключается через ресурс `ModuleConfig/node-manager` или командой:
+Модуль можно включить или выключить несколькими способами:
 
-```console
-kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable node-manager
-# или disable
-```
+1. Через ресурс ModuleConfig/node-manager:
 
-Пример включения модуля:
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: node-manager
+   spec:
+     version: 2
+     enabled: true
+     settings:
+       earlyOomEnabled: true
+       instancePrefix: kube
+       mcmEmergencyBrake: false
+   ```
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: node-manager
-spec:
-  version: 2
-  enabled: true
-  settings:
-    earlyOomEnabled: true
-    instancePrefix: kube
-    mcmEmergencyBrake: false
-```
+1. Командой:
+
+   ```console
+   kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable node-manager
+   # или disable
+   ```
+
+1. Через [веб-интерфейс Deckhouse](https://deckhouse.ru/products/kubernetes-platform/modules/console/stable/):
+
+   - Перейдите в раздел «Deckhouse - «Модули»;
+   - Найдите модуль `node-manager` и нажмите на него;
+   - Включите тумблер «Модуль включен».
 
 ## Автоматическое развёртывание и обновление
 
