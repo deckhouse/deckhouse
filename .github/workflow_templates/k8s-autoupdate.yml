@@ -47,7 +47,7 @@ jobs:
           .filter(milestone => /^v\d+\.\d+\.0$/.test(milestone.title));
 
           if (filteredMilestones.length > 0) {
-            const minimalMilestone = filteredMilestones.sort((a, b) => {
+            const targetMilestone = filteredMilestones.sort((a, b) => {
               const partsA = a.title.substring(1).split('.').map(Number);
               const partsB = b.title.substring(1).split('.').map(Number);
 
@@ -62,8 +62,8 @@ jobs:
               return 0; // Equal
             })[0];
 
-            core.setOutput('milestone', minimalMilestone.id);
-            console.log(`Milestone ID found: ${minimalMilestone.id}`);
+            core.setOutput('milestone', targetMilestone.id);
+            console.log(`Milestone number found: ${targetMilestone}`);
           } else {
             core.setOutput('milestone', '');
             console.log('No milestones found with patch version 0.');
