@@ -4,6 +4,7 @@
 
 
  - All data sources created with the GrafanaAdditionalDatasource custom resource will have their UIDs changed.
+ - Ingress-nginx pods will restart. The validation of the generated NGINX configuration during the validation of `Ingress` resources is disabled until finding a way of running validations safely.
  - NGINX Ingress controller pods will be restarted.
 
 ## Features
@@ -84,6 +85,8 @@
  - **[extended-monitoring]** Fixed security vulnerabilities in `events-exporter`. [#11442](https://github.com/deckhouse/deckhouse/pull/11442)
  - **[extended-monitoring]** Fixed security vulnerabilities in `extended-monitoring-exporter`. [#11425](https://github.com/deckhouse/deckhouse/pull/11425)
  - **[extended-monitoring]** Fixed security vulnerabilities in `image-availability-exporter`. [#11336](https://github.com/deckhouse/deckhouse/pull/11336)
+ - **[ingress-nginx]** latest CVE fixes backported. [#12746](https://github.com/deckhouse/deckhouse/pull/12746)
+    Ingress-nginx pods will restart. The validation of the generated NGINX configuration during the validation of `Ingress` resources is disabled until finding a way of running validations safely.
  - **[ingress-nginx]** Fixed graceful shutdown handling for Ingress controller pods. [#11656](https://github.com/deckhouse/deckhouse/pull/11656)
     NGINX Ingress controller pods will be restarted.
  - **[ingress-nginx]** Fixed a bug related to dynamic libraries in the NGINX Ingress controller pods. [#11644](https://github.com/deckhouse/deckhouse/pull/11644)
