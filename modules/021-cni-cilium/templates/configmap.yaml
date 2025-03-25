@@ -12,7 +12,7 @@ data:
   #
   bpf-lb-source-range-all-types: "true"
   bpf-lb-sock-terminate-pod-connections: "true"
-  enable-runtime-device-detection: "true"
+  enable-tcx: "false"
   # Disable ipam processing svc_loadBalancer if loadBalancerClass not specified&
   default-lb-service-ipam: none
   #
@@ -130,8 +130,6 @@ data:
   enable-k8s-endpoint-slice: "true"
 
   enable-cilium-endpoint-slice: "true"
-
-  enable-k8s-terminating-endpoint: "true"
 
   bpf-map-dynamic-size-ratio: "0.005"
   bpf-policy-map-max: "65536"
