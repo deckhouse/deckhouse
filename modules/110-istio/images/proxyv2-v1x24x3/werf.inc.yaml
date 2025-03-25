@@ -135,7 +135,7 @@ shell:
   # - git clone --depth 1 --branch {{ $istioProxyDepsRev }} {{ .SOURCE_REPO }}/istio/envoy-build-deps.git /tmp/bazel-deps
   # - rm -rf /tmp/bazel-deps/.git
   #
-  - ln -f -s llvm-17.0 "/usr/lib/llvm-17"
+  - ln -f -s llvm-14.0 "/usr/lib/llvm-14"
   - export GOROOT=/usr/local/go GOPATH=/go
   - export PATH=${PATH}:${GOROOT}/bin:${GOPATH}/bin
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
@@ -156,10 +156,10 @@ shell:
   - sed -i '/^build --action_env=CC --host_action_env=CC/d' envoy.bazelrc
   - sed -i '/^build --action_env=CXX --host_action_env=CXX/d' envoy.bazelrc
   - sed -i '/^build --action_env=LLVM_CONFIG --host_action_env=LLVM_CONFIG/d' envoy.bazelrc
-  - sed -i '/^build --incompatible_merge_fixed_and_default_shell_env/a build --action_env=CC=/usr/lib/llvm-17.0/bin/clang --host_action_env=CC=/usr/lib/llvm-17.0/bin/clang' envoy.bazelrc
-  - sed -i '/^build --incompatible_merge_fixed_and_default_shell_env/a build --action_env=CCX=/usr/lib/llvm-17.0/bin/clang++ --host_action_env=CCX=/usr/lib/llvm-17.0/bin/clang++' envoy.bazelrc
-  - sed -i '/^build --incompatible_merge_fixed_and_default_shell_env/a build --action_env=LD=/usr/lib/llvm-17.0/bin/ld.lld --host_action_env=LD=/usr/lib/llvm-17.0/bin/ld.lld' envoy.bazelrc
-  - sed -i '/^build --incompatible_merge_fixed_and_default_shell_env/a build --action_env=LLVM_CONFIG=/usr/lib/llvm-17.0/bin/llvm-config  --host_action_env=LLVM_CONFIG=/usr/lib/llvm-17.0/bin/llvm-config' envoy.bazelrc
+  - sed -i '/^build --incompatible_merge_fixed_and_default_shell_env/a build --action_env=CC=/usr/lib/llvm-14.0/bin/clang --host_action_env=CC=/usr/lib/llvm-14.0/bin/clang' envoy.bazelrc
+  - sed -i '/^build --incompatible_merge_fixed_and_default_shell_env/a build --action_env=CCX=/usr/lib/llvm-14.0/bin/clang++ --host_action_env=CCX=/usr/lib/llvm-14.0/bin/clang++' envoy.bazelrc
+  - sed -i '/^build --incompatible_merge_fixed_and_default_shell_env/a build --action_env=LD=/usr/lib/llvm-14.0/bin/ld.lld --host_action_env=LD=/usr/lib/llvm-14.0/bin/ld.lld' envoy.bazelrc
+  - sed -i '/^build --incompatible_merge_fixed_and_default_shell_env/a build --action_env=LLVM_CONFIG=/usr/lib/llvm-14.0/bin/llvm-config  --host_action_env=LLVM_CONFIG=/usr/lib/llvm-14.0/bin/llvm-config' envoy.bazelrc
   - sed -i 's|build:gcc --action_env=BAZEL_COMPILER=gcc|build:gcc --action_env=BAZEL_COMPILER=gcc-11|' envoy.bazelrc
   - sed -i 's|build:gcc --action_env=CC=gcc --action_env=CXX=g++|build:gcc --action_env=CC=/usr/bin/gcc-11 --action_env=CXX=/usr/bin/g++-11|' envoy.bazelrc
   - sed -i '/^build:gcc --test_env=HEAPCHECK=/a build:gcc --gcc_install_dir=/usr/bin/../lib64/gcc/x86_64-alt-linux/11' envoy.bazelrc
@@ -283,17 +283,17 @@ shell:
     apt-get install -y \
     sudo \
     libcap-devel libpcap-devel \
-    clang17.0 clang17.0-tools lld17.0 llvm17.0-devel \
+    clang14.0 clang14.0-tools lld14.0 llvm14.0-devel \
     libcxxabi-devel \
-    libcxx libcxx-static libcxxabi-static lld17.0
+    libcxx libcxx-static libcxxabi-static lld14.0
   # apt clean
   - apt-get autoclean && apt-get clean
   install:
   - update-alternatives --install /usr/bin/python python /usr/bin/python3 1
-  - ln -s -f /usr/lib/llvm-17.0/bin/clang /usr/bin/clang
-  - ln -s -f /usr/lib/llvm-17.0/bin/clang++ /usr/bin/clang++
-  - ln -s -f /usr/lib/llvm-17.0/bin/ld.lld /usr/bin/ld.lld
-  - ln -s -f /usr/lib/llvm-17.0/bin/llvm-config /usr/bin/llvm-config
+  - ln -s -f /usr/lib/llvm-14.0/bin/clang /usr/bin/clang
+  - ln -s -f /usr/lib/llvm-14.0/bin/clang++ /usr/bin/clang++
+  - ln -s -f /usr/lib/llvm-14.0/bin/ld.lld /usr/bin/ld.lld
+  - ln -s -f /usr/lib/llvm-14.0/bin/llvm-config /usr/bin/llvm-config
   - ln -s -f /usr/bin/gcc-11 /usr/bin/gcc
   - ln -s -f /usr/bin/g++-11 /usr/bin/g++
   - export ALTWRAP_LLVM_VERSION=17.0 GCC_VERSION=11
