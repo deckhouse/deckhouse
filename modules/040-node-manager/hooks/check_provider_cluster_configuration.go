@@ -61,7 +61,8 @@ func CheckCloudProviderConfig(input *go_hook.HookInput) error {
 		if err != nil {
 			requirements.SaveValue(CheckCloudProviderConfigRaw, true)
 			input.MetricsCollector.Set("d8_check_cloud_provider_config", 1, nil)
-			input.Logger.Error(findErrorLines(err.Error()))
+			input.Logger.Error(err.Error())
+			// input.Logger.Error(findErrorLines(err.Error()))
 			return nil
 		}
 		requirements.SaveValue(CheckCloudProviderConfigRaw, false)
