@@ -75,6 +75,7 @@ type ModulePullOverride struct {
 type ModulePullOverrideSpec struct {
 	ImageTag     string          `json:"imageTag"`
 	ScanInterval libapi.Duration `json:"scanInterval"`
+	Rollback     bool            `json:"rollback,omitempty"`
 }
 
 // +k8s:deepcopy-gen=true
