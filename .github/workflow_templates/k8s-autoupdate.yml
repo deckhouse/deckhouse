@@ -77,12 +77,18 @@ jobs:
     - name: Create Pull Request
       id: create-pull-request
       uses: {!{ index (ds "actions") "peter-evans/create-pull-request" }!}
+      env:
+        BOATSWAIN_GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
       with:
-        commit-message: "Automated Change: Update k8s patch version"
+        commit-message: |
+          "Automated Change: Update k8s patch version
+
+           Signed-off-by: deckhouse-BOaTswain <89150800+deckhouse-boatswain@users.noreply.github.com>"
         title: "Automated Change: Update k8s patch version"
         body-path: ".github/k8s_autoupdate_pull_request_template.md"
         branch: chore/k8s-autoupdate
         branch-suffix: timestamp
+        token: $BOATSWAIN_GITHUB_TOKEN
         base: main
         labels: e2e/run/yandex-cloud
         milestone: ${{ steps.setup.outputs.milestone }}
@@ -90,7 +96,8 @@ jobs:
       if: ${{ steps.create-pull-request.outputs.pull-request-url != '' }}
       env:
         LOOP_TOKEN: ${{secrets.LOOP_CVE_REPORTS_SEND_TOKEN}}
-        LOOP_CHANNEL_ID: ${{secrets.LOOP_E2E_REPORT_CHANEL_ID}}
+#        LOOP_CHANNEL_ID: ${{secrets.LOOP_E2E_REPORT_CHANEL_ID}}
+        LOOP_CHANNEL_ID: rc4zcp9rp38z9xzy8cjmjtybdr
       run: |
         PULL_REQUEST_URL="${{ steps.create-pull-request.outputs.pull-request-url }}"
         bash ./.github/scripts/send-report.sh --message "✅Kubernetes has been automatically updated✅\n[URL]($PULL_REQUEST_URL)"
