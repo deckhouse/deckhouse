@@ -15,6 +15,87 @@ Context:
 
 {{/* TODO: format_examples $data */}}
 
+{{/* Reading all conversions files */}}
+{{- $modulePath := path.Dir (path.Dir (path.Dir (path.Dir .Page.File.Dir))) -}}
+{{- $moduleName := path.Base $modulePath -}}
+{{- $channel := path.Base (path.Dir .Page.File.Dir) -}}
+<!-- {{- $conversionsDir := printf "data/modules/%s/%s/openapi/conversions/" $moduleName $channel -}} -->
+{{- $conversionsDir := "data/modules/observability-platform/alpha/openapi/conversions/" }}
+{{- if fileExists $conversionsDir }}
+  {{- $conversionFiles := readDir $conversionsDir }}
+  {{- $conversionData := slice }}
+
+{{/* Filtering with layout v<number>.yaml и v<number>.yml */}}
+{{- range $file := $conversionFiles }}
+  {{- if hasPrefix $file.Name "v" }}
+    {{- if or (hasSuffix $file.Name ".yaml") (hasSuffix $file.Name ".yml") }}
+      {{- $yamlPath := path.Join $conversionsDir $file.Name }}
+      {{- $yamlContent := readFile $yamlPath }}
+      {{- $conversionData = $conversionData | append (dict "file" $file.Name "content" (unmarshal $yamlContent)) }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+
+{{/* Conversions rendering */}}
+{{- if gt (len $conversionData) 0 }}
+    <h2>{{ T "conversions_title" }}</h2>
+    
+    <p>{{ T "conversion_action_message" }}:</p>
+    
+    {{- range $conv := $conversionData }}
+      {{- if $conv.content }}
+      <ul>
+        <li>
+          <p>{{ T "conversion_from_version" }} <b>{{ sub $conv.content.version 1 }}</b> {{ T "conversion_to" }} <b>{{ $conv.content.version }}</b>:</p>
+          
+          {{/* Check description availability*/}}
+          {{- $currentLang := site.Language.Lang | default "en" -}}
+          {{- $hasDescription := false -}}
+          
+          {{- if $conv.content.description -}}
+            {{- if reflect.IsMap $conv.content.description -}}
+              {{- $description := index $conv.content.description $currentLang | default $conv.content.description.en -}}
+              {{- if $description -}}
+                <p>{{ $description | markdownify }}</p>
+                {{- $hasDescription = true -}}
+              {{- end -}}
+            {{- else -}}
+              <p>{{ $conv.content.description | markdownify }}</p>
+              {{- $hasDescription = true -}}
+            {{- end -}}
+          {{- end -}}
+          
+          {{/* If no description */}}
+          {{- if not $hasDescription -}}
+            <p>{{ T "conversion_missing_description" }}</p>
+            
+            {{/* Rendering details block only if there is no description, but there are expressions */}}
+            {{- if $conv.content.conversions -}}
+            <div class="details" markdown="0">
+              <p class="details__lnk">
+                <a href="javascript:void(0)" class="details__summary">
+                  {{ T "conversion_expressions" }}
+                </a>
+              </p>
+              <div class="details__content" markdown="0">
+                <div class="expand" markdown="0">
+                  <ul>
+                    {{- range $conversion := $conv.content.conversions }}
+                    <li><code class="language-plaintext highlighter-rouge">{{ $conversion }}</code></li>
+                    {{- end }}
+                  </ul>
+                </div>
+              </div>
+            </div>
+            {{- end -}}
+          {{- end -}}
+        </li>
+      </ul>
+      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+
 {{- if $data.properties }}
 <p><font size="-1">{{ T "version_of_schema" }}: {{ $configVersion }}</font></p>
 
