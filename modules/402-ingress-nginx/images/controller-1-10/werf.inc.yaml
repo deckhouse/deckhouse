@@ -48,6 +48,7 @@ shell:
   - patch -p1 < /patches/nginx-build.patch
   - patch -p1 < /patches/new-metrics.patch
   - patch -p1 < /patches/default-backend-fix.patch
+  - patch -p1 < /patches/fix-validating-webhook-cve.patch
   - cd /src/ingress-nginx/rootfs
   - patch -p1 < /patches/balancer-lua.patch
   - patch -p1 < /patches/nginx-tmpl.patch
