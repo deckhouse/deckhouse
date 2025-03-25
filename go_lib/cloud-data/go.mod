@@ -8,7 +8,6 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/imdario/mergo v0.3.15 // indirect
-	github.com/sirupsen/logrus v1.9.0
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	k8s.io/apimachinery v0.25.5
 	k8s.io/client-go v0.25.5

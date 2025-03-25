@@ -120,7 +120,7 @@ func (c *Reconciler) Start() {
 
 	err := httpServer.ListenAndServe()
 	if err != http.ErrServerClosed {
-		c.logger.Error(err)
+		c.logger.Error("http server error", err)
 	}
 }
 

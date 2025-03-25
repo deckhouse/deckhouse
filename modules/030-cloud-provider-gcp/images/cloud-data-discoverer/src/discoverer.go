@@ -30,13 +30,13 @@ import (
 )
 
 type Discoverer struct {
-	logger     *log.Entry
+	logger     *log.Logger
 	credsFiles string
 	project    string
 	zones      []string
 }
 
-func NewDiscoverer(logger *log.Entry, credsFile, project string, zones []string) *Discoverer {
+func NewDiscoverer(logger *log.Logger, credsFile, project string, zones []string) *Discoverer {
 	return &Discoverer{
 		credsFiles: credsFile,
 		project:    project,

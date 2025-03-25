@@ -20,16 +20,7 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-const (
-	loggerSimple = "simple"
-	loggerJSON   = "json"
-)
-
 func InitLogger() *log.Logger {
-	if LoggerType == loggerSimple {
-		// todo: now unused, need change formatter to text when our slog implementation will support it
-	}
-
 	// json is default formatter for our slog implementation
 	l := log.NewLogger(log.Options{
 		Level: slog.Level(LoggerLevel),

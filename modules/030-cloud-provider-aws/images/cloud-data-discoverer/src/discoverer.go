@@ -33,11 +33,11 @@ import (
 )
 
 type Discoverer struct {
-	logger *log.Entry
+	logger *log.Logger
 	region string
 }
 
-func NewDiscoverer(logger *log.Entry) *Discoverer {
+func NewDiscoverer(logger *log.Logger) *Discoverer {
 	region := os.Getenv("AWS_REGION")
 	if region == "" {
 		logger.Fatal("AWS_REGION not found")

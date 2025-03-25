@@ -40,7 +40,7 @@ type Discoverer struct {
 	clusterUUID  string
 }
 
-func NewDiscoverer(logger *log.Entry) *Discoverer {
+func NewDiscoverer(logger *log.Logger) *Discoverer {
 	authOpts, err := openstack.AuthOptionsFromEnv()
 	if err != nil {
 		logger.Fatalf("Cannot get opts from env: %v", err)
@@ -181,7 +181,7 @@ func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error)
 	return disksMeta, nil
 }
 
-func newProvider(authOpts gophercloud.AuthOptions, logger *log.Entry) (*gophercloud.ProviderClient, error) {
+func newProvider(authOpts gophercloud.AuthOptions, logger *log.Logger) (*gophercloud.ProviderClient, error) {
 	provider, err := openstack.NewClient(authOpts.IdentityEndpoint)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create OpenStack client: %v", err)
@@ -345,7 +345,7 @@ func (d *Discoverer) getAdditionalSecurityGroups(ctx context.Context, provider *
 	allPages, err := groups.List(client, groups.ListOpts{}).AllPages()
 	if err != nil {
 		if _, ok := err.(gophercloud.ErrDefault404); ok {
-			d.logger.Infoln("Cloud does not support security groups. Returns empty array")
+			d.logger.Info("Cloud does not support security groups. Returns empty array")
 			return make([]string, 0), nil
 		}
 
@@ -405,7 +405,7 @@ type OpenstackCloudDiscoveryDataInstances struct {
 	MainNetwork string `json:"mainNetwork,omitempty" yaml:"mainNetwork,omitempty"`
 }
 
-func RetryFunc(logger *log.Entry) gophercloud.RetryFunc {
+func RetryFunc(logger *log.Logger) gophercloud.RetryFunc {
 	return func(ctx context.Context, method, url string, options *gophercloud.RequestOpts, err error, failCount uint) error {
 		if failCount >= 3 {
 			return err
@@ -423,7 +423,7 @@ func RetryFunc(logger *log.Entry) gophercloud.RetryFunc {
 	}
 }
 
-func RetryBackoffFunc(logger *log.Entry) gophercloud.RetryBackoffFunc {
+func RetryBackoffFunc(logger *log.Logger) gophercloud.RetryBackoffFunc {
 	return func(ctx context.Context, respErr *gophercloud.ErrUnexpectedResponseCode, err error, retries uint) error {
 		retryAfter := respErr.ResponseHeader.Get("Retry-After")
 		if retryAfter == "" {

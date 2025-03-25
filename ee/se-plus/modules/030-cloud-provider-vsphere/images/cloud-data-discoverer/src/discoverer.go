@@ -8,6 +8,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"os"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/cns"
@@ -15,24 +21,19 @@ import (
 	"github.com/vmware/govmomi/session"
 	"github.com/vmware/govmomi/vim25"
 	"github.com/vmware/govmomi/vim25/soap"
-	"net/url"
-	"os"
-	"strconv"
-	"strings"
-	"time"
 
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 )
 
 type Discoverer struct {
-	logger               *log.Entry
+	logger               *log.Logger
 	clusterUUID          string
 	csiCompatibilityFlag string
 	govmomiClient        *govmomi.Client
 	cnsClient            *cns.Client
 }
 
-func NewDiscoverer(logger *log.Entry) *Discoverer {
+func NewDiscoverer(logger *log.Logger) *Discoverer {
 	clusterUUID := os.Getenv("CLUSTER_UUID")
 	if clusterUUID == "" {
 		logger.Fatalf("Cannot get CLUSTER_UUID env")
@@ -117,7 +118,7 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryDa
 
 func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error) {
 	if d.csiCompatibilityFlag != "none" {
-		d.logger.Warnln("Skipping orphaned disks discovery: \"legacy\" CSI driver in-use")
+		d.logger.Warn("Skipping orphaned disks discovery: \"legacy\" CSI driver in-use")
 		return []v1alpha1.DiskMeta{}, nil
 	}
 

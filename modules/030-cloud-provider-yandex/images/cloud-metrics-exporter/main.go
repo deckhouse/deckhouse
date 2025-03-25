@@ -17,9 +17,9 @@ package main
 import (
 	"os"
 
-	"exporter/app"
+	"github.com/deckhouse/deckhouse/pkg/log"
 
-	"github.com/sirupsen/logrus"
+	"exporter/app"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
