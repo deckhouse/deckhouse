@@ -16,8 +16,11 @@ package utils
 
 import (
 	"context"
+	goerrors "errors"
 	"fmt"
 	"time"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -32,10 +35,23 @@ import (
 )
 
 func TryToDrainNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string) error {
-	return retry.NewLoop(fmt.Sprintf("Drain node '%s'", nodeName), 45, 10*time.Second).
+	err := retry.NewLoop(fmt.Sprintf("Drain node '%s'", nodeName), 5, 10*time.Second).
 		RunContext(ctx, func() error {
 			return drainNode(ctx, kubeCl, nodeName)
 		})
+	if err != nil {
+		if goerrors.Is(err, kubedrain.ErrDrainTimeout) {
+			if input.NewConfirmation().WithMessage("Cannot drain node, because process was timeout. Do we continue without full-fledged drain?").Ask() {
+				log.WarnLn("Continue without full-fledged drain")
+				return nil
+			}
+
+			return err
+		}
+		return err
+	}
+
+	return nil
 }
 
 func drainNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string) error {
@@ -76,12 +92,12 @@ func drainNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName st
 
 	err = kubedrain.RunCordonOrUncordon(drainer, node, true)
 	if err != nil {
-		return fmt.Errorf("failed to cordon node '%s': %v", node.Name, err)
+		return fmt.Errorf("failed to cordon node '%s': %w", node.Name, err)
 	}
 
 	err = kubedrain.RunNodeDrain(drainer, node.Name)
 	if err != nil {
-		return fmt.Errorf("failed to drain node '%s': %v", node.Name, err)
+		return fmt.Errorf("failed to drain node '%s': %w", node.Name, err)
 	}
 
 	return nil

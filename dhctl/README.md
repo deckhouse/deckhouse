@@ -127,7 +127,7 @@ For example, use a docker image from the Flant docker registry:
      ```
 
      > macOS users do not need to mount the .ssh folder to the `/tmp`.
-     > Because of Docker for MacOS specific features it is more convenient to mount it to the `/root`.
+     > Because of Docker for macOS specific features it is more convenient to mount it to the `/root`.
 3. Execute cluster bootstrap:
 
    ```bash

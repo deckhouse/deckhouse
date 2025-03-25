@@ -837,8 +837,8 @@ OpenStackClusterConfiguration
 OpenStackEE
 OpenStackInstanceClass
 OpenStackInstanceClasses
-Opentofu
 opentofu
+Opentofu
 openvpn
 OpenVPN
 openvpn-admin
@@ -1508,10 +1508,10 @@ zVirt
 инсталлятором
 инстанс
 инстанса
-инстансом
 инстансам
 инстансах
 инстансов
+инстансом
 инстансу
 инстансы
 интеграций
