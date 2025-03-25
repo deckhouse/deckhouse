@@ -35,9 +35,13 @@ module JSONSchemaRenderer
         item['resourceType'] = resourceType
         item['title'] = %Q(#{if resourceType == 'crd' and  resourceName then resourceName + ":&nbsp;" end}#{parameterName})
         if get_hash_value(@site.data['modules'], 'all', moduleName, %Q(parameters-#{revision})) == nil then
-          @site.data['modules']['all'][moduleName][%Q(parameters-#{revision})] = Hash.new
+          if ! get_hash_value(@site.data['modules'], 'all', moduleName) then
+            puts "NOTE: No modules data for module " + moduleName
+          else
+            @site.data['modules']['all'][moduleName][%Q(parameters-#{revision})] = Hash.new
+          end
         end
-        if get_hash_value(@site.data['modules'], 'all', moduleName, %Q(parameters-#{revision}),
+        if get_hash_value(@site.data['modules'], 'all', moduleName) && get_hash_value(@site.data['modules'], 'all', moduleName, %Q(parameters-#{revision}),
            %Q(#{if resourceType != 'moduleConfig' then
                    if resourceName then resourceName + "." end
                 end
