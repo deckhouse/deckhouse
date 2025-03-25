@@ -6,5 +6,14 @@ metadata:
   namespace: d8-monitoring
   {{- include "helm_lib_module_labels" (list . (dict "app" "monitoring-ping")) | nindent 2 }}
 data:
-  targets.json: >
-    {{ .Values.monitoringPing.internal.targets | toJson }}
+  targets.json: |
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: monitoring-ping-config-external
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "monitoring-ping")) | nindent 2 }}
+data:
+  targets.json: |
+    {{ dict "targets" .Values.monitoringPing.externalTargets | toJson | nindent 4 }}

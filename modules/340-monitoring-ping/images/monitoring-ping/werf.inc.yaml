@@ -1,81 +1,48 @@
 ---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+  - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+    add: /src/monitoring-ping
+    to: /monitoring-ping
+    after: setup
+imageSpec:
+  config:
+    entrypoint: ["/monitoring-ping"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+from: builder/golang-bookworm
+final: false
+import:
+  - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+    add: /src
+    to: /src
+    before: install
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache bash git binutils
+  install:
+    - cd /src
+    - go mod download
+  setup:
+    - cd /src
+    - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - go build -ldflags="-s -w" -o /src/monitoring-ping
+    - chmod 0700 /src/monitoring-ping
+---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
 git:
-- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src/monitoring-ping.py
-  to: /src/monitoring-ping.py
-  stageDependencies:
-    install:
-    - '**/*'
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+    to: /src
+    stageDependencies:
+      install:
+        - "**/*"
 shell:
   install:
-  - cd /src
-  - git clone -b v5.2 --depth=1 $(cat /run/secrets/SOURCE_REPO)/schweikert/fping.git ./fping
-  - rm -rf fping/.git
----
-image: {{ .ModuleName }}/{{ .ImageName }}-fping-artifact
-fromImage: builder/golang-bookworm
-final: false
-import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-  add: /src/fping
-  to: /src
-  before: install
-shell:
-  beforeInstall:
-  {{- include "debian packages proxy" . | nindent 2 }}
-  - apt update && apt install -y --no-install-recommends git build-essential ca-certificates autoconf autotools-dev automake
-  install:
-  - cd src
-  - autoreconf -i
-  - ./configure LDFLAGS="-static" --prefix=/opt/fping-static
-  - make
-  - make install
-  - chown -R 64535:64535 /opt/fping-static
-  - chmod 0700 /opt/fping-static/sbin/fping
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
-fromImage: base/python
-final: false
-git:
-- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/requirements.txt
-  to: /requirements.txt
-  stageDependencies:
-    install:
-    - '**/*'
-import:
-- image: common/wheel-artifact
-  add: /wheels
-  to: /wheels
-  before: install
-shell:
-  install:
-  - pip3 install -f file:///wheels --no-index -r /requirements.txt
----
-image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
-import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-  add: /src/monitoring-ping.py
-  to: /monitoring-ping.py
-  before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-fping-artifact
-  add: /opt/fping-static/sbin/fping
-  to: /usr/sbin/fping
-  before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
-  add: /
-  to: /
-  before: install
-  includePaths:
-  - lib/ld-musl-x86_64*
-  - usr/bin/python3*
-  - usr/lib/python3*
-  - usr/lib/libc.so
-imageSpec:
-  config:
-    entrypoint: ["/usr/bin/python3", "/monitoring-ping.py"]
+    - cd /src
