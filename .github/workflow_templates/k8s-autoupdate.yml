@@ -78,7 +78,7 @@ jobs:
       id: create-pull-request
       uses: {!{ index (ds "actions") "peter-evans/create-pull-request" }!}
       env:
-        BOATSWAIN_GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+        BOATSWAIN_GITHUB_TOKEN: ${{secrets.CHANGELOG_ACCESS_TOKEN}}
       with:
         commit-message: |
           "Automated Change: Update k8s patch version
@@ -92,6 +92,7 @@ jobs:
         base: main
         labels: e2e/run/yandex-cloud
         milestone: ${{ steps.setup.outputs.milestone }}
+        delete-branch: true
     - name: Send success report
       if: ${{ steps.create-pull-request.outputs.pull-request-url != '' }}
       env:
