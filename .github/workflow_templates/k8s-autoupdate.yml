@@ -61,7 +61,7 @@ jobs:
               }
               return 0; // Equal
             })[0];
-
+            console.log(JSON.stringify(targetMilestone));
             core.setOutput('milestone', targetMilestone.id);
             console.log(`Milestone number found: ${targetMilestone}`);
           } else {
