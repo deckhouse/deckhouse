@@ -108,6 +108,18 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 		return ctrl.Result{}, err
 	}
 
+	// check if the project template exists
+	if projectTemplate == nil {
+		m.logger.Info("the project template not found for the project", "project", project.Name, "template", project.Spec.ProjectTemplateName)
+		project.SetState(v1alpha2.ProjectStateError)
+		project.SetConditionFalse(v1alpha2.ProjectConditionProjectTemplateFound, "The project template not found")
+		if updateErr := m.updateProjectStatus(ctx, project); updateErr != nil {
+			m.logger.Error(updateErr, "failed to update the project status", "project", project.Name, "template", project.Spec.ProjectTemplateName)
+			return ctrl.Result{}, updateErr
+		}
+		return ctrl.Result{}, nil
+	}
+
 	project.SetConditionTrue(v1alpha2.ProjectConditionProjectTemplateFound)
 	project.SetTemplateGeneration(projectTemplate.Generation)
 
