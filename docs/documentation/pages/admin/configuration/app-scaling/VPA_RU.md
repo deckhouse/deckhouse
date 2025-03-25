@@ -91,4 +91,10 @@ kubectl describe vpa my-app-vpa
 
 1. Примените файл конфигурации для VPA с помощью `kubectl apply -f <имя файла конфигурации>`.
 
-Подробнее про настройку лимитов VPA [см. в разделе Использование](../../../vpa.html#работа-vpa-с-лимитами).
+Подробнее про настройку лимитов VPA [см. в разделе Использование](../../../../user/configuration/app-scaling/vpa.html#работа-vpa-с-лимитами).
+
+
+
+http://ru.localhost/products/kubernetes-platform/documentation/v1/admin/configuration/app-scaling/vpa.html
+
+http://ru.localhost/products/kubernetes-platform/documentation/v1/user/configuration/app-scaling/vpa.html
