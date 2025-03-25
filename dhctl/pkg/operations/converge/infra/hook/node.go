@@ -32,18 +32,18 @@ var (
 )
 
 type NodeChecker interface {
-	IsReady(nodeName string) (bool, error)
+	IsReady(ctx context.Context, nodeName string) (bool, error)
 	Name() string
 }
 
-func IsNodeReady(checkers []NodeChecker, nodeName, sourceCommandName string) (bool, error) {
+func IsNodeReady(ctx context.Context, checkers []NodeChecker, nodeName, sourceCommandName string) (bool, error) {
 	title := fmt.Sprintf("Node %s readiness check", nodeName)
 	var lastErr error
 
-	err := retry.NewLoop(title, 30, 10*time.Second).Run(func() error {
+	err := retry.NewLoop(title, 30, 10*time.Second).RunContext(ctx, func() error {
 		for _, check := range checkers {
 			err := log.Process(sourceCommandName, check.Name(), func() error {
-				isReady, err := check.IsReady(nodeName)
+				isReady, err := check.IsReady(ctx, nodeName)
 				if err != nil {
 					return err
 				}
@@ -81,8 +81,8 @@ func NewKubeNodeReadinessChecker(getter kubernetes.KubeClientProvider) *KubeNode
 	}
 }
 
-func (c *KubeNodeReadinessChecker) IsReady(nodeName string) (bool, error) {
-	node, err := c.getter.KubeClient().CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
+func (c *KubeNodeReadinessChecker) IsReady(ctx context.Context, nodeName string) (bool, error) {
+	node, err := c.getter.KubeClient().CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 	if err != nil {
 		return false, err
 	}

@@ -53,35 +53,6 @@ spec:
   sessionAffinity: None
   type: ClusterIP`
 
-	service2YAML = `
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: d8-kube-dns-redirect
-  namespace: kube-system
-spec:
-  clusterIP: 10.222.142.22
-  clusterIPs:
-  - 10.222.142.22
-  internalTrafficPolicy: Cluster
-  ipFamilies:
-  - IPv4
-  ipFamilyPolicy: SingleStack
-  ports:
-  - name: dns
-    port: 53
-    protocol: UDP
-    targetPort: dns
-  - name: dns-tcp
-    port: 53
-    protocol: TCP
-    targetPort: dns-tcp
-  selector:
-    k8s-app: kube-dns
-  sessionAffinity: None
-  type: ClusterIP`
-
 	serviceRightPorts = `
 - name: dns
   port: 53
@@ -98,7 +69,7 @@ var _ = Describe("KubeDns hooks :: migration_service_with_many_ports", func() {
 
 	Context("There are broken service", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(serviceYAML + service2YAML))
+			f.BindingContexts.Set(f.KubeStateSet(serviceYAML))
 			f.RunHook()
 		})
 		It("Service have been fixed", func() {

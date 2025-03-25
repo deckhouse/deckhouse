@@ -15,7 +15,6 @@
 package converge
 
 import (
-	gocontext "context"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -100,7 +99,7 @@ func (r *runner) isSkip(phase phases.OperationPhase) bool {
 
 func (r *runner) RunConverge(ctx *context.Context) error {
 	if r.lockRunner != nil {
-		err := r.lockRunner.Run(func() error {
+		err := r.lockRunner.Run(ctx.Ctx(), func() error {
 			return r.converge(ctx)
 		})
 
@@ -124,7 +123,7 @@ func loadNodesState(ctx *context.Context) (map[string]state.NodeGroupTerraformSt
 			return nil, nil
 		}
 
-		nodesState, err := check.LoadNodesStateForCommanderMode(ctx.StateCache(), metaConfig, kubeCl)
+		nodesState, err := check.LoadNodesStateForCommanderMode(ctx.Ctx(), ctx.StateCache(), metaConfig, kubeCl)
 		if err != nil {
 			return nil, fmt.Errorf("unable to load nodes state: %w", err)
 		}
@@ -132,7 +131,7 @@ func loadNodesState(ctx *context.Context) (map[string]state.NodeGroupTerraformSt
 		return nodesState, nil
 	}
 
-	nodesState, err := state_terraform.GetNodesStateFromCluster(kubeCl)
+	nodesState, err := state_terraform.GetNodesStateFromCluster(ctx.Ctx(), kubeCl)
 	if err != nil {
 		return nil, fmt.Errorf("terraform nodes state in Kubernetes cluster not found: %w", err)
 	}
@@ -198,7 +197,7 @@ func (r *runner) convergeTerraNodes(ctx *context.Context, metaConfig *config.Met
 		bootstrapNewNodeGroups = operations.BootstrapSequentialTerraNodes
 	}
 
-	if err := bootstrapNewNodeGroups(ctx.KubeClient(), metaConfig, nodeGroupsWithoutStateInCluster, ctx.Terraform()); err != nil {
+	if err := bootstrapNewNodeGroups(ctx.Ctx(), ctx.KubeClient(), metaConfig, nodeGroupsWithoutStateInCluster, ctx.Terraform()); err != nil {
 		return err
 	}
 
@@ -243,7 +242,7 @@ func (r *runner) convergeDeckhouseConfiguration(ctx *context.Context, commanderU
 		return fmt.Errorf("unable to parse cluster uuid %q: %w", metaConfig.UUID, err)
 	}
 
-	if err := deckhouse.ConvergeDeckhouseConfiguration(gocontext.TODO(), ctx.KubeClient(), clusterUUID, commanderUUID, clusterConfigurationData, providerClusterConfigurationData); err != nil {
+	if err := deckhouse.ConvergeDeckhouseConfiguration(ctx.Ctx(), ctx.KubeClient(), clusterUUID, commanderUUID, clusterConfigurationData, providerClusterConfigurationData); err != nil {
 		return fmt.Errorf("unable to update deckhouse configuration: %w", err)
 	}
 
@@ -315,7 +314,7 @@ func (r *runner) updateClusterState(ctx *context.Context, metaConfig *config.Met
 		// NOTE: Cluster state loaded from target kubernetes cluster in default dhctl-converge.
 		// NOTE: In the commander mode cluster state should exist in the local state cache.
 		if !ctx.CommanderMode() {
-			clusterState, err = state_terraform.GetClusterStateFromCluster(ctx.KubeClient())
+			clusterState, err = state_terraform.GetClusterStateFromCluster(ctx.Ctx(), ctx.KubeClient())
 			if err != nil {
 				return fmt.Errorf("terraform cluster state in Kubernetes cluster not found: %w", err)
 			}
@@ -343,7 +342,7 @@ func (r *runner) updateClusterState(ctx *context.Context, metaConfig *config.Met
 			return global.ErrConvergeInterrupted
 		}
 
-		return entity.SaveClusterTerraformState(ctx.KubeClient(), outputs)
+		return entity.SaveClusterTerraformState(ctx.Ctx(), ctx.KubeClient(), outputs)
 	})
 
 	if err != nil {

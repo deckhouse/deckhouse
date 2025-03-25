@@ -64,6 +64,7 @@
  - **[cni-flannel]** Fixed a bug in the `check_cni_configuration` hook that could cause the main queue in the `deckhouse` to stop. [#11831](https://github.com/deckhouse/deckhouse/pull/11831)
  - **[cni-flannel]** Fixed package dropping issues with VXLAN and VMWare-hosted nodes. [#10087](https://github.com/deckhouse/deckhouse/pull/10087)
  - **[dashboard]** Specified the correct certificates for ingress to access via kube-rbac-proxy. [#11444](https://github.com/deckhouse/deckhouse/pull/11444)
+ - **[deckhouse]** Fix checking automatic kubernetes version in managed clusters. [#12684](https://github.com/deckhouse/deckhouse/pull/12684)
  - **[deckhouse]** Fix module requirements parsing. [#11733](https://github.com/deckhouse/deckhouse/pull/11733)
  - **[deckhouse]** Fix deleting module config for embedded modules. [#11347](https://github.com/deckhouse/deckhouse/pull/11347)
  - **[deckhouse]** Fix several deployed module releases. [#11245](https://github.com/deckhouse/deckhouse/pull/11245)

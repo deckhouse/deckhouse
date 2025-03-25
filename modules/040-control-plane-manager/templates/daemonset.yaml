@@ -12,12 +12,17 @@ memory: 10Mi
 {{- $kubeImageTagSuffix := .Values.controlPlaneManager.internal.effectiveKubernetesVersion | replace "." "" }}
 
 {{- $images := dict }}
+{{- $imageHolders := dict }}
 {{- range $component := list "kubeApiserver" "kubeControllerManager" "kubeScheduler" }}
   {{- $componentWithSuffix := printf "%s%s" $component $kubeImageTagSuffix }}
   {{- $_ := set $images $componentWithSuffix (get $.Values.global.modulesImages.digests.controlPlaneManager $componentWithSuffix) }}
+  {{- $_ := set $imageHolders $componentWithSuffix (printf "image-holder-%s" ($component | kebabcase)) }}
 {{- end }}
 {{- $_ := set $images "kubeApiserverHealthcheck" $.Values.global.modulesImages.digests.controlPlaneManager.kubeApiserverHealthcheck }}
 {{- $_ := set $images "etcd" $.Values.global.modulesImages.digests.controlPlaneManager.etcd }}
+
+{{- $_ := set $imageHolders "kubeApiserverHealthcheck" "image-holder-kube-apiserver-healthcheck" }}
+{{- $_ := set $imageHolders "etcd" "image-holder-etcd" }}
 
 {{- $registry := dict }}
 {{- $_ := set $registry "address" $.Values.global.modulesImages.registry.address }}
@@ -179,7 +184,7 @@ spec:
         cpu: 50m
         memory: 80Mi
     {{- range $name, $imageDigest := $images }}
-    - containerName: image-holder-{{ $name | kebabcase }}
+    - containerName: {{ index $imageHolders $name }}
       minAllowed:
         {{- include "image_holder_resources" $ | nindent 8 }}
       maxAllowed:
@@ -268,7 +273,7 @@ spec:
             {{- include "control_plane_manager_resources" . | nindent 12 }}
 {{- end }}
 {{- range $name, $imageDigest := $images }}
-      - name: image-holder-{{ $name | kebabcase }}
+      - name: {{ index $imageHolders $name }}
         image: "{{ $.Values.global.modulesImages.registry.base }}@{{ $imageDigest }}"
         command:
         - /pause

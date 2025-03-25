@@ -182,7 +182,7 @@ resource "openstack_compute_instance_v2" "master" {
 
 resource "openstack_blockstorage_volume_v3" "bastion" {
   name                 = "candi-${PREFIX}-bastion-0"
-  size                 = "30"
+  size                 = "60"
   image_id             = data.openstack_images_image_v2.astra_image.id
   volume_type          = var.volume_type
   availability_zone    = var.az_zone

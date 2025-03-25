@@ -1,0 +1,76 @@
+Subject: [PATCH] Fix some issues with the disable API call cache feature
+---
+Index: pkg/provider/azure_vmss.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/provider/azure_vmss.go b/pkg/provider/azure_vmss.go
+--- a/pkg/provider/azure_vmss.go	(revision cedcbf22e1e16274960c7c933a3a6407ec1d0d13)
++++ b/pkg/provider/azure_vmss.go	(date 1742471634907)
+@@ -430,6 +430,25 @@
+ 	vmManagementType, err := ss.getVMManagementTypeByProviderID(providerID, azcache.CacheReadTypeUnsafe)
+ 	if err != nil {
+ 		klog.Errorf("Failed to check VM management type: %v", err)
++
++		if vmManagementType == ManagedByUnknownVMSet {
++			klog.V(2).Infof("Failed to get VM management type for provider ID %q, trying to get node name from availability set or vmss flex", providerID)
++
++			nodeName, err := ss.availabilitySet.GetNodeNameByProviderID(providerID)
++			if err != nil {
++				klog.Warningf("Failed to get node name for provider ID %q: %v", providerID, err)
++			} else {
++				return nodeName, nil
++			}
++
++			nodeName, err = ss.flexScaleSet.GetNodeNameByProviderID(providerID)
++			if err != nil {
++				klog.Warningf("Failed to get node name for provider ID %q: %v", providerID, err)
++			} else {
++				return nodeName, nil
++			}
++		}
++
+ 		return "", err
+ 	}
+ 
+Index: pkg/provider/azure_instance_metadata.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/provider/azure_instance_metadata.go b/pkg/provider/azure_instance_metadata.go
+--- a/pkg/provider/azure_instance_metadata.go	(revision cedcbf22e1e16274960c7c933a3a6407ec1d0d13)
++++ b/pkg/provider/azure_instance_metadata.go	(date 1742471634912)
+@@ -107,12 +107,12 @@
+ }
+ 
+ // NewInstanceMetadataService creates an instance of the InstanceMetadataService accessor object.
+-func NewInstanceMetadataService(imdsServer string) (*InstanceMetadataService, error) {
++func NewInstanceMetadataService(imdsServer string, disableAPICallCache bool) (*InstanceMetadataService, error) {
+ 	ims := &InstanceMetadataService{
+ 		imdsServer: imdsServer,
+ 	}
+ 
+-	imsCache, err := azcache.NewTimedCache(consts.MetadataCacheTTL, ims.getMetadata, false)
++	imsCache, err := azcache.NewTimedCache(consts.MetadataCacheTTL, ims.getMetadata, disableAPICallCache)
+ 	if err != nil {
+ 		return nil, err
+ 	}
+Index: pkg/provider/azure.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/provider/azure.go b/pkg/provider/azure.go
+--- a/pkg/provider/azure.go	(revision cedcbf22e1e16274960c7c933a3a6407ec1d0d13)
++++ b/pkg/provider/azure.go	(date 1742471634919)
+@@ -629,7 +629,7 @@
+ 	az.Config = *config
+ 	az.Environment = *env
+ 	az.ResourceRequestBackoff = resourceRequestBackoff
+-	az.Metadata, err = NewInstanceMetadataService(consts.ImdsServer)
++	az.Metadata, err = NewInstanceMetadataService(consts.ImdsServer, config.DisableAPICallCache)
+ 	if err != nil {
+ 		return err
+ 	}
