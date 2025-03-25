@@ -70,9 +70,8 @@ jobs:
               }
               return 0; // Equal
             })[0];
-            console.log(JSON.stringify(targetMilestone));
-            core.setOutput('milestone', targetMilestone.id);
-            console.log(`Milestone number found: ${targetMilestone}`);
+            core.setOutput('milestone', targetMilestone.number);
+            console.log(`Milestone found: ${targetMilestone.number}`);
           } else {
             core.setOutput('milestone', '');
             console.log('No milestones found with patch version 0.');
