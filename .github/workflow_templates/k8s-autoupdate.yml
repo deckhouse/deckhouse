@@ -89,7 +89,8 @@ jobs:
         token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
         base: main
         labels: e2e/run/yandex-cloud
-        milestone: ${{ steps.get_milestone.outputs.milestone }}
+#        milestone: ${{ steps.get_milestone.outputs.milestone }}
+        milestone: 8
         delete-branch: true
     - name: Send success report
       if: ${{ steps.create-pull-request.outputs.pull-request-url != '' }}
