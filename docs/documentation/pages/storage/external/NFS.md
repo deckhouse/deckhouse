@@ -38,7 +38,7 @@ csi-nfs   910      Enabled   Embedded           Ready
 
 ## Creating the StorageClass
 
-To create a StorageClass, you need to use the [NFSStorageClas](../../../reference/cr/nfsstorageclass/) resource. Manually creating a StorageClass without [NFSStorageClas](../../../reference/cr/nfsstorageclass/) may lead to errors. Example of creating a StorageClass based on NFS:
+To create a StorageClass, you need to use the [NFSStorageClass](../../../reference/cr/nfsstorageclass/) resource. Manually creating a StorageClass without [NFSStorageClass](../../../reference/cr/nfsstorageclass/) may lead to errors. Example of creating a StorageClass based on NFS:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -67,13 +67,13 @@ spec:
 EOF
 ```
 
-Check that the created [NFSStorageClas](../../../reference/cr/nfsstorageclass/) resource has transitioned to the `Created` phase by running the following command:
+Check that the created [NFSStorageClass](../../../reference/cr/nfsstorageclass/) resource has transitioned to the `Created` phase by running the following command:
 
 ```shell
 d8 k get NFSStorageClass nfs-storage-class -w
 ```
 
-In the output, you should see information about the created [NFSStorageClas](../../../reference/cr/nfsstorageclass/) resource:
+In the output, you should see information about the created [NFSStorageClass](../../../reference/cr/nfsstorageclass/) resource:
 
 ```console
 NAME                PHASE     AGE
