@@ -97,9 +97,6 @@ func (m *Manager) Handle(ctx context.Context, namespace *corev1.Namespace) (ctrl
 		ObjectMeta: metav1.ObjectMeta{
 			Name: namespace.Name,
 		},
-		Spec: v1alpha2.ProjectSpec{
-			ProjectTemplateName: projectEmpty,
-		},
 	}
 
 	m.logger.Info("ensure the project", "project", project.Name)
