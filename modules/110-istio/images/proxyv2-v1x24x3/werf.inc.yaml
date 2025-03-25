@@ -160,6 +160,7 @@ shell:
   - sed -i '/^build --incompatible_merge_fixed_and_default_shell_env/a build --action_env=CCX=/usr/lib/llvm-17.0/bin/clang++ --host_action_env=CCX=/usr/lib/llvm-17.0/bin/clang++' envoy.bazelrc
   - sed -i '/^build --incompatible_merge_fixed_and_default_shell_env/a build --action_env=LD=/usr/lib/llvm-17.0/bin/ld.lld --host_action_env=LD=/usr/lib/llvm-17.0/bin/ld.lld' envoy.bazelrc
   - sed -i '/^build --incompatible_merge_fixed_and_default_shell_env/a build --action_env=LLVM_CONFIG=/usr/lib/llvm-17.0/bin/llvm-config  --host_action_env=LLVM_CONFIG=/usr/lib/llvm-17.0/bin/llvm-config' envoy.bazelrc
+  - sed -i '/^build --incompatible_merge_fixed_and_default_shell_env/a build --action_env=CC=/usr/bin/gcc-11 --action_env=CXX=/usr/bin/g++-11' envoy.bazelrc
   - sed -i 's|build:gcc --action_env=BAZEL_COMPILER=gcc|build:gcc --action_env=BAZEL_COMPILER=gcc-11|' envoy.bazelrc
   - sed -i 's|build:gcc --action_env=CC=gcc --action_env=CXX=g++|build:gcc --action_env=CC=/usr/bin/gcc-11 --action_env=CXX=/usr/bin/g++-11|' envoy.bazelrc
   - sed -i '/^build:gcc --test_env=HEAPCHECK=/a build:gcc --gcc_install_dir=/usr/bin/../lib64/gcc/x86_64-alt-linux/11' envoy.bazelrc
