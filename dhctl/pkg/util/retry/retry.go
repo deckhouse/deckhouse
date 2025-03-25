@@ -157,7 +157,7 @@ func (l *Loop) run(ctx context.Context, task func() error) error {
 			}
 		}
 
-		return fmt.Errorf("Timeout while %q: last error: %v", l.name, err)
+		return fmt.Errorf("Timeout while %q: last error: %W", l.name, err)
 	}
 
 	return l.logger.LogProcess("default", l.name, loopBody)
