@@ -145,14 +145,14 @@ shell:
   - export ALTWRAP_LLVM_VERSION=17.0 GCC_VERSION=11
   - cd /src/proxy
   - go mod download
-  - sed -i '/^build --enable_platform_specific_config/a build --linkopt=-L/opt/libcxx/lib'          envoy.bazelrc
-  - sed -i '/^build --enable_platform_specific_config/a build --linkopt=-Wl,-rpath,/opt/libcxx/lib' envoy.bazelrc
+  - sed -i '/^build --enable_platform_specific_config/a build --linkopt=-L/opt/libcxx/lib/x86_64-unknown-linux-gnu'          envoy.bazelrc
+  - sed -i '/^build --enable_platform_specific_config/a build --linkopt=-Wl,-rpath,/opt/libcxx/lib/x86_64-unknown-linux-gnu' envoy.bazelrc
   - sed -i 's|build:libc++ --action_env=BAZEL_LINKOPTS=-lm:-pthread|build:libc++ --action_env=BAZEL_LINKOPTS=-lm:-lpthread|' envoy.bazelrc
-  - sed -i 's|build:libc++ --action_env=CXXFLAGS=-stdlib=libc++|build:libc++ --action_env=CXXFLAGS=-stdlib=libcxx|' envoy.bazelrc
-  - sed -i 's|build:libc++ --action_env=LDFLAGS=-stdlib=libc++|build:libc++ --action_env=LDFLAGS=-stdlib=libcxx|' envoy.bazelrc
-  - sed -i 's|build:libc++ --action_env=BAZEL_CXXOPTS=-stdlib=libc++|build:libc++ --action_env=BAZEL_CXXOPTS=-stdlib=libcxx|' envoy.bazelrc
-  - sed -i 's|build:libc++ --action_env=BAZEL_LINKLIBS=-l%:libc++.a:-l%:libc++abi.a|build:libc++ --action_env=BAZEL_LINKLIBS=-l%:libcxx.a:-l%:libcxxabi.a|' envoy.bazelrc
-  - sed -i 's|build:clang-libc++ --config=libc++|build:clang-libc++ --config=libcxx|' envoy.bazelrc
+  # - sed -i 's|build:libc++ --action_env=CXXFLAGS=-stdlib=libc++|build:libc++ --action_env=CXXFLAGS=-stdlib=libcxx|' envoy.bazelrc
+  # - sed -i 's|build:libc++ --action_env=LDFLAGS=-stdlib=libc++|build:libc++ --action_env=LDFLAGS=-stdlib=libcxx|' envoy.bazelrc
+  # - sed -i 's|build:libc++ --action_env=BAZEL_CXXOPTS=-stdlib=libc++|build:libc++ --action_env=BAZEL_CXXOPTS=-stdlib=libcxx|' envoy.bazelrc
+  # - sed -i 's|build:libc++ --action_env=BAZEL_LINKLIBS=-l%:libc++.a:-l%:libc++abi.a|build:libc++ --action_env=BAZEL_LINKLIBS=-l%:libcxx.a:-l%:libcxxabi.a|' envoy.bazelrc
+  # - sed -i 's|build:clang-libc++ --config=libc++|build:clang-libc++ --config=libcxx|' envoy.bazelrc
   - sed -i '/^build --action_env=CC --host_action_env=CC/d' envoy.bazelrc
   - sed -i '/^build --action_env=CXX --host_action_env=CXX/d' envoy.bazelrc
   - sed -i '/^build --action_env=LLVM_CONFIG --host_action_env=LLVM_CONFIG/d' envoy.bazelrc
