@@ -13,7 +13,6 @@ description: "Deckhouse Kubernetes Platform. Использование ауте
 
 > Чтобы использовать аутентификацию в DKP, необходима [настройка](../../admin/configuration/access/authentication.html).
 
-
 ## Интерфейс
 
 Интерфейс аутентификации открывается при первом обращении к ресурсу, для которого включена аутентификация — DKP перенаправляет пользователя на страницу аутентификации. Если пользователь уже аутентифицирован (например во внешнем провайдере аутентификации), то DKP перенаправит запрос обратно к ресурсу, к которому первоначально обращался пользователь, обогатив запрос данными аутентификации. Если аутентификация не пройдена, пользователь увидит интерфейс аутентификации.
@@ -27,7 +26,6 @@ description: "Deckhouse Kubernetes Platform. Использование ауте
 Пример интерфейса аутентификации в DKP с вводом логина и пароля:
 
 ![Пример интерфейса аутентификации с вводом логина и пароля](../../images/user/access/authentication/web-auth-example2.png)
-
 
 ## Включение аутентификации в веб-приложении
 
@@ -88,7 +86,7 @@ description: "Deckhouse Kubernetes Platform. Использование ауте
 
    О настройке авторизации читайте в разделе [Авторизация](TODO) документации. Все параметры DexAuthenticator описаны в разделе [Справка](TODO).
 
-2. Добавьте в Ingress-ресурс приложения следующие аннотации:
+1. Добавьте в Ingress-ресурс приложения следующие аннотации:
 
    - `nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in`
    - `nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email`
@@ -105,20 +103,20 @@ description: "Deckhouse Kubernetes Platform. Использование ауте
      nginx.ingress.kubernetes.io/auth-url: https://app-name-dex-authenticator.app-ns.svc.cluster.local/dex-authenticator/auth
      nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
    ```
- 
-### Настойка аутентификации для приложения, которое умеет обрабатывать запросы на аутентификацию
+
+### Настройка аутентификации для приложения, которое умеет обрабатывать запросы на аутентификацию
 
 Приложения, которые умеют самостоятельно обрабатывать запросы на аутентификацию и выступать OIDC-клиентом, напрямую взаимодействуют с DKP для аутентификации пользователей.
 
 Чтобы включить аутентификацию для приложения, развернутого в DKP создайте объект [DexClient](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/cr.html#dexclient) в пространстве имен приложения.
 
 После появления объекта DexClient, в пространстве имен будет создан набор компонентов, необходимых для работы аутентификации:
+
 - В системе аутентификации DKP будет зарегистрирован клиент с идентификатором (`clientID`) `dex-client-<NAME>@<NAMESPACE>`, где `<NAME>` и `<NAMESPACE>` — `metadata.name` и `metadata.namespace` объекта DexClient соответственно.
 - В соответствующем пространстве имен будет создан секрет (Secret) `dex-client-<NAME>` (где `<NAME>` — `metadata.name` объекта DexClient), содержащий пароль доступа к клиенту (clientSecret).
 
+Пример манифеста DexClient:
 
-Пример DexClient:
-   
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: DexClient
@@ -137,7 +135,7 @@ spec:
 ```
 
 Пароль доступа к клиенту (`clientSecret`) сохранится в секрете. Пример:
-   
+
 ```yaml
 apiVersion: v1
 kind: Secret
