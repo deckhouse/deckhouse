@@ -13,13 +13,13 @@ spec:
                 reclaimPolicy:
                   description: |
                     Reclaim policy данного StorageClass:
-                    - Delete (При удалении Persistent Volume Claim также удаляются Persistent Volume и связанное хранилище).
-                    - Retain (При удалении Persistent Volume Claim остаются Persistent Volume и связанное хранилище).
+                    - `Delete` — при удалении Persistent Volume Claim также удаляются Persistent Volume и связанное хранилище;
+                    - `Retain` — при удалении Persistent Volume Claim остаются Persistent Volume и связанное хранилище.
                 volumeBindingMode:
                   description: |
                     Binding mode для данного StorageClass:
-                    - Immediate (создает PV сразу же, как будет создан PVC).
-                    - WaitForFirstConsumer (создает PV только после того, как будет создан Pod для PVC).
+                    - `Immediate` — создает PV сразу же, как будет создан PVC;
+                    - `WaitForFirstConsumer` — создает PV только после того, как будет создан Pod для PVC.
                 lvm:
                   description: |
                     Поле описывает конфигурацию LVM.
@@ -59,8 +59,8 @@ spec:
                 phase:
                   description: |
                     Текущее состояние StorageClass:
-                    - Failed (в случае, если контроллер получил некорректную конфигурацию, или возникли ошибки в ходе выполнения операций).
-                    - Create (если все операции завершились успешно).
+                    - `Failed` — в случае, если контроллер получил некорректную конфигурацию, или возникли ошибки в ходе выполнения операций;
+                    - `Create` — если все операции завершились успешно.
                 reason:
                   description: |
                     Дополнительная информация о состоянии StorageClass.

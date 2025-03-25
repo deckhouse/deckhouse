@@ -108,20 +108,18 @@ spec:
                   type: boolean
                   description: |
                     The device media type:
-                    - 'true' (for HHD)
-                    - 'false' (for SSD)
+                    - `true` — for HHD;
+                    - `false` — for SSD.
                 hotPlug:
                   type: boolean
                   description: |
                     The device connection type:
-                    - 'true' (if the device has been hotPlugged)
-                    - 'false' (otherwise)
+                    - `true` — if the device has been hotPlugged;
+                    - `false` — otherwise.
                 machineId:
                   type: string
                   description: |
-                    The unique identifier of the machine the device is on (normally at /etc/machine-id)
-
-
+                    The unique identifier of the machine the device is on (normally at /etc/machine-id).
       additionalPrinterColumns:
         - jsonPath: .status.nodeName
           name: Node
@@ -152,4 +150,4 @@ spec:
         - jsonPath: .metadata.creationTimestamp
           name: Age
           type: date
-          description: The age of this resource
+          description: The age of this resource.

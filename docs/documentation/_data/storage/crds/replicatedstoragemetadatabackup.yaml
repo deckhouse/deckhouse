@@ -35,4 +35,4 @@ spec:
                 data:
                   type: string
                   description: |
-                    Part of the LINSTOR's control-plane database backup
+                    Part of the LINSTOR's control-plane database backup.
