@@ -338,15 +338,7 @@ entries:
                 - title:
                     en: Overview
                     ru: Введение
-                  url: /admin/multitenancy-overview.html
-            - title:
-                en: Application scaling and resource management
-                ru: Масштабирование приложений и управление ресурсами
-              folders:
-                - title:
-                    en: Vertical pod autoscaling
-                    ru: Вертикальное масштабирование
-                  url: /admin/configuration/app-scaling/vpa.html      
+                  url: /admin/multitenancy-overview.html     
 # ------------- Using -------------
     - title:
         en: Using
@@ -432,6 +424,14 @@ entries:
             en: Catastrophic resistance
             ru: Катастрофоустойчивость
           url: /user/catastrophic-resistance.html
+        - title:
+            en: Application scaling and resource management
+            ru: Масштабирование приложений и управление ресурсами
+          folders:
+            - title:
+                en: Vertical pod autoscaling
+                ru: Вертикальное масштабирование
+              url: /admin/configuration/app-scaling/vpa.html 
 # ------------- Architecture -------------
     - title:
         en: Architecture
