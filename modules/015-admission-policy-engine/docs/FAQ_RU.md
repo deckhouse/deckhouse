@@ -86,6 +86,148 @@ spec:
 
 Больше примеров описания проверок для расширения политики можно найти [в библиотеке Gatekeeper](https://github.com/open-policy-agent/gatekeeper-library/tree/master/src/general).
 
+## Как разрешить одну или несколько политик Pod Security Standards, не отключая весь набор?
+
+1. Добавьте на ваш namespace метку `security.deckhouse.io/pod-policy: privileged`, чтобы отключить встроенный набор политик.
+1. Создайте ресурс `SecurityPolicy`, соответствующий политикам baseline либо restricted, при этом отредактируйте список `policies` под ваши нужды.
+1. Добавьте на свой namespace метку, соответствующую `namespaceSelector` в `SecurityPolicy`. В примерах ниже это `operation-policy.deckhouse.io/baseline-enabled: "true"` либо `operation-policy.deckhouse.io/restricted-enabled: "true"`
+
+`SecurityPolicy`, соответствующая [baseline](https://kubernetes.io/docs/concepts/security/pod-security-standards/#baseline):
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: baseline
+spec:
+  enforcementAction: Deny
+  policies:
+    allowHostIPC: false
+    allowHostNetwork: false
+    allowHostPID: false
+    allowPrivilegeEscalation: true
+    allowPrivileged: false
+    allowedAppArmor:
+      - runtime/default
+      - localhost/*
+    allowedCapabilities:
+      - AUDIT_WRITE
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - FSETID
+      - KILL
+      - MKNOD
+      - NET_BIND_SERVICE
+      - SETFCAP
+      - SETGID
+      - SETPCAP
+      - SETUID
+      - SYS_CHROOT
+    allowedHostPaths: []
+    allowedHostPorts:
+      - max: 0
+        min: 0
+    allowedProcMount: Default
+    allowedUnsafeSysctls:
+      - kernel.shm_rmid_forced
+      - net.ipv4.ip_local_port_range
+      - net.ipv4.ip_unprivileged_port_start
+      - net.ipv4.tcp_syncookies
+      - net.ipv4.ping_group_range
+      - net.ipv4.ip_local_reserved_ports
+      - net.ipv4.tcp_keepalive_time
+      - net.ipv4.tcp_fin_timeout
+      - net.ipv4.tcp_keepalive_intvl
+      - net.ipv4.tcp_keepalive_probes
+    seLinux:
+      - type: ""
+      - type: container_t
+      - type: container_init_t
+      - type: container_kvm_t
+      - type: container_engine_t
+    seccompProfiles:
+      allowedProfiles:
+        - RuntimeDefault
+        - Localhost
+        - undefined
+        - ''
+      allowedLocalhostFiles:
+        - '*'
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          operation-policy.deckhouse.io/baseline-enabled: "true"
+
+```
+
+`SecurityPolicy`, соответствующая [restricted](https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted):
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: restricted
+spec:
+  enforcementAction: Deny
+  policies:
+    allowHostIPC: false
+    allowHostNetwork: false
+    allowHostPID: false
+    allowPrivilegeEscalation: false
+    allowPrivileged: false
+    allowedAppArmor:
+      - runtime/default
+      - localhost/*
+    allowedCapabilities:
+      - NET_BIND_SERVICE
+    allowedHostPaths: []
+    allowedHostPorts:
+      - max: 0
+        min: 0
+    allowedProcMount: Default
+    allowedUnsafeSysctls:
+      - kernel.shm_rmid_forced
+      - net.ipv4.ip_local_port_range
+      - net.ipv4.ip_unprivileged_port_start
+      - net.ipv4.tcp_syncookies
+      - net.ipv4.ping_group_range
+      - net.ipv4.ip_local_reserved_ports
+      - net.ipv4.tcp_keepalive_time
+      - net.ipv4.tcp_fin_timeout
+      - net.ipv4.tcp_keepalive_intvl
+      - net.ipv4.tcp_keepalive_probes
+    allowedVolumes:
+      - configMap
+      - csi
+      - downwardAPI
+      - emptyDir
+      - ephemeral
+      - persistentVolumeClaim
+      - projected
+      - secret
+    requiredDropCapabilities:
+      - ALL
+    runAsUser:
+      rule: MustRunAsNonRoot
+    seLinux:
+      - type: ""
+      - type: container_t
+      - type: container_init_t
+      - type: container_kvm_t
+      - type: container_engine_t
+    seccompProfiles:
+      allowedProfiles:
+        - RuntimeDefault
+        - Localhost
+      allowedLocalhostFiles:
+        - '*'
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          operation-policy.deckhouse.io/restricted-enabled: "true"
+```
+
 ## Что, если несколько политик (операционных или безопасности) применяются на один объект?
 
 В этом случае необходимо, чтобы конфигурация объекта соответствовала всем политикам, которые на него распространяются.
