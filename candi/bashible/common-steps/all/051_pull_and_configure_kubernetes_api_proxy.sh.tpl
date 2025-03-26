@@ -176,6 +176,7 @@ spec:
     - mountPath: /tmp
       name: tmp
   priorityClassName: system-node-critical
+  priority: 2000001000
   volumes:
   - hostPath:
       path: /etc/kubernetes/kubernetes-api-proxy

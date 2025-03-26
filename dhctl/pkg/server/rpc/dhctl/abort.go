@@ -255,8 +255,7 @@ func (s *Service) abort(
 		TerraformContext:  terraform.NewTerraformContext(),
 	})
 
-	// TODO(dhctl-for-commander-cancels): pass ctx
-	abortErr := bootstrapper.Abort(false)
+	abortErr := bootstrapper.Abort(ctx, false)
 	state := bootstrapper.GetLastState()
 	stateData, marshalErr := json.Marshal(state)
 	err = errors.Join(abortErr, marshalErr)

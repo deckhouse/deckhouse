@@ -34,11 +34,11 @@ import (
 )
 
 func IsSequentialNodesBootstrap() bool {
-	if os.Getenv("DHCTL_PARALLEL_CLOUD_PERMANENT_NODES_BOOTSTRAP") == "yes" {
-		return false
+	if os.Getenv("DHCTL_PARALLEL_CLOUD_PERMANENT_NODES_BOOTSTRAP") == "false" {
+		return true
 	}
 
-	return true
+	return false
 }
 
 func NodeName(cfg *config.MetaConfig, nodeGroupName string, index int) string {
@@ -81,8 +81,7 @@ func BootstrapAdditionalNode(
 		RunnerLogger: log.GetDefaultLogger(),
 	})
 
-	// TODO(dhctl-for-commander-cancels): pass ctx
-	outputs, err := terraform.ApplyPipeline(context.TODO(), runner, nodeName, terraform.OnlyState)
+	outputs, err := terraform.ApplyPipeline(ctx, runner, nodeName, terraform.OnlyState)
 	if err != nil {
 		return err
 	}
@@ -91,8 +90,7 @@ func BootstrapAdditionalNode(
 		return global.ErrConvergeInterrupted
 	}
 
-	// TODO(dhctl-for-commander-cancels): pass ctx
-	err = entity.SaveNodeTerraformState(context.TODO(), kubeCl, nodeName, nodeGroupName, outputs.TerraformState, nodeGroupSettings, log.GetDefaultLogger())
+	err = entity.SaveNodeTerraformState(ctx, kubeCl, nodeName, nodeGroupName, outputs.TerraformState, nodeGroupSettings, log.GetDefaultLogger())
 	if err != nil {
 		return err
 	}
@@ -129,6 +127,7 @@ func BootstrapSequentialTerraNodes(ctx context.Context, kubeCl *client.Kubernete
 }
 
 func BootstrapAdditionalNodeForParallelRun(
+	ctx context.Context,
 	kubeCl *client.KubernetesClient,
 	cfg *config.MetaConfig,
 	index int,
@@ -153,8 +152,7 @@ func BootstrapAdditionalNodeForParallelRun(
 		RunnerLogger: runnerLogger,
 	})
 
-	// TODO(dhctl-for-commander-cancels): pass ctx
-	outputs, err := terraform.ApplyPipeline(context.TODO(), runner, nodeName, terraform.OnlyState)
+	outputs, err := terraform.ApplyPipeline(ctx, runner, nodeName, terraform.OnlyState)
 	if err != nil {
 		return err
 	}
@@ -163,8 +161,7 @@ func BootstrapAdditionalNodeForParallelRun(
 		return global.ErrConvergeInterrupted
 	}
 
-	// TODO(dhctl-for-commander-cancels): pass ctx
-	err = entity.SaveNodeTerraformState(context.TODO(), kubeCl, nodeName, nodeGroupName, outputs.TerraformState, nodeGroupSettings, runnerLogger)
+	err = entity.SaveNodeTerraformState(ctx, kubeCl, nodeName, nodeGroupName, outputs.TerraformState, nodeGroupSettings, runnerLogger)
 	if err != nil {
 		return err
 	}
@@ -224,6 +221,7 @@ func ParallelBootstrapAdditionalNodes(
 				nodeLogger = ngLogger
 			}
 			err := BootstrapAdditionalNodeForParallelRun(
+				ctx,
 				kubeCl,
 				cfg,
 				indexCandidate,
@@ -405,8 +403,7 @@ func BootstrapAdditionalMasterNode(
 		RunnerLogger: log.GetDefaultLogger(),
 	})
 
-	// TODO(dhctl-for-commander-cancels): pass ctx
-	outputs, err := terraform.ApplyPipeline(context.TODO(), runner, nodeName, terraform.GetMasterNodeResult)
+	outputs, err := terraform.ApplyPipeline(ctx, runner, nodeName, terraform.GetMasterNodeResult)
 	if err != nil {
 		return nil, err
 	}
@@ -415,8 +412,7 @@ func BootstrapAdditionalMasterNode(
 		return nil, global.ErrConvergeInterrupted
 	}
 
-	// TODO(dhctl-for-commander-cancels): pass ctx
-	err = entity.SaveMasterNodeTerraformState(context.TODO(), kubeCl, nodeName, outputs.TerraformState, outputs.GetDataDevices())
+	err = entity.SaveMasterNodeTerraformState(ctx, kubeCl, nodeName, outputs.TerraformState, outputs.GetDataDevices())
 	if err != nil {
 		return outputs, err
 	}

@@ -1,5 +1,7 @@
 ## Patches
 
+## ingress-nginx
+
 ### 001-lua-info.patch
 
 There are two patches to fix the problem with ingress names in logs and metrics.
@@ -58,3 +60,14 @@ Fix cve vulnerabilities.
 ### 011-nginx-build.patch
 
 Build nginx for controller on ALT Linux.
+
+### 012-fix-validating-webhook-cve.patch
+
+Backports several security fixes for the following CVE:
+CVE-2025-1097
+CVE-2025-1098
+CVE-2025-1974
+CVE-2025-24513
+CVE-2025-24514
+
+Sourced from https://github.com/kubernetes/ingress-nginx/commit/cfe3923bd657a82226eb58d3307204a8a8802db4

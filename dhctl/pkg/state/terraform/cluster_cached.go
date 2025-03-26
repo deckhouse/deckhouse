@@ -15,6 +15,7 @@
 package terraform
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -24,7 +25,7 @@ import (
 )
 
 type KubeClientGetter interface {
-	GetKubeClient() (*client.KubernetesClient, error)
+	GetKubeClient(ctx context.Context) (*client.KubernetesClient, error)
 }
 
 type KubeTerraStateLoader struct {
@@ -39,7 +40,7 @@ func NewCachedTerraStateLoader(kubeGetter KubeClientGetter, stateCache state.Cac
 	}
 }
 
-func (s *KubeTerraStateLoader) PopulateMetaConfig() (*config.MetaConfig, error) {
+func (s *KubeTerraStateLoader) PopulateMetaConfig(ctx context.Context) (*config.MetaConfig, error) {
 	var metaConfig *config.MetaConfig
 	var err error
 
@@ -59,17 +60,17 @@ func (s *KubeTerraStateLoader) PopulateMetaConfig() (*config.MetaConfig, error) 
 		return metaConfig, nil
 	}
 
-	kubeCl, err := s.kubeGetter.GetKubeClient()
+	kubeCl, err := s.kubeGetter.GetKubeClient(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	metaConfig, err = config.ParseConfigFromCluster(kubeCl)
+	metaConfig, err = config.ParseConfigFromCluster(ctx, kubeCl)
 	if err != nil {
 		return nil, err
 	}
 
-	metaConfig.UUID, err = GetClusterUUID(kubeCl)
+	metaConfig.UUID, err = GetClusterUUID(ctx, kubeCl)
 	if err != nil {
 		return nil, err
 	}
@@ -81,13 +82,13 @@ func (s *KubeTerraStateLoader) PopulateMetaConfig() (*config.MetaConfig, error) 
 	return metaConfig, nil
 }
 
-func (s *KubeTerraStateLoader) PopulateClusterState() ([]byte, map[string]state.NodeGroupTerraformState, error) {
-	clusterState, err := s.getClusterState()
+func (s *KubeTerraStateLoader) PopulateClusterState(ctx context.Context) ([]byte, map[string]state.NodeGroupTerraformState, error) {
+	clusterState, err := s.getClusterState(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	nodesState, err := s.getNodesState()
+	nodesState, err := s.getNodesState(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -95,7 +96,7 @@ func (s *KubeTerraStateLoader) PopulateClusterState() ([]byte, map[string]state.
 	return clusterState, nodesState, nil
 }
 
-func (s *KubeTerraStateLoader) getNodesState() (map[string]state.NodeGroupTerraformState, error) {
+func (s *KubeTerraStateLoader) getNodesState(ctx context.Context) (map[string]state.NodeGroupTerraformState, error) {
 	var err error
 	var kubeCl *client.KubernetesClient
 	var nodesState map[string]state.NodeGroupTerraformState
@@ -114,10 +115,10 @@ func (s *KubeTerraStateLoader) getNodesState() (map[string]state.NodeGroupTerraf
 			return nil, err
 		}
 	} else {
-		if kubeCl, err = s.kubeGetter.GetKubeClient(); err != nil {
+		if kubeCl, err = s.kubeGetter.GetKubeClient(ctx); err != nil {
 			return nil, err
 		}
-		nodesState, err = GetNodesStateFromCluster(kubeCl)
+		nodesState, err = GetNodesStateFromCluster(ctx, kubeCl)
 		if err != nil {
 			return nil, err
 		}
@@ -130,7 +131,7 @@ func (s *KubeTerraStateLoader) getNodesState() (map[string]state.NodeGroupTerraf
 	return nodesState, nil
 }
 
-func (s *KubeTerraStateLoader) getClusterState() ([]byte, error) {
+func (s *KubeTerraStateLoader) getClusterState(ctx context.Context) ([]byte, error) {
 	var kubeCl *client.KubernetesClient
 	var err error
 	var clusterState []byte
@@ -150,10 +151,10 @@ func (s *KubeTerraStateLoader) getClusterState() ([]byte, error) {
 			return nil, fmt.Errorf("can't load cluster state from cache")
 		}
 	} else {
-		if kubeCl, err = s.kubeGetter.GetKubeClient(); err != nil {
+		if kubeCl, err = s.kubeGetter.GetKubeClient(ctx); err != nil {
 			return nil, err
 		}
-		clusterState, err = GetClusterStateFromCluster(kubeCl)
+		clusterState, err = GetClusterStateFromCluster(ctx, kubeCl)
 		if err != nil {
 			return nil, err
 		}

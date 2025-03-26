@@ -4,6 +4,7 @@
 
 
  - All data sources created with the GrafanaAdditionalDatasource custom resource will have their UIDs changed.
+ - Ingress-nginx pods will restart. The validation of the generated NGINX configuration during the validation of `Ingress` resources is disabled until finding a way of running validations safely.
  - NGINX Ingress controller pods will be restarted.
 
 ## Features
@@ -63,6 +64,9 @@
  - **[cni-cilium]** L2 neigh discovery (arp flood) disabled. [#12078](https://github.com/deckhouse/deckhouse/pull/12078)
  - **[common]** Fixed a security vulnerability in `task`. [#11572](https://github.com/deckhouse/deckhouse/pull/11572)
  - **[control-plane-manager]** Fixed a security vulnerability. [#11536](https://github.com/deckhouse/deckhouse/pull/11536)
+ - **[deckhouse]** Fix checking automatic kubernetes version in managed clusters. [#12685](https://github.com/deckhouse/deckhouse/pull/12685)
+ - **[deckhouse]** Explicitly set ports in d8-kube-dns deployment. [#12658](https://github.com/deckhouse/deckhouse/pull/12658)
+ - **[deckhouse]** Set EnabledByModuleConfig condition by default for modules without this condition. [#12558](https://github.com/deckhouse/deckhouse/pull/12558)
  - **[deckhouse]** Add initial module config validation. [#12465](https://github.com/deckhouse/deckhouse/pull/12465)
  - **[deckhouse]** Add initial module config validation. [#12227](https://github.com/deckhouse/deckhouse/pull/12227)
  - **[deckhouse]** Fix module.yaml ignored when weight == 0. [#12254](https://github.com/deckhouse/deckhouse/pull/12254)
@@ -81,6 +85,8 @@
  - **[extended-monitoring]** Fixed security vulnerabilities in `events-exporter`. [#11442](https://github.com/deckhouse/deckhouse/pull/11442)
  - **[extended-monitoring]** Fixed security vulnerabilities in `extended-monitoring-exporter`. [#11425](https://github.com/deckhouse/deckhouse/pull/11425)
  - **[extended-monitoring]** Fixed security vulnerabilities in `image-availability-exporter`. [#11336](https://github.com/deckhouse/deckhouse/pull/11336)
+ - **[ingress-nginx]** latest CVE fixes backported. [#12746](https://github.com/deckhouse/deckhouse/pull/12746)
+    Ingress-nginx pods will restart. The validation of the generated NGINX configuration during the validation of `Ingress` resources is disabled until finding a way of running validations safely.
  - **[ingress-nginx]** Fixed graceful shutdown handling for Ingress controller pods. [#11656](https://github.com/deckhouse/deckhouse/pull/11656)
     NGINX Ingress controller pods will be restarted.
  - **[ingress-nginx]** Fixed a bug related to dynamic libraries in the NGINX Ingress controller pods. [#11644](https://github.com/deckhouse/deckhouse/pull/11644)
@@ -156,6 +162,7 @@
  - **[admission-policy-engine]** Fixes policies schemas. Allow to exclude namespaces or use only object labels. [#12292](https://github.com/deckhouse/deckhouse/pull/12292)
  - **[admission-policy-engine]** Fixed security vulnerabilities and updated the `trivy` build. [#11568](https://github.com/deckhouse/deckhouse/pull/11568)
  - **[admission-policy-engine]** Bumped `gatekeeper` and refactored the build. [#11356](https://github.com/deckhouse/deckhouse/pull/11356)
+ - **[candi]** Update Deckhouse CLI to 0.11.3 [#12691](https://github.com/deckhouse/deckhouse/pull/12691)
  - **[candi]** update d8-cli [#12104](https://github.com/deckhouse/deckhouse/pull/12104)
  - **[candi]** Bump patch versions of Kubernetes images: `v1.29.14`, `v1.30.1`, `v1.31.6` [#12081](https://github.com/deckhouse/deckhouse/pull/12081)
     Kubernetes control-plane components will restart, kubelet will restart.

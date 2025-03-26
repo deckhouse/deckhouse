@@ -13,15 +13,12 @@ proxy:
   noProxy:
   - 192.168.199.0/24
 ---
-apiVersion: deckhouse.io/v2alpha1
+apiVersion: deckhouse.io/v1
 kind: InitConfiguration
-registry:
-  mode: Proxy
-  proxy:
-    storageMode: Fs
-    imagesRepo: dev-registry.deckhouse.io/sys/deckhouse-oss
-    dockerCfg: '${DECKHOUSE_DOCKERCFG}'
 deckhouse:
+  registryScheme: "HTTP"
+  imagesRepo: '${IMAGES_REPO}'
+  registryDockerCfg: '${DECKHOUSE_DOCKERCFG}'
   devBranch: '${DEV_BRANCH}'
 ---
 apiVersion: deckhouse.io/v1

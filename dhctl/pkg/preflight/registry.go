@@ -96,7 +96,7 @@ Please check connectivity to control-plane host and that the sshd config paramet
 		Host:   registryData.Address,
 		Path:   "/v2/",
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, registryURL.String(), nil)
 	if err != nil {
@@ -154,7 +154,7 @@ func (pc *Checker) CheckRegistryCredentials(ctx context.Context) error {
 	}
 
 	log.DebugLn("Checking registry credentials")
-	ctx, cancel := context.WithTimeout(context.Background(), httpClientTimeoutSec*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, httpClientTimeoutSec*time.Second)
 	defer cancel()
 
 	registryData := pc.GetRegistryData()

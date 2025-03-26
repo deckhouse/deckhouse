@@ -100,7 +100,7 @@ func (h *HookForUpdatePipeline) WithConfirm(confirm func(msg string) bool) *Hook
 	return h
 }
 
-func (h *HookForUpdatePipeline) BeforeAction(runner terraform.RunnerInterface) (bool, error) {
+func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner terraform.RunnerInterface) (bool, error) {
 	if runner.GetChangesInPlan() != terraform.PlanHasDestructiveChanges {
 		return false, nil
 	}
@@ -109,34 +109,33 @@ func (h *HookForUpdatePipeline) BeforeAction(runner terraform.RunnerInterface) (
 		return false, ErrSingleMasterClusterTerraformPlanHasDestructiveChanges
 	}
 
-	err := h.IsAllNodesReady()
+	err := h.IsAllNodesReady(ctx)
 	if err != nil {
 		return false, fmt.Errorf("not all nodes are ready: %v", err)
 	}
 
-	err = lockRegistryDataDeviceMount(context.TODO(), h.kubeGetter.KubeClient(), h.nodeToConverge)
+	err = lockRegistryDataDeviceMount(ctx, h.kubeGetter.KubeClient(), h.nodeToConverge)
 	if err != nil {
 		return false, fmt.Errorf("failed to lock registry data device mount: %v", err)
 	}
-	
+
 	isRegistryMustBeEnabled, err := isRegistryMustBeEnabled(runner.GetInputVariables())
 	if err != nil {
 		return false, fmt.Errorf("failed to check is registry must be enable: %v", err)
 	}
 	if !isRegistryMustBeEnabled {
-		err = gracefulUnmountRegistryData(context.TODO(), h.kubeGetter.KubeClient(), h.nodeToConverge)
+		err = gracefulUnmountRegistryData(ctx, h.kubeGetter.KubeClient(), h.nodeToConverge)
 		if err != nil {
 			return false, fmt.Errorf("failed to umount registry data device from node '%s': %v", h.nodeToConverge, err)
 		}
 	}
 
-	err = removeControlPlaneRoleFromNode(h.kubeGetter.KubeClient(), h.nodeToConverge)
+	err = removeControlPlaneRoleFromNode(ctx, h.kubeGetter.KubeClient(), h.nodeToConverge)
 	if err != nil {
 		return false, fmt.Errorf("failed to remove control plane role from node '%s': %v", h.nodeToConverge, err)
 	}
 
-	// TODO(dhctl-for-commander-cancels): pass ctx
-	outputs, err := terraform.GetMasterNodeResult(context.TODO(), runner)
+	outputs, err := terraform.GetMasterNodeResult(ctx, runner)
 	if err != nil {
 		log.ErrorF("Get master node pipeline outputs: %v", err)
 	}
@@ -146,13 +145,12 @@ func (h *HookForUpdatePipeline) BeforeAction(runner terraform.RunnerInterface) (
 	return false, nil
 }
 
-func (h *HookForUpdatePipeline) AfterAction(runner terraform.RunnerInterface) error {
+func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner terraform.RunnerInterface) error {
 	if runner.GetChangesInPlan() != terraform.PlanHasDestructiveChanges {
 		return nil
 	}
 
-	// TODO(dhctl-for-commander-cancels): pass ctx
-	outputs, err := terraform.GetMasterNodeResult(context.TODO(), runner)
+	outputs, err := terraform.GetMasterNodeResult(ctx, runner)
 	if err != nil {
 		return fmt.Errorf("failed to get master node pipeline outputs: %v", err)
 	}
@@ -170,7 +168,7 @@ func (h *HookForUpdatePipeline) AfterAction(runner terraform.RunnerInterface) er
 
 	// Before waiting for the master node to be listed as a member of the etcd cluster,
 	// we need to store the path to the Kubernetes data device to avoid deadlock.
-	err = h.saveKubernetesDataDevicePath(outputs.KubeDataDevicePath)
+	err = h.saveKubernetesDataDevicePath(ctx, outputs.KubeDataDevicePath)
 	if err != nil {
 		return fmt.Errorf("failed to save kubernetes data device path: %v", err)
 	}
@@ -179,18 +177,18 @@ func (h *HookForUpdatePipeline) AfterAction(runner terraform.RunnerInterface) er
 		return fmt.Errorf("failed to save registry data device path: %v", err)
 	}
 
-	err = waitEtcdHasMember(h.kubeGetter.KubeClient().KubeClient.(*flantkubeclient.Client), h.nodeToConverge)
+	err = waitEtcdHasMember(ctx, h.kubeGetter.KubeClient().KubeClient.(*flantkubeclient.Client), h.nodeToConverge)
 	if err != nil {
 		return fmt.Errorf("failed to wait for the master node '%s' to be listed as etcd cluster member: %v", h.nodeToConverge, err)
 	}
 
-	err = unlockRegistryDataDeviceMount(context.TODO(), h.kubeGetter.KubeClient(), h.nodeToConverge)
+	err = unlockRegistryDataDeviceMount(ctx, h.kubeGetter.KubeClient(), h.nodeToConverge)
 	if err != nil {
 		return fmt.Errorf("failed to unlock registry data device mount: %v", err)
 	}
 
-	err = retry.NewLoop(fmt.Sprintf("Check the master node '%s' is ready", h.nodeToConverge), 45, 10*time.Second).Run(func() error {
-		ready, err := NewManagerReadinessChecker(h.kubeGetter).IsReady(h.nodeToConverge)
+	err = retry.NewLoop(fmt.Sprintf("Check the master node '%s' is ready", h.nodeToConverge), 45, 10*time.Second).RunContext(ctx, func() error {
+		ready, err := NewManagerReadinessChecker(h.kubeGetter).IsReady(ctx, h.nodeToConverge)
 		if err != nil {
 			return fmt.Errorf("failed to check the master node '%s' readiness: %v", h.nodeToConverge, err)
 		}
@@ -212,7 +210,7 @@ func (h *HookForUpdatePipeline) IsReady() error {
 	return nil
 }
 
-func (h *HookForUpdatePipeline) saveKubernetesDataDevicePath(devicePath string) error {
+func (h *HookForUpdatePipeline) saveKubernetesDataDevicePath(ctx context.Context, devicePath string) error {
 	getDevicePathManifest := func() interface{} {
 		return manifests.SecretMasterKubernetesDataDevicePath(h.nodeToConverge, []byte(devicePath))
 	}
@@ -221,7 +219,7 @@ func (h *HookForUpdatePipeline) saveKubernetesDataDevicePath(devicePath string) 
 		Name:     `Secret "d8-masters-kubernetes-data-device-path"`,
 		Manifest: getDevicePathManifest,
 		CreateFunc: func(manifest interface{}) error {
-			_, err := h.kubeGetter.KubeClient().CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
+			_, err := h.kubeGetter.KubeClient().CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 			if err != nil {
 				return err
 			}
@@ -235,7 +233,7 @@ func (h *HookForUpdatePipeline) saveKubernetesDataDevicePath(devicePath string) 
 			}
 
 			_, err = h.kubeGetter.KubeClient().CoreV1().Secrets("d8-system").Patch(
-				context.TODO(),
+				ctx,
 				"d8-masters-kubernetes-data-device-path",
 				types.MergePatchType,
 				data,
@@ -249,14 +247,15 @@ func (h *HookForUpdatePipeline) saveKubernetesDataDevicePath(devicePath string) 
 		},
 	}
 
-	return retry.NewLoop(fmt.Sprintf("Save Kubernetes data device path for node '%s'", h.nodeToConverge), 45, 10*time.Second).Run(func() error {
-		err := task.CreateOrUpdate()
-		if err != nil {
-			return err
-		}
+	return retry.NewLoop(fmt.Sprintf("Save Kubernetes data device path for node '%s'", h.nodeToConverge), 45, 10*time.Second).
+		RunContext(ctx, func() error {
+			err := task.CreateOrUpdate()
+			if err != nil {
+				return err
+			}
 
-		return nil
-	})
+			return nil
+		})
 }
 
 func (h *HookForUpdatePipeline) saveSystemRegistryDataDevicePath(devicePath string) error {

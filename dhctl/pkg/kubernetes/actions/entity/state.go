@@ -235,8 +235,6 @@ func DeleteTerraformState(ctx context.Context, kubeCl *client.KubernetesClient, 
 // got FS event "/tmp/dhctl/static-node-dhctl.043483477.tfstate": WRITE
 // '/tmp/dhctl/static-node-dhctl.043483477.tfstate' stat: 8840 bytes, mode: -rw-------
 
-// TODO(dhctl-for-commander-cancels): pass ctx to all kube client functions
-
 var (
 	_ terraform.SaverDestination = &ClusterStateSaver{}
 	_ terraform.SaverDestination = &NodeStateSaver{}

@@ -128,7 +128,7 @@ func (l *LeaseLock) Unlock(ctx context.Context) {
 	close(l.exitRenewCh)
 
 	deleteRetries := l.config.RenewRetries()
-	err := retry.NewSilentLoop("unlock lease", deleteRetries, l.config.RetryWaitDuration).Run(func() error {
+	err := retry.NewSilentLoop("unlock lease", deleteRetries, l.config.RetryWaitDuration).RunContext(ctx, func() error {
 		err := l.getter.KubeClient().CoordinationV1().Leases(l.config.Namespace).Delete(ctx, l.lease.Name, metav1.DeleteOptions{})
 		if errors.IsNotFound(err) {
 			return nil
@@ -181,7 +181,7 @@ func (l *LeaseLock) tryAcquire(ctx context.Context, force bool) (*coordinationv1
 	}
 
 	acquireRetries := l.config.RenewRetries()
-	err := retry.NewSilentLoop("acquire lease", acquireRetries, l.config.RetryWaitDuration).BreakIf(cannotRenew).Run(func() error {
+	err := retry.NewSilentLoop("acquire lease", acquireRetries, l.config.RetryWaitDuration).BreakIf(cannotRenew).RunContext(ctx, func() error {
 		var err error
 		lease, err = l.createLease(ctx)
 		if err == nil {
@@ -247,7 +247,7 @@ func (l *LeaseLock) tryRenew(ctx context.Context, lease *coordinationv1.Lease, f
 	var newLease *coordinationv1.Lease
 
 	renewRetries := l.config.RenewRetries()
-	err := retry.NewSilentLoop("try to renew", renewRetries, l.config.RetryWaitDuration).Run(func() error {
+	err := retry.NewSilentLoop("try to renew", renewRetries, l.config.RetryWaitDuration).RunContext(ctx, func() error {
 		var err error
 		lease.Spec.RenewTime = now()
 		newLease, err = l.getter.KubeClient().CoordinationV1().Leases(l.config.Namespace).Update(ctx, lease, metav1.UpdateOptions{})
@@ -350,7 +350,7 @@ func RemoveLease(ctx context.Context, kubeCl *client.KubernetesClient, config *L
 
 	log.Infof("Starting remove lease lock")
 
-	err = retry.NewSilentLoop("release lease", 5, config.RetryWaitDuration).Run(func() error {
+	err = retry.NewSilentLoop("release lease", 5, config.RetryWaitDuration).RunContext(ctx, func() error {
 		err := leasesCl.Delete(ctx, lease.Name, metav1.DeleteOptions{})
 		if errors.IsNotFound(err) {
 			return nil
