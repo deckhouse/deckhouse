@@ -14,7 +14,7 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
-# limitations under the License.
+# limitations under the License.#TODO debug
 
 name: K8S autoupdate
 on:
@@ -22,7 +22,15 @@ on:
   - cron: '0 3 * * *'
   workflow_dispatch:
 jobs:
-  update-k8s:
+  skip_tests_repos:
+    name: Skip tests repos
+    runs-on: ubuntu-latest
+    if: ${{ true || github.repository == 'deckhouse/deckhouse' }}
+    steps:
+    - name: Do nothing
+      run: echo "Empty action to fulfil Github requirements."
+
+  update_k8s:
     runs-on: [self-hosted, regular]
     steps:
 
@@ -88,7 +96,7 @@ jobs:
         body-path: ".github/k8s_autoupdate_pull_request_template.md"
         branch: chore/k8s-autoupdate
         branch-suffix: timestamp
-        token: ${{ secrets.TEST_TOKEN }}
+        token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
         base: main
         labels: e2e/run/yandex-cloud
         milestone: ${{ steps.get_milestone.outputs.milestone }}

@@ -32,8 +32,6 @@ git_info:
     ref_full: ${{ steps.git_info.outputs.ref_full }}
     github_sha: ${{ steps.git_info.outputs.github_sha }}
     pr_number: ${{ steps.git_info.outputs.pr_number }}
-  # Skip the CI for automation PRs, e.g. changelog
-  if: ${{ github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
   steps:
     - id: git_info
       name: Get tag name and SHA
@@ -118,7 +116,7 @@ block-e2e-until-image-is-not-ready:
           if (!branchName) {
             branchName = githubAction.GetBranchNameFromContext(context);
           }
- 
+
           if (branchName) {
             let prNum = context.payload.inputs.issue_number;
             // if the pull request id is not found, search it by the branch name
