@@ -203,27 +203,11 @@ func (config *templateModel) processTemplate(name templateName, outputPath strin
 		return false, fmt.Errorf("failed to render template %s: %v", name, err)
 	}
 
-	// Compute the hash of the rendered content
-	hash := computeHash(renderedContent)
-
-	// Update the hashField if provided
-	if hashField != nil {
-		*hashField = hash
+	chaged, err := saveFileIfChanged(outputPath, renderedContent, hashField)
+	if err != nil {
+		return chaged, fmt.Errorf("failed to save file %s: %w", outputPath, err)
 	}
-
-	// Compare the existing file's content with the new rendered content
-	if isSame, err := compareFileHash(outputPath, renderedContent); err != nil {
-		return false, fmt.Errorf("failed to compare file hash for %s: %v", outputPath, err)
-	} else if isSame {
-		return false, nil
-	}
-
-	// Save the new content to the file
-	if err := saveToFile(renderedContent, outputPath); err != nil {
-		return false, fmt.Errorf("failed to save file %s: %v", outputPath, err)
-	}
-
-	return true, nil
+	return chaged, nil
 }
 
 // syncPKIFiles synchronizes the PKI-related files in the specified directory.

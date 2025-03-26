@@ -59,9 +59,13 @@ func saveFileIfChanged(outputPath string, content []byte, hashField *string) (bo
 		return false, nil
 	}
 
-	// Save the new content to the file
-	if err := saveToFile(content, outputPath); err != nil {
-		return false, fmt.Errorf("failed to save file %s: %v", outputPath, err)
+	dir := filepath.Dir(outputPath)
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return false, fmt.Errorf("error creating directory %s: %v", dir, err)
+	}
+
+	if err := os.WriteFile(outputPath, content, 0600); err != nil {
+		return false, fmt.Errorf("error writing to file %s: %v", outputPath, err)
 	}
 
 	return true, nil
@@ -92,18 +96,4 @@ func deleteDirectory(path string) (bool, error) {
 	}
 
 	return true, nil
-}
-
-// SaveToFile saves the rendered content to the specified file path
-func saveToFile(content []byte, path string) error {
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0700); err != nil {
-		return fmt.Errorf("error creating directory %s: %v", dir, err)
-	}
-
-	if err := os.WriteFile(path, content, 0600); err != nil {
-		return fmt.Errorf("error writing to file %s: %v", path, err)
-	}
-
-	return nil
 }

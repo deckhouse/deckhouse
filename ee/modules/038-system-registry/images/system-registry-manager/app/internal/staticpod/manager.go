@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"net/http"
 	"sync"
+	"time"
 
 	dlog "github.com/deckhouse/deckhouse/pkg/log"
 
@@ -76,7 +77,10 @@ func Run(ctx context.Context, hostIP, nodeName string) error {
 	context.AfterFunc(ctx, func() {
 		log.Info("Shutting down API server")
 
-		if err := httpServer.Shutdown(ctx); err != nil {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		if err := httpServer.Shutdown(shutdownCtx); err != nil {
 			log.Error("Error shutting down API server", "error", err)
 		}
 	})
@@ -104,21 +108,19 @@ func (s *apiServer) handleStaticPodPost(w http.ResponseWriter, r *http.Request) 
 	}
 
 	var (
-		data Config
-		err  error
+		err error
 	)
 
+	model := templateModel{
+		Address:  s.hostIP,
+		NodeName: s.nodeName,
+	}
+
 	// Decode request body to struct EmbeddedRegistryConfig and return error if decoding fails
-	if err = render.Bind(r, &data); err != nil {
+	if err = render.Bind(r, &model.Config); err != nil {
 		log.Warn("Validation error", "error", err)
 		render.Render(w, r, ErrBadRequest(err))
 		return
-	}
-
-	model := templateModel{
-		Config:   data,
-		Address:  s.hostIP,
-		NodeName: s.nodeName,
 	}
 
 	// Lock the requestMutex to prevent concurrent requests and release it after the request is processed
@@ -128,7 +130,7 @@ func (s *apiServer) handleStaticPodPost(w http.ResponseWriter, r *http.Request) 
 	var resp ChangesReponse
 
 	// Sync the PKI files
-	if resp.PKI, err = data.PKI.syncPKIFiles(
+	if resp.PKI, err = model.PKI.syncPKIFiles(
 		pkiConfigDirectoryPath,
 		&model.Hashes,
 	); err != nil {

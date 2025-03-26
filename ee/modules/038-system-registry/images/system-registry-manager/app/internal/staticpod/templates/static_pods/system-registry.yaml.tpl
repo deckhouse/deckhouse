@@ -1,3 +1,4 @@
+{{- $mode := .Registry.Mode -}}
 apiVersion: v1
 kind: Pod
 metadata:
@@ -10,20 +11,26 @@ metadata:
     tier: control-plane
     type: static-pod
   annotations:
-    registry.deckhouse.io/auth-config-hash: {{ quote .Hashes.AuthTemplate }}
-    registry.deckhouse.io/distribution-config-hash: {{ quote .Hashes.DistributionTemplate }}
-    {{- if eq .Registry.Mode "Detached" }}
-    registry.deckhouse.io/mirrorer-config-hash: {{ quote .Hashes.MirrorerTemplate }}
+    {{- with .Hashes}}
+    registry.deckhouse.io/auth-config-hash: {{ quote .AuthTemplate }}
+    registry.deckhouse.io/distribution-config-hash: {{ quote .DistributionTemplate }}
+    {{- if eq $mode "Detached" }}
+    registry.deckhouse.io/mirrorer-config-hash: {{ quote .MirrorerTemplate }}
     {{- end }}
-    registry.deckhouse.io/ca-cert-hash: {{ quote .Hashes.CACert }}
-    registry.deckhouse.io/auth-cert-hash: {{ quote .Hashes.AuthCert }}
-    registry.deckhouse.io/auth-key-hash: {{ quote .Hashes.AuthKey }}
-    registry.deckhouse.io/auth-token-cert-hash: {{ quote .Hashes.TokenCert }}
-    registry.deckhouse.io/auth-token-key-hash: {{ quote .Hashes.TokenKey }}
-    registry.deckhouse.io/distribution-cert-hash: {{ quote .Hashes.DistributionCert }}
-    registry.deckhouse.io/distribution-key-hash: {{ quote .Hashes.DistributionKey }}
-    registry.deckhouse.io/ingress-client-ca-cert-hash: {{ quote .Hashes.IngressClientCACert }}
-    registry.deckhouse.io/upstream-registry-ca-cert-hash: {{ quote .Hashes.UpstreamRegistryCACert }}
+    registry.deckhouse.io/ca-cert-hash: {{ quote .CACert }}
+    registry.deckhouse.io/auth-cert-hash: {{ quote .AuthCert }}
+    registry.deckhouse.io/auth-key-hash: {{ quote .AuthKey }}
+    registry.deckhouse.io/auth-token-cert-hash: {{ quote .TokenCert }}
+    registry.deckhouse.io/auth-token-key-hash: {{ quote .TokenKey }}
+    registry.deckhouse.io/distribution-cert-hash: {{ quote .DistributionCert }}
+    registry.deckhouse.io/distribution-key-hash: {{ quote .DistributionKey }}
+    {{- if .IngressClientCACert }}
+    registry.deckhouse.io/ingress-client-ca-cert-hash: {{ quote .IngressClientCACert }}
+    {{- end }}
+    {{- if .UpstreamRegistryCACert }}
+    registry.deckhouse.io/upstream-registry-ca-cert-hash: {{ quote .UpstreamRegistryCACert }}
+    {{- end }}
+    {{- end }}
     {{- if .Version }}
     registry.deckhouse.io/config-version: {{ quote .Version }}
     {{- else }}
@@ -47,20 +54,26 @@ spec:
     args:
       - serve
       - /config/config.yaml
-{{- if .Proxy }}
+{{- with .Proxy }}
     env:
+      {{- if .Http }}
       - name: HTTP_PROXY
-        value: {{ .Proxy.Http }}
+        value: {{ .Http }}
       - name: http_proxy
-        value: {{ .Proxy.Http }}
+        value: {{ .Http }}
+      {{- end }}
+      {{- if .Https }}
       - name: HTTPS_PROXY
-        value: {{ .Proxy.Https }}
+        value: {{ .Https }}
       - name: https_proxy
-        value: {{ .Proxy.Https }}
+        value: {{ .Https }}
+      {{- end }}
+      {{- if .NoProxy }}
       - name: NO_PROXY
-        value: {{ .Proxy.NoProxy }}
+        value: {{ .NoProxy }}
       - name: no_proxy
-        value: {{ .Proxy.NoProxy }}
+        value: {{ .NoProxy }}
+      {{- end }}
 {{- end }}
     ports:
       - name: emb-reg-dist
@@ -125,7 +138,7 @@ spec:
         name: auth-config
       - mountPath: /system_registry_pki
         name: pki
-  {{- if and (eq .Registry.Mode "Detached") (gt (len .Mirrorer.Upstreams) 0) }}
+  {{- if and (eq $mode "Detached") .Mirrorer.Upstreams }}
   - name: mirrorer
     image: {{ .Images.Mirrorer }}
     imagePullPolicy: IfNotPresent
@@ -144,7 +157,7 @@ spec:
     hostPath:
       path: /etc/kubernetes/system-registry/pki
       type: Directory
-  # Configuration volumes
+  # Configuration
   - name: auth-config
     hostPath:
       path: /etc/kubernetes/system-registry/auth_config
@@ -159,7 +172,7 @@ spec:
       path: /etc/kubernetes/system-registry/mirrorer
       type: DirectoryOrCreate
   {{- end }}
-  # Data volume
+  # Data
   - name: data
     hostPath:
       path: /opt/deckhouse/system-registry/local_data
