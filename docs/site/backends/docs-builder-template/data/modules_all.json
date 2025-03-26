@@ -120,7 +120,6 @@
   },
   "observability-platform": {
     "editionMinimumAvailable": "ee",
-    "requiresSeparateLicenseObservability": "true",
     "external": "true",
     "path": "/products/kubernetes-platform/modules/observability-platform/stable/",
     "editions": [
