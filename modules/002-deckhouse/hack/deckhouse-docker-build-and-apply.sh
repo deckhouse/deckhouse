@@ -20,8 +20,8 @@ set -e
 # Input parameters:
 DECKHOUSE_PATH="/deckhouse/"
 IMG_PREFIX="$USER"
-DOCKER_REGISTRY="cr.yandex/crp8n201pre28pm81udl/sys/deckhouse-oss"
-PATCH_MODULE_CONFIG_BY_IMG_NAME_WITH_TAG=true
+YC_REGISTRY_ID="<...........>"
+DOCKER_REGISTRY="cr.yandex/$YC_REGISTRY_ID/sys/deckhouse-oss"
 
 IMAGE_TAG=pr8229-ee
 IMG_NAME="$DOCKER_REGISTRY/$IMG_PREFIX-deckhouse"
@@ -101,10 +101,8 @@ docker buildx build $DECKHOUSE_PATH \
 log_stage "Show img with tag"
 echo "$IMG_NAME_WITH_TAG"
 
-if [ "$PATCH_MODULE_CONFIG_BY_IMG_NAME_WITH_TAG" = "true" ]; then
-
-    # Define the patch that will add or replace deckhouse
-    PATCH=$(cat <<EOF
+# Define the patch that will add or replace deckhouse
+PATCH=$(cat <<EOF
 {
   "spec": {
     "settings": {
@@ -118,19 +116,19 @@ EOF
 )
 
 
-    before_patch=$(kubectl get ModuleConfig deckhouse -o yaml)
+before_patch=$(kubectl get ModuleConfig deckhouse -o yaml)
 
-    # Apply the patch without conditions
+# Apply the patch without conditions
 
-    log_stage "Applying patch to ModuleConfig deckhouse"
-    kubectl_patch_module_config "ModuleConfig/deckhouse" "$PATCH"
+log_stage "Applying patch to ModuleConfig deckhouse"
+kubectl_patch_module_config "ModuleConfig/deckhouse" "$PATCH"
 
 
-    after_patch=$(kubectl get ModuleConfig deckhouse -o yaml)
-    log_stage "Show Diff"
-    if diff --color=auto <(echo "$before_patch") <(echo "$after_patch"); then
-        echo "No changes were made."
-    fi
-
-    kubectl -n d8-system rollout restart deployment/deckhouse
+after_patch=$(kubectl get ModuleConfig deckhouse -o yaml)
+log_stage "Show Diff"
+if diff --color=auto <(echo "$before_patch") <(echo "$after_patch"); then
+    echo "No changes were made."
 fi
+
+log_stage "Restarting deckhouse deployment"
+kubectl -n d8-system rollout restart deployment/deckhouse

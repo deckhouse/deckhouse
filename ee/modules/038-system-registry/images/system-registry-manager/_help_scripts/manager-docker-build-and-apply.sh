@@ -8,7 +8,8 @@ set -e
 # Input parameters:
 DECKHOUSE_PATH="/deckhouse/"
 IMG_PREFIX="$USER"
-DOCKER_REGISTRY="cr.yandex/crp8n201pre28pm81udl/sys/deckhouse-oss"
+YC_REGISTRY_ID="<.........>"
+DOCKER_REGISTRY="cr.yandex/$YC_REGISTRY_ID/sys/deckhouse-oss"
 PATCH_MODULE_CONFIG_BY_IMAGE_AMD64_NAME_DIGEST=true
 
 IMG_NAME="$DOCKER_REGISTRY/$IMG_PREFIX-embedded-registry-manager"
