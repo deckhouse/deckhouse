@@ -5,6 +5,7 @@
 
  - All modules with distroless image will be restarted.
  - Dashboard module works only via HTTPS and no longer supports the "Basic" HTTP authentication scheme.
+ - Ingress-nginx pods will restart. The validation of the generated NGINX configuration during the validation of `Ingress` resources is disabled until finding a way of running validations safely.
  - Please note the following important points for metallb module:
     - Cluster readiness: before migration, you may need to ensure the cluster is in a specific state (refer to cluster alerts).
     - Backup configurations: it is highly recommended to backup custom resource configurations like L2Advertisement and IPAddressPool which were created manually bypassing the ModuleConfig before migration.
@@ -90,6 +91,8 @@
  - **[docs]** Fix priority-class module documentation. [#10897](https://github.com/deckhouse/deckhouse/pull/10897)
  - **[docs]** Add required NetworkInterface AWS policies. [#10842](https://github.com/deckhouse/deckhouse/pull/10842)
  - **[helm_lib]** Updated helm_lib to 1.37.1, which should fix issue [#10950](https://github.com/deckhouse/deckhouse/pull/10950)
+ - **[ingress-nginx]** latest CVE fixes backported. [#12757](https://github.com/deckhouse/deckhouse/pull/12757)
+    Ingress-nginx pods will restart. The validation of the generated NGINX configuration during the validation of `Ingress` resources is disabled until finding a way of running validations safely.
  - **[istio]** CRDs for 1.21 version moved to correct path [#11738](https://github.com/deckhouse/deckhouse/pull/11738)
  - **[istio]** Fixes for Federation/Multicluster metadata-exporter and for istio-operator. [#11150](https://github.com/deckhouse/deckhouse/pull/11150)
  - **[istio]** Fixed `IngressIstioController` CRD docs rendering. [#10581](https://github.com/deckhouse/deckhouse/pull/10581)
