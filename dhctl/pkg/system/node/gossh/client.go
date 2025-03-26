@@ -206,12 +206,26 @@ func (s *Client) keepAlive() {
 				log.DebugF("Keep-alive failed: %v", err)
 				s.live = false
 				s.Start()
+				for _, sess := range s.sessionList {
+					if sess != nil {
+						sess.Signal(ssh.SIGKILL)
+						sess.Close()
+					}
+				}
+				s.sessionList = nil
 				return
 			}
 			if _, err := session.SendRequest("keepalive", false, nil); err != nil {
 				log.DebugF("Keep-alive failed: %v", err)
 				s.live = false
 				s.Start()
+				for _, sess := range s.sessionList {
+					if sess != nil {
+						sess.Signal(ssh.SIGKILL)
+						sess.Close()
+					}
+				}
+				s.sessionList = nil
 				return
 			}
 		}
@@ -272,6 +286,7 @@ func (s *Client) Stop() {
 			sess.Close()
 		}
 	}
+	s.sessionList = nil
 
 	// by starting kubeproxy on remote, there is one more process starts
 	// it cannot be killed by sending any signal to his parrent process

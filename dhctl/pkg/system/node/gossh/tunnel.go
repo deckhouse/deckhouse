@@ -38,15 +38,14 @@ type Tunnel struct {
 	stopCh         chan struct{}
 	remoteListener net.Listener
 
-	errorCh chan tunnelWaitResult
-	errCh   chan error
+	errorCh chan error
 }
 
 func NewTunnel(sshClient *ssh.Client, address string) *Tunnel {
 	return &Tunnel{
 		sshClient: sshClient,
 		address:   address,
-		errorCh:   make(chan tunnelWaitResult),
+		errorCh:   make(chan error, 10),
 	}
 }
 
@@ -100,28 +99,33 @@ func (t *Tunnel) acceptTunnelConnection(id int, remoteAddress string, listener n
 		localConn, err := listener.Accept()
 		if err != nil {
 			e := fmt.Errorf("Accept(): %s", err.Error())
-			t.errorCh <- tunnelWaitResult{
-				id:  id,
-				err: e,
-			}
+			t.errorCh <- e
 			continue
 		}
 
 		remoteConn, err := t.sshClient.Dial("tcp", remoteAddress)
 		if err != nil {
 			e := fmt.Errorf("Cannot dial to %s: %s", remoteAddress, err.Error())
-			t.errorCh <- tunnelWaitResult{
-				id:  id,
-				err: e,
-			}
+			t.errorCh <- e
 			continue
 		}
 
 		go func() {
 			defer localConn.Close()
 			defer remoteConn.Close()
-			go io.Copy(remoteConn, localConn)
-			io.Copy(localConn, remoteConn)
+			go func() {
+				_, err := io.Copy(remoteConn, localConn)
+				if err != nil {
+					t.errorCh <- err
+				}
+
+			}()
+
+			_, err := io.Copy(localConn, remoteConn)
+			if err != nil {
+				t.errorCh <- err
+			}
+
 		}()
 	}
 }
@@ -134,7 +138,7 @@ func (t *Tunnel) HealthMonitor(errorOutCh chan<- error) {
 
 	for {
 		select {
-		case err := <-t.errCh:
+		case err := <-t.errorCh:
 			errorOutCh <- err
 		case <-t.stopCh:
 			if t.remoteListener != nil {

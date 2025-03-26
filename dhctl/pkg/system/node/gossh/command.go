@@ -643,9 +643,9 @@ func (c *SSHCommand) Stop() {
 	// <-c.waitCh
 	log.DebugF("Stopped '%s' \n", c.cmd)
 	c.closePipes()
-	// log.DebugF("Sending SIGINT to process '%s'\n", c.cmd)
+	log.DebugF("Sending SIGINT to process '%s'\n", c.cmd)
 	c.Session.Signal(ssh.SIGINT)
-	// log.DebugF("Signal sent\n")
+	log.DebugF("Signal sent\n")
 	c.Session.Signal(ssh.SIGKILL)
 }
 
