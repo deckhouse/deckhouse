@@ -3,16 +3,6 @@ cpu: 25m
 memory: 40Mi
 {{- end }}
 
-{{- define "image_holder_resources" }}
-cpu: 10m
-memory: 10Mi
-{{- end }}
-
-{{- $images := dict }}
-{{- $_ := set $images "dockerAuth" (include "helm_lib_module_image" (list . "dockerAuth")) }}
-{{- $_ := set $images "dockerDistribution" (include "helm_lib_module_image" (list . "dockerDistribution")) }}
-{{- $_ := set $images "mirrorer" (include "helm_lib_module_image" (list . "mirrorer")) }}
-
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -36,14 +26,6 @@ spec:
       maxAllowed:
         cpu: 50m
         memory: 80Mi
-    {{- range $name, $imageRef := $images }}
-    - containerName: image-holder-{{ $name | kebabcase }}
-      minAllowed:
-        {{- include "image_holder_resources" $ | nindent 8 }}
-      maxAllowed:
-        cpu: 10m
-        memory: 10Mi
-    {{- end }}
     {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
 
@@ -122,19 +104,6 @@ spec:
           {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "system_registry_manager_resources" . | nindent 12 }}
           {{- end }}
-{{- range $name, $imageRef := $images }}
-      - name: image-holder-{{ $name | kebabcase }}
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: "{{ $imageRef }}"
-        command:
-        - /pause
-        resources:
-          requests:
-            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-          {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
-            {{- include "image_holder_resources" $ | nindent 12 }}
-          {{- end }}
-{{- end }}
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
