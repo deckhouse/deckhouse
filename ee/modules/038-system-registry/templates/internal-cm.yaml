@@ -1,3 +1,4 @@
+{{- $ctx := . }}
 {{- with .Values.systemRegistry.internal }}
 ---
 apiVersion: v1
@@ -5,7 +6,7 @@ kind: ConfigMap
 metadata:
   name: registry-internal
   namespace: d8-system
-  {{- include "helm_lib_module_labels" (list . (dict "app" "system-registry-manager")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $ctx (dict "app" "system-registry-manager")) | nindent 2 }}
 data:
   value: |-
     {{- . | toYaml | nindent 4 }}
