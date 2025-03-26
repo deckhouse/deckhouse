@@ -249,4 +249,9 @@ features:
   ee:
     en: This feature is available in Enterprise Edition only.
     ru: Доступно только в Enterprise Edition.
-
+  requiresSeparateLicense:
+    en: Licensed separately, not included in the DKP license cost.
+    ru: Лицензируется на отдельных условиях, не включен в стоимость лицензии DKP. Подробнее см. <a href="https://deckhouse.ru/products/kubernetes-platform/pricing/">Условия и цены</a>.
+  requiresSeparateLicenseObservability:
+    en: Licensed separately, not included in the DKP license cost.
+    ru: Лицензируется на отдельных условиях, не включен в стоимость лицензии DKP. Подробнее см. на<a href=https://deckhouse.ru/products/observability-platform/">Главной странице платформы</a>.
