@@ -242,3 +242,26 @@
         First, run the `dhctl terraform check` command to check what will change.
         Use `dhctl converge` command or manually adjust NodeGroup settings to fix the issue.
       summary: Terraform-state-exporter node template changed
+
+
+  - alert: D8TerraformVersionMismatch
+    expr: |
+      (candi_converge_terraform_current_version unless on(version) candi_converge_terraform_state_version)
+      or
+      (candi_converge_terraform_state_version unless on(version) candi_converge_terraform_current_version)
+    for: 10m
+    labels:
+      severity_level: "8"
+      tier: cluster
+      d8_module: terraform-manager
+      d8_component: terraform-state-exporter
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: "Terraform version mismatch detected"
+      description: |
+        The Terraform version in the state does not match the current Terraform version.
+        
+        Please verify:
+        - Current version: `kubectl -n d8-system exec -it deployments/terraform-state-exporter -c exporter -- terraform version`
+        - State version: `kubectl -n d8-system get secret d8-cluster-terraform-state -o json | jq -r '.data["cluster-tf-state.json"] | @base64d | fromjson | .terraform_version'`

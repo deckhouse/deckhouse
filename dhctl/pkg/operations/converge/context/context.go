@@ -125,9 +125,9 @@ func (c *Context) CompleteExecutionPhase(data any) error {
 }
 
 func (c *Context) MetaConfig() (*config.MetaConfig, error) {
-	if c.metaConfig != nil {
-		return c.metaConfig, nil
-	}
+	// if c.metaConfig != nil {
+	// 	return c.metaConfig, nil
+	// }
 
 	if c.CommanderMode() {
 		metaConfig, err := commander.ParseMetaConfig(c.stateCache, c.commanderParams)

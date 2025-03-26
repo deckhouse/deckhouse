@@ -2717,6 +2717,21 @@ alerts:
         Prometheus can't scrape terraform-state-exporter
       severity: "8"
       markupFormat: markdown
+    - name: D8TerraformVersionMismatch
+      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-state-exporter.tpl
+      moduleUrl: 040-terraform-manager
+      module: terraform-manager
+      edition: ce
+      description: |
+        The Terraform version in the state does not match the current Terraform version.
+
+        Please verify:
+        - Current version: `kubectl -n d8-system exec -it deployments/terraform-state-exporter -c exporter -- terraform version`
+        - State version: `kubectl -n d8-system get secret d8-cluster-terraform-state -o json | jq -r '.data["cluster-tf-state.json"] | @base64d | fromjson | .terraform_version'`
+      summary: |
+        Terraform version mismatch detected
+      severity: "8"
+      markupFormat: markdown
     - name: D8TricksterTargetAbsent
       sourceFile: modules/300-prometheus/monitoring/prometheus-rules/base.tpl
       moduleUrl: 300-prometheus

@@ -115,6 +115,28 @@ func NewConvergeExporter(address, path string, interval time.Duration) *Converge
 }
 
 func (c *ConvergeExporter) registerMetrics() {
+	terraformCurrentVersionVec := prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "candi",
+		Subsystem: "converge",
+		Name:      "terraform_current_version",
+		Help:      "current version of terraform",
+	},
+		[]string{"version"},
+	)
+	prometheus.MustRegister(terraformCurrentVersionVec)
+	c.GaugeMetrics["terraform_current_version"] = terraformCurrentVersionVec
+
+	terraformStateVersionVec := prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "candi",
+		Subsystem: "converge",
+		Name:      "terraform_state_version",
+		Help:      "terraform version in the state",
+	},
+		[]string{"version"},
+	)
+	prometheus.MustRegister(terraformStateVersionVec)
+	c.GaugeMetrics["terraform_state_version"] = terraformStateVersionVec
+
 	clusterStateVec := prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: "candi",
 		Subsystem: "converge",
@@ -252,6 +274,12 @@ func (c *ConvergeExporter) getStatistic(ctx context.Context) *check.Statistics {
 func (c *ConvergeExporter) recordStatistic(statistic *check.Statistics) {
 	if statistic == nil {
 		return
+	}
+
+	if statistic.TerraformVersion != nil {
+		c.GaugeMetrics["terraform_current_version"].WithLabelValues(statistic.TerraformVersion.CurrentVersion).Set(1)
+		c.GaugeMetrics["terraform_state_version"].Reset()
+		c.GaugeMetrics["terraform_state_version"].WithLabelValues(statistic.TerraformVersion.InStateVersion).Set(1)
 	}
 
 	for _, status := range clusterStatuses {

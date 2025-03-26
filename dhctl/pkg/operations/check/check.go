@@ -65,10 +65,11 @@ type NodeGroupCheckResult struct {
 }
 
 type Statistics struct {
-	Node               []NodeCheckResult      `json:"nodes,omitempty"`
-	NodeTemplates      []NodeGroupCheckResult `json:"node_templates,omitempty"`
-	Cluster            ClusterCheckResult     `json:"cluster,omitempty"`
-	InfrastructurePlan []infrastructure.Plan  `json:"terraform_plan,omitempty"`
+	Node               []NodeCheckResult                     `json:"nodes,omitempty"`
+	NodeTemplates      []NodeGroupCheckResult                `json:"node_templates,omitempty"`
+	Cluster            ClusterCheckResult                    `json:"cluster,omitempty"`
+	InfrastructurePlan []infrastructure.Plan                 `json:"terraform_plan,omitempty"`
+	TerraformVersion   *infrastructurestate.TerraformVersion `json:"terraform_version,omitempty"`
 }
 
 type NodeGroupOptions struct {
@@ -416,6 +417,13 @@ func CheckState(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig
 			}
 		}
 	}
+
+	tfVersion, err := infrastructurestate.CheckTerraformVersion(ctx, kubeCl, metaConfig)
+	if err != nil {
+		allErrs = multierror.Append(allErrs, fmt.Errorf("terraform version check failed: %v", err))
+	}
+
+	statistics.TerraformVersion = tfVersion
 
 	return &statistics, allErrs.ErrorOrNil()
 }

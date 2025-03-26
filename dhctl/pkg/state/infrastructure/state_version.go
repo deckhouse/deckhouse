@@ -1,0 +1,71 @@
+package infrastructure
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+)
+
+type TerraformVersions struct {
+	Terraform string
+	OpenTofu  string
+}
+
+var DefaultTerraformVersions = TerraformVersions{
+	Terraform: "0.14.8",
+	OpenTofu:  "1.9.0",
+}
+
+type State struct {
+	TerraformVersion string     `json:"terraform_version"`
+	Resources        []Resource `json:"resources"`
+}
+
+type Resource struct {
+	Type     string `json:"type"`
+	Name     string `json:"name"`
+	Provider string `json:"provider"`
+}
+
+type TerraformVersionOutput struct {
+	TerraformVersion string `json:"terraform_version"`
+}
+
+type TerraformVersion struct {
+	InStateVersion string `json:"in_state_version,omitempty"`
+	CurrentVersion string `json:"current_version,omitempty"`
+}
+
+func parseTerraformVersion(output []byte) (string, error) {
+	var info TerraformVersionOutput
+	if err := json.Unmarshal(output, &info); err != nil {
+		return "", fmt.Errorf("cannot parse terraform version output: %w", err)
+	}
+	return info.TerraformVersion, nil
+}
+
+func getTerraformVersionFromState(ctx context.Context, kubeCl *client.KubernetesClient) (*State, error) {
+	state, err := GetClusterStateFromCluster(ctx, kubeCl)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get cluster state: %w", err)
+	}
+	var s State
+	if err := json.Unmarshal(state, &s); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal state: %w", err)
+	}
+	return &s, nil
+}
+
+func CheckTerraformVersion(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) (*TerraformVersion, error) {
+	sVersion, err := getTerraformVersionFromState(ctx, kubeCl)
+	if err != nil {
+		return nil, err
+	}
+	return &TerraformVersion{
+		InStateVersion: sVersion.TerraformVersion,
+		CurrentVersion: DefaultTerraformVersions.OpenTofu,
+	}, nil
+}
