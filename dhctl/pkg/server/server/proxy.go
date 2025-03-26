@@ -68,7 +68,7 @@ func (d *StreamDirector) Wait() {
 
 func (d *StreamDirector) Director() proxy.StreamDirector {
 	return func(ctx context.Context, fullMethodName string) (context.Context, *grpc.ClientConn, error) {
-		// Copy the inbound metadata explicitly.
+		// Copy the inbound metadata explicitly!
 		md, _ := metadata.FromIncomingContext(ctx)
 		outCtx := metadata.NewOutgoingContext(ctx, md.Copy())
 
