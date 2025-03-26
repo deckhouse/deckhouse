@@ -23,6 +23,11 @@ RUN cd ${APP_PATH_TO} && go mod download -x && \
 COPY ${APP_PATH_FROM}/ ${APP_PATH_TO}/
 COPY ${LOGGER_PATH_FROM}/ ${LOGGER_PATH_TO}/
 
+# Run tests
+RUN --mount=type=cache,target=/root/.cache/go-build \
+  cd ${APP_PATH_TO} && \
+  GOOS=${TARGETOS} GOARCH=${TARGETARCH} CGO_ENABLED=0 go test -tags "${BUILD_TAGS}" ./...
+
 # Build binary
 ARG TARGETOS TARGETARCH
 RUN --mount=type=cache,target=/root/.cache/go-build \

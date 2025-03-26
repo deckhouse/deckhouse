@@ -33,8 +33,9 @@ COPY ${GO_LIB_PATH_FROM}/ ${GO_LIB_PATH_TO}/
 COPY ${LOGGER_PATH_FROM}/ ${LOGGER_PATH_TO}/
 
 # Run tests
-# RUN cd $MANAGER_PATH_TO && \
-#   go test ./...
+RUN --mount=type=cache,target=/root/.cache/go-build \
+  cd ${APP_PATH_TO} && \
+  GOOS=${TARGETOS} GOARCH=${TARGETARCH} CGO_ENABLED=0 go test -tags "${BUILD_TAGS}" ./...
 
 # Build binary
 ARG TARGETOS TARGETARCH
