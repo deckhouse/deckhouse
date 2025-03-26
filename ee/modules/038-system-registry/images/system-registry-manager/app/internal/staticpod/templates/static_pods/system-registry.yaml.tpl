@@ -86,11 +86,11 @@ spec:
         */}}
     volumeMounts:
       - mountPath: /data
-        name: distribution-data-volume
+        name: data
       - mountPath: /config
-        name: distribution-config-volume
+        name: distribution-config
       - mountPath: /system_registry_pki
-        name: system-registry-pki-volume
+        name: pki
   - name: auth
     image: {{ .Images.Auth }}
     imagePullPolicy: IfNotPresent
@@ -122,9 +122,9 @@ spec:
       - /config/config.yaml
     volumeMounts:
       - mountPath: /config
-        name: auth-config-volume
+        name: auth-config
       - mountPath: /system_registry_pki
-        name: system-registry-pki-volume
+        name: pki
   {{- if and (eq .Registry.Mode "Detached") (gt (len .Mirrorer.Upstreams) 0) }}
   - name: mirrorer
     image: {{ .Images.Mirrorer }}
@@ -133,38 +133,34 @@ spec:
       - /config/config.yaml
     volumeMounts:
       - mountPath: /config
-        name: mirrorer-config-volume
+        name: mirrorer-config
       - mountPath: /system_registry_pki
-        name: system-registry-pki-volume
+        name: pki
   {{- end }}
   priorityClassName: system-node-critical
   volumes:
-  # PKI volumes
-  - name: kubernetes-pki-volume
-    hostPath:
-      path: /etc/kubernetes/pki
-      type: Directory
-  - name: system-registry-pki-volume
+  # PKI
+  - name: pki
     hostPath:
       path: /etc/kubernetes/system-registry/pki
       type: Directory
   # Configuration volumes
-  - name: auth-config-volume
+  - name: auth-config
     hostPath:
       path: /etc/kubernetes/system-registry/auth_config
       type: DirectoryOrCreate
-  - name: distribution-config-volume
+  - name: distribution-config
     hostPath:
       path: /etc/kubernetes/system-registry/distribution_config
       type: DirectoryOrCreate
   {{- if eq .Registry.Mode "Detached" }}
-  - name: mirrorer-config-volume
+  - name: mirrorer-config
     hostPath:
       path: /etc/kubernetes/system-registry/mirrorer
       type: DirectoryOrCreate
   {{- end }}
   # Data volume
-  - name: distribution-data-volume
+  - name: data
     hostPath:
       path: /opt/deckhouse/system-registry/local_data
       type: DirectoryOrCreate
