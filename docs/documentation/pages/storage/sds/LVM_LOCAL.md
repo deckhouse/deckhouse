@@ -3,6 +3,12 @@ title: "Local storage based on LVM"
 permalink: en/storage/admin/sds/lvm-local.html
 ---
 
+{% alert level="info" %}
+Available with a restriction on snapshot creation in: CE
+
+Available without limitations in the following commercial editions: SE, SE+, EE
+{% endalert %}
+
 Using local storage helps avoid network latencies, which improves performance compared to remote storage that requires network connectivity. This approach is ideal for test environments and EDGE clusters.
 
 ## Enabling the module
