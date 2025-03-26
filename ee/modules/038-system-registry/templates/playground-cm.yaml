@@ -5,8 +5,7 @@ kind: ConfigMap
 metadata:
   name: registry-playground
   namespace: d8-system
-  labels:
-    app.kubernetes.io/managed-by: system-registry
+  {{- include "helm_lib_module_labels" (list . (dict "app" "system-registry-manager")) | nindent 2 }}
 data:
   value: {{ .value | toString | quote }}
   state: |-
