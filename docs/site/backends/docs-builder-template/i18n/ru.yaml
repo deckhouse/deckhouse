@@ -7,7 +7,7 @@ documentation: документация
 modules_documentation: Документация модулей
 core: ядро
 currency_sign: "₽"
-commercial: Доступно в коммерческих редакциях.
+commercial: Доступно в некоторых коммерческих редакциях.
 notAvailableInThisEdition: Доступно в других коммерческих редакциях.
 default_value: по умолчанию
 platform: платформа
