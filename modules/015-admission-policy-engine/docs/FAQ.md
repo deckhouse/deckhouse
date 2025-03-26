@@ -89,6 +89,7 @@ Find more examples of checks for policy extension in the [Gatekeeper Library](ht
 1. Add a label to your namespace that matches the `namespaceSelector` in the `SecurityPolicy` resource. In the examples below, the label is `operation-policy.deckhouse.io/baseline-enabled: "true"` or `operation-policy.deckhouse.io/restricted-enabled: "true"`.
 
 `SecurityPolicy` that matches [baseline](https://kubernetes.io/docs/concepts/security/pod-security-standards/#baseline) standard:
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: SecurityPolicy
@@ -154,10 +155,10 @@ spec:
       labelSelector:
         matchLabels:
           operation-policy.deckhouse.io/baseline-enabled: "true"
-
 ```
 
 `SecurityPolicy` that matches [restricted](https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted) standard:
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: SecurityPolicy

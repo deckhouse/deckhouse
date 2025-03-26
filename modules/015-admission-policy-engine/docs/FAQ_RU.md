@@ -93,6 +93,7 @@ spec:
 1. Добавьте на свой namespace метку, соответствующую `namespaceSelector` в `SecurityPolicy`. В примерах ниже это `operation-policy.deckhouse.io/baseline-enabled: "true"` либо `operation-policy.deckhouse.io/restricted-enabled: "true"`
 
 `SecurityPolicy`, соответствующая [baseline](https://kubernetes.io/docs/concepts/security/pod-security-standards/#baseline):
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: SecurityPolicy
@@ -158,10 +159,10 @@ spec:
       labelSelector:
         matchLabels:
           operation-policy.deckhouse.io/baseline-enabled: "true"
-
 ```
 
 `SecurityPolicy`, соответствующая [restricted](https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted):
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: SecurityPolicy
