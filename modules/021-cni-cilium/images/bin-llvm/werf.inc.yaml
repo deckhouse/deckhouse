@@ -15,9 +15,12 @@
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --branch "{{ $llvmRev }}" {{ $.SOURCE_REPO }}/llvm/llvm-project.git /src/llvm
+  - git clone --branch "{{ $llvmRev }}" $(cat /run/secrets/SOURCE_REPO)/llvm/llvm-project.git /src/llvm
   - cd /src/llvm
   - git config --global user.email "builder@deckhouse.io"
   - git cherry-pick 29bc5dd19407c4d7cad1c059dea26ee216ddc7ca
@@ -30,10 +33,13 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}-ccache-artifact
 fromImage: common/src-artifact
 final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   - mkdir -p /tmp/ccache-dir
-  - git clone --depth 1 --branch {{ $llvmCacheRev }} {{ $.SOURCE_REPO }}/llvm/llvm-build-cache.git /tmp/ccache-dir && rm -rf /tmp/ccache-dir/.git
+  - git clone --depth 1 --branch {{ $llvmCacheRev }} $(cat /run/secrets/SOURCE_REPO)/llvm/llvm-build-cache.git /tmp/ccache-dir && rm -rf /tmp/ccache-dir/.git
 ---
 image: {{ .ModuleName }}/llvm-artifact
 fromImage: {{ .ModuleName }}/base-cilium-dev
