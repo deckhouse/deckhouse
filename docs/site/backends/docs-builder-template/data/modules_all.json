@@ -216,7 +216,6 @@
   },
   "stronghold": {
     "editionMinimumAvailable": "be",
-    "requiresSeparateLicense": "true",
     "editionsWithRestrictions": [
       "be",
       "se",
