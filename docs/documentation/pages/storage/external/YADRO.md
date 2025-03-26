@@ -5,7 +5,7 @@ d8Revision: ee
 ---
 
 {% alert level="info" %}
-Available in some commercial editions: EE
+Available in some commercial editions:  **EE**
 {% endalert %}
 
 Deckhouse supports integration with the [TATLIN.UNIFIED (Yadro)](https://yadro.com/ru/tatlin/unified) storage system, enabling volume management in Kubernetes. This allows the use of centralized storage for containerized workloads, ensuring high performance and fault tolerance.

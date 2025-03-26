@@ -4,7 +4,7 @@ permalink: en/storage/admin/external/nfs.html
 ---
 
 {% alert level="info" %}
-Available in editions: CE, SE, SE+, EE
+Available in editions:  **CE, SE, SE+, EE**
 {% endalert %}
 
 Deckhouse supports working with NFS (Network File System), providing the ability to connect and manage network file storage in Kubernetes. This allows for centralized data storage and file sharing between containers.
