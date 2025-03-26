@@ -195,3 +195,9 @@ func (e *Executor) Stop() {
 	//    See also pkg/system/ssh/cmd/ssh.go
 	_ = syscall.Kill(-e.cmd.Process.Pid, syscall.SIGINT)
 }
+
+func (e *Executor) Version(ctx context.Context) ([]byte, error) {
+	args := []string{"version", "--json"}
+	e.cmd = terraformCmd(ctx, args...)
+	return e.cmd.Output()
+}
