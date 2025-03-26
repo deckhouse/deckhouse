@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{!{- $enableWorkflowOnTestRepos := false -}!} #TODO debug
+{!{- $enableWorkflowOnTestRepos := false -}!}
 
 name: K8S autoupdate
 on:
@@ -30,6 +30,8 @@ jobs:
 
   update_k8s:
     runs-on: [self-hosted, regular]
+    needs:
+    - skip_tests_repos
     steps:
 {!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
     - uses: {!{ index (ds "actions") "actions/setup-go" }!}

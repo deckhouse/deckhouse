@@ -14,9 +14,7 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
-# limitations under the License.#TODO debug
-
-name: K8S autoupdate
+# limitations under the License.name: K8S autoupdate
 on:
   schedule:
   - cron: '0 3 * * *'
@@ -32,6 +30,8 @@ jobs:
 
   update_k8s:
     runs-on: [self-hosted, regular]
+    needs:
+    - skip_tests_repos
     steps:
 
     # <template: checkout_step>
