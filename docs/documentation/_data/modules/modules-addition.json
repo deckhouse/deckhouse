@@ -245,7 +245,6 @@
   },
   "stronghold": {
     "external": "true",
-    "requiresSeparateLicense": "true",
     "path": "/products/kubernetes-platform/modules/stronghold/stable/",
     "editionsWithRestrictions": [
       "be",
