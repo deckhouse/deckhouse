@@ -7,7 +7,7 @@ documentation: documentation
 modules_documentation: Modules documentation
 core: core
 currency_sign: "$"
-commercial: Available in commercial editions.
+commercial: Available in some commercial editions.
 notAvailableInThisEdition: Available in other commercial editions.
 default_value: default
 platform: platform
