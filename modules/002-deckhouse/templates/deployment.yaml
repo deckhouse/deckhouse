@@ -320,6 +320,7 @@ spec:
       dnsPolicy: Default
 {{- end}}
       serviceAccountName: deckhouse
+      automountServiceAccountToken: true
       volumes:
       - emptyDir:
           medium: Memory

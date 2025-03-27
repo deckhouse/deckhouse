@@ -59,6 +59,7 @@ spec:
       {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
 {{- if not (.Values.global.enabledModules | has "cni-cilium" )}}
+      automountServiceAccountToken: true
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
 {{- end }}

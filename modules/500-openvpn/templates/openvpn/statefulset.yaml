@@ -105,6 +105,7 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
       terminationGracePeriodSeconds: 5
+      automountServiceAccountToken: true
       serviceAccountName: openvpn
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
