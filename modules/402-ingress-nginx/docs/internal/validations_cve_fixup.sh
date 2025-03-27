@@ -1,6 +1,20 @@
 #!/bin/bash
-set -e
 
+# Copyright 2025 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+set -e
 echo "Creating certificates for fixer"
 
 openssl req -x509 -newkey rsa:1024 -days 3650 -nodes -keyout ca.key -out ca.crt -subj "/CN=d8-ingress-validation-cve-fixer.d8-system.svc"
@@ -192,7 +206,7 @@ data:
 EOF
 )
 
-shellOperatorImage=$(kubectl exec -it -n d8-system svc/deckhouse-leader -- deckhouse-controller global values --output=json | jq -r '.modulesImages.registry.base, .modulesImages.digests.common.shellOperator' | sed ':a;N;$!ba;s/\n/@/g')
+shellOperatorImage=$(kubectl -n d8-system exec svc/deckhouse-leader -- deckhouse-controller global values --output=json | jq -r '.modulesImages.registry.base, .modulesImages.digests.common.shellOperator' | sed ':a;N;$!ba;s/\n/@/g')
 
 echo "Creating fixer deployment using \"$shellOperatorImage\" as the image for the fixer"
 
