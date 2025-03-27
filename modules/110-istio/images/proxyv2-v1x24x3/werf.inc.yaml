@@ -133,7 +133,7 @@ mount:
 shell:
   install:
   - rm -rf /usr/include/c++/v1/*
-  - mv /src/llvm/libcxx/include/{*,.*} /usr/include/c++/v1
+  - cp -r /src/llvm/libcxx/include/. /usr/include/c++/v1/
   # - mkdir -p /tmp/bazel-cache
   # - git clone --depth 1 --branch {{ $istioProxyCacheRev }} {{ $.SOURCE_REPO }}/istio/envoy-build-cache.git /tmp/bazel-cache
   # - rm -rf /tmp/bazel-cache/.git
