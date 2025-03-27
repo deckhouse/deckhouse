@@ -97,7 +97,7 @@ spec:
           value: "{{ $.Values.global.enabledModules | join " " }}"
         - name: DECKHOUSE_CONFIG_MAP
           value: deckhouse-generated-config-do-not-edit
-        {{- if .Values.global.clusterConfiguration.cloud }}
+        {{- if (((.Values.global).clusterConfiguration).cloud) }}
         - name: INSTANCE_CLASS_NAME
           value: "{{ .Values.global.clusterConfiguration.cloud.provider | lower }}instanceclasses"
         {{- end }}
