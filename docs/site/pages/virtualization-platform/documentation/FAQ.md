@@ -111,6 +111,7 @@ For example, let's take a file that allows you to:
 - Create a non-privileged user with name *user* and the password *user*
 
 {% offtopic title="autounattend.xml" %}
+
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
 <unattend xmlns="urn:schemas-microsoft-com:unattend" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
@@ -297,6 +298,7 @@ For example, let's take a file that allows you to:
   </settings>
 </unattend>
 ```
+
 {% endofftopic %}
 
 Create a secret from this xml file:
