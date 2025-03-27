@@ -123,11 +123,17 @@ import:
   add: /opt/libcxx
   to: /opt/libcxx
   before: install
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/llvm
+  to: /src/llvm
+  before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
   install:
+  - rm -rf /usr/include/c++/v1/*
+  - mv /src/llvm/libcxx/include/{*,.*} /usr/include/c++/v1
   # - mkdir -p /tmp/bazel-cache
   # - git clone --depth 1 --branch {{ $istioProxyCacheRev }} {{ $.SOURCE_REPO }}/istio/envoy-build-cache.git /tmp/bazel-cache
   # - rm -rf /tmp/bazel-cache/.git
