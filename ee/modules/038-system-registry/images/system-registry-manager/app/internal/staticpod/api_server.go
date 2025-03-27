@@ -12,9 +12,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
-	dlog "github.com/deckhouse/deckhouse/pkg/log"
-
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"
@@ -26,13 +23,15 @@ const (
 )
 
 type apiServer struct {
-	log      *dlog.Logger
+	log      *slog.Logger
 	services *servicesManager
 }
 
 func (api *apiServer) Run(ctx context.Context) error {
-	api.log.Info("Starting")
-	defer api.log.Info("Stopped")
+	log := api.log
+
+	log.Info("Starting")
+	defer log.Info("Stopped")
 
 	logConfig := slogchi.Config{
 		WithSpanID:    true,
@@ -42,7 +41,7 @@ func (api *apiServer) Run(ctx context.Context) error {
 
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
-	r.Use(slogchi.NewWithConfig(slog.New(api.log.Handler()), logConfig))
+	r.Use(slogchi.NewWithConfig(log, logConfig))
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.NoCache)
 	r.Use(middleware.AllowContentType("application/json"))
@@ -69,7 +68,7 @@ func (api *apiServer) Run(ctx context.Context) error {
 
 	log.Info("Starting HTTP API", "addr", httpServer.Addr)
 	if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Error("HTTP API server error", err)
+		log.Error("HTTP API server error", "error", err)
 		return fmt.Errorf("failed to start HTTP API server: %w", err)
 	}
 

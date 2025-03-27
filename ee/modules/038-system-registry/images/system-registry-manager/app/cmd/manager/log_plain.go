@@ -6,8 +6,17 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 //go:build: log_plain
 package main
 
-import "log/slog"
+import (
+	"log/slog"
+	"os"
+)
 
 func init() {
-	logHandler = slog.Default().Handler()
+	slog.SetDefault(slog.New(slog.NewTextHandler(
+		os.Stdout,
+		&slog.HandlerOptions{
+			Level:     slog.LevelInfo,
+			AddSource: true,
+		})),
+	)
 }

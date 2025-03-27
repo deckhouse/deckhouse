@@ -3,9 +3,7 @@ FROM --platform=$BUILDPLATFORM golang:1.23-alpine AS builder
 ARG BUILD_TAGS=log_plain
 
 ENV APP_PATH_FROM=./ee/modules/038-system-registry/images/mirrorer/app \
-    APP_PATH_TO=/deckhouse/ee/modules/038-system-registry/images/mirrorer/app \
-    LOGGER_PATH_FROM=./pkg/log \
-    LOGGER_PATH_TO=/deckhouse/pkg/log
+    APP_PATH_TO=/deckhouse/ee/modules/038-system-registry/images/mirrorer/app
 
 # Create tmp dir
 RUN mkdir -m 1777 /tmp-tmp
@@ -13,15 +11,12 @@ RUN mkdir -m 1777 /tmp-tmp
 # Copy go.mod and go.sum
 RUN mkdir -p ${APP_PATH_TO} ${LOGGER_PATH_TO}
 COPY ${APP_PATH_FROM}/go.mod ${APP_PATH_FROM}/go.sum ${APP_PATH_TO}/
-COPY ${LOGGER_PATH_FROM}/go.mod ${LOGGER_PATH_FROM}/go.sum ${LOGGER_PATH_TO}/
 
 # Download libs
-RUN cd ${APP_PATH_TO} && go mod download -x && \
-    cd ${LOGGER_PATH_TO} && go mod download -x
+RUN cd ${APP_PATH_TO} && go mod download -x
 
 # Copy other files
 COPY ${APP_PATH_FROM}/ ${APP_PATH_TO}/
-COPY ${LOGGER_PATH_FROM}/ ${LOGGER_PATH_TO}/
 
 # Run tests
 RUN --mount=type=cache,target=/root/.cache/go-build \

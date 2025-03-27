@@ -7,9 +7,8 @@ package staticpod
 
 import (
 	"fmt"
+	"log/slog"
 	"sync"
-
-	dlog "github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -23,7 +22,7 @@ const (
 
 type servicesManager struct {
 	m        sync.Mutex
-	log      *dlog.Logger
+	log      *slog.Logger
 	hostIP   string
 	nodeName string
 }

@@ -5,9 +5,7 @@ ARG BUILD_TAGS=log_plain
 ENV APP_PATH_FROM=./ee/modules/038-system-registry/images/system-registry-manager/app \
     APP_PATH_TO=/deckhouse/ee/modules/038-system-registry/images/system-registry-manager/app \
     GO_LIB_PATH_FROM=./go_lib/system-registry-manager \
-    GO_LIB_PATH_TO=/deckhouse/go_lib/system-registry-manager \
-    LOGGER_PATH_FROM=./pkg/log \
-    LOGGER_PATH_TO=/deckhouse/pkg/log
+    GO_LIB_PATH_TO=/deckhouse/go_lib/system-registry-manager
 
 # Set GOPROXY and GOSUMDB
 #ENV GOPROXY=http://10.211.55.2:8081/repository/golang-proxy
@@ -20,17 +18,14 @@ RUN mkdir -m 1777 /tmp-tmp
 RUN mkdir -p ${APP_PATH_TO} ${GO_LIB_PATH_TO} ${LOGGER_PATH_TO}
 COPY ${APP_PATH_FROM}/go.mod ${APP_PATH_FROM}/go.sum ${APP_PATH_TO}/
 COPY ${GO_LIB_PATH_FROM}/go.mod ${GO_LIB_PATH_FROM}/go.sum ${GO_LIB_PATH_TO}/
-COPY ${LOGGER_PATH_FROM}/go.mod ${LOGGER_PATH_FROM}/go.sum ${LOGGER_PATH_TO}/
 
 # Download libs
 RUN cd ${APP_PATH_TO} && go mod download -x && \
-    cd ${GO_LIB_PATH_TO} && go mod download -x && \
-    cd ${LOGGER_PATH_TO} && go mod download -x
+    cd ${GO_LIB_PATH_TO} && go mod download -x
 
 # Copy other files
 COPY ${APP_PATH_FROM}/ ${APP_PATH_TO}/
 COPY ${GO_LIB_PATH_FROM}/ ${GO_LIB_PATH_TO}/
-COPY ${LOGGER_PATH_FROM}/ ${LOGGER_PATH_TO}/
 
 # Run tests
 RUN --mount=type=cache,target=/root/.cache/go-build \

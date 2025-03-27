@@ -8,28 +8,26 @@ package staticpod
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"golang.org/x/sync/errgroup"
-
-	dlog "github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func Run(ctx context.Context, hostIP, nodeName string) error {
-	logger := dlog.Default()
-	log := logger.
+	log := slog.
 		With("component", "Application")
 
 	log.Info("Starting")
 	defer log.Info("Stopped")
 
 	services := &servicesManager{
-		log:      logger.With("component", "Services manager"),
+		log:      slog.With("component", "Services manager"),
 		hostIP:   hostIP,
 		nodeName: nodeName,
 	}
 
 	api := &apiServer{
-		log:      logger.With("component", "HTTP API"),
+		log:      slog.With("component", "HTTP API"),
 		services: services,
 	}
 

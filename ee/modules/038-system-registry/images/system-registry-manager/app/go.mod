@@ -2,14 +2,10 @@ module embeded-registry-manager
 
 go 1.23.1
 
-replace (
-	github.com/deckhouse/deckhouse/go_lib/system-registry-manager => ../../../../../../go_lib/system-registry-manager
-	github.com/deckhouse/deckhouse/pkg/log => ../../../../../../pkg/log
-)
+replace github.com/deckhouse/deckhouse/go_lib/system-registry-manager => ../../../../../../go_lib/system-registry-manager
 
 require (
 	github.com/deckhouse/deckhouse/go_lib/system-registry-manager v0.0.0-00010101000000-000000000000
-	github.com/deckhouse/deckhouse/pkg/log v0.0.0-00010101000000-000000000000
 	github.com/go-chi/chi/v5 v5.1.0
 	github.com/go-chi/render v1.0.3
 	github.com/go-logr/logr v1.4.2
@@ -24,7 +20,6 @@ require (
 )
 
 require (
-	github.com/DataDog/gostackparse v0.7.0 // indirect
 	github.com/ajg/form v1.5.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect

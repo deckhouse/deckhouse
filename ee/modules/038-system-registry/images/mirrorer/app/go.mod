@@ -2,12 +2,7 @@ module mirrorer
 
 go 1.23.1
 
-replace (
-  github.com/deckhouse/deckhouse/pkg/log => ../../../../../../pkg/log
-)
-
 require (
-	github.com/deckhouse/deckhouse/pkg/log v0.0.0-00010101000000-000000000000
 	github.com/go-ozzo/ozzo-validation v3.6.0+incompatible
 	github.com/google/go-containerregistry v0.20.2
 	golang.org/x/sync v0.10.0
@@ -15,7 +10,6 @@ require (
 )
 
 require (
-	github.com/DataDog/gostackparse v0.7.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.14.3 // indirect
 	github.com/docker/cli v27.1.1+incompatible // indirect

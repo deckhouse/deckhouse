@@ -12,21 +12,17 @@ import (
 	"os/signal"
 	"syscall"
 
-	dlog "github.com/deckhouse/deckhouse/pkg/log"
-
 	"embeded-registry-manager/internal/staticpod"
 )
 
 var (
 	shutdownSignals = []os.Signal{os.Interrupt, syscall.SIGTERM}
 
-	logHandler slog.Handler = dlog.Default().Handler()
-
 	nodeName = os.Getenv("NODE_NAME")
 )
 
 func main() {
-	log := slog.New(logHandler).With("component", "main")
+	log := slog.With("component", "main")
 	log = log.With("node", nodeName)
 
 	hostIP := os.Getenv("HOST_IP")

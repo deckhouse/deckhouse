@@ -15,18 +15,14 @@ import (
 	"os/signal"
 	"path/filepath"
 	"syscall"
-
-	dlog "github.com/deckhouse/deckhouse/pkg/log"
 )
 
 var (
-	shutdownSignals              = []os.Signal{os.Interrupt, syscall.SIGTERM}
-	logHandler      slog.Handler = dlog.Default().Handler()
+	shutdownSignals = []os.Signal{os.Interrupt, syscall.SIGTERM}
 )
 
 func main() {
-	logger := slog.New(logHandler)
-	log := logger.With("component", "main")
+	log := slog.With("component", "main")
 
 	if len(os.Args) != 2 {
 		fmt.Fprintf(os.Stderr, "Usage: %v <config file>\n", filepath.Base(os.Args[0]))
@@ -48,7 +44,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	worker, err := mirrorer.New(logger, cfg)
+	worker, err := mirrorer.New(slog.Default(), cfg)
 	if err != nil {
 		log.Error("Cannot create mirrorer", "error", err)
 		os.Exit(2)

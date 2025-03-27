@@ -19,8 +19,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	dlog "github.com/deckhouse/deckhouse/pkg/log"
-
 	"embeded-registry-manager/internal/controllers/registry_controller"
 	"embeded-registry-manager/internal/state"
 	httpclient "embeded-registry-manager/internal/utils/http_client"
@@ -31,10 +29,8 @@ const (
 	healthListenAddr       = ":8097"
 )
 
-var logHandler slog.Handler = dlog.Default().Handler()
-
 func main() {
-	ctrl.SetLogger(logr.FromSlogHandler(logHandler))
+	ctrl.SetLogger(logr.FromSlogHandler(slog.Default().Handler()))
 	log := ctrl.Log.WithValues("component", "main")
 
 	log.Info("Starting embedded registry manager")

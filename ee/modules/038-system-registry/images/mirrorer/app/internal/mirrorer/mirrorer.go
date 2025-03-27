@@ -14,7 +14,6 @@ import (
 	"mirrorer/internal/transport"
 	"time"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -104,14 +103,14 @@ func (m *mirrorer) Run(ctx context.Context) error {
 
 func (m *mirrorer) doSync(ctx context.Context) error {
 	startTime := time.Now()
-	log.Info("Mirror start")
+	m.log.Info("Mirror start")
 
 	for _, sync := range m.syncers {
 		if err := sync.Sync(ctx); err != nil {
-			log.Error("Sync error", "error", err)
+			m.log.Error("Sync error", "error", err)
 		}
 	}
-	log.Info("Mirror done", "duration", time.Since(startTime))
+	m.log.Info("Mirror done", "duration", time.Since(startTime))
 
 	return nil
 }
