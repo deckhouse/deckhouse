@@ -17,6 +17,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-openstack/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-vcd/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks"
+	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/bashible"
 	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/https"
 	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/pki"
 	_ "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee"
