@@ -1,7 +1,7 @@
 @import "components/common/_variables.scss";
 
 .form {
-  &__callback {
+  &__request {
     font-size: 17px;
   }
 
@@ -28,9 +28,14 @@
       }
     }
 
-    &-callback {
+    &-request {
       margin: 0;
       margin-bottom: 16px;
+    }
+
+    &-approval {
+      margin: 0;
+      margin-top: 16px;
     }
   }
 
@@ -161,7 +166,7 @@
       border-color: red;
     }
 
-    &-callback {
+    &-request {
       padding: 13px 20px;
       border: 2px solid #cdd1e6;
       font-size: 15.7px;
@@ -180,52 +185,50 @@
     }
   }
 
-  .license-checkbox {
-    display: flex;
-    align-items: flex-start;
-  }
-
-  .checkbox {
-    position: absolute;
-    opacity: 0;
-    margin-top: 5px;
-    margin-left: 2px;
-  }
-
-  .fake-checkbox {
-    position: relative;
-    display: inline-block;
-    flex-shrink: 0;
-    width: 17px;
-    height: 17px;
-    margin-top: 1px;
-    margin-right: 10px;
-    box-sizing: border-box;
-    border: 2px solid $color-smooth;
-    transition: all .3s;
-  }
-
-  .checkbox:checked + .fake-checkbox {
-    border-color: #2A5EFF;
-    background-color: #2A5EFF;
-  }
-
-  .fake-checkbox::before {
-    content: "";
-    display: block;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 10px;
-    height: 10px;
-    background-color: #fff;
-    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
-    opacity: 0;
-  }
-
-  .checkbox:checked + .fake-checkbox::before {
-    opacity: 1;
+  .form__row-approval {
+    .license-checkbox {
+      display: inline-flex;
+      gap: 10px;
+      text-align: left;
+      user-select: none;
+      font-size: 14.7px;
+      cursor: pointer;
+    }
+  
+    .fake-checkbox {
+      margin-top: 2px;
+    }
+  
+    .checkbox {
+      position: absolute;
+      display: none;
+      opacity: 0;
+      z-index: -1;
+    }
+  
+    .fake-checkbox::before {
+      content: "";
+      height: 14px;
+      width: 14px;
+      display: inline-block;
+      flex-grow: 0;
+      flex-shrink: 0;
+      border: 1px solid #969dc4;
+      border-radius: .25em;
+    }
+  
+    .checkbox:checked + .fake-checkbox::before {
+      background-color: #0064ff;
+      background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2210%22%20height%3D%228%22%20fill%3D%22none%22%3E%3Cpath%20fill%3D%22%23fff%22%20fill-rule%3D%22evenodd%22%20d%3D%22M9.342%201.099a.54.54%200%200%201%200%20.763l-5.04%205.04a.54.54%200%200%201-.764%200l-2.88-2.88a.54.54%200%200%201%20.764-.763L3.92%205.757l4.658-4.658a.54.54%200%200%201%20.764%200Z%22%20clip-rule%3D%22evenodd%22%2F%3E%3C%2Fsvg%3E");
+      border-color: #0064ff;
+      background-position: 50%;
+      background-repeat: no-repeat;
+      background-size: 12px 10px;
+    }
+  
+    .checkbox:checked + .fake-checkbox::before {
+      opacity: 1;
+    }
   }
 
   .license-link {
