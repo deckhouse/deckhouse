@@ -74,6 +74,7 @@
   {{- $folder := index . 2 }}        {{- /* Folder */ -}}
   {{- $definition := index . 3 }}    {{/* Dashboard definition */}}
   {{- $propagated := contains $resourceName "-propagated-" }}
+  {{- $resourceName = $resourceName | replace "-propagated-" "-" }}
 ---
 apiVersion: deckhouse.io/v1
 kind: GrafanaDashboardDefinition
