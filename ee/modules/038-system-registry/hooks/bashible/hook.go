@@ -8,11 +8,10 @@ package bashible
 import (
 	"fmt"
 
-	"github.com/hashicorp/go-multierror"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	"github.com/hashicorp/go-multierror"
 )
 
 type BashibleConfig struct {
