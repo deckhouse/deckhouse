@@ -41,7 +41,7 @@ func runHealthServer(ctx context.Context) error {
 
 	defer ctxListenStop()
 
-	if err := srv.ListenAndServe(); err != nil {
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		return fmt.Errorf("listen and serve error: %w", err)
 	}
 
