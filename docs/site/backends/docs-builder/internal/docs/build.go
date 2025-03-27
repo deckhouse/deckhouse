@@ -68,19 +68,18 @@ func (svc *Service) buildHugo() error {
 		}
 
 		if path, ok := getAssembleErrorPath(err.Error()); ok {
-			modulePath := filepath.Dir(path)
-			err = os.RemoveAll(modulePath)
+			err = os.RemoveAll(path)
 			if err != nil {
 				return fmt.Errorf("remove module: %w", err)
 			}
 
-			moduleName, channel := svc.parseModulePath(modulePath)
+			moduleName, channel := svc.parseModulePath(path)
 			err = svc.removeModuleFromChannelMapping(moduleName, channel)
 			if err != nil {
 				return fmt.Errorf("remove module from channel mapping: %w", err)
 			}
 
-			svc.logger.Warn("removed broken module", slog.String("module_path", modulePath))
+			svc.logger.Warn("removed broken module", slog.String("module_path", path))
 			continue
 		}
 
@@ -97,7 +96,7 @@ func (svc *Service) removeModuleFromChannelMapping(moduleName, channel string) e
 func getAssembleErrorPath(errorMessage string) (string, bool) {
 	match := assembleErrorRegexp.FindStringSubmatch(errorMessage)
 	if len(match) == 6 {
-		return match[2], true
+		return match[1], true
 	}
 
 	return "", false
