@@ -8,9 +8,8 @@ package bashible
 import (
 	"fmt"
 
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
