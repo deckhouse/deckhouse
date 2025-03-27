@@ -16,7 +16,13 @@ curl -sL https://raw.githubusercontent.com/deckhouse/deckhouse/refs/heads/main/m
 kubectl -n d8-system get pods -lapp=ingress-validation-cve-fixer
 ```
 
-Также необходимо поочередно перезапустить поды Ingress-nginx контроллера в пространстве имен `d8-ingress-nginx`.
+Также необходимо с помощью команды
+
+```bash
+kubectl  edit ingressnginxcontrollers.deckhouse.io
+```
+
+выставить параметр `spec.validationEnabled` в значение `false` и поочередно перезапустить поды Ingress-nginx контроллера в пространстве имен `d8-ingress-nginx`.
 
 После перезапуска можно проверить наличие уязвимых подов командой:
 
