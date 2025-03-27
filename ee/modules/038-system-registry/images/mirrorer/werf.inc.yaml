@@ -30,8 +30,6 @@ shell:
     - export GOPROXY={{ $.GOPROXY }}
     - cd {{ $appAbsPath }}
     - go mod download
-    - cd /deckhouse/pkg/log
-    - go mod download
   setup:
     - cd {{ $appAbsPath }}
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go test ./...
