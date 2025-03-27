@@ -135,7 +135,7 @@ shell:
   - cp /usr/include/c++/v1/__config_site /tmp/__config_site
   - rm -rf /usr/include/c++/v1/*
   - cp -r /src/llvm/libcxx/include/. /usr/include/c++/v1/
-  - cp -r /src/llvmlibcxxabi/include/. /usr/include/c++/v1/
+  - cp -r /src/llvm/libcxxabi/include/. /usr/include/c++/v1/
   - cp /tmp/__config_site /usr/include/c++/v1/__config_site
   # - mkdir -p /tmp/bazel-cache
   # - git clone --depth 1 --branch {{ $istioProxyCacheRev }} {{ $.SOURCE_REPO }}/istio/envoy-build-cache.git /tmp/bazel-cache
