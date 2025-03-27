@@ -188,7 +188,7 @@ type RegistryMirrorHostObject struct {
 
 // FromInputData populates RegistryData fields from given registry configuration
 func (d *RegistryData) FromInputData(deckhouseRegistry deckhouseRegistry, registryBashibleConfig *registryBashibleConfig) error {
-	d.Version = "Unknown"
+	d.Version = "unknown"
 	d.ProxyEndpoints = []string{}
 	d.Hosts = []RegistryHostsObject{}
 	d.PrepullHosts = []RegistryHostsObject{}

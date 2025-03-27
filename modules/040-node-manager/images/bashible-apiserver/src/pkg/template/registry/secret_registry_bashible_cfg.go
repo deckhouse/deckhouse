@@ -33,17 +33,8 @@ type registryBashibleConfig struct {
 }
 
 func (d *registryBashibleConfig) DecodeSecret(secret *corev1.Secret) error {
-	if err := yaml.Unmarshal(secret.Data["version"], &d.Version); err != nil {
-		return fmt.Errorf("failed to parse version: %w", err)
-	}
-	if err := yaml.Unmarshal(secret.Data["proxyEndpoints"], &d.ProxyEndpoints); err != nil {
-		return fmt.Errorf("failed to parse proxyEndpoints: %w", err)
-	}
-	if err := yaml.Unmarshal(secret.Data["hosts"], &d.Hosts); err != nil {
-		return fmt.Errorf("failed to parse hosts: %w", err)
-	}
-	if err := yaml.Unmarshal(secret.Data["prepullHosts"], &d.PrepullHosts); err != nil {
-		return fmt.Errorf("failed to parse prepullHosts: %w", err)
+	if err := yaml.Unmarshal(secret.Data["config"], d); err != nil {
+		return fmt.Errorf("failed to parse registry bashible config: %w", err)
 	}
 	return nil
 }
