@@ -194,7 +194,7 @@ resource "openstack_blockstorage_volume_v3" "bastion" {
 
 resource "openstack_compute_instance_v2" "bastion" {
   name = "candi-${PREFIX}-bastion"
-  flavor_name = var.flavor_name_medium
+  flavor_name = var.flavor_name_large
   key_pair = "candi-${PREFIX}-key"
   availability_zone = var.az_zone
 
