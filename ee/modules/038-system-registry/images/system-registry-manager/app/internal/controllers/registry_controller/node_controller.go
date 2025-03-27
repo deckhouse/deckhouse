@@ -174,8 +174,8 @@ func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 		}
 
 		name := obj.GetName()
-		return name == state.PKISecretName ||
-			name == state.GlobalSecretsName ||
+		return name == state.GlobalSecretsName ||
+			name == state.PKISecretName ||
 			name == state.UserROSecretName ||
 			name == state.UserRWSecretName ||
 			name == state.UserMirrorPullerName ||
@@ -242,7 +242,7 @@ func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 		},
 	}
 
-	globalConfigMapsPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
+	ingressConfigMapPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		if obj.GetNamespace() != nc.Namespace {
 			return false
 		}
@@ -300,21 +300,21 @@ func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 			&corev1.Node{},
 			builder.WithPredicates(nodePredicate),
 		).
+		WatchesRawSource(nc.reprocessChannelSource()).
 		Watches(
-			&corev1.Secret{},
-			nodePKISecretsHandler,
-			builder.WithPredicates(nodePKISecretsPredicate),
+			&moduleConfig,
+			newReprocessAllHandler("ModuleConfig"),
+			builder.WithPredicates(moduleConfigPredicate),
 		).
 		Watches(
 			&corev1.Pod{},
 			staticPodManagerHandler,
 			builder.WithPredicates(staticPodManagerPredicate),
 		).
-		WatchesRawSource(nc.reprocessChannelSource()).
 		Watches(
-			&moduleConfig,
-			newReprocessAllHandler("ModuleConfig"),
-			builder.WithPredicates(moduleConfigPredicate),
+			&corev1.Secret{},
+			nodePKISecretsHandler,
+			builder.WithPredicates(nodePKISecretsPredicate),
 		).
 		Watches(
 			&corev1.Secret{},
@@ -329,7 +329,7 @@ func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 		Watches(
 			&corev1.ConfigMap{},
 			newReprocessAllHandler("ConfigMap"),
-			builder.WithPredicates(globalConfigMapsPredicate),
+			builder.WithPredicates(ingressConfigMapPredicate),
 		).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 10,
@@ -537,7 +537,7 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 		return
 	}
 
-	var mirrorerUpstreams []string
+	mirrorerUpstreams := make([]string, 0, len(masterNodesIPs))
 	for _, ip := range masterNodesIPs {
 		if ip != nodeInternalIP {
 			mirrorerUpstreams = append(mirrorerUpstreams, ip)
