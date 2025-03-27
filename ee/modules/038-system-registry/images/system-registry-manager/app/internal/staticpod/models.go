@@ -15,14 +15,29 @@ import (
 
 type templateModel struct {
 	Config
+	Version  string
 	Address  string
 	NodeName string
 	Hashes   ConfigHashes
 }
 
+type NodeServicesConfigModel struct {
+	Version string `json:"version"`
+	Config  Config `json:"config"`
+}
+
+func (config *NodeServicesConfigModel) Validate() error {
+	return validation.ValidateStruct(config,
+		validation.Field(&config.Config, validation.Required),
+	)
+}
+
+func (cfg *NodeServicesConfigModel) Bind(r *http.Request) error {
+	return cfg.Validate()
+}
+
 // Config represents the configuration
 type Config struct {
-	Version  string         `json:"version,omitempty"`
 	Registry RegistryConfig `json:"registry,omitempty"`
 	Images   Images         `json:"images,omitempty"`
 	PKI      PKIModel       `json:"pki,omitempty"`
@@ -38,10 +53,6 @@ func (config *Config) Validate() error {
 		validation.Field(&config.Proxy),
 		validation.Field(&config.Mirrorer, validation.Required),
 	)
-}
-
-func (cfg *Config) Bind(r *http.Request) error {
-	return cfg.Validate()
 }
 
 // PKIModel holds the configuration for the PKI
@@ -257,4 +268,18 @@ func (pki *PKIModel) syncPKIFiles(basePath string, configHashes *ConfigHashes) (
 	}
 
 	return anyFileChanged, nil
+}
+
+// ChangesModel represents a model to track applied changes
+type ChangesModel struct {
+	Distribution bool `json:",omitempty"` // Indicates changes in the distribution configuration.
+	Auth         bool `json:",omitempty"` // Indicates changes in the authentication system.
+	PKI          bool `json:",omitempty"` // Indicates changes in the public key infrastructure.
+	Pod          bool `json:",omitempty"` // Indicates changes in the pod setup.
+	Mirrorer     bool `json:",omitempty"` // Indicates changes in the mirrorer configuration.
+}
+
+// HasChanges checks if any field is true.
+func (c ChangesModel) HasChanges() bool {
+	return c.Distribution || c.Auth || c.PKI || c.Pod || c.Mirrorer
 }

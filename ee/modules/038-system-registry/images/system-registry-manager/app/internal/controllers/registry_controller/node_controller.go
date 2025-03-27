@@ -544,7 +544,7 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 		}
 	}
 
-	staticPodConfig, err := nc.contructStaticPodConfig(
+	servicesConfig, err := nc.contructNodeServicesConfig(
 		moduleConfig,
 		userRO,
 		userRW,
@@ -559,21 +559,20 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 	)
 
 	if err != nil {
-		err = fmt.Errorf("cannot construct static pod config: %w", err)
+		err = fmt.Errorf("cannot construct node services configuration: %w", err)
 		return
 	}
 
-	log.Info("Processing master node")
-	err = nc.applyStaticPodConfig(ctx, node.Name, staticPodConfig)
+	err = nc.configureNodeServices(ctx, node.Name, servicesConfig)
 	if err != nil {
-		err = fmt.Errorf("apply static pod configuration error: %w", err)
+		err = fmt.Errorf("apply node services configuration error: %w", err)
 		return
 	}
 
 	return
 }
 
-func (nc *nodeController) contructStaticPodConfig(
+func (nc *nodeController) contructNodeServicesConfig(
 	moduleConfig state.ModuleConfig,
 	userRO, userRW, userMirrorPuller, userMirrorPusher state.User,
 	globalPKI state.GlobalPKI,
@@ -582,7 +581,7 @@ func (nc *nodeController) contructStaticPodConfig(
 	ingressPKI *state.IngressPKI,
 	mirrorerUpstreams []string,
 	stateSecret state.StateSecret,
-) (config staticpod.Config, err error) {
+) (model staticpod.NodeServicesConfigModel, err error) {
 	tokenKey, err := pki.EncodePrivateKey(globalPKI.Token.Key)
 	if err != nil {
 		err = fmt.Errorf("cannot encode Token key: %w", err)
@@ -603,65 +602,67 @@ func (nc *nodeController) contructStaticPodConfig(
 
 	registryHostPath := fmt.Sprintf("%s%s", nc.Settings.RegistryAddress, nc.Settings.RegistryPath)
 
-	config = staticpod.Config{
+	model = staticpod.NodeServicesConfigModel{
 		Version: stateSecret.Version,
-		Images: staticpod.Images{
-			Auth:         fmt.Sprintf("%s@%s", registryHostPath, nc.Settings.ImageAuth),
-			Distribution: fmt.Sprintf("%s@%s", registryHostPath, nc.Settings.ImageDistribution),
-			Mirrorer:     fmt.Sprintf("%s@%s", registryHostPath, nc.Settings.ImageMirrorer),
-		},
-		Registry: staticpod.RegistryConfig{
-			Mode:       staticpod.RegistryMode(moduleConfig.Settings.Mode),
-			HttpSecret: globalSecrets.HttpSecret,
-			UserRO: staticpod.User{
-				Name:         userRO.UserName,
-				Password:     userRO.Password,
-				PasswordHash: userRO.HashedPassword,
+		Config: staticpod.Config{
+			Images: staticpod.Images{
+				Auth:         fmt.Sprintf("%s@%s", registryHostPath, nc.Settings.ImageAuth),
+				Distribution: fmt.Sprintf("%s@%s", registryHostPath, nc.Settings.ImageDistribution),
+				Mirrorer:     fmt.Sprintf("%s@%s", registryHostPath, nc.Settings.ImageMirrorer),
 			},
-			UserRW: staticpod.User{
-				Name:         userRW.UserName,
-				Password:     userRW.Password,
-				PasswordHash: userRW.HashedPassword,
+			Registry: staticpod.RegistryConfig{
+				Mode:       staticpod.RegistryMode(moduleConfig.Settings.Mode),
+				HttpSecret: globalSecrets.HttpSecret,
+				UserRO: staticpod.User{
+					Name:         userRO.UserName,
+					Password:     userRO.Password,
+					PasswordHash: userRO.HashedPassword,
+				},
+				UserRW: staticpod.User{
+					Name:         userRW.UserName,
+					Password:     userRW.Password,
+					PasswordHash: userRW.HashedPassword,
+				},
 			},
-		},
-		PKI: staticpod.PKIModel{
-			CACert:           string(pki.EncodeCertificate(globalPKI.CA.Cert)),
-			TokenCert:        string(pki.EncodeCertificate(globalPKI.Token.Cert)),
-			TokenKey:         string(tokenKey),
-			AuthCert:         string(pki.EncodeCertificate(nodePKI.Auth.Cert)),
-			AuthKey:          string(authKey),
-			DistributionCert: string(pki.EncodeCertificate(nodePKI.Distribution.Cert)),
-			DistributionKey:  string(distributionKey),
-		},
-		Mirrorer: staticpod.Mirrorer{
-			UserPuller: staticpod.User{
-				Name:         userMirrorPuller.UserName,
-				Password:     userMirrorPuller.Password,
-				PasswordHash: userMirrorPuller.HashedPassword,
+			PKI: staticpod.PKIModel{
+				CACert:           string(pki.EncodeCertificate(globalPKI.CA.Cert)),
+				TokenCert:        string(pki.EncodeCertificate(globalPKI.Token.Cert)),
+				TokenKey:         string(tokenKey),
+				AuthCert:         string(pki.EncodeCertificate(nodePKI.Auth.Cert)),
+				AuthKey:          string(authKey),
+				DistributionCert: string(pki.EncodeCertificate(nodePKI.Distribution.Cert)),
+				DistributionKey:  string(distributionKey),
 			},
-			UserPusher: staticpod.User{
-				Name:         userMirrorPusher.UserName,
-				Password:     userMirrorPusher.Password,
-				PasswordHash: userMirrorPusher.HashedPassword,
+			Mirrorer: staticpod.Mirrorer{
+				UserPuller: staticpod.User{
+					Name:         userMirrorPuller.UserName,
+					Password:     userMirrorPuller.Password,
+					PasswordHash: userMirrorPuller.HashedPassword,
+				},
+				UserPusher: staticpod.User{
+					Name:         userMirrorPusher.UserName,
+					Password:     userMirrorPusher.Password,
+					PasswordHash: userMirrorPusher.HashedPassword,
+				},
+				Upstreams: mirrorerUpstreams,
 			},
-			Upstreams: mirrorerUpstreams,
 		},
 	}
 
 	if moduleConfig.Settings.ImagesOverride.Mirrorer != "" {
-		config.Images.Mirrorer = moduleConfig.Settings.ImagesOverride.Mirrorer
+		model.Config.Images.Mirrorer = moduleConfig.Settings.ImagesOverride.Mirrorer
 	}
 
 	if ingressPKI != nil {
-		config.PKI.IngressClientCACert = string(pki.EncodeCertificate(ingressPKI.ClientCACert))
+		model.Config.PKI.IngressClientCACert = string(pki.EncodeCertificate(ingressPKI.ClientCACert))
 	}
 
 	if moduleConfig.Settings.Mode == state.RegistryModeProxy {
 		host, path := getRegistryAddressAndPathFromImagesRepo(moduleConfig.Settings.Proxy.ImagesRepo)
 
-		config.PKI.UpstreamRegistryCACert = moduleConfig.Settings.Proxy.CA
+		model.Config.PKI.UpstreamRegistryCACert = moduleConfig.Settings.Proxy.CA
 
-		config.Registry.Upstream = staticpod.UpstreamRegistry{
+		model.Config.Registry.Upstream = staticpod.UpstreamRegistry{
 			Scheme:   strings.ToLower(moduleConfig.Settings.Proxy.Scheme),
 			Host:     host,
 			Path:     path,
@@ -674,14 +675,14 @@ func (nc *nodeController) contructStaticPodConfig(
 	return
 }
 
-func (nc *nodeController) applyStaticPodConfig(ctx context.Context, nodeName string, config staticpod.Config) error {
-	podIP, err := nc.findStaticPodManagerIP(ctx, nodeName)
+func (nc *nodeController) configureNodeServices(ctx context.Context, nodeName string, model staticpod.NodeServicesConfigModel) error {
+	podIP, err := nc.findNodeServicesManagerIP(ctx, nodeName)
 	if err != nil {
 		return fmt.Errorf("cannot find Static Pod Manager IP for Node: %w", err)
 	}
 
 	url := fmt.Sprintf(staticPodURLFormat, podIP)
-	_, err = nc.HttpClient.SendJSON(url, http.MethodPost, config)
+	_, err = nc.HttpClient.SendJSON(url, http.MethodPost, model)
 
 	if err != nil {
 		return fmt.Errorf("error sending HTTP request: %w", err)
@@ -690,8 +691,8 @@ func (nc *nodeController) applyStaticPodConfig(ctx context.Context, nodeName str
 	return nil
 }
 
-func (nc *nodeController) deleteStaticPodConfig(ctx context.Context, nodeName string, onlyIfFound bool) error {
-	podIP, err := nc.findStaticPodManagerIP(ctx, nodeName)
+func (nc *nodeController) stopNodeServices(ctx context.Context, nodeName string, onlyIfFound bool) error {
+	podIP, err := nc.findNodeServicesManagerIP(ctx, nodeName)
 	if err != nil {
 		if onlyIfFound {
 			return nil
@@ -710,7 +711,7 @@ func (nc *nodeController) deleteStaticPodConfig(ctx context.Context, nodeName st
 	return nil
 }
 
-func (nc *nodeController) findStaticPodManagerIP(ctx context.Context, nodeName string) (string, error) {
+func (nc *nodeController) findNodeServicesManagerIP(ctx context.Context, nodeName string) (string, error) {
 	var pods corev1.PodList
 
 	err := nc.Client.List(
@@ -1020,7 +1021,7 @@ func (nc *nodeController) getAllMasterNodes(ctx context.Context) (nodes *corev1.
 
 func (nc *nodeController) cleanupNodeState(ctx context.Context, node *corev1.Node) (ctrl.Result, error) {
 	// Delete static pod (let's race with k8s sheduler)
-	if err := nc.deleteStaticPodConfig(ctx, node.Name, true); err != nil {
+	if err := nc.stopNodeServices(ctx, node.Name, true); err != nil {
 		err = fmt.Errorf("delete static pod configuration error: %w", err)
 		return ctrl.Result{}, err
 	}

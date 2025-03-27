@@ -16,6 +16,7 @@ require (
 	github.com/go-ozzo/ozzo-validation v3.6.0+incompatible
 	github.com/samber/slog-chi v1.12.3
 	golang.org/x/crypto v0.21.0
+	golang.org/x/sync v0.9.0
 	k8s.io/api v0.30.3
 	k8s.io/apimachinery v0.30.3
 	k8s.io/client-go v0.30.3

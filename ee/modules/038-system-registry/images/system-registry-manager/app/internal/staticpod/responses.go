@@ -59,20 +59,11 @@ func ErrBadRequest(err error) render.Renderer {
 	return ErrStatus(err, http.StatusBadRequest)
 }
 
-// ChangesReponse represents a model to track applied changes
-type ChangesReponse struct {
-	Distribution bool `json:",omitempty"` // Indicates changes in the distribution configuration.
-	Auth         bool `json:",omitempty"` // Indicates changes in the authentication system.
-	PKI          bool `json:",omitempty"` // Indicates changes in the public key infrastructure.
-	Pod          bool `json:",omitempty"` // Indicates changes in the pod setup.
-	Mirrorer     bool `json:",omitempty"` // Indicates changes in the mirrorer configuration.
+// changesReponse wraps ChangesModel
+type changesReponse struct {
+	ChangesModel
 }
 
-// HasChanges checks if any field in ChangesModel is true.
-func (c ChangesReponse) HasChanges() bool {
-	return c.Distribution || c.Auth || c.PKI || c.Pod || c.Mirrorer
-}
-
-func (c ChangesReponse) Render(w http.ResponseWriter, r *http.Request) error {
+func (c changesReponse) Render(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
