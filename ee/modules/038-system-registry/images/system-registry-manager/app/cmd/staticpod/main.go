@@ -13,6 +13,8 @@ import (
 	"syscall"
 
 	"embeded-registry-manager/internal/staticpod"
+
+	"k8s.io/client-go/rest"
 )
 
 var (
@@ -36,6 +38,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Load Kubernetes configuration
+	cfg, err := rest.InClusterConfig()
+	if err != nil {
+		log.Error("Unable to get kubeconfig", "error", err)
+		os.Exit(1)
+	}
+
 	log.Info("Starting Node Services manager")
 	defer log.Info("Stopped")
 
@@ -43,8 +52,8 @@ func main() {
 	ctx := setupSignalHandler()
 
 	log.Info("Starting application")
-	err := staticpod.Run(ctx, hostIP, nodeName)
-	if err != nil {
+
+	if err = staticpod.Run(ctx, cfg, hostIP, nodeName); err != nil {
 		log.Error("Application error", "error", err)
 	}
 

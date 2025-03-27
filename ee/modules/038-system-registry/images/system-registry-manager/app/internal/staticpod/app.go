@@ -9,13 +9,26 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
-	"golang.org/x/sync/errgroup"
+	"github.com/go-logr/logr"
+	"k8s.io/client-go/rest"
+
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 )
 
-func Run(ctx context.Context, hostIP, nodeName string) error {
-	log := slog.
-		With("component", "Application")
+const (
+	healthAddr  = ":8097"
+	metricsAddr = "127.0.0.1:8081"
+)
+
+func Run(ctx context.Context, cfg *rest.Config, hostIP, nodeName string) error {
+	ctrl.SetLogger(logr.FromSlogHandler(slog.Default().Handler()))
+	log := ctrl.Log.WithValues("component", "Application")
 
 	log.Info("Starting")
 	defer log.Info("Stopped")
@@ -31,27 +44,37 @@ func Run(ctx context.Context, hostIP, nodeName string) error {
 		services: services,
 	}
 
-	workers, workersCtx := errgroup.WithContext(ctx)
-
-	workers.Go(func() error {
-		if err := api.Run(workersCtx); err != nil && ctx.Err() == nil {
-			return fmt.Errorf("HTTP API error: %w", err)
-		}
-		return nil
+	// Set up the manager with leader election and other options
+	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
+		Metrics: metricsserver.Options{
+			BindAddress: metricsAddr,
+		},
+		HealthProbeBindAddress:  healthAddr,
+		GracefulShutdownTimeout: &[]time.Duration{10 * time.Second}[0],
+		Cache: cache.Options{
+			DefaultNamespaces: map[string]cache.Config{
+				"d8-system": {},
+			},
+		},
 	})
 
-	workers.Go(func() error {
-		if err := runHealthServer(workersCtx); err != nil {
-			return fmt.Errorf("HealthServer error: %w", err)
-		}
-		return nil
-	})
+	if err != nil {
+		return fmt.Errorf("unable to set up manager: %w", err)
+	}
 
-	<-ctx.Done()
+	if err = mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+		return fmt.Errorf("unable to set up health check: %w", err)
+	}
+	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+		return fmt.Errorf("unable to set up ready check: %w", err)
+	}
 
-	log.Info("Waiting for processes done")
-	if err := workers.Wait(); err != nil {
-		return fmt.Errorf("workers error: %w", err)
+	mgr.Add(manager.RunnableFunc(api.Run))
+
+	// Start the manager
+	log.Info("Starting manager")
+	if err := mgr.Start(ctx); err != nil {
+		return fmt.Errorf("unable to start manager: %w", err)
 	}
 
 	return nil

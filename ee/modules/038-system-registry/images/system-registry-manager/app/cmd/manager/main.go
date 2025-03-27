@@ -25,8 +25,8 @@ import (
 )
 
 const (
-	metricsBindAddressPort = "127.0.0.1:8081"
-	healthListenAddr       = ":8097"
+	metricsAddr = "127.0.0.1:8081"
+	healthAddr  = ":8097"
 )
 
 func main() {
@@ -95,9 +95,9 @@ func setupAndStartManager(ctx context.Context, cfg *rest.Config, httpClient *htt
 	// Set up the manager with leader election and other options
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Metrics: metricsserver.Options{
-			BindAddress: metricsBindAddressPort,
+			BindAddress: metricsAddr,
 		},
-		HealthProbeBindAddress:  healthListenAddr,
+		HealthProbeBindAddress:  healthAddr,
 		LeaderElection:          true,
 		LeaderElectionID:        "embedded-registry-manager-leader",
 		LeaderElectionNamespace: "d8-system",
