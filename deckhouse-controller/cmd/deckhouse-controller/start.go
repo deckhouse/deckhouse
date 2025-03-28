@@ -92,7 +92,7 @@ func start(logger *log.Logger) func(_ *kingpin.ParseContext) error {
 		operator.StartAPIServer()
 
 		if os.Getenv("DECKHOUSE_HA") == "true" {
-			logger.Info("Desckhouse is starting in HA mode")
+			logger.Info("Deckhouse starts in HA mode")
 			runHAMode(ctx, operator, logger)
 			return nil
 		}

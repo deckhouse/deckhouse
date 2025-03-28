@@ -1,0 +1,26 @@
+spec:
+versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |
+          CRD для отображения настроек модулей Deckhouse.
+          Определяет список версий настроек модуля.
+        properties:
+          apiVersion:
+            description: Версия API объекта.
+          kind:
+            description: Тип объекта.
+          metadata:
+            description: Метаданные объекта, включая имя, метки и аннотации.
+          spec:
+            description: Спецификация настроек модуля.
+            properties:
+              versions:
+                description: Список версий настроек модуля. Каждая версия включает имя и схему.
+                items:
+                  properties:
+                    name:
+                      description: Версия настроек модуля.
+                    schema:
+                      description: Схема настроек для данной версии модуля.
