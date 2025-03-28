@@ -406,7 +406,7 @@ func (r *reconciler) deleteModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 				return ctrl.Result{}, err
 			}
 			// clear downloaded dir
-			if err := os.RemoveAll(path.Join(r.downloadedModulesDir, downloader.DefaultDevVersion)); err != nil {
+			if err := os.RemoveAll(path.Join(r.downloadedModulesDir, mpo.GetModuleName(), downloader.DefaultDevVersion)); err != nil {
 				r.log.Errorf("failed to remove the '%s' module pull override downloaded dir: %v", mpo.Name, err)
 				return ctrl.Result{}, err
 			}
