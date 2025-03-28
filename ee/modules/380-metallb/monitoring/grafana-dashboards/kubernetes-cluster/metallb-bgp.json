@@ -99,7 +99,7 @@
                   {
                     "targetBlank": true,
                     "title": "Pool detail",
-                    "url": "/d/sZzUB4ymk3/?var-ds_prometheus=${ds_prometheus}&var-pool=${__value.raw}&${__url_time_range}"
+                    "url": "/d/sZzUB4ymn3/?var-ds_prometheus=${ds_prometheus}&var-pool=${__value.raw}&${__url_time_range}"
                   }
                 ]
               }
@@ -156,7 +156,7 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "metallb_allocator_addresses_total",
+          "expr": "(metallb_allocator_addresses_total{job=\"controller\"} unless metallb_allocator_addresses_total{job=\"l2lb-controller\"}) > 0 and (metallb_allocator_addresses_in_use_total{job=\"controller\"} unless metallb_allocator_addresses_in_use_total{job=\"l2lb-controller\"}) > 0",
           "format": "table",
           "range": true,
           "refId": "A"
@@ -167,14 +167,14 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "metallb_allocator_addresses_in_use_total",
+          "expr": "(metallb_allocator_addresses_in_use_total{job=\"controller\"} unless metallb_allocator_addresses_in_use_total{job=\"l2lb-controller\"}) > 0",
           "format": "table",
           "hide": false,
           "range": true,
           "refId": "B"
         }
       ],
-      "title": "Pools",
+      "title": "Pools in  usage",
       "transformations": [
         {
           "id": "seriesToColumns",
@@ -345,7 +345,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
-          "expr": "metallb_allocator_addresses_in_use_total / metallb_allocator_addresses_total * 100",
+          "expr": "((metallb_allocator_addresses_in_use_total{job=\"controller\"} unless metallb_allocator_addresses_in_use_total{job=\"l2lb-controller\"}) > 0) / ((metallb_allocator_addresses_total{job=\"controller\"} unless metallb_allocator_addresses_total{job=\"l2lb-controller\"}) > 0) * 100",
           "refId": "A"
         }
       ],
@@ -435,7 +435,7 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "metallb_allocator_addresses_total",
+          "expr": "(metallb_allocator_addresses_total{job=\"controller\"} unless metallb_allocator_addresses_total{job=\"l2lb-controller\"}) > 0 and (metallb_allocator_addresses_in_use_total{job=\"controller\"} unless metallb_allocator_addresses_in_use_total{job=\"l2lb-controller\"}) > 0",
           "instant": false,
           "interval": "",
           "legendFormat": "Total addresses in pool: {{pool}}",
@@ -447,7 +447,7 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "metallb_allocator_addresses_in_use_total",
+          "expr": "(metallb_allocator_addresses_in_use_total{job=\"controller\"} unless metallb_allocator_addresses_in_use_total{job=\"l2lb-controller\"}) > 0",
           "interval": "",
           "legendFormat": "Used addresses in pool: {{pool}}",
           "range": true,
@@ -515,7 +515,7 @@
           },
           "editorMode": "builder",
           "exemplar": false,
-          "expr": "sum by(pod, ip, node) (metallb_speaker_announced)",
+          "expr": "sum by(pod, ip, node) (metallb_speaker_announced{protocol=\"bgp\"})",
           "format": "table",
           "instant": false,
           "legendFormat": "",
@@ -658,134 +658,6 @@
       ],
       "title": "BGP",
       "type": "row"
-    },
-    {
-      "collapsed": true,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 24
-      },
-      "id": 802,
-      "panels": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${ds_prometheus}"
-          },
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 10,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineInterpolation": "smooth",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "never",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "none"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              },
-              "unit": "short"
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 9,
-            "w": 24,
-            "x": 0,
-            "y": 33
-          },
-          "id": 6,
-          "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom"
-            },
-            "tooltip": {
-              "mode": "multi",
-              "sort": "none"
-            }
-          },
-          "pluginVersion": "8.5.13",
-          "targets": [
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${ds_prometheus}"
-              },
-              "expr": "rate(metallb_layer2_gratuitous_sent{instance=~\"$layer2instance\"}[5m])",
-              "hide": false,
-              "instant": false,
-              "interval": "",
-              "legendFormat": "gratuitous_sent instance={{instance}} ip={{ip}} ",
-              "refId": "A"
-            },
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${ds_prometheus}"
-              },
-              "expr": "rate(metallb_layer2_requests_received{instance=~\"$layer2instance\"}[5m])",
-              "hide": false,
-              "interval": "",
-              "legendFormat": "requests_received instance={{instance}} ip={{ip}} ",
-              "refId": "B"
-            },
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${ds_prometheus}"
-              },
-              "expr": "rate(metallb_layer2_responses_sent{instance=~\"$layer2instance\"}[5m])",
-              "hide": false,
-              "interval": "",
-              "legendFormat": "responses_sent instance={{instance}} ip={{ip}} ",
-              "refId": "C"
-            }
-          ],
-          "title": "ARP packets",
-          "type": "timeseries"
-        }
-      ],
-      "title": "L2",
-      "type": "row"
     }
   ],
   "refresh": "",
@@ -882,7 +754,7 @@
     ]
   },
   "timezone": "",
-  "title": "Metallb",
+  "title": "MetalLB BGP",
   "uid": "sZzUB4ymk2",
   "version": 2,
   "weekStart": ""

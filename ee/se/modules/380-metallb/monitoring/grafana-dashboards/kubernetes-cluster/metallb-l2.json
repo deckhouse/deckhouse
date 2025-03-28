@@ -156,7 +156,7 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "metallb_allocator_addresses_total{namespace=\"d8-metallb\"}",
+          "expr": "(metallb_allocator_addresses_total{job=\"l2lb-controller\"} unless metallb_allocator_addresses_total{job=\"controller\"}) > 0 and (metallb_allocator_addresses_in_use_total{job=\"l2lb-controller\"} unless metallb_allocator_addresses_in_use_total{job=\"controller\"}) > 0",
           "format": "table",
           "range": true,
           "refId": "A"
@@ -167,14 +167,14 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "metallb_allocator_addresses_in_use_total{namespace=\"d8-metallb\"}",
+          "expr": "(metallb_allocator_addresses_in_use_total{job=\"l2lb-controller\"} unless metallb_allocator_addresses_in_use_total{job=\"controller\"}) > 0",
           "format": "table",
           "hide": false,
           "range": true,
           "refId": "B"
         }
       ],
-      "title": "Pools",
+      "title": "Pools in usage",
       "transformations": [
         {
           "id": "seriesToColumns",
@@ -345,7 +345,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
-          "expr": "metallb_allocator_addresses_in_use_total{namespace=\"d8-metallb\"} / metallb_allocator_addresses_total{namespace=\"d8-metallb\"} * 100",
+          "expr": "((metallb_allocator_addresses_in_use_total{job=\"l2lb-controller\"} unless metallb_allocator_addresses_in_use_total{job=\"controller\"}) > 0) / ((metallb_allocator_addresses_total{job=\"l2lb-controller\"} unless metallb_allocator_addresses_total{job=\"controller\"}) > 0) * 100",
           "refId": "A"
         }
       ],
@@ -435,7 +435,7 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "metallb_allocator_addresses_total",
+          "expr": "(metallb_allocator_addresses_total{job=\"l2lb-controller\"} unless metallb_allocator_addresses_total{job=\"controller\"}) > 0 and (metallb_allocator_addresses_in_use_total{job=\"l2lb-controller\"} unless metallb_allocator_addresses_in_use_total{job=\"controller\"}) > 0",
           "instant": false,
           "interval": "",
           "legendFormat": "Total addresses in pool: {{pool}}",
@@ -447,7 +447,7 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "metallb_allocator_addresses_in_use_total{namespace=\"d8-metallb\"}",
+          "expr": "(metallb_allocator_addresses_in_use_total{job=\"l2lb-controller\"} unless metallb_allocator_addresses_in_use_total{job=\"controller\"}) > 0",
           "interval": "",
           "legendFormat": "Used addresses in pool: {{pool}}",
           "range": true,
@@ -515,7 +515,7 @@
           },
           "editorMode": "builder",
           "exemplar": false,
-          "expr": "sum by(pod, ip, node) (metallb_speaker_announced{namespace=\"d8-metallb\"})",
+          "expr": "sum by(pod, ip, node) (metallb_speaker_announced{protocol=\"layer2\"})",
           "format": "table",
           "instant": false,
           "legendFormat": "",
@@ -783,7 +783,7 @@
     ]
   },
   "timezone": "",
-  "title": "L2LoadBalancer",
+  "title": "MetalLB L2",
   "uid": "sZzUB4ymn2",
   "version": 2,
   "weekStart": ""
