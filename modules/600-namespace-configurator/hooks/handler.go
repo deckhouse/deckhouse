@@ -36,6 +36,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion: "v1",
 			Kind:       "Namespace",
 			// Ignore upmeter probe fake namespaces, because upmeter deletes them immediately.
+			// Ignore deckhouse and multitenancy-manager namespaces, because they are managed by Deckhouse.
 			// They do not require any labels.
 			LabelSelector: &metav1.LabelSelector{
 				MatchExpressions: []metav1.LabelSelectorRequirement{
@@ -43,7 +44,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 						Key:      "heritage",
 						Operator: metav1.LabelSelectorOpNotIn,
 						Values: []string{
-							"upmeter",
+							"upmeter", "deckhouse", "multitenancy-manager",
 						},
 					},
 				},
