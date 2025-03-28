@@ -166,11 +166,11 @@
       plk_protocol_version: "1"
       plk_ignore_labels: "name"
       summary: |
-        Module `{{ $labels.moduleName }}` is running in development mode (self-service mode).
+        Module `{{ $labels.moduleName }}` is running in self-service mode.
       description: |
-        Module `{{ $labels.moduleName }}` is running in a development mode and its state won't be reconciled after updating.
+        Module `{{ $labels.moduleName }}` is running in self-service mode. In this mode, its state is not reconciled, which prevents configuration or hook changes from being applied automatically.
 
-        To switch the module to a normal mode, edit the corresponding module config using the following command:
+        To switch the module back to normal mode, edit the corresponding ModuleConfig resource with the following command:
         
         ```bash
         kubectl edit moduleconfig {{ $labels.name }}
