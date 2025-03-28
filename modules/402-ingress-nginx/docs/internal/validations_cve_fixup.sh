@@ -206,7 +206,7 @@ data:
 EOF
 )
 
-imageRegistry=$(kubectl -n d8-system get secrets deckhouse-registry -o json | jq .data.imagesRegistry -r | base64 -d)
+imageRegistry=$(kubectl -n d8-system get deployment deckhouse -o json | jq -r .spec.template.spec.containers[0].image | awk -F ':' '{print $1}')
 shellOperatorHash=$(kubectl -n d8-system exec deployments/deckhouse -- cat modules/040-node-manager/images_digests.json | jq -r .common.shellOperator)
 image=$imageRegistry@$shellOperatorHash
 
