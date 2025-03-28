@@ -324,12 +324,14 @@ func (l *Loader) restoreAbsentModulesFromReleases(ctx context.Context) error {
 				continue
 			}
 
+			l.logger.Debug("set module version", slog.String("name", release.GetModuleVersion()), slog.String("version", moduleVersion))
+
 			err = ctrlutils.UpdateWithRetry(ctx, l.client, module, func() error {
 				module.Properties.Version = moduleVersion
 				return nil
 			})
 			if err != nil {
-				return fmt.Errorf("update the '%s' module: %w", release.Spec.ModuleName, err)
+				return fmt.Errorf("update the '%s' module: %w", release.GetModuleName(), err)
 			}
 		}
 
