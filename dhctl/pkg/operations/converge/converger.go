@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+
 	"github.com/google/uuid"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -31,7 +33,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
 // TODO(remove-global-app): Support all needed parameters in Params, remove usage of app.*
@@ -52,7 +53,7 @@ type Params struct {
 	OnCheckResult              func(*check.CheckResult) error
 	ApproveDestructiveChangeID string
 
-	TerraformContext *terraform.TerraformContext
+	InfrastructureContext *infrastructure.Context
 }
 
 type Converger struct {
@@ -188,7 +189,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 	c.lastState = nil
 	defer c.PhasedExecutionContext.Finalize(stateCache)
 
-	changesSettings := terraform.ChangeActionSettings{
+	changesSettings := infrastructure.ChangeActionSettings{
 		AutoDismissDestructive: c.AutoDismissDestructive,
 		AutoApprove:            c.AutoApprove,
 	}
@@ -201,7 +202,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 	}
 
 	convergeCtx.WithPhaseContext(c.PhasedExecutionContext).
-		WithTerraformContext(c.Params.TerraformContext)
+		WithInfrastructureContext(c.Params.InfrastructureContext)
 
 	var inLockRunner *lock.InLockRunner
 	// No need for converge-lock in commander mode for bootstrap and converge operations
@@ -234,7 +235,7 @@ func (c *Converger) AutoConverge() error {
 	}
 
 	if app.RunningNodeName == "" {
-		return fmt.Errorf("Need to pass running node name. It is may taints terraform state while converge")
+		return fmt.Errorf("Need to pass running node name. It is may taints infrastructure state while converge")
 	}
 
 	var err error
@@ -256,13 +257,13 @@ func (c *Converger) AutoConverge() error {
 	}
 
 	var convergeCtx *convergectx.Context
-	convergeCtx = convergectx.NewContext(context.Background(), kubeCl, cache.Global(), terraform.ChangeActionSettings{
+	convergeCtx = convergectx.NewContext(context.Background(), kubeCl, cache.Global(), infrastructure.ChangeActionSettings{
 		AutoDismissDestructive: c.AutoDismissDestructive,
 		AutoApprove:            c.AutoApprove,
 	})
 
 	convergeCtx.WithPhaseContext(c.PhasedExecutionContext).
-		WithTerraformContext(c.Params.TerraformContext)
+		WithInfrastructureContext(c.Params.InfrastructureContext)
 
 	inLockRunner := lock.NewInLockRunner(convergeCtx, lock.AutoConvergerIdentity).
 		// never force lock

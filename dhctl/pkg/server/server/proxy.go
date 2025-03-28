@@ -95,7 +95,7 @@ func (d *StreamDirector) Director() proxy.StreamDirector {
 
 		// Launch new process group so that signals (ex: SIGINT) are not sent also to the child process.
 		// https://stackoverflow.com/a/66261096
-		// Child process will start own child process e.g. terraform. We want them to finish normally.
+		// Child process will start own child process e.g. infrastructure utility. We want them to finish normally.
 		// Parent process should wait for all children.
 		cmd.SysProcAttr = &syscall.SysProcAttr{
 			Setpgid: true,

@@ -23,7 +23,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
 func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
@@ -38,8 +37,7 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		}
 
 		converger := converge.NewConverger(&converge.Params{
-			SSHClient:        sshClient,
-			TerraformContext: terraform.NewTerraformContext(),
+			SSHClient: sshClient,
 		})
 		_, err = converger.Converge(context.Background())
 
@@ -58,7 +56,6 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		converger := converge.NewConverger(&converge.Params{
 			AutoDismissDestructive: true,
 			AutoApprove:            true,
-			TerraformContext:       terraform.NewTerraformContext(),
 		})
 		return converger.AutoConverge()
 	})

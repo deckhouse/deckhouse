@@ -27,23 +27,23 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-var ErrNoTerraformState = errors.New("Terraform state is not found in outputs.")
+var ErrNoInfrastructureState = errors.New("Infrastructure state is not found in outputs.")
 
 // Create secret for node with group settings only.
-func CreateNodeTerraformState(ctx context.Context, kubeCl *client.KubernetesClient, nodeName, nodeGroup string, settings []byte) error {
+func CreateNodeInfrastructureState(ctx context.Context, kubeCl *client.KubernetesClient, nodeName, nodeGroup string, settings []byte) error {
 	task := actions.ManifestTask{
 		Name: fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
 		Manifest: func() interface{} {
-			return manifests.SecretWithNodeTerraformState(nodeName, nodeGroup, nil, settings)
+			return manifests.SecretWithNodeInfrastructureState(nodeName, nodeGroup, nil, settings)
 		},
 		CreateFunc: func(manifest interface{}) error {
 			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
@@ -54,19 +54,19 @@ func CreateNodeTerraformState(ctx context.Context, kubeCl *client.KubernetesClie
 			return err
 		},
 	}
-	return retry.NewLoop(fmt.Sprintf("Create Terraform state for Node %q", nodeName), 45, 10*time.Second).
+	return retry.NewLoop(fmt.Sprintf("Create infrastructure state for Node %q", nodeName), 45, 10*time.Second).
 		RunContext(ctx, task.CreateOrUpdate)
 }
 
-func SaveNodeTerraformState(ctx context.Context, kubeCl *client.KubernetesClient, nodeName, nodeGroup string, tfState, settings []byte, logger log.Logger) error {
+func SaveNodeInfrastructureState(ctx context.Context, kubeCl *client.KubernetesClient, nodeName, nodeGroup string, tfState, settings []byte, logger log.Logger) error {
 	if len(tfState) == 0 {
-		return ErrNoTerraformState
+		return ErrNoInfrastructureState
 	}
 
 	task := actions.ManifestTask{
 		Name: fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
 		Manifest: func() interface{} {
-			return manifests.SecretWithNodeTerraformState(nodeName, nodeGroup, tfState, settings)
+			return manifests.SecretWithNodeInfrastructureState(nodeName, nodeGroup, tfState, settings)
 		},
 		CreateFunc: func(manifest interface{}) error {
 			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
@@ -77,17 +77,17 @@ func SaveNodeTerraformState(ctx context.Context, kubeCl *client.KubernetesClient
 			return err
 		},
 	}
-	return retry.NewLoop(fmt.Sprintf("Save Terraform state for Node %q", nodeName), 45, 10*time.Second).
+	return retry.NewLoop(fmt.Sprintf("Save infrastructure state for Node %q", nodeName), 45, 10*time.Second).
 		WithLogger(logger).RunContext(ctx, task.CreateOrUpdate)
 }
 
-func SaveMasterNodeTerraformState(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string, tfState, devicePath []byte) error {
+func SaveMasterNodeInfrastructureState(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string, tfState, devicePath []byte) error {
 	if len(tfState) == 0 {
-		return ErrNoTerraformState
+		return ErrNoInfrastructureState
 	}
 
-	getTerraformStateManifest := func() interface{} {
-		return manifests.SecretWithNodeTerraformState(nodeName, global.MasterNodeGroupName, tfState, nil)
+	getInfrastructureStateManifest := func() interface{} {
+		return manifests.SecretWithNodeInfrastructureState(nodeName, global.MasterNodeGroupName, tfState, nil)
 	}
 	getDevicePathManifest := func() interface{} {
 		return manifests.SecretMasterDevicePath(nodeName, devicePath)
@@ -96,7 +96,7 @@ func SaveMasterNodeTerraformState(ctx context.Context, kubeCl *client.Kubernetes
 	tasks := []actions.ManifestTask{
 		{
 			Name:     fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
-			Manifest: getTerraformStateManifest,
+			Manifest: getInfrastructureStateManifest,
 			CreateFunc: func(manifest interface{}) error {
 				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 				return err
@@ -130,7 +130,7 @@ func SaveMasterNodeTerraformState(ctx context.Context, kubeCl *client.Kubernetes
 		},
 	}
 
-	return retry.NewLoop(fmt.Sprintf("Save Terraform state for master Node %s", nodeName), 45, 10*time.Second).RunContext(ctx, func() error {
+	return retry.NewLoop(fmt.Sprintf("Save infrastructure state for master Node %s", nodeName), 45, 10*time.Second).RunContext(ctx, func() error {
 		var allErrs *multierror.Error
 		for _, task := range tasks {
 			if err := task.CreateOrUpdate(); err != nil {
@@ -141,14 +141,14 @@ func SaveMasterNodeTerraformState(ctx context.Context, kubeCl *client.Kubernetes
 	})
 }
 
-func SaveClusterTerraformState(ctx context.Context, kubeCl *client.KubernetesClient, outputs *terraform.PipelineOutputs) error {
-	if outputs == nil || len(outputs.TerraformState) == 0 {
-		return ErrNoTerraformState
+func SaveClusterInfrastructureState(ctx context.Context, kubeCl *client.KubernetesClient, outputs *infrastructure.PipelineOutputs) error {
+	if outputs == nil || len(outputs.InfrastructureState) == 0 {
+		return ErrNoInfrastructureState
 	}
 
 	task := actions.ManifestTask{
 		Name:     `Secret "d8-cluster-terraform-state"`,
-		Manifest: func() interface{} { return manifests.SecretWithTerraformState(outputs.TerraformState) },
+		Manifest: func() interface{} { return manifests.SecretWithInfrastructureState(outputs.InfrastructureState) },
 		CreateFunc: func(manifest interface{}) error {
 			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 			return err
@@ -159,7 +159,7 @@ func SaveClusterTerraformState(ctx context.Context, kubeCl *client.KubernetesCli
 		},
 	}
 
-	err := retry.NewLoop("Save Cluster Terraform state", 45, 10*time.Second).RunContext(ctx, task.CreateOrUpdate)
+	err := retry.NewLoop("Save Cluster infrastructure state", 45, 10*time.Second).RunContext(ctx, task.CreateOrUpdate)
 	if err != nil {
 		return err
 	}
@@ -185,16 +185,16 @@ func SaveClusterTerraformState(ctx context.Context, kubeCl *client.KubernetesCli
 	})
 }
 
-func DeleteTerraformState(ctx context.Context, kubeCl *client.KubernetesClient, secretName string) error {
-	return retry.NewLoop(fmt.Sprintf("Delete Terraform state %s", secretName), 45, 10*time.Second).
+func DeleteInfrastructureState(ctx context.Context, kubeCl *client.KubernetesClient, secretName string) error {
+	return retry.NewLoop(fmt.Sprintf("Delete infrastructure state %s", secretName), 45, 10*time.Second).
 		RunContext(ctx, func() error {
 			return kubeCl.CoreV1().Secrets("d8-system").Delete(ctx, secretName, metav1.DeleteOptions{})
 		})
 }
 
-// NewClusterStateSaver returns StateSaver that saves intermediate terraform state to Secret.
+// NewClusterStateSaver returns StateSaver that saves intermediate infrastructure state to Secret.
 // ErrNoIntermediateTerraformState is ignored because state file may become zero-sized during
-// terraform apply.
+// infrastructure apply.
 //
 // got FS event "/tmp/dhctl/static-node-dhctl.043483477.tfstate": WRITE
 // '/tmp/dhctl/static-node-dhctl.043483477.tfstate' stat: 6492 bytes, mode: -rw-------
@@ -209,8 +209,8 @@ func DeleteTerraformState(ctx context.Context, kubeCl *client.KubernetesClient, 
 // '/tmp/dhctl/static-node-dhctl.043483477.tfstate' stat: 8840 bytes, mode: -rw-------
 
 var (
-	_ terraform.SaverDestination = &ClusterStateSaver{}
-	_ terraform.SaverDestination = &NodeStateSaver{}
+	_ infrastructure.SaverDestination = &ClusterStateSaver{}
+	_ infrastructure.SaverDestination = &NodeStateSaver{}
 )
 
 type ClusterStateSaver struct {
@@ -223,21 +223,21 @@ func NewClusterStateSaver(getter kubernetes.KubeClientProvider) *ClusterStateSav
 	}
 }
 
-func (s *ClusterStateSaver) SaveState(outputs *terraform.PipelineOutputs) error {
-	if outputs == nil || len(outputs.TerraformState) == 0 {
+func (s *ClusterStateSaver) SaveState(outputs *infrastructure.PipelineOutputs) error {
+	if outputs == nil || len(outputs.InfrastructureState) == 0 {
 		return nil
 	}
 
 	task := actions.ManifestTask{
 		Name: `Secret "d8-cluster-terraform-state"`,
 		PatchData: func() interface{} {
-			return manifests.PatchWithTerraformState(outputs.TerraformState)
+			return manifests.PatchWithInfrastructureState(outputs.InfrastructureState)
 		},
 		PatchFunc: func(patch []byte) error {
 			// MergePatch is used because we need to replace one field in "data".
 			_, err := s.getter.KubeClient().CoreV1().Secrets("d8-system").Patch(
 				context.TODO(),
-				manifests.TerraformClusterStateName,
+				manifests.InfrastructureClusterStateName,
 				types.MergePatchType,
 				patch,
 				metav1.PatchOptions{},
@@ -247,7 +247,7 @@ func (s *ClusterStateSaver) SaveState(outputs *terraform.PipelineOutputs) error 
 	}
 
 	log.DebugF("Intermediate save base infra in cluster...\n")
-	err := retry.NewSilentLoop("Save Cluster intermediate Terraform state", 45, 10*time.Second).Run(task.Patch)
+	err := retry.NewSilentLoop("Save Cluster intermediate infrastructure state", 45, 10*time.Second).Run(task.Patch)
 	msg := "Intermediate base infra was saved in cluster\n"
 	if err != nil {
 		msg = fmt.Sprintf("Intermediate base infra was not saved in cluster: %v\n", err)
@@ -274,37 +274,37 @@ func NewNodeStateSaver(getter kubernetes.KubeClientProvider, nodeName, nodeGroup
 }
 
 // SaveState is a method to patch Secret with node state.
-// It patches a "node-tf-state" key with terraform state or create a new secret if new node is created.
+// It patches a "node-tf-state" key with infrastructure state or create a new secret if new node is created.
 //
 // settings can be nil for master node.
 //
 // The difference between master node and static node: master node has
 // no key "node-group-settings.json" with group settings.
-func (s *NodeStateSaver) SaveState(outputs *terraform.PipelineOutputs) error {
-	if outputs == nil || len(outputs.TerraformState) == 0 {
+func (s *NodeStateSaver) SaveState(outputs *infrastructure.PipelineOutputs) error {
+	if outputs == nil || len(outputs.InfrastructureState) == 0 {
 		return nil
 	}
 
 	task := actions.ManifestTask{
 		Name: fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, s.nodeName),
 		Manifest: func() interface{} {
-			return manifests.SecretWithNodeTerraformState(s.nodeName, s.nodeGroup, outputs.TerraformState, s.nodeGroupSettings)
+			return manifests.SecretWithNodeInfrastructureState(s.nodeName, s.nodeGroup, outputs.InfrastructureState, s.nodeGroupSettings)
 		},
 		CreateFunc: func(manifest interface{}) error {
 			_, err := s.getter.KubeClient().CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
 			return err
 		},
 		PatchData: func() interface{} {
-			return manifests.PatchWithNodeTerraformState(outputs.TerraformState)
+			return manifests.PatchWithInfrastructureState(outputs.InfrastructureState)
 		},
 		PatchFunc: func(patchData []byte) error {
-			secretName := manifests.SecretNameForNodeTerraformState(s.nodeName)
+			secretName := manifests.SecretNameForNodeInfrastructureState(s.nodeName)
 			// MergePatch is used because we need to replace one field in "data".
 			_, err := s.getter.KubeClient().CoreV1().Secrets("d8-system").Patch(context.TODO(), secretName, types.MergePatchType, patchData, metav1.PatchOptions{})
 			return err
 		},
 	}
-	taskName := fmt.Sprintf("Save intermediate Terraform state for Node %q", s.nodeName)
+	taskName := fmt.Sprintf("Save intermediate infrastructure state for Node %q", s.nodeName)
 	log.DebugF("Intermediate save state for node %s in cluster...\n", s.nodeName)
 	err := retry.NewSilentLoop(taskName, 45, 10*time.Second).Run(task.PatchOrCreate)
 	msg := fmt.Sprintf("Intermediate state for node %s was saved in cluster\n", s.nodeName)

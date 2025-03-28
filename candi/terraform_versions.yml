@@ -1,7 +1,9 @@
 # Keep this versions in sync with candi/cloud-providers/*/terraform-modules/versions.tf
 # and ee/candi/cloud-providers/*/terraform-modules/versions.tf
 
-version: 0.14.8
+terraform: 0.14.8
+
+opentofu: 1.9.0
 
 aws:
   namespace: hashicorp
@@ -69,6 +71,7 @@ yandex:
   artifact: terraform-provider-yandex
   artifactBinary: terraform-provider-yandex
   destinationBinary: terraform-provider-yandex
+  useOpentofu: true
 
 decort:
   namespace: terraform-provider-decort

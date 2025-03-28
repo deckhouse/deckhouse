@@ -22,13 +22,14 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
 type Params struct {
@@ -38,7 +39,7 @@ type Params struct {
 	CommanderUUID uuid.UUID
 	*commander.CommanderModeParams
 
-	TerraformContext *terraform.TerraformContext
+	InfrastructureContext *infrastructure.Context
 
 	KubeClient *client.KubernetesClient // optional
 }
@@ -69,6 +70,9 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, error) {
 	}
 
 	metaConfig, err := commander.ParseMetaConfig(c.StateCache, c.Params.CommanderModeParams)
+	if c.InfrastructureContext == nil {
+		c.InfrastructureContext = infrastructure.NewContextWithProvider(infrastructureprovider.ExecutorProvider(metaConfig))
+	}
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse meta configuration: %w", err)
 	}
@@ -88,7 +92,7 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, error) {
 	}
 
 	if metaConfig.ClusterType == config.CloudClusterType {
-		status, statusDetails, err := c.checkInfra(ctx, kubeCl, metaConfig, c.TerraformContext)
+		status, statusDetails, err := c.checkInfra(ctx, kubeCl, metaConfig, c.InfrastructureContext)
 		if err != nil {
 			return nil, fmt.Errorf("unable to check infra state: %w", err)
 		}
@@ -143,9 +147,9 @@ func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.Kuberne
 	return CheckStatusOutOfSync, nil
 }
 
-func (c *Checker) checkInfra(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraformContext *terraform.TerraformContext) (CheckStatus, *Statistics, error) {
+func (c *Checker) checkInfra(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, infrastructureContext *infrastructure.Context) (CheckStatus, *Statistics, error) {
 	stat, err := CheckState(
-		ctx, kubeCl, metaConfig, terraformContext,
+		ctx, kubeCl, metaConfig, infrastructureContext,
 		CheckStateOptions{
 			CommanderMode: c.CommanderMode,
 			StateCache:    c.StateCache,
