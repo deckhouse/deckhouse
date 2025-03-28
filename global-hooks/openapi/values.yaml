@@ -222,7 +222,6 @@ properties:
             type: string
             description: |
               Registry mode
-            enum: [Indirect, Direct]
             x-examples: [ "Direct" ]
       tags:
         type: object
