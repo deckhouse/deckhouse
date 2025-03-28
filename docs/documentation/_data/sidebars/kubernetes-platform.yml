@@ -299,33 +299,13 @@ entries:
                     ru: Обзор
                   url: /admin/configuration/logging/
                 - title:
-                    en: Log delivery
-                    ru: Доставка логов
-                  folders:
-                    - title:
-                        en: How log delivery works
-                        ru: Как устроена доставка логов
-                      url: /admin/configuration/logging/log-shipper/overview.html
-                    - title:
-                        en: Configuration examples
-                        ru: Примеры конфигурации
-                      url: /admin/configuration/logging/log-shipper/configuration-examples.html
-                    - title:
-                        en: FAQ
-                        ru: FAQ
-                      url: /admin/configuration/logging/log-shipper/faq.html
+                    en: Collection and delivery
+                    ru: Сбор и доставка
+                  url: /admin/configuration/logging/delivery.html
                 - title:
-                    en: Short-term log storage
-                    ru: Кратковременное хранение логов
-                  folders:
-                    - title:
-                        en: How short-term storage works
-                        ru: Как устроено кратковременное хранение
-                      url: /admin/configuration/logging/loki/overview.html
-                    - title:
-                        en: Configuration examples
-                        ru: Примеры конфигурации
-                      url: /admin/configuration/logging/loki/configuration-examples.html
+                    en: Short-term storage
+                    ru: Кратковременное хранение
+                  url: /admin/configuration/logging/storage.html
             - title:
                 en: Multitenancy
                 ru: Мультенантность
@@ -428,6 +408,14 @@ entries:
             ru: Мультитенантность
           url: /user/multitenancy-user.html
         - title:
+            en: Monitoring
+            ru: Мониторинг
+          folders:
+            - title:
+                en: Collecting application logs
+                ru: Сбор логов из приложения
+              url: /user/monitoring/logging.html
+        - title:
             en: Containerized applications
             ru: Контейнеризированные приложения
           folders:
@@ -480,6 +468,10 @@ entries:
             en: Updating
             ru: Обновление
           url: /architecture/updating.html
+        - title:
+            en: Logging
+            ru: Логирование
+          url: /architecture/logging.html
         - title:
             en: Functional specifications
             ru: Функциональные характеристики
