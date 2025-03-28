@@ -206,9 +206,10 @@ data:
 EOF
 )
 
-imageRegistry=$(kubectl -n d8-system get deployment deckhouse -o json | jq -r .spec.template.spec.containers[0].image | awk -F ':' '{print $1}')
+registryAddress=$(kubectl -n d8-system get secrets deckhouse-registry -o json | jq .data.address -r | base64 -d)
+registryPath=$(kubectl -n d8-system get secrets deckhouse-registry -o json | jq .data.path -r | base64 -d)
 shellOperatorHash=$(kubectl -n d8-system exec deployments/deckhouse -- cat modules/040-node-manager/images_digests.json | jq -r .common.shellOperator)
-image=$imageRegistry@$shellOperatorHash
+image=$registryAddress$registryPath@$shellOperatorHash
 
 echo "Creating fixer deployment using \"$image\" as the image for the fixer"
 
