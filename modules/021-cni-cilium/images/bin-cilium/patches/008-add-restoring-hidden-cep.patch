@@ -1,15 +1,38 @@
-From a7fd86be784c8f7eae23381f3c10448832ae27be Mon Sep 17 00:00:00 2001
+From 57aa5ec8cf918045ea11067ed1c3ad2ac6120566 Mon Sep 17 00:00:00 2001
 From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date: Fri, 28 Mar 2025 15:13:24 +0300
 Subject: [PATCH] add: restoring hidden cep when more priority cep was removed
 
 Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 ---
- operator/watchers/cilium_endpoint.go | 19 ++++++++++++++++---
- 1 file changed, 16 insertions(+), 3 deletions(-)
+ operator/pkg/ciliumendpointslice/manager.go |  7 ++++++-
+ operator/watchers/cilium_endpoint.go        | 20 +++++++++++++++++---
+ 2 files changed, 23 insertions(+), 4 deletions(-)
 
+diff --git a/operator/pkg/ciliumendpointslice/manager.go b/operator/pkg/ciliumendpointslice/manager.go
+index 3e618b2478..7f17686b9f 100644
+--- a/operator/pkg/ciliumendpointslice/manager.go
++++ b/operator/pkg/ciliumendpointslice/manager.go
+@@ -158,11 +158,16 @@ func (c *cesMgr) addCEPtoCES(cep *cilium_v2.CoreCiliumEndpoint, ces *cesTracker,
+ 		logfields.CEPName:  cep.Name,
+ 		logfields.CESName:  ces.ces.GetName(),
+ 		logfields.CEPCount: len(ces.ces.Endpoints),
+-	}).Debug("Queueing CEP in the CES")
++	}).Debug("Queueing CEP in the CES DEBUG")
+ 
+ 	for i, ep := range ces.ces.Endpoints {
+ 		if GetCEPNameFromCCEP(&ep, ces.ces.Namespace) == GetCEPNameFromCCEP(cep, ces.ces.Namespace) {
+ 			if cep.DeepEqual(&ep) {
++				log.WithFields(logrus.Fields{
++					logfields.CEPName:  cep.Name,
++					logfields.CESName:  ces.ces.GetName(),
++					logfields.CEPCount: len(ces.ces.Endpoints),
++				}).Debug("DEBUG deep equal is bad - prevent insert")
+ 				return
+ 			}
+ 			// Remove the matched cep from ces endpoints list.
 diff --git a/operator/watchers/cilium_endpoint.go b/operator/watchers/cilium_endpoint.go
-index cbba866ac2..9633605397 100644
+index cbba866ac2..8354511bea 100644
 --- a/operator/watchers/cilium_endpoint.go
 +++ b/operator/watchers/cilium_endpoint.go
 @@ -354,11 +354,12 @@ func equalCeps(cep0, cep1 *cilium_api_v2.CiliumEndpoint) bool {
@@ -45,7 +68,7 @@ index cbba866ac2..9633605397 100644
  }
  
  func endpointUpdated(cep *cilium_api_v2.CiliumEndpoint) {
-@@ -395,9 +405,12 @@ func endpointUpdated(cep *cilium_api_v2.CiliumEndpoint) {
+@@ -395,9 +405,13 @@ func endpointUpdated(cep *cilium_api_v2.CiliumEndpoint) {
  }
  
  func endpointDeleted(cep *cilium_api_v2.CiliumEndpoint) {
@@ -54,6 +77,7 @@ index cbba866ac2..9633605397 100644
  
  	cesController.Manager.RemoveCEPFromCache(ces.GetCEPNameFromCCEP(k8s.ConvertCEPToCoreCEP(cep), cep.Namespace), ces.DefaultCESSyncTime)
 +	if hiddenCep != nil {
++		cesController.Manager.RemoveCEPFromCache(ces.GetCEPNameFromCCEP(k8s.ConvertCEPToCoreCEP(hiddenCep), hiddenCep.Namespace), ces.DefaultCESSyncTime)
 +		cesController.Manager.InsertCEPInCache(k8s.ConvertCEPToCoreCEP(hiddenCep), hiddenCep.Namespace, ces.DefaultCESSyncTime)
 +	}
  }
