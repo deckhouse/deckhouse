@@ -303,13 +303,21 @@ entries:
                     ru: Введение
                   url: /admin/monitoring-overview.html
             - title:
-                en: Platform journaling
-                ru: Журналирование платформы
+                en: Logging
+                ru: Логирование
               folders:
                 - title:
                     en: Overview
-                    ru: Введение
-                  url: /admin/journaling-overview.html
+                    ru: Обзор
+                  url: /admin/configuration/logging/
+                - title:
+                    en: Collection and delivery
+                    ru: Сбор и доставка
+                  url: /admin/configuration/logging/delivery.html
+                - title:
+                    en: Short-term storage
+                    ru: Кратковременное хранение
+                  url: /admin/configuration/logging/storage.html
             - title:
                 en: Multitenancy
                 ru: Мультенантность
@@ -412,6 +420,14 @@ entries:
             ru: Мультитенантность
           url: /user/multitenancy-user.html
         - title:
+            en: Monitoring
+            ru: Мониторинг
+          folders:
+            - title:
+                en: Collecting application logs
+                ru: Сбор логов из приложения
+              url: /user/monitoring/logging.html
+        - title:
             en: Containerized applications
             ru: Контейнеризированные приложения
           folders:
@@ -464,6 +480,10 @@ entries:
             en: Updating
             ru: Обновление
           url: /architecture/updating.html
+        - title:
+            en: Logging
+            ru: Логирование
+          url: /architecture/logging.html
         - title:
             en: Functional specifications
             ru: Функциональные характеристики
