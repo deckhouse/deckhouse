@@ -44,7 +44,21 @@ spec:
                 enabled:
                   type: boolean
                   description: |
-                    Enables or disables a module.
+                    Enables or disables the module.
+                  x-doc-examples: ['false']
+                selfService:
+                  type: boolean
+                  description: |
+                    Enables self-service mode for developing or tweaking the module.
+                    
+                    In this mode:
+                    
+                    - Configuration or hook changes are not reconciled, which prevents resources from being updated automatically.
+                    - Resource monitoring is disabled, which prevents deleted resources from being restored.
+                    - All the module's resources are labeled with `selfService: true`.
+                    - The `ModuleIsInSelfServiceMode` alert is triggered.
+                    
+                    If Deckhouse restarts, the module reapplies its last known state once and then continues in self-service mode.
                   x-doc-examples: ['false']
                 version:
                   type: number
