@@ -1,0 +1,45 @@
+entries:
+    - title:
+        en: Overview
+        ru: Обзор
+      url: /delivery-kit/documentation/
+    - title:
+        en: Functional specifications
+        ru: Функциональные характеристики
+      folders:
+        - title:
+            en: Overview
+            ru: Обзор
+          url: /delivery-kit/documentation/specifications/
+    - title:
+        en: Administration guide
+        ru: Руководство администратора
+      folders:
+        - title:
+            en: Overview
+            ru: Обзор
+          url: /delivery-kit/documentation/admin/
+        - title:
+            en: Install
+            ru: Установка
+          url: /delivery-kit/documentation/admin/install.html
+    - title:
+        en: User guide
+        ru: Руководство пользователя
+      folders:
+        - title:
+            en: Overview
+            ru: Обзор
+          url: /delivery-kit/documentation/user/
+    - title:
+        en: Reference
+        ru: Справка
+      folders:
+        - title:
+            en: FAQ
+            ru: FAQ
+          url: /delivery-kit/documentation/reference/faq.html
+        - title:
+            en: Examples
+            ru: Примеры
+          url: /delivery-kit/documentation/reference/examples.html

@@ -114,7 +114,17 @@ defaults:
       documentation_state: develop
       search_bage_enabled: true
       sidebar: code
-      sitemap_include: false    
+      sitemap_include: false
+  - scope:
+      path: "pages/delivery-kit"
+    values:
+      toc_in_sidebar: false
+      toc: false
+      product_code: code
+      documentation_state: develop
+      search_bage_enabled: true
+      sidebar: delivery-kit
+      sitemap_include: false
   - scope:
       path: "pages/virtualization-platform"
     values:
