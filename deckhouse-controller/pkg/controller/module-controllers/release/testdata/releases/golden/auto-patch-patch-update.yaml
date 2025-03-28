@@ -24,7 +24,6 @@ kind: ModuleRelease
 metadata:
   annotations:
     modules.deckhouse.io/approved: "true"
-    modules.deckhouse.io/isUpdating: "false"
     modules.deckhouse.io/notified: "true"
   creationTimestamp: null
   labels:
