@@ -15,6 +15,7 @@
 package frontend
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"os"
@@ -345,7 +346,7 @@ func (k *KubeProxy) runKubeProxy(
 	})
 
 	log.DebugF("[%d] Start proxy command\n", startID)
-	err = proxy.Start()
+	err = proxy.Start(context.TODO())
 	if err != nil {
 		log.DebugF("[%d] Start proxy command error: %v\n", startID, err)
 		return nil, "", fmt.Errorf("start kubectl proxy: %w", err)

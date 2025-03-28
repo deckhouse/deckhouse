@@ -303,7 +303,7 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 		return global.ErrConvergeInterrupted
 	}
 
-	err = entity.SaveMasterNodeTerraformState(ctx.Ctx(), ctx.KubeClient(), nodeName, outputs.TerraformState, []byte(outputs.KubeDataDevicePath))
+	err = entity.SaveMasterNodeTerraformState(ctx.Ctx(), ctx.KubeClient(), nodeName, outputs.TerraformState, outputs.GetDataDevices())
 	if err != nil {
 		return err
 	}

@@ -25,10 +25,11 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"bashible-apiserver/pkg/template/registry"
 
 	"github.com/flant/kube-client/client"
 	"github.com/fsnotify/fsnotify"
@@ -127,17 +128,17 @@ func NewContext(ctx context.Context, stepsStorage *StepsStorage, kubeClient clie
 
 	// Bashible context and its dynamic update
 	contextSecretFactory := newBashibleInformerFactory(kubeClient, resyncTimeout, "d8-cloud-instance-manager", "app=bashible-apiserver")
-	registrySecretFactory := newBashibleInformerFactory(kubeClient, resyncTimeout, "d8-system", "app=registry")
 	nodeUserCRDFactory := newNodeUserInformerFactory(kubeClient, resyncTimeout)
 	moduleSourcesFactory := newModuleSourcesInformerFactory(kubeClient, resyncTimeout, "app!=deckhouse,heritage!=deckhouse,module!=deckhouse")
 
 	contextSecretUpdates := c.subscribe(ctx, contextSecretFactory, contextSecretName)
-	registrySecretUpdates := c.subscribe(ctx, registrySecretFactory, registrySecretName)
+
+	registryDataUpdates := registry.SetupAndStartManager(ctx)
 
 	c.subscribeOnNodeUserCRD(ctx, nodeUserCRDFactory)
 	c.subscribeOnModuleSource(ctx, moduleSourcesFactory)
 
-	go c.onSecretsUpdate(ctx, contextSecretUpdates, registrySecretUpdates)
+	go c.onSecretsUpdate(ctx, contextSecretUpdates, registryDataUpdates)
 
 	return &c
 }
@@ -288,7 +289,7 @@ func (c *BashibleContext) runFilesWatcher() {
 	}
 }
 
-func (c *BashibleContext) onSecretsUpdate(ctx context.Context, contextSecretC, registrySecretC chan map[string][]byte) {
+func (c *BashibleContext) onSecretsUpdate(ctx context.Context, contextSecretC chan map[string][]byte, registryDataC chan registry.RegistryDataWithHash) {
 	for {
 		select {
 		case data := <-contextSecretC:
@@ -310,25 +311,13 @@ func (c *BashibleContext) onSecretsUpdate(ctx context.Context, contextSecretC, r
 			c.saveChecksum(dataKey, checksum)
 			c.update("secret: bashible-apiserver-context")
 
-		case data := <-registrySecretC:
-			var input registryInputData
-			hash := sha256.New()
-			arr := make([]string, 0, len(data))
-			for k, v := range data {
-				arr = append(arr, k+"_"+string(v))
-			}
-			sort.Strings(arr)
-			for _, v := range arr {
-				hash.Write([]byte(v))
-			}
-			checksum := fmt.Sprintf("%x", hash.Sum(nil))
-			if c.isChecksumEqual("registry", checksum) {
+		case data := <-registryDataC:
+			if c.isChecksumEqual("registry", data.HashSum) {
 				continue
 			}
-			input.FromMap(data)
-			c.contextBuilder.SetRegistryData(input.toRegistry())
+			c.contextBuilder.SetRegistryData(data.RegistryData)
 			c.registrySynced = true
-			c.saveChecksum("registry", checksum)
+			c.saveChecksum("registry", data.HashSum)
 			c.update("secret: registry")
 
 		case <-c.stepsStorage.OnNodeGroupConfigurationsChanged():

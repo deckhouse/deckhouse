@@ -15,6 +15,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -45,7 +46,7 @@ type SSHAgent struct {
 var SSHAgentAuthSockRe = regexp.MustCompile(`SSH_AUTH_SOCK=(.*?);`)
 
 // Start runs ssh-agent as a subprocess, gets SSH_AUTH_SOCK path and
-func (a *SSHAgent) Start() error {
+func (a *SSHAgent) Start(ctx context.Context) error {
 	a.agentCmd = exec.Command(SSHAgentPath, "-D")
 	a.agentCmd.Env = os.Environ()
 	a.agentCmd.Dir = "/"
@@ -73,7 +74,7 @@ func (a *SSHAgent) Start() error {
 		log.InfoF("SSH-agent process exited, now stop.\n")
 	})
 
-	err := a.Executor.Start()
+	err := a.Executor.Start(ctx)
 	if err != nil {
 		a.agentCmd = nil
 		return fmt.Errorf("start ssh-agent subprocess: %v", err)
