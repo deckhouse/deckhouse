@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"encoding/json"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -59,6 +60,8 @@ const (
 )
 
 var (
+	ModuleReleaseLabelDeployed = strings.ToLower(ModuleReleasePhaseDeployed)
+
 	ModuleReleaseGVR = schema.GroupVersionResource{
 		Group:    SchemeGroupVersion.Group,
 		Version:  SchemeGroupVersion.Version,
