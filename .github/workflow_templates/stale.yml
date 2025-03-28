@@ -18,8 +18,11 @@ on:
     - cron: '30 9 * * *'
 
 jobs:
+{!{ tmpl.Exec "skip_tests_repos" . | strings.Indent 2 }!}
   stale:
     runs-on: ubuntu-latest
+    needs:
+      - skip_tests_repos
     steps:
     - uses: actions/stale@v7
       with:
