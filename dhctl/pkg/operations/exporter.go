@@ -278,6 +278,7 @@ func (c *ConvergeExporter) recordStatistic(statistic *check.Statistics) {
 
 	if statistic.TerraformVersion != nil {
 		c.GaugeMetrics["terraform_current_version"].WithLabelValues(statistic.TerraformVersion.CurrentVersion).Set(1)
+		c.GaugeMetrics["terraform_state_version"].Reset()
 		c.GaugeMetrics["terraform_state_version"].WithLabelValues(statistic.TerraformVersion.InStateVersion).Set(1)
 	}
 
