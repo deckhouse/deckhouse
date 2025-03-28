@@ -227,8 +227,8 @@ The IngressNginxController is deployed using DaemonSet. DaemonSet does not provi
 
 Notes:
 
-* The minimum actual number of ingressNginxController replicas cannot be less than the minimum number of nodes in the NodeGroup where ingressNginxController is deployed.
-* The maximum actual number of ingressNginxController replicas cannot be greater than the maximum number of nodes in the NodeGroup where ingressNginxController is deployed.
+- The minimum actual number of ingressNginxController replicas cannot be less than the minimum number of nodes in the NodeGroup where ingressNginxController is deployed.
+- The maximum actual number of ingressNginxController replicas cannot be greater than the maximum number of nodes in the NodeGroup where ingressNginxController is deployed.
 
 ## How to use IngressClass with IngressClassParameters?
 

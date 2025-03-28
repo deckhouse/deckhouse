@@ -6,7 +6,7 @@ properties:
     type: object
     default: {}
     x-required-for-helm:
-    - ingressControllers
+      - ingressControllers
     properties:
       admissionCertificate:
         type: object
@@ -18,15 +18,15 @@ properties:
         properties:
           ca:
             type: string
-            x-examples: [ "testca" ]
+            x-examples: ["testca"]
           key:
             type: string
-            x-examples: [ "testkey" ]
+            x-examples: ["testkey"]
           cert:
             type: string
-            x-examples: [ "testcrt" ]
+            x-examples: ["testcrt"]
       nginxAuthTLS:
-        type: ['null', array]
+        type: ["null", array]
         default: []
         items:
           type: object
@@ -52,7 +52,7 @@ properties:
                   type: string
                   x-examples: ["---certificate-string---"]
       ingressControllers:
-        type: ['null', array]
+        type: ["null", array]
         default: []
         items:
           type: object
@@ -76,7 +76,7 @@ properties:
                   x-examples: ["HostWithFailover"]
                 controllerVersion:
                   type: string
-                  x-examples: ["1.9", "1.10"]
+                  x-examples: ["1.9", "1.10", "1.12"]
                 enableIstioSidecar:
                   type: boolean
                 waitLoadBalancerOnTerminating:
@@ -95,33 +95,33 @@ properties:
                   description: |
                     Custom annotations for pods nginx controller.
                 nodeSelector:
-                    type: object
-                    additionalProperties:
-                      type: string
-                    description: |
-                      The same as the `spec.nodeSelector` pod parameter in Kubernetes.
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: |
+                    The same as the `spec.nodeSelector` pod parameter in Kubernetes.
 
-                      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
                 tolerations:
-                    type: array
-                    description: |
-                      The same as `spec.tolerations` for the Kubernetes pod.
+                  type: array
+                  description: |
+                    The same as `spec.tolerations` for the Kubernetes pod.
 
-                      Use [automatic](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling) if not specified. Set `false` to turn off automatic.
-                    items:
-                      type: object
-                      properties:
-                        effect:
-                          type: string
-                        key:
-                          type: string
-                        operator:
-                          type: string
-                        tolerationSeconds:
-                          type: integer
-                          format: int64
-                        value:
-                          type: string
+                    Use [automatic](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling) if not specified. Set `false` to turn off automatic.
+                  items:
+                    type: object
+                    properties:
+                      effect:
+                        type: string
+                      key:
+                        type: string
+                      operator:
+                        type: string
+                      tolerationSeconds:
+                        type: integer
+                        format: int64
+                      value:
+                        type: string
                 loadBalancer:
                   type: object
                   default: {}
@@ -311,7 +311,7 @@ properties:
       upmeterDiscovery:
         type: object
         required:
-        - controllerNames
+          - controllerNames
         properties:
           controllerNames:
             type: array
