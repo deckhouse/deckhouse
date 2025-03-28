@@ -33,7 +33,7 @@ import (
 )
 
 var _ = Describe("ingress-nginx :: hooks :: deprecated_geoip_version ::", func() {
-	f := HookExecutionConfigInit(`{"ingressNginx":{"defaultControllerVersion": "1.9", "internal": {}}}`, "")
+	f := HookExecutionConfigInit(`{"ingressNginx":{"defaultControllerVersion": "1.10", "internal": {}}}`, "")
 	f.RegisterCRD("deckhouse.io", "v1", "IngressNginxController", true)
 
 	Context("An empty cluster", func() {
@@ -64,7 +64,7 @@ kind: IngressNginxController
 metadata:
   name: first
 spec:
-  controllerVersion: "1.10"
+  controllerVersion: "1.12"
   ingressClass: "test"
 `))
 			f.BindingContexts.Set(f.GenerateScheduleContext("0 * * * *"))
@@ -92,7 +92,7 @@ kind: IngressNginxController
 metadata:
   name: first
 spec:
-  controllerVersion: "1.10"
+  controllerVersion: "1.12"
   ingressClass: "test"
 ---
 apiVersion: deckhouse.io/v1
@@ -100,7 +100,7 @@ kind: IngressNginxController
 metadata:
   name: second
 spec:
-  controllerVersion: "1.9"
+  controllerVersion: "1.10"
   ingressClass: "test"
 `))
 			err := createNs(d8IngressNginxNamespace)
@@ -156,7 +156,7 @@ kind: IngressNginxController
 metadata:
   name: second
 spec:
-  controllerVersion: "1.9"
+  controllerVersion: "1.10"
   ingressClass: "test"
 `))
 			err := createNs(d8IngressNginxNamespace)
@@ -242,7 +242,7 @@ kind: IngressNginxController
 metadata:
   name: second
 spec:
-  controllerVersion: "1.9"
+  controllerVersion: "1.10"
   ingressClass: "test"
 `))
 			err := createNs(d8IngressNginxNamespace)

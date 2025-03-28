@@ -61,7 +61,7 @@ var (
 	ingressNamespace        = "d8-ingress-nginx"
 	ingressAnnotationPrefix = "nginx.ingress.kubernetes.io/"
 
-	eolVersion = semver.MustParse("1.10")
+	eolVersion = semver.MustParse("1.12")
 
 	geoipVarsRegexp = regexp.MustCompile(`\$geoip_(country_(code3|code|name)|area_code|city_continent_code|city_country_(code3|code|name)|dma_code|latitude|longitude|region|region_name|city|postal_code|org)([^_a-zA-Z0-9]|$)+`)
 
