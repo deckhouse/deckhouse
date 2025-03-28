@@ -135,7 +135,7 @@ func (c *ConvergeExporter) registerMetrics() {
 		[]string{"version"},
 	)
 	prometheus.MustRegister(terraformStateVersionVec)
-	c.GaugeMetrics["terraform_version"] = terraformStateVersionVec
+	c.GaugeMetrics["terraform_state_version"] = terraformStateVersionVec
 
 	clusterStateVec := prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: "candi",
