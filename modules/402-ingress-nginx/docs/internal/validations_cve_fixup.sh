@@ -206,10 +206,11 @@ data:
 EOF
 )
 
-shellOperatorImage=$(kubectl -n d8-system exec svc/deckhouse-leader -- deckhouse-controller global values --output=json | jq -r '.modulesImages.registry.base, .modulesImages.digests.common.shellOperator' | sed ':a;N;$!ba;s/\n/@/g')
+imageRegistry=$(kubectl -n d8-system get secrets deckhouse-registry -o json | jq .data.imagesRegistry -r | base64 -d)
+shellOperatorHash=$(kubectl -n d8-system exec deployments/deckhouse -- cat modules/040-node-manager/images_digests.json | jq -r .common.shellOperator)
+image=$imageRegistry:$shellOperatorHash
 
-echo "Creating fixer deployment using \"$shellOperatorImage\" as the image for the fixer"
-
+echo "Creating fixer deployment using \"$image\" as the image for the fixer"
 
 kubectl apply -f <(cat <<EOF 
 ---
@@ -246,19 +247,12 @@ spec:
                 app: ingress-validation-cve-fixer
             topologyKey: kubernetes.io/hostname
       containers:
-      - command:
-        - /usr/bin/deckhouse-controller
-        - start
-      containers:
-      - image: $shellOperatorImage
+      - image: $image
         imagePullPolicy: IfNotPresent
         name: fixer
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         command:
-        - /sbin/tini
-        args:
-        - --
         - /shell-operator
         env:
         - name: SHELL_OPERATOR_NAMESPACE
