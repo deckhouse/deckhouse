@@ -28,6 +28,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -46,6 +47,26 @@ const (
 	AbsentStatus      = "absent"
 	ErrorStatus       = "error"
 )
+
+type State struct {
+	TerraformVersion string     `json:"terraform_version"`
+	Resources        []Resource `json:"resources"`
+}
+type Resource struct {
+	Type     string `json:"type"`
+	Name     string `json:"name"`
+	Provider string `json:"provider"`
+}
+
+type TerraformVersionOutput struct {
+	TerraformVersion string `json:"terraform_version"`
+}
+
+type TerraformVersion struct {
+	InStateVersion string `json:"in_state_version,omitempty"`
+	CurrentVersion string `json:"current_version,omitempty"`
+}
+type TerraformVersionProvider func(ctx context.Context, metaConfig *config.MetaConfig) ([]byte, error)
 
 type ClusterCheckResult struct {
 	Status             string                                               `json:"status,omitempty"`
@@ -69,6 +90,7 @@ type Statistics struct {
 	NodeTemplates      []NodeGroupCheckResult `json:"node_templates,omitempty"`
 	Cluster            ClusterCheckResult     `json:"cluster,omitempty"`
 	InfrastructurePlan []infrastructure.Plan  `json:"terraform_plan,omitempty"`
+	TerraformVersion   *TerraformVersion      `json:"terraform_version,omitempty"`
 }
 
 type NodeGroupOptions struct {
@@ -423,7 +445,65 @@ func CheckState(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig
 		}
 	}
 
+	tfVersion, err := checkTerraFormVersion(ctx, kubeCl, metaConfig)
+	if err != nil {
+		allErrs = multierror.Append(allErrs, fmt.Errorf("terraform version check failed: %v", err))
+	}
+
+	statistics.TerraformVersion = tfVersion
+
 	return &statistics, allErrs.ErrorOrNil()
+}
+
+func parseTerraVersion(output []byte) (string, error) {
+	var info TerraformVersionOutput
+	if err := json.Unmarshal(output, &info); err != nil {
+		return "", fmt.Errorf("cannot parse terraform version output: %w", err)
+	}
+	return info.TerraformVersion, nil
+}
+
+func getTerraformVersionFromExecutor(ctx context.Context, metaConfig *config.MetaConfig) ([]byte, error) {
+	executorProvider := infrastructureprovider.ExecutorProvider(metaConfig)
+	executor := executorProvider("/tmp", log.GetDefaultLogger())
+	return executor.Version(ctx)
+}
+
+func getCurrentTerraformVersion(ctx context.Context, metaConfig *config.MetaConfig, provider TerraformVersionProvider) (string, error) {
+	result, err := provider(ctx, metaConfig)
+	if err != nil {
+		return "", err
+	}
+	version, err := parseTerraVersion(result)
+	if err != nil {
+		return "", err
+	}
+	return version, nil
+}
+
+func getTerraformVersionFromState(ctx context.Context, kubeCl *client.KubernetesClient) (*State, error) {
+	state, err := infrastructurestate.GetClusterStateFromCluster(ctx, kubeCl)
+	if err != nil {
+		log.ErrorLn(err)
+	}
+	var s State
+	err = json.Unmarshal(state, &s)
+	if err != nil {
+		return nil, err
+	}
+	return &s, nil
+}
+
+func checkTerraFormVersion(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) (*TerraformVersion, error) {
+	cVersion, err := getCurrentTerraformVersion(ctx, metaConfig, getTerraformVersionFromExecutor)
+	sVersion, err := getTerraformVersionFromState(ctx, kubeCl)
+	if err != nil && sVersion != nil {
+		return nil, err
+	}
+	return &TerraformVersion{
+		InStateVersion: sVersion.TerraformVersion,
+		CurrentVersion: cVersion,
+	}, nil
 }
 
 func expectedNodeNames(cfg *config.MetaConfig, nodeGroupName string, replicas int) []string {

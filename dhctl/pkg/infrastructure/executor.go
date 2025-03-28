@@ -131,6 +131,7 @@ type Executor interface {
 	Destroy(ctx context.Context, opts DestroyOpts) error
 	Output(ctx context.Context, statePath string, outFields ...string) (result []byte, err error)
 	Show(ctx context.Context, statePath string) (result []byte, err error)
+	Version(ctx context.Context) (result []byte, err error)
 
 	SetExecutorLogger(logger log.Logger)
 	Stop()
@@ -172,6 +173,10 @@ func (e *fakeExecutor) Destroy(ctx context.Context, opts DestroyOpts) error {
 }
 
 func (e *fakeExecutor) Show(ctx context.Context, planPath string) (result []byte, err error) {
+	return e.showResp.resp, e.showResp.err
+}
+
+func (e *fakeExecutor) Version(ctx context.Context) (result []byte, err error) {
 	return e.showResp.resp, e.showResp.err
 }
 
@@ -222,6 +227,12 @@ func (e *DummyExecutor) Destroy(ctx context.Context, opts DestroyOpts) error {
 
 func (e *DummyExecutor) Show(ctx context.Context, planPath string) (result []byte, err error) {
 	e.logger.LogWarnLn("Call Show on dummy executor")
+
+	return nil, nil
+}
+
+func (e *DummyExecutor) Version(ctx context.Context) (result []byte, err error) {
+	e.logger.LogWarnLn("Call Version on dummy executor")
 
 	return nil, nil
 }

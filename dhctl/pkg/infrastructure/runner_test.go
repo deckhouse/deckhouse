@@ -218,6 +218,10 @@ func (e *sleepExecutor) Show(ctx context.Context, planPath string) (result []byt
 	return nil, nil
 }
 
+func (e *sleepExecutor) Version(ctx context.Context) (result []byte, err error) {
+	return nil, nil
+}
+
 func (e *sleepExecutor) SetExecutorLogger(logger log.Logger) {
 	e.logger = logger
 }
@@ -256,12 +260,14 @@ var destructivelyChanged = &PlanDestructiveChanges{
 		{
 			CurrentValue: map[string]any{
 				"allow_stopping_for_update": true,
-				"boot_disk": []any{map[string]any{
-					"auto_delete":       true,
-					"device_name":       "test",
-					"disk_id":           "test",
-					"initialize_params": []any{map[string]any{"description": "", "image_id": "tests", "name": "kubernetes-data-root", "size": float64(35), "snapshot_id": "", "type": "network-ssd"}},
-					"mode":              "READ_WRITE"},
+				"boot_disk": []any{
+					map[string]any{
+						"auto_delete":       true,
+						"device_name":       "test",
+						"disk_id":           "test",
+						"initialize_params": []any{map[string]any{"description": "", "image_id": "tests", "name": "kubernetes-data-root", "size": float64(35), "snapshot_id": "", "type": "network-ssd"}},
+						"mode":              "READ_WRITE",
+					},
 				},
 				"created_at":                "2021-02-26T09:41:42Z",
 				"description":               "",

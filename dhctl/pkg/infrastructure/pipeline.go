@@ -52,7 +52,6 @@ func equalArray(a, b []string) bool {
 
 func GetMasterIPAddressForSSH(ctx context.Context, statePath string, executor Executor) (string, error) {
 	result, err := executor.Output(ctx, statePath, "master_ip_address_for_ssh")
-
 	if err != nil {
 		var ee *exec.ExitError
 		if errors.As(err, &ee) {
