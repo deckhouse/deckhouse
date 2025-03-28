@@ -51,8 +51,21 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			NamespaceSelector: &types.NamespaceSelector{
 				LabelSelector: &v1.LabelSelector{
-					MatchLabels: map[string]string{
-						"heritage": "deckhouse",
+					MatchExpressions: []v1.LabelSelectorRequirement{
+						{
+							Key:      "heritage",
+							Operator: v1.LabelSelectorOpIn,
+							Values: []string{
+								"deckhouse",
+							},
+						},
+						{
+							Key:      "kubernetes.io/metadata.name",
+							Operator: v1.LabelSelectorOpNotIn,
+							Values: []string{
+								"d8-observability",
+							},
+						},
 					},
 				},
 			},
@@ -78,8 +91,21 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			NamespaceSelector: &types.NamespaceSelector{
 				LabelSelector: &v1.LabelSelector{
-					MatchLabels: map[string]string{
-						"heritage": "deckhouse",
+					MatchExpressions: []v1.LabelSelectorRequirement{
+						{
+							Key:      "heritage",
+							Operator: v1.LabelSelectorOpIn,
+							Values: []string{
+								"deckhouse",
+							},
+						},
+						{
+							Key:      "kubernetes.io/metadata.name",
+							Operator: v1.LabelSelectorOpNotIn,
+							Values: []string{
+								"d8-observability",
+							},
+						},
 					},
 				},
 			},
@@ -106,8 +132,21 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			NamespaceSelector: &types.NamespaceSelector{
 				LabelSelector: &v1.LabelSelector{
-					MatchLabels: map[string]string{
-						"heritage": "deckhouse",
+					MatchExpressions: []v1.LabelSelectorRequirement{
+						{
+							Key:      "heritage",
+							Operator: v1.LabelSelectorOpIn,
+							Values: []string{
+								"deckhouse",
+							},
+						},
+						{
+							Key:      "kubernetes.io/metadata.name",
+							Operator: v1.LabelSelectorOpNotIn,
+							Values: []string{
+								"d8-observability",
+							},
+						},
 					},
 				},
 			},
