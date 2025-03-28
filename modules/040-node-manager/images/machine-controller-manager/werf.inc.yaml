@@ -16,7 +16,7 @@ final: false
 shell:
   install:
   - git clone --depth 1 --branch bootstrap-token-node-manager {{ $.SOURCE_REPO }}/deckhouse/mcm.git /src
-  - rm -rf /src/.git
+  - rm -rf /src/.git && rm -rf /src/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
