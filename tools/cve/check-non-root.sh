@@ -85,7 +85,6 @@ function check_user() {
 
 function __main__() {
   echo "Deckhouse image to check non-root default user: $IMAGE:$TAG"
-  echo "Severity: $SEVERITY"
   echo "----------------------------------------------"
   echo ""
 
