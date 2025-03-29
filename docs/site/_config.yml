@@ -134,6 +134,16 @@ defaults:
       sitemap_include: false
       layout: guide
   - scope:
+      path: "pages/stronghold"
+    values:
+      toc_in_sidebar: false
+      toc: false
+      product_code: stronghold
+      documentation_state: develop
+      search_bage_enabled: true
+      sidebar: stronghold
+      sitemap_include: false
+  - scope:
       path: "modules_ru"
       type: "pages"
     values:
