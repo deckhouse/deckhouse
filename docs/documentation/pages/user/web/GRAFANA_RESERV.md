@@ -1,3 +1,9 @@
+---
+title: "Grafana-reserv"
+permalink: ru/user/web/grafana-reserv.html
+lang: ru
+---
+
 ## Веб-интерфейс системы мониторинга
 
 В качестве веб-интерфейса системы мониторинга используется Grafana.
