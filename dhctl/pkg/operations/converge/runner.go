@@ -16,12 +16,14 @@ package converge
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/google/uuid"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -113,6 +115,22 @@ func (r *runner) RunConverge(ctx *context.Context) error {
 	return r.converge(ctx)
 }
 
+func (r *runner) RunConvergeMigration(ctx *context.Context) error {
+	if r.lockRunner != nil {
+		err := r.lockRunner.Run(ctx.Ctx(), func() error {
+			return r.convergeMigration(ctx)
+		})
+
+		if err != nil {
+			return fmt.Errorf("failed to start lock runner: %w", err)
+		}
+
+		return nil
+	}
+
+	return r.converge(ctx)
+}
+
 func loadNodesState(ctx *context.Context) (map[string]state.NodeGroupInfrastructureState, error) {
 	kubeCl := ctx.KubeClient()
 	// NOTE: Nodes state loaded from target kubernetes cluster in default dhctl-converge.
@@ -152,6 +170,45 @@ func populateNodesState(ctx *context.Context) (map[string]state.NodeGroupInfrast
 	}
 
 	return nodesState, nil
+}
+
+func (r *runner) migrateTerraNodes(ctx *context.Context, metaConfig *config.MetaConfig, nodesState map[string]state.NodeGroupInfrastructureState) error {
+	if shouldStop, err := ctx.StarExecutionPhase(phases.AllNodesPhase, true); err != nil {
+		return err
+	} else if shouldStop {
+		return nil
+	}
+
+	terraNodeGroups := metaConfig.GetTerraNodeGroups()
+
+	desiredQuantity := metaConfig.MasterNodeGroupSpec.Replicas
+	for _, group := range terraNodeGroups {
+		desiredQuantity += group.Replicas
+	}
+
+	var nodeGroupsWithStateInCluster []string
+
+	for _, group := range terraNodeGroups {
+		// Skip if node group infrastructure state exists, we will update node group state below
+		if _, ok := nodesState[group.Name]; ok {
+			nodeGroupsWithStateInCluster = append(nodeGroupsWithStateInCluster, group.Name)
+			continue
+		}
+	}
+
+	for _, nodeGroupName := range utils.SortNodeGroupsStateKeys(nodesState, nodeGroupsWithStateInCluster) {
+		ngState := nodesState[nodeGroupName]
+
+		log.DebugF("NodeGroup for converge %v", nodeGroupName)
+
+		rr := controller.NewNodeGroupControllerRunner(nodeGroupName, ngState, r.excludedNodes)
+		err := rr.Run(ctx)
+		if err != nil {
+			return err
+		}
+	}
+
+	return ctx.CompleteExecutionPhase(nil)
 }
 
 func (r *runner) convergeTerraNodes(ctx *context.Context, metaConfig *config.MetaConfig, nodesState map[string]state.NodeGroupInfrastructureState) error {
@@ -257,6 +314,40 @@ func (r *runner) convergeDeckhouseConfiguration(ctx *context.Context, commanderU
 	return ctx.CompleteExecutionPhase(nil)
 }
 
+func (r *runner) convergeMigration(ctx *context.Context) error {
+	if r.switcher != nil && !reflect.ValueOf(r.switcher).IsNil() {
+		return fmt.Errorf("Node switcher is present for migrator")
+	}
+
+	log.InfoF("Converge migration start\n")
+	defer log.InfoF("Converge migration finisher\n")
+
+	metaConfig, err := ctx.MetaConfig()
+	if err != nil {
+		return err
+	}
+
+	if !infrastructureprovider.NeedToUseOpentofu(metaConfig) {
+		log.InfoF("Skipping migration. Provider %s does not support opentofu now\n", metaConfig.ProviderName)
+		return nil
+	}
+
+	if err := r.updateClusterState(ctx, metaConfig); err != nil {
+		return err
+	}
+
+	nodesStates, err := populateNodesState(ctx)
+	if err != nil {
+		return err
+	}
+
+	if err := r.migrateTerraNodes(ctx, metaConfig, nodesStates); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (r *runner) converge(ctx *context.Context) error {
 	log.DebugF("Converge start\n")
 	defer log.DebugF("Converge finisher\n")
@@ -331,15 +422,11 @@ func (r *runner) updateClusterState(ctx *context.Context, metaConfig *config.Met
 			}
 		}
 
-		changeSettings := ctx.ChangesSettings()
-
 		baseRunner := ctx.InfrastructureContext(metaConfig).GetConvergeBaseInfraRunner(metaConfig, infrastructure.BaseInfraRunnerOptions{
-			AutoDismissDestructive:           changeSettings.AutoDismissDestructive,
-			AutoApprove:                      changeSettings.AutoApprove,
 			StateCache:                       ctx.StateCache(),
 			ClusterState:                     clusterState,
 			AdditionalStateSaverDestinations: []infrastructure.SaverDestination{entity.NewClusterStateSaver(ctx)},
-		})
+		}, ctx.ChangesSettings().AutomaticSettings)
 
 		outputs, err := infrastructure.ApplyPipeline(ctx.Ctx(), baseRunner, "Kubernetes cluster", infrastructure.GetBaseInfraResult)
 		if err != nil {

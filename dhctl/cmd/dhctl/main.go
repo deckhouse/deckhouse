@@ -110,6 +110,11 @@ var (
 			DefineFunc: commands.DefineAutoConvergeCommand,
 		},
 		{
+			Name:       "converge-migration",
+			Help:       "Migrate state from terraform to opentofu. Starting converge if cluster has not infrastructure changes",
+			DefineFunc: commands.DefineConvergeMigrationCommand,
+		},
+		{
 			Name: "lock",
 			Help: "Converge cluster lock",
 		},

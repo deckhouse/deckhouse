@@ -21,6 +21,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
@@ -38,6 +39,16 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 
 		converger := converge.NewConverger(&converge.Params{
 			SSHClient: sshClient,
+			ChangesSettings: infrastructure.ChangeActionSettings{
+				SkipChangesOnDeny: false,
+				AutomaticSettings: infrastructure.AutomaticSettings{
+					AutoDismissChanges:     false,
+					AutoDismissDestructive: false,
+					AutoApproveSettings: infrastructure.AutoApproveSettings{
+						AutoApprove: false,
+					},
+				},
+			},
 		})
 		_, err = converger.Converge(context.Background())
 
@@ -54,10 +65,42 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		converger := converge.NewConverger(&converge.Params{
-			AutoDismissDestructive: true,
-			AutoApprove:            true,
+			ChangesSettings: infrastructure.ChangeActionSettings{
+				SkipChangesOnDeny: true,
+				AutomaticSettings: infrastructure.AutomaticSettings{
+					AutoDismissDestructive: true,
+					AutoDismissChanges:     false,
+					AutoApproveSettings: infrastructure.AutoApproveSettings{
+						AutoApprove: true,
+					},
+				},
+			},
 		})
 		return converger.AutoConverge()
+	})
+	return cmd
+}
+
+func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
+	app.DefineAutoConvergeFlags(cmd)
+	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineBecomeFlags(cmd)
+	app.DefineKubeFlags(cmd)
+
+	cmd.Action(func(c *kingpin.ParseContext) error {
+		converger := converge.NewConverger(&converge.Params{
+			ChangesSettings: infrastructure.ChangeActionSettings{
+				AutomaticSettings: infrastructure.AutomaticSettings{
+					AutoDismissDestructive: true,
+					AutoDismissChanges:     true,
+					AutoApproveSettings: infrastructure.AutoApproveSettings{
+						AutoApprove: false,
+					},
+				},
+				SkipChangesOnDeny: true,
+			},
+		})
+		return converger.ConvergeMigration(context.Background())
 	})
 	return cmd
 }

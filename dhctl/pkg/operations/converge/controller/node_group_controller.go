@@ -175,21 +175,19 @@ func (c *NodeGroupController) deleteRedundantNodes(
 		}
 
 		nodeRunner := ctx.InfrastructureContext(cfg).GetConvergeNodeDeleteRunner(cfg, infrastructure.NodeDeleteRunnerOptions{
-			AutoDismissDestructive: ctx.ChangesSettings().AutoDismissDestructive,
-			AutoApprove:            ctx.ChangesSettings().AutoApprove,
-			NodeName:               nodeToDeleteInfo.name,
-			NodeGroupName:          c.name,
-			LayoutStep:             c.layoutStep,
-			NodeIndex:              nodeIndex,
-			NodeState:              nodeState,
-			NodeCloudConfig:        c.cloudConfig,
-			CommanderMode:          ctx.CommanderMode(),
-			StateCache:             ctx.StateCache(),
+			NodeName:        nodeToDeleteInfo.name,
+			NodeGroupName:   c.name,
+			LayoutStep:      c.layoutStep,
+			NodeIndex:       nodeIndex,
+			NodeState:       nodeState,
+			NodeCloudConfig: c.cloudConfig,
+			CommanderMode:   ctx.CommanderMode(),
+			StateCache:      ctx.StateCache(),
 			AdditionalStateSaverDestinations: []infrastructure.SaverDestination{
 				entity.NewNodeStateSaver(ctx, nodeToDeleteInfo.name, c.name, nil),
 			},
 			Hook: getHookByNodeName(nodeToDeleteInfo.name),
-		})
+		}, ctx.ChangesSettings().AutomaticSettings)
 
 		if err := infrastructure.DestroyPipeline(ctx.Ctx(), nodeRunner, nodeToDeleteInfo.name); err != nil {
 			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %w", nodeToDeleteInfo.name, err))

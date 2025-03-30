@@ -69,7 +69,6 @@ func BootstrapAdditionalNode(
 
 	// TODO pass cache as argument or better refact func
 	runner := infrastructureContext.GetBootstrapNodeRunner(cfg, cache.Global(), infrastructure.BootstrapNodeRunnerOptions{
-		AutoApprove:     true,
 		NodeName:        nodeName,
 		NodeGroupStep:   step,
 		NodeGroupName:   nodeGroupName,
@@ -140,7 +139,6 @@ func BootstrapAdditionalNodeForParallelRun(
 	nodeGroupSettings := cfg.FindTerraNodeGroup(nodeGroupName)
 	// TODO pass cache as argument or better refact func
 	runner := infrastructureContext.GetBootstrapNodeRunner(cfg, cache.Global(), infrastructure.BootstrapNodeRunnerOptions{
-		AutoApprove:     true,
 		NodeName:        nodeName,
 		NodeGroupStep:   step,
 		NodeGroupName:   nodeGroupName,
@@ -391,7 +389,6 @@ func BootstrapAdditionalMasterNode(
 
 	// TODO pass cache as argument or better refact func
 	runner := infrastructureContext.GetBootstrapNodeRunner(cfg, cache.Global(), infrastructure.BootstrapNodeRunnerOptions{
-		AutoApprove:     true,
 		NodeName:        nodeName,
 		NodeGroupStep:   "master-node",
 		NodeGroupName:   global.MasterNodeGroupName,

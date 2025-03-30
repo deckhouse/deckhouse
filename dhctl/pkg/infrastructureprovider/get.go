@@ -35,7 +35,7 @@ func ExecutorProvider(metaConfig *config.MetaConfig) infrastructure.ExecutorProv
 		}
 	}
 
-	if strings.ToLower(metaConfig.ProviderName) == "yandex" {
+	if NeedToUseOpentofu(metaConfig) {
 		return func(w string, logger log.Logger) infrastructure.Executor {
 			return tofu.NewExecutor(w, logger)
 		}
@@ -44,4 +44,8 @@ func ExecutorProvider(metaConfig *config.MetaConfig) infrastructure.ExecutorProv
 	return func(w string, logger log.Logger) infrastructure.Executor {
 		return terraform.NewExecutor(w, logger)
 	}
+}
+
+func NeedToUseOpentofu(metaConfig *config.MetaConfig) bool {
+	return strings.ToLower(metaConfig.ProviderName) == "yandex"
 }

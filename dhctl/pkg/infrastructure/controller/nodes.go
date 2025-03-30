@@ -81,7 +81,9 @@ func (r *NodeGroupInfrastructureController) DestroyNode(ctx context.Context, nam
 	}
 
 	nodeRunner := r.infrastructureContext.GetDestroyNodeRunner(r.metaConfig, r.stateCache, infrastructure.DestroyNodeRunnerOptions{
-		AutoApprove:   autoApprove,
+		AutoApproveSettings: infrastructure.AutoApproveSettings{
+			AutoApprove: autoApprove,
+		},
 		NodeName:      name,
 		NodeGroupName: r.nodeGroupName,
 		NodeGroupStep: step,

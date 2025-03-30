@@ -259,21 +259,19 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 	var nodeGroupSettingsFromConfig []byte
 
 	nodeRunner := ctx.InfrastructureContext(metaConfig).GetConvergeNodeRunner(metaConfig, infrastructure.NodeRunnerOptions{
-		AutoDismissDestructive: ctx.ChangesSettings().AutoDismissDestructive,
-		AutoApprove:            ctx.ChangesSettings().AutoApprove,
-		NodeName:               nodeName,
-		NodeGroupName:          c.name,
-		NodeGroupStep:          c.layoutStep,
-		NodeIndex:              nodeIndex,
-		NodeState:              nodeState,
-		NodeCloudConfig:        c.cloudConfig,
-		CommanderMode:          ctx.CommanderMode(),
-		StateCache:             ctx.StateCache(),
+		NodeName:        nodeName,
+		NodeGroupName:   c.name,
+		NodeGroupStep:   c.layoutStep,
+		NodeIndex:       nodeIndex,
+		NodeState:       nodeState,
+		NodeCloudConfig: c.cloudConfig,
+		CommanderMode:   ctx.CommanderMode(),
+		StateCache:      ctx.StateCache(),
 		AdditionalStateSaverDestinations: []infrastructure.SaverDestination{
 			entity.NewNodeStateSaver(ctx, nodeName, global.MasterNodeGroupName, nodeGroupSettingsFromConfig),
 		},
 		Hook: hook,
-	})
+	}, ctx.ChangesSettings().AutomaticSettings)
 
 	outputs, err := infrastructure.ApplyPipeline(ctx.Ctx(), nodeRunner, nodeName, infrastructure.GetMasterNodeResult)
 	if err != nil {

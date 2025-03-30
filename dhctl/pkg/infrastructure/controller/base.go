@@ -42,7 +42,9 @@ func (r *BaseInfraController) Destroy(ctx context.Context, clusterState []byte, 
 	}
 
 	baseRunner := r.infrastructureContext.GetDestroyBaseInfraRunner(r.metaConfig, r.stateCache, infrastructure.DestroyBaseInfraRunnerOptions{
-		AutoApprove: autoApprove,
+		AutoApproveSettings: infrastructure.AutoApproveSettings{
+			AutoApprove: autoApprove,
+		},
 	})
 
 	return infrastructure.DestroyPipeline(ctx, baseRunner, "Kubernetes cluster")

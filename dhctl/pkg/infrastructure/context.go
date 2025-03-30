@@ -61,6 +61,37 @@ func (f *Context) getOrCreateRunner(name string, createFunc func() RunnerInterfa
 	return r
 }
 
+func applyAutomaticSettingsForChangesRunner(r *Runner) *Runner {
+	r.WithAutoDismissDestructiveChanges(true).
+		WithAutoApprove(false).
+		WithSkipChangesOnDeny(true).
+		WithAutoDismissChanges(true)
+
+	return r
+}
+
+func applyAutomaticSettings(r *Runner, settings AutomaticSettings) *Runner {
+	r.WithAutoDismissDestructiveChanges(settings.AutoDismissDestructive).
+		WithAutoApprove(settings.AutoApprove).
+		WithAutoDismissChanges(settings.AutoDismissChanges)
+
+	return r
+}
+
+func applyAutomaticSettingsForBootstrap(r *Runner) *Runner {
+	r.WithAutoDismissDestructiveChanges(false).
+		WithAutoApprove(true).
+		WithAutoDismissChanges(false)
+
+	return r
+}
+
+func applyAutomaticApproveSettings(r *Runner, settings AutoApproveSettings) *Runner {
+	r.WithAutoApprove(settings.AutoApprove)
+
+	return r
+}
+
 // TODO(dhctl-for-commander): Use same tf-runner for check & converge in commander mode only, keep things as-is without changes
 func (f *Context) GetCheckBaseInfraRunner(metaConfig *config.MetaConfig, opts BaseInfraRunnerOptions) RunnerInterface {
 	return f.getOrCreateRunner(
@@ -68,27 +99,24 @@ func (f *Context) GetCheckBaseInfraRunner(metaConfig *config.MetaConfig, opts Ba
 			if f.provider == nil {
 				panic("Executor provider must be set")
 			}
+
 			if opts.CommanderMode {
 				r := NewRunnerFromConfig(metaConfig, "base-infrastructure", opts.StateCache, f.provider).
-					WithSkipChangesOnDeny(true).
-					WithVariables(metaConfig.MarshalConfig()).
-					WithAutoDismissDestructiveChanges(opts.AutoDismissDestructive).
-					WithAutoApprove(opts.AutoApprove)
+					WithVariables(metaConfig.MarshalConfig())
 
 				r.WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...)
 
 				tomb.RegisterOnShutdown("base-infrastructure", r.Stop)
-				return r
+				return applyAutomaticSettingsForChangesRunner(r)
 			} else {
 				r := NewImmutableRunnerFromConfig(metaConfig, "base-infrastructure", f.provider).
-					WithVariables(metaConfig.MarshalConfig()).
-					WithAutoApprove(true)
+					WithVariables(metaConfig.MarshalConfig())
 				if opts.ClusterState != nil {
 					r.WithState(opts.ClusterState)
 				}
 
 				tomb.RegisterOnShutdown("base-infrastructure", r.Stop)
-				return r
+				return applyAutomaticSettingsForChangesRunner(r)
 			}
 		})
 }
@@ -100,19 +128,17 @@ func (f *Context) GetCheckNodeRunner(metaConfig *config.MetaConfig, opts NodeRun
 			if f.provider == nil {
 				panic("Executor provider must be set")
 			}
+
 			if opts.CommanderMode {
 				r := NewRunnerFromConfig(metaConfig, opts.NodeGroupStep, opts.StateCache, f.provider).
 					WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)).
-					WithSkipChangesOnDeny(true).
 					WithName(opts.NodeName).
-					WithAutoDismissDestructiveChanges(opts.AutoDismissDestructive).
-					WithAutoApprove(opts.AutoApprove).
 					WithHook(opts.Hook)
 
 				r.WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...)
 
 				tomb.RegisterOnShutdown(opts.NodeName, r.Stop)
-				return r
+				return applyAutomaticSettingsForChangesRunner(r)
 			} else {
 				r := NewImmutableRunnerFromConfig(metaConfig, opts.NodeGroupStep, f.provider).
 					WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)).
@@ -120,7 +146,7 @@ func (f *Context) GetCheckNodeRunner(metaConfig *config.MetaConfig, opts NodeRun
 					WithName(opts.NodeName)
 
 				tomb.RegisterOnShutdown(opts.NodeName, r.Stop)
-				return r
+				return applyAutomaticSettingsForChangesRunner(r)
 			}
 		})
 }
@@ -136,41 +162,33 @@ func (f *Context) GetCheckNodeDeleteRunner(metaConfig *config.MetaConfig, opts N
 				r := NewRunnerFromConfig(metaConfig, opts.LayoutStep, opts.StateCache, f.provider).
 					WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)).
 					WithName(opts.NodeName).
-					WithAllowedCachedState(true).
-					WithSkipChangesOnDeny(true).
-					WithAutoDismissDestructiveChanges(opts.AutoDismissDestructive).
-					WithAutoApprove(opts.AutoApprove)
+					WithAllowedCachedState(true)
 
 				r.WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...)
 
 				tomb.RegisterOnShutdown(opts.NodeName, r.Stop)
-				return r
+				return applyAutomaticSettingsForChangesRunner(r)
 			} else {
 				r := NewImmutableRunnerFromConfig(metaConfig, opts.LayoutStep, f.provider).
 					WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)).
 					WithName(opts.NodeName).
-					WithState(opts.NodeState).
-					WithSkipChangesOnDeny(true).
-					WithAutoDismissDestructiveChanges(false).
-					WithAutoApprove(true)
+					WithState(opts.NodeState)
 
 				tomb.RegisterOnShutdown(opts.NodeName, r.Stop)
-				return r
+				return applyAutomaticSettingsForChangesRunner(r)
 			}
 		})
 }
 
 // TODO: use same runner in check+converge only in commander mode, use as-is otherwise, implement destroy and bootstrap
 type BaseInfraRunnerOptions struct {
-	AutoDismissDestructive           bool
-	AutoApprove                      bool
 	CommanderMode                    bool
 	StateCache                       dstate.Cache
 	ClusterState                     []byte
 	AdditionalStateSaverDestinations []SaverDestination
 }
 
-func (f *Context) GetConvergeBaseInfraRunner(metaConfig *config.MetaConfig, opts BaseInfraRunnerOptions) RunnerInterface {
+func (f *Context) GetConvergeBaseInfraRunner(metaConfig *config.MetaConfig, opts BaseInfraRunnerOptions, automaticSettings AutomaticSettings) RunnerInterface {
 	return f.getOrCreateRunner(
 		fmt.Sprintf("converge.base-infrastructure.%s.%s.%s", metaConfig.ProviderName, metaConfig.ClusterPrefix, metaConfig.Layout),
 		func() RunnerInterface {
@@ -180,10 +198,7 @@ func (f *Context) GetConvergeBaseInfraRunner(metaConfig *config.MetaConfig, opts
 
 			r := NewRunnerFromConfig(metaConfig, "base-infrastructure", opts.StateCache, f.provider).
 				WithSkipChangesOnDeny(true).
-				WithVariables(metaConfig.MarshalConfig()).
-				WithAutoDismissDestructiveChanges(opts.AutoDismissDestructive).
-				WithAutoApprove(opts.AutoApprove)
-
+				WithVariables(metaConfig.MarshalConfig())
 			if opts.ClusterState != nil {
 				r = r.WithState(opts.ClusterState)
 			}
@@ -192,14 +207,11 @@ func (f *Context) GetConvergeBaseInfraRunner(metaConfig *config.MetaConfig, opts
 
 			tomb.RegisterOnShutdown("base-infrastructure", r.Stop)
 
-			return r
+			return applyAutomaticSettings(r, automaticSettings)
 		})
 }
 
 type NodeRunnerOptions struct {
-	AutoDismissDestructive bool
-	AutoApprove            bool
-
 	NodeName        string
 	NodeGroupName   string
 	NodeGroupStep   string
@@ -213,7 +225,7 @@ type NodeRunnerOptions struct {
 	Hook                             InfraActionHook
 }
 
-func (f *Context) GetConvergeNodeRunner(metaConfig *config.MetaConfig, opts NodeRunnerOptions) RunnerInterface {
+func (f *Context) GetConvergeNodeRunner(metaConfig *config.MetaConfig, opts NodeRunnerOptions, automaticSettings AutomaticSettings) RunnerInterface {
 	return f.getOrCreateRunner(
 		fmt.Sprintf("converge.node.%s.%s.%s.%s", metaConfig.ProviderName, metaConfig.ClusterPrefix, metaConfig.Layout, opts.NodeGroupStep),
 		func() RunnerInterface {
@@ -225,8 +237,6 @@ func (f *Context) GetConvergeNodeRunner(metaConfig *config.MetaConfig, opts Node
 				WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)).
 				WithSkipChangesOnDeny(true).
 				WithName(opts.NodeName).
-				WithAutoDismissDestructiveChanges(opts.AutoDismissDestructive).
-				WithAutoApprove(opts.AutoApprove).
 				WithHook(opts.Hook)
 
 			if opts.NodeState != nil {
@@ -237,14 +247,11 @@ func (f *Context) GetConvergeNodeRunner(metaConfig *config.MetaConfig, opts Node
 
 			tomb.RegisterOnShutdown(opts.NodeName, r.Stop)
 
-			return r
+			return applyAutomaticSettings(r, automaticSettings)
 		})
 }
 
 type NodeDeleteRunnerOptions struct {
-	AutoDismissDestructive bool
-	AutoApprove            bool
-
 	NodeName        string
 	NodeGroupName   string
 	LayoutStep      string
@@ -258,7 +265,7 @@ type NodeDeleteRunnerOptions struct {
 	Hook                             InfraActionHook
 }
 
-func (f *Context) GetConvergeNodeDeleteRunner(metaConfig *config.MetaConfig, opts NodeDeleteRunnerOptions) RunnerInterface {
+func (f *Context) GetConvergeNodeDeleteRunner(metaConfig *config.MetaConfig, opts NodeDeleteRunnerOptions, automaticSettings AutomaticSettings) RunnerInterface {
 	return f.getOrCreateRunner(
 		fmt.Sprintf("converge.node-delete.%s.%s.%s.%s", metaConfig.ProviderName, metaConfig.ClusterPrefix, metaConfig.Layout, opts.LayoutStep),
 		func() RunnerInterface {
@@ -271,8 +278,6 @@ func (f *Context) GetConvergeNodeDeleteRunner(metaConfig *config.MetaConfig, opt
 				WithName(opts.NodeName).
 				WithAllowedCachedState(true).
 				WithSkipChangesOnDeny(true).
-				WithAutoDismissDestructiveChanges(opts.AutoDismissDestructive).
-				WithAutoApprove(opts.AutoApprove).
 				WithHook(opts.Hook)
 
 			if opts.NodeState != nil {
@@ -283,7 +288,7 @@ func (f *Context) GetConvergeNodeDeleteRunner(metaConfig *config.MetaConfig, opt
 
 			tomb.RegisterOnShutdown(opts.NodeName, r.Stop)
 
-			return r
+			return applyAutomaticSettings(r, automaticSettings)
 		})
 }
 
@@ -296,18 +301,16 @@ func (f *Context) GetBootstrapBaseInfraRunner(metaConfig *config.MetaConfig, sta
 			}
 
 			r := NewRunnerFromConfig(metaConfig, "base-infrastructure", stateCache, f.provider).
-				WithVariables(metaConfig.MarshalConfig()).
-				WithAutoApprove(true)
+				WithVariables(metaConfig.MarshalConfig())
 
 			tomb.RegisterOnShutdown("base-infrastructure", r.Stop)
 
-			return r
+			return applyAutomaticSettingsForBootstrap(r)
 		},
 	)
 }
 
 type BootstrapNodeRunnerOptions struct {
-	AutoApprove                      bool
 	NodeName                         string
 	NodeGroupName                    string
 	NodeGroupStep                    string
@@ -332,19 +335,17 @@ func (f *Context) GetBootstrapNodeRunner(metaConfig *config.MetaConfig, stateCac
 			r := NewRunnerFromConfig(metaConfig, opts.NodeGroupStep, stateCache, f.provider).
 				WithVariables(nodeConfig).
 				WithName(opts.NodeName).
-				WithAutoApprove(opts.AutoApprove).
-				WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...).
 				WithLogger(opts.RunnerLogger)
 
 			tomb.RegisterOnShutdown(opts.NodeName, r.Stop)
 
-			return r
+			return applyAutomaticSettingsForBootstrap(r)
 		},
 	)
 }
 
 type DestroyBaseInfraRunnerOptions struct {
-	AutoApprove bool
+	AutoApproveSettings
 }
 
 func (f *Context) GetDestroyBaseInfraRunner(metaConfig *config.MetaConfig, stateCache dstate.Cache, opts DestroyBaseInfraRunnerOptions) RunnerInterface {
@@ -359,18 +360,18 @@ func (f *Context) GetDestroyBaseInfraRunner(metaConfig *config.MetaConfig, state
 
 			runner := NewRunnerFromConfig(metaConfig, "base-infrastructure", stateCache, f.provider).
 				WithVariables(metaConfig.MarshalConfig()).
-				WithAllowedCachedState(true).
-				WithAutoApprove(opts.AutoApprove)
+				WithAllowedCachedState(true)
 
 			tomb.RegisterOnShutdown("base-infrastructure", runner.Stop)
 
-			return runner
+			return applyAutomaticApproveSettings(runner, opts.AutoApproveSettings)
 		},
 	)
 }
 
 type DestroyNodeRunnerOptions struct {
-	AutoApprove   bool
+	AutoApproveSettings
+
 	NodeName      string
 	NodeGroupName string
 	NodeGroupStep string
@@ -390,12 +391,11 @@ func (f *Context) GetDestroyNodeRunner(metaConfig *config.MetaConfig, stateCache
 			runner := NewRunnerFromConfig(metaConfig, opts.NodeGroupStep, stateCache, f.provider).
 				WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, "")).
 				WithName(opts.NodeName).
-				WithAllowedCachedState(true).
-				WithAutoApprove(opts.AutoApprove)
+				WithAllowedCachedState(true)
 
 			tomb.RegisterOnShutdown(opts.NodeName, runner.Stop)
 
-			return runner
+			return applyAutomaticApproveSettings(runner, opts.AutoApproveSettings)
 		},
 	)
 }

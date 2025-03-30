@@ -40,9 +40,8 @@ type Params struct {
 	SSHClient  *ssh.Client
 	KubeClient *client.KubernetesClient // optional
 
-	OnPhaseFunc            phases.DefaultOnPhaseFunc
-	AutoDismissDestructive bool
-	AutoApprove            bool
+	OnPhaseFunc     phases.DefaultOnPhaseFunc
+	ChangesSettings infrastructure.ChangeActionSettings
 
 	*client.KubernetesInitParams
 
@@ -89,6 +88,101 @@ func (c *Converger) applyParams() error {
 		app.KubeConfig = c.KubernetesInitParams.KubeConfig
 		app.KubeConfigContext = c.KubernetesInitParams.KubeConfigContext
 	}
+	return nil
+}
+
+func (c *Converger) ConvergeMigration(ctx context.Context) error {
+	{
+		// TODO(dhctl-for-commander): pass stateCache externally using params as in the Destroyer, this block will be unneeded then
+		state, err := phases.ExtractDhctlState(cache.Global())
+		if err != nil {
+			return fmt.Errorf("unable to extract dhctl state: %w", err)
+		}
+		c.lastState = state
+	}
+
+	if err := c.applyParams(); err != nil {
+		return err
+	}
+
+	var err error
+	var kubeCl *client.KubernetesClient
+
+	if c.KubeClient != nil {
+		kubeCl = c.KubeClient
+	} else {
+		if c.SSHClient == nil {
+			return fmt.Errorf("Not enough flags were passed to perform the operation.\nUse dhctl converge --help to get available flags.\nSsh host is not provided. Need to pass --ssh-host, or specify SSHHost manifest in the --connection-config file")
+		}
+
+		kubeCl, err = kubernetes.ConnectToKubernetesAPI(ctx, ssh.NewNodeInterfaceWrapper(c.SSHClient))
+		if err != nil {
+			return fmt.Errorf("unable to connect to Kubernetes over ssh tunnel: %w", err)
+		}
+	}
+
+	if !c.CommanderMode {
+		cacheIdentity := ""
+		if app.KubeConfigInCluster {
+			cacheIdentity = "in-cluster"
+		}
+		if c.SSHClient != nil {
+			cacheIdentity = c.SSHClient.Check().String()
+		}
+		if app.KubeConfig != "" {
+			cacheIdentity = cache.GetCacheIdentityFromKubeconfig(
+				app.KubeConfig,
+				app.KubeConfigContext,
+			)
+		}
+		if cacheIdentity == "" {
+			return fmt.Errorf("Incorrect cache identity. Need to pass --ssh-host or --kube-client-from-cluster or --kubeconfig")
+		}
+
+		err = cache.InitWithOptions(cacheIdentity, cache.CacheOptions{})
+		if err != nil {
+			return fmt.Errorf("unable to initialize cache %s: %w", cacheIdentity, err)
+		}
+	}
+
+	stateCache := cache.Global()
+
+	if err := c.PhasedExecutionContext.InitPipeline(stateCache); err != nil {
+		return err
+	}
+	c.lastState = nil
+	defer c.PhasedExecutionContext.Finalize(stateCache)
+
+	var convergeCtx *convergectx.Context
+	if c.Params.CommanderMode {
+		convergeCtx = convergectx.NewCommanderContext(ctx, kubeCl, stateCache, c.Params.CommanderModeParams, c.Params.ChangesSettings)
+	} else {
+		convergeCtx = convergectx.NewContext(ctx, kubeCl, stateCache, c.Params.ChangesSettings)
+	}
+
+	convergeCtx.WithPhaseContext(c.PhasedExecutionContext).
+		WithInfrastructureContext(c.Params.InfrastructureContext)
+
+	var inLockRunner *lock.InLockRunner
+	// No need for converge-lock in commander mode for bootstrap and converge operations
+	if !c.CommanderMode {
+		inLockRunner = lock.NewInLockLocalRunner(convergeCtx, "local-converger")
+	}
+
+	kubectlSwitcher := convergectx.NewKubeClientSwitcher(convergeCtx, inLockRunner)
+
+	r := newRunner(inLockRunner, kubectlSwitcher).
+		WithCommanderUUID(c.CommanderUUID)
+
+	err = r.RunConvergeMigration(convergeCtx)
+	if err != nil {
+		return fmt.Errorf("converge problem: %v", err)
+	}
+
+	if err := c.PhasedExecutionContext.CompletePipeline(stateCache); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -189,16 +283,11 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 	c.lastState = nil
 	defer c.PhasedExecutionContext.Finalize(stateCache)
 
-	changesSettings := infrastructure.ChangeActionSettings{
-		AutoDismissDestructive: c.AutoDismissDestructive,
-		AutoApprove:            c.AutoApprove,
-	}
-
 	var convergeCtx *convergectx.Context
 	if c.Params.CommanderMode {
-		convergeCtx = convergectx.NewCommanderContext(ctx, kubeCl, stateCache, c.Params.CommanderModeParams, changesSettings)
+		convergeCtx = convergectx.NewCommanderContext(ctx, kubeCl, stateCache, c.Params.CommanderModeParams, c.Params.ChangesSettings)
 	} else {
-		convergeCtx = convergectx.NewContext(ctx, kubeCl, stateCache, changesSettings)
+		convergeCtx = convergectx.NewContext(ctx, kubeCl, stateCache, c.Params.ChangesSettings)
 	}
 
 	convergeCtx.WithPhaseContext(c.PhasedExecutionContext).
@@ -257,10 +346,7 @@ func (c *Converger) AutoConverge() error {
 	}
 
 	var convergeCtx *convergectx.Context
-	convergeCtx = convergectx.NewContext(context.Background(), kubeCl, cache.Global(), infrastructure.ChangeActionSettings{
-		AutoDismissDestructive: c.AutoDismissDestructive,
-		AutoApprove:            c.AutoApprove,
-	})
+	convergeCtx = convergectx.NewContext(context.Background(), kubeCl, cache.Global(), c.Params.ChangesSettings)
 
 	convergeCtx.WithPhaseContext(c.PhasedExecutionContext).
 		WithInfrastructureContext(c.Params.InfrastructureContext)

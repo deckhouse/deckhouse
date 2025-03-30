@@ -121,21 +121,19 @@ func (c *CloudPermanentNodeGroupController) updateNode(ctx *context.Context, nod
 	nodeGroupSettingsFromConfig = metaConfig.FindTerraNodeGroup(c.name)
 
 	nodeRunner := ctx.InfrastructureContext(metaConfig).GetConvergeNodeRunner(metaConfig, infrastructure.NodeRunnerOptions{
-		AutoDismissDestructive: ctx.ChangesSettings().AutoDismissDestructive,
-		AutoApprove:            ctx.ChangesSettings().AutoApprove,
-		NodeName:               nodeName,
-		NodeGroupName:          c.name,
-		NodeGroupStep:          c.layoutStep,
-		NodeIndex:              nodeIndex,
-		NodeState:              nodeState,
-		NodeCloudConfig:        c.cloudConfig,
-		CommanderMode:          ctx.CommanderMode(),
-		StateCache:             ctx.StateCache(),
+		NodeName:        nodeName,
+		NodeGroupName:   c.name,
+		NodeGroupStep:   c.layoutStep,
+		NodeIndex:       nodeIndex,
+		NodeState:       nodeState,
+		NodeCloudConfig: c.cloudConfig,
+		CommanderMode:   ctx.CommanderMode(),
+		StateCache:      ctx.StateCache(),
 		AdditionalStateSaverDestinations: []infrastructure.SaverDestination{
 			entity.NewNodeStateSaver(ctx, nodeName, nodeGroupName, nodeGroupSettingsFromConfig),
 		},
 		Hook: &infrastructure.DummyHook{},
-	})
+	}, ctx.ChangesSettings().AutomaticSettings)
 
 	outputs, err := infrastructure.ApplyPipeline(ctx.Ctx(), nodeRunner, nodeName, infrastructure.OnlyState)
 	if err != nil {

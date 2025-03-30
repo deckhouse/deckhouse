@@ -308,7 +308,6 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 			masterNodeName := fmt.Sprintf("%s-master-0", metaConfig.ClusterPrefix)
 			masterRunner := b.Params.InfrastructureContext.GetBootstrapNodeRunner(metaConfig, stateCache, infrastructure.BootstrapNodeRunnerOptions{
-				AutoApprove:     true,
 				NodeName:        masterNodeName,
 				NodeGroupStep:   "master-node",
 				NodeGroupName:   "master",

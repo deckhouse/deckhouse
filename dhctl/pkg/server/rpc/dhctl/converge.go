@@ -228,11 +228,19 @@ func (s *Service) converge(
 	}
 
 	convergeParams := &converge.Params{
-		OnPhaseFunc:            switchPhase,
-		AutoApprove:            true,
-		AutoDismissDestructive: false,
-		CommanderMode:          true,
-		CommanderUUID:          commanderUUID,
+		OnPhaseFunc: switchPhase,
+		ChangesSettings: infrastructure.ChangeActionSettings{
+			AutomaticSettings: infrastructure.AutomaticSettings{
+				AutoDismissDestructive: false,
+				AutoDismissChanges:     false,
+				AutoApproveSettings: infrastructure.AutoApproveSettings{
+					AutoApprove: true,
+				},
+			},
+			SkipChangesOnDeny: false,
+		},
+		CommanderMode: true,
+		CommanderUUID: commanderUUID,
 		CommanderModeParams: commander.NewCommanderModeParams(
 			[]byte(request.ClusterConfig),
 			[]byte(request.ProviderSpecificClusterConfig),

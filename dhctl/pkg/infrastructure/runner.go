@@ -68,10 +68,20 @@ var (
 
 type ExecutorProvider func(string, log.Logger) Executor
 
-type ChangeActionSettings struct {
+type AutoApproveSettings struct {
+	AutoApprove bool
+}
+
+type AutomaticSettings struct {
+	AutoApproveSettings
+
+	AutoDismissChanges     bool
 	AutoDismissDestructive bool
-	AutoApprove            bool
-	SkipChangesOnDeny      bool
+}
+
+type ChangeActionSettings struct {
+	AutomaticSettings
+	SkipChangesOnDeny bool
 }
 
 type Runner struct {
@@ -217,6 +227,10 @@ func (r *Runner) WithAutoApprove(flag bool) *Runner {
 
 func (r *Runner) WithAutoDismissDestructiveChanges(flag bool) *Runner {
 	r.changeSettings.AutoDismissDestructive = flag
+	return r
+}
+func (r *Runner) WithAutoDismissChanges(flag bool) *Runner {
+	r.changeSettings.AutoDismissChanges = flag
 	return r
 }
 
@@ -377,6 +391,10 @@ func (r *Runner) isSkipChanges(ctx context.Context) (skip bool, err error) {
 		return false, nil
 	}
 
+	if r.changeSettings.AutoDismissChanges {
+		return false, ErrInfrastructureApplyAborted
+	}
+
 	if !r.changeSettings.AutoApprove {
 		if !r.confirm().WithMessage("Do you want to CHANGE objects state in the cloud?").Ask() {
 			if r.changeSettings.SkipChangesOnDeny {
@@ -513,6 +531,10 @@ func (r *Runner) Destroy(ctx context.Context) error {
 
 	if r.statePath == "" {
 		return fmt.Errorf("no state found, try to run infrastructure apply first")
+	}
+
+	if r.changeSettings.AutoDismissChanges {
+		return ErrInfrastructureApplyAborted
 	}
 
 	if r.changeSettings.AutoDismissDestructive {

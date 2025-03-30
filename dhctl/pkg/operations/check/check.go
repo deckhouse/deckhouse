@@ -142,9 +142,8 @@ func checkClusterState(ctx context.Context, kubeCl *client.KubernetesClient, met
 	}
 
 	baseRunner := infrastructureContext.GetCheckBaseInfraRunner(metaConfig, infrastructure.BaseInfraRunnerOptions{
-		AutoDismissDestructive:           false,
-		AutoApprove:                      true,
-		CommanderMode:                    opts.CommanderMode,
+		CommanderMode: opts.CommanderMode,
+
 		StateCache:                       opts.StateCache,
 		ClusterState:                     clusterState,
 		AdditionalStateSaverDestinations: stateSavers,
@@ -184,8 +183,6 @@ func checkAbandonedNodeState(ctx context.Context, kubeCl *client.KubernetesClien
 		stateSavers = append(stateSavers, entity.NewNodeStateSaver(kubernetes.NewSimpleKubeClientGetter(kubeCl), nodeName, nodeGroupName, nil))
 	}
 	nodeRunner := infrastructureContext.GetCheckNodeDeleteRunner(cfg, infrastructure.NodeDeleteRunnerOptions{
-		AutoDismissDestructive:           false,
-		AutoApprove:                      true,
 		NodeName:                         nodeName,
 		NodeGroupName:                    nodeGroup.Name,
 		LayoutStep:                       nodeGroup.LayoutStep,
@@ -223,9 +220,6 @@ func checkNodeState(ctx context.Context, kubeCl *client.KubernetesClient, metaCo
 	}
 
 	nodeRunner := infrastructureContext.GetCheckNodeRunner(metaConfig, infrastructure.NodeRunnerOptions{
-		AutoDismissDestructive: false,
-		AutoApprove:            true,
-
 		NodeName:        nodeName,
 		NodeGroupName:   nodeGroup.Name,
 		NodeGroupStep:   nodeGroup.LayoutStep,
