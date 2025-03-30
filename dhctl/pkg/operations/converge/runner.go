@@ -25,7 +25,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
@@ -332,6 +331,15 @@ func (r *runner) convergeMigration(ctx *context.Context) error {
 		return nil
 	}
 
+	log.DebugLn("Start backup infrastructure states")
+
+	err = infrastructurestate.NewTofuMigrationStateBackuper(ctx, log.GetDefaultLogger()).BackupStates(ctx.Ctx())
+	if err != nil {
+		return err
+	}
+
+	log.DebugLn("End backup infrastructure states")
+
 	if err := r.updateClusterState(ctx, metaConfig); err != nil {
 		return err
 	}
@@ -425,7 +433,7 @@ func (r *runner) updateClusterState(ctx *context.Context, metaConfig *config.Met
 		baseRunner := ctx.InfrastructureContext(metaConfig).GetConvergeBaseInfraRunner(metaConfig, infrastructure.BaseInfraRunnerOptions{
 			StateCache:                       ctx.StateCache(),
 			ClusterState:                     clusterState,
-			AdditionalStateSaverDestinations: []infrastructure.SaverDestination{entity.NewClusterStateSaver(ctx)},
+			AdditionalStateSaverDestinations: []infrastructure.SaverDestination{infrastructurestate.NewClusterStateSaver(ctx)},
 		}, ctx.ChangesSettings().AutomaticSettings)
 
 		outputs, err := infrastructure.ApplyPipeline(ctx.Ctx(), baseRunner, "Kubernetes cluster", infrastructure.GetBaseInfraResult)
@@ -437,7 +445,7 @@ func (r *runner) updateClusterState(ctx *context.Context, metaConfig *config.Met
 			return global.ErrConvergeInterrupted
 		}
 
-		return entity.SaveClusterInfrastructureState(ctx.Ctx(), ctx.KubeClient(), outputs)
+		return infrastructurestate.SaveClusterInfrastructureState(ctx.Ctx(), ctx.KubeClient(), outputs)
 	})
 
 	if err != nil {

@@ -184,7 +184,7 @@ func (c *NodeGroupController) deleteRedundantNodes(
 			CommanderMode:   ctx.CommanderMode(),
 			StateCache:      ctx.StateCache(),
 			AdditionalStateSaverDestinations: []infrastructure.SaverDestination{
-				entity.NewNodeStateSaver(ctx, nodeToDeleteInfo.name, c.name, nil),
+				infrastructurestate.NewNodeStateSaver(ctx, nodeToDeleteInfo.name, c.name, nil),
 			},
 			Hook: getHookByNodeName(nodeToDeleteInfo.name),
 		}, ctx.ChangesSettings().AutomaticSettings)
@@ -209,7 +209,7 @@ func (c *NodeGroupController) deleteRedundantNodes(
 			continue
 		}
 
-		if err := entity.DeleteInfrastructureState(ctx.Ctx(), ctx.KubeClient(), fmt.Sprintf("d8-node-terraform-state-%s", nodeToDeleteInfo.name)); err != nil {
+		if err := infrastructurestate.DeleteInfrastructureState(ctx.Ctx(), ctx.KubeClient(), fmt.Sprintf("d8-node-terraform-state-%s", nodeToDeleteInfo.name)); err != nil {
 			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %w", nodeToDeleteInfo.name, err))
 			continue
 		}

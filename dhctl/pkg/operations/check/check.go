@@ -138,7 +138,7 @@ func checkClusterState(ctx context.Context, kubeCl *client.KubernetesClient, met
 
 	var stateSavers []infrastructure.SaverDestination
 	if opts.CommanderMode {
-		stateSavers = append(stateSavers, entity.NewClusterStateSaver(kubernetes.NewSimpleKubeClientGetter(kubeCl)))
+		stateSavers = append(stateSavers, infrastructurestate.NewClusterStateSaver(kubernetes.NewSimpleKubeClientGetter(kubeCl)))
 	}
 
 	baseRunner := infrastructureContext.GetCheckBaseInfraRunner(metaConfig, infrastructure.BaseInfraRunnerOptions{
@@ -180,7 +180,7 @@ func checkAbandonedNodeState(ctx context.Context, kubeCl *client.KubernetesClien
 
 	var stateSavers []infrastructure.SaverDestination
 	if opts.CommanderMode {
-		stateSavers = append(stateSavers, entity.NewNodeStateSaver(kubernetes.NewSimpleKubeClientGetter(kubeCl), nodeName, nodeGroupName, nil))
+		stateSavers = append(stateSavers, infrastructurestate.NewNodeStateSaver(kubernetes.NewSimpleKubeClientGetter(kubeCl), nodeName, nodeGroupName, nil))
 	}
 	nodeRunner := infrastructureContext.GetCheckNodeDeleteRunner(cfg, infrastructure.NodeDeleteRunnerOptions{
 		NodeName:                         nodeName,
@@ -216,7 +216,7 @@ func checkNodeState(ctx context.Context, kubeCl *client.KubernetesClient, metaCo
 
 	var stateSavers []infrastructure.SaverDestination
 	if opts.CommanderMode {
-		stateSavers = append(stateSavers, entity.NewNodeStateSaver(kubernetes.NewSimpleKubeClientGetter(kubeCl), nodeName, nodeGroupName, nodeGroupSettingsFromConfig))
+		stateSavers = append(stateSavers, infrastructurestate.NewNodeStateSaver(kubernetes.NewSimpleKubeClientGetter(kubeCl), nodeName, nodeGroupName, nodeGroupSettingsFromConfig))
 	}
 
 	nodeRunner := infrastructureContext.GetCheckNodeRunner(metaConfig, infrastructure.NodeRunnerOptions{

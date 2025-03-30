@@ -24,6 +24,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
+	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
@@ -130,7 +131,7 @@ func (c *CloudPermanentNodeGroupController) updateNode(ctx *context.Context, nod
 		CommanderMode:   ctx.CommanderMode(),
 		StateCache:      ctx.StateCache(),
 		AdditionalStateSaverDestinations: []infrastructure.SaverDestination{
-			entity.NewNodeStateSaver(ctx, nodeName, nodeGroupName, nodeGroupSettingsFromConfig),
+			infrastructurestate.NewNodeStateSaver(ctx, nodeName, nodeGroupName, nodeGroupSettingsFromConfig),
 		},
 		Hook: &infrastructure.DummyHook{},
 	}, ctx.ChangesSettings().AutomaticSettings)
@@ -145,7 +146,7 @@ func (c *CloudPermanentNodeGroupController) updateNode(ctx *context.Context, nod
 		return global.ErrConvergeInterrupted
 	}
 
-	err = entity.SaveNodeInfrastructureState(ctx.Ctx(), ctx.KubeClient(), nodeName, c.name, outputs.InfrastructureState, nodeGroupSettingsFromConfig, log.GetDefaultLogger())
+	err = infrastructurestate.SaveNodeInfrastructureState(ctx.Ctx(), ctx.KubeClient(), nodeName, c.name, outputs.InfrastructureState, nodeGroupSettingsFromConfig, log.GetDefaultLogger())
 	if err != nil {
 		return err
 	}

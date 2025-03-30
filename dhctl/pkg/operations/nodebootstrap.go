@@ -30,6 +30,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
+	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
@@ -75,7 +76,7 @@ func BootstrapAdditionalNode(
 		NodeIndex:       index,
 		NodeCloudConfig: cloudConfig,
 		AdditionalStateSaverDestinations: []infrastructure.SaverDestination{
-			entity.NewNodeStateSaver(kubernetes.NewSimpleKubeClientGetter(kubeCl), nodeName, nodeGroupName, nodeGroupSettings),
+			infrastructurestate.NewNodeStateSaver(kubernetes.NewSimpleKubeClientGetter(kubeCl), nodeName, nodeGroupName, nodeGroupSettings),
 		},
 		RunnerLogger: log.GetDefaultLogger(),
 	})
@@ -89,7 +90,7 @@ func BootstrapAdditionalNode(
 		return global.ErrConvergeInterrupted
 	}
 
-	err = entity.SaveNodeInfrastructureState(ctx, kubeCl, nodeName, nodeGroupName, outputs.InfrastructureState, nodeGroupSettings, log.GetDefaultLogger())
+	err = infrastructurestate.SaveNodeInfrastructureState(ctx, kubeCl, nodeName, nodeGroupName, outputs.InfrastructureState, nodeGroupSettings, log.GetDefaultLogger())
 	if err != nil {
 		return err
 	}
@@ -145,7 +146,7 @@ func BootstrapAdditionalNodeForParallelRun(
 		NodeIndex:       index,
 		NodeCloudConfig: cloudConfig,
 		AdditionalStateSaverDestinations: []infrastructure.SaverDestination{
-			entity.NewNodeStateSaver(kubernetes.NewSimpleKubeClientGetter(kubeCl), nodeName, nodeGroupName, nodeGroupSettings),
+			infrastructurestate.NewNodeStateSaver(kubernetes.NewSimpleKubeClientGetter(kubeCl), nodeName, nodeGroupName, nodeGroupSettings),
 		},
 		RunnerLogger: runnerLogger,
 	})
@@ -159,7 +160,7 @@ func BootstrapAdditionalNodeForParallelRun(
 		return global.ErrConvergeInterrupted
 	}
 
-	err = entity.SaveNodeInfrastructureState(ctx, kubeCl, nodeName, nodeGroupName, outputs.InfrastructureState, nodeGroupSettings, runnerLogger)
+	err = infrastructurestate.SaveNodeInfrastructureState(ctx, kubeCl, nodeName, nodeGroupName, outputs.InfrastructureState, nodeGroupSettings, runnerLogger)
 	if err != nil {
 		return err
 	}
@@ -395,7 +396,7 @@ func BootstrapAdditionalMasterNode(
 		NodeIndex:       index,
 		NodeCloudConfig: cloudConfig,
 		AdditionalStateSaverDestinations: []infrastructure.SaverDestination{
-			entity.NewNodeStateSaver(kubernetes.NewSimpleKubeClientGetter(kubeCl), nodeName, global.MasterNodeGroupName, nil),
+			infrastructurestate.NewNodeStateSaver(kubernetes.NewSimpleKubeClientGetter(kubeCl), nodeName, global.MasterNodeGroupName, nil),
 		},
 		RunnerLogger: log.GetDefaultLogger(),
 	})
@@ -409,7 +410,7 @@ func BootstrapAdditionalMasterNode(
 		return nil, global.ErrConvergeInterrupted
 	}
 
-	err = entity.SaveMasterNodeInfrastructureState(ctx, kubeCl, nodeName, outputs.InfrastructureState, []byte(outputs.KubeDataDevicePath))
+	err = infrastructurestate.SaveMasterNodeInfrastructureState(ctx, kubeCl, nodeName, outputs.InfrastructureState, []byte(outputs.KubeDataDevicePath))
 	if err != nil {
 		return outputs, err
 	}

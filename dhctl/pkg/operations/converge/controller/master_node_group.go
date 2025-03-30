@@ -27,6 +27,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
+	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
@@ -268,7 +269,7 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 		CommanderMode:   ctx.CommanderMode(),
 		StateCache:      ctx.StateCache(),
 		AdditionalStateSaverDestinations: []infrastructure.SaverDestination{
-			entity.NewNodeStateSaver(ctx, nodeName, global.MasterNodeGroupName, nodeGroupSettingsFromConfig),
+			infrastructurestate.NewNodeStateSaver(ctx, nodeName, global.MasterNodeGroupName, nodeGroupSettingsFromConfig),
 		},
 		Hook: hook,
 	}, ctx.ChangesSettings().AutomaticSettings)
@@ -308,7 +309,7 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 		return global.ErrConvergeInterrupted
 	}
 
-	err = entity.SaveMasterNodeInfrastructureState(ctx.Ctx(), ctx.KubeClient(), nodeName, outputs.InfrastructureState, []byte(outputs.KubeDataDevicePath))
+	err = infrastructurestate.SaveMasterNodeInfrastructureState(ctx.Ctx(), ctx.KubeClient(), nodeName, outputs.InfrastructureState, []byte(outputs.KubeDataDevicePath))
 	if err != nil {
 		return err
 	}

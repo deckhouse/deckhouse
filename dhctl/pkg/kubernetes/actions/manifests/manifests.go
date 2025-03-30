@@ -38,13 +38,12 @@ var imagesDigestsJSON = "/deckhouse/candi/images_digests.json"
 const (
 	deckhouseRegistrySecretName = "deckhouse-registry"
 
-	deployTimeEnvVarName        = "KUBERNETES_DEPLOYED"
-	deployServiceHostEnvVarName = "KUBERNETES_SERVICE_HOST"
-	deployServicePortEnvVarName = "KUBERNETES_SERVICE_PORT"
-	deployTimeEnvVarFormat      = time.RFC3339
-	pathSeparator               = ":"
-
-	ConvergeLabel = "dhctl.deckhouse.io/node-for-converge"
+	deployTimeEnvVarName            = "KUBERNETES_DEPLOYED"
+	deployServiceHostEnvVarName     = "KUBERNETES_SERVICE_HOST"
+	deployServicePortEnvVarName     = "KUBERNETES_SERVICE_PORT"
+	deployTimeEnvVarFormat          = time.RFC3339
+	pathSeparator                   = ":"
+	NodeInfrastructureStateLabelKey = "node.deckhouse.io/terraform-state"
 )
 
 type DeckhouseDeploymentParams struct {
@@ -636,10 +635,10 @@ func SecretWithNodeInfrastructureState(nodeName, nodeGroup string, data, setting
 		"d8-system",
 		body,
 		map[string]string{
-			"node.deckhouse.io/node-group":      nodeGroup,
-			"node.deckhouse.io/node-name":       nodeName,
-			"node.deckhouse.io/terraform-state": "",
-			"heritage":                          "deckhouse",
+			"node.deckhouse.io/node-group":  nodeGroup,
+			"node.deckhouse.io/node-name":   nodeName,
+			NodeInfrastructureStateLabelKey: "",
+			"heritage":                      "deckhouse",
 		},
 	)
 }
