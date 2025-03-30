@@ -1,9 +1,3 @@
----
-title: "Grafana"
-permalink: ru/user/web/grafana.html
-lang: ru
----
-
 ## Веб-интерфейс системы мониторинга
 
 В качестве веб-интерфейса системы мониторинга используется Grafana.
