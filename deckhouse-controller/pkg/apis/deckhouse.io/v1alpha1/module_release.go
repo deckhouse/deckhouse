@@ -39,7 +39,6 @@ const (
 	ModuleReleasePhaseTerminating = "Terminating"
 
 	ModuleReleaseApprovalAnnotation              = "modules.deckhouse.io/approved"
-	ModuleReleaseAnnotationIsUpdating            = "modules.deckhouse.io/isUpdating"
 	ModuleReleaseAnnotationNotified              = "modules.deckhouse.io/notified"
 	ModuleReleaseAnnotationApplyNow              = "modules.deckhouse.io/apply-now"
 	ModuleReleaseAnnotationRegistrySpecChanged   = "modules.deckhouse.io/registry-spec-changed"

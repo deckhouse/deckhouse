@@ -202,6 +202,8 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		suite.updateModuleReleasesStatuses()
 		_, err = suite.ctr.handleDeployedRelease(context.TODO(), suite.getModuleRelease("echo-v0.4.54"))
 		require.NoError(suite.T(), err)
+		_, err = suite.ctr.handleDeployedRelease(context.TODO(), suite.getModuleRelease("echo-v0.4.54"))
+		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("loop until deploy: canary", func() {
