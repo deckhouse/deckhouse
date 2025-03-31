@@ -134,11 +134,11 @@ spec:
             fieldRef:
               fieldPath: spec.nodeName
         - name: IMAGE_AUTH
-          value: {{ $images["auth"] }}
+          value: {{ index $images "auth" }}
         - name: IMAGE_DISTRIBUTION
-          value: {{ $images["distribution"] }}
+          value: {{ index $images "distribution" }}
         - name: IMAGE_MIRRORER
-          value: {{ $images["mirrorer"] }}
+          value: {{ index $images "mirrorer" }}
         {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
         ports:
         - name: http-healthz
