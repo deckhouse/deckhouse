@@ -130,3 +130,7 @@ spec:
           type: string
           jsonPath: .status.message
           description: Detailed description.
+        - name: Rollback
+          type: string
+          jsonPath: .spec.rollback
+          description: Indicates whether the module release should be rollback after deleting mpo.
