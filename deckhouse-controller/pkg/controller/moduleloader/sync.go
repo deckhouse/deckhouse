@@ -279,6 +279,26 @@ func (l *Loader) restoreAbsentModulesFromReleases(ctx context.Context) error {
 			continue
 		}
 
+		// update module version
+		module := new(v1alpha1.Module)
+		if err = l.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, module); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return fmt.Errorf("get '%s' module: %w", release.Spec.ModuleName, err)
+			}
+			l.logger.Warn("module is missing, skip setting version", slog.String("name", release.Spec.ModuleName))
+			continue
+		}
+
+		l.logger.Debug("set module version", slog.String("name", release.GetModuleName()), slog.String("version", release.GetModuleVersion()))
+
+		err = ctrlutils.UpdateWithRetry(ctx, l.client, module, func() error {
+			module.Properties.Version = release.GetModuleVersion()
+			return nil
+		})
+		if err != nil {
+			return fmt.Errorf("update the '%s' module: %w", release.GetModuleName(), err)
+		}
+
 		// get relevant module source
 		source := new(v1alpha1.ModuleSource)
 		if err = l.client.Get(ctx, client.ObjectKey{Name: release.GetModuleSource()}, source); err != nil {
@@ -312,26 +332,6 @@ func (l *Loader) restoreAbsentModulesFromReleases(ctx context.Context) error {
 				if err = l.createModuleSymlink(release.Spec.ModuleName, moduleVersion, source, release.Spec.Weight, false); err != nil {
 					return fmt.Errorf("create the '%s' module symlink: %w", release.Spec.ModuleName, err)
 				}
-			}
-
-			// update module version
-			module := new(v1alpha1.Module)
-			if err = l.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, module); err != nil {
-				if !apierrors.IsNotFound(err) {
-					return fmt.Errorf("get '%s' module: %w", release.Spec.ModuleName, err)
-				}
-				l.logger.Warn("module is missing, skip setting version", slog.String("name", release.Spec.ModuleName))
-				continue
-			}
-
-			l.logger.Debug("set module version", slog.String("name", release.GetModuleVersion()), slog.String("version", moduleVersion))
-
-			err = ctrlutils.UpdateWithRetry(ctx, l.client, module, func() error {
-				module.Properties.Version = moduleVersion
-				return nil
-			})
-			if err != nil {
-				return fmt.Errorf("update the '%s' module: %w", release.GetModuleName(), err)
 			}
 		}
 
