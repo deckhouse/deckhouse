@@ -12,7 +12,7 @@ cleanup:
       last: 1
   # keep 4 pre-release builds
   - references:
-      branch: /release-.*/
+      branch: /release-[0-9]\.[0-9]+/
       limit:
         last: 4
     imagesPerReference:
