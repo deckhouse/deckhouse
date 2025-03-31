@@ -300,7 +300,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
-          exit 0
+
           ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
@@ -591,7 +591,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
-          exit 0
+
           ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
@@ -882,7 +882,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
-          exit 0
+
           ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
@@ -1173,7 +1173,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
-          exit 0
+
           ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
@@ -1464,7 +1464,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
-          exit 0
+
           ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
@@ -1755,7 +1755,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
-          exit 0
+
           ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"

@@ -529,7 +529,7 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
           "
-          exit 0
+
           ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
@@ -619,7 +619,7 @@ jobs:
             const repo = context.repo.repo;
             const prNumber = process.env.CI_COMMIT_REF_SLUG;
             console.log(prNumber.replace("pr", ""))
-            const maxWaitTimeMinutes = 20;
+            const maxWaitTimeMinutes = 60;
             const startTime = Date.now();
 
             async function checkLabel() {
@@ -701,7 +701,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
-          exit 0
+
           ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
@@ -1084,7 +1084,7 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
           "
-          exit 0
+
           ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
@@ -1174,7 +1174,7 @@ jobs:
             const repo = context.repo.repo;
             const prNumber = process.env.CI_COMMIT_REF_SLUG;
             console.log(prNumber.replace("pr", ""))
-            const maxWaitTimeMinutes = 20;
+            const maxWaitTimeMinutes = 60;
             const startTime = Date.now();
 
             async function checkLabel() {
@@ -1256,7 +1256,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
-          exit 0
+
           ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
@@ -1639,7 +1639,7 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
           "
-          exit 0
+
           ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
@@ -1729,7 +1729,7 @@ jobs:
             const repo = context.repo.repo;
             const prNumber = process.env.CI_COMMIT_REF_SLUG;
             console.log(prNumber.replace("pr", ""))
-            const maxWaitTimeMinutes = 20;
+            const maxWaitTimeMinutes = 60;
             const startTime = Date.now();
 
             async function checkLabel() {
@@ -1811,7 +1811,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
-          exit 0
+
           ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
@@ -2194,7 +2194,7 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
           "
-          exit 0
+
           ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
@@ -2284,7 +2284,7 @@ jobs:
             const repo = context.repo.repo;
             const prNumber = process.env.CI_COMMIT_REF_SLUG;
             console.log(prNumber.replace("pr", ""))
-            const maxWaitTimeMinutes = 20;
+            const maxWaitTimeMinutes = 60;
             const startTime = Date.now();
 
             async function checkLabel() {
@@ -2366,7 +2366,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
-          exit 0
+
           ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
@@ -2749,7 +2749,7 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
           "
-          exit 0
+
           ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
@@ -2839,7 +2839,7 @@ jobs:
             const repo = context.repo.repo;
             const prNumber = process.env.CI_COMMIT_REF_SLUG;
             console.log(prNumber.replace("pr", ""))
-            const maxWaitTimeMinutes = 20;
+            const maxWaitTimeMinutes = 60;
             const startTime = Date.now();
 
             async function checkLabel() {
@@ -2921,7 +2921,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
-          exit 0
+
           ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
@@ -3304,7 +3304,7 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
           "
-          exit 0
+
           ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
@@ -3394,7 +3394,7 @@ jobs:
             const repo = context.repo.repo;
             const prNumber = process.env.CI_COMMIT_REF_SLUG;
             console.log(prNumber.replace("pr", ""))
-            const maxWaitTimeMinutes = 20;
+            const maxWaitTimeMinutes = 60;
             const startTime = Date.now();
 
             async function checkLabel() {
@@ -3476,7 +3476,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
-          exit 0
+
           ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
