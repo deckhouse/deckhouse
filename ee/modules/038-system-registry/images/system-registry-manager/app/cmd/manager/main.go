@@ -70,28 +70,6 @@ func main() {
 
 // setupAndStartManager sets up the manager, adds components, and starts the manager
 func setupAndStartManager(ctx context.Context, cfg *rest.Config, httpClient *httpclient.Client) error {
-	registryAddress := os.Getenv("REGISTRY_ADDRESS")
-	registryPath := os.Getenv("REGISTRY_PATH")
-	imageAuth := os.Getenv("IMAGE_DOCKER_AUTH")
-	imageDistribution := os.Getenv("IMAGE_DOCKER_DISTRIBUTION")
-	imageMirrorer := os.Getenv("IMAGE_MIRRORER")
-
-	if registryAddress == "" {
-		return fmt.Errorf("REGISTRY_ADDRESS enviroment variable is not set")
-	}
-	if registryPath == "" {
-		return fmt.Errorf("REGISTRY_PATH enviroment variable is not set")
-	}
-	if imageAuth == "" {
-		return fmt.Errorf("IMAGE_DOCKER_AUTH enviroment variable is not set")
-	}
-	if imageDistribution == "" {
-		return fmt.Errorf("IMAGE_DOCKER_DISTRIBUTION enviroment variable is not set")
-	}
-	if imageMirrorer == "" {
-		return fmt.Errorf("IMAGE_MIRRORER enviroment variable is not set")
-	}
-
 	// Set up the manager with leader election and other options
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Metrics: metricsserver.Options{
@@ -124,14 +102,6 @@ func setupAndStartManager(ctx context.Context, cfg *rest.Config, httpClient *htt
 		Client:     mgr.GetClient(),
 		Namespace:  state.RegistryNamespace,
 		HttpClient: httpClient,
-
-		Settings: registry_controller.NodeControllerSettings{
-			RegistryAddress:   registryAddress,
-			RegistryPath:      registryPath,
-			ImageAuth:         imageAuth,
-			ImageDistribution: imageDistribution,
-			ImageMirrorer:     imageMirrorer,
-		},
 	}
 
 	if err := nodeController.SetupWithManager(ctx, mgr); err != nil {

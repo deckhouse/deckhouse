@@ -17,6 +17,7 @@ import (
 
 type templateModel struct {
 	Config
+	Images  Images
 	Version string
 	Address string
 	Hash    string
@@ -39,7 +40,6 @@ func (cfg *NodeServicesConfigModel) Bind(r *http.Request) error {
 
 // Config represents the configuration
 type Config struct {
-	Images   Images         `json:"images,omitempty" yaml:"images,omitempty"`
 	Registry RegistryConfig `json:"registry,omitempty" yaml:"registry,omitempty"`
 	PKI      PKIModel       `json:"pki,omitempty" yaml:"pki,omitempty"`
 	Proxy    *Proxy         `json:"proxy,omitempty" yaml:"proxy,omitempty"`
@@ -48,7 +48,6 @@ type Config struct {
 func (config *Config) Validate() error {
 	return validation.ValidateStruct(config,
 		validation.Field(&config.Registry, validation.Required),
-		validation.Field(&config.Images, validation.Required),
 		validation.Field(&config.PKI, validation.Required),
 		validation.Field(&config.Proxy),
 	)
@@ -139,9 +138,9 @@ func (u UpstreamRegistry) Validate() error {
 }
 
 type Images struct {
-	Distribution string `json:"distribution,omitempty" yaml:"distribution,omitempty"`
-	Auth         string `json:"auth,omitempty" yaml:"auth,omitempty"`
-	Mirrorer     string `json:"mirrorer,omitempty" yaml:"mirrorer,omitempty"`
+	Distribution string
+	Auth         string
+	Mirrorer     string
 }
 
 func (im Images) Validate() error {

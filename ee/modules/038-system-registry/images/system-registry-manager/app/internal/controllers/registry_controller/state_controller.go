@@ -52,9 +52,8 @@ func (sc *stateController) SetupWithManager(ctx context.Context, mgr ctrl.Manage
 	sc.eventRecorder = mgr.GetEventRecorderFor(controllerName)
 
 	moduleConfig := state.GetModuleConfigObject()
-
 	moduleConfigPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
-		return obj.GetName() == state.RegistryModuleName
+		return obj.GetName() == moduleConfig.GetName()
 	})
 
 	secretsPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
@@ -82,7 +81,7 @@ func (sc *stateController) SetupWithManager(ctx context.Context, mgr ctrl.Manage
 		)
 
 		var req reconcile.Request
-		req.Name = state.RegistryModuleName
+		req.Name = moduleConfig.GetName()
 
 		return []reconcile.Request{req}
 	})
@@ -104,7 +103,7 @@ func (sc *stateController) SetupWithManager(ctx context.Context, mgr ctrl.Manage
 	return nil
 }
 
-func (sc *stateController) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, err error) {
+func (sc *stateController) Reconcile(ctx context.Context, _ ctrl.Request) (result ctrl.Result, err error) {
 	log := ctrl.LoggerFrom(ctx)
 
 	config, err := state.LoadModuleConfig(ctx, sc.Client)

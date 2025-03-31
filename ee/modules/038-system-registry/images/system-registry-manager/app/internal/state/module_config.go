@@ -36,14 +36,9 @@ const (
 )
 
 type RegistryConfig struct {
-	Mode           RegistryMode    `json:"mode"` // enum: Direct, Proxy, Detached
-	Proxy          *ProxyConfig    `json:"proxy,omitempty"`
-	Detached       *DetachedConfig `json:"detached,omitempty"`
-	ImagesOverride ImagesOverride  `json:"imagesOverride,omitempty"`
-}
-
-type ImagesOverride struct {
-	Mirrorer string `json:"mirrorer,omitempty"`
+	Mode     RegistryMode    `json:"mode"` // enum: Direct, Proxy, Detached
+	Proxy    *ProxyConfig    `json:"proxy,omitempty"`
+	Detached *DetachedConfig `json:"detached,omitempty"`
 }
 
 type DetachedConfig struct {

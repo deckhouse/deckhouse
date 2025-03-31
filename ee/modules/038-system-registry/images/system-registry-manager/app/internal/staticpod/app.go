@@ -26,17 +26,28 @@ const (
 	metricsAddr = "127.0.0.1:8081"
 )
 
-func Run(ctx context.Context, cfg *rest.Config, hostIP, nodeName string) error {
+type AppSettings struct {
+	HostIP            string
+	NodeName          string
+	RegistryAddress   string
+	RegistryPath      string
+	ImageAuth         string
+	ImageDistribution string
+	ImageMirrorer     string
+}
+
+func Run(ctx context.Context, cfg *rest.Config, settings AppSettings) error {
 	ctrl.SetLogger(logr.FromSlogHandler(slog.Default().Handler()))
 	log := ctrl.Log.WithValues("component", "Application")
 
 	log.Info("Starting")
 	defer log.Info("Stopped")
 
+	namespace := "d8-system"
+
 	services := &servicesManager{
 		log:      slog.With("component", "Services manager"),
-		hostIP:   hostIP,
-		nodeName: nodeName,
+		settings: settings,
 	}
 
 	api := &apiServer{
@@ -53,7 +64,7 @@ func Run(ctx context.Context, cfg *rest.Config, hostIP, nodeName string) error {
 		GracefulShutdownTimeout: &[]time.Duration{10 * time.Second}[0],
 		Cache: cache.Options{
 			DefaultNamespaces: map[string]cache.Config{
-				"d8-system": {},
+				namespace: {},
 			},
 		},
 	})
@@ -67,6 +78,17 @@ func Run(ctx context.Context, cfg *rest.Config, hostIP, nodeName string) error {
 	}
 	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
 		return fmt.Errorf("unable to set up ready check: %w", err)
+	}
+
+	servicesCtrl := servicesController{
+		Namespace: namespace,
+		Client:    mgr.GetClient(),
+		Services:  services,
+		NodeName:  settings.NodeName,
+	}
+
+	if err := servicesCtrl.SetupWithManager(ctx, mgr); err != nil {
+		return fmt.Errorf("unable to create services controller: %w", err)
 	}
 
 	mgr.Add(manager.RunnableFunc(api.Run))

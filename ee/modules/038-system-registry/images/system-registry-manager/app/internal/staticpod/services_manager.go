@@ -25,8 +25,7 @@ const (
 type servicesManager struct {
 	m        sync.Mutex
 	log      *slog.Logger
-	hostIP   string
-	nodeName string
+	settings AppSettings
 }
 
 func (manager *servicesManager) applyConfig(config NodeServicesConfigModel) (changes ChangesModel, err error) {
@@ -37,7 +36,12 @@ func (manager *servicesManager) applyConfig(config NodeServicesConfigModel) (cha
 	model := templateModel{
 		Config:  config.Config,
 		Version: config.Version,
-		Address: manager.hostIP,
+		Address: manager.settings.HostIP,
+		Images: Images{
+			Distribution: manager.settings.ImageDistribution,
+			Auth:         manager.settings.ImageAuth,
+			Mirrorer:     manager.settings.ImageMirrorer,
+		},
 	}
 
 	sum := sha256.New()

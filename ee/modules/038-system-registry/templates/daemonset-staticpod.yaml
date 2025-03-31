@@ -9,9 +9,23 @@ memory: 10Mi
 {{- end }}
 
 {{- $images := dict }}
-{{- $_ := set $images "dockerAuth" (include "helm_lib_module_image" (list . "dockerAuth")) }}
-{{- $_ := set $images "dockerDistribution" (include "helm_lib_module_image" (list . "dockerDistribution")) }}
+
+{{- $_ := set $images "auth" (include "helm_lib_module_image" (list . "dockerAuth")) }}
+{{- $_ := set $images "distribution" (include "helm_lib_module_image" (list . "dockerDistribution")) }}
 {{- $_ := set $images "mirrorer" (include "helm_lib_module_image" (list . "mirrorer")) }}
+
+
+{{- with $.Values.systemRegistry.imagesOverride }}
+{{- with .auth }}
+{{- $_ := set $images "auth" . }}
+{{- end }}
+{{- with .distribution }}
+{{- $_ := set $images "distribution" . }}
+{{- end }}
+{{- with .mirrorer }}
+{{- $_ := set $images "mirrorer" . }}
+{{- end }}
+{{- end }}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
@@ -119,6 +133,12 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
+        - name: IMAGE_AUTH
+          value: {{ $images["auth"] }}
+        - name: IMAGE_DISTRIBUTION
+          value: {{ $images["distribution"] }}
+        - name: IMAGE_MIRRORER
+          value: {{ $images["mirrorer"] }}
         {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
         ports:
         - name: http-healthz

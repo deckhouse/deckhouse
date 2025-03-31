@@ -54,19 +54,10 @@ type NodeController = nodeController
 
 var _ reconcile.Reconciler = &nodeController{}
 
-type NodeControllerSettings struct {
-	RegistryAddress   string
-	RegistryPath      string
-	ImageAuth         string
-	ImageDistribution string
-	ImageMirrorer     string
-}
-
 type nodeController struct {
 	Namespace  string
 	Client     client.Client
 	HttpClient *httpclient.Client
-	Settings   NodeControllerSettings
 
 	masterNodeAddrs   []string
 	masterNodeAddrsMu sync.Mutex
@@ -199,7 +190,7 @@ func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 
 	moduleConfig := state.GetModuleConfigObject()
 	moduleConfigPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
-		return obj.GetName() == state.RegistryModuleName
+		return obj.GetName() == moduleConfig.GetName()
 	})
 
 	globalSecretsPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
@@ -639,16 +630,10 @@ func (nc *nodeController) contructNodeServicesConfig(
 		return
 	}
 
-	registryHostPath := fmt.Sprintf("%s%s", nc.Settings.RegistryAddress, nc.Settings.RegistryPath)
-
 	model = staticpod.NodeServicesConfigModel{
 		Version: stateSecret.Version,
 		Config: staticpod.Config{
-			Images: staticpod.Images{
-				Auth:         fmt.Sprintf("%s@%s", registryHostPath, nc.Settings.ImageAuth),
-				Distribution: fmt.Sprintf("%s@%s", registryHostPath, nc.Settings.ImageDistribution),
-				Mirrorer:     fmt.Sprintf("%s@%s", registryHostPath, nc.Settings.ImageMirrorer),
-			},
+
 			Registry: staticpod.RegistryConfig{
 				HttpSecret: globalSecrets.HttpSecret,
 				UserRO: staticpod.User{
@@ -702,10 +687,6 @@ func (nc *nodeController) contructNodeServicesConfig(
 			},
 			Upstreams: mirrorerUpstreams,
 		}
-	}
-
-	if moduleConfig.Settings.ImagesOverride.Mirrorer != "" {
-		model.Config.Images.Mirrorer = moduleConfig.Settings.ImagesOverride.Mirrorer
 	}
 
 	if ingressPKI != nil {

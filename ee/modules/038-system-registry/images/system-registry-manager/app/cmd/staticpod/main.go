@@ -19,24 +19,21 @@ import (
 
 var (
 	shutdownSignals = []os.Signal{os.Interrupt, syscall.SIGTERM}
-
-	nodeName = os.Getenv("NODE_NAME")
+	log             = slog.With("component", "main")
 )
 
 func main() {
-	log := slog.With("component", "main")
-	log = log.With("node", nodeName)
+	var settings staticpod.AppSettings
 
-	hostIP := os.Getenv("HOST_IP")
-	if hostIP == "" {
-		log.Error("HOST_IP environment variable is not set")
-		os.Exit(1)
-	}
+	settings.HostIP = getEnvOrExit("HOST_IP")
+	log = log.With("ip", settings.HostIP)
 
-	if nodeName == "" {
-		log.Error("NODE_NAME environment variable is not set")
-		os.Exit(1)
-	}
+	settings.NodeName = getEnvOrExit("NODE_NAME")
+	log = log.With("node", settings.NodeName)
+
+	settings.ImageAuth = getEnvOrExit("IMAGE_AUTH")
+	settings.ImageDistribution = getEnvOrExit("IMAGE_DISTRIBUTION")
+	settings.ImageMirrorer = getEnvOrExit("IMAGE_MIRRORER")
 
 	// Load Kubernetes configuration
 	cfg, err := rest.InClusterConfig()
@@ -53,7 +50,7 @@ func main() {
 
 	log.Info("Starting application")
 
-	if err = staticpod.Run(ctx, cfg, hostIP, nodeName); err != nil {
+	if err = staticpod.Run(ctx, cfg, settings); err != nil {
 		log.Error("Application error", "error", err)
 	}
 
@@ -77,4 +74,14 @@ func setupSignalHandler() context.Context {
 	}()
 
 	return ctx
+}
+
+func getEnvOrExit(name string) string {
+	val := os.Getenv(name)
+	if val == "" {
+		log.Error("Required environment variable is not set", "variable", name)
+		os.Exit(1)
+	}
+
+	return val
 }

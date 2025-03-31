@@ -66,20 +66,6 @@ spec:
         image: {{ include "helm_lib_module_image" (list . "systemRegistryManager") }}
         {{- end }}
         env:
-        - name: HOST_IP
-          valueFrom:
-            fieldRef:
-              fieldPath: status.hostIP
-        - name: REGISTRY_ADDRESS
-          value: {{ $.Values.global.modulesImages.registry.address }}
-        - name: REGISTRY_PATH
-          value: {{ $.Values.global.modulesImages.registry.path }}
-        - name: IMAGE_DOCKER_AUTH
-          value: {{ include "helm_lib_module_image_digest" (list . "dockerAuth") }}
-        - name: IMAGE_DOCKER_DISTRIBUTION
-          value: {{ include "helm_lib_module_image_digest" (list . "dockerDistribution") }}
-        - name: IMAGE_MIRRORER
-          value: {{ include "helm_lib_module_image_digest" (list . "mirrorer") }}
         {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
         ports:
         - name: http-healthz
