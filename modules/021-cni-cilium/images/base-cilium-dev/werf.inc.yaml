@@ -13,12 +13,12 @@
 # #####################################################################
 # BASE_DEV image for build binaries of all cilium components (based on Ubuntu)
 # based on original images: runtime, builder, compilers, cilium-envoy, iptables
-# Based on https://github.com/cilium/cilium/blob/v1.17.1/images/runtime/Dockerfile
-# and https://github.com/cilium/cilium/blob/v1.17.1/images/runtime/install-runtime-deps.sh
-# and https://github.com/cilium/cilium/blob/v1.17.1/images/builder/Dockerfile
+# Based on https://github.com/cilium/cilium/blob/v1.17.2/images/runtime/Dockerfile
+# and https://github.com/cilium/cilium/blob/v1.17.2/images/runtime/install-runtime-deps.sh
+# and https://github.com/cilium/cilium/blob/v1.17.2/images/builder/Dockerfile
 # and https://github.com/cilium/image-tools/blob/063fa0d879d9560b85b6134c48ece08e672fa057/images/compilers/Dockerfile
 # and https://github.com/cilium/image-tools/blob/063fa0d879d9560b85b6134c48ece08e672fa057/images/compilers/install-deps.sh
-# and https://github.com/cilium/cilium/blob/v1.17.1/images/cilium/Dockerfile#L9
+# and https://github.com/cilium/cilium/blob/v1.17.2/images/cilium/Dockerfile#L9
 # and https://github.com/cilium/proxy/blob/958bef243c6c66fcfd73ca319f2eb49fff1eb2ae/Dockerfile.builder
 # and https://github.com/cilium/image-tools/blob/0e4de6ffe79e97a9795f1ce887a45026e1af22a7/images/iptables/Dockerfile
 #
