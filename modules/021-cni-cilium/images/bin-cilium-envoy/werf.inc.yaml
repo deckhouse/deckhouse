@@ -84,7 +84,8 @@ shell:
   - mv proxylib/libcilium.so /tmp/install/usr/lib/libcilium.so
   #
   - export BAZEL_VERSION="{{ $bazelVersions }}" USE_BAZEL_VERSION="{{ $bazelVersions }}"
-  - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache --nofetch"
+  #- export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache --nofetch"
+  - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache"
   - export PKG_BUILD=1 V=$V DEBUG=$DEBUG DESTDIR=/tmp/install
   #
   - cd /cilium/proxy
