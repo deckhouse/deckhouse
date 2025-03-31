@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
+	"sort"
+	"strings"
 
 	validation "github.com/go-ozzo/ozzo-validation"
 )
@@ -18,7 +20,7 @@ type templateModel struct {
 	Version  string
 	Address  string
 	NodeName string
-	Hashes   configHashes
+	Hash     string
 }
 
 type NodeServicesConfigModel struct {
@@ -82,6 +84,18 @@ func (p PKIModel) Validate() error {
 
 // configHashes holds the hash of the configuration files
 type configHashes map[string]string
+
+func (ch configHashes) String() string {
+	values := make([]string, 0, len(ch))
+
+	for _, val := range ch {
+		values = append(values, val)
+	}
+
+	sort.Strings(values)
+	s := strings.Join(values, "\n")
+	return computeHash([]byte(s))
+}
 
 // RegistryConfig holds detailed configuration of the registry
 type RegistryConfig struct {

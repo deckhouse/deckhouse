@@ -10,14 +10,8 @@ metadata:
     tier: control-plane
     type: static-pod
   annotations:
-    {{- range $key, $value := .Hashes }}
-    registry.deckhouse.io/hash-{{ $key }}: {{ quote $value }}
-    {{- end }}
-    {{- with .Version }}
-    registry.deckhouse.io/config-version: {{ quote . }}
-    {{- else }}
-    registry.deckhouse.io/config-version: "unknown"
-    {{- end }}
+    registry.deckhouse.io/config-hash: {{ quote .Hash }}
+    registry.deckhouse.io/config-version: {{ quote .Version }}
   name: system-registry
   namespace: d8-system
 spec:

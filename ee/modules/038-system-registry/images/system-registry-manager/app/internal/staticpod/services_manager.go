@@ -39,8 +39,10 @@ func (manager *servicesManager) applyConfig(config NodeServicesConfigModel) (cha
 		NodeName: manager.nodeName,
 	}
 
+	var hashes configHashes
+
 	// Sync the PKI files
-	if changes.PKI, model.Hashes, err = model.PKI.syncPKIFiles(
+	if changes.PKI, hashes, err = model.PKI.syncPKIFiles(
 		pkiConfigDirectoryPath,
 	); err != nil {
 		err = fmt.Errorf("error saving PKI files: %w", err)
@@ -48,7 +50,7 @@ func (manager *servicesManager) applyConfig(config NodeServicesConfigModel) (cha
 	}
 
 	// Process the templates with the given data and create the static pod and configuration files
-	if changes.Auth, model.Hashes["auth-config"], err = model.processTemplate(
+	if changes.Auth, hashes["auth-config"], err = model.processTemplate(
 		authConfigTemplateName,
 		authConfigPath,
 	); err != nil {
@@ -56,7 +58,7 @@ func (manager *servicesManager) applyConfig(config NodeServicesConfigModel) (cha
 		return
 	}
 
-	if changes.Distribution, model.Hashes["distribution-config"], err = model.processTemplate(
+	if changes.Distribution, hashes["distribution-config"], err = model.processTemplate(
 		distributionConfigTemplateName,
 		distributionConfigPath,
 	); err != nil {
@@ -65,7 +67,7 @@ func (manager *servicesManager) applyConfig(config NodeServicesConfigModel) (cha
 	}
 
 	if model.Registry.Mirrorer != nil {
-		if changes.Mirrorer, model.Hashes["mirrorer-config"], err = model.processTemplate(
+		if changes.Mirrorer, hashes["mirrorer-config"], err = model.processTemplate(
 			mirrorerConfigTemplateName,
 			mirrorerConfigPath,
 		); err != nil {
@@ -80,6 +82,7 @@ func (manager *servicesManager) applyConfig(config NodeServicesConfigModel) (cha
 		}
 	}
 
+	model.Hash = hashes.String()
 	if changes.Pod, _, err = model.processTemplate(
 		registryStaticPodTemplateName,
 		registryStaticPodConfigPath,
@@ -98,7 +101,6 @@ func (manager *servicesManager) StopServices() (changes ChangesModel, err error)
 
 	// Delete the static pod file
 	if changes.Pod, err = deleteFile(registryStaticPodConfigPath); err != nil {
-
 		err = fmt.Errorf("error deleting static pod file: %w", err)
 		return
 	}
