@@ -39,16 +39,12 @@ shell:
 git:
   - add: /{{ $appRelPath }}
     to:  {{ $appAbsPath }}
-    includePaths:
-      - '**/*.mod'
-      - '**/*.sum'
-      - '**/*.go'
     stageDependencies:
       install:
         - '**/*.mod'
         - '**/*.sum'
       setup:
-        - "**/*.go"
+        - "**/*"
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg

@@ -48,30 +48,20 @@ shell:
 git:
   - add: /{{ $appRelPath }}
     to:  {{ $appAbsPath }}
-    includePaths:
-      - '**/*.mod'
-      - '**/*.sum'
-      - '**/*.go'
-      - 'internal/staticpod/templates/**'
     stageDependencies:
       install:
         - '**/*.mod'
         - '**/*.sum'
       setup:
-        - "**/*.go"
-        - 'internal/staticpod/templates/**'
+        - "**/*"
   - add: /go_lib/system-registry-manager
     to: /deckhouse/go_lib/system-registry-manager
-    includePaths:
-      - '**/*.go'
-      - '**/*.mod'
-      - '**/*.sum'
     stageDependencies:
       install:
         - '**/*.mod'
         - '**/*.sum'
       setup:
-        - "**/*.go"
+        - "**/*"
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
