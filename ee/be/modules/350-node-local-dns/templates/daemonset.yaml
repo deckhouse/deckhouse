@@ -49,7 +49,6 @@ spec:
   selector:
     matchLabels:
       app: node-local-dns
-      foo: bar
   template:
     metadata:
       labels:
