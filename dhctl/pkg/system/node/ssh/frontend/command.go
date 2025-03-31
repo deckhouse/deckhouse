@@ -15,6 +15,7 @@
 package frontend
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -142,7 +143,7 @@ func (c *Command) Cmd() {
 	c.Executor = process.NewDefaultExecutor(c.cmd)
 }
 
-func (c *Command) Output() ([]byte, []byte, error) {
+func (c *Command) Output(ctx context.Context) ([]byte, []byte, error) {
 	if c.Session == nil {
 		return nil, nil, fmt.Errorf("execute command %s: SSH client is undefined", c.Name)
 	}
@@ -158,7 +159,7 @@ func (c *Command) Output() ([]byte, []byte, error) {
 	return output, nil, nil
 }
 
-func (c *Command) CombinedOutput() ([]byte, error) {
+func (c *Command) CombinedOutput(ctx context.Context) ([]byte, error) {
 	if c.Session == nil {
 		return nil, fmt.Errorf("execute command %s: sshClient is undefined", c.Name)
 	}

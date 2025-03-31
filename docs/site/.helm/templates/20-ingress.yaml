@@ -232,6 +232,13 @@ spec:
             name: backend
             port:
               name: http
+      - path: /products/code/documentation/
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http        
       - path: /products/virtualization-platform/documentation/
         pathType: Prefix
         backend:

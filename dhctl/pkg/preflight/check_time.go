@@ -15,6 +15,7 @@
 package preflight
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"regexp"
@@ -34,9 +35,9 @@ func getLocalTimeStamp() int64 {
 	return time.Now().Unix()
 }
 
-func getRemoteTimeStamp(sshCl node.Interface) (int64, error) {
+func getRemoteTimeStamp(ctx context.Context, sshCl node.Interface) (int64, error) {
 	cmd := sshCl.Command("date", "+%s")
-	dateOutput, _, err := cmd.Output()
+	dateOutput, _, err := cmd.Output(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to execute date command: %w", err)
 	}
@@ -53,13 +54,13 @@ func getRemoteTimeStamp(sshCl node.Interface) (int64, error) {
 	return timeStamp, nil
 }
 
-func (pc *Checker) CheckTimeDrift() error {
+func (pc *Checker) CheckTimeDrift(ctx context.Context) error {
 	if app.PreflightSkipTimeDrift {
 		log.InfoLn("Checking Time Drift was skipped (via skip flag)")
 		return nil
 	}
 
-	remoteTimeStamp, err := getRemoteTimeStamp(pc.nodeInterface)
+	remoteTimeStamp, err := getRemoteTimeStamp(ctx, pc.nodeInterface)
 	if err != nil {
 		log.InfoF("Checking Time Drift was skipped, check cannot be performed: %v\n", err)
 		return nil

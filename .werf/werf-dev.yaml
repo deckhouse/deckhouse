@@ -35,6 +35,7 @@ shell:
     EOD
 {{- end }}
     {{ include "dev_prebuild_setup_script_general_part" (dict "Env" .Env "CI_COMMIT_TAG" .CI_COMMIT_TAG) | nindent 4}}
+  - setcap "cap_sys_chroot=ep cap_sys_admin=ep cap_mknod=ep" /usr/bin/caps-deckhouse-controller
 
 {{ include "dev_prebuild_docker_properties" . }}
 ---

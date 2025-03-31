@@ -21,7 +21,9 @@
   "istio": {
     "editionsWithRestrictions": [
       "ce",
-      "be"
+      "be",
+      "se",
+      "se-plus"
     ],
     "editionsWithRestrictionsComments": {
       "all": {
@@ -153,7 +155,13 @@
   "secrets-store-integration": {
     "external": "true",
     "path": "/products/kubernetes-platform/modules/secrets-store-integration/stable/",
-    "editionMinimumAvailable": "be"
+    "editionFullyAvailable": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ]
   },
   "csi-yadro-tatlin-unified": {
     "external": "true",

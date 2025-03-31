@@ -14,14 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-shutdown_grace_period="30s"
-shutdown_grace_period_critical_pods="5s"
+shutdown_grace_period="25"
+shutdown_grace_period_critical_pods="5"
 
 preemptible="$(d8-curl --connect-timeout 10 -sS -H "Metadata-Flavor: Google" 169.254.169.254/computeMetadata/v1/instance/scheduling/preemptible || true)"
 
 if [[ "$preemptible" == "FALSE" ]]; then
-  shutdown_grace_period="90s"
-  shutdown_grace_period_critical_pods="5s"
+  shutdown_grace_period="85"
+  shutdown_grace_period_critical_pods="5"
 fi
 
 cat << EOF > /var/lib/bashible/cloud-provider-variables

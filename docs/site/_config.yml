@@ -106,6 +106,16 @@ defaults:
       layout: guide
       search_bage_enabled: false
   - scope:
+      path: "pages/code"
+    values:
+      toc_in_sidebar: false
+      toc: false
+      product_code: code
+      documentation_state: develop
+      search_bage_enabled: true
+      sidebar: code
+      sitemap_include: false    
+  - scope:
       path: "pages/virtualization-platform"
     values:
       toc_in_sidebar: false

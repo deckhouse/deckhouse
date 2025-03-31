@@ -1,5 +1,5 @@
 # Patches
 
-### 001-go-mod
+### 001-go-mod.patch
 
 Updates vulnerable dependencies to mitigate CVEs.

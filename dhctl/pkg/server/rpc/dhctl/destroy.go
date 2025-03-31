@@ -45,7 +45,8 @@ import (
 )
 
 func (s *Service) Destroy(server pb.DHCTL_DestroyServer) error {
-	ctx := operationCtx(server)
+	ctx, cancel := operationCtx(server)
+	defer cancel()
 
 	logger.L(ctx).Info("started")
 
@@ -92,7 +93,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.destroySafe(ctx, message.Start, phaseSwitcher.switchPhase, logWriter)
+					result := s.destroySafe(ctx, message.Start, phaseSwitcher.switchPhase(ctx), logWriter)
 					sendCh <- &pb.DestroyResponse{Message: &pb.DestroyResponse_Result{Result: result}}
 				}()
 
@@ -113,6 +114,9 @@ connectionProcessor:
 				case pb.Continue_CONTINUE_ERROR:
 					phaseSwitcher.next <- errors.New(message.Continue.Err)
 				}
+
+			case *pb.DestroyRequest_Cancel:
+				cancel()
 
 			default:
 				logger.L(ctx).Error("got unprocessable message",
@@ -139,7 +143,7 @@ func (s *Service) destroySafe(
 }
 
 func (s *Service) destroy(
-	_ context.Context,
+	ctx context.Context,
 	request *pb.DestroyStart,
 	switchPhase phases.DefaultOnPhaseFunc,
 	logWriter io.Writer,
@@ -251,7 +255,7 @@ func (s *Service) destroy(
 		return &pb.DestroyResult{Err: fmt.Errorf("unable to initialize cluster destroyer: %w", err).Error()}
 	}
 
-	destroyErr := destroyer.DestroyCluster(true)
+	destroyErr := destroyer.DestroyCluster(ctx, true)
 	state := destroyer.PhasedExecutionContext.GetLastState()
 	data, marshalErr := json.Marshal(state)
 	err = errors.Join(destroyErr, marshalErr)

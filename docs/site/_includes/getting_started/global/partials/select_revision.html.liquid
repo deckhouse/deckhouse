@@ -28,6 +28,11 @@
 </div>
 {%- endunless %}
 {%- if page.ee_only == true and page.se_support == true %}
+{% if page.lang == 'ru' %}
+  <h4>Выберите редакцию Deckhouse Kubernetes Platform</h4>
+  {% else %}
+  <h4>Select the Deckhouse Kubernetes Platform revision</h4>
+{% endif %}
   <div class="tabs">
     {%- for revision in site.data.getting_started.dkp_data.global.revisions %}
       {%  if revision == "se" or revision == "se-plus" or revision == "ee" %}
@@ -40,6 +45,21 @@
       {% endif %}
     {%- endfor %}
   </div>
+
+  <script>
+    // Function for initializing tabs on page load
+    function initializeTabs() {
+      // Set active tab
+      const defaultTab = 'se';
+      const defaultTabElement = document.getElementById(`tab_layout_${defaultTab}`);
+      if (defaultTabElement) {
+        defaultTabElement.click();
+      }
+    }
+
+    // Call the initialization function on page load
+    window.addEventListener('load', initializeTabs);
+  </script>
 {% endif %}
 
 {%- for revision in site.data.getting_started.dkp_data.global.revisions %}

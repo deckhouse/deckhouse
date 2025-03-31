@@ -3,6 +3,10 @@ title: "SCSI-based data storage"
 permalink: en/storage/admin/external/scsi.html
 ---
 
+{% alert level="info" %}
+Available in some commercial editions:  **EE**
+{% endalert %}
+
 Deckhouse supports managing storage connected via iSCSI or Fibre Channel, enabling working with volumes at the block device level. This allows for the integration of storage systems with Kubernetes and management through a CSI driver.
 
 This page provides instructions for connecting SCSI devices in Deckhouse, creating SCSITarget, StorageClass, and verifying system functionality.

@@ -42,7 +42,8 @@ import (
 )
 
 func (s *Service) CommanderAttach(server pb.DHCTL_CommanderAttachServer) error {
-	ctx := operationCtx(server)
+	ctx, cancel := operationCtx(server)
+	defer cancel()
 
 	logger.L(ctx).Info("started")
 
@@ -89,7 +90,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.commanderAttachSafe(ctx, message.Start, phaseSwitcher.switchPhase, logWriter)
+					result := s.commanderAttachSafe(ctx, message.Start, phaseSwitcher.switchPhase(ctx), logWriter)
 					sendCh <- &pb.CommanderAttachResponse{Message: &pb.CommanderAttachResponse_Result{Result: result}}
 				}()
 
@@ -110,6 +111,9 @@ connectionProcessor:
 				case pb.Continue_CONTINUE_ERROR:
 					phaseSwitcher.next <- errors.New(message.Continue.Err)
 				}
+
+			case *pb.CommanderAttachRequest_Cancel:
+				cancel()
 
 			default:
 				logger.L(ctx).Error("got unprocessable message",

@@ -100,14 +100,14 @@ spec:
 
 ## Авторизация в container registry
 
-В зависимости от выбранной редакции может потребоваться авторизация в container registry `registry.deckhouse.io`:
+В зависимости от выбранной редакции может потребоваться авторизация в container registry `registry.deckhouse.ru`:
 
 - Для установки Community Edition авторизация не требуется.
 
 - Для установки Enterprise Edition и выше необходимо выполнить авторизацию на **машине установки**  с использованием лицензионного ключа:
 
   ```shell
-  docker login -u license-token registry.deckhouse.io
+  docker login -u license-token registry.deckhouse.ru
   ```
 
 ## Запуск установщика платформы
@@ -117,7 +117,7 @@ spec:
 Установщик запускается в виде Docker-контейнера. Образ контейнера выбирается в зависимости от редакции и канала обновлений:
 
 ```shell
-registry.deckhouse.io/deckhouse/<REVISION>/install:<RELEASE_CHANNEL>
+registry.deckhouse.ru/deckhouse/<REVISION>/install:<RELEASE_CHANNEL>
 ```
 
 Где:
@@ -135,12 +135,12 @@ registry.deckhouse.io/deckhouse/<REVISION>/install:<RELEASE_CHANNEL>
 
 1. Запустите контейнер, в который будут подмонтированы файл конфигурации и ключи для доступа к узлам.
 
-   Например, для установки редакции `CE` из канала обновлений `Stable` следует использовать образ `registry.deckhouse.io/deckhouse/ce/install:stable`. В этом случае контейнер можно запустить следующей командой:
+   Например, для установки редакции `CE` из канала обновлений `Stable` следует использовать образ `registry.deckhouse.ru/deckhouse/ce/install:stable`. В этом случае контейнер можно запустить следующей командой:
 
    ```shell
    docker run -it --pull=always \
      -v "$PWD/config.yaml:/config.yaml" \
-     -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.io/deckhouse/ce/install:stable bash
+     -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.ru/deckhouse/ce/install:stable bash
    ```
 
 1. Запустите внутри контейнера установщик платформы с помощью команды `dhctl bootstrap`.
@@ -163,7 +163,7 @@ registry.deckhouse.io/deckhouse/<REVISION>/install:<RELEASE_CHANNEL>
 
 1. Запустите контейнер, в который будут подмонтированы файл конфигурации, ключи для доступа к узлам и файл для подключения к Kubernetes API.
 
-   Например, для установки редакции `CE` из канала обновлений `Stable` будет использоваться образ `registry.deckhouse.io/deckhouse/ce/install:stable`,  а для подключения к Kubernetes API будет использоваться файл конфигурации в `$HOME/.kube/config`.
+   Например, для установки редакции `CE` из канала обновлений `Stable` будет использоваться образ `registry.deckhouse.ru/deckhouse/ce/install:stable`,  а для подключения к Kubernetes API будет использоваться файл конфигурации в `$HOME/.kube/config`.
 
    В этом случае контейнер можно запустить следующей командой:
 
