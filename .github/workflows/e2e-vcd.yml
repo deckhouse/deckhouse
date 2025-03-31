@@ -629,11 +629,9 @@ jobs:
             const maxWaitTimeMinutes = 20;
             const startTime = Date.now();
 
-            const octokit = github.getOctokit(process.env.GITHUB_TOKEN);
-
             async function checkLabel() {
               try {
-                const { data: pullRequest } = await octokit.rest.pulls.get({
+                const { data: pullRequest } = await github.rest.pulls.get({
                   owner,
                   repo,
                   pull_number: parseInt(prNumber),
@@ -1201,11 +1199,9 @@ jobs:
             const maxWaitTimeMinutes = 20;
             const startTime = Date.now();
 
-            const octokit = github.getOctokit(process.env.GITHUB_TOKEN);
-
             async function checkLabel() {
               try {
-                const { data: pullRequest } = await octokit.rest.pulls.get({
+                const { data: pullRequest } = await github.rest.pulls.get({
                   owner,
                   repo,
                   pull_number: parseInt(prNumber),
@@ -1773,11 +1769,9 @@ jobs:
             const maxWaitTimeMinutes = 20;
             const startTime = Date.now();
 
-            const octokit = github.getOctokit(process.env.GITHUB_TOKEN);
-
             async function checkLabel() {
               try {
-                const { data: pullRequest } = await octokit.rest.pulls.get({
+                const { data: pullRequest } = await github.rest.pulls.get({
                   owner,
                   repo,
                   pull_number: parseInt(prNumber),
@@ -2345,11 +2339,9 @@ jobs:
             const maxWaitTimeMinutes = 20;
             const startTime = Date.now();
 
-            const octokit = github.getOctokit(process.env.GITHUB_TOKEN);
-
             async function checkLabel() {
               try {
-                const { data: pullRequest } = await octokit.rest.pulls.get({
+                const { data: pullRequest } = await github.rest.pulls.get({
                   owner,
                   repo,
                   pull_number: parseInt(prNumber),
@@ -2917,11 +2909,9 @@ jobs:
             const maxWaitTimeMinutes = 20;
             const startTime = Date.now();
 
-            const octokit = github.getOctokit(process.env.GITHUB_TOKEN);
-
             async function checkLabel() {
               try {
-                const { data: pullRequest } = await octokit.rest.pulls.get({
+                const { data: pullRequest } = await github.rest.pulls.get({
                   owner,
                   repo,
                   pull_number: parseInt(prNumber),
@@ -3489,11 +3479,9 @@ jobs:
             const maxWaitTimeMinutes = 20;
             const startTime = Date.now();
 
-            const octokit = github.getOctokit(process.env.GITHUB_TOKEN);
-
             async function checkLabel() {
               try {
-                const { data: pullRequest } = await octokit.rest.pulls.get({
+                const { data: pullRequest } = await github.rest.pulls.get({
                   owner,
                   repo,
                   pull_number: parseInt(prNumber),
