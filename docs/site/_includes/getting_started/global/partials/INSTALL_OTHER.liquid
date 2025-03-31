@@ -1,13 +1,13 @@
 {% assign revision=include.revision %}
 
-Use a Docker image to install the **Deckhouse Kubernetes Platform**. It is necessary to transfer configuration file to the container{%- if page.platform_type != 'existing' %} as well as SSH keys for accessing **the master node** (further, it is assumed that the SSH key `~/.ssh/id_rsa` is used){% endif %}.
+Use a container image to install the **Deckhouse Kubernetes Platform**. It is necessary to transfer configuration file to the container{%- if page.platform_type != 'existing' %} as well as SSH keys for accessing **the master node** (further, it is assumed that the SSH key `~/.ssh/id_rsa` from the personal computer of the user performing the installation is used){% endif %}.
 {% if page.platform_code == 'bm-private' %}
 Log in on the **personal computer** to the container image registry you specified in the previous step.
 {%- endif %}
 
 Run the installer on the **personal computer**.
 
-{%- if revision == 'ee' %}
+{%- if revision == 'be' or revision == 'se' or revision == 'se-plus' or revision == 'ee' %}
 
 <a id='tab_installer_linux_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_installer_{{ revision }} active"
    onclick="openTabAndSaveStatus(event, 'tabs__btn_installer_{{ revision }}', 'tabs__content_installer_{{ revision }}', 'block_installer_linux_{{ revision }}');" >
@@ -19,9 +19,14 @@ Run the installer on the **personal computer**.
 </a>
 
 <div id='block_installer_linux_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }} active" markdown="1">
-<!-- Linux or macOS install, EE -->
+<!-- Linux or macOS install, BE, SE, SE+, EE -->
+Log in on the **personal computer** to the container image registry:
 ```shell
- echo <LICENSE_TOKEN> | docker login -u license-token --password-stdin registry.deckhouse.io
+echo <LICENSE_TOKEN> | docker login -u license-token --password-stdin registry.deckhouse.io
+```
+
+Run a container with the installer:
+```shell
 docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "$PWD/config.yml:/config.yml"{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/"{% endif %}
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %} \
   -v "$HOME/.kube/config:/kubeconfig"{% endif %}
@@ -30,7 +35,7 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 ```
 </div>
 <div id='block_installer_windows_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }}" markdown="1">
-<!-- Windows install, EE -->
+<!-- Windows install, BE, SE, SE+, EE -->
 Log in on the **personal computer** to the container image registry by providing the license key as a password:
 ```text
 docker login -u license-token registry.deckhouse.io
@@ -103,7 +108,7 @@ dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- el
 
 {%- if page.platform_type == "baremetal" or page.platform_type == "cloud" %}
 {%- if page.platform_type == "baremetal" %}
-The `--ssh-user` parameter here refers to the user that generated the SSH key. If a password is required to run sudo on the server, then specify it in response to the request `[sudo] Password:`.
+The `--ssh-user` parameter here refers to the user on the master node. If a password is required to run `sudo` on the server, then specify it in response to the request `[sudo] Password:`.
 {%- else %}
 The `--ssh-user` parameter here refers to the default user for the relevant VM image.
 {%- if page.platform_code == "azure" %} It is `azureuser` in case of {{ page.platform_name[page.lang] }} (for the image suggested in this guide).

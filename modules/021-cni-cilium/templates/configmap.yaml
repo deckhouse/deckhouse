@@ -130,11 +130,11 @@ data:
   bpf-policy-map-max: "65536"
 
   # Local hubble sever section
-{{- if has "cilium-hubble" .Values.global.enabledModules }}
+  {{- if has "cilium-hubble" .Values.global.enabledModules }}
   enable-hubble: "true"
-{{- else }}
+  {{- else }}
   enable-hubble: "false"
-{{- end }}
+  {{- end }}
   hubble-socket-path: "/var/run/cilium/hubble.sock"
   hubble-listen-address: ":4244"
 
@@ -153,6 +153,11 @@ data:
   procfs: "/host/proc"
 
   write-cni-conf-when-ready: /host/etc/cni/net.d/05-cilium.conflist
-  cni-exclusive: {{ .Values.cniCilium.internal.isIstioCNIEnabled | not | quote }}
+
+  {{- if .Values.cniCilium.internal.isIstioCNIEnabled }}
+  cni-exclusive: "false"
+  {{- else }}
+  cni-exclusive: {{ .Values.cniCilium.exclusiveCNIPlugin | quote }}
+  {{- end }}
 
   skip-crd-creation: "true"

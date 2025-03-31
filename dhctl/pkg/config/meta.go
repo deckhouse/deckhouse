@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -157,6 +158,42 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 					nodeGroup.Replicas > len(nodeGroup.InstanceClass.ExternalIPAddresses) {
 					return nil, fmt.Errorf(`number of nodeGroups["%s"].replicas should be equal to the length of nodeGroups["%s"].instanceClass.externalIPAddresses`, nodeGroup.Name, nodeGroup.Name)
 				}
+			}
+		}
+	}
+
+	if cloud.Provider == "VCD" {
+		// Set default version for terraform-provider-vcd to 3.10.0 if legacyMode is true
+		// This is a temporary solution to avoid breaking changes in the VCD API
+
+		var legacyMode bool
+
+		_, ok := m.ProviderClusterConfig["legacyMode"]
+		if ok {
+			err := json.Unmarshal(m.ProviderClusterConfig["legacyMode"], &legacyMode)
+			if err != nil {
+				return nil, fmt.Errorf("failed to unmarshal legacyMode from provider cluster configuration: %v", err)
+			}
+		}
+
+		terraformModulesDir := getTerraformModulesDir("vcd")
+
+		versionsFilePath := filepath.Join(terraformModulesDir, "versions.tf")
+
+		err := os.Remove(versionsFilePath)
+		if err != nil && !os.IsNotExist(err) {
+			return nil, fmt.Errorf("failed to remove versions.tf: %v", err)
+		}
+
+		if legacyMode {
+			err := os.Symlink(filepath.Join(terraformModulesDir, "versions-legacy.tf"), versionsFilePath)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create symlink to versions-legacy.tf: %v", err)
+			}
+		} else {
+			err := os.Symlink(filepath.Join(terraformModulesDir, "versions-new.tf"), versionsFilePath)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create symlink to versions-new.tf: %v", err)
 			}
 		}
 	}

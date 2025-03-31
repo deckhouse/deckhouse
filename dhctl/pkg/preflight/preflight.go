@@ -15,6 +15,7 @@
 package preflight
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -49,7 +50,7 @@ type Checker struct {
 type checkStep struct {
 	successMessage string
 	skipFlag       string
-	fun            func() error
+	fun            func(ctx context.Context) error
 }
 
 func NewChecker(
@@ -70,7 +71,7 @@ func NewChecker(
 	}
 }
 
-func (pc *Checker) Static() error {
+func (pc *Checker) Static(ctx context.Context) error {
 	ready, err := pc.bootstrapState.StaticPreflightchecksWasRan()
 	if err != nil {
 		msg := fmt.Sprintf("Can not get state from cache: %v", err)
@@ -81,7 +82,7 @@ func (pc *Checker) Static() error {
 		return nil
 	}
 
-	err = pc.do("Preflight checks for static-cluster", []checkStep{
+	err = pc.do(ctx, "Preflight checks for static-cluster", []checkStep{
 		{
 			fun:            pc.CheckSingleSSHHostForStatic,
 			successMessage: "only one --ssh-host parameter used",
@@ -150,7 +151,38 @@ func (pc *Checker) Static() error {
 	return pc.bootstrapState.SetStaticPreflightchecksWasRan()
 }
 
-func (pc *Checker) Cloud() error {
+func (pc *Checker) StaticSudo(ctx context.Context) error {
+	_, err := pc.bootstrapState.StaticPreflightchecksWasRan()
+	if err != nil {
+		msg := fmt.Sprintf("Can not get state from cache: %v", err)
+		return errors.New(msg)
+	}
+
+	err = pc.do(ctx, "Preflight checks for SSH and sudo", []checkStep{
+		{
+			fun:            pc.CheckSSHCredential,
+			successMessage: "ssh credential is correctly",
+			skipFlag:       app.SSHCredentialsCheckArgName,
+		},
+		{
+			fun:            pc.CheckSSHTunnel,
+			successMessage: "ssh tunnel between installer and node is possible",
+			skipFlag:       app.SSHForwardArgName,
+		},
+		{
+			fun:            pc.CheckSudoIsAllowedForUser,
+			successMessage: "sudo is allowed for user",
+			skipFlag:       app.SudoAllowedCheckArgName,
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (pc *Checker) Cloud(ctx context.Context) error {
 	ready, err := pc.bootstrapState.CloudPreflightchecksWasRan()
 	if err != nil {
 		msg := fmt.Sprintf("Can not get state from cache: %v", err)
@@ -161,7 +193,7 @@ func (pc *Checker) Cloud() error {
 		return nil
 	}
 
-	err = pc.do("Cloud deployment preflight checks", []checkStep{
+	err = pc.do(ctx, "Cloud deployment preflight checks", []checkStep{
 		{
 			fun:            pc.CheckCloudMasterNodeSystemRequirements,
 			successMessage: "cloud master node system requirements are met",
@@ -180,7 +212,7 @@ func (pc *Checker) Cloud() error {
 	return pc.bootstrapState.SetCloudPreflightchecksWasRan()
 }
 
-func (pc *Checker) PostCloud() error {
+func (pc *Checker) PostCloud(ctx context.Context) error {
 	ready, err := pc.bootstrapState.PostCloudPreflightchecksWasRan()
 	if err != nil {
 		msg := fmt.Sprintf("Can not get state from cache: %v", err)
@@ -191,7 +223,7 @@ func (pc *Checker) PostCloud() error {
 		return nil
 	}
 
-	err = pc.do("Cloud deployment preflight checks", []checkStep{
+	err = pc.do(ctx, "Cloud deployment preflight checks", []checkStep{
 		{
 			fun:            pc.CheckCloudAPIAccessibility,
 			successMessage: "access to cloud api from master host",
@@ -205,7 +237,7 @@ func (pc *Checker) PostCloud() error {
 	return pc.bootstrapState.SetPostCloudPreflightchecksWasRan()
 }
 
-func (pc *Checker) Global() error {
+func (pc *Checker) Global(ctx context.Context) error {
 	ready, err := pc.bootstrapState.GlobalPreflightchecksWasRan()
 	if err != nil {
 		msg := fmt.Sprintf("Can not get state from cache: %v", err)
@@ -216,7 +248,7 @@ func (pc *Checker) Global() error {
 		return nil
 	}
 
-	err = pc.do("Global preflight checks", []checkStep{
+	err = pc.do(ctx, "Global preflight checks", []checkStep{
 		{
 			fun:            pc.CheckPublicDomainTemplate,
 			successMessage: "PublicDomainTemplate is correctly",
@@ -240,7 +272,7 @@ func (pc *Checker) Global() error {
 	return pc.bootstrapState.SetGlobalPreflightchecksWasRan()
 }
 
-func (pc *Checker) do(title string, checks []checkStep) error {
+func (pc *Checker) do(ctx context.Context, title string, checks []checkStep) error {
 	return log.Process("common", title, func() error {
 		if app.PreflightSkipAll {
 			log.WarnLn("Preflight checks were skipped")
@@ -259,7 +291,7 @@ func (pc *Checker) do(title string, checks []checkStep) error {
 				1,
 				10*time.Second,
 			)
-			if err := loop.Run(check.fun); err != nil {
+			if err := loop.RunContext(ctx, func() error { return check.fun(ctx) }); err != nil {
 				return fmt.Errorf("Installation aborted: %w\n"+
 					`Please fix this problem or skip it if you're sure with %s flag`, err, check.skipFlag)
 			}

@@ -23,6 +23,7 @@ status:
   - name: parca
     policy: foxtrot-alpha
   modulesCount: 2
+  phase: ""
   syncTime: "2024-05-03T21:05:05Z"
 ---
 apiVersion: deckhouse.io/v1alpha1

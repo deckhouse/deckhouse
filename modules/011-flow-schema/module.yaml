@@ -1,6 +1,0 @@
-name: flow-schema
-weight: 11
-subsystems:
-  - kubernetes
-  - networking
-namespace: d8-system

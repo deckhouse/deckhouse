@@ -21,7 +21,9 @@
   "istio": {
     "editionsWithRestrictions": [
       "ce",
-      "be"
+      "be",
+      "se",
+      "se-plus"
     ],
     "editionsWithRestrictionsComments": {
       "all": {
@@ -108,11 +110,6 @@
     "path": "/products/kubernetes-platform/modules/sds-node-configurator/stable/",
     "editionMinimumAvailable": "ce"
   },
-  "sds-drbd": {
-    "external": "true",
-    "path": "/products/kubernetes-platform/modules/sds-drbd/stable/",
-    "editionMinimumAvailable": "ee"
-  },
   "sds-replicated-volume": {
     "external": "true",
     "path": "/products/kubernetes-platform/modules/sds-replicated-volume/stable/",
@@ -158,11 +155,17 @@
   "secrets-store-integration": {
     "external": "true",
     "path": "/products/kubernetes-platform/modules/secrets-store-integration/stable/",
-    "editionMinimumAvailable": "be"
+    "editionFullyAvailable": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ]
   },
-  "csi-yadro": {
+  "csi-yadro-tatlin-unified": {
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/csi-yadro/stable/",
+    "path": "/products/kubernetes-platform/modules/csi-yadro-tatlin-unified/stable/",
     "editionMinimumAvailable": "ee"
   },
   "csi-huawei": {
@@ -189,6 +192,11 @@
     "external": "true",
     "path": "/products/kubernetes-platform/modules/csi-s3/stable/",
     "editionMinimumAvailable": "ee"
+  },
+  "csi-yadro-tatlin-unified": {
+      "external": "true",
+      "path": "/products/kubernetes-platform/modules/csi-yadro-tatlin-unified/stable/",
+      "editionMinimumAvailable": "ee"
   },
   "csi-scsi-generic": {
     "external": "true",

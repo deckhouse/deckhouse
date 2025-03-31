@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"strings"
 	"sync"
 	"time"
@@ -45,6 +46,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
+	dlog "github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // this hook checks helm releases (v2 and v3) and find deprecated apis
@@ -408,7 +410,12 @@ func (h *helmDeprecatedAPIsProcessor) getHelm3Releases(client k8s.Client, releas
 
 			release, err := helm3DecodeRelease(string(releaseData))
 			if err != nil {
-				h.logger.Warnf("failed to decode %s/%s helm3 release: %s. Skipping", secret.Namespace, secret.Name, err)
+				h.logger.Warn(
+					"failed to decode helm3 release. Skipping",
+					slog.String("namespace", secret.Namespace),
+					slog.String("name", secret.Name),
+					dlog.Err(err),
+				)
 				continue
 			}
 			// release can contain wrong namespace (set by helm and werf) and confuse user with a wrong metric
@@ -453,7 +460,12 @@ func (h *helmDeprecatedAPIsProcessor) getHelm2Releases(client k8s.Client, releas
 
 			release, err := helm2DecodeRelease(releaseData)
 			if err != nil {
-				h.logger.Warnf("failed to decode %s/%s helm2 release: %s. Skipping", cm.Namespace, cm.Name, err)
+				h.logger.Warn(
+					"failed to decode helm2 release. Skipping",
+					slog.String("namespace", cm.Namespace),
+					slog.String("name", cm.Name),
+					dlog.Err(err),
+				)
 				continue
 			}
 
@@ -524,7 +536,7 @@ func (h *helmDeprecatedAPIsProcessor) FetchHelmManifests(client k8s.Client) chan
 				resource := new(manifestHead)
 				err := yaml.Unmarshal([]byte(manifestData), &resource)
 				if err != nil {
-					h.logger.Warnf("manifest (%s/%s) read error: %s", rel.Namespace, rel.Name, err)
+					h.logger.Warn("manifest read error", slog.String("namespace", rel.Namespace), slog.String("name", rel.Name), dlog.Err(err))
 					continue
 				}
 

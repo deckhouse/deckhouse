@@ -106,12 +106,12 @@ func getPossiblePathToModules() []string {
 }
 
 func GetAllOpenAPIDirs() ([]string, error) {
-	var (
-		dirs        []string
-		openAPIDirs []string
-	)
+	possiblePathToModules := getPossiblePathToModules()
 
-	for _, possibleDir := range getPossiblePathToModules() {
+	dirs := make([]string, 0, len(possiblePathToModules))
+	openAPIDirs := make([]string, 0)
+
+	for _, possibleDir := range possiblePathToModules {
 		globDirs, err := filepath.Glob(possibleDir)
 		if err != nil {
 			return nil, err

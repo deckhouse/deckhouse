@@ -17,9 +17,10 @@ limitations under the License.
 package hooks
 
 import (
+	"log/slog"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -114,7 +115,7 @@ func systemReserve(input *go_hook.HookInput) error {
 		if skipMigration {
 			continue
 		}
-		input.PatchCollector.Filter(func(u *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+		input.PatchCollector.PatchWithMutatingFunc(func(u *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 			objCopy := u.DeepCopy()
 			err := unstructured.SetNestedField(objCopy.Object, "Off", "spec", "kubelet", "resourceReservation", "mode")
 			if err != nil {
@@ -124,7 +125,7 @@ func systemReserve(input *go_hook.HookInput) error {
 		}, "deckhouse.io/v1", "NodeGroup", "", ng.Name)
 	}
 
-	input.PatchCollector.Create(&corev1.ConfigMap{
+	input.PatchCollector.CreateIfNotExists(&corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "ConfigMap",
@@ -134,10 +135,10 @@ func systemReserve(input *go_hook.HookInput) error {
 			Namespace: systemReserveMigrationNS,
 			Labels:    map[string]string{"heritage": "deckhouse"},
 		},
-	}, object_patch.IgnoreIfExists())
+	})
 
 	if cmSnapshot := input.Snapshots["cm"]; len(cmSnapshot) > 0 {
-		log.Debugf("Delete old migration configmap (d8-system/%s).", systemReserveMigrationCM)
+		log.Debug("Delete old migration configmap", slog.String("configmap", "(d8-system/"+systemReserveMigrationCM+")"))
 		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", systemReserveMigrationCM)
 	}
 

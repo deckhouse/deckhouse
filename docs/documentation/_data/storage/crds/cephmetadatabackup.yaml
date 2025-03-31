@@ -30,4 +30,4 @@ spec:
               data:
                 type: string
                 description: |
-                  Data is a base64 encoded Kubernetes resource.
+                  Data is a Base64 encoded Kubernetes resource.

@@ -25,7 +25,7 @@ import (
 	"slices"
 	"strings"
 
-	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
+	"github.com/flant/shell-operator/pkg/metric"
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
 	kwhmodel "github.com/slok/kubewebhook/v2/pkg/model"
 	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
@@ -49,7 +49,7 @@ type ObjectMeta struct {
 const disableReasonSuffix = "Please annotate ModuleConfig with `modules.deckhouse.io/allow-disabling=true` if you're sure that you want to disable the module."
 
 // moduleConfigValidationHandler validations for ModuleConfig creation
-func moduleConfigValidationHandler(cli client.Client, moduleStorage moduleStorage, metricStorage *metricstorage.MetricStorage, configValidator *configtools.Validator) http.Handler {
+func moduleConfigValidationHandler(cli client.Client, moduleStorage moduleStorage, metricStorage metric.Storage, configValidator *configtools.Validator) http.Handler {
 	vf := kwhvalidating.ValidatorFunc(func(ctx context.Context, review *kwhmodel.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
 		var (
 			cfg = new(v1alpha1.ModuleConfig)

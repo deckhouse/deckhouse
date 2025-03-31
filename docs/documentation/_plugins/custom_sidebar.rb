@@ -116,7 +116,7 @@ module Jekyll
       elsif !external_url.nil? && external_url.size > 0
         result.push("<li class='#{ parameters['item_entry_class']}'><a href='#{ external_url }' target='_blank'>#{entry.dig('title', lang)} ↗</a></li>")
       elsif page_url == entry['url'] or page_url == entry_with_lang
-        result.push("<li class='#{ parameters['item_entry_class']} active'><a href='#{ getTrueRelativeUrl(entry['url']) }' target='_blank'>#{entry.dig('title', lang)}</a></li>")
+        result.push("<li class='#{ parameters['item_entry_class']} active'><a href='#{ getTrueRelativeUrl(entry['url']) }'>#{entry.dig('title', lang)}</a></li>")
       else
         if @context.registers[:page]['url'] == '404.md'
           result.push(%Q(<li class='#{ parameters['item_entry_class']}'><a data-proofer-ignore href='#{ @context.registers[:site].config['canonical_url_prefix_documentation'] + getTrueRelativeUrl(entry['url']) }'>#{entry.dig('title', lang)}</a></li>))

@@ -19,6 +19,7 @@ package values_validation
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"path/filepath"
 
 	"github.com/flant/addon-operator/pkg/utils"
@@ -139,7 +140,7 @@ func (vv *ValuesValidator) ValidateGlobalValues(obj utils.Values) error {
 func (vv *ValuesValidator) ValidateModuleValues(moduleName string, obj utils.Values) error {
 	ss := vv.ModuleSchemaStorages[moduleName]
 	if ss == nil {
-		log.Warnf("schema storage for '%s' is not found", moduleName)
+		log.Warn("schema storage is not found for", slog.String("module", moduleName))
 		return nil
 	}
 
@@ -149,7 +150,7 @@ func (vv *ValuesValidator) ValidateModuleValues(moduleName string, obj utils.Val
 func (vv *ValuesValidator) ValidateModuleHelmValues(moduleName string, obj utils.Values) error {
 	ss := vv.ModuleSchemaStorages[moduleName]
 	if ss == nil {
-		log.Warnf("schema storage for '%s' is not found", moduleName)
+		log.Warn("schema storage is not found for", slog.String("module", moduleName))
 		return nil
 	}
 
@@ -159,7 +160,7 @@ func (vv *ValuesValidator) ValidateModuleHelmValues(moduleName string, obj utils
 func (vv *ValuesValidator) ValidateConfigValues(moduleName string, obj utils.Values) error {
 	ss := vv.ModuleSchemaStorages[moduleName]
 	if ss == nil {
-		log.Warnf("schema storage for '%s' is not found", moduleName)
+		log.Warn("schema storage is not found for", slog.String("module", moduleName))
 		return nil
 	}
 

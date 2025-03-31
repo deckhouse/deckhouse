@@ -23,11 +23,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/yaml"
-
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 
 	"controller/apis/deckhouse.io/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha2"

@@ -1,11 +1,11 @@
 ## Patches
 
-### gomod
+### 001-go-mod.patch
 
 Go mod patches for ingress-nginx-controller
 Collected with
 
-### Healthcheck
+### 002-healthcheck.patch
 
 After catching SIGTERM, ingress stops responding to the readiness probe.
 The combination of this patch and the `EndpointSliceTerminatingCondition` feature gate for kube-proxy helps us avoid
@@ -15,7 +15,7 @@ Update: for external load balancers it's advisable to get 5xx if a SIGTERM was s
 Backport of the behavior of the later versions of ingress nginx controller.
 The `sleep` is needed to gracefully shut down ingress controllers behind a cloud load balancer.
 
-### Nginx TPL
+### 003-nginx-tmpl.patch
 
 * Enable our metrics collector instead of the default one.
 * Enable pcre_jit.
@@ -26,54 +26,80 @@ The `sleep` is needed to gracefully shut down ingress controllers behind a cloud
 
 We do not intend to make a PR to the upstream with these changes, because there are only our custom features.
 
-### Ingress information
+### 004-lua-info.patch
 
 There are two patches to fix the problem with ingress names in logs and metrics.
 Unfortunately, the PR was declined in the upstream.
 https://github.com/kubernetes/ingress-nginx/pull/4367
 
-### Makefile
+### 005-makefile.patch
 
 Run the build locally, not inside the container.
 
-### metrics SetSSLExpireTime
+### 006-metrics-SetSSLExpireTime.patch
 
 Fixes namespace which is given by metric nginx_ingress_controller_ssl_expire_time_seconds.
 
 https://github.com/kubernetes/ingress-nginx/pull/10274
 
-### Always set auth cookie
+### 007-auth-cookie-always.patch
 
 Without always option toggled, ingress-nginx does not set the cookie in case if backend returns >=400 code, which may lead to dex refresh token invalidation.
 Annotation `nginx.ingress.kubernetes.io/auth-always-set-cookie` does not work. Anyway, we can't use it, because we need this behavior for all ingresses.
 
 https://github.com/kubernetes/ingress-nginx/pull/8213
 
-### Util patch
+### 008-util.patch
 
 Adds "-e /dev/null" flags to the "nginx -t" invocations so that "nginx -t" logs aren't got saved to /var/log/nginx/error.log file, preventing fs bloating.
 
-### Fix cleanup
+### 009-fix-cleanup.patch
 
 Fix tmpDir path for the cleanup procedure.
 
 https://github.com/kubernetes/ingress-nginx/pull/10797
 
-### nginx-build
+### 010-nginx-build.patch
 
 Build nginx for controller on ALT Linux.
 
-### http3
+### 011-add-http3.patch
 
 Add HTTP/3 support.
 
-### new metrics
+We have made two PRs in upstream to bump ingress-nginx image and to enable http3 module. 
+But we did not add full support for http3 in upstream, because at that time OpenSSL did not fully support quic.
+
+Bump the image and enable http3 module: https://github.com/kubernetes/ingress-nginx/pull/11470
+README about next steps for upstream: https://github.com/kubernetes/ingress-nginx/pull/11513
+
+README: https://github.com/kubernetes/ingress-nginx/blob/main/images/nginx/README.md
+
+When OpenSSL fully supports quic, the work can be continued. 
+To add fully support - steps from the readme should be accomplished and after this the patch can be deleted.
+
+### 012-new-metrics.patch
 
 This patch adds worker max connections, worker processes and worker max open files metrics.
 
-### default backend fix
+### 013-default-backend-fix.patch
 
 Fixes the problem with the controller when Ingress specifies `Service` with the `ExternalName` type as the main backend, and the default backend (using an annotation `nginx.ingress.kubernetes.io/default-backend `) - with the ClusterIP type. You can see the detailed cases here:
 https://github.com/kubernetes/ingress-nginx/issues/12158
 https://github.com/kubernetes/ingress-nginx/issues/12173
 https://github.com/deckhouse/deckhouse/issues/9933
+
+### 014-balancer-lua.patch
+
+TODO: update readme with patch description
+
+### 015-fix-validating-webhook-cve.patch
+
+Backports several security fixes for the following CVE:
+CVE-2025-1097
+CVE-2025-1098
+CVE-2025-1974
+CVE-2025-24513
+CVE-2025-24514
+
+Sourced from https://github.com/kubernetes/ingress-nginx/commit/cfe3923bd657a82226eb58d3307204a8a8802db4

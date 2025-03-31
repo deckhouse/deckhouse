@@ -97,6 +97,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/ee/modules/030-cloud-provider-vcd/images/cloud-data-discoverer-legacy/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/ee/modules/110-istio/images/api-proxy/src"
   labels:
   - "type/dependencies"
@@ -178,7 +187,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/ee/se-plus/modules/030-cloud-provider-zvirt/images/cloud-data-discoverer"
+  directory: "/ee/se-plus/modules/030-cloud-provider-zvirt/images/cloud-data-discoverer/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

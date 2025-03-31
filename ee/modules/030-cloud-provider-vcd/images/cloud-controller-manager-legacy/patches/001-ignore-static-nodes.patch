@@ -1,0 +1,21 @@
+Subject: [PATCH] Ignore static nodes
+---
+Index: pkg/ccm/instances.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/ccm/instances.go b/pkg/ccm/instances.go
+--- a/pkg/ccm/instances.go	(revision f3f44d21165e798e1a8e1a14324b09e01fe35fd4)
++++ b/pkg/ccm/instances.go	(date 1741840814883)
+@@ -146,6 +146,10 @@
+ func (i *instances) InstanceExistsByProviderID(ctx context.Context, providerID string) (bool, error) {
+ 	klog.Infof("instances.InstanceExistsByProviderID() called with provider ID [%s]", providerID)
+ 
++	if strings.HasPrefix(providerID, "static://") {
++		return true, nil
++	}
++
+ 	vmUUID := getUUIDFromProviderID(providerID)
+ 	_, err := i.vmInfoCache.GetByUUID(vmUUID)
+ 	if err != nil {

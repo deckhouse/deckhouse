@@ -79,7 +79,7 @@ func removeResourcesLimitsForClusterAutoscaler(input *go_hook.HookInput) error {
 		return sdk.ToUnstructured(&depl)
 	}
 
-	input.PatchCollector.Filter(filterResourceLimits, "apps/v1", "Deployment", "kube-system", "cluster-autoscaler")
+	input.PatchCollector.PatchWithMutatingFunc(filterResourceLimits, "apps/v1", "Deployment", "kube-system", "cluster-autoscaler")
 
 	return nil
 }

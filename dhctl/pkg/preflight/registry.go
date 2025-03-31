@@ -47,7 +47,7 @@ const (
 	httpClientTimeoutSec = 20
 )
 
-func (pc *Checker) CheckRegistryAccessThroughProxy() error {
+func (pc *Checker) CheckRegistryAccessThroughProxy(ctx context.Context) error {
 	if app.PreflightSkipRegistryThroughProxy {
 		log.InfoLn("Checking if registry is accessible through proxy was skipped (via skip flag)")
 		return nil
@@ -87,7 +87,7 @@ Please check connectivity to control-plane host and that the sshd config paramet
 		Host:   pc.metaConfig.Registry.Address,
 		Path:   "/v2/",
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, registryURL.String(), nil)
 	if err != nil {
@@ -130,7 +130,7 @@ func checkResponseIsFromDockerRegistry(resp *http.Response) error {
 	return nil
 }
 
-func (pc *Checker) CheckRegistryCredentials() error {
+func (pc *Checker) CheckRegistryCredentials(ctx context.Context) error {
 	if app.PreflightSkipRegistryCredentials {
 		log.InfoLn("Checking registry credentials was skipped")
 		return nil
@@ -145,7 +145,7 @@ func (pc *Checker) CheckRegistryCredentials() error {
 	}
 
 	log.DebugLn("Checking registry credentials")
-	ctx, cancel := context.WithTimeout(context.Background(), httpClientTimeoutSec*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, httpClientTimeoutSec*time.Second)
 	defer cancel()
 
 	authData, err := pc.metaConfig.Registry.Auth()

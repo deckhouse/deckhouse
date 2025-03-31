@@ -51,6 +51,7 @@ internal:
   auth: {}
   deployDexAuthenticator: true
   grafana:
+    enabled: true
     additionalDatasources: []
     alertsChannelsConfig:
       notifiers: []

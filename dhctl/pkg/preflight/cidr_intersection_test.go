@@ -15,12 +15,14 @@
 package preflight
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"testing"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 )
 
 func TestGetCidrFromMetaConfig(t *testing.T) {
@@ -220,7 +222,7 @@ func TestCheckCidrIntersection(t *testing.T) {
 			pc := &Checker{
 				metaConfig: tt.fields.metaConfig,
 			}
-			tt.wantErr(t, pc.CheckCidrIntersection(), fmt.Sprintf("CheckCidrIntersection()"))
+			tt.wantErr(t, pc.CheckCidrIntersection(context.Background()), fmt.Sprintf("CheckCidrIntersection()"))
 		})
 	}
 }
@@ -366,7 +368,10 @@ func TestCheckCidrIntersectionStatic(t *testing.T) {
 			pc := &Checker{
 				metaConfig: tt.fields.metaConfig,
 			}
-			tt.wantErr(t, pc.CheckCidrIntersectionStatic(), fmt.Sprintf("CheckCidrIntersectionStatic()"))
+			tt.wantErr(t,
+				pc.CheckCidrIntersectionStatic(context.Background()),
+				fmt.Sprintf("CheckCidrIntersectionStatic()"),
+			)
 		})
 	}
 }

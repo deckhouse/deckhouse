@@ -126,7 +126,7 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 			return fmt.Errorf("failed to write terraform state: %w", err)
 		}
 
-		ipAddress, err := terraform.GetMasterIPAddressForSSH(statePath)
+		ipAddress, err := terraform.GetMasterIPAddressForSSH(s.ctx.Ctx(), statePath)
 		if err != nil {
 			log.WarnF("failed to get master IP address: %s", err)
 			continue
@@ -174,7 +174,7 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 
 	log.DebugLn("private keys added for replacing kube client")
 
-	newKubeClient, err := kubernetes.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(newSSHClient))
+	newKubeClient, err := kubernetes.ConnectToKubernetesAPI(s.ctx.Ctx(), ssh.NewNodeInterfaceWrapper(newSSHClient))
 	if err != nil {
 		return fmt.Errorf("failed to connect to Kubernetes API: %w", err)
 	}
@@ -185,7 +185,7 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 
 	if s.lockRunner != nil {
 		log.DebugLn("starting reset lock after replacing kube client")
-		err := s.lockRunner.ResetLock()
+		err := s.lockRunner.ResetLock(s.ctx.Ctx())
 		if err != nil {
 			return fmt.Errorf("failed to reset lock: %w", err)
 		}

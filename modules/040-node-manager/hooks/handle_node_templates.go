@@ -175,7 +175,7 @@ func nodeTemplatesHandler(input *go_hook.HookInput) error {
 			continue
 		}
 
-		input.PatchCollector.Filter(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+		input.PatchCollector.PatchWithMutatingFunc(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 			nodeObj := new(v1.Node)
 			err := sdk.FromUnstructured(obj, nodeObj)
 			if err != nil {

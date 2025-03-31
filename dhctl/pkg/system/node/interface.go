@@ -14,7 +14,10 @@
 
 package node
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 type Interface interface {
 	Command(name string, args ...string) Command
@@ -23,14 +26,14 @@ type Interface interface {
 }
 
 type Command interface {
-	Run() error
+	Run(ctx context.Context) error
 	Cmd()
 	Sudo()
 
 	StdoutBytes() []byte
 	StderrBytes() []byte
-	Output() ([]byte, []byte, error)
-	CombinedOutput() ([]byte, error)
+	Output(ctx context.Context) ([]byte, []byte, error)
+	CombinedOutput(ctx context.Context) ([]byte, error)
 
 	OnCommandStart(fn func())
 	WithEnv(env map[string]string)
@@ -41,16 +44,16 @@ type Command interface {
 }
 
 type File interface {
-	Upload(srcPath, dstPath string) error
-	Download(srcPath, dstPath string) error
+	Upload(ctx context.Context, srcPath, dstPath string) error
+	Download(ctx context.Context, srcPath, dstPath string) error
 
-	UploadBytes(data []byte, remotePath string) error
-	DownloadBytes(remotePath string) ([]byte, error)
+	UploadBytes(ctx context.Context, data []byte, remotePath string) error
+	DownloadBytes(ctx context.Context, remotePath string) ([]byte, error)
 }
 
 type Script interface {
-	Execute() (stdout []byte, err error)
-	ExecuteBundle(parentDir, bundleDir string) (stdout []byte, err error)
+	Execute(ctx context.Context) (stdout []byte, err error)
+	ExecuteBundle(ctx context.Context, parentDir, bundleDir string) (stdout []byte, err error)
 
 	Sudo()
 	WithStdoutHandler(handler func(string))

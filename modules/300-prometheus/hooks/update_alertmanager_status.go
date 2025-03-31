@@ -55,7 +55,7 @@ func updateAmStatus(input *go_hook.HookInput) error {
 
 	// update AMs' statuses
 	for _, am := range addressDeclaredAlertmanagers {
-		input.PatchCollector.Filter(set_cr_statuses.SetProcessedStatus(applyAlertmanagerCRDFilter), "deckhouse.io/v1alpha1", "customalertmanager", "", am.Name, object_patch.WithSubresource("/status"), object_patch.IgnoreHookError())
+		input.PatchCollector.PatchWithMutatingFunc(set_cr_statuses.SetProcessedStatus(applyAlertmanagerCRDFilter), "deckhouse.io/v1alpha1", "customalertmanager", "", am.Name, object_patch.WithSubresource("/status"), object_patch.WithIgnoreHookError())
 	}
 
 	for _, am := range serviceDeclaredAlertmanagers {
@@ -63,12 +63,12 @@ func updateAmStatus(input *go_hook.HookInput) error {
 		if len(am.ResourceName) == 0 {
 			continue
 		}
-		input.PatchCollector.Filter(set_cr_statuses.SetProcessedStatus(applyAlertmanagerCRDFilter), "deckhouse.io/v1alpha1", "customalertmanager", "", am.ResourceName, object_patch.WithSubresource("/status"), object_patch.IgnoreHookError())
+		input.PatchCollector.PatchWithMutatingFunc(set_cr_statuses.SetProcessedStatus(applyAlertmanagerCRDFilter), "deckhouse.io/v1alpha1", "customalertmanager", "", am.ResourceName, object_patch.WithSubresource("/status"), object_patch.WithIgnoreHookError())
 	}
 
 	for _, am := range internalDeclaredAlertmanagers {
 		name := am["name"].(string)
-		input.PatchCollector.Filter(set_cr_statuses.SetProcessedStatus(applyAlertmanagerCRDFilter), "deckhouse.io/v1alpha1", "customalertmanager", "", name, object_patch.WithSubresource("/status"), object_patch.IgnoreHookError())
+		input.PatchCollector.PatchWithMutatingFunc(set_cr_statuses.SetProcessedStatus(applyAlertmanagerCRDFilter), "deckhouse.io/v1alpha1", "customalertmanager", "", name, object_patch.WithSubresource("/status"), object_patch.WithIgnoreHookError())
 	}
 
 	return nil

@@ -19,7 +19,7 @@ package validation
 import (
 	"net/http"
 
-	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
+	"github.com/flant/shell-operator/pkg/metric"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
@@ -45,7 +45,7 @@ func RegisterAdmissionHandlers(
 	mm moduleManager,
 	validator *configtools.Validator,
 	storage moduleStorage,
-	metricStorage *metricstorage.MetricStorage,
+	metricStorage metric.Storage,
 ) {
 	reg.RegisterHandler("/validate/v1alpha1/module-configs", moduleConfigValidationHandler(cli, storage, metricStorage, validator))
 	reg.RegisterHandler("/validate/v1alpha1/modules", moduleValidationHandler())

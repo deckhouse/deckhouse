@@ -26,6 +26,7 @@ status:
       fetch image error: GET https://registry.deckhouse.io/v2/deckhouse/ee/modules/errormodule/release/manifests/alpha:
             MANIFEST_UNKNOWN: manifest unknown; map[Tag:alpha]
   modulesCount: 2
+  phase: Active
   syncTime: "2019-10-17T15:33:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1

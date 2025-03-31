@@ -1,6 +1,6 @@
 {% assign revision=include.revision %}
 
-Для установки **Deckhouse Kubernetes Platform** используется Docker-образ, в который необходимо передать конфигурационные файлы{%- if page.platform_type != 'existing' %} и SSH-ключи доступа на **master-узел** (далее подразумевается что используется SSH-ключ `~/.ssh/id_rsa`){% endif %}.
+Для установки **Deckhouse Kubernetes Platform** используется образ контейнера, в который необходимо передать конфигурационные файлы{%- if page.platform_type != 'existing' %} и SSH-ключи доступа на **master-узел** (далее подразумевается что используется SSH-ключ `~/.ssh/id_rsa` пользователя персонального компьютера, с которого выполняется установка){% endif %}.
 
 {% if page.platform_code == 'bm-private' or page.platform_code == 'bm' %}
 **В операционных системах семейства Astra Linux**, при использовании модуля мандатного контроля целостности Parsec, сконфигурируйте максимальный уровень целостности для пользователя, под которым будет выполняться установка. Для этого выполните **на будущем master-узле** команду, заменив `<USERNAME>` на имя пользователя:
@@ -16,7 +16,7 @@ pdpl-user -i 63 <USERNAME>
 
 Запустите установщик на **персональном компьютере**.
 
-{%- if revision == 'ee' %}
+{%- if revision == 'be' or revision == 'se' or revision == 'se-plus' or revision == 'ee' %}
 
 <a id='tab_installer_linux_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_installer_{{ revision }} active"
    onclick="openTabAndSaveStatus(event, 'tabs__btn_installer_{{ revision }}', 'tabs__content_installer_{{ revision }}', 'block_installer_linux_{{ revision }}');" >
@@ -28,9 +28,14 @@ pdpl-user -i 63 <USERNAME>
 </a>
 
 <div id='block_installer_linux_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }} active" markdown="1">
-<!-- Linux or macOS install, EE -->
+<!-- Linux or macOS install, BE, SE, SE+, EE -->
+Авторизуйтесь на **персональном компьютере** в container image registry:
 ```shell
- echo <LICENSE_TOKEN> | docker login -u license-token --password-stdin registry.deckhouse.ru
+echo <LICENSE_TOKEN> | docker login -u license-token --password-stdin registry.deckhouse.ru
+```
+
+Запустите контейнер с установщиком:
+```shell
 docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "$PWD/config.yml:/config.yml"{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/"{% endif %}
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %} \
   -v "$HOME/.kube/config:/kubeconfig"{% endif %}
@@ -39,7 +44,7 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 ```
 </div>
 <div id='block_installer_windows_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }}" markdown="1">
-<!-- Windows install, EE -->
+<!-- Windows install, BE, SE, SE+, EE -->
 Авторизуйтесь на **персональном компьютере** в container image registry, введя лицензионный ключ на запрос пароля:
 ```text
 docker login -u license-token registry.deckhouse.ru
@@ -111,7 +116,7 @@ dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- el
 
 {%- if page.platform_type == "baremetal" or page.platform_type == "cloud" %}
 {%- if page.platform_type == "baremetal" %}
-В параметре `--ssh-user` укажите имя пользователя, от которого генерировался SSH-ключ для установки. Если для запуска sudo на сервере необходим пароль, то укажите его в ответ на запрос `[sudo] Password:`.
+В параметре `--ssh-user` укажите имя пользователя на master-узле. Если для выполнения `sudo` на сервере необходим пароль, то укажите его в ответ на запрос `[sudo] Password:`.
 {%- else %}
 В параметре `--ssh-user` укажите имя пользователя по умолчанию для выбранного образа виртуальной машины.
 {%- if page.platform_code == "azure" %} В случае c {{ page.platform_name[page.lang] }}, это `azureuser` (для используемого в этом руководстве образа).

@@ -58,7 +58,7 @@ spec:
     - sourceLabels: [container]
       regex: '^$'
       action: drop
-    - regex: container_name|pod_name|id|image|name
+    - regex: container_name|pod_name|id
       action: labeldrop
     # Drop a bunch of metrics which are disabled but still sent, see https://github.com/google/cadvisor/issues/1925
     - sourceLabels: [__name__]

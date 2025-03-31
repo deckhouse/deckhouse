@@ -63,7 +63,7 @@ positive:
       clusterIsBootstrapped: true
       deckhouseVersion: dev
       deckhouseEdition: FE
-      enabledModules: [ "cert-manager", "vertical-pod-autoscaler", "prometheus", "priority-class" ]
+      enabledModules: [ "cert-manager", "vertical-pod-autoscaler", "prometheus"]
       discovery:
         clusterControlPlaneIsHighlyAvailable: true
         clusterMasterCount: 3

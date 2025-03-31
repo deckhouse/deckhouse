@@ -1,13 +1,19 @@
 ---
-title: "NFS Storage"
+title: "NFS data storage"
 permalink: en/storage/admin/external/nfs.html
 ---
 
-To manage volumes based on the NFS (Network File System) protocol, you can use the `csi-nfs` module, which allows the creation of a StorageClass through the creation of custom `NFSStorageClass` resources.
+{% alert level="info" %}
+Available in editions:  **CE, SE, SE+, EE**
+{% endalert %}
+
+Deckhouse supports working with NFS (Network File System), providing the ability to connect and manage network file storage in Kubernetes. This allows for centralized data storage and file sharing between containers.
+
+This page provides instructions on connecting NFS storage to Deckhouse, configuring the connection, creating a StorageClass, and verifying system functionality.
 
 ## Enabling the module
 
-To enable the `csi-nfs` module, apply the following resource:
+To manage volumes based on the NFS (Network File System) protocol, the `csi-nfs` module is used, allowing the creation of StorageClass through custom resources like [NFSStorageClass](../../../reference/cr/nfsstorageclass/). To enable the module, run the following command:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -21,8 +27,7 @@ spec:
 EOF
 ```
 
-Wait until the `csi-nfs` module transitions to the `Ready` status.
-To check the status, run the following command:
+Wait until the `csi-nfs` module transitions to the `Ready` status. To check the status, run the following command:
 
 ```shell
 d8 k get module csi-nfs -w
@@ -37,9 +42,7 @@ csi-nfs   910      Enabled   Embedded           Ready
 
 ## Creating the StorageClass
 
-To create a StorageClass, you need to use the `NFSStorageClass` resource. Manually creating a StorageClass without `NFSStorageClass` may lead to errors.
-
-Example of creating a StorageClass based on NFS:
+To create a StorageClass, you need to use the [NFSStorageClass](../../../reference/cr/nfsstorageclass/) resource. Manually creating a StorageClass without [NFSStorageClass](../../../reference/cr/nfsstorageclass/) may lead to errors. Example of creating a StorageClass based on NFS:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -68,13 +71,13 @@ spec:
 EOF
 ```
 
-Check that the created `NFSStorageClass` resource has transitioned to the `Created` phase by running the following command:
+Check that the created [NFSStorageClass](../../../reference/cr/nfsstorageclass/) resource has transitioned to the `Created` phase by running the following command:
 
 ```shell
 d8 k get NFSStorageClass nfs-storage-class -w
 ```
 
-In the output, you should see information about the created `NFSStorageClass` resource:
+In the output, you should see information about the created [NFSStorageClass](../../../reference/cr/nfsstorageclass/) resource:
 
 ```console
 NAME                PHASE     AGE
@@ -94,16 +97,11 @@ NAME                PROVISIONER      RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLO
 nfs-storage-class   nfs.csi.k8s.io   Delete          WaitForFirstConsumer   true                   1h
 ```
 
-If the StorageClass named `nfs-storage-class` appears, it means the `csi-nfs` module has been configured successfully. Users can now create PersistentVolumes by specifying the `nfs-storage-class` StorageClass.
-
-For each `PersistentVolume` resource, a directory `<share-directory>/<PersistentVolume-name>` will be created.
+If the StorageClass named `nfs-storage-class` appears, it means the `csi-nfs` module has been configured successfully. Users can now create PersistentVolumes by specifying the `nfs-storage-class` StorageClass. For each PersistentVolume resource, a directory `<share-directory>/<PersistentVolume-name>` will be created.
 
 ## Checking module functionality
 
-To check the functionality of the `csi-nfs` module, you need to verify the pod statuses in the `d8-csi-nfs` namespace.
-All pods should be in the `Running` or `Completed` state, and the `csi-nfs` pods should be running on all nodes.
-
-You can check the module's functionality with the following command:
+To check the functionality of the `csi-nfs` module, you need to verify the pod statuses in the `d8-csi-nfs` namespace. All pods should be in the `Running` or `Completed` state, and the `csi-nfs` pods should be running on all nodes. You can check the module's functionality with the following command:
 
 ```shell
 d8 k -n d8-csi-nfs get pod -owide -w

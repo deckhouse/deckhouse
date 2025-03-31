@@ -63,6 +63,13 @@ properties:
     default: false
     description: |
       Do not enforce any Network Policy. Just log allowed/disallowed connections.
+  exclusiveCNIPlugin:
+    type: boolean
+    default: true
+    description: |
+      Prevents additional CNI plugins from being enabled on cluster nodes. If the Istio module's [`dataPlane.trafficRedirectionSetupMode` setting](../istio/configuration.html#parameters-dataplane-trafficredirectionsetupmode) is set to `CNIPlugin`, the option will be automatically set to `false`.
+
+      Explicitly disabling this option is recommended only when using an additional CNI or a specific CNI plugin in the cluster. An example of such a use case could be the Linkerd CNI plugin.
   bpfLBMode:
     type: string
     default: "Hybrid"

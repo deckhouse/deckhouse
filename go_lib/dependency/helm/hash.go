@@ -61,7 +61,7 @@ func escapeValue(value interface{}, writer *hash.Hash) {
 }
 
 func sortedKeys(sum map[string]interface{}) []string {
-	var keys []string
+	keys := make([]string, 0, len(sum))
 	for k := range sum {
 		keys = append(keys, k)
 	}

@@ -1,9 +1,11 @@
 module stale-dns-connections-cleaner
 
-go 1.22.8
+go 1.23.1
+
+toolchain go1.24.0
 
 require (
-	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20241203083636-caa103ce9ee1
+	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250318101108-490c52ef4de1
 	github.com/vishvananda/netlink v1.2.1-beta.2.0.20240221172127-ec7bcb248e94
 	golang.org/x/sys v0.28.0
 	k8s.io/api v0.29.2

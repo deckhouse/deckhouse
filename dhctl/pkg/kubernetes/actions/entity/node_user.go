@@ -34,7 +34,7 @@ func CreateNodeUser(ctx context.Context, kubeGetter kubernetes.KubeClientProvide
 		return fmt.Errorf("failed to convert NodeUser to unstructured: %w", err)
 	}
 
-	return retry.NewLoop("Save dhctl converge NodeUser", 45, 10*time.Second).Run(func() error {
+	return retry.NewLoop("Save dhctl converge NodeUser", 45, 10*time.Second).RunContext(ctx, func() error {
 		_, err = kubeGetter.KubeClient().Dynamic().Resource(v1.NodeUserGVK).Create(ctx, nodeUserResource, metav1.CreateOptions{})
 
 		if err != nil {
@@ -51,7 +51,7 @@ func CreateNodeUser(ctx context.Context, kubeGetter kubernetes.KubeClientProvide
 }
 
 func DeleteNodeUser(ctx context.Context, kubeGetter kubernetes.KubeClientProvider, name string) error {
-	return retry.NewLoop("Delete dhctl converge NodeUser", 45, 10*time.Second).Run(func() (err error) {
+	return retry.NewLoop("Delete dhctl converge NodeUser", 45, 10*time.Second).RunContext(ctx, func() (err error) {
 		err = kubeGetter.KubeClient().Dynamic().Resource(v1.NodeUserGVK).Delete(ctx, name, metav1.DeleteOptions{})
 		if err != nil {
 			if k8errors.IsNotFound(err) {

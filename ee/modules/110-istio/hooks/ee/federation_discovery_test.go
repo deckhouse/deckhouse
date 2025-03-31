@@ -590,12 +590,12 @@ status: {}
 
 			Expect(string(f.LoggerOutput.Contents())).To(Not(ContainSubstring("local-federation")))
 
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("cannot fetch public metadata endpoint https://public-internal-error/metadata/public/public.json for IstioFederation public-internal-error (HTTP Code 500)"))
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("cannot unmarshal public metadata endpoint https://public-bad-json/metadata/public/public.json for IstioFederation public-bad-json, error: unexpected end of JSON input"))
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("bad public metadata format in endpoint https://public-wrong-format/metadata/public/public.json for IstioFederation public-wrong-format"))
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("cannot fetch private metadata endpoint https://private-internal-error/metadata/private/federation.json for IstioFederation private-internal-error (HTTP Code 500)"))
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("cannot unmarshal private metadata endpoint https://private-bad-json/metadata/private/federation.json for IstioFederation private-bad-json, error: unexpected end of JSON input"))
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("bad private metadata format in endpoint https://private-wrong-format/metadata/private/federation.json for IstioFederation private-wrong-format"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"cannot fetch private metadata endpoint for IstioFederation\",\"endpoint\":\"https://private-internal-error/metadata/private/federation.json\",\"http_code\":500"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"cannot unmarshal private metadata endpoint for IstioFederation\",\"endpoint\":\"https://private-bad-json/metadata/private/federation.json\",\"error\":\"unexpected end of JSON input\",\"name\":\"private-bad-json\""))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"bad public metadata format in endpoint for IstioFederation\",\"endpoint\":\"https://public-wrong-format/metadata/public/public.json\",\"name\":\"public-wrong-format\""))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"cannot fetch private metadata endpoint for IstioFederation\",\"endpoint\":\"https://private-internal-error/metadata/private/federation.json\",\"http_code\":500,\"name\":\"private-internal-error\""))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"cannot unmarshal private metadata endpoint for IstioFederation\",\"endpoint\":\"https://private-bad-json/metadata/private/federation.json\",\"error\":\"unexpected end of JSON input\",\"name\":\"private-bad-json\""))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"bad private metadata format in endpoint for IstioFederation\",\"endpoint\":\"https://private-wrong-format/metadata/private/federation.json\",\"name\":\"private-wrong-format\""))
 
 			Expect(f.KubernetesGlobalResource("IstioFederation", "local-federation").Field("status").String()).To(MatchJSON("{}"))
 			Expect(f.KubernetesGlobalResource("IstioFederation", "public-internal-error").Field("status").String()).To(MatchJSON("{}"))

@@ -29,6 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	infra_utils "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/utils"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
@@ -49,15 +50,15 @@ func NewHookForDestroyPipeline(getter kubernetes.KubeClientProvider, nodeToDestr
 	}
 }
 
-func (h *HookForDestroyPipeline) BeforeAction(runner terraform.RunnerInterface) (bool, error) {
-	outputs, err := terraform.GetMasterNodeResult(runner)
+func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner terraform.RunnerInterface) (bool, error) {
+	outputs, err := terraform.GetMasterNodeResult(ctx, runner)
 	if err != nil {
 		log.ErrorF("Get master node pipeline outputs: %v", err)
 	}
 
 	h.oldMasterIPForSSH = outputs.MasterIPForSSH
 
-	err = removeControlPlaneRoleFromNode(h.getter.KubeClient(), h.nodeToDestroy)
+	err = removeControlPlaneRoleFromNode(ctx, h.getter.KubeClient(), h.nodeToDestroy)
 	if err != nil {
 		return false, fmt.Errorf("failed to remove control plane role from node '%s': %v", h.nodeToDestroy, err)
 	}
@@ -65,7 +66,7 @@ func (h *HookForDestroyPipeline) BeforeAction(runner terraform.RunnerInterface) 
 	return false, nil
 }
 
-func (h *HookForDestroyPipeline) AfterAction(runner terraform.RunnerInterface) error {
+func (h *HookForDestroyPipeline) AfterAction(_ context.Context, runner terraform.RunnerInterface) error {
 	if h.commanderMode {
 		return nil
 	}
@@ -84,8 +85,8 @@ func (h *HookForDestroyPipeline) IsReady() error {
 	return nil
 }
 
-func removeControlPlaneRoleFromNode(kubeCl *client.KubernetesClient, nodeName string) error {
-	err := removeLabelsFromNode(kubeCl, nodeName, []string{
+func removeControlPlaneRoleFromNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string) error {
+	err := removeLabelsFromNode(ctx, kubeCl, nodeName, []string{
 		"node-role.kubernetes.io/control-plane",
 		"node-role.kubernetes.io/master",
 		"node.deckhouse.io/group",
@@ -94,12 +95,12 @@ func removeControlPlaneRoleFromNode(kubeCl *client.KubernetesClient, nodeName st
 		return fmt.Errorf("failed to remove labels from node '%s': %v", nodeName, err)
 	}
 
-	err = waitEtcdHasNoMember(kubeCl.KubeClient.(*flantkubeclient.Client), nodeName)
+	err = waitEtcdHasNoMember(ctx, kubeCl.KubeClient.(*flantkubeclient.Client), nodeName)
 	if err != nil {
 		return fmt.Errorf("failed to check etcd has no member '%s': %v", nodeName, err)
 	}
 
-	err = tryToDrainNode(kubeCl, nodeName)
+	err = infra_utils.TryToDrainNode(ctx, kubeCl, nodeName)
 	if err != nil {
 		return fmt.Errorf("failed to drain node '%s': %v", nodeName, err)
 	}
@@ -107,9 +108,9 @@ func removeControlPlaneRoleFromNode(kubeCl *client.KubernetesClient, nodeName st
 	return nil
 }
 
-func removeLabelsFromNode(kubeCl *client.KubernetesClient, nodeName string, labels []string) error {
-	return retry.NewLoop(fmt.Sprintf("Remove labels from node %s", nodeName), 45, 5*time.Second).Run(func() error {
-		node, err := kubeCl.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
+func removeLabelsFromNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string, labels []string) error {
+	return retry.NewLoop(fmt.Sprintf("Remove labels from node %s", nodeName), 45, 5*time.Second).RunContext(ctx, func() error {
+		node, err := kubeCl.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 		if err != nil {
 			if errors.IsNotFound(err) {
 				log.InfoF("Node '%s' has been deleted. Skip\n", nodeName)
@@ -145,7 +146,7 @@ func removeLabelsFromNode(kubeCl *client.KubernetesClient, nodeName string, labe
 			return err
 		}
 
-		_, err = kubeCl.CoreV1().Nodes().Patch(context.TODO(), nodeName, types.JSONPatchType, patch, metav1.PatchOptions{})
+		_, err = kubeCl.CoreV1().Nodes().Patch(ctx, nodeName, types.JSONPatchType, patch, metav1.PatchOptions{})
 		if err != nil {
 			return err
 		}

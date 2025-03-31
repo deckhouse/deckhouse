@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sort"
@@ -46,15 +47,15 @@ func installFileIfChanged(src, dst string, perm os.FileMode) error {
 	srcBytes = []byte(os.ExpandEnv(string(srcBytes)))
 
 	if bytes.Equal(srcBytes, dstBytes) {
-		log.Infof("file %s is not changed, skipping", dst)
+		log.Info("file is not changed, skipping", slog.String("path", dst))
 		return nil
 	}
 
 	if err := backupFile(dst); err != nil {
-		log.Warnf("Backup failed, %s", err)
+		log.Warn("Backup failed", log.Err(err))
 	}
 
-	log.Infof("install file %s to destination %s", src, dst)
+	log.Info("install file to destination", slog.String("src", src), slog.String("destination", dst))
 	if err := os.WriteFile(dst, srcBytes, perm); err != nil {
 		return err
 	}
@@ -63,7 +64,7 @@ func installFileIfChanged(src, dst string, perm os.FileMode) error {
 }
 
 func backupFile(src string) error {
-	log.Infof("backup %s file", src)
+	log.Info("backup file", slog.String("path", src))
 
 	if _, err := os.Stat(src); err != nil {
 		return err
@@ -78,7 +79,7 @@ func backupFile(src string) error {
 }
 
 func removeFile(src string) error {
-	log.Infof("remove %s file", src)
+	log.Info("remove file", slog.String("path", src))
 	if err := backupFile(src); err != nil {
 		return err
 	}
@@ -105,7 +106,7 @@ func removeDirectory(dir string) error {
 
 func removeOrphanFiles() {
 	srcDir := filepath.Join(deckhousePath, "kubeadm", "patches")
-	log.Infof("phase: remove orphan files from dir %s", srcDir)
+	log.Info("phase: remove orphan files from dir", slog.String("dir", srcDir))
 
 	walkDirFunc := func(path string, d fs.DirEntry, _ error) error {
 		if d == nil || d.IsDir() {
@@ -169,7 +170,7 @@ func removeOldBackups() error {
 		return nil
 	}
 	for _, f := range files[5:] {
-		log.Infof("removing old backup dir %s", f.Name())
+		log.Info("removing old backup dir", slog.String("dir", f.Name()))
 		if err := os.RemoveAll(filepath.Join(backupPath, f.Name())); err != nil {
 			return err
 		}

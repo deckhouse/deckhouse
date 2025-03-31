@@ -16,6 +16,7 @@ package hooks
 
 import (
 	"fmt"
+	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -126,18 +127,18 @@ func enableCni(input *go_hook.HookInput) error {
 		requirements.SaveValue(cniConfigurationSettledKey, "false")
 		return fmt.Errorf("more then one CNI enabled: %v", explicitlyEnabledCNIs.Slice())
 	} else if len(explicitlyEnabledCNIs) == 1 {
-		input.Logger.Infof("enabled CNI from Deckhouse ModuleConfig: %s", explicitlyEnabledCNIs.Slice()[0])
+		input.Logger.Info("enabled CNI from Deckhouse ModuleConfig", slog.String("cni", explicitlyEnabledCNIs.Slice()[0]))
 		return nil
 	}
 
 	// nor any CNI enabled directly via MC, found default CNI from secret
 	cniToEnable := cniNameSnap[0].(string)
 	if _, ok := cniNameToModule[cniToEnable]; !ok {
-		input.Logger.Warnf("Incorrect cni name: '%v'. Skip", cniToEnable)
+		input.Logger.Warn("Incorrect cni name. Skip", slog.String("cni", cniToEnable))
 		return nil
 	}
 
-	input.Logger.Infof("enabled CNI by secret: %s", cniToEnable)
+	input.Logger.Info("enabled CNI by secret", slog.String("cni", cniToEnable))
 	input.Values.Set(cniNameToModule[cniToEnable], true)
 	return nil
 }

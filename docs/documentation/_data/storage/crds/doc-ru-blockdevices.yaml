@@ -5,7 +5,7 @@ spec:
         openAPIV3Schema:
           description: |
             Ресурс отображает актуальную информацию о доступных блочных устройствах на узлах, которые могут быть использованы контроллером sds-node-configurator для операций в LVM.
-            
+
             > Ресурс создается и обслуживается только контроллером. Ручное изменение ресурса запрещено.
           properties:
             status:
@@ -17,15 +17,15 @@ spec:
                   description: |
                     Тип файловой системы.
                 nodeName:
-                  description: |                    
+                  description: |
                     Имя Kubernetes-узла, на котором находится девайс.
                 consumable:
-                  description: |                    
+                  description: |
                     Флаг, определяющий, может ли данный девайс быть использован контроллером для создания LVM Physical Volume.
                 pvUUID:
-                  description: |                    
+                  description: |
                     LVM Physical Volume UUID.
-                                        
+
                     > Опциально: присутствует, только если девайс используется как LVM Physical Volume.
                 vgUUID:
                   description: |
@@ -40,17 +40,17 @@ spec:
                 lvmVolumeGroupName:
                   description: |
                     Имя ресурса LVMVolumeGroup.
-                    
+
                     > Опциально: присутствует, только если девайс используется как Physical Volume, включен в Volume Group и указан в LVMVolumeGroup-ресурсе.
                 actualVGNameOnTheNode:
                   description: |
                     Фактическое имя LVM Volume Group на узле, в которую включен девайс.
-                    
+
                     > Опциально: присутствует, только если девайс используется как Physical Volume и включен в Volume Group.
                 wwn:
                   description: |
                     Уникальный идентификатор девайса WWN (World Wide Name).
-                    
+
                     > Опционально: может отсутствовать, если WWN для данного типа дисков не поддерживается производителем.
                 serial:
                   description: |
@@ -63,19 +63,19 @@ spec:
                     Размер девайса.
                 model:
                   description: |
-                    Модель девайса. 
-                    
+                    Модель девайса.
+
                     > Опционально: может отсутствовать, если для данного типа дисков не поддерживается производителем.
                 rota:
                   description: |
-                    Медиатип девайса. Может быть:
-                    - true (для HHD)
-                    - false (для SSD)
+                    Медиатип девайса:
+                    - `true` — для HHD;
+                    - `false` — для SSD.
                 hotPlug:
                   description: |
-                    Тип подключения девайса. Может быть:
-                    - true (если девайс был подключен как съемный)
-                    - false (в иных случаях)
+                    Тип подключения девайса:
+                    - `true` — если девайс был подключен как съемный;
+                    - `false` — в иных случаях.
                 machineId:
                   description: |
                     Уникальный идентификатор узла, на котором располагается девайс (обычно хранится в /etc/machine-id).

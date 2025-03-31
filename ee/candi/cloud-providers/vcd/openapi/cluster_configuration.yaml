@@ -318,6 +318,11 @@ apiVersions:
               x-doc-default: false
           required:
             - server
+        legacyMode:
+          type: boolean
+          description: |
+            If set to `true`, an API version below `37.2` will be used.
+          x-doc-default: false
       allOf:
       - oneOf:
         - required: [layout]

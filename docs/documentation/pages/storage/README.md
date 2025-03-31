@@ -3,6 +3,36 @@ title: "Overview"
 permalink: en/storage/admin/
 ---
 
-**Storage Configuration** is a critical step in deploying and managing a Kubernetes cluster, ensuring reliable data storage and availability for applications. In this chapter, you will explore the key approaches and tools provided by the Deckhouse Kubernetes Platform for configuring and managing storage.
+Reliable data storage is one of the key tasks when deploying and operating Kubernetes clusters. In Deckhouse Kubernetes Platform, this is achieved through flexible support for both software-defined and external storage systems, as well as convenient automation and management tools.
 
-Deckhouse supports a wide range of storage solutions, including **Local Persistent Volumes**, **Ceph**, **NFS**, as well as integration with enterprise storage systems (**Yadro.Tatlin**, **Huawei Dorado**, **HPE 3PAR**), **S3**, **generic SCSI**, and others. In this section you will learn how to configure these types of storages according to infrastructure demands.
+In this section, you will learn:
+- Which types of storage Deckhouse supports;
+- How to set up both local (SDS) and external storage systems;
+- Which tools Deckhouse provides to simplify storage configuration and operation;
+- How to choose the optimal solution for your scenarios, based on requirements for reliability, performance, and scalability.
+
+## Supported Storage Types
+
+Deckhouse Kubernetes Platform offers a wide range of solutions, which can be divided into two main groups.
+
+### Software-Defined Storage
+
+- [Local storage based on LVM (Logical Volume Manager)](../storage/admin/sds/lvm-local.html);
+- [Replicated storage based on DRBD (Distributed Replicated Block Device)](../storage/admin/sds/lvm-replicated.html).
+
+### External Storage
+
+- [Distributed Ceph storage](../storage/admin/external/ceph.html);
+- [HPE data storage](../storage/admin/external/hpe.html);
+- [Huawei data storage](../storage/admin/external/huawei.html);
+- [NFS data storage](../storage/admin/external/nfs.html);
+- [S3-based object storage](../storage/admin/external/s3.html);
+- [SCSI-based data storage](../storage/admin/external/scsi.html);
+- [TATLIN.UNIFIED (Yadro) unified storage](../storage/admin/external/yadro.html).
+
+## Key Features
+
+- All storage configurations are performed through Deckhouse and its modules, simplifying integration with all cluster components;
+- Ready-to-use solutions for Ceph, NFS, S3, corporate storage systems, and other options, which make connecting storage to the cluster straightforward;
+- Thanks to SDS support (including DRBD) and distributed solutions (Ceph, S3), you can scale up as your workload grows;
+- Data replication and integration with robust storage systems help protect critical services and applications from data loss.

@@ -15,6 +15,8 @@
 package infrastructure
 
 import (
+	"context"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
@@ -22,8 +24,8 @@ import (
 )
 
 type StateLoader interface {
-	PopulateMetaConfig() (*config.MetaConfig, error)
-	PopulateClusterState() ([]byte, map[string]state.NodeGroupTerraformState, error)
+	PopulateMetaConfig(ctx context.Context) (*config.MetaConfig, error)
+	PopulateClusterState(ctx context.Context) ([]byte, map[string]state.NodeGroupTerraformState, error)
 }
 
 type NodeGroupController interface {
@@ -60,13 +62,13 @@ func NewClusterInfraWithOptions(terraState StateLoader, cache state.Cache, terra
 	}
 }
 
-func (r *ClusterInfra) DestroyCluster(autoApprove bool) error {
-	metaConfig, err := r.stateLoader.PopulateMetaConfig()
+func (r *ClusterInfra) DestroyCluster(ctx context.Context, autoApprove bool) error {
+	metaConfig, err := r.stateLoader.PopulateMetaConfig(ctx)
 	if err != nil {
 		return err
 	}
 
-	clusterState, nodesState, err := r.stateLoader.PopulateClusterState()
+	clusterState, nodesState, err := r.stateLoader.PopulateClusterState(ctx)
 	if err != nil {
 		return err
 	}
@@ -85,7 +87,7 @@ func (r *ClusterInfra) DestroyCluster(autoApprove bool) error {
 			return err
 		}
 		for name, ngState := range nodeGroupStates.State {
-			err := ngController.DestroyNode(name, ngState, autoApprove)
+			err := ngController.DestroyNode(ctx, name, ngState, autoApprove)
 			if err != nil {
 				return err
 			}
@@ -100,7 +102,8 @@ func (r *ClusterInfra) DestroyCluster(autoApprove bool) error {
 		}
 	}
 
-	if err := NewBaseInfraController(metaConfig, r.cache, r.terraformContext).Destroy(clusterState, autoApprove); err != nil {
+	if err := NewBaseInfraController(metaConfig, r.cache, r.terraformContext).
+		Destroy(ctx, clusterState, autoApprove); err != nil {
 		return err
 	}
 

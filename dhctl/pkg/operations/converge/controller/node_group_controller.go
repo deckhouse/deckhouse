@@ -62,7 +62,7 @@ func NewNodeGroupController(name string, state state.NodeGroupTerraformState, ex
 
 func (c *NodeGroupController) Run(ctx *context.Context) error {
 	// we hide deckhouse logs because we always have config
-	nodeCloudConfig, err := entity.GetCloudConfig(ctx.KubeClient(), c.name, global.HideDeckhouseLogs, log.GetDefaultLogger())
+	nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), ctx.KubeClient(), c.name, global.HideDeckhouseLogs, log.GetDefaultLogger())
 	if err != nil {
 		return err
 	}
@@ -191,7 +191,7 @@ func (c *NodeGroupController) deleteRedundantNodes(
 			Hook: getHookByNodeName(nodeToDeleteInfo.name),
 		})
 
-		if err := terraform.DestroyPipeline(nodeRunner, nodeToDeleteInfo.name); err != nil {
+		if err := terraform.DestroyPipeline(ctx.Ctx(), nodeRunner, nodeToDeleteInfo.name); err != nil {
 			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %w", nodeToDeleteInfo.name, err))
 			continue
 		}
@@ -201,7 +201,7 @@ func (c *NodeGroupController) deleteRedundantNodes(
 			return allErrs.ErrorOrNil()
 		}
 
-		if err := entity.DeleteNode(ctx.KubeClient(), nodeToDeleteInfo.name); err != nil {
+		if err := entity.DeleteNode(ctx.Ctx(), ctx.KubeClient(), nodeToDeleteInfo.name); err != nil {
 			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %w", nodeToDeleteInfo.name, err))
 			continue
 		}
@@ -211,7 +211,7 @@ func (c *NodeGroupController) deleteRedundantNodes(
 			continue
 		}
 
-		if err := entity.DeleteTerraformState(ctx.KubeClient(), fmt.Sprintf("d8-node-terraform-state-%s", nodeToDeleteInfo.name)); err != nil {
+		if err := entity.DeleteTerraformState(ctx.Ctx(), ctx.KubeClient(), fmt.Sprintf("d8-node-terraform-state-%s", nodeToDeleteInfo.name)); err != nil {
 			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %w", nodeToDeleteInfo.name, err))
 			continue
 		}
@@ -223,7 +223,7 @@ func (c *NodeGroupController) deleteRedundantNodes(
 func (c *NodeGroupController) tryUpdateNodeTemplate(ctx *context.Context, nodeTemplate map[string]interface{}) error {
 	nodeTemplatePath := []string{"spec", "nodeTemplate"}
 	for {
-		ng, err := entity.GetNodeGroup(ctx.KubeClient(), c.name)
+		ng, err := entity.GetNodeGroup(ctx.Ctx(), ctx.KubeClient(), c.name)
 		if err != nil {
 			return err
 		}
@@ -251,7 +251,7 @@ func (c *NodeGroupController) tryUpdateNodeTemplate(ctx *context.Context, nodeTe
 			return err
 		}
 
-		err = entity.UpdateNodeGroup(ctx.KubeClient(), c.name, ng)
+		err = entity.UpdateNodeGroup(ctx.Ctx(), ctx.KubeClient(), c.name, ng)
 
 		if err == nil {
 			return nil
@@ -278,7 +278,7 @@ func (c *NodeGroupController) tryDeleteNodeGroup(ctx *context.Context) error {
 	}
 
 	return log.Process("converge", fmt.Sprintf("Delete NodeGroup %s", c.name), func() error {
-		return entity.DeleteNodeGroup(ctx.KubeClient(), c.name)
+		return entity.DeleteNodeGroup(ctx.Ctx(), ctx.KubeClient(), c.name)
 	})
 }
 
@@ -325,7 +325,7 @@ func (c *NodeGroupController) updateNodes(ctx *context.Context) error {
 			}
 
 			// we hide deckhouse logs because we always have config
-			nodeCloudConfig, err := entity.GetCloudConfig(ctx.KubeClient(), c.name, global.HideDeckhouseLogs, log.GetDefaultLogger())
+			nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), ctx.KubeClient(), c.name, global.HideDeckhouseLogs, log.GetDefaultLogger())
 			if err != nil {
 				return err
 			}
@@ -334,7 +334,6 @@ func (c *NodeGroupController) updateNodes(ctx *context.Context) error {
 
 			return nil
 		})
-
 		if err != nil {
 			// We do not return an error immediately for the following reasons:
 			// - some nodes cannot be converged for some reason, but other nodes must be converged

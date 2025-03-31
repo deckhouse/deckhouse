@@ -12,6 +12,8 @@ import (
 	"regexp"
 	"testing"
 
+	"webhook/internal/cache"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -34,6 +36,23 @@ func TestAuthorizeRequest(t *testing.T) {
 				Version:   "v1",
 				Resource:  "object1",
 				Namespace: "test",
+			},
+			ResultStatus: WebhookRequestStatus{},
+		},
+		{
+			Name:  "Non-existent Namespaced",
+			Group: []string{"normal"},
+			Attributes: WebhookResourceAttributes{
+				Resource:  "faketest",
+				Namespace: "test",
+			},
+			ResultStatus: WebhookRequestStatus{},
+		},
+		{
+			Name:  "Non-existent Clusterscoped",
+			Group: []string{"normal"},
+			Attributes: WebhookResourceAttributes{
+				Resource: "faketest",
 			},
 			ResultStatus: WebhookRequestStatus{},
 		},
@@ -618,6 +637,11 @@ func TestAuthorizeRequest(t *testing.T) {
 						"object2.test": "v1",
 						"object1.test": "v1",
 					},
+					coreResources: cache.CoreResourcesDict{
+						"pods":       struct{}{},
+						"namespaces": struct{}{},
+						"services":   struct{}{},
+					},
 				},
 				directory: map[string]map[string]DirectoryEntry{
 					"Group": {
@@ -683,10 +707,15 @@ func TestAuthorizeRequest(t *testing.T) {
 type dummyCache struct {
 	data              map[string]map[string]bool
 	preferredVersions map[string]string
+	coreResources     cache.CoreResourcesDict
 }
 
 func (d *dummyCache) Get(api, key string) (bool, error) {
 	return d.data[api][key], nil
+}
+
+func (d *dummyCache) GetCoreResources() (cache.CoreResourcesDict, error) {
+	return d.coreResources, nil
 }
 
 func (d *dummyCache) GetPreferredVersion(group, resource string) (string, error) {

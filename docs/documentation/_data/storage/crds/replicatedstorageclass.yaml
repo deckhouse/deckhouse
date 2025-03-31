@@ -41,7 +41,7 @@ spec:
               type: object
               description: |
                 Defines a Kubernetes Storage class configuration.
-                
+
                 > Note that this field is in read-only mode.
               required:
                 - storagePool
@@ -61,9 +61,9 @@ spec:
                     - rule: self == oldSelf
                       message: Value is immutable.
                   description: |
-                    The storage class's reclaim policy. Might be:
-                    - Delete (If the Persistent Volume Claim is deleted, deletes the Persistent Volume and its associated storage as well)
-                    - Retain (If the Persistent Volume Claim is deleted, remains the Persistent Volume and its associated storage)
+                    The storage class's reclaim policy:
+                    - `Delete` — if the Persistent Volume Claim is deleted, deletes the Persistent Volume and its associated storage as well;
+                    - `Retain` — if the Persistent Volume Claim is deleted, remains the Persistent Volume and its associated storage.
                   enum:
                     - Delete
                     - Retain
@@ -73,11 +73,11 @@ spec:
                     - rule: self == oldSelf
                       message: Value is immutable.
                   description: |
-                    The Storage class's replication mode. Might be:
-                    - None (in this mode the Storage class's 'placementCount' and 'AutoEvictMinReplicaCount' params equal '1')
-                    - Availability (in this mode the Storage class's 'placementCount' and 'AutoEvictMinReplicaCount' params equal '2')
-                    - ConsistencyAndAvailability (in this mode the Storage class's 'placementCount' and 'AutoEvictMinReplicaCount' params equal '3')
-                    
+                    The Storage class's replication mode:
+                    - `None` — in this mode the Storage class's 'placementCount' and 'AutoEvictMinReplicaCount' params equal '1');
+                    - `Availability` — in this mode the Storage class's 'placementCount' and 'AutoEvictMinReplicaCount' params equal '2');
+                    - `ConsistencyAndAvailability` — in this mode the Storage class's 'placementCount' and 'AutoEvictMinReplicaCount' params equal '3').
+
                     > Note that default Replication mode is 'ConsistencyAndAvailability'.
                   enum:
                     - None
@@ -90,20 +90,20 @@ spec:
                     - rule: self == oldSelf
                       message: Value is immutable.
                   description: |
-                    The Storage class's access mode. Might be:
-                    - Local (in this mode the Storage class's 'allowRemoteVolumeAccess' param equals 'false'
-                    and Volume Binding mode equals 'WaitForFirstConsumer')
-                    - EventuallyLocal (in this mode the Storage class's 'allowRemoteVolumeAccess' param 
-                    equals '- fromSame:\n  - topology.kubernetes.io/zone', 'auto-diskful' param equals '30' minutes, 
+                    The Storage class's access mode:
+                    - `Local` — in this mode the Storage class's 'allowRemoteVolumeAccess' param equals 'false'
+                    and Volume Binding mode equals 'WaitForFirstConsumer');
+                    - `EventuallyLocal` — in this mode the Storage class's 'allowRemoteVolumeAccess' param
+                    equals '- fromSame:\n  - topology.kubernetes.io/zone', 'auto-diskful' param equals '30' minutes,
                     'auto-diskful-allow-cleanup' param equals 'true',
-                    and Volume Binding mode equals 'WaitForFirstConsumer')
-                    - PreferablyLocal (in this mode the Storage class's 'allowRemoteVolumeAccess' param 
+                    and Volume Binding mode equals 'WaitForFirstConsumer');
+                    - `PreferablyLocal` — in this mode the Storage class's 'allowRemoteVolumeAccess' param
                     equals '- fromSame:\n  - topology.kubernetes.io/zone',
-                    and Volume Binding mode equals 'WaitForFirstConsumer')
-                    - Any (in this mode the Storage class's 'allowRemoteVolumeAccess' param 
+                    and Volume Binding mode equals 'WaitForFirstConsumer');
+                    - `Any` — in this mode the Storage class's 'allowRemoteVolumeAccess' param
                     equals '- fromSame:\n  - topology.kubernetes.io/zone',
-                    and Volume Binding mode equals 'Immediate')
-                    
+                    and Volume Binding mode equals 'Immediate').
+
                     > Note that the default Volume Access mode is 'PreferablyLocal'.
                   enum:
                     - Local
@@ -117,11 +117,11 @@ spec:
                     - rule: self == oldSelf
                       message: Value is immutable.
                   description: |
-                    The topology settings for the volumes in the created Storage class. Might be:
-                    - TransZonal - replicas of the volumes will be created in different zones (one replica per zone). 
+                    The topology settings for the volumes in the created Storage class:
+                    - `TransZonal` — replicas of the volumes will be created in different zones (one replica per zone).
                     To use this topology, the available zones must be specified in the 'zones' param, and the cluster nodes must have the topology.kubernetes.io/zone=<zone name> label.
-                    - Zonal - all replicas of the volumes are created in the same zone that the scheduler selected to place the pod using this volume.
-                    - Ignored - the topology information will not be used to place replicas of the volumes.
+                    - `Zonal` — all replicas of the volumes are created in the same zone that the scheduler selected to place the pod using this volume.
+                    - `Ignored` — the topology information will not be used to place replicas of the volumes.
                     The replicas can be placed on any available nodes, with the restriction: no more than one replica of a given volume on one node.
 
                     > Note that the 'Ignored' value can be used only if there are no zones in the cluster (there are no nodes with the topology.kubernetes.io/zone label).
@@ -137,8 +137,8 @@ spec:
                   description: |
                     Array of zones the Storage class's volumes should be replicated in. The controller will put a label with
                     the Storage class's name on the nodes which be actual used by the Storage class.
-                 
-                    > Note that for Replication mode 'Availability' and 'ConsistencyAndAvailability' you have to select 
+
+                    > Note that for Replication mode 'Availability' and 'ConsistencyAndAvailability' you have to select
                     exactly 1 or 3 zones.
                   items:
                     type: string
@@ -150,9 +150,9 @@ spec:
                 phase:
                   type: string
                   description: |
-                    The Storage class current state. Might be: 
-                    - Failed (if the controller received incorrect resource configuration or some errors occurred during the operation)
-                    - Create (if everything went fine)
+                    The Storage class current state:
+                    - `Failed` — if the controller received incorrect resource configuration or some errors occurred during the operation;
+                    - `Create` — if everything went fine.
                   enum:
                     - Failed
                     - Created
@@ -171,4 +171,4 @@ spec:
         - jsonPath: .metadata.creationTimestamp
           name: Age
           type: date
-          description: The age of this resource
+          description: The age of this resource.

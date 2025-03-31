@@ -26,7 +26,6 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -292,7 +291,7 @@ func generateConfig(input *go_hook.HookInput) error {
 
 	clusterDomain := input.Values.Get("global.discovery.clusterDomain").String()
 
-	var destinations []v1alpha1.ClusterLogDestination
+	destinations := make([]v1alpha1.ClusterLogDestination, 0)
 
 	for _, destination := range destSnap {
 		dest := destination.(v1alpha1.ClusterLogDestination)
@@ -332,9 +331,8 @@ func generateConfig(input *go_hook.HookInput) error {
 	input.Values.Set("logShipper.internal.activated", activated)
 
 	if !activated {
-		input.PatchCollector.Delete(
-			"v1", "Secret", "d8-log-shipper", "d8-log-shipper-config",
-			object_patch.InBackground())
+		input.PatchCollector.DeleteInBackground(
+			"v1", "Secret", "d8-log-shipper", "d8-log-shipper-config")
 		return nil
 	}
 
@@ -354,7 +352,7 @@ func generateConfig(input *go_hook.HookInput) error {
 		},
 		Data: map[string][]byte{"vector.json": configContent},
 	}
-	input.PatchCollector.Create(secret, object_patch.UpdateIfExists())
+	input.PatchCollector.CreateOrUpdate(secret)
 
 	event := &eventsv1.Event{
 		TypeMeta: metav1.TypeMeta{

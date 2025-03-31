@@ -90,3 +90,32 @@ subjects:
     name: log-shipper
     namespace: d8-log-shipper
 {{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: access-to-loki-from-d8
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+  - apiGroups: ["apps"]
+    resources:
+      - "statefulsets/http-create"
+      - "statefulsets/http"
+    resourceNames: ["loki"]
+    verbs: ["create", "get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: access-to-loki-from-d8
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: access-to-loki-from-d8
+subjects:
+  - kind: ServiceAccount
+    name: loki
+    namespace: d8-monitoring

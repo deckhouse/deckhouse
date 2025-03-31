@@ -27,8 +27,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-func GetPod(kubeCl *client.KubernetesClient, leaderElectionLeaseName types.NamespacedName) (*v1.Pod, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+func GetPod(ctx context.Context, kubeCl *client.KubernetesClient, leaderElectionLeaseName types.NamespacedName) (*v1.Pod, error) {
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
 	pods, err := kubeCl.CoreV1().Pods("d8-system").List(ctx, metav1.ListOptions{LabelSelector: "app=deckhouse"})

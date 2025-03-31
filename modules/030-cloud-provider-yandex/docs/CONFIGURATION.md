@@ -6,6 +6,8 @@ title: "Cloud provider — Yandex Cloud: configuration"
 
 {% include module-alerts.liquid %}
 
+{% include module-conversion.liquid %}
+
 ## Storage
 
 The module automatically creates StorageClasses covering all available disks in Yandex:

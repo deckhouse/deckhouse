@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -104,9 +105,9 @@ func convergeComponent(componentName string) error {
 		recreateConfig = true
 	}
 	if recreateConfig {
-		log.Infof("generate new manifest for %s", componentName)
+		log.Info("generate new manifest", slog.String("name", componentName))
 		if err := backupFile(filepath.Join(manifestsPath, componentName+".yaml")); err != nil {
-			log.Warnf("Backup failed, %s", err)
+			log.Warn("Backup failed", log.Err(err))
 		}
 
 		if err := generateChecksumPatch(componentName, checksum); err != nil {
@@ -260,7 +261,7 @@ func waitPodIsReady(componentName string, checksum string) error {
 		}
 
 		if podChecksum := pod.Annotations["control-plane-manager.deckhouse.io/checksum"]; podChecksum != checksum {
-			log.Warnf("kubernetes pod %s checksum %s does not match expected checksum %s", podName, podChecksum, checksum)
+			log.Warn("kubernetes pod checksum does not match expected checksum", slog.String("name", podName), slog.String("checksum", podChecksum), slog.String("expected_checksum", checksum))
 			time.Sleep(1 * time.Second)
 			continue
 		}
@@ -272,18 +273,18 @@ func waitPodIsReady(componentName string, checksum string) error {
 			}
 		}
 		if !podIsReady {
-			log.Warnf("kubernetes pod %s has matching checksum %s but is not ready", podName, checksum)
+			log.Warn("kubernetes pod has matching checksum but is not ready", slog.String("name", podName), slog.String("checksum", checksum))
 			time.Sleep(1 * time.Second)
 			continue
 		}
 
-		log.Infof("kubernetes pod %s has matching checksum %s and is ready", podName, checksum)
+		log.Info("kubernetes pod has matching checksum and is ready", slog.String("name", podName), slog.String("checksum", checksum))
 		return nil
 	}
 }
 
 func triggerKubeletRereadManifest(componentName string) error {
-	log.Warnf("trying to trigger kubelet to re-read manifest")
+	log.Warn("trying to trigger kubelet to re-read manifest")
 
 	srcPath := filepath.Join(manifestsPath, componentName+".yaml")
 	dstPath := filepath.Join(manifestsPath, "."+componentName+".yaml")

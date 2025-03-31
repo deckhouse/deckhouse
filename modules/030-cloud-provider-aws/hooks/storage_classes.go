@@ -98,7 +98,7 @@ func storageClasses(input *go_hook.HookInput) error {
 		provisionExcludeNames = append(provisionExcludeNames, sc.Get("name"))
 	}
 
-	var provisionRegexps []*regexp.Regexp
+	provisionRegexps := make([]*regexp.Regexp, 0, len(provisionExcludeNames))
 
 	// compile regular expressions
 	for _, excludePattern := range provisionExcludeNames {
@@ -109,7 +109,7 @@ func storageClasses(input *go_hook.HookInput) error {
 		provisionRegexps = append(provisionRegexps, r)
 	}
 
-	var storageClassesFilteredProvision []StorageClass
+	storageClassesFilteredProvision := make([]StorageClass, 0)
 	for _, storageClass := range defaultStorageClasses {
 		if !excludeCheck(provisionRegexps, storageClass.Name) {
 			storageClassesFilteredProvision = append(storageClassesFilteredProvision, storageClass)
@@ -128,7 +128,7 @@ func storageClasses(input *go_hook.HookInput) error {
 
 	excludeStorageClasses := input.Values.Get("cloudProviderAws.storageClass.exclude").Array()
 
-	var excludeRegexps []*regexp.Regexp
+	excludeRegexps := make([]*regexp.Regexp, 0, len(excludeStorageClasses))
 
 	// compile regular expressions
 	for _, excludePattern := range excludeStorageClasses {
@@ -139,7 +139,7 @@ func storageClasses(input *go_hook.HookInput) error {
 		excludeRegexps = append(excludeRegexps, r)
 	}
 
-	var storageClassesFiltered []StorageClass
+	storageClassesFiltered := make([]StorageClass, 0)
 	for _, storageClass := range storageClassesFilteredProvision {
 		if !excludeCheck(excludeRegexps, storageClass.Name) {
 			storageClassesFiltered = append(storageClassesFiltered, storageClass)
@@ -156,7 +156,7 @@ func storageClasses(input *go_hook.HookInput) error {
 		input.Values.Set("cloudProviderAws.internal.storageClasses", []StorageClass{})
 	}
 
-	var existedStorageClasses []StorageClass
+	existedStorageClasses := make([]StorageClass, 0, len(input.Snapshots["module_storageclasses"]))
 	for _, v := range input.Snapshots["module_storageclasses"] {
 		sc := v.(*storagev1.StorageClass)
 		existedStorageClasses = append(existedStorageClasses, StorageClass{

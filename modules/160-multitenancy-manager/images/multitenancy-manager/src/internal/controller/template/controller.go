@@ -23,10 +23,8 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
-
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -43,10 +41,10 @@ const controllerName = "d8-template-controller"
 
 func Register(runtimeManager manager.Manager, templatesPath string, logger logr.Logger) error {
 	r := &reconciler{
-		init:            new(sync.WaitGroup),
-		logger:          logger.WithName(controllerName),
-		client:          runtimeManager.GetClient(),
-		templateManager: templatemanager.New(runtimeManager.GetClient(), logger),
+		init:    new(sync.WaitGroup),
+		logger:  logger.WithName(controllerName),
+		client:  runtimeManager.GetClient(),
+		manager: templatemanager.New(runtimeManager.GetClient(), logger),
 	}
 
 	r.init.Add(1)
@@ -70,7 +68,7 @@ func Register(runtimeManager manager.Manager, templatesPath string, logger logr.
 				return true
 			},
 			func() error {
-				return r.templateManager.Init(ctx, runtimeManager.GetWebhookServer().StartedChecker(), r.init, templatesPath)
+				return r.manager.Init(ctx, runtimeManager.GetWebhookServer().StartedChecker(), r.init, templatesPath)
 			},
 		)
 	})); err != nil {
@@ -89,10 +87,10 @@ func Register(runtimeManager manager.Manager, templatesPath string, logger logr.
 var _ reconcile.Reconciler = &reconciler{}
 
 type reconciler struct {
-	init            *sync.WaitGroup
-	templateManager *templatemanager.Manager
-	client          client.Client
-	logger          logr.Logger
+	init    *sync.WaitGroup
+	manager *templatemanager.Manager
+	client  client.Client
+	logger  logr.Logger
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -118,5 +116,5 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	// ensure template
 	r.logger.Info("ensure the template", "template", template.Name)
-	return r.templateManager.Handle(ctx, template)
+	return r.manager.Handle(ctx, template)
 }

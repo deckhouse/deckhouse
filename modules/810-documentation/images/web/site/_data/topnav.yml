@@ -11,5 +11,5 @@ topnav:
     - title: Каналы обновлений
       url: /deckhouse-release-channels.html
     - title: Лицензионное соглашение
-      external_url: https://deckhouse.ru/license.html
+      external_url: https://deckhouse.ru/license/
       ee_only: true

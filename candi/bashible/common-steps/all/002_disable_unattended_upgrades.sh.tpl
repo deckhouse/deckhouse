@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if ! systemctl list-unit-files unattended-upgrades  > /dev/null 2>&1; then
+if ! systemctl list-unit-files unattended-upgrades.service >/dev/null 2>&1; then
   exit 0
 fi
 

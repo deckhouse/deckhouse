@@ -88,6 +88,10 @@ func (c *Context) Terraform() *terraform.TerraformContext {
 	return c.terraformContext
 }
 
+func (c *Context) Ctx() context.Context {
+	return c.ctx
+}
+
 func (c *Context) WithTimeout(timeout time.Duration) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(c.ctx, timeout)
 }
@@ -132,7 +136,7 @@ func (c *Context) MetaConfig() (*config.MetaConfig, error) {
 		return metaConfig, nil
 	}
 
-	metaConfig, err := entity.GetMetaConfig(c.kubeClient)
+	metaConfig, err := entity.GetMetaConfig(c.ctx, c.kubeClient)
 	if err != nil {
 		return nil, err
 	}

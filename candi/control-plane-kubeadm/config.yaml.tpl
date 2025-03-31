@@ -42,26 +42,37 @@ apiServer:
   {{- end }}
 {{- end }}
   extraArgs:
-{{- if .apiserver.serviceAccount }}
-    {{- $defaultAud := printf "https://kubernetes.default.svc.%s" .clusterConfiguration.clusterDomain }}
-    {{- $uniqueAdditionalAuds := (default (list) .apiserver.serviceAccount.additionalAPIAudiences) | uniq }}
-    {{- $filteredAuds := list }}
-    {{- range $uniqueAdditionalAuds }}
-      {{- if ne . $defaultAud }}
-        {{- $filteredAuds = append $filteredAuds . }}
-      {{- end }}
+{{- $sa := .apiserver.serviceAccount | default dict }}
+{{- $primaryAud := $sa.issuer }}
+{{- $defaultAud := printf "https://kubernetes.default.svc.%s" .clusterConfiguration.clusterDomain }}
+{{- $audiences := list $primaryAud }}
+{{- if $sa.additionalAPIIssuers }}
+  {{- range $sa.additionalAPIIssuers }}
+    {{- if and (ne . $primaryAud) (ne . $defaultAud) }}
+      {{- $audiences = append $audiences . }}
     {{- end }}
-    api-audiences: {{ $defaultAud }}{{- if gt (len $filteredAuds) 0 }},{{ $filteredAuds | join "," }}{{ end }}
-    {{- if .apiserver.serviceAccount.issuer }}
-    service-account-issuer: {{ .apiserver.serviceAccount.issuer }}
-    service-account-jwks-uri: {{ .apiserver.serviceAccount.issuer }}/openid/v1/jwks
+  {{- end }}
+{{- end }}
+{{- if $sa.additionalAPIAudiences }}
+  {{- range $sa.additionalAPIAudiences }}
+    {{- if and (ne . $primaryAud) (ne . $defaultAud) }}
+      {{- $audiences = append $audiences . }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- $audiences = $audiences | uniq }}
+{{- $audiences = without $audiences $defaultAud }}
+{{- $audiences = append $audiences $defaultAud }}
+    api-audiences: {{ $audiences | join "," }}
+    {{- if $sa.issuer }}
+    service-account-issuer: {{ $sa.issuer }}
+    service-account-jwks-uri: {{ $sa.issuer }}/openid/v1/jwks
     {{- else }}
     service-account-issuer: https://kubernetes.default.svc.{{ .clusterConfiguration.clusterDomain }}
     service-account-jwks-uri: https://kubernetes.default.svc.{{ .clusterConfiguration.clusterDomain }}/openid/v1/jwks
     {{- end }}
     service-account-key-file: /etc/kubernetes/pki/sa.pub
     service-account-signing-key-file: /etc/kubernetes/pki/sa.key
-{{- end }}
 {{- if ne .runType "ClusterBootstrap" }}
     {{ $admissionPlugins := list "NodeRestriction" "PodNodeSelector" "PodTolerationRestriction" "EventRateLimit" "ExtendedResourceToleration" }}
     {{- if .apiserver.admissionPlugins }}

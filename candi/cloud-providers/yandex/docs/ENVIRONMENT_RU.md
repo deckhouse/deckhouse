@@ -17,13 +17,17 @@ description: "Настройка Yandex Cloud для работы облачно
    name: deckhouse
    ```
 
-2. Назначьте роль `editor` вновь созданному пользователю для своего облака:
+1. Назначьте необходимые роли вновь созданному пользователю для своего облака:
 
    ```yaml
-   yc resource-manager folder add-access-binding --id <folderID> --role editor --subject serviceAccount:<userID>
+   yc resource-manager folder add-access-binding --id <folderID> --role compute.editor --subject serviceAccount:<userID>
+   yc resource-manager folder add-access-binding --id <folderID> --role api-gateway.editor --subject serviceAccount:<userID>
+   yc resource-manager folder add-access-binding --id <folderID> --role connection-manager.editor --subject serviceAccount:<userID>
+   yc resource-manager folder add-access-binding --id <folderID> --role vpc.admin --subject serviceAccount:<userID>
+   yc resource-manager folder add-access-binding --id <folderID> --role load-balancer.editor --subject serviceAccount:<userID>
    ```
 
-3. Создайте JSON-файл с параметрами авторизации пользователя в облаке. В дальнейшем с помощью этих данных будет происходить авторизация в облаке:
+1. Создайте JSON-файл с параметрами авторизации пользователя в облаке. В дальнейшем с помощью этих данных будет происходить авторизация в облаке:
 
    ```yaml
    yc iam key create --service-account-name deckhouse --output deckhouse-sa-key.json
@@ -38,6 +42,7 @@ description: "Настройка Yandex Cloud для работы облачно
 При заказе нового кластера необходимо увеличить квоты в консоли Yandex Cloud.
 
 Рекомендованные значения квот при создании нового кластера:
+
 * Количество виртуальных процессоров: 64.
 * Общий объем SSD-дисков: 2000 ГБ.
 * Количество виртуальных машин: 25.

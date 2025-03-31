@@ -63,10 +63,10 @@
 {{- end }}
 
 {{- $csiImageName := ""}}
-{{- if semverCompare ">=37.2" .Values.cloudProviderVcd.internal.discoveryData.vcdAPIVersion -}}
-  {{- $csiImageName = "vcdCsiPlugin" }}
-{{- else -}}
+{{- if eq .Values.cloudProviderVcd.internal.providerClusterConfiguration.legacyMode true -}}
   {{- $csiImageName = "vcdCsiPluginLegacy" }}
+{{- else -}}
+  {{- $csiImageName = "vcdCsiPlugin" }}
 {{- end }}
 
 {{- $csiControllerImage := include "helm_lib_module_image_no_fail" (list . $csiImageName) }}
@@ -75,7 +75,7 @@
   {{- $csiControllerConfig := dict }}
   {{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}
   {{- $_ := set $csiControllerConfig "snapshotterEnabled" false }}
-  {{- $_ := set $csiControllerConfig "resizerEnabled" (semverCompare ">=37.2" .Values.cloudProviderVcd.internal.discoveryData.vcdAPIVersion) }}
+  {{- $_ := set $csiControllerConfig "resizerEnabled" (ne .Values.cloudProviderVcd.internal.providerClusterConfiguration.legacyMode true) }}
   {{- $_ := set $csiControllerConfig "topologyEnabled" false }}
   {{- $_ := set $csiControllerConfig "additionalControllerArgs" (include "csi_controller_args" . | fromYamlArray) }}
   {{- $_ := set $csiControllerConfig "additionalControllerEnvs" (include "csi_controller_envs" . | fromYamlArray) }}

@@ -58,5 +58,5 @@ locals {
         "sudo" : "ALL=(ALL) NOPASSWD:ALL"
       }
     ]
-  }, length(var.cloudConfig) > 0 ? jsondecode(base64decode(var.cloudConfig)) : tomap({})))
+  }, length(var.cloudConfig) > 0 ? try(jsondecode(base64decode(var.cloudConfig), yamldecode(base64decode(var.cloudConfig)))) : tomap({})))
 }

@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -109,7 +110,7 @@ func safeControllerUpdate(input *go_hook.HookInput) error {
 
 		proxy, ok := proxyMap[ds.ControllerName]
 		if !ok {
-			input.Logger.Warnf("Proxy DaemonSets not found for %q controller", ds.ControllerName)
+			input.Logger.Warn("Proxy DaemonSets not found for controller", slog.String("name", ds.ControllerName))
 			continue
 		}
 
@@ -132,13 +133,13 @@ func safeControllerUpdate(input *go_hook.HookInput) error {
 		podForDelete := sn.(ingressControllerPod)
 
 		if !controllers.Has(podForDelete.ControllerName) {
-			input.Logger.Warnf("Failover and Proxy DaemonSets not found for %q controller", podForDelete.ControllerName)
+			input.Logger.Warn("Failover and Proxy DaemonSets not found for controller", slog.String("name", podForDelete.ControllerName))
 			continue
 		}
 
 		// postpone main controller's pod update for the first time so that failover controller could catch up with the hook
 		if !podForDelete.PostponedUpdate {
-			input.Logger.Infof("Assuring that %s/%s has met update conditions", podForDelete.ControllerName, podForDelete.Name)
+			input.Logger.Info("Assuring that update conditions met", slog.String("controller", podForDelete.ControllerName), slog.String("pod", podForDelete.Name))
 			metadata := map[string]interface{}{
 				"metadata": map[string]interface{}{
 					"annotations": map[string]interface{}{

@@ -307,7 +307,7 @@ func handleEffectiveK8sVersion(input *go_hook.HookInput, dc dependency.Container
 func ekvProcessPodsSnapshot(input *go_hook.HookInput, dc dependency.Container) (*semver.Version, *semver.Version, error) {
 	snap := input.Snapshots["control_plane_versions"]
 
-	var controlPlaneVersions []controlPlanePod
+	controlPlaneVersions := make([]controlPlanePod, 0, len(snap))
 	var apiserverExists bool
 
 	for _, res := range snap {
@@ -354,7 +354,7 @@ func ekvProcessPodsSnapshot(input *go_hook.HookInput, dc dependency.Container) (
 func ekvProcessNodeSnapshot(input *go_hook.HookInput) (*semver.Version /*minNodeVersion*/, *semver.Version /*maxNodeVersion*/, error) {
 	snap := input.Snapshots["node_versions"]
 
-	var nodeVersions []*semver.Version
+	nodeVersions := make([]*semver.Version, 0, len(snap))
 	for _, res := range snap {
 		nodeVersions = append(nodeVersions, res.(*semver.Version))
 	}

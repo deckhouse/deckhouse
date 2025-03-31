@@ -17,7 +17,7 @@ limitations under the License.
 package releaseupdater
 
 import (
-	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
+	"github.com/flant/shell-operator/pkg/metric"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
@@ -25,7 +25,7 @@ import (
 const D8ReleaseBlockedMetricName = "d8_release_info"
 const ModuleReleaseBlockedMetricName = "d8_module_release_info"
 
-func NewMetricsUpdater(metricStorage *metricstorage.MetricStorage, metricName string) *MetricsUpdater {
+func NewMetricsUpdater(metricStorage metric.Storage, metricName string) *MetricsUpdater {
 	return &MetricsUpdater{
 		metricStorage: metricStorage,
 		metricName:    metricName,
@@ -33,7 +33,7 @@ func NewMetricsUpdater(metricStorage *metricstorage.MetricStorage, metricName st
 }
 
 type MetricsUpdater struct {
-	metricStorage *metricstorage.MetricStorage
+	metricStorage metric.Storage
 	metricName    string
 }
 

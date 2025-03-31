@@ -8,10 +8,14 @@
 {%- endif %}
 
 {%- if page.lang == 'ru' %}
+## Настройки
+
 Чтобы настроить модуль, используйте ресурс `ModuleConfig` с именем `{{ moduleKebabName }}` ([подробнее о настройке Deckhouse...](../../)).
 
 Пример ресурса `ModuleConfig/{{ moduleKebabName }}` для настройки модуля:
 {%- else %}
+## Settings
+
 The module is configured using the ModuleConfig custom resource named `{{ moduleKebabName }}` ([learn more about setting up Deckhouse...](../../)).
 
 Example of the `ModuleConfig/{{ moduleKebabName }}` resource for configuring the module:

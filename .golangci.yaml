@@ -87,3 +87,4 @@ linters:
   - copyloopvar
   - nonamedreturns
   - musttag
+  - prealloc

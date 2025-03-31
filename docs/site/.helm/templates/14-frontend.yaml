@@ -93,6 +93,29 @@ spec:
               name: modules-docs-en
             - mountPath: "/mount/public/ru/modules"
               name: modules-docs-ru
+        - name: backend
+          command: ["/app/server"]
+          image: {{ index .Values.werf.image "web-backend" }}
+          {{- include "resources" . | nindent 10 }}
+          ports:
+            - containerPort: 8082
+              name: http
+              protocol: TCP
+          env:
+            - name: VROUTER_DOMAIN_MAP
+              value: {{ .Values.global.domain_map | quote }}
+            {{- include "vrouter_envs" . | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8082
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8082
+          volumeMounts:
+            - name: release-channels
+              mountPath: /app/release-channels
       volumes:
         - name: modules-docs-en
           emptyDir: {}
@@ -100,7 +123,9 @@ spec:
           emptyDir: {}
         - name: download-cache
           emptyDir: {}
-
+        - name: release-channels
+          configMap:
+            name: release-channels-data
 ---
 apiVersion: v1
 kind: Service
@@ -115,6 +140,20 @@ spec:
     port: 80
     protocol: TCP
     targetPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+spec:
+  clusterIP: None
+  selector:
+    service: frontend
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: 8082
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler

@@ -15,6 +15,7 @@
 package terraform
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -129,7 +130,7 @@ func (s *StateSaver) FsEventHandler(event fsnotify.Event) {
 		return
 	}
 
-	outputs, err := OnlyState(s.runner)
+	outputs, err := OnlyState(context.Background(), s.runner)
 	if err != nil {
 		log.ErrorF("Parse intermediate state: %v\n", err)
 		return

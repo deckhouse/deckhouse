@@ -19,6 +19,7 @@ package hooks
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"regexp"
 	"strings"
 	"time"
@@ -33,6 +34,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // TODO: Remove this alerting hook after deprecating ingress controllers of 1.10< versions
@@ -130,7 +132,7 @@ func searchForDeprecatedGeoip(input *go_hook.HookInput, dc dependency.Container)
 			ResourceVersionMatch: metav1.ResourceVersionMatchNotOlderThan,
 		})
 		if err != nil {
-			input.Logger.Warnf("couldn't list ingresses: %v", err)
+			input.Logger.Warn("couldn't list ingresses", log.Err(err))
 			return nil
 		}
 		ingressList.GetRemainingItemCount()
@@ -165,7 +167,7 @@ func checkControllerConfigMaps(client k8s.Client, input *go_hook.HookInput, cont
 	for _, cmName := range configMaps {
 		configMap, err := client.CoreV1().ConfigMaps(ingressNamespace).Get(context.Background(), cmName, metav1.GetOptions{})
 		if err != nil {
-			input.Logger.Warnf("couldn't get %s controller's configmap %s: %v", controllerName, cmName, err)
+			input.Logger.Warn("couldn't get controller's configmap", slog.String("controller", controllerName), slog.String("config_map", cmName), log.Err(err))
 			continue
 		}
 		for k, v := range configMap.Data {

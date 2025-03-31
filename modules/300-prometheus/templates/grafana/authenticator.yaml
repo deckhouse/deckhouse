@@ -1,4 +1,4 @@
-{{- if .Values.prometheus.internal.deployDexAuthenticator }}
+{{- if and .Values.prometheus.internal.grafana.enabled .Values.prometheus.internal.deployDexAuthenticator }}
 ---
 apiVersion: deckhouse.io/v1
 kind: DexAuthenticator

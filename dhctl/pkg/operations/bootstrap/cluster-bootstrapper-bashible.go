@@ -15,6 +15,7 @@
 package bootstrap
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -23,7 +24,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
-func (b *ClusterBootstrapper) ExecuteBashible() error {
+func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 	if restore, err := b.applyParams(); err != nil {
 		return err
 	} else {
@@ -44,12 +45,12 @@ func (b *ClusterBootstrapper) ExecuteBashible() error {
 		if _, err = wrapper.Client().Start(); err != nil {
 			return fmt.Errorf("unable to start ssh client: %w", err)
 		}
-		if err = WaitForSSHConnectionOnMaster(wrapper.Client()); err != nil {
+		if err = WaitForSSHConnectionOnMaster(ctx, wrapper.Client()); err != nil {
 			return fmt.Errorf("failed to wait for SSH connection on master: %v", err)
 		}
 	}
 
-	if err := RunBashiblePipeline(b.NodeInterface, metaConfig, app.InternalNodeIP, app.DevicePath); err != nil {
+	if err := RunBashiblePipeline(ctx, b.NodeInterface, metaConfig, app.InternalNodeIP, app.DevicePath); err != nil {
 		return err
 	}
 

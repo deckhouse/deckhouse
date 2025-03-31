@@ -142,7 +142,7 @@ jobs:
   security_scan_images:
     name: Security scan images
     if: ${{ needs.pull_request_info.outputs.security_rootless_scan == 'true' }}
-    runs-on: [ self-hosted, regular, selectel ]
+    runs-on: [self-hosted, large]
     needs:
       - git_info
       - pull_request_info

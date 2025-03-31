@@ -174,7 +174,7 @@ nginx.ingress.kubernetes.io/configuration-snippet: |
 
 - протокол: `HTTP`;
 - путь: `/healthz`;
-- порт: `80` (в случае использования inlet'а `HostPort` нужно указать номер порта, соответствующий параметру [httpPort](cr.html#ingressnginxcontroller-v1-spec-hostport-httpport).
+- порт: `80` (в случае использования инлета `HostPort` нужно указать номер порта, соответствующий параметру [httpPort](cr.html#ingressnginxcontroller-v1-spec-hostport-httpport).
 
 ## Как настроить работу через MetalLB с доступом только из внутренней сети?
 
@@ -214,7 +214,7 @@ spec:
 ## Как включить HorizontalPodAutoscaling для IngressNginxController?
 
 {% alert level="warning" %}
-Режим HPA возможен только для контроллеров с inlet'ом `LoadBalancer` или `LoadBalancerWithProxyProtocol`.
+Режим HPA возможен только для контроллеров с инлетом `LoadBalancer` или `LoadBalancerWithProxyProtocol`.
 
 Режим HPA возможен только при `minReplicas` != `maxReplicas`, в противном случае deployment `hpa-scaler` не создается.
 {% endalert %}

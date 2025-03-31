@@ -237,6 +237,15 @@ properties:
       as `{"event_type": "purge", "ip_src": "172.25.175.10", "ip_dst": "10.222.0.10", "port_src": 32172, "port_dst": 53, "ip_proto": "udp", "packets": 1, "bytes": 53}`
     type: boolean
     default: false
+  clientCertExpirationDays:
+    type: integer
+    description: |
+      Certificate client expired period for OpenVPN in days. Specifies the number of days for which a client certificate generated using EasyRSA will be issued.
+
+      Client certificate lifetime must be at least 1 day and no more than 10 years.
+    minimum: 1
+    maximum: 3650
+    default: 3650
 oneOf:
   - properties:
       tcpEnabled:

@@ -28,8 +28,11 @@ spec:
   type: KubernetesPods
   kubernetesPods:
     namespaceSelector:
-      matchNames:
-        - development
+      labelSelector:
+        matchExpressions:
+        - key: "kubernetes.io/metadata.name"
+          operator: In
+          values: [development]
   destinationRefs:
     - d8-loki
 ```

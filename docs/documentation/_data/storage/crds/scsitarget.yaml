@@ -38,30 +38,26 @@ spec:
             properties:
               deviceTemplate:
                 type: object
-                description: DeviceTemplate defines the metadata for dynamically created
+                description: DeviceTemplate defines the metadata for dynamically created.
                   devices.
                 properties:
                   metadata:
                     type: object
-                    description: Metadata specifies the metadata to be applied to
-                      devices.
+                    description: Metadata specifies the metadata to be applied to devices.
                     properties:
                       labels:
                         type: object
-                        description: Labels are key-value pairs that may be used to
-                          select devices.
+                        description: Labels are key-value pairs that may be used to select devices.
                         additionalProperties:
                           type: string
               fibreChannel:
                 type: object
-                description: FibreChannel defines the configuration for a Fibre Channel
-                  target.
+                description: FibreChannel defines the configuration for a Fibre Channel target.
                 required:
                 - WWNs
                 properties:
                   WWNs:
-                    description: WWNs is a list of World Wide Names for the Fibre
-                      Channel target.
+                    description: WWNs is a list of World Wide Names for the Fibre Channel target.
                     items:
                       type: string
                     minItems: 1
@@ -78,24 +74,20 @@ spec:
                     required:
                     - login
                     - password
-                    description: Auth specifies authentication details for accessing
-                      the iSCSI target.
+                    description: Auth specifies authentication details for accessing the iSCSI target.
                     properties:
                       login:
-                        description: Login is the username used for authentication
-                          with the iSCSI target.
+                        description: Login is the username used for authentication with the iSCSI target.
                         type: string
                       password:
-                        description: Password is the password used for authentication
-                          with the iSCSI target.
+                        description: Password is the password used for authentication with the iSCSI target.
                         type: string
                   iqn:
                     description: IQN is the iSCSI Qualified Name of the target.
                     type: string
                   portals:
                     type: array
-                    description: Portals is a list of portal addresses (IP:port) for
-                      accessing the iSCSI target.
+                    description: Portals is a list of portal addresses (IP:port) for accessing the iSCSI target.
                     items:
                       type: string
                     minItems: 1
@@ -103,11 +95,10 @@ spec:
             description: Status represents the observed state of the target.
             properties:
               conflictMessage:
-                description: ConflictMessage contains information about label conflicts,
-                  if any.
+                description: ConflictMessage contains information about label conflicts, if any.
                 type: string
             type: object
-        
-        
+
+
     subresources:
       status: {}

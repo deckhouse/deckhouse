@@ -45,7 +45,8 @@ import (
 )
 
 func (s *Service) Converge(server pb.DHCTL_ConvergeServer) error {
-	ctx := operationCtx(server)
+	ctx, cancel := operationCtx(server)
+	defer cancel()
 
 	logger.L(ctx).Info("started")
 
@@ -92,7 +93,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.convergeSafe(ctx, message.Start, phaseSwitcher.switchPhase, logWriter)
+					result := s.convergeSafe(ctx, message.Start, phaseSwitcher.switchPhase(ctx), logWriter)
 					sendCh <- &pb.ConvergeResponse{Message: &pb.ConvergeResponse_Result{Result: result}}
 				}()
 
@@ -113,6 +114,9 @@ connectionProcessor:
 				case pb.Continue_CONTINUE_ERROR:
 					phaseSwitcher.next <- errors.New(message.Continue.Err)
 				}
+
+			case *pb.ConvergeRequest_Cancel:
+				cancel()
 
 			default:
 				logger.L(ctx).Error("got unprocessable message",
@@ -238,7 +242,7 @@ func (s *Service) converge(
 		OnCheckResult:              onCheckResult,
 	}
 
-	kubeClient, sshClient, cleanup, err := helper.InitializeClusterConnections(helper.ClusterConnectionsOptions{
+	kubeClient, sshClient, cleanup, err := helper.InitializeClusterConnections(ctx, helper.ClusterConnectionsOptions{
 		CommanderMode: request.Options.CommanderMode,
 		ApiServerUrl:  request.Options.ApiServerUrl,
 		ApiServerOptions: helper.ApiServerOptions{

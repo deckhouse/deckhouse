@@ -20,6 +20,8 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -35,7 +37,7 @@ func discoverDeckhouseVersion(input *go_hook.HookInput) error {
 	version := "unknown"
 	content, err := os.ReadFile(versionFile)
 	if err != nil {
-		input.Logger.Warnf("cannot get deckhouse version: %v", err)
+		input.Logger.Warn("cannot get deckhouse version", log.Err(err))
 	} else {
 		version = strings.TrimSuffix(string(content), "\n")
 	}

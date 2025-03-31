@@ -15,6 +15,7 @@
 package preflight
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -211,7 +212,7 @@ deckhouse:
 
 		preflightChecker := NewChecker(ssh.NewNodeInterfaceWrapper(&ssh.Client{}), installer, metaConfig, bootstrapState)
 
-		err = preflightChecker.CheckRegistryAccessThroughProxy()
+		err = preflightChecker.CheckRegistryAccessThroughProxy(context.Background())
 		if test.skipped {
 			s.NoError(err)
 		} else {

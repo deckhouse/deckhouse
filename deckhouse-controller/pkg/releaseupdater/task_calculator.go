@@ -84,6 +84,15 @@ type ReleaseInfo struct {
 var ErrReleasePhaseIsNotPending = errors.New("release phase is not pending")
 var ErrReleaseIsAlreadyDeployed = errors.New("release is already deployed")
 
+// isPatchRelease returns true if b is greater only in terms of the patch versions.
+func isPatchRelease(a, b *semver.Version) bool {
+	if b.Major() == a.Major() && b.Minor() == a.Minor() && b.Patch() > a.Patch() {
+		return true
+	}
+
+	return false
+}
+
 // CalculatePendingReleaseTask calculate task with information about current reconcile
 //
 // calculating flow:
@@ -153,6 +162,10 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 	})
 
 	releaseQueueDepth := len(releases) - 1 - releaseIdx
+	// max value for release queue depth is 3 due to the alert's logic, having queue depth greater than 3 breaks this logic
+	if releaseQueueDepth > 3 {
+		releaseQueueDepth = 3
+	}
 	isLatestRelease := releaseQueueDepth == 0
 	isPatch := true
 
@@ -162,13 +175,13 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 		prevRelease := releases[releaseIdx-1]
 
 		// if release version is greater in major or minor version than previous release
-		if release.GetVersion().Major() > prevRelease.GetVersion().Major() ||
-			release.GetVersion().Minor() > prevRelease.GetVersion().Minor() {
+		if !isPatchRelease(prevRelease.GetVersion(), release.GetVersion()) ||
+			(deployedReleaseInfo != nil && !isPatchRelease(deployedReleaseInfo.Version, release.GetVersion())) {
 			isPatch = false
 
 			// it must await if previous release has Deployed state
 			// truncate all not deployed phase releases
-			if prevRelease.GetPhase() != v1alpha1.DeckhouseReleasePhaseDeployed {
+			if prevRelease.GetPhase() == v1alpha1.DeckhouseReleasePhasePending {
 				msg := prevRelease.GetMessage()
 				if !strings.Contains(msg, "awaiting") {
 					msg = fmt.Sprintf("awaiting for v%s release to be deployed", prevRelease.GetVersion().String())

@@ -454,7 +454,7 @@ func handleUpdateNGStatus(input *go_hook.HookInput) error {
 
 		patchNodeGroupStatus(input.PatchCollector, ngName, patch)
 		// set CR processed status
-		input.PatchCollector.Filter(set_cr_statuses.SetProcessedStatus(applyNodeGroupCrdFilter), "deckhouse.io/v1", "nodegroup", "", ngName, object_patch.WithSubresource("/status"), object_patch.IgnoreHookError())
+		input.PatchCollector.PatchWithMutatingFunc(set_cr_statuses.SetProcessedStatus(applyNodeGroupCrdFilter), "deckhouse.io/v1", "nodegroup", "", ngName, object_patch.WithSubresource("/status"), object_patch.WithIgnoreHookError())
 	}
 
 	return nil

@@ -3,6 +3,13 @@ cpu: 25m
 memory: 50Mi
 {{- end }}
 
+{{- $cddImageName := ""}}
+{{- if eq .Values.cloudProviderVcd.internal.providerClusterConfiguration.legacyMode true -}}
+  {{- $cddImageName = "cloudDataDiscovererLegacy" }}
+{{- else -}}
+  {{- $cddImageName = "cloudDataDiscoverer" }}
+{{- end }}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -74,7 +81,7 @@ spec:
       containers:
       - name: cloud-data-discoverer
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: {{ include "helm_lib_module_image" (list . "cloudDataDiscoverer") }}
+        image: {{ include "helm_lib_module_image" (list . $cddImageName) }}
         args:
         - --discovery-period=1h
         - --listen-address=127.0.0.1:8081

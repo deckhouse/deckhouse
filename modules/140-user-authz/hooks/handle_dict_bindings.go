@@ -22,7 +22,6 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -118,7 +117,7 @@ func ensureDictBindings(input *go_hook.HookInput) error {
 	}
 
 	for name, subject := range subjects {
-		input.PatchCollector.Create(createDictBinding(name, subject), object_patch.IgnoreIfExists())
+		input.PatchCollector.CreateIfNotExists(createDictBinding(name, subject))
 	}
 
 	return nil

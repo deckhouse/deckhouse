@@ -35,7 +35,8 @@ https:
 internal:
   vpa: {}
   prometheusMain: {}
-  grafana: {}
+  grafana:
+    enabled: true
   customCertificateData:
     tls.crt: CRTCRTCRT
     tls.key: KEYKEYKEY

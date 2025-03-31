@@ -15,17 +15,19 @@
 package terraform
 
 import (
+	"context"
 	"os"
 	"runtime"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	"github.com/stretchr/testify/require"
 )
 
 func newTestRunner() *Runner {
@@ -63,7 +65,7 @@ func TestCheckPlanDestructiveChanges(t *testing.T) {
 
 			runner := newTestRunner().withTerraformExecutor(executor)
 
-			changes, err := runner.getPlanDestructiveChanges("")
+			changes, err := runner.getPlanDestructiveChanges(context.Background(), "")
 			if tc.err != nil {
 				require.EqualError(t, err, tc.err.Error())
 			} else {
@@ -159,7 +161,7 @@ func TestCheckRunnerHandleChanges(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			skip, err := tc.runner.isSkipChanges()
+			skip, err := tc.runner.isSkipChanges(context.Background())
 			require.Equal(t, tc.skip, skip)
 			if tc.err != nil {
 				require.Error(t, err)
@@ -176,7 +178,7 @@ type sleepExecutor struct {
 	logger   log.Logger
 }
 
-func (s *sleepExecutor) Output(_ ...string) ([]byte, error) {
+func (s *sleepExecutor) Output(_ context.Context, _ ...string) ([]byte, error) {
 	return nil, nil
 }
 
@@ -184,7 +186,7 @@ func (s *sleepExecutor) SetExecutorLogger(logger log.Logger) {
 	s.logger = logger
 }
 
-func (s *sleepExecutor) Exec(_ ...string) (int, error) {
+func (s *sleepExecutor) Exec(_ context.Context, _ ...string) (int, error) {
 	ticker := time.NewTicker(time.Second)
 loop:
 	for {
@@ -201,17 +203,19 @@ loop:
 func (s *sleepExecutor) Stop() { close(s.cancelCh) }
 
 func TestConcurrentExec(t *testing.T) {
+	ctx := context.Background()
+
 	exec := sleepExecutor{cancelCh: make(chan struct{})}
 	defer exec.Stop()
 
 	runner := newTestRunner().withTerraformExecutor(&exec)
 
 	go func() {
-		_, _ = runner.execTerraform()
+		_, _ = runner.execTerraform(ctx)
 	}()
 
 	runtime.Gosched()
-	_, err := runner.execTerraform()
+	_, err := runner.execTerraform(ctx)
 
 	require.Equal(t, "Terraform have been already executed.", err.Error())
 }

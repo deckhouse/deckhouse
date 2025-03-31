@@ -18,6 +18,7 @@ package kubernetesversion
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 	"sync"
@@ -65,11 +66,11 @@ func (e *Extender) getKubernetesVersion() {
 		if val := os.Getenv("TEST_EXTENDER_KUBERNETES_VERSION"); val != "" {
 			parsed, err := semver.NewVersion(val)
 			if err == nil {
-				instance.logger.Debugf("setting kubernetes version to %s from env", parsed.String())
+				instance.logger.Debug("setting kubernets version from env to", slog.String("version", parsed.String()))
 				instance.versionMatcher.ChangeBaseVersion(parsed)
 				return
 			}
-			instance.logger.Warnf("cannot parse TEST_EXTENDER_KUBERNETES_VERSION env variable value %q: %v", val, err)
+			instance.logger.Warn("cannot parse TEST_EXTENDER_KUBERNETES_VERSION env variable value", slog.String("value", val), log.Err(err))
 		}
 		content, err := e.waitForFileExists("/tmp/kubectl_version")
 		if err != nil {
@@ -81,23 +82,23 @@ func (e *Extender) getKubernetesVersion() {
 			e.err = err
 			return
 		}
-		instance.logger.Debugf("setting kubernets version to %s from file", parsed.String())
+		instance.logger.Debug("setting kubernets version from file to", slog.String("version", parsed.String()))
 		e.versionMatcher.ChangeBaseVersion(parsed)
 		go instance.watchForKubernetesVersion()
 	})
 }
 
 func (e *Extender) waitForFileExists(path string) ([]byte, error) {
-	e.logger.Debugf("waiting for file %s", path)
+	e.logger.Debug("waiting for", slog.String("file", path))
 	for {
 		if _, err := os.Stat(path); err == nil {
-			e.logger.Debugf("file %s exists", path)
+			e.logger.Debug("file exists", slog.String("path", path))
 			content, err := os.ReadFile(path)
 			if err != nil {
 				return nil, err
 			}
 			if len(content) == 0 {
-				e.logger.Debugf("file %s is empty", path)
+				e.logger.Debug("file is empty", slog.String("path", path))
 				continue
 			}
 			return content, nil
@@ -122,22 +123,22 @@ func (e *Extender) watchForKubernetesVersion() {
 		}
 	}()
 	for version := range versionCh {
-		e.logger.Debugf("new kubernetes version: %s", version.String())
+		e.logger.Debug("new kubernetes version", slog.String("version", version.String()))
 		e.versionMatcher.ChangeBaseVersion(version)
 	}
 }
 
 func (e *Extender) AddConstraint(name, rawConstraint string) error {
 	if err := e.versionMatcher.AddConstraint(name, rawConstraint); err != nil {
-		e.logger.Debugf("adding installed constraint for the '%q' module failed", name)
+		e.logger.Debug("adding installed constraint for the module failed", slog.String("name", name))
 		return err
 	}
-	e.logger.Debugf("installed constraint for the '%q' module is added", name)
+	e.logger.Debug("installed constraint for the module is added", slog.String("name", name))
 	return nil
 }
 
 func (e *Extender) DeleteConstraint(name string) {
-	e.logger.Debugf("deleting installed constrain for the '%s' module", name)
+	e.logger.Debug("deleting installed constrain for the module", slog.String("name", name))
 	e.versionMatcher.DeleteConstraint(name)
 }
 
@@ -164,23 +165,23 @@ func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
 	}
 	e.mtx.Unlock()
 	if err := e.versionMatcher.Validate(name); err != nil {
-		e.logger.Debugf("requirements of the '%s' module are not satisfied: current kubernetes version is not suitable: %s", name, err.Error())
+		e.logger.Debug("requirements of the module are not satisfied: current kubernetes version is not suitable", slog.String("name", name), log.Err(err))
 		return ptr.To(false), fmt.Errorf("requirements are not satisfied: current kubernetes version is not suitable: %s", err.Error())
 	}
-	e.logger.Debugf("requirements of the '%s' module are satisfied", name)
+	e.logger.Debug("requirements of module are satisfied", slog.String("name", name))
 	return ptr.To(true), nil
 }
 
 func (e *Extender) ValidateBaseVersion(baseVersion string) (string, error) {
 	if name, err := e.versionMatcher.ValidateBaseVersion(baseVersion); err != nil {
 		if name != "" {
-			e.logger.Debugf("requirements of the '%s' module are not satisfied: %s kubernetes version is not suitable: %s", name, baseVersion, err.Error())
+			e.logger.Debug("requirements of the module are not satisfied, kubernetes version is not suitable", slog.String("name", name), slog.String("version", baseVersion), log.Err(err))
 			return name, fmt.Errorf("requirements of the '%s' module are not satisfied: %s kubernetes version is not suitable: %s", name, baseVersion, err.Error())
 		}
-		e.logger.Debugf("requirements cannot be checked: kubernetes version is invalid: %s", err.Error())
+		e.logger.Debug("requirements cannot be checked: kubernetes version is invalid", slog.String("version", err.Error()))
 		return "", fmt.Errorf("requirements cannot be checked: kubernetes version is invalid: %s", err.Error())
 	}
-	e.logger.Debugf("modules requirements for '%s' kubernets version are satisfied", baseVersion)
+	e.logger.Debug("modules requirements for kubernets version are satisfied", slog.String("version", baseVersion))
 	return "", nil
 }
 
@@ -192,11 +193,11 @@ func (e *Extender) ValidateRelease(releaseName, rawConstraint string) error {
 		return fmt.Errorf("parse kubernetes version failed: %s", e.err)
 	}
 	e.mtx.Unlock()
-	e.logger.Debugf("validate requirements for %s", releaseName)
+	e.logger.Debug("validate requirements", slog.String("name", releaseName))
 	if err := e.versionMatcher.ValidateConstraint(rawConstraint); err != nil {
-		e.logger.Debugf("requirements of the '%s' module release are not satisfied: current kubernetes version is not suitable: %s", releaseName, err.Error())
+		e.logger.Debug("requirements of the module release are not satisfied: current kubernetes version is not suitable", slog.String("name", releaseName), log.Err(err))
 		return fmt.Errorf("requirements are not satisfied: current kubernetes version is not suitable: %s", err.Error())
 	}
-	e.logger.Debugf("requirements of the '%s' module release are satisfied", releaseName)
+	e.logger.Debug("requirements of the module release are satisfied", slog.String("name", releaseName))
 	return nil
 }

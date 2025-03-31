@@ -14,21 +14,25 @@
 
 package terraform
 
-import "github.com/deckhouse/deckhouse/dhctl/pkg/log"
+import (
+	"context"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+)
 
 type PlanOptions struct {
 	Destroy bool
 }
 
 type RunnerInterface interface {
-	Init() error
-	Apply() error
-	Plan(opts PlanOptions) error
-	Destroy() error
+	Init(ctx context.Context) error
+	Apply(ctx context.Context) error
+	Plan(ctx context.Context, opts PlanOptions) error
+	Destroy(ctx context.Context) error
 	Stop()
 
 	ResourcesQuantityInState() int
-	GetTerraformOutput(output string) ([]byte, error)
+	GetTerraformOutput(ctx context.Context, output string) ([]byte, error)
 	GetState() ([]byte, error)
 	GetStep() string
 	GetChangesInPlan() int

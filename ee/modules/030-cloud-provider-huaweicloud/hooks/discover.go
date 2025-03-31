@@ -8,6 +8,7 @@ package hooks
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"regexp"
 	"sort"
 	"strings"
@@ -104,7 +105,7 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 				AllowVolumeExpansion: allowVolumeExpansion,
 			})
 		}
-		input.Logger.Infof("Found huaweicloud storage classes using StorageClass snapshots: %v", storageClasses)
+		input.Logger.Info("Found huaweicloud storage classes using StorageClass snapshots", slog.Any("storage_classes", storageClasses))
 
 		setStorageClassesValues(input, storageClasses)
 
@@ -183,7 +184,7 @@ func handleDiscoveryDataVolumeTypes(
 		return storageClasses[i].Name < storageClasses[j].Name
 	})
 
-	input.Logger.Infof("Found huaweicloud storage classes using StorageClass snapshots, StorageDomain discovery data: %v", storageClasses)
+	input.Logger.Info("Found huaweicloud storage classes using StorageClass snapshots, StorageDomain discovery data", slog.Any("data", storageClasses))
 
 	setStorageClassesValues(input, storageClasses)
 }

@@ -21,7 +21,6 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -107,7 +106,7 @@ func handleConfigRender(input *go_hook.HookInput) error {
 		Type: corev1.SecretTypeOpaque,
 	}
 
-	input.PatchCollector.Create(sec, object_patch.UpdateIfExists())
+	input.PatchCollector.CreateOrUpdate(sec)
 
 	return nil
 }

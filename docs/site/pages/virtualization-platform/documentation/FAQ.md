@@ -110,7 +110,7 @@ For example, let's take a file that allows you to:
 - Create an user with name *cloud* and the password *cloud* in the Administrators group
 - Create a non-privileged user with name *user* and the password *user*
 
-<details><summary><b>autounattend.xml</b></summary>
+{% offtopic title="autounattend.xml" %}
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
@@ -299,7 +299,7 @@ For example, let's take a file that allows you to:
 </unattend>
 ```
 
-</details>
+{% endofftopic %}
 
 Create a secret from this xml file:
 
@@ -350,9 +350,7 @@ spec:
 
 The virtual machine runs in a Kubernetes cluster, so directing network traffic is similar to directing traffic to pods.
 
-1. Create a service with the required settings.
-
-   As an example, here is a virtual machine with an HTTP service published on port 80 and the following set of labels:
+1. Create a service with the required settings. As an example, here is a virtual machine with an HTTP service published on port 80 and the following set of labels:
 
     ```yaml
     apiVersion: virtualization.deckhouse.io/v1alpha2
@@ -380,6 +378,8 @@ The virtual machine runs in a Kubernetes cluster, so directing network traffic i
     selector:
     app: old
     ```
+
+## Changing virtual machine labels without having to restart
 
 You can change the labels of a virtual machine without having to restart it, which allows you to configure real-time redirection of network traffic between different services.
 

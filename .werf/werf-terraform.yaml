@@ -19,10 +19,19 @@ import:
       {{- if $edition.terraformProviders }}
         {{- range $_, $tfProvider := $edition.terraformProviders }}
           {{- $tf := index $.TF $tfProvider }}
+            {{- if eq $tf.type "vcd" }}
+              {{- range $version := $tf.versions }}
+  - image: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
+    add: /{{ $tf.artifactBinary }}-v{{ $version }}
+    to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ $tf.namespace }}/{{ $tf.type }}/{{ $version }}//linux_amd64/{{ $tf.destinationBinary }}
+    before: setup
+              {{- end }}
+            {{- else }}
   - image: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
     add: /{{ $tf.artifactBinary }}
     to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ $tf.namespace }}/{{ $tf.type }}/{{ $tf.version }}//linux_amd64/{{ $tf.destinationBinary }}
     before: setup
+            {{- end }}
       {{- end }}
     {{- end }}
     {{- if eq $.Env $edition.name }}
