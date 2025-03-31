@@ -453,8 +453,8 @@ jobs:
                 }
 
               } catch (error) {
-                core.setFailed(`Failed to get PR information: ${error}`);
-                return true; // Treat error as label removed to avoid infinite loop (but job will fail)
+                core.info(`Failed to get PR information: ${error} Continuing...`);
+                return false;
               }
             }
 
@@ -1018,8 +1018,8 @@ jobs:
                 }
 
               } catch (error) {
-                core.setFailed(`Failed to get PR information: ${error}`);
-                return true; // Treat error as label removed to avoid infinite loop (but job will fail)
+                core.info(`Failed to get PR information: ${error} Continuing...`);
+                return false;
               }
             }
 
@@ -1540,8 +1540,8 @@ jobs:
                 }
 
               } catch (error) {
-                core.setFailed(`Failed to get PR information: ${error}`);
-                return true; // Treat error as label removed to avoid infinite loop (but job will fail)
+                core.info(`Failed to get PR information: ${error} Continuing...`);
+                return false;
               }
             }
 
@@ -2060,8 +2060,8 @@ jobs:
                 }
 
               } catch (error) {
-                core.setFailed(`Failed to get PR information: ${error}`);
-                return true; // Treat error as label removed to avoid infinite loop (but job will fail)
+                core.info(`Failed to get PR information: ${error} Continuing...`);
+                return false;
               }
             }
 
@@ -2578,8 +2578,8 @@ jobs:
                 }
 
               } catch (error) {
-                core.setFailed(`Failed to get PR information: ${error}`);
-                return true; // Treat error as label removed to avoid infinite loop (but job will fail)
+                core.info(`Failed to get PR information: ${error} Continuing...`);
+                return false;
               }
             }
 
@@ -3096,8 +3096,8 @@ jobs:
                 }
 
               } catch (error) {
-                core.setFailed(`Failed to get PR information: ${error}`);
-                return true; // Treat error as label removed to avoid infinite loop (but job will fail)
+                core.info(`Failed to get PR information: ${error} Continuing...`);
+                return false;
               }
             }
 
@@ -3612,8 +3612,8 @@ jobs:
                 }
 
               } catch (error) {
-                core.setFailed(`Failed to get PR information: ${error}`);
-                return true; // Treat error as label removed to avoid infinite loop (but job will fail)
+                core.info(`Failed to get PR information: ${error} Continuing...`);
+                return false;
               }
             }
 
@@ -4136,8 +4136,8 @@ jobs:
                 }
 
               } catch (error) {
-                core.setFailed(`Failed to get PR information: ${error}`);
-                return true; // Treat error as label removed to avoid infinite loop (but job will fail)
+                core.info(`Failed to get PR information: ${error} Continuing...`);
+                return false;
               }
             }
 
@@ -4658,8 +4658,8 @@ jobs:
                 }
 
               } catch (error) {
-                core.setFailed(`Failed to get PR information: ${error}`);
-                return true; // Treat error as label removed to avoid infinite loop (but job will fail)
+                core.info(`Failed to get PR information: ${error} Continuing...`);
+                return false;
               }
             }
 
