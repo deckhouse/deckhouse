@@ -13,7 +13,9 @@ data:
   bpf-lb-source-range-all-types: "true"
   bpf-lb-sock-terminate-pod-connections: "true"
   enable-tcx: "false"
-  # Disable ipam processing svc_loadBalancer if loadBalancerClass not specified&
+  #
+  exclude-node-label-patterns: "virtualization.deckhouse.io storage.deckhouse.io"
+  # Disable ipam processing svc_loadBalancer if loadBalancerClass not specified
   default-lb-service-ipam: none
   #
   identity-allocation-mode: crd
@@ -115,7 +117,12 @@ data:
   netfilter-compatible-mode: "true"
 
   enable-session-affinity: "true"
+  {{- if .Values.cniCilium.svcSourceRangeCheck }}
   enable-svc-source-range-check: {{ .Values.cniCilium.svcSourceRangeCheck | quote }}
+    {{- if .Values.cniCilium.lbSourceRangeAllTypes }}
+  bpf-lb-source-range-all-types: {{ .Values.cniCilium.lbSourceRangeAllTypes | quote }}
+    {{- end }}
+  {{- end }}
 
   enable-icmp-rules: "true"
   enable-endpoint-health-checking: "true"
