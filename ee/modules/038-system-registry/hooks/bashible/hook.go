@@ -7,11 +7,13 @@ package bashible
 
 import (
 	"fmt"
-	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
-	registry_models "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+
+	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
+	registry_models "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{

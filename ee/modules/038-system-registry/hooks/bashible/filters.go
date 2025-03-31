@@ -8,13 +8,13 @@ package bashible
 import (
 	"encoding/base64"
 	"fmt"
-	"sigs.k8s.io/yaml"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	v1core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	registry_models "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models"
