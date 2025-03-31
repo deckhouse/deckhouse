@@ -151,6 +151,8 @@ type KafkaSpec struct {
 	SASL KafkaSASL `json:"sasl,omitempty"`
 
 	Encoding CommonEncoding `json:"encoding,omitempty"`
+
+	Dedotted bool `json:"dedotted,omitempty"`
 }
 
 type KafkaSASLMechanism string
