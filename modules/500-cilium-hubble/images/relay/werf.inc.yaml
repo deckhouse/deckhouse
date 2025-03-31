@@ -1,8 +1,7 @@
-{{- $ciliumVersion := "1.17.1" }}
-{{- $grpcHealthProbeVersion := "0.4.37" }}
+{{- $ciliumVersion := "1.17.2" }}
 ---
-# Based on https://github.com/cilium/cilium/blob/v1.17.1/images/hubble-relay/Dockerfile
-# and https://github.com/cilium/cilium/blob/v1.17.1/images/hubble-relay/download-grpc-health-probe.sh
+# Based on https://github.com/cilium/cilium/blob/v1.17.2/images/hubble-relay/Dockerfile
+# and https://github.com/cilium/cilium/blob/v1.17.2/images/hubble-relay/download-grpc-health-probe.sh
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
@@ -12,10 +11,6 @@ git:
   stageDependencies:
     install:
       - '**/*'
-shell:
-  install:
-  - git clone --depth 1 --branch v{{ $grpcHealthProbeVersion }} {{ $.SOURCE_REPO }}/grpc-ecosystem/grpc-health-probe.git /src/grpc-health-probe
-  - rm -r /src/grpc-health-probe/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
@@ -25,10 +20,6 @@ import:
   add: /src/cilium
   to: /src/cilium
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src/grpc-health-probe
-  to: /src/grpc-health-probe
-  before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -36,16 +27,6 @@ shell:
   beforeInstall:
   {{- include "alpine packages proxy" $ | nindent 2 }}
   - apk add --no-cache make bash binutils
-  install:
-  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
-  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-  #
-  - cd /src/grpc-health-probe
-  - go mod download -x
-  - go build -a -tags netgo -ldflags="-w -X main.versionTag={{ $grpcHealthProbeVersion }}" -o grpc_health_probe
-  - strip /src/grpc-health-probe/grpc_health_probe
-  - chown 64535:64535 /src/grpc-health-probe/grpc_health_probe
-  - chmod 0700 /src/grpc-health-probe/grpc_health_probe
   setup:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
@@ -61,10 +42,6 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
-  add: /src/grpc-health-probe/grpc_health_probe
-  to: /bin/grpc_health_probe
-  before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
   add: /out/linux/amd64/usr/bin/hubble-relay
   to: /usr/local/bin/hubble-relay

@@ -1,11 +1,11 @@
-{{- $hubbleUIVersion := "0.13.1" }}
-{{- $hubbleUIFrontVersion := "0.13.1" }}
-{{- $hubbleUIBackVersion := "0.13.1" }}
+{{- $hubbleUIVersion := "0.13.2" }}
+{{- $hubbleUIFrontVersion := "0.13.2" }}
+{{- $hubbleUIBackVersion := "0.13.2" }}
 ---
-# Based on https://github.com/cilium/cilium/blob/v1.17.1/install/kubernetes/cilium/values.yaml#L1691
-# and on https://github.com/cilium/cilium/blob/v1.17.1/install/kubernetes/cilium/values.yaml#L1725
-# and on https://github.com/cilium/hubble-ui/blob/v0.13.1/Dockerfile
-# and on https://github.com/cilium/hubble-ui/blob/v0.13.1/backend/Dockerfile
+# Based on https://github.com/cilium/cilium/blob/v1.17.2/install/kubernetes/cilium/values.yaml#L1698
+# and on https://github.com/cilium/cilium/blob/v1.17.2/install/kubernetes/cilium/values.yaml#L1732
+# and on https://github.com/cilium/hubble-ui/blob/v0.13.2/Dockerfile
+# and on https://github.com/cilium/hubble-ui/blob/v0.13.2/backend/Dockerfile
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
