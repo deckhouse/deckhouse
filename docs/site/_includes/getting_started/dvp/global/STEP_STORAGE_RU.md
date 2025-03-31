@@ -25,8 +25,8 @@ EOF
 
 Дождитесь, пока модуль включится, для этого можете использовать следующую команду:
 
-```sheel
-sudo -i d8 k wait module sds-replicated-volume --for='jsonpath={.status.status}=Ready' --timeout=1200s
+```shell
+sudo -i d8 k wait module sds-replicated-volume --for='jsonpath={.status.phase}=Ready' --timeout=1200s
 ```
 
 Объедините доступные на узлах блочные устройства в группы томов LVM. Чтобы получить доступные блочные устройства, выполните команду:
@@ -68,14 +68,14 @@ EOF
 Дождитесь, когда созданный ресурс LVMVolumeGroup перейдет в состояние `Operational`:
 
 ```shell
-sudo -i d8 k get lvg vg-on-worker-0 -w
+sudo -i d8 k get lvg vg-on-dvp-worker -w
 ```
 
 Пример вывода:
 
 ```console
-NAME             THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE       ALLOCATED SIZE   VG   AGE
-vg-on-worker-0   1/1         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
+NAME               THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE       ALLOCATED SIZE   VG   AGE
+vg-on-dvp-worker   1/1         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
 ```
 
 Создайте пул LVM-томов:

@@ -28,13 +28,15 @@ import (
 )
 
 const (
-	ModuleReleaseResource        = "modulereleases"
-	ModuleReleaseKind            = "ModuleRelease"
-	ModuleReleasePhasePending    = "Pending"
-	ModuleReleasePhaseDeployed   = "Deployed"
-	ModuleReleasePhaseSuperseded = "Superseded"
-	ModuleReleasePhaseSuspended  = "Suspended"
-	ModuleReleasePhaseSkipped    = "Skipped"
+	ModuleReleaseResource = "modulereleases"
+	ModuleReleaseKind     = "ModuleRelease"
+
+	ModuleReleasePhasePending     = "Pending"
+	ModuleReleasePhaseDeployed    = "Deployed"
+	ModuleReleasePhaseSuperseded  = "Superseded"
+	ModuleReleasePhaseSuspended   = "Suspended"
+	ModuleReleasePhaseSkipped     = "Skipped"
+	ModuleReleasePhaseTerminating = "Terminating"
 
 	ModuleReleaseApprovalAnnotation              = "modules.deckhouse.io/approved"
 	ModuleReleaseAnnotationIsUpdating            = "modules.deckhouse.io/isUpdating"

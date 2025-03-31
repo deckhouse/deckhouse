@@ -29,6 +29,8 @@ spec:
               properties:
                 syncTime:
                   description: Время последней синхронизации с container registry.
+                phase:
+                  description: Текущая фаза.
                 modulesCount:
                   type: integer
                   description: Количество доступных модулей.
@@ -58,14 +60,14 @@ spec:
       subresources:
         status: {}
       additionalPrinterColumns:
-        - name: "release channel"
-          type: string
-          jsonPath: .spec.releaseChannel
-          description: Канал обновлений по умолчанию для модулей в данном репозитории.
         - name: count
           type: integer
           jsonPath: .status.modulesCount
           description: Количество доступных модулей в данном репозитории.
+        - name: status
+          type: string
+          jsonPath: .status.phase
+          description: Текущая фаза.
         - name: sync
           jsonPath: .status.syncTime
           type: date

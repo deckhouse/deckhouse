@@ -16,6 +16,7 @@ package hooks
 
 import (
 	"context"
+	"log/slog"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -25,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -67,7 +69,7 @@ func setupDefaultStorageClass(input *go_hook.HookInput, dc dependency.Container)
 
 	storageClasses, err := client.StorageV1().StorageClasses().List(context.Background(), metav1.ListOptions{})
 	if err != nil {
-		input.Logger.Warnf("Error getting storage classes: %s", err)
+		input.Logger.Warn("Error getting storage classes", log.Err(err))
 		return nil
 	}
 
@@ -81,7 +83,7 @@ func setupDefaultStorageClass(input *go_hook.HookInput, dc dependency.Container)
 	}
 
 	if !haveStorageClass {
-		input.Logger.Warnf("StorageClass `%s` does not exists in cluster (set in `%s` parameter). Skipping", defaultClusterStorageClass, paramPath)
+		input.Logger.Warn("StorageClass does not exists in cluster (set in parameter). Skipping", slog.String("name", defaultClusterStorageClass), slog.String("parameter_path", paramPath))
 		return nil
 	}
 
@@ -91,7 +93,7 @@ func setupDefaultStorageClass(input *go_hook.HookInput, dc dependency.Container)
 			// it's that storage class which we want
 			if !isMarkedDefault(&sc) {
 				// we must add default-annotation to this StorageClass because it's not annotated as default
-				input.Logger.Warnf("Add default annotation to storage class %q (it specified in `global.defaultClusterStorageClass`)", sc.GetName())
+				input.Logger.Warn("Add default annotation to storage class (it specified in `global.defaultClusterStorageClass`)", slog.String("name", sc.GetName()))
 
 				patch := map[string]any{
 					"metadata": map[string]any{
@@ -106,7 +108,7 @@ func setupDefaultStorageClass(input *go_hook.HookInput, dc dependency.Container)
 		} else {
 			if isMarkedDefault(&sc) {
 				// we must remove default-annotation from this StorageClass because only one StorageClass (which name in defaultClusterStorageClass) can be default
-				input.Logger.Warnf("Remove default annotations from storage class %q", sc.GetName())
+				input.Logger.Warn("Remove default annotations from storage class", slog.String("name", sc.GetName()))
 
 				patch := map[string]any{
 					"metadata": map[string]any{

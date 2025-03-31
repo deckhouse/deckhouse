@@ -179,7 +179,7 @@ func (d *LogPrinter) WithLeaderElectionAwarenessMode(leaderElectionLease types.N
 	return d
 }
 
-func (d *LogPrinter) printErrorsForTask(taskID string, errorTaskTime time.Time) {
+func (d *LogPrinter) printErrorsForTask(ctx context.Context, taskID string, errorTaskTime time.Time) {
 	if taskID == "" {
 		return
 	}
@@ -196,9 +196,9 @@ func (d *LogPrinter) printErrorsForTask(taskID string, errorTaskTime time.Time) 
 	var result []byte
 
 	var lastErr error
-	err := retry.NewSilentLoop("getting logs for error", 2, 1*time.Second).Run(func() error {
+	err := retry.NewSilentLoop("getting logs for error", 2, 1*time.Second).RunContext(ctx, func() error {
 		request := d.kubeCl.CoreV1().Pods("d8-system").GetLogs(d.deckhousePod.Name, &logOptions)
-		result, lastErr = request.DoRaw(context.TODO())
+		result, lastErr = request.DoRaw(ctx)
 		if lastErr != nil {
 			log.DebugF("printErrorsForTask: %s\n %s", lastErr.Error(), string(result))
 			return ErrRequestFailed
@@ -242,10 +242,10 @@ func (d *LogPrinter) printErrorsForTask(taskID string, errorTaskTime time.Time) 
 	d.lastErrorTime = errorTaskTime
 }
 
-func (d *LogPrinter) printLogsByLine(content []byte) {
+func (d *LogPrinter) printLogsByLine(ctx context.Context, content []byte) {
 	parseLogByLine(content, func(line *logLine) bool {
 		if isErrorLine(line) {
-			d.printErrorsForTask(line.TaskID, line.Time)
+			d.printErrorsForTask(ctx, line.TaskID, line.Time)
 			return true
 		}
 
@@ -266,8 +266,8 @@ func (d *LogPrinter) printLogsByLine(content []byte) {
 	})
 }
 
-func (d *LogPrinter) GetPod() error {
-	pod, err := GetPod(d.kubeCl, d.leaderElectionLeaseName)
+func (d *LogPrinter) GetPod(ctx context.Context) error {
+	pod, err := GetPod(ctx, d.kubeCl, d.leaderElectionLeaseName)
 	if err != nil {
 		return err
 	}
@@ -284,12 +284,12 @@ func (d *LogPrinter) GetPod() error {
 	return nil
 }
 
-func (d *LogPrinter) checkDeckhousePodReady() (bool, error) {
+func (d *LogPrinter) checkDeckhousePodReady(ctx context.Context) (bool, error) {
 	if !d.waitPodBecomeReady || d.deckhousePod == nil {
 		return false, nil
 	}
 
-	runningPod, err := d.kubeCl.CoreV1().Pods("d8-system").Get(context.TODO(), d.deckhousePod.Name, metav1.GetOptions{})
+	runningPod, err := d.kubeCl.CoreV1().Pods("d8-system").Get(ctx, d.deckhousePod.Name, metav1.GetOptions{})
 	if err != nil {
 		log.DebugF("checkDeckhousePodReady: %s\n", err.Error())
 		return false, ErrRequestFailed
@@ -312,7 +312,7 @@ func (d *LogPrinter) checkDeckhousePodReady() (bool, error) {
 }
 
 func (d *LogPrinter) Print(ctx context.Context) (bool, error) {
-	if err := d.GetPod(); err != nil {
+	if err := d.GetPod(ctx); err != nil {
 		return false, err
 	}
 
@@ -333,7 +333,7 @@ func (d *LogPrinter) Print(ctx context.Context) (bool, error) {
 			log.ErrorLn(strings.Join(d.deckhouseErrors, "\n"))
 			return false, ErrTimedOut
 		default:
-			ready, err := d.checkDeckhousePodReady()
+			ready, err := d.checkDeckhousePodReady(ctx)
 			if err != nil {
 				return false, err
 			}
@@ -342,13 +342,13 @@ func (d *LogPrinter) Print(ctx context.Context) (bool, error) {
 			}
 
 			request := d.kubeCl.CoreV1().Pods("d8-system").GetLogs(d.deckhousePod.Name, &logOptions)
-			result, err := request.DoRaw(context.TODO())
+			result, err := request.DoRaw(ctx)
 			if err != nil {
 				log.DebugF("Print: %s\n %s", err.Error(), string(result))
 				return false, ErrRequestFailed
 			}
 
-			d.printLogsByLine(result)
+			d.printLogsByLine(ctx, result)
 
 			time.Sleep(time.Second)
 			currentTime := metav1.NewTime(time.Now())

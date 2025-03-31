@@ -1,5 +1,10 @@
 cilium-hubble:
     - version: 2
+control-plane-manager:
+    - version: 2
+      description:
+        en: Delete `etcd.externalMembersNames`
+        ru: Удалите `etcd.externalMembersNames`
 dashboard:
     - version: 2
     - version: 3

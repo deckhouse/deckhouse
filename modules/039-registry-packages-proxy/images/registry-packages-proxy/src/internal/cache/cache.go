@@ -16,6 +16,7 @@ package cache
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
@@ -62,7 +63,7 @@ func (c *Cache) Get(digest string) (int64, io.ReadCloser, error) {
 
 	// check if cache entry exists
 	if !c.storageGetOK(digest) {
-		c.logger.Infof("entry with digest %s is not found in the cache", digest)
+		c.logger.Info("entry with digest is not found in the cache", slog.String("digest", digest))
 		return 0, nil, cache.ErrEntryNotFound
 	}
 
@@ -76,7 +77,7 @@ func (c *Cache) Get(digest string) (int64, io.ReadCloser, error) {
 	}
 
 	stat, err := file.Stat()
-	c.logger.Infof("found file %s with size %d in the cache", stat.Name(), stat.Size())
+	c.logger.Info("found file with size in the cache", slog.String("name", stat.Name()), slog.Int64("size", stat.Size()))
 
 	if err != nil {
 		return 0, nil, err
@@ -92,11 +93,11 @@ func (c *Cache) Get(digest string) (int64, io.ReadCloser, error) {
 func (c *Cache) Set(digest string, size int64, reader io.Reader) error {
 	// check if cache entry exists
 	if c.storageGetOK(digest) {
-		c.logger.Infof("entry with digest %s already exists, skipping", digest)
+		c.logger.Info("entry with digest already exists, skipping", slog.String("digest", digest))
 		return nil
 	}
 
-	c.logger.Infof("write file with digest %s with size %d to the cache dir", digest, size)
+	c.logger.Info("write file with digest with size to the cache dir", slog.String("digest", digest), slog.Int64("size", size))
 
 	path := c.digestToPath(digest)
 
@@ -129,12 +130,12 @@ func (c *Cache) Set(digest string, size int64, reader io.Reader) error {
 func (c *Cache) Delete(digest string) error {
 	// check if cache entry exists
 	if !c.storageGetOK(digest) {
-		c.logger.Infof("entry with digest %s doesn't exists, skipping", digest)
+		c.logger.Info("entry with digest doesn't exists, skipping", slog.String("digest", digest))
 		return nil
 	}
 
 	path := c.digestToPath(digest)
-	c.logger.Infof("remove file with path %s from the cache dir", path)
+	c.logger.Info("remove file with path from the cache dir", slog.String("path", path))
 
 	err := os.Remove(path)
 	if err != nil {
@@ -162,7 +163,7 @@ func (c *Cache) Reconcile(ctx context.Context) {
 		case <-ticker.C:
 			err := c.ApplyRetentionPolicy()
 			if err != nil {
-				c.logger.Error("reconcile loop failed", slog.String("error", err.Error()))
+				c.logger.Error("reconcile loop failed", log.Err(err))
 				return
 			}
 		}
@@ -173,7 +174,7 @@ func (c *Cache) ApplyRetentionPolicy() error {
 	for {
 		usagePercent := int(float64(c.calculateCacheSize()) / float64(c.retentionSize) * 100)
 		if usagePercent < HighUsagePercent {
-			c.logger.Infof("current cache usage %d%% less than %d%%, compaction is not needed", usagePercent, HighUsagePercent)
+			c.logger.Info(fmt.Sprintf("current cache usage less than %d%%, compaction is not needed", HighUsagePercent), slog.Int("usage", usagePercent))
 			return nil
 		}
 
@@ -182,7 +183,7 @@ func (c *Cache) ApplyRetentionPolicy() error {
 			return nil
 		}
 
-		c.logger.Infof("need to compact cache, current usage %d%% more than %d%%", usagePercent, HighUsagePercent)
+		c.logger.Info(fmt.Sprintf("need to compact cache, current usage more than %d%%", HighUsagePercent), slog.Int("usage", usagePercent))
 
 		// sort descending by last access time
 		var oldestDigest string

@@ -134,7 +134,7 @@ func handleAuditPolicy(input *go_hook.HookInput) error {
 }
 
 func appendBasicPolicyRules(policy *audit.Policy, extraData []go_hook.FilterResult) {
-	var appendDropResourcesRule = func(resource audit.GroupResources) {
+	appendDropResourcesRule := func(resource audit.GroupResources) {
 		rule := audit.PolicyRule{
 			Level: audit.LevelNone,
 			Resources: []audit.GroupResources{
@@ -250,6 +250,25 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []go_hook.FilterResu
 
 		policy.Rules = append(policy.Rules, rule)
 	}
+	// fstec
+	// - K8s Pod created
+	// - K8s Pod deleted
+	// - Container tag is not @sha256
+	{
+		rule := audit.PolicyRule{
+			Level: audit.LevelRequest,
+			Resources: []audit.GroupResources{
+				{
+					Resources: []string{"pods"},
+				},
+			},
+			Verbs: []string{"create", "delete", "patch", "update"},
+			OmitStages: []audit.Stage{
+				audit.StageRequestReceived,
+			},
+		}
+		policy.Rules = append(policy.Rules, rule)
+	}
 	// A rule collecting logs about actions taken on the resources in system namespaces.
 	{
 		rule := audit.PolicyRule{
@@ -270,6 +289,90 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []go_hook.FilterResu
 			Verbs:      []string{"list"},
 			Namespaces: []string{}, // every namespace
 			// no stage omitted, since apiserver might crash with OOM before it responds, and we want to catch it
+		}
+		policy.Rules = append(policy.Rules, rule)
+	}
+
+	// fstec
+	// - K8s ServiceAccount created
+	// - K8s ServiceAccount deleted
+	// - ServiceAccount created in a system namespace
+	{
+		rule := audit.PolicyRule{
+			Level: audit.LevelMetadata,
+			Resources: []audit.GroupResources{
+				{
+					Group:     "",
+					Resources: []string{"serviceaccounts"},
+				},
+			},
+			Verbs: []string{"create", "delete"},
+			OmitStages: []audit.Stage{
+				audit.StageRequestReceived,
+			},
+		}
+		policy.Rules = append(policy.Rules, rule)
+	}
+
+	// fstec
+	// - ClusterRole with wildcard created
+	// - ClusterRole with write privileges created
+	// - System ClusterRole modified/deleted
+	// - K8s Role/ClusterRole created
+	// - K8s Role/ClusterRole deleted
+	{
+		rule := audit.PolicyRule{
+			Level: audit.LevelRequest,
+			Resources: []audit.GroupResources{
+				{
+					Group:     "rbac.authorization.k8s.io",
+					Resources: []string{"roles", "clusterroles"},
+				},
+			},
+			Verbs: []string{"create", "update", "delete", "patch"},
+			OmitStages: []audit.Stage{
+				audit.StageRequestReceived,
+			},
+		}
+		policy.Rules = append(policy.Rules, rule)
+	}
+
+	// fstec
+	// - Attach to cluster-admin Role
+	// - K8s Role/ClusterRole binding created
+	// - K8s Role/ClusterRole binding deleted
+	{
+		rule := audit.PolicyRule{
+			Level: audit.LevelRequest,
+			Resources: []audit.GroupResources{
+				{
+					Group:     "rbac.authorization.k8s.io",
+					Resources: []string{"clusterrolebindings"},
+				},
+			},
+			Verbs: []string{"create", "update", "delete"},
+			OmitStages: []audit.Stage{
+				audit.StageRequestReceived,
+			},
+		}
+		policy.Rules = append(policy.Rules, rule)
+	}
+
+	// fstec
+	// - Attach/Exec Pod fstec
+	// - EphemeralContainers created
+	{
+		rule := audit.PolicyRule{
+			Level: audit.LevelRequest,
+			Resources: []audit.GroupResources{
+				{
+					Resources: []string{"pods/exec", "pods/attach", "pods/ephemeralcontainers"},
+				},
+			},
+			Verbs: []string{"get", "patch"},
+			OmitStages: []audit.Stage{
+				audit.StageRequestReceived,
+			},
 		}
 		policy.Rules = append(policy.Rules, rule)
 	}

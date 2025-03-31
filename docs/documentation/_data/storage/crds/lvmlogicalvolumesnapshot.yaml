@@ -23,7 +23,7 @@ spec:
       schema:
         openAPIV3Schema:
           type: object
-          description: | 
+          description: |
             The LVMLogicalVolumeSnapshot resource defines the storage where a VolumeSnapshot will be created in.
           required:
             - spec
@@ -89,11 +89,11 @@ spec:
         - jsonPath: .spec.lvmLogicalVolumeName
           name: Snapshotted LLV Name
           type: string
-          description: Snapshotted LLV name
+          description: Snapshotted LLV name.
         - jsonPath: .status.nodeName
           name: NodeName
           type: string
-          description: The name of the kubernetes node the snapshot resides in..
+          description: The name of the kubernetes node the snapshot resides in.
         - jsonPath: .status.phase
           name: Phase
           type: string
@@ -109,4 +109,4 @@ spec:
         - jsonPath: .metadata.creationTimestamp
           name: Age
           type: date
-          description: The age of this resource
+          description: The age of this resource.

@@ -77,13 +77,13 @@ func (c *CloudPermanentNodeGroupController) addNodes(ctx *context.Context) error
 
 	err = log.Process("terraform", fmt.Sprintf("Pipelines %s for %s-%s-%v", c.layoutStep, metaConfig.ClusterPrefix, c.name, nodesIndexToCreate), func() error {
 		var err error
-		nodesToWait, err = operations.ParallelBootstrapAdditionalNodes(ctx.KubeClient(), metaConfig, nodesIndexToCreate, c.layoutStep, c.name, c.cloudConfig, true, ctx.Terraform(), log.GetDefaultLogger(), false)
+		nodesToWait, err = operations.ParallelBootstrapAdditionalNodes(ctx.Ctx(), ctx.KubeClient(), metaConfig, nodesIndexToCreate, c.layoutStep, c.name, c.cloudConfig, true, ctx.Terraform(), log.GetDefaultLogger(), false)
 		return err
 	})
 	if err != nil {
 		return err
 	}
-	return entity.WaitForNodesListBecomeReady(ctx.KubeClient(), nodesToWait, nil)
+	return entity.WaitForNodesListBecomeReady(ctx.Ctx(), ctx.KubeClient(), nodesToWait, nil)
 }
 
 func (c *CloudPermanentNodeGroupController) updateNode(ctx *context.Context, nodeName string) error {
@@ -127,7 +127,7 @@ func (c *CloudPermanentNodeGroupController) updateNode(ctx *context.Context, nod
 		Hook: &terraform.DummyHook{},
 	})
 
-	outputs, err := terraform.ApplyPipeline(nodeRunner, nodeName, terraform.OnlyState)
+	outputs, err := terraform.ApplyPipeline(ctx.Ctx(), nodeRunner, nodeName, terraform.OnlyState)
 	if err != nil {
 		log.ErrorF("Terraform exited with an error:\n%s\n", err.Error())
 		return err
@@ -137,19 +137,19 @@ func (c *CloudPermanentNodeGroupController) updateNode(ctx *context.Context, nod
 		return global.ErrConvergeInterrupted
 	}
 
-	err = entity.SaveNodeTerraformState(ctx.KubeClient(), nodeName, c.name, outputs.TerraformState, nodeGroupSettingsFromConfig, log.GetDefaultLogger())
+	err = entity.SaveNodeTerraformState(ctx.Ctx(), ctx.KubeClient(), nodeName, c.name, outputs.TerraformState, nodeGroupSettingsFromConfig, log.GetDefaultLogger())
 	if err != nil {
 		return err
 	}
 
-	return entity.WaitForSingleNodeBecomeReady(ctx.KubeClient(), nodeName)
+	return entity.WaitForSingleNodeBecomeReady(ctx.Ctx(), ctx.KubeClient(), nodeName)
 }
 
 func (c *CloudPermanentNodeGroupController) deleteNodes(ctx *context.Context, nodesToDeleteInfo []nodeToDeleteInfo) error {
 	title := fmt.Sprintf("Delete Nodes from NodeGroup %s (replicas: %v)", c.name, c.desiredReplicas)
 	return log.Process("converge", title, func() error {
 		return c.deleteRedundantNodes(ctx, c.state.Settings, nodesToDeleteInfo, func(nodeName string) terraform.InfraActionHook {
-			return &terraform.DummyHook{}
+			return NewHookForDestroyPipeline(ctx, nodeName, ctx.CommanderMode())
 		})
 	})
 }

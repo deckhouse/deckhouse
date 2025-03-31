@@ -19,6 +19,7 @@ package hooks
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -31,6 +32,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks/internal"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type ingressDaemonSetFilterResult struct {
@@ -127,12 +129,16 @@ func chaosMonkey(input *go_hook.HookInput, dc dependency.Container) error {
 	for _, ds := range daemonsets {
 		res := ds.(ingressDaemonSetFilterResult)
 		if !chaosMonkeyEnabled[res.ControllerName] {
-			input.Logger.Debugf("chaos monkey is disabled for controller %q, skipping", res.ControllerName)
+			input.Logger.Debug("chaos monkey is disabled for controller, skipping", slog.String("name", res.ControllerName))
 			continue
 		}
 
 		if res.DesiredReplicas != res.ReadyReplicas {
-			input.Logger.Debugf("controller %q replicase aren't ready %d/%d, skipping", res.ControllerName, res.ReadyReplicas, res.DesiredReplicas)
+			input.Logger.Debug(
+				"controller replicas aren't ready, skipping",
+				slog.String("name", res.ControllerName),
+				slog.Int64("ready", int64(res.ReadyReplicas)),
+				slog.Int64("desired", int64(res.DesiredReplicas)))
 			continue
 		}
 
@@ -142,7 +148,7 @@ func chaosMonkey(input *go_hook.HookInput, dc dependency.Container) error {
 		}
 
 		if len(podList.Items) < 2 {
-			input.Logger.Debugf("at least two pods for controller %q are required, skipping", res.ControllerName)
+			input.Logger.Debug("at least two pods for controller are required, skipping", slog.String("controller", res.ControllerName))
 			return nil
 		}
 
@@ -155,7 +161,7 @@ func chaosMonkey(input *go_hook.HookInput, dc dependency.Container) error {
 
 		err = kubeClient.CoreV1().Pods(internal.Namespace).EvictV1(context.TODO(), &policyv1.Eviction{ObjectMeta: metav1.ObjectMeta{Name: oldestPod.Name}})
 		if err != nil {
-			input.Logger.Infof("can't evict ingress controller pod %q: %v", oldestPod.Name, err)
+			input.Logger.Info("can't evict ingress controller pod", slog.String("name", oldestPod.Name), log.Err(err))
 		}
 	}
 

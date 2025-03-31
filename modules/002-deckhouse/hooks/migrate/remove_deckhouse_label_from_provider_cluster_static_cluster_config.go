@@ -17,6 +17,8 @@ limitations under the License.
 package migrate
 
 import (
+	"log/slog"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -98,12 +100,12 @@ func removeLabelHeritageDeckhouse(input *go_hook.HookInput) error {
 		snap := input.Snapshots[snapSecretName]
 
 		if len(snap) == 0 {
-			input.Logger.Debugf("Skip removing label 'heritage: deckhouse' for secret %s - secret not found", snapSecretName)
+			input.Logger.Debug("Skip removing label 'heritage: deckhouse' - secret not found", slog.String("name", snapSecretName))
 			return
 		}
 
 		if !snap[0].(bool) {
-			input.Logger.Debugf("Skip removing label 'heritage: deckhouse' for secret %s - label not found", snapSecretName)
+			input.Logger.Debug("Skip removing label 'heritage: deckhouse' - label not found", slog.String("name", snapSecretName))
 			return
 		}
 
@@ -115,7 +117,7 @@ func removeLabelHeritageDeckhouse(input *go_hook.HookInput) error {
 			},
 		}
 
-		input.Logger.Warnf("Remove label 'heritage: deckhouse' from %s", snapSecretName)
+		input.Logger.Warn("Remove label 'heritage: deckhouse' from secret", slog.String("name", snapSecretName))
 		input.PatchCollector.MergePatch(patch, "v1", "Secret", "kube-system", snapSecretName)
 	}
 

@@ -1,14 +1,22 @@
 ---
-title: "NFS-хранилище"
+title: "Хранилище данных NFS"
 permalink: ru/storage/admin/external/nfs.html
 lang: ru
 ---
 
-Для управления томами на основе протокола NFS (Network File System) можно использовать модуль `csi-nfs`, позволяющий создавать StorageClass через создание пользовательских ресурсов `NFSStorageClass`.
+{% alert level="info" %}
+Доступно в редакциях:  **CE, SE, SE+, EE, CSE Pro (1.64)**
+
+Подробнее см. в разделе [Условия и цены](../../../../../pricing/).
+{% endalert %}
+
+Deckhouse поддерживает работу с NFS (Network File System), обеспечивая возможность подключения и управления сетевыми файловыми хранилищами в Kubernetes. Это позволяет организовать централизованное хранение данных и совместное использование файлов между контейнерами.
+
+На этой странице представлены инструкции по подключению NFS-хранилища в Deckhouse, настройке соединения, созданию StorageClass, а также проверке работоспособности системы.
 
 ## Включение модуля
 
-Чтобы включить модуль `csi-nfs`, выполните команду:
+Для управления томами на основе протокола NFS (Network File System) используется модуль `csi-nfs`, позволяющий создавать StorageClass через создание пользовательских ресурсов [NFSStorageClass](../../../reference/cr/nfsstorageclass/). Чтобы включить модуль выполните команду:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -22,8 +30,7 @@ spec:
 EOF
 ```
 
-Дождитесь, когда модуль `csi-nfs` перейдет в состояние `Ready`.
-Проверить состояние можно, выполнив следующую команду:
+Дождитесь, когда модуль `csi-nfs` перейдет в состояние `Ready`. Проверить состояние можно, выполнив следующую команду:
 
 ```shell
 d8 k get module csi-nfs -w
@@ -38,10 +45,7 @@ csi-nfs   910      Enabled   Embedded           Ready
 
 ## Создание StorageClass
 
-Для создания StorageClass необходимо использовать ресурс `NFSStorageClass`.
-Ручное создание ресурса StorageClass без `NFSStorageClass` может привести к ошибкам.
-
-Пример команды для создания класса хранения на базе NFS:
+Для создания StorageClass необходимо использовать ресурс [NFSStorageClass](../../../reference/cr/nfsstorageclass/). Ручное создание ресурса StorageClass без [NFSStorageClass](../../../reference/cr/nfsstorageclass/) может привести к ошибкам. Пример команды для создания класса хранения на базе NFS:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -70,13 +74,13 @@ spec:
 EOF
 ```
 
-Проверьте, что созданный ресурс `NFSStorageClass` перешел в состояние `Created`, выполнив следующую команду:
+Проверьте, что созданный ресурс [NFSStorageClass](../../../reference/cr/nfsstorageclass/) перешел в состояние `Created`, выполнив следующую команду:
 
 ```shell
 d8 k get NFSStorageClass nfs-storage-class -w
 ```
 
-В результате будет выведена информация о созданном ресурсе `NFSStorageClass`:
+В результате будет выведена информация о созданном ресурсе [NFSStorageClass](../../../reference/cr/nfsstorageclass/):
 
 ```console
 NAME                PHASE     AGE
@@ -96,23 +100,17 @@ NAME                PROVISIONER      RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLO
 nfs-storage-class   nfs.csi.k8s.io   Delete          WaitForFirstConsumer   true                   1h
 ```
 
-Если StorageClass с именем `nfs-storage-class` появился, значит настройка модуля csi-nfs завершена.
-Теперь пользователи могут создавать PersistentVolume, указывая StorageClass с именем `nfs-storage-class`.
-
-Для каждого ресурса PersistentVolume будет создаваться каталог `<директория из share>/<имя PersistentVolume>`.
+Если StorageClass с именем `nfs-storage-class` появился, значит настройка модуля `csi-nfs` завершена. Теперь пользователи могут создавать PersistentVolume, указывая StorageClass с именем `nfs-storage-class`. Для каждого ресурса PersistentVolume будет создаваться каталог `<директория из share>/<имя PersistentVolume>`.
 
 ## Проверка работоспособности модуля
 
-Для того, чтобы проверить работоспособность модуля csi-nfs, необходимо проверить состояние подов в пространстве имен d8-csi-nfs.
-Все поды должны быть в состоянии `Running` или `Completed`, поды csi-nfs должны быть запущены на всех узлах.
-
-Проверить работоспособность модуля можно с помощью следующей команды:
+Для того чтобы проверить работоспособность модуля `csi-nfs`, необходимо проверить состояние подов в пространстве имен `d8-csi-nfs`. Все поды должны быть в состоянии `Running` или `Completed`, поды `csi-nfs` должны быть запущены на всех узлах. Проверить работоспособность модуля можно с помощью следующей команды:
 
 ```shell
 d8 k -n d8-csi-nfs get pod -owide -w
 ```
 
-В результате будет выведен список всех подов в пространстве имен d8-csi-nfs:
+В результате будет выведен список всех подов в пространстве имен `d8-csi-nfs`:
 
 ```console
 NAME                             READY   STATUS    RESTARTS   AGE   IP             NODE       NOMINATED NODE   READINESS GATES

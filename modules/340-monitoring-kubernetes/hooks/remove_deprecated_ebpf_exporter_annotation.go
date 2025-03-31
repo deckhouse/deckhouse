@@ -65,7 +65,7 @@ func unlabelNodes(input *go_hook.HookInput) error {
 		}
 		labeledNode := labeledNodeRaw.(*NodeWithLabel)
 
-		input.PatchCollector.Filter(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+		input.PatchCollector.PatchWithMutatingFunc(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 			var node v1.Node
 			err := sdk.FromUnstructured(obj, &node)
 			if err != nil {

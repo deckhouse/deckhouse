@@ -1,13 +1,19 @@
 ---
-title: "CEPH Storage"
+title: "Distributed Ceph storage"
 permalink: en/storage/admin/external/ceph.html
 ---
 
-To create StorageClass objects based on RBD (RADOS Block Device) or Ceph file system, you can use the `csi-ceph` module, which allows you to configure connections to one or more Ceph clusters.
+{% alert level="info" %}
+Available in editions:  **CE, SE, SE+, EE**
+{% endalert %}
+
+Ceph is a scalable distributed storage system that ensures high availability and fault tolerance of data. Deckhouse supports integration with Ceph clusters, enabling dynamic storage management and the use of StorageClass based on RBD (RADOS Block Device) or CephFS.
+
+This page provides instructions on connecting Ceph to Deckhouse, configuring authentication, creating StorageClass objects, and verifying storage functionality.
 
 ## Enabling the module
 
-To enable the `csi-ceph` module, apply the `ModuleConfig` resource:
+To connect a Ceph cluster in Deckhouse, you need to enable the `csi-ceph` module. To do this, apply the ModuleConfig resource:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -22,7 +28,7 @@ EOF
 
 ## Connecting to a Ceph cluster
 
-To configure a connection to a Ceph cluster, apply the `CephClusterConnection` resource. Example command:
+To configure a connection to a Ceph cluster, apply the [CephClusterConnection](../../../reference/cr/cephclusterconnection/) resource. Example usage:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -40,7 +46,7 @@ spec:
 EOF
 ```
 
-You can check the connection creation status with the following command (the phase should be in `Created` status):
+You can check the connection status with the following command (the `Phase` should be in `Created` status):
 
 ```shell
 d8 k get cephclusterconnection ceph-cluster-1
@@ -48,7 +54,7 @@ d8 k get cephclusterconnection ceph-cluster-1
 
 ## Authentication
 
-To authenticate with the Ceph cluster, you need to define the authentication parameters in the `CephClusterAuthentication` resource:
+To authenticate with the Ceph cluster, you need to define the authentication parameters in the [CephClusterAuthentication](../../../reference/cr/cephclusterauthentication/) resource:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -66,9 +72,7 @@ EOF
 
 ## Creating StorageClass
 
-The creation of StorageClass objects is done through the `CephStorageClass` resource, which defines the configuration for the desired storage class. Manually creating a StorageClass resource without `CephStorageClass` may lead to errors.
-
-Example of creating a StorageClass based on RBD (RADOS Block Device):
+The creation of StorageClass objects is done through the [CephStorageClass](../../../reference/cr/cephstorageclass/) resource, which defines the configuration for the desired StorageClass. Manually creating a StorageClass resource without [CephStorageClass](../../../reference/cr/cephstorageclass/) may lead to errors. Example of creating a StorageClass based on RBD (RADOS Block Device):
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -105,13 +109,13 @@ spec:
 EOF
 ```
 
-Check that the created `CephStorageClass` resources have transitioned to the `Created` phase by running the following command:
+Check that the created [CephStorageClass](../../../reference/cr/cephstorageclass/) resources have transitioned to the `Created` phase by running the following command:
 
 ```shell
 d8 k get cephstorageclass
 ```
 
-In the output, you should see information about the created `CephStorageClass` resources:
+In the output, you should see information about the created [CephStorageClass](../../../reference/cr/cephstorageclass/) resources:
 
 ```console
 NAME          PHASE     AGE
@@ -133,4 +137,4 @@ ceph-rbd-sc   rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true    
 ceph-fs-sc    rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true                   15s
 ```
 
-If the StorageClass objects are listed, it means the csi-ceph module configuration is complete. Users can now create PersistentVolumes by specifying the created StorageClass objects.
+If the StorageClass objects appear, it means the `csi-ceph` module configuration is complete. Users can now create PersistentVolumes by specifying the created StorageClass objects.

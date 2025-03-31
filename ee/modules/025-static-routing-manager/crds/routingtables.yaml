@@ -102,7 +102,7 @@ spec:
                   **Format**: the standard `nodeSelector` list.
                 additionalProperties:
                   type: string
-                  pattern: "^[A-Za-z0-9][A-Za-z0-9-._]*$"
+                  pattern: "^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$"
                   maxLength: 63
           status:
             type: object

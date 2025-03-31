@@ -31,7 +31,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
+	"github.com/flant/shell-operator/pkg/metric"
 	registryv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/iancoleman/strcase"
 	"github.com/jonboulle/clockwork"
@@ -75,7 +75,7 @@ type DeckhouseReleaseFetcherConfig struct {
 	releaseChannel          string
 	releaseVersionImageHash string
 
-	metricStorage *metricstorage.MetricStorage
+	metricStorage metric.Storage
 
 	logger *log.Logger
 }
@@ -170,7 +170,7 @@ type DeckhouseReleaseFetcher struct {
 	releaseChannel          string
 	releaseVersionImageHash string
 
-	metricStorage *metricstorage.MetricStorage
+	metricStorage metric.Storage
 
 	logger *log.Logger
 }
@@ -542,9 +542,6 @@ func (f *DeckhouseReleaseFetcher) createRelease(
 				v1alpha1.DeckhouseReleaseAnnotationNotified:    "false",
 				v1alpha1.DeckhouseReleaseAnnotationChangeCause: changeCause,
 			},
-			Labels: map[string]string{
-				"heritage": "deckhouse",
-			},
 		},
 		Spec: v1alpha1.DeckhouseReleaseSpec{
 			Version:       releaseMetadata.Version,
@@ -889,7 +886,7 @@ func (f *DeckhouseReleaseFetcher) getNewVersions(ctx context.Context, actual, ta
 
 func (f *DeckhouseReleaseFetcher) parseAndFilterVersions(tags []string) []*semver.Version {
 	versionMatcher := regexp.MustCompile(`^v(([0-9]+).([0-9]+).([0-9]+))$`)
-	var versions []*semver.Version
+	versions := make([]*semver.Version, 0)
 
 	for _, tag := range tags {
 		if !versionMatcher.MatchString(tag) {

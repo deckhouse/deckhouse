@@ -29,8 +29,6 @@ import (
 	"github.com/fatih/structs"
 	"github.com/go-logr/logr"
 	"github.com/go-openapi/spec"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chartutil"
@@ -38,6 +36,7 @@ import (
 	"helm.sh/helm/v3/pkg/release"
 	"helm.sh/helm/v3/pkg/releaseutil"
 	"helm.sh/helm/v3/pkg/storage/driver"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"controller/apis/deckhouse.io/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha2"
@@ -46,7 +45,14 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-const helmDriver = "secret"
+const (
+	helmDriver = "secret"
+
+	ResourceAnnotationReleaseName      = "meta.helm.sh/release-name"
+	ResourceAnnotationReleaseNamespace = "meta.helm.sh/release-namespace"
+
+	ResourceLabelManagedBy = "app.kubernetes.io/managed-by"
+)
 
 type Client struct {
 	conf      *action.Configuration

@@ -71,6 +71,14 @@
       "ee"
     ]
   },
+    "csi-yadro-tatlin-unified": {
+      "editionMinimumAvailable": "ee",
+      "external": "true",
+      "path": "/products/kubernetes-platform/modules/csi-yadro-tatlin-unified/stable/",
+      "editions": [
+        "ee"
+    ]
+  },
   "csi-nfs": {
     "editionMinimumAvailable": "ce",
     "external": "true",
@@ -135,18 +143,10 @@
       "ee"
     ]
   },
-  "csi-yadro": {
+  "csi-yadro-tatlin-unified": {
     "editionMinimumAvailable": "ee",
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/csi-yadro/stable/",
-    "editions": [
-      "ee"
-    ]
-  },
-  "sds-drbd": {
-    "editionMinimumAvailable": "ee",
-    "external": "true",
-    "path": "/products/kubernetes-platform/modules/sds-drbd/stable/",
+    "path": "/products/kubernetes-platform/modules/csi-yadro-tatlin-unified/stable/",
     "editions": [
       "ee"
     ]
@@ -207,6 +207,7 @@
     "external": "true",
     "path": "/products/kubernetes-platform/modules/secrets-store-integration/stable/",
     "editions": [
+      "ce",
       "be",
       "se",
       "se-plus",

@@ -1,14 +1,20 @@
 ---
-title: "Local storage (LVM)"
+title: "Local storage based on LVM"
 permalink: en/storage/admin/sds/lvm-local.html
 ---
+
+{% alert level="info" %}
+<span style="border-bottom: 1px dotted #000;" data-tippy-content="Restriction on the ability to create snapshots">
+Available with limitations in:</span>  **CE**
+
+Available without limitations in the following commercial editions:  **SE, SE+, EE**
+{% endalert %}
 
 Using local storage helps avoid network latencies, which improves performance compared to remote storage that requires network connectivity. This approach is ideal for test environments and EDGE clusters.
 
 ## Enabling the module
 
-Configuring local block storage is based on the Logical Volume Manager (LVM).  
-LVM is managed by the `sds-node-configurator` module, which must be enabled before activating the `sds-local-volume` module.
+Configuring local block storage is based on the Logical Volume Manager (LVM). LVM is managed by the `sds-node-configurator` module, which must be enabled before activating the `sds-local-volume` module.
 
 To enable the module, apply the following `ModuleConfig` resource:
 
@@ -24,8 +30,7 @@ spec:
 EOF
 ```
 
-Wait until the `sds-node-configurator` module transitions to the `Ready` state.
-To check its status, execute the following command:
+Wait until the `sds-node-configurator` module transitions to the `Ready` state. To check its status, execute the following command:
 
 ```shell
 d8 k get modules sds-node-configurator -w
@@ -52,8 +57,7 @@ spec:
 EOF
 ```
 
-This will launch service pods of the `sds-local-volume` components on all cluster nodes.
-To check the module status, run the following command:
+This will launch service pods of the `sds-local-volume` components on all cluster nodes. To check the module status, run the following command:
 
 ```shell
 d8 k get modules sds-local-volume -w
@@ -77,9 +81,7 @@ d8 k -n d8-sds-node-configurator get pod -w
 
 ### Creating LVM volume groups
 
-Ensure that on all nodes where LVM resources are intended to be used, service pods `sds-local-volume-csi-node` are running. These pods provide interaction with nodes where LVM components are located.
-
-This can be verified using the following command:
+Ensure that on all nodes where LVM resources are intended to be used, service pods `sds-local-volume-csi-node` are running. These pods provide interaction with nodes where LVM components are located. This can be verified using the following command:
 
 ```shell
 d8 k -n d8-sds-local-volume get pod -l app=sds-local-volume-csi-node -owide
@@ -88,7 +90,8 @@ d8 k -n d8-sds-local-volume get pod -l app=sds-local-volume-csi-node -owide
 The placement of these pods on nodes is determined based on specific labels (nodeSelector) defined in the `spec.settings.dataNodes.nodeSelector` field in the module settings. For more details on configuration, refer to the documentation.
 
 Before setting up the creation of StorageClass objects, available block devices on nodes need to be combined into LVM volume groups. These volume groups will subsequently be used to host PersistentVolume resources.
-To list available block devices, you can use the `BlockDevices` resource, which reflects their current state:
+
+To list available block devices, you can use the BlockDevices resource, which reflects their current state:
 
 ```shell
 d8 k get bd
@@ -106,11 +109,9 @@ dev-53d904f18b912187ac82de29af06a34d9ae23199   worker-2   false        976762584
 dev-6c5abbd549100834c6b1668c8f89fb97872ee2b1   worker-2   false        894006140416   /dev/nvme0n1p6
 ```
 
-In the example above, six block devices are available across three nodes.
+In the example above, six block devices are available across three nodes. To group block devices on one node, you need to create an LVM volume group using the [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) resource.
 
-To group block devices on one node, you need to create an LVM volume group using the `LVMVolumeGroup` resource.
-
-To create an `LVMVolumeGroup` resource on node worker-0, apply the following resource, replacing the node and block device names with your own:
+To create an [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) resource on node worker-0, apply the following resource, replacing the node and block device names with your own:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -140,10 +141,7 @@ spec:
 EOF
 ```
 
-Details about the configuration options for the `LVMVolumeGroup` resource can be found in the [reference section](../../../../../reference/cr/lvmvolumegroup.html).
-
-Wait until the created `LVMVolumeGroup` resource transitions to the `Ready` phase.
-To check the resource phase, run the following command:
+Wait until the created [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) resource transitions to the `Ready` phase. To check the resource phase, run the following command:
 
 ```shell
 d8 k get lvg vg-on-worker-0 -w
@@ -158,9 +156,7 @@ vg-on-worker-0   1/1         True                    Ready   worker-0   360484Mi
 
 If the resource transitions to the `Ready` phase, this indicates that an LVM volume group named `vg` has been created on node worker-0 using the block devices `/dev/nvme1n1` and `/dev/nvme0n1p6`.
 
-Next, you need to repeat the creation of `LVMVolumeGroup` resources for the remaining nodes (worker-1 and worker-2), modifying the resource name, node name, and block device names accordingly.
-
-Ensure that LVM volume groups are created on all nodes where they are intended for use by running the following command:
+Next, you need to repeat the creation of [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) resources for the remaining nodes (worker-1 and worker-2), modifying the resource name, node name, and block device names accordingly. Ensure that LVM volume groups are created on all nodes where they are intended for use by running the following command:
 
 ```shell
 d8 k get lvg -w
@@ -175,21 +171,15 @@ vg-on-worker-1   0/0         True                    Ready   worker-1   360484Mi
 vg-on-worker-2   0/0         True                    Ready   worker-2   360484Mi   30064Mi          vg   1h
 ```
 
-### Creating a StorageClass
+### Creating a thick type StorageClass
 
-### Thick type StorageClass
+The creation of StorageClass objects is done through the [LocalStorageClass](../../../reference/cr/localstorageclass/) resource, which defines the configuration for the desired storage class. Manually creating a StorageClass without a [LocalStorageClass](../../../reference/cr/localstorageclass/) can result in errors.
 
-The creation of StorageClass objects is done through the `LocalStorageClass` resource, which defines the configuration for the desired storage class. Manually creating a StorageClass without a `LocalStorageClass` can result in errors.
+When creating a [LocalStorageClass](../../../reference/cr/localstorageclass/), it's crucial to select the storage type, which can be either thick or thin.
 
-When creating a `LocalStorageClass`, it's crucial to select the storage type, which can be either `Thick` or `Thin`.
+Thick pools offer high performance comparable to the storage device itself but do not support snapshot.
 
-Thick pools offer high performance comparable to the storage device itself but do not support snapshots, whereas Thin pools allow for snapshots and overprovisioning (resource over-allocation) at the cost of reduced performance.
-
-{% alert level="warning" %}
-Overprovisioning should be used with caution, ensuring free space in the pool is carefully monitored (the cluster monitoring system generates events when free space falls to 20%, 10%, 5%, and 1%). A lack of free space in the pool can lead to degradation of the module's operation and poses a real risk of data loss.
-{% endalert %}
-
-Example of creating a `LocalStorageClass` resource with a `Thick` type:
+Example of creating a [LocalStorageClass](../../../reference/cr/localstorageclass/) resource with a thick type:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -209,13 +199,13 @@ spec:
 EOF
 ```
 
-Check that the created `LocalStorageClass` has transitioned to the `Created` phase by running the following command:
+Check that the created [LocalStorageClass](../../../reference/cr/localstorageclass/) has transitioned to the `Created` phase by running the following command:
 
 ```shell
 d8 k get lsc local-storage-class -w
 ```
 
-In the output, you should see information about the created `LocalStorageClass`:
+In the output, you should see information about the created [LocalStorageClass](../../../reference/cr/localstorageclass/):
 
 ```console
 NAME                        PHASE     AGE
@@ -235,9 +225,15 @@ NAME                        PROVISIONER                      RECLAIMPOLICY   VOL
 local-storage-class-thick   local.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   1h
 ```
 
-### Thin type StorageClass
+### Creating a thin type StorageClass
 
-The previously created `LVMVolumeGroup` resources are suitable for creating Thick storage. If you require the ability to create `Thin` storage, update the configuration of the `LVMVolumeGroup` resources by adding a definition for a Thin pool:
+Thin pools allow using snapshots and overprovisioning (resource over-allocation) at the cost of reduced performance.
+
+{% alert level="warning" %}
+Overprovisioning should be used with caution, ensuring free space in the pool is carefully monitored (the cluster monitoring system generates events when free space falls to 20%, 10%, 5%, and 1%). A lack of free space in the pool can lead to degradation of the module's operation and poses a real risk of data loss.
+{% endalert %}
+
+The previously created [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) resources are suitable for creating thick storage. If you require the ability to create thin storage, update the configuration of the [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) resources by adding a definition for a thin pool:
 
 ```yaml
 d8 k patch lvg vg-on-worker-0 --type='json' -p='[
@@ -254,11 +250,9 @@ d8 k patch lvg vg-on-worker-0 --type='json' -p='[
 ]'
 ```
 
-In the updated version of the `LVMVolumeGroup`, 70% of the available space will be allocated for creating Thin storage. The remaining 30% can be used for Thick storage.
+In the updated version of the [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/), 70% of the available space will be allocated for creating thin storage. The remaining 30% can be used for thick storage.
 
-Repeat the addition of Thin pools for the remaining nodes (worker-1 and worker-2).
-
-Example of creating a `LocalStorageClass` resource with a Thin type:
+Repeat the addition of thin pools for the remaining nodes (worker-1 and worker-2). Example of creating a [LocalStorageClass](../../../reference/cr/localstorageclass/) resource with a thin type:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -284,13 +278,13 @@ spec:
 EOF
 ```
 
-Check that the created `LocalStorageClass` has transitioned to the `Created` phase by running the following command:
+Check that the created [LocalStorageClass](../../../reference/cr/localstorageclass/) has transitioned to the `Created` phase by running the following command:
 
 ```shell
 d8 k get lsc local-storage-class -w
 ```
 
-In the output, you should see information about the created `LocalStorageClass`:
+In the output, you should see information about the created [LocalStorageClass](../../../reference/cr/localstorageclass/):
 
 ```console
 NAME                       PHASE     AGE

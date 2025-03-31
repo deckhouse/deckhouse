@@ -1,0 +1,52 @@
+Subject: [PATCH] Power off the virtual machine before changing the sizing policy if the hot-add cpu or memory feature is disabled.
+---
+Index: vcd/resource_vcd_vapp_vm.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/vcd/resource_vcd_vapp_vm.go b/vcd/resource_vcd_vapp_vm.go
+--- a/vcd/resource_vcd_vapp_vm.go	(revision a9b8551447000ecc04c5577252fbebbfba9d7c4a)
++++ b/vcd/resource_vcd_vapp_vm.go	(date 1739973948434)
+@@ -1781,7 +1781,7 @@
+ }
+ 
+ func resourceVmHotUpdate(d *schema.ResourceData, meta interface{}, vmType typeOfVm) diag.Diagnostics {
+-	_, _, vdc, vapp, _, vm, err := getVmFromResource(d, meta, vmType)
++	_, _, vdc, vapp, identifier, vm, err := getVmFromResource(d, meta, vmType)
+ 	if err != nil {
+ 		return diag.FromErr(err)
+ 	}
+@@ -1858,8 +1858,32 @@
+ 			placementId = newPlacementId
+ 		}
+ 		if sizingPolicyChanged {
++			if !d.Get("memory_hot_add_enabled").(bool) || !d.Get("cpu_hot_add_enabled").(bool) {
++				vmStatusBeforeUpdate, err := vm.GetStatus()
++				if err != nil {
++					return diag.Errorf("[VM update] error getting VM (%s) status before update: %s", identifier, err)
++				}
++
++				if vmStatusBeforeUpdate != "POWERED_OFF" {
++					if d.Get("prevent_update_power_off").(bool) {
++						return diag.Errorf("update stopped: VM needs to power off to change properties, but `prevent_update_power_off` is `true`")
++					}
++					log.Printf("[DEBUG] Un-deploying VM %s for offline update. Previous state %s",
++						vm.VM.Name, vmStatusBeforeUpdate)
++					task, err := vm.Undeploy()
++					if err != nil {
++						return diag.Errorf("error triggering undeploy for VM %s: %s", vm.VM.Name, err)
++					}
++					err = task.WaitTaskCompletion()
++					if err != nil {
++						return diag.Errorf("error waiting for undeploy task for VM %s: %s", vm.VM.Name, err)
++					}
++				}
++			}
++
+ 			sizingId = newSizingId
+ 		}
++
+ 		_, err = vm.UpdateComputePolicyV2(sizingId.(string), placementId.(string), "")
+ 		if err != nil {
+ 			return diag.Errorf("error updating compute policy: %s", err)

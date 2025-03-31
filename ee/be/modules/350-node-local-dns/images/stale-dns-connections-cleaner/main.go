@@ -10,7 +10,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -146,7 +145,7 @@ func main() {
 
 	err = httpServer.ListenAndServe()
 	if !errors.Is(err, http.ErrServerClosed) {
-		log.Fatal("httpServer", slog.String("error", err.Error()))
+		log.Fatal("httpServer", log.Err(err))
 	}
 }
 

@@ -12,7 +12,7 @@ resources:
 - name: VROUTER_SHOW_LATEST_CHANNEL
   value: {{ .Values.vrouter.showLatestChannel | quote }}
 - name: VROUTER_LISTEN_PORT
-  value: "8080"
+  value: "8082"
 - name: VROUTER_LOG_LEVEL
   value: {{ pluck .Values.web.env .Values.vrouter.logLevel | first | default .Values.vrouter.logLevel._default | quote }}
 - name: VROUTER_PATH_STATIC

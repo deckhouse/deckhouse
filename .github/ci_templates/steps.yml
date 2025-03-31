@@ -267,5 +267,5 @@
     WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
   run: |
     bash ./.github/scripts/send-report.sh
-# </template: login_git_step>
+# </template: send_fail_report>
 {!{- end -}!}

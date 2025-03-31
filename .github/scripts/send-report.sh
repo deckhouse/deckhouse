@@ -25,6 +25,9 @@ while [[ "$#" -gt 0 ]]; do
       custom_message="$2"
       shift
       ;;
+    --direct-post)
+      direct_post_flag=true
+      ;;
     *)
       echo "Unsupported argument: $1"
       exit 1
@@ -76,5 +79,9 @@ if [ "$upload" = true ]; then
     file_id_array+=("$file_id")
   done
 fi
-# send_post
-send_post_with_webhook
+
+if [ "$direct_post_flag" = true ]; then
+  send_post
+else
+  send_post_with_webhook
+fi

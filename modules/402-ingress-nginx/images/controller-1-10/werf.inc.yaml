@@ -37,21 +37,22 @@ shell:
   - git clone --branch 7-3 {{ $.SOURCE_REPO }}/luarocks-sorces/lua-iconv
   - git clone --branch {{ $controllerBranch }} --depth 1 {{$.SOURCE_REPO}}/kubernetes/ingress-nginx.git
   - cd /src/ingress-nginx
-  - patch -p1 < /patches/lua-info.patch
-  - patch -p1 < /patches/01-gomod.patch
-  - patch -p1 < /patches/makefile.patch
-  - patch -p1 < /patches/healthcheck.patch
-  - patch -p1 < /patches/metrics-SetSSLExpireTime.patch
-  - patch -p1 < /patches/util.patch
-  - patch -p1 < /patches/fix-cleanup.patch
-  - patch -p1 < /patches/add-http3.patch
-  - patch -p1 < /patches/nginx-build.patch
-  - patch -p1 < /patches/new-metrics.patch
-  - patch -p1 < /patches/default-backend-fix.patch
+  - patch -p1 < /patches/004-lua-info.patch
+  - patch -p1 < /patches/001-go-mod.patch
+  - patch -p1 < /patches/005-makefile.patch
+  - patch -p1 < /patches/002-healthcheck.patch
+  - patch -p1 < /patches/006-metrics-SetSSLExpireTime.patch
+  - patch -p1 < /patches/008-util.patch
+  - patch -p1 < /patches/009-fix-cleanup.patch
+  - patch -p1 < /patches/011-add-http3.patch
+  - patch -p1 < /patches/010-nginx-build.patch
+  - patch -p1 < /patches/012-new-metrics.patch
+  - patch -p1 < /patches/013-default-backend-fix.patch
+  - patch -p1 < /patches/015-fix-validating-webhook-cve.patch
   - cd /src/ingress-nginx/rootfs
-  - patch -p1 < /patches/balancer-lua.patch
-  - patch -p1 < /patches/nginx-tmpl.patch
-  - patch -p1 < /patches/auth-cookie-always.patch
+  - patch -p1 < /patches/014-balancer-lua.patch
+  - patch -p1 < /patches/003-nginx-tmpl.patch
+  - patch -p1 < /patches/007-auth-cookie-always.patch
   # pass env for build
   - cd /src/ingress-nginx
   - echo "export COMMIT_SHA=git-$(git rev-parse --short HEAD)" > .env_pass
@@ -347,6 +348,8 @@ shell:
 # remove ruby from libs because it has cve's but not using in image
 # ruby install with grpc-plugins packet it needs for building nginx
   - rm -rf /chroot/usr/lib64/ruby
+# remove owasp-modsecurity-crs/util bash scripts cve
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs
 imageSpec:
   config:
     workingDir: /

@@ -1,6 +1,11 @@
 {{- define "deckhouse_resources" }}
-cpu: 500m
+{{- if and (.Values.global.enabledModules | has "vertical-pod-autoscaler") (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
+cpu: 100m
 memory: 1000Mi
+{{- else }}
+cpu: 150m
+memory: 1000Mi
+{{- end }}
 {{- end }}
 
 {{- if and (.Values.global.enabledModules | has "vertical-pod-autoscaler") (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
@@ -72,6 +77,9 @@ spec:
       annotations:
         checksum/registry: {{ include (print $.Template.BasePath "/registry-secret.yaml") . | sha256sum }}
         kubectl.kubernetes.io/default-container: deckhouse
+{{- if and (.Values.deckhouse.internal.chrootMode) (semverCompare "< 1.30" .Values.global.discovery.kubernetesVersion) }}
+        container.apparmor.security.beta.kubernetes.io/deckhouse: unconfined
+{{- end }}
     spec:
       affinity:
         podAntiAffinity:
@@ -120,8 +128,22 @@ spec:
       containers:
         - name: deckhouse
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_with_selinux" . | nindent 10 }}
+{{- if .Values.deckhouse.internal.chrootMode }}
+            capabilities:
+              add:
+              - SYS_ADMIN
+  {{- if semverCompare ">= 1.30" .Values.global.discovery.kubernetesVersion }}
+            appArmorProfile:
+              type: Unconfined
+  {{- end }}
+{{- end }}
           command:
-            - /deckhouse/deckhouse
+{{- if .Values.deckhouse.internal.chrootMode }}
+            - /usr/bin/caps-deckhouse-controller
+{{- else }}
+            - /usr/bin/deckhouse-controller
+{{- end }}
+            - start
           image: "{{ .Values.deckhouse.internal.currentReleaseImageName }}"
           imagePullPolicy: Always
           env:
@@ -207,6 +229,10 @@ spec:
             - name: DEBUG_HTTP_SERVER_ADDR
               value: "127.0.0.1:9652"
             {{- include "helm_lib_envs_for_proxy" . | nindent 12 }}
+{{- if .Values.deckhouse.internal.chrootMode }}
+            - name: ADDON_OPERATOR_SHELL_CHROOT_DIR
+              value: "/chroot"
+{{- end }}
           ports:
             - containerPort: 4222
               name: self
@@ -230,6 +256,10 @@ spec:
           volumeMounts:
           - mountPath: /tmp
             name: tmp
+{{- if .Values.deckhouse.internal.chrootMode }}
+          - mountPath: /chroot
+            name: chroot
+{{- end }}
           - mountPath: /.kube
             name: kube
           - mountPath: /certs
@@ -294,6 +324,10 @@ spec:
       - emptyDir:
           medium: Memory
         name: tmp
+{{- if .Values.deckhouse.internal.chrootMode }}
+      - emptyDir:
+        name: chroot
+{{- end }}
       - emptyDir:
           medium: Memory
         name: kube

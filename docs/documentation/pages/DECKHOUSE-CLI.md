@@ -25,7 +25,7 @@ The `d8 d` and `d8 mirror` command groups are not available for Community Editio
   - [Manually uploading images to an air-gapped registry](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#manually-uploading-images-to-an-air-gapped-registry).
   - [Manually uploading images of Deckhouse modules into an air-gapped registry](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#manually-uploading-images-of-deckhouse-modules-into-an-air-gapped-registry).
 
-* `d8 v` — the set of commands for managing virtual machines created by [Deckhouse Virtualization Platform](https://deckhouse.io/products/virtualization-platform/documentation/).  
+* `d8 v` — the set of commands for managing virtual machines created by [Deckhouse Virtualization Platform](https://deckhouse.io/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html).  
     For example, the `d8 virtualization console` command execs you into the VM console.
 
     <div markdown="0">
@@ -42,7 +42,7 @@ The `d8 d` and `d8 mirror` command groups are not available for Community Editio
 
 ## How do I install Deckhouse CLI?
 
-Starting from Deckhouse CLI 0.10 it can be installed using [trdl](https://trdl.dev/).
+Starting from Deckhouse CLI 0.10 it can be installed using [trdl](https://trdl.dev/). If you are installing inside a cluster, enable Deckhouse Tools and follow the interface instructions.
 
 {% alert %}
 Please note that since version 0.10, installation **is available only via trdl**. If you have a version lower than 0.10 installed, then you must first uninstall it.
@@ -56,9 +56,9 @@ If you need to install one of the versions below 0.10, use the [outdated install
 
    ```bash
    URL=https://trrr.flant.dev/trdl-deckhouse-cli
-   ROOT_VERSION=1
-   ROOT_SHA512=$(curl -Ls ${URL}/${ROOT_VERSION}.root.json | sha512sum | tr -d '\-[:space:]\n')
-   REPO=trdl-deckhouse-cli
+   ROOT_VERSION=0
+   ROOT_SHA512=$(curl -Ls ${URL}/root.json | sha512sum | tr -d '\-[:space:]\n')
+   REPO=trdl-d8
    
    trdl add $REPO $URL $ROOT_VERSION $ROOT_SHA512
    ```

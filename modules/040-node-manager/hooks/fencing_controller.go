@@ -18,17 +18,18 @@ package hooks
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/set"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -101,7 +102,7 @@ func fencingControllerHandler(input *go_hook.HookInput, dc dependency.Container)
 	// kubeclient to get node leases and get and delete pods
 	kubeClient, err := dc.GetK8sClient()
 	if err != nil {
-		input.Logger.Errorf("%v", err)
+		input.Logger.Error(err.Error())
 		return err
 	}
 
@@ -115,12 +116,17 @@ func fencingControllerHandler(input *go_hook.HookInput, dc dependency.Container)
 		node := nodeRaw.(fencingControllerNodeResult)
 		nodeLease, err := kubeClient.CoordinationV1().Leases("kube-node-lease").Get(context.TODO(), node.Name, metav1.GetOptions{})
 		if err != nil {
-			input.Logger.Errorf("Can't get node lease: %v", err)
+			input.Logger.Error("Can't get node lease", log.Err(err))
 			continue
 		}
 
 		if time.Since(nodeLease.Spec.RenewTime.Time) > fencingControllerTimeout {
-			input.Logger.Warnf("Node lease %s is expired. Current time: %v, node lease time %v", node.Name, time.Now(), nodeLease.Spec.RenewTime.Time)
+			input.Logger.Warn(
+				"Node lease is expired",
+				slog.String("name", node.Name),
+				slog.String("current time", time.Now().String()),
+				slog.String("node lease time", nodeLease.Spec.RenewTime.Time.String()),
+			)
 			nodesToKill.Add(node.Name)
 		}
 	}
@@ -131,11 +137,11 @@ func fencingControllerHandler(input *go_hook.HookInput, dc dependency.Container)
 		return nil
 	}
 
-	input.Logger.Warnf("Going to kill %d nodes", nodeToKillCount)
+	input.Logger.Warn("Going to kill nodes", slog.Int("count", nodeToKillCount))
 
 	// kill nodes
 	for _, node := range nodesToKill.Slice() {
-		input.Logger.Warnf("Delete all pods from node %s", node)
+		input.Logger.Warn("Delete all pods from node", slog.String("name", node))
 		podsToDelete, err := kubeClient.CoreV1().Pods("").List(
 			context.TODO(),
 			metav1.ListOptions{
@@ -143,23 +149,23 @@ func fencingControllerHandler(input *go_hook.HookInput, dc dependency.Container)
 			},
 		)
 		if err != nil {
-			input.Logger.Errorf("Can't list pods: %v", err)
+			input.Logger.Error("Can't list pods", log.Err(err))
 			continue
 		}
 
 		GracePeriodSeconds := int64(0)
 		for _, pod := range podsToDelete.Items {
-			input.Logger.Warnf("Delete pod %s in namespace %s on node %s", pod.Name, pod.Namespace, pod.Spec.NodeName)
+			input.Logger.Warn("Delete pod in namespace on node", slog.String("name", pod.Name), slog.String("namespace", pod.Namespace), slog.String("node", pod.Spec.NodeName))
 			err = kubeClient.CoreV1().Pods(pod.Namespace).Delete(context.TODO(), pod.Name, metav1.DeleteOptions{
 				GracePeriodSeconds: &GracePeriodSeconds,
 			})
 			if err != nil {
-				input.Logger.Errorf("Can't delete pod %s: %v", pod.Name, err)
+				input.Logger.Error("Can't delete pod", slog.String("name", pod.Name), log.Err(err))
 			}
 		}
 
-		input.Logger.Warnf("Delete node %s", node)
-		input.PatchCollector.Delete("v1", "Node", "", node, object_patch.InBackground())
+		input.Logger.Warn("Delete node", slog.String("name", node))
+		input.PatchCollector.DeleteInBackground("v1", "Node", "", node)
 	}
 
 	return nil

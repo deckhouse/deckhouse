@@ -132,19 +132,8 @@ func handleRecicleEtcdMembers(input *go_hook.HookInput, dc dependency.Container)
 		return errors.Wrap(err, "list etcd members failed")
 	}
 
-	// external etcd members, we dont need to delete them
-	externalRaw := input.Values.Get("controlPlaneManager.etcd.externalMembersNames").Array()
-	externalMembers := make(map[string]bool, len(externalRaw))
-	for _, res := range externalRaw {
-		externalMembers[res.String()] = true
-	}
-
 	removeList := make([]uint64, 0)
 	for _, mem := range etcdMembersResp.Members {
-		if _, ok := externalMembers[mem.Name]; ok {
-			// dont delete external members
-			continue
-		}
 		if _, ok := discoveredMasterMap[mem.Name]; !ok {
 			removeList = append(removeList, mem.ID)
 		}

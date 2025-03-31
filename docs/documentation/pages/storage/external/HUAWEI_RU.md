@@ -1,30 +1,38 @@
 ---
-title: "Huawei-хранилище"
+title: "Хранилище данных Huawei"
 permalink: ru/storage/admin/external/huawei.html
 lang: ru
 ---
 
-Данный модуль хранилища предоставляет CSI для управления томами c использованием СХД Huawei. Модуль позволяет создавать `StorageClass` в `Kubernetes` через создание [пользовательских ресурсов Kubernetes](./cr.html#huaweistorageclass) `HuaweiStorageClass`.
+{% alert level="info" %}
+Доступно в некоторых коммерческих редакциях:  **EE**
 
-> **Внимание!** Создание `StorageClass` для CSI-драйвера `csi.huawei.com` пользователем запрещено.
-> **Внимание!** На данный момент модулем поддерживаются СХД Huawei 3par. Для поддержки других СХД Huawei, пожалуйста, свяжитесь с техподдержкой.
+Подробнее см. в разделе [Условия и цены](../../../../../pricing/).
+{% endalert %}
 
-## Системные требования и рекомендации
+В Deckhouse предусмотрена поддержка систем хранения данных Huawei Dorado, позволяющая управлять томами в Kubernetes с использованием CSI-драйвера через создание пользовательских ресурсов [HuaweiStorageClass](../../../reference/cr/huaweistorageclass/). Это решение обеспечивает высокую производительность и отказоустойчивость хранения данных, что делает его оптимальным выбором для критически важных рабочих нагрузок.
 
-### Требования
+{% alert level="warning" %}
+Создание StorageClass для CSI-драйвера `csi.huawei.com` пользователем запрещено.
+Модулем поддерживаются только СХД Huawei Dorado. Для использования других СХД Huawei, пожалуйста, свяжитесь с технической поддержкой.
+{% endalert %}
 
-- Наличие развернутой и настроенной СХД Huawei.
-- Уникальные iqn в /etc/iscsi/initiatorname.iscsi на каждой из Kubernetes Nodes
+На этой странице представлены инструкции по подключению Huawei Dorado к Deckhouse, настройке соединения, созданию StorageClass, а также проверке работоспособности хранилища.
 
-## Быстрый старт
+## Системные требования
+
+- Наличие развернутой и настроенной СХД Huawei;
+- Уникальные IQN в `/etc/iscsi/initiatorname.iscsi` на каждой из Kubernetes Nodes.
+
+## Настройка и конфигурация
 
 Все команды следует выполнять на машине, имеющей доступ к API Kubernetes с правами администратора.
 
 ### Включение модуля
 
-- Включить модуль `csi-huawei`.  Это приведет к тому, что на всех узлах кластера будет:
-  - зарегистрирован CSI драйвер;
-  - запущены служебные поды компонентов `csi-huawei`.
+Для поддержки систем хранения данных Huawei Dorado включите модуль `csi-huawei`. Это приведет к тому, что на всех узлах кластера будет:
+- зарегистрирован CSI-драйвер;
+- запущены служебные поды компонентов `csi-huawei`.
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -38,15 +46,15 @@ spec:
 EOF
 ```
 
-- Дождаться, когда модуль перейдет в состояние `Ready`.
+Дождитесь, когда модуль перейдет в состояние `Ready`.
 
 ```shell
-kubectl get module csi-huawei -w
+d8 k get module csi-huawei -w
 ```
 
 ### Создание StorageClass
 
-Для создания StorageClass необходимо использовать ресурсы `HuaweiStorageClass` и `HuaweiStorageConnection`. Пример команд для создания таких ресурсов:
+Для создания StorageClass необходимо использовать ресурсы [HuaweiStorageClass](../../../reference/cr/huaweistorageclass/) и [HuaweiStorageConnection](../../../reference/cr/huaweistorageconnection/). Пример команд для создания таких ресурсов:
 
 ```yaml
 d8 k apply -f -<<EOF
@@ -86,7 +94,7 @@ spec:
 EOF
 ```
 
-- Проверить создание объекта можно командой (Phase должен быть `Created`):
+Проверить создание объекта можно командой (`Phase` должен быть `Created`):
 
 ```shell
 d8 k get huaweistorageconnections.storage.deckhouse.io <имя huaweistorageconnection>

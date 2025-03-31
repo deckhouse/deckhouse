@@ -31,6 +31,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"sigs.k8s.io/yaml"
 
+	transformer "github.com/deckhouse/deckhouse/dhctl/pkg/config/schema"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -91,7 +92,7 @@ func NewSchemaStore(paths ...string) *SchemaStore {
 	return newOnceSchemaStore(paths)
 }
 
-func newSchemaStore(schemasDir []string) *SchemaStore {
+func newSchemaStore(checkAdditionalProperties bool, schemasDir []string) *SchemaStore {
 	st := &SchemaStore{
 		cache:              make(map[SchemaIndex]*spec.Schema),
 		moduleConfigsCache: make(map[string]*spec.Schema),
@@ -111,7 +112,7 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 			"cloud_provider_discovery_data.yaml",
 			"ssh_configuration.yaml",
 			"ssh_host_configuration.yaml":
-			uploadError := st.UploadByPath(path)
+			uploadError := st.UploadByPath(checkAdditionalProperties, path)
 			if uploadError != nil {
 				return uploadError
 			}
@@ -146,6 +147,12 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 			err = spec.ExpandSchema(schema, schema, nil)
 			if err != nil {
 				return err
+			}
+			if checkAdditionalProperties {
+				schema = transformer.TransformSchema(
+					schema,
+					&transformer.AdditionalPropertiesTransformer{},
+				)
 			}
 			st.moduleConfigsCache[moduleName] = schema
 		} else if errors.Is(err, os.ErrNotExist) {
@@ -182,7 +189,7 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 
 func newOnceSchemaStore(schemasDir []string) *SchemaStore {
 	once.Do(func() {
-		store = newSchemaStore(schemasDir)
+		store = newSchemaStore(false, schemasDir)
 	})
 	return store
 }
@@ -312,16 +319,16 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte, opts ..
 	return nil
 }
 
-func (s *SchemaStore) UploadByPath(path string) error {
+func (s *SchemaStore) UploadByPath(checkAdditionalProperties bool, path string) error {
 	fileContent, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("Loading schema file: %v", err)
 	}
 
-	return s.upload(fileContent)
+	return s.upload(checkAdditionalProperties, fileContent)
 }
 
-func (s *SchemaStore) upload(fileContent []byte) error {
+func (s *SchemaStore) upload(checkAdditionalProperties bool, fileContent []byte) error {
 	openAPISchema := new(OpenAPISchema)
 	if err := yaml.UnmarshalStrict(fileContent, openAPISchema); err != nil {
 		return fmt.Errorf("json unmarshal: %v", err)
@@ -343,7 +350,12 @@ func (s *SchemaStore) upload(fileContent []byte) error {
 		if err != nil {
 			return fmt.Errorf("expand the schema: %v", err)
 		}
-
+		if checkAdditionalProperties {
+			schema = transformer.TransformSchema(
+				schema,
+				&transformer.AdditionalPropertiesTransformer{},
+			)
+		}
 		s.cache[SchemaIndex{Kind: openAPISchema.Kind, Version: parsedSchema.Version}] = schema
 	}
 
@@ -397,6 +409,24 @@ func ValidateDiscoveryData(config *[]byte, paths []string, opts ...ValidateOptio
 	}
 
 	return true, nil
+}
+
+func ValidateConf(conf *[]byte) error {
+	schemaStore := newSchemaStore(true, []string{
+		"/deckhouse/candi/cloud-providers/zvirt/openapi",
+		"/deckhouse/candi/cloud-providers/vsphere/openapi",
+		"/deckhouse/candi/cloud-providers/huaweicloud/openapi",
+		"/deckhouse/candi/cloud-providers/dynamix/openapi",
+		"/deckhouse/candi/cloud-providers/openstack/openapi",
+		"/deckhouse/candi/cloud-providers/openstack/openapi",
+		"/deckhouse/candi/cloud-providers/vcd/openapi",
+		"/deckhouse/candi/cloud-providers/gcp/openapi",
+		"/deckhouse/candi/cloud-providers/yandex/openapi",
+		"/deckhouse/candi/cloud-providers/aws/openapi",
+		"/deckhouse/candi/cloud-providers/azure/openapi",
+		"/deckhouse/candi/openapi/"})
+	_, err := schemaStore.Validate(conf)
+	return err
 }
 
 func applyOptions(opts ...ValidateOption) validateOptions {

@@ -25,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const d8Namespace = "d8-system"
@@ -45,7 +46,7 @@ func setLeaderLabelToPod(input *go_hook.HookInput, dc dependency.Container) erro
 
 	pods, err := client.CoreV1().Pods(d8Namespace).List(context.Background(), metav1.ListOptions{LabelSelector: "app=deckhouse"})
 	if err != nil {
-		input.Logger.Warnf("Error getting deckhouse pods: %s", err)
+		input.Logger.Warn("Error getting deckhouse pods", log.Err(err))
 		return nil
 	}
 
