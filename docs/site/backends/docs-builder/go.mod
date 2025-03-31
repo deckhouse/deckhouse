@@ -1,13 +1,15 @@
 module github.com/flant/docs-builder
 
-go 1.23
+go 1.23.1
+
+toolchain go1.24.0
 
 require (
 	github.com/bep/clocks v0.5.0
 	github.com/bep/lazycache v0.2.0
 	github.com/bep/logg v0.2.0
 	github.com/bep/overlayfs v0.6.0
-	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250130131024-4d287bfdbdbe
+	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250404113407-83e8e539d9ef
 	github.com/gohugoio/hugo v0.119.0
 	github.com/spf13/afero v1.9.5
 	github.com/spf13/fsync v0.9.0
