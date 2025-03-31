@@ -16,6 +16,7 @@
 
 bb-var BB_INSTALLED_PACKAGES_STORE "/var/cache/registrypackages"
 bb-var BB_FETCHED_PACKAGES_STORE "${TMPDIR}/registrypackages"
+bb-var BB_EXPORTED_IMAGE_STORE "/opt/deckhouse/images"
 
 # check if package installed
 # bb-package-is-installed? package digest
@@ -107,6 +108,15 @@ bb-package-fetch-blobs() {
   done
 }
 
+bb-image-fetch-blobs() {
+  local IMAGE_DIGEST
+  for IMAGE_DIGEST in "${!PACKAGES_MAP[@]}"; do
+    local PACKAGE_DIR="${BB_FETCHED_IMAGE_STORE}/${PACKAGES_MAP[$PACKAGE_DIGEST]}"
+    mkdir -p "${PACKAGE_DIR}"
+    bb-package-fetch-blob "${PACKAGE_DIGEST}" "${PACKAGE_DIR}/${PACKAGE_DIGEST}.tar"
+  done
+}
+
 # Unpack packages and run install script
 # bb-package-install package:digest
 bb-package-install() {
@@ -163,6 +173,49 @@ bb-package-install() {
   done
 }
 
+# Save image to local
+# bb-image-save package:digest
+bb-image-save() {
+  local IMAGE_WITH_DIGEST
+  for IMAGE_WITH_DIGEST in "$@"; do
+    local IMAGE=""
+    local DIGEST=""
+    IMAGE="$(awk -F ":" '{print $1}' <<< "${IMAGE_WITH_DIGEST}")"
+    DIGEST="$(awk -F ":" '{print $2":"$3}' <<< "${IMAGE_WITH_DIGEST}")"
+
+    if bb-package-is-installed? "${IMAGE}" "${DIGEST}"; then
+      bb-log-info "'${IMAGE_WITH_DIGEST}' image already installed"
+      continue
+    fi
+
+    if ! bb-package-is-fetched? "${IMAGE}" "${DIGEST}"; then
+      bb-log-info "'${IMAGE_WITH_DIGEST}' image not found locally"
+      bb-image-fetch "${IMAGE_WITH_DIGEST}"
+    fi
+
+    bb-log-info "Export image '${IMAGE}'"
+    local TMP_DIR=""
+    TMP_DIR="$(mktemp -d)"
+    trap '
+      rm -rf "${TMP_DIR}" "${BB_FETCHED_PACKAGES_STORE:?}/${PACKAGE}"
+      bb-log-error "Failed to unpack image "${PACKAGE}", it may be corrupted. The package will be refetched on the next attempt"
+    ' ERR
+    mv "${BB_FETCHED_PACKAGES_STORE}/${IMAGE}/${DIGEST}.tar" "${BB_EXPORTED_IMAGE_STORE}"
+    trap - ERR
+
+    # Write digest to hold file
+    mkdir -p "${BB_INSTALLED_PACKAGES_STORE}/${IMAGE}"
+    echo "${DIGEST}" > "${BB_INSTALLED_PACKAGES_STORE}/${IMAGE}/digest"
+
+    # Cleanup
+    rm -rf "${TMP_DIR}" "${BB_FETCHED_PACKAGES_STORE:?}/${IMAGE}"
+
+    bb-log-info "'${IMAGE}' image successfully saved"
+    bb-event-fire "bb-package-installed" "${IMAGE}"
+    trap - ERR
+  done
+}
+
 # Unpack package from module image and run install script
 # bb-package-module-install package:digest repository module_name
 # repository is like in appropriate ModuleConfig
@@ -213,6 +266,47 @@ bb-package-fetch() {
   bb-package-fetch-blobs PACKAGES_MAP
   trap - ERR
   bb-log-info "Packages saved under ${BB_FETCHED_PACKAGES_STORE}"
+}
+
+# Fetch image by digest
+# bb-image-fetch package1:digest1 [package2:digest2 ...]
+bb-image-fetch() {
+  bb-set-proxy
+  trap bb-unset-proxy RETURN
+  mkdir -p "${BB_FETCHED_PACKAGES_STORE}"
+
+  declare -A PACKAGES_MAP
+  local IMAGE_WITH_DIGEST
+  for IMAGE_WITH_DIGEST in "$@"; do
+    local IMAGE=""
+    local DIGEST=""
+    IMAGE="$(awk -F ":" '{print $1}' <<< "${IMAGE_WITH_DIGEST}")"
+    DIGEST="$(awk -F ":" '{print $2":"$3}' <<< "${IMAGE_WITH_DIGEST}")"
+
+    if bb-package-is-installed? "${IMAGE}" "${DIGEST}"; then
+      bb-log-info "'${IMAGE_WITH_DIGEST}' image already saved"
+      continue
+    fi
+
+    if bb-package-is-fetched? "${IMAGE}" "${DIGEST}"; then
+      bb-log-info "'${IMAGE_WITH_DIGEST}' image already fetched"
+      continue
+    fi
+
+    PACKAGES_MAP[$DIGEST]="${IMAGE}"
+  done
+
+  if [ "${#PACKAGES_MAP[@]}" -eq 0 ]; then
+    return 0
+  fi
+
+
+  bb-log-info "Fetching images: ${PACKAGES_MAP[*]}"
+  trap 'bb-log-error "Failed to fetch images"' ERR
+
+  bb-image-fetch-blobs PACKAGES_MAP
+  trap - ERR
+  bb-log-info "Images saved under ${BB_FETCHED_PACKAGES_STORE}"
 }
 
 # run uninstall script from hold dir
