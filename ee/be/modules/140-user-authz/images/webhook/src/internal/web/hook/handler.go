@@ -8,6 +8,7 @@ package hook
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"os"
@@ -166,6 +167,11 @@ func (h *Handler) authorizeClusterScopedRequest(request *WebhookRequest, entry *
 			var err error
 			apiVersion, err = h.cache.GetPreferredVersion(group, resource)
 			if err != nil {
+				// permit requests for an unknown (non-existent) group/resource to let the RBAC decide
+				if errors.Is(err, cache.ErrPreferredVersionNotFound) {
+					return request
+				}
+
 				// could not check whether resource is namespaced or not (from cache) - deny access
 				return h.fillDenyRequest(request, internalErrorReason, err.Error())
 			}
