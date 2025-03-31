@@ -1,8 +1,8 @@
 ## How to build static assets for hubble-ui-frontend
 
 ```
-# Based on https://github.com/cilium/cilium/blob/v1.14.14/install/kubernetes/cilium/values.yaml#L1375
-# and https://github.com/cilium/hubble-ui/blob/v0.13.1/Dockerfile
+# Based on https://github.com/cilium/cilium/blob/v1.17.2/install/kubernetes/cilium/values.yaml#L1732
+# and https://github.com/cilium/hubble-ui/blob/v0.13.2/Dockerfile
 ```
 
 Move to the folder containing the "deckhouse" repository.
@@ -22,7 +22,7 @@ ARG HUBBLE_UI_VERSION
 ENV SOURCE_REPO=${SOURCE_REPO} HUBBLE_UI_VERSION=${HUBBLE_UI_VERSION}
 ENV TARGETOS=linux TARGETARCH=amd64
 
-RUN apk add --no-cache git bash
+RUN apk add --no-cache make make git bash
 RUN mkdir -p /src && cd /src
 RUN --mount=type=ssh git clone --depth 1 --branch ${HUBBLE_UI_VERSION} ${SOURCE_REPO}/cilium/hubble-ui.git /src
 COPY patches/ /patches/
@@ -39,9 +39,9 @@ To build this Docker image, use the following commands:
 
 ```shell
 docker build \
---build-arg NODE_BASE_IMAGE=registry.deckhouse.io/base_images/node:20.11.0-alpine3.18 \
+--build-arg NODE_BASE_IMAGE=docker.io/library/node:22.13.1-alpine3.20 \
 --build-arg SOURCE_REPO=https://github.com \
---build-arg HUBBLE_UI_VERSION="v0.13.1" \
+--build-arg HUBBLE_UI_VERSION="v0.13.2" \
 -t hubble-ui-static-artifact \
 -f modules/500-cilium-hubble/images/ui/Dockerfile.static \
 modules/500-cilium-hubble/images/ui
