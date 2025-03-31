@@ -16,6 +16,7 @@ package config
 
 import (
 	"fmt"
+	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
 	"sigs.k8s.io/yaml"
 	"strings"
 )
@@ -37,7 +38,7 @@ var (
 		// "zvirt":       {},
 		// "dynamix":     {},
 	}
-	registryModesWithoutRegistryDataDeviceSupport = []string{RegistryModeDirect}
+	registryModesWithoutRegistryDataDeviceSupport = []registry_const.ModeType{registry_const.ModeDirect}
 )
 
 type ProviderSecondaryDevicesConfig struct {

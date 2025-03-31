@@ -15,7 +15,9 @@
 # Upload pki for system-registry
 
 
-{{- if and .registry.embeddedRegistryModuleMode (ne .registry.embeddedRegistryModuleMode "Direct") }}
+{{- if has .registry.mode (list "Proxy" "Detached") }}
+{{- $internalRegistryUserRO := .registry.bootstrap.internalRegistryPKI.userRO }}
+{{- $internalRegistryUserRW := .registry.bootstrap.internalRegistryPKI.userRW }}
 
 # Prepare vars
 registry_pki_path="/etc/kubernetes/system-registry/pki"
@@ -44,18 +46,18 @@ bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system label secret reg
 
 bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system delete secret registry-user-rw || true
 bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system create secret generic registry-user-rw \
-  --from-literal=name='{{- .registry.internalRegistryAccess.userRw.name }}' \
-  --from-literal=password='{{- .registry.internalRegistryAccess.userRw.password }}' \
-  --from-literal=passwordHash='{{- .registry.internalRegistryAccess.userRw.passwordHash }}' \
+  --from-literal=name='{{- $internalRegistryUserRW.name }}' \
+  --from-literal=password='{{- $internalRegistryUserRW.password }}' \
+  --from-literal=passwordHash='{{- $internalRegistryUserRW.passwordHash }}' \
   --type='system-registry/user'
 bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system label secret registry-user-rw \
   heritage=deckhouse module=embedded-registry type=system-registry-user
 
 bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system delete secret registry-user-ro || true
 bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system create secret generic registry-user-ro \
-  --from-literal=name='{{- .registry.internalRegistryAccess.userRo.name }}' \
-  --from-literal=password='{{- .registry.internalRegistryAccess.userRo.password }}' \
-  --from-literal=passwordHash='{{- .registry.internalRegistryAccess.userRo.passwordHash }}' \
+  --from-literal=name='{{- $internalRegistryUserRO.name }}' \
+  --from-literal=password='{{- $internalRegistryUserRO.password }}' \
+  --from-literal=passwordHash='{{- $internalRegistryUserRO.passwordHash }}' \
   --type='system-registry/user'
 bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system label secret registry-user-ro \
   heritage=deckhouse module=embedded-registry type=system-registry-user

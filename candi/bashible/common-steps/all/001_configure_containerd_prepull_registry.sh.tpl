@@ -17,13 +17,12 @@
 
 # PR: https://github.com/deckhouse/deckhouse/pull/11939
 #
-# Enabled by settings in /etc/containerd/config.toml:
+# Using by ctr:
 # ```
-# [plugins."io.containerd.grpc.v1.cri".registry]
-#   config_path = "/etc/containerd/registry.d"
+# ctr images pull --hosts-dir=/etc/containerd/registry_prepull.d
 # ```
 #
-# Example structure for /etc/containerd/registry.d:
+# Example structure for /etc/containerd/registry_prepull.d:
 # ```
 # .
 # ├── deckhouse_hosts_state.json
@@ -42,22 +41,22 @@
 
 discovered_node_ip="$(</var/lib/bashible/discovered-node-ip)"
 
-{{- range $host := .registry.hosts }}
+{{- range $host := .registry.prepullHosts }}
   {{- if not (has $host.host $exist_registry_host_list) }}
     {{- $exist_registry_host_list = append $exist_registry_host_list $host.host }}
   {{- end }}
 
-mkdir -p "/etc/containerd/registry.d/{{ $host.host }}"
+mkdir -p "/etc/containerd/registry_prepull.d/{{ $host.host }}"
   {{- $ca_files_path := list }}
   {{- range $index, $CA := $host.ca }}
-  {{- $ca_file_path := printf "/etc/containerd/registry.d/%s/ca_%d.crt" $host.host $index }}
+  {{- $ca_file_path := printf "/etc/containerd/registry_prepull.d/%s/ca_%d.crt" $host.host $index }}
   {{- $ca_files_path = append $ca_files_path $ca_file_path }}
 bb-sync-file {{ $ca_file_path | quote }} - << EOF
 {{ $CA }}
 EOF
   {{- end }}
 
-bb-sync-file "/etc/containerd/registry.d/{{ $host.host }}/hosts.toml" - << EOF
+bb-sync-file "/etc/containerd/registry_prepull.d/{{ $host.host }}/hosts.toml" - << EOF
 # Server specifies the default server for this registry host namespace.
 # When host(s) are specified, the hosts are tried first in the order listed.
 # https://github.com/containerd/containerd/blob/v1.7.24/docs/hosts.md#hoststoml-content-description---detail
@@ -98,18 +97,18 @@ EOF
       {{- $exist_registry_host_list = append $exist_registry_host_list $host }}
 
 # Sync module sources host.toml and ca.crt
-mkdir -p "/etc/containerd/registry.d/{{ $host }}"
-bb-sync-file "/etc/containerd/registry.d/{{ $host }}/ca.crt" - << EOF
+mkdir -p "/etc/containerd/registry_prepull.d/{{ $host }}"
+bb-sync-file "/etc/containerd/registry_prepull.d/{{ $host }}/ca.crt" - << EOF
 {{ $CA }}
 EOF
 
-bb-sync-file "/etc/containerd/registry.d/{{ $host }}/hosts.toml" - << EOF
+bb-sync-file "/etc/containerd/registry_prepull.d/{{ $host }}/hosts.toml" - << EOF
 # Server specifies the default server for this registry host namespace.
 # When host(s) are specified, the hosts are tried first in the order listed.
 # https://github.com/containerd/containerd/blob/v1.7.24/docs/hosts.md#hoststoml-content-description---detail
 
 server = {{ $host | quote }}
-ca = ["/etc/containerd/registry.d/{{ $host }}/ca.crt"]
+ca = ["/etc/containerd/registry_prepull.d/{{ $host }}/ca.crt"]
 
 [host]
 EOF
@@ -120,7 +119,7 @@ EOF
 
 
 # Manage old host directories and update state
-hosts_state_file="/etc/containerd/registry.d/deckhouse_hosts_state.json"
+hosts_state_file="/etc/containerd/registry_prepull.d/deckhouse_hosts_state.json"
 new_hosts='{{ $exist_registry_host_list | uniq | toJson }}'
 old_hosts="[]"
 if [[ -f "$hosts_state_file" ]]; then
@@ -130,7 +129,7 @@ fi
 # Remove old hosts
 echo "$old_hosts" | /opt/deckhouse/bin/jq -r --argjson new_hosts "$new_hosts" '
   .[] | select(. as $host | $new_hosts | index($host) | not)' | while IFS= read -r old_host; do
-  host_dir="/etc/containerd/registry.d/$old_host"
+  host_dir="/etc/containerd/registry_prepull.d/$old_host"
   if [[ -d "$host_dir" ]]; then
     rm -rf "$host_dir"
   fi

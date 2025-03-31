@@ -70,12 +70,15 @@ func (pc *Checker) CheckRegistryAccessThroughProxy(ctx context.Context) error {
 		return nil
 	}
 
-	registryData := pc.GetRegistryData()
+	registryData, err := pc.GetRegistryData()
+	if err != nil {
+		return err
+	}
 	if registryData == nil {
 		if _, isDetached := pc.metaConfig.Registry.IsDetached(); !isDetached {
-			return fmt.Errorf("Empty registry data for registry mode %s", pc.metaConfig.Registry.EmbeddedRegistryModuleMode())
+			return fmt.Errorf("Empty registry data for registry mode %s", pc.metaConfig.Registry.Mode())
 		}
-		log.DebugLn("Registry mode is %s, skipping check", pc.metaConfig.Registry.EmbeddedRegistryModuleMode())
+		log.DebugLn("Registry mode is %s, skipping check", pc.metaConfig.Registry.Mode())
 		return nil
 	}
 
@@ -157,12 +160,15 @@ func (pc *Checker) CheckRegistryCredentials(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, httpClientTimeoutSec*time.Second)
 	defer cancel()
 
-	registryData := pc.GetRegistryData()
+	registryData, err := pc.GetRegistryData()
+	if err != nil {
+		return err
+	}
 	if registryData == nil {
 		if _, isDetached := pc.metaConfig.Registry.IsDetached(); !isDetached {
-			return fmt.Errorf("Empty registry data for registry mode %s", pc.metaConfig.Registry.EmbeddedRegistryModuleMode())
+			return fmt.Errorf("Empty registry data for registry mode %s", pc.metaConfig.Registry.Mode())
 		}
-		log.DebugLn("Registry mode is %s, skipping check", pc.metaConfig.Registry.EmbeddedRegistryModuleMode())
+		log.DebugLn("Registry mode is %s, skipping check", pc.metaConfig.Registry.Mode())
 		return nil
 	}
 
@@ -174,15 +180,15 @@ func (pc *Checker) CheckRegistryCredentials(ctx context.Context) error {
 	return checkRegistryAuth(ctx, registryData, authData)
 }
 
-func (pc *Checker) GetRegistryData() *config.RegistryData {
-	switch pc.metaConfig.Registry.ModeSpecificFields.(type) {
+func (pc *Checker) GetRegistryData() (*config.RegistryData, error) {
+	switch modeSpecificFields := pc.metaConfig.Registry.ModeSpecificFields.(type) {
 	case config.DetachedModeRegistryData:
-		return nil
+		return nil, nil
 	case config.ProxyModeRegistryData:
-		modeSpecificFields := pc.metaConfig.Registry.ModeSpecificFields.(config.ProxyModeRegistryData)
-		return &modeSpecificFields.UpstreamRegistryData
+		registryData, err := modeSpecificFields.UpstreamRegistryData.ToRegistryData()
+		return &registryData, err
 	default:
-		return &pc.metaConfig.Registry.Data
+		return &pc.metaConfig.Registry.Data, nil
 	}
 }
 

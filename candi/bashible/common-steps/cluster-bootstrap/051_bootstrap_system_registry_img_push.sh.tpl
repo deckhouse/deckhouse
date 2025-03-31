@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if and .registry.embeddedRegistryModuleMode (eq .registry.embeddedRegistryModuleMode "Detached") }}
+{{- if eq .registry.mode "Detached" }}
 
 LOCK_FILE="/var/lib/bashible/wait_for_docker_img_push"
 

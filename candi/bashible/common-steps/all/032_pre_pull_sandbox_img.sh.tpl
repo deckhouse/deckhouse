@@ -12,73 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- $is_containerd_cri_and_embedded_registry := "" }}
-  {{- if eq $.cri "Containerd" }}
-    {{- if and $.registry.registryMode (ne $.registry.registryMode "Direct") }}
-      {{- $system_registry_address := $.systemRegistry.registryAddress | default "" }}
-      {{- if eq $.registry.address $system_registry_address }}
-        {{- $is_containerd_cri_and_embedded_registry = "true" }}
-      {{- end }}
-    {{- end }}
-  {{- end }}
+{{- if eq $.cri "Containerd" }}
 
-{{- $target_registry_address := $.registry.address }}
-
-{{- $sandbox_image_path := printf "%s@%s" $.registry.path (index $.images.common "pause") }}
-{{- $target_sandbox_image := printf "%s%s" $target_registry_address $sandbox_image_path }}
-
-{{- if $is_containerd_cri_and_embedded_registry }}
-
-# If embedded registry
-{{- $source_registry_port := "5001" }}
-{{- $source_registry_addresses := $.systemRegistry.addresses | join "," }}
-{{- $source_registry_user_and_password := "" }}
-{{- if $.registry.auth }}
-  {{- $source_registry_user_and_password = $.registry.auth | b64dec }}
-{{- end }}
-
-{{- if .registry.ca }}
-SOURCE_REGISTRY_CACERT_PATH="$(bb-tmp-file)"
-bb-sync-file $SOURCE_REGISTRY_CACERT_PATH - << "EOF"
-{{ .registry.ca }}
-EOF
-{{- end }}
-
-_pull_img_from_source_and_re_tag() {
-    local source_registry_image=$1
-    local target_registry_image=$2
-
-    /opt/deckhouse/bin/ctr \
-        --namespace=k8s.io \
-        images pull \
-        {{- if $source_registry_user_and_password }}
-        --user {{ $source_registry_user_and_password | quote }} \
-        {{- end }}
-        {{- if .registry.ca }}
-        --tlscacert $SOURCE_REGISTRY_CACERT_PATH \
-        {{- end }}
-        "$source_registry_image" || return 1
-    /opt/deckhouse/bin/ctr --namespace=k8s.io images tag "$source_registry_image" "$target_registry_image" || return 1
-    /opt/deckhouse/bin/ctr --namespace=k8s.io images rm "$source_registry_image" || return 1
-}
-
-_pull_img_from_several_sources_and_re_tag() {
-    local image_path=$1
-    local target_registry_address=$2
-    local source_registry_addresses=$3
-    local target_registry_image="${target_registry_address}${image_path}"
-
-    IFS=',' read -ra source_registry_addresses_list <<< "$source_registry_addresses"
-    for source_registry_address in "${source_registry_addresses_list[@]}"; do
-        local source_registry_image="${source_registry_address}${image_path}"
-        if _pull_img_from_source_and_re_tag "$source_registry_image" "$target_registry_image"; then
-            echo "The image '$target_registry_image' was correctly pulled from '$source_registry_image'"
-            return 0
-        fi
-    done
-    >&2 echo "Failed to pull image '$target_registry_image' using addresses '$source_registry_addresses'"
-    exit 1
-}
+{{- $sandbox_image := printf "%s@%s" .registry.imagesBase (index $.images.common "pause") }}
 
 _get_local_images_list() {
   repo_digests=$(/opt/deckhouse/bin/crictl images -o json | jq -r '.images[].repoDigests[]?')
@@ -86,22 +22,9 @@ _get_local_images_list() {
 }
 
 if [ "$FIRST_BASHIBLE_RUN" != "yes" ]; then
-  # Pre-pulling the image from the embedded registry if the image is not present on the machine.  
-  # The image is pulled from the following sources:  
-  # - Local embedded registry (localhost)  
-  # - Proxy embedded registry  
-  # - Addresses of neighboring master nodes
-  
-  discovered_node_ip="$(</var/lib/bashible/discovered-node-ip)"
-  list_of_local_imgs=$(_get_local_images_list)
-  target_registry_address={{ $target_registry_address | quote }}
-  source_registry_addresses="127.0.0.1:{{- $source_registry_port -}},$discovered_node_ip:{{- $source_registry_port -}}"
-  {{- if $source_registry_addresses }}
-  source_registry_addresses="$source_registry_addresses,{{- $source_registry_addresses -}}"
-  {{- end }}
-
-  if ! echo $list_of_local_imgs | grep -q {{ $target_sandbox_image | quote }}; then
-    _pull_img_from_several_sources_and_re_tag {{ $sandbox_image_path | quote }} $target_registry_address $source_registry_addresses
+  local_images_list=$(_get_local_images_list)
+  if ! echo $local_images_list | grep -q {{ $sandbox_image | quote }}; then
+    /opt/deckhouse/bin/ctr --namespace=k8s.io images pull --hosts-dir="/etc/containerd/registry_prepull.d" {{ $sandbox_image }}
   fi
 fi
 

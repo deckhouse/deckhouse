@@ -13,7 +13,6 @@
 # limitations under the License.
 
 mkdir -p /etc/kubernetes/kubernetes-api-proxy
-# Read previously discovered IP
 discovered_node_ip="$(</var/lib/bashible/discovered-node-ip)"
 
 bb-sync-file /etc/kubernetes/kubernetes-api-proxy/nginx_new.conf - << EOF
@@ -46,25 +45,16 @@ stream {
 {{- end }}
   }
 
-{{- if eq .runType "Normal" }}
-  {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
+{{- if gt (len .registry.proxyEndpoints) 0 }}
   upstream system-registry {
     least_conn;
-    {{- range $key, $value := .normal.apiserverEndpoints }}
-    {{ $parts := splitList ":" $value -}}
-    {{ $ip := index $parts 0 -}}
-    server {{ $ip }}:5001;
+    {{- range $proxy_endpoint := .registry.proxyEndpoints }}
+    server {{ $proxy_endpoint }};
     {{- end }}
   }
-  {{- end }}
- {{- else if eq .runType "ClusterBootstrap" }}
-  {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
-  upstream system-registry {
-    least_conn;
-    server ${discovered_node_ip}:5001;
-  }
-  {{- end }}
 {{- end }}
+
+
   server {
     listen 127.0.0.1:6445;
     proxy_pass kubernetes;
@@ -73,7 +63,8 @@ stream {
     proxy_timeout 24h;
     proxy_connect_timeout 1s;
   }
- {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
+
+{{- if gt (len .registry.proxyEndpoints) 0 }}
   server {
     listen 127.0.0.1:5001;
     proxy_pass system-registry;
@@ -82,6 +73,7 @@ stream {
     proxy_connect_timeout 1s;
   }
 {{- end }}
+
 }
 EOF
 

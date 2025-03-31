@@ -15,7 +15,7 @@
 rm -rf /var/lib/bashible/kubeadm
 bb-package-remove kubeadm
 
-{{- if and .registry.embeddedRegistryModuleMode (ne .registry.embeddedRegistryModuleMode "Direct") }}
+{{- if has .registry.mode (list "Proxy" "Detached") }}
 bb-package-remove dockerAuth dockerDistribution cfssl
 rm -rf $IGNITER_DIR
 {{- end }}

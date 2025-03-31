@@ -380,8 +380,8 @@ func pushDockerImagesToSystemRegistry(ctx context.Context, nodeInterface node.In
 	pushCtx := libmirrorCtx.PushContext{
 		BaseContext: libmirrorCtx.BaseContext{
 			RegistryAuth: authn.FromConfig(authn.AuthConfig{
-				Username: registryData.InternalRegistryAccess.UserRw.Name,
-				Password: registryData.InternalRegistryAccess.UserRw.Password,
+				Username: registryData.InternalRegistryPKI.UserRW.Name,
+				Password: registryData.InternalRegistryPKI.UserRW.Password,
 			}),
 			RegistryHost:        distributionHost,
 			RegistryPath:        registryData.RegistryPath,
@@ -498,19 +498,21 @@ func StartRegistryPackagesProxy(registryCfg config.Registry, clusterDomain strin
 	var client registry.Client
 	var err error
 
-	switch registryCfg.ModeSpecificFields.(type) {
+	switch modeSpecificFields := registryCfg.ModeSpecificFields.(type) {
 	case config.ProxyModeRegistryData:
 		client = &registry.DefaultClient{}
-		clientConfigGetter, err = newRegistryClientConfigGetter(
-			registryCfg.ModeSpecificFields.(config.ProxyModeRegistryData).UpstreamRegistryData,
-		)
+		registryData, err := modeSpecificFields.UpstreamRegistryData.ToRegistryData()
+		if err != nil {
+			return err
+		}
+		clientConfigGetter, err = newRegistryClientConfigGetter(registryData)
 		if err != nil {
 			return fmt.Errorf("Failed to create registry client for registry proxy: %v", err)
 		}
 	case config.DetachedModeRegistryData:
 		unpackedImagesPath, err := mirror.UnpackAndValidateImgBundle(
 			context.Background(),
-			registryCfg.ModeSpecificFields.(config.DetachedModeRegistryData).ImagesBundlePath,
+			modeSpecificFields.ImagesBundlePath,
 		)
 		if err != nil {
 			return fmt.Errorf("Failed to create registry client for registry proxy: %v", err)

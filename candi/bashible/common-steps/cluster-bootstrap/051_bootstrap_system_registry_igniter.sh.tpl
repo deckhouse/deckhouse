@@ -12,26 +12,43 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if and .registry.embeddedRegistryModuleMode (ne .registry.embeddedRegistryModuleMode "Direct") }}
+{{- $registryMode := .registry.mode }}
+{{- if has $registryMode (list "Proxy" "Detached") }}
 
-# Prepare UPSTREAM_REGISTRY vars for embeddedRegistryModuleMode == Proxy
-{{- if eq .registry.embeddedRegistryModuleMode "Proxy" }}
-UPSTREAM_REGISTRY_AUTH="$(base64 -d <<< "{{ .registry.upstreamRegistry.auth | default "" }}")"
-if [[ "$UPSTREAM_REGISTRY_AUTH" == *":"* ]]; then
-    export UPSTREAM_REGISTRY_LOGIN="$(echo "$UPSTREAM_REGISTRY_AUTH" | cut -d':' -f1)"
-    export UPSTREAM_REGISTRY_PASSWORD="$(echo "$UPSTREAM_REGISTRY_AUTH" | cut -d':' -f2)"
-else
-    export UPSTREAM_REGISTRY_LOGIN=""
-    export UPSTREAM_REGISTRY_PASSWORD=""
-fi
+# registry proxy mode data
+
+{{- $upstreamRegistryHost := "" }}
+{{- $upstreamRegistryPath := "" }}
+{{- $upstreamRegistryScheme := "" }}
+{{- $upstreamRegistryCACert := "" }}
+{{- $upstreamRegistryUserName := "" }}
+{{- $upstreamRegistryUserPassword := "" }}
+{{- $internalRegistryTTL := "" }}
+{{- if eq $registryMode "Proxy" }}
+  {{- $upstreamRegistryHost = .registry.bootstrap.upstreamRegistryData.address }}
+  {{- $upstreamRegistryPath = .registry.bootstrap.upstreamRegistryData.path }}
+  {{- $upstreamRegistryScheme = .registry.bootstrap.upstreamRegistryData.scheme }}
+  {{- with .registry.bootstrap.upstreamRegistryData.ca }}
+  {{- $upstreamRegistryCACert = . }}
+  {{- end }}
+  {{- $upstreamRegistryUserName = .registry.bootstrap.upstreamRegistryData.username }}
+  {{- $upstreamRegistryUserPassword = .registry.bootstrap.upstreamRegistryData.password }}
+  {{- $internalRegistryTTL = .registry.bootstrap.internalRegistryTTL }}
 {{- end }}
+
+# registry common data
+{{- $internalRegistryUserRO := .registry.bootstrap.internalRegistryPKI.userRO }}
+{{- $internalRegistryUserRW := .registry.bootstrap.internalRegistryPKI.userRW }}
+{{- $internalRegistryCACert := .registry.bootstrap.internalRegistryPKI.ca.cert }}
+{{- $internalRegistryCAKey := .registry.bootstrap.internalRegistryPKI.ca.key }}
+{{- $internalRegistryHost := .registry.bootstrap.internalRegistryData.address }}
+{{- $internalRegistryHostWithouPort :=  (splitList ":" $internalRegistryHost) | first }}
+{{- $internalRegistryPath := .registry.bootstrap.internalRegistryData.path }}
+{{- $internalRegistryScheme := .registry.bootstrap.upstreamRegistryData.scheme }}
+
 
 # Prepare vars
 discovered_node_ip="$(</var/lib/bashible/discovered-node-ip)"
-internal_registry_domain="{{ .registry.address }}"
-if [[ "$internal_registry_domain" == *":"* ]]; then
-    internal_registry_domain="$(echo "$internal_registry_domain" | cut -d':' -f1)"
-fi
 
 # Install igniter packages
 bb-package-install "dockerAuth:{{ .images.systemRegistry.dockerAuth }}" "dockerDistribution:{{ .images.systemRegistry.dockerDistribution }}" "cfssl:{{ .images.registrypackages.cfssl165 }}"
@@ -44,17 +61,17 @@ mkdir -p /opt/deckhouse/system-registry/local_data/
 
 # Prepare certs
 bb-sync-file "$IGNITER_DIR/ca.crt" - << EOF
-{{ .registry.internalRegistryAccess.ca.cert }}
+{{ $internalRegistryCACert }}
 EOF
 
 bb-sync-file "$IGNITER_DIR/ca.key" - << EOF
-{{ .registry.internalRegistryAccess.ca.key }}
+{{ $internalRegistryCAKey }}
 EOF
 
-{{- if eq .registry.embeddedRegistryModuleMode "Proxy" }}
-  {{- if .registry.upstreamRegistry.ca }}
+{{- if eq $registryMode "Proxy" }}
+  {{- if $upstreamRegistryCACert }}
 bb-sync-file "$IGNITER_DIR/upstream-registry-ca.crt" - << EOF
-{{ .registry.upstreamRegistry.ca }}
+{{ $upstreamRegistryCACert }}
 EOF
   {{- end }}
 {{- end }}
@@ -93,7 +110,7 @@ EOF
 
 client_server_csr_json=$(cat << EOF
 {
-  "hosts": ["127.0.0.1", "localhost", "${discovered_node_ip}", "${internal_registry_domain}"],
+  "hosts": ["127.0.0.1", "localhost", "${discovered_node_ip}", {{ $internalRegistryHostWithouPort | quote }}],
   "key": {"algo": "rsa", "size": 2048}
 }
 EOF
@@ -156,19 +173,19 @@ token:
 
 users:
   # Password is specified as a BCrypt hash. Use htpasswd -nB USERNAME to generate.
-  {{ .registry.internalRegistryAccess.userRw.name | quote }}:
-    password: "{{ .registry.internalRegistryAccess.userRw.passwordHash | replace "$" "\\$" }}"
-  {{ .registry.internalRegistryAccess.userRo.name | quote }}:
-    password: "{{ .registry.internalRegistryAccess.userRo.passwordHash | replace "$" "\\$" }}"
+  {{ $internalRegistryUserRW.name | quote }}:
+    password: "{{ $internalRegistryUserRW.passwordHash | replace "$" "\\$" }}"
+  {{ $internalRegistryUserRO.name | quote }}:
+    password: "{{ $internalRegistryUserRO.passwordHash | replace "$" "\\$" }}"
 
 acl:
-  - match: { account: {{ .registry.internalRegistryAccess.userRw.name | quote }} }
+  # Access is denied by default.
+  - match: { account: {{ $internalRegistryUserRW.name | quote }} }
     actions: [ "*" ]
     comment: "has full access"
-  - match: { account: {{ .registry.internalRegistryAccess.userRo.name | quote }} }
+  - match: { account: {{ $internalRegistryUserRO.name | quote }} }
     actions: ["pull"]
     comment: "has readonly access"
-  # Access is denied by default.
 EOF
 
 bb-sync-file "$IGNITER_DIR/distribution_config.yaml" - << EOF
@@ -187,33 +204,29 @@ storage:
     blobdescriptor: inmemory
 
 http:
-  addr: 0.0.0.0:5001
+  addr: "0.0.0.0:5001"
   prefix: /
   secret: asecretforlocaldevelopment
   debug:
-    addr: 127.0.0.1:5002
+    addr: "127.0.0.1:5002"
     prometheus:
       enabled: true
       path: /metrics
   tls:
     certificate: $IGNITER_DIR/distribution.crt
     key: $IGNITER_DIR/distribution.key
-#    clientcas:
-#      - $IGNITER_DIR/ca.crt
 
-{{- if eq .registry.embeddedRegistryModuleMode "Proxy" -}}
-{{- $scheme := .registry.upstreamRegistry.scheme | trimSuffix "/" | trimPrefix "/" -}}
-{{- $address := .registry.upstreamRegistry.address | trimSuffix "/" | trimPrefix "/" }}
+{{- if eq $registryMode "Proxy" }}
 proxy:
-  remoteurl: "{{ $scheme }}://{{ $address }}"
-  username: "$UPSTREAM_REGISTRY_LOGIN"
-  password: "$UPSTREAM_REGISTRY_PASSWORD"
-  remotepathonly: "{{ .registry.upstreamRegistry.path }}"
-  localpathalias: "{{ .registry.path }}"
-  {{- if .registry.upstreamRegistry.ca }}
+  remoteurl: "{{ $upstreamRegistryScheme }}://{{ $upstreamRegistryHost }}"
+  username: {{ $upstreamRegistryUserName | quote }}
+  password: {{ $upstreamRegistryUserPassword | quote }}
+  remotepathonly: {{ $upstreamRegistryPath | quote }}
+  localpathalias: {{ $internalRegistryPath | quote }}
+    {{- if $upstreamRegistryCACert }}
   ca: $IGNITER_DIR/upstream-registry-ca.crt
-  {{- end }}
-  ttl: "{{ .registry.ttl }}"
+    {{- end }}
+  ttl: {{ $internalRegistryTTL | quote }}
 {{- end }}
 
 auth:

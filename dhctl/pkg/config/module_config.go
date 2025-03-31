@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
 )
 
 const (
@@ -113,24 +114,20 @@ func CheckOrSetupSystemRegistryModuleConfig(cfg *DeckhouseInstaller) error {
 
 	switch modeSpecificFields := cfg.Registry.ModeSpecificFields.(type) {
 	case ProxyModeRegistryData:
-		user, password, err := modeSpecificFields.UpstreamRegistryData.GetUserNameAndPasswordFromAuth()
-		if err != nil {
-			return err
-		}
 		systemRegistryMC.Spec.Settings = SettingsValues{
-			"mode": RegistryModeProxy,
+			"mode": registry_const.ModeProxy,
 			"proxy": SettingsValues{
 				"imagesRepo": modeSpecificFields.UpstreamRegistryData.Address + modeSpecificFields.UpstreamRegistryData.Path,
-				"username":   user,
-				"password":   password,
+				"username":   modeSpecificFields.UpstreamRegistryData.Username,
+				"password":   modeSpecificFields.UpstreamRegistryData.Password,
 				"scheme":     modeSpecificFields.UpstreamRegistryData.Scheme,
 				"ca":         modeSpecificFields.UpstreamRegistryData.CA,
-				"ttl":        modeSpecificFields.TTL.String(),
+				"ttl":        modeSpecificFields.InternalRegistryTTL.String(),
 			},
 		}
 	case DetachedModeRegistryData:
 		systemRegistryMC.Spec.Settings = SettingsValues{
-			"mode": RegistryModeDetached,
+			"mode": registry_const.ModeDetached,
 		}
 	default:
 		// Remove moduleConfig systemRegistry if init_config.registry.mode != "Proxy" or "Detached"
@@ -140,7 +137,7 @@ func CheckOrSetupSystemRegistryModuleConfig(cfg *DeckhouseInstaller) error {
 				log.InfoF(
 					"Found enabled ModuleConfig for '%s', skipping creation, because registry mode is '%s'.\n",
 					systemRegistryModuleName,
-					cfg.Registry.EmbeddedRegistryModuleMode(),
+					cfg.Registry.Mode(),
 				)
 				cfg.ModuleConfigs = append(cfg.ModuleConfigs[:i], cfg.ModuleConfigs[i+1:]...)
 				return nil

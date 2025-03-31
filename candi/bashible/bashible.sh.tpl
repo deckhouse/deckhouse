@@ -189,12 +189,6 @@ function main() {
   export NODE_GROUP="{{ .nodeGroup.name }}"
   export TMPDIR="/opt/deckhouse/tmp"
   export RUN_TYPE="{{ .runType }}"
-{{- if .registry }}
-  export REGISTRY_ADDRESS="{{ .registry.address }}"
-  export SCHEME="{{ .registry.scheme }}"
-  export REGISTRY_PATH="{{ .registry.path }}"
-  export REGISTRY_AUTH="$(base64 -d <<< "{{ .registry.auth | default "" }}")"
-{{- end }}
 {{- if .packagesProxy }}
   export PACKAGES_PROXY_ADDRESSES="{{ .packagesProxy.addresses | join "," }}"
   export PACKAGES_PROXY_TOKEN="{{ .packagesProxy.token }}"
@@ -211,9 +205,7 @@ unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
   export D8_NODE_HOSTNAME=$(hostname)
 {{- end }}
 {{- if eq .runType "ClusterBootstrap" }}
-{{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
   export IGNITER_DIR="/opt/deckhouse/tmp/system_registry_igniter"
-{{- end }}
 {{- end }}
 
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
