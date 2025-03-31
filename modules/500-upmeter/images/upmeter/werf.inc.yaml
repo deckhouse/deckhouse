@@ -42,6 +42,17 @@ shell:
   - chown 64535:64535 /migrate /upmeter
   - chmod 0700 /migrate /upmeter
 ---
+image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+fromImage: common/relocate-artifact
+final: false
+shell:
+  install:
+  - |
+    /binary_replace.sh -i "\
+      /bin/sh \
+      /bin/df \
+      " -o /relocate
+---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
@@ -61,3 +72,9 @@ import:
   add: /upmeter
   to: /upmeter
   before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+  add: /relocate
+  to: /
+  before: setup
+  includePaths:
+  - '**/*'
