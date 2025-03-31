@@ -530,7 +530,6 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
-          exit 0
           ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
@@ -703,7 +702,6 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          exit 0
           ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
@@ -1087,7 +1085,6 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
-          exit 0
           ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
@@ -1260,7 +1257,6 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          exit 0
           ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
@@ -1644,7 +1640,6 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
-          exit 0
           ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
@@ -1817,7 +1812,6 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          exit 0
           ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
@@ -2201,7 +2195,6 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
-          exit 0
           ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
@@ -2374,7 +2367,6 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          exit 0
           ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
@@ -2758,7 +2750,6 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
-          exit 0
           ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
@@ -2931,7 +2922,6 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          exit 0
           ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
@@ -3315,7 +3305,6 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
-          exit 0
           ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
@@ -3488,7 +3477,6 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          exit 0
           ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
