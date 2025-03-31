@@ -15,6 +15,7 @@
 package preflight
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -33,7 +34,7 @@ const (
 	reservedMemoryThresholdMB = 512
 )
 
-func (pc *Checker) CheckCloudMasterNodeSystemRequirements() error {
+func (pc *Checker) CheckCloudMasterNodeSystemRequirements(_ context.Context) error {
 	if app.PreflightSkipSystemRequirementsCheck {
 		log.DebugLn("System requirements check is skipped")
 		return nil

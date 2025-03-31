@@ -36,7 +36,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(doDiscover))
 
 func filter(arr []vsphere.ZonedDataStore, cond func(vsphere.ZonedDataStore) bool) []vsphere.ZonedDataStore {
-	var result []vsphere.ZonedDataStore
+	result := []vsphere.ZonedDataStore{}
 	for _, x := range arr {
 		if cond(x) {
 			result = append(result, x)
@@ -50,6 +50,8 @@ func doDiscover(input *go_hook.HookInput, dc dependency.Container) error {
 	if !ok {
 		return fmt.Errorf("no providerClusterConfiguration present, discovery is not possible")
 	}
+
+	storageClasses := []vsphere.ZonedDataStore{}
 
 	var c v1.VsphereProviderClusterConfiguration
 	err := json.Unmarshal([]byte(configJSON.String()), &c)
@@ -83,7 +85,9 @@ func doDiscover(input *go_hook.HookInput, dc dependency.Container) error {
 		Zones:      output.Zones,
 	})
 
-	storageClasses := output.ZonedDataStores
+	if output.ZonedDataStores != nil {
+		storageClasses = output.ZonedDataStores
+	}
 
 	if exclude, ok := input.Values.GetOk("cloudProviderVsphere.storageClass.exclude"); ok {
 		var excludes []string

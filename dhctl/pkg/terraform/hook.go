@@ -14,15 +14,17 @@
 
 package terraform
 
+import "context"
+
 type InfraActionHook interface {
-	BeforeAction(RunnerInterface) (runAfterAction bool, err error)
+	BeforeAction(context.Context, RunnerInterface) (runAfterAction bool, err error)
 	IsReady() error
-	AfterAction(RunnerInterface) error
+	AfterAction(context.Context, RunnerInterface) error
 }
 
 type DummyHook struct{}
 
-func (c *DummyHook) BeforeAction(RunnerInterface) (runPostAction bool, err error) {
+func (c *DummyHook) BeforeAction(context.Context, RunnerInterface) (runPostAction bool, err error) {
 	return false, nil
 }
 
@@ -30,6 +32,6 @@ func (c *DummyHook) IsReady() error {
 	return nil
 }
 
-func (c *DummyHook) AfterAction(RunnerInterface) error {
+func (c *DummyHook) AfterAction(context.Context, RunnerInterface) error {
 	return nil
 }

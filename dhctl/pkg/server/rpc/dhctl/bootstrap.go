@@ -44,7 +44,8 @@ import (
 )
 
 func (s *Service) Bootstrap(server pb.DHCTL_BootstrapServer) error {
-	ctx := operationCtx(server)
+	ctx, cancel := operationCtx(server)
+	defer cancel()
 
 	logger.L(ctx).Info("started")
 
@@ -91,7 +92,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.bootstrapSafe(ctx, message.Start, phaseSwitcher.switchPhase, logWriter)
+					result := s.bootstrapSafe(ctx, message.Start, phaseSwitcher.switchPhase(ctx), logWriter)
 					sendCh <- &pb.BootstrapResponse{Message: &pb.BootstrapResponse_Result{Result: result}}
 				}()
 
@@ -112,6 +113,9 @@ connectionProcessor:
 				case pb.Continue_CONTINUE_ERROR:
 					phaseSwitcher.next <- errors.New(message.Continue.Err)
 				}
+
+			case *pb.BootstrapRequest_Cancel:
+				cancel()
 
 			default:
 				logger.L(ctx).Error("got unprocessable message",
@@ -138,7 +142,7 @@ func (s *Service) bootstrapSafe(
 }
 
 func (s *Service) bootstrap(
-	_ context.Context,
+	ctx context.Context,
 	request *pb.BootstrapStart,
 	switchPhase phases.DefaultOnPhaseFunc,
 	logWriter io.Writer,
@@ -267,7 +271,7 @@ func (s *Service) bootstrap(
 		KubernetesInitParams:       nil,
 	})
 
-	bootstrapErr := bootstrapper.Bootstrap()
+	bootstrapErr := bootstrapper.Bootstrap(ctx)
 	state := bootstrapper.GetLastState()
 	stateData, marshalErr := json.Marshal(state)
 	err = errors.Join(bootstrapErr, marshalErr)

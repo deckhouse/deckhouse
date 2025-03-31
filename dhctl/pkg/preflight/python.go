@@ -15,6 +15,7 @@
 package preflight
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os/exec"
@@ -25,13 +26,13 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 )
 
-func (pc *Checker) CheckPythonAndItsModules() error {
+func (pc *Checker) CheckPythonAndItsModules(ctx context.Context) error {
 	if app.PreflightSkipPythonChecks {
 		log.InfoLn("Python installation preflight check was skipped")
 		return nil
 	}
 
-	pythonBinary, err := detectPythonBinary(pc.nodeInterface)
+	pythonBinary, err := detectPythonBinary(ctx, pc.nodeInterface)
 	if err != nil {
 		return fmt.Errorf("Detect Python binary name: %w", err)
 	}
@@ -49,7 +50,7 @@ func (pc *Checker) CheckPythonAndItsModules() error {
 		atLeastOneModuleFoundForSet := false
 		for _, moduleName := range moduleSet {
 			cmd := pc.nodeInterface.Command(pythonBinary, "-c", "import "+moduleName)
-			err := cmd.Run()
+			err := cmd.Run(ctx)
 			if err != nil {
 				var ee *exec.ExitError
 				if errors.As(err, &ee) && ee.ExitCode() != 255 {
@@ -75,10 +76,10 @@ func (pc *Checker) CheckPythonAndItsModules() error {
 	return nil
 }
 
-func detectPythonBinary(sshCl node.Interface) (string, error) {
+func detectPythonBinary(ctx context.Context, sshCl node.Interface) (string, error) {
 	possibleBinaries := []string{"python3", "python2", "python"}
 	for _, binary := range possibleBinaries {
-		err := sshCl.Command("command", "-v", binary).Run()
+		err := sshCl.Command("command", "-v", binary).Run(ctx)
 		if err == nil {
 			return binary, nil
 		}

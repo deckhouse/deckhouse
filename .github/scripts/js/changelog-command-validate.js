@@ -30,7 +30,7 @@ module.exports = async ({ github, core, context }) => {
     return;
   }
 
-  return issue.milestone && issue.milestone.status == 'open';
+  return issue.milestone;
 };
 
 function validate(issue) {
@@ -41,10 +41,5 @@ function validate(issue) {
   if (!issue.milestone) {
     return 'No milestone, skip.';
   }
-
-  if (issue.milestone.state != 'open') {
-    return `Milestone ${issue.milestone.title} is not open.`;
-  }
-
   return '';
 }

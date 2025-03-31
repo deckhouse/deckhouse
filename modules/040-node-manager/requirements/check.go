@@ -17,9 +17,7 @@ limitations under the License.
 package requirements
 
 import (
-	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/Masterminds/semver/v3"
 
@@ -31,8 +29,6 @@ const (
 	minDebianVersionValuesKey = "nodeManager:nodesMinimalOSVersionDebian"
 	requirementsUbuntuKey     = "nodesMinimalOSVersionUbuntu"
 	requirementsDebianKey     = "nodesMinimalOSVersionDebian"
-	containerdRequirementsKey = "containerdOnAllNodes"
-	hasNodesWithDocker        = "nodeManager:hasNodesWithDocker"
 )
 
 func init() {
@@ -44,26 +40,8 @@ func init() {
 		return baseFuncMinVerOS(requirementValue, getter, "Debian")
 	}
 
-	checkContainerdRequirementFunc := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
-		requirementValue = strings.TrimSpace(requirementValue)
-		if requirementValue == "false" || requirementValue == "" {
-			return true, nil
-		}
-
-		hasDocker, exists := getter.Get(hasNodesWithDocker)
-		if !exists {
-			return true, nil
-		}
-
-		if hasDocker.(bool) {
-			return false, errors.New("has nodes with Docker CRI or defaultCRI is Docker")
-		}
-
-		return true, nil
-	}
 	requirements.RegisterCheck(requirementsUbuntuKey, checkRequirementUbuntuFunc)
 	requirements.RegisterCheck(requirementsDebianKey, checkRequirementDebianFunc)
-	requirements.RegisterCheck(containerdRequirementsKey, checkContainerdRequirementFunc)
 }
 
 func baseFuncMinVerOS(requirementValue string, getter requirements.ValueGetter, osImage string) (bool, error) {
