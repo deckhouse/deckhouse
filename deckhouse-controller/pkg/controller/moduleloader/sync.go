@@ -286,17 +286,16 @@ func (l *Loader) restoreAbsentModulesFromReleases(ctx context.Context) error {
 				return fmt.Errorf("get '%s' module: %w", release.Spec.ModuleName, err)
 			}
 			l.logger.Warn("module is missing, skip setting version", slog.String("name", release.Spec.ModuleName))
-			continue
-		}
+		} else {
+			l.logger.Debug("set module version", slog.String("name", release.GetModuleName()), slog.String("version", release.GetModuleVersion()))
 
-		l.logger.Debug("set module version", slog.String("name", release.GetModuleName()), slog.String("version", release.GetModuleVersion()))
-
-		err = ctrlutils.UpdateWithRetry(ctx, l.client, module, func() error {
-			module.Properties.Version = release.GetModuleVersion()
-			return nil
-		})
-		if err != nil {
-			return fmt.Errorf("update the '%s' module: %w", release.GetModuleName(), err)
+			err = ctrlutils.UpdateWithRetry(ctx, l.client, module, func() error {
+				module.Properties.Version = release.GetModuleVersion()
+				return nil
+			})
+			if err != nil {
+				return fmt.Errorf("update the '%s' module: %w", release.GetModuleName(), err)
+			}
 		}
 
 		// get relevant module source
