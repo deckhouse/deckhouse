@@ -73,7 +73,7 @@
   {{- $resourceName := index . 1 }}  {{- /* Dashboard name */ -}}
   {{- $folder := index . 2 }}        {{- /* Folder */ -}}
   {{- $definition := index . 3 }}    {{/* Dashboard definition */}}
-  {{- $propagated := contains $resourceName "-propagated-" }}
+  {{- $propagated := contains "-propagated-" $resourceName }}
   {{- $resourceName = $resourceName | replace "-propagated-" "-" }}
 ---
 apiVersion: deckhouse.io/v1
