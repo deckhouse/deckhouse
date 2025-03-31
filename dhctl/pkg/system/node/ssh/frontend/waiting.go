@@ -80,7 +80,7 @@ func (c *Check) CheckAvailability(ctx context.Context) error {
 
 func (c *Check) ExpectAvailable(ctx context.Context) ([]byte, error) {
 	cmd := NewCommand(c.Session, "echo SUCCESS")
-	cmd.Cmd()
+	cmd.Cmd(ctx)
 	output, err := cmd.CombinedOutput(ctx)
 	if err != nil {
 		return output, err
