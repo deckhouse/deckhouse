@@ -28,7 +28,7 @@ type servicesManager struct {
 	settings AppSettings
 }
 
-func (manager *servicesManager) applyConfig(config NodeServicesConfigModel) (changes ChangesModel, err error) {
+func (manager *servicesManager) applyConfig(config NodeServicesConfigModel) (changes changesModel, err error) {
 	// Lock to prevent concurrent config changes
 	manager.m.Lock()
 	defer manager.m.Unlock()
@@ -37,7 +37,7 @@ func (manager *servicesManager) applyConfig(config NodeServicesConfigModel) (cha
 		Config:  config.Config,
 		Version: config.Version,
 		Address: manager.settings.HostIP,
-		Images: Images{
+		Images: images{
 			Distribution: manager.settings.ImageDistribution,
 			Auth:         manager.settings.ImageAuth,
 			Mirrorer:     manager.settings.ImageMirrorer,
@@ -48,7 +48,7 @@ func (manager *servicesManager) applyConfig(config NodeServicesConfigModel) (cha
 	var hash string
 
 	// Sync the PKI files
-	if changes.PKI, hash, err = model.PKI.syncPKIFiles(
+	if changes.PKI, hash, err = model.syncPKIFiles(
 		pkiConfigDirectoryPath,
 	); err != nil {
 		err = fmt.Errorf("error saving PKI files: %w", err)
@@ -109,7 +109,7 @@ func (manager *servicesManager) applyConfig(config NodeServicesConfigModel) (cha
 	return
 }
 
-func (manager *servicesManager) StopServices() (changes ChangesModel, err error) {
+func (manager *servicesManager) StopServices() (changes changesModel, err error) {
 	// Lock to prevent concurrent config changes
 	manager.m.Lock()
 	defer manager.m.Unlock()

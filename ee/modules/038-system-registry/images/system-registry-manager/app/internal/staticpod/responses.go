@@ -61,7 +61,7 @@ func ErrBadRequest(err error) render.Renderer {
 
 // changesReponse wraps ChangesModel
 type changesReponse struct {
-	ChangesModel
+	changesModel
 }
 
 func (c changesReponse) Render(w http.ResponseWriter, r *http.Request) error {

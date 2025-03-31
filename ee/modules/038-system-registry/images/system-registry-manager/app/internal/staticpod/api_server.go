@@ -103,16 +103,12 @@ func (api *apiServer) handlePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if changes.HasChanges() {
-		log.Info(
-			"Services configuration created/updated successfully",
-			"changes", changes,
-		)
-	} else {
-		log.Info("No changes in services configuration")
-	}
+	log.Info(
+		"Services configuration created/updated successfully",
+		"changes", changes,
+	)
 
-	if err = render.Render(w, r, changesReponse{ChangesModel: changes}); err != nil {
+	if err = render.Render(w, r, changesReponse{changesModel: changes}); err != nil {
 		log.Error("Cannot render services configuration response", "error", err)
 		render.Render(w, r, ErrInternalError(err))
 		return
@@ -134,16 +130,12 @@ func (api *apiServer) handleDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if changes.HasChanges() {
-		log.Info(
-			"All services are stopped successfully",
-			"changes", changes,
-		)
-	} else {
-		log.Info("No services need to be stopped")
-	}
+	log.Info(
+		"All services are stopped successfully",
+		"changes", changes,
+	)
 
-	if err = render.Render(w, r, changesReponse{ChangesModel: changes}); err != nil {
+	if err = render.Render(w, r, changesReponse{changesModel: changes}); err != nil {
 		log.Error("Cannot render services stop response", "error", err)
 		render.Render(w, r, ErrInternalError(err))
 		return
