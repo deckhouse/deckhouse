@@ -41,3 +41,8 @@ Remove CRD check of `BroadcastJob` and `ImagePullJob`. We don't need them for Da
 ### 007-fix-informer.patch
 
 Addopts multi-namespace cache instead of using sharedindexinformer for getting necessary listers, as controller-runtime since v0.15.0+ doesn't provide sharedindexinformers for namespaced caches anymore, breaking openkruise logic https://github.com/openkruise/kruise/issues/1764.
+
+### 008-fix-ads-validation.patch
+
+This patch update kruise controller's validation handler in a way that it becomes possible to update .spec.replicas field in AdvacnedDaemonSet manifests.
+Without it, applying updates to a new AdvancedDaemonSet manifest might fail with the error: "admission webhook "vdaemonset.kb.io" denied the request: spec: Forbidden: updates to daemonset spec for fields other than 'BurstReplicas', 'template', 'lifecycle',  'updateStrategy', 'minReadySeconds', and 'revisionHistoryLimit' are forbidden"

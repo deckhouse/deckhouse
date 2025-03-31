@@ -1,0 +1,18 @@
+diff --git a/pkg/webhook/daemonset/validating/daemonset_create_update_handler.go b/pkg/webhook/daemonset/validating/daemonset_create_update_handler.go
+index 2a269f52..912790ef 100644
+--- a/pkg/webhook/daemonset/validating/daemonset_create_update_handler.go
++++ b/pkg/webhook/daemonset/validating/daemonset_create_update_handler.go
+@@ -49,11 +49,12 @@ func (h *DaemonSetCreateUpdateHandler) validateDaemonSetUpdate(ds, oldDs *appsv1
+ 	daemonset.Spec.UpdateStrategy = oldDs.Spec.UpdateStrategy
+ 	daemonset.Spec.Lifecycle = oldDs.Spec.Lifecycle
+ 	daemonset.Spec.BurstReplicas = oldDs.Spec.BurstReplicas
++	daemonset.Spec.Replicas = oldDs.Spec.Replicas
+ 	daemonset.Spec.MinReadySeconds = oldDs.Spec.MinReadySeconds
+ 	daemonset.Spec.RevisionHistoryLimit = oldDs.Spec.RevisionHistoryLimit
+ 
+ 	if !apiequality.Semantic.DeepEqual(daemonset.Spec, oldDs.Spec) {
+-		allErrs = append(allErrs, field.Forbidden(field.NewPath("spec"), "updates to daemonset spec for fields other than 'BurstReplicas', 'template', 'lifecycle',  'updateStrategy', 'minReadySeconds', and 'revisionHistoryLimit' are forbidden"))
++		allErrs = append(allErrs, field.Forbidden(field.NewPath("spec"), "updates to daemonset spec for fields other than 'BurstReplicas', 'Replicas', 'template', 'lifecycle',  'updateStrategy', 'minReadySeconds', and 'revisionHistoryLimit' are forbidden"))
+ 	}
+ 	allErrs = append(allErrs, validateDaemonSetSpec(&ds.Spec, field.NewPath("spec"))...)
+ 	return allErrs
