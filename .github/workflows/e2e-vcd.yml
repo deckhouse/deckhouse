@@ -521,6 +521,7 @@ jobs:
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
+            exit 0
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -617,6 +618,66 @@ jobs:
           number: ${{ needs.git_info.outputs.pr_number }}
           labels: "e2e/cluster/failed"
 
+      - name: Check pause label
+        uses: actions/github-script@v6.4.1
+        env:
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+        with:
+          script: |
+            const github = require('@actions/github');
+            const core = require('@actions/core');
+
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const prNumber = process.env.CI_COMMIT_REF_SLUG;
+            const maxWaitTimeMinutes = 20;
+            const startTime = Date.now();
+
+            const octokit = github.getOctokit(process.env.GITHUB_TOKEN);
+
+            async function checkLabel() {
+              try {
+                const { data: pullRequest } = await octokit.rest.pulls.get({
+                  owner,
+                  repo,
+                  pull_number: parseInt(prNumber),
+                });
+
+                const labels = pullRequest.labels.map(label => label.name);
+
+                if (!labels.includes('e2e/pause')) {
+                  core.info('Label "e2e/pause" has been removed. Continuing...');
+                  return true; // Label removed
+                } else {
+                  return false; // Label still present
+                }
+
+              } catch (error) {
+                core.setFailed(`Failed to get PR information: ${error}`);
+                return true; // Treat error as label removed to avoid infinite loop (but job will fail)
+              }
+            }
+
+            async function waitForLabelRemoval() {
+              while (true) {
+                const labelRemoved = await checkLabel();
+                if (labelRemoved) {
+                  return; // Exit the loop
+                }
+
+                const elapsedTimeMinutes = (Date.now() - startTime) / (1000 * 60);
+                if (elapsedTimeMinutes >= maxWaitTimeMinutes) {
+                  core.setFailed(`Timeout: Waited ${maxWaitTimeMinutes} minutes for 'e2e/pause' label to be removed.`);
+                  return; // Exit the loop and fail the job
+                }
+
+                core.info('Label "e2e/pause" still present.  Waiting 60 seconds...');
+                await new Promise(resolve => setTimeout(resolve, 60000)); // Wait 60 seconds
+              }
+            }
+
+            await waitForLabelRemoval();
+
       - name: Cleanup bootstrapped cluster
         if: inputs.autodelete||success()
         id: cleanup_cluster
@@ -646,6 +707,7 @@ jobs:
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+            exit 0
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -1036,6 +1098,7 @@ jobs:
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
+            exit 0
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -1132,6 +1195,66 @@ jobs:
           number: ${{ needs.git_info.outputs.pr_number }}
           labels: "e2e/cluster/failed"
 
+      - name: Check pause label
+        uses: actions/github-script@v6.4.1
+        env:
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+        with:
+          script: |
+            const github = require('@actions/github');
+            const core = require('@actions/core');
+
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const prNumber = process.env.CI_COMMIT_REF_SLUG;
+            const maxWaitTimeMinutes = 20;
+            const startTime = Date.now();
+
+            const octokit = github.getOctokit(process.env.GITHUB_TOKEN);
+
+            async function checkLabel() {
+              try {
+                const { data: pullRequest } = await octokit.rest.pulls.get({
+                  owner,
+                  repo,
+                  pull_number: parseInt(prNumber),
+                });
+
+                const labels = pullRequest.labels.map(label => label.name);
+
+                if (!labels.includes('e2e/pause')) {
+                  core.info('Label "e2e/pause" has been removed. Continuing...');
+                  return true; // Label removed
+                } else {
+                  return false; // Label still present
+                }
+
+              } catch (error) {
+                core.setFailed(`Failed to get PR information: ${error}`);
+                return true; // Treat error as label removed to avoid infinite loop (but job will fail)
+              }
+            }
+
+            async function waitForLabelRemoval() {
+              while (true) {
+                const labelRemoved = await checkLabel();
+                if (labelRemoved) {
+                  return; // Exit the loop
+                }
+
+                const elapsedTimeMinutes = (Date.now() - startTime) / (1000 * 60);
+                if (elapsedTimeMinutes >= maxWaitTimeMinutes) {
+                  core.setFailed(`Timeout: Waited ${maxWaitTimeMinutes} minutes for 'e2e/pause' label to be removed.`);
+                  return; // Exit the loop and fail the job
+                }
+
+                core.info('Label "e2e/pause" still present.  Waiting 60 seconds...');
+                await new Promise(resolve => setTimeout(resolve, 60000)); // Wait 60 seconds
+              }
+            }
+
+            await waitForLabelRemoval();
+
       - name: Cleanup bootstrapped cluster
         if: inputs.autodelete||success()
         id: cleanup_cluster
@@ -1161,6 +1284,7 @@ jobs:
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+            exit 0
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -1551,6 +1675,7 @@ jobs:
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
+            exit 0
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -1647,6 +1772,66 @@ jobs:
           number: ${{ needs.git_info.outputs.pr_number }}
           labels: "e2e/cluster/failed"
 
+      - name: Check pause label
+        uses: actions/github-script@v6.4.1
+        env:
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+        with:
+          script: |
+            const github = require('@actions/github');
+            const core = require('@actions/core');
+
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const prNumber = process.env.CI_COMMIT_REF_SLUG;
+            const maxWaitTimeMinutes = 20;
+            const startTime = Date.now();
+
+            const octokit = github.getOctokit(process.env.GITHUB_TOKEN);
+
+            async function checkLabel() {
+              try {
+                const { data: pullRequest } = await octokit.rest.pulls.get({
+                  owner,
+                  repo,
+                  pull_number: parseInt(prNumber),
+                });
+
+                const labels = pullRequest.labels.map(label => label.name);
+
+                if (!labels.includes('e2e/pause')) {
+                  core.info('Label "e2e/pause" has been removed. Continuing...');
+                  return true; // Label removed
+                } else {
+                  return false; // Label still present
+                }
+
+              } catch (error) {
+                core.setFailed(`Failed to get PR information: ${error}`);
+                return true; // Treat error as label removed to avoid infinite loop (but job will fail)
+              }
+            }
+
+            async function waitForLabelRemoval() {
+              while (true) {
+                const labelRemoved = await checkLabel();
+                if (labelRemoved) {
+                  return; // Exit the loop
+                }
+
+                const elapsedTimeMinutes = (Date.now() - startTime) / (1000 * 60);
+                if (elapsedTimeMinutes >= maxWaitTimeMinutes) {
+                  core.setFailed(`Timeout: Waited ${maxWaitTimeMinutes} minutes for 'e2e/pause' label to be removed.`);
+                  return; // Exit the loop and fail the job
+                }
+
+                core.info('Label "e2e/pause" still present.  Waiting 60 seconds...');
+                await new Promise(resolve => setTimeout(resolve, 60000)); // Wait 60 seconds
+              }
+            }
+
+            await waitForLabelRemoval();
+
       - name: Cleanup bootstrapped cluster
         if: inputs.autodelete||success()
         id: cleanup_cluster
@@ -1676,6 +1861,7 @@ jobs:
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+            exit 0
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -2066,6 +2252,7 @@ jobs:
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
+            exit 0
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -2162,6 +2349,66 @@ jobs:
           number: ${{ needs.git_info.outputs.pr_number }}
           labels: "e2e/cluster/failed"
 
+      - name: Check pause label
+        uses: actions/github-script@v6.4.1
+        env:
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+        with:
+          script: |
+            const github = require('@actions/github');
+            const core = require('@actions/core');
+
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const prNumber = process.env.CI_COMMIT_REF_SLUG;
+            const maxWaitTimeMinutes = 20;
+            const startTime = Date.now();
+
+            const octokit = github.getOctokit(process.env.GITHUB_TOKEN);
+
+            async function checkLabel() {
+              try {
+                const { data: pullRequest } = await octokit.rest.pulls.get({
+                  owner,
+                  repo,
+                  pull_number: parseInt(prNumber),
+                });
+
+                const labels = pullRequest.labels.map(label => label.name);
+
+                if (!labels.includes('e2e/pause')) {
+                  core.info('Label "e2e/pause" has been removed. Continuing...');
+                  return true; // Label removed
+                } else {
+                  return false; // Label still present
+                }
+
+              } catch (error) {
+                core.setFailed(`Failed to get PR information: ${error}`);
+                return true; // Treat error as label removed to avoid infinite loop (but job will fail)
+              }
+            }
+
+            async function waitForLabelRemoval() {
+              while (true) {
+                const labelRemoved = await checkLabel();
+                if (labelRemoved) {
+                  return; // Exit the loop
+                }
+
+                const elapsedTimeMinutes = (Date.now() - startTime) / (1000 * 60);
+                if (elapsedTimeMinutes >= maxWaitTimeMinutes) {
+                  core.setFailed(`Timeout: Waited ${maxWaitTimeMinutes} minutes for 'e2e/pause' label to be removed.`);
+                  return; // Exit the loop and fail the job
+                }
+
+                core.info('Label "e2e/pause" still present.  Waiting 60 seconds...');
+                await new Promise(resolve => setTimeout(resolve, 60000)); // Wait 60 seconds
+              }
+            }
+
+            await waitForLabelRemoval();
+
       - name: Cleanup bootstrapped cluster
         if: inputs.autodelete||success()
         id: cleanup_cluster
@@ -2191,6 +2438,7 @@ jobs:
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+            exit 0
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -2581,6 +2829,7 @@ jobs:
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
+            exit 0
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -2677,6 +2926,66 @@ jobs:
           number: ${{ needs.git_info.outputs.pr_number }}
           labels: "e2e/cluster/failed"
 
+      - name: Check pause label
+        uses: actions/github-script@v6.4.1
+        env:
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+        with:
+          script: |
+            const github = require('@actions/github');
+            const core = require('@actions/core');
+
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const prNumber = process.env.CI_COMMIT_REF_SLUG;
+            const maxWaitTimeMinutes = 20;
+            const startTime = Date.now();
+
+            const octokit = github.getOctokit(process.env.GITHUB_TOKEN);
+
+            async function checkLabel() {
+              try {
+                const { data: pullRequest } = await octokit.rest.pulls.get({
+                  owner,
+                  repo,
+                  pull_number: parseInt(prNumber),
+                });
+
+                const labels = pullRequest.labels.map(label => label.name);
+
+                if (!labels.includes('e2e/pause')) {
+                  core.info('Label "e2e/pause" has been removed. Continuing...');
+                  return true; // Label removed
+                } else {
+                  return false; // Label still present
+                }
+
+              } catch (error) {
+                core.setFailed(`Failed to get PR information: ${error}`);
+                return true; // Treat error as label removed to avoid infinite loop (but job will fail)
+              }
+            }
+
+            async function waitForLabelRemoval() {
+              while (true) {
+                const labelRemoved = await checkLabel();
+                if (labelRemoved) {
+                  return; // Exit the loop
+                }
+
+                const elapsedTimeMinutes = (Date.now() - startTime) / (1000 * 60);
+                if (elapsedTimeMinutes >= maxWaitTimeMinutes) {
+                  core.setFailed(`Timeout: Waited ${maxWaitTimeMinutes} minutes for 'e2e/pause' label to be removed.`);
+                  return; // Exit the loop and fail the job
+                }
+
+                core.info('Label "e2e/pause" still present.  Waiting 60 seconds...');
+                await new Promise(resolve => setTimeout(resolve, 60000)); // Wait 60 seconds
+              }
+            }
+
+            await waitForLabelRemoval();
+
       - name: Cleanup bootstrapped cluster
         if: inputs.autodelete||success()
         id: cleanup_cluster
@@ -2706,6 +3015,7 @@ jobs:
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+            exit 0
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -3096,6 +3406,7 @@ jobs:
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
+            exit 0
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -3192,6 +3503,66 @@ jobs:
           number: ${{ needs.git_info.outputs.pr_number }}
           labels: "e2e/cluster/failed"
 
+      - name: Check pause label
+        uses: actions/github-script@v6.4.1
+        env:
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+        with:
+          script: |
+            const github = require('@actions/github');
+            const core = require('@actions/core');
+
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const prNumber = process.env.CI_COMMIT_REF_SLUG;
+            const maxWaitTimeMinutes = 20;
+            const startTime = Date.now();
+
+            const octokit = github.getOctokit(process.env.GITHUB_TOKEN);
+
+            async function checkLabel() {
+              try {
+                const { data: pullRequest } = await octokit.rest.pulls.get({
+                  owner,
+                  repo,
+                  pull_number: parseInt(prNumber),
+                });
+
+                const labels = pullRequest.labels.map(label => label.name);
+
+                if (!labels.includes('e2e/pause')) {
+                  core.info('Label "e2e/pause" has been removed. Continuing...');
+                  return true; // Label removed
+                } else {
+                  return false; // Label still present
+                }
+
+              } catch (error) {
+                core.setFailed(`Failed to get PR information: ${error}`);
+                return true; // Treat error as label removed to avoid infinite loop (but job will fail)
+              }
+            }
+
+            async function waitForLabelRemoval() {
+              while (true) {
+                const labelRemoved = await checkLabel();
+                if (labelRemoved) {
+                  return; // Exit the loop
+                }
+
+                const elapsedTimeMinutes = (Date.now() - startTime) / (1000 * 60);
+                if (elapsedTimeMinutes >= maxWaitTimeMinutes) {
+                  core.setFailed(`Timeout: Waited ${maxWaitTimeMinutes} minutes for 'e2e/pause' label to be removed.`);
+                  return; // Exit the loop and fail the job
+                }
+
+                core.info('Label "e2e/pause" still present.  Waiting 60 seconds...');
+                await new Promise(resolve => setTimeout(resolve, 60000)); // Wait 60 seconds
+              }
+            }
+
+            await waitForLabelRemoval();
+
       - name: Cleanup bootstrapped cluster
         if: inputs.autodelete||success()
         id: cleanup_cluster
@@ -3221,6 +3592,7 @@ jobs:
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+            exit 0
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
