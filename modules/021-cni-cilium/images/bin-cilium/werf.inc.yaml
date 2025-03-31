@@ -1,8 +1,8 @@
-{{- $ciliumVersion := "1.17.1" }}
+{{- $ciliumVersion := "1.17.2" }}
 ---
 # #####################################################################
 # Build cilium-agent binaries
-# Based on https://github.com/cilium/cilium/blob/v1.17.1/images/cilium/Dockerfile (builder stage)
+# Based on https://github.com/cilium/cilium/blob/v1.17.2/images/cilium/Dockerfile (builder stage)
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
