@@ -580,15 +580,15 @@ check_e2e_labels:
 {!{- end }!}
 
     - name: Check pause label
+      if: ${{ success() && needs.git_info.outputs.pr_number }}
       uses: {!{ index (ds "actions") "actions/github-script" }!}
       env:
-        CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+        PR_NUMBER: ${{needs.git_info.outputs.pr_number}}
       with:
         script: |
           const owner = context.repo.owner;
           const repo = context.repo.repo;
-          const prNumber = process.env.CI_COMMIT_REF_SLUG;
-          console.log(prNumber.replace("pr", ""))
+          const prNumber = process.env.PR_NUMBER;
           const maxWaitTimeMinutes = 60;
           const startTime = Date.now();
 
@@ -597,7 +597,7 @@ check_e2e_labels:
               const { data: pullRequest } = await github.rest.pulls.get({
                 owner,
                 repo,
-                pull_number: parseInt(prNumber.replace("pr", "")),
+                pull_number: parseInt(prNumber),
               });
 
               const labels = pullRequest.labels.map(label => label.name);
