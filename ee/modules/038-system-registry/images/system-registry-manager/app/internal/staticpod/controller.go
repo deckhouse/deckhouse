@@ -10,12 +10,12 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -48,7 +48,7 @@ func (sc *servicesController) SetupWithManager(ctx context.Context, mgr ctrl.Man
 			return false
 		}
 
-		return secret.Namespace != configRequest.Namespace && secret.Name == configRequest.Name
+		return secret.Namespace == configRequest.Namespace && secret.Name == configRequest.Name
 	})
 
 	newConfigHandler := func(objectType string) handler.EventHandler {
@@ -128,9 +128,6 @@ func (sc *servicesController) SetupWithManager(ctx context.Context, mgr ctrl.Man
 			newConfigHandler("Node"),
 			builder.WithPredicates(nodePredicate),
 		).
-		WithOptions(controller.Options{
-			MaxConcurrentReconciles: 10,
-		}).
 		Complete(sc)
 
 	if err != nil {
@@ -149,27 +146,44 @@ func (sc *servicesController) Reconcile(ctx context.Context, _ ctrl.Request) (ct
 	if err := sc.Client.Get(ctx, key, &node); err != nil {
 		return ctrl.Result{}, fmt.Errorf("cannot get node: %w", err)
 	}
-	nodeIsMaster := hasMasterLabel(&node)
+
+	if !hasMasterLabel(&node) {
+		log.Info("Node is not master, stopping services")
+		if changes, err := sc.Services.StopServices(); err == nil {
+			log.Info("All servies stopped", "changes", changes)
+			return reconcile.Result{}, nil
+		} else {
+			err = fmt.Errorf("cannot stop services: %w", err)
+			log.Error(err, "Cannot stop services", "changes", changes)
+			return reconcile.Result{}, err
+		}
+	}
 
 	moduleConfig := getModuleConfigObject()
 	key = types.NamespacedName{Name: moduleConfig.GetName()}
 	if err := sc.Client.Get(ctx, key, &moduleConfig); err != nil {
 		return ctrl.Result{}, fmt.Errorf("cannot get ModuleConfig: %w", err)
 	}
-	moduleEnabled, _, _ := unstructured.NestedBool(moduleConfig.Object, "spec", "enabled")
+
+	moduleEnabled := true
+	if enabled, found, _ := unstructured.NestedBool(moduleConfig.Object, "spec", "enabled"); found {
+		moduleEnabled = enabled
+	}
+	log = log.WithValues("module_enabled", moduleEnabled)
 
 	config := corev1.Secret{}
 	key = types.NamespacedName{Name: sc.getConfigSecretName(), Namespace: sc.Namespace}
-	if err := sc.Client.Get(ctx, key, &config); err != nil {
+	if err := sc.Client.Get(ctx, key, &config); apierrors.IsNotFound(err) {
+		log.Info("Config not found, should stop all!")
+		return reconcile.Result{}, nil
+	} else if err != nil {
 		return ctrl.Result{}, fmt.Errorf("cannot get Config: %w", err)
 	}
 
 	configVersion := string(config.Data["version"])
-	configYAML := string(config.Data["version"])
+	configYAML := string(config.Data["config"])
 
 	log.Info("Reconcile",
-		"module_enabled", moduleEnabled,
-		"is_master", nodeIsMaster,
 		"version", configVersion,
 		"config_len", len(configYAML),
 	)
