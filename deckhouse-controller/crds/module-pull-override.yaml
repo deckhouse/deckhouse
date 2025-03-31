@@ -97,7 +97,7 @@ spec:
                   default: 15s
                 rollback:
                   type: boolean
-                  description: Indicates whether the module should be rollback after deleting mpo.
+                  description: Indicates whether the module release should be rollback after deleting mpo.
                   default: false
             status:
               type: object
