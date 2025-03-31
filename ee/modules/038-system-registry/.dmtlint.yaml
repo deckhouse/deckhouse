@@ -6,23 +6,14 @@ linters-settings:
           name: system-registry-manager
           container: kube-rbac-proxy
         - kind: DaemonSet
-          name: system-registry-manager
-          container: image-holder-docker-distribution
-        - kind: DaemonSet
-          name: system-registry-manager
-          container: image-holder-docker-auth
-        - kind: DaemonSet
-          name: system-registry-manager
-          container: image-holder-mirrorer
-        - kind: DaemonSet
           name: system-registry-staticpod-manager
           container: kube-rbac-proxy
         - kind: DaemonSet
           name: system-registry-staticpod-manager
-          container: image-holder-docker-distribution
+          container: image-holder-distribution
         - kind: DaemonSet
           name: system-registry-staticpod-manager
-          container: image-holder-docker-auth
+          container: image-holder-auth
         - kind: DaemonSet
           name: system-registry-staticpod-manager
           container: image-holder-mirrorer
@@ -31,23 +22,14 @@ linters-settings:
           name: system-registry-manager
           container: kube-rbac-proxy
         - kind: DaemonSet
-          name: system-registry-manager
-          container: image-holder-docker-distribution
-        - kind: DaemonSet
-          name: system-registry-manager
-          container: image-holder-docker-auth
-        - kind: DaemonSet
-          name: system-registry-manager
-          container: image-holder-mirrorer
-        - kind: DaemonSet
           name: system-registry-staticpod-manager
           container: kube-rbac-proxy
         - kind: DaemonSet
           name: system-registry-staticpod-manager
-          container: image-holder-docker-distribution
+          container: image-holder-distribution
         - kind: DaemonSet
           name: system-registry-staticpod-manager
-          container: image-holder-docker-auth
+          container: image-holder-auth
         - kind: DaemonSet
           name: system-registry-staticpod-manager
           container: image-holder-mirrorer
