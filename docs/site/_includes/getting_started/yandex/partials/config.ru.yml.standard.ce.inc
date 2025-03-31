@@ -135,15 +135,15 @@ masterNodeGroup:
   instanceClass:
     cores: 4
     memory: 8192
-    # [<en>] Yandex Cloud image ID. It is recommended to use the most fresh Ubuntu 22.04 LTS image.
+    # [<en>] Yandex Cloud image ID. It is recommended to use the most fresh Ubuntu 24.04 LTS image.
     # [<en>] To get one you can use this one-liner:
-    # [<en>] yc compute image list --folder-id standard-images --format json | jq -r '[.[] | select(.family == "ubuntu-2204-lts")] | sort_by(.created_at)[-1].id'
+    # [<en>] yc compute image list --folder-id standard-images --format json | jq -r '[.[] | select(.family == "ubuntu-2404-lts")] | sort_by(.created_at)[-1].id'
     # [<en>] You might consider changing this.
-    # [<ru>] ID образа в Yandex Cloud. Рекомендуется использовать актуальную сборку Ubuntu 22.04 LTS.
+    # [<ru>] ID образа в Yandex Cloud. Рекомендуется использовать актуальную сборку Ubuntu 24.04 LTS.
     # [<ru>] Для получения можете воспользоваться командой:
-    # [<ru>] yc compute image list --folder-id standard-images --format json | jq -r '[.[] | select(.family == "ubuntu-2204-lts")] | sort_by(.created_at)[-1].id'
+    # [<ru>] yc compute image list --folder-id standard-images --format json | jq -r '[.[] | select(.family == "ubuntu-2404-lts")] | sort_by(.created_at)[-1].id'
     # [<ru>] Возможно, захотите изменить.
-    imageID: fd864gbboths76r8gm5f
+    imageID: fd85m9q2qspfnsv055rh
     externalIPAddresses:
     - "Auto"
 # [<en>] This subnet will be split into three equal parts; they will serve as a basis for subnets in three Yandex Cloud zones.

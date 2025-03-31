@@ -56,7 +56,7 @@ spec:
                     Image ID to use while provisioning Yandex Compute Instances.
 
                     The [masterNodeGroup.instanceClass.imageID](cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-imageid) parameter will be used by default.
-                  x-doc-examples: ['fd8nb7ecsbvj76dfaa8b']
+                  x-doc-examples: ['fd85m9q2qspfnsv055rh']
                   type: string
                 platformID:
                   description: |
@@ -175,7 +175,7 @@ spec:
                     Image ID to use while provisioning Yandex Compute Instances.
 
                     The [masterNodeGroup.instanceClass.imageID](cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-imageid) parameter will be used by default.
-                  x-doc-examples: ['fd8nb7ecsbvj76dfaa8b']
+                  x-doc-examples: ['fd85m9q2qspfnsv055rh']
                   type: string
                 platformID:
                   description: |

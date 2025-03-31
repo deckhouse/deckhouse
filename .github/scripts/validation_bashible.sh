@@ -48,7 +48,7 @@ masterNodeGroup:
   instanceClass:
     cores: 4
     memory: 8192
-    imageID: fd864gbboths76r8gm5f
+    imageID: fd85m9q2qspfnsv055rh
     externalIPAddresses:
     - "Auto"
 nodeNetworkCIDR: "10.241.32.0/20"
@@ -68,7 +68,7 @@ masterNodeGroup:
   replicas: 1
   instanceClass:
     machineType: n1-standard-4
-    image: projects/ubuntu-os-cloud/global/images/ubuntu-2204-jammy-v20221206
+    image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20250313
     disableExternalIP: false
 subnetworkCIDR: 10.0.0.0/24
 sshKey: test_ssh
