@@ -104,7 +104,7 @@ lang: ru
 - Создать в группе администраторов пользователя *cloud* с паролем *cloud*;
 - Создать непривилегированного пользователя *user* с паролем *user*.
 
-<details><summary><b>autounattend.xml</b></summary>
+{% offtopic title="autounattend.xml" %}
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
@@ -293,7 +293,7 @@ lang: ru
 </unattend>
   ```
 
-</details>
+{% endofftopic %}
 
 Создайте секрет из этого xml файла:
 

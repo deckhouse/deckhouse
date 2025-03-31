@@ -11,12 +11,20 @@ properties:
             description: |
               Издатель ServiceAccount'ов. Это URL API-сервера. Значения этого поля используются как `iss` claim токена и для проверки JWT-токенов ServiceAccount.
 
+              Издатель по-умолчанию автоматически генерируется по шаблону `https://kubernetes.default.svc.${clusterDomain}`, например, `https://kubernetes.default.svc.cluster.local`
+
               **Обратите внимание**, что все поды в кластере, использующие токены ServiceAccount, должны быть перезапущены при изменении этой опции.
           additionalAPIAudiences:
             description: |
               Список дополнительных API audience'ов, которые следует добавить при создании токенов ServiceAccount.
 
-              Audience по умолчанию, автоматически генерируются на основе шаблона `https://kubernetes.default.svc.${clusterDomain}`, например, `https://kubernetes.default.svc.cluster.local`. Аутентификатор токенов ServiceAccount проверяет, что токены, использованные с API, привязаны как минимум к одной из этих audiences.
+              Список audience'ов по умолчанию содержит:
+
+              - `serviceAccount.issuer`, eсли указано
+              - `serviceAccount.additionalAPIIssuers`, eсли указано
+              - `https://kubernetes.default.svc.${clusterDomain}`, например, `https://kubernetes.default.svc.cluster.local` - этот audience добавляется всегда для обратной совместимости.
+
+              Аутентификатор токенов ServiceAccount проверяет, что токены, использованные с API, привязаны как минимум к одной из этих audiences.
 
               Этот вариант полезен при переходе от одного издателя API к другому.
           additionalAPIIssuers:
@@ -25,7 +33,7 @@ properties:
 
               Эти издатели (iss) используются для проверки источника токенов, чтобы гарантировать, что они поступают от доверенных сущностей.
 
-              Первый издатель автоматически генерируется по шаблону `https://kubernetes.default.svc.${clusterDomain}`, например, `https://kubernetes.default.svc.cluster.local`. Когда указано несколько издателей, то первый используется для генерации токенов, а все указанные издатели принимаются для валидации токенов.
+              Когда указано несколько издателей, то первый используется для генерации токенов, а все указанные издатели принимаются для валидации токенов.
 
               Этот вариант полезен при переходе от одного API издателя к другому.
       admissionPlugins:

@@ -149,7 +149,7 @@ func (c *CloudPermanentNodeGroupController) deleteNodes(ctx *context.Context, no
 	title := fmt.Sprintf("Delete Nodes from NodeGroup %s (replicas: %v)", c.name, c.desiredReplicas)
 	return log.Process("converge", title, func() error {
 		return c.deleteRedundantNodes(ctx, c.state.Settings, nodesToDeleteInfo, func(nodeName string) terraform.InfraActionHook {
-			return &terraform.DummyHook{}
+			return NewHookForDestroyPipeline(ctx, nodeName, ctx.CommanderMode())
 		})
 	})
 }

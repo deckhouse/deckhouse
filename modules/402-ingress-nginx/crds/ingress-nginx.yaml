@@ -235,7 +235,7 @@ spec:
                         If the parameter is not set, the connection over HTTP cannot be established.
 
                         This parameter is mandatory if `httpsPort` is not set.
-                      x-doc-examples: ['80']
+                      x-doc-examples: [80]
                     httpsPort:
                       type: integer
                       description: |
@@ -244,7 +244,7 @@ spec:
                         If the parameter is not set, the connection over HTTPS cannot be established.
 
                         This parameter is mandatory if `httpPort` is not set.
-                      x-doc-examples: ['443']
+                      x-doc-examples: [443]
                       x-kubernetes-validations:
                         - message: .spec.hostPort.httpsPort can't be 6443, it's reserved for kube-apiserver
                           rule: 'self != 6443'
@@ -278,7 +278,7 @@ spec:
                         If the parameter is not set, the connection over HTTP cannot be established.
 
                         This parameter is mandatory if `httpsPort` is not set.
-                      x-doc-examples: ['80']
+                      x-doc-examples: [80]
                     httpsPort:
                       type: integer
                       description: |
@@ -287,7 +287,7 @@ spec:
                         If the parameter is not set, the connection over HTTPS cannot be established.
 
                         This parameter is mandatory if `httpPort` is not set.
-                      x-doc-examples: ['443']
+                      x-doc-examples: [443]
                       x-kubernetes-validations:
                         - message: .spec.hostPortWithProxyProtocol.httpsPort can't be 6443, it's reserved for kube-apiserver
                           rule: 'self != 6443'
@@ -861,7 +861,7 @@ spec:
                         If the parameter is not set, the connection over HTTP cannot be established.
 
                         This parameter is mandatory if `httpsPort` is not set.
-                      x-doc-examples: ['80']
+                      x-doc-examples: [80]
                     httpsPort:
                       type: integer
                       description: |
@@ -870,7 +870,7 @@ spec:
                         If the parameter is not set, the connection over HTTPS cannot be established.
 
                         This parameter is mandatory if `httpPort` is not set.
-                      x-doc-examples: ['443']
+                      x-doc-examples: [443]
                       x-kubernetes-validations:
                         - message: .spec.hostPort.httpsPort can't be 6443, it's reserved for kube-apiserver
                           rule: 'self != 6443'
@@ -904,7 +904,7 @@ spec:
                         If the parameter is not set, the connection over HTTP cannot be established.
 
                         This parameter is mandatory if `httpsPort` is not set.
-                      x-doc-examples: ['80']
+                      x-doc-examples: [80]
                     httpsPort:
                       type: integer
                       description: |
@@ -913,7 +913,7 @@ spec:
                         If the parameter is not set, the connection over HTTPS cannot be established.
 
                         This parameter is mandatory if `httpPort` is not set.
-                      x-doc-examples: ['443']
+                      x-doc-examples: [443]
                       x-kubernetes-validations:
                         - message: .spec.hostPortWithProxyProtocol.httpsPort can't be 6443, it's reserved for kube-apiserver
                           rule: 'self != 6443'
@@ -933,7 +933,7 @@ spec:
                         If the parameter is not set, the connection over HTTP cannot be established.
 
                         This parameter is mandatory if `httpsPort` is not set.
-                      x-doc-examples: ['80']
+                      x-doc-examples: [80]
                     httpsPort:
                       type: integer
                       description: |
@@ -942,7 +942,7 @@ spec:
                         If the parameter is not set, the connection over HTTPS cannot be established.
 
                         This parameter is mandatory if `httpPort` is not set.
-                      x-doc-examples: ['443']
+                      x-doc-examples: [443]
                       x-kubernetes-validations:
                         - message: .spec.hostPortWithSSLPassthrough.httpsPort can't be 6443, it's reserved for kube-apiserver
                           rule: 'self != 6443'

@@ -138,7 +138,7 @@ func (t *ReverseTunnel) StartHealthMonitor(ctx context.Context, checker ReverseT
 	checkReverseTunnel := func(id int) bool {
 		log.DebugF("[%d] Start Check reverse tunnel\n", id)
 
-		err := retry.NewSilentLoop("Check reverse tunnel", 2, 2*time.Second).Run(func() error {
+		err := retry.NewSilentLoop("Check reverse tunnel", 2, 2*time.Second).RunContext(ctx, func() error {
 			out, err := checker.CheckTunnel(ctx)
 			if err != nil {
 				log.DebugF("[%d] Cannot check ssh tunnel: '%v': stderr: '%s'\n", id, err, out)

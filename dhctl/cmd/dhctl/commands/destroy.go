@@ -15,6 +15,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
@@ -80,7 +81,7 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		return destroyer.DestroyCluster(app.SanityCheck)
+		return destroyer.DestroyCluster(context.Background(), app.SanityCheck)
 	})
 
 	return cmd

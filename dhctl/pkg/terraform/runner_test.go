@@ -161,7 +161,7 @@ func TestCheckRunnerHandleChanges(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			skip, err := tc.runner.isSkipChanges()
+			skip, err := tc.runner.isSkipChanges(context.Background())
 			require.Equal(t, tc.skip, skip)
 			if tc.err != nil {
 				require.Error(t, err)

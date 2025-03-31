@@ -53,7 +53,7 @@ func newInSecretStateStore() *inSecretStateStore {
 func (s *inSecretStateStore) GetState(ctx *Context) (*State, error) {
 	var state State
 
-	err := retry.NewLoop("Get converge state from Kubernetes cluster", 5, 5*time.Second).Run(func() error {
+	err := retry.NewLoop("Get converge state from Kubernetes cluster", 5, 5*time.Second).RunContext(ctx.Ctx(), func() error {
 		c, cancel := ctx.WithTimeout(10 * time.Second)
 		defer cancel()
 
@@ -81,7 +81,7 @@ func (s *inSecretStateStore) GetState(ctx *Context) (*State, error) {
 }
 
 func (s *inSecretStateStore) Delete(ctx *Context) error {
-	return retry.NewLoop("Cleanup converge state from Kubernetes cluster", 5, 5*time.Second).Run(func() error {
+	return retry.NewLoop("Cleanup converge state from Kubernetes cluster", 5, 5*time.Second).RunContext(ctx.Ctx(), func() error {
 		c, cancel := ctx.WithTimeout(10 * time.Second)
 		defer cancel()
 
@@ -133,5 +133,5 @@ func (s *inSecretStateStore) SetState(ctx *Context, state *State) error {
 		},
 	}
 
-	return retry.NewLoop("Save dhctl converge state", 45, 10*time.Second).Run(task.CreateOrUpdate)
+	return retry.NewLoop("Save dhctl converge state", 45, 10*time.Second).RunContext(ctx.Ctx(), task.CreateOrUpdate)
 }

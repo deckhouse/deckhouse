@@ -15,6 +15,7 @@
 package controlplane
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -43,7 +44,7 @@ func NewChecker(nodeToHostForChecks map[string]string, checkers []hook.NodeCheck
 	}
 }
 
-func (c *Checker) IsAllNodesReady() error {
+func (c *Checker) IsAllNodesReady(ctx context.Context) error {
 	if c.checkers == nil {
 		log.DebugF("Not passed checkers. Skip. Nodes for check: %v", c.nodeToHostForChecks)
 
@@ -59,7 +60,7 @@ func (c *Checker) IsAllNodesReady() error {
 			continue
 		}
 
-		ready, err := hook.IsNodeReady(c.checkers, nodeName, c.sourceCommandName)
+		ready, err := hook.IsNodeReady(ctx, c.checkers, nodeName, c.sourceCommandName)
 		if err != nil {
 			return err
 		}

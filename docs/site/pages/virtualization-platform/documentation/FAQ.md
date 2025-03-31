@@ -110,7 +110,7 @@ For example, let's take a file that allows you to:
 - Create an user with name *cloud* and the password *cloud* in the Administrators group
 - Create a non-privileged user with name *user* and the password *user*
 
-<details><summary><b>autounattend.xml</b></summary>
+{% offtopic title="autounattend.xml" %}
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
@@ -299,7 +299,7 @@ For example, let's take a file that allows you to:
 </unattend>
 ```
 
-</details>
+{% endofftopic %}
 
 Create a secret from this xml file:
 

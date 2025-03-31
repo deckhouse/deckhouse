@@ -3,6 +3,10 @@ title: "Huawei data storage"
 permalink: en/storage/admin/external/huawei.html
 ---
 
+{% alert level="info" %}
+Available in some commercial editions:  **EE**
+{% endalert %}
+
 Deckhouse provides support for Huawei Dorado storage systems, enabling volume management in Kubernetes using a CSI driver through the creation of custom resources like [HuaweiStorageClass](../../../reference/cr/huaweistorageclass/). This solution ensures high-performance and fault-tolerant storage, making it an optimal choice for mission-critical workloads.
 
 {% alert level="warning" %}

@@ -61,7 +61,7 @@ cleanup:
 
 {{- $_ := set . "CandiVersionMap" $versionMap }}
 
-# do not forget change /deckhouse-controller/files/kubectl_wrapper.sh
+# do not forget change /deckhouse-controller/files/kubectl_wrapper.sh and /deckhouse-controller/files/bashrc
 {{- $_ := set . "kubectlForBaseComponents" (list "1.29" "1.31") }}
 ---
 # Terraform Versions

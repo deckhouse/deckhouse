@@ -39,7 +39,7 @@ func ConnectToKubernetesAPI(ctx context.Context, nodeInterface node.Interface) (
 		err := retry.NewLoop("Get Kubernetes API client", 45, 5*time.Second).
 			RunContext(ctx, func() error {
 				kubeCl = client.NewKubernetesClient().WithNodeInterface(nodeInterface)
-				if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
+				if err := kubeCl.InitContext(ctx, client.AppKubernetesInitParams()); err != nil {
 					return fmt.Errorf("open kubernetes connection: %v", err)
 				}
 				return nil

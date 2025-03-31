@@ -255,8 +255,7 @@ func (s *Service) destroy(
 		return &pb.DestroyResult{Err: fmt.Errorf("unable to initialize cluster destroyer: %w", err).Error()}
 	}
 
-	// TODO(dhctl-for-commander-cancels): pass ctx
-	destroyErr := destroyer.DestroyCluster(true)
+	destroyErr := destroyer.DestroyCluster(ctx, true)
 	state := destroyer.PhasedExecutionContext.GetLastState()
 	data, marshalErr := json.Marshal(state)
 	err = errors.Join(destroyErr, marshalErr)

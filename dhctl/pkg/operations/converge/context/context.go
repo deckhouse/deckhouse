@@ -136,7 +136,7 @@ func (c *Context) MetaConfig() (*config.MetaConfig, error) {
 		return metaConfig, nil
 	}
 
-	metaConfig, err := entity.GetMetaConfig(c.kubeClient)
+	metaConfig, err := entity.GetMetaConfig(c.ctx, c.kubeClient)
 	if err != nil {
 		return nil, err
 	}

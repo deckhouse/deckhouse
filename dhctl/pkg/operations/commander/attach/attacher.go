@@ -168,7 +168,7 @@ func (i *Attacher) prepare(ctx context.Context) (*client.KubernetesClient, *conf
 			return fmt.Errorf("unable to connect to kubernetes api over ssh: %w", err)
 		}
 
-		metaConfig, err = config.ParseConfigInCluster(kubeClient)
+		metaConfig, err = config.ParseConfigInCluster(ctx, kubeClient)
 		if err != nil {
 			return fmt.Errorf("unable to parse cluster config: %w", err)
 		}
@@ -201,7 +201,7 @@ func (i *Attacher) scan(
 
 		res = &ScanResult{}
 
-		metaConfig.UUID, err = state_terraform.GetClusterUUID(kubeClient)
+		metaConfig.UUID, err = state_terraform.GetClusterUUID(ctx, kubeClient)
 		if err != nil {
 			return fmt.Errorf("unable to get cluster uuid: %w", err)
 		}
@@ -237,12 +237,12 @@ func (i *Attacher) scan(
 			return fmt.Errorf("unable to get ssh public key: %w", err)
 		}
 
-		nodesState, err := state_terraform.GetNodesStateFromCluster(kubeClient)
+		nodesState, err := state_terraform.GetNodesStateFromCluster(ctx, kubeClient)
 		if err != nil {
 			return fmt.Errorf("unable to get nodes tf state: %w", err)
 		}
 
-		clusterState, err := state_terraform.GetClusterStateFromCluster(kubeClient)
+		clusterState, err := state_terraform.GetClusterStateFromCluster(ctx, kubeClient)
 		if err != nil {
 			return fmt.Errorf("unable get cluster tf state: %w", err)
 		}

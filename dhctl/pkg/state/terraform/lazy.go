@@ -15,6 +15,7 @@
 package terraform
 
 import (
+	"context"
 	"sync"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -22,8 +23,8 @@ import (
 )
 
 type StateLoader interface {
-	PopulateMetaConfig() (*config.MetaConfig, error)
-	PopulateClusterState() ([]byte, map[string]state.NodeGroupTerraformState, error)
+	PopulateMetaConfig(ctx context.Context) (*config.MetaConfig, error)
+	PopulateClusterState(ctx context.Context) ([]byte, map[string]state.NodeGroupTerraformState, error)
 }
 
 type LazyTerraStateLoader struct {
@@ -41,13 +42,13 @@ func NewLazyTerraStateLoader(stateLoader StateLoader) *LazyTerraStateLoader {
 	}
 }
 
-func (l *LazyTerraStateLoader) PopulateMetaConfig() (*config.MetaConfig, error) {
+func (l *LazyTerraStateLoader) PopulateMetaConfig(ctx context.Context) (*config.MetaConfig, error) {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 
 	if l.metaConfig == nil {
 		var err error
-		l.metaConfig, err = l.stateLoader.PopulateMetaConfig()
+		l.metaConfig, err = l.stateLoader.PopulateMetaConfig(ctx)
 		if err != nil {
 			l.metaConfig = nil
 			return nil, err
@@ -57,14 +58,14 @@ func (l *LazyTerraStateLoader) PopulateMetaConfig() (*config.MetaConfig, error) 
 	return l.metaConfig, nil
 }
 
-func (l *LazyTerraStateLoader) PopulateClusterState() ([]byte, map[string]state.NodeGroupTerraformState, error) {
+func (l *LazyTerraStateLoader) PopulateClusterState(ctx context.Context) ([]byte, map[string]state.NodeGroupTerraformState, error) {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 
 	var err error
 
 	if l.nodesTerraState == nil || l.clusterState == nil {
-		l.clusterState, l.nodesTerraState, err = l.stateLoader.PopulateClusterState()
+		l.clusterState, l.nodesTerraState, err = l.stateLoader.PopulateClusterState(ctx)
 		if err != nil {
 			l.nodesTerraState = nil
 			l.clusterState = nil

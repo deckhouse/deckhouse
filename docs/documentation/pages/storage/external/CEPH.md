@@ -3,6 +3,10 @@ title: "Distributed Ceph storage"
 permalink: en/storage/admin/external/ceph.html
 ---
 
+{% alert level="info" %}
+Available in editions:  **CE, SE, SE+, EE**
+{% endalert %}
+
 Ceph is a scalable distributed storage system that ensures high availability and fault tolerance of data. Deckhouse supports integration with Ceph clusters, enabling dynamic storage management and the use of StorageClass based on RBD (RADOS Block Device) or CephFS.
 
 This page provides instructions on connecting Ceph to Deckhouse, configuring authentication, creating StorageClass objects, and verifying storage functionality.

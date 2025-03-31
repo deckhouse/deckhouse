@@ -15,6 +15,8 @@
 package bootstrap
 
 import (
+	"context"
+
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -40,7 +42,7 @@ func DefineBootstrapCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
 			TerraformContext: terraform.NewTerraformContext(),
 		})
-		return bootstraper.Bootstrap()
+		return bootstraper.Bootstrap(context.Background())
 	})
 
 	return cmd

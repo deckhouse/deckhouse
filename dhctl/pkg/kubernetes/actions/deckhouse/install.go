@@ -49,7 +49,7 @@ func prepareDeckhouseDeploymentForUpdate(
 	manifestForUpdate *appsv1.Deployment,
 ) (*appsv1.Deployment, error) {
 	resDeployment := manifestForUpdate
-	err := retry.NewSilentLoop("get deployment", 10, 3*time.Second).Run(func() error {
+	err := retry.NewSilentLoop("get deployment", 10, 3*time.Second).RunContext(ctx, func() error {
 		currentManifestInCluster, err := kubeCl.AppsV1().
 			Deployments(manifestForUpdate.GetNamespace()).
 			Get(ctx, manifestForUpdate.GetName(), metav1.GetOptions{})
@@ -402,7 +402,7 @@ func CreateDeckhouseManifests(
 	}
 
 	if cfg.CommanderMode && cfg.CommanderUUID != uuid.Nil {
-		tasks = append(tasks, commander.ConstructManagedByCommanderConfigMapTask(cfg.CommanderUUID, kubeCl))
+		tasks = append(tasks, commander.ConstructManagedByCommanderConfigMapTask(ctx, cfg.CommanderUUID, kubeCl))
 	}
 
 	if cfg.KubeDNSAddress != "" {
@@ -451,7 +451,7 @@ func CreateDeckhouseManifests(
 
 	err = log.Process("default", "Create Manifests", func() error {
 		for _, task := range tasks {
-			err := retry.NewSilentLoop(task.Name, 60, 5*time.Second).Run(task.CreateOrUpdate)
+			err := retry.NewSilentLoop(task.Name, 60, 5*time.Second).RunContext(ctx, task.CreateOrUpdate)
 			if err != nil {
 				return err
 			}

@@ -47,11 +47,10 @@ func (e *PostBootstrapScriptExecutor) WithTimeout(timeout time.Duration) *PostBo
 	return e
 }
 
-func (e *PostBootstrapScriptExecutor) Execute() error {
+func (e *PostBootstrapScriptExecutor) Execute(ctx context.Context) error {
 	return log.Process("bootstrap", "Execute post-bootstrap script", func() error {
 		var err error
-		// TODO(dhctl-for-commander-cancels): pass ctx
-		resultToSetState, err := e.run(context.TODO())
+		resultToSetState, err := e.run(ctx)
 
 		if err != nil {
 			msg := fmt.Sprintf("Post execution script was failed: %v", err)

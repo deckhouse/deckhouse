@@ -81,7 +81,7 @@ func (c *KubeProxyChecker) WithSSHCredentials(input session.Input, privateKeys .
 	return c
 }
 
-func (c *KubeProxyChecker) IsReady(nodeName string) (bool, error) {
+func (c *KubeProxyChecker) IsReady(ctx context.Context, nodeName string) (bool, error) {
 	var sshClient *ssh.Client
 
 	if c.input != nil {
@@ -108,7 +108,7 @@ func (c *KubeProxyChecker) IsReady(nodeName string) (bool, error) {
 	}
 
 	kubeCl := client.NewKubernetesClient().WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient))
-	err = kubeCl.Init(client.AppKubernetesInitParams())
+	err = kubeCl.InitContext(ctx, client.AppKubernetesInitParams())
 	if err != nil {
 		return false, fmt.Errorf("open kubernetes connection: %v", err)
 	}
@@ -128,7 +128,7 @@ func (c *KubeProxyChecker) IsReady(nodeName string) (bool, error) {
 	}()
 
 	// d8-cluster-uuid
-	ns, err := kubeCl.CoreV1().ConfigMaps("kube-system").Get(context.TODO(), "d8-cluster-uuid", v1.GetOptions{})
+	ns, err := kubeCl.CoreV1().ConfigMaps("kube-system").Get(ctx, "d8-cluster-uuid", v1.GetOptions{})
 	if err != nil {
 		return false, err
 	}
