@@ -156,3 +156,4 @@ apiVersions:
 
               [Как получить](https://cloud.google.com/iam/docs/creating-managing-service-account-keys#creating_service_account_keys) `service account key`.
       zones: *NodeGroupZones_ru
+
