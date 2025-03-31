@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"reflect"
 	"sort"
 	"strings"
 	"sync"
@@ -154,6 +155,39 @@ func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 
 		log.Info(
 			"Node PKI secret changed, will trigger reconcile",
+			"secret", obj.GetName(),
+			"namespace", obj.GetNamespace(),
+			"node", ret.Name,
+			"controller", controllerName,
+		)
+
+		return []reconcile.Request{ret}
+	})
+
+	nodeServicesConfigPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		if obj.GetNamespace() != nc.Namespace {
+			return false
+		}
+
+		return strings.HasPrefix(obj.GetName(), state.NodeServicesConfigSecretNamePrefix)
+	})
+
+	nodeServicesConfigHander := handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
+		name := obj.GetName()
+
+		if !strings.HasPrefix(name, state.NodeServicesConfigSecretNamePrefix) {
+			return []reconcile.Request{}
+		}
+
+		name = strings.TrimPrefix(name, state.NodeServicesConfigSecretNamePrefix)
+
+		var ret reconcile.Request
+		ret.Name = name
+
+		log := ctrl.LoggerFrom(ctx)
+
+		log.Info(
+			"NodeServicesConfig secret changed, will trigger reconcile",
 			"secret", obj.GetName(),
 			"namespace", obj.GetNamespace(),
 			"node", ret.Name,
@@ -325,6 +359,11 @@ func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 			&corev1.Secret{},
 			newReprocessAllHandler("Secret"),
 			builder.WithPredicates(stateSecretPredicate),
+		).
+		Watches(
+			&corev1.Secret{},
+			nodeServicesConfigHander,
+			builder.WithPredicates(nodeServicesConfigPredicate),
 		).
 		Watches(
 			&corev1.ConfigMap{},
@@ -676,6 +715,11 @@ func (nc *nodeController) contructNodeServicesConfig(
 }
 
 func (nc *nodeController) configureNodeServices(ctx context.Context, nodeName string, model staticpod.NodeServicesConfigModel) error {
+	err := nc.saveNodeServicesConfig(ctx, nodeName, model)
+	if err != nil {
+		return fmt.Errorf("error saving NodeServicesConfig Secret: %w", err)
+	}
+
 	podIP, err := nc.findNodeServicesManagerIP(ctx, nodeName)
 	if err != nil {
 		return fmt.Errorf("cannot find Static Pod Manager IP for Node: %w", err)
@@ -686,6 +730,57 @@ func (nc *nodeController) configureNodeServices(ctx context.Context, nodeName st
 
 	if err != nil {
 		return fmt.Errorf("error sending HTTP request: %w", err)
+	}
+
+	return nil
+}
+
+func (nc *nodeController) saveNodeServicesConfig(ctx context.Context, nodeName string, model staticpod.NodeServicesConfigModel) error {
+	secret := corev1.Secret{}
+	key := types.NamespacedName{
+		Name:      state.NodeServicesConfigSecretName(nodeName),
+		Namespace: nc.Namespace,
+	}
+
+	var origSecret *corev1.Secret
+
+	if err := nc.Client.Get(ctx, key, &secret); err != nil {
+		if client.IgnoreNotFound(err) != nil {
+			return fmt.Errorf("cannot get secret %v k8s object: %w", key.Name, err)
+		}
+	} else {
+		// Making a copy unconditionally is a bit wasteful, since we don't
+		// always need to update the service. But, making an unconditional
+		// copy makes the code much easier to follow, and we have a GC for
+		// a reason.
+		origSecret = secret.DeepCopy()
+	}
+
+	nodeServicesConfig := state.NodeServicesConfig{
+		NodeServicesConfigModel: model,
+	}
+
+	if err := nodeServicesConfig.EncodeSecret(&secret); err != nil {
+		return fmt.Errorf("cannot encode to secret: %w", err)
+	}
+
+	if origSecret == nil {
+		secret.Name = key.Name
+		secret.Namespace = key.Namespace
+
+		if err := nc.Client.Create(ctx, &secret); err != nil {
+			return fmt.Errorf("cannot save secret %v for NodeServicesConfig: %w", secret.Name, err)
+		}
+	} else {
+		// Type cannot be changed, so preserve original value
+		secret.Type = origSecret.Type
+
+		// Check than we're need to update secret
+		if !reflect.DeepEqual(origSecret, secret) {
+			if err := nc.Client.Update(ctx, &secret); err != nil {
+				return fmt.Errorf("cannot update secret %v for NodeServicesConfig: %w", secret.Name, err)
+			}
+		}
 	}
 
 	return nil
