@@ -629,7 +629,7 @@ jobs:
                 const { data: pullRequest } = await github.rest.pulls.get({
                   owner,
                   repo,
-                  pull_number: parseInt(prNumber),
+                  pull_number: parseInt(prNumberString.replace("pr", "")),
                 });
 
                 const labels = pullRequest.labels.map(label => label.name);
@@ -1188,7 +1188,7 @@ jobs:
                 const { data: pullRequest } = await github.rest.pulls.get({
                   owner,
                   repo,
-                  pull_number: parseInt(prNumber),
+                  pull_number: parseInt(prNumberString.replace("pr", "")),
                 });
 
                 const labels = pullRequest.labels.map(label => label.name);
@@ -1747,7 +1747,7 @@ jobs:
                 const { data: pullRequest } = await github.rest.pulls.get({
                   owner,
                   repo,
-                  pull_number: parseInt(prNumber),
+                  pull_number: parseInt(prNumberString.replace("pr", "")),
                 });
 
                 const labels = pullRequest.labels.map(label => label.name);
@@ -2306,7 +2306,7 @@ jobs:
                 const { data: pullRequest } = await github.rest.pulls.get({
                   owner,
                   repo,
-                  pull_number: parseInt(prNumber),
+                  pull_number: parseInt(prNumberString.replace("pr", "")),
                 });
 
                 const labels = pullRequest.labels.map(label => label.name);
@@ -2865,7 +2865,7 @@ jobs:
                 const { data: pullRequest } = await github.rest.pulls.get({
                   owner,
                   repo,
-                  pull_number: parseInt(prNumber),
+                  pull_number: parseInt(prNumberString.replace("pr", "")),
                 });
 
                 const labels = pullRequest.labels.map(label => label.name);
@@ -3424,7 +3424,7 @@ jobs:
                 const { data: pullRequest } = await github.rest.pulls.get({
                   owner,
                   repo,
-                  pull_number: parseInt(prNumber),
+                  pull_number: parseInt(prNumberString.replace("pr", "")),
                 });
 
                 const labels = pullRequest.labels.map(label => label.name);
