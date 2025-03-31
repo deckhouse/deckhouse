@@ -618,7 +618,7 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const prNumber = process.env.CI_COMMIT_REF_SLUG;
-            console.log(prNumber)
+            console.log(prNumber.replace("pr", ""))
             const maxWaitTimeMinutes = 20;
             const startTime = Date.now();
 
@@ -627,7 +627,7 @@ jobs:
                 const { data: pullRequest } = await github.rest.pulls.get({
                   owner,
                   repo,
-                  pull_number: parseInt(prNumberString.replace("pr", "")),
+                  pull_number: parseInt(prNumber.replace("pr", "")),
                 });
 
                 const labels = pullRequest.labels.map(label => label.name);
@@ -1173,7 +1173,7 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const prNumber = process.env.CI_COMMIT_REF_SLUG;
-            console.log(prNumber)
+            console.log(prNumber.replace("pr", ""))
             const maxWaitTimeMinutes = 20;
             const startTime = Date.now();
 
@@ -1182,7 +1182,7 @@ jobs:
                 const { data: pullRequest } = await github.rest.pulls.get({
                   owner,
                   repo,
-                  pull_number: parseInt(prNumberString.replace("pr", "")),
+                  pull_number: parseInt(prNumber.replace("pr", "")),
                 });
 
                 const labels = pullRequest.labels.map(label => label.name);
@@ -1728,7 +1728,7 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const prNumber = process.env.CI_COMMIT_REF_SLUG;
-            console.log(prNumber)
+            console.log(prNumber.replace("pr", ""))
             const maxWaitTimeMinutes = 20;
             const startTime = Date.now();
 
@@ -1737,7 +1737,7 @@ jobs:
                 const { data: pullRequest } = await github.rest.pulls.get({
                   owner,
                   repo,
-                  pull_number: parseInt(prNumberString.replace("pr", "")),
+                  pull_number: parseInt(prNumber.replace("pr", "")),
                 });
 
                 const labels = pullRequest.labels.map(label => label.name);
@@ -2283,7 +2283,7 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const prNumber = process.env.CI_COMMIT_REF_SLUG;
-            console.log(prNumber)
+            console.log(prNumber.replace("pr", ""))
             const maxWaitTimeMinutes = 20;
             const startTime = Date.now();
 
@@ -2292,7 +2292,7 @@ jobs:
                 const { data: pullRequest } = await github.rest.pulls.get({
                   owner,
                   repo,
-                  pull_number: parseInt(prNumberString.replace("pr", "")),
+                  pull_number: parseInt(prNumber.replace("pr", "")),
                 });
 
                 const labels = pullRequest.labels.map(label => label.name);
@@ -2838,7 +2838,7 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const prNumber = process.env.CI_COMMIT_REF_SLUG;
-            console.log(prNumber)
+            console.log(prNumber.replace("pr", ""))
             const maxWaitTimeMinutes = 20;
             const startTime = Date.now();
 
@@ -2847,7 +2847,7 @@ jobs:
                 const { data: pullRequest } = await github.rest.pulls.get({
                   owner,
                   repo,
-                  pull_number: parseInt(prNumberString.replace("pr", "")),
+                  pull_number: parseInt(prNumber.replace("pr", "")),
                 });
 
                 const labels = pullRequest.labels.map(label => label.name);
@@ -3393,7 +3393,7 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const prNumber = process.env.CI_COMMIT_REF_SLUG;
-            console.log(prNumber)
+            console.log(prNumber.replace("pr", ""))
             const maxWaitTimeMinutes = 20;
             const startTime = Date.now();
 
@@ -3402,7 +3402,7 @@ jobs:
                 const { data: pullRequest } = await github.rest.pulls.get({
                   owner,
                   repo,
-                  pull_number: parseInt(prNumberString.replace("pr", "")),
+                  pull_number: parseInt(prNumber.replace("pr", "")),
                 });
 
                 const labels = pullRequest.labels.map(label => label.name);
