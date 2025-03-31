@@ -16,9 +16,7 @@ mkdir -p /etc/kubernetes/manifests
 
 bb-set-proxy
 
-if crictl version >/dev/null 2>/dev/null; then
-  crictl pull {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
-fi
+{{- $kubernetes_api_proxy_image := "deckhouse.local/images:kubernetes-api-proxy" }}
 
 bb-sync-file /etc/kubernetes/manifests/kubernetes-api-proxy.yaml - << EOF
 apiVersion: v1
@@ -39,7 +37,7 @@ spec:
   shareProcessNamespace: true
   containers:
   - name: kubernetes-api-proxy
-    image: {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
+    image: {{ $kubernetes_api_proxy_image }}
     imagePullPolicy: IfNotPresent
     command: ["/opt/nginx-static/sbin/nginx", "-c", "/etc/nginx/config/nginx.conf", "-g", "daemon off;"]
     env:
@@ -51,7 +49,7 @@ spec:
     - mountPath: /tmp
       name: tmp
   - name: kubernetes-api-proxy-reloader
-    image: {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
+    image: {{ $kubernetes_api_proxy_image }}
     imagePullPolicy: IfNotPresent
     command: ["/kubernetes-api-proxy-reloader"]
     env:

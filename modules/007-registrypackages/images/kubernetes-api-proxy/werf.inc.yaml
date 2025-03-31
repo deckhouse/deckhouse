@@ -1,0 +1,51 @@
+{{- $version := "08.04.25" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+from: {{ $.Images.BASE_SCRATCH }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /
+  to: /
+  includePaths:
+  - kubernetes-api-proxy.tar
+  - install
+  - uninstall
+  before: setup
+imageSpec:
+  config:
+    labels: {"distro": "all", "version": "all", "kubernetes-api-proxy": "{{ $version }}" }
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /
+  stageDependencies:
+    setup:
+    - '**/*'
+dependencies:
+- image: control-plane-manager/kubernetes-api-proxy
+  before: setup
+  imports:
+  - type: ImageDigest
+    targetEnv: IMAGE_DIGEST
+  - type: ImageRepo
+    targetEnv: IMAGE_REPO
+mount:
+- fromPath: ~/.docker
+  to: /root/.docker
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  beforeSetup:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache git openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  - git clone --depth 1 --branch  v0.20.3 {{ .SOURCE_REPO }}/google/go-containerregistry.git /go-containerregistry
+  - cd go-containerregistry/cmd/crane
+  - export GOPROXY={{ .GOPROXY }}
+  - CGO_ENABLED=0 GOOS=linux go build  -ldflags '-s -w -X github.com/google/go-containerregistry/cmd/crane/cmd.Version=v0.20.3' -o /crane
+  - rm -rf /go-containerregistry
+  setup:
+  - /crane pull $IMAGE_REPO@$IMAGE_DIGEST /kubernetes-api-proxy.tar
