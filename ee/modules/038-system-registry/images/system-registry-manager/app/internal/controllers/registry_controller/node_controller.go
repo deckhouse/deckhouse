@@ -650,7 +650,6 @@ func (nc *nodeController) contructNodeServicesConfig(
 				Mirrorer:     fmt.Sprintf("%s@%s", registryHostPath, nc.Settings.ImageMirrorer),
 			},
 			Registry: staticpod.RegistryConfig{
-				Mode:       staticpod.RegistryMode(moduleConfig.Settings.Mode),
 				HttpSecret: globalSecrets.HttpSecret,
 				UserRO: staticpod.User{
 					Name:         userRO.UserName,
@@ -672,20 +671,37 @@ func (nc *nodeController) contructNodeServicesConfig(
 				DistributionCert: string(pki.EncodeCertificate(nodePKI.Distribution.Cert)),
 				DistributionKey:  string(distributionKey),
 			},
-			Mirrorer: staticpod.Mirrorer{
-				UserPuller: staticpod.User{
-					Name:         userMirrorPuller.UserName,
-					Password:     userMirrorPuller.Password,
-					PasswordHash: userMirrorPuller.HashedPassword,
-				},
-				UserPusher: staticpod.User{
-					Name:         userMirrorPusher.UserName,
-					Password:     userMirrorPusher.Password,
-					PasswordHash: userMirrorPusher.HashedPassword,
-				},
-				Upstreams: mirrorerUpstreams,
-			},
 		},
+	}
+
+	switch moduleConfig.Settings.Mode {
+	case state.RegistryModeProxy:
+		host, path := getRegistryAddressAndPathFromImagesRepo(moduleConfig.Settings.Proxy.ImagesRepo)
+
+		model.Config.PKI.UpstreamRegistryCACert = moduleConfig.Settings.Proxy.CA
+
+		model.Config.Registry.Upstream = &staticpod.UpstreamRegistry{
+			Scheme:   strings.ToLower(moduleConfig.Settings.Proxy.Scheme),
+			Host:     host,
+			Path:     path,
+			User:     moduleConfig.Settings.Proxy.UserName,
+			Password: moduleConfig.Settings.Proxy.Password,
+			TTL:      moduleConfig.Settings.Proxy.TTL.StringPointer(),
+		}
+	case state.RegistryModeDetached:
+		model.Config.Registry.Mirrorer = &staticpod.Mirrorer{
+			UserPuller: staticpod.User{
+				Name:         userMirrorPuller.UserName,
+				Password:     userMirrorPuller.Password,
+				PasswordHash: userMirrorPuller.HashedPassword,
+			},
+			UserPusher: staticpod.User{
+				Name:         userMirrorPusher.UserName,
+				Password:     userMirrorPusher.Password,
+				PasswordHash: userMirrorPusher.HashedPassword,
+			},
+			Upstreams: mirrorerUpstreams,
+		}
 	}
 
 	if moduleConfig.Settings.ImagesOverride.Mirrorer != "" {
@@ -694,21 +710,6 @@ func (nc *nodeController) contructNodeServicesConfig(
 
 	if ingressPKI != nil {
 		model.Config.PKI.IngressClientCACert = string(pki.EncodeCertificate(ingressPKI.ClientCACert))
-	}
-
-	if moduleConfig.Settings.Mode == state.RegistryModeProxy {
-		host, path := getRegistryAddressAndPathFromImagesRepo(moduleConfig.Settings.Proxy.ImagesRepo)
-
-		model.Config.PKI.UpstreamRegistryCACert = moduleConfig.Settings.Proxy.CA
-
-		model.Config.Registry.Upstream = staticpod.UpstreamRegistry{
-			Scheme:   strings.ToLower(moduleConfig.Settings.Proxy.Scheme),
-			Host:     host,
-			Path:     path,
-			User:     moduleConfig.Settings.Proxy.UserName,
-			Password: moduleConfig.Settings.Proxy.Password,
-			TTL:      moduleConfig.Settings.Proxy.TTL.StringPointer(),
-		}
 	}
 
 	return

@@ -1,3 +1,5 @@
+{{- with .Registry -}}
+
 server:
   addr: "127.0.0.1:5051"
   real_ip_header: "X-Forwarded-For"
@@ -11,33 +13,35 @@ token:
 
 users:
   # Password is specified as a BCrypt hash. Use htpasswd -nB USERNAME to generate.
-  {{ quote .Registry.UserRW.Name }}:
-    password: {{ quote .Registry.UserRW.PasswordHash }}
-  {{ quote .Registry.UserRO.Name }}:
-    password: {{ quote .Registry.UserRO.PasswordHash }}
-  {{- if eq .Registry.Mode "Detached" }}
-  {{ quote .Mirrorer.UserPuller.Name }}:
-    password: {{ quote .Mirrorer.UserPuller.PasswordHash }}
-  {{ quote .Mirrorer.UserPusher.Name }}:
-    password: {{ quote .Mirrorer.UserPusher.PasswordHash }}
+  {{ quote .UserRW.Name }}:
+    password: {{ quote .UserRW.PasswordHash }}
+  {{ quote .UserRO.Name }}:
+    password: {{ quote .UserRO.PasswordHash }}
+  {{- with .Mirrorer }}
+  {{ quote .UserPuller.Name }}:
+    password: {{ quote .UserPuller.PasswordHash }}
+  {{ quote .UserPusher.Name }}:
+    password: {{ quote .UserPusher.PasswordHash }}
   {{- end }}
 
 acl:
-  - match: { account: {{ quote .Registry.UserRW.Name }} }
+  - match: { account: {{ quote .UserRW.Name }} }
     actions: [ "*" ]
     comment: "has full access"
-  - match: { account: {{ quote .Registry.UserRO.Name }} }
+  - match: { account: {{ quote .UserRO.Name }} }
     actions: ["pull"]
     comment: "has readonly access"
-  {{- if eq .Registry.Mode "Detached" }}
-  - match: { account: {{ quote .Mirrorer.UserPusher.Name }} }
+  {{- with .Mirrorer }}
+  - match: { account: {{ quote .UserPusher.Name }} }
     actions: [ "*" ]
     comment: "mirrorer pusher"
-  - match: { account: {{ quote .Mirrorer.UserPuller.Name }}, type: "registry", name: "catalog" }
+  - match: { account: {{ quote .UserPuller.Name }}, type: "registry", name: "catalog" }
     actions: ["*"]
     comment: "mirrorer puller catalog"
-  - match: { account: {{ quote .Mirrorer.UserPuller.Name }} }
+  - match: { account: {{ quote .UserPuller.Name }} }
     actions: ["pull"]
     comment: "mirrorer puller"
   {{- end }}
   # Access is denied by default.
+
+{{- end }}

@@ -20,13 +20,13 @@ func computeHash(content []byte) string {
 }
 
 // compareFileHash reads the file at the given path and compares its hash with the provided new content.
-func compareFileHash(path string, newContent []byte) (bool, error) {
+func compareFileHash(path string, newContent []byte) (bool, string, error) {
 	currentContent, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
 		// File doesn't exist, so consider it different
-		return false, nil
+		return false, "", nil
 	} else if err != nil {
-		return false, err
+		return false, "", err
 	}
 
 	// Compute hashes for both the current file content and new content
@@ -34,41 +34,33 @@ func compareFileHash(path string, newContent []byte) (bool, error) {
 	newHash := computeHash(newContent)
 
 	// Return whether the hashes match
-	return currentHash == newHash, nil
+	return currentHash == newHash, newHash, nil
 }
 
 // saveFileIfChanged computing content's hash, compares it with the existing file hash and overwrites file if it different
 // hash is updated with actual value
-func saveFileIfChanged(outputPath string, content []byte, hashField *string) (bool, error) {
-	// Compute the hash of the new content
-	hash := computeHash(content)
-
-	// Update the hash field if provided
-	if hashField != nil {
-		*hashField = hash
-	}
-
+func saveFileIfChanged(outputPath string, content []byte) (bool, string, error) {
 	// Compare the existing file content with the new content
-	isSame, err := compareFileHash(outputPath, content)
+	isSame, hash, err := compareFileHash(outputPath, content)
 	if err != nil {
-		return false, fmt.Errorf("failed to compare file content for %s: %v", outputPath, err)
+		return false, hash, fmt.Errorf("failed to compare file content for %s: %v", outputPath, err)
 	}
 
 	// If the content is the same, no need to overwrite the file
 	if isSame {
-		return false, nil
+		return false, hash, nil
 	}
 
 	dir := filepath.Dir(outputPath)
 	if err := os.MkdirAll(dir, 0700); err != nil {
-		return false, fmt.Errorf("error creating directory %s: %v", dir, err)
+		return false, hash, fmt.Errorf("error creating directory %s: %v", dir, err)
 	}
 
 	if err := os.WriteFile(outputPath, content, 0600); err != nil {
-		return false, fmt.Errorf("error writing to file %s: %v", outputPath, err)
+		return false, hash, fmt.Errorf("error writing to file %s: %v", outputPath, err)
 	}
 
-	return true, nil
+	return true, hash, nil
 }
 
 // deleteFile deletes the file at the specified path

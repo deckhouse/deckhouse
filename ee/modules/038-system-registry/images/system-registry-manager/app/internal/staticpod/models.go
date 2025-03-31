@@ -18,7 +18,7 @@ type templateModel struct {
 	Version  string
 	Address  string
 	NodeName string
-	Hashes   ConfigHashes
+	Hashes   configHashes
 }
 
 type NodeServicesConfigModel struct {
@@ -38,11 +38,10 @@ func (cfg *NodeServicesConfigModel) Bind(r *http.Request) error {
 
 // Config represents the configuration
 type Config struct {
-	Registry RegistryConfig `json:"registry,omitempty" yaml:"registry,omitempty"`
 	Images   Images         `json:"images,omitempty" yaml:"images,omitempty"`
+	Registry RegistryConfig `json:"registry,omitempty" yaml:"registry,omitempty"`
 	PKI      PKIModel       `json:"pki,omitempty" yaml:"pki,omitempty"`
 	Proxy    *Proxy         `json:"proxy,omitempty" yaml:"proxy,omitempty"`
-	Mirrorer Mirrorer       `json:"mirrorer,omitempty" yaml:"mirrorer,omitempty"`
 }
 
 func (config *Config) Validate() error {
@@ -51,7 +50,6 @@ func (config *Config) Validate() error {
 		validation.Field(&config.Images, validation.Required),
 		validation.Field(&config.PKI, validation.Required),
 		validation.Field(&config.Proxy),
-		validation.Field(&config.Mirrorer, validation.Required),
 	)
 }
 
@@ -82,50 +80,27 @@ func (p PKIModel) Validate() error {
 	)
 }
 
-// ConfigHashes holds the hash of the configuration files
-type ConfigHashes struct {
-	AuthTemplate           string
-	DistributionTemplate   string
-	CACert                 string
-	AuthCert               string
-	AuthKey                string
-	TokenCert              string
-	TokenKey               string
-	DistributionCert       string
-	DistributionKey        string
-	UpstreamRegistryCACert string
-	IngressClientCACert    string
-	MirrorerTemplate       string
-}
-
-type RegistryMode string
-
-const (
-	RegistryModeDirect   RegistryMode = "Direct"
-	RegistryModeProxy    RegistryMode = "Proxy"
-	RegistryModeDetached RegistryMode = "Detached"
-)
+// configHashes holds the hash of the configuration files
+type configHashes map[string]string
 
 // RegistryConfig holds detailed configuration of the registry
 type RegistryConfig struct {
-	UserRW     User             `json:"userRW,omitempty" yaml:"user_rw,omitempty"`
-	UserRO     User             `json:"userRO,omitempty" yaml:"user_ro,omitempty"`
-	Mode       RegistryMode     `json:"mode,omitempty" yaml:"mode,omitempty" `
-	Upstream   UpstreamRegistry `json:"upstream,omitempty" yaml:"upstream,omitempty"`
-	HttpSecret string           `json:"httpSecret,omitempty" yaml:"http_secret,omitempty"`
+	UserRW     User              `json:"userRW,omitempty" yaml:"user_rw,omitempty"`
+	UserRO     User              `json:"userRO,omitempty" yaml:"user_ro,omitempty"`
+	Upstream   *UpstreamRegistry `json:"upstream,omitempty" yaml:"upstream,omitempty"`
+	HttpSecret string            `json:"httpSecret,omitempty" yaml:"http_secret,omitempty"`
+	Mirrorer   *Mirrorer         `json:"mirrorer,omitempty" yaml:"mirrorer,omitempty"`
 }
 
 func (rd RegistryConfig) Validate() error {
 	var fields []*validation.FieldRules
 
-	fields = append(fields, validation.Field(&rd.Mode, validation.Required))
 	fields = append(fields, validation.Field(&rd.HttpSecret, validation.Required))
 	fields = append(fields, validation.Field(&rd.UserRO, validation.Required))
 	fields = append(fields, validation.Field(&rd.UserRW, validation.Required))
 
-	if rd.Mode == RegistryModeProxy {
-		fields = append(fields, validation.Field(&rd.Upstream))
-	}
+	fields = append(fields, validation.Field(&rd.Mirrorer))
+	fields = append(fields, validation.Field(&rd.Upstream))
 
 	return validation.ValidateStruct(&rd, fields...)
 }
@@ -207,40 +182,41 @@ func (m Mirrorer) Validate() error {
 }
 
 // processTemplate processes the given template file and saves the rendered result to the specified path
-func (config *templateModel) processTemplate(name templateName, outputPath string, hashField *string) (bool, error) {
+func (config *templateModel) processTemplate(name templateName, outputPath string) (bool, string, error) {
 	// Render the template with the given configuration
 	renderedContent, err := renderTemplate(name, config)
 	if err != nil {
-		return false, fmt.Errorf("failed to render template %s: %v", name, err)
+		return false, "", fmt.Errorf("failed to render template %s: %v", name, err)
 	}
 
-	chaged, err := saveFileIfChanged(outputPath, renderedContent, hashField)
+	chaged, hash, err := saveFileIfChanged(outputPath, renderedContent)
 	if err != nil {
-		return chaged, fmt.Errorf("failed to save file %s: %w", outputPath, err)
+		return chaged, hash, fmt.Errorf("failed to save file %s: %w", outputPath, err)
 	}
-	return chaged, nil
+	return chaged, hash, nil
 }
 
 // syncPKIFiles synchronizes the PKI-related files in the specified directory.
 // This includes saving new files, updating existing ones, and removing obsolete files,
 // while updating hashes in ConfigHashes if they change.
-func (pki *PKIModel) syncPKIFiles(basePath string, configHashes *ConfigHashes) (bool, error) {
+func (pki *PKIModel) syncPKIFiles(basePath string) (bool, configHashes, error) {
 	anyFileChanged := false
+	hashes := make(configHashes)
 
 	// Define paths for each PKI file and corresponding hash field in ConfigHashes
 	fileMap := map[string]struct {
-		content   string
-		hashField *string
+		content string
+		hashKey string
 	}{
-		"ca.crt":                   {pki.CACert, &configHashes.CACert},
-		"auth.crt":                 {pki.AuthCert, &configHashes.AuthCert},
-		"auth.key":                 {pki.AuthKey, &configHashes.AuthKey},
-		"token.crt":                {pki.TokenCert, &configHashes.TokenCert},
-		"token.key":                {pki.TokenKey, &configHashes.TokenKey},
-		"distribution.crt":         {pki.DistributionCert, &configHashes.DistributionCert},
-		"distribution.key":         {pki.DistributionKey, &configHashes.DistributionKey},
-		"ingress-client-ca.crt":    {pki.IngressClientCACert, &configHashes.IngressClientCACert},
-		"upstream-registry-ca.crt": {pki.UpstreamRegistryCACert, &configHashes.UpstreamRegistryCACert},
+		"ca.crt":                   {pki.CACert, "ca-cert"},
+		"auth.crt":                 {pki.AuthCert, "auth-cert"},
+		"auth.key":                 {pki.AuthKey, "auth-key"},
+		"token.crt":                {pki.TokenCert, "token-cert"},
+		"token.key":                {pki.TokenKey, "token-key"},
+		"distribution.crt":         {pki.DistributionCert, "distribution-cert"},
+		"distribution.key":         {pki.DistributionKey, "distribution-key"},
+		"ingress-client-ca.crt":    {pki.IngressClientCACert, "ingress-ca-cert"},
+		"upstream-registry-ca.crt": {pki.UpstreamRegistryCACert, "upstream-ca-cert"},
 	}
 
 	// Iterate over the PKI files and process them
@@ -249,25 +225,24 @@ func (pki *PKIModel) syncPKIFiles(basePath string, configHashes *ConfigHashes) (
 
 		// Process each template and check if it has changed
 		if data.content != "" {
-			changed, err := saveFileIfChanged(path, []byte(data.content), data.hashField)
+			changed, hash, err := saveFileIfChanged(path, []byte(data.content))
 			if err != nil {
-				return false, fmt.Errorf("failed to process PKI file %s: %v", path, err)
+				return false, hashes, fmt.Errorf("failed to process PKI file %s: %v", path, err)
 			}
+
+			hashes[data.hashKey] = hash
 
 			anyFileChanged = anyFileChanged || changed
 		} else {
-			emptyContentHash := ""
-			data.hashField = &emptyContentHash
-
 			changed, err := deleteFile(path)
 			if err != nil {
-				return false, fmt.Errorf("failed to process PKI file %s: %v", path, err)
+				return false, hashes, fmt.Errorf("failed to process PKI file %s: %v", path, err)
 			}
 			anyFileChanged = anyFileChanged || changed
 		}
 	}
 
-	return anyFileChanged, nil
+	return anyFileChanged, hashes, nil
 }
 
 // ChangesModel represents a model to track applied changes

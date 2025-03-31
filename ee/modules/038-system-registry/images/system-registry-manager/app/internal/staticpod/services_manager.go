@@ -40,38 +40,34 @@ func (manager *servicesManager) applyConfig(config NodeServicesConfigModel) (cha
 	}
 
 	// Sync the PKI files
-	if changes.PKI, err = model.PKI.syncPKIFiles(
+	if changes.PKI, model.Hashes, err = model.PKI.syncPKIFiles(
 		pkiConfigDirectoryPath,
-		&model.Hashes,
 	); err != nil {
 		err = fmt.Errorf("error saving PKI files: %w", err)
 		return
 	}
 
 	// Process the templates with the given data and create the static pod and configuration files
-	if changes.Auth, err = model.processTemplate(
+	if changes.Auth, model.Hashes["auth-config"], err = model.processTemplate(
 		authConfigTemplateName,
 		authConfigPath,
-		&model.Hashes.AuthTemplate,
 	); err != nil {
 		err = fmt.Errorf("error processing Auth template: %w", err)
 		return
 	}
 
-	if changes.Distribution, err = model.processTemplate(
+	if changes.Distribution, model.Hashes["distribution-config"], err = model.processTemplate(
 		distributionConfigTemplateName,
 		distributionConfigPath,
-		&model.Hashes.DistributionTemplate,
 	); err != nil {
 		err = fmt.Errorf("error processing Distribution template: %w", err)
 		return
 	}
 
-	if model.Registry.Mode == RegistryModeDetached {
-		if changes.Mirrorer, err = model.processTemplate(
+	if model.Registry.Mirrorer != nil {
+		if changes.Mirrorer, model.Hashes["mirrorer-config"], err = model.processTemplate(
 			mirrorerConfigTemplateName,
 			mirrorerConfigPath,
-			&model.Hashes.MirrorerTemplate,
 		); err != nil {
 			err = fmt.Errorf("error processing Mirrorer template: %w", err)
 			return
@@ -84,10 +80,9 @@ func (manager *servicesManager) applyConfig(config NodeServicesConfigModel) (cha
 		}
 	}
 
-	if changes.Pod, err = model.processTemplate(
+	if changes.Pod, _, err = model.processTemplate(
 		registryStaticPodTemplateName,
 		registryStaticPodConfigPath,
-		nil,
 	); err != nil {
 		err = fmt.Errorf("error processing static pod template: %w", err)
 		return

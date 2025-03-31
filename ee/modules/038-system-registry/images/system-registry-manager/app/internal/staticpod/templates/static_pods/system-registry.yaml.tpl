@@ -1,4 +1,3 @@
-{{- $mode := .Registry.Mode -}}
 apiVersion: v1
 kind: Pod
 metadata:
@@ -11,28 +10,11 @@ metadata:
     tier: control-plane
     type: static-pod
   annotations:
-    {{- with .Hashes}}
-    registry.deckhouse.io/auth-config-hash: {{ quote .AuthTemplate }}
-    registry.deckhouse.io/distribution-config-hash: {{ quote .DistributionTemplate }}
-    {{- if eq $mode "Detached" }}
-    registry.deckhouse.io/mirrorer-config-hash: {{ quote .MirrorerTemplate }}
+    {{- range $key, $value := .Hashes }}
+    registry.deckhouse.io/hash-{{ $key }}: {{ quote $value }}
     {{- end }}
-    registry.deckhouse.io/ca-cert-hash: {{ quote .CACert }}
-    registry.deckhouse.io/auth-cert-hash: {{ quote .AuthCert }}
-    registry.deckhouse.io/auth-key-hash: {{ quote .AuthKey }}
-    registry.deckhouse.io/auth-token-cert-hash: {{ quote .TokenCert }}
-    registry.deckhouse.io/auth-token-key-hash: {{ quote .TokenKey }}
-    registry.deckhouse.io/distribution-cert-hash: {{ quote .DistributionCert }}
-    registry.deckhouse.io/distribution-key-hash: {{ quote .DistributionKey }}
-    {{- if .IngressClientCACert }}
-    registry.deckhouse.io/ingress-client-ca-cert-hash: {{ quote .IngressClientCACert }}
-    {{- end }}
-    {{- if .UpstreamRegistryCACert }}
-    registry.deckhouse.io/upstream-registry-ca-cert-hash: {{ quote .UpstreamRegistryCACert }}
-    {{- end }}
-    {{- end }}
-    {{- if .Version }}
-    registry.deckhouse.io/config-version: {{ quote .Version }}
+    {{- with .Version }}
+    registry.deckhouse.io/config-version: {{ quote . }}
     {{- else }}
     registry.deckhouse.io/config-version: "unknown"
     {{- end }}
@@ -138,7 +120,7 @@ spec:
         name: auth-config
       - mountPath: /system_registry_pki
         name: pki
-  {{- if and (eq $mode "Detached") .Mirrorer.Upstreams }}
+  {{- if and (.Registry.Mirrorer) .Registry.Mirrorer.Upstreams }}
   - name: mirrorer
     image: {{ .Images.Mirrorer }}
     imagePullPolicy: IfNotPresent
@@ -166,7 +148,7 @@ spec:
     hostPath:
       path: /etc/kubernetes/system-registry/distribution_config
       type: DirectoryOrCreate
-  {{- if eq .Registry.Mode "Detached" }}
+  {{- if and (.Registry.Mirrorer) .Registry.Mirrorer.Upstreams }}
   - name: mirrorer-config
     hostPath:
       path: /etc/kubernetes/system-registry/mirrorer

@@ -1,3 +1,6 @@
+{{- $pki := .PKI -}}
+{{- $address := .Address -}}
+{{- with .Registry -}}
 version: 0.1
 log:
   level: info
@@ -11,9 +14,9 @@ storage:
     disable: true
 
 http:
-  addr: {{ .Address }}:5001
+  addr: {{ $address }}:5001
   prefix: /
-  secret: {{ quote .Registry.HttpSecret }}
+  secret: {{ quote .HttpSecret }}
   debug:
     addr: "127.0.0.1:5002"
     prometheus:
@@ -22,7 +25,7 @@ http:
   tls:
     certificate: /system_registry_pki/distribution.crt
     key: /system_registry_pki/distribution.key
-{{- if .PKI.IngressClientCACert }}
+{{- if $pki.IngressClientCACert }}
   realip:
     enabled: true
     clientcert:
@@ -30,23 +33,23 @@ http:
       cn: nginx-ingress:nginx
 {{- end }}
 
-{{- if eq .Registry.Mode "Proxy" }}
+{{- with .Upstream }}
 proxy:
-  remoteurl: "{{ .Registry.Upstream.Scheme }}://{{ .Registry.Upstream.Host }}"
-  username: {{ quote .Registry.Upstream.User }}
-  password: {{ quote .Registry.Upstream.Password }}
-  remotepathonly: {{ quote .Registry.Upstream.Path }}
+  remoteurl: "{{ .Scheme }}://{{ .Host }}"
+  username: {{ quote .User }}
+  password: {{ quote .Password }}
+  remotepathonly: {{ quote .Path }}
   localpathalias: "/system/deckhouse"
-  {{- if .PKI.UpstreamRegistryCACert }}
+  {{- if $pki.UpstreamRegistryCACert }}
   ca: /system_registry_pki/upstream-registry-ca.crt
   {{- end }}
-  {{- if .Registry.Upstream.TTL }}
-  ttl: {{ quote .Registry.Upstream.TTL }}
+  {{- with .TTL }}
+  ttl: {{ quote . }}
   {{- end }}
 {{- end }}
 auth:
   token:
-    realm: "https://{{ .Address }}:5051/auth"
+    realm: "https://{{ $address }}:5051/auth"
     service: Deckhouse registry
     issuer: Registry server
     rootcertbundle: /system_registry_pki/token.crt
@@ -54,3 +57,5 @@ auth:
     proxy:
       url: https://127.0.0.1:5051/auth
       ca: /system_registry_pki/ca.crt
+
+{{- end }}

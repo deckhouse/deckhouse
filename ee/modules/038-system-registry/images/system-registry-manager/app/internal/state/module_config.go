@@ -43,8 +43,7 @@ type RegistryConfig struct {
 }
 
 type ImagesOverride struct {
-	RegistryManager string `json:"registryManager,omitempty"`
-	Mirrorer        string `json:"mirrorer,omitempty"`
+	Mirrorer string `json:"mirrorer,omitempty"`
 }
 
 type DetachedConfig struct {
