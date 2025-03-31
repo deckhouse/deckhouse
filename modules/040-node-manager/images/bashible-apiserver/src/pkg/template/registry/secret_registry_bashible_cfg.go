@@ -15,8 +15,8 @@
 package registry
 
 import (
-	"sigs.k8s.io/yaml"
 	"fmt"
+	"sigs.k8s.io/yaml"
 
 	corev1 "k8s.io/api/core/v1"
 )
@@ -26,6 +26,8 @@ const (
 )
 
 type registryBashibleConfig struct {
+	Mode           string                `json:"mode" yaml:"mode"`
+	ImagesBase     string                `json:"imagesBase" yaml:"imagesBase"`
 	Version        string                `json:"version" yaml:"version"`
 	ProxyEndpoints []string              `json:"proxyEndpoints" yaml:"proxyEndpoints"`
 	Hosts          []RegistryHostsObject `json:"hosts" yaml:"hosts"`

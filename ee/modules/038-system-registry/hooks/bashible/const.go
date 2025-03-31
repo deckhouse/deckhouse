@@ -6,23 +6,12 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package bashible
 
 import (
-	"fmt"
-
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
 	inputValuesBashibleCfg = "systemRegistry.internal.bashible"
-
-	RegistryPort   = 5001
-	RegistryPath   = "/system/deckhouse"
-	RegistryScheme = "https"
-)
-
-var (
-	RegistryHost      = fmt.Sprintf("embedded-registry.d8-system.svc:%d", RegistryPort)
-	RegistryProxyHost = fmt.Sprintf("127.0.0.1:%d", RegistryPort)
 )
 
 var (

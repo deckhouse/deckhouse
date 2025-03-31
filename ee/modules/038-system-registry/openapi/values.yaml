@@ -83,6 +83,13 @@ properties:
         type: object
         default: {}
         properties:
+          mode:
+            type: string
+          version:
+            type: string
+            default: "unknown"
+          imagesBase:
+            type: string
           proxyEndpoints:
             type: array
             default: []
@@ -96,13 +103,13 @@ properties:
             default: []
             x-example:
               - host: registry.d8-system.svc
+                ca: ["<cert content>"]
                 mirrors:
                   - host: 127.0.0.1:5001
-                    username: ...
-                    password: ...
-                    auth: ...
-                    ca: ...
-                    scheme: ...
+                    username: <username>
+                    password: <password>
+                    auth: <auth>
+                    scheme: http/https
             items:
               type: object
               required:
@@ -110,6 +117,11 @@ properties:
               properties:
                 host:
                   type: string
+                ca:
+                  type: array
+                  default: []
+                  items:
+                    type: string
                 mirrors:
                   type: array
                   default: []
@@ -125,8 +137,6 @@ properties:
                       password:
                         type: string
                       auth:
-                        type: string
-                      ca:
                         type: string
                       scheme:
                         type: string

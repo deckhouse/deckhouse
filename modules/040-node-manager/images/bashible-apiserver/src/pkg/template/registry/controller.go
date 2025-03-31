@@ -150,8 +150,8 @@ func (sc *registryStateController) loadRegistryBashibleConfigSecret(ctx context.
 }
 
 type RegistryDataWithHash struct {
-	HashSum      string       `json:"hashSum,omitempty" yaml:"hashSum,omitempty"`
-	RegistryData RegistryData `json:"registry" yaml:"registry"`
+	HashSum      string
+	RegistryData RegistryData
 }
 
 type RegistryData struct {
@@ -159,7 +159,7 @@ type RegistryData struct {
 	Address      string `json:"address" yaml:"address"`
 	Path         string `json:"path" yaml:"path"`
 	Scheme       string `json:"scheme" yaml:"scheme"`
-	CA           string `json:"ca,omitempty" yaml:"ca,omitempty"`
+	CA           string `json:"ca" yaml:"ca"`
 	DockerCFG    []byte `json:"dockerCfg" yaml:"dockerCfg"`
 	Auth         string `json:"auth" yaml:"auth"`
 	RegistryMode string `json:"registryMode" yaml:"registryMode"`
@@ -174,40 +174,41 @@ type RegistryData struct {
 
 type RegistryHostsObject struct {
 	Host    string                     `json:"host" yaml:"host"`
+	CA      []string                   `json:"ca" yaml:"ca"`
 	Mirrors []RegistryMirrorHostObject `json:"mirrors" yaml:"mirrors"`
 }
 
 type RegistryMirrorHostObject struct {
 	Host     string `json:"host" yaml:"host"`
+	Username string `json:"username" yaml:"username"`
+	Password string `json:"password" yaml:"password"`
+	Auth     string `json:"auth" yaml:"auth"`
 	Scheme   string `json:"scheme" yaml:"scheme"`
-	CA       string `json:"ca,omitempty" yaml:"ca,omitempty"`
-	Username string `json:"username,omitempty" yaml:"username,omitempty"`
-	Password string `json:"password,omitempty" yaml:"password,omitempty"`
-	Auth     string `json:"auth,omitempty" yaml:"auth,omitempty"`
 }
 
 // FromInputData populates RegistryData fields from given registry configuration
 func (d *RegistryData) FromInputData(deckhouseRegistry deckhouseRegistry, registryBashibleConfig *registryBashibleConfig) error {
-	d.Version = "unknown"
-	d.ProxyEndpoints = []string{}
-	d.Hosts = []RegistryHostsObject{}
-	d.PrepullHosts = []RegistryHostsObject{}
-
-	if registryBashibleConfig != nil {
-		d.Version = registryBashibleConfig.Version
-		d.ProxyEndpoints = slices.Clone(registryBashibleConfig.ProxyEndpoints)
-		d.Hosts = slices.Clone(registryBashibleConfig.Hosts)
-		d.PrepullHosts = slices.Clone(registryBashibleConfig.PrepullHosts)
-	}
-
-	d.Mode = deckhouseRegistry.RegistryMode
+	d.Mode = "Unmanaged"
 	d.ImagesBase = fmt.Sprintf(
 		"%s/%s",
 		deckhouseRegistry.Address,
 		strings.TrimLeft(deckhouseRegistry.Path, "/"),
 	)
+	d.Version = "unknown"
+	d.ProxyEndpoints = []string{}
+	d.Hosts = []RegistryHostsObject{}
+	d.PrepullHosts = []RegistryHostsObject{}
 
-	deckhouseRegistryHost := fmt.Sprintf("%s://%s", deckhouseRegistry.Scheme, deckhouseRegistry.Address)
+	// Replace, if registryBashibleConfig exist
+	if registryBashibleConfig != nil {
+		d.Mode = registryBashibleConfig.Mode
+		// TODO:
+		// d.ImagesBase = registryBashibleConfig.ImagesBase
+		d.Version = registryBashibleConfig.Version
+		d.ProxyEndpoints = slices.Clone(registryBashibleConfig.ProxyEndpoints)
+		d.Hosts = slices.Clone(registryBashibleConfig.Hosts)
+		d.PrepullHosts = slices.Clone(registryBashibleConfig.PrepullHosts)
+	}
 
 	deckhouseRegistryAuth, err := deckhouseRegistry.Auth()
 	if err != nil {
@@ -217,19 +218,21 @@ func (d *RegistryData) FromInputData(deckhouseRegistry deckhouseRegistry, regist
 	deckhouseRegistryMirrorHost := RegistryMirrorHostObject{
 		Host:   deckhouseRegistry.Address,
 		Auth:   deckhouseRegistryAuth,
-		CA:     deckhouseRegistry.CA,
 		Scheme: deckhouseRegistry.Scheme,
 	}
 
+	// Append Mirrors, if deckhouseRegistry.Address not exist in Mirrors list
 	if !slices.ContainsFunc(d.Hosts, func(host RegistryHostsObject) bool {
-		return host.Host == deckhouseRegistryHost
+		return host.Host == deckhouseRegistry.Address
 	}) {
 		d.Hosts = append(d.Hosts, RegistryHostsObject{
-			Host:    deckhouseRegistryHost,
+			Host:    deckhouseRegistry.Address,
+			CA:      []string{deckhouseRegistry.CA},
 			Mirrors: []RegistryMirrorHostObject{deckhouseRegistryMirrorHost},
 		})
 		d.PrepullHosts = append(d.PrepullHosts, RegistryHostsObject{
-			Host:    deckhouseRegistryHost,
+			Host:    deckhouseRegistry.Address,
+			CA:      []string{deckhouseRegistry.CA},
 			Mirrors: []RegistryMirrorHostObject{deckhouseRegistryMirrorHost},
 		})
 	}

@@ -6,40 +6,17 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package bashible
 
 import (
-	"slices"
 	"strings"
 
+	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 )
-
-type modeType string
 
 const (
 	inputValuesMode = "systemRegistry.mode"
 )
 
-const (
-	modeUnmanaged modeType = "Unmanaged"
-	modeDirect    modeType = "Direct"
-	modeProxy     modeType = "Proxy"
-	modeLocal     modeType = "Local"
-)
-
-func getMode(input *go_hook.HookInput) modeType {
+func getMode(input *go_hook.HookInput) registry_const.ModeType {
 	val := strings.ToLower(input.Values.Get(inputValuesMode).Str)
-
-	switch val {
-	case "direct":
-		return modeDirect
-	case "proxy":
-		return modeProxy
-	case "local":
-		return modeLocal
-	default:
-		return modeUnmanaged
-	}
-}
-
-func shouldRunStaticPodRegistry(mode modeType) bool {
-	return slices.Contains([]string{string(modeProxy), string(modeLocal)}, string(mode))
+	return registry_const.ToModeType(val)
 }

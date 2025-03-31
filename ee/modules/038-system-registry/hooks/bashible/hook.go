@@ -7,32 +7,12 @@ package bashible
 
 import (
 	"fmt"
-
+	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
+	registry_models "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
-	"github.com/hashicorp/go-multierror"
 )
-
-type BashibleConfig struct {
-	ProxyEndpoints []string      `json:"proxyEndpoints"`
-	Hosts          []HostsObject `json:"hosts"`
-	PrepullHosts   []HostsObject `json:"prepullHosts"`
-}
-
-type HostsObject struct {
-	Host    string             `json:"host"`
-	Mirrors []MirrorHostObject `json:"mirrors"`
-}
-
-type MirrorHostObject struct {
-	Host     string `json:"host"`
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Auth     string `json:"auth"`
-	CA       string `json:"ca"`
-	Scheme   string `json:"scheme"`
-}
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
@@ -65,96 +45,102 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NamespaceSelector: namespaceSelector,
 			FilterFunc:        filterRegistryUser,
 		},
+		{
+			Name:       "registry_bashible_config_secret",
+			ApiVersion: "v1",
+			Kind:       "Secret",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"registry-bashible-config"},
+			},
+			NamespaceSelector: namespaceSelector,
+			FilterFunc:        filterSecret,
+		},
 	},
 }, handleBashibleConfig)
 
 func handleBashibleConfig(input *go_hook.HookInput) error {
 	// Check module registry mode
-	if !shouldRunStaticPodRegistry(getMode(input)) {
-		setBashibleConfig(input, emptyBashibleConfig())
+
+	rMode := getMode(input)
+	if !registry_const.ShouldRunStaticPodRegistry(rMode) {
+		removeBashibleConfig(input)
 		return nil
 	}
 
 	// Extract snaps
-	var (
-		masterNodesIPs []string
-		rPKI           RegistryPKI
-		rUser          RegistryUser
-	)
+	masterNodesIPs := extractFromSnapNodeInternalIP(input.Snapshots["master_nodes_ips"])
+	rPKI := extractFromSnapRegistryPKI(input.Snapshots["registry_pki"])
+	rUser := extractFromSnapRegistryUser(input.Snapshots["registry_ro_user"])
 
-	{
-		var multiErr multierror.Error
-		masterNodesIPs = extractFromSnapNodeInternalIP(input.Snapshots["master_nodes_ips"])
+	if rPKI == nil || rUser == nil {
+		// User or PKI are missing.
+		// We cannot set a new empty bashible config because the secrets might have been accidentally deleted.
+		// We can't return an error here, as it might indicate that the manager hasn't fully started yet.
+		// Returning an error could prevent the manager from starting.
+		// Instead, attempt to restore the current configuration if it exists.
+		input.Logger.Warn("Registry user secrets or registry PKI secrets are missing. Attempting to restore bashible config from secret.")
 
-		if rPKIData, err := extractFromSnapRegistryPKI(input.Snapshots["registry_pki"]); err != nil {
-			multiErr.Errors = append(multiErr.Errors, err)
-		} else {
-			rPKI = rPKIData
+		// Try to extract the current bashible configuration from the secrets
+		currentBashibleConfig, err := extractRegistryBashibleConfigFromSecret(input.Snapshots["registry_bashible_config_secret"])
+		if err != nil {
+			return fmt.Errorf("failed to extract bashible config from secret: %w", err)
 		}
 
-		if rUserData, err := extractFromSnapRegistryUser(input.Snapshots["registry_ro_user"]); err != nil {
-			multiErr.Errors = append(multiErr.Errors, err)
-		} else {
-			rUser = rUserData
+		// If we successfully obtained the current configuration, set it if it doesn't already exist
+		if currentBashibleConfig != nil {
+			setBashibleConfigIfNotExist(input, *currentBashibleConfig)
 		}
-
-		// Check if any error occurred
-		if err := multiErr.ErrorOrNil(); err != nil {
-			// We can't set newEmptyBashibleConfig, maybe someone accidentally deleted the secret
-			// We can't return an error because it might mean the manager isn't started yet. Returning an error would prevent the manager from starting
-			// We should set default config if it doesn't exist
-			setBashibleConfigIfNotExist(input, emptyBashibleConfig())
-			input.Logger.Error(err.Error())
-			return nil
-		}
+		return nil
 	}
 
 	proxyEndpoints := make([]string, 0, len(masterNodesIPs))
 	for _, masterNodesIP := range masterNodesIPs {
-		proxyEndpoints = append(proxyEndpoints, fmt.Sprintf("%s:%d", masterNodesIP, RegistryPort))
+		proxyEndpoints = append(proxyEndpoints, fmt.Sprintf("%s:%d", masterNodesIP, registry_const.Port))
 	}
 
-	mirrors := createMirrors(rUser, rPKI, []string{RegistryProxyHost})
-	prepullMirrors := createMirrors(rUser, rPKI, append([]string{RegistryProxyHost}, proxyEndpoints...))
+	mirrors := createMirrors(*rUser, []string{registry_const.Host})
+	prepullMirrors := createMirrors(*rUser, append([]string{registry_const.Host}, proxyEndpoints...))
 
-	bashibleConfig := BashibleConfig{
+	bashibleConfig := registry_models.BashibleConfigSecret{
+		Mode:           rMode,
+		Version:        registry_const.DefaultVersion, // TODO:
+		ImagesBase:     registry_const.HostWithPath,
 		ProxyEndpoints: proxyEndpoints,
-		Hosts:          []HostsObject{{Host: RegistryHost, Mirrors: mirrors}},
-		PrepullHosts:   []HostsObject{{Host: RegistryHost, Mirrors: prepullMirrors}},
+		Hosts:          []registry_models.HostsObject{{Host: registry_const.Host, CA: []string{rPKI.CA}, Mirrors: mirrors}},
+		PrepullHosts:   []registry_models.HostsObject{{Host: registry_const.Host, CA: []string{rPKI.CA}, Mirrors: prepullMirrors}},
 	}
 
 	setBashibleConfig(input, bashibleConfig)
 	return nil
 }
 
-func createMirrors(rUser RegistryUser, rPKI RegistryPKI, hosts []string) []MirrorHostObject {
-	mirrors := make([]MirrorHostObject, 0, len(hosts))
+func createMirrors(rUser RegistryUser, hosts []string) []registry_models.MirrorHostObject {
+	mirrors := make([]registry_models.MirrorHostObject, 0, len(hosts))
 	for _, host := range hosts {
-		mirrors = append(mirrors, MirrorHostObject{
+		mirrors = append(mirrors, registry_models.MirrorHostObject{
 			Host:     host,
 			Username: rUser.Name,
 			Password: rUser.Password,
 			Auth:     rUser.Auth(),
-			CA:       rPKI.CA,
-			Scheme:   RegistryScheme,
+			Scheme:   registry_const.Scheme,
 		})
 	}
 	return mirrors
 }
 
-func emptyBashibleConfig() BashibleConfig {
-	return BashibleConfig{
-		ProxyEndpoints: []string{},
-		Hosts:          []HostsObject{},
-		PrepullHosts:   []HostsObject{},
+func removeBashibleConfig(input *go_hook.HookInput) {
+	obj := input.Values.Get(inputValuesBashibleCfg)
+
+	if obj.Exists() {
+		input.Values.Remove(inputValuesBashibleCfg)
 	}
 }
 
-func setBashibleConfig(input *go_hook.HookInput, cfg BashibleConfig) {
+func setBashibleConfig(input *go_hook.HookInput, cfg registry_models.BashibleConfigSecret) {
 	input.Values.Set(inputValuesBashibleCfg, cfg)
 }
 
-func setBashibleConfigIfNotExist(input *go_hook.HookInput, cfg BashibleConfig) {
+func setBashibleConfigIfNotExist(input *go_hook.HookInput, cfg registry_models.BashibleConfigSecret) {
 	obj := input.Values.Get(inputValuesBashibleCfg)
 
 	if !obj.Exists() {

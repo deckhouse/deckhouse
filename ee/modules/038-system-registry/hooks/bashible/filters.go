@@ -8,6 +8,7 @@ package bashible
 import (
 	"encoding/base64"
 	"fmt"
+	"sigs.k8s.io/yaml"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -16,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
+	registry_models "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models"
 )
 
 type RegistryPKI struct {
@@ -91,20 +93,49 @@ func filterRegistryUser(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 	return ret, nil
 }
 
-func extractFromSnapRegistryUser(snaps []go_hook.FilterResult) (RegistryUser, error) {
-	if len(snaps) == 0 {
-		return RegistryUser{}, fmt.Errorf("registry ro user secrets are missing")
+func filterSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var ret v1core.Secret
+	if err := sdk.FromUnstructured(obj, &ret); err != nil {
+		return nil, fmt.Errorf("failed to convert %s to secret struct: %w", obj.GetName(), err)
 	}
-	return snaps[0].(RegistryUser), nil
+	return ret, nil
 }
 
-func extractFromSnapRegistryPKI(snaps []go_hook.FilterResult) (RegistryPKI, error) {
+func extractFromSnapRegistryUser(snaps []go_hook.FilterResult) *RegistryUser {
 	if len(snaps) == 0 {
-		return RegistryPKI{}, fmt.Errorf("registry pki secrets are missing")
+		return nil
 	}
-	return snaps[0].(RegistryPKI), nil
+	registryUser := snaps[0].(RegistryUser)
+	return &registryUser
+}
+
+func extractFromSnapRegistryPKI(snaps []go_hook.FilterResult) *RegistryPKI {
+	if len(snaps) == 0 {
+		return nil
+	}
+	registryPKI := snaps[0].(RegistryPKI)
+	return &registryPKI
 }
 
 func extractFromSnapNodeInternalIP(snaps []go_hook.FilterResult) []string {
 	return set.NewFromSnapshot(snaps).Slice()
+}
+
+func extractRegistryBashibleConfigFromSecret(snaps []go_hook.FilterResult) (*registry_models.BashibleConfigSecret, error) {
+	if len(snaps) == 0 {
+		return nil, nil
+	}
+	secret := snaps[0].(v1core.Secret)
+
+	// Check if field is empty
+	rawConfig := secret.Data["config"]
+	if len(rawConfig) == 0 {
+		return nil, nil
+	}
+
+	var ret registry_models.BashibleConfigSecret
+	if err := yaml.Unmarshal(rawConfig, ret); err != nil {
+		return nil, fmt.Errorf("failed to parse registry bashible config secret: %w", err)
+	}
+	return &ret, nil
 }

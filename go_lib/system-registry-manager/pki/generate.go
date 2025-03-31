@@ -8,6 +8,7 @@ package pki
 import (
 	"crypto/rand"
 	"fmt"
+	"golang.org/x/crypto/bcrypt"
 	"math/big"
 )
 
@@ -19,11 +20,16 @@ const (
 )
 
 func GenerateRandomSecret() (string, error) {
-	return generateSecret(25)
+	return generateSecret(randomSecretLength)
 }
 
 func GenerateUserPassword() (string, error) {
 	return generateSecret(userPasswordLength)
+}
+
+func GeneratePasswordHash(password string) (string, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	return string(hash), err
 }
 
 func generateSecret(size int) (string, error) {
