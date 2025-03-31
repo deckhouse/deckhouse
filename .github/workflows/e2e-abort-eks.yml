@@ -294,7 +294,6 @@ jobs:
         run: |
           echo "Execute 'script_eks.sh cleanup' via 'docker run', using environment:
             TERRAFORM_IMAGE_NAME=${TERRAFORM_IMAGE_NAME}
-            exit 0
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -306,7 +305,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
-
+          exit 0
           ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
@@ -588,7 +587,6 @@ jobs:
         run: |
           echo "Execute 'script_eks.sh cleanup' via 'docker run', using environment:
             TERRAFORM_IMAGE_NAME=${TERRAFORM_IMAGE_NAME}
-            exit 0
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -600,7 +598,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
-
+          exit 0
           ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
@@ -882,7 +880,6 @@ jobs:
         run: |
           echo "Execute 'script_eks.sh cleanup' via 'docker run', using environment:
             TERRAFORM_IMAGE_NAME=${TERRAFORM_IMAGE_NAME}
-            exit 0
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -894,7 +891,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
-
+          exit 0
           ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
@@ -1176,7 +1173,6 @@ jobs:
         run: |
           echo "Execute 'script_eks.sh cleanup' via 'docker run', using environment:
             TERRAFORM_IMAGE_NAME=${TERRAFORM_IMAGE_NAME}
-            exit 0
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -1188,7 +1184,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
-
+          exit 0
           ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
@@ -1470,7 +1466,6 @@ jobs:
         run: |
           echo "Execute 'script_eks.sh cleanup' via 'docker run', using environment:
             TERRAFORM_IMAGE_NAME=${TERRAFORM_IMAGE_NAME}
-            exit 0
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -1482,7 +1477,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
-
+          exit 0
           ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
@@ -1764,7 +1759,6 @@ jobs:
         run: |
           echo "Execute 'script_eks.sh cleanup' via 'docker run', using environment:
             TERRAFORM_IMAGE_NAME=${TERRAFORM_IMAGE_NAME}
-            exit 0
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -1776,7 +1770,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
-
+          exit 0
           ls -lh $(pwd)/testing
 
           dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
