@@ -158,8 +158,8 @@ shell:
   - sed -i '/^build --enable_platform_specific_config/a build --linkopt=-Wl,-rpath,/opt/libcxx/lib' envoy.bazelrc
   - sed -i 's|build:libc++ --action_env=BAZEL_LINKOPTS=-lm:-pthread|build:libc++ --action_env=BAZEL_LINKOPTS=-lm:-lpthread|' envoy.bazelrc
   # - sed -i 's|build:clang --action_env=BAZEL_COMPILER=clang|build:clang --action_env=BAZEL_COMPILER=clang|' envoy.bazelrc
-  # - sed -i 's|build:clang --action_env=CC=clang --host_action_env=CC=clang|build:clang --action_env=CC=/usr/lib/llvm-14.0/bin/clang --host_action_env=CC=/usr/lib/llvm-14.0/bin/clang|' envoy.bazelrc
-  # - sed -i 's|build:clang --action_env=CXX=clang++ --host_action_env=CXX=clang++|build:clang --action_env=CXX=/usr/lib/llvm-14.0/bin/clang++ --host_action_env=CXX=/usr/lib/llvm-14.0/bin/clang++|' envoy.bazelrc
+  - sed -i 's|build:clang --action_env=CC=clang --host_action_env=CC=clang|build:clang --action_env=CC=/usr/lib/llvm-14.0/bin/clang --host_action_env=CC=/usr/lib/llvm-14.0/bin/clang|' envoy.bazelrc
+  - sed -i 's|build:clang --action_env=CXX=clang++ --host_action_env=CXX=clang++|build:clang --action_env=CXX=/usr/lib/llvm-14.0/bin/clang++ --host_action_env=CXX=/usr/lib/llvm-14.0/bin/clang++|' envoy.bazelrc
   # - sed -i '/^build:clang --linkopt=-fuse-ld=lld/a build:clang --linkopt=-L/opt/libcxx/lib' envoy.bazelrc
   # - sed -i '/^build:clang --linkopt=-fuse-ld=lld/a build:clang --linkopt=-Wl,-rpath,/opt/libcxx/lib' envoy.bazelrc
   - sed -i 's|build:gcc --action_env=BAZEL_COMPILER=gcc|build:gcc --action_env=BAZEL_COMPILER=gcc-11|' envoy.bazelrc
