@@ -619,7 +619,7 @@ jobs:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const pull_number = process.env.CI_COMMIT_REF_SLUG;
+            const prNumber = process.env.CI_COMMIT_REF_SLUG;
             console.log(prNumber)
             const maxWaitTimeMinutes = 20;
             const startTime = Date.now();
@@ -1178,7 +1178,7 @@ jobs:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const pull_number = process.env.CI_COMMIT_REF_SLUG;
+            const prNumber = process.env.CI_COMMIT_REF_SLUG;
             console.log(prNumber)
             const maxWaitTimeMinutes = 20;
             const startTime = Date.now();
@@ -1737,7 +1737,7 @@ jobs:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const pull_number = process.env.CI_COMMIT_REF_SLUG;
+            const prNumber = process.env.CI_COMMIT_REF_SLUG;
             console.log(prNumber)
             const maxWaitTimeMinutes = 20;
             const startTime = Date.now();
@@ -2296,7 +2296,7 @@ jobs:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const pull_number = process.env.CI_COMMIT_REF_SLUG;
+            const prNumber = process.env.CI_COMMIT_REF_SLUG;
             console.log(prNumber)
             const maxWaitTimeMinutes = 20;
             const startTime = Date.now();
@@ -2855,7 +2855,7 @@ jobs:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const pull_number = process.env.CI_COMMIT_REF_SLUG;
+            const prNumber = process.env.CI_COMMIT_REF_SLUG;
             console.log(prNumber)
             const maxWaitTimeMinutes = 20;
             const startTime = Date.now();
@@ -3414,7 +3414,7 @@ jobs:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const pull_number = process.env.CI_COMMIT_REF_SLUG;
+            const prNumber = process.env.CI_COMMIT_REF_SLUG;
             console.log(prNumber)
             const maxWaitTimeMinutes = 20;
             const startTime = Date.now();
