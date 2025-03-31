@@ -1,3 +1,5 @@
+FROM registry.k8s.io/pause:latest as pause
+
 FROM --platform=$BUILDPLATFORM golang:1.23-alpine AS builder
 
 ARG BUILD_TAGS=log_plain
@@ -58,6 +60,7 @@ ENV APP_PATH_FROM=./ee/modules/038-system-registry/images/system-registry-manage
 COPY --from=builder /tmp-tmp /tmp
 COPY --from=builder /manager /manager
 COPY --from=builder /staticpod /staticpod
+COPY --from=pause /pause /pause
 
 #COPY --from=builder /go/bin/linux_amd64/dlv /dlv
 #ENV XDG_CONFIG_HOME=/tmp/dlv

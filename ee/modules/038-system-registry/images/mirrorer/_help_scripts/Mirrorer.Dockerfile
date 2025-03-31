@@ -1,3 +1,5 @@
+FROM registry.k8s.io/pause:latest as pause
+
 FROM --platform=$BUILDPLATFORM golang:1.23-alpine AS builder
 
 ARG BUILD_TAGS=log_plain
@@ -36,5 +38,6 @@ RUN apk add --no-cache iproute2 curl vim bash
 
 COPY --from=builder /tmp-tmp /tmp
 COPY --from=builder /mirrorer /mirrorer
+COPY --from=pause /pause /pause
 
 ENTRYPOINT ["/mirrorer"]
