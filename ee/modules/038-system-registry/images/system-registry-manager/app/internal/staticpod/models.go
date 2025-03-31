@@ -17,10 +17,9 @@ import (
 
 type templateModel struct {
 	Config
-	Version  string
-	Address  string
-	NodeName string
-	Hash     string
+	Version string
+	Address string
+	Hash    string
 }
 
 type NodeServicesConfigModel struct {
@@ -80,21 +79,6 @@ func (p PKIModel) Validate() error {
 		// UpstreamRegistryCACert is optional field and can be empty
 		// IngressClientCACert is optional field and can be empty
 	)
-}
-
-// configHashes holds the hash of the configuration files
-type configHashes map[string]string
-
-func (ch configHashes) String() string {
-	values := make([]string, 0, len(ch))
-
-	for _, val := range ch {
-		values = append(values, val)
-	}
-
-	sort.Strings(values)
-	s := strings.Join(values, "\n")
-	return computeHash([]byte(s))
 }
 
 // RegistryConfig holds detailed configuration of the registry
@@ -213,50 +197,50 @@ func (config *templateModel) processTemplate(name templateName, outputPath strin
 // syncPKIFiles synchronizes the PKI-related files in the specified directory.
 // This includes saving new files, updating existing ones, and removing obsolete files,
 // while updating hashes in ConfigHashes if they change.
-func (pki *PKIModel) syncPKIFiles(basePath string) (bool, configHashes, error) {
+func (pki *PKIModel) syncPKIFiles(basePath string) (bool, string, error) {
 	anyFileChanged := false
-	hashes := make(configHashes)
 
 	// Define paths for each PKI file and corresponding hash field in ConfigHashes
-	fileMap := map[string]struct {
-		content string
-		hashKey string
-	}{
-		"ca.crt":                   {pki.CACert, "ca-cert"},
-		"auth.crt":                 {pki.AuthCert, "auth-cert"},
-		"auth.key":                 {pki.AuthKey, "auth-key"},
-		"token.crt":                {pki.TokenCert, "token-cert"},
-		"token.key":                {pki.TokenKey, "token-key"},
-		"distribution.crt":         {pki.DistributionCert, "distribution-cert"},
-		"distribution.key":         {pki.DistributionKey, "distribution-key"},
-		"ingress-client-ca.crt":    {pki.IngressClientCACert, "ingress-ca-cert"},
-		"upstream-registry-ca.crt": {pki.UpstreamRegistryCACert, "upstream-ca-cert"},
+	fileMap := map[string]string{
+		"ca.crt":                   pki.CACert,
+		"auth.crt":                 pki.AuthCert,
+		"auth.key":                 pki.AuthKey,
+		"token.crt":                pki.TokenCert,
+		"token.key":                pki.TokenKey,
+		"distribution.crt":         pki.DistributionCert,
+		"distribution.key":         pki.DistributionKey,
+		"ingress-client-ca.crt":    pki.IngressClientCACert,
+		"upstream-registry-ca.crt": pki.UpstreamRegistryCACert,
 	}
+
+	hashes := make([]string, 0, len(fileMap))
 
 	// Iterate over the PKI files and process them
 	for name, data := range fileMap {
 		path := filepath.Join(basePath, name)
 
 		// Process each template and check if it has changed
-		if data.content != "" {
-			changed, hash, err := saveFileIfChanged(path, []byte(data.content))
+		if data != "" {
+			changed, hash, err := saveFileIfChanged(path, []byte(data))
 			if err != nil {
-				return false, hashes, fmt.Errorf("failed to process PKI file %s: %v", path, err)
+				return false, "", fmt.Errorf("failed to process PKI file %s: %v", path, err)
 			}
 
-			hashes[data.hashKey] = hash
+			hashes = append(hashes, hash)
 
 			anyFileChanged = anyFileChanged || changed
 		} else {
 			changed, err := deleteFile(path)
 			if err != nil {
-				return false, hashes, fmt.Errorf("failed to process PKI file %s: %v", path, err)
+				return false, "", fmt.Errorf("failed to process PKI file %s: %v", path, err)
 			}
 			anyFileChanged = anyFileChanged || changed
 		}
 	}
 
-	return anyFileChanged, hashes, nil
+	sort.Strings(hashes)
+	hashesStr := strings.Join(hashes, "\n")
+	return anyFileChanged, computeHash([]byte(hashesStr)), nil
 }
 
 // ChangesModel represents a model to track applied changes

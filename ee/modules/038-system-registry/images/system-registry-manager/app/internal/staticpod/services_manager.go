@@ -6,6 +6,8 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package staticpod
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -33,46 +35,54 @@ func (manager *servicesManager) applyConfig(config NodeServicesConfigModel) (cha
 	defer manager.m.Unlock()
 
 	model := templateModel{
-		Config:   config.Config,
-		Version:  config.Version,
-		Address:  manager.hostIP,
-		NodeName: manager.nodeName,
+		Config:  config.Config,
+		Version: config.Version,
+		Address: manager.hostIP,
 	}
 
-	var hashes configHashes
+	sum := sha256.New()
+	var hash string
 
 	// Sync the PKI files
-	if changes.PKI, hashes, err = model.PKI.syncPKIFiles(
+	if changes.PKI, hash, err = model.PKI.syncPKIFiles(
 		pkiConfigDirectoryPath,
 	); err != nil {
 		err = fmt.Errorf("error saving PKI files: %w", err)
 		return
+	} else {
+		sum.Write([]byte(hash))
 	}
 
 	// Process the templates with the given data and create the static pod and configuration files
-	if changes.Auth, hashes["auth-config"], err = model.processTemplate(
+	if changes.Auth, hash, err = model.processTemplate(
 		authConfigTemplateName,
 		authConfigPath,
 	); err != nil {
 		err = fmt.Errorf("error processing Auth template: %w", err)
 		return
+	} else {
+		sum.Write([]byte(hash))
 	}
 
-	if changes.Distribution, hashes["distribution-config"], err = model.processTemplate(
+	if changes.Distribution, hash, err = model.processTemplate(
 		distributionConfigTemplateName,
 		distributionConfigPath,
 	); err != nil {
 		err = fmt.Errorf("error processing Distribution template: %w", err)
 		return
+	} else {
+		sum.Write([]byte(hash))
 	}
 
 	if model.Registry.Mirrorer != nil {
-		if changes.Mirrorer, hashes["mirrorer-config"], err = model.processTemplate(
+		if changes.Mirrorer, hash, err = model.processTemplate(
 			mirrorerConfigTemplateName,
 			mirrorerConfigPath,
 		); err != nil {
 			err = fmt.Errorf("error processing Mirrorer template: %w", err)
 			return
+		} else {
+			sum.Write([]byte(hash))
 		}
 	} else {
 		// Delete the mirrorer config file
@@ -82,7 +92,8 @@ func (manager *servicesManager) applyConfig(config NodeServicesConfigModel) (cha
 		}
 	}
 
-	model.Hash = hashes.String()
+	hashBytes := sum.Sum([]byte{})
+	model.Hash = hex.EncodeToString(hashBytes)
 	if changes.Pod, _, err = model.processTemplate(
 		registryStaticPodTemplateName,
 		registryStaticPodConfigPath,
