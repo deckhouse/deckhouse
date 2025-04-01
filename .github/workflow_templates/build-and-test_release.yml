@@ -54,7 +54,7 @@ jobs:
     runs-on: "ubuntu-latest"
     steps:
 {!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
-
+{!{ tmpl.Exec "skip_tests_repos" . | strings.Indent 2 }!}
 {!{ tmpl.Exec "git_info_job" $ctx | strings.Indent 2 }!}
 
   detect_editions:
@@ -116,6 +116,7 @@ jobs:
     name: {!{ $jobNames.build_fe }!}
     needs:
       - git_info
+      - skip_tests_repos
       - go_generate
       - workflow_render
     env:
