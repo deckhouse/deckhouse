@@ -57,7 +57,9 @@ func TestStaticPodManifest(t *testing.T) {
 }
 
 func TestDistributionConfig(t *testing.T) {
-	model := distributionConfigModel{}
+	model := distributionConfigModel{
+		Upstream: &distributionConfigUpstreamModel{},
+	}
 
 	testRender(t, model)
 }

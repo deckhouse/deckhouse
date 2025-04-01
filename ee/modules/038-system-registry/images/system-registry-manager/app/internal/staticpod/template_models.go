@@ -66,6 +66,7 @@ type distributionConfigUpstreamModel struct {
 	User     string
 	Password string
 	TTL      *string
+	CA       bool
 }
 
 func (model distributionConfigModel) Render() ([]byte, error) {
@@ -91,6 +92,7 @@ func (value NodeServicesConfigModel) toDistributionConfig(listenAddress string) 
 			User:     upstream.User,
 			Password: upstream.Password,
 			TTL:      upstream.TTL,
+			CA:       config.PKI.UpstreamRegistryCACert != "",
 		}
 	}
 
