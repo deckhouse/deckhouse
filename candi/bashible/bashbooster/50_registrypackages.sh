@@ -113,7 +113,7 @@ bb-image-fetch-blobs() {
   for IMAGE_DIGEST in "${!PACKAGES_MAP[@]}"; do
     local PACKAGE_DIR="${BB_FETCHED_PACKAGES_STORE}/${PACKAGES_MAP[$IMAGE_DIGEST]}"
     mkdir -p "${PACKAGE_DIR}"
-    bb-package-fetch-blob "${IMAGE_DIGEST}" "${PACKAGE_DIR}/${IMAGE_DIGEST}.tar"
+    bb-package-fetch-blob "${IMAGE_DIGEST}" "${PACKAGE_DIR}/${IMAGE_DIGEST}.tar.gz"
   done
 }
 
@@ -200,7 +200,7 @@ bb-image-save() {
       rm -rf "${TMP_DIR}" "${BB_FETCHED_PACKAGES_STORE:?}/${IMAGE}"
       bb-log-error "Failed to unpack image "${IMAGE}", it may be corrupted. The package will be refetched on the next attempt"
     ' ERR
-    gzip -d -c "${BB_FETCHED_PACKAGES_STORE}/${IMAGE}" "${BB_EXPORTED_IMAGE_STORE}/"
+    gzip -d -c "${BB_FETCHED_PACKAGES_STORE}/${IMAGE}.tar.gz" "${BB_EXPORTED_IMAGE_STORE}/"
     trap - ERR
 
     # Write digest to hold file
