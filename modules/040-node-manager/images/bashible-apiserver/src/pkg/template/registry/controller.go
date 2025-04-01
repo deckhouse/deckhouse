@@ -202,8 +202,7 @@ func (d *RegistryData) FromInputData(deckhouseRegistry deckhouseRegistry, regist
 	// Replace, if registryBashibleConfig exist
 	if registryBashibleConfig != nil {
 		d.Mode = registryBashibleConfig.Mode
-		// TODO:
-		// d.ImagesBase = registryBashibleConfig.ImagesBase
+		d.ImagesBase = registryBashibleConfig.ImagesBase
 		d.Version = registryBashibleConfig.Version
 		d.ProxyEndpoints = slices.Clone(registryBashibleConfig.ProxyEndpoints)
 		d.Hosts = slices.Clone(registryBashibleConfig.Hosts)
