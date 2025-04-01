@@ -32,7 +32,6 @@ type deckhouseRegistry struct {
 	Scheme       string `json:"scheme" yaml:"scheme"`
 	CA           string `json:"ca,omitempty" yaml:"ca,omitempty"`
 	DockerConfig []byte `json:".dockerconfigjson" yaml:".dockerconfigjson"`
-	RegistryMode string `json:"registryMode" yaml:"registryMode"`
 }
 
 func (d *deckhouseRegistry) DecodeSecret(secret *corev1.Secret) error {
@@ -53,12 +52,6 @@ func (d *deckhouseRegistry) DecodeSecret(secret *corev1.Secret) error {
 
 	if v, ok := secret.Data[".dockerconfigjson"]; ok {
 		d.DockerConfig = v
-	}
-
-	if v, ok := secret.Data["registryMode"]; ok {
-		d.RegistryMode = string(v)
-	} else {
-		d.RegistryMode = "Direct"
 	}
 	return nil
 }

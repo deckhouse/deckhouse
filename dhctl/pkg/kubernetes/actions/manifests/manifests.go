@@ -529,7 +529,6 @@ func DeckhouseRegistrySecret(registry config.Registry) *apiv1.Secret {
 			"address":                 []byte(registry.Data.Address),
 			"scheme":                  []byte(registry.Data.Scheme),
 			"imagesRegistry":          []byte(registry.Data.Address),
-			"registryMode":            []byte(registry.Mode()),
 		},
 	}
 

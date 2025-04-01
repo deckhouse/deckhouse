@@ -218,11 +218,6 @@ properties:
               It is used in the helm templates to generate the address of the container image.
               Almost always, concatinateds with tag from modulesImages.tag
             x-examples: [ "registry.example.com/deckhouse" ]
-          mode:
-            type: string
-            description: |
-              Registry mode
-            x-examples: [ "Direct" ]
       tags:
         type: object
         default: {}

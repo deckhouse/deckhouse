@@ -426,7 +426,6 @@ type tplContextCommon struct {
 
 	Proxy          map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
 	PackagesProxy  map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
-	RegistryMode   string                 `json:"registryMode,omitempty" yaml:"registryMode,omitempty"`
 }
 
 type bundleNGContext struct {
