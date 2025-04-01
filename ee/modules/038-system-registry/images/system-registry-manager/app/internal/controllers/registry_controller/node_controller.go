@@ -8,7 +8,6 @@ package registry_controller
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"reflect"
 	"sort"
 	"strings"
@@ -16,7 +15,6 @@ import (
 
 	"embeded-registry-manager/internal/state"
 	"embeded-registry-manager/internal/staticpod"
-	httpclient "embeded-registry-manager/internal/utils/http_client"
 
 	nodeservices "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/node-services"
 	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/pki"
@@ -37,17 +35,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-const (
-	staticPodURLFormat = "https://%s:4577/staticpod"
-)
-
 var (
 	masterNodesMatchingLabels = client.MatchingLabels{
 		state.LabelNodeIsMasterKey: "",
-	}
-
-	staticPodMatchingLabels = client.MatchingLabels{
-		"app": "system-registry-staticpod-manager",
 	}
 )
 
@@ -56,9 +46,8 @@ type NodeController = nodeController
 var _ reconcile.Reconciler = &nodeController{}
 
 type nodeController struct {
-	Namespace  string
-	Client     client.Client
-	HttpClient *httpclient.Client
+	Namespace string
+	Client    client.Client
 
 	masterNodeAddrs   []string
 	masterNodeAddrsMu sync.Mutex
@@ -277,33 +266,6 @@ func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 		return name == state.IngressPKIConfigMapName
 	})
 
-	staticPodManagerPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
-		if obj.GetNamespace() != nc.Namespace {
-			return false
-		}
-
-		labels := obj.GetLabels()
-		for k, v := range staticPodMatchingLabels {
-			if labels[k] != v {
-				return false
-			}
-		}
-
-		return true
-	})
-
-	staticPodManagerHandler := handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
-		pod, ok := obj.(*corev1.Pod)
-
-		if !ok {
-			return nil
-		}
-
-		var ret reconcile.Request
-		ret.Name = pod.Spec.NodeName
-		return []reconcile.Request{ret}
-	})
-
 	newReprocessAllHandler := func(objectType string) handler.EventHandler {
 		return handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
 			log := ctrl.LoggerFrom(ctx)
@@ -331,11 +293,6 @@ func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 			&moduleConfig,
 			newReprocessAllHandler("ModuleConfig"),
 			builder.WithPredicates(moduleConfigPredicate),
-		).
-		Watches(
-			&corev1.Pod{},
-			staticPodManagerHandler,
-			builder.WithPredicates(staticPodManagerPredicate),
 		).
 		Watches(
 			&corev1.Secret{},
@@ -392,7 +349,7 @@ func (nc *nodeController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	err = nc.Client.Get(ctx, req.NamespacedName, node)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			return nc.handleNodeDelete(ctx, req.Name)
+			return nc.cleanupNodeState(ctx, node)
 		}
 
 		return ctrl.Result{}, fmt.Errorf("cannot get node: %w", err)
@@ -594,9 +551,9 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 		return
 	}
 
-	err = nc.configureNodeServices(ctx, node.Name, servicesConfig)
+	err = nc.saveNodeServicesConfig(ctx, node.Name, servicesConfig)
 	if err != nil {
-		err = fmt.Errorf("apply node services configuration error: %w", err)
+		err = fmt.Errorf("save node services configuration error: %w", err)
 		return
 	}
 
@@ -697,27 +654,6 @@ func (nc *nodeController) contructNodeServicesConfig(
 	return
 }
 
-func (nc *nodeController) configureNodeServices(ctx context.Context, nodeName string, model staticpod.NodeServicesConfigModel) error {
-	err := nc.saveNodeServicesConfig(ctx, nodeName, model)
-	if err != nil {
-		return fmt.Errorf("error saving NodeServicesConfig Secret: %w", err)
-	}
-
-	podIP, err := nc.findNodeServicesManagerIP(ctx, nodeName)
-	if err != nil {
-		return fmt.Errorf("cannot find Static Pod Manager IP for Node: %w", err)
-	}
-
-	url := fmt.Sprintf(staticPodURLFormat, podIP)
-	_, err = nc.HttpClient.SendJSON(url, http.MethodPost, model)
-
-	if err != nil {
-		return fmt.Errorf("error sending HTTP request: %w", err)
-	}
-
-	return nil
-}
-
 func (nc *nodeController) saveNodeServicesConfig(ctx context.Context, nodeName string, model staticpod.NodeServicesConfigModel) error {
 	secret := corev1.Secret{}
 	key := types.NamespacedName{
@@ -769,49 +705,35 @@ func (nc *nodeController) saveNodeServicesConfig(ctx context.Context, nodeName s
 	return nil
 }
 
-func (nc *nodeController) stopNodeServices(ctx context.Context, nodeName string, onlyIfFound bool) error {
-	podIP, err := nc.findNodeServicesManagerIP(ctx, nodeName)
+func (nc *nodeController) deleteNodeServicesConfig(ctx context.Context, nodeName string, onlyIfFound bool) error {
+	log := ctrl.LoggerFrom(ctx).
+		WithValues("action", "DeleteNodeServicesConfig")
+
+	secret := corev1.Secret{}
+	key := types.NamespacedName{
+		Name:      state.NodeServicesConfigSecretName(nodeName),
+		Namespace: nc.Namespace,
+	}
+
+	err := nc.Client.Get(ctx, key, &secret)
+
 	if err != nil {
-		if onlyIfFound {
+		if apierrors.IsNotFound(err) {
+			// Already absent
 			return nil
 		}
 
-		return fmt.Errorf("cannot find Static Pod Manager IP for Node: %w", err)
+		return fmt.Errorf("cannot get secret %v k8s object: %w", key.Name, err)
 	}
 
-	url := fmt.Sprintf(staticPodURLFormat, podIP)
-	_, err = nc.HttpClient.SendJSON(url, http.MethodDelete, nil)
-
-	if err != nil {
-		return fmt.Errorf("error sending HTTP request: %w", err)
+	err = nc.Client.Delete(ctx, &secret)
+	if client.IgnoreNotFound(err) != nil {
+		return fmt.Errorf("delete secret %v error: %w", secret.Name, err)
+	} else {
+		log.Info("Deleted Node Services config", "node", nodeName, "name", secret.Name, "namespace", secret.Namespace)
 	}
 
 	return nil
-}
-
-func (nc *nodeController) findNodeServicesManagerIP(ctx context.Context, nodeName string) (string, error) {
-	var pods corev1.PodList
-
-	err := nc.Client.List(
-		ctx,
-		&pods,
-		staticPodMatchingLabels,
-		client.MatchingFields{
-			"spec.nodeName": nodeName,
-		},
-	)
-
-	if err != nil {
-		return "", err
-	}
-	if len(pods.Items) == 0 {
-		return "", fmt.Errorf("system-registry-staticpod-manager pod not found for node %s", nodeName)
-	}
-	if pods.Items[0].Status.PodIP == "" {
-		return "", fmt.Errorf("system-registry-staticpod-manager pod IP is empty for node %s", nodeName)
-	}
-
-	return pods.Items[0].Status.PodIP, nil
 }
 
 func (nc *nodeController) ensureNodePKI(ctx context.Context, nodeName, nodeAddress string, globalPKI state.GlobalPKI) (ret state.NodePKI, err error) {
@@ -1099,22 +1021,13 @@ func (nc *nodeController) getAllMasterNodes(ctx context.Context) (nodes *corev1.
 
 func (nc *nodeController) cleanupNodeState(ctx context.Context, node *corev1.Node) (ctrl.Result, error) {
 	// Delete static pod (let's race with k8s sheduler)
-	if err := nc.stopNodeServices(ctx, node.Name, true); err != nil {
-		err = fmt.Errorf("delete static pod configuration error: %w", err)
+	if err := nc.deleteNodeServicesConfig(ctx, node.Name, true); err != nil {
+		err = fmt.Errorf("delete Node Services Config error: %w", err)
 		return ctrl.Result{}, err
 	}
 
 	// Delete node secret if exists
 	if err := nc.deleteNodePKI(ctx, node.Name); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	return ctrl.Result{}, nil
-}
-
-func (nc *nodeController) handleNodeDelete(ctx context.Context, name string) (ctrl.Result, error) {
-	// Delete node secret if exists
-	if err := nc.deleteNodePKI(ctx, name); err != nil {
 		return ctrl.Result{}, err
 	}
 

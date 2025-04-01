@@ -17,7 +17,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 )
 
@@ -48,11 +47,6 @@ func Run(ctx context.Context, cfg *rest.Config, settings AppSettings) error {
 	services := &servicesManager{
 		log:      slog.With("component", "Services manager"),
 		settings: settings,
-	}
-
-	api := &apiServer{
-		log:      slog.With("component", "HTTP API"),
-		services: services,
 	}
 
 	// Set up the manager with leader election and other options
@@ -90,8 +84,6 @@ func Run(ctx context.Context, cfg *rest.Config, settings AppSettings) error {
 	if err := servicesCtrl.SetupWithManager(ctx, mgr); err != nil {
 		return fmt.Errorf("unable to create services controller: %w", err)
 	}
-
-	mgr.Add(manager.RunnableFunc(api.Run))
 
 	// Start the manager
 	log.Info("Starting manager")

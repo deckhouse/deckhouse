@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 
+	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -149,14 +150,7 @@ func (sc *servicesController) Reconcile(ctx context.Context, _ ctrl.Request) (ct
 
 	if !hasMasterLabel(&node) {
 		log.Info("Node is not master, stopping services")
-		if changes, err := sc.Services.StopServices(); err == nil {
-			log.Info("All servies stopped", "changes", changes)
-			return reconcile.Result{}, nil
-		} else {
-			err = fmt.Errorf("cannot stop services: %w", err)
-			log.Error(err, "Cannot stop services", "changes", changes)
-			return reconcile.Result{}, err
-		}
+		return sc.stopServices(ctx)
 	}
 
 	moduleConfig := getModuleConfigObject()
@@ -173,22 +167,62 @@ func (sc *servicesController) Reconcile(ctx context.Context, _ ctrl.Request) (ct
 
 	config := corev1.Secret{}
 	key = types.NamespacedName{Name: sc.getConfigSecretName(), Namespace: sc.Namespace}
+
 	if err := sc.Client.Get(ctx, key, &config); apierrors.IsNotFound(err) {
-		log.Info("Config not found, should stop all!")
-		return reconcile.Result{}, nil
+		return sc.stopServices(ctx)
 	} else if err != nil {
 		return ctrl.Result{}, fmt.Errorf("cannot get Config: %w", err)
 	}
 
-	configVersion := string(config.Data["version"])
-	configYAML := string(config.Data["config"])
+	configModel := NodeServicesConfigModel{
+		Version: string(config.Data["version"]),
+	}
 
-	log.Info("Reconcile",
-		"version", configVersion,
-		"config_len", len(configYAML),
-	)
+	if err := yaml.Unmarshal(config.Data["config"], &configModel.Config); err != nil {
+		return ctrl.Result{}, fmt.Errorf("config unmarshal error: %w", err)
+	}
+
+	if err := configModel.Validate(); err != nil {
+		return ctrl.Result{}, fmt.Errorf("config validation error: %w", err)
+	}
+
+	changes, err := sc.Services.applyConfig(configModel)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("apply services config error: %w", err)
+	}
+
+	if changes.HasChanges() {
+		log.Info(
+			"Services configuration created/updated successfully",
+			"changes", changes,
+			"version", configModel.Version,
+		)
+	} else {
+		log.Info("No changes in services configuration required")
+	}
 
 	return ctrl.Result{}, nil
+}
+
+func (sc *servicesController) stopServices(ctx context.Context) (ctrl.Result, error) {
+	log := ctrl.LoggerFrom(ctx)
+
+	changes, err := sc.Services.StopServices()
+
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("stop services error: %w", err)
+	}
+
+	if changes.HasChanges() {
+		log.Info(
+			"All services are stopped successfully",
+			"changes", changes,
+		)
+	} else {
+		log.Info("All services are stopped already")
+	}
+
+	return reconcile.Result{}, nil
 }
 
 func (sc *servicesController) getConfigSecretName() string {
