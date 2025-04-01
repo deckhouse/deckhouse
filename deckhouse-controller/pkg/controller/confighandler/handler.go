@@ -74,7 +74,7 @@ func (h *Handler) HandleEvent(moduleConfig *v1alpha1.ModuleConfig, op config.Op)
 	} else {
 		addonOperatorModuleConfig := utils.NewModuleConfig(moduleConfig.Name, values)
 		addonOperatorModuleConfig.IsEnabled = moduleConfig.Spec.Enabled
-		addonOperatorModuleConfig.SelfService = moduleConfig.Spec.SelfService
+		addonOperatorModuleConfig.ManagementState = moduleConfig.Spec.ManagementState
 		kubeConfig.Modules[moduleConfig.Name] = &config.ModuleKubeConfig{
 			ModuleConfig: *addonOperatorModuleConfig,
 			Checksum:     addonOperatorModuleConfig.Checksum(),
@@ -120,7 +120,7 @@ func (h *Handler) LoadConfig(ctx context.Context, _ ...string) (*config.KubeConf
 
 		addonOperatorModuleConfig := utils.NewModuleConfig(moduleConfig.Name, values)
 		addonOperatorModuleConfig.IsEnabled = moduleConfig.Spec.Enabled
-		addonOperatorModuleConfig.SelfService = moduleConfig.Spec.SelfService
+		addonOperatorModuleConfig.ManagementState = moduleConfig.Spec.ManagementState
 
 		kubeConfig.Modules[moduleConfig.Name] = &config.ModuleKubeConfig{
 			ModuleConfig: *addonOperatorModuleConfig,

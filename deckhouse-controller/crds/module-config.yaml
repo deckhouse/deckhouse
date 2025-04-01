@@ -46,10 +46,11 @@ spec:
                   description: |
                     Enables or disables the module.
                   x-doc-examples: ['false']
-                selfService:
-                  type: boolean
+                managementState:
+                  type: string
+                  enum: ["Unmanaged"]
                   description: |
-                    Enables self-service mode for developing or tweaking the module.
+                    Enables Unmanaged mode for developing or tweaking the module.
                     
                     In this mode:
                     

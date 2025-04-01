@@ -103,12 +103,12 @@ func (v SettingsValues) DeepCopyInto(out *SettingsValues) {
 }
 
 type ModuleConfigSpec struct {
-	Version      int            `json:"version,omitempty"`
-	Settings     SettingsValues `json:"settings,omitempty"`
-	Enabled      *bool          `json:"enabled,omitempty"`
-	UpdatePolicy string         `json:"updatePolicy,omitempty"`
-	Source       string         `json:"source,omitempty"`
-	SelfService  bool           `json:"selfService,omitempty"`
+	Version         int            `json:"version,omitempty"`
+	Settings        SettingsValues `json:"settings,omitempty"`
+	Enabled         *bool          `json:"enabled,omitempty"`
+	UpdatePolicy    string         `json:"updatePolicy,omitempty"`
+	Source          string         `json:"source,omitempty"`
+	ManagementState string         `json:"managementState,omitempty"`
 }
 
 type ModuleConfigStatus struct {

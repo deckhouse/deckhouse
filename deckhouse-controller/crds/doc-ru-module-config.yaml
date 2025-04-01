@@ -12,7 +12,7 @@ spec:
                 enabled:
                   description: |
                     Включить или выключить модуль.
-                selfService:
+                managementState:
                   description: |
                     Включить режим самообслуживания для разработки или отладки модуля.
                     
