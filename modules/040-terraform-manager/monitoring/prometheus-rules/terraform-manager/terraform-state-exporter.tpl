@@ -246,10 +246,8 @@
 
   - alert: D8TerraformVersionMismatch
     expr: |
-      (candi_converge_terraform_current_version unless on(version) candi_converge_terraform_state_version)
-      or
-      (candi_converge_terraform_state_version unless on(version) candi_converge_terraform_current_version)
-    for: 10m
+      candi_converge_terraform_state_version unless on(version) candi_converge_terraform_current_version
+    for: 5m
     labels:
       severity_level: "8"
       tier: cluster
