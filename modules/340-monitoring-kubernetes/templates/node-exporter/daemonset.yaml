@@ -83,7 +83,7 @@ spec:
         - '--collector.ntp.server=$(HOST_IP)'
         - '--collector.processes'
         - '--collector.filesystem.mount-points-exclude'
-        - '(^/(dev|proc|sys|run)($|/))|(^/var/lib/docker/)|(^/var/lib/containerd/)|(/kubelet/)'
+        - '(^/(dev|proc|run)($|/))|(^/var/lib/docker/)|(^/var/lib/containerd/)|(/kubelet/)'
 # we want to ignore veth devices. Justification - https://github.com/prometheus-operator/kube-prometheus/pull/1224
 # veth.* - for veth interfaces.
 # [a-f0-9]{15} - for OVN veth interfaces.
