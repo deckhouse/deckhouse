@@ -155,7 +155,7 @@ func livenessCheck() error {
 func setupInterface(kubeDNSSvcIP string) error {
 	link, err := netlink.LinkByName(deviceName)
 	if err != nil {
-		if errors.Is(err, &netlink.LinkNotFoundError{}) {
+		if errors.As(err, &netlink.LinkNotFoundError{}) {
 			linkAttrs := netlink.NewLinkAttrs()
 			linkAttrs.Name = deviceName
 			dummyLink := &netlink.Dummy{LinkAttrs: linkAttrs}
