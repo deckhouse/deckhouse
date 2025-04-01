@@ -435,10 +435,10 @@ entries:
                     en: Examples
                     ru: Примеры
                   url: /modules/cloud-provider-vcd/examples.html
-                - title:
-                    en: FAQ
-                    ru: FAQ
-                  url: /modules/cloud-provider-vcd/faq.html
+                #- title:
+                    #en: FAQ
+                    #ru: FAQ
+                  #url: /modules/cloud-provider-vcd/faq.html
             - title:
                 en: VMware vSphere
                 ru: VMware vSphere

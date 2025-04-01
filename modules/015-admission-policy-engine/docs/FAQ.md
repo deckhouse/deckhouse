@@ -84,11 +84,13 @@ Find more examples of checks for policy extension in the [Gatekeeper Library](ht
 
 ## How to allow some Pod Security Standards policies without disabling whole list?
 
-1. Add the `security.deckhouse.io/pod-policy: privileged` label to your namespace in order to disable built-in policies.
-1. Create a `SecurityPolicy` resource that matches the `baseline` or `restricted` policy while also editing the list of `policies` elements as you see fit.
-1. Add a label to your namespace that matches the `namespaceSelector` in the `SecurityPolicy` resource. In the examples below, the label is `operation-policy.deckhouse.io/baseline-enabled: "true"` or `operation-policy.deckhouse.io/restricted-enabled: "true"`.
+To apply only the required security policies without turning off the entire built-in set:
 
-`SecurityPolicy` that matches [baseline](https://kubernetes.io/docs/concepts/security/pod-security-standards/#baseline) standard:
+1. Add the `security.deckhouse.io/pod-policy: privileged` label to your namespace in order to disable built-in policies.
+1. Create a SecurityPolicy resource that matches the [baseline](https://kubernetes.io/docs/concepts/security/pod-security-standards/#baseline) or [restricted](https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted) policy while also editing the list of `policies` elements as you see fit.
+1. Add a label to your namespace that matches the `namespaceSelector` in the SecurityPolicy resource. In the examples below, the label is `operation-policy.deckhouse.io/baseline-enabled: "true"` or `operation-policy.deckhouse.io/restricted-enabled: "true"`.
+
+SecurityPolicy that matches baseline standard:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -157,7 +159,7 @@ spec:
           operation-policy.deckhouse.io/baseline-enabled: "true"
 ```
 
-`SecurityPolicy` that matches [restricted](https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted) standard:
+`SecurityPolicy` that matches restricted standard:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

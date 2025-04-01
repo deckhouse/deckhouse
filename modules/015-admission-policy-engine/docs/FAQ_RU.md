@@ -86,13 +86,15 @@ spec:
 
 Больше примеров описания проверок для расширения политики можно найти [в библиотеке Gatekeeper](https://github.com/open-policy-agent/gatekeeper-library/tree/master/src/general).
 
-## Как разрешить одну или несколько политик Pod Security Standards, не отключая весь набор?
+## Как включить одну или несколько политик Pod Security Standards, не отключая весь набор?
 
-1. Добавьте на ваш namespace метку `security.deckhouse.io/pod-policy: privileged`, чтобы отключить встроенный набор политик.
-1. Создайте ресурс `SecurityPolicy`, соответствующий политикам baseline либо restricted, при этом отредактируйте список `policies` под ваши нужды.
-1. Добавьте на свой namespace метку, соответствующую `namespaceSelector` в `SecurityPolicy`. В примерах ниже это `operation-policy.deckhouse.io/baseline-enabled: "true"` либо `operation-policy.deckhouse.io/restricted-enabled: "true"`
+Чтобы применить только нужные политики безопасности, не отключая весь предустановленный набор:
 
-`SecurityPolicy`, соответствующая [baseline](https://kubernetes.io/docs/concepts/security/pod-security-standards/#baseline):
+1. Добавьте в нужное пространство имён метку: `security.deckhouse.io/pod-policy: privileged`, чтобы отключить встроенный набор политик.
+1. Создайте ресурс SecurityPolicy, соответствующий уровню [baseline](https://kubernetes.io/docs/concepts/security/pod-security-standards/#baseline) или [restricted](https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted). В секции `policies` укажите только необходимые вам настройки.
+1. Добавьте в пространство имён дополнительную метку, которая будет соответствовать селектору `namespaceSelector` в SecurityPolicy. В примерах ниже это `operation-policy.deckhouse.io/baseline-enabled: "true"` либо `operation-policy.deckhouse.io/restricted-enabled: "true"`
+
+SecurityPolicy, соответствующая baseline:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -161,7 +163,7 @@ spec:
           operation-policy.deckhouse.io/baseline-enabled: "true"
 ```
 
-`SecurityPolicy`, соответствующая [restricted](https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted):
+SecurityPolicy, соответствующая restricted:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
