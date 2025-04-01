@@ -37,6 +37,10 @@ import:
   add: /opentofu/opentofu
   to: /root/opentofu
   before: setup
+- image: opentofu
+  add: /opentofu/opentofu
+  to: /root/terraform
+  before: setup
 git:
 - add: /{{ .ModulePath }}
   to: /deckhouse
