@@ -111,8 +111,8 @@ spec:
 
 Чтобы настроить работу Deckhouse с платформой Grafana Cloud, выполните следующие шаги:
 
-1. Создайте [ключ доступа к API Grafana Cloud](https://grafana.com/docs/grafana-cloud/reference/create-api-key/).
-1. Закодируйте токен доступа к Grafana Cloud в формате Base64.
+1. создайте [ключ доступа к API Grafana Cloud](https://grafana.com/docs/grafana-cloud/reference/create-api-key/);
+1. закодируйте токен доступа к Grafana Cloud в формате Base64:
 
    ![API-ключ Grafana Cloud](../../images/log-shipper/grafana_cloud.png)
 
@@ -120,7 +120,7 @@ spec:
    echo -n "<YOUR-GRAFANACLOUD-TOKEN>" | base64 -w0
    ```
 
-1. Создайте ресурс ClusterLogDestination (#TODO ссылка на CR), следуя примеру:
+1. создайте ресурс ClusterLogDestination (#TODO ссылка на CR), следуя примеру:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
