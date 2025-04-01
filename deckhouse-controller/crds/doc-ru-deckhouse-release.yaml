@@ -20,7 +20,7 @@ spec:
                 requirements:
                   description: Требования для установки релиза.
                 disruptions:
-                  description: Потенциально опасные изменения в релизе.
+                  description: Изменения в релизе с потенциальным прерыванием трафика (disruptions).
                 changelog:
                   description: Изменения включенных модулей в данном релизе.
                 changelogLink:
