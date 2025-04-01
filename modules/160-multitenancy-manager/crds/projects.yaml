@@ -93,18 +93,6 @@ spec:
                   description: |
                     Arbitrary description of the project's purpose. Specify an empty string if no description is required.
                   type: string
-                resourceLabels:
-                  description: |
-                    Labels to be applied to all resources created by the project.
-                  type: object
-                  additionalProperties:
-                    type: string
-                resourceAnnotations:
-                  description: |
-                    Annotations to be applied to all resources created by the project.
-                  type: object
-                  additionalProperties:
-                    type: string
                 projectTemplateName:
                   description: |
                     The name of the [ProjectTemplate](cr.html#projecttemplate) resource that defines which resources will be created in the project.

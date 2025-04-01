@@ -119,12 +119,6 @@ type ProjectSpec struct {
 	// Description of the Project
 	Description string `json:"description,omitempty"`
 
-	// Labels that will be set for all project resources
-	ResourceLabels map[string]string `json:"resourceLabels,omitempty"`
-
-	// Annotations that will be set for all project resources
-	ResourceAnnotations map[string]string `json:"resourceAnnotations,omitempty"`
-
 	// Name of ProjectTemplate to use to create Project
 	ProjectTemplateName string `json:"projectTemplateName,omitempty"`
 
@@ -147,20 +141,6 @@ func (p *ProjectSpec) DeepCopyInto(newObj *ProjectSpec) {
 	newObj.Parameters = make(map[string]interface{})
 	for key, value := range p.Parameters {
 		newObj.Parameters[key] = value
-	}
-	if p.ResourceLabels != nil {
-		in, out := &p.ResourceLabels, &newObj.ResourceLabels
-		*out = make(map[string]string, len(*in))
-		for key, val := range *in {
-			(*out)[key] = val
-		}
-	}
-	if p.ResourceAnnotations != nil {
-		in, out := &p.ResourceAnnotations, &newObj.ResourceAnnotations
-		*out = make(map[string]string, len(*in))
-		for key, val := range *in {
-			(*out)[key] = val
-		}
 	}
 }
 
