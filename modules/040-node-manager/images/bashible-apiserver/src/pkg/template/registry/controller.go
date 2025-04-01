@@ -155,15 +155,6 @@ type RegistryDataWithHash struct {
 }
 
 type RegistryData struct {
-	// For backward compatibility
-	Address      string `json:"address" yaml:"address"`
-	Path         string `json:"path" yaml:"path"`
-	Scheme       string `json:"scheme" yaml:"scheme"`
-	CA           string `json:"ca" yaml:"ca"`
-	DockerCFG    []byte `json:"dockerCfg" yaml:"dockerCfg"`
-	Auth         string `json:"auth" yaml:"auth"`
-	RegistryMode string `json:"registryMode" yaml:"registryMode"`
-
 	Mode           string                `json:"mode" yaml:"mode"`
 	ImagesBase     string                `json:"imagesBase" yaml:"imagesBase"`
 	Version        string                `json:"version" yaml:"version"`
@@ -235,15 +226,6 @@ func (d *RegistryData) FromInputData(deckhouseRegistry deckhouseRegistry, regist
 			Mirrors: []RegistryMirrorHostObject{deckhouseRegistryMirrorHost},
 		})
 	}
-
-	// For backward compatibility
-	d.Address = deckhouseRegistry.Address
-	d.Path = deckhouseRegistry.Path
-	d.Scheme = deckhouseRegistry.Scheme
-	d.CA = deckhouseRegistry.CA
-	d.DockerCFG = deckhouseRegistry.DockerConfig
-	d.Auth = deckhouseRegistryAuth
-	d.RegistryMode = deckhouseRegistry.RegistryMode
 	return nil
 }
 
