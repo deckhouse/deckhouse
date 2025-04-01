@@ -198,6 +198,7 @@ spec:
         ports:
         - containerPort: 8080
           name: https-metrics
+{{- range $name, $imageRef := $images }}
       - name: image-holder-{{ $name | kebabcase }}
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: "{{ $imageRef }}"
@@ -209,6 +210,7 @@ spec:
           {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "image_holder_resources" $ | nindent 12 }}
           {{- end }}
+{{- end }}
       priorityClassName: system-cluster-critical
       volumes:
       - name: etc-kubernetes
