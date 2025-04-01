@@ -1846,6 +1846,14 @@ entries:
                 ru: Настройки
               url: /modules/deckhouse-tools/configuration.html
     - title:
+        en: Release notes
+        ru: История изменений
+      folders:
+      - title:
+          en: Version 1.68
+          ru: Версия 1.68
+        url: /release-notes/1-68.html
+    - title:
         en: Deckhouse CLI
         ru: Deckhouse CLI
       url: /deckhouse-cli/
