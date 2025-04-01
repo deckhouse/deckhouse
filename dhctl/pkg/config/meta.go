@@ -377,7 +377,7 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 		result["nodeIP"] = nodeIP
 	}
 
-	registryData, err := m.Registry.ConvertToMap()
+	registryData, err := m.Registry.KubeadmTemplatesContext()
 	if err != nil {
 		return nil, err
 	}
@@ -430,11 +430,6 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 		nodeGroup["static"] = m.ExtractMasterNodeGroupStaticSettings()
 	}
 
-	registryData, err := m.Registry.ConvertToMap()
-	if err != nil {
-		return nil, err
-	}
-
 	configForBashibleBundleTemplate := make(map[string]interface{})
 	for key, value := range m.VersionMap {
 		configForBashibleBundleTemplate[key] = value
@@ -459,6 +454,11 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 		if proxyData != nil {
 			configForBashibleBundleTemplate["proxy"] = proxyData
 		}
+	}
+
+	registryData, err := m.Registry.BashibleBundleTemplateContext()
+	if err != nil {
+		return nil, err
 	}
 
 	configForBashibleBundleTemplate["registry"] = registryData

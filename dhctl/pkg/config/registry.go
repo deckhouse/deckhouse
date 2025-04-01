@@ -240,7 +240,11 @@ func (r Registry) DeepCopy() Registry {
 	}
 }
 
-func (r Registry) ConvertToMap() (map[string]interface{}, error) {
+func (r Registry) KubeadmTemplatesContext() (map[string]interface{}, error) {
+	return r.Data.ConvertToMap()
+}
+
+func (r Registry) BashibleBundleTemplateContext() (map[string]interface{}, error) {
 	// prepare common data
 	imagesBase := fmt.Sprintf("%s/%s", r.Data.Address, strings.TrimLeft(r.Data.Path, "/"))
 	auth, err := r.Data.Auth()
@@ -263,6 +267,8 @@ func (r Registry) ConvertToMap() (map[string]interface{}, error) {
 				Scheme:   r.Data.Scheme,
 			})
 		}
+		// ${discovered_node_ip} - bashible will use this as a placeholder on envsubst call
+		// address will be discovered in one of bashible steps
 		proxyEndpoints = registry_const.GenerateProxyEndpoints([]string{"${discovered_node_ip}"})
 		for _, host := range append([]string{registry_const.ProxyHost}, proxyEndpoints...) {
 			prepullMirrors = append(prepullMirrors, registry_models.MirrorHostObject{
@@ -343,14 +349,22 @@ func (r Registry) ConvertToMap() (map[string]interface{}, error) {
 }
 
 func (rData *RegistryData) ConvertToMap() (map[string]interface{}, error) {
-	data := map[string]interface{}{
+	ret := map[string]interface{}{
 		"address":   rData.Address,
 		"path":      rData.Path,
 		"scheme":    rData.Scheme,
 		"ca":        rData.CA,
 		"dockerCfg": rData.DockerCfg,
 	}
-	return data, nil
+	if rData.DockerCfg != "" {
+		auth, err := rData.Auth()
+		if err != nil {
+			return nil, err
+		}
+
+		ret["auth"] = auth
+	}
+	return ret, nil
 }
 
 func (r *RegistryData) Auth() (string, error) {
