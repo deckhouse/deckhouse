@@ -69,17 +69,6 @@ func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 	controllerName := "node-controller"
 	nc.eventRecorder = mgr.GetEventRecorderFor(controllerName)
 
-	// Set up the field indexer to index Pods by spec.nodeName
-	err := mgr.GetFieldIndexer().
-		IndexField(ctx, &corev1.Pod{}, "spec.nodeName", func(obj client.Object) []string {
-			pod := obj.(*corev1.Pod)
-			return []string{pod.Spec.NodeName}
-		})
-
-	if err != nil {
-		return fmt.Errorf("failed to set up index on spec.nodeName: %w", err)
-	}
-
 	nodePredicate := predicate.Funcs{
 		GenericFunc: func(e event.TypedGenericEvent[client.Object]) bool {
 			node := e.Object.(*corev1.Node)
@@ -282,7 +271,7 @@ func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 		})
 	}
 
-	err = ctrl.NewControllerManagedBy(mgr).
+	err := ctrl.NewControllerManagedBy(mgr).
 		Named(controllerName).
 		For(
 			&corev1.Node{},
@@ -1020,7 +1009,6 @@ func (nc *nodeController) getAllMasterNodes(ctx context.Context) (nodes *corev1.
 }
 
 func (nc *nodeController) cleanupNodeState(ctx context.Context, node *corev1.Node) (ctrl.Result, error) {
-	// Delete static pod (let's race with k8s sheduler)
 	if err := nc.deleteNodeServicesConfig(ctx, node.Name, true); err != nil {
 		err = fmt.Errorf("delete Node Services Config error: %w", err)
 		return ctrl.Result{}, err

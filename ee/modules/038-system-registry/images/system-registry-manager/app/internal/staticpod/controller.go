@@ -144,12 +144,17 @@ func (sc *servicesController) Reconcile(ctx context.Context, _ ctrl.Request) (ct
 
 	node := corev1.Node{}
 	key := types.NamespacedName{Name: sc.NodeName}
-	if err := sc.Client.Get(ctx, key, &node); err != nil {
+	if err := sc.Client.Get(ctx, key, &node); apierrors.IsNotFound(err) {
+		// How?
+		log.Info("Our Node not found, stopping services")
+		return sc.stopServices(ctx)
+	} else if err != nil {
 		return ctrl.Result{}, fmt.Errorf("cannot get node: %w", err)
 	}
 
 	if !hasMasterLabel(&node) {
-		log.Info("Node is not master, stopping services")
+		// Let's race with k8s sheduler
+		log.Info("Our Node is not master, stopping services")
 		return sc.stopServices(ctx)
 	}
 
