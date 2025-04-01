@@ -200,7 +200,7 @@ bb-image-save() {
       rm -rf "${TMP_DIR}" "${BB_FETCHED_PACKAGES_STORE:?}/${IMAGE}"
       bb-log-error "Failed to unpack image "${IMAGE}", it may be corrupted. The package will be refetched on the next attempt"
     ' ERR
-    mv -f "${BB_FETCHED_PACKAGES_STORE}/${IMAGE}" "${BB_EXPORTED_IMAGE_STORE}/"
+    gzip -d -c "${BB_FETCHED_PACKAGES_STORE}/${IMAGE}" "${BB_EXPORTED_IMAGE_STORE}/"
     trap - ERR
 
     # Write digest to hold file
