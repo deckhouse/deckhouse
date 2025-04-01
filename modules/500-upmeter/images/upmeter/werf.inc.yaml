@@ -75,5 +75,3 @@ import:
   add: /upmeter
   to: /upmeter
   before: setup
-  includePaths:
-  - '**/*'
