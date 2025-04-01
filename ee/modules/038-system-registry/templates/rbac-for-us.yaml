@@ -4,6 +4,8 @@ metadata:
   name: {{ .Chart.Name }}
   namespace: d8-system
   {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name )) | nindent 2 }}
+
+
 ---
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
@@ -31,6 +33,8 @@ rules:
 - apiGroups: [""]
   resources: ["events"]
   verbs: ["get", "list", "update", "create", "patch"]
+
+
 ---
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -46,6 +50,8 @@ roleRef:
   kind: Role
   name: {{ .Chart.Name }}
   apiGroup: rbac.authorization.k8s.io
+
+
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
@@ -63,6 +69,9 @@ rules:
   - apiGroups: [""]
     resources: ["nodes"]
     verbs: ["get", "list", "watch"]
+
+
+
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -78,6 +87,8 @@ roleRef:
   name: d8:{{ .Chart.Name }}
   apiGroup: rbac.authorization.k8s.io
 ---
+
+
 # For creating resource "tokenreviews" in API group "authentication.k8s.io" at the cluster scope
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -88,34 +99,6 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: d8:rbac-proxy
-subjects:
-  - kind: ServiceAccount
-    name: {{ .Chart.Name }}
-    namespace: d8-system
----
-# For API access to system-registry-staticpod-manager
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: access-to-system-registry-staticpod-manager-api
-  namespace: d8-system
-  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name )) | nindent 2 }}
-rules:
-  - apiGroups: ["apps"]
-    resources: ["daemonset/api"]
-    resourceNames: ["system-registry-staticpod-manager"]
-    verbs: ["get", "create", "delete"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: access-to-system-registry-staticpod-manager-api
-  namespace: d8-system
-  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name )) | nindent 2 }}
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: access-to-system-registry-staticpod-manager-api
 subjects:
   - kind: ServiceAccount
     name: {{ .Chart.Name }}

@@ -167,8 +167,7 @@ spec:
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
         args:
-        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4577"
-        - "--client-ca-file=/etc/kube-rbac-proxy/ca.crt"
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8080"
         - "--v=2"
         - "--logtostderr=true"
         - "--stale-cache-interval=1h30m"
@@ -180,7 +179,7 @@ spec:
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
             upstreams:
-            - upstream: http://127.0.0.1:4576/
+            - upstream: http://127.0.0.1:8081/
               path: /
               authorization:
                 resourceAttributes:
@@ -188,22 +187,17 @@ spec:
                   apiGroup: apps
                   apiVersion: v1
                   resource: daemonset
-                  subresource: api
+                  subresource: prometheus-metrics
                   name: system-registry-staticpod-manager
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
-{{- end }}
+          {{- end }}
         ports:
-        - name: https-api
-          protocol: TCP
-          containerPort: 4577
-        volumeMounts:
-        - name: kube-rbac-proxy-ca
-          mountPath: /etc/kube-rbac-proxy
-{{- range $name, $imageRef := $images }}
+        - containerPort: 8080
+          name: https-metrics
       - name: image-holder-{{ $name | kebabcase }}
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: "{{ $imageRef }}"
@@ -215,13 +209,8 @@ spec:
           {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "image_holder_resources" $ | nindent 12 }}
           {{- end }}
-{{- end }}
       priorityClassName: system-cluster-critical
       volumes:
-      - name: kube-rbac-proxy-ca
-        configMap:
-          defaultMode: 420
-          name: kube-rbac-proxy-ca.crt
       - name: etc-kubernetes
         hostPath:
           path: /etc/kubernetes/
