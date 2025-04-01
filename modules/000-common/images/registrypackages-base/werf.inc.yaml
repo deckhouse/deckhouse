@@ -1,0 +1,9 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+from: {{ $.Images.BASE_SCRATCH }}
+imageSpec:
+  config:
+    user: ""
+    workingDir: ""
+    clearCmd: true
+    clearEntrypoint: true

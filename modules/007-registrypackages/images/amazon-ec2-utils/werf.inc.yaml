@@ -17,7 +17,7 @@ shell:
   - cp /src/amazon-ec2-utils/ebsnvme-id /ebsnvme-id
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-from: {{ $.Images.BASE_SCRATCH }}
+fromImage: common/registrypackages-base
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/amazon-ec2-utils/ebsnvme-id
