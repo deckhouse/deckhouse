@@ -75,26 +75,9 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, erro
 			}
 		}
 
-		annotations := object.GetAnnotations()
-		if len(annotations) == 0 {
-			annotations = make(map[string]string)
-		}
-
-		// inject project annotations
-		for k, v := range r.project.Spec.ResourceAnnotations {
-			annotations[k] = v
-		}
-
-		object.SetAnnotations(annotations)
-
 		labels := object.GetLabels()
 		if len(labels) == 0 {
 			labels = make(map[string]string)
-		}
-
-		// inject project labels
-		for k, v := range r.project.Spec.ResourceLabels {
-			labels[k] = v
 		}
 
 		// inject multitenancy-manager
@@ -146,16 +129,6 @@ func (r *postRenderer) newNamespace(name string) []byte {
 			Name:   name,
 			Labels: map[string]string{},
 		},
-	}
-
-	// inject project annotations
-	if len(r.project.Spec.ResourceAnnotations) != 0 {
-		obj.SetAnnotations(r.project.Spec.ResourceAnnotations)
-	}
-
-	// inject project labels
-	if len(r.project.Spec.ResourceLabels) != 0 {
-		obj.SetLabels(r.project.Spec.ResourceLabels)
 	}
 
 	obj.Labels[v1alpha2.ResourceLabelHeritage] = v1alpha2.ResourceHeritageMultitenancy

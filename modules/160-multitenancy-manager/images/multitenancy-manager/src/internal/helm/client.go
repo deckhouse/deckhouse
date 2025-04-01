@@ -267,9 +267,6 @@ func buildValues(project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) 
 	return map[string]interface{}{
 		"projectTemplate": structs.Map(template.Spec),
 		"project":         structs.Map(preparedProject),
-		// this helps to trigger project rendering when resource labels/annotations changed
-		"_projectLabels":      project.Spec.ResourceLabels,
-		"_projectAnnotations": project.Spec.ResourceAnnotations,
 	}
 }
 
