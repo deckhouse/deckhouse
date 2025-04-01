@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-mkdir -p /etc/kubernetes/manifests
+mkdir -p /etc/kubernetes/manifests /opt/deckhouse/images
 
 bb-set-proxy
 
@@ -20,7 +20,7 @@ if crictl version >/dev/null 2>/dev/null; then
   crictl pull {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
 fi
 
-bb-image-save "common:{{ $.images.common.pause }}"
+bb-image-save "pause:{{ $.images.common.pause }}"
 
 bb-sync-file /etc/kubernetes/manifests/kubernetes-api-proxy.yaml - << EOF
 apiVersion: v1
