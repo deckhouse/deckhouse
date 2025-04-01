@@ -421,6 +421,62 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Check pause label
+        if: ${{ success() && needs.git_info.outputs.pr_number }}
+        uses: actions/github-script@v6.4.1
+        env:
+          PR_NUMBER: ${{needs.git_info.outputs.pr_number}}
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const prNumber = process.env.PR_NUMBER;
+            const maxWaitTimeMinutes = 60;
+            const startTime = Date.now();
+
+            async function checkLabel() {
+              try {
+                const { data: pullRequest } = await github.rest.pulls.get({
+                  owner,
+                  repo,
+                  pull_number: parseInt(prNumber),
+                });
+
+                const labels = pullRequest.labels.map(label => label.name);
+
+                if (!labels.includes('e2e/pause')) {
+                  core.info('Label "e2e/pause" has been removed. Continuing...');
+                  return true; // Label removed
+                } else {
+                  return false; // Label still present
+                }
+
+              } catch (error) {
+                core.info(`Failed to get PR information: ${error} Continuing...`);
+                return false;
+              }
+            }
+
+            async function waitForLabelRemoval() {
+              while (true) {
+                const labelRemoved = await checkLabel();
+                if (labelRemoved) {
+                  return; // Exit the loop
+                }
+
+                const elapsedTimeMinutes = (Date.now() - startTime) / (1000 * 60);
+                if (elapsedTimeMinutes >= maxWaitTimeMinutes) {
+                  core.setFailed(`Timeout: Waited ${maxWaitTimeMinutes} minutes for 'e2e/pause' label to be removed.`);
+                  return; // Exit the loop and fail the job
+                }
+
+                core.info('Label "e2e/pause" still present.  Waiting 60 seconds...');
+                await new Promise(resolve => setTimeout(resolve, 60000)); // Wait 60 seconds
+              }
+            }
+
+            await waitForLabelRemoval();
+
       - name: Cleanup bootstrapped cluster
         if: always()
         id: cleanup_cluster
@@ -928,6 +984,62 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Check pause label
+        if: ${{ success() && needs.git_info.outputs.pr_number }}
+        uses: actions/github-script@v6.4.1
+        env:
+          PR_NUMBER: ${{needs.git_info.outputs.pr_number}}
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const prNumber = process.env.PR_NUMBER;
+            const maxWaitTimeMinutes = 60;
+            const startTime = Date.now();
+
+            async function checkLabel() {
+              try {
+                const { data: pullRequest } = await github.rest.pulls.get({
+                  owner,
+                  repo,
+                  pull_number: parseInt(prNumber),
+                });
+
+                const labels = pullRequest.labels.map(label => label.name);
+
+                if (!labels.includes('e2e/pause')) {
+                  core.info('Label "e2e/pause" has been removed. Continuing...');
+                  return true; // Label removed
+                } else {
+                  return false; // Label still present
+                }
+
+              } catch (error) {
+                core.info(`Failed to get PR information: ${error} Continuing...`);
+                return false;
+              }
+            }
+
+            async function waitForLabelRemoval() {
+              while (true) {
+                const labelRemoved = await checkLabel();
+                if (labelRemoved) {
+                  return; // Exit the loop
+                }
+
+                const elapsedTimeMinutes = (Date.now() - startTime) / (1000 * 60);
+                if (elapsedTimeMinutes >= maxWaitTimeMinutes) {
+                  core.setFailed(`Timeout: Waited ${maxWaitTimeMinutes} minutes for 'e2e/pause' label to be removed.`);
+                  return; // Exit the loop and fail the job
+                }
+
+                core.info('Label "e2e/pause" still present.  Waiting 60 seconds...');
+                await new Promise(resolve => setTimeout(resolve, 60000)); // Wait 60 seconds
+              }
+            }
+
+            await waitForLabelRemoval();
+
       - name: Cleanup bootstrapped cluster
         if: always()
         id: cleanup_cluster
@@ -1392,6 +1504,62 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Check pause label
+        if: ${{ success() && needs.git_info.outputs.pr_number }}
+        uses: actions/github-script@v6.4.1
+        env:
+          PR_NUMBER: ${{needs.git_info.outputs.pr_number}}
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const prNumber = process.env.PR_NUMBER;
+            const maxWaitTimeMinutes = 60;
+            const startTime = Date.now();
+
+            async function checkLabel() {
+              try {
+                const { data: pullRequest } = await github.rest.pulls.get({
+                  owner,
+                  repo,
+                  pull_number: parseInt(prNumber),
+                });
+
+                const labels = pullRequest.labels.map(label => label.name);
+
+                if (!labels.includes('e2e/pause')) {
+                  core.info('Label "e2e/pause" has been removed. Continuing...');
+                  return true; // Label removed
+                } else {
+                  return false; // Label still present
+                }
+
+              } catch (error) {
+                core.info(`Failed to get PR information: ${error} Continuing...`);
+                return false;
+              }
+            }
+
+            async function waitForLabelRemoval() {
+              while (true) {
+                const labelRemoved = await checkLabel();
+                if (labelRemoved) {
+                  return; // Exit the loop
+                }
+
+                const elapsedTimeMinutes = (Date.now() - startTime) / (1000 * 60);
+                if (elapsedTimeMinutes >= maxWaitTimeMinutes) {
+                  core.setFailed(`Timeout: Waited ${maxWaitTimeMinutes} minutes for 'e2e/pause' label to be removed.`);
+                  return; // Exit the loop and fail the job
+                }
+
+                core.info('Label "e2e/pause" still present.  Waiting 60 seconds...');
+                await new Promise(resolve => setTimeout(resolve, 60000)); // Wait 60 seconds
+              }
+            }
+
+            await waitForLabelRemoval();
+
       - name: Cleanup bootstrapped cluster
         if: always()
         id: cleanup_cluster
@@ -1854,6 +2022,62 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Check pause label
+        if: ${{ success() && needs.git_info.outputs.pr_number }}
+        uses: actions/github-script@v6.4.1
+        env:
+          PR_NUMBER: ${{needs.git_info.outputs.pr_number}}
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const prNumber = process.env.PR_NUMBER;
+            const maxWaitTimeMinutes = 60;
+            const startTime = Date.now();
+
+            async function checkLabel() {
+              try {
+                const { data: pullRequest } = await github.rest.pulls.get({
+                  owner,
+                  repo,
+                  pull_number: parseInt(prNumber),
+                });
+
+                const labels = pullRequest.labels.map(label => label.name);
+
+                if (!labels.includes('e2e/pause')) {
+                  core.info('Label "e2e/pause" has been removed. Continuing...');
+                  return true; // Label removed
+                } else {
+                  return false; // Label still present
+                }
+
+              } catch (error) {
+                core.info(`Failed to get PR information: ${error} Continuing...`);
+                return false;
+              }
+            }
+
+            async function waitForLabelRemoval() {
+              while (true) {
+                const labelRemoved = await checkLabel();
+                if (labelRemoved) {
+                  return; // Exit the loop
+                }
+
+                const elapsedTimeMinutes = (Date.now() - startTime) / (1000 * 60);
+                if (elapsedTimeMinutes >= maxWaitTimeMinutes) {
+                  core.setFailed(`Timeout: Waited ${maxWaitTimeMinutes} minutes for 'e2e/pause' label to be removed.`);
+                  return; // Exit the loop and fail the job
+                }
+
+                core.info('Label "e2e/pause" still present.  Waiting 60 seconds...');
+                await new Promise(resolve => setTimeout(resolve, 60000)); // Wait 60 seconds
+              }
+            }
+
+            await waitForLabelRemoval();
+
       - name: Cleanup bootstrapped cluster
         if: always()
         id: cleanup_cluster
@@ -2313,6 +2537,62 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
+
+      - name: Check pause label
+        if: ${{ success() && needs.git_info.outputs.pr_number }}
+        uses: actions/github-script@v6.4.1
+        env:
+          PR_NUMBER: ${{needs.git_info.outputs.pr_number}}
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const prNumber = process.env.PR_NUMBER;
+            const maxWaitTimeMinutes = 60;
+            const startTime = Date.now();
+
+            async function checkLabel() {
+              try {
+                const { data: pullRequest } = await github.rest.pulls.get({
+                  owner,
+                  repo,
+                  pull_number: parseInt(prNumber),
+                });
+
+                const labels = pullRequest.labels.map(label => label.name);
+
+                if (!labels.includes('e2e/pause')) {
+                  core.info('Label "e2e/pause" has been removed. Continuing...');
+                  return true; // Label removed
+                } else {
+                  return false; // Label still present
+                }
+
+              } catch (error) {
+                core.info(`Failed to get PR information: ${error} Continuing...`);
+                return false;
+              }
+            }
+
+            async function waitForLabelRemoval() {
+              while (true) {
+                const labelRemoved = await checkLabel();
+                if (labelRemoved) {
+                  return; // Exit the loop
+                }
+
+                const elapsedTimeMinutes = (Date.now() - startTime) / (1000 * 60);
+                if (elapsedTimeMinutes >= maxWaitTimeMinutes) {
+                  core.setFailed(`Timeout: Waited ${maxWaitTimeMinutes} minutes for 'e2e/pause' label to be removed.`);
+                  return; // Exit the loop and fail the job
+                }
+
+                core.info('Label "e2e/pause" still present.  Waiting 60 seconds...');
+                await new Promise(resolve => setTimeout(resolve, 60000)); // Wait 60 seconds
+              }
+            }
+
+            await waitForLabelRemoval();
 
       - name: Cleanup bootstrapped cluster
         if: always()
@@ -2774,6 +3054,62 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Check pause label
+        if: ${{ success() && needs.git_info.outputs.pr_number }}
+        uses: actions/github-script@v6.4.1
+        env:
+          PR_NUMBER: ${{needs.git_info.outputs.pr_number}}
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const prNumber = process.env.PR_NUMBER;
+            const maxWaitTimeMinutes = 60;
+            const startTime = Date.now();
+
+            async function checkLabel() {
+              try {
+                const { data: pullRequest } = await github.rest.pulls.get({
+                  owner,
+                  repo,
+                  pull_number: parseInt(prNumber),
+                });
+
+                const labels = pullRequest.labels.map(label => label.name);
+
+                if (!labels.includes('e2e/pause')) {
+                  core.info('Label "e2e/pause" has been removed. Continuing...');
+                  return true; // Label removed
+                } else {
+                  return false; // Label still present
+                }
+
+              } catch (error) {
+                core.info(`Failed to get PR information: ${error} Continuing...`);
+                return false;
+              }
+            }
+
+            async function waitForLabelRemoval() {
+              while (true) {
+                const labelRemoved = await checkLabel();
+                if (labelRemoved) {
+                  return; // Exit the loop
+                }
+
+                const elapsedTimeMinutes = (Date.now() - startTime) / (1000 * 60);
+                if (elapsedTimeMinutes >= maxWaitTimeMinutes) {
+                  core.setFailed(`Timeout: Waited ${maxWaitTimeMinutes} minutes for 'e2e/pause' label to be removed.`);
+                  return; // Exit the loop and fail the job
+                }
+
+                core.info('Label "e2e/pause" still present.  Waiting 60 seconds...');
+                await new Promise(resolve => setTimeout(resolve, 60000)); // Wait 60 seconds
+              }
+            }
+
+            await waitForLabelRemoval();
+
       - name: Cleanup bootstrapped cluster
         if: always()
         id: cleanup_cluster
@@ -3231,6 +3567,62 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
+
+      - name: Check pause label
+        if: ${{ success() && needs.git_info.outputs.pr_number }}
+        uses: actions/github-script@v6.4.1
+        env:
+          PR_NUMBER: ${{needs.git_info.outputs.pr_number}}
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const prNumber = process.env.PR_NUMBER;
+            const maxWaitTimeMinutes = 60;
+            const startTime = Date.now();
+
+            async function checkLabel() {
+              try {
+                const { data: pullRequest } = await github.rest.pulls.get({
+                  owner,
+                  repo,
+                  pull_number: parseInt(prNumber),
+                });
+
+                const labels = pullRequest.labels.map(label => label.name);
+
+                if (!labels.includes('e2e/pause')) {
+                  core.info('Label "e2e/pause" has been removed. Continuing...');
+                  return true; // Label removed
+                } else {
+                  return false; // Label still present
+                }
+
+              } catch (error) {
+                core.info(`Failed to get PR information: ${error} Continuing...`);
+                return false;
+              }
+            }
+
+            async function waitForLabelRemoval() {
+              while (true) {
+                const labelRemoved = await checkLabel();
+                if (labelRemoved) {
+                  return; // Exit the loop
+                }
+
+                const elapsedTimeMinutes = (Date.now() - startTime) / (1000 * 60);
+                if (elapsedTimeMinutes >= maxWaitTimeMinutes) {
+                  core.setFailed(`Timeout: Waited ${maxWaitTimeMinutes} minutes for 'e2e/pause' label to be removed.`);
+                  return; // Exit the loop and fail the job
+                }
+
+                core.info('Label "e2e/pause" still present.  Waiting 60 seconds...');
+                await new Promise(resolve => setTimeout(resolve, 60000)); // Wait 60 seconds
+              }
+            }
+
+            await waitForLabelRemoval();
 
       - name: Cleanup bootstrapped cluster
         if: always()
@@ -3698,6 +4090,62 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Check pause label
+        if: ${{ success() && needs.git_info.outputs.pr_number }}
+        uses: actions/github-script@v6.4.1
+        env:
+          PR_NUMBER: ${{needs.git_info.outputs.pr_number}}
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const prNumber = process.env.PR_NUMBER;
+            const maxWaitTimeMinutes = 60;
+            const startTime = Date.now();
+
+            async function checkLabel() {
+              try {
+                const { data: pullRequest } = await github.rest.pulls.get({
+                  owner,
+                  repo,
+                  pull_number: parseInt(prNumber),
+                });
+
+                const labels = pullRequest.labels.map(label => label.name);
+
+                if (!labels.includes('e2e/pause')) {
+                  core.info('Label "e2e/pause" has been removed. Continuing...');
+                  return true; // Label removed
+                } else {
+                  return false; // Label still present
+                }
+
+              } catch (error) {
+                core.info(`Failed to get PR information: ${error} Continuing...`);
+                return false;
+              }
+            }
+
+            async function waitForLabelRemoval() {
+              while (true) {
+                const labelRemoved = await checkLabel();
+                if (labelRemoved) {
+                  return; // Exit the loop
+                }
+
+                const elapsedTimeMinutes = (Date.now() - startTime) / (1000 * 60);
+                if (elapsedTimeMinutes >= maxWaitTimeMinutes) {
+                  core.setFailed(`Timeout: Waited ${maxWaitTimeMinutes} minutes for 'e2e/pause' label to be removed.`);
+                  return; // Exit the loop and fail the job
+                }
+
+                core.info('Label "e2e/pause" still present.  Waiting 60 seconds...');
+                await new Promise(resolve => setTimeout(resolve, 60000)); // Wait 60 seconds
+              }
+            }
+
+            await waitForLabelRemoval();
+
       - name: Cleanup bootstrapped cluster
         if: always()
         id: cleanup_cluster
@@ -4161,6 +4609,62 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
+
+      - name: Check pause label
+        if: ${{ success() && needs.git_info.outputs.pr_number }}
+        uses: actions/github-script@v6.4.1
+        env:
+          PR_NUMBER: ${{needs.git_info.outputs.pr_number}}
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const prNumber = process.env.PR_NUMBER;
+            const maxWaitTimeMinutes = 60;
+            const startTime = Date.now();
+
+            async function checkLabel() {
+              try {
+                const { data: pullRequest } = await github.rest.pulls.get({
+                  owner,
+                  repo,
+                  pull_number: parseInt(prNumber),
+                });
+
+                const labels = pullRequest.labels.map(label => label.name);
+
+                if (!labels.includes('e2e/pause')) {
+                  core.info('Label "e2e/pause" has been removed. Continuing...');
+                  return true; // Label removed
+                } else {
+                  return false; // Label still present
+                }
+
+              } catch (error) {
+                core.info(`Failed to get PR information: ${error} Continuing...`);
+                return false;
+              }
+            }
+
+            async function waitForLabelRemoval() {
+              while (true) {
+                const labelRemoved = await checkLabel();
+                if (labelRemoved) {
+                  return; // Exit the loop
+                }
+
+                const elapsedTimeMinutes = (Date.now() - startTime) / (1000 * 60);
+                if (elapsedTimeMinutes >= maxWaitTimeMinutes) {
+                  core.setFailed(`Timeout: Waited ${maxWaitTimeMinutes} minutes for 'e2e/pause' label to be removed.`);
+                  return; // Exit the loop and fail the job
+                }
+
+                core.info('Label "e2e/pause" still present.  Waiting 60 seconds...');
+                await new Promise(resolve => setTimeout(resolve, 60000)); // Wait 60 seconds
+              }
+            }
+
+            await waitForLabelRemoval();
 
       - name: Cleanup bootstrapped cluster
         if: always()
