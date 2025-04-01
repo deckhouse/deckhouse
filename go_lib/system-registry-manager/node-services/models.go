@@ -27,14 +27,14 @@ func (config *Config) Validate() error {
 // PKIModel holds the configuration for the PKI
 type PKIModel struct {
 	CACert                 string `json:"ca,omitempty" yaml:"ca,omitempty"`
-	AuthCert               string `json:"authCert,omitempty" yaml:"auth_cert,omitempty"`
-	AuthKey                string `json:"authKey,omitempty" yaml:"auth_key,omitempty"`
-	TokenCert              string `json:"tokenCert,omitempty" yaml:"token_cert,omitempty"`
-	TokenKey               string `json:"tokenKey,omitempty" yaml:"token_key,omitempty"`
-	DistributionCert       string `json:"distributionCert,omitempty" yaml:"distribution_cert,omitempty"`
-	DistributionKey        string `json:"distributionKey,omitempty" yaml:"distribution_key,omitempty"`
-	UpstreamRegistryCACert string `json:"upstreamRegistryCACert,omitempty" yaml:"upstream_registry_ca,omitempty"`
-	IngressClientCACert    string `json:"ingressClientCACert,omitempty" yaml:"ingress_client_ca,omitempty"`
+	AuthCert               string `json:"auth_cert,omitempty" yaml:"auth_cert,omitempty"`
+	AuthKey                string `json:"auth_key,omitempty" yaml:"auth_key,omitempty"`
+	TokenCert              string `json:"token_cert,omitempty" yaml:"token_cert,omitempty"`
+	TokenKey               string `json:"token_key,omitempty" yaml:"token_key,omitempty"`
+	DistributionCert       string `json:"distribution_cert,omitempty" yaml:"distribution_cert,omitempty"`
+	DistributionKey        string `json:"distribution_key,omitempty" yaml:"distribution_key,omitempty"`
+	UpstreamRegistryCACert string `json:"upstream_registry_ca,omitempty" yaml:"upstream_registry_ca,omitempty"`
+	IngressClientCACert    string `json:"ingress_client_ca,omitempty" yaml:"ingress_client_ca,omitempty"`
 }
 
 func (p PKIModel) Validate() error {
@@ -53,10 +53,10 @@ func (p PKIModel) Validate() error {
 
 // RegistryConfig holds detailed configuration of the registry
 type RegistryConfig struct {
-	UserRW     User              `json:"userRW,omitempty" yaml:"user_rw,omitempty"`
-	UserRO     User              `json:"userRO,omitempty" yaml:"user_ro,omitempty"`
+	UserRW     User              `json:"user_rw,omitempty" yaml:"user_rw,omitempty"`
+	UserRO     User              `json:"user_ro,omitempty" yaml:"user_ro,omitempty"`
 	Upstream   *UpstreamRegistry `json:"upstream,omitempty" yaml:"upstream,omitempty"`
-	HttpSecret string            `json:"httpSecret,omitempty" yaml:"http_secret,omitempty"`
+	HttpSecret string            `json:"http_secret,omitempty" yaml:"http_secret,omitempty"`
 	Mirrorer   *Mirrorer         `json:"mirrorer,omitempty" yaml:"mirrorer,omitempty"`
 }
 
@@ -77,7 +77,7 @@ func (rd RegistryConfig) Validate() error {
 type User struct {
 	Name         string `json:"name" yaml:"name"`
 	Password     string `json:"password" yaml:"password"`
-	PasswordHash string `json:"passwordHash" yaml:"password_hash"`
+	PasswordHash string `json:"password_hash" yaml:"password_hash"`
 }
 
 func (u User) Validate() error {
@@ -111,7 +111,7 @@ func (u UpstreamRegistry) Validate() error {
 type Proxy struct {
 	Http    string `json:"http,omitempty" yaml:"http,omitempty"`
 	Https   string `json:"https,omitempty" yaml:"https,omitempty"`
-	NoProxy string `json:"noProxy,omitempty" yaml:"no_proxy,omitempty"`
+	NoProxy string `json:"no_proxy,omitempty" yaml:"no_proxy,omitempty"`
 }
 
 func (p Proxy) Validate() error {
@@ -123,8 +123,8 @@ func (p Proxy) Validate() error {
 }
 
 type Mirrorer struct {
-	UserPuller User     `json:"userPuller,omitempty" yaml:"user_puller,omitempty"`
-	UserPusher User     `json:"userPusher,omitempty" yaml:"user_pusher,omitempty"`
+	UserPuller User     `json:"user_puller,omitempty" yaml:"user_puller,omitempty"`
+	UserPusher User     `json:"user_pusher,omitempty" yaml:"user_pusher,omitempty"`
 	Upstreams  []string `json:"upstreams,omitempty" yaml:"upstreams,omitempty"`
 }
 
