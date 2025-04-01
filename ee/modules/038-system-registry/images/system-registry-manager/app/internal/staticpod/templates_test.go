@@ -36,174 +36,72 @@ func TestTemplatesExists(t *testing.T) {
 	}
 }
 
-func TestStaticPodManifest(t *testing.T) {
-	model := templateModel{
-		Address: "192.168.0.1",
-	}
-
-	buf, err := renderTemplate(registryStaticPodTemplateName, &model)
+func testRender(t *testing.T, renderer templateRenderer) {
+	buf, err := renderer.Render()
 	if err != nil {
-		t.Errorf("Cannot load template: %v", err)
+		t.Fatalf("Cannot load template: %v", err)
 	}
 
 	size := len(buf)
 	if size == 0 {
-		t.Error("Template content is empty!")
+		t.Fatal("Template content is empty!")
 	}
 
 	t.Logf("Result:\n%s", buf)
+}
+
+func TestStaticPodManifest(t *testing.T) {
+	model := staticPodConfigModel{}
+
+	testRender(t, model)
 }
 
 func TestDistributionConfig(t *testing.T) {
-	model := templateModel{
-		Address: "192.168.0.1",
-	}
+	model := distributionConfigModel{}
 
-	model.Registry = RegistryConfig{
-		UserRO: User{
-			Name:         "ro-user",
-			Password:     "ro-password",
-			PasswordHash: "ro-password-hash",
-		},
-		UserRW: User{
-			Name:         "rw-user",
-			Password:     "rw-password",
-			PasswordHash: "rw-password-hash",
-		},
-		Mirrorer: &Mirrorer{
-			UserPuller: User{
-				Name:         "puller-user",
-				Password:     "puller-password",
-				PasswordHash: "puller-password-hash",
-			},
-			UserPusher: User{
-				Name:         "pusher-user",
-				Password:     "pusher-password",
-				PasswordHash: "pusher-password-hash",
-			},
-		},
-	}
-
-	buf, err := renderTemplate(distributionConfigTemplateName, &model)
-	if err != nil {
-		t.Errorf("Cannot load template: %v", err)
-	}
-
-	size := len(buf)
-	if size == 0 {
-		t.Error("Template content is empty!")
-	}
-
-	t.Logf("Result:\n%s", buf)
+	testRender(t, model)
 }
 
 func TestAuthConfigWithMirrorer(t *testing.T) {
-	model := templateModel{
-		Address: "192.168.0.1",
-	}
-
-	model.Registry = RegistryConfig{
-		UserRO: User{
+	model := authConfigModel{
+		RO: authConfigUserModel{
 			Name:         "ro-user",
-			Password:     "ro-password",
 			PasswordHash: "ro-password-hash",
 		},
-		UserRW: User{
+		RW: authConfigUserModel{
 			Name:         "rw-user",
-			Password:     "rw-password",
 			PasswordHash: "rw-password-hash",
 		},
-		Mirrorer: &Mirrorer{
-			UserPuller: User{
-				Name:         "puller-user",
-				Password:     "puller-password",
-				PasswordHash: "puller-password-hash",
-			},
-			UserPusher: User{
-				Name:         "pusher-user",
-				Password:     "pusher-password",
-				PasswordHash: "pusher-password-hash",
-			},
+		MirrorPuller: &authConfigUserModel{
+			Name:         "puller-user",
+			PasswordHash: "puller-password-hash",
+		},
+		MirrorPusher: &authConfigUserModel{
+			Name:         "pusher-user",
+			PasswordHash: "pusher-password-hash",
 		},
 	}
 
-	buf, err := renderTemplate(authConfigTemplateName, &model)
-	if err != nil {
-		t.Errorf("Cannot load template: %v", err)
-	}
-
-	size := len(buf)
-	if size == 0 {
-		t.Error("Template content is empty!")
-	}
-
-	t.Logf("Result:\n%s", buf)
-
+	testRender(t, model)
 }
 
 func TestAuthConfig(t *testing.T) {
-	model := templateModel{
-		Address: "192.168.0.1",
-	}
-
-	model.Registry = RegistryConfig{
-		UserRO: User{
+	model := authConfigModel{
+		RO: authConfigUserModel{
 			Name:         "ro-user",
-			Password:     "ro-password",
 			PasswordHash: "ro-password-hash",
 		},
-		UserRW: User{
+		RW: authConfigUserModel{
 			Name:         "rw-user",
-			Password:     "rw-password",
 			PasswordHash: "rw-password-hash",
 		},
 	}
 
-	buf, err := renderTemplate(authConfigTemplateName, &model)
-	if err != nil {
-		t.Errorf("Cannot load template: %v", err)
-	}
-
-	size := len(buf)
-	if size == 0 {
-		t.Error("Template content is empty!")
-	}
-
-	t.Logf("Result:\n%s", buf)
+	testRender(t, model)
 }
 
 func TestMirrorerConfig(t *testing.T) {
-	model := templateModel{
-		Address: "192.168.0.1",
-	}
+	model := mirrorerConfigModel{}
 
-	model.Registry.Mirrorer = &Mirrorer{
-		UserPuller: User{
-			Name:         "puller",
-			Password:     "puller password",
-			PasswordHash: "AS:DLASDLAJSDASD",
-		},
-		UserPusher: User{
-			Name:         "pusher",
-			Password:     "pusher password",
-			PasswordHash: "AS:DLASDLAJSDASD",
-		},
-		Upstreams: []string{
-			"one",
-			"two",
-			"three",
-		},
-	}
-
-	buf, err := renderTemplate(mirrorerConfigTemplateName, &model)
-	if err != nil {
-		t.Errorf("Cannot load template: %v", err)
-	}
-
-	size := len(buf)
-	if size == 0 {
-		t.Error("Template content is empty!")
-	}
-
-	t.Logf("Result:\n%s", buf)
+	testRender(t, model)
 }

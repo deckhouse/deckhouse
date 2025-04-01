@@ -1,6 +1,3 @@
-{{- $pki := .PKI -}}
-{{- $address := .Address -}}
-{{- with .Registry -}}
 version: 0.1
 log:
   level: info
@@ -14,7 +11,7 @@ storage:
     disable: true
 
 http:
-  addr: {{ $address }}:5001
+  addr: {{ .ListenAddress }}:5001
   prefix: /
   secret: {{ quote .HttpSecret }}
   debug:
@@ -25,7 +22,7 @@ http:
   tls:
     certificate: /system_registry_pki/distribution.crt
     key: /system_registry_pki/distribution.key
-{{- if $pki.IngressClientCACert }}
+{{- if .Ingress }}
   realip:
     enabled: true
     clientcert:
@@ -40,7 +37,7 @@ proxy:
   password: {{ quote .Password }}
   remotepathonly: {{ quote .Path }}
   localpathalias: "/system/deckhouse"
-  {{- if $pki.UpstreamRegistryCACert }}
+  {{- if .CA }}
   ca: /system_registry_pki/upstream-registry-ca.crt
   {{- end }}
   {{- with .TTL }}
@@ -49,7 +46,7 @@ proxy:
 {{- end }}
 auth:
   token:
-    realm: "https://{{ $address }}:5051/auth"
+    realm: "https://{{ .ListenAddress }}:5051/auth"
     service: Deckhouse registry
     issuer: Registry server
     rootcertbundle: /system_registry_pki/token.crt
@@ -57,5 +54,3 @@ auth:
     proxy:
       url: https://127.0.0.1:5051/auth
       ca: /system_registry_pki/ca.crt
-
-{{- end }}

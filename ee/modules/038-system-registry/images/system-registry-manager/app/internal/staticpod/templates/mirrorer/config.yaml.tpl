@@ -1,6 +1,3 @@
-{{- $address := .Address -}}
-{{- with .Registry.Mirrorer -}}
-
 ca: /system_registry_pki/ca.crt
 users:
   puller:
@@ -10,7 +7,7 @@ users:
     name: {{ quote .UserPusher.Name }}
     password: {{ quote .UserPusher.Password }}
 
-local: "{{ $address }}:5001"
+local: "{{ .LocalAddress }}:5001"
 {{- with .Upstreams }}
 remote:
 {{- range $ip := . }}
@@ -18,6 +15,4 @@ remote:
 {{- end }}
 {{- else }}
 remote: []
-{{- end }}
-
 {{- end }}

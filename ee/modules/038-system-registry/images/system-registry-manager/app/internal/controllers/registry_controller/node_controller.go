@@ -18,6 +18,7 @@ import (
 	"embeded-registry-manager/internal/staticpod"
 	httpclient "embeded-registry-manager/internal/utils/http_client"
 
+	nodeservices "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/node-services"
 	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/pki"
 
 	"github.com/go-logr/logr"
@@ -632,22 +633,22 @@ func (nc *nodeController) contructNodeServicesConfig(
 
 	model = staticpod.NodeServicesConfigModel{
 		Version: stateSecret.Version,
-		Config: staticpod.Config{
+		Config: nodeservices.Config{
 
-			Registry: staticpod.RegistryConfig{
+			Registry: nodeservices.RegistryConfig{
 				HttpSecret: globalSecrets.HttpSecret,
-				UserRO: staticpod.User{
+				UserRO: nodeservices.User{
 					Name:         userRO.UserName,
 					Password:     userRO.Password,
 					PasswordHash: userRO.HashedPassword,
 				},
-				UserRW: staticpod.User{
+				UserRW: nodeservices.User{
 					Name:         userRW.UserName,
 					Password:     userRW.Password,
 					PasswordHash: userRW.HashedPassword,
 				},
 			},
-			PKI: staticpod.PKIModel{
+			PKI: nodeservices.PKIModel{
 				CACert:           string(pki.EncodeCertificate(globalPKI.CA.Cert)),
 				TokenCert:        string(pki.EncodeCertificate(globalPKI.Token.Cert)),
 				TokenKey:         string(tokenKey),
@@ -665,7 +666,7 @@ func (nc *nodeController) contructNodeServicesConfig(
 
 		model.Config.PKI.UpstreamRegistryCACert = moduleConfig.Settings.Proxy.CA
 
-		model.Config.Registry.Upstream = &staticpod.UpstreamRegistry{
+		model.Config.Registry.Upstream = &nodeservices.UpstreamRegistry{
 			Scheme:   strings.ToLower(moduleConfig.Settings.Proxy.Scheme),
 			Host:     host,
 			Path:     path,
@@ -674,13 +675,13 @@ func (nc *nodeController) contructNodeServicesConfig(
 			TTL:      moduleConfig.Settings.Proxy.TTL.StringPointer(),
 		}
 	case state.RegistryModeDetached:
-		model.Config.Registry.Mirrorer = &staticpod.Mirrorer{
-			UserPuller: staticpod.User{
+		model.Config.Registry.Mirrorer = &nodeservices.Mirrorer{
+			UserPuller: nodeservices.User{
 				Name:         userMirrorPuller.UserName,
 				Password:     userMirrorPuller.Password,
 				PasswordHash: userMirrorPuller.HashedPassword,
 			},
-			UserPusher: staticpod.User{
+			UserPusher: nodeservices.User{
 				Name:         userMirrorPusher.UserName,
 				Password:     userMirrorPusher.Password,
 				PasswordHash: userMirrorPusher.HashedPassword,

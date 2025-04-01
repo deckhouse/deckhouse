@@ -3,28 +3,11 @@ Copyright 2024 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
-package staticpod
+package nodeservices
 
 import (
-	"net/http"
-
 	validation "github.com/go-ozzo/ozzo-validation"
 )
-
-type NodeServicesConfigModel struct {
-	Version string `json:"version"`
-	Config  Config `json:"config"`
-}
-
-func (config *NodeServicesConfigModel) Validate() error {
-	return validation.ValidateStruct(config,
-		validation.Field(&config.Config, validation.Required),
-	)
-}
-
-func (cfg *NodeServicesConfigModel) Bind(r *http.Request) error {
-	return cfg.Validate()
-}
 
 // Config represents the configuration
 type Config struct {

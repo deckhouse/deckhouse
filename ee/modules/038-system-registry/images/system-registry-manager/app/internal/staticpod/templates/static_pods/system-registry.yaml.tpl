@@ -114,7 +114,7 @@ spec:
         name: auth-config
       - mountPath: /system_registry_pki
         name: pki
-  {{- if and (.Registry.Mirrorer) .Registry.Mirrorer.Upstreams }}
+  {{- if .HasMirrorer }}
   - name: mirrorer
     image: {{ .Images.Mirrorer }}
     imagePullPolicy: IfNotPresent
@@ -142,7 +142,7 @@ spec:
     hostPath:
       path: /etc/kubernetes/system-registry/distribution_config
       type: DirectoryOrCreate
-  {{- if and (.Registry.Mirrorer) .Registry.Mirrorer.Upstreams }}
+  {{- if .HasMirrorer }}
   - name: mirrorer-config
     hostPath:
       path: /etc/kubernetes/system-registry/mirrorer

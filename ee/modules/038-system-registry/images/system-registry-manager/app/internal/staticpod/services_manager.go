@@ -33,23 +33,13 @@ func (manager *servicesManager) applyConfig(config NodeServicesConfigModel) (cha
 	manager.m.Lock()
 	defer manager.m.Unlock()
 
-	model := templateModel{
-		Config:  config.Config,
-		Version: config.Version,
-		Address: manager.settings.HostIP,
-		Images: images{
-			Distribution: manager.settings.ImageDistribution,
-			Auth:         manager.settings.ImageAuth,
-			Mirrorer:     manager.settings.ImageMirrorer,
-		},
-	}
-
 	sum := sha256.New()
 	var hash string
 
 	// Sync the PKI files
-	if changes.PKI, hash, err = model.syncPKIFiles(
+	if changes.PKI, hash, err = syncPKIFiles(
 		pkiConfigDirectoryPath,
+		config.Config.PKI,
 	); err != nil {
 		err = fmt.Errorf("error saving PKI files: %w", err)
 		return
@@ -58,8 +48,8 @@ func (manager *servicesManager) applyConfig(config NodeServicesConfigModel) (cha
 	}
 
 	// Process the templates with the given data and create the static pod and configuration files
-	if changes.Auth, hash, err = model.processTemplate(
-		authConfigTemplateName,
+	if changes.Auth, hash, err = processTemplate(
+		config.toAuthConfig(),
 		authConfigPath,
 	); err != nil {
 		err = fmt.Errorf("error processing Auth template: %w", err)
@@ -68,8 +58,8 @@ func (manager *servicesManager) applyConfig(config NodeServicesConfigModel) (cha
 		sum.Write([]byte(hash))
 	}
 
-	if changes.Distribution, hash, err = model.processTemplate(
-		distributionConfigTemplateName,
+	if changes.Distribution, hash, err = processTemplate(
+		config.toDistributionConfig(manager.settings.HostIP),
 		distributionConfigPath,
 	); err != nil {
 		err = fmt.Errorf("error processing Distribution template: %w", err)
@@ -78,9 +68,12 @@ func (manager *servicesManager) applyConfig(config NodeServicesConfigModel) (cha
 		sum.Write([]byte(hash))
 	}
 
-	if model.Registry.Mirrorer != nil {
-		if changes.Mirrorer, hash, err = model.processTemplate(
-			mirrorerConfigTemplateName,
+	mirrorer := config.toMirrorerConfig(manager.settings.RegistryAddress)
+	hasMirrorer := mirrorer != nil && len(mirrorer.Upstreams) > 0
+
+	if hasMirrorer {
+		if changes.Mirrorer, hash, err = processTemplate(
+			mirrorer,
 			mirrorerConfigPath,
 		); err != nil {
 			err = fmt.Errorf("error processing Mirrorer template: %w", err)
@@ -97,9 +90,16 @@ func (manager *servicesManager) applyConfig(config NodeServicesConfigModel) (cha
 	}
 
 	hashBytes := sum.Sum([]byte{})
-	model.Hash = hex.EncodeToString(hashBytes)
-	if changes.Pod, _, err = model.processTemplate(
-		registryStaticPodTemplateName,
+	hash = hex.EncodeToString(hashBytes)
+
+	images := staticPodImagesModel{
+		Auth:         manager.settings.ImageAuth,
+		Distribution: manager.settings.ImageDistribution,
+		Mirrorer:     manager.settings.ImageMirrorer,
+	}
+
+	if changes.Pod, _, err = processTemplate(
+		config.toStaticPodConfig(images, hash, hasMirrorer),
 		registryStaticPodConfigPath,
 	); err != nil {
 		err = fmt.Errorf("error processing static pod template: %w", err)

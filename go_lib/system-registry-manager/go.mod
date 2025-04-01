@@ -4,12 +4,14 @@ go 1.23.1
 
 require (
 	github.com/cloudflare/cfssl v1.6.5
-	github.com/sirupsen/logrus v1.9.3
+	github.com/go-ozzo/ozzo-validation v3.6.0+incompatible
 	github.com/stretchr/testify v1.8.4
+	golang.org/x/crypto v0.19.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
+	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/google/certificate-transparency-go v1.1.7 // indirect
@@ -19,9 +21,7 @@ require (
 	github.com/weppos/publicsuffix-go v0.30.0 // indirect
 	github.com/zmap/zcrypto v0.0.0-20230310154051-c8b263fd8300 // indirect
 	github.com/zmap/zlint/v3 v3.5.0 // indirect
-	golang.org/x/crypto v0.19.0 // indirect
 	golang.org/x/net v0.20.0 // indirect
-	golang.org/x/sys v0.17.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	google.golang.org/protobuf v1.32.0 // indirect
 	k8s.io/klog/v2 v2.100.1 // indirect

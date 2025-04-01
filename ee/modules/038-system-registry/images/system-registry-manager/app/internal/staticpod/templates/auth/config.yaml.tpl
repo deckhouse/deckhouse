@@ -1,5 +1,3 @@
-{{- with .Registry -}}
-
 server:
   addr: "127.0.0.1:5051"
   real_ip_header: "X-Forwarded-For"
@@ -13,35 +11,37 @@ token:
 
 users:
   # Password is specified as a BCrypt hash. Use htpasswd -nB USERNAME to generate.
-  {{ quote .UserRW.Name }}:
-    password: {{ quote .UserRW.PasswordHash }}
-  {{ quote .UserRO.Name }}:
-    password: {{ quote .UserRO.PasswordHash }}
-  {{- with .Mirrorer }}
-  {{ quote .UserPuller.Name }}:
-    password: {{ quote .UserPuller.PasswordHash }}
-  {{ quote .UserPusher.Name }}:
-    password: {{ quote .UserPusher.PasswordHash }}
+  {{ quote .RW.Name }}:
+    password: {{ quote .RW.PasswordHash }}
+  {{ quote .RO.Name }}:
+    password: {{ quote .RO.PasswordHash }}
+  {{- with .MirrorPuller }}
+  {{ quote .Name }}:
+    password: {{ quote .PasswordHash }}
+  {{- end }}
+  {{- with .MirrorPusher }}
+  {{ quote .Name }}:
+    password: {{ quote .PasswordHash }}
   {{- end }}
 
 acl:
-  - match: { account: {{ quote .UserRW.Name }} }
+  - match: { account: {{ quote .RW.Name }} }
     actions: [ "*" ]
     comment: "has full access"
-  - match: { account: {{ quote .UserRO.Name }} }
+  - match: { account: {{ quote .RO.Name }} }
     actions: ["pull"]
     comment: "has readonly access"
-  {{- with .Mirrorer }}
-  - match: { account: {{ quote .UserPusher.Name }} }
+  {{- with .MirrorPusher }}
+  - match: { account: {{ quote .Name }} }
     actions: [ "*" ]
     comment: "mirrorer pusher"
-  - match: { account: {{ quote .UserPuller.Name }}, type: "registry", name: "catalog" }
+  {{- end }}
+  {{- with .MirrorPuller }}
+  - match: { account: {{ quote .Name }}, type: "registry", name: "catalog" }
     actions: ["*"]
     comment: "mirrorer puller catalog"
-  - match: { account: {{ quote .UserPuller.Name }} }
+  - match: { account: {{ quote .Name }} }
     actions: ["pull"]
     comment: "mirrorer puller"
   {{- end }}
   # Access is denied by default.
-
-{{- end }}

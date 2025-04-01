@@ -16,17 +16,8 @@ import (
 //go:embed templates
 var templatesFS embed.FS
 
-type templateName string
-
-const (
-	authConfigTemplateName         templateName = "templates/auth/config.yaml.tpl"
-	distributionConfigTemplateName templateName = "templates/distribution/config.yaml.tpl"
-	registryStaticPodTemplateName  templateName = "templates/static_pods/system-registry.yaml.tpl"
-	mirrorerConfigTemplateName     templateName = "templates/mirrorer/config.yaml.tpl"
-)
-
 // RenderTemplate renders the provided template content with the given data
-func renderTemplate(name templateName, data interface{}) ([]byte, error) {
+func renderTemplate(name string, data interface{}) ([]byte, error) {
 	content, err := templatesFS.ReadFile(string(name))
 	if err != nil {
 		return nil, fmt.Errorf("cannot load template: %w", err)
@@ -47,4 +38,23 @@ func renderTemplate(name templateName, data interface{}) ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
+}
+
+type templateRenderer interface {
+	Render() ([]byte, error)
+}
+
+// processTemplate processes the given template file and saves the rendered result to the specified path
+func processTemplate(renderer templateRenderer, outputPath string) (bool, string, error) {
+	// Render the template with the given configuration
+	renderedContent, err := renderer.Render()
+	if err != nil {
+		return false, "", fmt.Errorf("failed to render template %w", err)
+	}
+
+	chaged, hash, err := saveFileIfChanged(outputPath, renderedContent)
+	if err != nil {
+		return chaged, hash, fmt.Errorf("failed to save file %s: %w", outputPath, err)
+	}
+	return chaged, hash, nil
 }
