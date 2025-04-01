@@ -1853,3 +1853,11 @@ entries:
         en: Used software
         ru: Используемое ПО
       url: /oss_info.html
+    - title:
+        en: Release notes
+        ru: История изменений
+      folders:
+      - title:
+          en: Version 1.68
+          ru: Версия 1.68
+        url: /release-notes/1-68.html
