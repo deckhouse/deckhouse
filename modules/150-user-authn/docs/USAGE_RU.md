@@ -152,6 +152,34 @@ spec:
 
 Ниже можно ознакомиться с некоторыми примерами.
 
+#### Keycloak
+
+Кроме регистрации клиента, при настройке `realm` необходимо создать в [Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes) `scope` с именем `groups`, и назначить ему предопределенный маппинг `groups`. Затем добавьте в созданном клиенте этот `scope` на [вкладке Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking).
+
+Кроме этого, [для клиента](https://www.keycloak.org/docs/latest/server_admin/#general-settings) необходимо в `Valid redirect URIs`, `Valid post logout redirect URIs` и `Web origins` указать `https://dex.<publicDomainTemplate>/*`, где `publicDomainTemplate` – [указанный](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) в модуле `global` шаблон DNS-имен кластера.
+
+В примере представлены настройки провайдера для интеграции с Keycloak:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: DexProvider
+metadata:
+  name: keycloak
+spec:
+  type: OIDC
+  displayName: My Company Keycloak
+  oidc:
+    issuer: https://keycloak.my-company.com/realms/myrealm
+    clientID: plainstring
+    clientSecret: plainstring
+    getUserInfo: true
+    scopes:
+      - openid
+      - profile
+      - email
+      - groups
+```
+
 #### Okta
 
 В примере представлены настройки провайдера для интеграции с Okta:
