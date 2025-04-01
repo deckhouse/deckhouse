@@ -156,7 +156,6 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 		Images:         cb.imagesDigests,
 		Proxy:          cb.clusterInputData.Proxy,
 		PackagesProxy:  cb.clusterInputData.PackagesProxy,
-		SystemRegistry: cb.clusterInputData.SystemRegistry,
 	}
 
 	for _, ng := range cb.clusterInputData.NodeGroups {
@@ -207,7 +206,6 @@ func (cb *ContextBuilder) newBashibleContext(checksumCollector hash.Hash, ng nod
 		Proxy:             cb.clusterInputData.Proxy,
 		CloudProviderType: cb.getCloudProvider(),
 		PackagesProxy:     cb.clusterInputData.PackagesProxy,
-		SystemRegistry:    cb.clusterInputData.SystemRegistry,
 	}
 
 	err := cb.generateBashibleChecksum(checksumCollector, bc, bundleNgContext, versionMap)
@@ -382,7 +380,6 @@ type bashibleContext struct {
 	Proxy             map[string]interface{}       `json:"proxy" yaml:"proxy"`
 	CloudProviderType string                       `json:"cloudProviderType" yaml:"cloudProviderType"`
 	PackagesProxy     map[string]interface{}       `json:"packagesProxy" yaml:"packagesProxy"`
-	SystemRegistry    map[string]interface{}       `json:"systemRegistry" yaml:"systemRegistry"`
 }
 
 func (bc *bashibleContext) AddToChecksum(checksumCollector hash.Hash) error {
@@ -429,7 +426,6 @@ type tplContextCommon struct {
 
 	Proxy          map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
 	PackagesProxy  map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
-	SystemRegistry map[string]interface{} `json:"systemRegistry,omitempty" yaml:"systemRegistry,omitempty"`
 	RegistryMode   string                 `json:"registryMode,omitempty" yaml:"registryMode,omitempty"`
 }
 
@@ -470,7 +466,6 @@ type inputData struct {
 	Proxy              map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
 	BootstrapTokens    map[string]string      `json:"bootstrapTokens,omitempty" yaml:"bootstrapTokens,omitempty"`
 	PackagesProxy      map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
-	SystemRegistry     map[string]interface{} `json:"systemRegistry,omitempty" yaml:"systemRegistry,omitempty"`
 	APIServerEndpoints []string               `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
 	KubernetesCA       string                 `json:"kubernetesCA" yaml:"kubernetesCA"`
 	AllowedBundles     []string               `json:"allowedBundles" yaml:"allowedBundles"`

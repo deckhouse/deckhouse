@@ -139,21 +139,6 @@ spec:
       {{- $.Values.nodeManager.internal.bootstrapTokens | toYaml | nindent 6 }}
     apiserverEndpoints:
       {{- $.Values.nodeManager.internal.clusterMasterAddresses | toYaml | nindent 6 }}
-    {{- if hasKey $.Values.nodeManager.internal "systemRegistry" }}
-    systemRegistry:
-      addresses:
-        {{- $.Values.nodeManager.internal.systemRegistry.addresses | toYaml | nindent 8 }}
-      {{- if hasKey $.Values.nodeManager.internal.systemRegistry "auth" }}
-      auth: {{ $.Values.nodeManager.internal.systemRegistry.auth | toYaml }}
-      {{- end }}
-      {{- if hasKey $.Values.nodeManager.internal.systemRegistry "registryAddress" }}
-      registryAddress: {{ $.Values.nodeManager.internal.systemRegistry.registryAddress | toYaml }}
-      {{- end }}
-      {{- if hasKey $.Values.nodeManager.internal.systemRegistry "registryCA" }}
-      registryCA: |
-        {{ $.Values.nodeManager.internal.systemRegistry.registryCA | nindent 8 }}
-      {{- end }}
-    {{- end }}
     {{- if hasKey $.Values.nodeManager.internal "packagesProxy" }}
     packagesProxy:
       addresses:
