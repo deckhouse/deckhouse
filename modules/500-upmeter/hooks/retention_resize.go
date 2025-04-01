@@ -30,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
@@ -51,9 +52,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "upmeter_pod",
-			ApiVersion: "v1",
-			Kind:       "Pod",
+			Name:                   "upmeter_pod",
+			ApiVersion:             "v1",
+			Kind:                   "Pod",
+			WaitForSynchronization: ptr.To(false),
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
 					MatchNames: []string{"d8-upmeter"},
