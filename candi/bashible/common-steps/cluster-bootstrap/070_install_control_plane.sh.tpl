@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+exit 1
+
 mkdir -p /etc/kubernetes/deckhouse/kubeadm/patches/
 cp /var/lib/bashible/kubeadm/patches/* /etc/kubernetes/deckhouse/kubeadm/patches/
 kubeadm init phase certs all --config /var/lib/bashible/kubeadm/config.yaml
