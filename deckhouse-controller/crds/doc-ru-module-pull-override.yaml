@@ -31,7 +31,7 @@ spec:
                   description: "Контрольная сумма образа контейнера."
                 weight:
                   type: integer
-                  description: "_Вес_ (приоритет) модуля."
+                  description: "Вес (приоритет) модуля."
     - name: v1alpha2
       served: true
       storage: false
@@ -50,7 +50,7 @@ spec:
                 scanInterval:
                   description: Интервал сканирования для проверки изменения образа контейнера. Если образ изменился, модуль будет обновлен.
                 rollback:
-                  description: Восстановить ли модуль из релиза после удаление mpo.
+                  description: Восстанавливать ли модуль из релиза, если объект mpo был удалён.
             status:
               properties:
                 message:
@@ -63,4 +63,4 @@ spec:
                   description: Контрольная сумма образа контейнера.
                 weight:
                   type: integer
-                  description: "_Вес_ (приоритет) модуля."
+                  description: "Вес (приоритет) модуля."
