@@ -141,7 +141,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 				if err := b.initSSHClient(); err != nil {
 					return err
 				}
-				destroyer = destroy.NewStaticMastersDestroyer(wrapper.Client(), []destroy.NodeIP{})
+				destroyer = destroy.NewStaticMastersDestroyer(wrapper.Client(), []destroy.NodeIP{}, nil)
 			}
 
 			logMsg := "Deckhouse installation was not started before. Abort from cache"

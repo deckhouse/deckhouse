@@ -95,11 +95,11 @@ func NewSSHCommand(client *Client, name string, arg ...string) *SSHCommand {
 	var session *ssh.Session
 	var err error
 
-	err = retry.NewSilentLoop("Get bastion SSH client", 10, 5*time.Second).Run(func() error {
+	err = retry.NewSilentLoop("Establish new session", 10, 5*time.Second).Run(func() error {
 		session, err = client.sshClient.NewSession()
-		if err != nil {
-			client.Start()
-		}
+		// if err != nil {
+		// 	client.Start()
+		// }
 		return err
 	})
 
@@ -504,7 +504,7 @@ func (c *SSHCommand) SetupStreamHandlers() (err error) {
 			return
 		}
 		c.ConsumeLines(stderrHandlerReadPipe, c.stderrHandler)
-		log.DebugF("stop sdterr line consumer for '%s'\n", c.Args[0])
+		log.DebugF("stop sdterr line consumer for '%s'\n", c.cmd)
 	}()
 
 	return nil
@@ -524,7 +524,6 @@ func (c *SSHCommand) readFromStreams(stdoutReadPipe io.Reader, stdoutHandlerWrit
 	matchersDone := false
 	errorsCount := 0
 	for {
-		log.DebugLn("trying to read from pipe")
 		n, err := stdoutReadPipe.Read(buf)
 		if err != nil && err != io.EOF {
 			log.DebugF("Error reading from stdout: %s\n", err)
@@ -534,7 +533,6 @@ func (c *SSHCommand) readFromStreams(stdoutReadPipe io.Reader, stdoutHandlerWrit
 			}
 			continue
 		}
-		log.DebugF("read %d bytes\n", n)
 
 		m := 0
 		if !matchersDone {

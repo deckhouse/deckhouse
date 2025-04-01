@@ -59,7 +59,7 @@ func (s *KubeClientSwitcher) SwitchToNodeUser(nodesState map[string][]byte) erro
 
 	if convergeState.NodeUserCredentials == nil {
 		log.DebugLn("Generate node user")
-		nodeUser, nodeUserCredentials, err := generateNodeUser()
+		nodeUser, nodeUserCredentials, err := GenerateNodeUser()
 		if err != nil {
 			return fmt.Errorf("failed to generate NodeUser: %w", err)
 		}
@@ -170,7 +170,6 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 
 	log.DebugLn("ssh client started for replacing kube client")
 	log.DebugF("New SSH Client: %-v\n", newSSHClient)
-	log.DebugF("New client become pass: %s\n", newSSHClient.Settings.BecomePass)
 
 	// adding keys to agent is not needed anymore
 	// err = newSSHClient.Agent.AddKeys(newSSHClient.PrivateKeys())

@@ -96,7 +96,7 @@ func (s *Client) Start() error {
 		bastionAddr := fmt.Sprintf("%s:%s", s.Settings.BastionHost, s.Settings.BastionPort)
 		var err error
 		log.DebugF("Connect to bastion host %s\n", bastionAddr)
-		err = retry.NewSilentLoop("Get bastion SSH client", 10, 15*time.Second).Run(func() error {
+		err = retry.NewSilentLoop("Get bastion SSH client", 30, 5*time.Second).Run(func() error {
 			bastionClient, err = ssh.Dial("tcp", bastionAddr, bastionConfig)
 			return err
 		})
@@ -136,7 +136,7 @@ func (s *Client) Start() error {
 	s.Settings.ChoiceNewHost()
 	addr := fmt.Sprintf("%s:%s", s.Settings.Host(), s.Settings.Port)
 
-	config.Timeout = 10 * time.Second
+	config.Timeout = 30 * time.Second
 	config.BannerCallback = func(message string) error {
 		return nil
 	}
@@ -145,7 +145,7 @@ func (s *Client) Start() error {
 		log.DebugF("Try to direct connect host master host %s\n", addr)
 
 		var err error
-		err = retry.NewSilentLoop("Get SSH client", 10, 15*time.Second).Run(func() error {
+		err = retry.NewSilentLoop("Get SSH client", 30, 5*time.Second).Run(func() error {
 			client, err = ssh.Dial("tcp", addr, config)
 			return err
 		})
@@ -157,6 +157,8 @@ func (s *Client) Start() error {
 		s.live = true
 
 		if s.stopChan == nil {
+			stopCh := make(chan struct{})
+			s.stopChan = stopCh
 			go s.keepAlive()
 		}
 
@@ -166,17 +168,25 @@ func (s *Client) Start() error {
 	log.DebugF("Try to connect to through bastion host master host %s\n", addr)
 
 	var err error
-	err = retry.NewSilentLoop("Get SSH client", 10, 15*time.Second).Run(func() error {
+	err = retry.NewSilentLoop("Get SSH client", 30, 5*time.Second).Run(func() error {
 		targetConn, err = bastionClient.Dial("tcp", addr)
 		return err
 	})
 	if err != nil {
 		return fmt.Errorf("failed to connect to target host through bastion host: %w", err)
 	}
-	targetClientConn, targetNewChan, targetReqChan, err := ssh.NewClientConn(targetConn, addr, config)
+	var targetClientConn ssh.Conn
+	var targetNewChan <-chan ssh.NewChannel
+	var targetReqChan <-chan *ssh.Request
+	err = retry.NewSilentLoop("Connect to target SSH host", 30, 5*time.Second).Run(func() error {
+		targetClientConn, targetNewChan, targetReqChan, err = ssh.NewClientConn(targetConn, addr, config)
+		return err
+	})
+
 	if err != nil {
 		return fmt.Errorf("failed to create client connection to target host: %w", err)
 	}
+
 	clientConn = targetClientConn
 	client = ssh.NewClient(targetClientConn, targetNewChan, targetReqChan)
 
@@ -187,6 +197,8 @@ func (s *Client) Start() error {
 	s.live = true
 
 	if s.stopChan == nil {
+		stopCh := make(chan struct{})
+		s.stopChan = stopCh
 		go s.keepAlive()
 	}
 
@@ -194,17 +206,21 @@ func (s *Client) Start() error {
 }
 
 func (s *Client) keepAlive() {
+	defer log.DebugLn("keep-alive goroutine stopped")
 	for {
 		select {
 		case <-s.stopChan:
 			log.DebugLn("Stopping keep-alive goroutine.")
+			close(s.stopChan)
+			s.stopChan = nil
 			return
 		default:
-			time.Sleep(30 * time.Second)
+			time.Sleep(10 * time.Second)
 			session, err := s.sshClient.NewSession()
 			if err != nil {
-				log.DebugF("Keep-alive failed: %v", err)
+				log.DebugF("Keep-alive to %s failed: %v", s.Settings.Host(), err)
 				s.live = false
+				s.stopChan = nil
 				s.Start()
 				for _, sess := range s.sessionList {
 					if sess != nil {
@@ -218,6 +234,7 @@ func (s *Client) keepAlive() {
 			if _, err := session.SendRequest("keepalive", false, nil); err != nil {
 				log.DebugF("Keep-alive failed: %v", err)
 				s.live = false
+				s.stopChan = nil
 				s.Start()
 				for _, sess := range s.sessionList {
 					if sess != nil {
@@ -274,12 +291,14 @@ func (s *Client) Check() node.Check {
 // Stop the client
 func (s *Client) Stop() {
 	log.DebugLn("SSH Client is stopping now")
+	log.DebugLn("stopping kube proxies")
 	for _, p := range s.kubeProxies {
 		// log.InfoF("found non-stoped kube-proxy: %-v\n", p)
 		p.StopAll()
 	}
 	s.kubeProxies = nil
 
+	log.DebugLn("closing sessions")
 	for _, sess := range s.sessionList {
 		if sess != nil {
 			sess.Signal(ssh.SIGKILL)
@@ -291,10 +310,14 @@ func (s *Client) Stop() {
 	// by starting kubeproxy on remote, there is one more process starts
 	// it cannot be killed by sending any signal to his parrent process
 	// so we need to use killall command to kill all this processes
+	log.DebugLn("stopping kube proxies on remote")
 	s.stopKubeproxy()
+	log.DebugLn("kube proxies on remote were stopped")
 
+	log.DebugLn("stopping keep-alive goroutine")
 	if s.stopChan != nil {
-		close(s.stopChan)
+		log.DebugLn("sendind message to stop keep-alive")
+		s.stopChan <- struct{}{}
 	}
 
 	s.sshClient.Close()
