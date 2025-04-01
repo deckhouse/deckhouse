@@ -17,6 +17,8 @@ limitations under the License.
 package config
 
 import (
+	"strings"
+
 	"github.com/iancoleman/strcase"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -120,7 +122,7 @@ func CheckOrSetupSystemRegistryModuleConfig(cfg *DeckhouseInstaller) error {
 				"imagesRepo": modeSpecificFields.UpstreamRegistryData.Address + modeSpecificFields.UpstreamRegistryData.Path,
 				"username":   modeSpecificFields.UpstreamRegistryData.Username,
 				"password":   modeSpecificFields.UpstreamRegistryData.Password,
-				"scheme":     modeSpecificFields.UpstreamRegistryData.Scheme,
+				"scheme":     strings.ToUpper(modeSpecificFields.UpstreamRegistryData.Scheme),
 				"ca":         modeSpecificFields.UpstreamRegistryData.CA,
 				"ttl":        modeSpecificFields.InternalRegistryTTL.String(),
 			},

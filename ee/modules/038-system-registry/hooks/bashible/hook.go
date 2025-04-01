@@ -100,8 +100,8 @@ func handleBashibleConfig(input *go_hook.HookInput) error {
 		proxyEndpoints = append(proxyEndpoints, fmt.Sprintf("%s:%d", masterNodesIP, registry_const.Port))
 	}
 
-	mirrors := createMirrors(*rUser, []string{registry_const.Host})
-	prepullMirrors := createMirrors(*rUser, append([]string{registry_const.Host}, proxyEndpoints...))
+	mirrors := createMirrors(*rUser, []string{registry_const.ProxyHost})
+	prepullMirrors := createMirrors(*rUser, append([]string{registry_const.ProxyHost}, proxyEndpoints...))
 
 	bashibleConfig := registry_models.BashibleConfigSecret{
 		Mode:           rMode,
