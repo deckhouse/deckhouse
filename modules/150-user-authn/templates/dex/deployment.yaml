@@ -70,6 +70,13 @@ spec:
       - name: tls
         secret:
           secretName: dex-tls
+      {{- range $provider := .Values.userAuthn.internal.providers }}
+      {{- if and (eq $provider.type "Google") $provider.google.serviceAccountSecretName }}
+      - name: google-sa-{{ $provider.id }}
+        secret:
+          secretName: {{ $provider.google.serviceAccountSecretName }}
+      {{- end }}
+      {{- end }}
       {{- if (dig "customLogo" "enabled" false .Values.userAuthn.internal) }}
       - name: whitelabel-logo
         configMap:
@@ -117,6 +124,13 @@ spec:
           mountPath: /etc/dex/config
         - name: tls
           mountPath: /etc/dex/certs
+        {{- range $provider := .Values.userAuthn.internal.providers }}
+        {{- if and (eq $provider.type "Google") $provider.google.serviceAccountSecretName }}
+        - name: google-sa-{{ $provider.id }}
+          mountPath: /{{ $provider.id }}-service-account.json
+          subPath: service-account.json
+        {{- end }}
+        {{- end }}
         {{- if (dig "customLogo" "enabled" false .Values.userAuthn.internal) }}
         - mountPath: /web/static/img/deckhouse-logo-icon.svg
           name: whitelabel-logo

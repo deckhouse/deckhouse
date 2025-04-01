@@ -291,6 +291,29 @@ spec:
                               groupAttr:
                                 description: |
                                   Имя атрибута, в котором хранятся имена пользователей, состоящих в группе.
+                google: &google
+                  description: |
+                    Параметры провайдера Google (можно указывать, только если `type: Google`).
+                  properties:
+                    clientID:
+                      description: |
+                        ID приложения, созданного в Google Cloud Console.
+                    clientSecret:
+                      description: |
+                        Secret приложения, созданного в Google Cloud Console.
+                    serviceAccountSecretName:
+                      description: |
+                        Имя секрета в пространстве имен d8-user-authn, содержащего JSON-ключ сервисного аккаунта Google.
+                        Секрет должен содержать ключ 'service-account.json' с учетными данными сервисного аккаунта.
+                        Требуется для получения информации о группах пользователей.
+                    hostedDomains:
+                      description: |
+                        Список разрешенных доменов Google Workspace.
+                        Если список не пустой, только пользователи из указанных доменов смогут войти в систему.
+                    groups:
+                      description: |
+                        Список-фильтр групп, допустимых для приема из Google Workspace.
+                        Если список не пустой, только пользователи, состоящие хотя бы в одной из указанных групп, смогут войти в систему.
     - name: v1
       schema:
         openAPIV3Schema:
@@ -352,3 +375,4 @@ spec:
                 crowd: *crowd
                 oidc: *oidc
                 ldap: *ldap
+                google: *google

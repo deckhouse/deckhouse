@@ -299,6 +299,18 @@ properties:
                 userMatchers:
                   - userAttr: uuid
                     groupAttr: groups
+          - id: google
+            displayName: google
+            type: Google
+            google:
+              clientID: plainstring
+              clientSecret: plainstring
+              serviceAccountSecretName: google-service-account
+              hostedDomains:
+                - example.com
+              groups:
+                - admins@example.com
+                - developers@example.com
         items:
           type: object
           properties:
@@ -325,6 +337,9 @@ properties:
               type: object
               additionalProperties: true
             bitbucketCloud:
+              type: object
+              additionalProperties: true
+            google:
               type: object
               additionalProperties: true
       customLogo:

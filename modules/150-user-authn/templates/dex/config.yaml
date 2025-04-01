@@ -202,6 +202,30 @@
         {{- end }}
         usernamePrompt: {{ $provider.crowd.usernamePrompt | default "Crowd username" | quote }}
       {{- end }}
+
+      {{- if eq $provider.type "Google" }}
+    - type: google
+      id: {{ $provider.id | quote }}
+      name: {{ $provider.displayName | quote }}
+      config:
+        clientID: {{ $provider.google.clientID | quote }}
+        clientSecret: {{ $provider.google.clientSecret | quote }}
+        {{- if $provider.google.serviceAccountSecretName }}
+        serviceAccountFilePath: /{{ $provider.id }}-service-account.json
+        {{- end }}
+        {{- if $provider.google.hostedDomains }}
+        hostedDomains:
+          {{- range $domain := $provider.google.hostedDomains }}
+        - {{ $domain | quote }}
+          {{- end }}
+        {{- end }}
+        {{- if $provider.google.groups }}
+        groups:
+          {{- range $group := $provider.google.groups }}
+        - {{ $group | quote }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
     {{- end }}
   {{- end }}
 {{- end }}
