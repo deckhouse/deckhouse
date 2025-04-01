@@ -1,3 +1,4 @@
+{{- $binaries := "/bin/sh /bin/df" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -47,15 +48,17 @@ fromImage: common/relocate-artifact
 final: false
 shell:
   install:
-  - |
-    /binary_replace.sh -i "\
-      /bin/sh \
-      /bin/df \
-      " -o /relocate
+  - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+  add: /relocate
+  to: /
+  before: install
+  includePaths:
+  - '**/*'
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /src/upmeter/pkg/db/migrations/agent
   to: /data/migrations/agent
@@ -71,10 +74,6 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /upmeter
   to: /upmeter
-  before: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
-  add: /relocate
-  to: /
   before: setup
   includePaths:
   - '**/*'
