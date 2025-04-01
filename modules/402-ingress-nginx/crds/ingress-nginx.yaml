@@ -566,7 +566,7 @@ spec:
                 - message: .spec.controllerVersion should be explicitly set to 1.9 for .spec.annotationValidationEnabled to make effect
                   rule: 'self.annotationValidationEnabled == true ? self.controllerVersion == ''1.9'': true'
                 - message: '"enableIstioSidecar" cannot be enabled when "inlet" is "HostWithFailover".'
-                  rule: '!((self.enableIstioSidecar == true) && (self.inlet == "HostWithFailover"))'
+                  rule: "!((has(self.enableIstioSidecar) && self.enableIstioSidecar == true) && self.inlet == 'HostWithFailover')"
       additionalPrinterColumns:
         - jsonPath: .spec.ingressClass
           name: Ingress Class
