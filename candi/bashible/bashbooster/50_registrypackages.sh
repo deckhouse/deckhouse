@@ -197,8 +197,8 @@ bb-image-save() {
     local TMP_DIR=""
     TMP_DIR="$(mktemp -d)"
     trap '
-      rm -rf "${TMP_DIR}" "${BB_FETCHED_PACKAGES_STORE:?}/${PACKAGE}"
-      bb-log-error "Failed to unpack image "${PACKAGE}", it may be corrupted. The package will be refetched on the next attempt"
+      echo rm -rf "${TMP_DIR}" "${BB_FETCHED_PACKAGES_STORE:?}/${IMAGE}"
+      bb-log-error "Failed to unpack image "${IMAGE}", it may be corrupted. The package will be refetched on the next attempt"
     ' ERR
     mv "${BB_FETCHED_PACKAGES_STORE}/${IMAGE}/${DIGEST}.tar" "${BB_EXPORTED_IMAGE_STORE}"
     trap - ERR
