@@ -548,12 +548,4 @@ spec:
                 path: server.crt
               - key: tls.key
                 path: server.key
-      - name: hubble-dynamic-metrics-config
-        configMap:
-          name: cilium-dynamic-metrics-config
-          optional: true
-      - name: hubble-flowlog-config
-        configMap:
-          name: cilium-flowlog-config
-          optional: true
 {{- end  }}
