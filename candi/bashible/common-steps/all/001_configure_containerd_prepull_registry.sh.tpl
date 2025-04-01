@@ -57,15 +57,6 @@ EOF
   {{- end }}
 
 bb-sync-file "/etc/containerd/registry_prepull.d/{{ $host.host }}/hosts.toml" - << EOF
-# Server specifies the default server for this registry host namespace.
-# When host(s) are specified, the hosts are tried first in the order listed.
-# https://github.com/containerd/containerd/blob/v1.7.24/docs/hosts.md#hoststoml-content-description---detail
-
-server = {{ $host.host | quote }}
-{{- if gt (len $ca_files_path) 0 }}
-ca = {{- printf "[%q]" (join "\", \"" $ca_files_path) }}
-{{- end }}
-
 [host]
 {{- range $mirror := $host.mirrors }}
   {{- $mirrorHostWithScheme := (printf "%s://%s" $mirror.scheme $mirror.host) }}
