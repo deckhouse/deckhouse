@@ -399,6 +399,26 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 
 func (r *reconciler) deleteModuleOverride(ctx context.Context, mpo *v1alpha2.ModulePullOverride) (ctrl.Result, error) {
 	if controllerutil.ContainsFinalizer(mpo, v1alpha1.ModulePullOverrideFinalizer) {
+		if mpo.Spec.Rollback {
+			// clear symlink dir
+			if err := os.RemoveAll(path.Join(r.symlinksDir, mpo.Name)); err != nil {
+				r.log.Errorf("failed to remove the '%s' module pull override symlink: %v", mpo.Name, err)
+				return ctrl.Result{}, err
+			}
+			// clear downloaded dir
+			if err := os.RemoveAll(path.Join(r.downloadedModulesDir, mpo.GetModuleName(), downloader.DefaultDevVersion)); err != nil {
+				r.log.Errorf("failed to remove the '%s' module pull override downloaded dir: %v", mpo.Name, err)
+				return ctrl.Result{}, err
+			}
+			// restart deckhouse
+			defer func() {
+				r.log.Info("restart deckhouse because module rollback", slog.String("name", mpo.Name))
+				if err := syscall.Kill(1, syscall.SIGUSR2); err != nil {
+					r.log.Fatal("failed to send SIGUSR2 signal", log.Err(err))
+				}
+			}()
+		}
+
 		module := new(v1alpha1.Module)
 		if err := r.client.Get(ctx, client.ObjectKey{Name: mpo.GetName()}, module); err != nil {
 			if !apierrors.IsNotFound(err) {
@@ -428,6 +448,7 @@ func (r *reconciler) deleteModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 			return ctrl.Result{Requeue: true}, nil
 		}
 	}
+
 	return ctrl.Result{}, nil
 }
 
