@@ -1,0 +1,115 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: dvpinstanceclasses.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-dvp
+spec:
+  group: deckhouse.io
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - cpu
+                - memory
+                - vmClassName
+                - osImageRef
+                - rootDiskStorageClass
+              properties:
+                osImageRef:
+                  type: object
+                  required:
+                    - kind
+                    - name
+                  description: Reference to the image of the operating system used to bootstrap VM's
+                  properties:
+                    kind:
+                      type: string
+                      enum:
+                        - ClusterVirtualImage
+                        - VirtualImage
+                        - VirtualDisk
+                      default: VirtualImage
+                      description: Kind of resource describing the image
+                    name:
+                      type: string
+                      description: Name of the resource describing the image
+                vmClassName:
+                  type: string
+                  description: >
+                    Name of the VirtualMachineClass resource describing the
+                    requirements for a virtual CPU, memory, and the resource
+                    allocation policy.
+                cpu:
+                  type: object
+                  description: Section describing the CPU settings for a VM.
+                  required:
+                    - cores
+                  properties:
+                    cores:
+                      format: int32
+                      type: integer
+                      minimum: 1
+                      default: 4
+                      description: Number of cores.
+                    coreFraction:
+                      type: string
+                      default: 100%
+                      description: >
+                        Guaranteed share of CPU time that will be allocated to
+                        the VM. Specified as a percentage.
+                memory:
+                  type: integer
+                  default: 8192
+                  minimum: 8
+                  description: RAM amount in megabytes.
+                rootDiskSize:
+                  description: |
+                    Root disk size.
+
+                    The disk will be automatically resized if its VirtualImage size differs from specified.
+                  default: 50Gi
+                  anyOf:
+                    - type: integer
+                    - type: string
+                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                  x-kubernetes-int-or-string: true
+                rootDiskStorageClass:
+                  type: string
+                  description: Storage class to use for disks of virtual machines.
+                bootloader:
+                  type: string
+                  enum:
+                    - BIOS
+                    - EFI
+                    - EFIWithSecureBoot
+                  default: EFI
+                  description: >
+                    Defines a bootloader for a VM.
+
+
+                    * `BIOS`: Use BIOS.
+
+                    * `EFI`: Use Unified Extensible Firmware (EFI/UEFI).
+
+                    * `EFIWithSecureBoot`: Use UEFI/EFI with the Secure Boot
+                    support.
+
+  scope: Cluster
+  names:
+    plural: dvpinstanceclasses
+    singular: dvpinstanceclass
+    kind: DVPInstanceClass
+    categories:
+      - cloudinstanceclasses
