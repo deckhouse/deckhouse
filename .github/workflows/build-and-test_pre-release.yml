@@ -450,6 +450,7 @@ jobs:
 
             werf build \
               ${SECONDARY_REPO} \
+              --verbose \
               --parallel=true --parallel-tasks-limit=5 \
               --save-build-report=true \
               --tmp-dir="$TEMP_WORKDIR" \
@@ -462,6 +463,7 @@ jobs:
             # - branches to Dev registry to run e2e tests.
             # - semver tags to Github Container Registry for testing release process.
             werf build \
+              --verbose \
               --parallel=true --parallel-tasks-limit=5 \
               --save-build-report=true \
               --tmp-dir="$TEMP_WORKDIR" \

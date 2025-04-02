@@ -1,5 +1,17 @@
 type: object
 properties:
+  builtInRulesList:
+    type: array
+    items:
+      type: string
+      enum:
+        - Fstec
+    default: ["Fstec"]
+    x-examples:
+      - ["Fstec"]
+      - []
+    description: |
+      List of enabled default rules. You can specify an empty list `[]` to disable built-in rules.
   debugLogging:
     type: boolean
     description: |

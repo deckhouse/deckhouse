@@ -88,7 +88,7 @@ func (t *ReverseTunnel) upNewTunnel(oldId int) (int, error) {
 			"-R", t.Address,
 		).
 		WithExitWhenTunnelFailure(true).
-		Cmd()
+		Cmd(context.Background())
 
 	err := t.sshCmd.Start()
 	if err != nil {

@@ -84,6 +84,15 @@ jobs:
           echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
+  # <template: skip_tests_repos>
+  skip_tests_repos:
+    name: Skip tests repos
+    runs-on: ubuntu-latest
+    if: ${{ false || github.repository == 'deckhouse/deckhouse' }}
+    steps:
+    - name: Do nothing
+      run: echo "Empty action to fulfil Github requirements."
+  # </template: skip_tests_repos>
 
   # <template: git_info_job>
 
@@ -409,6 +418,7 @@ jobs:
     name: Build FE
     needs:
       - git_info
+      - skip_tests_repos
       - go_generate
       - workflow_render
     env:
@@ -608,6 +618,7 @@ jobs:
 
             werf build \
               ${SECONDARY_REPO} \
+              --verbose \
               --parallel=true --parallel-tasks-limit=5 \
               --save-build-report=true \
               --tmp-dir="$TEMP_WORKDIR" \
@@ -620,6 +631,7 @@ jobs:
             # - branches to Dev registry to run e2e tests.
             # - semver tags to Github Container Registry for testing release process.
             werf build \
+              --verbose \
               --parallel=true --parallel-tasks-limit=5 \
               --save-build-report=true \
               --tmp-dir="$TEMP_WORKDIR" \
@@ -676,6 +688,7 @@ jobs:
               # Copy stages to prod registry from dev registry.
               export WERF_DISABLE_META_TAGS=true
               werf build \
+                --verbose \
                 --repo ${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX} \
                 --secondary-repo $WERF_REPO \
                 --parallel=true --parallel-tasks-limit=5 \
@@ -969,6 +982,7 @@ jobs:
 
             werf build \
               ${SECONDARY_REPO} \
+              --verbose \
               --parallel=true --parallel-tasks-limit=5 \
               --save-build-report=true \
               --tmp-dir="$TEMP_WORKDIR" \
@@ -981,6 +995,7 @@ jobs:
             # - branches to Dev registry to run e2e tests.
             # - semver tags to Github Container Registry for testing release process.
             werf build \
+              --verbose \
               --parallel=true --parallel-tasks-limit=5 \
               --save-build-report=true \
               --tmp-dir="$TEMP_WORKDIR" \
@@ -1037,6 +1052,7 @@ jobs:
               # Copy stages to prod registry from dev registry.
               export WERF_DISABLE_META_TAGS=true
               werf build \
+                --verbose \
                 --repo ${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX} \
                 --secondary-repo $WERF_REPO \
                 --parallel=true --parallel-tasks-limit=5 \
@@ -1330,6 +1346,7 @@ jobs:
 
             werf build \
               ${SECONDARY_REPO} \
+              --verbose \
               --parallel=true --parallel-tasks-limit=5 \
               --save-build-report=true \
               --tmp-dir="$TEMP_WORKDIR" \
@@ -1342,6 +1359,7 @@ jobs:
             # - branches to Dev registry to run e2e tests.
             # - semver tags to Github Container Registry for testing release process.
             werf build \
+              --verbose \
               --parallel=true --parallel-tasks-limit=5 \
               --save-build-report=true \
               --tmp-dir="$TEMP_WORKDIR" \
@@ -1398,6 +1416,7 @@ jobs:
               # Copy stages to prod registry from dev registry.
               export WERF_DISABLE_META_TAGS=true
               werf build \
+                --verbose \
                 --repo ${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX} \
                 --secondary-repo $WERF_REPO \
                 --parallel=true --parallel-tasks-limit=5 \
@@ -1691,6 +1710,7 @@ jobs:
 
             werf build \
               ${SECONDARY_REPO} \
+              --verbose \
               --parallel=true --parallel-tasks-limit=5 \
               --save-build-report=true \
               --tmp-dir="$TEMP_WORKDIR" \
@@ -1703,6 +1723,7 @@ jobs:
             # - branches to Dev registry to run e2e tests.
             # - semver tags to Github Container Registry for testing release process.
             werf build \
+              --verbose \
               --parallel=true --parallel-tasks-limit=5 \
               --save-build-report=true \
               --tmp-dir="$TEMP_WORKDIR" \
@@ -1759,6 +1780,7 @@ jobs:
               # Copy stages to prod registry from dev registry.
               export WERF_DISABLE_META_TAGS=true
               werf build \
+                --verbose \
                 --repo ${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX} \
                 --secondary-repo $WERF_REPO \
                 --parallel=true --parallel-tasks-limit=5 \
@@ -2052,6 +2074,7 @@ jobs:
 
             werf build \
               ${SECONDARY_REPO} \
+              --verbose \
               --parallel=true --parallel-tasks-limit=5 \
               --save-build-report=true \
               --tmp-dir="$TEMP_WORKDIR" \
@@ -2064,6 +2087,7 @@ jobs:
             # - branches to Dev registry to run e2e tests.
             # - semver tags to Github Container Registry for testing release process.
             werf build \
+              --verbose \
               --parallel=true --parallel-tasks-limit=5 \
               --save-build-report=true \
               --tmp-dir="$TEMP_WORKDIR" \
@@ -2120,6 +2144,7 @@ jobs:
               # Copy stages to prod registry from dev registry.
               export WERF_DISABLE_META_TAGS=true
               werf build \
+                --verbose \
                 --repo ${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX} \
                 --secondary-repo $WERF_REPO \
                 --parallel=true --parallel-tasks-limit=5 \
@@ -2413,6 +2438,7 @@ jobs:
 
             werf build \
               ${SECONDARY_REPO} \
+              --verbose \
               --parallel=true --parallel-tasks-limit=5 \
               --save-build-report=true \
               --tmp-dir="$TEMP_WORKDIR" \
@@ -2425,6 +2451,7 @@ jobs:
             # - branches to Dev registry to run e2e tests.
             # - semver tags to Github Container Registry for testing release process.
             werf build \
+              --verbose \
               --parallel=true --parallel-tasks-limit=5 \
               --save-build-report=true \
               --tmp-dir="$TEMP_WORKDIR" \
@@ -2481,6 +2508,7 @@ jobs:
               # Copy stages to prod registry from dev registry.
               export WERF_DISABLE_META_TAGS=true
               werf build \
+                --verbose \
                 --repo ${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX} \
                 --secondary-repo $WERF_REPO \
                 --parallel=true --parallel-tasks-limit=5 \

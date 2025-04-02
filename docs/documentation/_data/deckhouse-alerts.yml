@@ -517,6 +517,17 @@ alerts:
         Bashible-apiserver is locked for too long
       severity: "6"
       markupFormat: markdown
+    - name: D8CephCsiModuleDeprecated
+      sourceFile: modules/031-ceph-csi/monitoring/prometheus-rules/deprecated-module-alert.yaml
+      moduleUrl: 031-ceph-csi
+      module: ceph-csi
+      edition: ce
+      description: |
+        CephCsi module is deprecated. Please, use [csi-ceph](https://deckhouse.io/products/kubernetes-platform/modules/csi-ceph/stable/) module instead.
+      summary: |
+        CephCsi module is deprecated.
+      severity: "5"
+      markupFormat: markdown
     - name: D8CertExporterPodIsNotReady
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/certificates/certificates-exporter-health.yaml
       moduleUrl: 340-extended-monitoring
@@ -582,6 +593,81 @@ alerts:
       summary: |
         Prometheus can't scrape x509-certificate-exporter metrics.
       severity: "8"
+      markupFormat: markdown
+    - name: D8CheckCloudProviderConfig
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/check_config.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        The provider-cluster-configuration in the cluster contains fields that aren't defined in the schema.
+
+        Steps to troubleshoot:
+
+        1. Check the logs for details:
+
+           ```bash
+           kubectl logs -n d8-system -l app=deckhouse --tail=-1 | grep check_provider_cluster_configuration | grep error | jq .msg
+           ```
+
+        1. Remove the unsupported fields from the provider-cluster-configuration:
+
+           ```bash
+           kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+           ```
+      summary: |
+        Provider-cluster-configuration contains unsupported fields.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8CheckClusterConfig
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/check_config.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        The cluster-configuration in the cluster contains fields that aren't defined in the schema.
+
+        Steps to troubleshoot:
+
+        1. Check the logs for details:
+
+           ```bash
+           kubectl logs -n d8-system -l app=deckhouse --tail=-1 | grep check_cluster_configuration | grep error | jq .msg
+           ```
+
+        1. Remove the unsupported fields from the cluster-configuration:
+
+           ```bash
+           kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
+           ```
+      summary: |
+        Cluster-configuration contains unsupported fields.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8CheckStaticClusterConfig
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/check_config.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        The static-cluster-configuration in the cluster contains fields that aren't defined in the schema.
+
+        Steps to troubleshoot:
+
+        1. Check the logs for details:
+
+           ```bash
+           kubectl logs -n d8-system -l app=deckhouse --tail=-1 | grep check_static_cluster_configuration | grep error | jq .msg
+           ```
+
+        1. Remove the unsupported fields from the static-cluster-configuration:
+
+           ```bash
+           kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit static-cluster-configuration
+           ```
+      summary: |
+        Static-cluster-configuration contains unsupported fields.
+      severity: "4"
       markupFormat: markdown
     - name: D8CloudDataDiscovererCloudRequestError
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/cloud-data-discovery.tpl
@@ -701,47 +787,9 @@ alerts:
       severity: "2"
       markupFormat: markdown
     - name: D8CNIMisconfigured
-      sourceFile: modules/021-cni-cilium/monitoring/prometheus-rules/cni-checks.yaml
-      moduleUrl: 021-cni-cilium
-      module: cni-cilium
-      edition: ce
-      description: |
-        Steps to troubleshoot:
-
-        1. Find the desired settings in the ConfigMap `d8-system/desired-cni-moduleconfig` by running the following command:
-
-           ```bash
-           kubectl -n d8-system get configmap desired-cni-moduleconfig -o yaml
-           ```
-
-        1. Update the conflicting settings in the CNI `{{ $labels.cni }}` ModuleConfig to match the desired configuration.
-      summary: |
-        Settings in the secret d8-cni-configuration conflict with the ModuleConfig.
-      severity: "5"
-      markupFormat: markdown
-    - name: D8CNIMisconfigured
-      sourceFile: modules/035-cni-flannel/monitoring/prometheus-rules/cni-checks.yaml
-      moduleUrl: 035-cni-flannel
-      module: cni-flannel
-      edition: ce
-      description: |
-        Steps to troubleshoot:
-
-        1. Find the desired settings in the ConfigMap `d8-system/desired-cni-moduleconfig` by running the following command:
-
-           ```bash
-           kubectl -n d8-system get configmap desired-cni-moduleconfig -o yaml
-           ```
-
-        1. Update the conflicting settings in the CNI `{{ $labels.cni }}` ModuleConfig to match the desired configuration.
-      summary: |
-        Settings in the secret d8-cni-configuration conflict with the ModuleConfig.
-      severity: "5"
-      markupFormat: markdown
-    - name: D8CNIMisconfigured
-      sourceFile: modules/035-cni-simple-bridge/monitoring/prometheus-rules/cni-checks.yaml
-      moduleUrl: 035-cni-simple-bridge
-      module: cni-simple-bridge
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/cni-checks.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
       edition: ce
       description: |
         Steps to troubleshoot:
@@ -5690,12 +5738,11 @@ alerts:
       markupFormat: markdown
 modules-having-alerts:
     - admission-policy-engine
+    - ceph-csi
     - cert-manager
     - chrony
     - cloud-provider-yandex
     - cni-cilium
-    - cni-flannel
-    - cni-simple-bridge
     - control-plane-manager
     - documentation
     - extended-monitoring

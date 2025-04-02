@@ -66,7 +66,7 @@ func NewClient(repo string, options ...Option) (Client, error) {
 		var err error
 		timeout, err = time.ParseDuration(t)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("parse duration: %w", err)
 		}
 	}
 	opts := &registryOptions{
@@ -85,7 +85,7 @@ func NewClient(repo string, options ...Option) (Client, error) {
 	if !opts.withoutAuth {
 		authConfig, err := readAuthConfig(repo, opts.dockerCfg)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("read auth config: %w", err)
 		}
 		r.authConfig = authConfig
 	}
@@ -103,7 +103,7 @@ func (r *client) Image(ctx context.Context, tag string) (v1.Image, error) {
 
 	ref, err := name.ParseReference(imageURL, nameOpts...) // parse options available: weak validation, etc.
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse reference: %w", err)
 	}
 
 	imageOptions := make([]remote.Option, 0)
@@ -118,21 +118,19 @@ func (r *client) Image(ctx context.Context, tag string) (v1.Image, error) {
 	if r.options.timeout > 0 {
 		// add default timeout to prevent endless request on a huge image
 		ctxWTO, cancel := context.WithTimeout(ctx, r.options.timeout)
-		// seems weird - yes! but we can't call cancel here, otherwise Image outside this function would be inaccessible
-		go func() {
-			<-ctxWTO.Done()
-			cancel()
-		}()
+		defer cancel()
 
 		imageOptions = append(imageOptions, remote.WithContext(ctxWTO))
 	} else {
 		imageOptions = append(imageOptions, remote.WithContext(ctx))
 	}
 
-	return remote.Image(
-		ref,
-		imageOptions...,
-	)
+	image, err := remote.Image(ref, imageOptions...)
+	if err != nil {
+		return nil, fmt.Errorf("image: %w", err)
+	}
+
+	return image, nil
 }
 
 func (r *client) ListTags(ctx context.Context) ([]string, error) {
@@ -157,28 +155,30 @@ func (r *client) ListTags(ctx context.Context) ([]string, error) {
 	if r.options.timeout > 0 {
 		// add default timeout to prevent endless request on a huge amount of tags
 		ctxWTO, cancel := context.WithTimeout(ctx, r.options.timeout)
-		go func() {
-			<-ctxWTO.Done()
-			cancel()
-		}()
+		defer cancel()
 
 		imageOptions = append(imageOptions, remote.WithContext(ctxWTO))
 	} else {
 		imageOptions = append(imageOptions, remote.WithContext(ctx))
 	}
 
-	return remote.List(repo, imageOptions...)
+	list, err := remote.List(repo, imageOptions...)
+	if err != nil {
+		return nil, fmt.Errorf("list: %w", err)
+	}
+
+	return list, nil
 }
 
 func (r *client) Digest(ctx context.Context, tag string) (string, error) {
 	image, err := r.Image(ctx, tag)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("image: %w", err)
 	}
 
 	d, err := image.Digest()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("extract digest: %w", err)
 	}
 
 	return d.String(), nil
@@ -187,7 +187,7 @@ func (r *client) Digest(ctx context.Context, tag string) (string, error) {
 func readAuthConfig(repo, dockerCfgBase64 string) (authn.AuthConfig, error) {
 	r, err := parse(repo)
 	if err != nil {
-		return authn.AuthConfig{}, err
+		return authn.AuthConfig{}, fmt.Errorf("parse repo: %w", err)
 	}
 
 	dockerCfg, err := base64.StdEncoding.DecodeString(dockerCfgBase64)
@@ -202,13 +202,13 @@ func readAuthConfig(repo, dockerCfgBase64 string) (authn.AuthConfig, error) {
 	for repoName, repoAuth := range auths {
 		repoNameURL, err := parse(repoName)
 		if err != nil {
-			return authn.AuthConfig{}, err
+			return authn.AuthConfig{}, fmt.Errorf("parse repo name: %w", err)
 		}
 
 		if repoNameURL.Host == r.Host {
 			err := json.Unmarshal([]byte(repoAuth.Raw), &authConfig)
 			if err != nil {
-				return authn.AuthConfig{}, err
+				return authn.AuthConfig{}, fmt.Errorf("unmarshal json: %w", err)
 			}
 			return authConfig, nil
 		}

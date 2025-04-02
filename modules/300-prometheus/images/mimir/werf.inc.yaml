@@ -20,7 +20,7 @@ shell:
     - git clone --depth 1 --branch mimir-{{ $MimirVersion }} $(cat /run/secrets/SOURCE_REPO)/grafana/mimir.git /src
     - cd /src
     - git apply /patches/*.patch --verbose
-    - rm -r .git
+    - rm -rf .git ./operations
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}

@@ -17,7 +17,7 @@ shell:
     - git clone --depth 1 --branch {{ $PromxyVersion }} $(cat /run/secrets/SOURCE_REPO)/jacksontj/promxy.git /src
     - cd /src
     - git apply /patches/*.patch --verbose
-    - rm -r .git
+    - rm -rf .git ./vendor/github.com/prometheus/prometheus/web
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
