@@ -102,14 +102,18 @@ func handleBashibleConfig(input *go_hook.HookInput) error {
 
 	mirrors := createMirrors(*rUser, []string{registry_const.ProxyHost})
 	prepullMirrors := createMirrors(*rUser, append([]string{registry_const.ProxyHost}, proxyEndpoints...))
+	CA := []string{}
+	if rPKI.CA != "" {
+		CA = append(CA, rPKI.CA)
+	}
 
 	bashibleConfig := registry_models.BashibleConfigSecret{
 		Mode:           rMode,
 		Version:        registry_const.DefaultVersion, // TODO:
 		ImagesBase:     registry_const.HostWithPath,
 		ProxyEndpoints: proxyEndpoints,
-		Hosts:          []registry_models.HostsObject{{Host: registry_const.Host, CA: []string{rPKI.CA}, Mirrors: mirrors}},
-		PrepullHosts:   []registry_models.HostsObject{{Host: registry_const.Host, CA: []string{rPKI.CA}, Mirrors: prepullMirrors}},
+		Hosts:          []registry_models.HostsObject{{Host: registry_const.Host, CA: CA, Mirrors: mirrors}},
+		PrepullHosts:   []registry_models.HostsObject{{Host: registry_const.Host, CA: CA, Mirrors: prepullMirrors}},
 	}
 
 	setBashibleConfig(input, bashibleConfig)

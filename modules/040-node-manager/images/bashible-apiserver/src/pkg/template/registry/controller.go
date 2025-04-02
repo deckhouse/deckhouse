@@ -211,18 +211,23 @@ func (d *RegistryData) FromInputData(deckhouseRegistry deckhouseRegistry, regist
 		Scheme: deckhouseRegistry.Scheme,
 	}
 
+	deckhouseRegistryCA := []string{}
+	if deckhouseRegistry.CA != "" {
+		deckhouseRegistryCA = append(deckhouseRegistryCA, deckhouseRegistry.CA)
+	}
+
 	// Append Mirrors, if deckhouseRegistry.Address not exist in Mirrors list
 	if !slices.ContainsFunc(d.Hosts, func(host RegistryHostsObject) bool {
 		return host.Host == deckhouseRegistry.Address
 	}) {
 		d.Hosts = append(d.Hosts, RegistryHostsObject{
 			Host:    deckhouseRegistry.Address,
-			CA:      []string{deckhouseRegistry.CA},
+			CA:      deckhouseRegistryCA,
 			Mirrors: []RegistryMirrorHostObject{deckhouseRegistryMirrorHost},
 		})
 		d.PrepullHosts = append(d.PrepullHosts, RegistryHostsObject{
 			Host:    deckhouseRegistry.Address,
-			CA:      []string{deckhouseRegistry.CA},
+			CA:      deckhouseRegistryCA,
 			Mirrors: []RegistryMirrorHostObject{deckhouseRegistryMirrorHost},
 		})
 	}
