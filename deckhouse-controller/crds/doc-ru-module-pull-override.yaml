@@ -31,7 +31,7 @@ spec:
                   description: "Контрольная сумма образа контейнера."
                 weight:
                   type: integer
-                  description: "Вес (приоритет) модуля."
+                  description: Вес (приоритет) модуля.
     - name: v1alpha2
       served: true
       storage: false
