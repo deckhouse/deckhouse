@@ -56,7 +56,7 @@ shell:
     apt-https curl jq tzdata \
     ca-certificates bash-completion iproute2 arpd ipset kmod \
     iptables iptables-ipv6 iptables-nft \
-    coreutils binutils git zip unzip wget mount patch patchelf \
+    coreutils binutils git git-lfs zip unzip wget mount patch patchelf \
     make automake autoconf cmake ccache bison flex ninja-build pkg-config \
     gcc gcc-c++ libstdc++-devel libstdc++-devel-static \
     glibc glibc-devel glibc-devel-static \
