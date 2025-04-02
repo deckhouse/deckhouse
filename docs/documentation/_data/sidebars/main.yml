@@ -435,10 +435,10 @@ entries:
                     en: Examples
                     ru: Примеры
                   url: /modules/cloud-provider-vcd/examples.html
-                - title:
-                    en: FAQ
-                    ru: FAQ
-                  url: /modules/cloud-provider-vcd/faq.html
+                #- title:
+                    #en: FAQ
+                    #ru: FAQ
+                  #url: /modules/cloud-provider-vcd/faq.html
             - title:
                 en: VMware vSphere
                 ru: VMware vSphere
@@ -1182,10 +1182,6 @@ entries:
                     en: Configuration
                     ru: Настройки
                   url: /modules/operator-prometheus/configuration.html
-                - title:
-                    en: FAQ
-                    ru: FAQ
-                  url: /modules/operator-prometheus/faq.html
             - title:
                 en: okmeter
                 ru: okmeter
@@ -1857,3 +1853,11 @@ entries:
         en: Used software
         ru: Используемое ПО
       url: /oss_info.html
+    - title:
+        en: Release notes
+        ru: История изменений
+      folders:
+      - title:
+          en: Version 1.68
+          ru: Версия 1.68
+        url: /release-notes/1-68.html

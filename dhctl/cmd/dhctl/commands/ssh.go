@@ -87,10 +87,10 @@ func DefineTestSCPCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		if Direction == "up" {
 			if Data != "" {
 				log.InfoF("upload bytes to '%s' on remote\n", DstPath)
-				err = sshCl.File().UploadBytes([]byte(Data), DstPath)
+				err = sshCl.File().UploadBytes(context.Background(), []byte(Data), DstPath)
 			} else {
 				log.InfoF("upload local '%s' to '%s' on remote\n", SrcPath, DstPath)
-				err = sshCl.File().Upload(SrcPath, DstPath)
+				err = sshCl.File().Upload(context.Background(), SrcPath, DstPath)
 			}
 			if err != nil {
 				return err
@@ -99,7 +99,7 @@ func DefineTestSCPCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		} else {
 			if DstPath == "stdout" {
 				log.InfoF("download bytes from remote '%s'\n", SrcPath)
-				data, err := sshCl.File().DownloadBytes(SrcPath)
+				data, err := sshCl.File().DownloadBytes(context.Background(), SrcPath)
 				if err != nil {
 					return err
 				}
@@ -107,7 +107,7 @@ func DefineTestSCPCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 				success = true
 			} else {
 				log.InfoF("download bytes from remote '%s' to local '%s'\n", SrcPath, DstPath)
-				err = sshCl.File().Download(SrcPath, DstPath)
+				err = sshCl.File().Download(context.Background(), SrcPath, DstPath)
 				if err != nil {
 					return err
 				}
@@ -147,7 +147,7 @@ func DefineTestUploadExecCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			cmd.Sudo()
 		}
 		var stdout []byte
-		stdout, err = cmd.Execute()
+		stdout, err = cmd.Execute(context.Background())
 		if err != nil {
 			var ee *exec.ExitError
 			if errors.As(err, &ee) {
@@ -186,7 +186,7 @@ func DefineTestBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		cmd.Sudo()
 		parentDir := path.Dir(BundleDir)
 		bundleDir := path.Base(BundleDir)
-		stdout, err := cmd.ExecuteBundle(parentDir, bundleDir)
+		stdout, err := cmd.ExecuteBundle(context.Background(), parentDir, bundleDir)
 		if err != nil {
 			var ee *exec.ExitError
 			if errors.As(err, &ee) {

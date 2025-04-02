@@ -37,7 +37,7 @@ var (
 	ErrCloudApiUnreachable = errors.New("could not reach Cloud API from master node")
 )
 
-func (pc *Checker) CheckCloudAPIAccessibility() error {
+func (pc *Checker) CheckCloudAPIAccessibility(ctx context.Context) error {
 
 	if app.PreflightSkipCloudAPIAccessibility {
 		log.InfoLn("Checking  Cloud API is accessible from first master host was skipped (via skip flag)")
@@ -78,7 +78,7 @@ func (pc *Checker) CheckCloudAPIAccessibility() error {
 		return fmt.Errorf(`cannot setup tunnel to control-plane host: %w.
 Please check connectivity to control-plane host and that the sshd config parameter 'AllowTcpForwarding' set to 'yes' on control-plane node`, err)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
 	defer tun.Stop()
 

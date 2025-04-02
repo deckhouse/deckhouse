@@ -1,6 +1,6 @@
 ---
 {{ $grafanaVersion := "10.4.15" }}
-{{ $bundledPlugins := "petrslavotinek-carpetplot-panel,vonage-status-panel,btplc-status-dot-panel,natel-plotly-panel,savantly-heatmap-panel,grafana-piechart-panel,grafana-worldmap-panel" }}
+{{ $bundledPlugins := "petrslavotinek-carpetplot-panel,vonage-status-panel,btplc-status-dot-panel,natel-plotly-panel,savantly-heatmap-panel,grafana-piechart-panel,grafana-worldmap-panel,esnet-matrix-panel" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
 final: false

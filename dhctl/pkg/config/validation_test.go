@@ -84,7 +84,7 @@ func TestValidateInitConfiguration(t *testing.T) {
 	t.Parallel()
 
 	const schemasDir = "./../../../candi/openapi"
-	newStore := newSchemaStore([]string{schemasDir})
+	newStore := newSchemaStore(false,[]string{schemasDir})
 	newStore.moduleConfigsCache["deckhouse"] = &spec.Schema{}
 	newStore.modulesCache["deckhouse"] = struct{}{}
 
@@ -101,7 +101,6 @@ apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
   imagesRepo: registry.deckhouse.io/deckhouse/ce
-  releaseChannel: Alpha
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -140,13 +139,11 @@ apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
   imagesRepo: registry.deckhouse.io/deckhouse/ce
-  releaseChannel: Alpha
 ---
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
-  imagesRepo: registry.deckhouse.io/deckhouse/ce
-  releaseChannel: Stable`,
+  imagesRepo: registry.deckhouse.io/deckhouse/ce`,
 			errContains: `ValidationFailed: exactly one "InitConfiguration" required`,
 		},
 		"extra kinds": {
@@ -155,7 +152,6 @@ apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
   imagesRepo: registry.deckhouse.io/deckhouse/ce
-  releaseChannel: Alpha
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterConfiguration
@@ -191,7 +187,7 @@ func TestValidateClusterConfiguration(t *testing.T) {
 	t.Parallel()
 
 	const schemasDir = "./../../../candi/openapi"
-	newStore := newSchemaStore([]string{schemasDir})
+	newStore := newSchemaStore(false,[]string{schemasDir})
 
 	tests := map[string]struct {
 		config      string
@@ -288,7 +284,7 @@ func TestValidateProviderSpecificClusterConfiguration(t *testing.T) {
 	t.Parallel()
 
 	const schemasDir = "./../../../candi/cloud-providers"
-	newStore := newSchemaStore([]string{schemasDir})
+	newStore := newSchemaStore(false,[]string{schemasDir})
 
 	tests := map[string]struct {
 		config        string
@@ -478,7 +474,7 @@ func TestValidateStaticClusterConfiguration(t *testing.T) {
 	t.Parallel()
 
 	const schemasDir = "./../../../candi/openapi"
-	newStore := newSchemaStore([]string{schemasDir})
+	newStore := newSchemaStore(false,[]string{schemasDir})
 
 	tests := map[string]struct {
 		config      string

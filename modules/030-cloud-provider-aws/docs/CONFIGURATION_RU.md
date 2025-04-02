@@ -10,4 +10,6 @@ title: "Cloud provider — AWS: настройки"
 
 {% include module-alerts.liquid %}
 
+{% include module-conversion.liquid %}
+
 {% include module-settings.liquid %}

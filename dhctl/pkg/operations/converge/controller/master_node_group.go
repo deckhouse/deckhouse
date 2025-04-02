@@ -187,7 +187,7 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 		candidateName := fmt.Sprintf("%s-%s-%v", metaConfig.ClusterPrefix, c.name, index)
 
 		if _, ok := c.state.State[candidateName]; !ok {
-			output, err := operations.BootstrapAdditionalMasterNode(ctx.KubeClient(), metaConfig, index, c.cloudConfig, true, ctx.Terraform())
+			output, err := operations.BootstrapAdditionalMasterNode(ctx.Ctx(), ctx.KubeClient(), metaConfig, index, c.cloudConfig, true, ctx.Terraform())
 			if err != nil {
 				return err
 			}
@@ -202,7 +202,7 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 		index++
 	}
 
-	err = entity.WaitForNodesListBecomeReady(ctx.KubeClient(), nodesToWait, controlplane.NewManagerReadinessChecker(ctx))
+	err = entity.WaitForNodesListBecomeReady(ctx.Ctx(), ctx.KubeClient(), nodesToWait, controlplane.NewManagerReadinessChecker(ctx))
 	if err != nil {
 		return err
 	}
@@ -218,7 +218,7 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 		}
 
 		// we hide deckhouse logs because we always have config
-		nodeCloudConfig, err := entity.GetCloudConfig(ctx.KubeClient(), c.name, global.HideDeckhouseLogs, log.GetDefaultLogger(), nodeInternalIPList...)
+		nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), ctx.KubeClient(), c.name, global.HideDeckhouseLogs, log.GetDefaultLogger(), nodeInternalIPList...)
 		if err != nil {
 			return err
 		}
@@ -303,14 +303,14 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 		return global.ErrConvergeInterrupted
 	}
 
-	err = entity.SaveMasterNodeTerraformState(ctx.KubeClient(), nodeName, outputs.TerraformState, []byte(outputs.KubeDataDevicePath))
+	err = entity.SaveMasterNodeTerraformState(ctx.Ctx(), ctx.KubeClient(), nodeName, outputs.TerraformState, []byte(outputs.KubeDataDevicePath))
 	if err != nil {
 		return err
 	}
 
 	c.state.State[nodeName] = outputs.TerraformState
 
-	return entity.WaitForSingleNodeBecomeReady(ctx.KubeClient(), nodeName)
+	return entity.WaitForSingleNodeBecomeReady(ctx.Ctx(), ctx.KubeClient(), nodeName)
 }
 
 func (c *MasterNodeGroupController) newHookForUpdatePipeline(ctx *context.Context, convergedNode string, metaConfig *config.MetaConfig) terraform.InfraActionHook {

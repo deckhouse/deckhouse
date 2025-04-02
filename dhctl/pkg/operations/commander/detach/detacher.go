@@ -81,7 +81,7 @@ func (op *Detacher) Detach(ctx context.Context) error {
 			return fmt.Errorf("unable to parse resources to create: %w", err)
 		}
 
-		kubeClient, err := op.Checker.GetKubeClient()
+		kubeClient, err := op.Checker.GetKubeClient(ctx)
 		if err != nil {
 			return fmt.Errorf("unable to get kube client: %w", err)
 		}
@@ -91,7 +91,7 @@ func (op *Detacher) Detach(ctx context.Context) error {
 			return fmt.Errorf("unable to get resource checkers: %w", err)
 		}
 
-		err = resources.CreateResourcesLoop(kubeClient, detachResources, checkers, nil)
+		err = resources.CreateResourcesLoop(ctx, kubeClient, detachResources, checkers, nil)
 		if err != nil {
 			return fmt.Errorf("unable to create resources: %w", err)
 		}
@@ -111,7 +111,7 @@ func (op *Detacher) Detach(ctx context.Context) error {
 			return fmt.Errorf("unable to parse resources to delete: %w", err)
 		}
 
-		kubeClient, err := op.Checker.GetKubeClient()
+		kubeClient, err := op.Checker.GetKubeClient(ctx)
 		if err != nil {
 			return fmt.Errorf("unable to get kube client: %w", err)
 		}

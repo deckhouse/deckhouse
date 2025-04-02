@@ -16,7 +16,7 @@ pdpl-user -i 63 <USERNAME>
 
 Запустите установщик на **персональном компьютере**.
 
-{%- if revision == 'ee' %}
+{%- if revision == 'be' or revision == 'se' or revision == 'se-plus' or revision == 'ee' %}
 
 <a id='tab_installer_linux_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_installer_{{ revision }} active"
    onclick="openTabAndSaveStatus(event, 'tabs__btn_installer_{{ revision }}', 'tabs__content_installer_{{ revision }}', 'block_installer_linux_{{ revision }}');" >
@@ -28,9 +28,14 @@ pdpl-user -i 63 <USERNAME>
 </a>
 
 <div id='block_installer_linux_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }} active" markdown="1">
-<!-- Linux or macOS install, EE -->
+<!-- Linux or macOS install, BE, SE, SE+, EE -->
+Авторизуйтесь на **персональном компьютере** в container image registry:
 ```shell
- echo <LICENSE_TOKEN> | docker login -u license-token --password-stdin registry.deckhouse.ru
+echo <LICENSE_TOKEN> | docker login -u license-token --password-stdin registry.deckhouse.ru
+```
+
+Запустите контейнер с установщиком:
+```shell
 docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "$PWD/config.yml:/config.yml"{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/"{% endif %}
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %} \
   -v "$HOME/.kube/config:/kubeconfig"{% endif %}
@@ -39,7 +44,7 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 ```
 </div>
 <div id='block_installer_windows_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }}" markdown="1">
-<!-- Windows install, EE -->
+<!-- Windows install, BE, SE, SE+, EE -->
 Авторизуйтесь на **персональном компьютере** в container image registry, введя лицензионный ключ на запрос пароля:
 ```text
 docker login -u license-token registry.deckhouse.ru

@@ -15,6 +15,7 @@
 package terraform
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"strings"
@@ -35,12 +36,12 @@ func NewFileTerraStateLoader(stateCache state.Cache, metaConfig *config.MetaConf
 	}
 }
 
-func (s *FileTerraStateLoader) PopulateMetaConfig() (*config.MetaConfig, error) {
+func (s *FileTerraStateLoader) PopulateMetaConfig(_ context.Context) (*config.MetaConfig, error) {
 	return s.metaConfig, nil
 }
 
-func (s *FileTerraStateLoader) PopulateClusterState() ([]byte, map[string]state.NodeGroupTerraformState, error) {
-	metaConfig, err := s.PopulateMetaConfig()
+func (s *FileTerraStateLoader) PopulateClusterState(ctx context.Context) ([]byte, map[string]state.NodeGroupTerraformState, error) {
+	metaConfig, err := s.PopulateMetaConfig(ctx)
 	if err != nil {
 		return nil, nil, err
 	}

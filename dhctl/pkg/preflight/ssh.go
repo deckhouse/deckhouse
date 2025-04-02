@@ -15,6 +15,7 @@
 package preflight
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strconv"
@@ -32,7 +33,7 @@ const (
 
 var ErrAuthSSHFailed = errors.New("authentication failed")
 
-func (pc *Checker) CheckSSHTunnel() error {
+func (pc *Checker) CheckSSHTunnel(_ context.Context) error {
 	if app.PreflightSkipSSHForward {
 		log.InfoLn("SSH forward preflight check was skipped (via skip flag)")
 		return nil
@@ -66,7 +67,7 @@ Please check connectivity to control-plane host and that the sshd config paramet
 	return nil
 }
 
-func (pc *Checker) CheckSSHCredential() error {
+func (pc *Checker) CheckSSHCredential(ctx context.Context) error {
 	if app.PreflightSkipSSHCredentialsCheck {
 		log.InfoLn("SSH credentials preflight check was skipped (via skip flag)")
 		return nil
@@ -79,7 +80,7 @@ func (pc *Checker) CheckSSHCredential() error {
 	}
 
 	sshCheck := wrapper.Client().Check()
-	err := sshCheck.CheckAvailability()
+	err := sshCheck.CheckAvailability(ctx)
 	if err != nil {
 		return fmt.Errorf(
 			"ssh %w. Please check ssh credential and try again",
@@ -89,7 +90,7 @@ func (pc *Checker) CheckSSHCredential() error {
 	return nil
 }
 
-func (pc *Checker) CheckSingleSSHHostForStatic() error {
+func (pc *Checker) CheckSingleSSHHostForStatic(_ context.Context) error {
 	if app.PreflightSkipOneSSHHost {
 		log.InfoLn("Only one --ssh-host parameter used preflight check was skipped (via skip flag)")
 		return nil

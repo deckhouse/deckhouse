@@ -56,7 +56,6 @@
       {{- $_ := set $ctx "OBSERVABILITY_SOURCE_REPO" $Root.OBSERVABILITY_SOURCE_REPO }}
       {{- $_ := set $ctx "GOPROXY" $Root.GOPROXY }}
       {{- $_ := set $ctx "DECKHOUSE_PRIVATE_REPO" $Root.DECKHOUSE_PRIVATE_REPO }}
-      {{- $_ := set $ctx "STRONGHOLD_PULL_TOKEN" $Root.STRONGHOLD_PULL_TOKEN }}
       {{- $_ := set $ctx "DistroPackagesProxy" $Root.DistroPackagesProxy }}
       {{- $_ := set $ctx "CargoProxy" $Root.CargoProxy }}
 ---
