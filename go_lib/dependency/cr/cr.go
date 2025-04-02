@@ -118,7 +118,10 @@ func (r *client) Image(ctx context.Context, tag string) (v1.Image, error) {
 	if r.options.timeout > 0 {
 		// add default timeout to prevent endless request on a huge image
 		ctxWTO, cancel := context.WithTimeout(ctx, r.options.timeout)
-		defer cancel()
+		go func() {
+			<-ctxWTO.Done()
+			cancel()
+		}()
 
 		imageOptions = append(imageOptions, remote.WithContext(ctxWTO))
 	} else {
