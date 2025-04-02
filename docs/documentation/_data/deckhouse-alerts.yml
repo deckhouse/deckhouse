@@ -4531,7 +4531,7 @@ alerts:
         To switch the module back to normal mode, edit the corresponding ModuleConfig resource with the following command:
 
         ```bash
-        kubectl edit moduleconfig {{ $labels.name }}
+        kubectl patch moduleconfig {{ $labels.name }} --type=json -p='[{"op": "remove", "path": "/spec/managementState"}]'
         ```
       summary: |
         Module {{ $labels.moduleName }} is running in unmanaged mode.
