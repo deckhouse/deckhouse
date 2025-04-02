@@ -14,7 +14,6 @@ import (
 	"sync"
 
 	"embeded-registry-manager/internal/state"
-	"embeded-registry-manager/internal/staticpod"
 
 	nodeservices "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/node-services"
 	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/pki"
@@ -329,6 +328,11 @@ func (nc *nodeController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		req.Namespace = ""
 	}
 
+	// Delete node secret if exists
+	if err := nc.deleteNodePKI(ctx, req.Name); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	err := nc.checkNodesAddressesChanged(ctx)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("cannot check nodes addresses change: %w", err)
@@ -491,20 +495,27 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 		return
 	}
 
+	servicesConfig := new(state.NodeServicesConfig)
+	*servicesConfig, err = nc.getServicesConfig(ctx, node.Name)
+	if client.IgnoreNotFound(err) != nil {
+		log.Error(err, "cannot load Node Service Config secret")
+	}
+
 	nodeInternalIP := getNodeInternalIP(node)
 	if nodeInternalIP == "" {
 		err = fmt.Errorf("node does not have internal IP")
 		return
 	}
 
-	nodePKI, err := nc.ensureNodePKI(
+	nodePKI, err := nc.getNodePKI(
 		ctx,
 		node.Name,
 		nodeInternalIP,
 		globalPKI,
+		servicesConfig,
 	)
 	if err != nil {
-		err = fmt.Errorf("cannot ensure node PKI: %w", err)
+		err = fmt.Errorf("cannot get node PKI: %w", err)
 		return
 	}
 
@@ -521,7 +532,7 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 		}
 	}
 
-	servicesConfig, err := nc.contructNodeServicesConfig(
+	*servicesConfig, err = nc.contructNodeServicesConfig(
 		moduleConfig,
 		userRO,
 		userRW,
@@ -540,7 +551,7 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 		return
 	}
 
-	err = nc.saveNodeServicesConfig(ctx, node.Name, servicesConfig)
+	err = nc.configureNodeServices(ctx, node.Name, *servicesConfig)
 	if err != nil {
 		err = fmt.Errorf("save node services configuration error: %w", err)
 		return
@@ -558,7 +569,7 @@ func (nc *nodeController) contructNodeServicesConfig(
 	ingressPKI *state.IngressPKI,
 	mirrorerUpstreams []string,
 	stateSecret state.StateSecret,
-) (model staticpod.NodeServicesConfigModel, err error) {
+) (model state.NodeServicesConfig, err error) {
 	tokenKey, err := pki.EncodePrivateKey(globalPKI.Token.Key)
 	if err != nil {
 		err = fmt.Errorf("cannot encode Token key: %w", err)
@@ -577,7 +588,7 @@ func (nc *nodeController) contructNodeServicesConfig(
 		return
 	}
 
-	model = staticpod.NodeServicesConfigModel{
+	model = state.NodeServicesConfig{
 		Version: stateSecret.Version,
 		Config: nodeservices.Config{
 
@@ -643,7 +654,10 @@ func (nc *nodeController) contructNodeServicesConfig(
 	return
 }
 
-func (nc *nodeController) saveNodeServicesConfig(ctx context.Context, nodeName string, model staticpod.NodeServicesConfigModel) error {
+func (nc *nodeController) configureNodeServices(ctx context.Context, nodeName string, config state.NodeServicesConfig) error {
+	log := ctrl.LoggerFrom(ctx).
+		WithValues("action", "ConfigureNodeServices")
+
 	secret := corev1.Secret{}
 	key := types.NamespacedName{
 		Name:      state.NodeServicesConfigSecretName(nodeName),
@@ -664,11 +678,7 @@ func (nc *nodeController) saveNodeServicesConfig(ctx context.Context, nodeName s
 		origSecret = secret.DeepCopy()
 	}
 
-	nodeServicesConfig := state.NodeServicesConfig{
-		NodeServicesConfigModel: model,
-	}
-
-	if err := nodeServicesConfig.EncodeSecret(&secret); err != nil {
+	if err := config.EncodeSecret(&secret); err != nil {
 		return fmt.Errorf("cannot encode to secret: %w", err)
 	}
 
@@ -688,13 +698,15 @@ func (nc *nodeController) saveNodeServicesConfig(ctx context.Context, nodeName s
 			if err := nc.Client.Update(ctx, &secret); err != nil {
 				return fmt.Errorf("cannot update secret %v for NodeServicesConfig: %w", secret.Name, err)
 			}
+		} else {
+			log.Info("No changes in Node Services Config needed")
 		}
 	}
 
 	return nil
 }
 
-func (nc *nodeController) deleteNodeServicesConfig(ctx context.Context, nodeName string, onlyIfFound bool) error {
+func (nc *nodeController) stopNodeServices(ctx context.Context, nodeName string, onlyIfFound bool) error {
 	log := ctrl.LoggerFrom(ctx).
 		WithValues("action", "DeleteNodeServicesConfig")
 
@@ -725,7 +737,40 @@ func (nc *nodeController) deleteNodeServicesConfig(ctx context.Context, nodeName
 	return nil
 }
 
-func (nc *nodeController) ensureNodePKI(ctx context.Context, nodeName, nodeAddress string, globalPKI state.GlobalPKI) (ret state.NodePKI, err error) {
+func (nc *nodeController) getServicesConfig(ctx context.Context, nodeName string) (ret state.NodeServicesConfig, err error) {
+	secret := corev1.Secret{}
+	key := types.NamespacedName{
+		Name:      state.NodeServicesConfigSecretName(nodeName),
+		Namespace: nc.Namespace,
+	}
+
+	if err = nc.Client.Get(ctx, key, &secret); err != nil {
+		err = fmt.Errorf("cannot get secret %v k8s object: %w", key.Name, err)
+		return
+	}
+
+	err = ret.DecodeSecret(&secret)
+	if err != nil {
+		err = fmt.Errorf("cannot decode from secret: %w", err)
+		return
+	}
+
+	err = ret.Validate()
+	if err != nil {
+		err = fmt.Errorf("valdiation error: %w", err)
+		return
+	}
+
+	return
+}
+
+func (nc *nodeController) getNodePKI(
+	ctx context.Context,
+	nodeName,
+	nodeAddress string,
+	globalPKI state.GlobalPKI,
+	servicesConfig *state.NodeServicesConfig,
+) (ret state.NodePKI, err error) {
 	log := ctrl.LoggerFrom(ctx).
 		WithValues("action", "EnsureNodePKI")
 
@@ -736,115 +781,71 @@ func (nc *nodeController) ensureNodePKI(ctx context.Context, nodeName, nodeAddre
 		fmt.Sprintf("%s.%s.svc", state.RegistrySvcName, state.RegistryNamespace),
 	}
 
-	updated, err := ensureSecret(
-		ctx,
-		nc.Client,
-		state.NodePKISecretName(nodeName),
-		nc.Namespace,
-		func(ctx context.Context, secret *corev1.Secret, found bool) error {
-			valid := true
-			if found {
-				ret, valid = nc.loadNodePKIFromSecret(log, secret, &globalPKI, hosts)
-			}
+	if servicesConfig != nil {
+		if ret, err = nc.loadNodePKIFromConfig(*servicesConfig, globalPKI, hosts); err == nil {
+			return
+		} else {
+			log.Error(err, "Error decode Node PKI")
 
-			if !found || !valid {
-				nc.logModuleWarning(
-					&log,
-					fmt.Sprintf("NodePKIGenerateNew: %v", nodeName),
-					"NodePKI secret is invalid, generating new",
-				)
+			nc.logModuleWarning(
+				&log,
+				"NodePKIDecodeError",
+				fmt.Sprintf("Error decode Node PKI: %v", err),
+			)
+		}
+	}
 
-				ret, err = state.GenerateNodePKI(*globalPKI.CA, hosts)
-				if err != nil {
-					return fmt.Errorf("cannot generate new PKI: %w", err)
-				}
-			}
-
-			err = ret.EncodeSecret(secret)
-			if err != nil {
-				return fmt.Errorf("cannot encode NodePKI to secret: %w", err)
-			}
-
-			return nil
-		},
+	nc.logModuleWarning(
+		&log,
+		fmt.Sprintf("NodePKIGenerateNew: %v", nodeName),
+		"Generating new NodePKI",
 	)
 
-	if err != nil {
-		err = fmt.Errorf("cannot ensure secret: %w", err)
-		return
-	}
-	if updated {
-		log.Info("Secret was updated")
+	if ret, err = state.GenerateNodePKI(*globalPKI.CA, hosts); err != nil {
+		err = fmt.Errorf("cannot generate new PKI: %w", err)
 	}
 
 	return
 }
 
-func (nc *nodeController) loadNodePKIFromSecret(log logr.Logger, secret *corev1.Secret, globalPKI *state.GlobalPKI, hosts []string) (ret state.NodePKI, valid bool) {
-	err := ret.DecodeSecret(secret)
+func (nc *nodeController) loadNodePKIFromConfig(
+	servicesConfig state.NodeServicesConfig,
+	globalPKI state.GlobalPKI,
+	hosts []string,
+) (ret state.NodePKI, err error) {
+	err = ret.DecodeServicesConfig(servicesConfig)
+
 	if err != nil {
-		log.Error(err, "Cannot decode Node PKI from secret")
-
-		nc.logModuleWarning(
-			&log,
-			"NodePKIDecodeError",
-			fmt.Sprintf("NodePKI decode error: %v", err),
-		)
-
+		err = fmt.Errorf("cannot decode Node PKI from config: %w", err)
 		return
 	}
 
 	err = pki.ValidateCertWithCAChain(ret.Auth.Cert, globalPKI.CA.Cert)
 	if err != nil {
-		log.Error(err, "Auth certificate validation error")
-
-		nc.logModuleWarning(
-			&log,
-			"NodePKIAuthCertValidationError",
-			fmt.Sprintf("NodePKI Auth certificate validation error: %v", err),
-		)
-
+		err = fmt.Errorf("error validating Auth certificate: %w", err)
 		return
 	}
 
 	err = pki.ValidateCertWithCAChain(ret.Distribution.Cert, globalPKI.CA.Cert)
 	if err != nil {
-		log.Error(err, "Distribution certificate validation error")
-
-		nc.logModuleWarning(
-			&log,
-			"NodePKIDistributionCertValidationError",
-			fmt.Sprintf("NodePKI Distribution certificate validation error: %v", err),
-		)
-
+		err = fmt.Errorf("error validating Distribution certificate: %w", err)
 		return
 	}
 
 	for _, host := range hosts {
 		err = ret.Auth.Cert.VerifyHostname(host)
 		if err != nil {
-			nc.logModuleWarning(
-				&log,
-				"NodePKIAuthCertHostUnsupported",
-				fmt.Sprintf("NodePKI Auth certificate not support hostname %v: %v", host, err),
-			)
-
+			err = fmt.Errorf("hostname \"%v\" not supported by Auth certificate: %w", host, err)
 			return
 		}
 
 		err = ret.Distribution.Cert.VerifyHostname(host)
 		if err != nil {
-			nc.logModuleWarning(
-				&log,
-				"NodePKIDistributionCertHostUnsupported",
-				fmt.Sprintf("NodePKI Distribution certificate not support hostname %v: %v", host, err),
-			)
-
+			err = fmt.Errorf("hostname \"%v\" not supported by Distribution certificate: %w", host, err)
 			return
 		}
 	}
 
-	valid = true
 	return
 }
 
@@ -1009,13 +1010,8 @@ func (nc *nodeController) getAllMasterNodes(ctx context.Context) (nodes *corev1.
 }
 
 func (nc *nodeController) cleanupNodeState(ctx context.Context, node *corev1.Node) (ctrl.Result, error) {
-	if err := nc.deleteNodeServicesConfig(ctx, node.Name, true); err != nil {
+	if err := nc.stopNodeServices(ctx, node.Name, true); err != nil {
 		err = fmt.Errorf("delete Node Services Config error: %w", err)
-		return ctrl.Result{}, err
-	}
-
-	// Delete node secret if exists
-	if err := nc.deleteNodePKI(ctx, node.Name); err != nil {
 		return ctrl.Result{}, err
 	}
 

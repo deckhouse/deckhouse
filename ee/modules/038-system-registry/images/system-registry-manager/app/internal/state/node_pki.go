@@ -9,23 +9,12 @@ import (
 	"fmt"
 	"regexp"
 
-	corev1 "k8s.io/api/core/v1"
-
 	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/pki"
 )
 
 const (
-	nodePKISecretType      = "system-registry/node-pki-secret"
-	nodePKISecretTypeLabel = "node-pki-secret"
-
 	nodeAuthCertCN         = "embedded-registry-auth"
 	nodeDistributionCertCN = "embedded-registry-distribution"
-
-	nodeAuthCertSecretField = "auth.crt"
-	nodeAuthKeySecretField  = "auth.key"
-
-	nodeDistributionCertSecretField = "distribution.crt"
-	nodeDistributionKeySecretField  = "distribution.key"
 )
 
 var (
@@ -35,8 +24,6 @@ var (
 func NodePKISecretName(nodeName string) string {
 	return fmt.Sprintf("registry-node-%s-pki", nodeName)
 }
-
-var _ encodeDecodeSecret = &NodePKI{}
 
 type NodePKI struct {
 	Auth         *pki.CertKey
@@ -63,55 +50,21 @@ func GenerateNodePKI(ca pki.CertKey, hosts []string) (ret NodePKI, err error) {
 	return
 }
 
-func (nc *NodePKI) DecodeSecret(secret *corev1.Secret) error {
-	if secret == nil {
-		return ErrSecretIsNil
-	}
+func (nc *NodePKI) DecodeServicesConfig(config NodeServicesConfig) error {
+	pkiConfig := config.Config.PKI
 
-	authPKI, err := decodeCertKeyFromSecret(nodeAuthCertSecretField, nodeAuthKeySecretField, secret)
+	authPKI, err := pki.DecodeCertKey([]byte(pkiConfig.AuthCert), []byte(pkiConfig.AuthKey))
 	if err != nil {
 		return fmt.Errorf("cannot decode auth PKI: %w", err)
 	}
 
-	distributionPKI, err := decodeCertKeyFromSecret(nodeDistributionCertSecretField, nodeDistributionKeySecretField, secret)
+	distributionPKI, err := pki.DecodeCertKey([]byte(pkiConfig.DistributionCert), []byte(pkiConfig.DistributionKey))
 	if err != nil {
 		return fmt.Errorf("cannot decode distribution PKI: %w", err)
 	}
 
 	nc.Auth = &authPKI
 	nc.Distribution = &distributionPKI
-
-	return nil
-}
-
-func (nc *NodePKI) EncodeSecret(secret *corev1.Secret) error {
-	if secret == nil {
-		return ErrSecretIsNil
-	}
-
-	secret.Type = nodePKISecretType
-
-	initSecretLabels(secret)
-	secret.Labels[LabelTypeKey] = nodePKISecretTypeLabel
-
-	secret.Data = make(map[string][]byte)
-	if err := encodeCertKeyToSecret(
-		*nc.Auth,
-		nodeAuthCertSecretField,
-		nodeAuthKeySecretField,
-		secret,
-	); err != nil {
-		return fmt.Errorf("cannot encode Auth: %w", err)
-	}
-
-	if err := encodeCertKeyToSecret(
-		*nc.Distribution,
-		nodeDistributionCertSecretField,
-		nodeDistributionKeySecretField,
-		secret,
-	); err != nil {
-		return fmt.Errorf("cannot encode Distribution: %w", err)
-	}
 
 	return nil
 }

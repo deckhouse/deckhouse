@@ -8,10 +8,10 @@ package state
 import (
 	"fmt"
 
+	nodeservices "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/node-services"
+	validation "github.com/go-ozzo/ozzo-validation"
 	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
-
-	"embeded-registry-manager/internal/staticpod"
 )
 
 const (
@@ -26,7 +26,14 @@ func NodeServicesConfigSecretName(nodeName string) string {
 }
 
 type NodeServicesConfig struct {
-	staticpod.NodeServicesConfigModel
+	Version string
+	Config  nodeservices.Config
+}
+
+func (config *NodeServicesConfig) Validate() error {
+	return validation.ValidateStruct(config,
+		validation.Field(&config.Config, validation.Required),
+	)
 }
 
 func (nsc *NodeServicesConfig) EncodeSecret(secret *corev1.Secret) error {
@@ -47,6 +54,20 @@ func (nsc *NodeServicesConfig) EncodeSecret(secret *corev1.Secret) error {
 	secret.Data = map[string][]byte{
 		"version": []byte(nsc.Version),
 		"config":  configBytes,
+	}
+
+	return nil
+}
+
+func (nsc *NodeServicesConfig) DecodeSecret(secret *corev1.Secret) error {
+	if secret == nil {
+		return ErrSecretIsNil
+	}
+
+	nsc.Version = string(secret.Data["version"])
+
+	if err := yaml.Unmarshal(secret.Data["config"], &nsc.Config); err != nil {
+		return fmt.Errorf("config unmarshal error: %w", err)
 	}
 
 	return nil
