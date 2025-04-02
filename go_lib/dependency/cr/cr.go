@@ -118,6 +118,7 @@ func (r *client) Image(ctx context.Context, tag string) (v1.Image, error) {
 	if r.options.timeout > 0 {
 		// add default timeout to prevent endless request on a huge image
 		ctxWTO, cancel := context.WithTimeout(ctx, r.options.timeout)
+		// seems weird - yes! but we can't call cancel here, otherwise Image outside this function would be inaccessible
 		go func() {
 			<-ctxWTO.Done()
 			cancel()
