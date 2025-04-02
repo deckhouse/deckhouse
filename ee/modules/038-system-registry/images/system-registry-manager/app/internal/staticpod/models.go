@@ -6,8 +6,6 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package staticpod
 
 import (
-	"net/http"
-
 	nodeservices "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/node-services"
 	validation "github.com/go-ozzo/ozzo-validation"
 )
@@ -21,10 +19,6 @@ func (config *NodeServicesConfigModel) Validate() error {
 	return validation.ValidateStruct(config,
 		validation.Field(&config.Config, validation.Required),
 	)
-}
-
-func (cfg NodeServicesConfigModel) Bind(r *http.Request) error {
-	return cfg.Validate()
 }
 
 // changesModel represents a model to track applied changes
