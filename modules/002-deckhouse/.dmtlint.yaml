@@ -25,3 +25,6 @@ linters-settings:
       placement:
         - kind: ClusterRole
           name: d8:rbac-proxy
+        - kind: ClusterRoleBinding
+          name: d8-sudouser
+
