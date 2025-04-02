@@ -33,16 +33,23 @@ secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
 shell:
-  setup:
+  install:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  # git needs for patch
+  - apk --no-cache add git
+  beforeSetup:
   - cd /src
-  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  - git apply /src/patches/*.patch --verbose
+  setup:
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /src/cmd/agent
-  - go build -ldflags="-s -w" -o /agent .
+  - go build -mod=vendor -ldflags="-s -w" -o /agent .
   - chown 64535:64535 /agent
   - chmod +x /agent
   - cd /src/cmd/controller
-  - go build -ldflags="-s -w" -o /controller .
+  - go build -mod=vendor -ldflags="-s -w" -o /controller .
   - chown 64535:64535 /controller
   - chmod +x /controller
+  - rm -rf /src/vendor
