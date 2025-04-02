@@ -19,7 +19,7 @@
 # Helper - pull all cert-manager crds and mutate their labels and annotations
 # also injects certificateOwnerRef patch
 
-version="v1.16.1"
+version="v1.17.1"
 name="cert-manager"
 
 repo="https://raw.githubusercontent.com/cert-manager/cert-manager/${version}/deploy/crds"
