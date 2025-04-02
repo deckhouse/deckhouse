@@ -121,7 +121,7 @@ func adjustUpmeterRetention(input *go_hook.HookInput, dc dependency.Container) e
 
 	retentionDays := 548
 
-	if usagePercent > 60 {
+	if usagePercent > 80 {
 		scaling := float64(100-usagePercent) / 20.0
 		retentionDays = int(548.0 * scaling)
 		if retentionDays < 30 {
