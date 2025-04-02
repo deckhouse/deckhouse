@@ -17,8 +17,9 @@ limitations under the License.
 package api
 
 import (
-	"dvp-common/config"
 	"errors"
+
+	"dvp-common/config"
 
 	"github.com/deckhouse/virtualization/api/core/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
