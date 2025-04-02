@@ -7,6 +7,7 @@ package bashible
 
 import (
 	"encoding/json"
+
 	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
 )
 

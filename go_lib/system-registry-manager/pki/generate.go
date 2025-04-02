@@ -8,8 +8,9 @@ package pki
 import (
 	"crypto/rand"
 	"fmt"
-	"golang.org/x/crypto/bcrypt"
 	"math/big"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 const (

@@ -73,7 +73,7 @@ func GenerateCertificate(commonName string, ca CertKey, hosts ...string) (CertKe
 
 	// generate a CSR and private key
 	g := &csr.Generator{
-		Validator: func(cr *csr.CertificateRequest) error {
+		Validator: func(_ *csr.CertificateRequest) error {
 			return nil
 		},
 	}
