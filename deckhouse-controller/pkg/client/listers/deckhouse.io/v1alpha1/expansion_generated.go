@@ -42,6 +42,10 @@ type ModulePullOverrideListerExpansion interface{}
 // ModuleReleaseLister.
 type ModuleReleaseListerExpansion interface{}
 
+// ModuleSettingsDefinitionListerExpansion allows custom methods to be added to
+// ModuleSettingsDefinitionLister.
+type ModuleSettingsDefinitionListerExpansion interface{}
+
 // ModuleSourceListerExpansion allows custom methods to be added to
 // ModuleSourceLister.
 type ModuleSourceListerExpansion interface{}

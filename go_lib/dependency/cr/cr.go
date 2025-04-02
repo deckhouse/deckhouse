@@ -117,8 +117,9 @@ func (r *client) Image(ctx context.Context, tag string) (v1.Image, error) {
 
 	if r.options.timeout > 0 {
 		// add default timeout to prevent endless request on a huge image
+		// Warning!: don't use cancel() in the defer func here. Otherwise *v1.Image outside this function would be inaccessible due to cancelled context, while reading layers, for example.
 		ctxWTO, cancel := context.WithTimeout(ctx, r.options.timeout)
-		defer cancel()
+		_ = cancel
 
 		imageOptions = append(imageOptions, remote.WithContext(ctxWTO))
 	} else {
@@ -154,8 +155,9 @@ func (r *client) ListTags(ctx context.Context) ([]string, error) {
 
 	if r.options.timeout > 0 {
 		// add default timeout to prevent endless request on a huge amount of tags
+		// Warning!: don't use cancel() in the defer func here. Otherwise *v1.Image outside this function would be inaccessible due to cancelled context, while reading layers, for example.
 		ctxWTO, cancel := context.WithTimeout(ctx, r.options.timeout)
-		defer cancel()
+		_ = cancel
 
 		imageOptions = append(imageOptions, remote.WithContext(ctxWTO))
 	} else {
