@@ -117,7 +117,8 @@ func (r *client) Image(ctx context.Context, tag string) (v1.Image, error) {
 
 	if r.options.timeout > 0 {
 		// add default timeout to prevent endless request on a huge image
-		ctxWTO, _ := context.WithTimeout(ctx, r.options.timeout) // nolint:govet
+		ctxWTO, cancel := context.WithTimeout(ctx, r.options.timeout)
+		_ = cancel
 
 		imageOptions = append(imageOptions, remote.WithContext(ctxWTO))
 	} else {
@@ -153,7 +154,8 @@ func (r *client) ListTags(ctx context.Context) ([]string, error) {
 
 	if r.options.timeout > 0 {
 		// add default timeout to prevent endless request on a huge amount of tags
-		ctxWTO, _ := context.WithTimeout(ctx, r.options.timeout) // nolint:govet
+		ctxWTO, cancel := context.WithTimeout(ctx, r.options.timeout)
+		_ = cancel
 
 		imageOptions = append(imageOptions, remote.WithContext(ctxWTO))
 	} else {
