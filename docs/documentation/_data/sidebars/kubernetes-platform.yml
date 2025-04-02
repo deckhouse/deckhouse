@@ -406,15 +406,27 @@ entries:
                 - title:
                     en: Hubble web interface
                     ru: Веб-интерфейс Hubble
-                  url: /user/hubble.html
+                  url: /user/web/hubble.html
                 - title:
                     en: Alertmanager-email web interface
                     ru: Веб-интерфейс Alertmanager-email
-                  url: /user/alertmanager.html
+                  url: /user/web/alertmanager.html
                 - title:
-                    en: Alertmanager1-email web interface
-                    ru: Веб-интерфейс Alertmanager1-email
-                  url: /user/alertmanager1.html
+                    en: Console web interface
+                    ru: Веб-интерфейс Console
+                  url: /user/web/console.html
+                - title:
+                    en: Grafana web interface
+                    ru: Веб-интерфейс Grafana
+                  url: /user/web/grafana.html
+                - title:
+                    en: Kubeconfig web interface
+                    ru: Веб-интерфейс Kubeconfig
+                  url: /user/web/kubeconfig.html
+                - title:
+                    en: Stronghold web interface
+                    ru: Веб-интерфейс Stronghold
+                  url: /user/web/stronghold.html
         - title:
             en: Multitenancy
             ru: Мультитенантность
