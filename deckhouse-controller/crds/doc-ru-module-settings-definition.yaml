@@ -4,7 +4,7 @@ versions:
     schema:
       openAPIV3Schema:
         description: |
-          Отображает настроки модулей Deckhouse.
+          Отображает настройки модулей Deckhouse.
           Определяет список версий настроек модуля.
         properties:
           apiVersion:
