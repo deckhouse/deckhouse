@@ -787,47 +787,9 @@ alerts:
       severity: "2"
       markupFormat: markdown
     - name: D8CNIMisconfigured
-      sourceFile: modules/021-cni-cilium/monitoring/prometheus-rules/cni-checks.yaml
-      moduleUrl: 021-cni-cilium
-      module: cni-cilium
-      edition: ce
-      description: |
-        Steps to troubleshoot:
-
-        1. Find the desired settings in the ConfigMap `d8-system/desired-cni-moduleconfig` by running the following command:
-
-           ```bash
-           kubectl -n d8-system get configmap desired-cni-moduleconfig -o yaml
-           ```
-
-        1. Update the conflicting settings in the CNI `{{ $labels.cni }}` ModuleConfig to match the desired configuration.
-      summary: |
-        Settings in the secret d8-cni-configuration conflict with the ModuleConfig.
-      severity: "5"
-      markupFormat: markdown
-    - name: D8CNIMisconfigured
-      sourceFile: modules/035-cni-flannel/monitoring/prometheus-rules/cni-checks.yaml
-      moduleUrl: 035-cni-flannel
-      module: cni-flannel
-      edition: ce
-      description: |
-        Steps to troubleshoot:
-
-        1. Find the desired settings in the ConfigMap `d8-system/desired-cni-moduleconfig` by running the following command:
-
-           ```bash
-           kubectl -n d8-system get configmap desired-cni-moduleconfig -o yaml
-           ```
-
-        1. Update the conflicting settings in the CNI `{{ $labels.cni }}` ModuleConfig to match the desired configuration.
-      summary: |
-        Settings in the secret d8-cni-configuration conflict with the ModuleConfig.
-      severity: "5"
-      markupFormat: markdown
-    - name: D8CNIMisconfigured
-      sourceFile: modules/035-cni-simple-bridge/monitoring/prometheus-rules/cni-checks.yaml
-      moduleUrl: 035-cni-simple-bridge
-      module: cni-simple-bridge
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/cni-checks.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
       edition: ce
       description: |
         Steps to troubleshoot:
@@ -5781,8 +5743,6 @@ modules-having-alerts:
     - chrony
     - cloud-provider-yandex
     - cni-cilium
-    - cni-flannel
-    - cni-simple-bridge
     - control-plane-manager
     - documentation
     - extended-monitoring
