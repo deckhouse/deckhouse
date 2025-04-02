@@ -83,7 +83,7 @@ shell:
   - cd /src
 ---
 image: {{ .ModuleName }}/agent-binaries-artifact
-fromCacheVersion: "2025-04-02.1"
+fromCacheVersion: "2025-04-02.2"
 fromImage: {{ .ModuleName }}/base-cilium-dev
 final: false
 import:
@@ -134,7 +134,7 @@ import:
   - init-container.sh
   - install-plugin.sh
   - LICENSE.all
-  - etc/bash_completion.d/cilium
+  - etc/bash_completion.d/cilium-dbg
   - opt/cni/bin/cilium-cni
   - usr/bin/cilium*
   - var/lib/cilium/bpf
@@ -238,7 +238,7 @@ shell:
 # New Main Agent Image (Distroless)
 ---
 image: {{ .ModuleName }}/agent-distroless
-fromCacheVersion: "2025-04-02.1"
+fromCacheVersion: "2025-04-02.2"
 fromImage: common/distroless
 import:
 - image: {{ .ModuleName }}/agent-binaries-artifact
