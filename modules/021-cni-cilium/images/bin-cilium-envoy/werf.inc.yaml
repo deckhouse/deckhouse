@@ -1,6 +1,6 @@
 {{- $ciliumProxyRev := "efed3defcc70ab5b263a0fc44c93d316b846a211" }}
 {{- $ciliumProxyCacheRev := "v1.31.5-1741765102-efed3defcc70ab5b263a0fc44c93d316b846a211-alt-p11-llvm17-gcc11-v1" }}
-{{- $ciliumProxyDepsRev := "v1.31.5-1741765102-efed3defcc70ab5b263a0fc44c93d316b846a211-alt-p11-llvm17-gcc11-v1" }}
+{{- $ciliumProxyDepsRev := "v1.31.5-1741765102-efed3defcc70ab5b263a0fc44c93d316b846a211-alt-p11-llvm17-gcc11-lfs-v2" }}
 {{- $bazelVersions := "6.5.0" }}
 {{- $envoySHA := "688c4bbe47f4d05bb8ed268f5172bb026cf03242" }}
 ---
@@ -69,6 +69,7 @@ shell:
   - git clone --depth 1 --branch {{ $ciliumProxyCacheRev }} {{ $.SOURCE_REPO }}/cilium/proxy-build-cache.git /tmp/bazel-cache && rm -rf /tmp/bazel-cache/.git
   - chown -R 1337:1337 /tmp/bazel-cache
   - mkdir -p /tmp/bazel-deps
+  - git lfs install
   - git clone --depth 1 --branch {{ $ciliumProxyDepsRev }} {{ $.SOURCE_REPO }}/cilium/proxy-build-deps.git /tmp/bazel-deps && rm -rf /tmp/bazel-deps/.git
   - chown -R 1337:1337 /tmp/bazel-deps
   #
@@ -106,7 +107,8 @@ shell:
   #
   - export BAZEL_OUTPUT_BASE=$(sudo -u cilium PATH=${PATH} bazel info output_base)
   - sudo -u cilium PATH=${PATH} mkdir -p ${BAZEL_OUTPUT_BASE}/external
-  - sudo -u cilium PATH=${PATH} cat /tmp/bazel-deps/external.tar.gz-part* | tar -zxf - -C ${BAZEL_OUTPUT_BASE}/external
+  #- sudo -u cilium PATH=${PATH} cat /tmp/bazel-deps/external.tar.gz-part* | tar -zxf - -C ${BAZEL_OUTPUT_BASE}/external
+  - sudo -u cilium PATH=${PATH} tar -zxf /tmp/bazel-deps/external.tar.gz -C ${BAZEL_OUTPUT_BASE}/external
   - rm -rf /tmp/bazel-deps
   #
   - sudo -u cilium PATH=${PATH} make clang.bazelrc
