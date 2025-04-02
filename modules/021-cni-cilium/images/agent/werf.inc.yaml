@@ -238,6 +238,7 @@ shell:
 # New Main Agent Image (Distroless)
 ---
 image: {{ .ModuleName }}/agent-distroless
+fromCacheVersion: "2025-04-02.1"
 fromImage: common/distroless
 import:
 - image: {{ .ModuleName }}/agent-binaries-artifact
