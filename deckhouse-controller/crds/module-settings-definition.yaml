@@ -13,8 +13,6 @@ spec:
     plural: modulesettingsdefinitions
     singular: modulesettingsdefinition
     kind: ModuleSettingsDefinition
-    shortNames:
-      - msd
   preserveUnknownFields: false
   versions:
     - name: v1alpha1
@@ -29,15 +27,6 @@ spec:
           required:
             - spec
           properties:
-            apiVersion:
-              type: string
-              description: API version of the object.
-            kind:
-              type: string
-              description: Object type.
-            metadata:
-              type: object
-              description: Object metadata, including name, labels, and annotations.
             spec:
               type: object
               description: Specification of the module settings.

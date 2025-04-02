@@ -7,12 +7,6 @@ versions:
           Отображает настройки модулей Deckhouse.
           Определяет список версий настроек модуля.
         properties:
-          apiVersion:
-            description: Версия API объекта.
-          kind:
-            description: Тип объекта.
-          metadata:
-            description: Метаданные объекта, включая имя, метки и аннотации.
           spec:
             description: Спецификация настроек модуля.
             properties:
