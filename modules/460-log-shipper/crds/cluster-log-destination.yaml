@@ -510,6 +510,11 @@ spec:
                           type: boolean
                           default: true
                           description: Validate the TLS certificate of the remote host.
+                    dedotted:
+                      type: bool
+                      description: |
+                        The Kafka enable deddot transform for pod logs.
+                      x-doc-examples: ["false"]
                 splunk:
                   type: object
                   required:
