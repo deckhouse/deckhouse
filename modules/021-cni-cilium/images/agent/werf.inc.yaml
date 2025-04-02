@@ -173,6 +173,9 @@ shell:
   - ln -snf /usr/share/zoneinfo/Etc/UTC /etc/localtime
   - /binary_replace.sh -i "{{ $binariesFromALT }}" -o /relocate
   # copy self built binaries and deps
+  # fix compatibility with the new version of bash_completion
+  - sed -i 's/_get_comp_words_by_ref/_comp_get_words/' /etc/bash_completion.d/cilium-dbg
+  - sed -i 's/_get_comp_words_by_ref/_comp_get_words/' /etc/bash_completion.d/hubble
   - /binary_replace.sh -i "{{ $selfBuiltBinaries }}" -o /relocate
   # additional relocate for iptables
   - |
