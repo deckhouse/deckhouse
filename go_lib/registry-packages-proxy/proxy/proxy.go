@@ -266,21 +266,21 @@ func (p *Proxy) getPackage(ctx context.Context, digest string, repository string
 
 func (p *Proxy) getImage(ctx context.Context, digest string, repository string, path string) (int64, io.ReadCloser, error) {
 	// if cache is nil, return digest directly from registry
-	if p.cache == nil {
-		p.logger.Infof("Digest %q not found in local cache, trying to fetch image from registry", digest)
-		return p.getImageFromRegistry(ctx, digest, repository, path)
-	}
+	// if p.cache == nil {
+	// 	p.logger.Infof("Digest %q not found in local cache, trying to fetch image from registry", digest)
+	// 	return p.getImageFromRegistry(ctx, digest, repository, path)
+	// }
 
 	// otherwise try to find digest in the cache
-	size, cacheReader, err := p.cache.Get(digest)
-	if err == nil {
-		return size, cacheReader, nil
-	}
+	// size, cacheReader, err := p.cache.Get(digest)
+	// if err == nil {
+	// 	return size, cacheReader, nil
+	// }
 	// if any error other than item in the cache not found, get digest directly from the registry
-	if !errors.Is(err, cache.ErrEntryNotFound) {
-		p.logger.Errorf("Get image from cache: %v", err)
-		return p.getImageFromRegistry(ctx, digest, repository, path)
-	}
+	// if !errors.Is(err, cache.ErrEntryNotFound) {
+	// 	p.logger.Errorf("Get image from cache: %v", err)
+	// 	return p.getImageFromRegistry(ctx, digest, repository, path)
+	// }
 
 	// if digest is not found in the cache, get digest from registry and add digest to the cache
 	size, registryReader, err := p.getImageFromRegistry(ctx, digest, repository, path)
@@ -293,28 +293,28 @@ func (p *Proxy) getImage(ctx context.Context, digest string, repository string, 
 	// so when we read from teeReader it read content from registryReader and write it to the pipeWriter
 	// and on the another side of the pipe we have second reader - pipeReader
 	// thus, we have two readers - teeReader and pipeReader that is copy of registryReader
-	pipeReader, pipeWriter := io.Pipe()
-	teeReader := io.TeeReader(registryReader, pipeWriter)
+	// pipeReader, pipeWriter := io.Pipe()
+	// teeReader := io.TeeReader(registryReader, pipeWriter)
 
 	// asynchronously copy registry package to the cache
-	go func() {
-		defer registryReader.Close()
-		defer pipeWriter.Close()
+	// go func() {
+	// 	defer registryReader.Close()
+	// 	defer pipeWriter.Close()
 
-		err := p.cache.Set(digest, size, teeReader)
-		if err == nil {
-			return
-		}
-		// if cache set returns error, log it and directly copy content from registryReader to pipeWriter
-		p.logger.Error(err.Error())
-		// Copy remaining data to pipe
-		_, err = io.Copy(pipeWriter, registryReader)
-		if err != nil {
-			p.logger.Error(err.Error())
-		}
-	}()
+	// 	err := p.cache.Set(digest, size, teeReader)
+	// 	if err == nil {
+	// 		return
+	// 	}
+	// 	// if cache set returns error, log it and directly copy content from registryReader to pipeWriter
+	// 	p.logger.Error(err.Error())
+	// 	// Copy remaining data to pipe
+	// 	_, err = io.Copy(pipeWriter, registryReader)
+	// 	if err != nil {
+	// 		p.logger.Error(err.Error())
+	// 	}
+	// }()
 
-	return size, pipeReader, nil
+	return size, registryReader, nil
 }
 
 func (p *Proxy) getPackageFromRegistry(ctx context.Context, digest string, repository string, path string) (int64, io.ReadCloser, error) {
