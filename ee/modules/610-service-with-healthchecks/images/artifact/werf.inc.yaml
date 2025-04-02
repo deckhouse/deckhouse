@@ -30,16 +30,24 @@ import:
     before: install
 shell:
   install:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  # git needs for patch
+  - apk --no-cache add git
   - cd /src
   - go mod download
+  - go mod vendor
+  beforeSetup:
+  - cd /src
+  - git apply  /src/patches/*.patch --verbose
   setup:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /src/cmd/agent
-  - go build -ldflags="-s -w" -o /agent .
+  - go build -mod=vendor -ldflags="-s -w" -o /agent .
   - chown 64535:64535 /agent
   - chmod +x /agent
   - cd /src/cmd/controller
-  - go build -ldflags="-s -w" -o /controller .
+  - go build -mod=vendor -ldflags="-s -w" -o /controller .
   - chown 64535:64535 /controller
   - chmod +x /controller
+  - rm -rf /src/vendor
