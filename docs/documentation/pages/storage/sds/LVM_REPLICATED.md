@@ -3,6 +3,13 @@ title: "Replicated storage based on DRBD"
 permalink: en/storage/admin/sds/lvm-replicated.html
 ---
 
+{% alert level="info" %}
+<span style="border-bottom: 1px dotted #000;" data-tippy-content="Restriction on the ability to create snapshots">
+Available with limitations in:</span>  **CE**
+
+Available without limitations in the following commercial editions:  **SE, SE+, EE**
+{% endalert %}
+
 Data replication across multiple nodes ensures fault tolerance and data availability, even if a hardware or software failure occurs on one of the nodes. This guarantees data preservation on other nodes, maintaining continuous access. Such a model is essential for critical data and distributed infrastructures requiring high availability and minimizing data loss during failures.
 
 To create replicated block objects in StorageClass based on the distributed replicated block device (DRBD), you can enable the `sds-replicated-volume` module, which uses [LINSTOR](https://linbit.com/linstor/) as its backend.

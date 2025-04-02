@@ -24,6 +24,7 @@ import "common.proto";
 message CheckRequest {
   oneof message {
     CheckStart start = 1;
+    CheckCancel cancel = 2;
   }
 }
 
@@ -41,6 +42,8 @@ message CheckStart {
   string state = 4;
   CheckStartOptions options = 5;
 }
+
+message CheckCancel {}
 
 message CheckStartOptions {
   bool commander_mode = 1;

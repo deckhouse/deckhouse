@@ -268,6 +268,15 @@ func (m *Module) DisabledByModuleConfigMoreThan(timeout time.Duration) bool {
 	return false
 }
 
+func (m *Module) HasCondition(condName string) bool {
+	for _, cond := range m.Status.Conditions {
+		if cond.Type == condName {
+			return true
+		}
+	}
+	return false
+}
+
 func (m *Module) GetVersion() string {
 	return m.Properties.Version
 }

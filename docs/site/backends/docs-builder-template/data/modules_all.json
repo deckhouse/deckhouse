@@ -207,6 +207,7 @@
     "external": "true",
     "path": "/products/kubernetes-platform/modules/secrets-store-integration/stable/",
     "editions": [
+      "ce",
       "be",
       "se",
       "se-plus",

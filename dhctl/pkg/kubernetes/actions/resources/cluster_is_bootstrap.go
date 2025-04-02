@@ -37,19 +37,19 @@ import (
 )
 
 type nodeGroupGetter interface {
-	NodeGroups() ([]*v1.NodeGroup, error)
-	MachineFailedEvents() ([]eventsv1.Event, error)
+	NodeGroups(ctx context.Context) ([]*v1.NodeGroup, error)
+	MachineFailedEvents(ctx context.Context) ([]eventsv1.Event, error)
 }
 
 type kubeNgGetter struct {
 	kubeCl *client.KubernetesClient
 }
 
-func (n *kubeNgGetter) NodeGroups() ([]*v1.NodeGroup, error) {
+func (n *kubeNgGetter) NodeGroups(ctx context.Context) ([]*v1.NodeGroup, error) {
 	var ngs []unstructured.Unstructured
-	err := retry.NewSilentLoop("get machine failed events", 3, 3*time.Second).Run(func() error {
+	err := retry.NewSilentLoop("get machine failed events", 3, 3*time.Second).RunContext(ctx, func() error {
 		var err error
-		ngs, err = entity.GetNodeGroups(n.kubeCl)
+		ngs, err = entity.GetNodeGroups(ctx, n.kubeCl)
 		return err
 	})
 
@@ -77,11 +77,11 @@ func (n *kubeNgGetter) NodeGroups() ([]*v1.NodeGroup, error) {
 	return nodegroups, err
 }
 
-func (n *kubeNgGetter) MachineFailedEvents() ([]eventsv1.Event, error) {
+func (n *kubeNgGetter) MachineFailedEvents(ctx context.Context) ([]eventsv1.Event, error) {
 	var list *eventsv1.EventList
-	err := retry.NewSilentLoop("get machine failed events", 3, 3*time.Second).Run(func() error {
+	err := retry.NewSilentLoop("get machine failed events", 3, 3*time.Second).RunContext(ctx, func() error {
 		var err error
-		list, err = n.kubeCl.EventsV1().Events("default").List(context.TODO(), metav1.ListOptions{
+		list, err = n.kubeCl.EventsV1().Events("default").List(ctx, metav1.ListOptions{
 			FieldSelector: "reason=MachineFailed",
 			TypeMeta:      metav1.TypeMeta{Kind: "NodeGroup", APIVersion: "deckhouse.io/v1"},
 		})
@@ -119,8 +119,8 @@ func newClusterIsBootstrapCheck(ngGetter nodeGroupGetter, kubeCl *client.Kuberne
 	}
 }
 
-func (n *clusterIsBootstrapCheck) lastEvents(lastTime time.Duration) ([]eventsv1.Event, error) {
-	events, err := n.ngGetter.MachineFailedEvents()
+func (n *clusterIsBootstrapCheck) lastEvents(ctx context.Context, lastTime time.Duration) ([]eventsv1.Event, error) {
+	events, err := n.ngGetter.MachineFailedEvents(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -144,11 +144,11 @@ func (n *clusterIsBootstrapCheck) lastEvents(lastTime time.Duration) ([]eventsv1
 	return res, nil
 }
 
-func (n *clusterIsBootstrapCheck) hasBootstrappedCM() (bool, error) {
+func (n *clusterIsBootstrapCheck) hasBootstrappedCM(ctx context.Context) (bool, error) {
 	hasCm := false
-	err := retry.NewSilentLoop("get is-bootstrapped cm", 3, 3*time.Second).Run(func() error {
+	err := retry.NewSilentLoop("get is-bootstrapped cm", 3, 3*time.Second).RunContext(ctx, func() error {
 		_, err := n.kubeCl.CoreV1().ConfigMaps("kube-system").
-			Get(context.TODO(), "d8-cluster-is-bootstraped", metav1.GetOptions{})
+			Get(ctx, "d8-cluster-is-bootstraped", metav1.GetOptions{})
 		if err == nil {
 			hasCm = true
 			return nil
@@ -165,12 +165,12 @@ func (n *clusterIsBootstrapCheck) hasBootstrappedCM() (bool, error) {
 	return hasCm, err
 }
 
-func (n *clusterIsBootstrapCheck) outputNodeGroups() {
+func (n *clusterIsBootstrapCheck) outputNodeGroups(ctx context.Context) {
 	if n.attempts%4 != 0 {
 		return
 	}
 
-	ngs, err := n.ngGetter.NodeGroups()
+	ngs, err := n.ngGetter.NodeGroups(ctx)
 	if err != nil {
 		n.logger.LogDebugF("Error while getting node groups: %v", err)
 		return
@@ -194,13 +194,13 @@ func (n *clusterIsBootstrapCheck) outputNodeGroups() {
 	}
 }
 
-func (n *clusterIsBootstrapCheck) outputMachineFailures() {
+func (n *clusterIsBootstrapCheck) outputMachineFailures(ctx context.Context) {
 	if time.Now().Before(n.startCheckTime) {
 		n.logger.LogDebugF("Waiting 1 minute for stabilizing node group events\n")
 		return
 	}
 
-	events, err := n.lastEvents(1 * time.Minute)
+	events, err := n.lastEvents(ctx, 1*time.Minute)
 	if err != nil {
 		n.logger.LogDebugF("Error while getting last events: %v", err)
 		return
@@ -224,7 +224,7 @@ func (n *clusterIsBootstrapCheck) Single() bool {
 	return true
 }
 
-func (n *clusterIsBootstrapCheck) IsReady() (bool, error) {
+func (n *clusterIsBootstrapCheck) IsReady(ctx context.Context) (bool, error) {
 	defer func() {
 		n.attempts++
 		n.logger.LogInfoF("\n")
@@ -234,7 +234,7 @@ func (n *clusterIsBootstrapCheck) IsReady() (bool, error) {
 
 	notBootstrappedMsg := "The cluster has not been bootstrapped yet. Waiting for at least one non-master node in Ready status.\n"
 
-	ok, err := n.hasBootstrappedCM()
+	ok, err := n.hasBootstrappedCM(ctx)
 	if err != nil {
 		n.logger.LogDebugF("Error while checking cluster state: %v\n", err)
 		n.logger.LogInfoF(notBootstrappedMsg)
@@ -248,9 +248,9 @@ func (n *clusterIsBootstrapCheck) IsReady() (bool, error) {
 
 	n.logger.LogInfoF(notBootstrappedMsg)
 
-	n.outputNodeGroups()
+	n.outputNodeGroups(ctx)
 
-	n.outputMachineFailures()
+	n.outputMachineFailures(ctx)
 
 	return false, nil
 }

@@ -156,9 +156,10 @@ spec:
 
 {{- if .apiserver.serviceAccount }}
   {{- if .apiserver.serviceAccount.additionalAPIIssuers }}
-    {{- $uniqueIssuers := uniq .apiserver.serviceAccount.additionalAPIIssuers }}
     {{- $defaultIssuer := printf "https://kubernetes.default.svc.%s" .clusterConfiguration.clusterDomain }}
-    {{- if not (and (eq (len $uniqueIssuers) 1) (eq (index $uniqueIssuers 0) $defaultIssuer)) }}
+    {{- $issuerToRemove := default $defaultIssuer .apiserver.serviceAccount.issuer }}
+    {{- $uniqueIssuers := uniq .apiserver.serviceAccount.additionalAPIIssuers }}
+    {{- if not (and (eq (len $uniqueIssuers) 1) (eq (index $uniqueIssuers 0) $issuerToRemove)) }}
 ---
 apiVersion: v1
 kind: Pod
@@ -170,12 +171,12 @@ spec:
   - name: kube-apiserver
     args:
     {{- range $uniqueIssuers }}
-      {{- if ne . $defaultIssuer }}
+      {{- if ne . $issuerToRemove }}
     - --service-account-issuer={{ . }}
       {{- end }}
     {{- end }}
+    {{- end }}
   {{- end }}
-{{- end }}
 {{- end }}
 ---
 apiVersion: v1

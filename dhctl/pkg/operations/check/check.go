@@ -121,13 +121,13 @@ func getStepByNodeGroupName(nodeGroupName string) string {
 	return step
 }
 
-func checkClusterState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraformContext *terraform.TerraformContext, opts CheckStateOptions) (int, terraform.TerraformPlan, *terraform.BaseInfrastructureDestructiveChanges, error) {
+func checkClusterState(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraformContext *terraform.TerraformContext, opts CheckStateOptions) (int, terraform.TerraformPlan, *terraform.BaseInfrastructureDestructiveChanges, error) {
 	var clusterState []byte
 	var err error
 	// NOTE: Cluster state loaded from target kubernetes cluster in default dhctl-converge.
 	// NOTE: In the commander mode cluster state should exist in the local state cache.
 	if !opts.CommanderMode {
-		clusterState, err = state_terraform.GetClusterStateFromCluster(kubeCl)
+		clusterState, err = state_terraform.GetClusterStateFromCluster(ctx, kubeCl)
 		if err != nil {
 			return terraform.PlanHasNoChanges, nil, nil, fmt.Errorf("terraform cluster state in Kubernetes cluster not found: %w", err)
 		}
@@ -150,11 +150,10 @@ func checkClusterState(kubeCl *client.KubernetesClient, metaConfig *config.MetaC
 		AdditionalStateSaverDestinations: stateSavers,
 	})
 
-	// TODO(dhctl-for-commander-cancels): pass ctx
-	return terraform.CheckBaseInfrastructurePipeline(context.TODO(), baseRunner, "Kubernetes cluster")
+	return terraform.CheckBaseInfrastructurePipeline(ctx, baseRunner, "Kubernetes cluster")
 }
 
-func checkAbandonedNodeState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, nodeGroup *NodeGroupOptions, nodeGroupState *state.NodeGroupTerraformState, nodeName string, terraformContext *terraform.TerraformContext, opts CheckStateOptions) (int, terraform.TerraformPlan, *terraform.PlanDestructiveChanges, error) {
+func checkAbandonedNodeState(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, nodeGroup *NodeGroupOptions, nodeGroupState *state.NodeGroupTerraformState, nodeName string, terraformContext *terraform.TerraformContext, opts CheckStateOptions) (int, terraform.TerraformPlan, *terraform.PlanDestructiveChanges, error) {
 	nodeIndex, err := config.GetIndexFromNodeName(nodeName)
 	if err != nil {
 		return terraform.PlanHasNoChanges, nil, nil, fmt.Errorf("can't extract index from terraform state secret (%v), skip %s", err, nodeName)
@@ -198,11 +197,10 @@ func checkAbandonedNodeState(kubeCl *client.KubernetesClient, metaConfig *config
 		AdditionalStateSaverDestinations: stateSavers,
 	})
 
-	// TODO(dhctl-for-commander-cancels): pass ctx
-	return terraform.CheckPipeline(context.TODO(), nodeRunner, nodeName, terraform.PlanOptions{Destroy: true})
+	return terraform.CheckPipeline(ctx, nodeRunner, nodeName, terraform.PlanOptions{Destroy: true})
 }
 
-func checkNodeState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, nodeGroup *NodeGroupOptions, nodeName string, terraformContext *terraform.TerraformContext, opts CheckStateOptions) (int, terraform.TerraformPlan, *terraform.PlanDestructiveChanges, error) {
+func checkNodeState(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, nodeGroup *NodeGroupOptions, nodeName string, terraformContext *terraform.TerraformContext, opts CheckStateOptions) (int, terraform.TerraformPlan, *terraform.PlanDestructiveChanges, error) {
 	nodeIndex, err := config.GetIndexFromNodeName(nodeName)
 	if err != nil {
 		return terraform.PlanHasNoChanges, nil, nil, fmt.Errorf("can't extract index from terraform state secret (%v), skip %s", err, nodeName)
@@ -240,8 +238,7 @@ func checkNodeState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConf
 		AdditionalStateSaverDestinations: stateSavers,
 	})
 
-	// TODO(dhctl-for-commander-cancels): pass ctx
-	return terraform.CheckPipeline(context.TODO(), nodeRunner, nodeName, terraform.PlanOptions{})
+	return terraform.CheckPipeline(ctx, nodeRunner, nodeName, terraform.PlanOptions{})
 }
 
 type CheckStateOptions struct {
@@ -249,7 +246,7 @@ type CheckStateOptions struct {
 	StateCache    dhctlstate.Cache
 }
 
-func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraformContext *terraform.TerraformContext, opts CheckStateOptions) (*Statistics, error) {
+func CheckState(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraformContext *terraform.TerraformContext, opts CheckStateOptions) (*Statistics, error) {
 	statistics := Statistics{
 		Node:          make([]NodeCheckResult, 0),
 		NodeTemplates: make([]NodeGroupCheckResult, 0),
@@ -258,7 +255,7 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, 
 
 	var allErrs *multierror.Error
 
-	clusterChanged, terraformPlan, destructiveChanges, err := checkClusterState(kubeCl, metaConfig, terraformContext, opts)
+	clusterChanged, terraformPlan, destructiveChanges, err := checkClusterState(ctx, kubeCl, metaConfig, terraformContext, opts)
 	switch {
 	case err != nil:
 		statistics.Cluster.Status = ErrorStatus
@@ -277,18 +274,18 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, 
 	// NOTE: In the commander mode nodes state should exist in the local state cache.
 	var nodesState map[string]state.NodeGroupTerraformState
 	if opts.CommanderMode {
-		nodesState, err = LoadNodesStateForCommanderMode(opts.StateCache, metaConfig, kubeCl)
+		nodesState, err = LoadNodesStateForCommanderMode(ctx, opts.StateCache, metaConfig, kubeCl)
 		if err != nil {
 			allErrs = multierror.Append(allErrs, fmt.Errorf("unable to load nodes state: %w", err))
 		}
 	} else {
-		nodesState, err = state_terraform.GetNodesStateFromCluster(kubeCl)
+		nodesState, err = state_terraform.GetNodesStateFromCluster(ctx, kubeCl)
 		if err != nil {
 			allErrs = multierror.Append(allErrs, fmt.Errorf("terraform cluster state in Kubernetes cluster not found: %w", err))
 		}
 	}
 
-	nodeTemplates, err := entity.GetNodeGroupTemplates(kubeCl)
+	nodeTemplates, err := entity.GetNodeGroupTemplates(ctx, kubeCl)
 	if err != nil {
 		allErrs = multierror.Append(allErrs, fmt.Errorf("node goups in Kubernetes cluster not found: %w", err))
 	}
@@ -317,7 +314,7 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, 
 
 		// track missed
 		for _, nodeName := range expectedNodeNames(metaConfig, group.Name, group.Replicas) {
-			result := getStatusForMissedNode(kubeCl, nodeName, group.Name, &allErrs)
+			result := getStatusForMissedNode(ctx, kubeCl, nodeName, group.Name, &allErrs)
 			statistics.Node = append(statistics.Node, result)
 		}
 	}
@@ -346,7 +343,7 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, 
 			}
 
 			for _, nodeName := range missedNodes {
-				result := getStatusForMissedNode(kubeCl, nodeName, nodeGroupName, &allErrs)
+				result := getStatusForMissedNode(ctx, kubeCl, nodeName, nodeGroupName, &allErrs)
 				statistics.Node = append(statistics.Node, result)
 			}
 		} else if replicas < len(nodeGroupState.State) {
@@ -373,7 +370,7 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, 
 					Name:  nodeName,
 				}
 
-				_, terraformPlan, destructiveChanges, err := checkAbandonedNodeState(kubeCl, metaConfig, &nodeGroup, &nodeGroupState, nodeName, terraformContext, opts)
+				_, terraformPlan, destructiveChanges, err := checkAbandonedNodeState(ctx, kubeCl, metaConfig, &nodeGroup, &nodeGroupState, nodeName, terraformContext, opts)
 				if err != nil {
 					checkResult.Status = ErrorStatus
 					allErrs = multierror.Append(allErrs, fmt.Errorf("node %s: %v", nodeName, err))
@@ -407,7 +404,7 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, 
 				Name:   name,
 				Status: OKStatus,
 			}
-			changed, terraformPlan, destructiveChanges, err := checkNodeState(kubeCl, metaConfig, &nodeGroup, name, terraformContext, opts)
+			changed, terraformPlan, destructiveChanges, err := checkNodeState(ctx, kubeCl, metaConfig, &nodeGroup, name, terraformContext, opts)
 			switch {
 			case err != nil:
 				checkResult.Status = ErrorStatus
@@ -462,10 +459,10 @@ func sortNodesByIndex(nodesState map[string][]byte) ([]string, error) {
 	return names, nil
 }
 
-func getStatusForMissedNode(kubeCl *client.KubernetesClient, nodeName, nodeGroupName string, allErrs **multierror.Error) NodeCheckResult {
+func getStatusForMissedNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName, nodeGroupName string, allErrs **multierror.Error) NodeCheckResult {
 	status := AbsentStatus
 
-	exists, err := entity.IsNodeExistsInCluster(kubeCl, nodeName, log.GetDefaultLogger())
+	exists, err := entity.IsNodeExistsInCluster(ctx, kubeCl, nodeName, log.GetDefaultLogger())
 	if err != nil {
 		*allErrs = multierror.Append(*allErrs, err)
 		status = ErrorStatus

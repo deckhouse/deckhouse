@@ -15,6 +15,7 @@
 package bootstrap
 
 import (
+	"context"
 	"fmt"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
@@ -45,7 +46,7 @@ func DefineBootstrapInstallDeckhouseCommand(cmd *kingpin.CmdClause) *kingpin.Cmd
 			NodeInterface:    ssh.NewNodeInterfaceWrapper(sshClient),
 			TerraformContext: terraform.NewTerraformContext(),
 		})
-		return bootstraper.InstallDeckhouse()
+		return bootstraper.InstallDeckhouse(context.Background())
 	})
 
 	return cmd
@@ -67,7 +68,7 @@ func DefineBootstrapExecuteBashibleCommand(cmd *kingpin.CmdClause) *kingpin.CmdC
 			NodeInterface:    ssh.NewNodeInterfaceWrapper(sshClient),
 			TerraformContext: terraform.NewTerraformContext(),
 		})
-		return bootstraper.ExecuteBashible()
+		return bootstraper.ExecuteBashible(context.Background())
 	})
 
 	return cmd
@@ -90,7 +91,7 @@ func DefineCreateResourcesCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			NodeInterface:    ssh.NewNodeInterfaceWrapper(sshClient),
 			TerraformContext: terraform.NewTerraformContext(),
 		})
-		return bootstraper.CreateResources()
+		return bootstraper.CreateResources(context.Background())
 	})
 
 	return cmd
@@ -110,7 +111,7 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			NodeInterface:    ssh.NewNodeInterfaceWrapper(sshClient),
 			TerraformContext: terraform.NewTerraformContext(),
 		})
-		return bootstraper.Abort(app.ForceAbortFromCache)
+		return bootstraper.Abort(context.Background(), app.ForceAbortFromCache)
 	})
 
 	return cmd
@@ -125,7 +126,7 @@ func DefineBaseInfrastructureCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
 			TerraformContext: terraform.NewTerraformContext(),
 		})
-		return bootstraper.BaseInfrastructure()
+		return bootstraper.BaseInfrastructure(context.Background())
 	})
 
 	return cmd
@@ -146,7 +147,7 @@ func DefineExecPostBootstrapScript(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			NodeInterface:    ssh.NewNodeInterfaceWrapper(sshClient),
 			TerraformContext: terraform.NewTerraformContext(),
 		})
-		return bootstraper.ExecPostBootstrap()
+		return bootstraper.ExecPostBootstrap(context.Background())
 	})
 
 	return cmd

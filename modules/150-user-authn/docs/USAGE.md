@@ -147,6 +147,34 @@ Authentication through the OIDC provider requires registering a client (or "crea
 
 Paste the generated `clientID` and `clientSecret` into the [DexProvider](cr.html#dexprovider) custom resource.
 
+#### Keycloak
+
+When setting up `realm`, in addition to registering a client, you have to create a [Client scope](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes) with the name `groups` and set the predefined mapping `groups` for this scope. Then, you have to add this newly created scope in the [Client scopes tab](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking_) for your client.
+
+In the [Client](https://www.keycloak.org/docs/latest/server_admin/#general-settings), you also have to specify `Valid redirect URIs`, `Valid post logout redirect URIs`, and `Web origins` as `https://dex.<publicDomainTemplate>/*`, where `publicDomainTemplate` is a value of the [parameter](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate_) in the `global` module config.
+
+The example shows the provider's settings for integration with Keycloak.
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: DexProvider
+metadata:
+  name: keycloak
+spec:
+  type: OIDC
+  displayName: My Company Keycloak
+  oidc:
+    issuer: https://keycloak.my-company.com/realms/myrealm
+    clientID: plainstring
+    clientSecret: plainstring
+    getUserInfo: true
+    scopes:
+      - openid
+      - profile
+      - email
+      - groups
+```
+
 #### Okta
 
 The example shows the provider's settings for integration with Okta.

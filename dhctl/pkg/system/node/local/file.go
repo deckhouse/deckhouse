@@ -15,6 +15,7 @@
 package local
 
 import (
+	"context"
 	"io"
 	"os"
 	"path/filepath"
@@ -26,27 +27,28 @@ func NewFile() *File {
 	return &File{}
 }
 
-func (File) Upload(srcPath, dstPath string) error {
-	if err := copyRecursively(srcPath, dstPath); err != nil {
-		return err
-	}
-	return nil
-}
-func (File) Download(srcPath, dstPath string) error {
+func (File) Upload(_ context.Context, srcPath, dstPath string) error {
 	if err := copyRecursively(srcPath, dstPath); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (File) UploadBytes(data []byte, dstPath string) error {
+func (File) Download(_ context.Context, srcPath, dstPath string) error {
+	if err := copyRecursively(srcPath, dstPath); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (File) UploadBytes(_ context.Context, data []byte, dstPath string) error {
 	if err := os.WriteFile(dstPath, data, 0666); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (File) DownloadBytes(srcPath string) ([]byte, error) {
+func (File) DownloadBytes(_ context.Context, srcPath string) ([]byte, error) {
 	file, err := os.ReadFile(srcPath)
 	if err != nil {
 		return nil, err

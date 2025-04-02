@@ -15,6 +15,7 @@
 package local
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -42,7 +43,7 @@ func NewScript(path string, args ...string) *Script {
 	}
 }
 
-func (s *Script) Execute() (stdout []byte, err error) {
+func (s *Script) Execute(ctx context.Context) (stdout []byte, err error) {
 	cmd := NewCommand(s.scriptPath, s.args...)
 	if s.sudo {
 		cmd.Sudo()
@@ -62,7 +63,7 @@ func (s *Script) Execute() (stdout []byte, err error) {
 		defer os.Remove(cmd.program)
 	}
 
-	err = cmd.Run()
+	err = cmd.Run(ctx)
 	if err != nil {
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) {
@@ -75,7 +76,7 @@ func (s *Script) Execute() (stdout []byte, err error) {
 	return cmd.StdoutBytes(), nil
 }
 
-func (s *Script) ExecuteBundle(parentDir, bundleDir string) (stdout []byte, err error) {
+func (s *Script) ExecuteBundle(ctx context.Context, parentDir, bundleDir string) (stdout []byte, err error) {
 	srcPath := filepath.Join(parentDir, bundleDir)
 	dstPath := filepath.Join("/var/lib/", bundleDir)
 	_ = os.RemoveAll(dstPath) // Cleanup from previous runs
@@ -97,7 +98,7 @@ func (s *Script) ExecuteBundle(parentDir, bundleDir string) (stdout []byte, err 
 		cmd.Sudo()
 	}
 
-	if err = cmd.Run(); err != nil {
+	if err = cmd.Run(ctx); err != nil {
 		log.DebugF("stdout: %s\n\nstderr: %s\n", cmd.StdoutBytes(), cmd.StderrBytes())
 		return nil, fmt.Errorf("execute bundle: %w", err)
 	}

@@ -41,9 +41,9 @@ func NewManagerReadinessChecker(getter kubernetes.KubeClientProvider) *ManagerRe
 	}
 }
 
-func (c *ManagerReadinessChecker) IsReadyAll() error {
-	return retry.NewLoop("Control-plane manager pods readiness", 50, 10*time.Second).Run(func() error {
-		nodes, err := c.getter.KubeClient().CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{
+func (c *ManagerReadinessChecker) IsReadyAll(ctx context.Context) error {
+	return retry.NewLoop("Control-plane manager pods readiness", 50, 10*time.Second).RunContext(ctx, func() error {
+		nodes, err := c.getter.KubeClient().CoreV1().Nodes().List(ctx, metav1.ListOptions{
 			LabelSelector: "node.deckhouse.io/group=master",
 		})
 		if err != nil {
@@ -51,7 +51,7 @@ func (c *ManagerReadinessChecker) IsReadyAll() error {
 			return ErrControlPlaneIsNotReady
 		}
 
-		cpmPodsList, err := c.getter.KubeClient().CoreV1().Pods("kube-system").List(context.TODO(), metav1.ListOptions{
+		cpmPodsList, err := c.getter.KubeClient().CoreV1().Pods("kube-system").List(ctx, metav1.ListOptions{
 			LabelSelector: "app=d8-control-plane-manager",
 		})
 		if err != nil {
@@ -91,8 +91,8 @@ func (c *ManagerReadinessChecker) IsReadyAll() error {
 	})
 }
 
-func (c *ManagerReadinessChecker) IsReady(nodeName string) (bool, error) {
-	cpmPodsList, err := c.getter.KubeClient().CoreV1().Pods("kube-system").List(context.TODO(), metav1.ListOptions{
+func (c *ManagerReadinessChecker) IsReady(ctx context.Context, nodeName string) (bool, error) {
+	cpmPodsList, err := c.getter.KubeClient().CoreV1().Pods("kube-system").List(ctx, metav1.ListOptions{
 		LabelSelector: "app=d8-control-plane-manager",
 		FieldSelector: fmt.Sprintf("spec.nodeName=%s", nodeName),
 	})
