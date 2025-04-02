@@ -331,6 +331,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/modules/030-cloud-provider-dvp/images/capdvp-controller-manager/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/modules/030-cloud-provider-dvp/images/cloud-controller-manager/src"
   labels:
   - "type/dependencies"
