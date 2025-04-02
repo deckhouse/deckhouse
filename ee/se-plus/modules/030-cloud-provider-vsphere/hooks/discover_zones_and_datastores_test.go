@@ -99,6 +99,26 @@ cloudProviderVsphere:
     - bar
     default: other-bar
 `
+
+		initValuesStringE = `
+cloudProviderVsphere:
+  internal:
+    providerClusterConfiguration:
+      provider:
+        server: test.test.com
+        username: test
+        password: test
+        insecure: true
+      region: Test
+      regionTagCategory: test-region
+      zoneTagCategory: test-zone
+      sshPublicKey: test
+      vmFolderPath: test
+  storageClass:
+    exclude:
+    - .*
+    default: other-bar
+`
 	)
 
 	f := HookExecutionConfigInit(initValuesStringA, `{}`)
@@ -176,6 +196,20 @@ cloudProviderVsphere:
   }
 ]
 `))
+		})
+	})
+
+	e := HookExecutionConfigInit(initValuesStringE, `{}`)
+
+	Context("When all discovered storage classes are excluded", func() {
+		BeforeEach(func() {
+			e.BindingContexts.Set(e.GenerateBeforeHelmContext())
+			e.RunHook()
+		})
+
+		It("Should result empty storageClasses list", func() {
+			Expect(e).To(ExecuteSuccessfully())
+			Expect(e.ValuesGet("cloudProviderVsphere.internal.storageClasses").String()).To(MatchJSON(`[]`))
 		})
 	})
 })

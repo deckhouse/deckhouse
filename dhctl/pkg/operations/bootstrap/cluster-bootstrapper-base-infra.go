@@ -26,7 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
-func (b *ClusterBootstrapper) BaseInfrastructure() error {
+func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 	if restore, err := b.applyParams(); err != nil {
 		return err
 	} else {
@@ -64,8 +64,7 @@ func (b *ClusterBootstrapper) BaseInfrastructure() error {
 	return log.Process("bootstrap", "Cloud infrastructure", func() error {
 		baseRunner := b.Params.TerraformContext.GetBootstrapBaseInfraRunner(metaConfig, stateCache)
 
-		// TODO(dhctl-for-commander-cancels): pass ctx
-		_, err := terraform.ApplyPipeline(context.TODO(), baseRunner, "Kubernetes cluster", terraform.GetBaseInfraResult)
+		_, err := terraform.ApplyPipeline(ctx, baseRunner, "Kubernetes cluster", terraform.GetBaseInfraResult)
 		return err
 	})
 }

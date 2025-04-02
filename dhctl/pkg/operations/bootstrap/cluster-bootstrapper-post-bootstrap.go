@@ -15,6 +15,7 @@
 package bootstrap
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -23,7 +24,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
-func (b *ClusterBootstrapper) ExecPostBootstrap() error {
+func (b *ClusterBootstrapper) ExecPostBootstrap(ctx context.Context) error {
 	if restore, err := b.applyParams(); err != nil {
 		return err
 	} else {
@@ -52,7 +53,7 @@ func (b *ClusterBootstrapper) ExecPostBootstrap() error {
 	postScriptExecutor := NewPostBootstrapScriptExecutor(wrapper.Client(), app.PostBootstrapScriptPath, bootstrapState).
 		WithTimeout(app.PostBootstrapScriptTimeout)
 
-	if err := postScriptExecutor.Execute(); err != nil {
+	if err := postScriptExecutor.Execute(ctx); err != nil {
 		return err
 	}
 

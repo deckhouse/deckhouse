@@ -15,6 +15,7 @@
 package preflight
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -25,7 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-func (pc *Checker) CheckYandexWithNatInstanceConfig() error {
+func (pc *Checker) CheckYandexWithNatInstanceConfig(_ context.Context) error {
 	if app.PreflightSkipYandexWithNatInstanceCheck {
 		log.DebugLn("Yandex NAT instance config check is skipped")
 		return nil
