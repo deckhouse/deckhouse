@@ -196,6 +196,10 @@ import:
   add: /usr/local/go
   to: /usr/local/go
   before: install
+- image: common/alt-p11-artifact
+  add: /root/.ssh
+  to: /root/.ssh
+  before: install
 shell:
   beforeInstall:
   - export DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC
