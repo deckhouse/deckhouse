@@ -159,7 +159,11 @@ func (r *client) ListTags(ctx context.Context) ([]string, error) {
 	if r.options.timeout > 0 {
 		// add default timeout to prevent endless request on a huge amount of tags
 		ctxWTO, cancel := context.WithTimeout(ctx, r.options.timeout)
-		defer cancel()
+		// seems weird - yes! but we can't call cancel here, otherwise Image outside this function would be inaccessible
+		go func() {
+			<-ctxWTO.Done()
+			cancel()
+		}()
 
 		imageOptions = append(imageOptions, remote.WithContext(ctxWTO))
 	} else {
