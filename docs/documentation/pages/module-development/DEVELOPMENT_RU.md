@@ -27,14 +27,16 @@ spec:
 
 Необязательный интервал времени `spec.scanInterval` устанавливает интервал для проверки образов в registry. По умолчанию задан интервал в 15 секунд. Для принудительного обновления можно изменить интервал, либо установить на ModulePullOverride аннотацию `renew=""`.
 
+Также есть необязательный параметр `spec.rollback`, установка этого параметра в `true` восстановит deployed модуль релиз после удаление ModulePullOverride.
+
 Результат применения ModulePullOverride можно увидеть в сообщении (колонка `MESSAGE`) при получении информации об ModulePullOverride. Значение `Ready` означает применение параметров ModulePullOverride. Любое другое значение означает конфликт.
 
 Пример отсутствия конфликтов при применении ModulePullOverride:
 
 ```console
 $ kubectl get modulepulloverrides.deckhouse.io 
-NAME      UPDATED   MESSAGE
-example1  10s       Ready
+NAME      UPDATED   MESSAGE   ROLLBACK
+example1  10s       Ready     false
 ```
 
 Требования к модулю:
@@ -44,8 +46,8 @@ example1  10s       Ready
 
   ```console
   $ kubectl get modulepulloverrides.deckhouse.io 
-  NAME      UPDATED   MESSAGE
-  example1  10s       The module not found
+  NAME      UPDATED   MESSAGE                ROLLBACK
+  example1  10s       The module not found   false
   ```
 
 * Модуль не должен быть встроенным модулем Deckhouse, иначе сообщение у ModulePullOverride будет *The module is embedded*.
@@ -54,8 +56,8 @@ example1  10s       Ready
 
   ```console
   $ kubectl get modulepulloverrides.deckhouse.io 
-  NAME           UPDATED  MESSAGE
-  ingress-nginx  10s      The module is embedded
+  NAME           UPDATED  MESSAGE                  ROLLBACK
+  ingress-nginx  10s      The module is embedded   false
   ```
 
 * Модуль должен быть включен, иначе сообщение у ModulePullOverride будет *The module disabled*.
@@ -64,8 +66,8 @@ example1  10s       Ready
 
   ```console
   $ kubectl get modulepulloverrides.deckhouse.io 
-  NAME     UPDATED   MESSAGE
-  example  7s        The module disabled
+  NAME     UPDATED   MESSAGE               ROLLBACK
+  example  7s        The module disabled   false
   ```
 
 * Модуль должен иметь источник, иначе сообщение у ModulePullOverride будет *The module does not have an active source*.
@@ -74,8 +76,8 @@ example1  10s       Ready
 
   ```console
   $ kubectl get modulepulloverrides.deckhouse.io 
-  NAME       UPDATED   MESSAGE
-  example    12s       The module does not have an active source
+  NAME       UPDATED   MESSAGE                                     ROLLBACK
+  example    12s       The module does not have an active source   false
   ```
 
 * Источник модуля должен существовать, иначе сообщение у ModulePullOverride будет *The source not found*.
@@ -84,8 +86,8 @@ example1  10s       Ready
 
   ```console
   $ kubectl get modulepulloverrides.deckhouse.io 
-  NAME       UPDATED   MESSAGE
-  example    12s       The source not found
+  NAME       UPDATED   MESSAGE                 ROLLBACK
+  example    12s       The source not found    false
   ```
 
 Чтобы обновить модуль не дожидаясь начала следующего цикла обновления, можно выполнить следующую команду:
