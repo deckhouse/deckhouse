@@ -209,7 +209,7 @@ shell:
     curl gnupg lsb-release \
     python3 python3-pip python3-venv \
     libc++-dev libc++abi-dev \
-    libssl-dev libz-dev
+    libssl-dev libz-dev unzip
   # apt clean
   - apt-get autoclean && apt-get clean
   install:
