@@ -166,7 +166,7 @@ multiplier = 1
 if len(sys.argv) > 2:
     if len(sys.argv[2]) > 0:
         multiplier = float(sys.argv[2])
-print(numfmt_to_bytes(human_number, multiplier))"
+print(numfmt_to_bytes(human_number, multiplier))" $1 $2
 }
 
 total_memory=$(free -m|awk '/^Mem:/{print $2}')
