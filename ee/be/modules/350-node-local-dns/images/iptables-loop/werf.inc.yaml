@@ -30,14 +30,6 @@ imageSpec:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 fromImage: common/relocate-artifact
 final: false
-import:
-- image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
-  add: /
-  to: /sbin
-  includePaths:
-  - xtables-legacy-multi
-  - xtables-nft-multi
-  before: install
 shell:
   install:
     - |
