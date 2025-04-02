@@ -33,10 +33,6 @@ secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
 shell:
-  install:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  # git needs for patch
-  - apk --no-cache add git
   setup:
   - cd /src
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
