@@ -63,4 +63,4 @@ spec:
                   description: Контрольная сумма образа контейнера.
                 weight:
                   type: integer
-                  description: "Вес (приоритет) модуля."
+                  description: Вес (приоритет) модуля.
