@@ -4526,7 +4526,7 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Module `{{ $labels.moduleName }}` is running in Unmanaged mode. In this mode, its state is not reconciled, which prevents configuration or hook changes from being applied automatically.
+        Module `{{ $labels.moduleName }}` is running in unmanaged mode. In this mode, its state is not reconciled, which prevents configuration or hook changes from being applied automatically.
 
         To switch the module back to normal mode, edit the corresponding ModuleConfig resource with the following command:
 
@@ -4534,7 +4534,7 @@ alerts:
         kubectl edit moduleconfig {{ $labels.name }}
         ```
       summary: |
-        Module {{ $labels.moduleName }} is running in Unmanaged mode.
+        Module {{ $labels.moduleName }} is running in unmanaged mode.
       severity: "6"
       markupFormat: markdown
     - name: ModuleReleaseIsBlockedByRequirements
