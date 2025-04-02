@@ -52,8 +52,8 @@ func (c *FakeDeckhouseV1alpha1) ModuleReleases() v1alpha1.ModuleReleaseInterface
 	return &FakeModuleReleases{c}
 }
 
-func (c *FakeDeckhouseV1alpha1) ModuleSettingses() v1alpha1.ModuleSettingsInterface {
-	return &FakeModuleSettingses{c}
+func (c *FakeDeckhouseV1alpha1) ModuleSettingsDefinitions() v1alpha1.ModuleSettingsDefinitionInterface {
+	return &FakeModuleSettingsDefinitions{c}
 }
 
 func (c *FakeDeckhouseV1alpha1) ModuleSources() v1alpha1.ModuleSourceInterface {

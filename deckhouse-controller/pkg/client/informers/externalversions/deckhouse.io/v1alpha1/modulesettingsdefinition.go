@@ -32,58 +32,58 @@ import (
 	cache "k8s.io/client-go/tools/cache"
 )
 
-// ModuleSettingsInformer provides access to a shared informer and lister for
-// ModuleSettingses.
-type ModuleSettingsInformer interface {
+// ModuleSettingsDefinitionInformer provides access to a shared informer and lister for
+// ModuleSettingsDefinitions.
+type ModuleSettingsDefinitionInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1alpha1.ModuleSettingsLister
+	Lister() v1alpha1.ModuleSettingsDefinitionLister
 }
 
-type moduleSettingsInformer struct {
+type moduleSettingsDefinitionInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
 }
 
-// NewModuleSettingsInformer constructs a new informer for ModuleSettings type.
+// NewModuleSettingsDefinitionInformer constructs a new informer for ModuleSettingsDefinition type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewModuleSettingsInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredModuleSettingsInformer(client, resyncPeriod, indexers, nil)
+func NewModuleSettingsDefinitionInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredModuleSettingsDefinitionInformer(client, resyncPeriod, indexers, nil)
 }
 
-// NewFilteredModuleSettingsInformer constructs a new informer for ModuleSettings type.
+// NewFilteredModuleSettingsDefinitionInformer constructs a new informer for ModuleSettingsDefinition type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewFilteredModuleSettingsInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+func NewFilteredModuleSettingsDefinitionInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.DeckhouseV1alpha1().ModuleSettingses().List(context.TODO(), options)
+				return client.DeckhouseV1alpha1().ModuleSettingsDefinitions().List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.DeckhouseV1alpha1().ModuleSettingses().Watch(context.TODO(), options)
+				return client.DeckhouseV1alpha1().ModuleSettingsDefinitions().Watch(context.TODO(), options)
 			},
 		},
-		&deckhouseiov1alpha1.ModuleSettings{},
+		&deckhouseiov1alpha1.ModuleSettingsDefinition{},
 		resyncPeriod,
 		indexers,
 	)
 }
 
-func (f *moduleSettingsInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredModuleSettingsInformer(client, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+func (f *moduleSettingsDefinitionInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+	return NewFilteredModuleSettingsDefinitionInformer(client, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 
-func (f *moduleSettingsInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&deckhouseiov1alpha1.ModuleSettings{}, f.defaultInformer)
+func (f *moduleSettingsDefinitionInformer) Informer() cache.SharedIndexInformer {
+	return f.factory.InformerFor(&deckhouseiov1alpha1.ModuleSettingsDefinition{}, f.defaultInformer)
 }
 
-func (f *moduleSettingsInformer) Lister() v1alpha1.ModuleSettingsLister {
-	return v1alpha1.NewModuleSettingsLister(f.Informer().GetIndexer())
+func (f *moduleSettingsDefinitionInformer) Lister() v1alpha1.ModuleSettingsDefinitionLister {
+	return v1alpha1.NewModuleSettingsDefinitionLister(f.Informer().GetIndexer())
 }

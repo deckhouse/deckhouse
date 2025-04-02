@@ -445,7 +445,7 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 		return ctrl.Result{}, fmt.Errorf("delete outdated module releases: %w", err)
 	}
 
-	settings := new(v1alpha1.ModuleSettings)
+	settings := new(v1alpha1.ModuleSettingsDefinition)
 	if err = r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, settings); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return ctrl.Result{}, fmt.Errorf("get module settings: %w", err)

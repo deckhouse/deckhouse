@@ -4,7 +4,7 @@ versions:
     schema:
       openAPIV3Schema:
         description: |
-          CRD для отображения настроек модулей Deckhouse.
+          Отображает настроки модулей Deckhouse.
           Определяет список версий настроек модуля.
         properties:
           apiVersion:

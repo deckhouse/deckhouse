@@ -368,8 +368,8 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 }
 
 func (l *Loader) ensureModuleSettings(ctx context.Context, module string, rawConfig []byte) error {
-	settings := new(v1alpha1.ModuleSettings)
-	if err := l.client.Get(ctx, client.ObjectKey{Name: module}, settings);  client.IgnoreNotFound(err) != nil  {
+	settings := new(v1alpha1.ModuleSettingsDefinition)
+	if err := l.client.Get(ctx, client.ObjectKey{Name: module}, settings); client.IgnoreNotFound(err) != nil {
 		return fmt.Errorf("get the '%s' module settings: %w", module, err)
 	}
 

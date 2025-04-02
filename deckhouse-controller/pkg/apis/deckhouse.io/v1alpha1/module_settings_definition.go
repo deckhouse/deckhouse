@@ -25,21 +25,21 @@ import (
 )
 
 const (
-	ModuleSettingsResource = "modulesettings"
-	ModuleSettingsKind     = "ModuleSettings"
+	ModuleSettingsDefinitionResource = "modulesettingsdefinitions"
+	ModuleSettingsDefinitionKind     = "ModuleSettingsDefinition"
 )
 
 var (
-	// ModuleSettingsGVR GroupVersionResource
-	ModuleSettingsGVR = schema.GroupVersionResource{
+	// ModuleSettingsDefinitionGVR GroupVersionResource
+	ModuleSettingsDefinitionGVR = schema.GroupVersionResource{
 		Group:    SchemeGroupVersion.Group,
 		Version:  SchemeGroupVersion.Version,
-		Resource: ModuleSettingsResource,
+		Resource: ModuleSettingsDefinitionResource,
 	}
-	ModuleSettingsGVK = schema.GroupVersionKind{
+	ModuleSettingsDefinitionGVK = schema.GroupVersionKind{
 		Group:   SchemeGroupVersion.Group,
 		Version: SchemeGroupVersion.Version,
-		Kind:    ModuleSettingsKind,
+		Kind:    ModuleSettingsDefinitionKind,
 	}
 )
 
@@ -48,12 +48,12 @@ var _ runtime.Object = (*ModuleConfig)(nil)
 // +k8s:deepcopy-gen=true
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// ModuleSettingsList is a list of ModuleSettings resources
-type ModuleSettingsList struct {
+// ModuleSettingsDefinitionList is a list of ModuleSettings resources
+type ModuleSettingsDefinitionList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
 
-	Items []ModuleSettings `json:"items"`
+	Items []ModuleSettingsDefinition `json:"items"`
 }
 
 // +genclient
@@ -61,28 +61,28 @@ type ModuleSettingsList struct {
 // +k8s:deepcopy-gen=true
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// ModuleSettings is a configuration for module or for global config values.
-type ModuleSettings struct {
+// ModuleSettingsDefinition is a configuration for module or for global config values.
+type ModuleSettingsDefinition struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec ModuleSettingsSpec `json:"spec"`
+	Spec ModuleSettingsDefinitionSpec `json:"spec"`
 }
 
-type ModuleSettingsSpec struct {
-	Versions []ModuleSettingsVersion `json:"versions"`
+type ModuleSettingsDefinitionSpec struct {
+	Versions []ModuleSettingsDefinitionVersion `json:"versions"`
 }
 
-type ModuleSettingsVersion struct {
+type ModuleSettingsDefinitionVersion struct {
 	Name   string                                    `json:"name"`
 	Schema *apiextensionsv1.CustomResourceValidation `json:"schema,omitempty"`
 }
 
 // SetVersion adds or updates a version in the ModuleSettingsSpec.
-func (s *ModuleSettings) SetVersion(rawSchema []byte) error {
+func (s *ModuleSettingsDefinition) SetVersion(rawSchema []byte) error {
 	if rawSchema == nil {
 		return nil
 	}
@@ -99,7 +99,7 @@ func (s *ModuleSettings) SetVersion(rawSchema []byte) error {
 		return fmt.Errorf("invalid JSON schema: %w", err)
 	}
 
-	version := ModuleSettingsVersion{
+	version := ModuleSettingsDefinitionVersion{
 		Name:   jsonSchema.Version,
 		Schema: &apiextensionsv1.CustomResourceValidation{OpenAPIV3Schema: &jsonSchema.JSONSchemaProps},
 	}

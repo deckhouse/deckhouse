@@ -36,8 +36,8 @@ type Interface interface {
 	ModulePullOverrides() ModulePullOverrideInformer
 	// ModuleReleases returns a ModuleReleaseInformer.
 	ModuleReleases() ModuleReleaseInformer
-	// ModuleSettingses returns a ModuleSettingsInformer.
-	ModuleSettingses() ModuleSettingsInformer
+	// ModuleSettingsDefinitions returns a ModuleSettingsDefinitionInformer.
+	ModuleSettingsDefinitions() ModuleSettingsDefinitionInformer
 	// ModuleSources returns a ModuleSourceInformer.
 	ModuleSources() ModuleSourceInformer
 	// ModuleUpdatePolicies returns a ModuleUpdatePolicyInformer.
@@ -85,9 +85,9 @@ func (v *version) ModuleReleases() ModuleReleaseInformer {
 	return &moduleReleaseInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
-// ModuleSettingses returns a ModuleSettingsInformer.
-func (v *version) ModuleSettingses() ModuleSettingsInformer {
-	return &moduleSettingsInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+// ModuleSettingsDefinitions returns a ModuleSettingsDefinitionInformer.
+func (v *version) ModuleSettingsDefinitions() ModuleSettingsDefinitionInformer {
+	return &moduleSettingsDefinitionInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // ModuleSources returns a ModuleSourceInformer.

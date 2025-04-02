@@ -1,7 +1,7 @@
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: modulesettings.deckhouse.io
+  name: modulesettingsdefinitions.deckhouse.io
   labels:
     heritage: deckhouse
     app.kubernetes.io/name: deckhouse
@@ -10,9 +10,11 @@ spec:
   group: deckhouse.io
   scope: Cluster
   names:
-    plural: modulesettings
-    singular: modulesettings
-    kind: ModuleSettings
+    plural: modulesettingsdefinitions
+    singular: modulesettingsdefinition
+    kind: ModuleSettingsDefinition
+    shortNames:
+      - msd
   preserveUnknownFields: false
   versions:
     - name: v1alpha1
@@ -21,7 +23,7 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            CRD for displaying module settings.
+            It displays module settings.
             Defines a list of module settings versions.
           type: object
           required:

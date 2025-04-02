@@ -34,7 +34,7 @@ type DeckhouseV1alpha1Interface interface {
 	ModuleDocumentationsGetter
 	ModulePullOverridesGetter
 	ModuleReleasesGetter
-	ModuleSettingsesGetter
+	ModuleSettingsDefinitionsGetter
 	ModuleSourcesGetter
 	ModuleUpdatePoliciesGetter
 }
@@ -68,8 +68,8 @@ func (c *DeckhouseV1alpha1Client) ModuleReleases() ModuleReleaseInterface {
 	return newModuleReleases(c)
 }
 
-func (c *DeckhouseV1alpha1Client) ModuleSettingses() ModuleSettingsInterface {
-	return newModuleSettingses(c)
+func (c *DeckhouseV1alpha1Client) ModuleSettingsDefinitions() ModuleSettingsDefinitionInterface {
+	return newModuleSettingsDefinitions(c)
 }
 
 func (c *DeckhouseV1alpha1Client) ModuleSources() ModuleSourceInterface {
