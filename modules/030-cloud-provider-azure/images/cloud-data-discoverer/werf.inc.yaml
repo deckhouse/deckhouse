@@ -16,28 +16,15 @@ fromImage: common/src-artifact
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src
   to:  /src
-  excludePaths:
-  - "**/*.md"
-  - "**/*.yaml"
-  stageDependencies:
-    install:
-    - go.mod
-    - go.sum
-    - "**/*.go"
 - add: /go_lib/cloud-data
   to: /src/go_lib/cloud-data
-  excludePaths:
-  - "**/*.md"
-  - "**/*.yaml"
-  stageDependencies:
-    install:
-    - go.mod
-    - go.sum
-    - "**/*.go"
+- add: /pkg/log
+  to: /src/pkg/log
 shell:
   install:
   - cd /src
   - sed -i -e 's# /deckhouse/go_lib/cloud-data# /src/go_lib/cloud-data#g' go.mod
+  - sed -i -e 's# /deckhouse/pkg/log# /src/pkg/log#g' go.mod
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false

@@ -1,6 +1,8 @@
 module discoverer
 
-go 1.23
+go 1.23.1
+
+toolchain go1.24.1
 
 require (
 	github.com/alecthomas/kingpin v2.2.6+incompatible
@@ -70,3 +72,5 @@ require (
 )
 
 replace github.com/deckhouse/deckhouse/go_lib/cloud-data => /deckhouse/go_lib/cloud-data
+
+replace github.com/deckhouse/deckhouse/pkg/log => /deckhouse/pkg/log
