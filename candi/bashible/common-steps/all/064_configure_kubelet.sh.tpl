@@ -158,7 +158,7 @@ def numfmt_to_bytes(human_number: str, multiplier: float = 1) -> Decimal:
     }
     for unit, factor in units.items():
         if human_number.endswith(unit):
-            return Decimal(int(human_number[: -len(unit)]) * factor * m).quantize(1)
+            return Decimal(float(human_number[: -len(unit)]) * factor * m).quantize(1)
     return Decimal(float(human_number) * m).quantize(1)
 
 human_number = sys.argv[1]
