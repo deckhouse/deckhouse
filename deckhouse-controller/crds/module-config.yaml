@@ -44,7 +44,24 @@ spec:
                 enabled:
                   type: boolean
                   description: |
-                    Enables or disables a module.
+                    Enables or disables the module.
+                  x-doc-examples: ['false']
+                managementState:
+                  type: string
+                  enum: ["Unmanaged"]
+                  description: |
+                    Defines the module management mode.
+                    
+                    - `Unmanaged`: A mode for developing or tweaking the module.
+                    
+                      In this mode:
+                    
+                      - Configuration or hook changes are not reconciled, which prevents resources from being updated automatically.
+                      - Resource monitoring is disabled, which prevents deleted resources from being restored.
+                      - All the module's resources are labeled with `managementState: Unmanaged`.
+                      - The `ModuleIsInUnmanagedMode` alert is triggered.
+                    
+                      If Deckhouse restarts, the module reapplies its last known state once and then continues in unmanaged mode.
                   x-doc-examples: ['false']
                 version:
                   type: number

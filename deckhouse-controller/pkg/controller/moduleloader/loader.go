@@ -30,7 +30,7 @@ import (
 	"github.com/flant/addon-operator/pkg/app"
 	"github.com/flant/addon-operator/pkg/module_manager/loader"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
-	"github.com/flant/addon-operator/pkg/utils"
+	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"gopkg.in/yaml.v3"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -93,7 +93,7 @@ func New(client client.Client, version, modulesDir, globalDir string, dc depende
 	return &Loader{
 		client:               client,
 		logger:               logger,
-		modulesDirs:          utils.SplitToPaths(modulesDir),
+		modulesDirs:          addonutils.SplitToPaths(modulesDir),
 		globalDir:            globalDir,
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
@@ -156,7 +156,7 @@ func (l *Loader) LoadModule(_, modulePath string) (*modules.BasicModule, error) 
 		return nil, err
 	}
 
-	module, err := l.processModuleDefinition(def)
+	module, err := l.processModuleDefinition(context.TODO(), def)
 	if err != nil {
 		return nil, err
 	}
@@ -165,16 +165,16 @@ func (l *Loader) LoadModule(_, modulePath string) (*modules.BasicModule, error) 
 	return module.GetBasicModule(), nil
 }
 
-func (l *Loader) processModuleDefinition(def *moduletypes.Definition) (*moduletypes.Module, error) {
+func (l *Loader) processModuleDefinition(ctx context.Context, def *moduletypes.Definition) (*moduletypes.Module, error) {
 	if err := validateModuleName(def.Name); err != nil {
 		return nil, fmt.Errorf("invalid name: %w", err)
 	}
 
 	// load values for the module
-	valuesModuleName := utils.ModuleNameToValuesKey(def.Name)
+	valuesModuleName := addonutils.ModuleNameToValuesKey(def.Name)
 
 	// 1. from static values.yaml inside the module
-	moduleStaticValues, err := utils.LoadValuesFileFromDir(def.Path, app.StrictModeEnabled)
+	moduleStaticValues, err := addonutils.LoadValuesFileFromDir(def.Path, app.StrictModeEnabled)
 	if err != nil {
 		return nil, fmt.Errorf("load values file from the %q dir: %w", def.Path, err)
 	}
@@ -184,12 +184,12 @@ func (l *Loader) processModuleDefinition(def *moduletypes.Definition) (*modulety
 	}
 
 	// 2. from openapi defaults
-	configBytes, vb, err := utils.ReadOpenAPIFiles(filepath.Join(def.Path, "openapi"))
+	rawConfig, rawValues, err := addonutils.ReadOpenAPIFiles(filepath.Join(def.Path, "openapi"))
 	if err != nil {
 		return nil, fmt.Errorf("read openapi files: %w", err)
 	}
 
-	module, err := moduletypes.NewModule(def, moduleStaticValues, configBytes, vb, l.logger.Named("module"))
+	module, err := moduletypes.NewModule(def, moduleStaticValues, rawConfig, rawValues, l.logger.Named("module"))
 	if err != nil {
 		return nil, fmt.Errorf("build %q module: %w", def.Name, err)
 	}
@@ -209,12 +209,17 @@ func (l *Loader) processModuleDefinition(def *moduletypes.Definition) (*modulety
 		return nil, fmt.Errorf("load constraints for the %q module: %w", def.Name, err)
 	}
 
+	// ensure settings
+	if err = l.ensureModuleSettings(ctx, def.Name, rawConfig); err != nil {
+		return nil, fmt.Errorf("ensure the %q module settings: %w", def.Name, err)
+	}
+
 	return module, nil
 }
 
 func validateModuleName(name string) error {
 	// check if name is consistent for conversions between kebab-case and camelCase.
-	restoredName := utils.ModuleNameFromValuesKey(utils.ModuleNameToValuesKey(name))
+	restoredName := addonutils.ModuleNameFromValuesKey(addonutils.ModuleNameToValuesKey(name))
 
 	if name != restoredName {
 		return fmt.Errorf("'%s' name should be in kebab-case and be restorable from camelCase: consider renaming to '%s'", name, restoredName)
@@ -253,7 +258,7 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 		l.logger.Debug("parsed modules from the dir", slog.Int("count", len(definitions)), slog.String("path", dir))
 		for _, def := range definitions {
 			l.logger.Debug("process module definition from the dir", slog.String("name", def.Name), slog.String("path", dir))
-			module, err := l.processModuleDefinition(def)
+			module, err := l.processModuleDefinition(ctx, def)
 			if err != nil {
 				return fmt.Errorf("process the '%s' module definition: %w", def.Name, err)
 			}
@@ -362,6 +367,26 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 	})
 }
 
+func (l *Loader) ensureModuleSettings(ctx context.Context, module string, rawConfig []byte) error {
+	settings := new(v1alpha1.ModuleSettingsDefinition)
+	if err := l.client.Get(ctx, client.ObjectKey{Name: module}, settings); client.IgnoreNotFound(err) != nil {
+		return fmt.Errorf("get the '%s' module settings: %w", module, err)
+	}
+
+	if err := settings.SetVersion(rawConfig); err != nil {
+		return fmt.Errorf("set the module settings: %w", err)
+	}
+
+	// settings not found
+	if settings.UID == "" {
+		settings.Name = module
+		settings.Labels = map[string]string{"heritage": "deckhouse"}
+		return l.client.Create(ctx, settings)
+	}
+
+	return l.client.Update(ctx, settings)
+}
+
 // parseModulesDir returns modules definitions from the target dir
 func (l *Loader) parseModulesDir(modulesDir string) ([]*moduletypes.Definition, error) {
 	entries, err := readDir(modulesDir)
@@ -432,7 +457,7 @@ func (l *Loader) resolveDirEntry(dirPath string, entry os.DirEntry) (string, str
 		return name, targetPath, nil
 	}
 
-	if name != utils.ValuesFileName {
+	if name != addonutils.ValuesFileName {
 		log.Warn("ignore while searching for modules", slog.String("path", absPath))
 	}
 
@@ -445,7 +470,7 @@ func resolveSymlinkToDir(dirPath string, entry os.DirEntry) (string, error) {
 		return "", err
 	}
 
-	targetDirPath, isTargetDir, err := utils.SymlinkInfo(filepath.Join(dirPath, info.Name()), info)
+	targetDirPath, isTargetDir, err := addonutils.SymlinkInfo(filepath.Join(dirPath, info.Name()), info)
 	if err != nil {
 		return "", err
 	}

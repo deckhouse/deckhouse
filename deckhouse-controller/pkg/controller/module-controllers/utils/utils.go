@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -255,6 +254,16 @@ func GetClusterUUID(ctx context.Context, cli client.Client) string {
 	return uuid.Must(uuid.NewV4()).String()
 }
 
+// GetModuleVersion gets version of the module by symlink(/downloaded/modules/{moduleName})
+func GetModuleVersion(moduleSymlink string) (string, error) {
+	downloadedModule, err := filepath.EvalSymlinks(moduleSymlink)
+	if err != nil {
+		return "", fmt.Errorf("evaluate the '%s' module symlink: %w", moduleSymlink, err)
+	}
+
+	return filepath.Base(downloadedModule), nil
+}
+
 // EnableModule deletes old symlinks and creates a new one
 func EnableModule(downloadedModulesDir, oldSymlinkPath, newSymlinkPath, modulePath string) error {
 	// delete the old module symlink with diff version if exists
@@ -379,19 +388,13 @@ func GetNotificationConfig(ctx context.Context, cli client.Client) (releaseUpdat
 // SyncModuleRegistrySpec compares and updates current registry settings of a deployed module (in the ./openapi/values.yaml file)
 // and the registry settings set in the related module source
 func SyncModuleRegistrySpec(downloadedModulesDir, moduleName, moduleVersion string, moduleSource *v1alpha1.ModuleSource) error {
-	openAPIFile, err := os.Open(filepath.Join(downloadedModulesDir, moduleName, moduleVersion, "openapi/values.yaml"))
+	raw, err := os.ReadFile(filepath.Join(downloadedModulesDir, moduleName, moduleVersion, "openapi/values.yaml"))
 	if err != nil {
-		return fmt.Errorf("open the '%s' module openapi values: %w", moduleName, err)
-	}
-	defer openAPIFile.Close()
-
-	raw, err := io.ReadAll(openAPIFile)
-	if err != nil {
-		return fmt.Errorf("read from the '%s' module's openapi values: %w", moduleName, err)
+		return fmt.Errorf("read the '%s' module openapi values: %w", moduleName, err)
 	}
 
-	var openAPISpec moduleOpenAPISpec
-	if err = yaml.Unmarshal(raw, &openAPISpec); err != nil {
+	openAPISpec := new(moduleOpenAPISpec)
+	if err = yaml.Unmarshal(raw, openAPISpec); err != nil {
 		return fmt.Errorf("unmarshal the '%s' module's registry spec: %w", moduleName, err)
 	}
 

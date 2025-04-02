@@ -195,6 +195,8 @@ spec:
               value: "20"
             - name: KUBE_CLIENT_BURST
               value: "40"
+            - name: GOGC
+              value: "50"
             - name: ADDON_OPERATOR_PROMETHEUS_METRICS_PREFIX
               value: deckhouse_
             - name: ADDON_OPERATOR_NAMESPACE

@@ -84,8 +84,15 @@ spec:
   validationActions: [Deny, Audit]
   matchResources:
     objectSelector:
-      matchLabels:
-        heritage: deckhouse
+      matchExpressions:
+      - key: "heritage"
+        operator: In
+        values:
+        - "deckhouse"
+      - key: "managementState"
+        operator: NotIn
+        values:
+        - "Unmanaged"
 {{- end }}
 ---
 {{- $policyName := "update-policy-label-objects.deckhouse.io" }}
