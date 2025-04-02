@@ -97,7 +97,6 @@ spec:
                   description: |
                     The name of the [ProjectTemplate](cr.html#projecttemplate) resource that defines which resources will be created in the project.
                   type: string
-                  minLength: 1
                 parameters:
                   additionalProperties:
                     x-kubernetes-preserve-unknown-fields: true
