@@ -1,6 +1,8 @@
 module discoverer
 
-go 1.23
+go 1.23.1
+
+toolchain go1.24.1
 
 require (
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.6.0
@@ -74,4 +76,6 @@ require (
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
-replace github.com/deckhouse/deckhouse/go_lib/cloud-data => /deckhouse/go_lib/cloud-data/
+replace github.com/deckhouse/deckhouse/go_lib/cloud-data => /deckhouse/go_lib/cloud-data
+
+replace github.com/deckhouse/deckhouse/pkg/log => /deckhouse/pkg/log

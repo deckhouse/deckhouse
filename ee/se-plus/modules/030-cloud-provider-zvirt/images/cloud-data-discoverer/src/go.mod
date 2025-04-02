@@ -1,6 +1,6 @@
 module discoverer
 
-go 1.22.8
+go 1.23.1
 
 toolchain go1.24.1
 
@@ -76,5 +76,7 @@ require (
 )
 
 replace github.com/deckhouse/deckhouse/go_lib/cloud-data => /deckhouse/go_lib/cloud-data
+
+replace github.com/deckhouse/deckhouse/pkg/log => /deckhouse/pkg/log
 
 replace github.com/ovirt/go-ovirt-client/v3 v3.2.0 => github.com/flant/go-ovirt-client/v3 v3.2.0-flant-1
