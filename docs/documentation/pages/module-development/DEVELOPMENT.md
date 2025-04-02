@@ -27,7 +27,7 @@ Requirements for the resource parameters:
 The `spec.scanInterval` time interval (optional) defines the interval for scanning images in the registry. The default interval is 15 seconds.
 To force scan you can change the interval or set the `renew=""` annotation on ModulePullOverride.
 
-The `spec.rollback` indicates whether the deployed module release should be rollback after deleting the mpo.
+The `spec.rollback` indicates whether the deployed module release should be rollback after deleting the `ModulePullOverride`.
 
 You can get the result of applying ModulePullOverride in the message (column `MESSAGE`) when retrieving ModulePullOverride information. The value `Ready` indicates the successful application of ModulePullOverride parameters. Any other value indicates conflict.
 
