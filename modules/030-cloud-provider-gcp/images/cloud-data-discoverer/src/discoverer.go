@@ -46,7 +46,6 @@ func NewDiscoverer(logger *log.Entry, credsFile, project string, zones []string)
 }
 
 func (d *Discoverer) CheckCloudConditions(ctx context.Context) ([]v1alpha1.CloudCondition, error) {
-	// TODO implement me
 	return nil, nil
 }
 
