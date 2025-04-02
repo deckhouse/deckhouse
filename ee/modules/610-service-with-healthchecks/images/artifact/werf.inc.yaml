@@ -37,11 +37,10 @@ shell:
   {{- include "alpine packages proxy" . | nindent 2 }}
   # git needs for patch
   - apk --no-cache add git
-  beforeSetup:
-  - cd /src
-  - git apply /src/patches/*.patch --verbose
   setup:
+  - cd /src
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
+  - git apply /src/patches/*.patch --verbose
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /src/cmd/agent
