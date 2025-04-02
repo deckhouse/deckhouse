@@ -15,39 +15,44 @@ document.addEventListener("DOMContentLoaded", function() {
       this.closeBtn.addEventListener('click', this.closeModal.bind(this));
       this.closeBg.addEventListener('click', this.closeModal.bind(this));
 
-      this.preferredContact = document.querySelector('input[name="preferred_contact"]');
-      this.telegramInput = document.querySelector('input[name="telegram_id"]');
-      this.telegramCheckbox = document.querySelector('input[value="telegram"]');
+      this.preferredContact = this.wrapper.querySelector('input[name="preferred_contact"]');
+      this.telegramInput = this.wrapper.querySelector('input[name="telegram_id"]');
+      this.telegramCheckbox = this.wrapper.querySelector('input[value="telegram"]');
+      this.checkboxes = this.wrapper.querySelectorAll('input[type="checkbox"]');
       this.updateContactValue();
       this.initializeCheckbox();
       this.toggleTelegramInput();
-      this.telegramCheckbox.addEventListener('change', this.toggleTelegramInput.bind(this));
+      if(this.telegramCheckbox) {
+        this.telegramCheckbox.addEventListener('change', this.toggleTelegramInput.bind(this));
+      }
     }
 
     initializeCheckbox() {
-      const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-      checkboxes.forEach(checkbox => {
+      this.checkboxes.forEach(checkbox => {
         checkbox.addEventListener('change', this.updateContactValue.bind(this));
       });
     }
 
     updateContactValue() {
-      let selectedContacts = [];
-      const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-      checkboxes.forEach(checkbox => {
-        if(checkbox.checked) {
-          selectedContacts.push(checkbox.value);
-        }
-      });
-      this.preferredContact.value = selectedContacts.join(',');
+      if(this.preferredContact) {
+        let selectedContacts = [];
+        this.checkboxes.forEach(checkbox => {
+          if(checkbox.checked) {
+            selectedContacts.push(checkbox.value);
+          }
+        });
+        this.preferredContact.value = selectedContacts.join(',');
+      }
     }
 
     toggleTelegramInput() {
-      if(this.telegramCheckbox.checked) {
-        this.telegramInput.style.display = 'block';
-      } else {
-        this.telegramInput.style.display = 'none';
-        this.telegramInput.value = '';
+      if(this.telegramCheckbox) {
+        if(this.telegramCheckbox.checked) {
+          this.telegramInput.style.display = 'block';
+        } else {
+          this.telegramInput.style.display = 'none';
+          this.telegramInput.value = '';
+        }
       }
     }
 
@@ -77,11 +82,19 @@ document.addEventListener("DOMContentLoaded", function() {
         }
       }
 
-      if(FormData.company) {
-        bitrixFields.fields['TITLE'] += FormData.company + ' - запрос ';
+      const modalAttr = this.wrapper.dataset.modalWindow;
+
+      if(modalAttr == 'request_access') {
+        if(FormData.company) {
+          bitrixFields.fields['TITLE'] += FormData.company + ' - запрос бесплатного триала';
+        }
+      } else {
+        if(FormData.company) {
+          bitrixFields.fields['TITLE'] += FormData.company + ' - запрос ';
+        }
+    
+        bitrixFields.fields['TITLE'] += 'с сайта Deckhouse ';
       }
-  
-      bitrixFields.fields['TITLE'] += ' с сайта Deckhouse ';
   
       if (FormData.name) {
         bitrixFields.fields['NAME'] = FormData.name;

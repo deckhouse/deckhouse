@@ -35,7 +35,6 @@ editions:
     skipModules: true
 
 - name: BE
-  versionMapFile: "ee/be/candi/version_map.yml"
   modulesDir: "ee/be/modules"
 
   # exclude modules from templates and images
@@ -58,6 +57,7 @@ editions:
   - dashboard
 
 - name: EE
+  versionMapFile: "ee/candi/version_map.yml"
   modulesDir: "ee/modules"
   terraformProviders:
     - openstack

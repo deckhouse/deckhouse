@@ -25,8 +25,8 @@ func TestAssembleErrorRegexp(t *testing.T) {
 	input := "error building site: assemble: \"/app/hugo/content/modules/moduleName/BROKEN.md:1:1\": EOF looking for end YAML front matter delimiter"
 
 	path, ok := getAssembleErrorPath(input)
-	if !ok || path != "/app/hugo/content/modules/moduleName/BROKEN.md" {
-		t.Fatalf("unedxpcted path %q", path)
+	if !ok || path != "/app/hugo/content/modules/moduleName" {
+		t.Fatalf("unexpected path %q", path)
 	}
 }
 
@@ -34,8 +34,8 @@ func TestAssembleErrorWithColorRegexp(t *testing.T) {
 	input := "error building site: assemble: \x1b[1;36m\"/app/hugo/content/modules/moduleName/BROKEN.md:1:1\"\x1b[0m: EOF looking for end YAML front matter delimiter"
 
 	path, ok := getAssembleErrorPath(input)
-	if !ok || path != "/app/hugo/content/modules/moduleName/BROKEN.md" {
-		t.Fatalf("unedxpcted path %q", path)
+	if !ok || path != "/app/hugo/content/modules/moduleName" {
+		t.Fatalf("unexpected path %q", path)
 	}
 }
 
@@ -45,8 +45,8 @@ func TestGetModulePath(t *testing.T) {
 		expected string
 	}{
 		{
-			filePath: "/app/hugo/content/modules/moduleName/alpha/BROKEN.md",
-			expected: "/app/hugo/content/modules/moduleName/alpha",
+			filePath: "/app/hugo/content/modules/moduleName/BROKEN.md",
+			expected: "/app/hugo/content/modules/moduleName",
 		},
 	}
 

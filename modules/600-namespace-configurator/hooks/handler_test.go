@@ -260,4 +260,58 @@ metadata:
 			Expect(ns.Field(`metadata.labels.extended-monitoring\.deckhouse\.io/enabled`).Exists()).To(BeFalse())
 		})
 	})
+	Context("Do change in existing namespace, but not in namespaces with heritage label", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("namespaceConfigurator", []byte(`
+---
+configurations:
+  - labels:
+      test-label: "test-value"
+    includeNames: ["default"]
+`))
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: default
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: deckhouse-ns
+  labels:
+    heritage: deckhouse
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: multi-ns
+  labels:
+    heritage: multitenancy-manager
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: upmeter-ns
+  labels:
+    heritage: upmeter
+`))
+			f.RunHook()
+		})
+
+		It("Should apply labels to default namespace, but not to deckhouse namespace with heritage label", func() {
+			ns := f.KubernetesResource("Namespace", "", "default")
+			Expect(ns.Field(`metadata.labels.test-label`).String()).To(Equal("test-value"))
+
+			ns = f.KubernetesResource("Namespace", "", "deckhouse-ns")
+			Expect(ns.Field(`metadata.labels.test-label`).Exists()).To(BeFalse())
+
+			ns = f.KubernetesResource("Namespace", "", "multi-ns")
+			Expect(ns.Field(`metadata.labels.test-label`).Exists()).To(BeFalse())
+
+			ns = f.KubernetesResource("Namespace", "", "upmeter-ns")
+			Expect(ns.Field(`metadata.labels.test-label`).Exists()).To(BeFalse())
+		})
+	})
 })

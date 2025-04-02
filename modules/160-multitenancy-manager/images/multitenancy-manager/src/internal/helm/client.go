@@ -250,6 +250,11 @@ func buildChart(templates map[string][]byte, releaseName string) (*chart.Chart, 
 }
 
 func buildValues(project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) map[string]interface{} {
+	// to handle empty template
+	if len(template.Spec.ResourcesTemplate) == 0 {
+		template.Spec.ResourcesTemplate = " "
+	}
+
 	// skip error, invalid template cannot be here due to validation
 	schema, _ := validate.LoadSchema(template.Spec.ParametersSchema.OpenAPIV3Schema)
 
@@ -267,9 +272,6 @@ func buildValues(project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) 
 	return map[string]interface{}{
 		"projectTemplate": structs.Map(template.Spec),
 		"project":         structs.Map(preparedProject),
-		// this helps to trigger project rendering when resource labels/annotations changed
-		"_projectLabels":      project.Spec.ResourceLabels,
-		"_projectAnnotations": project.Spec.ResourceAnnotations,
 	}
 }
 

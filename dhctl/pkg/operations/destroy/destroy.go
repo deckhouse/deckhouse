@@ -307,7 +307,7 @@ func processStaticHosts(ctx context.Context, hosts []session.Host, s *session.Se
 		settings.SetAvailableHosts([]session.Host{host})
 		err := retry.NewLoop(fmt.Sprintf("Clear master %s", host), 5, 10*time.Second).RunContext(ctx, func() error {
 			cmd := frontend.NewCommand(settings, cmd)
-			cmd.Sudo()
+			cmd.Sudo(ctx)
 			cmd.WithTimeout(5 * time.Minute)
 			cmd.WithStdoutHandler(stdOutErrHandler)
 			cmd.WithStderrHandler(stdOutErrHandler)

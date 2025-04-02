@@ -466,18 +466,20 @@ func (f *DeckhouseReleaseFetcher) createReleases(
 		notificationShiftTime = &metav1.Time{Time: *actual.GetApplyAfter()}
 	}
 
+	metricLabels := map[string]string{
+		"version": releaseForUpdate.GetVersion().Original(),
+	}
+
 	metas, err := f.GetNewReleasesMetadata(ctx, actual.GetVersion(), newSemver)
 	if err != nil {
 		f.logger.Error("step by step update failed", log.Err(err))
 
-		labels := map[string]string{
-			"version": releaseForUpdate.GetVersion().Original(),
-		}
-
-		f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup, "d8_updating_is_failed", 1, labels)
+		f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup, "d8_updating_is_failed", 1, metricLabels)
 
 		return nil, fmt.Errorf("get new releases metadata: %w", err)
 	}
+
+	f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup, "d8_updating_is_failed", 0, metricLabels)
 
 	for _, meta := range metas {
 		releaseMetadata = &meta

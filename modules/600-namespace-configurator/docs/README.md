@@ -11,6 +11,7 @@ It facilitates to enable new namespaces to monitoring system by adding `extended
 This module monitors the namespaces and configuration:
 
 * It assigns labels and annotations from the configuration to all namespaces that match the `includeNames` pattern and do not match the `excludeNames` pattern.
+* Namespaces labeled `heritage` with one of the values `upmeter`, `deckhouse` or `multitenancy-manager` are ignored;
 * When changing the module configuration, namespace labels and annotations will be reassigned according to the configuration.
 
 ## What do I need to configure?

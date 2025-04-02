@@ -15,6 +15,7 @@
 package frontend
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"os"
@@ -182,7 +183,7 @@ func (k *KubeProxy) proxyCMD(startID int) *Command {
 	log.DebugF("[%d] Proxy command for start: %s\n", startID, command)
 
 	cmd := NewCommand(k.Session, command)
-	cmd.Sudo()
+	cmd.Sudo(context.Background())
 	cmd.Executor = cmd.Executor.CaptureStderr(nil).CaptureStdout(nil)
 	return cmd
 }

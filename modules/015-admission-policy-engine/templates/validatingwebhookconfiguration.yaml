@@ -93,8 +93,8 @@ webhooks:
   {{- include "validating.webhook.tracked.resources" . | nindent 2 }}
 {{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   matchConditions:
-    - name: 'exclude-virtualization' # Exclude virtualization module's service accounts until their manifests get to comply with the restricted policy
-      expression: '!(["system:serviceaccount:d8-virtualization:kubevirt-internal-virtualization-controller", "system:serviceaccount:d8-virtualization:cdi-sa", "system:serviceaccount:d8-virtualization:virtualization-controller"].exists(e, (e == request.userInfo.username)))'
+    - name: 'exclude-virtualization'
+      expression: '!(request.userInfo.groups.exists(e, (e == "system:serviceaccounts:d8-virtualization")))'
 {{- end }}
   timeoutSeconds: 15
   {{- include "validating.webhook.config" . | nindent 2 }}

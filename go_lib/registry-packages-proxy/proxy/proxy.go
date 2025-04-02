@@ -16,14 +16,13 @@ package proxy
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"os"
 	"strconv"
-
-	"github.com/pkg/errors"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/cache"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/log"
@@ -133,6 +132,15 @@ func (p *Proxy) Serve() {
 	p.logger.Debugf("Starting packages proxy listener: %s", p.listener.Addr())
 
 	if err := p.server.Serve(p.listener); err != nil && err != http.ErrServerClosed {
+		p.logger.Error(err.Error())
+	}
+}
+
+// StopProxy stops proxy server but does not call os.Exit
+func (p *Proxy) StopProxy() {
+	p.logger.Infof("graceful shutdown packages proxy listener: %s", p.listener.Addr())
+	err := p.server.Shutdown(context.Background())
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
 		p.logger.Error(err.Error())
 	}
 }

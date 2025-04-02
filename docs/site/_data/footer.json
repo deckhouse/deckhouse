@@ -23,12 +23,6 @@
             "rel": ""
           },
           {
-            "title": "Commander",
-            "url": "/products/commander/",
-            "target": "",
-            "rel": ""
-          },
-          {
             "title": "Stronghold",
             "url": "/products/stronghold/",
             "target": "",
@@ -37,6 +31,12 @@
           {
             "title": "Delivery Kit",
             "url": "/products/delivery-kit/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Commander",
+            "url": "/products/commander/",
             "target": "",
             "rel": ""
           }
@@ -130,12 +130,6 @@
             "rel": ""
           },
           {
-            "title": "Commander",
-            "url": "/products/commander/",
-            "target": "",
-            "rel": ""
-          },
-          {
             "title": "Stronghold",
             "url": "/products/stronghold/",
             "target": "",
@@ -144,6 +138,24 @@
           {
             "title": "Delivery Kit",
             "url": "/products/delivery-kit/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Commander",
+            "url": "/products/commander/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Code",
+            "url": "/products/code/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Prom++",
+            "url": "/products/prompp/",
             "target": "",
             "rel": ""
           }
