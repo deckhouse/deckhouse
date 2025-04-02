@@ -32,4 +32,5 @@ var ErrPackageNotFound = errors.New("package not found")
 
 type Client interface {
 	GetPackage(ctx context.Context, log log.Logger, config *ClientConfig, digest string, path string) (int64, io.ReadCloser, error)
+	GetImage(ctx context.Context, log log.Logger, config *ClientConfig, digest string, path string) (int64, io.ReadCloser, error)
 }

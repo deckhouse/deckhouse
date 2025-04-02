@@ -130,6 +130,71 @@ func (p *Proxy) Serve() {
 		p.logger.Infof("Package for digest %q sent successfully", digest)
 	})
 
+	http.HandleFunc("/image", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "HEAD" && r.Method != "GET" {
+			p.logger.Error("method not allowed")
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		requestIP := getRequestIP(r)
+		digest := r.URL.Query().Get("digest")
+		repository := r.URL.Query().Get("repository")
+		additionalPath := r.URL.Query().Get("path")
+
+		if repository == "" {
+			repository = registry.DefaultRepository
+		}
+
+		logEntry := fmt.Sprintf("Received request with digest %q for repo %s from client %s", digest, repository, requestIP)
+
+		if additionalPath != "" {
+			logEntry = fmt.Sprintf("%s and additional path = %s", logEntry, additionalPath)
+		}
+
+		p.logger.Infof("%s", logEntry)
+
+		if digest == "" {
+			p.logger.Error("missing digest")
+			http.Error(w, "missing digest", http.StatusBadRequest)
+			return
+		}
+
+		size, packageReader, err := p.getImage(r.Context(), digest, repository, additionalPath)
+		if packageReader != nil {
+			defer packageReader.Close()
+		}
+		if err != nil {
+			p.logger.Error(err.Error())
+			if errors.Is(err, registry.ErrPackageNotFound) {
+				http.Error(w, err.Error(), http.StatusNotFound)
+				return
+			}
+
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/x-gzip")
+		w.Header().Set("Content-Disposition", "attachment; filename="+digest+".tar.gz")
+		w.Header().Set("Content-Length", strconv.FormatInt(size, 10))
+
+		// Cache for 1 year
+		w.Header().Set("Cache-Control", `public, max-age=31536000`)
+		w.Header().Set("ETag", "\""+digest+"\"")
+
+		if r.Method == "HEAD" {
+			return
+		}
+		_, err = io.Copy(w, packageReader)
+		if err != nil {
+			p.logger.Errorf("send package: %v", err)
+			return
+		}
+
+		p.logger.Infof("Image for digest %q sent successfully", digest)
+	})
+
 	p.logger.Debugf("Starting packages proxy listener: %s", p.listener.Addr())
 
 	if err := p.server.Serve(p.listener); err != nil && err != http.ErrServerClosed {
@@ -199,6 +264,59 @@ func (p *Proxy) getPackage(ctx context.Context, digest string, repository string
 	return size, pipeReader, nil
 }
 
+func (p *Proxy) getImage(ctx context.Context, digest string, repository string, path string) (int64, io.ReadCloser, error) {
+	// if cache is nil, return digest directly from registry
+	if p.cache == nil {
+		p.logger.Infof("Digest %q not found in local cache, trying to fetch image from registry", digest)
+		return p.getImageFromRegistry(ctx, digest, repository, path)
+	}
+
+	// otherwise try to find digest in the cache
+	size, cacheReader, err := p.cache.Get(digest)
+	if err == nil {
+		return size, cacheReader, nil
+	}
+	// if any error other than item in the cache not found, get digest directly from the registry
+	if !errors.Is(err, cache.ErrEntryNotFound) {
+		p.logger.Errorf("Get image from cache: %v", err)
+		return p.getImageFromRegistry(ctx, digest, repository, path)
+	}
+
+	// if digest is not found in the cache, get digest from registry and add digest to the cache
+	size, registryReader, err := p.getImageFromRegistry(ctx, digest, repository, path)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	// TeeReader returns teeReader which writes to pipeWriter what it reads from registryReader
+	// pipeWriter is pipe to pipeReader
+	// so when we read from teeReader it read content from registryReader and write it to the pipeWriter
+	// and on the another side of the pipe we have second reader - pipeReader
+	// thus, we have two readers - teeReader and pipeReader that is copy of registryReader
+	pipeReader, pipeWriter := io.Pipe()
+	teeReader := io.TeeReader(registryReader, pipeWriter)
+
+	// asynchronously copy registry package to the cache
+	go func() {
+		defer registryReader.Close()
+		defer pipeWriter.Close()
+
+		err := p.cache.Set(digest, size, teeReader)
+		if err == nil {
+			return
+		}
+		// if cache set returns error, log it and directly copy content from registryReader to pipeWriter
+		p.logger.Error(err.Error())
+		// Copy remaining data to pipe
+		_, err = io.Copy(pipeWriter, registryReader)
+		if err != nil {
+			p.logger.Error(err.Error())
+		}
+	}()
+
+	return size, pipeReader, nil
+}
+
 func (p *Proxy) getPackageFromRegistry(ctx context.Context, digest string, repository string, path string) (int64, io.ReadCloser, error) {
 	registryConfig, err := p.getter.Get(repository)
 	if err != nil {
@@ -209,6 +327,20 @@ func (p *Proxy) getPackageFromRegistry(ctx context.Context, digest string, repos
 	if err != nil {
 		return 0, nil, err
 	}
+	return size, registryReader, nil
+}
+
+func (p *Proxy) getImageFromRegistry(ctx context.Context, digest string, repository string, path string) (int64, io.ReadCloser, error) {
+	registryConfig, err := p.getter.Get(repository)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	size, registryReader, err := p.registryClient.GetImage(ctx, p.logger, registryConfig, digest, path)
+	if err != nil {
+		return 0, nil, err
+	}
+
 	return size, registryReader, nil
 }
 
