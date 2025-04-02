@@ -28,7 +28,7 @@ spec:
                   description: "Когда модуль был обновлен в последний раз."
                 imageDigest:
                   type: string
-                  description: "Контрольная сумма образа контейнера."
+                  description: Контрольная сумма образа контейнера.
                 weight:
                   type: integer
                   description: Вес (приоритет) модуля.
