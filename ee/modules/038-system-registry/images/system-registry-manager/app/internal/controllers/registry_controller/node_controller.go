@@ -785,8 +785,6 @@ func (nc *nodeController) getNodePKI(
 		if ret, err = nc.loadNodePKIFromConfig(*servicesConfig, globalPKI, hosts); err == nil {
 			return
 		} else {
-			log.Error(err, "Error decode Node PKI")
-
 			nc.logModuleWarning(
 				&log,
 				"NodePKIDecodeError",
