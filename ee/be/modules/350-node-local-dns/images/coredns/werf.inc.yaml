@@ -8,6 +8,13 @@ import:
   add: /relocate
   to: /
   before: setup
+- image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
+  add: /
+  to: /sbin
+  includePaths:
+  - xtables-legacy-multi
+  - xtables-nft-multi
+  before: setup
 - image: common/iptables-wrapper
   add: /iptables-wrapper
   to: /sbin/iptables-wrapper
@@ -20,22 +27,12 @@ imageSpec:
   config:
     entrypoint: [ "/coredns" ]
 ---
-{{ $iptablesLoopBinaries := "/sbin/xtables-legacy-multi /sbin/xtables-nft-multi" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 fromImage: common/relocate-artifact
 final: false
-import:
-- image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
-  add: /
-  to: /sbin
-  includePaths:
-  - xtables-legacy-multi
-  - xtables-nft-multi
-  before: install
 shell:
   install:
-    - /binary_replace.sh -i "{{ $iptablesLoopBinaries }}" -o /relocate
     - |
       for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
         rm -f "/relocate/sbin/${cmd}"

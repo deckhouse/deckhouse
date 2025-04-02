@@ -104,7 +104,7 @@ func (rf *readinessMgr) handleStatus() error {
 	if err := rf.checkReadinessStatus(); err != nil {
 		if rf.ready == nil || *rf.ready {
 			if err := rf.deleteIPtablesRule(); err != nil {
-				return fmt.Errorf("failed to append the rule: %w", err)
+				return fmt.Errorf("failed to delete the rule: %w", err)
 			}
 
 			rf.ready = ptr.To(false)
