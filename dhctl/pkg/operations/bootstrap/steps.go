@@ -313,7 +313,7 @@ func (r *registryClientConfigGetter) Get(_ string) (*registry.ClientConfig, erro
 	return &r.ClientConfig, nil
 }
 
-func StartRegistryPackagesProxy(config config.RegistryData, clusterDomain string) error {
+func StartRegistryPackagesProxy(ctx context.Context, config config.RegistryData, clusterDomain string) error {
 	cert, err := generateTLSCertificate(clusterDomain)
 	if err != nil {
 		return fmt.Errorf("Failed to generate TLS certificate for registry proxy: %v", err)
@@ -335,6 +335,11 @@ func StartRegistryPackagesProxy(config config.RegistryData, clusterDomain string
 	proxy := proxy.NewProxy(srv, listener, clientConfigGetter, registryPackagesProxyLogger{}, &registry.DefaultClient{})
 
 	go proxy.Serve()
+
+	go func() {
+		<-ctx.Done()
+		proxy.StopProxy()
+	}()
 
 	return nil
 }
@@ -419,7 +424,7 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 	log.DebugLn("Starting registry packages proxy")
 
 	// we need clusterDomain to generate proper certificate for packages proxy
-	err = StartRegistryPackagesProxy(cfg.Registry, clusterDomain)
+	err = StartRegistryPackagesProxy(ctx, cfg.Registry, clusterDomain)
 	if err != nil {
 		return fmt.Errorf("failed to start registry packages proxy: %v", err)
 	}
