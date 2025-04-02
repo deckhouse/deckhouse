@@ -119,9 +119,9 @@ func (r *client) Image(ctx context.Context, tag string) (v1.Image, error) {
 		// add default timeout to prevent endless request on a huge image
 		ctxWTO, cancel := context.WithTimeout(ctx, r.options.timeout)
 		// we must do this because of the way how remote.Image works
-		// it shares the context with the images
+		// it shares the context with the image
 		// if we cancel the context with defer here, it will cancel the request to the registry
-		// and we will not be able to get the list of images
+		// and we will not be able to get the info about image
 		go func() {
 			<-ctxWTO.Done()
 			cancel()
@@ -165,7 +165,7 @@ func (r *client) ListTags(ctx context.Context) ([]string, error) {
 		// we must do this because of the way how remote.List works
 		// it shares the context with the images
 		// if we cancel the context with defer here, it will cancel the request to the registry
-		// and we will not be able to get the list of images
+		// and we will not be able to get images infos
 		go func() {
 			<-ctxWTO.Done()
 			cancel()
