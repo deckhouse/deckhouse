@@ -439,19 +439,6 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
-	// TODO: it's maybe deprecated history about bootstrap deploying. delete???
-	//
-	// if cluster needs bootstrap and we found only one release - apply release
-	if !r.registrySecret.ClusterIsBootstrapped && task.IsSingle {
-		err := r.ApplyRelease(ctx, dr, task)
-		if err != nil {
-			return res, fmt.Errorf("run single bootstrapping release deploy: %w", err)
-		}
-
-		// stop requeue because we restart deckhouse (deployment)
-		return ctrl.Result{}, nil
-	}
-
 	// handling error inside function
 	err = r.PreApplyReleaseCheck(ctx, dr, task, metricLabels)
 	if err != nil {
