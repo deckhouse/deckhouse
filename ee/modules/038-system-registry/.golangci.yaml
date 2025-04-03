@@ -1,0 +1,86 @@
+run:
+  timeout: 10m
+
+issues:
+  exclude:
+    - ST1005.*
+    - "should not use dot imports"
+    - "don't use an underscore in package name"
+    - "exported: .*"
+
+linters-settings:
+  gci:
+    sections:
+      - standard
+      - default
+      - prefix(github.com/deckhouse/)
+      - localmodule
+  goimports:
+    local-prefixes: github.com/deckhouse/
+  # TODO: replace deprecated methods
+  # ignore deprecated
+  # https://staticcheck.dev/docs/checks/#SA1019
+  staticcheck:
+     checks: ["all","-SA1019"]
+  errcheck:
+    # Is Depricateed, use exclude-functions: https://github.com/kisielk/errcheck#excluding-functions
+    exclude-functions:
+      - fmt:.*[rR]ead|[wW]rite|[cC]lose
+      - io:Copy
+  sloglint:
+      # Enforce not mixing key-value pairs and attributes.
+      no-mixed-args: true
+      # Enforce using key-value pairs only (overrides no-mixed-args, incompatible with attr-only).
+      kv-only: false
+      # Enforce using attributes only (overrides no-mixed-args, incompatible with kv-only).
+      attr-only: false
+      # Enforce not using global loggers.
+      no-global: ""
+      # Enforce using methods that accept a context.
+      context: ""
+      # Enforce using static values for log messages.
+      static-msg: false
+      # Enforce using constants instead of raw keys.
+      no-raw-keys: false
+      # Enforce a single key naming convention.
+      key-naming-case: ""
+      # Enforce not using specific keys.
+      forbidden-keys:
+        - level
+        - msg
+        - logger
+        - source
+        - stacktrace
+        - time
+      # Enforce putting arguments on separate lines.
+      args-on-sep-lines: false
+  nonamedreturns:
+    # Report named error if it is assigned inside defer.
+    # Default: false
+    report-error-in-defer: false
+
+linters:
+  disable-all: true
+  enable:
+  - dogsled
+  - errcheck
+  - gci
+  - gocritic
+  - gofmt
+  - goimports
+  - gosimple
+  - govet
+  - ineffassign
+  - misspell
+  - revive
+  - sloglint
+  - staticcheck
+#  - structcheck
+  - typecheck
+  - unconvert
+  - unparam
+  - whitespace
+  - copyloopvar
+  - nonamedreturns
+  - musttag
+  - prealloc
