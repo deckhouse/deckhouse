@@ -42,19 +42,8 @@ cleanup:
 # Base Images
 {{- include "parse_base_images_map" . }}
 ---
-# Version Map
-{{- $versionMap := dict }}
-{{- range $_, $edition := $.Editions }}
- {{- if $edition.versionMapFile }}
-   {{- $versionMap = (merge $versionMap ($.Files.Get $edition.versionMapFile | fromYaml) )}}
- {{- end }}
- {{- if eq $.Env $edition.name }}
-   {{- break -}}
- {{- end }}
-{{- end }}
-
-{{- $_ := set . "CandiVersionMap" $versionMap }}
-
+# version map
+{{- include "parse_version_map" . }}
 # do not forget change /deckhouse-controller/files/kubectl_wrapper.sh and /deckhouse-controller/files/bashrc
 {{- $_ := set . "kubectlForBaseComponents" (list "1.29" "1.31") }}
 ---

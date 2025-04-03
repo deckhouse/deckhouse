@@ -31,7 +31,6 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 )
@@ -72,6 +71,8 @@ const minK8sVersionRequirementKey = "controlPlaneManager:minUsedControlPlaneKube
 
 const maxUsedK8sVersionSecretKey = "maxUsedControlPlaneKubernetesVersion"
 const deckhouseDefaultK8sVersionSecretKey = "deckhouseDefaultKubernetesVersion"
+
+var DefaultKubernetesVersion = "1.30"
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        moduleQueue,
@@ -279,9 +280,9 @@ func handleEffectiveK8sVersion(input *go_hook.HookInput, dc dependency.Container
 		addToPatch(maxUsedK8sVersionSecretKey, encoded)
 	}
 
-	currentDeckhouseDefault, err := semver.NewVersion(config.DefaultKubernetesVersion)
+	currentDeckhouseDefault, err := semver.NewVersion(DefaultKubernetesVersion)
 	if err != nil {
-		return fmt.Errorf("incorrect default kubernetes version %s: %v", config.DefaultKubernetesVersion, err)
+		return fmt.Errorf("incorrect default kubernetes version %s: %v", DefaultKubernetesVersion, err)
 	}
 
 	if versionsInSecret.DeckhouseDefault == nil || currentDeckhouseDefault.GreaterThan(versionsInSecret.DeckhouseDefault) {
