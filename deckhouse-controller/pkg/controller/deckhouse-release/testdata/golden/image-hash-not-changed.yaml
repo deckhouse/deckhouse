@@ -12,10 +12,11 @@ metadata:
   labels:
     heritage: deckhouse
   name: v1.15.0
-  resourceVersion: "1"
+  resourceVersion: "2"
 spec:
   version: v1.15.0
 status:
   approved: false
   message: ""
+  phase: Deployed
   transitionTime: null
