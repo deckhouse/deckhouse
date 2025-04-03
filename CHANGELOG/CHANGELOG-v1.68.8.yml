@@ -18,8 +18,4 @@ istio:
   fixes:
     - summary: Fixed the display of ports in the examples in the CRDs.
       pull_request: https://github.com/deckhouse/deckhouse/pull/12743
-node-manager:
-  fixes:
-    - summary: partial rollback of changes in images cluster-autoscaler
-      pull_request: https://github.com/deckhouse/deckhouse/pull/12854
 
