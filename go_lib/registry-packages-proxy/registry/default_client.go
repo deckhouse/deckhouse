@@ -15,6 +15,7 @@
 package registry
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -133,8 +134,11 @@ func (c *DefaultClient) GetImage(ctx context.Context, log log.Logger, config *Cl
 	}
 	log.Infof("Tarball size: %d\n", size)
 
-	err = tarball.Write(tag, image, writer)
-	defer writer.Close()
+	go func() {
+		err = tarball.Write(tag, image, writer)
+		defer writer.Close()
+	}()
+
 	if err != nil {
 		return 0, nil, err
 	}
