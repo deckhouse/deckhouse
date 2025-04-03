@@ -99,7 +99,7 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 					AutoDismissDestructive: true,
 					AutoDismissChanges:     true,
 					AutoApproveSettings: infrastructure.AutoApproveSettings{
-						AutoApprove: false,
+						AutoApprove: true,
 					},
 				},
 				SkipChangesOnDeny: true,
