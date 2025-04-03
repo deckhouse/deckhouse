@@ -1,8 +1,8 @@
 ---
-{{- $istioVersion := "1.24.3" }}
-{{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioVersion)) }} {{- /* 1.24.3 -> v1x24x3 */}}
+{{- $istioVersion := "1.24.4" }}
+{{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioVersion)) }} {{- /* 1.24.4 -> v1x24x4 */}}
 ---
-# Based on https://github.com/istio/istio/blob/1.24.3/cni/deployments/kubernetes/Dockerfile.install-cni
+# Based on https://github.com/istio/istio/blob/1.24.4/cni/deployments/kubernetes/Dockerfile.install-cni
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:

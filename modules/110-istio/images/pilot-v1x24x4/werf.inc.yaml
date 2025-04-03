@@ -1,8 +1,8 @@
 ---
-{{- $istioVersion := "1.24.3" }}
-{{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioVersion)) }} {{- /* 1.24.3 -> v1x24x3 */}}
+{{- $istioVersion := "1.24.4" }}
+{{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioVersion)) }} {{- /* 1.24.4 -> v1x24x4 */}}
 ---
-# Based on https://github.com/istio/istio/blob/1.24.3/pilot/docker/Dockerfile.pilot
+# Based on https://github.com/istio/istio/blob/1.24.4/pilot/docker/Dockerfile.pilot
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
