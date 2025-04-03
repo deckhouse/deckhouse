@@ -1,4 +1,4 @@
-// Copyright 2024 Flant JSC
+// Copyright 2025 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,19 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package manager
 
 import (
-	"k8s.io/client-go/kubernetes"
-	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
-	"k8s.io/client-go/tools/clientcmd"
+	"context"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-func InitClient(kubeConfig string) (*kubernetes.Clientset, error) {
-	k, err := clientcmd.BuildConfigFromFlags("", kubeConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	return kubernetes.NewForConfig(k)
+func RestartAutoConverger(ctx context.Context, kubeClProvider kubernetes.KubeClientProvider) error {
+	return log.Process("default", "Restart auto converger", func() error {
+		return checkAndRestartDeployment(ctx, kubeClProvider, "terraform-auto-converger")
+	})
 }
