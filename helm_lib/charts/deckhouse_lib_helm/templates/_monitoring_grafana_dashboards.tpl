@@ -73,14 +73,29 @@
   {{- $resourceName := index . 1 }}  {{- /* Dashboard name */ -}}
   {{- $folder := index . 2 }}        {{- /* Folder */ -}}
   {{- $definition := index . 3 }}    {{/* Dashboard definition */}}
+  {{- $propagated := contains "-propagated-" $resourceName }}
+  {{- $resourceName = $resourceName | replace "-propagated-" "-" }}
 ---
 apiVersion: deckhouse.io/v1
 kind: GrafanaDashboardDefinition
 metadata:
   name: d8-{{ $resourceName }}
-  {{- include "helm_lib_module_labels" (list $context (dict "prometheus.deckhouse.io/grafana-dashboard" "")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "prometheus.deckhouse.io/grafana-dashboard" "" "observability.deckhouse.io/skip-dashboard-conversion" "")) | nindent 2 }}
 spec:
-  folder: "{{ $folder }}"
+  folder: {{ $folder | quote }}
   definition: |
     {{- $definition | nindent 4 }}
+  {{- if $context.Values.global.enabledModules | has "observability" }}
+---
+apiVersion: observability.deckhouse.io/v1alpha1
+kind: {{ $propagated | ternary "ClusterObservabilityPropagatedDashboard" "ClusterObservabilityDashboard" }}
+metadata:
+  annotations:
+    metadata.deckhouse.io/category: {{ $folder | quote }}
+  name: d8-{{ $resourceName }}
+  {{- include "helm_lib_module_labels" (list $context (dict "observability.deckhouse.io/dashboard-origin" "module")) | nindent 2 }}
+spec:
+  definition: |
+    {{- $definition | nindent 4 }}
+  {{- end }}
 {{- end }}
