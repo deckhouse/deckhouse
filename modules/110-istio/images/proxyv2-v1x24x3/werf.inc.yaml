@@ -27,12 +27,6 @@ import:
   owner: 1337
   group: 1337
   after: setup
-- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
-  add: /src/istio/tools/packaging/common/gcp_envoy_bootstrap.json
-  to: /var/lib/istio/envoy/gcp_envoy_bootstrap_tmpl.json
-  owner: 1337
-  group: 1337
-  after: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-agent-artifact
   add: /src/istio/out/pilot-agent
   to: /usr/local/bin/pilot-agent
