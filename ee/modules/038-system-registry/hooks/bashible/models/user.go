@@ -9,11 +9,13 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/bashible/helpers"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	v1core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/bashible/helpers"
 )
 
 type UserModel struct {

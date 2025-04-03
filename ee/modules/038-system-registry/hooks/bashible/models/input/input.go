@@ -7,10 +7,12 @@ package input
 
 import (
 	"errors"
+
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/bashible/helpers"
 	common_models "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/bashible/models"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 )
 
 const (

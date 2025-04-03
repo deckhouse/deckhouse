@@ -11,13 +11,14 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/bashible/helpers"
 	common_models "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/bashible/models"
 	bashible_input "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/bashible/models/input"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
-	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 )
 
 func BashibleInputHook(order float64, queue string) bool {

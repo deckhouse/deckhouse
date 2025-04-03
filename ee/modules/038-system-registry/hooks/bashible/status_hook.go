@@ -8,13 +8,14 @@ package bashible
 import (
 	"fmt"
 
-	bashible_input "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/bashible/models/input"
-	bashible_status "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/bashible/models/status"
-	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	v1core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	bashible_input "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/bashible/models/input"
+	bashible_status "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/bashible/models/status"
+	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
 )
 
 const (
