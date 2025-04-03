@@ -17,11 +17,12 @@
 set -e
 
 deckhouseVer=${D8_VERSION:-"dev"}
+defaultKubernetesVer=${DEFAULT_KUBERNETES_VERSION:-"1.30"}
 shellOpVer=$(go list -m all | grep shell-operator | cut -d' ' -f 2-)
 addonOpVer=$(go list -m all | grep addon-operator | cut -d' ' -f 2-)
 
 GOOS=linux \
     go build \
-     -ldflags="-s -w -X 'main.DeckhouseVersion=$deckhouseVer' -X 'main.AddonOperatorVersion=$addonOpVer' -X 'main.ShellOperatorVersion=$shellOpVer'" \
+     -ldflags="-s -w -X 'main.DeckhouseVersion=$deckhouseVer' -X 'main.AddonOperatorVersion=$addonOpVer' -X 'main.ShellOperatorVersion=$shellOpVer' -X 'hooks.DefaultKubernetesVersion=$defaultKubernetesVer'" \
      -o ./deckhouse-controller \
      ./cmd/deckhouse-controller

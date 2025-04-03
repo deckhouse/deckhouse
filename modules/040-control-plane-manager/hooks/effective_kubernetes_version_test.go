@@ -32,7 +32,6 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -197,7 +196,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_pki_checksum 
 
 				defaultKubernetesVersion, err := base64.StdEncoding.DecodeString(d8ClusterConfigSecret.Field("data.deckhouseDefaultKubernetesVersion").String())
 				Expect(err).To(BeNil())
-				Expect(string(defaultKubernetesVersion)).To(Equal(config.DefaultKubernetesVersion))
+				Expect(string(defaultKubernetesVersion)).To(Equal(DefaultKubernetesVersion))
 
 				Expect(f.ValuesGet("controlPlaneManager.internal.effectiveKubernetesVersion").String()).To(Equal(out.effectiveVersion))
 
