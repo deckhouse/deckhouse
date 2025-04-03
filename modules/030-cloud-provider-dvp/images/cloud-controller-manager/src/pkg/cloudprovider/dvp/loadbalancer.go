@@ -68,6 +68,8 @@ func (c *Cloud) EnsureLoadBalancer(ctx context.Context, clusterName string, serv
 	vmLabels := map[string]string{}
 	vmLabels = c.addNodesSelectorLabels(vmLabels, nodes)
 
+	klog.Infof("vmLabels: %v", vmLabels)
+
 	// TODO: fix labels.
 	svcLabels := map[string]string{
 		"cluster.x-k8s.io/tenant-service-name":      service.Name,
