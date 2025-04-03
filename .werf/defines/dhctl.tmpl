@@ -56,6 +56,5 @@ shell:
   install:
   - cd /dhctl
   - GOPROXY={{ $context.GOPROXY }} go mod download
-  - D8_VERSION={{- $context.CI_COMMIT_TAG }} make build
-
+  - D8_VERSION={{- $context.CI_COMMIT_TAG }} DEFAULT_KUBERNETES_VERSION={{- $context.defaultKubernetesVersion }} make build
 {{- end }}

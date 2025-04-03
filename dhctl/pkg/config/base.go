@@ -42,7 +42,8 @@ var (
 	versionMap        = candiDir + "/version_map.yml"
 	imagesDigestsJSON = candiDir + "/images_digests.json"
 
-	// don't forget to update the version in release requirements (release.yaml) 'autoK8sVersion' key
+	// This value is set on the dhctl build in the dhctl/Makefile script.
+	// Do not touch it !!!
 	DefaultKubernetesVersion = "1.30"
 )
 
