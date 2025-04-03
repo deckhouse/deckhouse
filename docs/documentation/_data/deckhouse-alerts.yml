@@ -5312,7 +5312,7 @@ alerts:
         Immediate renewal is recommended.
       summary: |
         OpenVPN CA certificate expires in less than 7 days.
-      severity: "6"
+      severity: "5"
       markupFormat: markdown
     - name: OpenVPNServerCACertificateExpiringSoon
       sourceFile: modules/500-openvpn/monitoring/prometheus-rules/ovpn-admin.yaml
@@ -5351,7 +5351,7 @@ alerts:
         Immediate renewal is recommended.
       summary: |
         OpenVPN server certificate expires in less than 7 days.
-      severity: "6"
+      severity: "5"
       markupFormat: markdown
     - name: OpenVPNServerCertificateExpiringSoon
       sourceFile: modules/500-openvpn/monitoring/prometheus-rules/ovpn-admin.yaml
