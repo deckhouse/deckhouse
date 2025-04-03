@@ -55,6 +55,7 @@ func (c *Cloud) EnsureLoadBalancer(ctx context.Context, clusterName string, serv
 	name := c.GetLoadBalancerName(ctx, clusterName, service)
 	svc, err := c.dvpService.LoadBalancerService.GetLoadBalancerByName(ctx, name)
 	klog.Infof("EnsureLoadBalancer: %v+", svc)
+	klog.Infof("EnsureLoadBalancer nodes: %v+", nodes)
 	if err != nil {
 		klog.Errorf("Failed to get LoadBalancer service %q in namespace %q: %v", name, c.config.Namespace, err)
 		return nil, err
