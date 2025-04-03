@@ -18,6 +18,7 @@ package dvp
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -45,14 +46,15 @@ func (c *Cloud) GetLoadBalancer(ctx context.Context, clusterName string, service
 	return status, true, nil
 }
 
-func (c *Cloud) GetLoadBalancerName(_ context.Context, _ string, service *corev1.Service) string {
+func (c *Cloud) GetLoadBalancerName(_ context.Context, clusterName string, service *corev1.Service) string {
 	// TODO: replace DefaultLoadBalancerName to generate more meaningful loadbalancer names.
-	return cloudprovider.DefaultLoadBalancerName(service)
+	return fmt.Sprintf("%s-%s", clusterName, cloudprovider.DefaultLoadBalancerName(service))
 }
 
 func (c *Cloud) EnsureLoadBalancer(ctx context.Context, clusterName string, service *corev1.Service, nodes []*corev1.Node) (*corev1.LoadBalancerStatus, error) {
 	name := c.GetLoadBalancerName(ctx, clusterName, service)
 	svc, err := c.dvpService.LoadBalancerService.GetLoadBalancerByName(ctx, name)
+	klog.Infof("EnsureLoadBalancer: %v+", svc)
 	if err != nil {
 		klog.Errorf("Failed to get LoadBalancer service %q in namespace %q: %v", name, c.config.Namespace, err)
 		return nil, err
