@@ -412,7 +412,7 @@ func removeSystemRegistryLockFile(ctx context.Context, nodeInterface node.Interf
 	}
 
 	cmd := nodeInterface.Command("rm", "-f", SystemRegistrylockFile)
-	cmd.Sudo()
+	cmd.Sudo(ctx)
 	return cmd.Run(ctx)
 }
 
@@ -421,7 +421,7 @@ func isSystemRegistryLockFileExists(ctx context.Context, nodeInterface node.Inte
 	checkLockFileStdoutHandler := func(l string) { checkLockFileStdout += l }
 
 	cmd := nodeInterface.Command("test", "-e", SystemRegistrylockFile, "&&", "echo", "true", "||", "echo", "false")
-	cmd.Sudo()
+	cmd.Sudo(ctx)
 	cmd.WithStdoutHandler(checkLockFileStdoutHandler)
 	err := cmd.Run(ctx)
 
@@ -671,9 +671,6 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 
 			return nil
 		})
-		if err != nil {
-			return fmt.Errorf("cannot create %s directories: %w", app.DeckhouseNodeTmpPath, err)
-		}
 
 		if err != nil {
 			return fmt.Errorf("cannot create %s directories: %w", app.DeckhouseNodeTmpPath, err)
