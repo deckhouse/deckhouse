@@ -18,7 +18,6 @@ package api
 
 import (
 	"context"
-	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -28,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/ptr"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -122,11 +120,6 @@ func (lb *LoadBalancerService) CreateLoadBalancer(
 		return nil, nil
 	}
 
-	err = lb.WaitLoadBalancerCreation(ctx, name)
-	if err != nil {
-		return nil, err
-	}
-
 	return svc, nil
 }
 
@@ -144,24 +137,4 @@ func (lb *LoadBalancerService) DeleteLoadBalancerByName(ctx context.Context, nam
 		return err
 	}
 	return nil
-}
-
-func (d *LoadBalancerService) WaitLoadBalancerCreation(ctx context.Context, serviceName string) error {
-	return d.Wait(ctx, serviceName, &corev1.Service{}, func(obj client.Object) (bool, error) {
-		svc, ok := obj.(*corev1.Service)
-		if !ok {
-			return false, fmt.Errorf("expected a Service but got a %T", obj)
-		}
-
-		status := false
-
-		for _, condition := range svc.Status.Conditions {
-			if condition.Type == DeckhouseNetworkLoadBalancerClassType && condition.Status == "True" {
-				status = true
-				break
-			}
-		}
-
-		return status, nil
-	})
 }
