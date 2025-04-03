@@ -27,8 +27,6 @@ const (
 type AppSettings struct {
 	HostIP            string
 	NodeName          string
-	RegistryAddress   string
-	RegistryPath      string
 	ImageAuth         string
 	ImageDistribution string
 	ImageMirrorer     string

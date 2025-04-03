@@ -70,7 +70,7 @@ func (manager *servicesManager) applyConfig(config NodeServicesConfigModel) (cha
 	}
 	sum.Write([]byte(hash))
 
-	mirrorer := config.toMirrorerConfig(manager.settings.RegistryAddress)
+	mirrorer := config.toMirrorerConfig(manager.settings.HostIP)
 	hasMirrorer := mirrorer != nil && len(mirrorer.Upstreams) > 0
 
 	if hasMirrorer {
