@@ -1,10 +1,10 @@
 ---
 title: "Alertmanager-email"
-permalink: ru/user/alertmanager.html
+permalink: ru/user/web/alertmanager.html
 lang: ru
 ---
 
-Веб-интерфейс модуля Alertmanager-email предназначен для просмотра и управления оповещениями (алертами), возникающими в кластере.
+Веб-интерфейс модуля Alertmanager-email предназначен для просмотра и управления оповещениями (алертами) кластера.
 
 ## Доступ к веб-интерфейсу
 
