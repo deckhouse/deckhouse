@@ -6,11 +6,11 @@ imageSpec:
   config:
     env: { "EDITOR": "vim" }
     labels: {
-      "io.deckhouse.dkp.version": "{{ $context.CI_COMMIT_TAG }}",
-      "io.deckhouse.dkp.edition": "{{ $context.Env }}",
-      "io.deckhouse.dkp.supportedKubernetesVersions": "{{ $context.kubernetesVersions }}",
-      "io.deckhouse.dkp.defaultKubernetesVersion": "{{ $context.defaultKubernetesVersion }}",
-      "io.deckhouse.dkp.eolKubernetesVersions": "{{ $context.eolKubernetesVersions }}",
-      "io.deckhouse.dkp.previewKubernetesVersions": "{{ $context.previewKubernetesVersions }}"
+      "io.deckhouse.version": "{{ $context.CI_COMMIT_TAG }}",
+      "io.deckhouse.edition": "{{ $context.Env }}",
+      "io.deckhouse.kubernetes.versions.supported": "{{ join " " $context.kubernetesVersions }}",
+      "io.deckhouse.kubernetes.versions.default": "{{ $context.defaultKubernetesVersion }}",
+      "io.deckhouse.kubernetes.versions.eol": "{{ join " " $context.eolKubernetesVersions }}",
+      "io.deckhouse.kubernetes.versions.preview": "{{ join " " $context.previewKubernetesVersions }}"
     }
 {{- end }}
