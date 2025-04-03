@@ -34,7 +34,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Schedule: []go_hook.ScheduleConfig{
 		{
 			Name:    "check_server_cert_expiry",
-			Crontab: "* * * * *", // Every minute
+			Crontab: "0 */6 * * *", // Every 6 hours
 		},
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
@@ -121,9 +121,9 @@ func checkServerCertExpiry(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	// Check expired cert
+	// // Check if cert expires within 6 hours
 	now := time.Now()
-	if now.After(cert.NotAfter) {
+	if cert.NotAfter.Sub(now) <= 6*time.Hour {
 		input.Logger.Infof("Server certificate expired at %s, initiating cleanup and restart", cert.NotAfter)
 
 		// Remove openvpn-pki-ca
