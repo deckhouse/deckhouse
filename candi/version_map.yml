@@ -16,6 +16,22 @@ bashible: &bashible
     "15.4":
     "15.5":
     "15.6":
+  redos:
+    "7.3":
+    "8.0":
+  rosa:
+    "7.9":
+    "12.4":
+    "12.5":
+  astra:
+    "1.7":
+    "1.8":
+  altlinux:
+    "p10":
+    "10.0":
+    "10.1":
+    "10.2":
+    "11":
 k8s:
   "1.28":
     status: end-of-life
@@ -69,7 +85,7 @@ k8s:
     status: available
     patch: 10
     bashible: *bashible
-    clusterAutoscalerPatch: 2
+    clusterAutoscalerPatch: '0'
     crictlPatch: 1
     ccm:
       openstack: v1.30.2
@@ -93,7 +109,7 @@ k8s:
     status: available
     patch: 6
     bashible: *bashible
-    clusterAutoscalerPatch: 2
+    clusterAutoscalerPatch: '0'
     crictlPatch: 1
     ccm:
       openstack: v1.31.2
@@ -117,7 +133,7 @@ k8s:
     status: preview
     patch: 2
     bashible: *bashible
-    clusterAutoscalerPatch: 2
+    clusterAutoscalerPatch: '0'
     crictlPatch: 0
     ccm:
       openstack: v1.31.2
