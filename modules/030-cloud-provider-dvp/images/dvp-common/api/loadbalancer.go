@@ -117,7 +117,7 @@ func (lb *LoadBalancerService) CreateLoadBalancer(
 
 	err := lb.client.Create(ctx, svc)
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 
 	return svc, nil
