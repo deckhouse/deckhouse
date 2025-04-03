@@ -6,7 +6,11 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package nodeservices
 
 import (
+	"fmt"
+
 	validation "github.com/go-ozzo/ozzo-validation"
+
+	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/pki"
 )
 
 // Config represents the configuration
@@ -38,7 +42,7 @@ type PKIModel struct {
 }
 
 func (p PKIModel) Validate() error {
-	return validation.ValidateStruct(&p,
+	err := validation.ValidateStruct(&p,
 		validation.Field(&p.CACert, validation.Required),
 		validation.Field(&p.AuthCert, validation.Required),
 		validation.Field(&p.AuthKey, validation.Required),
@@ -49,6 +53,47 @@ func (p PKIModel) Validate() error {
 		// UpstreamRegistryCACert is optional field and can be empty
 		// IngressClientCACert is optional field and can be empty
 	)
+
+	if err != nil {
+		return err
+	}
+
+	caCert, err := pki.DecodeCertificate([]byte(p.CACert))
+	if err != nil {
+		return fmt.Errorf("cannot decode CA: %w", err)
+	}
+
+	tokenPKI, err := pki.DecodeCertKey([]byte(p.TokenCert), []byte(p.TokenKey))
+	if err != nil {
+		return fmt.Errorf("cannot decode Token: %w", err)
+	}
+
+	authPKI, err := pki.DecodeCertKey([]byte(p.AuthCert), []byte(p.AuthKey))
+	if err != nil {
+		return fmt.Errorf("cannot decode Auth: %w", err)
+	}
+
+	distributionPKI, err := pki.DecodeCertKey([]byte(p.DistributionCert), []byte(p.DistributionKey))
+	if err != nil {
+		return fmt.Errorf("cannot decode Distribution: %w", err)
+	}
+
+	err = pki.ValidateCertWithCAChain(tokenPKI.Cert, caCert)
+	if err != nil {
+		return fmt.Errorf("cannot validate Token certificate with CA: %w", err)
+	}
+
+	err = pki.ValidateCertWithCAChain(authPKI.Cert, caCert)
+	if err != nil {
+		return fmt.Errorf("cannot validate Auth certificate with CA: %w", err)
+	}
+
+	err = pki.ValidateCertWithCAChain(distributionPKI.Cert, caCert)
+	if err != nil {
+		return fmt.Errorf("cannot validate Distribution certificate with CA: %w", err)
+	}
+
+	return nil
 }
 
 // RegistryConfig holds detailed configuration of the registry
