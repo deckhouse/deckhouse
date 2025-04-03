@@ -1,5 +1,5 @@
 ---
-title: "Cloud provider — VMware Cloud Director: FAQ"
+#title: "Cloud provider — VMware Cloud Director: FAQ"
 ---
 
 ## How do I create a hybrid cluster?

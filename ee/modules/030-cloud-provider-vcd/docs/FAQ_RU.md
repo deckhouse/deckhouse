@@ -1,5 +1,5 @@
 ---
-title: "Cloud provider — VMware Cloud Director: FAQ"
+#title: "Cloud provider — VMware Cloud Director: FAQ"
 ---
 
 ## Как поднять гибридный кластер?
