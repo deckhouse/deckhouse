@@ -13,7 +13,7 @@
 # limitations under the License.
 
 function create_annotation(){
-    local annotation="$1=\"$2\""
+    local annotation="$1=$2"
     local node="$D8_NODE_HOSTNAME"
     bb-kubectl --request-timeout=60s --kubeconfig=/etc/kubernetes/kubelet.conf annotate node $node --overwrite $annotation
 }
