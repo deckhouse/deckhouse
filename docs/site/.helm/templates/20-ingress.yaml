@@ -45,7 +45,7 @@ spec:
   - host: {{ .URL }}
     http:
       paths:
-{{- if or (eq $.Values.web.dc_name "prod-sel") (eq $.Values.web.dc_name "prod-25") (eq $.Values.web.env "web-test" ) }}
+{{- if or (eq $.Values.web.dc_name "prod-25") (eq $.Values.web.env "web-test" ) }}
 {{- if eq .Lang "en" }}
       - path: /ru
         pathType: Prefix
@@ -218,6 +218,13 @@ spec:
             name: frontend
             port:
               name: http
+      - path: /downloads/deckhouse-cli-trdl
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
       - path: /documentation/v1
         pathType: Prefix
         backend:
@@ -230,6 +237,13 @@ spec:
         backend:
           service:
             name: backend
+            port:
+              name: http
+      - path: /products/code/documentation/
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
             port:
               name: http
       - path: /products/virtualization-platform/documentation/

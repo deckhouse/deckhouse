@@ -25,9 +25,12 @@ concurrency:
   group: trivy-db-download
 
 jobs:
+{!{ tmpl.Exec "skip_tests_repos" . | strings.Indent 2 }!}
   download-and-repush-images:
     name: Download and repush images
-    runs-on: [self-hosted]
+    needs:
+      - skip_tests_repos
+    runs-on: [self-hosted, regular]
     steps:
 {!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 6 }!}

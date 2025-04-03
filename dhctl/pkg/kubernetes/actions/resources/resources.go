@@ -51,7 +51,7 @@ func newAPIResourceListGetter(kubeCl *client.KubernetesClient) *apiResourceListG
 	}
 }
 
-func (g *apiResourceListGetter) Get(gvk *schema.GroupVersionKind) (*metav1.APIResourceList, error) {
+func (g *apiResourceListGetter) Get(ctx context.Context, gvk *schema.GroupVersionKind) (*metav1.APIResourceList, error) {
 	key := gvk.GroupVersion().String()
 	if resourcesList, ok := g.gvkToResourcesList[key]; ok {
 		return resourcesList, nil
@@ -59,7 +59,7 @@ func (g *apiResourceListGetter) Get(gvk *schema.GroupVersionKind) (*metav1.APIRe
 
 	var resourcesList *metav1.APIResourceList
 	var err error
-	err = retry.NewSilentLoop("Get resources list", 3, 1*time.Second).Run(func() error {
+	err = retry.NewSilentLoop("Get resources list", 3, 1*time.Second).RunContext(ctx, func() error {
 		// ServerResourcesForGroupVersion does not return error if API returned NotFound (404) or Forbidden (403)
 		// https://github.com/kubernetes/client-go/blob/51a4fd4aee686931f6a53148b3f4c9094f80d512/discovery/discovery_client.go#L204
 		// and if CRD was not deployed method will return empty APIResources list
@@ -91,7 +91,7 @@ func NewCreator(kubeCl *client.KubernetesClient, resources template.Resources, t
 	}
 }
 
-func (c *Creator) createAll() error {
+func (c *Creator) createAll(ctx context.Context) error {
 	apiResourceGetter := newAPIResourceListGetter(c.kubeCl)
 	addedResourcesIndexes := make(map[int]struct{})
 
@@ -112,7 +112,7 @@ func (c *Creator) createAll() error {
 	log.DebugLn("start ensureRequiredNamespacesExist")
 
 	// resourcesToSkipInCurrentIteration connect with c.resources via resource slice index
-	resourcesToSkipInCurrentIteration, err := c.ensureRequiredNamespacesExist()
+	resourcesToSkipInCurrentIteration, err := c.ensureRequiredNamespacesExist(ctx)
 	if err != nil {
 		return err
 	}
@@ -125,7 +125,7 @@ func (c *Creator) createAll() error {
 			continue
 		}
 
-		resourcesList, err := apiResourceGetter.Get(&resource.GVK)
+		resourcesList, err := apiResourceGetter.Get(ctx, &resource.GVK)
 		if err != nil {
 			log.DebugF("apiResourceGetter returns error: %w\n", err)
 			continue
@@ -135,7 +135,7 @@ func (c *Creator) createAll() error {
 			if discoveredResource.Kind != resource.GVK.Kind {
 				continue
 			}
-			if err := c.createSingleResource(resource); err != nil {
+			if err := c.createSingleResource(ctx, resource); err != nil {
 				return err
 			}
 
@@ -147,7 +147,7 @@ func (c *Creator) createAll() error {
 	return nil
 }
 
-func (c *Creator) ensureRequiredNamespacesExist() (map[int]struct{}, error) {
+func (c *Creator) ensureRequiredNamespacesExist(ctx context.Context) (map[int]struct{}, error) {
 	// true means known existing namespace
 	// false means known namespace that is not yet created (used to skip checking for that namespace for multiple times)
 	knownNamespaces := make(map[string]bool)
@@ -156,7 +156,7 @@ func (c *Creator) ensureRequiredNamespacesExist() (map[int]struct{}, error) {
 	// or after state is set to "cluster is bootstrapped" (some namespaces will be created by the deckhouse after that)
 	resourcesToSkipInCurrentIteration := make(map[int]struct{})
 
-	err := retry.NewSilentLoop("Ensure that required namespaces exist", 10, 10*time.Second).Run(func() error {
+	err := retry.NewSilentLoop("Ensure that required namespaces exist", 10, 10*time.Second).RunContext(ctx, func() error {
 		for i, res := range c.resources {
 			nsName := res.Object.GetNamespace()
 
@@ -181,7 +181,7 @@ func (c *Creator) ensureRequiredNamespacesExist() (map[int]struct{}, error) {
 				continue
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			if _, err := c.kubeCl.CoreV1().Namespaces().Get(ctx, nsName, metav1.GetOptions{}); err != nil {
 				cancel()
 
@@ -208,8 +208,8 @@ func (c *Creator) ensureRequiredNamespacesExist() (map[int]struct{}, error) {
 	return resourcesToSkipInCurrentIteration, nil
 }
 
-func (c *Creator) TryToCreate() error {
-	if err := c.createAll(); err != nil {
+func (c *Creator) TryToCreate(ctx context.Context) error {
+	if err := c.createAll(ctx); err != nil {
 		return err
 	}
 
@@ -224,7 +224,7 @@ func (c *Creator) TryToCreate() error {
 	}
 
 	for _, task := range c.mcTasks {
-		err := c.runSingleMCTask(task)
+		err := c.runSingleMCTask(ctx, task)
 		if err != nil {
 			return err
 		}
@@ -274,9 +274,9 @@ func resourceToGVR(kubeCl *client.KubernetesClient, resource *template.Resource)
 	return &gvr, docCopy, nil
 }
 
-func (c *Creator) createSingleResource(resource *template.Resource) error {
+func (c *Creator) createSingleResource(ctx context.Context, resource *template.Resource) error {
 	// Wait up to 10 minutes
-	return retry.NewLoop(fmt.Sprintf("Create %s resources", resource.GVK.String()), 60, 10*time.Second).Run(func() error {
+	return retry.NewLoop(fmt.Sprintf("Create %s resources", resource.GVK.String()), 60, 10*time.Second).RunContext(ctx, func() error {
 		gvr, docCopy, err := resourceToGVR(c.kubeCl, resource)
 		if err != nil {
 			return err
@@ -288,7 +288,7 @@ func (c *Creator) createSingleResource(resource *template.Resource) error {
 			CreateFunc: func(manifest interface{}) error {
 				_, err := c.kubeCl.Dynamic().Resource(*gvr).
 					Namespace(namespace).
-					Create(context.TODO(), docCopy, metav1.CreateOptions{})
+					Create(ctx, docCopy, metav1.CreateOptions{})
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
@@ -299,7 +299,7 @@ func (c *Creator) createSingleResource(resource *template.Resource) error {
 				// using patch here because of https://github.com/kubernetes/kubernetes/issues/70674
 				_, err = c.kubeCl.Dynamic().Resource(*gvr).
 					Namespace(namespace).
-					Patch(context.TODO(), docCopy.GetName(), types.MergePatchType, content, metav1.PatchOptions{})
+					Patch(ctx, docCopy.GetName(), types.MergePatchType, content, metav1.PatchOptions{})
 				return err
 			},
 		}
@@ -308,14 +308,14 @@ func (c *Creator) createSingleResource(resource *template.Resource) error {
 	})
 }
 
-func (c *Creator) runSingleMCTask(task actions.ModuleConfigTask) error {
+func (c *Creator) runSingleMCTask(ctx context.Context, task actions.ModuleConfigTask) error {
 	// Wait up to 10 minutes
-	return retry.NewLoop(task.Title, 60, 5*time.Second).Run(func() error {
+	return retry.NewLoop(task.Title, 60, 5*time.Second).RunContext(ctx, func() error {
 		return task.Do(c.kubeCl)
 	})
 }
 
-func CreateResourcesLoop(kubeCl *client.KubernetesClient, resources template.Resources, checkers []Checker, tasks []actions.ModuleConfigTask) error {
+func CreateResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, resources template.Resources, checkers []Checker, tasks []actions.ModuleConfigTask) error {
 	endChannel := time.After(app.ResourcesTimeout)
 
 	ticker := time.NewTicker(10 * time.Second)
@@ -325,12 +325,12 @@ func CreateResourcesLoop(kubeCl *client.KubernetesClient, resources template.Res
 
 	waiter := NewWaiter(checkers)
 	for {
-		err := resourceCreator.TryToCreate()
+		err := resourceCreator.TryToCreate(ctx)
 		if err != nil && !errors.Is(err, ErrNotAllResourcesCreated) {
 			return err
 		}
 
-		ready, errWaiter := waiter.ReadyAll()
+		ready, errWaiter := waiter.ReadyAll(ctx)
 		if errWaiter != nil {
 			return errWaiter
 		}

@@ -42,10 +42,10 @@ on:
         required: false
       pull_request_head_label:
         description: 'Head label of pull request. e.g. my_repo:my_feature_branch'
-        required: false 
+        required: false
   pull_request:
     types:
-      - synchronize 
+      - synchronize
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
   cancel-in-progress: true
@@ -85,7 +85,7 @@ jobs:
           echo "Triggered by: ${{ github.event_name }}"
           echo "Image tag: $image_tag"
   scan_images:
-    runs-on: [ self-hosted, regular, selectel ]
+    runs-on: [self-hosted, large]
     needs: check_trigger
     if: ${{ needs.check_trigger.outputs.image_tag != 'unknown' }}
     steps:

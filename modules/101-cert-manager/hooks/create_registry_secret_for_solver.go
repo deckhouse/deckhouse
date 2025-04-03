@@ -21,7 +21,6 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -209,12 +208,12 @@ func handleChallenge(input *go_hook.HookInput) error {
 		// secret already exists in namespace. do not create or patch
 		if !secretExists || secretContent != registryCfg {
 			secret := prepareSolverRegistrySecret(ns, registryCfg)
-			input.PatchCollector.Create(secret, object_patch.UpdateIfExists())
+			input.PatchCollector.CreateOrUpdate(secret)
 		}
 
 		if _, saExists := serviceAccountsNss[ns]; !saExists {
 			sa := prepareSolverRegistryServiceAccount(ns)
-			input.PatchCollector.Create(sa, object_patch.UpdateIfExists())
+			input.PatchCollector.CreateOrUpdate(sa)
 		}
 	}
 

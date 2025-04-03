@@ -154,6 +154,7 @@ shell:
   - bazel build --disk_cache=/tmp/bazel-cache --nofetch --stamp --config=release //:envoy
   - mkdir /src/proxy/bin
   - mv /src/proxy/bazel-bin/envoy /src/proxy/bin/
+  - rm -rf /src/proxy/.git
   - rm -rf /root/.cache /tmp/bazel-cache
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-libcxx-artifact
@@ -237,15 +238,6 @@ import:
   add: /usr/local/go
   to: /usr/local/go
   before: install
-- image: cni-cilium/base-cilium-dev-src-artifact
-  add: /src
-  to: /src
-  includePaths:
-  - grpc-go
-  - protobuf-go
-  - protoc-gen-go-json
-  - protoc-gen-doc
-  before: install
 shell:
   beforeInstall:
   - export DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC
@@ -290,10 +282,19 @@ shell:
   - curl --fail --show-error --silent --location "{{ $source }}/protocolbuffers/protobuf/releases/download/v{{ $protocVersion }}/protoc-{{ $protocVersion }}-linux-x86_64.zip" --output /tmp/protoc.zip
   - unzip /tmp/protoc.zip -x readme.txt -d /usr/local && rm /tmp/protoc.zip
   - chmod o+rx /usr/local/bin/protoc && chmod o+rX -R /usr/local/include/google/
+  - git clone --depth 1 --branch cmd/protoc-gen-go-grpc/v1.3.0 {{ $.SOURCE_REPO }}/grpc/grpc-go.git /src/grpc-go
+  - git clone --depth 1 --branch v1.30.0 {{ $.SOURCE_REPO }}/protocolbuffers/protobuf-go.git /src/protobuf-go
+  - git clone --depth 1 --branch v1.1.0 {{ $.SOURCE_REPO }}/mitchellh/protoc-gen-go-json.git /src/protoc-gen-go-json
+  - git clone --depth 1 --branch v1.5.1 {{ $.SOURCE_REPO }}/pseudomuto/protoc-gen-doc.git /src/protoc-gen-doc
   - cd /src/grpc-go/cmd/protoc-gen-go-grpc && go install
   - cd /src/protobuf-go/cmd/protoc-gen-go && go install
   - cd /src/protoc-gen-go-json && go install
   - cd /src/protoc-gen-doc/cmd/protoc-gen-doc && go install
+  - cd /src
+  - rm -rf /src/grpc-go
+  - rm -rf /src/protobuf-go
+  - rm -rf /src/protoc-gen-go-json
+  - rm -rf /src/protoc-gen-doc
   # Install multiversion bazel
   - bazel_versions=({{ $bazelVersions }})
   # install bazel wrapper script in the path, it automatically recognises `.bazelversion` and `USE_BAZEL_VERSIONS`, if neither are set it picks latest
@@ -328,7 +329,6 @@ shell:
   - git clone --depth 1 --branch {{ $istioVersion }} {{ $.SOURCE_REPO }}/istio/proxy.git /src/proxy
   - cd /src/proxy/
   - git apply --verbose /patches/*.patch
-
   - git clone --branch "{{ $llvmRev }}" {{ $.SOURCE_REPO }}/llvm/llvm-project.git /src/llvm
   - rm -rf /src/llvm/.git
 

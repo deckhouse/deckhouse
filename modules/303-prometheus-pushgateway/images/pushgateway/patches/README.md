@@ -1,6 +1,6 @@
 # Patches
 
-### 001_fix_cve
+## 001-go-mod.patch
 
 Fixes several CVEs.
 
@@ -11,5 +11,3 @@ go get google.golang.org/protobuf@v1.33.0
 go mod tidy
 git diff
 ```
-
-`

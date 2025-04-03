@@ -37,6 +37,12 @@ testing/cloud_layouts/**/tmp
 testing/cloud_layouts/**/bootstrap.log
 testing/cloud_layouts/**/configuration.yaml
 testing/cloud_layouts/**/sshkey*
+testing/cloud_layouts/**/registry-mirror/ssl
+testing/cloud_layouts/**/registry-mirror/privkey.pem
+testing/cloud_layouts/**/registry-mirror/auth_config.yaml
+testing/cloud_layouts/**/registry-mirror/registry-config.yaml
+testing/cloud_layouts/**/registry-mirror/test.sh
+
 layouts-tests-tmp/
 
 # ignore generated files

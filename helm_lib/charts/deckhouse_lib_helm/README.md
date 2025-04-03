@@ -35,6 +35,8 @@
 | [helm_lib_module_image_no_fail](#helm_lib_module_image_no_fail) |
 | [helm_lib_module_common_image](#helm_lib_module_common_image) |
 | [helm_lib_module_common_image_no_fail](#helm_lib_module_common_image_no_fail) |
+| [helm_lib_module_image_digest](#helm_lib_module_image_digest) |
+| [helm_lib_module_image_digest_no_fail](#helm_lib_module_image_digest_no_fail) |
 | **Module Ingress Class** |
 | [helm_lib_module_ingress_class](#helm_lib_module_ingress_class) |
 | **Module Init Container** |
@@ -408,6 +410,36 @@ list:
 #### Usage
 
 `{{ include "helm_lib_module_common_image_no_fail" (list . "<container-name>") }} `
+
+#### Arguments
+
+list:
+-  Template context with .Values, .Chart, etc 
+-  Container name 
+
+
+### helm_lib_module_image_digest
+
+ returns image digest 
+
+#### Usage
+
+`{{ include "helm_lib_module_image_digest" (list . "<container-name>" "<module-name>(optional)") }} `
+
+#### Arguments
+
+list:
+-  Template context with .Values, .Chart, etc 
+-  Container name 
+
+
+### helm_lib_module_image_digest_no_fail
+
+ returns image digest if found 
+
+#### Usage
+
+`{{ include "helm_lib_module_image_digest_no_fail" (list . "<container-name>" "<module-name>(optional)") }} `
 
 #### Arguments
 
@@ -1027,7 +1059,7 @@ list:
 
 ### helm_lib_priority_class
 
- returns priority class if priority-class module enabled, otherwise returns nothing 
+ returns priority class 
 
 #### Arguments
 

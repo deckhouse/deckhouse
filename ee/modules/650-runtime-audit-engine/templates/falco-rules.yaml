@@ -1,3 +1,10 @@
+{{- $rules := default (list) .Values.runtimeAuditEngine.builtInRulesList -}}
+{{- $ruleSet := dict -}}
+{{- range $rule := $rules -}}
+  {{- $ruleSet = set $ruleSet $rule true -}}
+{{- end -}}
+
+{{- if index $ruleSet "Fstec" -}}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: FalcoAuditRules
@@ -6,9 +13,6 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name)) | nindent 2 }}
 spec:
   rules:
-    - macro:
-        name: never_true
-        condition: (evt.num=0)
     - macro:
         name: always_true
         condition: (evt.num>=0)
@@ -19,20 +23,11 @@ spec:
         name: open_read
         condition: (evt.type in (open,openat,openat2) and evt.is_open_read=true and fd.typechar='f' and fd.num>=0)
     - macro:
-        name: open_directory
-        condition: (evt.type in (open,openat,openat2) and evt.is_open_read=true and fd.typechar='d' and fd.num>=0)
-    - macro:
-        name: open_file_failed
-        condition: (evt.type in (open,openat,openat2) and fd.typechar='f' and fd.num=-1 and evt.res startswith E)
-    - macro:
         name: chmod
         condition: (evt.type in (chmod, fchmod, fchmodat) and evt.dir=<)
     - macro:
         name: rename
         condition: (evt.type in (rename, renameat, renameat2))
-    - macro:
-        name: mkdir
-        condition: (evt.type in (mkdir, mkdirat))
     - macro:
         name: remove
         condition: (evt.type in (rmdir, unlink, unlinkat))
@@ -45,9 +40,6 @@ spec:
     - macro:
         name: spawned_process
         condition: (evt.type in (execve, execveat) and evt.dir=<)
-    - macro:
-        name: proc_name_exists
-        condition: (proc.name!="<NA>")
     - macro:
         name: package_mgmt_ancestor_procs
         condition: proc.pname in (package_mgmt_binaries) or proc.aname[2] in (package_mgmt_binaries) or proc.aname[3] in (package_mgmt_binaries) or proc.aname[4] in (package_mgmt_binaries)
@@ -108,9 +100,6 @@ spec:
         name: writable_verbs
         condition: kcreate or kmodify or kdelete
     - macro:
-        name: namespace
-        condition: ka.target.resource=namespaces
-    - macro:
         name: serviceaccount
         condition: ka.target.resource=serviceaccounts
     - macro:
@@ -122,9 +111,6 @@ spec:
     - macro:
         name: role
         condition: ka.target.resource=roles
-    - macro:
-        name: secret
-        condition: ka.target.resource=secrets
     - macro:
         name: pod
         condition: ka.target.resource=pods and not ka.target.subresource exists
@@ -142,12 +128,6 @@ spec:
         condition: (always_true)
     - macro:
         name: user_known_package_manager_in_container
-        condition: (always_true)
-    - macro:
-        name: user_known_exec_pod_activities
-        condition: (always_true)
-    - macro:
-        name: user_known_pod_debug_activities
         condition: (always_true)
     - macro:
         name: system_namespace
@@ -274,10 +254,11 @@ spec:
           - fstec
           - rbac_drift
         source: K8sAudit
+
     - rule:
         name: Attach/Exec Pod
         condition: |
-          kevt_started and pod_subresource and kcreate and ka.target.subresource in (exec,attach) and not user_known_exec_pod_activities
+          kevt_started and pod_subresource and (kcreate or kget) and ka.target.subresource in (exec,attach)
         desc: |
           Detect any attempt to attach/exec to a pod
         output: Attach/Exec to pod (user=%ka.user.name pod=%ka.target.name resource=%ka.target.resource ns=%ka.target.namespace action=%ka.target.subresource command=%ka.uri.param[command])
@@ -289,10 +270,10 @@ spec:
     - rule:
         name: EphemeralContainers created
         condition: |
-          kevt and pod_subresource and kmodify and ka.target.subresource in (ephemeralcontainers) and not user_known_pod_debug_activities
+          kevt and pod_subresource and kmodify and ka.target.subresource in (ephemeralcontainers)
         desc: |
           Detect any ephemeral container created
-        output: Ephemeral container is created in pod (user=%ka.user.name pod=%ka.target.name resource=%ka.target.resource ns=%ka.target.namespace ephemeral_container_name=%jevt.value[/requestObject/ephemeralContainers/0/name] ephemeral_container_image=%jevt.value[/requestObject/ephemeralContainers/0/image])
+        output: Ephemeral container is created in pod (user=%ka.user.name pod=%ka.target.name resource=%ka.target.resource ns=%ka.target.namespace ephemeral_container_name=%jevt.value[/requestObject/spec/ephemeralContainers/0/name] ephemeral_container_image=%jevt.value[/requestObject/spec/ephemeralContainers/0/image])
         priority: Notice
         tags:
           - fstec
@@ -325,7 +306,7 @@ spec:
         condition: |
           kevt and (role or clusterrole) and (kmodify or kdelete) and (ka.target.name startswith "system:") and not ka.target.name in (system:coredns, system:managed-certificate-controller)
         desc: Detect any attempt to modify/delete a ClusterRole/Role starting with system
-        output: System ClusterRole/Role modified or deleted (user=%ka.user.name role=%ka.target.name resource=%ka.target.resource ns=%ka.target.namespace action=%ka.verb)
+        output: System ClusterRole/Role modified or deleted (user=%ka.user.name role=%ka.target.name resource=%ka.target.resource action=%ka.verb)
         priority: Warning
         tags:
           - fstec
@@ -439,8 +420,9 @@ spec:
             or (evt.type in (recvfrom,recvmsg))
           ) and fd.sport=22
         desc: Detect Inbound SSH Connection
-        output: Inbound SSH Connection (command=%proc.cmdline pid=%proc.pid connection=%fd.name user=%user.name user_loginuid=%user.loginuid container_id=%container.id image=%container.image.repository type=%evt.type)
+        output: Inbound SSH Connection (command=%proc.cmdline pid=%proc.pid connection=%fd.name user=%user.name user_loginuid=%user.loginuid type=%evt.type)
         priority: Notice
         tags:
           - fstec
           - auth_attempts
+{{- end }}

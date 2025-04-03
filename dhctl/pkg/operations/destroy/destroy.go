@@ -24,6 +24,9 @@ import (
 
 	"github.com/google/uuid"
 
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	infra "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -38,12 +41,10 @@ import (
 	tf "github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type Destroyer interface {
-	DestroyCluster(autoApprove bool) error
+	DestroyCluster(ctx context.Context, autoApprove bool) error
 }
 
 type Params struct {
@@ -134,7 +135,7 @@ func NewClusterDestroyer(params *Params) (*ClusterDestroyer, error) {
 	}, nil
 }
 
-func (d *ClusterDestroyer) DestroyCluster(autoApprove bool) error {
+func (d *ClusterDestroyer) DestroyCluster(ctx context.Context, autoApprove bool) error {
 	defer d.d8Destroyer.UnlockConverge(true)
 
 	if err := d.PhasedExecutionContext.InitPipeline(d.stateCache); err != nil {
@@ -143,19 +144,19 @@ func (d *ClusterDestroyer) DestroyCluster(autoApprove bool) error {
 	defer d.PhasedExecutionContext.Finalize(d.stateCache)
 
 	if d.CommanderMode {
-		kubeCl, err := d.d8Destroyer.GetKubeClient()
+		kubeCl, err := d.d8Destroyer.GetKubeClient(ctx)
 		if err != nil {
 			return err
 		}
 
-		_, err = commander.CheckShouldUpdateCommanderUUID(context.TODO(), kubeCl, d.CommanderUUID)
+		_, err = commander.CheckShouldUpdateCommanderUUID(ctx, kubeCl, d.CommanderUUID)
 		if err != nil {
 			return fmt.Errorf("uuid consistency check failed: %w", err)
 		}
 	}
 
 	// populate cluster state in cache
-	metaConfig, err := d.terrStateLoader.PopulateMetaConfig()
+	metaConfig, err := d.terrStateLoader.PopulateMetaConfig(ctx)
 	if err != nil {
 		return err
 	}
@@ -166,7 +167,7 @@ func (d *ClusterDestroyer) DestroyCluster(autoApprove bool) error {
 	case config.CloudClusterType:
 		infraDestroyer = d.cloudClusterInfra
 	case config.StaticClusterType:
-		nodeIPs, err := d.GetMasterNodesIPs()
+		nodeIPs, err := d.GetMasterNodesIPs(ctx)
 		if err != nil {
 			return err
 		}
@@ -183,7 +184,7 @@ func (d *ClusterDestroyer) DestroyCluster(autoApprove bool) error {
 		} else if shouldStop {
 			return nil
 		}
-		if err := d.d8Destroyer.DeleteResources(clusterType); err != nil {
+		if err := d.d8Destroyer.DeleteResources(ctx, clusterType); err != nil {
 			return err
 		}
 		if err := d.PhasedExecutionContext.CompletePhase(d.stateCache, nil); err != nil {
@@ -192,7 +193,7 @@ func (d *ClusterDestroyer) DestroyCluster(autoApprove bool) error {
 	}
 
 	if clusterType == config.CloudClusterType {
-		_, _, err = d.terrStateLoader.PopulateClusterState()
+		_, _, err = d.terrStateLoader.PopulateClusterState(ctx)
 		if err != nil {
 			return err
 		}
@@ -212,7 +213,7 @@ func (d *ClusterDestroyer) DestroyCluster(autoApprove bool) error {
 	// Stop proxy because we have already got all info from kubernetes-api
 	d.d8Destroyer.StopProxy()
 
-	if err := infraDestroyer.DestroyCluster(autoApprove); err != nil {
+	if err := infraDestroyer.DestroyCluster(ctx, autoApprove); err != nil {
 		return err
 	}
 
@@ -237,7 +238,7 @@ func NewStaticMastersDestroyer(c *ssh.Client, ips []NodeIP) *StaticMastersDestro
 	}
 }
 
-func (d *StaticMastersDestroyer) DestroyCluster(autoApprove bool) error {
+func (d *StaticMastersDestroyer) DestroyCluster(ctx context.Context, autoApprove bool) error {
 	if !autoApprove {
 		if !input.NewConfirmation().WithMessage("Do you really want to cleanup control-plane nodes?").Ask() {
 			return fmt.Errorf("Cleanup master nodes disallow")
@@ -252,7 +253,7 @@ func (d *StaticMastersDestroyer) DestroyCluster(autoApprove bool) error {
 	hostToExclude := ""
 	if len(d.IPs) > 0 {
 		file := frontend.NewFile(d.SSHClient.Settings)
-		bytes, err := file.DownloadBytes("/var/lib/bashible/discovered-node-ip")
+		bytes, err := file.DownloadBytes(ctx, "/var/lib/bashible/discovered-node-ip")
 		if err != nil {
 
 			return err
@@ -284,14 +285,14 @@ func (d *StaticMastersDestroyer) DestroyCluster(autoApprove bool) error {
 		settings := d.SSHClient.Settings.Copy()
 		settings.BastionHost = settings.AvailableHosts()[0].Host
 		settings.SetAvailableHosts(additionalMastersHosts)
-		err := processStaticHosts(additionalMastersHosts, settings, stdOutErrHandler, cmd)
+		err := processStaticHosts(ctx, additionalMastersHosts, settings, stdOutErrHandler, cmd)
 		if err != nil {
 
 			return err
 		}
 	}
 
-	err := processStaticHosts(mastersHosts, d.SSHClient.Settings, stdOutErrHandler, cmd)
+	err := processStaticHosts(ctx, mastersHosts, d.SSHClient.Settings, stdOutErrHandler, cmd)
 	if err != nil {
 
 		return err
@@ -300,17 +301,17 @@ func (d *StaticMastersDestroyer) DestroyCluster(autoApprove bool) error {
 	return nil
 }
 
-func processStaticHosts(hosts []session.Host, s *session.Session, stdOutErrHandler func(l string), cmd string) error {
+func processStaticHosts(ctx context.Context, hosts []session.Host, s *session.Session, stdOutErrHandler func(l string), cmd string) error {
 	for _, host := range hosts {
 		settings := s.Copy()
 		settings.SetAvailableHosts([]session.Host{host})
-		err := retry.NewLoop(fmt.Sprintf("Clear master %s", host), 5, 10*time.Second).Run(func() error {
+		err := retry.NewLoop(fmt.Sprintf("Clear master %s", host), 5, 10*time.Second).RunContext(ctx, func() error {
 			cmd := frontend.NewCommand(settings, cmd)
-			cmd.Sudo()
+			cmd.Sudo(ctx)
 			cmd.WithTimeout(5 * time.Minute)
 			cmd.WithStdoutHandler(stdOutErrHandler)
 			cmd.WithStderrHandler(stdOutErrHandler)
-			err := cmd.Run()
+			err := cmd.Run(ctx)
 
 			if err != nil {
 				var ee *exec.ExitError
@@ -335,20 +336,20 @@ func processStaticHosts(hosts []session.Host, s *session.Session, stdOutErrHandl
 	return nil
 }
 
-func (d *ClusterDestroyer) GetMasterNodesIPs() ([]NodeIP, error) {
+func (d *ClusterDestroyer) GetMasterNodesIPs(ctx context.Context) ([]NodeIP, error) {
 	var nodeIPs []NodeIP
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	kubeCl, err := d.d8Destroyer.GetKubeClient()
+	kubeCl, err := d.d8Destroyer.GetKubeClient(ctx)
 	if err != nil {
 		log.DebugF("Cannot get kubernetes client. Got error: %v", err)
 		return []NodeIP{}, err
 	}
 
 	var nodes *v1.NodeList
-	err = retry.NewLoop("Get control plane nodes from Kubernetes cluster", 5, 5*time.Second).Run(func() error {
+	err = retry.NewLoop("Get control plane nodes from Kubernetes cluster", 5, 5*time.Second).RunContext(ctx, func() error {
 		nodes, err = kubeCl.CoreV1().Nodes().List(ctx, metav1.ListOptions{LabelSelector: "node-role.kubernetes.io/control-plane="})
 		if err != nil {
 			log.DebugF("Cannot get nodes. Got error: %v", err)

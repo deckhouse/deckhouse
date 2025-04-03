@@ -15,6 +15,7 @@
 package local
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -35,7 +36,7 @@ func TestCommandOutput(t *testing.T) {
 	s.NoError(err)
 
 	cmd := NewCommand("cat", testFilePath)
-	stdout, _, err := cmd.Output()
+	stdout, _, err := cmd.Output(context.Background())
 	s.NoError(err)
 	s.Equal("Hello world", string(stdout))
 }
@@ -53,7 +54,7 @@ func TestCommandCombinedOutput(t *testing.T) {
 	s.NoError(err)
 
 	cmd := NewCommand("cat", testFilePath)
-	stdout, err := cmd.CombinedOutput()
+	stdout, err := cmd.CombinedOutput(context.Background())
 	s.NoError(err)
 	s.Equal("Hello world", string(stdout))
 }
@@ -71,7 +72,7 @@ func TestCommandRun(t *testing.T) {
 	s.NoError(err)
 
 	cmd := NewCommand("cat", testFilePath)
-	err = cmd.Run()
+	err = cmd.Run(context.Background())
 	s.NoError(err)
 	s.Equal("Hello world", string(cmd.StdoutBytes()))
 	s.Nil(cmd.StderrBytes())
@@ -81,7 +82,7 @@ func TestCommandPipe(t *testing.T) {
 	s := require.New(t)
 
 	cmd := NewCommand("bash", "-c", `echo "Goodbye world" | sed "s/Goodbye/Hello/g"`)
-	s.NoError(cmd.Run())
+	s.NoError(cmd.Run(context.Background()))
 	s.Equal("Hello world", string(cmd.StdoutBytes()))
 	s.Nil(cmd.StderrBytes())
 }

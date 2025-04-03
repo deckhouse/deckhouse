@@ -15,6 +15,7 @@
 package infrastructure
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -62,7 +63,7 @@ func getNgMetaConfig(clusterMetaConfig *config.MetaConfig, settings []byte) (*co
 	return cfg, nil
 }
 
-func (r *NodeGroupTerraformController) DestroyNode(name string, nodeState []byte, autoApprove bool) error {
+func (r *NodeGroupTerraformController) DestroyNode(ctx context.Context, name string, nodeState []byte, autoApprove bool) error {
 	stateName := fmt.Sprintf("%s.tfstate", name)
 	if err := saveInCacheIfNotExists(r.stateCache, stateName, nodeState); err != nil {
 		return err
@@ -87,7 +88,7 @@ func (r *NodeGroupTerraformController) DestroyNode(name string, nodeState []byte
 		NodeIndex:     nodeIndex,
 	})
 
-	if err := terraform.DestroyPipeline(nodeRunner, name); err != nil {
+	if err := terraform.DestroyPipeline(ctx, nodeRunner, name); err != nil {
 		return fmt.Errorf("destroing of node %s failed: %v", name, err)
 	}
 

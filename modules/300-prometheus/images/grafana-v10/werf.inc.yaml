@@ -1,6 +1,6 @@
 ---
 {{ $grafanaVersion := "10.4.15" }}
-{{ $bundledPlugins := "petrslavotinek-carpetplot-panel,vonage-status-panel,btplc-status-dot-panel,natel-plotly-panel,savantly-heatmap-panel,grafana-piechart-panel,grafana-worldmap-panel" }}
+{{ $bundledPlugins := "petrslavotinek-carpetplot-panel,vonage-status-panel,btplc-status-dot-panel,natel-plotly-panel,savantly-heatmap-panel,grafana-piechart-panel,grafana-worldmap-panel,esnet-matrix-panel" }}
 {{ $gfPathPlugins := "/usr/share/grafana/plugins-bundled" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
@@ -21,7 +21,6 @@ shell:
   - git clone --depth 1 --branch v{{ $grafanaVersion }} {{ $.SOURCE_REPO }}/grafana/grafana.git .
   - git clone --depth 1 --branch v{{ $grafanaVersion }} {{ $.SOURCE_REPO }}/grafana/grafana-deps.git /grafana-public
   - git clone --depth 1 {{ $.SOURCE_REPO }}/grafana/grafana-plugins.git /grafana-plugins
-  - git clone --depth 1 --branch v0.6.0 {{ $.SOURCE_REPO }}/google/wire.git /src/wire
   - find /patches -name '*.patch' -exec git apply {} \;
   - rm -rf /usr/src/app/.git /grafana-public/.git /grafana-plugins/.git /src/wire/.git
 ---
@@ -36,17 +35,16 @@ import:
   add: /usr/src/app
   to: /usr/src/app
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
-  add: /src/wire
-  to: /src/wire
-  before: install
 shell:
   beforeInstall:
   {{- include "debian packages proxy" . | nindent 2 }}
-  - apt-get -y --no-install-recommends install gcc musl musl-tools
+  - apt-get -y --no-install-recommends install gcc musl musl-tools git
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  - git clone --depth 1 --branch v0.6.0 {{ $.SOURCE_REPO }}/google/wire.git /src/wire
   install:
   - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=/usr/bin/musl-gcc
   - cd /src/wire/cmd/wire && go install
+  - rm -rf /src/wire
   - cd /usr/src/app
   - /go/bin/wire gen -tags oss ./pkg/server
   - go build -ldflags -w -ldflags "-X main.version={{ $grafanaVersion }} -linkmode external -extldflags -static" -tags netgo -o ./bin/linux-amd64/grafana ./pkg/cmd/grafana

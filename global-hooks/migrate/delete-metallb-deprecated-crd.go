@@ -17,22 +17,41 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 10},
-}, removeValidatingWebhook)
+}, dependency.WithExternalDependencies(removeDeprecatedCRD))
 
-func removeValidatingWebhook(input *go_hook.HookInput) error {
-	input.PatchCollector.Delete(
-		"apiextensions.k8s.io/v1",
-		"CustomResourceDefinition",
-		"",
-		"addresspools.metallb.io",
-		object_patch.InForeground(),
-	)
+func removeDeprecatedCRD(_ *go_hook.HookInput, dc dependency.Container) error {
+	kubeClient, err := dc.GetK8sClient()
+	if err != nil {
+		return fmt.Errorf("cannot init Kubernetes client: %v", err)
+	}
+
+	gvr := schema.GroupVersionResource{
+		Group:    "apiextensions.k8s.io",
+		Version:  "v1",
+		Resource: "customresourcedefinitions",
+	}
+
+	_, err = kubeClient.Dynamic().Resource(gvr).Get(context.TODO(), "addresspools.metallb.io", metav1.GetOptions{})
+	if err != nil {
+		return nil
+	}
+
+	err = kubeClient.Dynamic().Resource(gvr).Delete(context.TODO(), "addresspools.metallb.io", metav1.DeleteOptions{})
+	if err != nil {
+		return fmt.Errorf("cannot delete CRD: %v", err)
+	}
 	return nil
 }

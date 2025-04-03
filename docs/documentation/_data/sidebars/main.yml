@@ -109,6 +109,10 @@ entries:
                     ru: Общие настройки
                   url: /security_software_setup.html
                 - title:
+                    en: Sysctl parameters
+                    ru: Параметры sysctl
+                  url: /security/sysctl.html
+                - title:
                     en: KESL
                     ru: KESL
                   url: /security/kesl.html
@@ -431,10 +435,10 @@ entries:
                     en: Examples
                     ru: Примеры
                   url: /modules/cloud-provider-vcd/examples.html
-                - title:
-                    en: FAQ
-                    ru: FAQ
-                  url: /modules/cloud-provider-vcd/faq.html
+                #- title:
+                    #en: FAQ
+                    #ru: FAQ
+                  #url: /modules/cloud-provider-vcd/faq.html
             - title:
                 en: VMware vSphere
                 ru: VMware vSphere
@@ -1178,10 +1182,6 @@ entries:
                     en: Configuration
                     ru: Настройки
                   url: /modules/operator-prometheus/configuration.html
-                - title:
-                    en: FAQ
-                    ru: FAQ
-                  url: /modules/operator-prometheus/faq.html
             - title:
                 en: okmeter
                 ru: okmeter
@@ -1603,82 +1603,190 @@ entries:
         en: Storage
         ru: Хранилище
       folders:
-        - title:
-            en: ceph-csi
-            ru: ceph-csi
-          moduleName: ceph-csi
-          featureStatus: deprecated
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/ceph-csi/
-            - title:
-                en: Examples
-                ru: Примеры
-              url: /modules/ceph-csi/examples.html
-            - title:
-                en: Reference
-                ru: Справка
-              folders:
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/ceph-csi/configuration.html
-                - title:
-                    en: Custom Resources
-                    ru: Custom Resources
-                  url: /modules/ceph-csi/cr.html
-            - title:
-                en: FAQ
-                ru: FAQ
-              url: /modules/ceph-csi/faq.html
-        - title:
-            en: local-path-provisioner
-            ru: local-path-provisioner
-          moduleName: local-path-provisioner
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/local-path-provisioner/
-            - title:
-                en: Examples
-                ru: Примеры
-              url: /modules/local-path-provisioner/examples.html
-            - title:
-                en: Reference
-                ru: Справка
-              folders:
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/local-path-provisioner/configuration.html
-                - title:
-                    en: Custom Resources
-                    ru: Custom Resources
-                  url: /modules/local-path-provisioner/cr.html
-            - title:
-                en: FAQ
-                ru: FAQ
-              url: /modules/local-path-provisioner/faq.html
-        - title:
-            en: snapshot-controller
-            ru: snapshot-controller
-          moduleName: snapshot-controller
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/snapshot-controller/
-            - title:
-                en: Usage
-                ru: Примеры
-              url: /modules/snapshot-controller/usage.html
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/snapshot-controller/configuration.html
+      - title:
+          en: Overview
+          ru: Обзор
+        url: /storage/admin/
+      - title:
+          en: Storage configuration
+          ru: Настройка хранилищ
+        url: /storage/admin/supported-storage.html
+      - title:
+          en: SDS
+          ru: Программно-определяемые хранилища
+        folders:
+          - title:
+              en: Local storage based on LVM
+              ru: Локальное хранилище на основе LVM
+            url: /storage/admin/sds/lvm-local.html
+          - title:
+              en: Replicated storage based on DRBD
+              ru: Реплицируемое хранилище на основе DRBD
+            url: /storage/admin/sds/lvm-replicated.html
+      - title:
+          en: External
+          ru: Внешние хранилища
+        folders:
+          - title:
+              en: Distributed Ceph storage
+              ru: Распределённое хранилище Ceph
+            url: /storage/admin/external/ceph.html
+          - title:
+              en: HPE data storage
+              ru: Хранилище данных HPE
+            url: /storage/admin/external/hpe.html
+          - title:
+              en: Huawei data storage
+              ru: Хранилище данных Huawei
+            url: /storage/admin/external/huawei.html
+          - title:
+              en: NFS data storage
+              ru: Хранилище данных NFS
+            url: /storage/admin/external/nfs.html
+          - title:
+              en: S3-based object storage
+              ru: Объектное хранилище на основе S3
+            url: /storage/admin/external/s3.html
+          - title:
+              en: SCSI-based data storage
+              ru: Хранилище данных на основе протокола SCSI
+            url: /storage/admin/external/scsi.html
+          - title:
+              en: TATLIN.UNIFIED (Yadro) unified storage
+              ru: Унифицированное хранилище TATLIN.UNIFIED (Yadro)
+            url: /storage/admin/external/yadro.html
+      - title:
+         en: Module settings
+         ru: Настройки модулей
+        folders:
+          - title:
+              en: csi-ceph
+              ru: csi-ceph
+            url: /reference/mc/csi-ceph/
+          - title:
+              en: csi-hpe
+              ru: csi-hpe
+            url: /reference/mc/csi-hpe/
+          - title:
+              en: csi-huawei
+              ru: csi-huawei
+            url: /reference/mc/csi-huawei/
+          - title:
+              en: csi-nfs
+              ru: csi-nfs
+            url: /reference/mc/csi-nfs/
+          - title:
+              en: csi-s3
+              ru: csi-s3
+            url: /reference/mc/csi-s3/
+          - title:
+              en: csi-scsi-generic
+              ru: csi-scsi-generic
+            url: /reference/mc/csi-scsi-generic/
+          - title:
+              en: sds-local-volume
+              ru: sds-local-volume
+            url: /reference/mc/sds-local-volume/
+          - title:
+              en: sds-node-configurator
+              ru: sds-node-configurator
+            url: /reference/mc/sds-node-configurator/
+          - title:
+              en: sds-replicated-volume
+              ru: sds-replicated-volume
+            url: /reference/mc/sds-replicated-volume/
+      - title:
+         en: Custom Resources
+         ru: Custom Resources
+        folders:
+          - title:
+              en: CephClusterAuthentication
+              ru: CephClusterAuthentication
+            url: /reference/cr/cephclusterauthentication/
+          - title:
+              en: CephClusterConnection
+              ru: CephClusterConnection
+            url: /reference/cr/cephclusterconnection/
+          - title:
+              en: CephMetadataBackup
+              ru: CephMetadataBackup
+            url: /reference/cr/cephmetadatabackup/
+          - title:
+              en: CephStorageClass
+              ru: CephStorageClass
+            url: /reference/cr/cephstorageclass/
+          - title:
+              en: HPEStorageClass
+              ru: HPEStorageClass
+            url: /reference/cr/hpestorageconnection/
+          - title:
+              en: HuaweiStorageClass
+              ru: HuaweiStorageClass
+            url: /reference/cr/huaweistorageclass/
+          - title:
+              en: LocalStorageClass
+              ru: LocalStorageClass
+            url: /reference/cr/localstorageclass/
+          - title:
+              en: LVMLogicalVolumeSnapshot
+              ru: LVMLogicalVolumeSnapshot
+            url: /reference/cr/lvmlogicalvolumesnapshot/
+          - title:
+              en: LVMLogicalVolume
+              ru: LVMLogicalVolume
+            url: /reference/cr/lvmlogicalvolume/
+          - title:
+              en: LvmVolumeGroupBackup
+              ru: LvmVolumeGroupBackup
+            url: /reference/cr/lvmvolumegroupbackup/
+          - title:
+              en: LVMVolumeGroupSet
+              ru: LVMVolumeGroupSet
+            url: /reference/cr/lvmvolumegroupset/
+          - title:
+              en: LVMVolumeGroup
+              ru: LVMVolumeGroup
+            url: /reference/cr/lvmvolumegroup/
+          - title:
+              en: NFSStorageClass
+              ru: NFSStorageClass
+            url: /reference/cr/nfsstorageclass/
+          - title:
+              en: ReplicatedStorageMetadataBackup
+              ru: ReplicatedStorageMetadataBackup
+            url: /reference/cr/replicatedstoragemetadatabackup/
+          - title:
+              en: ReplicatedStorageClass
+              ru: ReplicatedStorageClass
+            url: /reference/cr/replicatedstorageclass/
+          - title:
+              en: ReplicatedStoragePool
+              ru: ReplicatedStoragePool
+            url: /reference/cr/replicatedstoragepool/
+          - title:
+              en: S3StorageClass
+              ru: S3StorageClass
+            url: /reference/cr/s3storageclass/
+          - title:
+              en: SCSIDevice
+              ru: SCSIDevice
+            url: /reference/cr/scsidevice/
+          - title:
+              en: SCSIStorageClass
+              ru: SCSIStorageClass
+            url: /reference/cr/scsistorageclass/
+          - title:
+              en: SCSITarget
+              ru: SCSITarget
+            url: /reference/cr/scsitarget/
+          - title:
+              en: YadroTatlinUnifiedStorageClass
+              ru: YadroTatlinUnifiedStorageClass
+            url: /reference/cr/yadrotatlinunifiedstorageclass/
+          - title:
+              en: YadroTatlinUnifiedStorageConnection
+              ru: YadroTatlinUnifiedStorageConnection
+            url: /reference/cr/yadrotatlinunifiedstorageconnection/
     - title:
         en: Little things
         ru: Приятные мелочи
@@ -1745,3 +1853,11 @@ entries:
         en: Used software
         ru: Используемое ПО
       url: /oss_info.html
+    - title:
+        en: Release notes
+        ru: История изменений
+      folders:
+      - title:
+          en: Version 1.68
+          ru: Версия 1.68
+        url: /release-notes/1-68.html

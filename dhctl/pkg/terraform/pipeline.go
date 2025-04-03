@@ -15,6 +15,7 @@
 package terraform
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -49,27 +50,32 @@ func equalArray(a, b []string) bool {
 	return true
 }
 
-func ApplyPipeline(r RunnerInterface, name string, extractFn func(r RunnerInterface) (*PipelineOutputs, error)) (*PipelineOutputs, error) {
+func ApplyPipeline(
+	ctx context.Context,
+	r RunnerInterface,
+	name string,
+	extractFn func(ctx context.Context, r RunnerInterface) (*PipelineOutputs, error),
+) (*PipelineOutputs, error) {
 	var extractedData *PipelineOutputs
 	pipelineFunc := func() error {
-		err := r.Init()
+		err := r.Init(ctx)
 		if err != nil {
 			return err
 		}
 
-		err = r.Plan(PlanOptions{})
+		err = r.Plan(ctx, PlanOptions{})
 		if err != nil {
 			return err
 		}
 
-		defer func() { extractedData, err = extractFn(r) }()
+		defer func() { extractedData, err = extractFn(ctx, r) }()
 
-		err = r.Apply()
+		err = r.Apply(ctx)
 		if err != nil {
 			return err
 		}
 
-		extractedData, err = extractFn(r)
+		extractedData, err = extractFn(ctx, r)
 		return err
 	}
 
@@ -78,18 +84,23 @@ func ApplyPipeline(r RunnerInterface, name string, extractFn func(r RunnerInterf
 	return extractedData, err
 }
 
-func CheckPipeline(r RunnerInterface, name string, opts PlanOptions) (int, TerraformPlan, *PlanDestructiveChanges, error) {
+func CheckPipeline(
+	ctx context.Context,
+	r RunnerInterface,
+	name string,
+	opts PlanOptions,
+) (int, TerraformPlan, *PlanDestructiveChanges, error) {
 	isChange := PlanHasNoChanges
 	var destructiveChanges *PlanDestructiveChanges
 	var terraformPlan map[string]any
 
 	pipelineFunc := func() error {
-		err := r.Init()
+		err := r.Init(ctx)
 		if err != nil {
 			return err
 		}
 
-		err = r.Plan(opts)
+		err = r.Plan(ctx, opts)
 		if err != nil {
 			return err
 		}
@@ -97,7 +108,7 @@ func CheckPipeline(r RunnerInterface, name string, opts PlanOptions) (int, Terra
 		isChange = r.GetChangesInPlan()
 		destructiveChanges = r.GetPlanDestructiveChanges()
 
-		rawPlan, err := r.GetTerraformExecutor().Output("show", "-json", r.GetPlanPath())
+		rawPlan, err := r.GetTerraformExecutor().Output(ctx, "show", "-json", r.GetPlanPath())
 		if err != nil {
 			var ee *exec.ExitError
 			if errors.As(err, &ee) {
@@ -123,7 +134,11 @@ type BaseInfrastructureDestructiveChanges struct {
 	OutputZonesChanged ValueChange `json:"output_zones_changed,omitempty"`
 }
 
-func CheckBaseInfrastructurePipeline(r RunnerInterface, name string) (int, TerraformPlan, *BaseInfrastructureDestructiveChanges, error) {
+func CheckBaseInfrastructurePipeline(
+	ctx context.Context,
+	r RunnerInterface,
+	name string,
+) (int, TerraformPlan, *BaseInfrastructureDestructiveChanges, error) {
 	isChange := PlanHasNoChanges
 
 	var destructiveChanges *BaseInfrastructureDestructiveChanges
@@ -136,12 +151,12 @@ func CheckBaseInfrastructurePipeline(r RunnerInterface, name string) (int, Terra
 	var terraformPlan map[string]any
 
 	pipelineFunc := func() error {
-		err := r.Init()
+		err := r.Init(ctx)
 		if err != nil {
 			return err
 		}
 
-		err = r.Plan(PlanOptions{})
+		err = r.Plan(ctx, PlanOptions{})
 		if err != nil {
 			return err
 		}
@@ -154,7 +169,7 @@ func CheckBaseInfrastructurePipeline(r RunnerInterface, name string) (int, Terra
 			return nil
 		}
 
-		info, err := GetBaseInfraResult(r)
+		info, err := GetBaseInfraResult(ctx, r)
 		if err != nil {
 			isChange = PlanHasDestructiveChanges
 			getOrCreateDestructiveChanges().OutputBrokenReason = err.Error()
@@ -180,7 +195,7 @@ func CheckBaseInfrastructurePipeline(r RunnerInterface, name string) (int, Terra
 			} `json:"output_changes"`
 		}
 
-		rawPlan, err := r.GetTerraformExecutor().Output("show", "-json", r.GetPlanPath())
+		rawPlan, err := r.GetTerraformExecutor().Output(ctx, "show", "-json", r.GetPlanPath())
 		if err != nil {
 			var ee *exec.ExitError
 			if errors.As(err, &ee) {
@@ -216,9 +231,9 @@ func CheckBaseInfrastructurePipeline(r RunnerInterface, name string) (int, Terra
 	return isChange, terraformPlan, destructiveChanges, err
 }
 
-func DestroyPipeline(r RunnerInterface, name string) error {
+func DestroyPipeline(ctx context.Context, r RunnerInterface, name string) error {
 	pipelineFunc := func() error {
-		err := r.Init()
+		err := r.Init(ctx)
 		if err != nil {
 			return err
 		}
@@ -228,7 +243,7 @@ func DestroyPipeline(r RunnerInterface, name string) error {
 			return nil
 		}
 
-		err = r.Destroy()
+		err = r.Destroy(ctx)
 		if err != nil {
 			return err
 		}
@@ -237,8 +252,8 @@ func DestroyPipeline(r RunnerInterface, name string) error {
 	return log.Process("terraform", fmt.Sprintf("Destroy %s for %s", r.GetStep(), name), pipelineFunc)
 }
 
-func GetBaseInfraResult(r RunnerInterface) (*PipelineOutputs, error) {
-	cloudDiscovery, err := r.GetTerraformOutput("cloud_discovery_data")
+func GetBaseInfraResult(ctx context.Context, r RunnerInterface) (*PipelineOutputs, error) {
+	cloudDiscovery, err := r.GetTerraformOutput(ctx, "cloud_discovery_data")
 	if err != nil {
 		return nil, err
 	}
@@ -250,7 +265,7 @@ func GetBaseInfraResult(r RunnerInterface) (*PipelineOutputs, error) {
 	}
 
 	// bastion host is optional
-	bastionHost, _ := getStringOrIntOutput(r, "bastion_ip_address_for_ssh")
+	bastionHost, _ := getStringOrIntOutput(ctx, r, "bastion_ip_address_for_ssh")
 
 	tfState, err := r.GetState()
 	if err != nil {
@@ -264,18 +279,18 @@ func GetBaseInfraResult(r RunnerInterface) (*PipelineOutputs, error) {
 	}, nil
 }
 
-func GetMasterNodeResult(r RunnerInterface) (*PipelineOutputs, error) {
-	masterIPAddressForSSH, err := getStringOrIntOutput(r, "master_ip_address_for_ssh")
+func GetMasterNodeResult(ctx context.Context, r RunnerInterface) (*PipelineOutputs, error) {
+	masterIPAddressForSSH, err := getStringOrIntOutput(ctx, r, "master_ip_address_for_ssh")
 	if err != nil {
 		return nil, err
 	}
 
-	nodeInternalIP, err := getStringOrIntOutput(r, "node_internal_ip_address")
+	nodeInternalIP, err := getStringOrIntOutput(ctx, r, "node_internal_ip_address")
 	if err != nil {
 		return nil, err
 	}
 
-	kubernetesDataDevicePath, err := getStringOrIntOutput(r, "kubernetes_data_device_path")
+	kubernetesDataDevicePath, err := getStringOrIntOutput(ctx, r, "kubernetes_data_device_path")
 	if err != nil {
 		return nil, err
 	}
@@ -293,7 +308,7 @@ func GetMasterNodeResult(r RunnerInterface) (*PipelineOutputs, error) {
 	}, nil
 }
 
-func OnlyState(r RunnerInterface) (*PipelineOutputs, error) {
+func OnlyState(_ context.Context, r RunnerInterface) (*PipelineOutputs, error) {
 	tfState, err := r.GetState()
 	if err != nil {
 		return nil, err
@@ -320,8 +335,8 @@ func (s *stringOrInt) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func getStringOrIntOutput(r RunnerInterface, name string) (string, error) {
-	outputRaw, err := r.GetTerraformOutput(name)
+func getStringOrIntOutput(ctx context.Context, r RunnerInterface, name string) (string, error) {
+	outputRaw, err := r.GetTerraformOutput(ctx, name)
 	if err != nil {
 		return "", err
 	}

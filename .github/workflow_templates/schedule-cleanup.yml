@@ -29,12 +29,14 @@ concurrency:
   group: schedule-cleanup
 
 jobs:
+{!{ tmpl.Exec "skip_tests_repos" . | strings.Indent 2 }!}
 # Note: git_info is needed for werf.yaml
 {!{ tmpl.Exec "git_info_job" . | strings.Indent 2 }!}
 
   cleanup_registry:
     name: Cleanup registry
     needs:
+      - skip_tests_repos
       - git_info
     runs-on: [self-hosted, regular]
     steps:

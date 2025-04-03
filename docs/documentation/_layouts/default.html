@@ -24,12 +24,6 @@
     {{ content }}
   </div>
      <!--#include virtual="/includes/footer.html" -->
-  {% include form_in_modal.html mode="request_access" %}
-  {% include form_in_modal.html mode="request_callback" %}
-  {% include form_in_modal.html mode="request_education" %}
-  {% include form_in_modal.html mode="request_demo" %}
-  {% include form_in_modal.html mode="get_a_report" %}
-  {% include form_in_modal.html mode="become_a_partner" %}
 </body>
 {%- if page.name == 'CR.md' or page.name == 'CR_RU.md' or page.name == 'CONFIGURATION.md' or page.name == 'CONFIGURATION_RU.md' or page.name == 'CLUSTER_CONFIGURATION.md' or page.name == 'CLUSTER_CONFIGURATION_RU.md' or page.name == 'DECKHOUSE_CONFIGURE_GLOBAL.md' or page.name == 'DECKHOUSE_CONFIGURE_GLOBAL_RU.md' %}
 {% include openapi-tippy.html %}

@@ -5,6 +5,7 @@
 {%- assign editionsWithRestrictionsComments = site.data['modules']['all'][moduleKebabName]['editionsWithRestrictionsComments'] %}
 {%- assign editionsWithoutRestrictions = "#" |  split: "#" %}
 
+{% unless page.module-kebab-name contains "/installing/configuration.html" %}
 <div class="info alert__wrap">
   <svg class="alert__icon icon--info">
     <use xlink:href="/images/sprite.svg#info-icon"></use>
@@ -73,3 +74,4 @@
   {%- endif %}
 </div>
 </div>
+{% endunless %}

@@ -29,9 +29,21 @@ concurrency:
   group: trivy-db-download
 
 jobs:
+
+  # <template: skip_tests_repos>
+  skip_tests_repos:
+    name: Skip tests repos
+    runs-on: ubuntu-latest
+    if: ${{ false || github.repository == 'deckhouse/deckhouse' }}
+    steps:
+    - name: Do nothing
+      run: echo "Empty action to fulfil Github requirements."
+  # </template: skip_tests_repos>
   download-and-repush-images:
     name: Download and repush images
-    runs-on: [self-hosted]
+    needs:
+      - skip_tests_repos
+    runs-on: [self-hosted, regular]
     steps:
 
       # <template: checkout_step>

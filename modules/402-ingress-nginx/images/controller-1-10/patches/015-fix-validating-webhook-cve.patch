@@ -1,0 +1,121 @@
+diff --git a/internal/ingress/annotations/auth/main.go b/internal/ingress/annotations/auth/main.go
+index 7c7fde7b8..79e3ce5d3 100644
+--- a/internal/ingress/annotations/auth/main.go
++++ b/internal/ingress/annotations/auth/main.go
+@@ -19,6 +19,7 @@ package auth
+ import (
+ 	"fmt"
+ 	"os"
++	"path/filepath"
+ 	"regexp"
+ 	"strings"
+ 
+@@ -203,16 +204,24 @@ func (a auth) Parse(ing *networking.Ingress) (interface{}, error) {
+ 		return nil, err
+ 	}
+ 
+-	passFilename := fmt.Sprintf("%v/%v-%v-%v.passwd", a.authDirectory, ing.GetNamespace(), ing.UID, secret.UID)
++	passFileName := fmt.Sprintf("%v-%v-%v.passwd", ing.GetNamespace(), ing.UID, secret.UID)
++	passFilePath := filepath.Join(a.authDirectory, passFileName)
++
++	// Ensure password file name does not contain any path traversal characters.
++	if a.authDirectory != filepath.Dir(passFilePath) || passFileName != filepath.Base(passFilePath) {
++		return nil, ing_errors.LocationDeniedError{
++			Reason: fmt.Errorf("invalid password file name: %s", passFileName),
++		}
++	}
+ 
+ 	switch secretType {
+ 	case fileAuth:
+-		err = dumpSecretAuthFile(passFilename, secret)
++		err = dumpSecretAuthFile(passFilePath, secret)
+ 		if err != nil {
+ 			return nil, err
+ 		}
+ 	case mapAuth:
+-		err = dumpSecretAuthMap(passFilename, secret)
++		err = dumpSecretAuthMap(passFilePath, secret)
+ 		if err != nil {
+ 			return nil, err
+ 		}
+@@ -225,9 +234,9 @@ func (a auth) Parse(ing *networking.Ingress) (interface{}, error) {
+ 	return &Config{
+ 		Type:       at,
+ 		Realm:      realm,
+-		File:       passFilename,
++		File:       passFilePath,
+ 		Secured:    true,
+-		FileSHA:    file.SHA1(passFilename),
++		FileSHA:    file.SHA1(passFilePath),
+ 		Secret:     name,
+ 		SecretType: secretType,
+ 	}, nil
+diff --git a/internal/ingress/controller/controller.go b/internal/ingress/controller/controller.go
+index 652a80e49..5a263551e 100644
+--- a/internal/ingress/controller/controller.go
++++ b/internal/ingress/controller/controller.go
+@@ -420,11 +420,15 @@ func (n *NGINXController) CheckIngress(ing *networking.Ingress) error {
+ 		return err
+ 	}
+ 
++	/* Deactivated to mitigate CVE-2025-1974
++	// TODO: Implement sandboxing so this test can be done safely
+ 	err = n.testTemplate(content)
+ 	if err != nil {
+ 		n.metricCollector.IncCheckErrorCount(ing.ObjectMeta.Namespace, ing.Name)
+ 		return err
+ 	}
++	*/
++
+ 	n.metricCollector.IncCheckCount(ing.ObjectMeta.Namespace, ing.Name)
+ 	endCheck := time.Now().UnixNano() / 1000000
+ 	n.metricCollector.SetAdmissionMetrics(
+diff --git a/internal/ingress/controller/template/template.go b/internal/ingress/controller/template/template.go
+index ed052e4ec..0e0300743 100644
+--- a/internal/ingress/controller/template/template.go
++++ b/internal/ingress/controller/template/template.go
+@@ -1622,11 +1622,11 @@ func buildMirrorLocations(locs []*ingress.Location) string {
+ 		mapped.Insert(loc.Mirror.Source)
+ 		buffer.WriteString(fmt.Sprintf(`location = %v {
+ internal;
+-proxy_set_header Host "%v";
+-proxy_pass "%v";
++proxy_set_header Host %v;
++proxy_pass %v;
+ }
+ 
+-`, loc.Mirror.Source, loc.Mirror.Host, loc.Mirror.Target))
++`, strconv.Quote(loc.Mirror.Source), strconv.Quote(loc.Mirror.Host), strconv.Quote(loc.Mirror.Target)))
+ 	}
+ 
+ 	return buffer.String()
+diff --git a/rootfs/etc/nginx/template/nginx.tmpl b/rootfs/etc/nginx/template/nginx.tmpl
+index 6b8e750b0..0a87de5ee 100644
+--- a/rootfs/etc/nginx/template/nginx.tmpl
++++ b/rootfs/etc/nginx/template/nginx.tmpl
+@@ -879,7 +879,7 @@ stream {
+ 
+         {{ if not ( empty $server.CertificateAuth.MatchCN ) }}
+         {{ if gt (len $server.CertificateAuth.MatchCN) 0 }}
+-        if ( $ssl_client_s_dn !~ {{ $server.CertificateAuth.MatchCN }} ) {
++        if ( $ssl_client_s_dn !~ {{ $server.CertificateAuth.MatchCN | quote }} ) {
+             return 403 "client certificate unauthorized";
+         }
+         {{ end }}
+@@ -1082,7 +1082,7 @@ stream {
+             set $target {{ changeHostPort $externalAuth.URL $authUpstreamName }};
+             {{ else }}
+             proxy_http_version {{ $location.Proxy.ProxyHTTPVersion }};
+-            set $target {{ $externalAuth.URL }};
++            set $target {{ $externalAuth.URL | quote }};
+             {{ end }}
+             proxy_pass $target;
+         }
+@@ -1120,7 +1120,7 @@ stream {
+             {{ buildOpentelemetryForLocation $all.Cfg.EnableOpentelemetry $all.Cfg.OpentelemetryTrustIncomingSpan $location }}
+ 
+             {{ if $location.Mirror.Source }}
+-            mirror {{ $location.Mirror.Source }};
++            mirror {{ $location.Mirror.Source | quote }};
+             mirror_request_body {{ $location.Mirror.RequestBody }};
+             {{ end }}

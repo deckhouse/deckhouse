@@ -44,6 +44,7 @@ locals {
   node_network_cidr = var.providerClusterConfiguration.nodeNetworkCIDR
   existing_zone_to_subnet_id_map = lookup(var.providerClusterConfiguration, "existingZoneToSubnetIDMap", {})
   nat_instance_internal_subnet_id = lookup(var.providerClusterConfiguration.withNATInstance, "internalSubnetID", null)
+  nat_instance_internal_subnet_cidr = lookup(var.providerClusterConfiguration.withNATInstance, "internalSubnetCIDR", null)
   nat_instance_external_subnet_id = lookup(var.providerClusterConfiguration.withNATInstance, "externalSubnetID", null)
   nat_instance_external_address = lookup(var.providerClusterConfiguration.withNATInstance, "natInstanceExternalAddress", null)
   nat_instance_internal_address = lookup(var.providerClusterConfiguration.withNATInstance, "natInstanceInternalAddress", null)

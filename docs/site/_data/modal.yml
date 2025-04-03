@@ -2,36 +2,36 @@ request-access:
   header:
     ru:
       title: "Запросить пробный доступ"
-      text: "Заполните форму и в течение ближайшего рабочего дня мы свяжемся с вами для уточнения деталей - будьте на связи!"
+      text: "Заполните форму, и&nbsp;в&nbsp;течение ближайшего рабочего дня мы&nbsp;свяжемся с&nbsp;вами для&nbsp;уточнения деталей — будьте на&nbsp;связи!"
     en:
       title: " Request trial access"
-      text: "Fill out the form, and we will contact you within the next business day — please stay in touch!"
+      text: "Fill out the form, and we&nbsp;will contact you within the next business day&nbsp;&mdash; please stay in&nbsp;touch!"
   success-message:
     ru:
       title: "Запрос получен"
-      text: "Спасибо за ваш интерес к платформе Deckhouse Kubernetes Platform!<br/>В течение ближайшего рабочего дня мы свяжемся с вами для уточнения деталей запроса - будьте на связи!"
+      text: "Спасибо за ваш интерес к платформе Deckhouse Kubernetes Platform!<br/>В течение ближайшего рабочего дня мы свяжемся с вами для уточнения деталей запроса — будьте на связи!"
     en:
       title: "Thank you"
       text: "Thank you for your interest in the Deckhouse Kubernetes Platform!<br/>We will contact you within the next business day regarding the details of your request — please be in touch!"
   error-message:
     ru:
       title: "Ошибка"
-      text: "Что-то пошло не так"
+      text: "Что-то пошло не так..."
     en:
       title: "Error"
       text: "Something went wrong..."
 request-callback:
   header:
     ru:
-      title: "Запросить обратный звонок"
-      text: "Оставьте ваши данные, и мы свяжемся с вами."
+      title: "Связаться со специалистом Deckhouse"
+      text: "Ответим на вопросы о продуктах, разберем ваш кейс, назначим встречу с техническим экспертом"
     en:
       title: "Request callback"
       text: "Fill out this form, and we will contact you soon."
   сommunication-method:
-    ru: 
+    ru:
       title: "Удобный способ связи"
-    en: 
+    en:
       title: "Select your preferred communication means"
   success-message:
     ru:

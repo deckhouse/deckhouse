@@ -189,4 +189,62 @@ summary: Add valid sections
       "section 'invalid_section' is not an allowed section in block 2"
     );
   });
+
+  test('[summary] valid yaml with brackets', () => {
+    const entry = `
+section: valid_section
+type: chore
+summary: "[grafana] fix usage of bundled vars in env"
+  `;
+    expect(() => validatePullRequestChangelog(entry, allowedSections)).not.toThrow();
+  });
+
+  test('[summary] invalid yaml with brackets to valid', () => {
+    const entry = `
+section: valid_section
+type: chore
+summary: [grafana] fix usage of bundled vars in env
+  `;
+    expect(() => validatePullRequestChangelog(entry, allowedSections)).not.toThrow();
+  });
+
+  test('[impact] invalid yaml with brackets to valid', () => {
+    const entry = `
+section: valid_section
+type: chore
+summary: [grafana] fix usage of bundled vars in env
+impact: [test] test
+  `;
+    expect(() => validatePullRequestChangelog(entry, allowedSections)).not.toThrow();
+  });
+
+  test('[impact] valid yaml with brackets', () => {
+    const entry = `
+section: valid_section
+type: chore
+summary: "[grafana] fix usage of bundled vars in env"
+impact: "[test] test"
+  `;
+    expect(() => validatePullRequestChangelog(entry, allowedSections)).not.toThrow();
+  });
+
+  test('[impact] valid yaml with brackets', () => {
+    const entry = `
+section: valid_section
+type: chore
+summary: "[grafana] fix usage of bundled vars in env"
+impact: [test]
+  `;
+    expect(() => validatePullRequestChangelog(entry, allowedSections)).not.toThrow();
+  });
+
+  test('[impact] colon missing', () => {
+    const entry = `
+section: valid_section
+type: chore
+summary: grafana fix usage of bundled vars in env
+impact test
+  `;
+    expect(() => validatePullRequestChangelog(entry, allowedSections)).toThrow();
+  });
 });

@@ -1,5 +1,10 @@
 cilium-hubble:
     - version: 2
+control-plane-manager:
+    - version: 2
+      description:
+        en: Delete `etcd.externalMembersNames`
+        ru: Удалите `etcd.externalMembersNames`
 dashboard:
     - version: 2
     - version: 3
@@ -10,6 +15,9 @@ descheduler:
         ru: Удалите `settings`.
 extended-monitoring:
     - version: 2
+      description:
+        en: If the `.imageAvailability.skipRegistryCertVerification` field is set to `true`, add `.imageAvailability.registry.tlsConfig.insecureSkipVerify=true`. Then, delete the `skipRegistryCertVerification` field from the object. If the `.imageAvailability` object becomes empty after this change, delete it.
+        ru: Если для поля `.imageAvailability.skipRegistryCertVerification` установлено значение `true`, добавьте поле `.imageAvailability.registry.tlsConfig.insecureSkipVerify=true`. После этого удалите поле `.imageAvailability.skipRegistryCertVerification` из объекта. Если в результате объект `.imageAvailability` становится пуст, удалите его.
 istio:
     - version: 2
 metallb:
@@ -24,8 +32,8 @@ openvpn:
 prometheus:
     - version: 2
       description:
-        en: todo en
-        ru: todo ru
+        en: Remove the `.auth.password` field. If the `.auth` object becomes empty after this change, delete it.
+        ru: Удалите поле `.auth.password`. Если в результате объект `.auth` становится пуст, удалите его.
 upmeter:
     - version: 2
     - version: 3

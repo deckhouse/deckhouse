@@ -475,3 +475,35 @@
           kubectl -n d8-upmeter delete certificate -l upmeter-probe=cert-manager
           kubectl -n d8-upmeter get secret -ojson | jq -r '.items[] | .metadata.name' | grep upmeter-cm-probe | xargs -n 1 -- kubectl -n d8-upmeter delete secret
           ```
+
+    - alert: D8UpmeterDiskUsage
+      expr: |
+        100 * (
+        kubelet_volume_stats_used_bytes{persistentvolumeclaim="data-upmeter-0",namespace="d8-upmeter"} / kubelet_volume_stats_capacity_bytes{persistentvolumeclaim="data-upmeter-0",namespace="d8-upmeter"}
+        ) > 80
+      for: 10m
+      labels:
+        severity_level: "5"
+        tier: cluster
+        d8_module: upmeter
+        d8_component: server
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        summary: Upmeter disk usage is over 80%.
+        description: |
+          The only way to resolve is to recreate the PVC using the following steps:
+
+          1. Save the PVC data if you need it.
+
+          1. Delete the PVC and restart `upmeter`:
+
+             ```shell
+             kubectl -n d8-upmeter delete persistentvolumeclaim/data-upmeter-0 pod/upmeter-0
+             ```
+
+          1. Check the status of the created PVC:
+
+             ```shell
+             kubectl -n d8-upmeter get pvc
+             ```

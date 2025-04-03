@@ -271,7 +271,8 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		Image:           params.Registry,
 		ImagePullPolicy: apiv1.PullAlways,
 		Command: []string{
-			"/deckhouse/deckhouse",
+			"/usr/bin/deckhouse-controller",
+			"start",
 		},
 		WorkingDir: "/deckhouse",
 		ReadinessProbe: &apiv1.Probe{
@@ -365,6 +366,10 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		{
 			Name:  "HELM_HISTORY_MAX",
 			Value: "3",
+		},
+		{
+			Name:  "GOGC",
+			Value: "50",
 		},
 		{
 			Name:  "ADDON_OPERATOR_CONFIG_MAP",

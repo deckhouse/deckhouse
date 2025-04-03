@@ -70,6 +70,10 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 		}
 		for _, namespace := range namespaces.Items {
 			if namespace.Name == project.Name {
+				if _, ok := namespace.Annotations[v1alpha2.NamespaceAnnotationAdopt]; ok {
+					continue
+				}
+
 				msg := fmt.Sprintf("The '%s' project cannot be created, a namespace with its name exists", project.Name)
 				return admission.Denied(msg)
 			}
@@ -89,6 +93,11 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 		if project.Status.State == v1alpha2.ProjectStateError {
 			return admission.Allowed("").WithWarnings("The project skip validation due to the status")
 		}
+	}
+
+	// skip project with empty template
+	if project.Spec.ProjectTemplateName == "" {
+		return admission.Allowed("")
 	}
 
 	template, err := v.projectTemplateByName(context.Background(), project.Spec.ProjectTemplateName)

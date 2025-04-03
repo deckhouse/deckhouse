@@ -63,7 +63,7 @@ func NewChecker(params *Params) *Checker {
 }
 
 func (c *Checker) Check(ctx context.Context) (*CheckResult, error) {
-	kubeCl, err := c.GetKubeClient()
+	kubeCl, err := c.GetKubeClient(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +124,7 @@ func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.Kuberne
 		return "", fmt.Errorf("unable to get provider cluster config yaml: %w", err)
 	}
 
-	inClusterMetaConfig, err := entity.GetMetaConfig(kubeCl)
+	inClusterMetaConfig, err := entity.GetMetaConfig(ctx, kubeCl)
 	if err != nil {
 		return "", fmt.Errorf("unable to get in-cluster meta config: %w", err)
 	}
@@ -143,9 +143,9 @@ func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.Kuberne
 	return CheckStatusOutOfSync, nil
 }
 
-func (c *Checker) checkInfra(_ context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraformContext *terraform.TerraformContext) (CheckStatus, *Statistics, error) {
+func (c *Checker) checkInfra(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraformContext *terraform.TerraformContext) (CheckStatus, *Statistics, error) {
 	stat, err := CheckState(
-		kubeCl, metaConfig, terraformContext,
+		ctx, kubeCl, metaConfig, terraformContext,
 		CheckStateOptions{
 			CommanderMode: c.CommanderMode,
 			StateCache:    c.StateCache,
@@ -193,12 +193,12 @@ func resolveStatisticsStatus(status string) CheckStatus {
 	panic(fmt.Sprintf("unknown check infra status: %q", status))
 }
 
-func (c *Checker) GetKubeClient() (*client.KubernetesClient, error) {
+func (c *Checker) GetKubeClient(ctx context.Context) (*client.KubernetesClient, error) {
 	if c.KubeClient != nil {
 		return c.KubeClient, nil
 	}
 
-	kubeCl, err := kubernetes.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(c.SSHClient))
+	kubeCl, err := kubernetes.ConnectToKubernetesAPI(ctx, ssh.NewNodeInterfaceWrapper(c.SSHClient))
 	if err != nil {
 		return nil, fmt.Errorf("unable to connect to kubernetes api over ssh: %w", err)
 	}

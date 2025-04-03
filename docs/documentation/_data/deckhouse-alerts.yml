@@ -16,7 +16,7 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        A certificate in Secret `{{$labels.namespace}}/{{$labels.name}}` has expired.
+        A certificate in Secret `{{$labels.secret_namespace}}/{{$labels.secret_name}}` has expired.
 
         Ways to resolve:
 
@@ -25,13 +25,13 @@ alerts:
           1. Retrieve the certificate name from the Secret:
 
              ```bash
-             cert=$(kubectl get secret -n {{$labels.namespace}} {{$labels.name}} -o 'jsonpath={.metadata.annotations.cert-manager\.io/certificate-name}')
+             cert=$(kubectl get secret -n {{$labels.secret_namespace}} {{$labels.secret_name}} -o 'jsonpath={.metadata.annotations.cert-manager\.io/certificate-name}')
              ```
 
           2. Check the certificate status and investigate why it hasn't been updated:
 
              ```bash
-             kubectl describe cert -m {{$labels.namespace}} "$cert"
+             kubectl describe cert -m {{$labels.secret_namespace}} "$cert"
              ```
       summary: |
         Certificate has expired.
@@ -43,7 +43,7 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        A certificate in Secret `{{$labels.namespace}}/{{$labels.name}}` will expire in less than two weeks.
+        A certificate in Secret `{{$labels.secret_namespace}}/{{$labels.secret_name}}` will expire in less than two weeks.
 
         Ways to resolve:
 
@@ -52,13 +52,13 @@ alerts:
           1. Retrieve the certificate name from the Secret:
 
              ```bash
-             cert=$(kubectl get secret -n {{$labels.namespace}} {{$labels.name}} -o 'jsonpath={.metadata.annotations.cert-manager\.io/certificate-name}')
+             cert=$(kubectl get secret -n {{$labels.secret_namespace}} {{$labels.secret_name}} -o 'jsonpath={.metadata.annotations.cert-manager\.io/certificate-name}')
              ```
 
           2. Check the certificate status and investigate why it hasn't been updated:
 
              ```bash
-             kubectl describe cert -n {{$labels.namespace}} "$cert"
+             kubectl describe cert -n {{$labels.secret_namespace}} "$cert"
              ```
       summary: |
         Certificate is expiring soon.
@@ -517,6 +517,17 @@ alerts:
         Bashible-apiserver is locked for too long
       severity: "6"
       markupFormat: markdown
+    - name: D8CephCsiModuleDeprecated
+      sourceFile: modules/031-ceph-csi/monitoring/prometheus-rules/deprecated-module-alert.yaml
+      moduleUrl: 031-ceph-csi
+      module: ceph-csi
+      edition: ce
+      description: |
+        CephCsi module is deprecated. Please, use [csi-ceph](https://deckhouse.io/products/kubernetes-platform/modules/csi-ceph/stable/) module instead.
+      summary: |
+        CephCsi module is deprecated.
+      severity: "5"
+      markupFormat: markdown
     - name: D8CertExporterPodIsNotReady
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/certificates/certificates-exporter-health.yaml
       moduleUrl: 340-extended-monitoring
@@ -582,6 +593,81 @@ alerts:
       summary: |
         Prometheus can't scrape x509-certificate-exporter metrics.
       severity: "8"
+      markupFormat: markdown
+    - name: D8CheckCloudProviderConfig
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/check_config.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        The provider-cluster-configuration in the cluster contains fields that aren't defined in the schema.
+
+        Steps to troubleshoot:
+
+        1. Check the logs for details:
+
+           ```bash
+           kubectl logs -n d8-system -l app=deckhouse --tail=-1 | grep check_provider_cluster_configuration | grep error | jq .msg
+           ```
+
+        1. Remove the unsupported fields from the provider-cluster-configuration:
+
+           ```bash
+           kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+           ```
+      summary: |
+        Provider-cluster-configuration contains unsupported fields.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8CheckClusterConfig
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/check_config.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        The cluster-configuration in the cluster contains fields that aren't defined in the schema.
+
+        Steps to troubleshoot:
+
+        1. Check the logs for details:
+
+           ```bash
+           kubectl logs -n d8-system -l app=deckhouse --tail=-1 | grep check_cluster_configuration | grep error | jq .msg
+           ```
+
+        1. Remove the unsupported fields from the cluster-configuration:
+
+           ```bash
+           kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
+           ```
+      summary: |
+        Cluster-configuration contains unsupported fields.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8CheckStaticClusterConfig
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/check_config.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        The static-cluster-configuration in the cluster contains fields that aren't defined in the schema.
+
+        Steps to troubleshoot:
+
+        1. Check the logs for details:
+
+           ```bash
+           kubectl logs -n d8-system -l app=deckhouse --tail=-1 | grep check_static_cluster_configuration | grep error | jq .msg
+           ```
+
+        1. Remove the unsupported fields from the static-cluster-configuration:
+
+           ```bash
+           kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit static-cluster-configuration
+           ```
+      summary: |
+        Static-cluster-configuration contains unsupported fields.
+      severity: "4"
       markupFormat: markdown
     - name: D8CloudDataDiscovererCloudRequestError
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/cloud-data-discovery.tpl
@@ -701,47 +787,9 @@ alerts:
       severity: "2"
       markupFormat: markdown
     - name: D8CNIMisconfigured
-      sourceFile: modules/021-cni-cilium/monitoring/prometheus-rules/cni-checks.yaml
-      moduleUrl: 021-cni-cilium
-      module: cni-cilium
-      edition: ce
-      description: |
-        Steps to troubleshoot:
-
-        1. Find the desired settings in the ConfigMap `d8-system/desired-cni-moduleconfig` by running the following command:
-
-           ```bash
-           kubectl -n d8-system get configmap desired-cni-moduleconfig -o yaml
-           ```
-
-        1. Update the conflicting settings in the CNI `{{ $labels.cni }}` ModuleConfig to match the desired configuration.
-      summary: |
-        Settings in the secret d8-cni-configuration conflict with the ModuleConfig.
-      severity: "5"
-      markupFormat: markdown
-    - name: D8CNIMisconfigured
-      sourceFile: modules/035-cni-flannel/monitoring/prometheus-rules/cni-checks.yaml
-      moduleUrl: 035-cni-flannel
-      module: cni-flannel
-      edition: ce
-      description: |
-        Steps to troubleshoot:
-
-        1. Find the desired settings in the ConfigMap `d8-system/desired-cni-moduleconfig` by running the following command:
-
-           ```bash
-           kubectl -n d8-system get configmap desired-cni-moduleconfig -o yaml
-           ```
-
-        1. Update the conflicting settings in the CNI `{{ $labels.cni }}` ModuleConfig to match the desired configuration.
-      summary: |
-        Settings in the secret d8-cni-configuration conflict with the ModuleConfig.
-      severity: "5"
-      markupFormat: markdown
-    - name: D8CNIMisconfigured
-      sourceFile: modules/035-cni-simple-bridge/monitoring/prometheus-rules/cni-checks.yaml
-      moduleUrl: 035-cni-simple-bridge
-      module: cni-simple-bridge
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/cni-checks.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
       edition: ce
       description: |
         Steps to troubleshoot:
@@ -2694,6 +2742,31 @@ alerts:
         One or more Upmeter agent pods is NOT Running
       severity: "6"
       markupFormat: markdown
+    - name: D8UpmeterDiskUsage
+      sourceFile: modules/500-upmeter/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 500-upmeter
+      module: upmeter
+      edition: ce
+      description: |
+        The only way to resolve is to recreate the PVC using the following steps:
+
+        1. Save the PVC data if you need it.
+
+        1. Delete the PVC and restart `upmeter`:
+
+           ```shell
+           kubectl -n d8-upmeter delete persistentvolumeclaim/data-upmeter-0 pod/upmeter-0
+           ```
+
+        1. Check the status of the created PVC:
+
+           ```shell
+           kubectl -n d8-upmeter get pvc
+           ```
+      summary: |
+        Upmeter disk usage is over 80%.
+      severity: "5"
+      markupFormat: markdown
     - name: D8UpmeterProbeGarbageConfigmap
       sourceFile: modules/500-upmeter/monitoring/prometheus-rules/alerting.yaml
       moduleUrl: 500-upmeter
@@ -4019,23 +4092,6 @@ alerts:
         Soft eviction of nodefs on node {{$labels.node}} at mountpoint {{$labels.mountpoint}} is in progress.
       severity: "9"
       markupFormat: markdown
-    - name: KubernetesAPFRejectRequests
-      sourceFile: modules/011-flow-schema/monitoring/prometheus-rules/flow-schema.yaml
-      moduleUrl: 011-flow-schema
-      module: flow-schema
-      edition: ce
-      description: |
-        > This alert is experimental.
-
-        To display the APF schema queue requests, use the following expression:
-
-        ```promql
-        apiserver_flowcontrol_current_inqueue_requests{flow_schema="d8-serviceaccounts"}
-        ```
-      summary: |
-        APF flow schema d8-serviceaccounts has rejected API requests.
-      severity: "9"
-      markupFormat: markdown
     - name: KubernetesCoreDNSHasCriticalErrors
       sourceFile: modules/042-kube-dns/monitoring/prometheus-rules/kubernetes/dns.yaml
       moduleUrl: 042-kube-dns
@@ -4331,6 +4387,19 @@ alerts:
         A LoadBalancer has not been created.
       severity: "4"
       markupFormat: default
+    - name: LokiRetentionPerionViolation
+      sourceFile: modules/462-loki/monitoring/prometheus-rules/alerts.tpl
+      moduleUrl: 462-loki
+      module: loki
+      edition: ce
+      description: |-
+        Not enough disk space to retain logs for 168 hours. Current effective retention period is {{ $value }} hours.
+
+        You need either decrease expected `retentionPeriodHours` or increase resize Loki PersistentVolumeClaim
+      summary: |
+        Not enough disk space to retain logs for 168 hours
+      severity: "4"
+      markupFormat: markdown
     - name: MigrationRequiredFromRBDInTreeProvisionerToCSIDriver
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/migration-alerts.tpl
       moduleUrl: 340-monitoring-deckhouse
@@ -4412,6 +4481,23 @@ alerts:
       summary: |
         Module {{ $labels.moduleName }} is matched by the deprecated update policy {{ $labels.updatePolicy }}.
       severity: "4"
+      markupFormat: markdown
+    - name: ModuleIsInUnmanagedMode
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        Module `{{ $labels.moduleName }}` is running in unmanaged mode. In this mode, its state is not reconciled, which prevents configuration or hook changes from being applied automatically.
+
+        To switch the module back to normal mode, edit the corresponding ModuleConfig resource with the following command:
+
+        ```bash
+        kubectl patch moduleconfig {{ $labels.name }} --type=json -p='[{"op": "remove", "path": "/spec/managementState"}]'
+        ```
+      summary: |
+        Module {{ $labels.moduleName }} is running in unmanaged mode.
+      severity: "6"
       markupFormat: markdown
     - name: ModuleReleaseIsBlockedByRequirements
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
@@ -5669,20 +5755,19 @@ alerts:
       markupFormat: markdown
 modules-having-alerts:
     - admission-policy-engine
+    - ceph-csi
     - cert-manager
     - chrony
     - cloud-provider-yandex
     - cni-cilium
-    - cni-flannel
-    - cni-simple-bridge
     - control-plane-manager
     - documentation
     - extended-monitoring
-    - flow-schema
     - ingress-nginx
     - istio
     - kube-dns
     - log-shipper
+    - loki
     - metallb
     - monitoring-applications
     - monitoring-custom

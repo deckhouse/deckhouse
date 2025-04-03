@@ -19,7 +19,6 @@ package hooks
 import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -174,7 +173,7 @@ func discoveryIstiodHealthHook(input *go_hook.HookInput) error {
 	input.Values.Set(versionMapPath, versionMap)
 	if !isGlobalVersionIstiodReady {
 		// There is a problem deleting the webhook configuration from helm. It must be deleted in the first place.
-		input.PatchCollector.Delete("admissionregistration.k8s.io/v1", "ValidatingWebhookConfiguration", "", "d8-istio-validator-global", object_patch.InForeground())
+		input.PatchCollector.Delete("admissionregistration.k8s.io/v1", "ValidatingWebhookConfiguration", "", "d8-istio-validator-global")
 	}
 	return nil
 }

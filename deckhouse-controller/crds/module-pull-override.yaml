@@ -45,6 +45,10 @@ spec:
                   type: string
                   description: "Scan interval for checking the image digest. If the digest changes, the module is updated."
                   default: 15s
+                rollback:
+                  type: boolean
+                  description: Indicates whether the module release should be rollback after deleting mpo.
+                  default: false
             status:
               type: object
               properties:
@@ -95,6 +99,10 @@ spec:
                   type: string
                   description: Scan interval for checking the image digest. If the digest changes, the module is updated.
                   default: 15s
+                rollback:
+                  type: boolean
+                  description: Indicates whether the module release should be rollback after deleting mpo.
+                  default: false
             status:
               type: object
               properties:
@@ -122,3 +130,7 @@ spec:
           type: string
           jsonPath: .status.message
           description: Detailed description.
+        - name: Rollback
+          type: string
+          jsonPath: .spec.rollback
+          description: Indicates whether the module release should be rollback after deleting mpo.
