@@ -69,7 +69,7 @@ func (c *MasterNodeGroupController) populateNodeToHost(ctx *context.Context) err
 	}
 
 	nodeToHost, err := ssh.CheckSSHHosts(userPassedHosts, nodesNames, string(c.convergeState.Phase), func(msg string) bool {
-		if ctx.CommanderMode() {
+		if ctx.CommanderMode() || ctx.ChangesSettings().AutoApprove {
 			return true
 		}
 		return input.NewConfirmation().WithMessage(msg).Ask()
