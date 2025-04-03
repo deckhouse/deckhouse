@@ -72,6 +72,8 @@ const minK8sVersionRequirementKey = "controlPlaneManager:minUsedControlPlaneKube
 const maxUsedK8sVersionSecretKey = "maxUsedControlPlaneKubernetesVersion"
 const deckhouseDefaultK8sVersionSecretKey = "deckhouseDefaultKubernetesVersion"
 
+// This value is set on the controller build in the deckhouse-controller/go-build.sh script.
+// Do not touch it !!!
 var DefaultKubernetesVersion = "1.30"
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
