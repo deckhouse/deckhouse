@@ -28,7 +28,12 @@ type servicesManager struct {
 	settings AppSettings
 }
 
-func (manager *servicesManager) applyConfig(config NodeServicesConfigModel) (changes changesModel, err error) {
+func (manager *servicesManager) applyConfig(config NodeServicesConfigModel) (changesModel, error) {
+	var (
+		changes changesModel
+		err     error
+	)
+
 	// Lock to prevent concurrent config changes
 	manager.m.Lock()
 	defer manager.m.Unlock()
@@ -42,10 +47,9 @@ func (manager *servicesManager) applyConfig(config NodeServicesConfigModel) (cha
 		config.Config.PKI,
 	); err != nil {
 		err = fmt.Errorf("error saving PKI files: %w", err)
-		return
-	} else {
-		sum.Write([]byte(hash))
+		return changes, err
 	}
+	sum.Write([]byte(hash))
 
 	// Process the templates with the given data and create the static pod and configuration files
 	if changes.Auth, hash, err = processTemplate(
@@ -53,20 +57,18 @@ func (manager *servicesManager) applyConfig(config NodeServicesConfigModel) (cha
 		authConfigPath,
 	); err != nil {
 		err = fmt.Errorf("error processing Auth template: %w", err)
-		return
-	} else {
-		sum.Write([]byte(hash))
+		return changes, err
 	}
+	sum.Write([]byte(hash))
 
 	if changes.Distribution, hash, err = processTemplate(
 		config.toDistributionConfig(manager.settings.HostIP),
 		distributionConfigPath,
 	); err != nil {
 		err = fmt.Errorf("error processing Distribution template: %w", err)
-		return
-	} else {
-		sum.Write([]byte(hash))
+		return changes, err
 	}
+	sum.Write([]byte(hash))
 
 	mirrorer := config.toMirrorerConfig(manager.settings.RegistryAddress)
 	hasMirrorer := mirrorer != nil && len(mirrorer.Upstreams) > 0
@@ -77,15 +79,14 @@ func (manager *servicesManager) applyConfig(config NodeServicesConfigModel) (cha
 			mirrorerConfigPath,
 		); err != nil {
 			err = fmt.Errorf("error processing Mirrorer template: %w", err)
-			return
-		} else {
-			sum.Write([]byte(hash))
+			return changes, err
 		}
+		sum.Write([]byte(hash))
 	} else {
 		// Delete the mirrorer config file
 		if changes.Mirrorer, err = deleteFile(mirrorerConfigPath); err != nil {
 			err = fmt.Errorf("error deleting Mirrorer config file: %w", err)
-			return
+			return changes, err
 		}
 	}
 
@@ -103,13 +104,18 @@ func (manager *servicesManager) applyConfig(config NodeServicesConfigModel) (cha
 		registryStaticPodConfigPath,
 	); err != nil {
 		err = fmt.Errorf("error processing static pod template: %w", err)
-		return
+		return changes, err
 	}
 
-	return
+	return changes, err
 }
 
-func (manager *servicesManager) StopServices() (changes changesModel, err error) {
+func (manager *servicesManager) StopServices() (changesModel, error) {
+	var (
+		changes changesModel
+		err     error
+	)
+
 	// Lock to prevent concurrent config changes
 	manager.m.Lock()
 	defer manager.m.Unlock()
@@ -117,31 +123,31 @@ func (manager *servicesManager) StopServices() (changes changesModel, err error)
 	// Delete the static pod file
 	if changes.Pod, err = deleteFile(registryStaticPodConfigPath); err != nil {
 		err = fmt.Errorf("error deleting static pod file: %w", err)
-		return
+		return changes, err
 	}
 
 	// Delete the auth config file
 	if changes.Auth, err = deleteFile(authConfigPath); err != nil {
 		err = fmt.Errorf("error deleting Auth config file: %w", err)
-		return
+		return changes, err
 	}
 
 	// Delete the distribution config file
 	if changes.Distribution, err = deleteFile(distributionConfigPath); err != nil {
 		err = fmt.Errorf("error deleting Distribution config file: %w", err)
-		return
+		return changes, err
 	}
 
 	// Delete the mirrorer config file
 	if changes.Mirrorer, err = deleteFile(mirrorerConfigPath); err != nil {
 		err = fmt.Errorf("error deleting Mirrorer config file: %w", err)
-		return
+		return changes, err
 	}
 
 	if changes.PKI, err = deleteDirectory(pkiConfigDirectoryPath); err != nil {
 		err = fmt.Errorf("error deleting registry PKI directory: %w", err)
-		return
+		return changes, err
 	}
 
-	return
+	return changes, err
 }

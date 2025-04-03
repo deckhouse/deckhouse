@@ -54,7 +54,7 @@ type authConfigUserModel struct {
 
 type distributionConfigModel struct {
 	ListenAddress string
-	HttpSecret    string
+	HTTPSecret    string
 	Ingress       bool
 	Upstream      *distributionConfigUpstreamModel
 }
@@ -79,7 +79,7 @@ func (value NodeServicesConfigModel) toDistributionConfig(listenAddress string) 
 
 	model := distributionConfigModel{
 		ListenAddress: listenAddress,
-		HttpSecret:    registry.HttpSecret,
+		HTTPSecret:    registry.HTTPSecret,
 		Ingress:       config.PKI.IngressClientCACert != "",
 	}
 
@@ -151,8 +151,8 @@ type staticPodConfigModel struct {
 }
 
 type staticPodProxyModel struct {
-	Http    string
-	Https   string
+	HTTP    string
+	HTTPS   string
 	NoProxy string
 }
 
@@ -179,9 +179,9 @@ func (value NodeServicesConfigModel) toStaticPodConfig(images staticPodImagesMod
 	proxy := config.Proxy
 	if proxy != nil {
 		model.Proxy = &staticPodProxyModel{
-			Http:    proxy.Http,
-			Https:   proxy.Https,
-			NoProxy: proxy.Https,
+			HTTP:    proxy.HTTP,
+			HTTPS:   proxy.HTTPS,
+			NoProxy: proxy.NoProxy,
 		}
 	}
 

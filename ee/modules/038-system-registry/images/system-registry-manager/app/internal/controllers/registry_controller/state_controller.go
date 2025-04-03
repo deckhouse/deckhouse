@@ -7,11 +7,8 @@ package registry_controller
 
 import (
 	"context"
-	"embeded-registry-manager/internal/state"
 	"errors"
 	"fmt"
-
-	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/pki"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -22,6 +19,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/pki"
+
+	"node-services-manager/internal/state"
 )
 
 type StateController = stateController
@@ -46,7 +47,7 @@ type stateController struct {
 	stateOK bool
 }
 
-func (sc *stateController) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
+func (sc *stateController) SetupWithManager(mgr ctrl.Manager) error {
 	controllerName := "global-state-controller"
 
 	sc.eventRecorder = mgr.GetEventRecorderFor(controllerName)
@@ -103,19 +104,21 @@ func (sc *stateController) SetupWithManager(ctx context.Context, mgr ctrl.Manage
 	return nil
 }
 
-func (sc *stateController) Reconcile(ctx context.Context, _ ctrl.Request) (result ctrl.Result, err error) {
+func (sc *stateController) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result, error) {
+	var err error
+
 	log := ctrl.LoggerFrom(ctx)
 
 	config, err := state.LoadModuleConfig(ctx, sc.Client)
 	if err != nil {
 		err = fmt.Errorf("cannot load module config: %w", err)
-		return
+		return ctrl.Result{}, err
 	}
 
 	if !config.Enabled {
 		log.Info("Module disabled will not reconcile other objects")
 
-		return
+		return ctrl.Result{}, err
 	}
 
 	if err = sc.ensurePKI(ctx, &sc.globalPKI); err != nil {
@@ -131,11 +134,11 @@ func (sc *stateController) Reconcile(ctx context.Context, _ ctrl.Request) (resul
 			sc.stateOK = false
 
 			err = nil
-			return
+			return ctrl.Result{}, err
 		}
 
 		err = fmt.Errorf("cannot ensure PKI: %w", err)
-		return
+		return ctrl.Result{}, err
 	}
 
 	if err = sc.ensureUserSecret(
@@ -144,7 +147,7 @@ func (sc *stateController) Reconcile(ctx context.Context, _ ctrl.Request) (resul
 		&sc.userRO,
 	); err != nil {
 		err = fmt.Errorf("cannot ensure secret %v for user: %w", state.UserROSecretName, err)
-		return
+		return ctrl.Result{}, err
 	}
 
 	if err = sc.ensureUserSecret(
@@ -153,7 +156,7 @@ func (sc *stateController) Reconcile(ctx context.Context, _ ctrl.Request) (resul
 		&sc.userRW,
 	); err != nil {
 		err = fmt.Errorf("cannot ensure secret %v for user: %w", state.UserRWSecretName, err)
-		return
+		return ctrl.Result{}, err
 	}
 
 	if err = sc.ensureUserSecret(
@@ -162,7 +165,7 @@ func (sc *stateController) Reconcile(ctx context.Context, _ ctrl.Request) (resul
 		&sc.userMirrorPuller,
 	); err != nil {
 		err = fmt.Errorf("cannot ensure secret %v for user: %w", state.UserMirrorPullerName, err)
-		return
+		return ctrl.Result{}, err
 	}
 
 	if err = sc.ensureUserSecret(
@@ -171,12 +174,12 @@ func (sc *stateController) Reconcile(ctx context.Context, _ ctrl.Request) (resul
 		&sc.userMirrorPusher,
 	); err != nil {
 		err = fmt.Errorf("cannot ensure secret %v for user: %w", state.UserMirrorPusherName, err)
-		return
+		return ctrl.Result{}, err
 	}
 
 	if err = sc.ensureGlobalSecrets(ctx); err != nil {
 		err = fmt.Errorf("cannot ensure global secrets: %w", err)
-		return
+		return ctrl.Result{}, err
 	}
 
 	if !sc.stateOK {
@@ -189,7 +192,7 @@ func (sc *stateController) Reconcile(ctx context.Context, _ ctrl.Request) (resul
 		)
 	}
 
-	return
+	return ctrl.Result{}, nil
 }
 
 func (sc *stateController) ensureGlobalSecrets(ctx context.Context) error {
@@ -203,7 +206,7 @@ func (sc *stateController) ensureGlobalSecrets(ctx context.Context) error {
 		sc.Client,
 		state.GlobalSecretsName,
 		sc.Namespace,
-		func(ctx context.Context, secret *corev1.Secret, found bool) error {
+		func(_ context.Context, secret *corev1.Secret, found bool) error {
 			valid := true
 			if found {
 				if err := actualValue.DecodeSecret(secret); err != nil {
@@ -230,10 +233,10 @@ func (sc *stateController) ensureGlobalSecrets(ctx context.Context) error {
 					"Global secrets is invalid, generating new",
 				)
 
-				if randomValue, err := pki.GenerateRandomSecret(); err != nil {
-					return fmt.Errorf("cannot generate HTTP secret: %w", err)
-				} else {
+				if randomValue, err := pki.GenerateRandomSecret(); err == nil {
 					actualValue.HttpSecret = randomValue
+				} else {
+					return fmt.Errorf("cannot generate HTTP secret: %w", err)
 				}
 			}
 
@@ -265,7 +268,7 @@ func (sc *stateController) ensureUserSecret(ctx context.Context, name string, cu
 		sc.Client,
 		name,
 		sc.Namespace,
-		func(ctx context.Context, secret *corev1.Secret, found bool) error {
+		func(_ context.Context, secret *corev1.Secret, found bool) error {
 			valid := true
 			if found {
 				if err := actualValue.DecodeSecret(secret); err != nil {
@@ -298,12 +301,17 @@ func (sc *stateController) ensureUserSecret(ctx context.Context, name string, cu
 					)
 
 					actualValue.UserName = name
-					actualValue.GenerateNewPassword()
+
+					if err := actualValue.GenerateNewPassword(); err != nil {
+						return fmt.Errorf("cannot generate password: %w", err)
+					}
 				}
 			}
 
 			if !actualValue.IsPasswordHashValid() {
-				actualValue.UpdatePasswordHash()
+				if err := actualValue.UpdatePasswordHash(); err != nil {
+					return fmt.Errorf("cannot update password hash: %w", err)
+				}
 
 				sc.logModuleWarning(
 					&log,
@@ -342,7 +350,7 @@ func (sc *stateController) ensurePKI(ctx context.Context, currentValue **state.G
 		sc.Client,
 		state.PKISecretName,
 		sc.Namespace,
-		func(ctx context.Context, secret *corev1.Secret, found bool) error {
+		func(_ context.Context, secret *corev1.Secret, found bool) error {
 			valid := true
 			if found {
 				if err := actualValue.DecodeSecret(secret); err != nil {

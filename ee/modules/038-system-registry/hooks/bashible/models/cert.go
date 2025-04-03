@@ -25,7 +25,7 @@ type CertModel struct {
 func InputValuesToCertModel(input *go_hook.HookInput, objLocation string) (*CertModel, error) {
 	var ret CertModel
 	err := helpers.UnmarshalInputValue(input, objLocation, &ret)
-	if errors.Is(err, helpers.InputValueNotExist) {
+	if errors.Is(err, helpers.ErrInputValueNotExist) {
 		return nil, nil
 	}
 	return &ret, err

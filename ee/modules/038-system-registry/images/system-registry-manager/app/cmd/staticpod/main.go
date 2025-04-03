@@ -12,9 +12,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"embeded-registry-manager/internal/staticpod"
-
 	"k8s.io/client-go/rest"
+
+	"node-services-manager/internal/staticpod"
 )
 
 var (
@@ -43,7 +43,6 @@ func main() {
 	}
 
 	log.Info("Starting Node Services manager")
-	defer log.Info("Stopped")
 
 	log.Info("Setup signal handler")
 	ctx := setupSignalHandler()

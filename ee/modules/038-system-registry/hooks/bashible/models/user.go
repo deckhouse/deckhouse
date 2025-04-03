@@ -31,7 +31,7 @@ func (u *UserModel) Auth() string {
 func InputValuesToUserModel(input *go_hook.HookInput, objLocation string) (*UserModel, error) {
 	var ret UserModel
 	err := helpers.UnmarshalInputValue(input, objLocation, &ret)
-	if errors.Is(err, helpers.InputValueNotExist) {
+	if errors.Is(err, helpers.ErrInputValueNotExist) {
 		return nil, nil
 	}
 	return &ret, err

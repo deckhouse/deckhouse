@@ -19,8 +19,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	"embeded-registry-manager/internal/controllers/registry_controller"
-	"embeded-registry-manager/internal/state"
+	"node-services-manager/internal/controllers/registry_controller"
+	"node-services-manager/internal/state"
 )
 
 const (
@@ -95,7 +95,7 @@ func setupAndStartManager(ctx context.Context, cfg *rest.Config) error {
 		Namespace: state.RegistryNamespace,
 	}
 
-	if err := nodeController.SetupWithManager(ctx, mgr); err != nil {
+	if err := nodeController.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create node controller: %w", err)
 	}
 
@@ -104,7 +104,7 @@ func setupAndStartManager(ctx context.Context, cfg *rest.Config) error {
 		Namespace: state.RegistryNamespace,
 	}
 
-	if err := stateController.SetupWithManager(ctx, mgr); err != nil {
+	if err := stateController.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create state controller: %w", err)
 	}
 

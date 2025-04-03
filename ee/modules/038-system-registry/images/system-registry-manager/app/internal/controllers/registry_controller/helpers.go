@@ -18,7 +18,12 @@ import (
 
 type ensureSecretProcess func(ctx context.Context, secret *corev1.Secret, found bool) error
 
-func ensureSecret(ctx context.Context, cli client.Client, name, namespace string, process ensureSecretProcess) (updated bool, err error) {
+func ensureSecret(ctx context.Context, cli client.Client, name, namespace string, process ensureSecretProcess) (bool, error) {
+	var (
+		updated bool
+		err     error
+	)
+
 	secret := corev1.Secret{}
 	key := types.NamespacedName{
 		Name:      name,
@@ -28,7 +33,7 @@ func ensureSecret(ctx context.Context, cli client.Client, name, namespace string
 	err = cli.Get(ctx, key, &secret)
 	if client.IgnoreNotFound(err) != nil {
 		err = fmt.Errorf("cannot get secret %v k8s object: %w", key.Name, err)
-		return
+		return updated, err
 	}
 
 	// Making a copy unconditionally is a bit wasteful, since we don't
@@ -41,7 +46,7 @@ func ensureSecret(ctx context.Context, cli client.Client, name, namespace string
 	err = process(ctx, &secret, found)
 	if err != nil {
 		err = fmt.Errorf("process error: %w", err)
-		return
+		return updated, err
 	}
 
 	if !found {
@@ -50,7 +55,7 @@ func ensureSecret(ctx context.Context, cli client.Client, name, namespace string
 
 		if err = cli.Create(ctx, &secret); err != nil {
 			err = fmt.Errorf("cannot create k8s object: %w", err)
-			return
+			return updated, err
 		}
 
 		updated = true
@@ -62,7 +67,7 @@ func ensureSecret(ctx context.Context, cli client.Client, name, namespace string
 		if !reflect.DeepEqual(secretOrig, secret) {
 			if err = cli.Update(ctx, &secret); err != nil {
 				err = fmt.Errorf("cannot update k8s object: %w", err)
-				return
+				return updated, err
 			}
 
 			if secretOrig.ResourceVersion != secret.ResourceVersion {
@@ -71,7 +76,7 @@ func ensureSecret(ctx context.Context, cli client.Client, name, namespace string
 		}
 	}
 
-	return
+	return updated, err
 }
 
 // getRegistryAddressAndPathFromImagesRepo returns the registry address and path from the given image repository.

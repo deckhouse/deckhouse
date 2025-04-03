@@ -39,7 +39,7 @@ type DetachedInputModel struct {
 func Get(input *go_hook.HookInput) (*InputModel, error) {
 	var ret InputModel
 	err := helpers.UnmarshalInputValue(input, InputSpecLocation, &ret)
-	if errors.Is(err, helpers.InputValueNotExist) {
+	if errors.Is(err, helpers.ErrInputValueNotExist) {
 		return nil, nil
 	}
 	return &ret, err

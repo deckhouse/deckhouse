@@ -31,7 +31,7 @@ type NodeStatus struct {
 func Get(input *go_hook.HookInput) (*Status, error) {
 	var ret Status
 	err := helpers.UnmarshalInputValue(input, StatusSpecLocation, &ret)
-	if errors.Is(err, helpers.InputValueNotExist) {
+	if errors.Is(err, helpers.ErrInputValueNotExist) {
 		return nil, nil
 	}
 	return &ret, err

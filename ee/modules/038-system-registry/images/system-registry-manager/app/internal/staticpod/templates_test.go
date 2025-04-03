@@ -13,7 +13,7 @@ import (
 func TestTemplatesExists(t *testing.T) {
 	count := 0
 
-	fs.WalkDir(templatesFS, "templates", func(path string, d fs.DirEntry, err error) error {
+	err := fs.WalkDir(templatesFS, "templates", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			t.Errorf("walk error: %v", err)
 		}
@@ -28,6 +28,10 @@ func TestTemplatesExists(t *testing.T) {
 
 		return nil
 	})
+
+	if err != nil {
+		t.Fatalf("cannot walk templates directory: %v", err)
+	}
 
 	t.Logf("Templates found: %v", count)
 
@@ -52,6 +56,14 @@ func testRender(t *testing.T, renderer templateRenderer) {
 
 func TestStaticPodManifest(t *testing.T) {
 	model := staticPodConfigModel{}
+
+	testRender(t, model)
+}
+
+func TestStaticPodManifestWithProxy(t *testing.T) {
+	model := staticPodConfigModel{
+		Proxy: &staticPodProxyModel{},
+	}
 
 	testRender(t, model)
 }

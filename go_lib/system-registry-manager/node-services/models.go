@@ -101,14 +101,14 @@ type RegistryConfig struct {
 	UserRW     User              `json:"user_rw,omitempty" yaml:"user_rw,omitempty"`
 	UserRO     User              `json:"user_ro,omitempty" yaml:"user_ro,omitempty"`
 	Upstream   *UpstreamRegistry `json:"upstream,omitempty" yaml:"upstream,omitempty"`
-	HttpSecret string            `json:"http_secret,omitempty" yaml:"http_secret,omitempty"`
+	HTTPSecret string            `json:"http_secret,omitempty" yaml:"http_secret,omitempty"`
 	Mirrorer   *Mirrorer         `json:"mirrorer,omitempty" yaml:"mirrorer,omitempty"`
 }
 
 func (rd RegistryConfig) Validate() error {
 	var fields []*validation.FieldRules
 
-	fields = append(fields, validation.Field(&rd.HttpSecret, validation.Required))
+	fields = append(fields, validation.Field(&rd.HTTPSecret, validation.Required))
 	fields = append(fields, validation.Field(&rd.UserRO, validation.Required))
 	fields = append(fields, validation.Field(&rd.UserRW, validation.Required))
 
@@ -154,15 +154,15 @@ func (u UpstreamRegistry) Validate() error {
 }
 
 type Proxy struct {
-	Http    string `json:"http,omitempty" yaml:"http,omitempty"`
-	Https   string `json:"https,omitempty" yaml:"https,omitempty"`
+	HTTP    string `json:"http,omitempty" yaml:"http,omitempty"`
+	HTTPS   string `json:"https,omitempty" yaml:"https,omitempty"`
 	NoProxy string `json:"no_proxy,omitempty" yaml:"no_proxy,omitempty"`
 }
 
 func (p Proxy) Validate() error {
 	return validation.ValidateStruct(&p,
-		validation.Field(&p.Http, validation.Required),
-		validation.Field(&p.Https, validation.Required),
+		validation.Field(&p.HTTP, validation.Required),
+		validation.Field(&p.HTTPS, validation.Required),
 		validation.Field(&p.NoProxy, validation.Required),
 	)
 }

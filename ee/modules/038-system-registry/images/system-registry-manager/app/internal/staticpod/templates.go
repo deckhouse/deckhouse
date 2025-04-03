@@ -18,13 +18,13 @@ var templatesFS embed.FS
 
 // RenderTemplate renders the provided template content with the given data
 func renderTemplate(name string, data interface{}) ([]byte, error) {
-	content, err := templatesFS.ReadFile(string(name))
+	content, err := templatesFS.ReadFile(name)
 	if err != nil {
 		return nil, fmt.Errorf("cannot load template: %w", err)
 	}
 
 	funcMap := template.FuncMap{
-		"quote": func(s string) string { return strconv.Quote(s) },
+		"quote": strconv.Quote,
 	}
 
 	tmpl, err := template.New("template").Funcs(funcMap).Parse(string(content))

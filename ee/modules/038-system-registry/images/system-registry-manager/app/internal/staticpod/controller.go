@@ -32,7 +32,7 @@ type servicesController struct {
 	Services  *servicesManager
 }
 
-func (sc *servicesController) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
+func (sc *servicesController) SetupWithManager(_ context.Context, mgr ctrl.Manager) error {
 	controllerName := "services-controller"
 
 	configRequest := reconcile.Request{
@@ -136,7 +136,6 @@ func (sc *servicesController) SetupWithManager(ctx context.Context, mgr ctrl.Man
 	}
 
 	return nil
-
 }
 
 func (sc *servicesController) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result, error) {
@@ -241,7 +240,7 @@ func hasMasterLabel(node *corev1.Node) bool {
 
 func getModuleConfigObject() unstructured.Unstructured {
 	ret := unstructured.Unstructured{}
-	ret.SetAPIVersion(moduleConfigApiVersion)
+	ret.SetAPIVersion(moduleConfigAPIVersion)
 	ret.SetKind(moduleConfigKind)
 	ret.SetName(registryModuleName)
 

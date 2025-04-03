@@ -28,7 +28,7 @@ type ConfigModel registry_models.BashibleConfigSecret
 func Get(input *go_hook.HookInput) (*ConfigModel, error) {
 	var ret ConfigModel
 	err := helpers.UnmarshalInputValue(input, ConfigSpecLocation, &ret)
-	if errors.Is(err, helpers.InputValueNotExist) {
+	if errors.Is(err, helpers.ErrInputValueNotExist) {
 		return nil, nil
 	}
 	return &ret, err

@@ -14,14 +14,14 @@ import (
 )
 
 var (
-	InputValueNotExist = errors.New("input value not exist")
+	ErrInputValueNotExist = errors.New("input value not exist")
 )
 
 func UnmarshalInputValue(input *go_hook.HookInput, objLocation string, objOut any) error {
 	obj := input.Values.Get(objLocation)
 
 	if !obj.Exists() {
-		return fmt.Errorf("failed to get \"%s\": %w", objLocation, InputValueNotExist)
+		return fmt.Errorf("failed to get \"%s\": %w", objLocation, ErrInputValueNotExist)
 	}
 
 	if err := json.Unmarshal([]byte(obj.Raw), objOut); err != nil {

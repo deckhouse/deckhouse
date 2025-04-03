@@ -13,7 +13,7 @@ storage:
 http:
   addr: {{ .ListenAddress }}:5001
   prefix: /
-  secret: {{ quote .HttpSecret }}
+  secret: {{ quote .HTTPSecret }}
   debug:
     addr: "127.0.0.1:5002"
     prometheus:

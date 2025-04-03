@@ -1,4 +1,4 @@
-module embeded-registry-manager
+module node-services-manager
 
 go 1.23.1
 

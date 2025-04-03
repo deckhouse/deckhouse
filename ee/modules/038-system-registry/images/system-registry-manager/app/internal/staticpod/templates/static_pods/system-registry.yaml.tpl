@@ -32,17 +32,17 @@ spec:
       - /config/config.yaml
 {{- with .Proxy }}
     env:
-      {{- if .Http }}
+      {{- if .HTTP }}
       - name: HTTP_PROXY
-        value: {{ .Http }}
+        value: {{ .HTTP }}
       - name: http_proxy
-        value: {{ .Http }}
+        value: {{ .HTTP }}
       {{- end }}
-      {{- if .Https }}
+      {{- if .HTTPS }}
       - name: HTTPS_PROXY
-        value: {{ .Https }}
+        value: {{ .HTTPS }}
       - name: https_proxy
-        value: {{ .Https }}
+        value: {{ .HTTPS }}
       {{- end }}
       {{- if .NoProxy }}
       - name: NO_PROXY

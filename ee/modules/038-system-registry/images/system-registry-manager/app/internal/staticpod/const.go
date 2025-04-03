@@ -6,7 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package staticpod
 
 const (
-	moduleConfigApiVersion = "deckhouse.io/v1alpha1"
+	moduleConfigAPIVersion = "deckhouse.io/v1alpha1"
 	moduleConfigKind       = "ModuleConfig"
 	registryModuleName     = "system-registry"
 )
