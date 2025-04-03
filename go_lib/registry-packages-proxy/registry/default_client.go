@@ -25,9 +25,10 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1/mutate"
+	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
+	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/pkg/errors"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/log"
@@ -117,17 +118,25 @@ func (c *DefaultClient) GetImage(ctx context.Context, log log.Logger, config *Cl
 		return 0, nil, err
 	}
 
-	layers, err := image.Layers()
-	var size int64
-	for _, layer := range layers {
-		lsize, _ := layer.Size()
-		if err != nil {
-			return 0, nil, err
-		}
-		size += lsize
+	tagToImage := map[name.Tag]v1.Image{}
+
+	reader, writer := io.Pipe()
+	refToImage := make(map[name.Reference]v1.Image, len(tagToImage))
+	log.Infof("Creating tarball for %s\n", digest)
+	tag := repository.Tag(digest)
+	refToImage[tag] = image
+	log.Infof("Creating tarball for %s\n", tag)
+
+	size, err := tarball.CalculateSize(refToImage)
+	if err != nil {
+		return 0, nil, err
 	}
-	fmt.Println("size=", size, "image=", digest)
-	reader := mutate.Extract(image)
+	log.Infof("Tarball size: %d\n", size)
+
+	err = tarball.Write(tag, image, writer)
+	if err != nil {
+		return 0, nil, err
+	}
 
 	return size, reader, nil
 }
