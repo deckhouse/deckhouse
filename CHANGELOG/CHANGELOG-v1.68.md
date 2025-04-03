@@ -108,7 +108,6 @@
  - **[network-gateway]** Fixed security context settings for static pods and iptables containers. [#11309](https://github.com/deckhouse/deckhouse/pull/11309)
  - **[node-local-dns]** Fix module dependencies. The `monitoring-applications` module was affected and disabled by the enabled script. [#12428](https://github.com/deckhouse/deckhouse/pull/12428)
  - **[node-local-dns]** Fixed security context settings for static pods and iptables containers. [#11309](https://github.com/deckhouse/deckhouse/pull/11309)
- - **[node-manager]** partial rollback of changes in images cluster-autoscaler [#12854](https://github.com/deckhouse/deckhouse/pull/12854)
  - **[node-manager]** fix autoscaler RBAC for zvirt and dynamix [#11236](https://github.com/deckhouse/deckhouse/pull/11236)
  - **[node-manager]** Fixed CVE in images cluster-autoscaler and machine-controller-manager. [#12024](https://github.com/deckhouse/deckhouse/pull/12024)
  - **[node-manager]** Deleted `cert-manager.io/inject-ca-from` annotation from CAPI `ValidatingWebhookConfiguration`. [#11666](https://github.com/deckhouse/deckhouse/pull/11666)
