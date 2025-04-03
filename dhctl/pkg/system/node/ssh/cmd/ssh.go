@@ -15,6 +15,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -64,7 +65,7 @@ func (s *SSH) WithCommand(name string, arg ...string) *SSH {
 }
 
 // TODO move connection settings from ExecuteCmd
-func (s *SSH) Cmd() *exec.Cmd {
+func (s *SSH) Cmd(ctx context.Context) *exec.Cmd {
 	env := append(os.Environ(), s.Env...)
 	env = append(env, s.Session.AgentSettings.AuthSockEnv())
 
@@ -152,7 +153,7 @@ func (s *SSH) Cmd() *exec.Cmd {
 
 	log.DebugF("SSH arguments %v\n", args)
 
-	sshCmd := exec.Command("ssh", args...)
+	sshCmd := exec.CommandContext(ctx, "ssh", args...)
 	sshCmd.Env = env
 	// Start ssh with the new process group to prevent early stop by SIGINT from the shell.
 	sshCmd.SysProcAttr = &syscall.SysProcAttr{

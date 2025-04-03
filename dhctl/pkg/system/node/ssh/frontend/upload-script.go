@@ -98,11 +98,11 @@ func (u *UploadScript) Execute(ctx context.Context) (stdout []byte, err error) {
 	if u.sudo {
 		scriptFullPath = u.pathWithEnv(filepath.Join(app.DeckhouseNodeTmpPath, scriptName))
 		cmd = NewCommand(u.Session, scriptFullPath, u.Args...)
-		cmd.Sudo()
+		cmd.Sudo(ctx)
 	} else {
 		scriptFullPath = u.pathWithEnv("./" + scriptName)
 		cmd = NewCommand(u.Session, scriptFullPath, u.Args...)
-		cmd.Cmd()
+		cmd.Cmd(ctx)
 	}
 
 	scriptCmd := cmd.CaptureStdout(nil).CaptureStderr(nil)
@@ -191,7 +191,7 @@ func (u *UploadScript) ExecuteBundle(ctx context.Context, parentDir, bundleDir s
 		strings.Join(u.Args, " "),
 	)
 	bundleCmd := NewCommand(u.Session, tarCmdline)
-	bundleCmd.Sudo()
+	bundleCmd.Sudo(ctx)
 
 	// Buffers to implement output handler logic
 	lastStep := ""

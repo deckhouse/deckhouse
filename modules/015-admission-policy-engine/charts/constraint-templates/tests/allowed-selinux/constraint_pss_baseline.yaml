@@ -21,3 +21,4 @@ spec:
     - type: container_t
     - type: container_init_t
     - type: container_kvm_t
+    - type: container_engine_t

@@ -328,10 +328,6 @@ func (cb *ContextBuilder) getNodeUserConfigurations(nodeGroup string) []*UserCon
 func versionMapFromMap(m map[string]interface{}) versionMapWrapper {
 	var res versionMapWrapper
 
-	if v, ok := m["bashible"]; ok {
-		res.Bashbile = v.(map[string]interface{})
-	}
-
 	if v, ok := m["k8s"]; ok {
 		res.K8s = v.(map[string]interface{})
 	}
@@ -411,8 +407,7 @@ func (bc *bashibleContext) AddToChecksum(checksumCollector hash.Hash) error {
 
 // for appropriate marshalling
 type versionMapWrapper struct {
-	Bashbile map[string]interface{} `json:"bashible" yaml:"bashible"`
-	K8s      map[string]interface{} `json:"k8s" yaml:"k8s"`
+	K8s map[string]interface{} `json:"k8s" yaml:"k8s"`
 }
 
 type tplContextCommon struct {

@@ -39,16 +39,15 @@ import (
 	"sync"
 	"time"
 
-	libmirrorCtx "github.com/deckhouse/deckhouse-cli/pkg/libmirror/contexts"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
+	"github.com/google/go-containerregistry/pkg/authn"
 
+	libmirrorCtx "github.com/deckhouse/deckhouse-cli/pkg/libmirror/contexts"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/proxy"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
-	"github.com/google/go-containerregistry/pkg/authn"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/imgbundle/mirror"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/imgbundle/pkgproxy"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
@@ -56,6 +55,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
@@ -152,7 +152,7 @@ func checkBashibleAlreadyRun(ctx context.Context, nodeInterface node.Interface) 
 	isReady := false
 	err := log.Process("bootstrap", "Checking bashible is ready", func() error {
 		cmd := nodeInterface.Command("cat", DHCTLEndBootstrapBashiblePipeline)
-		cmd.Sudo()
+		cmd.Sudo(ctx)
 		cmd.WithTimeout(10 * time.Second)
 		if err := cmd.Run(ctx); err != nil {
 			isReady = false
@@ -176,7 +176,7 @@ func getBashiblePIDs(ctx context.Context, nodeInterface node.Interface) ([]strin
 		psStrings = append(psStrings, l)
 	}
 	cmd := nodeInterface.Command("bash", "-c", `ps a --no-headers -o args:64 -o "|%p"`)
-	cmd.Sudo()
+	cmd.Sudo(ctx)
 	cmd.WithTimeout(10 * time.Second)
 	cmd.WithStdoutHandler(h)
 	if err := cmd.Run(ctx); err != nil {
@@ -217,7 +217,7 @@ func getBashiblePIDs(ctx context.Context, nodeInterface node.Interface) ([]strin
 
 func killBashible(ctx context.Context, nodeInterface node.Interface, pids []string) error {
 	cmd := nodeInterface.Command("kill", pids...)
-	cmd.Sudo()
+	cmd.Sudo(ctx)
 	cmd.WithTimeout(10 * time.Second)
 	if err := cmd.Run(ctx); err != nil {
 		var ee *exec.ExitError
@@ -237,7 +237,7 @@ func killBashible(ctx context.Context, nodeInterface node.Interface, pids []stri
 
 func unlockBashible(ctx context.Context, NodeInterface node.Interface) error {
 	cmd := NodeInterface.Command("rm", "-f", "/var/lock/bashible")
-	cmd.Sudo()
+	cmd.Sudo(ctx)
 	cmd.WithTimeout(10 * time.Second)
 	if err := cmd.Run(ctx); err != nil {
 		return err
@@ -493,7 +493,7 @@ func (r *registryClientConfigGetter) Get(_ string) (*registry.ClientConfig, erro
 	return &r.ClientConfig, nil
 }
 
-func StartRegistryPackagesProxy(registryCfg config.Registry, clusterDomain string) error {
+func StartRegistryPackagesProxy(ctx context.Context, registryCfg config.Registry, clusterDomain string) error {
 	var clientConfigGetter registry.ClientConfigGetter
 	var client registry.Client
 	var err error
@@ -543,6 +543,11 @@ func StartRegistryPackagesProxy(registryCfg config.Registry, clusterDomain strin
 	proxy := proxy.NewProxy(srv, listener, clientConfigGetter, registryPackagesProxyLogger{}, client)
 
 	go proxy.Serve()
+
+	go func() {
+		<-ctx.Done()
+		proxy.StopProxy()
+	}()
 
 	return nil
 }
@@ -627,7 +632,7 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 	log.DebugLn("Starting registry packages proxy")
 
 	// we need clusterDomain to generate proper certificate for packages proxy
-	err = StartRegistryPackagesProxy(cfg.Registry, clusterDomain)
+	err = StartRegistryPackagesProxy(ctx, cfg.Registry, clusterDomain)
 	if err != nil {
 		return fmt.Errorf("failed to start registry packages proxy: %v", err)
 	}
@@ -646,7 +651,7 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 
 		err := retry.NewLoop(fmt.Sprintf("Prepare %s", app.NodeDeckhouseDirectoryPath), 30, 10*time.Second).RunContext(ctx, func() error {
 			cmd := nodeInterface.Command("sh", "-c", fmt.Sprintf("umask 0022 ; mkdir -p -m 0755 %s", app.DeckhouseNodeBinPath))
-			cmd.Sudo()
+			cmd.Sudo(ctx)
 			if err = cmd.Run(ctx); err != nil {
 				return fmt.Errorf("ssh: mkdir -p %s -m 0755: %w", app.DeckhouseNodeBinPath, err)
 			}
@@ -659,7 +664,7 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 
 		err = retry.NewLoop(fmt.Sprintf("Prepare %s", app.DeckhouseNodeTmpPath), 30, 10*time.Second).RunContext(ctx, func() error {
 			cmd := nodeInterface.Command("sh", "-c", fmt.Sprintf("umask 0022 ; mkdir -p -m 1777 %s", app.DeckhouseNodeTmpPath))
-			cmd.Sudo()
+			cmd.Sudo(ctx)
 			if err := cmd.Run(ctx); err != nil {
 				return fmt.Errorf("ssh: mkdir -p -m 1777 %s: %w", app.DeckhouseNodeTmpPath, err)
 			}
@@ -678,7 +683,7 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 		// we need creating it before because we do not want handle errors from cat
 		return retry.NewLoop(fmt.Sprintf("Prepare %s", DHCTLEndBootstrapBashiblePipeline), 30, 10*time.Second).RunContext(ctx, func() error {
 			cmd := nodeInterface.Command("touch", DHCTLEndBootstrapBashiblePipeline)
-			cmd.Sudo()
+			cmd.Sudo(ctx)
 			if err := cmd.Run(ctx); err != nil {
 				return fmt.Errorf("touch error %s: %w", DHCTLEndBootstrapBashiblePipeline, err)
 			}

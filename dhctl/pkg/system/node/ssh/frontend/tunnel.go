@@ -61,7 +61,7 @@ func (t *Tunnel) Up() error {
 			fmt.Sprintf("-%s", t.Type), t.Address,
 		).
 		WithCommand("echo", "SUCCESS", "&&", "cat").
-		Cmd()
+		Cmd(context.Background())
 
 	stdoutReadPipe, stdoutWritePipe, err := os.Pipe()
 	if err != nil {

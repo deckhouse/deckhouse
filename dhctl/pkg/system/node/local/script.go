@@ -46,7 +46,7 @@ func NewScript(path string, args ...string) *Script {
 func (s *Script) Execute(ctx context.Context) (stdout []byte, err error) {
 	cmd := NewCommand(s.scriptPath, s.args...)
 	if s.sudo {
-		cmd.Sudo()
+		cmd.Sudo(ctx)
 	}
 
 	if s.timeout > 0 {
@@ -96,7 +96,7 @@ func (s *Script) ExecuteBundle(ctx context.Context, parentDir, bundleDir string)
 		cmd.WithStdoutHandler(s.stdoutLineHandler)
 	}
 	if s.sudo {
-		cmd.Sudo()
+		cmd.Sudo(ctx)
 	}
 
 	if err = cmd.Run(ctx); err != nil {

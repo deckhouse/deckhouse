@@ -44,12 +44,12 @@ func (s *ConversionsStore) Add(module, pathToConversions string) error {
 		s.converters = make(map[string]*Converter)
 	}
 
-	newConverter, err := newConverter(pathToConversions)
+	converter, err := newConverter(pathToConversions)
 	if err != nil {
 		return err
 	}
 
-	s.converters[module] = newConverter
+	s.converters[module] = converter
 
 	return nil
 }

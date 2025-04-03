@@ -368,6 +368,10 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			Value: "3",
 		},
 		{
+			Name:  "GOGC",
+			Value: "50",
+		},
+		{
 			Name:  "ADDON_OPERATOR_CONFIG_MAP",
 			Value: "deckhouse",
 		},
