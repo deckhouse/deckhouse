@@ -62,6 +62,7 @@ func init() {
 		return true, nil
 	}
 
+	// TODO: enable this
 	// requirements.RegisterCheck(unmetCloudConditionsRequirementsKey, checkUnmetCloudConditionsFunc)
 	requirements.RegisterCheck(requirementsUbuntuKey, checkRequirementUbuntuFunc)
 	requirements.RegisterCheck(requirementsDebianKey, checkRequirementDebianFunc)
