@@ -331,21 +331,21 @@ func TestClient_ListTags(t *testing.T) {
 			// Registry API check
 			w.WriteHeader(http.StatusOK)
 		case r.URL.Path == "/v2/test/repo/tags/list":
-			// Check for specific query parameters
-			if r.URL.Query().Get("n") == "1" {
+			switch {
+			case r.URL.Query().Get("n") == "1":
 				// Tag list with pagination
 				w.Header().Set("Content-Type", "application/json")
 				w.Header().Set("Link", `</v2/test/repo/tags/list?n=1&last=tag1>; rel="next"`)
 				w.WriteHeader(http.StatusOK)
 				_, err := w.Write([]byte(`{"name":"test/repo","tags":["tag1"]}`))
 				require.NoError(t, err)
-			} else if r.URL.Path == "/v2/test/repo/tags/list" && r.URL.Query().Get("last") == "tag1" {
+			case r.URL.Query().Get("last") == "tag1":
 				// Next page of results
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusOK)
 				_, err := w.Write([]byte(`{"name":"test/repo","tags":["tag2","tag3"]}`))
 				require.NoError(t, err)
-			} else {
+			default:
 				// Default tag list
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusOK)
