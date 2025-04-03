@@ -20,6 +20,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -80,7 +81,8 @@ func applyServerSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 
 	certData, ok := secret.Data["tls.crt"]
 	if !ok || len(certData) == 0 {
-		return nil, fmt.Errorf("tls.crt not found in secret openvpn-pki-server")
+		log.Info("No tls.crt in secret")
+		return nil, nil
 	}
 
 	return certData, nil
