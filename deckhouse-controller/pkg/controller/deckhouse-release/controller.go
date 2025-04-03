@@ -321,12 +321,8 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	if r.registrySecret == nil {
 		// TODO: make registry service to check secrets in it (make issue)
 		registrySecret, err := r.getRegistrySecret(ctx)
-		if err != nil && !errors.Is(err, utils.ErrClusterIsBootstrappedFieldIsNotFound) {
-			return res, fmt.Errorf("get registry secret: %w", err)
-		}
-
 		if err != nil {
-			registrySecret.ClusterIsBootstrapped = true
+			return res, fmt.Errorf("get registry secret: %w", err)
 		}
 
 		r.registrySecret = registrySecret
