@@ -8,10 +8,11 @@ package state
 import (
 	"fmt"
 
-	nodeservices "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/node-services"
 	validation "github.com/go-ozzo/ozzo-validation"
 	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
+
+	nodeservices "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/node-services"
 )
 
 const (
