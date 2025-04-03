@@ -76,7 +76,7 @@ cleanup:
 ---
 {{ include "dhctl_src_artifact" (dict "gitPrefix" "") }}
 ---
-{{ include "dhctl_artifact" (dict "GOPROXY" .GOPROXY "CI_COMMIT_TAG" .CI_COMMIT_TAG ) }}
+{{ include "dhctl_artifact" (dict "GOPROXY" .GOPROXY "CI_COMMIT_TAG" .CI_COMMIT_TAG "DEFAULT_KUBERNETES_VERSION" .defaultKubernetesVersion ) }}
 ---
 # render images and artifact from .werf
 # WARNING! new images and artifacts should be placed in .werf/werf-YOUR-MAGIC-IMAGES-GROUP.yaml
