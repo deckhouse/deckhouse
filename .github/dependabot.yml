@@ -349,15 +349,6 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/030-cloud-provider-yandex/images/cloud-migrator/src"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
   directory: "/modules/031-local-path-provisioner/images/helper/src"
   labels:
   - "type/dependencies"
