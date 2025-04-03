@@ -6,9 +6,11 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package helpers
 
 import (
-	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"strings"
+
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+
+	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
 )
 
 const (
