@@ -132,15 +132,15 @@ func (c *DefaultClient) GetImage(ctx context.Context, log log.Logger, config *Cl
 		return 0, nil, err
 	}
 	log.Infof("Tarball size: %d\n", size)
-
-	go func() {
-		err = tarball.Write(tag, image, writer)
-		defer writer.Close()
-	}()
-
+	// writer := bufio.NewWriter(file)
+	// go func() {
+	err = tarball.Write(tag, image, writer)
 	if err != nil {
 		return 0, nil, err
 	}
+	defer writer.Close()
+	// }()
+
 	log.Infof("Tarball write finished")
 
 	return size, reader, nil
