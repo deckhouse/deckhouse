@@ -156,6 +156,25 @@
         ```bash
         kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
         ```
+
+  - alert: ModuleIsInUnmanagedMode
+    expr: sum(deckhouse_mm_module_management_state{state="Unmanaged"}) by (moduleName) > 0
+    labels:
+      severity_level: "6"
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_ignore_labels: "name"
+      summary: |
+        Module `{{ $labels.moduleName }}` is running in unmanaged mode.
+      description: |
+        Module `{{ $labels.moduleName }}` is running in unmanaged mode. In this mode, its state is not reconciled, which prevents configuration or hook changes from being applied automatically.
+
+        To switch the module back to normal mode, edit the corresponding ModuleConfig resource with the following command:
+        
+        ```bash
+        kubectl patch moduleconfig {{ $labels.name }} --type=json -p='[{"op": "remove", "path": "/spec/managementState"}]'
+        ```
       
   - alert: DeckhouseReleaseNotificationNotSent
     expr: sum by (name) (d8_release_info{notificationNotSent="true"})
