@@ -116,11 +116,17 @@ func (c *DefaultClient) GetImage(ctx context.Context, log log.Logger, config *Cl
 		}
 		return 0, nil, err
 	}
-	size, err := image.Size()
-	if err != nil {
-		return 0, nil, err
-	}
 
+	layers, err := image.Layers()
+	var size int64
+	for _, layer := range layers {
+		lsize, _ := layer.Size()
+		if err != nil {
+			return 0, nil, err
+		}
+		size += lsize
+	}
+	fmt.Println("size=", size, "image=", digest)
 	reader := mutate.Extract(image)
 
 	return size, reader, nil
