@@ -166,7 +166,6 @@ jobs:
 {!{ tmpl.Exec "tests_webhooks_template" (slice $ctx) | strings.Indent 4 }!}
 
   tests_dmt_lint:
-    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: Tests DMT lint
     needs:
     - git_info
