@@ -260,8 +260,6 @@ is used if DECKHOUSE_REGISTRY_HOST is not set.
             if [[ ${enable_push} == "true" ]] ; then
               echo "⚓️ 📤 [$(date -u)] Push '${SRC_NAME}' image as ${DST}."
               docker image push ${DST}
-              # add date label to pushed image
-              crane mutate -l io.deckhouse.releasedate="$(date -u +%Y-%m-%dT%H:%M:%SZ)" ${DST}
             fi
 
             echo "⚓️ 🧹 [$(date -u)] Remove local tag for '${SRC_NAME}'."
@@ -334,6 +332,9 @@ is used if DECKHOUSE_REGISTRY_HOST is not set.
 
           echo "⚓️ 💫 [$(date -u)] Publish 'release-channel-version' image to rw-registry using tag ${RELEASE_CHANNEL}".
           pull_push_rmi 'release-channel-version' ${SOURCE_RELEASE_VERSION_IMAGE} ${PROD_RELEASE_VERSION_IMAGE}
+
+          # add date label to pushed image
+          crane mutate -l io.deckhouse.releasedate="$(date -u +%Y-%m-%dT%H:%M:%SZ)" ${PROD_RELEASE_VERSION_IMAGE}
 
           echo "⚓️  [$(date -u)] Remove local source images."
           echo "  Delete local 'dev' source image ${SOURCE_IMAGE}"
