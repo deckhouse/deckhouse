@@ -1,6 +1,6 @@
 ---
 title: "Web-интерфейс Hubble"
-permalink: ru/user/hubble.html
+permalink: ru/user/web/hubble.html
 lang: ru
 ---
 
