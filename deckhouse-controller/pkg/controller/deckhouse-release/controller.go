@@ -326,7 +326,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		}
 
 		if err != nil {
-			r.registrySecret.ClusterIsBootstrapped = true
+			registrySecret.ClusterIsBootstrapped = true
 		}
 
 		r.registrySecret = registrySecret
