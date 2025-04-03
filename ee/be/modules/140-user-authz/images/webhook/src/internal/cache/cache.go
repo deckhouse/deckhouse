@@ -44,8 +44,11 @@ type Cache interface {
 	Check() error
 }
 
-var _ Cache = (*NamespacedDiscoveryCache)(nil)
-var ErrNotFound = errors.New("not found")
+var (
+	_                           Cache = (*NamespacedDiscoveryCache)(nil)
+	ErrNotFound                       = errors.New("not found")
+	ErrPreferredVersionNotFound       = errors.New("preferred version not found")
+)
 
 type cacheEntry struct {
 	TTL     time.Duration
@@ -279,7 +282,7 @@ func (c *NamespacedDiscoveryCache) requestPreferredVersion(group, resource strin
 	}
 
 	if preferredVersion == "" {
-		return "", fmt.Errorf("failed to discover preferred version for %s.%s", resource, group)
+		return "", ErrPreferredVersionNotFound
 	}
 
 	return preferredVersion, nil
