@@ -64,6 +64,7 @@ spec:
         kubectl.kubernetes.io/default-logs-container: cloud-data-discoverer
         checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manager/secret.yaml") . | sha256sum }}
     spec:
+      automountServiceAccountToken: true
       imagePullSecrets:
       - name: deckhouse-registry
       {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
