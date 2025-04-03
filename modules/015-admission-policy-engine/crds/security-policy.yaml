@@ -137,10 +137,16 @@ spec:
                             description: Max value for the `hostPort`.
                     allowPrivileged:
                       type: boolean
-                      description: Allows running containers in a privileged mode.
+                      description: |
+                        Allows running containers in a privileged mode.
+
+                        **By default** (if not specified) — `false`. This means that if the field is omitted or explicitly set to `false`, the container is denied any privilege escalation. If you want to allow elevated privileges, set this parameter to `true`.
                     allowPrivilegeEscalation:
                       type: boolean
-                      description: Allows container processes to gain more privileges than its parent process.
+                      description: |
+                        Allows container processes to gain more privileges than its parent process.
+
+                        **By default** (if not specified) — `false`. This means that if the field is omitted or explicitly set to `false`, the container is denied any privilege escalation. If you want to allow elevated privileges, set this parameter to `true`.
                     allowedProcMount:
                       type: string
                       description: Allows `/proc` mount type for containers.
