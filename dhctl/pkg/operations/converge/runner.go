@@ -24,6 +24,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manager"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
@@ -356,6 +357,20 @@ func (r *runner) convergeMigration(ctx *context.Context) error {
 	if err := r.migrateTerraNodes(ctx, metaConfig, nodesStates); err != nil {
 		return err
 	}
+
+	log.DebugLn("Restart infrastructure manager deployments")
+
+	err = manager.RestartStateExporter(ctx.Ctx(), ctx.KubeProvider())
+	if err != nil {
+		return err
+	}
+
+	err = manager.RestartAutoConverger(ctx.Ctx(), ctx.KubeProvider())
+	if err != nil {
+		return err
+	}
+
+	log.DebugLn("Restarting infrastructure manager deployments finished")
 
 	return nil
 }

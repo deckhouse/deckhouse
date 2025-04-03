@@ -1,0 +1,48 @@
+{{- if has .Values.global.clusterConfiguration.cloud.provider (list "Yandex")  }}
+
+{{- define "migration_job_resources" }}
+cpu: 25m
+memory: 60Mi
+{{- end }}
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate-state-to-opentofu
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "migrate-state-to-opentofu")) | nindent 2 }}
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: migrate-state-to-opentofu
+    spec:
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      restartPolicy: Never
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+      - name: migrator
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        args:
+        - "converge-migration"
+        - "--logger-type=json"
+        - "--kube-client-from-cluster"
+        image: {{ include "terraform_manager_image" . }}
+        env:
+        - name: DHCTL_CLI_KUBE_CLIENT_FROM_CLUSTER
+          value: "true"
+        - name: DHCTL_CLI_ALLOWED_COMMANDS
+          value: "converge-migration"
+        - name: DHCTL_CLI_RUNNING_NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" 10 | nindent 12 }}
+            {{- include "migration_job_resources" . | nindent 12 }}
+
+{{- end }}

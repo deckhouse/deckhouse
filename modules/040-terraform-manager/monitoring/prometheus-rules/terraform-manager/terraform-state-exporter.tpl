@@ -244,7 +244,7 @@
       summary: Terraform-state-exporter node template changed
 
 
-  - alert: D8TerraformVersionMismatch
+  - alert: D8NeedMigrateStateToOpentofu
     expr: |
       candi_converge_need_migrate_to_tofu == 1
     for: 5m
