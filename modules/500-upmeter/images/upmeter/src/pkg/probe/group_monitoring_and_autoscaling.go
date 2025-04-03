@@ -57,25 +57,25 @@ func initMonitoringAndAutoscaling(access kubernetes.Access, nodeLister node.List
 			},
 		}, {
 			group:  groupMonitoringAndAutoscaling,
-			probe:  "trickster",
+			probe:  "metrics-proxy",
 			check:  "pod",
 			period: 10 * time.Second,
 			config: checker.AtLeastOnePodReady{
 				Access:           access,
 				Timeout:          5 * time.Second,
 				Namespace:        "d8-monitoring",
-				LabelSelector:    "app=trickster",
+				LabelSelector:    "app=aggregating-proxy",
 				PreflightChecker: controlPlanePinger,
 			},
 		}, {
 			group:  groupMonitoringAndAutoscaling,
-			probe:  "trickster",
+			probe:  "metrics-proxy",
 			check:  "api",
 			period: 10 * time.Second,
 			config: checker.PrometheusApiAvailable{
 				Access:   access,
 				Timeout:  5 * time.Second,
-				Endpoint: "https://trickster.d8-monitoring:443/trickster/main/api/v1/query?query=vector(1)",
+				Endpoint: "https://aggregating-proxy.d8-monitoring:443/api/v1/query?query=vector(1)",
 			},
 		}, {
 			group:  groupMonitoringAndAutoscaling,

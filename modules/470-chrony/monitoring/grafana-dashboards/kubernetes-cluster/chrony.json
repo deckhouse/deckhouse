@@ -1075,8 +1075,8 @@
     "list": [
       {
         "current": {
-          "text": "trickster",
-          "value": "trickster"
+          "text": "default",
+          "value": "default"
         },
         "hide": 0,
         "includeAll": false,
