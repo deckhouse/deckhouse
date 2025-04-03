@@ -179,7 +179,7 @@ type RegistryMirrorHostObject struct {
 
 // FromInputData populates RegistryData fields from given registry configuration
 func (d *RegistryData) FromInputData(deckhouseRegistry deckhouseRegistry, registryBashibleConfig *registryBashibleConfig) error {
-	d.Mode = "Unmanaged"
+	d.Mode = "unmanaged"
 	d.ImagesBase = fmt.Sprintf(
 		"%s/%s",
 		deckhouseRegistry.Address,

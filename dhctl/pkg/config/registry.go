@@ -256,7 +256,7 @@ func (r Registry) BashibleBundleTemplateContext() (map[string]interface{}, error
 	if r.Data.CA != "" {
 		CA = append(CA, r.Data.CA)
 	}
-	
+
 	// prepare mirrrors and proxy endpoints
 	mirrors := []registry_models.MirrorHostObject{}
 	prepullMirrors := []registry_models.MirrorHostObject{}
@@ -300,7 +300,7 @@ func (r Registry) BashibleBundleTemplateContext() (map[string]interface{}, error
 
 	cfg := registry_models.BashibleContext{
 		Mode:           r.Mode(),
-		Version:        registry_const.DefaultVersion,
+		Version:        registry_const.UnknownVersion,
 		ImagesBase:     imagesBase,
 		ProxyEndpoints: proxyEndpoints,
 		Hosts:          []registry_models.HostsObject{{Host: r.Data.Address, CA: CA, Mirrors: mirrors}},

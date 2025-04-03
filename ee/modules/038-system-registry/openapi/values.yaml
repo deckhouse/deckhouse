@@ -83,62 +83,18 @@ properties:
         type: object
         default: {}
         properties:
-          mode:
-            type: string
-          version:
-            type: string
-            default: "unknown"
-          imagesBase:
-            type: string
-          proxyEndpoints:
-            type: array
-            default: []
-            items:
-              type: string
-              pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}:[1-9][0-9]{0,4}$'
-            x-examples:
-              - ["10.0.0.2:5001", "10.0.0.3:5001", "10.0.0.4:5001"]
-          hosts: &hosts
-            type: array
-            default: []
-            x-example:
-              - host: registry.d8-system.svc
-                ca: ["<cert content>"]
-                mirrors:
-                  - host: 127.0.0.1:5001
-                    username: <username>
-                    password: <password>
-                    auth: <auth>
-                    scheme: http/https
-            items:
-              type: object
-              required:
-                - host
-              properties:
-                host:
-                  type: string
-                ca:
-                  type: array
-                  default: []
-                  items:
-                    type: string
-                mirrors:
-                  type: array
-                  default: []
-                  items:
-                    type: object
-                    required:
-                      - host
-                    properties:
-                      host:
-                        type: string
-                      username:
-                        type: string
-                      password:
-                        type: string
-                      auth:
-                        type: string
-                      scheme:
-                        type: string
-                        default: https
-          prepullHosts: *hosts
+          input:
+            type: object
+            default: {}
+            additionalProperties: true
+            x-kubernetes-preserve-unknown-fields: true
+          config:
+            type: object
+            default: {}
+            additionalProperties: true
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            default: {}
+            additionalProperties: true
+            x-kubernetes-preserve-unknown-fields: true

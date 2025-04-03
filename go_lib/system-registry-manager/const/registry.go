@@ -17,7 +17,7 @@ const (
 )
 
 const (
-	DefaultVersion = "unknown"
+	UnknownVersion = "unknown"
 )
 
 var (
