@@ -37,7 +37,7 @@ spec:
                 type:
                   type: string
                   description: 'Type of authentication provider.'
-                  enum: ['Github', 'Gitlab', 'BitbucketCloud', 'Crowd', 'OIDC', 'LDAP']
+                  enum: ['Github', 'Gitlab', 'BitbucketCloud', 'Crowd', 'OIDC', 'LDAP', 'Google']
                 displayName:
                   type: string
                   description: |
@@ -460,6 +460,40 @@ spec:
                                 x-doc-examples: ['member']
                                 description: |
                                   The name of the attribute that stores the group member names.
+                google: &google
+                  type: object
+                  required: ['clientID', 'clientSecret']
+                  description: |
+                    Parameters of the Google provider (intended for the `type: Google` case only).
+                  properties:
+                    clientID:
+                      type: string
+                      description: 'Client ID from Google Cloud Console.'
+                    clientSecret:
+                      type: string
+                      description: 'Client secret key from Google Cloud Console.'
+                    serviceAccountSecretName:
+                      type: string
+                      description: |
+                        Name of the secret in d8-user-authn namespace containing Google Service Account JSON.
+                        The secret should have a key 'service-account.json' with the service account credentials.
+                        Required for group membership lookups.
+                    hostedDomains:
+                      type: array
+                      description: |
+                        Optional list of Google Apps domains to restrict logins to.
+                        If this field is not empty, only users from listed domains will be allowed to log in.
+                      items:
+                        type: string
+                        x-doc-examples: ['example.com']
+                    groups:
+                      type: array
+                      description: |
+                        Optional list of groups to filter by.
+                        If this field is not empty, only users who are members of at least one of these groups will be allowed to log in.
+                      items:
+                        type: string
+                        x-doc-examples: ['admins@example.com']
               oneOf:
                 - properties:
                     inlet:
@@ -491,6 +525,11 @@ spec:
                       enum: ['LDAP']
                     ldap: {}
                   required: ['ldap']
+                - properties:
+                    inlet:
+                      enum: ['Google']
+                    google: {}
+                  required: ['google']
       additionalPrinterColumns: &additionalPrinterColumns
         - jsonPath: .spec.type
           name: Type
@@ -522,7 +561,7 @@ spec:
                 type:
                   type: string
                   description: 'Type of authentication provider.'
-                  enum: ['Github', 'Gitlab', 'BitbucketCloud', 'Crowd', 'OIDC', 'LDAP']
+                  enum: ['Github', 'Gitlab', 'BitbucketCloud', 'Crowd', 'OIDC', 'LDAP', 'Google']
                 displayName:
                   type: string
                   description: |
@@ -587,6 +626,7 @@ spec:
                 crowd: *crowd
                 oidc: *oidc
                 ldap: *ldap
+                google: *google
               oneOf:
                 - properties:
                     inlet:
@@ -618,4 +658,9 @@ spec:
                       enum: ['LDAP']
                     ldap: {}
                   required: ['ldap']
+                - properties:
+                    inlet:
+                      enum: ['Google']
+                    google: {}
+                  required: ['google']
       additionalPrinterColumns: *additionalPrinterColumns
