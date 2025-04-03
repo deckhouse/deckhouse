@@ -18,6 +18,7 @@ package dvp
 
 import (
 	"context"
+	"dvp-common/api"
 	"fmt"
 	"time"
 
@@ -54,22 +55,20 @@ func (c *Cloud) GetLoadBalancerName(_ context.Context, clusterName string, servi
 func (c *Cloud) EnsureLoadBalancer(ctx context.Context, clusterName string, service *corev1.Service, nodes []*corev1.Node) (*corev1.LoadBalancerStatus, error) {
 	name := c.GetLoadBalancerName(ctx, clusterName, service)
 	svc, err := c.dvpService.LoadBalancerService.GetLoadBalancerByName(ctx, name)
-	klog.Infof("EnsureLoadBalancer: %v+", svc)
-	klog.Infof("EnsureLoadBalancer nodes: %v+", nodes)
 	if err != nil {
 		klog.Errorf("Failed to get LoadBalancer service %q in namespace %q: %v", name, c.config.Namespace, err)
 		return nil, err
 	}
+
 	ports := c.dvpService.LoadBalancerService.CreateLoadBalancerPorts(service)
 
 	if svc != nil {
 		return &svc.Status.LoadBalancer, c.dvpService.LoadBalancerService.UpdateLoadBalancerPorts(ctx, svc, ports)
 	}
 
-	// TODO: fix labels.
-	vmLabels := map[string]string{
-		"cluster.x-k8s.io/cluster-name": clusterName,
-	}
+	vmLabels := map[string]string{}
+	vmLabels = c.addNodesSelectorLabels(vmLabels, nodes)
+
 	// TODO: fix labels.
 	svcLabels := map[string]string{
 		"cluster.x-k8s.io/tenant-service-name":      service.Name,
@@ -77,16 +76,11 @@ func (c *Cloud) EnsureLoadBalancer(ctx context.Context, clusterName string, serv
 		"cluster.x-k8s.io/cluster-name":             clusterName,
 	}
 
-	// for k, v := range lb.infraLabels {
-	// 	svcLabels[k] = v
-	// }
-
 	svc, err = c.dvpService.LoadBalancerService.CreateLoadBalancer(
 		ctx,
 		name,
 		service,
 		vmLabels,
-		true,
 		svcLabels,
 		ports,
 	)
@@ -120,6 +114,15 @@ func (c *Cloud) EnsureLoadBalancer(ctx context.Context, clusterName string, serv
 	}
 
 	return &svc.Status.LoadBalancer, nil
+}
+
+func (c *Cloud) addNodesSelectorLabels(labels map[string]string, nodes []*corev1.Node) map[string]string {
+	for _, node := range nodes {
+		if labelValue, ok := node.Labels[api.DVPVMHostnameLabel]; ok {
+			labels[api.DVPVMHostnameLabel] = labelValue
+		}
+	}
+	return labels
 }
 
 func (c *Cloud) UpdateLoadBalancer(ctx context.Context, clusterName string, service *corev1.Service, _ []*corev1.Node) error {
