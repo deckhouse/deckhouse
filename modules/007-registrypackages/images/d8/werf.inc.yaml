@@ -14,7 +14,7 @@ shell:
 #  - rm -rf /src/deckhouse-cli/.git # https://github.com/deckhouse/deckhouse-cli/blob/main/Taskfile.yml#L9
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: {{ $.Images.BASE_SCRATCH }}
+fromImage: common/registrypackages-base
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /

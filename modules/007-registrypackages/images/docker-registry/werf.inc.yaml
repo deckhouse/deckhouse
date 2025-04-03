@@ -19,7 +19,7 @@ shell:
   - rm -rf /src/docker_auth/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-{{ $image_version }}
-from: {{ .Images.BASE_SCRATCH }}
+fromImage: common/registrypackages-base
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
   add: /
