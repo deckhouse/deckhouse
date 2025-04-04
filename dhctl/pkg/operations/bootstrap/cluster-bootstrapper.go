@@ -346,6 +346,9 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 					SaveBastionHostToCache(baseOutputs.BastionHost)
 				}
 				sshClient.Session().SetAvailableHosts([]session.Host{{Host: masterOutputs.MasterIPForSSH, Name: masterNodeName}})
+				if err := sshClient.Start(); err != nil {
+					return fmt.Errorf("unable to start ssh client: %w", err)
+				}
 			}
 
 			nodeIP = masterOutputs.NodeInternalIP

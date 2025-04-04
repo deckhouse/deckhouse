@@ -81,6 +81,7 @@ func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
 		Envar(configEnvName("SSH_HOSTS")).
 		StringsVar(&sshHostsRaw)
 	cmd.Flag("ssh-port", "SSH destination port").
+		Default("22").
 		IsSetByUser(&sshFlagSetByUser).
 		Envar(configEnvName("SSH_PORT")).
 		StringVar(&SSHPort)
