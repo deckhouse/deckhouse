@@ -40,7 +40,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
-// testing commander dev branch resolve
+// testing commander dev branch resolve 2
 var (
 	allowedCommands []string
 	commandList     = []Command{
