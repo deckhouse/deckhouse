@@ -507,7 +507,7 @@ Check [releases.deckhouse.io](https://releases.deckhouse.io) for the current sta
    ```
 
    where:
-   - `<EDITION>` — the edition code of the Deckhouse Kubernetes Platform (for example, `ee`, `se`);
+   - `<EDITION>` — the edition code of the Deckhouse Kubernetes Platform (for example, `ee`, `se`, `se-plus`).
    - `<LICENSE_KEY>` — Deckhouse Kubernetes Platform license key.
    - `/home/user/d8-bundle` — the directory to store the resulting bundle into. It will be created if not present.
 

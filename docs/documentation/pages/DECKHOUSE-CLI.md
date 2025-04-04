@@ -55,27 +55,18 @@ If you need to install one of the versions below 0.10, use the [outdated install
 1. Add the Deckhouse CLI repository to trdl:
 
    ```bash
-   URL=https://trrr.flant.dev/trdl-deckhouse-cli
-   ROOT_VERSION=0
-   ROOT_SHA512=$(curl -Ls ${URL}/root.json | sha512sum | tr -d '\-[:space:]\n')
-   REPO=trdl-d8
-   
+   URL=https://deckhouse.ru/downloads/deckhouse-cli-trdl
+   ROOT_VERSION=1
+   ROOT_SHA512=343bd5f0d8811254e5f0b6fe292372a7b7eda08d276ff255229200f84e58a8151ab2729df3515cb11372dc3899c70df172a4e54c8a596a73d67ae790466a0491
+   REPO=d8
+
    trdl add $REPO $URL $ROOT_VERSION $ROOT_SHA512
    ```
 
-1. Install stable release:
+1. Install latest stable release and validate that the `d8` binary is functional:
 
    ```bash
-   trdl update $REPO $ROOT_VERSION stable
+   . $(trdl use d8 0 stable) && d8 --version
    ```
 
-1. Validate that the `d8` binary is installed:
-
-   ```bash
-   . $(trdl use $REPO $ROOT_VERSION stable) && d8 --version
-   ```
-
-{% alert level="warning" %}
-On macOS you might need to remove the quarantine attribute from binary to prevent Gatekeeper from blocking it.
-(`sudo xattr -d com.apple.quarantine /path/to/d8`)
-{% endalert %}
+If you dont want to call `. $(trdl use d8 0 stable)` every time you need to use Deckhouse CLI, consider adding `alias d8='trdl exec d8 0 stable -- "$@"'` to your shell RC file.
