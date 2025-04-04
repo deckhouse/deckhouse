@@ -857,11 +857,6 @@ func RunPostInstallTasks(kubeCl *client.KubernetesClient, result *InstallDeckhou
 	}
 
 	return log.Process("bootstrap", "Run post bootstrap actions", func() error {
-		err := deckhouse.ConfigureDeckhouseRelease(kubeCl)
-		if err != nil {
-			return err
-		}
-
 		return applyPostBootstrapModuleConfigs(kubeCl, result.ManifestResult.PostBootstrapMCTasks)
 	})
 }
