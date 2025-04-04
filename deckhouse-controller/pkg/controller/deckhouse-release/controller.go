@@ -329,10 +329,6 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 			return res, fmt.Errorf("get registry secret: %w", err)
 		}
 
-		if err != nil {
-			return res, fmt.Errorf("get registry secret: %w", err)
-		}
-
 		r.registrySecret = registrySecret
 	}
 
