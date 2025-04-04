@@ -89,7 +89,7 @@ func (c *Cloud) Initialize(
 
 // LoadBalancer returns a balancer interface if supported.
 func (c *Cloud) LoadBalancer() (cloudprovider.LoadBalancer, bool) {
-	return nil, false
+	return c, true
 }
 
 // Instances returns an instances interface if supported.
