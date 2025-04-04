@@ -55,3 +55,24 @@ func TestNodeOSVersionRequirement(t *testing.T) {
 		require.Error(t, err)
 	})
 }
+
+func TestUnmetCloudConditionsRequirement(t *testing.T) {
+	// TODO: remove
+	t.Skip("UnmetCloudConditions check is not enabled")
+
+	requirements.RemoveValue(unmetCloudConditionsKey)
+
+	t.Run("unmetCloudConditions requirement runs successfully", func(t *testing.T) {
+		requirements.SaveValue(unmetCloudConditionsKey, false)
+		ok, err := requirements.CheckRequirement(unmetCloudConditionsRequirementsKey, "true")
+		assert.True(t, ok)
+		require.NoError(t, err)
+	})
+
+	t.Run("unmetCloudConditions requirement fails", func(t *testing.T) {
+		requirements.SaveValue(unmetCloudConditionsKey, true)
+		ok, err := requirements.CheckRequirement(unmetCloudConditionsRequirementsKey, "true")
+		assert.False(t, ok)
+		require.Error(t, err)
+	})
+}

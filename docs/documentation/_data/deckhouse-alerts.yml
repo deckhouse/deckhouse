@@ -5735,6 +5735,18 @@ alerts:
         The sampling limit is close.
       severity: "7"
       markupFormat: markdown
+    - name: UnmetCloudConditions
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/cloud-data-discovery.tpl
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        Cloud data discoverer checks if cloud conditions are met.
+          Name: {{ $labels.name }}, Message: {{ $labels.message }}
+      summary: |
+        Cloud data discoverer checks cloud conditions
+      severity: "6"
+      markupFormat: markdown
     - name: UnsupportedContainerRuntimeVersion
       sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/cri-version.tpl
       moduleUrl: 340-monitoring-kubernetes
