@@ -837,6 +837,8 @@ OpenStackClusterConfiguration
 OpenStackEE
 OpenStackInstanceClass
 OpenStackInstanceClasses
+opentofu
+Opentofu
 openvpn
 OpenVPN
 openvpn-admin
@@ -1302,6 +1304,7 @@ Yadro
 yaml
 yandex
 Yandex
+YandexCloud
 YandexClusterConfiguration
 YandexInstanceClass
 YandexInstanceClasses
@@ -1505,10 +1508,10 @@ zVirt
 инсталлятором
 инстанс
 инстанса
-инстансом
 инстансам
 инстансах
 инстансов
+инстансом
 инстансу
 инстансы
 интеграций

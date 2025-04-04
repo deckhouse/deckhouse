@@ -47,4 +47,5 @@ type CheckResult struct {
 	Status              CheckStatus   `json:"status"`
 	StatusDetails       StatusDetails `json:"status_details"`
 	DestructiveChangeID string        `json:"destructive_change_id,omitempty"`
+	HasTerraformState   bool          `json:"-"`
 }
