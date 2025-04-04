@@ -160,6 +160,11 @@ func (lb *LoadBalancerService) updateLoadBalancerService(
 		return nil, err
 	}
 
+	svc, err = lb.GetLoadBalancerByName(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+
 	return svc, nil
 }
 
@@ -212,6 +217,11 @@ func (lb *LoadBalancerService) createLoadBalancerService(
 	err = lb.pollLoadBalancer(ctx, name, svc)
 	if err != nil {
 		klog.Errorf("Failed to poll LoadBalancer service %q in namespace %q: %v", name, lb.namespace, err)
+		return nil, err
+	}
+
+	svc, err = lb.GetLoadBalancerByName(ctx, name)
+	if err != nil {
 		return nil, err
 	}
 
