@@ -38,6 +38,7 @@ apiVersions:
           type: object
           additionalProperties: false
           required: [key]
+          x-rules: [sshPrivateKey]
           properties:
             key:
               type: string
