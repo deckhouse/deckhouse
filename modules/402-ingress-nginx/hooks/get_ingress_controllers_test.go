@@ -24,7 +24,7 @@ import (
 )
 
 var _ = Describe("ingress-nginx :: hooks :: get_ingress_controllers ::", func() {
-	f := HookExecutionConfigInit(`{"ingressNginx":{"defaultControllerVersion": "1.9", "internal": {}}}`, "")
+	f := HookExecutionConfigInit(`{"ingressNginx":{"defaultControllerVersion": "1.10", "internal": {}}}`, "")
 	f.RegisterCRD("deckhouse.io", "v1", "IngressNginxController", false)
 
 	Context("Fresh cluster", func() {
@@ -48,7 +48,7 @@ metadata:
 spec:
   ingressClass: nginx
   inlet: LoadBalancer
-  controllerVersion: "1.9"
+  controllerVersion: "1.10"
   acceptRequestsFrom:
   - 127.0.0.1/32
   - 192.168.0.0/24
@@ -70,7 +70,7 @@ spec:
   "annotationValidationEnabled": false,
   "chaosMonkey": false,
   "config": {},
-  "controllerVersion": "1.9",
+  "controllerVersion": "1.10",
   "disableHTTP2": false,
   "enableHTTP3": false,
   "geoIP2": {},
