@@ -359,27 +359,21 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		suite.setupReleaseController(suite.fetchTestFileData("initial-state.yaml"))
 
 		// Test updating Parca module
-		suite.Run("update Parca module", func() {
-			mr := suite.getModuleRelease("parca-1.2.2")
-			_, err := suite.ctr.handleRelease(ctx, mr)
-			require.NoError(suite.T(), err)
-		})
+		mr := suite.getModuleRelease("parca-1.2.2")
+		_, err := suite.ctr.handleRelease(ctx, mr)
+		require.NoError(suite.T(), err)
 
 		// Test updating Commander module
-		suite.Run("update Commander module", func() {
-			mr := suite.getModuleRelease("commander-1.0.3")
-			_, err := suite.ctr.handleRelease(ctx, mr)
-			require.NoError(suite.T(), err)
-		})
+		mr = suite.getModuleRelease("commander-1.0.3")
+		_, err = suite.ctr.handleRelease(ctx, mr)
+		require.NoError(suite.T(), err)
 
 		// Verify the final state
-		suite.Run("verify final state", func() {
-			parca := suite.getModuleRelease("parca-1.2.2")
-			assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, parca.Status.Phase)
+		parca := suite.getModuleRelease("parca-1.2.2")
+		require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, parca.Status.Phase)
 
-			commander := suite.getModuleRelease("commander-1.0.3")
-			assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, commander.Status.Phase)
-		})
+		commander := suite.getModuleRelease("commander-1.0.3")
+		require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, commander.Status.Phase)
 	})
 }
 
