@@ -18,7 +18,7 @@ package hooks
 
 import (
 	"context"
-	. "github.com/deckhouse/deckhouse/testing/hooks"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -26,6 +26,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
+
+	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 var _ = Describe("openvpn :: hooks :: check_server_cert_expiry ::", func() {
