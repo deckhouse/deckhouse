@@ -1,0 +1,132 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    modules.deckhouse.io/registry-spec-checksum: c12a99d96e9ec5e0b07d24cc9615835f
+  creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/release-exists
+  name: test
+  resourceVersion: "999"
+spec:
+  registry:
+    ca: ""
+    dockerCfg: ""
+    repo: ""
+status:
+  message: ""
+  modules: null
+  modulesCount: 0
+  phase: ""
+  syncTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  creationTimestamp: null
+  labels:
+    module: commander
+    modules.deckhouse.io/update-policy: commander
+    release-checksum: fd59af7328ed891b53cc999f242b0866
+    source: test
+  name: commander-1.0.1
+  resourceVersion: "999"
+spec:
+  moduleName: commander
+  version: 1.0.1
+status:
+  approved: false
+  message: ""
+  phase: Superseded
+  pullDuration: 0s
+  size: 0
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  creationTimestamp: null
+  labels:
+    module: commander
+    modules.deckhouse.io/update-policy: commander
+    release-checksum: fd59af7328ed891b53cc999f242b0866
+    source: test
+  name: commander-1.0.2
+  resourceVersion: "999"
+spec:
+  moduleName: commander
+  version: 1.0.2
+status:
+  approved: false
+  message: ""
+  phase: Deployed
+  pullDuration: 0s
+  size: 0
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  creationTimestamp: null
+  labels:
+    module: commander
+    modules.deckhouse.io/update-policy: commander
+    release-checksum: fd59af7328ed891b53cc999f242b0866
+    source: test
+  name: commander-1.0.3
+  resourceVersion: "999"
+spec:
+  moduleName: commander
+  version: 1.0.3
+status:
+  approved: false
+  message: ""
+  phase: Pending
+  pullDuration: 0s
+  size: 0
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  creationTimestamp: null
+  labels:
+    module: parca
+    modules.deckhouse.io/update-policy: parca
+    release-checksum: fd59af7328ed891b53cc999f242b0866
+    source: test
+  name: parca-1.2.1
+  resourceVersion: "999"
+spec:
+  moduleName: parca
+  version: 1.2.1
+status:
+  approved: false
+  message: ""
+  phase: Deployed
+  pullDuration: 0s
+  size: 0
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  creationTimestamp: null
+  labels:
+    module: parca
+    modules.deckhouse.io/update-policy: parca
+    release-checksum: fd59af7328ed891b53cc999f242b0866
+    source: test
+  name: parca-1.2.2
+  resourceVersion: "999"
+spec:
+  moduleName: parca
+  version: 1.2.2
+status:
+  approved: false
+  message: ""
+  phase: Pending
+  pullDuration: 0s
+  size: 0
+  transitionTime: null
