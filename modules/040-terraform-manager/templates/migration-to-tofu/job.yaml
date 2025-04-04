@@ -1,9 +1,9 @@
-{{- if has .Values.global.clusterConfiguration.cloud.provider (list "Yandex")  }}
-
 {{- define "migration_job_resources" }}
 cpu: 25m
 memory: 60Mi
 {{- end }}
+
+{{- if has .Values.global.clusterConfiguration.cloud.provider (list "Yandex")  }}
 
 ---
 apiVersion: batch/v1
