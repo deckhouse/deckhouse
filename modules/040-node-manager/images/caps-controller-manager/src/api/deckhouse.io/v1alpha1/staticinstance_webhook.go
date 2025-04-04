@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"errors"
+	"fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -68,6 +69,11 @@ func (r *StaticInstance) ValidateUpdate(old runtime.Object) (admission.Warnings,
 	oldStaticInstance := old.(*StaticInstance)
 	if oldStaticInstance.Spec.Address != r.Spec.Address {
 		return nil, field.Forbidden(field.NewPath("spec", "address"), "StaticInstance address is immutable")
+	}
+
+	_, ok := r.Annotations[SkipBootstrapPhaseAnnotation]
+	if ok && r.Status.CurrentStatus.Phase != StaticInstanceStatusCurrentStatusPhasePending {
+		return nil, field.Forbidden(field.NewPath("metadata", "annotations"), fmt.Sprintf("Annotation '%s' can be set only when StaticInstance is in Pending phase", SkipBootstrapPhaseAnnotation))
 	}
 
 	return nil, nil

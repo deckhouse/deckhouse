@@ -238,9 +238,9 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 
 // setStaticInstancePhaseToRunning finishes the bootstrap process by waiting for bootstrapping Node to appear and patching StaticMachine and StaticInstance.
 func (c *Client) setStaticInstancePhaseToRunning(ctx context.Context, instanceScope *scope.InstanceScope) error {
-	node, err := waitForNode(ctx, instanceScope)
+	node, err := getNodeByProviderID(ctx, instanceScope)
 	if err != nil {
-		return errors.Wrap(err, "failed to wait for Node to appear")
+		return errors.Wrap(err, "failed to get Node by provider id")
 	}
 
 	c.recorder.SendNormalEvent(instanceScope.Instance, instanceScope.MachineScope.StaticMachine.Labels["node-group"], "NodeBootstrappingSucceeded", "Node successfully bootstrapped")
@@ -275,8 +275,8 @@ func (c *Client) setStaticInstancePhaseToRunning(ctx context.Context, instanceSc
 	return nil
 }
 
-// waitForNode waits for the node to appear and checks that it has 'node.deckhouse.io/configuration-checksum' annotation.
-func waitForNode(ctx context.Context, instanceScope *scope.InstanceScope) (*corev1.Node, error) {
+// getNodeByProviderID returns the Node with the provider id from the StaticMachine's spec.
+func getNodeByProviderID(ctx context.Context, instanceScope *scope.InstanceScope) (*corev1.Node, error) {
 	nodes := &corev1.NodeList{}
 	nodeSelector := fields.OneTermEqualSelector("spec.providerID", string(instanceScope.MachineScope.StaticMachine.Spec.ProviderID))
 
