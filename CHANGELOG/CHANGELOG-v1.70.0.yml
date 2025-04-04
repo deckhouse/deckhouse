@@ -1,0 +1,23 @@
+ci:
+  fixes:
+    - summary: Prevent scheduled GitHub Actions from running in forks
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12787
+cni-cilium:
+  fixes:
+    - summary: >-
+        Added restoring/hiding network access to cilium endpoint (cep) when higher/lower priority
+        cep was removed/added.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12793
+deckhouse-controller:
+  fixes:
+    - summary: add verbosity to registry client
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12824
+metallb:
+  fixes:
+    - summary: Dashboards are aligned with user experience expectations.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12666
+service-with-healthchecks:
+  fixes:
+    - summary: Fixed README.md for image patches.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12841
+
