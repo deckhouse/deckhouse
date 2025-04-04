@@ -243,3 +243,12 @@ properties:
                 - type: number
                 description: |
                   Configuring memory limits.
+  encryptionMode:
+    type: string
+    enum: ["Disabled", "Default", "NodeToNode"]
+    default: "Disabled"
+    description: |
+      Encryption mode:
+      - `Disabled` — encryption is disabled.
+      - `Default` — encryption between pods is enabled using Wireguard.
+      - `NodeToNode` — encryption between pods and nodes is enabled using Wireguard.
