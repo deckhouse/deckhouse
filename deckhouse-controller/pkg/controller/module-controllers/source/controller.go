@@ -192,27 +192,27 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 	if err != nil {
 		r.logger.Error("failed to get registry client for the module source", slog.String("source_name", source.Name), log.Err(err))
 		if uerr := r.updateModuleSourceStatusMessage(ctx, source, err.Error()); uerr != nil {
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{}, uerr
 		}
 		// error can occur on wrong auth only, we don't want to requeue the source until auth is fixed
-		return ctrl.Result{Requeue: false}, nil
+		return ctrl.Result{}, nil
 	}
 
 	// sync registry settings
 	if err = r.syncRegistrySettings(ctx, source); err != nil && !errors.Is(err, ErrSettingsNotChanged) {
 		r.logger.Error("failed to sync registry settings for module source", slog.String("source_name", source.Name), log.Err(err))
 		if uerr := r.updateModuleSourceStatusMessage(ctx, source, err.Error()); uerr != nil {
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{}, uerr
 		}
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{}, err
 	}
 	if err == nil {
 		// new registry settings checksum should be applied to module source
 		if err = r.client.Update(ctx, source); err != nil {
 			r.logger.Error("failed to update module source status", slog.String("source_name", source.Name), log.Err(err))
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{}, err
 		}
-		// requeue moduleSource after modifying annotation
+		// requeue module source after modifying annotation
 		r.logger.Debug("module source will be requeued", slog.String("source_name", source.Name))
 		return ctrl.Result{Requeue: true}, nil
 	}
@@ -223,7 +223,7 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 	if err != nil {
 		r.logger.Error("failed to list tags for the module source", slog.String("source_name", source.Name), log.Err(err))
 		if uerr := r.updateModuleSourceStatusMessage(ctx, source, err.Error()); uerr != nil {
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{}, uerr
 		}
 		return ctrl.Result{RequeueAfter: defaultScanInterval}, nil
 	}
@@ -242,14 +242,14 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 		if !namesSet[availableModule.Name] {
 			if err = r.cleanSourceInModule(ctx, source.Name, availableModule.Name); err != nil {
 				r.logger.Error("failed to clean the module from the module source", slog.String("name", availableModule.Name), log.Err(err))
-				return ctrl.Result{Requeue: true}, nil
+				return ctrl.Result{}, err
 			}
 		}
 	}
 
 	if err = r.processModules(ctx, source, opts, pulledModules); err != nil {
 		r.logger.Error("failed to process modules for the module source", slog.String("source_name", source.Name), log.Err(err))
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{}, err
 	}
 	r.logger.Debug("module source reconciled", slog.String("source_name", source.Name))
 
