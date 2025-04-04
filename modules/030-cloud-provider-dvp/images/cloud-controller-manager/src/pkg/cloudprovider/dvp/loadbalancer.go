@@ -58,69 +58,6 @@ func (c *Cloud) EnsureLoadBalancer(
 	service *corev1.Service,
 	nodes []*corev1.Node,
 ) (*corev1.LoadBalancerStatus, error) {
-	// name := c.GetLoadBalancerName(ctx, clusterName, service)
-	// svc, err := c.dvpService.LoadBalancerService.GetLoadBalancerByName(ctx, name)
-	// if err != nil {
-	// 	klog.Errorf("Failed to get LoadBalancer service %q in namespace %q: %v", name, c.config.Namespace, err)
-	// 	return nil, err
-	// }
-	//
-	// ports := c.dvpService.LoadBalancerService.CreateLoadBalancerPorts(service)
-	//
-	// if svc != nil {
-	// 	return &svc.Status.LoadBalancer, c.dvpService.LoadBalancerService.UpdateLoadBalancerPorts(ctx, svc, ports)
-	// }
-	//
-	// vmLabels := map[string]string{}
-	// vmLabels = c.addNodesSelectorLabels(vmLabels, nodes)
-	//
-	// klog.Infof("vmLabels: %v", vmLabels)
-	//
-	// // TODO: fix labels.
-	// svcLabels := map[string]string{
-	// 	"cluster.x-k8s.io/tenant-service-name":      service.Name,
-	// 	"cluster.x-k8s.io/tenant-service-namespace": service.Namespace,
-	// 	"cluster.x-k8s.io/cluster-name":             clusterName,
-	// }
-	//
-	// svc, err = c.dvpService.LoadBalancerService.CreateLoadBalancer(
-	// 	ctx,
-	// 	name,
-	// 	service,
-	// 	vmLabels,
-	// 	svcLabels,
-	// 	ports,
-	// )
-	// if err != nil {
-	// 	klog.Errorf("Failed to create LoadBalancer service %q in namespace %q: %v", name, c.config.Namespace, err)
-	// 	return nil, err
-	// }
-	//
-	// err = wait.PollUntilContextTimeout(ctx,
-	// 	LBCreationPollInterval,
-	// 	LBCreationPollTimeout,
-	// 	true,
-	// 	func(context.Context) (done bool, err error) {
-	// 		if len(svc.Status.LoadBalancer.Ingress) > 0 {
-	// 			return true, nil
-	// 		}
-	// 		s, err := c.dvpService.LoadBalancerService.GetLoadBalancerByName(ctx, name)
-	// 		if err != nil {
-	// 			klog.Errorf("Failed to get LoadBalancer service %q in namespace %q: %v", name, c.config.Namespace, err)
-	// 			return false, err
-	// 		}
-	// 		if s != nil && len(s.Status.LoadBalancer.Ingress) > 0 {
-	// 			svc = s
-	// 			return true, nil
-	// 		}
-	// 		return false, nil
-	// 	})
-	// if err != nil {
-	// 	klog.Errorf("Failed to poll LoadBalancer service %q in namespace %q: %v", name, c.config.Namespace, err)
-	// 	return nil, err
-	// }
-	//
-	// return &svc.Status.LoadBalancer, nil
 	return c.ensureLB(ctx, service, nodes)
 }
 
@@ -130,17 +67,6 @@ func (c *Cloud) UpdateLoadBalancer(
 	service *corev1.Service,
 	nodes []*corev1.Node,
 ) error {
-	// name := c.GetLoadBalancerName(ctx, clusterName, service)
-	//
-	// svc, err := c.dvpService.LoadBalancerService.GetLoadBalancerByName(ctx, name)
-	// if err != nil {
-	// 	klog.Errorf("Failed to get LoadBalancer service %q in namespace %q: %v", name, c.config.Namespace, err)
-	// 	return err
-	// }
-	//
-	// ports := c.dvpService.LoadBalancerService.CreateLoadBalancerPorts(service)
-	// // LoadBalancer already exist, update the ports if changed
-	// return c.dvpService.LoadBalancerService.UpdateLoadBalancerPorts(ctx, svc, ports)
 	_, err := c.ensureLB(ctx, service, nodes)
 	return err
 }
