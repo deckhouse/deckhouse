@@ -353,50 +353,33 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
 		require.NoError(suite.T(), err)
 	})
-}
 
-func (suite *ReleaseControllerTestSuite) TestModuleUpdate() {
-	err := os.Setenv("TEST_EXTENDER_DECKHOUSE_VERSION", "v1.0.0")
-	require.NoError(suite.T(), err)
-	err = os.Setenv("TEST_EXTENDER_KUBERNETES_VERSION", "1.28.0")
-	require.NoError(suite.T(), err)
-	ctx := suite.Context()
+	suite.Run("Process pending releases", func() {
+		// Setup initial state
+		suite.setupReleaseController(suite.fetchTestFileData("initial-state.yaml"))
 
-	dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
-		ManifestStub: func() (*v1.Manifest, error) {
-			return &v1.Manifest{
-				Layers: []v1.Descriptor{},
-			}, nil
-		},
-		LayersStub: func() ([]v1.Layer, error) {
-			return []v1.Layer{&utils.FakeLayer{}}, nil
-		},
-	}, nil)
+		// Test updating Parca module
+		suite.Run("update Parca module", func() {
+			mr := suite.getModuleRelease("parca-1.2.2")
+			_, err := suite.ctr.handleRelease(ctx, mr)
+			require.NoError(suite.T(), err)
+		})
 
-	// Setup initial state
-	suite.setupReleaseController(suite.fetchTestFileData("initial-state.yaml"))
+		// Test updating Commander module
+		suite.Run("update Commander module", func() {
+			mr := suite.getModuleRelease("commander-1.0.3")
+			_, err := suite.ctr.handleRelease(ctx, mr)
+			require.NoError(suite.T(), err)
+		})
 
-	// Test updating Parca module
-	suite.Run("update Parca module", func() {
-		mr := suite.getModuleRelease("parca-1.2.2")
-		_, err := suite.ctr.handleRelease(ctx, mr)
-		require.NoError(suite.T(), err)
-	})
+		// Verify the final state
+		suite.Run("verify final state", func() {
+			parca := suite.getModuleRelease("parca-1.2.2")
+			assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, parca.Status.Phase)
 
-	// Test updating Commander module
-	suite.Run("update Commander module", func() {
-		mr := suite.getModuleRelease("commander-1.0.3")
-		_, err := suite.ctr.handleRelease(ctx, mr)
-		require.NoError(suite.T(), err)
-	})
-
-	// Verify the final state
-	suite.Run("verify final state", func() {
-		parca := suite.getModuleRelease("parca-1.2.2")
-		assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, parca.Status.Phase)
-
-		commander := suite.getModuleRelease("commander-1.0.3")
-		assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, commander.Status.Phase)
+			commander := suite.getModuleRelease("commander-1.0.3")
+			assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, commander.Status.Phase)
+		})
 	})
 }
 

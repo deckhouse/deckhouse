@@ -54,7 +54,7 @@ metadata:
     release-checksum: fd59af7328ed891b53cc999f242b0866
     source: test
   name: commander-1.0.2
-  resourceVersion: "999"
+  resourceVersion: "1000"
 spec:
   moduleName: commander
   version: 1.0.2
@@ -62,22 +62,28 @@ spec:
 status:
   approved: false
   message: ""
-  phase: Deployed
+  phase: Superseded
   pullDuration: 0s
   size: 0
-  transitionTime: null
+  transitionTime: "2019-10-17T15:33:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
+  annotations:
+    modules.deckhouse.io/isUpdating: "true"
+    modules.deckhouse.io/notified: "false"
   creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/exist-on-fs
   labels:
     module: commander
     modules.deckhouse.io/update-policy: commander
     release-checksum: fd59af7328ed891b53cc999f242b0866
     source: test
+    status: deployed
   name: commander-1.0.3
-  resourceVersion: "999"
+  resourceVersion: "1001"
 spec:
   moduleName: commander
   version: 1.0.3
@@ -85,8 +91,8 @@ spec:
 status:
   approved: false
   message: ""
-  phase: Pending
-  pullDuration: 0s
+  phase: Deployed
+  pullDuration: 9m15s
   size: 0
   transitionTime: null
 ---
@@ -100,7 +106,7 @@ metadata:
     release-checksum: fd59af7328ed891b53cc999f242b0866
     source: test
   name: parca-1.2.1
-  resourceVersion: "999"
+  resourceVersion: "1000"
 spec:
   moduleName: parca
   version: 1.2.1
@@ -108,22 +114,28 @@ spec:
 status:
   approved: false
   message: ""
-  phase: Deployed
+  phase: Superseded
   pullDuration: 0s
   size: 0
-  transitionTime: null
+  transitionTime: "2019-10-17T15:33:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
+  annotations:
+    modules.deckhouse.io/isUpdating: "true"
+    modules.deckhouse.io/notified: "false"
   creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/exist-on-fs
   labels:
     module: parca
     modules.deckhouse.io/update-policy: parca
     release-checksum: fd59af7328ed891b53cc999f242b0866
     source: test
+    status: deployed
   name: parca-1.2.2
-  resourceVersion: "999"
+  resourceVersion: "1001"
 spec:
   moduleName: parca
   version: 1.2.2
@@ -131,7 +143,7 @@ spec:
 status:
   approved: false
   message: ""
-  phase: Pending
-  pullDuration: 0s
+  phase: Deployed
+  pullDuration: 9m15s
   size: 0
   transitionTime: null
