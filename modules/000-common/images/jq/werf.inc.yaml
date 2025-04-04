@@ -2,10 +2,13 @@
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   - cd /src
-  - git clone --depth 1 {{ .SOURCE_REPO }}/jqlang/jq --branch "jq-{{.CandiVersionMap.jq.version}}" . && rm -rf /src/.git
+  - git clone --depth 1 $(cat /run/secrets/SOURCE_REPO)/jqlang/jq --branch "jq-{{.CandiVersionMap.jq.version}}" . && rm -rf /src/.git
   - rm -r docs
   - mkdir -p docs/content/manual
   - touch docs/content/manual/manual.yml

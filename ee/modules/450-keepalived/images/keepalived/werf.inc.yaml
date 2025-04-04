@@ -2,9 +2,12 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
 fromImage: common/src-artifact
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 -b v2.2.7 {{ $.SOURCE_REPO }}/acassen/keepalived.git /src
+  - git clone --depth 1 -b v2.2.7 $(cat /run/secrets/SOURCE_REPO)/acassen/keepalived.git /src
   - rm -rf /src/.git
 ---
 image: {{ .ModuleName }}/build-keepalived
