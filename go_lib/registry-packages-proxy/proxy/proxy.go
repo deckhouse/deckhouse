@@ -114,6 +114,7 @@ func (p *Proxy) Serve() {
 		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s.%s", digest, fileSuffix))
 		w.Header().Set("Content-Length", strconv.FormatInt(size, 10))
 
+		// Cache for 1 year
 		w.Header().Set("Cache-Control", "public, max-age=31536000")
 		w.Header().Set("ETag", "\""+digest+"\"")
 
