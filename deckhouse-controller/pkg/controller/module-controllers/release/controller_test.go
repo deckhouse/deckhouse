@@ -356,7 +356,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("Process pending releases", func() {
 		// Setup initial state
-		suite.setupReleaseController(suite.fetchTestFileData("initial-state.yaml"))
+		suite.setupReleaseController(suite.fetchTestFileData("apply-pending-releases.yaml"))
 
 		// Test updating Parca module
 		mr := suite.getModuleRelease("parca-1.2.2")
