@@ -64,11 +64,13 @@ func NewClient(repo string, options ...Option) (Client, error) {
 	// make possible to rewrite timeout in runtime
 	if t := os.Getenv("REGISTRY_TIMEOUT"); t != "" {
 		var err error
+
 		timeout, err = time.ParseDuration(t)
 		if err != nil {
 			return nil, fmt.Errorf("parse duration: %w", err)
 		}
 	}
+
 	opts := &registryOptions{
 		timeout: timeout,
 	}
@@ -87,6 +89,7 @@ func NewClient(repo string, options ...Option) (Client, error) {
 		if err != nil {
 			return nil, fmt.Errorf("read auth config: %w", err)
 		}
+
 		r.authConfig = authConfig
 	}
 
@@ -111,14 +114,16 @@ func (r *client) Image(ctx context.Context, tag string) (v1.Image, error) {
 	if !r.options.withoutAuth {
 		imageOptions = append(imageOptions, remote.WithAuth(authn.FromConfig(r.authConfig)))
 	}
+
 	if r.options.ca != "" {
 		imageOptions = append(imageOptions, remote.WithTransport(GetHTTPTransport(r.options.ca)))
 	}
 
 	if r.options.timeout > 0 {
 		// add default timeout to prevent endless request on a huge image
+		// Warning!: don't use cancel() in the defer func here. Otherwise *v1.Image outside this function would be inaccessible due to cancelled context, while reading layers, for example.
 		ctxWTO, cancel := context.WithTimeout(ctx, r.options.timeout)
-		defer cancel()
+		_ = cancel
 
 		imageOptions = append(imageOptions, remote.WithContext(ctxWTO))
 	} else {
@@ -139,12 +144,12 @@ func (r *client) ListTags(ctx context.Context) ([]string, error) {
 		nameOpts = append(nameOpts, name.Insecure)
 	}
 
-	imageOptions := make([]remote.Option, 0)
+	listOptions := make([]remote.Option, 0)
 	if !r.options.withoutAuth {
-		imageOptions = append(imageOptions, remote.WithAuth(authn.FromConfig(r.authConfig)))
+		listOptions = append(listOptions, remote.WithAuth(authn.FromConfig(r.authConfig)))
 	}
 	if r.options.ca != "" {
-		imageOptions = append(imageOptions, remote.WithTransport(GetHTTPTransport(r.options.ca)))
+		listOptions = append(listOptions, remote.WithTransport(GetHTTPTransport(r.options.ca)))
 	}
 
 	repo, err := name.NewRepository(r.registryURL, nameOpts...)
@@ -155,14 +160,15 @@ func (r *client) ListTags(ctx context.Context) ([]string, error) {
 	if r.options.timeout > 0 {
 		// add default timeout to prevent endless request on a huge amount of tags
 		ctxWTO, cancel := context.WithTimeout(ctx, r.options.timeout)
+		// here we can use cancel because we return the []strings, not []*v1.Image
 		defer cancel()
 
-		imageOptions = append(imageOptions, remote.WithContext(ctxWTO))
+		listOptions = append(listOptions, remote.WithContext(ctxWTO))
 	} else {
-		imageOptions = append(imageOptions, remote.WithContext(ctx))
+		listOptions = append(listOptions, remote.WithContext(ctx))
 	}
 
-	list, err := remote.List(repo, imageOptions...)
+	list, err := remote.List(repo, listOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("list: %w", err)
 	}
@@ -314,6 +320,7 @@ func Extract(image v1.Image) (io.ReadCloser, error) {
 	if err != nil {
 		return nil, fmt.Errorf("getting the image's layers: %w", err)
 	}
+
 	if len(imageLayers) != 1 {
 		return nil, fmt.Errorf("unexpected number of layers: %w", err)
 	}

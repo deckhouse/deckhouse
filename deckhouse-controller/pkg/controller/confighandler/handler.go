@@ -74,6 +74,9 @@ func (h *Handler) HandleEvent(moduleConfig *v1alpha1.ModuleConfig, op config.Op)
 	} else {
 		addonOperatorModuleConfig := utils.NewModuleConfig(moduleConfig.Name, values)
 		addonOperatorModuleConfig.IsEnabled = moduleConfig.Spec.Enabled
+		if len(moduleConfig.Spec.ManagementState) > 0 {
+			addonOperatorModuleConfig.ManagementState = utils.ManagementState(moduleConfig.Spec.ManagementState)
+		}
 		kubeConfig.Modules[moduleConfig.Name] = &config.ModuleKubeConfig{
 			ModuleConfig: *addonOperatorModuleConfig,
 			Checksum:     addonOperatorModuleConfig.Checksum(),
@@ -88,7 +91,7 @@ func (h *Handler) HandleEvent(moduleConfig *v1alpha1.ModuleConfig, op config.Op)
 	h.configEventCh <- config.Event{Key: moduleConfig.Name, Config: kubeConfig, Op: op}
 }
 
-// StartInformer does not start informer, it just registers channels, this name used just to implement interface
+// StartInformer does not start informer, it just registers channels, this name is used just to implement interface
 func (h *Handler) StartInformer(_ context.Context, eventCh chan config.Event) {
 	h.l.Lock()
 	h.configEventCh = eventCh
@@ -119,7 +122,9 @@ func (h *Handler) LoadConfig(ctx context.Context, _ ...string) (*config.KubeConf
 
 		addonOperatorModuleConfig := utils.NewModuleConfig(moduleConfig.Name, values)
 		addonOperatorModuleConfig.IsEnabled = moduleConfig.Spec.Enabled
-
+		if len(moduleConfig.Spec.ManagementState) > 0 {
+			addonOperatorModuleConfig.ManagementState = utils.ManagementState(moduleConfig.Spec.ManagementState)
+		}
 		kubeConfig.Modules[moduleConfig.Name] = &config.ModuleKubeConfig{
 			ModuleConfig: *addonOperatorModuleConfig,
 			Checksum:     addonOperatorModuleConfig.Checksum(),
