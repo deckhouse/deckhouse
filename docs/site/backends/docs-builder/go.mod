@@ -2,15 +2,14 @@ module github.com/flant/docs-builder
 
 go 1.23.1
 
-toolchain go1.24.0
-
 require (
 	github.com/bep/clocks v0.5.0
 	github.com/bep/lazycache v0.2.0
 	github.com/bep/logg v0.2.0
 	github.com/bep/overlayfs v0.6.0
-	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250404113407-83e8e539d9ef
+	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250404120920-86b2e172d961
 	github.com/gohugoio/hugo v0.119.0
+	github.com/mitchellh/mapstructure v1.5.0
 	github.com/spf13/afero v1.9.5
 	github.com/spf13/fsync v0.9.0
 	golang.org/x/sync v0.10.0
@@ -120,7 +119,6 @@ require (
 	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/mitchellh/hashstructure v1.1.0 // indirect
-	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect

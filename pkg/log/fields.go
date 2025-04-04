@@ -18,7 +18,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -41,13 +40,6 @@ func Err(err error) slog.Attr {
 	return slog.Attr{
 		Key:   "error",
 		Value: slog.StringValue(err.Error()),
-	}
-}
-
-func Duration(key string, d time.Duration) slog.Attr {
-	return slog.Attr{
-		Key:   key,
-		Value: slog.StringValue(d.String()),
 	}
 }
 
