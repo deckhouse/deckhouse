@@ -114,10 +114,10 @@ func (r *runner) RunConverge(ctx *context.Context) error {
 	return r.converge(ctx)
 }
 
-func (r *runner) RunConvergeMigration(ctx *context.Context) error {
+func (r *runner) RunConvergeMigration(ctx *context.Context, checkHasTerraformStateBeforeMigration bool) error {
 	if r.lockRunner != nil {
 		err := r.lockRunner.Run(ctx.Ctx(), func() error {
-			return r.convergeMigration(ctx)
+			return r.convergeMigration(ctx, checkHasTerraformStateBeforeMigration)
 		})
 
 		if err != nil {
@@ -313,7 +313,7 @@ func (r *runner) convergeDeckhouseConfiguration(ctx *context.Context, commanderU
 	return ctx.CompleteExecutionPhase(nil)
 }
 
-func (r *runner) convergeMigration(ctx *context.Context) error {
+func (r *runner) convergeMigration(ctx *context.Context, checkHasTerraformStateBeforeMigration bool) error {
 	log.InfoF("Converge migration start\n")
 	defer log.InfoF("Converge migration finished\n")
 
@@ -325,6 +325,22 @@ func (r *runner) convergeMigration(ctx *context.Context) error {
 	if !infrastructureprovider.NeedToUseOpentofu(metaConfig) {
 		log.InfoF("Skipping migration. Provider %s does not support opentofu now\n", metaConfig.ProviderName)
 		return nil
+	}
+
+	if checkHasTerraformStateBeforeMigration {
+		_, hasTerraFormState, err := check.CheckState(ctx.Ctx(), ctx.KubeClient(), metaConfig, ctx.InfrastructureContext(metaConfig), check.CheckStateOptions{
+			CommanderMode: ctx.CommanderMode(),
+			StateCache:    ctx.StateCache(),
+		})
+
+		if err != nil {
+			return err
+		}
+
+		if hasTerraFormState {
+			log.InfoLn("Cluster do not have terraform state. Skipping migration")
+			return nil
+		}
 	}
 
 	log.DebugLn("Start backup infrastructure states")
@@ -365,9 +381,13 @@ func (r *runner) convergeMigration(ctx *context.Context) error {
 		return err
 	}
 
-	err = manager.RestartAutoConverger(ctx.Ctx(), ctx.KubeProvider())
-	if err != nil {
-		return err
+	if !checkHasTerraformStateBeforeMigration {
+		err = manager.RestartAutoConverger(ctx.Ctx(), ctx.KubeProvider())
+		if err != nil {
+			return err
+		}
+	} else {
+		log.InfoF("Skip restarting autoconverger\n")
 	}
 
 	log.DebugLn("Restarting infrastructure manager deployments finished")
