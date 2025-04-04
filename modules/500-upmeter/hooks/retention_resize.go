@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//	http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -47,7 +47,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Schedule: []go_hook.ScheduleConfig{
 		{
 			Name:    "adjust_retention_every_15min",
-			Crontab: "*/15 * * * *",
+			Crontab: "0 */4 * * *",
 		},
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
@@ -109,46 +109,62 @@ func adjustUpmeterRetention(input *go_hook.HookInput, dc dependency.Container) e
 		return fmt.Errorf("unable to get Kubernetes client: %w", err)
 	}
 
-	stdout, _, err := execToPod(kubeClient, "df -PB1 /db", "upmeter", pod.Name, pod.Namespace)
+	podObj, err := kubeClient.CoreV1().Pods(pod.Namespace).Get(context.Background(), pod.Name, metav1.GetOptions{})
 	if err != nil {
-		return fmt.Errorf("unable to execute command in pod: %w", err)
+		return fmt.Errorf("unable to get pod object: %w", err)
 	}
 
-	usagePercent := parseDFPct(stdout)
-	if usagePercent < 0 {
-		return fmt.Errorf("unable to parse disk usage percentage from command output")
-	}
-
-	retentionDays := 548
-
-	if usagePercent > 80 {
-		scaling := float64(100-usagePercent) / 20.0
-		retentionDays = int(548.0 * scaling)
-		if retentionDays < 30 {
-			retentionDays = 30
-		}
-	}
-
-	input.Values.Set("upmeter.internal.retentionDays", retentionDays)
-
-	return nil
-}
-
-func parseDFPct(output string) int {
-	lines := strings.Split(output, "\n")
-	for _, line := range lines {
-		if strings.Contains(line, "/db") || strings.Contains(line, "/dev/") {
-			fields := strings.Fields(line)
-			if len(fields) >= 5 {
-				pctStr := strings.TrimSuffix(fields[4], "%")
-				pct, err := strconv.Atoi(pctStr)
-				if err == nil {
-					return pct
+	var currentRetention int
+	for _, container := range podObj.Spec.Containers {
+		if container.Name == "upmeter" {
+			for _, envVar := range container.Env {
+				if envVar.Name == "RETENTION_DAYS" {
+					currentRetention, err = strconv.Atoi(envVar.Value)
+					if err != nil {
+						return fmt.Errorf("invalid RETENTION_DAYS env value: %v", err)
+					}
+					break
 				}
 			}
 		}
 	}
-	return -1
+
+	stdout, _, err := execToPod(kubeClient, "df -B1 --output=pcent /db", "upmeter", pod.Name, pod.Namespace)
+	if err != nil {
+		return fmt.Errorf("unable to execute command in pod: %w", err)
+	}
+
+	usagePercent, err := parseDFPct(stdout)
+	if err != nil {
+		return fmt.Errorf("unable to parse disk usage percentage: %w", err)
+	}
+
+	if usagePercent > 80 {
+		currentRetention -= 7
+		if currentRetention < 90 {
+			currentRetention = 90
+		}
+	}
+
+	input.Values.Set("upmeter.internal.retentionDays", currentRetention)
+
+	return nil
+}
+
+func parseDFPct(output string) (int, error) {
+	lines := strings.Split(output, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.HasSuffix(line, "%") {
+			pctStr := strings.TrimSuffix(line, "%")
+			pct, err := strconv.Atoi(strings.TrimSpace(pctStr))
+			if err != nil {
+				return 0, fmt.Errorf("failed to convert to int: %w", err)
+			}
+			return pct, nil
+		}
+	}
+	return 0, fmt.Errorf("no usage percentage found in df output")
 }
 
 func execToPod(kubeClient k8s.Client, command, container, podName, namespace string) (string, string, error) {
