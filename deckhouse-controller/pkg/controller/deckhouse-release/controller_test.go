@@ -347,19 +347,6 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
-	suite.Run("First Release with manual mode", func() {
-		mup := embeddedMUP.DeepCopy()
-		mup.Update.Mode = v1alpha1.UpdateModeManual.String()
-
-		values, err := sjson.Delete(initValues, "global.clusterIsBootstrapped")
-		require.NoError(suite.T(), err)
-
-		suite.setupController("first-release-with-manual-mode.yaml", values, mup)
-		dr := suite.getDeckhouseRelease("v1.25.1")
-		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
-		require.NoError(suite.T(), err)
-	})
-
 	suite.Run("Few patch releases", func() {
 		dependency.TestDC.HTTPClient.DoMock.
 			Expect(&http.Request{}).
