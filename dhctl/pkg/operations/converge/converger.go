@@ -54,6 +54,8 @@ type Params struct {
 	ApproveDestructiveChangeID string
 
 	InfrastructureContext *infrastructure.Context
+
+	CheckHasTerraformStateBeforeMigration bool
 }
 
 type Converger struct {
@@ -175,7 +177,7 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 	r := newRunner(inLockRunner, nil).
 		WithCommanderUUID(c.CommanderUUID)
 
-	err = r.RunConvergeMigration(convergeCtx)
+	err = r.RunConvergeMigration(convergeCtx, c.Params.CheckHasTerraformStateBeforeMigration)
 	if err != nil {
 		return fmt.Errorf("converge problem: %v", err)
 	}
@@ -323,7 +325,9 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 
 	doAction := r.RunConverge
 	if needAutomaticTofuMigrationForCommander {
-		doAction = r.RunConvergeMigration
+		doAction = func(ctx *convergectx.Context) error {
+			return r.RunConvergeMigration(ctx, false)
+		}
 	}
 
 	err = doAction(convergeCtx)

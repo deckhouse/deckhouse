@@ -85,6 +85,7 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
+	app.DefineCheckHasTerraformStateBeforeMigrateToTofu(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		sshClient, err := ssh.NewInitClientFromFlags(true)
@@ -104,6 +105,7 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 				},
 				SkipChangesOnDeny: true,
 			},
+			CheckHasTerraformStateBeforeMigration: app.CheckHasTerraformStateBeforeMigrateToTofu,
 		})
 		return converger.ConvergeMigration(context.Background())
 	})

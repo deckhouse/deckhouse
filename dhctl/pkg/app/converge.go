@@ -25,6 +25,8 @@ var (
 	ListenAddress = ":9101"
 	CheckInterval = time.Minute
 	OutputFormat  = "yaml"
+
+	CheckHasTerraformStateBeforeMigrateToTofu = false
 )
 
 func DefineConvergeExporterFlags(cmd *kingpin.CmdClause) {
@@ -44,4 +46,10 @@ func DefineOutputFlag(cmd *kingpin.CmdClause) {
 		Envar(configEnvName("OUTPUT")).
 		Short('o').
 		EnumVar(&OutputFormat, "yaml", "json")
+}
+
+func DefineCheckHasTerraformStateBeforeMigrateToTofu(cmd *kingpin.CmdClause) {
+	cmd.Flag("check-has-terraform-state-before-migrate-to-tofu", "Check cluster has terraform state before migrate state to tofu.").
+		Default("false").
+		BoolVar(&CheckHasTerraformStateBeforeMigrateToTofu)
 }
