@@ -31,6 +31,7 @@ check_container_running() {
     fi
 
     sleep $sleep_interval
+    echo "wait for the $container_name to start $count"
   done
 }
 
