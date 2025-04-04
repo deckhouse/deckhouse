@@ -25,6 +25,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"k8s.io/client-go/tools/clientcmd"
@@ -42,7 +45,13 @@ func DefineSessionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineBecomeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient, err := ssh.NewInitClientFromFlags(true)
+		var sshClient node.SSHClient
+		var err error
+		if app.LegacyMode {
+			sshClient, err = clissh.NewInitClientFromFlags(true)
+		} else {
+			sshClient, err = gossh.NewInitClientFromFlags(true)
+		}
 		if err != nil {
 			return err
 		}

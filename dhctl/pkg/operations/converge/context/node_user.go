@@ -38,7 +38,7 @@ type NodeUserCredentials struct {
 	Password string `json:"password"`
 }
 
-func generateNodeUser() (*v1.NodeUser, *NodeUserCredentials, error) {
+func GenerateNodeUser() (*v1.NodeUser, *NodeUserCredentials, error) {
 	passwordBytes := make([]byte, 16)
 	_, err := rand.Read(passwordBytes)
 	if err != nil {

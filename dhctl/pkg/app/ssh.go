@@ -21,7 +21,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -43,6 +43,8 @@ var (
 
 	AskBecomePass = false
 	BecomePass    = ""
+
+	LegacyMode = false
 )
 
 type connectionConfigParser interface {
@@ -89,6 +91,9 @@ func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
 	cmd.Flag("connection-config", "SSH connection config file path").
 		Envar(configEnvName("CONNECTION_CONFIG")).
 		StringVar(&ConnectionConfigPath)
+	cmd.Flag("ssh-legacy-mode", "Switch to legacy SSH mode").
+		Envar(configEnvName("SSH_LEGACY_MODE")).
+		BoolVar(&LegacyMode)
 
 	cmd.PreAction(func(c *kingpin.ParseContext) error {
 		if !sshBastionUserFlagSetByUser && sshUserFlagSetByUser {
@@ -142,7 +147,10 @@ func ParseSSHPrivateKeyPaths(pathSets []string) ([]string, error) {
 			if err != nil {
 				return nil, fmt.Errorf("get absolute path for '%s': %v", k, err)
 			}
-			res = append(res, keyPath)
+
+			if _, err := os.Stat(keyPath); err == nil {
+				res = append(res, keyPath)
+			}
 		}
 	}
 	return res, nil

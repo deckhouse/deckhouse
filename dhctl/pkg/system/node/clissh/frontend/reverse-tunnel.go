@@ -23,20 +23,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/cmd"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh/cmd"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 )
-
-type ReverseTunnelChecker interface {
-	CheckTunnel(ctx context.Context) (string, error)
-}
-
-type ReverseTunnelKiller interface {
-	KillTunnel(ctx context.Context) (string, error)
-}
 
 type tunnelWaitResult struct {
 	id  int
@@ -120,7 +113,7 @@ func (t *ReverseTunnel) isStarted() bool {
 	return r
 }
 
-func (t *ReverseTunnel) tryToRestart(ctx context.Context, id int, killer ReverseTunnelKiller) (int, error) {
+func (t *ReverseTunnel) tryToRestart(ctx context.Context, id int, killer node.ReverseTunnelKiller) (int, error) {
 	t.stop(id, false)
 	log.DebugF("[%d] Kill tunnel\n", id)
 	if out, err := killer.KillTunnel(ctx); err != nil {
@@ -130,7 +123,7 @@ func (t *ReverseTunnel) tryToRestart(ctx context.Context, id int, killer Reverse
 	return t.upNewTunnel(id)
 }
 
-func (t *ReverseTunnel) StartHealthMonitor(ctx context.Context, checker ReverseTunnelChecker, killer ReverseTunnelKiller) {
+func (t *ReverseTunnel) StartHealthMonitor(ctx context.Context, checker node.ReverseTunnelChecker, killer node.ReverseTunnelKiller) {
 	t.tunMutex.Lock()
 	t.stopCh = make(chan struct{})
 	t.tunMutex.Unlock()

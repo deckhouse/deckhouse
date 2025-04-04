@@ -20,71 +20,59 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/process"
 )
 
-type SCP struct {
+type SSH struct {
 	*process.Executor
+	Session     *session.Session
+	Args        []string
+	Env         []string
+	CommandName string
+	CommandArgs []string
 
-	Session *session.Session
-	scpCmd  *exec.Cmd
-
-	RemoteDst bool
-	Dst       string
-	RemoteSrc bool
-	Src       string
-	Preserve  bool
-	Recursive bool
+	ExitWhenTunnelFailure bool
 }
 
-func NewSCP(sess *session.Session) *SCP {
-	return &SCP{Session: sess}
+func NewSSH(sess *session.Session) *SSH {
+	return &SSH{Session: sess}
 }
 
-func (s *SCP) WithRemoteDst(path string) *SCP {
-	s.RemoteDst = true
-	s.Dst = path
+func (s *SSH) WithEnv(env ...string) *SSH {
+	s.Env = env
 	return s
 }
 
-func (s *SCP) WithDst(path string) *SCP {
-	s.RemoteDst = false
-	s.Dst = path
+func (s *SSH) WithArgs(args ...string) *SSH {
+	s.Args = args
 	return s
 }
 
-func (s *SCP) WithRemoteSrc(path string) *SCP {
-	s.RemoteSrc = true
-	s.Src = path
+func (s *SSH) WithExitWhenTunnelFailure(yes bool) *SSH {
+	s.ExitWhenTunnelFailure = yes
 	return s
 }
 
-func (s *SCP) WithSrc(path string) *SCP {
-	s.RemoteSrc = false
-	s.Src = path
+func (s *SSH) WithCommand(name string, arg ...string) *SSH {
+	s.CommandName = name
+	s.CommandArgs = arg
 	return s
 }
 
-func (s *SCP) WithRecursive(recursive bool) *SCP {
-	s.Recursive = recursive
-	return s
-}
+// TODO move connection settings from ExecuteCmd
+func (s *SSH) Cmd(ctx context.Context) *exec.Cmd {
+	env := append(os.Environ(), s.Env...)
+	env = append(env, s.Session.AgentSettings.AuthSockEnv())
 
-func (s *SCP) WithPreserve(preserve bool) *SCP {
-	s.Preserve = preserve
-	return s
-}
-
-func (s *SCP) SCP(ctx context.Context) *SCP {
-	// env := append(os.Environ(), s.Env...)
-	env := append(os.Environ(), s.Session.AgentSettings.AuthSockEnv())
-
-	// set absolute path to the ssh binary, because scp contains predefined absolute path to ssh binary (/ssh/bin/ssh) as we set in the building process of the static ssh utils
-	sshPathArgs := []string{"-S", fmt.Sprintf("%s/bin/ssh", os.Getenv("PWD"))}
-
+	// ssh connection settings
+	//   ANSIBLE_SSH_ARGS="${ANSIBLE_SSH_ARGS:-"-C
+	//   -o ControlMaster=auto
+	//  -o ControlPersist=600s"}
 	args := []string{
 		// ssh args for bastion here
 		"-C", // compression
@@ -93,10 +81,10 @@ func (s *SCP) SCP(ctx context.Context) *SCP {
 		"-o", "StrictHostKeyChecking=no",
 		"-o", "UserKnownHostsFile=/dev/null",
 		"-o", "GlobalKnownHostsFile=/dev/null",
-		"-o", "PasswordAuthentication=no",
 		"-o", "ServerAliveInterval=1",
 		"-o", "ServerAliveCountMax=3600",
 		"-o", "ConnectTimeout=15",
+		"-o", "PasswordAuthentication=no",
 	}
 
 	if app.IsDebug {
@@ -110,7 +98,17 @@ func (s *SCP) SCP(ctx context.Context) *SCP {
 		}
 	}
 
+	if len(s.Args) > 0 {
+		args = append(args, s.Args...)
+	}
+
+	exitOnForwardFailureSet := false
+
 	// add bastion options
+	//  if [[ "x$ssh_bastion_host" != "x" ]] ; then
+	//    export ANSIBLE_SSH_ARGS="${ANSIBLE_SSH_ARGS}
+	//   -o ProxyCommand='ssh ${ssh_bastion_user:-$USER}@$ssh_bastion_host -W %h:%p'"
+	//  fi
 	if s.Session.BastionHost != "" {
 		bastion := s.Session.BastionHost
 		if s.Session.BastionUser != "" {
@@ -125,54 +123,44 @@ func (s *SCP) SCP(ctx context.Context) *SCP {
 			"-o", fmt.Sprintf("ProxyCommand=ssh %s -W %%h:%%p %s", bastion, strings.Join(args, " ")),
 			"-o", "ExitOnForwardFailure=yes",
 		}...)
+		exitOnForwardFailureSet = true
 	}
 
-	// add remote port if defined
+	if !exitOnForwardFailureSet && s.ExitWhenTunnelFailure {
+		args = append(args, "-o", "ExitOnForwardFailure=yes")
+	}
+
+	// add destination: user, host and port
+	if s.Session.User != "" {
+		args = append(args, []string{
+			"-l",
+			s.Session.User,
+		}...)
+	}
 	if s.Session.Port != "" {
 		args = append(args, []string{
-			"-P",
+			"-p",
 			s.Session.Port,
 		}...)
 	}
 
-	if s.Preserve {
-		args = append(args, "-p")
+	args = append(args, s.Session.Host())
+
+	if s.CommandName != "" {
+		args = append(args, "--" /* cmd.Path */, s.CommandName)
+		args = append(args, s.CommandArgs...)
 	}
 
-	if s.Recursive {
-		args = append(args, "-r")
+	log.DebugF("SSH arguments %v\n", args)
+
+	sshCmd := exec.CommandContext(ctx, "ssh", args...)
+	sshCmd.Env = env
+	// Start ssh with the new process group to prevent early stop by SIGINT from the shell.
+	sshCmd.SysProcAttr = &syscall.SysProcAttr{
+		Setpgid: true,
 	}
 
-	// create src path
-	srcPath := s.Src
-	if s.RemoteSrc {
-		srcPath = s.Session.RemoteAddress() + ":" + srcPath
-	}
+	s.Executor = process.NewDefaultExecutor(sshCmd)
 
-	// create dest path
-	dstPath := s.Dst
-	if dstPath == "" {
-		dstPath = "."
-	}
-	if !strings.HasPrefix(dstPath, "/") && !strings.HasPrefix(dstPath, ".") {
-		dstPath = "./" + dstPath
-	}
-	if s.RemoteDst {
-		dstPath = s.Session.RemoteAddress() + ":" + dstPath
-	}
-
-	args = append(args, []string{
-		srcPath,
-		dstPath,
-	}...)
-
-	scpArgs := append(sshPathArgs, args...)
-	s.scpCmd = exec.CommandContext(ctx, "scp", scpArgs...)
-	s.scpCmd.Env = env
-	// scpCmd.Stdout = os.Stdout
-	// scpCmd.Stderr = os.Stderr
-
-	s.Executor = process.NewDefaultExecutor(s.scpCmd)
-
-	return s
+	return sshCmd
 }

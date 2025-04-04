@@ -18,11 +18,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"os"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 
 	"github.com/google/uuid"
 	"k8s.io/utils/ptr"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
@@ -41,7 +44,7 @@ import (
 type Params struct {
 	CommanderMode    bool
 	CommanderUUID    uuid.UUID
-	SSHClient        *ssh.Client
+	SSHClient        node.SSHClient
 	OnCheckResult    func(*check.CheckResult) error
 	TerraformContext *terraform.TerraformContext
 	OnPhaseFunc      OnPhaseFunc
@@ -222,7 +225,7 @@ func (i *Attacher) scan(
 		}
 		res.ProviderSpecificClusterConfiguration = string(providerConfiguration)
 
-		sshPrivateKey, err := os.ReadFile(i.Params.SSHClient.PrivateKeys[0].Key)
+		sshPrivateKey, err := os.ReadFile(i.Params.SSHClient.PrivateKeys()[0].Key)
 		if err != nil {
 			return fmt.Errorf("unable to read ssh private key: %w", err)
 		}

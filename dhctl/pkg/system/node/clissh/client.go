@@ -12,14 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ssh
+package clissh
 
 import (
 	"fmt"
 	"sync"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/frontend"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh/frontend"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
@@ -27,8 +29,6 @@ var (
 	agentInstanceSingleton sync.Once
 	agentInstance          *frontend.Agent
 )
-
-type SSHLoopHandler func(s *Client) error
 
 // initializeNewInstance disables singleton logic
 func initAgentInstance(
@@ -77,7 +77,7 @@ func initAgentInstance(
 func NewClient(session *session.Session, privKeys []session.AgentPrivateKey) *Client {
 	return &Client{
 		Settings:    session,
-		PrivateKeys: privKeys,
+		privateKeys: privKeys,
 
 		// We use arbitrary privKeys param, so always reinitialize agent with privKeys
 		InitializeNewAgent: true,
@@ -88,64 +88,66 @@ type Client struct {
 	Settings *session.Session
 	Agent    *frontend.Agent
 
-	PrivateKeys        []session.AgentPrivateKey
+	privateKeys        []session.AgentPrivateKey
 	InitializeNewAgent bool
 
 	kubeProxies []*frontend.KubeProxy
 }
 
-func (s *Client) Start() (*Client, error) {
+func (s *Client) Start() error {
 	if s.Settings == nil {
-		return nil, fmt.Errorf("possible bug in ssh client: session should be created before start")
+		return fmt.Errorf("possible bug in ssh client: session should be created before start")
 	}
 
-	a, err := initAgentInstance(s.PrivateKeys, s.InitializeNewAgent)
+	a, err := initAgentInstance(s.privateKeys, s.InitializeNewAgent)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	s.Agent = a
 	s.Settings.AgentSettings = s.Agent.AgentSettings
 
-	return s, nil
+	return nil
 }
 
 // Easy access to frontends
 
 // Tunnel is used to open local (L) and remote (R) tunnels
-func (s *Client) Tunnel(ttype, address string) *frontend.Tunnel {
-	return frontend.NewTunnel(s.Settings, ttype, address)
+func (s *Client) Tunnel(address string) node.Tunnel {
+	return frontend.NewTunnel(s.Settings, "L", address)
 }
 
 // ReverseTunnel is used to open remote (R) tunnel
-func (s *Client) ReverseTunnel(address string) *frontend.ReverseTunnel {
+func (s *Client) ReverseTunnel(address string) node.ReverseTunnel {
 	return frontend.NewReverseTunnel(s.Settings, address)
 }
 
 // Command is used to run commands on remote server
-func (s *Client) Command(name string, arg ...string) *frontend.Command {
+func (s *Client) Command(name string, arg ...string) node.Command {
 	return frontend.NewCommand(s.Settings, name, arg...)
 }
 
 // KubeProxy is used to start kubectl proxy and create a tunnel from local port to proxy port
-func (s *Client) KubeProxy() *frontend.KubeProxy {
+func (s *Client) KubeProxy() node.KubeProxy {
 	p := frontend.NewKubeProxy(s.Settings)
 	s.kubeProxies = append(s.kubeProxies, p)
 	return p
 }
 
 // File is used to upload and download files and directories
-func (s *Client) File() *frontend.File {
+func (s *Client) File() node.File {
 	return frontend.NewFile(s.Settings)
 }
 
 // UploadScript is used to upload script and execute it on remote server
-func (s *Client) UploadScript(scriptPath string, args ...string) *frontend.UploadScript {
+func (s *Client) UploadScript(scriptPath string, args ...string) node.Script {
 	return frontend.NewUploadScript(s.Settings, scriptPath, args...)
 }
 
 // UploadScript is used to upload script and execute it on remote server
-func (s *Client) Check() *frontend.Check {
-	return frontend.NewCheck(s.Settings)
+func (s *Client) Check() node.Check {
+	return ssh.NewCheck(func(sess *session.Session, cmd string) node.Command {
+		return frontend.NewCommand(sess, cmd)
+	}, s.Settings)
 }
 
 // Stop the client
@@ -163,8 +165,16 @@ func (s *Client) Stop() {
 	s.kubeProxies = nil
 }
 
+func (s *Client) Session() *session.Session {
+	return s.Settings
+}
+
+func (s *Client) PrivateKeys() []session.AgentPrivateKey {
+	return s.privateKeys
+}
+
 // Loop Looping all available hosts
-func (s *Client) Loop(fn SSHLoopHandler) error {
+func (s *Client) Loop(fn node.SSHLoopHandler) error {
 	var err error
 
 	resetSession := func() {

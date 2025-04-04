@@ -30,13 +30,16 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
 // TODO(remove-global-app): Support all needed parameters in Params, remove usage of app.*
 type Params struct {
-	SSHClient  *ssh.Client
+	SSHClient  node.SSHClient
 	KubeClient *client.KubernetesClient // optional
 
 	OnPhaseFunc            phases.DefaultOnPhaseFunc
@@ -100,6 +103,8 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 		}
 		c.lastState = state
 	}
+
+	defer c.Params.SSHClient.Stop()
 
 	if err := c.applyParams(); err != nil {
 		return nil, err
@@ -243,8 +248,13 @@ func (c *Converger) AutoConverge() error {
 	if c.KubeClient != nil {
 		kubeCl = c.KubeClient
 	} else {
-		var sshClient *ssh.Client
-		sshClient, err = ssh.NewInitClientFromFlags(false)
+		var sshClient node.SSHClient
+		if app.LegacyMode {
+			sshClient, err = clissh.NewInitClientFromFlags(false)
+		} else {
+			sshClient, err = gossh.NewInitClientFromFlags(false)
+		}
+
 		if err != nil {
 			return err
 		}

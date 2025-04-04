@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ssh
+package gossh
 
 import (
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
@@ -38,10 +38,7 @@ func NewClientFromFlags() *Client {
 		keys = append(keys, session.AgentPrivateKey{Key: key})
 	}
 
-	return &Client{
-		Settings:    settings,
-		PrivateKeys: keys,
-	}
+	return NewClient(settings, keys)
 }
 
 func NewClientFromFlagsWithHosts() (*Client, error) {
@@ -68,7 +65,8 @@ func NewInitClientFromFlags(askPassword bool) (*Client, error) {
 	var sshClient *Client
 	var err error
 
-	sshClient, err = NewClientFromFlags().Start()
+	sshClient = NewClientFromFlags()
+	err = sshClient.Start()
 	if err != nil {
 		return nil, err
 	}
