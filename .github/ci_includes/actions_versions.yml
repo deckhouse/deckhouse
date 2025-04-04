@@ -11,3 +11,6 @@
 "werf/actions/converge": "werf/actions/converge@v2"
 "dorny/paths-filter": "dorny/paths-filter@v2"
 "ssh-agent": "webfactory/ssh-agent@v0.9.0"
+"peter-evans/create-pull-request": "peter-evans/create-pull-request@v7.0.8"
+"actions/setup-go": "actions/setup-go@v5.4.0"
+
