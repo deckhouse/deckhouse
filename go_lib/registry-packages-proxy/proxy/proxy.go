@@ -65,7 +65,7 @@ func NewProxy(server *http.Server,
 }
 
 func (p *Proxy) Serve() {
-	http.HandleFunc("/package", func(w http.ResponseWriter, r *http.Request) {
+	handleRequest := func(w http.ResponseWriter, r *http.Request, getDataFunc func(ctx context.Context, digest, repository, additionalPath string) (int64, io.ReadCloser, error), contentType, successMessage, fileSuffix string) {
 		if r.Method != "HEAD" && r.Method != "GET" {
 			p.logger.Error("method not allowed")
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -95,10 +95,11 @@ func (p *Proxy) Serve() {
 			return
 		}
 
-		size, packageReader, err := p.getPackage(r.Context(), digest, repository, additionalPath)
+		size, packageReader, err := getDataFunc(r.Context(), digest, repository, additionalPath)
 		if packageReader != nil {
 			defer packageReader.Close()
 		}
+
 		if err != nil {
 			p.logger.Error(err.Error())
 			if errors.Is(err, registry.ErrPackageNotFound) {
@@ -110,89 +111,31 @@ func (p *Proxy) Serve() {
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/x-gzip")
-		w.Header().Set("Content-Disposition", "attachment; filename="+digest+".tar.gz")
+		w.Header().Set("Content-Type", contentType)
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s.%s", digest, fileSuffix))
 		w.Header().Set("Content-Length", strconv.FormatInt(size, 10))
 
-		// Cache for 1 year
-		w.Header().Set("Cache-Control", `public, max-age=31536000`)
+		w.Header().Set("Cache-Control", "public, max-age=31536000")
 		w.Header().Set("ETag", "\""+digest+"\"")
 
 		if r.Method == "HEAD" {
 			return
 		}
-		_, err = io.Copy(w, packageReader)
-		if err != nil {
+
+		if _, err := io.Copy(w, packageReader); err != nil {
 			p.logger.Errorf("send package: %v", err)
 			return
 		}
 
-		p.logger.Infof("Package for digest %q sent successfully", digest)
+		p.logger.Infof(successMessage, digest)
+	}
+
+	http.HandleFunc("/package", func(w http.ResponseWriter, r *http.Request) {
+		handleRequest(w, r, p.getPackage, "application/x-gzip", "Package for digest %q sent successfully", "tar.gz")
 	})
 
 	http.HandleFunc("/image", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "HEAD" && r.Method != "GET" {
-			p.logger.Error("method not allowed")
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
-		requestIP := getRequestIP(r)
-		digest := r.URL.Query().Get("digest")
-		repository := r.URL.Query().Get("repository")
-		additionalPath := r.URL.Query().Get("path")
-
-		if repository == "" {
-			repository = registry.DefaultRepository
-		}
-
-		logEntry := fmt.Sprintf("Received request with digest %q for repo %s from client %s", digest, repository, requestIP)
-
-		if additionalPath != "" {
-			logEntry = fmt.Sprintf("%s and additional path = %s", logEntry, additionalPath)
-		}
-
-		p.logger.Infof("%s", logEntry)
-
-		if digest == "" {
-			p.logger.Error("missing digest")
-			http.Error(w, "missing digest", http.StatusBadRequest)
-			return
-		}
-
-		size, packageReader, err := p.getImage(r.Context(), digest, repository, additionalPath)
-		if packageReader != nil {
-			defer packageReader.Close()
-		}
-		if err != nil {
-			p.logger.Error(err.Error())
-			if errors.Is(err, registry.ErrPackageNotFound) {
-				http.Error(w, err.Error(), http.StatusNotFound)
-				return
-			}
-
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/x-gzip")
-		w.Header().Set("Content-Disposition", "attachment; filename="+digest+".tar.gz")
-		w.Header().Set("Content-Length", strconv.FormatInt(size, 10))
-
-		// Cache for 1 year
-		w.Header().Set("Cache-Control", `public, max-age=31536000`)
-		w.Header().Set("ETag", "\""+digest+"\"")
-
-		if r.Method == "HEAD" {
-			return
-		}
-		_, err = io.Copy(w, packageReader)
-		if err != nil {
-			p.logger.Errorf("send package: %v", err)
-			return
-		}
-
-		p.logger.Infof("Image for digest %q sent successfully", digest)
+		handleRequest(w, r, p.getImage, "application/x-tar", "Image with digest %q sent successfully", "tar")
 	})
 
 	p.logger.Debugf("Starting packages proxy listener: %s", p.listener.Addr())

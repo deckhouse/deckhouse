@@ -32,10 +32,20 @@ bb-package-or-image-is-installed?() {
 }
 
 # Check if package or image fetched
-# bb-package-or-image-is-fetched? package digest
-bb-package-or-image-is-fetched?() {
+# bb-package-is-fetched? package digest
+bb-package-is-fetched?() {
   if [[ -d "${BB_FETCHED_PACKAGES_STORE}/${1}" ]]; then
     if [[ -f "${BB_FETCHED_PACKAGES_STORE}/${1}/${2}.tar.gz" ]]; then
+      return 0
+    fi
+  fi
+  return 1
+}
+
+# bb-package-is-fetched? package digest
+bb-image-is-fetched?() {
+  if [[ -d "${BB_FETCHED_PACKAGES_STORE}/${1}" ]]; then
+    if [[ -f "${BB_FETCHED_PACKAGES_STORE}/${1}/${2}.tar" ]]; then
       return 0
     fi
   fi
@@ -175,7 +185,7 @@ bb-package-install() {
       continue
     fi
 
-    if ! bb-package-or-image-is-fetched? "${PACKAGE}" "${DIGEST}"; then
+    if ! bb-package-is-fetched? "${PACKAGE}" "${DIGEST}"; then
       bb-log-info "'${PACKAGE_WITH_DIGEST}' package not found locally"
       bb-package-fetch "${PACKAGE_WITH_DIGEST}"
     fi
@@ -229,6 +239,11 @@ bb-image-save() {
     if bb-package-or-image-is-installed? "${IMAGE}" "${DIGEST}"; then
       bb-log-info "'${IMAGE_WITH_DIGEST}' image already installed"
       continue
+    fi
+
+    if ! bb-image-is-fetched? "${IMAGE}" "${DIGEST}"; then
+      bb-log-info "'${IMAGE_WITH_DIGEST}' package not found locally"
+      bb-image-fetch "${IMAGE_WITH_DIGEST}"
     fi
 
     bb-log-info "Export image '${IMAGE}'"
@@ -285,7 +300,7 @@ bb-package-fetch() {
       continue
     fi
 
-    if bb-package-or-image-is-fetched? "${PACKAGE}" "${DIGEST}"; then
+    if bb-package-is-fetched? "${PACKAGE}" "${DIGEST}"; then
       bb-log-info "'${PACKAGE_WITH_DIGEST}' package already fetched"
       continue
     fi
@@ -326,7 +341,7 @@ bb-image-fetch() {
       continue
     fi
 
-    if bb-package-or-image-is-fetched? "${IMAGE}" "${DIGEST}"; then
+    if bb-package-is-fetched? "${IMAGE}" "${DIGEST}"; then
       bb-log-info "'${IMAGE_WITH_DIGEST}' image already fetched"
       continue
     fi
