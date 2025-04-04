@@ -1,0 +1,100 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      customCertificateData:
+        type: object
+        properties:
+          tls.crt:
+            type: string
+            x-examples:
+              - plainstring
+          tls.key:
+            type: string
+            x-examples:
+              - plainstring
+          ca.crt:
+            type: string
+            x-examples:
+              - plainstring
+      playground:
+        type: object
+        properties:
+          value:
+            type: integer
+          data:
+            type: object
+            additionalProperties: true
+            x-kubernetes-preserve-unknown-fields: true
+      pki:
+        type: object
+        default: {}
+        properties:
+          mode:
+            type: string
+            default: "Unmanaged"
+          ca: &pki_cert_property
+            type: object
+            properties:
+              cert:
+                type: string
+              key:
+                type: string
+          token:
+            <<: *pki_cert_property
+          proxy:
+            <<: *pki_cert_property
+          nodes:
+            type: array
+            items:
+              type: object
+              properties:
+                auth:
+                  <<: *pki_cert_property
+                distribution:
+                  <<: *pki_cert_property
+      state:
+        type: object
+        default: {}
+        properties:
+          staticpod_version:
+            type: string
+            default: "unknown"
+          bashible_version:
+            type: string
+            default: "unknown"
+          nodes:
+            type: object
+            additionalProperties: true
+            x-kubernetes-preserve-unknown-fields: true
+          config:
+            type: object
+            additionalProperties: true
+            x-kubernetes-preserve-unknown-fields: true
+          messages:
+            type: array
+            items:
+              type: string
+      bashible:
+        type: object
+        default: {}
+        properties:
+          input:
+            type: object
+            default: {}
+            additionalProperties: true
+            x-kubernetes-preserve-unknown-fields: true
+          config:
+            type: object
+            default: {}
+            additionalProperties: true
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            default: {}
+            additionalProperties: true
+            x-kubernetes-preserve-unknown-fields: true

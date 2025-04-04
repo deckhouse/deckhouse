@@ -382,6 +382,7 @@ var DefaultImagesDigests = map[string]interface{}{
 	},
 	"registrypackages": map[string]interface{}{
 		"amazonEc2Utils220":         "imageHash-registrypackages-amazonEc2Utils220",
+		"cfssl165":                  "imageHash-registrypackages-cfssl165",
 		"containerd1724":            "imageHash-registrypackages-containerd1724",
 		"crictl128":                 "imageHash-registrypackages-crictl128",
 		"crictl129":                 "imageHash-registrypackages-crictl129",
@@ -425,6 +426,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"tomlMerge01":               "imageHash-registrypackages-tomlMerge01",
 		"virtWhat125":               "imageHash-registrypackages-virtWhat125",
 		"xfsprogs670":               "imageHash-registrypackages-xfsprogs670",
+		"yq4451":                    "imageHash-registrypackages-yq4451",
 	},
 	"runtimeAuditEngine": map[string]interface{}{
 		"falco":            "imageHash-runtimeAuditEngine-falco",
@@ -442,6 +444,12 @@ var DefaultImagesDigests = map[string]interface{}{
 	},
 	"staticRoutingManager": map[string]interface{}{
 		"agent": "imageHash-staticRoutingManager-agent",
+	},
+	"systemRegistry": map[string]interface{}{
+		"dockerAuth":            "imageHash-systemRegistry-dockerAuth",
+		"dockerDistribution":    "imageHash-systemRegistry-dockerDistribution",
+		"mirrorer":              "imageHash-systemRegistry-mirrorer",
+		"systemRegistryManager": "imageHash-systemRegistry-systemRegistryManager",
 	},
 	"terraformManager": map[string]interface{}{
 		"baseTerraformManager":        "imageHash-terraformManager-baseTerraformManager",

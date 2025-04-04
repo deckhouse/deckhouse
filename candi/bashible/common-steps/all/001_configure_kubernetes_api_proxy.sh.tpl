@@ -13,7 +13,6 @@
 # limitations under the License.
 
 mkdir -p /etc/kubernetes/kubernetes-api-proxy
-# Read previously discovered IP
 discovered_node_ip="$(</var/lib/bashible/discovered-node-ip)"
 
 bb-sync-file /etc/kubernetes/kubernetes-api-proxy/nginx_new.conf - << EOF
@@ -33,6 +32,7 @@ events {
   worker_connections 16384;
 }
 
+
 stream {
   upstream kubernetes {
     least_conn;
@@ -44,6 +44,17 @@ stream {
     server ${discovered_node_ip}:6443;
 {{- end }}
   }
+
+{{- if gt (len .registry.proxyEndpoints) 0 }}
+  upstream system-registry {
+    least_conn;
+    {{- range $proxy_endpoint := .registry.proxyEndpoints }}
+    server {{ $proxy_endpoint }};
+    {{- end }}
+  }
+{{- end }}
+
+
   server {
     listen 127.0.0.1:6445;
     proxy_pass kubernetes;
@@ -52,6 +63,17 @@ stream {
     proxy_timeout 24h;
     proxy_connect_timeout 1s;
   }
+
+{{- if gt (len .registry.proxyEndpoints) 0 }}
+  server {
+    listen 127.0.0.1:5001;
+    proxy_pass system-registry;
+    # 1h timeout for very log pull/push operations
+    proxy_timeout 1h;
+    proxy_connect_timeout 1s;
+  }
+{{- end }}
+
 }
 EOF
 

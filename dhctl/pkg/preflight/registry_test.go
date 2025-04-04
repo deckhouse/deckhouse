@@ -83,9 +83,11 @@ func getProxyFromMetaConfigSuccessHTTPSProxy(t *testing.T) {
 	s := require.New(t)
 
 	metaConfig := &config.MetaConfig{
-		Registry: config.RegistryData{
-			Address: "registry.deckhouse.io",
-			Scheme:  "https",
+		Registry: config.Registry{
+			Data: config.RegistryData{
+				Address: "registry.deckhouse.io",
+				Scheme:  "https",
+			},
 		},
 		ClusterConfig: map[string]json.RawMessage{
 			"clusterDomain":     []byte(`"cluster.local"`),
@@ -109,9 +111,11 @@ func getProxyFromMetaConfigSuccessHTTPProxy(t *testing.T) {
 	s := require.New(t)
 
 	metaConfig := &config.MetaConfig{
-		Registry: config.RegistryData{
-			Address: "registry.deckhouse.io",
-			Scheme:  "https",
+		Registry: config.Registry{
+			Data: config.RegistryData{
+				Address: "registry.deckhouse.io",
+				Scheme:  "https",
+			},
 		},
 		ClusterConfig: map[string]json.RawMessage{
 			"clusterDomain":     []byte(`"cluster.local"`),
@@ -134,9 +138,11 @@ func getProxyFromMetaConfigSuccessNoProxy(t *testing.T) {
 	s := require.New(t)
 
 	metaConfig := &config.MetaConfig{
-		Registry: config.RegistryData{
-			Address: "registry.deckhouse.io",
-			Scheme:  "https",
+		Registry: config.Registry{
+			Data: config.RegistryData{
+				Address: "registry.deckhouse.io",
+				Scheme:  "https",
+			},
 		},
 		ClusterConfig: map[string]json.RawMessage{
 			"clusterDomain":     []byte(`"cluster.local"`),
