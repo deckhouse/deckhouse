@@ -51,9 +51,23 @@ function install_dmt() {
       ;;
   esac
 
-  curl -sSfL https://github.com/deckhouse/dmt/releases/download/v${DMT_VERSION}/dmt-${DMT_VERSION}-"${platform}"-${arch}.tar.gz | tar -zx --strip-components 1 -C /tmp
-  mv /tmp/dmt /usr/local/bin/dmt
-  chmod +x /usr/local/bin/dmt
+#  curl -sSfL https://github.com/deckhouse/dmt/releases/download/v${DMT_VERSION}/dmt-${DMT_VERSION}-"${platform}"-${arch}.tar.gz | tar -zx --strip-components 1 -C /tmp
+#  mv /tmp/dmt /usr/local/bin/dmt
+#  chmod +x /usr/local/bin/dmt
+   echo "$(cat /etc/*release)"
+   apt update && \
+   apt install -y git make
+
+   curl -LO https://go.dev/dl/go1.23.0.linux-amd64.tar.gz
+   rm -rf /usr/local/go
+   tar -C /usr/local -xzf go1.23.0.linux-amd64.tar.gz
+   export PATH=$PATH:/usr/local/go/bin
+   echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc
+
+   git clone --depth 1  -b template-ingress-snippets https://github.com/deckhouse/dmt.git /tmp/dmt/
+   make -C /tmp/dmt build
+   mv /tmp/dmt/dmt /usr/local/bin/dmt
+   chmod +x /usr/local/bin/dmt
 
 }
 

@@ -24,3 +24,6 @@ linters-settings:
       files:
         - images/web/site/_data/topnav.yml
         - images/docs-builder/modules-docs/hugo.yaml
+  ingress-rules:
+    - kind: Ingress
+      name: documentation
