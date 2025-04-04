@@ -1,5 +1,9 @@
 # Patches
 
+## 000-go-mod.patch
+
+Fix CVE, update go.mod and go.sum.
+
 ## 001-request-ip.patch
 
 Add the oportunity to request specific IP-address using annotation:
@@ -20,10 +24,6 @@ Upstream <https://github.com/cilium/cilium/pull/24100>
 Set correct MTU value for veth interfaces
 
 Upstream issue <https://github.com/cilium/cilium/issues/23711>
-
-## 004-go-mod.patch
-
-Update go.mod and tidy.
 
 ## 005-ebpf-dhcp-server.patch
 
