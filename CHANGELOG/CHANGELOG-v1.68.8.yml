@@ -6,6 +6,8 @@ cert-manager:
       pull_request: https://github.com/deckhouse/deckhouse/pull/12808
 docs:
   fixes:
+    - summary: FIx local docimentation build and run.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12850
     - summary: The information label with the editions has been removed from the global settings page.
       pull_request: https://github.com/deckhouse/deckhouse/pull/12772
 ingress-nginx:
