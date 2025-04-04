@@ -139,7 +139,7 @@ func adjustUpmeterRetention(input *go_hook.HookInput, dc dependency.Container) e
 		return fmt.Errorf("unable to parse disk usage percentage: %w", err)
 	}
 
-	if usagePercent > 80 {
+	if usagePercent > 50 {
 		currentRetention -= 7
 		if currentRetention < 90 {
 			currentRetention = 90
