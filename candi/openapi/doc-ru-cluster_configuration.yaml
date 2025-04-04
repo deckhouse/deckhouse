@@ -61,7 +61,7 @@ apiVersions:
           В этом случае образы, используемые в NodeGroup'ах, должны содержать уже установленный container runtime.
       kubernetesVersion:
         description: |
-          Версия control plane кластера Kubernetes.
+          Версия Kubernetes (компонентов control plane кластера).
 
           Изменение параметра в работающем кластере приведет к [автоматическому обновлению](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/#управление-версиями) версии control plane кластера.
 
