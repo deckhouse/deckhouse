@@ -1,0 +1,10 @@
+positive:
+  configValues:
+  - {}
+  values:
+  - { internal: {} }
+negative:
+  configValues:
+  - { somethingInConfig: yes }
+  values:
+  - { somethingInConfig: yes }
