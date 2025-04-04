@@ -30,6 +30,7 @@ spec:
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         args:
         - "converge-migration"
+        - "--do-not-write-debug-log-file"
         - "--logger-type=json"
         - "--kube-client-from-cluster"
         image: {{ include "terraform_manager_image" . }}
