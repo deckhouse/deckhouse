@@ -161,12 +161,12 @@ bb-package-fetch-blobs() {
 # bb-images-fetch map[blob_digest]output_file_path [repository]
 #
 # DO NOT CALL THIS FUNCTION DIRECTLY!
-bb-images-fetch() {
+bb-images-fetch-tar() {
   local IMAGE_DIGEST
   for IMAGE_DIGEST in "${!PACKAGES_MAP[@]}"; do
     local PACKAGE_DIR="${BB_FETCHED_PACKAGES_STORE}/${PACKAGES_MAP[$IMAGE_DIGEST]}"
     mkdir -p "${PACKAGE_DIR}"
-    bb-image-fetch "${IMAGE_DIGEST}" "${PACKAGE_DIR}/${IMAGE_DIGEST}.tar"
+    bb-images-fetch-tar "${IMAGE_DIGEST}" "${PACKAGE_DIR}/${IMAGE_DIGEST}.tar"
   done
 }
 
