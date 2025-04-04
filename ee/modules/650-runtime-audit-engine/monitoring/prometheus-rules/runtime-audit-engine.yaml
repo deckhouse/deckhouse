@@ -1,5 +1,7 @@
 - name: runtime-audit-engine
   rules:
+  - record: falco_events
+    expr: falcosecurity_falcosidekick_falco_events_total{job="runtime-audit-engine"}
   - alert: D8RuntimeAuditEngineNotScheduledInCluster
     for: 15m
     expr: |
