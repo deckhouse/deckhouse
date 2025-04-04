@@ -11,6 +11,7 @@ metadata:
 spec:
   moduleName: commander
   version: 1.0.1
+  weight: 900
 status:
   phase: Superseded
 ---
@@ -26,6 +27,7 @@ metadata:
 spec:
   moduleName: commander
   version: 1.0.2
+  weight: 900
 status:
   phase: Deployed
 ---
@@ -41,6 +43,7 @@ metadata:
 spec:
   moduleName: commander
   version: 1.0.3
+  weight: 900
 status:
   phase: Pending
 ---
@@ -56,6 +59,7 @@ metadata:
 spec:
   moduleName: parca
   version: 1.2.1
+  weight: 900
 status:
   phase: Deployed
 ---
@@ -71,6 +75,7 @@ metadata:
 spec:
   moduleName: parca
   version: 1.2.2
+  weight: 900
 status:
   phase: Pending
 ---
