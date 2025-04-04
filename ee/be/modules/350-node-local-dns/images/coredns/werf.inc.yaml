@@ -1,18 +1,6 @@
 {{- $iptables_version := "1.8.9" }}
 {{- $iptables_image_version := $iptables_version | replace "." "-" }}
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromImage: common/src-artifact
-final: false
-git:
-- add: /{{ $.ModulePath }}modules/350-{{ $.ModuleName }}/images/{{ $.ImageName }}
-  to: /src
-  stageDependencies:
-    install:
-    - '**/*'
-  includePaths:
-    - '*.sh'
----
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/coredns
 import:
@@ -31,28 +19,20 @@ import:
   add: /iptables-wrapper
   to: /sbin/iptables-wrapper
   before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src
-  to: /
-  includePaths:
-  - '**/*.sh'
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /coredns-helper
+  to: /coredns-helper
   before: setup
 imageSpec:
   config:
     entrypoint: [ "/coredns" ]
 ---
-{{ $corednsBinaries := "/usr/bin/dig /bin/echo /usr/bin/curl /usr/bin/jq /bin/bash /bin/grep /sbin/ip" }}
----
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 fromImage: common/relocate-artifact
 final: false
 shell:
-  beforeInstall:
-    - apt-get update -y
-    - apt-get install -y bind-utils curl jq
-    - rm -rf /var/lib/apt/lists/* /var/cache/apt/* && mkdir -p /var/lib/apt/lists/partial /var/cache/apt/archives/partial
   install:
-    - /binary_replace.sh -i "{{ $corednsBinaries }}" -o /relocate
+    - mkdir -p /relocate/sbin
     - |
       for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
         rm -f "/relocate/sbin/${cmd}"
@@ -66,3 +46,31 @@ shell:
           done
         done
       done
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+  to: /src
+  stageDependencies:
+    install:
+    - '**/*'
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - export GOPROXY={{ .GOPROXY }}
+  - cd /src
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /coredns-helper main.go
+  - chmod 0700 /coredns-helper

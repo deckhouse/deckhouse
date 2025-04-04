@@ -12,6 +12,7 @@
 
  - **[candi]** Add a new layout for HuaweiCloud provider with support for VPC peering connections. [#12224](https://github.com/deckhouse/deckhouse/pull/12224)
  - **[candi]** Added a way to manage node labels from local files. [#10905](https://github.com/deckhouse/deckhouse/pull/10905)
+ - **[cert-manager]** Bump cert-manager version up to 1.17.1. This fixes acme confirmation for cloudflare provider. [#12808](https://github.com/deckhouse/deckhouse/pull/12808)
  - **[cloud-provider-aws]** Bumped the `aws-node-termination-handler` version to `1.22.1`. [#10861](https://github.com/deckhouse/deckhouse/pull/10861)
  - **[cloud-provider-aws]** Added an option to specify your IAM role. [#10439](https://github.com/deckhouse/deckhouse/pull/10439)
  - **[cni-cilium]** DVP-specific feature that allows having two pods in the same cluster with equal IP addresses. [#11138](https://github.com/deckhouse/deckhouse/pull/11138)
