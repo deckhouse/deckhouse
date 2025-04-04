@@ -147,8 +147,11 @@ spec:
           image: "{{ .Values.deckhouse.internal.currentReleaseImageName }}"
           imagePullPolicy: Always
           env:
-# KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT are needed on the bootstrap phase to make Deckhouse work without kube-proxy
-{{- if not .Values.global.clusterIsBootstrapped }}
+{{- if (not (.Values.global.enabledModules | has "control-plane-manager")) }}
+# control-plane is managed by third-party team (EKS/GKP/...): use service by default
+{{- else }}
+  {{- if not .Values.global.clusterIsBootstrapped }}
+  # bootstrap phase: use direct connection
             - name: KUBERNETES_SERVICE_HOST
               valueFrom:
                 fieldRef:
@@ -156,6 +159,13 @@ spec:
                   fieldPath: status.hostIP
             - name: KUBERNETES_SERVICE_PORT
               value: "6443"
+  {{- else }}
+  # managed by Deckhouse: use API-proxy
+            - name: KUBERNETES_SERVICE_HOST
+              value: 127.0.0.1
+            - name: KUBERNETES_SERVICE_PORT
+              value: "6445"
+  {{- end }}
 {{- end }}
             - name: LOG_LEVEL
               value: {{ .Values.deckhouse.logLevel }}
