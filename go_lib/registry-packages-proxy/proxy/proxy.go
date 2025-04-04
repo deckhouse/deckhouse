@@ -64,7 +64,7 @@ func NewProxy(server *http.Server,
 }
 
 func (p *Proxy) Serve() {
-	http.HandleFunc("/package", func(w http.ResponseWriter, r *http.Request) {
+	handleRequest := func(w http.ResponseWriter, r *http.Request, getDataFunc func(ctx context.Context, digest, repository, additionalPath string) (int64, io.ReadCloser, error), contentType, successMessage, fileSuffix string) {
 		if r.Method != "HEAD" && r.Method != "GET" {
 			p.logger.Error("method not allowed")
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -94,7 +94,7 @@ func (p *Proxy) Serve() {
 			return
 		}
 
-		size, packageReader, err := p.getPackage(r.Context(), digest, repository, additionalPath)
+		size, packageReader, err := getDataFunc(r.Context(), digest, repository, additionalPath)
 		if packageReader != nil {
 			defer packageReader.Close()
 		}
@@ -109,24 +109,31 @@ func (p *Proxy) Serve() {
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/x-gzip")
-		w.Header().Set("Content-Disposition", "attachment; filename="+digest+".tar.gz")
+		w.Header().Set("Content-Type", contentType)
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s.%s", digest, fileSuffix))
 		w.Header().Set("Content-Length", strconv.FormatInt(size, 10))
 
 		// Cache for 1 year
-		w.Header().Set("Cache-Control", `public, max-age=31536000`)
+		w.Header().Set("Cache-Control", "public, max-age=31536000")
 		w.Header().Set("ETag", "\""+digest+"\"")
 
 		if r.Method == "HEAD" {
 			return
 		}
-		_, err = io.Copy(w, packageReader)
-		if err != nil {
+		if _, err := io.Copy(w, packageReader); err != nil {
 			p.logger.Errorf("send package: %v", err)
 			return
 		}
 
-		p.logger.Infof("Package for digest %q sent successfully", digest)
+		p.logger.Infof(successMessage, digest)
+	}
+
+	http.HandleFunc("/package", func(w http.ResponseWriter, r *http.Request) {
+		handleRequest(w, r, p.getPackage, "application/x-gzip", "Package for digest %q sent successfully", "tar.gz")
+	})
+
+	http.HandleFunc("/image", func(w http.ResponseWriter, r *http.Request) {
+		handleRequest(w, r, p.getImage, "application/x-tar", "Image with digest %q sent successfully", "tar")
 	})
 
 	p.logger.Debugf("Starting packages proxy listener: %s", p.listener.Addr())
@@ -154,11 +161,11 @@ func (p *Proxy) Stop() {
 	}
 }
 
-func (p *Proxy) getPackage(ctx context.Context, digest string, repository string, path string) (int64, io.ReadCloser, error) {
+func (p *Proxy) getData(ctx context.Context, digest, repository, path string, getDataFromRegistryFunc func(ctx context.Context, digest, repository, path string) (int64, io.ReadCloser, error)) (int64, io.ReadCloser, error) {
 	// if cache is nil, return digest directly from registry
 	if p.cache == nil {
-		p.logger.Infof("Digest %q not found in local cache, trying to fetch package from registry", digest)
-		return p.getPackageFromRegistry(ctx, digest, repository, path)
+		p.logger.Infof("Digest %q not found in local cache, trying to fetch data from registry", digest)
+		return getDataFromRegistryFunc(ctx, digest, repository, path)
 	}
 
 	// otherwise try to find digest in the cache
@@ -168,12 +175,12 @@ func (p *Proxy) getPackage(ctx context.Context, digest string, repository string
 	}
 	// if any error other than item in the cache not found, get digest directly from the registry
 	if !errors.Is(err, cache.ErrEntryNotFound) {
-		p.logger.Errorf("Get package from cache: %v", err)
-		return p.getPackageFromRegistry(ctx, digest, repository, path)
+		p.logger.Errorf("Get data from cache: %v", err)
+		return getDataFromRegistryFunc(ctx, digest, repository, path)
 	}
 
 	// if digest is not found in the cache, get digest from registry and add digest to the cache
-	size, registryReader, err := p.getPackageFromRegistry(ctx, digest, repository, path)
+	size, registryReader, err := getDataFromRegistryFunc(ctx, digest, repository, path)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -207,6 +214,14 @@ func (p *Proxy) getPackage(ctx context.Context, digest string, repository string
 	return size, pipeReader, nil
 }
 
+func (p *Proxy) getPackage(ctx context.Context, digest, repository, path string) (int64, io.ReadCloser, error) {
+	return p.getData(ctx, digest, repository, path, p.getPackageFromRegistry)
+}
+
+func (p *Proxy) getImage(ctx context.Context, digest, repository, path string) (int64, io.ReadCloser, error) {
+	return p.getData(ctx, digest, repository, path, p.getImageFromRegistry)
+}
+
 func (p *Proxy) getPackageFromRegistry(ctx context.Context, digest string, repository string, path string) (int64, io.ReadCloser, error) {
 	registryConfig, err := p.getter.Get(repository)
 	if err != nil {
@@ -217,6 +232,20 @@ func (p *Proxy) getPackageFromRegistry(ctx context.Context, digest string, repos
 	if err != nil {
 		return 0, nil, err
 	}
+	return size, registryReader, nil
+}
+
+func (p *Proxy) getImageFromRegistry(ctx context.Context, digest string, repository string, path string) (int64, io.ReadCloser, error) {
+	registryConfig, err := p.getter.Get(repository)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	size, registryReader, err := p.registryClient.GetImage(ctx, p.logger, registryConfig, digest, path)
+	if err != nil {
+		return 0, nil, err
+	}
+
 	return size, registryReader, nil
 }
 
