@@ -112,13 +112,15 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 	if c.KubeClient != nil {
 		kubeCl = c.KubeClient
 	} else {
-		if c.SSHClient == nil {
-			return fmt.Errorf("Not enough flags were passed to perform the operation.\nUse dhctl converge-migration --help to get available flags.\nSsh host is not provided. Need to pass --ssh-host, or specify SSHHost manifest in the --connection-config file")
+		var sshClient *ssh.Client
+		sshClient, err = ssh.NewInitClientFromFlags(false)
+		if err != nil {
+			return err
 		}
 
-		kubeCl, err = kubernetes.ConnectToKubernetesAPI(ctx, ssh.NewNodeInterfaceWrapper(c.SSHClient))
-		if err != nil {
-			return fmt.Errorf("unable to connect to Kubernetes over ssh tunnel: %w", err)
+		kubeCl = client.NewKubernetesClient().WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient))
+		if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
+			return err
 		}
 	}
 
