@@ -18,11 +18,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/flant/addon-operator/sdk"
 	kubeclient "github.com/flant/kube-client/client"
 	"gopkg.in/alecthomas/kingpin.v2"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
