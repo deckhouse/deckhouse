@@ -55,7 +55,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, checkCloudConditions)
 
 func checkCloudConditions(input *go_hook.HookInput) error {
-	if len(input.Snapshots) == 0 {
+	if len(input.Snapshots["conditions"]) == 0 {
+		requirements.SaveValue(unmetCloudConditionsKey, false)
 		return nil
 	}
 
