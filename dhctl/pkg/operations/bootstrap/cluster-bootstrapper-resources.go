@@ -66,7 +66,7 @@ func (b *ClusterBootstrapper) CreateResources(ctx context.Context) error {
 	if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok && wrapper != nil {
 		sshClient := wrapper.Client()
 		if sshClient != nil {
-			if _, err := sshClient.Start(); err != nil {
+			if err := sshClient.Start(); err != nil {
 				return fmt.Errorf("unable to start ssh-client: %w", err)
 			}
 		}

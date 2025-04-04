@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package frontend
+package gossh
 
 import (
 	"context"
@@ -29,12 +29,12 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
+	"golang.org/x/crypto/ssh"
 )
 
-type UploadScript struct {
-	Session *session.Session
+type SSHUploadScript struct {
+	sshClient *Client
 
 	ScriptPath string
 	Args       []string
@@ -49,9 +49,9 @@ type UploadScript struct {
 	timeout time.Duration
 }
 
-func NewUploadScript(sess *session.Session, scriptPath string, args ...string) *UploadScript {
-	return &UploadScript{
-		Session:    sess,
+func NewSSHUploadScript(sshClient *Client, scriptPath string, args ...string) *SSHUploadScript {
+	return &SSHUploadScript{
+		sshClient:  sshClient,
 		ScriptPath: scriptPath,
 		Args:       args,
 
@@ -59,71 +59,62 @@ func NewUploadScript(sess *session.Session, scriptPath string, args ...string) *
 	}
 }
 
-func (u *UploadScript) Sudo() {
+func (u *SSHUploadScript) Sudo() {
 	u.sudo = true
 }
 
-func (u *UploadScript) WithStdoutHandler(handler func(string)) {
+func (u *SSHUploadScript) WithStdoutHandler(handler func(string)) {
 	u.stdoutHandler = handler
 }
 
-func (u *UploadScript) WithTimeout(timeout time.Duration) {
+func (u *SSHUploadScript) WithTimeout(timeout time.Duration) {
 	u.timeout = timeout
 }
 
-func (u *UploadScript) WithEnvs(envs map[string]string) {
+func (u *SSHUploadScript) WithEnvs(envs map[string]string) {
 	u.envs = envs
 }
 
 // WithCleanupAfterExec option tells if ssh executor should delete uploaded script after execution was attempted or not.
 // It does not care if script was executed successfully of failed.
-func (u *UploadScript) WithCleanupAfterExec(doCleanup bool) {
+func (u *SSHUploadScript) WithCleanupAfterExec(doCleanup bool) {
 	u.cleanupAfterExec = doCleanup
 }
 
-func (u *UploadScript) Execute(ctx context.Context) (stdout []byte, err error) {
+func (u *SSHUploadScript) Execute(ctx context.Context) (stdout []byte, err error) {
 	scriptName := filepath.Base(u.ScriptPath)
 
 	remotePath := "."
 	if u.sudo {
 		remotePath = filepath.Join(app.DeckhouseNodeTmpPath, scriptName)
 	}
-	err = NewFile(u.Session).Upload(ctx, u.ScriptPath, remotePath)
+	log.DebugF("Uploading script %s to %s\n", u.ScriptPath, remotePath)
+	err = NewSSHFile(u.sshClient.sshClient).Upload(ctx, u.ScriptPath, remotePath)
 	if err != nil {
 		return nil, fmt.Errorf("upload: %v", err)
 	}
 
-	var cmd *Command
+	var cmd *SSHCommand
 	var scriptFullPath string
 	if u.sudo {
 		scriptFullPath = u.pathWithEnv(filepath.Join(app.DeckhouseNodeTmpPath, scriptName))
-		cmd = NewCommand(u.Session, scriptFullPath, u.Args...)
+		cmd = NewSSHCommand(u.sshClient, scriptFullPath, u.Args...)
 		cmd.Sudo(ctx)
 	} else {
 		scriptFullPath = u.pathWithEnv("./" + scriptName)
-		cmd = NewCommand(u.Session, scriptFullPath, u.Args...)
+		cmd = NewSSHCommand(u.sshClient, scriptFullPath, u.Args...)
 		cmd.Cmd(ctx)
 	}
 
-	scriptCmd := cmd.CaptureStdout(nil).CaptureStderr(nil)
 	if u.stdoutHandler != nil {
-		scriptCmd.WithStdoutHandler(u.stdoutHandler)
+		cmd.WithStdoutHandler(u.stdoutHandler)
 	}
 
 	if u.timeout > 0 {
-		scriptCmd.WithTimeout(u.timeout)
+		cmd.WithTimeout(u.timeout)
 	}
 
-	if u.cleanupAfterExec {
-		defer func() {
-			err := NewCommand(u.Session, "rm", "-f", scriptFullPath).Run(ctx)
-			if err != nil {
-				log.DebugF("Failed to delete uploaded script %s: %v", scriptFullPath, err)
-			}
-		}()
-	}
-
-	err = scriptCmd.Run(ctx)
+	err = cmd.Run(ctx)
 	if err != nil {
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) {
@@ -135,10 +126,20 @@ func (u *UploadScript) Execute(ctx context.Context) (stdout []byte, err error) {
 
 		err = fmt.Errorf("execute on remote: %w", err)
 	}
+
+	if u.cleanupAfterExec {
+		defer func() {
+			err := NewSSHCommand(u.sshClient, "rm", "-f", scriptFullPath).Run(ctx)
+			if err != nil {
+				log.DebugF("Failed to delete uploaded script %s: %v", scriptFullPath, err)
+			}
+		}()
+	}
+
 	return cmd.StdoutBytes(), err
 }
 
-func (u *UploadScript) pathWithEnv(path string) string {
+func (u *SSHUploadScript) pathWithEnv(path string) string {
 	if len(u.envs) == 0 {
 		return path
 	}
@@ -158,12 +159,12 @@ func (u *UploadScript) pathWithEnv(path string) string {
 
 var ErrBashibleTimeout = errors.New("Timeout bashible step running")
 
-func (u *UploadScript) ExecuteBundle(ctx context.Context, parentDir, bundleDir string) (stdout []byte, err error) {
+func (u *SSHUploadScript) ExecuteBundle(ctx context.Context, parentDir, bundleDir string) (stdout []byte, err error) {
 	bundleName := fmt.Sprintf("bundle-%s.tar", time.Now().Format("20060102-150405"))
 	bundleLocalFilepath := filepath.Join(app.TmpDirName, bundleName)
 
 	// tar cpf bundle.tar -C /tmp/dhctl.1231qd23/var/lib bashible
-	tarCmd := exec.CommandContext(ctx, "tar", "cpf", bundleLocalFilepath, "-C", parentDir, bundleDir)
+	tarCmd := exec.Command("tar", "cpf", bundleLocalFilepath, "-C", parentDir, bundleDir)
 	err = tarCmd.Run()
 	if err != nil {
 		return nil, fmt.Errorf("tar bundle: %v", err)
@@ -175,7 +176,7 @@ func (u *UploadScript) ExecuteBundle(ctx context.Context, parentDir, bundleDir s
 	)
 
 	// upload to node's deckhouse tmp directory
-	err = NewFile(u.Session).Upload(ctx, bundleLocalFilepath, app.DeckhouseNodeTmpPath)
+	err = NewSSHFile(u.sshClient.sshClient).Upload(ctx, bundleLocalFilepath, app.DeckhouseNodeTmpPath)
 	if err != nil {
 		return nil, fmt.Errorf("upload: %v", err)
 	}
@@ -190,7 +191,7 @@ func (u *UploadScript) ExecuteBundle(ctx context.Context, parentDir, bundleDir s
 		u.ScriptPath,
 		strings.Join(u.Args, " "),
 	)
-	bundleCmd := NewCommand(u.Session, tarCmdline)
+	bundleCmd := NewSSHCommand(u.sshClient, tarCmdline)
 	bundleCmd.Sudo(ctx)
 
 	// Buffers to implement output handler logic
@@ -200,7 +201,7 @@ func (u *UploadScript) ExecuteBundle(ctx context.Context, parentDir, bundleDir s
 
 	processLogger := log.GetProcessLogger()
 
-	handler := bundleOutputHandler(bundleCmd, processLogger, &lastStep, &failsCounter, &isBashibleTimeout)
+	handler := bundleSSHOutputHandler(bundleCmd, processLogger, &lastStep, &failsCounter, &isBashibleTimeout)
 	bundleCmd.WithStdoutHandler(handler)
 	bundleCmd.CaptureStdout(nil)
 	bundleCmd.CaptureStderr(nil)
@@ -232,8 +233,8 @@ func (u *UploadScript) ExecuteBundle(ctx context.Context, parentDir, bundleDir s
 
 var stepHeaderRegexp = regexp.MustCompile("^=== Step: /var/lib/bashible/bundle_steps/(.*)$")
 
-func bundleOutputHandler(
-	cmd *Command,
+func bundleSSHOutputHandler(
+	cmd *SSHCommand,
 	processLogger log.ProcessLogger,
 	lastStep *string,
 	failsCounter *int,
@@ -255,7 +256,7 @@ func bundleOutputHandler(
 					*isBashibleTimeout = true
 					if cmd != nil {
 						// Force kill bashible
-						_ = cmd.cmd.Process.Kill()
+						_ = cmd.Session.Signal(ssh.SIGABRT)
 					}
 					return
 				}

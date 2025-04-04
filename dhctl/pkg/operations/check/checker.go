@@ -21,6 +21,8 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
@@ -32,7 +34,7 @@ import (
 )
 
 type Params struct {
-	SSHClient     *ssh.Client
+	SSHClient     node.SSHClient
 	StateCache    dhctlstate.Cache
 	CommanderMode bool
 	CommanderUUID uuid.UUID

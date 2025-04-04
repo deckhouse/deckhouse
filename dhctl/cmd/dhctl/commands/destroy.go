@@ -25,6 +25,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
@@ -59,7 +62,13 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			}
 		}
 
-		sshClient, err := ssh.NewClientFromFlags().Start()
+		var sshClient node.SSHClient
+		if app.LegacyMode {
+			sshClient = clissh.NewClientFromFlags()
+		} else {
+			sshClient = gossh.NewClientFromFlags()
+		}
+		err := sshClient.Start()
 		if err != nil {
 			return err
 		}
