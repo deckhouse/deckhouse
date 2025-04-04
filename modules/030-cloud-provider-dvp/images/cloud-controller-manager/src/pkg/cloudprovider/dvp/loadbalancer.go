@@ -119,6 +119,8 @@ func (c *Cloud) EnsureLoadBalancer(ctx context.Context, clusterName string, serv
 
 func (c *Cloud) addNodesSelectorLabels(labels map[string]string, nodes []*corev1.Node) map[string]string {
 	for _, node := range nodes {
+		klog.Infof("node.Labels: %v", node.Labels)
+		klog.Infof("node: %v", node.Name)
 		if labelValue, ok := node.Labels[api.DVPVMHostnameLabel]; ok {
 			labels[api.DVPVMHostnameLabel] = labelValue
 		}
