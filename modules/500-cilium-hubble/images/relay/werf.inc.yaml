@@ -2,15 +2,6 @@
 ---
 # Based on https://github.com/cilium/cilium/blob/v1.17.2/images/hubble-relay/Dockerfile
 # and https://github.com/cilium/cilium/blob/v1.17.2/images/hubble-relay/download-grpc-health-probe.sh
-image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromImage: common/src-artifact
-final: false
-git:
-- add: /{{ $.ModulePath }}modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-  to: /patches
-  stageDependencies:
-    install:
-      - '**/*'
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
 fromImage: builder/golang-alpine
