@@ -122,7 +122,7 @@ func (c *DefaultClient) GetImage(ctx context.Context, log log.Logger, config *Cl
 
 	reader, writer := io.Pipe()
 	refToImage := make(map[name.Reference]v1.Image, len(tagToImage))
-	log.Infof("Creating tarball for %s\n", digest)
+
 	tag := repository.Tag(digest)
 	refToImage[tag] = image
 	log.Infof("Creating tarball for %s\n", tag)
@@ -132,16 +132,14 @@ func (c *DefaultClient) GetImage(ctx context.Context, log log.Logger, config *Cl
 		return 0, nil, err
 	}
 	log.Infof("Tarball size: %d\n", size)
-	// writer := bufio.NewWriter(file)
-	// go func() {
-	err = tarball.Write(tag, image, writer)
-	if err != nil {
-		return 0, nil, err
-	}
-	defer writer.Close()
-	// }()
 
-	log.Infof("Tarball write finished")
+	go func() {
+		err = tarball.Write(tag, image, writer)
+		defer writer.Close()
+		if err != nil {
+			return
+		}
+	}()
 
 	return size, reader, nil
 }
