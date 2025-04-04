@@ -18,9 +18,9 @@ bb-var BB_INSTALLED_PACKAGES_STORE "/var/cache/registrypackages"
 bb-var BB_FETCHED_PACKAGES_STORE "${TMPDIR}/registrypackages"
 bb-var BB_EXPORTED_IMAGE_STORE "/opt/deckhouse/images"
 
-# check if package installed
-# bb-package-is-installed? package digest
-bb-package-is-installed?() {
+# check if package or image installed
+# bb-package-or-image-is-installed? package/image digest
+bb-package-or-image-is-installed?() {
   if [[ -d "${BB_INSTALLED_PACKAGES_STORE}/${1}" ]]; then
     local INSTALLED_DIGEST=""
     INSTALLED_DIGEST="$(cat "${BB_INSTALLED_PACKAGES_STORE}/${1}/digest")"
@@ -31,9 +31,9 @@ bb-package-is-installed?() {
   return 1
 }
 
-# Check if package fetched
-# bb-package-is-fetched? package digest
-bb-package-is-fetched?() {
+# Check if package or image fetched
+# bb-package-or-image-is-fetched? package digest
+bb-package-or-image-is-fetched?() {
   if [[ -d "${BB_FETCHED_PACKAGES_STORE}/${1}" ]]; then
     if [[ -f "${BB_FETCHED_PACKAGES_STORE}/${1}/${2}.tar.gz" ]]; then
       return 0
@@ -93,9 +93,9 @@ with open('$2', 'wb') as f:
 EOF
 }
 
-# Fetch a package using python.
-# bb-package-proxy-fetch-blob digest output_file_path
-bb-image-fetch-blob() {
+# Fetch a image to tar using python.
+# bb-image-fetch digest output_file_path
+bb-image-fetch() {
   local REPOSITORY="${REPOSITORY:-}"
   local REPOSITORY_PATH="${REPOSITORY_PATH:-}"
   local no_proxy=${PACKAGES_PROXY_ADDRESSES}
@@ -143,16 +143,20 @@ bb-package-fetch-blobs() {
   for PACKAGE_DIGEST in "${!PACKAGES_MAP[@]}"; do
     local PACKAGE_DIR="${BB_FETCHED_PACKAGES_STORE}/${PACKAGES_MAP[$PACKAGE_DIGEST]}"
     mkdir -p "${PACKAGE_DIR}"
-    bb-package-fetch-blob "${PACKAGE_DIGEST}" "${PACKAGE_DIR}/${PACKAGE_DIGEST}.tar.gz"
+    bb-package-fetch-blob "${PACKAGE_DIGEST}" "${PACKAGE_DIR}/${PACKAGE_DIGEST}.tar"
   done
 }
 
-bb-image-fetch-blobs() {
+# Fetch digests from registry and save to tar
+# bb-images-fetch map[blob_digest]output_file_path [repository]
+#
+# DO NOT CALL THIS FUNCTION DIRECTLY!
+bb-images-fetch() {
   local IMAGE_DIGEST
   for IMAGE_DIGEST in "${!PACKAGES_MAP[@]}"; do
     local PACKAGE_DIR="${BB_FETCHED_PACKAGES_STORE}/${PACKAGES_MAP[$IMAGE_DIGEST]}"
     mkdir -p "${PACKAGE_DIR}"
-    bb-image-fetch-blob "${IMAGE_DIGEST}" "${PACKAGE_DIR}/${IMAGE_DIGEST}.tar.gz"
+    bb-image-fetch "${IMAGE_DIGEST}" "${PACKAGE_DIR}/${IMAGE_DIGEST}.tar"
   done
 }
 
@@ -166,12 +170,12 @@ bb-package-install() {
     PACKAGE="$(awk -F ":" '{print $1}' <<< "${PACKAGE_WITH_DIGEST}")"
     DIGEST="$(awk -F ":" '{print $2":"$3}' <<< "${PACKAGE_WITH_DIGEST}")"
 
-    if bb-package-is-installed? "${PACKAGE}" "${DIGEST}"; then
+    if bb-package-or-image-is-installed? "${PACKAGE}" "${DIGEST}"; then
       bb-log-info "'${PACKAGE_WITH_DIGEST}' package already installed"
       continue
     fi
 
-    if ! bb-package-is-fetched? "${PACKAGE}" "${DIGEST}"; then
+    if ! bb-package-or-image-is-fetched? "${PACKAGE}" "${DIGEST}"; then
       bb-log-info "'${PACKAGE_WITH_DIGEST}' package not found locally"
       bb-package-fetch "${PACKAGE_WITH_DIGEST}"
     fi
@@ -212,7 +216,7 @@ bb-package-install() {
   done
 }
 
-# Save image to local
+# Save image as tar to local
 # bb-image-save package:digest
 bb-image-save() {
   local IMAGE_WITH_DIGEST
@@ -222,14 +226,9 @@ bb-image-save() {
     IMAGE="$(awk -F ":" '{print $1}' <<< "${IMAGE_WITH_DIGEST}")"
     DIGEST="$(awk -F ":" '{print $2":"$3}' <<< "${IMAGE_WITH_DIGEST}")"
 
-    if bb-package-is-installed? "${IMAGE}" "${DIGEST}"; then
+    if bb-package-or-image-is-installed? "${IMAGE}" "${DIGEST}"; then
       bb-log-info "'${IMAGE_WITH_DIGEST}' image already installed"
       continue
-    fi
-
-    if ! bb-package-is-fetched? "${IMAGE}" "${DIGEST}"; then
-      bb-log-info "'${IMAGE_WITH_DIGEST}' image not found locally"
-      bb-image-fetch "${IMAGE_WITH_DIGEST}"
     fi
 
     bb-log-info "Export image '${IMAGE}'"
@@ -237,9 +236,9 @@ bb-image-save() {
     TMP_DIR="$(mktemp -d)"
     trap '
       rm -rf "${TMP_DIR}" "${BB_FETCHED_PACKAGES_STORE:?}/${IMAGE}"
-      bb-log-error "Failed to unpack image "${IMAGE}", it may be corrupted. The package will be refetched on the next attempt"
+      bb-log-error "Failed to save image "${IMAGE}"."
     ' ERR
-    gzip -d -c "${BB_FETCHED_PACKAGES_STORE}/${IMAGE}/${DIGEST}.tar.gz" > "${BB_EXPORTED_IMAGE_STORE}/${IMAGE}.tar"
+    mv -f "${BB_FETCHED_PACKAGES_STORE}/${IMAGE}/${DIGEST}.tar" > "${BB_EXPORTED_IMAGE_STORE}/${IMAGE}.tar"
     trap - ERR
 
     # Write digest to hold file
@@ -281,12 +280,12 @@ bb-package-fetch() {
     PACKAGE="$(awk -F ":" '{print $1}' <<< "${PACKAGE_WITH_DIGEST}")"
     DIGEST="$(awk -F ":" '{print $2":"$3}' <<< "${PACKAGE_WITH_DIGEST}")"
 
-    if bb-package-is-installed? "${PACKAGE}" "${DIGEST}"; then
+    if bb-package-or-image-is-installed? "${PACKAGE}" "${DIGEST}"; then
       bb-log-info "'${PACKAGE_WITH_DIGEST}' package already installed"
       continue
     fi
 
-    if bb-package-is-fetched? "${PACKAGE}" "${DIGEST}"; then
+    if bb-package-or-image-is-fetched? "${PACKAGE}" "${DIGEST}"; then
       bb-log-info "'${PACKAGE_WITH_DIGEST}' package already fetched"
       continue
     fi
@@ -322,12 +321,12 @@ bb-image-fetch() {
     IMAGE="$(awk -F ":" '{print $1}' <<< "${IMAGE_WITH_DIGEST}")"
     DIGEST="$(awk -F ":" '{print $2":"$3}' <<< "${IMAGE_WITH_DIGEST}")"
 
-    if bb-package-is-installed? "${IMAGE}" "${DIGEST}"; then
+    if bb-package-or-image-is-installed? "${IMAGE}" "${DIGEST}"; then
       bb-log-info "'${IMAGE_WITH_DIGEST}' image already saved"
       continue
     fi
 
-    if bb-package-is-fetched? "${IMAGE}" "${DIGEST}"; then
+    if bb-package-or-image-is-fetched? "${IMAGE}" "${DIGEST}"; then
       bb-log-info "'${IMAGE_WITH_DIGEST}' image already fetched"
       continue
     fi
@@ -343,7 +342,7 @@ bb-image-fetch() {
   bb-log-info "Fetching images: ${PACKAGES_MAP[*]}"
   trap 'bb-log-error "Failed to fetch images"' ERR
 
-  bb-image-fetch-blobs PACKAGES_MAP
+  bb-images-fetch PACKAGES_MAP
   trap - ERR
   bb-log-info "Images saved under ${BB_FETCHED_PACKAGES_STORE}"
 }
