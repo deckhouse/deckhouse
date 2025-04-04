@@ -6,13 +6,9 @@ import:
   add: /migrator
   to: /migrator
   before: setup
-- image: common/relocate-artifact
-  add: /bin/true
-  to: /true
-  before: setup
 imageSpec:
   config:
-    entrypoint: ["/true"]
+    entrypoint: ["/migrator"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
