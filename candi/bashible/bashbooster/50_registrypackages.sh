@@ -93,6 +93,45 @@ with open('$2', 'wb') as f:
 EOF
 }
 
+# Fetch a package using python.
+# bb-package-proxy-fetch-blob digest output_file_path
+bb-image-fetch-blob() {
+  local REPOSITORY="${REPOSITORY:-}"
+  local REPOSITORY_PATH="${REPOSITORY_PATH:-}"
+  local no_proxy=${PACKAGES_PROXY_ADDRESSES}
+  local NO_PROXY=${PACKAGES_PROXY_ADDRESSES}
+  
+  check_python
+
+  cat - <<EOF | $python_binary
+import random
+import ssl
+try:
+  from urllib.request import urlopen, Request, HTTPError
+except ImportError:
+  from urllib2 import urlopen, Request, HTTPError
+endpoints = "${PACKAGES_PROXY_ADDRESSES}".split(",")
+# Choose a random endpoint to increase fault tolerance and reduce load on a single endpoint.
+random.shuffle(endpoints)
+ssl._create_default_https_context = ssl._create_unverified_context
+for ep in endpoints:
+  url = 'https://{}/image?digest=$1&repository=${REPOSITORY}&path=${REPOSITORY_PATH}'.format(ep)
+  request = Request(url, headers={'Authorization': 'Bearer ${PACKAGES_PROXY_TOKEN}'})
+  try:
+    response = urlopen(request, timeout=10)
+  except HTTPError as e:
+    print("Access to {} return HTTP Error {}: {}".format(url, e.getcode(), e.read()[:255]))
+    print('You can check via curl -v -k -H "Authorization: Bearer ${PACKAGES_PROXY_TOKEN}" "{}" > /dev/null'.format(url))
+    continue
+  except Exception as e:
+    print("Access to {} return Error: {}".format(url, e))
+    continue
+  break
+with open('$2', 'wb') as f:
+    f.write(response.read())
+EOF
+}
+
 # Fetch digests from registry and save to file
 # bb-package-fetch-blobs map[blob_digest]output_file_path [repository]
 #
@@ -113,7 +152,7 @@ bb-image-fetch-blobs() {
   for IMAGE_DIGEST in "${!PACKAGES_MAP[@]}"; do
     local PACKAGE_DIR="${BB_FETCHED_PACKAGES_STORE}/${PACKAGES_MAP[$IMAGE_DIGEST]}"
     mkdir -p "${PACKAGE_DIR}"
-    bb-package-fetch-blob "${IMAGE_DIGEST}" "${PACKAGE_DIR}/${IMAGE_DIGEST}.tar.gz"
+    bb-image-fetch-blob "${IMAGE_DIGEST}" "${PACKAGE_DIR}/${IMAGE_DIGEST}.tar.gz"
   done
 }
 
