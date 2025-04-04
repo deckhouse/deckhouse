@@ -250,34 +250,16 @@ func (c *Reconciler) checkCloudConditions(ctx context.Context) {
 	}
 
 	if len(conditions) == 0 {
-		// remove configmap if we don't have conditions
 		c.logger.Infof("Got 0 conditions")
 
-		if err = retryFunc(15, 3*time.Second, 30*time.Second, c.logger, func() error {
-			cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-			_, err1 := c.k8sClient.CoreV1().ConfigMaps("kube-system").Get(cctx, "d8-cloud-provider-conditions", metav1.GetOptions{})
-			cancel()
-			if errors.IsNotFound(err1) {
-				// ok
-				return nil
-			} else if err1 != nil {
-				return fmt.Errorf("Cannot check d8-cloud-provider-conditions configMap: %v", err1)
-			} else {
-				cctx, cancel = context.WithTimeout(ctx, 10*time.Second)
-				err1 = c.k8sClient.CoreV1().ConfigMaps("kube-system").Delete(cctx, "d8-cloud-provider-conditions", metav1.DeleteOptions{})
-				cancel()
+		cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		_, err = c.k8sClient.CoreV1().ConfigMaps("kube-system").Get(cctx, "d8-cloud-provider-conditions", metav1.GetOptions{})
+		cancel()
 
-				if err1 != nil {
-					return fmt.Errorf("Cannot delete d8-cloud-provider-conditions configMap: %v", err)
-				}
-			}
-			return nil
-		}); err != nil {
-			c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
-			c.logger.Errorln("Cannot update d8-cloud-provider-conditions configMap. Timed out. See error messages below.")
-			c.setProbe(false)
+		if errors.IsNotFound(err) {
+			// don't create empty configmap if we don't have an existing one
+			return
 		}
-		return
 	}
 
 	jsonConditions, err := json.Marshal(conditions)

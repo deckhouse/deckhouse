@@ -60,6 +60,9 @@ data:
 
 		It("Hook must not fail", func() {
 			Expect(f).To(ExecuteSuccessfully())
+			value, exists := requirements.GetValue(unmetCloudConditionsKey)
+			Expect(exists).To(BeTrue())
+			Expect(value).To(BeFalse())
 		})
 	})
 
@@ -77,13 +80,13 @@ data:
 		})
 	})
 
-	Context("unmetCloudConditions, nodeManager:unmetCloudConditions requirement value should be false", func() {
+	Context("unmetCloudConditions", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(unmetCloudConditions))
 			f.RunHook()
 		})
 
-		It("Hook must not fail; nodeManager:unmetCloudConditions requirement value should be true", func() {
+		It("unmetCloudConditions requirement value should be true", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			value, exists := requirements.GetValue(unmetCloudConditionsKey)
 			Expect(exists).To(BeTrue())
