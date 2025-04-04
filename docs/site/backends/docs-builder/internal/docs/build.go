@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/spf13/fsync"
 
 	"github.com/flant/docs-builder/pkg/hugo"
@@ -62,14 +63,14 @@ func (svc *Service) buildHugo() error {
 	}
 
 	for {
-		err := hugo.Build(flags, svc.logger)
-		if err == nil {
+		buildErr := hugo.Build(flags, svc.logger)
+		if buildErr == nil {
 			return nil
 		}
 
-		if path, ok := getAssembleErrorPath(err.Error()); ok {
+		if path, ok := getAssembleErrorPath(buildErr.Error()); ok {
 			modulePath := filepath.Dir(path)
-			err = os.RemoveAll(modulePath)
+			err := os.RemoveAll(modulePath)
 			if err != nil {
 				return fmt.Errorf("remove module: %w", err)
 			}
@@ -80,11 +81,11 @@ func (svc *Service) buildHugo() error {
 				return fmt.Errorf("remove module from channel mapping: %w", err)
 			}
 
-			svc.logger.Warn("removed broken module", slog.String("module_path", modulePath))
+			svc.logger.Warn("removed broken module", slog.String("module_path", modulePath), log.Err(buildErr))
 			continue
 		}
 
-		return err
+		return buildErr
 	}
 }
 

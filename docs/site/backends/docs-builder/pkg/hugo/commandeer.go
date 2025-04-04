@@ -77,7 +77,7 @@ func (c *command) PreRun() error {
 		}
 	}
 	var err error
-	c.hugologger, err = c.createLogger(false, *c.logger)
+	c.hugologger, err = c.createLogger(false)
 	if err != nil {
 		return err
 	}
@@ -275,7 +275,14 @@ func (c *command) HugFromConfig(conf *commonConfig) (*hugolib.HugoSites, error) 
 	return h, err
 }
 
-func (c *command) createLogger(running bool, logger log.Logger) (loggers.Logger, error) {
+func duration(key string, d time.Duration) slog.Attr {
+	return slog.Attr{
+		Key:   key,
+		Value: slog.StringValue(d.String()),
+	}
+}
+
+func (c *command) createLogger(running bool) (loggers.Logger, error) {
 	level := logg.LevelWarn
 
 	if c.flags.LogLevel != "" {
@@ -327,7 +334,7 @@ func (c *command) createLogger(running bool, logger log.Logger) (loggers.Logger,
 				case "__h_field__cmd":
 					f.Name = "hugo_command"
 				case "duration":
-					opts = append(opts, log.Duration(f.Name, f.Value.(time.Duration)))
+					opts = append(opts, duration(f.Name, f.Value.(time.Duration)))
 					continue
 				}
 				opts = append(opts, slog.Any(f.Name, f.Value))
@@ -335,13 +342,13 @@ func (c *command) createLogger(running bool, logger log.Logger) (loggers.Logger,
 
 			switch e.Level {
 			case logg.LevelDebug:
-				logger.Debug(e.Message, opts...)
+				c.logger.Debug(e.Message, opts...)
 			case logg.LevelError:
-				logger.Error(e.Message, opts...)
+				c.logger.Error(e.Message, opts...)
 			case logg.LevelWarn:
-				logger.Warn(e.Message, opts...)
+				c.logger.Warn(e.Message, opts...)
 			case logg.LevelInfo:
-				logger.Info(e.Message, opts...)
+				c.logger.Info(e.Message, opts...)
 			}
 			return nil
 		},
