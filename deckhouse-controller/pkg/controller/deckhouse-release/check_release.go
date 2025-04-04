@@ -391,11 +391,11 @@ func (f *DeckhouseReleaseFetcher) restoreCurrentDeployedRelease(ctx context.Cont
 		return nil, fmt.Errorf("create release: %w", err)
 	}
 
-	releasePatch := release.DeepCopy()
+	patch := client.MergeFrom(release.DeepCopy())
 
-	releasePatch.Status.Phase = v1alpha1.DeckhouseReleasePhaseDeployed
+	release.Status.Phase = v1alpha1.DeckhouseReleasePhaseDeployed
 
-	err = f.k8sClient.Status().Patch(ctx, releasePatch, client.MergeFrom(release))
+	err = f.k8sClient.Status().Patch(ctx, release, patch)
 	if err != nil {
 		return nil, fmt.Errorf("patch release status: %w", err)
 	}
