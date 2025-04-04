@@ -2,6 +2,8 @@ linters-settings:
   module:
     oss:
       disable: true
-  ingress-rules:
-    - kind: Ingress
-      name: deckhouse-tools
+  templates:
+    exclude-rules:
+      ingress:
+        - kind: Ingress
+          name: deckhouse-tools
