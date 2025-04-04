@@ -234,7 +234,6 @@ The `/hooks` directory contains the module's hooks. A hook is an executable file
 
 {% raw %}
 Hook requirements:
-- The hook must be written in the Python language.
 - When run with the `--config` parameter, the hook must output its configuration in YAML format.
 - When run without parameters, the hook must perform its intended action.
 
