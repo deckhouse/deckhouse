@@ -156,11 +156,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"capzControllerManager":  "imageHash-cloudProviderZvirt-capzControllerManager",
 		"cloudControllerManager": "imageHash-cloudProviderZvirt-cloudControllerManager",
 		"cloudDataDiscoverer":    "imageHash-cloudProviderZvirt-cloudDataDiscoverer",
-		"zvirtCsiDriver127":      "imageHash-cloudProviderZvirt-zvirtCsiDriver127",
-		"zvirtCsiDriver128":      "imageHash-cloudProviderZvirt-zvirtCsiDriver128",
-		"zvirtCsiDriver129":      "imageHash-cloudProviderZvirt-zvirtCsiDriver129",
-		"zvirtCsiDriver130":      "imageHash-cloudProviderZvirt-zvirtCsiDriver130",
-		"zvirtCsiDriver131":      "imageHash-cloudProviderZvirt-zvirtCsiDriver131",
+		"zvirtCsiDriver":         "imageHash-cloudProviderZvirt-zvirtCsiDriver",
 	},
 	"cniCilium": map[string]interface{}{
 		"agentDistroless":    "imageHash-cniCilium-agentDistroless",
