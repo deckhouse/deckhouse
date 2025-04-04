@@ -16,7 +16,9 @@ package debug
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/flant/addon-operator/sdk"
 	kubeclient "github.com/flant/kube-client/client"
@@ -61,13 +63,11 @@ func DefineModuleConfigDebugCommands(kpApp *kingpin.Application, logger *log.Log
 }
 
 func moduleSwitch(kubeClient *kubeclient.Client, moduleName string, enabled bool, actionDesc string, logger *log.Logger) error {
-	// Init logging for console output.
-
 	// TODO: check formatters?
 	// log.SetFormatter(&log.TextFormatter{DisableTimestamp: true, ForceColors: true})
 	logger.SetLevel(log.LevelError)
 
-	if err := setModuleConfigEnabled(kubeClient, moduleName, enabled); err != nil {
+	if err := setModuleConfigEnabled(context.TODO(), kubeClient, moduleName, enabled); err != nil {
 		return fmt.Errorf("%s module failed: %w", actionDesc, err)
 	}
 	fmt.Printf("Module %s %sd\n", moduleName, actionDesc)
@@ -75,23 +75,30 @@ func moduleSwitch(kubeClient *kubeclient.Client, moduleName string, enabled bool
 }
 
 // setModuleConfigEnabled updates spec.enabled flag or creates a new ModuleConfig with spec.enabled flag.
-func setModuleConfigEnabled(kubeClient k8s.Client, name string, enabled bool) error {
+func setModuleConfigEnabled(ctx context.Context, kubeClient k8s.Client, name string, enabled bool) error {
 	// this should not happen, but check it anyway.
 	if kubeClient == nil {
 		return fmt.Errorf("kubernetes client is not initialized")
 	}
 
-	unstructuredObj, err := kubeClient.Dynamic().Resource(v1alpha1.ModuleConfigGVR).Get(context.TODO(), name, metav1.GetOptions{})
+	if _, err := kubeClient.Dynamic().Resource(v1alpha1.ModuleConfigGVR).Get(ctx, name, metav1.GetOptions{}); err != nil {
+		if apierrors.IsNotFound(err) {
+			return errors.New("not found")
+		}
+		return fmt.Errorf("get the '%s' module: %w", name, err)
+	}
+
+	unstructuredObj, err := kubeClient.Dynamic().Resource(v1alpha1.ModuleConfigGVR).Get(ctx, name, metav1.GetOptions{})
 	if client.IgnoreNotFound(err) != nil {
-		return fmt.Errorf("failed to get the '%s' module config: %w", name, err)
+		return fmt.Errorf("get the '%s' module config: %w", name, err)
 	}
 
 	if unstructuredObj != nil {
 		if err = unstructured.SetNestedField(unstructuredObj.Object, enabled, "spec", "enabled"); err != nil {
-			return fmt.Errorf("failed to change spec.enabled to %v in the '%s' module config: %w", enabled, name, err)
+			return fmt.Errorf("change spec.enabled to %v in the '%s' module config: %w", enabled, name, err)
 		}
-		if _, err = kubeClient.Dynamic().Resource(v1alpha1.ModuleConfigGVR).Update(context.TODO(), unstructuredObj, metav1.UpdateOptions{}); err != nil {
-			return fmt.Errorf("failed to update the '%s' module config: %w", name, err)
+		if _, err = kubeClient.Dynamic().Resource(v1alpha1.ModuleConfigGVR).Update(ctx, unstructuredObj, metav1.UpdateOptions{}); err != nil {
+			return fmt.Errorf("update the '%s' module config: %w", name, err)
 		}
 		return nil
 	}
@@ -112,11 +119,12 @@ func setModuleConfigEnabled(kubeClient k8s.Client, name string, enabled bool) er
 
 	obj, err := sdk.ToUnstructured(newCfg)
 	if err != nil {
-		return fmt.Errorf("failed to convert the '%s' module config: %w", name, err)
+		return fmt.Errorf("convert the '%s' module config: %w", name, err)
 	}
 
-	if _, err = kubeClient.Dynamic().Resource(v1alpha1.ModuleConfigGVR).Create(context.TODO(), obj, metav1.CreateOptions{}); err != nil {
-		return fmt.Errorf("failed to create the '%s' module config: %w", name, err)
+	if _, err = kubeClient.Dynamic().Resource(v1alpha1.ModuleConfigGVR).Create(ctx, obj, metav1.CreateOptions{}); err != nil {
+		return fmt.Errorf("create the '%s' module config: %w", name, err)
 	}
+
 	return nil
 }
