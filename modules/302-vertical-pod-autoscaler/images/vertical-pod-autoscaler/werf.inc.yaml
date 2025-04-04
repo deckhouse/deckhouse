@@ -24,8 +24,7 @@ import:
     to: /src
     before: install
 mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
+{{ include "mount points for golang builds" . }}
 shell:
   install:
     - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
