@@ -226,6 +226,7 @@ func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore,
 		_, err = schemaStore.Validate(&docData, opts...)
 		if err != nil {
 			if errors.Is(err, ErrSchemaNotFound) {
+				log.DebugF("Schema not found for module %s\n", moduleConfig.Name)
 				return false, nil
 			}
 			return false, fmt.Errorf("Module config validation failed: %w\ndata: \n%s\n", err, numerateManifestLines(docData))
@@ -286,12 +287,16 @@ func ParseConfigFromData(configData string, opts ...ValidateOption) (*MetaConfig
 			return nil, err
 		}
 		if !found && strings.TrimSpace(doc) != "" {
+			var index SchemaIndex
+			_ = yaml.Unmarshal([]byte(doc), &index)
+			if index.Kind != "" && index.Version != "" {
+				log.DebugF("Found resource for resourcesYaml %s/%s\n", index.Kind, index.Version)
+			}
 			resourcesDocs = append(resourcesDocs, doc)
 		}
 	}
 
 	metaConfig.ResourcesYAML = strings.TrimSpace(strings.Join(resourcesDocs, "\n\n---\n\n"))
-	log.DebugF("Collected ResourcesYAML:\n%s\n\n", metaConfig.ResourcesYAML)
 
 	// init configuration can be empty, but we need default from openapi spec
 	if len(metaConfig.InitClusterConfig) == 0 {
