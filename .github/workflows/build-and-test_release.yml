@@ -202,6 +202,32 @@ jobs:
           if [[ $EMPTY_EDITIONS == "yes" ]] ; then
             echo "No editions requested. Building only FE."
           fi
+  check_branch_name:
+    name: Check branch name
+    runs-on: ubuntu-latest
+    steps:
+
+    # <template: checkout_step>
+    - name: Checkout sources
+      uses: actions/checkout@v3.5.2
+
+    # </template: checkout_step>
+      with:
+        fetch-depth: 0
+    - name: Check branch name
+      id: check_branch_name
+      run: |
+        TAG_NAME="${GITHUB_REF#refs/tags/}" # Remove "refs/tags/" prefix
+        echo "TAG_NAME=${TAG_NAME}"
+        MAJOR=$(echo "$TAG_NAME" | cut -d'.' -f1 | tr -d 'v')
+        MINOR=$(echo "$TAG_NAME" | cut -d'.' -f2)
+        RELEASE_BRANCH_NAME="release-${MAJOR}.${MINOR}"
+        echo "RELEASE_BRANCH_NAME=${RELEASE_BRANCH_NAME}"
+        echo "GITHUB_SHA=${GITHUB_SHA}"
+        echo "Current commit in branch:"
+        git branch -r --contains ${GITHUB_SHA}
+        # grep returns exit code 1 if branch not found
+        git branch -r --contains ${GITHUB_SHA} | grep ${RELEASE_BRANCH_NAME}
 
   comment_on_start:
     name: Update issue comment
@@ -233,6 +259,7 @@ jobs:
     name: Go Generate
     needs:
       - git_info
+      - check_branch_name
 
     # <template: go_generate_template>
     runs-on: [self-hosted, regular]
@@ -332,6 +359,7 @@ jobs:
     name: Render workflow
     needs:
       - git_info
+      - check_branch_name
 
     # <template: workflow_render_template>
     runs-on: [self-hosted, regular]
@@ -2842,6 +2870,7 @@ jobs:
     name: Tests
     needs:
       - git_info
+      - check_branch_name
 
     # <template: tests_before_build_template>
     runs-on: [self-hosted, regular]
