@@ -31,7 +31,7 @@ bb-package-or-image-is-installed?() {
   return 1
 }
 
-# Check if package or image fetched
+# Check if package fetched
 # bb-package-is-fetched? package digest
 bb-package-is-fetched?() {
   if [[ -d "${BB_FETCHED_PACKAGES_STORE}/${1}" ]]; then
@@ -103,7 +103,7 @@ with open('$2', 'wb') as f:
 EOF
 }
 
-# Fetch a image to tar using python.
+# Fetch a image using python.
 # bb-image-fetch digest output_file_path
 bb-image-fetch() {
   local REPOSITORY="${REPOSITORY:-}"

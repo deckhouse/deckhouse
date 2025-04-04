@@ -99,7 +99,6 @@ func (p *Proxy) Serve() {
 		if packageReader != nil {
 			defer packageReader.Close()
 		}
-
 		if err != nil {
 			p.logger.Error(err.Error())
 			if errors.Is(err, registry.ErrPackageNotFound) {
@@ -121,7 +120,6 @@ func (p *Proxy) Serve() {
 		if r.Method == "HEAD" {
 			return
 		}
-
 		if _, err := io.Copy(w, packageReader); err != nil {
 			p.logger.Errorf("send package: %v", err)
 			return
