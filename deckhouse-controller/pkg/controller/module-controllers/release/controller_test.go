@@ -356,7 +356,22 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 }
 
 func (suite *ReleaseControllerTestSuite) TestModuleUpdate() {
+	err := os.Setenv("TEST_EXTENDER_DECKHOUSE_VERSION", "v1.0.0")
+	require.NoError(suite.T(), err)
+	err = os.Setenv("TEST_EXTENDER_KUBERNETES_VERSION", "1.28.0")
+	require.NoError(suite.T(), err)
 	ctx := suite.Context()
+
+	dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
+		ManifestStub: func() (*v1.Manifest, error) {
+			return &v1.Manifest{
+				Layers: []v1.Descriptor{},
+			}, nil
+		},
+		LayersStub: func() ([]v1.Layer, error) {
+			return []v1.Layer{&utils.FakeLayer{}}, nil
+		},
+	}, nil)
 
 	// Setup initial state
 	suite.setupReleaseController(suite.fetchTestFileData("initial-state.yaml"))
