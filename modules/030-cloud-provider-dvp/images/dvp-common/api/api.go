@@ -22,6 +22,7 @@ import (
 	"dvp-common/config"
 
 	"github.com/deckhouse/virtualization/api/core/v1alpha2"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -33,10 +34,11 @@ var (
 )
 
 type DVPCloudAPI struct {
-	Service        *Service
-	ComputeService *ComputeService
-	DiskService    *DiskService
-	PortalService  *PortalService
+	Service             *Service
+	ComputeService      *ComputeService
+	DiskService         *DiskService
+	PortalService       *PortalService
+	LoadBalancerService *LoadBalancerService
 }
 
 func NewDVPCloudAPI(config *config.CloudConfig) (*DVPCloudAPI, error) {
@@ -55,6 +57,11 @@ func NewDVPCloudAPI(config *config.CloudConfig) (*DVPCloudAPI, error) {
 		return nil, err
 	}
 
+	err = corev1.AddToScheme(scheme)
+	if err != nil {
+		return nil, err
+	}
+
 	client, err := client.New(clientConfig, client.Options{
 		Scheme: scheme,
 	})
@@ -69,10 +76,11 @@ func NewDVPCloudAPI(config *config.CloudConfig) (*DVPCloudAPI, error) {
 	}
 
 	return &DVPCloudAPI{
-		Service:        service,
-		ComputeService: NewComputeService(service),
-		DiskService:    NewDiskService(service),
-		PortalService:  NewPortalService(service),
+		Service:             service,
+		ComputeService:      NewComputeService(service),
+		DiskService:         NewDiskService(service),
+		PortalService:       NewPortalService(service),
+		LoadBalancerService: NewLoadBalancerService(service),
 	}, nil
 }
 
