@@ -1,0 +1,16 @@
+# oci image labels with supported k8s versions
+# applies on the main deckhouse image and on the install image
+{{- define "controller_and_install_image_labels" }}
+{{- $context := . }}
+imageSpec:
+  config:
+    env: { "EDITOR": "vim" }
+    labels: {
+      "io.deckhouse.version": "{{ $context.CI_COMMIT_TAG }}",
+      "io.deckhouse.edition": "{{ $context.Env }}",
+      "io.deckhouse.kubernetes.versions.supported": "{{ join " " $context.kubernetesVersions }}",
+      "io.deckhouse.kubernetes.versions.default": "{{ $context.defaultKubernetesVersion }}",
+      "io.deckhouse.kubernetes.versions.eol": "{{ join " " $context.eolKubernetesVersions }}",
+      "io.deckhouse.kubernetes.versions.preview": "{{ join " " $context.previewKubernetesVersions }}"
+    }
+{{- end }}
