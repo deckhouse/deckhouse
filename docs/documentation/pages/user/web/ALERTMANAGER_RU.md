@@ -8,7 +8,7 @@ lang: ru
 
 ## Доступ к веб-интерфейсу
 
-Для открытия веб-интерфейса модуля Alertmanager-email выполните переход по ссылке, расположенной в левой части главного экрана Grafana.
+Для открытия веб-интерфейса модуля Alertmanager-email перейдите по ссылке, расположенной в левой части главного экрана Grafana.
 
 ![Открытие web-интерфейса Alertmanager-email](../images/alertmanager-email/alertmanager-webinterface.png)
 
