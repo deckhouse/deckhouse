@@ -12,12 +12,42 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+check_container_running() {
+  local container_name=$1
+  local max_retries=20
+  local sleep_interval=10
+  local count=0
+
+  while [[ $count -lt $max_retries ]]; do
+    if crictl ps -o json | jq -e --arg name "$container_name" '.containers[] | select(.metadata.name == $name and .state == "CONTAINER_RUNNING")' > /dev/null; then
+      echo "$container_name is running"
+      return 0
+    fi
+    count=$((count + 1))
+
+    if [[ $count -ge $max_retries ]]; then
+      echo "$container_name not running in $sleep_interval*$max_retries"
+      exit 1
+    fi
+
+    sleep $sleep_interval
+    echo "wait for the $container_name to start $count"
+  done
+}
+
+check_container_running "kubernetes-api-proxy-reloader"
+check_container_running "kubernetes-api-proxy"
 mkdir -p /etc/kubernetes/deckhouse/kubeadm/patches/
 cp /var/lib/bashible/kubeadm/patches/* /etc/kubernetes/deckhouse/kubeadm/patches/
 kubeadm init phase certs all --config /var/lib/bashible/kubeadm/config.yaml
 kubeadm init phase kubeconfig all --config /var/lib/bashible/kubeadm/config.yaml
 kubeadm init phase etcd local --config /var/lib/bashible/kubeadm/config.yaml
+check_container_running "etcd"
 kubeadm init phase control-plane all --config /var/lib/bashible/kubeadm/config.yaml
+check_container_running "kube-apiserver"
+check_container_running "healthcheck"
+check_container_running "kube-controller-manager"
+check_container_running "kube-scheduler"
 kubeadm init phase mark-control-plane --config /var/lib/bashible/kubeadm/config.yaml
 
 # CIS becnhmark purposes
