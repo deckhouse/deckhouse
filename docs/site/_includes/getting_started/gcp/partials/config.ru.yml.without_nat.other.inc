@@ -143,7 +143,7 @@ masterNodeGroup:
     # [<ru>] Используемый образ.
     # [<en>] You might consider changing this.
     # [<ru>] Возможно, захотите изменить.
-    image: projects/ubuntu-os-cloud/global/images/ubuntu-2204-jammy-v20221206
+    image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20250313
     disableExternalIP: false
 # [<en>] A subnet to use for cluster nodes.
 # [<ru>] Адресное пространство узлов кластера.

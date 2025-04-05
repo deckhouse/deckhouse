@@ -78,7 +78,7 @@ kubectl -n kube-system get secret d8-provider-cluster-configuration -o json | jq
    yc compute instance create \
    --name bastion \
    --hostname bastion \
-   --create-boot-disk image-family=ubuntu-2204-lts,image-folder-id=standard-images,size=20,type=network-hdd \
+   --create-boot-disk image-family=ubuntu-2404-lts,image-folder-id=standard-images,size=20,type=network-hdd \
    --memory 2 \
    --cores 2 \
    --core-fraction 100 \

@@ -122,3 +122,4 @@ spec:
                 networkType:
                   description: |
                     Тип сети: обычная или [программно-ускоренная](https://cloud.yandex.ru/docs/vpc/concepts/software-accelerated-network).
+

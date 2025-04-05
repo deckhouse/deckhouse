@@ -41,7 +41,7 @@ masterNodeGroup:
   - europe-west4-b
   instanceClass:
     machineType: n1-standard-4      # Required.
-    image: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911  # Required.
+    image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20250313  # Required.
     diskSizeGb: 20                  # Optional, local disk is used if not specified.
     disableExternalIP: false        # Optional, by default master has externalIP.
     additionalNetworkTags:          # Optional.
@@ -55,7 +55,7 @@ nodeGroups:
   - europe-west4-b
   instanceClass:
     machineType: n1-standard-4      # Required.
-    image: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911  # Required.
+    image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20250313  # Required.
     diskSizeGb: 20                  # Optional, local disk is used if not specified.
     disableExternalIP: true         # Optional, by default nodes do not have externalIP.
     additionalNetworkTags:          # Optional.
@@ -104,7 +104,7 @@ masterNodeGroup:
   - europe-west4-b
   instanceClass:
     machineType: n1-standard-4      # Required.
-    image: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911  # Required.
+    image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20250313  # Required.
     diskSizeGb: 20                  # Optional, local disk is used if not specified.
     additionalNetworkTags:          # Optional.
     - tag1
@@ -117,7 +117,7 @@ nodeGroups:
   - europe-west4-b
   instanceClass:
     machineType: n1-standard-4      # Required.
-    image: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911  # Required.
+    image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20250313  # Required.
     diskSizeGb: 20                  # Optional, local disk is used if not specified.
     additionalNetworkTags:          # Optional.
     - tag1
