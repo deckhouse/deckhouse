@@ -200,7 +200,7 @@ func (r *runner) migrateTerraNodes(ctx *context.Context, metaConfig *config.Meta
 
 		log.DebugF("NodeGroup for converge %v", nodeGroupName)
 
-		rr := controller.NewNodeGroupControllerRunner(nodeGroupName, ngState, r.excludedNodes)
+		rr := controller.NewNodeGroupControllerRunner(nodeGroupName, ngState, r.excludedNodes, true)
 		err := rr.Run(ctx)
 		if err != nil {
 			return err
@@ -270,7 +270,7 @@ func (r *runner) convergeTerraNodes(ctx *context.Context, metaConfig *config.Met
 
 		log.DebugF("NodeGroup for converge %v", nodeGroupName)
 
-		rr := controller.NewNodeGroupControllerRunner(nodeGroupName, ngState, r.excludedNodes)
+		rr := controller.NewNodeGroupControllerRunner(nodeGroupName, ngState, r.excludedNodes, false)
 		err := rr.Run(ctx)
 		if err != nil {
 			return err
