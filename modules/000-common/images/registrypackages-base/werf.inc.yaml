@@ -3,7 +3,8 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ $.Images.BASE_SCRATCH }}
 imageSpec:
   config:
-    user: ""
-    workingDir: ""
+    clearUser: true
+    clearWorkingDir: true
     clearCmd: true
     clearEntrypoint: true
+    removeEnv: ["/.*/"]
