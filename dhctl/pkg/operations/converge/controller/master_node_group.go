@@ -40,11 +40,14 @@ type MasterNodeGroupController struct {
 
 	nodeToHost    map[string]string
 	convergeState *context.State
+
+	skipChecks bool
 }
 
-func NewMasterNodeGroupController(controller *NodeGroupController) *MasterNodeGroupController {
+func NewMasterNodeGroupController(controller *NodeGroupController, skipChecks bool) *MasterNodeGroupController {
 	masterNodeGroupController := &MasterNodeGroupController{
 		NodeGroupController: controller,
+		skipChecks:          skipChecks,
 	}
 	masterNodeGroupController.layoutStep = "master-node"
 	masterNodeGroupController.nodeGroup = masterNodeGroupController
@@ -337,7 +340,7 @@ func (c *MasterNodeGroupController) newHookForUpdatePipeline(ctx *context.Contex
 		}
 	}
 
-	return controlplane.NewHookForUpdatePipeline(ctx, nodesToCheck, metaConfig.UUID, ctx.CommanderMode()).
+	return controlplane.NewHookForUpdatePipeline(ctx, nodesToCheck, metaConfig.UUID, ctx.CommanderMode(), c.skipChecks).
 		WithSourceCommandName("converge").
 		WithNodeToConverge(convergedNode).
 		WithConfirm(confirm)
