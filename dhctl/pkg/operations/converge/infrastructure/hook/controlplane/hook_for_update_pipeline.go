@@ -54,7 +54,7 @@ func NewHookForUpdatePipeline(
 		hook.NewKubeNodeReadinessChecker(kubeGetter),
 	}
 
-	if !commanderMode || !skipChecks {
+	if !commanderMode && !skipChecks {
 		cl := kubeGetter.KubeClient().NodeInterfaceAsSSHClient()
 		if cl == nil {
 			panic("Node interface is not ssh")
