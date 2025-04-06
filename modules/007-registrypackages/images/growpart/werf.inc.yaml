@@ -18,7 +18,7 @@ shell:
   - rm -rf /src/cloud-utils/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-fromImage: common/registrypackages-base
+from: {{ $.Images.BASE_SCRATCH }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
@@ -38,6 +38,11 @@ import:
 imageSpec:
   config:
     labels: { "distro": "all", "version": "all", "growpart": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-fdisk-{{ $image_version }}
 final: false

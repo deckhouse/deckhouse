@@ -31,7 +31,7 @@ shell:
   - rm -rf .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-fromImage: common/registrypackages-base
+from: {{ $.Images.BASE_SCRATCH }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
@@ -62,6 +62,11 @@ import:
 imageSpec:
   config:
     labels: {"distro": "all", "version": "all", "kubernetes-cni": "{{ $cni_version }}", "flannel": "{{ $cni_flannel_version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false

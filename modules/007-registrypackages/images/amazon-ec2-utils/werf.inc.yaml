@@ -17,7 +17,7 @@ shell:
   - cp /src/amazon-ec2-utils/ebsnvme-id /ebsnvme-id
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-fromImage: common/registrypackages-base
+from: {{ $.Images.BASE_SCRATCH }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/amazon-ec2-utils/ebsnvme-id
@@ -30,3 +30,8 @@ import:
 imageSpec:
   config:
     labels: { "distro": "all", "version": "all", "growpart": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]

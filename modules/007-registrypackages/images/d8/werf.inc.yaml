@@ -14,7 +14,7 @@ shell:
 #  - rm -rf /src/deckhouse-cli/.git # https://github.com/deckhouse/deckhouse-cli/blob/main/Taskfile.yml#L9
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/registrypackages-base
+from: {{ $.Images.BASE_SCRATCH }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /
@@ -27,6 +27,11 @@ import:
 imageSpec:
   config:
     labels: { "distro": "all", "version": "all", "d8": "{{ .CandiVersionMap.d8.d8CliVersion }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false

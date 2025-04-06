@@ -192,7 +192,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"nginxStatic":               "imageHash-common-nginxStatic",
 		"pause":                     "imageHash-common-pause",
 		"redisStatic":               "imageHash-common-redisStatic",
-		"registrypackagesBase":      "imageHash-common-registrypackagesBase",
 		"shellOperator":             "imageHash-common-shellOperator",
 		"vxlanOffloadingFixer":      "imageHash-common-vxlanOffloadingFixer",
 	},
