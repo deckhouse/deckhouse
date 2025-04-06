@@ -53,6 +53,7 @@ title: "Модуль deckhouse: FAQ"
 * состояние очереди Deckhouse;
 * Deckhouse values. За исключением значений `kubeRBACProxyCA` и `registry.dockercfg`;
 * список включенных модулей;
+* список модулей в режиме `Unmanaged`;
 * `events` из всех пространств имен;
 * манифесты controller'ов и подов из всех пространств имен Deckhouse;
 * все объекты `nodegroups`;
@@ -70,7 +71,6 @@ title: "Модуль deckhouse: FAQ"
 * логи Vertical Pod Autoscaler recommender;
 * логи Vertical Pod Autoscaler updater;
 * логи Prometheus;
-* метрики terraform-state-exporter. За исключением значений в `provider` из `providerClusterConfiguration`;
 * все горящие уведомления в Prometheus.
 
 ## Как отлаживать проблемы в подах с помощью ephemeral containers?

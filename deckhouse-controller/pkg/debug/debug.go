@@ -86,7 +86,7 @@ func createTarball() *bytes.Buffer {
 		{
 			File: "deckhouse-unmanaged-modules.txt",
 			Cmd:  "bash",
-			Args: []string{"-c", `kubectl get moduleconfig -ojson | jq -r '.items[] | select(.spec.settings.bundle == "Default") | .metadata.name'`},
+			Args: []string{"-c", `kubectl get moduleconfig -ojson | jq -r '.items[] | select(.spec.managementState == "Unmanaged") | .metadata.name'`},
 		},
 		{
 			File: "events.json",

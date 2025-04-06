@@ -52,6 +52,7 @@ Data that will be collected:
 * Deckhouse queue state
 * global Deckhouse values. Except for the values of `kubeRBACProxyCA` and `registry.dockercfg`
 * enabled modules list
+* list of modules in `Unmanaged` mode
 * `events` from all namespaces
 * controllers and pods manifests from namespaces owned by Deckhouse
 * `nodegroups` state
@@ -69,7 +70,6 @@ Data that will be collected:
 * Vertical Pod Autoscaler recommender logs
 * Vertical Pod Autoscaler updater logs
 * Prometheus logs
-* terraform-state-exporter metrics. Except for the values in `provider` from `providerClusterConfiguration`.
 * all firing alerts from Prometheus
 
 ## How to debug pod problems with ephemeral containers?
