@@ -48,12 +48,13 @@ func NewHookForUpdatePipeline(
 	nodeToHostForChecks map[string]string,
 	clusterUUID string,
 	commanderMode bool,
+	skipChecks bool,
 ) *HookForUpdatePipeline {
 	checkers := []hook.NodeChecker{
 		hook.NewKubeNodeReadinessChecker(kubeGetter),
 	}
 
-	if !commanderMode {
+	if !commanderMode || skipChecks {
 		cl := kubeGetter.KubeClient().NodeInterfaceAsSSHClient()
 		if cl == nil {
 			panic("Node interface is not ssh")
