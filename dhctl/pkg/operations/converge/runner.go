@@ -328,7 +328,7 @@ func (r *runner) convergeMigration(ctx *context.Context, checkHasTerraformStateB
 	}
 
 	if checkHasTerraformStateBeforeMigration {
-		_, hasTerraFormState, err := check.CheckState(ctx.Ctx(), ctx.KubeClient(), metaConfig, ctx.InfrastructureContext(metaConfig), check.CheckStateOptions{
+		stats, hasTerraFormState, err := check.CheckState(ctx.Ctx(), ctx.KubeClient(), metaConfig, ctx.InfrastructureContext(metaConfig), check.CheckStateOptions{
 			CommanderMode: ctx.CommanderMode(),
 			StateCache:    ctx.StateCache(),
 		})
@@ -337,9 +337,19 @@ func (r *runner) convergeMigration(ctx *context.Context, checkHasTerraformStateB
 			return err
 		}
 
-		if hasTerraFormState {
+		if !hasTerraFormState {
 			log.InfoLn("Cluster do not have terraform state. Skipping migration")
 			return nil
+		}
+
+		if stats.Cluster.Status != check.OKStatus {
+			return fmt.Errorf("Cluster state has no ok status.")
+		}
+
+		for _, node := range stats.Node {
+			if node.Status != check.OKStatus {
+				return fmt.Errorf("Node %s state has no ok status.", node.Name)
+			}
 		}
 	}
 
