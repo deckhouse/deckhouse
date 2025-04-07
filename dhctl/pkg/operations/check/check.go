@@ -322,6 +322,8 @@ func CheckState(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig
 
 	hasTerraformState := baseRes.IsTerraformState
 
+	log.DebugF("Base infrastructure has terraform state %v\n", hasTerraformState)
+
 	// NOTE: Nodes state loaded from target kubernetes cluster in default dhctl-converge.
 	// NOTE: In the commander mode nodes state should exist in the local state cache.
 	var nodesState map[string]state.NodeGroupInfrastructureState
@@ -474,8 +476,11 @@ func CheckState(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig
 				statistics.InfrastructurePlan = append(statistics.InfrastructurePlan, nodeRes.Plan)
 			}
 
+			log.DebugF("Node %s has terraform state: %v\n", name, nodeRes.IsTerraformState)
+
 			if nodeRes.IsTerraformState && !hasTerraformState {
 				hasTerraformState = nodeRes.IsTerraformState
+				log.DebugF("Has terraform state after node %s: %v\n", name, hasTerraformState)
 			}
 		}
 	}
