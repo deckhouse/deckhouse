@@ -34,13 +34,13 @@ description: "Deckhouse Kubernetes Platform. Использование ауте
 В DKP можно включить аутентификацию для приложения двумя способами
 В зависимости от того, умеет приложение обрабатывать запросы на аутентификацию (выступать OIDC-клиентом) или нет, в DKP можно включить аутентификацию для приложения двумя способами. Оба они рассматриваются далее.
 
-### Настройка аутентификации для приложения, которое не умеет обрабатывать запросы на аутентификацию
+### Аутентификация через прокси (без поддержки OIDC)
 
 Аутентификация в приложении, которое не умеет самостоятельно обрабатывать запросы на аутентификацию, реализуется с помощью специального прокси-сервера. Он обрабатывает запросы на аутентификацию, также выполняет функции авторизации, скрывая от приложения детали этих процессов.
 
 Чтобы включить аутентификацию для приложения, развернутого в DKP выполните следующие шаги:
 
-1. Создайте объект [DexAuthenticator](TODO) в пространстве имен приложения.
+1. Создайте объект DexAuthenticator в пространстве имен приложения.
 
    После появления объекта DexAuthenticator, в пространстве имен будет создан набор компонентов, необходимых для работы аутентификации:
    * Deployment, содержащий контейнеры с прокси-сервером аутентификации/авторизации и хранилищем данных Redis;
@@ -81,8 +81,8 @@ description: "Deckhouse Kubernetes Platform. Использование ауте
    ```
 
    Обратите внимание на следующие возможности при настройке аутентификации:
-   - В параметре `applicationDomain` DexAuthenticator указывается основной домен приложения. Дополнительные домены можно указать в параметре `additionalApplications.domain`;
-   - Параметры `whitelistSourceRanges` и `additionalApplications.whitelistSourceRanges` позволяют открыть возможность аутентификации в приложении только для указанного списка IP-адресов;
+   * В параметре `applicationDomain` DexAuthenticator указывается основной домен приложения. Дополнительные домены можно указать в параметре `additionalApplications.domain`;
+   * Параметры `whitelistSourceRanges` и `additionalApplications.whitelistSourceRanges` позволяют открыть возможность аутентификации в приложении только для указанного списка IP-адресов;
 
    О настройке авторизации читайте в разделе [Авторизация](TODO) документации. Все параметры DexAuthenticator описаны в разделе [Справка](TODO).
 
@@ -104,45 +104,66 @@ description: "Deckhouse Kubernetes Platform. Использование ауте
      nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
    ```
 
-### Настройка аутентификации для приложения, которое умеет обрабатывать запросы на аутентификацию
+### Аутентификация для приложений с поддержкой OIDC
 
-Приложения, которые умеют самостоятельно обрабатывать запросы на аутентификацию и выступать OIDC-клиентом, напрямую взаимодействуют с DKP для аутентификации пользователей.
+Приложения, которые умеют самостоятельно обрабатывать запросы на аутентификацию и выступать OIDC-клиентом, могут напрямую взаимодействовать с системой аутентификации DKP. В этом случае приложение самостоятельно перенаправляет пользователя на страницу входа и обрабатывает полученные OIDC-токены.
 
-Чтобы включить аутентификацию для приложения, развернутого в DKP создайте объект [DexClient](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/cr.html#dexclient) в пространстве имен приложения.
+Чтобы включить аутентификацию для такого приложения, выполните следующие шаги:
 
-После появления объекта DexClient, в пространстве имен будет создан набор компонентов, необходимых для работы аутентификации:
+1. Создайте объект [DexClient](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/cr.html#dexclient) в пространстве имен приложения.
 
-- В системе аутентификации DKP будет зарегистрирован клиент с идентификатором (`clientID`) `dex-client-<NAME>@<NAMESPACE>`, где `<NAME>` и `<NAMESPACE>` — `metadata.name` и `metadata.namespace` объекта DexClient соответственно.
-- В соответствующем пространстве имен будет создан секрет (Secret) `dex-client-<NAME>` (где `<NAME>` — `metadata.name` объекта DexClient), содержащий пароль доступа к клиенту (clientSecret).
+   После создания объекта DexClient, Deckhouse выполнит следующие действия:
 
-Пример манифеста DexClient:
+   * В системе аутентификации DKP будет зарегистрирован OIDC-клиент с идентификатором (`clientID`) вида:  
+     `dex-client-<NAME>@<NAMESPACE>`  
+     где `<NAME>` и `<NAMESPACE>` — это `metadata.name` и `metadata.namespace` объекта DexClient;
+   * Будет автоматически сгенерирован `clientSecret` и сохранён в виде секрета `dex-client-<NAME>` в том же пространстве имён;
+   * Пользователь сможет использовать этот `clientID` и `clientSecret` в своём приложении для настройки OIDC.
 
-```yaml
-apiVersion: deckhouse.io/v1
-kind: DexClient
-metadata:
-  name: myname
-  namespace: mynamespace
-spec:
-  redirectURIs:
-  - https://app.example.com/callback
-  - https://app.example.com/callback-reserve
-  allowedGroups:
-  - Everyone
-  - admins
-  trustedPeers:
-  - opendistro-sibling
-```
+1. Укажите допустимые redirect-URI.
+   Эти URI определяют, куда провайдер (Dex) может перенаправить пользователя после успешной аутентификации.
 
-Пароль доступа к клиенту (`clientSecret`) сохранится в секрете. Пример:
+1. Ограничьте доступ по группам, если необходимо.  
+   Используйте параметр `allowedGroups`, чтобы указать, какие группы пользователей имеют право входа в приложение через этот клиент.
 
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: dex-client-myname
-  namespace: mynamespace
-type: Opaque
-data:
-  clientSecret: c2VjcmV0
-```
+1. (Опционально). Укажите список доверенных клиентов (`trustedPeers`), если вы хотите разрешить делегирование аутентификации между приложениями.
+
+   Пример объекта DexClient:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1
+   kind: DexClient
+   metadata:
+     name: myname
+     namespace: mynamespace
+   spec:
+     redirectURIs:
+     - https://app.example.com/callback
+     - https://app.example.com/callback-reserve
+     allowedGroups:
+     - Everyone
+     - admins
+     trustedPeers:
+     - opendistro-sibling
+     ```
+
+1. Получите `clientSecret`.
+   Секрет будет создан автоматически:
+
+   ```yaml
+   apiVersion: v1
+   kind: Secret
+   metadata:
+     name: dex-client-myname
+     namespace: mynamespace
+   type: Opaque
+   data:
+     clientSecret: c2VjcmV0
+   ```
+
+1. Настройте своё приложение как OIDC-клиент.
+   Используйте `clientID`, `clientSecret`, `redirectURIs`, а также адрес Dex как провайдера. Адрес Dex (`https://dex.<publicDomainTemplate>`) можно получить с помощью команды:
+
+   ```console
+   kubectl -n d8-user-authn get ingress dex -o jsonpath="{.spec.rules[*].host}"
+   ```
