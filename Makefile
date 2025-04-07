@@ -149,6 +149,8 @@ tests-modules: ## Run unit tests for modules hooks and templates.
 	go test -timeout=${TESTS_TIMEOUT} -vet=off ${TESTS_PATH}
 
 dmt-lint:
+	export DMT_METRICS_URL=$(DMT_METRICS_URL)
+	export DMT_METRICS_TOKEN=$(DMT_METRICS_TOKEN)
 	docker run --rm -v ${PWD}:/deckhouse-src -e DMT_METRICS_URL="${DMT_METRICS_URL}" -e DMT_METRICS_TOKEN="${DMT_METRICS_TOKEN}" --user $(id -u):$(id -g) ubuntu /deckhouse-src/tools/dmt-lint.sh
 
 
