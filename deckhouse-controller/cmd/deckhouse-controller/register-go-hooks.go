@@ -25,6 +25,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/bashible/models/status"
 	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/https"
 	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/pki"
+	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/users"
 	_ "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee"
 	_ "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee/lib/crd"
 	_ "github.com/deckhouse/deckhouse/ee/modules/150-user-authn/hooks"
