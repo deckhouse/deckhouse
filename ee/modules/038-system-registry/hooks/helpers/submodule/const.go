@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	submodulesValuesPrefix = "systemRegistry.internal.module"
+	submodulesValuesPrefix = "systemRegistry.internal"
 )
 
 var (

@@ -65,8 +65,6 @@ spec:
         {{- else }}
         image: {{ include "helm_lib_module_image" (list . "systemRegistryManager") }}
         {{- end }}
-        env:
-        {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
         ports:
         - name: http-healthz
           protocol: TCP

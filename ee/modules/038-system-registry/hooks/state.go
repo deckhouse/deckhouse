@@ -17,6 +17,8 @@ import (
 	v1core "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers/submodule"
 )
 
 const (
@@ -65,8 +67,8 @@ type registryConfig struct {
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
-	Queue:        "/modules/system-registry/staticpod-status",
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
+	Queue:        "/modules/system-registry/state",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "static_pods",
@@ -169,7 +171,7 @@ func filterRegistryState(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 		ret.Messages = messages
 	}
 
-	userEnabled := string(secret.Data["users"])
+	userEnabled := string(secret.Data["users_enabled"])
 	userEnabled = strings.TrimSpace(userEnabled)
 	userEnabled = strings.ToLower(userEnabled)
 	ret.UsersEnabled = userEnabled == "true"
@@ -180,6 +182,11 @@ func filterRegistryState(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 	for _, user := range users {
 		user = strings.TrimSpace(user)
 		user = strings.ToLower(user)
+
+		if user == "" {
+			continue
+		}
+
 		usersMap[user] = struct{}{}
 	}
 
@@ -347,8 +354,24 @@ func handleRegistryStaticPods(input *go_hook.HookInput) error {
 		input.Values.Set("systemRegistry.internal.state.messages", state.Messages)
 	}
 
-	input.Values.Set("systemRegistry.internal.state.users_enabled", state.UsersEnabled)
-	input.Values.Set("systemRegistry.internal.state.users", state.Users)
+	input.Values.Set("systemRegistry.internal.state.users.enabled", state.UsersEnabled)
+
+	if len(state.Users) > 0 {
+		input.Values.Set("systemRegistry.internal.state.users.users", state.Users)
+	} else {
+		input.Values.Remove("systemRegistry.internal.state.users.users")
+	}
+
+	if !state.UsersEnabled {
+		submodule.DisableSubmodule(input.Values, "users")
+	} else {
+		usersVer, err := submodule.SetSubmoduleConfig(input.Values, "users", state.Users)
+		if err != nil {
+			return fmt.Errorf("cannot set users config: %w", err)
+		}
+
+		input.Values.Set("systemRegistry.internal.state.users.version", usersVer)
+	}
 
 	return nil
 }

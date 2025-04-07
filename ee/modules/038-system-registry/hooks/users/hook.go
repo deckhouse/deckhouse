@@ -24,7 +24,7 @@ const (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 6},
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Queue:        "/modules/system-registry/users",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
@@ -32,6 +32,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion:        "v1",
 			Kind:              "Secret",
 			NamespaceSelector: namespaceSelector,
+			//ExecuteHookOnSynchronization: ptr.Bool(false),
 			FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 				var secret v1core.Secret
 
@@ -65,6 +66,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	config := submodule.GetSubmoduleConfig[Params](input.Values, "users")
 
 	if !config.Enabled {
+		input.Logger.Warn("Users disabled")
 		submodule.RemoveSubmoduleState(input.Values, "users")
 		return nil
 	}
@@ -83,6 +85,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	stateUsers := state.Data
 	state.Data = make(State)
 
+	input.Logger.Warn("Users reconcile", "state", stateUsers, "secrets", secretUsers)
+
 	for _, name := range config.Params {
 		if !isValidUserName(name) {
 			return fmt.Errorf("user name \"%v\" is invalid", name)
@@ -92,7 +96,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 		user, ok := stateUsers[key]
 		if !ok || !user.IsValid() {
-			user, ok = secretUsers[name]
+			user, ok = secretUsers[key]
 		}
 
 		if !ok || !user.IsValid() {
@@ -116,6 +120,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 	state.Version = config.Version
 	submodule.SetSubmoduleState(input.Values, "users", state)
+
 	return nil
 })
 

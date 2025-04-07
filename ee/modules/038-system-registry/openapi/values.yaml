@@ -21,35 +21,32 @@ properties:
             type: string
             x-examples:
               - plainstring
-      module:
+
+      users:
         type: object
         default: {}
         properties:
-          users:
+          enabled:
+            type: boolean
+            default: false
+          config:
             type: object
-            default: {}
             properties:
-              enabled:
-                type: boolean
-                default: false
-              config:
-               type: object
-               properties:
-                version:
+              version:
+                type: string
+              params:
+                type: array
+                items:
                   type: string
-                params:
-                  type: array
-                  items:
-                    type: string
-              state:
+          state:
+            type: object
+            properties:
+              version:
+                type: string
+              data:
                 type: object
-                properties:
-                  version:
-                    type: string
-                  data:
-                    type: object
-                    additionalProperties:
-                      type: object
+                additionalProperties:
+                  type: object
 
 
       pki:
@@ -101,13 +98,19 @@ properties:
             type: array
             items:
               type: string
-          users_enabled:
-            type: boolean
-            default: false
           users:
-            type: array
-            items:
-              type: string
+            type: object
+            default: {}
+            properties:
+              enabled:
+                type: boolean
+                default: false
+              users:
+                type: array
+                items:
+                  type: string
+              version:
+                type: string
       bashible:
         type: object
         default: {}
