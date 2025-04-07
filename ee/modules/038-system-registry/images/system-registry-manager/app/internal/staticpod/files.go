@@ -17,7 +17,7 @@ import (
 // syncPKIFiles synchronizes the PKI-related files in the specified directory.
 // This includes saving new files, updating existing ones, and removing obsolete files,
 // while updating hashes in ConfigHashes if they change.
-func syncPKIFiles(basePath string, pki nodeservices.PKIModel) (bool, string, error) {
+func syncPKIFiles(basePath string, pki nodeservices.PKI) (bool, string, error) {
 	anyFileChanged := false
 
 	// Define paths for each PKI file and corresponding hash field in ConfigHashes

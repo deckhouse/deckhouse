@@ -602,7 +602,7 @@ func (nc *nodeController) contructNodeServicesConfig(
 		Version: stateSecret.Version,
 		Config: nodeservices.Config{
 
-			Registry: nodeservices.RegistryConfig{
+			Registry: nodeservices.Registry{
 				HTTPSecret: globalSecrets.HTTPSecret,
 				UserRO: nodeservices.User{
 					Name:         userRO.UserName,
@@ -615,7 +615,7 @@ func (nc *nodeController) contructNodeServicesConfig(
 					PasswordHash: userRW.HashedPassword,
 				},
 			},
-			PKI: nodeservices.PKIModel{
+			PKI: nodeservices.PKI{
 				CACert:           string(pki.EncodeCertificate(globalPKI.CA.Cert)),
 				TokenCert:        string(pki.EncodeCertificate(globalPKI.Token.Cert)),
 				TokenKey:         string(tokenKey),
