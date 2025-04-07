@@ -1,4 +1,3 @@
-{{- $binaries := "/bin/sh /bin/df" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
