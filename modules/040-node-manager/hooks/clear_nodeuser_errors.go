@@ -12,10 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// this hook figure out minimal ingress controller version at the beginning and on IngressNginxController creation
-// this version is used on requirements check on Deckhouse update
-// Deckhouse would not update minor version before pod is ready, so this hook will execute at least once (on sync)
-
 package hooks
 
 import (
