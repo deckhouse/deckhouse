@@ -45,10 +45,10 @@ stream {
 {{- end }}
   }
 
-{{- if gt (len .registry.proxyEndpoints) 0 }}
+{{- with .registry.proxyEndpoints }}
   upstream system-registry {
     least_conn;
-    {{- range $proxy_endpoint := .registry.proxyEndpoints }}
+    {{- range $proxy_endpoint := . }}
     server {{ $proxy_endpoint }};
     {{- end }}
   }
@@ -64,7 +64,7 @@ stream {
     proxy_connect_timeout 1s;
   }
 
-{{- if gt (len .registry.proxyEndpoints) 0 }}
+{{- with .registry.proxyEndpoints }}
   server {
     listen 127.0.0.1:5001;
     proxy_pass system-registry;

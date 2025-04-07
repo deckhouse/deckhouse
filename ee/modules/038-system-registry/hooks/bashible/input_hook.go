@@ -65,7 +65,6 @@ func BashibleInputHook(order float64, queue string) bool {
 		case registry_const.ModeProxy:
 			if CA == nil || User == nil {
 				// User or PKI are missing.
-				// We cannot set a new empty bashible config because the secrets might have been accidentally deleted.
 				// We can't return an error here, as it might indicate that the manager hasn't fully started yet.
 				// Returning an error could prevent the manager from starting.
 				// Instead, attempt to restore the current configuration if it exists.
@@ -79,7 +78,6 @@ func BashibleInputHook(order float64, queue string) bool {
 		case registry_const.ModeDetached:
 			if CA == nil || User == nil {
 				// User or PKI are missing.
-				// We cannot set a new empty bashible config because the secrets might have been accidentally deleted.
 				// We can't return an error here, as it might indicate that the manager hasn't fully started yet.
 				// Returning an error could prevent the manager from starting.
 				// Instead, attempt to restore the current configuration if it exists.

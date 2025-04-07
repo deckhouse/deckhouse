@@ -190,7 +190,7 @@ func (d *RegistryData) FromInputData(deckhouseRegistry deckhouseRegistry, regist
 	d.Hosts = []RegistryHostsObject{}
 	d.PrepullHosts = []RegistryHostsObject{}
 
-	// Replace, if registryBashibleConfig exist
+	// Replace, if registryBashibleConfig secret exist
 	if registryBashibleConfig != nil {
 		d.Mode = registryBashibleConfig.Mode
 		d.ImagesBase = registryBashibleConfig.ImagesBase
@@ -200,6 +200,7 @@ func (d *RegistryData) FromInputData(deckhouseRegistry deckhouseRegistry, regist
 		d.PrepullHosts = slices.Clone(registryBashibleConfig.PrepullHosts)
 	}
 
+	// Append mirrors from deckhouseRegistry secret
 	deckhouseRegistryAuth, err := deckhouseRegistry.Auth()
 	if err != nil {
 		return err

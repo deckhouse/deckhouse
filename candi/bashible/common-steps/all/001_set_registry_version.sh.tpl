@@ -12,6 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# This step is used to set the status of the currently configured registry. The status must be set before executing the tasks:
+# - 001_configure_kubernetes_api_proxy.sh.tpl (simultaneously used as a proxy for the registry)
+# - 001_configure_containerd_registry.sh.tpl (registry authentication configuration)
+# and after:
+# - 001_waiting_approval_annotations.sh.tpl (receiving approval from bashible to execute the other tasks)
+
 function create_annotation(){
     local annotation="$1=$2"
     local node="$D8_NODE_HOSTNAME"
