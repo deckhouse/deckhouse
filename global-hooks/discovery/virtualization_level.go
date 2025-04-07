@@ -20,7 +20,6 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -124,7 +123,7 @@ func createSecretWithVirtualizationLevel(input *go_hook.HookInput, level int) {
 		Data: map[string][]byte{"level": []byte(strconv.Itoa(level))},
 	}
 
-	input.PatchCollector.Create(secret, object_patch.UpdateIfExists())
+	input.PatchCollector.CreateOrUpdate(secret)
 }
 
 func getVirtualizationLevelFromMaterNodesLabels(masterNodeInfoSnaps []go_hook.FilterResult) int {
