@@ -120,6 +120,6 @@ steps:
       DMT_METRICS_URL: ${{secrets.DMT_METRICS_URL}}
       DMT_METRICS_TOKEN: ${{secrets.DMT_METRICS_TOKEN}}
     run: |
-      make dmt-lint
+      DMT_METRICS_URL="${DMT_METRICS_URL}" DMT_METRICS_TOKEN="${DMT_METRICS_TOKEN}" make dmt-lint
 # </template: tests_dmt_lint>
 {!{- end -}!}
