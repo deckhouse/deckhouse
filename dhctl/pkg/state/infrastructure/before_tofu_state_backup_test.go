@@ -160,6 +160,7 @@ func getBackupSecret(t *testing.T, fakeClient *client.KubernetesClient, name str
 
 func assertBackupSecretContainsLabelAndAnnotation(t *testing.T, secret *corev1.Secret) {
 	require.Equal(t, secret.Labels["dhctl.deckhouse.io/before-tofu-state-backup"], "true")
+	require.Equal(t, secret.Labels["dhctl.deckhouse.io/state-backup"], "true")
 	require.Contains(t, secret.Annotations, "dhctl.deckhouse.io/before-tofu-state-backup-time")
 }
 
