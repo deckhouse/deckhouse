@@ -3101,6 +3101,9 @@ jobs:
           fetch-depth: 0
       # </template: checkout_full_step>
       - name: DMT lint
+        env:
+          DMT_METRICS_URL: ${{secrets.DMT_METRICS_URL}}
+          DMT_METRICS_TOKEN: ${{secrets.DMT_METRICS_TOKEN}}
         run: |
           make dmt-lint
     # </template: tests_dmt_lint>
