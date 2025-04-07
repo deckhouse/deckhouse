@@ -267,6 +267,10 @@ func (c *ConvergeExporter) getStatistic(ctx context.Context) (*check.Statistics,
 		// the CheckState call is a combination of errors from all infrastructure utility runs.
 	}
 
+	if !infrastructureprovider.NeedToUseOpentofu(metaConfig) {
+		hasTerraformState = false
+	}
+
 	return statistic, hasTerraformState
 }
 
