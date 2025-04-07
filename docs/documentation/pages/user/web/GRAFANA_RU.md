@@ -93,8 +93,6 @@ lang: ru
 
 5.3.1.5.4 Дашборды группы Ingress Nginx — дашборды, связанные с Ingress-контроллерами.
 
-![Ingress Nginx](../images/grafana/ingress_nginx.png)
-
 Дашборд «Namespace Detail» — на этом дашборде отображается детализация компонентов в пространстве имен. Детализация компонентов в пространстве имен. В фильтрах возможно выбрать конкретное пространство имен, Ingress, Service и другие параметры для отображения.
 
 ![Namespace Detail](../images/grafana/namespace_detail.png)
