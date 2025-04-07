@@ -7,7 +7,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/pkg/vcdcsiclient/disks.go b/pkg/vcdcsiclient/disks.go
 --- a/pkg/vcdcsiclient/disks.go	(revision 4d45eb49052c9ff2e5a72c80a74f7fb4484e7b74)
-+++ b/pkg/vcdcsiclient/disks.go	(date 1722439754789)
++++ b/pkg/vcdcsiclient/disks.go	(date 1744029622113)
 @@ -9,17 +9,19 @@
  	"context"
  	"encoding/json"
@@ -32,9 +32,9 @@ diff --git a/pkg/vcdcsiclient/disks.go b/pkg/vcdcsiclient/disks.go
 +	"github.com/vmware/cloud-director-named-disk-csi-driver/pkg/vcdtypes"
 +	"github.com/vmware/cloud-director-named-disk-csi-driver/version"
  )
-
+ 
  type DiskManager struct {
-@@ -151,6 +153,8 @@
+@@ -151,16 +153,41 @@
  		Xmlns: types.XMLNamespaceVCloud,
  		Disk:  d,
  	}
@@ -43,15 +43,20 @@ diff --git a/pkg/vcdcsiclient/disks.go b/pkg/vcdcsiclient/disks.go
  	if storageProfile != "" {
  		storageReference, err := diskManager.VCDClient.VDC.FindStorageProfileReference(storageProfile)
  		if err != nil {
-@@ -161,6 +165,29 @@
+-			return nil, fmt.Errorf("unable to find storage profile [%s] for disk [%s]",
+-				storageProfile, diskName)
++			return nil, fmt.Errorf("unable to find storage profile [%s] for disk [%s]: [%v]",
++				storageProfile, diskName, err)
+ 		}
+ 
  		diskParams.Disk.StorageProfile = &types.Reference{
  			HREF: storageReference.HREF,
  		}
 +
 +		storageProfileData, err := diskManager.VCDClient.VCDClient.GetStorageProfileByHref(storageReference.HREF)
 +		if err != nil {
-+			return nil, fmt.Errorf("unable to get storage profile [%s] for disk [%s] by HREF [%s]",
-+				storageProfile, diskName, storageReference.HREF)
++			return nil, fmt.Errorf("unable to get storage profile [%s] for disk [%s] by HREF [%s]: [%v]",
++				storageProfile, diskName, storageReference.HREF, err)
 +		}
 +
 +		klog.Infof("Storage profile data iops settings [%s]: %v", storageProfileData.Name, storageProfileData.IopsSettings)
@@ -71,5 +76,5 @@ diff --git a/pkg/vcdcsiclient/disks.go b/pkg/vcdcsiclient/disks.go
 +			}
 +		}
  	}
-
+ 
  	task, err := diskManager.createDisk(diskParams)
