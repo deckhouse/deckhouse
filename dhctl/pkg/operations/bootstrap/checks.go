@@ -62,7 +62,7 @@ Please check hostname.`, uuidInCluster, config.UUID)
 	})
 }
 
-func WaitFirstMasterNodeBecomeReady(ctx context.Context, kubeCl *client.KubernetesClient) error {
+func WaitForFirstMasterNodeBecomeReady(ctx context.Context, kubeCl *client.KubernetesClient) error {
 	return retry.NewLoop("Waiting for first master node become ready", 45, 3*time.Second).RunContext(ctx, func() error {
 		var nodeName string
 		err := retry.NewSilentLoop("Get master node name", 45, 3*time.Second).RunContext(ctx, func() error {

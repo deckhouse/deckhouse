@@ -427,7 +427,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return err
 	}
 
-	err = WaitFirstMasterNodeBecomeReady(ctx, kubeCl)
+	err = WaitForFirstMasterNodeBecomeReady(ctx, kubeCl)
 	if err != nil {
 		return err
 	}
