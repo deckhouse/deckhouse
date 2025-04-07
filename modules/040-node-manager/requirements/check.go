@@ -17,7 +17,9 @@ limitations under the License.
 package requirements
 
 import (
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
 
@@ -25,10 +27,12 @@ import (
 )
 
 const (
-	minUbuntuVersionValuesKey = "nodeManager:nodesMinimalOSVersionUbuntu"
-	minDebianVersionValuesKey = "nodeManager:nodesMinimalOSVersionDebian"
-	requirementsUbuntuKey     = "nodesMinimalOSVersionUbuntu"
-	requirementsDebianKey     = "nodesMinimalOSVersionDebian"
+	minUbuntuVersionValuesKey           = "nodeManager:nodesMinimalOSVersionUbuntu"
+	minDebianVersionValuesKey           = "nodeManager:nodesMinimalOSVersionDebian"
+	requirementsUbuntuKey               = "nodesMinimalOSVersionUbuntu"
+	requirementsDebianKey               = "nodesMinimalOSVersionDebian"
+	unmetCloudConditionsKey             = "nodeManager:unmetCloudConditions"
+	unmetCloudConditionsRequirementsKey = "unmetCloudConditions"
 )
 
 func init() {
@@ -40,6 +44,26 @@ func init() {
 		return baseFuncMinVerOS(requirementValue, getter, "Debian")
 	}
 
+	_ = func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+		requirementValue = strings.TrimSpace(requirementValue)
+		if requirementValue == "false" || requirementValue == "" {
+			return true, nil
+		}
+
+		hasUnmetCloudConditions, exists := getter.Get(unmetCloudConditionsKey)
+		if !exists {
+			return true, nil
+		}
+
+		if hasUnmetCloudConditions.(bool) {
+			return false, errors.New("has unmet cloud conditions, see clusteralerts for details")
+		}
+
+		return true, nil
+	}
+
+	// TODO: enable this
+	// requirements.RegisterCheck(unmetCloudConditionsRequirementsKey, checkUnmetCloudConditionsFunc)
 	requirements.RegisterCheck(requirementsUbuntuKey, checkRequirementUbuntuFunc)
 	requirements.RegisterCheck(requirementsDebianKey, checkRequirementDebianFunc)
 }
