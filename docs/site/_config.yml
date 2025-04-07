@@ -20,7 +20,8 @@ d8Revision: EE
 
 metrics:
   google: G-4X28CEP7W2
-  yandex: 78422802
+  yandex_ru: 78422802
+  yandex_en: 100410448
 
 chat_script_url:
   en: "https://crm.flant.ru/upload/crm/site_button/loader_2_qurrbf.js"

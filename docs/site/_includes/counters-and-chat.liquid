@@ -11,6 +11,9 @@
 <!-- Yandex.Metrika counter -->
 <script type="text/javascript" >
 if ([{{ siteUrls }}].includes(window.location.hostname)) {
+  let lang = {{ page.lang }};
+  let metricId = lang == 'ru' ? {{ site.metrics.yandex_ru }} : {{ site.metrics.yandex_en }};
+
   (function (m, e, t, r, i, k, a) {
     m[i] = m[i] || function () {
       (m[i].a = m[i].a || []).push(arguments)
@@ -20,7 +23,7 @@ if ([{{ siteUrls }}].includes(window.location.hostname)) {
   })
   (window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
 
-  ym({{ site.metrics.yandex }}, "init", {
+  ym(metricId, "init", {
     clickmap: true,
     trackLinks: true,
     accurateTrackBounce: true,
@@ -36,9 +39,10 @@ if ([{{ siteUrls }}].includes(window.location.hostname)) {
   var token = getCookie('license-token') ? getCookie('license-token') : getCookie('demotoken');
   if (token) {
     window.yaParams = {"license-token": token};
-    ym(78422802, 'params', window.yaParams || {});
+    ym(metricId, 'params', window.yaParams || {});
   }
 }
+
 </script>
 <!-- /Yandex.Metrika counter -->
 
