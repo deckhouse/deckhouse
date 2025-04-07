@@ -116,10 +116,7 @@ steps:
 {!{ tmpl.Exec "started_at_output"       $ctx | strings.Indent 2 }!}
 {!{ tmpl.Exec "checkout_full_step"      $ctx | strings.Indent 2 }!}
   - name: DMT lint
-    env:
-      DMT_METRICS_URL: ${{secrets.DMT_METRICS_URL}}
-      DMT_METRICS_TOKEN: ${{secrets.DMT_METRICS_TOKEN}}
     run: |
-      DMT_METRICS_URL="${DMT_METRICS_URL}" DMT_METRICS_TOKEN="${DMT_METRICS_TOKEN}" make dmt-lint
+      make dmt-lint
 # </template: tests_dmt_lint>
 {!{- end -}!}
