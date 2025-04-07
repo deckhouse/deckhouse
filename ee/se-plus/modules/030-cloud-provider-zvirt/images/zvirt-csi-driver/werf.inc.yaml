@@ -1,20 +1,9 @@
-{{- range $key, $value := .CandiVersionMap.k8s }}
-  {{- $version := toString $key }}
-  {{- $image_version := $version | replace "." "-" }}
-  {{- if $value.csi.zvirt }}
-    {{- $src_version := toString $value.csi.zvirt }}
-    {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
-    {{- $patch := false }}
-    {{- range $path, $_ := $.Files.Glob (printf "%s/*" $patches) }}
-      {{- if contains $src_version $path }}
-        {{- $patch = true }}
-      {{- end }}
-    {{- end }}
+{{- $version := "release-4.19" }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /ovirt-csi-driver
   to: /ovirt-csi-driver
   before: setup
@@ -38,31 +27,29 @@ imageSpec:
   config:
     entrypoint: ["/ovirt-csi-driver"]
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
 fromImage: common/src-artifact
-    {{- if $patch }}
 git:
-- add: {{ $patches }}/patches/{{ $src_version }}
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
   stageDependencies:
     install:
     - '**/*'
-    {{- end }}
 shell:
   install:
+  - git clone --depth 1 --branch {{ $version }} {{ $.SOURCE_REPO }}/openshift/ovirt-csi-driver.git /src
+  - git clone --depth 1 --branch v0.0.1-flant {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/ovirt/go-ovirt /src/go-ovirt
   - cd /src
-  - git clone --depth 1 --branch {{ $value.csi.zvirt }} {{ $.SOURCE_REPO }}/openshift/ovirt-csi-driver.git .
-  {{- if $patch }}
   - git apply /patches/*.patch --verbose
-  {{- end }}
+  - echo "replace github.com/ovirt/go-ovirt => /src/go-ovirt" >> go.mod
   - rm -rf vendor .git
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 import:
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
     add: /src
     to: /src
     before: install
@@ -71,16 +58,14 @@ mount:
   to: /go/pkg
 shell:
   install:
-  - export GO_VERSION=${GOLANG_VERSION}
-  - export GOPROXY={{ $.GOPROXY }}
   - cd /src
+  - export GOPROXY={{ $.GOPROXY }}
   - go mod download
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X version.Version={{ $value.csi.zvirt }}" -o /ovirt-csi-driver ./cmd/ovirt-csi-driver/ovirt-csi-driver.go
- {{- end }}
-{{- end }}
+  setup:
+  - cd /src
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X version.Version={{ $version }}" -o /ovirt-csi-driver ./cmd/ovirt-csi-driver/ovirt-csi-driver.go
 ---
 {{- $csiBinaries := "/bin/chmod /bin/mount /bin/mkdir /bin/rmdir /bin/umount /bin/findmnt /bin/lsblk /sbin/badblocks /sbin/blockdev /sbin/blk* /sbin/btrfs* /sbin/dumpe2fs /sbin/e2* /sbin/findfs /sbin/fsck* /sbin/fsfreeze /sbin/fstrim /sbin/mke2fs /sbin/mkfs* /sbin/resize2fs /sbin/xfs_repair /usr/sbin/nvme /usr/sbin/parted /usr/sbin/xfs*" }}
----
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 final: false
 fromImage: common/relocate-artifact
