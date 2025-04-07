@@ -30,60 +30,84 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
-type Installation int
-
 const (
-	Existing Installation = iota
-	New
+	metricGroupVxvlanPort           = "d8_cni_cilium_config_vxvlan_port"
+	metricNameNonStandardVxvlanPort = "d8_cni_cilium_non_standard_vxlan_port"
 )
 
-type Virtualization int
+type installationStatus int
 
 const (
-	On Virtualization = iota
-	Off
+	existingInstallation installationStatus = iota
+	newInstallation
 )
 
-var transitions = map[Installation]map[Virtualization][]TransitionRule{
-	Existing: { // existing installation (ConfigMap exists)
-		On: { // Virtualization is on
-			// cm has configured 8469 port, will leave it as is
-			TransitionRule{source: 8469, target: 8469},
+type virtualizationStatus int
 
-			// dreamy case — virtualization was enabled with upgrading d8 simultaneously
-			TransitionRule{source: 0, target: 8469},
+const (
+	virtualizationEnabled virtualizationStatus = iota
+	virtualizationDisabled
+)
 
-			// dreamy case — virtualization was enabled with upgrading d8 simultaneously and
-			// someone configured the port for setup without virtualization 8472 manually, will set the right one
-			TransitionRule{source: 8472, target: 4298},
+func getTransitionRules(instStatus installationStatus, virtStatus virtualizationStatus, virtNestingLevel int) []TransitionRule {
+	switch instStatus {
+	case existingInstallation: // (ConfigMap exists)
+		switch virtStatus {
+		case virtualizationEnabled:
+			return []TransitionRule{
+				// cm has configured 8469 port, will leave it as is
+				TransitionRule{source: 8469, target: 8469},
 
-			// virtualization module was enabled on regular setup with the right port, will set the 4298
-			TransitionRule{source: 4299, target: 4298},
+				// dreamy case — virtualization was enabled with upgrading d8 simultaneously
+				TransitionRule{source: 0, target: 8469},
 
-			// regular setup with enabled virtualization module and right port, will leave it as is
-			TransitionRule{source: 4298, target: 4298},
+				// dreamy case — virtualization was enabled with upgrading d8 simultaneously and
+				// someone configured the port for setup without virtualization 8472 manually, will set the right one
+				TransitionRule{source: 8472, target: 4298},
 
-			// if the "source" port is non-standard and didn't mention here, will leave it as is and fire the alert
-		},
-		Off: { // Virtualization is off
-			// our previous standard setup, will set the old default port explicitly
-			TransitionRule{source: 0, target: 8472},
+				// virtualization module was enabled on regular setup with the right port, but we have to consider virtualization nesting level and migrate to a new port
+				TransitionRule{source: 4299, target: 4298 + virtNestingLevel},
 
-			// our previous standard setup with explicitly configured 8472 port, will leave the 8472
-			TransitionRule{source: 8472, target: 8472},
+				// virtualization module was enabled on regular setup with the right port, will set the 4298 plus virtualization nesting level
+				TransitionRule{source: 4299 + virtNestingLevel, target: 4298 + virtNestingLevel},
 
-			// regular setup with standard 4299 port, will leave it as is
-			TransitionRule{source: 4299, target: 4299},
-		},
-	},
-	New: { // new installation (ConfigMap does not exist)
-		On: { // Virtualization is on
-			TransitionRule{source: 0, target: 4298},
-		},
-		Off: { // Virtualization is off
-			TransitionRule{source: 0, target: 4299},
-		},
-	},
+				// regular setup with enabled virtualization module and right port, will leave it as is
+				TransitionRule{source: 4298 + virtNestingLevel, target: 4298 + virtNestingLevel},
+
+				// if the "source" port is non-standard and didn't mention here, will leave it as is and fire the alert
+			}
+
+		case virtualizationDisabled:
+			return []TransitionRule{
+				// our previous standard setup, will set the old default port explicitly
+				TransitionRule{source: 0, target: 8472},
+
+				// our previous standard setup with explicitly configured 8472 port, will leave the 8472
+				TransitionRule{source: 8472, target: 8472},
+
+				// regular setup with standard 4299 port, but we have to consider virtualization nesting level and migrate to a new port
+				TransitionRule{source: 4299, target: 4299 + virtNestingLevel},
+
+				// regular setup with standard 4299 plus virtualization nesting level port, will leave it as is
+				TransitionRule{source: 4299 + virtNestingLevel, target: 4299 + virtNestingLevel},
+			}
+		}
+
+	case newInstallation: // (ConfigMap does not exist)
+		switch virtStatus {
+		case virtualizationEnabled:
+			return []TransitionRule{
+				TransitionRule{source: 0, target: 4298 + virtNestingLevel},
+			}
+
+		case virtualizationDisabled:
+			return []TransitionRule{
+				TransitionRule{source: 0, target: 4299 + virtNestingLevel},
+			}
+		}
+	}
+
+	return nil
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -123,17 +147,27 @@ func filterConfigMap(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 }
 
 func discoverVXLANPort(input *go_hook.HookInput) error {
-	input.MetricsCollector.Expire("d8_cni_cilium_config")
-	var installationStatus = New
+	input.MetricsCollector.Expire(metricGroupVxvlanPort)
+	var (
+		instStatus       = newInstallation
+		virtStatus       = virtualizationDisabled
+		virtNestingLevel int
+	)
 
-	if len(input.Snapshots["cilium-configmap"]) > 0 {
-		installationStatus = Existing
+	virtNestingLevelRaw, ok := input.Values.GetOk("global.discovery.dvpNestingLevel")
+	if ok {
+		virtNestingLevel = int(virtNestingLevelRaw.Int())
+	} else {
+		input.Logger.Warn("Virtualization nesting level is not set globally - assuming level 0")
 	}
 
-	var virtualizationModuleStatus = Off
+	if len(input.Snapshots["cilium-configmap"]) > 0 {
+		instStatus = existingInstallation
+	}
+
 	enabledModules := set.NewFromValues(input.Values, "global.enabledModules")
 	if enabledModules.Has("virtualization") {
-		virtualizationModuleStatus = On
+		virtStatus = virtualizationEnabled
 	}
 
 	var targetPort, sourcePort int
@@ -143,7 +177,7 @@ func discoverVXLANPort(input *go_hook.HookInput) error {
 	}
 
 	var transitionFound bool
-	for _, rule := range transitions[installationStatus][virtualizationModuleStatus] {
+	for _, rule := range getTransitionRules(instStatus, virtStatus, virtNestingLevel) {
 		if rule.source == sourcePort {
 			targetPort = rule.target
 			transitionFound = true
@@ -153,7 +187,7 @@ func discoverVXLANPort(input *go_hook.HookInput) error {
 
 	if !transitionFound {
 		targetPort = sourcePort
-		input.MetricsCollector.Set("d8_cni_cilium_non_standard_vxlan_port", 1, map[string]string{"port": fmt.Sprintf("%d", targetPort)}, metrics.WithGroup("d8_cni_cilium_config"))
+		input.MetricsCollector.Set(metricNameNonStandardVxvlanPort, 1, map[string]string{"port": fmt.Sprintf("%d", targetPort)}, metrics.WithGroup(metricGroupVxvlanPort))
 	}
 
 	input.Values.Set("cniCilium.internal.tunnelPortVXLAN", targetPort)
