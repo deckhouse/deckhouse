@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -69,6 +70,8 @@ func IsTerraformState(output []byte) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+
+	log.DebugF("Terraform Version: %s\n", parsedVersion)
 
 	res := parsedVersion == DefaultTerraformVersions.Terraform
 

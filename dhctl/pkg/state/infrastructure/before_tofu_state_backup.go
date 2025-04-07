@@ -37,7 +37,7 @@ const (
 	tofuBackupPrefix          = "tf-bkp"
 	tofuBackupNodeStatePrefix = tofuBackupPrefix + "-node"
 	baseInfraBackupSecretName = tofuBackupPrefix + "-cluster-state"
-	backupLabelKey            = "dhctl.deckhouse.io/before-tofu-state-backup"
+	tofuBackupLabelKey        = "dhctl.deckhouse.io/before-tofu-state-backup"
 )
 
 func addTofuBackupLabelAndAnnotation(secret *apiv1.Secret) {
@@ -45,7 +45,8 @@ func addTofuBackupLabelAndAnnotation(secret *apiv1.Secret) {
 		secret.Labels = make(map[string]string, 1)
 	}
 
-	secret.Labels[backupLabelKey] = "true"
+	secret.Labels[tofuBackupLabelKey] = "true"
+	secret.Labels[global.InfrastructureStateBackupLabelKey] = "true"
 
 	if len(secret.Annotations) == 0 {
 		secret.Annotations = make(map[string]string, 1)
@@ -108,7 +109,7 @@ func (t *TofuMigrationStateBackuper) doBackupStates(ctx context.Context) error {
 	}
 
 	for _, secret := range secrets {
-		if len(secret.Labels) > 0 && secret.Labels[backupLabelKey] == "true" {
+		if len(secret.Labels) > 0 && secret.Labels[tofuBackupLabelKey] == "true" {
 			t.logger.LogInfoF("Skip backup secret %s\n", secret.Name)
 			continue
 		}

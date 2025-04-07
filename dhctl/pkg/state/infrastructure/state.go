@@ -87,6 +87,11 @@ func GetNodesStateSecretsFromCluster(ctx context.Context, kubeCl *client.Kuberne
 				return fmt.Errorf("can't determine Node name for %q secret", nodeState.Name)
 			}
 
+			if _, ok := nodeState.Labels[global.InfrastructureStateBackupLabelKey]; ok {
+				log.DebugF("Found backup state secret %s for node: %s. Skip.\n", nodeState.Name, name)
+				continue
+			}
+
 			nodeGroup := nodeState.Labels["node.deckhouse.io/node-group"]
 			if nodeGroup == "" {
 				return fmt.Errorf("can't determine NodeGroup for %q secret", nodeState.Name)
