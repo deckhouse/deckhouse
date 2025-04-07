@@ -25,7 +25,7 @@ resource "kubernetes_manifest" "kubernetes-data-disk" {
       "persistentVolumeClaim" = merge({
         "size" = var.size
         },
-        var.storage_class != null ? { "storageClass" = var.storage_class } : null
+        var.storage_class != null ? { "storageClassName" = var.storage_class } : null
       )
     }
   }
