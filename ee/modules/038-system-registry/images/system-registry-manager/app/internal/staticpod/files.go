@@ -11,7 +11,7 @@ import (
 	"sort"
 	"strings"
 
-	nodeservices "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/node-services"
+	nodeservices "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models/node-services"
 )
 
 // syncPKIFiles synchronizes the PKI-related files in the specified directory.

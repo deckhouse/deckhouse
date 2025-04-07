@@ -6,7 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package staticpod
 
 import (
-	nodeservices "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/node-services"
+	nodeservices "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models/node-services"
 )
 
 type authConfigModel struct {

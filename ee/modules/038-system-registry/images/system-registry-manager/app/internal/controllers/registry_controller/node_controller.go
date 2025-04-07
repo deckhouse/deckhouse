@@ -28,7 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	nodeservices "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/node-services"
+	nodeservices "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models/node-services"
 	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/pki"
 
 	"node-services-manager/internal/state"

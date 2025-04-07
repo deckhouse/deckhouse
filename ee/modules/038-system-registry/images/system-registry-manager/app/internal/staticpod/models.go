@@ -8,7 +8,7 @@ package staticpod
 import (
 	validation "github.com/go-ozzo/ozzo-validation"
 
-	nodeservices "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/node-services"
+	nodeservices "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models/node-services"
 )
 
 type NodeServicesConfigModel struct {

@@ -12,7 +12,7 @@ import (
 	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 
-	nodeservices "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/node-services"
+	nodeservices "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models/node-services"
 )
 
 const (
