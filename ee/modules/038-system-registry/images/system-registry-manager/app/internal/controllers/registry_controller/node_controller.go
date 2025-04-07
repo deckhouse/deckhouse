@@ -603,7 +603,7 @@ func (nc *nodeController) contructNodeServicesConfig(
 		Config: nodeservices.Config{
 
 			Registry: nodeservices.RegistryConfig{
-				HTTPSecret: globalSecrets.HttpSecret,
+				HTTPSecret: globalSecrets.HTTPSecret,
 				UserRO: nodeservices.User{
 					Name:         userRO.UserName,
 					Password:     userRO.Password,

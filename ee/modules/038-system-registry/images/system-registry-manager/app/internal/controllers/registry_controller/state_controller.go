@@ -234,7 +234,7 @@ func (sc *stateController) ensureGlobalSecrets(ctx context.Context) error {
 				)
 
 				if randomValue, err := pki.GenerateRandomSecret(); err == nil {
-					actualValue.HttpSecret = randomValue
+					actualValue.HTTPSecret = randomValue
 				} else {
 					return fmt.Errorf("cannot generate HTTP secret: %w", err)
 				}

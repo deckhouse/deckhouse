@@ -10,15 +10,15 @@ import (
 	"encoding/json"
 	"fmt"
 
-	utiltime "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/time"
-
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	utiltime "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/time"
 )
 
 const (
-	ModuleConfigApiVersion = "deckhouse.io/v1alpha1"
+	ModuleConfigAPIVersion = "deckhouse.io/v1alpha1"
 	ModuleConfigKind       = "ModuleConfig"
 )
 
@@ -55,14 +55,19 @@ type ProxyConfig struct {
 
 func GetModuleConfigObject() unstructured.Unstructured {
 	ret := unstructured.Unstructured{}
-	ret.SetAPIVersion(ModuleConfigApiVersion)
+	ret.SetAPIVersion(ModuleConfigAPIVersion)
 	ret.SetKind(ModuleConfigKind)
 	ret.SetName(RegistryModuleName)
 
 	return ret
 }
 
-func LoadModuleConfig(ctx context.Context, cli client.Client) (config ModuleConfig, err error) {
+func LoadModuleConfig(ctx context.Context, cli client.Client) (ModuleConfig, error) {
+	var (
+		config ModuleConfig
+		err    error
+	)
+
 	key := types.NamespacedName{
 		Name: RegistryModuleName,
 	}
@@ -71,13 +76,13 @@ func LoadModuleConfig(ctx context.Context, cli client.Client) (config ModuleConf
 
 	if err = cli.Get(ctx, key, &configObject); err != nil {
 		err = fmt.Errorf("cannot get k8s object: %w", err)
-		return
+		return config, err
 	}
 
 	configSpec, ok, err := unstructured.NestedMap(configObject.Object, "spec")
 	if err != nil || !ok {
 		err = fmt.Errorf("cannot extract spec: %w", err)
-		return
+		return config, err
 	}
 
 	err = jsonRecode(configSpec, &config)
@@ -95,12 +100,10 @@ func LoadModuleConfig(ctx context.Context, cli client.Client) (config ModuleConf
 			config.Settings.Proxy.Scheme = "HTTPS"
 		}
 
-		if config.Settings.Proxy.TTL == nil {
-			// Default handled by distribution
-		}
+		// TTL Default handled by distribution
 	}
 
-	return
+	return config, err
 }
 
 func jsonRecode(input any, output any) error {

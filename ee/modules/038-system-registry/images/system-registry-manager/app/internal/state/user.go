@@ -34,22 +34,6 @@ type User struct {
 	HashedPassword string
 }
 
-func (u *User) IsEqual(other *User) bool {
-	if u == nil || other == nil {
-		return u == other
-	}
-	if u.UserName != other.UserName {
-		return false
-	}
-	if u.Password != other.Password {
-		return false
-	}
-	if u.HashedPassword != other.HashedPassword {
-		return false
-	}
-	return true
-}
-
 func (u *User) IsValid() bool {
 	if u == nil {
 		return false
@@ -97,7 +81,9 @@ func (u *User) GenerateNewPassword() error {
 	}
 
 	u.Password = password
-	u.UpdatePasswordHash()
+	if err := u.UpdatePasswordHash(); err != nil {
+		return fmt.Errorf("cannot update password hash: %w", err)
+	}
 
 	return nil
 }

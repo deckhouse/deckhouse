@@ -30,24 +30,28 @@ type NodePKI struct {
 	Distribution *pki.CertKey
 }
 
-func GenerateNodePKI(ca pki.CertKey, hosts []string) (ret NodePKI, err error) {
-	var generatedPKI pki.CertKey
+func GenerateNodePKI(ca pki.CertKey, hosts []string) (NodePKI, error) {
+	var (
+		ret          NodePKI
+		err          error
+		generatedPKI pki.CertKey
+	)
 
 	generatedPKI, err = pki.GenerateCertificate(nodeAuthCertCN, ca, hosts...)
 	if err != nil {
 		err = fmt.Errorf("cannot generate Auth PKI: %w", err)
-		return
+		return ret, err
 	}
 	ret.Auth = &generatedPKI
 
 	generatedPKI, err = pki.GenerateCertificate(nodeDistributionCertCN, ca, hosts...)
 	if err != nil {
 		err = fmt.Errorf("cannot generate Distribution PKI: %w", err)
-		return
+		return ret, err
 	}
 	ret.Distribution = &generatedPKI
 
-	return
+	return ret, err
 }
 
 func (nc *NodePKI) DecodeServicesConfig(config NodeServicesConfig) error {

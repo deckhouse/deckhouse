@@ -22,7 +22,7 @@ const (
 var _ encodeDecodeSecret = &GlobalSecrets{}
 
 type GlobalSecrets struct {
-	HttpSecret string
+	HTTPSecret string
 }
 
 func (gs *GlobalSecrets) Validate() error {
@@ -30,7 +30,7 @@ func (gs *GlobalSecrets) Validate() error {
 		return ErrIsNil
 	}
 
-	if strings.TrimSpace(gs.HttpSecret) == "" {
+	if strings.TrimSpace(gs.HTTPSecret) == "" {
 		return fmt.Errorf("HttpSecret is empty")
 	}
 
@@ -42,7 +42,7 @@ func (gs *GlobalSecrets) DecodeSecret(secret *corev1.Secret) error {
 		return ErrSecretIsNil
 	}
 
-	gs.HttpSecret = string(secret.Data["http"])
+	gs.HTTPSecret = string(secret.Data["http"])
 
 	return nil
 }
@@ -58,7 +58,7 @@ func (gs *GlobalSecrets) EncodeSecret(secret *corev1.Secret) error {
 	secret.Labels[LabelTypeKey] = globalSecretsTypeLabel
 
 	secret.Data = map[string][]byte{
-		"http": []byte(gs.HttpSecret),
+		"http": []byte(gs.HTTPSecret),
 	}
 
 	return nil

@@ -31,9 +31,9 @@ type NodeServicesConfig struct {
 	Config  nodeservices.Config
 }
 
-func (config *NodeServicesConfig) Validate() error {
-	return validation.ValidateStruct(config,
-		validation.Field(&config.Config, validation.Required),
+func (nsc *NodeServicesConfig) Validate() error {
+	return validation.ValidateStruct(nsc,
+		validation.Field(&nsc.Config, validation.Required),
 	)
 }
 

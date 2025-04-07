@@ -51,7 +51,6 @@ func (gp *GlobalPKI) DecodeSecret(secret *corev1.Secret) error {
 
 	if err != nil {
 		return fmt.Errorf("cannot decode CA PKI: %w", err)
-
 	}
 
 	tokenPKI, err := decodeCertKeyFromSecret(tokenCertSecretField, tokenKeySecretField, secret)
