@@ -21,15 +21,37 @@ properties:
             type: string
             x-examples:
               - plainstring
-      playground:
+      module:
         type: object
+        default: {}
         properties:
-          value:
-            type: integer
-          data:
+          users:
             type: object
-            additionalProperties: true
-            x-kubernetes-preserve-unknown-fields: true
+            default: {}
+            properties:
+              enabled:
+                type: boolean
+                default: false
+              config:
+               type: object
+               properties:
+                version:
+                  type: string
+                params:
+                  type: array
+                  items:
+                    type: string
+              state:
+                type: object
+                properties:
+                  version:
+                    type: string
+                  data:
+                    type: object
+                    additionalProperties:
+                      type: object
+
+
       pki:
         type: object
         default: {}
@@ -76,6 +98,13 @@ properties:
             additionalProperties: true
             x-kubernetes-preserve-unknown-fields: true
           messages:
+            type: array
+            items:
+              type: string
+          users_enabled:
+            type: boolean
+            default: false
+          users:
             type: array
             items:
               type: string

@@ -20,7 +20,7 @@ import (
 	bashible_input "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/bashible/models/input"
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
-	registry_models "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models"
+	registry_models "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models/bashible"
 )
 
 func BashibleConfigHook(order float64, queue string) bool {

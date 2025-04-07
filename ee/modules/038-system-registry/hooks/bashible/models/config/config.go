@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/bashible/helpers"
-	registry_models "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models"
+	registry_models "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models/bashible"
 )
 
 const (

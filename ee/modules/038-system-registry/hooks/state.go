@@ -7,6 +7,8 @@ package hooks
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -50,6 +52,8 @@ type registryState struct {
 	BashibleVersion  string
 	Messages         []string
 	PkiMode          string
+	Users            []string
+	UsersEnabled     bool
 }
 
 type registryConfig struct {
@@ -164,6 +168,26 @@ func filterRegistryState(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 
 		ret.Messages = messages
 	}
+
+	userEnabled := string(secret.Data["users"])
+	userEnabled = strings.TrimSpace(userEnabled)
+	userEnabled = strings.ToLower(userEnabled)
+	ret.UsersEnabled = userEnabled == "true"
+
+	users := strings.Split(string(secret.Data["users"]), ",")
+	usersMap := make(map[string]struct{})
+
+	for _, user := range users {
+		user = strings.TrimSpace(user)
+		user = strings.ToLower(user)
+		usersMap[user] = struct{}{}
+	}
+
+	for user := range usersMap {
+		ret.Users = append(ret.Users, user)
+	}
+
+	sort.Strings(ret.Users)
 
 	return ret, nil
 }
@@ -322,6 +346,9 @@ func handleRegistryStaticPods(input *go_hook.HookInput) error {
 
 		input.Values.Set("systemRegistry.internal.state.messages", state.Messages)
 	}
+
+	input.Values.Set("systemRegistry.internal.state.users_enabled", state.UsersEnabled)
+	input.Values.Set("systemRegistry.internal.state.users", state.Users)
 
 	return nil
 }

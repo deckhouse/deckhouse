@@ -11,7 +11,6 @@ import (
 
 	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -143,11 +142,13 @@ func (sc *servicesController) Reconcile(ctx context.Context, _ ctrl.Request) (ct
 
 	node := corev1.Node{}
 	key := types.NamespacedName{Name: sc.NodeName}
-	if err := sc.Client.Get(ctx, key, &node); apierrors.IsNotFound(err) {
-		// How?
-		log.Info("Our Node not found, stopping services")
-		return sc.stopServices(ctx)
-	} else if err != nil {
+	if err := sc.Client.Get(ctx, key, &node); err != nil {
+		if client.IgnoreNotFound(err) == nil {
+			// How?
+			log.Info("Our Node not found, stopping services")
+			return sc.stopServices(ctx)
+		}
+
 		return ctrl.Result{}, fmt.Errorf("cannot get node: %w", err)
 	}
 
@@ -172,9 +173,11 @@ func (sc *servicesController) Reconcile(ctx context.Context, _ ctrl.Request) (ct
 	config := corev1.Secret{}
 	key = types.NamespacedName{Name: sc.getConfigSecretName(), Namespace: sc.Namespace}
 
-	if err := sc.Client.Get(ctx, key, &config); apierrors.IsNotFound(err) {
-		return sc.stopServices(ctx)
-	} else if err != nil {
+	if err := sc.Client.Get(ctx, key, &config); err != nil {
+		if client.IgnoreNotFound(err) == nil {
+			return sc.stopServices(ctx)
+		}
+
 		return ctrl.Result{}, fmt.Errorf("cannot get Config: %w", err)
 	}
 

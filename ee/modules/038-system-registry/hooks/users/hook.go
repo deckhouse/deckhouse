@@ -7,43 +7,31 @@ package users
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers"
+	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers/submodule"
+	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models/users"
 )
 
 const (
-	snapUsers = "users"
-)
-
-var (
-	namespaceSelector = &types.NamespaceSelector{
-		NameSelector: &types.NameSelector{
-			MatchNames: []string{"d8-system"},
-		},
-	}
+	userSecretsSnap = "user-secrets"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 6},
 	Queue:        "/modules/system-registry/users",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:              snapUsers,
+			Name:              userSecretsSnap,
 			ApiVersion:        "v1",
 			Kind:              "Secret",
 			NamespaceSelector: namespaceSelector,
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{
-					"registry-user-ro",
-					"registry-user-rw",
-					"registry-user-mirror-puller",
-					"registry-user-mirror-pusher",
-				},
-			},
 			FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 				var secret v1core.Secret
 
@@ -52,11 +40,84 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					return "", fmt.Errorf("failed to convert secret \"%v\" to struct: %v", obj.GetName(), err)
 				}
 
-				return "", nil
+				if !strings.HasPrefix(secret.Name, userSecretNamePrefix) {
+					return nil, nil
+				}
+
+				var user users.User
+				err = user.DecodeSecretData(secret.Data)
+
+				if err != nil {
+					return nil, nil
+				}
+
+				ret := helpers.KeyValue[string, users.User]{
+					Key:   secret.Name,
+					Value: user,
+				}
+
+				return ret, nil
 			},
 		},
 	},
 }, func(input *go_hook.HookInput) error {
+	state := submodule.GetSubmoduleState[State](input.Values, "users")
+	config := submodule.GetSubmoduleConfig[Params](input.Values, "users")
 
+	if !config.Enabled {
+		submodule.RemoveSubmoduleState(input.Values, "users")
+		return nil
+	}
+
+	secretUsers := make(map[string]users.User)
+
+	for _, snap := range input.Snapshots[userSecretsSnap] {
+		if snap == nil {
+			continue
+		}
+
+		user := snap.(helpers.KeyValue[string, users.User])
+		secretUsers[user.Key] = user.Value
+	}
+
+	stateUsers := state.Data
+	state.Data = make(State)
+
+	for _, name := range config.Params {
+		if !isValidUserName(name) {
+			return fmt.Errorf("user name \"%v\" is invalid", name)
+		}
+
+		key := userSecretName(name)
+
+		user, ok := stateUsers[key]
+		if !ok || !user.IsValid() {
+			user, ok = secretUsers[name]
+		}
+
+		if !ok || !user.IsValid() {
+			user = users.User{
+				UserName: name,
+			}
+
+			if err := user.GenerateNewPassword(); err != nil {
+				return fmt.Errorf("cannot generate user \"%v\" password: %w", name, err)
+			}
+		}
+
+		if !user.IsPasswordHashValid() {
+			if err := user.UpdatePasswordHash(); err != nil {
+				return fmt.Errorf("cannot update user \"%v\" password hash: %w", name, err)
+			}
+		}
+
+		state.Data[key] = user
+	}
+
+	state.Version = config.Version
+	submodule.SetSubmoduleState(input.Values, "users", state)
 	return nil
 })
+
+type Params []string
+type State map[string]users.User

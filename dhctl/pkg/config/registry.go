@@ -18,15 +18,17 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	util_time "github.com/deckhouse/deckhouse/dhctl/pkg/util/time"
-	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
-	registry_models "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models"
-	registry_pki "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/pki"
 	"regexp"
 	"slices"
 	"strings"
+
+	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
+	registry_models "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models/bashible"
+	registry_pki "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/pki"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
+	util_time "github.com/deckhouse/deckhouse/dhctl/pkg/util/time"
 )
 
 type Registry struct {

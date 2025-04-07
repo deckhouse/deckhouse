@@ -15,7 +15,6 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -341,7 +340,7 @@ func (nc *nodeController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	node := &corev1.Node{}
 	err = nc.Client.Get(ctx, req.NamespacedName, node)
 	if err != nil {
-		if apierrors.IsNotFound(err) {
+		if client.IgnoreNotFound(err) == nil {
 			return nc.cleanupNodeState(ctx, node)
 		}
 
@@ -729,7 +728,7 @@ func (nc *nodeController) stopNodeServices(ctx context.Context, nodeName string)
 	err := nc.Client.Get(ctx, key, &secret)
 
 	if err != nil {
-		if apierrors.IsNotFound(err) {
+		if client.IgnoreNotFound(err) == nil {
 			// Already absent
 			return nil
 		}
@@ -1003,7 +1002,7 @@ func (nc *nodeController) loadIngressPKI(ctx context.Context) (*state.IngressPKI
 	}
 
 	if err := nc.Client.Get(ctx, key, &cm); err != nil {
-		if apierrors.IsNotFound(err) {
+		if client.IgnoreNotFound(err) == nil {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("cannot get configmap %v k8s object: %w", key.Name, err)
@@ -1071,7 +1070,7 @@ func (nc *nodeController) deleteNodePKI(ctx context.Context, nodeName string) er
 	err := nc.Client.Get(ctx, key, &secret)
 
 	if err != nil {
-		if apierrors.IsNotFound(err) {
+		if client.IgnoreNotFound(err) == nil {
 			// Already absent
 			return nil
 		}
