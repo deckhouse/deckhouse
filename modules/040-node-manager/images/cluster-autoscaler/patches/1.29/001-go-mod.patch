@@ -1,18 +1,16 @@
 diff --git i/cluster-autoscaler/go.mod w/cluster-autoscaler/go.mod
-index 777c3c9a8..313247d13 100644
+index 777c3c9a8..dcd6436fd 100644
 --- i/cluster-autoscaler/go.mod
 +++ w/cluster-autoscaler/go.mod
-@@ -1,6 +1,8 @@
+@@ -1,6 +1,6 @@
  module k8s.io/autoscaler/cluster-autoscaler
  
 -go 1.21
-+go 1.23.0
-+
-+toolchain go1.23.6
++go 1.23
  
  require (
  	cloud.google.com/go/compute/metadata v0.2.3
-@@ -21,7 +23,7 @@ require (
+@@ -21,7 +21,7 @@ require (
  	github.com/golang/mock v1.6.0
  	github.com/google/go-cmp v0.6.0
  	github.com/google/go-querystring v1.0.0
@@ -21,7 +19,7 @@ index 777c3c9a8..313247d13 100644
  	github.com/jmespath/go-jmespath v0.4.0
  	github.com/json-iterator/go v1.1.12
  	github.com/onsi/ginkgo/v2 v2.13.0
-@@ -30,28 +32,28 @@ require (
+@@ -30,28 +30,28 @@ require (
  	github.com/prometheus/client_golang v1.16.0
  	github.com/satori/go.uuid v1.2.0
  	github.com/spf13/pflag v1.0.5
@@ -64,7 +62,7 @@ index 777c3c9a8..313247d13 100644
  	k8s.io/legacy-cloud-providers v0.0.0
  	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
  	sigs.k8s.io/cloud-provider-azure v1.28.0
-@@ -105,7 +107,7 @@ require (
+@@ -105,7 +105,7 @@ require (
  	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
  	github.com/godbus/dbus/v5 v5.1.0 // indirect
  	github.com/gogo/protobuf v1.3.2 // indirect
@@ -73,7 +71,7 @@ index 777c3c9a8..313247d13 100644
  	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
  	github.com/golang/protobuf v1.5.4 // indirect
  	github.com/google/cadvisor v0.48.1 // indirect
-@@ -137,19 +139,20 @@ require (
+@@ -137,19 +137,20 @@ require (
  	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
  	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
  	github.com/opencontainers/go-digest v1.0.0 // indirect
@@ -96,7 +94,7 @@ index 777c3c9a8..313247d13 100644
  	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635 // indirect
  	github.com/vishvananda/netlink v1.1.0 // indirect
  	github.com/vishvananda/netns v0.0.4 // indirect
-@@ -172,12 +175,12 @@ require (
+@@ -172,12 +173,12 @@ require (
  	go.uber.org/multierr v1.11.0 // indirect
  	go.uber.org/zap v1.24.0 // indirect
  	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
@@ -114,7 +112,7 @@ index 777c3c9a8..313247d13 100644
  	google.golang.org/appengine v1.6.7 // indirect
  	google.golang.org/genproto v0.0.0-20230803162519-f966b187b2e5 // indirect
  	google.golang.org/genproto/googleapis/api v0.0.0-20230726155614-23370e0ffb3e // indirect
-@@ -186,16 +189,16 @@ require (
+@@ -186,16 +187,16 @@ require (
  	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
  	gopkg.in/warnings.v0 v0.1.2 // indirect
  	gopkg.in/yaml.v3 v3.0.1 // indirect
@@ -136,7 +134,7 @@ index 777c3c9a8..313247d13 100644
  	k8s.io/mount-utils v0.26.0-alpha.0 // indirect
  	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.28.0 // indirect
  	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
-@@ -207,64 +210,64 @@ replace github.com/digitalocean/godo => github.com/digitalocean/godo v1.27.0
+@@ -207,64 +208,64 @@ replace github.com/digitalocean/godo => github.com/digitalocean/godo v1.27.0
  
  replace github.com/rancher/go-rancher => github.com/rancher/go-rancher v0.1.0
  
