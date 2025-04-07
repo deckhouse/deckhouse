@@ -165,8 +165,6 @@ type ConfigMapInfo struct {
 	Port int
 }
 
-type DaemonSetInfo struct{}
-
 type TransitionRule struct {
 	source int
 	target int
