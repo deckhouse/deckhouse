@@ -842,7 +842,7 @@ jobs:
           DMT_METRICS_URL: ${{secrets.DMT_METRICS_URL}}
           DMT_METRICS_TOKEN: ${{secrets.DMT_METRICS_TOKEN}}
         run: |
-          make DMT_METRICS_URL="${DMT_METRICS_URL}" DMT_METRICS_TOKEN="${DMT_METRICS_TOKEN}" dmt-lint
+          make dmt-lint
     # </template: tests_dmt_lint>
 
   dhctl_tests:
