@@ -29,10 +29,6 @@ properties:
           - ["synthetic/dns"]
         items:
           type: string
-      retentionDays:
-        type: integer
-        default: 548
-        x-examples: [548]
       upmeter:
         type: object
         default: {}
