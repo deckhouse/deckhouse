@@ -232,8 +232,8 @@ func (c *Reconciler) reconcile(ctx context.Context) {
 }
 
 func (c *Reconciler) checkCloudConditions(ctx context.Context) {
-	c.logger.Infoln("Start checking cloud conditions")
-	defer c.logger.Infoln("Finish checking cloud conditions")
+	c.logger.Info("Start checking cloud conditions")
+	defer c.logger.Info("Finish checking cloud conditions")
 
 	conditions, err := c.discoverer.CheckCloudConditions(ctx)
 	if err != nil {
@@ -308,7 +308,7 @@ func (c *Reconciler) checkCloudConditions(ctx context.Context) {
 		return nil
 	}); err != nil {
 		c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
-		c.logger.Errorln("Cannot update d8-cloud-provider-conditions configMap. Timed out. See error messages below.")
+		c.logger.Error("Cannot update d8-cloud-provider-conditions configMap. Timed out. See error messages below.")
 		c.setProbe(false)
 	}
 }
