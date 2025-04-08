@@ -1,11 +1,18 @@
 {{- define "parse_base_images_map" }}
-
-# Base Images
-  {{- $_ := set . "Images" (.Files.Get "candi/image_versions.yml" | fromYaml) }}
-    {{- range $k, $v := .Images }}
-      {{ $baseImagePath := (printf "%s%s" $.Images.REGISTRY_PATH (trimSuffix "/" $v)) }}
-      {{- if ne $k "REGISTRY_PATH" }}
-        {{- $_ := set $.Images $k $baseImagePath }}
-      {{- end }}
+  {{- $image_versions := .Files.Get "candi/image_versions.yml" | fromYaml }}
+  {{- $base_images := .Files.Get "candi/base_images.yml" | fromYaml }}
+    {{- $_ := set . "Images" (mustMerge $image_versions $base_images) }}
+  {{- range $k, $v := .Images }}
+    {{ $baseImagePath := (printf "%s%s" $.Images.REGISTRY_PATH (trimSuffix "/" $v)) }}
+    {{- if ne $k "REGISTRY_PATH" }}
+      {{- $_ := set $.Images $k $baseImagePath }}
     {{- end }}
+  {{- end }}
+  # base images artifacts
+  {{- range $k, $v := .Images }}
+---
+image: {{ $k }}
+from: {{ $v }}
+final: false
+  {{- end }}
 {{- end }}

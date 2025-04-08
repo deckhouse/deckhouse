@@ -1,19 +1,19 @@
 # REGISTRY_PATH is a special key which is concatenated with other base images
 REGISTRY_PATH: registry.deckhouse.io/base_images
-BASE_DISTROLESS: "base/distroless@sha256:f2ac3320ce677484d7aef4608f99ddf0055d8907cc3509f8cccc8513f314c31a" # fromImage: builder/scratch
-BASE_NGINX_STATIC: "base/nginx-static@sha256:28a844d4ff777dc704d3808bdd1240108315f4d1ed1668e762627b9c4ddc8d66" # fromImage: base/distroless
-BASE_PYTHON: "base/python@sha256:432f19eaeb5035ea38e3fbc721576e6802c679fd0fb7a8e6d441fdb36944c180" # fromImage: base/distroless
-BUILDER_ALPINE: "builder/alpine@sha256:92adb9e8a387c645ba4eeedb08f9a6de0583c5d1d496bf9c9b3a89fe963a6a06" # from: alpine:3.20.6
-BUILDER_ALT: "builder/alt@sha256:6fe06774a942e293e28b85cf3307e0f6e79a1593352c9c5ca97a6cbefdce0a55" # from: registry.altlinux.org/p11/alt:20241211
-BUILDER_GOLANG_ALPINE: "builder/golang-alpine@sha256:482aab8cb49614acb14ce9397861b02d05cc222d893d689abd205c9bd2c17b46" # from: golang:1.24.2-alpine3.20
-BUILDER_GOLANG_BOOKWORM: "builder/golang-bookworm@sha256:3755a67e7d3f16995b1615694a2aae7a95618a1ff9603b23f347764dfa0242b2" # from: golang:1.24.2-bookworm
-BUILDER_GOLANG_BULLSEYE: "builder/golang-bullseye@sha256:7f2838a3779bb9759accba1cbea7ea7aa086cc67ec763718004febb47948570c" # from: golang:1.24.2-bullseye
-BUILDER_NODE_ALPINE: "builder/node-alpine@sha256:f09f957ee8e960c7afee93d7a30f20116e76660c0408d35109ee9a9fa2a4d5b0" # from: node:23.10.0-alpine3.20
-BUILDER_SCRATCH: "builder/scratch@sha256:10b5855ae3e20ecc2ba6eb3d7f8365ee2facc98a62c9e4840927ad4074bd2317" # from: registry.werf.io/werf/scratch
-TOOLS_BASH: "tools/bash@sha256:892cd63bafb70b529377833c374009db5e9759c0aa72b165aff4ba52b59a45c6" # fromImage: builder/scratch
-TOOLS_COSIGN: "tools/cosign@sha256:d62c8deb048d9d02e5ea3b9f1efa9a940625c746f3c568a283c346c844a8acf8" # fromImage: builder/scratch
-TOOLS_GREP: "tools/grep@sha256:48e485161d6cec13d5283d03e69e2d1ff9e1c6146d040dc3bf623d856b62a636" # fromImage: builder/scratch
-TOOLS_JQ: "tools/jq@sha256:71aac8b711bef4dbef462d6309e283812358b9920301ad3de23a5734a18a23f2" # fromImage: builder/scratch
-TOOLS_LESS: "tools/less@sha256:259d88c1a732e7d3fc8d067ea0324684e1fe73a3bbb3eb7e2a9d88212a4ee2a0" # fromImage: builder/scratch
-TOOLS_VIM: "tools/vim@sha256:66db26b1475c389df02b8a8f9b98ff6993b2a2b51085f88a0cf618b915086de6" # fromImage: builder/scratch
-TOOLS_YQ4: "tools/yq4@sha256:35911ea155806ec3b29c5d6eec90184d3d836bb42037f9865fb5949ab7a4cd6c" # fromImage: builder/scratch
+base/distroless: "sha256:f2ac3320ce677484d7aef4608f99ddf0055d8907cc3509f8cccc8513f314c31a" # fromImage: builder/scratch
+base/nginx-static: "sha256:28a844d4ff777dc704d3808bdd1240108315f4d1ed1668e762627b9c4ddc8d66" # fromImage: base/distroless
+base/python: "sha256:432f19eaeb5035ea38e3fbc721576e6802c679fd0fb7a8e6d441fdb36944c180" # fromImage: base/distroless
+builder/alpine: "sha256:92adb9e8a387c645ba4eeedb08f9a6de0583c5d1d496bf9c9b3a89fe963a6a06" # from: alpine:3.20.6
+builder/alt: "sha256:6fe06774a942e293e28b85cf3307e0f6e79a1593352c9c5ca97a6cbefdce0a55" # from: registry.altlinux.org/p11/alt:20241211
+builder/golang-alpine: "sha256:482aab8cb49614acb14ce9397861b02d05cc222d893d689abd205c9bd2c17b46" # from: golang:1.24.2-alpine3.20
+builder/golang-bookworm: "sha256:3755a67e7d3f16995b1615694a2aae7a95618a1ff9603b23f347764dfa0242b2" # from: golang:1.24.2-bookworm
+builder/golang-bullseye: "sha256:7f2838a3779bb9759accba1cbea7ea7aa086cc67ec763718004febb47948570c" # from: golang:1.24.2-bullseye
+builder/node-alpine: "sha256:f09f957ee8e960c7afee93d7a30f20116e76660c0408d35109ee9a9fa2a4d5b0" # from: node:23.10.0-alpine3.20
+builder/scratch: "sha256:10b5855ae3e20ecc2ba6eb3d7f8365ee2facc98a62c9e4840927ad4074bd2317" # from: registry.werf.io/werf/scratch
+tools/bash: "sha256:892cd63bafb70b529377833c374009db5e9759c0aa72b165aff4ba52b59a45c6" # fromImage: builder/scratch
+tools/cosign: "sha256:d62c8deb048d9d02e5ea3b9f1efa9a940625c746f3c568a283c346c844a8acf8" # fromImage: builder/scratch
+tools/grep: "sha256:48e485161d6cec13d5283d03e69e2d1ff9e1c6146d040dc3bf623d856b62a636" # fromImage: builder/scratch
+tools/jq: "sha256:71aac8b711bef4dbef462d6309e283812358b9920301ad3de23a5734a18a23f2" # fromImage: builder/scratch
+tools/less: "sha256:259d88c1a732e7d3fc8d067ea0324684e1fe73a3bbb3eb7e2a9d88212a4ee2a0" # fromImage: builder/scratch
+tools/vim: "sha256:66db26b1475c389df02b8a8f9b98ff6993b2a2b51085f88a0cf618b915086de6" # fromImage: builder/scratch
+tools/yq4: "sha256:35911ea155806ec3b29c5d6eec90184d3d836bb42037f9865fb5949ab7a4cd6c" # fromImage: builder/scratch
