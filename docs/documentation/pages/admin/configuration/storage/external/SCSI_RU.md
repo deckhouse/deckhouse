@@ -155,7 +155,7 @@ EOF
 d8 k get scsistorageclasses.storage.deckhouse.io <имя scsistorageclass>
 ```
 
-### Как проверить работоспособность модуля?
+### Проверка работоспособности модуля
 
 Проверьте состояние подов в пространстве `d8-csi-scsi-generic`. Все поды должны быть в состоянии `Running` или `Completed` и запущены на всех узлах.
 

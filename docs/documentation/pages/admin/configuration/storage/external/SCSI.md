@@ -153,7 +153,7 @@ After creating [SCSIStorageClass](../../../reference/cr/scsistorageclass/), chec
 d8 k get scsistorageclasses.storage.deckhouse.io <scsistorageclass name>
 ```
 
-### How to check module health?
+### Module Health Check
 
 Verify the module status by checking the state of pods in the `d8-csi-scsi-generic` namespace. All pods should be in the `Running` or `Completed` state and deployed on all cluster nodes.
 

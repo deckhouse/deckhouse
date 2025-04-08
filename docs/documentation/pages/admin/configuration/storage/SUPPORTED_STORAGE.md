@@ -13,7 +13,7 @@ Each storage type may have its own specific requirements and configuration nuanc
 
 To create StorageClass objects, you must connect one or more storages that manage PersistentVolume resources. Created StorageClass objects can be used to organize virtual disks and images.
 
-## How to Set the Default StorageClass?
+## Default StorageClass assignment
 
 The default StorageClass is used when a PersistentVolumeClaim resource is created without explicitly specifying a storage class. This simplifies the process of creating and using storage by avoiding the need to specify a class each time.
 
