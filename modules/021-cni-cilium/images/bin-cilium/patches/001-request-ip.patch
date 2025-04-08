@@ -80,12 +80,12 @@ index d8f88e6468..06b1e37020 100644
 
  		if ipam.config.IPv6Enabled() {
 -			ipam.IPv6Allocator = newHostScopeAllocator(ipam.nodeAddressing.IPv6().AllocationCIDR().IPNet)
-+			ipam.IPv6Allocator = newHostScopeAllocator(ipam.nodeAddressing.IPv6().AllocationCIDR().IPNet, k8sEventReg)
++			ipam.IPv6Allocator = newHostScopeAllocator(ipam.nodeAddressing.IPv6().AllocationCIDR().IPNet, ipam.k8sEventReg)
  		}
 
  		if ipam.config.IPv4Enabled() {
 -			ipam.IPv4Allocator = newHostScopeAllocator(ipam.nodeAddressing.IPv4().AllocationCIDR().IPNet)
-+			ipam.IPv4Allocator = newHostScopeAllocator(ipam.nodeAddressing.IPv4().AllocationCIDR().IPNet, k8sEventReg)
++			ipam.IPv4Allocator = newHostScopeAllocator(ipam.nodeAddressing.IPv4().AllocationCIDR().IPNet, ipam.k8sEventReg)
  		}
  	case ipamOption.IPAMMultiPool:
  		log.Info("Initializing MultiPool IPAM")
