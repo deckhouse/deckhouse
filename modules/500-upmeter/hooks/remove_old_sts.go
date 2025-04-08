@@ -57,15 +57,17 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func applyStsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var sts appsv1.StatefulSet
 	if err := sdk.FromUnstructured(obj, &sts); err != nil {
-		return nil, err
+		return "", err
 	}
 
 	if len(sts.Spec.VolumeClaimTemplates) == 0 {
-		return nil, nil
+		log.Debug("StatefulSet has no VolumeClaimTemplates", slog.String("namespace", sts.Namespace), slog.String("name", sts.Name))
+		return "", nil
 	}
 
 	quantity, ok := sts.Spec.VolumeClaimTemplates[0].Spec.Resources.Requests[corev1.ResourceStorage]
 	if !ok {
+		log.Debug("No storage resource request found in VolumeClaimTemplate", slog.String("namespace", sts.Namespace), slog.String("name", sts.Name))
 		return "", nil
 	}
 
@@ -81,7 +83,10 @@ func applyStsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 func removeStsUpmeter(input *go_hook.HookInput) error {
 	if stsSnapshot := input.Snapshots["sts"]; len(stsSnapshot) > 0 {
 		for _, snap := range stsSnapshot {
-			sts := snap.(*StatefulSetStorage)
+			sts, ok := snap.(*StatefulSetStorage)
+			if !ok {
+				continue
+			}
 			if sts.StorageRequest != "2Gi" {
 				log.Debug("Deleting StatefulSet", slog.String("namespace", sts.Namespace), slog.String("name", sts.Name))
 				input.PatchCollector.DeleteNonCascading(sts.APIVersion, sts.Kind, sts.Namespace, sts.Name)
