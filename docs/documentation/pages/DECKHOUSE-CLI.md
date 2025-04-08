@@ -40,12 +40,24 @@ The `d8 d` and `d8 mirror` command groups are not available for Community Editio
     </details>
     </div>
 
-## How do I install Deckhouse CLI?
+## How do I install the Deckhouse CLI?
 
-Starting from Deckhouse CLI 0.10 it can be installed using [trdl](https://trdl.dev/). If you are installing inside a cluster, enable Deckhouse Tools and follow the interface instructions.
+There are two ways to install the Deckhouse CLI:
+
+* Starting with version 0.10, you can install using [trdl](https://trdl.dev/). This method allows you to get fresh versions of the tool with all improvements and fixes.
+  > Note that trdl installation requires Internet access to the tuf repository containing the tool. This method will not work in an air-gapped environment!
+* You can manually download the executable file and install it on the system.
+
+### trdl-based installation
+
+Starting with the Deckhouse CLI version 0.10, you can install it using [trdl](https://trdl.dev/).
 
 {% alert %}
-Please note that since version 0.10, installation **is available only via trdl**. If you have a version lower than 0.10 installed, then you must first uninstall it.
+When installing within the cluster, enable [Deckhouse Tools](../modules/deckhouse-tools/) and follow the instructions provided in the interface.
+{% endalert %}
+
+{% alert level="warning" %}
+Versions earlier than 0.10 must be uninstalled before proceeding.
 
 If you need to install one of the versions below 0.10, use the [outdated installation method](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.67/deckhouse-cli/#how-do-i-install-deckhouse-cli).
 {% endalert %}
@@ -63,10 +75,21 @@ If you need to install one of the versions below 0.10, use the [outdated install
    trdl add $REPO $URL $ROOT_VERSION $ROOT_SHA512
    ```
 
-1. Install the latest stable release of the `d8` utility and verify its functionality:
+1. Install the latest stable release of the `d8` utility and check if it works as expected:
 
    ```bash
    . $(trdl use d8 0 stable) && d8 --version
    ```
 
-If you don't want to call `. $(trdl use d8 0 stable)` every time you need to use Deckhouse CLI, add the following line to your shell’s RC file: `alias d8='trdl exec d8 0 stable -- "$@"'`.
+To avoid having to run `. $(trdl use d8 0 stable)` before every Deckhouse CLI invocation, add the following line to your shell’s RC file: `alias d8='trdl exec d8 0 stable -- "$@"'`.
+
+Congratulations, you have installed the Deckhouse CLI.
+
+{% alert level="warning" %}
+Note that in macOS, you may need to remove the quarantine attribute from the executable to prevent Gatekeeper from blocking it.
+(`sudo xattr -d com.apple.quarantine /path/to/d8`)
+{% endalert %}
+
+### Installing the executable
+
+{% include d8-cli-install/main.liquid %}
