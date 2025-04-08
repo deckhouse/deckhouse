@@ -1,0 +1,99 @@
+- name: openvpn.admin.info
+  rules:
+    - alert: OpenVPNClientCertificateExpired
+      expr: ovpn_client_cert_expire > 0
+      for: 1m
+      labels:
+        severity_level: "4"
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        summary: Some OpenVPN client certificates have expired.
+        description: |-
+          There are {{ $value }} expired OpenVPN client certificates.
+
+          Renew the expired certificates if needed.
+
+    - alert: OpenVPNServerCertificateExpiringSoon
+      expr: ovpn_server_cert_expire < 30
+      for: 1h
+      labels:
+        severity_level: "5"
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        summary: OpenVPN server certificate expires in less than 30 days.
+        description: |-
+          The OpenVPN server certificate will expire in less than 30 days.
+
+          Renew the certificate if necessary.
+
+    - alert: OpenVPNServerCertificateExpiringInAWeek
+      expr: ovpn_server_cert_expire < 7
+      for: 1h
+      labels:
+        severity_level: "5"
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        summary: OpenVPN server certificate expires in less than 7 days.
+        description: |-
+          The OpenVPN server certificate will expire in less than 7 days.
+
+          Immediate renewal is recommended.
+
+    - alert: OpenVPNServerCertificateExpired
+      expr: ovpn_server_cert_expire == 0
+      for: 1m
+      labels:
+        severity_level: "4"
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        summary: OpenVPN server certificate has expired.
+        description: |-
+          The OpenVPN server certificate has expired.
+
+          To restore VPN functionality, renew the expired certificate as soon as possible.
+
+    - alert: OpenVPNServerCACertificateExpiringSoon
+      expr: ovpn_server_ca_cert_expire < 30
+      for: 1h
+      labels:
+        severity_level: "5"
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        summary: OpenVPN CA certificate expires in less than 30 days.
+        description: |-
+          The OpenVPN CA certificate will expire in less than 30 days.
+
+          Renew the CA certificate if necessary.
+
+    - alert: OpenVPNServerCACertificateExpiringInAWeek
+      expr: ovpn_server_ca_cert_expire < 7
+      for: 1h
+      labels:
+        severity_level: "5"
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        summary: OpenVPN CA certificate expires in less than 7 days.
+        description: |-
+          The OpenVPN CA certificate will expire in less than 7 days.
+
+          Immediate renewal is recommended.
+
+    - alert: OpenVPNServerCACertificateExpired
+      expr: ovpn_server_ca_cert_expire == 0
+      for: 1m
+      labels:
+        severity_level: "4"
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        summary: OpenVPN CA certificate has expired.
+        description: |-
+          The OpenVPN CA certificate has expired.
+
+          To restore VPN functionality, renew the expired certificate as soon as possible.
