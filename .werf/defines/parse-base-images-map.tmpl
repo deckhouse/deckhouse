@@ -7,12 +7,15 @@
       {{- $_ := set $imageVersions $k $baseImagePath }}
     {{- end }}
   {{- end }}
+  {{- $_ := unset $imageVersions "REGISTRY_PATH" }}
+
   {{- range $k, $v := $baseImages }}
     {{ $baseImagePath := (printf "%s@%s" $baseImages.REGISTRY_PATH (trimSuffix "/" $v)) }}
     {{- if ne $k "REGISTRY_PATH" }}
       {{- $_ := set $baseImages $k $baseImagePath }}
     {{- end }}
   {{- end }}
+  {{- $_ := unset $baseImages "REGISTRY_PATH" }}
 
   {{- $_ := set . "Images" (mustMerge $imageVersions $baseImages) }}
   # base images artifacts
