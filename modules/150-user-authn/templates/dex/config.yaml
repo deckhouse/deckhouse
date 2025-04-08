@@ -210,6 +210,7 @@
       config:
         clientID: {{ $provider.google.clientID | quote }}
         clientSecret: {{ $provider.google.clientSecret | quote }}
+        redirectURI: https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/callback
         {{- if $provider.google.serviceAccountSecretName }}
         serviceAccountFilePath: /{{ $provider.id }}-service-account.json
         {{- end }}
@@ -217,6 +218,12 @@
         hostedDomains:
           {{- range $domain := $provider.google.hostedDomains }}
         - {{ $domain | quote }}
+          {{- end }}
+        {{- end }}
+        {{- if $provider.google.domainToAdminEmail }}
+        domainToAdminEmail:
+          {{- range $domainToAdminEmail := $provider.google.domainToAdminEmail }}
+        - {{ $domainToAdminEmail | quote }}
           {{- end }}
         {{- end }}
         {{- if $provider.google.groups }}

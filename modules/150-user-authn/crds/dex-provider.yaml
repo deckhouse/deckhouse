@@ -494,6 +494,10 @@ spec:
                       items:
                         type: string
                         x-doc-examples: ['admins@example.com']
+                    domainToAdminEmail:
+                      type: string
+                      description: |
+                        Email address of the administrator for the domain.
               oneOf:
                 - properties:
                     inlet:

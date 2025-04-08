@@ -314,6 +314,10 @@ spec:
                       description: |
                         Список-фильтр групп, допустимых для приема из Google Workspace.
                         Если список не пустой, только пользователи, состоящие хотя бы в одной из указанных групп, смогут войти в систему.
+                    domainToAdminEmail:
+                      type: string
+                      description: |
+                        Адрес электронной почты администратора для домена.
     - name: v1
       schema:
         openAPIV3Schema:
