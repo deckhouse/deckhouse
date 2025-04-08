@@ -19,6 +19,8 @@ Use predefined MAC-addresses for virtualization workloads
 
 Upstream <https://github.com/cilium/cilium/pull/24100>
 
+It needs to be changed to <https://docs.cilium.io/en/latest/network/pod-mac-address/#pod-mac-address>
+
 ## 003-mtu.patch
 
 Set correct MTU value for veth interfaces
