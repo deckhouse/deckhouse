@@ -80,27 +80,38 @@ index 60a4d16d07..12875911aa 100644
  		GSOMaxSize:                          int64(h.bigTCPConfig.GetGSOIPv6MaxSize()),
  		GROIPV4MaxSize:                      int64(h.bigTCPConfig.GetGROIPv4MaxSize()),
 diff --git a/pkg/datapath/connector/veth.go b/pkg/datapath/connector/veth.go
-index ec853bf20b..e92d038f68 100644
+index ec853bf20b..c318b72823 100644
 --- a/pkg/datapath/connector/veth.go
 +++ b/pkg/datapath/connector/veth.go
-@@ -59,11 +59,19 @@ func SetupVethWithNames(lxcIfName, peerIfName string, mtu, groIPv6MaxSize, gsoIP
+@@ -51,6 +51,10 @@ func SetupVeth(id string, mtu, groIPv6MaxSize, gsoIPv6MaxSize, groIPv4MaxSize, g
+ // fields such as mac, NodeMac, ifIndex and ifName. Returns a pointer for the created
+ // veth, a pointer for the peer link and error if something fails.
+ func SetupVethWithNames(lxcIfName, peerIfName string, mtu, groIPv6MaxSize, gsoIPv6MaxSize, groIPv4MaxSize, gsoIPv4MaxSize int, ep *models.EndpointChangeRequest, sysctl sysctl.Sysctl) (*netlink.Veth, netlink.Link, error) {
++	var (
++		epHostMAC, epLXCMAC mac.MAC
++		err                 error
++	)
+ 	// systemd 242+ tries to set a "persistent" MAC addr for any virtual device
+ 	// by default (controlled by MACAddressPolicy). As setting happens
+ 	// asynchronously after a device has been created, ep.Mac and ep.HostMac
+@@ -59,11 +63,19 @@ func SetupVethWithNames(lxcIfName, peerIfName string, mtu, groIPv6MaxSize, gsoIP
  	// explicitly setting MAC addrs for both veth ends. This sets
  	// addr_assign_type for NET_ADDR_SET which prevents systemd from changing
  	// the addrs.
 -	epHostMAC, err := mac.GenerateRandMAC()
 +	if ep.HostMac != "" {
-+		epHostMAC, err := mac.ParseMAC(ep.HostMac)
++		epHostMAC, err = mac.ParseMAC(ep.HostMac)
 +	} else {
-+		epHostMAC, err := mac.GenerateRandMAC()
++		epHostMAC, err = mac.GenerateRandMAC()
 +	}
  	if err != nil {
  		return nil, nil, fmt.Errorf("unable to generate rnd mac addr: %w", err)
  	}
 -	epLXCMAC, err := mac.GenerateRandMAC()
 +	if ep.Mac != "" {
-+		epLXCMAC, _ := mac.ParseMAC(ep.Mac)
++		epLXCMAC, _ = mac.ParseMAC(ep.Mac)
 +	} else {
-+		epLXCMAC, err := mac.GenerateRandMAC()
++		epLXCMAC, err = mac.GenerateRandMAC()
 +	}
  	if err != nil {
  		return nil, nil, fmt.Errorf("unable to generate rnd mac addr: %w", err)
