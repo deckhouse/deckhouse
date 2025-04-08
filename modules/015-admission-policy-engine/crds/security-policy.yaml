@@ -362,7 +362,21 @@ spec:
                       properties:
                         allowedProfiles:
                           type: array
-                          description: The list of allowed profile values for seccomp on Pods/containers.
+                          description: |
+                            The list of allowed profile values for seccomp on Pods/containers.
+
+                            Both formats are supported:
+                            - Via annotations: `runtime/default`, `docker/default`, `unconfined`, `localhost/some-profile.json`.
+                              `localhost/*` allows any local profile.
+                            - Via securityContext: `RuntimeDefault`, `Unconfined`, `Localhost`.
+                              For `Localhost`, specify the allowed profiles using the `allowedLocalhostFiles` parameter.
+
+                            Profile types:
+                            - `Unconfined` — no restrictions (not recommended for security reasons).
+                            - `RuntimeDefault` — the default profile provided by the container runtime (e.g., Docker, CRI-O).
+                            - `Localhost` — a custom profile defined on the host (flexible and tailored to the application).
+
+                            Using `*` allows all profiles. It's not necessary to specify both formats — they are automatically mapped to each other.
                           items:
                             type: string
                         allowedLocalhostFiles:
