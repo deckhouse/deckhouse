@@ -7,7 +7,6 @@ package users
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -26,7 +25,7 @@ const (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 2},
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 3},
 	Queue:        "/modules/system-registry/users-migrate",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
@@ -52,10 +51,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					return nil, fmt.Errorf("failed to convert secret \"%v\" to struct: %v", obj.GetName(), err)
 				}
 
-				if !strings.HasPrefix(secret.Name, userSecretNamePrefix) {
-					return nil, nil
-				}
-
 				if secret.Type == secretType {
 					return nil, nil
 				}
@@ -66,24 +61,38 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, func(input *go_hook.HookInput) error {
 
-	secrets, err := helpers.SnapshotToList[*v1core.Secret](input, snapMigrateSecrets)
+	secrets, err := helpers.SnapshotToList[v1core.Secret](input, snapMigrateSecrets)
 	if err != nil {
 		return fmt.Errorf("cannot get secrets: %w", err)
 	}
 
 	for _, secret := range secrets {
-		newSecret := secret.DeepCopy()
+		var newSecret v1core.Secret
+
 		newSecret.Name = fmt.Sprintf("%s-migrate", secret.Name)
+		newSecret.Type = secretType
+
+		newSecret.Labels = secret.Labels
 		if newSecret.Labels == nil {
 			newSecret.Labels = make(map[string]string)
 		}
-
 		newSecret.Labels["migrate"] = "yes"
-		newSecret.Type = secretType
+
+		newSecret.Annotations = secret.Annotations
+		newSecret.Data = secret.Data
 
 		input.Logger.Warn("Migrate", "name", secret.Name, "new_name", newSecret.Name)
 
-		//input.PatchCollector.CreateOrUpdate(newSecret)
+		/*
+			TODO:
+
+			run hooks by binding: 4 errors occurred:
+			* Create object: ///registry-user-mirror-puller-migrate: apiVersion '', kind '' is not supported by cluster:  "" not found
+			* Create object: ///registry-user-mirror-pusher-migrate: apiVersion '', kind '' is not supported by cluster:  "" not found
+			* Create object: ///registry-user-ro-migrate: apiVersion '', kind '' is not supported by cluster:  "" not found
+			* Create object: ///registry-user-rw-migrate: apiVersion '', kind '' is not supported by cluster:  "" not found
+		*/
+		//input.PatchCollector.CreateOrUpdate(&newSecret)
 	}
 
 	return nil
