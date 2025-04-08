@@ -29,7 +29,7 @@ import (
 
 type StatefulSetStorage struct {
 	Kind           string
-	ApiVersion     string
+	APIVersion     string
 	Name           string
 	Namespace      string
 	StorageRequest string
@@ -71,7 +71,7 @@ func applyStsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 
 	return &StatefulSetStorage{
 		Kind:           sts.Kind,
-		ApiVersion:     sts.APIVersion,
+		APIVersion:     sts.APIVersion,
 		Name:           sts.Name,
 		Namespace:      sts.Namespace,
 		StorageRequest: quantity.String(),
@@ -84,7 +84,7 @@ func removeStsUpmeter(input *go_hook.HookInput) error {
 			sts := snap.(*StatefulSetStorage)
 			if sts.StorageRequest != "2Gi" {
 				log.Debug("Deleting StatefulSet", slog.String("namespace", sts.Namespace), slog.String("name", sts.Name))
-				input.PatchCollector.DeleteNonCascading(sts.ApiVersion, sts.Kind, sts.Namespace, sts.Name)
+				input.PatchCollector.DeleteNonCascading(sts.APIVersion, sts.Kind, sts.Namespace, sts.Name)
 			}
 		}
 	} else {
