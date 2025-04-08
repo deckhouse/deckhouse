@@ -495,9 +495,12 @@ spec:
                         type: string
                         x-doc-examples: ['admins@example.com']
                     domainToAdminEmail:
-                      type: string
+                      type: object
                       description: |
-                        Email address of the administrator for the domain.
+                        Map of domains to administrator emails.
+                        Use "*" for the default admin email.
+                      additionalProperties:
+                        type: string
               oneOf:
                 - properties:
                     inlet:

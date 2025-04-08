@@ -222,9 +222,7 @@
         {{- end }}
         {{- if $provider.google.domainToAdminEmail }}
         domainToAdminEmail:
-          {{- range $domainToAdminEmail := $provider.google.domainToAdminEmail }}
-        - {{ $domainToAdminEmail | quote }}
-          {{- end }}
+          {{- toYaml $provider.google.domainToAdminEmail | nindent 10 }}
         {{- end }}
         {{- if $provider.google.groups }}
         groups:
