@@ -20,7 +20,7 @@ git:
   to: /deckhouse/pkg/log
 shell:
   install:
-  - export VERSION="remove-logrus"
+  - export VERSION="v0.4.0"
   - export VERSION_COMMON="v0.4.0"
   - git clone --depth 1 --branch ${VERSION} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/huaweicloud/cloud-data-discoverer.git /src
   - git clone --depth 1 --branch ${VERSION_COMMON} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/huaweicloud/huaweicloud-common.git /src/huaweicloud-common
