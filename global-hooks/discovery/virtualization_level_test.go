@@ -15,7 +15,6 @@
 package hooks
 
 import (
-	"encoding/base64"
 	"fmt"
 	"strings"
 
@@ -28,6 +27,8 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
+const noLabel = "noLabel"
+
 var _ = Describe("Global hooks :: virtualization_level", func() {
 
 	f := HookExecutionConfigInit(`{"global": {"discovery": {}}}`, `{}`)
@@ -37,64 +38,234 @@ var _ = Describe("Global hooks :: virtualization_level", func() {
 			f.RunHook()
 		})
 
-		It("Hook just runs", func() {
+		It("Hook runs successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 		})
 	})
 
 	Context("Cluster with 1 hardware master node and 2 virtual ones", func() {
-		nodesLevels := map[string]int{
+		nodesLevels := map[string]any{
 			"kube-master-1": 0,
 			"kube-master-2": 1,
 			"kube-master-3": 1,
 		}
 
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(masterNodeYAMLs(nodesLevels)))
+			f.BindingContexts.Set(f.KubeStateSet(generateMasterNodesManifests(nodesLevels)))
 			f.RunHook()
 		})
 
-		It("Create secret, set global value dvpNestingLevel", func() {
+		It("Create configmap, set global value dvpNestingLevel to 0", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("global.discovery.dvpNestingLevel").String()).To(Equal("0"))
 
-			encoded := base64.StdEncoding.EncodeToString([]byte("0"))
-
-			secret := f.KubernetesResource("Secret", "d8-system", "d8-virtualization-level")
-			Expect(secret.Field("data.level").String()).To(Equal(encoded))
+			configmap := f.KubernetesResource("ConfigMap", "d8-system", "d8-virtualization-level")
+			Expect(configmap.Field("data.level").String()).To(Equal("0"))
 		})
 	})
 
 	Context("Cluster with 3 virtual master nodes", func() {
-		nodesLevels := map[string]int{
+		nodesLevels := map[string]any{
 			"kube-master-1": 1,
 			"kube-master-2": 1,
 			"kube-master-3": 1,
 		}
 
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(masterNodeYAMLs(nodesLevels)))
+			f.BindingContexts.Set(f.KubeStateSet(generateMasterNodesManifests(nodesLevels)))
 			f.RunHook()
 		})
 
-		It("Create secret, set global value dvpNestingLevel", func() {
+		It("Create configmap, set global value dvpNestingLevel", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("global.discovery.dvpNestingLevel").String()).To(Equal("1"))
+			configmap := f.KubernetesResource("ConfigMap", "d8-system", "d8-virtualization-level")
+			Expect(configmap.Field("data.level").String()).To(Equal("1"))
+		})
+	})
 
-			encoded := base64.StdEncoding.EncodeToString([]byte("1"))
+	Context("Cluster with 3 virtual master nodes and one node has a label with a faulty value", func() {
+		nodesLevels := map[string]any{
+			"kube-master-1": 3,
+			"kube-master-2": "x",
+			"kube-master-3": 4,
+		}
 
-			secret := f.KubernetesResource("Secret", "d8-system", "d8-virtualization-level")
-			Expect(secret.Field("data.level").String()).To(Equal(encoded))
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(generateMasterNodesManifests(nodesLevels)))
+			f.RunHook()
+		})
+
+		It("Create configmap, set global value dvpNestingLevel", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.discovery.dvpNestingLevel").String()).To(Equal("3"))
+			configmap := f.KubernetesResource("ConfigMap", "d8-system", "d8-virtualization-level")
+			Expect(configmap.Field("data.level").String()).To(Equal("3"))
+		})
+	})
+
+	Context("Cluster with 3 virtual master nodes and all nodes have falty labels", func() {
+		nodesLevels := map[string]any{
+			"kube-master-1": "x",
+			"kube-master-2": "x",
+			"kube-master-3": "x",
+		}
+
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(generateMasterNodesManifests(nodesLevels)))
+			f.RunHook()
+		})
+
+		It("Create configmap, set global value dvpNestingLevel", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.discovery.dvpNestingLevel").String()).To(Equal("0"))
+			configmap := f.KubernetesResource("ConfigMap", "d8-system", "d8-virtualization-level")
+			Expect(configmap.Field("data.level").String()).To(Equal("0"))
+		})
+	})
+
+	Context("Cluster with 3 virtual master nodes without labels", func() {
+		nodesLevels := map[string]any{
+			"kube-master-1": noLabel,
+			"kube-master-2": noLabel,
+			"kube-master-3": noLabel,
+		}
+
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(generateMasterNodesManifests(nodesLevels)))
+			f.RunHook()
+		})
+
+		It("Create configmap, set global value dvpNestingLevel", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.discovery.dvpNestingLevel").String()).To(Equal("0"))
+			configmap := f.KubernetesResource("ConfigMap", "d8-system", "d8-virtualization-level")
+			Expect(configmap.Field("data.level").String()).To(Equal("0"))
+		})
+	})
+
+	Context("Cluster with 3 virtual master nodes and an empty configmap", func() {
+		nodesLevels := map[string]any{
+			"kube-master-1": 1,
+			"kube-master-2": 1,
+			"kube-master-3": 1,
+		}
+
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(generateMasterNodesManifests(nodesLevels) + generateCMManigest("")))
+			f.RunHook()
+		})
+
+		It("Create configmap, set global value dvpNestingLevel", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.discovery.dvpNestingLevel").String()).To(Equal("1"))
+			configmap := f.KubernetesResource("ConfigMap", "d8-system", "d8-virtualization-level")
+			Expect(configmap.Field("data.level").String()).To(Equal("1"))
+		})
+	})
+
+	Context("Cluster with 3 virtual master nodes and a configmap overriding the nodes' labels", func() {
+		nodesLevels := map[string]any{
+			"kube-master-1": 1,
+			"kube-master-2": 1,
+			"kube-master-3": 1,
+		}
+
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(generateMasterNodesManifests(nodesLevels) + generateCMManigest("2")))
+			f.RunHook()
+		})
+
+		It("Create configmap, set global value dvpNestingLevel", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.discovery.dvpNestingLevel").String()).To(Equal("2"))
+			configmap := f.KubernetesResource("ConfigMap", "d8-system", "d8-virtualization-level")
+			Expect(configmap.Field("data.level").String()).To(Equal("2"))
+		})
+	})
+
+	Context("Cluster with 3 virtual master nodes and a configmap with a faulty value", func() {
+		nodesLevels := map[string]any{
+			"kube-master-1": 3,
+			"kube-master-2": 3,
+			"kube-master-3": 3,
+		}
+
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(generateMasterNodesManifests(nodesLevels) + generateCMManigest("x")))
+			f.RunHook()
+		})
+
+		It("Create configmap, set global value dvpNestingLevel", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.discovery.dvpNestingLevel").String()).To(Equal("3"))
+			configmap := f.KubernetesResource("ConfigMap", "d8-system", "d8-virtualization-level")
+			Expect(configmap.Field("data.level").String()).To(Equal("3"))
+		})
+	})
+
+	Context("Cluster with 3 virtual master nodes and a configmap having less value", func() {
+		nodesLevels := map[string]any{
+			"kube-master-1": 1,
+			"kube-master-2": 1,
+			"kube-master-3": 1,
+		}
+
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(generateMasterNodesManifests(nodesLevels) + generateCMManigest("0")))
+			f.RunHook()
+		})
+
+		It("Create configmap, set global value dvpNestingLevel", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.discovery.dvpNestingLevel").String()).To(Equal("1"))
+			configmap := f.KubernetesResource("ConfigMap", "d8-system", "d8-virtualization-level")
+			Expect(configmap.Field("data.level").String()).To(Equal("1"))
+		})
+	})
+
+	Context("Cluster with 3 virtual master nodes and a configmap having greater value", func() {
+		nodesLevels := map[string]any{
+			"kube-master-1": 1,
+			"kube-master-2": 1,
+			"kube-master-3": 1,
+		}
+
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(generateMasterNodesManifests(nodesLevels) + generateCMManigest("2")))
+			f.RunHook()
+		})
+
+		It("Create configmap, set global value dvpNestingLevel", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.discovery.dvpNestingLevel").String()).To(Equal("2"))
+			configmap := f.KubernetesResource("ConfigMap", "d8-system", "d8-virtualization-level")
+			Expect(configmap.Field("data.level").String()).To(Equal("2"))
 		})
 	})
 })
 
-func masterNodeYAMLs(nodeLevels map[string]int) string {
-	return nodeRoleYAMLs([]string{"master"}, nodeLevels)
+func generateCMManigest(level string) string {
+	var result strings.Builder
+	result.WriteString(`
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: d8-virtualization-level
+  namespace: d8-system
+data:`)
+
+	if len(level) > 0 {
+		result.WriteString(fmt.Sprintf(`
+  level: "%s"`, level))
+	}
+
+	return result.String()
 }
 
-func nodeRoleYAMLs(roles []string, nodeLevels map[string]int) string {
-	yamls := make([]string, 0, len(nodeLevels))
+func generateMasterNodesManifests(nodeLevels map[string]any) string {
+	var manifests strings.Builder
 
 	for name, level := range nodeLevels {
 		node := v1.Node{
@@ -108,20 +279,30 @@ func nodeRoleYAMLs(roles []string, nodeLevels map[string]int) string {
 		}
 
 		labels := make(map[string]string)
-		for _, role := range roles {
-			labels[fmt.Sprintf("node-role.kubernetes.io/%s", role)] = ""
+		labels[fmt.Sprintf("node-role.kubernetes.io/%s", nodeRole)] = ""
+		labels[masterNodeGroup] = nodeRole
+
+		switch l := level.(type) {
+		case int:
+			labels[virtualizationLevelKey] = fmt.Sprintf("%d", l)
+		case string:
+			if l != noLabel {
+				labels[virtualizationLevelKey] = l
+			}
+		default:
+			labels[virtualizationLevelKey] = "unknown value"
 		}
-		labels[masterNodeGroup] = "master"
-		labels[virtualizationLevelKey] = fmt.Sprintf("%d", level)
+
 		node.SetLabels(labels)
 
 		y, err := yaml.Marshal(node)
 		if err != nil {
 			panic(err)
 		}
-		yamls = append(yamls, string(y))
+
+		manifests.WriteString("\n---\n")
+		manifests.Write(y)
 	}
 
-	state := strings.Join(yamls, "\n---\n")
-	return state
+	return manifests.String()
 }

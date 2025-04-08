@@ -26,17 +26,25 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
+type masterNodeInfo struct {
+	Name                string
+	VirtualizationLevel int
+}
+
 const (
+	nodeRole               = "master"
+	cmFieldName            = "level"
 	masterNodeGroup        = "node.deckhouse.io/group"
 	virtualizationLevelKey = "node.deckhouse.io/dvp-nesting-level"
+	cmSnapshotName         = "virtualization_level_configmap"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "virtualization_level_secret",
+			Name:       cmSnapshotName,
 			ApiVersion: "v1",
-			Kind:       "Secret",
+			Kind:       "ConfigMap",
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"d8-virtualization-level"},
 			},
@@ -45,58 +53,70 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					MatchNames: []string{"d8-system"},
 				},
 			},
-			FilterFunc: applyVirtualizationLevelFilter,
+			FilterFunc: applyConfigMapFilter,
 		},
 		{
 			Name:          "master_nodes",
 			ApiVersion:    "v1",
 			Kind:          "Node",
-			LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{masterNodeGroup: "master"}},
+			LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{masterNodeGroup: nodeRole}},
 			FilterFunc:    applyMasterNodesFilter,
 		},
 	},
 }, setGlobalVirtualizationLevel)
 
-func applyVirtualizationLevelFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	secret := &corev1.Secret{}
+func applyConfigMapFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	cm := new(corev1.ConfigMap)
+	if err := sdk.FromUnstructured(obj, cm); err != nil {
+		return nil, err
+	}
 
-	err := sdk.FromUnstructured(obj, secret)
-	if err != nil {
-		return nil, err
+	level, ok := cm.Data[cmFieldName]
+	if !ok {
+		return nil, nil
 	}
-	virtualizationLevel, err := strconv.Atoi(string(secret.Data["level"]))
+
+	virtualizationLevel, err := strconv.Atoi(level)
 	if err != nil {
-		return nil, err
+		return nil, nil
 	}
+
 	return virtualizationLevel, nil
 }
 
 func applyMasterNodesFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var node corev1.Node
+	node := new(corev1.Node)
 
-	err := sdk.FromUnstructured(obj, &node)
+	err := sdk.FromUnstructured(obj, node)
 	if err != nil {
-		return masterNodeInfo{}, err
+		return nil, err
 	}
 
 	virtualizationLevel := 0
 	if value, exists := node.GetLabels()[virtualizationLevelKey]; exists {
-		virtualizationLevel, _ = strconv.Atoi(value)
+		if virtualizationLevel, err = strconv.Atoi(value); err != nil {
+			// exclude a node with a faulty label
+			return nil, nil
+		}
 	}
+
 	return masterNodeInfo{Name: node.GetName(), VirtualizationLevel: virtualizationLevel}, nil
 }
 
 func setGlobalVirtualizationLevel(input *go_hook.HookInput) error {
-	virtLevelSecretSnap := input.Snapshots["virtualization_level_secret"]
 	virtualizationLevel := 0
 
-	if len(virtLevelSecretSnap) == 0 { // secret doesn't exist
-		input.Logger.Info("secret d8-virtualization-level not found, will be created automatically")
-		virtualizationLevel = getVirtualizationLevelFromMaterNodesLabels(input.Snapshots["master_nodes"])
-
-		createSecretWithVirtualizationLevel(input, virtualizationLevel)
-	} else {
-		virtualizationLevel = virtLevelSecretSnap[0].(int)
+	virtualizationLevelFromLabels := getVirtualizationLevelFromMasterNodesLabels(input.Snapshots["master_nodes"])
+	if len(input.Snapshots[cmSnapshotName]) != 0 && input.Snapshots[cmSnapshotName][0] != nil {
+		virtualizationLevel = input.Snapshots[cmSnapshotName][0].(int)
+		// if master nodes' labels report a deeper level of virtualization than the configmap, override the configmap value with the label-based on
+		if virtualizationLevelFromLabels > virtualizationLevel {
+			virtualizationLevel = virtualizationLevelFromLabels
+			createOrUpdateVirtualizationLevelCM(input, virtualizationLevelFromLabels)
+		}
+	} else { // set virtualization level based on labels as configmap either doesn't exist or contains a faulty value
+		virtualizationLevel = virtualizationLevelFromLabels
+		createOrUpdateVirtualizationLevelCM(input, virtualizationLevel)
 	}
 
 	input.Values.Set("global.discovery.dvpNestingLevel", virtualizationLevel)
@@ -105,10 +125,10 @@ func setGlobalVirtualizationLevel(input *go_hook.HookInput) error {
 	return nil
 }
 
-func createSecretWithVirtualizationLevel(input *go_hook.HookInput, level int) {
-	secret := &corev1.Secret{
+func createOrUpdateVirtualizationLevelCM(input *go_hook.HookInput, virtualizationLevel int) {
+	configmap := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       "Secret",
+			Kind:       "ConfigMap",
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -120,27 +140,25 @@ func createSecretWithVirtualizationLevel(input *go_hook.HookInput, level int) {
 				"heritage": "deckhouse",
 			},
 		},
-		Data: map[string][]byte{"level": []byte(strconv.Itoa(level))},
+		Data: map[string]string{"level": (strconv.Itoa(virtualizationLevel))},
 	}
-
-	input.PatchCollector.CreateOrUpdate(secret)
+	input.PatchCollector.CreateOrUpdate(configmap)
 }
 
-func getVirtualizationLevelFromMaterNodesLabels(masterNodeInfoSnaps []go_hook.FilterResult) int {
+func getVirtualizationLevelFromMasterNodesLabels(masterNodeInfoSnaps []go_hook.FilterResult) int {
 	minimalVirtualizationLevel := math.MaxInt
 	for _, masterNodeInfoSnap := range masterNodeInfoSnaps {
-		masterNodeInfo := masterNodeInfoSnap.(masterNodeInfo)
-		if masterNodeInfo.VirtualizationLevel >= 0 && masterNodeInfo.VirtualizationLevel < minimalVirtualizationLevel {
-			minimalVirtualizationLevel = masterNodeInfo.VirtualizationLevel
+		masterNodeInfo, ok := masterNodeInfoSnap.(masterNodeInfo)
+		if ok {
+			if masterNodeInfo.VirtualizationLevel >= 0 && masterNodeInfo.VirtualizationLevel < minimalVirtualizationLevel {
+				minimalVirtualizationLevel = masterNodeInfo.VirtualizationLevel
+			}
 		}
 	}
+
 	if minimalVirtualizationLevel == math.MaxInt {
 		minimalVirtualizationLevel = 0
 	}
-	return minimalVirtualizationLevel
-}
 
-type masterNodeInfo struct {
-	Name                string
-	VirtualizationLevel int
+	return minimalVirtualizationLevel
 }
