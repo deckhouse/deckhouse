@@ -107,6 +107,18 @@ func applyControllerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 	if err != nil {
 		return nil, fmt.Errorf("cannot set resourcesRequests from ingress controller spec: %v", err)
 	}
+
+	logLevel, found, err := unstructured.NestedString(spec, "controllerLogLevel")
+	if err != nil {
+		return nil, fmt.Errorf("cannot get controllerLogLevel from ingress controller spec: %v", err)
+	}
+	if !found || logLevel == "" {
+		err = unstructured.SetNestedField(spec, "info", "controllerLogLevel")
+		if err != nil {
+			return nil, fmt.Errorf("cannot set default controllerLogLevel in ingress controller spec: %v", err)
+		}
+	}
+
 	return Controller{Name: name, Spec: spec}, nil
 }
 
