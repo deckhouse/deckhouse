@@ -69,4 +69,5 @@ If you need to install one of the versions below 0.10, use the [outdated install
    . $(trdl use d8 0 stable) && d8 --version
    ```
 
-If you dont want to call `. $(trdl use d8 0 stable)` every time you need to use Deckhouse CLI, consider adding `alias d8='trdl exec d8 0 stable -- "$@"'` to your shell RC file.
+
+If you don't want to call `. $(trdl use d8 0 stable)` every time you need to use Deckhouse CLI, consider adding `alias d8='trdl exec d8 0 stable -- "$@"'` to your shell RC file.
