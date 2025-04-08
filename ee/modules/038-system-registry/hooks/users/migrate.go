@@ -14,13 +14,15 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/module-sdk/pkg/utils/ptr"
+
+	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers"
 )
 
 const (
-	migrateLabel      = "migrate"
-	migrateLabelValue = "yes"
-
 	snapMigrateSecrets = "migrate-secrets"
+	secretType         = "registry/user"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -28,10 +30,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        "/modules/system-registry/users-migrate",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:              snapMigrateSecrets,
-			ApiVersion:        "v1",
-			Kind:              "Secret",
-			NamespaceSelector: namespaceSelector,
+			Name:                         snapMigrateSecrets,
+			ExecuteHookOnEvents:          ptr.Bool(false),
+			ExecuteHookOnSynchronization: ptr.Bool(false),
+			ApiVersion:                   "v1",
+			Kind:                         "Secret",
+			NamespaceSelector:            namespaceSelector,
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{
 					"registry-user-ro",
@@ -52,36 +56,34 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					return nil, nil
 				}
 
-				if secret.Labels[migrateLabel] == migrateLabelValue {
+				if secret.Type == secretType {
 					return nil, nil
 				}
 
-				return secret.Name, nil
+				return secret, nil
 			},
 		},
 	},
 }, func(input *go_hook.HookInput) error {
-	for _, secretSnap := range input.Snapshots[snapMigrateSecrets] {
-		name, ok := secretSnap.(string)
-		if !ok || name == "" {
-			continue
+
+	secrets, err := helpers.SnapshotToList[*v1core.Secret](input, snapMigrateSecrets)
+	if err != nil {
+		return fmt.Errorf("cannot get secrets: %w", err)
+	}
+
+	for _, secret := range secrets {
+		newSecret := secret.DeepCopy()
+		newSecret.Name = fmt.Sprintf("%s-migrate", secret.Name)
+		if newSecret.Labels == nil {
+			newSecret.Labels = make(map[string]string)
 		}
 
-		input.Logger.Warn("Migrate", "name", name)
+		newSecret.Labels["migrate"] = "yes"
+		newSecret.Type = secretType
 
-		input.PatchCollector.PatchWithMutatingFunc(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-			ret := obj.DeepCopy()
+		input.Logger.Warn("Migrate", "name", secret.Name, "new_name", newSecret.Name)
 
-			labels := ret.GetLabels()
-			if labels == nil {
-				labels = make(map[string]string)
-			}
-
-			labels[migrateLabel] = migrateLabelValue
-
-			ret.SetLabels(labels)
-			return ret, nil
-		}, "v1", "Secret", namespaceName, name)
+		//input.PatchCollector.CreateOrUpdate(newSecret)
 	}
 
 	return nil

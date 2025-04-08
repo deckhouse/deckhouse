@@ -52,11 +52,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					return nil, nil
 				}
 
-				ret := helpers.KeyValue[string, users.User]{
-					Key:   secret.Name,
-					Value: user,
-				}
-
+				ret := helpers.NewKeyValue(secret.Name, user)
 				return ret, nil
 			},
 		},
