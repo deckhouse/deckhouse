@@ -154,9 +154,10 @@ spec:
 
 #### Keycloak
 
-Кроме регистрации клиента, при настройке `realm` необходимо создать в [Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes) `scope` с именем `groups`, и назначить ему предопределенный маппинг `groups`. Затем добавьте в созданном клиенте этот `scope` на [вкладке Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking).
-
-Кроме этого, [для клиента](https://www.keycloak.org/docs/latest/server_admin/#general-settings) необходимо в `Valid redirect URIs`, `Valid post logout redirect URIs` и `Web origins` указать `https://dex.<publicDomainTemplate>/*`, где `publicDomainTemplate` – [указанный](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) в модуле `global` шаблон DNS-имен кластера.
+После выбора `realm` для настройки, добавления пользователя в [Users](https://www.keycloak.org/docs/latest/server_admin/index.html#assembly-managing-users_server_administration_guide) и создания клиента в разделе [Clients](https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide) с включенной [аутентификацией](https://www.keycloak.org/docs/latest/server_admin/index.html#capability-config), которая необходима для генерации `clientSecret`, нужно выполнить следующие шаги:
+* Создайте в разделе [Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes) `scope` с именем `groups` и назначьте ему предопределенный маппинг `groups`. (`Client scopes` -> `Client scope details` -> `Mappers` -> `Add predefined mappers`)
+* В созданном ранее клиенте добавьте этот `scope` на [вкладке Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking). (`Clients` -> `Client details` -> `Client Scopes` -> `Add client scope`)
+* В полях `Valid redirect URIs`, `Valid post logout redirect URIs` и `Web origins` [конфигурации клиента](https://www.keycloak.org/docs/latest/server_admin/#general-settings) укажите `https://dex.<publicDomainTemplate>/*`, где `publicDomainTemplate` – это [указанный](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) в модуле `global` шаблон DNS-имен кластера.
 
 В примере представлены настройки провайдера для интеграции с Keycloak:
 
@@ -169,7 +170,7 @@ spec:
   type: OIDC
   displayName: My Company Keycloak
   oidc:
-    issuer: https://keycloak.my-company.com/realms/myrealm
+    issuer: https://keycloak.my-company.com/realms/myrealm # Используйте имя вашего realm
     clientID: plainstring
     clientSecret: plainstring
     getUserInfo: true
