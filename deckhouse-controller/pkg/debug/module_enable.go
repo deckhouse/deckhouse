@@ -68,8 +68,9 @@ func moduleSwitch(kubeClient *kubeclient.Client, moduleName string, enabled bool
 	logger.SetLevel(log.LevelError)
 
 	if err := setModuleConfigEnabled(context.TODO(), kubeClient, moduleName, enabled); err != nil {
-		return fmt.Errorf("%s module failed: %w", actionDesc, err)
+		return fmt.Errorf("%s module: %w", actionDesc, err)
 	}
+
 	fmt.Printf("Module %s %sd\n", moduleName, actionDesc)
 	return nil
 }
@@ -83,7 +84,7 @@ func setModuleConfigEnabled(ctx context.Context, kubeClient k8s.Client, name str
 
 	if _, err := kubeClient.Dynamic().Resource(v1alpha1.ModuleConfigGVR).Get(ctx, name, metav1.GetOptions{}); err != nil {
 		if apierrors.IsNotFound(err) {
-			return errors.New("not found")
+			return errors.New("module not found")
 		}
 		return fmt.Errorf("get the '%s' module: %w", name, err)
 	}
