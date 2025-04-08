@@ -20,7 +20,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
-    appsv1 "k8s.io/api/apps/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -28,15 +28,15 @@ import (
 )
 
 type StatefulSetStorage struct {
-	Kind  		   string
-	ApiVersion	   string
-    Name           string
-    Namespace      string
-    StorageRequest string
+	Kind           string
+	ApiVersion     string
+	Name           string
+	Namespace      string
+	StorageRequest string
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:       "/modules/upmeter/remove_old_sts",
+	Queue:        "/modules/upmeter/remove_old_sts",
 	OnBeforeHelm: &go_hook.OrderedConfig{},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
@@ -55,27 +55,27 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, removeStsUpmeter)
 
 func applyStsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-    var sts appsv1.StatefulSet
-    if err := sdk.FromUnstructured(obj, &sts); err != nil {
-        return nil, err
-    }
+	var sts appsv1.StatefulSet
+	if err := sdk.FromUnstructured(obj, &sts); err != nil {
+		return nil, err
+	}
 
-    if len(sts.Spec.VolumeClaimTemplates) == 0 {
-        return nil, nil
-    }
+	if len(sts.Spec.VolumeClaimTemplates) == 0 {
+		return nil, nil
+	}
 
-    quantity, ok := sts.Spec.VolumeClaimTemplates[0].Spec.Resources.Requests[corev1.ResourceStorage]
-    if !ok {
-        return "", nil 
-    }
+	quantity, ok := sts.Spec.VolumeClaimTemplates[0].Spec.Resources.Requests[corev1.ResourceStorage]
+	if !ok {
+		return "", nil
+	}
 
-    return &StatefulSetStorage{
-		Kind:          	sts.Kind,
-		ApiVersion:    	sts.APIVersion,
-        Name:           sts.Name,
-        Namespace:      sts.Namespace,
-        StorageRequest: quantity.String(),
-    }, nil
+	return &StatefulSetStorage{
+		Kind:           sts.Kind,
+		ApiVersion:     sts.APIVersion,
+		Name:           sts.Name,
+		Namespace:      sts.Namespace,
+		StorageRequest: quantity.String(),
+	}, nil
 }
 
 func removeStsUpmeter(input *go_hook.HookInput) error {
