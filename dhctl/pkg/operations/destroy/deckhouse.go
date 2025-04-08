@@ -117,6 +117,11 @@ func (g *DeckhouseDestroyer) deleteEntities(kubeCl *client.KubernetesClient) err
 		return err
 	}
 
+	err = deckhouse.DeletePDBs(kubeCl)
+	if err != nil {
+		return err
+	}
+
 	err = deckhouse.DeleteServices(kubeCl)
 	if err != nil {
 		return err
