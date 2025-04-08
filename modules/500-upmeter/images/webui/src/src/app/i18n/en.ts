@@ -201,11 +201,11 @@ const langPack: LangPack = {
         reasonUnknown: REASON_APISERVER_UNAVAILABLE,
         reasonNodata: REASON_AGENTS_STOPPED,
       },
-      trickster: {
-        title: "Trickster",
-        description: "Trickster is an HTTP reverse proxy/cache for Prometheus",
-        reasonUp: "at least one Pod is in <code>Ready</code> state, and the Trickster API responds correctly",
-        reasonDown: "either no ready Pods present, or Trickster responds with invalid data",
+      "metrics-proxy": {
+        title: "Metrics Proxy",
+        description: "An aggregating and caching metrics proxy that reduces the load on Prometheus and aggregates both main Prometheus instances in single datasource.",
+        reasonUp: "at least one Pod is in <code>Ready</code> state, and the aggregating proxy API responds correctly",
+        reasonDown: "either no ready Pods present, or aggregating proxy responds with invalid data",
         reasonUnknown: REASON_APISERVER_UNAVAILABLE,
         reasonNodata: REASON_AGENTS_STOPPED,
       },

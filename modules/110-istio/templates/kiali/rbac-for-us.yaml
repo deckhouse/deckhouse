@@ -147,7 +147,7 @@ rules:
 - apiGroups:
   - apps
   resourceNames:
-  - trickster
+  - aggregating-proxy
   resources:
   - deployments/http
   verbs:

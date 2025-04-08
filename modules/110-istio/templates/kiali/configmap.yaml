@@ -31,7 +31,7 @@ data:
         config_map_name: istio-{{ $revision }}
         istio_sidecar_injector_config_map_name: istio-sidecar-injector-{{ $revision }}
       prometheus:
-        url: https://trickster.d8-monitoring/trickster/main
+        url: https://aggregating-proxy.d8-monitoring
         auth:
           insecure_skip_verify: true
           type: bearer
