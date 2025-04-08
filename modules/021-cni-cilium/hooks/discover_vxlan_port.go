@@ -56,23 +56,23 @@ func getTransitionRules(instStatus installationStatus, virtStatus virtualization
 		case virtualizationEnabled:
 			return []TransitionRule{
 				// cm has configured 8469 port, will leave it as is
-				TransitionRule{source: 8469, target: 8469},
+				{source: 8469, target: 8469},
 
 				// dreamy case — virtualization was enabled with upgrading d8 simultaneously
-				TransitionRule{source: 0, target: 8469},
+				{source: 0, target: 8469},
 
 				// dreamy case — virtualization was enabled with upgrading d8 simultaneously and
 				// someone configured the port for setup without virtualization 8472 manually, will set the right one
-				TransitionRule{source: 8472, target: 4298},
+				{source: 8472, target: 4298},
 
 				// virtualization module was enabled on regular setup with the right port, but we have to consider virtualization nesting level and migrate to a new port
-				TransitionRule{source: 4299, target: 4298 + virtNestingLevel},
+				{source: 4299, target: 4298 + virtNestingLevel},
 
 				// virtualization module was enabled on regular setup with the right port, will set the 4298 plus virtualization nesting level
-				TransitionRule{source: 4299 + virtNestingLevel, target: 4298 + virtNestingLevel},
+				{source: 4299 + virtNestingLevel, target: 4298 + virtNestingLevel},
 
 				// regular setup with enabled virtualization module and right port, will leave it as is
-				TransitionRule{source: 4298 + virtNestingLevel, target: 4298 + virtNestingLevel},
+				{source: 4298 + virtNestingLevel, target: 4298 + virtNestingLevel},
 
 				// if the "source" port is non-standard and didn't mention here, will leave it as is and fire the alert
 			}
@@ -80,16 +80,16 @@ func getTransitionRules(instStatus installationStatus, virtStatus virtualization
 		case virtualizationDisabled:
 			return []TransitionRule{
 				// our previous standard setup, will set the old default port explicitly
-				TransitionRule{source: 0, target: 8472},
+				{source: 0, target: 8472},
 
 				// our previous standard setup with explicitly configured 8472 port, will leave the 8472
-				TransitionRule{source: 8472, target: 8472},
+				{source: 8472, target: 8472},
 
 				// regular setup with standard 4299 port, but we have to consider virtualization nesting level and migrate to a new port
-				TransitionRule{source: 4299, target: 4299 + virtNestingLevel},
+				{source: 4299, target: 4299 + virtNestingLevel},
 
 				// regular setup with standard 4299 plus virtualization nesting level port, will leave it as is
-				TransitionRule{source: 4299 + virtNestingLevel, target: 4299 + virtNestingLevel},
+				{source: 4299 + virtNestingLevel, target: 4299 + virtNestingLevel},
 			}
 		}
 
@@ -97,12 +97,12 @@ func getTransitionRules(instStatus installationStatus, virtStatus virtualization
 		switch virtStatus {
 		case virtualizationEnabled:
 			return []TransitionRule{
-				TransitionRule{source: 0, target: 4298 + virtNestingLevel},
+				{source: 0, target: 4298 + virtNestingLevel},
 			}
 
 		case virtualizationDisabled:
 			return []TransitionRule{
-				TransitionRule{source: 0, target: 4299 + virtNestingLevel},
+				{source: 0, target: 4299 + virtNestingLevel},
 			}
 		}
 	}
