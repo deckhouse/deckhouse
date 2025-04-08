@@ -14,6 +14,7 @@ import (
 
 type SubmoduleState[TData any] struct {
 	Version string `json:"version"`
+	Hash    string `json:"hash"`
 	Data    TData  `json:"data,omitempty"`
 }
 

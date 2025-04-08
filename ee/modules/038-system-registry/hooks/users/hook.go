@@ -71,21 +71,24 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		return nil
 	}
 
-	secretUsers := make(map[string]users.User)
-
-	for _, snap := range input.Snapshots[userSecretsSnap] {
-		if snap == nil {
-			continue
-		}
-
-		user := snap.(helpers.KeyValue[string, users.User])
-		secretUsers[user.Key] = user.Value
-	}
-
+	secretUsers := helpers.SnapshotToMap[string, users.User](input.Snapshots[userSecretsSnap])
 	stateUsers := state.Data
 	state.Data = make(State)
 
-	input.Logger.Warn("Users reconcile", "state", stateUsers, "secrets", secretUsers)
+	hash, err := helpers.ComputeHash(config, secretUsers)
+	if err != nil {
+		return fmt.Errorf("cannot compute hash: %w", err)
+	}
+
+	state.Hash = hash
+	state.Version = config.Version
+
+	input.Logger.Warn(
+		"Users reconcile",
+		"state",
+		stateUsers, "secrets",
+		secretUsers, "hash", state.Hash,
+	)
 
 	for _, name := range config.Params {
 		if !isValidUserName(name) {
@@ -118,7 +121,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		state.Data[key] = user
 	}
 
-	state.Version = config.Version
 	submodule.SetSubmoduleState(input.Values, "users", state)
 
 	return nil

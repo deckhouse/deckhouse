@@ -23,6 +23,8 @@ import (
 	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/bashible/models/config"
 	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/bashible/models/input"
 	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/bashible/models/status"
+	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers"
+	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers/submodule"
 	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/https"
 	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/pki"
 	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/users"

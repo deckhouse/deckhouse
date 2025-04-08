@@ -6,12 +6,12 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package submodule
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+
+	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers"
 )
 
 type SubmoduleConfig[TParams any] struct {
@@ -21,14 +21,13 @@ type SubmoduleConfig[TParams any] struct {
 }
 
 func (config *SubmoduleConfig[TParams]) ComputeVersion() error {
-	buf, err := json.Marshal(config.Params)
+	version, err := helpers.ComputeHash(config.Params)
+
 	if err != nil {
-		return fmt.Errorf("marshal error: %w", err)
+		return err
 	}
 
-	hashBytes := sha256.Sum256(buf)
-	config.Version = hex.EncodeToString(hashBytes[:])
-
+	config.Version = version
 	return nil
 }
 
