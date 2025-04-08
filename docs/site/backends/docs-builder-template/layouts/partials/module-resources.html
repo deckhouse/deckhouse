@@ -11,9 +11,6 @@ Context:
 {{- $moduleData := .data }}
 {{- $lang := .lang }}
 
-<h2>$moduleData</h2>
-{{ $moduleData }}
-<hr />
 {{- if and (eq .type "crds") $moduleData.crds }}
   {{- range $crdName, $crdData := $moduleData.crds }}
     {{- if hasPrefix $crdName "doc-" }}{{ continue }}{{ end }}
