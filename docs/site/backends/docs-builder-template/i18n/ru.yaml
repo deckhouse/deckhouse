@@ -65,3 +65,4 @@ version: версия
 version_of_module: "Версия модуля ###"
 version_of_schema: Версия схемы
 required_value_sentence: Обязательный параметр
+parameters: параметры
