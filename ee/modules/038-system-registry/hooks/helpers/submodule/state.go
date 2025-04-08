@@ -18,11 +18,13 @@ type SubmoduleState[TData any] struct {
 	Data    TData  `json:"data,omitempty"`
 }
 
-func SetSubmoduleState[TData any](values go_hook.PatchableValuesCollector, name string, value SubmoduleState[TData]) {
+func SetSubmoduleState[TData any](input *go_hook.HookInput, name string, value SubmoduleState[TData]) {
+	values := input.Values
 	values.Set(fmt.Sprintf("%s.%s.state", submodulesValuesPrefix, name), value)
 }
 
-func GetSubmoduleState[TData any](values go_hook.PatchableValuesCollector, name string) SubmoduleState[TData] {
+func GetSubmoduleState[TData any](input *go_hook.HookInput, name string) SubmoduleState[TData] {
+	values := input.Values
 	value := values.Get(fmt.Sprintf("%s.%s.state", submodulesValuesPrefix, name))
 
 	var ret SubmoduleState[TData]
@@ -34,6 +36,7 @@ func GetSubmoduleState[TData any](values go_hook.PatchableValuesCollector, name 
 	return ret
 }
 
-func RemoveSubmoduleState(values go_hook.PatchableValuesCollector, name string) {
+func RemoveSubmoduleState(input *go_hook.HookInput, name string) {
+	values := input.Values
 	values.Remove(fmt.Sprintf("%s.%s.state", submodulesValuesPrefix, name))
 }

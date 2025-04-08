@@ -62,16 +62,19 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 	},
 }, func(input *go_hook.HookInput) error {
-	state := submodule.GetSubmoduleState[State](input.Values, "users")
-	config := submodule.GetSubmoduleConfig[Params](input.Values, "users")
+	state := submodule.GetSubmoduleState[State](input, "users")
+	config := submodule.GetSubmoduleConfig[Params](input, "users")
 
 	if !config.Enabled {
-		input.Logger.Warn("Users disabled")
-		submodule.RemoveSubmoduleState(input.Values, "users")
+		submodule.RemoveSubmoduleState(input, "users")
 		return nil
 	}
 
-	secretUsers := helpers.SnapshotToMap[string, users.User](input.Snapshots[userSecretsSnap])
+	secretUsers, err := helpers.SnapshotToMap[string, users.User](input, userSecretsSnap)
+	if err != nil {
+		return fmt.Errorf("canot get users from secrets: %w", err)
+	}
+
 	stateUsers := state.Data
 	state.Data = make(State)
 
@@ -83,6 +86,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	state.Hash = hash
 	state.Version = config.Version
 
+	//TODO: remove
 	input.Logger.Warn(
 		"Users reconcile",
 		"state",
@@ -121,7 +125,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		state.Data[key] = user
 	}
 
-	submodule.SetSubmoduleState(input.Values, "users", state)
+	submodule.SetSubmoduleState(input, "users", state)
 
 	return nil
 })

@@ -7,8 +7,6 @@ package hooks
 
 import (
 	"fmt"
-	"sort"
-	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -18,35 +16,29 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers/submodule"
+	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers"
 )
 
 const (
 	registryStaticPodVersionAnnotation = "registry.deckhouse.io/config-version"
 )
 
-type registryStaticPod struct {
-	Name    string
-	IP      string
-	Ready   bool
-	Version string
-}
-
 type registryStaticPodObject struct {
 	registryStaticPod
 	Node string
 }
 
-type registryNodeObject struct {
-	Name   string
-	IP     string
-	Ready  bool
-	Master bool
+type registryStaticPod struct {
+	IP      string
+	Ready   bool
+	Version string
 }
 
 type registryNode struct {
-	registryNodeObject
-	Pods []registryStaticPod
+	IP     string
+	Ready  bool
+	Master bool
+	Pods   map[string]registryStaticPod
 }
 
 type registryState struct {
@@ -54,8 +46,6 @@ type registryState struct {
 	BashibleVersion  string
 	Messages         []string
 	PkiMode          string
-	Users            []string
-	UsersEnabled     bool
 }
 
 type registryConfig struct {
@@ -171,31 +161,6 @@ func filterRegistryState(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 		ret.Messages = messages
 	}
 
-	userEnabled := string(secret.Data["users_enabled"])
-	userEnabled = strings.TrimSpace(userEnabled)
-	userEnabled = strings.ToLower(userEnabled)
-	ret.UsersEnabled = userEnabled == "true"
-
-	users := strings.Split(string(secret.Data["users"]), ",")
-	usersMap := make(map[string]struct{})
-
-	for _, user := range users {
-		user = strings.TrimSpace(user)
-		user = strings.ToLower(user)
-
-		if user == "" {
-			continue
-		}
-
-		usersMap[user] = struct{}{}
-	}
-
-	for user := range usersMap {
-		ret.Users = append(ret.Users, user)
-	}
-
-	sort.Strings(ret.Users)
-
 	return ret, nil
 }
 
@@ -215,22 +180,22 @@ func filterRegistryNodes(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 		}
 	}
 
-	ret := registryNodeObject{
-		Name:  node.Name,
+	nodeObject := registryNode{
 		Ready: isReady,
 	}
 
 	for _, addr := range node.Status.Addresses {
 		if addr.Type == "InternalIP" {
-			ret.IP = addr.Address
+			nodeObject.IP = addr.Address
 			break
 		}
 	}
 
 	if _, ok := node.Labels["node-role.kubernetes.io/control-plane"]; ok {
-		ret.Master = true
+		nodeObject.Master = true
 	}
 
+	ret := helpers.NewKeyValue(node.Name, nodeObject)
 	return ret, nil
 }
 
@@ -262,9 +227,8 @@ func filterRegistryStaticPods(obj *unstructured.Unstructured) (go_hook.FilterRes
 		}
 	}
 
-	ret := registryStaticPodObject{
+	podObject := registryStaticPodObject{
 		registryStaticPod: registryStaticPod{
-			Name:    pod.Name,
 			IP:      pod.Status.PodIP,
 			Ready:   isReady,
 			Version: pod.Annotations[registryStaticPodVersionAnnotation],
@@ -272,59 +236,44 @@ func filterRegistryStaticPods(obj *unstructured.Unstructured) (go_hook.FilterRes
 		Node: pod.Spec.NodeName,
 	}
 
+	ret := helpers.NewKeyValue(pod.Name, podObject)
 	return ret, nil
 }
 
 func handleRegistryStaticPods(input *go_hook.HookInput) error {
-	podSnaps := input.Snapshots["static_pods"]
-	nodeSnaps := input.Snapshots["nodes"]
-	stateSnaps := input.Snapshots["state"]
-	configSnaps := input.Snapshots["config"]
-
-	var (
-		state  registryState
-		config registryConfig
-	)
-
-	if len(stateSnaps) == 1 {
-		state = stateSnaps[0].(registryState)
-	} else {
-		msg := fmt.Sprintf("State snaps count: %v", len(stateSnaps))
-		state.Messages = append(state.Messages, msg)
-		input.Logger.Warn(msg)
+	state, err := helpers.SnapshotToSingle[registryState](input, "state")
+	if err != nil {
+		return fmt.Errorf("cannot load state: %w", err)
 	}
 
-	if len(configSnaps) == 1 {
-		config = configSnaps[0].(registryConfig)
-	} else {
-		msg := fmt.Sprintf("Config snaps count: %v", len(configSnaps))
-		state.Messages = append(state.Messages, msg)
-		input.Logger.Warn(msg)
+	config, err := helpers.SnapshotToSingle[registryConfig](input, "config")
+	if err != nil {
+		return fmt.Errorf("cannot load config: %w", err)
 	}
 
-	nodes := make(map[string]registryNode)
-
-	for _, snap := range nodeSnaps {
-		nodeObject := snap.(registryNodeObject)
-		node := registryNode{
-			registryNodeObject: nodeObject,
-		}
-		nodes[node.Name] = node
+	nodes, err := helpers.SnapshotToMap[string, registryNode](input, "nodes")
+	if err != nil {
+		return fmt.Errorf("cannot load nodes: %w", err)
 	}
 
-	for _, snap := range podSnaps {
-		pod := snap.(registryStaticPodObject)
+	pods, err := helpers.SnapshotToMap[string, registryStaticPodObject](input, "static_pods")
+	if err != nil {
+		return fmt.Errorf("cannot load static pods: %w", err)
+	}
 
+	for name, pod := range pods {
 		if node, ok := nodes[pod.Node]; ok {
-			node.Pods = append(node.Pods, pod.registryStaticPod)
-			nodes[node.Name] = node
+			if node.Pods == nil {
+				node.Pods = make(map[string]registryStaticPod)
+			}
+			node.Pods[name] = pod.registryStaticPod
 		} else {
-			msg := fmt.Sprintf("Node \"%v\" not found for static pod \"%v\"", pod.Node, pod.Name)
+			msg := fmt.Sprintf("Node \"%v\" not found for static pod \"%v\"", pod.Node, name)
 			state.Messages = append(state.Messages, msg)
 			input.Logger.Warn(
 				msg,
 				"node", pod.Node,
-				"pod", pod.Name,
+				"pod", name,
 			)
 		}
 	}
@@ -352,25 +301,6 @@ func handleRegistryStaticPods(input *go_hook.HookInput) error {
 		}
 
 		input.Values.Set("systemRegistry.internal.state.messages", state.Messages)
-	}
-
-	input.Values.Set("systemRegistry.internal.state.users.enabled", state.UsersEnabled)
-
-	if len(state.Users) > 0 {
-		input.Values.Set("systemRegistry.internal.state.users.users", state.Users)
-	} else {
-		input.Values.Remove("systemRegistry.internal.state.users.users")
-	}
-
-	if !state.UsersEnabled {
-		submodule.DisableSubmodule(input.Values, "users")
-	} else {
-		usersVer, err := submodule.SetSubmoduleConfig(input.Values, "users", state.Users)
-		if err != nil {
-			return fmt.Errorf("cannot set users config: %w", err)
-		}
-
-		input.Values.Set("systemRegistry.internal.state.users.version", usersVer)
 	}
 
 	return nil

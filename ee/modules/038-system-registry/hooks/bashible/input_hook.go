@@ -18,6 +18,7 @@ import (
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/bashible/helpers"
 	common_models "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/bashible/models"
 	bashible_input "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/bashible/models/input"
+	hooks_helpers "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
 )
 
@@ -54,7 +55,7 @@ func BashibleInputHook(order float64, queue string) bool {
 		},
 	}, func(hookInput *go_hook.HookInput) error {
 		// Get mode from moduleConfig
-		mode := helpers.GetGlobalMode(hookInput)
+		mode := hooks_helpers.GetMode(hookInput)
 		bashibleInputModel := bashible_input.InputModel{
 			Mode: mode,
 		}

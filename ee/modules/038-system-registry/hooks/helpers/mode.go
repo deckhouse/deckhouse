@@ -15,10 +15,10 @@ import (
 
 const (
 	// From moduleConfig
-	GlobalModeLocation = "systemRegistry.mode"
+	ModeLocation = "systemRegistry.mode"
 )
 
-func GetGlobalMode(input *go_hook.HookInput) registry_const.ModeType {
-	val := strings.ToLower(input.Values.Get(GlobalModeLocation).Str)
+func GetMode(input *go_hook.HookInput) registry_const.ModeType {
+	val := strings.ToLower(input.Values.Get(ModeLocation).Str)
 	return registry_const.ToModeType(val)
 }

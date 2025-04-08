@@ -100,19 +100,6 @@ properties:
             type: array
             items:
               type: string
-          users:
-            type: object
-            default: {}
-            properties:
-              enabled:
-                type: boolean
-                default: false
-              users:
-                type: array
-                items:
-                  type: string
-              version:
-                type: string
       bashible:
         type: object
         default: {}

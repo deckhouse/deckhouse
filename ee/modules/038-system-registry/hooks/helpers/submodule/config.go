@@ -31,7 +31,9 @@ func (config *SubmoduleConfig[TParams]) ComputeVersion() error {
 	return nil
 }
 
-func SetSubmoduleConfig[TParams any](values go_hook.PatchableValuesCollector, name string, params TParams) (string, error) {
+func SetSubmoduleConfig[TParams any](input *go_hook.HookInput, name string, params TParams) (string, error) {
+	values := input.Values
+
 	value := SubmoduleConfig[TParams]{
 		Params:  params,
 		Enabled: true,
@@ -47,12 +49,16 @@ func SetSubmoduleConfig[TParams any](values go_hook.PatchableValuesCollector, na
 	return value.Version, nil
 }
 
-func DisableSubmodule(values go_hook.PatchableValuesCollector, name string) {
+func DisableSubmodule(input *go_hook.HookInput, name string) {
+	values := input.Values
+
 	values.Set(fmt.Sprintf("%s.%s.enabled", submodulesValuesPrefix, name), false)
 	values.Remove(fmt.Sprintf("%s.%s.config", submodulesValuesPrefix, name))
 }
 
-func GetSubmoduleConfig[TParams any](values go_hook.PatchableValuesCollector, name string) SubmoduleConfig[TParams] {
+func GetSubmoduleConfig[TParams any](input *go_hook.HookInput, name string) SubmoduleConfig[TParams] {
+	values := input.Values
+
 	enabled := values.Get(fmt.Sprintf("%s.%s.enabled", submodulesValuesPrefix, name)).Bool()
 
 	var ret SubmoduleConfig[TParams]

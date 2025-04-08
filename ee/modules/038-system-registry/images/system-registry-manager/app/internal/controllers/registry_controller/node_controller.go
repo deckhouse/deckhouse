@@ -463,16 +463,26 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 		return result, err
 	}
 
-	userMirrorPuller, err := nc.loadUserSecret(ctx, state.UserMirrorPullerName)
-	if err != nil {
-		err = fmt.Errorf("cannot load mirror puller user: %w", err)
-		return result, err
-	}
+	var (
+		userMirrorPuller, userMirrorPusher *state.User
+	)
 
-	userMirrorPusher, err := nc.loadUserSecret(ctx, state.UserMirrorPusherName)
-	if err != nil {
-		err = fmt.Errorf("cannot load mirror pusher user: %w", err)
-		return result, err
+	if moduleConfig.Settings.Mode == state.RegistryModeDetached {
+		puller, err := nc.loadUserSecret(ctx, state.UserMirrorPullerName)
+		if err != nil {
+			err = fmt.Errorf("cannot load mirror puller user: %w", err)
+			return result, err
+		}
+
+		userMirrorPuller = &puller
+
+		pusher, err := nc.loadUserSecret(ctx, state.UserMirrorPusherName)
+		if err != nil {
+			err = fmt.Errorf("cannot load mirror pusher user: %w", err)
+			return result, err
+		}
+
+		userMirrorPusher = &pusher
 	}
 
 	globalSecrets, err := nc.loadGlobalSecrets(ctx)
@@ -566,7 +576,8 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 
 func (nc *nodeController) contructNodeServicesConfig(
 	moduleConfig state.ModuleConfig,
-	userRO, userRW, userMirrorPuller, userMirrorPusher state.User,
+	userRO, userRW state.User,
+	userMirrorPuller, userMirrorPusher *state.User,
 	globalPKI state.GlobalPKI,
 	globalSecrets state.GlobalSecrets,
 	nodePKI state.NodePKI,
