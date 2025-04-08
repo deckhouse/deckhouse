@@ -63,11 +63,11 @@ If you need to install one of the versions below 0.10, use the [outdated install
    trdl add $REPO $URL $ROOT_VERSION $ROOT_SHA512
    ```
 
-1. Install latest stable release and validate that the `d8` binary is functional:
+1. Install the latest stable release of the `d8` utility and verify its functionality:
 
    ```bash
    . $(trdl use d8 0 stable) && d8 --version
    ```
 
 
-If you don't want to call `. $(trdl use d8 0 stable)` every time you need to use Deckhouse CLI, consider adding `alias d8='trdl exec d8 0 stable -- "$@"'` to your shell RC file.
+If you don't want to call `. $(trdl use d8 0 stable)` every time you need to use Deckhouse CLI, add the following line to your shell’s RC file: `alias d8='trdl exec d8 0 stable -- "$@"'`.
