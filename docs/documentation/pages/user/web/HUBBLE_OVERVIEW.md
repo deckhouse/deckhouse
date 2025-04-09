@@ -1,4 +1,4 @@
 ---
 title: "Hubble web interface"
-permalink: en/user/hubble.html
+permalink: en/user/web/hubble.html
 ---
