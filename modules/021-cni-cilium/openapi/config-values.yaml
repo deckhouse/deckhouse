@@ -250,5 +250,5 @@ properties:
     description: |
       Encryption mode:
       - `Disabled` — encryption is disabled.
-      - `Default` — encryption between pods is enabled using WireGuard.
-      - `NodeToNode` — encryption between pods and nodes is enabled using Wireguard.
+      - `Default` — traffic encryption between pods is enabled using WireGuard.
+      - `NodeToNode` — traffic encryption between pods and nodes is enabled using Wireguard.
