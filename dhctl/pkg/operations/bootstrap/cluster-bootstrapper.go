@@ -439,6 +439,11 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return err
 	}
 
+	err = WaitForFirstMasterNodeBecomeReady(ctx, kubeCl)
+	if err != nil {
+		return err
+	}
+
 	if metaConfig.ClusterType == config.CloudClusterType {
 		if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.InstallAdditionalMastersAndStaticNodes, true, stateCache, nil); err != nil {
 			return err

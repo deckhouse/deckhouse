@@ -1137,11 +1137,6 @@ func RunPostInstallTasks(ctx context.Context, kubeCl *client.KubernetesClient, r
 	}
 
 	return log.Process("bootstrap", "Run post bootstrap actions", func() error {
-		err := deckhouse.ConfigureDeckhouseRelease(ctx, kubeCl)
-		if err != nil {
-			return err
-		}
-
 		return applyPostBootstrapModuleConfigs(kubeCl, result.ManifestResult.PostBootstrapMCTasks)
 	})
 }
