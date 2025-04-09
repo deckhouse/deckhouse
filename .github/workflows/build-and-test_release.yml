@@ -287,8 +287,8 @@ jobs:
       - name: Run go generate
         run: |
 
-          (cd tools && go generate)
-          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate)
+          (cd tools && go generate -v)
+          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
 
       - name: Check generated code
         run: |
