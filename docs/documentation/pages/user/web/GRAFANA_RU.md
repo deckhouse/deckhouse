@@ -198,73 +198,26 @@ lang: ru
 ![Namespaces](../../images/grafana/namespace2.png)
 
 5.3.1.5.7 Дашборды группы Security
-Работа с дашбордами группы Security описана в разделе 4.5. Просмотр журналов событий безопасности, Руководства Администратора.
 
 4.5 Просмотр журналов событий безопасности
 Просмотр журналов событий безопасности осуществляется в веб-интерфейсе Grafana. Необходимые дашборды сгруппированы в папке Security:
 Admission policy engine. Содержит информацию, связанную с работой политик безопасности. В том числе: количество событий запрета выполнения действий из-за нарушения политики безопасности; разбивку запретов выполнения действий по типу запрета; журнал событий.
 Журнал событий безопасности, связанных с политиками безопасности, находится в окне OPA Violations.
 
-Рис. 4.5.1. Пример дашборда Admission policy engine
+![Admission policy engine](../../images/grafana/admission-policy-engine.png)
 
 CIS Kubernetes Benchmark. Дашборд с информацией о результатах работы сканера проверок конфигурации кластера на соответствие принятым подходам (лучшим практикам). Содержит сводную информацию о результатах проверки, без возможности детализации. Дашборд доступен при включенном модуле operator-trivy (см. п.4.1.).
 
-Рис. 4.5.3. Пример дашборда CIS Kubernetes Benchmark
+![CIS Kubernetes Benchmark](../../images/grafana/cis-kubernetes-benchmark.png)
 
 Kubernetes audit logs. Журнал регистрации обращений к API-серверу. Содержит записи о всех обращениях к API-серверу кластера в JSON-формате.
 
-Рис. 4.5.4. Пример дашборда Kubernetes audit logs
+![Kubernetes audit logs](../../images/grafana/kubernetes-audit-logs.png)
 
 Runtime audit engine logs. Журнал регистрации событий безопасности аудита работы ядра Linux и API-сервера кластера.
 
-Рис. 4.5.5. Пример дашборда Runtime audit engine logs
+![Runtime audit engine logs](../../images/grafana/runtime-audit-engine-logs.png)
 
 Trivy Image Vulnerability Overview. Дашборд со сводной и детализированной информацией о сканировании образов контейнеров подов в пространствах имен, отмеченных аннотацией security-scanning.deckhouse.io/enabled (см. п.4.1).
 
-Рис. 4.5.6. Пример дашборда Trivy Image Vulnerability Overview
-4.6 Контроль целостности
-Для проверки целостности образа используется контрольная сумма, рассчитанная по алгоритму Стрибог (ГОСТ Р 34.11-2012).
-Чтобы устанавливаемые образы проверялись, необходимо добавить метку gost-integrity-controller.deckhouse.io/gost-digest-validation-enabled: true в пространство имен кластера, где необходимо производить контроль целостности образа.
-Пример:
-apiVersion: v1
-kind: Namespace
-metadata:
-labels:
-gost-integrity-controller.deckhouse.io/gost-digest-validation-enabled: true
-name: default
-
-Если в ходе проверки контрольная сумма образа окажется некорректной, установка образа будет отклонена, и вы получите соответствующее сообщение.
-Для расчета контрольной суммы берется список контрольных сумм слоев образа. Список сортируется в порядке возрастания и склеивается в одну строку. Затем производится расчет контрольной суммы от этой строки по алгоритму Стрибог (ГОСТ Р 34.11-2012).
-Пример расчета контрольной суммы образа nginx:1.25.2:
-Контрольные суммы слоев отсортированные в порядке возрастания
-[
-"sha256:27e923fb52d31d7e3bdade76ab9a8056f94dd4bc89179d1c242c0e58592b4d5c",
-"sha256:360eba32fa65016e0d558c6af176db31a202e9a6071666f9b629cb8ba6ccedf0",
-"sha256:72de7d1ce3a476d2652e24f098d571a6796524d64fb34602a90631ed71c4f7ce",
-"sha256:907d1bb4e9312e4bfeabf4115ef8592c77c3ddabcfddb0e6250f90ca1df414fe",
-"sha256:94f34d60e454ca21cf8e5b6ca1f401fcb2583d09281acb1b0de872dba2d36f34",
-"sha256:c5903f3678a7dec453012f84a7d04f6407129240f12a8ebc2cb7df4a06a08c4f",
-"sha256:e42dcfe1730ba17b27138ea21c0ab43785e4fdbea1ee753a1f70923a9c0cc9b8"
-]
-Склеенная строка из контрольных сумм
-"sha256:27e923fb52d31d7e3bdade76ab9a8056f94dd4bc89179d1c242c0e58592b4d5c
-sha256:360eba32fa65016e0d558c6af176db31a202e9a6071666f9b629cb8ba6ccedf0
-sha256:72de7d1ce3a476d2652e24f098d571a6796524d64fb34602a90631ed71c4f7ce
-sha256:907d1bb4e9312e4bfeabf4115ef8592c77c3ddabcfddb0e6250f90ca1df414fe
-sha256:94f34d60e454ca21cf8e5b6ca1f401fcb2583d09281acb1b0de872dba2d36f34
-sha256:c5903f3678a7dec453012f84a7d04f6407129240f12a8ebc2cb7df4a06a08c4f
-sha256:e42dcfe1730ba17b27138ea21c0ab43785e4fdbea1ee753a1f70923a9c0cc9b8"
-Контрольная сумма образа
-2f538c22adbdb2ca8749cdafc27e94baed8645c69d4f0745fc8889f0e1f5a3f9
-
-Скопировать бинарный файл imagedigest из дистрибутива ПО «Deckhouse Platform Certified Security Edition». Из образа install. Для этого перейти в каталог с дистрибутивом, распаковать архив deckhouse-cse-1.67.0.tar с помощью следующий команды:
-tar -xvf /distr/deckhouse-cse-1.67.0.tar  -C  /distr/deckhouse-cse-1.67.0
-Перейти в каталог deckhouse-cse-1.67.0 распаковать архив f67338b4fb93a72e06b8d0a0b768b2f358e766a20530ab7243fc7eac2ea73ca с помощью следующий команды:
-tar -xvf /distr/deckhouse-cse-1.67.0/install/blob/sha256/f67338b4fb93a72e06b8d0a0b768b2f358e766a20530ab7243fc7eac2ea73ca
-Из каталога /distr/deckhouse-cse-1.67.0/install/blob/sha256/usr/bin/ скопировать бинарный файл imagedigest к себе на ЭВМ.
-C помощью утилиты imagedigest выполняется расчет  контрольной суммы образа, подпись и проверка.
-imagedigest calculate <имя_образа> - расчет контрольной суммы образа
-imagedigest add <имя_образа> - подпись
-imagedigest validate <имя_образа> -проверка
-
-Для каждого образа администратор должен фиксировать в журнал идентификатор пользователя, подписавшего образ, и вычисленную контрольную сумму образа.
+![Trivy Image Vulnerability Overview](../../images/grafana/trivy-image-vulnerability-overview.png)
