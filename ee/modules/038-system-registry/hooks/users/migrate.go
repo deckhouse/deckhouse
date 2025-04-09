@@ -6,17 +6,20 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package users
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1core "k8s.io/api/core/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/module-sdk/pkg/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers"
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
 const (
@@ -59,42 +62,53 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 		},
 	},
-}, func(input *go_hook.HookInput) error {
-
+}, dependency.WithExternalDependencies(func(input *go_hook.HookInput, dc dependency.Container) error {
 	secrets, err := helpers.SnapshotToList[v1core.Secret](input, snapMigrateSecrets)
 	if err != nil {
 		return fmt.Errorf("cannot get secrets: %w", err)
 	}
 
+	client, err := dc.GetK8sClient()
+	if err != nil {
+		return fmt.Errorf("cannot get K8S client: %w", err)
+	}
+
+	ctx := context.Background()
+
 	for _, secret := range secrets {
+		k8sSecrets := client.CoreV1().Secrets(secret.Namespace)
+
 		var newSecret v1core.Secret
 
-		labels := secret.Labels
-		if labels == nil {
-			labels = make(map[string]string)
-		}
-		labels["app.kubernetes.io/managed-by"] = "Helm"
+		newSecret.Type = secretType
+		newSecret.Name = secret.Name
+		newSecret.Namespace = secret.Namespace
+		newSecret.Labels = secret.Labels
+		newSecret.Annotations = secret.Annotations
+		newSecret.Data = secret.Data
 
-		obj := map[string]any{
-			"apiVersion": "v1",
-			"kind":       "Secret",
-			"metadata": map[string]any{
-				"name":        secret.Name,
-				"namespace":   secret.Namespace,
-				"annotations": secret.Annotations,
-				"labels":      labels,
-			},
-			"type": secretType,
-			"data": secret.Data,
+		if newSecret.Labels == nil {
+			newSecret.Labels = make(map[string]string)
 		}
+		newSecret.Labels["app.kubernetes.io/managed-by"] = "Helm"
+		delete(newSecret.Labels, "migrate")
 
 		input.Logger.Warn("Migrate", "name", secret.Name, "new_name", newSecret.Name)
 
-		_ = obj
+		err = k8sSecrets.Delete(ctx, secret.Name, v1.DeleteOptions{})
+		if err != nil {
+			input.Logger.Warn(
+				"Delete secret error",
+				"name", secret.Name,
+				"namespace", secret.Namespace,
+			)
+		}
 
-		// input.PatchCollector.Delete("v1", "Secret", secret.Namespace, secret.Name)
-		// input.PatchCollector.Create(obj)
+		_, err = k8sSecrets.Create(ctx, &newSecret, v1.CreateOptions{})
+		if err != nil {
+			return fmt.Errorf("cannot create secret: %w", err)
+		}
 	}
 
 	return nil
-})
+}))
