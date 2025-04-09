@@ -69,4 +69,4 @@ crds/                           @nabokihms @z9r5
 openapi/                        @nabokihms @z9r5
 /pkg/                           @yalosev @ldmonster
 /monitoring/prometheus-rules/   @sudoroot-null
-/deckhouse/deckhouse/blob/main/release.yaml @yalosev @nabokihms
+/release.yaml @yalosev @nabokihms
