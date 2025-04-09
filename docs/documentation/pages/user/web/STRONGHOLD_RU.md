@@ -18,7 +18,7 @@ lang: ru
 1. При первом входе введите учетные данные пользователя.
 1. После успешной аутентификации откроется главный экран stronghold, в котором отображаются:
 
-   ![Веб-интерфейс модуля stronghold](../images/stronghold/web-stronghold.png)
+   ![Веб-интерфейс модуля stronghold](../../images/stronghold/web-stronghold.png)
 
 ### Работа с механизмами секретов
 

@@ -478,7 +478,7 @@ entries:
                 - title:
                     en: Deckhouse tools web interface
                     ru: Веб-интерфейс Deckhouse tools
-                  url: /user/web/deckouse-tools.html
+                  url: /user/web/deckhouse-tools.html
                 - title:
                     en: Stronghold web interface
                     ru: Веб-интерфейс Stronghold
