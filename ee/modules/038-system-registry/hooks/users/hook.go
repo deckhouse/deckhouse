@@ -80,15 +80,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	}
 
 	state.Hash = hash
-	state.Version = config.Version
-
-	//TODO: remove
-	input.Logger.Warn(
-		"Users reconcile",
-		"state",
-		stateUsers, "secrets",
-		secretUsers, "hash", state.Hash,
-	)
 
 	for _, name := range config.Params {
 		if !isValidUserName(name) {
@@ -120,6 +111,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 		state.Data[key] = user
 	}
+
+	state.Version = config.Version
+	state.Ready = true
 
 	submodule.SetSubmoduleState(input, "users", state)
 

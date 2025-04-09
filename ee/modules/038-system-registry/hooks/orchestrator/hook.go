@@ -72,7 +72,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		usersVersion string
 	)
 
-	mode := helpers.GetMode(input)
+	mode := registry_const.ToModeType(config.Mode)
 	switch mode {
 	case registry_const.ModeProxy:
 		usersParams = users.Params{
@@ -85,7 +85,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		usersParams = users.Params{
 			"ro",
 			"rw",
-			"mirrorer",
+			"mirrorer-puller",
+			"mirrorer-pusher",
 		}
 	}
 

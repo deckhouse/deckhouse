@@ -13,6 +13,7 @@ import (
 )
 
 type SubmoduleState[TData any] struct {
+	Ready   bool   `json:"ready"`
 	Version string `json:"version"`
 	Hash    string `json:"hash"`
 	Data    TData  `json:"data,omitempty"`
