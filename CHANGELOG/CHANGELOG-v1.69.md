@@ -36,7 +36,6 @@
  - **[dhctl]** Added a time drift check during cluster bootstrap to warn if local and remote server times differ by more than 10 minutes. [#12232](https://github.com/deckhouse/deckhouse/pull/12232)
  - **[dhctl]** Added a preflight check to detect CIDR intersection between `podSubnetCIDR` and `serviceSubnetCIDR`. [#12130](https://github.com/deckhouse/deckhouse/pull/12130)
  - **[dhctl]** Removed bundle from bashible-api contexts; nodegroupconfiguration scripts now use an auto-generated header to detect the bundle. [#11479](https://github.com/deckhouse/deckhouse/pull/11479)
- - **[docs]** Added NGINX configuration to proxy `deckhouse-cli-trdl` through the frontend, enabling downloads of Deckhouse CLI artifacts via deckhouse.ru. [#12837](https://github.com/deckhouse/deckhouse/pull/12837)
  - **[docs]** Enhanced registry watcher and docs-builder integration, including improved caching, error handling, and added retries. [#12337](https://github.com/deckhouse/deckhouse/pull/12337)
  - **[documentation]** Added the `auth.allowedUserEmails` option to restrict access to the application based on user email. [#12055](https://github.com/deckhouse/deckhouse/pull/12055)
  - **[ingress-nginx]** Added `controllerPodsAdditionalAnnotations` parameter to IngressNginxController for customizing pod annotations. [#11522](https://github.com/deckhouse/deckhouse/pull/11522)
