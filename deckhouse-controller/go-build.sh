@@ -14,10 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -e
+set -eu
 
 deckhouseVer=${D8_VERSION:-"dev"}
-defaultKubernetesVer=${DEFAULT_KUBERNETES_VERSION:-"1.30"}
+defaultKubernetesVer=${DEFAULT_KUBERNETES_VERSION}
 shellOpVer=$(go list -m all | grep shell-operator | cut -d' ' -f 2-)
 addonOpVer=$(go list -m all | grep addon-operator | cut -d' ' -f 2-)
 

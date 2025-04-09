@@ -165,6 +165,9 @@ serviceSubnetCIDR: 10.222.0.0/16
 }
 
 var _ = Describe("Modules :: control-plane-manager :: hooks :: get_pki_checksum ::", func() {
+	// set default value for kubernetes version for testing purposes
+	DefaultKubernetesVersion = "1.31"
+
 	Context("Empty cluster", func() {
 		f := HookExecutionConfigInit(`{"controlPlaneManager":{"internal": {}}}`, `{}`)
 
