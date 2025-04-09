@@ -19,23 +19,15 @@ import:
   add: /iptables-wrapper
   to: /sbin/iptables-wrapper
   before: setup
-- image: common/python-static
-  add: /opt/python-static/bin
-  to: /usr/bin
-  before: setup
+- image: base/python
+  add: /
+  to: /
   includePaths:
-  - python3*
-  - python3
-  owner: root
-  group: root
-- image: common/python-static
-  add: /opt/python-static/lib
-  to: /usr/lib
-  before: setup
-  includePaths:
-  - python3*
-  owner: root
-  group: root
+  - lib/ld-musl-x86_64.so.1
+  - usr/bin/python*
+  - usr/lib/python*
+  - usr/lib/libc.so
+  before: install
 - image: registrypackages/d8-curl-artifact-8-9-1
   add: /d8-curl
   to: /usr/bin/curl

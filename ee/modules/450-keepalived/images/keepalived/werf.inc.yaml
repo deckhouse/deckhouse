@@ -49,10 +49,12 @@ import:
   add: /empty
   to: /run
   before: install
-- image: common/python
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /
   to: /
-  before: install
   includePaths:
-  - lib
-  - usr/local
+  - lib/ld-musl-x86_64.so.1
+  - usr/bin/python*
+  - usr/lib/python*
+  - usr/lib/libc.so
+  before: install

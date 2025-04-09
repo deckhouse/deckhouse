@@ -39,13 +39,13 @@ image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
 fromImage: common/alt-p11-artifact
 final: false
 import:
-- image: common/python
+- image: base/python
   add: /
   to: /
   before: install
   includePaths:
   - lib
-  - usr/local
+  - usr
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/monitoring-ping/requirements.txt
   to: /requirements.txt
@@ -70,13 +70,14 @@ import:
   to: /usr/sbin/fping
   before: setup
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /usr/local
-  to: /usr/local
-  before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /lib/ld-musl-x86_64.so.1
-  to: /lib/ld-musl-x86_64.so.1
+  add: /
+  to: /
+  includePaths:
+  - lib/ld-musl-x86_64.so.1
+  - usr/bin/python*
+  - usr/lib/python*
+  - usr/lib/libc.so
   before: install
 imageSpec:
   config:
-    entrypoint: ["/usr/local/bin/python3", "/monitoring-ping.py"]
+    entrypoint: ["/usr/bin/python3", "/monitoring-ping.py"]
