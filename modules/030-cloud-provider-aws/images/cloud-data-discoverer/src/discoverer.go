@@ -66,7 +66,7 @@ func (d *Discoverer) CheckCloudConditions(ctx context.Context) ([]v1alpha1.Cloud
 	var res []v1alpha1.CloudCondition
 
 	// check permission for DescribeAddressesAttribute
-	log.Debugln("checking permission for DescribeAddressesAttribute")
+	log.Debug("checking permission for DescribeAddressesAttribute")
 	_, err = ec2Client.DescribeAddressesAttribute(&ec2.DescribeAddressesAttributeInput{
 		DryRun: aws.Bool(true),
 	})
@@ -86,7 +86,7 @@ func (d *Discoverer) CheckCloudConditions(ctx context.Context) ([]v1alpha1.Cloud
 	}
 
 	// check permission for DescribeInstanceTopology
-	log.Debugln("checking permission for DescribeInstanceTopology")
+	log.Debug("checking permission for DescribeInstanceTopology")
 	_, err = ec2Client.DescribeInstanceTopology(&ec2.DescribeInstanceTopologyInput{
 		DryRun: aws.Bool(true),
 	})
