@@ -19,8 +19,8 @@ import:
   to: /usr/local/bin/label-converter
   before: setup
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /usr/local
-  to: /usr/local
+  add: /usr
+  to: /usr
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /lib/ld-musl-x86_64.so.1
@@ -96,13 +96,13 @@ final: false
 fromImage: common/relocate-artifact
 
 import:
-- image: common/python
+- image: base/python
   add: /
   to: /
   before: install
   includePaths:
   - lib
-  - usr/local
+  - usr
 git:
 - add: /{{ .ModulePath }}modules/002-deckhouse/images/webhook-handler/requirements.txt
   to: /requirements.txt

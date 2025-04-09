@@ -3,12 +3,13 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/shell-operator
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /usr/local
-  to: /usr/local
-  before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /lib/ld-musl-x86_64.so.1
-  to: /lib/ld-musl-x86_64.so.1
+  add: /
+  to: /
+  includePaths:
+  - lib/ld-musl-x86_64.so.1
+  - usr/bin/python*
+  - usr/lib/python*
+  - usr/lib/libc.so
   before: install
 - image: {{ $.ModuleName }}/falco-artifact
   add: /falco-package
@@ -43,13 +44,13 @@ git:
     install:
     - '**/*'
 import:
-- image: common/python
+- image: base/python
   add: /
   to: /
   before: install
   includePaths:
   - lib
-  - usr/local
+  - usr
 shell:
   beforeInstall:
   - apt-get install -y git
