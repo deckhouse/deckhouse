@@ -14,14 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -e
+set -eu
 
 deckhouseVer=${D8_VERSION:-"dev"}
+defaultKubernetesVer=${DEFAULT_KUBERNETES_VERSION}
 shellOpVer=$(go list -m all | grep shell-operator | cut -d' ' -f 2-)
 addonOpVer=$(go list -m all | grep addon-operator | cut -d' ' -f 2-)
 
 GOOS=linux \
     go build \
-     -ldflags="-s -w -X 'main.DeckhouseVersion=$deckhouseVer' -X 'main.AddonOperatorVersion=$addonOpVer' -X 'main.ShellOperatorVersion=$shellOpVer'" \
+     -ldflags="-s -w -X 'main.DeckhouseVersion=$deckhouseVer' -X 'main.AddonOperatorVersion=$addonOpVer' -X 'main.ShellOperatorVersion=$shellOpVer' -X 'hooks.DefaultKubernetesVersion=$defaultKubernetesVer'" \
      -o ./deckhouse-controller \
      ./cmd/deckhouse-controller
