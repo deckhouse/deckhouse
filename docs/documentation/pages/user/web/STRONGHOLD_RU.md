@@ -195,30 +195,30 @@ lang: ru
 
 - Для сущностей (вкладка «Entities»):
 
-![Create entity](../../images/stronghold/create-entity.png)
+    ![Create entity](../../images/stronghold/create-entity.png)
 
-  - Просмотр детальной информации;
+- Просмотр детальной информации;
 
-![Info entities](../../images/stronghold/info-entities.png)
+    ![Info entities](../../images/stronghold/info-entities.png)
 
-  - Создание сущности.
+- Создание сущности.
 
-![Create entities](../../images/stronghold/create-entities.png)
+    ![Create entities](../../images/stronghold/create-entities.png)
 
- - Удаление сущности.
- 
-![Merge entities](../../images/stronghold/merge-entities.png)
+- Удаление сущности.
+
+    ![Merge entities](../../images/stronghold/merge-entities.png)
 
 - Для алиасов (вкладка «Aliases»):
 
-![Aliases](../../images/stronghold/aliases.png)
+    ![Aliases](../../images/stronghold/aliases.png)
 
-  - Просмотр детальной информации;
+- Просмотр детальной информации;
 
-![Info alias](../../images/stronghold/info-alias.png)
+    ![Info alias](../../images/stronghold/info-alias.png)
 
-  - Редактирование алиаса;
-  - Удаление алиаса.
+- Редактирование алиаса;
+- Удаление алиаса.
 
 ![Create alias](../../images/stronghold/create-alias.png)
 
@@ -278,7 +278,7 @@ lang: ru
 ![Hash](../../images/stronghold/hash.png)
 
 - **API Explorer** - для взаимодействия с API stronghold через графический интерфейс.
- 
+
 ![API](../../images/stronghold/api.png)
 
 ### Мониторинг состояния Raft кластера stronghold
