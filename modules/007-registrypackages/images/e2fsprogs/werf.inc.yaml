@@ -36,6 +36,11 @@ import:
 imageSpec:
   config:
     labels: { "distro": "all", "version": "all", "mke2fs": "{{ $version }}", "fsck": "{{ $version }}", "resize2fs": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false

@@ -427,6 +427,11 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return err
 	}
 
+	err = WaitForFirstMasterNodeBecomeReady(ctx, kubeCl)
+	if err != nil {
+		return err
+	}
+
 	if metaConfig.ClusterType == config.CloudClusterType {
 		if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.InstallAdditionalMastersAndStaticNodes, true, stateCache, nil); err != nil {
 			return err
@@ -575,7 +580,9 @@ func bootstrapAdditionalNodesForCloudCluster(ctx context.Context, kubeCl *client
 
 	terraNodeGroups := metaConfig.GetTerraNodeGroups()
 	bootstrapAdditionalTerraNodeGroups := BootstrapTerraNodes
-	if operations.IsSequentialNodesBootstrap() {
+	if operations.IsSequentialNodesBootstrap() || metaConfig.ProviderName == "vcd" {
+		// vcd doesn't support parrallel creating nodes in same vapp
+		// https://github.com/vmware/terraform-provider-vcd/issues/530
 		bootstrapAdditionalTerraNodeGroups = operations.BootstrapSequentialTerraNodes
 	}
 

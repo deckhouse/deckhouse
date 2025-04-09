@@ -61,7 +61,12 @@ func CheckStaticClusterConfig(input *go_hook.HookInput) error {
 		if err != nil {
 			requirements.SaveValue(CheckStaticClusterConfigRaw, true)
 			input.MetricsCollector.Set("d8_check_static_cluster_config", 1, nil)
-			input.Logger.Error(findErrorLines(err.Error()))
+			errText := err.Error()
+			if str := findErrorLines(errText); str != "" {
+				input.Logger.Error(str)
+			} else {
+				input.Logger.Error(errText)
+			}
 			return nil
 		}
 		requirements.SaveValue(CheckStaticClusterConfigRaw, false)

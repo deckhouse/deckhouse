@@ -181,12 +181,6 @@ func (f *DeckhouseReleaseFetcher) GetReleaseChannel() string {
 
 // fetchDeckhouseRelease is a complete flow for loop
 func (f *DeckhouseReleaseFetcher) fetchDeckhouseRelease(ctx context.Context) error {
-	// get image info from release channel
-	imageInfo, imageErr := f.GetNewImageInfo(ctx, f.releaseVersionImageHash)
-	if imageErr != nil && !errors.Is(imageErr, ErrImageNotChanged) {
-		return fmt.Errorf("get new image: %w", imageErr)
-	}
-
 	releases, err := f.listDeckhouseReleases(ctx)
 	if err != nil {
 		return fmt.Errorf("list deckhouse releases: %w", err)
@@ -230,8 +224,14 @@ func (f *DeckhouseReleaseFetcher) fetchDeckhouseRelease(ctx context.Context) err
 		}
 	}
 
+	// get image info from release channel
+	imageInfo, err := f.GetNewImageInfo(ctx, f.releaseVersionImageHash)
+	if err != nil && !errors.Is(err, ErrImageNotChanged) {
+		return fmt.Errorf("get new image: %w", err)
+	}
+
 	// no new image found
-	if errors.Is(imageErr, ErrImageNotChanged) {
+	if err != nil {
 		return nil
 	}
 
@@ -391,6 +391,15 @@ func (f *DeckhouseReleaseFetcher) restoreCurrentDeployedRelease(ctx context.Cont
 		return nil, fmt.Errorf("create release: %w", err)
 	}
 
+	patch := client.MergeFrom(release.DeepCopy())
+
+	release.Status.Phase = v1alpha1.DeckhouseReleasePhaseDeployed
+
+	err = f.k8sClient.Status().Patch(ctx, release, patch)
+	if err != nil {
+		return nil, fmt.Errorf("patch release status: %w", err)
+	}
+
 	return release, nil
 }
 
@@ -466,18 +475,20 @@ func (f *DeckhouseReleaseFetcher) createReleases(
 		notificationShiftTime = &metav1.Time{Time: *actual.GetApplyAfter()}
 	}
 
+	metricLabels := map[string]string{
+		"version": releaseForUpdate.GetVersion().Original(),
+	}
+
 	metas, err := f.GetNewReleasesMetadata(ctx, actual.GetVersion(), newSemver)
 	if err != nil {
 		f.logger.Error("step by step update failed", log.Err(err))
 
-		labels := map[string]string{
-			"version": releaseForUpdate.GetVersion().Original(),
-		}
-
-		f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup, "d8_updating_is_failed", 1, labels)
+		f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup, "d8_updating_is_failed", 1, metricLabels)
 
 		return nil, fmt.Errorf("get new releases metadata: %w", err)
 	}
+
+	f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup, "d8_updating_is_failed", 0, metricLabels)
 
 	for _, meta := range metas {
 		releaseMetadata = &meta

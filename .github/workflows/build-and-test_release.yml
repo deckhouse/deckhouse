@@ -84,6 +84,15 @@ jobs:
           echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
+  # <template: skip_tests_repos>
+  skip_tests_repos:
+    name: Skip tests repos
+    runs-on: ubuntu-latest
+    if: ${{ false || github.repository == 'deckhouse/deckhouse' }}
+    steps:
+    - name: Do nothing
+      run: echo "Empty action to fulfil Github requirements."
+  # </template: skip_tests_repos>
 
   # <template: git_info_job>
 
@@ -409,6 +418,7 @@ jobs:
     name: Build FE
     needs:
       - git_info
+      - skip_tests_repos
       - go_generate
       - workflow_render
     env:
@@ -3091,6 +3101,9 @@ jobs:
           fetch-depth: 0
       # </template: checkout_full_step>
       - name: DMT lint
+        env:
+          DMT_METRICS_URL: "${{ secrets.DMT_METRICS_URL }}"
+          DMT_METRICS_TOKEN: "${{ secrets.DMT_METRICS_TOKEN }}"
         run: |
           make dmt-lint
     # </template: tests_dmt_lint>

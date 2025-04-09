@@ -30,6 +30,11 @@ import:
 imageSpec:
   config:
     labels: {"distro": "all", "version": "all", "xfsprogs": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false

@@ -31,7 +31,7 @@ spec:
                   type: string
                   description: |
                     Ingress gateway class is used by application [Gateway](https://istio.io/latest/docs/reference/config/networking/gateway/) resources for identifying the right Ingress gateway setup.
-                    
+
                     The identification is organized by setting the spec.selector: `istio.deckhouse.io/ingress-gateway-class: <ingressGatewayClass value>`.
                   x-doc-examples: ['istio']
                   pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
@@ -110,7 +110,7 @@ spec:
                         If the parameter is not set, the connection over HTTP cannot be established.
 
                         This parameter is mandatory if `httpsPort` is not set.
-                      x-doc-examples: ['80']
+                      x-doc-examples: [80]
                     httpsPort:
                       type: integer
                       description: |
@@ -119,7 +119,7 @@ spec:
                         If the parameter is not set, the connection over HTTPS cannot be established.
 
                         This parameter is mandatory if `httpPort` is not set.
-                      x-doc-examples: ['443']
+                      x-doc-examples: [443]
                 nodePort:
                   type: object
                   description: |
