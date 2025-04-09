@@ -4,29 +4,29 @@ permalink: ru/admin/access/authorization-rbac-current.html
 lang: ru
 ---
 
-Для реализации текущей ролевой модели в кластере должен быть включен модуль [user-authz](#).
-Модуль создает набор кластерных ролей (`ClusterRole`), подходящий для большинства задач по управлению доступом пользователей и групп.
+Для реализации текущей ролевой модели в кластере должен быть включён модуль [user-authz](../../reference/mc/user-authz/).
+Модуль создаёт набор кластерных ролей (`ClusterRole`), подходящий для большинства задач по управлению доступом пользователей и групп.
 
-{% alert level="warning" %} С версии Deckhouse Kubernetes Platform v1.64 в модуле реализована экспериментальная модель ролевого доступа. Текущая модель ролевого доступа продолжит работать, но в будущем перестанет поддерживаться.
+{% alert level="warning" %} С версии Deckhouse Kubernetes Platform v1.64 в модуле реализована экспериментальная модель ролевого доступа. Текущая модель ролевого доступа продолжит работать, но в будущем будет объявлена устаревшей (deprecated).
 
-Функциональность экспериментальной и текущей моделей ролевого доступа несовместимы. Автоматическая конвертация ресурсов невозможна. {% endalert %}
+Функциональности экспериментальной и текущей моделей ролевого доступа несовместимы. Автоматическая конвертация ресурсов невозможна. {% endalert %}
 
 <!-- Перенесено с некоторыми изменениям из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/user-authz/#%D1%82%D0%B5%D0%BA%D1%83%D1%89%D0%B0%D1%8F-%D1%80%D0%BE%D0%BB%D0%B5%D0%B2%D0%B0%D1%8F-%D0%BC%D0%BE%D0%B4%D0%B5%D0%BB%D1%8C -->
 
 Особенности текущей ролевой модели:
 
-- Модуль [user-authz](#) реализует role-based-подсистему сквозной авторизации, расширяя функционал стандартного механизма RBAC.
-- Настройка прав доступа происходит с помощью [ресурсов](#).
-- Управление доступом к инструментам масштабирования (параметр `allowScale` ресурса [ClusterAuthorizationRule](#) или [AuthorizationRule](#)).
-- Управление доступом к форвардингу портов (параметр `portForwarding` ресурса [ClusterAuthorizationRule](#) или [AuthorizationRule](#)).
-- Управление списком разрешённых пространств имён в формате labelSelector (параметр `namespaceSelector` ресурса [ClusterAuthorizationRule](#)).
+- Реализует role-based-подсистему сквозной авторизации, расширяя функционал стандартного механизма RBAC.
+- Настройка прав доступа происходит с помощью кастомных ресурсов [ClusterAuthorizationRule](../../reference/cr/clusterauthorizationrule/) и [AuthorizationRule](../../reference/cr/authorizationrule/).
+- Управление доступом к инструментам масштабирования (параметр `allowScale` ресурса [ClusterAuthorizationRule](../../reference/cr/clusterauthorizationrule/) или [AuthorizationRule](../../reference/cr/authorizationrule/)).
+- Управление доступом к форвардингу портов (параметр `portForwarding` ресурса [ClusterAuthorizationRule](../../reference/cr/clusterauthorizationrule/) или [AuthorizationRule](../../reference/cr/authorizationrule/)).
+- Управление списком разрешённых пространств имён в формате labelSelector (параметр `namespaceSelector` ресурса [ClusterAuthorizationRule](../../reference/cr/clusterauthorizationrule/)).
 
 ## Высокоуровневые роли, используемые для реализации модели
 
-Для реализации текущей ролевой модели с помощью модуля [user-authz](#), кроме использования RBAC, можно использовать удобный набор высокоуровневых ролей:
+Для реализации текущей ролевой модели с помощью модуля [user-authz](../../reference/mc/user-authz/), кроме использования RBAC, можно использовать удобный набор высокоуровневых ролей:
 
-- `User` — позволяет получать информацию обо всех объектах (включая доступ к журналам подов), но не позволяет заходить в контейнеры, читать секреты и выполнять port-forward;
-- `PrivilegedUser` — то же самое, что и `User`, но позволяет заходить в контейнеры, читать секреты, а также удалять поды (что обеспечивает возможность перезагрузки);
+- `User` — позволяет получать информацию обо всех объектах (включая доступ к журналам подов), но не позволяет заходить в контейнеры, читать секреты и выполнять перенаправление портов (port-forward);
+- `PrivilegedUser` — то же самое, что и `User`, но позволяет заходить в контейнеры, читать секреты, а также удалять поды (позволяет инициировать перезапуск пода через его удаление);
 - `Editor` — то же самое, что и `PrivilegedUser`, но предоставляет возможность создавать, изменять и удалять все объекты, которые обычно нужны для прикладных задач;
 - `Admin` — то же самое, что и `Editor`, но позволяет удалять служебные объекты (производные ресурсы, например `ReplicaSet`, `certmanager.k8s.io/challenges` и `certmanager.k8s.io/orders`);
 - `ClusterEditor` — то же самое, что и `Editor`, но позволяет управлять ограниченным набором `cluster-wide`-объектов, которые могут понадобиться для прикладных задач (`ClusterXXXMetric`, `KeepalivedInstance`, `DaemonSet` и т. д). Роль для работы оператора кластера;
@@ -34,12 +34,12 @@ lang: ru
 - `SuperAdmin` — разрешены любые действия с любыми объектами, при этом ограничения `namespaceSelector` и `limitNamespaces` продолжат работать.
 
 {% alert level="warning" %}
-Режим multi-tenancy (авторизация по пространству имён) в данный момент реализован по временной схеме и **не гарантирует безопасность!**
+Режим multitenancy (авторизация по пространству имён) в данный момент реализован по временной схеме и **не гарантирует безопасность**.
 {% endalert %}
 
-В случае, если в ресурсе [`ClusterAuthorizationRule`](#) используется `namespaceSelector`, параметры `limitNamespaces` и `allowAccessToSystemNamespace` не учитываются.
+В случае, если в ресурсе [`ClusterAuthorizationRule`](../../reference/cr/clusterauthorizationrule/) используется `namespaceSelector`, параметры `limitNamespaces` и `allowAccessToSystemNamespace` не учитываются.
 
-Если вебхук, который реализовывает систему авторизации, по какой-то причине будет недоступен, опции `allowAccessToSystemNamespaces`, `namespaceSelector` и `limitNamespaces` в custom resource перестанут применяться и пользователи будут иметь доступ во все пространства имён. После восстановления доступности вебхука опции продолжат работать.
+Если вебхук, который реализовывает систему авторизации, по какой-то причине будет недоступен, опции `allowAccessToSystemNamespaces`, `namespaceSelector` и `limitNamespaces` в кастомных ресурсах перестанут применяться и пользователи будут иметь доступ во все пространства имён. После восстановления доступности вебхука опции продолжат работать.
 
 ## Список доступа для каждой роли модуля по умолчанию
 
@@ -171,7 +171,7 @@ write:
 ```
 <!-- end user-authz roles placeholder -->
 
-Вы можете получить дополнительный список правил доступа для роли модуля из кластера ([существующие пользовательские правила](#настройка-прав-высокоуровневых-ролей) и нестандартные правила из других модулей Deckhouse):
+Вы можете получить дополнительный список правил доступа для роли модуля из кластера ([существующие пользовательские правила](#настройка-прав-высокоуровневых-ролей) и нестандартные правила из других модулей Deckhouse) с помощью команды:
 
 ```bash
 D8_ROLE_NAME=Editor
@@ -219,7 +219,7 @@ spec:
 
 * ServiceAccount'ы, учёт которых ведёт сам Kubernetes через API.
 * Остальные пользователи, учёт которых ведёт не сам Kubernetes, а некоторый внешний софт, который настраивает администратор кластера. Существует множество механизмов аутентификации и, соответственно, множество способов заводить пользователей. В настоящий момент поддерживаются два способа аутентификации:
-  * через модуль [user-authn](#);
+  * через модуль [user-authn](../../reference/mc/user-authn/);
   * с помощью сертификатов.
 
 При выпуске сертификата для аутентификации нужно указать в нём имя (`CN=<имя>`), необходимое количество групп (`O=<группа>`) и подписать его с помощью корневого CA-кластера. Именно этим механизмом вы аутентифицируетесь в кластере, когда, например, используете kubectl на bastion-узле.
@@ -249,7 +249,7 @@ spec:
    EOF
    ```
 
-2. Дайте необходимые ServiceAccount-права (используя custom resource [ClusterAuthorizationRule](#)):
+2. Дайте необходимые ServiceAccount-права (используя custom resource [ClusterAuthorizationRule](../../reference/cr/clusterauthorizationrule/)):
 
    ```shell
    kubectl create -f - <<EOF
@@ -268,7 +268,7 @@ spec:
    EOF
    ```
 
-   Если в конфигурации Deckhouse включён режим мультитенантности (параметр [enableMultiTenancy](#), доступен только в Enterprise Edition), настройте доступные для ServiceAccount пространства имён (параметр [namespaceSelector](#)).
+   Если в конфигурации Deckhouse включён режим мультитенантности (параметр [enableMultiTenancy](../../reference/mc/user-authz/#parameters-enablemultitenancy), доступен только в Enterprise Edition), настройте доступные для ServiceAccount пространства имён (параметр [namespaceSelector](../../reference/cr/clusterauthorizationrule/#clusterauthorizationrule-v1-spec-namespaceselector)).
 
 3. Определите значения переменных (они будут использоваться далее), выполнив следующие команды (**подставьте свои значения**):
 
@@ -300,10 +300,10 @@ spec:
         ```
 
    * Если прямого доступа до API-сервера нет, используйте один следующих вариантов:
-      * включите доступ к API-серверу через Ingress-контроллер (параметр [publishAPI](#)) и укажите адреса, с которых будут идти запросы (параметр [whitelistSourceRanges](#));
-      * укажите адреса, с которых будут идти запросы, в отдельном Ingress-контроллере (параметр [acceptRequestsFrom](../ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom)).
+      * включите доступ к API-серверу через Ingress-контроллер (параметр [publishAPI](../../reference/mc/user-authn/#parameters-publishapi)) и укажите адреса, с которых будут идти запросы (параметр [whitelistSourceRanges](../../reference/mc/user-authn/#parameters-publishapi/#parameters-publishapi-whitelistsourceranges));
+      * укажите адреса, с которых будут идти запросы, в отдельном Ingress-контроллере (параметр [acceptRequestsFrom](../../reference/cr/ingressnginxcontroller/#ingressnginxcontroller-v1-spec-acceptrequestsfrom)).
 
-   * Если используется непубличный CA:
+   * **Если используется непубличный CA:**
 
      1. Получите сертификат CA из секрета с сертификатом, который используется для домена `api.%s`:
 
@@ -323,7 +323,7 @@ spec:
           --kubeconfig=$FILE_NAME
         ```
 
-   * Если используется публичный CA. Сгенерируйте секцию `cluster` (используется внешний домен для доступа):
+   * **Если используется публичный CA.** Сгенерируйте секцию `cluster` (используется внешний домен для доступа):
 
      ```shell
      kubectl config set-cluster $CLUSTER_NAME \
@@ -364,7 +364,7 @@ spec:
   openssl genrsa -out myuser.key 2048
   ```
 
-* Создайте CSR, где укажите, что требуется пользователь `myuser`, который состоит в группах `mygroup1` и `mygroup2`:
+* Создайте CSR с указанием пользователя `myuser`, входящего в группы `mygroup1` и `mygroup2`:
 
   ```shell
   openssl req -new -key myuser.key -out myuser.csr -subj "/CN=myuser/O=mygroup1/O=mygroup2"
@@ -421,13 +421,13 @@ spec:
   portForwarding: true
 ```
 
-### Настройка `kube-apiserver` для работы в режиме multi-tenancy
+### Настройка `kube-apiserver` для работы в режиме multitenancy
 
-Режим multi-tenancy, позволяющий ограничивать доступ к пространству имён, включается параметром [enableMultiTenancy](#) модуля [user-auth](#).
+Режим multitenancy, позволяющий ограничивать доступ к пространству имён, включается параметром [enableMultiTenancy](../../reference/mc/user-authz/#parameters-enablemultitenancy) модуля [user-authz](../../reference/mc/user-authz/).
 
-Работа в режиме multi-tenancy требует включения [плагина авторизации Webhook](https://kubernetes.io/docs/reference/access-authn-authz/webhook/) и выполнения настройки `kube-apiserver`. Все необходимые для работы режима multi-tenancy действия **выполняются автоматически** модулем [control-plane-manager](#), никаких ручных действий не требуется.
+Работа в режиме multitenancy требует включения [плагина авторизации Webhook](https://kubernetes.io/docs/reference/access-authn-authz/webhook/) и выполнения настройки `kube-apiserver`. Все необходимые для работы режима multitenancy действия **выполняются автоматически** модулем [control-plane-manager](../../reference/mc/control-plane-manager/), никаких ручных действий не требуется.
 
-Изменения манифеста `kube-apiserver`, которые произойдут после включения режима multi-tenancy:
+Изменения манифеста `kube-apiserver`, которые произойдут после включения режима multitenancy:
 
 * исправление аргумента `--authorization-mode`. Перед методом RBAC добавится метод Webhook (например, `--authorization-mode=Node,Webhook,RBAC`);
 * добавление аргумента `--authorization-webhook-config-file=/etc/kubernetes/authorization-webhook-config.yaml`;
@@ -456,7 +456,7 @@ spec:
 * `user` — имя пользователя;
 * `groups` — группы пользователя.
 
-> При совместном использовании с модулем `user-authn` группы и имя пользователя можно посмотреть в логах Dex — `kubectl -n d8-user-authn logs -l app=dex` (видны только при авторизации).
+> При совместном использовании с модулем `user-authn` группы и имя пользователя можно посмотреть в логах Dex с помощью команды `kubectl -n d8-user-authn logs -l app=dex` (видны только при авторизации).
 
 ```shell
 cat  <<EOF | 2>&1 kubectl  create --raw  /apis/authorization.k8s.io/v1/subjectaccessreviews -f - | jq .status
@@ -488,7 +488,7 @@ EOF
 }
 ```
 
-Если в кластере включён режим **multi-tenancy**, выполните ещё одну проверку, чтобы убедиться, что у пользователя есть доступ в пространство имён:
+Если в кластере включён режим **multitenancy**, выполните ещё одну проверку, чтобы убедиться, что у пользователя есть доступ в пространство имён:
 
 ```shell
 cat  <<EOF | 2>&1 kubectl --kubeconfig /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml create --raw / -f - | jq .status
@@ -622,4 +622,3 @@ spec:
 {% alert level="warning" %}
 Если есть правило без опции `namespaceSelector` и без опции `limitNamespaces` (устаревшая), это значит, что доступ разрешён во все пространства имён, кроме системных, что повлияет на результат вычисления доступных пространств имён для пользователя.
 {% endalert %}
-
