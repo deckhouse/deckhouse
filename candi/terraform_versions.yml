@@ -22,11 +22,11 @@ azure:
   namespace: hashicorp
   cloudName: Azure
   type: azurerm
-  version: 2.36.0
+  version: 3.117.1
   artifact: terraform-provider-azure
   artifactBinary: terraform-provider-azurerm
   destinationBinary: terraform-provider-azurerm
-  useOpentofu: false
+  useOpentofu: true
 
 gcp:
   namespace: hashicorp
