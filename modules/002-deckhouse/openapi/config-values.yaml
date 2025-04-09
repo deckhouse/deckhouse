@@ -410,30 +410,30 @@ properties:
               - "168h"
               - "168h10m"
               - "168h10m5s"
-    oneOf:
-      - required: [mode]
-        properties:
-          mode:
-            enum: [Unmanaged]
-        not:
-          required: [proxy, direct]
-      - required: [mode]
-        properties:
-          mode:
-            enum: [Direct]
-          direct: {}
-        not:
-          required: [proxy]
-      - required: [mode]
-        properties:
-          mode:
-            enum: [Proxy]
-          proxy: {}
-        not:
-          required: [direct]
-      - required: [mode]
-        properties:
-          mode:
-            enum: [Local]
-        not:
-          required: [proxy, direct]
+    # oneOf:
+    #   - required: [mode]
+    #     properties:
+    #       mode:
+    #         enum: [Unmanaged]
+    #     not:
+    #       required: [proxy, direct]
+    #   - required: [mode]
+    #     properties:
+    #       mode:
+    #         enum: [Direct]
+    #       direct: {}
+    #     not:
+    #       required: [proxy]
+    #   - required: [mode]
+    #     properties:
+    #       mode:
+    #         enum: [Proxy]
+    #       proxy: {}
+    #     not:
+    #       required: [direct]
+    #   - required: [mode]
+    #     properties:
+    #       mode:
+    #         enum: [Local]
+    #     not:
+    #       required: [proxy, direct]
