@@ -1,4 +1,6 @@
 # parses version_map.yml file and adds info about supported k8s versions
+# . is dict with keys:
+# Editions - set of deckhouse editions.
 {{- define "parse_version_map" }}
   {{ $context := . }}
   # Version Map
@@ -27,6 +29,9 @@
       {{- $eolKubernetesVersions = append $eolKubernetesVersions ($k | toString ) }}
     {{- end }}
     {{- if $v.default }}
+      {{- if ne $defaultKubernetesVersion "" }}
+        {{- fail "Multiple default kubernetes versions is set in candi/version_map.yml" }}
+      {{- end }}
       {{- $defaultKubernetesVersion = $k | toString }}
     {{- end }}
   {{- end }}
