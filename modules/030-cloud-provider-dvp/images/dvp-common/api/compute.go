@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"github.com/deckhouse/virtualization/api/core/v1alpha2"
+	"github.com/hashicorp/go-multierror"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -168,6 +169,40 @@ func (c *ComputeService) DeleteVM(ctx context.Context, name string) error {
 	return nil
 }
 
+func (c *ComputeService) GetDisksForDetachAndDelete(ctx context.Context, vm *v1alpha2.VirtualMachine, detachDisks bool) ([]string, []string, error) {
+	disksToDetach := make([]string, 0)
+	disksToDelete := make([]string, 0)
+	vmHostname, err := c.GetVMHostname(vm)
+
+	vmbdas, err := c.listVMBDAByHostname(ctx, vmHostname)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	vmbdasMap := make(map[string]struct{})
+
+	for _, vdbda := range vmbdas {
+		vmbdasMap[vdbda.Name] = struct{}{}
+	}
+
+	for _, device := range vm.Status.BlockDeviceRefs {
+		if !device.Attached || device.Kind != v1alpha2.DiskDevice {
+			continue
+		}
+		if _, ok := vmbdasMap[device.Name]; !ok || !detachDisks {
+			disksToDelete = append(disksToDelete, device.Name)
+			continue
+		}
+
+		if !detachDisks {
+			continue
+		}
+		disksToDetach = append(disksToDetach, device.Name)
+	}
+
+	return disksToDetach, disksToDelete, nil
+}
+
 func (c *ComputeService) StartVM(ctx context.Context, name string) error {
 	err := c.client.Create(ctx, &v1alpha2.VirtualMachineOperation{
 		ObjectMeta: metav1.ObjectMeta{
@@ -299,6 +334,20 @@ func (c *ComputeService) DetachDiskFromVM(ctx context.Context, diskName string, 
 	return nil
 }
 
+func (c *ComputeService) DetachDisksFromVM(ctx context.Context, disksName []string, vmName string) error {
+	merr := &multierror.Error{}
+	for _, diskName := range disksName {
+		err := c.DetachDiskFromVM(ctx, diskName, vmName)
+		if err != nil {
+			merr = multierror.Append(merr, fmt.Errorf("detach VirtualDisk %s: %w", diskName, err))
+		}
+	}
+	if err := merr.ErrorOrNil(); err != nil {
+		return fmt.Errorf("detach VirtualDisks: %w", err)
+	}
+	return nil
+}
+
 func (c *ComputeService) getVMBDA(ctx context.Context, diskName string, vmHostname string) (*v1alpha2.VirtualMachineBlockDeviceAttachment, error) {
 	selector, err := labels.Parse(fmt.Sprintf("%s=%s,%s=%s", attachmentDiskNameLabel, diskName, attachmentMachineNameLabel, vmHostname))
 	if err != nil {
@@ -323,6 +372,24 @@ func (c *ComputeService) getVMBDA(ctx context.Context, diskName string, vmHostna
 	}
 
 	return &vmbdas.Items[0], nil
+}
+
+func (c *ComputeService) listVMBDAByHostname(ctx context.Context, vmHostname string) ([]v1alpha2.VirtualMachineBlockDeviceAttachment, error) {
+	selector, err := labels.Parse(fmt.Sprintf("%s=%s", attachmentMachineNameLabel, vmHostname))
+	if err != nil {
+		return nil, err
+	}
+
+	var vmbdas v1alpha2.VirtualMachineBlockDeviceAttachmentList
+	err = c.client.List(ctx, &vmbdas, &client.ListOptions{
+		LabelSelector: selector,
+		Namespace:     c.namespace,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return vmbdas.Items, nil
 }
 
 func (c *ComputeService) CreateCloudInitProvisioningSecret(ctx context.Context, name string, userData []byte) error {

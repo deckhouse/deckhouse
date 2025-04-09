@@ -309,14 +309,20 @@ func (r *DeckhouseMachineReconciler) reconcileDeleteOperation(
 		return ctrl.Result{}, fmt.Errorf("cannot get VirtualMachine: %w", err)
 	}
 
-	disksToDelete := make([]string, 0)
-	for _, device := range vm.Status.BlockDeviceRefs {
-		if !device.Attached || device.Kind != v1alpha2.DiskDevice {
-			continue
-		}
-		disksToDelete = append(disksToDelete, device.Name)
+	disksToDetach, disksToDelete, err := r.DVP.ComputeService.GetDisksForDetachAndDelete(ctx, vm, true)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("error geting disks for detach and delete: %w", err)
 	}
-	logger.Info("VirtualDisks to delete", "disks", disksToDelete)
+
+	vmHostname, err := r.DVP.ComputeService.GetVMHostname(vm)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	err = r.DVP.ComputeService.DetachDisksFromVM(ctx, disksToDetach, vmHostname)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 
 	if err = r.DVP.ComputeService.DeleteVM(ctx, dvpMachine.Name); err != nil {
 		return ctrl.Result{}, fmt.Errorf("delete VirtualMachine: %w", err)
