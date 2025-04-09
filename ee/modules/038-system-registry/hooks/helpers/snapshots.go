@@ -14,11 +14,7 @@ import (
 func SnapshotToMap[TKey comparable, TValue any](input *go_hook.HookInput, name string) (map[TKey]TValue, error) {
 	ret := make(map[TKey]TValue)
 
-	snapshot, ok := input.Snapshots[name]
-	if !ok {
-		return ret, fmt.Errorf("no snapshot with name \"%v\" found", name)
-	}
-
+	snapshot := input.Snapshots[name]
 	for _, val := range snapshot {
 		if val == nil {
 			continue
@@ -37,11 +33,7 @@ func SnapshotToMap[TKey comparable, TValue any](input *go_hook.HookInput, name s
 func SnapshotToSingle[TValue any](input *go_hook.HookInput, name string) (TValue, error) {
 	var value TValue
 
-	snapshot, ok := input.Snapshots[name]
-	if !ok {
-		return value, fmt.Errorf("no snapshot with name \"%v\" found", name)
-	}
-
+	snapshot := input.Snapshots[name]
 	snapLen := len(snapshot)
 
 	if snapLen != 1 {
@@ -49,7 +41,7 @@ func SnapshotToSingle[TValue any](input *go_hook.HookInput, name string) (TValue
 	}
 
 	snapValue := snapshot[0]
-	value, ok = snapValue.(TValue)
+	value, ok := snapValue.(TValue)
 
 	if !ok {
 		return value, fmt.Errorf("snapshot value of type %T not convertible to %T", snapValue, value)
@@ -59,11 +51,7 @@ func SnapshotToSingle[TValue any](input *go_hook.HookInput, name string) (TValue
 }
 
 func SnapshotToList[TValue any](input *go_hook.HookInput, name string) ([]TValue, error) {
-	snapshot, ok := input.Snapshots[name]
-	if !ok {
-		return []TValue{}, fmt.Errorf("no snapshot with name \"%v\" found", name)
-	}
-
+	snapshot := input.Snapshots[name]
 	ret := make([]TValue, 0, len(snapshot))
 	for _, snap := range snapshot {
 		if snap == nil {
