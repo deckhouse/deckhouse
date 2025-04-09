@@ -16,6 +16,7 @@ package clouddata
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -44,12 +45,14 @@ type Discoverer interface {
 	InstanceTypes(ctx context.Context) ([]v1alpha1.InstanceType, error)
 	DiscoveryData(ctx context.Context, cloudProviderDiscoveryData []byte) ([]byte, error)
 	DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error)
+	CheckCloudConditions(ctx context.Context) ([]v1alpha1.CloudCondition, error)
 }
 
 type Reconciler struct {
-	cloudRequestErrorMetric   *prometheus.GaugeVec
-	updateResourceErrorMetric *prometheus.GaugeVec
-	orphanedDiskMetric        *prometheus.GaugeVec
+	cloudRequestErrorMetric    *prometheus.GaugeVec
+	updateResourceErrorMetric  *prometheus.GaugeVec
+	orphanedDiskMetric         *prometheus.GaugeVec
+	cloudConditionsErrorMetric *prometheus.GaugeVec
 
 	discoverer       Discoverer
 	checkInterval    time.Duration
@@ -154,6 +157,16 @@ func (c *Reconciler) registerMetrics() {
 		[]string{"id", "name"},
 	)
 	prometheus.MustRegister(c.orphanedDiskMetric)
+
+	c.cloudConditionsErrorMetric = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "cloud_data",
+		Subsystem: "discovery",
+		Name:      "cloud_conditions_error",
+		Help:      "Indicates that there are unmet cloud conditions in the cluster",
+	},
+		[]string{"name", "message"},
+	)
+	prometheus.MustRegister(c.cloudConditionsErrorMetric)
 }
 
 func (c *Reconciler) setProbe(probe bool) {
@@ -212,9 +225,92 @@ func (c *Reconciler) reconcile(ctx context.Context) {
 	c.logger.Infoln("Start next data discovery")
 	defer c.logger.Infoln("Finish data discovery")
 
+	c.checkCloudConditions(ctx)
 	c.instanceTypesReconcile(ctx)
 	c.discoveryDataReconcile(ctx)
 	c.orphanedDisksReconcile(ctx)
+}
+
+func (c *Reconciler) checkCloudConditions(ctx context.Context) {
+	c.logger.Infoln("Start checking cloud conditions")
+	defer c.logger.Infoln("Finish checking cloud conditions")
+
+	conditions, err := c.discoverer.CheckCloudConditions(ctx)
+	if err != nil {
+		c.logger.Errorf("Error occurred while checking cloud conditions: %v", err)
+		return
+	}
+
+	c.cloudConditionsErrorMetric.Reset()
+	for i := range conditions {
+		c.logger.Infof("Condition (%s) message: %s, ok: %t\n", conditions[i].Name, conditions[i].Message, conditions[i].Ok)
+		if !conditions[i].Ok {
+			c.cloudConditionsErrorMetric.WithLabelValues(conditions[i].Name, conditions[i].Message).Set(1.0)
+		}
+	}
+
+	if len(conditions) == 0 {
+		c.logger.Infof("Got 0 conditions")
+
+		cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		_, err = c.k8sClient.CoreV1().ConfigMaps("kube-system").Get(cctx, "d8-cloud-provider-conditions", metav1.GetOptions{})
+		cancel()
+
+		if errors.IsNotFound(err) {
+			// don't create empty configmap if we don't have an existing one
+			return
+		}
+	}
+
+	jsonConditions, err := json.Marshal(conditions)
+	if err != nil {
+		c.logger.Errorf("failed to marshal conditions: %v", err)
+		return
+	}
+
+	if err = retryFunc(15, 3*time.Second, 30*time.Second, c.logger, func() error {
+		cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		configMap, err1 := c.k8sClient.CoreV1().ConfigMaps("kube-system").Get(cctx, "d8-cloud-provider-conditions", metav1.GetOptions{})
+		cancel()
+		if errors.IsNotFound(err1) {
+			configMap = &v1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "d8-cloud-provider-conditions",
+					Namespace: "kube-system",
+				},
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ConfigMap",
+					APIVersion: "v1",
+				},
+				Data: map[string]string{"conditions": string(jsonConditions)},
+			}
+
+			cctx, cancel = context.WithTimeout(ctx, 10*time.Second)
+			_, err1 = c.k8sClient.CoreV1().ConfigMaps("kube-system").Create(cctx, configMap, metav1.CreateOptions{})
+			cancel()
+
+			if err1 != nil {
+				return fmt.Errorf("Cannot create d8-cloud-provider-conditions configMap: %v", err)
+			}
+		} else if err1 != nil {
+			return fmt.Errorf("Cannot check d8-cloud-provider-conditions configMap before creating it: %v", err1)
+		} else {
+			configMap.Data["conditions"] = string(jsonConditions)
+
+			cctx, cancel = context.WithTimeout(ctx, 10*time.Second)
+			_, err1 = c.k8sClient.CoreV1().ConfigMaps("kube-system").Update(cctx, configMap, metav1.UpdateOptions{})
+			cancel()
+
+			if err1 != nil {
+				return fmt.Errorf("Cannot update d8-cloud-provider-conditions configMap: %v", err)
+			}
+		}
+		return nil
+	}); err != nil {
+		c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
+		c.logger.Errorln("Cannot update d8-cloud-provider-conditions configMap. Timed out. See error messages below.")
+		c.setProbe(false)
+	}
 }
 
 func (c *Reconciler) instanceTypesReconcile(ctx context.Context) {

@@ -1581,7 +1581,7 @@ spec:
                       properties:
                         matchExpressions:
                           type: array
-                          description: matchExpressions is a list of label selector
+                          description: A list of label selector
                             requirements. The requirements are ANDed.
                           items:
                             description: A label selector requirement is a selector
@@ -1635,7 +1635,7 @@ spec:
                       x-kubernetes-map-type: atomic
                     count:
                       description: |
-                          The number of instances to create.
+                          The number of existing instances to bootstrap and add to the cluster.
                       type: integer
                       minimum: 0
                       default: 0

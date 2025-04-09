@@ -19,6 +19,7 @@ Context:
   {{- end }}
 {{- else if and (eq .type "configuration") $moduleData.openapi }}
     {{- $cfgData := index $moduleData.openapi "config-values" }}
+    {{- $cfgConversions := index $moduleData.openapi "conversions" }}
     {{- $langData := index $moduleData.openapi (printf "doc-%s-config-values" $lang ) }}
-    {{- partial "openapi/format-configuration" ( dict "data" $cfgData "langData" $langData ) }}
+    {{- partial "openapi/format-configuration" ( dict "data" $cfgData "conversions" $cfgConversions "langData" $langData ) }}
 {{- end }}

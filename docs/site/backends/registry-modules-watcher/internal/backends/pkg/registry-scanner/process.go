@@ -34,7 +34,7 @@ import (
 
 // Constants for directory structure
 var (
-	documentationDirs = []string{"docs", "openapi", "crds"}
+	documentationDirs = []string{"docs", "openapi", "openapi/conversions", "crds"}
 )
 
 const versionFileName = "version.json"

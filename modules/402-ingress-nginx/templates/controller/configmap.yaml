@@ -17,8 +17,11 @@ metadata:
   namespace: d8-ingress-nginx
   {{- include "helm_lib_module_labels" (list $context) | nindent 2 }}
 data:
-  # User snippets are disabled by default since v1.9 due to substantial security concerns
+  # User snippets are disabled by default due to substantial security concerns
   allow-snippet-annotations: "true"
+  # The default annotation risk level has been lowered to High in v1.12. Snippet annotations have an annotation risk level of Critical.
+  # https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/annotations-risk/
+  annotations-risk-level: Critical
   # Additional headers config map name in format namespace/name
   proxy-set-headers: "d8-ingress-nginx/{{ $crd.name }}-custom-headers"
   proxy-connect-timeout: "2"

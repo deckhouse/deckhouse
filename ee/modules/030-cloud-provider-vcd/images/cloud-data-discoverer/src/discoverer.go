@@ -120,6 +120,10 @@ func NewDiscoverer(logger *log.Entry) *Discoverer {
 	}
 }
 
+func (d *Discoverer) CheckCloudConditions(ctx context.Context) ([]v1alpha1.CloudCondition, error) {
+	return nil, nil
+}
+
 func (d *Discoverer) DiscoveryData(_ context.Context, cloudProviderDiscoveryData []byte) ([]byte, error) {
 	discoveryData := &v1alpha1.VCDCloudProviderDiscoveryData{}
 	if len(cloudProviderDiscoveryData) > 0 {
