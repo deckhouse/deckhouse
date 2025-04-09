@@ -1,3 +1,6 @@
+{{- $enabled := false -}}
+{{- if $enabled }}
+
 {{- if and (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
 
 {{- if eq $.Values.global.modulesImages.registry.address "embedded-registry.d8-system.svc:5001" }}
@@ -41,7 +44,7 @@ spec:
         !(object.metadata.name == "system-registry" &&
           has(oldObject.spec.settings) && oldObject.spec.settings != {} &&
           !(has(object.spec.settings) && object.spec.settings != {}) &&
-          !(object.spec.settings.mode == oldObject.spec.settings.mode) && 
+          !(object.spec.settings.mode == oldObject.spec.settings.mode) &&
           !(object.spec.enabled == oldObject.spec.enabled || object.spec.enabled == true))
       reason: Forbidden
 {{- end }}
@@ -101,6 +104,8 @@ spec:
 {{- end }}
 {{/* End ModuleConfig/system-registry delete validation */}}
 ---
+{{- end }}
+
 {{- end }}
 
 {{- end }}
