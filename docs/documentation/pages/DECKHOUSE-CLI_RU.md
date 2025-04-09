@@ -53,14 +53,10 @@ Deckhouse CLI — это интерфейс командной строки дл
 
 Начиная с версии 0.10 Deckhouse CLI установить её можно с помощью [trdl](https://ru.trdl.dev/).
 
-{% alert %}
-Если установка выполняется внутри кластера, включите [Deckhouse Tools](../modules/deckhouse-tools/) и следуйте инструкциям интерфейса.
-{% endalert %}
-
 {% alert level="warning" %}
 Если у вас установлена версия ниже 0.10, то её необходимо предварительно удалить.
 
-Если вам нужно установить одну из версий ниже 0.10, воспользуйтесь [устаревшим способом установки](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.67/deckhouse-cli/#how-do-i-install-deckhouse-cli).
+Если вам нужно установить одну из версий ниже 0.10, воспользуйтесь [устаревшим способом установки](#установка-исполняемого-файла).
 {% endalert %}
 
 1. Установите [клиент trdl](https://ru.trdl.dev/quickstart.html#%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B0-%D0%BA%D0%BB%D0%B8%D0%B5%D0%BD%D1%82%D0%B0).

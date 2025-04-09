@@ -52,14 +52,10 @@ There are two ways to install the Deckhouse CLI:
 
 Starting with the Deckhouse CLI version 0.10, you can install it using [trdl](https://trdl.dev/).
 
-{% alert %}
-When installing within the cluster, enable [Deckhouse Tools](../modules/deckhouse-tools/) and follow the instructions provided in the interface.
-{% endalert %}
-
 {% alert level="warning" %}
 Versions earlier than 0.10 must be uninstalled before proceeding.
 
-If you need to install one of the versions below 0.10, use the [outdated installation method](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.67/deckhouse-cli/#how-do-i-install-deckhouse-cli).
+If you need to install one of the versions below 0.10, use the [outdated installation method](#installing-the-executable).
 {% endalert %}
 
 1. [Install trdl client](https://trdl.dev/quickstart.html#installing-the-client).
