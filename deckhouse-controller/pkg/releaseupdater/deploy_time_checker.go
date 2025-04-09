@@ -160,7 +160,7 @@ func (c *DeployTimeService) CalculatePatchDeployTime(release v1alpha1.Release, m
 	c.checkCanary(result, release)
 	c.checkNotify(result, release)
 
-	if c.settings.Mode == v1alpha1.UpdateModeAutoPatch && !c.settings.Windows.IsAllowed(result.ReleaseApplyTime) {
+	if c.settings.Mode != v1alpha1.UpdateModeManual && !c.settings.Windows.IsAllowed(result.ReleaseApplyTime) {
 		c.processWindow(result)
 	}
 
