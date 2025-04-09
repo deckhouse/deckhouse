@@ -44,12 +44,20 @@ Deckhouse CLI — это интерфейс командной строки дл
 
 ## Как установить Deckhouse CLI
 
-Начиная с версии 0.10 Deckhouse CLI, установить её можно с помощью [trdl](https://ru.trdl.dev/). Если установка выполняется внутри кластера, включите Deckhouse Tools и следуйте инструкциям интерфейса.
+Установить Deckhouse CLI возможно двумя способами:
 
-{% alert %}
+* Начиная с версии 0.10 доступна установка с помощью [trdl](https://ru.trdl.dev/). Такой способ позволяет непрерывно получать свежие версии утилиты со всеми доработками и исправлениями.
+  > Обратите внимание, что для установки через trdl необходим доступ в Интернет к tuf-репозиторию с утилитой. В кластере с закрытым окружением такой способ работать не будет!
+* Вручную скачав исполняемый файл и установив его в системе.
+
+### Установка с помощью trdl
+
+Начиная с версии 0.10 Deckhouse CLI установить её можно с помощью [trdl](https://ru.trdl.dev/).
+
+{% alert level="warning" %}
 Если у вас установлена версия ниже 0.10, то её необходимо предварительно удалить.
 
-Если вам нужно установить одну из версий ниже 0.10, воспользуйтесь [устаревшим способом установки](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.67/deckhouse-cli/#how-do-i-install-deckhouse-cli).
+Если вам нужно установить одну из версий ниже 0.10, воспользуйтесь [устаревшим способом установки](#установка-исполняемого-файла).
 {% endalert %}
 
 1. Установите [клиент trdl](https://ru.trdl.dev/quickstart.html#%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B0-%D0%BA%D0%BB%D0%B8%D0%B5%D0%BD%D1%82%D0%B0).
@@ -57,27 +65,24 @@ Deckhouse CLI — это интерфейс командной строки дл
 1. Добавьте репозиторий Deckhouse CLI в trdl:
 
    ```bash
-   URL=https://trrr.flant.dev/trdl-deckhouse-cli
-   ROOT_VERSION=0
-   ROOT_SHA512=$(curl -Ls ${URL}/root.json | sha512sum | tr -d '\-[:space:]\n')
-   REPO=trdl-d8
-   
+   URL=https://deckhouse.ru/downloads/deckhouse-cli-trdl
+   ROOT_VERSION=1
+   ROOT_SHA512=343bd5f0d8811254e5f0b6fe292372a7b7eda08d276ff255229200f84e58a8151ab2729df3515cb11372dc3899c70df172a4e54c8a596a73d67ae790466a0491
+   REPO=d8
+
    trdl add $REPO $URL $ROOT_VERSION $ROOT_SHA512
    ```
 
-1. Установите актуальный стабильный релиз:
+1. Установите последний стабильный выпуск утилиты `d8` и проверьте ее работоспособность:
 
    ```bash
-   trdl update $REPO $ROOT_VERSION stable
+   . $(trdl use d8 0 stable) && d8 --version
    ```
 
-1. Убедитесь, что исполняемый файл `d8` установлен и работоспособен:
+Если вы не хотите вызывать `. $(trdl use d8 0 stable)` перед каждым использованием Deckhouse CLI, добавьте строку `alias d8='trdl exec d8 0 stable -- "$@"'` в RC-файл вашей командной оболочки.
 
-   ```bash
-   . $(trdl use $REPO $ROOT_VERSION stable) && d8 --version
-   ```
+Готово, вы установили Deckhouse CLI.
 
-{% alert level="warning" %}
-Если вы используете macOS, вам может потребоваться удалить атрибут карантина с исполняемого файла, чтобы Gatekeeper не блокировал его.
-(`sudo xattr -d com.apple.quarantine /path/to/d8`)
-{% endalert %}
+### Установка исполняемого файла
+
+{% include d8-cli-install/main.liquid %}
