@@ -139,6 +139,7 @@ shell:
     echo 'eval "$(dhctl --completion-script-bash)"' >> /etc/bashrc
     echo '{{- $context.CI_COMMIT_TAG }}' > /deckhouse/version
     echo '{{- $context.Env | default "unknown" }}' > /deckhouse/edition
+
 {{- end }}
 
 
