@@ -25,7 +25,7 @@ lang: ru
 
 В подразделе «Обзор» представлена ключевая информация о кластере и его компонентах.
 
-![Web-интерфейс Console](../../images/console/console.png)
+![Web-интерфейс Console](../../images/console/console_main.png)
 
 **Основные элементы интерфейса:**
 
