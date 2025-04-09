@@ -118,7 +118,7 @@ spec:
           - name: UPMETER_DB_PATH
             value: "/db/downtime.db.sqlite"
           - name: UPMETER_RETENTION_DAYS
-            value: "548"
+            value: "396"
           - name: UPMETER_LISTEN_HOST
             value: 127.0.0.1
           - name: UPMETER_LISTEN_PORT
@@ -223,5 +223,5 @@ spec:
       storageClassName: {{ $storageClass }}
       resources:
         requests:
-          storage: 1Gi
+          storage: 2Gi
 {{- end }}
