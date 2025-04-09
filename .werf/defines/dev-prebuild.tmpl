@@ -86,7 +86,6 @@ ln -fs /usr/bin/vim-console /usr/bin/vi
 {{- define "dev_prebuild_docker_properties" }}
 imageSpec:
   config:
-    labels: { "EDITION": {{ .Env | default "unknown" | quote }} }
     env: { "MODULES_DIR": "/deckhouse/modules", "GLOBAL_HOOKS_DIR": "/deckhouse/global-hooks", "PYTHONPATH": "/deckhouse/python_lib", "LC_ALL": "C" }
 {{- end }}
 
@@ -95,6 +94,9 @@ imageSpec:
 {{- define "dev_image" }}
 image: dev
 fromImage: dev-prebuild
+imageSpec:
+  config:
+    labels: { "EDITION": {{ .Env | default "unknown" | quote }} }
 import:
 - image: images-digests
   add: /images_digests.json
