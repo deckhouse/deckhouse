@@ -82,11 +82,6 @@ Deckhouse CLI — это интерфейс командной строки дл
 
 Готово, вы установили Deckhouse CLI.
 
-{% alert level="warning" %}
-Если вы используете macOS, вам может потребоваться удалить атрибут карантина с исполняемого файла, чтобы Gatekeeper не блокировал его.
-(`sudo xattr -d com.apple.quarantine /path/to/d8`)
-{% endalert %}
-
 ### Установка исполняемого файла
 
 {% include d8-cli-install/main.liquid %}
