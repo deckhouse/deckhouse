@@ -18,6 +18,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+# check notification webhook message
 token=$(curl -XPOST  -s https://webhook.site/token | jq -r .uuid)
 echo "open https://webhook.site/#"'!'"/view/$token"
 
@@ -50,6 +51,7 @@ metadata:
     dryrun: "true"
   name: v1.66.0
 spec:
+  applyAfter: "2045-01-01T19:19:24Z"
   version: v1.66.0
 EOF
 
@@ -57,7 +59,8 @@ kubectl wait --for=jsonpath='{.status.phase}'=Pending deckhouserelease/v1.66.0
 kubectl wait --for=jsonpath='{.metadata.annotations.release\.deckhouse\.io/notified}'=true deckhouserelease/v1.66.0
 kubectl wait --for=jsonpath='{.metadata.annotations.release\.deckhouse\.io/notification-time-shift}'=true deckhouserelease/v1.66.0
 
-# check notification webhook message
+
+
 raw=$(curl -s https://webhook.site/token/$token/request/latest)
 uuid=$(jq -r .uuid <<< "${raw}")
 content=$(jq -r .content <<< "${raw}")
@@ -69,11 +72,11 @@ else
   exit 1;
 fi
 # delete request
-#curl -s -X DELETE https://webhook.site/token/29ef9a7e-4550-43a2-b04b-ed685ce6f3ce/request/$uuid > /dev/null
+# curl -s -X DELETE https://webhook.site/token/$token/request/$uuid > /dev/null
 # stop check webhook
 
 msg=$(kubectl get deckhouserelease/v1.66.0 -o jsonpath='{.status.message}')
-if [[ "$msg" != Release\ is\ postponed,\ waiting\ for\ the\ update\ window\ until* ]]; then
+if [[ "$msg" != Release\ is\ postponed,\ waiting\ for\ the\ update\ window* ]]; then
 	echo "Release message invalid: $msg"
 	exit 1;
 fi
