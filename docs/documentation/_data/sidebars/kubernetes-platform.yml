@@ -76,7 +76,23 @@ entries:
             - title:
                 en: Platform update
                 ru: Обновление платформы
-              url: /admin/platform-update.html
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /admin/configuration/update/
+                - title:
+                    en: Configuring updates
+                    ru: Настройка обновлений
+                  url: /admin/configuration/update/configuration.html
+                - title:
+                    en: Configuring notifications
+                    ru: Настройка уведомлений
+                  url: /admin/configuration/update/notifications.html
+                - title:
+                    en: FAQ
+                    ru: FAQ
+                  url: /admin/configuration/update/faq.html
             - title:
                 en: High reliability and availability
                 ru: Высокая надежность и доступность
