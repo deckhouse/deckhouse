@@ -19,7 +19,7 @@ aws:
 azure:
   namespace: hashicorp
   type: azurerm
-  version: 2.36.0
+  version: 3.117.1
   artifact: terraform-provider-azure
   artifactBinary: terraform-provider-azurerm
   destinationBinary: terraform-provider-azurerm
