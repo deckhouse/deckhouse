@@ -1,4 +1,4 @@
-{{- $containerd_version := "2.0.4" }}
+{{- $containerd_version := "2.1.0-beta.0" }}
 {{- $image_version := $containerd_version | replace "." "-" }}
 {{- $runc_version := "1.2.6" }}
 ---
