@@ -33,3 +33,8 @@ import:
 imageSpec:
   config:
     labels: { "distro": "all", "version": "all", "growpart": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]

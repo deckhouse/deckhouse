@@ -22,7 +22,7 @@ shell:
   - rm -rf /src/docker_auth/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-{{ $image_version }}
-from: {{ .Images.BASE_SCRATCH }}
+from: {{ $.Images.BASE_SCRATCH }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
   add: /
@@ -36,6 +36,11 @@ import:
 imageSpec:
   config:
     labels: { "distro": "all", "version": "all", "docker": "{{ $docker_version }}", "cesanta_auth": "{{ $docker_auth_version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
 final: false

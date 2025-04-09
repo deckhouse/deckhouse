@@ -1,5 +1,6 @@
 name: deckhouse-tools
 weight: 800
+namespace: d8-system
 
 requirements:
   bootstrapped: true

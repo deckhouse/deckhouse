@@ -4482,6 +4482,23 @@ alerts:
         Module {{ $labels.moduleName }} is matched by the deprecated update policy {{ $labels.updatePolicy }}.
       severity: "4"
       markupFormat: markdown
+    - name: ModuleIsInUnmanagedMode
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        Module `{{ $labels.moduleName }}` is running in unmanaged mode. In this mode, its state is not reconciled, which prevents configuration or hook changes from being applied automatically.
+
+        To switch the module back to normal mode, edit the corresponding ModuleConfig resource with the following command:
+
+        ```bash
+        kubectl patch moduleconfig {{ $labels.name }} --type=json -p='[{"op": "remove", "path": "/spec/managementState"}]'
+        ```
+      summary: |
+        Module {{ $labels.moduleName }} is running in unmanaged mode.
+      severity: "6"
+      markupFormat: markdown
     - name: ModuleReleaseIsBlockedByRequirements
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
       moduleUrl: 340-monitoring-deckhouse
@@ -5258,6 +5275,97 @@ alerts:
         NTP daemon on the node {{$labels.node}} haven't synchronized time for too long.
       severity: "5"
       markupFormat: markdown
+    - name: OpenVPNClientCertificateExpired
+      sourceFile: modules/500-openvpn/monitoring/prometheus-rules/ovpn-admin.yaml
+      moduleUrl: 500-openvpn
+      module: openvpn
+      edition: ce
+      description: |-
+        There are {{ $value }} expired OpenVPN client certificates.
+
+        Renew the expired certificates if needed.
+      summary: |
+        Some OpenVPN client certificates have expired.
+      severity: "4"
+      markupFormat: markdown
+    - name: OpenVPNServerCACertificateExpired
+      sourceFile: modules/500-openvpn/monitoring/prometheus-rules/ovpn-admin.yaml
+      moduleUrl: 500-openvpn
+      module: openvpn
+      edition: ce
+      description: |-
+        The OpenVPN CA certificate has expired.
+
+        To restore VPN functionality, renew the expired certificate as soon as possible.
+      summary: |
+        OpenVPN CA certificate has expired.
+      severity: "4"
+      markupFormat: markdown
+    - name: OpenVPNServerCACertificateExpiringInAWeek
+      sourceFile: modules/500-openvpn/monitoring/prometheus-rules/ovpn-admin.yaml
+      moduleUrl: 500-openvpn
+      module: openvpn
+      edition: ce
+      description: |-
+        The OpenVPN CA certificate will expire in less than 7 days.
+
+        Immediate renewal is recommended.
+      summary: |
+        OpenVPN CA certificate expires in less than 7 days.
+      severity: "5"
+      markupFormat: markdown
+    - name: OpenVPNServerCACertificateExpiringSoon
+      sourceFile: modules/500-openvpn/monitoring/prometheus-rules/ovpn-admin.yaml
+      moduleUrl: 500-openvpn
+      module: openvpn
+      edition: ce
+      description: |-
+        The OpenVPN CA certificate will expire in less than 30 days.
+
+        Renew the CA certificate if necessary.
+      summary: |
+        OpenVPN CA certificate expires in less than 30 days.
+      severity: "5"
+      markupFormat: markdown
+    - name: OpenVPNServerCertificateExpired
+      sourceFile: modules/500-openvpn/monitoring/prometheus-rules/ovpn-admin.yaml
+      moduleUrl: 500-openvpn
+      module: openvpn
+      edition: ce
+      description: |-
+        The OpenVPN server certificate has expired.
+
+        To restore VPN functionality, renew the expired certificate as soon as possible.
+      summary: |
+        OpenVPN server certificate has expired.
+      severity: "4"
+      markupFormat: markdown
+    - name: OpenVPNServerCertificateExpiringInAWeek
+      sourceFile: modules/500-openvpn/monitoring/prometheus-rules/ovpn-admin.yaml
+      moduleUrl: 500-openvpn
+      module: openvpn
+      edition: ce
+      description: |-
+        The OpenVPN server certificate will expire in less than 7 days.
+
+        Immediate renewal is recommended.
+      summary: |
+        OpenVPN server certificate expires in less than 7 days.
+      severity: "5"
+      markupFormat: markdown
+    - name: OpenVPNServerCertificateExpiringSoon
+      sourceFile: modules/500-openvpn/monitoring/prometheus-rules/ovpn-admin.yaml
+      moduleUrl: 500-openvpn
+      module: openvpn
+      edition: ce
+      description: |-
+        The OpenVPN server certificate will expire in less than 30 days.
+
+        Renew the certificate if necessary.
+      summary: |
+        OpenVPN server certificate expires in less than 30 days.
+      severity: "5"
+      markupFormat: markdown
     - name: OperationPolicyViolation
       sourceFile: modules/015-admission-policy-engine/monitoring/prometheus-rules/audit.yaml
       moduleUrl: 015-admission-policy-engine
@@ -5718,6 +5826,18 @@ alerts:
         The sampling limit is close.
       severity: "7"
       markupFormat: markdown
+    - name: UnmetCloudConditions
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/cloud-data-discovery.tpl
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        Cloud data discoverer checks if cloud conditions are met.
+          Name: {{ $labels.name }}, Message: {{ $labels.message }}
+      summary: |
+        Cloud data discoverer checks cloud conditions
+      severity: "6"
+      markupFormat: markdown
     - name: UnsupportedContainerRuntimeVersion
       sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/cri-version.tpl
       moduleUrl: 340-monitoring-kubernetes
@@ -5760,6 +5880,7 @@ modules-having-alerts:
     - monitoring-ping
     - node-manager
     - okmeter
+    - openvpn
     - operator-prometheus
     - prometheus
     - runtime-audit-engine

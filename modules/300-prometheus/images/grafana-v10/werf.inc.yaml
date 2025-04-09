@@ -1,6 +1,7 @@
 ---
 {{ $grafanaVersion := "10.4.15" }}
 {{ $bundledPlugins := "petrslavotinek-carpetplot-panel,vonage-status-panel,btplc-status-dot-panel,natel-plotly-panel,savantly-heatmap-panel,grafana-piechart-panel,grafana-worldmap-panel,esnet-matrix-panel" }}
+{{ $gfPathPlugins := "/usr/share/grafana/plugins-bundled" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
 final: false
@@ -118,7 +119,7 @@ shell:
     GF_PATHS_DATA="/var/lib/grafana" \
     GF_PATHS_HOME="/usr/share/grafana" \
     GF_PATHS_LOGS="/var/log/grafana" \
-    GF_PATHS_PLUGINS="/usr/share/grafana/plugins-bundled" \
+    GF_PATHS_PLUGINS="{{ $gfPathPlugins }}" \
     GF_PATHS_PROVISIONING="/etc/grafana/provisioning"
   - cd $GF_PATHS_HOME
   - |
@@ -177,5 +178,5 @@ imageSpec:
   config:
     entrypoint: ["/usr/local/bin/entrypoint"]
     workingDir: "/usr/share/grafana"
-    env: { "PATH": "/usr/share/grafana/bin:$PATH", "GF_PATHS_CONFIG": "/etc/grafana/grafana.ini", "GF_PATHS_DATA": "/var/lib/grafana", "GF_PATHS_HOME": "/usr/share/grafana", "GF_PATHS_LOGS": "/var/log/grafana", "GF_PATHS_PLUGINS": "/usr/share/grafana/plugins-bundled", "GF_PATHS_PROVISIONING": "/etc/grafana/provisioning", "BUNDLED_PLUGINS_PATH": "${GF_PATHS_PLUGINS}" }
+    env: { "PATH": "/usr/share/grafana/bin:$PATH", "GF_PATHS_CONFIG": "/etc/grafana/grafana.ini", "GF_PATHS_DATA": "/var/lib/grafana", "GF_PATHS_HOME": "/usr/share/grafana", "GF_PATHS_LOGS": "/var/log/grafana", "GF_PATHS_PLUGINS": "{{ $gfPathPlugins }}", "GF_PATHS_PROVISIONING": "/etc/grafana/provisioning", "BUNDLED_PLUGINS_PATH": "{{ $gfPathPlugins }}" }
     expose: ["3000"]

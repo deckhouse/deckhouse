@@ -1,0 +1,18 @@
+deckhouse-controller:
+  features:
+    - summary: restore releases only by deckhouse-controller and in deployed state
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12858
+  fixes:
+    - summary: fix suspend release
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12874
+node-manager:
+  fixes:
+    - summary: handle_node_template hook ignore metallb label
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12868
+runtime-audit-engine:
+  fixes:
+    - summary: >-
+        copy falcosecurity_falcosidekick_falco_events_total metric to falco_events for backward
+        compatibility
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12873
+

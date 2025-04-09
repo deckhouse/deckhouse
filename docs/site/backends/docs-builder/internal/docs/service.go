@@ -23,7 +23,7 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-var docConfValuesRegexp = regexp.MustCompile(`^openapi/doc-.*-config-values\.yaml$`)
+var docConfValuesRegexp = regexp.MustCompile(`^openapi/(doc-.*-config-values\.yaml|conversions/v\d+\.yaml)$`)
 
 // /app/hugo/{data||content}/modules/{module}/{channel}/{brokenFile}:53:1
 // $1 - Module dir path /app/hugo/{data||content}/modules/{module}
