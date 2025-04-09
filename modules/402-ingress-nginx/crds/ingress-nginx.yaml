@@ -68,7 +68,7 @@ spec:
                     One of the supported NGINX Ingress controller versions.
 
                     **By default**: the version in the [module settings](configuration.html#parameters-defaultcontrollerversion) is used.
-                  enum: ['1.6','1.9','1.10']
+                  enum: ["1.9", "1.10", "1.12"]
                 enableIstioSidecar:
                   type: boolean
                   description: |
@@ -103,8 +103,6 @@ spec:
                   default: false
                   description: |
                     Enables the annotation validation feature.
-
-                    Requires a controller of 1.9 version.
                 nodeSelector:
                   type: object
                   additionalProperties:
@@ -235,7 +233,7 @@ spec:
                         If the parameter is not set, the connection over HTTP cannot be established.
 
                         This parameter is mandatory if `httpsPort` is not set.
-                      x-doc-examples: ['80']
+                      x-doc-examples: [80]
                     httpsPort:
                       type: integer
                       description: |
@@ -244,7 +242,7 @@ spec:
                         If the parameter is not set, the connection over HTTPS cannot be established.
 
                         This parameter is mandatory if `httpPort` is not set.
-                      x-doc-examples: ['443']
+                      x-doc-examples: [443]
                       x-kubernetes-validations:
                         - message: .spec.hostPort.httpsPort can't be 6443, it's reserved for kube-apiserver
                           rule: 'self != 6443'
@@ -278,7 +276,7 @@ spec:
                         If the parameter is not set, the connection over HTTP cannot be established.
 
                         This parameter is mandatory if `httpsPort` is not set.
-                      x-doc-examples: ['80']
+                      x-doc-examples: [80]
                     httpsPort:
                       type: integer
                       description: |
@@ -287,7 +285,7 @@ spec:
                         If the parameter is not set, the connection over HTTPS cannot be established.
 
                         This parameter is mandatory if `httpPort` is not set.
-                      x-doc-examples: ['443']
+                      x-doc-examples: [443]
                       x-kubernetes-validations:
                         - message: .spec.hostPortWithProxyProtocol.httpsPort can't be 6443, it's reserved for kube-apiserver
                           rule: 'self != 6443'
@@ -560,9 +558,6 @@ spec:
                     inlet:
                       enum: ['HostWithFailover']
                     hostWithFailover: {}
-              x-kubernetes-validations:
-                - message: .spec.controllerVersion should be explicitly set to 1.9 for .spec.annotationValidationEnabled to make effect
-                  rule: 'self.annotationValidationEnabled == true ? self.controllerVersion == ''1.9'': true'
       additionalPrinterColumns:
         - jsonPath: .spec.ingressClass
           name: Ingress Class
@@ -664,7 +659,7 @@ spec:
                     One of the supported NGINX Ingress controller versions.
 
                     **By default**: the version in the [module settings](configuration.html#parameters-defaultcontrollerversion) is used.
-                  enum: ['1.9','1.10']
+                  enum: ["1.9", "1.10", "1.12"]
                 enableIstioSidecar:
                   type: boolean
                   description: |
@@ -861,7 +856,7 @@ spec:
                         If the parameter is not set, the connection over HTTP cannot be established.
 
                         This parameter is mandatory if `httpsPort` is not set.
-                      x-doc-examples: ['80']
+                      x-doc-examples: [80]
                     httpsPort:
                       type: integer
                       description: |
@@ -870,7 +865,7 @@ spec:
                         If the parameter is not set, the connection over HTTPS cannot be established.
 
                         This parameter is mandatory if `httpPort` is not set.
-                      x-doc-examples: ['443']
+                      x-doc-examples: [443]
                       x-kubernetes-validations:
                         - message: .spec.hostPort.httpsPort can't be 6443, it's reserved for kube-apiserver
                           rule: 'self != 6443'
@@ -904,7 +899,7 @@ spec:
                         If the parameter is not set, the connection over HTTP cannot be established.
 
                         This parameter is mandatory if `httpsPort` is not set.
-                      x-doc-examples: ['80']
+                      x-doc-examples: [80]
                     httpsPort:
                       type: integer
                       description: |
@@ -913,7 +908,7 @@ spec:
                         If the parameter is not set, the connection over HTTPS cannot be established.
 
                         This parameter is mandatory if `httpPort` is not set.
-                      x-doc-examples: ['443']
+                      x-doc-examples: [443]
                       x-kubernetes-validations:
                         - message: .spec.hostPortWithProxyProtocol.httpsPort can't be 6443, it's reserved for kube-apiserver
                           rule: 'self != 6443'
@@ -933,7 +928,7 @@ spec:
                         If the parameter is not set, the connection over HTTP cannot be established.
 
                         This parameter is mandatory if `httpsPort` is not set.
-                      x-doc-examples: ['80']
+                      x-doc-examples: [80]
                     httpsPort:
                       type: integer
                       description: |
@@ -942,7 +937,7 @@ spec:
                         If the parameter is not set, the connection over HTTPS cannot be established.
 
                         This parameter is mandatory if `httpPort` is not set.
-                      x-doc-examples: ['443']
+                      x-doc-examples: [443]
                       x-kubernetes-validations:
                         - message: .spec.hostPortWithSSLPassthrough.httpsPort can't be 6443, it's reserved for kube-apiserver
                           rule: 'self != 6443'
@@ -1247,8 +1242,8 @@ spec:
                       enum: ['HostWithFailover']
                     hostWithFailover: {}
               x-kubernetes-validations:
-                - message: .spec.controllerVersion should be explicitly set to 1.10 for .spec.enableHTTP3 to make effect
-                  rule: 'self.enableHTTP3 == true ? self.controllerVersion == ''1.10'': true'
+                - message: .spec.controllerVersion should be explicitly set to 1.10 or 1.12 for .spec.enableHTTP3 to make effect
+                  rule: 'self.enableHTTP3 == true ? self.controllerVersion in [''1.10'', ''1.12'']: true'
       additionalPrinterColumns:
         - jsonPath: .spec.ingressClass
           name: Ingress Class

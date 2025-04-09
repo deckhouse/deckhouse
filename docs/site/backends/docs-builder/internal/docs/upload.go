@@ -136,6 +136,7 @@ func (svc *Service) getLocalPath(moduleName, channel, fileName string) (string, 
 
 	if strings.HasPrefix(fileName, "crds") ||
 		fileName == "openapi" ||
+		fileName == "openapi/conversions" ||
 		fileName == "openapi/config-values.yaml" ||
 		docConfValuesRegexp.MatchString(fileName) {
 		return filepath.Join(svc.baseDir, modulesDir, moduleName, channel, fileName), true

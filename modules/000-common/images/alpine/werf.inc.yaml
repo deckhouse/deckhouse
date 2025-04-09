@@ -1,6 +1,0 @@
-# Depricated
-# You need to use the common/init image
-# TODO: remove after dh 1.70
----
-image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/init

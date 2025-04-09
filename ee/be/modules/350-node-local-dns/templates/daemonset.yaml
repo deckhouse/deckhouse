@@ -86,7 +86,7 @@ spec:
           runAsNonRoot: false
           runAsUser: 0
         image: {{ include "helm_lib_module_image" (list . "coredns") }}
-        command: ["/bin/bash", "-l", "-c", "/start.sh"]
+        command: ["/coredns-helper", "-action=start"]
         env:
         - name: KUBE_CLUSTER_DOMAIN
           value: {{ .Values.global.discovery.clusterDomain | quote }}
@@ -111,7 +111,8 @@ spec:
 {{- else }}
           exec:
             command:
-            - /liveness.sh
+            - /coredns-helper
+            - -action=liveness
           periodSeconds: 20
           timeoutSeconds: 7
 {{- end }}
@@ -123,7 +124,8 @@ spec:
 {{- else }}
           exec:
             command:
-            - /readiness.sh
+            - /coredns-helper
+            - -action=readiness
 {{- end }}
           periodSeconds: 5
           timeoutSeconds: 7

@@ -27,6 +27,24 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
+func cleanupDeckhousePods(ctx context.Context, kubeCl *client.KubernetesClient, pods *v1.PodList) *v1.PodList {
+	d8Pods := &v1.PodList{}
+
+	for _, pod := range pods.Items {
+		switch pod.Status.Phase {
+		case v1.PodSucceeded, v1.PodFailed, v1.PodUnknown:
+			if err := kubeCl.CoreV1().Pods(pod.Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{}); err != nil {
+				log.DebugF("Failed to delete pod %s. err: %v", pod.Name, err)
+			} else {
+				log.DebugF("Pod %s was successfully deleted", pod.Name)
+			}
+		default:
+			d8Pods.Items = append(d8Pods.Items, pod)
+		}
+	}
+	return d8Pods
+}
+
 func GetPod(ctx context.Context, kubeCl *client.KubernetesClient, leaderElectionLeaseName types.NamespacedName) (*v1.Pod, error) {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
@@ -36,6 +54,7 @@ func GetPod(ctx context.Context, kubeCl *client.KubernetesClient, leaderElection
 		log.DebugF("Cannot get deckhouse pod. Got error: %v", err)
 		return nil, ErrListPods
 	}
+	pods = cleanupDeckhousePods(ctx, kubeCl, pods)
 
 	if len(pods.Items) == 0 {
 		log.DebugF("Cannot get deckhouse pod. Count of returned pods is zero")

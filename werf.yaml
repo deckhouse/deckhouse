@@ -40,13 +40,7 @@ cleanup:
 
 ---
 # Base Images
-{{- $_ := set . "Images" (.Files.Get "candi/image_versions.yml" | fromYaml) }}
-  {{- range $k, $v := .Images }}
-    {{ $baseImagePath := (printf "%s%s" $.Images.REGISTRY_PATH (trimSuffix "/" $v)) }}
-    {{- if ne $k "REGISTRY_PATH" }}
-      {{- $_ := set $.Images $k $baseImagePath }}
-    {{- end }}
-  {{- end }}
+{{- include "parse_base_images_map" . }}
 ---
 # Version Map
 {{- $versionMap := dict }}
@@ -61,7 +55,7 @@ cleanup:
 
 {{- $_ := set . "CandiVersionMap" $versionMap }}
 
-# do not forget change /deckhouse-controller/files/kubectl_wrapper.sh
+# do not forget change /deckhouse-controller/files/kubectl_wrapper.sh and /deckhouse-controller/files/bashrc
 {{- $_ := set . "kubectlForBaseComponents" (list "1.29" "1.31") }}
 ---
 # Terraform Versions

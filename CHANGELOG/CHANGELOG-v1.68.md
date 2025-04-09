@@ -4,6 +4,7 @@
 
 
  - All data sources created with the GrafanaAdditionalDatasource custom resource will have their UIDs changed.
+ - Ingress-nginx pods will restart. The validation of the generated NGINX configuration during the validation of `Ingress` resources is disabled until finding a way of running validations safely.
  - NGINX Ingress controller pods will be restarted.
 
 ## Features
@@ -11,6 +12,7 @@
 
  - **[candi]** Add a new layout for HuaweiCloud provider with support for VPC peering connections. [#12224](https://github.com/deckhouse/deckhouse/pull/12224)
  - **[candi]** Added a way to manage node labels from local files. [#10905](https://github.com/deckhouse/deckhouse/pull/10905)
+ - **[cert-manager]** Bump cert-manager version up to 1.17.1. This fixes acme confirmation for cloudflare provider. [#12808](https://github.com/deckhouse/deckhouse/pull/12808)
  - **[cloud-provider-aws]** Bumped the `aws-node-termination-handler` version to `1.22.1`. [#10861](https://github.com/deckhouse/deckhouse/pull/10861)
  - **[cloud-provider-aws]** Added an option to specify your IAM role. [#10439](https://github.com/deckhouse/deckhouse/pull/10439)
  - **[cni-cilium]** DVP-specific feature that allows having two pods in the same cluster with equal IP addresses. [#11138](https://github.com/deckhouse/deckhouse/pull/11138)
@@ -58,11 +60,15 @@
  - **[cloud-provider-vcd]** Backported a fix to `vcd-csi-plugin-legacy`. [#10776](https://github.com/deckhouse/deckhouse/pull/10776)
  - **[cloud-provider-vsphere]** CVE fix cloud-provider-vsphere. [#12125](https://github.com/deckhouse/deckhouse/pull/12125)
  - **[cloud-provider-vsphere]** Bump go, use images, src-artifact. [#11628](https://github.com/deckhouse/deckhouse/pull/11628)
+ - **[cloud-provider-zvirt]** fix zvirt-csi-driver patching (token refresh fix patch) [#12885](https://github.com/deckhouse/deckhouse/pull/12885)
  - **[cloud-provider-zvirt]** Removed `DisksMeta` from `cloud-data-discoverer` to prevent possible crashes. [#11511](https://github.com/deckhouse/deckhouse/pull/11511)
  - **[cloud-provider-zvirt]** Fixed a bug that prevented zVirt SDK API token from refreshing upon expiration. [#11040](https://github.com/deckhouse/deckhouse/pull/11040)
  - **[cni-cilium]** L2 neigh discovery (arp flood) disabled. [#12078](https://github.com/deckhouse/deckhouse/pull/12078)
  - **[common]** Fixed a security vulnerability in `task`. [#11572](https://github.com/deckhouse/deckhouse/pull/11572)
  - **[control-plane-manager]** Fixed a security vulnerability. [#11536](https://github.com/deckhouse/deckhouse/pull/11536)
+ - **[deckhouse]** Fix checking automatic kubernetes version in managed clusters. [#12685](https://github.com/deckhouse/deckhouse/pull/12685)
+ - **[deckhouse]** Explicitly set ports in d8-kube-dns deployment. [#12658](https://github.com/deckhouse/deckhouse/pull/12658)
+ - **[deckhouse]** Set EnabledByModuleConfig condition by default for modules without this condition. [#12558](https://github.com/deckhouse/deckhouse/pull/12558)
  - **[deckhouse]** Add initial module config validation. [#12465](https://github.com/deckhouse/deckhouse/pull/12465)
  - **[deckhouse]** Add initial module config validation. [#12227](https://github.com/deckhouse/deckhouse/pull/12227)
  - **[deckhouse]** Fix module.yaml ignored when weight == 0. [#12254](https://github.com/deckhouse/deckhouse/pull/12254)
@@ -81,6 +87,8 @@
  - **[extended-monitoring]** Fixed security vulnerabilities in `events-exporter`. [#11442](https://github.com/deckhouse/deckhouse/pull/11442)
  - **[extended-monitoring]** Fixed security vulnerabilities in `extended-monitoring-exporter`. [#11425](https://github.com/deckhouse/deckhouse/pull/11425)
  - **[extended-monitoring]** Fixed security vulnerabilities in `image-availability-exporter`. [#11336](https://github.com/deckhouse/deckhouse/pull/11336)
+ - **[ingress-nginx]** latest CVE fixes backported. [#12746](https://github.com/deckhouse/deckhouse/pull/12746)
+    Ingress-nginx pods will restart. The validation of the generated NGINX configuration during the validation of `Ingress` resources is disabled until finding a way of running validations safely.
  - **[ingress-nginx]** Fixed graceful shutdown handling for Ingress controller pods. [#11656](https://github.com/deckhouse/deckhouse/pull/11656)
     NGINX Ingress controller pods will be restarted.
  - **[ingress-nginx]** Fixed a bug related to dynamic libraries in the NGINX Ingress controller pods. [#11644](https://github.com/deckhouse/deckhouse/pull/11644)
@@ -101,6 +109,8 @@
  - **[network-gateway]** Fixed security context settings for static pods and iptables containers. [#11309](https://github.com/deckhouse/deckhouse/pull/11309)
  - **[node-local-dns]** Fix module dependencies. The `monitoring-applications` module was affected and disabled by the enabled script. [#12428](https://github.com/deckhouse/deckhouse/pull/12428)
  - **[node-local-dns]** Fixed security context settings for static pods and iptables containers. [#11309](https://github.com/deckhouse/deckhouse/pull/11309)
+ - **[node-manager]** partial rollback of changes in images cluster-autoscaler [#12910](https://github.com/deckhouse/deckhouse/pull/12910)
+ - **[node-manager]** partial rollback of changes in images cluster-autoscaler [#12854](https://github.com/deckhouse/deckhouse/pull/12854)
  - **[node-manager]** fix autoscaler RBAC for zvirt and dynamix [#11236](https://github.com/deckhouse/deckhouse/pull/11236)
  - **[node-manager]** Fixed CVE in images cluster-autoscaler and machine-controller-manager. [#12024](https://github.com/deckhouse/deckhouse/pull/12024)
  - **[node-manager]** Deleted `cert-manager.io/inject-ca-from` annotation from CAPI `ValidatingWebhookConfiguration`. [#11666](https://github.com/deckhouse/deckhouse/pull/11666)
@@ -132,6 +142,7 @@
  - **[registrypackages]** CVE update ec2-describe-tags. [#12115](https://github.com/deckhouse/deckhouse/pull/12115)
  - **[registrypackages]** Bumped the `docker_auth` version in in `docker-registry`. [#11600](https://github.com/deckhouse/deckhouse/pull/11600)
  - **[registrypackages]** Fixed security vulnerabilities in `crictl`. [#11523](https://github.com/deckhouse/deckhouse/pull/11523)
+ - **[runtime-audit-engine]** copy falcosecurity_falcosidekick_falco_events_total metric to falco_events for backward compatibility [#12873](https://github.com/deckhouse/deckhouse/pull/12873)
  - **[runtime-audit-engine]** Fixed security vulnerabilities in `k8s-metacollector` and `rules-loader`. [#11581](https://github.com/deckhouse/deckhouse/pull/11581)
  - **[service-with-healthchecks]** Fixed several issues. [#12272](https://github.com/deckhouse/deckhouse/pull/12272)
  - **[terraform-manager]** CVE fix dynamix cloud provider and bump go version. [#12111](https://github.com/deckhouse/deckhouse/pull/12111)
@@ -156,6 +167,7 @@
  - **[admission-policy-engine]** Fixes policies schemas. Allow to exclude namespaces or use only object labels. [#12292](https://github.com/deckhouse/deckhouse/pull/12292)
  - **[admission-policy-engine]** Fixed security vulnerabilities and updated the `trivy` build. [#11568](https://github.com/deckhouse/deckhouse/pull/11568)
  - **[admission-policy-engine]** Bumped `gatekeeper` and refactored the build. [#11356](https://github.com/deckhouse/deckhouse/pull/11356)
+ - **[candi]** Update Deckhouse CLI to 0.11.3 [#12691](https://github.com/deckhouse/deckhouse/pull/12691)
  - **[candi]** update d8-cli [#12104](https://github.com/deckhouse/deckhouse/pull/12104)
  - **[candi]** Bump patch versions of Kubernetes images: `v1.29.14`, `v1.30.1`, `v1.31.6` [#12081](https://github.com/deckhouse/deckhouse/pull/12081)
     Kubernetes control-plane components will restart, kubelet will restart.

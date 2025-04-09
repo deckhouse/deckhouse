@@ -23,8 +23,12 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-var docConfValuesRegexp = regexp.MustCompile(`^openapi/doc-.*-config-values\.yaml$`)
-var assembleErrorRegexp = regexp.MustCompile(`error building site: assemble: (\x1b\[1;36m)?"(?P<path>.+):(?P<line>\d+):(?P<column>\d+)"(\x1b\[0m)?:`)
+var docConfValuesRegexp = regexp.MustCompile(`^openapi/(doc-.*-config-values\.yaml|conversions/v\d+\.yaml)$`)
+
+// /app/hugo/{data||content}/modules/{module}/{channel}/{brokenFile}:53:1
+// $1 - Module dir path /app/hugo/{data||content}/modules/{module}
+// $2 - {module}
+var assembleErrorRegexp = regexp.MustCompile(`"(?P<base>.+?/modules/(?P<module>[^/]+))/(?P<path>.+?):(?P<line>\d+):(?P<column>\d+)"`)
 
 const (
 	modulesDir = "data/modules/"
