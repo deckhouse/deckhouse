@@ -100,6 +100,7 @@
 # . is dict with keys:
 #   rootContext - context with .Files
 #   CI_COMMIT_TAG - CI_COMMIT_TAG env
+#   Env           - werf env
 {{- define "installer_prepare_with_shell" }}
 {{- $context := . -}}
 {{- $rootContext := $context.rootContext -}}
@@ -137,7 +138,7 @@ shell:
 
     echo 'eval "$(dhctl --completion-script-bash)"' >> /etc/bashrc
     echo '{{- $context.CI_COMMIT_TAG }}' > /deckhouse/version
-
+    echo '{{- $context.Env | default "unknown" }}' > /deckhouse/edition
 {{- end }}
 
 
@@ -154,10 +155,12 @@ imageSpec:
 # render installer standalone setup script
 # . is dict with next params
 #   CI_COMMIT_TAG - CI_COMMIT_TAG env
+#   Env           - werf env
 {{- define "installer_standalone_setup_script" }}
 {{- $context := . -}}
 
 - echo '{{- $context.CI_COMMIT_TAG }}' > /image/deckhouse/version
+- echo '{{- $context.Env | default "unknown" }}' > /image/deckhouse/edition
 - cd /image
 - tar -czf /dhctl-{{- $context.CI_COMMIT_TAG }}.x86_64.tar.gz *
 
