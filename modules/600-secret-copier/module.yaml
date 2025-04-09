@@ -1,4 +1,5 @@
 name: secret-copier
+namespace: default
 weight: 600
 subsystems:
   - security

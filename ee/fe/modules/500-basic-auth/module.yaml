@@ -1,5 +1,6 @@
 name: basic-auth
 weight: 500
+namespace: kube-basic-auth
 
 requirements:
   bootstrapped: true

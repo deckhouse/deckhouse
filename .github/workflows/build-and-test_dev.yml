@@ -48,6 +48,11 @@ env:
   DECKHOUSE_PRIVATE_REPO: "${{secrets.DECKHOUSE_PRIVATE_REPO}}"
   # </template: git_source_envs>
 
+  # <template: dmt_envs>
+  DMT_METRICS_URL: "${{ secrets.DMT_METRICS_URL }}"
+  DMT_METRICS_TOKEN: "${{ secrets.DMT_METRICS_TOKEN }}"
+  # </template: dmt_envs>
+
 # Cancel in-progress jobs for the same PR (pull_request_target event) or for the same branch (push event).
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
@@ -1159,6 +1164,9 @@ jobs:
           ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_full_step>
       - name: DMT lint
+        env:
+          DMT_METRICS_URL: "${{ secrets.DMT_METRICS_URL }}"
+          DMT_METRICS_TOKEN: "${{ secrets.DMT_METRICS_TOKEN }}"
         run: |
           make dmt-lint
     # </template: tests_dmt_lint>
