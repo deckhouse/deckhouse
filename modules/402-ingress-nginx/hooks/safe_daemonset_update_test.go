@@ -24,7 +24,7 @@ import (
 )
 
 var _ = Describe("ingress-nginx :: hooks :: safe_daemonset_update ::", func() {
-	f := HookExecutionConfigInit(`{"ingressNginx":{"defaultControllerVersion": "1.9", "internal": {}}}`, "")
+	f := HookExecutionConfigInit(`{"ingressNginx":{"defaultControllerVersion": "1.10", "internal": {}}}`, "")
 	f.RegisterCRD("apps.kruise.io", "v1alpha1", "DaemonSet", true)
 
 	Context("Failover pods are ready, update postponed", func() {
