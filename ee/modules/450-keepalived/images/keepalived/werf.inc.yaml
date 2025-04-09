@@ -49,7 +49,7 @@ import:
   add: /empty
   to: /run
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- image: base/python
   add: /
   to: /
   includePaths:
