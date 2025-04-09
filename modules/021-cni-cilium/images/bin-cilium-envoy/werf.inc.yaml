@@ -31,6 +31,7 @@ shell:
   - git clone $(cat /run/secrets/SOURCE_REPO)/cilium/proxy.git /src/proxy
   - cd /src/proxy
   - git checkout {{ $ciliumProxyRev }}
+  - git apply --verbose /patches/*.patch
   - rm -rf /src/proxy/.git
   #
   - git clone {{ $.SOURCE_REPO }}/envoyproxy/envoy.git /src/envoy
