@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	userSecretNamePrefix = "registry-hook-user-"
+	userSecretNamePrefix = "registry-user-"
 	namespaceName        = "d8-system"
 )
 

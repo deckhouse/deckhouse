@@ -22,8 +22,6 @@ const (
 	userSecretTypeLabel = "system-registry-user"
 )
 
-var _ encodeDecodeSecret = &User{}
-
 type User struct {
 	users.User
 }
@@ -34,23 +32,4 @@ func (u *User) DecodeSecret(secret *corev1.Secret) error {
 	}
 
 	return u.DecodeSecretData(secret.Data)
-}
-
-func (u *User) EncodeSecret(secret *corev1.Secret) error {
-	if secret == nil {
-		return ErrSecretIsNil
-	}
-
-	secret.Type = userSecretType
-
-	initSecretLabels(secret)
-	secret.Labels[LabelTypeKey] = userSecretTypeLabel
-
-	secret.Data = map[string][]byte{
-		"name":         []byte(u.UserName),
-		"password":     []byte(u.Password),
-		"passwordHash": []byte(u.HashedPassword),
-	}
-
-	return nil
 }

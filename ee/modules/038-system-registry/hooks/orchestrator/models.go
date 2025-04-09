@@ -5,10 +5,19 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 
 package orchestrator
 
-type registryConfig struct {
-	Mode       string
+import (
+	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
+)
+
+type Params struct {
+	Mode       registry_const.ModeType
 	ImagesRepo string
 	UserName   string
 	Password   string
 	TTL        string
+}
+
+type State struct {
+	Mode       registry_const.ModeType
+	TargetMode registry_const.ModeType
 }

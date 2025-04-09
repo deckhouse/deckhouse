@@ -11,7 +11,6 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
-	"gopkg.in/yaml.v3"
 	v1core "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -43,17 +42,6 @@ type registryNode struct {
 
 type registryState struct {
 	StaticPodVersion string
-	BashibleVersion  string
-	Messages         []string
-	PkiMode          string
-}
-
-type registryConfig struct {
-	Mode       string
-	ImagesRepo string
-	UserName   string
-	Password   string
-	TTL        string
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -100,41 +88,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: filterRegistryState,
 		},
-		{
-			Name:       "config",
-			ApiVersion: "v1",
-			Kind:       "Secret",
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{"registry-config"},
-			},
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{"d8-system"},
-				},
-			},
-			FilterFunc: filterRegistryConfig,
-		},
 	},
 }, handleRegistryStaticPods)
-
-func filterRegistryConfig(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var secret v1core.Secret
-
-	err := sdk.FromUnstructured(obj, &secret)
-	if err != nil {
-		return "", fmt.Errorf("failed to convert config secret to struct: %v", err)
-	}
-
-	config := registryConfig{
-		Mode:       string(secret.Data["mode"]),
-		ImagesRepo: string(secret.Data["imagesRepo"]),
-		UserName:   string(secret.Data["username"]),
-		Password:   string(secret.Data["password"]),
-		TTL:        string(secret.Data["ttl"]),
-	}
-
-	return config, nil
-}
 
 func filterRegistryState(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var secret v1core.Secret
@@ -146,19 +101,6 @@ func filterRegistryState(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 
 	ret := registryState{
 		StaticPodVersion: string(secret.Data["staticpod_version"]),
-		BashibleVersion:  string(secret.Data["bashible_version"]),
-		PkiMode:          string(secret.Data["pki_mode"]),
-	}
-
-	if messagesData, ok := secret.Data["messages"]; ok {
-		var messages []string
-
-		err := yaml.Unmarshal(messagesData, &messages)
-		if err != nil {
-			return "", fmt.Errorf("cannot unmashal messages: %w", err)
-		}
-
-		ret.Messages = messages
 	}
 
 	return ret, nil
@@ -246,11 +188,6 @@ func handleRegistryStaticPods(input *go_hook.HookInput) error {
 		return fmt.Errorf("cannot load state: %w", err)
 	}
 
-	config, err := helpers.SnapshotToSingle[registryConfig](input, "config")
-	if err != nil {
-		return fmt.Errorf("cannot load config: %w", err)
-	}
-
 	nodes, err := helpers.SnapshotToMap[string, registryNode](input, "nodes")
 	if err != nil {
 		return fmt.Errorf("cannot load nodes: %w", err)
@@ -268,10 +205,8 @@ func handleRegistryStaticPods(input *go_hook.HookInput) error {
 			}
 			node.Pods[name] = pod.registryStaticPod
 		} else {
-			msg := fmt.Sprintf("Node \"%v\" not found for static pod \"%v\"", pod.Node, name)
-			state.Messages = append(state.Messages, msg)
 			input.Logger.Warn(
-				msg,
+				"Node not found for static pod",
 				"node", pod.Node,
 				"pod", name,
 			)
@@ -282,26 +217,8 @@ func handleRegistryStaticPods(input *go_hook.HookInput) error {
 		state.StaticPodVersion = "unknown"
 	}
 
-	if state.BashibleVersion == "" {
-		state.BashibleVersion = "unknown"
-	}
-
 	input.Values.Set("systemRegistry.internal.state.nodes", nodes)
-	input.Values.Set("systemRegistry.internal.state.config", config)
 	input.Values.Set("systemRegistry.internal.state.staticpod_version", state.StaticPodVersion)
-	input.Values.Set("systemRegistry.internal.state.bashible_version", state.BashibleVersion)
-
-	if state.PkiMode != "" {
-		input.Values.Set("systemRegistry.internal.pki.mode", state.PkiMode)
-	}
-
-	if len(state.Messages) > 0 {
-		if len(state.Messages) > 30 {
-			state.Messages = state.Messages[:30]
-		}
-
-		input.Values.Set("systemRegistry.internal.state.messages", state.Messages)
-	}
 
 	return nil
 }

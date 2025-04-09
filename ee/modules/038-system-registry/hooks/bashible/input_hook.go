@@ -6,11 +6,6 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package bashible
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
-	"fmt"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -92,7 +87,7 @@ func BashibleInputHook(order float64, queue string) bool {
 		}
 
 		// Generate a version hash for the bashible input model
-		hash, err := hashStruct(bashibleInputModel)
+		hash, err := hooks_helpers.ComputeHash(bashibleInputModel)
 		if err != nil {
 			return err
 		}
@@ -102,17 +97,4 @@ func BashibleInputHook(order float64, queue string) bool {
 		bashible_input.Set(hookInput, bashibleInputModel)
 		return nil
 	})
-}
-
-func hashStruct(v any) (string, error) {
-	data, err := json.Marshal(v)
-	if err != nil {
-		return "", fmt.Errorf("failed to marshal JSON: %w", err)
-	}
-	return computeHash(data), nil
-}
-
-func computeHash(content []byte) string {
-	hash := sha256.Sum256(content)
-	return hex.EncodeToString(hash[:])
 }

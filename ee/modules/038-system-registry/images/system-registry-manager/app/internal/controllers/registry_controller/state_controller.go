@@ -141,42 +141,6 @@ func (sc *stateController) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
-	if err = sc.ensureUserSecret(
-		ctx,
-		state.UserROSecretName,
-		&sc.userRO,
-	); err != nil {
-		err = fmt.Errorf("cannot ensure secret %v for user: %w", state.UserROSecretName, err)
-		return ctrl.Result{}, err
-	}
-
-	if err = sc.ensureUserSecret(
-		ctx,
-		state.UserRWSecretName,
-		&sc.userRW,
-	); err != nil {
-		err = fmt.Errorf("cannot ensure secret %v for user: %w", state.UserRWSecretName, err)
-		return ctrl.Result{}, err
-	}
-
-	if err = sc.ensureUserSecret(
-		ctx,
-		state.UserMirrorPullerName,
-		&sc.userMirrorPuller,
-	); err != nil {
-		err = fmt.Errorf("cannot ensure secret %v for user: %w", state.UserMirrorPullerName, err)
-		return ctrl.Result{}, err
-	}
-
-	if err = sc.ensureUserSecret(
-		ctx,
-		state.UserMirrorPusherName,
-		&sc.userMirrorPusher,
-	); err != nil {
-		err = fmt.Errorf("cannot ensure secret %v for user: %w", state.UserMirrorPusherName, err)
-		return ctrl.Result{}, err
-	}
-
 	if err = sc.ensureGlobalSecrets(ctx); err != nil {
 		err = fmt.Errorf("cannot ensure global secrets: %w", err)
 		return ctrl.Result{}, err
@@ -254,88 +218,6 @@ func (sc *stateController) ensureGlobalSecrets(ctx context.Context) error {
 		log.Info("Secret was updated")
 	}
 
-	return nil
-}
-
-func (sc *stateController) ensureUserSecret(ctx context.Context, name string, currentValue **state.User) error {
-	log := ctrl.LoggerFrom(ctx).
-		WithValues("action", "EnsureUserSecret", "name", name)
-
-	var actualValue state.User
-
-	updated, err := ensureSecret(
-		ctx,
-		sc.Client,
-		name,
-		sc.Namespace,
-		func(_ context.Context, secret *corev1.Secret, found bool) error {
-			valid := true
-			if found {
-				if err := actualValue.DecodeSecret(secret); err != nil {
-					sc.logModuleWarning(
-						&log,
-						fmt.Sprintf("UserDecodeError: %v", name),
-						fmt.Sprintf("Cannot decode user data from secret: %v", err),
-					)
-
-					valid = false
-				} else {
-					valid = actualValue.IsValid()
-				}
-			}
-
-			if !found || !valid {
-				if currentValue != nil && *currentValue != nil {
-					sc.logModuleWarning(
-						&log,
-						fmt.Sprintf("UserSecretRestored: %v", name),
-						"Secret for user is invalid, restoring from controller's internal state",
-					)
-
-					actualValue = **currentValue
-				} else {
-					sc.logModuleWarning(
-						&log,
-						fmt.Sprintf("UserSecretGenerateNew: %v", name),
-						"User is invalid, generating new",
-					)
-
-					actualValue.UserName = name
-
-					if err := actualValue.GenerateNewPassword(); err != nil {
-						return fmt.Errorf("cannot generate password: %w", err)
-					}
-				}
-			}
-
-			if !actualValue.IsPasswordHashValid() {
-				if err := actualValue.UpdatePasswordHash(); err != nil {
-					return fmt.Errorf("cannot update password hash: %w", err)
-				}
-
-				sc.logModuleWarning(
-					&log,
-					fmt.Sprintf("UserPasswordHashUpdated: %v", name),
-					"Password hash updated to correspond password",
-				)
-			}
-
-			if err := actualValue.EncodeSecret(secret); err != nil {
-				return fmt.Errorf("cannot encode to secret: %w", err)
-			}
-			return nil
-		},
-	)
-
-	if err != nil {
-		return fmt.Errorf("cannot ensure secret: %w", err)
-	}
-	if updated {
-		log.Info("Secret was updated")
-	}
-
-	// Save actual value
-	*currentValue = &actualValue
 	return nil
 }
 

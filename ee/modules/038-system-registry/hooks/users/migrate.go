@@ -69,30 +69,31 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	for _, secret := range secrets {
 		var newSecret v1core.Secret
 
-		newSecret.Name = fmt.Sprintf("%s-migrate", secret.Name)
-		newSecret.Type = secretType
-
-		newSecret.Labels = secret.Labels
-		if newSecret.Labels == nil {
-			newSecret.Labels = make(map[string]string)
+		labels := secret.Labels
+		if labels == nil {
+			labels = make(map[string]string)
 		}
-		newSecret.Labels["migrate"] = "yes"
+		labels["app.kubernetes.io/managed-by"] = "Helm"
 
-		newSecret.Annotations = secret.Annotations
-		newSecret.Data = secret.Data
+		obj := map[string]any{
+			"apiVersion": "v1",
+			"kind":       "Secret",
+			"metadata": map[string]any{
+				"name":        secret.Name,
+				"namespace":   secret.Namespace,
+				"annotations": secret.Annotations,
+				"labels":      labels,
+			},
+			"type": secretType,
+			"data": secret.Data,
+		}
 
 		input.Logger.Warn("Migrate", "name", secret.Name, "new_name", newSecret.Name)
 
-		/*
-			TODO:
+		_ = obj
 
-			run hooks by binding: 4 errors occurred:
-			* Create object: ///registry-user-mirror-puller-migrate: apiVersion '', kind '' is not supported by cluster:  "" not found
-			* Create object: ///registry-user-mirror-pusher-migrate: apiVersion '', kind '' is not supported by cluster:  "" not found
-			* Create object: ///registry-user-ro-migrate: apiVersion '', kind '' is not supported by cluster:  "" not found
-			* Create object: ///registry-user-rw-migrate: apiVersion '', kind '' is not supported by cluster:  "" not found
-		*/
-		// input.PatchCollector.CreateOrUpdate(&newSecret)
+		// input.PatchCollector.Delete("v1", "Secret", secret.Namespace, secret.Name)
+		// input.PatchCollector.Create(obj)
 	}
 
 	return nil
