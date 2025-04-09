@@ -92,7 +92,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			* Create object: ///registry-user-ro-migrate: apiVersion '', kind '' is not supported by cluster:  "" not found
 			* Create object: ///registry-user-rw-migrate: apiVersion '', kind '' is not supported by cluster:  "" not found
 		*/
-		//input.PatchCollector.CreateOrUpdate(&newSecret)
+		// input.PatchCollector.CreateOrUpdate(&newSecret)
 	}
 
 	return nil
