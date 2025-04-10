@@ -32,8 +32,8 @@ git_info:
     ref_full: ${{ steps.git_info.outputs.ref_full }}
     github_sha: ${{ steps.git_info.outputs.github_sha }}
     pr_number: ${{ steps.git_info.outputs.pr_number }}
-  # Skip the CI for automation PRs, e.g. changelog
-  if: ${{ github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
+  # Skip the CI for automation PRs, e.g. changelog, don't skip if Pull Request title contains "[run ci]".
+  if: ${{ contains(github.event.pull_request.title, '[run ci]') || github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
   steps:
     - id: git_info
       name: Get tag name and SHA
@@ -118,7 +118,7 @@ block-e2e-until-image-is-not-ready:
           if (!branchName) {
             branchName = githubAction.GetBranchNameFromContext(context);
           }
- 
+
           if (branchName) {
             let prNum = context.payload.inputs.issue_number;
             // if the pull request id is not found, search it by the branch name
@@ -175,8 +175,8 @@ pull_request_info:
     changes_docs: ${{ steps.changes.outputs.docs }}
     changes_not_markdown: ${{ steps.changes.outputs.not_markdown }}
 
-  # Skip pull_request and pull_request_target triggers for PRs authored by deckhouse-BOaTswain, e.g. changelog PRs.
-  if: ${{ ! (startsWith(github.event_name, 'pull_request') && github.event.pull_request.user.login == 'deckhouse-BOaTswain') }}
+  # Skip pull_request and pull_request_target triggers for PRs authored by deckhouse-BOaTswain, e.g. changelog PRs, don't skip if Pull Request title contains "[run ci]".
+  if: ${{ ! (startsWith(github.event_name, 'pull_request') && github.event.pull_request.user.login == 'deckhouse-BOaTswain' && !contains(github.event.pull_request.title, '[run ci]')) }}
   steps:
     - name: Get PR info for push trigger
       id: push_info
