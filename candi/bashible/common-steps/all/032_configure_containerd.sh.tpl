@@ -104,7 +104,7 @@ oom_score = 0
 
 [plugins]
   [plugins.'io.containerd.cri.v1.images']
-    snapshotter = "erofs"
+    snapshotter = "overlayfs"
     disable_snapshot_annotations = true
     discard_unpacked_layers = true
     max_concurrent_downloads = {{ $max_concurrent_downloads }}
@@ -179,6 +179,16 @@ oom_score = 0
       conf_template = ''
       ip_pref = ''
       use_internal_loopback = false
+
+  [plugins."io.containerd.snapshotter.v1.erofs"]
+      # Enable fsverity support for EROFS layers, default is false
+      enable_fsverity = true
+
+      # Optional: Additional mount options for overlayfs
+      ovl_mount_options = []
+
+  [plugins."io.containerd.service.v1.diff-service"]
+    default = ["erofs","walking"]
 
   [plugins."io.containerd.gc.v1.scheduler"]
     pause_threshold = 0.02
