@@ -578,7 +578,7 @@ function pre_bootstrap_static_setup() {
 function bootstrap_static() {
   >&2 echo "Run terraform to create nodes for Static cluster ..."
   pushd "$cwd"
-  
+
   terraform init -input=false -plugin-dir=/plugins || return $?
   terraform apply -state="${terraform_state_file}" -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
   popd
@@ -704,10 +704,11 @@ ENDSSH
   fi
 
   env b64_SSH_KEY="$(base64 -w0 "$ssh_private_key_path")" \
+    MASTER_USER="$ssh_user" MASTER_IP="$master_ip" \
     WORKER_REDOS_USER="$ssh_redos_user_worker" WORKER_REDOS_IP="$worker_redos_ip" \
     WORKER_OPENSUSE_USER="$ssh_opensuse_user_worker" WORKER_OPENSUSE_IP="$worker_opensuse_ip" \
     WORKER_ROSA_USER="$ssh_rosa_user_worker" WORKER_ROSA_IP="$worker_rosa_ip" \
-    envsubst '\${b64_SSH_KEY} \${WORKER_REDOS_USER} \${WORKER_REDOS_IP} \${WORKER_OPENSUSE_USER} \${WORKER_OPENSUSE_IP} \${WORKER_ROSA_USER} \${WORKER_ROSA_IP}' \
+    envsubst '\${b64_SSH_KEY} \${MASTER_USER} \${MASTER_IP} \${WORKER_REDOS_USER} \${WORKER_REDOS_IP} \${WORKER_OPENSUSE_USER} \${WORKER_OPENSUSE_IP} \${WORKER_ROSA_USER} \${WORKER_ROSA_IP}' \
     <"$cwd/resources.tpl.yaml" >"$cwd/resources.yaml"
 
   D8_MIRROR_USER="$(echo -n ${DECKHOUSE_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f1)"
@@ -747,7 +748,7 @@ EOF
        # cleanup
        rm -f /tmp/install-d8-and-pull-push-images.sh
        rm -rf d8
-           
+
        docker run -d --name='tinyproxy' --restart=always -p 8888:8888 -e ALLOWED_NETWORKS="127.0.0.1/8 10.0.0.0/8 192.168.0.1/8" mirror.gcr.io/kalaksi/tinyproxy:latest@sha256:561ef49fa0f0a9747db12abdfed9ab3d7de17e95c811126f11e026b3b1754e54
 ENDSSH
 
@@ -882,12 +883,13 @@ ENDSSH
   # Prepare resources.yaml for starting working node with CAPS
   # shellcheck disable=SC2016
   env b64_SSH_KEY="$(base64 -w0 "$ssh_private_key_path")" \
+      MASTER_USER="$ssh_user" MASTER_IP="$master_ip" \
       WORKER_REDOS_USER="$ssh_redos_user_worker" WORKER_REDOS_IP="$worker_redos_ip" \
       WORKER_OPENSUSE_USER="$ssh_opensuse_user_worker" WORKER_OPENSUSE_IP="$worker_opensuse_ip" \
       WORKER_ROSA_USER="$ssh_rosa_user_worker" WORKER_ROSA_IP="$worker_rosa_ip" \
-      envsubst '\${b64_SSH_KEY} \${WORKER_REDOS_USER} \${WORKER_REDOS_IP} \${WORKER_OPENSUSE_USER} \${WORKER_OPENSUSE_IP} \${WORKER_ROSA_USER} \${WORKER_ROSA_IP}' \
+      envsubst '\${b64_SSH_KEY} \${MASTER_USER} \${MASTER_IP} \${WORKER_REDOS_USER} \${WORKER_REDOS_IP} \${WORKER_OPENSUSE_USER} \${WORKER_OPENSUSE_IP} \${WORKER_ROSA_USER} \${WORKER_ROSA_IP}' \
       <"$cwd/resources.tpl.yaml" >"$cwd/resources.yaml"
-  
+
   # Bootstrap
   >&2 echo "Run dhctl bootstrap ..."
   for ((i=1; i<=$testRunAttempts; i++)); do
