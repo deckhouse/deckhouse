@@ -290,7 +290,7 @@ func WaitForPVDeletion(ctx context.Context, kubeCl *client.KubernetesClient) err
 
 		skipPVCount := len(skipPV)
 		if skipPVCount != 0 {
-			fmt.Printf("%d PersistentVolumes provided manually or with reclaimPolicy other than Delete left in the cluster\n", skipPVCount)
+			log.InfoF("%d PersistentVolumes provided manually or with reclaimPolicy other than Delete left in the cluster.Skipping...\n", skipPVCount)
 		}
 
 		count := len(filteredResources)
