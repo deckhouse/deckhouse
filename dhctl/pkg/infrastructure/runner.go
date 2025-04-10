@@ -440,6 +440,10 @@ func (r *Runner) Apply(ctx context.Context) error {
 
 				st, err := os.ReadFile(r.statePath)
 				if err != nil {
+					if os.IsNotExist(err) {
+						log.DebugF("File %s with state not found, Probably call apply with new resource. Skip check.", r.statePath)
+						return nil
+					}
 					return err
 				}
 
