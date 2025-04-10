@@ -16,10 +16,9 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/module-sdk/pkg/utils/ptr"
-
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/module-sdk/pkg/utils/ptr"
 )
 
 const (
