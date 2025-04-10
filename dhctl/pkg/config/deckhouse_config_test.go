@@ -133,7 +133,7 @@ spec:
 	})
 
 	t.Run("Forbid to use configOverrides", func(t *testing.T) {
-		metaConfig := generateMetaConfigForDeckhouseConfigTestWithErr(t, map[string]interface{}{
+		generateMetaConfigForDeckhouseConfigTestWithErr(t, map[string]interface{}{
 			"configOverrides": `
 configOverrides:
   istioEnabled: false
@@ -147,36 +147,24 @@ configOverrides:
     testString: aaaaa
 `,
 		})
-
-		_, err := PrepareDeckhouseInstallConfig(metaConfig)
-		require.Error(t, err)
 	})
 
 	t.Run("Forbid to use releaseChannel", func(t *testing.T) {
-		metaConfig := generateMetaConfigForDeckhouseConfigTestWithErr(t, map[string]interface{}{
+		generateMetaConfigForDeckhouseConfigTestWithErr(t, map[string]interface{}{
 			"releaseChannel": "Beta",
 		})
-
-		_, err := PrepareDeckhouseInstallConfig(metaConfig)
-		require.Error(t, err)
 	})
 
 	t.Run("Forbid to use bundle", func(t *testing.T) {
-		metaConfig := generateMetaConfigForDeckhouseConfigTestWithErr(t, map[string]interface{}{
+		generateMetaConfigForDeckhouseConfigTestWithErr(t, map[string]interface{}{
 			"bundle": "Default",
 		})
-
-		_, err := PrepareDeckhouseInstallConfig(metaConfig)
-		require.Error(t, err)
 	})
 
 	t.Run("Forbid to use logLevel", func(t *testing.T) {
-		metaConfig := generateMetaConfigForDeckhouseConfigTestWithErr(t, map[string]interface{}{
+		generateMetaConfigForDeckhouseConfigTestWithErr(t, map[string]interface{}{
 			"logLevel": "Info",
 		})
-
-		_, err := PrepareDeckhouseInstallConfig(metaConfig)
-		require.Error(t, err)
 	})
 
 	t.Run("Correct parse module configs", func(t *testing.T) {
