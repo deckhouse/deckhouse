@@ -1387,7 +1387,7 @@ jobs:
           python-version: '3.12.3'
 
       - name: Install dependencies
-        run: pip install ghapi=1.0.6 fastcore=1.7.28 kubernetes=32.0.1
+        run: pip install ghapi==1.0.6 fastcore==1.7.28 kubernetes==32.0.1
 
       - name: Prepare files to collect and deploy channels
         run: |
