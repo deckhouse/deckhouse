@@ -41,6 +41,10 @@ if ([{{ siteUrls }}].includes(window.location.hostname)) {
     window.yaParams = {"license-token": token};
     ym(metricId, 'params', window.yaParams || {});
   }
+
+  function reachGoal(goalMetric) {
+    ym(metricId, 'reachGoal', goalMetric)
+  }
 }
 
 </script>
