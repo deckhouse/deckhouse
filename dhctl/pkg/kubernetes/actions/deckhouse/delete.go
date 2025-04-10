@@ -279,22 +279,26 @@ func WaitForPVDeletion(ctx context.Context, kubeCl *client.KubernetesClient) err
 		// Skip PV's provided manually or with reclaimPolicy other than Delete
 		annotationKey := "pv.kubernetes.io/provisioned-by"
 		var filteredResources []v1.PersistentVolume
+		var skipPV []v1.PersistentVolume
 		for _, resource := range resources.Items {
-			if _, exists := resource.Annotations[annotationKey]; exists || resource.Spec.PersistentVolumeReclaimPolicy == v1.PersistentVolumeReclaimDelete {
+			if _, exists := resource.Annotations[annotationKey]; !exists || resource.Spec.PersistentVolumeReclaimPolicy != v1.PersistentVolumeReclaimDelete {
+				skipPV = append(skipPV, resource)
+			} else {
 				filteredResources = append(filteredResources, resource)
 			}
 		}
 
+		skipPVCount := len(skipPV)
+		if skipPVCount != 0 {
+			fmt.Printf("%d PersistentVolumes provided manually or with reclaimPolicy other than Delete left in the cluster\n", skipPVCount)
+		}
+
 		count := len(filteredResources)
 		if count != 0 {
-			var (
-				remainingPVs strings.Builder
-			)
-
+			remainingPVs := strings.Builder{}
 			for _, item := range resources.Items {
 				remainingPVs.WriteString(fmt.Sprintf("\t\t%s | %s\n", item.Name, item.Status.Phase))
 			}
-
 			return fmt.Errorf("%d PersistentVolumes left in the cluster\n%s", count, strings.TrimSuffix(remainingPVs.String(), "\n"))
 		}
 		log.InfoLn("All PersistentVolumes are deleted from the cluster")
