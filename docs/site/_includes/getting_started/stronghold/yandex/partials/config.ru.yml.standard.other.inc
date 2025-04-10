@@ -134,8 +134,8 @@ provider:
 masterNodeGroup:
   replicas: 1
   instanceClass:
-    cores: 4
-    memory: 8192
+    cores: 8
+    memory: 16384
     # [<en>] Yandex Cloud image ID. It is recommended to use the most fresh Ubuntu 22.04 LTS image.
     # [<en>] To get one you can use this one-liner:
     # [<en>] yc compute image list --folder-id standard-images --format json | jq -r '[.[] | select(.family == "ubuntu-2204-lts")] | sort_by(.created_at)[-1].id'

@@ -165,9 +165,9 @@ internalNetworkCIDR: 10.90.0.0/24
 masterNodeGroup:
   replicas: 1
   instanceClass:
-    numCPUs: 4
-    memory: 8192
-    rootDiskSize: 50
+    numCPUs: 8
+    memory: 16384
+    rootDiskSize: 100
     # [<en>] The name of the image, taking into account the vCenter folder path.
     # [<en>] Example: "folder/ubuntu-jammy-22.04".
     # [<ru>] Имя образа, созданного с учетом папки размещения образа в vCenter.
