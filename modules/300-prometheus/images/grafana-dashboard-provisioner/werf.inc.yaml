@@ -2,18 +2,14 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/shell-operator
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /opt/python-static/bin
-  to: /usr/bin
-  before: install
+  add: /
+  to: /
   includePaths:
-  - python3*
-  - python3
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /opt/python-static/lib
-  to: /usr/lib
+  - lib/ld-musl-x86_64.so.1
+  - usr/bin/python*
+  - usr/lib/python*
+  - usr/lib/libc.so
   before: install
-  includePaths:
-  - python3*
 git:
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/hooks
   to: /hooks
@@ -28,14 +24,17 @@ git:
     install:
     - '**/*'
 import:
-- image: common/python-static
-  add: /opt/python-static
-  to: /opt/python-static
+- image: base/python
+  add: /
+  to: /
   before: install
+  includePaths:
+  - lib
+  - usr
 shell:
   beforeInstall:
   - apt-get install -y git
   install:
   - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
-  - /opt/python-static/bin/pip3 install -f file:///wheels --no-index -r requirements.txt
+  - pip3 install -f file:///wheels --no-index -r requirements.txt
   - rm -rf /wheels

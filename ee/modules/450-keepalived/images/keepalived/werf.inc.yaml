@@ -49,16 +49,12 @@ import:
   add: /empty
   to: /run
   before: install
-- image: common/python-static
-  add: /opt/python-static/bin
-  to: /usr/bin
-  before: install
+- image: base/python
+  add: /
+  to: /
   includePaths:
-  - python3*
-  - python3
-- image: common/python-static
-  add: /opt/python-static/lib
-  to: /usr/lib
+  - lib/ld-musl-x86_64.so.1
+  - usr/bin/python*
+  - usr/lib/python*
+  - usr/lib/libc.so
   before: install
-  includePaths:
-  - python3*

@@ -10,16 +10,20 @@ git:
     install:
     - '**/*'
 import:
-- image: common/python-static
-  add: /opt/python-static
-  to: /opt/python-static
+
+- image: base/python
+  add: /
+  to: /
   before: install
+  includePaths:
+  - lib
+  - usr
 shell:
   beforeInstall:
   - apt-get install -y git dnsmasq libsqlite3
   install:
   - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
-  - /opt/python-static/bin/pip3 install -f file:///wheels --no-index -r requirements.txt
+  - pip3 install -f file:///wheels --no-index -r requirements.txt
   - rm -rf /wheels
   - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
 ---
@@ -39,16 +43,12 @@ import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
     add: /etc/dnsmasq.conf.d
     before: install
-  - image: common/python-static
-    add: /opt/python-static/bin
-    to: /usr/bin
-    before: install
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+    add: /
+    to: /
     includePaths:
-    - python3*
-    - python3
-  - image: common/python-static
-    add: /opt/python-static/lib
-    to: /usr/lib
+    - lib/ld-musl-x86_64.so.1
+    - usr/bin/python*
+    - usr/lib/python*
+    - usr/lib/libc.so
     before: install
-    includePaths:
-    - python3*

@@ -5,11 +5,6 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 final: false
 fromImage: common/relocate-artifact
-import:
-- image: common/python-static
-  add: /opt/python-static
-  to: /opt/python-static
-  before: install
 shell:
   install:
   - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
@@ -40,18 +35,14 @@ import:
   to: /
   before: setup
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /opt/python-static/bin
-  to: /usr/bin
-  before: install
+  add: /
+  to: /
   includePaths:
-  - python3*
-  - python3
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /opt/python-static/lib
-  to: /usr/lib
+  - lib/ld-musl-x86_64.so.1
+  - usr/bin/python*
+  - usr/lib/python*
+  - usr/lib/libc.so
   before: install
-  includePaths:
-  - python3*
 - image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
   add: /
   to: /sbin
