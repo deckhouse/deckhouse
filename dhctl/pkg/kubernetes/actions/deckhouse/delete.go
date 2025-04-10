@@ -279,22 +279,30 @@ func WaitForPVDeletion(ctx context.Context, kubeCl *client.KubernetesClient) err
 		// Skip PV's provided manually or with reclaimPolicy other than Delete
 		annotationKey := "pv.kubernetes.io/provisioned-by"
 		var filteredResources []v1.PersistentVolume
+		var skipPVs []v1.PersistentVolume
 		for _, resource := range resources.Items {
-			if _, exists := resource.Annotations[annotationKey]; exists || resource.Spec.PersistentVolumeReclaimPolicy == v1.PersistentVolumeReclaimDelete {
+			if _, exists := resource.Annotations[annotationKey]; !exists || resource.Spec.PersistentVolumeReclaimPolicy != v1.PersistentVolumeReclaimDelete {
+				skipPVs = append(skipPVs, resource)
+			} else {
 				filteredResources = append(filteredResources, resource)
 			}
 		}
 
+		skipPVsCount := len(skipPVs)
+		if skipPVsCount != 0 {
+			skipPVsInfo := strings.Builder{}
+			for _, item := range skipPVs {
+				skipPVsInfo.WriteString(fmt.Sprintf("\t\t%s | %s\n", item.Name, item.Status.Phase))
+			}
+			log.InfoF("%d PersistentVolumes provided manually or with reclaimPolicy other than Delete was skipped.\n%s\n", skipPVsCount, strings.TrimSuffix(skipPVsInfo.String(), "\n"))
+		}
+
 		count := len(filteredResources)
 		if count != 0 {
-			var (
-				remainingPVs strings.Builder
-			)
-
-			for _, item := range resources.Items {
+			remainingPVs := strings.Builder{}
+			for _, item := range filteredResources {
 				remainingPVs.WriteString(fmt.Sprintf("\t\t%s | %s\n", item.Name, item.Status.Phase))
 			}
-
 			return fmt.Errorf("%d PersistentVolumes left in the cluster\n%s", count, strings.TrimSuffix(remainingPVs.String(), "\n"))
 		}
 		log.InfoLn("All PersistentVolumes are deleted from the cluster")
