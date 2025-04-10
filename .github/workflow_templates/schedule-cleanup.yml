@@ -57,3 +57,5 @@ jobs:
           export WERF_REPO=${DEV_REGISTRY_PATH}
           type werf && source $(werf ci-env github --config werf_cleanup.yaml --verbose --as-file)
           werf cleanup --config werf_cleanup.yaml --without-kube
+{!{ tmpl.Exec "send_fail_report"                   | strings.Indent 6 }!}
+
