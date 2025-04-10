@@ -98,6 +98,60 @@ git_info:
 # </template: git_info_job>
 {!{- end -}!}
 
+{!{ define "block-e2e-until-image-is-not-ready" }!}
+# </template: block-e2e-until-image-is-not-ready>
+{!{- $ctx := . }!}
+block-e2e-until-image-is-not-ready:
+  name: Block e2e until the docker image is not ready
+  runs-on: ubuntu-latest
+  steps:
+    - uses: {!{ index (ds "actions") "actions/checkout" }!}
+    - name: Block e2e until the docker image is not ready
+      id: block-e2e
+      uses: {!{ index (ds "actions") "actions/github-script" }!}
+      with:
+        script: |
+          const githubAction = require('./.github/scripts/js/helpers/github-actions')({github, context, core});
+          const { isReleaseBranch } = require('./.github/scripts/js/helpers/utils');
+
+          let branchName = context.payload.inputs.ci_commit_ref_name;
+          if (!branchName) {
+            branchName = githubAction.GetBranchNameFromContext(context);
+          }
+ 
+          if (branchName) {
+            let prNum = context.payload.inputs.issue_number;
+            // if the pull request id is not found, search it by the branch name
+            if (!prNum && branchName !== 'main') {
+              const prInfo = await githubAction.GetPullRequestByBranchName(branchName);
+              prNum = prInfo.number;
+            }
+
+            let infoText = `Check build workflow is completed for branch: ${branchName}`;
+            if (prNum) {
+              infoText +=  ` PR: ${context.payload.repository.html_url}/pull/${prNum}`;
+            }
+            core.info(infoText);
+
+            const { waitForJobInWorkflowIsCompletedWithSuccess } = require('./.github/scripts/js/validators/validate-job-in-workflow-is-ready')({ github, context, core });
+            try {
+              let workflowName = 'Build and test for dev branches';
+              let jobName = 'Build Deckhouse';
+              if (isReleaseBranch(branchName)) {
+                workflowName = 'Build and test for release branches';
+                jobName = 'Build Deckhouse FE';
+              }
+              if (branchName === 'main') {
+                return true;
+              }
+              await waitForJobInWorkflowIsCompletedWithSuccess(branchName, workflowName, jobName);
+            } catch(error) {
+              core.setFailed(error);
+            }
+          }
+
+# </template: block-e2e-until-image-is-not-ready>
+{!{- end -}!}
 
 # Check pull request state on push or pull_request_target events:
 # - find PR info on push event
@@ -343,4 +397,16 @@ pull_request_info:
           core.setFailed('External PR contains dangerous changes.')
 
 # </template: pull_request_info>
+{!{- end -}!}
+
+{!{ define "skip_tests_repos" }!}
+# <template: skip_tests_repos>
+skip_tests_repos:
+  name: Skip tests repos
+  runs-on: ubuntu-latest
+  if: ${{ false || github.repository == 'deckhouse/deckhouse' }}
+  steps:
+  - name: Do nothing
+    run: echo "Empty action to fulfil Github requirements."
+# </template: skip_tests_repos>
 {!{- end -}!}

@@ -167,6 +167,59 @@ jobs:
 
   # </template: git_info_job>
 
+
+  # </template: block-e2e-until-image-is-not-ready>
+  block-e2e-until-image-is-not-ready:
+    name: Block e2e until the docker image is not ready
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3.5.2
+      - name: Block e2e until the docker image is not ready
+        id: block-e2e
+        uses: actions/github-script@v6.4.1
+        with:
+          script: |
+            const githubAction = require('./.github/scripts/js/helpers/github-actions')({github, context, core});
+            const { isReleaseBranch } = require('./.github/scripts/js/helpers/utils');
+
+            let branchName = context.payload.inputs.ci_commit_ref_name;
+            if (!branchName) {
+              branchName = githubAction.GetBranchNameFromContext(context);
+            }
+
+            if (branchName) {
+              let prNum = context.payload.inputs.issue_number;
+              // if the pull request id is not found, search it by the branch name
+              if (!prNum && branchName !== 'main') {
+                const prInfo = await githubAction.GetPullRequestByBranchName(branchName);
+                prNum = prInfo.number;
+              }
+
+              let infoText = `Check build workflow is completed for branch: ${branchName}`;
+              if (prNum) {
+                infoText +=  ` PR: ${context.payload.repository.html_url}/pull/${prNum}`;
+              }
+              core.info(infoText);
+
+              const { waitForJobInWorkflowIsCompletedWithSuccess } = require('./.github/scripts/js/validators/validate-job-in-workflow-is-ready')({ github, context, core });
+              try {
+                let workflowName = 'Build and test for dev branches';
+                let jobName = 'Build Deckhouse';
+                if (isReleaseBranch(branchName)) {
+                  workflowName = 'Build and test for release branches';
+                  jobName = 'Build Deckhouse FE';
+                }
+                if (branchName === 'main') {
+                  return true;
+                }
+                await waitForJobInWorkflowIsCompletedWithSuccess(branchName, workflowName, jobName);
+              } catch(error) {
+                core.setFailed(error);
+              }
+            }
+
+  # </template: block-e2e-until-image-is-not-ready>
+
   # <template: check_e2e_labels_job>
   check_e2e_labels:
     name: Check e2e labels
@@ -208,6 +261,7 @@ jobs:
     needs:
       - check_e2e_labels
       - git_info
+      - block-e2e-until-image-is-not-ready
     if: needs.check_e2e_labels.outputs.run_containerd_1_28 == 'true'
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
@@ -501,7 +555,6 @@ jobs:
 
           $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
 
-
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -600,7 +653,6 @@ jobs:
 
           user_runner_id=$(id -u):$(id -g)
           echo "user_runner_id $user_runner_id"
-
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -708,6 +760,7 @@ jobs:
     needs:
       - check_e2e_labels
       - git_info
+      - block-e2e-until-image-is-not-ready
     if: needs.check_e2e_labels.outputs.run_containerd_1_29 == 'true'
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
@@ -1001,7 +1054,6 @@ jobs:
 
           $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
 
-
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -1100,7 +1152,6 @@ jobs:
 
           user_runner_id=$(id -u):$(id -g)
           echo "user_runner_id $user_runner_id"
-
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -1208,6 +1259,7 @@ jobs:
     needs:
       - check_e2e_labels
       - git_info
+      - block-e2e-until-image-is-not-ready
     if: needs.check_e2e_labels.outputs.run_containerd_1_30 == 'true'
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
@@ -1501,7 +1553,6 @@ jobs:
 
           $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
 
-
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -1600,7 +1651,6 @@ jobs:
 
           user_runner_id=$(id -u):$(id -g)
           echo "user_runner_id $user_runner_id"
-
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -1708,6 +1758,7 @@ jobs:
     needs:
       - check_e2e_labels
       - git_info
+      - block-e2e-until-image-is-not-ready
     if: needs.check_e2e_labels.outputs.run_containerd_1_31 == 'true'
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
@@ -2001,7 +2052,6 @@ jobs:
 
           $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
 
-
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -2100,7 +2150,6 @@ jobs:
 
           user_runner_id=$(id -u):$(id -g)
           echo "user_runner_id $user_runner_id"
-
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -2208,6 +2257,7 @@ jobs:
     needs:
       - check_e2e_labels
       - git_info
+      - block-e2e-until-image-is-not-ready
     if: needs.check_e2e_labels.outputs.run_containerd_1_32 == 'true'
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
@@ -2501,7 +2551,6 @@ jobs:
 
           $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
 
-
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -2600,7 +2649,6 @@ jobs:
 
           user_runner_id=$(id -u):$(id -g)
           echo "user_runner_id $user_runner_id"
-
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -2708,6 +2756,7 @@ jobs:
     needs:
       - check_e2e_labels
       - git_info
+      - block-e2e-until-image-is-not-ready
     if: needs.check_e2e_labels.outputs.run_containerd_Automatic == 'true'
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
@@ -3001,7 +3050,6 @@ jobs:
 
           $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
 
-
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -3100,7 +3148,6 @@ jobs:
 
           user_runner_id=$(id -u):$(id -g)
           echo "user_runner_id $user_runner_id"
-
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \

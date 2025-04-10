@@ -12,10 +12,10 @@
       plk_markup_format: "markdown"
       plk_create_group_if_not_exists__d8_monitoring_custom_reserved_domain_group: "D8ReservedNodeLabelOrTaintFoundInCluster,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_monitoring_custom_reserved_domain_group: "D8ReservedNodeLabelOrTaintFoundInCluster,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      summary: "Node {{`{{ $labels.name }}`}} needs fixing up"
+      summary: "Node {{`{{ $labels.name }}`}} is using a reserved label or taint."
       description: |-
-        Node {{`{{ $labels.name }}`}} uses:
-        - reserved `metadata.labels` *node-role.deckhouse.io/* with ending not in `(system|frontend|monitoring|_deckhouse_module_name_)`
-        - or reserved `spec.taints` *dedicated.deckhouse.io* with values not in `(system|frontend|monitoring|_deckhouse_module_name_)`
+        Deckhouse has detected that node {{`{{ $labels.name }}`}} is using one of the following:
+        - A reserved `metadata.labels` object `node-role.deckhouse.io/`, which doesn't end with `(system|frontend|monitoring|_deckhouse_module_name_)`.
+        - A reserved `spec.taints` object `dedicated.deckhouse.io`, with a value other than `(system|frontend|monitoring|_deckhouse_module_name_)`.
 
-        [Get instructions on how to fix it here]({{ if .Values.global.modules.publicDomainTemplate }}{{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "documentation") }}/en/platform/modules{{- else }}https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules{{- end }}/node-manager/faq.html#how-do-i-allocate-nodes-to-specific-loads).
+        For instructions on how to resolve this issue, refer to the [node allocation guide](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-do-i-allocate-nodes-to-specific-loads).

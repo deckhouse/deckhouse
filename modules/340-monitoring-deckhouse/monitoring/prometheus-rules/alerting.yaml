@@ -9,18 +9,23 @@
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      description: |
-        Deckhouse is on a custom branch instead of one of the regular release channels.
-
-        It is recommended that Deckhouse be subscribed to one of the following channels: `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
-
-        Use the command below to find out what release channel is currently in use: `kubectl -n d8-system  get deploy deckhouse -o json | jq '.spec.template.spec.containers[0].image' -r`
-
-        Subscribe the cluster to one of the regular release channels.
       summary: |
-        Deckhouse in the cluster is not subscribed to one of the regular release channels.
+        Deckhouse isn't subscribed to any regular release channels.
+      description: |
+        Deckhouse in this cluster isn't subscribed to any of the regular release channels: `Alpha`, `Beta`, `EarlyAccess`, `Stable`, or `RockSolid`.
+
+        To resolve this issue, follow these steps:
+
+        1. Check the current release channel used in the cluster:
+        
+           ```bash
+           kubectl -n d8-system  get deploy deckhouse -o json | jq '.spec.template.spec.containers[0].image' -r
+           ```
+
+        1. Subscribe to one of the regular release channels by adjusting the [`deckhouse` module configuration](https://deckhouse.io/products/kubernetes-platform/documentation/latest/modules/deckhouse/configuration.html#parameters-releasechannel).
+
   - alert: DeckhouseReleaseIsWaitingManualApproval
-    expr: sum by (name) (d8_release_info{manualApproval="true", releaseQueueDepth=~"(nil|one)"})
+    expr: sum by (name) (d8_release_info{manualApproval="true", releaseQueueDepth=~"(nil|0|1)"})
     labels:
       severity_level: "9"
       d8_module: deckhouse
@@ -30,14 +35,19 @@
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
       plk_ignore_labels: "name"
-      description: |
-        Deckhouse release is waiting for manual approval.
-
-        Please run `kubectl patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{"approved": true}'` for confirmation.
       summary: |
-        Deckhouse release is waiting for manual approval.
+        A new Deckhouse release is awaiting manual approval.
+      description: |
+        A new Deckhouse release is available but requires manual approval before it can be applied.
+        
+        To approve the release, run the following command: 
+
+        ```bash
+        kubectl patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{"approved": true}'
+        ```
+
   - alert: DeckhouseReleaseIsWaitingManualApproval
-    expr: sum by (name) (d8_release_info{manualApproval="true", releaseQueueDepth="two"})
+    expr: sum by (name) (d8_release_info{manualApproval="true", releaseQueueDepth="2"})
     labels:
       severity_level: "6"
       d8_module: deckhouse
@@ -47,14 +57,19 @@
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
       plk_ignore_labels: "name"
-      description: |
-        Deckhouse release is waiting for manual approval.
-
-        Please run `kubectl patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{"approved": true}'` for confirmation.
       summary: |
-        Deckhouse release is waiting for manual approval.
+        A new Deckhouse release is awaiting manual approval.
+      description: |
+        A new Deckhouse release is available but requires manual approval before it can be applied.
+        
+        To approve the release, run the following command: 
+
+        ```bash
+        kubectl patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{"approved": true}'
+        ```
+
   - alert: DeckhouseReleaseIsWaitingManualApproval
-    expr: sum by (name) (d8_release_info{manualApproval="true", releaseQueueDepth="three"})
+    expr: sum by (name) (d8_release_info{manualApproval="true", releaseQueueDepth="3"})
     labels:
       severity_level: "3"
       d8_module: deckhouse
@@ -64,12 +79,17 @@
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
       plk_ignore_labels: "name"
-      description: |
-        Deckhouse release is waiting for manual approval.
-
-        Please run `kubectl patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{"approved": true}'` for confirmation.
       summary: |
-        Deckhouse release is waiting for manual approval.
+        A new Deckhouse release is awaiting manual approval.
+      description: |
+        A new Deckhouse release is available but requires manual approval before it can be applied.
+        
+        To approve the release, run the following command:
+
+        ```bash
+        kubectl patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{"approved": true}'
+        ```
+
   - alert: DeckhouseReleaseIsBlocked
     expr: sum by (name) (d8_release_info{requirementsNotMet="true"})
     labels:
@@ -80,12 +100,17 @@
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      description: |
-        Deckhouse release requirements is not met.
-
-        Please run `kubectl describe DeckhouseRelease {{ $labels.name }}` for details.
       summary: |
-        Deckhouse release requirements unmet.
+        Deckhouse release requirements haven't been met.
+      description: |
+        The requirements for the Deckhouse release haven't been met.
+
+        To check the details, run the following command:
+        
+        ```bash
+        kubectl describe DeckhouseRelease {{ $labels.name }}
+        ```
+
   - alert: DeckhouseReleaseDisruptionApprovalRequired
     expr: sum by (name) (d8_release_info{disruptionApproval="true"})
     labels:
@@ -96,27 +121,61 @@
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      description: |
-        Deckhouse release contains disruption update.
-
-        You can figure out more details by running `kubectl describe DeckhouseRelease {{ $labels.name }}`.
-        If you are ready to deploy this release, run: `kubectl annotate DeckhouseRelease {{ $labels.name }} release.deckhouse.io/disruption-approved=true`.
       summary: |
         Deckhouse release disruption approval required.
+      description: |
+        The new Deckhouse release includes a disruptive update that requires manual approval.
+
+        To check the details, run the following command:
+        
+        ```bash
+        kubectl describe DeckhouseRelease {{ $labels.name }}
+        ```
+        
+        To approve the disruptive update, run the following command:
+        
+        ```bash
+        kubectl annotate DeckhouseRelease {{ $labels.name }} release.deckhouse.io/disruption-approved=true
+        ```
+
   - alert: ModuleReleaseIsWaitingManualApproval
-    expr: sum(deckhouse_mm_module_info{enabled="true"} * on(moduleName) group_left(name) d8_module_release_info{manualApproval="true"}) by (name, moduleName)
+    expr: sum(deckhouse_mm_module_info{enabled="true"} * on(moduleName) group_left(name) sum by (name, moduleName, manualApproval) (d8_module_release_info{manualApproval="true"})) by (name, moduleName)
     labels:
       severity_level: "6"
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
       plk_ignore_labels: "name"
-      description: |
-        Module {{ $labels.moduleName }} release is waiting for manual approval.
-
-        Please run `kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"` for confirmation.
       summary: |
-        Module release is waiting for manual approval.
+        A new release for module `{{ $labels.moduleName }}` is awaiting manual approval.
+      description: |
+        A new release for module `{{ $labels.moduleName }}` is available but requires manual approval before it can be applied.
+
+        To approve the module release, run the following command:
+        
+        ```bash
+        kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
+        ```
+
+  - alert: ModuleIsInUnmanagedMode
+    expr: sum(deckhouse_mm_module_management_state{state="Unmanaged"}) by (moduleName) > 0
+    labels:
+      severity_level: "6"
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_ignore_labels: "name"
+      summary: |
+        Module `{{ $labels.moduleName }}` is running in unmanaged mode.
+      description: |
+        Module `{{ $labels.moduleName }}` is running in unmanaged mode. In this mode, its state is not reconciled, which prevents configuration or hook changes from being applied automatically.
+
+        To switch the module back to normal mode, edit the corresponding ModuleConfig resource with the following command:
+        
+        ```bash
+        kubectl patch moduleconfig {{ $labels.name }} --type=json -p='[{"op": "remove", "path": "/spec/managementState"}]'
+        ```
+      
   - alert: DeckhouseReleaseNotificationNotSent
     expr: sum by (name) (d8_release_info{notificationNotSent="true"})
     labels:
@@ -127,26 +186,36 @@
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      description: |
-        Failed to send the Deckhouse release notification webhook.
-
-        Check the notification webhook address by running `kubectl get mc deckhouse -o yaml`.
       summary: |
-        Deckhouse release notification webhook not sent.
+        Deckhouse release notification webhook hasn't been sent.
+      description: |
+        The Deckhouse release notification webhook failed to send.
+
+        To check the notification webhook address, run the following command:
+        
+        ```bash
+        kubectl get mc deckhouse -o yaml
+        ```
+
   - alert: ModuleReleaseIsBlockedByRequirements
-    expr: sum(deckhouse_mm_module_info{enabled="true"} * on(moduleName) group_left(name) d8_module_release_info{requirementsNotMet="true"}) by (name, moduleName)
+    expr: sum(deckhouse_mm_module_info{enabled="true"} * on(moduleName) group_left(name) sum by (name, moduleName, requirementsNotMet) (d8_module_release_info{requirementsNotMet="true"})) by (name, moduleName)
     labels:
       severity_level: "6"
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
       plk_ignore_labels: "name"
-      description: |
-        Module {{ $labels.moduleName }} release is blocked by the requirements.
-
-        Please check the requirements with the following command `kubectl  get mr {{ $labels.name }} -o json | jq .spec.requirements`.
       summary: |
-        Module release is blocked by the requirements.
+        A new release for module `{{ $labels.moduleName }}` has been blocked due to unmet requirements.
+      description: |
+        A new release for module `{{ $labels.moduleName }}` has been blocked because it doesn't meet the required conditions.
+
+        To check the requirements, run the following command:
+        
+        ```bash
+        kubectl  get mr {{ $labels.name }} -o json | jq .spec.requirements
+        ```
+
   - alert: D8HasModuleConfigAllowedToDisable
     expr: max by (module) (d8_moduleconfig_allowed_to_disable) >= 1
     for: 3m
@@ -158,18 +227,21 @@
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      description: |
-        ModuleConfig is waiting for disable.
-
-        It is recommended to keep clean your module configurations from approve annotations.
-
-        If you ignore this alert and do not clear the annotation, it may cause the module to be accidentally removed from the cluster.
-
-        Removing a module from a cluster can lead to a number of irreparable consequences.
-
-        Please run `kubectl annotate moduleconfig {{ $labels.module }} modules.deckhouse.io/allow-disabling-` to stop this alert.
       summary: |
-        ModuleConfig annotation for allow to disable is setted.
+        The ModuleConfig annotation for allowing module disabling is set.
+      description: |
+        The ModuleConfig is pending module disabling.
+
+        It is recommended that you keep your module configurations clean by removing unnecessary approval annotations.
+
+        If you ignore this alert and do not clear the annotation, the module may be accidentally removed from the cluster, potentially leading to irreversible consequences.
+
+        To resolve this issue and stop the alert, run the following command:
+
+        ```bash
+        kubectl annotate moduleconfig {{ $labels.module }} modules.deckhouse.io/allow-disabling-
+        ```
+
   - alert: ModuleAtConflict
     expr: max by (moduleName) (d8_module_at_conflict) >= 1
     labels:
@@ -177,10 +249,13 @@
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      description: |
-        Conflicting sources for the {{ $labels.moduleName }} module. Please specify the proper source in the module configuration.
       summary: |
         Conflict detected for module {{ $labels.moduleName }}.
+      description: |
+        Deckhouse has detected conflicting sources for the {{ $labels.moduleName }} module.
+        
+        To resolve this issue, specify the correct source in the module configuration.
+
   - alert: ModuleConfigObsoleteVersion
     expr: max by (name) (d8_module_config_obsolete_version) >= 1
     labels:
@@ -188,10 +263,13 @@
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      description: |
-        ModuleConfig {{ $labels.name }} is outdated. Update ModuleConfig {{ $labels.name }} to the latest version.
       summary: |
-        ModuleConfig {{ $labels.name }} is outdated.
+        ModuleConfig `{{ $labels.name }}` is outdated.
+      description: |
+        Deckhouse has detected that ModuleConfig `{{ $labels.name }}` is outdated.
+        
+        To resolve this issue, update ModuleConfig `{{ $labels.name }}` to the latest version.
+      
   - alert: ModuleHasDeprecatedUpdatePolicy
     expr: max by (moduleName, updatePolicy) (d8_deprecated_update_policy) >= 1
     labels:
@@ -199,17 +277,19 @@
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      description: |
-        The '{{ $labels.moduleName }}' module is matched by the '{{ $labels.updatePolicy }}' deprecated module update policy. The policy`s v1alpha1 has a selector that no longer works.
+      summary: |
+        Module `{{ $labels.moduleName }}` is matched by the deprecated update policy `{{ $labels.updatePolicy }}`.
+      description: |-
+        Deckhouse has detected that the module `{{ $labels.moduleName }}` is using the deprecated update policy `{{ $labels.updatePolicy }}`. The `v1alpha1` policy has a selector that no longer functions.
 
-        Specify the update policy in the module config by running the following command:
-        ```
+        To specify the update policy in the module configuration, run the following command:
+        
+        ```bash
         kubectl patch moduleconfig {{ $labels.moduleName }} --type='json' -p='[{"op": "add", "path": "/spec/updatePolicy", "value": "{{ $labels.updatePolicy }}"}]'
         ```
-
-        After solving all alerts for the '{{ $labels.updatePolicy }}' update policy, use this command to clear the selector:
-        ```
+        
+        After resolving all alerts related to the update policy `{{ $labels.updatePolicy }}`, clear the selector by running the following command:
+        
+        ```bash
         kubectl patch moduleupdatepolicies.v1alpha1.deckhouse.io {{ $labels.updatePolicy }} --type='json' -p='[{"op": "replace", "path": "/spec/moduleReleaseSelector/labelSelector/matchLabels", "value": {"": ""}}]'
         ```
-      summary: |
-        The '{{ $labels.moduleName }}' module is matched by the '{{ $labels.updatePolicy }}' deprecated module update policy.

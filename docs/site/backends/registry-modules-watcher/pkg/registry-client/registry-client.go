@@ -15,8 +15,9 @@
 package registryclient
 
 import (
+	"context"
 	"fmt"
-	registryscaner "registry-modules-watcher/internal/backends/pkg/registry-scaner"
+	registryscanner "registry-modules-watcher/internal/backends/pkg/registry-scanner"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -39,7 +40,7 @@ type client struct {
 
 // NewClient creates container registry client using `repo` as prefix for tags passed to methods. If insecure flag is set to true, then no cert validation is performed.
 // Repo example: "cr.example.com/ns/app"
-func NewClient(repo string, options ...Option) (registryscaner.Client, error) {
+func NewClient(repo string, options ...Option) (registryscanner.Client, error) {
 	opts := &registryOptions{}
 
 	for _, opt := range options {
@@ -54,8 +55,9 @@ func NewClient(repo string, options ...Option) (registryscaner.Client, error) {
 	if !opts.withoutAuth {
 		authConfig, err := readAuthConfig(repo, opts.dockerCfg)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("read auth config: %w", err)
 		}
+
 		client.authConfig = authConfig
 	}
 
@@ -66,30 +68,32 @@ func (c *client) Name() string {
 	return c.registryURL
 }
 
-func (c *client) ReleaseImage(moduleName, tag string) (v1.Image, error) {
+func (c *client) ReleaseImage(ctx context.Context, moduleName, tag string) (v1.Image, error) {
 	imageURL := c.registryURL + "/" + moduleName + "/release" + ":" + tag
 
-	return c.image(imageURL)
+	return c.image(ctx, imageURL)
 }
 
-func (c *client) Image(moduleName, tag string) (v1.Image, error) {
+func (c *client) Image(ctx context.Context, moduleName, tag string) (v1.Image, error) {
 	imageURL := c.registryURL + "/" + moduleName + ":" + tag
 
-	return c.image(imageURL)
+	return c.image(ctx, imageURL)
 }
 
-func (c *client) image(imageURL string) (v1.Image, error) {
+func (c *client) image(ctx context.Context, imageURL string) (v1.Image, error) {
 	var nameOpts []name.Option
 
-	ref, err := name.ParseReference(imageURL, nameOpts...) // parse options available: weak validation, etc.
+	ref, err := name.ParseReference(imageURL, nameOpts...) // parse options available: name.WeakValidation, etc.
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse reference: %w", err)
 	}
 
 	imageOptions := make([]remote.Option, 0)
 	if !c.options.withoutAuth {
 		imageOptions = append(imageOptions, remote.WithAuth(authn.FromConfig(c.authConfig)))
 	}
+
+	imageOptions = append(imageOptions, remote.WithContext(ctx))
 
 	return remote.Image(
 		ref,
@@ -97,17 +101,17 @@ func (c *client) image(imageURL string) (v1.Image, error) {
 	)
 }
 
-func (c *client) Modules() ([]string, error) {
-	return c.list(c.registryURL)
+func (c *client) Modules(ctx context.Context) ([]string, error) {
+	return c.list(ctx, c.registryURL)
 }
 
-func (c *client) ListTags(moduleName string) ([]string, error) {
+func (c *client) ListTags(ctx context.Context, moduleName string) ([]string, error) {
 	listTagsUrl := c.registryURL + "/" + moduleName + "/release"
 
-	return c.list(listTagsUrl)
+	return c.list(ctx, listTagsUrl)
 }
 
-func (c *client) list(url string) ([]string, error) {
+func (c *client) list(ctx context.Context, url string) ([]string, error) {
 	var nameOpts []name.Option
 
 	imageOptions := make([]remote.Option, 0)
@@ -115,22 +119,24 @@ func (c *client) list(url string) ([]string, error) {
 		imageOptions = append(imageOptions, remote.WithAuth(authn.FromConfig(c.authConfig)))
 	}
 
+	imageOptions = append(imageOptions, remote.WithContext(ctx))
+
 	repo, err := name.NewRepository(url, nameOpts...)
 	if err != nil {
-		return nil, fmt.Errorf("parsing repo %q: %w", c.registryURL, err)
+		return nil, fmt.Errorf("parsing repo %q: %w", url, err)
 	}
 
 	return remote.List(repo, imageOptions...)
 }
 
-// WithDisabledAuth don't use authConfig
+// WithDisabledAuth disables the use of authConfig
 func WithDisabledAuth() Option {
 	return func(options *registryOptions) {
 		options.withoutAuth = true
 	}
 }
 
-// WithAuth use docker config base64 as authConfig
+// WithAuth sets the docker config base64 as authConfig
 func WithAuth(dockerCfg string) Option {
 	return func(options *registryOptions) {
 		options.dockerCfg = dockerCfg

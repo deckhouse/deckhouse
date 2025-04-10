@@ -128,7 +128,7 @@ func (mdr *moduleDocumentationReconciler) enqueueLeaseMapFunc(ctx context.Contex
 		return nil
 	})
 	if err != nil {
-		log.Errorf("create mapping for lease failed: %s", err.Error())
+		log.Error("create mapping for lease failed", log.Err(err))
 	}
 
 	return requests
@@ -190,7 +190,7 @@ func (mdr *moduleDocumentationReconciler) deleteReconcile(ctx context.Context, m
 		md.Status.Conditions[idx].LastTransitionTime = now
 
 		if err := mdr.client.Status().Update(ctx, md); err != nil {
-			mdr.logger.Errorf("update status when delete documentation: %v", err)
+			mdr.logger.Error("update status when delete documentation", log.Err(err))
 
 			return result, fmt.Errorf("update status when delete documentation: %w", errors.Join(delErr, err))
 		}
@@ -200,7 +200,7 @@ func (mdr *moduleDocumentationReconciler) deleteReconcile(ctx context.Context, m
 
 	controllerutil.RemoveFinalizer(md, documentationExistsFinalizer)
 	if err := mdr.client.Update(ctx, md); err != nil {
-		mdr.logger.Errorf("update finalizer: %v", err)
+		mdr.logger.Error("update finalizer", log.Err(err))
 
 		return result, fmt.Errorf("update finalizer: %w", err)
 	}
@@ -212,7 +212,7 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 	var result ctrl.Result
 	moduleName := md.Name
 
-	mdr.logger.Infof("Updating documentation for %s module", moduleName)
+	mdr.logger.Info("Updating documentation for module", slog.String("name", moduleName))
 	addrs, err := mdr.getDocsBuilderAddresses(ctx)
 	if err != nil {
 		return result, fmt.Errorf("get docs builder addresses: %w", err)
@@ -225,7 +225,7 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 
 	b := new(bytes.Buffer)
 
-	mdr.logger.Debugf("Getting the %s module's documentation locally", moduleName)
+	mdr.logger.Debug("Getting module's documentation locally", slog.String("moduleName", moduleName))
 	fetchModuleErr := mdr.getDocumentationFromModuleDir(md.Spec.Path, b)
 
 	var rendered int
@@ -297,7 +297,7 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 	if !controllerutil.ContainsFinalizer(mdCopy, documentationExistsFinalizer) {
 		controllerutil.AddFinalizer(mdCopy, documentationExistsFinalizer)
 		if err := mdr.client.Update(ctx, mdCopy); err != nil {
-			mdr.logger.Errorf("update finalizer: %v", err)
+			mdr.logger.Error("update finalizer", log.Err(err))
 
 			return result, err
 		}

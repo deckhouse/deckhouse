@@ -1,3 +1,4 @@
+{{- if .Values.prometheus.internal.grafana.enabled }}
 ---
 apiVersion: v1
 kind: Secret
@@ -7,3 +8,4 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "grafana")) | nindent 2 }}
 data:
   notifiers.yaml: {{ .Values.prometheus.internal.grafana.alertsChannelsConfig | toYaml | b64enc }}
+{{- end }}

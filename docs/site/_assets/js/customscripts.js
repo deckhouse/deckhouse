@@ -322,6 +322,11 @@ document.addEventListener('DOMContentLoaded', function () {
       lang = "en"
     }
   }
+
+  if (!($.cookie("lang") === lang)) {
+    $.cookie('lang', lang, {path: '/', expires: 365});
+  }
+
   const textTooltip = {
     en: {
       copy: 'Copy',

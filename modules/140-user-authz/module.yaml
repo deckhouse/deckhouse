@@ -1,5 +1,6 @@
 name: user-authz
 weight: 140
+namespace: d8-user-authz
 subsystems:
   - security
 description: |

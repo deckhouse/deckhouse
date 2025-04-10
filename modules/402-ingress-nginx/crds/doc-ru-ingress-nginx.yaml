@@ -28,11 +28,11 @@ spec:
                       **Внимание.** При использовании этого инлета, убедитесь, что запросы к Ingress-контроллеру направляются только от доверенных источников. Одним из способов настройки ограничения может служить параметр [acceptRequestsFrom](cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom).
                     * `HostWithFailover` — устанавливаются два Ingress-контроллера — основной и резервный. Основной контроллер запускается в hostNetwork. Если поды основного контроллера недоступны, трафик уходит в резервный контроллер;
 
-                      **Внимание.** На одном хосте может быть только один контроллер с данным типом inlet'а.
+                      > **Внимание.** На одном хосте может быть только один контроллер с данным типом инлета.
 
-                      **Внимание.** Необходимо, чтобы на узле были свободны следующие порты: 80, 81, 443, 444, 4207, 4208.
+                      > **Внимание.** Необходимо, чтобы на узле были свободны следующие порты: 80, 81, 443, 444, 4207, 4208.
 
-                      **Внимание.**  Чтобы поменять инлет, удалите правила iptables и перезапустите поды `kube-proxy` или перезагрузите узлы, на которых размещались Ingress-контроллеры.
+                      > **Внимание.** Чтобы поменять инлет, удалите правила iptables и перезапустите поды `kube-proxy` или перезагрузите узлы, на которых размещались Ingress-контроллеры.
                 controllerVersion:
                   description: |
                     Версия NGINX Ingress controller.
@@ -60,8 +60,6 @@ spec:
                 annotationValidationEnabled:
                   description: |
                     Включить валидацию аннотаций Ingress-правил.
-
-                    Требуется версия контроллера 1.9.
                 nodeSelector:
                   description: |
                     Как в `spec.nodeSelector` у подов.
@@ -78,7 +76,7 @@ spec:
                     **Формат**: стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Поды инстанса унаследуют это поле как есть.
                 loadBalancer:
                   description: |
-                    Секция настроек для inlet'а `LoadBalancer`.
+                    Секция настроек для инлета `LoadBalancer`.
                   properties:
                     sourceRanges:
                       description: |
@@ -109,7 +107,7 @@ spec:
                         Работает только при включении `behindL7Proxy`.
                 loadBalancerWithProxyProtocol:
                   description: |
-                    Секция настроек для inlet'а `LoadBalancerWithProxyProtocol`.
+                    Секция настроек для инлета `LoadBalancerWithProxyProtocol`.
                   properties:
                     sourceRanges:
                       description: |
@@ -130,7 +128,7 @@ spec:
                         Класс балансировщика входящих сетевых запросов (пробрасывается в параметр `spec.loadBalancerClass` заказанного сервиса с типом LoadBalancer).
                 hostPort:
                   description: |
-                    Секция настроек для inlet'а `HostPort`.
+                    Секция настроек для инлета `HostPort`.
                   properties:
                     httpPort:
                       description: |
@@ -158,7 +156,7 @@ spec:
                         Работает **только** при включении `behindL7Proxy`.
                 hostPortWithProxyProtocol:
                   description: |
-                    Секция настроек для inlet'а `HostPortWithProxyProtocol`.
+                    Секция настроек для инлета `HostPortWithProxyProtocol`.
                   properties:
                     httpPort:
                       type: integer
@@ -179,7 +177,7 @@ spec:
                   description: |
                     Список адресов в формате CIDR, которым разрешено подключаться к контроллеру.
 
-                    Независимо от inlet'а всегда проверяется непосредственный адрес (в логах содержится в поле `original_address`), с которого производится подключение, а не «адрес клиента», который может передаваться в некоторых inlet'ах через заголовки или с использованием `proxy protocol`.
+                    Независимо от инлета всегда проверяется непосредственный адрес (в логах содержится в поле `original_address`), с которого производится подключение, а не «адрес клиента», который может передаваться в некоторых инлетах через заголовки или с использованием `proxy protocol`.
 
                     Параметр реализован с помощью [map module](https://nginx.org/en/docs/http/ngx_http_map_module.html), и если адрес, с которого непосредственно производится подключение, не разрешен – NGINX закрывает соединение (используя return 444).
 
@@ -337,7 +335,7 @@ spec:
       served: true
       storage: false
       subresources:
-        status: { }
+        status: {}
       schema:
         openAPIV3Schema:
           properties:
@@ -362,7 +360,7 @@ spec:
                     **Важно.** Если указать значение "nginx", дополнительно будут обрабатываться Ingress-ресурсы без аннотации `kubernetes.io/ingress.class` или поля `spec.ingressClassName`.
                 inlet:
                   description: |
-                    Способ поступления трафика из внешнего мира:
+                    Способ приема трафика из внешней сети. Изменение установленного способа невозможно.
                     * `LoadBalancer` — устанавливается Ingress-контроллер, и заказывается сервис с типом `LoadBalancer`;
                     * `LoadBalancerWithProxyProtocol` — устанавливается Ingress-контроллер, и заказывается сервис с типом `LoadBalancer`. Ingress-контроллер использует proxy-protocol для получения настоящего IP-адреса клиента;
                     * `LoadBalancerWithSSLPassthrough` — устанавливается Ingress-контроллер, и заказывается сервис с типом `LoadBalancer`. Этот инлет включает функцию SSL Passthrough, которая позволяет сконфигурировать бэкенды на принятие SSL-трафика напрямую, без его терминации на Ingress-контроллере.
@@ -396,8 +394,10 @@ spec:
                     * `HostWithFailover` — устанавливаются два Ingress-контроллера — основной и резервный. Основной контроллер запускается в hostNetwork. Если поды основного контроллера недоступны, трафик уходит в резервный контроллер.
 
                       > **Внимание.** На одном хосте может быть только один контроллер с данным типом инлета.
-                      >
-                      > Необходимо, чтобы на узле были свободны следующие порты: 80, 81, 443, 444, 4207, 4208.
+
+                      > **Внимание.** Необходимо, чтобы на узле были свободны следующие порты: 80, 81, 443, 444, 4207, 4208.
+
+                      > **Внимание.** Чтобы поменять инлет, удалите правила iptables и перезапустите поды `kube-proxy` или перезагрузите узлы, на которых размещались Ingress-контроллеры.
                 controllerVersion:
                   description: |
                     Версия NGINX Ingress controller.
@@ -441,7 +441,7 @@ spec:
                     **Формат**: стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Поды инстанса унаследуют это поле как есть.
                 loadBalancer:
                   description: |
-                    Секция настроек для inlet'а `LoadBalancer`.
+                    Секция настроек для инлета `LoadBalancer`.
                   properties:
                     sourceRanges:
                       description: |
@@ -472,7 +472,7 @@ spec:
                         Работает только при включении `behindL7Proxy`.
                 loadBalancerWithProxyProtocol:
                   description: |
-                    Секция настроек для inlet'а `LoadBalancerWithProxyProtocol`.
+                    Секция настроек для инлета `LoadBalancerWithProxyProtocol`.
                   properties:
                     sourceRanges:
                       description: |
@@ -492,7 +492,7 @@ spec:
                         Класс балансировщика входящих сетевых запросов (пробрасывается в параметр `spec.loadBalancerClass` заказанного сервиса с типом LoadBalancer).
                 loadBalancerWithSSLPassthrough:
                   description: |
-                    Секция настроек для inlet'а `LoadBalancerWithSSLPassthrough`.
+                    Секция настроек для инлета `LoadBalancerWithSSLPassthrough`.
                   properties:
                     sourceRanges:
                       description: |
@@ -512,7 +512,7 @@ spec:
                         Класс балансировщика входящих сетевых запросов (пробрасывается в параметр `spec.loadBalancerClass` заказанного сервиса с типом LoadBalancer).
                 hostPort:
                   description: |
-                    Секция настроек для inlet'а `HostPort`.
+                    Секция настроек для инлета `HostPort`.
                   properties:
                     httpPort:
                       description: |
@@ -540,7 +540,7 @@ spec:
                         Работает **только** при включении `behindL7Proxy`.
                 hostPortWithProxyProtocol:
                   description: |
-                    Секция настроек для inlet'а `HostPortWithProxyProtocol`.
+                    Секция настроек для инлета `HostPortWithProxyProtocol`.
                   properties:
                     httpPort:
                       type: integer
@@ -559,7 +559,7 @@ spec:
                         **Обязательный параметр**, если не указан `httpPort`.
                 hostPortWithSSLPassthrough:
                   description: |
-                    Секция настроек для inlet'а `HostPortWithSSLPassthrough`.
+                    Секция настроек для инлета `HostPortWithSSLPassthrough`.
                   properties:
                     httpPort:
                       type: integer
@@ -580,7 +580,7 @@ spec:
                   description: |
                     Список адресов в формате CIDR, которым разрешено подключаться к контроллеру.
 
-                    Независимо от inlet'а всегда проверяется непосредственный адрес (в логах содержится в поле `original_address`), с которого производится подключение, а не «адрес клиента», который может передаваться в некоторых inlet'ах через заголовки или с использованием `proxy protocol`.
+                    Независимо от инлета всегда проверяется непосредственный адрес (в логах содержится в поле `original_address`), с которого производится подключение, а не «адрес клиента», который может передаваться в некоторых инлетах через заголовки или с использованием `proxy protocol`.
 
                     Параметр реализован с помощью [map module](https://nginx.org/en/docs/http/ngx_http_map_module.html), и если адрес, с которого непосредственно производится подключение, не разрешен – NGINX закрывает соединение (используя return 444).
 

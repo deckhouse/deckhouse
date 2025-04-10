@@ -40,11 +40,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
 func (s *Service) Abort(server pb.DHCTL_AbortServer) error {
-	ctx := operationCtx(server)
+	ctx, cancel := operationCtx(server)
+	defer cancel()
 
 	logger.L(ctx).Info("started")
 
@@ -91,7 +91,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.abortSafe(ctx, message.Start, phaseSwitcher.switchPhase, logWriter)
+					result := s.abortSafe(ctx, message.Start, phaseSwitcher.switchPhase(ctx), logWriter)
 					sendCh <- &pb.AbortResponse{Message: &pb.AbortResponse_Result{Result: result}}
 				}()
 
@@ -112,6 +112,9 @@ connectionProcessor:
 				case pb.Continue_CONTINUE_ERROR:
 					phaseSwitcher.next <- errors.New(message.Continue.Err)
 				}
+
+			case *pb.AbortRequest_Cancel:
+				cancel()
 
 			default:
 				logger.L(ctx).Error("got unprocessable message",
@@ -138,7 +141,7 @@ func (s *Service) abortSafe(
 }
 
 func (s *Service) abort(
-	_ context.Context,
+	ctx context.Context,
 	request *pb.AbortStart,
 	switchPhase phases.DefaultOnPhaseFunc,
 	logWriter io.Writer,
@@ -146,7 +149,7 @@ func (s *Service) abort(
 	var err error
 
 	cleanuper := callback.NewCallback()
-	defer cleanuper.Call()
+	defer func() { _ = cleanuper.Call() }()
 
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
 		OutStream: logWriter,
@@ -160,30 +163,28 @@ func (s *Service) abort(
 	app.ApplyPreflightSkips(request.Options.CommonOptions.SkipPreflightChecks)
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
-	defer func() {
-		log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName)
-	}()
+	defer func() { log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName) }()
 
 	var (
-		configPath    string
-		resourcesPath string
-		cleanup       func() error
+		configPaths []string
+		configPath  string
+		cleanup     func() error
 	)
 	err = log.Process("default", "Preparing configuration", func() error {
-		configPath, cleanup, err = util.WriteDefaultTempFile([]byte(input.CombineYAMLs(
-			request.ClusterConfig, request.InitConfig, request.ProviderSpecificClusterConfig,
-		)))
-		cleanuper.Add(cleanup)
-		if err != nil {
-			return fmt.Errorf("failed to write init configuration: %w", err)
-		}
+		for _, cfg := range []string{
+			request.ClusterConfig,
+			request.InitConfig,
+			request.ProviderSpecificClusterConfig,
+			request.InitResources,
+			request.Resources,
+		} {
+			configPath, cleanup, err = util.WriteDefaultTempFile([]byte(cfg))
+			cleanuper.Add(cleanup)
+			if err != nil {
+				return fmt.Errorf("failed to write configuration: %w", err)
+			}
 
-		resourcesPath, cleanup, err = util.WriteDefaultTempFile([]byte(input.CombineYAMLs(
-			request.InitResources, request.Resources,
-		)))
-		cleanuper.Add(cleanup)
-		if err != nil {
-			return fmt.Errorf("failed to write resources: %w", err)
+			configPaths = append(configPaths, configPath)
 		}
 
 		return nil
@@ -239,8 +240,7 @@ func (s *Service) abort(
 	}
 
 	bootstrapper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-		ConfigPaths:      []string{configPath},
-		ResourcesPath:    resourcesPath,
+		ConfigPaths:      configPaths,
 		InitialState:     initialState,
 		NodeInterface:    ssh.NewNodeInterfaceWrapper(sshClient),
 		UseTfCache:       ptr.To(true),
@@ -255,7 +255,7 @@ func (s *Service) abort(
 		TerraformContext:  terraform.NewTerraformContext(),
 	})
 
-	abortErr := bootstrapper.Abort(false)
+	abortErr := bootstrapper.Abort(ctx, false)
 	state := bootstrapper.GetLastState()
 	stateData, marshalErr := json.Marshal(state)
 	err = errors.Join(abortErr, marshalErr)

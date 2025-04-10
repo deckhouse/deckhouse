@@ -7,9 +7,10 @@
       severity_level: "4"
     annotations:
       plk_protocol_version: "1"
-      description: Observed deployment generation does not match expected one for
-        deployment {{$labels.namespace}}/{{$labels.deployment}}
-      summary: Deployment is outdated
+      summary: Deployment is outdated.
+      description: |
+        The observed deployment generation doesn't match the expected one for Deployment `{{$labels.namespace}}/{{$labels.deployment}}`.
+
   - alert: KubeStateMetricsDown
     expr: absent(up{job="kube-state-metrics"} == 1)
     for: 5m
@@ -18,16 +19,26 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: markdown
-      description: |-
-        There are no metrics about cluster resources for 5 minutes.
-
-        Most alerts an monitroing panels aren't working.
-
-        To debug the problem:
-        1. Check kube-state-metrics pods: `kubectl -n d8-monitoring describe pod -l app=kube-state-metrics`
-        2. Check its logs: `kubectl -n d8-monitoring describe deploy kube-state-metrics`
       summary: >
-        Kube-state-metrics is not working in the cluster.
+        `Kube-state-metrics` isn't working in the cluster.
+      description: |-
+        Deckhouse has detected that no metrics about cluster resources have been available for the past 5 minutes.
+        As a result, most alerts and monitoring panels aren't working.
+
+        Steps to troubleshoot:
+
+        1. Check the `kube-state-metrics` pods:
+        
+           ```bash
+           kubectl -n d8-monitoring describe pod -l app=kube-state-metrics
+           ```
+
+        2. Check the deployment logs:
+        
+           ```bash
+           kubectl -n d8-monitoring describe deploy kube-state-metrics
+           ```
+
   # kube_persistentvolume_is_local migration.
   # The patch was not generic enough, but it is used in many alerts/panels.
   # This recording rule is aimed to avoid rewriting them.

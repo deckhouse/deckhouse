@@ -11,7 +11,6 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -53,7 +52,7 @@ func customLogoHandler(input *go_hook.HookInput) error {
 	snap := input.Snapshots["logo-cm"]
 	if len(snap) == 0 || snap[0] == nil {
 		input.Values.Set("prometheus.internal.grafana.customLogo.enabled", false)
-		input.PatchCollector.Delete("v1", "ConfigMap", ns, cmName, object_patch.InBackground())
+		input.PatchCollector.DeleteInBackground("v1", "ConfigMap", ns, cmName)
 		return nil
 	}
 
@@ -63,7 +62,7 @@ func customLogoHandler(input *go_hook.HookInput) error {
 
 	md5Sum := md5.Sum([]byte(logoData))
 
-	input.PatchCollector.Create(cm, object_patch.UpdateIfExists())
+	input.PatchCollector.CreateOrUpdate(cm)
 	input.Values.Set("prometheus.internal.grafana.customLogo.enabled", true)
 	input.Values.Set("prometheus.internal.grafana.customLogo.checksum", fmt.Sprintf("%x", md5Sum))
 

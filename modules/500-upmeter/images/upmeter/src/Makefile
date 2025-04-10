@@ -54,8 +54,8 @@ build:
 
 build-docker:
 	docker build \
-		--build-arg BASE_ALPINE=alpine:3.12 \
-		--build-arg BASE_GOLANG_ALPINE=golang:$(GO_VERSION)-alpine3.12 \
+		--build-arg BASE_ALPINE=alpine:3.20 \
+		--build-arg BASE_GOLANG_ALPINE=golang:$(GO_VERSION)-alpine3.20 \
 		--build-arg BASE_GOLANG_BUSTER=golang:$(GO_VERSION)-buster \
 		-t upmeter \
 		.

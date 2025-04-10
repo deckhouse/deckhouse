@@ -45,12 +45,13 @@ env:
   GOPROXY: "${{vars.GOPROXY}}"
   # observability source repo should contain creds for repo for ex https://user:password@my-repo.com/group
   OBSERVABILITY_SOURCE_REPO: "${{secrets.OBSERVABILITY_SOURCE_REPO}}"
-  # Next two are required for accessing the stronghold repo during d8 cli builds.
-  # Stronghold pull token should contain CI token with read access to stronghold repos.
-  STRONGHOLD_PULL_TOKEN: "${{secrets.STRONGHOLD_PULL_TOKEN}}"
-  # deckhouse private repo should contain the host address of proprietary parts of deckhouse ecosystem. Ex repo.my-repo.com
   DECKHOUSE_PRIVATE_REPO: "${{secrets.DECKHOUSE_PRIVATE_REPO}}"
   # </template: git_source_envs>
+
+  # <template: dmt_envs>
+  DMT_METRICS_URL: "${{ secrets.DMT_METRICS_URL }}"
+  DMT_METRICS_TOKEN: "${{ secrets.DMT_METRICS_TOKEN }}"
+  # </template: dmt_envs>
 
 # Cancel in-progress jobs for the same PR (pull_request_target event) or for the same branch (push event).
 concurrency:
@@ -496,8 +497,8 @@ jobs:
       - name: Run go generate
         run: |
 
-          (cd tools && go generate)
-          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate)
+          (cd tools && go generate -v)
+          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
 
       - name: Check generated code
         run: |
@@ -571,7 +572,7 @@ jobs:
     env:
       WERF_ENV: ${{ needs.pull_request_info.outputs.edition }}
     # <template: build_template>
-    runs-on: [self-hosted, regular, selectel]
+    runs-on: [self-hosted, large]
     outputs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
     steps:
@@ -757,6 +758,7 @@ jobs:
 
             werf build \
               ${SECONDARY_REPO} \
+              --verbose \
               --parallel=true --parallel-tasks-limit=5 \
               --save-build-report=true \
               --tmp-dir="$TEMP_WORKDIR" \
@@ -769,6 +771,7 @@ jobs:
             # - branches to Dev registry to run e2e tests.
             # - semver tags to Github Container Registry for testing release process.
             werf build \
+              --verbose \
               --parallel=true --parallel-tasks-limit=5 \
               --save-build-report=true \
               --tmp-dir="$TEMP_WORKDIR" \
@@ -954,7 +957,7 @@ jobs:
   security_scan_images:
     name: Security scan images
     if: ${{ needs.pull_request_info.outputs.security_rootless_scan == 'true' }}
-    runs-on: [ self-hosted, regular, selectel ]
+    runs-on: [self-hosted, large]
     needs:
       - git_info
       - pull_request_info
@@ -1135,7 +1138,6 @@ jobs:
     # </template: tests_webhooks_template>
 
   tests_dmt_lint:
-    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: Tests DMT lint
     needs:
     - git_info
@@ -1161,6 +1163,9 @@ jobs:
           ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_full_step>
       - name: DMT lint
+        env:
+          DMT_METRICS_URL: "${{ secrets.DMT_METRICS_URL }}"
+          DMT_METRICS_TOKEN: "${{ secrets.DMT_METRICS_TOKEN }}"
         run: |
           make dmt-lint
     # </template: tests_dmt_lint>

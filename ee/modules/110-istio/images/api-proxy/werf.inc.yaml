@@ -31,7 +31,7 @@ shell:
   setup:
   - cd /src
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-  - go build -ldflags="-s -w" -o /src/api-proxy main.go
+  - go build -ldflags="-s -w" -o /src/api-proxy main.go models.go proxy.go
   - chmod 0500 /src/api-proxy
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact

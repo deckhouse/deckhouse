@@ -23,93 +23,91 @@ import (
 )
 
 type Sender interface {
-	Send(ctx context.Context, listBackends map[string]struct{}, versions []Version) error
+	Send(ctx context.Context, listBackends map[string]struct{}, versions []DocumentationTask)
 }
 
-type RegistryScaner interface {
-	GetState() []Version
-	SubscribeOnUpdate(updateHandler func([]Version) error)
+type RegistryScanner interface {
+	GetState() []DocumentationTask
+	SubscribeOnUpdate(updateHandler func([]DocumentationTask) error)
 }
 
-var instance *backends = nil
-
-type Version struct {
+type DocumentationTask struct {
 	Registry        string
 	Module          string
 	Version         string
 	ReleaseChannels []string
 	TarFile         []byte
-	ToDelete        bool
+
+	Task Task
 }
 
-type backends struct {
-	registryScaner RegistryScaner
-	sender         Sender
+type Task uint
 
-	m            sync.RWMutex
-	listBackends map[string]struct{} // list of backends ip addreses
+const (
+	TaskCreate Task = iota
+	TaskDelete
+)
+
+// BackendManager handles operations on backend endpoints and coordinates updates
+type BackendManager struct {
+	scanner RegistryScanner
+	sender  Sender
+
+	mu           sync.RWMutex
+	backendAddrs map[string]struct{} // list of backend IP addresses
 
 	logger *log.Logger
 }
 
-func New(registryScaner RegistryScaner, sender Sender, logger *log.Logger) *backends {
-	if instance == nil {
-		instance = &backends{
-			registryScaner: registryScaner,
-			sender:         sender,
-			listBackends:   make(map[string]struct{}),
-
-			logger: logger,
-		}
-	}
-	registryScaner.SubscribeOnUpdate(instance.updateHandler)
-
-	return instance
-}
-
-func Get() (b *backends, ok bool) {
-	if instance == nil {
-		return nil, false
+// New creates a new BackendManager instance
+func New(scanner RegistryScanner, sender Sender, logger *log.Logger) *BackendManager {
+	bm := &BackendManager{
+		scanner:      scanner,
+		sender:       sender,
+		backendAddrs: make(map[string]struct{}),
+		logger:       logger,
 	}
 
-	return instance, true
+	scanner.SubscribeOnUpdate(bm.handleUpdate)
+
+	return bm
 }
 
-// Add new backend to list backends
-func (b *backends) Add(backend string) {
-	b.logger.Info(`Add call`, slog.String("backend", backend))
+// Add registers a new backend endpoint and sends the current documentation state
+func (bm *BackendManager) Add(ctx context.Context, backend string) {
+	bm.logger.Info("Adding backend", slog.String("backend", backend))
 
-	b.m.Lock()
-	defer b.m.Unlock()
+	bm.mu.Lock()
+	defer bm.mu.Unlock()
 
-	b.listBackends[backend] = struct{}{}
-	state := b.registryScaner.GetState()
-	err := b.sender.Send(context.Background(), map[string]struct{}{backend: {}}, state)
-	if err != nil {
-		b.logger.Fatal("sending docs to new backend", log.Err(err))
-	}
+	bm.backendAddrs[backend] = struct{}{}
+
+	state := bm.scanner.GetState()
+	bm.logger.Info("Sending documentation to new backend",
+		slog.String("backend", backend),
+		slog.Int("docs_count", len(state)))
+
+	bm.sender.Send(ctx, map[string]struct{}{backend: {}}, state)
 }
 
-func (b *backends) Delete(backend string) {
-	b.logger.Info(`Delete call`, slog.String("backend", backend))
+// Delete removes a backend endpoint from the managed list
+func (bm *BackendManager) Delete(_ context.Context, backend string) {
+	bm.logger.Info("Removing backend", slog.String("backend", backend))
 
-	b.m.Lock()
-	defer b.m.Unlock()
+	bm.mu.Lock()
+	defer bm.mu.Unlock()
 
-	delete(b.listBackends, backend)
+	delete(bm.backendAddrs, backend)
 }
 
-// UpdateDocks send update dock request to all backends
-func (b *backends) updateHandler(versions []Version) error {
-	b.logger.Info(`'registryScaner' produce update event`)
+// handleUpdate sends documentation updates to all registered backends
+func (bm *BackendManager) handleUpdate(docTasks []DocumentationTask) error {
+	bm.logger.Info("Processing registry update event", slog.Int("tasks", len(docTasks)))
 
-	b.m.RLock()
-	defer b.m.RUnlock()
+	bm.mu.RLock()
+	defer bm.mu.RUnlock()
 
-	err := b.sender.Send(context.Background(), b.listBackends, versions)
-	if err != nil {
-		return err
-	}
+	bm.sender.Send(context.Background(), bm.backendAddrs, docTasks)
 
 	return nil
 }

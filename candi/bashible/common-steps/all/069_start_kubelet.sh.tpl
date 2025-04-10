@@ -19,7 +19,7 @@ function wait-kubelet-client-certificate() {
   until [ -f /var/lib/kubelet/pki/kubelet-client-current.pem ]; do
     attempt=$(( attempt + 1 ))
     if [ "$attempt" -gt "30" ]; then
-      bb-log-error "The file /var/lib/kubelet/pki/kubelet-client-current.pem was not generated in 5 minutes."
+      bb-log-error "The file /var/lib/kubelet/pki/kubelet-client-current.pem was not generated in 5 minutes.\nPlease check logs of kubelet: journalctl -u kubelet.service"
       break
     fi
     bb-log-info "Waiting till the file /var/lib/kubelet/pki/kubelet-client-current.pem generated (10sec)..."

@@ -40,12 +40,11 @@ const (
 	DeckhouseReleaseAnnotationForce                 = "release.deckhouse.io/force"
 	DeckhouseReleaseAnnotationSuspended             = "release.deckhouse.io/suspended"
 	DeckhouseReleaseAnnotationNotificationTimeShift = "release.deckhouse.io/notification-time-shift"
-	DeckhouseReleaseAnnotationDryrun                = "dryrun"
-	DeckhouseReleaseAnnotationTriggeredByDryrun     = "triggered_by_dryrun"
 	DeckhouseReleaseAnnotationCurrentRestored       = "release.deckhouse.io/current-restored"
+	DeckhouseReleaseAnnotationChangeCause           = "release.deckhouse.io/change-cause"
 
-	// TODO: remove in entire code
-	DeckhouseReleaseAnnotationCooldown = "release.deckhouse.io/cooldown"
+	DeckhouseReleaseAnnotationDryrun            = "dryrun"
+	DeckhouseReleaseAnnotationTriggeredByDryrun = "triggered_by_dryrun"
 )
 
 var DeckhouseReleaseGVK = schema.GroupVersionKind{
@@ -93,19 +92,6 @@ func (in *DeckhouseRelease) GetChangelogLink() string {
 	return in.Spec.ChangelogLink
 }
 
-// TODO: remove cooldown from entire code
-func (in *DeckhouseRelease) GetCooldownUntil() *time.Time {
-	cooldown := new(time.Time)
-	if v, ok := in.Annotations[DeckhouseReleaseAnnotationCooldown]; ok {
-		cd, err := time.Parse(time.RFC3339, v)
-		if err == nil {
-			cooldown = &cd
-		}
-	}
-
-	return cooldown
-}
-
 func (in *DeckhouseRelease) GetDisruptions() []string {
 	return in.Spec.Disruptions
 }
@@ -122,6 +108,10 @@ func (in *DeckhouseRelease) GetPhase() string {
 func (in *DeckhouseRelease) GetForce() bool {
 	v, ok := in.Annotations[DeckhouseReleaseAnnotationForce]
 	return ok && v == "true"
+}
+
+func (*DeckhouseRelease) GetReinstall() bool {
+	return false
 }
 
 func (in *DeckhouseRelease) GetApplyNow() bool {

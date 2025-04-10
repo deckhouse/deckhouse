@@ -104,12 +104,13 @@ func TestDeleteMachinesIfResourcesExist(t *testing.T) {
 }
 
 func TestDeletePods(t *testing.T) {
+	ctx := context.Background()
 	log.InitLogger("json")
 
 	t.Run("Without pods", func(t *testing.T) {
 		fakeClient := client.NewFakeKubernetesClient()
 
-		err := DeletePods(fakeClient)
+		err := DeletePods(ctx, fakeClient)
 		require.NoError(t, err)
 	})
 
@@ -189,7 +190,7 @@ func TestDeletePods(t *testing.T) {
 		_, err = fakeClient.CoreV1().Pods("test-ns").Create(context.TODO(), pod4, metav1.CreateOptions{})
 		require.NoError(t, err)
 
-		err = DeletePods(fakeClient)
+		err = DeletePods(ctx, fakeClient)
 		require.NoError(t, err)
 
 		pods, err := fakeClient.CoreV1().Pods(metav1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})

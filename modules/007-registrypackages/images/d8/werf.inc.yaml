@@ -27,6 +27,11 @@ import:
 imageSpec:
   config:
     labels: { "distro": "all", "version": "all", "d8": "{{ .CandiVersionMap.d8.d8CliVersion }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
@@ -52,10 +57,15 @@ shell:
   - apt-get update && apt-get install libbtrfs-dev -y
   install:
   - export GOPROXY={{ $.GOPROXY }}
+
   - export PRIVATE_REPO={{ $.DECKHOUSE_PRIVATE_REPO }}
-  - export PRIVATE_REPO_TOKEN={{ $.STRONGHOLD_PULL_TOKEN }}
-  - export GOPRIVATE={{ $.DECKHOUSE_PRIVATE_REPO }}
-  - git config --global url."https://gitlab-ci-token:${PRIVATE_REPO_TOKEN}@${PRIVATE_REPO}/".insteadOf https://${PRIVATE_REPO}/
+  - GOPRIVATE="flant.internal"
+  - git config --global url."ssh://git@${PRIVATE_REPO}/".insteadOf "https://flant.internal/"
+  - git config --global --add safe.directory '*'
+  - mkdir -p ~/.ssh
+  - touch ~/.ssh/known_hosts
+  - ssh-keyscan -H ${PRIVATE_REPO} >> ~/.ssh/known_hosts
+
   - cd /src/deckhouse-cli
   - task build:dist:linux:amd64
   - mv ./dist/{{ .CandiVersionMap.d8.d8CliVersion }}/linux-amd64/bin/d8 /d8

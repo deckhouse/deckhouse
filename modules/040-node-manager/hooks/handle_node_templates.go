@@ -43,6 +43,7 @@ const (
 	masterNodeRoleKey                 = "node-role.kubernetes.io/master"
 	clusterAPIAnnotationKey           = "cluster.x-k8s.io/machine"
 	HeartbeatAnnotationKey            = "kubevirt.internal.virtualization.deckhouse.io/heartbeat"
+	MetalLBmemberLabelKey             = "l2-load-balancer.network.deckhouse.io/member"
 )
 
 type NodeSettings struct {
@@ -100,6 +101,12 @@ func actualNodeSettingsFilter(obj *unstructured.Unstructured) (go_hook.FilterRes
 	_, isHeartbeat := nodeObj.Annotations[HeartbeatAnnotationKey]
 	if isHeartbeat {
 		delete(nodeObj.Annotations, HeartbeatAnnotationKey)
+	}
+
+	// Ignore labels "l2-load-balancer.network.deckhouse.io/member" on hook execute.
+	_, isMetalLB := nodeObj.Labels[MetalLBmemberLabelKey]
+	if isMetalLB {
+		delete(nodeObj.Labels, MetalLBmemberLabelKey)
 	}
 
 	return settings, nil
@@ -175,7 +182,7 @@ func nodeTemplatesHandler(input *go_hook.HookInput) error {
 			continue
 		}
 
-		input.PatchCollector.Filter(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+		input.PatchCollector.PatchWithMutatingFunc(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 			nodeObj := new(v1.Node)
 			err := sdk.FromUnstructured(obj, nodeObj)
 			if err != nil {

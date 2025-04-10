@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"os"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -31,6 +32,7 @@ const (
 	saPath    = "/var/run/secrets/kubernetes.io/serviceaccount/"
 	caPath    = saPath + "ca.crt"
 	tokenPath = saPath + "token"
+	apiV1Path = "/api/v1"
 
 	kubernetesAPIAddress = "https://kubernetes.default"
 )
@@ -38,6 +40,7 @@ const (
 type Cache interface {
 	Get(string, string) (bool, error)
 	GetPreferredVersion(group, resource string) (string, error)
+	GetCoreResources() (CoreResourcesDict, error)
 	Check() error
 }
 
@@ -80,6 +83,13 @@ func newPreferredVersionCacheEntry(addTime time.Time, version string) *preferred
 	}
 }
 
+type CoreResourcesDict map[string]struct{}
+
+type coreResourcesCache struct {
+	*cacheEntry
+	dict CoreResourcesDict
+}
+
 type NamespacedDiscoveryCache struct {
 	logger *log.Logger
 
@@ -91,6 +101,9 @@ type NamespacedDiscoveryCache struct {
 	muPv              sync.RWMutex
 	preferredVersions map[string]*preferredVersionCacheEntry
 
+	muCr          sync.RWMutex
+	coreResources *coreResourcesCache
+
 	now func() time.Time
 
 	kubernetesAPIAddress string
@@ -101,6 +114,7 @@ func NewNamespacedDiscoveryCache(logger *log.Logger) *NamespacedDiscoveryCache {
 		logger:            logger,
 		data:              make(map[string]*namespacedCacheEntry),
 		preferredVersions: make(map[string]*preferredVersionCacheEntry),
+		coreResources:     new(coreResourcesCache),
 		now:               time.Now,
 
 		kubernetesAPIAddress: kubernetesAPIAddress,
@@ -175,7 +189,7 @@ func (c *NamespacedDiscoveryCache) renewCacheOnce(apiGroup string, req *http.Req
 }
 
 func (c *NamespacedDiscoveryCache) renewCache(apiGroup string) error {
-	path := "/api/v1"
+	path := apiV1Path
 	if apiGroup != "v1" {
 		path = "/apis/" + apiGroup
 	}
@@ -194,8 +208,8 @@ func (c *NamespacedDiscoveryCache) renewCache(apiGroup string) error {
 	})
 }
 
-func (c *NamespacedDiscoveryCache) getAvailableAPIGrouPVerionsInDescendingOrder(group string) ([]string, error) {
-	path := "/apis/" + group
+func (c *NamespacedDiscoveryCache) getAvailableAPIGroupVerionsInDescendingOrder(apiGroup string) ([]string, error) {
+	path := "/apis/" + apiGroup
 
 	availableVersions := make([]string, 0)
 
@@ -228,9 +242,9 @@ func (c *NamespacedDiscoveryCache) getAvailableAPIGrouPVerionsInDescendingOrder(
 func (c *NamespacedDiscoveryCache) requestPreferredVersion(group, resource string) (string, error) {
 	preferredVersion := ""
 
-	availableVersions, err := c.getAvailableAPIGrouPVerionsInDescendingOrder(group)
+	availableVersions, err := c.getAvailableAPIGroupVerionsInDescendingOrder(group)
 	if err != nil {
-		return "", fmt.Errorf("get availalble apigroup versions: %w", err)
+		return "", fmt.Errorf("get available apigroup versions: %w", err)
 	}
 
 	for _, version := range availableVersions {
@@ -269,6 +283,71 @@ func (c *NamespacedDiscoveryCache) requestPreferredVersion(group, resource strin
 	}
 
 	return preferredVersion, nil
+}
+
+// GetCoreResources returns a dict of currently available resources from the core apigroup
+func (c *NamespacedDiscoveryCache) GetCoreResources() (CoreResourcesDict, error) {
+	coreResources := c.getCoreResourcesFromCache()
+	if len(coreResources) != 0 {
+		return coreResources, nil
+	}
+
+	coreResources, err := c.requestCoreResources()
+	if err != nil {
+		return nil, err
+	}
+
+	c.muCr.Lock()
+	c.coreResources = &coreResourcesCache{
+		cacheEntry: newCacheEntry(c.now()),
+		dict:       coreResources,
+	}
+	c.muCr.Unlock()
+
+	return coreResources, nil
+}
+
+func (c *NamespacedDiscoveryCache) getCoreResourcesFromCache() CoreResourcesDict {
+	c.muCr.RLock()
+	defer c.muCr.RUnlock()
+	if len(c.coreResources.dict) != 0 && !c.isEntryExpired(c.coreResources.cacheEntry) {
+		return c.coreResources.dict
+	}
+
+	return nil
+}
+
+func getResourceNameBeforeSlash(resourceName string) string {
+	return strings.Split(resourceName, "/")[0]
+}
+
+func (c *NamespacedDiscoveryCache) requestCoreResources() (CoreResourcesDict, error) {
+	var coreResources CoreResourcesDict
+	if err := Retry(func() (bool, error) {
+		req, err := http.NewRequest(http.MethodGet, c.kubernetesAPIAddress+apiV1Path, nil)
+		if err != nil {
+			return false, fmt.Errorf("build request for core resources: %w", err)
+		}
+
+		var apiResourceList APIResourceList
+		_, err = c.execRequest(req, "request list of core resources", &apiResourceList)
+		if err != nil {
+			return true, fmt.Errorf("request list of core resources: %w", err)
+		}
+
+		discoveredCoreResources := make(CoreResourcesDict, len(apiResourceList.Resources))
+		for _, resource := range apiResourceList.Resources {
+			discoveredCoreResources[getResourceNameBeforeSlash(resource.Name)] = struct{}{}
+		}
+
+		coreResources = discoveredCoreResources
+
+		return false, nil
+	}); err != nil {
+		return nil, fmt.Errorf("get list of core resources: %w", err)
+	}
+
+	return coreResources, nil
 }
 
 func (c *NamespacedDiscoveryCache) preferredVersionFromCache(group, resource string) string {

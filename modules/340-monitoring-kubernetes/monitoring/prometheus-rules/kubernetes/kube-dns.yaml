@@ -9,10 +9,20 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
+      summary: Kube-dns or CoreDNS are not being monitored.
       description: |-
-        Prometheus is unable to collect metrics from kube-dns. Thus its status is unknown.
+        Prometheus is unable to collect metrics from `kube-dns`, which makes its status unknown.
 
-        To debug the problem, use the following commands:
-        1. `kubectl -n kube-system describe deployment -l k8s-app=kube-dns`
-        2. `kubectl -n kube-system describe pod -l k8s-app=kube-dns`
-      summary: Kube-dns or CoreDNS are not under monitoring.
+        Steps to troubleshoot:
+
+        1. Check the deployment details:
+
+           ```bash
+           kubectl -n kube-system describe deployment -l k8s-app=kube-dns
+           ```
+
+        2. Check the pod details:
+
+           ```bash
+           kubectl -n kube-system describe pod -l k8s-app=kube-dns
+           ```

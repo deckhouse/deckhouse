@@ -16,7 +16,7 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        A certificate in Secret `{{$labels.namespace}}/{{$labels.name}}` has expired.
+        A certificate in Secret `{{$labels.secret_namespace}}/{{$labels.secret_name}}` has expired.
 
         Ways to resolve:
 
@@ -25,13 +25,13 @@ alerts:
           1. Retrieve the certificate name from the Secret:
 
              ```bash
-             cert=$(kubectl get secret -n {{$labels.namespace}} {{$labels.name}} -o 'jsonpath={.metadata.annotations.cert-manager\.io/certificate-name}')
+             cert=$(kubectl get secret -n {{$labels.secret_namespace}} {{$labels.secret_name}} -o 'jsonpath={.metadata.annotations.cert-manager\.io/certificate-name}')
              ```
 
           2. Check the certificate status and investigate why it hasn't been updated:
 
              ```bash
-             kubectl describe cert -m {{$labels.namespace}} "$cert"
+             kubectl describe cert -m {{$labels.secret_namespace}} "$cert"
              ```
       summary: |
         Certificate has expired.
@@ -43,7 +43,7 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        A certificate in Secret `{{$labels.namespace}}/{{$labels.name}}` will expire in less than two weeks.
+        A certificate in Secret `{{$labels.secret_namespace}}/{{$labels.secret_name}}` will expire in less than two weeks.
 
         Ways to resolve:
 
@@ -52,13 +52,13 @@ alerts:
           1. Retrieve the certificate name from the Secret:
 
              ```bash
-             cert=$(kubectl get secret -n {{$labels.namespace}} {{$labels.name}} -o 'jsonpath={.metadata.annotations.cert-manager\.io/certificate-name}')
+             cert=$(kubectl get secret -n {{$labels.secret_namespace}} {{$labels.secret_name}} -o 'jsonpath={.metadata.annotations.cert-manager\.io/certificate-name}')
              ```
 
           2. Check the certificate status and investigate why it hasn't been updated:
 
              ```bash
-             kubectl describe cert -n {{$labels.namespace}} "$cert"
+             kubectl describe cert -n {{$labels.secret_namespace}} "$cert"
              ```
       summary: |
         Certificate is expiring soon.
@@ -249,11 +249,11 @@ alerts:
       module: monitoring-kubernetes
       edition: ce
       description: |-
-        The CPU steal is too high on the {{ $labels.node }} Node in the last 30 minutes.
+        The CPU steal has been excessively high on node `{{ $labels.node }}` over the past 30 minutes.
 
-        Probably, some other component is stealing Node resources (e.g., a neighboring virtual machine). This may be the result of "overselling" the hypervisor. In other words, there are more virtual machines than the hypervisor can handle.
+        Another component, such as a neighboring virtual machine, may be consuming the node's resources. This may be the result of "overselling" the hypervisor, meaning the hypervisor is hosting more virtual machines than it can handle.
       summary: |
-        CPU Steal on the {{ $labels.node }} Node is too high.
+        CPU steal on node {{ $labels.node }} is too high.
       severity: "4"
       markupFormat: default
     - name: CronJobAuthenticationFailure
@@ -445,15 +445,19 @@ alerts:
       module: monitoring-custom
       edition: ce
       description: |-
-        There are PodMonitors in Deckhouse namespace that were not created by Deckhouse.
+        There are PodMonitors in the Deckhouse namespace that were not created by Deckhouse.
 
-        Use the following command for filtering: `kubectl get podmonitors --all-namespaces -l heritage!=deckhouse`.
+        To resolve the issue, move these PodMonitors to the `user-spec` namespace by removing the `heritage: deckhouse` label.
 
-        They must be moved from Deckhouse namespace to user-spec namespace (was not labeled as `heritage: deckhouse`).
+        To list all PodMonitors in the Deckhouse namespace, run the following command:
 
-        The detailed description of the metric collecting process is available in the [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html).
+        ```bash
+        kubectl get podmonitors --all-namespaces -l heritage!=deckhouse
+        ```
+
+        For more information on metric collection, refer to the [Prometheus module FAQ](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html).
       summary: |
-        There are PodMonitors in Deckhouse namespace that were not created by Deckhouse.
+        Deckhouse namespace contains PodMonitors not created by Deckhouse.
       severity: "9"
       markupFormat: markdown
     - name: CustomServiceMonitorFoundInD8Namespace
@@ -462,15 +466,19 @@ alerts:
       module: monitoring-custom
       edition: ce
       description: |-
-        There are ServiceMonitors in Deckhouse namespace that were not created by Deckhouse.
+        There are ServiceMonitors in the Deckhouse namespace that were not created by Deckhouse.
 
-        Use the following command for filtering: `kubectl get servicemonitors --all-namespaces -l heritage!=deckhouse`.
+        To resolve the issue, move these ServiceMonitors to the `user-spec` namespace by removing the `heritage: deckhouse` label.
 
-        They must be moved from Deckhouse namespace to user-spec namespace (was not labeled as `heritage: deckhouse`).
+        To list all ServiceMonitors in the Deckhouse namespace, run the following command:
 
-        The detailed description of the metric collecting process is available in the [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html).
+        ```bash
+        kubectl get servicemonitors --all-namespaces -l heritage!=deckhouse
+        ```
+
+        For more information on metric collection, refer to the [Prometheus module FAQ](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html).
       summary: |
-        There are ServiceMonitors in Deckhouse namespace that were not created by Deckhouse.
+        Deckhouse namespace contains ServiceMonitors not created by Deckhouse.
       severity: "9"
       markupFormat: markdown
     - name: D8AdmissionPolicyEngineNotBootstrapped
@@ -508,6 +516,17 @@ alerts:
       summary: |
         Bashible-apiserver is locked for too long
       severity: "6"
+      markupFormat: markdown
+    - name: D8CephCsiModuleDeprecated
+      sourceFile: modules/031-ceph-csi/monitoring/prometheus-rules/deprecated-module-alert.yaml
+      moduleUrl: 031-ceph-csi
+      module: ceph-csi
+      edition: ce
+      description: |
+        CephCsi module is deprecated. Please, use [csi-ceph](https://deckhouse.io/products/kubernetes-platform/modules/csi-ceph/stable/) module instead.
+      summary: |
+        CephCsi module is deprecated.
+      severity: "5"
       markupFormat: markdown
     - name: D8CertExporterPodIsNotReady
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/certificates/certificates-exporter-health.yaml
@@ -574,6 +593,81 @@ alerts:
       summary: |
         Prometheus can't scrape x509-certificate-exporter metrics.
       severity: "8"
+      markupFormat: markdown
+    - name: D8CheckCloudProviderConfig
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/check_config.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        The provider-cluster-configuration in the cluster contains fields that aren't defined in the schema.
+
+        Steps to troubleshoot:
+
+        1. Check the logs for details:
+
+           ```bash
+           kubectl logs -n d8-system -l app=deckhouse --tail=-1 | grep check_provider_cluster_configuration | grep error | jq .msg
+           ```
+
+        1. Remove the unsupported fields from the provider-cluster-configuration:
+
+           ```bash
+           kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+           ```
+      summary: |
+        Provider-cluster-configuration contains unsupported fields.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8CheckClusterConfig
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/check_config.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        The cluster-configuration in the cluster contains fields that aren't defined in the schema.
+
+        Steps to troubleshoot:
+
+        1. Check the logs for details:
+
+           ```bash
+           kubectl logs -n d8-system -l app=deckhouse --tail=-1 | grep check_cluster_configuration | grep error | jq .msg
+           ```
+
+        1. Remove the unsupported fields from the cluster-configuration:
+
+           ```bash
+           kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
+           ```
+      summary: |
+        Cluster-configuration contains unsupported fields.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8CheckStaticClusterConfig
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/check_config.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        The static-cluster-configuration in the cluster contains fields that aren't defined in the schema.
+
+        Steps to troubleshoot:
+
+        1. Check the logs for details:
+
+           ```bash
+           kubectl logs -n d8-system -l app=deckhouse --tail=-1 | grep check_static_cluster_configuration | grep error | jq .msg
+           ```
+
+        1. Remove the unsupported fields from the static-cluster-configuration:
+
+           ```bash
+           kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit static-cluster-configuration
+           ```
+      summary: |
+        Static-cluster-configuration contains unsupported fields.
+      severity: "4"
       markupFormat: markdown
     - name: D8CloudDataDiscovererCloudRequestError
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/cloud-data-discovery.tpl
@@ -684,54 +778,18 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Several CNIs are enabled in the cluster:
+        Deckhouse has detected that multiple CNIs are enabled in the cluster.
         For the cluster to work correctly, only one CNI must be enabled.
+
+        To resolve this issue, disable any unnecessary CNI.
       summary: |
         More than one CNI is enabled in the cluster.
       severity: "2"
       markupFormat: markdown
     - name: D8CNIMisconfigured
-      sourceFile: modules/021-cni-cilium/monitoring/prometheus-rules/cni-checks.yaml
-      moduleUrl: 021-cni-cilium
-      module: cni-cilium
-      edition: ce
-      description: |
-        Steps to troubleshoot:
-
-        1. Find the desired settings in the ConfigMap `d8-system/desired-cni-moduleconfig` by running the following command:
-
-           ```bash
-           kubectl -n d8-system get configmap desired-cni-moduleconfig -o yaml
-           ```
-
-        1. Update the conflicting settings in the CNI `{{ $labels.cni }}` ModuleConfig to match the desired configuration.
-      summary: |
-        Settings in the secret d8-cni-configuration conflict with the ModuleConfig.
-      severity: "5"
-      markupFormat: markdown
-    - name: D8CNIMisconfigured
-      sourceFile: modules/035-cni-flannel/monitoring/prometheus-rules/cni-checks.yaml
-      moduleUrl: 035-cni-flannel
-      module: cni-flannel
-      edition: ce
-      description: |
-        Steps to troubleshoot:
-
-        1. Find the desired settings in the ConfigMap `d8-system/desired-cni-moduleconfig` by running the following command:
-
-           ```bash
-           kubectl -n d8-system get configmap desired-cni-moduleconfig -o yaml
-           ```
-
-        1. Update the conflicting settings in the CNI `{{ $labels.cni }}` ModuleConfig to match the desired configuration.
-      summary: |
-        Settings in the secret d8-cni-configuration conflict with the ModuleConfig.
-      severity: "5"
-      markupFormat: markdown
-    - name: D8CNIMisconfigured
-      sourceFile: modules/035-cni-simple-bridge/monitoring/prometheus-rules/cni-checks.yaml
-      moduleUrl: 035-cni-simple-bridge
-      module: cni-simple-bridge
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/cni-checks.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
       edition: ce
       description: |
         Steps to troubleshoot:
@@ -770,15 +828,19 @@ alerts:
       module: monitoring-custom
       edition: ce
       description: |-
-        There are PrometheusRules in the cluster that were not created by Deckhouse.
+        There are PrometheusRules in the Deckhouse namespace that were not created by Deckhouse.
 
-        Use the following command for filtering: `kubectl get prometheusrules --all-namespaces -l heritage!=deckhouse`.
+        To resolve the issue, replace these PrometheusRules with the CustomPrometheusRules object.
 
-        They must be abandoned and replaced with the `CustomPrometheusRules` object.
+        To list all PrometheusRules in the Deckhouse namespace, run the following command:
 
-        Please, refer to the [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html#how-do-i-add-alerts-andor-recording-rules) for information about adding alerts and/or recording rules.
+        ```bash
+        kubectl get prometheusrules --all-namespaces -l heritage!=deckhouse
+        ```
+
+        For details on adding alerts and recording rules, refer to the [Prometheus module FAQ](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html#how-do-i-add-alerts-andor-recording-rules).
       summary: |
-        There are PrometheusRules in the cluster that were not created by Deckhouse.
+        Deckhouse namespace contains PrometheusRules not created by Deckhouse.
       severity: "9"
       markupFormat: markdown
     - name: D8DeckhouseConfigInvalid
@@ -786,14 +848,9 @@ alerts:
       moduleUrl: 340-monitoring-deckhouse
       module: monitoring-deckhouse
       edition: ce
-      description: |
-        Deckhouse config contains errors.
-
-        Please check Deckhouse logs by running `kubectl -n d8-system logs -f -l app=deckhouse`.
-
-        Edit Deckhouse global configuration by running `kubectl edit mc global` or configuration of the specific module by running `kubectl edit mc <MODULE_NAME>`
+      description: "Deckhouse configuration contains errors.\n\nSteps to troubleshoot:\n\n1. Check Deckhouse logs by running the following command:\n\n   ```bash\n   kubectl -n d8-system logs -f -l app=deckhouse\n   ```\n\n1. Edit the Deckhouse global configuration:\n\n   ```bash\n   kubectl edit mc global\n   ```\n   \n   Or edit configuration of a specific module:\n\n   ```bash\n   kubectl edit mc <MODULE_NAME>\n   ```\n"
       summary: |
-        Deckhouse config is invalid.
+        Deckhouse configuration is invalid.
       severity: "5"
       markupFormat: markdown
     - name: D8DeckhouseCouldNotDeleteModule
@@ -802,7 +859,11 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Please, refer to the corresponding logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
+        To investigate the issue, check the logs by running the following command:
+
+        ```bash
+        kubectl -n d8-system logs -f -l app=deckhouse
+        ```
       summary: |
         Deckhouse is unable to delete the {{ $labels.module }} module.
       severity: "4"
@@ -813,7 +874,11 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Please, refer to the corresponding logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
+        To investigate the issue, check the logs by running the following command:
+
+        ```bash
+        kubectl -n d8-system logs -f -l app=deckhouse
+        ```
       summary: |
         Deckhouse is unable to discover modules.
       severity: "4"
@@ -824,7 +889,11 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Please, refer to the corresponding logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
+        To investigate the issue, check the logs by running the following command:
+
+        ```bash
+        kubectl -n d8-system logs -f -l app=deckhouse
+        ```
       summary: |
         Deckhouse is unable to run the {{ $labels.hook }} global hook.
       severity: "5"
@@ -835,7 +904,11 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Please, refer to the corresponding logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
+        To investigate the issue, check the logs by running the following command:
+
+        ```bash
+        kubectl -n d8-system logs -f -l app=deckhouse
+        ```
       summary: |
         Deckhouse is unable to start the {{ $labels.module }} module.
       severity: "4"
@@ -846,7 +919,11 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Please, refer to the corresponding logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
+        To investigate the issue, check the logs by running the following command:
+
+        ```bash
+        kubectl -n d8-system logs -f -l app=deckhouse
+        ```
       summary: |
         Deckhouse is unable to run the {{ $labels.module }}/{{ $labels.hook }} module hook.
       severity: "7"
@@ -867,10 +944,11 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        The deckhouse configmap is no longer used.
-        You need to remove configmap "d8-system/deckhouse" from ArgoCD
+        The Deckhouse ConfigMap is no longer used.
+
+        To resolve this issue, remove the `d8-system/deckhouse` ConfigMap from Argo CD.
       summary: |
-        Deprecated deckhouse configmap managed by Argo CD
+        Deprecated Deckhouse ConfigMap managed by Argo CD.
       severity: "4"
       markupFormat: markdown
     - name: D8DeckhouseGlobalHookFailsTooOften
@@ -879,11 +957,15 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        The {{ $labels.hook }} has failed in the last `__SCRAPE_INTERVAL_X_4__`.
+        The `{{ $labels.hook }}` hook has failed multiple times in the last `__SCRAPE_INTERVAL_X_4__`.
 
-        Please, refer to the corresponding logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
+        To investigate the issue, check the logs by running the following command:
+
+        ```bash
+        kubectl -n d8-system logs -f -l app=deckhouse
+        ```
       summary: |
-        The {{ $labels.hook }} Deckhouse global hook crashes way too often.
+        The {{ $labels.hook }} Deckhouse global hook is crashing too frequently.
       severity: "9"
       markupFormat: markdown
     - name: D8DeckhouseHasNoAccessToRegistry
@@ -892,9 +974,9 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Deckhouse is unable to connect to the registry (registry.deckhouse.io in most cases) to check for a new Docker image (checks are performed every 15 seconds). Deckhouse does not have access to the registry; automatic updates are not available.
+        Deckhouse can't connect to the registry (typically `registry.deckhouse.io`) to check for a new Docker image. These checks are performed every 15 seconds. Without access to the registry, automatic updates are unavailable.
 
-        Usually, this alert means that the Deckhouse Pod is having difficulties with connecting to the Internet.
+        This alert often indicates that the Deckhouse Pod is experiencing connectivity issues with the Internet.
       summary: |
         Deckhouse is unable to connect to the registry.
       severity: "7"
@@ -905,7 +987,8 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Deckhouse is probably down since the `deckhouse_live_ticks` metric in Prometheus is no longer increasing (it is supposed to increment every 10 seconds).
+        Deckhouse is probably down, since the `deckhouse_live_ticks` metric in Prometheus has stopped increasing.
+        This metric is expected to increment every 10 seconds.
       summary: |
         Deckhouse is down.
       severity: "4"
@@ -916,15 +999,19 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Deckhouse is on a custom branch instead of one of the regular release channels.
+        Deckhouse in this cluster isn't subscribed to any of the regular release channels: `Alpha`, `Beta`, `EarlyAccess`, `Stable`, or `RockSolid`.
 
-        It is recommended that Deckhouse be subscribed to one of the following channels: `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
+        To resolve this issue, follow these steps:
 
-        Use the command below to find out what release channel is currently in use: `kubectl -n d8-system  get deploy deckhouse -o json | jq '.spec.template.spec.containers[0].image' -r`
+        1. Check the current release channel used in the cluster:
 
-        Subscribe the cluster to one of the regular release channels.
+           ```bash
+           kubectl -n d8-system  get deploy deckhouse -o json | jq '.spec.template.spec.containers[0].image' -r
+           ```
+
+        1. Subscribe to one of the regular release channels by adjusting the [`deckhouse` module configuration](https://deckhouse.io/products/kubernetes-platform/documentation/latest/modules/deckhouse/configuration.html#parameters-releasechannel).
       summary: |
-        Deckhouse in the cluster is not subscribed to one of the regular release channels.
+        Deckhouse isn't subscribed to any regular release channels.
       severity: "9"
       markupFormat: markdown
     - name: D8DeckhouseModuleHookFailsTooOften
@@ -933,11 +1020,15 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        The {{ $labels.hook }} hook of the {{ $labels.module }} module has failed in the last `__SCRAPE_INTERVAL_X_4__`.
+        The `{{ $labels.hook }}` hook of the `{{ $labels.module }}` module has failed multiple times in the last `__SCRAPE_INTERVAL_X_4__`.
 
-        Please, refer to the corresponding logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
+        To investigate the issue, check the logs by running the following command:
+
+        ```bash
+        kubectl -n d8-system logs -f -l app=deckhouse
+        ```
       summary: |
-        The {{ $labels.module }}/{{ $labels.hook }} Deckhouse hook crashes way too often.
+        The {{ $labels.module }}/{{ $labels.hook }} Deckhouse hook is crashing too frequently.
       severity: "9"
       markupFormat: markdown
     - name: D8DeckhouseModuleUpdatePolicyNotFound
@@ -946,12 +1037,17 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Module update policy not found for {{ $labels.module_release }}
+        The module update policy for {{ $labels.module_release }} is missing.
 
-        You need to remove label from MR: `kubectl label mr {{ $labels.module_release }} modules.deckhouse.io/update-policy-`.
+        To resolve this issue, remove the label from the module release using the following command:
+
+        ```bash
+        kubectl label mr {{ $labels.module_release }} modules.deckhouse.io/update-policy-
+        ```
+
         A new suitable policy will be detected automatically.
       summary: |
-        Module update policy not found for {{ $labels.module_release }}
+        Module update policy not found for {{ $labels.module_release }}.
       severity: "5"
       markupFormat: markdown
     - name: D8DeckhousePodIsNotReady
@@ -980,11 +1076,15 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        The number of restarts in the last hour: {{ $value }}.
+        Number of restarts in the last hour: {{ $value }}.
 
-        Excessive Deckhouse restarts indicate that something is wrong. Normally, Deckhouse should be up and running all the time.
+        Excessive Deckhouse restarts indicate a potential issue. Normally, Deckhouse should be up and running continuously.
 
-        Please, refer to the corresponding logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
+        To investigate the issue, check the logs by running the following command:
+
+        ```bash
+        kubectl -n d8-system logs -f -l app=deckhouse
+        ```
       summary: |
         Excessive Deckhouse restarts detected.
       severity: "9"
@@ -995,11 +1095,15 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Deckhouse cannot finish processing of the {{ $labels.queue }} queue with {{ $value }} tasks piled up.
+        Deckhouse cannot finish processing of the `{{ $labels.queue }}` queue, which currently has {{ $value }} pending task(s).
 
-        Please, refer to the corresponding logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
+        To investigate the issue, check the logs by running the following command:
+
+        ```bash
+        kubectl -n d8-system logs -f -l app=deckhouse
+        ```
       summary: |
-        The {{ $labels.queue }} Deckhouse queue has hung; there are {{ $value }} task(s) in the queue.
+        The {{ $labels.queue }} Deckhouse queue is stuck with {{ $value }} pending task(s).
       severity: "7"
       markupFormat: markdown
     - name: D8DeckhouseSelfTargetAbsent
@@ -1027,18 +1131,9 @@ alerts:
       moduleUrl: 340-monitoring-deckhouse
       module: monitoring-deckhouse
       edition: ce
-      description: |
-        Error occurred in the client-go informer, possible problems with connection to apiserver.
-
-        Check Deckhouse logs for more information by running:
-        `kubectl -n d8-system logs deploy/deckhouse | grep error | grep -i watch`
-
-        This alert is an attempt to detect the correlation between the faulty snapshot invalidation
-        and apiserver connection errors, especially for the handle-node-template hook in the node-manager module.
-        Check the difference between the snapshot and actual node objects for this hook:
-        `diff -u <(kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}'|sort) <(kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module snapshots node-manager -o json | jq '."040-node-manager/hooks/handle_node_templates.go"' | jq '.nodes.snapshot[] | .filterResult.Name' -r | sort)`
+      description: "Deckhouse has detected an error in the client-go informer, possibly due to connection issues with the API server.\n\nSteps to investigate:\n\n1. Check Deckhouse logs for more information by running:\n\n   ```bash\n   kubectl -n d8-system logs deploy/deckhouse | grep error | grep -i watch\n   ```\n\n1. This alert attempts to detect a correlation between the faulty snapshot invalidation and API server connection errors, specifically for the `handle-node-template` hook in the `node-manager` module.\n   \n   To compare the snapshot with the actual node objects for this hook, run the following command:\n\n   ```bash\n   diff -u <(kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{\"\\n\"}{end}'|sort) <(kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module snapshots node-manager -o json | jq '.\"040-node-manager/hooks/handle_node_templates.go\"' | jq '.nodes.snapshot[] | .filterResult.Name' -r | sort)\n   ```\n"
       summary: |
-        Possible apiserver connection error in the client-go informer, check logs and snapshots.
+        Possible API server connection error in the client-go informer.
       severity: "5"
       markupFormat: markdown
     - name: D8DexAllTargetsDown
@@ -1175,17 +1270,19 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        ModuleConfig is waiting for disable.
+        The ModuleConfig is pending module disabling.
 
-        It is recommended to keep clean your module configurations from approve annotations.
+        It is recommended that you keep your module configurations clean by removing unnecessary approval annotations.
 
-        If you ignore this alert and do not clear the annotation, it may cause the module to be accidentally removed from the cluster.
+        If you ignore this alert and do not clear the annotation, the module may be accidentally removed from the cluster, potentially leading to irreversible consequences.
 
-        Removing a module from a cluster can lead to a number of irreparable consequences.
+        To resolve this issue and stop the alert, run the following command:
 
-        Please run `kubectl annotate moduleconfig {{ $labels.module }} modules.deckhouse.io/allow-disabling-` to stop this alert.
+        ```bash
+        kubectl annotate moduleconfig {{ $labels.module }} modules.deckhouse.io/allow-disabling-
+        ```
       summary: |
-        ModuleConfig annotation for allow to disable is setted.
+        The ModuleConfig annotation for allowing module disabling is set.
       severity: "4"
       markupFormat: markdown
     - name: D8ImageAvailabilityExporterMalfunctioning
@@ -2018,11 +2115,19 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |-
-        Some nodes have deprecated OS versions. Please update nodes to actual OS version.
+        Deckhouse has detected nodes running deprecated OS versions.
 
-        To observe affected nodes use the expr `kube_node_info{os_image=~"Ubuntu 18.04.*|Debian GNU/Linux 10.*|CentOS Linux 7.*"}` in Prometheus.
+        Steps to troubleshoot:
+
+        1. Get a list of affected nodes by running the following Prometheus query:
+
+           ```promql
+           kube_node_info{os_image=~"Ubuntu 18.04.*|Debian GNU/Linux 10.*|CentOS Linux 7.*"}
+           ```
+
+        1. Update the affected nodes to a supported OS version.
       summary: |
-        Nodes have deprecated OS versions.
+        Nodes with deprecated OS versions detected.
       severity: "4"
       markupFormat: markdown
     - name: D8NodeHasUnmetKernelRequirements
@@ -2031,16 +2136,19 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |-
-        Some nodes have unmet kernel constraints. This means that some modules cannot be run on that nodes.
-        Current kernel constraint requirements:
-        For Cilium module kernel should be >= 4.9.17.
-        For Cilium with Istio modules kernel should be >= 5.7.
-        For Cilium with OpenVPN modules kernel should be >= 5.7.
-        For Cilium with Node-local-dns modules kernel should be >= 5.7.
+        Deckhouse has detected that some nodes don't meet the required kernel constraints.
+        As a result, certain modules can't run on these nodes.
 
-        To observe affected nodes use the expr `d8_node_kernel_does_not_satisfy_requirements == 1` in Prometheus.
+        Kernel requirements for each module:
+
+        - **Cilium module**: Kernel version must be **>= 4.9.17**.
+        - **Cilium with Istio**: Kernel version must be **>= 5.7**.
+        - **Cilium with OpenVPN**: Kernel version must be **>= 5.7**.
+        - **Cilium with Node-local-dns**: Kernel version must be **>= 5.7**.
+
+        To list all affected nodes, use the `d8_node_kernel_does_not_satisfy_requirements == 1` expression in Prometheus.
       summary: |
-        Nodes have unmet kernel requirements
+        Nodes have unmet kernel requirements.
       severity: "4"
       markupFormat: markdown
     - name: D8NodeIsNotUpdating
@@ -2144,15 +2252,19 @@ alerts:
       module: monitoring-custom
       edition: ce
       description: |-
-        Services with the `prometheus-custom-target` label are used to collect metrics in the cluster.
+        Deckhouse has detected that services with the `prometheus-custom-target` label are being used to collect metrics in the cluster.
 
-        Use the following command for filtering: `kubectl get service --all-namespaces --show-labels | grep prometheus-custom-target`.
+        The label format has been changed. To resolve the issue, replace the `prometheus-custom-target` label with `prometheus.deckhouse.io/custom-target`.
 
-        Note that the label format has changed. You need to change the `prometheus-custom-target` label to `prometheus.deckhouse.io/custom-target`.
+        To list all services labeled with `prometheus-custom-target`, run the following command:
 
-        For more information, refer to the [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html).
+        ```bash
+        kubectl get service --all-namespaces --show-labels | grep prometheus-custom-target
+        ```
+
+        For more information on metric collection, refer to the [Prometheus module FAQ](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html).
       summary: |
-        Services with the prometheus-custom-target label are used to collect metrics in the cluster.
+        Services with the prometheus-custom-target label are being used for metric collection.
       severity: "9"
       markupFormat: markdown
     - name: D8OldPrometheusTargetFormat
@@ -2161,13 +2273,17 @@ alerts:
       module: monitoring-applications
       edition: fe
       description: |-
-        Services with the `prometheus-target` label are used to collect metrics in the cluster.
+        Deckhouse has detected that services with the `prometheus-target` label are being used to collect metrics in the cluster.
 
-        Use the following command to filter them: `kubectl get service --all-namespaces --show-labels | grep prometheus-target`
+        The label format has been changed. To resolve the issue, replace the `prometheus-target` label with `prometheus.deckhouse.io/target`.
 
-        Note that the label format has changed. You need to replace the `prometheus-target` label with `prometheus.deckhouse.io/target`.
+        To list all services labeled with `prometheus-target`, run the following command:
+
+        ```bash
+        kubectl get service --all-namespaces --show-labels | grep prometheus-target
+        ```
       summary: |
-        Services with the prometheus-target label are used to collect metrics in the cluster.
+        Services with the prometheus-target label are being used for metric collection.
       severity: "6"
       markupFormat: markdown
     - name: D8ProblematicNodeGroupConfiguration
@@ -2283,13 +2399,13 @@ alerts:
       module: monitoring-custom
       edition: ce
       description: |-
-        Node {{ $labels.name }} uses:
-        - reserved `metadata.labels` *node-role.deckhouse.io/* with ending not in `(system|frontend|monitoring|_deckhouse_module_name_)`
-        - or reserved `spec.taints` *dedicated.deckhouse.io* with values not in `(system|frontend|monitoring|_deckhouse_module_name_)`
+        Deckhouse has detected that node {{ $labels.name }} is using one of the following:
+        - A reserved `metadata.labels` object `node-role.deckhouse.io/`, which doesn't end with `(system|frontend|monitoring|_deckhouse_module_name_)`.
+        - A reserved `spec.taints` object `dedicated.deckhouse.io`, with a value other than `(system|frontend|monitoring|_deckhouse_module_name_)`.
 
-        [Get instructions on how to fix it here](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-do-i-allocate-nodes-to-specific-loads).
+        For instructions on how to resolve this issue, refer to the [node allocation guide](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-do-i-allocate-nodes-to-specific-loads).
       summary: |
-        Node {{ $labels.name }} needs fixing up
+        Node {{ $labels.name }} is using a reserved label or taint.
       severity: "6"
       markupFormat: markdown
     - name: D8RuntimeAuditEngineNotScheduledInCluster
@@ -2625,6 +2741,31 @@ alerts:
       summary: |
         One or more Upmeter agent pods is NOT Running
       severity: "6"
+      markupFormat: markdown
+    - name: D8UpmeterDiskUsage
+      sourceFile: modules/500-upmeter/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 500-upmeter
+      module: upmeter
+      edition: ce
+      description: |
+        The only way to resolve is to recreate the PVC using the following steps:
+
+        1. Save the PVC data if you need it.
+
+        1. Delete the PVC and restart `upmeter`:
+
+           ```shell
+           kubectl -n d8-upmeter delete persistentvolumeclaim/data-upmeter-0 pod/upmeter-0
+           ```
+
+        1. Check the status of the created PVC:
+
+           ```shell
+           kubectl -n d8-upmeter get pvc
+           ```
+      summary: |
+        Upmeter disk usage is over 80%.
+      severity: "5"
       markupFormat: markdown
     - name: D8UpmeterProbeGarbageConfigmap
       sourceFile: modules/500-upmeter/monitoring/prometheus-rules/alerting.yaml
@@ -2992,9 +3133,9 @@ alerts:
       moduleUrl: 340-monitoring-kubernetes
       module: monitoring-kubernetes
       edition: ce
-      description: This is a DeadMansSwitch meant to ensure that the entire Alerting pipeline is functional.
+      description: This is a dead man's switch meant to ensure that the entire Alerting pipeline is functional.
       summary: |
-        Alerting DeadMansSwitch
+        Alerting dead man's switch.
       severity: "4"
       markupFormat: default
     - name: DeckhouseModuleUseEmptyDir
@@ -3014,10 +3155,19 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Deckhouse release contains disruption update.
+        The new Deckhouse release includes a disruptive update that requires manual approval.
 
-        You can figure out more details by running `kubectl describe DeckhouseRelease {{ $labels.name }}`.
-        If you are ready to deploy this release, run: `kubectl annotate DeckhouseRelease {{ $labels.name }} release.deckhouse.io/disruption-approved=true`.
+        To check the details, run the following command:
+
+        ```bash
+        kubectl describe DeckhouseRelease {{ $labels.name }}
+        ```
+
+        To approve the disruptive update, run the following command:
+
+        ```bash
+        kubectl annotate DeckhouseRelease {{ $labels.name }} release.deckhouse.io/disruption-approved=true
+        ```
       summary: |
         Deckhouse release disruption approval required.
       severity: "4"
@@ -3028,11 +3178,15 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Deckhouse release requirements is not met.
+        The requirements for the Deckhouse release haven't been met.
 
-        Please run `kubectl describe DeckhouseRelease {{ $labels.name }}` for details.
+        To check the details, run the following command:
+
+        ```bash
+        kubectl describe DeckhouseRelease {{ $labels.name }}
+        ```
       summary: |
-        Deckhouse release requirements unmet.
+        Deckhouse release requirements haven't been met.
       severity: "5"
       markupFormat: markdown
     - name: DeckhouseReleaseIsWaitingManualApproval
@@ -3041,11 +3195,15 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Deckhouse release is waiting for manual approval.
+        A new Deckhouse release is available but requires manual approval before it can be applied.
 
-        Please run `kubectl patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{"approved": true}'` for confirmation.
+        To approve the release, run the following command:
+
+        ```bash
+        kubectl patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{"approved": true}'
+        ```
       summary: |
-        Deckhouse release is waiting for manual approval.
+        A new Deckhouse release is awaiting manual approval.
       severity: "3"
       markupFormat: markdown
     - name: DeckhouseReleaseIsWaitingManualApproval
@@ -3053,12 +3211,9 @@ alerts:
       moduleUrl: 340-monitoring-deckhouse
       module: monitoring-deckhouse
       edition: ce
-      description: |
-        Deckhouse release is waiting for manual approval.
-
-        Please run `kubectl patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{"approved": true}'` for confirmation.
+      description: "A new Deckhouse release is available but requires manual approval before it can be applied.\n\nTo approve the release, run the following command: \n\n```bash\nkubectl patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{\"approved\": true}'\n```\n"
       summary: |
-        Deckhouse release is waiting for manual approval.
+        A new Deckhouse release is awaiting manual approval.
       severity: "6"
       markupFormat: markdown
     - name: DeckhouseReleaseIsWaitingManualApproval
@@ -3066,12 +3221,9 @@ alerts:
       moduleUrl: 340-monitoring-deckhouse
       module: monitoring-deckhouse
       edition: ce
-      description: |
-        Deckhouse release is waiting for manual approval.
-
-        Please run `kubectl patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{"approved": true}'` for confirmation.
+      description: "A new Deckhouse release is available but requires manual approval before it can be applied.\n\nTo approve the release, run the following command: \n\n```bash\nkubectl patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{\"approved\": true}'\n```\n"
       summary: |
-        Deckhouse release is waiting for manual approval.
+        A new Deckhouse release is awaiting manual approval.
       severity: "9"
       markupFormat: markdown
     - name: DeckhouseReleaseNotificationNotSent
@@ -3080,11 +3232,15 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Failed to send the Deckhouse release notification webhook.
+        The Deckhouse release notification webhook failed to send.
 
-        Check the notification webhook address by running `kubectl get mc deckhouse -o yaml`.
+        To check the notification webhook address, run the following command:
+
+        ```bash
+        kubectl get mc deckhouse -o yaml
+        ```
       summary: |
-        Deckhouse release notification webhook not sent.
+        Deckhouse release notification webhook hasn't been sent.
       severity: "4"
       markupFormat: markdown
     - name: DeckhouseUpdating
@@ -3103,14 +3259,18 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Failed to update Deckhouse.
+        The Deckhouse update has failed.
 
-        Next version minor/path Deckhouse image is not available in the registry or the image is corrupted.
-        Actual version: {{ $labels.version }}.
+        Possible reasons:
 
-        Make sure that the next version Deckhouse image is available in the registry.
+        - The next minor or patch version of the Deckhouse image is not available in the registry.
+        - The Deckhouse image is corrupted.
+
+        Current version: {{ $labels.version }}.
+
+        To resolve this issue, ensure that the next version of the Deckhouse image is available in the registry.
       summary: |
-        Deckhouse updating is failed.
+        Deckhouse update has failed.
       severity: "4"
       markupFormat: markdown
     - name: DeploymentAuthenticationFailure
@@ -3169,9 +3329,10 @@ alerts:
       moduleUrl: 340-monitoring-kubernetes
       module: monitoring-kubernetes
       edition: ce
-      description: Observed deployment generation does not match expected one for deployment {{$labels.namespace}}/{{$labels.deployment}}
+      description: |
+        The observed deployment generation doesn't match the expected one for Deployment `{{$labels.namespace}}/{{$labels.deployment}}`.
       summary: |
-        Deployment is outdated
+        Deployment is outdated.
       severity: "4"
       markupFormat: default
     - name: DeploymentImageAbsent
@@ -3269,9 +3430,13 @@ alerts:
       moduleUrl: 340-monitoring-kubernetes
       module: monitoring-kubernetes
       edition: ce
-      description: ""
+      description: |
+        Possible options to resolve the issue:
+
+        * Build the kernel with [BTF type information](https://github.com/libbpf/libbpf?tab=readme-ov-file#bpf-co-re-compile-once--run-everywhere).
+        * [Disable ebpf_exporter](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/monitoring-kubernetes/configuration.html#parameters-ebpfexporterenabled).
       summary: |
-        The BTF module required for ebpf_exporter is missing in the kernel. Possible actions to resolve the problem: * Built kernel with BTF type information info. * Disable ebpf_exporter
+        The BTF module required for ebpf_exporter is missing from the kernel.
       severity: "8"
       markupFormat: markdown
     - name: ExtendedMonitoringDeprecatatedAnnotation
@@ -3328,9 +3493,10 @@ alerts:
       moduleUrl: 340-monitoring-kubernetes
       module: monitoring-kubernetes
       edition: ce
-      description: '{{ $labels.job }}: {{ $labels.instance }} instance will exhaust in file/socket descriptors within the next hour'
+      description: |
+        The instance `{{ $labels.job }}: {{ $labels.instance }}` is expected to exhaust its available file/socket descriptors within the next hour.
       summary: |
-        file descriptors soon exhausted
+        File descriptors for {{ $labels.job }}: {{ $labels.instance }} are almost exhausted.
       severity: "3"
       markupFormat: default
     - name: FdExhaustionClose
@@ -3338,9 +3504,10 @@ alerts:
       moduleUrl: 340-monitoring-kubernetes
       module: monitoring-kubernetes
       edition: ce
-      description: '{{ $labels.job }}: {{ $labels.namespace }}/{{ $labels.pod }} instance will exhaust in file/socket descriptors within the next hour'
+      description: |
+        The instance `{{ $labels.job }}: {{ $labels.namespace }}/{{ $labels.pod }}` is expected to exhaust its available file/socket descriptors within the next hour.
       summary: |
-        file descriptors soon exhausted
+        File descriptors for {{ $labels.job }}: {{ $labels.namespace }}/{{ $labels.pod }} are almost exhausted.
       severity: "3"
       markupFormat: default
     - name: FdExhaustionClose
@@ -3348,9 +3515,10 @@ alerts:
       moduleUrl: 340-monitoring-kubernetes
       module: monitoring-kubernetes
       edition: ce
-      description: '{{ $labels.job }}: {{ $labels.instance }} instance will exhaust in file/socket descriptors within the next 4 hours'
+      description: |
+        The instance `{{ $labels.job }}: {{ $labels.instance }}` is expected to exhaust its available file/socket descriptors within the next 4 hours.
       summary: |
-        file descriptors soon exhausted
+        File descriptors for {{ $labels.job }}: {{ $labels.instance }} are exhausting soon.
       severity: "4"
       markupFormat: default
     - name: FdExhaustionClose
@@ -3358,9 +3526,10 @@ alerts:
       moduleUrl: 340-monitoring-kubernetes
       module: monitoring-kubernetes
       edition: ce
-      description: '{{ $labels.job }}: {{ $labels.namespace }}/{{ $labels.pod }} instance will exhaust in file/socket descriptors within the next 4 hours'
+      description: |
+        The instance `{{ $labels.job }}: {{ $labels.namespace }}/{{ $labels.pod }}` is expected to exhaust its available file/socket descriptors within the next 4 hours.
       summary: |
-        file descriptors soon exhausted
+        File descriptors for {{ $labels.job }}: {{ $labels.namespace }}/{{ $labels.pod }} are exhausting soon.
       severity: "4"
       markupFormat: default
     - name: GrafanaDashboardAlertRulesDeprecated
@@ -3414,13 +3583,17 @@ alerts:
       module: monitoring-kubernetes
       edition: ce
       description: |
-        To observe all resources use the expr `max by (helm_release_namespace, helm_release_name, helm_version, resource_namespace, resource_name, api_version, kind, k8s_version) (resource_versions_compatibility) == 1` in Prometheus.
+        To list all affected resources, run the following Prometheus query:
 
-        You can find more details for migration in the deprecation guide: https://kubernetes.io/docs/reference/using-api/deprecation-guide/#v{{ $labels.k8s_version | reReplaceAll "\\." "-" }}.
+        ```promql
+        max by (helm_release_namespace, helm_release_name, helm_version, resource_namespace, resource_name, api_version, kind, k8s_version) (resource_versions_compatibility) == 1
+        ```
 
-        Attention: The check runs once per hour, so this alert should go out within an hour after deprecated resources migration.
+        For more details on upgrading deprecated resources, refer to the Kubernetes deprecation guide available at `https://kubernetes.io/docs/reference/using-api/deprecation-guide/#v{{ $labels.k8s_version | reReplaceAll "\\." "-" }}`.
+
+        Note that the check runs once per hour, so this alert should resolve within an hour after migrating deprecated resources.
       summary: |
-        At least one HELM release contains resources with deprecated apiVersion, which will be removed in Kubernetes v{{ $labels.k8s_version }}.
+        At least one Helm release contains resources with deprecated apiVersion, which will be removed in Kubernetes version {{ $labels.k8s_version }}.
       severity: "5"
       markupFormat: markdown
     - name: HelmReleasesHasResourcesWithUnsupportedVersions
@@ -3429,13 +3602,17 @@ alerts:
       module: monitoring-kubernetes
       edition: ce
       description: |
-        To observe all resources use the expr `max by (helm_release_namespace, helm_release_name, helm_version, resource_namespace, resource_name, api_version, kind, k8s_version) (resource_versions_compatibility) == 2` in Prometheus.
+        To list all affected resources, run the following Prometheus query:
 
-        You can find more details for migration in the deprecation guide: https://kubernetes.io/docs/reference/using-api/deprecation-guide/#v{{ $labels.k8s_version | reReplaceAll "\\." "-" }}.
+        ```promql
+        max by (helm_release_namespace, helm_release_name, helm_version, resource_namespace, resource_name, api_version, kind, k8s_version) (resource_versions_compatibility) == 2
+        ```
 
-        Attention: The check runs once per hour, so this alert should go out within an hour after deprecated resources migration.
+        For more details on migrating deprecated resources, refer to the Kubernetes deprecation guide available at `https://kubernetes.io/docs/reference/using-api/deprecation-guide/#v{{ $labels.k8s_version | reReplaceAll "\\." "-" }}`.
+
+        Note that the check runs once per hour, so this alert should resolve within an hour after migrating deprecated resources.
       summary: |
-        At least one HELM release contains resources with unsupported apiVersion for Kubernetes v{{ $labels.k8s_version }}.
+        At least one Helm release contains resources with unsupported apiVersion for Kubernetes version {{ $labels.k8s_version }}.
       severity: "4"
       markupFormat: markdown
     - name: IngressResponses5xx
@@ -3485,9 +3662,9 @@ alerts:
       moduleUrl: 340-monitoring-kubernetes-control-plane
       module: monitoring-kubernetes-control-plane
       edition: ce
-      description: No API servers are reachable or all have disappeared from service discovery
+      description: No API servers are reachable, or they have all disappeared from service discovery.
       summary: |
-        No API servers are reachable
+        API servers can't be reached.
       severity: "3"
       markupFormat: default
     - name: K8sCertificateExpiration
@@ -3495,29 +3672,9 @@ alerts:
       moduleUrl: 340-monitoring-kubernetes-control-plane
       module: monitoring-kubernetes-control-plane
       edition: ce
-      description: |
-        Some clients connect to {{$labels.component}} with certificate which expiring soon (less than 1 day) on node {{$labels.component}}.
-
-        You need to use `kubeadm` to check control plane certificates.
-        1. Install kubeadm: `apt install kubeadm=1.24.*`.
-        2. Check certificates: `kubeadm alpha certs check-expiration`
-
-        To check kubelet certificates, on each node you need to:
-        1. Check kubelet config:
-        ```
-        ps aux \
-          | grep "/usr/bin/kubelet" \
-          | grep -o -e "--kubeconfig=\S*" \
-          | cut -f2 -d"=" \
-          | xargs cat
-        ```
-        2. Find field `client-certificate` or `client-certificate-data`
-        3. Check certificate using openssl
-
-        There are no tools to help you find other stale kubeconfigs.
-        It will be better for you to enable `control-plane-manager` module to be able to debug in this case.
+      description: "Some clients are connecting to {{$labels.component}} with certificates that will expire in less than a day on node `{{$labels.component}}`.\n\nTo check control plane certificates, use kubeadm:\n\n1. Install kubeadm using the following command:\n   \n   ```bash\n   apt install kubeadm=1.24.*\n   ```\n\n2. Check certificates:\n\n   ```bash\n   kubeadm alpha certs check-expiration\n   ```\n\nTo check kubelet certificates, do the following on each node:\n\n1. Check kubelet configuration:\n\n   ```bash\n   ps aux \\\n     | grep \"/usr/bin/kubelet\" \\\n     | grep -o -e \"--kubeconfig=\\S*\" \\\n     | cut -f2 -d\"=\" \\\n     | xargs cat\n   ```\n\n2. Locate the `client-certificate` or `client-certificate-data` field.\n3. Check certificate expiration using OpenSSL.\n\nNote that there are no tools to find other stale kubeconfig files.\nConsider enabling the `control-plane-manager` module for advanced debugging.\n"
       summary: |
-        Kubernetes has API clients with soon expiring certificates
+        Kubernetes has API clients with soon-to-expire certificates.
       severity: "5"
       markupFormat: markdown
     - name: K8sCertificateExpiration
@@ -3525,29 +3682,9 @@ alerts:
       moduleUrl: 340-monitoring-kubernetes-control-plane
       module: monitoring-kubernetes-control-plane
       edition: ce
-      description: |
-        Some clients connect to {{$labels.component}} with certificate which expiring soon (less than 7 days) on node {{$labels.node}}.
-
-        You need to use `kubeadm` to check control plane certificates.
-        1. Install kubeadm: `apt install kubeadm=1.24.*`.
-        2. Check certificates: `kubeadm alpha certs check-expiration`
-
-        To check kubelet certificates, on each node you need to:
-        1. Check kubelet config:
-        ```
-        ps aux \
-          | grep "/usr/bin/kubelet" \
-          | grep -o -e "--kubeconfig=\S*" \
-          | cut -f2 -d"=" \
-          | xargs cat
-        ```
-        2. Find field `client-certificate` or `client-certificate-data`
-        3. Check certificate using openssl
-
-        There are no tools to help you find other stale kubeconfigs.
-        It will be better for you to enable `control-plane-manager` module to be able to debug in this case.
+      description: "Some clients are connecting to {{$labels.component}} with certificates that will expire in less than 7 days on node `{{$labels.node}}`.\n\nTo check control plane certificates, use kubeadm:\n\n1. Install kubeadm using the following command:\n   \n   ```bash\n   apt install kubeadm=1.24.*\n   ```\n\n2. Check certificates:\n\n   ```bash\n   kubeadm alpha certs check-expiration\n   ```\n\nTo check kubelet certificates, do the following on each node:\n\n1. Check kubelet configuration:\n\n   ```bash\n   ps aux \\\n     | grep \"/usr/bin/kubelet\" \\\n     | grep -o -e \"--kubeconfig=\\S*\" \\\n     | cut -f2 -d\"=\" \\\n     | xargs cat\n   ```\n\n2. Locate the `client-certificate` or `client-certificate-data` field.\n3. Check certificate expiration using OpenSSL.\n\nNote that there are no tools to find other stale kubeconfig files.\nConsider enabling the `control-plane-manager` module for advanced debugging.\n"
       summary: |
-        Kubernetes has API clients with soon expiring certificates
+        Kubernetes has API clients with soon-to-expire certificates.
       severity: "6"
       markupFormat: markdown
     - name: K8SControllerManagerTargetDown
@@ -3555,9 +3692,9 @@ alerts:
       moduleUrl: 340-monitoring-kubernetes-control-plane
       module: monitoring-kubernetes-control-plane
       edition: ce
-      description: There is no running kube-controller-manager. Deployments and replication controllers are not making progress.
+      description: There is no running kube-controller-manager. As a result, deployments and replication controllers are not progressing.
       summary: |
-        Controller manager is down
+        Controller manager is down.
       severity: "3"
       markupFormat: default
     - name: K8SKubeletDown
@@ -3567,7 +3704,7 @@ alerts:
       edition: ce
       description: Prometheus failed to scrape {{ $value }}% of kubelets.
       summary: |
-        Many kubelets cannot be scraped
+        Multiple kubelets couldn't be scraped.
       severity: "3"
       markupFormat: default
     - name: K8SKubeletDown
@@ -3577,7 +3714,7 @@ alerts:
       edition: ce
       description: Prometheus failed to scrape {{ $value }}% of kubelets.
       summary: |
-        A few kubelets cannot be scraped
+        Several kubelets couldn't be scraped.
       severity: "4"
       markupFormat: default
     - name: K8SKubeletTooManyPods
@@ -3585,9 +3722,9 @@ alerts:
       moduleUrl: 340-monitoring-kubernetes
       module: monitoring-kubernetes
       edition: ce
-      description: Kubelet {{ $labels.node }} is running {{ $value }} pods, close to the limit of {{ printf "kube_node_status_capacity{job=\"kube-state-metrics\",resource=\"pods\",unit=\"integer\",node=\"%s\"}" $labels.node | query | first | value }}
+      description: The kubelet on node {{ $labels.node }} is running {{ $value }} pods, which is close to the limit of {{ printf "kube_node_status_capacity{job=\"kube-state-metrics\",resource=\"pods\",unit=\"integer\",node=\"%s\"}" $labels.node | query | first | value }}.
       summary: |
-        Kubelet is close to pod limit
+        The kubelet on node {{ $labels.node }} is approaching the pod limit.
       severity: "7"
       markupFormat: default
     - name: K8SManyNodesNotReady
@@ -3595,9 +3732,9 @@ alerts:
       moduleUrl: 340-monitoring-kubernetes
       module: monitoring-kubernetes
       edition: ce
-      description: '{{ $value }}% of Kubernetes nodes are not ready'
+      description: '{{ $value }}% of Kubernetes nodes are not ready.'
       summary: |
-        Too many nodes are not ready
+        Too many nodes are not ready.
       severity: "3"
       markupFormat: default
     - name: K8SNodeNotReady
@@ -3605,9 +3742,10 @@ alerts:
       moduleUrl: 340-monitoring-kubernetes
       module: monitoring-kubernetes
       edition: ce
-      description: The Kubelet on {{ $labels.node }} has not checked in with the API, or has set itself to NotReady, for more than 10 minutes
+      description: |
+        The kubelet on node {{ $labels.node }} has either failed to check in with the API server or has set itself to `NotReady` for more than 10 minutes.
       summary: |
-        Node status is NotReady
+        The status of node {{ $labels.node }} is NotReady.
       severity: "3"
       markupFormat: default
     - name: K8SSchedulerTargetDown
@@ -3615,9 +3753,11 @@ alerts:
       moduleUrl: 340-monitoring-kubernetes-control-plane
       module: monitoring-kubernetes-control-plane
       edition: ce
-      description: There is no running K8S scheduler. New pods are not being assigned to nodes.
+      description: |
+        The Kubernetes scheduler is not running.
+        As a result, new pods are not being assigned to nodes.
       summary: |
-        Scheduler is down
+        Scheduler is down.
       severity: "3"
       markupFormat: default
     - name: K8STooManyNodes
@@ -3636,13 +3776,14 @@ alerts:
       module: monitoring-kubernetes-control-plane
       edition: ce
       description: |
-        In the last 15 minutes, the 99th percentile of the fsync duration for WAL files is longer than 0.5 seconds: {{ $value }}.
+        In the last 15 minutes, the 99th percentile of the fsync duration for WAL files exceeded 0.5 seconds: {{ $value }}.
 
         Possible causes:
-        1. High latency of the disk where the etcd data is located;
-        2. High CPU usage on the Node.
+
+        - High disk latency where etcd data is stored.
+        - High CPU usage on the node.
       summary: |
-        Synching (fsync) WAL files to disk is slow.
+        Syncing (fsync) WAL files to disk is slow.
       severity: "7"
       markupFormat: markdown
     - name: KubeEtcdHighNumberOfLeaderChanges
@@ -3651,14 +3792,15 @@ alerts:
       module: monitoring-kubernetes-control-plane
       edition: ce
       description: |
-        There were {{ $value }} leader re-elections for the etcd cluster member running on the {{ $labels.node }} Node in the last 10 minutes.
+        There have been {{ $value }} leader re-elections for the etcd cluster member running on node `{{ $labels.node }}` in the last 10 minutes.
 
         Possible causes:
-        1. High latency of the disk where the etcd data is located;
-        2. High CPU usage on the Node;
-        3. Degradation of network connectivity between cluster members in the multi-master mode.
+
+        - High disk latency where etcd data is stored.
+        - High CPU usage on the node.
+        - Degradation of network connectivity between cluster members in the multi-master mode.
       summary: |
-        The etcd cluster re-elects the leader too often.
+        The etcd cluster is re-electing the leader too frequently.
       severity: "5"
       markupFormat: markdown
     - name: KubeEtcdInsufficientMembers
@@ -3667,9 +3809,11 @@ alerts:
       module: monitoring-kubernetes-control-plane
       edition: ce
       description: |
-        Check the status of the etcd pods: `kubectl -n kube-system get pod -l component=etcd`.
+        The etcd cluster has too few members, increasing the risk of failure if another member becomes unavailable.
+        To resolve this issue, check the status of etcd Pods:
+        ```bash kubectl -n kube-system get pod -l component=etcd ```
       summary: |
-        There are insufficient members in the etcd cluster; the cluster will fail if one of the remaining members will become unavailable.
+        Insufficient members in the etcd cluster.
       severity: "4"
       markupFormat: markdown
     - name: KubeEtcdNoLeader
@@ -3678,9 +3822,10 @@ alerts:
       module: monitoring-kubernetes-control-plane
       edition: ce
       description: |
-        Check the status of the etcd Pods: `kubectl -n kube-system get pod -l component=etcd | grep {{ $labels.node }}`.
+        To resolve this issue, check the status of the etcd Pods:
+        ```bash kubectl -n kube-system get pod -l component=etcd | grep {{ $labels.node }} ```
       summary: |
-        The etcd cluster member running on the {{ $labels.node }} Node has lost the leader.
+        The etcd cluster member running on node {{ $labels.node }} has lost the leader.
       severity: "4"
       markupFormat: markdown
     - name: KubeEtcdTargetAbsent
@@ -3689,7 +3834,18 @@ alerts:
       module: monitoring-kubernetes-control-plane
       edition: ce
       description: |
-        Check the status of the etcd Pods: `kubectl -n kube-system get pod -l component=etcd` or Prometheus logs: `kubectl -n d8-monitoring logs -l app.kubernetes.io/name=prometheus -c prometheus`
+        Steps to troubleshoot:
+        1. Check the status of the etcd Pods:
+
+           ```bash
+           kubectl -n kube-system get pod -l component=etcd
+           ```
+
+        1. Review Prometheus logs:
+
+           ```bash
+           kubectl -n d8-monitoring logs -l app.kubernetes.io/name=prometheus -c prometheus
+           ```
       summary: |
         There is no etcd target in Prometheus.
       severity: "5"
@@ -3700,7 +3856,18 @@ alerts:
       module: monitoring-kubernetes-control-plane
       edition: ce
       description: |
-        Check the status of the etcd Pods: `kubectl -n kube-system get pod -l component=etcd` or Prometheus logs: `kubectl -n d8-monitoring logs -l app.kubernetes.io/name=prometheus -c prometheus`.
+        Steps to troubleshoot:
+        1. Check the status of the etcd Pods:
+
+           ```bash
+           kubectl -n kube-system get pod -l component=etcd
+           ```
+
+        1. Review Prometheus logs:
+
+           ```bash
+           kubectl -n d8-monitoring logs -l app.kubernetes.io/name=prometheus -c prometheus
+           ```
       summary: |
         Prometheus is unable to scrape etcd metrics.
       severity: "5"
@@ -3710,10 +3877,9 @@ alerts:
       moduleUrl: 340-monitoring-kubernetes
       module: monitoring-kubernetes
       edition: ce
-      description: |
-        No more free bytes on imagefs (filesystem that the container runtime uses for storing images and container writable layers) on node {{$labels.node}} mountpoint {{$labels.mountpoint}}.
+      description: ""
       summary: |
-        No more free bytes on imagefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint.
+        No free space remaining on imagefs on node {{$labels.node}} at mountpoint {{$labels.mountpoint}}.
       severity: "5"
       markupFormat: markdown
     - name: KubeletImageFSBytesUsage
@@ -3722,13 +3888,13 @@ alerts:
       module: monitoring-kubernetes
       edition: ce
       description: |
-        Hard eviction of imagefs (filesystem that the container runtime uses for storing images and container writable layers) on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
+        Hard eviction of imagefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is currently in progress.
 
-        Threshold at: {{ printf "kubelet_eviction_imagefs_bytes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
+        Hard eviction threshold: {{ printf "kubelet_eviction_imagefs_bytes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
 
-        Currently at: {{ .Value }}%
+        Current usage: {{ .Value }}%
       summary: |
-        Hard eviction of imagefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
+        Hard eviction of imagefs on node {{$labels.node}} at mountpoint {{$labels.mountpoint}} is in progress.
       severity: "6"
       markupFormat: markdown
     - name: KubeletImageFSBytesUsage
@@ -3737,13 +3903,13 @@ alerts:
       module: monitoring-kubernetes
       edition: ce
       description: |
-        Close to hard eviction threshold of imagefs (filesystem that the container runtime uses for storing images and container writable layers) on node {{$labels.node}} mountpoint {{$labels.mountpoint}}.
+        The imagefs usage on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is nearing the hard eviction threshold.
 
-        Threshold at: {{ printf "kubelet_eviction_imagefs_bytes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
+        Hard eviction threshold: {{ printf "kubelet_eviction_imagefs_bytes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
 
-        Currently at: {{ .Value }}%
+        Current usage: {{ .Value }}%
       summary: |
-        Close to hard eviction threshold of imagefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint.
+        Approaching hard eviction threshold of imagefs on node {{$labels.node}} at mountpoint {{$labels.mountpoint}}.
       severity: "7"
       markupFormat: markdown
     - name: KubeletImageFSBytesUsage
@@ -3752,13 +3918,13 @@ alerts:
       module: monitoring-kubernetes
       edition: ce
       description: |
-        Soft eviction of imagefs (filesystem that the container runtime uses for storing images and container writable layers) on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
+        Soft eviction of imagefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is currently in progress.
 
-        Threshold at: {{ printf "kubelet_eviction_imagefs_bytes{type=\"soft\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
+        Soft eviction threshold: {{ printf "kubelet_eviction_imagefs_bytes{type=\"soft\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
 
-        Currently at: {{ .Value }}%
+        Current usage: {{ .Value }}%
       summary: |
-        Soft eviction of imagefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
+        Soft eviction of imagefs on node {{$labels.node}} at mountpoint {{$labels.mountpoint}} is in progress.
       severity: "9"
       markupFormat: markdown
     - name: KubeletImageFSInodesUsage
@@ -3768,7 +3934,7 @@ alerts:
       edition: ce
       description: ""
       summary: |
-        No more free inodes on imagefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint.
+        No free inodes remaining on imagefs on node {{$labels.node}} at mountpoint {{$labels.mountpoint}}.
       severity: "5"
       markupFormat: markdown
     - name: KubeletImageFSInodesUsage
@@ -3777,13 +3943,13 @@ alerts:
       module: monitoring-kubernetes
       edition: ce
       description: |
-        Hard eviction of imagefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
+        Hard eviction of imagefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is currently in progress.
 
-        Threshold at: {{ printf "kubelet_eviction_imagefs_inodes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
+        Hard eviction threshold: {{ printf "kubelet_eviction_imagefs_inodes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
 
-        Currently at: {{ .Value }}%
+        Current usage: {{ .Value }}%
       summary: |
-        Hard eviction of imagefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
+        Hard eviction of imagefs on node {{$labels.node}} at mountpoint {{$labels.mountpoint}} is in progress.
       severity: "6"
       markupFormat: markdown
     - name: KubeletImageFSInodesUsage
@@ -3792,13 +3958,13 @@ alerts:
       module: monitoring-kubernetes
       edition: ce
       description: |
-        Close to hard eviction threshold of imagefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint.
+        The imagefs usage on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is nearing the hard eviction threshold.
 
-        Threshold at: {{ printf "kubelet_eviction_imagefs_inodes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
+        Hard eviction threshold: {{ printf "kubelet_eviction_imagefs_inodes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
 
-        Currently at: {{ .Value }}%
+        Current usage: {{ .Value }}%
       summary: |
-        Close to hard eviction threshold of imagefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint.
+        Approaching hard eviction threshold of imagefs on node {{$labels.node}} at mountpoint {{$labels.mountpoint}}.
       severity: "7"
       markupFormat: markdown
     - name: KubeletImageFSInodesUsage
@@ -3807,13 +3973,13 @@ alerts:
       module: monitoring-kubernetes
       edition: ce
       description: |
-        Soft eviction of imagefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
+        Soft eviction of imagefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is currently in progress.
 
-        Threshold at: {{ printf "kubelet_eviction_imagefs_inodes{type=\"soft\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
+        Soft eviction threshold: {{ printf "kubelet_eviction_imagefs_inodes{type=\"soft\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
 
-        Currently at: {{ .Value }}%
+        Current usage: {{ .Value }}%
       summary: |
-        Soft eviction of imagefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
+        Soft eviction of imagefs on node {{$labels.node}} at mountpoint {{$labels.mountpoint}} is in progress.
       severity: "9"
       markupFormat: markdown
     - name: KubeletNodeFSBytesUsage
@@ -3823,7 +3989,7 @@ alerts:
       edition: ce
       description: ""
       summary: |
-        No more free space on nodefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint.
+        No free space remaining on nodefs on node {{$labels.node}} at mountpoint {{$labels.mountpoint}}.
       severity: "5"
       markupFormat: markdown
     - name: KubeletNodeFSBytesUsage
@@ -3832,13 +3998,13 @@ alerts:
       module: monitoring-kubernetes
       edition: ce
       description: |
-        Hard eviction of nodefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
+        Hard eviction of nodefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is currently in progress.
 
-        Threshold at: {{ printf "kubelet_eviction_nodefs_bytes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
+        Hard eviction threshold: {{ printf "kubelet_eviction_nodefs_bytes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
 
-        Currently at: {{ .Value }}%
+        Current usage: {{ .Value }}%
       summary: |
-        Hard eviction of nodefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
+        Hard eviction of nodefs on node {{$labels.node}} at mountpoint {{$labels.mountpoint}} is in progress.
       severity: "6"
       markupFormat: markdown
     - name: KubeletNodeFSBytesUsage
@@ -3847,13 +4013,13 @@ alerts:
       module: monitoring-kubernetes
       edition: ce
       description: |
-        Close to hard eviction threshold of nodefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint.
+        The nodefs usage on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is nearing the hard eviction threshold.
 
-        Threshold at: {{ printf "kubelet_eviction_nodefs_bytes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
+        Hard eviction threshold: {{ printf "kubelet_eviction_nodefs_bytes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
 
-        Currently at: {{ .Value }}%
+        Current usage: {{ .Value }}%
       summary: |
-        Close to hard eviction threshold of nodefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint.
+        Approaching hard eviction threshold of nodefs on node {{$labels.node}} at mountpoint {{$labels.mountpoint}}.
       severity: "7"
       markupFormat: markdown
     - name: KubeletNodeFSBytesUsage
@@ -3862,13 +4028,13 @@ alerts:
       module: monitoring-kubernetes
       edition: ce
       description: |
-        Soft eviction of nodefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
+        Soft eviction of nodefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is currently in progress.
 
-        Threshold at: {{ printf "kubelet_eviction_nodefs_bytes{type=\"soft\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
+        Soft eviction threshold: {{ printf "kubelet_eviction_nodefs_bytes{type=\"soft\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
 
-        Currently at: {{ .Value }}%
+        Current usage: {{ .Value }}%
       summary: |
-        Soft eviction of nodefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
+        Soft eviction of nodefs on node {{$labels.node}} at mountpoint {{$labels.mountpoint}} is in progress.
       severity: "9"
       markupFormat: markdown
     - name: KubeletNodeFSInodesUsage
@@ -3878,7 +4044,7 @@ alerts:
       edition: ce
       description: ""
       summary: |
-        No more free inodes on nodefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint.
+        No free inodes remaining on nodefs on node {{$labels.node}} at mountpoint {{$labels.mountpoint}}.
       severity: "5"
       markupFormat: markdown
     - name: KubeletNodeFSInodesUsage
@@ -3887,13 +4053,13 @@ alerts:
       module: monitoring-kubernetes
       edition: ce
       description: |
-        Hard eviction of nodefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
+        Hard eviction of nodefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is currently in progress.
 
-        Threshold at: {{ printf "kubelet_eviction_nodefs_inodes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
+        Hard eviction threshold: {{ printf "kubelet_eviction_nodefs_inodes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
 
-        Currently at: {{ .Value }}%
+        Current usage: {{ .Value }}%
       summary: |
-        Hard eviction of nodefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
+        Hard eviction of nodefs on node {{$labels.node}} at mountpoint {{$labels.mountpoint}} is in progress.
       severity: "6"
       markupFormat: markdown
     - name: KubeletNodeFSInodesUsage
@@ -3902,13 +4068,13 @@ alerts:
       module: monitoring-kubernetes
       edition: ce
       description: |
-        Close to hard eviction threshold of nodefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint.
+        The nodefs usage on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is nearing the hard eviction threshold.
 
-        Threshold at: {{ printf "kubelet_eviction_nodefs_inodes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
+        Hard eviction threshold: {{ printf "kubelet_eviction_nodefs_inodes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
 
-        Currently at: {{ .Value }}%
+        Current usage: {{ .Value }}%
       summary: |
-        Close to hard eviction threshold of nodefs on the {{$labels.node}} Node at the  {{$labels.mountpoint}} mountpoint.
+        Approaching hard eviction threshold of nodefs on node {{$labels.node}} at mountpoint {{$labels.mountpoint}}.
       severity: "7"
       markupFormat: markdown
     - name: KubeletNodeFSInodesUsage
@@ -3917,30 +4083,13 @@ alerts:
       module: monitoring-kubernetes
       edition: ce
       description: |
-        Soft eviction of nodefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
+        Soft eviction of nodefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is currently in progress.
 
-        Threshold at: {{ printf "kubelet_eviction_nodefs_inodes{type=\"soft\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
+        Soft eviction threshold: {{ printf "kubelet_eviction_nodefs_inodes{type=\"soft\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
 
-        Currently at: {{ .Value }}%
+        Current usage: {{ .Value }}%
       summary: |
-        Soft eviction of nodefs on the  {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
-      severity: "9"
-      markupFormat: markdown
-    - name: KubernetesAPFRejectRequests
-      sourceFile: modules/011-flow-schema/monitoring/prometheus-rules/flow-schema.yaml
-      moduleUrl: 011-flow-schema
-      module: flow-schema
-      edition: ce
-      description: |
-        > This alert is experimental.
-
-        To display the APF schema queue requests, use the following expression:
-
-        ```promql
-        apiserver_flowcontrol_current_inqueue_requests{flow_schema="d8-serviceaccounts"}
-        ```
-      summary: |
-        APF flow schema d8-serviceaccounts has rejected API requests.
+        Soft eviction of nodefs on node {{$labels.node}} at mountpoint {{$labels.mountpoint}} is in progress.
       severity: "9"
       markupFormat: markdown
     - name: KubernetesCoreDNSHasCriticalErrors
@@ -4085,13 +4234,23 @@ alerts:
       module: monitoring-kubernetes
       edition: ce
       description: |-
-        Prometheus is unable to collect metrics from kube-dns. Thus its status is unknown.
+        Prometheus is unable to collect metrics from `kube-dns`, which makes its status unknown.
 
-        To debug the problem, use the following commands:
-        1. `kubectl -n kube-system describe deployment -l k8s-app=kube-dns`
-        2. `kubectl -n kube-system describe pod -l k8s-app=kube-dns`
+        Steps to troubleshoot:
+
+        1. Check the deployment details:
+
+           ```bash
+           kubectl -n kube-system describe deployment -l k8s-app=kube-dns
+           ```
+
+        2. Check the pod details:
+
+           ```bash
+           kubectl -n kube-system describe pod -l k8s-app=kube-dns
+           ```
       summary: |
-        Kube-dns or CoreDNS are not under monitoring.
+        Kube-dns or CoreDNS are not being monitored.
       severity: "5"
       markupFormat: markdown
     - name: KubernetesStatefulSetReplicasUnavailable
@@ -4137,15 +4296,24 @@ alerts:
       module: monitoring-kubernetes
       edition: ce
       description: |-
-        There are no metrics about cluster resources for 5 minutes.
+        Deckhouse has detected that no metrics about cluster resources have been available for the past 5 minutes.
+        As a result, most alerts and monitoring panels aren't working.
 
-        Most alerts an monitroing panels aren't working.
+        Steps to troubleshoot:
 
-        To debug the problem:
-        1. Check kube-state-metrics pods: `kubectl -n d8-monitoring describe pod -l app=kube-state-metrics`
-        2. Check its logs: `kubectl -n d8-monitoring describe deploy kube-state-metrics`
+        1. Check the `kube-state-metrics` pods:
+
+           ```bash
+           kubectl -n d8-monitoring describe pod -l app=kube-state-metrics
+           ```
+
+        2. Check the deployment logs:
+
+           ```bash
+           kubectl -n d8-monitoring describe deploy kube-state-metrics
+           ```
       summary: |
-        Kube-state-metrics is not working in the cluster.
+        Kube-state-metrics isn't working in the cluster.
       severity: "3"
       markupFormat: markdown
     - name: L2LoadBalancerOrphanServiceFound
@@ -4203,26 +4371,46 @@ alerts:
       module: monitoring-kubernetes
       edition: ce
       description: |-
-        One or more services with the LoadBalancer type cannot get an external address.
+        One or more services of the `LoadBalancer` type have not received an external address.
 
-        The list of services can be obtained with the following command:
+        To list affected services, run the following command:
+
+        ```bash
         kubectl get svc -Ao json | jq -r '.items[] | select(.spec.type == "LoadBalancer") | select(.status.loadBalancer.ingress[0].ip == null) | "namespace: \(.metadata.namespace), name: \(.metadata.name), ip: \(.status.loadBalancer.ingress[0].ip)"'
-        Check the cloud-controller-manager logs in the 'd8-cloud-provider-*' namespace
-        If you are using a bare-metal cluster with the metallb module enabled, check that the address space of the pool has not been exhausted.
+        ```
+
+        Steps to troubleshoot:
+
+        - Check the `cloud-controller-manager` logs in the `d8-cloud-provider-*` namespace.
+        - If you are using a bare-metal cluster with the `metallb` module enabled, ensure the address pool has not been exhausted.
       summary: |
-        A load balancer has not been created.
+        A LoadBalancer has not been created.
       severity: "4"
       markupFormat: default
+    - name: LokiRetentionPerionViolation
+      sourceFile: modules/462-loki/monitoring/prometheus-rules/alerts.tpl
+      moduleUrl: 462-loki
+      module: loki
+      edition: ce
+      description: |-
+        Not enough disk space to retain logs for 168 hours. Current effective retention period is {{ $value }} hours.
+
+        You need either decrease expected `retentionPeriodHours` or increase resize Loki PersistentVolumeClaim
+      summary: |
+        Not enough disk space to retain logs for 168 hours
+      severity: "4"
+      markupFormat: markdown
     - name: MigrationRequiredFromRBDInTreeProvisionerToCSIDriver
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/migration-alerts.tpl
       moduleUrl: 340-monitoring-deckhouse
       module: monitoring-deckhouse
       edition: ce
       description: |
-        To migrate volumes use this script https://github.com/deckhouse/deckhouse/blob//modules/031-ceph-csi/tools/rbd-in-tree-to-ceph-csi-migration-helper.sh
-        A description of how the migration is performed can be found here https://github.com/deckhouse/deckhouse/blob//modules/031-ceph-csi/docs/internal/INTREE_MIGRATION.md
+        To resolve this issue, migrate volumes to the Ceph CSI driver using the `rbd-in-tree-to-ceph-csi-migration-helper.sh` script available at `https://github.com/deckhouse/deckhouse/blob//modules/031-ceph-csi/tools/rbd-in-tree-to-ceph-csi-migration-helper.sh`.
+
+        For details on volume migration, refer to the migration guide available at `https://github.com/deckhouse/deckhouse/blob//modules/031-ceph-csi/docs/internal/INTREE_MIGRATION.md`.
       summary: |
-        Storage class {{ $labels.storageclass }} uses the deprecated rbd provisioner. It is necessary to migrate the volumes to the Ceph CSI driver.
+        StorageClass {{ $labels.storageclass }} is using a deprecated RBD provisioner.
       severity: "9"
       markupFormat: markdown
     - name: ModuleAtConflict
@@ -4231,7 +4419,9 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Conflicting sources for the {{ $labels.moduleName }} module. Please specify the proper source in the module configuration.
+        Deckhouse has detected conflicting sources for the {{ $labels.moduleName }} module.
+
+        To resolve this issue, specify the correct source in the module configuration.
       summary: |
         Conflict detected for module {{ $labels.moduleName }}.
       severity: "4"
@@ -4262,7 +4452,9 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        ModuleConfig {{ $labels.name }} is outdated. Update ModuleConfig {{ $labels.name }} to the latest version.
+        Deckhouse has detected that ModuleConfig `{{ $labels.name }}` is outdated.
+
+        To resolve this issue, update ModuleConfig `{{ $labels.name }}` to the latest version.
       summary: |
         ModuleConfig {{ $labels.name }} is outdated.
       severity: "4"
@@ -4272,21 +4464,40 @@ alerts:
       moduleUrl: 340-monitoring-deckhouse
       module: monitoring-deckhouse
       edition: ce
-      description: |
-        The '{{ $labels.moduleName }}' module is matched by the '{{ $labels.updatePolicy }}' deprecated module update policy. The policy`s v1alpha1 has a selector that no longer works.
+      description: |-
+        Deckhouse has detected that the module `{{ $labels.moduleName }}` is using the deprecated update policy `{{ $labels.updatePolicy }}`. The `v1alpha1` policy has a selector that no longer functions.
 
-        Specify the update policy in the module config by running the following command:
-        ```
+        To specify the update policy in the module configuration, run the following command:
+
+        ```bash
         kubectl patch moduleconfig {{ $labels.moduleName }} --type='json' -p='[{"op": "add", "path": "/spec/updatePolicy", "value": "{{ $labels.updatePolicy }}"}]'
         ```
 
-        After solving all alerts for the '{{ $labels.updatePolicy }}' update policy, use this command to clear the selector:
-        ```
+        After resolving all alerts related to the update policy `{{ $labels.updatePolicy }}`, clear the selector by running the following command:
+
+        ```bash
         kubectl patch moduleupdatepolicies.v1alpha1.deckhouse.io {{ $labels.updatePolicy }} --type='json' -p='[{"op": "replace", "path": "/spec/moduleReleaseSelector/labelSelector/matchLabels", "value": {"": ""}}]'
         ```
       summary: |
-        The '{{ $labels.moduleName }}' module is matched by the '{{ $labels.updatePolicy }}' deprecated module update policy.
+        Module {{ $labels.moduleName }} is matched by the deprecated update policy {{ $labels.updatePolicy }}.
       severity: "4"
+      markupFormat: markdown
+    - name: ModuleIsInUnmanagedMode
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        Module `{{ $labels.moduleName }}` is running in unmanaged mode. In this mode, its state is not reconciled, which prevents configuration or hook changes from being applied automatically.
+
+        To switch the module back to normal mode, edit the corresponding ModuleConfig resource with the following command:
+
+        ```bash
+        kubectl patch moduleconfig {{ $labels.name }} --type=json -p='[{"op": "remove", "path": "/spec/managementState"}]'
+        ```
+      summary: |
+        Module {{ $labels.moduleName }} is running in unmanaged mode.
+      severity: "6"
       markupFormat: markdown
     - name: ModuleReleaseIsBlockedByRequirements
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
@@ -4294,11 +4505,15 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Module {{ $labels.moduleName }} release is blocked by the requirements.
+        A new release for module `{{ $labels.moduleName }}` has been blocked because it doesn't meet the required conditions.
 
-        Please check the requirements with the following command `kubectl  get mr {{ $labels.name }} -o json | jq .spec.requirements`.
+        To check the requirements, run the following command:
+
+        ```bash
+        kubectl  get mr {{ $labels.name }} -o json | jq .spec.requirements
+        ```
       summary: |
-        Module release is blocked by the requirements.
+        A new release for module {{ $labels.moduleName }} has been blocked due to unmet requirements.
       severity: "6"
       markupFormat: markdown
     - name: ModuleReleaseIsWaitingManualApproval
@@ -4307,11 +4522,15 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Module {{ $labels.moduleName }} release is waiting for manual approval.
+        A new release for module `{{ $labels.moduleName }}` is available but requires manual approval before it can be applied.
 
-        Please run `kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"` for confirmation.
+        To approve the module release, run the following command:
+
+        ```bash
+        kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
+        ```
       summary: |
-        Module release is waiting for manual approval.
+        A new release for module {{ $labels.moduleName }} is awaiting manual approval.
       severity: "6"
       markupFormat: markdown
     - name: NATInstanceWithDeprecatedAvailabilityZone
@@ -4572,13 +4791,11 @@ alerts:
       module: monitoring-kubernetes
       edition: ce
       description: |-
-        The `conntrack` table on the {{ $labels.node }} Node is full!
+        As a result, no new connections created or accepted on the node. Keeping the `conntrack` table at full capacity may lead to erratic software behavior.
 
-        No new connections are created or accepted on the Node; note that this may result in strange software issues.
-
-        The recommended course of action is to identify the source of "excess" `conntrack` entries using Okmeter or Grafana charts.
+        To identify the source of excessive `conntrack` entries, use Okmeter or Grafana dashboards.
       summary: |
-        The conntrack table is full.
+        The conntrack table on node {{ $labels.node }} is full.
       severity: "3"
       markupFormat: markdown
     - name: NodeConntrackTableFull
@@ -4587,13 +4804,13 @@ alerts:
       module: monitoring-kubernetes
       edition: ce
       description: |-
-        The conntrack table on the {{ $labels.node }} is {{ $value }}% of the maximum size.
+        The `conntrack` table on node `{{ $labels.node }}` is currently at {{ $value }}% of its maximum capacity.
 
-        There's nothing to worry about yet if the `conntrack` table is only 70-80 percent full. However, if it runs out, you will experience problems with new connections while the software will behave strangely.
+        This is acceptable as long as the `conntrack` table remains 70-80% full. However, if it reaches full capacity, new connections may fail, causing network disruptions and erratic software behavior.
 
-        The recommended course of action is to identify the source of "excess" `conntrack` entries using Okmeter or Grafana charts.
+        To identify the source of excessive `conntrack` entries, use Okmeter or Grafana dashboards.
       summary: |
-        The conntrack table is close to the maximum size.
+        The conntrack table on node {{ $labels.node }} is approaching the size limit.
       severity: "4"
       markupFormat: markdown
     - name: NodeDiskBytesUsage
@@ -4681,9 +4898,9 @@ alerts:
       moduleUrl: 340-monitoring-kubernetes
       module: monitoring-kubernetes
       edition: ce
-      description: Prometheus could not scrape a node-exporter for more than 10m, or node-exporters have disappeared from discovery
+      description: Prometheus has been unable to scrape a `node-exporter` for more than 10 minutes, or `node-exporters` have disappeared from service discovery.
       summary: |
-        Prometheus could not scrape a node-exporter
+        Prometheus couldn't scrape a node-exporter.
       severity: "3"
       markupFormat: default
     - name: NodeFilesystemIsRO
@@ -4692,11 +4909,11 @@ alerts:
       module: monitoring-kubernetes
       edition: ce
       description: |-
-        The file system on the node has switched to read-only mode.
+        The file system on the node has been switched to read-only mode.
 
-        See the node logs to find out the cause and fix it.
+        To investigate the cause, check the node logs.
       summary: |
-        The file system of the node is in read-only mode.
+        Node file system is read-only.
       severity: "4"
       markupFormat: default
     - name: NodeGroupHasStaticInternalNetworkCIDRsField
@@ -4852,9 +5069,9 @@ alerts:
       moduleUrl: 340-monitoring-ping
       module: monitoring-ping
       edition: ce
-      description: ICMP packet loss to node {{$labels.destination_node}} is more than 5%
+      description: ICMP packet loss to node `{{$labels.destination_node}}` has exceeded 5%.
       summary: |
-        Ping loss more than 5%
+        Ping loss exceeds 5%.
       severity: "4"
       markupFormat: default
     - name: NodeRequiresDisruptionApprovalForUpdate
@@ -4923,16 +5140,22 @@ alerts:
       module: monitoring-kubernetes
       edition: ce
       description: |-
-        The {{ $labels.node }} Node has potential kernel memory leak. There is one known issue that can be reason for it.
+        The node `{{ $labels.node }}` has a potential kernel memory leak. One known issue could be causing this problem.
 
-        You should check cgroupDriver on the {{ $labels.node }} Node:
-        - `cat /var/lib/kubelet/config.yaml | grep 'cgroupDriver: systemd'`
+        Steps to troubleshoot:
 
-        If cgroupDriver is set to systemd then reboot is required to roll back to cgroupfs driver. Please, drain and reboot the node.
+        1. Check the `cgroupDriver` setting on node `{{ $labels.node }}`:
 
-        You can check this [issue](https://github.com/deckhouse/deckhouse/issues/2152) for extra information.
+           ```bash
+           cat /var/lib/kubelet/config.yaml | grep 'cgroupDriver: systemd'
+           ```
+
+        1. If `cgroupDriver` is set to `systemd`, a reboot is required to switch back to the `cgroupfs` driver.
+           In this case, drain and reboot the node.
+
+        For further details, refer to the [issue](https://github.com/deckhouse/deckhouse/issues/2152).
       summary: |
-        The {{ $labels.node }} Node has high kernel memory usage.
+        Node {{ $labels.node }} has high kernel memory usage.
       severity: "4"
       markupFormat: markdown
     - name: NodeSystemExporterDoesNotExistsForNode
@@ -4941,13 +5164,23 @@ alerts:
       module: monitoring-kubernetes
       edition: ce
       description: |-
-        Some of the Node system exporters don't work correctly for the {{ $labels.node }} Node.
+        To resolve the issue, follow these steps:
 
-        The recommended course of action:
-        1. Find the Node exporter Pod for this Node: `kubectl -n d8-monitoring get pod -l app=node-exporter -o json | jq -r ".items[] | select(.spec.nodeName==\"{{$labels.node}}\") | .metadata.name"`;
-        2. Describe the Node exporter Pod: `kubectl -n d8-monitoring describe pod <POD_NAME>`;
-        3. Check that kubelet is running on the {{ $labels.node }} node.
-      summary: ""
+        1. Find the `node-exporter` Pod running on the affected node:
+
+           ```bash
+           kubectl -n d8-monitoring get pod -l app=node-exporter -o json | jq -r ".items[] | select(.spec.nodeName==\"{{$labels.node}}\") | .metadata.name"
+           ```
+
+        2. Describe the `node-exporter` Pod:
+
+           ```bash
+           kubectl -n d8-monitoring describe pod <POD_NAME>
+           ```
+
+        3. Verify that the kubelet is running on node `{{ $labels.node }}`.
+      summary: |
+        Some system exporters aren't functioning correctly on node {{ $labels.node }}.
       severity: "4"
       markupFormat: markdown
     - name: NodeTCPMemoryExhaust
@@ -4956,12 +5189,16 @@ alerts:
       module: monitoring-kubernetes
       edition: ce
       description: |-
-        The TCP stack on the {{ $labels.node }} node is experiencing high memory pressure.
-        This could be caused by applications with intensive TCP networking functionality.
-        Investigate the relevant applications and consider adjusting the system's TCP memory configuration
-        or addressing the source of increased network traffic.
+        The TCP stack on node `{{ $labels.node }}` is experiencing high memory pressure.
+        This may be caused by applications with intensive TCP networking usage.
+
+        Steps to troubleshoot:
+
+        1. Identify applications consuming excessive TCP memory.
+        1. Adjust TCP memory configuration if needed.
+        1. Investigate network traffic sources.
       summary: |
-        The {{ $labels.node }} node has high TCP stack memory usage.
+        Node {{ $labels.node }} has high TCP stack memory usage.
       severity: "6"
       markupFormat: markdown
     - name: NodeTimeOutOfSync
@@ -4988,15 +5225,25 @@ alerts:
       module: monitoring-kubernetes
       edition: ce
       description: |-
-        The {{ $labels.node }} Node is cordon-protected; no new Pods can be scheduled onto it.
+        The node `{{ $labels.node }}` is in a cordon-protected state, meaning no new pods can be scheduled onto it.
 
-        This means that someone has executed one of the following commands on that Node:
-        - `kubectl cordon {{ $labels.node }}`
-        - `kubectl drain {{ $labels.node }}` that runs for more than 20 minutes
+        Someone may have executed one of the following commands on this node:
 
-        Probably, this is due to the maintenance of this Node.
+        - To cordon the node:
+
+          ```bash
+          kubectl cordon {{ $labels.node }}
+          ```
+
+        - To drain the node (if draining has been running for more than 20 minutes):
+
+          ```bash
+          kubectl drain {{ $labels.node }}
+          ```
+
+        The was likely caused by the scheduled maintenance of that node.
       summary: |
-        The {{ $labels.node }} Node is cordon-protected; no new Pods can be scheduled onto it.
+        Node {{ $labels.node }} is cordon-protected, preventing new pods from being scheduled.
       severity: "8"
       markupFormat: markdown
     - name: NTPDaemonOnNodeDoesNotSynchronizeTime
@@ -5026,6 +5273,97 @@ alerts:
            - Modify the NTP servers list defined in the [chrony configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/chrony/configuration.html).
       summary: |
         NTP daemon on the node {{$labels.node}} haven't synchronized time for too long.
+      severity: "5"
+      markupFormat: markdown
+    - name: OpenVPNClientCertificateExpired
+      sourceFile: modules/500-openvpn/monitoring/prometheus-rules/ovpn-admin.yaml
+      moduleUrl: 500-openvpn
+      module: openvpn
+      edition: ce
+      description: |-
+        There are {{ $value }} expired OpenVPN client certificates.
+
+        Renew the expired certificates if needed.
+      summary: |
+        Some OpenVPN client certificates have expired.
+      severity: "4"
+      markupFormat: markdown
+    - name: OpenVPNServerCACertificateExpired
+      sourceFile: modules/500-openvpn/monitoring/prometheus-rules/ovpn-admin.yaml
+      moduleUrl: 500-openvpn
+      module: openvpn
+      edition: ce
+      description: |-
+        The OpenVPN CA certificate has expired.
+
+        To restore VPN functionality, renew the expired certificate as soon as possible.
+      summary: |
+        OpenVPN CA certificate has expired.
+      severity: "4"
+      markupFormat: markdown
+    - name: OpenVPNServerCACertificateExpiringInAWeek
+      sourceFile: modules/500-openvpn/monitoring/prometheus-rules/ovpn-admin.yaml
+      moduleUrl: 500-openvpn
+      module: openvpn
+      edition: ce
+      description: |-
+        The OpenVPN CA certificate will expire in less than 7 days.
+
+        Immediate renewal is recommended.
+      summary: |
+        OpenVPN CA certificate expires in less than 7 days.
+      severity: "5"
+      markupFormat: markdown
+    - name: OpenVPNServerCACertificateExpiringSoon
+      sourceFile: modules/500-openvpn/monitoring/prometheus-rules/ovpn-admin.yaml
+      moduleUrl: 500-openvpn
+      module: openvpn
+      edition: ce
+      description: |-
+        The OpenVPN CA certificate will expire in less than 30 days.
+
+        Renew the CA certificate if necessary.
+      summary: |
+        OpenVPN CA certificate expires in less than 30 days.
+      severity: "5"
+      markupFormat: markdown
+    - name: OpenVPNServerCertificateExpired
+      sourceFile: modules/500-openvpn/monitoring/prometheus-rules/ovpn-admin.yaml
+      moduleUrl: 500-openvpn
+      module: openvpn
+      edition: ce
+      description: |-
+        The OpenVPN server certificate has expired.
+
+        To restore VPN functionality, renew the expired certificate as soon as possible.
+      summary: |
+        OpenVPN server certificate has expired.
+      severity: "4"
+      markupFormat: markdown
+    - name: OpenVPNServerCertificateExpiringInAWeek
+      sourceFile: modules/500-openvpn/monitoring/prometheus-rules/ovpn-admin.yaml
+      moduleUrl: 500-openvpn
+      module: openvpn
+      edition: ce
+      description: |-
+        The OpenVPN server certificate will expire in less than 7 days.
+
+        Immediate renewal is recommended.
+      summary: |
+        OpenVPN server certificate expires in less than 7 days.
+      severity: "5"
+      markupFormat: markdown
+    - name: OpenVPNServerCertificateExpiringSoon
+      sourceFile: modules/500-openvpn/monitoring/prometheus-rules/ovpn-admin.yaml
+      moduleUrl: 500-openvpn
+      module: openvpn
+      edition: ce
+      description: |-
+        The OpenVPN server certificate will expire in less than 30 days.
+
+        Renew the certificate if necessary.
+      summary: |
+        OpenVPN server certificate expires in less than 30 days.
       severity: "5"
       markupFormat: markdown
     - name: OperationPolicyViolation
@@ -5164,16 +5502,31 @@ alerts:
       module: monitoring-kubernetes
       edition: ce
       description: |
-        There is a {{ $labels.namespace }}/{{ $labels.pod }} Pod in the cluster that runs on the {{ $labels.node }} and listed as NotReady while all the Pod's containers are Ready.
+        The Pod `{{ $labels.namespace }}/{{ $labels.pod }}` running on node `{{ $labels.node }}` is listed as `NotReady` while all the Pod's containers are `Ready`.
 
-        This could be due to the [Kubernetes bug](https://github.com/kubernetes/kubernetes/issues/80968).
+        This could have been caused by the [known Kubernetes bug](https://github.com/kubernetes/kubernetes/issues/80968).
 
-        The recommended course of action:
-        1. Find all the Pods having this state: `kubectl get pod -o json --all-namespaces | jq '.items[] | select(.status.phase == "Running") | select(.status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | select(.status.conditions[] | select(.type == "Ready" and .status == "False")) | "\(.spec.nodeName)/\(.metadata.namespace)/\(.metadata.name)"'`;
-        2. Find all the Nodes affected: `kubectl get pod -o json --all-namespaces | jq '.items[] | select(.status.phase == "Running") | select(.status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | select(.status.conditions[] | select(.type == "Ready" and .status == "False")) | .spec.nodeName' -r | sort | uniq -c`;
-        3. Restart `kubelet` on each Node: `systemctl restart kubelet`.
+        Steps to troubleshoot:
+
+        1. Identify all pods with this state:
+
+           ```bash
+           kubectl get pod -o json --all-namespaces | jq '.items[] | select(.status.phase == "Running") | select(.status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | select(.status.conditions[] | select(.type == "Ready" and .status == "False")) | "\(.spec.nodeName)/\(.metadata.namespace)/\(.metadata.name)"'
+           ```
+
+        2. Identify all affected nodes:
+
+           ```bash
+           kubectl get pod -o json --all-namespaces | jq '.items[] | select(.status.phase == "Running") | select(.status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | select(.status.conditions[] | select(.type == "Ready" and .status == "False")) | .spec.nodeName' -r | sort | uniq -c
+           ```
+
+        3. Restart kubelet on each node:
+
+           ```bash
+           systemctl restart kubelet
+           ```
       summary: |
-        The state of the {{ $labels.namespace }}/{{ $labels.pod }} Pod running on the {{ $labels.node }} Node is incorrect. You need to restart kubelet.
+        Incorrect state of Pod {{ $labels.namespace }}/{{ $labels.pod }} running on node {{ $labels.node }}.
       severity: undefined
       markupFormat: markdown
     - name: PrometheusDiskUsage
@@ -5400,10 +5753,12 @@ alerts:
       module: monitoring-kubernetes
       edition: ce
       description: |-
-        StorageClass having a cloud-provider provisioner shouldn't be deployed manually.
-        They are managed by the cloud-provider module, you only need to change the module configuration to fit your needs.
+        A StorageClass using a `cloud-provider` provisioner shouldn't be deployed manually.
+        Such StorageClasses are managed by the `cloud-provider` module.
+
+        Instead of the manual deployment, modify the `cloud-provider` module configuration as needed.
       summary: |
-        Manually deployed StorageClass {{ $labels.name }} found in the cluster
+        Manually deployed StorageClass {{ $labels.name }} found in the cluster.
       severity: "6"
       markupFormat: markdown
     - name: StorageClassDefaultDuplicate
@@ -5412,10 +5767,11 @@ alerts:
       module: monitoring-kubernetes
       edition: ce
       description: |-
-        More than one StorageClass in the cluster annotated as a default.
-        Probably manually deployed StorageClass exists, that overlaps with cloud-provider module default Storage configuration.
+        Deckhouse has detected that more than one StorageClass in the cluster is annotated as default.
+
+        This may have been caused by a manually deployed StorageClass that is overlapping with the default storage configuration provided by the `cloud-provider` module.
       summary: |
-        Multiple default StorageClasses found in the cluster
+        Multiple default StorageClasses found in the cluster.
       severity: "6"
       markupFormat: markdown
     - name: TargetDown
@@ -5470,38 +5826,56 @@ alerts:
         The sampling limit is close.
       severity: "7"
       markupFormat: markdown
+    - name: UnmetCloudConditions
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/cloud-data-discovery.tpl
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        Deckhouse has detected that some cloud provider–specific conditions have not been met.
+        Until these issues are resolved, updating to the new Deckhouse release is not possible.
+
+        Troubleshooting details:
+
+        - Name: {{ $labels.name }}
+        - Message: {{ $labels.message }}
+      summary: |
+        Deckhouse update is unavailable due to unmet cloud provider conditions.
+      severity: "6"
+      markupFormat: markdown
     - name: UnsupportedContainerRuntimeVersion
       sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/cri-version.tpl
       moduleUrl: 340-monitoring-kubernetes
       module: monitoring-kubernetes
       edition: ce
       description: |-
-        Unsupported version {{$labels.container_runtime_version}} of CRI installed on {{$labels.node}} node.
-        Supported version of CRI for kubernetes {{$labels.kubelet_version}} version:
-        * Containerd 1.4.*
-        * Containerd 1.5.*
-        * Containerd 1.6.*
-        * Containerd 1.7.*
+        Deckhouse has detected that the node {{$labels.node}} is running an unsupported version of CRI {{$labels.container_runtime_version}}.
+
+        Supported CRI versions for Kubernetes {{$labels.kubelet_version}}:
+
+        * Containerd 1.4.
+        * Containerd 1.5.
+        * Containerd 1.6.
+        * Containerd 1.7.
       summary: |
-        Unsupported version of CRI {{$labels.container_runtime_version}} installed for Kubernetes version: {{$labels.kubelet_version}}
+        Unsupported version of CRI {{$labels.container_runtime_version}} installed for Kubernetes version {{$labels.kubelet_version}}.
       severity: undefined
       markupFormat: markdown
 modules-having-alerts:
     - admission-policy-engine
+    - ceph-csi
     - cert-manager
     - chrony
     - cloud-provider-yandex
     - cni-cilium
-    - cni-flannel
-    - cni-simple-bridge
     - control-plane-manager
     - documentation
     - extended-monitoring
-    - flow-schema
     - ingress-nginx
     - istio
     - kube-dns
     - log-shipper
+    - loki
     - metallb
     - monitoring-applications
     - monitoring-custom
@@ -5511,6 +5885,7 @@ modules-having-alerts:
     - monitoring-ping
     - node-manager
     - okmeter
+    - openvpn
     - operator-prometheus
     - prometheus
     - runtime-audit-engine

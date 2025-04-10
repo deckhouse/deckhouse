@@ -199,7 +199,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
-			RevisionHistoryLimit: ptr.To(int32(2)),
+			RevisionHistoryLimit: ptr.To(int32(0)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app": "deckhouse",
@@ -271,7 +271,8 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		Image:           params.Registry,
 		ImagePullPolicy: apiv1.PullAlways,
 		Command: []string{
-			"/deckhouse/deckhouse",
+			"/usr/bin/deckhouse-controller",
+			"start",
 		},
 		WorkingDir: "/deckhouse",
 		ReadinessProbe: &apiv1.Probe{
@@ -280,7 +281,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			FailureThreshold:    120,
 			ProbeHandler: apiv1.ProbeHandler{
 				HTTPGet: &apiv1.HTTPGetAction{
-					Path: "/ready",
+					Path: "/readyz",
 					Port: intstr.FromInt(4222),
 				},
 			},
@@ -365,6 +366,10 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		{
 			Name:  "HELM_HISTORY_MAX",
 			Value: "3",
+		},
+		{
+			Name:  "GOGC",
+			Value: "50",
 		},
 		{
 			Name:  "ADDON_OPERATOR_CONFIG_MAP",

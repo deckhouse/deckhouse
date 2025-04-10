@@ -40,7 +40,7 @@ type ReleaseTestSuite struct {
 
 	kubeClient client.Client
 	ctr        *deckhouseReleaseReconciler
-	rc         *DeckhouseReleaseChecker
+	rc         *DeckhouseReleaseFetcher
 }
 
 func (suite *ReleaseTestSuite) SetupSuite() {
@@ -64,35 +64,65 @@ func (suite *ReleaseTestSuite) SetupSubTest() {
 		"v1.32.3",
 		"v1.33.0",
 		"v1.33.1",
+		"v2.0.0",
+		"v2.0.1",
+		"v2.0.5",
+		"v2.1.2",
+		"v2.1.12",
 	}, nil)
 
 	suite.ctr, suite.kubeClient = setupFakeController(suite.T(), "", initValues, embeddedMUP)
-	var err error
-	suite.rc, err = NewDeckhouseReleaseChecker([]cr.Option{}, suite.ctr.logger, suite.ctr.dc,
-		suite.ctr.moduleManager, "", "")
-	require.NoError(suite.T(), err)
+	cfg := &DeckhouseReleaseFetcherConfig{
+		registryClient: dependency.TestDC.CRClient,
+		moduleManager:  suite.ctr.moduleManager,
+		logger:         suite.ctr.logger,
+	}
+
+	suite.rc = NewDeckhouseReleaseFetcher(cfg)
 }
 
 func (suite *ReleaseTestSuite) TestCheckRelease() {
-	check := func(name string, actual, target string, fail bool) {
+	check := func(name string, actual, target string, vers []*semver.Version) {
 		suite.Run(name, func() {
 			actual, _ := semver.NewVersion(actual)
 			target, _ := semver.NewVersion(target)
-			v, err := suite.rc.nextVersion(
+			v, err := suite.rc.getNewVersions(
 				context.Background(),
 				actual,
 				target,
 			)
 			require.NoError(suite.T(), err)
 
-			if !cmp.Equal(v, target) && !fail {
+			if !cmp.Equal(v, vers) {
 				suite.T().Fatalf("version is not equal: %v", cmp.Diff(v, target))
 			}
 		})
 	}
 
-	check("Patch", "1.31.0", "1.31.1", false)
-	check("Minor", "1.31.0", "1.32.3", false)
-	check("Last Minor", "1.31.0", "1.32.3", false)
-	check("Fail Update", "1.31.0", "1.33.0", true)
+	check("Patch", "1.31.0", "1.31.1", []*semver.Version{semver.MustParse("1.31.1")})
+
+	check("Minor", "1.31.0", "1.32.3", []*semver.Version{
+		semver.MustParse("1.32.3")})
+
+	check("Last Minor", "1.31.0", "1.33.1", []*semver.Version{
+		semver.MustParse("1.32.3"),
+		semver.MustParse("1.33.1")})
+
+	check("Major", "1.31.0", "2.0.5", []*semver.Version{
+		semver.MustParse("1.32.3"),
+		semver.MustParse("1.33.1"),
+		semver.MustParse("2.0.5"),
+	})
+
+	check("Last Major Minor", "1.31.0", "2.1.12", []*semver.Version{
+		semver.MustParse("1.32.3"),
+		semver.MustParse("1.33.1"),
+		semver.MustParse("2.0.5"),
+		semver.MustParse("2.1.12"),
+	})
+
+	check("Last Minor is not equal to target", "1.31.0", "1.33.0", []*semver.Version{
+		semver.MustParse("1.32.3"),
+		semver.MustParse("1.33.0"),
+	})
 }

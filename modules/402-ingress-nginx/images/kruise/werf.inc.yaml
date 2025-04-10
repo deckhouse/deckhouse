@@ -16,6 +16,7 @@ shell:
     - rm -rf /src/tools
     - cd /src
     - git apply /patches/*.patch --verbose
+    - rm -rf /src/.git
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}

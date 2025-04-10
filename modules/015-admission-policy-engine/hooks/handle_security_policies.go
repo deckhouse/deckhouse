@@ -51,7 +51,7 @@ func handleSP(input *go_hook.HookInput) error {
 	for _, sn := range snap {
 		sp := sn.(*securityPolicy)
 		// set observed status
-		input.PatchCollector.Filter(set_cr_statuses.SetObservedStatus(sn, filterSP), "deckhouse.io/v1alpha1", "securitypolicy", "", sp.Metadata.Name, object_patch.WithSubresource("/status"), object_patch.IgnoreHookError())
+		input.PatchCollector.PatchWithMutatingFunc(set_cr_statuses.SetObservedStatus(sn, filterSP), "deckhouse.io/v1alpha1", "securitypolicy", "", sp.Metadata.Name, object_patch.WithSubresource("/status"), object_patch.WithIgnoreHookError())
 		sp.preprocesSecurityPolicy()
 		result = append(result, sp)
 		for _, v := range sp.Spec.Policies.VerifyImageSignatures {

@@ -133,19 +133,15 @@ func clusterConfiguration(input *go_hook.HookInput) error {
 		}
 	}
 
-	values := InternalValues{
-		KeyName:                   discoveryData.KeyName,
-		LoadBalancerSecurityGroup: discoveryData.LoadBalancerSecurityGroup,
-		Zones:                     discoveryData.Zones,
-		ZoneToSubnetIDMap:         discoveryData.ZoneToSubnetIDMap,
-		Instances:                 discoveryData.Instances,
-		Region:                    provider.Region,
-		ProviderAccessKeyID:       provider.ProviderAccessKeyID,
-		ProviderSecretAccessKey:   provider.ProviderSecretAccessKey,
-		Tags:                      tags,
-	}
-
-	input.Values.Set("cloudProviderAws.internal", values)
+	input.Values.Set("cloudProviderAws.internal.keyName", discoveryData.KeyName)
+	input.Values.Set("cloudProviderAws.internal.loadBalancerSecurityGroup", discoveryData.LoadBalancerSecurityGroup)
+	input.Values.Set("cloudProviderAws.internal.zones", discoveryData.Zones)
+	input.Values.Set("cloudProviderAws.internal.zoneToSubnetIdMap", discoveryData.ZoneToSubnetIDMap)
+	input.Values.Set("cloudProviderAws.internal.instances", discoveryData.Instances)
+	input.Values.Set("cloudProviderAws.internal.region", provider.Region)
+	input.Values.Set("cloudProviderAws.internal.providerAccessKeyId", provider.ProviderAccessKeyID)
+	input.Values.Set("cloudProviderAws.internal.providerSecretAccessKey", provider.ProviderSecretAccessKey)
+	input.Values.Set("cloudProviderAws.internal.tags", tags)
 
 	return nil
 }

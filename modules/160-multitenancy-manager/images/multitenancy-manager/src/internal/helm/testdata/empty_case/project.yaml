@@ -4,4 +4,3 @@ metadata:
   name: test
 spec:
   description: This is an example from the Deckhouse documentation.
-  projectTemplateName: empty

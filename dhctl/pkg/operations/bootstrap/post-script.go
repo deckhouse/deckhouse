@@ -15,6 +15,7 @@
 package bootstrap
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -46,10 +47,10 @@ func (e *PostBootstrapScriptExecutor) WithTimeout(timeout time.Duration) *PostBo
 	return e
 }
 
-func (e *PostBootstrapScriptExecutor) Execute() error {
+func (e *PostBootstrapScriptExecutor) Execute(ctx context.Context) error {
 	return log.Process("bootstrap", "Execute post-bootstrap script", func() error {
 		var err error
-		resultToSetState, err := e.run()
+		resultToSetState, err := e.run(ctx)
 
 		if err != nil {
 			msg := fmt.Sprintf("Post execution script was failed: %v", err)
@@ -65,7 +66,7 @@ func (e *PostBootstrapScriptExecutor) Execute() error {
 	})
 }
 
-func (e *PostBootstrapScriptExecutor) run() (string, error) {
+func (e *PostBootstrapScriptExecutor) run(ctx context.Context) (string, error) {
 	outputFile := fs.RandomNumberSuffix("/tmp/post-bootstrap-script-output")
 	envs := map[string]string{
 		"OUTPUT": outputFile,
@@ -73,10 +74,10 @@ func (e *PostBootstrapScriptExecutor) run() (string, error) {
 
 	createOUtFileCmd := fmt.Sprintf("touch %s && chmod 644 %s", outputFile, outputFile)
 	cmd := frontend.NewCommand(e.sshClient.Settings, createOUtFileCmd)
-	cmd.Sudo()
+	cmd.Sudo(ctx)
 	cmd.WithStderrHandler(nil)
 	cmd.WithStdoutHandler(nil)
-	err := cmd.Run()
+	err := cmd.Run(ctx)
 
 	if err != nil {
 		return "", fmt.Errorf("Cannot create output file for script: %v", err)
@@ -85,10 +86,10 @@ func (e *PostBootstrapScriptExecutor) run() (string, error) {
 	defer func() {
 		// remove out file on server because it can contain non-safe information
 		cmd = frontend.NewCommand(e.sshClient.Settings, fmt.Sprintf("rm %s", outputFile))
-		cmd.Sudo()
+		cmd.Sudo(ctx)
 		cmd.WithStderrHandler(nil)
 		cmd.WithStdoutHandler(nil)
-		err = cmd.Run()
+		err = cmd.Run(ctx)
 	}()
 
 	script := e.sshClient.UploadScript(e.path)
@@ -99,13 +100,13 @@ func (e *PostBootstrapScriptExecutor) run() (string, error) {
 	script.WithEnvs(envs)
 	script.Sudo()
 
-	_, err = script.Execute()
+	_, err = script.Execute(ctx)
 
 	if err != nil {
 		return "", fmt.Errorf("Running %s done with error: %w", e.path, err)
 	}
 
-	content, err := e.sshClient.File().DownloadBytes(outputFile)
+	content, err := e.sshClient.File().DownloadBytes(ctx, outputFile)
 	if err != nil {
 		return "", fmt.Errorf("Cannot get output from remote file %s: %w", e.path, err)
 	}

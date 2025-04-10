@@ -29,10 +29,28 @@ concurrency:
   group: trivy-db-download
 
 jobs:
+
+  # <template: skip_tests_repos>
+  skip_tests_repos:
+    name: Skip tests repos
+    runs-on: ubuntu-latest
+    if: ${{ false || github.repository == 'deckhouse/deckhouse' }}
+    steps:
+    - name: Do nothing
+      run: echo "Empty action to fulfil Github requirements."
+  # </template: skip_tests_repos>
   download-and-repush-images:
     name: Download and repush images
-    runs-on: [self-hosted]
+    needs:
+      - skip_tests_repos
+    runs-on: [self-hosted, regular]
     steps:
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+
+      # </template: checkout_step>
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -61,6 +79,54 @@ jobs:
           password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_rw_registry_step>
+
+      # <template: login_rw_registry_step>
+      - name: Check rw cse registry credentials
+        id: check_rw_cse_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_CSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_CSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to rw cse registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_cse_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_CSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_CSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_CSE_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_rw_registry_step>
+
+      # <template: login_dev_cse_registry_step>
+      - name: Check dev cse registry credentials
+        id: check_dev_cse_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_CSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_CSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to dev cse registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_dev_cse_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_DEV_CSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_CSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_CSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_cse_registry_step>
 
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
@@ -108,15 +174,32 @@ jobs:
       # </template: login_git_step>
       - name: Download custom trivy-db binary and copy image
         run: |
-          rm -rf ./trivy-db && git clone --depth 1 --branch flant-v2 ${{secrets.SOURCE_REPO_GIT}}/aquasecurity/trivy-db.git && cd trivy-db
-          ./update.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee >/dev/null 2>&1
-          ./update.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe >/dev/null 2>&1
-          ./update.sh ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss >/dev/null 2>&1
-          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee/security/trivy-bdu:1 >/dev/null 2>&1
-          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe/security/trivy-bdu:1 >/dev/null 2>&1
-          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-bdu:1 >/dev/null 2>&1
+          rm -rf ./trivy-db
+          git clone --depth 1 --branch flant-v2 ${{secrets.SOURCE_REPO_GIT}}/aquasecurity/trivy-db.git
+          docker logout ghcr.io
+          cd trivy-db
+          ./update.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee 
+          ./update.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe 
+          ./update.sh ${{secrets.DECKHOUSE_CSE_REGISTRY_HOST}}/deckhouse/cse 
+          ./update.sh ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss 
+          ./update.sh ${{secrets.DECKHOUSE_DEV_CSE_REGISTRY_HOST}}/sys/deckhouse-cse 
+          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee/security/trivy-bdu:1 
+          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe/security/trivy-bdu:1 
+          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_CSE_REGISTRY_HOST}}/deckhouse/cse/security/trivy-bdu:1 
+          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-bdu:1 
+          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_DEV_CSE_REGISTRY_HOST}}/sys/deckhouse-cse/security/trivy-bdu:1 
           ./oras pull ghcr.io/aquasecurity/trivy-java-db:1
           ./oras push --artifact-type application/vnd.aquasec.trivy.config.v1+json ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee/security/trivy-java-db:1 javadb.tar.gz:application/vnd.aquasec.trivy.javadb.layer.v1.tar+gzip
           ./oras push --artifact-type application/vnd.aquasec.trivy.config.v1+json ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe/security/trivy-java-db:1 javadb.tar.gz:application/vnd.aquasec.trivy.javadb.layer.v1.tar+gzip
+          ./oras push --artifact-type application/vnd.aquasec.trivy.config.v1+json ${{secrets.DECKHOUSE_CSE_REGISTRY_HOST}}/deckhouse/cse/security/trivy-java-db:1 javadb.tar.gz:application/vnd.aquasec.trivy.javadb.layer.v1.tar+gzip
           ./oras push --artifact-type application/vnd.aquasec.trivy.config.v1+json ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-java-db:1 javadb.tar.gz:application/vnd.aquasec.trivy.javadb.layer.v1.tar+gzip
+          ./oras push --artifact-type application/vnd.aquasec.trivy.config.v1+json ${{secrets.DECKHOUSE_DEV_CSE_REGISTRY_HOST}}/sys/deckhouse-cse/security/trivy-java-db:1 javadb.tar.gz:application/vnd.aquasec.trivy.javadb.layer.v1.tar+gzip
           rm -f javadb.tar.gz
+      - name: Send fail report
+        if: failure()
+        env:
+          LOOP_TOKEN: ${{secrets.LOOP_CVE_REPORTS_SEND_TOKEN}}
+          LOOP_CHANNEL_ID: ${{secrets.LOOP_E2E_REPORT_CHANEL_ID}}
+        run: |
+          WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
+          bash ./.github/scripts/send-report.sh --message "🛑Trivy db shedule failure🛑\n[URL]($WORKFLOW_URL)"

@@ -16,16 +16,22 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
+	"os/signal"
+	"path/filepath"
+	"slices"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
 	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
+	aoapp "github.com/flant/addon-operator/pkg/app"
 	"github.com/flant/kube-client/client"
 	shapp "github.com/flant/shell-operator/pkg/app"
-	utilsignal "github.com/flant/shell-operator/pkg/utils/signal"
+	"github.com/shirou/gopsutil/v3/process"
 	"gopkg.in/alecthomas/kingpin.v2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,6 +48,14 @@ import (
 )
 
 const (
+	deckhouseControllerBinaryPath         = "/usr/bin/deckhouse-controller"
+	deckhouseControllerWithCapsBinaryPath = "/usr/bin/caps-deckhouse-controller"
+
+	deckhouseBundleEnv = "DECKHOUSE_BUNDLE"
+	chrootDirEnv       = "ADDON_OPERATOR_SHELL_CHROOT_DIR"
+	modulesDirEnv      = "MODULES_DIR"
+	skipEntrypointEnv  = "SKIP_ENTRYPOINT_EXECUTION"
+
 	leaseName        = "deckhouse-leader-election"
 	defaultNamespace = "d8-system"
 	leaseDuration    = 35
@@ -49,8 +63,26 @@ const (
 	retryPeriod      = 10
 )
 
+type reaperMutex struct {
+	sync.Mutex
+	scheduled bool
+}
+
+func (r *reaperMutex) Release() {
+	r.Lock()
+	r.scheduled = false
+	r.Unlock()
+}
+
 func start(logger *log.Logger) func(_ *kingpin.ParseContext) error {
 	return func(_ *kingpin.ParseContext) error {
+		if os.Getenv(skipEntrypointEnv) != "true" {
+			if err := entrypoint(logger); err != nil {
+				logger.Error("entrypoint run", log.Err(err))
+				os.Exit(1)
+			}
+		}
+
 		shapp.AppStartMessage = version()
 
 		ctx := context.Background()
@@ -60,7 +92,7 @@ func start(logger *log.Logger) func(_ *kingpin.ParseContext) error {
 		operator.StartAPIServer()
 
 		if os.Getenv("DECKHOUSE_HA") == "true" {
-			logger.Info("Desckhouse is starting in HA mode")
+			logger.Info("Deckhouse starts in HA mode")
 			runHAMode(ctx, operator, logger)
 			return nil
 		}
@@ -74,16 +106,66 @@ func start(logger *log.Logger) func(_ *kingpin.ParseContext) error {
 	}
 }
 
+func entrypoint(logger *log.Logger) error {
+	var possibleBundles = []string{"Default", "Minimal", "Managed"}
+	bundleEnvValue, found := os.LookupEnv(deckhouseBundleEnv)
+	if !found || len(bundleEnvValue) == 0 {
+		bundleEnvValue = "Default"
+	}
+
+	if !slices.Contains(possibleBundles, bundleEnvValue) {
+		logger.Fatal(fmt.Sprintf("Deckhouse bundle %q doesn't exist! -- Possible bundles: %s", bundleEnvValue, strings.Join(possibleBundles, ", ")))
+	}
+
+	chrootDirEnvValue, found := os.LookupEnv(chrootDirEnv)
+	if found && len(chrootDirEnvValue) > 0 {
+		chrootedTmpDirPath := filepath.Join(chrootDirEnvValue, aoapp.DefaultTempDir)
+		if err := os.MkdirAll(chrootedTmpDirPath, 0750); err != nil {
+			return fmt.Errorf("create chroot dir: %w", err)
+		}
+
+		if _, err := os.Stat(aoapp.DefaultTempDir); err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				if err := os.Symlink(chrootedTmpDirPath, aoapp.DefaultTempDir); err != nil {
+					return fmt.Errorf("create tmp directory symlink: %w", err)
+				}
+			} else {
+				return fmt.Errorf("stat tmp directory symlink: %w", err)
+			}
+		}
+	}
+
+	modulesDirEnvValue, found := os.LookupEnv(modulesDirEnv)
+	if !found || len(modulesDirEnvValue) == 0 {
+		return fmt.Errorf("%q env not set", modulesDirEnv)
+	}
+
+	coreModulesDir := strings.Split(modulesDirEnvValue, ":")[0]
+	bundelValuesFilePath := filepath.Join(coreModulesDir, fmt.Sprintf("values-%s.yaml", strings.ToLower(bundleEnvValue)))
+	bytes, err := os.ReadFile(bundelValuesFilePath)
+	if err != nil {
+		return fmt.Errorf("read bundle values file: %w", err)
+	}
+
+	if err := os.WriteFile("/tmp/values.yaml", bytes, 0644); err != nil {
+		return fmt.Errorf("write values file: %w", err)
+	}
+
+	logger.Info(fmt.Sprintf("-- Starting Deckhouse using %q $bundle --", bundleEnvValue))
+
+	return nil
+}
+
 func runHAMode(ctx context.Context, operator *addonoperator.AddonOperator, logger *log.Logger) {
 	var identity string
 	podName := os.Getenv("DECKHOUSE_POD")
 	if len(podName) == 0 {
-		log.Fatal("DECKHOUSE_POD env not set or empty")
+		logger.Fatal("DECKHOUSE_POD env not set or empty")
 	}
 
 	podIP := os.Getenv("ADDON_OPERATOR_LISTEN_ADDRESS")
 	if len(podIP) == 0 {
-		log.Fatal("ADDON_OPERATOR_LISTEN_ADDRESS env not set or empty")
+		logger.Fatal("ADDON_OPERATOR_LISTEN_ADDRESS env not set or empty")
 	}
 
 	podNs := os.Getenv("ADDON_OPERATOR_NAMESPACE")
@@ -93,7 +175,7 @@ func runHAMode(ctx context.Context, operator *addonoperator.AddonOperator, logge
 
 	clusterDomain := os.Getenv("KUBERNETES_CLUSTER_DOMAIN")
 	if len(clusterDomain) == 0 {
-		log.Warn("KUBERNETES_CLUSTER_DOMAIN env not set or empty - it's value won't be used for the leader election")
+		logger.Warn("KUBERNETES_CLUSTER_DOMAIN env not set or empty - its value won't be used for the leader election")
 		identity = fmt.Sprintf("%s.%s.%s.pod", podName, strings.ReplaceAll(podIP, ".", "-"), podNs)
 	} else {
 		identity = fmt.Sprintf("%s.%s.%s.pod.%s", podName, strings.ReplaceAll(podIP, ".", "-"), podNs, clusterDomain)
@@ -135,9 +217,9 @@ func runHAMode(ctx context.Context, operator *addonoperator.AddonOperator, logge
 
 	go func() {
 		<-ctx.Done()
-		log.Info("Context canceled received")
+		logger.Info("Context canceled received")
 		if err := syscall.Kill(1, syscall.SIGUSR2); err != nil {
-			log.Fatalf("Couldn't shutdown deckhouse: %s\n", err)
+			logger.Fatalf("Couldn't shutdown deckhouse: %s\n", err)
 		}
 	}()
 
@@ -145,6 +227,10 @@ func runHAMode(ctx context.Context, operator *addonoperator.AddonOperator, logge
 }
 
 func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log.Logger) error {
+	exitCh := make(chan struct{})
+	operatorStarted := false
+	go signalHandler(ctx, exitCh, operator, &operatorStarted, logger)
+
 	if err := d8Apis.EnsureCRDs(ctx, operator.KubeClient(), "/deckhouse/deckhouse-controller/crds/*.yaml"); err != nil {
 		return fmt.Errorf("ensure crds: %w", err)
 	}
@@ -167,16 +253,119 @@ func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log
 	if err = operator.Start(ctx); err != nil {
 		return fmt.Errorf("start operator: %w", err)
 	}
+	operatorStarted = true
 
 	debugserver.RegisterRoutes(operator.DebugServer)
 
 	// block main thread by waiting signals from OS.
-	utilsignal.WaitForProcessInterruption(func() {
-		operator.Stop()
-		os.Exit(0)
-	})
+	<-exitCh
 
 	return nil
+}
+
+func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonoperator.AddonOperator, operatorStarted *bool, logger *log.Logger) {
+	interruptCh := make(chan os.Signal, 5)
+	signal.Notify(interruptCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGUSR1, syscall.SIGUSR2, syscall.SIGCHLD)
+	rm := reaperMutex{}
+	for {
+		select {
+		case <-ctx.Done():
+			logger.Info("Context canceled - exiting")
+			exitCh <- struct{}{}
+			return
+
+		case sig := <-interruptCh:
+			switch sig {
+			case syscall.SIGUSR1, syscall.SIGUSR2:
+				environ := os.Environ()
+				skipEntrypointKeyValue := fmt.Sprintf("%s=true", skipEntrypointEnv)
+				if !slices.Contains(environ, skipEntrypointKeyValue) {
+					environ = append(environ, skipEntrypointKeyValue)
+				}
+				logger.Info(fmt.Sprintf("A %q signal was received, Deckhouse is restarting", sig.String()))
+				if *operatorStarted {
+					operator.Stop()
+				}
+				if err := syscall.Kill(-1, syscall.SIGKILL); err != nil {
+					if !errors.Is(err, syscall.ECHILD) && !errors.Is(err, syscall.ESRCH) {
+						logger.Error("Couldn't kill child processes", log.Err(err))
+					}
+				}
+				deckhouseBinaryToRun := deckhouseControllerBinaryPath
+				chrootDirEnvValue, found := os.LookupEnv(chrootDirEnv)
+				if found && len(chrootDirEnvValue) > 0 {
+					deckhouseBinaryToRun = deckhouseControllerWithCapsBinaryPath
+				}
+				if err := syscall.Exec(deckhouseBinaryToRun, []string{deckhouseBinaryToRun, "start"}, environ); err != nil {
+					log.Error("Couldn't restart Deckhouse", log.Err(err))
+					os.Exit(1)
+				}
+
+			case syscall.SIGCHLD:
+				rm.Lock()
+				if !rm.scheduled {
+					rm.scheduled = true
+					rm.Unlock()
+					go func() {
+						defer rm.Release()
+						// give some time to real parent processes to reap their children if any
+						time.Sleep(time.Second)
+
+						processes, err := process.Processes()
+						if err != nil {
+							logger.Debug("get processes", log.Err(err))
+							return
+						}
+
+						for _, ps := range processes {
+							status, err := ps.Status()
+							if err != nil {
+								logger.Debug("get process status", log.Err(err))
+								continue
+							}
+
+							if slices.Contains(status, process.Zombie) {
+								ppid, err := ps.Ppid()
+								if err != nil {
+									logger.Debug("get parent process id", log.Err(err))
+									continue
+								}
+
+								if ppid == 1 {
+									var status syscall.WaitStatus
+									_, err := syscall.Wait4(int(ps.Pid), &status, syscall.WNOHANG, nil)
+									if err != nil {
+										// ignore if a child has already been reaped
+										if !errors.Is(err, syscall.ECHILD) && !errors.Is(err, syscall.ESRCH) {
+											logger.Error("process SIGCHLD signal", log.Err(err))
+										}
+									}
+								}
+							}
+						}
+					}()
+				} else {
+					rm.Unlock()
+				}
+
+			case syscall.SIGINT, syscall.SIGTERM:
+				logger.Info(fmt.Sprintf("A %q signal was received, Deckhouse is shutting down", sig.String()))
+				if *operatorStarted {
+					operator.Stop()
+				}
+				if err := syscall.Kill(-1, syscall.SIGKILL); err != nil {
+					if !errors.Is(err, syscall.ECHILD) && !errors.Is(err, syscall.ESRCH) {
+						logger.Error("Couldn't kill child processes", log.Err(err))
+					}
+				}
+				signum := 0
+				if v, ok := sig.(syscall.Signal); ok {
+					signum = int(v)
+				}
+				os.Exit(128 + signum)
+			}
+		}
+	}
 }
 
 const (
@@ -194,7 +383,7 @@ func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Log
 	}
 
 	return retry.OnError(bk, func(err error) bool {
-		logger.Errorf("An error occurred during the bootstrap lock: %s. Retrying", err)
+		logger.Error("An error occurred during the bootstrap lock. Retrying", log.Err(err))
 		// retry on any error
 		return true
 	}, func() error {

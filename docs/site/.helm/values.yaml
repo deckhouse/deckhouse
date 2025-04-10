@@ -6,12 +6,10 @@ priorityClassName:
 ingressClass:
   _default: nginx
   prod-25: nginx
-  prod-sel: nginx-tfprod
 
 certificateClusterIssuer:
   _default: letsencrypt
   prod-25: letsencrypt-nginx
-  prod-sel: letsencrypt-nginx-tfprod
 
 moduleWatcher:
   registries:
@@ -25,7 +23,7 @@ moduleWatcher:
     web-production: 5m
   logLevel:
     _default: debug
-    web-production: error
+    web-production: info
 
 docsBuilder:
   highAvailability:
@@ -36,7 +34,7 @@ resources:
   requests:
     memory:
       _default: 32M
-      web-production: 64M
+      web-production: 150M
 
 vrouter:
   defaultGroup: "v1"

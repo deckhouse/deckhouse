@@ -154,9 +154,9 @@ apiVersions:
                   False means that static public addresses are created for nodes, they are also used for One-to-one NAT.;
               additionalNetworkTags: &instanceClassAdditionalNetworkTags
                 description: |
-                  The list of additional tags.
+                  The list of additional network tags.
 
-                  For example, you can use tags to apply firewall rules to instances. The detailed description of network tags is available in the [official documentation](https://cloud.google.com/vpc/docs/add-remove-network-tags).
+                  You can use network tags to apply firewall rules to instances. The detailed description of network tags is available in the [Google Cloud documentation](https://cloud.google.com/vpc/docs/add-remove-network-tags).
                 type: array
                 items:
                   type: string
@@ -165,7 +165,7 @@ apiVersions:
                 description: |
                   Additional labels.
 
-                  [More info...](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
+                  For details on labels, refer to the [Google Cloud documentation](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
                 x-doc-example: |
                   ```yaml
                   project: cms-production

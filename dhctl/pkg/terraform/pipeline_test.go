@@ -15,6 +15,7 @@
 package terraform
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -77,7 +78,7 @@ func TestGetMasterNodeResult(t *testing.T) {
 				WithStatePath("./mocks/pipeline/empty_state.json").
 				withTerraformExecutor(executor)
 
-			res, err := GetMasterNodeResult(runner)
+			res, err := GetMasterNodeResult(context.Background(), runner)
 			if tc.expectedErr != nil {
 				require.EqualError(t, err, tc.expectedErr.Error())
 			} else {
@@ -146,7 +147,7 @@ func TestCheckBaseInfrastructurePipeline(t *testing.T) {
 				WithStatePath("./mocks/pipeline/empty_state.json").
 				withTerraformExecutor(executor)
 
-			res, plan, _, err := CheckBaseInfrastructurePipeline(runner, "test")
+			res, plan, _, err := CheckBaseInfrastructurePipeline(context.Background(), runner, "test")
 			if tc.expectedErr != nil {
 				require.EqualError(t, err, tc.expectedErr.Error())
 			} else {
@@ -209,7 +210,7 @@ func TestDestroyPipeline(t *testing.T) {
 				WithStatePath(tc.stateFile).
 				withTerraformExecutor(executor)
 
-			err := DestroyPipeline(runner, "test")
+			err := DestroyPipeline(context.Background(), runner, "test")
 			if tc.expectedErr != nil {
 				require.Contains(t, err.Error(), tc.expectedErr.Error())
 			} else {

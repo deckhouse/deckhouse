@@ -15,6 +15,8 @@
 package infrastructure
 
 import (
+	"context"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
@@ -34,7 +36,7 @@ func NewBaseInfraController(metaConfig *config.MetaConfig, stateCache state.Cach
 	}
 }
 
-func (r *BaseInfraTerraformController) Destroy(clusterState []byte, autoApprove bool) error {
+func (r *BaseInfraTerraformController) Destroy(ctx context.Context, clusterState []byte, autoApprove bool) error {
 	if err := saveInCacheIfNotExists(r.stateCache, "base-infrastructure.tfstate", clusterState); err != nil {
 		return err
 	}
@@ -43,5 +45,5 @@ func (r *BaseInfraTerraformController) Destroy(clusterState []byte, autoApprove 
 		AutoApprove: autoApprove,
 	})
 
-	return terraform.DestroyPipeline(baseRunner, "Kubernetes cluster")
+	return terraform.DestroyPipeline(ctx, baseRunner, "Kubernetes cluster")
 }

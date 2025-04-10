@@ -15,6 +15,7 @@
 package frontend
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -80,14 +81,14 @@ func (u *UploadScript) WithCleanupAfterExec(doCleanup bool) {
 	u.cleanupAfterExec = doCleanup
 }
 
-func (u *UploadScript) Execute() (stdout []byte, err error) {
+func (u *UploadScript) Execute(ctx context.Context) (stdout []byte, err error) {
 	scriptName := filepath.Base(u.ScriptPath)
 
 	remotePath := "."
 	if u.sudo {
 		remotePath = filepath.Join(app.DeckhouseNodeTmpPath, scriptName)
 	}
-	err = NewFile(u.Session).Upload(u.ScriptPath, remotePath)
+	err = NewFile(u.Session).Upload(ctx, u.ScriptPath, remotePath)
 	if err != nil {
 		return nil, fmt.Errorf("upload: %v", err)
 	}
@@ -97,11 +98,11 @@ func (u *UploadScript) Execute() (stdout []byte, err error) {
 	if u.sudo {
 		scriptFullPath = u.pathWithEnv(filepath.Join(app.DeckhouseNodeTmpPath, scriptName))
 		cmd = NewCommand(u.Session, scriptFullPath, u.Args...)
-		cmd.Sudo()
+		cmd.Sudo(ctx)
 	} else {
 		scriptFullPath = u.pathWithEnv("./" + scriptName)
 		cmd = NewCommand(u.Session, scriptFullPath, u.Args...)
-		cmd.Cmd()
+		cmd.Cmd(ctx)
 	}
 
 	scriptCmd := cmd.CaptureStdout(nil).CaptureStderr(nil)
@@ -115,14 +116,14 @@ func (u *UploadScript) Execute() (stdout []byte, err error) {
 
 	if u.cleanupAfterExec {
 		defer func() {
-			err := NewCommand(u.Session, "rm", "-f", scriptFullPath).Run()
+			err := NewCommand(u.Session, "rm", "-f", scriptFullPath).Run(ctx)
 			if err != nil {
 				log.DebugF("Failed to delete uploaded script %s: %v", scriptFullPath, err)
 			}
 		}()
 	}
 
-	err = scriptCmd.Run()
+	err = scriptCmd.Run(ctx)
 	if err != nil {
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) {
@@ -157,12 +158,12 @@ func (u *UploadScript) pathWithEnv(path string) string {
 
 var ErrBashibleTimeout = errors.New("Timeout bashible step running")
 
-func (u *UploadScript) ExecuteBundle(parentDir, bundleDir string) (stdout []byte, err error) {
+func (u *UploadScript) ExecuteBundle(ctx context.Context, parentDir, bundleDir string) (stdout []byte, err error) {
 	bundleName := fmt.Sprintf("bundle-%s.tar", time.Now().Format("20060102-150405"))
 	bundleLocalFilepath := filepath.Join(app.TmpDirName, bundleName)
 
 	// tar cpf bundle.tar -C /tmp/dhctl.1231qd23/var/lib bashible
-	tarCmd := exec.Command("tar", "cpf", bundleLocalFilepath, "-C", parentDir, bundleDir)
+	tarCmd := exec.CommandContext(ctx, "tar", "cpf", bundleLocalFilepath, "-C", parentDir, bundleDir)
 	err = tarCmd.Run()
 	if err != nil {
 		return nil, fmt.Errorf("tar bundle: %v", err)
@@ -174,7 +175,7 @@ func (u *UploadScript) ExecuteBundle(parentDir, bundleDir string) (stdout []byte
 	)
 
 	// upload to node's deckhouse tmp directory
-	err = NewFile(u.Session).Upload(bundleLocalFilepath, app.DeckhouseNodeTmpPath)
+	err = NewFile(u.Session).Upload(ctx, bundleLocalFilepath, app.DeckhouseNodeTmpPath)
 	if err != nil {
 		return nil, fmt.Errorf("upload: %v", err)
 	}
@@ -190,7 +191,7 @@ func (u *UploadScript) ExecuteBundle(parentDir, bundleDir string) (stdout []byte
 		strings.Join(u.Args, " "),
 	)
 	bundleCmd := NewCommand(u.Session, tarCmdline)
-	bundleCmd.Sudo()
+	bundleCmd.Sudo(ctx)
 
 	// Buffers to implement output handler logic
 	lastStep := ""
@@ -203,7 +204,7 @@ func (u *UploadScript) ExecuteBundle(parentDir, bundleDir string) (stdout []byte
 	bundleCmd.WithStdoutHandler(handler)
 	bundleCmd.CaptureStdout(nil)
 	bundleCmd.CaptureStderr(nil)
-	err = bundleCmd.Run()
+	err = bundleCmd.Run(ctx)
 	if err != nil {
 		if lastStep != "" {
 			processLogger.LogProcessFail()

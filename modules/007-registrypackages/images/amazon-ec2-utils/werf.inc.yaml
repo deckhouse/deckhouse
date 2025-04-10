@@ -1,35 +1,37 @@
 {{- $version := "2.2.0" }}
 {{- $image_version := $version | replace "." "-" }}
 ---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /src/scripts
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - git clone -b v{{ $version }} --depth 1 {{ $.SOURCE_REPO }}/amazonlinux/amazon-ec2-utils.git /src/amazon-ec2-utils
+  - rm -rf /src/amazon-ec2-utils/.git
+  - cp /src/amazon-ec2-utils/ebsnvme-id /ebsnvme-id
+---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ $.Images.BASE_SCRATCH }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-  add: /
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src/amazon-ec2-utils/ebsnvme-id
+  to: /ebsnvme-id
+  before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src/scripts
   to: /
-  includePaths:
-  - ebsnvme-id
-  - install
-  - uninstall
   before: setup
 imageSpec:
   config:
     labels: { "distro": "all", "version": "all", "growpart": "{{ $version }}" }
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-final: false
-from: {{ $.Images.BASE_ALPINE_DEV }}
-git:
-  - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
-    to: /
-    stageDependencies:
-      setup:
-      - '**/*'
-shell:
-  beforeInstall:
-    - apk add --no-cache openssh-client
-  setup:
-    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-    - git clone -b v{{ $version }} --depth 1 {{ $.SOURCE_REPO }}/amazonlinux/amazon-ec2-utils.git  /src
-    - mv /src/ebsnvme-id /ebsnvme-id
-    - chmod +x /ebsnvme-id /install /uninstall
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]

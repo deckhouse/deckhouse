@@ -4,32 +4,44 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 final: false
-from: {{ .Images.BASE_ALT_DEV }}
+fromImage: common/relocate-artifact
+shell:
+  beforeInstall:
+  - apt-get install -y ipset conntrack-tools
+  install:
+  - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+  - |
+    for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore ip6tables-nft ip6tables-nft-restore ip6tables-nft-save iptables-nft iptables-nft-restore iptables-nft-save; do
+      ln -f -s /iptables-wrapper "/relocate/sbin/${cmd}"
+    done
+    # broken symlinks are not imported from the artifact
+    touch /iptables-wrapper
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
 shell:
   install:
-    - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
-    - |
-      for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore ip6tables-nft ip6tables-nft-restore ip6tables-nft-save iptables-nft iptables-nft-restore iptables-nft-save; do
-        ln -f -s /iptables-wrapper "/relocate/sbin/${cmd}"
-      done
-      # broken symlinks are not imported from the artifact
-      touch /iptables-wrapper
+  - git clone --depth 1 --branch v2.0.1 {{ $.SOURCE_REPO }}/cloudnativelabs/kube-router.git /src
+  - cd /src
+  - git describe --tags --dirty > GIT_COMMIT
+  - rm -rf .git
 ---
 image: {{ .ModuleName }}/kube-router-artifact
 final: false
-from: {{ .Images.BASE_GOLANG_20_ALPINE_DEV }}
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 shell:
-  beforeInstall:
-  - apk add --no-cache git openssh-client
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
-    - mkdir -p /src
-    - cd /src
-    - git clone --branch v2.0.1 --depth 1 {{ $.SOURCE_REPO }}/cloudnativelabs/kube-router.git .
-    - GIT_COMMIT=$(git describe --tags --dirty)
-    - BUILD_DATE=$(date +%Y-%m-%dT%H:%M:%S%z)
-    - export GOPROXY={{ $.GOPROXY }}
-    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-X github.com/cloudnativelabs/kube-router/v2/pkg/version.Version=${GIT_COMMIT} -X github.com/cloudnativelabs/kube-router/v2/pkg/version.BuildDate=${BUILD_DATE}" -o kube-router cmd/kube-router/kube-router.go
+  - cd /src
+  - GIT_COMMIT=$(cat GIT_COMMIT)
+  - BUILD_DATE=$(date +%Y-%m-%dT%H:%M:%S%z)
+  - export GOPROXY={{ $.GOPROXY }}
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-X github.com/cloudnativelabs/kube-router/v2/pkg/version.Version=${GIT_COMMIT} -X github.com/cloudnativelabs/kube-router/v2/pkg/version.BuildDate=${BUILD_DATE}" -o kube-router cmd/kube-router/kube-router.go
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless

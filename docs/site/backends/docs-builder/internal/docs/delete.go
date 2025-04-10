@@ -24,7 +24,7 @@ func (svc *Service) Delete(moduleName string, channels []string) error {
 		return fmt.Errorf("clean module files: %w", err)
 	}
 
-	err = svc.removeFromChannelMapping(moduleName)
+	err = svc.removeFromChannelMapping(moduleName, channels)
 	if err != nil {
 		return fmt.Errorf("remove from channel mapping:%w", err)
 	}
@@ -32,8 +32,14 @@ func (svc *Service) Delete(moduleName string, channels []string) error {
 	return nil
 }
 
-func (svc *Service) removeFromChannelMapping(moduleName string) error {
+func (svc *Service) removeFromChannelMapping(moduleName string, channels []string) error {
 	return svc.channelMappingEditor.edit(func(m channelMapping) {
-		delete(m, moduleName)
+		for _, channel := range channels {
+			delete(m[moduleName][channelMappingChannels], channel)
+		}
+
+		if len(m[moduleName][channelMappingChannels]) == 0 {
+			delete(m, moduleName)
+		}
 	})
 }

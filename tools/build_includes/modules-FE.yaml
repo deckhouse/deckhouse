@@ -274,11 +274,6 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /ee/modules/380-metallb/images/metallb
-  to: /deckhouse/modules/380-metallb/images/metallb
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/modules/380-metallb/templates/_helper.tpl
   to: /deckhouse/modules/380-metallb/templates/_helper.tpl
   stageDependencies:
@@ -289,28 +284,18 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /ee/modules/380-metallb/templates/rbac-for-us.yaml
-  to: /deckhouse/modules/380-metallb/templates/rbac-for-us.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/modules/380-metallb/templates/speaker
   to: /deckhouse/modules/380-metallb/templates/speaker
   stageDependencies:
     setup:
         - '**/*'
-- add: /ee/modules/380-metallb/template_tests/bgp_test.go
-  to: /deckhouse/modules/380-metallb/template_tests/bgp_test.go
+- add: /ee/modules/380-metallb/monitoring/grafana-dashboards/kubernetes-cluster/metallb-bgp.json
+  to: /deckhouse/modules/380-metallb/monitoring/grafana-dashboards/kubernetes-cluster/metallb-bgp.json
   stageDependencies:
     setup:
         - '**/*'
-- add: /ee/modules/380-metallb/monitoring/grafana-dashboards
-  to: /deckhouse/modules/380-metallb/monitoring/grafana-dashboards
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/modules/380-metallb/monitoring/prometheus-rules
-  to: /deckhouse/modules/380-metallb/monitoring/prometheus-rules
+- add: /ee/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
+  to: /deckhouse/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
   stageDependencies:
     setup:
         - '**/*'

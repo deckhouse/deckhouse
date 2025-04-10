@@ -57,7 +57,7 @@ func main() {
 
 	lManager, err := k8s.NewLeasesManager(logger)
 	if err != nil {
-		logger.Fatalf("new leases manager: %s", err)
+		logger.Fatal("new leases manager", log.Err(err))
 	}
 
 	h := v1.NewHandler(docs.NewService(src, dst, highAvailability, logger), logger.Named("v1"))
@@ -85,17 +85,17 @@ func main() {
 
 	err = lManager.Remove(ctx)
 	if err != nil {
-		logger.Errorf("lease removing failed: %v", err)
+		logger.Error("lease removing failed", log.Err(err))
 	}
 
 	err = srv.Shutdown(ctx)
 	if err != nil {
-		logger.Errorf("shutdown failed: %v", err)
+		logger.Error("shutdown failed", log.Err(err))
 	}
 
 	err = eg.Wait()
 	if err != nil {
-		logger.Errorf("error due stopping application%v", err)
+		logger.Error("error due stopping application", log.Err(err))
 	}
 
 	logger.Info("application stopped")

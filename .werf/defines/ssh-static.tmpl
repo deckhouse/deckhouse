@@ -12,6 +12,7 @@ fromImage: common/src-artifact
 shell:
   install:
   - git clone -b V_9_9_P1 --single-branch --depth=1 {{ $context.SOURCE_REPO }}/openssh/openssh-portable /src
+  - rm -rf /src/.git
 ---
 image: ssh-static
 final: false
@@ -28,6 +29,8 @@ shell:
   install:
   - cd /src
   - autoreconf
-  - ./configure LDFLAGS="-static $(LDFLAGS)" --prefix /ssh
-  - make install
+  - ./configure LDFLAGS="-static $(LDFLAGS)" --prefix=
+  - make --jobs=8
+  - make DESTDIR=/ssh install
+  - make clean
 {{- end }}

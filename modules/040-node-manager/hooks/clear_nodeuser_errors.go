@@ -12,13 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// this hook figure out minimal ingress controller version at the beginning and on IngressNginxController creation
-// this version is used on requirements check on Deckhouse update
-// Deckhouse would not update minor version before pod is ready, so this hook will execute at least once (on sync)
-
 package hooks
 
 import (
+	"log/slog"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -114,11 +112,11 @@ func discoverNodeUsersForClear(input *go_hook.HookInput) error {
 
 	for _, item := range nodeUserSnap {
 		nuForClear := item.(nodeUsersForClear)
-		input.Logger.Debugf("clearErrors--> NodeUsers: %v Nodes: %v", nuForClear, nodes)
+		input.Logger.Debug("clearErrors", slog.Any("NodeUsers", nuForClear), slog.Any("Nodes", nodes))
 		if incorrectNodes := hasIncorrectNodeUserErrors(nuForClear.StatusErrors, nodes); len(
 			incorrectNodes,
 		) > 0 {
-			input.Logger.Debugf("clearErrors--> incorrectNodes: %v", incorrectNodes)
+			input.Logger.Debug("clearErrors", slog.Any("incorrectNodes", incorrectNodes))
 			err := clearNodeUserIncorrectErrors(nuForClear.Name, incorrectNodes, input)
 			if err != nil {
 				return err
@@ -157,7 +155,7 @@ func clearNodeUserIncorrectErrors(
 		patch["status"]["errors"][node] = nil
 	}
 
-	input.Logger.Debugf("clearErrors--> patch: %v", patch)
+	input.Logger.Debug("clearErrors", slog.Any("patch", patch))
 	input.PatchCollector.MergePatch(
 		patch,
 		"deckhouse.io/v1",

@@ -44,7 +44,8 @@ import (
 )
 
 func (s *Service) Check(server pb.DHCTL_CheckServer) error {
-	ctx := operationCtx(server)
+	ctx, cancel := operationCtx(server)
+	defer cancel()
 
 	logger.L(ctx).Info("started")
 
@@ -92,6 +93,9 @@ connectionProcessor:
 					sendCh <- &pb.CheckResponse{Message: &pb.CheckResponse_Result{Result: result}}
 				}()
 
+			case *pb.CheckRequest_Cancel:
+				cancel()
+
 			default:
 				logger.L(ctx).Error("got unprocessable message",
 					slog.String("message", fmt.Sprintf("%T", message)))
@@ -123,7 +127,7 @@ func (s *Service) check(
 	var err error
 
 	cleanuper := callback.NewCallback()
-	defer cleanuper.Call()
+	defer func() { _ = cleanuper.Call() }()
 
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
 		OutStream: logWriter,
@@ -137,9 +141,7 @@ func (s *Service) check(
 	app.ApplyPreflightSkips(request.Options.CommonOptions.SkipPreflightChecks)
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
-	defer func() {
-		log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName)
-	}()
+	defer func() { log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName) }()
 
 	var metaConfig *config.MetaConfig
 	err = log.Process("default", "Parsing cluster config", func() error {
@@ -199,7 +201,7 @@ func (s *Service) check(
 		TerraformContext: terraform.NewTerraformContext(),
 	}
 
-	kubeClient, sshClient, cleanup, err := helper.InitializeClusterConnections(helper.ClusterConnectionsOptions{
+	kubeClient, sshClient, cleanup, err := helper.InitializeClusterConnections(ctx, helper.ClusterConnectionsOptions{
 		CommanderMode: request.Options.CommanderMode,
 		ApiServerUrl:  request.Options.ApiServerUrl,
 		ApiServerOptions: helper.ApiServerOptions{

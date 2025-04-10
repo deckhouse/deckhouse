@@ -10,11 +10,15 @@
       plk_markup_format: "markdown"
       plk_create_group_if_not_exists__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: |-
+        Services with the `prometheus-target` label are being used for metric collection.
       description: |-
-        Services with the `prometheus-target` label are used to collect metrics in the cluster.
+        Deckhouse has detected that services with the `prometheus-target` label are being used to collect metrics in the cluster.
 
-        Use the following command to filter them: `kubectl get service --all-namespaces --show-labels | grep prometheus-target`
+        The label format has been changed. To resolve the issue, replace the `prometheus-target` label with `prometheus.deckhouse.io/target`.
 
-        Note that the label format has changed. You need to replace the `prometheus-target` label with `prometheus.deckhouse.io/target`.
-      summary: >
-        Services with the `prometheus-target` label are used to collect metrics in the cluster.
+        To list all services labeled with `prometheus-target`, run the following command:
+        
+        ```bash
+        kubectl get service --all-namespaces --show-labels | grep prometheus-target
+        ```

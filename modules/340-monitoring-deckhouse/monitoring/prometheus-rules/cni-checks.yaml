@@ -11,9 +11,33 @@
         plk_protocol_version: "1"
         plk_create_group_if_not_exists__d8_cni_check: D8CNIEnabledMoreThanOne,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
         plk_grouped_by__d8_cni_check: D8CNIEnabledMoreThanOne,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
-        description: |
-          Several CNIs are enabled in the cluster:
-          For the cluster to work correctly, only one CNI must be enabled.
         summary: More than one CNI is enabled in the cluster.
+        description: |
+          Deckhouse has detected that multiple CNIs are enabled in the cluster.
+          For the cluster to work correctly, only one CNI must be enabled.
 
+          To resolve this issue, disable any unnecessary CNI.
+
+    - alert: D8CNIMisconfigured
+      expr: max(cniMisconfigured{}) by(cni, module) == 1
+      for: 5m
+      labels:
+        severity_level: "5"
+        tier: cluster
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_cni_check: D8CNIMisconfiguration,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_grouped_by__d8_cni_check: D8CNIMisconfiguration,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        summary: Settings in the secret `d8-cni-configuration` conflict with the ModuleConfig.
+        description: |
+          Steps to troubleshoot:
+
+          1. Find the desired settings in the ConfigMap `d8-system/desired-cni-moduleconfig` by running the following command:
+
+             ```bash
+             kubectl -n d8-system get configmap desired-cni-moduleconfig -o yaml
+             ```
+
+          1. Update the conflicting settings in the CNI `{{ $labels.cni }}` ModuleConfig to match the desired configuration.
 

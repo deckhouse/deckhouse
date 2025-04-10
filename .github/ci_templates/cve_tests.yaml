@@ -7,9 +7,9 @@
     DEFECTDOJO_HOST: ${{secrets.DEFECTDOJO_HOST}}
     DECKHOUSE_PRIVATE_REPO: ${{secrets.DECKHOUSE_PRIVATE_REPO}}
     TRIVY_PROJECT_ID: "2181"
-    TRIVY_DB_URL: ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe/security/trivy-db:2 
-    TRIVY_JAVA_DB_URL: ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe/security/trivy-java-db:1
-    TRIVY_POLICY_URL: ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe/security/trivy-bdu:1
+    TRIVY_DB_URL: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-db:2 
+    TRIVY_JAVA_DB_URL: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-java-db:1
+    TRIVY_POLICY_URL: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-bdu:1
   run: |
     echo "⚓️ 🏎 Running CVE tests on ${TAG}..."
     make cve-base-images
@@ -25,9 +25,9 @@
     DEFECTDOJO_HOST: ${{secrets.DEFECTDOJO_HOST}}
     DECKHOUSE_PRIVATE_REPO: ${{secrets.DECKHOUSE_PRIVATE_REPO}}
     TRIVY_PROJECT_ID: "2181"
-    TRIVY_DB_URL: ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe/security/trivy-db:2 
-    TRIVY_JAVA_DB_URL: ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe/security/trivy-java-db:1
-    TRIVY_POLICY_URL: ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe/security/trivy-bdu:1
+    TRIVY_DB_URL: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-db:2
+    TRIVY_JAVA_DB_URL: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-java-db:1
+    TRIVY_POLICY_URL: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-bdu:1
   run: |
     echo "⚓️ 🏎 Running Deckhouse images CVE tests on ${TAG}..."
     make cve-report
@@ -44,6 +44,7 @@
   if: failure()
   run: |
     echo "Trivy tests for ${TAG} have failed." > "out/${TAG}_test-failed.txt"
+    tar -zcvf out/trivy_json_reports.tar.gz out/json
 - name: Upload report artifacts
   if: success()
   uses: {!{ index (ds "actions") "actions/upload-artifact" }!}
@@ -58,6 +59,7 @@
     name: cve-reports
     path: |
       out/${{ env.TAG }}_test-failed.txt
+      out/trivy_json_reports.tar.gz
 # </template: cve_tests_upload_reports_artifacts>
 {!{- end -}!}
 

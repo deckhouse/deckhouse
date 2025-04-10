@@ -86,7 +86,6 @@ jobs:
 {!{ tmpl.Exec "tests_webhooks_template" (slice $ctx) | strings.Indent 4 }!}
 
   tests_dmt_lint:
-    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: Tests DMT lint
     needs:
     - git_info
@@ -148,25 +147,6 @@ jobs:
 {!{ tmpl.Exec "doc_release_version_template" | strings.Indent 6 }!}
 {!{ tmpl.Exec "deploy_doc_template" "production" | strings.Indent 6 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.deploy_release_doc_prod) | strings.Indent 6 }!}
-
-{!{/* Autodeploy documentation to the OLD production on push to release branch */}!}
-{!{- $jobNames = coll.Merge $jobNames (dict "deploy_release_doc_prod_old" "(Prod OLD) Deploy release documentation") }!}
-  deploy_release_doc_prod_old:
-    name: {!{ $jobNames.deploy_release_doc_prod_old }!}
-    continue-on-error: true
-    needs:
-      - git_info
-      - doc_web_build
-    if: ${{ startsWith(needs.git_info.outputs.ci_commit_ref_name, 'release-') && github.repository == 'deckhouse/deckhouse' }}
-    runs-on: [self-hosted, regular]
-    steps:
-{!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
-{!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 6}!}
-{!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 6 }!}
-{!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 6 }!}
-{!{ tmpl.Exec "doc_release_version_template" | strings.Indent 6 }!}
-{!{ tmpl.Exec "deploy_doc_template" "oldproduction" | strings.Indent 6 }!}
-{!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.deploy_release_doc_prod_old) | strings.Indent 6 }!}
 
 {!{/* Autodeploy documentation to stage envs on push to release branch */}!}
 {!{- $jobNames = coll.Merge $jobNames (dict "deploy_release_doc_stage" "(Stage) Deploy release documentation") }!}

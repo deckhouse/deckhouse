@@ -108,7 +108,8 @@
       plk_labels_as_annotations: "instance,pod"
       summary: Deckhouse is down.
       description: |
-        Deckhouse is probably down since the `deckhouse_live_ticks` metric in Prometheus is no longer increasing (it is supposed to increment every 10 seconds).
+        Deckhouse is probably down, since the `deckhouse_live_ticks` metric in Prometheus has stopped increasing.
+        This metric is expected to increment every 10 seconds.
 
 - name: d8.deckhouse.malfunctioning
   rules:
@@ -134,11 +135,15 @@
       plk_labels_as_annotations: "pod"
       summary: Excessive Deckhouse restarts detected.
       description: |
-        The number of restarts in the last hour: {{ $value }}.
+        Number of restarts in the last hour: {{ $value }}.
 
-        Excessive Deckhouse restarts indicate that something is wrong. Normally, Deckhouse should be up and running all the time.
+        Excessive Deckhouse restarts indicate a potential issue. Normally, Deckhouse should be up and running continuously.
 
-        Please, refer to the corresponding logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
+        To investigate the issue, check the logs by running the following command:
+
+        ```bash
+        kubectl -n d8-system logs -f -l app=deckhouse
+        ```
 
   - alert: D8DeckhouseHasNoAccessToRegistry
     expr: max by (pod, instance) (increase(deckhouse_registry_errors[__SCRAPE_INTERVAL_X_4__])) > 0
@@ -156,9 +161,9 @@
       plk_labels_as_annotations: "instance,pod"
       summary: Deckhouse is unable to connect to the registry.
       description: |
-        Deckhouse is unable to connect to the registry (registry.deckhouse.io in most cases) to check for a new Docker image (checks are performed every 15 seconds). Deckhouse does not have access to the registry; automatic updates are not available.
+        Deckhouse can't connect to the registry (typically `registry.deckhouse.io`) to check for a new Docker image. These checks are performed every 15 seconds. Without access to the registry, automatic updates are unavailable.
 
-        Usually, this alert means that the Deckhouse Pod is having difficulties with connecting to the Internet.
+        This alert often indicates that the Deckhouse Pod is experiencing connectivity issues with the Internet.
 
   - alert: D8DeckhouseQueueIsHung
     expr: max by (pod, instance, queue) (min_over_time(deckhouse_tasks_queue_length{queue!~"main-subqueue-kubernetes-.*|/modules/upmeter/update_selector.*|/modules/secret-copier|/modules/deckhouse/update_deckhouse_image"}[__SCRAPE_INTERVAL_X_3__])) != 0
@@ -174,11 +179,15 @@
       plk_create_group_if_not_exists__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_labels_as_annotations: "instance,pod"
-      summary: The {{ $labels.queue }} Deckhouse queue has hung; there are {{ $value }} task(s) in the queue.
+      summary: The `{{ $labels.queue }}` Deckhouse queue is stuck with {{ $value }} pending task(s).
       description: |
-        Deckhouse cannot finish processing of the {{ $labels.queue }} queue with {{ $value }} tasks piled up.
+        Deckhouse cannot finish processing of the `{{ $labels.queue }}` queue, which currently has {{ $value }} pending task(s).
 
-        Please, refer to the corresponding logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
+        To investigate the issue, check the logs by running the following command:
+
+        ```bash
+        kubectl -n d8-system logs -f -l app=deckhouse
+        ```
 
   - alert: D8DeckhouseGlobalHookFailsTooOften
     for: 10m
@@ -199,11 +208,15 @@
       plk_create_group_if_not_exists__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_labels_as_annotations: "instance,pod"
-      summary: The {{ $labels.hook }} Deckhouse global hook crashes way too often.
+      summary: The `{{ $labels.hook }}` Deckhouse global hook is crashing too frequently.
       description: |
-        The {{ $labels.hook }} has failed in the last `__SCRAPE_INTERVAL_X_4__`.
+        The `{{ $labels.hook }}` hook has failed multiple times in the last `__SCRAPE_INTERVAL_X_4__`.
 
-        Please, refer to the corresponding logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
+        To investigate the issue, check the logs by running the following command:
+        
+        ```bash
+        kubectl -n d8-system logs -f -l app=deckhouse
+        ```
 
   - alert: D8DeckhouseModuleHookFailsTooOften
     for: 10m
@@ -224,11 +237,15 @@
       plk_create_group_if_not_exists__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_labels_as_annotations: "instance,pod"
-      summary: The {{ $labels.module }}/{{ $labels.hook }} Deckhouse hook crashes way too often.
+      summary: The `{{ $labels.module }}/{{ $labels.hook }}` Deckhouse hook is crashing too frequently.
       description: |
-        The {{ $labels.hook }} hook of the {{ $labels.module }} module has failed in the last `__SCRAPE_INTERVAL_X_4__`.
+        The `{{ $labels.hook }}` hook of the `{{ $labels.module }}` module has failed multiple times in the last `__SCRAPE_INTERVAL_X_4__`.
 
-        Please, refer to the corresponding logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
+        To investigate the issue, check the logs by running the following command:
+
+        ```bash
+        kubectl -n d8-system logs -f -l app=deckhouse
+        ```
 
   - alert: D8DeckhouseCouldNotDiscoverModules
     expr: max by (pod, instance) (increase(deckhouse_modules_discover_errors_total[__SCRAPE_INTERVAL_X_4__])) > 1
@@ -246,7 +263,11 @@
       plk_labels_as_annotations: "instance,pod"
       summary: Deckhouse is unable to discover modules.
       description: |
-        Please, refer to the corresponding logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
+        To investigate the issue, check the logs by running the following command:
+        
+        ```bash
+        kubectl -n d8-system logs -f -l app=deckhouse
+        ```
 
   - alert: D8DeckhouseCouldNotRunModule
     expr: max(increase(deckhouse_module_run_errors_total[__SCRAPE_INTERVAL_X_4__])) by (pod, instance, module) > 1
@@ -262,9 +283,13 @@
       plk_create_group_if_not_exists__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_labels_as_annotations: "instance,pod"
-      summary: Deckhouse is unable to start the {{ $labels.module }} module.
+      summary: Deckhouse is unable to start the `{{ $labels.module }}` module.
       description: |
-        Please, refer to the corresponding logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
+        To investigate the issue, check the logs by running the following command:
+        
+        ```bash
+        kubectl -n d8-system logs -f -l app=deckhouse
+        ```
 
   - alert: D8DeckhouseCouldNotDeleteModule
     expr: max(increase(deckhouse_module_delete_errors_total[__SCRAPE_INTERVAL_X_4__])) by (pod, instance, module) > 1
@@ -280,9 +305,13 @@
       plk_create_group_if_not_exists__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_labels_as_annotations: "instance,pod"
-      summary: Deckhouse is unable to delete the {{ $labels.module }} module.
+      summary: Deckhouse is unable to delete the `{{ $labels.module }}` module.
       description: |
-        Please, refer to the corresponding logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
+        To investigate the issue, check the logs by running the following command:
+        
+        ```bash
+        kubectl -n d8-system logs -f -l app=deckhouse
+        ```
 
   - alert: D8DeckhouseCouldNotRunGlobalHook
     expr: max(increase(deckhouse_global_hook_errors_total[__SCRAPE_INTERVAL_X_4__])) by (pod, instance, hook) > 1
@@ -298,9 +327,13 @@
       plk_create_group_if_not_exists__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_labels_as_annotations: "instance,pod"
-      summary: Deckhouse is unable to run the {{ $labels.hook }} global hook.
+      summary: Deckhouse is unable to run the `{{ $labels.hook }}` global hook.
       description: |
-        Please, refer to the corresponding logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
+        To investigate the issue, check the logs by running the following command:
+        
+        ```bash
+        kubectl -n d8-system logs -f -l app=deckhouse
+        ```
 
   - alert: D8DeckhouseCouldNotRunModuleHook
     expr: max(increase(deckhouse_module_hook_errors_total[__SCRAPE_INTERVAL_X_4__])) by (pod, instance, module, hook) > 1
@@ -316,9 +349,13 @@
       plk_create_group_if_not_exists__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_labels_as_annotations: "instance,pod"
-      summary: Deckhouse is unable to run the {{ $labels.module }}/{{ $labels.hook }} module hook.
+      summary: Deckhouse is unable to run the `{{ $labels.module }}`/`{{ $labels.hook }}` module hook.
       description: |
-        Please, refer to the corresponding logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
+        To investigate the issue, check the logs by running the following command:
+        
+        ```bash
+        kubectl -n d8-system logs -f -l app=deckhouse
+        ```
 
   - alert: D8DeckhouseConfigInvalid
     expr: increase(deckhouse_config_values_errors_total[__SCRAPE_INTERVAL_X_2__]) > 0
@@ -333,14 +370,30 @@
       plk_protocol_version: "1"
       plk_create_group_if_not_exists__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      description: |
-        Deckhouse config contains errors.
-
-        Please check Deckhouse logs by running `kubectl -n d8-system logs -f -l app=deckhouse`.
-
-        Edit Deckhouse global configuration by running `kubectl edit mc global` or configuration of the specific module by running `kubectl edit mc <MODULE_NAME>`
       summary: |
-        Deckhouse config is invalid.
+        Deckhouse configuration is invalid.
+      description: |
+        Deckhouse configuration contains errors.
+
+        Steps to troubleshoot:
+
+        1. Check Deckhouse logs by running the following command:
+        
+           ```bash
+           kubectl -n d8-system logs -f -l app=deckhouse
+           ```
+
+        1. Edit the Deckhouse global configuration:
+
+           ```bash
+           kubectl edit mc global
+           ```
+           
+           Or edit configuration of a specific module:
+
+           ```bash
+           kubectl edit mc <MODULE_NAME>
+           ```
 
   - alert: DeckhouseUpdating
     expr: max (d8_is_updating) == 1
@@ -364,15 +417,18 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
+      summary: Deckhouse update has failed.
       description: |
-        Failed to update Deckhouse.
+        The Deckhouse update has failed.
 
-        Next version minor/path Deckhouse image is not available in the registry or the image is corrupted.
-        Actual version: {{ $labels.version }}.
+        Possible reasons:
 
-        Make sure that the next version Deckhouse image is available in the registry.
+        - The next minor or patch version of the Deckhouse image is not available in the registry.
+        - The Deckhouse image is corrupted.
 
-      summary: Deckhouse updating is failed.
+        Current version: {{ $labels.version }}.
+
+        To resolve this issue, ensure that the next version of the Deckhouse image is available in the registry.
 
   - alert: D8DeckhouseWatchErrorOccurred
     expr: increase(deckhouse_kubernetes_client_watch_errors_total[__SCRAPE_INTERVAL_X_2__]) > 0
@@ -387,19 +443,26 @@
       plk_protocol_version: "1"
       plk_create_group_if_not_exists__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      description: |
-        Error occurred in the client-go informer, possible problems with connection to apiserver.
-
-        Check Deckhouse logs for more information by running:
-        `kubectl -n d8-system logs deploy/deckhouse | grep error | grep -i watch`
-
-        This alert is an attempt to detect the correlation between the faulty snapshot invalidation
-        and apiserver connection errors, especially for the handle-node-template hook in the node-manager module.
-        Check the difference between the snapshot and actual node objects for this hook:
-        `diff -u <(kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}'|sort) <(kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module snapshots node-manager -o json | jq '."040-node-manager/hooks/handle_node_templates.go"' | jq '.nodes.snapshot[] | .filterResult.Name' -r | sort)`
-
       summary: |
-        Possible apiserver connection error in the client-go informer, check logs and snapshots.
+        Possible API server connection error in the client-go informer.
+      description: |
+        Deckhouse has detected an error in the client-go informer, possibly due to connection issues with the API server.
+
+        Steps to investigate:
+        
+        1. Check Deckhouse logs for more information by running:
+
+           ```bash
+           kubectl -n d8-system logs deploy/deckhouse | grep error | grep -i watch
+           ```
+
+        1. This alert attempts to detect a correlation between the faulty snapshot invalidation and API server connection errors, specifically for the `handle-node-template` hook in the `node-manager` module.
+           
+           To compare the snapshot with the actual node objects for this hook, run the following command:
+
+           ```bash
+           diff -u <(kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}'|sort) <(kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module snapshots node-manager -o json | jq '."040-node-manager/hooks/handle_node_templates.go"' | jq '.nodes.snapshot[] | .filterResult.Name' -r | sort)
+           ```
 
   - alert: D8DeckhouseDeprecatedConfigmapManagedByArgoCD
     expr: |
@@ -411,10 +474,11 @@
       plk_markup_format: markdown
       plk_protocol_version: "1"
       for: "10m"
-      summary: Deprecated deckhouse configmap managed by Argo CD
+      summary: Deprecated Deckhouse ConfigMap managed by Argo CD.
       description: |
-        The deckhouse configmap is no longer used.
-        You need to remove configmap "d8-system/deckhouse" from ArgoCD
+        The Deckhouse ConfigMap is no longer used.
+        
+        To resolve this issue, remove the `d8-system/deckhouse` ConfigMap from Argo CD.
 
   - alert: D8DeckhouseModuleUpdatePolicyNotFound
     expr: |
@@ -427,9 +491,14 @@
     annotations:
       plk_markup_format: markdown
       plk_protocol_version: "1"
-      summary: Module update policy not found for {{ $labels.module_release }}
+      summary: Module update policy not found for `{{ $labels.module_release }}`.
       description: |
-        Module update policy not found for {{ $labels.module_release }}
+        The module update policy for {{ $labels.module_release }} is missing.
 
-        You need to remove label from MR: `kubectl label mr {{ $labels.module_release }} modules.deckhouse.io/update-policy-`.
+        To resolve this issue, remove the label from the module release using the following command:
+        
+        ```bash
+        kubectl label mr {{ $labels.module_release }} modules.deckhouse.io/update-policy-
+        ```
+
         A new suitable policy will be detected automatically.

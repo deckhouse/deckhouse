@@ -15,6 +15,7 @@
 package frontend
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -38,14 +39,20 @@ func (c *Check) WithDelaySeconds(seconds int) *Check {
 	return c
 }
 
-func (c *Check) AwaitAvailability() error {
+func (c *Check) AwaitAvailability(ctx context.Context) error {
 	if c.Session.Host() == "" {
 		return fmt.Errorf("Empty host for connection received")
 	}
-	time.Sleep(c.delay)
-	return retry.NewLoop("Waiting for SSH connection", 50, 5*time.Second).Run(func() error {
+
+	select {
+	case <-time.After(c.delay):
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+
+	return retry.NewLoop("Waiting for SSH connection", 50, 5*time.Second).RunContext(ctx, func() error {
 		log.InfoF("Try to connect to %v host\n", c.Session.Host())
-		output, err := c.ExpectAvailable()
+		output, err := c.ExpectAvailable(ctx)
 		if err == nil {
 			return nil
 		}
@@ -57,13 +64,13 @@ func (c *Check) AwaitAvailability() error {
 	})
 }
 
-func (c *Check) CheckAvailability() error {
+func (c *Check) CheckAvailability(ctx context.Context) error {
 	if c.Session.Host() == "" {
 		return fmt.Errorf("empty host for connection received")
 	}
 
 	log.InfoF("Try to connect to %v host\n", c.Session.Host())
-	output, err := c.ExpectAvailable()
+	output, err := c.ExpectAvailable(ctx)
 	if err != nil {
 		log.InfoF(string(output))
 		return err
@@ -71,10 +78,10 @@ func (c *Check) CheckAvailability() error {
 	return nil
 }
 
-func (c *Check) ExpectAvailable() ([]byte, error) {
+func (c *Check) ExpectAvailable(ctx context.Context) ([]byte, error) {
 	cmd := NewCommand(c.Session, "echo SUCCESS")
-	cmd.Cmd()
-	output, err := cmd.CombinedOutput()
+	cmd.Cmd(ctx)
+	output, err := cmd.CombinedOutput(ctx)
 	if err != nil {
 		return output, err
 	}

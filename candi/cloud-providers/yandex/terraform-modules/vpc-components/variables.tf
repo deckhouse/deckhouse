@@ -54,6 +54,11 @@ variable "nat_instance_internal_address" {
   default = null
 }
 
+variable "nat_instance_internal_subnet_cidr" {
+  type = string
+  default = null
+}
+
 variable "nat_instance_internal_subnet_id" {
   type = string
   default = null

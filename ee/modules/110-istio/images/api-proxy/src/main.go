@@ -6,265 +6,98 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package main
 
 import (
-	"bytes"
-	"crypto/rand"
-	"crypto/rsa"
+	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"crypto/x509/pkix"
-	"encoding/json"
-	"encoding/pem"
 	"fmt"
 	"log"
-	"math/big"
-	"net"
 	"net/http"
-	"net/http/httputil"
 	"os"
-	"strings"
+	"os/signal"
+	"sync"
+	"syscall"
 	"time"
-
-	jose "github.com/go-jose/go-jose/v3"
 )
-
-type publicMetadata struct {
-	ClusterUUID string `json:"clusterUUID,omitempty"`
-	AuthnKeyPub string `json:"authnKeyPub,omitempty"`
-	RootCA      string `json:"rootCA,omitempty"`
-}
-
-// map[custerUUID]pubilcMetadata
-type remotePublicMetadata map[string]publicMetadata
-
-type jwtPayload struct {
-	Iss   string
-	Sub   string
-	Aud   string
-	Scope string
-	Nbf   int64
-	Exp   int64
-}
 
 var (
-	logger             = log.New(os.Stdout, "http: ", log.LstdFlags)
-	httpProxyTransport *http.Transport
-	probeClient        *http.Client
+	logger = log.New(os.Stdout, "http: ", log.LstdFlags)
 )
-
-func checkAuthn(header http.Header, scope string) error {
-	reqTokenString := header.Get("Authorization")
-	if !strings.HasPrefix(reqTokenString, "Bearer ") {
-		fmt.Errorf("Bearer authorization required.")
-	}
-	reqTokenString = strings.TrimPrefix(reqTokenString, "Bearer ")
-
-	reqToken, err := jose.ParseSigned(reqTokenString)
-	if err != nil {
-		return err
-	}
-	payloadBytes := reqToken.UnsafePayloadWithoutVerification()
-
-	var payload jwtPayload
-	err = json.Unmarshal(payloadBytes, &payload)
-	if err != nil {
-		return err
-	}
-
-	remotePublicMetadataBytes, err := os.ReadFile("/remote/remote-public-metadata.json")
-	if err != nil {
-		return err
-	}
-
-	var remotePublicMetadataMap remotePublicMetadata
-	err = json.Unmarshal(remotePublicMetadataBytes, &remotePublicMetadataMap)
-	if err != nil {
-		return err
-	}
-
-	if payload.Aud != os.Getenv("CLUSTER_UUID") {
-		return fmt.Errorf("JWT is signed for wrong destination cluster.")
-	}
-
-	if payload.Scope != scope {
-		return fmt.Errorf("JWT is signed for wrong scope.")
-	}
-
-	if payload.Exp < time.Now().UTC().Unix() {
-		return fmt.Errorf("JWT token expired.")
-	}
-
-	if _, ok := remotePublicMetadataMap[payload.Sub]; !ok {
-		return fmt.Errorf("JWT is signed for unknown source cluster.")
-	}
-	remoteAuthnKeyPubBlock, _ := pem.Decode([]byte(remotePublicMetadataMap[payload.Sub].AuthnKeyPub))
-	remoteAuthnKeyPub, err := x509.ParsePKIXPublicKey(remoteAuthnKeyPubBlock.Bytes)
-	if err != nil {
-		return err
-	}
-
-	if _, err := reqToken.Verify(remoteAuthnKeyPub); err != nil {
-		return fmt.Errorf("Cannot verify JWT token with known public key.")
-	}
-
-	return nil
-}
-
-func initProxyTransport() {
-	kubeCA, _ := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
-	kubeCertPool := x509.NewCertPool()
-	kubeCertPool.AppendCertsFromPEM(kubeCA)
-
-	httpProxyTransport = &http.Transport{
-		DialContext: (&net.Dialer{
-			Timeout: 30 * time.Second,
-		}).DialContext,
-
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: false,
-			RootCAs:            kubeCertPool,
-		},
-
-		MaxIdleConns:          100,
-		IdleConnTimeout:       90 * time.Second,
-		TLSHandshakeTimeout:   10 * time.Second,
-		ExpectContinueTimeout: 1 * time.Second,
-		ResponseHeaderTimeout: 10 * time.Second,
-	}
-
-	// for readiness healthcheck
-	probeClient = &http.Client{
-		Timeout:   10 * time.Second,
-		Transport: httpProxyTransport,
-	}
-}
 
 func httpHandlerHealthz(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "Ok.")
 	logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
 }
 
-func httpHandlerReady(w http.ResponseWriter, r *http.Request) {
-	_, err := probeClient.Get("https://kubernetes.default.svc." + os.Getenv("CLUSTER_DOMAIN") + "/version")
-	if err != nil {
-		logger.Fatalf("Readiness probe error: %v\n", err)
-		http.Error(w, "Error", http.StatusInternalServerError)
-	} else {
+func httpHandlerReady(p *Proxy) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		_, err := p.probeClient.Get("https://kubernetes.default.svc." + os.Getenv("CLUSTER_DOMAIN") + "/version")
+		if err != nil {
+			logger.Printf("[api-proxy] Readiness probe error: %v\n", err)
+			http.Error(w, "Error", http.StatusInternalServerError)
+			return
+		}
 		fmt.Fprint(w, "Ok.")
+		logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
 	}
-	logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
 }
 
-func httpHandlerApiProxy(w http.ResponseWriter, r *http.Request) {
-	// check if request was passed by ingress
-	if len(r.TLS.PeerCertificates) == 0 {
-		errstring := "Only requests with client certificate are allowed."
-		http.Error(w, errstring, http.StatusUnauthorized)
-		logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path, http.StatusUnauthorized, errstring)
-		return
+func httpHandlerApiProxy(p *Proxy) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// check if request was passed by ingress
+		if len(r.TLS.PeerCertificates) == 0 {
+			errstring := "[api-proxy] Only requests with client certificate are allowed."
+			http.Error(w, errstring, http.StatusUnauthorized)
+			logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path, http.StatusUnauthorized, errstring)
+			return
+		}
+
+		if r.TLS.PeerCertificates[0].Subject.Organization[0] != "ingress-nginx:auth" {
+			errstring := "[api-proxy] Only requests from ingress are allowed."
+			http.Error(w, errstring, http.StatusUnauthorized)
+			logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path, http.StatusUnauthorized, errstring)
+			return
+		}
+
+		err := p.CheckAuthn(r.Header, "api")
+		if err != nil {
+			errstring := "[api-proxy] Authentication error: " + err.Error()
+			http.Error(w, errstring, http.StatusUnauthorized)
+			logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path, http.StatusUnauthorized, errstring)
+			return
+		}
+
+		p.reverseProxy.ServeHTTP(w, r)
+		logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
 	}
-
-	if r.TLS.PeerCertificates[0].Subject.Organization[0] != "ingress-nginx:auth" {
-		errstring := "Only requests from ingress are allowed."
-		http.Error(w, errstring, http.StatusUnauthorized)
-		logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path, http.StatusUnauthorized, errstring)
-		return
-	}
-
-	err := checkAuthn(r.Header, "api")
-	if err != nil {
-		errstring := "Authentication error: " + err.Error()
-		http.Error(w, errstring, http.StatusUnauthorized)
-		logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path, http.StatusUnauthorized, errstring)
-		return
-	}
-
-	// impersonate as current ServiceAccount
-	saToken, _ := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
-	proxyDirector := func(req *http.Request) {
-		req.Header.Del("Authorization")
-		req.Header.Add("Authorization", "Bearer "+string(saToken))
-		req.URL.Scheme = "https"
-		req.URL.Host = "kubernetes.default.svc." + os.Getenv("CLUSTER_DOMAIN")
-	}
-
-	proxy := &httputil.ReverseProxy{
-		Director:      proxyDirector,
-		Transport:     httpProxyTransport,
-		ErrorLog:      logger,
-		FlushInterval: 50 * time.Millisecond,
-		ModifyResponse: func(resp *http.Response) error {
-			logger.Println("[apiserver]", resp.Status)
-			return nil
-		},
-	}
-
-	proxy.ServeHTTP(w, r)
-	logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
-}
-
-// ingress controller doesn't authenticate proxy for now
-func generateListenCert() (tls.Certificate, error) {
-	cert := &x509.Certificate{
-		SerialNumber: big.NewInt(1658),
-		Subject: pkix.Name{
-			CommonName: "istio-api-proxy",
-		},
-		DNSNames: []string{"api-proxy", "api-proxy.d8-istio", "api-proxy.d8-istio.svc"},
-
-		NotBefore:    time.Now(),
-		NotAfter:     time.Now().AddDate(10, 0, 0),
-		SubjectKeyId: []byte{1, 2, 3, 4, 6},
-		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		KeyUsage:     x509.KeyUsageDigitalSignature,
-	}
-
-	certPrivKey, err := rsa.GenerateKey(rand.Reader, 4096)
-	if err != nil {
-		return tls.Certificate{}, err
-	}
-
-	certBytes, err := x509.CreateCertificate(rand.Reader, cert, cert, &certPrivKey.PublicKey, certPrivKey)
-	if err != nil {
-		return tls.Certificate{}, err
-	}
-
-	certPEM := new(bytes.Buffer)
-	pem.Encode(certPEM, &pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: certBytes,
-	})
-
-	certPrivKeyPEM := new(bytes.Buffer)
-	pem.Encode(certPrivKeyPEM, &pem.Block{
-		Type:  "RSA PRIVATE KEY",
-		Bytes: x509.MarshalPKCS1PrivateKey(certPrivKey),
-	})
-
-	serverCert, err := tls.X509KeyPair(certPEM.Bytes(), certPrivKeyPEM.Bytes())
-	if err != nil {
-		return tls.Certificate{}, err
-	}
-
-	return serverCert, nil
 }
 
 func main() {
 	listenAddr := "0.0.0.0:4443"
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	wg := &sync.WaitGroup{}
 
-	initProxyTransport()
+	proxy, err := NewProxy("d8-istio")
+	if err != nil {
+		logger.Println("[api-proxy] Error creating proxy:", err)
+		return
+	}
 
 	router := http.NewServeMux()
 	router.Handle("/healthz", http.HandlerFunc(httpHandlerHealthz))
-	router.Handle("/ready", http.HandlerFunc(httpHandlerReady))
-	router.Handle("/", http.HandlerFunc(httpHandlerApiProxy))
+	router.Handle("/ready", http.HandlerFunc(httpHandlerReady(proxy)))
+	router.Handle("/", http.HandlerFunc(httpHandlerApiProxy(proxy)))
 
-	kubeCA, _ := os.ReadFile("/etc/ssl/kube-rbac-proxy-ca.crt")
-	kubeCertPool := x509.NewCertPool()
-	kubeCertPool.AppendCertsFromPEM(kubeCA)
-
-	listenCert, err := generateListenCert()
+	kubeCA, err := os.ReadFile("/etc/ssl/kube-rbac-proxy-ca.crt")
 	if err != nil {
-		logger.Fatalf("Could not generate server certificates on: %v\n", err)
+		logger.Printf("[api-proxy] Could not read CA certificate: %v\n", err)
+		return
+	}
+	kubeCertPool := x509.NewCertPool()
+
+	if !kubeCertPool.AppendCertsFromPEM(kubeCA) {
+		logger.Println("[api-proxy] Could not parse CA certificate")
+		return
 	}
 
 	server := &http.Server{
@@ -276,13 +109,56 @@ func main() {
 			// Additional subject check is in httpHandlerApiProxy func.
 			ClientAuth:   tls.VerifyClientCertIfGiven,
 			ClientCAs:    kubeCertPool,
-			Certificates: []tls.Certificate{listenCert},
+			Certificates: []tls.Certificate{*proxy.serverCert},
 		},
 	}
 
-	logger.Println("Server is starting to listen on ", listenAddr, "...")
+	stop := make(chan os.Signal, 2)
+	errChan := make(chan error, 2)
 
-	if err := server.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
-		logger.Fatalf("Could not listen on %s: %v\n", listenAddr, err)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err := proxy.Watch(ctx); err != nil {
+			logger.Println("[api-proxy] Error watching proxy:", err)
+			errChan <- err
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		logger.Println("Server is starting to listen on", listenAddr, "...")
+		if err := server.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
+			logger.Printf("Could not listen on %s: %v\n", listenAddr, err)
+			errChan <- err
+		}
+	}()
+
+	// wait stop
+	select {
+	case <-stop:
+		logger.Println("Server is shutting down...")
+	case err := <-errChan:
+		logger.Println("[api-proxy] Error watching proxy:", err)
 	}
+
+	logger.Println("Shutdown signal received. Shutting down server...")
+
+	// graceful shutdown
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer shutdownCancel()
+
+	cancel()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		logger.Printf("Server forced to shutdown: %v", err)
+	}
+
+	wg.Wait()
+	close(errChan)
+
+	logger.Println("Server gracefully stopped")
 }

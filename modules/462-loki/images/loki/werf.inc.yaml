@@ -7,7 +7,7 @@ git:
   - add: /modules/462-loki/images/{{ $.ImageName }}
     to: /
     stageDependencies:
-      setup:
+      install:
         - "**/*"
     includePaths:
       - patches

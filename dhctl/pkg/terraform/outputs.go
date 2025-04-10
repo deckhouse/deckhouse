@@ -15,13 +15,14 @@
 package terraform
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os/exec"
 )
 
-func GetMasterIPAddressForSSH(statePath string) (string, error) {
+func GetMasterIPAddressForSSH(ctx context.Context, statePath string) (string, error) {
 	args := []string{
 		"output",
 		"-no-color",
@@ -32,7 +33,7 @@ func GetMasterIPAddressForSSH(statePath string) (string, error) {
 
 	executor := &CMDExecutor{}
 
-	result, err := executor.Output(args...)
+	result, err := executor.Output(ctx, args...)
 	if err != nil {
 		var ee *exec.ExitError
 		if errors.As(err, &ee) {

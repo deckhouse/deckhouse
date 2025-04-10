@@ -25,24 +25,47 @@ concurrency:
   group: trivy-db-download
 
 jobs:
+{!{ tmpl.Exec "skip_tests_repos" . | strings.Indent 2 }!}
   download-and-repush-images:
     name: Download and repush images
-    runs-on: [self-hosted]
+    needs:
+      - skip_tests_repos
+    runs-on: [self-hosted, regular]
     steps:
+{!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 6 }!}
+{!{ tmpl.Exec "login_rw_cse_registry_step" . | strings.Indent 6 }!}
+{!{ tmpl.Exec "login_dev_cse_registry_step" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "login_git_step" . | strings.Indent 6 }!}
       - name: Download custom trivy-db binary and copy image
         run: |
-          rm -rf ./trivy-db && git clone --depth 1 --branch flant-v2 ${{secrets.SOURCE_REPO_GIT}}/aquasecurity/trivy-db.git && cd trivy-db
-          ./update.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee >/dev/null 2>&1
-          ./update.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe >/dev/null 2>&1
-          ./update.sh ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss >/dev/null 2>&1
-          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee/security/trivy-bdu:1 >/dev/null 2>&1
-          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe/security/trivy-bdu:1 >/dev/null 2>&1
-          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-bdu:1 >/dev/null 2>&1
+          rm -rf ./trivy-db
+          git clone --depth 1 --branch flant-v2 ${{secrets.SOURCE_REPO_GIT}}/aquasecurity/trivy-db.git
+          docker logout ghcr.io
+          cd trivy-db
+          ./update.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee 
+          ./update.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe 
+          ./update.sh ${{secrets.DECKHOUSE_CSE_REGISTRY_HOST}}/deckhouse/cse 
+          ./update.sh ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss 
+          ./update.sh ${{secrets.DECKHOUSE_DEV_CSE_REGISTRY_HOST}}/sys/deckhouse-cse 
+          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee/security/trivy-bdu:1 
+          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe/security/trivy-bdu:1 
+          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_CSE_REGISTRY_HOST}}/deckhouse/cse/security/trivy-bdu:1 
+          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-bdu:1 
+          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_DEV_CSE_REGISTRY_HOST}}/sys/deckhouse-cse/security/trivy-bdu:1 
           ./oras pull ghcr.io/aquasecurity/trivy-java-db:1
           ./oras push --artifact-type application/vnd.aquasec.trivy.config.v1+json ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee/security/trivy-java-db:1 javadb.tar.gz:application/vnd.aquasec.trivy.javadb.layer.v1.tar+gzip
           ./oras push --artifact-type application/vnd.aquasec.trivy.config.v1+json ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe/security/trivy-java-db:1 javadb.tar.gz:application/vnd.aquasec.trivy.javadb.layer.v1.tar+gzip
+          ./oras push --artifact-type application/vnd.aquasec.trivy.config.v1+json ${{secrets.DECKHOUSE_CSE_REGISTRY_HOST}}/deckhouse/cse/security/trivy-java-db:1 javadb.tar.gz:application/vnd.aquasec.trivy.javadb.layer.v1.tar+gzip
           ./oras push --artifact-type application/vnd.aquasec.trivy.config.v1+json ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-java-db:1 javadb.tar.gz:application/vnd.aquasec.trivy.javadb.layer.v1.tar+gzip
+          ./oras push --artifact-type application/vnd.aquasec.trivy.config.v1+json ${{secrets.DECKHOUSE_DEV_CSE_REGISTRY_HOST}}/sys/deckhouse-cse/security/trivy-java-db:1 javadb.tar.gz:application/vnd.aquasec.trivy.javadb.layer.v1.tar+gzip
           rm -f javadb.tar.gz
+      - name: Send fail report
+        if: failure()
+        env:
+          LOOP_TOKEN: ${{secrets.LOOP_CVE_REPORTS_SEND_TOKEN}}
+          LOOP_CHANNEL_ID: ${{secrets.LOOP_E2E_REPORT_CHANEL_ID}}
+        run: |
+          WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
+          bash ./.github/scripts/send-report.sh --message "🛑Trivy db shedule failure🛑\n[URL]($WORKFLOW_URL)"

@@ -13,11 +13,51 @@
 const YAML = require('yaml');
 
 /**
- *
+ * @param {string} blockText
+ * @returns {string}
+ */
+function processBlock(blockText) {
+  const lines = blockText.split('\n');
+  const targetFields = ['summary', 'impact']; // fields being processed
+  const unsafeChars = ['[', '{'];
+  const processedLines = [];
+
+  for (const line of lines) {
+    let processedLine = line;
+
+    for (const field of targetFields) {
+      if (processedLine.startsWith(`${field}:`)) {
+        const colonIndex = processedLine.indexOf(':');
+        const key = processedLine.slice(0, colonIndex + 1);
+        let valuePart = processedLine.slice(colonIndex + 1).trim();
+
+        // Check if the value is wrapped in quotes
+        const isQuoted =
+          (valuePart.startsWith('"') && valuePart.endsWith('"')) || (valuePart.startsWith("'") && valuePart.endsWith("'"));
+
+        if (!isQuoted && valuePart.length > 0) {
+          const firstChar = valuePart[0];
+          if (unsafeChars.includes(firstChar)) {
+            // Escape double quotes inside the value
+            valuePart = valuePart.replace(/"/g, '\\"');
+            processedLine = `${key} "${valuePart}"`;
+          }
+        }
+        break; // don't check other fields after a match
+      }
+    }
+
+    processedLines.push(processedLine);
+  }
+
+  return processedLines.join('\n');
+}
+
+/**
  * @param {object} block
  * @param {number} index
  * @param {string[]} allowedSections
- * @returns
+ * @returns {boolean}
  */
 function validateYaml(block, index, allowedSections) {
   if (
@@ -79,14 +119,20 @@ function validateYaml(block, index, allowedSections) {
 }
 
 /**
- *
+
  * @param {string} changelogEntries
  * @param {string[]} allowedSections
  */
 function validatePullRequestChangelog(changelogEntries, allowedSections) {
   let changesBlocks = changelogEntries.split('---');
   try {
-    changesBlocks.forEach((changeBlock, idx) => validateYaml(YAML.parse(changeBlock.trim()), idx + 1, allowedSections));
+    changesBlocks.forEach((changeBlock, idx) => {
+      const processedBlock = processBlock(changeBlock.trim());
+      const parsed = YAML.parse(processedBlock);
+      console.log(parsed);
+      validateYaml(parsed, idx + 1, allowedSections);
+    });
+
     console.log('Changes is valid');
   } catch (error) {
     throw error;

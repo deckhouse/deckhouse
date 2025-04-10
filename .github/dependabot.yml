@@ -52,6 +52,24 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/ee/be/modules/350-node-local-dns/images/coredns/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/be/modules/350-node-local-dns/images/iptables-loop/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/ee/be/modules/350-node-local-dns/images/stale-dns-connections-cleaner"
   labels:
   - "type/dependencies"
@@ -89,6 +107,15 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/ee/modules/030-cloud-provider-vcd/images/cloud-data-discoverer/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/modules/030-cloud-provider-vcd/images/cloud-data-discoverer-legacy/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -178,7 +205,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/ee/se-plus/modules/030-cloud-provider-zvirt/images/cloud-data-discoverer"
+  directory: "/ee/se-plus/modules/030-cloud-provider-zvirt/images/cloud-data-discoverer/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -655,6 +682,15 @@ updates:
   open-pull-requests-limit: 0
 
 # pip
+- package-ecosystem: "pip"
+  directory: "/ee/modules/450-network-gateway/images/dnsmasq"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
 - package-ecosystem: "pip"
   directory: "/ee/modules/650-runtime-audit-engine/images/rules-loader"
   labels:

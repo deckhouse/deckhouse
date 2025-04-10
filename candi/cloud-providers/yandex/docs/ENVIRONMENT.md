@@ -17,13 +17,17 @@ You need to create a service account with the editor role with the cloud provide
    name: deckhouse
    ```
 
-2. Assign the `editor` role to the newly created user:
+1. Assign the required roles to the newly created user for your cloud:
 
    ```yaml
-   yc resource-manager folder add-access-binding --id <folderID> --role editor --subject serviceAccount:<userID>
+   yc resource-manager folder add-access-binding --id <folderID> --role compute.editor --subject serviceAccount:<userID>
+   yc resource-manager folder add-access-binding --id <folderID> --role api-gateway.editor --subject serviceAccount:<userID>
+   yc resource-manager folder add-access-binding --id <folderID> --role connection-manager.editor --subject serviceAccount:<userID>
+   yc resource-manager folder add-access-binding --id <folderID> --role vpc.admin --subject serviceAccount:<userID>
+   yc resource-manager folder add-access-binding --id <folderID> --role load-balancer.editor --subject serviceAccount:<userID>
    ```
 
-3. Create a JSON file containing the parameters for user authorization in the cloud. These parameters will be used to log in to the cloud:
+1. Create a JSON file containing the parameters for user authorization in the cloud. These parameters will be used to log in to the cloud:
 
    ```yaml
    yc iam key create --service-account-name deckhouse --output deckhouse-sa-key.json
@@ -38,6 +42,7 @@ You need to create a service account with the editor role with the cloud provide
 > Note that you need to increase the quotas using the Yandex console when provisioning a new cluster.
 
 Recommended quotas for a new cluster:
+
 * The number of virtual processors: 64.
 * The total volume of SSD disks: 2000 GB.
 * The number of virtual machines: 25.

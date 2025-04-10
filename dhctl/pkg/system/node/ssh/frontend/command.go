@@ -15,6 +15,7 @@
 package frontend
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -57,7 +58,7 @@ func NewCommand(sess *session.Session, name string, arg ...string) *Command {
 	}
 
 	return &Command{
-		Executor: process.NewDefaultExecutor(cmd.NewSSH(sess).WithCommand(name, args...).Cmd()),
+		Executor: process.NewDefaultExecutor(cmd.NewSSH(sess).WithCommand(name, args...).Cmd(context.Background())),
 		Session:  sess,
 		Name:     name,
 		Args:     args,
@@ -73,7 +74,7 @@ func (c *Command) OnCommandStart(fn func()) {
 	c.onCommandStart = fn
 }
 
-func (c *Command) Sudo() {
+func (c *Command) Sudo(ctx context.Context) {
 	cmdLine := c.Name + " " + strings.Join(c.Args, " ")
 	sudoCmdLine := fmt.Sprintf(
 		`sudo -p SudoPassword -H -S -i bash -c 'echo SUDO-SUCCESS && %s'`,
@@ -89,7 +90,7 @@ func (c *Command) Sudo() {
 
 	c.cmd = cmd.NewSSH(c.Session).
 		WithArgs(args...).
-		WithCommand(sudoCmdLine).Cmd()
+		WithCommand(sudoCmdLine).Cmd(ctx)
 
 	c.Executor = process.NewDefaultExecutor(c.cmd)
 
@@ -102,23 +103,24 @@ func (c *Command) Sudo() {
 	passSent := false
 	c.WithMatchHandler(func(pattern string) string {
 		if pattern == "SudoPassword" {
+			var becomePass string
+
+			if c.Session.BecomePass != "" {
+				becomePass = c.Session.BecomePass
+			} else {
+				becomePass = app.BecomePass
+			}
 			if !passSent {
 				// send pass through stdin
 				log.DebugLn("Send become pass to cmd")
-				var becomePass string
-
-				if c.Session.BecomePass != "" {
-					becomePass = c.Session.BecomePass
-				} else {
-					becomePass = app.BecomePass
-				}
-
 				_, _ = c.Executor.Stdin.Write([]byte(becomePass + "\n"))
 				passSent = true
 			} else {
 				// Second prompt is error!
-				log.ErrorLn("Bad sudo password, exiting. TODO handle this correctly.")
-				os.Exit(1)
+				log.ErrorLn("Bad sudo password")
+				// sending wrong password again will raise an error in process.Run()
+				_, _ = c.Executor.Stdin.Write([]byte(becomePass + "\n"))
+				// os.Exit(1)
 			}
 			return "reset"
 		}
@@ -133,22 +135,22 @@ func (c *Command) Sudo() {
 	})
 }
 
-func (c *Command) Cmd() {
+func (c *Command) Cmd(ctx context.Context) {
 	c.cmd = cmd.NewSSH(c.Session).
 		WithArgs(c.SSHArgs...).
-		WithCommand(c.Name, c.Args...).Cmd()
+		WithCommand(c.Name, c.Args...).Cmd(ctx)
 
 	c.Executor = process.NewDefaultExecutor(c.cmd)
 }
 
-func (c *Command) Output() ([]byte, []byte, error) {
+func (c *Command) Output(ctx context.Context) ([]byte, []byte, error) {
 	if c.Session == nil {
 		return nil, nil, fmt.Errorf("execute command %s: SSH client is undefined", c.Name)
 	}
 
 	c.cmd = cmd.NewSSH(c.Session).
 		WithArgs(c.SSHArgs...).
-		WithCommand(c.Name, c.Args...).Cmd()
+		WithCommand(c.Name, c.Args...).Cmd(ctx)
 
 	output, err := c.cmd.Output()
 	if err != nil {
@@ -157,14 +159,14 @@ func (c *Command) Output() ([]byte, []byte, error) {
 	return output, nil, nil
 }
 
-func (c *Command) CombinedOutput() ([]byte, error) {
+func (c *Command) CombinedOutput(ctx context.Context) ([]byte, error) {
 	if c.Session == nil {
 		return nil, fmt.Errorf("execute command %s: sshClient is undefined", c.Name)
 	}
 
 	c.cmd = cmd.NewSSH(c.Session).
 		//	//WithArgs().
-		WithCommand(c.Name, c.Args...).Cmd()
+		WithCommand(c.Name, c.Args...).Cmd(ctx)
 
 	output, err := c.cmd.CombinedOutput()
 	if err != nil {

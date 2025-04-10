@@ -85,7 +85,7 @@ sysctl -w kernel.panic_on_oops=1
 sysctl -w kernel.panic={{ $fencingTime }}
 
 # we use tee for work with globs
-echo 256 | tee /sys/block/*/queue/nr_requests >/dev/null # put more in the request queue, increase throughput
+echo 256 | tee /sys/block/*/queue/nr_requests >/dev/null 2>&1 # put more in the request queue, increase throughput
 echo 256 | tee /sys/block/*/queue/read_ahead_kb >/dev/null # the most controversial thing, Netflix recommends increasing a little, but you need to test on different setups, this number looks safe
 transparent_hugepage_current=$(grep -o '\[.*\]' /sys/kernel/mm/transparent_hugepage/enabled | tr -d '[]')
 if [ "$transparent_hugepage_current" != "never" ]; then

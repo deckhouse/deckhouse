@@ -169,6 +169,7 @@ func InitGlobalVars(pwd string) {
 	candiBashibleDir = candiDir + "/bashible"
 	checkPortsScriptPath = candiBashibleDir + "/preflight/check_ports.sh.tpl"
 	checkLocalhostScriptPath = candiBashibleDir + "/preflight/check_localhost.sh.tpl"
+	checkDeckhouseUserScriptPath = candiBashibleDir + "/preflight/check_deckhouse_user.sh.tpl"
 	preflightScriptDirPath = candiBashibleDir + "/preflight/"
 	killReverseTunnelPath = candiBashibleDir + "/preflight/kill_reverse_tunnel.sh.tpl"
 	checkProxyRevTunnelOpenScriptPath = candiBashibleDir + "/preflight/check_reverse_tunnel_open.sh.tpl"

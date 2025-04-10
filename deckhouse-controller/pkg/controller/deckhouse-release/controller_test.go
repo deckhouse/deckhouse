@@ -347,19 +347,6 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
-	suite.Run("First Release with manual mode", func() {
-		mup := embeddedMUP.DeepCopy()
-		mup.Update.Mode = v1alpha1.UpdateModeManual.String()
-
-		values, err := sjson.Delete(initValues, "global.clusterIsBootstrapped")
-		require.NoError(suite.T(), err)
-
-		suite.setupController("first-release-with-manual-mode.yaml", values, mup)
-		dr := suite.getDeckhouseRelease("v1.25.1")
-		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
-		require.NoError(suite.T(), err)
-	})
-
 	suite.Run("Few patch releases", func() {
 		dependency.TestDC.HTTPClient.DoMock.
 			Expect(&http.Request{}).
@@ -446,6 +433,29 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
+	suite.Run("minor release and patch release", func() {
+		mup := embeddedMUP.DeepCopy()
+		mup.Update.Mode = v1alpha1.UpdateModeAuto.String()
+		mup.Update.Windows = update.Windows{{From: "8:00", To: "10:00"}}
+
+		dependency.TestDC.HTTPClient.DoMock.
+			Expect(&http.Request{}).
+			Return(&http.Response{
+				StatusCode: http.StatusOK,
+			}, nil)
+
+		suite.setupController("minor-release-and-patch-release.yaml", initValues, mup)
+		dr := suite.getDeckhouseRelease("v1.31.0")
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+		dr = suite.getDeckhouseRelease("v1.32.0")
+		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+		dr = suite.getDeckhouseRelease("v1.32.1")
+		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+	})
+
 	suite.Run("forced through few minor releases", func() {
 		dependency.TestDC.HTTPClient.DoMock.
 			Expect(&http.Request{}).
@@ -512,7 +522,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		suite.setupController("suspend-release.yaml", initValues, embeddedMUP)
 		dr := suite.getDeckhouseRelease("v1.25.1")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
-		require.NoError(suite.T(), err)
+		require.Error(suite.T(), err)
+		require.Contains(suite.T(), err.Error(), "release phase is not pending")
 		dr = suite.getDeckhouseRelease("v1.25.2")
 		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
