@@ -296,7 +296,7 @@ func WaitForPVDeletion(ctx context.Context, kubeCl *client.KubernetesClient) err
 		count := len(filteredResources)
 		if count != 0 {
 			remainingPVs := strings.Builder{}
-			for _, item := range resources.Items {
+			for _, item := range filteredResources {
 				remainingPVs.WriteString(fmt.Sprintf("\t\t%s | %s\n", item.Name, item.Status.Phase))
 			}
 			return fmt.Errorf("%d PersistentVolumes left in the cluster\n%s", count, strings.TrimSuffix(remainingPVs.String(), "\n"))
