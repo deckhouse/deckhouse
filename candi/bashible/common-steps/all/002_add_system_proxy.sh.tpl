@@ -35,6 +35,14 @@ EOF
 sed -i 's/%/%%/g' /etc/systemd/system/containerd-deckhouse.service.d/proxy-environment.conf
   {{- end }}
 
+mkdir -p /etc/systemd/system/kubelet.service.d/
+bb-sync-file /etc/systemd/system/kubelet.service.d/proxy-environment.conf - << EOF
+[Service]
+Environment="HTTP_PROXY=${HTTP_PROXY}" "http_proxy=${HTTP_PROXY}" "HTTPS_PROXY=${HTTPS_PROXY}" "https_proxy=${HTTPS_PROXY}" "NO_PROXY=${NO_PROXY}" "no_proxy=${NO_PROXY}"
+EOF
+#escape '%' character for systemd
+sed -i 's/%/%%/g' /etc/systemd/system/kubelet.service.d/proxy-environment.conf
+
 bb-unset-proxy
 
 {{- else }}
