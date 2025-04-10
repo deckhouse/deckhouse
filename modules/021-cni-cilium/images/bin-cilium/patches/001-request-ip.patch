@@ -72,20 +72,37 @@ index 6d58007461..d5446b8df7 100644
 
  func (h *hostScopeAllocator) AllocateNextWithoutSyncUpstream(owner string, pool Pool) (*AllocationResult, error) {
 diff --git a/pkg/ipam/ipam.go b/pkg/ipam/ipam.go
-index d8f88e6468..06b1e37020 100644
+index d8f88e6468..d3e514ced6 100644
 --- a/pkg/ipam/ipam.go
 +++ b/pkg/ipam/ipam.go
-@@ -110,11 +110,11 @@ func (ipam *IPAM) ConfigureAllocator() {
+@@ -13,6 +13,7 @@ import (
+ 	"github.com/cilium/cilium/pkg/datapath/types"
+ 	ipamOption "github.com/cilium/cilium/pkg/ipam/option"
+ 	"github.com/cilium/cilium/pkg/k8s/client"
++	"github.com/cilium/cilium/pkg/k8s/watchers"
+ 	"github.com/cilium/cilium/pkg/logging"
+ 	"github.com/cilium/cilium/pkg/logging/logfields"
+ 	"github.com/cilium/cilium/pkg/node"
+@@ -101,7 +102,7 @@ func NewIPAM(
+ // ConfigureAllocator initializes the IPAM allocator according to the configuration.
+ // As a precondition, the NodeAddressing must be fully initialized - therefore the method
+ // must be called after Daemon.WaitForNodeInformation.
+-func (ipam *IPAM) ConfigureAllocator() {
++func (ipam *IPAM) ConfigureAllocator(k8swatcher *watchers.K8sWatcher) {
+ 	switch ipam.config.IPAMMode() {
+ 	case ipamOption.IPAMKubernetes, ipamOption.IPAMClusterPool:
+ 		log.WithFields(logrus.Fields{
+@@ -110,11 +111,11 @@ func (ipam *IPAM) ConfigureAllocator() {
  		}).Infof("Initializing %s IPAM", ipam.config.IPAMMode())
 
  		if ipam.config.IPv6Enabled() {
 -			ipam.IPv6Allocator = newHostScopeAllocator(ipam.nodeAddressing.IPv6().AllocationCIDR().IPNet)
-+			ipam.IPv6Allocator = newHostScopeAllocator(ipam.nodeAddressing.IPv6().AllocationCIDR().IPNet, ipam.k8sEventReg)
++			ipam.IPv6Allocator = newHostScopeAllocator(ipam.nodeAddressing.IPv6().AllocationCIDR().IPNet, k8swatcher)
  		}
 
  		if ipam.config.IPv4Enabled() {
 -			ipam.IPv4Allocator = newHostScopeAllocator(ipam.nodeAddressing.IPv4().AllocationCIDR().IPNet)
-+			ipam.IPv4Allocator = newHostScopeAllocator(ipam.nodeAddressing.IPv4().AllocationCIDR().IPNet, ipam.k8sEventReg)
++			ipam.IPv4Allocator = newHostScopeAllocator(ipam.nodeAddressing.IPv4().AllocationCIDR().IPNet, k8swatcher)
  		}
  	case ipamOption.IPAMMultiPool:
  		log.Info("Initializing MultiPool IPAM")
@@ -129,3 +146,15 @@ index 6abe6fee6e..af9c2ced99 100644
  // AllocationResult is the result of an allocation
  type AllocationResult struct {
  	// IP is the allocated IP
+diff --git a/daemon/cmd/ipam.go b/daemon/cmd/ipam.go
+index acb9a61c64..9cfe792e30 100644
+--- a/daemon/cmd/ipam.go
++++ b/daemon/cmd/ipam.go
+@@ -585,7 +585,7 @@ func (d *Daemon) startIPAM() {
+ 	bootstrapStats.ipam.Start()
+ 	log.Info("Initializing node addressing")
+ 	// Set up ipam conf after init() because we might be running d.conf.KVStoreIPv4Registration
+-	d.ipam.ConfigureAllocator()
++	d.ipam.ConfigureAllocator(d.k8sWatcher)
+ 	bootstrapStats.ipam.End(true)
+ }
