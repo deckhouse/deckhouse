@@ -84,6 +84,7 @@ shell:
 ---
 image: {{ .ModuleName }}/agent-binaries-artifact
 fromImage: {{ .ModuleName }}/base-cilium-dev
+fromCacheVersion: "2025-04-10.01"
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact

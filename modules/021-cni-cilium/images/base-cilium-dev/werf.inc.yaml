@@ -38,7 +38,7 @@ final: false
 ---
 image: {{ .ModuleName }}/base-cilium-dev
 fromImage: common/alt-p11-artifact
-fromCacheVersion: "2025-04-09.01"
+fromCacheVersion: "2025-04-10.01"
 final: false
 mount:
 {{ include "mount points for golang builds" . }}
