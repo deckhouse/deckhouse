@@ -158,3 +158,4 @@ index acb9a61c64..9cfe792e30 100644
 +	d.ipam.ConfigureAllocator(d.k8sWatcher)
  	bootstrapStats.ipam.End(true)
  }
+
