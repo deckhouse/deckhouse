@@ -165,8 +165,8 @@ function destroy_static_infra() {
   >&2 echo "Run destroy_static_infra from ${terraform_state_file}"
 
   pushd "$cwd"
-  terraform init -input=false -plugin-dir=/plugins || return $?
-  terraform destroy -state="${terraform_state_file}" -input=false -auto-approve || exitCode=$?
+  opentofu init -input=false -plugin-dir=/plugins || return $?
+  opentofu destroy -state="${terraform_state_file}" -input=false -auto-approve || exitCode=$?
   popd
 
   return $exitCode
@@ -573,38 +573,45 @@ function pre_bootstrap_static_setup() {
   LOCAL_DECKHOUSE_DOCKERCFG=$(echo -n {\"auths\":{\"${BASTION_INTERNAL_IP}:5000\":{\"auth\":\"${LOCAL_REGISTRY_CLUSTER_DOCKERCFG}\"}}} | base64 -w0)
 
   cd ..
+  # todo: delete after migrating openstack to opentofy
+  cp -a /plugins/registry.terraform.io/terraform-provider-openstack/ /plugins/registry.opentofu.org/terraform-provider-openstack/
 }
 
 function bootstrap_static() {
   >&2 echo "Run terraform to create nodes for Static cluster ..."
   pushd "$cwd"
-  
-  terraform init -input=false -plugin-dir=/plugins || return $?
-  terraform apply -state="${terraform_state_file}" -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
+
+  opentofu init -input=false -plugin-dir=/plugins || return $?
+  opentofu apply -state="${terraform_state_file}" -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
   popd
 
-  if ! master_ip="$(grep -m1 "master_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d "\" ")" ; then
-    >&2 echo "ERROR: can't parse master_ip from terraform.log"
+  if ! master_ip="$(opentofu output -state="${terraform_state_file}" -raw master_ip_address_for_ssh)"; then
+    >&2 echo "ERROR: can't get master_ip from opentofu output"
     return 1
   fi
-  if ! system_ip="$(grep -m1 "system_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d "\" ")" ; then
-    >&2 echo "ERROR: can't parse system_ip from terraform.log"
+
+  if ! system_ip="$(opentofu output -state="${terraform_state_file}" -raw system_ip_address_for_ssh)"; then
+    >&2 echo "ERROR: can't get system_ip from opentofu output"
     return 1
   fi
-  if ! worker_redos_ip="$(grep -m1 "worker_redos_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d "\" ")" ; then
-    >&2 echo "ERROR: can't parse worker_redos_ip from terraform.log"
+
+  if ! worker_redos_ip="$(opentofu output -state="${terraform_state_file}" -raw worker_redos_ip_address_for_ssh)"; then
+    >&2 echo "ERROR: can't get worker_redos_ip from opentofu output"
     return 1
   fi
-  if ! worker_opensuse_ip="$(grep -m1 "worker_opensuse_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d "\" ")" ; then
-    >&2 echo "ERROR: can't parse worker_opensuse_ip from terraform.log"
+
+  if ! worker_opensuse_ip="$(opentofu output -state="${terraform_state_file}" -raw worker_opensuse_ip_address_for_ssh)"; then
+    >&2 echo "ERROR: can't get worker_opensuse_ip from opentofu output"
     return 1
   fi
-  if ! worker_rosa_ip="$(grep -m1 "worker_rosa_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d "\" ")" ; then
-        >&2 echo "ERROR: can't parse worker_ip from terraform.log"
+
+  if ! worker_rosa_ip="$(opentofu output -state="${terraform_state_file}" -raw worker_rosa_ip_address_for_ssh)"; then
+    >&2 echo "ERROR: can't get worker_rosa_ip from opentofu output"
     return 1
   fi
-  if ! bastion_ip="$(grep -m1 "bastion_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d "\" ")" ; then
-    >&2 echo "ERROR: can't parse bastion_ip from terraform.log"
+
+  if ! bastion_ip="$(opentofu output -state="${terraform_state_file}" -raw bastion_ip_address_for_ssh)"; then
+    >&2 echo "ERROR: can't get bastion_ip from opentofu output"
     return 1
   fi
 
@@ -747,7 +754,7 @@ EOF
        # cleanup
        rm -f /tmp/install-d8-and-pull-push-images.sh
        rm -rf d8
-           
+
        docker run -d --name='tinyproxy' --restart=always -p 8888:8888 -e ALLOWED_NETWORKS="127.0.0.1/8 10.0.0.0/8 192.168.0.1/8" mirror.gcr.io/kalaksi/tinyproxy:latest@sha256:561ef49fa0f0a9747db12abdfed9ab3d7de17e95c811126f11e026b3b1754e54
 ENDSSH
 
@@ -887,7 +894,7 @@ ENDSSH
       WORKER_ROSA_USER="$ssh_rosa_user_worker" WORKER_ROSA_IP="$worker_rosa_ip" \
       envsubst '\${b64_SSH_KEY} \${WORKER_REDOS_USER} \${WORKER_REDOS_IP} \${WORKER_OPENSUSE_USER} \${WORKER_OPENSUSE_IP} \${WORKER_ROSA_USER} \${WORKER_ROSA_IP}' \
       <"$cwd/resources.tpl.yaml" >"$cwd/resources.yaml"
-  
+
   # Bootstrap
   >&2 echo "Run dhctl bootstrap ..."
   for ((i=1; i<=$testRunAttempts; i++)); do

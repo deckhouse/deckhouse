@@ -322,6 +322,6 @@ func InitGlobalVars(pwd string) {
 	imagesDigestsJSON = candiDir + "/images_digests.json"
 }
 
-func getTerraformModulesDir(provider string) string {
+func getInfrastructureModulesDir(provider string) string {
 	return filepath.Join(candiDir, "cloud-providers", provider, "terraform-modules")
 }
