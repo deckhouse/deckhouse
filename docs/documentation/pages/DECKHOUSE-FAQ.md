@@ -528,7 +528,7 @@ Check [releases.deckhouse.io](https://releases.deckhouse.io) for the current sta
       - To authenticate in the official Deckhouse image registry, you need to use a license key and the `--license` parameter;
       - To authenticate in a third-party registry, you need to use the `--source-login` and `--source-password` parameters;
    - `--images-bundle-chunk-size=N` — to specify the maximum file size (in GB) to split the image archive into. As a result of the operation, instead of a single file archive, a set of `.chunk` files will be created (e.g., `d8.tar.NNNN.chunk`). To upload images from such a set of files, specify the file name without the `.NNNN.chunk` suffix in the `d8 mirror push` command (e.g., `d8.tar` for files like `d8.tar.NNNN.chunk`);
-   - `--tmp-dir` — path to a temporary directory to use for image pulling and pushing. All processing is done in this directory, so make sure there is enough free disk space to accommodate the entire bundle you are downloading;
+   - `--tmp-dir` — path to a temporary directory to use for image pulling and pushing. All processing is done in this directory, so make sure there is enough free disk space to accommodate the entire bundle you are downloading. By default, `.tmp` subdirectory under the bundle directory is used.
 
    Additional configuration options for the `d8 mirror` family of commands are available as environment variables:
     - `HTTP_PROXY`/`HTTPS_PROXY` — URL of the proxy server for HTTP(S) requests to hosts that are not listed in the variable `$NO_PROXY`;
