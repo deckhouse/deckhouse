@@ -287,8 +287,8 @@ jobs:
       - name: Run go generate
         run: |
 
-          (cd tools && go generate)
-          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate)
+          (cd tools && go generate -v)
+          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
 
       - name: Check generated code
         run: |
@@ -3101,6 +3101,9 @@ jobs:
           fetch-depth: 0
       # </template: checkout_full_step>
       - name: DMT lint
+        env:
+          DMT_METRICS_URL: "${{ secrets.DMT_METRICS_URL }}"
+          DMT_METRICS_TOKEN: "${{ secrets.DMT_METRICS_TOKEN }}"
         run: |
           make dmt-lint
     # </template: tests_dmt_lint>

@@ -1,6 +1,6 @@
 - name: applications.nats
   rules:
-  - alert: NatsClusterNotEnoughRoutes
+  - alert: NatsClusterNotEnoughRoutes-gnatsd
     expr: >-
       (min by (namespace, service, pod) (gnatsd_routez_num_routes{job="nats"})) - on (namespace, service) group_left()
         (sum by (namespace, service) (up{job="nats"})) + 1 != 0

@@ -149,7 +149,9 @@ tests-modules: ## Run unit tests for modules hooks and templates.
 	go test -timeout=${TESTS_TIMEOUT} -vet=off ${TESTS_PATH}
 
 dmt-lint:
-	docker run --rm -v ${PWD}:/deckhouse-src --user $(id -u):$(id -g) ubuntu /deckhouse-src/tools/dmt-lint.sh
+	export DMT_METRICS_URL="${DMT_METRICS_URL}"
+	export DMT_METRICS_TOKEN="${DMT_METRICS_TOKEN}"
+	docker run --rm -v ${PWD}:/deckhouse-src -e DMT_METRICS_URL="${DMT_METRICS_URL}" -e DMT_METRICS_TOKEN="${DMT_METRICS_TOKEN}" --user $(id -u):$(id -g) ubuntu /deckhouse-src/tools/dmt-lint.sh
 
 
 tests-openapi: ## Run tests against modules openapi values schemas.
@@ -205,7 +207,7 @@ lint-src-artifact: set-build-envs ## Run src-artifact stapel linter
 
 .PHONY: generate render-workflow
 generate: bin/werf ## Run all generate-* jobs in bulk.
-	cd tools; go generate
+	cd tools; go generate -v
 
 render-workflow: ## Generate CI workflow instructions.
 	./.github/render-workflows.sh
