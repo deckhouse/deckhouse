@@ -25,6 +25,10 @@ cgroup="$(stat -fc %T /sys/fs/cgroup)" || {
   exit 1
 }
 
+if [[ "$cgroup" != "cgroup2fs" && "$cgroup" != "tmpfs" ]]; then
+  cgroup="unknown"
+fi
+
 max_attempts=5
 until bb-kubectl --kubeconfig $kubeconfig label --overwrite=true node "$node" node.deckhouse.io/cgroup="$cgroup"; do
   attempt=$(( attempt + 1 ))
