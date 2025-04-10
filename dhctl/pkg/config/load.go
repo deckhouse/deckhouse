@@ -411,24 +411,6 @@ func ValidateDiscoveryData(config *[]byte, paths []string, opts ...ValidateOptio
 	return true, nil
 }
 
-func ValidateConf(conf *[]byte) error {
-	schemaStore := newSchemaStore([]string{
-		"/deckhouse/candi/cloud-providers/zvirt/openapi",
-		"/deckhouse/candi/cloud-providers/vsphere/openapi",
-		"/deckhouse/candi/cloud-providers/huaweicloud/openapi",
-		"/deckhouse/candi/cloud-providers/dynamix/openapi",
-		"/deckhouse/candi/cloud-providers/openstack/openapi",
-		"/deckhouse/candi/cloud-providers/openstack/openapi",
-		"/deckhouse/candi/cloud-providers/vcd/openapi",
-		"/deckhouse/candi/cloud-providers/gcp/openapi",
-		"/deckhouse/candi/cloud-providers/yandex/openapi",
-		"/deckhouse/candi/cloud-providers/aws/openapi",
-		"/deckhouse/candi/cloud-providers/azure/openapi",
-		"/deckhouse/candi/openapi/"})
-	_, err := schemaStore.Validate(conf)
-	return err
-}
-
 func applyOptions(opts ...ValidateOption) validateOptions {
 	options := validateOptions{}
 	for _, opt := range opts {
