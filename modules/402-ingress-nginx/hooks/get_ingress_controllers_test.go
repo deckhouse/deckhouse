@@ -82,7 +82,7 @@ spec:
   "ingressClass": "nginx",
   "inlet": "LoadBalancer",
   "loadBalancer": {},
-  "controllerLogLevel": "info",
+  "controllerLogLevel": "Info",
   "loadBalancerWithProxyProtocol": {},
   "maxReplicas": 1,
   "minReplicas": 1,
@@ -193,7 +193,7 @@ spec:
 "loadBalancerWithProxyProtocol": {},
 "maxReplicas": 1,
 "minReplicas": 1,
-"controllerLogLevel": "info",
+"controllerLogLevel": "Info",
 "resourcesRequests": {
   "mode": "Static",
   "static": {},
@@ -245,7 +245,7 @@ spec:
 },
 "underscoresInHeaders": false,
 "validationEnabled": true,
-"controllerLogLevel": "info"
+"controllerLogLevel": "Info"
 }`))
 
 			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers.2.name").String()).To(Equal("test-3"))
@@ -277,7 +277,7 @@ spec:
 },
 "underscoresInHeaders": false,
 "validationEnabled": true,
-"controllerLogLevel": "info"
+"controllerLogLevel": "Info"
 }`))
 		})
 	})

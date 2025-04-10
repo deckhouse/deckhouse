@@ -1218,20 +1218,13 @@ spec:
                   type: string
                   description: "Defines the verbosity level for the ingress controller logs."
                   enum:
-                    - error
-                    - warn
-                    - info
-                    - extended
-                    - debug
-                    - trace
-                  default: info
-                  x-enum-varnames:
                     - Error
                     - Warn
                     - Info
                     - Extended
                     - Debug
                     - Trace
+                  default: Info
                   x-enum-descriptions:
                     - "Only critical errors will be logged."
                     - "Warnings and errors will be logged."
