@@ -34,7 +34,7 @@ spec:
               properties:
                 userID:
                   description: |
-                    Username without `client.`.
+                    Username without `client`.
                   type: string
                 userKey:
                   description: |
@@ -49,8 +49,8 @@ spec:
                   type: string
                   description: |
                     The current state of resources managed by the CephClusterAuthentication custom resource:
-                    - Failed (if the controller received incorrect resource configuration or some errors occurred during the operation).
-                    - Created (if everything went fine).
+                    - `Failed` — if the controller received incorrect resource configuration or some errors occurred during the operation;
+                    - `Created` — if everything went fine.
                   enum:
                     - Failed
                     - Created

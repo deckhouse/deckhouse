@@ -18,9 +18,9 @@
 # kmod and dependencies
 {{ $binariesFromALT := cat $binariesFromALT "/bin/kmod /bin/lsmod /sbin/depmod /sbin/insmod /sbin/lsmod /sbin/modinfo /sbin/modprobe /sbin/rmmod" }}
 # iproute2 and dependencies
-{{ $binariesFromALT := cat $binariesFromALT "/sbin/dcb /sbin/devlink /sbin/ip /sbin/rdma /sbin/rtmon /sbin/tc /sbin/vdpa /usr/bin/ip /usr/bin/lnstat /usr/bin/nstat /usr/bin/rtmon /usr/bin/ss /usr/bin/tc" }}
-{{ $binariesFromALT := cat $binariesFromALT "/usr/sbin/bridge /usr/sbin/ctstat /usr/sbin/genl /usr/sbin/ifstat /usr/sbin/lnstat /usr/sbin/nstat /usr/sbin/rtacct /usr/sbin/rtstat /usr/sbin/ss /usr/sbin/tipc" }}
-{{ $binariesFromALT := cat $binariesFromALT "/usr/lib64/tc/experimental.dist /usr/lib64/tc/normal.dist /usr/lib64/tc/pareto.dist /usr/lib64/tc/paretonormal.dist" }}
+{{ $binariesFromALT := cat $binariesFromALT "/sbin/dcb /sbin/devlink /sbin/ip /sbin/rdma /sbin/rtmon /sbin/tc /sbin/vdpa" }}
+{{ $binariesFromALT := cat $binariesFromALT "/usr/sbin/bridge /usr/sbin/genl /usr/sbin/lnstat /usr/sbin/nstat /usr/sbin/rtacct /usr/sbin/ss /usr/sbin/tipc" }}
+{{ $binariesFromALT := cat $binariesFromALT "/usr/sbin/ctstat /usr/sbin/rtstat" }}
 # ipset and dependencies
 {{ $binariesFromALT := cat $binariesFromALT "/sbin/ipset" }}
 # clang dependencies
@@ -207,10 +207,10 @@ shell:
   - cp -a /var/lib/cilium/bpf /relocate/var/lib/cilium
   - echo ". /etc/bashrc.d/bash_completion.sh" >> /root/.bashrc
   - mkdir -p /relocate/root && cp -a /root/.bashrc /relocate/root
+  # additional relocate for fix locale
+  - mkdir -p /relocate/usr/lib/locale
+  - cp -a /usr/lib/locale/C.utf8 /relocate/usr/lib/locale
   setup:
-  # locale
-  - mkdir -p /relocate/usr/lib
-  - cp -a /usr/lib/locale /relocate/usr/lib
   # prepare final fs
   - mkdir -p /relocate/usr/sbin
   - if [ -d "/relocate/sbin" ]; then cp -a /relocate/sbin/* /relocate/usr/sbin/ && rm -rf /relocate/sbin; fi
@@ -251,6 +251,6 @@ import:
   before: install
 imageSpec:
   config:
-    env: { "HUBBLE_SERVER": "unix:///var/run/cilium/hubble.sock", "INITSYSTEM": "SYSTEMD", "HUBBLE_COMPAT": "legacy-json-output", "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", "LANG": "en_US.UTF-8", "LANGUAGE": "en_US:en", "LC_ALL": "en_US.UTF-8" }
+    env: { "HUBBLE_SERVER": "unix:///var/run/cilium/hubble.sock", "INITSYSTEM": "SYSTEMD", "HUBBLE_COMPAT": "legacy-json-output", "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", "LANG": "C.UTF-8", "LANGUAGE": "C.UTF-8", "LC_ALL": "C.UTF-8" }
     workingDir: "/home/cilium"
     cmd: ["/usr/bin/cilium"]

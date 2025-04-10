@@ -56,8 +56,8 @@ import (
 )
 
 const (
-	metricReleasesGroup = "d8_releases"
 	metricUpdatingGroup = "d8_updating"
+	metricUpdatingName  = "d8_is_updating"
 
 	deckhouseNamespace          = "d8-system"
 	deckhouseDeployment         = "deckhouse"
@@ -158,8 +158,6 @@ func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		r.logger.Debug("release channel not set")
 		return res, nil
 	}
-
-	r.metricStorage.Grouped().ExpireGroupMetrics(metricReleasesGroup)
 
 	release := new(v1alpha1.DeckhouseRelease)
 	err := r.client.Get(ctx, req.NamespacedName, release)
@@ -334,12 +332,6 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		r.registrySecret = registrySecret
 	}
 
-	if r.isDeckhousePodReady(ctx) {
-		r.metricStorage.Grouped().ExpireGroupMetrics(metricUpdatingGroup)
-	} else {
-		r.metricStorage.Grouped().GaugeSet(metricUpdatingGroup, "d8_is_updating", 1, map[string]string{"releaseChannel": r.updateSettings.Get().ReleaseChannel})
-	}
-
 	taskCalculator := releaseUpdater.NewDeckhouseReleaseTaskCalculator(r.client, r.logger)
 
 	task, err := taskCalculator.CalculatePendingReleaseTask(ctx, dr)
@@ -386,6 +378,27 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
+	if !r.isDeckhousePodReady(ctx) && !task.IsPatch {
+		r.logger.Info("Deckhouse is not ready. Skipping upgrade")
+
+		drs := &v1alpha1.DeckhouseReleaseStatus{
+			Phase: v1alpha1.DeckhouseReleasePhasePending,
+		}
+
+		if task.DeployedReleaseInfo == nil {
+			drs.Message = "can not find deployed version, awaiting"
+		} else {
+			drs.Message = fmt.Sprintf("awaiting for Deckhouse v%s pod to be ready", task.DeployedReleaseInfo.Version.String())
+		}
+
+		updateErr := r.updateReleaseStatus(ctx, dr, drs)
+		if updateErr != nil {
+			r.logger.Warn("await deckhouse pod status update ", slog.String("name", dr.GetName()), log.Err(err))
+		}
+
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+	}
+
 	checker, err := releaseUpdater.NewDeckhouseReleaseRequirementsChecker(r.client, r.moduleManager.GetEnabledModuleNames(), r.logger)
 	if err != nil {
 		updateErr := r.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
@@ -399,8 +412,17 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
+	metricLabels := releaseUpdater.NewReleaseMetricLabels(dr)
+	defer func() {
+		if metricLabels[releaseUpdater.ManualApprovalRequired] == "true" {
+			metricLabels[releaseUpdater.ReleaseQueueDepth] = strconv.Itoa(task.QueueDepth)
+		}
+		r.metricsUpdater.UpdateReleaseMetric(dr.GetName(), metricLabels)
+	}()
+
 	reasons := checker.MetRequirements(dr)
 	if len(reasons) > 0 {
+		metricLabels.SetTrue(releaseUpdater.RequirementsNotMet)
 		msgs := make([]string, 0, len(reasons))
 		for _, reason := range reasons {
 			msgs = append(msgs, reason.Message)
@@ -431,7 +453,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	}
 
 	// handling error inside function
-	err = r.PreApplyReleaseCheck(ctx, dr, task)
+	err = r.PreApplyReleaseCheck(ctx, dr, task, metricLabels)
 	if err != nil {
 		// ignore this err, just requeue because of check failed
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
@@ -450,18 +472,8 @@ var ErrPreApplyCheckIsFailed = errors.New("pre apply check is failed")
 // PreApplyReleaseCheck checks final conditions before apply
 //
 // - Calculating deploy time (if zero - deploy)
-func (r *deckhouseReleaseReconciler) PreApplyReleaseCheck(ctx context.Context, dr *v1alpha1.DeckhouseRelease, task *releaseUpdater.Task) error {
-	metricLabels := releaseUpdater.NewReleaseMetricLabels(dr)
-
+func (r *deckhouseReleaseReconciler) PreApplyReleaseCheck(ctx context.Context, dr *v1alpha1.DeckhouseRelease, task *releaseUpdater.Task, metricLabels releaseUpdater.MetricLabels) error {
 	timeResult := r.DeployTimeCalculate(ctx, dr, task, metricLabels)
-
-	if metricLabels[releaseUpdater.ManualApprovalRequired] == "true" {
-		metricLabels[releaseUpdater.ReleaseQueueDepth] = strconv.Itoa(task.QueueDepth)
-	}
-
-	// if the predicted release has an index less than the number of awaiting releases
-	// calculate and set releaseDepthQueue label
-	r.metricsUpdater.UpdateReleaseMetric(dr.GetName(), metricLabels)
 
 	if timeResult == nil {
 		return nil
@@ -534,7 +546,7 @@ func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr
 	}
 
 	releaseNotifier := releaseUpdater.NewReleaseNotifier(dus)
-	timeChecker := releaseUpdater.NewDeployTimeService(r.dc, dus, r.isDeckhousePodReady, r.logger)
+	timeChecker := releaseUpdater.NewDeployTimeService(r.dc, dus, r.logger)
 
 	var deployTimeResult *releaseUpdater.DeployTimeResult
 
@@ -596,7 +608,7 @@ func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr
 		}
 	}
 
-	processedDTR := timeChecker.ProcessMinorReleaseDeployTime(ctx, dr, deployTimeResult, task.DeployedReleaseInfo)
+	processedDTR := timeChecker.ProcessMinorReleaseDeployTime(dr, deployTimeResult)
 	if processedDTR == nil {
 		return nil
 	}
@@ -980,6 +992,7 @@ func (r *deckhouseReleaseReconciler) reconcileDeployedRelease(ctx context.Contex
 
 			dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationIsUpdating] = "false"
 			dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationNotified] = "true"
+			r.metricStorage.Grouped().ExpireGroupMetrics(metricUpdatingGroup)
 
 			return nil
 		})
@@ -990,11 +1003,22 @@ func (r *deckhouseReleaseReconciler) reconcileDeployedRelease(ctx context.Contex
 		return res, nil
 	}
 
-	return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+	if dr.GetIsUpdating() {
+		r.metricStorage.Grouped().GaugeSet(metricUpdatingGroup, metricUpdatingName, 1, map[string]string{"releaseChannel": r.updateSettings.Get().ReleaseChannel})
+
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+	}
+
+	return res, nil
 }
 
 func (r *deckhouseReleaseReconciler) updateReleaseStatus(ctx context.Context, dr *v1alpha1.DeckhouseRelease, status *v1alpha1.DeckhouseReleaseStatus) error {
 	r.logger.Debug("refresh release status", slog.String("name", dr.GetName()))
+
+	switch status.Phase {
+	case v1alpha1.DeckhouseReleasePhaseSuperseded, v1alpha1.DeckhouseReleasePhaseSuspended, v1alpha1.DeckhouseReleasePhaseSkipped:
+		r.metricsUpdater.PurgeReleaseMetric(dr.GetName())
+	}
 
 	return ctrlutils.UpdateStatusWithRetry(ctx, r.client, dr, func() error {
 		if dr.Status.Phase != status.Phase {

@@ -6,6 +6,8 @@ title: "Cloud provider — Yandex Cloud: настройки"
 
 {% include module-alerts.liquid %}
 
+{% include module-conversion.liquid %}
+
 ## Storage
 
 Модуль автоматически создает StorageClass'ы, покрывающие все варианты дисков в Yandex Cloud:

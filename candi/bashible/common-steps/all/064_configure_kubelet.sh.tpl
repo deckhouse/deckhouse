@@ -119,8 +119,8 @@ if [ "$(($imagefsInodesKFivePercent*2))" -gt "$(($needInodesFree*2))" ]; then
   evictionSoftThresholdImagefsInodesFree="$(($needInodesFree*2))k"
 fi
 
-shutdownGracePeriod="2m"
-shutdownGracePeriodCriticalPods="15s"
+shutdownGracePeriod="115"
+shutdownGracePeriodCriticalPods="15"
 
 if [[ -f /var/lib/bashible/cloud-provider-variables ]]; then
   source /var/lib/bashible/cloud-provider-variables
@@ -346,8 +346,13 @@ containerLogMaxSize: {{ .nodeGroup.kubelet.containerLogMaxSize | default "50Mi" 
 containerLogMaxFiles: {{ .nodeGroup.kubelet.containerLogMaxFiles | default 4 }}
 {{- end }}
 allowedUnsafeSysctls:  ["net.*"]
-shutdownGracePeriod: ${shutdownGracePeriod}
-shutdownGracePeriodCriticalPods: ${shutdownGracePeriodCriticalPods}
+shutdownGracePeriodByPodPriority:
+- priority: 2000000999
+  shutdownGracePeriodSeconds: 5
+- priority: 1999999999
+  shutdownGracePeriodSeconds: ${shutdownGracePeriodCriticalPods}
+- priority: 0
+  shutdownGracePeriodSeconds: ${shutdownGracePeriod}
 {{- if hasKey .nodeGroup "staticInstances" }}
 providerID: $(cat /var/lib/bashible/node-spec-provider-id)
 {{- end }}

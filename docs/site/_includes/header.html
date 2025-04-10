@@ -16,65 +16,76 @@
           >
           {%- unless site.mode == "module" %}
             {%- if page.lang == "ru" %}
-              <a href="#">Продукты</a>
-              <div class="sub-menu-container">
-              <ul class="sub-menu sub-menu_products">
-                <li>
-                  <a href="/products/kubernetes-platform/">
-                    <svg class="products__icon">
-                      <use xlink:href="/images/sprite.svg#kubernetes-platform-icon"></use>
-                    </svg>
-                    <span>Kubernetes Platform</span>
-                    <p>Создание идентичных Kubernetes-кластеров и&nbsp;управление ими</p>
-                  </a>
-                </li>
-                <li>
-                  <a href="/products/virtualization-platform/">
-                    <svg class="products__icon">
-                      <use xlink:href="/images/sprite.svg#virtualization-platform-icon"></use>
-                    </svg>
-                    <span>Virtualization Platform</span>
-                    <p>Управление виртуальными машинами</p>
-                  </a>
-                </li>
-                <li>
-                  <a href="/products/observability-platform/">
-                    <svg class="products__icon">
-                      <use xlink:href="/images/sprite.svg#observability-platform-icon"></use>
-                    </svg>
-                    <span>Observability Platform</span>
-                    <p>Мониторинг и&nbsp;журналирование инфраструктуры и&nbsp;приложений</p>
-                  </a>
-                </li>
-                <li>
-                  <a href="/products/commander/">
-                    <svg class="products__icon">
-                      <use xlink:href="/images/sprite.svg#commander-icon"></use>
-                    </svg>
-                    <span>Commander</span>
-                    <p>Центр управления парком кластеров</p>
-                  </a>
-                </li>
-                <li>
-                  <a href="/products/stronghold/">
-                    <svg class="products__icon">
-                      <use xlink:href="/images/sprite.svg#stronghold-icon"></use>
-                    </svg>
-                    <span>Stronghold</span>
-                    <p>Безопасное управление жизненным циклом секретов</p>
-                  </a>
-                </li>
-                <li>
-                  <a href="/products/delivery-kit/">
-                    <svg class="products__icon">
-                      <use xlink:href="/images/sprite.svg#delivery-icon"></use>
-                    </svg>
-                    <span>Delivery Kit</span>
-                    <p>Сборка и&nbsp;доставка контейнеризованного ПО</p>
-                  </a>
-                </li>
-              </ul>
-            </div>
+            <a href="#">Продукты</a>
+            <div class="sub-menu-container">
+            <ul class="sub-menu sub-menu_products">
+              <li>
+                <a href="/products/kubernetes-platform/">
+                  <svg class="products__icon">
+                    <use xlink:href="/images/sprite.svg#kubernetes-platform-icon"></use>
+                  </svg>
+                  <span>Kubernetes Platform</span>
+                  <p>Создание идентичных Kubernetes-кластеров и&nbsp;управление ими</p>
+                </a>
+              </li>
+              <li>
+                <a href="/products/virtualization-platform/">
+                  <svg class="products__icon">
+                    <use xlink:href="/images/sprite.svg#virtualization-platform-icon"></use>
+                  </svg>
+                  <span>Virtualization Platform</span>
+                  <p>Управление виртуальными машинами</p>
+                </a>
+              </li>
+              <li>
+                <a href="/products/observability-platform/">
+                  <svg class="products__icon">
+                    <use xlink:href="/images/sprite.svg#observability-platform-icon"></use>
+                  </svg>
+                  <span>Observability Platform</span>
+                  <p>Мониторинг и&nbsp;журналирование инфраструктуры и&nbsp;приложений</p>
+                </a>
+              </li>
+              <li>
+                <a href="/products/delivery-kit/">
+                  <svg class="products__icon">
+                    <use xlink:href="/images/sprite.svg#delivery-icon"></use>
+                  </svg>
+                  <span>Delivery Kit</span>
+                  <p>Сборка и&nbsp;доставка контейнеризованного ПО</p>
+                </a>
+              </li>
+              <li>
+                <a href="/products/stronghold/">
+                  <svg class="products__icon">
+                    <use xlink:href="/images/sprite.svg#stronghold-icon"></use>
+                  </svg>
+                  <span>Stronghold</span>
+                  <p>Безопасное управление жизненным циклом секретов</p>
+                </a>
+              </li>
+              <li>
+                <a href="/products/commander/">
+                  <svg class="products__icon">
+                    <use xlink:href="/images/sprite.svg#commander-icon"></use>
+                  </svg>
+                  <span>Commander</span>
+                  <p>Центр управления парком кластеров</p>
+                </a>
+              </li>
+              <li>
+                <a href="/products/code/">
+                  <svg width="20" height="20" viewBox="0 0 280 280" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M208.947 41.7573L250.705 0H0V250.757L41.8106 208.757L41.927 41.9269L208.947 41.7573Z" fill="#00003C"/>
+                    <path d="M280 29.5309L238.447 71.2573L238.073 238.073L71.4473 238.088L29.5386 280H280V29.5309Z" fill="#00003C"/>
+                    <path d="M145.855 179.993H105.855V99.9932H145.855C167.884 99.9932 185.855 117.964 185.855 139.993C185.855 162.022 167.884 179.993 145.855 179.993Z" fill="#0064FF"/>
+                  </svg>
+                  <span>Code</span>
+                  <p>Непрерывная разработка и управление жизненным циклом ПО</p>
+                </a>
+              </li>
+            </ul>
+          </div>
             {%- else %}
               <a href="#">Products</a>
               <div class="sub-menu-container">
@@ -107,12 +118,12 @@
                     </a>
                   </li>
                   <li>
-                    <a href="/products/commander/">
+                    <a href="/products/delivery-kit/">
                       <svg class="products__icon">
-                        <use xlink:href="/images/sprite.svg#commander-icon"></use>
+                        <use xlink:href="/images/sprite.svg#delivery-icon"></use>
                       </svg>
-                      <span>Commander</span>
-                      <p>Cluster control center</p>
+                      <span>Delivery Kit</span>
+                      <p>Building and&nbsp;delivering containerized software</p>
                     </a>
                   </li>
                   <li>
@@ -125,12 +136,12 @@
                     </a>
                   </li>
                   <li>
-                    <a href="/products/delivery-kit/">
+                    <a href="/products/commander/">
                       <svg class="products__icon">
-                        <use xlink:href="/images/sprite.svg#delivery-icon"></use>
+                        <use xlink:href="/images/sprite.svg#commander-icon"></use>
                       </svg>
-                      <span>Delivery Kit</span>
-                      <p>Building and&nbsp;delivering containerized software</p>
+                      <span>Commander</span>
+                      <p>Cluster control center</p>
                     </a>
                   </li>
                 </ul>

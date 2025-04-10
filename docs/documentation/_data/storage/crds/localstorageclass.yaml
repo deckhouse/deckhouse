@@ -44,8 +44,8 @@ spec:
                       message: Value is immutable.
                   description: |
                     The storage class's reclaim policy:
-                    - Delete (If the Persistent Volume Claim is deleted, deletes the Persistent Volume and its associated storage as well).
-                    - Retain (If the Persistent Volume Claim is deleted, remains the Persistent Volume and its associated storage).
+                    - `Delete` — if the Persistent Volume Claim is deleted, deletes the Persistent Volume and its associated storage as well;
+                    - `Retain` — if the Persistent Volume Claim is deleted, remains the Persistent Volume and its associated storage.
                   enum:
                     - Delete
                     - Retain
@@ -56,8 +56,8 @@ spec:
                       message: Value is immutable.
                   description: |
                     The Storage class's binding mode:
-                    - Immediate (creates a PV as a PVC requested).
-                    - WaitForFirstConsumer (creates a PV after a Pod consumes PVC).
+                    - `Immediate` — creates a PV as a PVC requested;
+                    - `WaitForFirstConsumer` — creates a PV after a Pod consumes PVC.
                   enum:
                     - Immediate
                     - WaitForFirstConsumer
@@ -154,8 +154,8 @@ spec:
                   type: string
                   description: |
                     The Storage class current state:
-                    - Failed (if the controller received incorrect resource configuration or some errors occurred during the operation).
-                    - Create (if everything went fine).
+                    - `Failed` — if the controller received incorrect resource configuration or some errors occurred during the operation;
+                    - `Create` — if everything went fine.
                   enum:
                     - Failed
                     - Created

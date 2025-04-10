@@ -51,6 +51,8 @@ const (
 
 	maxConcurrentReconciles = 3
 
+	moduleNotFoundInterval = 3 * time.Minute
+
 	moduleDeckhouse = "deckhouse"
 	moduleGlobal    = "global"
 )
@@ -132,20 +134,20 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// wait until init
 	r.init.Wait()
 
-	r.log.Debugf("reconciling the '%s' module config", req.Name)
+	r.log.Debug("reconciling module config", slog.String("name", req.Name))
 	moduleConfig := new(v1alpha1.ModuleConfig)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: req.Name}, moduleConfig); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.log.Warnf("the '%s' module config not found", req.Name)
+			r.log.Warn("module config not found", slog.String("name", req.Name))
 			return ctrl.Result{}, nil
 		}
-		r.log.Errorf("failed to get the '%s' module config: %v", req.Name, err)
-		return ctrl.Result{Requeue: true}, nil
+		r.log.Error("failed to get module config", slog.String("name", req.Name), log.Err(err))
+		return ctrl.Result{}, err
 	}
 
 	// handle delete event
 	if !moduleConfig.DeletionTimestamp.IsZero() {
-		r.log.Debugf("deleting the '%s' module config", req.Name)
+		r.log.Debug("deleting module config", slog.String("name", req.Name))
 		return r.deleteModuleConfig(ctx, moduleConfig)
 	}
 
@@ -191,26 +193,26 @@ func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alp
 	if err := r.client.Get(ctx, client.ObjectKey{Name: moduleConfig.Name}, module); err != nil {
 		if apierrors.IsNotFound(err) {
 			if moduleConfig.Name != moduleGlobal {
-				r.log.Warnf("the module '%s' not found", moduleConfig.Name)
+				r.log.Warn("module is not found", slog.String("name", moduleConfig.Name))
 				err = utils.UpdateStatus[*v1alpha1.ModuleConfig](ctx, r.client, moduleConfig, func(moduleConfig *v1alpha1.ModuleConfig) bool {
 					moduleConfig.Status.Message = v1alpha1.ModuleConfigMessageUnknownModule
 					return true
 				})
 				if err != nil {
-					r.log.Errorf("failed to update the '%s' module config: %v", moduleConfig.Name, err)
-					return ctrl.Result{Requeue: true}, nil
+					r.log.Error("failed to update module config", slog.String("name", moduleConfig.Name), log.Err(err))
+					return ctrl.Result{}, err
 				}
 			}
-			return ctrl.Result{}, nil
+			return ctrl.Result{RequeueAfter: moduleNotFoundInterval}, nil
 		}
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{}, err
 	}
 
 	return r.processModule(ctx, moduleConfig, module)
 }
 
 func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.ModuleConfig, module *v1alpha1.Module) (ctrl.Result, error) {
-	defer r.log.Debugf("the '%s' module config reconciled", moduleConfig.Name)
+	defer r.log.Debug("module config reconciled", slog.String("name", moduleConfig.Name))
 
 	// clear conflict metrics
 	metricGroup := fmt.Sprintf("module_%s_at_conflict", module.Name)
@@ -219,7 +221,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 	if !moduleConfig.IsEnabled() {
 		if err := r.disableModule(ctx, module); err != nil {
 			r.log.Error("failed to disable the module", slog.String("module", module.Name), log.Err(err))
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{}, err
 		}
 
 		err := utils.Update[*v1alpha1.ModuleConfig](ctx, r.client, moduleConfig, func(moduleConfig *v1alpha1.ModuleConfig) bool {
@@ -230,36 +232,36 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 			return false
 		})
 		if err != nil {
-			r.log.Errorf("failed to remove allow disabled annotation for the '%s' module config: %v", moduleConfig.Name, err)
-			return ctrl.Result{Requeue: true}, nil
+			r.log.Error("failed to remove allow disabled annotation for module config", slog.String("name", moduleConfig.Name), log.Err(err))
+			return ctrl.Result{}, err
 		}
 
 		// skip disabled modules
-		r.log.Debugf("skip the '%s' disabled module", module.Name)
+		r.log.Debug("skip disabled module", slog.String("name", module.Name))
 		return ctrl.Result{}, nil
 	}
 
 	if moduleConfig.IsEnabled() {
 		if err := r.enableModule(ctx, module); err != nil {
 			r.log.Error("failed to enable the module", slog.String("module", module.Name), log.Err(err))
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{}, err
 		}
 	}
 
 	if err := r.addFinalizer(ctx, moduleConfig); err != nil {
 		r.log.Error("failed to add finalizer", slog.String("module", module.Name), log.Err(err))
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{}, err
 	}
 
 	// skip system modules
 	if module.Name == moduleDeckhouse || module.Name == moduleGlobal {
-		r.log.Debugf("skip the '%s' system module", module.Name)
+		r.log.Debug("skip the system module", slog.String("name", module.Name))
 		return ctrl.Result{}, nil
 	}
 
 	// skip embedded modules
 	if module.IsEmbedded() {
-		r.log.Debugf("skip the '%s' embedded module", module.Name)
+		r.log.Debug("skip embedded module", slog.String("name", module.Name))
 		return ctrl.Result{}, nil
 	}
 
@@ -272,8 +274,8 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 	// change source by module config
 	if moduleConfig.Spec.Source != "" && module.Properties.Source != moduleConfig.Spec.Source {
 		if err := r.changeModuleSource(ctx, module, moduleConfig.Spec.Source, updatePolicy); err != nil {
-			r.log.Debugf("failed to change source for the '%s' module: %v", module.Name, err)
-			return ctrl.Result{Requeue: true}, nil
+			r.log.Debug("failed to change source for the module", slog.String("name", module.Name), log.Err(err))
+			return ctrl.Result{}, err
 		}
 	}
 
@@ -281,8 +283,8 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 		// change source by available source
 		if len(module.Properties.AvailableSources) == 1 {
 			if err := r.changeModuleSource(ctx, module, module.Properties.AvailableSources[0], updatePolicy); err != nil {
-				r.log.Debugf("failed to change source for the '%s' module: %v", module.Name, err)
-				return ctrl.Result{Requeue: true}, nil
+				r.log.Debug("failed to change source for module", slog.String("name", module.Name), log.Err(err))
+				return ctrl.Result{}, err
 			}
 		}
 
@@ -295,8 +297,8 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 				return true
 			})
 			if err != nil {
-				r.log.Errorf("failed to set conlflict to the '%s' module: %v", module.Name, err)
-				return ctrl.Result{Requeue: true}, nil
+				r.log.Error("failed to set conflict to module", slog.String("name", module.Name), log.Err(err))
+				return ctrl.Result{}, err
 			}
 			// fire alert at Conflict
 			r.metricStorage.Grouped().GaugeSet(metricGroup, "d8_module_at_conflict", 1.0, map[string]string{
@@ -314,8 +316,8 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 		return false
 	})
 	if err != nil {
-		r.log.Errorf("failed to update the '%s' module`s update policy: %v", module.Name, err)
-		return ctrl.Result{Requeue: true}, nil
+		r.log.Error("failed to update module`s update policy", slog.String("name", module.Name), log.Err(err))
+		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil
@@ -328,27 +330,27 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 	module := new(v1alpha1.Module)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: moduleConfig.Name}, module); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.log.Warnf("the module '%s' not found", moduleConfig.Name)
+			r.log.Warn("module not found", slog.String("name", moduleConfig.Name))
 			if err = r.removeFinalizer(ctx, moduleConfig); err != nil {
 				r.log.Error("failed to remove finalizer", slog.String("module", moduleConfig.Name), log.Err(err))
-				return ctrl.Result{Requeue: true}, nil
+				return ctrl.Result{}, err
 			}
 			return ctrl.Result{}, nil
 		}
-		r.log.Errorf("failed to get the '%s' module: %v", moduleConfig.Name, err)
-		return ctrl.Result{Requeue: true}, nil
+		r.log.Error("failed to get module", slog.String("name", moduleConfig.Name), log.Err(err))
+		return ctrl.Result{}, err
 	}
 
 	// skip system modules
 	if module.Name == moduleDeckhouse || module.Name == moduleGlobal {
-		r.log.Debugf("skip the '%s' system module", module.Name)
+		r.log.Debug("skip system module", slog.String("name", module.Name))
 		return ctrl.Result{}, nil
 	}
 
 	// disable module
 	if err := r.disableModule(ctx, module); err != nil {
 		r.log.Error("failed to disable the module", slog.String("module", module.Name), log.Err(err))
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{}, err
 	}
 
 	// clear downloaded module
@@ -360,13 +362,13 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 		})
 		if err != nil {
 			r.log.Error("failed to update the module", slog.String("module", module.Name), log.Err(err))
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{}, err
 		}
 	}
 
 	if err := r.removeFinalizer(ctx, moduleConfig); err != nil {
 		r.log.Error("failed to remove finalizer from ModuleConfig", slog.String("module", moduleConfig.Name), log.Err(err))
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil
@@ -423,7 +425,7 @@ func (r *reconciler) disableModule(ctx context.Context, module *v1alpha1.Module)
 			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, "", "")
 			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
 		}
-		module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
+		module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, "", "")
 		module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
 		return true
 	})

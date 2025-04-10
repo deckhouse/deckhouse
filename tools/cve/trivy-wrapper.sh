@@ -97,7 +97,7 @@ function prepareImageArgs() {
   fi
 
   if [ -z "$SEVERITY" ]; then
-    SEVERITY="CRITICAL,HIGH"
+    SEVERITY="UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
   fi
 
   if [ -z "$OUTPUT" ]; then
@@ -107,7 +107,7 @@ function prepareImageArgs() {
 
 function trivyGetCVEListForImage() (
   prepareImageArgs "$@"
-  bin/trivy i --policy "$TRIVY_POLICY_URL" --java-db-repository "$TRIVY_JAVA_DB_URL" --db-repository "$TRIVY_DB_URL" --severity=$SEVERITY --ignorefile "$IGNORE" --format json --scanners vuln --quiet "$IMAGE_ARGS" | jq -r ".Results[]?.Vulnerabilities[]?.VulnerabilityID" | uniq | sort
+  bin/trivy i --policy "$TRIVY_POLICY_URL" --java-db-repository "$TRIVY_JAVA_DB_URL" --db-repository "$TRIVY_DB_URL" --exit-code 0 --severity $SEVERITY --ignorefile "$IGNORE" --format json --scanners vuln --quiet "$IMAGE_ARGS" | jq -r ".Results[]?.Vulnerabilities[]?.VulnerabilityID" | uniq | sort
   # bin/trivy i --severity=$SEVERITY --ignorefile "$IGNORE" --format json --quiet "$IMAGE_ARGS" | jq -r ".Results[]?.Vulnerabilities[]?.VulnerabilityID" | uniq | sort
 )
 
@@ -118,6 +118,6 @@ function htmlReportHeader() (
 function trivyGetJSONReportPartForImage() (
   prepareImageArgs "$@"
   echo -n "    <h1>$LABEL</h1>"
-  bin/trivy i --policy "$TRIVY_POLICY_URL" --java-db-repository "$TRIVY_JAVA_DB_URL" --db-repository "$TRIVY_DB_URL" --severity=$SEVERITY --ignorefile "$IGNORE" --format json --scanners vuln --output $OUTPUT --quiet "$IMAGE_ARGS"
+  bin/trivy i --policy "$TRIVY_POLICY_URL" --java-db-repository "$TRIVY_JAVA_DB_URL" --db-repository "$TRIVY_DB_URL" --exit-code 0 --severity $SEVERITY --ignorefile "$IGNORE" --format json --scanners vuln --output $OUTPUT --quiet "$IMAGE_ARGS"
   echo -n "    <br/>"
 )

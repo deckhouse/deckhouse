@@ -109,6 +109,10 @@ entries:
                     ru: Общие настройки
                   url: /security_software_setup.html
                 - title:
+                    en: Sysctl parameters
+                    ru: Параметры sysctl
+                  url: /security/sysctl.html
+                - title:
                     en: KESL
                     ru: KESL
                   url: /security/kesl.html
@@ -1178,10 +1182,6 @@ entries:
                     en: Configuration
                     ru: Настройки
                   url: /modules/operator-prometheus/configuration.html
-                - title:
-                    en: FAQ
-                    ru: FAQ
-                  url: /modules/operator-prometheus/faq.html
             - title:
                 en: okmeter
                 ru: okmeter

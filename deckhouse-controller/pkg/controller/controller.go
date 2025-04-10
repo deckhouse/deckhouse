@@ -19,10 +19,14 @@ package controller
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"os"
 	"sync"
+	"syscall"
 	"time"
 
 	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
+	envmgr "github.com/flant/addon-operator/pkg/module_manager/environment_manager"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/go-logr/logr"
@@ -175,13 +179,17 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 	configHandler := confighandler.New(runtimeManager.GetClient(), deckhouseConfigCh)
 	operator.SetupKubeConfigManager(configHandler)
 
-	// init module manager
+	// setup module manager
 	if err = operator.Setup(); err != nil {
 		return nil, fmt.Errorf("setup operator: %w", err)
 	}
 
 	moduleEventCh := make(chan events.ModuleEvent, 350)
 	operator.ModuleManager.SetModuleEventsChannel(moduleEventCh)
+	// set chrooted environment for modules
+	if len(os.Getenv("ADDON_OPERATOR_SHELL_CHROOT_DIR")) > 0 {
+		setModulesEnvironment(operator)
+	}
 
 	// instantiate ModuleDependency extender
 	moduledependency.Instance().SetModulesVersionHelper(func(moduleName string) (string, error) {
@@ -275,6 +283,87 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 	}, nil
 }
 
+func setModulesEnvironment(operator *addonoperator.AddonOperator) {
+	operator.ModuleManager.AddObjectsToChrootEnvironment([]envmgr.ObjectDescriptor{
+		{
+			Source:            "/deckhouse/python_lib",
+			Flags:             syscall.MS_BIND | syscall.MS_RDONLY,
+			Type:              envmgr.Mount,
+			TargetEnvironment: envmgr.ShellHookEnvironment,
+		},
+		{
+			Source:            "/deckhouse/candi",
+			Flags:             syscall.MS_BIND | syscall.MS_RDONLY,
+			Type:              envmgr.Mount,
+			TargetEnvironment: envmgr.ShellHookEnvironment,
+		},
+		{
+			Source:            "/deckhouse/helm_lib",
+			Flags:             syscall.MS_BIND | syscall.MS_RDONLY,
+			Type:              envmgr.Mount,
+			TargetEnvironment: envmgr.ShellHookEnvironment,
+		},
+		{
+			Source:            "/chroot/tmp",
+			Target:            "/tmp",
+			Flags:             syscall.MS_BIND,
+			Type:              envmgr.Mount,
+			TargetEnvironment: envmgr.EnabledScriptEnvironment,
+		},
+		{
+			Source:            "/usr",
+			Flags:             syscall.MS_BIND | syscall.MS_RDONLY,
+			Type:              envmgr.Mount,
+			TargetEnvironment: envmgr.EnabledScriptEnvironment,
+		},
+		{
+			Source:            "/bin",
+			Flags:             syscall.MS_BIND | syscall.MS_RDONLY,
+			Type:              envmgr.Mount,
+			TargetEnvironment: envmgr.EnabledScriptEnvironment,
+		},
+		{
+			Source:            "/lib",
+			Flags:             syscall.MS_BIND | syscall.MS_RDONLY,
+			Type:              envmgr.Mount,
+			TargetEnvironment: envmgr.EnabledScriptEnvironment,
+		},
+		{
+			Source:            "/lib64",
+			Flags:             syscall.MS_BIND | syscall.MS_RDONLY,
+			Type:              envmgr.Mount,
+			TargetEnvironment: envmgr.EnabledScriptEnvironment,
+		},
+		{
+			Source:            "/deckhouse/shell_lib",
+			Flags:             syscall.MS_BIND | syscall.MS_RDONLY,
+			Type:              envmgr.Mount,
+			TargetEnvironment: envmgr.EnabledScriptEnvironment,
+		},
+		{
+			Source:            "/deckhouse/shell-operator",
+			Flags:             syscall.MS_BIND | syscall.MS_RDONLY,
+			Type:              envmgr.Mount,
+			TargetEnvironment: envmgr.EnabledScriptEnvironment,
+		},
+		{
+			Source:            "/proc/sys/kernel/cap_last_cap",
+			Type:              envmgr.File,
+			TargetEnvironment: envmgr.EnabledScriptEnvironment,
+		},
+		{
+			Source:            "/deckhouse/shell_lib.sh",
+			Type:              envmgr.File,
+			TargetEnvironment: envmgr.EnabledScriptEnvironment,
+		},
+		{
+			Target:            "/dev/null",
+			Type:              envmgr.DevNull,
+			TargetEnvironment: envmgr.EnabledScriptEnvironment,
+		},
+	}...)
+}
+
 // Start loads and ensures modules from FS, starts controllers and runs deckhouse config event loop
 func (c *DeckhouseController) Start(ctx context.Context) error {
 	// run preflight check
@@ -306,7 +395,7 @@ func (c *DeckhouseController) startModulesControllers(ctx context.Context) {
 	// syncs the fs with the cluster state, starts the manager and various controllers
 	go func() {
 		if err := c.runtimeManager.Start(ctx); err != nil {
-			c.log.Fatalf("start controller manager failed: %s", err)
+			c.log.Fatal("start controller manager failed", log.Err(err))
 		}
 	}()
 
@@ -328,17 +417,17 @@ func (c *DeckhouseController) syncDeckhouseSettings() {
 		settings.Update.DisruptionApprovalMode = "Auto"
 
 		if err := yaml.Unmarshal(configBytes, settings); err != nil {
-			c.log.Errorf("failed to unmarshal the deckhouse setting: %s", err)
+			c.log.Error("failed to unmarshal the deckhouse setting", log.Err(err))
 			continue
 		}
 
-		c.log.Debugf("update deckhouse settings")
+		c.log.Debug("update deckhouse settings")
 		c.settings.Set(settings)
 
 		// if deckhouse moduleConfig has releaseChannel unset, apply default releaseChannel Stable to the embedded policy
 		if len(settings.ReleaseChannel) == 0 {
 			settings.ReleaseChannel = "Stable"
-			c.log.Debugf("the embedded deckhouse policy release channel set to %q", settings.ReleaseChannel)
+			c.log.Debug("the embedded deckhouse policy release channel set", slog.String("release channel", settings.ReleaseChannel))
 		}
 
 		c.embeddedPolicy.Set(settings)

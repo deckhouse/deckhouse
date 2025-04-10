@@ -15,6 +15,7 @@
 package terraform
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -251,7 +252,7 @@ func (r *Runner) checkTerraformIsRunning() bool {
 	return (atomic.LoadInt32(&r.terraformRunningCounter) % 2) > 0
 }
 
-func (r *Runner) Init() error {
+func (r *Runner) Init(ctx context.Context) error {
 	if r.stopped {
 		return ErrRunnerStopped
 	}
@@ -318,7 +319,7 @@ func (r *Runner) Init() error {
 			r.workingDir,
 		}
 
-		_, err := r.execTerraform(args...)
+		_, err := r.execTerraform(ctx, args...)
 		return err
 	})
 }
@@ -335,10 +336,10 @@ func (r *Runner) getHook() InfraActionHook {
 	return r.hook
 }
 
-func (r *Runner) runBeforeActionAndWaitReady() error {
+func (r *Runner) runBeforeActionAndWaitReady(ctx context.Context) error {
 	hook := r.getHook()
 
-	runPostAction, err := hook.BeforeAction(r)
+	runPostAction, err := hook.BeforeAction(ctx, r)
 	if err != nil {
 		return err
 	}
@@ -348,7 +349,7 @@ func (r *Runner) runBeforeActionAndWaitReady() error {
 		resErr = multierror.Append(resErr, err)
 
 		if runPostAction {
-			err := hook.AfterAction(r)
+			err := hook.AfterAction(ctx, r)
 			if err != nil {
 				resErr = multierror.Append(resErr, err)
 			}
@@ -360,7 +361,7 @@ func (r *Runner) runBeforeActionAndWaitReady() error {
 	return nil
 }
 
-func (r *Runner) isSkipChanges() (skip bool, err error) {
+func (r *Runner) isSkipChanges(ctx context.Context) (skip bool, err error) {
 	// first verify destructive change
 	if r.changesInPlan == PlanHasDestructiveChanges && r.changeSettings.AutoDismissDestructive {
 		// skip plan
@@ -381,18 +382,18 @@ func (r *Runner) isSkipChanges() (skip bool, err error) {
 		}
 	}
 
-	err = r.runBeforeActionAndWaitReady()
+	err = r.runBeforeActionAndWaitReady(ctx)
 
 	return false, err
 }
 
-func (r *Runner) Apply() error {
+func (r *Runner) Apply(ctx context.Context) error {
 	if r.stopped {
 		return ErrRunnerStopped
 	}
 
 	return r.logger.LogProcess("default", "terraform apply ...", func() error {
-		skip, err := r.isSkipChanges()
+		skip, err := r.isSkipChanges(ctx)
 		if err != nil {
 			return err
 		}
@@ -425,21 +426,21 @@ func (r *Runner) Apply() error {
 			)
 		}
 
-		_, err = r.execTerraform(args...)
+		_, err = r.execTerraform(ctx, args...)
 
 		var errRes *multierror.Error
 		errRes = multierror.Append(errRes, err)
 
 		// yes, do not check err from exec terraform
 		// always run post action if need
-		err = r.getHook().AfterAction(r)
+		err = r.getHook().AfterAction(ctx, r)
 		errRes = multierror.Append(errRes, err)
 
 		return errRes.ErrorOrNil()
 	})
 }
 
-func (r *Runner) Plan(opts PlanOptions) error {
+func (r *Runner) Plan(ctx context.Context, opts PlanOptions) error {
 	if r.stopped {
 		return ErrRunnerStopped
 	}
@@ -465,10 +466,10 @@ func (r *Runner) Plan(opts PlanOptions) error {
 		}
 		args = append(args, r.workingDir)
 
-		exitCode, err := r.execTerraform(args...)
+		exitCode, err := r.execTerraform(ctx, args...)
 		if exitCode == terraformHasChangesExitCode {
 			r.changesInPlan = PlanHasChanges
-			destructiveChanges, err := r.getPlanDestructiveChanges(tmpFile.Name())
+			destructiveChanges, err := r.getPlanDestructiveChanges(ctx, tmpFile.Name())
 			if err != nil {
 				return err
 			}
@@ -486,7 +487,7 @@ func (r *Runner) Plan(opts PlanOptions) error {
 	})
 }
 
-func (r *Runner) GetTerraformOutput(output string) ([]byte, error) {
+func (r *Runner) GetTerraformOutput(ctx context.Context, output string) ([]byte, error) {
 	if r.stopped {
 		return nil, ErrRunnerStopped
 	}
@@ -502,7 +503,7 @@ func (r *Runner) GetTerraformOutput(output string) ([]byte, error) {
 	}
 	args = append(args, output)
 
-	result, err := r.terraformExecutor.Output(args...)
+	result, err := r.terraformExecutor.Output(ctx, args...)
 	if err != nil {
 		var ee *exec.ExitError
 		if errors.As(err, &ee) {
@@ -514,7 +515,7 @@ func (r *Runner) GetTerraformOutput(output string) ([]byte, error) {
 	return result, nil
 }
 
-func (r *Runner) Destroy() error {
+func (r *Runner) Destroy(ctx context.Context) error {
 	if r.stopped {
 		return ErrRunnerStopped
 	}
@@ -537,7 +538,7 @@ func (r *Runner) Destroy() error {
 	}
 	planDestroyArgs = append(planDestroyArgs, r.workingDir)
 
-	_, err := r.execTerraform(planDestroyArgs...)
+	_, err := r.execTerraform(ctx, planDestroyArgs...)
 	if err != nil {
 		return fmt.Errorf("Cannot prepare terrafrom destroy plan: %w", err)
 	}
@@ -548,7 +549,7 @@ func (r *Runner) Destroy() error {
 		}
 	}
 
-	err = r.runBeforeActionAndWaitReady()
+	err = r.runBeforeActionAndWaitReady(ctx)
 	if err != nil {
 		return err
 	}
@@ -569,14 +570,14 @@ func (r *Runner) Destroy() error {
 		}
 		args = append(args, r.workingDir)
 
-		_, err = r.execTerraform(args...)
+		_, err = r.execTerraform(ctx, args...)
 
 		var errRes *multierror.Error
 		errRes = multierror.Append(errRes, err)
 
 		// yes, do not check err from exec terraform
 		// always run post action if need
-		err = r.getHook().AfterAction(r)
+		err = r.getHook().AfterAction(ctx, r)
 		errRes = multierror.Append(errRes, err)
 
 		return errRes.ErrorOrNil()
@@ -648,7 +649,7 @@ func (r *Runner) Stop() {
 	}
 }
 
-func (r *Runner) execTerraform(args ...string) (int, error) {
+func (r *Runner) execTerraform(ctx context.Context, args ...string) (int, error) {
 	if r.checkTerraformIsRunning() {
 		return 0, fmt.Errorf("Terraform have been already executed.")
 	}
@@ -656,7 +657,7 @@ func (r *Runner) execTerraform(args ...string) (int, error) {
 	r.switchTerraformIsRunning()
 	defer r.switchTerraformIsRunning()
 	r.terraformExecutor.SetExecutorLogger(r.logger)
-	exitCode, err := r.terraformExecutor.Exec(args...)
+	exitCode, err := r.terraformExecutor.Exec(ctx, args...)
 	r.logger.LogInfoF("Terraform runner %q process exited.\n", r.step)
 
 	return exitCode, err
@@ -675,14 +676,14 @@ type ValueChange struct {
 	Type         string      `json:"type,omitempty"`
 }
 
-func (r *Runner) getPlanDestructiveChanges(planFile string) (*PlanDestructiveChanges, error) {
+func (r *Runner) getPlanDestructiveChanges(ctx context.Context, planFile string) (*PlanDestructiveChanges, error) {
 	args := []string{
 		"show",
 		"-json",
 		planFile,
 	}
 
-	result, err := r.terraformExecutor.Output(args...)
+	result, err := r.terraformExecutor.Output(ctx, args...)
 	if err != nil {
 		var ee *exec.ExitError
 		if errors.As(err, &ee) {

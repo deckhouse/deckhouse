@@ -67,8 +67,8 @@ spec:
                   type: string
                   description: |
                     The current state of resources managed by the HPEClusterConnection custom resource:
-                    - Failed (if the controller received incorrect resource configuration or some errors occurred during the operation).
-                    - Created (if everything went fine).
+                    - `Failed` — if the controller received incorrect resource configuration or some errors occurred during the operation;
+                    - `Created` — if everything went fine.
                   enum:
                     - Failed
                     - Created

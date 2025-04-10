@@ -90,8 +90,8 @@ spec:
                   type: string
                   description: |
                     The current state of the S3 storage class:
-                    - Failed (indicating errors in the configuration or setup).
-                    - Created (indicating successful creation and operation).
+                    - `Failed` — indicating errors in the configuration or setup;
+                    - `Created` — indicating successful creation and operation.
                   enum:
                     - Failed
                     - Created

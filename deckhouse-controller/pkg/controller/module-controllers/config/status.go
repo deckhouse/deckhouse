@@ -19,6 +19,7 @@ package config
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"time"
 
@@ -43,7 +44,7 @@ import (
 
 // refreshModule refreshes module in cluster
 func (r *reconciler) refreshModule(ctx context.Context, moduleName string) error {
-	r.log.Debugf("refresh the %q module status", moduleName)
+	r.log.Debug("refresh module status", slog.String("name", moduleName))
 
 	// events happen quite often, so conflicts happen often, default backoff not suitable
 	backoff := wait.Backoff{
@@ -68,7 +69,7 @@ func (r *reconciler) refreshModule(ctx context.Context, moduleName string) error
 
 // refreshModuleConfig refreshes module config in cluster
 func (r *reconciler) refreshModuleConfig(ctx context.Context, configName string) error {
-	r.log.Debugf("refresh the %q module config status", configName)
+	r.log.Debug("refresh module config status", slog.String("name", configName))
 
 	// clear metrics
 	metricGroup := fmt.Sprintf("obsoleteVersion_%s", configName)
@@ -79,7 +80,7 @@ func (r *reconciler) refreshModuleConfig(ctx context.Context, configName string)
 		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			if err := r.client.Get(ctx, client.ObjectKey{Name: configName}, moduleConfig); err != nil {
 				if apierrors.IsNotFound(err) {
-					r.log.Debugf("the module '%s' config not found", configName)
+					r.log.Debug("module config not found", slog.String("name", configName))
 					return nil
 				}
 				return fmt.Errorf("refresh the '%s' module config: %w", configName, err)

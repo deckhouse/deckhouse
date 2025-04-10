@@ -40,12 +40,12 @@ func RegisterWaitToBecomeReadyHook() bool {
 func isAllMasterNodesInitialized(input *go_hook.HookInput, dc dependency.Container) (bool, error) {
 	kubeClient, err := dc.GetK8sClient()
 	if err != nil {
-		input.Logger.Errorf("%v", err)
+		input.Logger.Error(err.Error())
 		return false, err
 	}
 	masterNodes, err := kubeClient.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{LabelSelector: "node-role.kubernetes.io/control-plane="})
 	if err != nil {
-		input.Logger.Errorf("%v", err)
+		input.Logger.Error(err.Error())
 		return false, err
 	}
 

@@ -11,7 +11,7 @@ spec:
                 type:
                   description: |
                     Тип группы томов (Volume Group):
-                    - Local — локальная, если используемые устройства не распределены (не Shared LUN).
+                    - `Local` — локальная, если используемые устройства не распределены (не Shared LUN).
                 blockDeviceNames:
                   description: |
                     Массив имен ресурсов блочных устройств для создания группы томов (Volume Group).

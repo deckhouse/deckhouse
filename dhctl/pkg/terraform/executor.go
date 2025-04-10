@@ -17,6 +17,7 @@ package terraform
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -34,14 +35,18 @@ import (
 var terraformLogsMatcher = regexp.MustCompile(`(\s+\[(TRACE|DEBUG|INFO|WARN|ERROR)\]\s+|Use TF_LOG=TRACE|there is no package|\-\-\-\-)`)
 
 type Executor interface {
-	Output(...string) ([]byte, error)
-	Exec(...string) (int, error)
+	Output(context.Context, ...string) ([]byte, error)
+	Exec(context.Context, ...string) (int, error)
 	SetExecutorLogger(logger log.Logger)
 	Stop()
 }
 
-func terraformCmd(args ...string) *exec.Cmd {
-	cmd := exec.Command("terraform", args...)
+func terraformCmd(ctx context.Context, args ...string) *exec.Cmd {
+	cmd := exec.CommandContext(ctx, "terraform", args...)
+	cmd.Cancel = func() error {
+		return syscall.Kill(-cmd.Process.Pid, syscall.SIGINT)
+	}
+
 	cmd.Env = append(
 		os.Environ(),
 		"TF_IN_AUTOMATION=yes",
@@ -66,16 +71,16 @@ type CMDExecutor struct {
 	logger log.Logger
 }
 
-func (c *CMDExecutor) Output(args ...string) ([]byte, error) {
-	return terraformCmd(args...).Output()
+func (c *CMDExecutor) Output(ctx context.Context, args ...string) ([]byte, error) {
+	return terraformCmd(ctx, args...).Output()
 }
 
 func (c *CMDExecutor) SetExecutorLogger(logger log.Logger) {
 	c.logger = logger
 }
 
-func (c *CMDExecutor) Exec(args ...string) (int, error) {
-	c.cmd = terraformCmd(args...)
+func (c *CMDExecutor) Exec(ctx context.Context, args ...string) (int, error) {
+	c.cmd = terraformCmd(ctx, args...)
 
 	// Start terraform as a leader of the new process group to prevent
 	// os.Interrupt (SIGINT) signal from the shell when Ctrl-C is pressed.
@@ -174,11 +179,11 @@ type fakeExecutor struct {
 	logger log.Logger
 }
 
-func (f *fakeExecutor) Output(parts ...string) ([]byte, error) {
+func (f *fakeExecutor) Output(_ context.Context, parts ...string) ([]byte, error) {
 	result := f.data[parts[0]]
 	return result.resp, result.err
 }
-func (f *fakeExecutor) Exec(parts ...string) (int, error) {
+func (f *fakeExecutor) Exec(_ context.Context, parts ...string) (int, error) {
 	result := f.data[parts[0]]
 	return result.code, result.err
 }

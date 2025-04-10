@@ -3,28 +3,32 @@ title: "SCSI-based data storage"
 permalink: en/storage/admin/external/scsi.html
 ---
 
+{% alert level="info" %}
+Available in some commercial editions:  **EE**
+{% endalert %}
+
 Deckhouse supports managing storage connected via iSCSI or Fibre Channel, enabling working with volumes at the block device level. This allows for the integration of storage systems with Kubernetes and management through a CSI driver.
 
 This page provides instructions for connecting SCSI devices in Deckhouse, creating SCSITarget, StorageClass, and verifying system functionality.
 
 ### Supported Features
 
-- Detecting LUN via iSCSI/FC.
-- Creating PersistentVolume from pre-provisioned LUN.
-- Deleting PersistentVolume and wiping data on LUN.
-- Attaching LUN to nodes via iSCSI/FC.
-- Creating `multipath` devices and mounting them in pods.
+- Detecting LUN via iSCSI/FC;
+- Creating PersistentVolume from pre-provisioned LUN;
+- Deleting PersistentVolume and wiping data on LUN;
+- Attaching LUN to nodes via iSCSI/FC;
+- Creating `multipath` devices and mounting them in pods;
 - Detaching LUN from nodes.
 
 ### Limitations
 
-- Creating LUN on storage is not supported.
-- Resizing LUN is not possible.
+- Creating LUN on storage is not supported;
+- Resizing LUN is not possible;
 - Snapshots are not supported.
 
 ## System Requirements
 
-- A properly configured and available storage system with iSCSI/FC connectivity.
+- A properly configured and available storage system with iSCSI/FC connectivity;
 - Unique IQN assigned to each Kubernetes node in `/etc/iscsi/initiatorname.iscsi`.
 
 ## Setup and Configuration
@@ -34,7 +38,7 @@ All commands should be executed on a machine with administrative access to the K
 ### Enabling the module
 
 To work with storage connected via SCSI, enable the `csi-scsi-generic` module. This will result in:
-- CSI driver registration.
+- CSI driver registration;
 - The launch of `csi-scsi-generic` service pods.
 
 ```shell

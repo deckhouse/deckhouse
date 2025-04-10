@@ -4,6 +4,7 @@
 
 
  - All data sources created with the GrafanaAdditionalDatasource custom resource will have their UIDs changed.
+ - Ingress-nginx pods will restart. The validation of the generated NGINX configuration during the validation of `Ingress` resources is disabled until finding a way of running validations safely.
  - NGINX Ingress controller pods will be restarted.
 
 ## Features
@@ -29,6 +30,7 @@
  - **[log-shipper]** Added the `keepDeletedFilesOpenedFor` option to Vector to set the duration of keeping deleted files open when log storage is unavailable. [#10641](https://github.com/deckhouse/deckhouse/pull/10641)
  - **[multitenancy-manager]** Added the ability to view installed resources in the project status.
     Also, non-existent resources in the template are now automatically checked and skipped during project rendering. [#11898](https://github.com/deckhouse/deckhouse/pull/11898)
+ - **[prometheus]** add grafana enable flag [#12460](https://github.com/deckhouse/deckhouse/pull/12460)
  - **[upmeter]** Added `backup.deckhouse.io/cluster-config` label to relevant module CRDs. [#10568](https://github.com/deckhouse/deckhouse/pull/10568)
  - **[user-authn]** Added `highAvailability` option to the DexAuthenticator custom resource. [#11049](https://github.com/deckhouse/deckhouse/pull/11049)
     All authenticators deployed in Deckhouse will inherit the `highAvailability` option from the corresponding module instead of using this option's value from the `user-authn` module. Therefore, for example, if the `prometheus` module runs in the non-HA mode, the DexAuthenticator instance will also be deployed without HA.
@@ -62,6 +64,9 @@
  - **[cni-cilium]** L2 neigh discovery (arp flood) disabled. [#12078](https://github.com/deckhouse/deckhouse/pull/12078)
  - **[common]** Fixed a security vulnerability in `task`. [#11572](https://github.com/deckhouse/deckhouse/pull/11572)
  - **[control-plane-manager]** Fixed a security vulnerability. [#11536](https://github.com/deckhouse/deckhouse/pull/11536)
+ - **[deckhouse]** Fix checking automatic kubernetes version in managed clusters. [#12685](https://github.com/deckhouse/deckhouse/pull/12685)
+ - **[deckhouse]** Explicitly set ports in d8-kube-dns deployment. [#12658](https://github.com/deckhouse/deckhouse/pull/12658)
+ - **[deckhouse]** Set EnabledByModuleConfig condition by default for modules without this condition. [#12558](https://github.com/deckhouse/deckhouse/pull/12558)
  - **[deckhouse]** Add initial module config validation. [#12465](https://github.com/deckhouse/deckhouse/pull/12465)
  - **[deckhouse]** Add initial module config validation. [#12227](https://github.com/deckhouse/deckhouse/pull/12227)
  - **[deckhouse]** Fix module.yaml ignored when weight == 0. [#12254](https://github.com/deckhouse/deckhouse/pull/12254)
@@ -75,10 +80,13 @@
  - **[dhctl]** Fix broken connection-config in CLI and support sudoPassword in SSHConfig. [#12036](https://github.com/deckhouse/deckhouse/pull/12036)
  - **[dhctl]** Fixed a bug that prevented PersistentVolumes from being properly deleted by the `dhctl destroy` command in Stronghold. [#11878](https://github.com/deckhouse/deckhouse/pull/11878)
  - **[dhctl]** Fixed the behavior of static cluster destruction. [#11059](https://github.com/deckhouse/deckhouse/pull/11059)
+ - **[docs]** Update Deckhouse CLI installation guide [#12573](https://github.com/deckhouse/deckhouse/pull/12573)
  - **[docs]** Fixed a security vulnerability in `docs-builder`. [#11583](https://github.com/deckhouse/deckhouse/pull/11583)
  - **[extended-monitoring]** Fixed security vulnerabilities in `events-exporter`. [#11442](https://github.com/deckhouse/deckhouse/pull/11442)
  - **[extended-monitoring]** Fixed security vulnerabilities in `extended-monitoring-exporter`. [#11425](https://github.com/deckhouse/deckhouse/pull/11425)
  - **[extended-monitoring]** Fixed security vulnerabilities in `image-availability-exporter`. [#11336](https://github.com/deckhouse/deckhouse/pull/11336)
+ - **[ingress-nginx]** latest CVE fixes backported. [#12746](https://github.com/deckhouse/deckhouse/pull/12746)
+    Ingress-nginx pods will restart. The validation of the generated NGINX configuration during the validation of `Ingress` resources is disabled until finding a way of running validations safely.
  - **[ingress-nginx]** Fixed graceful shutdown handling for Ingress controller pods. [#11656](https://github.com/deckhouse/deckhouse/pull/11656)
     NGINX Ingress controller pods will be restarted.
  - **[ingress-nginx]** Fixed a bug related to dynamic libraries in the NGINX Ingress controller pods. [#11644](https://github.com/deckhouse/deckhouse/pull/11644)
@@ -90,6 +98,7 @@
  - **[local-path-provisioner]** Fixed security context settings for `helper-pod`. [#11322](https://github.com/deckhouse/deckhouse/pull/11322)
  - **[loki]** Fixed minor security vulnerabilities. [#11530](https://github.com/deckhouse/deckhouse/pull/11530)
  - **[loki]** Fixed the build parameters. [#11399](https://github.com/deckhouse/deckhouse/pull/11399)
+ - **[metallb]** Add clearing of alert metric group D8MetallbObsoleteLayer2PoolsAreUsed [#12648](https://github.com/deckhouse/deckhouse/pull/12648)
  - **[metallb]** Fixed module startup error with empty Selector value in SVC. [#12328](https://github.com/deckhouse/deckhouse/pull/12328)
  - **[metallb]** Bumped Go module dependencies to fix security vulnerabilities. [#11650](https://github.com/deckhouse/deckhouse/pull/11650)
  - **[monitoring-applications]** Fix module dependencies. The `monitoring-applications` module was affected and disabled by the enabled script. [#12428](https://github.com/deckhouse/deckhouse/pull/12428)
@@ -153,6 +162,7 @@
  - **[admission-policy-engine]** Fixes policies schemas. Allow to exclude namespaces or use only object labels. [#12292](https://github.com/deckhouse/deckhouse/pull/12292)
  - **[admission-policy-engine]** Fixed security vulnerabilities and updated the `trivy` build. [#11568](https://github.com/deckhouse/deckhouse/pull/11568)
  - **[admission-policy-engine]** Bumped `gatekeeper` and refactored the build. [#11356](https://github.com/deckhouse/deckhouse/pull/11356)
+ - **[candi]** Update Deckhouse CLI to 0.11.3 [#12691](https://github.com/deckhouse/deckhouse/pull/12691)
  - **[candi]** update d8-cli [#12104](https://github.com/deckhouse/deckhouse/pull/12104)
  - **[candi]** Bump patch versions of Kubernetes images: `v1.29.14`, `v1.30.1`, `v1.31.6` [#12081](https://github.com/deckhouse/deckhouse/pull/12081)
     Kubernetes control-plane components will restart, kubelet will restart.
@@ -209,10 +219,13 @@
  - **[dashboard]** up log level  and version component [#12105](https://github.com/deckhouse/deckhouse/pull/12105)
  - **[deckhouse]** Refactored RBAC configuration. [#11605](https://github.com/deckhouse/deckhouse/pull/11605)
  - **[descheduler]** Updated the build and fixed security vulnerabilities. [#11221](https://github.com/deckhouse/deckhouse/pull/11221)
+ - **[dhctl]** Add opportunity to bootstrap terranodes parallel with env DHCTL_PARALLEL_CLOUD_PERMANENT_NODES_BOOTSTRAP revert sequentially by default [#12560](https://github.com/deckhouse/deckhouse/pull/12560)
  - **[dhctl]** Reverted CNI configuration to the approach used in Deckhouse 1.67, using the `d8-cni-configuration` secret. [#11935](https://github.com/deckhouse/deckhouse/pull/11935)
  - **[dhctl]** Replaced Logrus to implement Slog and deleted the "simple" logger. [#10909](https://github.com/deckhouse/deckhouse/pull/10909)
  - **[dhctl]** (Reverted) Prepared to migrate from using the `d8-cni-configuration` secret to ModuleConfigs for CNI configuration. [#10517](https://github.com/deckhouse/deckhouse/pull/10517)
+ - **[docs]** Update storage section in the documentation. [#12394](https://github.com/deckhouse/deckhouse/pull/12394)
  - **[docs]** Updated d8 mirror-related FAQ and Deckhouse CLI page in preparation for d8-cli v0.10 GA release [#12019](https://github.com/deckhouse/deckhouse/pull/12019)
+ - **[documentation]** Fix bugs is navigation. [#12505](https://github.com/deckhouse/deckhouse/pull/12505)
  - **[documentation]** Bumped the `docs-builder` dependencies. [#11742](https://github.com/deckhouse/deckhouse/pull/11742)
  - **[global-hooks]** Reverted CNI configuration to the approach used in Deckhouse 1.67, using the `d8-cni-configuration` secret. [#11935](https://github.com/deckhouse/deckhouse/pull/11935)
  - **[global-hooks]** (Reverted) Prepared to migrate from using the `d8-cni-configuration` secret to ModuleConfigs for CNI configuration. [#10517](https://github.com/deckhouse/deckhouse/pull/10517)
