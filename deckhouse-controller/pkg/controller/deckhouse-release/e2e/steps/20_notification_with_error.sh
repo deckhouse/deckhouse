@@ -22,6 +22,7 @@ kubectl patch mc deckhouse --type=merge -p '{"spec": {"settings": {"releaseChann
 
 kubectl apply -f - <<"EOF"
 apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
 approved: false
 metadata:
   annotations:
@@ -37,8 +38,8 @@ kubectl wait --for=jsonpath='{.status.phase}'=Deployed deckhouserelease/v1.65.0
 
 kubectl apply -f - <<"EOF"
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
+approved: false
 metadata:
   annotations:
     dryrun: "true"

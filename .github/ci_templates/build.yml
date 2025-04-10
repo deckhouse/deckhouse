@@ -15,8 +15,8 @@ steps:
   - name: Run go generate
     run: |
       {!{/* TODO replace with 'make generate' when make become available on runners */}!}
-      (cd tools && go generate)
-      (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate)
+      (cd tools && go generate -v)
+      (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
 
   - name: Check generated code
     run: |
