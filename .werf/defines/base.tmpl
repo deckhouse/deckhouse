@@ -80,25 +80,12 @@ import:
   to: /
   before: setup
   includePaths:
-  - usr/local
+  - usr
   - lib/ld-musl-x86_64.so.1
-  - usr/lib64/libz.so*
-  - usr/lib64/libexpat.so*
-  - usr/lib64/libssl.so.*
-  - usr/lib64/libcrypto.so.*
-  - usr/lib64/libpthread.so.0*
-  - usr/bin/openssl
   - etc/pki
-  - usr/share/ca-certificates/ca-bundle.crt
-  - usr/lib64/libffi.so*
-  - usr/lib64/libb2.so*
-  - usr/share/vim
   - etc/vim
   - etc/bash_completion.d
   - etc/bashrc.d/bash_completion.sh
-  - usr/share/bash-completion
-  - usr/lib/locale/C.utf8
-  - usr/bin/vim-console
 {{ include "base components imports" (dict "k8sVersions" $context.k8sVersions "CandiVersionMap" $context.CandiVersionMap ) }}
 
 - image: common/distroless
