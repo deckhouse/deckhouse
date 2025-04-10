@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2025 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -256,7 +256,7 @@ func bundleSSHOutputHandler(
 					*isBashibleTimeout = true
 					if cmd != nil {
 						// Force kill bashible
-						_ = cmd.Session.Signal(ssh.SIGABRT)
+						_ = cmd.session.Signal(ssh.SIGABRT)
 					}
 					return
 				}

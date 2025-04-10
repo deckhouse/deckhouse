@@ -1,6 +1,6 @@
 package gossh
 
-// Copyright 2021 Flant JSC
+// Copyright 2025 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ import (
 
 type SSHCommand struct {
 	sshClient *Client
-	Session   *ssh.Session
+	session   *ssh.Session
 
 	Name string
 	Args []string
@@ -89,7 +89,6 @@ func NewSSHCommand(client *Client, name string, arg ...string) *SSHCommand {
 			!strings.HasSuffix(args[i], `"`) &&
 			strings.Contains(args[i], " ") {
 			args[i] = strconv.Quote(args[i])
-			// cmd = cmd + args[i] + " "
 		}
 	}
 
@@ -98,9 +97,6 @@ func NewSSHCommand(client *Client, name string, arg ...string) *SSHCommand {
 
 	err = retry.NewSilentLoop("Establish new session", 10, 5*time.Second).Run(func() error {
 		session, err = client.sshClient.NewSession()
-		// if err != nil {
-		// 	client.Start()
-		// }
 		return err
 	})
 
@@ -111,7 +107,7 @@ func NewSSHCommand(client *Client, name string, arg ...string) *SSHCommand {
 	return &SSHCommand{
 		// Executor: process.NewDefaultExecutor(sess.Run(cmd)),
 		sshClient: client,
-		Session:   session,
+		session:   session,
 		Name:      name,
 		Args:      args,
 		Env:       os.Environ(),
@@ -136,7 +132,7 @@ func (c *SSHCommand) Start() error {
 		return err
 	}
 
-	err = c.Session.Start(command)
+	err = c.session.Start(command)
 	if err != nil {
 		return err
 	}
@@ -144,14 +140,14 @@ func (c *SSHCommand) Start() error {
 	if c.WaitHandler != nil {
 		c.ProcessWait()
 	} else {
-		err = c.Session.Wait()
+		err = c.session.Wait()
 		if err != nil {
 			return err
 		}
 	}
 
 	log.DebugF("Register stoppable: '%s'\n", command)
-	c.sshClient.RegisterSession(c.Session)
+	c.sshClient.RegisterSession(c.session)
 
 	return nil
 }
@@ -163,7 +159,7 @@ func (c *SSHCommand) ProcessWait() {
 
 	// wait for process in go routine
 	go func() {
-		waitErrCh <- c.Session.Wait()
+		waitErrCh <- c.session.Wait()
 	}()
 
 	go func() {
@@ -187,14 +183,12 @@ func (c *SSHCommand) ProcessWait() {
 			case err := <-waitErrCh:
 				if c.stop {
 					// Ignore error if Stop() was called.
-					// close(e.waitCh)
 					return
 				}
 				c.setWaitError(err)
 				if c.WaitHandler != nil {
 					c.WaitHandler(c.waitError)
 				}
-				// close(e.waitCh)
 				return
 			case <-c.stopCh:
 				c.stop = true
@@ -203,7 +197,7 @@ func (c *SSHCommand) ProcessWait() {
 				// The usual e.cmd.Process.Kill() is not working for the process
 				// started with the new process group (Setpgid: true).
 				// Negative pid number is used to send a signal to all processes in the group.
-				err := c.Session.Signal(ssh.SIGKILL)
+				err := c.session.Signal(ssh.SIGKILL)
 				if err != nil {
 					c.killError = err
 				}
@@ -214,7 +208,7 @@ func (c *SSHCommand) ProcessWait() {
 
 func (c *SSHCommand) Run(ctx context.Context) error {
 	log.DebugF("executor: run '%s'\n", c.cmd)
-	defer c.Session.Close()
+	defer c.session.Close()
 
 	err := c.Start()
 	if err != nil {
@@ -296,7 +290,6 @@ func (c *SSHCommand) Sudo(ctx context.Context) {
 			} else {
 				// Second prompt is error!
 				log.ErrorLn("Bad sudo password.")
-				// os.Exit(1)
 			}
 			return "reset"
 		}
@@ -322,10 +315,10 @@ func (c *SSHCommand) WithStderrHandler(handler func(string)) {
 func (c *SSHCommand) Cmd(ctx context.Context) {}
 
 func (c *SSHCommand) Output(ctx context.Context) ([]byte, []byte, error) {
-	defer c.Session.Close()
+	defer c.session.Close()
 
 	command := c.cmd + " " + strings.Join(c.Args, " ")
-	output, err := c.Session.Output(command)
+	output, err := c.session.Output(command)
 	if err != nil {
 		return output, nil, fmt.Errorf("execute command '%s': %w", c.Name, err)
 	}
@@ -333,10 +326,10 @@ func (c *SSHCommand) Output(ctx context.Context) ([]byte, []byte, error) {
 }
 
 func (c *SSHCommand) CombinedOutput(ctx context.Context) ([]byte, error) {
-	defer c.Session.Close()
+	defer c.session.Close()
 
 	command := c.cmd + " " + strings.Join(c.Args, " ")
-	output, err := c.Session.CombinedOutput(command)
+	output, err := c.session.CombinedOutput(command)
 	if err != nil {
 		return output, fmt.Errorf("execute command '%s': %w", c.Name, err)
 	}
@@ -378,10 +371,10 @@ func (c *SSHCommand) SetupStreamHandlers() (err error) {
 	// c.Cmd.Stdin = os.Stdin
 
 	// setup stdout stream handlers
-	if c.Session != nil && c.out == nil && c.stdoutHandler == nil && len(c.Matchers) == 0 {
-		c.Session.Stdout = os.Stdout
-		c.Session.Stdout = &c.OutBytes
-		c.Session.Stderr = &c.ErrBytes
+	if c.session != nil && c.out == nil && c.stdoutHandler == nil && len(c.Matchers) == 0 {
+		c.session.Stdout = os.Stdout
+		c.session.Stdout = &c.OutBytes
+		c.session.Stderr = &c.ErrBytes
 		return
 	}
 
@@ -391,12 +384,12 @@ func (c *SSHCommand) SetupStreamHandlers() (err error) {
 	if c.out != nil || c.stdoutHandler != nil || len(c.Matchers) > 0 {
 		// create pipe for stdout
 		var stdoutWritePipe *os.File
-		stdoutReadPipe, err = c.Session.StdoutPipe()
+		stdoutReadPipe, err = c.session.StdoutPipe()
 		if err != nil {
 			return fmt.Errorf("unable to create os pipe for stdout: %s", err)
 		}
 
-		c.Session.Stdout = stdoutWritePipe
+		c.session.Stdout = stdoutWritePipe
 
 		c.pipesMutex.Lock()
 		c.stdoutPipeFile = stdoutWritePipe
@@ -419,11 +412,11 @@ func (c *SSHCommand) SetupStreamHandlers() (err error) {
 		var stderrWritePipe *os.File
 		// stderrReadPipe, stderrWritePipe, err = os.Pipe()
 		log.DebugF("creating err pipe\n")
-		stderrReadPipe, err = c.Session.StderrPipe()
+		stderrReadPipe, err = c.session.StderrPipe()
 		if err != nil {
 			return fmt.Errorf("unable to create os pipe for stderr: %s", err)
 		}
-		c.Session.Stderr = stderrWritePipe
+		c.session.Stderr = stderrWritePipe
 
 		c.pipesMutex.Lock()
 		c.stderrPipeFile = stderrWritePipe
@@ -439,7 +432,7 @@ func (c *SSHCommand) SetupStreamHandlers() (err error) {
 	}
 
 	if c.StdinPipe {
-		c.Stdin, err = c.Session.StdinPipe()
+		c.Stdin, err = c.session.StdinPipe()
 		if err != nil {
 			return fmt.Errorf("open stdin pipe: %v", err)
 		}
@@ -625,7 +618,7 @@ func (c *SSHCommand) Stop() {
 		log.DebugF("Stop '%s': already stopped\n", c.cmd)
 		return
 	}
-	if c.Session == nil {
+	if c.session == nil {
 		log.DebugF("Stop '%s': session not started yet\n", c.cmd)
 		return
 	}
@@ -639,13 +632,12 @@ func (c *SSHCommand) Stop() {
 	if c.stopCh != nil {
 		close(c.stopCh)
 	}
-	// <-c.waitCh
 	log.DebugF("Stopped '%s' \n", c.cmd)
 	c.closePipes()
 	log.DebugF("Sending SIGINT to process '%s'\n", c.cmd)
-	c.Session.Signal(ssh.SIGINT)
+	c.session.Signal(ssh.SIGINT)
 	log.DebugF("Signal sent\n")
-	c.Session.Signal(ssh.SIGKILL)
+	c.session.Signal(ssh.SIGKILL)
 }
 
 func (c *SSHCommand) setWaitError(err error) {

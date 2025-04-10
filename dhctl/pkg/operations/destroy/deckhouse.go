@@ -89,6 +89,11 @@ func (g *DeckhouseDestroyer) GetKubeClient(ctx context.Context) (*client.Kuberne
 	return kubeCl, err
 }
 
+func (g *DeckhouseDestroyer) KubeClient() *client.KubernetesClient {
+	kubeClient, _ := g.GetKubeClient(context.Background())
+	return kubeClient
+}
+
 func (g *DeckhouseDestroyer) DeleteResources(ctx context.Context, cloudType string) error {
 	resourcesDestroyed, err := g.state.IsResourcesDestroyed()
 	if err != nil {

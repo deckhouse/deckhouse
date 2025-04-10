@@ -18,7 +18,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
@@ -27,9 +26,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/hook/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/maputil"
@@ -69,22 +67,14 @@ func (c *MasterNodeGroupController) populateNodeToHost(ctx *context.Context) err
 		nodesNames = append(nodesNames, nodeName)
 	}
 
-	nodeToHost := make(map[string]string)
-	var err error
-	if app.LegacyMode {
-		nodeToHost, err = clissh.CheckSSHHosts(userPassedHosts, nodesNames, string(c.convergeState.Phase), func(msg string) bool {
-			if ctx.CommanderMode() {
-				return true
-			}
-			return input.NewConfirmation().WithMessage(msg).Ask()
-		})
-	} else {
-		nodeToHost, err = gossh.CheckSSHHosts(userPassedHosts, nodesNames, string(c.convergeState.Phase), func(msg string) bool {
-			if ctx.CommanderMode() {
-				return true
-			}
-			return input.NewConfirmation().WithMessage(msg).Ask()
-		})
+	nodeToHost, err := ssh.CheckSSHHosts(userPassedHosts, nodesNames, string(c.convergeState.Phase), func(msg string) bool {
+		if ctx.CommanderMode() {
+			return true
+		}
+		return input.NewConfirmation().WithMessage(msg).Ask()
+	})
+	if err != nil {
+		return err
 	}
 
 	if err != nil {

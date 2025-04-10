@@ -243,11 +243,6 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	b.lastState = nil
 	defer b.PhasedExecutionContext.Finalize(stateCache)
 
-	// err = terminal.AskBecomePassword()
-	// if err != nil {
-	// 	return err
-	// }
-
 	printBanner()
 
 	clusterUUID, err := generateClusterUUID(stateCache)

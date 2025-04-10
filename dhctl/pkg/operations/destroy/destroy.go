@@ -24,18 +24,15 @@ import (
 	"strings"
 	"time"
 
-	sdk "github.com/deckhouse/module-sdk/pkg/utils"
 	"github.com/google/uuid"
 
-	dhv1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/v1"
 	v1 "k8s.io/api/core/v1"
-	k8errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	infra "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	convergectx "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
@@ -195,7 +192,7 @@ func (d *ClusterDestroyer) DestroyCluster(ctx context.Context, autoApprove bool)
 			ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
 			defer cancel()
 
-			err = createNodeUser(ctx, d.d8Destroyer.kubeCl.KubeClient, nodeUser)
+			err = entity.CreateNodeUser(ctx, d.d8Destroyer, nodeUser)
 			if err != nil {
 				return err
 			}
@@ -510,26 +507,4 @@ func (d *StaticMastersDestroyer) switchToNodeuser(settings *session.Session) err
 	d.SSHClient = newSSHClient
 
 	return nil
-}
-
-func createNodeUser(ctx context.Context, kubeCl client.KubeClient, nodeUser *dhv1.NodeUser) error {
-	nodeUserResource, err := sdk.ToUnstructured(nodeUser)
-	if err != nil {
-		return fmt.Errorf("failed to convert NodeUser to unstructured: %w", err)
-	}
-
-	return retry.NewLoop("Save dhctl converge NodeUser", 45, 10*time.Second).Run(func() error {
-		_, err = kubeCl.Dynamic().Resource(dhv1.NodeUserGVK).Create(ctx, nodeUserResource, metav1.CreateOptions{})
-
-		if err != nil {
-			if k8errors.IsAlreadyExists(err) {
-				_, err = kubeCl.Dynamic().Resource(dhv1.NodeUserGVK).Update(ctx, nodeUserResource, metav1.UpdateOptions{})
-				return err
-			}
-
-			return fmt.Errorf("failed to create NodeUser: %w", err)
-		}
-
-		return nil
-	})
 }
