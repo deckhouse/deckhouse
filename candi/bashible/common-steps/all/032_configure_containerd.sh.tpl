@@ -104,7 +104,7 @@ oom_score = 0
 
 [plugins]
   [plugins.'io.containerd.cri.v1.images']
-    snapshotter = "overlayfs"
+    snapshotter = "erofs"
     disable_snapshot_annotations = true
     discard_unpacked_layers = true
     max_concurrent_downloads = {{ $max_concurrent_downloads }}
