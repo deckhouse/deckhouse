@@ -1,0 +1,7 @@
+{%- for crd in site.data.schemas.crds %}
+{%- assign crdKind = crd[1]["kind"] %}
+{% if crdKind == 'CustomResourceDefinition' %}
+{%- assign crdKind = crd[1]["spec"]["names"]["kind"] %}
+{%  endif %}
+- [{{ crdKind }}]({{ crdKind | downcase |  append: "/" }})
+{%- endfor %}

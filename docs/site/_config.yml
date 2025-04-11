@@ -90,6 +90,22 @@ defaults:
       search_bage_enabled: true
       lang: en
   - scope:
+      path: "pages/admin"
+    values:
+      sidebar: kubernetes-platform
+  - scope:
+      path: "pages/architecture"
+    values:
+      sidebar: kubernetes-platform
+  - scope:
+      path: "pages/user"
+    values:
+      sidebar: kubernetes-platform
+  - scope:
+      path: "pages/reference"
+    values:
+      sidebar: kubernetes-platform
+  - scope:
       path: "pages/includes"
       type: "pages"
     values:
