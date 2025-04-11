@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"testing"
 
+	"bashible-apiserver/pkg/template/registry"
 	"sigs.k8s.io/yaml"
 )
 
@@ -106,9 +107,13 @@ updateEpoch: "1680009541"
 			},
 		},
 
-		Registry: &registry{
-			Address: "registry.deckhouse.io",
-			Path:    "/deckhouse/ce",
+		Registry: &registry.RegistryData{
+			Mode:           "Direct",
+			ImagesBase:     "registry.deckhouse.io/deckhouse/ce",
+			Version:        "Unknown",
+			ProxyEndpoints: []string{},
+			Hosts:          []registry.RegistryHostsObject{},
+			PrepullHosts:   []registry.RegistryHostsObject{},
 		},
 
 		Proxy: map[string]interface{}{

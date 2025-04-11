@@ -26,4 +26,5 @@ module "master-node" {
   tags = local.tags
   associate_ssh_accessible_sg = local.bastion_instance != {} ? false : true
   resourceManagementTimeout = var.resourceManagementTimeout
+  registryDataDeviceEnable = var.registryDataDeviceEnable
 }

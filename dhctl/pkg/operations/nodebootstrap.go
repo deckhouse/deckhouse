@@ -412,7 +412,7 @@ func BootstrapAdditionalMasterNode(
 		return nil, global.ErrConvergeInterrupted
 	}
 
-	err = entity.SaveMasterNodeTerraformState(ctx, kubeCl, nodeName, outputs.TerraformState, []byte(outputs.KubeDataDevicePath))
+	err = entity.SaveMasterNodeTerraformState(ctx, kubeCl, nodeName, outputs.TerraformState, outputs.GetDataDevices())
 	if err != nil {
 		return outputs, err
 	}
