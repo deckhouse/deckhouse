@@ -57,9 +57,6 @@ func TestNodeOSVersionRequirement(t *testing.T) {
 }
 
 func TestUnmetCloudConditionsRequirement(t *testing.T) {
-	// TODO: remove
-	t.Skip("UnmetCloudConditions check is not enabled")
-
 	requirements.RemoveValue(unmetCloudConditionsKey)
 
 	t.Run("unmetCloudConditions requirement runs successfully", func(t *testing.T) {
