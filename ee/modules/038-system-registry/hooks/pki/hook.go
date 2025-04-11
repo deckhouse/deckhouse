@@ -32,7 +32,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:              snapName,
 			ApiVersion:        "v1",
 			Kind:              "Secret",
-			NamespaceSelector: namespaceSelector,
+			NamespaceSelector: helpers.NamespaceSelector,
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{
 					"registry-pki",

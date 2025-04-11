@@ -52,6 +52,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func process(input *go_hook.HookInput, params Params, state *State) (bool, error) {
 	// TODO: this is stub code, need to write switch logic
 
+	if params.Mode == "" {
+		params.Mode = registry_const.ModeUnmanaged
+	}
+
 	if params.Mode != state.TargetMode {
 		input.Logger.Warn(
 			"Target mode change",

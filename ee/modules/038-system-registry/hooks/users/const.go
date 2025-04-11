@@ -8,22 +8,13 @@ package users
 import (
 	"fmt"
 	"regexp"
-
-	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 )
 
 const (
 	userSecretNamePrefix = "registry-user-"
-	namespaceName        = "d8-system"
 )
 
 var (
-	namespaceSelector = &types.NamespaceSelector{
-		NameSelector: &types.NameSelector{
-			MatchNames: []string{namespaceName},
-		},
-	}
-
 	userNameRegex  = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])*$`)
 	userNameMaxLen = 253 - len(userSecretNamePrefix)
 )

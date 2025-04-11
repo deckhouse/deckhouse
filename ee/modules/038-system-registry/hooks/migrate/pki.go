@@ -3,7 +3,7 @@ Copyright 2024 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
-package pki
+package migrate
 
 import (
 	"context"
@@ -23,21 +23,21 @@ import (
 )
 
 const (
-	snapMigrateSecrets = "migrate-secrets"
-	secretType         = "registry/pki"
+	pkiSnap       = "migrate-pki"
+	pkiSecretType = "registry/pki"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 3},
-	Queue:        "/modules/system-registry/users-migrate",
+	Queue:        "/modules/system-registry/pki-migrate",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:                         snapMigrateSecrets,
+			Name:                         pkiSnap,
 			ExecuteHookOnEvents:          ptr.Bool(false),
 			ExecuteHookOnSynchronization: ptr.Bool(false),
 			ApiVersion:                   "v1",
 			Kind:                         "Secret",
-			NamespaceSelector:            namespaceSelector,
+			NamespaceSelector:            helpers.NamespaceSelector,
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{
 					"registry-pki",
@@ -51,7 +51,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					return nil, fmt.Errorf("failed to convert secret \"%v\" to struct: %v", obj.GetName(), err)
 				}
 
-				if secret.Type != secretType {
+				if secret.Type != pkiSecretType {
 					return secret, nil
 				}
 
@@ -72,7 +72,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 	},
 }, dependency.WithExternalDependencies(func(input *go_hook.HookInput, dc dependency.Container) error {
-	secrets, err := helpers.SnapshotToList[v1core.Secret](input, snapMigrateSecrets)
+	secrets, err := helpers.SnapshotToList[v1core.Secret](input, pkiSnap)
 	if err != nil {
 		return fmt.Errorf("cannot get secrets: %w", err)
 	}
@@ -89,7 +89,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 		var newSecret v1core.Secret
 
-		newSecret.Type = secretType
+		newSecret.Type = pkiSecretType
 		newSecret.Name = secret.Name
 		newSecret.Namespace = secret.Namespace
 		newSecret.Labels = secret.Labels

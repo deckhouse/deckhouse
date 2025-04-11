@@ -32,7 +32,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:              userSecretsSnap,
 			ApiVersion:        "v1",
 			Kind:              "Secret",
-			NamespaceSelector: namespaceSelector,
+			NamespaceSelector: helpers.NamespaceSelector,
 			//ExecuteHookOnSynchronization: ptr.Bool(false),
 			FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 				var secret v1core.Secret
