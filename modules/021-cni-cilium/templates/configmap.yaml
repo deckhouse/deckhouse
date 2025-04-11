@@ -161,3 +161,10 @@ data:
   {{- end }}
 
   skip-crd-creation: "true"
+
+  {{- if ne .Values.cniCilium.encryptionMode "Disabled" }}
+  enable-wireguard: "true"
+  {{- if eq .Values.cniCilium.encryptionMode "NodeToNode" }}
+  encrypt-node: "true"
+  {{- end }}
+  {{- end }}
