@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package hooks
+package migrate
 
 import (
 	"context"
@@ -27,7 +27,7 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnStartup: &go_hook.OrderedConfig{Order: 10},
+	OnAfterHelm: &go_hook.OrderedConfig{Order: 10},
 }, dependency.WithExternalDependencies(removeDeckhouseEpslices))
 
 func removeDeckhouseEpslices(_ *go_hook.HookInput, dc dependency.Container) error {
