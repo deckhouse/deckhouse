@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/cns"
 	"github.com/vmware/govmomi/cns/types"
@@ -26,14 +26,14 @@ import (
 )
 
 type Discoverer struct {
-	logger               *log.Entry
+	logger               *log.Logger
 	clusterUUID          string
 	csiCompatibilityFlag string
 	govmomiClient        *govmomi.Client
 	cnsClient            *cns.Client
 }
 
-func NewDiscoverer(logger *log.Entry) *Discoverer {
+func NewDiscoverer(logger *log.Logger) *Discoverer {
 	clusterUUID := os.Getenv("CLUSTER_UUID")
 	if clusterUUID == "" {
 		logger.Fatalf("Cannot get CLUSTER_UUID env")
@@ -122,7 +122,7 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryDa
 
 func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error) {
 	if d.csiCompatibilityFlag != "none" {
-		d.logger.Warnln("Skipping orphaned disks discovery: \"legacy\" CSI driver in-use")
+		d.logger.Warn("Skipping orphaned disks discovery: \"legacy\" CSI driver in-use")
 		return []v1alpha1.DiskMeta{}, nil
 	}
 
