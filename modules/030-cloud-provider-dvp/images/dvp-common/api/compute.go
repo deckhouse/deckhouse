@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	cloudprovider "k8s.io/cloud-provider"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -178,6 +179,7 @@ func (c *ComputeService) GetDisksForDetachAndDelete(ctx context.Context, vm *v1a
 	if err != nil {
 		return nil, nil, err
 	}
+	klog.Infof("vmdbas: %v", vmbdas)
 
 	vmbdasMap := make(map[string]struct{})
 
@@ -194,9 +196,6 @@ func (c *ComputeService) GetDisksForDetachAndDelete(ctx context.Context, vm *v1a
 			continue
 		}
 
-		if !detachDisks {
-			continue
-		}
 		disksToDetach = append(disksToDetach, device.Name)
 	}
 
