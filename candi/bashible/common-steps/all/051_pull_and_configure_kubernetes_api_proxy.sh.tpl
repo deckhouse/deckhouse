@@ -18,7 +18,9 @@ bb-set-proxy
 
 {{ $kubernetes_api_proxy_image := printf "%s%s@%s" .registry.address .registry.path ( index .images.controlPlaneManager "kubernetesApiProxy" ) }}
 
-# Use local pinned images if module registrypackages is enabled. Otherwise pull from registry
+{{- /*
+Use local pinned images if module registrypackages is enabled. Otherwise pull from registry
+*/}}
 {{- if ((.images).registrypackages) }}
   {{- $kubernetes_api_proxy_image = "deckhouse.local/images:kubernetes-api-proxy" }}
 {{- else }}
