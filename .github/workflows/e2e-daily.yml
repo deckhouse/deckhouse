@@ -25,7 +25,6 @@ env:
   WERF_DRY_RUN: "false"
 
   # <template: werf_envs>
-  WERF_CHANNEL: "alpha"
   WERF_VERSION: "v2.35.0"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"

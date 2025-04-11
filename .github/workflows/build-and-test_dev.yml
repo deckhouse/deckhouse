@@ -25,7 +25,6 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_CHANNEL: "alpha"
   WERF_VERSION: "v2.35.0"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
@@ -884,7 +883,7 @@ jobs:
       - name: Run doc web build
         uses: werf/actions/build@v2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          version: ${{env.WERF_VERSION}}
         env:
           WERF_DIR: "docs/documentation"
           WERF_LOG_VERBOSE: "on"
@@ -944,7 +943,7 @@ jobs:
       - name: Run main web build
         uses: werf/actions/build@v2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          version: ${{env.WERF_VERSION}}
         env:
           WERF_DIR: "docs/site"
           WERF_LOG_VERBOSE: "on"
