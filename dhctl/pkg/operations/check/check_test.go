@@ -25,8 +25,6 @@ import (
 )
 
 func TestStatistics_Format(t *testing.T) {
-	t.Parallel()
-
 	var statistics Statistics
 	err := yaml.Unmarshal([]byte(statisticsYAML), &statistics)
 	require.NoError(t, err)

@@ -265,6 +265,7 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte, opts ..
 			return err
 		}
 		mcName := mc.GetName()
+		log.DebugF("Found module config for validate %s\n", mcName)
 		if mc.Spec.Enabled == nil && mcName != "global" {
 			// we need return error because on top level we want filter module configs from modulesources and move into resources
 			// global is special mc without module
@@ -305,6 +306,8 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte, opts ..
 		// we need return error because on top level we want filter documents without index and move into resources
 		return ErrSchemaNotFound
 	}
+
+	schema = transformer.TransformSchema(schema, &transformer.AdditionalPropertiesTransformer{})
 
 	isValid, err := openAPIValidate(&docForValidate, schema, options)
 	if !isValid {

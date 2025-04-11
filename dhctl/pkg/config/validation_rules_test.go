@@ -23,8 +23,6 @@ import (
 )
 
 func TestValidateClusterSettingsChanges(t *testing.T) {
-	t.Parallel()
-
 	tests := map[string]struct {
 		phase       phases.OperationPhase
 		oldConfig   string
@@ -325,7 +323,6 @@ masterNodeGroup:
 	for name, tt := range tests {
 		tt := tt
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
 			err := ValidateClusterSettingsChanges(tt.phase, tt.oldConfig, tt.newConfig, tt.schema, validateOpts...)
 			if tt.errContains == "" {
 				require.NoError(t, err)

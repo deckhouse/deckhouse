@@ -2,6 +2,47 @@
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
+  name: master
+spec:
+  nodeTemplate:
+    labels:
+      node-role.kubernetes.io/control-plane: ""
+      node-role.kubernetes.io/master: ""
+    taints:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/control-plane
+  nodeType: Static
+  staticInstances:
+    count: 1
+    labelSelector:
+      matchLabels:
+        role: master
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SSHCredentials
+metadata:
+  name: caps-master
+spec:
+  privateSSHKey: '${b64_SSH_KEY}'
+  user: '${MASTER_USER}'
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: StaticInstance
+metadata:
+  name: master
+  annotations:
+    static.node.deckhouse.io/skip-bootstrap-phase: ""
+  labels:
+    role: master
+spec:
+  address: '${MASTER_IP}'
+  credentialsRef:
+    kind: SSHCredentials
+    name: caps-master
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
   name: system
 spec:
   nodeType: Static
