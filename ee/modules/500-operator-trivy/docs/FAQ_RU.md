@@ -30,3 +30,19 @@ kubectl get clustercompliancereports.aquasecurity.github.io cis -ojson |
 ```
 
 {% endraw %}
+
+## Как вручную перезапустить сканирование ресурса, как понять когда ресурс будет просканирован повторно?
+
+Модуль каждые 24 часа выполняет повторное сканирование ресурсов, согласно следующему алгоритму:
+
+В namespace c каждый просканированным ресурсом создается объект `VulnerabilityReport`.  
+В данном объекте присутствует аннотация `trivy-operator.aquasecurity.github.io/report-ttl`, которая указывает время жизни отчета (стандартно - `24h`). 
+По истечении этого времени оператор удаляет объект, что вызывает повторное сканирование ресурса.
+
+Таким образом, для принудительного повторного сканирования ресурса необходимо перезаписать аннотацию `trivy-operator.aquasecurity.github.io/report-ttl`, указав малый промежуток времени.  
+Допустимо также полностью удалить объект `VulnerabilityReport`.
+
+Пример команды указания аннотации:
+```bash
+kubectl annotate VulnerabilityReport -n <namespace> <reportName>  trivy-operator.aquasecurity.github.io/report-ttl=1s --overwrite
+```
