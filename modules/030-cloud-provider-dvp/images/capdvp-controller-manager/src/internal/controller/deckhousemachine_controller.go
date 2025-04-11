@@ -314,8 +314,6 @@ func (r *DeckhouseMachineReconciler) reconcileDeleteOperation(
 		return ctrl.Result{}, fmt.Errorf("error geting disks for detach and delete: %w", err)
 	}
 
-	logger.Info("Vm disks", "disksToDetach", disksToDetach, "disksToDelete", disksToDelete)
-
 	vmHostname, err := r.DVP.ComputeService.GetVMHostname(vm)
 	if err != nil {
 		return ctrl.Result{}, err
