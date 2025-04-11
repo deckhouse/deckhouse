@@ -24,8 +24,8 @@ import (
 
 func init() {
 	const (
-		name       = "pki"
-		secretType = "registry/pki"
+		name       = "secrets"
+		secretType = "registry/secrets"
 	)
 
 	sdk.RegisterFunc(&go_hook.HookConfig{
@@ -41,7 +41,7 @@ func init() {
 				NamespaceSelector:            helpers.NamespaceSelector,
 				NameSelector: &types.NameSelector{
 					MatchNames: []string{
-						"registry-pki",
+						"registry-secrets",
 					},
 				},
 				FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {

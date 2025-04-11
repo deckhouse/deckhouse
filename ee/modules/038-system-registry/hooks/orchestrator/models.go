@@ -21,6 +21,7 @@ type State struct {
 	Mode       registry_const.ModeType
 	TargetMode registry_const.ModeType
 
-	PKIVersion   string
-	UsersVersion string
+	PKIVersion     string
+	UsersVersion   string
+	SecretsVersion string
 }

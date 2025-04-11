@@ -14,12 +14,7 @@ import (
 
 const (
 	GlobalSecretsName = "registry-secrets"
-
-	globalSecretsType      = "system-registry/global-secrets"
-	globalSecretsTypeLabel = "system-registry-global-secrets"
 )
-
-var _ encodeDecodeSecret = &GlobalSecrets{}
 
 type GlobalSecrets struct {
 	HTTPSecret string
@@ -43,23 +38,6 @@ func (gs *GlobalSecrets) DecodeSecret(secret *corev1.Secret) error {
 	}
 
 	gs.HTTPSecret = string(secret.Data["http"])
-
-	return nil
-}
-
-func (gs *GlobalSecrets) EncodeSecret(secret *corev1.Secret) error {
-	if secret == nil {
-		return ErrSecretIsNil
-	}
-
-	secret.Type = globalSecretsType
-
-	initSecretLabels(secret)
-	secret.Labels[LabelTypeKey] = globalSecretsTypeLabel
-
-	secret.Data = map[string][]byte{
-		"http": []byte(gs.HTTPSecret),
-	}
 
 	return nil
 }

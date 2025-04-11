@@ -20,20 +20,19 @@ import (
 )
 
 const (
-	userSecretsSnap = "user-secrets"
-	SubmoduleName   = "users"
+	snapName      = "user-secrets"
+	SubmoduleName = "users"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
-	Queue:        "/modules/system-registry/users",
+	Queue:        fmt.Sprintf("/modules/system-registry/submodule-%s", SubmoduleName),
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:              userSecretsSnap,
+			Name:              snapName,
 			ApiVersion:        "v1",
 			Kind:              "Secret",
 			NamespaceSelector: helpers.NamespaceSelector,
-			//ExecuteHookOnSynchronization: ptr.Bool(false),
 			FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 				var secret v1core.Secret
 
@@ -70,7 +69,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		return nil
 	}
 
-	secretUsers, err := helpers.SnapshotToMap[string, users.User](input, userSecretsSnap)
+	secretUsers, err := helpers.SnapshotToMap[string, users.User](input, snapName)
 	if err != nil {
 		return fmt.Errorf("canot get users from secrets: %w", err)
 	}

@@ -3,10 +3,11 @@ Copyright 2024 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
-package pki
+package secrets
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -20,8 +21,8 @@ import (
 )
 
 const (
-	snapName      = "pki"
-	SubmoduleName = "pki"
+	snapName      = "secrets"
+	SubmoduleName = "secrets"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -35,7 +36,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NamespaceSelector: helpers.NamespaceSelector,
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{
-					"registry-pki",
+					"registry-secrets",
 				},
 			},
 			FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -47,8 +48,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				}
 
 				ret := State{
-					CA:    secretDataToCertModel(secret, "ca"),
-					Token: secretDataToCertModel(secret, "token"),
+					HTTP: string(secret.Data["http"]),
 				}
 
 				return ret, nil
@@ -79,55 +79,16 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 	data := state.Data
 
-	// CA
-	caPKI, err := data.CA.ToPKI()
-	if err != nil {
-		prevErr := err
-		if caPKI, err = secretData.CA.ToPKI(); err == nil {
-			input.Logger.Warn("Cannot decode CA certificate and key, restored from memory", "error", prevErr)
+	if strings.TrimSpace(data.HTTP) == "" {
+		data.HTTP = secretData.HTTP
+	}
+
+	if strings.TrimSpace(data.HTTP) == "" {
+		if randomValue, err := pki.GenerateRandomSecret(); err == nil {
+			data.HTTP = randomValue
+		} else {
+			return fmt.Errorf("cannot generate HTTP secret: %w", err)
 		}
-	}
-
-	if err != nil {
-		input.Logger.Warn("Cannot decode CA certificate and key, will generate new", "error", err)
-
-		caPKI, err = pki.GenerateCACertificate("registry-ca")
-		if err != nil {
-			return fmt.Errorf("cannot generate CA certificate: %w", err)
-		}
-	}
-
-	data.CA, err = certKeyToCertModel(caPKI)
-	if err != nil {
-		return fmt.Errorf("cannot convert CA PKI to model: %w", err)
-	}
-
-	// Token
-	tokenPKI, err := data.Token.ToPKI()
-	if err != nil {
-		prevErr := err
-		if tokenPKI, err = secretData.Token.ToPKI(); err == nil {
-			input.Logger.Warn("Cannot decode Token certificate and key, restored from memory", "error", prevErr)
-		}
-	}
-
-	if err == nil {
-		err = pki.ValidateCertWithCAChain(tokenPKI.Cert, caPKI.Cert)
-		if err != nil {
-			input.Logger.Warn("Token certificate is not belongs to CA certificate", "error", err)
-		}
-	}
-
-	if err != nil {
-		tokenPKI, err = pki.GenerateCertificate("registry-auth-token", caPKI)
-		if err != nil {
-			return fmt.Errorf("cannot generate Token certificate: %w", err)
-		}
-	}
-
-	data.Token, err = certKeyToCertModel(tokenPKI)
-	if err != nil {
-		return fmt.Errorf("cannot convert Token PKI to model: %w", err)
 	}
 
 	state.Data = data
@@ -137,8 +98,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 })
 
 type State struct {
-	CA    *certModel `json:"ca,omitempty"`
-	Token *certModel `json:"token,omitempty"`
+	HTTP string `json:"http,omitempty"`
 }
 
 type Params struct {

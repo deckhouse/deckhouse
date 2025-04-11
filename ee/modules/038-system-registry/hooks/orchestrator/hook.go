@@ -13,22 +13,23 @@ import (
 
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers/submodule"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/pki"
+	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/secrets"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/users"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
 )
 
 const (
 	configSnapName = "config"
-	submoduleName  = "orchestrator"
+	SubmoduleName  = "orchestrator"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
-	Queue:        "/modules/system-registry/orchestrator",
+	Queue:        fmt.Sprintf("/modules/system-registry/submodule-%s", SubmoduleName),
 },
 	func(input *go_hook.HookInput) error {
-		moduleConfig := submodule.NewConfigAccessor[Params](input, submoduleName)
-		moduleState := submodule.NewStateAccessor[State](input, submoduleName)
+		moduleConfig := submodule.NewConfigAccessor[Params](input, SubmoduleName)
+		moduleState := submodule.NewStateAccessor[State](input, SubmoduleName)
 
 		config := moduleConfig.Get()
 		state := moduleState.Get()
@@ -67,9 +68,10 @@ func process(input *go_hook.HookInput, params Params, state *State) (bool, error
 	}
 
 	var (
-		usersParams users.Params
-		pkiEnabled  bool
-		err         error
+		usersParams    users.Params
+		pkiEnabled     bool
+		secretsEnabled bool
+		err            error
 	)
 
 	switch state.TargetMode {
@@ -79,6 +81,7 @@ func process(input *go_hook.HookInput, params Params, state *State) (bool, error
 			"rw",
 		}
 		pkiEnabled = true
+		secretsEnabled = true
 	case registry_const.ModeDetached:
 		fallthrough
 	case registry_const.ModeLocal:
@@ -89,11 +92,15 @@ func process(input *go_hook.HookInput, params Params, state *State) (bool, error
 			"mirror-pusher",
 		}
 		pkiEnabled = true
+		secretsEnabled = true
 	case registry_const.ModeDirect:
 		pkiEnabled = true
+		secretsEnabled = true
 	}
 
 	pkiConfig := submodule.NewConfigAccessor[pki.Params](input, pki.SubmoduleName)
+	secretsConfig := submodule.NewConfigAccessor[secrets.Params](input, secrets.SubmoduleName)
+	usersConfig := submodule.NewConfigAccessor[users.Params](input, users.SubmoduleName)
 
 	if pkiEnabled {
 		state.PKIVersion, err = pkiConfig.Set(pki.Params{})
@@ -105,7 +112,16 @@ func process(input *go_hook.HookInput, params Params, state *State) (bool, error
 		pkiConfig.Disable()
 	}
 
-	usersConfig := submodule.NewConfigAccessor[users.Params](input, users.SubmoduleName)
+	if secretsEnabled {
+		state.SecretsVersion, err = secretsConfig.Set(secrets.Params{})
+		if err != nil {
+			return false, fmt.Errorf("cannot set Secrets params: %w", err)
+		}
+	} else {
+		state.SecretsVersion = ""
+		secretsConfig.Disable()
+	}
+
 	if len(usersParams) > 0 {
 		state.UsersVersion, err = usersConfig.Set(usersParams)
 		if err != nil {

@@ -82,7 +82,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		TTL:        config.TTL,
 	}
 
-	orchestratorConfig := submodule.NewConfigAccessor[orchestrator.Params](input, "orchestrator")
+	orchestratorConfig := submodule.NewConfigAccessor[orchestrator.Params](input, orchestrator.SubmoduleName)
 	version, err := orchestratorConfig.Set(orchestratorParams)
 	if err != nil {
 		return fmt.Errorf("cannot set orchestrator params: %w", err)

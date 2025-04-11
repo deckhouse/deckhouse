@@ -29,6 +29,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/migrate"
 	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator"
 	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/pki"
+	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/secrets"
 	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/users"
 	_ "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee"
 	_ "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee/lib/crd"

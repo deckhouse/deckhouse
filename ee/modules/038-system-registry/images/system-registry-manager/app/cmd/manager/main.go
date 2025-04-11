@@ -99,15 +99,6 @@ func setupAndStartManager(ctx context.Context, cfg *rest.Config) error {
 		return fmt.Errorf("unable to create node controller: %w", err)
 	}
 
-	stateController := registry_controller.StateController{
-		Client:    mgr.GetClient(),
-		Namespace: state.RegistryNamespace,
-	}
-
-	if err := stateController.SetupWithManager(mgr); err != nil {
-		return fmt.Errorf("unable to create state controller: %w", err)
-	}
-
 	// Start the manager
 	ctrl.Log.Info("Starting manager")
 
