@@ -46,7 +46,7 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_CHANNEL: "alpha"
+  WERF_VERSION: "v2.35.0"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -252,7 +252,7 @@ jobs:
       - name: Deploy site to stage
         uses: werf/actions/converge@v2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          version: ${{env.WERF_VERSION}}
           kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_DEV }}"
           env: web-stage
         env:
@@ -283,7 +283,7 @@ jobs:
       - name: Deploy documentation to stage
         uses: werf/actions/converge@v2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          version: ${{env.WERF_VERSION}}
           kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_DEV }}"
           env: web-stage
         env:
