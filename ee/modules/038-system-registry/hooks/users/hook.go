@@ -21,6 +21,7 @@ import (
 
 const (
 	userSecretsSnap = "user-secrets"
+	submoduleName   = "users"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -58,11 +59,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 	},
 }, func(input *go_hook.HookInput) error {
-	state := submodule.GetSubmoduleState[State](input, "users")
-	config := submodule.GetSubmoduleConfig[Params](input, "users")
+	moduleState := submodule.NewStateAccessor[State](input, submoduleName)
+	moduleConfig := submodule.NewConfigAccessor[Params](input, submoduleName)
+
+	state := moduleState.Get()
+	config := moduleConfig.Get()
 
 	if !config.Enabled {
-		submodule.RemoveSubmoduleState(input, "users")
+		moduleState.Clear()
 		return nil
 	}
 
@@ -74,7 +78,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	stateUsers := state.Data
 	state.Data = make(State)
 
-	hash, err := helpers.ComputeHash(config, secretUsers)
+	hash, err := helpers.ComputeHash(moduleConfig, secretUsers)
 	if err != nil {
 		return fmt.Errorf("cannot compute hash: %w", err)
 	}
@@ -115,7 +119,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	state.Version = config.Version
 	state.Ready = true
 
-	submodule.SetSubmoduleState(input, "users", state)
+	moduleState.Set(state)
 
 	return nil
 })

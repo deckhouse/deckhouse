@@ -27,12 +27,15 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        "/modules/system-registry/orchestrator",
 },
 	func(input *go_hook.HookInput) error {
-		config := submodule.GetSubmoduleConfig[Params](input, submoduleName)
-		state := submodule.GetSubmoduleState[State](input, submoduleName)
+		moduleConfig := submodule.NewConfigAccessor[Params](input, submoduleName)
+		moduleState := submodule.NewStateAccessor[State](input, submoduleName)
+
+		config := moduleConfig.Get()
+		state := moduleState.Get()
 
 		if !config.Enabled {
-			//TODO
-			submodule.RemoveSubmoduleState(input, "orchestrator")
+			// TODO
+			moduleState.Clear()
 			return nil
 		}
 
@@ -42,7 +45,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		}
 
 		state.Ready = ready
-		submodule.SetSubmoduleState(input, submoduleName, state)
+		moduleState.Set(state)
 		return nil
 	})
 
@@ -80,13 +83,14 @@ func process(input *go_hook.HookInput, params Params, state *State) (bool, error
 		}
 	}
 
+	usersConfig := submodule.NewConfigAccessor[users.Params](input, "users")
 	if len(usersParams) > 0 {
-		usersVersion, err = submodule.SetSubmoduleConfig(input, "users", usersParams)
+		usersVersion, err = usersConfig.Set(usersParams)
 		if err != nil {
 			return false, fmt.Errorf("cannot set users params: %w", err)
 		}
 	} else {
-		submodule.DisableSubmodule(input, "users")
+		usersConfig.Disable()
 		usersVersion = "disabled"
 	}
 

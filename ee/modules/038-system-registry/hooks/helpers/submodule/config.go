@@ -14,13 +14,13 @@ import (
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers"
 )
 
-type SubmoduleConfig[TParams any] struct {
+type Config[TParams any] struct {
 	Params  TParams `json:"params,omitempty"`
 	Version string  `json:"version"`
 	Enabled bool    `json:"-"`
 }
 
-func (config *SubmoduleConfig[TParams]) ComputeVersion() error {
+func (config *Config[TParams]) ComputeVersion() error {
 	version, err := helpers.ComputeHash(config.Params)
 
 	if err != nil {
@@ -31,10 +31,12 @@ func (config *SubmoduleConfig[TParams]) ComputeVersion() error {
 	return nil
 }
 
-func SetSubmoduleConfig[TParams any](input *go_hook.HookInput, name string, params TParams) (string, error) {
-	values := input.Values
+type configAccessor[TParams any] struct {
+	values valuesAccessor
+}
 
-	value := SubmoduleConfig[TParams]{
+func (accessor configAccessor[TParams]) Set(params TParams) (string, error) {
+	value := Config[TParams]{
 		Params:  params,
 		Enabled: true,
 	}
@@ -43,32 +45,27 @@ func SetSubmoduleConfig[TParams any](input *go_hook.HookInput, name string, para
 		return "", fmt.Errorf("compute version error: %w", err)
 	}
 
-	values.Set(fmt.Sprintf("%s.%s.config", submodulesValuesPrefix, name), value)
-	values.Set(fmt.Sprintf("%s.%s.enabled", submodulesValuesPrefix, name), true)
+	accessor.values.Set("enabled", true)
+	accessor.values.Set("config", value)
 
 	return value.Version, nil
 }
 
-func DisableSubmodule(input *go_hook.HookInput, name string) {
-	values := input.Values
-
-	values.Set(fmt.Sprintf("%s.%s.enabled", submodulesValuesPrefix, name), false)
-	values.Remove(fmt.Sprintf("%s.%s.config", submodulesValuesPrefix, name))
+func (accessor configAccessor[TParams]) Disable() {
+	accessor.values.Remove("config")
+	accessor.values.Set("enabbled", false)
 }
 
-func GetSubmoduleConfig[TParams any](input *go_hook.HookInput, name string) SubmoduleConfig[TParams] {
-	values := input.Values
+func (accessor configAccessor[TParams]) Get() Config[TParams] {
+	enabled := accessor.values.Get("enabled").Bool()
 
-	enabled := values.Get(fmt.Sprintf("%s.%s.enabled", submodulesValuesPrefix, name)).Bool()
-
-	var ret SubmoduleConfig[TParams]
+	var ret Config[TParams]
 
 	if !enabled {
 		return ret
 	}
 
-	value := values.Get(fmt.Sprintf("%s.%s.config", submodulesValuesPrefix, name))
-
+	value := accessor.values.Get("config")
 	if !value.IsObject() {
 		ret.Enabled = true
 		return ret
@@ -78,4 +75,19 @@ func GetSubmoduleConfig[TParams any](input *go_hook.HookInput, name string) Subm
 
 	ret.Enabled = true
 	return ret
+}
+
+type ConfigAccessor[TParams any] interface {
+	Set(params TParams) (string, error)
+	Get() Config[TParams]
+	Disable()
+}
+
+func NewConfigAccessor[TParams any](input *go_hook.HookInput, submoduleName string) ConfigAccessor[TParams] {
+	return configAccessor[TParams]{
+		values: valuesAccessor{
+			input:    input,
+			basePath: fmt.Sprintf("%s.%s", submodulesValuesPrefix, submoduleName),
+		},
+	}
 }

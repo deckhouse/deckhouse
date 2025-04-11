@@ -12,23 +12,25 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 )
 
-type SubmoduleState[TData any] struct {
+type State[TData any] struct {
 	Ready   bool   `json:"ready"`
 	Version string `json:"version"`
 	Hash    string `json:"hash"`
 	Data    TData  `json:"data,omitempty"`
 }
 
-func SetSubmoduleState[TData any](input *go_hook.HookInput, name string, value SubmoduleState[TData]) {
-	values := input.Values
-	values.Set(fmt.Sprintf("%s.%s.state", submodulesValuesPrefix, name), value)
+type stateAccessor[TData any] struct {
+	values valuesAccessor
 }
 
-func GetSubmoduleState[TData any](input *go_hook.HookInput, name string) SubmoduleState[TData] {
-	values := input.Values
-	value := values.Get(fmt.Sprintf("%s.%s.state", submodulesValuesPrefix, name))
+func (accessor stateAccessor[TData]) Set(value State[TData]) {
+	accessor.values.Set("state", value)
+}
 
-	var ret SubmoduleState[TData]
+func (accessor stateAccessor[TData]) Get() State[TData] {
+	value := accessor.values.Get("state")
+
+	var ret State[TData]
 	if !value.IsObject() {
 		return ret
 	}
@@ -37,7 +39,21 @@ func GetSubmoduleState[TData any](input *go_hook.HookInput, name string) Submodu
 	return ret
 }
 
-func RemoveSubmoduleState(input *go_hook.HookInput, name string) {
-	values := input.Values
-	values.Remove(fmt.Sprintf("%s.%s.state", submodulesValuesPrefix, name))
+func (accessor stateAccessor[TData]) Clear() {
+	accessor.values.Remove("state")
+}
+
+type StateAccessor[TData any] interface {
+	Set(value State[TData])
+	Get() State[TData]
+	Clear()
+}
+
+func NewStateAccessor[TData any](input *go_hook.HookInput, submoduleName string) StateAccessor[TData] {
+	return stateAccessor[TData]{
+		values: valuesAccessor{
+			input:    input,
+			basePath: fmt.Sprintf("%s.%s", submodulesValuesPrefix, submoduleName),
+		},
+	}
 }
