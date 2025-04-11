@@ -60,7 +60,7 @@ osDistributions:
     note_content:
       ru: <b>Ubuntu 18.04</b> более не поддерживается разработчиками дистрибутива Ubuntu
       en: <b>Ubuntu 18.04</b> is no longer supported by Ubuntu developers
-  '_redos':
+  'redos':
     name: 'РЕД ОС'
     url: https://redos.red-soft.ru/product/server/
     ru_support: 'true'
@@ -68,7 +68,7 @@ osDistributions:
     cse_support:
       versions:
         - '7.3'
-  '_rosa':
+  'rosa':
     name: 'РОСА Сервер'
     url: https://rosa.ru
     ru_support: 'true'
