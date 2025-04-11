@@ -43,7 +43,7 @@ To force a rescan of the resource, you need to overwrite the annotation `trivy-o
 It is also possible to delete the `VulnerabilityReport` object.
 
 Example of annotation command:
+
 ```bash
 kubectl annotate VulnerabilityReport -n <namespace> <reportName> trivy-operator.aquasecurity.github.io/report-ttl=1s --overwrite
 ```
-
