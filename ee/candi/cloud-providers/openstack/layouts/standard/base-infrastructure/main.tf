@@ -62,7 +62,7 @@ locals {
   zone               = lookup(local.bastion_instance, "zone", null) != null ? local.bastion_instance.zone : local.actual_zones[0]
   metadata_tags      = merge(lookup(var.providerClusterConfiguration, "tags", {}), lookup(local.instance_class, "additionalTags", {}))
   config_drive       = false
-  root_disk_size     = lookup(local.instance_class, "rootDiskSize", "")
+  root_disk_size     = lookup(local.instance_class, "rootDiskSize", "30")
   volume_type        = lookup(local.bastion_instance, "volumeType", null)
 }
 

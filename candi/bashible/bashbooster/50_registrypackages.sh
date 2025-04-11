@@ -78,7 +78,7 @@ for ep in endpoints:
   url = 'https://{}/package?digest=$1&repository=${REPOSITORY}&path=${REPOSITORY_PATH}'.format(ep)
   request = Request(url, headers={'Authorization': 'Bearer ${PACKAGES_PROXY_TOKEN}'})
   try:
-    response = urlopen(request, timeout=10)
+    response = urlopen(request, timeout=60)
   except HTTPError as e:
     print("Access to {} return HTTP Error {}: {}".format(url, e.getcode(), e.read()[:255]))
     print('You can check via curl -v -k -H "Authorization: Bearer ${PACKAGES_PROXY_TOKEN}" "{}" > /dev/null'.format(url))

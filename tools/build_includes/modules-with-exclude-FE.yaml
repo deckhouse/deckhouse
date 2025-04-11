@@ -466,13 +466,8 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-- add: /ee/modules/380-metallb/monitoring/grafana-dashboards/kubernetes-cluster/metallb-pool.json
-  to: /deckhouse/modules/380-metallb/monitoring/grafana-dashboards/kubernetes-cluster/metallb-pool.json
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/modules/380-metallb/monitoring/grafana-dashboards/kubernetes-cluster/metallb.json
-  to: /deckhouse/modules/380-metallb/monitoring/grafana-dashboards/kubernetes-cluster/metallb.json
+- add: /ee/modules/380-metallb/monitoring/grafana-dashboards/kubernetes-cluster/metallb-bgp.json
+  to: /deckhouse/modules/380-metallb/monitoring/grafana-dashboards/kubernetes-cluster/metallb-bgp.json
   stageDependencies:
     setup:
         - '**/*'

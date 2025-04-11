@@ -26,7 +26,7 @@ env:
   WERF_DRY_RUN: "false"
 
   # <template: werf_envs>
-  WERF_CHANNEL: "alpha"
+  WERF_VERSION: "v2.35.0"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -45,6 +45,16 @@ concurrency:
   group: schedule-cleanup
 
 jobs:
+
+  # <template: skip_tests_repos>
+  skip_tests_repos:
+    name: Skip tests repos
+    runs-on: ubuntu-latest
+    if: ${{ false || github.repository == 'deckhouse/deckhouse' }}
+    steps:
+    - name: Do nothing
+      run: echo "Empty action to fulfil Github requirements."
+  # </template: skip_tests_repos>
 # Note: git_info is needed for werf.yaml
 
   # <template: git_info_job>
@@ -128,6 +138,7 @@ jobs:
   cleanup_registry:
     name: Cleanup registry
     needs:
+      - skip_tests_repos
       - git_info
     runs-on: [self-hosted, regular]
     steps:
@@ -163,7 +174,7 @@ jobs:
       - name: Install werf CLI
         uses: werf/actions/install@v2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
       - name: Cleanup
         env:

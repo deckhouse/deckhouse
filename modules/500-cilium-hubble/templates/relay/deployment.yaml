@@ -58,7 +58,7 @@ spec:
             - hubble-relay
           args:
             - serve
-          {{- if .Values.debugLogging }}
+          {{- if .Values.ciliumHubble.debugLogging }}
             - --debug
           {{- end }}
           ports:

@@ -22,8 +22,6 @@ import (
 )
 
 func TestCombineYAMLs(t *testing.T) {
-	t.Parallel()
-
 	tests := map[string]struct {
 		in  []string
 		out string
@@ -164,8 +162,6 @@ kind: ModuleConfig
 	for name, tt := range tests {
 		tt := tt
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
 			out := input.CombineYAMLs(tt.in...)
 			assert.Equal(t, tt.out, out)
 		})

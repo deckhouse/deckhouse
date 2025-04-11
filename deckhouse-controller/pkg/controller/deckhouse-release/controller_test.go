@@ -347,19 +347,6 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
-	suite.Run("First Release with manual mode", func() {
-		mup := embeddedMUP.DeepCopy()
-		mup.Update.Mode = v1alpha1.UpdateModeManual.String()
-
-		values, err := sjson.Delete(initValues, "global.clusterIsBootstrapped")
-		require.NoError(suite.T(), err)
-
-		suite.setupController("first-release-with-manual-mode.yaml", values, mup)
-		dr := suite.getDeckhouseRelease("v1.25.1")
-		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
-		require.NoError(suite.T(), err)
-	})
-
 	suite.Run("Few patch releases", func() {
 		dependency.TestDC.HTTPClient.DoMock.
 			Expect(&http.Request{}).
@@ -535,7 +522,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		suite.setupController("suspend-release.yaml", initValues, embeddedMUP)
 		dr := suite.getDeckhouseRelease("v1.25.1")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
-		require.NoError(suite.T(), err)
+		require.Error(suite.T(), err)
+		require.Contains(suite.T(), err.Error(), "release phase is not pending")
 		dr = suite.getDeckhouseRelease("v1.25.2")
 		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)

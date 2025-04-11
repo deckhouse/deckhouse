@@ -109,6 +109,10 @@ func (mr *ModuleRelease) GetVersion() *semver.Version {
 	return semver.MustParse(mr.Spec.Version)
 }
 
+func (mr *ModuleRelease) GetModuleVersion() string {
+	return "v" + semver.MustParse(mr.Spec.Version).String()
+}
+
 func (mr *ModuleRelease) GetName() string {
 	return mr.Name
 }

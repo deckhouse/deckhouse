@@ -75,6 +75,7 @@ type ModulePullOverride struct {
 type ModulePullOverrideSpec struct {
 	ImageTag     string          `json:"imageTag"`
 	ScanInterval libapi.Duration `json:"scanInterval"`
+	Rollback     bool            `json:"rollback"`
 }
 
 // +k8s:deepcopy-gen=true
@@ -83,7 +84,7 @@ type ModulePullOverrideStatus struct {
 	UpdatedAt   metav1.Time `json:"updatedAt"`
 	Message     string      `json:"message"`
 	ImageDigest string      `json:"imageDigest"`
-	Weight      uint32      `json:"weight,omitempty"`
+	Weight      uint32      `json:"weight"`
 }
 
 // GetModuleName returns the module's name of the module pull override

@@ -487,7 +487,7 @@ echo "$MYRESULTSTRING"
 ### Ручная загрузка образов Deckhouse Kubernetes Platform, БД сканера уязвимостей и модулей Deckhouse в приватный registry
 
 {% alert level="warning" %}
-Доступно только в Standard Edition (SE), Enterprise Edition (EE) и Certified Security Edition (CSE).
+Утилита `d8 mirror` недоступна для использования с редакциями Community Edition (CE) и Basic Edition (BE).
 {% endalert %}
 
 {% alert level="info" %}
@@ -511,9 +511,9 @@ echo "$MYRESULTSTRING"
 
    где:
 
-   - `<EDITION>` — код редакции Deckhouse Kubernetes Platform (например, `ee`, `se`, `cse`);
-   - `<LICENSE_KEY>` — лицензионный ключ Deckhouse Kubernetes Platform.
-   - `/home/user/d8-bundle` — директория в которой будут расположены пакеты образов. Будет создана, если не существует.
+   - `<EDITION>` — код редакции Deckhouse Kubernetes Platform (например, `ee`, `se`, `se-plus`). По умолчанию параметр `--source` ссылается на редакцию Enterprise Edition (`ee`) и может быть опущен;
+   - `<LICENSE_KEY>` — лицензионный ключ Deckhouse Kubernetes Platform;
+   - `/home/user/d8-bundle` — директория, в которой будут расположены пакеты образов. Будет создана, если не существует.
 
    > Если загрузка образов будет прервана, повторный вызов команды продолжит загрузку, если с момента ее остановки прошло не более суток.
 

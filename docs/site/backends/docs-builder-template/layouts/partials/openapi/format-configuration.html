@@ -6,6 +6,7 @@ Context:
 */}}
 
 {{- $data := .data }}
+{{- $conversions := .conversions }}
 {{- $langData := .langData }}
 
 {{- $configVersion := 1 }}
@@ -14,6 +15,70 @@ Context:
 {{- end }}
 
 {{/* TODO: format_examples $data */}}
+
+{{/* Reading all conversions files */}}
+
+{{/* Conversions rendering */}}
+{{- if and $conversions (gt (len $conversions) 0) }}
+    <h2>{{ T "conversions_title" }}</h2>
+
+    <p>{{ T "conversion_action_message" }}:</p>
+
+    {{- range $conversion := $conversions }}
+      {{- if $conversion }}
+      <ul>
+        <li>
+          <p>{{ T "conversion_from_version" }} <b>{{ sub $conversion.version 1 }}</b> {{ T "conversion_to" }} <b>{{ $conversion.version }}</b>:</p>
+
+          {{/* Check description availability*/}}
+          {{- $currentLang := site.Language.Lang | default "en" -}}
+          {{- $hasDescription := false -}}
+
+          {{- if $conversion.description -}}
+            {{- if reflect.IsMap $conversion.description -}}
+              {{- $description := index $conversion.description $currentLang | default $conversion.description.en -}}
+              {{- if $description -}}
+                <p>{{ $description | markdownify }}</p>
+                {{- $hasDescription = true -}}
+              {{- end -}}
+            {{- else -}}
+              <p>{{ $conversion.description | markdownify }}</p>
+              {{- $hasDescription = true -}}
+            {{- end -}}
+          {{- end -}}
+
+          {{/* If no description */}}
+          {{- if not $hasDescription -}}
+            <p>{{ T "conversion_missing_description" }}</p>
+
+            {{/* Rendering details block only if there is no description, but there are expressions */}}
+            {{- if $conversion.conversions -}}
+            <div class="details" markdown="0">
+              <p class="details__lnk">
+                <a href="javascript:void(0)" class="details__summary">
+                  {{ T "conversion_expressions" }}
+                </a>
+              </p>
+              <div class="details__content" markdown="0">
+                <div class="expand" markdown="0">
+                  <ul>
+                    {{- range $conversionExpr := $conversion.conversions }}
+                    <li><code class="language-plaintext highlighter-rouge">{{ $conversionExpr }}</code></li>
+                    {{- end }}
+                  </ul>
+                </div>
+              </div>
+            </div>
+            {{- end -}}
+          {{- end -}}
+        </li>
+      </ul>
+      {{- end }}
+    {{- end }}
+<h2>{{ T "parameters" | humanize }}</h2>
+
+{{- end }}
+{{/* END Conversions rendering */}}
 
 {{- if $data.properties }}
 <p><font size="-1">{{ T "version_of_schema" }}: {{ $configVersion }}</font></p>

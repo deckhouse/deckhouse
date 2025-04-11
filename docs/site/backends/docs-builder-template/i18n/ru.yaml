@@ -6,6 +6,12 @@ deckhouse: deckhouse
 documentation: документация
 modules_documentation: Документация модулей
 core: ядро
+conversions_title: Конверсии
+conversion_action_message: При необходимости преобразования данных из одной версии схемы параметров модуля в другую, выполните следующие действия
+conversion_from_version: Из версии
+conversion_to: в
+conversion_expressions: Преобразования, выполняемые конверсией (синтаксис jq)
+conversion_missing_description: Описание конверсии отсутствует
 currency_sign: "₽"
 commercial: Доступно в некоторых коммерческих редакциях.
 notAvailableInThisEdition: Доступно в других коммерческих редакциях.
@@ -59,3 +65,4 @@ version: версия
 version_of_module: "Версия модуля ###"
 version_of_schema: Версия схемы
 required_value_sentence: Обязательный параметр
+parameters: параметры

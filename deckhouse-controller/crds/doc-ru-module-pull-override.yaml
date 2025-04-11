@@ -28,10 +28,10 @@ spec:
                   description: "Когда модуль был обновлен в последний раз."
                 imageDigest:
                   type: string
-                  description: "Контрольная сумма образа контейнера."
+                  description: Контрольная сумма образа контейнера.
                 weight:
                   type: integer
-                  description: "_Вес_ (приоритет) модуля."
+                  description: Вес (приоритет) модуля.
     - name: v1alpha2
       served: true
       storage: false
@@ -49,6 +49,8 @@ spec:
                   description: Тег образа контейнера модуля, который будет скачан и установлен.
                 scanInterval:
                   description: Интервал сканирования для проверки изменения образа контейнера. Если образ изменился, модуль будет обновлен.
+                rollback:
+                  description: Определение необходимости восстановления модуля из релиза, если объект ModulePullOverride удалён.
             status:
               properties:
                 message:
@@ -61,4 +63,4 @@ spec:
                   description: Контрольная сумма образа контейнера.
                 weight:
                   type: integer
-                  description: "_Вес_ (приоритет) модуля."
+                  description: Вес (приоритет) модуля.

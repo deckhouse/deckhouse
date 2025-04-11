@@ -28,7 +28,6 @@ import (
 	sh_debug "github.com/flant/shell-operator/pkg/debug"
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/registry"
@@ -59,7 +58,6 @@ const (
 func main() {
 	sh_app.Version = ShellOperatorVersion
 	ad_app.Version = AddonOperatorVersion
-	controller.DeckhouseVersion = DeckhouseVersion
 
 	FileName := filepath.Base(os.Args[0])
 
