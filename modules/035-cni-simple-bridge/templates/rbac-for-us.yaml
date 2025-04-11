@@ -33,3 +33,4 @@ metadata:
   name: {{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list $ (dict "app" "simple-bridge")) | nindent 2 }}
   namespace: d8-{{ .Chart.Name }}
+automountServiceAccountToken: false
