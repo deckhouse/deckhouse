@@ -365,7 +365,24 @@ module JSONSchemaRenderer
             if name == "" and parent['type'] == 'array'
                 enum_result += ' ' + get_i18n_term("allowed_values_of_array")
             end
-            result.push(enum_result + ':</span> <span class="resources__attrs_content">'+ [*attributes['enum']].map { |e| "<code>#{e}</code>" }.join(', ') + '</span></p>')
+            enum_result += ':</span> <span class="resources__attrs_content">'
+            
+            if attributes.has_key?('x-enum-descriptions') && attributes['x-enum-descriptions'].is_a?(Array) && 
+               attributes['x-enum-descriptions'].size == attributes['enum'].size
+                # Render enum values matched with descriptions
+                enum_values = []
+                attributes['enum'].each_with_index do |enum_value, index|
+                    desc = attributes['x-enum-descriptions'][index]
+                    enum_values << "<code>#{enum_value}</code> — #{desc}"
+                end
+                enum_result += enum_values.join('<br/>')
+            else
+                # If no descriptions, render just enum values
+                enum_result += [*attributes['enum']].map { |e| "<code>#{e}</code>" }.join(', ')
+            end
+            
+            enum_result += '</span></p>'
+            result.push(enum_result)
         end
 
         if attributes.has_key?('pattern')
