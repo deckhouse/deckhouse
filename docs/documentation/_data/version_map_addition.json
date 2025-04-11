@@ -1,0 +1,22 @@
+{
+  "bashible": {
+    "astra": {
+      "1.7.2": null,
+      "1.7.3": null,
+      "1.7.4": null,
+      "1.7.5": null,
+      "1.7.6": null
+    },
+    "altlinux": {
+      "8 СП (релиз 10)": null
+    },
+    "rocky": {
+      "8": null,
+      "9": null
+    },
+    "_mosos-arbat": {
+      "15.4": null,
+      "15.5": null
+    }
+  }
+}
