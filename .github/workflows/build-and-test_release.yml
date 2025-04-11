@@ -40,7 +40,7 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_CHANNEL: "alpha"
+  WERF_VERSION: "v2.35.0"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -276,7 +276,7 @@ jobs:
       - name: Install werf CLI
         uses: werf/actions/install@v2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
 
       - name: Set up Go 1.23
@@ -287,8 +287,8 @@ jobs:
       - name: Run go generate
         run: |
 
-          (cd tools && go generate)
-          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate)
+          (cd tools && go generate -v)
+          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
 
       - name: Check generated code
         run: |
@@ -518,7 +518,7 @@ jobs:
       - name: Install werf CLI
         uses: werf/actions/install@v2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
 
       # <template: login_git_step>
@@ -882,7 +882,7 @@ jobs:
       - name: Install werf CLI
         uses: werf/actions/install@v2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
 
       # <template: login_git_step>
@@ -1246,7 +1246,7 @@ jobs:
       - name: Install werf CLI
         uses: werf/actions/install@v2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
 
       # <template: login_git_step>
@@ -1610,7 +1610,7 @@ jobs:
       - name: Install werf CLI
         uses: werf/actions/install@v2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
 
       # <template: login_git_step>
@@ -1974,7 +1974,7 @@ jobs:
       - name: Install werf CLI
         uses: werf/actions/install@v2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
 
       # <template: login_git_step>
@@ -2338,7 +2338,7 @@ jobs:
       - name: Install werf CLI
         uses: werf/actions/install@v2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
 
       # <template: login_git_step>
@@ -2674,7 +2674,7 @@ jobs:
       - name: Run doc web build
         uses: werf/actions/build@v2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          version: ${{env.WERF_VERSION}}
         env:
           WERF_DIR: "docs/documentation"
           WERF_LOG_VERBOSE: "on"
@@ -2794,7 +2794,7 @@ jobs:
       - name: Run main web build
         uses: werf/actions/build@v2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          version: ${{env.WERF_VERSION}}
         env:
           WERF_DIR: "docs/site"
           WERF_LOG_VERBOSE: "on"
@@ -3101,6 +3101,9 @@ jobs:
           fetch-depth: 0
       # </template: checkout_full_step>
       - name: DMT lint
+        env:
+          DMT_METRICS_URL: "${{ secrets.DMT_METRICS_URL }}"
+          DMT_METRICS_TOKEN: "${{ secrets.DMT_METRICS_TOKEN }}"
         run: |
           make dmt-lint
     # </template: tests_dmt_lint>
@@ -3568,7 +3571,7 @@ jobs:
       - name: Install werf CLI
         uses: werf/actions/install@v2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
 
       - name: Prepare site structure
@@ -3885,7 +3888,7 @@ jobs:
       - name: Deploy site to production
         uses: werf/actions/converge@v2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          version: ${{env.WERF_VERSION}}
           kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_PROD_25 }}"
           env: web-production
         env:
@@ -3994,7 +3997,7 @@ jobs:
       - name: Deploy documentation to production
         uses: werf/actions/converge@v2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          version: ${{env.WERF_VERSION}}
           kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_PROD_25 }}"
           env: web-production
         env:

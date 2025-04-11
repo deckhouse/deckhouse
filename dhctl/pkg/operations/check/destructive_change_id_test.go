@@ -25,8 +25,6 @@ import (
 )
 
 func TestDestructiveChangeID(t *testing.T) {
-	t.Parallel()
-
 	tests := map[string]struct {
 		statistics *Statistics
 		expected   string
@@ -271,8 +269,6 @@ func TestDestructiveChangeID(t *testing.T) {
 	for name, tt := range tests {
 		tt := tt
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
 			id, err := destructiveChangeID(tt.statistics)
 			require.NoError(t, err)
 

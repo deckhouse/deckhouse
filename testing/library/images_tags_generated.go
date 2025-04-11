@@ -147,7 +147,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"simpleBridge": "imageHash-cniSimpleBridge-simpleBridge",
 	},
 	"common": map[string]interface{}{
-		"alpine":                    "imageHash-common-alpine",
 		"checkKernelVersion":        "imageHash-common-checkKernelVersion",
 		"coredns":                   "imageHash-common-coredns",
 		"csiExternalAttacher128":    "imageHash-common-csiExternalAttacher128",
@@ -248,6 +247,7 @@ var DefaultImagesDigests = map[string]interface{}{
 	},
 	"ingressNginx": map[string]interface{}{
 		"controller110":         "imageHash-ingressNginx-controller110",
+		"controller112":         "imageHash-ingressNginx-controller112",
 		"controller19":          "imageHash-ingressNginx-controller19",
 		"kruise":                "imageHash-ingressNginx-kruise",
 		"kruiseStateMetrics":    "imageHash-ingressNginx-kruiseStateMetrics",

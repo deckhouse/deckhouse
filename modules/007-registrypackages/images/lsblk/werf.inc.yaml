@@ -15,6 +15,11 @@ import:
 imageSpec:
   config:
     labels: {"distro": "all", "version": "all", "lsblk": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false
@@ -44,7 +49,7 @@ shell:
   - apk add --no-cache make automake gettext-dev autoconf libtool flex bison clang binutils g++ linux-headers
   setup:
   - cd /src/util-linux
-  - export LDFLAGS="-Wl,-z,now -Wl,-z,relro -static -s" 
+  - export LDFLAGS="-Wl,-z,now -Wl,-z,relro -static -s"
   - export CFLAGS="-fPIC -pie -fstack-protector-all -O2 -D_FORTIFY_SOURCE=2 -static -s"
   - ./autogen.sh
   - ./configure --enable-static --enable-static-programs=lsblk --disable-pylibmount --without-python --disable-liblastlog2

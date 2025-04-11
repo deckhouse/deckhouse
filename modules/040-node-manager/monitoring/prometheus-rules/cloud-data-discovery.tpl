@@ -50,3 +50,25 @@
       description: |
         Cloud data discoverer finds disks in the cloud for which there is no PersistentVolume in the cluster. You can manually delete these disks from your cloud:
           ID: {{`{{ $labels.id }}`}}, Name: {{`{{ $labels.name }}`}}
+
+  - alert: UnmetCloudConditions
+    for: 1h
+    expr: max by(job, id, name, namespace)(cloud_data_discovery_cloud_conditions_error == 1)
+    labels:
+      severity_level: "6"
+      d8_module: node-manager
+      d8_component: cloud-data-discoverer
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: Deckhouse update is unavailable due to unmet cloud provider conditions.
+      plk_create_group_if_not_exists__main: "ClusterHasUnmetCloudConditionAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__main: "ClusterHasUnmetCloudConditionAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      description: |
+        Deckhouse has detected that some cloud provider–specific conditions have not been met.
+        Until these issues are resolved, updating to the new Deckhouse release is not possible.
+
+        Troubleshooting details:
+
+        - Name: {{`{{ $labels.name }}`}}
+        - Message: {{`{{ $labels.message }}`}}
