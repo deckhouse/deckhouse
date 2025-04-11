@@ -173,11 +173,15 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: login_git_step>
       - name: Download custom trivy-db binary and copy image
+        env:
+          TRIVY_VERSION: v0.55.2
         run: |
           rm -rf ./trivy-db
-          git clone --depth 1 --branch flant-v2 ${{secrets.SOURCE_REPO_GIT}}/aquasecurity/trivy-db.git
+          git clone --depth 1 --branch ${TRIVY_VERSION} git@${{secrets.DECKHOUSE_PRIVATE_REPO}}:deckhouse/trivy-db.git /src/trivy-db-patch
+          git clone --depth 1 --branch ${TRIVY_VERSION} ${{secrets.SOURCE_REPO_GIT}}/aquasecurity/trivy-db.git
           docker logout ghcr.io
           cd trivy-db
+          git apply --verbose --whitespace=fix /src/trivy-db-patch/patches/${TRIVY_VERSION}/*.patch
           ./update.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee 
           ./update.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe 
           ./update.sh ${{secrets.DECKHOUSE_CSE_REGISTRY_HOST}}/deckhouse/cse 
