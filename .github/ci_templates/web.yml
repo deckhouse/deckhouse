@@ -20,7 +20,7 @@ steps:
   - name: Run {!{ $docPart }!} web build
     uses: {!{ index (ds "actions") "werf/actions/build" }!}
     with:
-      channel: ${{env.WERF_CHANNEL}}
+      version: ${{env.WERF_VERSION}}
     env:
       WERF_DIR: "{!{ $dir }!}"
       WERF_LOG_VERBOSE: "on"
@@ -205,7 +205,7 @@ steps:
 - name: Deploy documentation to {!{ $env }!}
   uses: {!{ index (ds "actions") "werf/actions/converge" }!}
   with:
-    channel: ${{env.WERF_CHANNEL}}
+    version: ${{env.WERF_VERSION}}
     kube-config-base64-data: "{!{ $kubeConfig }!}"
     env: {!{ $webEnv }!}
   env:
@@ -244,7 +244,7 @@ steps:
 - name: Deploy site to {!{ $env }!}
   uses: {!{ index (ds "actions") "werf/actions/converge" }!}
   with:
-    channel: ${{env.WERF_CHANNEL}}
+    version: ${{env.WERF_VERSION}}
     kube-config-base64-data: "{!{ $kubeConfig }!}"
     env: {!{ $webEnv }!}
   env:

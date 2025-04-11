@@ -468,8 +468,6 @@ stage:
     runs-on: [self-hosted, regular]
     needs:
       - post_deploy_preparation
-    env:
-      WERF_CHANNEL: "ea"
     steps:
       {!{- tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
 
@@ -482,7 +480,7 @@ stage:
       - name: Converge
         uses: werf/actions/converge@v1.2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          version: ${{env.WERF_VERSION}}
           kube-config-base64-data: "${{ secrets.{!{ $env_properties.kubeconfig }!} }}"
           env: {!{ $env_properties.werf_env }!}
         env:

@@ -41,7 +41,7 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_CHANNEL: "alpha"
+  WERF_VERSION: "v2.35.0"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -1433,8 +1433,6 @@ jobs:
     runs-on: [self-hosted, regular]
     needs:
       - post_deploy_preparation
-    env:
-      WERF_CHANNEL: "ea"
     steps:
       # <template: checkout_step>
       - name: Checkout sources
@@ -1451,7 +1449,7 @@ jobs:
       - name: Converge
         uses: werf/actions/converge@v1.2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          version: ${{env.WERF_VERSION}}
           kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_PROD_SEL }}"
           env: web-production
         env:
@@ -1466,8 +1464,6 @@ jobs:
     runs-on: [self-hosted, regular]
     needs:
       - post_deploy_preparation
-    env:
-      WERF_CHANNEL: "ea"
     steps:
       # <template: checkout_step>
       - name: Checkout sources
@@ -1484,7 +1480,7 @@ jobs:
       - name: Converge
         uses: werf/actions/converge@v1.2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          version: ${{env.WERF_VERSION}}
           kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_PROD_25 }}"
           env: web-production
         env:
@@ -1499,8 +1495,6 @@ jobs:
     runs-on: [self-hosted, regular]
     needs:
       - post_deploy_preparation
-    env:
-      WERF_CHANNEL: "ea"
     steps:
       # <template: checkout_step>
       - name: Checkout sources
@@ -1517,7 +1511,7 @@ jobs:
       - name: Converge
         uses: werf/actions/converge@v1.2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          version: ${{env.WERF_VERSION}}
           kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_DEV }}"
           env: web-stage
         env:
