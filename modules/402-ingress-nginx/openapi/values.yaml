@@ -303,6 +303,9 @@ properties:
                           type: string
                         namespace:
                           type: string
+                controllerLogLevel:
+                  type: string
+                  description: "Defines the verbosity level for the ingress controller logs."
       externalIngressClasses:
         type: array
         default: []
