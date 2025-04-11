@@ -6,10 +6,8 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package pki
 
 import (
-	"encoding/json"
 	"fmt"
 
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	v1core "k8s.io/api/core/v1"
 
 	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/pki"
@@ -33,25 +31,6 @@ func certKeyToCertModel(value pki.CertKey) (*certModel, error) {
 		return nil, err
 	}
 	return &certModel{Cert: string(cert), Key: string(key)}, nil
-}
-
-func inputValuesToCertModel(input *go_hook.HookInput, key string) *certModel {
-	obj := input.Values.Get(key)
-
-	if !obj.Exists() {
-		return nil
-	}
-
-	var ret certModel
-	if err := json.Unmarshal([]byte(obj.Raw), &ret); err != nil {
-		return nil
-	}
-
-	if ret.Cert != "" && ret.Key != "" {
-		return &ret
-	}
-
-	return nil
 }
 
 func secretDataToCertModel(secret v1core.Secret, key string) *certModel {
