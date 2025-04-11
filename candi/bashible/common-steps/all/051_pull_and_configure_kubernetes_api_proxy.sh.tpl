@@ -16,7 +16,17 @@ mkdir -p /etc/kubernetes/manifests
 
 bb-set-proxy
 
-{{- $kubernetes_api_proxy_image := "deckhouse.local/images:kubernetes-api-proxy" }}
+{{ $kubernetes_api_proxy_image := printf "%s%s@%s" .registry.address .registry.path ( index .images.controlPlaneManager "kubernetesApiProxy" ) }}
+
+# Use local pinned images if module registrypackages is enabled. Otherwise pull from registry
+{{- if ((.images).registrypackages) }}
+  {{- $kubernetes_api_proxy_image = "deckhouse.local/images:kubernetes-api-proxy" }}
+{{- else }}
+if crictl version >/dev/null 2>/dev/null; then
+  crictl pull {{ $kubernetes_api_proxy_image }}
+fi
+{{- end }}
+
 
 bb-sync-file /etc/kubernetes/manifests/kubernetes-api-proxy.yaml - << EOF
 apiVersion: v1
