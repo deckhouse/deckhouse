@@ -223,10 +223,6 @@ oom_score = 0
   [plugins."io.containerd.runtime.v2.task"]
     platforms = ["linux/amd64"]
 
-  [plugins.'io.containerd.service.v1.diff-service']
-    default = ['walking']
-    sync_fs = false
-
   [plugins.'io.containerd.service.v1.tasks-service']
     blockio_config_file = ''
     rdt_config_file = ''
