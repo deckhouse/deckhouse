@@ -3,6 +3,7 @@ package hooks
 import (
 	"context"
 	"fmt"
+
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
