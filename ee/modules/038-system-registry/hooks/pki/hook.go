@@ -47,7 +47,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				}
 
 				ret := State{
-					CA:    secretDataToCertModel(secret, "registry-ca"),
+					CA:    secretDataToCertModel(secret, "ca"),
 					Token: secretDataToCertModel(secret, "token"),
 				}
 
