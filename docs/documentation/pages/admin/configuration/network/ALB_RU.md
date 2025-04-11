@@ -4,7 +4,7 @@ permalink: ru/admin/network/alb-overview.html
 lang: ru
 ---
 
-В Deckhouse Kubernetes Platform (далее — DKP) поддерживается балансировка входящего трафика на уровне приложений (ALB — Application Load Balancer) средствами [NGINX Ingress controller](../admin/alb-nginx.html) (модуль `ingress-nginx`) и Istio (модуль `istio`).
+В Deckhouse Kubernetes Platform (далее — DKP) поддерживается балансировка входящего трафика на уровне приложений (ALB — Application Load Balancer) средствами [NGINX Ingress controller](https://github.com/kubernetes/ingress-nginx) (модуль `ingress-nginx`) и Istio (модуль `istio`).
 
 Возможности функции ALB в Deckhouse Kubernetes Platform:
 

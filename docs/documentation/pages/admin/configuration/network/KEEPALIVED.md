@@ -3,7 +3,7 @@ title: "Ensuring high availability and fault tolerance (keepalived)"
 permalink: en/admin/network/keepalived.html
 ---
 
-In Deckhouse Kubernetes Platform, the [keepalived](#) module can be used to provide high availability and fault tolerance.
+In Deckhouse Kubernetes Platform, the [keepalived](reference/mc/keepalived/) module can be used to provide high availability and fault tolerance.
 
 <!-- Transferred with minor modifications from https://deckhouse.io/products/kubernetes-platform/documentation/latest/modules/keepalived/ -->
 

@@ -10,12 +10,12 @@ lang: ru
 
 ### Требования к кластерам
 
-* У каждого кластера должен быть уникальный домен в параметре [`clusterDomain`](../../installing/configuration.html#clusterconfiguration-clusterdomain) ресурса [*ClusterConfiguration*](../../installing/configuration.html#clusterconfiguration). Обратите внимание, что ни один из кластеров не должен иметь домен `cluster.local`, который является значением по умолчанию.
+* У каждого кластера должен быть уникальный домен в параметре [`clusterDomain`](../../reference/cr/clusterconfiguration/#clusterconfiguration-clusterdomain) ресурса [*ClusterConfiguration*](../../reference/cr/clusterconfiguration/). Обратите внимание, что ни один из кластеров не должен иметь домен `cluster.local`, который является значением по умолчанию.
 
   > `cluster.local` — неизменяемый псевдоним для домена локального кластера.
-  > Указание `cluster.local` как principals в AuthorizationPolicy всегда будет указывать на локальный кластер, даже если в mesh существует кластер, у которого [`clusterDomain`](../../installing/configuration.html#clusterconfiguration-clusterdomain) явно определен как `cluster.local` ([источник — документация Istio](https://istio.io/latest/docs/tasks/security/authorization/authz-td-migration/#best-practices)).
+  > Указание `cluster.local` как principals в AuthorizationPolicy всегда будет указывать на локальный кластер, даже если в mesh существует кластер, у которого [`clusterDomain`](../../reference/cr/clusterconfiguration/#clusterconfiguration-clusterdomain) явно определен как `cluster.local` ([источник — документация Istio](https://istio.io/latest/docs/tasks/security/authorization/authz-td-migration/#best-practices)).
 
-* Подсети сервисов и подов в параметрах [`serviceSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-servicesubnetcidr) и [`podSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-podsubnetcidr) ресурса [*ClusterConfiguration*](../../installing/configuration.html#clusterconfiguration) должны быть уникальными для каждого кластера.
+* Подсети сервисов и подов в параметрах [`serviceSubnetCIDR`](../../reference/cr/clusterconfiguration/#clusterconfiguration-servicesubnetcidr) и [`podSubnetCIDR`](../../reference/cr/clusterconfiguration/#clusterconfiguration-podsubnetcidr) ресурса [*ClusterConfiguration*](../../reference/cr/clusterconfiguration/) должны быть уникальными для каждого кластера.
 
   > - При анализе HTTP и HTTPS запросов *(в терминологии istio)* идентифицировать их и принять решение о дальнейшей маршрутизации, запрещении или разрешении возможно по заголовкам.
   > - А при анализе TCP-запросов *(в терминологии istio)* идентифицировать их и принять решение о дальнейшей маршрутизации, запрещении или разрешении возможно только по IP-адресу назначения и номеру порта.

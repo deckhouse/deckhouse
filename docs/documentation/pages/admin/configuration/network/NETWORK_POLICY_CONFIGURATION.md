@@ -3,7 +3,7 @@ title: "Network policy configuration"
 permalink: /admin/network/network-policy-configuration.html
 ---
 
-To define cluster-wide network policies in Deckhouse Kubernetes Platform, you can use the CiliumClusterwideNetworkPolicies module [Cilium](#).
+To define cluster-wide network policies in Deckhouse Kubernetes Platform, you can use the CiliumClusterwideNetworkPolicies module [Cilium](../../reference/mc/cni-cilium/).
 
 <!-- Transferred with minor modifications from https://deckhouse.io/products/kubernetes-platform/documentation/latest/modules/cni-cilium/#using-ciliumclusterwidenetworkpolicies -->
 

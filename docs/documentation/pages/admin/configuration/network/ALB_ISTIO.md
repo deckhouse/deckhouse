@@ -3,7 +3,7 @@ title: "ALB means Istio"
 permalink: en/admin/network/alb-istio.html
 ---
 
-Istio ALB is implemented via Istio Ingress Gateway or NGINX Ingress. The [istio](/ingress-nginx) module is used for this purpose.
+Istio ALB is implemented via Istio Ingress Gateway or NGINX Ingress. The [istio](../../reference/mc/istio/) module is used for this purpose.
 
 <!-- Transferred with minor modifications from [https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/ ](https://deckhouse.io/products/kubernetes-platform/documentation/latest/modules/istio/examples.html#ingress-to-publish-applications)-->
 
@@ -102,7 +102,7 @@ spec:
 ### NGINX Ingress
 
 To use Ingress, you need to:
-* Configure the Ingress controller by adding Istio sidecar to it. In our case, you need to enable the `enableIstioSidecar` parameter in the [ingress-nginx](../../modules/ingress-nginx/) module's [IngressNginxController](../../modules/ingress-nginx/cr.html#ingressnginxcontroller) custom resource.
+* Configure the Ingress controller by adding Istio sidecar to it. In our case, you need to enable the `enableIstioSidecar` parameter in the [ingress-nginx](../../reference/mc/ingress-nginx/) module's [IngressNginxController](../../reference/cr/ingressnginxcontroller/) custom resource.
 * Set up an Ingress that refers to the Service. The following annotations are mandatory for Ingress:
   * `nginx.ingress.kubernetes.io/service-upstream: "true"` — using this annotation, the Ingress controller sends requests to a single ClusterIP (from Service CIDR) while envoy load balances them. Ingress controller's sidecar is only catching traffic directed to Service CIDR.
   * `nginx.ingress.kubernetes.io/upstream-vhost: myservice.myns.svc` — using this annotation, the sidecar container can identify the application service that serves requests.

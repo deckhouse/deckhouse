@@ -4,7 +4,7 @@ permalink: ru/admin/network/metallb-balancing.html
 lang: ru
 ---
 
-Балансировка реализуется с помощью модуля [metallb](/#).
+Балансировка реализуется с помощью модуля [metallb](../../reference/mc/metallb/).
 Его можно использовать в bare metal кластерах, а также в облачных, когда нет возможности воспользоваться балансировщиком от облачного провайдера.
 
 <!-- перенесено с минимальными изменениями из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/metallb/ -->
