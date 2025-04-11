@@ -6,6 +6,7 @@
  - For new clusters in Yandex Cloud with the `withNATInstance` layout, `internalSubnetCIDR` or `internalSubnetID` must be specified.
  - The minimum supported version of Kubernetes is now 1.28. All control plane components will restart.
  - Time-based retention in `loki` is no longer available. See the changelog for details.
+ - release upgrade will be blocked on AWS-based clusters where SA doesn't have DescribeAddressesAttribute and DescribeInstanceTopology roles. They are required for new Terraform AWS Provider version.
 
 ## Features
 
@@ -20,6 +21,8 @@
  - **[cni-cilium]** Added a new dashboard to visualize node connectivity status across the cluster. [#11960](https://github.com/deckhouse/deckhouse/pull/11960)
  - **[control-plane-manager]** Added alert for detecting stale service account tokens. [#12163](https://github.com/deckhouse/deckhouse/pull/12163)
  - **[dashboard]** Added the `auth.allowedUserEmails` option to restrict access to the application based on user email. [#12055](https://github.com/deckhouse/deckhouse/pull/12055)
+ - **[deckhouse]** enable UnmetCloudConditions check [#12957](https://github.com/deckhouse/deckhouse/pull/12957)
+    release upgrade will be blocked on AWS-based clusters where SA doesn't have DescribeAddressesAttribute and DescribeInstanceTopology roles. They are required for new Terraform AWS Provider version.
  - **[deckhouse]** Added `sudouser` alias for easier debugging of protected resources. [#12838](https://github.com/deckhouse/deckhouse/pull/12838)
  - **[deckhouse]** Added rollback flag to ModulePullOverride to restore the previous release after deletion. [#12758](https://github.com/deckhouse/deckhouse/pull/12758)
  - **[deckhouse]** Added ModuleSettingsDefinition CRD to store OpenAPI specs for module settings. [#12702](https://github.com/deckhouse/deckhouse/pull/12702)
@@ -36,7 +39,6 @@
  - **[dhctl]** Added a time drift check during cluster bootstrap to warn if local and remote server times differ by more than 10 minutes. [#12232](https://github.com/deckhouse/deckhouse/pull/12232)
  - **[dhctl]** Added a preflight check to detect CIDR intersection between `podSubnetCIDR` and `serviceSubnetCIDR`. [#12130](https://github.com/deckhouse/deckhouse/pull/12130)
  - **[dhctl]** Removed bundle from bashible-api contexts; nodegroupconfiguration scripts now use an auto-generated header to detect the bundle. [#11479](https://github.com/deckhouse/deckhouse/pull/11479)
- - **[docs]** Added NGINX configuration to proxy `deckhouse-cli-trdl` through the frontend, enabling downloads of Deckhouse CLI artifacts via deckhouse.ru. [#12837](https://github.com/deckhouse/deckhouse/pull/12837)
  - **[docs]** Enhanced registry watcher and docs-builder integration, including improved caching, error handling, and added retries. [#12337](https://github.com/deckhouse/deckhouse/pull/12337)
  - **[documentation]** Added the `auth.allowedUserEmails` option to restrict access to the application based on user email. [#12055](https://github.com/deckhouse/deckhouse/pull/12055)
  - **[ingress-nginx]** Added `controllerPodsAdditionalAnnotations` parameter to IngressNginxController for customizing pod annotations. [#11522](https://github.com/deckhouse/deckhouse/pull/11522)
@@ -52,6 +54,8 @@
  - **[monitoring-kubernetes-control-plane]** Added support for selecting multiple Kubernetes versions. [#12284](https://github.com/deckhouse/deckhouse/pull/12284)
  - **[multitenancy-manager]** Added namespace adoption mechanism; namespaces with the `projects.deckhouse.io/adopt` annotation are now automatically linked to empty projects. [#12423](https://github.com/deckhouse/deckhouse/pull/12423)
  - **[namespace-configurator]** Added exclusion of `deckhouse` and `multitenancy-manager` namespaces. [#12784](https://github.com/deckhouse/deckhouse/pull/12784)
+ - **[node-manager]** enable UnmetCloudConditions check [#12845](https://github.com/deckhouse/deckhouse/pull/12845)
+ - **[node-manager]** UnmetCloudConditions requirement and alert [#12530](https://github.com/deckhouse/deckhouse/pull/12530)
  - **[node-manager]** Removed bundle from bashible-api contexts; nodegroupconfiguration scripts now use an auto-generated header to detect the bundle. [#11479](https://github.com/deckhouse/deckhouse/pull/11479)
  - **[node-manager]** Added `nodeDrainTimeoutSecond` parameter to set custom node draining time for each CloudEphemeral NodeGroup. [#10962](https://github.com/deckhouse/deckhouse/pull/10962)
  - **[openvpn]** Added `defaultClientCertExpirationDays` option for setting the expiration time for client certificates. [#12172](https://github.com/deckhouse/deckhouse/pull/12172)

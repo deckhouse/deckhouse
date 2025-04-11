@@ -1,0 +1,23 @@
+ci:
+  fixes:
+    - summary: Use fixed werf version.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12970
+deckhouse:
+  features:
+    - summary: enable UnmetCloudConditions check
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12957
+      impact: >-
+        release upgrade will be blocked on AWS-based clusters where SA doesn't have
+        DescribeAddressesAttribute and DescribeInstanceTopology roles. They are required for new
+        Terraform AWS Provider version.
+docs:
+  fixes:
+    - summary: Fix d8 install commands.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12962
+node-manager:
+  features:
+    - summary: enable UnmetCloudConditions check
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12845
+    - summary: UnmetCloudConditions requirement and alert
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12530
+
