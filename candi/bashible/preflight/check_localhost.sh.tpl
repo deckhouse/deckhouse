@@ -14,7 +14,7 @@
 # limitations under the License.
 */}}
 
-if ! getent ahosts localhost; then
+if ! getent ahostsv4 localhost -s files; then
   echo "localhost domain is not resolved. You should add a line '127.0.0.1 localhost' to this node's /etc/hosts file."
   exit 1
 fi
