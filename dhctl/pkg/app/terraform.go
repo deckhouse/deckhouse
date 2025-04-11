@@ -49,7 +49,7 @@ func DefineCacheFlags(cmd *kingpin.CmdClause) {
 		Envar(configEnvName("CACHE_DIR")).
 		StringVar(&CacheDir)
 
-	cmd.Flag("use-cache", fmt.Sprintf(`Behaviour for using terraform state cache. May be:
+	cmd.Flag("use-cache", fmt.Sprintf(`Behaviour for using infrastructure state cache. May be:
 	%s - ask user about it (Default)
    	%s - use cache
 	%s  - don't use cache
@@ -85,7 +85,7 @@ func DefineDropCacheFlags(cmd *kingpin.CmdClause) {
 }
 
 func DefineTFResourceManagementTimeout(cmd *kingpin.CmdClause) {
-	cmd.Flag("tf-resource-management-timeout", "Redefine terraform resource management timeouts").
+	cmd.Flag("tf-resource-management-timeout", "Redefine infrastructure resource management timeouts").
 		Envar(configEnvName("DHCTL_TF_RESOURCE_MANAGEMENT_TIMEOUT")).
 		StringVar(&ResourceManagementTimeout)
 }

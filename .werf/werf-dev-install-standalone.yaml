@@ -11,6 +11,7 @@ git:
 import:
 {{ include "installer_and_installer_standalone_generic_imports" (dict "Env" $.Env) }}
 {{ include "installer_and_installer_standalone_terraform_imports" (dict "Env" $.Env "TF" $.TF "Editions" $.Editions) }}
+{{ include "installer_and_installer_standalone_opentofu_imports" (dict "Env" $.Env "TF" $.TF "Editions" $.Editions) }}
 ---
 image: install-standalone-builder
 final: false

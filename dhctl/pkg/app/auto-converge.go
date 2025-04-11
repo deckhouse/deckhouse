@@ -27,7 +27,7 @@ var (
 )
 
 func DefineAutoConvergeFlags(cmd *kingpin.CmdClause) {
-	cmd.Flag("converge-interval", "Period to converge terraform state").
+	cmd.Flag("converge-interval", "Period to converge infrastructure state").
 		Envar(configEnvName("CONVERGE_INTERVAL")).
 		DurationVar(&ApplyInterval)
 
