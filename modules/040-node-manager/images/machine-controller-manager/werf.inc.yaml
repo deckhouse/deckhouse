@@ -16,7 +16,7 @@ final: false
 shell:
   install:
   - git clone --depth 1 --branch bootstrap-token-node-manager {{ $.SOURCE_REPO }}/deckhouse/mcm.git /src
-  - rm -rf /src/.git && rm -rf /src/.git
+  - rm -rf /src/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
@@ -31,7 +31,7 @@ mount:
   to: /go/pkg
 shell:
   install:
-  - cd /src
+  - cd /src && cd /src
   - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - go build -o machine-controller-manager cmd/machine-controller-manager/controller_manager.go
   - chown 64535:64535 machine-controller-manager
