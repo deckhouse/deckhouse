@@ -44,7 +44,7 @@ func init() {
 		return baseFuncMinVerOS(requirementValue, getter, "Debian")
 	}
 
-	_ = func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+	checkUnmetCloudConditionsFunc := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
 		requirementValue = strings.TrimSpace(requirementValue)
 		if requirementValue == "false" || requirementValue == "" {
 			return true, nil
@@ -62,8 +62,7 @@ func init() {
 		return true, nil
 	}
 
-	// TODO: enable this
-	// requirements.RegisterCheck(unmetCloudConditionsRequirementsKey, checkUnmetCloudConditionsFunc)
+	requirements.RegisterCheck(unmetCloudConditionsRequirementsKey, checkUnmetCloudConditionsFunc)
 	requirements.RegisterCheck(requirementsUbuntuKey, checkRequirementUbuntuFunc)
 	requirements.RegisterCheck(requirementsDebianKey, checkRequirementDebianFunc)
 }
