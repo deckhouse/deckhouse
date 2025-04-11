@@ -1,7 +1,7 @@
 {{- $version := "08.04.25" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: {{ $.Images.BASE_SCRATCH }}
+fromImage: builder/scratch
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /
@@ -16,7 +16,7 @@ imageSpec:
     labels: {"distro": "all", "version": "all", "pause": "{{ $version }}" }
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
@@ -24,6 +24,11 @@ git:
   stageDependencies:
     setup:
     - '**/*'
+import:
+- image: common/crane
+  add: /crane
+  to: /crane
+  before: setup
 dependencies:
 - image: common/pause
   before: setup
@@ -38,14 +43,5 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
-  beforeSetup:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache git openssh-client
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone --depth 1 --branch  v0.20.3 {{ .SOURCE_REPO }}/google/go-containerregistry.git /go-containerregistry
-  - cd go-containerregistry/cmd/crane
-  - export GOPROXY={{ .GOPROXY }}
-  - CGO_ENABLED=0 GOOS=linux go build  -ldflags '-s -w -X github.com/google/go-containerregistry/cmd/crane/cmd.Version=v0.20.3' -o /crane
-  - rm -rf /go-containerregistry
   setup:
   - /crane pull $PAUSE_IMAGE_REPO@$PAUSE_IMAGE_DIGEST /pause.tar
