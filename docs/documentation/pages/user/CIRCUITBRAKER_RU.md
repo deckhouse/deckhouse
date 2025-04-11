@@ -4,7 +4,7 @@ permalink: ru/user/circuit-breaker.html
 lang: ru
 ---
 
-В Deckhouse Kubernetes Platform Circuit Breaker реализуется средствами Istio (модуль [`istio`](../#)) и обеспечивает следующие возможности:
+В Deckhouse Kubernetes Platform Circuit Breaker реализуется средствами Istio (модуль [`istio`](../reference/mc/istio/)) и обеспечивает следующие возможности:
 
 <!-- перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/istio/#%D0%B7%D0%B0%D0%B4%D0%B0%D1%87%D0%B8-%D0%BA%D0%BE%D1%82%D0%BE%D1%80%D1%8B%D0%B5-%D1%80%D0%B5%D1%88%D0%B0%D0%B5%D1%82-istio -->
 
@@ -16,7 +16,7 @@ lang: ru
 
 <!-- перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/istio/examples.html#circuit-breaker -->
 
-Для выявления проблемных эндпоинтов используются настройки `outlierDetection` в custom resource [DestinationRule](istio-cr.html#destinationrule).
+Для выявления проблемных эндпоинтов используются настройки `outlierDetection` в custom resource [DestinationRule](../user/managing_request_between_service_istio.html#ресурс-destinationrule).
 Более подробно алгоритм Outlier Detection описан в [документации Envoy](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/outlier).
 
 Пример:
@@ -40,7 +40,7 @@ spec:
       baseEjectionTime: 15m   # после которых эндпоинт будет исключен из балансировки на 15 минут.
 ```
 
-А также для настройки HTTP-таймаутов используется ресурс [VirtualService](istio-cr.html#virtualservice). Эти таймауты также учитываются при подсчете статистики ошибок на эндпоинтах.
+А также для настройки HTTP-таймаутов используется ресурс [VirtualService](../user/retry_istio.html#ресурс-virtualservice). Эти таймауты также учитываются при подсчете статистики ошибок на эндпоинтах.
 
 Пример:
 

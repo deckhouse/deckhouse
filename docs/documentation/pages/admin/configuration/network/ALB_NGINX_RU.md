@@ -4,7 +4,7 @@ permalink: ru/admin/network/alb-nginx.html
 lang: ru
 ---
 
-Для реализации ALB средствами [NGINX Ingress controller](https://github.com/kubernetes/ingress-nginx) используется модуль [ingress-nginx](ingress-nginx).
+Для реализации ALB средствами [NGINX Ingress controller](https://github.com/kubernetes/ingress-nginx) используется модуль [ingress-nginx](../../reference/mc/ingress-nginx/).
 
 <!-- Перенесено с небольшими изменениями из https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/ + надо дополнить примерами? -->
 
@@ -33,7 +33,7 @@ lang: ru
 * параметрами HSTS;
 * набором доступных версий SSL/TLS и протоколов шифрования.
 
-Также модуль интегрирован с модулем [cert-manager](../../modules/cert-manager/), при взаимодействии с которым возможны автоматический заказ SSL-сертификатов и их дальнейшее использование NGINX Ingress controller'ами.
+Также модуль интегрирован с модулем [cert-manager](../../reference/mc/cert-manager/), при взаимодействии с которым возможны автоматический заказ SSL-сертификатов и их дальнейшее использование NGINX Ingress controller'ами.
 
 ## Мониторинг и статистика
 
@@ -96,7 +96,7 @@ lang: ru
 
 <!-- перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/examples.html -->
 
-Для настройки балансировки используйте кастомный ресурс [IngressNginxController](#).
+Для настройки балансировки используйте кастомный ресурс [IngressNginxController](../../reference/cr/ingressnginxcontroller/).
 
 ### Пример для AWS (Network Load Balancer)
 
@@ -209,7 +209,7 @@ spec:
 
 Контроллер должен получать реальные IP-адреса клиентов — поэтому его Service создается с параметром `externalTrafficPolicy: Local` (запрещая межузловой SNAT), и для удовлетворения данного параметра MetalLB speaker анонсирует этот Service только с тех узлов, где запущены целевые поды.
 
-Таким образом, для данного примера [конфигурация модуля `metallb`](../metallb/configuration.html) должна быть такой:
+Таким образом, для данного примера [конфигурация модуля `metallb`](../../reference/mc/metallb/) должна быть такой:
 
 ```yaml
 metallb:

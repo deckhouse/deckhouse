@@ -3,7 +3,7 @@ title: "ALB means NGINX Ingress controller"
 permalink: en/admin/network/alb-nginx.html
 ---
 
-The [ingress-nginx](ingress-nginx) module is used to implement ALB by means of [NGINX Ingress controller](https://github.com/kubernetes/ingress-nginx).
+The [ingress-nginx](../../reference/mc/ingress-nginx/) module is used to implement ALB by means of [NGINX Ingress controller](https://github.com/kubernetes/ingress-nginx).
 
 <!-- Transferred with minor modifications from https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/ -->
 
@@ -32,7 +32,7 @@ The module allows you to manage HTTPS security policies for each of the NGINX In
 * hsts parameters;
 * available SSL/TLS versions and encryption protocols.
 
-The module integrates with the [cert-manager](../../modules/cert-manager/) module. Thus, it can get SSL certificates automatically and pass them to NGINX Ingress controllers for further use.
+The module integrates with the [cert-manager](../../reference/mc/cert-manager/) module. Thus, it can get SSL certificates automatically and pass them to NGINX Ingress controllers for further use.
 
 ## Monitoring and statistics
 

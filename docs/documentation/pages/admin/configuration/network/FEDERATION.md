@@ -9,13 +9,13 @@ permalink: en/admin/network/cluster-federation.html
 
 ### Requirements for clusters
 
-* Each cluster must have a unique domain in the [`clusterDomain`](../../installing/configuration.html#clusterconfiguration-clusterdomain) parameter of the resource [_ClusterConfiguration_](../../installing/configuration.html#clusterconfiguration). Please note that none of the clusters should use the domain `cluster.local`, which is the default setting.
+* Each cluster must have a unique domain in the [`clusterDomain`](../../reference/cr/clusterconfiguration/#clusterconfiguration-clusterdomain) parameter of the resource [_ClusterConfiguration_](../../reference/cr/clusterconfiguration/). Please note that none of the clusters should use the domain `cluster.local`, which is the default setting.
 
   > `cluster.local` is an unmodified alias for the local cluster domain.
-  > When specifying `cluster.local` as a principals in the AuthorizationPolicy, it will always refer to the local cluster, even if there is another cluster in the mesh with [`clusterDomain`](../../installing/configuration.html#cluster-configuration-cluster-domain) explicitly defined as `cluster.local`.
+  > When specifying `cluster.local` as a principals in the AuthorizationPolicy, it will always refer to the local cluster, even if there is another cluster in the mesh with [`clusterDomain`](../../reference/cr/clusterconfiguration/#clusterconfiguration-clusterdomain) explicitly defined as `cluster.local`.
   > [source](https://istio.io/latest/docs/tasks/security/authorization/authz-td-migration/#best-practices)
 
-* Pod and Service subnets in the [`podSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-podsubnetcidr) and [`serviceSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-servicesubnetcidr) parameters of the resource [_ClusterConfiguration_](../../installing/configuration.html#clusterconfiguration) must be unique for each federation member.
+* Pod and Service subnets in the [`podSubnetCIDR`](../../reference/cr/clusterconfiguration/#clusterconfiguration-podsubnetcidr) and [`serviceSubnetCIDR`](../../reference/cr/clusterconfiguration/#clusterconfiguration-servicesubnetcidr) parameters of the resource [_ClusterConfiguration_](../../reference/cr/clusterconfiguration/) must be unique for each federation member.
 
   > - When analyzing HTTP and HTTPS traffic *(in istio terminology)*, you can identify them and decide on further routing or blocking based on their headers.
   > - At the same time, when analyzing TCP traffic *(in istio terminology)*, it is possible to identify them and decide on further routing or blocking based only on their destination IP address or port number.

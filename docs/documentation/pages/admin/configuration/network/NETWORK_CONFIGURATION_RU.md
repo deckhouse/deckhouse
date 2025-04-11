@@ -13,7 +13,7 @@ lang: ru
 
 ## Режимы работы внутренней сети
 
-Режим работы сети устанавливается в настройках модуля [cni-cilium](#) (параметр `tunnelMode`).
+Режим работы сети устанавливается в настройках модуля [cni-cilium](../../reference/mc/cni-cilium/) (параметр `tunnelMode`).
 Поддерживается два режима: классический и с использованием VXLAN-туннеля.
 
 Выбор подходящего варианта зависит от особенностей сети кластера.
@@ -42,7 +42,7 @@ spec:
     tunnelMode: VXLAN
 ```
 
-[Подробнее о настройках](#) модуля `cni-cilium`.
+[Подробнее о настройках](../../reference/mc/cni-cilium/) модуля `cni-cilium`.
 
 > После смены режима работы cilium перезагрузите все узлы, иначе возможны проблемы с доступностью подов.
 
@@ -66,7 +66,7 @@ Deckhouse Kubernetes Platform поддерживает следующие тип
 
 <!-- Перенесено с минимальными изменениями из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/kube-proxy/ -->
 
-В случае, если не используется Cilium, для реализации сервисов и настройки их сети в Deckhouse Kubernetes Platform можно использовать модуль `kube-proxy` (используется совместно с [cni-flannel](#) и [cni-simple-bridge](#)).
+В случае, если не используется Cilium, для реализации сервисов и настройки их сети в Deckhouse Kubernetes Platform можно использовать модуль `kube-proxy` (используется совместно с [cni-flannel](../../reference/mc/cni-flannel/) и [cni-simple-bridge](../../reference/mc/cni-simple-bridge/)).
 Он удаляет весь комплект kube-proxy (`DaemonSet`, `ConfigMap`, `RBAC`) от `kubeadm` и устанавливает свой.
 
 По умолчанию в целях безопасности при использовании сервисов с типом NodePort подключения принимаются только на InternalIP узлов. Для снятия данного ограничения предусмотрена аннотация на узел — `node.deckhouse.io/nodeport-bind-internal-ip: "false"`.
@@ -87,4 +87,4 @@ spec:
 
 > После добавления, удаления или изменения значения аннотации необходимо самостоятельно выполнить рестарт подов kube-proxy.
 >
-> Модуль kube-proxy автоматически отключается при включении модуля [cni-cilium](#).
+> Модуль kube-proxy автоматически отключается при включении модуля [cni-cilium](../../reference/mc/cni-cilium/).

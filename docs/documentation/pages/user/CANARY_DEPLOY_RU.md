@@ -8,7 +8,7 @@ Canary Deployment — стратегия развертывания прилож
 При таком подходе возможно тестирование новых версий приложения на небольшой части трафика, что позволяет минимизировать риски.
 Canary Deployment обеспечивает постепенное переключение трафика на новую версию в случае уверенности в ее стабильной работе. При обнаружении проблем в работе новой версии приложения можно быстро откатиться на старую.
 
-В Deckhouse Kubernetes Platform Canary deployment может быть реализован средствами [ingress-nginx](#) или [istio](#) (рекомендованный способ).
+В Deckhouse Kubernetes Platform Canary deployment может быть реализован средствами [ingress-nginx](../reference/mc/ingress-nginx/) или [istio](../reference/mc/istio/) (рекомендованный способ).
 
 ## Примеры настроек Canary deployment средствами Ingress NGINX
 
@@ -178,8 +178,8 @@ nginx.ingress.kubernetes.io/canary-by-header-value: "true"
 
 Требуется настроить два custom resource:
 
-* [DestinationRule](istio-cr.html#destinationrule) с описанием, как идентифицировать разные версии вашего приложения (subset'ы);
-* [VirtualService](istio-cr.html#virtualservice) с описанием, как распределять трафик между разными версиями приложения.
+* [DestinationRule](../user/managing_request_between_service_istio.html#ресурс-destinationrule) с описанием, как идентифицировать разные версии вашего приложения (subset'ы);
+* [VirtualService](../user/retry_istio.html#ресурс-virtualservice) с описанием, как распределять трафик между разными версиями приложения.
 
 Пример:
 

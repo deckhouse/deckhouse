@@ -10,9 +10,9 @@ lang: ru
 
 ### Требования к кластерам
 
-* Домены кластеров в параметре [`clusterDomain`](../../installing/configuration.html#clusterconfiguration-clusterdomain) ресурса [*ClusterConfiguration*](../../installing/configuration.html#clusterconfiguration) должны быть одинаковыми для всех членов мультикластера. По умолчанию значение параметра — `cluster.local`.
+* Домены кластеров в параметре [`clusterDomain`](../../reference/cr/clusterconfiguration/#clusterconfiguration-clusterdomain) ресурса [*ClusterConfiguration*](../../reference/cr/clusterconfiguration/) должны быть одинаковыми для всех членов мультикластера. По умолчанию значение параметра — `cluster.local`.
 
-* Подсети сервисов и подов в параметрах [`serviceSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-servicesubnetcidr) и [`podSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-podsubnetcidr) ресурса [*ClusterConfiguration*](../../installing/configuration.html#clusterconfiguration) должны быть уникальными для каждого кластера.
+* Подсети сервисов и подов в параметрах [`serviceSubnetCIDR`](../../reference/cr/clusterconfiguration/#clusterconfiguration-servicesubnetcidr) и [`podSubnetCIDR`](../../reference/cr/clusterconfiguration/#clusterconfiguration-podsubnetcidr) ресурса [*ClusterConfiguration*](../../reference/cr/clusterconfiguration/) должны быть уникальными для каждого кластера.
 
   > - При анализе HTTP и HTTPS запросов *(в терминологии istio)* идентифицировать их и принять решение о дальнейшей маршрутизации, запрещении или разрешении возможно по заголовкам.
   > - А при анализе TCP запросов *(в терминологии istio)* идентифицировать их и принять решение о дальнейшей маршрутизации, запрещении или разрешении возможно только по IP-адресу назначения и номеру порта.
