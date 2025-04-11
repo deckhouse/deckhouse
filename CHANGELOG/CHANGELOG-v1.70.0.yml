@@ -1,0 +1,65 @@
+candi:
+  features:
+    - summary: Deleting all users created by deckhouse from NodeUser manifests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12908
+    - summary: >-
+        Added a `bashible` step that assigns the `node.deckhouse.io/provider-id` annotation to nodes
+        with a `static://` provider ID
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11807
+  fixes:
+    - summary: bashible configure-kubelet step fix
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12722
+ci:
+  fixes:
+    - summary: Allow DMT lint to run on only markdown changes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12843
+    - summary: Prevent scheduled GitHub Actions from running in forks
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12787
+cloud-provider-openstack:
+  fixes:
+    - summary: fix terraform bastion default root_disk_size
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12924
+cni-cilium:
+  fixes:
+    - summary: >-
+        Added restoring/hiding network access to cilium endpoint (cep) when higher/lower priority
+        cep was removed/added.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12793
+deckhouse-controller:
+  fixes:
+    - summary: add verbosity to registry client
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12824
+dhctl:
+  features:
+    - summary: Add waiting for become ready first master node
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12918
+  fixes:
+    - summary: Add deny additional properties for validation schema eg module config
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12889
+    - summary: Added waiting for kubeadm command completion result
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12826
+docs:
+  fixes:
+    - summary: Add redirect to d8-cli from tuf repo page.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12930
+metallb:
+  fixes:
+    - summary: Dashboards are aligned with user experience expectations.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12666
+node-manager:
+  fixes:
+    - summary: Rewrite static Node adoption for `CAPS`
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11807
+openvpn:
+  features:
+    - summary: Added end-of-life alerts, CA certificate re-creation and a grafana dashboard.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12581
+service-with-healthchecks:
+  fixes:
+    - summary: Fixed README.md for image patches.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12841
+tools:
+  features:
+    - summary: update DMT lint configuration and version to 0.1.12
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12906
+
