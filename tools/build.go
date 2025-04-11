@@ -79,13 +79,13 @@ var nothingButGoHooksExcludes = []string{
 }
 
 var stageDependencies = map[string][]string{
-	"setup": {
+	"install": {
 		"**/*.go",
 	},
 }
 
 var stageDependenciesFile = map[string][]string{
-	"setup": {
+	"install": {
 		"**/*",
 	},
 }
