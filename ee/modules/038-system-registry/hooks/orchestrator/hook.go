@@ -12,9 +12,9 @@ import (
 	"github.com/flant/addon-operator/sdk"
 
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers/submodule"
+	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/pki"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/users"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
-	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -50,6 +50,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	})
 
 func process(input *go_hook.HookInput, params Params, state *State) (bool, error) {
+	// TODO: this is stub code, need to write switch logic
+
 	if params.Mode != state.TargetMode {
 		input.Logger.Warn(
 			"Target mode change",
@@ -61,9 +63,9 @@ func process(input *go_hook.HookInput, params Params, state *State) (bool, error
 	}
 
 	var (
-		usersParams  users.Params
-		usersVersion string
-		err          error
+		usersParams users.Params
+		pkiEnabled  bool
+		err         error
 	)
 
 	switch state.TargetMode {
@@ -72,34 +74,43 @@ func process(input *go_hook.HookInput, params Params, state *State) (bool, error
 			"ro",
 			"rw",
 		}
+		pkiEnabled = true
 	case registry_const.ModeDetached:
 		fallthrough
 	case registry_const.ModeLocal:
 		usersParams = users.Params{
 			"ro",
 			"rw",
-			"mirrorer-puller",
-			"mirrorer-pusher",
+			"mirror-puller",
+			"mirror-pusher",
 		}
+		pkiEnabled = true
+	case registry_const.ModeDirect:
+		pkiEnabled = true
 	}
 
-	usersConfig := submodule.NewConfigAccessor[users.Params](input, "users")
+	pkiConfig := submodule.NewConfigAccessor[pki.Params](input, pki.SubmoduleName)
+
+	if pkiEnabled {
+		state.PKIVersion, err = pkiConfig.Set(pki.Params{})
+		if err != nil {
+			return false, fmt.Errorf("cannot set PKI params: %w", err)
+		}
+	} else {
+		state.PKIVersion = ""
+		pkiConfig.Disable()
+	}
+
+	usersConfig := submodule.NewConfigAccessor[users.Params](input, users.SubmoduleName)
 	if len(usersParams) > 0 {
-		usersVersion, err = usersConfig.Set(usersParams)
+		state.UsersVersion, err = usersConfig.Set(usersParams)
 		if err != nil {
 			return false, fmt.Errorf("cannot set users params: %w", err)
 		}
 	} else {
 		usersConfig.Disable()
-		usersVersion = "disabled"
+		state.UsersVersion = ""
 	}
-
-	log.Warn(
-		"Users params set",
-		"config", params,
-		"params", usersParams,
-		"version", usersVersion,
-	)
 
 	state.Mode = state.TargetMode
 	return true, nil

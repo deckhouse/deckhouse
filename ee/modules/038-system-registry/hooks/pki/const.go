@@ -6,20 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package pki
 
 import (
-	"fmt"
-
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
-)
-
-const (
-	inputValuesPrefix = "systemRegistry.internal.pki"
-)
-
-var (
-	inputValuesMode = fmt.Sprintf("%s.mode", inputValuesPrefix)
-
-	inputValuesCA    = fmt.Sprintf("%s.ca", inputValuesPrefix)
-	inputValuesToken = fmt.Sprintf("%s.token", inputValuesPrefix)
 )
 
 var (

@@ -53,7 +53,7 @@ func (accessor configAccessor[TParams]) Set(params TParams) (string, error) {
 
 func (accessor configAccessor[TParams]) Disable() {
 	accessor.values.Remove("config")
-	accessor.values.Set("enabbled", false)
+	accessor.values.Set("enabled", false)
 }
 
 func (accessor configAccessor[TParams]) Get() Config[TParams] {

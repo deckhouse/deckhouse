@@ -21,7 +21,7 @@ import (
 
 const (
 	userSecretsSnap = "user-secrets"
-	submoduleName   = "users"
+	SubmoduleName   = "users"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -59,8 +59,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 	},
 }, func(input *go_hook.HookInput) error {
-	moduleState := submodule.NewStateAccessor[State](input, submoduleName)
-	moduleConfig := submodule.NewConfigAccessor[Params](input, submoduleName)
+	moduleState := submodule.NewStateAccessor[State](input, SubmoduleName)
+	moduleConfig := submodule.NewConfigAccessor[Params](input, SubmoduleName)
 
 	state := moduleState.Get()
 	config := moduleConfig.Get()

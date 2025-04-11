@@ -3,7 +3,7 @@ Copyright 2024 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
-package users
+package pki
 
 import (
 	"context"
@@ -24,7 +24,7 @@ import (
 
 const (
 	snapMigrateSecrets = "migrate-secrets"
-	secretType         = "registry/user"
+	secretType         = "registry/pki"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -40,10 +40,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NamespaceSelector:            namespaceSelector,
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{
-					"registry-user-ro",
-					"registry-user-rw",
-					"registry-user-mirror-puller",
-					"registry-user-mirror-pusher",
+					"registry-pki",
 				},
 			},
 			FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {

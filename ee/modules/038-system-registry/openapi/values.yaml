@@ -87,29 +87,38 @@ properties:
         type: object
         default: {}
         properties:
-          mode:
-            type: string
-            default: "Unmanaged"
-          ca: &pki_cert_property
+          enabled:
+            type: boolean
+            default: false
+          config:
             type: object
             properties:
-              cert:
+              version:
                 type: string
-              key:
+              params:
+                type: object
+          state:
+            type: object
+            properties:
+              version:
                 type: string
-          token:
-            <<: *pki_cert_property
-          proxy:
-            <<: *pki_cert_property
-          nodes:
-            type: array
-            items:
-              type: object
-              properties:
-                auth:
-                  <<: *pki_cert_property
-                distribution:
-                  <<: *pki_cert_property
+              hash:
+                type: string
+              ready:
+                type: boolean
+              data:
+                type: object
+                properties:
+                  ca: &certKey
+                    type: object
+                    properties:
+                      cert:
+                        type: string
+                      key:
+                        type: string
+                  token:
+                    <<: *certKey
+
       state:
         type: object
         default: {}

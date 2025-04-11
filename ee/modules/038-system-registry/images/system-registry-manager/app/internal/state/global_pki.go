@@ -16,17 +16,15 @@ import (
 const (
 	PKISecretName = "registry-pki"
 
-	caSecretType      = "system-registry/ca-secret"
-	caSecretTypeLabel = "global-pki-secret"
+	caSecretType      = "registry/pki"
+	caSecretTypeLabel = "registry-pki"
 
-	caCertSecretField = "registry-ca.crt"
-	caKeySecretField  = "registry-ca.key"
+	caCertSecretField = "ca.crt"
+	caKeySecretField  = "ca.key"
 
 	tokenCertSecretField = "token.crt"
 	tokenKeySecretField  = "token.key"
 )
-
-var _ encodeDecodeSecret = &GlobalPKI{}
 
 type GlobalPKI struct {
 	CA    *pki.CertKey
@@ -61,38 +59,6 @@ func (gp *GlobalPKI) DecodeSecret(secret *corev1.Secret) error {
 
 	gp.CA = &caPKI
 	gp.Token = &tokenPKI
-
-	return nil
-}
-
-func (gp *GlobalPKI) EncodeSecret(secret *corev1.Secret) error {
-	if secret == nil {
-		return ErrSecretIsNil
-	}
-
-	secret.Type = caSecretType
-
-	initSecretLabels(secret)
-	secret.Labels[LabelTypeKey] = caSecretTypeLabel
-
-	secret.Data = make(map[string][]byte)
-	if err := encodeCertKeyToSecret(
-		*gp.CA,
-		caCertSecretField,
-		caKeySecretField,
-		secret,
-	); err != nil {
-		return fmt.Errorf("cannot encode CA: %w", err)
-	}
-
-	if err := encodeCertKeyToSecret(
-		*gp.Token,
-		tokenCertSecretField,
-		tokenKeySecretField,
-		secret,
-	); err != nil {
-		return fmt.Errorf("cannot encode Token: %w", err)
-	}
 
 	return nil
 }

@@ -121,26 +121,6 @@ func (sc *stateController) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
-	if err = sc.ensurePKI(ctx, &sc.globalPKI); err != nil {
-		if errors.Is(err, errorPKIInvalid) {
-			log.Error(err, "PKI is invalid and cannot be restored from internal state")
-
-			sc.logModuleWarning(
-				nil,
-				"PKIFatal",
-				"PKI is invalid and cannot be restored from internal state",
-			)
-
-			sc.stateOK = false
-
-			err = nil
-			return ctrl.Result{}, err
-		}
-
-		err = fmt.Errorf("cannot ensure PKI: %w", err)
-		return ctrl.Result{}, err
-	}
-
 	if err = sc.ensureGlobalSecrets(ctx); err != nil {
 		err = fmt.Errorf("cannot ensure global secrets: %w", err)
 		return ctrl.Result{}, err
@@ -218,71 +198,6 @@ func (sc *stateController) ensureGlobalSecrets(ctx context.Context) error {
 		log.Info("Secret was updated")
 	}
 
-	return nil
-}
-
-func (sc *stateController) ensurePKI(ctx context.Context, currentValue **state.GlobalPKI) error {
-	log := ctrl.LoggerFrom(ctx).
-		WithValues("action", "EnsurePKI")
-
-	var actualValue state.GlobalPKI
-
-	updated, err := ensureSecret(
-		ctx,
-		sc.Client,
-		state.PKISecretName,
-		sc.Namespace,
-		func(_ context.Context, secret *corev1.Secret, found bool) error {
-			valid := true
-			if found {
-				if err := actualValue.DecodeSecret(secret); err != nil {
-					sc.logModuleWarning(
-						&log,
-						"PKIDecodeError",
-						fmt.Sprintf("PKI decode error: %v", err),
-					)
-					valid = false
-				} else if err = actualValue.Validate(); err != nil {
-					sc.logModuleWarning(
-						&log,
-						"PKIValidationError",
-						fmt.Sprintf("PKI validation error: %v", err),
-					)
-					valid = false
-				}
-			}
-
-			if !found || !valid {
-				if currentValue != nil && *currentValue != nil {
-					sc.logModuleWarning(
-						&log,
-						"PKIInvalidRestored",
-						"PKI secret is invalid, restoring from controller's internal state",
-					)
-
-					actualValue = **currentValue
-				} else {
-					// PKI is invalid and we don't have some to restore
-					return errorPKIInvalid
-				}
-			}
-
-			if err := actualValue.EncodeSecret(secret); err != nil {
-				return fmt.Errorf("cannot encode to secret: %w", err)
-			}
-			return nil
-		},
-	)
-
-	if err != nil {
-		return fmt.Errorf("cannot ensure secret: %w", err)
-	}
-	if updated {
-		log.Info("Secret was updated")
-	}
-
-	// Save actual value
-	*currentValue = &actualValue
 	return nil
 }
 
