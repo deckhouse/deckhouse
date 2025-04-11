@@ -1219,6 +1219,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
         &.table-wrapper__versions { 
             overflow: visible;
         }
+
+        .table__small {
+          box-shadow: none;
+        }
     }
 }
 
