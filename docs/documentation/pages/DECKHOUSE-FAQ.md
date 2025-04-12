@@ -772,6 +772,48 @@ proxy:
   httpsProxy: "https://user:password@proxy.company.my:8443"
 ```
 
+### Autoloading proxy variables for users at CLI
+
+Since DKP v1.67, the file `/etc/profile.d/d8-system-proxy.sh`, which sets proxy variables for users, is no longer configurable. To autoload proxy variables for users at the CLI, you can use the following `NodeGroupConfiguration` resource:
+
+```
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: profile-proxy.sh
+spec:
+  bundles:
+    - '*'
+  nodeGroups:
+    - '*'
+  weight: 99
+  content: |
+    {{- if .proxy }}
+      {{- if .proxy.httpProxy }}
+    export HTTP_PROXY={{ .proxy.httpProxy | quote }}
+    export http_proxy=${HTTP_PROXY}
+      {{- end }}
+      {{- if .proxy.httpsProxy }}
+    export HTTPS_PROXY={{ .proxy.httpsProxy | quote }}
+    export https_proxy=${HTTPS_PROXY}
+      {{- end }}
+      {{- if .proxy.noProxy }}
+    export NO_PROXY={{ .proxy.noProxy | join "," | quote }}
+    export no_proxy=${NO_PROXY}
+      {{- end }}
+    bb-sync-file /etc/profile.d/profile-proxy.sh - << EOF
+    export HTTP_PROXY=${HTTP_PROXY}
+    export http_proxy=${HTTP_PROXY}
+    export HTTPS_PROXY=${HTTPS_PROXY}
+    export https_proxy=${HTTPS_PROXY}
+    export NO_PROXY=${NO_PROXY}
+    export no_proxy=${NO_PROXY}
+    EOF
+    {{- else }}
+    rm -rf /etc/profile.d/profile-proxy.sh
+    {{- end }}
+```
+
 ## Changing the configuration
 
 {% alert level="warning" %}
