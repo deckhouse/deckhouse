@@ -1,4 +1,4 @@
-{{- $shellOperatorVersion := "v1.5.3"}}
+{{- $shellOperatorVersion := "v1.6.2"}}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/alt-p11
