@@ -18,11 +18,10 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-# check notification webhook message
 token=$(curl -XPOST  -s https://webhook.site/token | jq -r .uuid)
 echo "open https://webhook.site/#"'!'"/view/$token"
 
-kubectl patch mc deckhouse --type=merge -p '{"spec": {"settings": {"releaseChannel": "Alpha", "update": {"mode": "Auto", "windows": [{"from": "04:00", "to": "05:00"}], "notification": {"webhook": "https://webhook.site/'${token}'", "minimalNotificationTime": "10h"}}}}}'
+kubectl patch mc deckhouse --type=merge -p '{"spec": {"settings": {"releaseChannel": "Alpha", "update": {"mode": "AutoPatch", "windows": [{"from": "04:00", "to": "05:00"}], "notification": {"webhook": "https://webhook.site/'${token}'", "releaseType": "All", "minimalNotificationTime": "10h"}}}}}'
 
 kubectl apply -f - <<"EOF"
 apiVersion: deckhouse.io/v1alpha1
@@ -49,34 +48,29 @@ kind: DeckhouseRelease
 metadata:
   annotations:
     dryrun: "true"
-  name: v1.66.0
+  name: v1.65.1
 spec:
-  applyAfter: "2045-01-01T19:19:24Z"
-  version: v1.66.0
+  version: v1.65.1
 EOF
 
-kubectl wait --for=jsonpath='{.status.phase}'=Pending deckhouserelease/v1.66.0
-kubectl wait --for=jsonpath='{.metadata.annotations.release\.deckhouse\.io/notified}'=true deckhouserelease/v1.66.0
-kubectl wait --for=jsonpath='{.metadata.annotations.release\.deckhouse\.io/notification-time-shift}'=true deckhouserelease/v1.66.0
+kubectl wait --for=jsonpath='{.status.phase}'=Pending deckhouserelease/v1.65.1
+kubectl wait --for=jsonpath='{.metadata.annotations.release\.deckhouse\.io/notified}'=true deckhouserelease/v1.65.1
+kubectl wait --for=jsonpath='{.metadata.annotations.release\.deckhouse\.io/notification-time-shift}'=true deckhouserelease/v1.65.1
+
+# check notification webhook message
+raw=$(curl -s https://webhook.site/token/$token/request/latest)
+content=$(jq -r .content <<< "${raw}")
 
 
-
-raw=$(curl -s https://webhook.site/token/$token/request/latest | jq -r .)
-uuid=$(echo "$raw" | jq -r .uuid)
-content=$(echo "$raw" | jq -r .content)
-
-if echo "$content" | jq -e '.subject == "Deckhouse" and .version == "1.66.0" and (.message | startswith("New Deckhouse Release 1.66.0 is available"))' > /dev/null; then
+if echo "$content" | jq -e '.subject == "Deckhouse" and .version == "1.65.1" and (.message | startswith("New Deckhouse Release 1.65.1 is available. Release will be applied at:"))' > /dev/null; then
   echo "OK - webhook data exists"
 else
   echo "Webhook data invalid: $content"
   exit 1;
 fi
-# delete request
-# curl -s -X DELETE https://webhook.site/token/$token/request/$uuid > /dev/null
-# stop check webhook
 
-msg=$(kubectl get deckhouserelease/v1.66.0 -o jsonpath='{.status.message}')
-if [[ "$msg" != Release\ is\ postponed,\ waiting\ for\ the\ update\ window* ]]; then
+msg=$(kubectl get deckhouserelease/v1.65.1 -o jsonpath='{.status.message}')
+if [[ "$msg" != Release\ is\ postponed,\ waiting\ for\ the\ update\ window\ until* ]]; then
 	echo "Release message invalid: $msg"
 	exit 1;
 fi
