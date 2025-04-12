@@ -36,7 +36,7 @@ git:
   - candi/cloud-providers/*/layouts
   - candi/cloud-providers/*/terraform-modules
 - url: {{ .SOURCE_REPO }}/flant/shell-operator
-  tag: v1.6.2
+  tag: v1.6.1
   add: /frameworks/shell
   to: /deckhouse/shell-operator/frameworks/shell
   {{ .Files.Get (printf "tools/build_includes/modules-%s.yaml" .Env) }}
