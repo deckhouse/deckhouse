@@ -776,7 +776,7 @@ proxy:
 
 Since DKP v1.67, the file `/etc/profile.d/d8-system-proxy.sh`, which sets proxy variables for users, is no longer configurable. To autoload proxy variables for users at the CLI, you can use the following `NodeGroupConfiguration` resource:
 
-```
+```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
 metadata:

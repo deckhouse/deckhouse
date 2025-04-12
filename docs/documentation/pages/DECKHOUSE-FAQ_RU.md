@@ -778,7 +778,7 @@ proxy:
 
 С версии платформы DKP v1.67 более не настраивается файл `/etc/profile.d/d8-system-proxy.sh`, который устанавливал переменные proxy для пользователей. Для автозагрузки переменных proxy пользователям в CLI можно воспользоваться следующим ресурсом `NodeGroupConfiguration`:
 
-```
+```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
 metadata:
