@@ -1,56 +1,52 @@
 ---
 title: "Using DRBD‑Based Replicated Storage"
-permalink: ru/storage/user/sds/lvm-replicated.html
-lang: en
+permalink: en/storage/user/sds/lvm-replicated.html
 ---
 
 {% alert level="warning" %}
-Operation is guaranteed only if the [system requirements](#system-requirements) are met.  
-Using the module under other conditions is possible, but stable operation is not guaranteed.
+Functionality is guaranteed only if the [system requirements](#system-requirements) are met. Using it under other conditions is possible, but stable operation is not guaranteed.
 {% endalert %}
 
-## System Requirements
+## System requirements
 
 {% alert level="info" %}
-Applicable to both single‑zone clusters and clusters that span multiple availability zones.
+Applicable to both single‑zone clusters and clusters that use multiple availability zones.
 {% endalert %}
 
-- Use the stock kernels that ship with the supported distributions.
-- Provide a network infrastructure with a bandwidth of 10 Gbps or higher.
-- To achieve maximum performance, network latency between nodes should be 0.5–1 ms.
-- Do not use another SDS (Software‑Defined Storage) layer to supply disks for Deckhouse SDS.
+- Use stock kernels shipped with the supported distributions.
+- For network connectivity, use infrastructure with bandwidth of 10 Gbps or higher.
+- To achieve maximum performance, network latency between nodes should be within 0.5–1 ms.
+- Do not use another SDS (Software‑defined storage) to provide disks for Deckhouse SDS.
 
 ## Recommendations
 
-- Do not use RAID. See [below](#reasons-for-avoiding-raid-with-sds-replicated-volume) for details.
-- Use local physical disks. See [below](#recommendations-for-using-local-disks) for details.
-- For stable cluster operation (with reduced performance), network latency between nodes should not exceed 20 ms.
+- Do not use RAID. See [below](#reasons-to-avoid-raid-with-sds-replicated-volume) for details.
+- Use local physical disks. See [below](#recommendations-for-using-local-disks).
+- For stable cluster operation (with reduced performance), allowable network latency between nodes must not exceed 20 ms.
 
-## Obtaining Space‑Usage Information
+## Retrieving space‑usage information
 
-Two methods are available:
+There are two ways:
 
-1. Grafana dashboard:
+1. Via the Grafana dashboard:
 
-   Open Dashboards → Storage → LINSTOR/DRBD.  
-   The upper‑right corner shows the current cluster space usage.
+   Go to “Dashboards” → “Storage” → “LINSTOR/DRBD”. The current cluster space usage level is shown in the upper‑right corner.
 
-   > Note. The value reflects the total available space. When volumes are created with two replicas, divide the numbers by two to estimate how many volumes can actually be placed.
+   > **Warning.** The value reflects the state of all available space. When you create volumes with two replicas, divide the reported figures by two to estimate how many volumes can actually be placed.
 
-1. Command‑line interface:
+1. Via the command line:
 
    ```shell
-   d8 k exec -n d8-sds-replicated-volume \
-     deploy/linstor-controller -- linstor storage-pool list
+   d8 k exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor storage-pool list
    ```
 
-   > Note. The value reflects the total available space. When volumes are created with two replicas, divide the numbers by two to estimate how many volumes can actually be placed.
+   > **Warning.** The value reflects the state of all available space. When you create volumes with two replicas, divide the reported figures by two to estimate how many volumes can actually be placed.
 
-## Setting the Default StorageClass
+## Assigning the default StorageClass
 
-Set `spec.isDefault: true` in the [ReplicatedStorageClass](../../../reference/cr/replicatedstorageclass/) object to make a StorageClass the default.
+To designate a StorageClass as the default, set the field `spec.isDefault` to `true` in the [ReplicatedStorageClass](../../../reference/cr/replicatedstorageclass/) custom resource.
 
-## Adding an Existing LVMVolumeGroup or LVMThin Pool
+## Adding an existing LVMVolumeGroup or LVMThin pool
 
 1. Tag the Volume Group with `storage.deckhouse.io/enabled=true`:
 
@@ -58,38 +54,35 @@ Set `spec.isDefault: true` in the [ReplicatedStorageClass](../../../reference/cr
    vgchange myvg-0 --add-tag storage.deckhouse.io/enabled=true
    ```
 
-   The Volume Group is auto‑detected and an [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) resource is created for it.
+   After that the Volume Group will be discovered automatically and a corresponding [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) resource will be created.
 
-1. Reference this resource in the [ReplicatedStoragePool](../../../reference/cr/replicatedstoragepool/) object:
+1. Reference this resource in [ReplicatedStoragePool](../../../reference/cr/replicatedstoragepool/) parameters using `spec.lvmVolumeGroups[].name`.  
+   If an LVMThin pool is used, additionally specify its name in `spec.lvmVolumeGroups[].thinPoolName`.
 
-  - `spec.lvmVolumeGroups[].name` — Volume Group name.
-  - `spec.lvmVolumeGroups[].thinPoolName` — Thin‑pool name (if you use LVMThin).
+## Changing DRBD volume limits and cluster ports
 
-## Changing DRBD Volume Limits and Cluster Ports
-
-The default TCP port range for DRBD resources is 7000–7999. Override it with `drbdPortRange.minPort` and `drbdPortRange.maxPort`.
+The default port range for DRBD resources is TCP 7000–7999. You can override it with the `drbdPortRange` setting by specifying the desired `minPort` and `maxPort` values.
 
 {% alert level="warning" %}
-After changing `drbdPortRange`, restart the LINSTOR controller. Existing DRBD resources keep their previously assigned ports.
+After changing `drbdPortRange`, restart the LINSTOR controller so that the new settings take effect. Existing DRBD resources will retain their assigned ports.
 {% endalert %}
 
-## Safe Node Reboot with DRBD Resources
+## Correctly rebooting a node with DRBD resources
 
 {% alert level="info" %}
-Avoid rebooting multiple nodes at the same time.
+To ensure stable module operation, avoid rebooting multiple nodes at the same time:
 {% endalert %}
 
-1. Drain the node:
+1. Drain the desired node:
 
    ```shell
    d8 k drain test-node-1 --ignore-daemonsets --delete-emptydir-data
    ```
 
-1. Check for faulty resources or resources in SyncTarget:
+1. Check for faulty DRBD resources or resources in the `SyncTarget` state. If any are found, wait for synchronization to finish or take corrective actions:
 
    ```shell
-   d8 k -n d8-sds-replicated-volume exec -t \
-     deploy/linstor-controller -- linstor r l --faulty
+   d8 k -n d8-sds-replicated-volume exec -t deploy/linstor-controller -- linstor r l --faulty
    ```
 
    Example output:
@@ -102,74 +95,65 @@ Avoid rebooting multiple nodes at the same time.
    +----------------------------------------------------------------+
    ```
 
-1. Reboot the node, wait for all DRBD resources to resync, then uncordon:
+1. Reboot the node and wait for all DRBD resources to resynchronize, then run `uncordon`:
 
    ```shell
    d8 k uncordon test-node-1
    node/test-node-1 uncordoned
    ```
 
-Repeat for additional nodes as required.
+If you need to reboot another node, repeat the procedure.
 
-## Moving Resources to Free Space in a Storage Pool
+## Moving resources to free up space in a Storage Pool
 
-1. List Storage Pools on the source node:
-
-   ```shell
-   d8 k exec -n d8-sds-replicated-volume \
-     deploy/linstor-controller -- linstor storage-pool list -n OLD_NODE
-   ```
-
-1. List volumes on the source node:
+1. List Storage Pools:
 
    ```shell
-   d8 k exec -n d8-sds-replicated-volume \
-     deploy/linstor-controller -- linstor volume list -n OLD_NODE
+   d8 k exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor storage-pool list -n OLD_NODE
    ```
 
-1. List resources to migrate:
+1. Determine the location of volumes:
 
    ```shell
-   d8 k exec -n d8-sds-replicated-volume \
-     deploy/linstor-controller -- linstor resource list-volumes
+   d8 k exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor volume list -n OLD_NODE
    ```
 
-1. Move selected resources (no more than 1–2 at a time):
+1. Get a list of resources to move:
 
    ```shell
-   d8 k exec -n d8-sds-replicated-volume \
-     deploy/linstor-controller \
-     -- linstor --yes-i-am-sane-and-i-understand-what-i-am-doing \
-     resource create NEW_NODE RESOURCE_NAME
+   d8 k exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor resource list-volumes
    ```
 
-1. Wait for sync:
+1. Move the selected resources to another node (no more than 1–2 at a time):
 
    ```shell
-   d8 k exec -n d8-sds-replicated-volume \
-     deploy/linstor-controller -- linstor resource-definition wait-sync RESOURCE_NAME
+   d8 k exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor --yes-i-am-sane-and-i-understand-what-i-am-doing resource create NEW_NODE RESOURCE_NAME
    ```
 
-1. Delete the resource copy on the old node:
+1. Wait for synchronization:
 
    ```shell
-   d8 k exec -n d8-sds-replicated-volume \
-     deploy/linstor-controller \
-     -- linstor --yes-i-am-sane-and-i-understand-what-i-am-doing \
-     resource delete OLD_NODE RESOURCE_NAME
+   d8 k exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor resource-definition wait-sync RESOURCE_NAME
    ```
 
-## Evicting DRBD Resources from a Node
+1. Delete the resource from the original node:
 
-The `evict.sh` script supports two modes:
+   ```shell
+   d8 k exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor --yes-i-am-sane-and-i-understand-what-i-am-doing resource delete OLD_NODE RESOURCE_NAME
+   ```
 
-- Node deletion — creates extra replicas, then removes the node from LINSTOR and Kubernetes.
+## Evicting DRBD resources from a node
 
-- Resource deletion — creates extra replicas, then deletes the resources from LINSTOR while leaving the node in the cluster.
+The `evict.sh` script performs eviction in two modes:
 
-### Preparation and Execution
+- **Node removal** — additional replicas are created for every resource, after which the node is removed from LINSTOR and Kubernetes.
+- **Resource removal** — replicas are created for the resources, after which the resources themselves are removed from LINSTOR (the node remains in the cluster).
 
-1. Verify the script exists:
+### Preparing and running the script
+
+Before eviction:
+
+1. Make sure the script is present on the master node:
 
    ```shell
    ls -l /opt/deckhouse/sbin/evict.sh
@@ -178,49 +162,48 @@ The `evict.sh` script supports two modes:
 1. Fix faulty resources:
 
    ```shell
-   d8 k -n d8-sds-replicated-volume exec -ti \
-     deploy/linstor-controller -- linstor resource list --faulty
+   d8 k -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor resource list --faulty
    ```
 
-1. Ensure all pods in `d8-sds-replicated-volume` are `Running`:
+1. Ensure all pods in the `d8-sds-replicated-volume` namespace are in the `Running` state:
 
    ```shell
    d8 k -n d8-sds-replicated-volume get pods | grep -v Running
    ```
 
-#### Example — Delete a Node
+### Example: removing a node from LINSTOR and Kubernetes
 
-Interactive:
+Run `evict.sh` on any master node in interactive mode, specifying `--delete-node`:
 
 ```shell
 /opt/deckhouse/sbin/evict.sh --delete-node
 ```
 
-Non‑interactive:
+For non‑interactive mode, add `--non-interactive` and specify the node name. The script will perform all actions without prompting:
 
 ```shell
 /opt/deckhouse/sbin/evict.sh --non-interactive --delete-node --node-name "worker-1"
 ```
 
-#### Example — Delete Resources Only
+### Example: removing resources from a node
 
-Interactive:
+Run `evict.sh` on any master node in interactive mode, specifying `--delete-resources-only`:
 
 ```shell
 /opt/deckhouse/sbin/evict.sh --delete-resources-only
 ```
 
-Non‑interactive:
+For non‑interactive mode, add `--non-interactive` and specify the node name:
 
 ```shell
 /opt/deckhouse/sbin/evict.sh --non-interactive --delete-resources-only --node-name "worker-1"
 ```
 
 {% alert level="warning" %}
-After completion, the node remains SchedulingDisabled and LINSTOR sets `AutoplaceTarget=false`, blocking new resources on that node.
+After the script completes, the node remains in `SchedulingDisabled` status and LINSTOR sets the property `AutoplaceTarget=false`. This blocks automatic creation of new resources on the node.
 {% endalert %}
 
-Re‑enable placement:
+To allow resource placement again, run:
 
 ```shell
 alias linstor='kubectl -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor'
@@ -228,219 +211,452 @@ linstor node set-property "worker-1" AutoplaceTarget
 kubectl uncordon "worker-1"
 ```
 
-Verify:
+Check the `AutoplaceTarget` parameter on all nodes (the field will be empty on nodes where LINSTOR resource placement is allowed):
 
 ```shell
+alias linstor='kubectl -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor'
 linstor node list -s AutoplaceTarget
 ```
 
-#### `evict.sh` Parameters
+### `evict.sh` script parameters
 
-- `--delete-node` &nbsp; Remove node from LINSTOR + Kubernetes (after replica creation)
-- `--delete-resources-only` &nbsp; Remove resources only
-- `--non-interactive` &nbsp; Run without prompts
-- `--node-name` &nbsp; Target node (required with `--non-interactive`)
-- `--skip-db-backup` &nbsp; Skip LINSTOR DB backup
-- `--ignore-advise` &nbsp; Ignore `linstor advise resource` warnings
-- `--exclude-resources-from-check` &nbsp; Skip listed resources (`|`‑separated)
+- `--delete-node` — remove a node from LINSTOR and Kubernetes after creating additional replicas for all resources on the node;
+- `--delete-resources-only` — remove resources from the node without deleting the node, after creating additional replicas;
+- `--non-interactive` — run the script in non‑interactive mode;
+- `--node-name` — the name of the node to evict resources from. Mandatory when using `--non-interactive`;
+- `--skip-db-backup` — skip creating a LINSTOR DB backup before operations;
+- `--ignore-advise` — perform operations despite `linstor advise resource` warnings;
+- `--exclude-resources-from-check` — exclude resources listed with `|` from checks;
 
 ## Troubleshooting
 
-Issues can arise at various component levels.  
-Use the cheat‑sheet below for quick diagnostics.
+Issues can arise at various component layers. The cheat sheet below helps diagnose volume failures in LINSTOR.
 
-![cheat‑sheet](./images/linstor-debug-cheatsheet.ru.svg)
+![cheat sheet](./images/linstor-debug-cheatsheet.ru.svg)
+<!-- Source: https://docs.google.com/drawings/d/19hn3nRj6jx4N_haJE0OydbGKgd-m8AUSr0IqfHfT6YA/edit -->
 
-### linstor‑node Fails to Start (DRBD Module Load Error)
+### linstor-node start error while loading the DRBD module
 
-1. Check `linstor-node` pods:
+1. Check the `linstor-node` pods:
 
    ```shell
    d8 k get pod -n d8-sds-replicated-volume -l app=linstor-node
    ```
 
-2. If some pods are in Init, check DRBD version and bashible logs:
+1. If some pods are stuck in `Init`, check the DRBD version and bashible logs on the node:
 
    ```shell
    cat /proc/drbd
    journalctl -fu bashible
    ```
 
-Common causes:
+Most likely causes:
 
-- DRBDv8 loaded instead of DRBDv9.  
-  If `/proc/drbd` is missing, the module is not loaded.
+- DRBDv8 is loaded instead of the required DRBDv9. Verify the version (if `/proc/drbd` is missing, the module is not loaded):
 
-- Secure Boot enabled.  
-  The dynamically built DRBD module is unsigned and not supported with Secure Boot.
+  ```shell
+  cat /proc/drbd
+  ```
 
-### FailedMount During Pod Start
+  If the file is missing, the module is not loaded and the problem lies elsewhere.
 
-#### Pod stuck in *ContainerCreating*
+- Secure Boot is enabled. Because DRBD is built dynamically (similar to dkms) without a digital signature, the module is not supported when Secure Boot is enabled.
 
-If `d8 k describe pod` shows an error like:
+### FailedMount error when starting a pod
+
+#### Pod stuck in ContainerCreating
+
+If the pod is stuck in `ContainerCreating` and `d8 k describe pod` shows errors like the one below, the device is mounted on another node:
 
 ```console
-rpc error: code = Internal desc = NodePublishVolume failed ... wrong medium type ...
+rpc error: code = Internal desc = NodePublishVolume failed for pvc-b3e51b8a-9733-4d9a-bf34-84e0fee3168d: checking
+for exclusive open failed: wrong medium type, check device health
 ```
 
-the device is mounted on another node. Locate it:
+Check where the device is in use:
 
 ```shell
 alias linstor='kubectl -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor'
-linstor resource list -r pvc-<uid>
+linstor resource list -r pvc-b3e51b8a-9733-4d9a-bf34-84e0fee3168d
 ```
 
-Unmount the disk on the node shown in the InUse flag.
+The `InUse` flag shows on which node the device is used; unmount the disk manually on that node.
 
-#### *Input/output error*
+#### Input/output error
 
-Usually occurs during `mkfs`. Check:
+Such errors usually occur during filesystem creation (mkfs). Check `dmesg` on the node where the pod is starting:
 
 ```shell
 dmesg | grep 'Remote failed to finish a request within'
 ```
 
-If present, the disk subsystem is too slow for DRBD.
+If the output contains messages like *Remote failed to finish a request within …*, the disk subsystem may be too slow for DRBD to operate correctly.
 
-## Residual Storage Pool After Deleting ReplicatedStoragePool
+## Removing a leftover Storage Pool after deleting a ReplicatedStoragePool
 
-The `sds-replicated-volume` module does not yet handle deletion of [ReplicatedStoragePool](../../../reference/cr/replicatedstoragepool/) objects.
+The `sds-replicated-volume` module does not handle deletion operations for the [ReplicatedStoragePool](../../../reference/cr/replicatedstoragepool/) resource.
 
-## Limitations on Editing ReplicatedStorageClass
+## Restrictions on changing ReplicatedStorageClass spec
 
-Only `spec.isDefault` is mutable; other fields are immutable by design.
+Only the `isDefault` field can be modified. All other parameters are immutable — this is expected behavior.
 
-## Deleting a Child StorageClass with ReplicatedStorageClass
+## Deleting a child StorageClass when deleting a ReplicatedStorageClass
 
-A StorageClass in Created status can be deleted.  
-For other statuses, restore the resource or delete the StorageClass manually.
+If the StorageClass is in the `Created` status, it can be deleted. For other statuses you must restore the resource or delete the StorageClass manually.
 
-## Errors Creating a Storage Pool or StorageClass
+## Errors when creating a Storage Pool or StorageClass
 
-On temporary external failures (e.g., kube‑apiserver downtime) the module automatically retries the operation.
+For temporary external issues (e.g., kube‑apiserver unavailable) the module automatically retries the failed operation.
 
-## Error “You're not allowed to change state of linstor cluster manually”
+## Error "You're not allowed to change state of linstor cluster manually"
 
-Many operations are automated; the module restricts LINSTOR commands.  
-Run:
+Operations requiring manual intervention are partially or fully automated in the `sds-replicated-volume` module. Therefore, the module restricts the list of allowed LINSTOR commands. For example, creating a Tie‑Breaker is automated because LINSTOR sometimes does not create one for two‑replica resources. To see the list of allowed commands, run:
 
 ```shell
 alias linstor='kubectl -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor'
 linstor --help
 ```
 
-to view the allowed commands.
+## Restoring the database from a backup
 
-## Restoring the Database from Backup
+Backend resource backups are stored in Secrets as YAML files split into segments for easier restoration. Backups are created automatically on a schedule.
 
-Backups are stored in secrets as segmented YAML files and created automatically.
-
-A valid backup looks like:
-
-```console
-linstor-20240425074718-backup-0   Opaque 1  28s  sds-replicated-volume.deckhouse.io/linstor-db-backup=20240425074718
-...
-```
-
-### Restoration Steps
+A correctly formed backup looks like this:
 
 ```shell
-NAMESPACE="d8-sds-replicated-volume"
-BACKUP_NAME="linstor_db_backup"
+linstor-20240425074718-backup-0              Opaque                           1      28s     sds-replicated-volume.deckhouse.io/linstor-db-backup=20240425074718
+linstor-20240425074718-backup-1              Opaque                           1      28s     sds-replicated-volume.deckhouse.io/linstor-db-backup=20240425074718
+linstor-20240425074718-backup-2              Opaque                           1      28s     sds-replicated-volume.deckhouse.io/linstor-db-backup=20240425074718
+linstor-20240425074718-backup-completed      Opaque                           0      28s     <none>
 ```
 
-1. List backups:
+The backup is stored in encoded segments in Secrets named `linstor-%date_time%-backup-{0..2}`. The Secret `linstor-%date_time%-backup-completed` contains no data and serves as a marker that the backup process completed successfully.
+
+### Backup restoration procedure
+
+1. Set environment variables:
+
+   ```shell
+   NAMESPACE="d8-sds-replicated-volume"
+   BACKUP_NAME="linstor_db_backup"
+   ```
+
+1. List available backups:
 
    ```shell
    d8 k -n $NAMESPACE get secrets --show-labels
    ```
 
-2. Pick a label:
+   Example output:
+
+   ```shell
+   linstor-20240425072413-backup-0              Opaque                           1      33m     sds-replicated-volume.deckhouse.io/linstor-db-backup=20240425072413
+   ...
+   ```
+
+1. Each backup has its own creation‑time label. Choose the desired one and save it to an environment variable. In this example we use the most recent label:
 
    ```shell
    LABEL_SELECTOR="sds-replicated-volume.deckhouse.io/linstor-db-backup=20240425074718"
    ```
 
-3. Combine segments:
+1. Create a temporary directory to store archive parts:
 
    ```shell
    TMPDIR=$(mktemp -d)
+   echo "Temporary directory: $TMPDIR"
+   ```
+
+1. Create an empty archive and combine Secret data into one file:
+
+   ```shell
    COMBINED="${BACKUP_NAME}_combined.tar"
    > "$COMBINED"
+   ```
 
+1. Get the list of Secrets by label, decode the data, and append it to the archive:
+
+   ```shell
    MOBJECTS=$(kubectl get rsmb -l "$LABEL_SELECTOR" --sort-by=.metadata.name -o jsonpath="{.items[*].metadata.name}")
+   
    for MOBJECT in $MOBJECTS; do
+     echo "Process: $MOBJECT"
      kubectl get rsmb "$MOBJECT" -o jsonpath="{.data}" | base64 --decode >> "$COMBINED"
    done
    ```
 
-4. Extract:
+1. Extract the archive to get backup files:
 
    ```shell
    mkdir -p "./backup"
    tar -xf "$COMBINED" -C "./backup" --strip-components=2
    ```
 
-5. Restore:
+1. Check the backup contents:
 
    ```shell
-   d8 k apply -f ./backup/   # bulk restore
-   # or
-   d8 k apply -f specific.yaml
+   ls ./backup
    ```
 
-## SDS‑Replicated‑Volume Pods Missing on a Node
-
-Likely due to labels.
-
-1. Check `dataNodes.nodeSelector`:
+1. Restore the required entity by applying the corresponding YAML file:
 
    ```shell
-   d8 k get mc sds-replicated-volume -o=jsonpath={.spec.settings.dataNodes.nodeSelector}
+   d8 k apply -f %something%.yaml
    ```
 
-2. Check controller selectors:
+   Or bulk‑apply for a full restore:
 
    ```shell
-   d8 k -n d8-sds-replicated-volume \
-     get secret d8-sds-replicated-volume-controller-config \
-     -o jsonpath='{.data.config}' | base64 --decode
+   kubectl apply -f ./backup/
    ```
 
-3. Ensure the node has all required labels:
+## Missing sds-replicated-volume service pods on a selected node
+
+The issue is most likely related to node labels.
+
+- Check [dataNodes.nodeSelector](./configuration.html#parameters-datanodes-nodeselector) in module settings:
+
+  ```shell
+  d8 k get mc sds-replicated-volume -o=jsonpath={.spec.settings.dataNodes.nodeSelector}
+  ```
+
+- Check the selectors used by `sds-replicated-volume-controller`:
+
+  ```shell
+  d8 k -n d8-sds-replicated-volume get secret d8-sds-replicated-volume-controller-config  -o jsonpath='{.data.config}' | base64 --decode
+  ```
+
+- The secret `d8-sds-replicated-volume-controller-config` must contain the selectors specified in module settings plus `kubernetes.io/os: linux`.
+
+- Verify that the required labels are present on the node:
+
+  ```shell
+  d8 k get node worker-0 --show-labels
+  ```
+
+- If the labels are missing, add them via NodeGroup templates or directly to the node.
+
+- If the labels exist, check whether the node has the label `storage.deckhouse.io/sds-replicated-volume-node=`.  
+  If not, check whether `sds-replicated-volume-controller` is running and inspect its logs:
+
+  ```shell
+  d8 k -n d8-sds-replicated-volume get po -l app=sds-replicated-volume-controller
+  d8 k -n d8-sds-replicated-volume logs -l app=sds-replicated-volume-controller
+  ```
+
+## Additional support
+
+Reasons for failed operations are shown in the `status.reason` field of [ReplicatedStoragePool](../../../reference/cr/replicatedstoragepool/) and [ReplicatedStorageClass](../../../reference/cr/replicatedstorageclass/) resources. If that information is insufficient, consult the `sds-replicated-volume-controller` logs.
+
+## Migration from the linstor module to sds-replicated-volume
+
+During migration the LINSTOR control plane and its CSI are temporarily unavailable, which can affect PV operations (creation, expansion, or deletion).
+
+{% alert level="warning" %}
+User data is not affected because the migration moves to a new namespace and adds components that manage volumes.
+{% endalert %}
+
+### Migration procedure
+
+1. Ensure no faulty resources exist in the backend. The command should return an empty list:
 
    ```shell
-   d8 k get node worker-0 --show-labels
+   alias linstor='kubectl -n d8-linstor exec -ti deploy/linstor-controller -- linstor'
+   linstor resource list --faulty
    ```
 
-4. If label `storage.deckhouse.io/sds-replicated-volume-node=` is missing, check controller pod and logs:
+   > **Warning.** All resources must be healthy before migration.
+
+1. Disable the `linstor` module:
 
    ```shell
-   d8 k -n d8-sds-replicated-volume get po -l app=sds-replicated-volume-controller
-   d8 k -n d8-sds-replicated-volume logs -l app=sds-replicated-volume-controller
+   d8 k patch moduleconfig linstor --type=merge -p '{"spec": {"enabled": false}}'
    ```
 
-## Additional Support
+1. Wait until the `d8-linstor` namespace is deleted:
 
-Failure reasons appear in `status.reason` of [ReplicatedStoragePool](../../../reference/cr/replicatedstoragepool/) and [ReplicatedStorageClass](../../../reference/cr/replicatedstorageclass/).  
-If more detail is needed, inspect the `sds-replicated-volume-controller` logs.
+   ```shell
+   d8 k get namespace d8-linstor
+   ```
 
-## Migration from linstor to sds‑replicated‑volume
+1. Create a ModuleConfig for `sds-node-configurator`:
 
-*(Step‑by‑step instructions translated as in the Russian version.)*
+   ```yaml
+   d8 k apply -f -<<EOF
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: sds-node-configurator
+   spec:
+     enabled: true
+     version: 1
+   EOF
+   ```
 
-## Migration from sds‑drbd to sds‑replicated‑volume
+1. Wait until `sds-node-configurator` reaches `Ready`:
 
-*(Step‑by‑step instructions translated as in the Russian version.)*
+   ```shell
+   d8 k get moduleconfig sds-node-configurator
+   ```
 
-## Reasons for Avoiding RAID with sds‑replicated‑volume
+1. Create a ModuleConfig for `sds-replicated-volume`:
 
-Using DRBD with >1 replica already provides network RAID. Local RAID introduces:
+   > **Warning.** If `settings.dataNodes.nodeSelector` is not specified for `sds-replicated-volume`, its value will be taken from the `linstor` module. If it is absent there as well, it will remain empty and all cluster nodes will be considered data nodes.
 
-- High space overhead (e.g., three DRBD replicas + RAID1 doubles usage again).
-- Minimal performance gain with RAID0 (network is likely the bottleneck) and reduced reliability due to slower failover.
+   ```yaml
+   d8 k apply -f - <<EOF
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: sds-replicated-volume
+   spec:
+     enabled: true
+     version: 1
+   EOF
+   ```
 
-## Recommendations for Using Local Disks
+1. Wait until `sds-replicated-volume` reaches `Ready`:
 
-DRBD replicates data over the network. Using NAS multiplies network load because nodes sync with NAS and each other, increasing latency. NAS also usually employs RAID, adding extra overhead.
+   ```shell
+   d8 k get moduleconfig sds-replicated-volume
+   ```
+
+1. Check the `sds-replicated-volume` settings:
+
+   ```shell
+   d8 k get moduleconfig sds-replicated-volume -oyaml
+   ```
+
+1. Wait until all pods in the `d8-sds-replicated-volume` and `d8-sds-node-configurator` namespaces are `Ready` or `Completed`:
+
+   ```shell
+   d8 k get po -n d8-sds-node-configurator
+   d8 k get po -n d8-sds-replicated-volume
+   ```
+
+1. Update the `linstor` alias and check resources:
+
+```shell
+alias linstor='kubectl -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor'
+linstor resource list --faulty
+```
+
+If no faulty resources are found, migration was successful.
+
+### Migrating to ReplicatedStorageClass
+
+StorageClasses in this module are managed via the `ReplicatedStorageClass` resource. StorageClasses must not be created manually.
+
+When migrating from the LINSTOR module, delete old StorageClasses and create new ones via `ReplicatedStorageClass` according to the table below.
+
+Note that in old StorageClasses you look at the option in the `parameters` section of the StorageClass itself, while when creating a new one you set the corresponding option in `ReplicatedStorageClass`.
+
+| StorageClass parameter                               | ReplicatedStorageClass | Default | Notes                                                                                       |
+|------------------------------------------------------|------------------------|---------|---------------------------------------------------------------------------------------------|
+| linstor.csi.linbit.com/placementCount: "1"           | replication: "None"    |         | One data replica will be created                                                            |
+| linstor.csi.linbit.com/placementCount: "2"           | replication: "Availability" |     | Two data replicas will be created                                                           |
+| linstor.csi.linbit.com/placementCount: "3"           | replication: "ConsistencyAndAvailability" | yes | Three data replicas will be created                                                         |
+| linstor.csi.linbit.com/storagePool: "name"           | storagePool: "name"    |         | Name of the storage pool used for storage                                                   |
+| linstor.csi.linbit.com/allowRemoteVolumeAccess: "false" | volumeAccess: "Local" |         | Remote pod access to data volumes is forbidden (local disk access within the node only)     |
+
+Additional parameters:
+
+- `reclaimPolicy` (Delete, Retain) — corresponds to `reclaimPolicy` of the old StorageClass.
+- `zones` — list of zones to place resources in (direct cloud zone names). Note that remote pod access to the data volume is possible only within one zone.
+- `volumeAccess` values: `Local` (access strictly within the node), `EventuallyLocal` (a data replica will synchronize to the node after the pod starts), `PreferablyLocal` (remote pod access allowed, `volumeBindingMode: WaitForFirstConsumer`), `Any` (remote pod access allowed, `volumeBindingMode: Immediate`).
+- If you need `volumeBindingMode: Immediate`, set `volumeAccess` in ReplicatedStorageClass to `Any`.
+
+### Migrating to ReplicatedStoragePool
+
+The [ReplicatedStoragePool](../../../reference/cr/replicatedstoragepool/) resource allows you to create Storage Pools in the backend. It is recommended to create this resource even for existing Storage Pools and reference existing [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/). The controller will detect that the Storage Pools already exist and leave them unchanged, showing `Created` in `status.phase`.
+
+## Migration from the sds-drbd module to sds-replicated-volume
+
+During migration the module control plane and its CSI are unavailable. This prevents creation, expansion, or deletion of PVs and the creation or deletion of pods that use DRBD PVs for the duration of the migration.
+
+{% alert level="warning" %}
+> **Important.** User data is not affected because migration occurs to a new namespace and new components are added to provide future volume‑management functionality.
+{% endalert %}
+
+### Migration procedure
+
+1. Make sure there are no faulty DRBD resources in the cluster. The command should return an empty list:
+
+   ```shell
+   alias linstor='kubectl -n d8-sds-drbd exec -ti deploy/linstor-controller -- linstor'
+   linstor resource list --faulty
+   ```
+
+   > **Warning.** All DRBD resources must be healthy before migration.
+
+1. Disable the `sds-drbd` module:
+
+   ```shell
+   d8 k patch moduleconfig sds-drbd --type=merge -p '{"spec": {"enabled": false}}'
+   ```
+
+1. Wait until the `d8-sds-drbd` namespace is deleted:
+
+   ```shell
+   d8 k get namespace d8-sds-drbd
+   ```
+
+1. Create a ModuleConfig for `sds-replicated-volume`:
+
+   > **Warning.** If `settings.dataNodes.nodeSelector` is not specified for `sds-replicated-volume`, its value will be taken from the `sds-drbd` module. If it is absent there as well, it will remain empty and all cluster nodes will be considered data nodes.
+
+   ```yaml
+   d8 k apply -f - <<EOF
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: sds-replicated-volume
+   spec:
+     enabled: true
+     version: 1
+   EOF
+   ```
+
+1. Wait until `sds-replicated-volume` reaches `Ready`:
+
+   ```shell
+   d8 k get moduleconfig sds-replicated-volume
+   ```
+
+1. Check the `sds-replicated-volume` settings:
+
+   ```shell
+   d8 k get moduleconfig sds-replicated-volume -oyaml
+   ```
+
+1. Wait until all pods in the `d8-sds-replicated-volume` namespace are `Ready` or `Completed`:
+
+   ```shell
+   kubectl get po -n d8-sds-replicated-volume
+   ```
+
+1. Update the `linstor` alias and check DRBD resources:
+
+   ```shell
+   alias linstor='kubectl -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor'
+   linstor resource list --faulty
+   ```
+
+If no faulty resources are found, migration was successful.
+
+> **Warning.** DRBDStoragePool and DRBDStorageClass resources will be automatically migrated to ReplicatedStoragePool and ReplicatedStorageClass. No user action is required.
+
+The logic of these resources remains unchanged. However, verify that no DRBDStoragePool or DRBDStorageClass resources remain; if they do, please contact our technical support.
+
+## Reasons to avoid RAID with sds-replicated-volume
+
+Using DRBD with more than one replica already provides network‑level RAID functionality. Local RAID can cause the following issues:
+
+- Significantly increases space overhead when using redundant RAID.  
+  Example: [ReplicatedStorageClass](../../../reference/cr/replicatedstorageclass/) with `replication` set to `ConsistencyAndAvailability`. DRBD will store three data replicas (one per node). If those nodes use RAID1, storing 1 GB of data will require 6 GB of disk space. Redundant RAID is reasonable only to simplify server maintenance when storage cost is irrelevant. RAID1 then allows replacing disks without moving data replicas off a “problem” disk.
+
+- With RAID0 the performance gain is negligible because data replication occurs over the network and the bottleneck is likely the network. Additionally, reduced host storage reliability can lead to data unavailability since DRBD failover from a broken replica to a healthy one is not instantaneous.
+
+## Recommendations for using local disks
+
+DRBD uses the network for data replication. When using NAS, network load increases dramatically because nodes synchronize data not only with the NAS but also with each other. Latency for reads or writes also increases. NAS typically uses RAID on its side, adding further overhead.
