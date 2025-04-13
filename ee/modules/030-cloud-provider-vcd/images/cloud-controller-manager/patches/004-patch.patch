@@ -1,0 +1,52 @@
+Subject: [PATCH] patch
+---
+Index: pkg/vcdsdk/vapp.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/vcdsdk/vapp.go b/pkg/vcdsdk/vapp.go
+--- a/pkg/vcdsdk/vapp.go	(revision 79c0ed4e387552a992362f8025fd07cfaa1b253c)
++++ b/pkg/vcdsdk/vapp.go	(date 1744237438464)
+@@ -797,7 +797,7 @@
+ }
+
+ func (vdc *VdcManager) AddNewTkgVM(vmNamePrefix string, VAppName string, vmNum int,
+-	catalogName string, templateName string, placementPolicyName string, computePolicyName string,
++	catalogName string, templateName string, templateOrg string, placementPolicyName string, computePolicyName string,
+ 	storageProfileName string, powerOn bool) error {
+
+ 	// In TKG >= 1.6.0, there is a missing file at /etc/cloud/cloud.cfg.d/
+@@ -813,7 +813,7 @@
+ datasource_list: [ "VMware" ]
+ EOF`
+
+-	err := vdc.AddNewVM(vmNamePrefix, VAppName, vmNum, catalogName, templateName, placementPolicyName,
++	err := vdc.AddNewVM(vmNamePrefix, VAppName, vmNum, catalogName, templateName, templateOrg, placementPolicyName,
+ 		computePolicyName, storageProfileName, guestCustScript, powerOn)
+ 	if err != nil {
+ 		return fmt.Errorf("error for adding TKG VM to vApp[%s]: [%v]", VAppName, err)
+@@ -822,7 +822,7 @@
+ }
+
+ func (vdc *VdcManager) AddNewVM(vmNamePrefix string, VAppName string, vmNum int,
+-	catalogName string, templateName string, placementPolicyName string, computePolicyName string,
++	catalogName string, templateName string, templateOrg string, placementPolicyName string, computePolicyName string,
+ 	storageProfileName string, guestCustScript string, powerOn bool) error {
+
+ 	if vdc.Vdc == nil {
+@@ -835,7 +835,13 @@
+ 			VAppName, vdc.VdcName, err)
+ 	}
+
+-	orgManager, err := NewOrgManager(vdc.Client, vdc.Client.ClusterOrgName)
++	orgName := vdc.Client.ClusterOrgName
++
++	if templateOrg != "" {
++		orgName = templateOrg
++	}
++
++	orgManager, err := NewOrgManager(vdc.Client, orgName)
+ 	if err != nil {
+ 		return fmt.Errorf("error creating an orgManager object: [%v]", err)
+ 	}
