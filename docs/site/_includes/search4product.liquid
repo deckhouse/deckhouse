@@ -1,3 +1,5 @@
+{%  assign productCode = include.productCode %}
+{%- assign searchTemplate = productCode | append: '/' %}
 <div class="searchV2">
   <div class="searchV2__blocks searchV2__documents">
     <h4 class="searchV2__results-counter">
@@ -22,9 +24,9 @@
 </div>
 <script>
 var documents=[
-{%- assign searchedpages = site.pages | where: "searchable", true | where: "product_code", "code" | where: "lang", page.lang %}
+{%- assign searchedpages = site.pages | where: "searchable", true | where: "product_code", productCode | where: "lang", page.lang %}
 {%- for page in searchedpages %}
-{%- assign page_canonical_url = page.url | regex_replace_once: '^\/?(en\/|ru\/)', '' | replace_first: 'code/', '../' %}
+{%- assign page_canonical_url = page.url | regex_replace_once: '^\/?(en\/|ru\/)', '' | replace_first: searchTemplate, '../' %}
 {
 "title": "{{ page.title | escape }}",
 "url": "{{ page_canonical_url }}",
@@ -50,7 +52,7 @@ var documents=[
 {%- assign configpages = site.pages | where_exp: "item", "item.legacy-enabled-commands.size > 0" | where: "lang", page.lang %}
 {%- if configpages.size > 0 %},{% endif %}
 {%- for page in configpages %}
-{%- assign page_canonical_url = page.url | regex_replace_once: '^\/?(en\/|ru\/)', '' | replace_first: 'code/' , '../' %}
+{%- assign page_canonical_url = page.url | regex_replace_once: '^\/?(en\/|ru\/)', '' | replace_first: searchTemplate , '../' %}
 {%- assign keywords = "" %}
 {%- if page['legacy-enabled-commands'] %}
   {%- if keywords.size > 0 %}
@@ -79,7 +81,7 @@ var documents=[
 ];
 var parameters=[
 {%- for item in site.data.search.searchItems[page.lang] %}
-{%- assign page_canonical_url = item.url | replace_first: 'code/' , '../' %}
+{%- assign page_canonical_url = item.url | replace_first: searchTemplate , '../' %}
 {%- assign keywords = "" %}
 {%- if item.search.size > 0 %}
   {%- if keywords.size > 0 %}
