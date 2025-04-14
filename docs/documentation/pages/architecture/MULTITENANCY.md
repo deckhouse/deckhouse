@@ -1,38 +1,46 @@
 ---
 title: Multitenancy
 permalink: en/architecture/multitenancy.html
-lang: ru
+lang: en
 ---
 
-## Внутренняя логика работы
+## Internal logic
 
-### Создание проекта
+### Project creation
 
-Для создания проекта используются следующие кастомные ресурсы:
+The following custom resources are used to create a project:
 
-* [ProjectTemplate](TODO) — описывает шаблон проекта. Задается список ресурсов, которые будут созданы в проекте, а также схему параметров, которые можно передать при создании проекта;
-* [Project](TODO) — описывает конкретный проект.
+* [ProjectTemplate](TODO): Describes the project template.
+  It defines the list of resources to be created in the project
+  and the parameter schema that can be passed during project creation.
+* [Project](TODO): Describes a specific project.
 
-При создании `Project` из определенного `ProjectTemplate` происходит следующее:
+When a Project is created from a specified ProjectTemplate, the following occurs:
 
-1. Переданные [параметры](cr.html#project-v1alpha2-spec-parameters) валидируются по OpenAPI-спецификации (параметр [openAPI](cr.html#projecttemplate-v1alpha1-spec-parametersschema) ресурса [ProjectTemplate](cr.html#projecttemplate));
-1. Выполняется рендеринг [шаблона для ресурсов](cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) с помощью [Helm](https://helm.sh/docs/). Значения для рендеринга берутся из параметра [parameters](cr.html#project-v1alpha2-spec-parameters) ресурса [Project](cr.html#project);
-1. Cоздается `Namespace` с именем, которое совпадает c именем [Project](cr.html#project);
-1. По очереди создаются все ресурсы, описанные в шаблоне.
+1. The provided [parameters](cr.html#project-v1alpha2-spec-parameters) are validated against the OpenAPI specification
+   (defined in the [`openAPI`](cr.html#projecttemplate-v1alpha1-spec-parametersschema) parameter of the [ProjectTemplate](cr.html#projecttemplate) resource).
+1. The [resource template](cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) is rendered using [Helm](https://helm.sh/docs/).
+   The rendering values are taken from the [`parameters`](cr.html#project-v1alpha2-spec-parameters) field of the [Project](cr.html#project) resource.
+1. A namespace is created with the same name as the [Project](cr.html#project).
+1. All resources described in the template are created one by one.
 
 {% alert level="warning" %}
-При изменении шаблона проекта, все созданные проекты будут обновлены в соответствии с новым шаблоном.
+If you modify a project template, all previously created projects will be updated according to the new template.
 {% endalert %}
 
-### Изоляция проекта
+### Project isolation
 
-В основе проекта используется механизм изоляции ресурсов в рамках пространства имён (`Namespace`).
-Пространства имён позволяют группировать поды, сервисы, секреты и другие объекты, но не обеспечивают полноценной изоляции.
-Проект расширяет функциональность пространств имен, предлагая дополнительные инструменты для повышения уровня контроля и безопасности.
-Для управления уровнем изоляции проекта можно использовать возможности Kubernetes, например:
+Project isolation is based on the resource isolation mechanism provided by namespaces.
+Namespaces allow grouping pods, services, secrets, and other objects, but they do not offer full isolation.
+Projects extend namespace functionality by providing additional tools to improve control and security.
 
-* Ресурсы контроля доступа (`AuthorizationRule` / `RoleBinding`) — позволяют управлять взаимодействием объектов внутри `Namespace`. С их помощью можно задавать правила и назначать роли, чтобы точно контролировать, кто и что может делать в проекте.
-* Ресурсы контроля использования нагрузки (`ResourceQuota`) — с их помощью можно задать лимиты на использование процессорного времени (CPU), оперативной памяти (RAM), а также количества объектов внутри `Namespace`. Это помогает избежать чрезмерной нагрузки и обеспечивает мониторинг за приложениями в рамках проекта.
-* Ресурсы контроля сетевой связности (`NetworkPolicy`) — управляют входящим и исходящим сетевым трафиком в `Namespace`. Таким образом, можно настроить разрешенные подключения между подами, улучшить безопасность и управляемость сетевого взаимодействия в рамках проекта.
+To manage project isolation scale, you can use the following Kubernetes features:
 
-Эти инструменты можно комбинировать, чтобы настроить проект в соответствии с требованиями вашего приложения.
+* **Access control resources** (AuthorizationRule / RoleBinding): Let you manage interactions between objects within a namespace.
+  With them you can define rules and assign roles to precisely control who can do what in a project.
+* **Usage control resources** (ResourceQuota): Let you define limits for CPU, RAM, and number of objects within a namespace.
+  This helps prevent resource overconsumption and provides monitoring over project applications.
+* **Network connectivity control resources** (NetworkPolicy): Let you manage incoming and outgoing network traffic in a namespace.
+  You can configure allowed connections between pods and improve security and network manageability within a project.
+
+You can combine these tools to configure a project according to your application's requirements.

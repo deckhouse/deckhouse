@@ -364,8 +364,8 @@ entries:
                   url: /admin/configuration/logging/storage.html
             - title:
                 en: Multitenancy
-                ru: Мультенантность
-              url: /admin/multitenancy-admin.html
+                ru: Мультитенантность
+              url: /admin/multitenancy.html
 # ------------- Using -------------
     - title:
         en: Using
@@ -490,7 +490,7 @@ entries:
         - title:
             en: Multitenancy
             ru: Мультитенантность
-          url: /user/multitenancy-user.html
+          url: /user/multitenancy.html
         - title:
             en: Monitoring
             ru: Мониторинг
