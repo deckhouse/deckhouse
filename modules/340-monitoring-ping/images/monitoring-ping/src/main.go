@@ -16,22 +16,20 @@ package main
 
 import (
 	"context"
-	"github.com/deckhouse/deckhouse/pkg/log"
-	"github.com/prometheus/client_golang/prometheus"
 	"os/signal"
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
+	"github.com/prometheus/client_golang/prometheus"
 )
-
-
 
 func main() {
 
 	reg := prometheus.NewRegistry()
 	metrics := RegisterMetrics(reg)
 	cfg := LoadConfig()
-
 
 	//
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
