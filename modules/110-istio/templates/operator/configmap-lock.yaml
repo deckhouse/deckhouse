@@ -1,6 +1,7 @@
-{{- range $version := .Values.istio.internal.operatorVersionsToInstall }}
-  {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
-  {{- $revision := get $versionInfo "revision" }}
+{{- if and (ne (first .Values.istio.internal.operatorVersionsToInstall) "1.24") (hasKey .Values.istio.internal.versionMap (first .Values.istio.internal.operatorVersionsToInstall)) }}
+  {{- range $version := .Values.istio.internal.operatorVersionsToInstall }}
+    {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
+    {{- $revision := get $versionInfo "revision" }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -8,4 +9,5 @@ metadata:
   name: istio-operator-lock-{{ $revision }}
   namespace: d8-istio
   {{- include "helm_lib_module_labels" (list $ (dict "app" "operator" "revision" $revision)) | nindent 2 }}
+  {{- end }}
 {{- end }}
