@@ -272,6 +272,8 @@ func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore,
 }
 
 func ParseConfigFromData(configData string, opts ...ValidateOption) (*MetaConfig, error) {
+	log.WarnF("Parsing config from data: >\n%s\n<", configData)
+
 	schemaStore := NewSchemaStore()
 
 	bigFileTmp := strings.TrimSpace(configData)
@@ -281,6 +283,7 @@ func ParseConfigFromData(configData string, opts ...ValidateOption) (*MetaConfig
 
 	metaConfig := MetaConfig{}
 	for _, doc := range docs {
+		log.WarnF("Parsing config doc: >\n%s\n<", doc)
 		found, err := parseDocument(doc, &metaConfig, schemaStore, opts...)
 		if err != nil {
 			return nil, err

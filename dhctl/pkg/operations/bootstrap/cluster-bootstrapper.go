@@ -181,6 +181,9 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		app.ConfigPaths = append(app.ConfigPaths, app.ResourcesPath)
 	}
 
+	log.WarnF("config paths in bootstrap: %v", b.ConfigPaths)
+	log.WarnF("config paths in app.ConfigPaths: %v", app.ConfigPaths)
+
 	// first, parse and check cluster config
 	metaConfig, err := config.LoadConfigFromFile(app.ConfigPaths)
 	if err != nil {

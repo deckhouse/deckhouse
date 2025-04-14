@@ -178,6 +178,7 @@ func (s *Service) bootstrap(
 			request.InitResources,
 			request.Resources,
 		} {
+			log.WarnF("Writing cfg file >\n%s\n<", cfg)
 			configPath, cleanup, err = util.WriteDefaultTempFile([]byte(cfg))
 			cleanuper.Add(cleanup)
 			if err != nil {
@@ -186,6 +187,7 @@ func (s *Service) bootstrap(
 
 			configPaths = append(configPaths, configPath)
 		}
+		log.WarnF("config paths: %v", configPaths)
 
 		postBootstrapScriptPath, cleanup, err = util.WriteDefaultTempFile([]byte(request.PostBootstrapScript))
 		cleanuper.Add(cleanup)
