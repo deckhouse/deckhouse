@@ -22,22 +22,21 @@ module.exports = ({ github, context, core }) => {
         pull_number: parseInt(prNumber),
       });
 
-      const labels = pullRequest.labels.map(label => label.name);
+      const labels = pullRequest.labels.map((label) => label.name);
 
-      if (!labels.includes('e2e/pause')) {
+      if (!labels.includes("e2e/pause")) {
         core.info('Label "e2e/pause" has been removed. Continuing...');
         return true; // Label removed
       } else {
         return false; // Label still present
       }
-
     } catch (error) {
       core.info(`Failed to get PR information: ${error} Continuing...`);
       return false;
     }
   }
 
-  async function waitForLabelRemoval() {
+  return async function waitForLabelRemoval() {
     while (true) {
       const labelRemoved = await checkLabel();
       if (labelRemoved) {
@@ -46,15 +45,14 @@ module.exports = ({ github, context, core }) => {
 
       const elapsedTimeMinutes = (Date.now() - startTime) / (1000 * 60);
       if (elapsedTimeMinutes >= maxWaitTimeMinutes) {
-        core.setFailed(`Timeout: Waited ${maxWaitTimeMinutes} minutes for 'e2e/pause' label to be removed.`);
+        core.setFailed(
+          `Timeout: Waited ${maxWaitTimeMinutes} minutes for 'e2e/pause' label to be removed.`
+        );
         return; // Exit the loop and fail the job
       }
 
       core.info('Label "e2e/pause" still present.  Waiting 60 seconds...');
-      await new Promise(resolve => setTimeout(resolve, 60000)); // Wait 60 seconds
+      await new Promise((resolve) => setTimeout(resolve, 60000)); // Wait 60 seconds
     }
-  }
-
-  return waitForLabelRemoval();
-
-}
+  };
+};
