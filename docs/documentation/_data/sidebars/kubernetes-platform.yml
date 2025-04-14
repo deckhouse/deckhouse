@@ -302,6 +302,10 @@ entries:
                     ru: Настройка мониторинга
                   url: /admin/configuration/monitoring/configuring.html
                 - title:
+                    en: Prometheus settings
+                    ru: Настройки Prometheus
+                  url: /admin/configuration/monitoring/prometheus.html
+                - title:
                     en: Status page
                     ru: Страница состояния
                   url: /admin/configuration/monitoring/status.html
@@ -309,6 +313,14 @@ entries:
                     en: Alerts
                     ru: Алерты
                   url: /admin/configuration/monitoring/alerts.html
+                - title:
+                    en: Alert settings
+                    ru: Настройки алертов
+                  url: /admin/configuration/monitoring/alert-settings.html
+                - title:
+                    en: Alert settings
+                    ru: Вопросы и ответы
+                  url: /admin/configuration/monitoring/faq.html
             - title:
                 en: Platform journaling
                 ru: TODO Журналирование платформы
@@ -426,6 +438,18 @@ entries:
             en: Multitenancy
             ru: TODO Мультитенантность
           url: /user/multitenancy-user.html
+        - title:
+            en: Monitoring
+            ru: Мониторинг
+          folders:
+            - title:
+                en: Monitoring
+                ru: Мониторинг
+              url: /user/monitoring/
+            - title:
+                en: Monitoring settings
+                ru: Настройки мониторинга
+              url: /user/monitoring/app.html
         - title:
             en: Containerized applications
             ru: TODO Контейнеризированные приложения

@@ -1,6 +1,6 @@
 ---
 title: "Архитектура мониторинга в Deckhouse Kubernetes Platform"
-permalink: ru/architecture/monitoring/arch-monitoring.html
+permalink: ru/architecture/monitoring/
 lang: ru
 ---
 

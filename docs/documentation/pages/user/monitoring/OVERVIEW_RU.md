@@ -1,5 +1,5 @@
 ---
-title: "Мониторинг в Deckhouse Kubernetes Platform"
+title: "Мониторинг"
 permalink: ru/user/monitoring/
 lang: ru
 ---

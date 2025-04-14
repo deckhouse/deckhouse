@@ -1,5 +1,5 @@
 ---
-title: "Мониторинг приложения"
+title: "Настройки мониторинга"
 permalink: ru/user/monitoring/app.html
 lang: ru
 ---
