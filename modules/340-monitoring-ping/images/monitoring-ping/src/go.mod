@@ -4,8 +4,7 @@ go 1.23.1
 
 require (
 	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250325093849-00386471f326
-	github.com/go-ping/ping v1.2.0
-	github.com/prometheus-community/pro-bing v0.6.1
+	// github.com/prometheus-community/pro-bing v0.6.1
 	github.com/prometheus/client_golang v1.21.1
 	k8s.io/api v0.32.3
 	k8s.io/client-go v0.32.3
