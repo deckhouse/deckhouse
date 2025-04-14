@@ -4,8 +4,6 @@ permalink: ru/admin/configuration/monitoring/alerts.html
 lang: ru
 ---
 
-{% raw %}
-
 ## Отправка алертов в Telegram
 
 Alertmanager поддерживает прямую отправку алертов в Telegram.
@@ -115,5 +113,3 @@ spec:
               - id: team_id
                 type: team
 ```
-
-{% endraw %}

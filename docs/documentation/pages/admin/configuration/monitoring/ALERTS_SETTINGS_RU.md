@@ -1,6 +1,6 @@
 ---
 title: "Список алертов"
-permalink: ru/alerts.html
+permalink: ru/admin/configuration/monitoring/alerts.html
 lang: ru
 ---
 
@@ -9,6 +9,8 @@ lang: ru
 Алерты сгруппированы по модулям. Справа от названия алерта указаны иконки минимальной редакции DKP в которой доступен алерт и уровня критичности алерта (severity).
 
 Для каждого алерта приведено краткое описание (summary), раскрыв которое можно увидеть подробное описание алерта (description), при их наличии.
+
+Настройки алертов приведены в соответствующей [статье](docs/documentation/pages/admin/configuration/monitoring/alerts.html).
 
 ## Критичность алерта
 
