@@ -35,9 +35,9 @@ kubectl get clustercompliancereports.aquasecurity.github.io cis -ojson |
 
 The module rescans resources every 24 hours, according to the following algorithm:
 
-A `VulnerabilityReport` object is created in the namespace with each scanned resource.  
-This object contains the annotation `trivy-operator.aquasecurity.github.io/report-ttl`, which specifies the report lifetime (default is `24h`).  
-After this time, the operator deletes the object, which triggers a rescan of the resource.  
+- A `VulnerabilityReport` object is created in the namespace with each scanned resource.  
+- This object contains the annotation `trivy-operator.aquasecurity.github.io/report-ttl`, which specifies the report lifetime (default is `24h`).  
+- After this time, the operator deletes the object, which triggers a rescan of the resource.  
 
 To force a rescan of the resource, you need to overwrite the annotation `trivy-operator.aquasecurity.github.io/report-ttl`, specifying a short period of time.  
 It is also possible to delete the `VulnerabilityReport` object.
