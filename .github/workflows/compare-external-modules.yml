@@ -35,6 +35,7 @@ jobs:
   compare-external-modules:
     name: Compare external modules
     runs-on: [self-hosted, regular]
+    if: ${{ github.repository == 'deckhouse/deckhouse' }}
     steps:
 
       # <template: checkout_step>

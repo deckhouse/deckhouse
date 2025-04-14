@@ -31,6 +31,7 @@ jobs:
   compare-external-modules:
     name: Compare external modules
     runs-on: [self-hosted, regular]
+    if: ${{ github.repository == 'deckhouse/deckhouse' }}
     steps:
       {!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
       {!{ tmpl.Exec "python_setup_step" . | strings.Indent 6 }!}
