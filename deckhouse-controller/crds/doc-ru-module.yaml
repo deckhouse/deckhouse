@@ -32,6 +32,8 @@ spec:
                   description: Текущая стадия жизненного цикла модуля.
                 version:
                   description: Версия модуля.
+                uniqueKey:
+                  description: Уникальный ключ модуля
                 disableOptions:
                   description: Параметры защиты от отключения модуля.
                 requirements:

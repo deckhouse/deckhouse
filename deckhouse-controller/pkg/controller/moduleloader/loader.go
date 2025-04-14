@@ -237,6 +237,24 @@ func (l *Loader) GetModuleByName(name string) (*moduletypes.Module, error) {
 	return module, nil
 }
 
+func (l *Loader) GetModuleUniqueKey(moduleName string) *string {
+	uniqueKey := l.modules[moduleName].GetModuleDefenition().UniqueKey
+	if uniqueKey == "" {
+		return nil
+	}
+	return &l.modules[moduleName].GetModuleDefenition().UniqueKey
+}
+
+func (l *Loader) GetModulesByUniqueKey(uniqueKey string) []string {
+	modules := []string{}
+	for _, module := range l.modules {
+		if module.GetModuleDefenition().UniqueKey == uniqueKey {
+			modules = append(modules, module.GetBasicModule().Name)
+		}
+	}
+	return modules
+}
+
 // LoadModulesFromFS parses and ensures modules from FS
 func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 	// load the 'global' module conversions
@@ -344,6 +362,7 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 			module.Properties.Weight = def.Weight
 			module.Properties.Stage = def.Stage
 			module.Properties.DisableOptions = def.DisableOptions
+			module.Properties.UniqueKey = def.UniqueKey
 
 			module.SetAnnotations(def.Annotations())
 			module.SetLabels(def.Labels())
