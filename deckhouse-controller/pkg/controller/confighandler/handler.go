@@ -74,8 +74,8 @@ func (h *Handler) HandleEvent(moduleConfig *v1alpha1.ModuleConfig, op config.Op)
 	} else {
 		addonOperatorModuleConfig := utils.NewModuleConfig(moduleConfig.Name, values)
 		addonOperatorModuleConfig.IsEnabled = moduleConfig.Spec.Enabled
-		if len(moduleConfig.Spec.ManagementState) > 0 {
-			addonOperatorModuleConfig.ManagementState = utils.ManagementState(moduleConfig.Spec.ManagementState)
+		if len(moduleConfig.Spec.Maintenance) > 0 {
+			addonOperatorModuleConfig.MaintenanceState = utils.MaintenanceState(moduleConfig.Spec.Maintenance)
 		}
 		kubeConfig.Modules[moduleConfig.Name] = &config.ModuleKubeConfig{
 			ModuleConfig: *addonOperatorModuleConfig,
@@ -122,8 +122,8 @@ func (h *Handler) LoadConfig(ctx context.Context, _ ...string) (*config.KubeConf
 
 		addonOperatorModuleConfig := utils.NewModuleConfig(moduleConfig.Name, values)
 		addonOperatorModuleConfig.IsEnabled = moduleConfig.Spec.Enabled
-		if len(moduleConfig.Spec.ManagementState) > 0 {
-			addonOperatorModuleConfig.ManagementState = utils.ManagementState(moduleConfig.Spec.ManagementState)
+		if len(moduleConfig.Spec.Maintenance) > 0 {
+			addonOperatorModuleConfig.MaintenanceState = utils.MaintenanceState(moduleConfig.Spec.Maintenance)
 		}
 		kubeConfig.Modules[moduleConfig.Name] = &config.ModuleKubeConfig{
 			ModuleConfig: *addonOperatorModuleConfig,
