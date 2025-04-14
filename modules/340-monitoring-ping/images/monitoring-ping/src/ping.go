@@ -17,70 +17,73 @@ package main
 import (
 	"context"
 	"errors"
-	"sync"
+	"fmt"
+	"net"
+	fastping "ping/pkg/fastping"
 	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
-	ping "github.com/prometheus-community/pro-bing"
 )
 
-// pingAndCollectMetrics performs ICMP ping to a given host,
-// collects RTTs and updates Prometheus metrics accordingly.
-// It respects context cancellation for graceful shutdown.
-func pingAndCollectMetrics(ctx context.Context, name, host string, isNode bool, p *PrometheusExporterMetrics) {
-
-	pinger, err := ping.NewPinger(host)
-	if err != nil {
-		log.Error("ping error: %s -> %v", host, err)
-		return
-	}
-
-	pinger.Count = 30
-	pinger.Interval = time.Second
-	pinger.Timeout = 35 * time.Second
-	pinger.SetPrivileged(true)
-
-	var rtts []float64
-	pinger.OnRecv = func(pkt *ping.Packet) {
-		rtts = append(rtts, float64(pkt.Rtt.Microseconds())/1000)
-	}
-
-	if err := pinger.RunWithContext(ctx); err != nil && !errors.Is(err, context.Canceled) {
-		log.Error("ping error: %s -> %v", host, err)
-		return
-	}
-
-	if isNode {
-		p.UpdateNode(name, host, rtts, pinger.PacketsSent, pinger.PacketsRecv)
-	} else {
-		p.UpdateExternal(name, host, rtts, pinger.PacketsSent, pinger.PacketsRecv)
-	}
-}
-
-// PingAll launches a separate goroutine for each ping target (cluster and external)
-// and waits for all of them to complete. Context is respected for cancellation.
+// PingAll sends ICMP pings to all cluster and external targets in batch mode.
+// Uses a single Pinger instance and runs all pings concurrently inside the library.
 func PingAll(ctx context.Context, cluster []NodeTarget, external []ExternalTarget, p *PrometheusExporterMetrics) {
-	var wg sync.WaitGroup
+	// Prepare flat list of hosts and a map to distinguish internal/external
+	var allHosts []string
+	hostTypes := make(map[string]string) // host -> "internal" / "external"
+	nameMap := make(map[string]string)   // host -> name
 
-	// Ping all cluster nodes
 	for _, node := range cluster {
-		name := GetTargetName(node.Name, node.IP)
-		wg.Add(1)
-		go func(name, ip string) {
-			defer wg.Done()
-			pingAndCollectMetrics(ctx, name, ip, true, p)
-		}(name, node.IP)
+		allHosts = append(allHosts, node.IP)
+		hostTypes[node.IP] = "internal"
+		nameMap[node.IP] = GetTargetName(node.Name, node.IP)
 	}
 
-	// Ping all external targets
 	for _, ext := range external {
-		name := GetTargetName(ext.Name, ext.Host)
-		wg.Add(1)
-		go func(name, host string) {
-			defer wg.Done()
-			pingAndCollectMetrics(ctx, name, host, false, p)
-		}(name, ext.Host)
+		allHosts = append(allHosts, ext.Host)
+		hostTypes[ext.Host] = "external"
+		nameMap[ext.Host] = GetTargetName(ext.Name, ext.Host)
 	}
 
-	wg.Wait()
+	log.Info(fmt.Sprintf("Pinging hosts: %v", allHosts))
+	// Verify reachability
+	for _, host := range allHosts {
+		if _, err := net.LookupIP(host); err != nil {
+			log.Warn(fmt.Sprintf("host %s may be unreachable: %v", host, err))
+		}
+	}
+
+	// Initialize fastping with list of hosts
+	fp := fastping.NewPinger(allHosts, 30, time.Second, 30*time.Second)
+
+	// Collect RTTs per host
+	rttsMap := make(map[string][]float64)
+
+	// Callback for each received packet
+	fp.OnRecv = func(pkt fastping.PacketResult) {
+		host := pkt.Host
+		rttsMap[host] = append(rttsMap[host], float64(pkt.RTT.Milliseconds()))
+	}
+
+	// Run pinger
+	if err := fp.RunWithContext(ctx); err != nil && !errors.Is(err, context.Canceled) {
+		fmt.Printf("Failed to run pinger: %v\n", err)
+		return
+	}
+
+	// Update metrics
+	for _, host := range allHosts {
+		rtts := rttsMap[host]
+		sent, recv := fp.StatsForHost(host)
+		log.Info(fmt.Sprintf("Metrics host %s, sent: %d, recv: %d", host, sent, recv))
+
+		name := nameMap[host]
+
+		switch hostTypes[host] {
+		case "internal":
+			p.UpdateNode(name, host, rtts, sent, recv)
+		case "external":
+			p.UpdateExternal(name, host, rtts, sent, recv)
+		}
+	}
 }
