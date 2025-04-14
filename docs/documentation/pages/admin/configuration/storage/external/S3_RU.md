@@ -1,6 +1,6 @@
 ---
 title: "Объектное хранилище на основе S3"
-permalink: ru/storage/admin/external/s3.html
+permalink: ru/admin/storage/external/s3.html
 lang: ru
 ---
 

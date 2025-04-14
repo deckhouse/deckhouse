@@ -1,6 +1,6 @@
 ---
-title: "Локальное хранилище на основе LVM"
-permalink: ru/storage/admin/sds/lvm-local.html
+title: "Настройка локального хранилища на основе LVM"
+permalink: ru/admin/storage/sds/lvm-local.html
 lang: ru
 ---
 

@@ -1,6 +1,6 @@
 ---
-title: "Using Local Storage based on LVM"
-permalink: en/storage/user/sds/lvm-local.html
+title: "Managing local storage based on LVM"
+permalink: en/admin/storage/sds/lvm-local-faq.html
 ---
 
 Using local storage helps avoid network delays and improves performance compared to remote storage, which is accessed over a network. This approach is ideal for test environments and EDGE clusters.

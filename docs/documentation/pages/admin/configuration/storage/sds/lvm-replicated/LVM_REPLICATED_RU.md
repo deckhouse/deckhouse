@@ -1,6 +1,6 @@
 ---
-title: "Реплицируемое хранилище на основе DRBD"
-permalink: ru/storage/admin/sds/lvm-replicated.html
+title: "Настройка реплицируемого хранилища на основе DRBD"
+permalink: ru/admin/storage/sds/lvm-replicated.html
 lang: ru
 ---
 

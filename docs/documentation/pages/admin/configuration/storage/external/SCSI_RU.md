@@ -1,6 +1,6 @@
 ---
 title: "Хранилище данных на основе протокола SCSI"
-permalink: ru/storage/admin/external/scsi.html
+permalink: ru/admin/storage/external/scsi.html
 lang: ru
 ---
 

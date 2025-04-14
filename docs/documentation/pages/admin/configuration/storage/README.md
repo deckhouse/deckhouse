@@ -1,6 +1,6 @@
 ---
 title: "Overview"
-permalink: en/storage/admin/
+permalink: en/admin/storage/overview.html
 ---
 
 Reliable data storage is one of the key tasks when deploying and operating Kubernetes clusters. In Deckhouse Kubernetes Platform, this is achieved through flexible support for both software-defined and external storage systems, as well as convenient automation and management tools.

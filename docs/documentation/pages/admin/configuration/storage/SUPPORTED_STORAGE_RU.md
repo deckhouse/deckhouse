@@ -1,6 +1,6 @@
 ---
 title: "Настройка хранилищ"
-permalink: ru/storage/admin/supported-storage.html
+permalink: ru/admin/storage/supported-storage.html
 lang: ru
 ---
 

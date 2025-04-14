@@ -1,6 +1,6 @@
 ---
 title: "Распределённое хранилище Ceph"
-permalink: ru/storage/admin/external/ceph.html
+permalink: ru/admin/storage/external/ceph.html
 lang: ru
 ---
 

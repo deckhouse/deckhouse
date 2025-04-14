@@ -1,6 +1,6 @@
 ---
-title: "Replicated storage based on DRBD"
-permalink: en/storage/admin/sds/lvm-replicated.html
+title: "Setting up replicated storage based on DRBD"
+permalink: en/admin/storage/sds/lvm-replicated.html
 ---
 
 Data replication across multiple nodes ensures fault tolerance and data availability, even if a hardware or software failure occurs on one of the nodes. This guarantees data preservation on other nodes, maintaining continuous access. Such a model is essential for critical data and distributed infrastructures requiring high availability and minimizing data loss during failures.

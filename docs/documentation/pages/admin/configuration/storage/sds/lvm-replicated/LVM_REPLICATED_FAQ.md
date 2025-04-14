@@ -1,6 +1,6 @@
 ---
-title: "Using DRBD‑Based Replicated Storage"
-permalink: en/storage/user/sds/lvm-replicated.html
+title: "Managing DRBD‑based replicated storage"
+permalink: en/admin/storage/sds/lvm-replicated-faq.html
 ---
 
 {% alert level="warning" %}

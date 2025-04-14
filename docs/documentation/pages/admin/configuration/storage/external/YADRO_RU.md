@@ -1,6 +1,6 @@
 ---
 title: "Унифицированное хранилище TATLIN.UNIFIED (Yadro)"
-permalink: ru/storage/admin/external/yadro.html
+permalink: ru/admin/storage/external/yadro.html
 lang: ru
 d8Revision: ee
 ---

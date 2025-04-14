@@ -1,6 +1,6 @@
 ---
 title: "Хранилище данных Huawei"
-permalink: ru/storage/admin/external/huawei.html
+permalink: ru/admin/storage/external/huawei.html
 lang: ru
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: "Обзор"
-permalink: ru/storage/admin/
+permalink: ru/admin/storage/overview.html
 lang: ru
 ---
 
