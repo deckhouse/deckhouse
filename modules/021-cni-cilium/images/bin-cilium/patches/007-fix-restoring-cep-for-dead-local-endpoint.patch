@@ -30,7 +30,7 @@ index 8467720fb4..18d1e95923 100644
 +		return false
 +	}
 +
-+	p := cs.epCache.LookupPodName(k8sUtils.GetObjNamespaceName(c))
++	p := cs.epCache.LookupCEPName(k8sUtils.GetObjNamespaceName(c))
 +	return p == nil
 +}
 +
