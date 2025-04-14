@@ -1,6 +1,6 @@
 FROM registry.k8s.io/pause:latest as pause
 
-FROM --platform=$BUILDPLATFORM golang:1.23-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.24-alpine3.20 AS builder
 
 ARG BUILD_TAGS=log_plain
 

@@ -25,7 +25,7 @@ imageSpec:
     entrypoint: ["/manager"]
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+fromImage: golang/alpine
 final: false
 shell:
   beforeInstall:
