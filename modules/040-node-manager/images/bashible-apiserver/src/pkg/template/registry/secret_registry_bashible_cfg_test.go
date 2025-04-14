@@ -17,6 +17,7 @@ package registry
 import (
 	"testing"
 
+	validation "github.com/go-ozzo/ozzo-validation"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -171,6 +172,11 @@ func TestRegistryBashibleConfig_Validate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.testName, func(t *testing.T) {
 			err := tt.inputConfig.Validate()
+			if err != nil {
+				if e, ok := err.(validation.InternalError); ok {
+					assert.Fail(t, "Internal validation error: %w", e.InternalError())
+				}
+			}
 
 			if tt.expectError {
 				assert.Error(t, err, "Expected validation errors but got none")
@@ -268,6 +274,11 @@ func TestRegistryBashibleConfig_ConvertToRegistryData(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.testName, func(t *testing.T) {
 			err := tt.inputConfig.Validate()
+			if err != nil {
+				if e, ok := err.(validation.InternalError); ok {
+					assert.Fail(t, "Internal validation error: %w", e.InternalError())
+				}
+			}
 			assert.NoError(t, err, "Expected no validation error")
 
 			registryData := tt.inputConfig.ConvertToRegistryData()
@@ -275,6 +286,11 @@ func TestRegistryBashibleConfig_ConvertToRegistryData(t *testing.T) {
 			assert.Equal(t, tt.expectedConfig, *registryData, "RegistryData does not match expected")
 
 			err = registryData.Validate()
+			if err != nil {
+				if e, ok := err.(validation.InternalError); ok {
+					assert.Fail(t, "Internal validation error: %w", e.InternalError())
+				}
+			}
 			assert.NoError(t, err, "Expected no error in Validate")
 		})
 	}

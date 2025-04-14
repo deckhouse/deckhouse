@@ -17,6 +17,7 @@ package registry
 import (
 	"testing"
 
+	validation "github.com/go-ozzo/ozzo-validation"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -335,6 +336,11 @@ func TestRegistryData_Validate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.testName, func(t *testing.T) {
 			err := tt.inputConfig.Validate()
+			if err != nil {
+				if e, ok := err.(validation.InternalError); ok {
+					assert.Fail(t, "Internal validation error: %w", e.InternalError())
+				}
+			}
 
 			if tt.expectError {
 				assert.Error(t, err, "Expected validation errors but got none")

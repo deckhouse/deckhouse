@@ -18,13 +18,18 @@ import (
 	"fmt"
 
 	validation "github.com/go-ozzo/ozzo-validation"
-	"github.com/hashicorp/go-multierror"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
 )
 
 const (
 	RegistryBashibleConfigSecretName = "registry-bashible-config"
+)
+
+var (
+	_ validation.Validatable = &RegistryData{}
+	_ validation.Validatable = &RegistryDataHostsObject{}
+	_ validation.Validatable = &RegistryDataMirrorHostObject{}
 )
 
 type registryBashibleConfig struct {
@@ -77,40 +82,6 @@ func (d registryBashibleConfig) ConvertToRegistryData() *RegistryData {
 	return ret
 }
 
-// Validate checks registryBashibleConfig for consistency.
-func (d *registryBashibleConfig) Validate() error {
-	var result *multierror.Error
-
-	err := validation.ValidateStruct(d,
-		validation.Field(&d.Mode, validation.Required),
-		validation.Field(&d.Version, validation.Required),
-		validation.Field(&d.ImagesBase, validation.Required),
-	)
-	if err != nil {
-		result = multierror.Append(result, err)
-	}
-
-	for _, host := range d.Hosts {
-		if err := host.Validate(); err != nil {
-			result = multierror.Append(result, err)
-		}
-	}
-
-	for _, host := range d.PrepullHosts {
-		if err := host.Validate(); err != nil {
-			result = multierror.Append(result, err)
-		}
-	}
-
-	for _, endpoint := range d.ProxyEndpoints {
-		if err := validation.Validate(endpoint, validation.Required); err != nil {
-			result = multierror.Append(result, err)
-		}
-	}
-
-	return result.ErrorOrNil()
-}
-
 func (host registryBashibleConfigHostsObject) ConvertToRegistryDataHostsObject() RegistryDataHostsObject {
 	out := RegistryDataHostsObject{
 		Host:    host.Host,
@@ -123,45 +94,47 @@ func (host registryBashibleConfigHostsObject) ConvertToRegistryDataHostsObject()
 	return out
 }
 
-func (d *registryBashibleConfigHostsObject) Validate() error {
-	var result *multierror.Error
-
-	err := validation.ValidateStruct(d,
-		validation.Field(&d.Host, validation.Required),
-	)
-	if err != nil {
-		result = multierror.Append(result, err)
-	}
-
-	for _, ca := range d.CA {
-		if err := validation.Validate(ca, validation.Required); err != nil {
-			result = multierror.Append(result, err)
-		}
-	}
-
-	for _, mirrorHost := range d.Mirrors {
-		if err := mirrorHost.Validate(); err != nil {
-			result = multierror.Append(result, err)
-		}
-	}
-
-	return result.ErrorOrNil()
-}
-
 func (mirror registryBashibleConfigMirrorHostObject) ConvertToRegistryDataMirrorHostObject() RegistryDataMirrorHostObject {
 	return RegistryDataMirrorHostObject(mirror)
 }
 
-func (d *registryBashibleConfigMirrorHostObject) Validate() error {
-	var result *multierror.Error
+func (d *registryBashibleConfig) Validate() error {
+	return validation.ValidateStruct(d,
+		validation.Field(&d.Mode, validation.Required),
+		validation.Field(&d.Version, validation.Required),
+		validation.Field(&d.ImagesBase, validation.Required),
+		validation.Field(&d.ProxyEndpoints, validation.Each(validation.Required)),
+		validation.Field(&d.Hosts, validation.Each(validation.By(func(value interface{}) error {
+			if v, ok := value.(registryBashibleConfigHostsObject); ok {
+				return v.Validate()
+			}
+			return nil
+		}))),
+		validation.Field(&d.PrepullHosts, validation.Each(validation.By(func(value interface{}) error {
+			if v, ok := value.(registryBashibleConfigHostsObject); ok {
+				return v.Validate()
+			}
+			return nil
+		}))),
+	)
+}
 
-	err := validation.ValidateStruct(d,
+func (d *registryBashibleConfigHostsObject) Validate() error {
+	return validation.ValidateStruct(d,
+		validation.Field(&d.Host, validation.Required),
+		validation.Field(&d.CA, validation.Each(validation.Required)),
+		validation.Field(&d.Mirrors, validation.Each(validation.By(func(value interface{}) error {
+			if v, ok := value.(registryBashibleConfigMirrorHostObject); ok {
+				return v.Validate()
+			}
+			return nil
+		}))),
+	)
+}
+
+func (d *registryBashibleConfigMirrorHostObject) Validate() error {
+	return validation.ValidateStruct(d,
 		validation.Field(&d.Host, validation.Required),
 		validation.Field(&d.Scheme, validation.Required),
 	)
-	if err != nil {
-		result = multierror.Append(result, err)
-	}
-
-	return result.ErrorOrNil()
 }
