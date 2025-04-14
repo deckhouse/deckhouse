@@ -5741,10 +5741,15 @@ alerts:
       module: node-manager
       edition: ce
       description: |
-        Cloud data discoverer checks if cloud conditions are met.
-          Name: {{ $labels.name }}, Message: {{ $labels.message }}
+        Deckhouse has detected that some cloud provider–specific conditions have not been met.
+        Until these issues are resolved, updating to the new Deckhouse release is not possible.
+
+        Troubleshooting details:
+
+        - Name: {{ $labels.name }}
+        - Message: {{ $labels.message }}
       summary: |
-        Cloud data discoverer checks cloud conditions
+        Deckhouse update is unavailable due to unmet cloud provider conditions.
       severity: "6"
       markupFormat: markdown
     - name: UnsupportedContainerRuntimeVersion
