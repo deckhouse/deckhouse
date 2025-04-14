@@ -178,6 +178,11 @@ func (s *Service) bootstrap(
 			request.InitResources,
 			request.Resources,
 		} {
+			if len(cfg) == 0 {
+				log.WarnF("Writing empty file", cfg)
+				continue
+			}
+
 			log.WarnF("Writing cfg file >\n%s\n<", cfg)
 			configPath, cleanup, err = util.WriteDefaultTempFile([]byte(cfg))
 			cleanuper.Add(cleanup)
