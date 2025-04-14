@@ -27,8 +27,8 @@ type Interface interface {
 
 type Command interface {
 	Run(ctx context.Context) error
-	Cmd()
-	Sudo()
+	Cmd(ctx context.Context)
+	Sudo(ctx context.Context)
 
 	StdoutBytes() []byte
 	StderrBytes() []byte

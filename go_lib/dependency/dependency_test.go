@@ -35,7 +35,7 @@ import (
 )
 
 // nolint: govet
-func ExampleMockedHTTPClient() {
+func Test_ExampleMockedHTTPClient(_ *testing.T) {
 	prev := os.Getenv("D8_IS_TESTS_ENVIRONMENT")
 	os.Setenv("D8_IS_TESTS_ENVIRONMENT", "true")
 
@@ -51,7 +51,7 @@ func ExampleMockedHTTPClient() {
 }
 
 // nolint: govet
-func ExampleK8sClient() {
+func Test_ExampleK8sClient(_ *testing.T) {
 	prev := os.Getenv("D8_IS_TESTS_ENVIRONMENT")
 	os.Setenv("D8_IS_TESTS_ENVIRONMENT", "true")
 	dependency.TestDC.SetK8sVersion(k8s.V117)
@@ -67,7 +67,7 @@ func ExampleK8sClient() {
 }
 
 // nolint: govet
-func ExampleVersionedK8sClient() {
+func Test_ExampleVersionedK8sClient(_ *testing.T) {
 	prev := os.Getenv("D8_IS_TESTS_ENVIRONMENT")
 	os.Setenv("D8_IS_TESTS_ENVIRONMENT", "true")
 
@@ -85,7 +85,7 @@ func ExampleVersionedK8sClient() {
 }
 
 // nolint: govet
-func ExampleEtcdClient() {
+func Test_ExampleEtcdClient(_ *testing.T) {
 	prev := os.Getenv("D8_IS_TESTS_ENVIRONMENT")
 	os.Setenv("D8_IS_TESTS_ENVIRONMENT", "true")
 	dependency.TestDC.EtcdClient.GetMock.
@@ -98,7 +98,7 @@ func ExampleEtcdClient() {
 	os.Setenv("D8_IS_TESTS_ENVIRONMENT", prev)
 }
 
-func TestRace(_ *testing.T) {
+func Test_Race(_ *testing.T) {
 	prev := os.Getenv("D8_IS_TESTS_ENVIRONMENT")
 	os.Setenv("D8_IS_TESTS_ENVIRONMENT", "true")
 	dc := dependency.NewDependencyContainer()

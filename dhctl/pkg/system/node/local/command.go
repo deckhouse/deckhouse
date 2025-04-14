@@ -198,7 +198,7 @@ func (c *Command) prepareCmd(ctx context.Context) (*exec.Cmd, context.CancelFunc
 	return cmd, cancel
 }
 
-func (c *Command) Sudo() {
+func (c *Command) Sudo(_ context.Context) {
 	c.sudo = true
 }
 
@@ -228,5 +228,5 @@ func (c *Command) StderrBytes() []byte {
 
 // The rest are no-ops for local execution
 
-func (c *Command) Cmd()                    {}
+func (c *Command) Cmd(_ context.Context)   {}
 func (c *Command) WithSSHArgs(_ ...string) {}

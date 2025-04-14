@@ -64,6 +64,8 @@
 {!{- $run_from_issue_or_pr := index . 2 -}!}
 {!{- $script := "script.sh" -}!}
 {!{- $script_eks := "script_eks.sh" -}!}
+{!{- $script_commander := "script-commander.sh" -}!}
+{!{- $commanderProviders := "yandex-cloud" -}!}
 {!{- if eq $provider "aws" }!}
   LAYOUT_AWS_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
   LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
@@ -96,8 +98,14 @@
   COMMENT_ID: ${{ inputs.comment_id }}
   GITHUB_API_SERVER: ${{ github.api_url }}
   REPOSITORY: ${{ github.repository }}
+{!{- if not (strings.Contains $commanderProviders $provider) }!}
   DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+{!{- end }!}
   GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+{!{- if strings.Contains $commanderProviders $provider }!}
+  COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+  COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+{!{- end }!}
 {!{- if and (eq $script_arg "run-test") $run_from_issue_or_pr }!}
   CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
 {!{- end }!}
@@ -105,6 +113,8 @@ run: |
 {!{- if eq $provider "eks" }!}
   echo "Execute '{!{ $script_eks }!} {!{ $script_arg }!}' via 'docker run', using environment:
     TERRAFORM_IMAGE_NAME=${TERRAFORM_IMAGE_NAME}
+{!{- else if strings.Contains $commanderProviders $provider }!}
+  echo "Execute '{!{ $script_commander }!} {!{ $script_arg }!}' via 'shell', using environment:
 {!{- else }!}
   echo "Execute '{!{ $script }!} {!{ $script_arg }!}' via 'docker run', using environment:
 {!{- end }!}
@@ -122,7 +132,7 @@ run: |
     CIS_ENABLED=${CIS_ENABLED}
 {!{- end }!}
   "
-
+{!{ if not (strings.Contains $commanderProviders $provider) }!}
   ls -lh $(pwd)/testing
 
   dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
@@ -130,9 +140,9 @@ run: |
 
   user_runner_id=$(id -u):$(id -g)
   echo "user_runner_id $user_runner_id"
-
-
-{!{- if and (eq $script_arg "run-test") $run_from_issue_or_pr }!}
+{!{- end }!}
+{!{- if not (strings.Contains $commanderProviders $provider) -}!}
+  {!{- if and (eq $script_arg "run-test") $run_from_issue_or_pr }!}
   echo "Start waiting ssh connection string script"
   comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
   echo "Full comment url for updating ${comment_url}"
@@ -150,8 +160,8 @@ run: |
   echo "ssh_bastion_str_file=${bastion_ip_file}" >> $GITHUB_OUTPUT
 
   $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
-{!{ end }!}
-
+  {!{ end }!}
+{!{- end }!}
 {!{- if eq $provider "eks" }!}
   chmod 755 $(pwd)/testing/cloud_layouts/{!{ $script_eks }!}
 
@@ -221,6 +231,53 @@ run: |
   /deckhouse/testing/cloud_layouts/{!{ $script_eks }!} wait_cluster_ready"
 
   {!{- end }!}
+
+{!{- else if strings.Contains $commanderProviders $provider }!}
+
+  export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+  export PROVIDER=${PROVIDER:-not_provided}
+  export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+  export LAYOUT=${LAYOUT:-not_provided}
+  export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+  {!{- if eq $provider "aws" }!}
+  export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
+  export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
+  {!{- else if eq $provider "eks" }!}
+  export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
+  export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
+  {!{- else if eq $provider "gcp" }!}
+  export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
+  {!{- else if eq $provider "azure" }!}
+  export LAYOUT_AZURE_SUBSCRIPTION_ID=${LAYOUT_AZURE_SUBSCRIPTION_ID:-not_provided}
+  export LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided}
+  export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided}
+  export LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided}
+  {!{- else if eq $provider "yandex-cloud" }!}
+  export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+  export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+  export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
+  {!{- else if or (eq $provider "openstack") (eq $provider "static") }!}
+  export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
+  {!{- else if eq $provider "vsphere" }!}
+  export LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided}
+  export LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided}
+  {!{- else if eq $provider "vcd" }!}
+  export LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided}
+  export LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided}
+  export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided}
+  export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
+  export LAYOUT_STATIC_BASTION_IP=80.249.129.56
+  {!{- end }!}
+  {!{- if and (eq $script_arg "run-test") $run_from_issue_or_pr }!}
+  export CIS_ENABLED=${CIS_ENABLED}
+  {!{- end }!}
+
+  bash $(pwd)/testing/cloud_layouts/{!{ $script_commander }!} {!{ $script_arg }!}
+
+  # for logs upload
+  ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+  echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
 {!{- else }!}
   docker run --rm \
     -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
@@ -323,6 +380,7 @@ check_e2e_labels:
 {!{- define "e2e_run_job_template" -}!}
 {!{- $ctx := . -}!}
 {!{- $provider := $ctx.provider -}!}
+{!{- $commanderProviders := $ctx.commanderProviders -}!}
 {!{- $runsOnLabel := "e2e-common" -}!}
 {!{- if eq $ctx.provider "vsphere"  -}!}
 {!{-   $runsOnLabel = "e2e-vsphere" -}!}
@@ -372,10 +430,11 @@ check_e2e_labels:
 {!{- if coll.Has $ctx "manualRun" }!}
 {!{    tmpl.Exec "update_comment_on_start" $ctx.jobName | strings.Indent 4 }!}
 {!{- end }!}
-
-{!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 4 }!}
-{!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 4 }!}
-{!{ tmpl.Exec "werf_install_step" . | strings.Indent 4 }!}
+{!{ if not (strings.Contains $commanderProviders $provider) }!}
+  {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 4 }!}
+  {!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 4 }!}
+  {!{ tmpl.Exec "werf_install_step" . | strings.Indent 4 }!}
+{!{- end }!}
 
     - name: Setup
       id: setup
@@ -408,7 +467,7 @@ check_e2e_labels:
         # converts to DNS-like (all letters in lower case and replace all dots to dash)
         # because it prefix will use for k8s resources names (nodes, for example)
         DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
-
+{!{ if not (strings.Contains $commanderProviders $provider) }!}
         # Create tmppath for test script.
         TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
         if [[ -d "${TMP_DIR_PATH}" ]] ; then
@@ -419,6 +478,7 @@ check_e2e_labels:
           echo "Create temporary dir for job: ${TMP_DIR_PATH}."
           mkdir -p "${TMP_DIR_PATH}"
         fi
+{!{- end }!}
 
         ## Source: ci_templates/build.yml
 
@@ -492,10 +552,11 @@ check_e2e_labels:
           MASTERS_COUNT=1
         fi
         echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
-
+{!{ if not (strings.Contains $commanderProviders $provider) }!}
         # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
         echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
         docker pull "${INSTALL_IMAGE_NAME}"
+{!{- end }!}
 {!{- if eq $provider "eks" }!}
         docker pull "${TERRAFORM_IMAGE_NAME}"
 {!{- end }!}
@@ -503,8 +564,10 @@ check_e2e_labels:
         IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
         echo '::echo::on'
+{!{- if not (strings.Contains $commanderProviders $provider) }!}
         echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
         echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
+{!{- end }!}
         echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
         echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
 {!{- if eq $provider "eks" }!}
@@ -531,7 +594,9 @@ check_e2e_labels:
 {!{- end }!}
         LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
         LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+{!{- if not (strings.Contains $commanderProviders $provider) }!}
         TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+{!{- end }!}
         PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
         MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
         INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -593,7 +658,9 @@ check_e2e_labels:
 {!{- end }!}
         LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
         LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+{!{- if not (strings.Contains $commanderProviders $provider) }!}
         TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+{!{- end }!}
         PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
         MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
         INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -602,7 +669,7 @@ check_e2e_labels:
 {!{- end }!}
         DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
   {!{- tmpl.Exec "e2e_run_template" (slice .provider "cleanup" (coll.Has $ctx "manualRun") ) | strings.Indent 6 }!}
-
+{!{ if not (strings.Contains $commanderProviders $provider) }!}
     - name: Save dhctl state
       id: save_failed_cluster_state
       if: ${{ failure() }}
@@ -613,7 +680,7 @@ check_e2e_labels:
           ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
           ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
           ${{ steps.setup.outputs.tmp-dir-path}}/logs
-
+{!{ end }!}
     - name: Save test results
       if: ${{ steps.setup.outputs.dhctl-log-file }}
       uses: {!{ index (ds "actions") "actions/upload-artifact" }!}
@@ -636,6 +703,7 @@ check_e2e_labels:
         else
           echo Not a directory.
         fi
+{!{- if not (strings.Contains $commanderProviders $provider) }!}
         if [ -n $USER_RUNNER_ID ]; then
           echo "Fix temp directories owner..."
           chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
@@ -647,6 +715,7 @@ check_e2e_labels:
           chmod -f -R 777 "/deckhouse/testing" || true
           chmod -f -R 777 /tmp || true
         fi
+{!{- end }!}
 
 {!{- if coll.Has $ctx "manualRun" }!}
 {!{    tmpl.Exec "update_comment_on_finish" (slice "job,separate" $ctx.jobName) | strings.Indent 4 }!}
@@ -668,6 +737,7 @@ check_e2e_labels:
 {!{- $ctx := . -}!}
 {!{- $runsOnLabel := "e2e-common" -}!}
 {!{- $provider := $ctx.provider -}!}
+{!{- $commanderProviders := $ctx.commanderProviders -}!}
 {!{- if eq $ctx.provider "vsphere"  -}!}
 {!{-   $runsOnLabel = "e2e-vsphere" -}!}
 {!{- end -}!}
@@ -752,7 +822,7 @@ check_e2e_labels:
         echo "masters-count=${MASTERS_COUNT}" >> $GITHUB_OUTPUT
 
         echo '::echo::off'
-
+{!{ if not (strings.Contains $commanderProviders $provider) }!}
     - name: "Download state"
       id: download_artifact_with_state
       uses: dawidd6/action-download-artifact@v2.23.0
@@ -761,7 +831,7 @@ check_e2e_labels:
         run_id: ${{github.event.inputs.run_id}}
         name: ${{github.event.inputs.state_artifact_name}}
         path: ${{ steps.setup.outputs.tmp-dir-path}}
-
+{!{ end }!}
     - name: Cleanup bootstrapped cluster
       if: ${{ success() || cancelled() }}
       id: cleanup_cluster

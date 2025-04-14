@@ -74,7 +74,7 @@ func (e *PostBootstrapScriptExecutor) run(ctx context.Context) (string, error) {
 
 	createOUtFileCmd := fmt.Sprintf("touch %s && chmod 644 %s", outputFile, outputFile)
 	cmd := frontend.NewCommand(e.sshClient.Settings, createOUtFileCmd)
-	cmd.Sudo()
+	cmd.Sudo(ctx)
 	cmd.WithStderrHandler(nil)
 	cmd.WithStdoutHandler(nil)
 	err := cmd.Run(ctx)
@@ -86,7 +86,7 @@ func (e *PostBootstrapScriptExecutor) run(ctx context.Context) (string, error) {
 	defer func() {
 		// remove out file on server because it can contain non-safe information
 		cmd = frontend.NewCommand(e.sshClient.Settings, fmt.Sprintf("rm %s", outputFile))
-		cmd.Sudo()
+		cmd.Sudo(ctx)
 		cmd.WithStderrHandler(nil)
 		cmd.WithStdoutHandler(nil)
 		err = cmd.Run(ctx)

@@ -33,7 +33,7 @@ const (
 	nldNS            string = "kube-system"
 	nldLabelSelector string = "app=node-local-dns"
 	nldDstPort       uint16 = 53
-	scanInterval            = 30 * time.Second
+	scanInterval            = 10 * time.Second
 	listenAddress           = "127.0.0.1:8001"
 	// netlink const
 	familyIPv4          = syscall.AF_INET
@@ -66,7 +66,7 @@ func main() {
 	log.Infof("This is due to the UDP socket remaining active in the application pods with the destination IP address of the old node-local-dns pod, which has already been deleted.")
 	log.Infof("To prevent this problem, the following actions are taken:")
 	log.Infof("- Obtain the name and PodCidr of the node where the application is running.")
-	log.Infof("- Then every 30 seconds:")
+	log.Infof("- Then every 10 seconds:")
 	log.Infof("  - Retrieve the current IP address of the node-local-dns pod.")
 	log.Infof("  - Retrieve all UDP sockets on the node and search for those with dst_port 53 and dsp_ip belonging to PodCidr, but not equal to the current IP address of the node-local-dns pod.")
 	log.Infof("  - If such sockets are found, delete them.")
