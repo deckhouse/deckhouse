@@ -75,6 +75,9 @@ rm -rf /etc/sudoers.d/sudoers_flant_kubectl
 rm -rf /etc/sudoers.d/30-deckhouse-nodeadmins
 userdel deckhouse
 groupdel nodeadmin
+for user in `cat /etc/passwd |grep "created by deckhouse" |egrep -o "^[^:]+"`; do
+	userdel $user
+done
 rm -rf /home/deckhouse
 
 shutdown -r -t 5

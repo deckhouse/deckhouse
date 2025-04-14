@@ -8,6 +8,31 @@ cpu: 10m
 memory: 25Mi
 {{- end }}
 
+{{- define "calcTimeout" -}}
+{{- $duration := . | default "30s" }}
+{{- $totalSeconds := 0 }}
+{{- range $match := regexFindAll "([0-9]+)([a-zA-Z]+)" $duration -1 }}
+  {{- $value := regexFind "[0-9]+" $match | int }}
+  {{- $unit := regexFind "[a-zA-Z]+" $match }}
+  {{- if eq $unit "y" }}
+    {{- $totalSeconds = add $totalSeconds (mul $value 31536000) }}
+  {{- else if eq $unit "w" }}
+    {{- $totalSeconds = add $totalSeconds (mul $value 604800) }}
+  {{- else if eq $unit "d" }}
+    {{- $totalSeconds = add $totalSeconds (mul $value 86400) }}
+  {{- else if eq $unit "h" }}
+    {{- $totalSeconds = add $totalSeconds (mul $value 3600) }}
+  {{- else if eq $unit "m" }}
+    {{- $totalSeconds = add $totalSeconds (mul $value 60) }}
+  {{- else if eq $unit "s" }}
+    {{- $totalSeconds = add $totalSeconds $value }}
+  {{- else if eq $unit "ms" }}
+    {{- $totalSeconds = add $totalSeconds (div $value 1000) }}
+  {{- end }}
+{{- end }}
+{{- $totalSeconds }}
+{{- end }}
+
 {{- define "toSeconds" -}}
 {{- $duration := . }}
 {{- $now := now }}
@@ -140,6 +165,7 @@ spec:
         topologyKey: kubernetes.io/hostname
 {{- end }}
   scrapeInterval: {{ .Values.prometheus.scrapeInterval | default "30s"}}
+  scrapeTimeout: {{ mulf (include "calcTimeout" .Values.prometheus.scrapeInterval) 0.8 | int }}s
   evaluationInterval: {{ .Values.prometheus.scrapeInterval | default "30s" }}
   minReadySeconds: {{ mul (include "toSeconds" .Values.prometheus.scrapeInterval) 2 }}
   # Empty field because when scraping metrics via the Federation API,

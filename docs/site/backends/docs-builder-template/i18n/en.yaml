@@ -6,8 +6,14 @@ deckhouse: deckhouse
 documentation: documentation
 modules_documentation: Modules documentation
 core: core
+conversions_title: Conversions
+conversion_action_message: Perform the following actions if you need to convert data from one version of the module parameter schema to another
+conversion_from_version: From version
+conversion_to: to
+conversion_expressions: Actions performed by the conversion (jq syntax)
+conversion_missing_description: Conversion description is missing
 currency_sign: "$"
-commercial: Available in commercial editions.
+commercial: Available in some commercial editions.
 notAvailableInThisEdition: Available in other commercial editions.
 default_value: default
 platform: platform
@@ -59,4 +65,5 @@ version: version
 version_of_module: "### module version"
 version_of_schema: Schema version
 required_value_sentence: Required value
+parameters: parameters
 

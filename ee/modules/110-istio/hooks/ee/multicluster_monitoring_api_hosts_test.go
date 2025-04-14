@@ -124,9 +124,9 @@ var _ = Describe("Istio hooks :: multicluster_monitoring_api_hosts ::", func() {
 
 			// there should be 3 log messages
 			Expect(strings.Split(strings.Trim(string(f.LoggerOutput.Contents()), "\n"), "\n")).To(HaveLen(3))
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("cannot fetch api host improper-hostname-bad-code for IstioMulticluster improper-mc-bad-code (HTTP code 500)"))
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("cannot unmarshal api host improper-hostname-bad-json response for IstioMulticluster improper-mc-bad-json, error: unexpected end of JSON input"))
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("got wrong response format from api host improper-hostname-wrong-format for IstioMulticluster improper-mc-wrong-format"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"cannot fetch api host for IstioMulticluster\",\"api_host\":\"improper-hostname-bad-code\",\"http_code\":500,\"name\":\"improper-mc-bad-code\""))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"cannot unmarshal api host response for IstioMulticluster\",\"api_host\":\"improper-hostname-bad-json\",\"error\":\"unexpected end of JSON input\",\"name\":\"improper-mc-bad-json\""))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"got wrong response format from api host for IstioMulticluster\",\"api_host\":\"improper-hostname-wrong-format\",\"name\":\"improper-mc-wrong-format\""))
 
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(5))

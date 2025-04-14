@@ -367,11 +367,11 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 		needsUpdate = true
 	}
 
-	if len(release.Labels) == 0 || (release.Labels[v1alpha1.ModuleReleaseLabelStatus] != strings.ToLower(v1alpha1.ModuleReleasePhaseDeployed)) {
+	if len(release.Labels) == 0 || (release.Labels[v1alpha1.ModuleReleaseLabelStatus] != v1alpha1.ModuleReleaseLabelDeployed) {
 		if len(release.ObjectMeta.Labels) == 0 {
 			release.ObjectMeta.Labels = make(map[string]string)
 		}
-		release.ObjectMeta.Labels[v1alpha1.ModuleReleaseLabelStatus] = strings.ToLower(v1alpha1.ModuleReleasePhaseDeployed)
+		release.ObjectMeta.Labels[v1alpha1.ModuleReleaseLabelStatus] = v1alpha1.ModuleReleaseLabelDeployed
 		needsUpdate = true
 	}
 
@@ -439,11 +439,28 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 	}
 
 	r.log.Debug("delete outdated releases for module", slog.String("module", release.GetModuleName()))
-	err = r.deleteOutdatedModuleReleases(ctx, release.GetModuleSource(), release.GetModuleName())
-	if err != nil {
+	if err = r.deleteOutdatedModuleReleases(ctx, release.GetModuleSource(), release.GetModuleName()); err != nil {
 		r.log.Error("failed to delete outdated module releases", slog.String("module", release.GetModuleName()), log.Err(err))
 
 		return ctrl.Result{}, fmt.Errorf("delete outdated module releases: %w", err)
+	}
+
+	settings := new(v1alpha1.ModuleSettingsDefinition)
+	if err = r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, settings); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return ctrl.Result{}, fmt.Errorf("get module settings: %w", err)
+		}
+		r.log.Warn("module settings not found", slog.String("module", release.GetModuleName()))
+
+		return ctrl.Result{}, nil
+	}
+
+	settings.OwnerReferences = []metav1.OwnerReference{ownerRef}
+
+	if err = r.client.Update(ctx, settings); err != nil {
+		r.log.Warn("failed to update module settings", slog.String("module", release.GetModuleName()), log.Err(err))
+
+		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil
@@ -578,8 +595,17 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
+	metricLabels := releaseUpdater.NewReleaseMetricLabels(release)
+	defer func() {
+		if metricLabels[releaseUpdater.ManualApprovalRequired] == "true" {
+			metricLabels[releaseUpdater.ReleaseQueueDepth] = strconv.Itoa(task.QueueDepth)
+		}
+		r.metricsUpdater.UpdateReleaseMetric(release.GetName(), metricLabels)
+	}()
+
 	reasons := checker.MetRequirements(release)
 	if len(reasons) > 0 {
+		metricLabels.SetTrue(releaseUpdater.RequirementsNotMet)
 		msgs := make([]string, 0, len(reasons))
 		for _, reason := range reasons {
 			msgs = append(msgs, reason.Message)
@@ -604,7 +630,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 	}
 
 	// handling error inside function
-	err = r.PreApplyReleaseCheck(ctx, release, task, us)
+	err = r.PreApplyReleaseCheck(ctx, release, task, us, metricLabels)
 	if err != nil {
 		// ignore this err, just requeue because of check failed
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
@@ -756,7 +782,7 @@ func (r *reconciler) runReleaseDeploy(ctx context.Context, release *v1alpha1.Mod
 			release.ObjectMeta.Labels = make(map[string]string, 1)
 		}
 
-		release.ObjectMeta.Labels[v1alpha1.ModuleReleaseLabelStatus] = strings.ToLower(v1alpha1.ModuleReleasePhaseDeployed)
+		release.ObjectMeta.Labels[v1alpha1.ModuleReleaseLabelStatus] = v1alpha1.ModuleReleaseLabelDeployed
 
 		if release.GetApplyNow() {
 			delete(release.Annotations, v1alpha1.ModuleReleaseAnnotationApplyNow)
@@ -959,18 +985,8 @@ var ErrPreApplyCheckIsFailed = errors.New("pre apply check is failed")
 // PreApplyReleaseCheck checks final conditions before apply
 //
 // - Calculating deploy time (if zero - deploy)
-func (r *reconciler) PreApplyReleaseCheck(ctx context.Context, mr *v1alpha1.ModuleRelease, task *releaseUpdater.Task, us *releaseUpdater.Settings) error {
-	metricLabels := releaseUpdater.NewReleaseMetricLabels(mr)
-
+func (r *reconciler) PreApplyReleaseCheck(ctx context.Context, mr *v1alpha1.ModuleRelease, task *releaseUpdater.Task, us *releaseUpdater.Settings, metricLabels releaseUpdater.MetricLabels) error {
 	timeResult := r.DeployTimeCalculate(ctx, mr, task, us, metricLabels)
-
-	if metricLabels[releaseUpdater.ManualApprovalRequired] == "true" {
-		metricLabels[releaseUpdater.ReleaseQueueDepth] = strconv.Itoa(task.QueueDepth)
-	}
-
-	// if the predicted release has an index less than the number of awaiting releases
-	// calculate and set releaseDepthQueue label
-	r.metricsUpdater.UpdateReleaseMetric(mr.GetName(), metricLabels)
 
 	if timeResult == nil {
 		return nil
@@ -1040,7 +1056,7 @@ type TimeResult struct {
 // - Manual Approved
 func (r *reconciler) DeployTimeCalculate(ctx context.Context, mr v1alpha1.Release, task *releaseUpdater.Task, us *releaseUpdater.Settings, metricLabels releaseUpdater.MetricLabels) *TimeResult {
 	releaseNotifier := releaseUpdater.NewReleaseNotifier(us)
-	timeChecker := releaseUpdater.NewDeployTimeService(r.dependencyContainer, us, func(_ context.Context) bool { return true }, r.log)
+	timeChecker := releaseUpdater.NewDeployTimeService(r.dependencyContainer, us, r.log)
 
 	var deployTimeResult *releaseUpdater.DeployTimeResult
 
@@ -1102,7 +1118,7 @@ func (r *reconciler) DeployTimeCalculate(ctx context.Context, mr v1alpha1.Releas
 		}
 	}
 
-	processedDTR := timeChecker.ProcessMinorReleaseDeployTime(ctx, mr, deployTimeResult, task.DeployedReleaseInfo)
+	processedDTR := timeChecker.ProcessMinorReleaseDeployTime(mr, deployTimeResult)
 	if processedDTR == nil {
 		return nil
 	}
@@ -1122,6 +1138,11 @@ func (r *reconciler) updateReleaseStatus(ctx context.Context, mr *v1alpha1.Modul
 		Duration: 20 * time.Millisecond,
 		Factor:   1.0,
 		Jitter:   0.1,
+	}
+
+	switch status.Phase {
+	case v1alpha1.ModuleReleasePhaseSuperseded, v1alpha1.ModuleReleasePhaseSuspended, v1alpha1.ModuleReleasePhaseSkipped, v1alpha1.ModuleReleasePhaseTerminating:
+		r.metricsUpdater.PurgeReleaseMetric(mr.GetName())
 	}
 
 	return ctrlutils.UpdateStatusWithRetry(ctx, r.client, mr, func() error {

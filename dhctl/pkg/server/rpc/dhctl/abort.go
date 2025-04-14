@@ -43,7 +43,8 @@ import (
 )
 
 func (s *Service) Abort(server pb.DHCTL_AbortServer) error {
-	ctx := operationCtx(server)
+	ctx, cancel := operationCtx(server)
+	defer cancel()
 
 	logger.L(ctx).Info("started")
 
@@ -90,7 +91,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.abortSafe(ctx, message.Start, phaseSwitcher.switchPhase, logWriter)
+					result := s.abortSafe(ctx, message.Start, phaseSwitcher.switchPhase(ctx), logWriter)
 					sendCh <- &pb.AbortResponse{Message: &pb.AbortResponse_Result{Result: result}}
 				}()
 
@@ -111,6 +112,9 @@ connectionProcessor:
 				case pb.Continue_CONTINUE_ERROR:
 					phaseSwitcher.next <- errors.New(message.Continue.Err)
 				}
+
+			case *pb.AbortRequest_Cancel:
+				cancel()
 
 			default:
 				logger.L(ctx).Error("got unprocessable message",
@@ -137,7 +141,7 @@ func (s *Service) abortSafe(
 }
 
 func (s *Service) abort(
-	_ context.Context,
+	ctx context.Context,
 	request *pb.AbortStart,
 	switchPhase phases.DefaultOnPhaseFunc,
 	logWriter io.Writer,
@@ -251,7 +255,7 @@ func (s *Service) abort(
 		TerraformContext:  terraform.NewTerraformContext(),
 	})
 
-	abortErr := bootstrapper.Abort(false)
+	abortErr := bootstrapper.Abort(ctx, false)
 	state := bootstrapper.GetLastState()
 	stateData, marshalErr := json.Marshal(state)
 	err = errors.Join(abortErr, marshalErr)

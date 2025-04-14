@@ -44,8 +44,6 @@ const (
 	ModulePhaseDownloadingError = "DownloadingError"
 	ModulePhaseReconciling      = "Reconciling"
 	ModulePhaseInstalling       = "Installing"
-	ModulePhaseHooksDisabled    = "HooksDisabled"
-	ModulePhaseWaitSyncTasks    = "WaitSyncTasks"
 	ModulePhaseDownloaded       = "Downloaded"
 	ModulePhaseConflict         = "Conflict"
 	ModulePhaseReady            = "Ready"
@@ -263,6 +261,15 @@ func (m *Module) DisabledByModuleConfigMoreThan(timeout time.Duration) bool {
 	for _, cond := range m.Status.Conditions {
 		if cond.Type == ModuleConditionEnabledByModuleConfig && cond.Status == corev1.ConditionFalse {
 			return time.Since(cond.LastTransitionTime.Time) >= timeout
+		}
+	}
+	return false
+}
+
+func (m *Module) HasCondition(condName string) bool {
+	for _, cond := range m.Status.Conditions {
+		if cond.Type == condName {
+			return true
 		}
 	}
 	return false

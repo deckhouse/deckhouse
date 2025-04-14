@@ -57,7 +57,7 @@ func main() {
 
 	lManager, err := k8s.NewLeasesManager(logger)
 	if err != nil {
-		logger.Fatalf("new leases manager: %s", err)
+		logger.Fatal("new leases manager", log.Err(err))
 	}
 
 	h := v1.NewHandler(docs.NewService(src, dst, highAvailability, logger), logger.Named("v1"))

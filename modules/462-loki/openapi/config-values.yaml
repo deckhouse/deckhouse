@@ -20,27 +20,25 @@ properties:
   diskSizeGigabytes:
     type: integer
     description: >
-      Disk size for log storage or PVC size when specifying the
+      Initial disk size for log storage or PVC size when specifying the
       [storageClass](#parameters-storageclass) parameters.
 
       You should manually specify the required disk size for storing logs for
       the period defined by the `retentionPeriodHours` parameter.
 
-      Loki cannot automatically delete old data when the disk is full.
-
       The
       [extended-monitoring](../extended-monitoring/configuration.html#namespaced-kubernetes-objects)
       module automatically monitors the percentage of used disk space.
-
-      **CAUTION!** If the Loki data disk becomes full, the application will stop
-      working. You must find the right balance between `retentionPeriodHours`
-      and `diskSizeGigabytes` values.
     x-doc-default: 2
     default: 2
   retentionPeriodHours:
     type: integer
     description: |
-      How many hours to keep logs before deleting.
+      The desired minimum log retention period in hours.
+
+      This parameter does not affect the log retention depth, since Loki only deletes old data when the disk is full.
+
+      If Loki deletes data that has not yet reached the specified retention period, you will receive a `LokiRetentionPerionViolation` alert. In this case, you should either increase the disk size or decrease the value of this parameter.
     x-doc-default: 168
     default: 168
   storeSystemLogs:
@@ -80,6 +78,11 @@ properties:
 
           0 means unlimited.
         default: 0
+      maxLabelNamesPerSeries:
+        type: integer
+        description: |
+          The maximum number of unique label names per series (log stream).
+        default: 32
       maxEntriesLimitPerQuery:
         type: integer
         description: |

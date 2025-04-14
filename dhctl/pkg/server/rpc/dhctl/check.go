@@ -44,7 +44,8 @@ import (
 )
 
 func (s *Service) Check(server pb.DHCTL_CheckServer) error {
-	ctx := operationCtx(server)
+	ctx, cancel := operationCtx(server)
+	defer cancel()
 
 	logger.L(ctx).Info("started")
 
@@ -91,6 +92,9 @@ connectionProcessor:
 					result := s.checkSafe(ctx, message.Start, logWriter)
 					sendCh <- &pb.CheckResponse{Message: &pb.CheckResponse_Result{Result: result}}
 				}()
+
+			case *pb.CheckRequest_Cancel:
+				cancel()
 
 			default:
 				logger.L(ctx).Error("got unprocessable message",
@@ -197,7 +201,7 @@ func (s *Service) check(
 		TerraformContext: terraform.NewTerraformContext(),
 	}
 
-	kubeClient, sshClient, cleanup, err := helper.InitializeClusterConnections(helper.ClusterConnectionsOptions{
+	kubeClient, sshClient, cleanup, err := helper.InitializeClusterConnections(ctx, helper.ClusterConnectionsOptions{
 		CommanderMode: request.Options.CommanderMode,
 		ApiServerUrl:  request.Options.ApiServerUrl,
 		ApiServerOptions: helper.ApiServerOptions{

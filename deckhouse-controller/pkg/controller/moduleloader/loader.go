@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -29,7 +30,7 @@ import (
 	"github.com/flant/addon-operator/pkg/app"
 	"github.com/flant/addon-operator/pkg/module_manager/loader"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
-	"github.com/flant/addon-operator/pkg/utils"
+	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"gopkg.in/yaml.v3"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -92,7 +93,7 @@ func New(client client.Client, version, modulesDir, globalDir string, dc depende
 	return &Loader{
 		client:               client,
 		logger:               logger,
-		modulesDirs:          utils.SplitToPaths(modulesDir),
+		modulesDirs:          addonutils.SplitToPaths(modulesDir),
 		globalDir:            globalDir,
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
@@ -155,7 +156,7 @@ func (l *Loader) LoadModule(_, modulePath string) (*modules.BasicModule, error) 
 		return nil, err
 	}
 
-	module, err := l.processModuleDefinition(def)
+	module, err := l.processModuleDefinition(context.TODO(), def)
 	if err != nil {
 		return nil, err
 	}
@@ -164,16 +165,16 @@ func (l *Loader) LoadModule(_, modulePath string) (*modules.BasicModule, error) 
 	return module.GetBasicModule(), nil
 }
 
-func (l *Loader) processModuleDefinition(def *moduletypes.Definition) (*moduletypes.Module, error) {
+func (l *Loader) processModuleDefinition(ctx context.Context, def *moduletypes.Definition) (*moduletypes.Module, error) {
 	if err := validateModuleName(def.Name); err != nil {
 		return nil, fmt.Errorf("invalid name: %w", err)
 	}
 
 	// load values for the module
-	valuesModuleName := utils.ModuleNameToValuesKey(def.Name)
+	valuesModuleName := addonutils.ModuleNameToValuesKey(def.Name)
 
 	// 1. from static values.yaml inside the module
-	moduleStaticValues, err := utils.LoadValuesFileFromDir(def.Path, app.StrictModeEnabled)
+	moduleStaticValues, err := addonutils.LoadValuesFileFromDir(def.Path, app.StrictModeEnabled)
 	if err != nil {
 		return nil, fmt.Errorf("load values file from the %q dir: %w", def.Path, err)
 	}
@@ -183,19 +184,19 @@ func (l *Loader) processModuleDefinition(def *moduletypes.Definition) (*modulety
 	}
 
 	// 2. from openapi defaults
-	configBytes, vb, err := utils.ReadOpenAPIFiles(filepath.Join(def.Path, "openapi"))
+	rawConfig, rawValues, err := addonutils.ReadOpenAPIFiles(filepath.Join(def.Path, "openapi"))
 	if err != nil {
 		return nil, fmt.Errorf("read openapi files: %w", err)
 	}
 
-	module, err := moduletypes.NewModule(def, moduleStaticValues, configBytes, vb, l.logger.Named("module"))
+	module, err := moduletypes.NewModule(def, moduleStaticValues, rawConfig, rawValues, l.logger.Named("module"))
 	if err != nil {
 		return nil, fmt.Errorf("build %q module: %w", def.Name, err)
 	}
 
 	// load conversions
 	if _, err = os.Stat(filepath.Join(def.Path, "openapi", "conversions")); err == nil {
-		l.logger.Debugf("conversions for the '%s' module found", def.Name)
+		l.logger.Debug("conversions for the module found", slog.String("name", def.Name))
 		if err = conversion.Store().Add(def.Name, filepath.Join(def.Path, "openapi", "conversions")); err != nil {
 			return nil, fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
 		}
@@ -208,12 +209,17 @@ func (l *Loader) processModuleDefinition(def *moduletypes.Definition) (*modulety
 		return nil, fmt.Errorf("load constraints for the %q module: %w", def.Name, err)
 	}
 
+	// ensure settings
+	if err = l.ensureModuleSettings(ctx, def.Name, rawConfig); err != nil {
+		return nil, fmt.Errorf("ensure the %q module settings: %w", def.Name, err)
+	}
+
 	return module, nil
 }
 
 func validateModuleName(name string) error {
 	// check if name is consistent for conversions between kebab-case and camelCase.
-	restoredName := utils.ModuleNameFromValuesKey(utils.ModuleNameToValuesKey(name))
+	restoredName := addonutils.ModuleNameFromValuesKey(addonutils.ModuleNameToValuesKey(name))
 
 	if name != restoredName {
 		return fmt.Errorf("'%s' name should be in kebab-case and be restorable from camelCase: consider renaming to '%s'", name, restoredName)
@@ -244,25 +250,25 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 	}
 
 	for _, dir := range l.modulesDirs {
-		l.logger.Debugf("parse modules from the '%s' dir", dir)
+		l.logger.Debug("parse modules from the dir", slog.String("path", dir))
 		definitions, err := l.parseModulesDir(dir)
 		if err != nil {
 			return fmt.Errorf("parse modules from the %q dir: %w", dir, err)
 		}
-		l.logger.Debugf("%d parsed modules from the '%s' dir", len(definitions), dir)
+		l.logger.Debug("parsed modules from the dir", slog.Int("count", len(definitions)), slog.String("path", dir))
 		for _, def := range definitions {
-			l.logger.Debugf("process the '%s' module definition from the '%s' dir", def.Name, dir)
-			module, err := l.processModuleDefinition(def)
+			l.logger.Debug("process module definition from the dir", slog.String("name", def.Name), slog.String("path", dir))
+			module, err := l.processModuleDefinition(ctx, def)
 			if err != nil {
 				return fmt.Errorf("process the '%s' module definition: %w", def.Name, err)
 			}
 
 			if _, ok := l.modules[def.Name]; ok {
-				l.logger.Warnf("the %q module already exists, skip it from the %q", def.Name, def.Path)
+				l.logger.Warn("module already exists, skip it from path", slog.String("name", def.Name), slog.String("path", def.Path))
 				continue
 			}
 
-			l.logger.Debugf("ensure the '%s' module", def.Name)
+			l.logger.Debug("ensure module", slog.String("name", def.Name))
 			if err = l.ensureModule(ctx, def, strings.HasPrefix(def.Path, embeddedModulesDir)); err != nil {
 				return fmt.Errorf("ensure the '%s' embedded module: %w", def.Name, err)
 			}
@@ -278,9 +284,16 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 	}
 	for _, module := range modulesList.Items {
 		if module.IsEmbedded() && l.modules[module.Name] == nil {
-			l.logger.Debugf("delete the '%s' embedded module", module.Name)
+			l.logger.Debug("delete embedded module", slog.String("name", module.Name))
 			if err := l.client.Delete(ctx, &module); err != nil {
 				return fmt.Errorf("delete the '%s' emebedded module: %w", module.Name, err)
+			}
+		}
+
+		if !module.HasCondition(v1alpha1.ModuleConditionEnabledByModuleConfig) {
+			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
+			if err := l.client.Status().Update(ctx, &module); err != nil {
+				return fmt.Errorf("update status for the '%s' module: %w", module.Name, err)
 			}
 		}
 	}
@@ -297,7 +310,7 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 					return fmt.Errorf("get the %q module: %w", def.Name, err)
 				}
 				if !embedded {
-					l.logger.Warnf("the '%s' downloaded module does not exist, skip it", def.Name)
+					l.logger.Warn("downloaded module does not exist, skip it", slog.String("name", def.Name))
 					return nil
 				}
 				module = &v1alpha1.Module{
@@ -317,7 +330,7 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 						Requirements: def.Requirements,
 					},
 				}
-				l.logger.Debugf("the '%s' embedded module not found, create it", def.Name)
+				l.logger.Debug("embedded module not found, create it", slog.String("name", def.Name))
 				if err = l.client.Create(ctx, module); err != nil {
 					return fmt.Errorf("create the '%s' embedded module: %w", def.Name, err)
 				}
@@ -352,6 +365,26 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 			return nil
 		})
 	})
+}
+
+func (l *Loader) ensureModuleSettings(ctx context.Context, module string, rawConfig []byte) error {
+	settings := new(v1alpha1.ModuleSettingsDefinition)
+	if err := l.client.Get(ctx, client.ObjectKey{Name: module}, settings); client.IgnoreNotFound(err) != nil {
+		return fmt.Errorf("get the '%s' module settings: %w", module, err)
+	}
+
+	if err := settings.SetVersion(rawConfig); err != nil {
+		return fmt.Errorf("set the module settings: %w", err)
+	}
+
+	// settings not found
+	if settings.UID == "" {
+		settings.Name = module
+		settings.Labels = map[string]string{"heritage": "deckhouse"}
+		return l.client.Create(ctx, settings)
+	}
+
+	return l.client.Update(ctx, settings)
 }
 
 // parseModulesDir returns modules definitions from the target dir
@@ -412,7 +445,7 @@ func (l *Loader) resolveDirEntry(dirPath string, entry os.DirEntry) (string, str
 		// TODO: probably we can use os.IsNotExist here
 		if e, ok := err.(*fs.PathError); ok {
 			if e.Err.Error() == "no such file or directory" {
-				l.logger.Warnf("symlink target '%s' does not exist, ignoring module", dirPath)
+				l.logger.Warn("symlink target does not exist, ignoring module", slog.String("path", dirPath))
 				return "", "", nil
 			}
 		}
@@ -424,8 +457,8 @@ func (l *Loader) resolveDirEntry(dirPath string, entry os.DirEntry) (string, str
 		return name, targetPath, nil
 	}
 
-	if name != utils.ValuesFileName {
-		log.Warnf("ignore '%s' while searching for modules", absPath)
+	if name != addonutils.ValuesFileName {
+		log.Warn("ignore while searching for modules", slog.String("path", absPath))
 	}
 
 	return "", "", nil
@@ -437,7 +470,7 @@ func resolveSymlinkToDir(dirPath string, entry os.DirEntry) (string, error) {
 		return "", err
 	}
 
-	targetDirPath, isTargetDir, err := utils.SymlinkInfo(filepath.Join(dirPath, info.Name()), info)
+	targetDirPath, isTargetDir, err := addonutils.SymlinkInfo(filepath.Join(dirPath, info.Name()), info)
 	if err != nil {
 		return "", err
 	}
@@ -457,7 +490,7 @@ func (l *Loader) moduleDefinitionByDir(moduleName, moduleDir string) (*moduletyp
 	}
 
 	if definition == nil {
-		l.logger.Debugf("module.yaml for the '%s' module does not exist", moduleName)
+		l.logger.Debug("module.yaml for module does not exist", slog.String("name", moduleName))
 		definition, err = l.moduleDefinitionByDirName(moduleName, moduleDir)
 		if err != nil {
 			return nil, err

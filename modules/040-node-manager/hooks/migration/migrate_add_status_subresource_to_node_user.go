@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"log/slog"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -64,11 +66,11 @@ func addStatusSubresourceForNodeUser(input *go_hook.HookInput) error {
 	for _, item := range nodeUserSnap {
 		nu := item.(existingStatus)
 		if nu.StatusExists {
-			input.Logger.Debugf("Status already exists for node user %s", nu.UserName)
+			input.Logger.Debug("Status already exists for node user", slog.String("user", nu.UserName))
 			continue
 		}
 
-		input.Logger.Infof("Add status for node user %s", nu.UserName)
+		input.Logger.Info("Add status for node user", slog.String("user", nu.UserName))
 
 		input.PatchCollector.PatchWithMutatingFunc(func(u *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 			objCopy := u.DeepCopy()

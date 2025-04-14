@@ -57,7 +57,7 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_CHANNEL: "alpha"
+  WERF_VERSION: "v2.35.0"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -366,7 +366,7 @@ jobs:
       - name: Install werf CLI
         uses: werf/actions/install@v2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
 
       - name: Setup
@@ -555,7 +555,6 @@ jobs:
 
           $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
 
-
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -654,7 +653,6 @@ jobs:
 
           user_runner_id=$(id -u):$(id -g)
           echo "user_runner_id $user_runner_id"
-
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -867,7 +865,7 @@ jobs:
       - name: Install werf CLI
         uses: werf/actions/install@v2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
 
       - name: Setup
@@ -1056,7 +1054,6 @@ jobs:
 
           $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
 
-
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -1155,7 +1152,6 @@ jobs:
 
           user_runner_id=$(id -u):$(id -g)
           echo "user_runner_id $user_runner_id"
-
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -1368,7 +1364,7 @@ jobs:
       - name: Install werf CLI
         uses: werf/actions/install@v2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
 
       - name: Setup
@@ -1557,7 +1553,6 @@ jobs:
 
           $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
 
-
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -1656,7 +1651,6 @@ jobs:
 
           user_runner_id=$(id -u):$(id -g)
           echo "user_runner_id $user_runner_id"
-
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -1869,7 +1863,7 @@ jobs:
       - name: Install werf CLI
         uses: werf/actions/install@v2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
 
       - name: Setup
@@ -2058,7 +2052,6 @@ jobs:
 
           $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
 
-
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -2157,7 +2150,6 @@ jobs:
 
           user_runner_id=$(id -u):$(id -g)
           echo "user_runner_id $user_runner_id"
-
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -2370,7 +2362,7 @@ jobs:
       - name: Install werf CLI
         uses: werf/actions/install@v2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
 
       - name: Setup
@@ -2559,7 +2551,6 @@ jobs:
 
           $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
 
-
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -2658,7 +2649,6 @@ jobs:
 
           user_runner_id=$(id -u):$(id -g)
           echo "user_runner_id $user_runner_id"
-
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -2871,7 +2861,7 @@ jobs:
       - name: Install werf CLI
         uses: werf/actions/install@v2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
 
       - name: Setup
@@ -3060,7 +3050,6 @@ jobs:
 
           $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
 
-
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -3159,7 +3148,6 @@ jobs:
 
           user_runner_id=$(id -u):$(id -g)
           echo "user_runner_id $user_runner_id"
-
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \

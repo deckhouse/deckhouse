@@ -5,8 +5,8 @@ permalink: en/storage/admin/supported-storage.html
 
 Storage setup consists of several steps that depend on the selected storage type. The main configuration stages include:
 
-- Enabling and configuring the appropriate modules.
-- Creating Volume Groups.
+- Enabling and configuring the appropriate modules;
+- Creating Volume Groups;
 - Preparing and creating StorageClass objects, followed by their assignment and usage.
 
 Each storage type may have its own specific requirements and configuration nuances, which are described in the corresponding sections.

@@ -70,9 +70,9 @@ spec:
                 size:
                   x-kubernetes-int-or-string: true
                   description: |
-                   The desired LV size. Might be specified as number or percent size of total VG or thin pool space (for thin pool total space is counted by actual thin pool size multiply by allocationLimit value).
+                    The desired LV size. Might be specified as number or percent size of total VG or thin pool space (for thin pool total space is counted by actual thin pool size multiply by allocationLimit value).
 
-                   > Note, that if you specify the percent size, the LV will be automatically extended when VG, thin pool or thin pool's allocationLimit value is extended.
+                    > Note, that if you specify the percent size, the LV will be automatically extended when VG, thin pool or thin pool's allocationLimit value is extended.
                   minLength: 1
                   pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$|^[1-9][0-9]?%$|100%'
                 lvmVolumeGroupName:
@@ -120,9 +120,9 @@ spec:
                       description: |
                         The method of the volume cleanup before deletion.
                         If the parameter is not set, after deleting the PV, the data may be deleted or it may remain. There is no guarantee of deletion or non-deletion:
-                        - `RandomFillSinglePass`: The volume will be overwritten with random data once before deletion. This option is not recommended for solid-state drives, as it reduces the lifespan of the drive.
-                        - `RandomFillThreePass`: The volume will be overwritten with random data three times before deletion. This option is also not recommended for solid-state drives, as it reduces the lifespan of the drive.
-                        - `Discard`: All blocks of the volume will be marked as free using the `discard`` system call before deletion. This option is only applicable to solid-state drives.
+                        - `RandomFillSinglePass` — the volume will be overwritten with random data once before deletion. This option is not recommended for solid-state drives, as it reduces the lifespan of the drive.
+                        - `RandomFillThreePass` — the volume will be overwritten with random data three times before deletion. This option is also not recommended for solid-state drives, as it reduces the lifespan of the drive.
+                        - `Discard` — all blocks of the volume will be marked as free using the `discard`` system call before deletion. This option is only applicable to solid-state drives.
                 source:
                   type: object
                   description: |

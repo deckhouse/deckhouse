@@ -8,6 +8,14 @@
     }
   },
   "transforms": {
+    "transform/destination/test-kafka-dest/00_del_parsed_data": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/source/test-source/01_clean_up"
+      ],
+      "source": "if exists(.parsed_data) {\n    del(.parsed_data)\n}",
+      "type": "remap"
+    },
     "transform/source/test-source/00_local_timezone": {
       "drop_on_abort": false,
       "inputs": [
@@ -29,7 +37,7 @@
     "destination/cluster/test-kafka-dest": {
       "type": "kafka",
       "inputs": [
-        "transform/source/test-source/01_clean_up"
+        "transform/destination/test-kafka-dest/00_del_parsed_data"
       ],
       "healthcheck": {
         "enabled": false

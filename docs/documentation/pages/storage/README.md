@@ -17,22 +17,22 @@ Deckhouse Kubernetes Platform offers a wide range of solutions, which can be div
 
 ### Software-Defined Storage
 
-- [Local storage based on LVM (Logical Volume Manager)](../storage/admin/sds/lvm-local.html)
-- [Replicated storage based on DRBD (Distributed Replicated Block Device)](../storage/admin/sds/lvm-replicated.html)
+- [Local storage based on LVM (Logical Volume Manager)](../storage/admin/sds/lvm-local.html);
+- [Replicated storage based on DRBD (Distributed Replicated Block Device)](../storage/admin/sds/lvm-replicated.html).
 
 ### External Storage
 
-- [Distributed Ceph storage](../storage/admin/external/ceph.html)
-- [HPE data storage](../storage/admin/external/hpe.html)
-- [Huawei data storage](../storage/admin/external/huawei.html)
-- [NFS data storage](../storage/admin/external/nfs.html)
-- [S3-based object storage](../storage/admin/external/s3.html)
-- [SCSI-based data storage](../storage/admin/external/scsi.html)
-- [TATLIN.UNIFIED (Yadro) unified storage](../storage/admin/external/yadro.html)
+- [Distributed Ceph storage](../storage/admin/external/ceph.html);
+- [HPE data storage](../storage/admin/external/hpe.html);
+- [Huawei data storage](../storage/admin/external/huawei.html);
+- [NFS data storage](../storage/admin/external/nfs.html);
+- [S3-based object storage](../storage/admin/external/s3.html);
+- [SCSI-based data storage](../storage/admin/external/scsi.html);
+- [TATLIN.UNIFIED (Yadro) unified storage](../storage/admin/external/yadro.html).
 
 ## Key Features
 
-- All storage configurations are performed through Deckhouse and its modules, simplifying integration with all cluster components.
-- Ready-to-use solutions for Ceph, NFS, S3, corporate storage systems, and other options, which make connecting storage to the cluster straightforward.
-- Thanks to SDS support (including DRBD) and distributed solutions (Ceph, S3), you can scale up as your workload grows.
+- All storage configurations are performed through Deckhouse and its modules, simplifying integration with all cluster components;
+- Ready-to-use solutions for Ceph, NFS, S3, corporate storage systems, and other options, which make connecting storage to the cluster straightforward;
+- Thanks to SDS support (including DRBD) and distributed solutions (Ceph, S3), you can scale up as your workload grows;
 - Data replication and integration with robust storage systems help protect critical services and applications from data loss.

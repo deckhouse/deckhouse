@@ -131,7 +131,7 @@ spec:
                       type: string
                       description: |
                         The type of a VolumeGroup in LVMVolumeGroups:
-                        - Local, that is, local if the devices used are not distributed (not Shared LUN).
+                        - `Local` — that is, local if the devices used are not distributed (not Shared LUN).
                       enum:
                         - Local
                       x-kubernetes-validations:
@@ -244,4 +244,4 @@ spec:
         - jsonPath: .metadata.creationTimestamp
           name: Age
           type: date
-          description: The age of this resource
+          description: The age of this resource.

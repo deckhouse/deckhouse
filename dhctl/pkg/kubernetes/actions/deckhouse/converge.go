@@ -104,7 +104,7 @@ func ConvergeDeckhouseConfiguration(ctx context.Context, kubeCl *client.Kubernet
 	}
 
 	if commanderUUID != uuid.Nil {
-		tasks = append(tasks, commander.ConstructManagedByCommanderConfigMapTask(commanderUUID, kubeCl))
+		tasks = append(tasks, commander.ConstructManagedByCommanderConfigMapTask(ctx, commanderUUID, kubeCl))
 	}
 
 	return log.Process("default", "Converge deckhouse configuration", func() error {

@@ -19,6 +19,7 @@ package certificate
 import (
 	"bytes"
 	"log"
+	"log/slog"
 	"time"
 
 	"github.com/cloudflare/cfssl/cli/genkey"
@@ -52,7 +53,7 @@ func WithSigningDefaultUsage(usage []string) SigningOption {
 }
 
 func GenerateSelfSignedCert(logger go_hook.Logger, cn string, ca Authority, options ...interface{}) (Certificate, error) {
-	logger.Debugf("Generate self-signed cert for %s", cn)
+	logger.Debug("Generate self-signed cert", slog.String("cn", cn))
 	request := &csr.CertificateRequest{
 		CN: cn,
 		KeyRequest: &csr.KeyRequest{

@@ -19,6 +19,7 @@ package validation
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
@@ -41,19 +42,19 @@ func kubernetesVersionHandler(mm moduleManager) http.Handler {
 	validator := kwhvalidating.ValidatorFunc(func(_ context.Context, _ *model.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
 		secret, ok := obj.(*v1.Secret)
 		if !ok {
-			log.Debugf("unexpected type, expected %T, got %T", v1.Secret{}, obj)
+			log.Debug("unexpected type", log.Type("expected", v1.Secret{}), log.Type("got", obj))
 			return nil, fmt.Errorf("expect Secret as unstructured, got %T", obj)
 		}
 
 		clusterConfigurationRaw, ok := secret.Data["cluster-configuration.yaml"]
 		if !ok {
-			log.Debugf("no cluster-configuration found in secret %s/%s", obj.GetNamespace(), obj.GetName())
+			log.Debug("no cluster-configuration found in secret", slog.String("namespace", obj.GetNamespace()), slog.String("name", obj.GetName()))
 			return nil, fmt.Errorf("expected field 'cluster-configuration.yaml' not found in secret %s", secret.Name)
 		}
 
 		clusterConf := new(clusterConfig)
 		if err := yaml.Unmarshal(clusterConfigurationRaw, clusterConf); err != nil {
-			log.Debugf("failed to unmarshal cluster configuration: %v", err)
+			log.Debug("failed to unmarshal cluster configuration", log.Err(err))
 			return nil, fmt.Errorf("unmarshal cluster configuration: %w", err)
 		}
 
@@ -62,12 +63,12 @@ func kubernetesVersionHandler(mm moduleManager) http.Handler {
 		}
 
 		if moduleName, err := kubernetesversion.Instance().ValidateBaseVersion(clusterConf.KubernetesVersion); err != nil {
-			log.Debugf("failed to validate base version: %v", err)
+			log.Debug("failed to validate base version", log.Err(err))
 			if moduleName == "" {
 				return rejectResult(err.Error())
 			}
 			if mm.IsModuleEnabled(moduleName) {
-				log.Debugf("the module %q has unsatisfied requirements", moduleName)
+				log.Debug("module has unsatisfied requirements", slog.String("name", moduleName))
 				return rejectResult(err.Error())
 			}
 		}

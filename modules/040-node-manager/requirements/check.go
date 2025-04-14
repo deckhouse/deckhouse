@@ -27,12 +27,12 @@ import (
 )
 
 const (
-	minUbuntuVersionValuesKey = "nodeManager:nodesMinimalOSVersionUbuntu"
-	minDebianVersionValuesKey = "nodeManager:nodesMinimalOSVersionDebian"
-	requirementsUbuntuKey     = "nodesMinimalOSVersionUbuntu"
-	requirementsDebianKey     = "nodesMinimalOSVersionDebian"
-	containerdRequirementsKey = "containerdOnAllNodes"
-	hasNodesWithDocker        = "nodeManager:hasNodesWithDocker"
+	minUbuntuVersionValuesKey           = "nodeManager:nodesMinimalOSVersionUbuntu"
+	minDebianVersionValuesKey           = "nodeManager:nodesMinimalOSVersionDebian"
+	requirementsUbuntuKey               = "nodesMinimalOSVersionUbuntu"
+	requirementsDebianKey               = "nodesMinimalOSVersionDebian"
+	unmetCloudConditionsKey             = "nodeManager:unmetCloudConditions"
+	unmetCloudConditionsRequirementsKey = "unmetCloudConditions"
 )
 
 func init() {
@@ -44,26 +44,27 @@ func init() {
 		return baseFuncMinVerOS(requirementValue, getter, "Debian")
 	}
 
-	checkContainerdRequirementFunc := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+	checkUnmetCloudConditionsFunc := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
 		requirementValue = strings.TrimSpace(requirementValue)
 		if requirementValue == "false" || requirementValue == "" {
 			return true, nil
 		}
 
-		hasDocker, exists := getter.Get(hasNodesWithDocker)
+		hasUnmetCloudConditions, exists := getter.Get(unmetCloudConditionsKey)
 		if !exists {
 			return true, nil
 		}
 
-		if hasDocker.(bool) {
-			return false, errors.New("has nodes with Docker CRI or defaultCRI is Docker")
+		if hasUnmetCloudConditions.(bool) {
+			return false, errors.New("has unmet cloud conditions, see clusteralerts for details")
 		}
 
 		return true, nil
 	}
+
+	requirements.RegisterCheck(unmetCloudConditionsRequirementsKey, checkUnmetCloudConditionsFunc)
 	requirements.RegisterCheck(requirementsUbuntuKey, checkRequirementUbuntuFunc)
 	requirements.RegisterCheck(requirementsDebianKey, checkRequirementDebianFunc)
-	requirements.RegisterCheck(containerdRequirementsKey, checkContainerdRequirementFunc)
 }
 
 func baseFuncMinVerOS(requirementValue string, getter requirements.ValueGetter, osImage string) (bool, error) {

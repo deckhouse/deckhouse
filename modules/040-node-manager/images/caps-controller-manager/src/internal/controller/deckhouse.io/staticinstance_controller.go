@@ -19,7 +19,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -38,7 +37,6 @@ import (
 	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
 	"caps-controller-manager/internal/controller"
 	"caps-controller-manager/internal/event"
-	"caps-controller-manager/internal/providerid"
 	"caps-controller-manager/internal/scope"
 )
 
@@ -150,16 +148,10 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	return r.reconcileNormal(ctx, instanceScope)
 }
 
-const skipBootstrapPhaseAnnotation = "static.node.deckhouse.io/skip-bootstrap-phase"
-
 func (r *StaticInstanceReconciler) reconcileNormal(
 	ctx context.Context,
 	instanceScope *scope.InstanceScope,
 ) (ctrl.Result, error) {
-	if _, shouldSkipBootstrap := instanceScope.Instance.Annotations[skipBootstrapPhaseAnnotation]; shouldSkipBootstrap {
-		return r.adoptBootstrappedStaticInstance(ctx, instanceScope)
-	}
-
 	if (instanceScope.Instance.Status.CurrentStatus == nil ||
 		instanceScope.Instance.Status.CurrentStatus.Phase == "" ||
 		instanceScope.Instance.Status.CurrentStatus.Phase == deckhousev1.StaticInstanceStatusCurrentStatusPhaseError) &&
@@ -208,78 +200,6 @@ func (r *StaticInstanceReconciler) reconcileNormal(
 
 			return ctrl.Result{}, nil
 		}
-	}
-
-	return ctrl.Result{}, nil
-}
-
-func (r *StaticInstanceReconciler) adoptBootstrappedStaticInstance(ctx context.Context, instanceScope *scope.InstanceScope) (ctrl.Result, error) {
-	instanceScope.Logger.Info(
-		fmt.Sprintf("adopting node for StaticInstance with %s annotation", skipBootstrapPhaseAnnotation),
-	)
-
-	staticMachines := &infrav1.StaticMachineList{}
-	if err := r.Client.List(ctx, staticMachines, client.InNamespace("d8-cloud-instance-manager")); err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed to list StaticMachines")
-	}
-
-	var machine *infrav1.StaticMachine
-	for _, m := range staticMachines.Items {
-		if m.Status.Ready {
-			continue
-		}
-		if m.Spec.ProviderID != "" {
-			continue
-		}
-		if conditions.IsTrue(&m, infrav1.StaticMachineStaticInstanceReadyCondition) ||
-			conditions.IsTrue(&m, infrav1.StaticMachineWaitingForBootstrapDataSecretReason) {
-			continue
-		}
-		if len(m.Status.Addresses) > 0 {
-			continue
-		}
-		if m.Status.FailureMessage != nil || m.Status.FailureReason != nil {
-			continue
-		}
-
-		machine = &m
-		break
-	}
-	if machine == nil {
-		return ctrl.Result{}, errors.Errorf("no valid StaticMachine found for adoption")
-	}
-
-	machineScope, ok, err := controller.NewMachineScope(ctx, r.Client, r.Config, machine)
-	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed to create a machine scope")
-	}
-	if !ok {
-		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
-	}
-
-	instanceScope.MachineScope = machineScope
-	instanceScope.Instance.Status.MachineRef = &corev1.ObjectReference{
-		Kind:       machine.Kind,
-		Namespace:  machine.Namespace,
-		Name:       machine.Name,
-		UID:        machine.UID,
-		APIVersion: machine.APIVersion,
-	}
-
-	delete(instanceScope.Instance.Annotations, skipBootstrapPhaseAnnotation)
-	conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceBootstrapSucceededCondition)
-	conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceAddedToNodeGroupCondition)
-	instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseRunning)
-	if err = instanceScope.Patch(ctx); err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed to set StaticInstance phase to Running")
-	}
-
-	machine.Spec.ProviderID = providerid.GenerateProviderID(instanceScope.Instance.Name)
-	machine.Status.Ready = true
-	conditions.MarkTrue(machine, infrav1.StaticMachineStaticInstanceReadyCondition)
-	instanceScope.MachineScope.StaticMachine = machine
-	if err = instanceScope.MachineScope.Patch(ctx); err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed to patch StaticMachine's provider ID")
 	}
 
 	return ctrl.Result{}, nil

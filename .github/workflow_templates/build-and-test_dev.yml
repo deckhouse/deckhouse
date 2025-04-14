@@ -26,6 +26,7 @@ on:
 env:
 {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
 {!{ tmpl.Exec "git_source_envs" | strings.Indent 2 }!}
+{!{ tmpl.Exec "dmt_envs" | strings.Indent 2 }!}
 
 # Cancel in-progress jobs for the same PR (pull_request_target event) or for the same branch (push event).
 concurrency:
@@ -166,7 +167,6 @@ jobs:
 {!{ tmpl.Exec "tests_webhooks_template" (slice $ctx) | strings.Indent 4 }!}
 
   tests_dmt_lint:
-    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: Tests DMT lint
     needs:
     - git_info

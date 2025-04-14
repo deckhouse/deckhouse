@@ -15,6 +15,7 @@
 package bootstrap
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -31,7 +32,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
-func (b *ClusterBootstrapper) Abort(forceAbortFromCache bool) error {
+func (b *ClusterBootstrapper) Abort(ctx context.Context, forceAbortFromCache bool) error {
 	if restore, err := b.applyParams(); err != nil {
 		return err
 	} else {
@@ -42,7 +43,7 @@ func (b *ClusterBootstrapper) Abort(forceAbortFromCache bool) error {
 		log.WarnLn(bootstrapAbortCheckMessage)
 	}
 
-	return log.Process("bootstrap", "Abort", func() error { return b.doRunBootstrapAbort(forceAbortFromCache) })
+	return log.Process("bootstrap", "Abort", func() error { return b.doRunBootstrapAbort(ctx, forceAbortFromCache) })
 }
 
 func (b *ClusterBootstrapper) initSSHClient() error {
@@ -78,7 +79,7 @@ func (b *ClusterBootstrapper) initSSHClient() error {
 	return nil
 }
 
-func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) error {
+func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbortFromCache bool) error {
 	metaConfig, err := config.ParseConfig(app.ConfigPaths)
 	if err != nil {
 		return err
@@ -220,7 +221,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 		}
 		bootstrapState := NewBootstrapState(stateCache)
 		preflightChecker := preflight.NewChecker(b.NodeInterface, deckhouseInstallConfig, metaConfig, bootstrapState)
-		if err := preflightChecker.StaticSudo(); err != nil {
+		if err := preflightChecker.StaticSudo(ctx); err != nil {
 			return err
 		}
 	}
@@ -234,7 +235,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 	}
 	defer b.PhasedExecutionContext.Finalize(stateCache)
 
-	if err := destroyer.DestroyCluster(app.SanityCheck); err != nil {
+	if err := destroyer.DestroyCluster(ctx, app.SanityCheck); err != nil {
 		b.lastState = b.PhasedExecutionContext.GetLastState()
 		return err
 	}

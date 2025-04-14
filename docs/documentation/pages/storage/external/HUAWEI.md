@@ -3,6 +3,10 @@ title: "Huawei data storage"
 permalink: en/storage/admin/external/huawei.html
 ---
 
+{% alert level="info" %}
+Available in some commercial editions:  **EE**
+{% endalert %}
+
 Deckhouse provides support for Huawei Dorado storage systems, enabling volume management in Kubernetes using a CSI driver through the creation of custom resources like [HuaweiStorageClass](../../../reference/cr/huaweistorageclass/). This solution ensures high-performance and fault-tolerant storage, making it an optimal choice for mission-critical workloads.
 
 {% alert level="warning" %}
@@ -14,7 +18,7 @@ This page provides instructions on connecting Huawei Dorado to Deckhouse, config
 
 ## System requirements
 
-- Presence of a deployed and configured Huawei SAN.
+- Presence of a deployed and configured Huawei SAN;
 - Unique IQNs in `/etc/iscsi/initiatorname.iscsi` on each Kubernetes Nodes.
 
 ## Setup and Configuration
@@ -24,7 +28,7 @@ Note that all commands must be run on a machine that has administrator access to
 ### Enabling the module
 
 To support Huawei Dorado storage systems, enable the `csi-huawei` module. This will ensure that all cluster nodes have:
-- registration of the CSI driver.
+- registration of the CSI driver;
 - launch of service pods for the `csi-huawei` components.
 
 ```yaml

@@ -12,7 +12,7 @@ properties:
             Начальный порт диапазона DRBD.
         maxPort:
           description: |
-            Конечный порт диапазона DR
+            Конечный порт диапазона DRBD.
   enableThinProvisioning:
     description: Разрешить использование LVM-томов типа thin.
   dataNodes:

@@ -52,29 +52,6 @@ var patchServiceData = []patchServiceStruct{
 			},
 		},
 	},
-	{
-		module:    "kube-dns",
-		namespace: "kube-system",
-		name:      "d8-kube-dns-redirect",
-		patch: map[string]interface{}{
-			"spec": map[string]interface{}{
-				"ports": []interface{}{
-					map[string]interface{}{
-						"name":       "dns",
-						"port":       53,
-						"targetPort": "dns",
-						"protocol":   "UDP",
-					},
-					map[string]interface{}{
-						"name":       "dns-tcp",
-						"port":       53,
-						"targetPort": "dns-tcp",
-						"protocol":   "TCP",
-					},
-				},
-			},
-		},
-	},
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{

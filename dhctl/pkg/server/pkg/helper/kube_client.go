@@ -15,6 +15,7 @@
 package helper
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -31,7 +32,7 @@ type ApiServerOptions struct {
 	CertificateAuthorityData []byte
 }
 
-func CreateKubeClient(apiServerUrl string, opts ApiServerOptions) (*client.KubernetesClient, func() error, error) {
+func CreateKubeClient(ctx context.Context, apiServerUrl string, opts ApiServerOptions) (*client.KubernetesClient, func() error, error) {
 	kubeConfig, cleanup, err := GenerateTempKubeConfig(apiServerUrl, opts)
 	if err != nil {
 		return nil, nil, fmt.Errorf("generating kube config: %w", err)
@@ -39,7 +40,7 @@ func CreateKubeClient(apiServerUrl string, opts ApiServerOptions) (*client.Kuber
 
 	kubeCl := client.NewKubernetesClient()
 
-	if err := kubeCl.Init(&client.KubernetesInitParams{
+	if err := kubeCl.InitContext(ctx, &client.KubernetesInitParams{
 		KubeConfig: kubeConfig,
 	}); err != nil {
 		cleanup()
