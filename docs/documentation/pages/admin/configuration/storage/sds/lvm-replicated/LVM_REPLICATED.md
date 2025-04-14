@@ -102,7 +102,7 @@ dev-6c5abbd549100834c6b1668c8f89fb97872ee2b1   worker-2   false        894006140
 
 In the example above, there are six block devices available across three nodes.
 
-To combine the block devices on a node, you need to create an LVM volume group using the [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) resource. To create the [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) resource on node worker-0, apply the following resource, replacing the node and block device names with your own:
+To combine the block devices on a node, you need to create an LVM volume group using the [LVMVolumeGroup](../../../../reference/cr/lvmvolumegroup/) resource. To create the [LVMVolumeGroup](../../../../reference/cr/lvmvolumegroup/) resource on node worker-0, apply the following resource, replacing the node and block device names with your own:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -132,7 +132,7 @@ spec:
 EOF
 ```
 
-Wait for the created [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) resource to reach the `Ready` phase. To check the resource phase, run the following command:
+Wait for the created [LVMVolumeGroup](../../../../reference/cr/lvmvolumegroup/) resource to reach the `Ready` phase. To check the resource phase, run the following command:
 
 ```shell
 d8 k get lvg vg-on-worker-0 -w
@@ -147,7 +147,7 @@ vg-on-worker-0   1/1         True                    Ready   worker-0   360484Mi
 
 If the resource has transitioned to the `Ready` phase, this means that an LVM volume group named vg has been created on node worker-0 from the block devices `/dev/nvme1n1` and `/dev/nvme0n1p6`.
 
-Next, you need to repeat the creation of [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) resources for the remaining nodes (worker-1 and worker-2), changing the resource name, node name, and block device names accordingly. Ensure that LVM volume groups have been created on all nodes where they are planned to be used by running the following command:
+Next, you need to repeat the creation of [LVMVolumeGroup](../../../../reference/cr/lvmvolumegroup/) resources for the remaining nodes (worker-1 and worker-2), changing the resource name, node name, and block device names accordingly. Ensure that LVM volume groups have been created on all nodes where they are planned to be used by running the following command:
 
 ```shell
 d8 k get lvg -w
@@ -164,7 +164,7 @@ vg-on-worker-2   0/0         True                    Ready   worker-2   360484Mi
 
 ### Creating replicated thick pools
 
-Now that the necessary LVM volume groups are created on the nodes, you need to combine them into a single logical space. This can be done by combining them into replicated storage pools in the `LINSTOR` backend through the [ReplicatedStoragePool](../../../reference/cr/replicatedstoragepool/) resource interface.
+Now that the necessary LVM volume groups are created on the nodes, you need to combine them into a single logical space. This can be done by combining them into replicated storage pools in the `LINSTOR` backend through the [ReplicatedStoragePool](../../../../reference/cr/replicatedstoragepool/) resource interface.
 
 Storage pools can be of two types: LVM (thick) and LVMThin (thin). The thick pool offers high performance, comparable to the performance of the storage device, but it does not allow snapshots. Example of creating a replicated thick pool:
 
@@ -183,7 +183,7 @@ spec:
 EOF
 ```
 
-Wait for the created [ReplicatedStoragePool](../../../reference/cr/replicatedstoragepool/) resource to reach the `Completed` phase. To check the resource phase, run the following command:
+Wait for the created [ReplicatedStoragePool](../../../../reference/cr/replicatedstoragepool/) resource to reach the `Completed` phase. To check the resource phase, run the following command:
 
 ```shell
 d8 k get rsp data -w
@@ -200,7 +200,7 @@ thick-pool   Completed   LVM    87d
 
 Unlike thick pools, a thin pool allows the use of snapshots but has lower performance.
 
-The previously created [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) is suitable for creating thick pools. If you need the ability to create replicated thin pools, update the configuration of the [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) resources by adding a definition for the thin pool:
+The previously created [LVMVolumeGroup](../../../../reference/cr/lvmvolumegroup/) is suitable for creating thick pools. If you need the ability to create replicated thin pools, update the configuration of the [LVMVolumeGroup](../../../../reference/cr/lvmvolumegroup/) resources by adding a definition for the thin pool:
 
 ```yaml
 d8 k patch lvg vg-on-worker-0 --type='json' -p='[
@@ -217,7 +217,7 @@ d8 k patch lvg vg-on-worker-0 --type='json' -p='[
 ]'
 ```
 
-In the updated version of [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/), 70% of the available space will be used to create thin pools. The remaining 30% can be used for thick pools.
+In the updated version of [LVMVolumeGroup](../../../../reference/cr/lvmvolumegroup/), 70% of the available space will be used to create thin pools. The remaining 30% can be used for thick pools.
 
 Repeat the addition of thin pools for the remaining nodes (worker-1 and worker-2). Example of creating a replicated thin pool:
 
@@ -239,7 +239,7 @@ spec:
 EOF
 ```
 
-Wait for the created [ReplicatedStoragePool](../../../reference/cr/replicatedstoragepool/) resource to transition to the `Completed` phase. To check the resource phase, run the following command:
+Wait for the created [ReplicatedStoragePool](../../../../reference/cr/replicatedstoragepool/) resource to transition to the `Completed` phase. To check the resource phase, run the following command:
 
 ```shell
 d8 k get rsp data -w
@@ -254,9 +254,9 @@ thin-pool   Completed   LVMThin   87d
 
 ## Creating StorageClass objects
 
-StorageClass objects are created through the [ReplicatedStorageClass](../../../reference/cr/replicatedstorageclass/) resource, which defines the configuration for the desired StorageClass. Manually creating a StorageClass resource without [ReplicatedStorageClass](../../../reference/cr/replicatedstorageclass/) may lead to undesired behavior.
+StorageClass objects are created through the [ReplicatedStorageClass](../../../../reference/cr/replicatedstorageclass/) resource, which defines the configuration for the desired StorageClass. Manually creating a StorageClass resource without [ReplicatedStorageClass](../../../../reference/cr/replicatedstorageclass/) may lead to undesired behavior.
 
-Example of creating a [ReplicatedStorageClass](../../../reference/cr/replicatedstorageclass/) resource based on a thick pool, where the PersistentVolumes will be placed on volume groups across three nodes:
+Example of creating a [ReplicatedStorageClass](../../../../reference/cr/replicatedstorageclass/) resource based on a thick pool, where the PersistentVolumes will be placed on volume groups across three nodes:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -280,13 +280,13 @@ spec:
 EOF
 ```
 
-Check that the created [ReplicatedStorageClass](../../../reference/cr/replicatedstorageclass/) resource has transitioned to the `Created` phase by running the following command:
+Check that the created [ReplicatedStorageClass](../../../../reference/cr/replicatedstorageclass/) resource has transitioned to the `Created` phase by running the following command:
 
 ```shell
 d8 k get rsc replicated-storage-class -w
 ```
 
-In the output, you should see information about the created [ReplicatedStorageClass](../../../reference/cr/replicatedstorageclass/) resource:
+In the output, you should see information about the created [ReplicatedStorageClass](../../../../reference/cr/replicatedstorageclass/) resource:
 
 ```console
 NAME                       PHASE     AGE

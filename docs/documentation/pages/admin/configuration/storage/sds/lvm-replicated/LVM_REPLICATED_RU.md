@@ -103,7 +103,7 @@ dev-6c5abbd549100834c6b1668c8f89fb97872ee2b1   worker-2   false        894006140
 
 В примере выполнения команды выше в наличии имеется шесть блочных устройств, расположенных на трёх узлах.
 
-Чтобы объединить блочные устройства на одном узле, необходимо создать группу томов LVM с помощью ресурса [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/). Для создания ресурса [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) на узле worker-0 примените следующий ресурс, предварительно заменив имена узла и блочных устройств на свои:
+Чтобы объединить блочные устройства на одном узле, необходимо создать группу томов LVM с помощью ресурса [LVMVolumeGroup](../../../../reference/cr/lvmvolumegroup/). Для создания ресурса [LVMVolumeGroup](../../../../reference/cr/lvmvolumegroup/) на узле worker-0 примените следующий ресурс, предварительно заменив имена узла и блочных устройств на свои:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -133,7 +133,7 @@ spec:
 EOF
 ```
 
-Дождитесь, когда созданный ресурс [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) перейдет в состояние `Ready`. Чтобы проверить состояние ресурса, выполните следующую команду:
+Дождитесь, когда созданный ресурс [LVMVolumeGroup](../../../../reference/cr/lvmvolumegroup/) перейдет в состояние `Ready`. Чтобы проверить состояние ресурса, выполните следующую команду:
 
 ```shell
 d8 k get lvg vg-on-worker-0 -w
@@ -146,7 +146,7 @@ NAME             THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE    
 vg-on-worker-0   1/1         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
 ```
 
-Если ресурс перешел в состояние `Ready`, то это значит, что на узле worker-0 из блочных устройств `/dev/nvme1n1` и `/dev/nvme0n1p6` была создана группа томов LVM с именем `vg`. Далее необходимо повторить создание ресурсов [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) для оставшихся узлов (worker-1 и worker-2), изменив в примере выше имя ресурса [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/), имя узла и имена блочных устройств, соответствующих узлу.
+Если ресурс перешел в состояние `Ready`, то это значит, что на узле worker-0 из блочных устройств `/dev/nvme1n1` и `/dev/nvme0n1p6` была создана группа томов LVM с именем `vg`. Далее необходимо повторить создание ресурсов [LVMVolumeGroup](../../../../reference/cr/lvmvolumegroup/) для оставшихся узлов (worker-1 и worker-2), изменив в примере выше имя ресурса [LVMVolumeGroup](../../../../reference/cr/lvmvolumegroup/), имя узла и имена блочных устройств, соответствующих узлу.
 
 Убедитесь, что группы томов LVM созданы на всех узлах, где планируется их использовать, выполнив следующую команду:
 
@@ -165,7 +165,7 @@ vg-on-worker-2   0/0         True                    Ready   worker-2   360484Mi
 
 ### Создание реплицированных thick-пулов
 
-Теперь, когда на узлах созданы нужные группы томов LVM, необходимо объединить их в единое логическое пространство. Это можно сделать, объединив их в реплицированные пулы хранения в бэкенде `LINSTOR` через интерфейс в виде ресурса [ReplicatedStoragePool](../../../reference/cr/replicatedstoragepool/).
+Теперь, когда на узлах созданы нужные группы томов LVM, необходимо объединить их в единое логическое пространство. Это можно сделать, объединив их в реплицированные пулы хранения в бэкенде `LINSTOR` через интерфейс в виде ресурса [ReplicatedStoragePool](../../../../reference/cr/replicatedstoragepool/).
 
 Пулы хранения могут быть двух типов: LVM (thick) и LVMThin (thin). Thick-пул обладает высокой производительностью, сравнимой с производительностью накопителя, но не позволяет использовать снапшоты. Пример создания реплицированного thick-пула:
 
@@ -184,7 +184,7 @@ spec:
 EOF
 ```
 
-Дождитесь, когда созданный ресурс [ReplicatedStoragePool](../../../reference/cr/replicatedstoragepool/) перейдет в состояние `Completed`. Чтобы проверить состояние ресурса, выполните следующую команду:
+Дождитесь, когда созданный ресурс [ReplicatedStoragePool](../../../../reference/cr/replicatedstoragepool/) перейдет в состояние `Completed`. Чтобы проверить состояние ресурса, выполните следующую команду:
 
 ```shell
 d8 k get rsp data -w
@@ -201,7 +201,7 @@ thick-pool   Completed   LVM    87d
 
 В отличие от thick-пулов, thin-пул позволяет использовать снапшоты, но обладает меньшей производительностью.
 
-Созданные ранее [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) подходят для создания thick-пулов. Если вам важно иметь возможность создавать реплицированные thin-пулы, обновите конфигурацию ресурсов [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/), добавив определение для thin-пула:
+Созданные ранее [LVMVolumeGroup](../../../../reference/cr/lvmvolumegroup/) подходят для создания thick-пулов. Если вам важно иметь возможность создавать реплицированные thin-пулы, обновите конфигурацию ресурсов [LVMVolumeGroup](../../../../reference/cr/lvmvolumegroup/), добавив определение для thin-пула:
 
 ```yaml
 d8 k patch lvg vg-on-worker-0 --type='json' -p='[
@@ -218,7 +218,7 @@ d8 k patch lvg vg-on-worker-0 --type='json' -p='[
 ]'
 ```
 
-В обновленной версии [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) 70% доступного пространства будет использовано для создания thin-пулов. Оставшиеся 30% могут быть использованы для thick-пулов.
+В обновленной версии [LVMVolumeGroup](../../../../reference/cr/lvmvolumegroup/) 70% доступного пространства будет использовано для создания thin-пулов. Оставшиеся 30% могут быть использованы для thick-пулов.
 
 Повторите добавление Thin-пулов для оставшихся узлов (worker-1 и worker-2). Пример создания реплицированного thin-пула:
 
@@ -240,7 +240,7 @@ spec:
 EOF
 ```
 
-Дождитесь, когда созданный ресурс [ReplicatedStoragePool](../../../reference/cr/replicatedstoragepool/) перейдет в состояние `Completed`. Чтобы проверить состояние ресурса, выполните следующую команду:
+Дождитесь, когда созданный ресурс [ReplicatedStoragePool](../../../../reference/cr/replicatedstoragepool/) перейдет в состояние `Completed`. Чтобы проверить состояние ресурса, выполните следующую команду:
 
 ```shell
 d8 k get rsp data -w
@@ -255,9 +255,9 @@ thin-pool   Completed   LVMThin   87d
 
 ## Создание объектов StorageClass
 
-Создание объектов StorageClass осуществляется через ресурс [ReplicatedStorageClass](../../../reference/cr/replicatedstorageclass/), который определяет конфигурацию для желаемого класса хранения. Ручное создание ресурса StorageClass без [ReplicatedStorageClass](../../../reference/cr/replicatedstorageclass/) может привести к нежелательному поведению.
+Создание объектов StorageClass осуществляется через ресурс [ReplicatedStorageClass](../../../../reference/cr/replicatedstorageclass/), который определяет конфигурацию для желаемого класса хранения. Ручное создание ресурса StorageClass без [ReplicatedStorageClass](../../../../reference/cr/replicatedstorageclass/) может привести к нежелательному поведению.
 
-Пример создания ресурса [ReplicatedStorageClass](../../../reference/cr/replicatedstorageclass/) на основе thick-пула, PersistentVolumes которого будут размещены на группах томов на трех узлах:
+Пример создания ресурса [ReplicatedStorageClass](../../../../reference/cr/replicatedstorageclass/) на основе thick-пула, PersistentVolumes которого будут размещены на группах томов на трех узлах:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -281,13 +281,13 @@ spec:
 EOF
 ```
 
-Проверьте, что созданный ресурс [ReplicatedStorageClass](../../../reference/cr/replicatedstorageclass/) перешел в состояние `Created`, выполнив следующую команду:
+Проверьте, что созданный ресурс [ReplicatedStorageClass](../../../../reference/cr/replicatedstorageclass/) перешел в состояние `Created`, выполнив следующую команду:
 
 ```shell
 d8 k get rsc replicated-storage-class -w
 ```
 
-В результате будет выведена информация о созданном [ReplicatedStorageClass](../../../reference/cr/replicatedstorageclass/):
+В результате будет выведена информация о созданном [ReplicatedStorageClass](../../../../reference/cr/replicatedstorageclass/):
 
 ```console
 NAME                       PHASE     AGE

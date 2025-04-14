@@ -45,7 +45,7 @@ lang: ru
 
 ## Назначение StorageClass по умолчанию
 
-Для назначения StorageClass по умолчанию необходимо в пользовательском ресурсе [ReplicatedStorageClass](../../../reference/cr/replicatedstorageclass/) в поле `spec.isDefault` указать значение `true`. 
+Для назначения StorageClass по умолчанию необходимо в пользовательском ресурсе [ReplicatedStorageClass](../../../../reference/cr/replicatedstorageclass/) в поле `spec.isDefault` указать значение `true`. 
 
 ## Добавление существующей LVMVolumeGroup или LVMThin‑пула
 
@@ -55,9 +55,9 @@ lang: ru
    vgchange myvg-0 --add-tag storage.deckhouse.io/enabled=true
    ```
 
-   После этого Volume Group будет автоматически обнаружена, и для неё будет создан ресурс [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/).
+   После этого Volume Group будет автоматически обнаружена, и для неё будет создан ресурс [LVMVolumeGroup](../../../../reference/cr/lvmvolumegroup/).
 
-1. Полученный ресурс укажите в параметрах [ReplicatedStoragePool](../../../reference/cr/replicatedstoragepool/) в поле `spec.lvmVolumeGroups[].name` Если используется LVMThin‑пул, дополнительно задайте имя в `spec.lvmVolumeGroups[].thinPoolName`.
+1. Полученный ресурс укажите в параметрах [ReplicatedStoragePool](../../../../reference/cr/replicatedstoragepool/) в поле `spec.lvmVolumeGroups[].name` Если используется LVMThin‑пул, дополнительно задайте имя в `spec.lvmVolumeGroups[].thinPoolName`.
 
 ## Изменение ограничений DRBD‑томов и портов кластера
 
@@ -295,7 +295,7 @@ dmesg | grep 'Remote failed to finish a request within'
 
 ## Удаление остаточного Storage Pool после удаления ReplicatedStoragePool
 
-Модуль `sds-replicated-volume` не обрабатывает операции удаления ресурса [ReplicatedStoragePool](../../../reference/cr/replicatedstoragepool/).
+Модуль `sds-replicated-volume` не обрабатывает операции удаления ресурса [ReplicatedStoragePool](../../../../reference/cr/replicatedstoragepool/).
 
 ## Ограничения на изменение spec ReplicatedStorageClass
 
@@ -481,7 +481,7 @@ linstor-20240425074718-backup-completed      Opaque                           0 
 
 ## Дополнительная поддержка
 
-Информация о причинах неудачных операций отображается в поле `status.reason` ресурсов [ReplicatedStoragePool](../../../reference/cr/replicatedstoragepool/) и [ReplicatedStorageClass](../../../reference/cr/replicatedstorageclass/). При недостатке информации для диагностики рекомендуется обращаться к логам `sds-replicated-volume-controller`.
+Информация о причинах неудачных операций отображается в поле `status.reason` ресурсов [ReplicatedStoragePool](../../../../reference/cr/replicatedstoragepool/) и [ReplicatedStorageClass](../../../../reference/cr/replicatedstorageclass/). При недостатке информации для диагностики рекомендуется обращаться к логам `sds-replicated-volume-controller`.
 
 ## Миграция с модуля linstor на sds-replicated-volume
 
@@ -603,7 +603,7 @@ StorageClass в данном модуле управляются через ре
 
 ### Миграция на ReplicatedStoragePool
 
-Ресурс [ReplicatedStoragePool](../../../reference/cr/replicatedstoragepool/) позволяет создавать `Storage Pool` в бэкенде модуля. Рекомендуется создать этот ресурс даже для уже существующих `Storage Pool` и указать в этом ресурсе существующие [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/). В этом случае контроллер увидит, что соответствующие `Storage Pool` созданы, и оставит их без изменений, а в поле `status.phase` созданного ресурса будет отображено значение `Created`.
+Ресурс [ReplicatedStoragePool](../../../../reference/cr/replicatedstoragepool/) позволяет создавать `Storage Pool` в бэкенде модуля. Рекомендуется создать этот ресурс даже для уже существующих `Storage Pool` и указать в этом ресурсе существующие [LVMVolumeGroup](../../../../reference/cr/lvmvolumegroup/). В этом случае контроллер увидит, что соответствующие `Storage Pool` созданы, и оставит их без изменений, а в поле `status.phase` созданного ресурса будет отображено значение `Created`.
 
 ## Миграция с модуля sds-drbd на sds-replicated-volume
 
@@ -687,7 +687,7 @@ StorageClass в данном модуле управляются через ре
 
 Использование DRBD с более чем одной репликой уже обеспечивает функциональность сетевого RAID. Применение RAID локально может привести к следующим проблемам:
 
-- В несколько раз увеличивает оверхед по используемому пространству в случае использования RAID с избыточностью. Например, используется [ReplicatedStorageClass](../../../reference/cr/replicatedstorageclass/) с `replication`, выставленном в `ConsistencyAndAvailability`. При таких настройках DRBD будет сохранять данные в трех репликах (по одной реплике на три разных узла). Если на этих узлах будет использоваться RAID1, то для хранения 1 Гб данных потребуется суммарно 6 Гб места на дисках. RAID с избыточностью есть смысл использовать для упрощения обслуживания серверов в том случае, когда цена хранения не имеет значения. RAID1 в таком случае позволит менять диски на серверах без необходимости перемещения реплик данных с "проблемного" диска.
+- В несколько раз увеличивает оверхед по используемому пространству в случае использования RAID с избыточностью. Например, используется [ReplicatedStorageClass](../../../../reference/cr/replicatedstorageclass/) с `replication`, выставленном в `ConsistencyAndAvailability`. При таких настройках DRBD будет сохранять данные в трех репликах (по одной реплике на три разных узла). Если на этих узлах будет использоваться RAID1, то для хранения 1 Гб данных потребуется суммарно 6 Гб места на дисках. RAID с избыточностью есть смысл использовать для упрощения обслуживания серверов в том случае, когда цена хранения не имеет значения. RAID1 в таком случае позволит менять диски на серверах без необходимости перемещения реплик данных с "проблемного" диска.
 
 - В случае RAID0 прирост производительности будет незаметен, т. к. репликация данных будет осуществляться по сети и узким местом с высокой вероятностью будет именно сеть. Кроме того, уменьшение надежности хранилища на хосте потенциально будет приводить к недоступности данных, тк в DRBD переключение со сломавшейся реплики на здоровую происходит не мгновенно.
 

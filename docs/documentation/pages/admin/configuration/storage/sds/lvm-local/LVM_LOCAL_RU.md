@@ -103,9 +103,9 @@ dev-53d904f18b912187ac82de29af06a34d9ae23199   worker-2   false        976762584
 dev-6c5abbd549100834c6b1668c8f89fb97872ee2b1   worker-2   false        894006140416   /dev/nvme0n1p6
 ```
 
-В примере выполнения команды выше в наличии имеется шесть блочных устройств, расположенных на трех узлах. Чтобы объединить блочные устройства на одном узле, необходимо создать группу томов LVM с помощью ресурса [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/).
+В примере выполнения команды выше в наличии имеется шесть блочных устройств, расположенных на трех узлах. Чтобы объединить блочные устройства на одном узле, необходимо создать группу томов LVM с помощью ресурса [LVMVolumeGroup](../../../../reference/cr/lvmvolumegroup/).
 
-Для создания ресурса [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) на узле worker-0 примените следующий ресурс, предварительно заменив имена узла и блочных устройств на свои:
+Для создания ресурса [LVMVolumeGroup](../../../../reference/cr/lvmvolumegroup/) на узле worker-0 примените следующий ресурс, предварительно заменив имена узла и блочных устройств на свои:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -135,7 +135,7 @@ spec:
 EOF
 ```
 
-Дождитесь, когда созданный ресурс [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) перейдет в состояние `Ready`. Чтобы проверить состояние ресурса, выполните следующую команду:
+Дождитесь, когда созданный ресурс [LVMVolumeGroup](../../../../reference/cr/lvmvolumegroup/) перейдет в состояние `Ready`. Чтобы проверить состояние ресурса, выполните следующую команду:
 
 ```shell
 d8 k get lvg vg-on-worker-0 -w
@@ -150,7 +150,7 @@ vg-on-worker-0   1/1         True                    Ready   worker-0   360484Mi
 
 Если ресурс перешел в состояние `Ready`, то это значит, что на узле worker-0 из блочных устройств `/dev/nvme1n1` и `/dev/nvme0n1p6` была создана группа томов LVM с именем `vg`.
 
-Далее необходимо повторить создание ресурсов [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) для оставшихся узлов (worker-1 и worker-2), изменив в примере выше имя ресурса [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/), имя узла и имена блочных устройств, соответствующих узлу. Убедитесь, что группы томов LVM созданы на всех узлах, где планируется их использовать, выполнив следующую команду:
+Далее необходимо повторить создание ресурсов [LVMVolumeGroup](../../../../reference/cr/lvmvolumegroup/) для оставшихся узлов (worker-1 и worker-2), изменив в примере выше имя ресурса [LVMVolumeGroup](../../../../reference/cr/lvmvolumegroup/), имя узла и имена блочных устройств, соответствующих узлу. Убедитесь, что группы томов LVM созданы на всех узлах, где планируется их использовать, выполнив следующую команду:
 
 ```shell
 d8 k get lvg -w
@@ -167,13 +167,13 @@ vg-on-worker-2   0/0         True                    Ready   worker-2   360484Mi
 
 ### Создание StorageClass с типом thick
 
-Создание объектов StorageClass осуществляется через ресурс [LocalStorageClass](../../../reference/cr/localstorageclass/), который определяет конфигурацию для желаемого класса хранения. Ручное создание ресурса StorageClass без [LocalStorageClass](../../../reference/cr/localstorageclass/) может привести к ошибкам.
+Создание объектов StorageClass осуществляется через ресурс [LocalStorageClass](../../../../reference/cr/localstorageclass/), который определяет конфигурацию для желаемого класса хранения. Ручное создание ресурса StorageClass без [LocalStorageClass](../../../../reference/cr/localstorageclass/) может привести к ошибкам.
 
-При создании [LocalStorageClass](../../../reference/cr/localstorageclass/) важно выбрать тип хранения, который может иметь значение thick, либо thin.
+При создании [LocalStorageClass](../../../../reference/cr/localstorageclass/) важно выбрать тип хранения, который может иметь значение thick, либо thin.
 
 Thick-пул обеспечивает высокую производительность, сопоставимую с производительностью накопителя, но не поддерживает создание снапшотов.
 
-Пример создания ресурса [LocalStorageClass](../../../reference/cr/localstorageclass/) с типом thick:
+Пример создания ресурса [LocalStorageClass](../../../../reference/cr/localstorageclass/) с типом thick:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -193,13 +193,13 @@ spec:
 EOF
 ```
 
-Проверьте, что созданный [LocalStorageClass](../../../reference/cr/localstorageclass/) перешёл в состояние `Created`, выполнив следующую команду:
+Проверьте, что созданный [LocalStorageClass](../../../../reference/cr/localstorageclass/) перешёл в состояние `Created`, выполнив следующую команду:
 
 ```shell
 d8 k get lsc local-storage-class -w
 ```
 
-В результате будет выведена информация о созданном [LocalStorageClass](../../../reference/cr/localstorageclass/):
+В результате будет выведена информация о созданном [LocalStorageClass](../../../../reference/cr/localstorageclass/):
 
 ```console
 NAME                        PHASE     AGE
@@ -227,7 +227,7 @@ local-storage-class-thick   local.csi.storage.deckhouse.io   Delete          Wai
 Overprovisioning следует использовать с осторожностью, контролируя доступное пространство в пуле. В системе мониторинга кластера предусмотрены события при снижении свободного места до 20%, 10%, 5% и 1%. Полное заполнение пула может привести к деградации работы модуля и риску потери данных.
 {% endalert %}
 
-Созданные ранее [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) подходят для создания thick-хранилищ. Если вам важно иметь возможность создавать хранилища с типом thin, обновите конфигурацию ресурсов [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/), добавив определение для thin-пула:
+Созданные ранее [LVMVolumeGroup](../../../../reference/cr/lvmvolumegroup/) подходят для создания thick-хранилищ. Если вам важно иметь возможность создавать хранилища с типом thin, обновите конфигурацию ресурсов [LVMVolumeGroup](../../../../reference/cr/lvmvolumegroup/), добавив определение для thin-пула:
 
 ```yaml
 d8 k patch lvg vg-on-worker-0 --type='json' -p='[
@@ -244,9 +244,9 @@ d8 k patch lvg vg-on-worker-0 --type='json' -p='[
 ]'
 ```
 
-В обновленной версии [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) 70% доступного пространства будет использовано для создания thin-хранилищ. Оставшиеся 30% могут быть использованы для thick-хранилищ.
+В обновленной версии [LVMVolumeGroup](../../../../reference/cr/lvmvolumegroup/) 70% доступного пространства будет использовано для создания thin-хранилищ. Оставшиеся 30% могут быть использованы для thick-хранилищ.
 
-Повторите добавление thin-пулов для оставшихся узлов (worker-1 и worker-2). Пример создания ресурса [LocalStorageClass](../../../reference/cr/localstorageclass/) с типом thin:
+Повторите добавление thin-пулов для оставшихся узлов (worker-1 и worker-2). Пример создания ресурса [LocalStorageClass](../../../../reference/cr/localstorageclass/) с типом thin:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -272,13 +272,13 @@ spec:
 EOF
 ```
 
-Проверьте, что созданный [LocalStorageClass](../../../reference/cr/localstorageclass/) перешёл в состояние `Created`, выполнив следующую команду:
+Проверьте, что созданный [LocalStorageClass](../../../../reference/cr/localstorageclass/) перешёл в состояние `Created`, выполнив следующую команду:
 
 ```shell
 d8 k get lsc local-storage-class -w
 ```
 
-В результате будет выведена информация о созданном [LocalStorageClass](../../../reference/cr/localstorageclass/):
+В результате будет выведена информация о созданном [LocalStorageClass](../../../../reference/cr/localstorageclass/):
 
 ```console
 NAME                       PHASE     AGE

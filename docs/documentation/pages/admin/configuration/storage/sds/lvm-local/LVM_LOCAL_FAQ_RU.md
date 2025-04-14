@@ -108,10 +108,10 @@ d8 k -n d8-sds-local-volume get po -owide
 d8 k get node %node-name% --show-labels
 ```
 
-Если метки отсутствуют, проверьте, что на узле не присутствуют [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) ресурсы, используемые [LocalStorageClass](../../../reference/cr/localstorageclass/) ресурсами. Подробнее об этой проверке можно прочитать [здесь](#проверка-зависимых-ресурсов-lvmvolumegroup-на-узле).
+Если метки отсутствуют, проверьте, что на узле не присутствуют [LVMVolumeGroup](../../../../reference/cr/lvmvolumegroup/) ресурсы, используемые [LocalStorageClass](../../../../reference/cr/localstorageclass/) ресурсами. Подробнее об этой проверке можно прочитать [здесь](#проверка-зависимых-ресурсов-lvmvolumegroup-на-узле).
 
 {% alert level="warning" %}
-Обратите внимание, что на ресурсах [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) и [LocalStorageClass](../../../reference/cr/localstorageclass/), из-за которых не удается вывести узел из-под управления модуля, будет отображена метка `storage.deckhouse.io/sds-local-volume-candidate-for-eviction`.
+Обратите внимание, что на ресурсах [LVMVolumeGroup](../../../../reference/cr/lvmvolumegroup/) и [LocalStorageClass](../../../../reference/cr/localstorageclass/), из-за которых не удается вывести узел из-под управления модуля, будет отображена метка `storage.deckhouse.io/sds-local-volume-candidate-for-eviction`.
 
 На самом узле будет присутствовать метка `storage.deckhouse.io/sds-local-volume-need-manual-eviction`.
 {% endalert %}
@@ -120,13 +120,13 @@ d8 k get node %node-name% --show-labels
 
 Для проверки зависимых ресурсов выполните следующие шаги:
 
-1. Отобразить имеющиеся [LocalStorageClass](../../../reference/cr/localstorageclass/) ресурсы:
+1. Отобразить имеющиеся [LocalStorageClass](../../../../reference/cr/localstorageclass/) ресурсы:
 
    ```shell
    d8 k get lsc
    ```
 
-1. Проверить список используемых [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) ресурсов для конкретного [LocalStorageClass](../../../reference/cr/localstorageclass/):
+1. Проверить список используемых [LVMVolumeGroup](../../../../reference/cr/lvmvolumegroup/) ресурсов для конкретного [LocalStorageClass](../../../../reference/cr/localstorageclass/):
 
    ```shell
    d8 k get lsc <LSC-NAME> -oyaml
@@ -157,7 +157,7 @@ d8 k get node %node-name% --show-labels
 
    > Обратите внимание на поле `spec.lvm.lvmVolumeGroups` — именно здесь указаны используемые ресурсы.
 
-1. Отобразите список существующих [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) ресурсов:
+1. Отобразите список существующих [LVMVolumeGroup](../../../../reference/cr/lvmvolumegroup/) ресурсов:
 
    ```shell
    d8 k get lvg
@@ -175,11 +175,11 @@ d8 k get node %node-name% --show-labels
    lvg-on-worker-5   Operational   node-worker-5   204796Mi   0                test-vg   15d
    ```
 
-1. Убедитесь, что на узле, который планируется вывести из-под управления модуля, отсутствует любой [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) ресурс, используемый в [LocalStorageClass](../../../reference/cr/localstorageclass/)  ресурсах. Если такие ресурсы присутствуют, их необходимо удалить вручную, чтобы избежать потери контроля над томами.
+1. Убедитесь, что на узле, который планируется вывести из-под управления модуля, отсутствует любой [LVMVolumeGroup](../../../../reference/cr/lvmvolumegroup/) ресурс, используемый в [LocalStorageClass](../../../../reference/cr/localstorageclass/)  ресурсах. Если такие ресурсы присутствуют, их необходимо удалить вручную, чтобы избежать потери контроля над томами.
 
 ## Оставшийся под sds-local-volume-csi-node после удаления меток
 
-Если после удаления меток с узла pod `sds-local-volume-csi-node` продолжает работать, это, вероятнее всего, связано с наличием на узле [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) ресурсов, которые используются в одном из [LocalStorageClass](../../../reference/cr/localstorageclass/) ресурсов. Процесс проверки описан [выше](#проверка-зависимых-ресурсов-lvmvolumegroup-на-узле).
+Если после удаления меток с узла pod `sds-local-volume-csi-node` продолжает работать, это, вероятнее всего, связано с наличием на узле [LVMVolumeGroup](../../../../reference/cr/lvmvolumegroup/) ресурсов, которые используются в одном из [LocalStorageClass](../../../../reference/cr/localstorageclass/) ресурсов. Процесс проверки описан [выше](#проверка-зависимых-ресурсов-lvmvolumegroup-на-узле).
 
 ## Отсутствие служебных подов на нужном узле
 
