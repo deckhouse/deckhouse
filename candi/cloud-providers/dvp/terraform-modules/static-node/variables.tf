@@ -131,22 +131,22 @@ locals {
     var.node_selector
   )
 
-  vm_destructive_params = merge({
-    "virtualMachine" = {
-      "cpu" = {
-        "cores"        = var.cpu.cores
-        "coreFraction" = var.cpu.core_fraction
+  vm_destructive_params = merge(
+    {
+      "virtualMachine" = {
+        "cpu" = {
+          "cores"        = var.cpu.cores
+          "coreFraction" = var.cpu.core_fraction
+        }
+        "memory" = {
+          "size" = var.memory_size
+        }
+        "nodeSelector"      = local.vm_merged_node_selector
+        "tolerations"       = var.tolerations
+        "priorityClassName" = var.priority_class_name
+        "ipAddress"         = var.ipv4_address.address
+        "sshPublicKeyHash"  = sha256(jsonencode(var.ssh_public_key))
       }
-      "memory" = {
-        "size" = var.memory_size
-      }
-      "nodeSelector"      = local.vm_merged_node_selector
-      "tolerations"       = var.tolerations
-      "priorityClassName" = var.priority_class_name
-      "ipAddress"         = var.ipv4_address.address
-      "sshPublicKeyHash"  = sha256(jsonencode(var.ssh_public_key))
-      "cloudConfigHash"   = sha256(jsonencode(var.cloud_config))
-    }
     },
     {
       "rootDiskHash" = var.root_disk.hash,
