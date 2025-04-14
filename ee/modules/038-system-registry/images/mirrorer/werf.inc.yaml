@@ -21,7 +21,7 @@ imageSpec:
     entrypoint: ["/mirrorer"]
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
-fromImage: golang/alpine
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 final: false
 shell:
   beforeInstall:
