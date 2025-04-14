@@ -100,7 +100,7 @@ function nodeuser_patch() {
 function nodeuser_add_error() {
   local username="$1"
   local message="$2"
-  local machine_name="${D8_NODE_HOSTNAME}"
+  local machine_name=$(bb-d8-node-name)
   if [ -f ${BOOTSTRAP_DIR}/machine-name ]; then
     local machine_name="$(<${BOOTSTRAP_DIR}/machine-name)"
   fi
@@ -117,7 +117,7 @@ function nodeuser_add_error() {
 # $1 - username
 function nodeuser_clear_error() {
   local username="$1"
-  local machine_name="${D8_NODE_HOSTNAME}"
+  local machine_name=$(bb-d8-node-name)
   if [ -f ${BOOTSTRAP_DIR}/machine-name ]; then
     local machine_name="$(<${BOOTSTRAP_DIR}/machine-name)"
   fi

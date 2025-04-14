@@ -88,6 +88,8 @@ $([ -n "$discovered_node_ip" ] && echo -e "\n    --node-ip=${discovered_node_ip}
     --root-dir={{ .nodeGroup.kubelet.rootDir | default "/var/lib/kubelet" }} \\
 {{- end }}
     ${credential_provider_flags} \\
+    --hostname-override=$(bb-d8-node-name) \\
+    --node-ip=$(bb-d8-node-ip) \\
     --v=2
 EOF
 

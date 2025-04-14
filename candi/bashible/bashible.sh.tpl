@@ -32,8 +32,8 @@ function bb-event-error-create() {
     # step is used as argument for function call.
     # If event creation failed, error from kubectl suppressed.
     step="$1"
-    eventName="$(echo -n "${D8_NODE_HOSTNAME}")-$(echo $step | sed 's#.*/##; s/_/-/g')"
-    nodeName="${D8_NODE_HOSTNAME}"
+    eventName="$(echo -n $(d8-node-name))-$(echo $step | sed 's#.*/##; s/_/-/g')"
+    nodeName=$(d8-node-name)
     eventLog="/var/lib/bashible/step.log"
     if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
       kubectl_exec apply -f - <<EOF || true
@@ -50,7 +50,7 @@ function bb-event-error-create() {
           reason: BashibleStepFailed
           type: Warning
           reportingController: bashible
-          reportingInstance: '${D8_NODE_HOSTNAME}'
+          reportingInstance: "$(d8-node-name)"
           eventTime: '$(date -u +"%Y-%m-%dT%H:%M:%S.%6NZ")'
           action: "BashibleStepExecution"
 EOF
@@ -58,8 +58,8 @@ EOF
 }
 
 function bb-event-info-create() {
-    eventName="$(echo -n "${D8_NODE_HOSTNAME}")-$1"
-    nodeName="${D8_NODE_HOSTNAME}"
+    eventName="$(echo -n "$(d8-node-name)")-$1"
+    nodeName="$(d8-node-name)"
     if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
       kubectl_exec apply -f - <<EOF || true
           apiVersion: events.k8s.io/v1
@@ -75,7 +75,7 @@ function bb-event-info-create() {
           type: Normal
           note: "$1 steps update on ${nodeName}"
           reportingController: bashible
-          reportingInstance: '${D8_NODE_HOSTNAME}'
+          reportingInstance: "$(d8-node-name)"
           eventTime: '$(date -u +"%Y-%m-%dT%H:%M:%S.%6NZ")'
           action: "BashibleStepExecution"
 EOF
@@ -83,22 +83,22 @@ EOF
 }
 
 function annotate_node() {
-  echo "Annotate node ${D8_NODE_HOSTNAME} with annotation ${@}"
+  echo "Annotate node $(d8-node-name) with annotation ${@}"
   attempt=0
-  until error=$(kubectl_exec annotate node ${D8_NODE_HOSTNAME} --overwrite ${@} 2>&1); do
+  until error=$(kubectl_exec annotate node $(d8-node-name) --overwrite ${@} 2>&1); do
     attempt=$(( attempt + 1 ))
     if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
-      >&2 echo "ERROR: Failed to annotate node ${D8_NODE_HOSTNAME} with annotation ${@} after ${MAX_RETRIES} retries. Last error from kubectl: ${error}"
+      >&2 echo "ERROR: Failed to annotate node $(d8-node-name) with annotation ${@} after ${MAX_RETRIES} retries. Last error from kubectl: ${error}"
       exit 1
     fi
     if [ "$attempt" -gt "2" ]; then
-      >&2 echo "Failed to annotate node ${D8_NODE_HOSTNAME} with annotation ${@} after 3 tries. Last message from kubectl: ${error}"
+      >&2 echo "Failed to annotate node $(d8-node-name) with annotation ${@} after 3 tries. Last message from kubectl: ${error}"
       >&2 echo "Retrying..."
       attempt=0
     fi
     sleep 10
   done
-  echo "Successful annotate node ${D8_NODE_HOSTNAME} with annotation ${@}"
+  echo "Successful annotate node $(d8-node-name) with annotation ${@}"
 }
 
 function get_secret() {
@@ -178,6 +178,22 @@ function current_uptime() {
   cat /proc/uptime | cut -d " " -f1
 }
 
+function discover_node_name() {
+  {{- if and (ne .nodeGroup.nodeType "Static") (ne .nodeGroup.nodeType "CloudStatic" )}}
+  if [[ "$(hostname)" != "$(hostname -s)" ]]; then
+    hostnamectl set-hostname $(hostname -s)
+  fi
+  {{ end }}
+
+  if [ ! -s /var/lib/bashible/discovered-node-name ]; then
+    hostname > /var/lib/bashible/discovered-node-name
+  fi
+}
+
+function d8-node-name() {
+  echo $(</var/lib/bashible/discovered-node-name)
+}
+
 function main() {
   export PATH="/opt/deckhouse/bin:/usr/local/bin:$PATH"
   export BOOTSTRAP_DIR="/var/lib/bashible"
@@ -198,15 +214,12 @@ function main() {
   export PACKAGES_PROXY_ADDRESSES="{{ .packagesProxy.addresses | join "," }}"
   export PACKAGES_PROXY_TOKEN="{{ .packagesProxy.token }}"
 {{- end }}
-unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
-{{- if and (ne .nodeGroup.nodeType "Static") (ne .nodeGroup.nodeType "CloudStatic" )}}
-  export D8_NODE_HOSTNAME=$(hostname -s)
-{{- else }}
-  export D8_NODE_HOSTNAME=$(hostname)
-{{- end }}
+  unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
+
+  discover_node_name
 
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
-    if tmp="$(kubectl_exec get node ${D8_NODE_HOSTNAME} -o json | jq -r '.metadata.labels."node.deckhouse.io/group"')" ; then
+    if tmp="$(kubectl_exec get node $(d8-node-name) -o json | jq -r '.metadata.labels."node.deckhouse.io/group"')" ; then
       NODE_GROUP="$tmp"
       if [ "${NODE_GROUP}" == "null" ] ; then
         >&2 echo "failed to get node group. Forgot set label 'node.deckhouse.io/group'"

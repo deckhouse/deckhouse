@@ -1,5 +1,4 @@
-{{- if and (ne .nodeGroup.nodeType "Static") (ne .nodeGroup.nodeType "CloudStatic" )}}
-# Copyright 2021 Flant JSC
+# Copyright 2025 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if [[ "$(hostname)" != "$(hostname -s)" ]]; then
-  hostnamectl set-hostname $(hostname -s)
-fi
-{{ end }}
+function bb-d8-node-name() {
+  echo $(</var/lib/bashible/discovered-node-name)
+}
+
+function bb-d8-node-ip() {
+  echo $(</var/lib/bashible/discovered-node-ip)
+}
