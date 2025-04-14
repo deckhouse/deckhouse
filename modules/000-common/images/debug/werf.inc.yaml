@@ -1,0 +1,8 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-network
+fromImage: common/alt-p11
+shell:
+  install:
+  - apt-get update
+  - apt-get install -y netcat curl bash apache2-utils bind-tools bridge-utils dhcping ethtool arping iperf3 iproute2 iptables iputils jq strace tcpdump vim websocat
+  - rm -rf /var/lib/apt/lists/* /var/cache/apt/* && mkdir -p /var/lib/apt/lists/partial /var/cache/apt/archives/partial
