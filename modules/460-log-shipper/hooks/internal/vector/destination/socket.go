@@ -51,7 +51,6 @@ func NewSocket(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Socket {
 
 	if spec.Mode == v1alpha1.SocketModeTCP {
 		tls := CommonTLS{
-			Enabled:           true,
 			CAFile:            decodeB64(spec.TCP.TLS.CAFile),
 			CertFile:          decodeB64(spec.TCP.TLS.CertFile),
 			KeyFile:           decodeB64(spec.TCP.TLS.KeyFile),
@@ -64,6 +63,9 @@ func NewSocket(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Socket {
 		}
 		if spec.TCP.TLS.VerifyHostname != nil {
 			tls.VerifyHostname = *spec.TCP.TLS.VerifyHostname
+		}
+		if spec.TCP.TLS.CAFile != "" || spec.TCP.TLS.CertFile != "" || spec.TCP.TLS.KeyFile != "" {
+			tls.Enabled = true
 		}
 
 		result.TLS = tls
