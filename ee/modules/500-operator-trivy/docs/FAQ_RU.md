@@ -39,10 +39,10 @@ kubectl get clustercompliancereports.aquasecurity.github.io cis -ojson |
 - В этом объекте присутствует аннотация `trivy-operator.aquasecurity.github.io/report-ttl`, которая указывает время жизни отчета (по умолчанию - `24h`).
 - По истечении этого времени оператор удаляет объект, что вызывает повторное сканирование ресурса.
 
-Таким образом, для принудительного повторного сканирования ресурса необходимо перезаписать аннотацию `trivy-operator.aquasecurity.github.io/report-ttl`, указав малый промежуток времени.  
-Допустимо также полностью удалить объект `VulnerabilityReport`.
+Чтобы принудительно запустить повторное сканирование ресурса, необходимо перезаписать аннотацию `trivy-operator.aquasecurity.github.io/report-ttl`, указав малый промежуток времени.  
+Также для принудительного перезапуска повторного сканирования допустимо полностью удалить объект `VulnerabilityReport`.
 
-Пример команды указания аннотации:
+Пример команды указания аннотации `trivy-operator.aquasecurity.github.io/report-ttl`:
 
 ```bash
 kubectl annotate VulnerabilityReport -n <namespace> <reportName>  trivy-operator.aquasecurity.github.io/report-ttl=1s --overwrite
