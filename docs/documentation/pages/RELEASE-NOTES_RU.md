@@ -1,16 +1,18 @@
 ---
-title: Обзор изменений в DKP 1.68
-permalink: ru/release-notes/1-68.html
+title: Обзор изменений в Deckhouse Kubernetes Platform
+permalink: ru/release-notes.html
 lang: ru
 ---
 
-## Обратите внимание
+## Версия 1.68
+
+### Обратите внимание
 
 - После обновления у всех источников данных (DataSource) Grafana,
   созданных с помощью ресурса GrafanaAdditionalDatasource, изменится UID.
   Если на источник данных ссылались по UID, то такая связь нарушится.
 
-## Основные изменения
+### Основные изменения
 
 - Новый параметр [`iamNodeRole`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.68/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-iamnoderole) для провайдера AWS.
   Параметр позволяет задать имя IAM-роли, которая будет привязана ко всем AWS-инстансам узлов кластера.
@@ -59,7 +61,7 @@ lang: ru
   По умолчанию таймаут составляет 10 минут.
   Параметр имеет влияние только для следующих облаков: AWS, Azure, GCP, Yandex Cloud, OpenStack, Базис.DynamiX.
 
-## Безопасность
+### Безопасность
 
 Закрыты известные уязвимости в следующих модулях:
 
@@ -93,7 +95,7 @@ lang: ru
 - `vertical-pod-autoscaler`
 - `static-routing-manager`
 
-## Обновление версий компонентов
+### Обновление версий компонентов
 
 Обновлены следующие компоненты DKP:
 
@@ -114,7 +116,7 @@ lang: ru
 - `snapshot-controller`: 8.2.0
 - `yq4`: 3.45.1
 
-## Перезапуск компонентов
+### Перезапуск компонентов
 
 После обновления DKP до версии 1.68 будут перезапущены следующие компоненты:
 
