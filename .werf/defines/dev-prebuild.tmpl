@@ -16,7 +16,7 @@
 #  render shell operator import
 {{- define "dev_prebuild_git_shell_operator" }}
 - url: {{ .SOURCE_REPO }}/flant/shell-operator
-  commit: eabed3e7a7e14d7532dc109dae3882ba43139ac3
+  tag: v1.4.10
   add: /frameworks/shell
   to: /deckhouse/shell-operator/frameworks/shell
 {{- end }}
