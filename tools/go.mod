@@ -178,7 +178,7 @@ require (
 	google.golang.org/protobuf v1.36.5 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.62.0 // indirect
-	helm.sh/helm/v3 v3.14.2 // indirect
+	helm.sh/helm/v3 v3.15.4 // indirect
 	honnef.co/go/tools v0.1.4 // indirect
 	k8s.io/api v0.30.11 // indirect
 	k8s.io/apiextensions-apiserver v0.30.11 // indirect

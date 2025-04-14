@@ -10,7 +10,7 @@ require (
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/fatih/color v1.13.0 // indirect
-	github.com/flant/addon-operator v1.6.2-0.20250411112642-018971e21ce2
+	github.com/flant/addon-operator v1.6.2-0.20250414064537-0b84fc127f82
 	github.com/flant/kube-client v1.3.0
 	github.com/flant/shell-operator v1.6.2-0.20250411110330-eabed3e7a7e1
 	github.com/go-openapi/spec v0.19.8
@@ -40,7 +40,7 @@ require (
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
-	helm.sh/helm/v3 v3.14.2
+	helm.sh/helm/v3 v3.15.4
 	k8s.io/api v0.30.11
 	k8s.io/apiextensions-apiserver v0.30.11
 	k8s.io/apimachinery v0.30.11
@@ -76,7 +76,7 @@ require (
 	k8s.io/code-generator v0.30.11
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340
-	k8s.io/kubectl v0.29.10
+	k8s.io/kubectl v0.30.3
 	sigs.k8s.io/controller-runtime v0.17.0
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd
 	sigs.k8s.io/kustomize/kyaml v0.14.3-0.20230601165947-6ce0bf390ce3
