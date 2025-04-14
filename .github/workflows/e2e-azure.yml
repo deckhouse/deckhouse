@@ -622,8 +622,8 @@ jobs:
           PR_NUMBER: ${{needs.git_info.outputs.pr_number}}
         with:
           script: |
-            const waitPauseRemove = require('./.github/scripts/js/e2e/wait-remove-pause-label.js');
-            waitPauseRemove();
+            const waitPauseRemove = require('./.github/scripts/js/e2e/wait-remove-pause-label.js')({ github, context, core });
+            await waitPauseRemove();
 
       - name: Cleanup bootstrapped cluster
         if: inputs.autodelete||success()
@@ -1143,8 +1143,8 @@ jobs:
           PR_NUMBER: ${{needs.git_info.outputs.pr_number}}
         with:
           script: |
-            const waitPauseRemove = require('./.github/scripts/js/e2e/wait-remove-pause-label.js');
-            waitPauseRemove();
+            const waitPauseRemove = require('./.github/scripts/js/e2e/wait-remove-pause-label.js')({ github, context, core });
+            await waitPauseRemove();
 
       - name: Cleanup bootstrapped cluster
         if: inputs.autodelete||success()
@@ -1664,8 +1664,8 @@ jobs:
           PR_NUMBER: ${{needs.git_info.outputs.pr_number}}
         with:
           script: |
-            const waitPauseRemove = require('./.github/scripts/js/e2e/wait-remove-pause-label.js');
-            waitPauseRemove();
+            const waitPauseRemove = require('./.github/scripts/js/e2e/wait-remove-pause-label.js')({ github, context, core });
+            await waitPauseRemove();
 
       - name: Cleanup bootstrapped cluster
         if: inputs.autodelete||success()
@@ -2185,8 +2185,8 @@ jobs:
           PR_NUMBER: ${{needs.git_info.outputs.pr_number}}
         with:
           script: |
-            const waitPauseRemove = require('./.github/scripts/js/e2e/wait-remove-pause-label.js');
-            waitPauseRemove();
+            const waitPauseRemove = require('./.github/scripts/js/e2e/wait-remove-pause-label.js')({ github, context, core });
+            await waitPauseRemove();
 
       - name: Cleanup bootstrapped cluster
         if: inputs.autodelete||success()
@@ -2706,8 +2706,8 @@ jobs:
           PR_NUMBER: ${{needs.git_info.outputs.pr_number}}
         with:
           script: |
-            const waitPauseRemove = require('./.github/scripts/js/e2e/wait-remove-pause-label.js');
-            waitPauseRemove();
+            const waitPauseRemove = require('./.github/scripts/js/e2e/wait-remove-pause-label.js')({ github, context, core });
+            await waitPauseRemove();
 
       - name: Cleanup bootstrapped cluster
         if: inputs.autodelete||success()
@@ -3227,8 +3227,8 @@ jobs:
           PR_NUMBER: ${{needs.git_info.outputs.pr_number}}
         with:
           script: |
-            const waitPauseRemove = require('./.github/scripts/js/e2e/wait-remove-pause-label.js');
-            waitPauseRemove();
+            const waitPauseRemove = require('./.github/scripts/js/e2e/wait-remove-pause-label.js')({ github, context, core });
+            await waitPauseRemove();
 
       - name: Cleanup bootstrapped cluster
         if: inputs.autodelete||success()
