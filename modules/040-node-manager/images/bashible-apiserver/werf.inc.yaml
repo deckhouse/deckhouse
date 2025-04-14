@@ -54,6 +54,7 @@ git:
   - common-steps
   - bootstrap
   - bashible.sh.tpl
+  - bb_node_name.sh.tpl
   {{- if eq .Env "CE" }}
   - detect_bundle.sh
   {{- end }}
