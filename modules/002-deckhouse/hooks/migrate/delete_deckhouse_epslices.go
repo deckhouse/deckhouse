@@ -17,25 +17,16 @@ limitations under the License.
 package migrate
 
 import (
-	"context"
-	"fmt"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
+// TODO(ipaqsa): Can be removed after 1.70
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnAfterHelm: &go_hook.OrderedConfig{Order: 10},
-}, dependency.WithExternalDependencies(removeDeckhouseEpslices))
+}, removeDeckhouseEpslices)
 
-func removeDeckhouseEpslices(_ *go_hook.HookInput, dc dependency.Container) error {
-	kubeClient, err := dc.GetK8sClient()
-	if err != nil {
-		return fmt.Errorf("get kubernetes client: %v", err)
-	}
-
-	return kubeClient.DiscoveryV1().EndpointSlices("d8-system").Delete(context.TODO(), "deckhouse", metav1.DeleteOptions{})
+func removeDeckhouseEpslices(input *go_hook.HookInput) error {
+	input.PatchCollector.Delete("discovery.k8s.io/v1", "endpointslices", "d8-system", "deckhouse")
+	return nil
 }
