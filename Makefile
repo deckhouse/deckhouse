@@ -155,10 +155,10 @@ dmt-lint:
 
 
 tests-openapi: ## Run tests against modules openapi values schemas.
-	go test -vet=off ./testing/openapi_cases/
+	go test -timeout=${TESTS_TIMEOUT} -vet=off ./testing/openapi_cases/
 
 tests-controller: ## Run deckhouse-controller unit tests.
-	go test ./deckhouse-controller/... -v
+	go test -timeout=${TESTS_TIMEOUT} ./deckhouse-controller/... -v
 
 tests-webhooks: bin/yq ## Run python webhooks unit tests.
 	./testing/webhooks/run.sh
