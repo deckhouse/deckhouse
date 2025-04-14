@@ -42,7 +42,7 @@ The module rescans resources every 24 hours, according to the following algorith
 To force a rescan of the resource, you need to overwrite the annotation `trivy-operator.aquasecurity.github.io/report-ttl`, specifying a short period of time.  
 It is also possible to delete the `VulnerabilityReport` object.
 
-Example of annotation command:
+Example command for specifying the `trivy-operator.aquasecurity.github.io/report-ttl` annotation:
 
 ```bash
 kubectl annotate VulnerabilityReport -n <namespace> <reportName> trivy-operator.aquasecurity.github.io/report-ttl=1s --overwrite
