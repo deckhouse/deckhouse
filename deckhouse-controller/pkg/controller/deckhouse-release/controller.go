@@ -386,7 +386,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		}
 
 		if task.DeployedReleaseInfo == nil {
-			drs.Message = "can not find deployed version, awaiting"
+			drs.Message = "could not find deployed version, awaiting"
 		} else {
 			drs.Message = fmt.Sprintf("awaiting for Deckhouse v%s pod to be ready", task.DeployedReleaseInfo.Version.String())
 		}
