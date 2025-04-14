@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/deckhouse/module-sdk/pkg/utils/ptr"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -49,7 +50,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					"app": "loki",
 				},
 			},
-			FilterFunc: persistentVolumeClaimFilter,
+			ExecuteHookOnSynchronization: ptr.Bool(false),
+			FilterFunc:                   persistentVolumeClaimFilter,
 		},
 		{
 			Name:       "sts",
@@ -65,7 +67,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					"app": "loki",
 				},
 			},
-			FilterFunc: statefulSetFilter,
+			ExecuteHookOnSynchronization: ptr.Bool(false),
+			FilterFunc:                   statefulSetFilter,
 		},
 	},
 }, lokiDisk)
@@ -139,8 +142,10 @@ func persistentVolumeClaimFilter(obj *unstructured.Unstructured) (go_hook.Filter
 func lokiDisk(input *go_hook.HookInput) error {
 	var stsStorageSize, pvcSize, cleanupThreshold uint64
 
-	defaultDiskSize := uint64(input.Values.Get("loki.diskSizeGigabytes").Int() << 30)
-	ingestionRate := input.Values.Get("loki.lokiConfig.ingestionRateMB").Float()
+	defaultDiskSize := uint64(input.ConfigValues.Get("loki.diskSizeGigabytes").Int() << 30)
+	ingestionRate := input.ConfigValues.Get("loki.lokiConfig.ingestionRateMB").Float()
+
+	fmt.Printf("defaultDiskSize: %d, ingestionRate: %f\n", defaultDiskSize, ingestionRate)
 
 	for _, obj := range input.Snapshots["pvcs"] {
 		pvc := obj.(PersistentVolumeClaim)
