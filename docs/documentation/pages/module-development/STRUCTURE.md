@@ -428,6 +428,7 @@ If confirmation is required to disable a module (the `confirmation` parameter is
 - `modules` — *Object.* Module dependency [on the version of other modules](../dependencies/#dependency-on-the-version-of-other-modules).
 - `stage` — *String.* [Module lifecycle stage](../versioning/#how-do-i-figure-out-how-stable-a-module-is). Possible values: `Experimental`, `Preview`, `General Availability`, `Deprecated`.
 - `tags` — *Array of strings.* List of additional module tags. Tags are converted to [Module](../../cr.html#module) object labels according to the template `module.deckhouse.io/<TAG>=""` (where `<TAG>` is the tag name).
+- `exclusiveGroup` – String. If multiple modules belong to the same `exclusiveGroup`, only one of them can be active in the system at any given time. This behavior prevents conflicts between modules that perform similar or incompatible functions.
 
 For example, if you specify `tags: ["test", "myTag"]`, then the corresponding Module object in the cluster will be assigned the labels `module.deckhouse.io/test=""` and `module.deckhouse.io/myTag=""`.
 - `weight` — *Number.* The weight of the module. Used to control the order in which the module is launched compared to other modules. The lower the weight, the earlier the module will be launched. Default: 900.
@@ -442,6 +443,7 @@ tags: ["test", "myTag"]
 weight: 960
 stage: "Sandbox"
 namespace: "test"
+exclusiveGroup: group
 subsystems:
   - test
   - test1
