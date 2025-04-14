@@ -51,6 +51,7 @@ func NewSocket(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Socket {
 
 	if spec.Mode == v1alpha1.SocketModeTCP {
 		tls := CommonTLS{
+			Enabled:           true,
 			CAFile:            decodeB64(spec.TCP.TLS.CAFile),
 			CertFile:          decodeB64(spec.TCP.TLS.CertFile),
 			KeyFile:           decodeB64(spec.TCP.TLS.KeyFile),
