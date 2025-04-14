@@ -46,12 +46,13 @@ securityContext:
   {{ end }}
 {{ end }}
 
-{{- range $version := .Values.istio.internal.versionsToInstall }}
-  {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
-  {{- $revision := get $versionInfo "revision"}}
-  {{- $imageSuffix := get $versionInfo "imageSuffix" }}
-  {{- $fullVersion := get $versionInfo "fullVersion" }}
-  {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+{{- if and (ne (first .Values.istio.internal.operatorVersionsToInstall) "1.24") (hasKey .Values.istio.internal.versionMap (first .Values.istio.internal.operatorVersionsToInstall)) }}
+  {{- range $version := .Values.istio.internal.versionsToInstall }}
+    {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
+    {{- $revision := get $versionInfo "revision"}}
+    {{- $imageSuffix := get $versionInfo "imageSuffix" }}
+    {{- $fullVersion := get $versionInfo "fullVersion" }}
+    {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -299,4 +300,5 @@ spec:
       - matchExpressions:
         - key: job-name
           operator: Exists
+  {{- end }}
 {{- end }}

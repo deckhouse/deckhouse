@@ -8,11 +8,12 @@ cpu: 50m
 memory: 100Mi
 {{- end }}
 
-{{- range $version := .Values.istio.internal.operatorVersionsToInstall }}
-  {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
-  {{ $imageSuffix := get $versionInfo "imageSuffix" }}
-  {{- $revision := get $versionInfo "revision" }}
-  {{- if $.Values.global.enabledModules | has "vertical-pod-autoscaler" }}
+{{- if and (ne (first .Values.istio.internal.operatorVersionsToInstall) "1.24") (hasKey .Values.istio.internal.versionMap (first .Values.istio.internal.operatorVersionsToInstall)) }}
+  {{- range $version := .Values.istio.internal.operatorVersionsToInstall }}
+    {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
+    {{ $imageSuffix := get $versionInfo "imageSuffix" }}
+    {{- $revision := get $versionInfo "revision" }}
+    {{- if $.Values.global.enabledModules | has "vertical-pod-autoscaler" }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -120,4 +121,5 @@ spec:
             value: 300s
           - name: REVISION
             value: {{ $revision }}
+  {{- end }}
 {{- end }}
