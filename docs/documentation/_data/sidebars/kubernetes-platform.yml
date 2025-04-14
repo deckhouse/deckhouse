@@ -102,7 +102,7 @@ entries:
                     ru: Обзор
                   url: /admin/high-reliability-and-availability/
                 - title:
-                    en: HA mode control
+                    en: Managing HA mode
                     ru: Управление режимом HA
                   url: /admin/high-reliability-and-availability/enable.html
                 - title:
