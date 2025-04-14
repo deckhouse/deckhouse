@@ -17,6 +17,7 @@ package hugo
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -30,6 +31,7 @@ import (
 	"github.com/gohugoio/hugo/helpers"
 	"github.com/gohugoio/hugo/hugolib"
 	"github.com/gohugoio/hugo/hugolib/filesystems"
+	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/fsync"
 	"golang.org/x/sync/errgroup"
 )
@@ -62,14 +64,22 @@ func (b *hugoBuilder) build() error {
 	}
 
 	if !b.c.flags.Quiet {
-		b.c.Println()
 		h, err := b.hugo()
 		if err != nil {
 			return err
 		}
 
-		h.PrintProcessingStats(os.Stdout)
-		b.c.Println()
+		stats := map[string]any{}
+		if err := mapstructure.Decode(h.ProcessingStats, &stats); err != nil {
+			return err
+		}
+
+		attrs := make([]any, 0, len(stats))
+		for k, v := range stats {
+			attrs = append(attrs, slog.Any(strings.ToLower(k), v))
+		}
+
+		b.logger.Info("processing stats", attrs...)
 	}
 
 	return nil
