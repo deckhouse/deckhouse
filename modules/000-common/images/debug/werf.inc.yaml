@@ -4,5 +4,8 @@ fromImage: common/alt-p11
 shell:
   install:
   - apt-get update
-  - apt-get install -y netcat curl bash apache2-utils bind-tools bridge-utils dhcping ethtool arping iperf3 iproute2 iptables iputils jq strace tcpdump vim websocat
+  - apt-get install -y netcat curl bash bind-utils dhcping ethtool iperf3 iproute2 iptables iputils jq strace tcpdump vim-console websocat bridge-utils wget
   - rm -rf /var/lib/apt/lists/* /var/cache/apt/* && mkdir -p /var/lib/apt/lists/partial /var/cache/apt/archives/partial
+  - gwet https://github.com/cilium/pwru/releases/download/v1.0.9/pwru-linux-amd64.tar.gz
+  - tar -xf pwru-linux-amd64.tar.gz -C /usr/local/sbin
+  - rm -f pwru-linux-amd64.tar.gz
