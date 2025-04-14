@@ -400,12 +400,20 @@ kind: ModuleConfig
 metadata:
   name: global
 spec:
-  version: 1
+  version: 2
   settings:
     modules:
       publicDomainTemplate: "%s.127.0.0.1.sslip.io"
       https:
-          mode: Disabled
+        mode: Disabled
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cert-manager
+spec:
+  version: 1
+  enabled: true
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -435,13 +443,6 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: ingress-nginx
-spec:
-  enabled: true
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: operator-prometheus
 spec:
   enabled: true
 ---
