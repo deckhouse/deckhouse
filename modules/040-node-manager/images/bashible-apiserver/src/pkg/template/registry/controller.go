@@ -16,21 +16,22 @@ package registry
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/json"
 	"fmt"
-	"slices"
-	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+)
+
+const (
+	Namespace      = "d8-system"
+	ControllerName = "registry-state-controller"
 )
 
 type RegistryStateController = registryStateController
@@ -40,14 +41,23 @@ var _ reconcile.Reconciler = &registryStateController{}
 type registryStateController struct {
 	Namespace      string
 	client         client.Client
-	eventRecorder  record.EventRecorder
 	registryDataCh chan RegistryDataWithHash
 }
 
-func (sc *registryStateController) SetupWithManager(ctx context.Context, mgr ctrl.Manager) (chan RegistryDataWithHash, error) {
-	controllerName := "registry-state-controller"
-	sc.client = mgr.GetClient()
-	sc.eventRecorder = mgr.GetEventRecorderFor(controllerName)
+type RegistryDataWithHash struct {
+	HashSum      string
+	RegistryData RegistryData
+}
+
+func NewStateController() *RegistryStateController {
+	return &RegistryStateController{
+		Namespace: Namespace,
+	}
+}
+
+func (sc *registryStateController) SetupWithManager(ctx context.Context, ctrlManager ctrl.Manager) chan RegistryDataWithHash {
+	controllerName := ControllerName
+	sc.client = ctrlManager.GetClient()
 	sc.registryDataCh = make(chan RegistryDataWithHash)
 
 	secretsPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
@@ -59,14 +69,16 @@ func (sc *registryStateController) SetupWithManager(ctx context.Context, mgr ctr
 			name == RegistryBashibleConfigSecretName
 	})
 
-	err := ctrl.NewControllerManagedBy(mgr).
+	klog.Infof("Setting up controller %q with manager", controllerName)
+
+	err := ctrl.NewControllerManagedBy(ctrlManager).
 		Named(controllerName).
 		For(&corev1.Secret{}, builder.WithPredicates(secretsPredicate)).
 		Complete(sc)
 	if err != nil {
-		return sc.registryDataCh, fmt.Errorf("cannot build controller: %w", err)
+		klog.Fatalf("cannot build %q controller: %v", controllerName, err)
 	}
-	return sc.registryDataCh, nil
+	return sc.registryDataCh
 }
 
 func (sc *registryStateController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -147,110 +159,4 @@ func (sc *registryStateController) loadRegistryBashibleConfigSecret(ctx context.
 	}
 
 	return &ret, nil
-}
-
-type RegistryDataWithHash struct {
-	HashSum      string
-	RegistryData RegistryData
-}
-
-type RegistryData struct {
-	Mode           string                `json:"mode" yaml:"mode"`
-	ImagesBase     string                `json:"imagesBase" yaml:"imagesBase"`
-	Version        string                `json:"version" yaml:"version"`
-	ProxyEndpoints []string              `json:"proxyEndpoints" yaml:"proxyEndpoints"`
-	Hosts          []RegistryHostsObject `json:"hosts" yaml:"hosts"`
-	PrepullHosts   []RegistryHostsObject `json:"prepullHosts" yaml:"prepullHosts"`
-}
-
-type RegistryHostsObject struct {
-	Host    string                     `json:"host" yaml:"host"`
-	CA      []string                   `json:"ca" yaml:"ca"`
-	Mirrors []RegistryMirrorHostObject `json:"mirrors" yaml:"mirrors"`
-}
-
-type RegistryMirrorHostObject struct {
-	Host     string `json:"host" yaml:"host"`
-	Username string `json:"username" yaml:"username"`
-	Password string `json:"password" yaml:"password"`
-	Auth     string `json:"auth" yaml:"auth"`
-	Scheme   string `json:"scheme" yaml:"scheme"`
-}
-
-// FromInputData populates RegistryData fields from given registry configuration
-func (d *RegistryData) FromInputData(deckhouseRegistry deckhouseRegistry, registryBashibleConfig *registryBashibleConfig) error {
-	d.Mode = "unmanaged"
-	d.ImagesBase = fmt.Sprintf(
-		"%s/%s",
-		deckhouseRegistry.Address,
-		strings.TrimLeft(deckhouseRegistry.Path, "/"),
-	)
-	d.Version = "unknown"
-	d.ProxyEndpoints = []string{}
-	d.Hosts = []RegistryHostsObject{}
-	d.PrepullHosts = []RegistryHostsObject{}
-
-	// Replace, if registryBashibleConfig secret exist
-	if registryBashibleConfig != nil {
-		d.Mode = registryBashibleConfig.Mode
-		d.ImagesBase = registryBashibleConfig.ImagesBase
-		d.Version = registryBashibleConfig.Version
-		d.ProxyEndpoints = slices.Clone(registryBashibleConfig.ProxyEndpoints)
-		d.Hosts = slices.Clone(registryBashibleConfig.Hosts)
-		d.PrepullHosts = slices.Clone(registryBashibleConfig.PrepullHosts)
-	}
-
-	// Append mirrors from deckhouseRegistry secret
-	deckhouseRegistryAuth, err := deckhouseRegistry.Auth()
-	if err != nil {
-		return err
-	}
-
-	deckhouseRegistryMirrorHost := RegistryMirrorHostObject{
-		Host:   deckhouseRegistry.Address,
-		Auth:   deckhouseRegistryAuth,
-		Scheme: deckhouseRegistry.Scheme,
-	}
-
-	deckhouseRegistryCA := []string{}
-	if deckhouseRegistry.CA != "" {
-		deckhouseRegistryCA = append(deckhouseRegistryCA, deckhouseRegistry.CA)
-	}
-
-	// Append Mirrors, if deckhouseRegistry.Address not exist in Mirrors list
-	if !slices.ContainsFunc(d.Hosts, func(host RegistryHostsObject) bool {
-		return host.Host == deckhouseRegistry.Address
-	}) {
-		d.Hosts = append(d.Hosts, RegistryHostsObject{
-			Host:    deckhouseRegistry.Address,
-			CA:      deckhouseRegistryCA,
-			Mirrors: []RegistryMirrorHostObject{deckhouseRegistryMirrorHost},
-		})
-		d.PrepullHosts = append(d.PrepullHosts, RegistryHostsObject{
-			Host:    deckhouseRegistry.Address,
-			CA:      deckhouseRegistryCA,
-			Mirrors: []RegistryMirrorHostObject{deckhouseRegistryMirrorHost},
-		})
-	}
-	return nil
-}
-
-func (d *RegistryData) Validate() error {
-	// Implementation of validation logic if needed
-	return nil
-}
-
-func (d *RegistryData) hashSum() (string, error) {
-	rawData, err := json.Marshal(d)
-	if err != nil {
-		return "", fmt.Errorf("error marshalling data: %w", err)
-	}
-
-	hash := sha256.New()
-	_, err = hash.Write(rawData)
-	if err != nil {
-		return "", fmt.Errorf("error generating hash: %w", err)
-	}
-
-	return fmt.Sprintf("%x", hash.Sum(nil)), nil
 }

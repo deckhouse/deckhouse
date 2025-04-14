@@ -23,10 +23,11 @@ import (
 	"hash"
 	"sort"
 
-	"bashible-apiserver/pkg/template/registry"
 	"github.com/mohae/deepcopy"
 	"github.com/pkg/errors"
 	"sigs.k8s.io/yaml"
+
+	"bashible-apiserver/pkg/template/registry"
 )
 
 type ContextBuilder struct {
@@ -152,10 +153,10 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 			KubernetesCA:       cb.clusterInputData.KubernetesCA,
 			ModuleSourcesCA:    cb.moduleSourcesCA,
 		},
-		Registry:       cb.registryData,
-		Images:         cb.imagesDigests,
-		Proxy:          cb.clusterInputData.Proxy,
-		PackagesProxy:  cb.clusterInputData.PackagesProxy,
+		Registry:      cb.registryData,
+		Images:        cb.imagesDigests,
+		Proxy:         cb.clusterInputData.Proxy,
+		PackagesProxy: cb.clusterInputData.PackagesProxy,
 	}
 
 	for _, ng := range cb.clusterInputData.NodeGroups {
@@ -419,8 +420,8 @@ type tplContextCommon struct {
 	Images   map[string]map[string]string `json:"images" yaml:"images"`
 	Registry registry.RegistryData        `json:"registry" yaml:"registry"`
 
-	Proxy          map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
-	PackagesProxy  map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
+	Proxy         map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
+	PackagesProxy map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
 }
 
 type bundleNGContext struct {

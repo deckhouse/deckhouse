@@ -17,11 +17,10 @@ limitations under the License.
 package registry
 
 import (
-	"bashible-apiserver/pkg/registry/bashible/bootstrap"
-
 	"k8s.io/apiserver/pkg/registry/rest"
 
 	"bashible-apiserver/pkg/registry/bashible/bashible"
+	"bashible-apiserver/pkg/registry/bashible/bootstrap"
 	"bashible-apiserver/pkg/registry/bashible/nodegroupbundle"
 	"bashible-apiserver/pkg/template"
 )

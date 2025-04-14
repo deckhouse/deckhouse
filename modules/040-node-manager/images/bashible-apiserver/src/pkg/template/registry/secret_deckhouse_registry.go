@@ -18,6 +18,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 )
@@ -88,4 +89,45 @@ func (d *deckhouseRegistry) Auth() (string, error) {
 		}
 	}
 	return auth, nil
+}
+
+func (d deckhouseRegistry) ConvertToRegistryData() (*RegistryData, error) {
+	imagesBase := strings.TrimRight(d.Address, "/")
+	if path := strings.TrimLeft(d.Path, "/"); path != "" {
+		imagesBase += "/" + path
+	}
+
+	auth, err := d.Auth()
+	if err != nil {
+		return nil, err
+	}
+
+	ca := []string{}
+	if d.CA != "" {
+		ca = append(ca, d.CA)
+	}
+
+	mirrorHost := RegistryDataMirrorHostObject{
+		Host:   d.Address,
+		Auth:   auth,
+		Scheme: d.Scheme,
+	}
+
+	ret := &RegistryData{
+		Mode:           "unmanaged",
+		ImagesBase:     imagesBase,
+		Version:        "unknown",
+		ProxyEndpoints: []string{},
+		Hosts: []RegistryDataHostsObject{{
+			Host:    d.Address,
+			CA:      ca,
+			Mirrors: []RegistryDataMirrorHostObject{mirrorHost},
+		}},
+		PrepullHosts: []RegistryDataHostsObject{{
+			Host:    d.Address,
+			CA:      ca,
+			Mirrors: []RegistryDataMirrorHostObject{mirrorHost},
+		}},
+	}
+	return ret, nil
 }

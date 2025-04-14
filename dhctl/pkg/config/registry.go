@@ -248,7 +248,10 @@ func (r Registry) KubeadmTemplatesContext() (map[string]interface{}, error) {
 
 func (r Registry) BashibleBundleTemplateContext() (map[string]interface{}, error) {
 	// prepare common data
-	imagesBase := fmt.Sprintf("%s/%s", r.Data.Address, strings.TrimLeft(r.Data.Path, "/"))
+	imagesBase := strings.TrimRight(r.Data.Address, "/")
+	if path := strings.TrimLeft(r.Data.Path, "/"); path != "" {
+		imagesBase += "/" + path
+	}
 	auth, err := r.Data.Auth()
 	if err != nil {
 		return nil, err

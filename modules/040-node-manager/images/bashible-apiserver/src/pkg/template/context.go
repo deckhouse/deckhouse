@@ -29,8 +29,6 @@ import (
 	"sync"
 	"time"
 
-	"bashible-apiserver/pkg/template/registry"
-
 	"github.com/flant/kube-client/client"
 	"github.com/fsnotify/fsnotify"
 	corev1 "k8s.io/api/core/v1"
@@ -41,7 +39,10 @@ import (
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/yaml"
+
+	"bashible-apiserver/pkg/template/registry"
 )
 
 const (
@@ -110,7 +111,7 @@ type UserConfiguration struct {
 	Spec NodeUserSpec `json:"spec" yaml:"spec"`
 }
 
-func NewContext(ctx context.Context, stepsStorage *StepsStorage, kubeClient client.Client, resyncTimeout time.Duration, secretHandler checksumSecretUpdater, updateHandler UpdateHandler) *BashibleContext {
+func NewContext(ctx context.Context, stepsStorage *StepsStorage, kubeClient client.Client, resyncTimeout time.Duration, secretHandler checksumSecretUpdater, updateHandler UpdateHandler, ctrlManager ctrl.Manager) *BashibleContext {
 	c := BashibleContext{
 		ctx:                               ctx,
 		updateHandler:                     updateHandler,
@@ -133,7 +134,7 @@ func NewContext(ctx context.Context, stepsStorage *StepsStorage, kubeClient clie
 
 	contextSecretUpdates := c.subscribe(ctx, contextSecretFactory, contextSecretName)
 
-	registryDataUpdates := registry.SetupAndStartManager(ctx)
+	registryDataUpdates := registry.NewStateController().SetupWithManager(ctx, ctrlManager)
 
 	c.subscribeOnNodeUserCRD(ctx, nodeUserCRDFactory)
 	c.subscribeOnModuleSource(ctx, moduleSourcesFactory)
