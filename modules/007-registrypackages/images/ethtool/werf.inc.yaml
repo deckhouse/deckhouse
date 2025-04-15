@@ -1,0 +1,43 @@
+{{- $version := .CandiVersionMap.ethtool.version }}
+{{- $image_version := $version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+fromImage: builder/alpine
+git:
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /
+  includePaths:
+  - install
+  - uninstall
+  stageDependencies:
+    setup:
+    - '**/*'
+import:
+- image: common/ethtool
+  add: /ethtool
+  to: /ethtool
+  before: setup
+shell:
+  setup:
+  - chmod +x /ethtool /install /uninstall
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+fromImage: builder/scratch
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - install
+  - uninstall
+  - ethtool
+  before: setup
+imageSpec:
+  config:
+    labels: { "distro": "all", "version": "all", "ethtool": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
