@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+
 	"github.com/google/uuid"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -327,6 +329,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 
 	doAction := r.RunConverge
 	if needAutomaticTofuMigrationForCommander {
+		log.WarnF("Need migrate to opentofu. Switch to migrator\n")
 		doAction = func(ctx *convergectx.Context) error {
 			return r.RunConvergeMigration(ctx, false)
 		}
