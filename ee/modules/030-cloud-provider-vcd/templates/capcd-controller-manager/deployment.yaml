@@ -1,6 +1,6 @@
 {{- define "capcd_controller_manager_args" }}
 - "--leader-elect"
-{{- if eq .Values.cloudProviderVcd.internal.providerClusterConfiguration.legacyMode true }}
+{{- if eq .Values.cloudProviderVcd.internal.legacyMode true }}
 - "--metrics-bind-address=127.0.0.1:9446"
 {{- else }}
 - "--diagnostics-address=127.0.0.1:9446"
@@ -15,7 +15,7 @@ memory: 50Mi
 {{- end }}
 
 {{- $capcdImageName := ""}}
-{{- if eq .Values.cloudProviderVcd.internal.providerClusterConfiguration.legacyMode true -}}
+{{- if eq .Values.cloudProviderVcd.internal.legacyMode true -}}
   {{- $capcdImageName = "capcdControllerManagerLegacy" }}
 {{- else -}}
   {{- $capcdImageName = "capcdControllerManager" }}
