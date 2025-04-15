@@ -158,7 +158,7 @@
         ```
 
   - alert: ModuleIsInMaintenanceMode
-    expr: sum(deckhouse_mm_module_maintenance_state{state="NoResourceReconciliation"}) by (moduleName) > 0
+    expr: sum(deckhouse_mm_module_maintenance{state="NoResourceReconciliation"}) by (moduleName) > 0
     labels:
       severity_level: "6"
     annotations:
