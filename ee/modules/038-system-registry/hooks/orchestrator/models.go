@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package orchestrator
 
 import (
+	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/pki"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
 )
 
@@ -17,11 +18,15 @@ type Params struct {
 	TTL        string
 }
 
-type State struct {
-	Mode       registry_const.ModeType
-	TargetMode registry_const.ModeType
+type Inputs struct {
+	PKI pki.State
+}
 
-	PKIVersion     string
-	UsersVersion   string
-	SecretsVersion string
+type State struct {
+	Mode registry_const.ModeType `json:"mode"`
+
+	PKI *pki.State `json:"pki,omitempty"`
+
+	UsersVersion   string `json:"users_version,omitempty"`
+	SecretsVersion string `json:"secrets_version,omitempty"`
 }

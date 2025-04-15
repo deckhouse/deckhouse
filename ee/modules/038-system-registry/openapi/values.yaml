@@ -79,45 +79,26 @@ properties:
                 type: boolean
               data:
                 type: object
+                default: {}
                 additionalProperties: true
                 x-kubernetes-preserve-unknown-fields: true
-
-
-      pki:
-        type: object
-        default: {}
-        properties:
-          enabled:
-            type: boolean
-            default: false
-          config:
-            type: object
-            properties:
-              version:
-                type: string
-              params:
-                type: object
-          state:
-            type: object
-            properties:
-              version:
-                type: string
-              hash:
-                type: string
-              ready:
-                type: boolean
-              data:
-                type: object
                 properties:
-                  ca: &certKey
+                  mode:
+                    type: string
+                    enum: [Unmanaged, Direct, Proxy, Local]
+                  pki:
                     type: object
                     properties:
-                      cert:
-                        type: string
-                      key:
-                        type: string
-                  token:
-                    <<: *certKey
+                      ca: &certKey
+                        type: object
+                        properties:
+                          cert:
+                            type: string
+                          key:
+                            type: string
+                      token:
+                        <<: *certKey
+
 
       secrets:
         type: object

@@ -13,27 +13,27 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/pki"
 )
 
-type certModel struct {
+type CertModel struct {
 	Cert string `json:"cert,omitempty"`
 	Key  string `json:"key,omitempty"`
 }
 
-func (pcm *certModel) ToPKI() (pki.CertKey, error) {
+func (pcm *CertModel) ToPKI() (pki.CertKey, error) {
 	if pcm == nil {
 		return pki.CertKey{}, fmt.Errorf("cannot convert nil to CertKey")
 	}
 	return pki.DecodeCertKey([]byte(pcm.Cert), []byte(pcm.Key))
 }
 
-func certKeyToCertModel(value pki.CertKey) (*certModel, error) {
+func PKICertModel(value pki.CertKey) (*CertModel, error) {
 	cert, key, err := pki.EncodeCertKey(value)
 	if err != nil {
 		return nil, err
 	}
-	return &certModel{Cert: string(cert), Key: string(key)}, nil
+	return &CertModel{Cert: string(cert), Key: string(key)}, nil
 }
 
-func secretDataToCertModel(secret v1core.Secret, key string) *certModel {
+func SecretDataToCertModel(secret v1core.Secret, key string) *CertModel {
 	if key == "" {
 		return nil
 	}
@@ -42,7 +42,7 @@ func secretDataToCertModel(secret v1core.Secret, key string) *certModel {
 	keyValue := string(secret.Data[fmt.Sprintf("%s.key", key)])
 
 	if certValue != "" && keyValue != "" {
-		return &certModel{
+		return &CertModel{
 			Cert: certValue,
 			Key:  keyValue,
 		}
