@@ -6,7 +6,7 @@ description: >-
   Stronghold provides an identity management solution to maintain clients who are recognized by Stronghold.
 ---
 
-# Identity
+## Identity
 
 This document contains conceptual information about **Identity** along with an
 overview of the various terminologies and their concepts. The idea of Identity

@@ -5,8 +5,6 @@ lang: en
 description: OIDC provider configuration quick starts
 ---
 
-# OIDC provider configuration
-
 This page collects high-level setup steps on how to configure an OIDC
 application for various providers. For more general usage and operation
 information, see the [Stronghold JWT/OIDC method documentation](/docs/auth/jwt).

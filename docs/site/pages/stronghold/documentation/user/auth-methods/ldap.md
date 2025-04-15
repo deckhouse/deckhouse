@@ -9,7 +9,7 @@ description: |-
 
 {% raw %}
 
-# LDAP auth method
+## LDAP auth method
 
 The `ldap` auth method allows authentication using an existing LDAP
 server and user/password credentials. This allows Stronghold to be integrated
@@ -261,20 +261,23 @@ d8 stronghold write auth/ldap/groups/scientists policies=foo,bar
 
 This maps the LDAP group "scient
 
-## Блокировка пользователя
+## User Lockout
 
-Если пользователь несколько раз подряд предоставит неверные учетные данные, Stronghold на некоторое время прекратит попытки проверить его учетные данные, а вместо этого сразу же вернет ошибку с отказом доступе. Мы называем такое поведение «блокировкой пользователя» (`user_lockout`). Время, на которое пользователь будет заблокирован, называется «длительностью блокировки» (`lockout_duration`). Пользователь сможет войти в систему после истечения срока блокировки. Количество неудачных попыток входа, после которых пользователь будет заблокирован, называется «порог блокировки» (`lockout_threshold`). Счетчик порога блокировки обнуляется через несколько минут без попыток входа или при успешной попытке входа. Время, в течение которого счетчик будет обнулен после отсутствия попыток входа, называется «сброс счетчика блокировки» (`lockout_counter_reset`). Это позволяет предотвратить атаки с целью подбора пароля.
+If a user repeatedly provides incorrect credentials, Stronghold will temporarily stop attempting to verify the credentials and will immediately return an access denied error instead. We refer to this behavior as "user lockout" (`user_lockout`). The duration for which the user remains locked out is called the "lockout duration" (`lockout_duration`). The user will be able to log in again after this period expires.
+The number of failed login attempts that trigger a lockout is called the "lockout threshold" (`lockout_threshold`). СThe lockout threshold counter is reset after a few minutes without login attempts or after a successful login.
+The period after which the counter is reset in the absence of login attempts is called the "lockout counter reset" (`lockout_counter_reset`). ЭThis mechanism helps prevent password guessing attacks.
 
-Функция блокировки пользователя включена по умолчанию. Значения по умолчанию:
-- `lockout_threshold` - 5 попыток
-- `lockout_duration` - 15 минут
-- `lockout_counter_reset` - 15 минут.
+The user lockout feature is enabled by default. Default values:
 
-Функцию блокировки пользователя можно отключить с помощью команды «auth tune», передав значение `disable_lockout` true
+- `lockout_threshold` - 5 attempts
+- `lockout_duration` - 15 minutes
+- `lockout_counter_reset` - 15 minutes
+
+You can disable the user lockout feature using the auth tune command by setting `disable_lockout` to `true`.
 
 {% endraw %}
 {% alert level="warning" %}
-Эта функция поддерживается только методами userpass, ldap и approle auth.
+This feature is supported only by the userpass, ldap, and approle auth methods.
 {% endalert %}
 {% raw %}
 
@@ -322,6 +325,7 @@ The user lockout feature is enabled by default. The default values for "lockout 
 "lockout duration" is 15 minutes, "lockout counter reset" is 15 minutes.
 
 The user lockout feature can be disabled as follows:
+
 - It can be disabled globally using environment variable `VAULT_DISABLE_USER_LOCKOUT`.
 - It can be disabled for all supported auth methods (ldap, userpass and approle) or a specific supported auth method using the `disable_lockout`
   parameter within `user_lockout` stanza in configuration file.

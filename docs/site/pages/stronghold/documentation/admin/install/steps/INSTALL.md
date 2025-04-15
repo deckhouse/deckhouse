@@ -23,7 +23,7 @@ The YAML installation configuration file includes parameters for several resourc
 - ModuleConfig — a set of resources containing configuration parameters for [built-in platform modules](../).
   If the cluster is initially created with nodes designated for specific types of workloads (system nodes, monitoring nodes, etc.), it is recommended to explicitly specify the corresponding nodeSelector in the module configuration for modules using persistent storage volumes (e.g., for the `prometheus` module, this would be the [nodeSelector](/products/stronghold/reference/mc.html#prometheus-parameters-nodeselector) parameter).
 
-<!-- TODO: поправить манифесты -->
+<!-- TODO: fix the manifests -->
 
 {% offtopic title="Example Installation Configuration File..." %}
 
@@ -117,7 +117,7 @@ spec:
 
 An optional YAML file of installation resources contains Kubernetes resource manifests that the installer will apply after the successful installation of the platform. This file can be useful for additional configuration of the cluster post-installation: deploying an Ingress controller, creating additional node groups, configuring resources, setting permissions, users, etc.
 
-**Attention!** You cannot use [ModuleConfig](../) for **built-in** modules in the installation resources file. Use the [configuration file](#файл-конфигурации-установки) for configuring built-in modules.
+**Attention!** You cannot use [ModuleConfig](../) for **built-in** modules in the installation resources file. Use the configuration file for configuring built-in modules.
 
 {% offtopic title="Example Installation Resources File..." %}
 
@@ -344,6 +344,7 @@ Domain template is '%s.1.2.3.4.sslip.io'.
 ## Storage Systems Installation
 
 To ensure the proper functioning of the platform, one or more storage systems need to be installed for:
+
 - The permanent storage of platform system data (metrics, logs, images)
 - The storage of virtual machine disks
 

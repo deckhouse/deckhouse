@@ -5,7 +5,7 @@ lang: en
 description: The token store auth method is used to authenticate using tokens.
 ---
 
-# Token auth method
+## Token auth method
 
 The `token` auth method is built-in and automatically available at `/auth/token`. It
 allows users to authenticate using a token, as well to create new tokens, revoke

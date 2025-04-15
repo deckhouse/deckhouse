@@ -1,5 +1,5 @@
 ---
-title: "Метод Userpass"
+title: "Userpass method"
 permalink: en/stronghold/documentation/user/auth-methods/userpass.html
 lang: en
 description: >-
@@ -7,7 +7,7 @@ description: >-
   username and password.
 ---
 
-# Userpass auth method
+## Userpass auth method
 
 The `userpass` auth method allows users to authenticate with Stronghold using
 a username and password combination.
@@ -104,6 +104,7 @@ The user lockout feature is enabled by default. The default values for "lockout 
 "lockout duration" is 15 minutes, "lockout counter reset" is 15 minutes.
 
 The user lockout feature can be disabled as follows:
+
 - It can be disabled globally using environment variable `VAULT_DISABLE_USER_LOCKOUT`.
 - It can be disabled for all supported auth methods (ldap, userpass and approle) or a specific supported auth method using the `disable_lockout`
   parameter within `user_lockout` stanza in configuration file.

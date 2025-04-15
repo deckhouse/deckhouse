@@ -53,7 +53,7 @@ redirect URIs are specified for a role with the `allowed_redirect_uris` paramete
 different redirect URIs to configure the Stronghold UI and CLI flows, so one or both will need to
 be set up depending on the installation.
 
-**CLI**
+#### CLI
 
 If you plan to support authentication via `d8 stronghold login -method=oidc` and
 are not using `callbackmode=device`, a redirect URI with a path ending
@@ -70,7 +70,7 @@ Logins via the CLI may
 specify a different host and/or listening port if needed, and a URI with this host/port must match one
 of the configured redirected URIs. These same URIs must be added to the provider as well.
 
-**Stronghold UI**
+### Stronghold UI
 
 Logging in via the Stronghold UI requires a redirect URI of the form:
 

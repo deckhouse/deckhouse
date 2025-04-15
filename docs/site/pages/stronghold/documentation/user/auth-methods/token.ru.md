@@ -14,7 +14,7 @@ lang: ru
 
 #### Аутентификация
 
-**Через CLI**
+**Через CLI**:
 
 В этом примере пользователь выполняет вход в систему, используя токен:
 
@@ -30,7 +30,7 @@ d8 stronghold login -method=userpass \
    password=foo
 ```
 
-**Через API**
+**Через API**:
 
 Токен задается непосредственно в виде заголовка для HTTP API. Заголовок должен иметь вид X-Vault-Token: &lt;token> или Authorization: Bearer &lt;token>.
 

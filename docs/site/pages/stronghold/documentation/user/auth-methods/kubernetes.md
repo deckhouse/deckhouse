@@ -7,7 +7,7 @@ description: |-
   Service Accounts.
 ---
 
-# Kubernetes auth method
+## Kubernetes auth method
 
 The `kubernetes` auth method can be used to authenticate with Stronghold using a
 Kubernetes Service Account Token. This method of authentication makes it easy to
@@ -106,6 +106,7 @@ management tool.
   to 3rd parties.
 
 {% endalert %}
+
 1. Create a named role:
 
   ```text
@@ -168,11 +169,7 @@ table summarizes the options, each of which is explained in more detail below.
 {% alert level="info" %}
 
 **Note:** By default, Kubernetes currently extends the lifetime of admission
-injected service account tokens to a year to help smooth the transition to
-short-lived tokens. If you would like to disable this, set
-[--service-account-extend-token-expiration=false][k8s-extended-tokens] for
-`kube-apiserver` or specify your own `serviceAccountToken` volume mount. See
-[here](/docs/auth/jwt/oidc-providers/kubernetes#specifying-ttl-and-audience) for an example.
+injected service account tokens to a year to help smooth the transition to short-lived tokens. If you would like to disable this, set [--service-account-extend-token-expiration=false][k8s-extended-tokens] for `kube-apiserver` or specify your own `serviceAccountToken` volume mount. See [here](/docs/auth/jwt/oidc-providers/kubernetes#specifying-ttl-and-audience) for an example.
 
 {% endalert %}
 [k8s-extended-tokens]: <https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/#options>

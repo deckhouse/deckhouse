@@ -22,7 +22,7 @@ the AppRole associated with the credentials.
 
 ## Authentication
 
-### Via the CLI
+**Via the CLI**:
 
 The default path is `/approle`. If this auth method was enabled at a different
 path, specify `auth/my-path/login` instead.
@@ -41,7 +41,7 @@ token_renewable    true
 token_policies     [default]
 ```
 
-### Via the API
+**Via the API**:
 
 The default endpoint is `auth/approle/login`. If this auth method was enabled
 at a different path, use that value instead of `approle`.
@@ -82,7 +82,7 @@ Auth methods must be configured in advance before users or machines can
 authenticate. These steps are usually completed by an operator or configuration
 management tool.
 
-### Via the CLI
+**Via the CLI**:
 
 1. Enable the AppRole auth method:
 
@@ -126,7 +126,7 @@ documentation.
    secret_id_num_uses      40
    ```
 
-### Via the API
+**Via the API**:
 
 1. Enable the AppRole auth method:
 
@@ -255,6 +255,7 @@ The user lockout feature is enabled by default. The default values for "lockout 
 "lockout duration" is 15 minutes, "lockout counter reset" is 15 minutes.
 
 The user lockout feature can be disabled as follows:
+
 - It can be disabled globally using environment variable `VAULT_DISABLE_USER_LOCKOUT`.
 - It can be disabled for all supported auth methods (ldap, userpass and approle) or a specific supported auth method using the `disable_lockout`
   parameter within `user_lockout` stanza in configuration file.

@@ -1,5 +1,5 @@
 ---
-title: "Механизм секретов Cubbyhole"
+title: "Cubbyhole secrets engine"
 permalink: en/stronghold/documentation/user/secrets-engines/cubbyhole.html
 description: >-
   The cubbyhole secrets engine can store arbitrary secrets scoped to a single

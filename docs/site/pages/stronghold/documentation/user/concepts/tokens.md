@@ -285,12 +285,12 @@ batch tokens.
 
 ### Service vs. batch token lease handling
 
-#### Service tokens
+1. Service tokens.
 
 Leases created by service tokens (including child tokens' leases) are tracked
 along with the service token and revoked when the token expires.
 
-#### Batch tokens
+1. Batch tokens.
 
 Leases created by batch tokens are constrained to the remaining TTL of the
 batch tokens and, if the batch token is not an orphan, are tracked by the
