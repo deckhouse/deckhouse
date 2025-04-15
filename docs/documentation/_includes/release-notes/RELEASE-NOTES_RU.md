@@ -1,9 +1,3 @@
----
-title: Обзор изменений в Deckhouse Kubernetes Platform
-permalink: ru/release-notes.html
-lang: ru
----
-
 ## Версия 1.69
 
 ### Обратите внимание

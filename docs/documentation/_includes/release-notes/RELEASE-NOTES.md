@@ -1,8 +1,3 @@
----
-title: Release notes for Deckhouse Kubernetes Platform
-permalink: en/release-notes.html
----
-
 ## Version 1.69
 
 ### Important
