@@ -1,0 +1,61 @@
+{{- $version := "1.8.6" }}
+{{- $image_version := $version | replace "." "-" }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /src/scripts
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - git clone --depth 1 {{ .SOURCE_REPO }}/erofs/erofs-utils --branch "v{{ $version }}" /src
+  - rm -rf /src/.git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
+from: {{ $.Images.BASE_ALPINE }}
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: install
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache automake autoconf libtool pkg-config uuid-dev make
+  install:
+  - cd /src
+  - ./autogen.sh
+  - ./configure --enable-static
+  - make LDFLAGS="--static"
+  - mv dump/dump.erofs /
+  - mv mkfs/mkfs.erofs /
+  - mv fsck/fsck.erofs /
+  - mv /src/scripts/* /
+  - chmod +x /install /uninstall /dump.erofs /mkfs.erofs /fsck.erofs
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+from: {{ $.Images.BASE_SCRATCH }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - install
+  - uninstall
+  - dump.erofs
+  - fsck.erofs
+  - mkfs.erofs
+  before: setup
+imageSpec:
+  config:
+    labels: { "distro": "all", "version": "all", "erofs-utils": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]

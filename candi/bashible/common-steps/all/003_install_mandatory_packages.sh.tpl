@@ -12,4 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-bb-package-install "jq:{{ .images.registrypackages.jq171 }}" "curl:{{ .images.registrypackages.d8Curl891 }}" "virt-what:{{ .images.registrypackages.virtWhat125 }}" "socat:{{ .images.registrypackages.socat1734 }}" "e2fsprogs:{{ .images.registrypackages.e2fsprogs1472 }}" "netcat:{{ .images.registrypackages.netcat110481 }}" "iptables:{{ .images.registrypackages.iptables189 }}" "growpart:{{ .images.registrypackages.growpart033 }}" "lsblk:{{- index .images.registrypackages "lsblk2402" }}"
+bb-package-install "jq:{{ .images.registrypackages.jq171 }}" "curl:{{ .images.registrypackages.d8Curl891 }}" "virt-what:{{ .images.registrypackages.virtWhat125 }}" "socat:{{ .images.registrypackages.socat1734 }}" "e2fsprogs:{{ .images.registrypackages.e2fsprogs1472 }}" "netcat:{{ .images.registrypackages.netcat110481 }}" "iptables:{{ .images.registrypackages.iptables189 }}" "growpart:{{ .images.registrypackages.growpart033 }}" "lsblk:{{- index .images.registrypackages "lsblk2402" }}" "erofs-utils:{{- index .images.registrypackages.erofsUtils186 }}"
