@@ -12,7 +12,7 @@ git:
     - '**/*'
 shell:
   install:
-  - git clone --depth 1 {{ .SOURCE_REPO }}/erofs/erofs-utils --branch "v{{ $version }}" /src
+  - git clone --depth 1 {{ .SOURCE_REPO }}/erofs/erofs-utils --branch "v{{ $version }}" /src/erofs-utils
   - rm -rf /src/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
@@ -28,7 +28,7 @@ shell:
   {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache automake autoconf libtool pkg-config uuid-dev make
   install:
-  - cd /src
+  - cd /src/erofs-utils
   - ./autogen.sh
   - ./configure --enable-static
   - make LDFLAGS="--static"
