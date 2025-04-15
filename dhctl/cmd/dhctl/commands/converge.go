@@ -22,7 +22,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
@@ -32,7 +35,21 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineKubeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient, err := ssh.NewInitClientFromFlags(true)
+		var sshClient node.SSHClient
+		var err error
+
+		if err := terminal.AskBecomePassword(); err != nil {
+			return err
+		}
+		if err := terminal.AskBastionPassword(); err != nil {
+			return err
+		}
+
+		if app.LegacyMode {
+			sshClient, err = clissh.NewInitClientFromFlags(true)
+		} else {
+			sshClient, err = gossh.NewInitClientFromFlags(true)
+		}
 		if err != nil {
 			return err
 		}
