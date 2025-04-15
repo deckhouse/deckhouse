@@ -72,11 +72,11 @@ spec:
 ...
 ```
 
-{% alert level="warning" %}
-System dashboards and dashboards added using [GrafanaDashboardDefinition](cr.html#grafanadashboarddefinition) cannot be modified via the Grafana interface.
-
-Alerts configured in the dashboard do not work with datasource templates - such a dashboard is invalid and cannot be imported. In Grafana 9.0, the legacy alerting functionality was [deprecated](https://grafana.com/docs/grafana/latest/breaking-changes/breaking-changes-v10-0/#description) and replaced with Grafana Alerting. Therefore, we do not recommend using legacy alerting in dashboards.
-{% endalert %}
+> **Caution!** 
+>
+> System dashboards and dashboards added using [GrafanaDashboardDefinition](cr.html#grafanadashboarddefinition) cannot be modified via the Grafana interface.
+>
+> Alerts configured in the dashboard do not work with datasource templates - such a dashboard is invalid and cannot be imported. In Grafana 9.0, the legacy alerting functionality was [deprecated](https://grafana.com/docs/grafana/latest/breaking-changes/breaking-changes-v10-0/#description) and replaced with Grafana Alerting. Therefore, we do not recommend using legacy alerting in dashboards.
 
 ## How do I add alerts and/or recording rules?
 
