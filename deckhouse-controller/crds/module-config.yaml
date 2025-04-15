@@ -46,20 +46,20 @@ spec:
                   description: |
                     Enables or disables the module.
                   x-doc-examples: ['false']
-                managementState:
+                maintenance:
                   type: string
-                  enum: ["Unmanaged"]
+                  enum: ["NoResourceReconciliation"]
                   description: |
-                    Defines the module management mode.
+                    Defines the module maintenance mode.
                     
-                    - `Unmanaged`: A mode for developing or tweaking the module.
+                    - `NoResourceReconciliation`: A mode for developing or tweaking the module.
                     
                       In this mode:
                     
                       - Configuration or hook changes are not reconciled, which prevents resources from being updated automatically.
                       - Resource monitoring is disabled, which prevents deleted resources from being restored.
-                      - All the module's resources are labeled with `managementState: Unmanaged`.
-                      - The `ModuleIsInUnmanagedMode` alert is triggered.
+                      - All the module's resources are labeled with `maintenance: NoResourceReconciliation`.
+                      - The `ModuleIsInMaintenanceMode` alert is triggered.
                     
                       If Deckhouse restarts, the module reapplies its last known state once and then continues in unmanaged mode.
                   x-doc-examples: ['false']
