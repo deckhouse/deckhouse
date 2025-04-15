@@ -1,15 +1,12 @@
----
-title: Release notes for DKP 1.68
-permalink: en/release-notes/1-68.html
----
+## Version 1.68
 
-## Important notes
+### Important
 
 - After the update,
   the UID will change for all Grafana data sources created using the GrafanaAdditionalDatasource resource.
   If a data source was referenced by UID, that reference will no longer be valid.
 
-## Major changes
+### Major changes
 
 - A new parameter, [`iamNodeRole`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.68/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-iamnoderole),
   has been introduced for the AWS provider.
@@ -61,7 +58,7 @@ permalink: en/release-notes/1-68.html
   By default, the timeout is set to 10 minutes.
   This parameter applies only to the following clouds: AWS, Azure, GCP, OpenStack.
 
-## Security
+### Security
 
 Known vulnerabilities have been addressed in the following modules:
 
@@ -95,7 +92,7 @@ Known vulnerabilities have been addressed in the following modules:
 - `vertical-pod-autoscaler`
 - `static-routing-manager`
 
-## Component version updates
+### Component version updates
 
 The following DKP components have been updated:
 
@@ -116,7 +113,7 @@ The following DKP components have been updated:
 - `snapshot-controller`: 8.2.0
 - `yq4`: 3.45.1
 
-## Mandatory component restart
+### Mandatory component restart
 
 The following components will be restarted after updating DKP to 1.68:
 
