@@ -63,6 +63,14 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		}
 
 		var sshClient node.SSHClient
+
+		if err := terminal.AskBecomePassword(); err != nil {
+			return err
+		}
+		if err := terminal.AskBastionPassword(); err != nil {
+			return err
+		}
+
 		if app.LegacyMode {
 			sshClient = clissh.NewClientFromFlags()
 		} else {
@@ -70,9 +78,6 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		}
 		err := sshClient.Start()
 		if err != nil {
-			return err
-		}
-		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
 

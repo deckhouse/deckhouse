@@ -19,7 +19,7 @@ import (
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
@@ -46,6 +46,14 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, name, secret, dataKey string) 
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		var sshClient node.SSHClient
 		var err error
+
+		if err := terminal.AskBecomePassword(); err != nil {
+			return err
+		}
+		if err := terminal.AskBastionPassword(); err != nil {
+			return err
+		}
+
 		if app.LegacyMode {
 			sshClient, err = clissh.NewInitClientFromFlags(true)
 		} else {
@@ -55,17 +63,7 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, name, secret, dataKey string) 
 			return err
 		}
 
-		var kubeCl *client.KubernetesClient
-		if sshClient != nil {
-			defer sshClient.Stop()
-			kubeCl, err = kubernetes.ConnectToKubernetesAPI(context.Background(), ssh.NewNodeInterfaceWrapper(sshClient))
-		} else {
-			if app.LegacyMode {
-				kubeCl, err = kubernetes.ConnectToKubernetesAPI(context.Background(), ssh.NewNodeInterfaceWrapper(sshClient.(*clissh.Client)))
-			} else {
-				kubeCl, err = kubernetes.ConnectToKubernetesAPI(context.Background(), gossh.NewNodeInterfaceWrapper(sshClient.(*gossh.Client)))
-			}
-		}
+		kubeCl, err := kubernetes.ConnectToKubernetesAPI(context.Background(), ssh.NewNodeInterfaceWrapper(sshClient))
 		if err != nil {
 			return err
 		}

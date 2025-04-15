@@ -83,11 +83,16 @@ func (s *Client) Start() error {
 		bastionConfig := &ssh.ClientConfig{}
 		log.DebugLn("Initialize bastion connection...")
 
-		if len(s.privateKeys) == 0 {
-			return fmt.Errorf("no SSH key present to connect to bastion host")
+		if len(s.privateKeys) == 0 && len(app.SSHBastionPass) == 0 {
+			return fmt.Errorf("no credentials present to connect to bastion host")
 		}
 
 		AuthMethods := []ssh.AuthMethod{ssh.PublicKeys(signers...)}
+
+		if len(app.SSHBastionPass) > 0 {
+			log.DebugF("Initial password auth to bastion host\n")
+			AuthMethods = append(AuthMethods, ssh.Password(app.SSHBastionPass))
+		}
 
 		bastionConfig = &ssh.ClientConfig{
 			User:            s.Settings.BastionUser,
@@ -107,28 +112,31 @@ func (s *Client) Start() error {
 		log.DebugF("Connected successfully to bastion host %s", bastionAddr)
 	}
 
-	config := &ssh.ClientConfig{}
-	if len(s.privateKeys) > 0 {
-		log.DebugF("Initial ssh privater keys auth to master host\n")
+	var becomePass string
 
-		AuthMethods := []ssh.AuthMethod{ssh.PublicKeys(signers...)}
-
-		config = &ssh.ClientConfig{
-			User:            s.Settings.User,
-			Auth:            AuthMethods,
-			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		}
-	} else if len(app.BecomePass) > 0 {
-		log.DebugF("Initial password auth to master host\n")
-		config = &ssh.ClientConfig{
-			User: s.Settings.User,
-			Auth: []ssh.AuthMethod{
-				ssh.Password(app.BecomePass),
-			},
-			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		}
+	if s.Settings.BecomePass != "" {
+		becomePass = s.Settings.BecomePass
 	} else {
-		return fmt.Errorf("no authentication config for SSH found")
+		becomePass = app.BecomePass
+	}
+
+	if len(s.privateKeys) == 0 && len(becomePass) == 0 {
+		return fmt.Errorf("one of SSH keys or become password should be not empty")
+	}
+
+	log.DebugF("Initial ssh privater keys auth to master host\n")
+
+	AuthMethods := []ssh.AuthMethod{ssh.PublicKeys(signers...)}
+
+	if len(becomePass) > 0 {
+		log.DebugF("Initial password auth to master host\n")
+		AuthMethods = append(AuthMethods, ssh.Password(becomePass))
+	}
+
+	config := &ssh.ClientConfig{
+		User:            s.Settings.User,
+		Auth:            AuthMethods,
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
 	var targetConn net.Conn

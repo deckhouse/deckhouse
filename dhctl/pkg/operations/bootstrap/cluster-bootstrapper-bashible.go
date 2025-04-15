@@ -40,6 +40,9 @@ func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	if err := terminal.AskBastionPassword(); err != nil {
+		return err
+	}
 
 	if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
 		if err = wrapper.Client().Start(); err != nil {

@@ -52,6 +52,13 @@ func (b *ClusterBootstrapper) initSSHClient() error {
 		return nil // Local runs don't use ssh client.
 	}
 
+	if err := terminal.AskBecomePassword(); err != nil {
+		return err
+	}
+	if err := terminal.AskBastionPassword(); err != nil {
+		return err
+	}
+
 	sshClient := wrapper.Client()
 	if err := sshClient.Start(); err != nil {
 		return fmt.Errorf("unable to start ssh client: %w", err)

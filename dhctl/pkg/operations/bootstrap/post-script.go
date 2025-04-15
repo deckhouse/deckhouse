@@ -23,7 +23,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh/frontend"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
@@ -73,7 +72,7 @@ func (e *PostBootstrapScriptExecutor) run(ctx context.Context) (string, error) {
 	}
 
 	createOUtFileCmd := fmt.Sprintf("touch %s && chmod 644 %s", outputFile, outputFile)
-	cmd := frontend.NewCommand(e.sshClient.Session(), createOUtFileCmd)
+	cmd := e.sshClient.Command(createOUtFileCmd)
 	cmd.Sudo(ctx)
 	cmd.WithStderrHandler(nil)
 	cmd.WithStdoutHandler(nil)
@@ -85,7 +84,7 @@ func (e *PostBootstrapScriptExecutor) run(ctx context.Context) (string, error) {
 
 	defer func() {
 		// remove out file on server because it can contain non-safe information
-		cmd = frontend.NewCommand(e.sshClient.Session(), fmt.Sprintf("rm %s", outputFile))
+		cmd = e.sshClient.Command(fmt.Sprintf("rm %s", outputFile))
 		cmd.Sudo(ctx)
 		cmd.WithStderrHandler(nil)
 		cmd.WithStdoutHandler(nil)

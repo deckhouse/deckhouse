@@ -15,6 +15,8 @@
 package ssh
 
 import (
+	"reflect"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 )
@@ -24,7 +26,7 @@ type NodeInterfaceWrapper struct {
 }
 
 func NewNodeInterfaceWrapper(sshClient node.SSHClient) *NodeInterfaceWrapper {
-	if sshClient == nil {
+	if sshClient == nil || reflect.ValueOf(sshClient).IsNil() {
 		return nil
 	}
 

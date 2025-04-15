@@ -35,6 +35,7 @@ var (
 	SSHBastionHost       = ""
 	SSHBastionPort       = ""
 	SSHBastionUser       = os.Getenv("USER")
+	SSHBastionPass       = ""
 	SSHUser              = os.Getenv("USER")
 	SSHHosts             = make([]session.Host, 0)
 	sshHostsRaw          = make([]string, 0)
@@ -43,6 +44,8 @@ var (
 
 	AskBecomePass = false
 	BecomePass    = ""
+
+	AskBastionPass = false
 
 	LegacyMode = false
 )
@@ -95,6 +98,9 @@ func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
 	cmd.Flag("ssh-legacy-mode", "Switch to legacy SSH mode").
 		Envar(configEnvName("SSH_LEGACY_MODE")).
 		BoolVar(&LegacyMode)
+	cmd.Flag("ask-bastion-pass", "Ask for bastion password before the installation process.").
+		Envar(configEnvName("ASK_BASTION_PASS")).
+		BoolVar(&AskBastionPass)
 
 	cmd.PreAction(func(c *kingpin.ParseContext) error {
 		if !sshBastionUserFlagSetByUser && sshUserFlagSetByUser {

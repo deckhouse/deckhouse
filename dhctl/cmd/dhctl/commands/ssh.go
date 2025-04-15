@@ -30,6 +30,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
 func DefineTestSSHConnectionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
@@ -39,6 +40,14 @@ func DefineTestSSHConnectionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		var sshCl node.SSHClient
 		var err error
+
+		if err := terminal.AskBecomePassword(); err != nil {
+			return err
+		}
+		if err := terminal.AskBastionPassword(); err != nil {
+			return err
+		}
+
 		if app.LegacyMode {
 			sshCl, err = clissh.NewClientFromFlagsWithHosts()
 		} else {
@@ -83,6 +92,14 @@ func DefineTestSCPCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		log.DebugLn("scp: start ssh-agent")
 		var sshCl node.SSHClient
 		var err error
+
+		if err := terminal.AskBecomePassword(); err != nil {
+			return err
+		}
+		if err := terminal.AskBastionPassword(); err != nil {
+			return err
+		}
+
 		if app.LegacyMode {
 			sshCl, err = clissh.NewClientFromFlagsWithHosts()
 		} else {
@@ -154,6 +171,14 @@ func DefineTestUploadExecCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		var sshClient node.SSHClient
 		var err error
+
+		if err := terminal.AskBecomePassword(); err != nil {
+			return err
+		}
+		if err := terminal.AskBastionPassword(); err != nil {
+			return err
+		}
+
 		if app.LegacyMode {
 			sshClient, err = clissh.NewInitClientFromFlagsWithHosts(true)
 		} else {
@@ -200,6 +225,14 @@ func DefineTestBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		var sshClient node.SSHClient
 		var err error
+
+		if err := terminal.AskBecomePassword(); err != nil {
+			return err
+		}
+		if err := terminal.AskBastionPassword(); err != nil {
+			return err
+		}
+
 		if app.LegacyMode {
 			sshClient, err = clissh.NewInitClientFromFlagsWithHosts(true)
 		} else {

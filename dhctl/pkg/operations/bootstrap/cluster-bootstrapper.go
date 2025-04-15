@@ -203,6 +203,10 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			}
 
 			if metaConfig.IsStatic() {
+				// aks bastion pass for SSH Client Dial() with password auth
+				if err := terminal.AskBastionPassword(); err != nil {
+					return err
+				}
 				// ask become pass for SSH Client Dial() with password auth
 				if err := terminal.AskBecomePassword(); err != nil {
 					return err

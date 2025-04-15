@@ -34,6 +34,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
@@ -249,6 +250,14 @@ func (c *Converger) AutoConverge() error {
 		kubeCl = c.KubeClient
 	} else {
 		var sshClient node.SSHClient
+
+		if err := terminal.AskBecomePassword(); err != nil {
+			return err
+		}
+		if err := terminal.AskBastionPassword(); err != nil {
+			return err
+		}
+
 		if app.LegacyMode {
 			sshClient, err = clissh.NewInitClientFromFlags(false)
 		} else {

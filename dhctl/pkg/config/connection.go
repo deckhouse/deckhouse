@@ -42,6 +42,7 @@ type SSHConfig struct {
 	SSHBastionHost      string               `json:"sshBastionHost,omitempty"`
 	SSHBastionPort      *int32               `json:"sshBastionPort,omitempty"`
 	SSHBastionUser      string               `json:"sshBastionUser,omitempty"`
+	SSHBastionPassword  string               `json:"sshBastionPassword,omitempty"`
 	SudoPassword        string               `json:"sudoPassword,omitempty"`
 }
 
@@ -201,6 +202,7 @@ func (ConnectionConfigParser) ParseConnectionConfigFromFile() error {
 	app.SSHHosts = hosts
 	app.SSHPort = port
 	app.SSHExtraArgs = cfg.SSHConfig.SSHExtraArgs
+	app.SSHBastionPass = cfg.SSHConfig.SSHBastionPassword
 
 	return nil
 }

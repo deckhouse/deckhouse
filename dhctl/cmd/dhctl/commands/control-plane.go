@@ -31,6 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
 func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
@@ -42,6 +43,14 @@ func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause) *kingpin.
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		var sshClient node.SSHClient
 		var err error
+
+		if err := terminal.AskBecomePassword(); err != nil {
+			return err
+		}
+		if err := terminal.AskBastionPassword(); err != nil {
+			return err
+		}
+
 		if app.LegacyMode {
 			sshClient, err = clissh.NewInitClientFromFlags(true)
 		} else {
@@ -88,6 +97,14 @@ func DefineTestControlPlaneNodeReadyCommand(cmd *kingpin.CmdClause) *kingpin.Cmd
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		var sshClient node.SSHClient
 		var err error
+
+		if err := terminal.AskBecomePassword(); err != nil {
+			return err
+		}
+		if err := terminal.AskBastionPassword(); err != nil {
+			return err
+		}
+
 		if app.LegacyMode {
 			sshClient, err = clissh.NewInitClientFromFlags(true)
 		} else {

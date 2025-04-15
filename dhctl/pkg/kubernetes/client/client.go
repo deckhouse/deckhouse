@@ -17,6 +17,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"time"
 
 	klient "github.com/flant/kube-client/client"
@@ -71,7 +72,10 @@ func NewFakeKubernetesClientWithListGVR(gvr map[schema.GroupVersionResource]stri
 }
 
 func (k *KubernetesClient) WithNodeInterface(client node.Interface) *KubernetesClient {
-	k.NodeInterface = client
+	if client != nil && !reflect.ValueOf(client).IsNil() {
+		k.NodeInterface = client
+	}
+
 	return k
 }
 
