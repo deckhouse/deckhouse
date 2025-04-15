@@ -1,4 +1,4 @@
-# Copyright 2023 Flant JSC
+# Copyright 2024 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,14 +12,38 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-mkdir -p /etc/kubernetes/manifests
-
 bb-set-proxy
 
-if crictl version >/dev/null 2>/dev/null; then
-  crictl pull {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
+{{- $sandbox_image := printf "%s@%s" .registry.imagesBase (index $.images.common "pause") }}
+{{- $kubernetes_api_proxy_image := printf "%s@%s" .registry.imagesBase (index $.images.controlPlaneManager "kubernetesApiProxy") }}
+
+{{- if eq $.cri "Containerd" }}
+
+_get_local_images_list() {
+  repo_digests=$(/opt/deckhouse/bin/crictl images -o json | jq -r '.images[].repoDigests[]?')
+  echo $repo_digests
+}
+local_images_list=$(_get_local_images_list)
+
+if ! echo $local_images_list | grep -q {{ $sandbox_image | quote }}; then
+  /opt/deckhouse/bin/ctr --namespace=k8s.io images pull --hosts-dir="/etc/containerd/registry_prepull.d" {{ $sandbox_image | quote }}
 fi
 
+if ! echo $local_images_list | grep -q {{ $kubernetes_api_proxy_image | quote }}; then
+  /opt/deckhouse/bin/ctr --namespace=k8s.io images pull --hosts-dir="/etc/containerd/registry_prepull.d" {{ $kubernetes_api_proxy_image | quote }}
+fi
+
+{{- else }}
+
+# Use crictl for pulling images if crictl exist (for cri NotManaged)
+if crictl version >/dev/null 2>/dev/null; then
+  crictl pull {{ $sandbox_image | quote }}
+  crictl pull {{ $kubernetes_api_proxy_image | quote }}
+fi
+
+{{- end }}
+
+mkdir -p /etc/kubernetes/manifests
 bb-sync-file /etc/kubernetes/manifests/kubernetes-api-proxy.yaml - << EOF
 apiVersion: v1
 kind: Pod
@@ -39,7 +63,7 @@ spec:
   shareProcessNamespace: true
   containers:
   - name: kubernetes-api-proxy
-    image: {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
+    image: {{ $kubernetes_api_proxy_image }}
     imagePullPolicy: IfNotPresent
     command: ["/opt/nginx-static/sbin/nginx", "-c", "/etc/nginx/config/nginx.conf", "-g", "daemon off;"]
     env:
@@ -51,7 +75,7 @@ spec:
     - mountPath: /tmp
       name: tmp
   - name: kubernetes-api-proxy-reloader
-    image: {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
+    image: {{ $kubernetes_api_proxy_image }}
     imagePullPolicy: IfNotPresent
     command: ["/kubernetes-api-proxy-reloader"]
     env:

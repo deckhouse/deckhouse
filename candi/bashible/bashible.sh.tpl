@@ -188,12 +188,6 @@ function main() {
   export FIRST_BASHIBLE_RUN="no"
   export NODE_GROUP="{{ .nodeGroup.name }}"
   export TMPDIR="/opt/deckhouse/tmp"
-{{- if .registry }}
-  export REGISTRY_ADDRESS="{{ .registry.address }}"
-  export SCHEME="{{ .registry.scheme }}"
-  export REGISTRY_PATH="{{ .registry.path }}"
-  export REGISTRY_AUTH="$(base64 -d <<< "{{ .registry.auth | default "" }}")"
-{{- end }}
 {{- if .packagesProxy }}
   export PACKAGES_PROXY_ADDRESSES="{{ .packagesProxy.addresses | join "," }}"
   export PACKAGES_PROXY_TOKEN="{{ .packagesProxy.token }}"

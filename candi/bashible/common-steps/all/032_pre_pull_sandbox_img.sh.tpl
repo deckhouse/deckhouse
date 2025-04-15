@@ -12,16 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-mkdir -p /opt/deckhouse/share/ca-certificates/
+{{- if eq $.cri "Containerd" }}
 
-{{- if eq .runType "Normal" }}
-	{{- range $registryAddr,$ca := .normal.moduleSourcesCA }}
-		{{- if $ca }}
+{{- $sandbox_image := printf "%s@%s" .registry.imagesBase (index $.images.common "pause") }}
 
-bb-log-info "Sync moduleSource CA for {{ $registryAddr }}"
-bb-sync-file /opt/deckhouse/share/ca-certificates/{{ $registryAddr | lower }}-ca.crt - << "EOF"
-{{ $ca }}
-EOF
-		{{- end }}
-	{{- end }}
+_get_local_images_list() {
+  repo_digests=$(/opt/deckhouse/bin/crictl images -o json | jq -r '.images[].repoDigests[]?')
+  echo $repo_digests
+}
+
+if [ "$FIRST_BASHIBLE_RUN" != "yes" ]; then
+  local_images_list=$(_get_local_images_list)
+  if ! echo $local_images_list | grep -q {{ $sandbox_image | quote }}; then
+    /opt/deckhouse/bin/ctr --namespace=k8s.io images pull --hosts-dir="/etc/containerd/registry_prepull.d" {{ $sandbox_image }}
+  fi
+fi
+
 {{- end }}
