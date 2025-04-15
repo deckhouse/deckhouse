@@ -178,6 +178,10 @@ func (s *Service) bootstrap(
 			request.InitResources,
 			request.Resources,
 		} {
+			if len(cfg) == 0 {
+				continue
+			}
+
 			configPath, cleanup, err = util.WriteDefaultTempFile([]byte(cfg))
 			cleanuper.Add(cleanup)
 			if err != nil {

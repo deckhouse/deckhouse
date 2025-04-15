@@ -60,6 +60,7 @@
  - **[cloud-provider-vcd]** Backported a fix to `vcd-csi-plugin-legacy`. [#10776](https://github.com/deckhouse/deckhouse/pull/10776)
  - **[cloud-provider-vsphere]** CVE fix cloud-provider-vsphere. [#12125](https://github.com/deckhouse/deckhouse/pull/12125)
  - **[cloud-provider-vsphere]** Bump go, use images, src-artifact. [#11628](https://github.com/deckhouse/deckhouse/pull/11628)
+ - **[cloud-provider-zvirt]** fix invalid zvirt csi template [#12961](https://github.com/deckhouse/deckhouse/pull/12961)
  - **[cloud-provider-zvirt]** fix zvirt-csi-driver patching (token refresh fix patch) [#12885](https://github.com/deckhouse/deckhouse/pull/12885)
  - **[cloud-provider-zvirt]** Removed `DisksMeta` from `cloud-data-discoverer` to prevent possible crashes. [#11511](https://github.com/deckhouse/deckhouse/pull/11511)
  - **[cloud-provider-zvirt]** Fixed a bug that prevented zVirt SDK API token from refreshing upon expiration. [#11040](https://github.com/deckhouse/deckhouse/pull/11040)

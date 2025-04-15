@@ -143,6 +143,26 @@
           "rel": "doc"
         }
       ]
+    },
+    {
+      "title": "Code",
+      "url": "/products/code/",
+      "target": "",
+      "rel": "",
+      "items": [
+        {
+          "title": "Learn more",
+          "url": "/products/code/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Documentation",
+          "url": "/products/code/documentation/",
+          "target": "",
+          "rel": "doc"
+        }
+      ]
     }
   ],
   "ru": [
@@ -305,6 +325,40 @@
           "url": "/products/kubernetes-platform/modules/delivery-kit/stable/",
           "target": "",
           "rel": "doc"
+        }
+      ]
+    },
+    {
+      "title": "Code",
+      "url": "/products/code/",
+      "target": "",
+      "rel": "",
+      "items": [
+        {
+          "title": "О продукте",
+          "url": "/products/code/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Документация",
+          "url": "/products/code/documentation/",
+          "target": "",
+          "rel": "doc"
+        }
+      ]
+    },
+    {
+      "title": "Prom++",
+      "url": "/products/prompp/",
+      "target": "",
+      "rel": "",
+      "items": [
+        {
+          "title": "О продукте",
+          "url": "/products/prompp/",
+          "target": "",
+          "rel": ""
         }
       ]
     }
