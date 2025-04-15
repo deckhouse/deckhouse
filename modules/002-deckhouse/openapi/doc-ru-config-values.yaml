@@ -39,8 +39,9 @@ properties:
 
           Выбранный режим обновления применяется **только** при установленном [канале обновлений](#parameters-releasechannel).
       disruptionApprovalMode:
+        x-doc-deprecated: true
         description: |
-          Режим обновления версий Deckhouse, имеющих изменения с потенциальным прерыванием трафика (disruptions):
+          Режим обновления версий Deckhouse, имеющих изменения, которые могут привести к кратковременному простою в работе системных компонентов:
           - `Auto` — автоматический режим обновления.
           - `Manual` — ручной режим обновления. Для применения обновления нужно установить аннотацию `release.deckhouse.io/disruption-approved=true` на соответствующий ресурс [DeckhouseRelease](../../cr.html#deckhouserelease).
       windows:

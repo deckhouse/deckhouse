@@ -14,7 +14,7 @@ title: "Модуль deckhouse: примеры конфигурации"
 
 Управлять временными окнами, когда Deckhouse будет устанавливать обновления автоматически, можно следующими способами:
 - в параметре [update.windows](configuration.html#parameters-update-windows) ModuleConfig `deckhouse`, для общего управления обновлениями;
-- в параметрах [disruptions.automatic.windows](../node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-windows) и [disruptions.rollingUpdate.windows](../node-manager/cr.html#nodegroup-v1-spec-disruptions-rollingupdate-windows) NodeGroup, для управления обновлениями с потенциальным прерыванием трафика (disruption updates).
+- в параметрах [disruptions.automatic.windows](../node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-windows) и [disruptions.rollingUpdate.windows](../node-manager/cr.html#nodegroup-v1-spec-disruptions-rollingupdate-windows) NodeGroup, для управления обновлениями, которые могут привести к кратковременному простою в работе системных компонентов.
 
 Пример настройки двух ежедневных окон обновлений: с 8:00 до 10:00 и c 20:00 до 22:00 (UTC):
 
@@ -70,23 +70,7 @@ spec:
   kubectl patch DeckhouseRelease v1.66.2 --type=merge -p='{"approved": true}'
   ```
 
-- Включено подтверждение обновлений с потенциальным прерыванием трафика (disruption updates).
-
-  Это значит, что параметр [update.disruptionApprovalMode](configuration.html#parameters-update-disruptionapprovalmode) ModuleConfig `deckhouse` установлен в `Manual`. Вы можете использовать следующую команду, чтобы установить его в `Manual`:
-  
-  ```shell
-  kubectl patch mc deckhouse --type=merge -p='{"spec":{"update":{"disruptionApprovalMode":"Manual"}}}'
-  ```
-
-  Для подтверждения обновления с потенциальным прерыванием трафика (disruption update) необходимо установить аннотацию `release.deckhouse.io/disruption-approved=true` на соответствующем ресурсе [DeckhouseRelease](../../cr.html#deckhouserelease).
-  
-  Пример:
-
-  ```shell
-  kubectl annotate DeckhouseRelease v1.66.2 release.deckhouse.io/disruption-approved=true
-  ```
-  
-- Если для какой-либо группы узлов отключено автоматическое применение обновлений с потенциальным прерыванием трафика (disruption updates).
+- Если для какой-либо группы узлов отключено автоматическое применение обновлений, которые могут привести к кратковременному простою в работе системных компонентов.
 
   Это значит, что у NodeGroup, соответствующего группе узлов, установлен параметр [spec.disruptions.approvalMode](../node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode) в `Manual`.
 
