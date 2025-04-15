@@ -111,7 +111,6 @@ var _ = Describe("Modules :: monitoring-ping :: hooks :: node_list", func() {
 
 	Context("List nodes", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
 			f.BindingContexts.Set(f.KubeStateSet(ctxNode1 + ctxNode2 + ctxNode3NoAddress + ctxNode4Unschedulable + ctxNamespace + ctxConfigMap))
 			f.RunGoHook()
 		})

@@ -24,7 +24,7 @@ import (
 )
 
 func (p *Pinger) RunWithContext(ctx context.Context) error {
-	conn, err := newSocket()
+	conn, err := newSocket(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to create socket: %w", err)
 	}
@@ -74,16 +74,26 @@ func (p *Pinger) RunWithContext(ctx context.Context) error {
 	}
 }
 
+// StatsForHost returns the number of sent and received ICMP packets for a given host.
+// The host can be either an IP address (e.g., "8.8.8.8") or a domain name (e.g., "google.com").
+//
+// If the host is an IP address, the stats are returned directly from the maps.
+// If the host is a domain name (that resolved to multiple IPs), it aggregates `sentCount`
+// across all IPs that were resolved for this domain.
 func (p *Pinger) StatsForHost(host string) (sent int, recv int) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
+	// Fast path: if host is an IP that was pinged directly, return its stats
 	if sentVal, ok := p.sentCount[host]; ok {
 		sent = sentVal
 		recv = p.recvCount[host]
 	} else {
+		// Otherwise, assume `host` is a domain name (e.g., "vk.com")
+		// and aggregate `sentCount` for all IPs that map to this domain name
+		recv = p.recvCount[host] // recv count is still stored by name
 
-		recv = p.recvCount[host]
+		// Walk through the hostMap and find all IPs mapped to this name
 		for ip, name := range p.hostMap {
 			if name == host {
 				sent += p.sentCount[ip]
