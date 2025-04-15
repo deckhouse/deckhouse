@@ -8,7 +8,7 @@ description: |-
   for the MySQL database.
 ---
 
-# MySQL/MariaDB database secrets engine
+## MySQL/MariaDB database secrets engine
 
 {% alert level="warning" %}
 

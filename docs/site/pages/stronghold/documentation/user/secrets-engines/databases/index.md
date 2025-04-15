@@ -9,7 +9,7 @@ description: |-
   framework for running custom database types for extendability.
 ---
 
-# Databases
+## Databases
 
 The database secrets engine generates database credentials dynamically based on
 configured roles. It works with a number of different databases through a plugin
@@ -118,6 +118,7 @@ management tool.
    users.
 
 {% endalert %}
+
 1. Configure a role that maps a name in Stronghold to a set of creation statements to
    create the database credential:
 

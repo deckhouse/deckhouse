@@ -433,7 +433,7 @@ $ curl \
     ${STRONGHOLD_ADDR}/v1/auth/approle/role/application1/secret-id/destroy
 ```
 
-#### Чтение SecretID AppRole
+#### SecretID AppRole
 
 Выводит свойства SecretID AppRole.
 

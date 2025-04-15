@@ -4,7 +4,7 @@ permalink: ru/stronghold/documentation/user/secrets-engines/pki/overview.html
 lang: ru
 ---
 
-# Механизм секретов PKI (Публичной инфраструктуры ключей / Public Key Infrastructure)
+## Механизм секретов PKI (Публичной инфраструктуры ключей / Public Key Infrastructure)
 
 Когда этот модуль секретов включен, экземпляр Stronghold может работать в качестве сервера сертификационного центра (CA), генерируя динамические корневые и промежуточные сертификаты, а также подписывая сертификаты по запросу.
 

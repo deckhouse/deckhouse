@@ -5,7 +5,7 @@ lang: en
 description: The PKI secrets engine for Stronghold generates TLS certificates.
 ---
 
-# PKI secrets engine - rotation primitives
+## PKI secrets engine - rotation primitives
 
 Stronghold's PKI Secrets Engine supports multiple issuers in a single mount point.
 By using the certificate types below, rotation can be accomplished in various
@@ -186,7 +186,7 @@ cross-signed as this is more common.
 
 ##### Process flow
 
-```
+```console
         -------------------
        | generate key pair | -------------> ...
         -------------------                 ...
@@ -214,7 +214,7 @@ by many different root certificates if necessary and desired.
 
 ##### Certificate hierarchy
 
-```
+```console
  --------                                            --------
 | root A |                                          | root B |
  --------                                            --------

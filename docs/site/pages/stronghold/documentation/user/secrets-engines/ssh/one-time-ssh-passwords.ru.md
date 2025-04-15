@@ -8,7 +8,7 @@ description: |-
   host using a helper command on the remote host to perform verification.
 ---
 
-# One-Time SSH passwords
+## One-Time SSH passwords
 
 The One-Time SSH Password (OTP) SSH secrets engine type allows an Stronghold server to
 issue a One-Time Password every time a client wants to SSH into a remote host

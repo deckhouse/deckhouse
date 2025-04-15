@@ -8,7 +8,7 @@ description: |-
   roles for the PostgreSQL database.
 ---
 
-# PostgreSQL database secrets engine
+## PostgreSQL database secrets engine
 
 PostgreSQL is one of the supported plugins for the database secrets engine. This
 plugin generates database credentials dynamically based on configured roles for

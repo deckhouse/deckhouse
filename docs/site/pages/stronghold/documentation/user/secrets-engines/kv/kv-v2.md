@@ -299,7 +299,7 @@ real path).
    version          3
    ```
 
-2. Reading after a patch will return the newest version of the data in which
+1. Reading after a patch will return the newest version of the data in which
    only the specified fields were updated:
 
    ```shell-session
@@ -320,7 +320,7 @@ real path).
    bar         bbb
    ```
 
-3. Previous versions can be accessed with the `-version` flag:
+1. Previous versions can be accessed with the `-version` flag:
 
    ```shell-session
    $ d8 stronghold kv get -mount=secret -version=1 my-secret

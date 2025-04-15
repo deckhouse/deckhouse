@@ -5,7 +5,7 @@ lang: en
 description: The PKI secrets engine for Stronghold generates TLS certificates.
 ---
 
-# PKI secrets engine - considerations
+## PKI secrets engine - considerations
 
 To successfully deploy this secrets engine, there are a number of important
 considerations to be aware of, as well as some preparatory steps that should be
@@ -718,8 +718,8 @@ We suggest the following personas:
    subsystem; manages issuers and key material.
 - _Agent_; a semi-privileged user that manages roles and handles
    revocation on behalf of an operator; may also handle delegated
-   issuance. This may also be called an _administrator_ or *role
-   manager*.
+   issuance. This may also be called an _administrator_ or _role
+   manager_.
 - _Advanced_; potentially a power-user or service that has access to
    additional issuance APIs.
 - _Requester_; a low-level user or service that simply requests certificates.

@@ -264,8 +264,8 @@ This maps the LDAP group "scient
 ## User Lockout
 
 If a user repeatedly provides incorrect credentials, Stronghold will temporarily stop attempting to verify the credentials and will immediately return an access denied error instead. We refer to this behavior as "user lockout" (`user_lockout`). The duration for which the user remains locked out is called the "lockout duration" (`lockout_duration`). The user will be able to log in again after this period expires.
-The number of failed login attempts that trigger a lockout is called the "lockout threshold" (`lockout_threshold`). СThe lockout threshold counter is reset after a few minutes without login attempts or after a successful login.
-The period after which the counter is reset in the absence of login attempts is called the "lockout counter reset" (`lockout_counter_reset`). ЭThis mechanism helps prevent password guessing attacks.
+The number of failed login attempts that trigger a lockout is called the "lockout threshold" (`lockout_threshold`). The lockout threshold counter is reset after a few minutes without login attempts or after a successful login.
+The period after which the counter is reset in the absence of login attempts is called the "lockout counter reset" (`lockout_counter_reset`). This mechanism helps prevent password guessing attacks.
 
 The user lockout feature is enabled by default. Default values:
 

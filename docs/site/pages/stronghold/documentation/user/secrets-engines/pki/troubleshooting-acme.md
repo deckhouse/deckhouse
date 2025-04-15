@@ -5,7 +5,7 @@ lang: en
 description: Troubleshoot problems with ACME clients and Stronghold PKI Secrets Engine's ACME server.
 ---
 
-# Troubleshoot PKI Secrets Engine and ACME
+## Troubleshoot PKI Secrets Engine and ACME
 
 Solve common problems related to ACME client integration with Stronghold PKI
 Secrets Engine's ACME server.
