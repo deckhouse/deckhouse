@@ -9,7 +9,7 @@ Authentication is the process of verifying a user's identity. In the Deckhouse K
 
 Authentication in DKP is based on a federated OIDC provider. You can learn more about the authentication architecture in DKP in the [Architecture](#TODO---link-to-authentication-architecture) section.
 
-At the core of DKP's authentication mechanism is the federated OpenID Connect provider `Dex`. Depending on the DKP configuration, authentication can use either the [internal user database](#local-authentication) (local authentication) or [external identity providers](#integration-with-external-auth-providers). Connecting an external identity provider allows the use of existing credentials (e.g., LDAP, GitLab, GitHub, etc.) to access the system. It also enables the use of a single set of credentials to authenticate across multiple DKP clusters.
+At the core of DKP's authentication mechanism is the federated OpenID Connect provider `Dex`. Depending on the DKP configuration, authentication can use either the [internal user database](#local-authentication) (local authentication) or [external identity providers](#integration-with-external-authentication-providers). Connecting an external identity provider allows the use of existing credentials (e.g., LDAP, GitLab, GitHub, etc.) to access the system. It also enables the use of a single set of credentials to authenticate across multiple DKP clusters.
 
 From the perspective of a cluster user or application developer, the way authentication is configured in DKP does not matter — the authentication interface and methods for enabling authentication in an application are the same.
 
@@ -17,7 +17,7 @@ DKP allows you to:
 
 - Authenticate using local (static) [users and groups](#local-authentication) created in the cluster;
 - [Integrate](#integration-with-external-auth-providers) with external identity systems;
-- Enable [authentication in any web application](#generic-integration-scheme) running in the cluster;
+- Enable [authentication in any web application](#general-integration-scheme) running in the cluster;
 - Provide [authenticated access to the Kubernetes API](#accessing-the-kubernetes-api-via-load-balancer) via a load balancer.
 
 ## Accessing the Kubernetes API via load balancer
@@ -99,26 +99,22 @@ DKP supports integration with the following external providers and authenticatio
 Password security policies (such as complexity requirements, expiration, history, two-factor authentication, etc.) are fully managed by the external authentication provider. Deckhouse does not manage passwords and does not interfere with provider-side policy enforcement.
 {% endalert %}
 
-### General integration flow
+### General integration scheme
 
 1. Create an OAuth application with your authentication provider:
    - Specify the Redirect URI in the form of `https://dex.<publicDomainTemplate>/callback`;
    - Obtain the `clientID` and `clientSecret`.
 
-     {% alert level="warning" %}
-     When specifying the Redirect URI, substitute the actual `publicDomainTemplate` value without `%s`.  
+     > **Warning**. When specifying the Redirect URI, substitute the actual `publicDomainTemplate` value without `%s`.  
      For example, if `publicDomainTemplate: '%s.sandbox1.deckhouse-docs.flant.com'` is set,  
      the actual URI would be `https://dex.sandbox20.deckhouse-docs.flant.com/callback`.
      {% endalert %}
 
-     {% alert level="info" %}
-     You can find the Dex address (URI) using the following command:
+     > You can find the Dex address (URI) using the following command:
 
-     ```console
-     kubectl -n d8-user-authn get ingress dex -o jsonpath="{.spec.rules[*].host}"
-     ```
-
-     {% endalert %}
+       ```console
+       kubectl -n d8-user-authn get ingress dex -o jsonpath="{.spec.rules[*].host}"
+       ```
 
 1. Create a DexProvider resource based on the specifics of your chosen provider.
 1. Enable the `user-authn` module (if it is not already enabled).
@@ -178,11 +174,7 @@ Password security policies (such as complexity requirements, expiration, history
 
 ### OIDC (OpenID Connect) integration
 
-Authentication via an OIDC provider requires client registration (or application creation). Follow your provider’s documentation for this process — for example:  
-[Okta](https://help.okta.com/en-us/Content/Topics/Apps/Apps_App_Integration_Wizard_OIDC.htm),  
-[Keycloak](https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide),  
-[Gluu](https://gluu.org/docs/gluu-server/4.4/admin-guide/openid-connect/#manual-client-registration), or  
-[Blitz](https://docs.identityblitz.ru/latest/integration-guide/oidc-app-enrollment.html).
+Authentication via an OIDC provider requires client registration (or application creation). Follow your provider’s documentation for this process — for example [Okta](https://help.okta.com/en-us/Content/Topics/Apps/Apps_App_Integration_Wizard_OIDC.htm), [Keycloak](https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide), [Gluu](https://gluu.org/docs/gluu-server/4.4/admin-guide/openid-connect/#manual-client-registration), or [Blitz](https://docs.identityblitz.ru/latest/integration-guide/oidc-app-enrollment.html).
 
 Specify the obtained `clientID` and `clientSecret` in the DexProvider resource.
 
@@ -210,7 +202,7 @@ After selecting a `realm` for configuration, adding a user under [Users](https:/
 - In the previously created client, link this scope via the [Client scopes tab](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) (Clients → Client details → Client Scopes → Add client scope).
 - In the client configuration fields "Valid redirect URIs", "Valid post logout redirect URIs", and "Web origins", specify:  
   `https://dex.<publicDomainTemplate>/*`,  
-  where `publicDomainTemplate` refers to the [DNS name template](https://deckhouse.io/documentation/v1/modules/040-deckhouse-configure-global/#parameters-modules-publicdomaintemplate) of your cluster as defined in the `global` module.
+  where `publicDomainTemplate` refers to the DNS name template of your cluster as defined in the `global` module.
 
 Example DexProvider configuration for integration with Keycloak:
 
