@@ -173,7 +173,7 @@
         To switch the module back to normal mode, edit the corresponding ModuleConfig resource with the following command:
         
         ```bash
-        kubectl patch moduleconfig {{ $labels.name }} --type=json -p='[{"op": "remove", "path": "/spec/maintenance"}]'
+        kubectl patch moduleconfig {{ $labels.moduleName }} --type=json -p='[{"op": "remove", "path": "/spec/maintenance"}]'
         ```
       
   - alert: DeckhouseReleaseNotificationNotSent
