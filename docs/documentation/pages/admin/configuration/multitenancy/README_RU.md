@@ -1,11 +1,11 @@
 ---
-title: Мультенантность
-permalink: ru/admin/multitenancy-admin.html
-description: Мультенантность
+title: Мультитенантность
+permalink: ru/admin/multitenancy.html
+description: Мультитенантность
 lang: ru
 ---
 
-Мультенантность — это возможность создавать в кластере Kubernetes изолированные окружения (проекты). Проекты похожи на пространства имен (Namespace), но имеют больше возможностей. Пространства имен используются только для логического разделения ресурсов в Kubernetes, и, например, не ограничивают сетевое взаимодействие, потребление ресурсов подами и возможности монтирования директории хоста. Такие особенности пространств имен не полностью соответствуют современным требованиям к разработке. По умолчанию для пространств имен также не включена сборка логов, аудит и сканирование на уязвимости.
+Мультитенантность — это возможность создавать в кластере Kubernetes изолированные окружения (проекты). Проекты похожи на пространства имен (Namespace), но имеют больше возможностей. Пространства имен используются только для логического разделения ресурсов в Kubernetes, и, например, не ограничивают сетевое взаимодействие, потребление ресурсов подами и возможности монтирования директории хоста. Такие особенности пространств имен не полностью соответствуют современным требованиям к разработке. По умолчанию для пространств имен также не включена сборка логов, аудит и сканирование на уязвимости.
 
 Использование проектов позволяет решить эти проблемы и имеет следующие преимущества:
 
@@ -35,20 +35,20 @@ lang: ru
   * выбор профиля безопасности;
   * настройка администраторов проекта.
 
-    Описание шаблона [в GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/src/default/default.yaml).
+    Описание шаблона [в GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/src/templates/default.yaml).
 
 - `secure` — включает все возможности шаблона `default`, а также дополнительные функции:
   * настройка допустимых для проекта UID/GID;
   * правила аудита обращения Linux-пользователей проекта к ядру;
   * сканирование запускаемых образов контейнеров на наличие известных уязвимостей (CVE).
 
-  Описание шаблона [в GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/src/default/secure.yaml).
+  Описание шаблона [в GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/src/templates/secure.yaml).
 
 - `secure-with-dedicated-nodes` — включает все возможности шаблона `secure`, а также дополнительные функции:
   * определение селектора узла для всех подов в проекте: если под создан, селектор узла пода будет автоматически **заменён** на селектор узла проекта;
   * определение стандартных tolerations для всех подов в проекте: если под создан, стандартные значения tolerations **добавляются** к нему автоматически.
 
-  Описание шаблона [в GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/src/default/secure-with-dedicated-nodes.yaml).
+  Описание шаблона [в GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/src/templates/secure-with-dedicated-nodes.yaml).
 
 Чтобы перечислить все доступные параметры для шаблона проекта, выполните команду:
 
@@ -87,11 +87,11 @@ kubectl get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath=
    kubectl get projecttemplates <ИМЯ_НОВОГО_ШАБЛОНА>
    ```
 
-## Создание проектов
+## Создание проекта
 
 Для создания проекта используется кастомный ресурс [Project](cr.html#project) с указанием имени шаблона проекта в поле [.spec.projectTemplateName](cr.html#project-v1alpha2-spec-projecttemplatename).
-В параметре [.spec.parameters](cr.html#project-v1alpha2-spec-parameters) указывается значения параметров для секции [.spec.parametersSchema.openAPIV3Schema](cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) кастомного ресурса `ProjectTemplate`.
+В параметре [.spec.parameters](cr.html#project-v1alpha2-spec-parameters) указывается значения параметров для секции [.spec.parametersSchema.openAPIV3Schema](cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) кастомного ресурса ProjectTemplate.
 
 Также существует возможность автоматически создать проект из существующего пространства имён в кластере.
 
-Подробнее с созданием проектов можно ознакомиться [в разделе использования](../user/multitenancy-user.html).
+Подробнее с созданием проектов можно ознакомиться [в разделе использования](../user/multitenancy.html).
