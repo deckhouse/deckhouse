@@ -20,6 +20,7 @@ type Params struct {
 }
 
 type Inputs struct {
+	Params  Params
 	PKI     pki.State
 	Secrets secrets.State
 }

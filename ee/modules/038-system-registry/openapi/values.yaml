@@ -56,18 +56,6 @@ properties:
         type: object
         default: {}
         properties:
-          enabled:
-            type: boolean
-            default: false
-          config:
-            type: object
-            properties:
-              version:
-                type: string
-              params:
-                type: object
-                additionalProperties: true
-                x-kubernetes-preserve-unknown-fields: true
           state:
             type: object
             properties:

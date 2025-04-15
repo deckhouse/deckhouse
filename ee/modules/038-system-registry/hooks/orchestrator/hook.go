@@ -32,8 +32,39 @@ const (
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
-	Queue:        fmt.Sprintf("/modules/system-registry/submodule-%s", SubmoduleName),
+	Queue:        "/modules/system-registry/orchestrator",
 	Kubernetes: []go_hook.KubernetesConfig{
+		{
+			Name:       configSnapName,
+			ApiVersion: "v1",
+			Kind:       "Secret",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"registry-config"},
+			},
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"d8-system"},
+				},
+			},
+			FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+				var secret v1core.Secret
+
+				err := sdk.FromUnstructured(obj, &secret)
+				if err != nil {
+					return "", fmt.Errorf("failed to convert config secret to struct: %v", err)
+				}
+
+				config := Params{
+					Mode:       string(secret.Data["mode"]),
+					ImagesRepo: string(secret.Data["imagesRepo"]),
+					UserName:   string(secret.Data["username"]),
+					Password:   string(secret.Data["password"]),
+					TTL:        string(secret.Data["ttl"]),
+				}
+
+				return config, nil
+			},
+		},
 		{
 			Name:              pkiSnapName,
 			ApiVersion:        "v1",
@@ -88,22 +119,23 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 },
 	func(input *go_hook.HookInput) error {
-		moduleConfig := submodule.NewConfigAccessor[Params](input, SubmoduleName)
 		moduleState := submodule.NewStateAccessor[State](input, SubmoduleName)
-
-		config := moduleConfig.Get()
 		state := moduleState.Get()
-
-		if !config.Enabled {
-			// TODO
-			moduleState.Clear()
-			return nil
-		}
 
 		var (
 			inputs Inputs
 			err    error
 		)
+
+		inputs.Params, err = helpers.SnapshotToSingle[Params](input, configSnapName)
+		if err != nil {
+			if errors.Is(err, helpers.ErrNoSnapshot) {
+				moduleState.Clear()
+				return nil
+			}
+
+			return fmt.Errorf("get Config snapshot error: %w", err)
+		}
 
 		inputs.PKI, err = helpers.SnapshotToSingle[pki.State](input, pkiSnapName)
 		if err != nil && !errors.Is(err, helpers.ErrNoSnapshot) {
@@ -115,25 +147,24 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			return fmt.Errorf("get Secrets snapshot error: %w", err)
 		}
 
-		ready, err := process(input, config.Params, inputs, &state.Data)
-		if err != nil {
-			return fmt.Errorf("cannot process: %w", err)
-		}
-
-		hash, err := helpers.ComputeHash(inputs)
+		state.Hash, err = helpers.ComputeHash(inputs)
 		if err != nil {
 			return fmt.Errorf("cannot compute inputs hash: %w", err)
 		}
 
-		state.Ready = ready
-		state.Hash = hash
+		state.Ready, err = process(input, inputs, &state.Data)
+		if err != nil {
+			return fmt.Errorf("cannot process: %w", err)
+		}
 
 		moduleState.Set(state)
 		return nil
 	})
 
-func process(input *go_hook.HookInput, params Params, inputs Inputs, state *State) (bool, error) {
+func process(input *go_hook.HookInput, inputs Inputs, state *State) (bool, error) {
 	// TODO: this is stub code, need to write switch logic
+
+	params := inputs.Params
 
 	if params.Mode == "" {
 		params.Mode = registry_const.ModeUnmanaged
