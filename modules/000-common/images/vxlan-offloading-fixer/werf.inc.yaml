@@ -1,4 +1,3 @@
-{{- $version := "6.11" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -9,50 +8,9 @@ git:
   stageDependencies:
     install:
     - '**/*'
-shell:
-  install:
-  - cd /src
-  - git clone -b libmnl-1.0.5 --depth 1 {{ .SOURCE_REPO }}/netfilter/libmnl ./libmnl
-  - rm -r libmnl/.git
-  - git clone -b v{{ $version }} --depth 1 {{ .SOURCE_REPO }}/ethtool/ethtool.git ./ethtool
-  - rm -r ethtool/.git
----
-image: {{ .ModuleName }}/{{ .ImageName }}-ethtool-artifact
-from: {{ .Images.BASE_ALPINE }}
-final: false
-import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-  add: /src
-  to: /src
-  before: install
-  includePaths:
-  - libmnl
-  - ethtool
-mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
-shell:
-  beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache autoconf automake make libtool g++ linux-headers pkgconfig
-  setup:
-  - export PKG_CONFIG_PATH=/opt/deckhouse/bin/.libs/pkgconfig
-  - cd /src/libmnl
-  - ./autogen.sh
-  - ./configure --enable-static --libdir=/opt/deckhouse/bin/.libs
-  - make && make install
-  - cd /src/ethtool
-  - ./autogen.sh
-  - ./configure LDFLAGS=-static --libdir=/opt/deckhouse/bin/.libs
-  - make
-  - ls -la
-  - strip ./ethtool
-  - chown 64535:64535 ./ethtool
-  - chmod 0755 ./ethtool
-  - cp ./ethtool /ethtool
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -72,7 +30,7 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-ethtool-artifact
+- image: common/ethtool
   add: /ethtool
   to: /ethtool
   before: setup
