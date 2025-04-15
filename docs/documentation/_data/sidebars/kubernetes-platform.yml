@@ -366,6 +366,10 @@ entries:
                 en: Multitenancy
                 ru: Мультенантность
               url: /admin/multitenancy-admin.html
+            - title:
+                en: Backup and restore
+                ru: Резервное копирование и восстановление
+              url: /admin/configuration/backup/backup-and-restore.html  
 # ------------- Using -------------
     - title:
         en: Using
