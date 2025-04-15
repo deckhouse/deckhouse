@@ -176,7 +176,7 @@ func (nc *nodeController) SetupWithManager(mgr ctrl.Manager) error {
 		}
 
 		name := obj.GetName()
-		return name == state.GlobalSecretsName ||
+		return name == state.SecretsName ||
 			name == state.PKISecretName ||
 			name == state.UserROSecretName ||
 			name == state.UserRWSecretName ||
@@ -579,7 +579,7 @@ func (nc *nodeController) contructNodeServicesConfig(
 	userRO, userRW state.User,
 	userMirrorPuller, userMirrorPusher *state.User,
 	globalPKI state.GlobalPKI,
-	globalSecrets state.GlobalSecrets,
+	globalSecrets state.Secrets,
 	nodePKI state.NodePKI,
 	ingressPKI *state.IngressPKI,
 	mirrorerUpstreams []string,
@@ -613,7 +613,7 @@ func (nc *nodeController) contructNodeServicesConfig(
 		Config: nodeservices.Config{
 
 			Registry: nodeservices.Registry{
-				HTTPSecret: globalSecrets.HTTPSecret,
+				HTTPSecret: globalSecrets.HTTP,
 				UserRO: nodeservices.User{
 					Name:         userRO.UserName,
 					Password:     userRO.Password,
@@ -879,15 +879,15 @@ func (nc *nodeController) loadNodePKIFromConfig(
 	return ret, err
 }
 
-func (nc *nodeController) loadGlobalSecrets(ctx context.Context) (state.GlobalSecrets, error) {
+func (nc *nodeController) loadGlobalSecrets(ctx context.Context) (state.Secrets, error) {
 	var (
-		ret state.GlobalSecrets
+		ret state.Secrets
 		err error
 	)
 
 	secret := corev1.Secret{}
 	key := types.NamespacedName{
-		Name:      state.GlobalSecretsName,
+		Name:      state.SecretsName,
 		Namespace: nc.Namespace,
 	}
 

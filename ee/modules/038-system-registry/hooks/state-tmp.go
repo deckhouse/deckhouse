@@ -46,7 +46,7 @@ type registryState struct {
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
-	Queue:        "/modules/system-registry/state",
+	Queue:        "/modules/system-registry/state-tmp",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "static_pods",
@@ -79,7 +79,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion: "v1",
 			Kind:       "Secret",
 			NameSelector: &types.NameSelector{
-				MatchNames: []string{"registry-state"},
+				MatchNames: []string{"registry-state-tmp"},
 			},
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{

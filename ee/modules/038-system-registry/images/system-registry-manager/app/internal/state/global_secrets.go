@@ -13,31 +13,31 @@ import (
 )
 
 const (
-	GlobalSecretsName = "registry-secrets"
+	SecretsName = "registry-secrets"
 )
 
-type GlobalSecrets struct {
-	HTTPSecret string
+type Secrets struct {
+	HTTP string
 }
 
-func (gs *GlobalSecrets) Validate() error {
+func (gs *Secrets) Validate() error {
 	if gs == nil {
 		return ErrIsNil
 	}
 
-	if strings.TrimSpace(gs.HTTPSecret) == "" {
+	if strings.TrimSpace(gs.HTTP) == "" {
 		return fmt.Errorf("HttpSecret is empty")
 	}
 
 	return nil
 }
 
-func (gs *GlobalSecrets) DecodeSecret(secret *corev1.Secret) error {
+func (gs *Secrets) DecodeSecret(secret *corev1.Secret) error {
 	if secret == nil {
 		return ErrSecretIsNil
 	}
 
-	gs.HTTPSecret = string(secret.Data["http"])
+	gs.HTTP = string(secret.Data["http"])
 
 	return nil
 }

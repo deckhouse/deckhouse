@@ -73,4 +73,8 @@ USER deckhouse
 
 
 # Replace module helm chart
+RUN rm -r \
+  /deckhouse/modules/038-system-registry/templates \
+  /deckhouse/modules/038-system-registry/openapi
+
 COPY --from=src /artifacts/registry /deckhouse/modules/038-system-registry
