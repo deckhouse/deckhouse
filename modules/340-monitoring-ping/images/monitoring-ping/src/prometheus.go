@@ -116,7 +116,7 @@ func updateSet(sentVec, recvVec *prometheus.CounterVec, rttVec *prometheus.Count
 	minVec, maxVec, stdVec *prometheus.GaugeVec,
 	labels prometheus.Labels, rtts []float64, sent, received int) {
 
-	log.Info(fmt.Sprintf("ping sent=%d, received=%d, rtts=%v", sent, received, rtts))
+	// log.Info(fmt.Sprintf("ping sent=%d, received=%d, rtts=%v", sent, received, rtts))
 
 	sentVec.With(labels).Add(float64(sent))
 	recvVec.With(labels).Add(float64(received))

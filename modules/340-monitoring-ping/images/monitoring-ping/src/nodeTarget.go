@@ -18,24 +18,25 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
+
 	"github.com/deckhouse/deckhouse/pkg/log"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
-	"sync"
 )
 
 type NodeTracker struct {
 	sync.RWMutex
-	nodes []NodeTarget
+	nodes           []NodeTarget
 	externalTargets []ExternalTarget
 }
 
 func NewNodeTracker() *NodeTracker {
 	return &NodeTracker{
-		nodes: make([]NodeTarget, 0),
+		nodes:           make([]NodeTarget, 0),
 		externalTargets: make([]ExternalTarget, 0),
 	}
 }
@@ -66,12 +67,12 @@ func (nt *NodeTracker) Start(ctx context.Context, internalCM, externalCM, namesp
 
 func (t *InternalTargets) Update(nt *NodeTracker) {
 	nt.nodes = t.Cluster
-	log.Info("Updated internal targets: %d nodes", len(t.Cluster))
+	log.Info(fmt.Sprintf("Updated internal targets: %d nodes", len(t.Cluster)))
 }
 
 func (t *ExternalTargets) Update(nt *NodeTracker) {
 	nt.externalTargets = t.Targets
-	log.Info("Updated external targets: %d hosts", len(t.Targets))
+	log.Info(fmt.Sprintf("Updated external targets: %d hosts", len(t.Targets)))
 }
 
 func (nt *NodeTracker) updateTargets(jsonData string, target Targets) {
@@ -142,4 +143,3 @@ func createInformer(cfgMapName, namespace string, handler func(interface{}, bool
 
 	return informer
 }
-

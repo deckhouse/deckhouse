@@ -15,8 +15,8 @@
 package fastping
 
 import (
-	"fmt"
 	"net"
+	"slices"
 	"sync"
 	"time"
 
@@ -64,10 +64,10 @@ func NewPinger(hosts []string, count int, interval, timeout time.Duration) *Ping
 				log.Warn("IP %s already mapped to %s, adding for %s", ipStr, existingHost, host)
 			}
 			hostMap[ipStr] = host
-			if !contains(ipHosts, ipStr) {
+			if !slices.Contains(ipHosts, ipStr) {
 				ipHosts = append(ipHosts, ipStr)
 			}
-			log.Info(fmt.Sprintf("mapped host %s to IP %s", host, ipStr))
+			// log.Info(fmt.Sprintf("mapped host %s to IP %s", host, ipStr))
 		}
 	}
 
@@ -80,13 +80,4 @@ func NewPinger(hosts []string, count int, interval, timeout time.Duration) *Ping
 		sentCount: make(map[string]int),
 		recvCount: make(map[string]int),
 	}
-}
-
-func contains(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
-	}
-	return false
 }

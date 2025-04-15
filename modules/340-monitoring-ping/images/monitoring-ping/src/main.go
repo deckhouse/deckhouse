@@ -25,6 +25,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+var (
+	countPings int = 30 // Count pings on every cycle
+)
+
 func main() {
 
 	reg := prometheus.NewRegistry()
@@ -54,18 +58,18 @@ func main() {
 	go func() {
 		defer wg.Done()
 
-		ticker := time.NewTicker(1 * time.Second)
+		ticker := time.NewTicker(time.Duration(countPings) * time.Second)
 		defer ticker.Stop()
 
 		for {
 			select {
-			case <-ticker.C:
-				clusterTargets := nodeTracker.ListClusterTargets()
-				externalTargets := nodeTracker.ListExternalTargets()
-				PingAll(ctx, clusterTargets, externalTargets, metrics)
 			case <-ctx.Done():
 				log.Info("ping loop stopped")
 				return
+			default:
+				clusterTargets := nodeTracker.ListClusterTargets()
+				externalTargets := nodeTracker.ListExternalTargets()
+				PingAll(ctx, clusterTargets, externalTargets, countPings, metrics)
 			}
 		}
 	}()

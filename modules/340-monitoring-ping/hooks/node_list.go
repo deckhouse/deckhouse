@@ -74,8 +74,7 @@ func getConfigMap(obj *unstructured.Unstructured) (go_hook.FilterResult, error) 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Schedule: []go_hook.ScheduleConfig{
 		{
-			Name:    "node_list",
-			Crontab: "* * * * *",
+			Name: "node_list",
 		},
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
