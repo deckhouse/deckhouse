@@ -646,10 +646,10 @@ entries:
             ru: Консольные утилиты
           url: /reference/console-utilities.html
 # ------------- Versions -------------
-    - title:
-        en: DKP versions overview
-        ru: TODO Обзор версий DKP
-      url: /versions/versions-overview.html
+        - title:
+            en: Release notes
+            ru: Обзор изменений
+          url: /reference/release-notes/
 # ------------- FAQ -------------
     - title:
         en: FAQ
