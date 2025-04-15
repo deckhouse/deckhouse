@@ -1672,16 +1672,16 @@ alerts:
       module: istio
       edition: ee
       description: |
-        The Istio control plane instance `{{$labels.istiod}}` cannot synchronize with remote cluster `{{$labels.cluster_id}}`.
+        The Istio control plane instance `{{$labels.istiod}}` cannot synchronize with the remote cluster `{{$labels.cluster_id}}`.
 
-        This usually means:
+        Possible causes:
 
-        - Remote cluster is offline
-        - Remote API endpoint is not reachable
-        - Remote ServiceAccount token is invalid or expired
-        - TLS/certificate issue between clusters
+        - The remote cluster is offline.
+        - The remote API endpoint is not reachable.
+        - The remote ServiceAccount token is invalid or expired.
+        - There is a TLS or certificate issue between the clusters.
       summary: |
-        Istio remote cluster {{$labels.cluster_id}} is not synced.
+        Istio remote cluster {{$labels.cluster_id}} is not synchronized.
       severity: "4"
       markupFormat: markdown
     - name: D8IstioVersionIsIncompatibleWithK8sVersion
