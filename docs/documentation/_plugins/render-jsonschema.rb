@@ -79,6 +79,20 @@ module JSONSchemaRenderer
         result
     end
 
+    def get_i18n_parameter(name, primaryLanguage, fallbackLanguage, source=nil)
+        if get_hash_value(primaryLanguage, name) then
+            result = primaryLanguage[name]
+        elsif get_hash_value(fallbackLanguage, name) then
+            result = fallbackLanguage[name]
+        elsif get_hash_value(source, name) then
+            result = source[name]
+        else
+            result = ''
+        end
+
+        result
+    end
+
     def convertAPIVersionChannelToInt(channel)
       return 0 if channel == 'alpha'
       return 1 if channel == 'beta'
@@ -365,7 +379,25 @@ module JSONSchemaRenderer
             if name == "" and parent['type'] == 'array'
                 enum_result += ' ' + get_i18n_term("allowed_values_of_array")
             end
-            result.push(enum_result + ':</span> <span class="resources__attrs_content">'+ [*attributes['enum']].map { |e| "<code>#{e}</code>" }.join(', ') + '</span></p>')
+            enum_result += ':</span> <span class="resources__attrs_content">'
+
+            if attributes.has_key?('x-enum-descriptions') && attributes['x-enum-descriptions'].is_a?(Array) &&
+               attributes['x-enum-descriptions'].size == attributes['enum'].size
+                # Render enum values matched with descriptions
+                enum_values = []
+                descriptions = get_i18n_parameter('x-enum-descriptions', primaryLanguage, fallbackLanguage, attributes)
+                attributes['enum'].each_with_index do |enum_value, index|
+                    description = descriptions[index]
+                    enum_values << "<code>#{enum_value}</code> — #{description}"
+                end
+                enum_result += enum_values.join('<br/>')
+            else
+                # If no descriptions, render just enum values
+                enum_result += [*attributes['enum']].map { |e| "<code>#{e}</code>" }.join(', ')
+            end
+
+            enum_result += '</span></p>'
+            result.push(enum_result)
         end
 
         if attributes.has_key?('pattern')
