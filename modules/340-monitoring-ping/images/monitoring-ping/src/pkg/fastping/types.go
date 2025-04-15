@@ -15,7 +15,6 @@
 package fastping
 
 import (
-	"fmt"
 	"net"
 	"sync"
 	"time"
@@ -67,7 +66,7 @@ func NewPinger(hosts []string, count int, interval, timeout time.Duration) *Ping
 			if !contains(ipHosts, ipStr) {
 				ipHosts = append(ipHosts, ipStr)
 			}
-			log.Info(fmt.Sprintf("mapped host %s to IP %s", host, ipStr))
+			// log.Info(fmt.Sprintf("mapped host %s to IP %s", host, ipStr))
 		}
 	}
 

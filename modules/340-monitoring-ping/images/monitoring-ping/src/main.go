@@ -54,7 +54,7 @@ func main() {
 	go func() {
 		defer wg.Done()
 
-		ticker := time.NewTicker(1 * time.Second)
+		ticker := time.NewTicker(10 * time.Second)
 		defer ticker.Stop()
 
 		for {

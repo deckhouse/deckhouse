@@ -18,11 +18,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 	fastping "ping/pkg/fastping"
 	"time"
-
-	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // PingAll sends ICMP pings to all cluster and external targets in batch mode.
@@ -32,6 +29,8 @@ func PingAll(ctx context.Context, cluster []NodeTarget, external []ExternalTarge
 	var allHosts []string
 	hostTypes := make(map[string]string) // host -> "internal" / "external"
 	nameMap := make(map[string]string)   // host -> name
+	fmt.Printf("%d count nodes", len(cluster))
+	fmt.Printf("%d count external", len(external))
 
 	for _, node := range cluster {
 		allHosts = append(allHosts, node.IP)
@@ -45,16 +44,8 @@ func PingAll(ctx context.Context, cluster []NodeTarget, external []ExternalTarge
 		nameMap[ext.Host] = GetTargetName(ext.Name, ext.Host)
 	}
 
-	log.Info(fmt.Sprintf("Pinging hosts: %v", allHosts))
-	// Verify reachability
-	for _, host := range allHosts {
-		if _, err := net.LookupIP(host); err != nil {
-			log.Warn(fmt.Sprintf("host %s may be unreachable: %v", host, err))
-		}
-	}
-
 	// Initialize fastping with list of hosts
-	fp := fastping.NewPinger(allHosts, 30, time.Second, 30*time.Second)
+	fp := fastping.NewPinger(allHosts, 10, time.Second, 30*time.Second)
 
 	// Collect RTTs per host
 	rttsMap := make(map[string][]float64)
@@ -62,7 +53,7 @@ func PingAll(ctx context.Context, cluster []NodeTarget, external []ExternalTarge
 	// Callback for each received packet
 	fp.OnRecv = func(pkt fastping.PacketResult) {
 		host := pkt.Host
-		rttsMap[host] = append(rttsMap[host], float64(pkt.RTT.Milliseconds()))
+		rttsMap[host] = append(rttsMap[host], float64(pkt.RTT.Seconds()*1000))
 	}
 
 	// Run pinger
@@ -75,7 +66,7 @@ func PingAll(ctx context.Context, cluster []NodeTarget, external []ExternalTarge
 	for _, host := range allHosts {
 		rtts := rttsMap[host]
 		sent, recv := fp.StatsForHost(host)
-		log.Info(fmt.Sprintf("Metrics host %s, sent: %d, recv: %d", host, sent, recv))
+		// log.Info(fmt.Sprintf("Metrics host %s, sent: %d, recv: %d", host, sent, recv))
 
 		name := nameMap[host]
 

@@ -24,7 +24,7 @@ import (
 )
 
 func (p *Pinger) RunWithContext(ctx context.Context) error {
-	conn, err := newSocket()
+	conn, err := newSocket(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to create socket: %w", err)
 	}
