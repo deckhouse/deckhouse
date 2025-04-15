@@ -26,10 +26,15 @@ ctr_import_image() {
 
 post-install-import() {
   local PACKAGE="$1"
+  
   if [[ "${PACKAGE}" == "pause" ]]; then
     ctr_import_image {{ $sandbox_image }} "/opt/deckhouse/images/pause.tar"
-  elif [[ "${PACKAGE}" == "kubernetes-api-proxy" ]]; then
+    return 0
+  fi
+
+  if [[ "${PACKAGE}" == "kubernetes-api-proxy" ]]; then
     ctr_import_image {{ $kubernetes_api_proxy_image }} "/opt/deckhouse/images/kubernetes-api-proxy.tar"
+    return 0
   fi
 }
 
