@@ -180,9 +180,10 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		log.WarnLn("--resources flag is deprecated. Please use --config flag multiple repeatedly for logical resources separation")
 		app.ConfigPaths = append(app.ConfigPaths, app.ResourcesPath)
 	}
-
-	log.WarnF("config paths in bootstrap: %v", b.ConfigPaths)
-	log.WarnF("config paths in app.ConfigPaths: %v", app.ConfigPaths)
+	log.DebugF("Config paths: %v\n", app.ConfigPaths)
+	log.InfoF("Config paths: %v\n", app.ConfigPaths)
+	log.WarnF("Config paths: %v\n", app.ConfigPaths)
+	log.ErrorF("Config paths: %v\n", app.ConfigPaths)
 
 	// first, parse and check cluster config
 	metaConfig, err := config.LoadConfigFromFile(app.ConfigPaths)
