@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package orchestrator
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -17,15 +18,16 @@ import (
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers/submodule"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/pki"
-	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/secrets"
+	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/secrets"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/users"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
 )
 
 const (
-	configSnapName = "config"
-	pkiSnapName    = "pki"
-	SubmoduleName  = "orchestrator"
+	configSnapName  = "config"
+	pkiSnapName     = "pki"
+	secretsSnapName = "secrets"
+	SubmoduleName   = "orchestrator"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -58,6 +60,31 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				return ret, nil
 			},
 		},
+		{
+			Name:              secretsSnapName,
+			ApiVersion:        "v1",
+			Kind:              "Secret",
+			NamespaceSelector: helpers.NamespaceSelector,
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{
+					"registry-secrets",
+				},
+			},
+			FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+				var secret v1core.Secret
+
+				err := sdk.FromUnstructured(obj, &secret)
+				if err != nil {
+					return "", fmt.Errorf("failed to convert secret \"%v\" to struct: %v", obj.GetName(), err)
+				}
+
+				ret := secrets.State{
+					HTTP: string(secret.Data["http"]),
+				}
+
+				return ret, nil
+			},
+		},
 	},
 },
 	func(input *go_hook.HookInput) error {
@@ -78,9 +105,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			err    error
 		)
 
-		if inputs.PKI, err = helpers.SnapshotToSingle[pki.State](input, pkiSnapName); err != nil {
-			// TODO: remove
-			input.Logger.Warn("Get PKI snapshot error", "error", err)
+		inputs.PKI, err = helpers.SnapshotToSingle[pki.State](input, pkiSnapName)
+		if err != nil && !errors.Is(err, helpers.ErrNoSnapshot) {
+			return fmt.Errorf("get PKI snapshot error: %w", err)
+		}
+
+		inputs.Secrets, err = helpers.SnapshotToSingle[secrets.State](input, secretsSnapName)
+		if err != nil && !errors.Is(err, helpers.ErrNoSnapshot) {
+			return fmt.Errorf("get Secrets snapshot error: %w", err)
 		}
 
 		ready, err := process(input, config.Params, inputs, &state.Data)
@@ -146,11 +178,10 @@ func process(input *go_hook.HookInput, params Params, inputs Inputs, state *Stat
 		secretsEnabled = true
 	}
 
-	secretsConfig := submodule.NewConfigAccessor[secrets.Params](input, secrets.SubmoduleName)
 	usersConfig := submodule.NewConfigAccessor[users.Params](input, users.SubmoduleName)
 
 	if pkiEnabled {
-		if state.PKI == nil || state.PKI.CA == nil {
+		if state.PKI == nil {
 			state.PKI = &inputs.PKI
 		}
 
@@ -163,13 +194,16 @@ func process(input *go_hook.HookInput, params Params, inputs Inputs, state *Stat
 	}
 
 	if secretsEnabled {
-		state.SecretsVersion, err = secretsConfig.Set(secrets.Params{})
+		if state.Secrets == nil {
+			state.Secrets = &inputs.Secrets
+		}
+
+		err := state.Secrets.Process()
 		if err != nil {
-			return false, fmt.Errorf("cannot set Secrets params: %w", err)
+			return false, fmt.Errorf("cannot process Secrets: %w", err)
 		}
 	} else {
-		state.SecretsVersion = ""
-		secretsConfig.Disable()
+		state.Secrets = nil
 	}
 
 	if len(usersParams) > 0 {

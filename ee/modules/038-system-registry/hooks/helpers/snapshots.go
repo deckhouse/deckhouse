@@ -6,9 +6,15 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package helpers
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+)
+
+var (
+	ErrNoSnapshot        = errors.New("no snapshot found or too many snapshots")
+	ErrSnapshotTypeError = errors.New("snapshot cannot be converted to requested type")
 )
 
 func SnapshotToMap[TKey comparable, TValue any](input *go_hook.HookInput, name string) (map[TKey]TValue, error) {
@@ -23,7 +29,7 @@ func SnapshotToMap[TKey comparable, TValue any](input *go_hook.HookInput, name s
 		if kv, ok := val.(KeyValue[TKey, TValue]); ok {
 			ret[kv.Key] = kv.Value
 		} else {
-			return ret, fmt.Errorf("snapshot value of type %T not convertible to %T", val, kv)
+			return ret, fmt.Errorf("value of type %T not convertible to %T: %w", val, kv, ErrSnapshotTypeError)
 		}
 	}
 
@@ -37,14 +43,14 @@ func SnapshotToSingle[TValue any](input *go_hook.HookInput, name string) (TValue
 	snapLen := len(snapshot)
 
 	if snapLen != 1 {
-		return value, fmt.Errorf("snapshot contains values count %d != 1", snapLen)
+		return value, fmt.Errorf("snapshot values count %d not equal one: %w", snapLen, ErrNoSnapshot)
 	}
 
 	snapValue := snapshot[0]
 	value, ok := snapValue.(TValue)
 
 	if !ok {
-		return value, fmt.Errorf("snapshot value of type %T not convertible to %T", snapValue, value)
+		return value, fmt.Errorf("value of type %T not convertible to %T: %w", snapValue, value, ErrSnapshotTypeError)
 	}
 
 	return value, nil
@@ -61,7 +67,7 @@ func SnapshotToList[TValue any](input *go_hook.HookInput, name string) ([]TValue
 		value, ok := snap.(TValue)
 
 		if !ok {
-			return ret, fmt.Errorf("snapshot value of type %T not convertible to %T", snap, value)
+			return ret, fmt.Errorf("value of type %T not convertible to %T: %w", snap, value, ErrNoSnapshot)
 		}
 
 		ret = append(ret, value)

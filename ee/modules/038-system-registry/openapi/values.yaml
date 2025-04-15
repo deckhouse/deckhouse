@@ -98,36 +98,12 @@ properties:
                             type: string
                       token:
                         <<: *certKey
+                  secrets:
+                    type: object
+                    properties:
+                      http:
+                        type: string
 
-
-      secrets:
-        type: object
-        default: {}
-        properties:
-          enabled:
-            type: boolean
-            default: false
-          config:
-            type: object
-            properties:
-              version:
-                type: string
-              params:
-                type: object
-          state:
-            type: object
-            properties:
-              version:
-                type: string
-              hash:
-                type: string
-              ready:
-                type: boolean
-              data:
-                type: object
-                properties:
-                  http:
-                    type: string
 
       state:
         type: object
