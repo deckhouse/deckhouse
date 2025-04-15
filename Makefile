@@ -146,7 +146,7 @@ bin/yq: bin ## Install yq deps for update-patchversion script.
 .PHONY: tests-modules dmt-lint tests-openapi tests-controller tests-webhooks
 tests-modules: ## Run unit tests for modules hooks and templates.
   ##~ Options: FOCUS=module-name
-	go test -timeout=${TESTS_TIMEOUT} -vet=off ${TESTS_PATH}
+	go test --race -timeout=${TESTS_TIMEOUT} -vet=off ${TESTS_PATH}
 
 dmt-lint:
 	export DMT_METRICS_URL="${DMT_METRICS_URL}"
@@ -155,17 +155,17 @@ dmt-lint:
 
 
 tests-openapi: ## Run tests against modules openapi values schemas.
-	go test -vet=off ./testing/openapi_cases/
+	go test --race -vet=off ./testing/openapi_cases/
 
 tests-controller: ## Run deckhouse-controller unit tests.
-	go test ./deckhouse-controller/... -v
+	go test --race ./deckhouse-controller/... -v
 
 tests-webhooks: bin/yq ## Run python webhooks unit tests.
 	./testing/webhooks/run.sh
 
 .PHONY: validate
 validate: ## Check common patterns through all modules.
-	go test -tags=validation -run Validation -timeout=${TESTS_TIMEOUT} ./testing/...
+	go test --race -tags=validation -run Validation -timeout=${TESTS_TIMEOUT} ./testing/...
 
 bin/golangci-lint:
 	mkdir -p bin
