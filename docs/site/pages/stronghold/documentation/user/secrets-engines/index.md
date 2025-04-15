@@ -5,7 +5,7 @@ lang: en
 description: Secrets engines are mountable engines that store or generate secrets in Stronghold.
 ---
 
-# Secrets engines
+## Secrets engines
 
 Secrets engines are components which store, generate, or encrypt data. Secrets
 engines are incredibly flexible, so it is easiest to think about them in terms

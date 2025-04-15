@@ -13,7 +13,7 @@ description: >-
   This key will be used to sign other SSH keys.
 ---
 
-# Signed SSH certificates
+## Signed SSH certificates
 
 The signed SSH certificates is the simplest and most powerful in terms of setup
 complexity and in terms of being platform agnostic. By leveraging Stronghold's
