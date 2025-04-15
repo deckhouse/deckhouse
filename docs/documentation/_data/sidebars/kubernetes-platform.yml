@@ -307,6 +307,10 @@ entries:
                     ru: Настройка хранилищ
                   url: admin/storage/supported-storage.html
                 - title:
+                    en: Configuring volume snapshot creation
+                    ru: Настройка создания снимков томов
+                  url: admin/storage/snapshot-controller.html
+                - title:
                     en: SDS
                     ru: Программно-определяемые хранилища
                   folders:
