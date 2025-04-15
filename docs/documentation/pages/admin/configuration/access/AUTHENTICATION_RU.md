@@ -107,7 +107,6 @@ DKP поддерживает подключение следующих внеш�
    - получите `clientID` и `clientSecret`.
 
      > **Важно**. При указании Redirect URI подставьте значение `publicDomainTemplate` без `%s`. Например, если указано `publicDomainTemplate: '%s.sandbox1.deckhouse-docs.flant.com'`, то фактический URI будет `https://dex.sandbox20.deckhouse-docs.flant.com/callback`.
-     {% endalert %}
 
      > Адрес Dex (URI) можно узнать командой:
 
