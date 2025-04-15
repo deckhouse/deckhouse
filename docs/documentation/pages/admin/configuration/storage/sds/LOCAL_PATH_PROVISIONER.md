@@ -1,14 +1,13 @@
 ---
-title: "Local Path Provisioner Storage"
+title: "Local path provisioner storage"
 permalink: en/admin/storage/sds/local-path-provisioner.html
-lang: en
 ---
 
 Deckhouse Kubernetes Platform provides the ability to configure local storage using Local Path Provisioner. This is a simple solution without support for snapshots or volume size limits, best suited for development, testing, and small clusters. It enables the use of local disk space on Kubernetes nodes to create PersistentVolumes without relying on external storage systems.
 
 ## How it works
 
-For each [LocalPathProvisioner](../../reference/cr/localpathprovisioner/) resource, a corresponding `StorageClass` object is created.
+For each [LocalPathProvisioner](../../../reference/cr/localpathprovisioner/) resource, a corresponding `StorageClass` object is created.
 
 The set of nodes eligible for the `StorageClass` is determined based on the `nodeGroups` field from the custom resource. This topology is used for pod scheduling.
 
@@ -57,26 +56,27 @@ spec:
 
 ## Configuring Prometheus to use local storage
 
-1. Apply the [LocalPathProvisioner](../../reference/cr/localpathprovisioner/) resource:
+1. Apply the [LocalPathProvisioner](../../../reference/cr/localpathprovisioner/) resource:
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: LocalPathProvisioner
-metadata:
-  name: localpath-system
-spec:
-  nodeGroups:
-  - system
-  path: "/opt/local-path-provisioner"
-```
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: LocalPathProvisioner
+   metadata:
+     name: localpath-system
+   spec:
+     nodeGroups:
+     - system
+     path: "/opt/local-path-provisioner"
+   ```
+
 
 1. Ensure that `spec.nodeGroups` matches the NodeGroup where Prometheus will be running.
 
 1. Specify the name of the created StorageClass in the Prometheus configuration:
 
-```yaml
-longtermStorageClass: localpath-system
-storageClass: localpath-system
-```
+   ```yaml
+   longtermStorageClass: localpath-system
+   storageClass: localpath-system
+   ```
 
 1. Wait for Prometheus pods to restart.

@@ -315,6 +315,10 @@ entries:
                     ru: Программно-определяемые хранилища
                   folders:
                     - title:
+                        en: Local path provisioner storage
+                        ru: Локальное хранилище Local Path Provisioner
+                      url: admin/storage/sds/local-path-provisioner.html
+                    - title:
                         en: Local storage based on LVM
                         ru: Локальное хранилище на основе LVM
                       folders:

@@ -8,7 +8,7 @@ Deckhouse Kubernetes Platform предоставляет возможность 
 
 ## Принцип работы
 
-Для каждого ресурса [LocalPathProvisioner](../../reference/cr/localpathprovisioner/) создается соответствующий объект StorageClass.
+Для каждого ресурса [LocalPathProvisioner](../../../reference/cr/localpathprovisioner/) создается соответствующий объект StorageClass.
 
 Топология допустимых узлов для StorageClass определяется на основе поля `nodeGroups` из custom resource. Эта топология используется при размещении подов.
 
@@ -57,27 +57,27 @@ spec:
 
 ## Настройка Prometheus с использованием локального хранилища
 
-1. Примените ресурс [LocalPathProvisioner](../../reference/cr/localpathprovisioner/):
+1. Примените ресурс [LocalPathProvisioner](../../../reference/cr/localpathprovisioner/):
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: LocalPathProvisioner
-metadata:
-  name: localpath-system
-spec:
-  nodeGroups:
-  - system
-  path: "/opt/local-path-provisioner"
-```
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: LocalPathProvisioner
+   metadata:
+     name: localpath-system
+   spec:
+     nodeGroups:
+     - system
+     path: "/opt/local-path-provisioner"
+   ```
 
 1. Убедитесь, что `spec.nodeGroups` соответствует NodeGroup, на котором будет работать Prometheus.
 
 1. Укажите имя созданного StorageClass в настройках Prometheus:
 
-```yaml
-longtermStorageClass: localpath-system
-storageClass: localpath-system
-```
+   ```yaml
+   longtermStorageClass: localpath-system
+   storageClass: localpath-system
+   ```
 
 1. Дождитесь перезапуска подов Prometheus.
 
