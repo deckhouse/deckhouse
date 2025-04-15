@@ -122,8 +122,9 @@ shell:
   - git clone --depth 1 --branch {{ $istioProxyCacheRev }} {{ $.SOURCE_REPO }}/istio/envoy-build-cache.git /tmp/bazel-cache
   - rm -rf /tmp/bazel-cache/.git
   - mkdir -p /tmp/bazel-deps
-  # - git clone --depth 1 --branch {{ $istioProxyDepsRev }} {{ .SOURCE_REPO }}/istio/envoy-build-deps.git /tmp/bazel-deps
-  # - rm -rf /tmp/bazel-deps/.git
+  - git lfs install
+  - git clone --depth 1 --branch {{ $istioProxyDepsRev }} {{ .SOURCE_REPO }}/istio/envoy-build-deps.git /tmp/bazel-deps
+  - rm -rf /tmp/bazel-deps/.git
   
   - export GOROOT=/usr/local/go GOPATH=/go
   - export PATH=${PATH}:${GOROOT}/bin:${GOPATH}/bin
@@ -138,8 +139,8 @@ shell:
   
   - export BAZEL_OUTPUT_BASE=$(bazel info output_base)
   - mkdir -p ${BAZEL_OUTPUT_BASE}/external
-  # - tar -zxf /tmp/bazel-deps/external.tar.gz -C ${BAZEL_OUTPUT_BASE}/external
-  # - rm -rf /tmp/bazel-deps
+  - tar -zxf /tmp/bazel-deps/external.tar.gz -C ${BAZEL_OUTPUT_BASE}/external
+  - rm -rf /tmp/bazel-deps
   
   - bazel build --disk_cache=/tmp/bazel-cache --nofetch --stamp --config=release //:envoy
   - mkdir /src/proxy/bin
