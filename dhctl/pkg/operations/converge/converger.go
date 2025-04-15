@@ -327,6 +327,10 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 	r := newRunner(inLockRunner, kubectlSwitcher).
 		WithCommanderUUID(c.CommanderUUID)
 
+	if c.CommanderMode {
+		log.InfoF("Need automatic migration for commander: %v\n", needAutomaticTofuMigrationForCommander)
+	}
+
 	doAction := r.RunConverge
 	if needAutomaticTofuMigrationForCommander {
 		log.WarnF("Need migrate to opentofu. Switch to migrator\n")
