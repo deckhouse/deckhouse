@@ -20,9 +20,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
@@ -63,10 +62,6 @@ type Resource struct {
 }
 
 func RegisterHook() bool {
-	hookHandler := func(input *go_hook.HookInput) error {
-		return fireNeedMigrateToOpenTofuMetric(input)
-	}
-
 	return sdk.RegisterFunc(&go_hook.HookConfig{
 		OnBeforeHelm: &go_hook.OrderedConfig{Order: 1},
 		Kubernetes: []go_hook.KubernetesConfig{
@@ -101,7 +96,7 @@ func RegisterHook() bool {
 				FilterFunc:          nodeStateSecretFilter,
 			},
 		},
-	}, hookHandler)
+	}, fireNeedMigrateToOpenTofuMetric)
 }
 
 func clusterStateSecretFilter(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
