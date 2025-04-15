@@ -27,7 +27,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/ptr"
 )
 
 const (
@@ -77,8 +76,7 @@ func RegisterHook() bool {
 						MatchNames: []string{secretsNs},
 					},
 				},
-				ExecuteHookOnEvents: ptr.To(false),
-				FilterFunc:          clusterStateSecretFilter,
+				FilterFunc: clusterStateSecretFilter,
 			},
 			{
 				Name:       "nodes_state",
@@ -92,8 +90,7 @@ func RegisterHook() bool {
 						MatchNames: []string{secretsNs},
 					},
 				},
-				ExecuteHookOnEvents: ptr.To(false),
-				FilterFunc:          nodeStateSecretFilter,
+				FilterFunc: nodeStateSecretFilter,
 			},
 		},
 	}, fireNeedMigrateToOpenTofuMetric)
