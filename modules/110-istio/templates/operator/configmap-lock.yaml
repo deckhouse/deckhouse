@@ -1,4 +1,5 @@
-{{- if and (ne (first .Values.istio.internal.operatorVersionsToInstall) "1.24") (hasKey .Values.istio.internal.versionMap (first .Values.istio.internal.operatorVersionsToInstall)) }}
+{{- $versions := .Values.istio.internal.operatorVersionsToInstall }}
+{{- if not (and (eq (len $versions) 1) (eq (first $versions) "1.24")) }}
   {{- range $version := .Values.istio.internal.operatorVersionsToInstall }}
     {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
     {{- $revision := get $versionInfo "revision" }}
