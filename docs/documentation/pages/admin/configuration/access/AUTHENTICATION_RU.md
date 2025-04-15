@@ -96,7 +96,7 @@ DKP поддерживает подключение следующих внеш�
 - [Bitbucket Cloud](#интеграция-с-bitbucket-cloud);
 - [Atlassian Crowd](#интеграция-с-atlassian-crowd).
 
-{% alert level="info" %} 
+{% alert level="info" %}
 Политика безопасности паролей (требования к сложности, срок действия, история, двухфакторная аутентификация и т.д.) полностью контролируется внешним провайдером аутентификации. Deckhouse не управляет паролями и не вмешивается в реализацию этих политик на стороне провайдера.
 {% endalert %}
 
@@ -196,9 +196,9 @@ DKP поддерживает подключение следующих внеш�
 
 После выбора `realm` для настройки, добавления пользователя в [Users](https://www.keycloak.org/docs/latest/server_admin/index.html#assembly-managing-users_server_administration_guide) и создания клиента в разделе [Clients](https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide) с включенной [аутентификацией](https://www.keycloak.org/docs/latest/server_admin/index.html#capability-config), которая необходима для генерации `clientSecret`, выполните следующие шаги:
 
-* Создайте в разделе [Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes) `scope` с именем `groups`, и назначьте ему предопределенный маппинг `groups` («Client scopes» → «Client scope details» → «Mappers» → «Add predefined mappers»).
-* В созданном ранее клиенте добавьте данный `scope` [во вкладке Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) («Clients → «Client details» → «Client Scopes» → «Add client scope»).
-* В полях «Valid redirect URIs», «Valid post logout redirect URIs» и «Web origins» [конфигурации клиента](https://www.keycloak.org/docs/latest/server_admin/#general-settings) укажите `https://dex.<publicDomainTemplate>/*`, где `publicDomainTemplate` – это [указанный](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) шаблон DNS-имен кластера в модуле `global`.
+- Создайте в разделе [Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes) `scope` с именем `groups`, и назначьте ему предопределенный маппинг `groups` («Client scopes» → «Client scope details» → «Mappers» → «Add predefined mappers»).
+- В созданном ранее клиенте добавьте данный `scope` [во вкладке Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) («Clients → «Client details» → «Client Scopes» → «Add client scope»).
+- В полях «Valid redirect URIs», «Valid post logout redirect URIs» и «Web origins» [конфигурации клиента](https://www.keycloak.org/docs/latest/server_admin/#general-settings) укажите `https://dex.<publicDomainTemplate>/*`, где `publicDomainTemplate` – это [указанный](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) шаблон DNS-имен кластера в модуле `global`.
 
 Пример настройки провайдера для интеграции с Keycloak:
 
@@ -237,11 +237,11 @@ spec:
     basicAuthUnsupported: false
     claimMapping:
       email: email
-      groups: your_claim # Claim для получения групп пользователя, группы пользователя настраиваются на стороне провайдера Blitz Identity Provider
+      groups: your_claim # Claim для получения групп пользователя, группы пользователя настраиваются на стороне провайдера Blitz Identity Provider.
     clientID: clientID
     clientSecret: clientSecret
     getUserInfo: true
-    insecureSkipEmailVerified: true # Установить true, если нет необходимости в проверке email пользователя
+    insecureSkipEmailVerified: true # Установить true, если нет необходимости в проверке email пользователя.
     insecureSkipVerify: false
     issuer: https://yourdomain.idblitz.ru/blitz
     promptType: consent 
@@ -511,14 +511,3 @@ spec:
    `Members` — список пользователей, которые входят в группу (указывается `kind`: User и имя пользователя).
 
    После создания группы и добавления в неё пользователей, необходимо настроить [авторизацию](authorization.html).
-
-<!-- 
-## Важно
-
-- Использовать OpenID Connect без HTTPS небезопасно (это подтверждается, например, отсутствием поддержки OIDC по HTTP в Kubernetes API-сервере), поэтому данный механизм можно установить только при включённом HTTPS (параметр `https.mode` должен быть отличен от `Disabled`  либо глобально для кластера, либо в самом механизме).
-
-- После активации механизма, аутентификация во всех веб-интерфейсах переключается с HTTP Basic Auth на Dex, который в свою очередь использует ваши внешние провайдеры. Чтобы настроить доступ для kubectl, перейдите по адресу `https://kubeconfig.<modules.publicDomainTemplate>/`, выполните вход в нужного провайдера и скопируйте предложенные shell-команды.
-
-- Для корректной работы аутентификации в Dashboard и kubectl требуется дополнительная настройка API-сервера. Этот процесс автоматизирован модулем [control-plane-manager](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/040-control-plane-manager/), который включен по умолчанию.
-- 
-//-->
