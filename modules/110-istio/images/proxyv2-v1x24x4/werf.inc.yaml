@@ -203,7 +203,7 @@ shell:
   - |
     apt-get install -y \
     clang-14 lld-14 \
-    git cmake ninja-build \
+    git git-lfs cmake ninja-build \
     libtool automake autoconf make \
     curl gnupg lsb-release \
     python3 python3-pip python3-venv \
