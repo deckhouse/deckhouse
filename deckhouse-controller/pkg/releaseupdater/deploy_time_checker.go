@@ -143,7 +143,7 @@ func (c *DeployTimeService) processWindow(dtr *DeployTimeResult) {
 //
 // 1) Canary
 // 2) Notify
-// 3) Window (only in "AutoPatch" mode)
+// 3) Window (in not "Manual" mode)
 // 4) Manual approve (only in "Manual" mode)
 //
 // Notify reason must override any other reason
