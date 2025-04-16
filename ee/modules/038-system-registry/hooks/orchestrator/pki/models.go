@@ -18,14 +18,14 @@ type CertModel struct {
 	Key  string `json:"key,omitempty"`
 }
 
-func (pcm *CertModel) ToPKI() (pki.CertKey, error) {
+func (pcm *CertModel) toPKI() (pki.CertKey, error) {
 	if pcm == nil {
 		return pki.CertKey{}, fmt.Errorf("cannot convert nil to CertKey")
 	}
 	return pki.DecodeCertKey([]byte(pcm.Cert), []byte(pcm.Key))
 }
 
-func PKICertModel(value pki.CertKey) (*CertModel, error) {
+func pkiCertModel(value pki.CertKey) (*CertModel, error) {
 	cert, key, err := pki.EncodeCertKey(value)
 	if err != nil {
 		return nil, err
@@ -33,7 +33,7 @@ func PKICertModel(value pki.CertKey) (*CertModel, error) {
 	return &CertModel{Cert: string(cert), Key: string(key)}, nil
 }
 
-func SecretDataToCertModel(secret v1core.Secret, key string) *CertModel {
+func secretDataToCertModel(secret v1core.Secret, key string) *CertModel {
 	if key == "" {
 		return nil
 	}
@@ -50,3 +50,5 @@ func SecretDataToCertModel(secret v1core.Secret, key string) *CertModel {
 
 	return nil
 }
+
+type Inputs = State

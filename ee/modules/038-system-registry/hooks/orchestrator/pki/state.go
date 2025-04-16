@@ -30,7 +30,7 @@ func (state *State) Process(log go_hook.Logger) (Result, error) {
 	)
 
 	// CA
-	ret.CA, err = state.CA.ToPKI()
+	ret.CA, err = state.CA.toPKI()
 	if err != nil {
 		log.Warn("Cannot decode CA certificate and key, will generate new", "error", err)
 
@@ -40,13 +40,13 @@ func (state *State) Process(log go_hook.Logger) (Result, error) {
 		}
 	}
 
-	state.CA, err = PKICertModel(ret.CA)
+	state.CA, err = pkiCertModel(ret.CA)
 	if err != nil {
 		return ret, fmt.Errorf("cannot convert CA PKI to model: %w", err)
 	}
 
 	// Token
-	ret.Token, err = state.Token.ToPKI()
+	ret.Token, err = state.Token.toPKI()
 	if err == nil {
 		err = pki.ValidateCertWithCAChain(ret.Token.Cert, ret.CA.Cert)
 		if err != nil {
@@ -61,7 +61,7 @@ func (state *State) Process(log go_hook.Logger) (Result, error) {
 		}
 	}
 
-	state.Token, err = PKICertModel(ret.Token)
+	state.Token, err = pkiCertModel(ret.Token)
 	if err != nil {
 		return ret, fmt.Errorf("cannot convert Token PKI to model: %w", err)
 	}

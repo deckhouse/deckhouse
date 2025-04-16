@@ -3,11 +3,10 @@ Copyright 2024 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
-package users
+package secrets
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -16,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers"
-	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models/users"
 )
 
 func KubernetsConfig(name string) go_hook.KubernetesConfig {
@@ -27,10 +25,7 @@ func KubernetsConfig(name string) go_hook.KubernetesConfig {
 		NamespaceSelector: helpers.NamespaceSelector,
 		NameSelector: &types.NameSelector{
 			MatchNames: []string{
-				SecretName("ro"),
-				SecretName("rw"),
-				SecretName("mirror-puller"),
-				SecretName("mirror-pusher"),
+				"registry-secrets",
 			},
 		},
 		FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -41,22 +36,15 @@ func KubernetsConfig(name string) go_hook.KubernetesConfig {
 				return "", fmt.Errorf("failed to convert secret \"%v\" to struct: %v", obj.GetName(), err)
 			}
 
-			if !strings.HasPrefix(secret.Name, SecretNamePrefix) {
-				return nil, nil
+			ret := State{
+				HTTP: string(secret.Data["http"]),
 			}
 
-			var user users.User
-			err = user.DecodeSecretData(secret.Data)
-			if err != nil {
-				return nil, nil
-			}
-
-			ret := helpers.NewKeyValue(secret.Name, user)
 			return ret, nil
 		},
 	}
 }
 
 func InputsFromSnapshot(input *go_hook.HookInput, name string) (Inputs, error) {
-	return helpers.SnapshotToMap[string, users.User](input, name)
+	return helpers.SnapshotToSingle[Inputs](input, name)
 }

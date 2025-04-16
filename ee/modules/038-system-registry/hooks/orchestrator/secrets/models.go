@@ -12,6 +12,8 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/pki"
 )
 
+type Inputs = State
+
 type State struct {
 	HTTP string `json:"http,omitempty"`
 }

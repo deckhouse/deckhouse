@@ -67,57 +67,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				return config, nil
 			},
 		},
-		{
-			Name:              pkiSnapName,
-			ApiVersion:        "v1",
-			Kind:              "Secret",
-			NamespaceSelector: helpers.NamespaceSelector,
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{
-					"registry-pki",
-				},
-			},
-			FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-				var secret v1core.Secret
-
-				err := sdk.FromUnstructured(obj, &secret)
-				if err != nil {
-					return "", fmt.Errorf("failed to convert secret \"%v\" to struct: %v", obj.GetName(), err)
-				}
-
-				ret := pki.State{
-					CA:    pki.SecretDataToCertModel(secret, "ca"),
-					Token: pki.SecretDataToCertModel(secret, "token"),
-				}
-
-				return ret, nil
-			},
-		},
-		{
-			Name:              secretsSnapName,
-			ApiVersion:        "v1",
-			Kind:              "Secret",
-			NamespaceSelector: helpers.NamespaceSelector,
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{
-					"registry-secrets",
-				},
-			},
-			FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-				var secret v1core.Secret
-
-				err := sdk.FromUnstructured(obj, &secret)
-				if err != nil {
-					return "", fmt.Errorf("failed to convert secret \"%v\" to struct: %v", obj.GetName(), err)
-				}
-
-				ret := secrets.State{
-					HTTP: string(secret.Data["http"]),
-				}
-
-				return ret, nil
-			},
-		},
+		pki.KubernetsConfig(pkiSnapName),
+		secrets.KubernetsConfig(secretsSnapName),
 		users.KubernetsConfig(usersSnapName),
 	},
 },
@@ -140,17 +91,17 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			return fmt.Errorf("get Config snapshot error: %w", err)
 		}
 
-		inputs.PKI, err = helpers.SnapshotToSingle[pki.State](input, pkiSnapName)
+		inputs.PKI, err = pki.InputsFromSnapshot(input, pkiSnapName)
 		if err != nil && !errors.Is(err, helpers.ErrNoSnapshot) {
 			return fmt.Errorf("get PKI snapshot error: %w", err)
 		}
 
-		inputs.Secrets, err = helpers.SnapshotToSingle[secrets.State](input, secretsSnapName)
+		inputs.Secrets, err = secrets.InputsFromSnapshot(input, secretsSnapName)
 		if err != nil && !errors.Is(err, helpers.ErrNoSnapshot) {
 			return fmt.Errorf("get Secrets snapshot error: %w", err)
 		}
 
-		inputs.Users, err = helpers.SnapshotToMap[string, users.User](input, usersSnapName)
+		inputs.Users, err = users.InputsFromSnapshot(input, usersSnapName)
 		if err != nil {
 			return fmt.Errorf("get Users snapshot error: %w", err)
 		}
