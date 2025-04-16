@@ -186,7 +186,7 @@ data:
 		})
 	})
 
-	FContext("Cluster has a d8-cluster-configuration Secret with kubernetesVersion = `Automatic`", func() {
+	Context("Cluster has a d8-cluster-configuration Secret with kubernetesVersion = `Automatic`", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateC, 1))
 			f.RunHook()
