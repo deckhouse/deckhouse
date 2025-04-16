@@ -11,6 +11,8 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models/users"
 )
 
+type User = users.User
+
 type Params struct {
 	RO       bool `json:"ro,omitempty"`
 	RW       bool `json:"rw,omitempty"`
@@ -22,13 +24,13 @@ func (params Params) Any() bool {
 }
 
 type State struct {
-	RO           *users.User `json:"ro,omitempty"`
-	RW           *users.User `json:"rw,omitempty"`
-	MirrorPuller *users.User `json:"mirror-puller,omitempty"`
-	MirrorPusher *users.User `json:"mirror-pusher,omitempty"`
+	RO           *User `json:"ro,omitempty"`
+	RW           *User `json:"rw,omitempty"`
+	MirrorPuller *User `json:"mirror_puller,omitempty"`
+	MirrorPusher *User `json:"mirror_pusher,omitempty"`
 }
 
-type Inputs map[string]users.User
+type Inputs map[string]User
 
 func (state *State) Process(params Params, inputs Inputs) error {
 	if params.RO {
@@ -71,15 +73,15 @@ func (state *State) Process(params Params, inputs Inputs) error {
 	return nil
 }
 
-func processUser(name string, state *users.User, inputs Inputs) (users.User, error) {
-	var user users.User
+func processUser(name string, state *User, inputs Inputs) (User, error) {
+	var user User
 
 	if state.IsValid() {
 		user = *state
-	} else if inputUser, ok := inputs[userSecretName(name)]; ok && inputUser.IsValid() {
+	} else if inputUser, ok := inputs[SecretName(name)]; ok && inputUser.IsValid() {
 		user = inputUser
 	} else {
-		user = users.User{
+		user = User{
 			UserName: name,
 		}
 

@@ -8,6 +8,7 @@ package orchestrator
 import (
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/pki"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/secrets"
+	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/users"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
 )
 
@@ -23,13 +24,13 @@ type Inputs struct {
 	Params  Params
 	PKI     pki.State
 	Secrets secrets.State
+	Users   users.Inputs
 }
 
 type State struct {
-	Mode registry_const.ModeType `json:"mode"`
+	Mode registry_const.ModeType `json:"mode,omitempty"`
 
 	PKI     *pki.State     `json:"pki,omitempty"`
 	Secrets *secrets.State `json:"secrets,omitempty"`
-
-	UsersVersion string `json:"users_version,omitempty"`
+	Users   *users.State   `json:"users,omitempty"`
 }

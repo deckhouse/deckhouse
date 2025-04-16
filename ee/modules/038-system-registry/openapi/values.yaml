@@ -22,36 +22,6 @@ properties:
             x-examples:
               - plainstring
 
-      users:
-        type: object
-        default: {}
-        properties:
-          enabled:
-            type: boolean
-            default: false
-          config:
-            type: object
-            properties:
-              version:
-                type: string
-              params:
-                type: object
-                additionalProperties: true
-                x-kubernetes-preserve-unknown-fields: true
-          state:
-            type: object
-            properties:
-              version:
-                type: string
-              hash:
-                type: string
-              ready:
-                type: boolean
-              data:
-                type: object
-                additionalProperties: true
-                x-kubernetes-preserve-unknown-fields: true
-
       orchestrator:
         type: object
         default: {}
@@ -91,6 +61,22 @@ properties:
                     properties:
                       http:
                         type: string
+                  users:
+                    type: object
+                    properties:
+                      ro: &user
+                        name:
+                          type: string
+                        password:
+                          type: string
+                        password_hash:
+                          type: tring
+                      rw:
+                        <<: *user
+                      mirror_puller:
+                        <<: *user
+                      mirror_pusher:
+                        <<: *user
 
 
       state:

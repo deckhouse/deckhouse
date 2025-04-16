@@ -17,7 +17,7 @@ import (
 type User struct {
 	UserName       string `json:"name"`
 	Password       string `json:"password"`
-	HashedPassword string `json:"passwordHash"`
+	HashedPassword string `json:"password_hash"`
 }
 
 func (u *User) IsValid() bool {

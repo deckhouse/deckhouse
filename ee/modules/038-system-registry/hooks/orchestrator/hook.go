@@ -19,15 +19,17 @@ import (
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers/submodule"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/pki"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/secrets"
-	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/users"
+	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/users"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
 )
 
 const (
+	SubmoduleName = "orchestrator"
+
 	configSnapName  = "config"
 	pkiSnapName     = "pki"
 	secretsSnapName = "secrets"
-	SubmoduleName   = "orchestrator"
+	usersSnapName   = "users"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -116,6 +118,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				return ret, nil
 			},
 		},
+		users.KubernetsConfig(usersSnapName),
 	},
 },
 	func(input *go_hook.HookInput) error {
@@ -145,6 +148,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		inputs.Secrets, err = helpers.SnapshotToSingle[secrets.State](input, secretsSnapName)
 		if err != nil && !errors.Is(err, helpers.ErrNoSnapshot) {
 			return fmt.Errorf("get Secrets snapshot error: %w", err)
+		}
+
+		inputs.Users, err = helpers.SnapshotToMap[string, users.User](input, usersSnapName)
+		if err != nil {
+			return fmt.Errorf("get Users snapshot error: %w", err)
 		}
 
 		state.Hash, err = helpers.ComputeHash(inputs)
@@ -182,7 +190,6 @@ func process(input *go_hook.HookInput, inputs Inputs, state *State) (bool, error
 		usersParams    users.Params
 		pkiEnabled     bool
 		secretsEnabled bool
-		err            error
 	)
 
 	switch params.Mode {
@@ -208,15 +215,12 @@ func process(input *go_hook.HookInput, inputs Inputs, state *State) (bool, error
 		secretsEnabled = true
 	}
 
-	usersConfig := submodule.NewConfigAccessor[users.Params](input, users.SubmoduleName)
-
 	if pkiEnabled {
 		if state.PKI == nil {
 			state.PKI = &inputs.PKI
 		}
 
-		_, err := state.PKI.Process(input.Logger)
-		if err != nil {
+		if _, err := state.PKI.Process(input.Logger); err != nil {
 			return false, fmt.Errorf("cannot process PKI: %w", err)
 		}
 	} else {
@@ -228,8 +232,7 @@ func process(input *go_hook.HookInput, inputs Inputs, state *State) (bool, error
 			state.Secrets = &inputs.Secrets
 		}
 
-		err := state.Secrets.Process()
-		if err != nil {
+		if err := state.Secrets.Process(); err != nil {
 			return false, fmt.Errorf("cannot process Secrets: %w", err)
 		}
 	} else {
@@ -237,13 +240,15 @@ func process(input *go_hook.HookInput, inputs Inputs, state *State) (bool, error
 	}
 
 	if usersParams.Any() {
-		state.UsersVersion, err = usersConfig.Set(usersParams)
-		if err != nil {
-			return false, fmt.Errorf("cannot set users params: %w", err)
+		if state.Users == nil {
+			state.Users = &users.State{}
+		}
+
+		if err := state.Users.Process(usersParams, inputs.Users); err != nil {
+			return false, fmt.Errorf("cannot process Users: %w", err)
 		}
 	} else {
-		usersConfig.Disable()
-		state.UsersVersion = ""
+		state.Users = nil
 	}
 
 	state.Mode = params.Mode

@@ -29,7 +29,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator"
 	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/pki"
 	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/secrets"
-	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/users"
+	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/users"
 	_ "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee"
 	_ "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee/lib/crd"
 	_ "github.com/deckhouse/deckhouse/ee/modules/150-user-authn/hooks"
