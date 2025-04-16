@@ -11,6 +11,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -33,6 +34,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion:        "v1",
 			Kind:              "Secret",
 			NamespaceSelector: helpers.NamespaceSelector,
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{
+					userSecretName("ro"),
+					userSecretName("rw"),
+					userSecretName("mirror-puller"),
+					userSecretName("mirror-pusher"),
+				},
+			},
 			FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 				var secret v1core.Secret
 
@@ -47,7 +56,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 				var user users.User
 				err = user.DecodeSecretData(secret.Data)
-
 				if err != nil {
 					return nil, nil
 				}
@@ -69,50 +77,19 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		return nil
 	}
 
-	secretUsers, err := helpers.SnapshotToMap[string, users.User](input, snapName)
+	inputs, err := helpers.SnapshotToMap[string, users.User](input, snapName)
 	if err != nil {
 		return fmt.Errorf("canot get users from secrets: %w", err)
 	}
 
-	stateUsers := state.Data
-	state.Data = make(State)
-
-	hash, err := helpers.ComputeHash(moduleConfig, secretUsers)
+	state.Hash, err = helpers.ComputeHash(moduleConfig, inputs)
 	if err != nil {
 		return fmt.Errorf("cannot compute hash: %w", err)
 	}
 
-	state.Hash = hash
-
-	for _, name := range config.Params {
-		if !isValidUserName(name) {
-			return fmt.Errorf("user name \"%v\" is invalid", name)
-		}
-
-		key := userSecretName(name)
-
-		user, ok := stateUsers[key]
-		if !ok || !user.IsValid() {
-			user, ok = secretUsers[key]
-		}
-
-		if !ok || !user.IsValid() {
-			user = users.User{
-				UserName: name,
-			}
-
-			if err := user.GenerateNewPassword(); err != nil {
-				return fmt.Errorf("cannot generate user \"%v\" password: %w", name, err)
-			}
-		}
-
-		if !user.IsPasswordHashValid() {
-			if err := user.UpdatePasswordHash(); err != nil {
-				return fmt.Errorf("cannot update user \"%v\" password hash: %w", name, err)
-			}
-		}
-
-		state.Data[key] = user
+	err = state.Data.Process(config.Params, inputs)
+	if err != nil {
+		return fmt.Errorf("cannot process users: %w", err)
 	}
 
 	state.Version = config.Version
@@ -122,6 +99,3 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 	return nil
 })
-
-type Params []string
-type State map[string]users.User

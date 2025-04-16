@@ -188,8 +188,8 @@ func process(input *go_hook.HookInput, inputs Inputs, state *State) (bool, error
 	switch params.Mode {
 	case registry_const.ModeProxy:
 		usersParams = users.Params{
-			"ro",
-			"rw",
+			RO: true,
+			RW: true,
 		}
 		pkiEnabled = true
 		secretsEnabled = true
@@ -197,10 +197,9 @@ func process(input *go_hook.HookInput, inputs Inputs, state *State) (bool, error
 		fallthrough
 	case registry_const.ModeLocal:
 		usersParams = users.Params{
-			"ro",
-			"rw",
-			"mirror-puller",
-			"mirror-pusher",
+			RO:       true,
+			RW:       true,
+			Mirrorer: true,
 		}
 		pkiEnabled = true
 		secretsEnabled = true
@@ -237,7 +236,7 @@ func process(input *go_hook.HookInput, inputs Inputs, state *State) (bool, error
 		state.Secrets = nil
 	}
 
-	if len(usersParams) > 0 {
+	if usersParams.Any() {
 		state.UsersVersion, err = usersConfig.Set(usersParams)
 		if err != nil {
 			return false, fmt.Errorf("cannot set users params: %w", err)

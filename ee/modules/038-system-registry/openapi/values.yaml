@@ -35,9 +35,9 @@ properties:
               version:
                 type: string
               params:
-                type: array
-                items:
-                  type: string
+                type: object
+                additionalProperties: true
+                x-kubernetes-preserve-unknown-fields: true
           state:
             type: object
             properties:
@@ -49,8 +49,8 @@ properties:
                 type: boolean
               data:
                 type: object
-                additionalProperties:
-                  type: object
+                additionalProperties: true
+                x-kubernetes-preserve-unknown-fields: true
 
       orchestrator:
         type: object
