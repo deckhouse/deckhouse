@@ -299,7 +299,7 @@ func (s *socketConn) cleanupLoop(ctx context.Context) {
 }
 
 // func buildICMP(seq int, connId int, sendTime time.Time) []byte {
-// 	pkt := make([]byte, 8+8) // 8 byte header + 8 байт timestamp
+// 	pkt := make([]byte, 8+8) // 8 byte header + 8 byte timestamp
 // 	id := uint16(connId)
 // 	s := uint16(seq)
 
@@ -313,7 +313,7 @@ func (s *socketConn) cleanupLoop(ctx context.Context) {
 // 	pkt[6] = byte(s >> 8) // Sequence number
 // 	pkt[7] = byte(s)
 
-// 	// Timestamp в payload
+// 	// Timestamp into payload
 // 	binary.BigEndian.PutUint64(pkt[8:], uint64(sendTime.UnixNano()))
 
 // 	// Checksum
