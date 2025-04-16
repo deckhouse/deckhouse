@@ -45,6 +45,8 @@ bb-dnf-repo?() {
 }
 
 bb-dnf-package?() {
+    bb-set-proxy
+    trap bb-unset-proxy RETURN
     dnf list installed "$1" &>/dev/null
 }
 
@@ -71,7 +73,6 @@ bb-dnf-install() {
             NEED_FIRE=true
         fi
         if ! bb-dnf-package? "$PACKAGE"; then
-            echo "bob"
             PACKAGES_TO_INSTALL+=("$PACKAGE")
         fi
     done
@@ -87,7 +88,9 @@ bb-dnf-install() {
         NEED_FIRE=true
     fi
 
-    [ "$NEED_FIRE" = "true" ] && bb-event-fire "bb-package-installed" "$PACKAGE"
+    if [[ "$NEED_FIRE" == "true" ]]; then
+        bb-event-fire "bb-package-installed" "$PACKAGE"
+    fi
 }
 
 bb-dnf-remove() {
