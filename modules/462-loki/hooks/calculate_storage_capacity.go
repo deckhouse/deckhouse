@@ -49,7 +49,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					"app": "loki",
 				},
 			},
-			FilterFunc: persistentVolumeClaimFilter,
+			ExecuteHookOnSynchronization: go_hook.Bool(false),
+			FilterFunc:                   persistentVolumeClaimFilter,
 		},
 		{
 			Name:       "sts",
@@ -65,7 +66,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					"app": "loki",
 				},
 			},
-			FilterFunc: statefulSetFilter,
+			ExecuteHookOnSynchronization: go_hook.Bool(false),
+			FilterFunc:                   statefulSetFilter,
 		},
 	},
 }, lokiDisk)
@@ -139,8 +141,8 @@ func persistentVolumeClaimFilter(obj *unstructured.Unstructured) (go_hook.Filter
 func lokiDisk(input *go_hook.HookInput) error {
 	var stsStorageSize, pvcSize, cleanupThreshold uint64
 
-	defaultDiskSize := uint64(input.ConfigValues.Get("loki.diskSizeGigabytes").Int() << 30)
-	ingestionRate := input.ConfigValues.Get("loki.lokiConfig.ingestionRateMB").Float()
+	defaultDiskSize := uint64(input.Values.Get("loki.diskSizeGigabytes").Int() << 30)
+	ingestionRate := input.Values.Get("loki.lokiConfig.ingestionRateMB").Float()
 
 	for _, obj := range input.Snapshots["pvcs"] {
 		pvc := obj.(PersistentVolumeClaim)
