@@ -20,7 +20,7 @@ type Params struct {
 }
 
 func (params Params) Any() bool {
-	return params.RO && params.RW && params.Mirrorer
+	return params.RO || params.RW || params.Mirrorer
 }
 
 type State struct {

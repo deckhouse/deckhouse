@@ -147,7 +147,6 @@ func process(input *go_hook.HookInput, inputs Inputs, state *State) (bool, error
 	case registry_const.ModeProxy:
 		usersParams = users.Params{
 			RO: true,
-			RW: true,
 		}
 		pkiEnabled = true
 		secretsEnabled = true

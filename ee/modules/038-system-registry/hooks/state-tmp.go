@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -184,7 +185,7 @@ func filterRegistryStaticPods(obj *unstructured.Unstructured) (go_hook.FilterRes
 
 func handleRegistryStaticPods(input *go_hook.HookInput) error {
 	state, err := helpers.SnapshotToSingle[registryState](input, "state")
-	if err != nil {
+	if err != nil && !errors.Is(err, helpers.ErrNoSnapshot) {
 		return fmt.Errorf("cannot load state: %w", err)
 	}
 
