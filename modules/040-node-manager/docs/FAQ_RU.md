@@ -618,7 +618,7 @@ spec:
    kubectl annotate node <имя master-узла> update.node.deckhouse.io/disruption-approved=
    ```
 
-1. Дождаитесь перехода обновленного master-узла в `Ready`. Выполните итерацию для следующего master-узла.
+1. Дождитесь перехода обновленного master-узла в `Ready`. Выполните итерацию для следующего master-узла.
 
 ## Как добавить шаг для конфигурации узлов?
 
