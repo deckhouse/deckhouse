@@ -26,9 +26,11 @@ import:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache automake autoconf libtool pkgconfig util-linux-dev make g++ musl
+  - apk add --no-cache automake autoconf libtool pkgconfig util-linux-dev make g++ util-linux-static
   install:
   - cd /src/erofs-utils
+  - sed -i -E ':a;N;$!ba;s/\n[[:space:]]*contrib\/Makefile//g' configure.ac
+  - sed -i "/contrib/d" Makefile.am
   - ./autogen.sh
   - ./configure --enable-static
   - make LDFLAGS="--static"
