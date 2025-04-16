@@ -76,36 +76,18 @@ func operatorRevisionsToInstallDiscovery(input *go_hook.HookInput) error {
 
 	var versionsToInstallResult = input.Values.Get("istio.internal.versionsToInstall").Array()
 	for _, versionResult := range versionsToInstallResult {
-		version := versionResult.String()
-		if version != "1.24" {
-			operatorVersionsToInstall = append(operatorVersionsToInstall, versionResult.String())
-		}
+		operatorVersionsToInstall = append(operatorVersionsToInstall, versionResult.String())
 	}
 
-	nonOperatorVersion := false
-	for _, versionResult := range versionsToInstallResult {
-		if versionResult.String() == "1.24" {
-			nonOperatorVersion = true
-			break
+	for _, iop := range input.Snapshots["istiooperators"] {
+		iopInfo := iop.(IstioOperatorCrdInfo)
+		iopVer := versionMap.GetVersionByRevision(iopInfo.Revision)
+		if !versionMap.IsRevisionSupported(iopInfo.Revision) {
+			unsupportedRevisions = append(unsupportedRevisions, iopInfo.Revision)
+			continue
 		}
-	}
-
-	if !nonOperatorVersion {
-		for _, iop := range input.Snapshots["istiooperators"] {
-			iopInfo := iop.(IstioOperatorCrdInfo)
-			if versionMap.GetVersionByRevision(iopInfo.Revision) == "1.24" {
-				continue
-			}
-
-			if !versionMap.IsRevisionSupported(iopInfo.Revision) {
-				unsupportedRevisions = append(unsupportedRevisions, iopInfo.Revision)
-				continue
-			}
-
-			iopVer := versionMap.GetVersionByRevision(iopInfo.Revision)
-			if !lib.Contains(operatorVersionsToInstall, iopVer) {
-				operatorVersionsToInstall = append(operatorVersionsToInstall, iopVer)
-			}
+		if !lib.Contains(operatorVersionsToInstall, iopVer) {
+			operatorVersionsToInstall = append(operatorVersionsToInstall, iopVer)
 		}
 	}
 
@@ -120,9 +102,6 @@ func operatorRevisionsToInstallDiscovery(input *go_hook.HookInput) error {
 	// Getting minVersion
 	var minVersion *semver.Version
 	for _, version := range operatorVersionsToInstall {
-		if version == "1.24" {
-			continue
-		}
 		versionSemver, err := semver.NewVersion(version)
 		if err != nil {
 			return err
