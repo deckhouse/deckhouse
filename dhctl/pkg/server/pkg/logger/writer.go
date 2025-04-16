@@ -64,3 +64,44 @@ func (w *LogWriter[T]) Write(p []byte) (n int, err error) {
 
 	return len(p), nil
 }
+
+type DebugLogWriter struct {
+	l *slog.Logger
+
+	m    sync.Mutex
+	prev []byte
+}
+
+func NewDebugLogWriter(l *slog.Logger) *DebugLogWriter {
+	return &DebugLogWriter{
+		l: l,
+	}
+}
+
+func (w *DebugLogWriter) Write(p []byte) (n int, err error) {
+	w.m.Lock()
+	defer w.m.Unlock()
+
+	var lines []string
+
+	for _, b := range p {
+		switch b {
+		case '\n', '\r':
+			s := string(w.prev)
+			if s != "" {
+				lines = append(lines, s)
+			}
+			w.prev = []byte{}
+		default:
+			w.prev = append(w.prev, b)
+		}
+	}
+
+	if len(lines) > 0 {
+		for _, line := range lines {
+			w.l.Debug(line)
+		}
+	}
+
+	return len(p), nil
+}

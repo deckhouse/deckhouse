@@ -19,17 +19,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
-	"io"
-	"log/slog"
-
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"log/slog"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
@@ -60,11 +58,21 @@ func (s *Service) Converge(server pb.DHCTL_ConvergeServer) error {
 	phaseSwitcher := &fsmPhaseSwitcher[*pb.ConvergeResponse, any]{
 		f: f, dataFunc: s.convergeSwitchPhaseData, sendCh: sendCh, next: make(chan error),
 	}
-	logWriter := logger.NewLogWriter(logger.L(ctx).With(logTypeDHCTL), sendCh,
+
+	loggerDefault := logger.L(ctx).With(logTypeDHCTL)
+
+	logWriter := logger.NewLogWriter(loggerDefault, sendCh,
 		func(lines []string) *pb.ConvergeResponse {
 			return &pb.ConvergeResponse{Message: &pb.ConvergeResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
 		},
 	)
+
+	debugWriter := logger.NewDebugLogWriter(loggerDefault)
+
+	logOptions := logger.Options{
+		DebugWriter:   debugWriter,
+		DefaultWriter: logWriter,
+	}
 
 	startReceiver[*pb.ConvergeRequest, *pb.ConvergeResponse](server, receiveCh, doneCh, internalErrCh)
 	startSender[*pb.ConvergeRequest, *pb.ConvergeResponse](server, sendCh, internalErrCh)
@@ -94,7 +102,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.convergeSafe(ctx, message.Start, phaseSwitcher.switchPhase(ctx), logWriter)
+					result := s.convergeSafe(ctx, message.Start, phaseSwitcher.switchPhase(ctx), logOptions)
 					sendCh <- &pb.ConvergeResponse{Message: &pb.ConvergeResponse_Result{Result: result}}
 				}()
 
@@ -128,36 +136,28 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) convergeSafe(
-	ctx context.Context,
-	request *pb.ConvergeStart,
-	switchPhase phases.DefaultOnPhaseFunc,
-	logWriter io.Writer,
-) (result *pb.ConvergeResult) {
+func (s *Service) convergeSafe(ctx context.Context, request *pb.ConvergeStart, switchPhase phases.DefaultOnPhaseFunc, options logger.Options) (result *pb.ConvergeResult) {
 	defer func() {
 		if r := recover(); r != nil {
 			result = &pb.ConvergeResult{Err: panicMessage(ctx, r)}
 		}
 	}()
 
-	return s.converge(ctx, request, switchPhase, logWriter)
+	return s.converge(ctx, request, switchPhase, options)
 }
 
-func (s *Service) converge(
-	ctx context.Context,
-	request *pb.ConvergeStart,
-	switchPhase phases.DefaultOnPhaseFunc,
-	logWriter io.Writer,
-) *pb.ConvergeResult {
+func (s *Service) converge(ctx context.Context, request *pb.ConvergeStart, switchPhase phases.DefaultOnPhaseFunc, options logger.Options) *pb.ConvergeResult {
 	var err error
 
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream: logWriter,
-		Width:     int(request.Options.LogWidth),
+		OutStream:   options.DefaultWriter,
+		Width:       int(request.Options.LogWidth),
+		DebugStream: options.DebugWriter,
 	})
+
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
 	app.ResourcesTimeout = request.Options.ResourcesTimeout.AsDuration()
