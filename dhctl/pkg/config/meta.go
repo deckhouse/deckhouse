@@ -62,14 +62,6 @@ type MetaConfig struct {
 
 type imagesDigests map[string]map[string]interface{}
 
-type RegistryData struct {
-	Address   string `json:"address"`
-	Path      string `json:"path"`
-	Scheme    string `json:"scheme"`
-	CA        string `json:"ca"`
-	DockerCfg string `json:"dockerCfg"`
-}
-
 // Prepare extracts all necessary information from raw json messages to the root structure
 func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 	if len(m.ClusterConfig) > 0 {
@@ -104,7 +96,6 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		m.Registry.DockerCfg = m.DeckhouseConfig.RegistryDockerCfg
 		m.Registry.Scheme = strings.ToLower(m.DeckhouseConfig.RegistryScheme)
 		m.Registry.CA = m.DeckhouseConfig.RegistryCA
-
 	}
 
 	if m.ClusterType != CloudClusterType || len(m.ProviderClusterConfig) == 0 {
@@ -391,7 +382,7 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 		result["nodeIP"] = nodeIP
 	}
 
-	registryData, err := m.ParseRegistryData()
+	registryData, err := m.Registry.KubeadmTemplatesContext()
 	if err != nil {
 		return nil, err
 	}
@@ -444,7 +435,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 		nodeGroup["static"] = m.ExtractMasterNodeGroupStaticSettings()
 	}
 
-	registryData, err := m.ParseRegistryData()
+	registryData, err := m.Registry.BashibleBundleTemplateContext()
 	if err != nil {
 		return nil, err
 	}
@@ -598,23 +589,6 @@ func (m *MetaConfig) LoadVersionMap(filename string) error {
 	return nil
 }
 
-func (m *MetaConfig) ParseRegistryData() (map[string]interface{}, error) {
-	log.DebugF("registry data: %v\n", m.Registry)
-
-	ret := m.Registry.ConvertToMap()
-
-	if m.Registry.DockerCfg != "" {
-		auth, err := m.Registry.Auth()
-		if err != nil {
-			return nil, err
-		}
-
-		ret["auth"] = auth
-	}
-
-	return ret, nil
-}
-
 func (m *MetaConfig) EnrichProxyData() (map[string]interface{}, error) {
 	type proxy struct {
 		HttpProxy  string   `json:"httpProxy" yaml:"httpProxy"`
@@ -706,56 +680,6 @@ func (m *MetaConfig) GetReplicasByNodeGroupName(nodeGroupName string) int {
 	}
 
 	return 0
-}
-
-func (r *RegistryData) ConvertToMap() map[string]interface{} {
-	return map[string]interface{}{
-		"address":   r.Address,
-		"path":      r.Path,
-		"scheme":    r.Scheme,
-		"ca":        r.CA,
-		"dockerCfg": r.DockerCfg,
-	}
-}
-
-func (r *RegistryData) Auth() (string, error) {
-	type dockerCfg struct {
-		Auths map[string]struct {
-			Auth     string `json:"auth"`
-			Username string `json:"username"`
-			Password string `json:"password"`
-		} `json:"auths"`
-	}
-
-	var (
-		registryAuth string
-		dc           dockerCfg
-	)
-
-	bytes, err := base64.StdEncoding.DecodeString(r.DockerCfg)
-	if err != nil {
-		return "", fmt.Errorf("cannot base64 decode docker cfg: %v", err)
-	}
-
-	log.DebugF("parse registry data: dockerCfg after base64 decode = %s\n", bytes)
-	err = json.Unmarshal(bytes, &dc)
-	if err != nil {
-		return "", fmt.Errorf("cannot unmarshal docker cfg: %v", err)
-	}
-
-	if registry, ok := dc.Auths[r.Address]; ok {
-		switch {
-		case registry.Auth != "":
-			registryAuth = registry.Auth
-		case registry.Username != "" && registry.Password != "":
-			auth := fmt.Sprintf("%s:%s", registry.Username, registry.Password)
-			registryAuth = base64.StdEncoding.EncodeToString([]byte(auth))
-		default:
-			log.DebugF("auth or username with password not found in dockerCfg %s for %s. Use empty string", bytes, r.Address)
-		}
-	}
-
-	return registryAuth, nil
 }
 
 func getDNSAddress(serviceCIDR string) string {
