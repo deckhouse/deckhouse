@@ -22,7 +22,7 @@ Example of DKP authentication interface:
 
 ![Example authentication interface](../../images/user/access/authentication/web-auth-example.png)
 
-The authentication interface allows users to choose an authentication method if multiple methods are configured. If only one external provider is configured, the user is redirected directly to that provider's login page. If [local users](../../admin/configuration/access/authentication.html#локальная-аутентификация) are defined in DKP, the user will be prompted to enter a username and password.
+The authentication interface allows users to choose an authentication method if multiple methods are configured. If only one external provider is configured, the user is redirected directly to that provider's login page. If [local users](../../admin/configuration/access/authentication.html#local-authentication) are defined in DKP, the user will be prompted to enter a username and password.
 
 Example of DKP authentication interface with username and password input:
 
