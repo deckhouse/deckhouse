@@ -3,6 +3,7 @@ linters-settings:
     exclude-rules:
       enum:
         - "properties.internal.properties.grafana.properties.alertsChannelsConfig.properties.notifiers.items.properties.type"
+        - "spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.access"
   container:
     exclude-rules:
       readiness-probe:
