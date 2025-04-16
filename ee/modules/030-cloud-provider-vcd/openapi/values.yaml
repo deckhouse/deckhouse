@@ -438,4 +438,8 @@ properties:
               type: string
             name:
               type: string
-
+      legacyMode:
+        type: boolean
+        description: |
+          If set to `true`, an API version below `37.2` will be used.
+        x-doc-default: false
