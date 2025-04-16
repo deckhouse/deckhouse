@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers"
-	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers/submodule"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/pki"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/secrets"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/users"
@@ -24,6 +23,7 @@ import (
 )
 
 const (
+	valuesPath    = "systemRegistry.internal.orchestrator"
 	SubmoduleName = "orchestrator"
 
 	configSnapName  = "config"
@@ -73,8 +73,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 },
 	func(input *go_hook.HookInput) error {
-		moduleState := submodule.NewStateAccessor[State](input, SubmoduleName)
-		state := moduleState.Get()
+		moduleValues := helpers.NewValuesAccessor[Values](input, valuesPath)
+		values := moduleValues.Get()
 
 		var (
 			inputs Inputs
@@ -84,7 +84,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		inputs.Params, err = helpers.SnapshotToSingle[Params](input, configSnapName)
 		if err != nil {
 			if errors.Is(err, helpers.ErrNoSnapshot) {
-				moduleState.Clear()
+				moduleValues.Clear()
 				return nil
 			}
 
@@ -106,17 +106,17 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			return fmt.Errorf("get Users snapshot error: %w", err)
 		}
 
-		state.Hash, err = helpers.ComputeHash(inputs)
+		values.Hash, err = helpers.ComputeHash(inputs)
 		if err != nil {
 			return fmt.Errorf("cannot compute inputs hash: %w", err)
 		}
 
-		state.Ready, err = process(input, inputs, &state.Data)
+		values.Ready, err = process(input, inputs, &values.State)
 		if err != nil {
 			return fmt.Errorf("cannot process: %w", err)
 		}
 
-		moduleState.Set(state)
+		moduleValues.Set(values)
 		return nil
 	})
 

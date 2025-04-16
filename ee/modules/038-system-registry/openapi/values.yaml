@@ -26,57 +26,52 @@ properties:
         type: object
         default: {}
         properties:
+          ready:
+            type: boolean
+          hash:
+            type: string
           state:
             type: object
+            default: {}
             properties:
-              version:
+              mode:
                 type: string
-              hash:
-                type: string
-              ready:
-                type: boolean
-              data:
+                enum: [Unmanaged, Direct, Proxy, Local]
+              pki:
                 type: object
-                default: {}
-                additionalProperties: true
-                x-kubernetes-preserve-unknown-fields: true
                 properties:
-                  mode:
-                    type: string
-                    enum: [Unmanaged, Direct, Proxy, Local]
-                  pki:
+                  ca: &certKey
                     type: object
                     properties:
-                      ca: &certKey
-                        type: object
-                        properties:
-                          cert:
-                            type: string
-                          key:
-                            type: string
-                      token:
-                        <<: *certKey
-                  secrets:
-                    type: object
-                    properties:
-                      http:
+                      cert:
                         type: string
-                  users:
+                      key:
+                        type: string
+                  token:
+                    <<: *certKey
+              secrets:
+                type: object
+                properties:
+                  http:
+                    type: string
+              users:
+                type: object
+                properties:
+                  ro: &user
                     type: object
                     properties:
-                      ro: &user
-                        name:
-                          type: string
-                        password:
-                          type: string
-                        password_hash:
-                          type: tring
-                      rw:
-                        <<: *user
-                      mirror_puller:
-                        <<: *user
-                      mirror_pusher:
-                        <<: *user
+                      name:
+                        type: string
+                      password:
+                        type: string
+                      password_hash:
+                        type: string
+                  rw:
+                    <<: *user
+                  mirror_puller:
+                    <<: *user
+                  mirror_pusher:
+                    <<: *user
 
 
       state:

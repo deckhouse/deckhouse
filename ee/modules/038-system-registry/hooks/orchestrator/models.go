@@ -35,3 +35,9 @@ type State struct {
 	Secrets *secrets.State `json:"secrets,omitempty"`
 	Users   *users.State   `json:"users,omitempty"`
 }
+
+type Values struct {
+	Ready bool   `json:"ready,omitempty"`
+	Hash  string `json:"hash,omitempty"`
+	State State  `json:"state,omitempty"`
+}
