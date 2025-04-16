@@ -26,7 +26,7 @@ import:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache automake autoconf libtool pkgconfig util-linux-dev make g++
+  - apk add --no-cache automake autoconf libtool pkgconfig util-linux-dev make g++ musl
   install:
   - cd /src/erofs-utils
   - ./autogen.sh
