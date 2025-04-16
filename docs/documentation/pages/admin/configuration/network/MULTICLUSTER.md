@@ -13,8 +13,8 @@ permalink: en/admin/network/multicluster.html
 
 * Pod and Service subnets in the [`podSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-podsubnetcidr) and [`serviceSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-servicesubnetcidr) parameters of the resource [_ClusterConfiguration_](../../installing/configuration.html#clusterconfiguration) must be unique for each multicluster member.
 
-  > - When analyzing HTTP and HTTPS traffic *(in istio terminology)*, you can identify them and decide on further routing or blocking based on their headers.
-  > - At the same time, when analyzing TCP traffic *(in istio terminology)*, it is possible to identify them and decide on further routing or blocking based only on their destination IP address or port number.s
+  > - When analyzing HTTP and HTTPS traffic _(in istio terminology)_, you can identify them and decide on further routing or blocking based on their headers.
+  > - At the same time, when analyzing TCP traffic _(in istio terminology)_, it is possible to identify them and decide on further routing or blocking based only on their destination IP address or port number.s
   >
   > If the IP addresses of services or pods in different clusters match, requests from other pods in other clusters may mistakenly fall under the istio's rules.
   > The intersection of subnets of services and pods is strictly prohibited in `single-network` mode, and is acceptable but not recommended in `multi-networks` mode.

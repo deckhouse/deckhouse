@@ -402,4 +402,3 @@ spec:
         - requiredDuringSchedulingIgnoredDuringExecution
         - preferredDuringSchedulingIgnoredDuringExecution
 ```
-

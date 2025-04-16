@@ -3,8 +3,6 @@ title: Обновление Control Plane
 permalink: ru/admin/configuration/update/control-plane-update.html
 ---
 
-# Обновление Control Plane Kubernetes
-
 В Deckhouse Kubernetes Platform процесс обновления Control Plane максимально автоматизирован и безопасен — как для single-master-, так и для multi-master-кластеров. При этом могут возникать кратковременные перерывы в доступности API-сервера, однако на работу приложений внутри кластера обновление не влияет. Дополнительного окна для регламентных работ обычно не требуется.
 
 ## Поддерживаемые версии и режимы обновления

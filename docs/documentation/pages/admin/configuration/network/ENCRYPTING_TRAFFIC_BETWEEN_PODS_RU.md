@@ -123,8 +123,8 @@ E....]@.@.T.
 o[D
 o[..P..'...;.i8...........
 .ZN..~......z...v...T......d.4p
-..6j..V..G...0 d..U h...e....W.`.....4....;.......T.......3.$... [..%ex.....i<...*.[..C...jC....p.+..............Nt	................{..P%.+.,L......A........B..7}.v../...rg.o.)5......E.X;K8..%,..yb.^f...^+..Ble.j..w3 S......}..	|3...+.=...;H..#...Y...3h.....:.9.w.A.4X..g...|S;.`<....%.y..4.....D.m...../6.7[.......!+.J........2._r.D.C>`.3A..... ..H.^1...P1N....)..%...	r.=..s.FB..i^..^....4{;...ED_.\...g`l,q........U*0.#..(......).h..|sc...
-.c(..kd....5C@..5.Z.L..C2 @.7>..y%....R.5........j9........!........H.a....b..].0..~..0x7..+N...o.6........	(%7:.Xr..N......'.O.a.j&v..Ba.....t..q.	=U.t.fU.].......2g....Eat.D.3n........*G.N..!LY.......n)......._jL..9RD..gT.lX..p&..=.d..Tq%....qF`.....'..|..$!g..j.d. N%tb^...@-	..`...S:..D.....y...ckA.;}Y,.....X..6...=[,..|AD..._}......W.. ..u3G...<. ..&.0j.,.'!.#	....w..bx..............}U.;..y....J.K..fQ.#]..3.V..=.d._.'....q.;!.9.N......n.7.Zi.>....@...].u.A}.;.....c..s......d.*=..G..9......Nt@....v..s.>.
+..6j..V..G...0 d..U h...e....W.`.....4....;.......T.......3.$... [..%ex.....i<...*.[..C...jC....p.+..............Nt ................{..P%.+.,L......A........B..7}.v../...rg.o.)5......E.X;K8..%,..yb.^f...^+..Ble.j..w3 S......}.. |3...+.=...;H..#...Y...3h.....:.9.w.A.4X..g...|S;.`<....%.y..4.....D.m...../6.7[.......!+.J........2._r.D.C>`.3A..... ..H.^1...P1N....)..%... r.=..s.FB..i^..^....4{;...ED_.\...g`l,q........U*0.#..(......).h..|sc...
+.c(..kd....5C@..5.Z.L..C2 @.7>..y%....R.5........j9........!........H.a....b..].0..~..0x7..+N...o.6........ (%7:.Xr..N......'.O.a.j&v..Ba.....t..q. =U.t.fU.].......2g....Eat.D.3n........*G.N..!LY.......n)......._jL..9RD..gT.lX..p&..=.d..Tq%....qF`.....'..|..$!g..j.d. N%tb^...@- ..`...S:..D.....y...ckA.;}Y,.....X..6...=[,..|AD..._}......W.. ..u3G...<. ..&.0j.,.'!.# ....w..bx..............}U.;..y....J.K..fQ.#]..3.V..=.d._.'....q.;!.9.N......n.7.Zi.>....@...].u.A}.;.....c..s......d.*=..G..9......Nt@....v..s.>.
 ...h....Cm.Z.......n......L.......-_.......r...%Z.....h...........`..8A....yt.t..2d....oH?.1.O&.J....F..b.OV.............E1H..%~..2.H..{.I...=.I.*..2y1p0h..........P.....@r....vk.!".......{..`.3..<,.r&L.....M...t...;.z...Q...1+.,.......:._L.V.....e.. ..!]\..6*}....vT.A>.....A0.....{.?}AH.+R..g.[=?.X...|94....S+!..e...*..M`f...o..b.K#5.....@...5.......o.(.
 ...
 ```
@@ -155,11 +155,11 @@ kubectl -n test-istio-mtls create deployment client --image=registry.company.net
 
 ```shell
     10.111.91.211.54424 > 10.111.91.68.http: Flags [P.], cksum 0xcc77 (incorrect -> 0xee57), seq 1:93, ack 1, win 128, options [nop,nop,TS val 305286128 ecr 3834507600], length 92: HTTP, length: 92
-	GET / HTTP/1.1
-	Host: webserver.test-istio-mtls
-	User-Agent: Wget
-	Accept: */*
-	Connection: close
+ GET / HTTP/1.1
+ Host: webserver.test-istio-mtls
+ User-Agent: Wget
+ Accept: */*
+ Connection: close
 
 E...y.@.?...
 o[.
@@ -179,39 +179,39 @@ o[..P..<Nb................
 ...Q.2K.
 09:14:20.964496 lxc4f4a182c887c In  IP (tos 0x0, ttl 64, id 33397, offset 0, flags [DF], proto TCP (6), length 1003)
     10.111.91.68.http > 10.111.91.211.54424: Flags [P.], cksum 0xcfd2 (incorrect -> 0x44eb), seq 1:952, ack 93, win 128, options [nop,nop,TS val 3834507605 ecr 305286128], length 951: HTTP, length: 951
-	HTTP/1.1 200 OK
-	server: istio-envoy
-	date: Fri, 24 Jan 2025 09:14:20 GMT
-	content-type: text/html
-	content-length: 615
-	last-modified: Wed, 14 Aug 2024 05:42:07 GMT
-	etag: "66bc43af-267"
-	accept-ranges: bytes
-	x-envoy-upstream-service-time: 0
-	connection: close
-	x-envoy-decorator-operation: webserver.test-istio-mtls.svc.cluster.local:80/*
+ HTTP/1.1 200 OK
+ server: istio-envoy
+ date: Fri, 24 Jan 2025 09:14:20 GMT
+ content-type: text/html
+ content-length: 615
+ last-modified: Wed, 14 Aug 2024 05:42:07 GMT
+ etag: "66bc43af-267"
+ accept-ranges: bytes
+ x-envoy-upstream-service-time: 0
+ connection: close
+ x-envoy-decorator-operation: webserver.test-istio-mtls.svc.cluster.local:80/*
 
-	<!DOCTYPE html>
-	<html>
-	<head>
-	<title>Welcome to nginx!</title>
-	<style>
-	html { color-scheme: light dark; }
-	body { width: 35em; margin: 0 auto;
-	font-family: Tahoma, Verdana, Arial, sans-serif; }
-	</style>
-	</head>
-	<body>
-	<h1>Welcome to nginx!</h1>
-	<p>If you see this page, the nginx web server is successfully installed and
-	working. Further configuration is required.</p>
+ <!DOCTYPE html>
+ <html>
+ <head>
+ <title>Welcome to nginx!</title>
+ <style>
+ html { color-scheme: light dark; }
+ body { width: 35em; margin: 0 auto;
+ font-family: Tahoma, Verdana, Arial, sans-serif; }
+ </style>
+ </head>
+ <body>
+ <h1>Welcome to nginx!</h1>
+ <p>If you see this page, the nginx web server is successfully installed and
+ working. Further configuration is required.</p>
 
-	<p>For online documentation and support please refer to
-	<a href="http://nginx.org/">nginx.org</a>.<br/>
-	Commercial support is available at
-	<a href="http://nginx.com/">nginx.com</a>.</p>
+ <p>For online documentation and support please refer to
+ <a href="http://nginx.org/">nginx.org</a>.<br/>
+ Commercial support is available at
+ <a href="http://nginx.com/">nginx.com</a>.</p>
 
-	<p><em>Thank you for using nginx.</em></p>
-	</body>
-	</html>
+ <p><em>Thank you for using nginx.</em></p>
+ </body>
+ </html>
 ```
