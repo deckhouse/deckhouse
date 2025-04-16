@@ -1,6 +1,6 @@
 ---
 title: "Descheduler"
-permalink: en/admin/configuration/app-scaling/pod-eviction/descheduler.html 
+permalink: en/admin/configuration/app-scaling/pod-eviction/scheduler.html 
 ---
 
 ## Pod scheduling

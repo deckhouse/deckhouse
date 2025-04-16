@@ -1,6 +1,6 @@
 ---
 title: "Vertical pod autoscaling"
-permalink: /user/configuration/app-scaling/vpa.html
+permalink: en/user/configuration/app-scaling/vpa.html
 ---
 
 ## How Vertical Pod Autoscaler (VPA) works
