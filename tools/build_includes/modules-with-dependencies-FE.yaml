@@ -540,7 +540,7 @@
     - '**/*_test.go'
     - '**/*.sh'
   stageDependencies:
-    setup:
+    install:
         - '**/*.go'
 - add: /ee/modules/040-node-manager/cloud-providers/openstack
   to: /deckhouse/modules/040-node-manager/cloud-providers/openstack
