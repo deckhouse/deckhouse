@@ -301,7 +301,79 @@ entries:
                 - title:
                     en: Overview
                     ru: Обзор
-                  url: /admin/storage-overview.html
+                  url: /admin/storage/overview.html
+                - title:
+                    en: Storage configuration
+                    ru: Настройка хранилищ
+                  url: admin/storage/supported-storage.html
+                - title:
+                    en: Configuring volume snapshot creation
+                    ru: Настройка создания снимков томов
+                  url: admin/storage/snapshot-controller.html
+                - title:
+                    en: SDS
+                    ru: Программно-определяемые хранилища
+                  folders:
+                    - title:
+                        en: Local path provisioner storage
+                        ru: Локальное хранилище Local Path Provisioner
+                      url: admin/storage/sds/local-path-provisioner.html
+                    - title:
+                        en: Local storage based on LVM
+                        ru: Локальное хранилище на основе LVM
+                      folders:
+                        - title:
+                            en: Setting up local storage based on LVM
+                            ru: Настройка локального хранилища на основе LVM
+                          url: admin/storage/sds/lvm-local.html
+                        - title:
+                            en: Managing local storage based on LVM
+                            ru: Управление локальным хранилищем на основе LVM
+                          url: admin/storage/sds/lvm-local-faq.html
+                    - title:
+                        en: Replicated storage based on DRBD
+                        ru: Реплицируемое хранилище на основе DRBD
+                      folders:
+                        - title:
+                            en: Setting up replicated storage based on DRBD
+                            ru: Настройка реплицируемого хранилища на основе DRBD
+                          url: admin/storage/sds/lvm-replicated.html
+                        - title:
+                            en: Managing DRBD‑based replicated storage
+                            ru: Управление реплицируемым хранилищем на основе DRBD
+                          url: admin/storage/sds/lvm-replicated-faq.html
+                - title:
+                    en: External
+                    ru: Внешние хранилища
+                  folders:
+                    - title:
+                        en: Distributed Ceph storage
+                        ru: Распределённое хранилище Ceph
+                      url: admin/storage/external/ceph.html
+                    - title:
+                        en: HPE data storage
+                        ru: Хранилище данных HPE
+                      url: admin/storage/external/hpe.html
+                    - title:
+                        en: Huawei data storage
+                        ru: Хранилище данных Huawei
+                      url: admin/storage/external/huawei.html
+                    - title:
+                        en: NFS data storage
+                        ru: Хранилище данных NFS
+                      url: admin/storage/external/nfs.html
+                    - title:
+                        en: S3 object storage
+                        ru: Объектное хранилище на основе S3
+                      url: admin/storage/external/s3.html
+                    - title:
+                        en: SCSI-based data storage
+                        ru: Хранилище данных на основе протокола SCSI
+                      url: admin/storage/external/scsi.html
+                    - title:
+                        en: TATLIN.UNIFIED (Yadro) unified storage
+                        ru: Унифицированное хранилище TATLIN.UNIFIED (Yadro)
+                      url: admin/storage/external/yadro.html
             - title:
                 en: Platform security
                 ru: TODO Безопасность платформы
