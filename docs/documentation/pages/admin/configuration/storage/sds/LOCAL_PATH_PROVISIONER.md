@@ -69,7 +69,6 @@ spec:
      path: "/opt/local-path-provisioner"
    ```
 
-
 1. Ensure that `spec.nodeGroups` matches the NodeGroup where Prometheus will be running.
 
 1. Specify the name of the created StorageClass in the Prometheus configuration:

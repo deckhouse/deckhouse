@@ -107,10 +107,10 @@ If the pod remains after removing the label, ensure that the labels from the `d8
 d8 k get node %node-name% --show-labels
 ```
 
-If the labels are absent, check that the node does not have any [LVMVolumeGroup](../../../../reference/cr/lvmvolumegroup/) resources being used by [LocalStorageClass](../../../../reference/cr/localstorageclass/) resources. More information on this check can be found [here](#verifying-dependent-LVMVolumeGroup–resources–on-the-node).
+If the labels are absent, check that the node does not have any [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) resources being used by [LocalStorageClass](../../../reference/cr/localstorageclass/) resources. More information on this check can be found [here](#verifying-dependent-LVMVolumeGroup–resources–on-the-node).
 
 {% alert level=“warning” %}
-Note that for [LVMVolumeGroup](../../../../reference/cr/lvmvolumegroup/) and [LocalStorageClass](../../../../reference/cr/localstorageclass/) resources—due to which the node cannot be removed from module management — the label `storage.deckhouse.io/sds-local-volume-candidate-for-eviction` will be displayed.
+Note that for [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) and [LocalStorageClass](../../../reference/cr/localstorageclass/) resources—due to which the node cannot be removed from module management — the label `storage.deckhouse.io/sds-local-volume-candidate-for-eviction` will be displayed.
 
 On the node itself, the label `storage.deckhouse.io/sds-local-volume-need-manual-eviction` will be present.
 {% endalert %}
@@ -119,13 +119,13 @@ On the node itself, the label `storage.deckhouse.io/sds-local-volume-need-manual
 
 To check the dependent resources, follow these steps:
 
-1. Display the available [LocalStorageClass](../../../../reference/cr/localstorageclass/) resources:
+1. Display the available [LocalStorageClass](../../../reference/cr/localstorageclass/) resources:
 
    ```shell
    d8 k get lsc
    ```
 
-1. Check the list of used LVMVolumeGroup resources for a specific [LocalStorageClass](../../../../reference/cr/localstorageclass/):
+1. Check the list of used LVMVolumeGroup resources for a specific [LocalStorageClass](../../../reference/cr/localstorageclass/):
 
    ```shell
    d8 k get lsc <LSC-NAME> -oyaml
@@ -156,7 +156,7 @@ To check the dependent resources, follow these steps:
 
    > Note the `spec.lvm.lvmVolumeGroups` field — this is where the used resources are specified.
 
-1. Display the list of existing [LVMVolumeGroup](../../../../reference/cr/lvmvolumegroup/) resources:
+1. Display the list of existing [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) resources:
 
    ```shell
    d8 k get lvg
@@ -174,11 +174,11 @@ To check the dependent resources, follow these steps:
    lvg-on-worker-5   Operational   node-worker-5   204796Mi   0                test-vg   15d
    ```
 
-1. Make sure that on the node planned for removal from module management, there is no [LVMVolumeGroup](../../../../reference/cr/lvmvolumegroup/) resource used in [LocalStorageClass](../../../../reference/cr/localstorageclass/) resources. If such resources are present, they must be deleted manually to avoid loss of control over the volumes.
+1. Make sure that on the node planned for removal from module management, there is no [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) resource used in [LocalStorageClass](../../../reference/cr/localstorageclass/) resources. If such resources are present, they must be deleted manually to avoid loss of control over the volumes.
 
 ## Remaining sds-local-volume-csi-node pod after removing labels
 
-If after removing the labels from the node the sds-local-volume-csi-node pod continues to run, this is most likely due to the presence on the node of [LVMVolumeGroup](../../../../reference/cr/lvmvolumegroup/) resources that are used by one of the [LocalStorageClass](../../../../reference/cr/localstorageclass/) resources. The verification process is described [above](#verifying-dependent-LVMVolumeGroup-resources-on-the-node).
+If after removing the labels from the node the sds-local-volume-csi-node pod continues to run, this is most likely due to the presence on the node of [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) resources that are used by one of the [LocalStorageClass](../../../reference/cr/localstorageclass/) resources. The verification process is described [above](#verifying-dependent-LVMVolumeGroup-resources-on-the-node).
 
 ## Absence of component service pods on the desired node
 

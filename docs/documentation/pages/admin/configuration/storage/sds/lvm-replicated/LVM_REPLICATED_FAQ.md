@@ -44,7 +44,7 @@ There are two ways:
 
 ## Assigning the default StorageClass
 
-To designate a StorageClass as the default, set the field `spec.isDefault` to `true` in the [ReplicatedStorageClass](../../../../reference/cr/replicatedstorageclass/) custom resource.
+To designate a StorageClass as the default, set the field `spec.isDefault` to `true` in the [ReplicatedStorageClass](../../../reference/cr/replicatedstorageclass/) custom resource.
 
 ## Adding an existing LVMVolumeGroup or LVMThin pool
 
@@ -54,9 +54,9 @@ To designate a StorageClass as the default, set the field `spec.isDefault` to `t
    vgchange myvg-0 --add-tag storage.deckhouse.io/enabled=true
    ```
 
-   After that the Volume Group will be discovered automatically and a corresponding [LVMVolumeGroup](../../../../reference/cr/lvmvolumegroup/) resource will be created.
+   After that the Volume Group will be discovered automatically and a corresponding [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/) resource will be created.
 
-1. Reference this resource in [ReplicatedStoragePool](../../../../reference/cr/replicatedstoragepool/) parameters using `spec.lvmVolumeGroups[].name`.  
+1. Reference this resource in [ReplicatedStoragePool](../../../reference/cr/replicatedstoragepool/) parameters using `spec.lvmVolumeGroups[].name`.  
    If an LVMThin pool is used, additionally specify its name in `spec.lvmVolumeGroups[].thinPoolName`.
 
 ## Changing DRBD volume limits and cluster ports
@@ -232,7 +232,7 @@ linstor node list -s AutoplaceTarget
 
 Issues can arise at various component layers. The cheat sheet below helps diagnose volume failures in LINSTOR.
 
-![cheat sheet](./images/linstor-debug-cheatsheet.ru.svg)
+![cheat sheet](../../../images/storage/sds/lvm-replicated/linstor-debug-cheatsheet.svg)
 <!-- Source: https://docs.google.com/drawings/d/19hn3nRj6jx4N_haJE0OydbGKgd-m8AUSr0IqfHfT6YA/edit -->
 
 ### linstor-node start error while loading the DRBD module
@@ -294,7 +294,7 @@ If the output contains messages like *Remote failed to finish a request within �
 
 ## Removing a leftover Storage Pool after deleting a ReplicatedStoragePool
 
-The `sds-replicated-volume` module does not handle deletion operations for the [ReplicatedStoragePool](../../../../reference/cr/replicatedstoragepool/) resource.
+The `sds-replicated-volume` module does not handle deletion operations for the [ReplicatedStoragePool](../../../reference/cr/replicatedstoragepool/) resource.
 
 ## Restrictions on changing ReplicatedStorageClass spec
 
@@ -407,7 +407,7 @@ The backup is stored in encoded segments in Secrets named `linstor-%date_time%-b
    Or bulk‑apply for a full restore:
 
    ```shell
-   kubectl apply -f ./backup/
+   d8 k apply -f ./backup/
    ```
 
 ## Missing sds-replicated-volume service pods on a selected node
@@ -446,7 +446,7 @@ The issue is most likely related to node labels.
 
 ## Additional support
 
-Reasons for failed operations are shown in the `status.reason` field of [ReplicatedStoragePool](../../../../reference/cr/replicatedstoragepool/) and [ReplicatedStorageClass](../../../../reference/cr/replicatedstorageclass/) resources. If that information is insufficient, consult the `sds-replicated-volume-controller` logs.
+Reasons for failed operations are shown in the `status.reason` field of [ReplicatedStoragePool](../../../reference/cr/replicatedstoragepool/) and [ReplicatedStorageClass](../../../reference/cr/replicatedstorageclass/) resources. If that information is insufficient, consult the `sds-replicated-volume-controller` logs.
 
 ## Migration from the linstor module to sds-replicated-volume
 
@@ -568,7 +568,7 @@ Additional parameters:
 
 ### Migrating to ReplicatedStoragePool
 
-The [ReplicatedStoragePool](../../../../reference/cr/replicatedstoragepool/) resource allows you to create Storage Pools in the backend. It is recommended to create this resource even for existing Storage Pools and reference existing [LVMVolumeGroup](../../../../reference/cr/lvmvolumegroup/). The controller will detect that the Storage Pools already exist and leave them unchanged, showing `Created` in `status.phase`.
+The [ReplicatedStoragePool](../../../reference/cr/replicatedstoragepool/) resource allows you to create Storage Pools in the backend. It is recommended to create this resource even for existing Storage Pools and reference existing [LVMVolumeGroup](../../../reference/cr/lvmvolumegroup/). The controller will detect that the Storage Pools already exist and leave them unchanged, showing `Created` in `status.phase`.
 
 ## Migration from the sds-drbd module to sds-replicated-volume
 
@@ -632,7 +632,7 @@ During migration the module control plane and its CSI are unavailable. This prev
 1. Wait until all pods in the `d8-sds-replicated-volume` namespace are `Ready` or `Completed`:
 
    ```shell
-   kubectl get po -n d8-sds-replicated-volume
+   d8 k get po -n d8-sds-replicated-volume
    ```
 
 1. Update the `linstor` alias and check DRBD resources:
@@ -653,7 +653,7 @@ The logic of these resources remains unchanged. However, verify that no DRBDStor
 Using DRBD with more than one replica already provides network‑level RAID functionality. Local RAID can cause the following issues:
 
 - Significantly increases space overhead when using redundant RAID.  
-  Example: [ReplicatedStorageClass](../../../../reference/cr/replicatedstorageclass/) with `replication` set to `ConsistencyAndAvailability`. DRBD will store three data replicas (one per node). If those nodes use RAID1, storing 1 GB of data will require 6 GB of disk space. Redundant RAID is reasonable only to simplify server maintenance when storage cost is irrelevant. RAID1 then allows replacing disks without moving data replicas off a “problem” disk.
+  Example: [ReplicatedStorageClass](../../../reference/cr/replicatedstorageclass/) with `replication` set to `ConsistencyAndAvailability`. DRBD will store three data replicas (one per node). If those nodes use RAID1, storing 1 GB of data will require 6 GB of disk space. Redundant RAID is reasonable only to simplify server maintenance when storage cost is irrelevant. RAID1 then allows replacing disks without moving data replicas off a “problem” disk.
 
 - With RAID0 the performance gain is negligible because data replication occurs over the network and the bottleneck is likely the network. Additionally, reduced host storage reliability can lead to data unavailability since DRBD failover from a broken replica to a healthy one is not instantaneous.
 

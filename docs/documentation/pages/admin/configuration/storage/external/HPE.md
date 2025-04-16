@@ -42,7 +42,7 @@ EOF
 Wait for the module to become `Ready`.
 
 ```shell
-kubectl get module csi-hpe -w
+d8 k get module csi-hpe -w
 ```
 
 ### Creating a StorageClass
