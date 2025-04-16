@@ -27,6 +27,7 @@ const (
 	CtrlManagerNamespace      = "d8-system"
 	CtrlManagerHealthAddr     = ":8097"
 	CtrlManagerLeaderElection = false
+	CtrlMetricsBindAddress    = "0" // "0" - disable metrics
 )
 
 func NewCtrlManager() (ctrl.Manager, error) {
@@ -40,6 +41,7 @@ func NewCtrlManager() (ctrl.Manager, error) {
 		HealthProbeBindAddress: CtrlManagerHealthAddr,
 		Namespace:              CtrlManagerNamespace,
 		Logger:                 klog.NewKlogr(),
+		MetricsBindAddress:     CtrlMetricsBindAddress,
 	})
 
 	if err != nil {

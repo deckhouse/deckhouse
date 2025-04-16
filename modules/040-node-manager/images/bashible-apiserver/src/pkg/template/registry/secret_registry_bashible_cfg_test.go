@@ -134,13 +134,13 @@ func TestRegistryBashibleConfig_Validate(t *testing.T) {
 				Hosts: []registryBashibleConfigHostsObject{
 					{
 						Host:    "host",
-						Mirrors: []registryBashibleConfigMirrorHostObject{{Host: "host", Scheme: ""}},
+						Mirrors: []registryBashibleConfigMirrorHostObject{{Host: "", Scheme: "https"}},
 					},
 				},
 				PrepullHosts: []registryBashibleConfigHostsObject{
 					{
 						Host:    "host",
-						Mirrors: []registryBashibleConfigMirrorHostObject{{Host: "host", Scheme: ""}},
+						Mirrors: []registryBashibleConfigMirrorHostObject{{Host: "", Scheme: "https"}},
 					},
 				},
 			},
@@ -273,6 +273,7 @@ func TestRegistryBashibleConfig_ConvertToRegistryData(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.testName, func(t *testing.T) {
+			// Validate input
 			err := tt.inputConfig.Validate()
 			if err != nil {
 				if e, ok := err.(validation.InternalError); ok {
@@ -281,8 +282,8 @@ func TestRegistryBashibleConfig_ConvertToRegistryData(t *testing.T) {
 			}
 			assert.NoError(t, err, "Expected no validation error")
 
+			// Validate output
 			registryData := tt.inputConfig.ConvertToRegistryData()
-			assert.NoError(t, err, "Expected no error in ToRegistryData")
 			assert.Equal(t, tt.expectedConfig, *registryData, "RegistryData does not match expected")
 
 			err = registryData.Validate()

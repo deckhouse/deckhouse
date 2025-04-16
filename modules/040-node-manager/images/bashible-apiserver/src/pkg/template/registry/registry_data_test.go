@@ -27,7 +27,6 @@ func TestRegistryData_FromInputData(t *testing.T) {
 		inputDeckhouseRegistryCfg deckhouseRegistry
 		inputRegistryBashibleCfg  *registryBashibleConfig
 		expectedConfig            *RegistryData
-		expectError               bool
 	}{
 		{
 			testName: "Empty registry bashible config",
@@ -57,7 +56,6 @@ func TestRegistryData_FromInputData(t *testing.T) {
 					},
 				},
 			},
-			expectError: false,
 		},
 		{
 			testName: "With registry bashible config",
@@ -116,7 +114,6 @@ func TestRegistryData_FromInputData(t *testing.T) {
 					},
 				},
 			},
-			expectError: false,
 		},
 		{
 			testName: "With registry bashible config, unique hosts",
@@ -165,22 +162,43 @@ func TestRegistryData_FromInputData(t *testing.T) {
 					},
 				},
 			},
-			expectError: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.testName, func(t *testing.T) {
-			outputData := &RegistryData{}
-			outputErr := outputData.FromInputData(tt.inputDeckhouseRegistryCfg, tt.inputRegistryBashibleCfg)
+			// Validate input
+			err := tt.inputDeckhouseRegistryCfg.Validate()
+			if err != nil {
+				if e, ok := err.(validation.InternalError); ok {
+					assert.Fail(t, "Internal validation error: %w", e.InternalError())
+				}
+			}
+			assert.NoError(t, err, "Expected no error but got one")
 
-			if tt.expectError {
-				assert.Error(t, outputErr, "Expected an error but got none")
-			} else {
-				assert.NoError(t, outputErr, "Expected no error but got one")
+			if tt.inputRegistryBashibleCfg != nil {
+				err = tt.inputRegistryBashibleCfg.Validate()
+				if err != nil {
+					if e, ok := err.(validation.InternalError); ok {
+						assert.Fail(t, "Internal validation error: %w", e.InternalError())
+					}
+				}
+				assert.NoError(t, err, "Expected no error but got one")
 			}
 
+			// Validate output
+			outputData := &RegistryData{}
+			err = outputData.FromInputData(tt.inputDeckhouseRegistryCfg, tt.inputRegistryBashibleCfg)
+			assert.NoError(t, err, "Expected no error but got one")
 			assert.Equal(t, tt.expectedConfig, outputData, "Expected and actual configurations do not match")
+
+			err = outputData.Validate()
+			if err != nil {
+				if e, ok := err.(validation.InternalError); ok {
+					assert.Fail(t, "Internal validation error: %w", e.InternalError())
+				}
+			}
+			assert.NoError(t, err, "Expected no error but got one")
 		})
 	}
 }
