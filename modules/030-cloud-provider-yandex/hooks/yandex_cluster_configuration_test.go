@@ -98,7 +98,6 @@ withNATInstance:
   internalSubnetID: test
   natInstanceExternalAddress: 84.201.160.148
   exporterAPIKey: ""
-  natInstanceFamilyID: nat-instance-ubuntu-2204
   natInstanceResources:
     cores: 2
     memory: 2048
