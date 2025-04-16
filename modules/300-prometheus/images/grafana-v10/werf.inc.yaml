@@ -1,5 +1,5 @@
 ---
-{{ $grafanaVersion := "10.4.15" }}
+{{ $grafanaVersion := "10.4.17" }}
 {{ $bundledPlugins := "petrslavotinek-carpetplot-panel,vonage-status-panel,btplc-status-dot-panel,natel-plotly-panel,savantly-heatmap-panel,grafana-piechart-panel,grafana-worldmap-panel,esnet-matrix-panel" }}
 {{ $gfPathPlugins := "/usr/share/grafana/plugins-bundled" }}
 ---
