@@ -148,7 +148,7 @@ spec:
           imagePullPolicy: Always
           env:
 {{- if (not (.Values.global.enabledModules | has "control-plane-manager")) }}
-# control-plane is managed by third-party team (EKS/GKP/...): use service by default
+# control-plane is managed by third-party team (EKS/GKP/...): use Service by default
 {{- else }}
   {{- if not .Values.global.clusterIsBootstrapped }}
   # bootstrap phase: use direct connection
