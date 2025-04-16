@@ -42,11 +42,8 @@ import (
 // Full method example: /dhctl.DHCTL/Check
 const singlethreadedMethodsPrefix = "/dhctl.DHCTL"
 
-// The period during which data on the number of recent endpoint requests is collected
-const requestsCounterMaxDuration = time.Hour * 2
-
 // Serve starts GRPC server
-func Serve(network, address string, parallelTasksLimit int) error {
+func Serve(network, address string, parallelTasksLimit int, requestsCounterMaxDuration time.Duration) error {
 	dhctllog.InitLoggerWithOptions("silent", dhctllog.LoggerOptions{})
 	lvl := &slog.LevelVar{}
 	lvl.Set(slog.LevelDebug)
@@ -59,7 +56,7 @@ func Serve(network, address string, parallelTasksLimit int) error {
 
 	dhctlProxy := NewStreamDirector(log, singlethreadedMethodsPrefix)
 
-	requestsCounter := rc.New(requestsCounterMaxDuration)
+	requestsCounter := rc.New(requestsCounterMaxDuration, sem)
 	requestsCounter.Run(ctx)
 
 	log.Info(
