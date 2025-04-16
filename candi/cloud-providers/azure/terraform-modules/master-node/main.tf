@@ -111,7 +111,7 @@ resource "azurerm_managed_disk" "kubernetes_data" {
   name                 = join("-", [local.prefix, "kubernetes-data", var.nodeIndex])
   resource_group_name  = data.azurerm_resource_group.kube.name
   location             = data.azurerm_resource_group.kube.location
-  zones                = [local.zone]
+  zone                =  local.zone
   storage_account_type = local.disk_type
   create_option        = "Empty"
   disk_size_gb         = local.etcd_disk_size_gb
