@@ -161,6 +161,8 @@ spec:
         {{- end }}
         - name: GF_SECURITY_COOKIE_SAMESITE
           value: "strict"
+        - name: GF_DATABASE_WAL
+          value: "true"
         - name: PROMETHEUS_TOKEN
           valueFrom:
             secretKeyRef:
