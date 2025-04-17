@@ -657,7 +657,11 @@ module JSONSchemaRenderer
                      return nil
                  end
 
-                 result.push(%Q(<h2>#{input["spec"]["names"]["kind"]}</h2>))
+                 if @page['layout'] == "pdf"
+                   result.push(%Q(<h3>#{input["spec"]["names"]["kind"]}</h3>))
+                 else
+                   result.push(%Q(<h2>#{input["spec"]["names"]["kind"]}</h2>))
+                 end
 
                  if  input["spec"]["versions"].length > 1 then
                      result.push('<p><font size="-1">Scope: ' + input["spec"]["scope"] + '</font></p>')
@@ -886,7 +890,11 @@ module JSONSchemaRenderer
         end
 
         result.push('<div markdown="0">')
-        result.push(convert(%Q(<h2>#{input["kind"]}</h2>)))
+        if page['layout'] == "pdf"
+          result.push(convert(%Q(<h3>#{input["kind"]}</h3>)))
+        else
+          result.push(convert(%Q(<h2>#{input["kind"]}</h2>)))
+        end
 
         for i in 0..(input["apiVersions"].length-1)
           result.push("<p><font size='-1'>Version: #{input["apiVersions"][i]["apiVersion"]}</font></p>")
