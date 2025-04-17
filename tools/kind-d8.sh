@@ -15,7 +15,7 @@
 # limitations under the License.
 
 CONFIG_DIR=~/.kind-d8
-KIND_IMAGE=kindest/node:v1.31.6
+KIND_IMAGE=kindest/node:v1.31.6@sha256:28b7cbb993dfe093c76641a0c95807637213c9109b761f1d422c2400e22b8e87
 D8_RELEASE_CHANNEL_TAG=stable
 D8_RELEASE_CHANNEL_NAME=Stable
 D8_REGISTRY_ADDRESS=registry.deckhouse.io
