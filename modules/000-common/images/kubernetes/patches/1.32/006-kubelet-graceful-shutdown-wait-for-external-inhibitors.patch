@@ -1,0 +1,81 @@
+diff --git a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
+index 12dcb66ec77..5b415429200 100644
+--- a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
++++ b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
+@@ -22,6 +22,7 @@ package nodeshutdown
+ 
+ import (
+ 	"fmt"
++	"os"
+ 	"path/filepath"
+ 	"sync"
+ 	"time"
+@@ -37,6 +38,7 @@ import (
+ 	"k8s.io/kubernetes/pkg/kubelet/metrics"
+ 	"k8s.io/kubernetes/pkg/kubelet/nodeshutdown/systemd"
+ 	"k8s.io/kubernetes/pkg/kubelet/prober"
++	"k8s.io/utils/clock"
+ )
+ 
+ const (
+@@ -248,6 +250,12 @@ func (m *managerImpl) start() (chan struct{}, error) {
+ 					m.recorder.Event(m.nodeRef, v1.EventTypeNormal, kubeletevents.NodeShutdown, "Shutdown manager detected shutdown cancellation")
+ 				}
+ 
++				if isShuttingDown {
++					// Wait until external inhibitors are unlocked before proceeding with shutdown.
++					// Do not set m.nodeShuttingDownNow yet to keep Ready status for Node.
++					m.waitForExternalInhibitorsToUnlock()
++				}
++
+ 				m.nodeShuttingDownMutex.Lock()
+ 				m.nodeShuttingDownNow = isShuttingDown
+ 				m.nodeShuttingDownMutex.Unlock()
+@@ -324,3 +332,47 @@ func (m *managerImpl) processShutdownEvent() error {
+ 
+ 	return m.podManager.killPods(activePods)
+ }
++
++// waitForExternalInhibitorsToUnlock waits for external inhibitors to unlock before proceeding with shutdown.
++func (m *managerImpl) waitForExternalInhibitorsToUnlock() {
++	const (
++		inhibitorsCheckInterval = 5 * time.Second
++		progressLogInterval     = 20 * time.Second
++	)
++	// Do not wait if inhibitors not started.
++	_, err := os.Stat("/var/run/d8-shutdown-inhibitor/enabled")
++	if os.IsNotExist(err) {
++		m.logger.V(1).Info("No external inhibitor locks enabled, proceed with shutdown")
++		return
++	}
++
++	m.logger.V(1).Info("Wait for external inhibitors to unlock")
++
++	realClock := clock.RealClock{}
++	ticker := realClock.NewTicker(inhibitorsCheckInterval)
++	defer ticker.Stop()
++
++	var lastLogTime time.Time
++
++	for {
++		_, err := os.Stat("/var/run/d8-shutdown-inhibitor/inhibited")
++		if os.IsNotExist(err) {
++			m.logger.V(1).Info("External inhibitors unlocked, proceed with shutdown")
++			return
++		}
++
++		now := time.Now()
++		if lastLogTime.IsZero() || now.Sub(lastLogTime) > progressLogInterval {
++			lastLogTime = now
++			m.logger.V(1).Info("Shutdown still locked by external inhibitors")
++		}
++
++		<-ticker.C()
++	}
++
++	// We have a rather long InhibitorsDelayMaxSec, but we should let kubelet to do its job,
++	// so global timer is added to kill Pods anyway some minutes before InhibitorsDelayMaxSec is passed.
++	// TODO It is still uncertain if we should implement this timer.
++	m.logger.V(1).Info("Timeout while waiting for external inhibitors, proceed with shutdown")
++	return
++}
