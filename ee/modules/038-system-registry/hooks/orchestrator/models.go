@@ -1,0 +1,46 @@
+/*
+Copyright 2024 Flant JSC
+Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+*/
+
+package orchestrator
+
+import (
+	nodeservices "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/node-services"
+	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/pki"
+	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/secrets"
+	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/users"
+	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
+)
+
+type Params struct {
+	Mode       registry_const.ModeType
+	ImagesRepo string
+	UserName   string
+	Password   string
+	TTL        string
+}
+
+type Inputs struct {
+	Params Params
+
+	PKI          pki.Inputs
+	Secrets      secrets.Inputs
+	Users        users.Inputs
+	NodeServices nodeservices.Inputs
+}
+
+type State struct {
+	Mode registry_const.ModeType `json:"mode,omitempty"`
+
+	PKI          *pki.State          `json:"pki,omitempty"`
+	Secrets      *secrets.State      `json:"secrets,omitempty"`
+	Users        *users.State        `json:"users,omitempty"`
+	NodeServices *nodeservices.State `json:"node_services,omitempty"`
+}
+
+type Values struct {
+	Ready bool   `json:"ready,omitempty"`
+	Hash  string `json:"hash,omitempty"`
+	State State  `json:"state,omitempty"`
+}

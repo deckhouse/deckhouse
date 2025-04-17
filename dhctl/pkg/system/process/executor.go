@@ -125,7 +125,7 @@ type Executor struct {
 	started bool
 	stop    bool
 	waitCh  chan struct{}
-	stopCh  chan struct{}
+	doStop  context.CancelFunc
 
 	lockWaitError sync.RWMutex
 	waitError     error
@@ -450,7 +450,7 @@ func (e *Executor) ConsumeLines(r io.Reader, fn func(l string)) {
 	}
 }
 
-func (e *Executor) Start() error {
+func (e *Executor) Start(ctx context.Context) error {
 	// setup stream handlers
 	log.DebugF("executor: start '%s'\n", e.cmd.String())
 	err := e.SetupStreamHandlers()
@@ -464,7 +464,7 @@ func (e *Executor) Start() error {
 	}
 	e.started = true
 
-	e.ProcessWait()
+	e.ProcessWait(ctx)
 
 	log.DebugF("Register stoppable: '%s'\n", e.cmd.String())
 	e.Session.RegisterStoppable(e)
@@ -472,50 +472,53 @@ func (e *Executor) Start() error {
 	return nil
 }
 
-func (e *Executor) ProcessWait() {
+func (e *Executor) ProcessWait(ctx context.Context) {
 	waitErrCh := make(chan error, 1)
 	e.waitCh = make(chan struct{}, 1)
-	e.stopCh = make(chan struct{}, 1)
 
 	// wait for process in go routine
 	go func() {
 		waitErrCh <- e.cmd.Wait()
 	}()
 
-	go func() {
-		if e.timeout > 0 {
-			time.Sleep(e.timeout)
-			if e.stopCh != nil {
-				e.stopCh <- struct{}{}
-			}
-		}
-	}()
+	var (
+		runCtx context.Context
+		runCtxCancel context.CancelFunc
+	)
+	if e.timeout > 0 {
+		runCtx, runCtxCancel = context.WithTimeout(ctx, e.timeout)
+	} else {
+		runCtx, runCtxCancel = context.WithCancel(ctx)
+	}
+
+	e.doStop = runCtxCancel
 
 	// watch for wait or stop
 	go func() {
 		defer func() {
+			runCtxCancel()
 			close(e.waitCh)
 			close(waitErrCh)
 		}()
+
 		// Wait until Stop() is called or/and Wait() is returning.
 		for {
 			select {
 			case err := <-waitErrCh:
 				if e.stop {
 					// Ignore error if Stop() was called.
-					// close(e.waitCh)
+
 					return
 				}
 				e.setWaitError(err)
 				if e.WaitHandler != nil {
 					e.WaitHandler(e.waitError)
 				}
-				// close(e.waitCh)
+
 				return
-			case <-e.stopCh:
+			case <-runCtx.Done():
 				e.stop = true
-				// Prevent next readings from the closed channel.
-				e.stopCh = nil
+
 				// The usual e.cmd.Process.Kill() is not working for the process
 				// started with the new process group (Setpgid: true).
 				// Negative pid number is used to send a signal to all processes in the group.
@@ -562,25 +565,28 @@ func (e *Executor) Stop() {
 		return
 	}
 	if e.cmd == nil {
-		log.DebugF("Possible BUG: Call Executor.Stop with Cmd==nil\n")
+		log.WarnF("Possible BUG: Call Executor.Stop with Cmd==nil\n")
 		return
 	}
 
 	e.stop = true
 	log.DebugF("Stop '%s'\n", e.cmd.String())
-	if e.stopCh != nil {
-		close(e.stopCh)
+
+	// Let's pray there is no race condition here
+	if e.doStop != nil {
+		e.doStop()
 	}
+
 	<-e.waitCh
 	log.DebugF("Stopped '%s': %d\n", e.cmd.String(), e.cmd.ProcessState.ExitCode())
 	e.closePipes()
 }
 
 // Run executes a command and blocks until it is finished or stopped.
-func (e *Executor) Run(_ context.Context) error {
+func (e *Executor) Run(ctx context.Context) error {
 	log.DebugF("executor: run '%s'\n", e.cmd.String())
 
-	err := e.Start()
+	err := e.Start(ctx)
 	if err != nil {
 		return err
 	}

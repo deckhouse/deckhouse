@@ -1,0 +1,120 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      customCertificateData:
+        type: object
+        properties:
+          tls.crt:
+            type: string
+            x-examples:
+              - plainstring
+          tls.key:
+            type: string
+            x-examples:
+              - plainstring
+          ca.crt:
+            type: string
+            x-examples:
+              - plainstring
+
+      orchestrator:
+        type: object
+        default: {}
+        properties:
+          ready:
+            type: boolean
+          hash:
+            type: string
+          state:
+            type: object
+            default: {}
+            properties:
+              mode:
+                type: string
+                enum: [Unmanaged, Direct, Proxy, Local]
+              pki:
+                type: object
+                properties:
+                  ca: &certKey
+                    type: object
+                    properties:
+                      cert:
+                        type: string
+                      key:
+                        type: string
+                  token:
+                    <<: *certKey
+              secrets:
+                type: object
+                properties:
+                  http:
+                    type: string
+              users:
+                type: object
+                x-dmt-default:
+                  ro: &user_dmt
+                    name: ro
+                    password: 11fJH7j7dwPCmGr4
+                    password_hash: $2a$10$H9K27LmQp7EVnah2ZrZfEu.z5CjSIOaM78qUcPhvXLF.Cov3muGES
+                  rw:
+                    <<: *user_dmt
+                    name: rw
+                  mirror_puller:
+                    <<: *user_dmt
+                    name: mirror_puller
+                  mirror_pusher:
+                    <<: *user_dmt
+                    name: mirror_pusher
+                properties:
+                  ro: &user
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      password:
+                        type: string
+                      password_hash:
+                        type: string
+                  rw:
+                    <<: *user
+                  mirror_puller:
+                    <<: *user
+                  mirror_pusher:
+                    <<: *user
+
+
+      state:
+        type: object
+        default: {}
+        properties:
+          staticpod_version:
+            type: string
+            default: "unknown"
+          nodes:
+            type: object
+            additionalProperties: true
+            x-kubernetes-preserve-unknown-fields: true
+      bashible:
+        type: object
+        default: {}
+        properties:
+          input:
+            type: object
+            default: {}
+            additionalProperties: true
+            x-kubernetes-preserve-unknown-fields: true
+          config:
+            type: object
+            default: {}
+            additionalProperties: true
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            default: {}
+            additionalProperties: true
+            x-kubernetes-preserve-unknown-fields: true

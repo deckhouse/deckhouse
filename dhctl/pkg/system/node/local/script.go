@@ -52,6 +52,7 @@ func (s *Script) Execute(ctx context.Context) (stdout []byte, err error) {
 	if s.timeout > 0 {
 		cmd.WithTimeout(s.timeout)
 	}
+
 	if s.env != nil {
 		cmd.WithEnv(s.env)
 	}
