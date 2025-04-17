@@ -19,13 +19,7 @@ bb-set-proxy
 {{ $kubernetes_api_proxy_image := printf "%s%s@%s" .registry.address .registry.path ( index .images.controlPlaneManager "kubernetesApiProxy" ) }}
 
 {{- if eq .cri "Containerd" }}
-  {{- if ((.images).registrypackages) }}
-    {{- $kubernetes_api_proxy_image = "deckhouse.local/images:kubernetes-api-proxy" }}
-  {{- else }}
-  if crictl version >/dev/null 2>/dev/null; then
-    crictl pull {{ $kubernetes_api_proxy_image }}
-  fi
-  {{- end }}
+  {{- $kubernetes_api_proxy_image = "deckhouse.local/images:kubernetes-api-proxy" }}
 {{- end }}
 
 bb-sync-file /etc/kubernetes/manifests/kubernetes-api-proxy.yaml - << EOF

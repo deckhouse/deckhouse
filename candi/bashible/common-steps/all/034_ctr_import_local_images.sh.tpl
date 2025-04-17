@@ -42,8 +42,6 @@ post-install-import() {
 
 bb-event-on 'bb-package-installed' 'post-install-import'
 
-  {{- if ((.images).registrypackages) }}
 bb-package-install "pause:{{ $.images.registrypackages.pause }}"
 bb-package-install "kubernetes-api-proxy:{{ $.images.registrypackages.kubernetesApiProxy }}"
-  {{- end }}
 {{- end }}
