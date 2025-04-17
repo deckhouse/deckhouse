@@ -12,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- $sandbox_image := "deckhouse.local/images:pause" -}}
-{{- $kubernetes_api_proxy_image := "deckhouse.local/images:kubernetes-api-proxy" }}
+{{- if eq .cri "Containerd" }}
+
+  {{- $sandbox_image := "deckhouse.local/images:pause" -}}
+  {{- $kubernetes_api_proxy_image := "deckhouse.local/images:kubernetes-api-proxy" }}
 
 ctr_import_image() {
   local image_name="$1"
@@ -40,7 +42,8 @@ post-install-import() {
 
 bb-event-on 'bb-package-installed' 'post-install-import'
 
-{{- if ((.images).registrypackages) }}
+  {{- if ((.images).registrypackages) }}
 bb-package-install "pause:{{ $.images.registrypackages.pause }}"
 bb-package-install "kubernetes-api-proxy:{{ $.images.registrypackages.kubernetesApiProxy }}"
+  {{- end }}
 {{- end }}
