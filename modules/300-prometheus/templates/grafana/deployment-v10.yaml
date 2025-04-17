@@ -151,6 +151,8 @@ spec:
           value: "{{- range $i, $v := .Values.prometheus.grafana.customPlugins }}{{- if ne $i 0 -}},{{- end -}}{{- $v -}}{{- end }}"
           {{- end }}
         {{- end }}
+        - name: GF_DATABASE_WAL
+          value: "true"
         - name: PROMETHEUS_TOKEN
           valueFrom:
             secretKeyRef:
