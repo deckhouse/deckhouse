@@ -134,3 +134,10 @@ properties:
               memory:
                 description: |
                   Настройка ограничений использования памяти (memory limits).
+  encryptionMode:
+    type: string
+    description: |
+      Режим шифрования трафика:
+      - `Disabled` — шифрование трафика отключено.
+      - `Default` — включено шифрование трафика между подами с использованием WireGuard.
+      - `NodeToNode` — включено шифрование трафика между подами и узлами с использованием Wireguard.
