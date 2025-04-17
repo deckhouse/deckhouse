@@ -255,6 +255,8 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 
 		hasTerraformState = checkRes.HasTerraformState
 
+		log.InfoF("Has terraform state: %v\n", hasTerraformState)
+
 		if c.Params.OnCheckResult != nil {
 			if err := c.Params.OnCheckResult(checkRes); err != nil {
 				return nil, err
