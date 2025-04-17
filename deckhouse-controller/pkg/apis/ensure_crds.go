@@ -21,9 +21,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	crdinstaller "github.com/deckhouse/module-sdk/pkg/crd-installer"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+
+	crdinstaller "github.com/deckhouse/module-sdk/pkg/crd-installer"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 )

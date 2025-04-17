@@ -23,7 +23,6 @@ import (
 	"reflect"
 	"strings"
 
-	crdinstaller "github.com/deckhouse/module-sdk/pkg/crd-installer"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/hashicorp/go-multierror"
@@ -32,6 +31,8 @@ import (
 	apimachineryv1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/util/retry"
+
+	crdinstaller "github.com/deckhouse/module-sdk/pkg/crd-installer"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
@@ -167,10 +168,10 @@ func (cp *CRDsInstaller) updateOrInsertCRD(ctx context.Context, crd *v1.CustomRe
 		}
 
 		existCRD.Spec = crd.Spec
-		if len(existCRD.ObjectMeta.Labels) == 0 {
-			existCRD.ObjectMeta.Labels = make(map[string]string, 1)
+		if len(existCRD.Labels) == 0 {
+			existCRD.Labels = make(map[string]string, 1)
 		}
-		existCRD.ObjectMeta.Labels["heritage"] = "deckhouse"
+		existCRD.Labels["heritage"] = "deckhouse"
 
 		ucrd, err := sdk.ToUnstructured(existCRD)
 		if err != nil {
