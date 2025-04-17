@@ -182,7 +182,8 @@ oom_score = 0
 
   [plugins."io.containerd.snapshotter.v1.erofs"]
       # Enable fsverity support for EROFS layers, default is false
-      enable_fsverity = true
+      # Temporary disable fsverity
+      enable_fsverity = false
 
       # Optional: Additional mount options for overlayfs
       ovl_mount_options = []
