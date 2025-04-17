@@ -19,6 +19,7 @@ data:
     client-config-dir /etc/openvpn/ccd
     key-direction 0
     data-ciphers AES-256-GCM:AES-128-GCM:AES-128-CBC
+    data-ciphers-fallback AES-128-CBC # for e2e
     keepalive 10 60
     persist-key
     persist-tun
