@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 
 	"github.com/google/uuid"
@@ -56,11 +55,21 @@ func (s *Service) Abort(server pb.DHCTL_AbortServer) error {
 	phaseSwitcher := &fsmPhaseSwitcher[*pb.AbortResponse, any]{
 		f: f, dataFunc: s.abortSwitchPhaseData, sendCh: sendCh, next: make(chan error),
 	}
-	logWriter := logger.NewLogWriter(logger.L(ctx).With(logTypeDHCTL), sendCh,
+
+	loggerDefault := logger.L(ctx).With(logTypeDHCTL)
+
+	logWriter := logger.NewLogWriter(loggerDefault, sendCh,
 		func(lines []string) *pb.AbortResponse {
 			return &pb.AbortResponse{Message: &pb.AbortResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
 		},
 	)
+
+	debugWriter := logger.NewDebugLogWriter(loggerDefault)
+
+	logOptions := logger.Options{
+		DebugWriter:   debugWriter,
+		DefaultWriter: logWriter,
+	}
 
 	startReceiver[*pb.AbortRequest, *pb.AbortResponse](server, receiveCh, doneCh, internalErrCh)
 	startSender[*pb.AbortRequest, *pb.AbortResponse](server, sendCh, internalErrCh)
@@ -90,7 +99,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.abortSafe(ctx, message.Start, phaseSwitcher.switchPhase(ctx), logWriter)
+					result := s.abortSafe(ctx, message.Start, phaseSwitcher.switchPhase(ctx), logOptions)
 					sendCh <- &pb.AbortResponse{Message: &pb.AbortResponse_Result{Result: result}}
 				}()
 
@@ -124,36 +133,28 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) abortSafe(
-	ctx context.Context,
-	request *pb.AbortStart,
-	switchPhase phases.DefaultOnPhaseFunc,
-	logWriter io.Writer,
-) (result *pb.AbortResult) {
+func (s *Service) abortSafe(ctx context.Context, request *pb.AbortStart, switchPhase phases.DefaultOnPhaseFunc, options logger.Options) (result *pb.AbortResult) {
 	defer func() {
 		if r := recover(); r != nil {
 			result = &pb.AbortResult{Err: panicMessage(ctx, r)}
 		}
 	}()
 
-	return s.abort(ctx, request, switchPhase, logWriter)
+	return s.abort(ctx, request, switchPhase, options)
 }
 
-func (s *Service) abort(
-	ctx context.Context,
-	request *pb.AbortStart,
-	switchPhase phases.DefaultOnPhaseFunc,
-	logWriter io.Writer,
-) *pb.AbortResult {
+func (s *Service) abort(ctx context.Context, request *pb.AbortStart, switchPhase phases.DefaultOnPhaseFunc, options logger.Options) *pb.AbortResult {
 	var err error
 
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream: logWriter,
-		Width:     int(request.Options.LogWidth),
+		OutStream:   options.DefaultWriter,
+		Width:       int(request.Options.LogWidth),
+		DebugStream: options.DebugWriter,
 	})
+
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
 	app.ResourcesTimeout = request.Options.ResourcesTimeout.AsDuration()
