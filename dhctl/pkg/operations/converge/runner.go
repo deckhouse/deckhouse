@@ -127,7 +127,7 @@ func (r *runner) RunConvergeMigration(ctx *context.Context, checkHasTerraformSta
 		return nil
 	}
 
-	return r.converge(ctx)
+	return r.convergeMigration(ctx, checkHasTerraformStateBeforeMigration)
 }
 
 func loadNodesState(ctx *context.Context) (map[string]state.NodeGroupInfrastructureState, error) {
