@@ -19,6 +19,7 @@ linters-settings:
       - standard
       - default
       - prefix(github.com/deckhouse/)
+      - localmodule
   goimports:
     local-prefixes: github.com/deckhouse/
   # TODO: replace deprecated methods
