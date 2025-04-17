@@ -16,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers"
+	nodeservices "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/node-services"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/pki"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/secrets"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/users"
@@ -26,16 +27,15 @@ const (
 	valuesPath    = "systemRegistry.internal.orchestrator"
 	SubmoduleName = "orchestrator"
 
-	configSnapName  = "config"
-	pkiSnapName     = "pki"
-	secretsSnapName = "secrets"
-	usersSnapName   = "users"
+	configSnapName       = "config"
+	pkiSnapName          = "pki"
+	secretsSnapName      = "secrets"
+	usersSnapName        = "users"
+	nodeServicesSnapName = "node-services"
 )
 
-var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
-	Queue:        "/modules/system-registry/orchestrator",
-	Kubernetes: []go_hook.KubernetesConfig{
+func getKubernetesConfigs() []go_hook.KubernetesConfig {
+	ret := []go_hook.KubernetesConfig{
 		{
 			Name:       configSnapName,
 			ApiVersion: "v1",
@@ -70,7 +70,17 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		pki.KubernetsConfig(pkiSnapName),
 		secrets.KubernetsConfig(secretsSnapName),
 		users.KubernetsConfig(usersSnapName),
-	},
+	}
+
+	ret = append(ret, nodeservices.KubernetsConfig(nodeServicesSnapName)...)
+
+	return ret
+}
+
+var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
+	Queue:        "/modules/system-registry/orchestrator",
+	Kubernetes:   getKubernetesConfigs(),
 },
 	func(input *go_hook.HookInput) error {
 		moduleValues := helpers.NewValuesAccessor[Values](input, valuesPath)

@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package orchestrator
 
 import (
+	nodeservices "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/node-services"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/pki"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/secrets"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/users"
@@ -23,17 +24,19 @@ type Params struct {
 type Inputs struct {
 	Params Params
 
-	PKI     pki.Inputs
-	Secrets secrets.Inputs
-	Users   users.Inputs
+	PKI          pki.Inputs
+	Secrets      secrets.Inputs
+	Users        users.Inputs
+	NodeServices nodeservices.Inputs
 }
 
 type State struct {
 	Mode registry_const.ModeType `json:"mode,omitempty"`
 
-	PKI     *pki.State     `json:"pki,omitempty"`
-	Secrets *secrets.State `json:"secrets,omitempty"`
-	Users   *users.State   `json:"users,omitempty"`
+	PKI          *pki.State          `json:"pki,omitempty"`
+	Secrets      *secrets.State      `json:"secrets,omitempty"`
+	Users        *users.State        `json:"users,omitempty"`
+	NodeServices *nodeservices.State `json:"node_services,omitempty"`
 }
 
 type Values struct {
