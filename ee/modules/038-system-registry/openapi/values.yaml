@@ -56,6 +56,11 @@ properties:
                     type: string
               users:
                 type: object
+                x-dmt-default:
+                  ro:
+                    name: ro
+                    password: 11fJH7j7dwPCmGr4
+                    password_hash: $2a$10$H9K27LmQp7EVnah2ZrZfEu.z5CjSIOaM78qUcPhvXLF.Cov3muGES
                 properties:
                   ro: &user
                     type: object
