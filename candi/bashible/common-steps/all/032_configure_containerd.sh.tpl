@@ -104,7 +104,7 @@ oom_score = 0
 
 [plugins]
   [plugins.'io.containerd.cri.v1.images']
-    snapshotter = "overlayfs"
+    snapshotter = "erofs"
     disable_snapshot_annotations = true
     discard_unpacked_layers = true
     max_concurrent_downloads = {{ $max_concurrent_downloads }}
@@ -172,7 +172,7 @@ oom_score = 0
             SystemdCgroup = ${systemd_cgroup}
 
     [plugins.'io.containerd.cri.v1.runtime'.cni]
-      bin_dir = '/opt/cni/bin'
+      bin_dirs = '/opt/cni/bin'
       conf_dir = '/etc/cni/net.d'
       max_conf_num = 1
       setup_serially = false
