@@ -20,20 +20,30 @@ import (
 	"time"
 )
 
-const cleanUpPeriod = time.Minute * 10
+const (
+	defaultCleanUpPeriod = time.Minute * 10
+	defaultTTL           = time.Hour * 2
+)
 
 // RequestsCounter structure for tracking requests by methods
 type RequestsCounter struct {
-	mx            sync.Mutex
-	requestsStore map[string][]time.Time
-	ttl           time.Duration
+	mx             sync.Mutex
+	requestsStore  map[string][]time.Time
+	ttl            time.Duration
+	cleanUpPreriod time.Duration
+	taskSem        chan struct{}
 }
 
 // New constructor for RequestsCounter
-func New(ttl time.Duration) *RequestsCounter {
+func New(ttl time.Duration, taskSemChan chan struct{}) *RequestsCounter {
+	if ttl <= 0 {
+		ttl = defaultTTL
+	}
 	at := &RequestsCounter{
-		requestsStore: make(map[string][]time.Time),
-		ttl:           ttl,
+		requestsStore:  make(map[string][]time.Time),
+		ttl:            ttl,
+		cleanUpPreriod: min(defaultCleanUpPeriod, ttl/2),
+		taskSem:        taskSemChan,
 	}
 
 	return at
@@ -48,7 +58,12 @@ func (r *RequestsCounter) Add(method string) {
 	r.requestsStore[method] = append(r.requestsStore[method], now)
 }
 
-// CountRecentRequests get the number of accesses in the last 2 hours for a specific method
+// CoountCurrentRequests get the number of tasks in progress
+func (r *RequestsCounter) CountCurrentRequests() int64 {
+	return int64(len(r.taskSem))
+}
+
+// CountRecentRequests get the number of accesses in the counter time range for a specific method
 func (r *RequestsCounter) CountRecentRequests() map[string]int64 {
 	r.mx.Lock()
 	defer r.mx.Unlock()
@@ -63,7 +78,7 @@ func (r *RequestsCounter) CountRecentRequests() map[string]int64 {
 }
 
 func (r *RequestsCounter) Run(ctx context.Context) {
-	ticker := time.NewTicker(cleanUpPeriod)
+	ticker := time.NewTicker(r.cleanUpPreriod)
 
 	go func() {
 		defer ticker.Stop()
