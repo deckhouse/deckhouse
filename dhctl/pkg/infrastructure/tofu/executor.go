@@ -49,7 +49,7 @@ func tofuCmd(ctx context.Context, workingDir string, args ...string) *exec.Cmd {
 	)
 
 	// always use dug log for write its to debug log file
-	cmd.Env = append(cmd.Env, "TF_LOG=TRACE")
+	cmd.Env = append(cmd.Env, "TF_LOG=DEBUG")
 
 	cmd.Env = append(
 		cmd.Env,
