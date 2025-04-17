@@ -333,15 +333,13 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 		log.InfoF("Need automatic migration for commander: %v\n", needAutomaticTofuMigrationForCommander)
 	}
 
-	doAction := r.RunConverge
 	if needAutomaticTofuMigrationForCommander {
 		log.WarnF("Need migrate to opentofu. Switch to migrator\n")
-		doAction = func(ctx *convergectx.Context) error {
-			return r.RunConvergeMigration(ctx, false)
-		}
+		err = r.RunConvergeMigration(convergeCtx, false)
+	} else {
+		err = r.RunConverge(convergeCtx)
 	}
 
-	err = doAction(convergeCtx)
 	if err != nil {
 		return nil, fmt.Errorf("converge problem: %v", err)
 	}
