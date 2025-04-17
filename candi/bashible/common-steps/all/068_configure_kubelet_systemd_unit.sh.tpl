@@ -18,7 +18,7 @@ rm -f /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf # for centos
 rm -f /var/lib/kubelet/kubeadm-flags.env
 
 # Read previously discovered IP
-discovered_node_ip="$(</var/lib/bashible/discovered-node-ip)"
+discovered_node_ip="$(bb-d8-node-ip)"
 
 cri_config=""
 
@@ -89,7 +89,6 @@ $([ -n "$discovered_node_ip" ] && echo -e "\n    --node-ip=${discovered_node_ip}
 {{- end }}
     ${credential_provider_flags} \\
     --hostname-override=$(bb-d8-node-name) \\
-    --node-ip=$(bb-d8-node-ip) \\
     --v=2
 EOF
 

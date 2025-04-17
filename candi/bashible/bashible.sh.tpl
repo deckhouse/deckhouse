@@ -217,6 +217,7 @@ function main() {
   unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 
   discover_node_name
+  export D8_NODE_HOSTNAME=$(d8-node-name)
 
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
     if tmp="$(kubectl_exec get node $(d8-node-name) -o json | jq -r '.metadata.labels."node.deckhouse.io/group"')" ; then
