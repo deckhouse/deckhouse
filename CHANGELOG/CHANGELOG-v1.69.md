@@ -116,6 +116,8 @@
  - **[node-manager]** Improved `handleDraining` hook to ignore timeout errors during node draining. [#12542](https://github.com/deckhouse/deckhouse/pull/12542)
  - **[node-manager]** Added validation of `instanceClass` deletion for being used by a NodeGroup. [#11830](https://github.com/deckhouse/deckhouse/pull/11830)
  - **[operator-trivy]** Add proxy env variables support to the trivy server. [#13036](https://github.com/deckhouse/deckhouse/pull/13036)
+ - **[prometheus]** enable WAL for the grafana SQLite database to prevent locking errors, thus fixing in-dashboard alerting. [#13063](https://github.com/deckhouse/deckhouse/pull/13063)
+    the grafana deployment will be rollout restarted
  - **[prometheus]** Fixed security vulnerabilities in Grafana. [#12062](https://github.com/deckhouse/deckhouse/pull/12062)
  - **[prometheus]** Fixed security vulnerabilities in `mimir` and `promxy`. [#11978](https://github.com/deckhouse/deckhouse/pull/11978)
  - **[runtime-audit-engine]** Fixed built-in rules for `runtime-audit-engine`. [#12486](https://github.com/deckhouse/deckhouse/pull/12486)
