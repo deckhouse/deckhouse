@@ -23,6 +23,7 @@ import (
 	"reflect"
 	"strings"
 
+	crdinstaller "github.com/deckhouse/module-sdk/pkg/crd-installer"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/hashicorp/go-multierror"
@@ -35,7 +36,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/deckhouse/deckhouse/pkg/log"
-	crdinstaller "github.com/deckhouse/module-sdk/pkg/crd-installer"
 )
 
 var crdGVR = schema.GroupVersionResource{

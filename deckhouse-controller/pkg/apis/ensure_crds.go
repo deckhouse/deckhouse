@@ -21,11 +21,11 @@ import (
 	"path/filepath"
 	"strings"
 
+	crdinstaller "github.com/deckhouse/module-sdk/pkg/crd-installer"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
-	crdinstaller "github.com/deckhouse/module-sdk/pkg/crd-installer"
 )
 
 // list of CRDs to delete, like "externalmodulesources.deckhouse.io"
