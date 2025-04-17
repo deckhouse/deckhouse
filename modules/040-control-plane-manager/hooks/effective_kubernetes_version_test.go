@@ -32,7 +32,6 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -166,6 +165,9 @@ serviceSubnetCIDR: 10.222.0.0/16
 }
 
 var _ = Describe("Modules :: control-plane-manager :: hooks :: get_pki_checksum ::", func() {
+	// set default value for kubernetes version for testing purposes
+	DefaultKubernetesVersion = "1.31"
+
 	Context("Empty cluster", func() {
 		f := HookExecutionConfigInit(`{"controlPlaneManager":{"internal": {}}}`, `{}`)
 
@@ -197,7 +199,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_pki_checksum 
 
 				defaultKubernetesVersion, err := base64.StdEncoding.DecodeString(d8ClusterConfigSecret.Field("data.deckhouseDefaultKubernetesVersion").String())
 				Expect(err).To(BeNil())
-				Expect(string(defaultKubernetesVersion)).To(Equal(config.DefaultKubernetesVersion))
+				Expect(string(defaultKubernetesVersion)).To(Equal(DefaultKubernetesVersion))
 
 				Expect(f.ValuesGet("controlPlaneManager.internal.effectiveKubernetesVersion").String()).To(Equal(out.effectiveVersion))
 

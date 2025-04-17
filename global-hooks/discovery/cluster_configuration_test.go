@@ -99,6 +99,9 @@ data:
   "cluster-configuration.yaml": ` + base64.StdEncoding.EncodeToString([]byte(stateCClusterConfiguration))
 	)
 
+	// Set default value for test purposes. Normally this var set to specific kubernetes version on the build stage.
+	config.DefaultKubernetesVersion = "1.32"
+
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 
 	Context("Cluster has a d8-cluster-configuration Secret", func() {

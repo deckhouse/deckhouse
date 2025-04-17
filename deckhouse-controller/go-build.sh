@@ -17,11 +17,16 @@
 set -e
 
 deckhouseVer=${D8_VERSION:-"dev"}
+defaultKubernetesVer=${DEFAULT_KUBERNETES_VERSION}
 shellOpVer=$(go list -m all | grep shell-operator | cut -d' ' -f 2-)
 addonOpVer=$(go list -m all | grep addon-operator | cut -d' ' -f 2-)
 
+if [ -z ${defaultKubernetesVer} ]; then
+  echo "DEFAULT_KUBERNETES_VERSION is not set"
+  exit 1
+fi
 GOOS=linux \
     go build \
-     -ldflags="-s -w -X 'main.DeckhouseVersion=$deckhouseVer' -X 'main.AddonOperatorVersion=$addonOpVer' -X 'main.ShellOperatorVersion=$shellOpVer'" \
+     -ldflags="-s -w -X 'main.DeckhouseVersion=$deckhouseVer' -X 'main.AddonOperatorVersion=$addonOpVer' -X 'main.ShellOperatorVersion=$shellOpVer' -X 'github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks.DefaultKubernetesVersion=$defaultKubernetesVer'" \
      -o ./deckhouse-controller \
      ./cmd/deckhouse-controller
