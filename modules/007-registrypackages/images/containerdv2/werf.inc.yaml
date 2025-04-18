@@ -1,7 +1,5 @@
-{{- $containerd_version := "1.7.27" }}
-{{- $containerd_2_version := "2.1.1" }}
+{{- $containerd_version := "2.1.1" }}
 {{- $image_version := $containerd_version | replace "." "-" }}
-{{- $image_version_2 := $containerd_2_version | replace "." "-" }}
 {{- $runc_version := "1.3.0" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
@@ -38,10 +36,6 @@ git:
   stageDependencies:
     install:
       - '**/*'
-  includePaths:
-  - install
-  - uninstall
-  - containerd.service
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
   stageDependencies:
@@ -92,89 +86,3 @@ shell:
   - make COMMIT="$(cat COMMIT)" static
   - mv runc /runc
   - mv /src/scripts/* /
-  - chmod +x /install /uninstall
----
-###
-# containerdV2
-###
-image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version_2 }}
-fromImage: builder/scratch
-import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version_2 }}
-  add: /
-  to: /
-  includePaths:
-  - containerd
-  - containerd-shim-runc-v2
-  - ctr
-  - runc
-  - install
-  - uninstall
-  - containerd.service
-  before: setup
-imageSpec:
-  config:
-    labels: { "distro": "all", "version": "all", "containerd": "{{ $containerd_2_version }}", "runc": "{{ $runc_version }}" }
-    clearUser: true
-    clearWorkingDir: true
-    clearCmd: true
-    clearEntrypoint: true
-    removeEnv: ["/.*/"]
----
-image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version_2 }}
-final: false
-fromImage: common/src-artifact
-git:
-- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
-  to: /src/scripts
-  stageDependencies:
-    install:
-      - '**/*'
-  includePaths:
-  - install_V2
-  - uninstall
-  - containerd.service
-shell:
-  install:
-  - git clone --depth=1 --branch v{{ $containerd_version }} {{ $.SOURCE_REPO }}/containerd/containerd.git /src/containerd
-  - git clone --depth=1 --branch v{{ $runc_version }} {{ $.SOURCE_REPO }}/opencontainers/runc /src/runc
-  - cd /src/containerd
-  - git describe --match 'v[0-9]*' --dirty='.m' --always > VERSION
-  - git rev-parse HEAD > REVISION
-  - cd /src/runc
-  - git describe --dirty --long --always > COMMIT
-  - rm -rf /src/containerd/.git
-  - rm -rf /src/runc/.git
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version_2 }}
-fromImage: builder/golang-bullseye
-final: false
-import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version_2 }}
-  add: /src
-  to: /src
-  before: install
-mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
-shell:
-  beforeInstall:
-  {{- include "debian packages proxy" . | nindent 2 }}
-  - apt-get update && apt-get install libseccomp-dev -y
-  install:
-  - export GOPROXY={{ $.GOPROXY }}
-  - cd /src/containerd
-  - git config --global user.email "builder@deckhouse.io"
-  - go mod download
-  - go mod vendor
-  - make STATIC=1 VERSION="$(cat VERSION)" REVISION="$(cat REVISION)" all
-  - mv bin/* /
-  - cd /src/runc
-  - go mod download
-  - go mod vendor
-  - git config --global user.email "builder@deckhouse.io"
-  - make COMMIT="$(cat COMMIT)" static
-  - mv runc /runc
-  - mv /src/scripts/* /
-  - mv /install_V2 /install
-  - chmod +x /install /uninstall
