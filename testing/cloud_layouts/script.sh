@@ -1156,7 +1156,7 @@ function wait_cluster_ready() {
 
   test_failed=
 
-  testNodeUserScript=$(cat "$(pwd)/deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_nodeuser.sh")
+  testNodeUserScript=$(cat "/deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_nodeuser.sh")
 
   testRunAttempts=5
   for ((i=1; i<=$testRunAttempts; i++)); do
@@ -1190,7 +1190,7 @@ function wait_cluster_ready() {
     return 1
   fi
 
-  testScript=$(cat "$(pwd)/deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_script.sh")
+  testScript=$(cat "/deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_script.sh")
 
   testRunAttempts=5
   for ((i=1; i<=$testRunAttempts; i++)); do
@@ -1208,7 +1208,24 @@ function wait_cluster_ready() {
     return 1
   fi
 
-  testAlerts=$(cat "$(pwd)/deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_alerts.sh")
+  testOpenvpnReady=$(cat "/deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_openvpn_ready.sh")
+
+  test_failed="true"
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" \
+      sudo su -c /bin/bash <<<"${testOpenvpnReady}"; then
+      test_failed=""
+    else
+      test_failed="true"
+      >&2 echo "OpenVPN test failed for Static provider. Sleeping 30 seconds..."
+      sleep 30
+    fi
+
+    if [[ $test_failed == "true" ]]; then
+      return 1
+    fi
+
+
+  testAlerts=$(cat "$/deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_alerts.sh")
 
   test_failed="true"
   if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testAlerts}"; then
