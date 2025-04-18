@@ -66,19 +66,17 @@ def validate(ctx: DotMap) -> tuple[Optional[str], list[str]]:
         raise Exception(f"Unknown operation {ctx.review.request.operation}")
 
 def validate_update(ctx: DotMap) -> tuple[Optional[str], list[str]]:
-    print(ctx.review.request.object.spec.cri)
     if ctx.review.request.object.spec.cri.type == "ContainerdV2":
       nodeGroupNameWithChangedCRI = ctx.review.object.metadata.name
       for i in ctx.snapshots.get("d8-nodes-with-containerd-custom-conf",[]):
           node = i["filterResult"]
           nodeName = node.get('nodeName', '')
-          labelss = node.get('labels', [])
-          print(labelss)
-          nodeGroupName = node.get('nodeGroup', '')
-
-          if nodeGroupName == nodeGroupNameWithChangedCRI:
-              nodesWithCustomConf = ", ".join(nodeName)
-          
+          labels = node.get('labels', '')
+          if labels:
+              nodeGroupName = labels.get('node.deckhouse.io/group', "")
+              if nodeGroupName == nodeGroupNameWithChangedCRI:
+                  nodesWithCustomConf = ", ".join(nodeName)
+            
       if nodesWithCustomConf:
           errorMessage = (f"CRI cannot be changed because next nodes are using custom configuration: {nodesWithCustomConf}")
           return errorMessage, []
