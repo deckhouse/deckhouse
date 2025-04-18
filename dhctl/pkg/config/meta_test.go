@@ -19,7 +19,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-
 	"testing"
 	"text/template"
 
@@ -330,7 +329,7 @@ func TestParseRegistryData(t *testing.T) {
 				"imagesRepo": "r.example.com/deckhouse/ce/",
 			})
 
-			m, err := cfg.ParseRegistryData()
+			m, err := cfg.Registry.ConvertToMap()
 			require.NoError(t, err)
 
 			require.Equal(t, m["auth"], dockerCfgAuth(user, password))
@@ -346,7 +345,7 @@ func TestParseRegistryData(t *testing.T) {
 					"imagesRepo": "r.example.com/deckhouse/ce/",
 				})
 
-				m, err := cfg.ParseRegistryData()
+				m, err := cfg.Registry.ConvertToMap()
 				require.NoError(t, err)
 
 				require.Equal(t, m["auth"], dockerCfgAuth(user, password))
@@ -361,7 +360,7 @@ func TestParseRegistryData(t *testing.T) {
 					"imagesRepo": "r.example.com/deckhouse/ce/",
 				})
 
-				m, err := cfg.ParseRegistryData()
+				m, err := cfg.Registry.ConvertToMap()
 				require.NoError(t, err)
 
 				require.Equal(t, m["auth"], "")
@@ -376,7 +375,7 @@ func TestParseRegistryData(t *testing.T) {
 					"imagesRepo": "r.example.com/deckhouse/ce/",
 				})
 
-				m, err := cfg.ParseRegistryData()
+				m, err := cfg.Registry.ConvertToMap()
 				require.NoError(t, err)
 
 				require.Equal(t, m["auth"], "")
@@ -388,7 +387,7 @@ func TestParseRegistryData(t *testing.T) {
 		t.Run("sets empty auth key", func(t *testing.T) {
 			cfg := generateMetaConfigForMetaConfigTest(t, make(map[string]interface{}))
 
-			m, err := cfg.ParseRegistryData()
+			m, err := cfg.Registry.ConvertToMap()
 			require.NoError(t, err)
 
 			require.Equal(t, m["auth"], "")

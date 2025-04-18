@@ -44,6 +44,16 @@ stream {
     server ${discovered_node_ip}:6443;
 {{- end }}
   }
+
+{{- with .registry.proxyEndpoints }}
+  upstream system-registry {
+    least_conn;
+    {{- range $proxy_endpoint := . }}
+    server {{ $proxy_endpoint }};
+    {{- end }}
+  }
+{{- end }}
+
   server {
     listen 127.0.0.1:6445;
     proxy_pass kubernetes;
@@ -52,6 +62,16 @@ stream {
     proxy_timeout 24h;
     proxy_connect_timeout 1s;
   }
+
+{{- with .registry.proxyEndpoints }}
+  server {
+    listen 127.0.0.1:5001;
+    proxy_pass system-registry;
+    # 1h timeout for very log pull/push operations
+    proxy_timeout 1h;
+    proxy_connect_timeout 1s;
+  }
+{{- end }}
 }
 EOF
 
