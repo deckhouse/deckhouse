@@ -12,20 +12,11 @@ import:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
 fromImage: common/src-artifact
-git:
-- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-  to: /patches
-  stageDependencies:
-    install:
-    - '**/*'
 shell:
   install:
   - git clone --depth 1 --branch v{{ .TF.azure.version }} {{ $.SOURCE_REPO }}/hashicorp/terraform-provider-azurerm.git /src
   - cd /src
-  - rm -rf vendor/
-  - rm -rf examples/
-  - git apply /patches/*.patch --verbose
-  - rm -rf .git
+  - rm -rf vendor examples .git
 ---
 image: terraform-provider-azure
 final: false
