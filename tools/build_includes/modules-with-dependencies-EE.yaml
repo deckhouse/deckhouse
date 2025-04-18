@@ -563,7 +563,7 @@
     - '**/*_test.go'
     - '**/*.sh'
   stageDependencies:
-    setup:
+    install:
         - '**/*.go'
 - add: /ee/modules/040-node-manager/capi/dynamix
   to: /deckhouse/modules/040-node-manager/capi/dynamix
