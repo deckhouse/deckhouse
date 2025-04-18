@@ -13,7 +13,7 @@
 # limitations under the License.
 
 {{- if eq .runType "Normal" }}
-  {{- if eq .cri "Containerd" }}
+  {{- if or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") }}
 mkdir -p /var/lib/node_labels
 label_path="/var/lib/node_labels/containerd-conf"
 

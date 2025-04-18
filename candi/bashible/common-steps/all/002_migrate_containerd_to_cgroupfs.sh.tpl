@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if eq .cri "Containerd" }}
+{{- if or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") }}
 # Migration already done
 if [ -f /var/lib/bashible/cgroup_config ]; then
   # If there is a file /var/lib/bashible/cgroup_config, then we use the cgroup driver value from the file.
