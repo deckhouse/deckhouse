@@ -38,6 +38,18 @@ func TestDir(t *testing.T) {
 			pwd:  "/home/user/work/flant/deckhouse/deckhouse-controller/pkg/controller/module-controllers/release",
 			want: "/home/user/work/flant/deckhouse",
 		},
+		{
+			pwd:  "/home/user/src/github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/release",
+			want: "/home/user/src/github.com/deckhouse/deckhouse",
+		},
+		{
+			pwd:  "/home/user/src/github.com/deckhouse",
+			want: "/home/user/src/github.com/deckhouse",
+		},
+		{
+			pwd:  "/home/user/src",
+			want: "",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.pwd, func(t *testing.T) {
