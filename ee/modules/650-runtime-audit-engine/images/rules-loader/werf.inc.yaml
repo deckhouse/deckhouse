@@ -2,15 +2,6 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/shell-operator
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /
-  to: /
-  includePaths:
-  - lib/ld-musl-x86_64.so.1
-  - usr/bin/python*
-  - usr/lib/python*
-  - usr/lib/libc.so
-  before: install
 - image: {{ $.ModuleName }}/falco-artifact
   add: /falco-package
   to: /
@@ -22,6 +13,13 @@ import:
   add: /src/falcoctl
   to: /usr/bin/falcoctl
   before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
+  add: /
+  to: /
+  before: install
+  includePaths:
+  - lib
+  - usr
 git:
 - add: /{{ $.ModulePath }}modules/650-{{ $.ModuleName }}/images/{{ $.ImageName }}/hooks
   to: /hooks
@@ -34,29 +32,20 @@ imageSpec:
     entrypoint: ["tini", "--", "/shell-operator"]
     cmd: ["start"]
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-fromImage: common/alt-p11-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
+fromImage: base/python
 final: false
 git:
-- add: /{{ $.ModulePath }}modules/650-{{ $.ModuleName }}/images/{{ $.ImageName }}/requirements.txt
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/requirements.txt
   to: /requirements.txt
   stageDependencies:
     install:
     - '**/*'
 import:
-- image: base/python
-  add: /
-  to: /
+- image: common/wheel-artifact
+  add: /wheels
+  to: /wheels
   before: install
-  includePaths:
-  - lib
-  - usr
 shell:
-  beforeInstall:
-  - apt-get install -y git
   install:
-  - export SOURCE_REPO={{ .SOURCE_REPO }}
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
   - pip3 install -f file:///wheels --no-index -r requirements.txt
-  - rm -rf /wheels

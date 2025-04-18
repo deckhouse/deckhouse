@@ -44,24 +44,24 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 git:
-  - add: /{{ $.ModulePath }}modules/450-{{ $.ModuleName }}/images/{{ $.ImageName }}/prepare-config.py
-    to: /prepare-config.py
+- add: /{{ $.ModulePath }}modules/450-{{ $.ModuleName }}/images/{{ $.ImageName }}/prepare-config.py
+  to: /prepare-config.py
 import:
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-    add: /relocate
-    to: /
-    before: install
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-    add: /
-    to: /
-    before: install
-    includePaths:
-    - etc/dnsmasq.conf
-    - etc/dnsmasq.conf.d
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
-    add: /
-    to: /
-    before: install
-    includePaths:
-    - lib
-    - usr
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /relocate
+  to: /
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /
+  to: /
+  before: install
+  includePaths:
+  - etc/dnsmasq.conf
+  - etc/dnsmasq.conf.d
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
+  add: /
+  to: /
+  before: install
+  includePaths:
+  - lib
+  - usr
