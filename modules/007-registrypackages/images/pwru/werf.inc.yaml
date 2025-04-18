@@ -1,0 +1,59 @@
+{{- $version := "1.0.9" }}
+{{- $image_version := $version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /src/scripts
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ $version }} {{ $.SOURCE_REPO }}/cilium/pwru.git /src/pwru
+  - rm -rf /src/pwru/.git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+fromImage: builder/golang-bookworm
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: install
+shell:
+  beforeInstall:
+  {{- include "debian packages proxy" . | nindent 2 }}
+  - apt update
+  - apt install -y make git clang-15 llvm curl gcc flex bison gcc-x86-64* libc6-dev-amd64-cross
+  - ln -s /usr/bin/clang-15 /usr/bin/clang
+  - apt clean
+  - rm -rf /var/lib/apt/lists/*
+  setup:
+  - cd /src/pwru
+  - make pwru TARGET_GOARCH=amd64 VERSION=v{{ $version }}
+  - mv ./pwru /pwru
+  - mv /src/scripts/* /
+  - chmod +x /pwru /install /uninstall
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+fromImage: builder/scratch
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - install
+  - uninstall
+  - pwru
+  before: setup
+imageSpec:
+  config:
+    labels: { "distro": "all", "version": "all", "pwru": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]

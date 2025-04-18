@@ -157,3 +157,5 @@ d8:
   d8CliVersion: v0.11.3
 jq:
   version: 1.7.1
+ethtool:
+  version: "6.11"
