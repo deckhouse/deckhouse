@@ -126,6 +126,13 @@ func (suite *ReleaseControllerTestSuite) TearDownSubTest() {
 			assert.YAMLEq(suite.T(), exp[i], got[i], "Got and exp manifests must match")
 		}
 	}
+	// remove modules dir
+	moduleDir := filepath.Join(suite.TmpDir(), "modules")
+	err := os.RemoveAll(moduleDir)
+	if errors.Is(err, os.ErrExist) {
+		err = nil
+	}
+	suite.Check(err)
 }
 
 func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
