@@ -1,40 +1,32 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/shell-operator
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /
-  to: /
-  includePaths:
-  - lib/ld-musl-x86_64.so.1
-  - usr/bin/python*
-  - usr/lib/python*
-  - usr/lib/libc.so
-  before: install
-git:
-- add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/hooks
-  to: /hooks
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-fromImage: common/alt-p11-artifact
-final: false
-git:
-- add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/requirements.txt
-  to: /requirements.txt
-  stageDependencies:
-    install:
-    - '**/*'
-import:
-- image: base/python
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
   add: /
   to: /
   before: install
   includePaths:
   - lib
   - usr
+git:
+- add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/hooks
+  to: /hooks
+---
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
+fromImage: base/python
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/requirements.txt
+  to: /requirements.txt
+  stageDependencies:
+    install:
+    - '**/*'
+import:
+- image: common/wheel-artifact
+  add: /wheels
+  to: /wheels
+  before: install
 shell:
-  beforeInstall:
-  - apt-get install -y git
   install:
-  - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
   - pip3 install -f file:///wheels --no-index -r requirements.txt
-  - rm -rf /wheels
