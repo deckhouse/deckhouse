@@ -35,28 +35,23 @@ shell:
   - chown -R 64535:64535 /opt/fping-static
   - chmod 0700 /opt/fping-static/sbin/fping
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
-fromImage: common/alt-p11-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
+fromImage: base/python
 final: false
-import:
-- image: base/python
-  add: /
-  to: /
-  before: install
-  includePaths:
-  - lib
-  - usr
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-  add: /src/monitoring-ping/requirements.txt
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/requirements.txt
   to: /requirements.txt
+  stageDependencies:
+    install:
+    - '**/*'
+import:
+- image: common/wheel-artifact
+  add: /wheels
+  to: /wheels
   before: install
 shell:
-  beforeInstall:
-  - apt-get install -y git
   install:
-  - git clone --depth 1 {{ .SOURCE_REPO }}/python-modules/wheels /wheels
   - pip3 install -f file:///wheels --no-index -r requirements.txt
-  - rm -rf /wheels
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
@@ -69,15 +64,13 @@ import:
   add: /opt/fping-static/sbin/fping
   to: /usr/sbin/fping
   before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
   add: /
   to: /
-  includePaths:
-  - lib/ld-musl-x86_64.so.1
-  - usr/bin/python*
-  - usr/lib/python*
-  - usr/lib/libc.so
   before: install
+  includePaths:
+  - lib
+  - usr
 imageSpec:
   config:
     entrypoint: ["/usr/bin/python3", "/monitoring-ping.py"]
