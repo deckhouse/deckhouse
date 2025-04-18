@@ -38,6 +38,32 @@ metadata:
     modules.deckhouse.io/update-policy: foxtrot-alpha
     release-checksum: 98d00f741c99e06e6c6c4d18b763c550
     source: foxtrot
+  name: upmeter-v1.70.0
+  ownerReferences:
+    - apiVersion: deckhouse.io/v1alpha1
+      controller: true
+      kind: ModuleSource
+      name: foxtrot
+      uid: 71d2300f-700b-452a-896a-6a3805f9cef7
+spec:
+  changelog:
+    features:
+      - Bump upmeter version
+  moduleName: upmeter
+  version: 1.70.0
+  weight: 950
+status:
+  phase: Deployed
+---
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  labels:
+    module: upmeter
+    modules.deckhouse.io/update-policy: foxtrot-alpha
+    release-checksum: 98d00f741c99e06e6c6c4d18b763c550
+    source: foxtrot
   name: upmeter-v1.70.1
   ownerReferences:
     - apiVersion: deckhouse.io/v1alpha1
