@@ -125,6 +125,9 @@ type CRI struct {
 	// Containerd runtime parameters.
 	Containerd *Containerd `json:"containerd,omitempty"`
 
+	// Containerd runtime parameters.
+	ContainerdV2 *Containerd `json:"containerdV2,omitempty"`
+
 	// Docker settings for nodes.
 	Docker *Docker `json:"docker,omitempty"`
 

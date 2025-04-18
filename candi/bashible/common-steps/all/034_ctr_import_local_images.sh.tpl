@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if eq .cri "Containerd" }}
+{{- if or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") }}
 
   {{- $sandbox_image := "deckhouse.local/images:pause" -}}
   {{- $kubernetes_api_proxy_image := "deckhouse.local/images:kubernetes-api-proxy" }}
