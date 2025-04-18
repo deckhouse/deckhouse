@@ -383,7 +383,7 @@ var DefaultImagesDigests = map[string]interface{}{
 	},
 	"registrypackages": map[string]interface{}{
 		"amazonEc2Utils220":         "imageHash-registrypackages-amazonEc2Utils220",
-		"containerd1724":            "imageHash-registrypackages-containerd1724",
+		"containerd210Beta1":        "imageHash-registrypackages-containerd210Beta1",
 		"crictl128":                 "imageHash-registrypackages-crictl128",
 		"crictl129":                 "imageHash-registrypackages-crictl129",
 		"crictl130":                 "imageHash-registrypackages-crictl130",
@@ -400,6 +400,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"ecrCredentialProvider130":  "imageHash-registrypackages-ecrCredentialProvider130",
 		"ecrCredentialProvider131":  "imageHash-registrypackages-ecrCredentialProvider131",
 		"ecrCredentialProvider132":  "imageHash-registrypackages-ecrCredentialProvider132",
+		"erofsUtils186":             "imageHash-registrypackages-erofsUtils186",
 		"growpart033":               "imageHash-registrypackages-growpart033",
 		"iptables189":               "imageHash-registrypackages-iptables189",
 		"jq171":                     "imageHash-registrypackages-jq171",
