@@ -235,7 +235,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
-	suite.Run("Patch out of update window", func() {
+	suite.Run("No patch out of update window", func() {
 		mup := embeddedMUP.DeepCopy()
 		mup.Update.Windows = update.Windows{{From: "8:00", To: "8:01"}}
 
