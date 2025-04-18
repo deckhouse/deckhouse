@@ -3,20 +3,6 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 fromImage: common/relocate-artifact
 final: false
-git:
-- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/requirements.txt
-  to: /requirements.txt
-  stageDependencies:
-    install:
-    - '**/*'
-import:
-- image: base/python
-  add: /
-  to: /
-  before: install
-  includePaths:
-  - lib
-  - usr
 shell:
   beforeInstall:
   - apt-get install -y dnsmasq libsqlite3

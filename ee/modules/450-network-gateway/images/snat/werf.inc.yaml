@@ -27,22 +27,13 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 git:
-- add: /{{ $.ModulePath }}modules/450-{{ $.ModuleName }}/images/{{ $.ImageName }}/iptables-loop.py
+- add: /{{ $.ModulePath }}modules/450-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/iptables-loop.py
   to: /iptables-loop.py
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /relocate
   to: /
   before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /
-  to: /
-  includePaths:
-  - lib/ld-musl-x86_64.so.1
-  - usr/bin/python*
-  - usr/lib/python*
-  - usr/lib/libc.so
-  before: install
 - image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
   add: /
   to: /sbin
@@ -54,3 +45,10 @@ import:
   add: /iptables-wrapper
   to: /sbin/iptables-wrapper
   before: setup
+- image: base/python
+  add: /
+  to: /
+  before: install
+  includePaths:
+  - lib
+  - usr
