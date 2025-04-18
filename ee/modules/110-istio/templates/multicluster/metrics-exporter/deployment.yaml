@@ -47,11 +47,15 @@ spec:
       labels:
         app: metrics-exporter
     spec:
-      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- if $.Values.istio.controlPlane.nodeSelector }}
+        {{ $.Values.istio.controlPlane.nodeSelector | toYaml | nindent 8 }}
+      {{- else }}
+        {{- include "helm_lib_node_selector" (tuple $ "master") | nindent 6 }}
+      {{- end }}
       {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "metrics-exporter")) | nindent 6 }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       serviceAccountName: multicluster-metrics-exporter
       imagePullSecrets:
       - name: deckhouse-registry
@@ -63,15 +67,15 @@ spec:
         readinessProbe:
           httpGet:
             path: /readyz
-            port: 8080
-            scheme: HTTP
+            port: 4224
+            scheme: HTTPS
           initialDelaySeconds: 1
           periodSeconds: 30
         livenessProbe:
           httpGet:
             path: /healthz
-            port: 8080
-            scheme: HTTP
+            port: 4224
+            scheme: HTTPS
           initialDelaySeconds: 1
           periodSeconds: 30
         resources:
@@ -96,6 +100,9 @@ spec:
                 fieldPath: status.podIP
           - name: KUBE_RBAC_PROXY_CONFIG
             value: |
+              excludePaths:
+              - /healthz
+              - /readyz
               upstreams:
               - upstream: http://127.0.0.1:8080/
                 path: /

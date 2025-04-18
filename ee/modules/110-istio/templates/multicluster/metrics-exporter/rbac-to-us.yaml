@@ -4,7 +4,7 @@ kind: Role
 metadata:
   name: access-to-multicluster-metrics-exporter-role
   namespace: d8-{{ $.Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "monitor")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "metrics-exporter")) | nindent 2 }}
 rules:
   - apiGroups: ["apps"]
     resources: ["deployments/prometheus-metrics"]
@@ -16,7 +16,7 @@ kind: RoleBinding
 metadata:
   name: access-to-multicluster-metrics-exporter-role-binding
   namespace: d8-{{ $.Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "monitor")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "metrics-exporter")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
