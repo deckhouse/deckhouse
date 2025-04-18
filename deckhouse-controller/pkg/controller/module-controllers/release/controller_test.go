@@ -360,7 +360,6 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		_, err = suite.ctr.handleRelease(context.TODO(), mr)
 		require.NoError(suite.T(), err)
 	})
-
 }
 
 func (suite *ReleaseControllerTestSuite) loopUntilDeploy(dc *dependency.MockedContainer, releaseName string) {
