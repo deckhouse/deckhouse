@@ -15,6 +15,22 @@
 # limitations under the License.
 */}}
 
+function discover_node_name() {
+  {{- if and (ne .nodeGroup.nodeType "Static") (ne .nodeGroup.nodeType "CloudStatic" )}}
+  if [[ "$(hostname)" != "$(hostname -s)" ]]; then
+    hostnamectl set-hostname $(hostname -s)
+  fi
+  {{ end }}
+
+  if [ ! -s /var/lib/bashible/discovered-node-name ]; then
+    hostname > /var/lib/bashible/discovered-node-name
+  fi
+}
+
+function d8-node-name() {
+  echo $(</var/lib/bashible/discovered-node-name)
+}
+
 function get_bundle() {
   resource="$1"
   name="$2"
@@ -46,11 +62,8 @@ chmod 0700 $BOOTSTRAP_DIR
 
 unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 
-{{- if and (ne .nodeGroup.nodeType "Static") (ne .nodeGroup.nodeType "CloudStatic" )}}
-export D8_NODE_HOSTNAME=$(hostname -s)
-{{- else }}
-export D8_NODE_HOSTNAME=$(hostname)
-{{- end }}
+discover_node_name
+export D8_NODE_HOSTNAME=$(d8-node-name)
 
 {{- if or (eq .nodeGroup.nodeType "CloudEphemeral") (hasKey .nodeGroup "staticInstances") }}
 # Put bootstrap log information to Machine resource status if it is a cloud installation or cluster-api static machine
