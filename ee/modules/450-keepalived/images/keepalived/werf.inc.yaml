@@ -31,6 +31,24 @@ shell:
   - mkdir /empty
   - chmod 755 /empty
 ---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
+fromImage: base/python
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/requirements.txt
+  to: /requirements.txt
+  stageDependencies:
+    install:
+    - '**/*'
+import:
+- image: common/wheel-artifact
+  add: /wheels
+  to: /wheels
+  before: install
+shell:
+  install:
+  - pip3 install -f file:///wheels --no-index -r requirements.txt
+---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 git:
@@ -49,7 +67,7 @@ import:
   add: /empty
   to: /run
   before: install
-- image: base/python
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
   add: /
   to: /
   includePaths:
