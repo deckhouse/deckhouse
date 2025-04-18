@@ -94,6 +94,7 @@ if [ "$#" -eq 0 ]; then
     get_modules
     prepare_templates
     prepare_channels
+    clean
 else
     if [ "$1" = "clean" ]; then
         echo "Cleaning $EXT_MODULES_DIR..."
