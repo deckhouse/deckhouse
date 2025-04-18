@@ -14,7 +14,7 @@
 
 _reload_systemd() {
   systemctl daemon-reload
-{{- if eq .cri "Containerd" }}
+{{- if or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") }}
   bb-flag-set containerd-need-restart
 {{- end }}
 }
@@ -25,7 +25,7 @@ bb-set-proxy
 
 bb-event-on 'bb-sync-file-changed' '_reload_systemd'
 
-  {{- if eq .cri "Containerd" }}
+  {{- if or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") }}
 mkdir -p /etc/systemd/system/containerd-deckhouse.service.d/
 bb-sync-file /etc/systemd/system/containerd-deckhouse.service.d/proxy-environment.conf - << EOF
 [Service]
