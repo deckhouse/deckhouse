@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if eq .cri "Containerd" }}
+{{- if or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") }}
 
 bb-event-on 'bb-package-installed' 'post-install'
 
@@ -37,5 +37,10 @@ post-install() {
   fi
 }
 
-bb-package-install "containerd:{{- index $.images.registrypackages "containerd1727" }}" "crictl:{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}" "toml-merge:{{ .images.registrypackages.tomlMerge01 }}"
+{{- $containerd := "containerd1727"}}
+{{- if eq .cri "ContainerdV2" }}
+  {{- $containerd = "containerd211" }}
+{{- end }}
+
+bb-package-install "containerd:{{- index $.images.registrypackages $containerd }}" "crictl:{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}" "toml-merge:{{ .images.registrypackages.tomlMerge01 }}"
 {{- end }}
