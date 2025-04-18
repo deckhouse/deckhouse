@@ -33,8 +33,8 @@ kubernetes:
         node.deckhouse.io/containerd: custom-config
     jqFilter: |
       {
-        "nodeName": '.metadata.name // "unknown"',
-        "nodeGroup": '.metadata.labels."node.deckhouse.io/group" // "unknown"',
+        "nodeName": .metadata.name,
+        "nodeGroup": '.metadata.labels."node.deckhouse.io/group" // "unknown"'
       }
 kubernetesValidating:
 - name: containerd-allow-upgrade.deckhouse.io
