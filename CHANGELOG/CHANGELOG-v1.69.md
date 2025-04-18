@@ -96,6 +96,7 @@
  - **[control-plane-manager]** Fixed `d8-control-plane-manager` containers that were duplicated when updating Kubernetes. [#12561](https://github.com/deckhouse/deckhouse/pull/12561)
  - **[control-plane-manager]** Removed `etcd.externalMembersNames` from ModuleConfig settings. [#12422](https://github.com/deckhouse/deckhouse/pull/12422)
  - **[control-plane-manager]** Fixed the behavior when an etcd member couldn't be promoted from learner state if needed. [#11934](https://github.com/deckhouse/deckhouse/pull/11934)
+ - **[deckhouse]** Gracefully restore deployed modules on HA installations. [#13077](https://github.com/deckhouse/deckhouse/pull/13077)
  - **[deckhouse]** Removed duplicated alerts in CNI modules. [#12220](https://github.com/deckhouse/deckhouse/pull/12220)
  - **[deckhouse-controller]** Fix runtime handling for the global config. [#12985](https://github.com/deckhouse/deckhouse/pull/12985)
  - **[deckhouse-tools]** Removed unnecessary secrets and fixed the Deckhouse CLI build. [#12290](https://github.com/deckhouse/deckhouse/pull/12290)
