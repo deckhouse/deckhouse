@@ -81,6 +81,21 @@ kubernetes:
     nameSelector:
       matchNames: ["global"]
     jqFilter: '.spec.settings // ""'
+  - name: nodes_with_containerd_custom_conf
+    apiVersion: v1
+    kind: nodes
+    group: main
+    executeHookOnEvent: []
+    executeHookOnSynchronization: false
+    keepFullObjectsInMemory: false
+    labelSelector:
+      matchLabels:
+        node.deckhouse.io/containerd: custom-config
+    jqFilter: |
+      {
+        "nodeName": .metadata.name,
+        "labels": .metadata.labels
+      }
 kubernetesValidating:
 - name: nodegroup-policy.deckhouse.io
   group: main
@@ -125,16 +140,18 @@ EOF
   # Check zones existence for CloudEphemeral nodes
   allowedZones=$(context::jq -e -r 'if (.snapshots.provider_cluster_config | length) > 0 then .snapshots.provider_cluster_config[0].filterResult.zones else [] end | if . == [] then [] else .[] end')
   ngZones=$(context::jq -r '.review.request.object.spec.cloudInstances.zones // []')
-
+  
   if [[ "$allowedZones" != "[]" ]]; then
-    for zone in $(jq -e -r '.[]' <<< "$ngZones"); do
-      if ! grep -qE "^$zone\$" <<< "$allowedZones"; then
-        cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+    if [[ "$ngZones" != "[]" ]]; then
+      for zone in $(jq -e -r '.[]' <<< "$ngZones"); do
+        if ! grep -qE "^$zone\$" <<< "$allowedZones"; then
+          cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":false, "message":"unknown zone \"${zone}\""}
 EOF
-        return 0
-      fi
-    done
+          return 0
+        fi
+      done
+    fi
   fi
 
   criType="$(context::jq -r '.review.request.object.spec.cri.type')"
@@ -242,6 +259,28 @@ EOF
 EOF
     return 0
   fi
+
+  # Forbid change CRI type if ng has nodes with custom containerd config
+  if [[ "${operationType}" == "UPDATE" ]]; then
+    cat "$BINDING_CONTEXT_PATH" > /tmp/file2.txt
+
+    nodeGroupNameWithChangedCRI="$(context::jq -r '.review.request.object.metadata.name')"
+    nodes=$(context::jq -r '.snapshots.nodes_with_containerd_custom_conf // []')
+    cat $nodes > /tmp/nodes.txt
+    if [[ "$nodes" != "[]" ]]; then
+      for node in $(jq -e -r '.[]' <<< "$nodes"); do
+        nodeGroupNameFromNode=$(jq -e -r '.filterResult.labels["node.deckhouse.io/group"]' <<< "$node")
+        nodeName=$(context::jq -r '.filterResult.nodeName // "unknownName"')
+        if [[ $nodeGroupNameFromNode == $nodeGroupNameWithChangedCRI ]]; then
+          cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"CRI cannot be changed because some nodes are using custom configuration: $nodeName"}
+EOF
+          return 0
+        fi
+      done
+    fi
+  fi
+
 
   cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":true}
