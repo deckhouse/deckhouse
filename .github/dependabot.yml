@@ -728,7 +728,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "pip"
-  directory: "/modules/340-extended-monitoring/images/extended-monitoring-exporter/src"
+  directory: "/modules/340-extended-monitoring/images/extended-monitoring-exporter"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
