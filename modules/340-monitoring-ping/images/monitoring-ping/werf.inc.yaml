@@ -3,8 +3,8 @@ image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
 git:
-- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src
-  to: /src/monitoring-ping
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src/monitoring-ping.py
+  to: /src/monitoring-ping.py
   stageDependencies:
     install:
     - '**/*'
@@ -39,7 +39,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
 fromImage: base/python
 final: false
 git:
-- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/requirements.txt
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/requirements.txt
   to: /requirements.txt
   stageDependencies:
     install:
@@ -51,13 +51,13 @@ import:
   before: install
 shell:
   install:
-  - pip3 install -f file:///wheels --no-index -r requirements.txt
+  - pip3 install -f file:///wheels --no-index -r /requirements.txt
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-  add: /src/monitoring-ping/monitoring-ping.py
+  add: /src/monitoring-ping.py
   to: /monitoring-ping.py
   before: install
 - image: {{ .ModuleName }}/{{ .ImageName }}-fping-artifact

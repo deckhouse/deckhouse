@@ -9,7 +9,7 @@ import:
   - lib
   - usr
 git:
-- add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/hooks
+- add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/hooks
   to: /hooks
 ---
 ---
@@ -17,7 +17,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
 fromImage: base/python
 final: false
 git:
-- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/requirements.txt
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/requirements.txt
   to: /requirements.txt
   stageDependencies:
     install:
@@ -29,4 +29,4 @@ import:
   before: install
 shell:
   install:
-  - pip3 install -f file:///wheels --no-index -r requirements.txt
+  - pip3 install -f file:///wheels --no-index -r /requirements.txt

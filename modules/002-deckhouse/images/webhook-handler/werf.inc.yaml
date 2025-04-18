@@ -38,7 +38,7 @@ git:
   stageDependencies:
     install:
       - '**/*'
-- add: /{{ .ModulePath }}modules/002-deckhouse/images/webhook-handler/entrypoint.sh
+- add: /{{ .ModulePath }}modules/002-deckhouse/images/webhook-handler/src/entrypoint.sh
   to: /entrypoint.sh
   stageDependencies:
     install:
@@ -62,7 +62,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}-label-converter-src-artifact
 final: false
 fromImage: common/src-artifact
 git:
-- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/label-converter
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src/label-converter
   to: /src
   includePaths:
   - '**/*.go'
@@ -94,7 +94,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
 fromImage: base/python
 final: false
 git:
-- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/requirements.txt
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/requirements.txt
   to: /requirements.txt
   stageDependencies:
     install:
@@ -106,4 +106,4 @@ import:
   before: install
 shell:
   install:
-  - pip3 install -f file:///wheels --no-index -r requirements.txt
+  - pip3 install -f file:///wheels --no-index -r /requirements.txt
