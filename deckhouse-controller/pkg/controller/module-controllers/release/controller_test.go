@@ -361,22 +361,29 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
-	suite.Run("sequential processing with mirror release", func() {
+	suite.Run("sequential processing with minor release", func() {
 		suite.setupReleaseController(suite.fetchTestFileData("sequential-processing-minor.yaml"))
 		mr := suite.getModuleRelease(suite.testMRName)
 		_, err = suite.ctr.handleRelease(context.TODO(), mr)
 		require.NoError(suite.T(), err)
 	})
 
-	suite.Run("sequential processing with mirror release", func() {
+	suite.Run("sequential processing with minor pending release", func() {
 		suite.setupReleaseController(suite.fetchTestFileData("sequential-processing-minor-pending.yaml"))
 		mr := suite.getModuleRelease(suite.testMRName)
 		_, err = suite.ctr.handleRelease(context.TODO(), mr)
 		require.NoError(suite.T(), err)
 	})
 
-	suite.Run("sequential processing with mirror release", func() {
+	suite.Run("sequential processing with minor auto release", func() {
 		suite.setupReleaseController(suite.fetchTestFileData("sequential-processing-minor-auto.yaml"))
+		mr := suite.getModuleRelease(suite.testMRName)
+		_, err = suite.ctr.handleRelease(context.TODO(), mr)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("sequential processing with minor notready release", func() {
+		suite.setupReleaseController(suite.fetchTestFileData("sequential-processing-minor-notready.yaml"))
 		mr := suite.getModuleRelease(suite.testMRName)
 		_, err = suite.ctr.handleRelease(context.TODO(), mr)
 		require.NoError(suite.T(), err)
