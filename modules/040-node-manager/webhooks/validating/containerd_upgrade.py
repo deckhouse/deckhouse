@@ -44,7 +44,7 @@ kubernetesValidating:
   - apiGroups:   ["deckhouse.io"]
     apiVersions: ["*"]
     operations:  ["UPDATE"]
-    resources:   ["NodeGroup"]
+    resources:   ["nodegroups"]
     scope:       "Cluster"
 """
 
