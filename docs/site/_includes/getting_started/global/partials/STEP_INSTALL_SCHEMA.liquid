@@ -128,7 +128,9 @@ Scheme of Deckhouse installation in a private environment:<br />
    - SSH key access from the **personal computer** (section 1)
    - network access from the **personal computer** (section 1) via port <code>22322/TCP</code>
    - container runtime packages, such as containerd or docker, should not be installed on the node
+   {%- if page.platform_type == 'cloud' %}
    - `cloud-utils` and `cloud-init` packages should be installed on the node
+   {%- endif %}
    {% endofftopic %}
 {%- endif %}
 </li>
