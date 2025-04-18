@@ -1,5 +1,5 @@
 # REGISTRY_PATH is a special key which is concatenated with other base images
-REGISTRY_PATH: dev-registry.deckhouse.io/base_images
+REGISTRY_PATH: registry.deckhouse.io/base_images
 base/distroless: "sha256:aec0c3319a95ca008a94fff27370da1efabd76986cd5e71ac23a7daffb051c08" # fromImage: builder/scratch
 base/nginx: "sha256:36701bad02d860bc69fdda33a43d0126c16e87a06b6f499f9bc98b69a59a1995" # fromImage: base/distroless
 base/python: "sha256:21cee2ea48c1fbce7c28a799d592ffe4138e93ff4791049e6beb0f543a62a11c" # fromImage: base/distroless
