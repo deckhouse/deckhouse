@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
