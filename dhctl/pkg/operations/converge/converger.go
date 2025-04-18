@@ -310,9 +310,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 
 	if infrastructureprovider.NeedToUseOpentofu(metaConfig) {
 		needAutomaticTofuMigrationForCommander = hasTerraformState && c.CommanderMode
-		if !c.CommanderMode {
-			convergeCtx.WithStateChecker(infrastructurestate.AskCanIConvergeTerraformStateWhenWeUseTofu)
-		}
+		convergeCtx.WithStateChecker(infrastructurestate.AskCanIConvergeTerraformStateWhenWeUseTofu)
 	}
 
 	convergeCtx.WithPhaseContext(c.PhasedExecutionContext).

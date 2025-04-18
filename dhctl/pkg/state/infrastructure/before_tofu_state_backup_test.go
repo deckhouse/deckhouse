@@ -248,8 +248,8 @@ func TestBackupStatesForCommander(t *testing.T) {
 	assertCacheState(t, c, "fake-nmit-delete-12-03-khm-0.tfstate", "secret")
 
 	assertCacheState(t, c, "tf-bkp-cluster-state.terraform.backup", "secret")
-	assertCacheState(t, c, "fake-nmit-delete-12-03-master-0.terraform.backup", "secret")
-	assertCacheState(t, c, "fake-nmit-delete-12-03-khm-0.terraform.backup", "secret")
+	assertCacheState(t, c, "tf-fake-nmit-delete-12-03-master-0.terraform.backup", "secret")
+	assertCacheState(t, c, "tf-fake-nmit-delete-12-03-khm-0.terraform.backup", "secret")
 }
 
 func TestSkipBackupStatesForCommander(t *testing.T) {
@@ -267,8 +267,8 @@ func TestSkipBackupStatesForCommander(t *testing.T) {
 	saveCacheState(t, c, "fake-nmit-delete-12-03-khm-0.tfstate", "secret")
 
 	saveCacheState(t, c, "tf-bkp-cluster-state.terraform.backup", "secret1")
-	saveCacheState(t, c, "fake-nmit-delete-12-03-master-0.terraform.backup", "secret1")
-	saveCacheState(t, c, "fake-nmit-delete-12-03-khm-0.terraform.backup", "secret1")
+	saveCacheState(t, c, "tf-fake-nmit-delete-12-03-master-0.terraform.backup", "secret1")
+	saveCacheState(t, c, "tf-fake-nmit-delete-12-03-khm-0.terraform.backup", "secret1")
 
 	backuper := NewTofuMigrationStateBackuper(provider, log.GetDefaultLogger()).WithCommanderMode(&TofuBackupCommanderMode{
 		Cache:      c,
@@ -283,8 +283,8 @@ func TestSkipBackupStatesForCommander(t *testing.T) {
 	assertCacheState(t, c, "fake-nmit-delete-12-03-khm-0.tfstate", "secret")
 
 	assertCacheState(t, c, "tf-bkp-cluster-state.terraform.backup", "secret1")
-	assertCacheState(t, c, "fake-nmit-delete-12-03-master-0.terraform.backup", "secret1")
-	assertCacheState(t, c, "fake-nmit-delete-12-03-khm-0.terraform.backup", "secret1")
+	assertCacheState(t, c, "tf-fake-nmit-delete-12-03-master-0.terraform.backup", "secret1")
+	assertCacheState(t, c, "tf-fake-nmit-delete-12-03-khm-0.terraform.backup", "secret1")
 
 	require.Len(t, c.Store, 6)
 }
