@@ -20,92 +20,104 @@ spec:
           properties:
             spec:
               type: object
-              required:
-                - cpu
-                - memory
-                - vmClassName
-                - osImageRef
-                - rootDiskStorageClass
+              required: [virtualMachine, rootDisk]
               properties:
-                osImageRef:
+                virtualMachine:
                   type: object
-                  required:
-                    - kind
-                    - name
-                  description: Reference to the image of the operating system used to bootstrap VM's
+                  description: |
+                    VM settings for the created master node.
+                  required: [cpu, memory]
                   properties:
-                    kind:
+                    cpu:
+                      description: |
+                        CPU setting for VM.
+                      type: object
+                      additionalProperties: false
+                      required: [cores]
+                      properties:
+                        cores:
+                          description: |
+                            Amount of CPU cores for VM.
+                          minumum: 1
+                          format: int32
+                          type: integer
+                        coreFraction:
+                          type: string
+                          default: "100%"
+                          enum: ["5%", "10%", "25%", "50%", "100%"]
+                          description: |
+                            Guaranteed share of CPU that will be allocated to the VM. Specified as a percentage.
+                            Supported values: `5%`, `10%`, `25%`, `50%`, `100%`.
+                          example: "100%"
+                    memory:
+                      type: object
+                      description: |
+                        Specifies the memory settings for the VM.
+                      required:
+                        - size
+                      properties:
+                        size:
+                          type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          description: |
+                            Amount of memory resources allowed for VM.
+                          example: 4Gi
+                    bootloader:
                       type: string
                       enum:
-                        - ClusterVirtualImage
-                        - VirtualImage
-                        - VirtualDisk
-                      default: VirtualImage
-                      description: Kind of resource describing the image
-                    name:
-                      type: string
-                      description: Name of the resource describing the image
-                vmClassName:
-                  type: string
-                  description: >
-                    Name of the VirtualMachineClass resource describing the
-                    requirements for a virtual CPU, memory, and the resource
-                    allocation policy.
-                cpu:
-                  type: object
-                  description: Section describing the CPU settings for a VM.
-                  required:
-                    - cores
-                  properties:
-                    cores:
-                      format: int32
-                      type: integer
-                      minimum: 1
-                      default: 4
-                      description: Number of cores.
-                    coreFraction:
-                      type: string
-                      default: 100%
+                        - BIOS
+                        - EFI
+                        - EFIWithSecureBoot
+                      default: EFI
                       description: >
-                        Guaranteed share of CPU time that will be allocated to
-                        the VM. Specified as a percentage.
-                memory:
-                  type: integer
-                  default: 8192
-                  minimum: 8
-                  description: RAM amount in megabytes.
-                rootDiskSize:
+                        Defines a bootloader for a VM.
+
+
+                        * `BIOS`: Use BIOS.
+
+                        * `EFI`: Use Unified Extensible Firmware (EFI/UEFI).
+
+                        * `EFIWithSecureBoot`: Use UEFI/EFI with the Secure Boot
+                        support.
+                rootDisk:
+                  type: object
                   description: |
-                    Root disk size.
-
-                    The disk will be automatically resized if its VirtualImage size differs from specified.
-                  default: 50Gi
-                  anyOf:
-                    - type: integer
-                    - type: string
-                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                  x-kubernetes-int-or-string: true
-                rootDiskStorageClass:
-                  type: string
-                  description: Storage class to use for disks of virtual machines.
-                bootloader:
-                  type: string
-                  enum:
-                    - BIOS
-                    - EFI
-                    - EFIWithSecureBoot
-                  default: EFI
-                  description: >
-                    Defines a bootloader for a VM.
-
-
-                    * `BIOS`: Use BIOS.
-
-                    * `EFI`: Use Unified Extensible Firmware (EFI/UEFI).
-
-                    * `EFIWithSecureBoot`: Use UEFI/EFI with the Secure Boot
-                    support.
-
+                    Specifies settings for the root disk of VM.
+                  required:
+                    - size
+                    - image
+                  properties:
+                    size:
+                      type: string
+                      pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                      description: |
+                        Root disk size.
+                      example: 10Gi
+                    storageClass:
+                      type: string
+                      description: |
+                        The name of the existing StorageClass will be used to create the VM's root disk.
+                    image:
+                      type: object
+                      description: |
+                        Image parameters that will be used to create the VM's root disk.
+                      required:
+                        - kind
+                        - name
+                      properties:
+                        kind:
+                          type: string
+                          description: |
+                            The kind of the image source.
+                          enum:
+                            - "ClusterVirtualImage"
+                            - "VirtualImage"
+                            - "VirtualDisk"
+                        name:
+                          type: string
+                          description: |
+                            The name of the image that will be used to create the root disk.
+                            > The installation requires linux OS images with cloud-init pre-installed
   scope: Cluster
   names:
     plural: dvpinstanceclasses
