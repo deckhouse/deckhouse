@@ -1666,6 +1666,24 @@ alerts:
         Detected pods without Istio sidecars but with istio-injection configured.
       severity: "4"
       markupFormat: markdown
+    - name: D8IstioRemoteClusterNotSynced
+      sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/multicluster.yaml
+      moduleUrl: 110-istio
+      module: istio
+      edition: ee
+      description: |
+        The Istio control plane instance `{{$labels.istiod}}` cannot synchronize with the remote cluster `{{$labels.cluster_id}}`.
+
+        Possible causes:
+
+        - The remote cluster is offline.
+        - The remote API endpoint is not reachable.
+        - The remote ServiceAccount token is invalid or expired.
+        - There is a TLS or certificate issue between the clusters.
+      summary: |
+        Istio remote cluster {{$labels.cluster_id}} is not synchronized.
+      severity: "4"
+      markupFormat: markdown
     - name: D8IstioVersionIsIncompatibleWithK8sVersion
       sourceFile: modules/110-istio/monitoring/prometheus-rules/versions.tpl
       moduleUrl: 110-istio
