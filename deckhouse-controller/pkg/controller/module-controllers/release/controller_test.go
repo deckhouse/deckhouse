@@ -353,6 +353,14 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
 		require.NoError(suite.T(), err)
 	})
+
+	suite.Run("simple with module in Ready", func() {
+		suite.setupReleaseController(suite.fetchTestFileData("simple-exist-module.yaml"))
+		mr := suite.getModuleRelease(suite.testMRName)
+		_, err = suite.ctr.handleRelease(context.TODO(), mr)
+		require.NoError(suite.T(), err)
+	})
+
 }
 
 func (suite *ReleaseControllerTestSuite) loopUntilDeploy(dc *dependency.MockedContainer, releaseName string) {
@@ -542,6 +550,11 @@ func (suite *ReleaseControllerTestSuite) assembleInitObject(obj string) client.O
 		err = yaml.Unmarshal([]byte(obj), &sec)
 		require.NoError(suite.T(), err)
 		res = &sec
+	case "Module":
+		var mod v1alpha1.Module
+		err = yaml.Unmarshal([]byte(obj), &mod)
+		require.NoError(suite.T(), err)
+		res = &mod
 	}
 
 	return res

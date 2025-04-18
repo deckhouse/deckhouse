@@ -470,6 +470,20 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1.ModuleRelease) (ctrl.Result, error) {
 	var res ctrl.Result
 
+	module := new(v1alpha1.Module)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, module); err != nil {
+		if !apierrors.IsNotFound(err) {
+			r.log.Error("failed to get module", slog.String("name", release.GetModuleName()), log.Err(err))
+			return ctrl.Result{Requeue: true}, nil
+		}
+		r.log.Warn("module not found", slog.String("name", release.GetModuleName()))
+	}
+	if module.GetName() != "" && !module.ConditionStatus(v1alpha1.ModuleConditionIsReady) {
+		r.log.Debug("module is not ready", slog.String("name", release.GetModuleName()))
+
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+	}
+
 	var modulesChangedReason string
 	defer func() {
 		if modulesChangedReason != "" {
