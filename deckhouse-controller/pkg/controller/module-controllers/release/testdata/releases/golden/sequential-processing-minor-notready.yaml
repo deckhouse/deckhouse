@@ -33,7 +33,6 @@ metadata:
     modules.deckhouse.io/update-policy: foxtrot-alpha
     release-checksum: 98d00f741c99e06e6c6c4d18b763c550
     source: foxtrot
-    status: superseded
   name: upmeter-v1.70.0
   ownerReferences:
   - apiVersion: deckhouse.io/v1alpha1
@@ -41,7 +40,7 @@ metadata:
     kind: ModuleSource
     name: foxtrot
     uid: 71d2300f-700b-452a-896a-6a3805f9cef7
-  resourceVersion: "1000"
+  resourceVersion: "999"
 spec:
   changelog:
     features:
