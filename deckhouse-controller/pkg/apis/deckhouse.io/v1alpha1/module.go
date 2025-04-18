@@ -38,6 +38,7 @@ const (
 	ModuleConditionEnabledByModuleManager = "EnabledByModuleManager"
 	ModuleConditionIsReady                = "IsReady"
 	ModuleConditionIsOverridden           = "IsOverridden"
+	ModuleConditionInstalled              = "Installed"
 
 	ModulePhaseAvailable        = "Available"
 	ModulePhaseDownloading      = "Downloading"

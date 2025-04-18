@@ -363,6 +363,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			if err != nil {
 				return fmt.Errorf("update the '%s' module: %w", moduleName, err)
 			}
+
 			continue
 		}
 

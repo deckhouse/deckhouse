@@ -44,7 +44,7 @@ import (
 
 // refreshModule refreshes module in cluster
 func (r *reconciler) refreshModule(ctx context.Context, moduleName string) error {
-	r.log.Debug("refresh module status", slog.String("name", moduleName))
+	r.logger.Debug("refresh module status", slog.String("name", moduleName))
 
 	// events happen quite often, so conflicts happen often, default backoff not suitable
 	backoff := wait.Backoff{
@@ -69,7 +69,7 @@ func (r *reconciler) refreshModule(ctx context.Context, moduleName string) error
 
 // refreshModuleConfig refreshes module config in cluster
 func (r *reconciler) refreshModuleConfig(ctx context.Context, configName string) error {
-	r.log.Debug("refresh module config status", slog.String("name", configName))
+	r.logger.Debug("refresh module config status", slog.String("name", configName))
 
 	// clear metrics
 	metricGroup := fmt.Sprintf("obsoleteVersion_%s", configName)
@@ -80,7 +80,7 @@ func (r *reconciler) refreshModuleConfig(ctx context.Context, configName string)
 		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			if err := r.client.Get(ctx, client.ObjectKey{Name: configName}, moduleConfig); err != nil {
 				if apierrors.IsNotFound(err) {
-					r.log.Debug("module config not found", slog.String("name", configName))
+					r.logger.Debug("module config not found", slog.String("name", configName))
 					return nil
 				}
 				return fmt.Errorf("refresh the '%s' module config: %w", configName, err)
@@ -146,6 +146,7 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 		case modules.CanRunHelm:
 			module.Status.Phase = v1alpha1.ModulePhaseReady
 			module.SetConditionTrue(v1alpha1.ModuleConditionIsReady)
+			module.SetConditionTrue(v1alpha1.ModuleConditionInstalled)
 
 		case modules.Startup:
 			if module.Status.Phase == v1alpha1.ModulePhaseDownloading {
