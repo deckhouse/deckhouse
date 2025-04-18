@@ -34,7 +34,7 @@ kubernetes:
     jqFilter: |
       {
         "nodeName": .metadata.name,
-        "nodeGroup": '.metadata.labels["node.deckhouse.io/group"] // "unknown"'
+        "labels": .metadata.labels
       }
 kubernetesValidating:
 - name: containerd-allow-upgrade.deckhouse.io
@@ -72,6 +72,8 @@ def validate_update(ctx: DotMap) -> tuple[Optional[str], list[str]]:
       for i in ctx.snapshots.get("d8-nodes-with-containerd-custom-conf",[]):
           node = i["filterResult"]
           nodeName = node.get('nodeName', '')
+          labelss = node.get('labels', [])
+          print(labelss)
           nodeGroupName = node.get('nodeGroup', '')
 
           if nodeGroupName == nodeGroupNameWithChangedCRI:
