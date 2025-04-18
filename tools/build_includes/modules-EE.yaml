@@ -167,7 +167,7 @@
 - add: /ee/modules/040-node-manager/capi/dvp
   to: /deckhouse/modules/040-node-manager/capi/dvp
   stageDependencies:
-    setup:
+    install:
         - '**/*'
 - add: /ee/modules/040-node-manager/capi/dynamix
   to: /deckhouse/modules/040-node-manager/capi/dynamix
