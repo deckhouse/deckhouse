@@ -254,7 +254,7 @@ func (t *TofuMigrationStateBackuper) saveBackupStatesForCommander(ctx context.Co
 				err := retry.NewLoop(fmt.Sprintf("Save infrastructure backup state for node %s states for commander", node), 1, 5*time.Second).
 					WithLogger(t.logger).
 					RunContext(ctx, func() error {
-						name := node + ".terraform.backup"
+						name := "tf-" + node + ".terraform.backup"
 
 						ok, err := t.commanderMode.Cache.InCache(name)
 						if err != nil {
