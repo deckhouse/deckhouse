@@ -28,10 +28,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 final: false
 mount:
-- from: tmp_dir
-  to: /go/pkg
-- from: tmp_dir
-  to: /root/.cache/go-build
+{{ include "mount points for golang builds" . }}
 {{ if ne .ModuleName "docs" }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact

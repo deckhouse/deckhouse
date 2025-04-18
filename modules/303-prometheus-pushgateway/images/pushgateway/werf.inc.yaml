@@ -29,10 +29,7 @@ import:
     to: /bin/promu
     before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
-- from: tmp_dir
-  to: /root/.cache/go-build
+{{ include "mount points for golang builds" . }}
 shell:
   install:
     - cd /src/pushgateway
