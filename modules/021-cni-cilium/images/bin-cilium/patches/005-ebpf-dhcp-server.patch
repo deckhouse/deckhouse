@@ -287,7 +287,7 @@ index 0000000000..682fc7e4c6
 +	void *dhcp_options;
 +	void *data, *data_end;
 +
-+	union macaddr node_mac = NODE_MAC;
++	union macaddr node_mac = THIS_INTERFACE_MAC;
 +	__u32 yiaddr = LXC_IPV4;
 +	/* manually calculated, based on dhcp_prepare_options implementation */
 +	__u16 dhcp_options_len = 3 + 6 + 6 + 6 + 6 + 6 + sizeof(domain_search_list) + 1;
