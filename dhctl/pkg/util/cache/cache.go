@@ -82,7 +82,7 @@ func NewStateCacheWithInitialState(dir string, initialState map[string][]byte) (
 // SaveStruct saves bytes to a file
 func (s *StateCache) Save(name string, content []byte) error {
 	if err := os.WriteFile(s.GetPath(name), content, 0o600); err != nil {
-		log.ErrorF("Can't save terraform state in cache: %v", err)
+		log.ErrorF("Can't save infrastructure state in cache: %v", err)
 	}
 
 	return nil
@@ -199,12 +199,12 @@ func (s *StateCache) Iterate(iterFunc func(string, []byte) error) error {
 }
 
 func (s *StateCache) NeedIntermediateSave() bool {
-	// cache use one file with terraform
+	// cache use one file with infrastructure state
 	return false
 }
 
 func (s *StateCache) Dir() string {
-	// cache use one file with terraform
+	// cache use one file with infrastructure state
 	return s.dir
 }
 
@@ -223,3 +223,66 @@ func (d *DummyCache) GetPath(n string) string                  { return "" }
 func (d *DummyCache) Iterate(func(string, []byte) error) error { return nil }
 func (d *DummyCache) NeedIntermediateSave() bool               { return false }
 func (d *DummyCache) Dir() string                              { return "" }
+
+type TestCache struct {
+	Store map[string][]byte
+}
+
+func NewTestCache() *TestCache {
+	return &TestCache{
+		Store: make(map[string][]byte),
+	}
+}
+
+func (d *TestCache) Save(n string, c []byte) error {
+	d.Store[n] = c
+	return nil
+}
+
+func (d *TestCache) InCache(n string) (bool, error) {
+	_, ok := d.Store[n]
+	return ok, nil
+}
+
+func (d *TestCache) Clean() {
+	d.Store = make(map[string][]byte)
+}
+
+func (d *TestCache) CleanWithExceptions(e ...string) {
+	n := make(map[string][]byte, 0)
+
+	for _, v := range e {
+		n[v] = d.Store[v]
+	}
+
+	d.Store = n
+}
+
+func (d *TestCache) Delete(n string) {
+	delete(d.Store, n)
+}
+
+func (d *TestCache) Load(n string) ([]byte, error) {
+	return d.Store[n], nil
+}
+
+func (d *TestCache) LoadStruct(n string, v interface{}) error { panic("not implemented") }
+
+func (d *TestCache) SaveStruct(n string, v interface{}) error { panic("not implemented") }
+
+func (d *TestCache) GetPath(n string) string {
+	return n
+}
+
+func (d *TestCache) Iterate(action func(string, []byte) error) error {
+	for k, v := range d.Store {
+		err := action(k, v)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (d *TestCache) NeedIntermediateSave() bool { return false }
+
+func (d *TestCache) Dir() string { return "" }

@@ -21,15 +21,17 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"reflect"
 	"sync"
 	"time"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/gookit/color"
 	"github.com/werf/logboek"
 	"github.com/werf/logboek/pkg/level"
 	"github.com/werf/logboek/pkg/types"
 	"k8s.io/klog"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 )
@@ -44,9 +46,14 @@ func init() {
 }
 
 type LoggerOptions struct {
-	OutStream io.Writer
-	Width     int
-	IsDebug   bool
+	OutStream   io.Writer
+	Width       int
+	IsDebug     bool
+	DebugStream io.Writer
+}
+
+type debugLogWriter struct {
+	DebugStream io.Writer
 }
 
 func InitLogger(loggerType string) {
@@ -165,16 +172,17 @@ type styleEntry struct {
 }
 
 type PrettyLogger struct {
-	processTitles map[string]styleEntry
-	isDebug       bool
-	logboekLogger types.LoggerInterface
+	processTitles  map[string]styleEntry
+	isDebug        bool
+	logboekLogger  types.LoggerInterface
+	debugLogWriter *debugLogWriter
 }
 
 func NewPrettyLogger(opts LoggerOptions) *PrettyLogger {
 	res := &PrettyLogger{
 		processTitles: map[string]styleEntry{
 			"common":           {"🎈 ~ Common: %s", CommonOptions},
-			"terraform":        {"🌱 ~ Terraform: %s", TerraformOptions},
+			"infrastructure":   {"🌱 ~ Infrastructure: %s", InfrastructureOptions},
 			"converge":         {"🛸 ~ Converge: %s", ConvergeOptions},
 			"bootstrap":        {"⛵ ~ Bootstrap: %s", BootstrapOptions},
 			"mirror":           {"🪞 ~ Mirror: %s", MirrorOptions},
@@ -189,6 +197,10 @@ func NewPrettyLogger(opts LoggerOptions) *PrettyLogger {
 		res.logboekLogger = logboek.DefaultLogger().NewSubLogger(opts.OutStream, opts.OutStream)
 	} else {
 		res.logboekLogger = logboek.DefaultLogger()
+	}
+
+	if opts.DebugStream != nil && !reflect.ValueOf(opts.DebugStream).IsNil() {
+		res.debugLogWriter = &debugLogWriter{DebugStream: opts.DebugStream}
 	}
 
 	res.logboekLogger.SetAcceptedLevel(level.Info)
@@ -245,12 +257,28 @@ func (d *PrettyLogger) LogErrorLn(a ...interface{}) {
 }
 
 func (d *PrettyLogger) LogDebugF(format string, a ...interface{}) {
+	if d.debugLogWriter != nil {
+		o := fmt.Sprintf(format, a...)
+		_, err := d.debugLogWriter.DebugStream.Write([]byte(o))
+		if err != nil {
+			d.logboekLogger.Info().LogF("cannot write debug log (%s): %v", o, err)
+		}
+	}
+
 	if d.isDebug {
 		d.logboekLogger.Info().LogF(format, a...)
 	}
 }
 
 func (d *PrettyLogger) LogDebugLn(a ...interface{}) {
+	if d.debugLogWriter != nil {
+		o := fmt.Sprintln(a...)
+		_, err := d.debugLogWriter.DebugStream.Write([]byte(o))
+		if err != nil {
+			d.logboekLogger.Info().LogF("cannot write debug log (%s): %v", o, err)
+		}
+	}
+
 	if d.isDebug {
 		d.logboekLogger.Info().LogLn(a...)
 	}

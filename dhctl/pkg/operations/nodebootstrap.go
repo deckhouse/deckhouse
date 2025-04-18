@@ -24,12 +24,13 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
+	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
@@ -52,7 +53,7 @@ func BootstrapAdditionalNode(
 	index int,
 	step, nodeGroupName, cloudConfig string,
 	isConverge bool,
-	terraformContext *terraform.TerraformContext,
+	infrastructureContext *infrastructure.Context,
 ) error {
 	nodeName := NodeName(cfg, nodeGroupName, index)
 
@@ -68,20 +69,19 @@ func BootstrapAdditionalNode(
 	nodeGroupSettings := cfg.FindTerraNodeGroup(nodeGroupName)
 
 	// TODO pass cache as argument or better refact func
-	runner := terraformContext.GetBootstrapNodeRunner(cfg, cache.Global(), terraform.BootstrapNodeRunnerOptions{
-		AutoApprove:     true,
+	runner := infrastructureContext.GetBootstrapNodeRunner(cfg, cache.Global(), infrastructure.BootstrapNodeRunnerOptions{
 		NodeName:        nodeName,
 		NodeGroupStep:   step,
 		NodeGroupName:   nodeGroupName,
 		NodeIndex:       index,
 		NodeCloudConfig: cloudConfig,
-		AdditionalStateSaverDestinations: []terraform.SaverDestination{
-			entity.NewNodeStateSaver(kubernetes.NewSimpleKubeClientGetter(kubeCl), nodeName, nodeGroupName, nodeGroupSettings),
+		AdditionalStateSaverDestinations: []infrastructure.SaverDestination{
+			infrastructurestate.NewNodeStateSaver(kubernetes.NewSimpleKubeClientGetter(kubeCl), nodeName, nodeGroupName, nodeGroupSettings),
 		},
 		RunnerLogger: log.GetDefaultLogger(),
 	})
 
-	outputs, err := terraform.ApplyPipeline(ctx, runner, nodeName, terraform.OnlyState)
+	outputs, err := infrastructure.ApplyPipeline(ctx, runner, nodeName, infrastructure.OnlyState)
 	if err != nil {
 		return err
 	}
@@ -90,7 +90,7 @@ func BootstrapAdditionalNode(
 		return global.ErrConvergeInterrupted
 	}
 
-	err = entity.SaveNodeTerraformState(ctx, kubeCl, nodeName, nodeGroupName, outputs.TerraformState, nodeGroupSettings, log.GetDefaultLogger())
+	err = infrastructurestate.SaveNodeInfrastructureState(ctx, kubeCl, nodeName, nodeGroupName, outputs.InfrastructureState, nodeGroupSettings, log.GetDefaultLogger())
 	if err != nil {
 		return err
 	}
@@ -98,7 +98,7 @@ func BootstrapAdditionalNode(
 	return nil
 }
 
-func BootstrapSequentialTerraNodes(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraNodeGroups []config.TerraNodeGroupSpec, terraformContext *terraform.TerraformContext) error {
+func BootstrapSequentialTerraNodes(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraNodeGroups []config.TerraNodeGroupSpec, infrastructureContext *infrastructure.Context) error {
 	for _, ng := range terraNodeGroups {
 		err := log.Process("bootstrap", fmt.Sprintf("Create %s NodeGroup", ng.Name), func() error {
 			err := entity.CreateNodeGroup(ctx, kubeCl, ng.Name, log.GetDefaultLogger(), metaConfig.NodeGroupManifest(ng))
@@ -112,7 +112,7 @@ func BootstrapSequentialTerraNodes(ctx context.Context, kubeCl *client.Kubernete
 			}
 
 			for i := 0; i < ng.Replicas; i++ {
-				err = BootstrapAdditionalNode(ctx, kubeCl, metaConfig, i, "static-node", ng.Name, cloudConfig, false, terraformContext)
+				err = BootstrapAdditionalNode(ctx, kubeCl, metaConfig, i, "static-node", ng.Name, cloudConfig, false, infrastructureContext)
 				if err != nil {
 					return err
 				}
@@ -133,26 +133,25 @@ func BootstrapAdditionalNodeForParallelRun(
 	index int,
 	step, nodeGroupName, cloudConfig string,
 	isConverge bool,
-	terraformContext *terraform.TerraformContext,
+	infrastructureContext *infrastructure.Context,
 	runnerLogger log.Logger,
 ) error {
 	nodeName := NodeName(cfg, nodeGroupName, index)
 	nodeGroupSettings := cfg.FindTerraNodeGroup(nodeGroupName)
 	// TODO pass cache as argument or better refact func
-	runner := terraformContext.GetBootstrapNodeRunner(cfg, cache.Global(), terraform.BootstrapNodeRunnerOptions{
-		AutoApprove:     true,
+	runner := infrastructureContext.GetBootstrapNodeRunner(cfg, cache.Global(), infrastructure.BootstrapNodeRunnerOptions{
 		NodeName:        nodeName,
 		NodeGroupStep:   step,
 		NodeGroupName:   nodeGroupName,
 		NodeIndex:       index,
 		NodeCloudConfig: cloudConfig,
-		AdditionalStateSaverDestinations: []terraform.SaverDestination{
-			entity.NewNodeStateSaver(kubernetes.NewSimpleKubeClientGetter(kubeCl), nodeName, nodeGroupName, nodeGroupSettings),
+		AdditionalStateSaverDestinations: []infrastructure.SaverDestination{
+			infrastructurestate.NewNodeStateSaver(kubernetes.NewSimpleKubeClientGetter(kubeCl), nodeName, nodeGroupName, nodeGroupSettings),
 		},
 		RunnerLogger: runnerLogger,
 	})
 
-	outputs, err := terraform.ApplyPipeline(ctx, runner, nodeName, terraform.OnlyState)
+	outputs, err := infrastructure.ApplyPipeline(ctx, runner, nodeName, infrastructure.OnlyState)
 	if err != nil {
 		return err
 	}
@@ -161,7 +160,7 @@ func BootstrapAdditionalNodeForParallelRun(
 		return global.ErrConvergeInterrupted
 	}
 
-	err = entity.SaveNodeTerraformState(ctx, kubeCl, nodeName, nodeGroupName, outputs.TerraformState, nodeGroupSettings, runnerLogger)
+	err = infrastructurestate.SaveNodeInfrastructureState(ctx, kubeCl, nodeName, nodeGroupName, outputs.InfrastructureState, nodeGroupSettings, runnerLogger)
 	if err != nil {
 		return err
 	}
@@ -176,7 +175,7 @@ func ParallelBootstrapAdditionalNodes(
 	nodesIndexToCreate []int,
 	step, nodeGroupName, cloudConfig string,
 	isConverge bool,
-	terraformContext *terraform.TerraformContext,
+	infrastructureContext *infrastructure.Context,
 	ngLogger log.Logger,
 	saveLogToBuffer bool,
 ) ([]string, error) {
@@ -204,7 +203,7 @@ func ParallelBootstrapAdditionalNodes(
 	}
 
 	if len(nodesIndexToCreate) > 1 && !saveLogToBuffer {
-		ngLogger.LogWarnF("Many pipelines will run in parallel, terraform output for nodes %s-%v will be displayed after main execution.\n\n", nodeGroupName, nodesIndexToCreate[1:])
+		ngLogger.LogWarnF("Many pipelines will run in parallel, infrastructure utility output for nodes %s-%v will be displayed after main execution.\n\n", nodeGroupName, nodesIndexToCreate[1:])
 	}
 
 	resultsChan := make(chan checkResult, len(nodesIndexToCreate))
@@ -229,7 +228,7 @@ func ParallelBootstrapAdditionalNodes(
 				nodeGroupName,
 				cloudConfig,
 				true,
-				terraformContext,
+				infrastructureContext,
 				nodeLogger,
 			)
 
@@ -268,7 +267,7 @@ func ParallelCreateNodeGroup(
 	kubeCl *client.KubernetesClient,
 	metaConfig *config.MetaConfig,
 	terraNodeGroups []config.TerraNodeGroupSpec,
-	terraformContext *terraform.TerraformContext,
+	infrastructureContext *infrastructure.Context,
 ) error {
 	msg := "Create NodeGroups "
 	for _, group := range terraNodeGroups {
@@ -333,7 +332,7 @@ func ParallelCreateNodeGroup(
 					nodesIndexToCreate = append(nodesIndexToCreate, i)
 				}
 
-				_, err = ParallelBootstrapAdditionalNodes(ctx, kubeCl, metaConfig, nodesIndexToCreate, "static-node", group.Name, nodeCloudConfig, true, terraformContext, ngLogger, saveLogToBuffer)
+				_, err = ParallelBootstrapAdditionalNodes(ctx, kubeCl, metaConfig, nodesIndexToCreate, "static-node", group.Name, nodeCloudConfig, true, infrastructureContext, ngLogger, saveLogToBuffer)
 
 				resultsChan <- checkResult{
 					name:    group.Name,
@@ -376,8 +375,8 @@ func BootstrapAdditionalMasterNode(
 	index int,
 	cloudConfig string,
 	isConverge bool,
-	terraformContext *terraform.TerraformContext,
-) (*terraform.PipelineOutputs, error) {
+	infrastructureContext *infrastructure.Context,
+) (*infrastructure.PipelineOutputs, error) {
 	nodeName := NodeName(cfg, global.MasterNodeGroupName, index)
 
 	if isConverge {
@@ -390,20 +389,19 @@ func BootstrapAdditionalMasterNode(
 	}
 
 	// TODO pass cache as argument or better refact func
-	runner := terraformContext.GetBootstrapNodeRunner(cfg, cache.Global(), terraform.BootstrapNodeRunnerOptions{
-		AutoApprove:     true,
+	runner := infrastructureContext.GetBootstrapNodeRunner(cfg, cache.Global(), infrastructure.BootstrapNodeRunnerOptions{
 		NodeName:        nodeName,
 		NodeGroupStep:   "master-node",
 		NodeGroupName:   global.MasterNodeGroupName,
 		NodeIndex:       index,
 		NodeCloudConfig: cloudConfig,
-		AdditionalStateSaverDestinations: []terraform.SaverDestination{
-			entity.NewNodeStateSaver(kubernetes.NewSimpleKubeClientGetter(kubeCl), nodeName, global.MasterNodeGroupName, nil),
+		AdditionalStateSaverDestinations: []infrastructure.SaverDestination{
+			infrastructurestate.NewNodeStateSaver(kubernetes.NewSimpleKubeClientGetter(kubeCl), nodeName, global.MasterNodeGroupName, nil),
 		},
 		RunnerLogger: log.GetDefaultLogger(),
 	})
 
-	outputs, err := terraform.ApplyPipeline(ctx, runner, nodeName, terraform.GetMasterNodeResult)
+	outputs, err := infrastructure.ApplyPipeline(ctx, runner, nodeName, infrastructure.GetMasterNodeResult)
 	if err != nil {
 		return nil, err
 	}
@@ -412,7 +410,7 @@ func BootstrapAdditionalMasterNode(
 		return nil, global.ErrConvergeInterrupted
 	}
 
-	err = entity.SaveMasterNodeTerraformState(ctx, kubeCl, nodeName, outputs.TerraformState, []byte(outputs.KubeDataDevicePath))
+	err = infrastructurestate.SaveMasterNodeInfrastructureState(ctx, kubeCl, nodeName, outputs.InfrastructureState, []byte(outputs.KubeDataDevicePath))
 	if err != nil {
 		return outputs, err
 	}
