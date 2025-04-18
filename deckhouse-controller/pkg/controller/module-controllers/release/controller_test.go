@@ -126,6 +126,13 @@ func (suite *ReleaseControllerTestSuite) TearDownSubTest() {
 			assert.YAMLEq(suite.T(), exp[i], got[i], "Got and exp manifests must match")
 		}
 	}
+	// remove modules dir
+	moduleDir := filepath.Join(suite.TmpDir(), "modules")
+	err := os.RemoveAll(moduleDir)
+	if errors.Is(err, os.ErrExist) {
+		err = nil
+	}
+	suite.Check(err)
 }
 
 func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
@@ -353,6 +360,41 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
 		require.NoError(suite.T(), err)
 	})
+
+	suite.Run("sequential processing with patch release", func() {
+		suite.setupReleaseController(suite.fetchTestFileData("sequential-processing-patch.yaml"))
+		mr := suite.getModuleRelease(suite.testMRName)
+		_, err = suite.ctr.handleRelease(context.TODO(), mr)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("sequential processing with minor release", func() {
+		suite.setupReleaseController(suite.fetchTestFileData("sequential-processing-minor.yaml"))
+		mr := suite.getModuleRelease(suite.testMRName)
+		_, err = suite.ctr.handleRelease(context.TODO(), mr)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("sequential processing with minor pending release", func() {
+		suite.setupReleaseController(suite.fetchTestFileData("sequential-processing-minor-pending.yaml"))
+		mr := suite.getModuleRelease(suite.testMRName)
+		_, err = suite.ctr.handleRelease(context.TODO(), mr)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("sequential processing with minor auto release", func() {
+		suite.setupReleaseController(suite.fetchTestFileData("sequential-processing-minor-auto.yaml"))
+		mr := suite.getModuleRelease(suite.testMRName)
+		_, err = suite.ctr.handleRelease(context.TODO(), mr)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("sequential processing with minor notready release", func() {
+		suite.setupReleaseController(suite.fetchTestFileData("sequential-processing-minor-notready.yaml"))
+		mr := suite.getModuleRelease(suite.testMRName)
+		_, err = suite.ctr.handleRelease(context.TODO(), mr)
+		require.NoError(suite.T(), err)
+	})
 }
 
 func (suite *ReleaseControllerTestSuite) loopUntilDeploy(dc *dependency.MockedContainer, releaseName string) {
@@ -542,6 +584,11 @@ func (suite *ReleaseControllerTestSuite) assembleInitObject(obj string) client.O
 		err = yaml.Unmarshal([]byte(obj), &sec)
 		require.NoError(suite.T(), err)
 		res = &sec
+	case "Module":
+		var mod v1alpha1.Module
+		err = yaml.Unmarshal([]byte(obj), &mod)
+		require.NoError(suite.T(), err)
+		res = &mod
 	}
 
 	return res
