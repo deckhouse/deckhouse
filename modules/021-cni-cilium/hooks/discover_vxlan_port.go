@@ -20,19 +20,19 @@ import (
 	"fmt"
 	"strconv"
 
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
 )
 
 const (
-	metricGroupVxvlanPort           = "d8_cni_cilium_config_vxvlan_port"
-	metricNameNonStandardVxvlanPort = "d8_cni_cilium_non_standard_vxlan_port"
+	metricGroupVxlanPort           = "d8_cni_cilium_config_vxlan_port"
+	metricNameNonStandardVxlanPort = "d8_cni_cilium_non_standard_vxlan_port"
 )
 
 type installationStatus int
@@ -179,7 +179,7 @@ func discoverVXLANPort(input *go_hook.HookInput) error {
 		transitionFound  bool
 	)
 
-	input.MetricsCollector.Expire(metricGroupVxvlanPort)
+	input.MetricsCollector.Expire(metricGroupVxlanPort)
 
 	virtNestingLevelRaw, ok := input.Values.GetOk("global.discovery.dvpNestingLevel")
 	if ok {
@@ -209,7 +209,7 @@ func discoverVXLANPort(input *go_hook.HookInput) error {
 
 	if !transitionFound {
 		targetPort = sourcePort
-		input.MetricsCollector.Set(metricNameNonStandardVxvlanPort, 1, map[string]string{"port": fmt.Sprintf("%d", targetPort)}, metrics.WithGroup(metricGroupVxvlanPort))
+		input.MetricsCollector.Set(metricNameNonStandardVxlanPort, 1, map[string]string{"port": fmt.Sprintf("%d", targetPort)}, metrics.WithGroup(metricGroupVxlanPort))
 	}
 
 	input.Values.Set("cniCilium.internal.tunnelPortVXLAN", targetPort)

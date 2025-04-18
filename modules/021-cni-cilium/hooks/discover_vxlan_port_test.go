@@ -19,11 +19,10 @@ package hooks
 import (
 	"fmt"
 
-	"k8s.io/utils/ptr"
-
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/ptr"
 )
 
 var _ = Describe("Modules :: cni-cilium :: hooks :: discover_vxlan_port ::", func() {
