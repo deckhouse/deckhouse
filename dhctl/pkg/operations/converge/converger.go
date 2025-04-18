@@ -333,7 +333,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 
 	if needAutomaticTofuMigrationForCommander {
 		log.WarnF("Need migrate to opentofu. Switch to migrator\n")
-		err = r.RunConvergeMigration(convergeCtx, false)
+		err = r.RunConvergeMigration(convergeCtx, true)
 	} else {
 		err = r.RunConverge(convergeCtx)
 	}
