@@ -249,13 +249,12 @@ func generateMasterNodesManifests(nodeLevels map[string]any) string {
 		labels[fmt.Sprintf("node-role.kubernetes.io/%s", nodeRole)] = ""
 		labels[masterNodeGroup] = nodeRole
 
-		switch level.(type) {
+		switch l := level.(type) {
 		case int:
-			labels[virtualizationLevelKey] = fmt.Sprintf("%d", level)
+			labels[virtualizationLevelKey] = fmt.Sprintf("%d", l)
 		case string:
-			lvl := level.(string)
-			if lvl != noLabel {
-				labels[virtualizationLevelKey] = lvl
+			if l != noLabel {
+				labels[virtualizationLevelKey] = l
 			}
 		default:
 			labels[virtualizationLevelKey] = "unknown value"
