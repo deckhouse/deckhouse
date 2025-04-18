@@ -208,4 +208,28 @@ rules:
 			Expect(listRule.Namespaces).To(BeEmpty())
 		})
 	})
+
+	Context("Cluster started with virtualization audit policies", func() {
+		BeforeEach(func() {
+			f.ValuesSet("global.enabledModules", []string{"virtualization"})
+			f.BindingContexts.Set(f.KubeStateSet(configmap))
+			f.RunHook()
+		})
+
+		It("controlPlaneManager.internal.auditPolicy must contain proper rules", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			data, _ := base64.StdEncoding.DecodeString(f.ValuesGet("controlPlaneManager.internal.auditPolicy").String())
+			var policy audit.Policy
+			_ = yaml.UnmarshalStrict(data, &policy)
+
+			// All rules, except first one are metedata level rules.
+			for i := 1; i < len(policy.Rules); i++ {
+				v := policy.Rules[i]
+				Expect(v.Level).To(Equal(audit.LevelMetadata))
+			}
+
+			vmopRule := policy.Rules[0]
+			Expect(vmopRule.Level).To(Equal(audit.LevelRequestResponse))
+		})
+	})
 })
