@@ -53,8 +53,6 @@ import:
   add: /
   to: /
   includePaths:
-  - lib/ld-musl-x86_64.so.1
-  - usr/bin/python*
-  - usr/lib/python*
-  - usr/lib/libc.so
+  - lib
+  - usr
   before: install
