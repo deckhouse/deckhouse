@@ -9,14 +9,12 @@ description: |-
   framework for running custom database types for extendability.
 ---
 
-## Базы данных
-
 Механизм секретов баз данных генерирует учетные данные динамически на основе
 настроенных ролей. Он работает с различными базами данных через интерфейс плагинов.
 Есть несколько встроенных типов баз данных, а также фреймворк для запуска
 пользовательских типов баз данных для расширения возможностей. Это означает, что
 сервисам, которым нужен доступ к базе данных, больше не нужно жестко кодировать
-учетные данные: они могут запрашивать их у Stronghold и использовать [leasing mechanism](/docs/concepts/lease)
+учетные данные: они могут запрашивать их у Stronghold и использовать [leasing mechanism](../../concepts/lease)
 для более удобного распространения ключей. Такие ключи называются «динамические роли» или «динамические секреты».
 
 Поскольку каждая служба обращается к базе данных с уникальными учетными
@@ -44,19 +42,17 @@ Stronghold хранит и автоматически меняет пароли 
 соответствующими политиками Stronghold может получить доступ к соответствующей
 учетной записи пользователя в базе данных.
 
-{% alert level="warning" %}[Do not use static roles for root database credentials]
-   Не используйте те же учетные данные root базы данных, которые вы предоставили Stronghold в
-   <tt>config/</tt> с статическими ролями.
+!!! Внимание
+      Не используйте те же учетные данные root базы данных, которые вы предоставили Stronghold в
+      <tt>config/</tt> с статическими ролями.
 
-   Stronghold не делает различий между стандартными учетными данными и учетными данными root
-   при изменении паролей. Если вы назначите учетные данные root статической роли, все динамические
-   или статические пользователи, управляемые этой конфигурацией базы данных, не смогут работать
-   после изменения, поскольку пароль для <tt>config/</tt> больше не действителен.
+      Stronghold не делает различий между стандартными учетными данными и учетными данными root
+      при изменении паролей. Если вы назначите учетные данные root статической роли, все динамические
+      или статические пользователи, управляемые этой конфигурацией базы данных, не смогут работать
+      после изменения, поскольку пароль для <tt>config/</tt> больше не действителен.
 
-   Если небходимо изменить root учетную запись, используйте
-   [Rotate root credentials](/api-docs/secret/databases/#rotate-root-credentials) API эндпоинт.
+      Если небходимо изменить root учетную запись, используйте эндпоинт API `rotate-root-credentials``.
 
-{% endalert %}
 Обратитесь к таблице [database capabilities table](#db-capabilities-table) чтобы определить,
 поддерживает ли выбранная вами база данных статические роли.
 
@@ -68,32 +64,31 @@ Stronghold хранит и автоматически меняет пароли 
 
 1. Включить механизм секретов базы данных:
 
-   ```shell-session
-   $ d8 stronghold secrets enable database
-   Success! Enabled the database secrets engine at: database/
-   ```
+```shell-session
+$ d8 stronghold secrets enable database
+Success! Enabled the database secrets engine at: database/
+```
 
    По умолчанию, механизм секретов будет включаться по имени движка.
    Чтобы включить механизм секретов по другому пути, используйте аргумент `-path`.
 
 1. Настроить Stronghold с помощью соответствующего плагина и информации о подключении:
 
-   ```shell-session
-   $ d8 stronghold write database/config/my-database \
-       plugin_name="..." \
-       connection_url="..." \
-       allowed_roles="..." \
-       username="..." \
-       password="..." \
-   ```
+```shell-session
+$ d8 stronghold write database/config/my-database \
+    plugin_name="..." \
+    connection_url="..." \
+    allowed_roles="..." \
+    username="..." \
+    password="..." \
+```
 
-{% alert level="warning" %}
- Настоятельно рекомендуется создать пользователя в базе данных
+!!! Внимание
+   Настоятельно рекомендуется создать пользователя в базе данных
    специально для Stronghold. Этот пользователь будет использоваться
    для работы с динамическими и статическими пользователями в базе данных.
    В документации этот пользователь называется «root».
 
-{% endalert %}
    Stronghold будет использовать указанного здесь пользователя для создания/обновления/отмены
    учетных данных базы данных. Этот пользователь должен иметь соответствующие права на
    выполнение действий над другими пользователями базы данных (создание, обновление
@@ -107,32 +102,29 @@ Stronghold хранит и автоматически меняет пароли 
    для него таким образом, чтобы пользователь stronghold не был доступен
    никаким пользователям, кроме самого Stronghold:
 
-   ```shell-session
-   d8 stronghold write -force database/rotate-root/my-database
-   ```
+```shell-session
+d8 stronghold write -force database/rotate-root/my-database
+```
 
-{% alert level="critical" %}
-
- После этого пароль для пользователя, указанного в предыдущем шаге, будет недоступен.
+!!! Внимание
+   После этого пароль для пользователя, указанного в предыдущем шаге, будет недоступен.
    В связи с этим настоятельно рекомендуется создать пользователя, который будет
    использоваться Stronghold для управления пользователями базы данных.
-
-{% endalert %}
 
 1. Настройте роль, которая сопоставляет имя в Stronghold с набором инструкций для
    создания учетных данных базы данных.
 
-   ```shell-session
-   $ d8 stronghold write database/roles/my-role \
-       db_name=my-database \
-       creation_statements="..." \
-       default_ttl="1h" \
-       max_ttl="24h"
-   Success! Data written to: database/roles/my-role
-   ```
+```shell-session
+$ d8 stronghold write database/roles/my-role \
+    db_name=my-database \
+    creation_statements="..." \
+    default_ttl="1h" \
+    max_ttl="24h"
+Success! Data written to: database/roles/my-role
+```
 
-   Поля `{{username}}` and `{{password}}` будут заполнены плагином динамически
-   сгенерированными значениями. В некоторых плагинах также поддерживается поле `{{expiration}}`.
+Поля `{{username}}` and `{{password}}` будут заполнены плагином динамически
+сгенерированными значениями. В некоторых плагинах также поддерживается поле `{{expiration}}`.
 
 ## Использование
 
@@ -141,44 +133,33 @@ Stronghold хранит и автоматически меняет пароли 
 
 1. Сгенерировать новую учетную запись, используя `/creds` и имя роли:
 
-    ```shell-session
-    $ d8 stronghold read database/creds/my-role
-    Key                Value
-    ---                -----
-    lease_id           database/creds/my-role/2f6a614c-4aa2-7b19-24b9-ad944a8d4de6
-    lease_duration     1h
-    lease_renewable    true
-    password           FSREZ1S0kFsZtLat-y94
-    username           v-strongholduser-e2978cd0-ugp7iqI2hdlff5hfjylJ-1602537260
-    ```
+```shell-session
+$ d8 stronghold read database/creds/my-role
+Key                Value
+---                -----
+lease_id           database/creds/my-role/2f6a614c-4aa2-7b19-24b9-ad944a8d4de6
+lease_duration     1h
+lease_renewable    true
+password           FSREZ1S0kFsZtLat-y94
+username           v-strongholduser-e2978cd0-ugp7iqI2hdlff5hfjylJ-1602537260
+```
 
 ## Возможности базы данных
 
 Все базы данных поддерживают динамические и статические роли. Все плагины
 поддерживают изменение учетных данных root пользователя.
 
-<a id="db-capabilities-table" />
 
 | База данных                                           | Изменение Root пользователя | Динамические роли | Статические роли | Кастомизация имени пользователя  | Тип учетных данных |
 |-------------------------------------------------------|-----------------------------|-------------------|------------------|----------------------------------|--------------------|
-| [Cassandra](/docs/secrets/databases/cassandra)        | Yes                         | Yes               | Yes              | Yes                              | password           |
-| [InfluxDB](/docs/secrets/databases/influxdb)          | Yes                         | Yes               | Yes              | Yes                              | password           |
-| [MySQL/MariaDB](/docs/secrets/databases/mysql-maria)  | Yes                         | Yes               | Yes              | Yes                              | password           |
-| [PostgreSQL](/docs/secrets/databases/postgresql)      | Yes                         | Yes               | Yes              | Yes                              | password           |
-
-## Настраиваемые плагины
-
-Этот механизм секретов позволяет запускать настраиваемые типы баз данных через открытый
-интерфейс плагинов. Дополнительную информацию можно найти в
-[custom database plugin](/docs/secrets/databases/custom).
+| [MySQL/MariaDB](mysql-maria)  | Yes                         | Yes               | Yes              | Yes                              | password           |
+| [PostgreSQL](postgresql)      | Yes                         | Yes               | Yes              | Yes                              | password           |
 
 ## Типы учетных данных
 
 Системы баз данных поддерживают различные методы аутентификации и типы учетных данных.
 Механизм секретов базы данных поддерживает управление учетными данными, альтернативными
-именами пользователей и паролями. Параметры
-[credential_type](/api-docs/secret/databases#credential_type) и
-[credential_config](/api-docs/secret/databases#credential_config)
+именами пользователей и паролями. Параметры `credential_type` и `credential_config`
 динамических и статических ролей определяют учетные данные, которые Stronghold
 будет генерировать и делать доступными для плагинов баз данных. О том, какие типы
 учетных данных они поддерживают, и о примерах их использования читайте в документации
@@ -186,7 +167,7 @@ Stronghold хранит и автоматически меняет пароли 
 
 ## Генерация паролей
 
-Пароли генерируются с помощью [Password Policies](/docs/concepts/password-policies).
+Пароли генерируются с помощью политики паролей.
 Базы данных могут по желанию устанавливать политику паролей для использования во всех
 ролях или на уровне отдельных ролей для данной базы данных. Например, каждый раз,
 когда вы вызываете команду `d8 stronghold write database/config/my-database`, вы можете
@@ -223,8 +204,6 @@ rule "charset" {
 Вы можете указать опцию `disable_escaping` со значением `true` в некоторых механизмах секретов,
 чтобы Stronghold не экранировал специальные символы в полях имени пользователя и пароля.
 Это необходимо для некоторых альтернативных форматов строк подключения.
-Смотрите документацию [databases secrets engine API docs](/api-docs/secret/databases#common-fields)
-и ссылки на отдельные документации по отдельным плагинам для определения поддержки этого параметра.
 
 Например, если пароль содержит символы URL-escaped, такие как `#` или `%`,
 они останутся таковыми, а не станут `%23` и `%25` соответственно.
@@ -237,8 +216,3 @@ username="root" \
 password='your#StrongPassword%' \
 disable_escaping="true"
 ```
-
-## API
-
-Более подробную информацию о HTTP API механизма секретов баз данных можно найти в разделе [Database secret
-secrets engine API](/api-docs/secret/databases).

@@ -1,5 +1,5 @@
 ---
-title: "MySQL/MariaDB"
+title: "Механизм секретов баз данных MySQL/MariaDB"
 permalink: ru/stronghold/documentation/user/secrets-engines/databases/mysql.html
 lang: ru
 description: |-
@@ -8,18 +8,9 @@ description: |-
   for the MySQL database.
 ---
 
-## Механизм секретов баз данных MySQL/MariaDB
-
-{% alert level="warning" %}
-
-**Note**: Этот механизм может использовать внешние сертификаты X.509 в качестве части TLS
-    или проверки подписи. Проверка подписей по сертификатам X.509, использующим SHA-1, устарела
-    и больше не используется без обходного пути. Подробнее в [deprecation FAQ](/docs/deprecation/faq#q-what-is-the-impact-of-removing-support-for-x-509-certificates-with-signatures-that-use-sha-1).
-
-{% endalert %}
 MySQL - один из поддерживаемых плагинов для механизма секретов баз данных.
 Этот плагин генерирует учетные данные базы данных динамически на основе
-настроенных ролей для базы данных MySQL, а также поддерживает статические роли, подробнее описанные в [Static Roles](/docs/secrets/databases#static-roles).
+настроенных ролей для базы данных MySQL, а также поддерживает статические роли.
 
 Этот плагин имеет несколько различных экземпляров, встроенных в Stronghold,
 каждый из которых предназначен для немного разных драйверов MySQL. Единственное
@@ -32,48 +23,48 @@ MySQL - один из поддерживаемых плагинов для ме�
 - mysql-rds-database-plugin
 - mysql-legacy-database-plugin
 
-Подробнее о настройке механизма секретов баз данных [database secrets engine](/docs/secrets/databases).
+Подробнее о настройке механизма секретов баз данных [database secrets engine](../).
 
 ## Возможности
 
-| Имя плагина                                                           | Изменение Root учетной записи | Динамические роли | Статические роли | Кастомизация имени пользователя |
-|-----------------------------------------------------------------------|-------------------------------|-------------------|------------------|---------------------------------|
-| Может меняться (see: [above](#mysql-mariadb-database-secrets-engine)  | Yes                           | Yes               | Yes              | Yes (1.7+)                      |
+| Имя плагина                     | Изменение Root учетной записи | Динамические роли | Статические роли | Кастомизация имени пользователя |
+|---------------------------------|-------------------------------|-------------------|------------------|---------------------------------|
+| Может меняться                  | Да                            | Да                | Да               | Да                              |
 
 ## Установка
 
 1. Включите механизм секретов базы данных, если он еще не включен:
 
-   ```text
-   $ d8 stronghold secrets enable database
-   Success! Enabled the database secrets engine at: database/
-   ```
+```text
+$ d8 stronghold secrets enable database
+Success! Enabled the database secrets engine at: database/
+```
 
    По умолчанию механизм секретов будет включаться на основе его имени.
    Чтобы включить механизм секретов по другому пути, используйте аргумент `-path`.
 
-2. Настройте Stronghold с помощью соответствующего плагина и информации о подключении:
+1. Настройте Stronghold с помощью соответствующего плагина и информации о подключении:
 
-   ```text
-   $ d8 stronghold write database/config/my-mysql-database \
-       plugin_name=mysql-database-plugin \
-       connection_url="{{username}}:{{password}}@tcp(127.0.0.1:3306)/" \
-       allowed_roles="my-role" \
-       username="strongholduser" \
-       password="strongholdpass"
-   ```
+```text
+$ d8 stronghold write database/config/my-mysql-database \
+    plugin_name=mysql-database-plugin \
+    connection_url="{{username}}:{{password}}@tcp(127.0.0.1:3306)/" \
+    allowed_roles="my-role" \
+    username="strongholduser" \
+    password="strongholdpass"
+```
 
-3. Настройте роль, которая сопоставляет имя в Stronghold с SQL запросом,
+1. Настройте роль, которая сопоставляет имя в Stronghold с SQL запросом,
    выполняемым для создания учетной записи базы данных:
 
-   ```text
-   $ d8 stronghold write database/roles/my-role \
-       db_name=my-mysql-database \
-       creation_statements="CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';GRANT SELECT ON *.* TO '{{name}}'@'%';" \
-       default_ttl="1h" \
-       max_ttl="24h"
-   Success! Data written to: database/roles/my-role
-   ```
+```text
+$ d8 stronghold write database/roles/my-role \
+    db_name=my-mysql-database \
+    creation_statements="CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';GRANT SELECT ON *.* TO '{{name}}'@'%';" \
+    default_ttl="1h" \
+    max_ttl="24h"
+Success! Data written to: database/roles/my-role
+```
 
 ## Использование
 
@@ -82,16 +73,16 @@ MySQL - один из поддерживаемых плагинов для ме�
 
 1. Сгенерируйте новую учетную запись, используя `/creds` и имя роли:
 
-   ```text
-   $ d8 stronghold read database/creds/my-role
-   Key                Value
-   ---                -----
-   lease_id           database/creds/my-role/2f6a614c-4aa2-7b19-24b9-ad944a8d4de6
-   lease_duration     1h
-   lease_renewable    true
-   password           yY-57n3X5UQhxnmFRP3f
-   username           v_strongholduser_my-role_crBWVqVh2Hc1
-   ```
+```text
+$ d8 stronghold read database/creds/my-role
+Key                Value
+---                -----
+lease_id           database/creds/my-role/2f6a614c-4aa2-7b19-24b9-ad944a8d4de6
+lease_duration     1h
+lease_renewable    true
+password           yY-57n3X5UQhxnmFRP3f
+username           v_strongholduser_my-role_crBWVqVh2Hc1
+```
 
 ## Проверка подлинности сертификата клиента x509
 
@@ -147,7 +138,7 @@ $ d8 stronghold write database/roles/my-role \
 ### Изменение root учетных данных in MySQL 5.6
 
 По умолчанию для MySQL используется синтаксис `ALTER USER`, присутствующий в MySQL 5.7 и выше.
-Для MySQL 5.6, [root rotation statements](/api-docs/secret/databases#root_rotation_statements)
+Для MySQL 5.6, `root_rotation_statements`
 должны быть настроены на использование старого синтаксиса `SET PASSWORD`.
 Например:
 
@@ -160,11 +151,3 @@ $ d8 stronghold write database/config/my-mysql-database \
     username="root" \
     password="mysql"
 ```
-
-## API
-
-Полный список настраиваемых параметров можно
-найти на странице [MySQL database plugin API](/api-docs/secret/databases/mysql-maria).
-
-Более подробную информацию о HTTP API механизма секретов баз данных можно найти в разделе
-[Database secrets engine API](/api-docs/secret/databases).

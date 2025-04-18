@@ -13,170 +13,190 @@ entries:
             ru: Введение
           url: /stronghold/documentation/admin/overview.html
         - title:
-            en: Platform editions
-            ru: Редакции платформы
-          url: /stronghold/documentation/admin/editions.html
-        - title:
-            en: Update channels
-            ru: Каналы обновлений
-          url: /stronghold/documentation/admin/update-channels.html
-        - title:
-            en: Install
-            ru: Установка платформы
-          url: /stronghold/documentation/admin/install/steps/install.html
+            en: Launch in Linux OS
+            ru: Запуск в ОС Linux
           folders:
             - title:
-                en: Requirements
-                ru: Требования
-              url: /stronghold/documentation/admin/install/requirements.html
+                en: Installation
+                ru: Установка
+              url: /stronghold/documentation/admin/admin/standalone/installation.html
             - title:
-                en: Installation steps
-                ru: Порядок установки
-              folders:
-                - title:
-                    en: Prepare the environment
-                    ru: Подготовка окружения
-                  url: /stronghold/documentation/admin/install/steps/prepare.html
-                - title:
-                    en: Platform installation
-                    ru: Установка платформы
-                  url: /stronghold/documentation/admin/install/steps/install.html
-                - title:
-                    en: Initial access configuration
-                    ru: Первичная настройка доступа
-                  url: /stronghold/documentation/admin/install/steps/access.html
+                en: Configuration
+                ru: Настройка
+              url: /stronghold/documentation/admin/admin/standalone/configuration.html
+            - title:
+                en: HSM Support
+                ru: Поддержка HSM
+              url: /stronghold/documentation/admin/admin/standalone/hsm.html
         - title:
-            en: Platform configuration
-            ru: Настройка платформы
+            en: Launch in DKP
+            ru: Запуск в DKP
           folders:
             - title:
-                en: Node management
-                ru: Управление узлами
+                en: Platform editions
+                ru: Редакции платформы
+              url: /stronghold/documentation/admin/editions.html
+            - title:
+                en: Update channels
+                ru: Каналы обновлений
+              url: /stronghold/documentation/admin/update-channels.html
+            - title:
+                en: Install
+                ru: Установка платформы
+              url: /stronghold/documentation/admin/install/steps/install.html
               folders:
                 - title:
-                    en: NodeGroup
-                    ru: Группы узлов
-                  url: /stronghold/documentation/admin/platform-management/node-management/node-group.html
+                    en: Requirements
+                    ru: Требования
+                  url: /stronghold/documentation/admin/install/requirements.html
                 - title:
-                    en: Adding a node
-                    ru: Добавление узла
-                  url: /stronghold/documentation/admin/platform-management/node-management/adding-node.html
-                - title:
-                    en: Node сonfiguration
-                    ru: Настройка узлов
+                    en: Installation steps
+                    ru: Порядок установки
                   folders:
                     - title:
-                        en: NodeGroupConfiguration
-                        ru: Конфигурация групп узлов
-                      url: /stronghold/documentation/admin/platform-management/node-management/configuration.html
+                        en: Prepare the environment
+                        ru: Подготовка окружения
+                      url: /stronghold/documentation/admin/install/steps/prepare.html
                     - title:
-                        en: OS configuration
-                        ru: Настройка ОС
-                      url: /stronghold/documentation/admin/platform-management/node-management/os.html
+                        en: Platform installation
+                        ru: Установка платформы
+                      url: /stronghold/documentation/admin/install/steps/install.html
                     - title:
-                        en: Containerd configuration
-                        ru: Настройка containerd
-                      url: /stronghold/documentation/admin/platform-management/node-management/containerd.html
+                        en: Initial access configuration
+                        ru: Первичная настройка доступа
+                      url: /stronghold/documentation/admin/install/steps/access.html
             - title:
-                en: Control plane
-                ru: Управляющий слой
+                en: Platform configuration
+                ru: Настройка платформы
               folders:
                 - title:
-                    en: Components
-                    ru: Компоненты
+                    en: Node management
+                    ru: Управление узлами
                   folders:
                     - title:
-                        en: Description
-                        ru: Описание
-                      url: /stronghold/documentation/admin/platform-management/control-plane-settings/control-plane-components.html
+                        en: NodeGroup
+                        ru: Группы узлов
+                      url: /stronghold/documentation/admin/platform-management/node-management/node-group.html
                     - title:
-                        en: Etcd operations
-                        ru: Работа с etcd
-                      url: /stronghold/documentation/admin/platform-management/control-plane-settings/etcd.html
+                        en: Adding a node
+                        ru: Добавление узла
+                      url: /stronghold/documentation/admin/platform-management/node-management/adding-node.html
                     - title:
-                        en: Scheduler
-                        ru: Планировщик
-                      url: /stronghold/documentation/admin/platform-management/control-plane-settings/scheduler.html
+                        en: Node сonfiguration
+                        ru: Настройка узлов
+                      folders:
+                        - title:
+                            en: NodeGroupConfiguration
+                            ru: Конфигурация групп узлов
+                          url: /stronghold/documentation/admin/platform-management/node-management/configuration.html
+                        - title:
+                            en: OS configuration
+                            ru: Настройка ОС
+                          url: /stronghold/documentation/admin/platform-management/node-management/os.html
+                        - title:
+                            en: Containerd configuration
+                            ru: Настройка containerd
+                          url: /stronghold/documentation/admin/platform-management/node-management/containerd.html
+                - title:
+                    en: Control plane
+                    ru: Управляющий слой
+                  folders:
                     - title:
-                        en: Auditing
-                        ru: Аудит
-                      url: /stronghold/documentation/admin/platform-management/control-plane-settings/audit.html
+                        en: Components
+                        ru: Компоненты
+                      folders:
+                        - title:
+                            en: Description
+                            ru: Описание
+                          url: /stronghold/documentation/admin/platform-management/control-plane-settings/control-plane-components.html
+                        - title:
+                            en: Etcd operations
+                            ru: Работа с etcd
+                          url: /stronghold/documentation/admin/platform-management/control-plane-settings/etcd.html
+                        - title:
+                            en: Scheduler
+                            ru: Планировщик
+                          url: /stronghold/documentation/admin/platform-management/control-plane-settings/scheduler.html
+                        - title:
+                            en: Auditing
+                            ru: Аудит
+                          url: /stronghold/documentation/admin/platform-management/control-plane-settings/audit.html
+                    - title:
+                        en: Master nodes
+                        ru: Мастер узлы
+                      url: /stronghold/documentation/admin/platform-management/control-plane-settings/masters.html
+                    - title:
+                        en: Components placement
+                        ru: Размещение компонентов
+                      url: /stronghold/documentation/admin/platform-management/control-plane-settings/placement-management.html
                 - title:
-                    en: Master nodes
-                    ru: Мастер узлы
-                  url: /stronghold/documentation/admin/platform-management/control-plane-settings/masters.html
+                    en: Network management
+                    ru: Управление сетью
+                  folders:
+                    - title:
+                        en: Ingress
+                        ru: Управление входящим трафиком
+                      url: /stronghold/documentation/admin/platform-management/network/ingress.html
+                    - title:
+                        en: Egress
+                        ru: Управление исходящим трафиком
+                      url: /stronghold/documentation/admin/platform-management/network/egress.html
+                    - title:
+                        en: Routing
+                        ru: Настройка маршрутизации
+                      url: /stronghold/documentation/admin/platform-management/network/routing.html
+                    - title:
+                        en: DNS settings
+                        ru: Настройка DNS
+                      url: /stronghold/documentation/admin/platform-management/network/dns.html
+                    - title:
+                        en: NTP settings
+                        ru: Настройка NTP
+                      url: /stronghold/documentation/admin/platform-management/network/ntp.html
                 - title:
-                    en: Components placement
-                    ru: Размещение компонентов
-                  url: /stronghold/documentation/admin/platform-management/control-plane-settings/placement-management.html
-            - title:
-                en: Network management
-                ru: Управление сетью
-              folders:
+                    en: Monitoring
+                    ru: Мониторинг
+                  folders:
+                    - title:
+                        en: Node monitoring
+                        ru: Мониторинг узлов
+                      url: /stronghold/documentation/admin/platform-management/monitoring/node.html
                 - title:
-                    en: Ingress
-                    ru: Управление входящим трафиком
-                  url: /stronghold/documentation/admin/platform-management/network/ingress.html
-                - title:
-                    en: Egress
-                    ru: Управление исходящим трафиком
-                  url: /stronghold/documentation/admin/platform-management/network/egress.html
-                - title:
-                    en: Routing
-                    ru: Настройка маршрутизации
-                  url: /stronghold/documentation/admin/platform-management/network/routing.html
-                - title:
-                    en: DNS settings
-                    ru: Настройка DNS
-                  url: /stronghold/documentation/admin/platform-management/network/dns.html
-                - title:
-                    en: NTP settings
-                    ru: Настройка NTP
-                  url: /stronghold/documentation/admin/platform-management/network/ntp.html
-            - title:
-                en: Monitoring
-                ru: Мониторинг
-              folders:
-                - title:
-                    en: Node monitoring
-                    ru: Мониторинг узлов
-                  url: /stronghold/documentation/admin/platform-management/monitoring/node.html
-            - title:
-                en: Access control
-                ru: Разграничение доступа
-              folders:
-                - title:
-                    en: Role model
-                    ru: Ролевая модель
-                  url: /stronghold/documentation/admin/platform-management/access-control/role-model.html
-                - title:
-                    en: User management
-                    ru: Управление пользователями
-                  url: /stronghold/documentation/admin/platform-management/access-control/user-management.html
-                - title:
-                    en: Projects
-                    ru: Проекты
-                  url: /stronghold/documentation/admin/platform-management/access-control/projects.html
-        - title:
-            en: Platform update
-            ru: Обновление платформы
-          folders:
+                    en: Access control
+                    ru: Разграничение доступа
+                  folders:
+                    - title:
+                        en: Role model
+                        ru: Ролевая модель
+                      url: /stronghold/documentation/admin/platform-management/access-control/role-model.html
+                    - title:
+                        en: User management
+                        ru: Управление пользователями
+                      url: /stronghold/documentation/admin/platform-management/access-control/user-management.html
+                    - title:
+                        en: Projects
+                        ru: Проекты
+                      url: /stronghold/documentation/admin/platform-management/access-control/projects.html
             - title:
                 en: Platform update
                 ru: Обновление платформы
-              url: /stronghold/documentation/admin/update/update.html
+              folders:
+                - title:
+                    en: Platform update
+                    ru: Обновление платформы
+                  url: /stronghold/documentation/admin/update/update.html
+                - title:
+                    en: Manual update mode
+                    ru: Ручной режим обновления
+                  url: /stronghold/documentation/admin/update/manual-update-mode.html
             - title:
-                en: Manual update mode
-                ru: Ручной режим обновления
-              url: /stronghold/documentation/admin/update/manual-update-mode.html
-        - title:
-            en: Removing the platform
-            ru: Удаление платформы
-          url: /stronghold/documentation/admin/removing/removing.html
-        - title:
-            en: Stronghold configuration
-            ru: Настройка Stronghold
-          url: /stronghold/documentation/configuration.html
+                en: Removing the platform
+                ru: Удаление платформы
+              url: /stronghold/documentation/admin/removing/removing.html
+            - title:
+                en: Stronghold configuration
+                ru: Настройка Stronghold
+              url: /stronghold/documentation/configuration.html
     - title:
         en: User guide
         ru: Руководство пользователя
@@ -224,47 +244,47 @@ entries:
               - title:
                   en: Overview
                   ru: Обзор
-                url: /stronghold/documentation/user/auth-methods/jwt/oidc-providers/overview.html
+                url: /stronghold/documentation/user/auth/jwt/oidc-providers/overview.html
               - title:
                   en: Gitlab
                   ru: Gitlab
-                url: /stronghold/documentation/user/auth-methods/jwt/oidc-providers/gitlab.html
+                url: /stronghold/documentation/user/auth/jwt/oidc-providers/gitlab.html
               - title:
                   en: Keycloak
                   ru: Keycloak
-                url: /stronghold/documentation/user/auth-methods/jwt/oidc-providers/keycloak.html
+                url: /stronghold/documentation/user/auth/jwt/oidc-providers/keycloak.html
               - title:
                   en: Kubernetes
                   ru: Kubernetes
-                url: /stronghold/documentation/user/auth-methods/jwt/oidc-providers/kubernetes.html
+                url: /stronghold/documentation/user/auth/jwt/oidc-providers/kubernetes.html
             - title:
                 en: OIDC
                 ru: OIDC
-              url: /stronghold/documentation/user/auth-methods/oidc.html
+              url: /stronghold/documentation/user/auth/oidc.html
             - title:
                 en: JWT
                 ru: JWT
-              url: /stronghold/documentation/user/auth-methods/jwt.html
+              url: /stronghold/documentation/user/auth/jwt.html
             - title:
                 en: Approle
                 ru: Approle
-              url: /stronghold/documentation/user/auth-methods/approle.html
+              url: /stronghold/documentation/user/auth/approle.html
             - title:
                 en: Userpass
                 ru: Userpass
-              url: /stronghold/documentation/user/auth-methods/userpass.html
+              url: /stronghold/documentation/user/auth/userpass.html
             - title:
                 en: Token
                 ru: Токен
-              url: /stronghold/documentation/user/auth-methods/token.html
+              url: /stronghold/documentation/user/auth/token.html
             - title:
                 en: LDAP
                 ru: LDAP
-              url: /stronghold/documentation/user/auth-methods/ldap.html
+              url: /stronghold/documentation/user/auth/ldap.html
             - title:
                 en: Kubernetes
                 ru: Kubernetes
-              url: /stronghold/documentation/user/auth-methods/kubernetes.html
+              url: /stronghold/documentation/user/auth/kubernetes.html
         - title:
             en: Secrets engines
             ru: Механизмы секретов
@@ -288,19 +308,27 @@ entries:
             - title:
                 en: PKI Secrets engine
                 ru: Механизм секретов PKI
-              folders:
-                - title:
-                    en: Overview
-                    ru: Обзор
-                  url: /stronghold/documentation/user/secrets-engines/pki/overview.html
-                - title:
-                    en: Setup and usage
-                    ru: Настройка и использование
-                  url: /stronghold/documentation/user/secrets-engines/pki/setup.html
+              url: /stronghold/documentation/user/secrets-engines/pki.html
             - title:
                 en: Cubbyhole Secrets engine
                 ru: Механизм секретов Cubbyhole
               url: /stronghold/documentation/user/secrets-engines/cubbyhole.html
+            - title:
+                en: SSH Secrets engine
+                ru: Механизм секретов SSH
+              url: /stronghold/documentation/user/secrets-engines/ssh.html
+            - title:
+                en: Transit Secrets engine
+                ru: Механизм секретов Transit
+              url: /stronghold/documentation/user/secrets-engines/transit.html
+            - title:
+                en: TOTP Secrets engine
+                ru: Механизм секретов TOTP
+              url: /stronghold/documentation/user/secrets-engines/totp.html
+            - title:
+                en: Kubernets Secrets engine
+                ru: Механизм секретов Kubernetes
+              url: /stronghold/documentation/user/secrets-engines/kubernetes.html
             - title:
                 en: Identity Secrets engine
                 ru: Механизм секретов Identity
@@ -317,34 +345,6 @@ entries:
                     en: OIDC identity tokens
                     ru: OIDC identity tokens
                   url: /stronghold/documentation/user/secrets-engines/identity-token.html
-            - title:
-                en: SSH Secrets engine
-                ru: Механизм секретов SSH
-              folders:
-                - title:
-                    en: Overview
-                    ru: Обзор
-                  url: /stronghold/documentation/user/secrets-engines/ssh/overview.html
-                - title:
-                    en: One-Time SSH passwords
-                    ru: Одноразовые пароли SSH
-                  url: /stronghold/documentation/user/secrets-engines/ssh/one-time-ssh-passwords.html
-                - title:
-                    en: Signed Certificate
-                    ru: Вход по сертификатам
-                  url: /stronghold/documentation/user/secrets-engines/ssh/signed-ssh-certificates.html
-            - title:
-                en: Transit Secrets engine
-                ru: Механизм секретов Transit
-              folders:
-                - title:
-                    en: Overview
-                    ru: Обзор
-                  url: /stronghold/documentation/user/secrets-engines/transit/overview.html
-                - title:
-                    en: Import Key Wrapping
-                    ru: Обертрывание импортируемых ключей
-                  url: /stronghold/documentation/user/secrets-engines/transit/key-wrapping-guide.html
             - title:
                 en: Databases Secrets engine
                 ru: Механизм секретов баз данных

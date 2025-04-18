@@ -1,50 +1,49 @@
 ---
-title: "LDAP secrets engine"
+title: "Механизм секретов LDAP"
 permalink: ru/stronghold/documentation/user/secrets-engines/ldap.html
 lang: ru
 description: >-
   The LDAP secret engine manages LDAP entry passwords.
 ---
 
-
-{% raw %}
 Механизм секретов LDAP обеспечивает управление учетными данными LDAP, а также динамическое создание учетных данных. Он поддерживает интеграцию с реализациями протокола LDAP v3, включая OpenLDAP, Active Directory и IBM Resource Access Control Facility (RACF).
 
 Механизм секретов имеет три основные функции:
-- [Управление статическими учетными данными](#%D1%81%D1%82%D0%B0%D1%82%D0%B8%D1%87%D0%B5%D1%81%D0%BA%D0%B8%D0%B5-%D1%80%D0%BE%D0%BB%D0%B8)
-- [Управление динамическими учетными данными](#%D0%B4%D0%B8%D0%BD%D0%B0%D0%BC%D0%B8%D1%87%D0%B5%D1%81%D0%BA%D0%B8%D0%B5-%D1%80%D0%BE%D0%BB%D0%B8)
-- [Ротация паролей для списов учетных записей](#%D1%80%D0%BE%D1%82%D0%B0%D1%86%D0%B8%D1%8F-%D0%BF%D0%B0%D1%80%D0%BE%D0%BB%D0%B5%D0%B9-%D0%B4%D0%BB%D1%8F-%D1%81%D0%BF%D0%B8%D1%81%D0%BA%D0%BE%D0%B2-%D1%83%D1%87%D0%B5%D1%82%D0%BD%D1%8B%D1%85-%D0%B7%D0%B0%D0%BF%D0%B8%D1%81%D0%B5%D0%B9)
+
+- [Управление статическими учетными данными](#static-roles)
+- [Управление динамическими учетными данными](#dynamic-roles)
+- [Ротация паролей для списов учетных записей](#rotation)
 
 ## Настройка
 
-1. Включите механизм секретов LDAP:
+Включите механизм секретов LDAP:
 
-   ```sh
-   d8 stronghold secrets enable ldap
-   ```
+```sh
+d8 stronghold secrets enable ldap
+```
 
    По умолчанию подключение произойдет по пусти `ldap`. Для подключения по другому пути используйте аргумент `-path`.
 
-2. Настройте учетные данные, которые Stronghold использует для подключения к LDAP для генерации паролей:
+Настройте учетные данные, которые Stronghold использует для подключения к LDAP для генерации паролей:
 
-   ```sh
-   d8 stronghold write ldap/config \
-       binddn=$USERNAME \
-       bindpass=$PASSWORD \
-       url=ldaps://138.91.247.105
-   ```
+```sh
+d8 stronghold write ldap/config \
+    binddn=$USERNAME \
+    bindpass=$PASSWORD \
+    url=ldaps://138.91.247.105
+```
 
    Примечание: рекомендуется создать отдельную учетную запись специально для Stronghold.
 
-3. Ротируйте пароль, чтобы он харнился только в Stronghold:
+Ротируйте пароль, чтобы он харнился только в Stronghold:
 
-   ```sh
-   d8 stronghold write -f ldap/rotate-root
-   ```
+```sh
+d8 stronghold write -f ldap/rotate-root
+```
 
    Примечание: получить сгенерированный пароль после ротации в Stronghold невозможно.
 
-### Схемы LDAP
+### Схемы LDAP {#schemas}
 
 Механизм секретов LDAP поддерживает три различные схемы:
 
@@ -68,7 +67,7 @@ description: >-
 
 Для управления системой безопасности IBM Resource Access Control Facility (RACF) механизм секретов должен быть настроен на использование схемы `racf`.
 
-Для поддержки RACF генерируемые пароли должны состоять из 8 символов или меньше. Длина пароля может быть настроена с помощью [политики паролей] (/docs/concepts/password-policies):
+Для поддержки RACF генерируемые пароли должны состоять из 8 символов или меньше. Длина пароля может быть настроена с помощью политики паролей:
 
 ```bash
 d8 stronghold write ldap/config \
@@ -91,25 +90,26 @@ d8 stronghold write ldap/config \
  schema=ad
 ```
 
-## Статические роли
 
-### Настройка
+### Статические роли {#static-roles}
 
-1. Настройте статическую роль, которая сопоставляет имя в Stronghold с записью в LDAP.
+#### Настройка
+
+Настройте статическую роль, которая сопоставляет имя в Stronghold с записью в LDAP.
    Настройки ротации паролей будут управляться этой ролью.
 
-   ```sh
-   d8 stronghold write ldap/static-role/lf-edge\
-       dn='uid=lf-edge,ou=users,dc=lf-edge,dc=com' \
-       username='stronghold'\
-       rotation_period="24h"
-   ```
+```sh
+d8 stronghold write ldap/static-role/lf-edge\
+    dn='uid=lf-edge,ou=users,dc=lf-edge,dc=com' \
+    username='stronghold'\
+    rotation_period="24h"
+```
 
-2. Запросите учетные данные для роли "stronghold":
+Запросите учетные данные для роли "stronghold":
 
-   ```sh
-   d8 stronghold read ldap/static-cred/lf-edge
-   ```
+```sh
+d8 stronghold read ldap/static-cred/lf-edge
+```
 
 ### Ротация паролей
 
@@ -132,9 +132,9 @@ d8 stronghold write ldap/config \
 
 При удалении статической роли пароли не сменяются. Пароль должен быть ротирован вручную перед удалением роли или отзывом доступа к статической роли.
 
-## Динамические роли
+### Динамические роли {#dynamic-roles}
 
-### Настройка
+#### Настройка
 
 Динамическую роль можно настроить с помощью вызова `/role/:role_name`:
 
@@ -147,11 +147,8 @@ d8 stronghold write ldap/role/dynamic-role \
   max_ttl=24h
 ```
 
-{% endraw %}
-{% alert level="info" %}
-Аргумент `rollback_ldif` необязателен, но рекомендуется. Операции, указанные в `rollback_ldif` будут выполнены, если создание по какой-либо причине завершится неудачей. Это поможет гарантировать, что все объекты будут удалены в случае неудачи.
-{% endalert %}
-{% raw %}
+!!! Внимание
+    Аргумент `rollback_ldif` необязателен, но рекомендуется. Операции, указанные в `rollback_ldif` будут выполнены, если создание по какой-либо причине завершится неудачей. Это поможет гарантировать, что все объекты будут удалены в случае неудачи.
 
 Чтобы сгенерировать учетные данные, выполните:
 
@@ -240,11 +237,11 @@ member: CN={{.Username}},OU=Stronghold,DC=adtesting,DC=lab
 -
 ```
 
-## Ротация паролей для списков учетных записей
+## Ротация паролей для списков учетных записей {#rotation}
 
 Stronghold может автоматически менять пароли для группы учетных записей. Операция по ротации пароля может быть выполнена вручную, или Stronghold выполнит ее, когда истечет TTL от предыдущей смены.
 
-Функционал работает с различными [схемами](#%D1%81%D1%85%D0%B5%D0%BC%D1%8B-ldap), включая OpenLDAP, Active Directory и RACF. В следующем примере рассмотрим вариант с Active Directory.
+Функционал работает с различными [схемами](#schemas), включая OpenLDAP, Active Directory и RACF. В следующем примере рассмотрим вариант с Active Directory.
 
 Сначала нам нужно включить механизм секретов LDAP и указать ему, как подключиться к серверу AD.
 
@@ -368,5 +365,3 @@ olcPPolicyForwardUpdates: FALSE
 olcPPolicyHashCleartext: TRUE
 olcPPolicyUseLockout: TRUE
 ```
-
-{% endraw %}

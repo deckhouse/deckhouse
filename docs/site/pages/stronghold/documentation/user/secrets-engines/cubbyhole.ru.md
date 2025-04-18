@@ -28,7 +28,7 @@ lang: ru
    Success! Data written to: cubbyhole/my-secret
 ```
 
-1. Чтение произвольных данных:
+2. Чтение произвольных данных:
 
 ```shell
    $ d8 stronghold read cubbyhole/my-secret
