@@ -23,8 +23,10 @@ import:
   add: /
   to: /
   includePaths:
-  - lib
-  - usr
+  - lib/ld-musl-x86_64*
+  - usr/bin/python3*
+  - usr/lib/python3*
+  - usr/lib/libc.so
   before: install
 - image: registrypackages/d8-curl-artifact-8-9-1
   add: /d8-curl

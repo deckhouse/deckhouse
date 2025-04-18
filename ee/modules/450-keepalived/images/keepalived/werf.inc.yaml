@@ -70,7 +70,9 @@ import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
   add: /
   to: /
-  includePaths:
-  - lib
-  - usr
   before: install
+  includePaths:
+  - lib/ld-musl-x86_64*
+  - usr/bin/python3*
+  - usr/lib/python3*
+  - usr/lib/libc.so

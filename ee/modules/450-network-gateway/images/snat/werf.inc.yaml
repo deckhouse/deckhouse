@@ -50,5 +50,7 @@ import:
   to: /
   before: install
   includePaths:
-  - lib
-  - usr
+  - lib/ld-musl-x86_64*
+  - usr/bin/python3*
+  - usr/lib/python3*
+  - usr/lib/libc.so

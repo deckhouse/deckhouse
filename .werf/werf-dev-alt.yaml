@@ -12,8 +12,10 @@ import:
   to: /
   before: install
   includePaths:
-  - lib
-  - usr
+  - lib/ld-musl-x86_64*
+  - usr/bin/python3*
+  - usr/lib/python3*
+  - usr/lib/libc.so
 shell:
   beforeInstall:
   - apt-get install -y ca-certificates openssl vim-console bash-completion gettext libexpat libcrypto3 glibc-pthread locale
