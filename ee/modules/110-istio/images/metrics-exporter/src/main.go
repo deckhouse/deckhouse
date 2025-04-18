@@ -7,14 +7,15 @@ package main
 
 import (
 	"context"
-	"github.com/deckhouse/deckhouse/pkg/log"
-	"github.com/prometheus/client_golang/prometheus"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"os/signal"
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
+	"github.com/prometheus/client_golang/prometheus"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 func main() {
@@ -38,7 +39,6 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-
 	wg := &sync.WaitGroup{}
 
 	wg.Add(1)
@@ -47,12 +47,11 @@ func main() {
 		watcher.StartPodWatcher(ctx, cfg.Namespace)
 	}()
 
-
 	// Metrics
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		StartPrometheusServer(ctx, reg, ":8080")
+		StartPrometheusServer(ctx, reg, "127.0.0.1:8080")
 	}()
 
 	// Get status every 30 sec

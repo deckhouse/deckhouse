@@ -33,6 +33,7 @@ shell:
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - go build -ldflags="-s -w" -o /src/monitor /src
   - chmod 0500 /src/monitor
+  - chown -R 64535:64535 /src/monitor
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
