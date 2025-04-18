@@ -369,14 +369,14 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("sequential processing with mirror release", func() {
-		suite.setupReleaseController(suite.fetchTestFileData("sequential-processing-mirror-pending.yaml"))
+		suite.setupReleaseController(suite.fetchTestFileData("sequential-processing-minor-pending.yaml"))
 		mr := suite.getModuleRelease(suite.testMRName)
 		_, err = suite.ctr.handleRelease(context.TODO(), mr)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("sequential processing with mirror release", func() {
-		suite.setupReleaseController(suite.fetchTestFileData("sequential-processing-mirror-auto.yaml"))
+		suite.setupReleaseController(suite.fetchTestFileData("sequential-processing-minor-auto.yaml"))
 		mr := suite.getModuleRelease(suite.testMRName)
 		_, err = suite.ctr.handleRelease(context.TODO(), mr)
 		require.NoError(suite.T(), err)
