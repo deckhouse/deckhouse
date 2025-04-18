@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"os"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/yandex-cloud/go-genproto/yandex/cloud/compute/v1"
 	ycsdk "github.com/yandex-cloud/go-sdk"
 	"github.com/yandex-cloud/go-sdk/iamkey"
@@ -30,13 +30,13 @@ import (
 )
 
 type Discoverer struct {
-	logger      *log.Entry
+	logger      *log.Logger
 	folderID    string
 	clusterUUID string
 	sdk         *ycsdk.SDK
 }
 
-func NewDiscoverer(logger *log.Entry) *Discoverer {
+func NewDiscoverer(logger *log.Logger) *Discoverer {
 	folderID := os.Getenv("YC_FOLDER_ID")
 	if folderID == "" {
 		logger.Fatal("Cannot get YC_FOLDER_ID env")
@@ -125,7 +125,7 @@ func (d *Discoverer) getDisksCreatedByCSIDriver(ctx context.Context) ([]*compute
 	}
 
 	if len(disksCreatedByCSIDriver) == 0 {
-		d.logger.Warnln("Unexpected behavior: no disks created by the CSI driver were found in the cloud. Should be checked manually")
+		d.logger.Warn("Unexpected behavior: no disks created by the CSI driver were found in the cloud. Should be checked manually")
 	}
 
 	return disksCreatedByCSIDriver, nil

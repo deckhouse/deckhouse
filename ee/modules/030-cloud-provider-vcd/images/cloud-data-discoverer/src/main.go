@@ -9,7 +9,7 @@ import (
 	"os"
 
 	"github.com/alecthomas/kingpin"
-	"github.com/sirupsen/logrus"
+	"github.com/deckhouse/deckhouse/pkg/log"
 
 	cloud_data "github.com/deckhouse/deckhouse/go_lib/cloud-data"
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/app"
@@ -35,7 +35,7 @@ func main() {
 
 	_, err := kpApp.Parse(os.Args[1:])
 	if err != nil {
-		logrus.Error(err)
+		log.Error("failed to parse command-line arguments", err)
 		os.Exit(1)
 	}
 }

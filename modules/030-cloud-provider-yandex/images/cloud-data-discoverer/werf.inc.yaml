@@ -1,10 +1,11 @@
+---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-    add: /discoverer
-    to: /discoverer
-    before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /discoverer
+  to: /discoverer
+  before: setup
 imageSpec:
   config:
     entrypoint: ["/discoverer"]
@@ -13,53 +14,36 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
 fromImage: common/src-artifact
 git:
-  - add: /{{ .ModulePath }}modules/030-{{ .ModuleName }}/images/{{ .ImageName }}
-    to:  /src
-    excludePaths:
-      - "**/*.md"
-      - "**/*.yaml"
-      - hack
-    stageDependencies:
-      install:
-        - go.mod
-        - go.sum
-        - "**/*.go"
-        - "*.go"
-  - add: /go_lib/cloud-data
-    to: /src/go_lib/cloud-data
-    excludePaths:
-      - "**/*.md"
-      - "**/*.yaml"
-      - hack
-    stageDependencies:
-      install:
-        - go.mod
-        - go.sum
-        - "**/*.go"
-        - "*.go"
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src
+  to:  /src
+- add: /go_lib/cloud-data
+  to: /src/go_lib/cloud-data
+- add: /pkg/log
+  to: /src/pkg/log
 shell:
   install:
-    - cd /src
-    - sed -i -e 's# /deckhouse/go_lib/cloud-data# /src/go_lib/cloud-data#g' go.mod
+  - cd /src
+  - sed -i -e 's# /deckhouse/go_lib/cloud-data# /src/go_lib/cloud-data#g' go.mod
+  - sed -i -e 's# /deckhouse/pkg/log# /src/pkg/log#g' go.mod
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 import:
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-    add: /src
-    to: /src
-    before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
 shell:
   install:
-    - cd /src
-    - export GOPROXY={{ $.GOPROXY }}
-    - go mod download
+  - cd /src
+  - export GOPROXY={{ $.GOPROXY }}
+  - go mod download
   setup:
-    - cd /src
-    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /discoverer
-    - chown 64535:64535 /discoverer
-    - chmod 0755 /discoverer
+  - cd /src
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /discoverer
+  - chown 64535:64535 /discoverer
+  - chmod 0755 /discoverer
