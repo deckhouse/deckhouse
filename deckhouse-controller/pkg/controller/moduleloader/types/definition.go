@@ -34,18 +34,19 @@ const (
 )
 
 type Definition struct {
-	Name         string                       `json:"name" yaml:"name"`
-	Weight       uint32                       `json:"weight,omitempty" yaml:"weight,omitempty"`
-	Tags         []string                     `json:"tags,omitempty" yaml:"tags,omitempty"`
-	Subsystems   []string                     `json:"subsystems,omitempty" yaml:"subsystems,omitempty"`
-	Namespace    string                       `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Stage        string                       `json:"stage,omitempty" yaml:"stage,omitempty"`
+	Name       string   `json:"name" yaml:"name"`
+	Weight     uint32   `json:"weight,omitempty" yaml:"weight,omitempty"`
+	Tags       []string `json:"tags,omitempty" yaml:"tags,omitempty"`
+	Subsystems []string `json:"subsystems,omitempty" yaml:"subsystems,omitempty"`
+	Namespace  string   `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Stage      string   `json:"stage,omitempty" yaml:"stage,omitempty"`
+	UniqueKey  string   `json:"uniqueKey,omitempty" yaml:"uniqueKey,omitempty"`
+
 	Descriptions *ModuleDescriptions          `json:"descriptions,omitempty" yaml:"descriptions,omitempty"`
 	Requirements *v1alpha1.ModuleRequirements `json:"requirements,omitempty" yaml:"requirements,omitempty"`
 
 	DisableOptions *v1alpha1.ModuleDisableOptions `json:"disable,omitempty" yaml:"disable,omitempty"`
-
-	Path string `yaml:"-"`
+	Path           string                         `yaml:"-"`
 }
 
 type ModuleDescriptions struct {
