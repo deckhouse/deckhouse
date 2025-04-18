@@ -1,4 +1,5 @@
-# Copyright 2024 Flant JSC
+#!/bin/bash
+# Copyright 2025 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,16 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if or ( eq .cri "Containerd") ( eq .crt "ContainerdV2") }}
-if bb-flag? containerd-need-restart; then
-  bb-log-warning "'containerd-need-restart' flag was set, restarting containerd."
-  if out=$(containerd config dump 2>&1); then
-      systemctl restart containerd-deckhouse.service
-  else
-      bb-log-error "'containerd config dump' return error: $out"
-      exit 1
-  fi
-  bb-flag-set kubelet-need-restart
-  bb-flag-unset containerd-need-restart
-fi
-{{- end }}
+set -Eeo pipefail
+mkdir -p /opt/deckhouse/images
+cp -f kubernetes-api-proxy.tar /opt/deckhouse/images/kubernetes-api-proxy.tar
