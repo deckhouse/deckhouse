@@ -1,0 +1,14 @@
+{% if site.data.schemas.stronghold.crds.size > 0 %}
+
+{%- assign crds = site.data.schemas.stronghold.crds  | sort %}
+
+{%- for crd in crds %}
+{%- assign crdData = crd[1] %}
+{%- assign crdKind = crd[1]["spec"]["names"]["kind"] %}
+{%- unless crdKind %}
+  {%- assign crdKind = crd[1]["kind"] %}
+{%- endunless %}
+{%- assign crdUrl = crdKind | downcase | append: ".html" %}
+- [{{ crdKind }}]({{ crdUrl }})
+{%- endfor %}
+{% endif %}
