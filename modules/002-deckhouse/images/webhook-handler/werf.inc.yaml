@@ -18,14 +18,13 @@ import:
   add: /label-converter
   to: /usr/local/bin/label-converter
   before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /usr
-  to: /usr
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
+  add: /
+  to: /
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /lib/ld-musl-x86_64.so.1
-  to: /lib/ld-musl-x86_64.so.1
-  before: install
+  includePaths:
+  - lib
+  - usr
 git:
 - add: /{{ .ModulePath }}
   to: /available_hooks
@@ -91,28 +90,20 @@ shell:
     - chown 64535:64535 /label-converter
     - chmod 755 /label-converter
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
+fromImage: base/python
 final: false
-fromImage: common/relocate-artifact
-
-import:
-- image: base/python
-  add: /
-  to: /
-  before: install
-  includePaths:
-  - lib
-  - usr
 git:
-- add: /{{ .ModulePath }}modules/002-deckhouse/images/webhook-handler/requirements.txt
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/requirements.txt
   to: /requirements.txt
   stageDependencies:
     install:
     - '**/*'
+import:
+- image: common/wheel-artifact
+  add: /wheels
+  to: /wheels
+  before: install
 shell:
-  beforeInstall:
-  - apt-get install -y git
   install:
-    - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
-    - pip3 install -f file:///wheels --no-index -r /requirements.txt
-    - rm -rf /wheels
+  - pip3 install -f file:///wheels --no-index -r requirements.txt
