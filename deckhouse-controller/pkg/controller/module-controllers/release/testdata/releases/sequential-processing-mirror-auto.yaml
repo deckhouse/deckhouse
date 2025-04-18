@@ -4,11 +4,9 @@ kind: ModuleSource
 metadata:
   annotations:
     modules.deckhouse.io/registry-spec-checksum: 38557e472e4e2bd8695fc58a255ec3dd
-  creationTimestamp: null
   finalizers:
-  - modules.deckhouse.io/release-exists
+    - modules.deckhouse.io/release-exists
   name: foxtrot
-  resourceVersion: "999"
 spec:
   registry:
     ca: ""
@@ -18,51 +16,48 @@ spec:
 status:
   message: ""
   modules:
-  - name: upmeter
-    policy: foxtrot-alpha
+    - name: upmeter
+      policy: foxtrot-alpha
   modulesCount: 1
-  phase: ""
   syncTime: "2024-05-03T21:05:05Z"
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: ModuleUpdatePolicy
+metadata:
+  name: foxtrot-alpha
+spec:
+  releaseChannel: Stable
+  update:
+    mode: Auto
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
-  creationTimestamp: null
-  finalizers:
-  - modules.deckhouse.io/exist-on-fs
   labels:
     module: upmeter
     modules.deckhouse.io/update-policy: foxtrot-alpha
     release-checksum: 98d00f741c99e06e6c6c4d18b763c550
     source: foxtrot
-    status: deployed
   name: upmeter-v1.70.0
   ownerReferences:
-  - apiVersion: deckhouse.io/v1alpha1
-    controller: true
-    kind: ModuleSource
-    name: foxtrot
-    uid: 71d2300f-700b-452a-896a-6a3805f9cef7
-  resourceVersion: "1000"
+    - apiVersion: deckhouse.io/v1alpha1
+      controller: true
+      kind: ModuleSource
+      name: foxtrot
+      uid: 71d2300f-700b-452a-896a-6a3805f9cef7
 spec:
   changelog:
     features:
-    - Bump upmeter version
+      - Bump upmeter version
   moduleName: upmeter
   version: 1.70.0
   weight: 950
 status:
-  approved: false
-  message: ""
-  phase: Deployed
-  pullDuration: 0s
-  size: 0
-  transitionTime: null
+  phase: Superseded
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
-  creationTimestamp: null
   labels:
     module: upmeter
     modules.deckhouse.io/update-policy: foxtrot-alpha
@@ -70,23 +65,22 @@ metadata:
     source: foxtrot
   name: upmeter-v1.71.0
   ownerReferences:
-  - apiVersion: deckhouse.io/v1alpha1
-    controller: true
-    kind: ModuleSource
-    name: foxtrot
-    uid: 71d2300f-700b-452a-896a-6a3805f9cef7
-  resourceVersion: "999"
+    - apiVersion: deckhouse.io/v1alpha1
+      controller: true
+      kind: ModuleSource
+      name: foxtrot
+      uid: 71d2300f-700b-452a-896a-6a3805f9cef7
 spec:
   changelog:
     features:
-    - Bump upmeter version
+      - Bump upmeter version
   moduleName: upmeter
   version: 1.71.0
   weight: 950
 status:
   approved: false
   message: ""
-  phase: Pending
+  phase: Deployed
   pullDuration: 0s
   size: 0
   transitionTime: "2024-05-03T20:55:49Z"
@@ -94,7 +88,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
-  creationTimestamp: null
   labels:
     module: upmeter
     modules.deckhouse.io/update-policy: foxtrot-alpha
@@ -102,16 +95,15 @@ metadata:
     source: foxtrot
   name: upmeter-v1.72.0
   ownerReferences:
-  - apiVersion: deckhouse.io/v1alpha1
-    controller: true
-    kind: ModuleSource
-    name: foxtrot
-    uid: 71d2300f-700b-452a-896a-6a3805f9cef7
-  resourceVersion: "999"
+    - apiVersion: deckhouse.io/v1alpha1
+      controller: true
+      kind: ModuleSource
+      name: foxtrot
+      uid: 71d2300f-700b-452a-896a-6a3805f9cef7
 spec:
   changelog:
     features:
-    - Bump upmeter version
+      - Bump upmeter version
   moduleName: upmeter
   version: 1.72.0
   weight: 950
@@ -122,3 +114,25 @@ status:
   pullDuration: 0s
   size: 0
   transitionTime: "2024-05-03T20:55:49Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: upmeter
+properties:
+  namespace: d8-upmeter
+  releaseChannel: Stable
+  requirements:
+    bootstrapped: "true"
+  source: Embedded
+  subsystems:
+    - observability
+  version: v1.71.0
+  weight: 950
+status:
+  conditions:
+    - lastProbeTime: "2025-04-15T16:32:29Z"
+      lastTransitionTime: "2024-11-18T09:33:12Z"
+      status: "True"
+      type: IsReady
+  phase: Ready
