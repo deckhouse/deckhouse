@@ -61,6 +61,8 @@ def main(ctx: hook.Context):
 
 def validate(ctx: DotMap) -> tuple[Optional[str], list[str]]:
     if ctx.review.request.operation == "UPDATE":
+        with open("/tmp/file.txt", "w") as f:
+            f.write(ctx)
         return validate_update(ctx)
     else:
         raise Exception(f"Unknown operation {ctx.review.request.operation}")
@@ -72,13 +74,16 @@ def validate_update(ctx: DotMap) -> tuple[Optional[str], list[str]]:
           node = i["filterResult"]
           nodeName = node.get('nodeName', '')
           labels = node.get('labels', '')
+          print("labels=",labels)
           if labels:
               nodeGroupName = labels.get('node.deckhouse.io/group', "")
+              print("nodeGroupName=",nodeGroupName)
               if nodeGroupName == nodeGroupNameWithChangedCRI:
                   nodesWithCustomConf = ", ".join(nodeName)
+                  print("nodesWithCustomConf=", nodesWithCustomConf)
             
       if nodesWithCustomConf:
-          errorMessage = (f"CRI cannot be changed because next nodes are using custom configuration: {nodesWithCustomConf}")
+          errorMessage = f"CRI cannot be changed because next nodes are using custom configuration: {nodesWithCustomConf}"
           return errorMessage, []
 
     return None, []
