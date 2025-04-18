@@ -226,14 +226,10 @@ bin/trivy: bin bin/trivy-${TRIVY_VERSION}/trivy
 	chmod u+x bin/trivy-${TRIVY_VERSION}/trivy
 	ln -s ${PWD}/bin/trivy-${TRIVY_VERSION}/trivy bin/trivy
 
-.PHONY: cve-report cve-base-images
+.PHONY: cve-report
 cve-report: bin/trivy bin/jq ## Generate CVE report for a Deckhouse release.
   ##~ Options: SEVERITY=CRITICAL,HIGH REPO=registry.deckhouse.io TAG=v1.30.0
 	./tools/cve/d8-images.sh
-
-cve-base-images: bin/trivy bin/jq ## Check CVE in our base images.
-  ##~ Options: SEVERITY=CRITICAL,HIGH
-	./tools/cve/base-images.sh
 
 cve-base-images-check-default-user: bin/trivy bin/jq ## Check CVE in our base images.
   ##~ Options: SEVERITY=CRITICAL,HIGH
