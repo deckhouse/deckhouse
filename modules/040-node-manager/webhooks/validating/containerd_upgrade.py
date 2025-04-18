@@ -34,7 +34,7 @@ kubernetes:
     jqFilter: |
       {
         "nodeName": .metadata.name,
-        "nodeGroup": '.metadata.labels."node.deckhouse.io/group" // "unknown"'
+        "nodeGroup": '.metadata.labels["node.deckhouse.io/group"] // "unknown"'
       }
 kubernetesValidating:
 - name: containerd-allow-upgrade.deckhouse.io
