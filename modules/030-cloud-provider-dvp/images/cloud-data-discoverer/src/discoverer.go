@@ -69,6 +69,10 @@ func NewDiscoverer(logger *logrus.Entry) *Discoverer {
 	}
 }
 
+func (d *Discoverer) CheckCloudConditions(ctx context.Context) ([]v1alpha1.CloudCondition, error) {
+	return nil, nil
+}
+
 func (d *Discoverer) DiscoveryData(
 	ctx context.Context,
 	cloudProviderDiscoveryData []byte,
