@@ -127,9 +127,7 @@ jobs:
         env:
           TAG: ${{ needs.check_trigger.outputs.image_tag }}
           IMAGE: "dev-registry.deckhouse.io/sys/deckhouse-oss"
-          TRIVY_TOKEN: ${{secrets.FOX_ACCESS_TOKEN}}
           DECKHOUSE_PRIVATE_REPO: ${{secrets.DECKHOUSE_PRIVATE_REPO}}
-          TRIVY_PROJECT_ID: "2181"
         run: |
           echo "⚓️ 🏎 Running default user validation on ${TAG}..."
           make cve-base-images-check-default-user
