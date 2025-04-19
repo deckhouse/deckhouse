@@ -774,6 +774,8 @@ proxy:
   httpsProxy: "https://user:password@proxy.company.my:8443"
 ```
 
+{% raw %}
+
 ### Автозагрузка переменных proxy пользователям в CLI
 
 Начиная с версии платформы DKP v1.67 больше не настраивается файл `/etc/profile.d/d8-system-proxy.sh`, который устанавливал переменные proxy для пользователей. Для автозагрузки переменных proxy пользователям в CLI используйте ресурс `NodeGroupConfiguration`:
@@ -815,6 +817,8 @@ spec:
     rm -rf /etc/profile.d/profile-proxy.sh
     {{- end }}
 ```
+
+{% endraw %}
 
 ## Изменение конфигурации
 
