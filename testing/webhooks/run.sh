@@ -20,7 +20,7 @@ TAG="$(bin/yq '.BASE_ALT_P11' < candi/image_versions.yml)"
 
 docker run --rm \
   -v "${PWD}":/src \
-  -v "${PWD}/modules/002-deckhouse/images/webhook-handler/requirements.txt":/requirements.txt \
+  -v "${PWD}/modules/002-deckhouse/images/webhook-handler/src/requirements.txt":/requirements.txt \
   -v "${PWD}/testing/webhooks/test.sh":/test.sh \
   "${BASE}${TAG}" \
   /test.sh
