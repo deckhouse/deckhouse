@@ -6,7 +6,7 @@ lang: ru
 
 ## Pages
 
-Если шаблон публичных доменов — `%s.example.com`, то `Pages` будут доступны по адресу `https://code-pages.example.com` (субдомен `code`).
+Если шаблон публичных доменов — `%s.example.com`, то `Pages` будут доступны по адресу `https://code-pages.example.com` (поддомен `code`).
 
 ## Generic
 
@@ -147,7 +147,7 @@ redis:
       password: <REPLACE_ME>
 ```
 
-## Внешний Postgres
+## Внешний PostgreSQL
 
 1. Пример без TLS:
 
@@ -243,7 +243,7 @@ postgres:
     praefectPassword: <REPLACE_ME> # идентично значению postgres.password
 ```
 
-## Настройка бекапов
+## Настройка резервного копирования
 
 Пример настройки:
 
