@@ -89,6 +89,8 @@ Jekyll::Hooks.register :site, :pre_render do |site|
     if moduleData.has_key?("editionMinimumAvailable") then
       _index = _editionsToFillWith.find_index(moduleData['editionMinimumAvailable'])
       editions = _editionsToFillWith.slice(_index, _editionsToFillWith.length())
+    else
+      editions = editions | moduleData['editions'] if moduleData.has_key?("editions")
     end
     site.data['editions'].each do |edition, editionData|
       editions = editions | [edition] if editionData.has_key?("includeModules") && editionData['includeModules'].include?(moduleName)
@@ -135,7 +137,7 @@ Jekyll::Hooks.register :site, :pre_render do |site|
 
     if page.data['module-kebab-name'] and !page.name.match?(/CR(\.ru|_RU)?\.md$/)
       insert_module_stage_block(site.data['sidebars'][page.data['sidebar']]['entries'], page)
-    
+
       if page.name.match?(/^README(\.ru|_RU)?\.md$/i) ||
          page.name.match?(/^CONFIGURATION(\.ru|_RU)?\.md$/i)
         insert_module_edition_block(page)
