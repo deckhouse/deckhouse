@@ -22,6 +22,11 @@ Deckhouse будет установлен в **минимальной** конф
 
 ## Установка
 
+{% alert level="warning" %}
+Если вы устанавливаете Deckhouse Kubernetes Platform в kind на компьютер Apple с процессором с архитектурой ARM, отключите Rosetta для Docker Desktop.
+Для этого в интерфейсе Docker Desktop перейдите в `Settings > General > Virtual Machine Options` и отключите опцию `Use Rosetta for x86_64/amd64 emulation on Apple Silicon`.
+{% endalert %}
+
 Развертывание кластера Kubernetes и установка в него Deckhouse выполняются с помощью [Shell-скрипта](https://github.com/deckhouse/deckhouse/blob/main/tools/kind-d8.sh):
 - Выполните следующую команду для установки Deckhouse **Community Edition**:
 ```shell

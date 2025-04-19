@@ -22,6 +22,11 @@ When using kind on Windows, monitoring (Grafana, Prometheus) may not be availabl
 
 ## Installing
 
+{% alert level="warning" %}
+If you are installing Deckhouse Kubernetes Platform in kind on an Apple computer with an ARM processor, disable Rosetta for Docker Desktop.
+To do this, in the Docker Desktop interface, go to `Settings > General > Virtual Machine Options` and disable the `Use Rosetta for x86_64/amd64 emulation on Apple Silicon` option.
+{% endalert %}
+
 A Kubernetes cluster will be deployed and Deckhouse will be installed into a cluster using [the Shell script](https://github.com/deckhouse/deckhouse/blob/main/tools/kind-d8.sh):
 - Run the following command for installing Deckhouse **Community Edition**:
 ```shell
