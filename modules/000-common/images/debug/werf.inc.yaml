@@ -1,0 +1,12 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-network
+fromImage: common/alt-p11
+shell:
+  install:
+  - apt-get update
+  - apt-get install -y netcat curl bash bind-utils dhcping ethtool iperf3 iproute2 iptables jq strace tcpdump vim-console websocat bridge-utils wget
+  # - apt-get install -y iputils
+  - rm -rf /var/lib/apt/lists/* /var/cache/apt/* && mkdir -p /var/lib/apt/lists/partial /var/cache/apt/archives/partial
+  - wget https://github.com/cilium/pwru/releases/download/v1.0.9/pwru-linux-amd64.tar.gz
+  - tar -xf pwru-linux-amd64.tar.gz -C /usr/local/sbin
+  - rm -f pwru-linux-amd64.tar.gz
