@@ -118,6 +118,13 @@
     "external": "true",
     "path": "/products/kubernetes-platform/modules/delivery-kit/stable/"
   },
+  "managed-postgres": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/managed-postgres/stable/"
+  },
   "observability-platform": {
     "editionMinimumAvailable": "ee",
     "editions": [

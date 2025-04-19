@@ -124,6 +124,13 @@
       }
     }
   },
+  "managed-postgres": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/managed-postgres/stable/"
+  },
   "metallb": {
     "editionMinimumAvailable": "se",
     "editionsWithRestrictions": [
