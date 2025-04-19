@@ -14,7 +14,7 @@
 
 data "yandex_compute_image" "nat_image" {
   count  = local.is_with_nat_instance ? 1 : 0
-  family = "nat-instance-ubuntu"
+  family = "nat-instance-ubuntu-2204"
 }
 
 data "yandex_vpc_subnet" "user_internal_subnet" {
