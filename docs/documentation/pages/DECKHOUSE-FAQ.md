@@ -772,6 +772,8 @@ proxy:
   httpsProxy: "https://user:password@proxy.company.my:8443"
 ```
 
+{% raw %}
+
 ### Autoloading proxy variables for users at CLI
 
 Since DKP v1.67, the file `/etc/profile.d/d8-system-proxy.sh`, which sets proxy variables for users, is no longer configurable. To autoload proxy variables for users at the CLI, use the `NodeGroupConfiguration` resource:
@@ -813,6 +815,8 @@ spec:
     rm -rf /etc/profile.d/profile-proxy.sh
     {{- end }}
 ```
+
+{% endraw %}
 
 ## Changing the configuration
 
