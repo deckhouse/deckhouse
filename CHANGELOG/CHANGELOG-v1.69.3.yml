@@ -1,0 +1,5 @@
+user-authn:
+  fixes:
+    - summary: Fix secret generation on empty data field in the dex client app secret.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13092
+
