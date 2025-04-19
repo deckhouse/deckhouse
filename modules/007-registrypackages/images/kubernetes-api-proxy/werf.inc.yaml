@@ -1,0 +1,47 @@
+{{- $version := "08.04.25" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: builder/scratch
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /
+  to: /
+  includePaths:
+  - kubernetes-api-proxy.tar
+  - install
+  - uninstall
+  before: setup
+imageSpec:
+  config:
+    labels: {"distro": "all", "version": "all", "kubernetes-api-proxy": "{{ $version }}" }
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+fromImage: builder/golang-alpine
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /
+  stageDependencies:
+    setup:
+    - '**/*'
+import:
+- image: common/crane
+  add: /crane
+  to: /crane
+  before: setup
+dependencies:
+- image: control-plane-manager/kubernetes-api-proxy
+  before: setup
+  imports:
+  - type: ImageDigest
+    targetEnv: IMAGE_DIGEST
+  - type: ImageRepo
+    targetEnv: IMAGE_REPO
+mount:
+- fromPath: ~/.docker
+  to: /root/.docker
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  setup:
+  - /crane pull $IMAGE_REPO@$IMAGE_DIGEST /kubernetes-api-proxy.tar

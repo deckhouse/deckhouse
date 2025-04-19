@@ -861,6 +861,10 @@ spec:
                         containerd: {}
                     - properties:
                         type:
+                          enum: [ContainerdV2]
+                        containerdv2: {}
+                    - properties:
+                        type:
                           enum: [NotManaged]
                 cloudInstances:
                   description: |
@@ -1515,6 +1519,7 @@ spec:
                       enum:
                         - Docker
                         - Containerd
+                        - ContainerdV2
                         - NotManaged
                     containerd:
                       type: object
@@ -1522,6 +1527,18 @@ spec:
                         Containerd runtime parameters.
 
                         If used, `cri.type` must be set to `Containerd`.
+                      properties:
+                        maxConcurrentDownloads:
+                          type: integer
+                          description: |
+                            Set the max concurrent downloads for each pull.
+                          x-doc-default: 3
+                    containerdv2:
+                      type: object
+                      description: |
+                        ContainerdV2 runtime parameters.
+
+                        If used, `cri.type` must be set to `ContainerdV2`.
                       properties:
                         maxConcurrentDownloads:
                           type: integer
@@ -1562,6 +1579,10 @@ spec:
                         type:
                           enum: [Containerd]
                         containerd: {}
+                    - properties:
+                        type:
+                          enum: [ContainerdV2]
+                        containerdv2: {}
                     - properties:
                         type:
                           enum: [NotManaged]
