@@ -45,7 +45,13 @@
     }
   },
   "commander": {
-    "editionMinimumAvailable": "be",
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
     "editionsWithRestrictions": [
       "ce",
       "be",
@@ -61,51 +67,88 @@
     "path": "/products/kubernetes-platform/modules/commander/stable/"
   },
   "commander-agent": {
-    "editionMinimumAvailable": "ce",
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
     "path": ""
   },
   "console": {
-    "editionMinimumAvailable": "se",
+    "editions": [
+      "se",
+      "se-plus",
+      "ee"
+    ],
     "external": "true",
     "path": "/products/kubernetes-platform/modules/console/stable/"
   },
   "csi-ceph": {
-    "editionMinimumAvailable": "ce",
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
     "external": "true",
     "path": "/products/kubernetes-platform/modules/csi-ceph/stable/"
   },
   "csi-hpe": {
-    "editionMinimumAvailable": "ee",
+    "editions": [
+      "ee"
+    ],
     "external": "true",
     "path": "/products/kubernetes-platform/modules/csi-hpe/stable/"
   },
   "csi-huawei": {
-    "editionMinimumAvailable": "ee",
+    "editions": [
+      "ee"
+    ],
     "external": "true",
     "path": "/products/kubernetes-platform/modules/csi-huawei/stable/"
   },
   "csi-nfs": {
-    "editionMinimumAvailable": "ce",
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
     "external": "true",
     "path": "/products/kubernetes-platform/modules/csi-nfs/stable/"
   },
   "csi-s3": {
-    "editionMinimumAvailable": "ee",
+    "editions": [
+      "ee"
+    ],
     "external": "true",
     "path": "/products/kubernetes-platform/modules/csi-s3/stable/"
   },
   "csi-scsi-generic": {
-    "editionMinimumAvailable": "ee",
+    "editions": [
+      "ee"
+    ],
     "external": "true",
     "path": "/products/kubernetes-platform/modules/csi-scsi-generic/stable/"
   },
   "csi-yadro-tatlin-unified": {
-    "editionMinimumAvailable": "ee",
+    "editions": [
+      "ee"
+    ],
     "external": "true",
     "path": "/products/kubernetes-platform/modules/csi-yadro-tatlin-unified/stable/"
   },
   "delivery-kit": {
-    "editionMinimumAvailable": "be",
+    "editions": [
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
     "external": "true",
     "path": "/products/kubernetes-platform/modules/delivery-kit/stable/"
   },
@@ -147,7 +190,9 @@
     "path": "modules/metallb/"
   },
   "observability-platform": {
-    "editionMinimumAvailable": "ee",
+    "editions": [
+      "ee"
+    ],
     "editionsWithRestrictions": [
       "ee"
     ],
@@ -161,7 +206,9 @@
     "path": "/products/kubernetes-platform/modules/observability-platform/stable/"
   },
   "operator-argo": {
-    "editionMinimumAvailable": "ee",
+    "editions": [
+      "ee"
+    ],
     "external": "true",
     "path": "/products/kubernetes-platform/modules/operator-argo/stable/"
   },
@@ -170,7 +217,13 @@
     "path": ""
   },
   "sds-local-volume": {
-    "editionMinimumAvailable": "ce",
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
     "editionsWithRestrictions": [
       "ce"
     ],
@@ -184,12 +237,24 @@
     "path": "/products/kubernetes-platform/modules/sds-local-volume/stable/"
   },
   "sds-node-configurator": {
-    "editionMinimumAvailable": "ce",
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
     "external": "true",
     "path": "/products/kubernetes-platform/modules/sds-node-configurator/stable/"
   },
   "sds-replicated-volume": {
-    "editionMinimumAvailable": "ce",
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
     "editionsWithRestrictions": [
       "ce"
     ],
@@ -214,7 +279,12 @@
     "path": "/products/kubernetes-platform/modules/secrets-store-integration/stable/"
   },
   "stronghold": {
-    "editionMinimumAvailable": "be",
+    "editions": [
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
     "editionsWithRestrictions": [
       "be",
       "se",
@@ -236,7 +306,13 @@
       "se",
       "se-plus"
     ],
-    "editionMinimumAvailable": "ce",
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
     "editionsWithRestrictions": [
       "ce"
     ],
@@ -249,7 +325,10 @@
     "path": "modules/user-authz/"
   },
   "virtualization": {
-    "editionMinimumAvailable": "se-plus",
+    "editions": [
+      "se-plus",
+      "ee"
+    ],
     "editionsWithRestrictions": [
       "ce"
     ],
