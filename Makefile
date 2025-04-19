@@ -433,3 +433,4 @@ build-render: set-build-envs ## render werf.yaml for build Deckhouse images.
 .PHONY: go-module-version
 go-module-version:
 	@echo "go get $(shell go list ./deckhouse-controller/cmd/deckhouse-controller)@$(shell git rev-parse HEAD)"
+
