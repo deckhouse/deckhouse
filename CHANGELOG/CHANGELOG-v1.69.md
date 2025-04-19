@@ -126,6 +126,7 @@
  - **[service-with-healthchecks]** Removed unnecessary text data from the executable binary file. [#12492](https://github.com/deckhouse/deckhouse/pull/12492)
  - **[static-routing-manager]** Fixed regular expression to allow empty string in `nodeSelector` field. [#12510](https://github.com/deckhouse/deckhouse/pull/12510)
  - **[static-routing-manager]** Fixed `nodeSelector` parameter validation. [#12318](https://github.com/deckhouse/deckhouse/pull/12318)
+ - **[user-authn]** Fix secret generation on empty data field in the dex client app secret. [#13092](https://github.com/deckhouse/deckhouse/pull/13092)
  - **[user-authn]** Added security context with RuntimeDefault seccomp profile to dex container. [#12197](https://github.com/deckhouse/deckhouse/pull/12197)
  - **[vertical-pod-autoscaler]** Enabled the memory-save option to prevent the VPA recommender from consuming excessive amounts of RAM. [#12077](https://github.com/deckhouse/deckhouse/pull/12077)
 
