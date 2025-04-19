@@ -1,6 +1,13 @@
 {
   "commander": {
     "editionMinimumAvailable": "be",
+    "editions": [
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "ce"
+    ],
     "editionsWithRestrictions": [
       "ce",
       "be",
@@ -13,115 +20,106 @@
       }
     },
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/commander/stable/",
-    "editions": [
-      "be",
-      "se",
-      "se-plus",
-      "ee",
-      "ce"
-    ]
+    "path": "/products/kubernetes-platform/modules/commander/stable/"
   },
   "commander-agent": {
     "editionMinimumAvailable": "ce",
-    "path": "",
     "editions": [
       "ce",
       "be",
       "se",
       "se-plus",
       "ee"
-    ]
+    ],
+    "path": ""
   },
   "console": {
     "editionMinimumAvailable": "se",
-    "external": "true",
-    "path": "/products/kubernetes-platform/modules/console/stable/",
     "editions": [
       "se",
       "se-plus",
       "ee"
-    ]
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/console/stable/"
   },
   "csi-ceph": {
     "editionMinimumAvailable": "ce",
-    "external": "true",
-    "path": "/products/kubernetes-platform/modules/csi-ceph/stable/",
     "editions": [
       "ce",
       "se",
       "se-plus",
       "ee",
       "cse-pro"
-    ]
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/csi-ceph/stable/"
   },
   "csi-hpe": {
     "editionMinimumAvailable": "ee",
-    "external": "true",
-    "path": "/products/kubernetes-platform/modules/csi-hpe/stable/",
     "editions": [
       "ee"
-    ]
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/csi-hpe/stable/"
   },
   "csi-huawei": {
     "editionMinimumAvailable": "ee",
-    "external": "true",
-    "path": "/products/kubernetes-platform/modules/csi-huawei/stable/",
     "editions": [
       "ee"
-    ]
-  },
-    "csi-yadro-tatlin-unified": {
-      "editionMinimumAvailable": "ee",
-      "external": "true",
-      "path": "/products/kubernetes-platform/modules/csi-yadro-tatlin-unified/stable/",
-      "editions": [
-        "ee"
-    ]
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/csi-huawei/stable/"
   },
   "csi-nfs": {
     "editionMinimumAvailable": "ce",
-    "external": "true",
-    "path": "/products/kubernetes-platform/modules/csi-nfs/stable/",
     "editions": [
       "ce",
       "se",
       "se-plus",
       "ee",
       "cse-pro"
-    ]
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/csi-nfs/stable/"
   },
   "csi-s3": {
     "editionMinimumAvailable": "ee",
-    "external": "true",
-    "path": "/products/kubernetes-platform/modules/csi-s3/stable/",
     "editions": [
       "ee"
-    ]
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/csi-s3/stable/"
   },
   "csi-scsi-generic": {
     "editionMinimumAvailable": "ee",
-    "external": "true",
-    "path": "/products/kubernetes-platform/modules/csi-scsi-generic/stable/",
     "editions": [
       "ee"
-    ]
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/csi-scsi-generic/stable/"
+  },
+  "csi-yadro-tatlin-unified": {
+    "editionMinimumAvailable": "ee",
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/csi-yadro-tatlin-unified/stable/"
   },
   "delivery-kit": {
     "editionMinimumAvailable": "be",
-    "external": "true",
-    "path": "/products/kubernetes-platform/modules/delivery-kit/stable/",
     "editions": [
       "be",
       "se",
       "se-plus",
       "ee"
-    ]
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/delivery-kit/stable/"
   },
   "observability-platform": {
     "editionMinimumAvailable": "ee",
-    "external": "true",
-    "path": "/products/kubernetes-platform/modules/observability-platform/stable/",
     "editions": [
       "ee"
     ],
@@ -130,29 +128,29 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "ru": "Требуется дополнительная лицензия",
-        "en": "Additional license required"
+        "en": "Additional license required",
+        "ru": "Требуется дополнительная лицензия"
       }
-    }
+    },
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/observability-platform/stable/"
   },
   "operator-argo": {
     "editionMinimumAvailable": "ee",
-    "external": "true",
-    "path": "/products/kubernetes-platform/modules/operator-argo/stable/",
     "editions": [
       "ee"
-    ]
-  },
-  "csi-yadro-tatlin-unified": {
-    "editionMinimumAvailable": "ee",
+    ],
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/csi-yadro-tatlin-unified/stable/",
-    "editions": [
-      "ee"
-    ]
+    "path": "/products/kubernetes-platform/modules/operator-argo/stable/"
   },
   "sds-local-volume": {
     "editionMinimumAvailable": "ce",
+    "editions": [
+      "ce",
+      "se",
+      "se-plus",
+      "ee"
+    ],
     "editionsWithRestrictions": [
       "ce"
     ],
@@ -163,27 +161,27 @@
       }
     },
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/sds-local-volume/stable/",
-    "editions": [
-      "ce",
-      "se",
-      "se-plus",
-      "ee"
-    ]
+    "path": "/products/kubernetes-platform/modules/sds-local-volume/stable/"
   },
   "sds-node-configurator": {
     "editionMinimumAvailable": "ce",
-    "external": "true",
-    "path": "/products/kubernetes-platform/modules/sds-node-configurator/stable/",
     "editions": [
       "ce",
       "se",
       "se-plus",
       "ee"
-    ]
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/sds-node-configurator/stable/"
   },
   "sds-replicated-volume": {
     "editionMinimumAvailable": "ce",
+    "editions": [
+      "ce",
+      "se",
+      "se-plus",
+      "ee"
+    ],
     "editionsWithRestrictions": [
       "ce"
     ],
@@ -194,28 +192,28 @@
       }
     },
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/sds-replicated-volume/stable/",
-    "editions": [
-      "ce",
-      "se",
-      "se-plus",
-      "ee"
-    ]
+    "path": "/products/kubernetes-platform/modules/sds-replicated-volume/stable/"
   },
   "secrets-store-integration": {
     "editionMinimumAvailable": "be",
-    "external": "true",
-    "path": "/products/kubernetes-platform/modules/secrets-store-integration/stable/",
     "editions": [
       "ce",
       "be",
       "se",
       "se-plus",
       "ee"
-    ]
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/secrets-store-integration/stable/"
   },
   "stronghold": {
     "editionMinimumAvailable": "be",
+    "editions": [
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
     "editionsWithRestrictions": [
       "be",
       "se",
@@ -229,16 +227,15 @@
       }
     },
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/stronghold/stable/",
-    "editions": [
-      "be",
-      "se",
-      "se-plus",
-      "ee"
-    ]
+    "path": "/products/kubernetes-platform/modules/stronghold/stable/"
   },
   "virtualization": {
     "editionMinimumAvailable": "se-plus",
+    "editions": [
+      "ce",
+      "se-plus",
+      "ee"
+    ],
     "editionsWithRestrictions": [
       "ce"
     ],
@@ -249,11 +246,6 @@
       }
     },
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/virtualization/stable/",
-    "editions": [
-      "ce",
-      "se-plus",
-      "ee"
-    ]
+    "path": "/products/kubernetes-platform/modules/virtualization/stable/"
   }
 }
