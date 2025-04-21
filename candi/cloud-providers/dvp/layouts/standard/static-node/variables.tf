@@ -61,6 +61,8 @@ locals {
   }
   memory_size = local.instance_class.virtualMachine.memory.size
 
+  bootloader = lookup(local.instance_class.virtualMachine, "bootloader", null)
+
   ssh_public_key = var.providerClusterConfiguration.sshPublicKey
 
   ipv4_address = lookup(local.instance_class.virtualMachine, "ipAddresses", null) == null ? "Auto" : local.node_index + 1 > length(local.instance_class.virtualMachine.ipAddresses) ? "Auto" : local.instance_class.virtualMachine.ipAddresses[local.node_index]
