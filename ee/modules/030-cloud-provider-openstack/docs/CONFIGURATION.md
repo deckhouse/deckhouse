@@ -29,4 +29,6 @@ A list of OpenStack services required for Deckhouse Kubernetes Platform to work 
 
 &#8432;  If you need to order a Load Balancer.
 
+To ensure proper integration and functionality, the OpenStack user associated with the Deckhouse Kubernetes Platform should be granted the "member" role. This role assignment is essential to provide the necessary permissions for interacting with the listed services and managing resources within the OpenStack environment.
+
 {% include module-settings.liquid %}
