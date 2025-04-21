@@ -19,15 +19,14 @@ import (
 	"time"
 
 	"github.com/alecthomas/kingpin"
-	"github.com/sirupsen/logrus"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 var (
 	DiscoveryPeriod = 1 * time.Hour
 	KubeConfig      = ""
 	ListenAddress   = "127.0.0.1:9000"
-	LoggerType      = loggerJSON
-	LoggerLevel     = int(logrus.InfoLevel)
+	LoggerLevel     = int(log.LevelInfo)
 )
 
 func InitFlags(cmd *kingpin.Application) {
@@ -46,13 +45,8 @@ func InitFlags(cmd *kingpin.Application) {
 		Default(KubeConfig).
 		StringVar(&KubeConfig)
 
-	cmd.Flag("logger-type", "Format logs output of a discoverer in different ways.").
-		Envar("LOGGER_TYPE").
-		Default(LoggerType).
-		EnumVar(&LoggerType, loggerJSON, loggerSimple)
-
 	cmd.Flag("v", "Logger verbosity").
 		Envar("LOGGER_LEVEL").
-		Default(strconv.Itoa(int(LoggerLevel))).
+		Default(strconv.Itoa(LoggerLevel)).
 		IntVar(&LoggerLevel)
 }
