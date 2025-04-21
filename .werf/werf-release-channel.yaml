@@ -24,6 +24,9 @@ shell:
     {{ $changelog | nindent 6 }}
     EOF
     {{ end }}
+    # update kubernetes auto version in the release file
+    yq eval '.requirements.autoK8sVersion = "{{ .defaultKubernetesVersion }}"' -i /deckhouse/release.yaml
+    yq eval '.requirements.k8s = "{{.kubernetesVersions | first }}"' -i /deckhouse/release.yaml
 git:
 - add: /
   to: /deckhouse
