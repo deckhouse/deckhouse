@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/deckhouse/virtualization/api/core/v1alpha2"
@@ -28,7 +27,6 @@ import (
 	"github.com/hashicorp/go-multierror"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -443,10 +441,10 @@ users:
 			},
 			CPU: v1alpha2.CPUSpec{
 				Cores:        dvpMachine.Spec.CPU.Cores,
-				CoreFraction: strconv.Itoa(dvpMachine.Spec.CPU.Fraction) + "%",
+				CoreFraction: dvpMachine.Spec.CPU.Fraction,
 			},
 			Memory: v1alpha2.MemorySpec{
-				Size: *resource.NewQuantity(int64(dvpMachine.Spec.Memory*1024*1024), resource.BinarySI),
+				Size: dvpMachine.Spec.Memory,
 			},
 			BlockDeviceRefs: []v1alpha2.BlockDeviceSpecRef{
 				{Kind: v1alpha2.DiskDevice, Name: bootDisk.Name},

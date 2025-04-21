@@ -49,9 +49,8 @@ type DeckhouseMachineSpecTemplate struct {
 	CPU CPU `json:"cpu"`
 
 	// Memory is this machine's RAM amount in mebibytes (MiB).
-	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:default=8192
-	Memory int `json:"memory"`
+	// +kubebuilder:default="8Gi"
+	Memory resource.Quantity `json:"memory"`
 
 	// RootDiskSize holds the size of the bootable disk.
 	RootDiskSize resource.Quantity `json:"rootDiskSize"`
