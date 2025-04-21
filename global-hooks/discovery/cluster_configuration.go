@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	ctrl "github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks"
 )
 
 type ClusterConfigurationYaml struct {
@@ -91,7 +92,7 @@ func clusterConfiguration(input *go_hook.HookInput) error {
 		}
 
 		if kubernetesVersionFromMetaConfig == "Automatic" {
-			b, _ := json.Marshal(config.DefaultKubernetesVersion)
+			b, _ := json.Marshal(ctrl.DefaultKubernetesVersion)
 			metaConfig.ClusterConfig["kubernetesVersion"] = b
 		}
 

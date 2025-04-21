@@ -35,8 +35,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	dhctlconfig "github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	ctrl "github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks"
 )
 
 const clusterAdminsGroupAndClusterRoleBinding = "kubeadm:cluster-admins"
@@ -103,7 +103,7 @@ func k8sPostUpgrade(input *go_hook.HookInput, dc dependency.Container) error {
 		return fmt.Errorf("unmarshal 'cluster-configuration.yaml' failed: %w", err)
 	}
 
-	var kubernetesVersion = dhctlconfig.DefaultKubernetesVersion
+	var kubernetesVersion = ctrl.DefaultKubernetesVersion
 
 	if config.KubernetesVersion != "Automatic" {
 		kubernetesVersion = config.KubernetesVersion

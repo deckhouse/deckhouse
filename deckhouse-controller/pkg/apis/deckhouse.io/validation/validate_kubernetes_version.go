@@ -29,8 +29,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
+	ctrl "github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -59,7 +59,7 @@ func kubernetesVersionHandler(mm moduleManager) http.Handler {
 		}
 
 		if clusterConf.KubernetesVersion == "Automatic" {
-			clusterConf.KubernetesVersion = config.DefaultKubernetesVersion
+			clusterConf.KubernetesVersion = ctrl.DefaultKubernetesVersion
 		}
 
 		if moduleName, err := kubernetesversion.Instance().ValidateBaseVersion(clusterConf.KubernetesVersion); err != nil {
