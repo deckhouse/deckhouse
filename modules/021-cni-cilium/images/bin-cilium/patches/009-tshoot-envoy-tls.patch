@@ -1,0 +1,13 @@
+diff --git a/pkg/envoy/xds_server.go b/pkg/envoy/xds_server.go
+index be83ac887d..fd4f6cdc4c 100644
+--- a/pkg/envoy/xds_server.go
++++ b/pkg/envoy/xds_server.go
+@@ -512,7 +512,7 @@ func (s *xdsServer) getTcpFilterChainProto(clusterName string, filterName string
+ 	if filterName == "" {
+ 		// Use proxylib by default
+ 		ciliumConfig = &cilium.NetworkFilter{
+-			Proxylib: "libcilium.so",
++			Proxylib: "/usr/lib/libcilium.so",
+ 			ProxylibParams: map[string]string{
+ 				"access-log-path": s.accessLogPath,
+ 				"xds-path":        s.socketPath,
