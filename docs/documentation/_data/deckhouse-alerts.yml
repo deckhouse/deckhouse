@@ -5860,6 +5860,16 @@ alerts:
         Node {{ $labels.node }} is cordon-protected, preventing new pods from being scheduled.
       severity: "8"
       markupFormat: markdown
+    - name: NonStandardVxlanPort
+      sourceFile: modules/021-cni-cilium/monitoring/prometheus-rules/non-standard-vxlan-port.tpl
+      moduleUrl: 021-cni-cilium
+      module: cni-cilium
+      edition: ce
+      description: 'TODO: Provide some description below.'
+      summary: |
+        Cillium is configured to use a non-standard port for tunneling.
+      severity: "9"
+      markupFormat: markdown
     - name: NTPDaemonOnNodeDoesNotSynchronizeTime
       sourceFile: modules/470-chrony/monitoring/prometheus-rules/chrony.yaml
       moduleUrl: 470-chrony
