@@ -44,7 +44,7 @@ func (manager *servicesManager) applyConfig(config NodeServicesConfigModel) (cha
 	// Sync the PKI files
 	if changes.PKI, hash, err = syncPKIFiles(
 		pkiConfigDirectoryPath,
-		config.Config.PKI,
+		config.Config,
 	); err != nil {
 		err = fmt.Errorf("error saving PKI files: %w", err)
 		return changes, err

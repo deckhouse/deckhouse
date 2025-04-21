@@ -7,8 +7,10 @@ package nodeservices
 
 import (
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 
@@ -33,12 +35,21 @@ type Params struct {
 }
 
 type ProxyModeParams struct {
+	Scheme     string
+	ImagesRepo string
+	UserName   string
+	Password   string
+	TTL        string
+
 	UpstreamCA *x509.Certificate
 }
 
 type LocalModeParams struct {
+	UserRW     users.User
+	UserPuller users.User
+	UserPusher users.User
+
 	IngressCA *x509.Certificate
-	UserRW    users.User
 }
 
 type State struct {
@@ -47,19 +58,27 @@ type State struct {
 
 func (state *State) Process(log go_hook.Logger, params Params, inputs Inputs) (bool, error) {
 	var (
-		err   error
-		ready = true
+		nodesIP []string
+		err     error
+		ready   = true
 	)
+
+	if params.Local != nil {
+		nodesIPSet := make(map[string]struct{})
+		for _, node := range inputs.Nodes {
+			nodesIPSet[node.IP] = struct{}{}
+		}
+
+		nodesIP := make([]string, 0, len(nodesIPSet))
+		for ip := range nodesIPSet {
+			nodesIP = append(nodesIP, ip)
+		}
+		sort.Strings(nodesIP)
+	}
 
 	if state.Nodes == nil {
 		state.Nodes = make(map[string]NodeServicesConfig)
 	}
-
-	nodesIP := make([]string, 0, len(inputs.Nodes))
-	for _, node := range inputs.Nodes {
-		nodesIP = append(nodesIP, node.IP)
-	}
-	sort.Strings(nodesIP)
 
 	for name, node := range inputs.Nodes {
 		config := state.Nodes[name]
@@ -90,13 +109,25 @@ type NodeServicesConfig struct {
 	Config  nodeservices.Config `json:"config"`
 }
 
-func (config *NodeServicesConfig) process(log go_hook.Logger, name string, node Node, params Params, nodesIP []string) error {
-	err := config.processPKI(log, name, node.IP, params)
+func (nsc *NodeServicesConfig) process(log go_hook.Logger, name string, node Node, params Params, nodesIP []string) error {
+	switch {
+	case params.Local != nil:
+		nsc.processLocalMode(*params.Local, node.IP, nodesIP)
+	case params.Proxy != nil:
+		nsc.processProxyMode(*params.Proxy)
+	default:
+		return errors.New("params must be set for Local or Proxy mode")
+	}
+
+	err := nsc.processPKI(log, name, node.IP, params)
 	if err != nil {
 		return fmt.Errorf("cannot process PKI: %w", err)
 	}
 
-	config.Version, err = helpers.ComputeHash(config.Config)
+	nsc.Config.HTTPSecret = params.HTTPSecret
+	nsc.Config.UserRO = mapUser(params.UserRO)
+
+	nsc.Version, err = helpers.ComputeHash(nsc.Config)
 	if err != nil {
 		return fmt.Errorf("cannot compute config hash: %w", err)
 	}
@@ -104,13 +135,58 @@ func (config *NodeServicesConfig) process(log go_hook.Logger, name string, node 
 	return fmt.Errorf("not implemented")
 }
 
-func (config *NodeServicesConfig) processPKI(log go_hook.Logger, name, nodeIP string, params Params) error {
+func (nsc *NodeServicesConfig) processLocalMode(params LocalModeParams, nodeIP string, nodesIP []string) {
+	cfg := nodeservices.LocalMode{
+		UserRW:     mapUser(params.UserRW),
+		UserPuller: mapUser(params.UserPuller),
+		UserPusher: mapUser(params.UserPusher),
+	}
+
+	cfg.Upstreams = make([]string, 0, len(nodesIP))
+	for _, ip := range nodesIP {
+		if ip != nodeIP {
+			cfg.Upstreams = append(cfg.Upstreams, ip)
+		}
+	}
+
+	if params.IngressCA != nil {
+		cfg.IngressClientCACert = string(pki.EncodeCertificate(params.IngressCA))
+	}
+
+	nsc.Config.LocalMode = &cfg
+}
+
+func (nsc *NodeServicesConfig) processProxyMode(params ProxyModeParams) {
+	host, path := getRegistryAddressAndPathFromImagesRepo(params.ImagesRepo)
+
+	cfg := nodeservices.ProxyMode{
+		Upstream: nodeservices.UpstreamRegistry{
+			Scheme:   strings.ToLower(params.Scheme),
+			Host:     host,
+			Path:     path,
+			User:     params.UserName,
+			Password: params.Password,
+		},
+	}
+
+	if params.TTL != "" {
+		cfg.Upstream.TTL = &params.TTL
+	}
+
+	if params.UpstreamCA != nil {
+		cfg.UpstreamRegistryCACert = string(pki.EncodeCertificate(params.UpstreamCA))
+	}
+
+	nsc.Config.ProxyMode = &cfg
+}
+
+func (nsc *NodeServicesConfig) processPKI(log go_hook.Logger, name, nodeIP string, params Params) error {
 	var (
 		err     error
 		nodePKI nodePKI
 	)
 
-	err = nodePKI.Process(log, params.CA, name, nodeIP, config.Config.PKI)
+	err = nodePKI.Process(log, params.CA, name, nodeIP, nsc.Config)
 	if err != nil {
 		return fmt.Errorf("cannot process node PKI: %w", err)
 	}
@@ -130,26 +206,20 @@ func (config *NodeServicesConfig) processPKI(log go_hook.Logger, name, nodeIP st
 		return fmt.Errorf("cannot encode node's Distribution key: %w", err)
 	}
 
-	value := nodeservices.PKI{
-		CACert:           string(pki.EncodeCertificate(params.CA.Cert)),
-		TokenCert:        string(pki.EncodeCertificate(params.Token.Cert)),
-		TokenKey:         string(tokenKey),
-		AuthCert:         string(pki.EncodeCertificate(nodePKI.Auth.Cert)),
-		AuthKey:          string(authKey),
-		DistributionCert: string(pki.EncodeCertificate(nodePKI.Distribution.Cert)),
-		DistributionKey:  string(distributionKey),
-	}
+	cfg := nsc.Config
 
-	if params.Local != nil && params.Local.IngressCA != nil {
-		value.IngressClientCACert = string(pki.EncodeCertificate(params.Local.IngressCA))
-	}
+	cfg.CACert = string(pki.EncodeCertificate(params.CA.Cert))
 
-	if params.Proxy != nil && params.Proxy.UpstreamCA != nil {
-		value.UpstreamRegistryCACert = string(pki.EncodeCertificate(params.Proxy.UpstreamCA))
-	}
+	cfg.TokenCert = string(pki.EncodeCertificate(params.Token.Cert))
+	cfg.TokenKey = string(tokenKey)
 
-	config.Config.PKI = value
+	cfg.AuthCert = string(pki.EncodeCertificate(nodePKI.Auth.Cert))
+	cfg.AuthKey = string(authKey)
 
+	cfg.DistributionCert = string(pki.EncodeCertificate(nodePKI.Distribution.Cert))
+	cfg.DistributionKey = string(distributionKey)
+
+	nsc.Config = cfg
 	return nil
 }
 

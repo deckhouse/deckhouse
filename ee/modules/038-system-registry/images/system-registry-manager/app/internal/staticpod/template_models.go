@@ -28,22 +28,18 @@ func (value NodeServicesConfigModel) toAuthConfig() authConfigModel {
 		}
 	}
 
-	registry := value.Config.Registry
+	config := value.Config
 
 	model := authConfigModel{
-		RO: mapUser(registry.UserRO),
+		RO: mapUser(config.UserRO),
 	}
 
-	if registry.UserRW != nil {
-		user := mapUser(*registry.UserRW)
-		model.RW = &user
-	}
+	if config.LocalMode != nil {
+		rw := mapUser(config.LocalMode.UserRW)
+		puller := mapUser(config.LocalMode.UserPuller)
+		pusher := mapUser(config.LocalMode.UserPusher)
 
-	mirrorer := registry.Mirrorer
-	if mirrorer != nil {
-		puller := mapUser(mirrorer.UserPuller)
-		pusher := mapUser(mirrorer.UserPusher)
-
+		model.RW = &rw
 		model.MirrorPuller = &puller
 		model.MirrorPusher = &pusher
 	}
@@ -79,16 +75,17 @@ func (model distributionConfigModel) Render() ([]byte, error) {
 
 func (value NodeServicesConfigModel) toDistributionConfig(listenAddress string) distributionConfigModel {
 	config := value.Config
-	registry := config.Registry
 
 	model := distributionConfigModel{
 		ListenAddress: listenAddress,
-		HTTPSecret:    registry.HTTPSecret,
-		Ingress:       config.PKI.IngressClientCACert != "",
+		HTTPSecret:    config.HTTPSecret,
 	}
 
-	upstream := registry.Upstream
-	if upstream != nil {
+	if config.LocalMode != nil {
+		model.Ingress = config.LocalMode.IngressClientCACert != ""
+	} else if config.ProxyMode != nil {
+		upstream := config.ProxyMode.Upstream
+
 		model.Upstream = &distributionConfigUpstreamModel{
 			Scheme:   upstream.Scheme,
 			Host:     upstream.Host,
@@ -96,7 +93,7 @@ func (value NodeServicesConfigModel) toDistributionConfig(listenAddress string) 
 			User:     upstream.User,
 			Password: upstream.Password,
 			TTL:      upstream.TTL,
-			CA:       config.PKI.UpstreamRegistryCACert != "",
+			CA:       config.ProxyMode.UpstreamRegistryCACert != "",
 		}
 	}
 
@@ -120,27 +117,26 @@ func (model mirrorerConfigModel) Render() ([]byte, error) {
 }
 
 func (value NodeServicesConfigModel) toMirrorerConfig(localAddress string) *mirrorerConfigModel {
-	mirrorer := value.Config.Registry.Mirrorer
-
-	if mirrorer == nil {
+	if value.Config.LocalMode == nil {
 		return nil
 	}
 
+	config := value.Config.LocalMode
 	model := mirrorerConfigModel{
 		LocalAddress: localAddress,
 		UserPuller: mirrorerConfigUserModel{
-			Name:     mirrorer.UserPuller.Name,
-			Password: mirrorer.UserPuller.Password,
+			Name:     config.UserPuller.Name,
+			Password: config.UserPuller.Password,
 		},
 		UserPusher: mirrorerConfigUserModel{
-			Name:     mirrorer.UserPusher.Name,
-			Password: mirrorer.UserPusher.Password,
+			Name:     config.UserPusher.Name,
+			Password: config.UserPusher.Password,
 		},
 	}
 
-	if len(mirrorer.Upstreams) > 0 {
-		model.Upstreams = make([]string, len(mirrorer.Upstreams))
-		copy(model.Upstreams, mirrorer.Upstreams)
+	if len(config.Upstreams) > 0 {
+		model.Upstreams = make([]string, len(config.Upstreams))
+		copy(model.Upstreams, config.Upstreams)
 	}
 
 	return &model
@@ -180,7 +176,7 @@ func (value NodeServicesConfigModel) toStaticPodConfig(images staticPodImagesMod
 		HasMirrorer: hasMirrorer,
 	}
 
-	proxy := config.Proxy
+	proxy := config.ProxyConfig
 	if proxy != nil {
 		model.Proxy = &staticPodProxyModel{
 			HTTP:    proxy.HTTP,

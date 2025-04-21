@@ -43,7 +43,7 @@ func (nc *nodePKI) generate(ca pki.CertKey, hosts []string) error {
 	return nil
 }
 
-func (nc *nodePKI) loadFromConfig(config nodeservices.PKI, ca *x509.Certificate, hosts []string) error {
+func (nc *nodePKI) loadFromConfig(config nodeservices.Config, ca *x509.Certificate, hosts []string) error {
 	authPKI, err := pki.DecodeCertKey(
 		[]byte(config.AuthCert), []byte(config.AuthKey),
 	)
@@ -82,7 +82,7 @@ func (nc *nodePKI) loadFromConfig(config nodeservices.PKI, ca *x509.Certificate,
 	return nil
 }
 
-func (nc *nodePKI) Process(log go_hook.Logger, ca pki.CertKey, nodeName, nodeIP string, config nodeservices.PKI) error {
+func (nc *nodePKI) Process(log go_hook.Logger, ca pki.CertKey, nodeName, nodeIP string, config nodeservices.Config) error {
 	certHosts := []string{
 		"127.0.0.1",
 		"localhost",

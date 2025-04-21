@@ -573,23 +573,19 @@ func (nc *nodeController) contructNodeServicesConfig(
 	model = state.NodeServicesConfig{
 		Version: stateSecret.Version,
 		Config: nodeservices.Config{
+			CACert:           string(pki.EncodeCertificate(globalPKI.CA.Cert)),
+			TokenCert:        string(pki.EncodeCertificate(globalPKI.Token.Cert)),
+			TokenKey:         string(tokenKey),
+			AuthCert:         string(pki.EncodeCertificate(nodePKI.Auth.Cert)),
+			AuthKey:          string(authKey),
+			DistributionCert: string(pki.EncodeCertificate(nodePKI.Distribution.Cert)),
+			DistributionKey:  string(distributionKey),
 
-			Registry: nodeservices.Registry{
-				HTTPSecret: globalSecrets.HTTP,
-				UserRO: nodeservices.User{
-					Name:         userRO.UserName,
-					Password:     userRO.Password,
-					PasswordHash: userRO.HashedPassword,
-				},
-			},
-			PKI: nodeservices.PKI{
-				CACert:           string(pki.EncodeCertificate(globalPKI.CA.Cert)),
-				TokenCert:        string(pki.EncodeCertificate(globalPKI.Token.Cert)),
-				TokenKey:         string(tokenKey),
-				AuthCert:         string(pki.EncodeCertificate(nodePKI.Auth.Cert)),
-				AuthKey:          string(authKey),
-				DistributionCert: string(pki.EncodeCertificate(nodePKI.Distribution.Cert)),
-				DistributionKey:  string(distributionKey),
+			HTTPSecret: globalSecrets.HTTP,
+			UserRO: nodeservices.User{
+				Name:         userRO.UserName,
+				Password:     userRO.Password,
+				PasswordHash: userRO.HashedPassword,
 			},
 		},
 	}
@@ -598,24 +594,26 @@ func (nc *nodeController) contructNodeServicesConfig(
 	case state.RegistryModeProxy:
 		host, path := getRegistryAddressAndPathFromImagesRepo(moduleConfig.Settings.Proxy.ImagesRepo)
 
-		model.Config.PKI.UpstreamRegistryCACert = moduleConfig.Settings.Proxy.CA
-
-		model.Config.Registry.Upstream = &nodeservices.UpstreamRegistry{
-			Scheme:   strings.ToLower(moduleConfig.Settings.Proxy.Scheme),
-			Host:     host,
-			Path:     path,
-			User:     moduleConfig.Settings.Proxy.UserName,
-			Password: moduleConfig.Settings.Proxy.Password,
-			TTL:      moduleConfig.Settings.Proxy.TTL.StringPointer(),
+		modeConfig := nodeservices.ProxyMode{
+			UpstreamRegistryCACert: moduleConfig.Settings.Proxy.CA,
+			Upstream: nodeservices.UpstreamRegistry{
+				Scheme:   strings.ToLower(moduleConfig.Settings.Proxy.Scheme),
+				Host:     host,
+				Path:     path,
+				User:     moduleConfig.Settings.Proxy.UserName,
+				Password: moduleConfig.Settings.Proxy.Password,
+				TTL:      moduleConfig.Settings.Proxy.TTL.StringPointer(),
+			},
 		}
+
+		model.Config.ProxyMode = &modeConfig
 	case state.RegistryModeDetached:
-		model.Config.Registry.UserRW = &nodeservices.User{
-			Name:         userRW.UserName,
-			Password:     userRW.Password,
-			PasswordHash: userRW.HashedPassword,
-		}
-
-		model.Config.Registry.Mirrorer = &nodeservices.Mirrorer{
+		modeConfig := nodeservices.LocalMode{
+			UserRW: nodeservices.User{
+				Name:         userRW.UserName,
+				Password:     userRW.Password,
+				PasswordHash: userRW.HashedPassword,
+			},
 			UserPuller: nodeservices.User{
 				Name:         userMirrorPuller.UserName,
 				Password:     userMirrorPuller.Password,
@@ -628,10 +626,12 @@ func (nc *nodeController) contructNodeServicesConfig(
 			},
 			Upstreams: mirrorerUpstreams,
 		}
-	}
 
-	if ingressPKI != nil {
-		model.Config.PKI.IngressClientCACert = string(pki.EncodeCertificate(ingressPKI.ClientCACert))
+		if ingressPKI != nil {
+			modeConfig.IngressClientCACert = string(pki.EncodeCertificate(ingressPKI.ClientCACert))
+		}
+
+		model.Config.LocalMode = &modeConfig
 	}
 
 	return model, err

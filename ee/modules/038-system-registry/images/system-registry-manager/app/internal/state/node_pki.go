@@ -50,7 +50,7 @@ func GenerateNodePKI(ca pki.CertKey, hosts []string) (NodePKI, error) {
 }
 
 func (nc *NodePKI) DecodeServicesConfig(config NodeServicesConfig) error {
-	pkiConfig := config.Config.PKI
+	pkiConfig := config.Config
 
 	authPKI, err := pki.DecodeCertKey([]byte(pkiConfig.AuthCert), []byte(pkiConfig.AuthKey))
 	if err != nil {

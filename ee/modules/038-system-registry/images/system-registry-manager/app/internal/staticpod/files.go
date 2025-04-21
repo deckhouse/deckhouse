@@ -17,20 +17,30 @@ import (
 // syncPKIFiles synchronizes the PKI-related files in the specified directory.
 // This includes saving new files, updating existing ones, and removing obsolete files,
 // while updating hashes in ConfigHashes if they change.
-func syncPKIFiles(basePath string, pki nodeservices.PKI) (bool, string, error) {
+func syncPKIFiles(basePath string, config nodeservices.Config) (bool, string, error) {
 	anyFileChanged := false
 
 	// Define paths for each PKI file and corresponding hash field in ConfigHashes
 	fileMap := map[string]string{
-		"ca.crt":                   pki.CACert,
-		"auth.crt":                 pki.AuthCert,
-		"auth.key":                 pki.AuthKey,
-		"token.crt":                pki.TokenCert,
-		"token.key":                pki.TokenKey,
-		"distribution.crt":         pki.DistributionCert,
-		"distribution.key":         pki.DistributionKey,
-		"ingress-client-ca.crt":    pki.IngressClientCACert,
-		"upstream-registry-ca.crt": pki.UpstreamRegistryCACert,
+		"ca.crt":           config.CACert,
+		"auth.crt":         config.AuthCert,
+		"auth.key":         config.AuthKey,
+		"token.crt":        config.TokenCert,
+		"token.key":        config.TokenKey,
+		"distribution.crt": config.DistributionCert,
+		"distribution.key": config.DistributionKey,
+	}
+
+	if config.LocalMode != nil {
+		fileMap["ingress-client-ca.crt"] = config.LocalMode.IngressClientCACert
+	} else {
+		fileMap["ingress-client-ca.crt"] = ""
+	}
+
+	if config.ProxyMode != nil {
+		fileMap["upstream-registry-ca.crt"] = config.ProxyMode.UpstreamRegistryCACert
+	} else {
+		fileMap["upstream-registry-ca.crt"] = ""
 	}
 
 	hashes := make([]string, 0, len(fileMap))
