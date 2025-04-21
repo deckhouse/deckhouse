@@ -384,6 +384,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 				return fmt.Errorf("ensure module release for the '%s' module: %w", moduleName, err)
 			}
 			availableModule.Checksum = meta.Checksum
+			availableModule.Version = meta.ModuleVersion
 		}
 		availableModules = append(availableModules, availableModule)
 	}
