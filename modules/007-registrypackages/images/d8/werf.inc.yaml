@@ -1,7 +1,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
-fromCacheVersion: "2025-04-21.03"
+fromCacheVersion: "2025-04-21.04"
 fromImage: common/src-artifact
 git:
 - add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
@@ -14,12 +14,10 @@ shell:
   # - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} {{ $.SOURCE_REPO }}/deckhouse/deckhouse-cli.git /src/deckhouse-cli
   - git clone --depth 1 --branch debug-command-wrapper https://github.com/deckhouse/deckhouse-cli.git /src/deckhouse-cli
 #  - rm -rf /src/deckhouse-cli/.git # https://github.com/deckhouse/deckhouse-cli/blob/main/Taskfile.yml#L9
-  - |
-    printenv
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ $.Images.BASE_SCRATCH }}
-fromCacheVersion: "2025-04-21.03"
+fromCacheVersion: "2025-04-21.04"
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /
@@ -40,7 +38,7 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
-fromCacheVersion: "2025-04-21.03"
+fromCacheVersion: "2025-04-21.04"
 from: {{ $.Images.BASE_GOLANG_23_BULLSEYE }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
