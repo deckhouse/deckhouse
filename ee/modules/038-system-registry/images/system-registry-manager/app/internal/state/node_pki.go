@@ -7,7 +7,6 @@ package state
 
 import (
 	"fmt"
-	"regexp"
 
 	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/pki"
 )
@@ -15,10 +14,6 @@ import (
 const (
 	nodeAuthCertCN         = "embedded-registry-auth"
 	nodeDistributionCertCN = "embedded-registry-distribution"
-)
-
-var (
-	NodePKISecretRegex = regexp.MustCompile(`^registry-node-(.*)-pki$`)
 )
 
 func NodePKISecretName(nodeName string) string {

@@ -82,7 +82,7 @@ func TestAuthConfigWithMirrorer(t *testing.T) {
 			Name:         "ro-user",
 			PasswordHash: "ro-password-hash",
 		},
-		RW: authConfigUserModel{
+		RW: &authConfigUserModel{
 			Name:         "rw-user",
 			PasswordHash: "rw-password-hash",
 		},
@@ -97,6 +97,9 @@ func TestAuthConfigWithMirrorer(t *testing.T) {
 	}
 
 	testRender(t, model)
+
+	model.RW = nil
+	testRender(t, model)
 }
 
 func TestAuthConfig(t *testing.T) {
@@ -105,12 +108,14 @@ func TestAuthConfig(t *testing.T) {
 			Name:         "ro-user",
 			PasswordHash: "ro-password-hash",
 		},
-		RW: authConfigUserModel{
+		RW: &authConfigUserModel{
 			Name:         "rw-user",
 			PasswordHash: "rw-password-hash",
 		},
 	}
+	testRender(t, model)
 
+	model.RW = nil
 	testRender(t, model)
 }
 

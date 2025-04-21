@@ -141,6 +141,7 @@ require (
 	github.com/go-openapi/runtime v0.28.0 // indirect
 	github.com/go-openapi/strfmt v0.23.0 // indirect
 	github.com/go-openapi/validate v0.24.0 // indirect
+	github.com/go-ozzo/ozzo-validation v3.6.0+incompatible // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/goccy/go-graphviz v0.1.3 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect

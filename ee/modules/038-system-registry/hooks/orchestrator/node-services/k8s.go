@@ -11,7 +11,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	v1core "k8s.io/api/core/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers"
@@ -69,7 +69,7 @@ func KubernetsConfig(name string) []go_hook.KubernetesConfig {
 			ApiVersion:        "v1",
 			Kind:              "Pod",
 			NamespaceSelector: helpers.NamespaceSelector,
-			LabelSelector: &v1.LabelSelector{
+			LabelSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"heritage":  "deckhouse",
 					"app":       "system-registry",

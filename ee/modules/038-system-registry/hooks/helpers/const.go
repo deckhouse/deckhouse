@@ -6,6 +6,8 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package helpers
 
 import (
+	"fmt"
+
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 )
 
@@ -15,4 +17,11 @@ var (
 			MatchNames: []string{"d8-system"},
 		},
 	}
+
+	RegistryServiceDNSName = fmt.Sprintf("%s.%s.svc", RegistryServiceName, RegistryServiceNamespace)
+)
+
+const (
+	RegistryServiceName      = "registry"
+	RegistryServiceNamespace = "d8-system"
 )

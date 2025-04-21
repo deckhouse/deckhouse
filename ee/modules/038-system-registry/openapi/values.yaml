@@ -30,6 +30,24 @@ properties:
             type: boolean
           hash:
             type: string
+          conditions:
+            x-kubernetes-patch-strategy: merge
+            x-kubernetes-patch-merge-key: type
+            type: array
+            items:
+              type: object
+              properties:
+                type:
+                  type: string
+                status:
+                  type: string
+                message:
+                  type: string
+                reason:
+                  type: string
+                lastTransitionTime:
+                  format: date-time
+                  type: string
           state:
             type: object
             default: {}
@@ -86,6 +104,10 @@ properties:
                     <<: *user
                   mirror_pusher:
                     <<: *user
+              node_services:
+                type: object
+                additionalProperties: true
+                x-kubernetes-preserve-unknown-fields: true
 
 
       state:

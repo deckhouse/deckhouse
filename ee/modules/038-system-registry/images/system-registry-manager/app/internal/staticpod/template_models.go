@@ -11,7 +11,7 @@ import (
 
 type authConfigModel struct {
 	RO           authConfigUserModel
-	RW           authConfigUserModel
+	RW           *authConfigUserModel
 	MirrorPuller *authConfigUserModel
 	MirrorPusher *authConfigUserModel
 }
@@ -32,7 +32,11 @@ func (value NodeServicesConfigModel) toAuthConfig() authConfigModel {
 
 	model := authConfigModel{
 		RO: mapUser(registry.UserRO),
-		RW: mapUser(registry.UserRW),
+	}
+
+	if registry.UserRW != nil {
+		user := mapUser(*registry.UserRW)
+		model.RW = &user
 	}
 
 	mirrorer := registry.Mirrorer

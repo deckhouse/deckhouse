@@ -11,10 +11,12 @@ token:
 
 users:
   # Password is specified as a BCrypt hash. Use htpasswd -nB USERNAME to generate.
-  {{ quote .RW.Name }}:
-    password: {{ quote .RW.PasswordHash }}
   {{ quote .RO.Name }}:
     password: {{ quote .RO.PasswordHash }}
+  {{- with .RW }}
+  {{ quote .Name }}:
+    password: {{ quote .PasswordHash }}
+  {{- end }}
   {{- with .MirrorPuller }}
   {{ quote .Name }}:
     password: {{ quote .PasswordHash }}
@@ -25,12 +27,14 @@ users:
   {{- end }}
 
 acl:
-  - match: { account: {{ quote .RW.Name }} }
-    actions: [ "*" ]
-    comment: "has full access"
   - match: { account: {{ quote .RO.Name }} }
     actions: ["pull"]
     comment: "has readonly access"
+  {{- with .RW }}
+  - match: { account: {{ quote .Name }} }
+    actions: [ "*" ]
+    comment: "has full access"
+  {{- end }}
   {{- with .MirrorPusher }}
   - match: { account: {{ quote .Name }} }
     actions: [ "*" ]

@@ -13,6 +13,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1core "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers"
@@ -121,7 +122,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			return fmt.Errorf("cannot compute inputs hash: %w", err)
 		}
 
-		values.Ready, err = process(input, inputs, &values.State)
+		values.ProcessResult, err = process(input, inputs, &values.State)
 		if err != nil {
 			return fmt.Errorf("cannot process: %w", err)
 		}
@@ -130,8 +131,19 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		return nil
 	})
 
-func process(input *go_hook.HookInput, inputs Inputs, state *State) (bool, error) {
+func process(input *go_hook.HookInput, inputs Inputs, state *State) (ProcessResult, error) {
 	// TODO: this is stub code, need to write switch logic
+
+	var result ProcessResult
+
+	readyCondition := metav1.Condition{
+		Type:               ConditionTypeReady,
+		Status:             metav1.ConditionFalse,
+		Reason:             ConditionReasonProcessing,
+		ObservedGeneration: inputs.Params.Generation,
+	}
+
+	result.SetCondition(readyCondition)
 
 	params := inputs.Params
 
@@ -181,7 +193,7 @@ func process(input *go_hook.HookInput, inputs Inputs, state *State) (bool, error
 		}
 
 		if _, err := state.PKI.Process(input.Logger); err != nil {
-			return false, fmt.Errorf("cannot process PKI: %w", err)
+			return result, fmt.Errorf("cannot process PKI: %w", err)
 		}
 	} else {
 		state.PKI = nil
@@ -193,7 +205,7 @@ func process(input *go_hook.HookInput, inputs Inputs, state *State) (bool, error
 		}
 
 		if err := state.Secrets.Process(); err != nil {
-			return false, fmt.Errorf("cannot process Secrets: %w", err)
+			return result, fmt.Errorf("cannot process Secrets: %w", err)
 		}
 	} else {
 		state.Secrets = nil
@@ -205,12 +217,17 @@ func process(input *go_hook.HookInput, inputs Inputs, state *State) (bool, error
 		}
 
 		if err := state.Users.Process(usersParams, inputs.Users); err != nil {
-			return false, fmt.Errorf("cannot process Users: %w", err)
+			return result, fmt.Errorf("cannot process Users: %w", err)
 		}
 	} else {
 		state.Users = nil
 	}
 
 	state.Mode = params.Mode
-	return true, nil
+
+	readyCondition.Status = metav1.ConditionTrue
+	readyCondition.Reason = ""
+	result.SetCondition(readyCondition)
+
+	return result, nil
 }

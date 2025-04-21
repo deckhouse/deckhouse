@@ -100,38 +100,6 @@ func (nc *nodeController) SetupWithManager(mgr ctrl.Manager) error {
 		},
 	}
 
-	nodePKISecretsPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
-		if obj.GetNamespace() != nc.Namespace {
-			return false
-		}
-
-		return state.NodePKISecretRegex.MatchString(obj.GetName())
-	})
-
-	nodePKISecretsHandler := handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
-		name := obj.GetName()
-		sub := state.NodePKISecretRegex.FindStringSubmatch(name)
-
-		if len(sub) < 2 {
-			return nil
-		}
-
-		var ret reconcile.Request
-		ret.Name = sub[1]
-
-		log := ctrl.LoggerFrom(ctx)
-
-		log.Info(
-			"Node PKI secret changed, will trigger reconcile",
-			"secret", obj.GetName(),
-			"namespace", obj.GetNamespace(),
-			"node", ret.Name,
-			"controller", controllerName,
-		)
-
-		return []reconcile.Request{ret}
-	})
-
 	nodeServicesConfigPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		if obj.GetNamespace() != nc.Namespace {
 			return false
@@ -283,11 +251,6 @@ func (nc *nodeController) SetupWithManager(mgr ctrl.Manager) error {
 		).
 		Watches(
 			&corev1.Secret{},
-			nodePKISecretsHandler,
-			builder.WithPredicates(nodePKISecretsPredicate),
-		).
-		Watches(
-			&corev1.Secret{},
 			newReprocessAllHandler("Secret"),
 			builder.WithPredicates(globalSecretsPredicate),
 		).
@@ -325,11 +288,6 @@ func (nc *nodeController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 	if req.Namespace != "" {
 		req.Namespace = ""
-	}
-
-	// Delete node secret if exists
-	if err := nc.deleteNodePKI(ctx, req.Name); err != nil {
-		return ctrl.Result{}, err
 	}
 
 	err := nc.checkNodesAddressesChanged(ctx)
@@ -457,15 +415,19 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 		return result, err
 	}
 
-	userRW, err := nc.loadUserSecret(ctx, state.UserRWSecretName)
-	if err != nil {
-		err = fmt.Errorf("cannot load RW user: %w", err)
-		return result, err
-	}
-
 	var (
-		userMirrorPuller, userMirrorPusher *state.User
+		userRW, userMirrorPuller, userMirrorPusher *state.User
 	)
+
+	if moduleConfig.Settings.Mode == state.RegistryModeDetached {
+		user, err := nc.loadUserSecret(ctx, state.UserRWSecretName)
+		if err != nil {
+			err = fmt.Errorf("cannot load RW user: %w", err)
+			return result, err
+		}
+
+		userRW = &user
+	}
 
 	if moduleConfig.Settings.Mode == state.RegistryModeDetached {
 		puller, err := nc.loadUserSecret(ctx, state.UserMirrorPullerName)
@@ -576,8 +538,8 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 
 func (nc *nodeController) contructNodeServicesConfig(
 	moduleConfig state.ModuleConfig,
-	userRO, userRW state.User,
-	userMirrorPuller, userMirrorPusher *state.User,
+	userRO state.User,
+	userRW, userMirrorPuller, userMirrorPusher *state.User,
 	globalPKI state.GlobalPKI,
 	globalSecrets state.Secrets,
 	nodePKI state.NodePKI,
@@ -619,11 +581,6 @@ func (nc *nodeController) contructNodeServicesConfig(
 					Password:     userRO.Password,
 					PasswordHash: userRO.HashedPassword,
 				},
-				UserRW: nodeservices.User{
-					Name:         userRW.UserName,
-					Password:     userRW.Password,
-					PasswordHash: userRW.HashedPassword,
-				},
 			},
 			PKI: nodeservices.PKI{
 				CACert:           string(pki.EncodeCertificate(globalPKI.CA.Cert)),
@@ -652,6 +609,12 @@ func (nc *nodeController) contructNodeServicesConfig(
 			TTL:      moduleConfig.Settings.Proxy.TTL.StringPointer(),
 		}
 	case state.RegistryModeDetached:
+		model.Config.Registry.UserRW = &nodeservices.User{
+			Name:         userRW.UserName,
+			Password:     userRW.Password,
+			PasswordHash: userRW.HashedPassword,
+		}
+
 		model.Config.Registry.Mirrorer = &nodeservices.Mirrorer{
 			UserPuller: nodeservices.User{
 				Name:         userMirrorPuller.UserName,
@@ -1066,36 +1029,6 @@ func (nc *nodeController) cleanupNodeState(ctx context.Context, node *corev1.Nod
 	}
 
 	return ctrl.Result{}, nil
-}
-
-func (nc *nodeController) deleteNodePKI(ctx context.Context, nodeName string) error {
-	log := ctrl.LoggerFrom(ctx).
-		WithValues("action", "DeleteNodePKI")
-
-	secret := corev1.Secret{}
-	key := types.NamespacedName{
-		Name:      state.NodePKISecretName(nodeName),
-		Namespace: nc.Namespace,
-	}
-
-	err := nc.Client.Get(ctx, key, &secret)
-
-	if err != nil {
-		if client.IgnoreNotFound(err) == nil {
-			// Already absent
-			return nil
-		}
-
-		return fmt.Errorf("get node PKI secret error: %w", err)
-	}
-
-	err = nc.Client.Delete(ctx, &secret)
-	if client.IgnoreNotFound(err) != nil {
-		return fmt.Errorf("delete node PKI secret error: %w", err)
-	}
-
-	log.Info("Deleted node PKI", "node", nodeName, "name", secret.Name, "namespace", secret.Namespace)
-	return nil
 }
 
 func (nc *nodeController) reprocessChannelSource() source.Source {

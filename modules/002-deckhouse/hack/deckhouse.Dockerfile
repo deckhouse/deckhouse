@@ -53,6 +53,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 COPY --from=src /artifacts/src .
 
 ENV D8_VERSION="1.68.7-dev"
+ENV DEFAULT_KUBERNETES_VERSION="1.30"
 RUN --mount=type=cache,target=/root/.cache/go-build \
         cd ./deckhouse-controller/ && \
         chmod +x *.sh && \
