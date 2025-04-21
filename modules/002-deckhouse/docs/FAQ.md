@@ -52,7 +52,7 @@ Data that will be collected:
 * Deckhouse queue state
 * global Deckhouse values. Except for the values of `kubeRBACProxyCA` and `registry.dockercfg`
 * enabled modules list
-* list of modules in `Unmanaged` mode
+* list of modules in `maintenance` mode
 * `events` from all namespaces
 * controllers and pods manifests from namespaces owned by Deckhouse
 * `nodegroups` state

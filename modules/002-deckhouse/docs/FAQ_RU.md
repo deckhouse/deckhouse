@@ -53,7 +53,7 @@ title: "Модуль deckhouse: FAQ"
 * состояние очереди Deckhouse;
 * Deckhouse values. За исключением значений `kubeRBACProxyCA` и `registry.dockercfg`;
 * список включенных модулей;
-* список модулей в режиме `Unmanaged`;
+* список модулей в режиме `maintenance`;
 * `events` из всех пространств имен;
 * манифесты controller'ов и подов из всех пространств имен Deckhouse;
 * все объекты `nodegroups`;
