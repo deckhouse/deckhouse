@@ -260,7 +260,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			}
 
 			testData := suite.fetchTestFileData("auto-patch-minor-update.yaml")
-			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
+			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup), withBasicModulePhase(addonmodules.CanRunHelm))
 
 			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
 			require.NoError(suite.T(), err)
@@ -280,7 +280,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			}
 
 			testData := suite.fetchTestFileData("auto-mode.yaml")
-			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
+			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup), withBasicModulePhase(addonmodules.CanRunHelm))
 
 			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
 			require.NoError(suite.T(), err)
@@ -310,7 +310,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			mup.Update.Mode = v1alpha1.UpdateModeAutoPatch.String()
 
 			testData := suite.fetchTestFileData("auto-patch-mode-minor-release.yaml")
-			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
+			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup), withBasicModulePhase(addonmodules.CanRunHelm))
 
 			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
 			require.NoError(suite.T(), err)
@@ -325,7 +325,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			mup.Update.Mode = v1alpha1.UpdateModeAutoPatch.String()
 
 			testData := suite.fetchTestFileData("auto-patch-mode-minor-release-approved.yaml")
-			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
+			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup), withBasicModulePhase(addonmodules.CanRunHelm))
 
 			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
 			require.NoError(suite.T(), err)
@@ -355,35 +355,35 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("sequential processing with patch release", func() {
-		suite.setupReleaseController(suite.fetchTestFileData("sequential-processing-patch.yaml"))
+		suite.setupReleaseController(suite.fetchTestFileData("sequential-processing-patch.yaml"), withBasicModulePhase(addonmodules.CanRunHelm))
 		mr := suite.getModuleRelease(suite.testMRName)
 		_, err = suite.ctr.handleRelease(context.TODO(), mr)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("sequential processing with minor release", func() {
-		suite.setupReleaseController(suite.fetchTestFileData("sequential-processing-minor.yaml"))
+		suite.setupReleaseController(suite.fetchTestFileData("sequential-processing-minor.yaml"), withBasicModulePhase(addonmodules.CanRunHelm))
 		mr := suite.getModuleRelease(suite.testMRName)
 		_, err = suite.ctr.handleRelease(context.TODO(), mr)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("sequential processing with minor pending release", func() {
-		suite.setupReleaseController(suite.fetchTestFileData("sequential-processing-minor-pending.yaml"))
+		suite.setupReleaseController(suite.fetchTestFileData("sequential-processing-minor-pending.yaml"), withBasicModulePhase(addonmodules.CanRunHelm))
 		mr := suite.getModuleRelease(suite.testMRName)
 		_, err = suite.ctr.handleRelease(context.TODO(), mr)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("sequential processing with minor auto release", func() {
-		suite.setupReleaseController(suite.fetchTestFileData("sequential-processing-minor-auto.yaml"))
+		suite.setupReleaseController(suite.fetchTestFileData("sequential-processing-minor-auto.yaml"), withBasicModulePhase(addonmodules.CanRunHelm))
 		mr := suite.getModuleRelease(suite.testMRName)
 		_, err = suite.ctr.handleRelease(context.TODO(), mr)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("sequential processing with minor notready release", func() {
-		suite.setupReleaseController(suite.fetchTestFileData("sequential-processing-minor-notready.yaml"))
+		suite.setupReleaseController(suite.fetchTestFileData("sequential-processing-minor-notready.yaml"), withBasicModulePhase(addonmodules.Startup))
 		mr := suite.getModuleRelease(suite.testMRName)
 		_, err = suite.ctr.handleRelease(context.TODO(), mr)
 		require.NoError(suite.T(), err)
@@ -450,6 +450,12 @@ func withDependencyContainer(dc dependency.Container) reconcilerOption {
 	}
 }
 
+func withBasicModulePhase(phase addonmodules.ModuleRunPhase) reconcilerOption {
+	return func(r *reconciler) {
+		r.moduleManager = stubModulesManager{modulePhase: phase}
+	}
+}
+
 func (suite *ReleaseControllerTestSuite) setupReleaseController(yamlDoc string, options ...reconcilerOption) {
 	manifests := releaseutil.SplitManifests(yamlDoc)
 
@@ -493,7 +499,7 @@ type: Opaque
 		dependencyContainer:  dependency.NewDependencyContainer(),
 		log:                  logger,
 		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
-		moduleManager:        stubModulesManager{client: suite.Suite.Client()},
+		moduleManager:        stubModulesManager{},
 		delayTimer:           time.NewTimer(3 * time.Second),
 		metricStorage:        metricstorage.NewMetricStorage(context.Background(), "", true, logger),
 
@@ -577,11 +583,6 @@ func (suite *ReleaseControllerTestSuite) assembleInitObject(obj string) client.O
 		err = yaml.Unmarshal([]byte(obj), &sec)
 		require.NoError(suite.T(), err)
 		res = &sec
-	case "Module":
-		var mod v1alpha1.Module
-		err = yaml.Unmarshal([]byte(obj), &mod)
-		require.NoError(suite.T(), err)
-		res = &mod
 	}
 
 	return res
@@ -630,7 +631,7 @@ func (suite *ReleaseControllerTestSuite) fetchResults() []byte {
 }
 
 type stubModulesManager struct {
-	client client.Client
+	modulePhase addonmodules.ModuleRunPhase
 }
 
 func (s stubModulesManager) AreModulesInited() bool {
@@ -642,11 +643,10 @@ func (s stubModulesManager) DisableModuleHooks(_ string) {
 
 func (s stubModulesManager) GetModule(name string) *addonmodules.BasicModule {
 	bm, _ := addonmodules.NewBasicModule(name, "", 900, nil, []byte{}, []byte{}, addonmodules.WithLogger(log.NewNop()))
-	c := s.client
-	module := new(v1alpha1.Module)
-	if err := c.Get(context.TODO(), client.ObjectKey{Name: name}, module); err == nil {
-		bm.SetPhase(addonmodules.ModuleRunPhase(module.Status.Phase))
+	if s.modulePhase != "" {
+		bm.SetPhase(s.modulePhase)
 	}
+
 	return bm
 }
 
