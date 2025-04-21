@@ -49,7 +49,7 @@ title: "Модуль operator-prometheus"
 
   ![Работа Prometheus](../../images/operator-prometheus/targets.png)
 
-  * **(1)** Prometheus читает секцию конфига `scrape_configs`, согласно которой настраивает свой внутренний механизм Service Discovery
+  * **(1)** Prometheus читает секцию конфигурации `scrape_configs`, согласно которой настраивает свой внутренний механизм Service Discovery
   * **(2)** Механизм Service Discovery взаимодействует с API Kubernetes (в основном — получает endpoint`ы)
   * **(3)** На основании происходящего в Kubernetes механизм Service Discovery обновляет Targets (список *target'ов*)
 * В `scrape_configs` указан список *scrape job'ов* (внутреннее понятие Prometheus), каждый из которых определяется следующим образом:
@@ -113,7 +113,7 @@ title: "Модуль operator-prometheus"
 * Таким образом, Prometheus сам отслеживает:
   * добавление и удаление Pod'ов (при добавлении/удалении Pod'ов Kubernetes изменяет endpoint'ы, а Prometheus это видит и добавляет/удаляет *target'ы*)
   * добавление и удаление сервисов (точнее endpoint'ов) в указанных namespace'ах
-* Изменение конфига требуется в следующих случаях:
+* Изменение конфигурации требуется в следующих случаях:
   * нужно добавить новый scrape config (обычно — новый вид сервисов, которые надо мониторить)
   * нужно изменить список namespace'ов
 
@@ -151,7 +151,7 @@ title: "Модуль operator-prometheus"
 
 1. Prometheus Operator читает (а также следит за добавлением/удалением/изменением) Service Monitor'ы (какие именно Service Monitor'ы — указано в самом ресурсе `prometheus`, см. подробней [официальную документацию](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#prometheusspec)).
 1. Для каждого Service Monitor'а, если в нем НЕ указан конкретный список namespace'ов (указано `any: true`), Prometheus Operator вычисляет (обращаясь к API Kubernetes) список namespace'ов, в которых есть Service'ы (подходящие под указанные в Service Monitor'е label'ы).
-1. На основании прочитанных ресурсов `servicemonitor` (см. [официальную документацию](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#servicemonitorspec)) и на основании вычисленных namespace'ов Prometheus Operator генерирует часть конфига (секцию `scrape_configs`) и сохраняет конфиг в соответствующий Secret.
+1. На основании прочитанных ресурсов `servicemonitor` (см. [официальную документацию](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#servicemonitorspec)) и на основании вычисленных namespace'ов Prometheus Operator генерирует часть конфигурации (секцию `scrape_configs`) и сохраняет конфиг в соответствующий Secret.
 1. Штатными средствами самого Kubernetes данные из секрета прилетают в Pod (файл `prometheus.yaml` обновляется).
 1. Изменение файла замечает `prometheus-config-reloader`, который по HTTP отправляет запрос Prometheus'у на перезагрузку.
 1. Prometheus перечитывает конфиг и видит изменения в scrape_configs, которые обрабатывает уже согласно своей логике работы (см. подробнее выше).
