@@ -23,7 +23,6 @@ import (
 )
 
 func (pc *Checker) CheckStaticInstancesIPDuplication(_ context.Context) error {
-	fmt.Println(pc.metaConfig.ResourcesYAML)
 	documents := strings.Split(pc.metaConfig.ResourcesYAML, "---")
 	instances := make(map[string]string)
 	for _, doc := range documents {
