@@ -140,18 +140,17 @@ EOF
   # Check zones existence for CloudEphemeral nodes
   allowedZones=$(context::jq -e -r 'if (.snapshots.provider_cluster_config | length) > 0 then .snapshots.provider_cluster_config[0].filterResult.zones else [] end | if . == [] then [] else .[] end')
   ngZones=$(context::jq -r '.review.request.object.spec.cloudInstances.zones // []')
-  
+
   if [[ "$allowedZones" != "[]" ]]; then
-    if [[ "$ngZones" != "[]" ]]; then
-      for zone in $(jq -e -r '.[]' <<< "$ngZones"); do
-        if ! grep -qE "^$zone\$" <<< "$allowedZones"; then
-          cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+    # if [[ "$ngZones" != "[]" ]]; then
+    for zone in $(jq -e -r '.[]' <<< "$ngZones"); do
+      if ! grep -qE "^$zone\$" <<< "$allowedZones"; then
+        cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":false, "message":"unknown zone \"${zone}\""}
 EOF
-          return 0
-        fi
-      done
-    fi
+        return 0
+      fi
+    done
   fi
 
   criType="$(context::jq -r '.review.request.object.spec.cri.type')"
