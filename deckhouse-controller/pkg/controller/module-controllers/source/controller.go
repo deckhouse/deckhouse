@@ -264,8 +264,8 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 	availableModules := make([]v1alpha1.AvailableModule, 0)
 	var pullErrorsExist bool
 	for _, moduleName := range pulledModules {
-		if moduleName == "modules" {
-			r.logger.Warn("the 'modules' is a forbidden name, skip the module.")
+		if moduleName == "modules" || len(moduleName) > 64 {
+			r.logger.Warn("the modules has a forbidden name, skip it.", slog.String("name", moduleName))
 			continue
 		}
 
