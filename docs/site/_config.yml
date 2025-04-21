@@ -90,6 +90,22 @@ defaults:
       search_bage_enabled: true
       lang: en
   - scope:
+      path: "pages/admin"
+    values:
+      sidebar: kubernetes-platform
+  - scope:
+      path: "pages/architecture"
+    values:
+      sidebar: kubernetes-platform
+  - scope:
+      path: "pages/user"
+    values:
+      sidebar: kubernetes-platform
+  - scope:
+      path: "pages/reference"
+    values:
+      sidebar: kubernetes-platform
+  - scope:
       path: "pages/includes"
       type: "pages"
     values:
@@ -114,7 +130,7 @@ defaults:
       documentation_state: develop
       search_bage_enabled: true
       sidebar: code
-      sitemap_include: false    
+      sitemap_include: false
   - scope:
       path: "pages/virtualization-platform"
     values:
@@ -189,4 +205,3 @@ defaults:
     values:
       featureStatus: experimental
 timezone: Europe/Moscow
-

@@ -88,7 +88,7 @@
           },
           {
             "title": "Documentation",
-            "url": "/products/kubernetes-platform/documentation/v1/deckhouse-overview.html",
+            "url": "/products/kubernetes-platform/documentation/v1/",
             "target": "",
             "rel": ""
           },

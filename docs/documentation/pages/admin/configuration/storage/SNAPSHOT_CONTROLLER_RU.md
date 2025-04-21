@@ -1,0 +1,69 @@
+---
+title: "Настройка создания снимков томов"
+permalink: ru/admin/storage/snapshot-controller.html
+lang: ru
+---
+
+Deckhouse Kubernetes Platform поддерживает создание снимков томов для CSI-драйверов в кластере Kubernetes.
+
+Снимки позволяют сохранять состояние тома на определённый момент времени и использовать это состояние для восстановления данных или клонирования томов. Поддержка создания снимков зависит от используемого CSI-драйвера.
+
+## Поддерживаемые CSI-драйверы
+
+Создание снимков поддерживается следующими CSI-драйверами:
+
+- [Облачные ресурсы провайдера OpenStack](#TODO);
+- [Облачные ресурсы провайдера VMWare vSphere](#TODO);
+- [Распределённое хранилище Ceph](../storage/external/ceph.html);
+- [Облачные ресурсы провайдера Amazon Web Services](#TODO);
+- [Облачные ресурсы провайдера Microsoft Azure](#TODO);
+- [Облачные ресурсы провайдера Google Cloud Platform](#TODO);
+- [Реплицируемое хранилище на основе DRBD](../storage/sds/lvm-replicated.html);
+- [Хранилище данных NFS](../storage/external/nfs.html).
+
+## Использование снимков
+
+Перед созданием снимков убедитесь, что в кластере настроены объекты [VolumeSnapshotClass](../../reference/cr/volumesnapshotclass/). Список доступных классов можно получить командой:
+
+```shell
+d8 k get volumesnapshotclasses.snapshot.storage.k8s.io
+```
+
+Чтобы создать снимок для тома, укажите нужный [VolumeSnapshotClass](../../reference/cr/volumesnapshotclass/) в манифесте:
+
+```yaml
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshot
+metadata:
+  name: example-snapshot
+spec:
+  volumeSnapshotClassName: <имя-класса>
+  source:
+    persistentVolumeClaimName: <имя-PVC>
+```
+
+## Восстановление из снимка
+
+Чтобы восстановить данные из снимка, создайте PVC, ссылающийся на ранее созданный объект [VolumeSnapshot](../../reference/cr/volumesnapshot/):
+
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: restored-pvc
+spec:
+  dataSource:
+    name: example-snapshot
+    kind: VolumeSnapshot
+    apiGroup: snapshot.storage.k8s.io
+  storageClassName: <имя-StorageClass>
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+```
+
+{% alert level="warning" %}
+Не все CSI-драйверы поддерживают восстановление тома из снимка. Убедитесь, что используемый драйвер поддерживает соответствующие возможности.
+{% endalert %}
