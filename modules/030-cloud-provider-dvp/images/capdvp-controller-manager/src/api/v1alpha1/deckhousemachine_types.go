@@ -49,7 +49,7 @@ type CPU struct {
 	// Expressed as percentage.
 	// +kubebuilder:default="100%"
 	// +kubebuilder:validation:Enum:={"5%", "10%", "25%", "50%", "100%"}
-	Fraction int `json:"cpuFraction"`
+	Fraction string `json:"cpuFraction"`
 }
 
 type DiskImageRef struct {

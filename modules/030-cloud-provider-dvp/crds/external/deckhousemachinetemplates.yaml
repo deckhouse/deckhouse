@@ -147,7 +147,7 @@ spec:
                                 - 25%
                                 - 50%
                                 - 100%
-                              type: integer
+                              type: string
                           required:
                             - cores
                             - cpuFraction

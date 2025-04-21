@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/deckhouse/virtualization/api/core/v1alpha2"
@@ -442,7 +441,7 @@ users:
 			},
 			CPU: v1alpha2.CPUSpec{
 				Cores:        dvpMachine.Spec.CPU.Cores,
-				CoreFraction: strconv.Itoa(dvpMachine.Spec.CPU.Fraction),
+				CoreFraction: dvpMachine.Spec.CPU.Fraction,
 			},
 			Memory: v1alpha2.MemorySpec{
 				Size: dvpMachine.Spec.Memory,
