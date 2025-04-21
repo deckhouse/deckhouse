@@ -38,3 +38,13 @@ Added a `network.deckhouse.io/pod-common-ip-priority` label allows you to share 
 ## 007-fix-restoring-cep-for-dead-local-endpoint.patch
 
 Fixed bug when agent uses CiliumEndpoint cache for dead local endpoints.
+
+## 008-hide-error-of-incompatibility-of-egw-with-ces.patch
+
+In PR <https://github.com/cilium/cilium/pull/27984> ware added error if CES and EGW enabled together becouse part of functions work incorrect.
+
+In the PR <https://github.com/cilium/cilium/pull/27984>, an error has been introduced if `CES` and `EGW` are enabled together, as some of the features are not functioning correctly.
+
+While we were previously satisfied with the older behavior, the agent is now unable to start due to this error.
+
+Please remove this change after `CES` becomes Stable. <https://github.com/cilium/cilium/issues/31904#issuecomment-2647858564>
