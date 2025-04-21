@@ -268,16 +268,13 @@ EOF
     nodes=$(context::jq -r '.snapshots.nodes_with_containerd_custom_conf // []')
     echo $nodes > /tmp/nodes.txt
     if [[ "$nodes" != "[]" ]]; then
-      for node in $(jq -e -r '.[]' <<< "$nodes"); do
-        nodeGroupNameFromNode=$(jq -e -r '.filterResult.labels["node.deckhouse.io/group"]' <<< "$node")
-        nodeName=$(context::jq -r '.filterResult.nodeName // "unknownName"')
-        if [[ $nodeGroupNameFromNode == $nodeGroupNameWithChangedCRI ]]; then
-          cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"CRI cannot be changed because some nodes are using custom configuration: $nodeName"}
+      forbidUpdateNodes="$(context::jq -r --arg nodeGroup "${nodeGroupNameWithChangedCRI}" '.snapshots.nodes_with_containerd_custom_conf.[]? | select(.filterResult.labels["node.deckhouse.io/group"] == $nodeGroup) | .filterResult.nodeName' )"
+      if [[ $forbidUpdateNodes != "" ]]; then
+        cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"CRI cannot be changed because some nodes are using custom configuration: $forbidUpdateNodes"}
 EOF
-          return 0
-        fi
-      done
+        return 0
+      fi
     fi
   fi
 
