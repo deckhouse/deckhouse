@@ -32,7 +32,6 @@ spec:
                       description: |
                         CPU setting for VM.
                       type: object
-                      additionalProperties: false
                       required: [cores]
                       properties:
                         cores:
