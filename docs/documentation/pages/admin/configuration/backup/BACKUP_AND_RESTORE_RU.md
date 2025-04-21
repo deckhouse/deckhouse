@@ -4,7 +4,7 @@ permalink: ru/admin/configuration/backup/backup-and-restore.html
 lang: ru
 ---
 
-## Восстановление кластера
+## Ручное восстановление кластера
 
 ### Восстановление кластера с одним control-plane узлом
 
@@ -527,3 +527,110 @@ kubectl delete po etcd-restore --force
    - Убедитесь, что новый сертификат присутствует и валиден.
 
    После выполнения всех вышеперечисленных шагов кластер будет успешно восстановлен и продолжит работу с новым IP-адресом master-узла.
+
+## Создание резервных копий с помощью Deckhouse CLI
+
+Deckhouse CLI (`d8`) предоставляет команду `backup` для создания резервных копий различных компонентов кластера:
+
+- `etcd` — снимок ключевого хранилища данных Deckhouse;
+- `cluster-config` — архив с ключевыми конфигурационными объектами кластера;
+- `loki` — выгрузка логов из встроенного API Loki.
+
+### Резервное копирование etcd
+
+Снимок etcd позволяет сохранить текущее состояние кластера на уровне key-value хранилища. Это полный дамп, который можно использовать для восстановления.
+
+Для создания резервной копии выполните команду:
+
+```console
+d8 backup etcd <путь-до-резервной-копии>
+```
+
+Пример:
+
+```console
+d8 backup etcd /backup/etcd-2025-04-21.tar
+```
+
+#### Автоматическое резервное копирование etcd
+
+Deckhouse выполняет ежедневную резервную копию etcd автоматически с помощью CronJob. Задание запускается в поде `d8-etcd-backup` в пространстве имён `kube-system`.
+
+Внутри пода выполняются команды:
+
+```console
+etcdctl snapshot save etcd-backup.snapshot
+tar -czvf etcd-backup.tar.gz etcd-backup.snapshot
+```
+
+Итоговый архив `etcd-backup.tar.gz` сохраняется локально на узле в директории `/var/lib/etcd/`:
+
+```console
+mv etcd-backup.tar.gz /var/lib/etcd/etcd-backup.tar.gz
+```
+
+### Резервное копирование конфигурации кластера
+
+Команда `d8 backup cluster-config` создаёт архив с важными объектами кластера: секретами, ConfigMap'ами и другими ресурсами, включёнными в whitelist.
+
+Для создания резервной копии выполните команду:
+
+```console
+d8 backup cluster-config <путь-до-резервной-копии>
+```
+
+Пример:
+
+```console
+d8 backup cluster-config /backup/cluster-config-2025-04-21.tar
+```
+
+В архив включаются:
+
+- Секреты и ConfigMap'ы из пространств имён, начинающихся с `d8-`и `kube-`, если они указаны в whitelist'е';
+- Все объекты CustomResource (CR), если для соответствующего CRD установлена аннтоация `backup.deckhouse.io/cluster-config=true`;
+- ClusterRoles и ClusterRoleBindings, за исключением тех, у которых установлен лейбл `heritage=deckhouse`;
+- StorageClass'ы с лейблом `heritage=deckhouse`.
+
+> Резервная копия включает только объекты CR, но не сами определения CRD. Для полного восстановления кластера CRD должны быть заранее установлены (например, из манифестов модулей Deckhouse).
+
+Пример содержимого whitelist:
+
+| Пространство имён        | Тип ресурса | Название                             |
+|------------------|-------------|-----------------------------------------------|
+| `d8-system`      | Secret      | `d8-cluster-terraform-state`                  |
+|                  |             | `$regexp:^d8-node-terraform-state-(.*)$`      |
+|                  |             | `deckhouse-registry`                          |
+|                  | ConfigMap   | `d8-deckhouse-version-info`                   |
+| `kube-system`    | ConfigMap   | `d8-cluster-is-bootstraped`                   |
+|                  |             | `d8-cluster-uuid`                             |
+|                  |             | `extension-apiserver-authentication`          |
+|                  | Secret      | `d8-cloud-provider-discovery-data`            |
+|                  |             | `d8-cluster-configuration`                    |
+|                  |             | `d8-cni-configuration`                        |
+|                  |             | `d8-control-plane-manager-config`             |
+|                  |             | `d8-node-manager-cloud-provider`              |
+|                  |             | `d8-pki`                                      |
+|                  |             | `d8-provider-cluster-configuration`           |
+|                  |             | `d8-static-cluster-configuration`             |
+|                  |             | `d8-secret-encryption-key`                   |
+| `d8-cert-manager`| Secret      | `cert-manager-letsencrypt-private-key`        |
+|                  |             | `selfsigned-ca-key-pair`                      |
+
+### Выгрузка логов из Loki
+
+Команда `d8 backup loki` предназначена для выгрузки логов из встроенного Loki. Это не полноценныая резервная копия, а лишь диагностическая выгрузка: полученные данные нельзя восстановить обратно в Loki.
+
+Для создания резервной копии выполните команду:
+
+```console
+d8 backup loki [флаги] > <путь-до-файла>
+```
+
+Флаги:
+
+- `--start`, `--end` — временные метки в формате "YYYY-MM-DD HH:MM:SS";
+- `--days` — ширина временного окна выгрузки (по умолчанию 5 дней);
+- `--limit` — максимум строк в одном запросе (по умолчанию 5000).
+
+Список доступных флагов можно получить через команду `d8 backup loki --help`.
