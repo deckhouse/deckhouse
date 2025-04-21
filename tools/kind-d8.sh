@@ -22,16 +22,17 @@ YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
-# Getting a chip name
-chip_info=$(sysctl -n machdep.cpu.brand_string)
-
-if [[ "$chip_info" == *"Apple M"* ]]; then
-  # Retrieving the processor generation for Apple on the M
-  chip_model=$(echo "$chip_info" | awk -F'Apple ' '{print $2}' | cut -d' ' -f1-2 | sed 's/ / /')
-  # Display an alert for Apple on M
-  echo -e "${BOLD}${PURPLE}Warning. ${CYAN}Your computer has been identified as: ${GREEN}Apple $chip_model ${NC}
-  ${YELLOW}Disable Rosetta support in Docker Desktop before installation.
-  To do this, in Docker Desktop go to ${CYAN}Settings > General > Virtual Machine Options ${YELLOW}and uncheck the ${CYAN}Use Rosetta for x86_64/amd64 emulation on Apple Silicon ${YELLOW}option.${NC}"
+#  Checking OS and getting a chip name
+if uname -s | grep -q "Darwin"; then
+    chip_info=$(sysctl -n machdep.cpu.brand_string)
+    if [[ "$chip_info" == *"Apple M"* ]]; then
+    # Retrieving the processor generation for Apple on the M
+    chip_model=$(echo "$chip_info" | awk -F'Apple ' '{print $2}' | cut -d' ' -f1-2 | sed 's/ / /')
+    # Display an alert for Apple on M
+    echo -e "${BOLD}${PURPLE}Warning. ${CYAN}Your computer has been identified as: ${GREEN}Apple $chip_model ${NC}
+    ${YELLOW}Disable Rosetta support in Docker Desktop before installation.
+    To do this, in Docker Desktop go to ${CYAN}Settings > General > Virtual Machine Options ${YELLOW}and uncheck the ${CYAN}Use Rosetta for x86_64/amd64 emulation on Apple Silicon ${YELLOW}option.${NC}"
+    fi
 fi
 
 CONFIG_DIR=~/.kind-d8
