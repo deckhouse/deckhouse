@@ -596,7 +596,7 @@ d8 backup cluster-config /backup/cluster-config-2025-04-21.tar
 
 Пример содержимого whitelist:
 
-| Пространство имён        | Тип ресурса | Название                             |
+| Пространство имён        | Объект | Название                             |
 |------------------|-------------|-----------------------------------------------|
 | `d8-system`      | Secret      | `d8-cluster-terraform-state`                  |
 |                  |             | `$regexp:^d8-node-terraform-state-(.*)$`      |
