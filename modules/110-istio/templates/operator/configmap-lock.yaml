@@ -1,5 +1,5 @@
 {{- $versions := .Values.istio.internal.operatorVersionsToInstall }}
-{{- if not (and (eq (len $versions) 1) (eq (first $versions) "1.24")) }}
+{{- if not (and (eq (len $versions) 1) (eq (first $versions) "1.25")) }}
   {{- range $version := .Values.istio.internal.operatorVersionsToInstall }}
     {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
     {{- $revision := get $versionInfo "revision" }}

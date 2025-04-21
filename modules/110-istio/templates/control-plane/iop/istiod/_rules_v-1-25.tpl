@@ -1,4 +1,4 @@
-{{- define "istiod_rules_v-1-24" -}}
+{{- define "istiod_rules_v-1-25" -}}
 - apiGroups:
   - apps
   resources:
