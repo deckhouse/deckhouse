@@ -37,7 +37,7 @@ locals {
     {
       "terminationGracePeriodSeconds" = 90
 
-      "bootloader"               = "BIOS"
+      "bootloader"               = var.bootloader
       "enableParavirtualization" = true
       "osType"                   = "Generic"
       "runPolicy"                = "AlwaysOn"
