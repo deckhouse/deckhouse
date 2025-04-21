@@ -1,5 +1,5 @@
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-network
+image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/alt-p11
 shell:
   install:

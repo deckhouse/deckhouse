@@ -220,10 +220,14 @@ unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 
   mkdir -p "$BUNDLE_STEPS_DIR" "$TMPDIR"
 
-  # get amd debug container image
-  images=$(kubectl_exec -n d8-cloud-instance-manager get cm bashible-apiserver-files -o json | jq -r '.data."images_digests.json"')
-  debug_image_hash=$(echo ${images} | jq -r '.common.debugNetwork')
-  echo "${REGISTRY_ADDRESS}${REGISTRY_PATH}:${debug_image_hash}" > ${BOOTSTRAP_DIR}/debug_container_image
+  # get and save debug container image info
+  if debug_image_hash=$(kubectl_exec -n d8-cloud-instance-manager get cm bashible-apiserver-files -o json | jq -r '.data."images_digests.json"' | jq -r '.common.debugcontainer'); then
+    if [ ${debug_image_hash} == "null" ]; then
+      >&2 echo "failed to get debug container image information"
+    else
+      echo "${REGISTRY_ADDRESS}${REGISTRY_PATH}@${debug_image_hash}" > ${BOOTSTRAP_DIR}/debug-container-image
+    fi
+  fi
 
   # update bashible.sh itself
   if [ -z "${BASHIBLE_SKIP_UPDATE-}" ] && [ -z "${is_local-}" ]; then
