@@ -221,7 +221,8 @@ unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
   mkdir -p "$BUNDLE_STEPS_DIR" "$TMPDIR"
 
   # get amd debug container image
-  debug_image_hash=$(kubectl_exec -n d8-system exec deployments/deckhouse -- cat modules/images_digests.json | jq -r .common.debugNetwork)
+  images=$(kubectl_exec -n d8-cloud-instance-manager get cm bashible-apiserver-files -o json | jq -r '.data."images_digests.json"')
+  debug_image_hash=$(echo ${images} | jq -r '.common.debugNetwork')
   echo "${REGISTRY_ADDRESS}${REGISTRY_PATH}:${debug_image_hash}" > ${BOOTSTRAP_DIR}/debug_container_image
 
   # update bashible.sh itself
