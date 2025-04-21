@@ -14,33 +14,10 @@
 
 bb-set-proxy
 
-{{- $sandbox_image := printf "%s@%s" .registry.imagesBase (index $.images.common "pause") }}
 {{- $kubernetes_api_proxy_image := printf "%s@%s" .registry.imagesBase (index $.images.controlPlaneManager "kubernetesApiProxy") }}
 
 {{- if eq $.cri "Containerd" }}
-
-_get_local_images_list() {
-  repo_digests=$(/opt/deckhouse/bin/crictl images -o json | jq -r '.images[].repoDigests[]?')
-  echo $repo_digests
-}
-local_images_list=$(_get_local_images_list)
-
-if ! echo $local_images_list | grep -q {{ $sandbox_image | quote }}; then
-  /opt/deckhouse/bin/ctr --namespace=k8s.io images pull --hosts-dir="/etc/containerd/registry_prepull.d" {{ $sandbox_image | quote }}
-fi
-
-if ! echo $local_images_list | grep -q {{ $kubernetes_api_proxy_image | quote }}; then
-  /opt/deckhouse/bin/ctr --namespace=k8s.io images pull --hosts-dir="/etc/containerd/registry_prepull.d" {{ $kubernetes_api_proxy_image | quote }}
-fi
-
-{{- else }}
-
-# Use cri info for pulling images if crictl exist (for cri NotManaged or Containerd)
-if crictl version >/dev/null 2>/dev/null; then
-  crictl pull {{ $sandbox_image | quote }}
-  crictl pull {{ $kubernetes_api_proxy_image | quote }}
-fi
-
+  {{- $kubernetes_api_proxy_image = "deckhouse.local/images:kubernetes-api-proxy" }}
 {{- end }}
 
 mkdir -p /etc/kubernetes/manifests
