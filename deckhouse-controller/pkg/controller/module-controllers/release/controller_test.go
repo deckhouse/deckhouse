@@ -640,6 +640,7 @@ func (s stubModulesManager) DisableModuleHooks(_ string) {
 
 func (s stubModulesManager) GetModule(name string) *addonmodules.BasicModule {
 	bm, _ := addonmodules.NewBasicModule(name, "", 900, nil, []byte{}, []byte{}, addonmodules.WithLogger(log.NewNop()))
+	bm.SetPhase(addonmodules.CanRunHelm)
 	return bm
 }
 
