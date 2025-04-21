@@ -260,7 +260,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			}
 
 			testData := suite.fetchTestFileData("auto-patch-minor-update.yaml")
-			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup), withBasicModulePhase(addonmodules.CanRunHelm))
+			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
 			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
 			require.NoError(suite.T(), err)
@@ -280,7 +280,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			}
 
 			testData := suite.fetchTestFileData("auto-mode.yaml")
-			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup), withBasicModulePhase(addonmodules.CanRunHelm))
+			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
 			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
 			require.NoError(suite.T(), err)
@@ -310,7 +310,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			mup.Update.Mode = v1alpha1.UpdateModeAutoPatch.String()
 
 			testData := suite.fetchTestFileData("auto-patch-mode-minor-release.yaml")
-			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup), withBasicModulePhase(addonmodules.CanRunHelm))
+			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
 			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
 			require.NoError(suite.T(), err)
@@ -325,7 +325,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			mup.Update.Mode = v1alpha1.UpdateModeAutoPatch.String()
 
 			testData := suite.fetchTestFileData("auto-patch-mode-minor-release-approved.yaml")
-			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup), withBasicModulePhase(addonmodules.CanRunHelm))
+			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
 			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
 			require.NoError(suite.T(), err)
@@ -357,7 +357,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	suite.Run("Sequential processing", func() {
 		suite.Run("sequential processing with patch release", func() {
 			testData := suite.fetchTestFileData("sequential-processing-patch.yaml")
-			suite.setupReleaseController(testData, withBasicModulePhase(addonmodules.CanRunHelm))
+			suite.setupReleaseController(testData)
 			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.0"))
 			require.NoError(suite.T(), err)
 			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.1"))
@@ -366,7 +366,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 		suite.Run("sequential processing with minor release", func() {
 			testData := suite.fetchTestFileData("sequential-processing-minor.yaml")
-			suite.setupReleaseController(testData, withBasicModulePhase(addonmodules.CanRunHelm))
+			suite.setupReleaseController(testData)
 			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.0"))
 			require.NoError(suite.T(), err)
 			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.71.0"))
@@ -375,7 +375,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 		suite.Run("sequential processing with minor pending release", func() {
 			testData := suite.fetchTestFileData("sequential-processing-minor-pending.yaml")
-			suite.setupReleaseController(testData, withBasicModulePhase(addonmodules.CanRunHelm))
+			suite.setupReleaseController(testData)
 			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.0"))
 			require.NoError(suite.T(), err)
 			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.71.0"))
@@ -386,7 +386,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 		suite.Run("sequential processing with minor auto release", func() {
 			testData := suite.fetchTestFileData("sequential-processing-minor-auto.yaml")
-			suite.setupReleaseController(testData, withBasicModulePhase(addonmodules.CanRunHelm))
+			suite.setupReleaseController(testData)
 			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.0"))
 			require.NoError(suite.T(), err)
 			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.71.0"))
@@ -661,6 +661,7 @@ func (s stubModulesManager) DisableModuleHooks(_ string) {
 
 func (s stubModulesManager) GetModule(name string) *addonmodules.BasicModule {
 	bm, _ := addonmodules.NewBasicModule(name, "", 900, nil, []byte{}, []byte{}, addonmodules.WithLogger(log.NewNop()))
+	bm.SetPhase(addonmodules.CanRunHelm)
 	if s.modulePhase != "" {
 		bm.SetPhase(s.modulePhase)
 	}
