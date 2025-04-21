@@ -1,6 +1,6 @@
 ---
 title: "OIDC identity provider"
-permalink: en/stronghold/documentation/user/secrets-engines/identity-oidc-provider.html
+permalink: en/stronghold/documentation/user/secrets-engines/identity/oidc-provider.html
 ---
 
 Stronghold is an OpenID Connect ([OIDC](https://openid.net/specs/openid-connect-core-1_0.html))

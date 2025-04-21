@@ -6,8 +6,8 @@ global:
     - ee
   step1:
     name:
-      en: Selecting infrastructure
-      ru: Выбор инфраструктуры
+      en: Selecting installation method
+      ru: Выбор варианта установки
   layout: page-nosidebar-notitle
   step:
     header: getting_started/global/HEADER.md
@@ -33,6 +33,29 @@ presets:
         - Ваши приложения должны работать на worker-узле.
 
 installTypes:
+  existing-dkp:
+    iconPath: images/icons/platforms/corp_cloud_vmware.png
+    type: existing-dkp
+    name:
+      en: Existing DKP cluster
+      ru: Существующий кластер DKP
+    pages_title:
+      en: "Deckhouse Stronghold in an existing Deckhouse Kubernetes Platform cluster"
+      ru: "Deckhouse Stronghold в существующем кластере Deckhouse Kubernetes Platform"
+    #layout:
+    #  code: standard
+    #  name: Standard
+    steps:
+      step2:
+        name:
+          en: Enabling the module
+          ru: Включение модуля
+        template: getting_started/stronghold/<INSTALL_CODE>/ENABLE.md
+      step3:
+        name:
+          en: What can I do next?
+          ru: Куда двигаться дальше?
+        template: getting_started/stronghold/global/STEP_FINISH.md
   vsphere:
     iconPath: images/icons/platforms/corp_cloud_vmware.png
     ee_only: true

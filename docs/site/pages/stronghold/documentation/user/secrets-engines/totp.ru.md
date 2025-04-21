@@ -1,4 +1,5 @@
 ---
+title: Механизм секретов TOTP
 sidebar_label: Механизм секретов TOTP
 permalink: ru/stronghold/documentation/user/secrets-engines/totp.html
 description: Механизм секретов TOTP для Stronghold генерирует одноразовые пароли на основе текущего времени.

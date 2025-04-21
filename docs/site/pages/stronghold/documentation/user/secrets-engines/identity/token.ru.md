@@ -1,6 +1,6 @@
 ---
 title: "Токены сущностей"
-permalink: ru/stronghold/documentation/user/secrets-engines/identity-token.html
+permalink: ru/stronghold/documentation/user/secrets-engines/identity/token.html
 description: Подробная информация и лучшие практики использования идентификационных токенов.
 lang: ru
 ---

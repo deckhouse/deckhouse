@@ -1,6 +1,6 @@
 ---
 title: "Провайдер идентификации OIDC"
-permalink: ru/stronghold/documentation/user/secrets-engines/identity-oidc-provider.html
+permalink: ru/stronghold/documentation/user/secrets-engines/identity/oidc-provider.html
 description: Установка и настройка Stronghold в качестве провайдера идентификации OpenID Connect (OIDC).
 lang: ru
 ---

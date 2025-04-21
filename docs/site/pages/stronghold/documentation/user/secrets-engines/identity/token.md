@@ -1,6 +1,6 @@
 ---
 title: "Identity tokens"
-permalink: en/stronghold/documentation/user/secrets-engines/identity-token.html
+permalink: en/stronghold/documentation/user/secrets-engines/identity/token.html
 description: Details and best practices for identity tokens.
 ---
 

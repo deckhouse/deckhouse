@@ -1,6 +1,6 @@
 ---
 title: "Механизм секретов Identity"
-permalink: ru/stronghold/documentation/user/secrets-engines/identity.html
+permalink: ru/stronghold/documentation/user/secrets-engines/identity/
 lang: ru
 ---
 

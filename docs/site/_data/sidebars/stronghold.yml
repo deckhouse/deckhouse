@@ -336,15 +336,15 @@ entries:
                 - title:
                     en: Overview
                     ru: Обзор
-                  url: /stronghold/documentation/user/secrets-engines/identity.html
+                  url: /stronghold/documentation/user/secrets-engines/identity/
                 - title:
                     en: OIDC identity provider
                     ru: OIDC identity provider
-                  url: /stronghold/documentation/user/secrets-engines/identity-oidc-provider.html
+                  url: /stronghold/documentation/user/secrets-engines/identity/oidc-provider.html
                 - title:
                     en: OIDC identity tokens
                     ru: OIDC identity tokens
-                  url: /stronghold/documentation/user/secrets-engines/identity-token.html
+                  url: /stronghold/documentation/user/secrets-engines/identity/token.html
             - title:
                 en: Databases Secrets engine
                 ru: Механизм секретов баз данных

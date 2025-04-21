@@ -1,6 +1,6 @@
 ---
 title: "Identity secrets engine"
-permalink: en/stronghold/documentation/user/secrets-engines/identity.html
+permalink: en/stronghold/documentation/user/secrets-engines/identity/
 ---
 
 The Identity secrets engine is the identity management solution for Stronghold. It
