@@ -12,32 +12,30 @@ metadata:
 spec:
   template:
     spec:
-      {{- if .nodeGroup.instanceClass.vmClassName }}
-      vmClassName: {{ .nodeGroup.instanceClass.vmClassName | quote }}
-      {{- end }}
-      {{- if .nodeGroup.instanceClass.rootDiskStorageClass }}
-      rootDiskStorageClass: {{ .nodeGroup.instanceClass.rootDiskStorageClass | quote }}
+      vmClassName: generic
+      {{- if .nodeGroup.instanceClass.rootDisk.storageClass }}
+      rootDiskStorageClass: {{ .nodeGroup.instanceClass.rootDisk.storageClass | quote }}
       {{- end }}
       cpu:
-        {{- if .nodeGroup.instanceClass.cpu.cores }}
-        cores: {{ .nodeGroup.instanceClass.cpu.cores }}
+        {{- if .nodeGroup.instanceClass.virtualMachine.cpu.cores }}
+        cores: {{ .nodeGroup.instanceClass.virtualMachine.cpu.cores }}
         {{- end }}
-        {{- if .nodeGroup.instanceClass.cpu.cpuFraction }}
-        cpuFraction: {{ .nodeGroup.instanceClass.cpu.cpuFraction }}
+        {{- if .nodeGroup.instanceClass.virtualMachine.cpu.coreFraction }}
+        cpuFraction: {{ .nodeGroup.instanceClass.virtualMachine.cpu.coreFraction }}
         {{- end }}
-      {{- if .nodeGroup.instanceClass.memory }}
-      memory: {{ .nodeGroup.instanceClass.memory }}
+      {{- if .nodeGroup.instanceClass.virtualMachine.memory.size }}
+      memory: {{ .nodeGroup.instanceClass.virtualMachine.memory.size }}
       {{- end }}
-      {{- if .nodeGroup.instanceClass.rootDiskSize }}
-      rootDiskSize: {{ .nodeGroup.instanceClass.rootDiskSize | quote }}
+      {{- if .nodeGroup.instanceClass.rootDisk.size }}
+      rootDiskSize: {{ .nodeGroup.instanceClass.rootDisk.size | quote }}
       {{- end }}
-      {{- if .nodeGroup.instanceClass.bootloader }}
-      bootloader: {{ .nodeGroup.instanceClass.bootloader | quote }}
+      {{- if .nodeGroup.instanceClass.virtualMachine.bootloader }}
+      bootloader: {{ .nodeGroup.instanceClass.virtualMachine.bootloader | quote }}
       {{- end }}
       bootDiskImageRef:
-        {{- if .nodeGroup.instanceClass.osImageRef.kind }}
-        kind: {{ .nodeGroup.instanceClass.osImageRef.kind | quote }}
+        {{- if .nodeGroup.instanceClass.rootDisk.image.kind }}
+        kind: {{ .nodeGroup.instanceClass.rootDisk.image.kind | quote }}
         {{- end }}
-        {{- if .nodeGroup.instanceClass.osImageRef.name }}
-        name: {{ .nodeGroup.instanceClass.osImageRef.name | quote }}
+        {{- if .nodeGroup.instanceClass.rootDisk.image.name }}
+        name: {{ .nodeGroup.instanceClass.rootDisk.image.name | quote }}
         {{- end }}

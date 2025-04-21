@@ -193,6 +193,7 @@ func (in *DeckhouseMachineList) DeepCopyObject() runtime.Object {
 func (in *DeckhouseMachineSpec) DeepCopyInto(out *DeckhouseMachineSpec) {
 	*out = *in
 	out.CPU = in.CPU
+	out.Memory = in.Memory.DeepCopy()
 	out.RootDiskSize = in.RootDiskSize.DeepCopy()
 	out.BootDiskImageRef = in.BootDiskImageRef
 }
@@ -211,6 +212,7 @@ func (in *DeckhouseMachineSpec) DeepCopy() *DeckhouseMachineSpec {
 func (in *DeckhouseMachineSpecTemplate) DeepCopyInto(out *DeckhouseMachineSpecTemplate) {
 	*out = *in
 	out.CPU = in.CPU
+	out.Memory = in.Memory.DeepCopy()
 	out.RootDiskSize = in.RootDiskSize.DeepCopy()
 	out.BootDiskImageRef = in.BootDiskImageRef
 }

@@ -50,6 +50,7 @@ module "master" {
   kubernetes_data_disk   = module.kubernetes-data-disk
   ipv4_address           = module.ipv4-address
   memory_size            = local.memory_size
+  bootloader             = local.bootloader
   cpu                    = local.cpu
   ssh_public_key         = local.ssh_public_key
   hostname               = local.hostname

@@ -143,7 +143,6 @@ properties:
                               Guaranteed share of CPU that will be allocated to the VM. Specified as a percentage.
                               Supported values: `5%`, `10%`, `25%`, `50%`, `100%`.
                             example: "100%"
-
                       memory:
                         type: object
                         description: |
@@ -157,7 +156,23 @@ properties:
                             description: |
                               Amount of memory resources allowed for VM.
                             example: 4Gi
+                      bootloader:
+                        type: string
+                        enum:
+                          - BIOS
+                          - EFI
+                          - EFIWithSecureBoot
+                        default: EFI
+                        description: >
+                          Defines a bootloader for a VM.
 
+
+                          * `BIOS`: Use BIOS.
+
+                          * `EFI`: Use Unified Extensible Firmware (EFI/UEFI).
+
+                          * `EFIWithSecureBoot`: Use UEFI/EFI with the Secure Boot
+                          support.
                       ipAddresses:
                         type: array
                         description: |

@@ -102,6 +102,11 @@ variable "memory_size" {
   type = string
 }
 
+variable "bootloader" {
+  type    = string
+  default = "BIOS"
+}
+
 variable "ipv4_address" {
   default = null
   type = object({

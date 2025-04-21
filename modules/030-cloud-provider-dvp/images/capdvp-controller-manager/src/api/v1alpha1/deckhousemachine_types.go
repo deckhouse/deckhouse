@@ -47,9 +47,9 @@ type CPU struct {
 
 	// Fraction is a guaranteed share of CPU time that will be allocated to the VM.
 	// Expressed as percentage.
-	// +kubebuilder:default=100
-	// +kubebuilder:validation:Enum:={5, 10, 25, 50, 100}
-	Fraction int `json:"cpuFraction"`
+	// +kubebuilder:default="100%"
+	// +kubebuilder:validation:Enum:={"5%", "10%", "25%", "50%", "100%"}
+	Fraction string `json:"cpuFraction"`
 }
 
 type DiskImageRef struct {
@@ -84,10 +84,9 @@ type DeckhouseMachineSpec struct {
 	// CPU holds number of cores and processing time allocated to them.
 	CPU CPU `json:"cpu"`
 
-	// Memory is this machine's RAM amount in mebibytes (MiB).
-	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:default=8192
-	Memory int `json:"memory"`
+	// Memory is this machine's RAM amount.
+	// +kubebuilder:default="8Gi"
+	Memory resource.Quantity `json:"memory"`
 
 	// RootDiskSize holds the size of the bootable disk.
 	RootDiskSize resource.Quantity `json:"rootDiskSize"`
