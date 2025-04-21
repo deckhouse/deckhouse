@@ -541,6 +541,10 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 		return res, err
 	}
 
+	if !task.IsSingle && !task.IsPatch && !isModuleReady(r.moduleManager, release.GetModuleName()) {
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+	}
+
 	if release.GetForce() {
 		r.log.Warn("forced release found")
 
@@ -1280,4 +1284,13 @@ func newModuleReleaseWithName(name string) *v1alpha1.ModuleRelease {
 			Name: name,
 		},
 	}
+}
+
+func isModuleReady(moduleManager moduleManager, moduleName string) bool {
+	basicModule := moduleManager.GetModule(moduleName)
+	if basicModule == nil {
+		return false
+	}
+
+	return basicModule.GetPhase() == addonmodules.CanRunHelm
 }
