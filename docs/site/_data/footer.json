@@ -23,6 +23,12 @@
             "rel": ""
           },
           {
+            "title": "Commander",
+            "url": "/products/commander/",
+            "target": "",
+            "rel": ""
+          },
+          {
             "title": "Stronghold",
             "url": "/products/stronghold/",
             "target": "",
@@ -31,12 +37,6 @@
           {
             "title": "Delivery Kit",
             "url": "/products/delivery-kit/",
-            "target": "",
-            "rel": ""
-          },
-          {
-            "title": "Commander",
-            "url": "/products/commander/",
             "target": "",
             "rel": ""
           }

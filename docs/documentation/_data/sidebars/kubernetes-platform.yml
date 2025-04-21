@@ -102,7 +102,7 @@ entries:
                     ru: Обзор
                   url: /admin/high-reliability-and-availability/
                 - title:
-                    en: HA mode control
+                    en: Managing HA mode
                     ru: Управление режимом HA
                   url: /admin/high-reliability-and-availability/enable.html
                 - title:
@@ -301,7 +301,79 @@ entries:
                 - title:
                     en: Overview
                     ru: Обзор
-                  url: /admin/storage-overview.html
+                  url: /admin/storage/overview.html
+                - title:
+                    en: Storage configuration
+                    ru: Настройка хранилищ
+                  url: admin/storage/supported-storage.html
+                - title:
+                    en: Configuring volume snapshot creation
+                    ru: Настройка создания снимков томов
+                  url: admin/storage/snapshot-controller.html
+                - title:
+                    en: SDS
+                    ru: Программно-определяемые хранилища
+                  folders:
+                    - title:
+                        en: Local path provisioner storage
+                        ru: Локальное хранилище Local Path Provisioner
+                      url: admin/storage/sds/local-path-provisioner.html
+                    - title:
+                        en: Local storage based on LVM
+                        ru: Локальное хранилище на основе LVM
+                      folders:
+                        - title:
+                            en: Setting up local storage based on LVM
+                            ru: Настройка локального хранилища на основе LVM
+                          url: admin/storage/sds/lvm-local.html
+                        - title:
+                            en: Managing local storage based on LVM
+                            ru: Управление локальным хранилищем на основе LVM
+                          url: admin/storage/sds/lvm-local-faq.html
+                    - title:
+                        en: Replicated storage based on DRBD
+                        ru: Реплицируемое хранилище на основе DRBD
+                      folders:
+                        - title:
+                            en: Setting up replicated storage based on DRBD
+                            ru: Настройка реплицируемого хранилища на основе DRBD
+                          url: admin/storage/sds/lvm-replicated.html
+                        - title:
+                            en: Managing DRBD‑based replicated storage
+                            ru: Управление реплицируемым хранилищем на основе DRBD
+                          url: admin/storage/sds/lvm-replicated-faq.html
+                - title:
+                    en: External
+                    ru: Внешние хранилища
+                  folders:
+                    - title:
+                        en: Distributed Ceph storage
+                        ru: Распределённое хранилище Ceph
+                      url: admin/storage/external/ceph.html
+                    - title:
+                        en: HPE data storage
+                        ru: Хранилище данных HPE
+                      url: admin/storage/external/hpe.html
+                    - title:
+                        en: Huawei data storage
+                        ru: Хранилище данных Huawei
+                      url: admin/storage/external/huawei.html
+                    - title:
+                        en: NFS data storage
+                        ru: Хранилище данных NFS
+                      url: admin/storage/external/nfs.html
+                    - title:
+                        en: S3 object storage
+                        ru: Объектное хранилище на основе S3
+                      url: admin/storage/external/s3.html
+                    - title:
+                        en: SCSI-based data storage
+                        ru: Хранилище данных на основе протокола SCSI
+                      url: admin/storage/external/scsi.html
+                    - title:
+                        en: TATLIN.UNIFIED (Yadro) unified storage
+                        ru: Унифицированное хранилище TATLIN.UNIFIED (Yadro)
+                      url: admin/storage/external/yadro.html
             - title:
                 en: Platform security
                 ru: TODO Безопасность платформы
@@ -339,6 +411,10 @@ entries:
                     ru: Настройка мониторинга
                   url: /admin/configuration/monitoring/configuring.html
                 - title:
+                    en: Prometheus settings
+                    ru: Настройки Prometheus
+                  url: /admin/configuration/monitoring/prometheus.html
+                - title:
                     en: Status page
                     ru: Страница состояния
                   url: /admin/configuration/monitoring/status.html
@@ -346,6 +422,14 @@ entries:
                     en: Alerts
                     ru: Алерты
                   url: /admin/configuration/monitoring/alerts.html
+                - title:
+                    en: Alert settings
+                    ru: Настройки алертов
+                  url: /admin/configuration/monitoring/alert-settings.html
+                - title:
+                    en: Alert settings
+                    ru: Вопросы и ответы
+                  url: /admin/configuration/monitoring/faq.html
             - title:
                 en: Platform journaling
                 ru: Журналирование платформы
@@ -365,7 +449,7 @@ entries:
             - title:
                 en: Multitenancy
                 ru: Мультенантность
-              url: /admin/multitenancy-admin.html
+              url: /admin/multitenancy.html
             - title:
                 en: Backup and restore
                 ru: Резервное копирование и восстановление
@@ -494,11 +578,19 @@ entries:
         - title:
             en: Multitenancy
             ru: Мультитенантность
-          url: /user/multitenancy-user.html
+          url: /user/multitenancy.html
         - title:
             en: Monitoring
             ru: Мониторинг
           folders:
+            - title:
+                en: Monitoring
+                ru: Мониторинг
+              url: /user/monitoring/
+            - title:
+                en: Monitoring settings
+                ru: Настройки мониторинга
+              url: /user/monitoring/app.html
             - title:
                 en: Collecting application logs
                 ru: Сбор логов из приложения
@@ -581,6 +673,14 @@ entries:
             ru: Архитектура прикладного сервиса с включенным Istio
           url: /architecture/service-with-istio.html
         - title:
+            en: Architecture of the cluster with Istio enabled
+            ru: Архитектура кластера с включенным Istio
+          url: /architecture/cluster-with-istio.html
+        - title:
+            en: Application service architecture with Istio enabled
+            ru: Архитектура прикладного сервиса с включенным Istio
+          url: /architecture/service-with-istio.html
+        - title:
             en: Table
             ru: Таблица (Мэгтона)
           url: /architecture/functional-table.html
@@ -622,10 +722,10 @@ entries:
             ru: Консольные утилиты
           url: /reference/console-utilities.html
 # ------------- Versions -------------
-    - title:
-        en: DKP versions overview
-        ru: TODO Обзор версий DKP
-      url: /versions/versions-overview.html
+        - title:
+            en: Release notes
+            ru: Обзор изменений
+          url: /reference/release-notes/
 # ------------- FAQ -------------
     - title:
         en: FAQ

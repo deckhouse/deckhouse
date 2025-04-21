@@ -61,9 +61,14 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      summary: Cloud data discoverer checks cloud conditions
+      summary: Deckhouse update is unavailable due to unmet cloud provider conditions.
       plk_create_group_if_not_exists__main: "ClusterHasUnmetCloudConditionAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__main: "ClusterHasUnmetCloudConditionAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       description: |
-        Cloud data discoverer checks if cloud conditions are met.
-          Name: {{`{{ $labels.name }}`}}, Message: {{`{{ $labels.message }}`}}
+        Deckhouse has detected that some cloud provider–specific conditions have not been met.
+        Until these issues are resolved, updating to the new Deckhouse release is not possible.
+
+        Troubleshooting details:
+
+        - Name: {{`{{ $labels.name }}`}}
+        - Message: {{`{{ $labels.message }}`}}

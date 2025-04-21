@@ -30,7 +30,7 @@ apiVersions:
           instanceClass:
             cores: 4
             memory: 8192
-            imageID: fd8nb7ecsbvj76dfaa8b
+            imageID: fd85m9q2qspfnsv055rh
         nodeGroups:
           - name: worker
             replicas: 1
@@ -39,7 +39,7 @@ apiVersions:
             instanceClass:
               cores: 4
               memory: 8192
-              imageID: fd8nb7ecsbvj76dfaa8b
+              imageID: fd85m9q2qspfnsv055rh
               coreFraction: 50
               externalIPAddresses:
                 - "198.51.100.5"
@@ -120,7 +120,7 @@ apiVersions:
                 type: string
                 description: |
                   Image ID to use while provisioning Yandex Compute Instances.
-                example: fd8nb7ecsbvj76dfaa8b
+                example: fd85m9q2qspfnsv055rh
               diskSizeGB: &instanceClassDiskSizeGB
                 type: integer
                 description: |

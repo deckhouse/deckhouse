@@ -36,6 +36,7 @@ module ResourceGenerator
 
 
       #  CRDs
+      site.data['schemas']['crds-list'] = []
       site.data['schemas']['crds'].each do |crdKey, crdData|
         next if crdKey.start_with?("doc-ru-")
 
@@ -47,6 +48,7 @@ module ResourceGenerator
 
         if crdData["apiVersions"] and crdData["kind"] then
           puts "Generating page for CRD %s..." % [crdData["kind"]]
+          site.data['schemas']['crds-list'].push(crdData["kind"])
           languages.each do |lang|
             site.pages << ResourcePage.new(site, productCode, sidebar, crdKey, crdData, lang, "resource")
           end
@@ -54,13 +56,14 @@ module ResourceGenerator
           next unless crdData["spec"]["names"]["kind"]
           puts "Generating page for CRD %s..." % [crdData["spec"]["names"]["kind"]]
 
+          site.data['schemas']['crds-list'].push(crdData["spec"]["names"]["kind"])
           languages.each do |lang|
 
             site.pages << ResourcePage.new(site, productCode, sidebar, crdKey, crdData, lang)
           end
         end
         # sort CRD array
-        site.data['schemas']['crds'] = site.data['schemas']['crds'].sort_by { |crdKey, crdData| crdKey }.to_h
+        site.data['schemas']['crds-list'] = site.data['schemas']['crds-list'].sort
       end
     end
   end

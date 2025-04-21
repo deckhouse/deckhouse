@@ -198,8 +198,10 @@ $(document).ready(function(){
 
   tables.each((_, table) => {
     if($(table).hasClass('table__small')) {
-      $(table).wrap("<div class='table-wrapper table-wrapper__small'></div>");
-    } else {
+      $(table).wrap("<div class='table-wrapper table-wrapper__small table-wrapper__versions'><div></div></div>");
+    } else if($(table).hasClass('supported_versions')) {
+      $(table).wrap("<div class='table-wrapper table-wrapper__versions'><div></div></div>");
+    }else {
       $(table).wrap("<div class='table-wrapper'></div>");
     }
   });

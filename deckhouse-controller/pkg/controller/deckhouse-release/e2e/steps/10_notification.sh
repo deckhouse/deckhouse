@@ -59,9 +59,9 @@ kubectl wait --for=jsonpath='{.metadata.annotations.release\.deckhouse\.io/notif
 kubectl wait --for=jsonpath='{.metadata.annotations.release\.deckhouse\.io/notification-time-shift}'=true deckhouserelease/v1.66.0
 
 # check notification webhook message
-raw=$(curl -s https://webhook.site/token/$token/request/latest | jq -r .)
-uuid=$(echo "$raw" | jq -r .uuid)
-content=$(echo "$raw" | jq -r .content)
+raw=$(curl -s https://webhook.site/token/$token/request/latest)
+uuid=$(jq -r .uuid <<< "${raw}")
+content=$(jq -r .content <<< "${raw}")
 
 if echo "$content" | jq -e '.subject == "Deckhouse" and .version == "1.66.0" and (.message | startswith("New Deckhouse Release 1.66.0 is available"))' > /dev/null; then
   echo "OK - webhook data exists"

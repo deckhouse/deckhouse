@@ -130,7 +130,7 @@ defaults:
       documentation_state: develop
       search_bage_enabled: true
       sidebar: code
-      sitemap_include: false    
+      sitemap_include: false
   - scope:
       path: "pages/virtualization-platform"
     values:
@@ -205,4 +205,3 @@ defaults:
     values:
       featureStatus: experimental
 timezone: Europe/Moscow
-

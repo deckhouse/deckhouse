@@ -264,9 +264,17 @@
     <div class="header header__product-menu">
       <div class="container">
         <div class="header__product-menu-logo">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
-             <use xlink:href="{{ productLogoURL }}"></use>
+          {%- if productName == "Code" %}
+          <svg width="20" height="20" viewBox="0 0 280 280" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M208.947 41.7573L250.705 0H0V250.757L41.8106 208.757L41.927 41.9269L208.947 41.7573Z" fill="#00003C"/>
+            <path d="M280 29.5309L238.447 71.2573L238.073 238.073L71.4473 238.088L29.5386 280H280V29.5309Z" fill="#00003C"/>
+            <path d="M145.855 179.993H105.855V99.9932H145.855C167.884 99.9932 185.855 117.964 185.855 139.993C185.855 162.022 167.884 179.993 145.855 179.993Z" fill="#0064FF"/>
           </svg>
+          {%- else %}
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <use xlink:href="{{ productLogoURL }}"></use>
+          </svg>
+          {%- endif %}
           <span>{{ productName }}</span>
         </div>
         <ul class="nav header__nav">
