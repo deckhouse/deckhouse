@@ -1,3 +1,26 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: upmeter
+properties:
+  namespace: d8-upmeter
+  releaseChannel: Stable
+  requirements:
+    bootstrapped: "true"
+  source: Embedded
+  subsystems:
+    - observability
+  version: v1.71.0
+  weight: 950
+status:
+  conditions:
+    - lastProbeTime: "2025-04-15T16:32:29Z"
+      lastTransitionTime: "2024-11-18T09:33:12Z"
+      message: turned off by bundle
+      reason: Bundle
+      status: "False"
+      type: IsReady
+  phase: Downloaded
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleSource
@@ -114,27 +137,3 @@ status:
   pullDuration: 0s
   size: 0
   transitionTime: "2024-05-03T20:55:49Z"
----
-apiVersion: deckhouse.io/v1alpha1
-kind: Module
-metadata:
-  name: upmeter
-properties:
-  namespace: d8-upmeter
-  releaseChannel: Stable
-  requirements:
-    bootstrapped: "true"
-  source: Embedded
-  subsystems:
-    - observability
-  version: v1.71.0
-  weight: 950
-status:
-  conditions:
-    - lastProbeTime: "2025-04-15T16:32:29Z"
-      lastTransitionTime: "2024-11-18T09:33:12Z"
-      message: turned off by bundle
-      reason: Bundle
-      status: "False"
-      type: IsReady
-  phase: Downloaded

@@ -1,4 +1,24 @@
 apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: parca
+properties:
+  namespace: d8-parca
+  releaseChannel: Stable
+  requirements:
+    bootstrapped: "true"
+  source: Embedded
+  version: v1.26.2
+  weight: 900
+status:
+  conditions:
+    - lastProbeTime: "2021-12-08T08:34:01Z"
+      lastTransitionTime: "2021-12-08T08:34:01Z"
+      status: "True"
+      type: IsReady
+  phase: CanRunHelm
+---
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   name: parca-1.26.2

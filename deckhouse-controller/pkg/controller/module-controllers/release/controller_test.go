@@ -493,7 +493,7 @@ type: Opaque
 		dependencyContainer:  dependency.NewDependencyContainer(),
 		log:                  logger,
 		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
-		moduleManager:        stubModulesManager{},
+		moduleManager:        stubModulesManager{client: suite.Suite.Client()},
 		delayTimer:           time.NewTimer(3 * time.Second),
 		metricStorage:        metricstorage.NewMetricStorage(context.Background(), "", true, logger),
 
@@ -629,7 +629,9 @@ func (suite *ReleaseControllerTestSuite) fetchResults() []byte {
 	return result.Bytes()
 }
 
-type stubModulesManager struct{}
+type stubModulesManager struct {
+	client client.Client
+}
 
 func (s stubModulesManager) AreModulesInited() bool {
 	return true
@@ -640,7 +642,11 @@ func (s stubModulesManager) DisableModuleHooks(_ string) {
 
 func (s stubModulesManager) GetModule(name string) *addonmodules.BasicModule {
 	bm, _ := addonmodules.NewBasicModule(name, "", 900, nil, []byte{}, []byte{}, addonmodules.WithLogger(log.NewNop()))
-	bm.SetPhase(addonmodules.CanRunHelm)
+	c := s.client
+	module := new(v1alpha1.Module)
+	if err := c.Get(context.TODO(), client.ObjectKey{Name: name}, module); err == nil {
+		bm.SetPhase(addonmodules.ModuleRunPhase(module.Status.Phase))
+	}
 	return bm
 }
 
