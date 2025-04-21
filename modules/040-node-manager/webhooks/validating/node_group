@@ -266,7 +266,7 @@ EOF
 
     nodeGroupNameWithChangedCRI="$(context::jq -r '.review.request.object.metadata.name')"
     nodes=$(context::jq -r '.snapshots.nodes_with_containerd_custom_conf // []')
-    cat $nodes > /tmp/nodes.txt
+    echo $nodes > /tmp/nodes.txt
     if [[ "$nodes" != "[]" ]]; then
       for node in $(jq -e -r '.[]' <<< "$nodes"); do
         nodeGroupNameFromNode=$(jq -e -r '.filterResult.labels["node.deckhouse.io/group"]' <<< "$node")
