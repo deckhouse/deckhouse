@@ -83,16 +83,16 @@ spec:
                       minimum: 1
                       type: integer
                     cpuFraction:
-                      default: 100
+                      default: 100%
                       description: |-
                         Fraction is a guaranteed share of CPU time that will be allocated to the VM.
                         Expressed as percentage.
                       enum:
-                        - 5
-                        - 10
-                        - 25
-                        - 50
-                        - 100
+                        - 5%
+                        - 10%
+                        - 25%
+                        - 50%
+                        - 100%
                       type: integer
                   required:
                     - cores
