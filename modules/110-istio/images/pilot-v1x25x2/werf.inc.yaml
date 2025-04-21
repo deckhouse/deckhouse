@@ -1,6 +1,6 @@
 ---
-{{- $istioVersion := "1.24.4" }}
-{{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioVersion)) }} {{- /* 1.24.4 -> v1x24x4 */}}
+{{- $istioVersion := "1.25.2" }}
+{{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioVersion)) }} {{- /* 1.25.2 -> v1x25x2 */}}
 ---
 # Based on https://github.com/istio/istio/blob/1.24.4/pilot/docker/Dockerfile.pilot
 image: {{ .ModuleName }}/{{ .ImageName }}
