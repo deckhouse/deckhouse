@@ -31,6 +31,7 @@ memory: 25Mi
   {{- $initContainers := $config.initContainers }}
   {{- $additionalPullSecrets := $config.additionalPullSecrets }}
   {{- $additionalCsiNodePodAnnotations := $config.additionalCsiNodePodAnnotations | default false }}
+  {{- $csiNodeHostNetwork := $config.csiNodeHostNetwork | default "true" }}
   {{- $kubernetesSemVer := semver $context.Values.global.discovery.kubernetesVersion }}
   {{- $driverRegistrarImageName := join "" (list "csiNodeDriverRegistrar" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
   {{- $driverRegistrarImage := include "helm_lib_module_common_image_no_fail" (list $context $driverRegistrarImageName) }}
@@ -126,8 +127,10 @@ spec:
       {{- include "helm_lib_priority_class" (tuple $context "system-node-critical") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple $context "any-node" "with-no-csi") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
-      hostNetwork: true
+      hostNetwork: {{ $csiNodeHostNetwork }}
+      {{- if eq $csiNodeHostNetwork "true" }}
       dnsPolicy: ClusterFirstWithHostNet
+      {{- end }}
       containers:
       - name: node-driver-registrar
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $context | nindent 8 }}
