@@ -334,7 +334,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			return fmt.Errorf("check if the '%s' module has a release: %w", moduleName, err)
 		}
 		if !exists || availableModule.Version == "" {
-			// if release does not exist, clear checksum to trigger meta downloading
+			// if release does not exist or the version is unset, clear checksum to trigger meta downloading
 			cachedChecksum = ""
 		}
 
@@ -384,10 +384,6 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 				return fmt.Errorf("ensure module release for the '%s' module: %w", moduleName, err)
 			}
 			availableModule.Checksum = meta.Checksum
-		}
-
-		// set module version
-		if meta.ModuleVersion != "" {
 			availableModule.Version = meta.ModuleVersion
 		}
 
