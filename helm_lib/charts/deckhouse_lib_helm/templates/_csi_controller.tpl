@@ -56,6 +56,7 @@ memory: 50Mi
   {{- $attacherWorkers := $config.attacherWorkers | default "10" }}
   {{- $resizerWorkers := $config.resizerWorkers | default "10" }}
   {{- $snapshotterWorkers := $config.snapshotterWorkers | default "10" }}
+  {{- $additionalCsiControllerPodAnnotations := $config.additionalCsiControllerPodAnnotations | default false }}
   {{- $additionalControllerEnvs := $config.additionalControllerEnvs }}
   {{- $additionalSyncerEnvs := $config.additionalSyncerEnvs }}
   {{- $additionalControllerArgs := $config.additionalControllerArgs }}
@@ -173,11 +174,7 @@ metadata:
   name: {{ $fullname }}
   namespace: d8-{{ $context.Chart.Name }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "csi-controller")) | nindent 2 }}
-
-  {{- if eq $context.Chart.Name "csi-nfs" }}
-  annotations:
-    pod-reloader.deckhouse.io/auto: "true"
-  {{- end }}
+ 
 spec:
   replicas: 1
   revisionHistoryLimit: 2
@@ -190,10 +187,15 @@ spec:
     metadata:
       labels:
         app: {{ $fullname }}
-    {{- if hasPrefix "cloud-provider-" $context.Chart.Name }}
+      {{- if or (hasPrefix "cloud-provider-" $context.Chart.Name) ($additionalCsiControllerPodAnnotations) }}
       annotations:
+      {{- if hasPrefix "cloud-provider-" $context.Chart.Name }}
         cloud-config-checksum: {{ include (print $context.Template.BasePath "/cloud-controller-manager/secret.yaml") $context | sha256sum }}
-    {{- end }}
+      {{- end }}
+      {{- if  }}
+        {{- $additionalCsiControllerPodAnnotations | toYaml | nindent 8 }}
+      {{- end }}
+      {{- end }}
     spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
@@ -216,6 +218,7 @@ spec:
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       {{- end }}
       serviceAccountName: csi
+      automountServiceAccountToken: true
       containers:
       - name: provisioner
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
@@ -477,6 +480,7 @@ metadata:
   name: csi
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | nindent 2 }}
+automountServiceAccountToken: false
 
 # ===========
 # provisioner
