@@ -147,8 +147,6 @@ import:
   - bin/cilium-envoy
   - bin/cilium-envoy-starter
   - lib/libcilium.so
-  owner: root
-  group: root
 - image: common/pause
   add: /pause
   to: /pause
