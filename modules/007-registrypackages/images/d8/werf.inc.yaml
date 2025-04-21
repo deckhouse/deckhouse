@@ -1,7 +1,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
-fromCacheVersion: "2025-04-21.08"
+fromCacheVersion: "2025-04-21.09"
 fromImage: common/src-artifact
 git:
 - add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
@@ -17,7 +17,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ $.Images.BASE_SCRATCH }}
-fromCacheVersion: "2025-04-21.08"
+fromCacheVersion: "2025-04-21.09"
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /
@@ -38,7 +38,7 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
-fromCacheVersion: "2025-04-21.08"
+fromCacheVersion: "2025-04-21.09"
 from: {{ $.Images.BASE_GOLANG_23_BULLSEYE }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
