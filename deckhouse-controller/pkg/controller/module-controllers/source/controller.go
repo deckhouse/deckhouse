@@ -386,6 +386,10 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			availableModule.Checksum = meta.Checksum
 			availableModule.Version = meta.ModuleVersion
 		}
+		// set module version
+		if meta.ModuleVersion != "" {
+			availableModule.Version = meta.ModuleVersion
+		}
 
 		availableModules = append(availableModules, availableModule)
 	}
