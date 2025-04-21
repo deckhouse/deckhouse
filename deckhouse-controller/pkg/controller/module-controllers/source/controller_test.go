@@ -245,7 +245,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
 			ManifestStub: manifestStub,
 			LayersStub: func() ([]crv1.Layer, error) {
-				return []crv1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "crv1.2.3"}`}}}, nil
+				return []crv1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "v1.2.3"}`}}}, nil
 			},
 			DigestStub: func() (crv1.Hash, error) {
 				return crv1.Hash{Algorithm: "sha256"}, nil
@@ -267,7 +267,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			return &crfake.FakeImage{
 				ManifestStub: manifestStub,
 				LayersStub: func() ([]crv1.Layer, error) {
-					return []crv1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "crv1.2.3"}`}}}, nil
+					return []crv1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "v1.2.3"}`}}}, nil
 				},
 				DigestStub: func() (crv1.Hash, error) {
 					return crv1.Hash{Algorithm: "sha256"}, nil
