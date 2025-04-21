@@ -333,7 +333,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		if err != nil {
 			return fmt.Errorf("check if the '%s' module has a release: %w", moduleName, err)
 		}
-		if !exists {
+		if !exists || availableModule.Version == "" {
 			// if release does not exist, clear checksum to trigger meta downloading
 			cachedChecksum = ""
 		}
