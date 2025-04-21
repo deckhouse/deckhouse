@@ -48,3 +48,7 @@ In the PR <https://github.com/cilium/cilium/pull/27984>, an error has been intro
 While we were previously satisfied with the older behavior, the agent is now unable to start due to this error.
 
 Please remove this change after `CES` becomes Stable. <https://github.com/cilium/cilium/issues/31904#issuecomment-2647858564>
+
+## 009-tshoot-envoy-tls.patch
+
+009-tshoot-envoy-tls.patch
