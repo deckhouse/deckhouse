@@ -131,10 +131,10 @@ spec:
       subresources:
         status: {}
       additionalPrinterColumns:
-        - name: Weight
-          jsonPath: .properties.weight
-          type: integer
-          description: Module _weight_ (priority).
+        - name: Stage
+          jsonPath: .properties.stage
+          type: string
+          description: Module stage
         - name: Release channel
           jsonPath: .properties.releaseChannel
           description: Release channel of the module.
