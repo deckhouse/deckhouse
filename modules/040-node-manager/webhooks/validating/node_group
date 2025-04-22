@@ -261,17 +261,16 @@ EOF
 
   # Forbid change CRI type if ng has nodes with custom containerd config
   if [[ "${operationType}" == "UPDATE" ]]; then
-    cat "$BINDING_CONTEXT_PATH" > /tmp/file2.txt
+    newCriType="$(context::jq -r '.review.request.object.spec.cri.type')"
+    oldCriType="$(context::jq -r '.review.request.oldObject.spec.cri.type')"
 
-    nodeGroupNameWithChangedCRI="$(context::jq -r '.review.request.object.metadata.name')"
-    nodes=$(context::jq -r '.snapshots.nodes_with_containerd_custom_conf // []')
-    echo $nodes > /tmp/nodes.txt
-    if [[ "$nodes" != "[]" ]]; then
-      forbidUpdateNodes="$(context::jq -r --arg nodeGroup "${nodeGroupNameWithChangedCRI}" '.snapshots.nodes_with_containerd_custom_conf.[]? | select(.filterResult.labels["node.deckhouse.io/group"] == $nodeGroup) | .filterResult.nodeName' )"
+    if [[ "${oldCriType}" != "${newCriType}" ]]; then
+      nodeGroupNameWithChangedCRI="$(context::jq -r '.review.request.object.metadata.name')"
+      nodesForbidingChanges="$(context::jq -r --arg nodeGroup "${nodeGroupNameWithChangedCRI}" '.snapshots.nodes_with_containerd_custom_conf.[]? | select(.filterResult.labels["node.deckhouse.io/group"] == $nodeGroup) | .filterResult.nodeName' )"
       if [[ $forbidUpdateNodes != "" ]]; then
         cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"CRI cannot be changed because some nodes are using custom configuration: $forbidUpdateNodes"}
-EOF
+  {"allowed":false, "message":"CRI cannot be changed because some nodes are using custom configuration: ${forbidUpdateNodes}"}
+  EOF
         return 0
       fi
     fi
