@@ -81,6 +81,21 @@ kubernetes:
     nameSelector:
       matchNames: ["global"]
     jqFilter: '.spec.settings // ""'
+  - name: nodes_with_containerd_custom_conf
+    apiVersion: v1
+    kind: nodes
+    group: main
+    executeHookOnEvent: []
+    executeHookOnSynchronization: false
+    keepFullObjectsInMemory: false
+    labelSelector:
+      matchLabels:
+        node.deckhouse.io/containerd: custom-config
+    jqFilter: |
+      {
+        "nodeName": .metadata.name,
+        "labels": .metadata.labels
+      }
 kubernetesValidating:
 - name: nodegroup-policy.deckhouse.io
   group: main
@@ -127,6 +142,7 @@ EOF
   ngZones=$(context::jq -r '.review.request.object.spec.cloudInstances.zones // []')
 
   if [[ "$allowedZones" != "[]" ]]; then
+    # if [[ "$ngZones" != "[]" ]]; then
     for zone in $(jq -e -r '.[]' <<< "$ngZones"); do
       if ! grep -qE "^$zone\$" <<< "$allowedZones"; then
         cat <<EOF > "$VALIDATING_RESPONSE_PATH"
@@ -242,6 +258,24 @@ EOF
 EOF
     return 0
   fi
+
+  # Forbid change CRI type if ng has nodes with custom containerd config
+  if [[ "${operationType}" == "UPDATE" ]]; then
+    newCriType="$(context::jq -r '.review.request.object.spec.cri.type')"
+    oldCriType="$(context::jq -r '.review.request.oldObject.spec.cri.type')"
+
+    if [[ "${oldCriType}" != "${newCriType}" ]]; then
+      nodeGroupNameWithChangedCRI="$(context::jq -r '.review.request.object.metadata.name')"
+      nodesForbidingChanges="$(context::jq -r --arg nodeGroup "${nodeGroupNameWithChangedCRI}" '.snapshots.nodes_with_containerd_custom_conf.[]? | select(.filterResult.labels["node.deckhouse.io/group"] == $nodeGroup) | .filterResult.nodeName' )"
+      if [[ $nodesForbidingChanges != "" ]]; then
+        cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+  {"allowed":false, "message":"CRI cannot be changed because some nodes are using custom configuration: ${nodesForbidingChanges}"}
+EOF
+        return 0
+      fi
+    fi
+  fi
+
 
   cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":true}

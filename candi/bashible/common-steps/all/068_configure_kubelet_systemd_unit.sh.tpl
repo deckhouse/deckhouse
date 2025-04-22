@@ -22,7 +22,7 @@ discovered_node_ip="$(</var/lib/bashible/discovered-node-ip)"
 
 cri_config=""
 
-{{- if eq .cri "Containerd" }}
+{{- if or ( eq .cri "Containerd") ( eq .crt "ContainerdV2") }}
 cri_config="--container-runtime=remote --container-runtime-endpoint=unix:/var/run/containerd/containerd.sock"
 {{- else if eq .cri "NotManaged" }}
   {{- if (and .nodeGroup.cri.notManaged .nodeGroup.cri.notManaged.criSocketPath) }}
