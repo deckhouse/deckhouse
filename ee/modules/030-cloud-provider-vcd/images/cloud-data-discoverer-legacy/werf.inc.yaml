@@ -19,15 +19,21 @@ git:
     excludePaths:
       - "**/*.md"
       - "**/*.yaml"
+      - go.mod
+      - go.sum
     stageDependencies:
       install:
-        - go.mod
-        - go.sum
         - "**/*.go"
   - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src/go.mod
     to: /src/go.mod
+    stageDependencies:
+      install:
+        - go.mod
   - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src/go.sum
     to: /src/go.sum
+    stageDependencies:
+      install:
+        - go.sum
   - add: /go_lib/cloud-data
     to: /src/go_lib/cloud-data
     excludePaths:
