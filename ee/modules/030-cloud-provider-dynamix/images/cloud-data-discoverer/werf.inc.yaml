@@ -16,8 +16,24 @@ fromImage: common/src-artifact
 git:
 - add: /go_lib/cloud-data
   to: /deckhouse/go_lib/cloud-data
+  excludePaths:
+  - "**/*.md"
+  - "**/*.yaml"
+  stageDependencies:
+    install:
+    - go.mod
+    - go.sum
+    - "**/*.go"
 - add: /pkg/log
   to: /deckhouse/pkg/log
+  excludePaths:
+  - "**/*.md"
+  - "**/*.yaml"
+  stageDependencies:
+    install:
+    - go.mod
+    - go.sum
+    - "**/*.go"
 shell:
   install:
   - export VERSION="v0.5.0"
@@ -53,4 +69,3 @@ shell:
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /discoverer
     - chown 64535:64535 /discoverer
     - chmod 0755 /discoverer
----
