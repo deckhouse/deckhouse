@@ -1,6 +1,5 @@
 name: ceph-csi
 weight: 31
-stage: Deprecated
 subsystems:
   - storage
   - infrastructure
