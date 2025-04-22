@@ -270,7 +270,7 @@ EOF
       if [[ $nodesForbidingChanges != "" ]]; then
         cat <<EOF > "$VALIDATING_RESPONSE_PATH"
   {"allowed":false, "message":"CRI cannot be changed because some nodes are using custom configuration: ${nodesForbidingChanges}"}
-  EOF
+EOF
         return 0
       fi
     fi
