@@ -62,7 +62,7 @@ spec:
       annotations:
         kubectl.kubernetes.io/default-exec-container: cloud-data-discoverer
         kubectl.kubernetes.io/default-logs-container: cloud-data-discoverer
-        checksum/config: {{ printf "%s%s"  (include (print $.Template.BasePath "/secret.yaml") . | toString) | sha256sum }}
+        checksum/config: {{ printf "%s%s"  (include (print $.Template.BasePath "/cloud-controller-manager/secret.yaml") . | toString) | sha256sum }}
     spec:
       imagePullSecrets:
       - name: deckhouse-registry

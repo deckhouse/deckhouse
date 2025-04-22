@@ -35,7 +35,7 @@ metadata:
   namespace: d8-cloud-provider-dvp
   {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager")) | nindent 2 }}
   annotations:
-    checksum/config: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+    checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manager/secret.yaml") . | sha256sum }}
 spec:
   maxUnavailable: 1
   selector:
@@ -59,7 +59,7 @@ spec:
       labels:
         app: cloud-controller-manager
       annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manager/secret.yaml") . | sha256sum }}
     spec:
       imagePullSecrets:
       - name: deckhouse-registry
