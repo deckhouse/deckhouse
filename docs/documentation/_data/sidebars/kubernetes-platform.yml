@@ -303,29 +303,41 @@ entries:
                     ru: Обзор
                   url: /admin/storage-overview.html
             - title:
-                en: Platform security
-                ru: TODO Безопасность платформы
+                en: Security
+                ru: Безопасность
               folders:
                 - title:
                     en: Overview
                     ru: Обзор
-                  url: /admin/security-overview.html
-                - title:
-                    en: SIEM and security software
-                    ru: SIEM и ПО безопасности
-                  url: /admin/siem-and-security-software.html
-                - title:
-                    en: Security policies
-                    ru: Политики безопасности
-                  url: /admin/security-policies.html
+                  url: /admin/security/overview.html
                 - title:
                     en: Security events
                     ru: События безопасности
-                  url: /admin/security-events.html
+                  folders:
+                    - title:
+                        en: Kubernetes API event audit
+                        ru: Аудит событий API Kubernetes
+                      url: /admin/security/events/kubernetes-api-audit.html
+                    - title:
+                        en: Security event audit
+                        ru: Аудит событий безопасности
+                      url: /admin/security/events/runtime-audit.html
+                - title:
+                    en: Security policies
+                    ru: Политики безопасности
+                  url: /admin/security/policies.html
                 - title:
                     en: Vulnerability scanning
-                    ru: Сканирование на уязвимости (operator-trivy)
-                  url: /admin/vulnerability-scanning.html
+                    ru: Сканирование на уязвимости
+                  url: /admin/security/scanning.html
+                - title:
+                    en: Certificate management
+                    ru: Управление сертификатами
+                  url: /admin/security/certificates.html
+                - title:
+                    en: Integration with KUMA and antivirus software
+                    ru: Интеграция с KUMA и антивирусным ПО
+                  url: /admin/security/kuma-and-av-software.html
             - title:
                 en: Platform monitoring
                 ru: Мониторинг платформы
@@ -612,6 +624,18 @@ entries:
             en: Multitenancy
             ru: Мультитенантность
           url: /architecture/multitenancy.html
+        - title:
+            en: Security
+            ru: Безопасность
+          folders:
+            - title:
+                en: Integrity control
+                ru: Контроль целостности
+              url: /architecture/security/integrity-control.html
+            - title:
+                en: Architecture of security event audit
+                ru: Архитектура аудита событий безопасности
+              url: /architecture/security/runtime-audit.html
         - title:
             en: Release notes
             ru: История изменений
