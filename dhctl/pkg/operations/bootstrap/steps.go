@@ -143,15 +143,15 @@ func checkBashibleAlreadyRun(ctx context.Context, nodeInterface node.Interface) 
 		cmd := nodeInterface.Command("cat", DHCTLEndBootstrapBashiblePipeline)
 		cmd.Sudo(ctx)
 		cmd.WithTimeout(10 * time.Second)
-		if err := cmd.Run(ctx); err != nil {
+		stdout, stderr, err := cmd.Output(ctx)
+		if err != nil {
 			isReady = false
 			return err
 		}
 
-		stdout := string(cmd.StdoutBytes())
-		log.DebugF("cat %s stdout: '%s'\n", DHCTLEndBootstrapBashiblePipeline, stdout)
+		log.DebugF("cat %s stdout: '%s'; stderr: '%s'\n", DHCTLEndBootstrapBashiblePipeline, stdout, stderr)
 
-		isReady = strings.TrimSpace(stdout) == "OK"
+		isReady = strings.TrimSpace(string(stdout)) == "OK"
 
 		return nil
 	})
@@ -422,12 +422,7 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 
 	log.DebugF("Got cluster domain: %s", clusterDomain)
 	log.DebugLn("Starting registry packages proxy")
-
 	// we need clusterDomain to generate proper certificate for packages proxy
-	err = StartRegistryPackagesProxy(ctx, cfg.Registry, clusterDomain)
-	if err != nil {
-		return fmt.Errorf("failed to start registry packages proxy: %v", err)
-	}
 
 	if err := CheckDHCTLDependencies(ctx, nodeInterface); err != nil {
 		return err
@@ -483,6 +478,31 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 		return err
 	}
 
+	ready := false
+
+	err = retry.NewLoop("Checking bashible already ran", 30, 10*time.Second).RunContext(ctx, func() error {
+		log.DebugLn("Check bundle routine start")
+		var err error
+
+		ready, err = checkBashibleAlreadyRun(ctx, nodeInterface)
+
+		return err
+	})
+
+	if err != nil {
+		return err
+	}
+
+	if ready {
+		log.Success("Bashible already run! Skip bashible install\n\n")
+		return nil
+	}
+
+	err = StartRegistryPackagesProxy(ctx, cfg.Registry, clusterDomain)
+	if err != nil {
+		return fmt.Errorf("failed to start registry packages proxy: %v", err)
+	}
+
 	if wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper); ok {
 		cleanUpTunnel, err := setupRPPTunnel(ctx, wrapper.Client())
 		if err != nil {
@@ -510,16 +530,7 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 		RunContext(ctx, func() error {
 			// we do not need to restart tunnel because we have HealthMonitor
 
-			log.DebugLn("Check bundle routine start")
-			ready, err := checkBashibleAlreadyRun(ctx, nodeInterface)
-			if err != nil {
-				return err
-			}
-
-			if ready {
-				log.Success("Bashible already run!\n")
-				return nil
-			}
+			log.DebugLn("Stop bashible if need")
 
 			if err := cleanupPreviousBashibleRunIfNeed(ctx, nodeInterface); err != nil {
 				return err
