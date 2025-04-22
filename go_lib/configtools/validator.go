@@ -26,6 +26,7 @@ import (
 	"github.com/flant/addon-operator/pkg/values/validation"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/configtools/celrules"
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 )
 
@@ -171,9 +172,9 @@ func (v *Validator) validateSettings(configName string, configSettings map[strin
 
 	// Instantiate defaults from the OpenAPI schema.
 	defaultSettings := make(map[string]interface{})
-	s := schemaStorage.Schemas[validation.ConfigValuesSchema]
-	if s != nil {
-		validation.ApplyDefaults(defaultSettings, s)
+	schema := schemaStorage.Schemas[validation.ConfigValuesSchema]
+	if schema != nil {
+		validation.ApplyDefaults(defaultSettings, schema)
 	}
 
 	// Merge defaults with passed settings as addon-operator will do.
@@ -181,6 +182,13 @@ func (v *Validator) validateSettings(configName string, configSettings map[strin
 		utils.Values{valuesKey: defaultSettings},
 		utils.Values{valuesKey: configSettings},
 	)
+
+	// Validate config settings against x-deckhouse-validation rules.
+	if schema != nil {
+		if err := celrules.Validate(schema, values); err != nil {
+			return fmt.Errorf("validate the '%s' config: %w", configName, err)
+		}
+	}
 
 	return schemaStorage.ValidateConfigValues(valuesKey, values)
 }
