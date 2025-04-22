@@ -627,7 +627,7 @@ d8 backup cluster-config /backup/cluster-config-2025-04-21.tar
 | Пространство имён   | Объект     | Название                                           |
 |---------------------|------------|----------------------------------------------------|
 | `d8-system`         | Secret     | `d8-cluster-terraform-state`                      |
-|                     |            | <span title="¹ Строка интерпретируется как регулярное выражение и охватывает все секреты с именем, начинающимся на d8-node-terraform-state-."><code style="color:#d63384">$regexp:^d8-node-terraform-state-(.*)$</code></span> |
+|                     |            | <span title="Строка интерпретируется как регулярное выражение и охватывает все секреты с именем, начинающимся на d8-node-terraform-state-."><code style="color:#d63384">$regexp:^d8-node-terraform-state-(.*)$</code></span> |
 |                     |            | `deckhouse-registry`                              |
 |                     | ConfigMap  | `d8-deckhouse-version-info`                       |
 | `kube-system`       | ConfigMap  | `d8-cluster-is-bootstraped`                       |
