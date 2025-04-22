@@ -30,7 +30,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
-	ctrl "github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks"
+	"github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -59,7 +59,7 @@ func kubernetesVersionHandler(mm moduleManager) http.Handler {
 		}
 
 		if clusterConf.KubernetesVersion == "Automatic" {
-			clusterConf.KubernetesVersion = ctrl.DefaultKubernetesVersion
+			clusterConf.KubernetesVersion = hooks.DefaultKubernetesVersion
 		}
 
 		if moduleName, err := kubernetesversion.Instance().ValidateBaseVersion(clusterConf.KubernetesVersion); err != nil {
