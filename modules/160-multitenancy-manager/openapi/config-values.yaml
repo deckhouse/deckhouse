@@ -14,7 +14,7 @@ properties:
 
       By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](../../deckhouse-configure-global.html#parameters) to learn more about the HA mode for modules.
 
-x-deckhouse-validation:
-  - expression: "!(has(properties.allowNamespacesWithoutProjects) && properties.allowNamespacesWithoutProjects == false)"
+x-deckhouse-validations:
+  - expression: "!has(self.allowNamespacesWithoutProjects) || self.allowNamespacesWithoutProjects == true"
     message: |
       The `allowNamespacesWithoutProjects` parameter should be enabled.

@@ -22,7 +22,7 @@ import (
 	"testing"
 
 	"github.com/flant/addon-operator/pkg/kube_config_manager/config"
-	"github.com/flant/addon-operator/pkg/module_manager"
+	modulemanager "github.com/flant/addon-operator/pkg/module_manager"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/yaml"
 
@@ -253,6 +253,22 @@ spec:
 `,
 			expectInvalid,
 		},
+		{
+			"cel rule validation failed",
+			`apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: flant-integration
+spec:
+  version: 1
+  enabled: true
+  settings:
+     auxiliaryCluster: false
+     kubeall:
+       host: ''
+`,
+			expectInvalid,
+		},
 	}
 
 	for _, tt := range tests {
@@ -260,29 +276,25 @@ spec:
 			g := NewWithT(t)
 
 			const magic = 10
-			var kubeConfigManager = NewKubeConfigManagerMock(t).KubeConfigEventChMock.
-				Return(make(chan config.KubeConfigEvent, magic))
+			var kubeConfigManager = NewKubeConfigManagerMock(t).KubeConfigEventChMock.Return(make(chan config.KubeConfigEvent, magic))
 
-			mmc := &module_manager.ModuleManagerConfig{
-				DirectoryConfig: module_manager.DirectoryConfig{
+			conf := &modulemanager.ModuleManagerConfig{
+				DirectoryConfig: modulemanager.DirectoryConfig{
 					ModulesDir:     "testdata/validator",
 					GlobalHooksDir: "testdata/validator/global",
 					TempDir:        "testdata",
 				},
-				Dependencies: module_manager.ModuleManagerDependencies{
+				Dependencies: modulemanager.ModuleManagerDependencies{
 					KubeConfigManager: kubeConfigManager,
 				},
 			}
-			mm := module_manager.NewModuleManager(context.Background(), mmc, log.NewNop())
+			mm := modulemanager.NewModuleManager(context.Background(), conf, log.NewNop())
+			g.Expect(mm.Init(log.NewNop())).ShouldNot(HaveOccurred(), "should init module manager")
 
-			err := mm.Init(log.NewNop())
-			g.Expect(err).ShouldNot(HaveOccurred(), "should init module manager")
-
-			v := NewValidator(mm)
 			cfg, err := modCfgFromYAML(tt.manifest)
 			g.Expect(err).ShouldNot(HaveOccurred(), "should parse manifest: %s", tt.manifest)
 
-			res := v.Validate(cfg)
+			res := NewValidator(mm).Validate(cfg)
 
 			switch tt.expect {
 			case expectValid:

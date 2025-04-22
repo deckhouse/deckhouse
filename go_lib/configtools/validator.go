@@ -185,8 +185,12 @@ func (v *Validator) validateSettings(configName string, configSettings map[strin
 
 	// Validate config settings against x-deckhouse-validation rules.
 	if schema != nil {
-		if err := celrules.Validate(schema, values); err != nil {
-			return fmt.Errorf("validate the '%s' config: %w", configName, err)
+		if val, ok := values[valuesKey]; ok {
+			if modValues, ok := val.(map[string]interface{}); ok {
+				if err := celrules.Validate(schema, modValues); err != nil {
+					return fmt.Errorf("validate the '%s' config: %w", configName, err)
+				}
+			}
 		}
 	}
 

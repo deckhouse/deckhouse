@@ -17,7 +17,6 @@ properties:
       Whether a "package" has been purchased.
   auxiliaryCluster:
     type: boolean
-    default: false
     description: |
       This cluster is auxiliary.
   clusterType:
@@ -109,3 +108,8 @@ properties:
         default: ""
         description: |
           Which `context` to use from the specified `kubeconfig`.
+
+x-deckhouse-validations:
+  - expression: "!has(self.auxiliaryCluster) || self.auxiliaryCluster == true"
+    message: |
+      The `auxiliaryCluster` parameter should be enabled.
