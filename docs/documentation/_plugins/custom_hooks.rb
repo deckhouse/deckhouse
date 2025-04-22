@@ -1,5 +1,20 @@
 require 'json'
 
+def doc_links_for_module(moduleName)
+    data = {
+      'overview' => {
+          'internal' => {
+            'en' => "/en/platform/modules/%s/" % moduleName,
+            'ru' => "/ru/platform/modules/%s/" % moduleName
+          },
+          'external' => {
+            'en' => "/products/kubernetes-platform/documentation/v1/modules/%s/" % moduleName,
+            'ru' => "/products/kubernetes-platform/documentation/v1/modules/%s/" % moduleName
+          }
+        },
+      'crds' => []
+    }
+end
 
 # Inserts the module-editions.liquid block into the module pages content.
 # The block is inserted at the beginning of the page's content if the page content is not empty.
@@ -100,6 +115,8 @@ Jekyll::Hooks.register :site, :pre_render do |site|
     editions = editions | moduleData['editionsWithRestrictions'] if moduleData.has_key?("editionsWithRestrictions")
     puts "Module #{moduleName} editions: #{editions}"
     site.data['modules']['all'][moduleName]['editions'] = editions
+
+    site.data['modules']['all'][moduleName]['docs'] = doc_links_for_module(moduleName)
   end
 
   # Exclude custom resource and module setting files from the search index by setting the 'searchable' parameter to false.
