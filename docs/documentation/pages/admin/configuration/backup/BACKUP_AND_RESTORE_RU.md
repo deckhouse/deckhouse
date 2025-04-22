@@ -161,7 +161,7 @@ lang: ru
 
 - Путь до резервного снимка (snapshot) etcd. Укажите в скрипте корректное расположение файла `etcd-backup.snapshot`.
 - Директория для выгружаемых JSON-файлов. Определите, куда именно будут сохраняться выгруженные манифесты объектов кластера.
-- Фильтр отбора объектов (grep). При необходимости задайте строку для фильтрации путей в etcd, чтобы выгрузить лишь нужные ресурсы, например по названию пространства имён или типу ресурса.
+- Фильтр отбора объектов (`grep`). При необходимости задайте строку для фильтрации путей в etcd, чтобы выгрузить лишь нужные ресурсы, например по названию пространства имён или типу ресурса.
 
 {% offtopic title="Скрипт выгрузки объектов" %}
 ```shell
@@ -462,7 +462,7 @@ kubectl delete po etcd-restore --force
        --data-dir=/var/lib/etcd
      ```
 
-   - Верните манифест etcd на место, чтобы kubelet снова запустил pod:
+   - Верните манифест etcd на место, чтобы kubelet снова запустил под:
 
      ```shell
      mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
@@ -647,12 +647,64 @@ d8 backup cluster-config /backup/cluster-config-2025-04-21.tar
 
 ### Выгрузка логов из Loki
 
-Команда `d8 backup loki` предназначена для выгрузки логов из встроенного Loki. Это не полноценныая резервная копия, а лишь диагностическая выгрузка: полученные данные нельзя восстановить обратно в Loki.
+Команда `d8 backup loki` предназначена для выгрузки логов из встроенного Loki. Это не полноценная резервная копия, а лишь диагностическая выгрузка: полученные данные нельзя восстановить обратно в Loki.
+
+Для успешной выгрузки `d8` обращается к Loki API от имени ServiceAccount `loki` в пространстве имён `d8-monitoring`, используя секрет с токеном.
+
+ServiceAccount `loki` создаётся автоматически с версии Deckhouse v1.69.0. Однако для работы команды `d8 backup loki` необходимо вручную создать секрет и назначить Role и RoleBinding, если они ещё не заданы.
+
+Примените манифесты перед запуском `d8 backup loki`, чтобы команда корректно получала токен и могла обращаться к Loki API. 
+
+Пример манифестов:
+
+```yaml
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: loki-api-token
+  namespace: d8-monitoring
+  annotations:
+    kubernetes.io/service-account.name: loki
+type: kubernetes.io/service-account-token
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: access-to-loki-from-d8
+  namespace: d8-monitoring
+rules:
+  - apiGroups: ["apps"]
+    resources:
+      - "statefulsets/http"
+    resourceNames: ["loki"]
+    verbs: ["create", "get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: access-to-loki-from-d8
+  namespace: d8-monitoring
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: access-to-loki-from-d8
+subjects:
+  - kind: ServiceAccount
+    name: loki
+    namespace: d8-monitoring
+```
 
 Для создания резервной копии выполните команду:
 
 ```console
 d8 backup loki [флаги]
+```
+
+Пример:
+
+```console
+d8 backup loki --days 1 > ./loki.log
 ```
 
 Флаги:
