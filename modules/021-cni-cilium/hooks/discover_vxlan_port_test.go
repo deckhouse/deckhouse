@@ -27,7 +27,7 @@ import (
 )
 
 var _ = Describe("Modules :: cni-cilium :: hooks :: discover_vxlan_port ::", func() {
-	f := HookExecutionConfigInit(`{"cniCilium":{"internal":{"mode": "VXLAN"}}}`, "")
+	f := HookExecutionConfigInit(`{"cniCilium":{"internal":{}}}`, "")
 
 	Context("New cluster :: No ConfigMap :: Virtualization Off :: Nesting level is not set", func() {
 		BeforeEach(func() {

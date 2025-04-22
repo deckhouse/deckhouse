@@ -49,7 +49,6 @@ data:
   {{- if eq .Values.cniCilium.internal.mode "VXLAN" }}
   tunnel-protocol: "vxlan"
   routing-mode: "tunnel"
-  tunnel-port: {{ .Values.cniCilium.internal.tunnelPortVXLAN | quote }}
 
   {{- else if eq .Values.cniCilium.internal.mode "DirectWithNodeRoutes" }}
   routing-mode: "native"
@@ -61,6 +60,8 @@ data:
   {{- else }}
     {{- fail (printf "unknown mode %s" .Values.cniCilium.internal.mode) }}
   {{- end }}
+
+  tunnel-port: {{ .Values.cniCilium.internal.tunnelPortVXLAN | quote }}
 
   {{- if has "virtualization" .Values.global.enabledModules }}
   enable-ip-masq-agent: "true"
