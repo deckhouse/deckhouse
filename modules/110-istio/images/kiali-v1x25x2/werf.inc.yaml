@@ -3,7 +3,7 @@
 {{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioVersion)) }} {{- /* 1.25.2 -> v1x25x2 */}}
 {{- $kialiVersion := "v2.7.1" }}
 ---
-# Based on https://github.com/kiali/kiali/blob/v2.1.1/deploy/docker/Dockerfile-distroless
+# Based on https://github.com/kiali/kiali/blob/v2.7.1/deploy/docker/Dockerfile-distroless
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/alt-p11
 import:
