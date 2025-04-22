@@ -21,7 +21,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -35,6 +35,7 @@ var (
 	SSHBastionHost       = ""
 	SSHBastionPort       = ""
 	SSHBastionUser       = os.Getenv("USER")
+	SSHBastionPass       = ""
 	SSHUser              = os.Getenv("USER")
 	SSHHosts             = make([]session.Host, 0)
 	sshHostsRaw          = make([]string, 0)
@@ -43,6 +44,10 @@ var (
 
 	AskBecomePass = false
 	BecomePass    = ""
+
+	AskBastionPass = false
+
+	LegacyMode = false
 )
 
 type connectionConfigParser interface {
@@ -79,6 +84,7 @@ func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
 		Envar(configEnvName("SSH_HOSTS")).
 		StringsVar(&sshHostsRaw)
 	cmd.Flag("ssh-port", "SSH destination port").
+		Default("22").
 		IsSetByUser(&sshFlagSetByUser).
 		Envar(configEnvName("SSH_PORT")).
 		StringVar(&SSHPort)
@@ -89,6 +95,12 @@ func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
 	cmd.Flag("connection-config", "SSH connection config file path").
 		Envar(configEnvName("CONNECTION_CONFIG")).
 		StringVar(&ConnectionConfigPath)
+	cmd.Flag("ssh-legacy-mode", "Switch to legacy SSH mode").
+		Envar(configEnvName("SSH_LEGACY_MODE")).
+		BoolVar(&LegacyMode)
+	cmd.Flag("ask-bastion-pass", "Ask for bastion password before the installation process.").
+		Envar(configEnvName("ASK_BASTION_PASS")).
+		BoolVar(&AskBastionPass)
 
 	cmd.PreAction(func(c *kingpin.ParseContext) error {
 		if !sshBastionUserFlagSetByUser && sshUserFlagSetByUser {
@@ -142,7 +154,10 @@ func ParseSSHPrivateKeyPaths(pathSets []string) ([]string, error) {
 			if err != nil {
 				return nil, fmt.Errorf("get absolute path for '%s': %v", k, err)
 			}
-			res = append(res, keyPath)
+
+			if _, err := os.Stat(keyPath); err == nil {
+				res = append(res, keyPath)
+			}
 		}
 	}
 	return res, nil
