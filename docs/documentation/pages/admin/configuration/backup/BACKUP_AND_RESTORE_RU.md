@@ -543,13 +543,26 @@ Deckhouse CLI (`d8`) предоставляет команду `backup` для �
 Для создания резервной копии выполните команду:
 
 ```console
-d8 backup etcd <путь-до-резервной-копии>
+d8 backup etcd <путь-до-снапшота> [флаги]
 ```
+
+Флаги:
+
+- `-p`, `--etcd-pod string` — имя пода etcd, с которого необходимо снять снимок;
+- `-h`, `--help` — показать справку по команде etcd;
+- `--verbose` — подробный (расширенный) вывод логов.
 
 Пример:
 
 ```console
-d8 backup etcd /backup/etcd-2025-04-21.tar
+d8 backup etcd mybackup.snapshot
+```
+
+Пример вывода команды:
+
+```console
+2025/04/22 08:38:58 Trying to snapshot etcd-sandbox-master-0
+2025/04/22 08:39:01 Snapshot successfully taken from etcd-sandbox-master-0
 ```
 
 #### Автоматическое резервное копирование etcd
@@ -571,7 +584,7 @@ mv etcd-backup.tar.gz /var/lib/etcd/etcd-backup.tar.gz
 
 ### Резервное копирование конфигурации кластера
 
-Команда `d8 backup cluster-config` создаёт архив с важными объектами кластера: секретами, ConfigMap'ами и другими ресурсами, включёнными в whitelist.
+Команда `d8 backup cluster-config` создаёт архив с набором ключевых ресурсов, относящихся к конфигурации кластера. Это не полная резервная копия всех объектов, а определённый whitelist.
 
 Для создания резервной копии выполните команду:
 
@@ -585,37 +598,52 @@ d8 backup cluster-config <путь-до-резервной-копии>
 d8 backup cluster-config /backup/cluster-config-2025-04-21.tar
 ```
 
-В архив включаются:
+В архив включаются только те объекты, которые соответствуют следующим критериям:
 
-- Секреты и ConfigMap'ы из пространств имён, начинающихся с `d8-`и `kube-`, если они указаны в whitelist'е';
-- Все объекты CustomResource (CR), если для соответствующего CRD установлена аннтоация `backup.deckhouse.io/cluster-config=true`;
-- ClusterRoles и ClusterRoleBindings, за исключением тех, у которых установлен лейбл `heritage=deckhouse`;
-- StorageClass'ы с лейблом `heritage=deckhouse`.
+- Объекты CustomResource, чьи CRD помечены аннотацией:
+
+  ```console
+  backup.deckhouse.io/cluster-config=true
+  ```
+
+- StorageClass'ы, имеющие лейбл:
+
+  ```console
+  heritage=deckhouse
+  ```
+
+- Секреты и ConfigMap'ы, из пространств имён, начинающихся на `d8-` или `kube-`, если они явно перечислены в файле whitelist.
+
+- Роли и биндинги уровня кластера (ClusterRole и ClusterRoleBinding), если они не помечены меткой:
+
+  ```console
+  heritage=deckhouse
+  ```
 
 > Резервная копия включает только объекты CR, но не сами определения CRD. Для полного восстановления кластера CRD должны быть заранее установлены (например, из манифестов модулей Deckhouse).
 
 Пример содержимого whitelist:
 
-| Пространство имён        | Объект | Название                             |
-|------------------|-------------|-----------------------------------------------|
-| `d8-system`      | Secret      | `d8-cluster-terraform-state`                  |
-|                  |             | `$regexp:^d8-node-terraform-state-(.*)$`      |
-|                  |             | `deckhouse-registry`                          |
-|                  | ConfigMap   | `d8-deckhouse-version-info`                   |
-| `kube-system`    | ConfigMap   | `d8-cluster-is-bootstraped`                   |
-|                  |             | `d8-cluster-uuid`                             |
-|                  |             | `extension-apiserver-authentication`          |
-|                  | Secret      | `d8-cloud-provider-discovery-data`            |
-|                  |             | `d8-cluster-configuration`                    |
-|                  |             | `d8-cni-configuration`                        |
-|                  |             | `d8-control-plane-manager-config`             |
-|                  |             | `d8-node-manager-cloud-provider`              |
-|                  |             | `d8-pki`                                      |
-|                  |             | `d8-provider-cluster-configuration`           |
-|                  |             | `d8-static-cluster-configuration`             |
-|                  |             | `d8-secret-encryption-key`                   |
-| `d8-cert-manager`| Secret      | `cert-manager-letsencrypt-private-key`        |
-|                  |             | `selfsigned-ca-key-pair`                      |
+| Пространство имён   | Объект     | Название                                           |
+|---------------------|------------|----------------------------------------------------|
+| `d8-system`         | Secret     | `d8-cluster-terraform-state`                      |
+|                     |            | <span title="¹ Строка интерпретируется как регулярное выражение и охватывает все Secret с именем, начинающимся на d8-node-terraform-state-."><code style="color:#d63384">$regexp:^d8-node-terraform-state-(.*)$</code></span> |
+|                     |            | `deckhouse-registry`                              |
+|                     | ConfigMap  | `d8-deckhouse-version-info`                       |
+| `kube-system`       | ConfigMap  | `d8-cluster-is-bootstraped`                       |
+|                     |            | `d8-cluster-uuid`                                 |
+|                     |            | `extension-apiserver-authentication`              |
+|                     | Secret     | `d8-cloud-provider-discovery-data`                |
+|                     |            | `d8-cluster-configuration`                        |
+|                     |            | `d8-cni-configuration`                            |
+|                     |            | `d8-control-plane-manager-config`                 |
+|                     |            | `d8-node-manager-cloud-provider`                  |
+|                     |            | `d8-pki`                                          |
+|                     |            | `d8-provider-cluster-configuration`               |
+|                     |            | `d8-static-cluster-configuration`                 |
+|                     |            | `d8-secret-encryption-key`                        |
+| `d8-cert-manager`   | Secret     | `cert-manager-letsencrypt-private-key`            |
+|                     |            | `selfsigned-ca-key-pair`                          |
 
 ### Выгрузка логов из Loki
 
