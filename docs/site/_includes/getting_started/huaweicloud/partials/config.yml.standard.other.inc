@@ -6,7 +6,7 @@ apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Cloud
 cloud:
-  provider: HuaweiCloud
+  provider: Huaweicloud
   # [<en>] A prefix of objects that are created in the cloud during the installation.
   # [<en>] You might consider changing this.
   # [<ru>] Префикс объектов, создаваемых в облаке при установке.
@@ -171,9 +171,6 @@ masterNodeGroup:
     # [<en>] Disk size for the root FS.
     # [<ru>] Размер диска для корневой ФС.
     rootDiskSize: 40
-    # [<en>] The type of a root disk.
-    # [<ru>] Тип root-диска.
-    rootDiskType: SSD
 # [<en>] Public SSH key for accessing cloud nodes.
 # [<en>] This key will be added to the user on created nodes (the user name depends on the image used).
 # [<ru>] Публичная часть SSH-ключа для доступа к узлам облака.
@@ -196,10 +193,7 @@ spec:
   flavorName: Standard-2-4-50
   # [<en>] The size of a root disk in gigabytes.
   # [<ru>] Размер root-диска. Значение указывается в гигабайтах.
-  rootDiskSize: 30
-  # [<en>] The type of a root disk.
-  # [<ru>] Тип root-диска.
-  rootDiskType: SSD
+  rootDiskSize: 40
   # [<en>] VM image in use.
   # [<ru>] Используемый образ виртуальной машины.
   # [<en>] You might consider changing this.

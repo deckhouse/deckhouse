@@ -56,7 +56,6 @@
     "registrypackages",
     "registry-packages-proxy",
     "runtime-audit-engine",
-    "sds-node-configurator",
     "stronghold",
     "snapshot-controller",
     "user-authn",
