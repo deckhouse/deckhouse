@@ -421,6 +421,16 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Check pause label
+        if: ${{ success() && needs.git_info.outputs.pr_number }}
+        uses: actions/github-script@v6.4.1
+        env:
+          PR_NUMBER: ${{needs.git_info.outputs.pr_number}}
+        with:
+          script: |
+            const waitPauseRemove = require('./.github/scripts/js/e2e/wait-remove-pause-label.js')({ github, context, core });
+            await waitPauseRemove();
+
       - name: Cleanup bootstrapped cluster
         if: always()
         id: cleanup_cluster
@@ -928,6 +938,16 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Check pause label
+        if: ${{ success() && needs.git_info.outputs.pr_number }}
+        uses: actions/github-script@v6.4.1
+        env:
+          PR_NUMBER: ${{needs.git_info.outputs.pr_number}}
+        with:
+          script: |
+            const waitPauseRemove = require('./.github/scripts/js/e2e/wait-remove-pause-label.js')({ github, context, core });
+            await waitPauseRemove();
+
       - name: Cleanup bootstrapped cluster
         if: always()
         id: cleanup_cluster
@@ -1386,6 +1406,16 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Check pause label
+        if: ${{ success() && needs.git_info.outputs.pr_number }}
+        uses: actions/github-script@v6.4.1
+        env:
+          PR_NUMBER: ${{needs.git_info.outputs.pr_number}}
+        with:
+          script: |
+            const waitPauseRemove = require('./.github/scripts/js/e2e/wait-remove-pause-label.js')({ github, context, core });
+            await waitPauseRemove();
+
       - name: Cleanup bootstrapped cluster
         if: always()
         id: cleanup_cluster
@@ -1760,6 +1790,16 @@ jobs:
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
         # </template: e2e_run_template>
+
+      - name: Check pause label
+        if: ${{ success() && needs.git_info.outputs.pr_number }}
+        uses: actions/github-script@v6.4.1
+        env:
+          PR_NUMBER: ${{needs.git_info.outputs.pr_number}}
+        with:
+          script: |
+            const waitPauseRemove = require('./.github/scripts/js/e2e/wait-remove-pause-label.js')({ github, context, core });
+            await waitPauseRemove();
 
       - name: Cleanup bootstrapped cluster
         if: always()
@@ -2183,6 +2223,16 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
+
+      - name: Check pause label
+        if: ${{ success() && needs.git_info.outputs.pr_number }}
+        uses: actions/github-script@v6.4.1
+        env:
+          PR_NUMBER: ${{needs.git_info.outputs.pr_number}}
+        with:
+          script: |
+            const waitPauseRemove = require('./.github/scripts/js/e2e/wait-remove-pause-label.js')({ github, context, core });
+            await waitPauseRemove();
 
       - name: Cleanup bootstrapped cluster
         if: always()
@@ -2641,6 +2691,16 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
+
+      - name: Check pause label
+        if: ${{ success() && needs.git_info.outputs.pr_number }}
+        uses: actions/github-script@v6.4.1
+        env:
+          PR_NUMBER: ${{needs.git_info.outputs.pr_number}}
+        with:
+          script: |
+            const waitPauseRemove = require('./.github/scripts/js/e2e/wait-remove-pause-label.js')({ github, context, core });
+            await waitPauseRemove();
 
       - name: Cleanup bootstrapped cluster
         if: always()
@@ -3108,6 +3168,16 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Check pause label
+        if: ${{ success() && needs.git_info.outputs.pr_number }}
+        uses: actions/github-script@v6.4.1
+        env:
+          PR_NUMBER: ${{needs.git_info.outputs.pr_number}}
+        with:
+          script: |
+            const waitPauseRemove = require('./.github/scripts/js/e2e/wait-remove-pause-label.js')({ github, context, core });
+            await waitPauseRemove();
+
       - name: Cleanup bootstrapped cluster
         if: always()
         id: cleanup_cluster
@@ -3571,6 +3641,16 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
+
+      - name: Check pause label
+        if: ${{ success() && needs.git_info.outputs.pr_number }}
+        uses: actions/github-script@v6.4.1
+        env:
+          PR_NUMBER: ${{needs.git_info.outputs.pr_number}}
+        with:
+          script: |
+            const waitPauseRemove = require('./.github/scripts/js/e2e/wait-remove-pause-label.js')({ github, context, core });
+            await waitPauseRemove();
 
       - name: Cleanup bootstrapped cluster
         if: always()
