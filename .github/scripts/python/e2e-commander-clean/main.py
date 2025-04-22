@@ -25,6 +25,15 @@ commander_headers = {
         'X-Auth-Token': e2e_commander_token,
     }
 
+class DeletionError(Exception):
+    """
+    Exception that occurs when cluster deletion fails.
+    """
+    def __init__(self, deletion_failed=None, timeout=None):
+        self.deletion_failed = deletion_failed or []
+        self.timeout = timeout or []
+        super().__init__("Failed to delete clusters")
+
 def get_clusters():
     cls = requests.get(f"https://{e2e_commander_host}/api/v1/clusters", headers = commander_headers)
     return cls
@@ -35,41 +44,63 @@ def get_cluster_status(cluster_id: str):
     response = requests.get(url=url, headers=commander_headers).json()
     return response["status"]
 
-def delete_cluster(cluster_id: str, cluster_name: str):
-    cluster_is_deleted = False
-    sleep_time = 0
-    url = f"https://${e2e_commander_host}/api/v1/clusters/${cluster_id}"
-    # requests.delete(url=url, headers=commander_headers)
-    while not cluster_is_deleted:
+def get_clusters_delete_status(clusters: list[dict[str: str, str: str]]):
+    sleep_time = 30
+    attempt = 0
+    max_attempt = 60
+    deletion_failed_clusters = []
+    while len(clusters) > 0:
+        attempt += 1
+        print(f"\nWait to cluster delete, attempt {attempt}/{max_attempt}")
+        print("=" * 40)
+        for cluster in clusters:
+            try:
+                status = get_cluster_status(cluster["id"])
+            except Exception as e:
+                print(e)
+                print("Error getting cluster status, continue...")
+                continue
+            print(f'-  {cluster["name"]} --- {status}')
+            if status == "deleted":
+                clusters.remove({"id": cluster_id, "name": cluster["name"]})
+            elif status == "deletion_failed":
+                deletion_failed_clusters.append({"id": cluster_id, "name": cluster["name"]})
+                clusters.remove({"id": cluster_id, "name": cluster["name"]})
+            else:
+                continue
+        if (len(deletion_failed_clusters) > 0 and len(clusters) == 0) or attempt >= max_attempt:
+            raise DeletionError(deletion_failed=deletion_failed_clusters, timeout=clusters)
         time.sleep(sleep_time)
-        sleep_time = 10
-        cluster_status = get_cluster_status(cluster_id)
-        if cluster_status == "deleted":
-            print(f"-  Cluster {cluster_name} deleted")
-            cluster_is_deleted = True
-        elif cluster_status == "deletion_failed":
-            print(f"-  Cluster {cluster_name}: deletion_failed")
-        else:
-            print(f"-  Cluster {cluster_name}: {cluster_status}")
-            continue
 
 if __name__ == "__main__":
 
     expire_time = datetime.now(timezone.utc) - timedelta(hours=HOURS_TO_REMOVE)
     clusters = get_clusters().json()
+    clusters_to_delete = []
     for i in clusters:
         cluster_id = i["id"]
         cluster_name = i["name"]
-        print(i["created_at"])
         created_at = datetime.strptime(i["created_at"], COMMANDER_TIME_FORMAT)
-        print(created_at)
-        print(datetime.now(timezone.utc))
         if created_at < expire_time:
             print(f"Cluster {cluster_name} created more than {HOURS_TO_REMOVE} hours ago, deleting")
-            delete_cluster(cluster_id, cluster_name)
+            url = f"https://{e2e_commander_host}/api/v1/clusters/{cluster_id}"
+            requests.delete(url=url, headers=commander_headers)
+            clusters_to_delete.append({"id": cluster_id, "name": cluster_name})
         else:
             print(f"Cluster {cluster_name} created less than {HOURS_TO_REMOVE} hours ago, skip")
             skip_delete = True
 
-
-
+    try:
+        get_clusters_delete_status(clusters_to_delete)
+    except DeletionError as e:
+        if len(e.deletion_failed) > 0:
+            print("\nError deleting clusters, were not deleted:")
+            for i in e.deletion_failed:
+                print(f"-  {i['name']}")
+        if len(e.timeout) > 0:
+            print("\nTimeout deleting clusters, were not deleted:")
+            for i in e.timeout:
+                print(f"-  {i['name']}")
+        exit(1)
+    else:
+        print("All clusters were successfully removed.")
