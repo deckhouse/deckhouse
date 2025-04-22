@@ -2026,3 +2026,51 @@ select#contact-select {
   }
 }
 
+.docs {
+  .code__transfer {
+    overflow-x: auto;
+    white-space: pre;
+    overflow-x: auto;
+    display: block;
+
+    .wrap {
+      white-space: pre-wrap;
+      overflow-x: auto;
+      word-wrap: break-word;
+      user-select: none;
+    }
+
+    button.wrap__button {
+      position: absolute;
+      top: 0.5em;
+      right: 3.5em;
+      background-color: inherit;
+      padding: 5px;
+      cursor: pointer;
+      z-index: 2;
+    }
+
+    .code__wrapper {
+      display: flex;
+    }
+
+    .line-number {
+      display: inline-block;
+      margin: 0;
+      margin-right: 10px;
+      line-height: 22px;
+      user-select: none;
+      list-style-type: none;
+
+      li {
+        padding: 0;
+        margin: 0;
+
+        &::before {
+          content: none;
+        }
+      }
+    }
+  }
+}
+
