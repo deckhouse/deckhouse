@@ -76,12 +76,11 @@ func (state *State) Process(log go_hook.Logger, params Params, inputs Inputs) (b
 		sort.Strings(nodesIP)
 	}
 
-	if state.Nodes == nil {
-		state.Nodes = make(map[string]NodeServicesConfig)
-	}
+	nodes := state.Nodes
+	state.Nodes = make(map[string]NodeServicesConfig)
 
 	for name, node := range inputs.Nodes {
-		config := state.Nodes[name]
+		config := nodes[name]
 
 		err = config.process(log, name, node, params, nodesIP)
 		if err != nil {
