@@ -38,9 +38,7 @@ fi
 if [ -z "$SEVERITY" ]; then
   SEVERITY="UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
 fi
-upload(){
-  
-}
+
 function __main__() {
   echo "Deckhouse image to check: $IMAGE:$TAG"
   echo "Severity: $SEVERITY"
@@ -62,6 +60,7 @@ function __main__() {
 
   IMAGE_REPORT_NAME="deckhouse::$(echo "$IMAGE:$TAG" | sed 's/^.*\/\(.*\)/\1/')"
   mkdir -p out/json
+  touch out/.trivyignore
 
   date_iso=$(date -I)
 
