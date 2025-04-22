@@ -6,7 +6,7 @@ index ff963142..2096957a 100644
  module github.com/kubernetes-sigs/cri-tools
  
 -go 1.22.0
-+go 1.24.0
++go 1.23.6
  
 -toolchain go1.22.1
 +toolchain go1.24.2
