@@ -53,6 +53,8 @@ The `d8 d` and `d8 mirror` command groups are not available for Community Editio
     d8 backup loki --days 1 > ./loki.log
     ```
 
+    You can get the list of available d8 backup flags by running `d8 backup --help`.
+
 ## How do I install the Deckhouse CLI?
 
 There are two ways to install the Deckhouse CLI:

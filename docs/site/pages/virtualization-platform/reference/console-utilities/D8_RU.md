@@ -55,6 +55,8 @@ Deckhouse CLI — это интерфейс командной строки дл
     d8 backup loki --days 1 > ./loki.log
     ```
 
+    Список доступных флагов `d8 backup` можно получить через команду `d8 backup --help`.
+
 ## Как установить Deckhouse CLI
 
 Установить Deckhouse CLI возможно двумя способами:
