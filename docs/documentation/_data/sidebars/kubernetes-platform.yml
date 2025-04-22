@@ -73,6 +73,14 @@ entries:
                         en: Experimental authorization model
                         ru: Экспериментальная модель авторизации
                       url: /admin/access/authorization-rbac-experimental.html
+                    - title:
+                        en: Granting rights to users and servers
+                        ru: Выдача прав пользователям и серверам
+                      url: /admin/access/granting-rights-to-users-and-servers.html
+                    - title:
+                        en: Checking whether the user has rights
+                        ru: Проверка наличия прав у пользователя
+                      url: /admin/access/checking-users-rights.html
             - title:
                 en: Platform update
                 ru: Обновление платформы
