@@ -1,5 +1,5 @@
 ---
-title: Backup and restore
+title: Резервное копирование и восстановление
 permalink: ru/admin/configuration/backup/backup-and-restore.html
 lang: ru
 ---
