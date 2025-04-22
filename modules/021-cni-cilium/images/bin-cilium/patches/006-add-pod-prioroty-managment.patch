@@ -1,0 +1,120 @@
+From 53de4db9b8bba5d9c60bcc021a66d10c3320e7cb Mon Sep 17 00:00:00 2001
+From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+Date: Tue, 22 Apr 2025 18:34:06 +0300
+Subject: [PATCH] add priority calc
+
+Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+---
+ .../pkg/ciliumendpointslice/endpointslice.go  | 46 +++++++++++++++++++
+ operator/watchers/cilium_endpoint.go          |  1 +
+ pkg/labels/labels.go                          |  4 ++
+ 3 files changed, 51 insertions(+)
+
+diff --git a/operator/pkg/ciliumendpointslice/endpointslice.go b/operator/pkg/ciliumendpointslice/endpointslice.go
+index 3b3ffc13ef..c70a81afc1 100644
+--- a/operator/pkg/ciliumendpointslice/endpointslice.go
++++ b/operator/pkg/ciliumendpointslice/endpointslice.go
+@@ -6,6 +6,9 @@ package ciliumendpointslice
+ import (
+ 	"context"
+ 	"fmt"
++	"math"
++	"strconv"
++	"strings"
+ 	"time"
+ 
+ 	"github.com/cilium/hive/cell"
+@@ -18,6 +21,7 @@ import (
+ 	cilium_api_v2 "github.com/cilium/cilium/pkg/k8s/apis/cilium.io/v2"
+ 	capi_v2a1 "github.com/cilium/cilium/pkg/k8s/apis/cilium.io/v2alpha1"
+ 	"github.com/cilium/cilium/pkg/k8s/resource"
++	"github.com/cilium/cilium/pkg/labels"
+ 	"github.com/cilium/cilium/pkg/logging/logfields"
+ )
+ 
+@@ -53,6 +57,46 @@ const (
+ 	CESWriteQPSBurstMax = 100
+ )
+ 
++type cepPriority uint32
++
++const (
++	High    cepPriority = 0
++	Default cepPriority = math.MaxUint32
++)
++
++func getPriority(s string) cepPriority {
++	if num, err := strconv.ParseUint(s, 10, 32); err == nil {
++		return cepPriority(num)
++	}
++	return Default
++}
++
++func getCepPriority(cep *cilium_api_v2.CiliumEndpoint) cepPriority {
++	var priority cepPriority = Default
++	for _, lbl := range cep.Status.Identity.Labels {
++		if !strings.Contains(lbl, labels.IDNamePriority) {
++			continue
++		}
++
++		fmt.Printf("DEBUG CEP label in cep.Status.Identity.Labels\n")
++
++		parts := strings.SplitN(lbl, "=", 2)
++		if len(parts) < 2 {
++			continue
++		}
++
++		priority = getPriority(parts[1])
++		break
++	}
++
++	if lbl, exist := cep.Labels[labels.IDNamePriority]; exist {
++		fmt.Printf("DEBUG CEP label in cep.Labels[labels.IDNamePriority]\n")
++		priority = getPriority(lbl)
++	}
++
++	return priority
++}
++
+ func (c *Controller) initializeQueue() {
+ 	c.logger.Info("CES controller workqueue configuration",
+ 		logfields.WorkQueueQPSLimit, c.rateLimit.current.Limit,
+@@ -73,6 +117,8 @@ func (c *Controller) onEndpointUpdate(cep *cilium_api_v2.CiliumEndpoint) {
+ 	if cep.Status.Networking == nil || cep.Status.Identity == nil || cep.GetName() == "" || cep.Namespace == "" {
+ 		return
+ 	}
++
++	fmt.Printf("CEP %v priority: %v\n", cep.GetName(), getCepPriority(cep))
+ 	touchedCESs := c.manager.UpdateCEPMapping(k8s.ConvertCEPToCoreCEP(cep), cep.Namespace)
+ 	c.enqueueCESReconciliation(touchedCESs)
+ }
+diff --git a/operator/watchers/cilium_endpoint.go b/operator/watchers/cilium_endpoint.go
+index 40bf20429a..765ceb9614 100644
+--- a/operator/watchers/cilium_endpoint.go
++++ b/operator/watchers/cilium_endpoint.go
+@@ -95,6 +95,7 @@ func transformToCiliumEndpoint(obj interface{}) (interface{}, error) {
+ 				ResourceVersion: concreteObj.ResourceVersion,
+ 				OwnerReferences: concreteObj.OwnerReferences,
+ 				UID:             concreteObj.UID,
++				Labels:          concreteObj.Labels,
+ 			},
+ 			Status: cilium_api_v2.EndpointStatus{
+ 				Identity:   concreteObj.Status.Identity,
+diff --git a/pkg/labels/labels.go b/pkg/labels/labels.go
+index 40c714ee0f..9541281c22 100644
+--- a/pkg/labels/labels.go
++++ b/pkg/labels/labels.go
+@@ -80,6 +80,10 @@ const (
+ 	// IDNameUnknown is the label used to to identify an endpoint with an
+ 	// unknown identity.
+ 	IDNameUnknown = "unknown"
++
++	// IDNamePriority is the label used to set pod priority on shared ip4-address
++	// network access
++	IDNamePriority = "network.deckhouse.io/pod-common-ip-priority"
+ )
+ 
+ var (
+-- 
+2.34.1
+
