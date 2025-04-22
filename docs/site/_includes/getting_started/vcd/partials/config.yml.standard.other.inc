@@ -158,7 +158,7 @@ masterNodeGroup:
     # [<ru>] Рекомендуем использовать .2, .3 .4 адреса, например: 10.15.11.2.
     mainNetworkIPAddresses:
     - !CHANGE_SUBNET*.2
-    rootDiskSizeGb: 40
+    rootDiskSizeGb: 50
     sizingPolicy: *!CHANGE_SIZING_POLICY*
     storageProfile: *!CHANGE_STORAGE_PROFILE*
     # [<en>] The name of the image, taking into account the vCloudDirector catalog path.
@@ -171,7 +171,7 @@ nodeGroups:
 - instanceClass:
     mainNetworkIPAddresses:
     - !CHANGE_SUBNET*.11
-    rootDiskSizeGb: 40
+    rootDiskSizeGb: 50
     sizingPolicy: *!CHANGE_SIZING_POLICY*
     storageProfile: *!CHANGE_STORAGE_PROFILE*
     # [<en>] The name of the image, taking into account the vCloudDirector catalog path.
