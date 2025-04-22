@@ -44,7 +44,9 @@
     "editions": [
       "se",
       "se-plus",
-      "ee"
+      "ee",
+      "cse-lite",
+      "cse-pro"
     ],
     "external": "true",
     "path": "/products/kubernetes-platform/modules/console/stable/"
@@ -151,7 +153,8 @@
       "ce",
       "se",
       "se-plus",
-      "ee"
+      "ee",
+      "cse-pro"
     ],
     "editionsWithRestrictions": [
       "ce"
@@ -170,7 +173,8 @@
       "ce",
       "se",
       "se-plus",
-      "ee"
+      "ee",
+      "cse-pro"
     ],
     "external": "true",
     "path": "/products/kubernetes-platform/modules/sds-node-configurator/stable/"
@@ -200,18 +204,13 @@
       "be",
       "se",
       "se-plus",
-      "ee"
+      "ee",
+      "cse-pro"
     ],
     "external": "true",
     "path": "/products/kubernetes-platform/modules/secrets-store-integration/stable/"
   },
   "stronghold": {
-    "editions": [
-      "be",
-      "se",
-      "se-plus",
-      "ee"
-    ],
     "editionsWithRestrictions": [
       "be",
       "se",
