@@ -34,9 +34,9 @@ fi
 if [ -z "$TAG" ]; then
   TAG="$(git tag --list "v*" | tail -1)"
 fi
-
+#UNKNOWN,LOW,MEDIUM,
 if [ -z "$SEVERITY" ]; then
-  SEVERITY="UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
+  SEVERITY="HIGH,CRITICAL"
 fi
 
 function __main__() {
