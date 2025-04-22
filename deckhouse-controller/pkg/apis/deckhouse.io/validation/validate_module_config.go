@@ -186,7 +186,11 @@ func moduleConfigValidationHandler(
 			warning = res.Warning
 		}
 
-		exclusiveGroup := moduleStorage.GetModuleExclusiveGroup(cfg.Name)
+		module, err := moduleStorage.GetModuleByName(cfg.Name)
+		if err != nil {
+			return nil, fmt.Errorf("module not found %s: %w", cfg.Name, err)
+		}
+		exclusiveGroup := module.GetModuleExclusiveGroup()
 		if exclusiveGroup != nil {
 			modules := moduleStorage.GetModulesByExclusiveGroup(*exclusiveGroup)
 

@@ -32,7 +32,6 @@ type registerer interface {
 
 type moduleStorage interface {
 	GetModuleByName(name string) (*moduletypes.Module, error)
-	GetModuleExclusiveGroup(moduleName string) *string
 	GetModulesByExclusiveGroup(exclusiveGroup string) []string
 }
 

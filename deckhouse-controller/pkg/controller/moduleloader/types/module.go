@@ -48,6 +48,13 @@ func (m *Module) GetModuleDefenition() *Definition {
 	return m.def
 }
 
+func (m *Module) GetModuleExclusiveGroup() *string {
+	if m.def.ExclusiveGroup == "" {
+		return nil
+	}
+	return &m.def.ExclusiveGroup
+}
+
 func (m *Module) GetConfirmationDisableReason() (string, bool) {
 	if m.def != nil && m.def.DisableOptions != nil {
 		return m.def.DisableOptions.Message, m.def.DisableOptions.Confirmation
