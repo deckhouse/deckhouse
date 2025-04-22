@@ -652,7 +652,7 @@ d8 backup cluster-config /backup/cluster-config-2025-04-21.tar
 Для создания резервной копии выполните команду:
 
 ```console
-d8 backup loki [флаги] > <путь-до-файла>
+d8 backup loki [флаги]
 ```
 
 Флаги:
