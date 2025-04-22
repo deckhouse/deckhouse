@@ -405,6 +405,18 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.72.0"))
 			require.NoError(suite.T(), err)
 		})
+
+		suite.Run("sequential processing with pending releases", func() {
+			testData := suite.fetchTestFileData("sequential-processing-pending.yaml")
+			suite.setupReleaseController(testData, withBasicModulePhase(addonmodules.Startup))
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.0"))
+			require.NoError(suite.T(), err)
+			suite.setModulePhase(addonmodules.CanRunHelm)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.71.0"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.72.0"))
+			require.NoError(suite.T(), err)
+		})
 	})
 }
 
@@ -451,6 +463,12 @@ func (suite *ReleaseControllerTestSuite) updateModuleReleasesStatuses() {
 	for _, release := range releases.Items {
 		release.Status.Phase = caser.String(release.Labels[v1alpha1.ModuleReleaseLabelStatus])
 		require.NoError(suite.T(), suite.client.Status().Update(context.TODO(), &release))
+	}
+}
+
+func (suite *ReleaseControllerTestSuite) setModulePhase(phase addonmodules.ModuleRunPhase) {
+	suite.ctr.moduleManager = stubModulesManager{
+		modulePhase: phase,
 	}
 }
 
@@ -667,6 +685,10 @@ func (s stubModulesManager) GetModule(name string) *addonmodules.BasicModule {
 	}
 
 	return bm
+}
+
+func (s stubModulesManager) setModulePhase(phase addonmodules.ModuleRunPhase) {
+	s.modulePhase = phase
 }
 
 func (s stubModulesManager) GetEnabledModuleNames() []string {
