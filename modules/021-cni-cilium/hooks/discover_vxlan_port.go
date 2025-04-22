@@ -33,7 +33,6 @@ import (
 const (
 	metricGroupVxlanPort           = "d8_cni_cilium_config_vxlan_port"
 	metricNameNonStandardVxlanPort = "d8_cni_cilium_non_standard_vxlan_port"
-	vxlanMode                      = "VXLAN"
 )
 
 type installationStatus int
@@ -172,9 +171,6 @@ func filterConfigMap(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 
 func discoverVXLANPort(input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire(metricGroupVxlanPort)
-	if input.Values.Get("cniCilium.internal.mode").String() != vxlanMode {
-		return nil
-	}
 
 	var (
 		instStatus       = newInstallation
