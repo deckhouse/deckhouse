@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/spf13/fsync"
 
 	"github.com/flant/docs-builder/pkg/hugo"
@@ -62,41 +63,47 @@ func (svc *Service) buildHugo() error {
 	}
 
 	for {
-		err := hugo.Build(flags, svc.logger)
-		if err == nil {
+		buildErr := hugo.Build(flags, svc.logger)
+		if buildErr == nil {
 			return nil
 		}
 
-		if path, ok := getAssembleErrorPath(err.Error()); ok {
-			modulePath := filepath.Dir(path)
-			err = os.RemoveAll(modulePath)
-			if err != nil {
-				return fmt.Errorf("remove module: %w", err)
+		if moduleName, ok := getAssembleErrorPath(buildErr.Error()); ok {
+			paths := []string{
+				filepath.Join(svc.baseDir, contentDir, moduleName),
+				filepath.Join(svc.baseDir, modulesDir, moduleName),
 			}
 
-			moduleName, channel := svc.parseModulePath(modulePath)
-			err = svc.removeModuleFromChannelMapping(moduleName, channel)
+			for _, path := range paths {
+				err := os.RemoveAll(path)
+				if err != nil {
+					return fmt.Errorf("remove module: %w", err)
+				}
+			}
+
+			err := svc.removeModuleFromChannelMapping(moduleName)
 			if err != nil {
 				return fmt.Errorf("remove module from channel mapping: %w", err)
 			}
 
-			svc.logger.Warn("removed broken module", slog.String("module_path", modulePath))
+			svc.logger.Warn("removed broken module", slog.String("name", moduleName), log.Err(buildErr))
 			continue
 		}
 
-		return err
+		return buildErr
 	}
 }
 
-func (svc *Service) removeModuleFromChannelMapping(moduleName, channel string) error {
+func (svc *Service) removeModuleFromChannelMapping(moduleName string) error {
 	return svc.channelMappingEditor.edit(func(m channelMapping) {
-		delete(m[moduleName][channelMappingChannels], channel)
+		delete(m, moduleName)
 	})
 }
 
 func getAssembleErrorPath(errorMessage string) (string, bool) {
 	match := assembleErrorRegexp.FindStringSubmatch(errorMessage)
 	if len(match) == 6 {
+		// return only module name
 		return match[2], true
 	}
 
@@ -106,7 +113,7 @@ func getAssembleErrorPath(errorMessage string) (string, bool) {
 func (svc *Service) parseModulePath(modulePath string) (moduleName, channel string) {
 	s := strings.Split(modulePath, "/")
 	if len(s) < 2 {
-		svc.logger.Error("failed to parse", modulePath)
+		svc.logger.Error("failed to parse", slog.String("path", modulePath))
 		return "", ""
 	}
 

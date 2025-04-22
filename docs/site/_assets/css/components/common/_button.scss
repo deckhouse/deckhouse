@@ -19,12 +19,15 @@
         border: 2px solid $color-alt;
     }
 
-    &-callback {
+    &-request {
         margin-top: 37px;
         width: 100%;
         font-weight: 500;
         text-transform: uppercase;
 
+        &-access {
+            margin-top: 16px;
+        }
         &:hover {
             border: 2px solid #002cca;
             background: #002cca;
@@ -36,7 +39,7 @@
         background: $color-inverse;
         border: 2px solid $color-inverse;
     }
-    &:not(.button_disabled):not(.button_card):not(.button--primary):not(.gdpr__button):not(.button--outline):not(.button--contact):not(.button-callback):hover {
+    &:not(.button_disabled):not(.button_card):not(.button--primary):not(.gdpr__button):not(.button--outline):not(.button--contact):not(.button-form):hover {
         color: $color-inverse !important;
         background: $color-main;
         border: 2px solid $color-main;

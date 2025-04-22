@@ -1,0 +1,122 @@
+Subject: [PATCH] Fix incorrect handling of the `--cluster-name` CLI flag
+---
+Index: pkg/cloudprovider/huaweicloud/huaweicloud.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/cloudprovider/huaweicloud/huaweicloud.go b/pkg/cloudprovider/huaweicloud/huaweicloud.go
+--- a/pkg/cloudprovider/huaweicloud/huaweicloud.go	(revision a2521439748697680ba5ab25e693b1125a456b8f)
++++ b/pkg/cloudprovider/huaweicloud/huaweicloud.go	(date 1744916473972)
+@@ -43,7 +43,6 @@
+ 	"k8s.io/client-go/tools/leaderelection/resourcelock"
+ 	"k8s.io/client-go/tools/record"
+ 	"k8s.io/cloud-provider"
+-	"k8s.io/cloud-provider/options"
+ 	servicehelper "k8s.io/cloud-provider/service/helpers"
+ 	"k8s.io/klog/v2"
+ 	"sigs.k8s.io/cloud-provider-huaweicloud/pkg/cloudprovider/huaweicloud/wrapper"
+@@ -113,8 +112,8 @@
+ type ELBAlgorithm string
+
+ type Basic struct {
+-	cloudControllerManagerOpts *options.CloudControllerManagerOptions
+-	cloudConfig                *config.CloudConfig
++	clusterName string
++	cloudConfig *config.CloudConfig
+
+ 	loadbalancerOpts *config.LoadBalancerOptions
+ 	networkingOpts   *config.NetworkingOptions
+@@ -133,6 +132,10 @@
+ 	mutexLock *mutexkv.MutexKV
+ }
+
++func (b *Basic) SetClusterName(clusterName string) {
++	b.clusterName = clusterName
++}
++
+ func (b Basic) listPodsBySelector(ctx context.Context, namespace string, selectors map[string]string) (*v1.PodList, error) {
+ 	labelSelector := labels.SelectorFromSet(selectors)
+ 	opts := metav1.ListOptions{LabelSelector: labelSelector.String()}
+@@ -318,14 +321,8 @@
+ 	broadcaster.StartRecordingToSink(&corev1.EventSinkImpl{Interface: corev1.New(kubeClient.RESTClient()).Events("")})
+ 	recorder := broadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: "cloud-provider-huaweicloud"})
+
+-	ccmOpts, err := options.NewCloudControllerManagerOptions()
+-	if err != nil {
+-		return nil, fmt.Errorf("failed to init CloudControllerManagerOptions: %s", err)
+-	}
+-
+ 	basic := Basic{
+-		cloudControllerManagerOpts: ccmOpts,
+-		cloudConfig:                cloudConfig,
++		cloudConfig: cloudConfig,
+
+ 		loadbalancerOpts: &elbCfg.LoadBalancerOpts,
+ 		networkingOpts:   &elbCfg.NetworkingOpts,
+@@ -775,7 +772,6 @@
+ 		stopChannel: make(chan struct{}, 1),
+ 	}
+
+-	clusterName := h.cloudControllerManagerOpts.KubeCloudShared.ClusterName
+ 	id, err := os.Hostname()
+ 	if err != nil {
+ 		return fmt.Errorf("failed to elect leader in listener EndpointSlice : %s", err)
+@@ -793,7 +789,7 @@
+ 			}
+
+ 			if isDelete {
+-				err := h.EnsureLoadBalancerDeleted(context.TODO(), clusterName, service)
++				err := h.EnsureLoadBalancerDeleted(context.TODO(), h.clusterName, service)
+ 				if err != nil {
+ 					klog.Errorf("failed to delete loadBalancer, service: %s/%s, error: %s", service.Namespace, service.Name, err)
+ 					eventMsg := fmt.Sprintf("failed to clean listener for service: %s/%s, error: %s", service.Namespace, service.Name, err)
+@@ -814,9 +810,9 @@
+
+ 			h.sendEvent("UpdateLoadBalancer", "Endpoints changed, start updating", service)
+
+-			err = h.UpdateLoadBalancer(context.TODO(), clusterName, service, nodes)
++			err = h.UpdateLoadBalancer(context.TODO(), h.clusterName, service, nodes)
+ 			if err == nil {
+-				lbStatus, exists, err := h.GetLoadBalancer(context.TODO(), clusterName, service)
++				lbStatus, exists, err := h.GetLoadBalancer(context.TODO(), h.clusterName, service)
+ 				if err != nil || !exists {
+ 					klog.Errorf("failed to get loadBalancer, service: %s/%s, exists: %v, error: %s", service.Namespace, service.Name, exists, err)
+ 					return
+@@ -827,7 +823,7 @@
+
+ 			// An error occurred while updating.
+ 			if common.IsNotFound(err) || strings.Contains(err.Error(), "error, can not find a listener matching") {
+-				lbStatus, err := h.EnsureLoadBalancer(context.TODO(), clusterName, service, nodes)
++				lbStatus, err := h.EnsureLoadBalancer(context.TODO(), h.clusterName, service, nodes)
+ 				if err != nil {
+ 					klog.Errorf("failed to ensure loadBalancer, service: %s/%s, error: %s", service.Namespace, service.Name, err)
+ 					return
+Index: cmd/cloud-controller-manager/cloud-controller-manager.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/cmd/cloud-controller-manager/cloud-controller-manager.go b/cmd/cloud-controller-manager/cloud-controller-manager.go
+--- a/cmd/cloud-controller-manager/cloud-controller-manager.go	(revision a2521439748697680ba5ab25e693b1125a456b8f)
++++ b/cmd/cloud-controller-manager/cloud-controller-manager.go	(date 1744917762432)
+@@ -40,7 +40,7 @@
+ 	"k8s.io/klog/v2"
+ 	_ "k8s.io/kubernetes/pkg/features" // add the kubernetes feature gates
+
+-	_ "sigs.k8s.io/cloud-provider-huaweicloud/pkg/cloudprovider/huaweicloud"
++	"sigs.k8s.io/cloud-provider-huaweicloud/pkg/cloudprovider/huaweicloud"
+ )
+
+ func main() {
+@@ -90,6 +90,10 @@
+ 			klog.Fatalf("no ClusterID found.  A ClusterID is required for the cloud provider to function properly.  This check can be bypassed by setting the allow-untagged-cloud option")
+ 		}
+ 	}
++
++	cloudProvider := cloud.(*huaweicloud.CloudProvider)
++	cloudProvider.SetClusterName(config.ComponentConfig.KubeCloudShared.ClusterName)
++
+ 	return cloud
+ }
+

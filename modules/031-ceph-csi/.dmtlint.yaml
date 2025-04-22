@@ -3,6 +3,7 @@ linters-settings:
     exclude-rules:
       enum:
         - "properties.internal.properties.crs.items.properties.spec.properties.rbd.properties.storageClasses.items.properties.defaultFSType"
+        - "spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.rbd.properties.storageClasses.items.properties.defaultFSType"
   templates:
     exclude-rules:
       pdb:

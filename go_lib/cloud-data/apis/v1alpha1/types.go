@@ -46,3 +46,9 @@ type DiskMeta struct {
 	ID   string
 	Name string
 }
+
+type CloudCondition struct {
+	Name    string `json:"name"`
+	Message string `json:"message"`
+	Ok      bool   `json:"ok"`
+}

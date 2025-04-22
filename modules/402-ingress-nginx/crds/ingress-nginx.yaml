@@ -61,6 +61,8 @@ spec:
                       > **Caution.** The following ports must be available on the node: 80, 81, 443, 444, 4207, 4208.
 
                       > **Caution.** To change inlet, remove the iptables rules and restart the `kube-proxy` pods or reboot the nodes hosting Ingress controllers.
+
+                      > **Caution.** This inlet cannot be used if the `enableIstioSidecar` parameter is enabled.
                   enum: ["LoadBalancer","LoadBalancerWithProxyProtocol","HostPort","HostPortWithProxyProtocol", "HostWithFailover"]
                 controllerVersion:
                   type: string
@@ -68,7 +70,7 @@ spec:
                     One of the supported NGINX Ingress controller versions.
 
                     **By default**: the version in the [module settings](configuration.html#parameters-defaultcontrollerversion) is used.
-                  enum: ['1.6','1.9','1.10']
+                  enum: ["1.9", "1.10", "1.12"]
                 enableIstioSidecar:
                   type: boolean
                   description: |
@@ -79,6 +81,8 @@ spec:
                     To use this feature in your application, you must add these annotations to your Ingress resources:
                     * `nginx.ingress.kubernetes.io/service-upstream: "true"` — using this annotation, the ingress-controller sends requests to a single ClusterIP (from Service CIDR) while envoy load balances them. Istio sidecar containers only catching traffic directed to Service CIDR.
                     * `nginx.ingress.kubernetes.io/upstream-vhost: myservice.myns.svc` — using this annotation, the sidecar can identify the application service that serves requests.
+
+                    > **Caution.** This parameter cannot be enabled if the Ingress controller inlet is set to `HostWithFailover`.
                 waitLoadBalancerOnTerminating:
                   x-kubernetes-int-or-string: true
                   type: integer
@@ -103,8 +107,6 @@ spec:
                   default: false
                   description: |
                     Enables the annotation validation feature.
-
-                    Requires a controller of 1.9 version.
                 nodeSelector:
                   type: object
                   additionalProperties:
@@ -561,8 +563,8 @@ spec:
                       enum: ['HostWithFailover']
                     hostWithFailover: {}
               x-kubernetes-validations:
-                - message: .spec.controllerVersion should be explicitly set to 1.9 for .spec.annotationValidationEnabled to make effect
-                  rule: 'self.annotationValidationEnabled == true ? self.controllerVersion == ''1.9'': true'
+                - message: '"enableIstioSidecar" cannot be enabled when "inlet" is "HostWithFailover".'
+                  rule: "!((has(self.enableIstioSidecar) && self.enableIstioSidecar == true) && self.inlet == 'HostWithFailover')"
       additionalPrinterColumns:
         - jsonPath: .spec.ingressClass
           name: Ingress Class
@@ -657,6 +659,8 @@ spec:
                       > **Caution.** The following ports must be available on the node: 80, 81, 443, 444, 4207, 4208.
 
                       > **Caution.** To change inlet, remove the iptables rules and restart the `kube-proxy` pods or reboot the nodes hosting Ingress controllers.
+
+                      > **Caution.** This inlet cannot be used if the `enableIstioSidecar` parameter is enabled.
                   enum: ["LoadBalancer","LoadBalancerWithSSLPassthrough","LoadBalancerWithProxyProtocol","HostPort","HostPortWithSSLPassthrough","HostPortWithProxyProtocol", "HostWithFailover"]
                 controllerVersion:
                   type: string
@@ -664,7 +668,7 @@ spec:
                     One of the supported NGINX Ingress controller versions.
 
                     **By default**: the version in the [module settings](configuration.html#parameters-defaultcontrollerversion) is used.
-                  enum: ['1.9','1.10']
+                  enum: ["1.9", "1.10", "1.12"]
                 enableIstioSidecar:
                   type: boolean
                   description: |
@@ -675,6 +679,8 @@ spec:
                     To use this feature in your application, you must add these annotations to your Ingress resources:
                     * `nginx.ingress.kubernetes.io/service-upstream: "true"` — using this annotation, the ingress-controller sends requests to a single ClusterIP (from Service CIDR) while envoy load balances them. Istio sidecar containers only catching traffic directed to Service CIDR.
                     * `nginx.ingress.kubernetes.io/upstream-vhost: myservice.myns.svc` — using this annotation, the sidecar can identify the application service that serves requests.
+
+                    > **Caution.** This parameter cannot be enabled if the Ingress controller inlet is set to `HostWithFailover`.
                 waitLoadBalancerOnTerminating:
                   x-kubernetes-int-or-string: true
                   type: integer
@@ -1247,8 +1253,10 @@ spec:
                       enum: ['HostWithFailover']
                     hostWithFailover: {}
               x-kubernetes-validations:
-                - message: .spec.controllerVersion should be explicitly set to 1.10 for .spec.enableHTTP3 to make effect
-                  rule: 'self.enableHTTP3 == true ? self.controllerVersion == ''1.10'': true'
+                - message: .spec.controllerVersion should be explicitly set to 1.10 or 1.12 for .spec.enableHTTP3 to make effect
+                  rule: 'self.enableHTTP3 == true ? self.controllerVersion in [''1.10'', ''1.12'']: true'
+                - message: '"enableIstioSidecar" cannot be enabled when "inlet" is "HostWithFailover".'
+                  rule: "!((has(self.enableIstioSidecar) && self.enableIstioSidecar == true) && self.inlet == 'HostWithFailover')"
       additionalPrinterColumns:
         - jsonPath: .spec.ingressClass
           name: Ingress Class

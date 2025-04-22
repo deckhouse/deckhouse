@@ -24,8 +24,6 @@ import (
 )
 
 func TestFiniteStateMachine(t *testing.T) {
-	t.Parallel()
-
 	type event struct {
 		event       fsm.Event
 		stateBefore fsm.State
@@ -111,8 +109,6 @@ func TestFiniteStateMachine(t *testing.T) {
 	for name, tt := range tests {
 		tt := tt
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
 			f := fsm.New(tt.initialState, tt.transitions)
 			for _, e := range tt.events {
 				assert.Equal(t, e.stateBefore, f.State())

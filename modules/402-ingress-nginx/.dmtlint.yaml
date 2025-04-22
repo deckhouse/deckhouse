@@ -5,3 +5,7 @@ linters-settings:
         - kind: Deployment
           name: kruise-controller-manager
           container: kruise
+  openapi:
+    exclude-rules:
+      enum:
+        - "spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.geoIP2.properties.maxmindEditionIDs.items"

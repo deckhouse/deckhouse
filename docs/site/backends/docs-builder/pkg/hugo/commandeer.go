@@ -18,11 +18,13 @@ import (
 	"fmt"
 	"io"
 	stdlog "log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/bep/clocks"
 	"github.com/bep/lazycache"
@@ -268,7 +270,16 @@ func (c *command) HugFromConfig(conf *commonConfig) (*hugolib.HugoSites, error) 
 		// depsCfg := deps.DepsCfg{Configs: conf.configs, Fs: conf.fs, StdOut: c.hugologger.StdOut(), LogLevel: c.hugologger.Level()}
 		return hugolib.NewHugoSites(depsCfg)
 	})
+	h.Log = c.hugologger
+
 	return h, err
+}
+
+func duration(key string, d time.Duration) slog.Attr {
+	return slog.Attr{
+		Key:   key,
+		Value: slog.StringValue(d.String()),
+	}
 }
 
 func (c *command) createLogger(running bool) (loggers.Logger, error) {
@@ -312,9 +323,35 @@ func (c *command) createLogger(running bool) (loggers.Logger, error) {
 		// StoreErrors:   running,
 		Distinct:    true,
 		Level:       level,
-		Stdout:      c.Out,
-		Stderr:      c.Out,
+		Stdout:      io.Discard,
+		Stderr:      io.Discard,
 		StoreErrors: running,
+		HandlerPost: func(e *logg.Entry) error {
+			opts := make([]any, 0, len(e.Fields))
+
+			for _, f := range e.Fields {
+				switch f.Name {
+				case "__h_field__cmd":
+					f.Name = "hugo_command"
+				case "duration":
+					opts = append(opts, duration(f.Name, f.Value.(time.Duration)))
+					continue
+				}
+				opts = append(opts, slog.Any(f.Name, f.Value))
+			}
+
+			switch e.Level {
+			case logg.LevelDebug:
+				c.logger.Debug(e.Message, opts...)
+			case logg.LevelError:
+				c.logger.Error(e.Message, opts...)
+			case logg.LevelWarn:
+				c.logger.Warn(e.Message, opts...)
+			case logg.LevelInfo:
+				c.logger.Info(e.Message, opts...)
+			}
+			return nil
+		},
 	}
 
 	return loggers.New(optsLogger), nil

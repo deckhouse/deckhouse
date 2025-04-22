@@ -22,8 +22,20 @@ on:
     - cron: '30 9 * * *'
 
 jobs:
+
+  # <template: skip_tests_repos>
+  skip_tests_repos:
+    name: Skip tests repos
+    runs-on: ubuntu-latest
+    if: ${{ false || github.repository == 'deckhouse/deckhouse' }}
+    steps:
+    - name: Do nothing
+      run: echo "Empty action to fulfil Github requirements."
+  # </template: skip_tests_repos>
   stale:
     runs-on: ubuntu-latest
+    needs:
+      - skip_tests_repos
     steps:
     - uses: actions/stale@v7
       with:

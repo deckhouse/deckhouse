@@ -18,6 +18,11 @@ import:
 imageSpec:
   config:
     labels: {"distro": "all", "version": "all", "kubelet": "{{ printf "%s.%s" $version $patch }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false

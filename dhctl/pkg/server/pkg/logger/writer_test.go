@@ -29,8 +29,6 @@ import (
 )
 
 func TestLogWriter(t *testing.T) {
-	t.Parallel()
-
 	tests := map[string]struct {
 		input [][]byte
 		lines [][]string
@@ -90,8 +88,6 @@ func TestLogWriter(t *testing.T) {
 		tt := tt
 
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
 			sendCh := make(chan []string)
 			defer close(sendCh)
 

@@ -149,7 +149,9 @@ tests-modules: ## Run unit tests for modules hooks and templates.
 	go test -timeout=${TESTS_TIMEOUT} -vet=off ${TESTS_PATH}
 
 dmt-lint:
-	docker run --rm -v ${PWD}:/deckhouse-src --user $(id -u):$(id -g) ubuntu /deckhouse-src/tools/dmt-lint.sh
+	export DMT_METRICS_URL="${DMT_METRICS_URL}"
+	export DMT_METRICS_TOKEN="${DMT_METRICS_TOKEN}"
+	docker run --rm -v ${PWD}:/deckhouse-src -e DMT_METRICS_URL="${DMT_METRICS_URL}" -e DMT_METRICS_TOKEN="${DMT_METRICS_TOKEN}" --user $(id -u):$(id -g) ubuntu /deckhouse-src/tools/dmt-lint.sh
 
 
 tests-openapi: ## Run tests against modules openapi values schemas.
@@ -205,7 +207,7 @@ lint-src-artifact: set-build-envs ## Run src-artifact stapel linter
 
 .PHONY: generate render-workflow
 generate: bin/werf ## Run all generate-* jobs in bulk.
-	cd tools; go generate
+	cd tools; go generate -v
 
 render-workflow: ## Generate CI workflow instructions.
 	./.github/render-workflows.sh
@@ -330,6 +332,11 @@ update-lib-helm: ## Update lib-helm.
 	##~ Options: version=MAJOR.MINOR.PATCH
 	cd helm_lib/ && yq -i '.dependencies[0].version = "$(version)"' Chart.yaml && helm dependency update && tar -xf charts/deckhouse_lib_helm-*.tgz -C charts/ && rm charts/deckhouse_lib_helm-*.tgz && git add Chart.yaml Chart.lock charts/*
 
+.PHONY: update-base-images-versions
+update-base-images-versions:
+	##~ Options: version=vMAJOR.MINOR.PATCH
+	cd candi && curl --fail -sSLO https://fox.flant.com/api/v4/projects/deckhouse%2Fbase-images/packages/generic/base_images/$(version)/base_images.yml
+
 ##@ Build
 .PHONY: build
 set-build-envs:
@@ -378,7 +385,7 @@ set-build-envs:
   ifeq ($(DECKHOUSE_PRIVATE_REPO),)
   	export DECKHOUSE_PRIVATE_REPO=https://github.com
   endif
-  
+
 	export WERF_REPO=$(DEV_REGISTRY_PATH)
 	export REGISTRY_SUFFIX=$(shell echo $(WERF_ENV) | tr '[:upper:]' '[:lower:]')
 	export SECONDARY_REPO=--secondary-repo $(DECKHOUSE_REGISTRY_HOST)/deckhouse/$(REGISTRY_SUFFIX)

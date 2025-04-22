@@ -50,9 +50,10 @@ jobs:
 {!{/* Jobs for each CRI and Kubernetes version */}!}
 {!{- $criName := "Containerd" -}!}
 {!{- $kubernetesVersion := "1.29" -}!}
-{!{- $providerNames := slice "AWS" "EKS" "Azure" "GCP" "Yandex.Cloud" "OpenStack" "vSphere" "VCD" "Static" -}!}
+{!{- $providerNames := slice "AWS" "EKS" "GCP" "Yandex.Cloud" "OpenStack" "vSphere" "VCD" "Static" -}!}
+{!{- $commanderProviders := "yandex-cloud" -}!}
 {!{- if $enableWorkflowOnTestRepos -}!}
-{!{-   $providerNames = slice "AWS" "OpenStack" "Azure" -}!}
+{!{-   $providerNames = slice "AWS" "OpenStack" -}!}
 {!{- end -}!}
 {!{- range $providerName := $providerNames -}!}
 {!{-   $provider := $providerName | replaceAll "." "-" | toLower -}!}
@@ -64,7 +65,7 @@ jobs:
 {!{-   $jobID := printf "run_%s_%s_%s" $providerForJobId $cri $kubernetesVersionSlug -}!}
 {!{-   $dependsJobsForAlert = $dependsJobsForAlert | coll.Append $jobID -}!}
 {!{-   $jobName := printf "%s, %s, Kubernetes %s" $providerName $criName $kubernetesVersion -}!}
-{!{-   $jobCtx := (dict "provider" $provider "cri" $cri "criName" $criName "criEnv" $criEnv "layout" $layout) }!}
+{!{-   $jobCtx := (dict "provider" $provider "commanderProviders" $commanderProviders "cri" $cri "criName" $criName "criEnv" $criEnv "layout" $layout) }!}
 {!{-   $jobCtx = coll.Merge $jobCtx (dict "kubernetesVersion" $kubernetesVersion "kubernetesVersionSlug" $kubernetesVersionSlug) }!}
 {!{-   $jobCtx = coll.Merge $jobCtx (dict "providerName" $providerName "workflowName" $workflowName "jobName" $jobName "jobID" $jobID) }!}
 {!{   tmpl.Exec "e2e_run_job_template" $jobCtx | strings.Indent 2 }!}

@@ -92,7 +92,7 @@ func NewSchemaStore(paths ...string) *SchemaStore {
 	return newOnceSchemaStore(paths)
 }
 
-func newSchemaStore(checkAdditionalProperties bool, schemasDir []string) *SchemaStore {
+func newSchemaStore(schemasDir []string) *SchemaStore {
 	st := &SchemaStore{
 		cache:              make(map[SchemaIndex]*spec.Schema),
 		moduleConfigsCache: make(map[string]*spec.Schema),
@@ -112,7 +112,7 @@ func newSchemaStore(checkAdditionalProperties bool, schemasDir []string) *Schema
 			"cloud_provider_discovery_data.yaml",
 			"ssh_configuration.yaml",
 			"ssh_host_configuration.yaml":
-			uploadError := st.UploadByPath(checkAdditionalProperties, path)
+			uploadError := st.UploadByPath(path)
 			if uploadError != nil {
 				return uploadError
 			}
@@ -148,12 +148,12 @@ func newSchemaStore(checkAdditionalProperties bool, schemasDir []string) *Schema
 			if err != nil {
 				return err
 			}
-			if checkAdditionalProperties {
-				schema = transformer.TransformSchema(
-					schema,
-					&transformer.AdditionalPropertiesTransformer{},
-				)
-			}
+
+			schema = transformer.TransformSchema(
+				schema,
+				&transformer.AdditionalPropertiesTransformer{},
+			)
+
 			st.moduleConfigsCache[moduleName] = schema
 		} else if errors.Is(err, os.ErrNotExist) {
 			log.DebugF("Openapi spec not found for module %s\n", moduleName)
@@ -189,7 +189,7 @@ func newSchemaStore(checkAdditionalProperties bool, schemasDir []string) *Schema
 
 func newOnceSchemaStore(schemasDir []string) *SchemaStore {
 	once.Do(func() {
-		store = newSchemaStore(false, schemasDir)
+		store = newSchemaStore(schemasDir)
 	})
 	return store
 }
@@ -265,6 +265,7 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte, opts ..
 			return err
 		}
 		mcName := mc.GetName()
+		log.DebugF("Found module config for validate %s\n", mcName)
 		if mc.Spec.Enabled == nil && mcName != "global" {
 			// we need return error because on top level we want filter module configs from modulesources and move into resources
 			// global is special mc without module
@@ -306,6 +307,8 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte, opts ..
 		return ErrSchemaNotFound
 	}
 
+	schema = transformer.TransformSchema(schema, &transformer.AdditionalPropertiesTransformer{})
+
 	isValid, err := openAPIValidate(&docForValidate, schema, options)
 	if !isValid {
 		if options.commanderMode {
@@ -319,16 +322,16 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte, opts ..
 	return nil
 }
 
-func (s *SchemaStore) UploadByPath(checkAdditionalProperties bool, path string) error {
+func (s *SchemaStore) UploadByPath(path string) error {
 	fileContent, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("Loading schema file: %v", err)
 	}
 
-	return s.upload(checkAdditionalProperties, fileContent)
+	return s.upload(fileContent)
 }
 
-func (s *SchemaStore) upload(checkAdditionalProperties bool, fileContent []byte) error {
+func (s *SchemaStore) upload(fileContent []byte) error {
 	openAPISchema := new(OpenAPISchema)
 	if err := yaml.UnmarshalStrict(fileContent, openAPISchema); err != nil {
 		return fmt.Errorf("json unmarshal: %v", err)
@@ -350,12 +353,12 @@ func (s *SchemaStore) upload(checkAdditionalProperties bool, fileContent []byte)
 		if err != nil {
 			return fmt.Errorf("expand the schema: %v", err)
 		}
-		if checkAdditionalProperties {
-			schema = transformer.TransformSchema(
-				schema,
-				&transformer.AdditionalPropertiesTransformer{},
-			)
-		}
+
+		schema = transformer.TransformSchema(
+			schema,
+			&transformer.AdditionalPropertiesTransformer{},
+		)
+
 		s.cache[SchemaIndex{Kind: openAPISchema.Kind, Version: parsedSchema.Version}] = schema
 	}
 
@@ -412,7 +415,7 @@ func ValidateDiscoveryData(config *[]byte, paths []string, opts ...ValidateOptio
 }
 
 func ValidateConf(conf *[]byte) error {
-	schemaStore := newSchemaStore(true, []string{
+	schemaStore := newSchemaStore([]string{
 		"/deckhouse/candi/cloud-providers/zvirt/openapi",
 		"/deckhouse/candi/cloud-providers/vsphere/openapi",
 		"/deckhouse/candi/cloud-providers/huaweicloud/openapi",

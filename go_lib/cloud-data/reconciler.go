@@ -16,6 +16,7 @@ package clouddata
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -26,9 +27,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,17 +45,19 @@ type Discoverer interface {
 	InstanceTypes(ctx context.Context) ([]v1alpha1.InstanceType, error)
 	DiscoveryData(ctx context.Context, cloudProviderDiscoveryData []byte) ([]byte, error)
 	DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error)
+	CheckCloudConditions(ctx context.Context) ([]v1alpha1.CloudCondition, error)
 }
 
 type Reconciler struct {
-	cloudRequestErrorMetric   *prometheus.GaugeVec
-	updateResourceErrorMetric *prometheus.GaugeVec
-	orphanedDiskMetric        *prometheus.GaugeVec
+	cloudRequestErrorMetric    *prometheus.GaugeVec
+	updateResourceErrorMetric  *prometheus.GaugeVec
+	orphanedDiskMetric         *prometheus.GaugeVec
+	cloudConditionsErrorMetric *prometheus.GaugeVec
 
 	discoverer       Discoverer
 	checkInterval    time.Duration
 	listenAddress    string
-	logger           *log.Entry
+	logger           *log.Logger
 	k8sDynamicClient dynamic.Interface
 	k8sClient        *kubernetes.Clientset
 	probe            bool
@@ -65,7 +68,7 @@ func NewReconciler(
 	discoverer Discoverer,
 	listenAddress string,
 	interval time.Duration,
-	logger *log.Entry,
+	logger *log.Logger,
 	k8sClient *kubernetes.Clientset,
 	k8sDynamicClient dynamic.Interface,
 ) *Reconciler {
@@ -81,11 +84,11 @@ func NewReconciler(
 }
 
 func (c *Reconciler) Start() {
-	defer c.logger.Infoln("Stop cloud data discoverer fully")
+	defer c.logger.Info("Stop cloud data discoverer fully")
 
-	c.logger.Infoln("Start cloud data discoverer")
-	c.logger.Infoln("Address:", c.listenAddress)
-	c.logger.Infoln("Checks interval:", c.checkInterval)
+	c.logger.Info("Start cloud data discoverer")
+	c.logger.Info("Address:", c.listenAddress)
+	c.logger.Info("Checks interval:", c.checkInterval)
 
 	// channels to stop converge loop
 	doneCh := make(chan struct{})
@@ -101,13 +104,13 @@ func (c *Reconciler) Start() {
 	go func() {
 		c.logger.Infof("Signal received: %v. Exiting.\n", <-signalChan)
 		cancel()
-		c.logger.Infoln("Waiting for stop reconcile loop...")
+		c.logger.Info("Waiting for stop reconcile loop...")
 		<-doneCh
 
 		ctx, cancel := context.WithTimeout(rootCtx, 10*time.Second)
 		defer cancel()
 
-		c.logger.Infoln("Shutdown ...")
+		c.logger.Info("Shutdown ...")
 
 		err := httpServer.Shutdown(ctx)
 		if err != nil {
@@ -120,7 +123,7 @@ func (c *Reconciler) Start() {
 
 	err := httpServer.ListenAndServe()
 	if err != http.ErrServerClosed {
-		c.logger.Fatal(err)
+		c.logger.Error("http server error", err)
 	}
 }
 
@@ -154,6 +157,16 @@ func (c *Reconciler) registerMetrics() {
 		[]string{"id", "name"},
 	)
 	prometheus.MustRegister(c.orphanedDiskMetric)
+
+	c.cloudConditionsErrorMetric = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "cloud_data",
+		Subsystem: "discovery",
+		Name:      "cloud_conditions_error",
+		Help:      "Indicates that there are unmet cloud conditions in the cluster",
+	},
+		[]string{"name", "message"},
+	)
+	prometheus.MustRegister(c.cloudConditionsErrorMetric)
 }
 
 func (c *Reconciler) setProbe(probe bool) {
@@ -199,7 +212,7 @@ func (c *Reconciler) getHTTPServer() *http.Server {
 
 		w.WriteHeader(http.StatusServiceUnavailable)
 		_, _ = w.Write([]byte("false"))
-		c.logger.Errorln("Probe failed")
+		c.logger.Error("Probe failed")
 	})
 	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(indexPageContent))
@@ -209,17 +222,100 @@ func (c *Reconciler) getHTTPServer() *http.Server {
 }
 
 func (c *Reconciler) reconcile(ctx context.Context) {
-	c.logger.Infoln("Start next data discovery")
-	defer c.logger.Infoln("Finish data discovery")
+	c.logger.Info("Start next data discovery")
+	defer c.logger.Info("Finish data discovery")
 
+	c.checkCloudConditions(ctx)
 	c.instanceTypesReconcile(ctx)
 	c.discoveryDataReconcile(ctx)
 	c.orphanedDisksReconcile(ctx)
 }
 
+func (c *Reconciler) checkCloudConditions(ctx context.Context) {
+	c.logger.Info("Start checking cloud conditions")
+	defer c.logger.Info("Finish checking cloud conditions")
+
+	conditions, err := c.discoverer.CheckCloudConditions(ctx)
+	if err != nil {
+		c.logger.Errorf("Error occurred while checking cloud conditions: %v", err)
+		return
+	}
+
+	c.cloudConditionsErrorMetric.Reset()
+	for i := range conditions {
+		c.logger.Infof("Condition (%s) message: %s, ok: %t\n", conditions[i].Name, conditions[i].Message, conditions[i].Ok)
+		if !conditions[i].Ok {
+			c.cloudConditionsErrorMetric.WithLabelValues(conditions[i].Name, conditions[i].Message).Set(1.0)
+		}
+	}
+
+	if len(conditions) == 0 {
+		c.logger.Infof("Got 0 conditions")
+
+		cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		_, err = c.k8sClient.CoreV1().ConfigMaps("kube-system").Get(cctx, "d8-cloud-provider-conditions", metav1.GetOptions{})
+		cancel()
+
+		if errors.IsNotFound(err) {
+			// don't create empty configmap if we don't have an existing one
+			return
+		}
+	}
+
+	jsonConditions, err := json.Marshal(conditions)
+	if err != nil {
+		c.logger.Errorf("failed to marshal conditions: %v", err)
+		return
+	}
+
+	if err = retryFunc(15, 3*time.Second, 30*time.Second, c.logger, func() error {
+		cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		configMap, err1 := c.k8sClient.CoreV1().ConfigMaps("kube-system").Get(cctx, "d8-cloud-provider-conditions", metav1.GetOptions{})
+		cancel()
+		if errors.IsNotFound(err1) {
+			configMap = &v1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "d8-cloud-provider-conditions",
+					Namespace: "kube-system",
+				},
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ConfigMap",
+					APIVersion: "v1",
+				},
+				Data: map[string]string{"conditions": string(jsonConditions)},
+			}
+
+			cctx, cancel = context.WithTimeout(ctx, 10*time.Second)
+			_, err1 = c.k8sClient.CoreV1().ConfigMaps("kube-system").Create(cctx, configMap, metav1.CreateOptions{})
+			cancel()
+
+			if err1 != nil {
+				return fmt.Errorf("Cannot create d8-cloud-provider-conditions configMap: %v", err)
+			}
+		} else if err1 != nil {
+			return fmt.Errorf("Cannot check d8-cloud-provider-conditions configMap before creating it: %v", err1)
+		} else {
+			configMap.Data["conditions"] = string(jsonConditions)
+
+			cctx, cancel = context.WithTimeout(ctx, 10*time.Second)
+			_, err1 = c.k8sClient.CoreV1().ConfigMaps("kube-system").Update(cctx, configMap, metav1.UpdateOptions{})
+			cancel()
+
+			if err1 != nil {
+				return fmt.Errorf("Cannot update d8-cloud-provider-conditions configMap: %v", err)
+			}
+		}
+		return nil
+	}); err != nil {
+		c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
+		c.logger.Error("Cannot update d8-cloud-provider-conditions configMap. Timed out. See error messages below.")
+		c.setProbe(false)
+	}
+}
+
 func (c *Reconciler) instanceTypesReconcile(ctx context.Context) {
-	c.logger.Infoln("Start instance type discovery step")
-	defer c.logger.Infoln("Finish instance type discovery step")
+	c.logger.Info("Start instance type discovery step")
+	defer c.logger.Info("Finish instance type discovery step")
 
 	instanceTypes, err := c.discoverer.InstanceTypes(ctx)
 	if err != nil {
@@ -284,7 +380,7 @@ func (c *Reconciler) instanceTypesReconcile(ctx context.Context) {
 	})
 	if err != nil {
 		c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
-		c.logger.Errorln("Cannot update cloud data resource. Timed out. See error messages below.")
+		c.logger.Error("Cannot update cloud data resource. Timed out. See error messages below.")
 		c.setProbe(false)
 	}
 }
@@ -324,8 +420,8 @@ func (c *Reconciler) instanceTypesCloudDiscoveryUnstructured(o *unstructured.Uns
 }
 
 func (c *Reconciler) discoveryDataReconcile(ctx context.Context) {
-	c.logger.Infoln("Start cloud data discovery step")
-	defer c.logger.Infoln("Finish cloud data discovery step")
+	c.logger.Info("Start cloud data discovery step")
+	defer c.logger.Info("Finish cloud data discovery step")
 
 	cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
@@ -347,7 +443,7 @@ func (c *Reconciler) discoveryDataReconcile(ctx context.Context) {
 	})
 	if err != nil {
 		c.cloudRequestErrorMetric.WithLabelValues("discovery_data").Set(1.0)
-		c.logger.Errorln("Cannot get 'd8-provider-cluster-configuration' secret. Timed out. See error messages below.")
+		c.logger.Error("Cannot get 'd8-provider-cluster-configuration' secret. Timed out. See error messages below.")
 		c.setProbe(false)
 		return
 	}
@@ -404,7 +500,7 @@ func (c *Reconciler) discoveryDataReconcile(ctx context.Context) {
 	})
 	if err != nil {
 		c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
-		c.logger.Errorln("Cannot update cloud data resource. Timed out. See error messages below.")
+		c.logger.Error("Cannot update cloud data resource. Timed out. See error messages below.")
 		c.setProbe(false)
 	}
 }
@@ -443,8 +539,8 @@ func (s Set) Has(x string) bool {
 }
 
 func (c *Reconciler) orphanedDisksReconcile(ctx context.Context) {
-	c.logger.Infoln("Start orphaned disks discovery step")
-	defer c.logger.Infoln("Finish orphaned disks discovery step")
+	c.logger.Info("Start orphaned disks discovery step")
+	defer c.logger.Info("Finish orphaned disks discovery step")
 
 	err := retryFunc(15, 3*time.Second, 30*time.Second, c.logger, func() error {
 		cctx, cancel := context.WithTimeout(ctx, 30*time.Second)
@@ -457,7 +553,7 @@ func (c *Reconciler) orphanedDisksReconcile(ctx context.Context) {
 		}
 
 		if len(disksMeta) == 0 {
-			c.logger.Infoln("No disks found")
+			c.logger.Info("No disks found")
 			c.cloudRequestErrorMetric.WithLabelValues("disks_meta").Set(0.0)
 			c.updateResourceErrorMetric.WithLabelValues().Set(0.0)
 			return nil
@@ -488,7 +584,7 @@ func (c *Reconciler) orphanedDisksReconcile(ctx context.Context) {
 	})
 	if err != nil {
 		c.updateResourceErrorMetric.WithLabelValues().Set(1.0)
-		c.logger.Errorln("Cannot update cloud data resource. Timed out. See error messages below.")
+		c.logger.Error("Cannot update cloud data resource. Timed out. See error messages below.")
 		c.setProbe(false)
 	}
 }
@@ -497,7 +593,7 @@ type retryable func() error
 
 var errMaxRetriesReached = fmt.Errorf("exceeded retry limit")
 
-func retryFunc(attempts int, initialSleep time.Duration, maxSleep time.Duration, logger *log.Entry, fn retryable) error {
+func retryFunc(attempts int, initialSleep time.Duration, maxSleep time.Duration, logger *log.Logger, fn retryable) error {
 	var err error
 	sleep := initialSleep
 

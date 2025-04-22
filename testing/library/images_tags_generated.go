@@ -147,7 +147,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"simpleBridge": "imageHash-cniSimpleBridge-simpleBridge",
 	},
 	"common": map[string]interface{}{
-		"alpine":                    "imageHash-common-alpine",
 		"checkKernelVersion":        "imageHash-common-checkKernelVersion",
 		"coredns":                   "imageHash-common-coredns",
 		"csiExternalAttacher128":    "imageHash-common-csiExternalAttacher128",
@@ -248,6 +247,7 @@ var DefaultImagesDigests = map[string]interface{}{
 	},
 	"ingressNginx": map[string]interface{}{
 		"controller110":         "imageHash-ingressNginx-controller110",
+		"controller112":         "imageHash-ingressNginx-controller112",
 		"controller19":          "imageHash-ingressNginx-controller19",
 		"kruise":                "imageHash-ingressNginx-kruise",
 		"kruiseStateMetrics":    "imageHash-ingressNginx-kruiseStateMetrics",
@@ -418,10 +418,12 @@ var DefaultImagesDigests = map[string]interface{}{
 		"kubelet13010":              "imageHash-registrypackages-kubelet13010",
 		"kubelet1316":               "imageHash-registrypackages-kubelet1316",
 		"kubelet1322":               "imageHash-registrypackages-kubelet1322",
+		"kubernetesApiProxy":        "imageHash-registrypackages-kubernetesApiProxy",
 		"kubernetesCni162":          "imageHash-registrypackages-kubernetesCni162",
 		"lsblk2402":                 "imageHash-registrypackages-lsblk2402",
 		"netcat110481":              "imageHash-registrypackages-netcat110481",
 		"nvmeCli211":                "imageHash-registrypackages-nvmeCli211",
+		"pause":                     "imageHash-registrypackages-pause",
 		"socat1734":                 "imageHash-registrypackages-socat1734",
 		"tomlMerge01":               "imageHash-registrypackages-tomlMerge01",
 		"virtWhat125":               "imageHash-registrypackages-virtWhat125",
