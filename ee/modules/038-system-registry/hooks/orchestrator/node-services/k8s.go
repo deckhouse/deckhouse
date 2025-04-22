@@ -38,7 +38,7 @@ func KubernetsConfig(name string) []go_hook.KubernetesConfig {
 
 				err := sdk.FromUnstructured(obj, &node)
 				if err != nil {
-					return "", fmt.Errorf("failed to convert node to struct: %v", err)
+					return nil, fmt.Errorf("failed to convert node to struct: %v", err)
 				}
 
 				isReady := false
@@ -83,7 +83,7 @@ func KubernetsConfig(name string) []go_hook.KubernetesConfig {
 
 				err := sdk.FromUnstructured(obj, &pod)
 				if err != nil {
-					return "", fmt.Errorf("failed to convert pod to struct: %v", err)
+					return nil, fmt.Errorf("failed to convert pod to struct: %v", err)
 				}
 
 				nodeFound := false
@@ -95,7 +95,7 @@ func KubernetsConfig(name string) []go_hook.KubernetesConfig {
 				}
 
 				if !nodeFound {
-					return "", nil
+					return nil, nil
 				}
 
 				isReady := false

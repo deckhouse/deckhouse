@@ -38,7 +38,7 @@ func KubernetsConfig(name string) go_hook.KubernetesConfig {
 
 			err := sdk.FromUnstructured(obj, &secret)
 			if err != nil {
-				return "", fmt.Errorf("failed to convert secret \"%v\" to struct: %v", obj.GetName(), err)
+				return nil, fmt.Errorf("failed to convert secret \"%v\" to struct: %v", obj.GetName(), err)
 			}
 
 			if !strings.HasPrefix(secret.Name, SecretNamePrefix) {

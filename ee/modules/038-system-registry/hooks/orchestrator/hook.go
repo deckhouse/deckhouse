@@ -54,7 +54,7 @@ func getKubernetesConfigs() []go_hook.KubernetesConfig {
 
 				err := sdk.FromUnstructured(obj, &secret)
 				if err != nil {
-					return "", fmt.Errorf("failed to convert config secret to struct: %v", err)
+					return nil, fmt.Errorf("failed to convert config secret to struct: %v", err)
 				}
 
 				config := Params{
