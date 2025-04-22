@@ -200,8 +200,8 @@ spec:
     # [<ru>] Максимальное количество инстансов в каждой зоне (используется при масштабировании).
     # [<ru>] Возможно, захотите изменить.
     maxPerZone: 1
-    # [<en>] The minimum number of instances for the group in each zone.
-    # [<ru>] Минимальное количество инстансов в каждой зоне.
+    # [<en>] The minimum number of instances for the group in each zone. To launch more nodes, increase maxPerZone or add more zones.
+    # [<ru>] Минимальное количество инстансов в каждой зоне. Чтобы запустить больше узлов, увеличьте maxPerZone или добавьте зоны.
     minPerZone: 1
   disruptions:
     approvalMode: Automatic
