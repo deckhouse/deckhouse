@@ -18,6 +18,10 @@ package checker
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -26,6 +30,8 @@ import (
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/kubernetes"
 )
+
+const svcName = "deckhouse-leader"
 
 // AtLeastOnePodReady is a checker constructor and configurator
 type AtLeastOnePodReady struct {
@@ -44,6 +50,7 @@ func (c AtLeastOnePodReady) Checker() check.Checker {
 		access:        c.Access,
 		namespace:     c.Namespace,
 		labelSelector: c.LabelSelector,
+		client:        newInsecureClient(3 * c.Timeout),
 	}
 
 	return sequence(
@@ -57,6 +64,7 @@ type podReadinessChecker struct {
 	namespace     string
 	labelSelector string
 	access        kubernetes.Access
+	client        *http.Client
 }
 
 func (c *podReadinessChecker) Check() check.Error {
@@ -84,33 +92,126 @@ type podRunningOrReadyChecker struct {
 	labelSelector    string
 	readinessTimeout time.Duration
 	access           kubernetes.Access
+	client           http.Client
+}
+
+type Status struct {
+	ConvergeInProgress        *int `json:"CONVERGE_IN_PROGRESS"`
+	ConvergeWaitTask          bool `json:"CONVERGE_WAIT_TASK"`
+	StartupConvergeDone       bool `json:"STARTUP_CONVERGE_DONE"`
+	StartupConvergeInProgress *int `json:"STARTUP_CONVERGE_IN_PROGRESS"`
+	StartupConvergeNotStarted bool `json:"STARTUP_CONVERGE_NOT_STARTED"`
+}
+
+const (
+	windowSize          = 6
+	taskGrowthThreshold = 0.01
+	freezeThreshold     = 5 * time.Minute
+)
+
+var history []Status
+
+func (c *podRunningOrReadyChecker) poll() (*Status, check.Error) {
+	url, err := c.extractServiceURL()
+	if err != nil {
+		return nil, check.ErrUnknown("cannot get svc url %s: %v", c.namespace, err)
+	}
+
+	req, err := http.NewRequestWithContext(context.TODO(), http.MethodGet, url, nil)
+	if err != nil {
+		return nil, check.ErrUnknown("error getting deckhouse pod status converge %s: %v", c.namespace, err)
+	}
+
+	resp, err := c.client.Do(req)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		return nil, check.ErrUnknown("failed to get status converge %s: %v", c.namespace, err)
+	}
+
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, check.ErrUnknown("failed to get status converge %s: %v", c.namespace, err)
+	}
+
+	var status Status
+	if err := json.Unmarshal(body, &status); err != nil {
+		return nil, check.ErrUnknown("failed unmarshal json %s: %v", c.namespace, err)
+	}
+
+	return &status, nil
 }
 
 func (c *podRunningOrReadyChecker) Check() check.Error {
-	podList, err := c.access.Kubernetes().CoreV1().Pods(c.namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: c.labelSelector})
+	status, err := c.poll()
 	if err != nil {
-		return check.ErrUnknown("cannot get pods %s,%s: %v", c.namespace, c.labelSelector, err)
+		return err
+	}
+	fmt.Printf("poll ended %+v\n", status)
+	history = append(history, *status)
+	if len(history) > windowSize {
+		println("history more than window size, removing oldest element")
+		history = history[1:]
+	}
+	fmt.Printf("append to history %+v\n", history)
+
+	if len(history) < 2 {
+		// not enough data
+		fmt.Printf("not enough data yet, %d\n", len(history))
+		return nil
 	}
 
-	var cherr check.Error
-	for _, pod := range podList.Items {
-		err := isPodWorking(&pod, c.readinessTimeout)
-		if err == nil {
-			// the pod is fine
-			return nil
-		}
-		if cherr == nil {
-			// got error, saving it for comparison with other pods
-			cherr = err
-			continue
-		}
-		if cherr.Status() == check.Unknown {
-			// got at least second error, we should not make the status worse anyway
-			continue
-		}
-		cherr = err
+	latest := history[len(history)-1]
+
+	if latest.ConvergeWaitTask {
+		print("queue is empty, skip check")
+
+		// queue is empty, deckhouse is waiting for tasks
+		return nil
 	}
-	return cherr
+
+	start, end := history[0], latest
+	startTasks := toInt(start.ConvergeInProgress) + toInt(start.StartupConvergeInProgress)
+	endTasks := toInt(end.ConvergeInProgress) + toInt(end.StartupConvergeInProgress)
+	fmt.Printf("start tasks %d, end tasks %d\n", startTasks, endTasks)
+
+	duration := time.Duration(len(history)) * (time.Second * 60)
+	fmt.Printf("duration %d\n", duration)
+
+	growthRate := float64(endTasks-startTasks) / duration.Seconds()
+	fmt.Printf("growth rate %d\n", growthRate)
+
+	if growthRate > taskGrowthThreshold {
+		fmt.Printf("growth rate exceeds task growth threshold %d\n", growthRate)
+		return check.ErrFail("growth rate exceeds task growth threshold")
+	}
+
+	// check for frozen queue
+	allEqual := true
+	ref := toInt(history[0].ConvergeInProgress) + toInt(history[0].StartupConvergeInProgress)
+	for _, h := range history[1:] {
+		cur := toInt(h.ConvergeInProgress) + toInt(h.StartupConvergeInProgress)
+		if cur != ref {
+			allEqual = false
+			break
+		}
+	}
+
+	if allEqual {
+		frozenDuration := time.Duration(len(history)) * (time.Second * 60)
+		if frozenDuration >= freezeThreshold {
+			return check.ErrFail("queue size haven't changed in 5 minutes, possibly frozen")
+		}
+	}
+
+	return nil
+}
+
+func toInt(ptr *int) int {
+	if ptr == nil {
+		return 0
+	}
+	return *ptr
 }
 
 func isPodRunning(pod *v1.Pod) bool {
@@ -215,4 +316,19 @@ func createNodeAffinityObject(nodeName string) *v1.NodeAffinity {
 			},
 		},
 	}
+}
+
+func (c *podRunningOrReadyChecker) extractServiceURL() (string, error) {
+	service, err := c.access.Kubernetes().CoreV1().Services(c.namespace).Get(context.TODO(), svcName, metav1.GetOptions{})
+	if err != nil {
+		return "", err
+	}
+	var serviceport int32
+	for _, port := range service.Spec.Ports {
+		if port.Name == "self" {
+			serviceport = port.Port
+		}
+	}
+
+	return fmt.Sprintf("http://%s.%s:%d/status/converge?output=json", svcName, c.namespace, serviceport), nil
 }

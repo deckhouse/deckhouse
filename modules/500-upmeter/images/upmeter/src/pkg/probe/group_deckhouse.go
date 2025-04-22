@@ -54,8 +54,8 @@ func initDeckhouse(access kubernetes.Access, preflight checker.Doer, logger *log
 
 				Access:           access,
 				PreflightChecker: controlPlanePinger,
-
-				DeckhouseReadinessTimeout: 20 * time.Minute,
+				// TODO: DONT FORGET TO CHANGE BACK
+				DeckhouseReadinessTimeout: 20 * time.Second,
 				PodAccessTimeout:          5 * time.Second,
 				ObjectChangeTimeout:       5 * time.Second,
 
