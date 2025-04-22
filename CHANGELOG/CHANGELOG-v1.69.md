@@ -4,6 +4,7 @@
 
 
  - For new clusters in Yandex Cloud with the `withNATInstance` layout, `internalSubnetCIDR` or `internalSubnetID` must be specified.
+ - Ingress-nginx controller pods of v1.9 will be restated.
  - The minimum supported version of Kubernetes is now 1.28. All control plane components will restart.
  - Time-based retention in `loki` is no longer available. See the changelog for details.
  - release upgrade will be blocked on AWS-based clusters where SA doesn't have DescribeAddressesAttribute and DescribeInstanceTopology roles. They are required for new Terraform AWS Provider version.
@@ -92,6 +93,7 @@
  - **[cloud-provider-vsphere]** Fixed null StorageClasses in vSphere when StorageClasses are excluded from discovery. [#12597](https://github.com/deckhouse/deckhouse/pull/12597)
  - **[cloud-provider-yandex]** Fixed LoadBalancer service creation in hybrid clusters. [#12491](https://github.com/deckhouse/deckhouse/pull/12491)
  - **[cloud-provider-zvirt]** Fixed zvirt-csi-driver patching (token refresh fix patch). [#12313](https://github.com/deckhouse/deckhouse/pull/12313)
+ - **[control-plane-manager]** Stale service account alert fix. [#13129](https://github.com/deckhouse/deckhouse/pull/13129)
  - **[control-plane-manager]** Fixed `additionalAPIIssuers` and `additionalAPIAudiences` parameters and associated tests. [#12576](https://github.com/deckhouse/deckhouse/pull/12576)
  - **[control-plane-manager]** Fixed `d8-control-plane-manager` containers that were duplicated when updating Kubernetes. [#12561](https://github.com/deckhouse/deckhouse/pull/12561)
  - **[control-plane-manager]** Removed `etcd.externalMembersNames` from ModuleConfig settings. [#12422](https://github.com/deckhouse/deckhouse/pull/12422)
@@ -107,10 +109,13 @@
  - **[dhctl]** Fixed the CloudPermanent node converge process so that it must be drained before removal. [#12389](https://github.com/deckhouse/deckhouse/pull/12389)
  - **[dhctl]** Fixed the behavior when `SudoPassword` from the connection-config wasn't used in dhctl CLI and dhctl server. [#12368](https://github.com/deckhouse/deckhouse/pull/12368)
  - **[dhctl]** Improved logging and operation when performing `converge`. [#11926](https://github.com/deckhouse/deckhouse/pull/11926)
+ - **[ingress-nginx]** All necessary shared libraries are added to the container image. [#13124](https://github.com/deckhouse/deckhouse/pull/13124)
+    Ingress-nginx controller pods of v1.9 will be restated.
  - **[ingress-nginx]** Fixed patch names in `ingress-nginx`. [#12633](https://github.com/deckhouse/deckhouse/pull/12633)
  - **[ingress-nginx]** Fixed security vulnerabilities. [#12449](https://github.com/deckhouse/deckhouse/pull/12449)
  - **[istio]** Added Kubernetes version check in a Helm chart. [#12503](https://github.com/deckhouse/deckhouse/pull/12503)
  - **[istio]** Refactored secure api-proxy for multiclusters to improve reliability. [#12196](https://github.com/deckhouse/deckhouse/pull/12196)
+ - **[kube-dns]** Expanded pattern for `stubZones` to allow underscores (`_`) in domain names. [#13118](https://github.com/deckhouse/deckhouse/pull/13118)
  - **[loki]** fix storage capacity calculator hook for Loki [#13003](https://github.com/deckhouse/deckhouse/pull/13003)
     fixes the bug introduced in v1.69.0
  - **[node-manager]** Fixed kubeconfig generation for `CAPI`. [#12554](https://github.com/deckhouse/deckhouse/pull/12554)
@@ -126,6 +131,7 @@
  - **[service-with-healthchecks]** Removed unnecessary text data from the executable binary file. [#12492](https://github.com/deckhouse/deckhouse/pull/12492)
  - **[static-routing-manager]** Fixed regular expression to allow empty string in `nodeSelector` field. [#12510](https://github.com/deckhouse/deckhouse/pull/12510)
  - **[static-routing-manager]** Fixed `nodeSelector` parameter validation. [#12318](https://github.com/deckhouse/deckhouse/pull/12318)
+ - **[user-authn]** Fix secret generation on empty data field in the dex client app secret. [#13092](https://github.com/deckhouse/deckhouse/pull/13092)
  - **[user-authn]** Added security context with RuntimeDefault seccomp profile to dex container. [#12197](https://github.com/deckhouse/deckhouse/pull/12197)
  - **[vertical-pod-autoscaler]** Enabled the memory-save option to prevent the VPA recommender from consuming excessive amounts of RAM. [#12077](https://github.com/deckhouse/deckhouse/pull/12077)
 

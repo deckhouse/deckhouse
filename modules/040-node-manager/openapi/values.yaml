@@ -115,6 +115,7 @@ properties:
           properties:
             name:
               type: string
+              x-dmt-default: name
             standby:
               type: number
             reserveCPU:
