@@ -6,7 +6,7 @@
 {{- $llvmRev := "llvmorg-14.0.6" }}
 {{- $goVersion := "1.23.1" }}
 {{- $protocVersion := "22.3" }}
-{{- $bazelVersions := "8.2.1" }}
+{{- $bazelVersions := "6.5.0" }}
 {{- $iptables_version := "1.8.9" }}
 {{- $iptables_image_version := $iptables_version | replace "." "-" }}
 {{- $source := "https://github.com" }}
@@ -131,7 +131,7 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - export TARGETARCH=amd64 ARCH="x86_64"
-  - export BAZEL_VERSION="8.2.1" USE_BAZEL_VERSION="8.2.1"
+  - export BAZEL_VERSION="6.5.0" USE_BAZEL_VERSION="6.5.0"
   - cd /src/proxy
   - go mod download
   # - sed -i 's|ENVOY_SHA = "35c166bb5c90573151afbd94a0936741f9fab8bc"|ENVOY_SHA = "b3ba121ee22d3f77d6f2f7e5d4722d752093da15"|' WORKSPACE
