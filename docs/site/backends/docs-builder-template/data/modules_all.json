@@ -32,6 +32,15 @@
     "path": ""
   },
   "console": {
+    "editionsWithRestrictions": [
+      "cse-lite"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "View-only access",
+        "ru": "Доступ только на просмотр"
+      }
+    },
     "editions": [
       "se",
       "se-plus",
@@ -207,7 +216,9 @@
       "be",
       "se",
       "se-plus",
-      "ee"
+      "ee",
+      "cse-lite",
+      "cse-pro"
     ],
     "editionsWithRestrictionsComments": {
       "all": {
