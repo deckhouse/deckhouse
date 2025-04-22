@@ -70,12 +70,11 @@ USER root
 RUN cp /usr/bin/deckhouse-controller /usr/bin/caps-deckhouse-controller && \
     setcap "cap_sys_chroot=ep cap_sys_admin=ep cap_mknod=ep" /usr/bin/caps-deckhouse-controller
 
-USER deckhouse
-
-
 # Replace module helm chart
 RUN rm -r \
   /deckhouse/modules/038-system-registry/templates \
   /deckhouse/modules/038-system-registry/openapi
+
+USER deckhouse
 
 COPY --from=src /artifacts/registry /deckhouse/modules/038-system-registry
