@@ -129,3 +129,27 @@ kind: StaticClusterConfiguration
 # [<ru>] Если на узлах кластера используется только один интерфейс, ресурс StaticClusterConfiguration можно не создавать.
 internalNetworkCIDRs:
 - *!CHANGE_internalNetworkCIDRs*
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeType: Static
+  nodeTemplate:
+    labels:
+      node-role.kubernetes.io/control-plane: ""
+      node-role.kubernetes.io/master: ""
+    taints: []
+---
+# [<en>] stronghold module settings.
+# [<en>] https://deckhouse.io/products/stronghold/reference/mc.html#stronghold
+# [<ru>] Настройки модуля stronghold.
+# [<ru>] https://deckhouse.ru/products/stronghold/reference/mc.html#stronghold
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: stronghold
+spec:
+  version: 1
+  enabled: true

@@ -159,6 +159,18 @@ kind: StaticClusterConfiguration
 internalNetworkCIDRs:
 - *!CHANGE_internalNetworkCIDRs*
 ---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeType: Static
+  nodeTemplate:
+    labels:
+      node-role.kubernetes.io/control-plane: ""
+      node-role.kubernetes.io/master: ""
+    taints: []
+---
 # [<en>] stronghold module settings.
 # [<en>] https://deckhouse.io/products/stronghold/reference/mc.html#stronghold
 # [<ru>] Настройки модуля stronghold.

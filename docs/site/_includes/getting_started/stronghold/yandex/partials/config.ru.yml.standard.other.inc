@@ -156,6 +156,18 @@ nodeNetworkCIDR: "10.241.32.0/20"
 # [<ru>] Этот ключ будет добавлен пользователю на созданных узлах (имя пользователя зависит от используемого образа).
 sshPublicKey: *!CHANGE_SSH_KEY*
 ---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeType: CloudPermanent
+  nodeTemplate:
+    labels:
+      node-role.kubernetes.io/control-plane: ""
+      node-role.kubernetes.io/master: ""
+    taints: []
+---
 # [<en>] stronghold module settings.
 # [<en>] https://deckhouse.io/products/stronghold/reference/mc.html#stronghold
 # [<ru>] Настройки модуля stronghold.
