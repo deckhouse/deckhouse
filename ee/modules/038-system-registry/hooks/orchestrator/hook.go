@@ -20,7 +20,6 @@ import (
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers"
 	nodeservices "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/node-services"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/pki"
-	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/secrets"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/users"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
 )
@@ -99,7 +98,6 @@ func getKubernetesConfigs() []go_hook.KubernetesConfig {
 			},
 		},
 		pki.KubernetsConfig(pkiSnapName),
-		secrets.KubernetsConfig(secretsSnapName),
 		users.KubernetsConfig(usersSnapName),
 	}
 
@@ -144,6 +142,8 @@ func handle(input *go_hook.HookInput) error {
 			values.State = State{
 				Mode: registry_const.ModeUnmanaged,
 			}
+		} else {
+			input.Logger.Info("State successfully restored from secret")
 		}
 	}
 
@@ -160,11 +160,6 @@ func handle(input *go_hook.HookInput) error {
 	inputs.PKI, err = pki.InputsFromSnapshot(input, pkiSnapName)
 	if err != nil && !errors.Is(err, helpers.ErrNoSnapshot) {
 		return fmt.Errorf("get PKI snapshot error: %w", err)
-	}
-
-	inputs.Secrets, err = secrets.InputsFromSnapshot(input, secretsSnapName)
-	if err != nil && !errors.Is(err, helpers.ErrNoSnapshot) {
-		return fmt.Errorf("get Secrets snapshot error: %w", err)
 	}
 
 	inputs.Users, err = users.InputsFromSnapshot(input, usersSnapName)
