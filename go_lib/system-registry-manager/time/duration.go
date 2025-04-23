@@ -10,7 +10,7 @@ import (
 	"errors"
 	"time"
 
-	"gopkg.in/yaml.v3"
+	"sigs.k8s.io/yaml"
 )
 
 type Duration struct {
@@ -31,7 +31,7 @@ func (d Duration) String() string {
 
 // UnmarshalJSON deserializes a JSON string into Duration
 func (d *Duration) UnmarshalJSON(b []byte) error {
-	var s interface{}
+	var s any
 	if err := json.Unmarshal(b, &s); err != nil {
 		return err
 	}
@@ -43,7 +43,7 @@ func (d *Duration) UnmarshalJSON(b []byte) error {
 
 // UnmarshalYAML deserializes a YAML string into Duration
 func (d *Duration) UnmarshalYAML(value []byte) error {
-	var s interface{}
+	var s any
 	if err := yaml.Unmarshal(value, &s); err != nil {
 		return err
 	}
@@ -53,7 +53,7 @@ func (d *Duration) UnmarshalYAML(value []byte) error {
 	return err
 }
 
-func ParseDuration(value interface{}) (time.Duration, error) {
+func ParseDuration(value any) (time.Duration, error) {
 	switch v := value.(type) {
 	case float64:
 		return time.Duration(v), nil

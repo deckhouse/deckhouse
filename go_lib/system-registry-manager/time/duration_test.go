@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/yaml.v3"
+	"sigs.k8s.io/yaml"
 )
 
 // WithPointer struct - Event with a pointer to Duration
