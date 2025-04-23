@@ -1,4 +1,4 @@
-2413
+2414
 1GB
 2GB
 5XX
@@ -1556,6 +1556,7 @@ yaml
 yandex
 Yandex
 Yandex.Cloud
+YandexCloud
 YandexClusterConfiguration
 YandexInstanceClass
 YandexInstanceClasses
