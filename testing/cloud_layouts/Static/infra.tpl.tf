@@ -279,6 +279,7 @@ resource "openstack_compute_instance_v2" "worker" {
 resource "openstack_networking_floatingip_v2" "bastion" {
   floating_network_id = data.openstack_networking_network_v2.external.id
   port_id             = openstack_networking_port_v2.bastion_internal_without_security.id
+  pool                = "external-network"
 }
 
 output "master_ip_address_for_ssh" {
