@@ -147,10 +147,15 @@ spec:
           image: "{{ .Values.deckhouse.internal.currentReleaseImageName }}"
           imagePullPolicy: Always
           env:
-{{- if (not (.Values.global.enabledModules | has "control-plane-manager")) }}
-# control-plane is managed by third-party team (EKS/GKP/...): use Service by default
-{{- else }}
-  {{- if not .Values.global.clusterIsBootstrapped }}
+{{- if (.Values.global.enabledModules | has "control-plane-manager") }}
+# control-plane is NOT managed by third-party team (EKS/GKP/...)
+  {{- if .Values.global.clusterIsBootstrapped }}
+  # managed by Deckhouse: use API-proxy
+            - name: KUBERNETES_SERVICE_HOST
+              value: 127.0.0.1
+            - name: KUBERNETES_SERVICE_PORT
+              value: "6445"
+  {{- else }}
   # bootstrap phase: use direct connection
             - name: KUBERNETES_SERVICE_HOST
               valueFrom:
@@ -159,12 +164,6 @@ spec:
                   fieldPath: status.hostIP
             - name: KUBERNETES_SERVICE_PORT
               value: "6443"
-  {{- else }}
-  # managed by Deckhouse: use API-proxy
-            - name: KUBERNETES_SERVICE_HOST
-              value: 127.0.0.1
-            - name: KUBERNETES_SERVICE_PORT
-              value: "6445"
   {{- end }}
 {{- end }}
             - name: LOG_LEVEL
