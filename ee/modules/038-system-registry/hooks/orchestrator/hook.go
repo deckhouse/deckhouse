@@ -15,6 +15,7 @@ import (
 	v1core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers"
 	nodeservices "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/node-services"
@@ -29,6 +30,7 @@ const (
 	SubmoduleName = "orchestrator"
 
 	configSnapName       = "config"
+	stateSnapName        = "state"
 	pkiSnapName          = "pki"
 	secretsSnapName      = "secrets"
 	usersSnapName        = "users"
@@ -68,6 +70,34 @@ func getKubernetesConfigs() []go_hook.KubernetesConfig {
 				return config, nil
 			},
 		},
+		{
+			Name:       stateSnapName,
+			ApiVersion: "v1",
+			Kind:       "Secret",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"registry-state"},
+			},
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"d8-system"},
+				},
+			},
+			FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+				var secret v1core.Secret
+
+				err := sdk.FromUnstructured(obj, &secret)
+				if err != nil {
+					return nil, fmt.Errorf("failed to convert config secret to struct: %v", err)
+				}
+
+				stateData, ok := secret.Data["state"]
+				if !ok {
+					return nil, nil
+				}
+
+				return stateData, nil
+			},
+		},
 		pki.KubernetsConfig(pkiSnapName),
 		secrets.KubernetsConfig(secretsSnapName),
 		users.KubernetsConfig(usersSnapName),
@@ -95,6 +125,28 @@ func handle(input *go_hook.HookInput) error {
 		err    error
 	)
 
+	if values.State.Mode == "" {
+		input.Logger.Info("State not initialized, trying restore from secret")
+
+		stateData, err := helpers.SnapshotToSingle[[]byte](input, stateSnapName)
+		if err == nil {
+			if err = yaml.Unmarshal(stateData, &values.State); err != nil {
+				err = fmt.Errorf("cannot unmarhsal YAML: %w", err)
+			}
+		}
+
+		if err != nil {
+			input.Logger.Warn(
+				"Cannot restore state from secret, will initialize new",
+				"error", err,
+			)
+
+			values.State = State{
+				Mode: registry_const.ModeUnmanaged,
+			}
+		}
+	}
+
 	inputs.Params, err = helpers.SnapshotToSingle[Params](input, configSnapName)
 	if err != nil {
 		if errors.Is(err, helpers.ErrNoSnapshot) {
@@ -118,6 +170,11 @@ func handle(input *go_hook.HookInput) error {
 	inputs.Users, err = users.InputsFromSnapshot(input, usersSnapName)
 	if err != nil {
 		return fmt.Errorf("get Users snapshot error: %w", err)
+	}
+
+	inputs.NodeServices, err = nodeservices.InputsFromSnapshot(input, nodeServicesSnapName)
+	if err != nil {
+		return fmt.Errorf("get NodeServices snapshots error: %w", err)
 	}
 
 	values.Hash, err = helpers.ComputeHash(inputs)
