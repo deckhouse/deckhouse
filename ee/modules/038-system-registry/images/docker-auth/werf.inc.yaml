@@ -3,7 +3,7 @@
 {{- $GIT_CLONE_DEST_PATH := "/go/src/github.com/cesanta/docker_auth"}}
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 fromCacheVersion: 2025012201
 final: false
 mount:
