@@ -769,6 +769,14 @@ entries:
         ru: Проекты (ТЕСТ)
       folders:
         - title:
+            en: Administration
+            ru: Администрирование
+          folders:
+            - title:
+                en: Projects
+                ru: Проекты
+              url: /test/admin/projects.html
+        - title:
             en: Architecture
             ru: Архитектура
           folders:
