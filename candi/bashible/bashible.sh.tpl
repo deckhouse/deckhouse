@@ -206,8 +206,8 @@ unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 {{- end }}
 
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
-    if tmp="$(kubectl_exec get node ${D8_NODE_HOSTNAME} -o json | jq -r '.metadata.labels."node.deckhouse.io/group"')" ; then
-      NODE_GROUP="$tmp"
+      if tmp="$(kubectl_exec get node ${D8_NODE_HOSTNAME} -o json | jq -r '.metadata.labels."node.deckhouse.io/group"')" ; then
+        NODE_GROUP="$tmp"
       if [ "${NODE_GROUP}" == "null" ] ; then
         >&2 echo "failed to get node group. Forgot set label 'node.deckhouse.io/group'"
       fi
@@ -219,6 +219,15 @@ unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
   fi
 
   mkdir -p "$BUNDLE_STEPS_DIR" "$TMPDIR"
+
+  # get and save debug container image info
+  if debug_image_hash=$(kubectl_exec -n d8-cloud-instance-manager get cm bashible-apiserver-files -o json | jq -r '.data."images_digests.json"' | jq -r '.common.debugcontainer'); then
+    if [ ${debug_image_hash} == "null" ]; then
+      >&2 echo "failed to get debug container image information"
+    else
+      echo "${REGISTRY_ADDRESS}${REGISTRY_PATH}@${debug_image_hash}" > ${BOOTSTRAP_DIR}/debug-container-image
+    fi
+  fi
 
   # update bashible.sh itself
   if [ -z "${BASHIBLE_SKIP_UPDATE-}" ] && [ -z "${is_local-}" ]; then
