@@ -1,3 +1,4 @@
+{{- /* -}}
 {{- define "system_registry_manager_resources" }}
 cpu: 25m
 memory: 40Mi
@@ -124,3 +125,5 @@ spec:
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
           {{- end }}
       priorityClassName: system-cluster-critical
+
+{{- */ -}}
