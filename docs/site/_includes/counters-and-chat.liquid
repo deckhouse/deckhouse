@@ -10,6 +10,7 @@
 
 <!-- Yandex.Metrika counter -->
 <script type="text/javascript" >
+
 if ([{{ siteUrls }}].includes(window.location.hostname)) {
   let lang = {{ page.lang }};
   let metricId = lang == 'ru' ? {{ site.metrics.yandex_ru }} : {{ site.metrics.yandex_en }};
@@ -41,10 +42,42 @@ if ([{{ siteUrls }}].includes(window.location.hostname)) {
     window.yaParams = {"license-token": token};
     ym(metricId, 'params', window.yaParams || {});
   }
+}
 
-  function reachGoal(goalMetric) {
-    ym(metricId, 'reachGoal', goalMetric)
+export default class yaMetrika {
+  static generateGoalName (action, extra = '') {
+    let urlPath = window.location.pathname;
+
+    urlPath = urlPath.startsWith('/') ? urlPath.slice(1) : urlPath;
+    urlPath = urlPath.endsWith('/') ? urlPath.slice(0, -1) : urlPath;
+
+    const extraPart = extra ? `_${extra}` : '';
+
+    return `${basePath}${extraPart}_${action}`;
   }
+
+  static reachGoal (action, extra = '') {
+    if (!ym_is_loaded()) {
+      return;
+    }
+
+    const goalName = this.generateGoalName(action, extra);
+
+    if (typeof ymData !== 'undefined' && ymData.metricId) {
+      ym(ymData.metricId, 'reachGoal', goalName);
+    } else {
+      console.warn('Данные счетчика Яндекс.Метрики не загружены');
+    }
+  }
+}
+
+const ym_is_loaded = () => {
+  if (typeof ym !== 'function') {
+    console.warn('Яндекс Метрика не загружена или ym() не доступен.');
+    return false;
+  }
+
+  return true;
 }
 
 </script>
