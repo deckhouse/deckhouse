@@ -263,6 +263,28 @@ properties:
     description: |
       `etcd` parameters.
     properties:
+      backup:
+        type: object
+        description: |
+          `etcd` backup parameters.
+        properties:
+          enabled:
+            type: boolean
+            default: true
+            description: |
+              Enable etcd backup.
+          cronSchedule:
+            type: string
+            default: "0 0 * * *"
+            x-examples:
+            - "0 1 * * *"
+            description: |
+              Backup schedule `etcd` in cron format. The local time zone of the kube-controller-manager is used.
+          hostPath:
+            type: string
+            default: /var/lib/etcd
+            description: |
+              Host path on masters nodes for etcd backup.
       maxDbSize:
         description: |
           [quota-backend-bytes](https://etcd.io/docs/v3.5/dev-guide/limit/#storage-size-limit) parameter.
