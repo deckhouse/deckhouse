@@ -83,53 +83,56 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        "/modules/system-registry/orchestrator",
 	Kubernetes:   getKubernetesConfigs(),
 },
-	func(input *go_hook.HookInput) error {
-		moduleValues := helpers.NewValuesAccessor[Values](input, valuesPath)
-		values := moduleValues.Get()
+	handle,
+)
 
-		var (
-			inputs Inputs
-			err    error
-		)
+func handle(input *go_hook.HookInput) error {
+	moduleValues := helpers.NewValuesAccessor[Values](input, valuesPath)
+	values := moduleValues.Get()
 
-		inputs.Params, err = helpers.SnapshotToSingle[Params](input, configSnapName)
-		if err != nil {
-			if errors.Is(err, helpers.ErrNoSnapshot) {
-				moduleValues.Clear()
-				return nil
-			}
+	var (
+		inputs Inputs
+		err    error
+	)
 
-			return fmt.Errorf("get Config snapshot error: %w", err)
+	inputs.Params, err = helpers.SnapshotToSingle[Params](input, configSnapName)
+	if err != nil {
+		if errors.Is(err, helpers.ErrNoSnapshot) {
+			moduleValues.Clear()
+			return nil
 		}
 
-		inputs.PKI, err = pki.InputsFromSnapshot(input, pkiSnapName)
-		if err != nil && !errors.Is(err, helpers.ErrNoSnapshot) {
-			return fmt.Errorf("get PKI snapshot error: %w", err)
-		}
+		return fmt.Errorf("get Config snapshot error: %w", err)
+	}
 
-		inputs.Secrets, err = secrets.InputsFromSnapshot(input, secretsSnapName)
-		if err != nil && !errors.Is(err, helpers.ErrNoSnapshot) {
-			return fmt.Errorf("get Secrets snapshot error: %w", err)
-		}
+	inputs.PKI, err = pki.InputsFromSnapshot(input, pkiSnapName)
+	if err != nil && !errors.Is(err, helpers.ErrNoSnapshot) {
+		return fmt.Errorf("get PKI snapshot error: %w", err)
+	}
 
-		inputs.Users, err = users.InputsFromSnapshot(input, usersSnapName)
-		if err != nil {
-			return fmt.Errorf("get Users snapshot error: %w", err)
-		}
+	inputs.Secrets, err = secrets.InputsFromSnapshot(input, secretsSnapName)
+	if err != nil && !errors.Is(err, helpers.ErrNoSnapshot) {
+		return fmt.Errorf("get Secrets snapshot error: %w", err)
+	}
 
-		values.Hash, err = helpers.ComputeHash(inputs)
-		if err != nil {
-			return fmt.Errorf("cannot compute inputs hash: %w", err)
-		}
+	inputs.Users, err = users.InputsFromSnapshot(input, usersSnapName)
+	if err != nil {
+		return fmt.Errorf("get Users snapshot error: %w", err)
+	}
 
-		values.ProcessResult, err = process(input, inputs, &values.State)
-		if err != nil {
-			return fmt.Errorf("cannot process: %w", err)
-		}
+	values.Hash, err = helpers.ComputeHash(inputs)
+	if err != nil {
+		return fmt.Errorf("cannot compute inputs hash: %w", err)
+	}
 
-		moduleValues.Set(values)
-		return nil
-	})
+	values.ProcessResult, err = process(input, inputs, &values.State)
+	if err != nil {
+		return fmt.Errorf("cannot process: %w", err)
+	}
+
+	moduleValues.Set(values)
+	return nil
+}
 
 func process(input *go_hook.HookInput, inputs Inputs, state *State) (ProcessResult, error) {
 	// TODO: this is stub code, need to write switch logic
