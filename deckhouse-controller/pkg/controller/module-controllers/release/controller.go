@@ -933,7 +933,7 @@ func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRel
 
 		if valuesByConfig {
 			status.Phase = v1alpha1.ModuleReleasePhasePending
-			status.Message = "initial module config validation failed: " + err.Error()
+			status.Message = "initial validation failed: " + err.Error()
 		}
 
 		if err = r.updateReleaseStatus(ctx, release, status); err != nil {

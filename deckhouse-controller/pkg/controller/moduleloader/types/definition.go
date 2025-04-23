@@ -62,39 +62,37 @@ func (d *Definition) Validate(values addonutils.Values, logger *log.Logger) erro
 		return errors.New("cannot validate module without path. Path is required to load openapi specs")
 	}
 
-	cb, vb, err := addonutils.ReadOpenAPIFiles(filepath.Join(d.Path, "openapi"))
+	rawConfig, rawValues, err := addonutils.ReadOpenAPIFiles(filepath.Join(d.Path, "openapi"))
 	if err != nil {
 		return fmt.Errorf("read open API files: %w", err)
 	}
 
-	dm, err := addonmodules.NewBasicModule(d.Name, d.Path, d.Weight, nil, cb, vb, addonmodules.WithLogger(logger.Named("basic-module")))
+	modLog := addonmodules.WithLogger(logger.Named("basic-module"))
+	module, err := addonmodules.NewBasicModule(d.Name, d.Path, d.Weight, nil, rawConfig, rawValues, modLog)
 	if err != nil {
-		return fmt.Errorf("new basic module: %w", err)
+		return fmt.Errorf("create basic module: %w", err)
 	}
 
 	if values != nil {
-		dm.SaveConfigValues(values)
+		module.SaveConfigValues(values)
 	}
 
-	err = dm.Validate()
-	// next we will need to record all validation errors except required (602).
+	// next, we will need to record all validation errors except required (602).
 	var result error
-	var mErr *multierror.Error
-	if errors.As(err, &mErr) {
-		for _, me := range mErr.Errors {
-			var e *openapierrors.Validation
-
-			if errors.As(me, &e) {
-				if e.Code() == 602 {
+	var multiErr *multierror.Error
+	if errors.As(module.Validate(), &multiErr) {
+		for _, e := range multiErr.Errors {
+			var validationErr *openapierrors.Validation
+			if errors.As(e, &validationErr) {
+				if validationErr.Code() == 602 {
 					continue
 				}
 			}
-
-			result = errors.Join(result, me)
+			result = errors.Join(result, e)
 		}
 	}
 
-	// now result will contain all validation errors, if any, except required.
+	// now the result will contain all validation errors, if any, except required.
 	if result != nil {
 		return fmt.Errorf("validate module: %w", result)
 	}

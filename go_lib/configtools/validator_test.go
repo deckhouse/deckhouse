@@ -264,6 +264,7 @@ spec:
   enabled: true
   settings:
      auxiliaryCluster: false
+     clusterType: Hybrid
      kubeall:
        host: ''
 `,

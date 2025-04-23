@@ -22,7 +22,7 @@ import (
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
-	"github.com/flant/addon-operator/pkg/utils"
+	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/values/validation"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -178,9 +178,9 @@ func (v *Validator) validateSettings(configName string, configSettings map[strin
 	}
 
 	// Merge defaults with passed settings as addon-operator will do.
-	values := utils.MergeValues(
-		utils.Values{valuesKey: defaultSettings},
-		utils.Values{valuesKey: configSettings},
+	values := addonutils.MergeValues(
+		addonutils.Values{valuesKey: defaultSettings},
+		addonutils.Values{valuesKey: configSettings},
 	)
 
 	// Validate config settings against x-deckhouse-validation rules.
@@ -201,7 +201,7 @@ func valuesKeyFromObjectName(name string) string {
 	if name == "global" {
 		return name
 	}
-	return utils.ModuleNameToValuesKey(name)
+	return addonutils.ModuleNameToValuesKey(name)
 }
 
 func concatIntList(items []int) string {
