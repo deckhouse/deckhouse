@@ -2077,9 +2077,14 @@ alerts:
 
         To migrate to OpenTofu:
         1. Using the `install` container with a version of the previous major Deckhouse release (e.g., 1.69.X while the cluster is now on 1.70.X) run `dhctl converge` and resolve all destructive changes in the cluster.
-        2. After a time, the terraform-auto-converger pod should migrate automatically.
+        2. After time terraform-auto-converger pod should migrate automatically.
+        If auto-migration doesn't happen: using the `install` container with the current cluster's Deckhouse release version run `dhctl converge-migration` to migrate state to OpenTofu.
 
-        If auto-migration doesn't happen, use the `install` container with the current cluster's Deckhouse release version and run 'dhctl converge-migration` to migrate to OpenTofu.
+        If this alert fires at a cluster created by the Deckhouse Commander that means that cluster has updated to a new Deckhouse version with not approved changes in state, like destructive changes, to resolve it:
+        1. At Deckhouse Commander press the `Delete manually` button to remove the cluster out of control temporarily.
+        2. Delete commander-agent module `kubectl delete mc commander-agent` from the cluster.
+        3. Using the `install` container with a version of the previous major Deckhouse release (e.g., 1.69.X while the cluster is now on 1.70.X) run `dhctl converge` and resolve all changes in the cluster.
+        4. At the Deckhouse Commander press the `Attach` button to attach the cluster back.
       summary: |
         Need migrate state from terraform to OpenTofu
       severity: "4"
