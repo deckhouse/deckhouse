@@ -1,10 +1,12 @@
 ---
-title: "Запуск модуля в кластере"
+title: "Запуск и проверка модуля в кластере"
 permalink: ru/module-development/run/
 lang: ru
 ---
 
-В этом разделе рассмотрен процесс запуска настроенного модуля в кластере Deckhouse Kubernetes Platform (DKP).
+В этом разделе рассмотрен процесс запуска модуля в кластере Deckhouse Kubernetes Platform (DKP), а также подключение Deckhouse Module Tools для проверки корректности (линтинг) и сбора метрик.
+
+## Запуск модуля в кластере DKP
 
 Чтобы запустить модуль в кластере, необходимо выполнить следующие шаги:
 
@@ -12,7 +14,7 @@ lang: ru
 - _(не обязательно)_ Определить [политику обновления модуля](#политика-обновления-модуля) (ресурс [ModuleUpdatePolicy](../../cr.html#moduleupdatepolicy)).
 - [Включить модуль в кластере](#включение-модуля-в-кластере) (ресурс [ModuleConfig](../../cr.html#moduleconfig)).
 
-## Источник модулей
+### Источник модулей
 
 Чтобы указать в кластере источник, откуда нужно загружать информацию о модулях, необходимо создать ресурс [ModuleSource](../../cr.html#modulesource). В этом ресурсе указывается адрес container registry, откуда DKP будет загружать модули, параметры аутентификации и другие настройки.
 
@@ -295,7 +297,7 @@ kubectl annotate mr <module_release_name> modules.deckhouse.io/approved="true"
    kubectl get mr
    ```
 
-## Политика обновления модуля
+### Политика обновления модуля
 
 Политика обновления модуля — это правила, по которым DKP обновляет модули в кластере. Она определяется ресурсом [ModuleUpdatePolicy](../../cr.html#moduleupdatepolicy), в котором можно настроить:
 - режим обновления модуля (автоматический, ручной, обновления отключены);
@@ -325,7 +327,7 @@ spec:
 
 Политика обновления указывается в поле `updatePolicy` в ModuleConfig.
 
-## Включение модуля в кластере
+### Включение модуля в кластере
 
 Прежде чем включить модуль, проверьте что он доступен для включения. Выполните следующую команду, чтобы вывести список всех доступных модулей DKP:
 
@@ -428,3 +430,65 @@ module-1-v1.23.2     Pending      example-update-policy  3m               Waitin
 ```shell
 kubectl annotate mr module-1-v1.23.2 modules.deckhouse.io/approved="true"
 ```
+
+## Подключение Deckhouse Module Tools для проверки модуля и сбора статистики
+
+Для линтинга (автоматической проверки структуры модуля) и, при необходимости, отправки статистики, в сборку можно подключить Deckhouse Module Tools (DMT).
+
+### Для GitHub-проектов
+
+Для GitHub доступен отдельный [GitHub Action](https://github.com/deckhouse/modules-actions/blob/main/lint/action.yml) для подключения линтера к модулю.
+
+Чтобы подключить линтер DMT, в конфигурации workflow сборки `[project].github/workflows/build.yml` добавьте шаг для выполнения проверки:
+
+```yaml
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    name: Linting
+    steps:
+      - uses: actions/checkout@v4
+      - uses: deckhouse/modules-actions/lint@main
+      env:
+         DMT_METRICS_URL: ${{ secrets.DMT_METRICS_URL }}
+         DMT_METRICS_TOKEN: ${{ secrets.DMT_METRICS_TOKEN }}
+```
+
+Переменные `DMT_METRICS_URL` и `DMT_METRICS_TOKEN` – необязательные. При их наличии модуль будет отправлять телеметрию на указанный адрес.
+
+> Если модуль находится в GitHub-группе `deckhouse`, значения этих переменных будут автоматически получены из настроенных секретов.
+
+Пример полной конфигурации можно увидеть в файле [build_dev.yml](https://github.com/deckhouse/csi-nfs/blob/main/.github/workflows/build_dev.yml#L39C1-L42C62).
+
+Для упрощения настройки сборки воспользуйтесь [шаблонами конфигурации](https://github.com/deckhouse/modules-actions/blob/main/.examples/build.yml).
+
+### Для GitLab-проектов
+
+Для GitLab также доступны готовые шаблоны, которые можно подключить в `.gitlab-ci.yml`  для автоматической настройки процессов сборки и проверки корректности:
+
+- **Setup**: [Шаблон конфигурации для настройки](https://github.com/deckhouse/modules-gitlab-ci/blob/main/templates/Setup.gitlab-ci.yml).
+- **Build**: [Шаблон конфигурации для процесса сборки](https://github.com/deckhouse/modules-gitlab-ci/blob/main/templates/Build.gitlab-ci.yml).
+
+#### Шаги для подключения линтера
+
+1. В файле `.gitlab-ci.yml` вашего проекта добавьте ссылки на шаблоны:
+
+    ```yaml
+    include:
+      - remote: https://raw.githubusercontent.com/deckhouse/modules-gitlab-ci/refs/heads/main/templates/Setup.gitlab-ci.yml
+      - remote: https://raw.githubusercontent.com/deckhouse/modules-gitlab-ci/refs/heads/main/templates/Build.gitlab-ci.yml
+    ```
+
+    Пример добавления ссылок расположен в [GitLab](https://fox.flant.com/deckhouse/flant-integration/-/blob/main/.gitlab-ci.yml?ref_type=heads#L2).
+
+1. После подключения шаблонов, в той же конфигурации `.gitlab-ci.yml` добавьте шаг для выполнения проверки:
+
+    ```yaml
+    Lint:
+      extends: .lint
+    ```
+
+    Пример добавления шага проверки расположен в [GitLab](https://fox.flant.com/deckhouse/flant-integration/-/blob/main/.gitlab-ci.yml?ref_type=heads#L48).
+
+> Если проект находится в группе [https://fox.flant.com/deckhouse](https://fox.flant.com/deckhouse), переменные для отправки метрик уже заданы. Дополнительно ничего конфигурировать не требуется.
