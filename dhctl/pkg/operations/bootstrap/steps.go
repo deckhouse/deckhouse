@@ -421,8 +421,6 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 	}
 
 	log.DebugF("Got cluster domain: %s", clusterDomain)
-	log.DebugLn("Starting registry packages proxy")
-	// we need clusterDomain to generate proper certificate for packages proxy
 
 	if err := CheckDHCTLDependencies(ctx, nodeInterface); err != nil {
 		return err
@@ -498,6 +496,8 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 		return nil
 	}
 
+	log.DebugLn("Starting registry packages proxy")
+	// we need clusterDomain to generate proper certificate for packages proxy
 	err = StartRegistryPackagesProxy(ctx, cfg.Registry, clusterDomain)
 	if err != nil {
 		return fmt.Errorf("failed to start registry packages proxy: %v", err)
