@@ -30,24 +30,6 @@ properties:
             type: boolean
           hash:
             type: string
-          conditions:
-            x-kubernetes-patch-strategy: merge
-            x-kubernetes-patch-merge-key: type
-            type: array
-            items:
-              type: object
-              properties:
-                type:
-                  type: string
-                status:
-                  type: string
-                message:
-                  type: string
-                reason:
-                  type: string
-                lastTransitionTime:
-                  format: date-time
-                  type: string
           state:
             type: object
             default: {}
@@ -74,20 +56,6 @@ properties:
                     type: string
               users:
                 type: object
-                # x-dmt-default:
-                #   ro: &user_dmt
-                #     name: ro
-                #     password: 11fJH7j7dwPCmGr4
-                #     password_hash: $2a$10$H9K27LmQp7EVnah2ZrZfEu.z5CjSIOaM78qUcPhvXLF.Cov3muGES
-                #   rw:
-                #     <<: *user_dmt
-                #     name: rw
-                #   mirror_puller:
-                #     <<: *user_dmt
-                #     name: mirror_puller
-                #   mirror_pusher:
-                #     <<: *user_dmt
-                #     name: mirror_pusher
                 properties:
                   ro: &user
                     type: object
@@ -106,9 +74,39 @@ properties:
                     <<: *user
               node_services:
                 type: object
-                additionalProperties: true
-                x-kubernetes-preserve-unknown-fields: true
-
+                properties:
+                  nodes:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      properties:
+                        config:
+                          type: object
+                          additionalProperties: true
+                          x-kubernetes-preserve-unknown-fields: true
+                        version:
+                         type: string
+              conditions:
+                x-kubernetes-patch-strategy: merge
+                x-kubernetes-patch-merge-key: type
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                    status:
+                      type: string
+                    message:
+                      type: string
+                    reason:
+                      type: string
+                    lastTransitionTime:
+                      format: date-time
+                      type: string
+                    observedGeneration:
+                      format: int64
+                      type: integer
 
       state:
         type: object

@@ -16,10 +16,10 @@ type User struct {
 	PasswordHash string `json:"password_hash" yaml:"password_hash"`
 }
 
-func (u User) Validate() error {
-	return validation.ValidateStruct(&u,
-		validation.Field(&u.Name, validation.Required),
-		validation.Field(&u.Password, validation.Required),
-		validation.Field(&u.PasswordHash, validation.Required),
+func (user User) Validate() error {
+	return validation.ValidateStruct(&user,
+		validation.Field(&user.Name, validation.Required),
+		validation.Field(&user.Password, validation.Required),
+		validation.Field(&user.PasswordHash, validation.Required),
 	)
 }

@@ -23,6 +23,8 @@ func (params Params) Any() bool {
 	return params.RO || params.RW || params.Mirrorer
 }
 
+type Inputs map[string]User
+
 type State struct {
 	RO           *User `json:"ro,omitempty"`
 	RW           *User `json:"rw,omitempty"`
@@ -30,7 +32,13 @@ type State struct {
 	MirrorPusher *User `json:"mirror_pusher,omitempty"`
 }
 
-type Inputs map[string]User
+func (state *State) GetParams() Params {
+	return Params{
+		RO:       state.RO != nil,
+		RW:       state.RW != nil,
+		Mirrorer: state.MirrorPuller != nil || state.MirrorPusher != nil,
+	}
+}
 
 func (state *State) Process(params Params, inputs Inputs) error {
 	if params.RO {

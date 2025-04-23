@@ -9,10 +9,6 @@ import:
     to: /tmp
     before: setup
   - image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
-    add: "/manager"
-    to: /manager
-    before: setup
-  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
     add: "/staticpod"
     to: /staticpod
     before: setup
@@ -22,7 +18,7 @@ import:
     before: setup
 imageSpec:
   config:
-    entrypoint: ["/manager"]
+    entrypoint: ["/staticpod"]
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
 fromImage: builder/golang-alpine
@@ -39,9 +35,6 @@ shell:
   setup:
     - cd {{ $appAbsPath }}
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go test ./...
-    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /manager ./cmd/manager
-    - chown 64535:64535 /manager
-    - chmod 0755 /manager
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /staticpod ./cmd/staticpod
     - chown 64535:64535 /staticpod
     - chmod 0755 /staticpod

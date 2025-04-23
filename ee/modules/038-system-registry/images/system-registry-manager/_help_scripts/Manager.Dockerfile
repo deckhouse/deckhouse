@@ -38,12 +38,6 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 ARG TARGETOS TARGETARCH
 RUN --mount=type=cache,target=/root/.cache/go-build \
     cd ${APP_PATH_TO} && \
-    GOOS=${TARGETOS} GOARCH=${TARGETARCH} CGO_ENABLED=0 go build -tags "${BUILD_TAGS}" -o /manager ./cmd/manager && \
-    chown 64535:64535 /manager && \
-    chmod 0755 /manager
-
-RUN --mount=type=cache,target=/root/.cache/go-build \
-    cd ${APP_PATH_TO} && \
     GOOS=${TARGETOS} GOARCH=${TARGETARCH} CGO_ENABLED=0 go build -tags "${BUILD_TAGS}" -o /staticpod ./cmd/staticpod && \
     chown 64535:64535 /staticpod && \
     chmod 0755 /staticpod
@@ -58,13 +52,12 @@ FROM --platform=linux/amd64 alpine:3.20
 RUN apk add --no-cache iproute2 curl vim bash
 ENV APP_PATH_FROM=./ee/modules/038-system-registry/images/system-registry-manager
 COPY --from=builder /tmp-tmp /tmp
-COPY --from=builder /manager /manager
 COPY --from=builder /staticpod /staticpod
 COPY --from=pause /pause /pause
 
 #COPY --from=builder /go/bin/linux_amd64/dlv /dlv
 #ENV XDG_CONFIG_HOME=/tmp/dlv
 
-#ENTRYPOINT ["/dlv", "exec", "/manager", "--headless=true", "--listen=0.0.0.0:9876", "--api-version=2", "--accept-multiclient", "--continue", "--"]
+#ENTRYPOINT ["/dlv", "exec", "/staticpod", "--headless=true", "--listen=0.0.0.0:9876", "--api-version=2", "--accept-multiclient", "--continue", "--"]
 # Usage example kubectl port-forward pod/system-registry-manager-jzw4r 9876:9876 -n d8-system
-ENTRYPOINT ["/manager"]
+ENTRYPOINT ["/staticpod"]

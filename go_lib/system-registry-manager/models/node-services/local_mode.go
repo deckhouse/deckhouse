@@ -18,8 +18,8 @@ type LocalMode struct {
 	IngressClientCACert string `json:"ingress_client_ca,omitempty" yaml:"ingress_client_ca,omitempty"`
 }
 
-func (localModel *LocalMode) Validate() error {
-	return validation.ValidateStruct(localModel,
+func (localModel LocalMode) Validate() error {
+	return validation.ValidateStruct(&localModel,
 		validation.Field(&localModel.UserRW, validation.Required),
 		validation.Field(&localModel.UserPuller, validation.Required),
 		validation.Field(&localModel.UserPusher, validation.Required),

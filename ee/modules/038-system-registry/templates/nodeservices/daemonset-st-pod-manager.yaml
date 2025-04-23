@@ -8,6 +8,14 @@ cpu: 10m
 memory: 10Mi
 {{- end }}
 
+{{- $orchestrator := .Values.systemRegistry.internal.orchestrator -}}
+{{- if $orchestrator -}}
+{{- $hash := $orchestrator.hash -}}
+{{- $state := ($orchestrator.state).node_services -}}
+
+{{- if $state -}}
+{{- if $state.nodes -}}
+
 {{- $images := dict }}
 
 {{- $_ := set $images "auth" (include "helm_lib_module_image" (list . "dockerAuth")) }}
@@ -68,6 +76,8 @@ metadata:
   name: system-registry-staticpod-manager
   namespace: d8-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "system-registry-staticpod-manager")) | nindent 2 }}
+  annotations:
+    registry.deckhouse.io/config-hash: {{ $hash | quote }}
 spec:
   selector:
     matchLabels:
@@ -219,3 +229,7 @@ spec:
           type: DirectoryOrCreate
       - name: tmp
         emptyDir: {}
+
+{{- end }}
+{{- end }}
+{{- end }}

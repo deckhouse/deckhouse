@@ -13,7 +13,6 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1core "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
@@ -64,6 +63,9 @@ func getKubernetesConfigs() []go_hook.KubernetesConfig {
 					UserName:   string(secret.Data["username"]),
 					Password:   string(secret.Data["password"]),
 					TTL:        string(secret.Data["ttl"]),
+					Scheme:     string(secret.Data["scheme"]),
+					CA:         string(secret.Data["ca"]),
+					Generation: secret.Generation,
 				}
 
 				return config, nil
@@ -167,6 +169,7 @@ func handle(input *go_hook.HookInput) error {
 		return fmt.Errorf("get Users snapshot error: %w", err)
 	}
 
+	// TODO: extract ingress CA for local mode
 	inputs.NodeServices, err = nodeservices.InputsFromSnapshot(input, nodeServicesSnapName)
 	if err != nil {
 		return fmt.Errorf("get NodeServices snapshots error: %w", err)
@@ -177,112 +180,11 @@ func handle(input *go_hook.HookInput) error {
 		return fmt.Errorf("cannot compute inputs hash: %w", err)
 	}
 
-	values.ProcessResult, err = process(input, inputs, &values.State)
+	err = values.State.process(input.Logger, inputs)
 	if err != nil {
 		return fmt.Errorf("cannot process: %w", err)
 	}
 
 	moduleValues.Set(values)
 	return nil
-}
-
-func process(input *go_hook.HookInput, inputs Inputs, state *State) (ProcessResult, error) {
-	// TODO: this is stub code, need to write switch logic
-
-	var result ProcessResult
-
-	readyCondition := metav1.Condition{
-		Type:               ConditionTypeReady,
-		Status:             metav1.ConditionFalse,
-		Reason:             ConditionReasonProcessing,
-		ObservedGeneration: inputs.Params.Generation,
-	}
-
-	result.SetCondition(readyCondition)
-
-	params := inputs.Params
-
-	if params.Mode == "" {
-		params.Mode = registry_const.ModeUnmanaged
-	}
-
-	if params.Mode != state.Mode {
-		input.Logger.Warn(
-			"Mode change",
-			"old_mode", state.Mode,
-			"new_mode", params.Mode,
-		)
-	}
-
-	var (
-		usersParams    users.Params
-		pkiEnabled     bool
-		secretsEnabled bool
-	)
-
-	switch params.Mode {
-	case registry_const.ModeProxy:
-		usersParams = users.Params{
-			RO: true,
-		}
-		pkiEnabled = true
-		secretsEnabled = true
-	case registry_const.ModeDetached:
-		fallthrough
-	case registry_const.ModeLocal:
-		usersParams = users.Params{
-			RO:       true,
-			RW:       true,
-			Mirrorer: true,
-		}
-		pkiEnabled = true
-		secretsEnabled = true
-	case registry_const.ModeDirect:
-		pkiEnabled = true
-		secretsEnabled = true
-	}
-
-	if pkiEnabled {
-		if state.PKI == nil {
-			state.PKI = &inputs.PKI
-		}
-
-		if _, err := state.PKI.Process(input.Logger); err != nil {
-			return result, fmt.Errorf("cannot process PKI: %w", err)
-		}
-	} else {
-		state.PKI = nil
-	}
-
-	if secretsEnabled {
-		if state.Secrets == nil {
-			state.Secrets = &inputs.Secrets
-		}
-
-		if err := state.Secrets.Process(); err != nil {
-			return result, fmt.Errorf("cannot process Secrets: %w", err)
-		}
-	} else {
-		state.Secrets = nil
-	}
-
-	if usersParams.Any() {
-		if state.Users == nil {
-			state.Users = &users.State{}
-		}
-
-		if err := state.Users.Process(usersParams, inputs.Users); err != nil {
-			return result, fmt.Errorf("cannot process Users: %w", err)
-		}
-	} else {
-		state.Users = nil
-	}
-
-	state.Mode = params.Mode
-
-	readyCondition.Status = metav1.ConditionTrue
-	readyCondition.Reason = ""
-	result.SetCondition(readyCondition)
-
-	return result, nil
 }

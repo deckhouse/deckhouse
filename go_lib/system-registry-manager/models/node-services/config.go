@@ -33,8 +33,8 @@ type Config struct {
 	ProxyConfig *ProxyConfig `json:"proxy_config,omitempty" yaml:"proxy,omitempty"`
 }
 
-func (config *Config) Validate() error {
-	err := validation.ValidateStruct(config,
+func (config Config) Validate() error {
+	err := validation.ValidateStruct(&config,
 		validation.Field(&config.CACert, validation.Required),
 		validation.Field(&config.AuthCert, validation.Required),
 		validation.Field(&config.AuthKey, validation.Required),

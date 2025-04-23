@@ -118,6 +118,7 @@ func KubernetsConfig(name string) []go_hook.KubernetesConfig {
 				return ret, nil
 			},
 		},
+		// TODO: add node configs hook
 	}
 
 	return ret
@@ -149,6 +150,8 @@ func InputsFromSnapshot(input *go_hook.HookInput, name string) (Inputs, error) {
 			node.Pods = make(NodePods)
 		}
 		node.Pods[name] = pod.Pod
+
+		ret.Nodes[pod.Node] = node
 	}
 
 	return ret, nil

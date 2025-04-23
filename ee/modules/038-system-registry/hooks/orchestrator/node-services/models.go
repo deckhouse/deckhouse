@@ -52,15 +52,68 @@ type LocalModeParams struct {
 	IngressCA *x509.Certificate
 }
 
-type State struct {
-	Nodes map[string]NodeServicesConfig
+type ProcessResult struct {
+	nodes map[string]resultNode
 }
 
-func (state *State) Process(log go_hook.Logger, params Params, inputs Inputs) (bool, error) {
+type resultNode struct {
+	Ready         bool
+	PodReady      bool
+	ConfigVersion string
+}
+
+func (result ProcessResult) GetConditionMessage() string {
+	ready := true
+	nodeMessages := make(map[string]string)
+
+	for name, node := range result.nodes {
+		switch {
+		case !node.Ready:
+			nodeMessages[name] = "node is not in Ready state"
+		case !node.PodReady:
+			nodeMessages[name] = fmt.Sprintf(
+				"services pod(s) not in Ready state or config version (%v) mismatch",
+				node.ConfigVersion,
+			)
+		default:
+			continue
+		}
+
+		ready = false
+	}
+
+	if ready {
+		return ""
+	}
+
+	nodeNames := make([]string, 0, len(nodeMessages))
+	for name := range nodeMessages {
+		nodeNames = append(nodeNames, name)
+	}
+	sort.Strings(nodeNames)
+
+	builder := new(strings.Builder)
+
+	fmt.Fprintln(builder, "Nodes not ready:")
+
+	for _, name := range nodeNames {
+		fmt.Fprintf(builder, "- %v: %v\n", name, nodeMessages[name])
+	}
+
+	return builder.String()
+}
+
+type State struct {
+	Nodes map[string]NodeServicesConfig `json:"nodes,omitempty"`
+}
+
+func (state *State) Process(log go_hook.Logger, params Params, inputs Inputs) (ProcessResult, error) {
 	var (
 		nodesIP []string
 		err     error
-		ready   = true
+		result  = ProcessResult{
+			nodes: make(map[string]resultNode),
+		}
 	)
 
 	if params.Local != nil {
@@ -82,25 +135,30 @@ func (state *State) Process(log go_hook.Logger, params Params, inputs Inputs) (b
 	for name, node := range inputs.Nodes {
 		config := nodes[name]
 
-		err = config.process(log, name, node, params, nodesIP)
+		err = config.process(log, name, node.IP, params, nodesIP)
 		if err != nil {
-			return false, fmt.Errorf("cannot process node %v config: %w", name, err)
+			return result, fmt.Errorf("cannot process node %v config: %w", name, err)
 		}
 
 		state.Nodes[name] = config
 
-		podReady := false
+		isPodReady := false
 		for _, pod := range node.Pods {
-			if pod.Ready && pod.Version == config.Version {
-				pod.Ready = true
+			isPodReady = pod.Ready && pod.Version == config.Version
+
+			if isPodReady {
 				break
 			}
 		}
 
-		ready = ready && podReady
+		result.nodes[name] = resultNode{
+			Ready:         node.Ready,
+			PodReady:      isPodReady,
+			ConfigVersion: config.Version,
+		}
 	}
 
-	return ready, nil
+	return result, nil
 }
 
 type NodeServicesConfig struct {
@@ -108,17 +166,17 @@ type NodeServicesConfig struct {
 	Config  nodeservices.Config `json:"config"`
 }
 
-func (nsc *NodeServicesConfig) process(log go_hook.Logger, name string, node Node, params Params, nodesIP []string) error {
+func (nsc *NodeServicesConfig) process(log go_hook.Logger, name string, nodeIP string, params Params, nodesIP []string) error {
 	switch {
 	case params.Local != nil:
-		nsc.processLocalMode(*params.Local, node.IP, nodesIP)
+		nsc.processLocalMode(*params.Local, nodeIP, nodesIP)
 	case params.Proxy != nil:
 		nsc.processProxyMode(*params.Proxy)
 	default:
 		return errors.New("params must be set for Local or Proxy mode")
 	}
 
-	err := nsc.processPKI(log, name, node.IP, params)
+	err := nsc.processPKI(log, name, nodeIP, params)
 	if err != nil {
 		return fmt.Errorf("cannot process PKI: %w", err)
 	}
@@ -131,7 +189,7 @@ func (nsc *NodeServicesConfig) process(log go_hook.Logger, name string, node Nod
 		return fmt.Errorf("cannot compute config hash: %w", err)
 	}
 
-	return fmt.Errorf("not implemented")
+	return nil
 }
 
 func (nsc *NodeServicesConfig) processLocalMode(params LocalModeParams, nodeIP string, nodesIP []string) {

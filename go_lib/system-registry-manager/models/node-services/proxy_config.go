@@ -15,30 +15,10 @@ type ProxyConfig struct {
 	NoProxy string `json:"no_proxy,omitempty" yaml:"no_proxy,omitempty"`
 }
 
-func (p ProxyConfig) Validate() error {
-	return validation.ValidateStruct(&p,
-		validation.Field(&p.HTTP, validation.Required),
-		validation.Field(&p.HTTPS, validation.Required),
-		validation.Field(&p.NoProxy, validation.Required),
-	)
-}
-
-// UpstreamRegistry holds upstream registry configuration details
-type UpstreamRegistry struct {
-	Scheme   string  `json:"scheme,omitempty" yaml:"scheme,omitempty"`
-	Host     string  `json:"host,omitempty" yaml:"host,omitempty"`
-	Path     string  `json:"path,omitempty" yaml:"path,omitempty"`
-	User     string  `json:"user,omitempty" yaml:"user,omitempty"`
-	Password string  `json:"password,omitempty" yaml:"password,omitempty"`
-	TTL      *string `json:"ttl,omitempty" yaml:"ttl,omitempty"`
-}
-
-func (upstream UpstreamRegistry) Validate() error {
-	return validation.ValidateStruct(&upstream,
-		validation.Field(&upstream.Scheme, validation.Required),
-		validation.Field(&upstream.Host, validation.Required),
-		validation.Field(&upstream.Path, validation.Required),
-		validation.Field(&upstream.User, validation.Required),
-		validation.Field(&upstream.Password, validation.Required),
+func (proxyConfig ProxyConfig) Validate() error {
+	return validation.ValidateStruct(&proxyConfig,
+		validation.Field(&proxyConfig.HTTP, validation.Required),
+		validation.Field(&proxyConfig.HTTPS, validation.Required),
+		validation.Field(&proxyConfig.NoProxy, validation.Required),
 	)
 }
