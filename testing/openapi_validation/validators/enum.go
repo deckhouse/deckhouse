@@ -158,6 +158,8 @@ var (
 			"properties.masterNodeGroup.properties.instanceClass.properties.virtualMachine.properties.cpu.properties.coreFraction.enum",
 			"properties.nodeGroups.items.properties.instanceClass.properties.virtualMachine.properties.cpu.properties.coreFraction.enum",
 			"properties.spec.properties.virtualMachine.properties.cpu.properties.coreFraction.enum",
+		},
+		"candi/cloud-providers/dvp/openapi/instance_class.yaml": {
 			"properties.internal.properties.providerClusterConfiguration.properties.nodeGroups.items.properties.instanceClass.properties.virtualMachine.properties.cpu.properties.coreFraction.enum",
 			"properties.internal.properties.providerClusterConfiguration.properties.masterNodeGroup.properties.instanceClass.properties.virtualMachine.properties.cpu.properties.coreFraction.enum",
 		},
