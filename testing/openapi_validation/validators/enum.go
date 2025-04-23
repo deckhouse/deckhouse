@@ -157,13 +157,23 @@ var (
 			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
 			"properties.internal.properties.providerClusterConfiguration.properties.masterNodeGroup.properties.instanceClass.properties.virtualMachine.properties.cpu.properties.coreFraction.enum",
 			"properties.internal.properties.providerClusterConfiguration.properties.nodeGroups.items.properties.instanceClass.properties.virtualMachine.properties.cpu.properties.coreFraction.enum",
+			"apiVersions[0].openAPISpec.properties.nodeGroups.items.properties.instanceClass.properties.virtualMachine.properties.cpu.properties.coreFraction.enum",
+			"apiVersions[0].openAPISpec.properties.masterNodeGroup.properties.instanceClass.properties.virtualMachine.properties.cpu.properties.coreFraction.enum",
+			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.virtualMachine.properties.cpu.properties.coreFraction.enum",
 		},
 		"candi/cloud-providers/dvp/openapi/instance_class.yaml": {
+			"properties.internal.properties.providerClusterConfiguration.properties.masterNodeGroup.properties.instanceClass.properties.virtualMachine.properties.cpu.properties.coreFraction.enum",
+			"properties.internal.properties.providerClusterConfiguration.properties.nodeGroups.items.properties.instanceClass.properties.virtualMachine.properties.cpu.properties.coreFraction.enum",
+			"apiVersions[0].openAPISpec.properties.nodeGroups.items.properties.instanceClass.properties.virtualMachine.properties.cpu.properties.coreFraction.enum",
+			"apiVersions[0].openAPISpec.properties.masterNodeGroup.properties.instanceClass.properties.virtualMachine.properties.cpu.properties.coreFraction.enum",
 			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.virtualMachine.properties.cpu.properties.coreFraction.enum",
 		},
 		"candi/cloud-providers/dvp/openapi/cluster_configuration.yaml": {
+			"properties.internal.properties.providerClusterConfiguration.properties.masterNodeGroup.properties.instanceClass.properties.virtualMachine.properties.cpu.properties.coreFraction.enum",
+			"properties.internal.properties.providerClusterConfiguration.properties.nodeGroups.items.properties.instanceClass.properties.virtualMachine.properties.cpu.properties.coreFraction.enum",
 			"apiVersions[0].openAPISpec.properties.nodeGroups.items.properties.instanceClass.properties.virtualMachine.properties.cpu.properties.coreFraction.enum",
 			"apiVersions[0].openAPISpec.properties.masterNodeGroup.properties.instanceClass.properties.virtualMachine.properties.cpu.properties.coreFraction.enum",
+			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.virtualMachine.properties.cpu.properties.coreFraction.enum",
 		},
 		"modules/030-cloud-provider-huaweicloud/openapi/values.yaml": {
 			// ignore internal values
