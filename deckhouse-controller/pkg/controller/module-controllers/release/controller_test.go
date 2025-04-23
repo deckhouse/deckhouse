@@ -467,7 +467,7 @@ func (suite *ReleaseControllerTestSuite) updateModuleReleasesStatuses() {
 }
 
 func (suite *ReleaseControllerTestSuite) setModulePhase(phase addonmodules.ModuleRunPhase) {
-	suite.ctr.moduleManager = &stubModulesManager{
+	suite.ctr.moduleManager = stubModulesManager{
 		modulePhase: phase,
 	}
 }
@@ -488,7 +488,7 @@ func withDependencyContainer(dc dependency.Container) reconcilerOption {
 
 func withBasicModulePhase(phase addonmodules.ModuleRunPhase) reconcilerOption {
 	return func(r *reconciler) {
-		r.moduleManager = &stubModulesManager{modulePhase: phase}
+		r.moduleManager = stubModulesManager{modulePhase: phase}
 	}
 }
 
@@ -535,7 +535,7 @@ type: Opaque
 		dependencyContainer:  dependency.NewDependencyContainer(),
 		log:                  logger,
 		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
-		moduleManager:        &stubModulesManager{},
+		moduleManager:        stubModulesManager{},
 		delayTimer:           time.NewTimer(3 * time.Second),
 		metricStorage:        metricstorage.NewMetricStorage(context.Background(), "", true, logger),
 
@@ -670,14 +670,14 @@ type stubModulesManager struct {
 	modulePhase addonmodules.ModuleRunPhase
 }
 
-func (s *stubModulesManager) AreModulesInited() bool {
+func (s stubModulesManager) AreModulesInited() bool {
 	return true
 }
 
-func (s *stubModulesManager) DisableModuleHooks(_ string) {
+func (s stubModulesManager) DisableModuleHooks(_ string) {
 }
 
-func (s *stubModulesManager) GetModule(name string) *addonmodules.BasicModule {
+func (s stubModulesManager) GetModule(name string) *addonmodules.BasicModule {
 	bm, _ := addonmodules.NewBasicModule(name, "", 900, nil, []byte{}, []byte{}, addonmodules.WithLogger(log.NewNop()))
 	bm.SetPhase(addonmodules.CanRunHelm)
 	if s.modulePhase != "" {
@@ -687,19 +687,15 @@ func (s *stubModulesManager) GetModule(name string) *addonmodules.BasicModule {
 	return bm
 }
 
-func (s *stubModulesManager) setModulePhase(phase addonmodules.ModuleRunPhase) {
-	s.modulePhase = phase
-}
-
-func (s *stubModulesManager) GetEnabledModuleNames() []string {
+func (s stubModulesManager) GetEnabledModuleNames() []string {
 	return nil
 }
 
-func (s *stubModulesManager) IsModuleEnabled(_ string) bool {
+func (s stubModulesManager) IsModuleEnabled(_ string) bool {
 	return true
 }
 
-func (s *stubModulesManager) RunModuleWithNewOpenAPISchema(_, _, _ string) error {
+func (s stubModulesManager) RunModuleWithNewOpenAPISchema(_, _, _ string) error {
 	return nil
 }
 
