@@ -267,7 +267,7 @@ properties:
         type: object
         default: {}
         description: |
-          `etcd` backup parameters.
+          etcd backup parameters.
         properties:
           enabled:
             type: boolean
@@ -280,7 +280,7 @@ properties:
             x-examples:
             - "0 1 * * *"
             description: |
-              Backup schedule `etcd` in cron format. The local time zone of the kube-controller-manager is used.
+              Backup schedule etcd in cron format. The local time zone of the `kube-controller-manager` is used.
           hostPath:
             type: string
             default: /var/lib/etcd

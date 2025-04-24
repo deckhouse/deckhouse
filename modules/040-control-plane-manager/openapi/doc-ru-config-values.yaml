@@ -153,21 +153,21 @@ properties:
           > **Важно!** Этот режим нельзя отключить!
   etcd:
     description: |
-      Параметры `etcd`.
+      Параметры etcd.
     properties:
       backup:
         description: |
-          Параметры резервного копирования `etcd`.
+          Параметры резервного копирования etcd.
         properties:
           enabled:
             description: |
-              Включение резервного копирование `etcd`.
+              Включение резервного копирование etcd.
           cronSchedule:
             description: |
-              Расписание резервного копирования `etcd` в формате cron. Используется локальный часовой пояс kube-controller-manager.
+              Расписание резервного копирования etcd в формате cron. Используется локальный часовой пояс `kube-controller-manager`.
           hostPath:
             description: |
-              Путь для хранения резервных копий `etcd` на мастер нодах.
+              Путь для хранения резервных копий etcd на master-узлах.
       maxDbSize:
         description: |
           [quota-backend-bytes](https://etcd.io/docs/v3.5/dev-guide/limit/#storage-size-limit) параметр.
