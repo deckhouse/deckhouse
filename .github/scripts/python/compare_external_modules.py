@@ -96,7 +96,7 @@ for module, versions in unique_images.items():
                     for edition, module_digests in module_image_digests.items():
                         print(f"\t\t{edition} digest: {module_digests[name]}")
             if not module_diff_found:
-                print(f"\tNo differing images in image digests for module {module}:{version}")
+                print(f"\tNo differing component images for module {module}:{version}")
 
 if found:
     sys.exit(1)
