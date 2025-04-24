@@ -15,7 +15,7 @@ Deckhouse Platform Cluster
 │
 ├─ SystemNamespace                                                    ← Системное пространство имён
 │     ├─ d8-*   (системные компоненты Deckhouse)
-│     └─ kube-* (системные компоненты Dekhouse)
+│     └─ kube-* (системные компоненты Deckhouse)
 │
 └─ Project <project‑name>
       │    ├─ ResourceQuota (CPU, RAM, Subprojects)
