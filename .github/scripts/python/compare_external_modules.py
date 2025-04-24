@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import os
 import re
 import subprocess
@@ -21,8 +22,15 @@ import sys
 
 from obtain_edition_list import obtain_edition_list
 
+
 def crane(command_list):
     completed_process = subprocess.run(["crane"] + command_list, text=True, capture_output=True)
+    completed_process.check_returncode()
+    return completed_process.stdout
+
+
+def regctl(command_list):
+    completed_process = subprocess.run(["regctl"] + command_list, text=True, capture_output=True)
     completed_process.check_returncode()
     return completed_process.stdout
 
@@ -64,6 +72,31 @@ for module, versions in unique_images.items():
             for edition in editions:
                 if module in edition_data[edition] and version in edition_data[edition][module]:
                     print(f'\t{edition} digest: {edition_data[edition][module][version]}')
+            # Compare image_digests for differing modules
+            module_image_digests = {}
+            unique_module_images = {}
+            module_diff_found = False
+            for edition in editions:
+                if module in edition_data[edition] and version in edition_data[edition][module]:
+                    module_image_digests[edition] = json.loads(regctl([
+                        "image",
+                        "get-file",
+                        f"{registry}/deckhouse/{edition}/modules/{module}:{version}",
+                        "images_digests.json"
+                    ]))
+            for edition, module_digests in module_image_digests.items():
+                for name, digest in module_digests.items():
+                    if name not in unique_module_images:
+                        unique_module_images[name] = set()
+                    unique_module_images[name].add(digest)
+            for name, module_digest_set in unique_module_images.items():
+                if len(module_digest_set) > 1:
+                    module_diff_found = True
+                    print(f"\tFound differing module component f{name}:")
+                    for edition, module_digests in module_image_digests.items():
+                        print(f"\t\t{edition} digest: {module_digests[name]}")
+            if not module_diff_found:
+                print(f"\tNo differing images in image digests for module {module}:{version}")
 
 if found:
     sys.exit(1)
