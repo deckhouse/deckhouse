@@ -11,6 +11,6 @@ Set zap as klog logger
 
 Update dependencies
 
-### 004-go-mod.patch
+### 004-klog.patch
 
 Update klog to klog/v2 in other files
