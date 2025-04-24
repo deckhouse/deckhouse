@@ -263,12 +263,11 @@ spec:
   version: 1
   enabled: true
   settings:
-     auxiliaryCluster: false
-     clusterType: Hybrid
+     clusterType: Cloud
      kubeall:
        host: ''
 `,
-			expectInvalid,
+			expectValid,
 		},
 	}
 

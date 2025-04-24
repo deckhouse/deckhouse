@@ -110,9 +110,9 @@ properties:
           Which `context` to use from the specified `kubeconfig`.
 
 x-deckhouse-validations:
-  - expression: "!has(self.auxiliaryCluster) || self.auxiliaryCluster == true"
+  - expression: "self.auxiliaryCluster == true"
     message: |
       The `auxiliaryCluster` parameter should be enabled.
-  - expression: "!has(self.clusterType) || self.clusterType == 'Cloud'"
+  - expression: "self.clusterType == 'Cloud'"
     message: |
       The `clusterType` parameter should not be set to `Cloud`.
