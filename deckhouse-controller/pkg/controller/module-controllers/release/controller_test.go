@@ -418,6 +418,28 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			require.NoError(suite.T(), err)
 		})
 	})
+
+	suite.Run("Process pending releases", func() {
+		// Setup initial state
+		suite.setupReleaseController(suite.fetchTestFileData("apply-pending-releases.yaml"))
+
+		// Test updating Parca module
+		mr := suite.getModuleRelease("parca-1.2.2")
+		_, err := suite.ctr.handleRelease(ctx, mr)
+		require.NoError(suite.T(), err)
+
+		// Test updating Commander module
+		mr = suite.getModuleRelease("commander-1.0.3")
+		_, err = suite.ctr.handleRelease(ctx, mr)
+		require.NoError(suite.T(), err)
+
+		// Verify the final state
+		parca := suite.getModuleRelease("parca-1.2.2")
+		require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, parca.Status.Phase)
+
+		commander := suite.getModuleRelease("commander-1.0.3")
+		require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, commander.Status.Phase)
+	})
 }
 
 func (suite *ReleaseControllerTestSuite) loopUntilDeploy(dc *dependency.MockedContainer, releaseName string) {
