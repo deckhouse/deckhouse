@@ -25,6 +25,7 @@ azure:
   artifact: terraform-provider-azure
   artifactBinary: terraform-provider-azurerm
   destinationBinary: terraform-provider-azurerm
+  useOpentofu: true
 
 gcp:
   namespace: hashicorp
