@@ -265,6 +265,7 @@ properties:
     properties:
       backup:
         type: object
+        default: {}
         description: |
           `etcd` backup parameters.
         properties:
