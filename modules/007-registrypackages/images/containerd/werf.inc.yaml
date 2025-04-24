@@ -1,17 +1,15 @@
-{{- $containerd_version := "1.7.24" }}
+{{- $containerd_version := "1.7.27" }}
 {{- $image_version := $containerd_version | replace "." "-" }}
-{{- $runc_version := "1.2.3" }}
+{{- $runc_version := "1.2.5" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-from: {{ $.Images.BASE_SCRATCH }}
+fromImage: builder/scratch
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
   to: /
   includePaths:
   - containerd
-  - containerd-shim
-  - containerd-shim-runc-v1
   - containerd-shim-runc-v2
   - ctr
   - runc
@@ -37,11 +35,6 @@ git:
   stageDependencies:
     install:
       - '**/*'
-- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-  to: /patches
-  stageDependencies:
-    install:
-      - '**/*'
 shell:
   install:
   - git clone --depth=1 --branch v{{ $containerd_version }} {{ $.SOURCE_REPO }}/containerd/containerd.git /src/containerd
@@ -49,15 +42,13 @@ shell:
   - cd /src/containerd
   - git describe --match 'v[0-9]*' --dirty='.m' --always > VERSION
   - git rev-parse HEAD > REVISION
-  - git apply /patches/containerd/*.patch --verbose
   - cd /src/runc
-  - git apply /patches/runc/*.patch --verbose
   - git describe --dirty --long --always > COMMIT
   - rm -rf /src/containerd/.git
   - rm -rf /src/runc/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ $.Images.BASE_GOLANG_23_BULLSEYE }}
+fromImage: builder/golang-bullseye
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
