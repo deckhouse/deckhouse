@@ -5,15 +5,16 @@
     DEFECTDOJO_API_TOKEN: ${{secrets.DEFECTDOJO_API_TOKEN}}
     DEFECTDOJO_HOST: ${{secrets.DEFECTDOJO_HOST}}
     DECKHOUSE_PRIVATE_REPO: ${{secrets.DECKHOUSE_PRIVATE_REPO}}
+    DEV_REGISTRY: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+    PROD_REGISTRY: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
     TRIVY_PROJECT_ID: "2181"
     TRIVY_DB_URL: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-db:2
     TRIVY_JAVA_DB_URL: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-java-db:1
     TRIVY_POLICY_URL: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-bdu:1
-    REGISTRY_USER: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
-    REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+    SEVERITY: "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
   run: |
     echo "⚓️ 🏎 Running Deckhouse images CVE tests on ${TAG}..."
-    make cve-report
+    ./.github/scripts/cve_scan.sh
 # </template: cve_tests_deckhouse_images>
 {!{- end -}!}
 
@@ -22,27 +23,30 @@
 - name: Archive report artifacts
   if: success()
   run: |
-    tar -zcvf out/trivy_json_reports.tar.gz out/json
+    tar -zcvf ${{ env.WORKDIR }}/artifacts/trivy_json_reports.tar.gz ${{ env.WORKDIR }}/modules
 - name: Create fail artifact
   if: failure()
   run: |
-    echo "Trivy tests for ${TAG} have failed." > "out/${TAG}_test-failed.txt"
-    tar -zcvf out/trivy_json_reports.tar.gz out/json
+    echo "Trivy tests for ${TAG} have failed." > "${{ env.WORKDIR }}/artifacts/${TAG}_test-failed.txt"
+    tar -zcvf ${{ env.WORKDIR }}/artifacts/trivy_json_reports.tar.gz ${{ env.WORKDIR }}/modules
 - name: Upload report artifacts
   if: success()
   uses: {!{ index (ds "actions") "actions/upload-artifact" }!}
   with:
     name: cve-reports
     path: |
-      out/trivy_json_reports.tar.gz
+      ${{ env.WORKDIR }}/artifacts/trivy_json_reports.tar.gz
 - name: Upload fail artifact
   if: failure()
   uses: {!{ index (ds "actions") "actions/upload-artifact" }!}
   with:
     name: cve-reports
     path: |
-      out/${{ env.TAG }}_test-failed.txt
-      out/trivy_json_reports.tar.gz
+      ${{ env.WORKDIR }}/artifacts/${{ env.TAG }}_test-failed.txt
+      ${{ env.WORKDIR }}/artifacts/trivy_json_reports.tar.gz
+- name: Remove workdir
+  run: |
+    rm -r ${{ env.WORKDIR }}
 # </template: cve_tests_upload_reports_artifacts>
 {!{- end -}!}
 
