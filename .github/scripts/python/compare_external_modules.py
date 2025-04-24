@@ -92,7 +92,7 @@ for module, versions in unique_images.items():
             for name, module_digest_set in unique_module_images.items():
                 if len(module_digest_set) > 1:
                     module_diff_found = True
-                    print(f"\tFound differing module component f{name}:")
+                    print(f"\tFound differing module component {name}:")
                     for edition, module_digests in module_image_digests.items():
                         print(f"\t\t{edition} digest: {module_digests[name]}")
             if not module_diff_found:
