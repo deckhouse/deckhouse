@@ -119,7 +119,6 @@ apiVersions:
               items:
                 type: string
               uniqueItems: true
-
             instanceClass:
               type: object
               description: |
