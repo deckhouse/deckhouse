@@ -26,7 +26,6 @@ import (
 	"github.com/flant/addon-operator/pkg/values/validation"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/go_lib/configtools/celrules"
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 )
 
@@ -182,17 +181,6 @@ func (v *Validator) validateSettings(configName string, configSettings map[strin
 		addonutils.Values{valuesKey: defaultSettings},
 		addonutils.Values{valuesKey: configSettings},
 	)
-
-	// Validate config settings against x-deckhouse-validation rules.
-	if schema != nil {
-		if val, ok := values[valuesKey]; ok {
-			if modValues, ok := val.(map[string]interface{}); ok {
-				if err := celrules.Validate(schema, modValues); err != nil {
-					return fmt.Errorf("validate the '%s' config: %w", configName, err)
-				}
-			}
-		}
-	}
 
 	return schemaStorage.ValidateConfigValues(valuesKey, values)
 }
