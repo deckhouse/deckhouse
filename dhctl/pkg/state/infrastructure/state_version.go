@@ -23,7 +23,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
-const opentofuConvertationMsg = "State terraform encountered when opentofu should be used. Do you want to migrate? Use with caution, only if no changes!"
+const opentofuConvertationMsg = "Terraform state detected while opentofu state was expected. Do you want to apply migration? Use with caution, and only if there are no changes in the execution plan!"
 
 var ErrTerraformState = errors.New("Cannot converge state because state is terraform, not opentofu")
 
