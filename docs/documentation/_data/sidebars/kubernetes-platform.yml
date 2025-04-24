@@ -103,12 +103,16 @@ entries:
                       folders:
                         - title:
                             en: Overview
-                            ru: Обзор
+                            ru: Введение
                           url: /admin/integrations/public/yandex/yandex-overview.html
                         - title:
-                            en: Integration with Yandex Cloud
-                            ru: Интеграция с Yandex Cloud
-                          url: /admin/integrations/public/yandex/yandex-integration.html
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/public/yandex/yandex-authorization.html
+                        - title:
+                            en: Configuration and layout
+                            ru: Конфигурация и схема размещения
+                          url: /admin/integrations/public/yandex/yandex-layout.html  
                     - title:
                         en: Integration with VK Cloud
                         ru: TODO Интеграция с VK Cloud
