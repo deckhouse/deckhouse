@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index 361fbe94f2c..5c0f89bbb4b 100644
+index 361fbe94f2c..e12a56495ce 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -6,7 +6,9 @@
@@ -43,9 +43,10 @@ index 361fbe94f2c..5c0f89bbb4b 100644
 +	go.opentelemetry.io/otel v1.20.0
  	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.19.0
 -	go.opentelemetry.io/otel/metric v1.19.0
-+	go.opentelemetry.io/otel/metric v1.20.0
- 	go.opentelemetry.io/otel/sdk v1.19.0
+-	go.opentelemetry.io/otel/sdk v1.19.0
 -	go.opentelemetry.io/otel/trace v1.19.0
++	go.opentelemetry.io/otel/metric v1.20.0
++	go.opentelemetry.io/otel/sdk v1.20.0
 +	go.opentelemetry.io/otel/trace v1.20.0
  	go.opentelemetry.io/proto/otlp v1.0.0
  	go.uber.org/goleak v1.2.1
@@ -139,7 +140,7 @@ index 361fbe94f2c..5c0f89bbb4b 100644
  	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
  	gopkg.in/warnings.v0 v0.1.2 // indirect
 diff --git a/go.sum b/go.sum
-index 4e7df5a3f67..66163026781 100644
+index 4e7df5a3f67..e1db7814b05 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -28,143 +28,28 @@ cloud.google.com/go v0.90.0/go.mod h1:kRX0mNRHe0e2rC6oNakvwQqzyDmg57xJ+SZU1eT2aD
@@ -552,12 +553,14 @@ index 4e7df5a3f67..66163026781 100644
  go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.19.0/go.mod h1:0+KuTDyKL4gjKCF75pHOX4wuzYDUZYfAQdSu43o+Z2I=
 -go.opentelemetry.io/otel/metric v1.19.0 h1:aTzpGtV0ar9wlV4Sna9sdJyII5jTVJEvKETPiOKwvpE=
 -go.opentelemetry.io/otel/metric v1.19.0/go.mod h1:L5rUsV9kM1IxCj1MmSdS+JQAcVm319EUrDVLrt7jqt8=
-+go.opentelemetry.io/otel/metric v1.20.0 h1:ZlrO8Hu9+GAhnepmRGhSU7/VkpjrNowxRN9GyKR4wzA=
-+go.opentelemetry.io/otel/metric v1.20.0/go.mod h1:90DRw3nfK4D7Sm/75yQ00gTJxtkBxX+wu6YaNymbpVM=
- go.opentelemetry.io/otel/sdk v1.19.0 h1:6USY6zH+L8uMH8L3t1enZPR3WFEmSTADlqldyHtJi3o=
- go.opentelemetry.io/otel/sdk v1.19.0/go.mod h1:NedEbbS4w3C6zElbLdPJKOpJQOrGUJ+GfzpjUvI0v1A=
+-go.opentelemetry.io/otel/sdk v1.19.0 h1:6USY6zH+L8uMH8L3t1enZPR3WFEmSTADlqldyHtJi3o=
+-go.opentelemetry.io/otel/sdk v1.19.0/go.mod h1:NedEbbS4w3C6zElbLdPJKOpJQOrGUJ+GfzpjUvI0v1A=
 -go.opentelemetry.io/otel/trace v1.19.0 h1:DFVQmlVbfVeOuBRrwdtaehRrWiL1JoVs9CPIQ1Dzxpg=
 -go.opentelemetry.io/otel/trace v1.19.0/go.mod h1:mfaSyvGyEJEI0nyV2I4qhNQnbBOUUmYZpYojqMnX2vo=
++go.opentelemetry.io/otel/metric v1.20.0 h1:ZlrO8Hu9+GAhnepmRGhSU7/VkpjrNowxRN9GyKR4wzA=
++go.opentelemetry.io/otel/metric v1.20.0/go.mod h1:90DRw3nfK4D7Sm/75yQ00gTJxtkBxX+wu6YaNymbpVM=
++go.opentelemetry.io/otel/sdk v1.20.0 h1:5Jf6imeFZlZtKv9Qbo6qt2ZkmWtdWx/wzcCbNUlAWGM=
++go.opentelemetry.io/otel/sdk v1.20.0/go.mod h1:rmkSx1cZCm/tn16iWDn1GQbLtsW/LvsdEEFzCSRM6V0=
 +go.opentelemetry.io/otel/trace v1.20.0 h1:+yxVAPZPbQhbC3OfAkeIVTky6iTFpcr4SiY9om7mXSQ=
 +go.opentelemetry.io/otel/trace v1.20.0/go.mod h1:HJSK7F/hA5RlzpZ0zKDCHCDHm556LCDtKaAo6JmBFUU=
  go.opentelemetry.io/proto/otlp v0.7.0/go.mod h1:PqfVotwruBrMGOCsRd/89rSnXhoiJIqeYNgFYFoEGnI=
@@ -1127,7 +1130,7 @@ index 4a31209066a..95190b71a12 100644
  k8s.io/utils v0.0.0-20230726121419-3b25d923346b/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
  sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd h1:EDPBXCAspyGV4jQlpZSudPeMmr1bNJefnuqLsRAsHZo=
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/go.mod b/staging/src/k8s.io/apiextensions-apiserver/go.mod
-index b73b9ad52d0..c98a36986ba 100644
+index b73b9ad52d0..5fd2a464b50 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/go.mod
 +++ b/staging/src/k8s.io/apiextensions-apiserver/go.mod
 @@ -2,7 +2,9 @@
@@ -1188,8 +1191,9 @@ index b73b9ad52d0..c98a36986ba 100644
  	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.19.0 // indirect
  	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.19.0 // indirect
 -	go.opentelemetry.io/otel/metric v1.19.0 // indirect
+-	go.opentelemetry.io/otel/sdk v1.19.0 // indirect
 +	go.opentelemetry.io/otel/metric v1.20.0 // indirect
- 	go.opentelemetry.io/otel/sdk v1.19.0 // indirect
++	go.opentelemetry.io/otel/sdk v1.20.0 // indirect
  	go.opentelemetry.io/proto/otlp v1.0.0 // indirect
  	go.uber.org/atomic v1.10.0 // indirect
  	go.uber.org/multierr v1.11.0 // indirect
@@ -1221,7 +1225,7 @@ index b73b9ad52d0..c98a36986ba 100644
  	gopkg.in/inf.v0 v0.9.1 // indirect
  	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/go.sum b/staging/src/k8s.io/apiextensions-apiserver/go.sum
-index 58755f2b275..3a78034d4f9 100644
+index 58755f2b275..5c87a1b7afd 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/go.sum
 +++ b/staging/src/k8s.io/apiextensions-apiserver/go.sum
 @@ -1,131 +1,13 @@
@@ -1506,12 +1510,14 @@ index 58755f2b275..3a78034d4f9 100644
  go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.19.0/go.mod h1:0+KuTDyKL4gjKCF75pHOX4wuzYDUZYfAQdSu43o+Z2I=
 -go.opentelemetry.io/otel/metric v1.19.0 h1:aTzpGtV0ar9wlV4Sna9sdJyII5jTVJEvKETPiOKwvpE=
 -go.opentelemetry.io/otel/metric v1.19.0/go.mod h1:L5rUsV9kM1IxCj1MmSdS+JQAcVm319EUrDVLrt7jqt8=
-+go.opentelemetry.io/otel/metric v1.20.0 h1:ZlrO8Hu9+GAhnepmRGhSU7/VkpjrNowxRN9GyKR4wzA=
-+go.opentelemetry.io/otel/metric v1.20.0/go.mod h1:90DRw3nfK4D7Sm/75yQ00gTJxtkBxX+wu6YaNymbpVM=
- go.opentelemetry.io/otel/sdk v1.19.0 h1:6USY6zH+L8uMH8L3t1enZPR3WFEmSTADlqldyHtJi3o=
- go.opentelemetry.io/otel/sdk v1.19.0/go.mod h1:NedEbbS4w3C6zElbLdPJKOpJQOrGUJ+GfzpjUvI0v1A=
+-go.opentelemetry.io/otel/sdk v1.19.0 h1:6USY6zH+L8uMH8L3t1enZPR3WFEmSTADlqldyHtJi3o=
+-go.opentelemetry.io/otel/sdk v1.19.0/go.mod h1:NedEbbS4w3C6zElbLdPJKOpJQOrGUJ+GfzpjUvI0v1A=
 -go.opentelemetry.io/otel/trace v1.19.0 h1:DFVQmlVbfVeOuBRrwdtaehRrWiL1JoVs9CPIQ1Dzxpg=
 -go.opentelemetry.io/otel/trace v1.19.0/go.mod h1:mfaSyvGyEJEI0nyV2I4qhNQnbBOUUmYZpYojqMnX2vo=
++go.opentelemetry.io/otel/metric v1.20.0 h1:ZlrO8Hu9+GAhnepmRGhSU7/VkpjrNowxRN9GyKR4wzA=
++go.opentelemetry.io/otel/metric v1.20.0/go.mod h1:90DRw3nfK4D7Sm/75yQ00gTJxtkBxX+wu6YaNymbpVM=
++go.opentelemetry.io/otel/sdk v1.20.0 h1:5Jf6imeFZlZtKv9Qbo6qt2ZkmWtdWx/wzcCbNUlAWGM=
++go.opentelemetry.io/otel/sdk v1.20.0/go.mod h1:rmkSx1cZCm/tn16iWDn1GQbLtsW/LvsdEEFzCSRM6V0=
 +go.opentelemetry.io/otel/trace v1.20.0 h1:+yxVAPZPbQhbC3OfAkeIVTky6iTFpcr4SiY9om7mXSQ=
 +go.opentelemetry.io/otel/trace v1.20.0/go.mod h1:HJSK7F/hA5RlzpZ0zKDCHCDHm556LCDtKaAo6JmBFUU=
  go.opentelemetry.io/proto/otlp v1.0.0 h1:T0TX0tmXU8a3CbNXzEKGeU5mIVOdf0oykP+u2lIVU/I=
@@ -2555,7 +2561,7 @@ index 0167426a23f..d283b81069f 100644
  k8s.io/klog/v2 v2.110.1/go.mod h1:YGtd1984u+GgbuZ7e08/yBuAfKLSO0+uR1Fhi6ExXjo=
  k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00 h1:aVUu9fTY98ivBPKR9Y5w/AuzbMm96cd3YHRTU83I780=
 diff --git a/staging/src/k8s.io/cloud-provider/go.mod b/staging/src/k8s.io/cloud-provider/go.mod
-index eec91635ec3..576918747a3 100644
+index eec91635ec3..29a0ccd0103 100644
 --- a/staging/src/k8s.io/cloud-provider/go.mod
 +++ b/staging/src/k8s.io/cloud-provider/go.mod
 @@ -2,7 +2,9 @@
@@ -2601,9 +2607,10 @@ index eec91635ec3..576918747a3 100644
  	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.19.0 // indirect
  	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.19.0 // indirect
 -	go.opentelemetry.io/otel/metric v1.19.0 // indirect
-+	go.opentelemetry.io/otel/metric v1.20.0 // indirect
- 	go.opentelemetry.io/otel/sdk v1.19.0 // indirect
+-	go.opentelemetry.io/otel/sdk v1.19.0 // indirect
 -	go.opentelemetry.io/otel/trace v1.19.0 // indirect
++	go.opentelemetry.io/otel/metric v1.20.0 // indirect
++	go.opentelemetry.io/otel/sdk v1.20.0 // indirect
 +	go.opentelemetry.io/otel/trace v1.20.0 // indirect
  	go.opentelemetry.io/proto/otlp v1.0.0 // indirect
  	go.uber.org/atomic v1.10.0 // indirect
@@ -2637,7 +2644,7 @@ index eec91635ec3..576918747a3 100644
  	gopkg.in/inf.v0 v0.9.1 // indirect
  	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 diff --git a/staging/src/k8s.io/cloud-provider/go.sum b/staging/src/k8s.io/cloud-provider/go.sum
-index 1568fc7d024..0bbf578c30c 100644
+index 1568fc7d024..fce21e7f783 100644
 --- a/staging/src/k8s.io/cloud-provider/go.sum
 +++ b/staging/src/k8s.io/cloud-provider/go.sum
 @@ -1,133 +1,14 @@
@@ -2910,12 +2917,14 @@ index 1568fc7d024..0bbf578c30c 100644
  go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.19.0/go.mod h1:0+KuTDyKL4gjKCF75pHOX4wuzYDUZYfAQdSu43o+Z2I=
 -go.opentelemetry.io/otel/metric v1.19.0 h1:aTzpGtV0ar9wlV4Sna9sdJyII5jTVJEvKETPiOKwvpE=
 -go.opentelemetry.io/otel/metric v1.19.0/go.mod h1:L5rUsV9kM1IxCj1MmSdS+JQAcVm319EUrDVLrt7jqt8=
-+go.opentelemetry.io/otel/metric v1.20.0 h1:ZlrO8Hu9+GAhnepmRGhSU7/VkpjrNowxRN9GyKR4wzA=
-+go.opentelemetry.io/otel/metric v1.20.0/go.mod h1:90DRw3nfK4D7Sm/75yQ00gTJxtkBxX+wu6YaNymbpVM=
- go.opentelemetry.io/otel/sdk v1.19.0 h1:6USY6zH+L8uMH8L3t1enZPR3WFEmSTADlqldyHtJi3o=
- go.opentelemetry.io/otel/sdk v1.19.0/go.mod h1:NedEbbS4w3C6zElbLdPJKOpJQOrGUJ+GfzpjUvI0v1A=
+-go.opentelemetry.io/otel/sdk v1.19.0 h1:6USY6zH+L8uMH8L3t1enZPR3WFEmSTADlqldyHtJi3o=
+-go.opentelemetry.io/otel/sdk v1.19.0/go.mod h1:NedEbbS4w3C6zElbLdPJKOpJQOrGUJ+GfzpjUvI0v1A=
 -go.opentelemetry.io/otel/trace v1.19.0 h1:DFVQmlVbfVeOuBRrwdtaehRrWiL1JoVs9CPIQ1Dzxpg=
 -go.opentelemetry.io/otel/trace v1.19.0/go.mod h1:mfaSyvGyEJEI0nyV2I4qhNQnbBOUUmYZpYojqMnX2vo=
++go.opentelemetry.io/otel/metric v1.20.0 h1:ZlrO8Hu9+GAhnepmRGhSU7/VkpjrNowxRN9GyKR4wzA=
++go.opentelemetry.io/otel/metric v1.20.0/go.mod h1:90DRw3nfK4D7Sm/75yQ00gTJxtkBxX+wu6YaNymbpVM=
++go.opentelemetry.io/otel/sdk v1.20.0 h1:5Jf6imeFZlZtKv9Qbo6qt2ZkmWtdWx/wzcCbNUlAWGM=
++go.opentelemetry.io/otel/sdk v1.20.0/go.mod h1:rmkSx1cZCm/tn16iWDn1GQbLtsW/LvsdEEFzCSRM6V0=
 +go.opentelemetry.io/otel/trace v1.20.0 h1:+yxVAPZPbQhbC3OfAkeIVTky6iTFpcr4SiY9om7mXSQ=
 +go.opentelemetry.io/otel/trace v1.20.0/go.mod h1:HJSK7F/hA5RlzpZ0zKDCHCDHm556LCDtKaAo6JmBFUU=
  go.opentelemetry.io/proto/otlp v1.0.0 h1:T0TX0tmXU8a3CbNXzEKGeU5mIVOdf0oykP+u2lIVU/I=
@@ -3736,7 +3745,7 @@ index 704e558e03f..b96af5c9a25 100644
  k8s.io/klog/v2 v2.110.1/go.mod h1:YGtd1984u+GgbuZ7e08/yBuAfKLSO0+uR1Fhi6ExXjo=
  k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00 h1:aVUu9fTY98ivBPKR9Y5w/AuzbMm96cd3YHRTU83I780=
 diff --git a/staging/src/k8s.io/controller-manager/go.mod b/staging/src/k8s.io/controller-manager/go.mod
-index 95aa9a77053..51ec3f912c1 100644
+index 95aa9a77053..a4fa8e2b319 100644
 --- a/staging/src/k8s.io/controller-manager/go.mod
 +++ b/staging/src/k8s.io/controller-manager/go.mod
 @@ -2,17 +2,19 @@
@@ -3784,9 +3793,10 @@ index 95aa9a77053..51ec3f912c1 100644
  	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.19.0 // indirect
  	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.19.0 // indirect
 -	go.opentelemetry.io/otel/metric v1.19.0 // indirect
-+	go.opentelemetry.io/otel/metric v1.20.0 // indirect
- 	go.opentelemetry.io/otel/sdk v1.19.0 // indirect
+-	go.opentelemetry.io/otel/sdk v1.19.0 // indirect
 -	go.opentelemetry.io/otel/trace v1.19.0 // indirect
++	go.opentelemetry.io/otel/metric v1.20.0 // indirect
++	go.opentelemetry.io/otel/sdk v1.20.0 // indirect
 +	go.opentelemetry.io/otel/trace v1.20.0 // indirect
  	go.opentelemetry.io/proto/otlp v1.0.0 // indirect
  	go.uber.org/atomic v1.10.0 // indirect
@@ -3818,7 +3828,7 @@ index 95aa9a77053..51ec3f912c1 100644
  	gopkg.in/inf.v0 v0.9.1 // indirect
  	gopkg.in/yaml.v2 v2.4.0 // indirect
 diff --git a/staging/src/k8s.io/controller-manager/go.sum b/staging/src/k8s.io/controller-manager/go.sum
-index a826bc836c4..5dd8f87ab9b 100644
+index a826bc836c4..a65440a5739 100644
 --- a/staging/src/k8s.io/controller-manager/go.sum
 +++ b/staging/src/k8s.io/controller-manager/go.sum
 @@ -1,132 +1,12 @@
@@ -4091,12 +4101,14 @@ index a826bc836c4..5dd8f87ab9b 100644
  go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.19.0/go.mod h1:0+KuTDyKL4gjKCF75pHOX4wuzYDUZYfAQdSu43o+Z2I=
 -go.opentelemetry.io/otel/metric v1.19.0 h1:aTzpGtV0ar9wlV4Sna9sdJyII5jTVJEvKETPiOKwvpE=
 -go.opentelemetry.io/otel/metric v1.19.0/go.mod h1:L5rUsV9kM1IxCj1MmSdS+JQAcVm319EUrDVLrt7jqt8=
-+go.opentelemetry.io/otel/metric v1.20.0 h1:ZlrO8Hu9+GAhnepmRGhSU7/VkpjrNowxRN9GyKR4wzA=
-+go.opentelemetry.io/otel/metric v1.20.0/go.mod h1:90DRw3nfK4D7Sm/75yQ00gTJxtkBxX+wu6YaNymbpVM=
- go.opentelemetry.io/otel/sdk v1.19.0 h1:6USY6zH+L8uMH8L3t1enZPR3WFEmSTADlqldyHtJi3o=
- go.opentelemetry.io/otel/sdk v1.19.0/go.mod h1:NedEbbS4w3C6zElbLdPJKOpJQOrGUJ+GfzpjUvI0v1A=
+-go.opentelemetry.io/otel/sdk v1.19.0 h1:6USY6zH+L8uMH8L3t1enZPR3WFEmSTADlqldyHtJi3o=
+-go.opentelemetry.io/otel/sdk v1.19.0/go.mod h1:NedEbbS4w3C6zElbLdPJKOpJQOrGUJ+GfzpjUvI0v1A=
 -go.opentelemetry.io/otel/trace v1.19.0 h1:DFVQmlVbfVeOuBRrwdtaehRrWiL1JoVs9CPIQ1Dzxpg=
 -go.opentelemetry.io/otel/trace v1.19.0/go.mod h1:mfaSyvGyEJEI0nyV2I4qhNQnbBOUUmYZpYojqMnX2vo=
++go.opentelemetry.io/otel/metric v1.20.0 h1:ZlrO8Hu9+GAhnepmRGhSU7/VkpjrNowxRN9GyKR4wzA=
++go.opentelemetry.io/otel/metric v1.20.0/go.mod h1:90DRw3nfK4D7Sm/75yQ00gTJxtkBxX+wu6YaNymbpVM=
++go.opentelemetry.io/otel/sdk v1.20.0 h1:5Jf6imeFZlZtKv9Qbo6qt2ZkmWtdWx/wzcCbNUlAWGM=
++go.opentelemetry.io/otel/sdk v1.20.0/go.mod h1:rmkSx1cZCm/tn16iWDn1GQbLtsW/LvsdEEFzCSRM6V0=
 +go.opentelemetry.io/otel/trace v1.20.0 h1:+yxVAPZPbQhbC3OfAkeIVTky6iTFpcr4SiY9om7mXSQ=
 +go.opentelemetry.io/otel/trace v1.20.0/go.mod h1:HJSK7F/hA5RlzpZ0zKDCHCDHm556LCDtKaAo6JmBFUU=
  go.opentelemetry.io/proto/otlp v1.0.0 h1:T0TX0tmXU8a3CbNXzEKGeU5mIVOdf0oykP+u2lIVU/I=
@@ -4458,10 +4470,10 @@ index 91ca17b7fda..db201dc57d2 100644
  k8s.io/utils v0.0.0-20230726121419-3b25d923346b/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
  sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd h1:EDPBXCAspyGV4jQlpZSudPeMmr1bNJefnuqLsRAsHZo=
 diff --git a/staging/src/k8s.io/dynamic-resource-allocation/go.mod b/staging/src/k8s.io/dynamic-resource-allocation/go.mod
-index aef6724a7ce..00a7c2aa1da 100644
+index aef6724a7ce..b573792deb1 100644
 --- a/staging/src/k8s.io/dynamic-resource-allocation/go.mod
 +++ b/staging/src/k8s.io/dynamic-resource-allocation/go.mod
-@@ -2,7 +2,9 @@
+@@ -2,13 +2,15 @@
  
  module k8s.io/dynamic-resource-allocation
  
@@ -4472,16 +4484,33 @@ index aef6724a7ce..00a7c2aa1da 100644
  
  require (
  	github.com/go-logr/logr v1.3.0
+ 	github.com/google/go-cmp v0.6.0
+ 	github.com/stretchr/testify v1.8.4
+-	google.golang.org/grpc v1.58.3
++	google.golang.org/grpc v1.59.0
+ 	k8s.io/api v0.0.0
+ 	k8s.io/apimachinery v0.0.0
+ 	k8s.io/client-go v0.0.0
+@@ -29,7 +31,7 @@ require (
+ 	github.com/golang/protobuf v1.5.4 // indirect
+ 	github.com/google/gnostic-models v0.6.8 // indirect
+ 	github.com/google/gofuzz v1.2.0 // indirect
+-	github.com/google/uuid v1.3.0 // indirect
++	github.com/google/uuid v1.3.1 // indirect
+ 	github.com/josharian/intern v1.0.0 // indirect
+ 	github.com/json-iterator/go v1.1.12 // indirect
+ 	github.com/mailru/easyjson v0.7.7 // indirect
 @@ -38,11 +40,11 @@ require (
  	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
  	github.com/pkg/errors v0.9.1 // indirect
  	github.com/pmezard/go-difflib v1.0.0 // indirect
 -	golang.org/x/net v0.23.0 // indirect
-+	golang.org/x/net v0.38.0 // indirect
- 	golang.org/x/oauth2 v0.10.0 // indirect
+-	golang.org/x/oauth2 v0.10.0 // indirect
 -	golang.org/x/sys v0.18.0 // indirect
 -	golang.org/x/term v0.18.0 // indirect
 -	golang.org/x/text v0.14.0 // indirect
++	golang.org/x/net v0.38.0 // indirect
++	golang.org/x/oauth2 v0.11.0 // indirect
 +	golang.org/x/sys v0.31.0 // indirect
 +	golang.org/x/term v0.30.0 // indirect
 +	golang.org/x/text v0.23.0 // indirect
@@ -4489,7 +4518,7 @@ index aef6724a7ce..00a7c2aa1da 100644
  	google.golang.org/appengine v1.6.7 // indirect
  	google.golang.org/genproto/googleapis/rpc v0.0.0-20230822172742-b8732ec3820d // indirect
 diff --git a/staging/src/k8s.io/dynamic-resource-allocation/go.sum b/staging/src/k8s.io/dynamic-resource-allocation/go.sum
-index 25140621e67..4409e279fce 100644
+index 25140621e67..e843abee3c2 100644
 --- a/staging/src/k8s.io/dynamic-resource-allocation/go.sum
 +++ b/staging/src/k8s.io/dynamic-resource-allocation/go.sum
 @@ -1,22 +1,9 @@
@@ -4529,14 +4558,18 @@ index 25140621e67..4409e279fce 100644
  github.com/google/gnostic-models v0.6.8 h1:yo/ABAfM5IMRsS1VnXjTBvUb61tFIHozhlYvRgGre9I=
  github.com/google/gnostic-models v0.6.8/go.mod h1:5n7qKqH0f5wFt+aWF8CW6pZLLNOfYuF5OpfBSENuI8U=
  github.com/google/go-cmp v0.5.9/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
-@@ -50,10 +35,6 @@ github.com/google/pprof v0.0.0-20210720184732-4bb14d4b1be1 h1:K6RDEckDVWvDI9JAJY
+@@ -48,12 +33,8 @@ github.com/google/gofuzz v1.2.0 h1:xRy4A+RhZaiKjJ1bPfwQ8sedCA+YS2YcCHW6ec7JMi0=
+ github.com/google/gofuzz v1.2.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/M65Eg=
+ github.com/google/pprof v0.0.0-20210720184732-4bb14d4b1be1 h1:K6RDEckDVWvDI9JAJYCmNdQXq6neHJOYx3V6jnqNEec=
  github.com/google/pprof v0.0.0-20210720184732-4bb14d4b1be1/go.mod h1:kpwsk12EmLew5upagYY7GY0pfYCcupk39gWOCRROcvE=
- github.com/google/uuid v1.3.0 h1:t6JiXgmwXMjEs8VusXIJk2BXHsn+wx8BZdTaoZ5fu7I=
- github.com/google/uuid v1.3.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+-github.com/google/uuid v1.3.0 h1:t6JiXgmwXMjEs8VusXIJk2BXHsn+wx8BZdTaoZ5fu7I=
+-github.com/google/uuid v1.3.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 -github.com/gorilla/websocket v1.5.0/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
 -github.com/gregjones/httpcache v0.0.0-20180305231024-9cad4c3443a7/go.mod h1:FecbI9+v66THATjSRHfNgh1IVFe/9kFxbXtjV0ctIMA=
 -github.com/imdario/mergo v0.3.6/go.mod h1:2EnlNZ0deacrJVfApfmtdGgDfMuh/nq6Ok1EcJh5FfA=
 -github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
++github.com/google/uuid v1.3.1 h1:KjJaJ9iWZ3jOFZIf1Lqf4laDRCasjl0BCmnEGxkdLb4=
++github.com/google/uuid v1.3.1/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
  github.com/josharian/intern v1.0.0 h1:vlS4z54oSdjm0bgjRigI+G1HpF+tI+9rE5LLzOg8HmY=
  github.com/josharian/intern v1.0.0/go.mod h1:5DoeVV0s6jJacbCEi61lwdGj/aVlrQvzHFFd8Hwg//Y=
  github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnrnM=
@@ -4573,7 +4606,7 @@ index 25140621e67..4409e279fce 100644
  github.com/spf13/pflag v1.0.5 h1:iy+VFUOCP1a+8yFto/drg2CJ5u0yRoB7fZw3DKv/JXA=
  github.com/spf13/pflag v1.0.5/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
  github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
-@@ -111,52 +83,46 @@ github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9dec
+@@ -111,56 +83,50 @@ github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9dec
  golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
  golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550/go.mod h1:yigFU9vqHzYiE8UmvKecakEJjdnWj3jj499lnFckfCI=
  golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
@@ -4588,10 +4621,12 @@ index 25140621e67..4409e279fce 100644
  golang.org/x/net v0.0.0-20201021035429-f5854403a974/go.mod h1:sp8m0HH+o8qH0wwXwYZr8TS3Oi6o0r6Gce1SSxlDquU=
 -golang.org/x/net v0.23.0 h1:7EYJ93RZ9vYSZAIb2x3lnuvqO5zneoD6IvWjuhfxjTs=
 -golang.org/x/net v0.23.0/go.mod h1:JKghWKKOSdJwpW2GEx0Ja7fmaKnMsbu+MWVZTokSYmg=
+-golang.org/x/oauth2 v0.10.0 h1:zHCpF2Khkwy4mMB4bv0U37YtJdTGW8jI0glAApi0Kh8=
+-golang.org/x/oauth2 v0.10.0/go.mod h1:kTpgurOux7LqtuxjuyZa4Gj2gdezIt/jQtGnNFfypQI=
 +golang.org/x/net v0.38.0 h1:vRMAPTMaeGqVhG5QyLJHqNDwecKTomGeqbnfZyKlBI8=
 +golang.org/x/net v0.38.0/go.mod h1:ivrbrMbzFq5J41QOQh0siUuly180yBYtLp+CKbEaFx8=
- golang.org/x/oauth2 v0.10.0 h1:zHCpF2Khkwy4mMB4bv0U37YtJdTGW8jI0glAApi0Kh8=
- golang.org/x/oauth2 v0.10.0/go.mod h1:kTpgurOux7LqtuxjuyZa4Gj2gdezIt/jQtGnNFfypQI=
++golang.org/x/oauth2 v0.11.0 h1:vPL4xzxBM4niKCW6g9whtaWVXTJf1U5e4aZxxFx/gbU=
++golang.org/x/oauth2 v0.11.0/go.mod h1:LdF7O/8bLR/qWK9DrpXmbHLTouvRHK0SgJl0GmDBchk=
  golang.org/x/sync v0.0.0-20190423024810-112230192c58/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
  golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
  golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
@@ -4635,7 +4670,13 @@ index 25140621e67..4409e279fce 100644
 -google.golang.org/genproto/googleapis/api v0.0.0-20230711160842-782d3b101e98/go.mod h1:rsr7RhLuwsDKL7RmgDDCUc6yaGr1iqceVb5Wv6f6YvQ=
  google.golang.org/genproto/googleapis/rpc v0.0.0-20230822172742-b8732ec3820d h1:uvYuEyMHKNt+lT4K3bN6fGswmK8qSvcreM3BwjDh+y4=
  google.golang.org/genproto/googleapis/rpc v0.0.0-20230822172742-b8732ec3820d/go.mod h1:+Bk1OCOj40wS2hwAMA+aCW9ypzm63QTBBHp6lQ3p+9M=
- google.golang.org/grpc v1.58.3 h1:BjnpXut1btbtgN/6sp+brB2Kbm2LjNXnidYujAVbSoQ=
+-google.golang.org/grpc v1.58.3 h1:BjnpXut1btbtgN/6sp+brB2Kbm2LjNXnidYujAVbSoQ=
+-google.golang.org/grpc v1.58.3/go.mod h1:tgX3ZQDlNJGU96V6yHh1T/JeoBQ2TXdr43YbYSsCJk0=
++google.golang.org/grpc v1.59.0 h1:Z5Iec2pjwb+LEOqzpB2MR12/eKFhDPhuqW91O+4bwUk=
++google.golang.org/grpc v1.59.0/go.mod h1:aUPDwccQo6OTjy7Hct4AfBPD1GptF4fyUjIkQ9YtF98=
+ google.golang.org/protobuf v1.33.0 h1:uNO2rsAINq/JlFpSdYEKIZ0uKD/R9cpdv0T+yoGwGmI=
+ google.golang.org/protobuf v1.33.0/go.mod h1:c6P6GXX6sHbq/GpV6MGZEdwhWPcYBgnhAHhKbcUYpos=
+ gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 @@ -174,7 +140,6 @@ gopkg.in/yaml.v2 v2.4.0/go.mod h1:RDklbk79AGWmwhnvt/jBztapEOGDOx6ZbXqjP6csGnQ=
  gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
  gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
@@ -5018,7 +5059,7 @@ index 54b75bf8165..0297000cb0a 100644
  golang.org/x/tools v0.0.0-20191119224855-298f0cb1881e/go.mod h1:b+2E5dAYhXwXZwtnZ6UAqBI28+e2cm9otk0dWdXHAEo=
  golang.org/x/tools v0.0.0-20200619180055-7c47624df98f/go.mod h1:EkVYQZoAsY45+roYkvgYkIh4xh/qjgUK9TdY2XT94GE=
 diff --git a/staging/src/k8s.io/kube-aggregator/go.mod b/staging/src/k8s.io/kube-aggregator/go.mod
-index ddb44bb31b1..2a187f5171e 100644
+index ddb44bb31b1..c387280ddab 100644
 --- a/staging/src/k8s.io/kube-aggregator/go.mod
 +++ b/staging/src/k8s.io/kube-aggregator/go.mod
 @@ -2,7 +2,9 @@
@@ -5071,9 +5112,10 @@ index ddb44bb31b1..2a187f5171e 100644
  	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.19.0 // indirect
  	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.19.0 // indirect
 -	go.opentelemetry.io/otel/metric v1.19.0 // indirect
-+	go.opentelemetry.io/otel/metric v1.20.0 // indirect
- 	go.opentelemetry.io/otel/sdk v1.19.0 // indirect
+-	go.opentelemetry.io/otel/sdk v1.19.0 // indirect
 -	go.opentelemetry.io/otel/trace v1.19.0 // indirect
++	go.opentelemetry.io/otel/metric v1.20.0 // indirect
++	go.opentelemetry.io/otel/sdk v1.20.0 // indirect
 +	go.opentelemetry.io/otel/trace v1.20.0 // indirect
  	go.opentelemetry.io/proto/otlp v1.0.0 // indirect
  	go.uber.org/atomic v1.10.0 // indirect
@@ -5109,7 +5151,7 @@ index ddb44bb31b1..2a187f5171e 100644
  	gopkg.in/inf.v0 v0.9.1 // indirect
  	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 diff --git a/staging/src/k8s.io/kube-aggregator/go.sum b/staging/src/k8s.io/kube-aggregator/go.sum
-index 741817c9e40..c937252e742 100644
+index 741817c9e40..771f3854f28 100644
 --- a/staging/src/k8s.io/kube-aggregator/go.sum
 +++ b/staging/src/k8s.io/kube-aggregator/go.sum
 @@ -1,129 +1,10 @@
@@ -5385,12 +5427,14 @@ index 741817c9e40..c937252e742 100644
  go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.19.0/go.mod h1:0+KuTDyKL4gjKCF75pHOX4wuzYDUZYfAQdSu43o+Z2I=
 -go.opentelemetry.io/otel/metric v1.19.0 h1:aTzpGtV0ar9wlV4Sna9sdJyII5jTVJEvKETPiOKwvpE=
 -go.opentelemetry.io/otel/metric v1.19.0/go.mod h1:L5rUsV9kM1IxCj1MmSdS+JQAcVm319EUrDVLrt7jqt8=
-+go.opentelemetry.io/otel/metric v1.20.0 h1:ZlrO8Hu9+GAhnepmRGhSU7/VkpjrNowxRN9GyKR4wzA=
-+go.opentelemetry.io/otel/metric v1.20.0/go.mod h1:90DRw3nfK4D7Sm/75yQ00gTJxtkBxX+wu6YaNymbpVM=
- go.opentelemetry.io/otel/sdk v1.19.0 h1:6USY6zH+L8uMH8L3t1enZPR3WFEmSTADlqldyHtJi3o=
- go.opentelemetry.io/otel/sdk v1.19.0/go.mod h1:NedEbbS4w3C6zElbLdPJKOpJQOrGUJ+GfzpjUvI0v1A=
+-go.opentelemetry.io/otel/sdk v1.19.0 h1:6USY6zH+L8uMH8L3t1enZPR3WFEmSTADlqldyHtJi3o=
+-go.opentelemetry.io/otel/sdk v1.19.0/go.mod h1:NedEbbS4w3C6zElbLdPJKOpJQOrGUJ+GfzpjUvI0v1A=
 -go.opentelemetry.io/otel/trace v1.19.0 h1:DFVQmlVbfVeOuBRrwdtaehRrWiL1JoVs9CPIQ1Dzxpg=
 -go.opentelemetry.io/otel/trace v1.19.0/go.mod h1:mfaSyvGyEJEI0nyV2I4qhNQnbBOUUmYZpYojqMnX2vo=
++go.opentelemetry.io/otel/metric v1.20.0 h1:ZlrO8Hu9+GAhnepmRGhSU7/VkpjrNowxRN9GyKR4wzA=
++go.opentelemetry.io/otel/metric v1.20.0/go.mod h1:90DRw3nfK4D7Sm/75yQ00gTJxtkBxX+wu6YaNymbpVM=
++go.opentelemetry.io/otel/sdk v1.20.0 h1:5Jf6imeFZlZtKv9Qbo6qt2ZkmWtdWx/wzcCbNUlAWGM=
++go.opentelemetry.io/otel/sdk v1.20.0/go.mod h1:rmkSx1cZCm/tn16iWDn1GQbLtsW/LvsdEEFzCSRM6V0=
 +go.opentelemetry.io/otel/trace v1.20.0 h1:+yxVAPZPbQhbC3OfAkeIVTky6iTFpcr4SiY9om7mXSQ=
 +go.opentelemetry.io/otel/trace v1.20.0/go.mod h1:HJSK7F/hA5RlzpZ0zKDCHCDHm556LCDtKaAo6JmBFUU=
  go.opentelemetry.io/proto/otlp v1.0.0 h1:T0TX0tmXU8a3CbNXzEKGeU5mIVOdf0oykP+u2lIVU/I=
@@ -7201,8 +7245,20 @@ index 8d31bd65be1..2e18cdd5aab 100644
  google.golang.org/appengine v1.6.7 h1:FZR1q0exgwxzPzp/aF+VccGrSfxfPpkBqjIIEq3ru6c=
  google.golang.org/appengine v1.6.7/go.mod h1:8WjMMxjGQR8xUklV/ARdw2HLXBOI7O7uCIDZVag1xfc=
  google.golang.org/protobuf v1.33.0 h1:uNO2rsAINq/JlFpSdYEKIZ0uKD/R9cpdv0T+yoGwGmI=
+diff --git a/staging/src/k8s.io/mount-utils/go.sum b/staging/src/k8s.io/mount-utils/go.sum
+index 5078a4f118a..30c94ee5a00 100644
+--- a/staging/src/k8s.io/mount-utils/go.sum
++++ b/staging/src/k8s.io/mount-utils/go.sum
+@@ -18,7 +18,6 @@ github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZN
+ github.com/rogpeppe/go-internal v1.9.0/go.mod h1:WtVeX8xhTBvf0smdhujwtBcq4Qrzq/fJaraNFVN+nFs=
+ github.com/rogpeppe/go-internal v1.10.0 h1:TMyTOH3F/DB16zRVcYyreMH6GnZZrwQVAoYjRBZyWFQ=
+ github.com/rogpeppe/go-internal v1.10.0/go.mod h1:UQnix2H7Ngw/k4C5ijL5+65zddjncjaFoBhdsK/akog=
+-github.com/stretchr/objx v0.5.0/go.mod h1:Yh+to48EsGEfYuaHDzXPcE3xhTkx73EhmCGUpEOglKo=
+ github.com/stretchr/testify v1.8.4 h1:CcVxjf3Q8PM0mHUKJCdn+eZZtm5yQwehR5yeSVQQcUk=
+ github.com/stretchr/testify v1.8.4/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXlSw2iwfAo=
+ golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 diff --git a/staging/src/k8s.io/pod-security-admission/go.mod b/staging/src/k8s.io/pod-security-admission/go.mod
-index b40506c2e13..7b0210f2a8e 100644
+index b40506c2e13..78cd7f72ccf 100644
 --- a/staging/src/k8s.io/pod-security-admission/go.mod
 +++ b/staging/src/k8s.io/pod-security-admission/go.mod
 @@ -2,7 +2,9 @@
@@ -7249,9 +7305,10 @@ index b40506c2e13..7b0210f2a8e 100644
  	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.19.0 // indirect
  	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.19.0 // indirect
 -	go.opentelemetry.io/otel/metric v1.19.0 // indirect
-+	go.opentelemetry.io/otel/metric v1.20.0 // indirect
- 	go.opentelemetry.io/otel/sdk v1.19.0 // indirect
+-	go.opentelemetry.io/otel/sdk v1.19.0 // indirect
 -	go.opentelemetry.io/otel/trace v1.19.0 // indirect
++	go.opentelemetry.io/otel/metric v1.20.0 // indirect
++	go.opentelemetry.io/otel/sdk v1.20.0 // indirect
 +	go.opentelemetry.io/otel/trace v1.20.0 // indirect
  	go.opentelemetry.io/proto/otlp v1.0.0 // indirect
  	go.uber.org/atomic v1.10.0 // indirect
@@ -7285,7 +7342,7 @@ index b40506c2e13..7b0210f2a8e 100644
  	gopkg.in/inf.v0 v0.9.1 // indirect
  	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 diff --git a/staging/src/k8s.io/pod-security-admission/go.sum b/staging/src/k8s.io/pod-security-admission/go.sum
-index a826bc836c4..5dd8f87ab9b 100644
+index a826bc836c4..a65440a5739 100644
 --- a/staging/src/k8s.io/pod-security-admission/go.sum
 +++ b/staging/src/k8s.io/pod-security-admission/go.sum
 @@ -1,132 +1,12 @@
@@ -7558,12 +7615,14 @@ index a826bc836c4..5dd8f87ab9b 100644
  go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.19.0/go.mod h1:0+KuTDyKL4gjKCF75pHOX4wuzYDUZYfAQdSu43o+Z2I=
 -go.opentelemetry.io/otel/metric v1.19.0 h1:aTzpGtV0ar9wlV4Sna9sdJyII5jTVJEvKETPiOKwvpE=
 -go.opentelemetry.io/otel/metric v1.19.0/go.mod h1:L5rUsV9kM1IxCj1MmSdS+JQAcVm319EUrDVLrt7jqt8=
-+go.opentelemetry.io/otel/metric v1.20.0 h1:ZlrO8Hu9+GAhnepmRGhSU7/VkpjrNowxRN9GyKR4wzA=
-+go.opentelemetry.io/otel/metric v1.20.0/go.mod h1:90DRw3nfK4D7Sm/75yQ00gTJxtkBxX+wu6YaNymbpVM=
- go.opentelemetry.io/otel/sdk v1.19.0 h1:6USY6zH+L8uMH8L3t1enZPR3WFEmSTADlqldyHtJi3o=
- go.opentelemetry.io/otel/sdk v1.19.0/go.mod h1:NedEbbS4w3C6zElbLdPJKOpJQOrGUJ+GfzpjUvI0v1A=
+-go.opentelemetry.io/otel/sdk v1.19.0 h1:6USY6zH+L8uMH8L3t1enZPR3WFEmSTADlqldyHtJi3o=
+-go.opentelemetry.io/otel/sdk v1.19.0/go.mod h1:NedEbbS4w3C6zElbLdPJKOpJQOrGUJ+GfzpjUvI0v1A=
 -go.opentelemetry.io/otel/trace v1.19.0 h1:DFVQmlVbfVeOuBRrwdtaehRrWiL1JoVs9CPIQ1Dzxpg=
 -go.opentelemetry.io/otel/trace v1.19.0/go.mod h1:mfaSyvGyEJEI0nyV2I4qhNQnbBOUUmYZpYojqMnX2vo=
++go.opentelemetry.io/otel/metric v1.20.0 h1:ZlrO8Hu9+GAhnepmRGhSU7/VkpjrNowxRN9GyKR4wzA=
++go.opentelemetry.io/otel/metric v1.20.0/go.mod h1:90DRw3nfK4D7Sm/75yQ00gTJxtkBxX+wu6YaNymbpVM=
++go.opentelemetry.io/otel/sdk v1.20.0 h1:5Jf6imeFZlZtKv9Qbo6qt2ZkmWtdWx/wzcCbNUlAWGM=
++go.opentelemetry.io/otel/sdk v1.20.0/go.mod h1:rmkSx1cZCm/tn16iWDn1GQbLtsW/LvsdEEFzCSRM6V0=
 +go.opentelemetry.io/otel/trace v1.20.0 h1:+yxVAPZPbQhbC3OfAkeIVTky6iTFpcr4SiY9om7mXSQ=
 +go.opentelemetry.io/otel/trace v1.20.0/go.mod h1:HJSK7F/hA5RlzpZ0zKDCHCDHm556LCDtKaAo6JmBFUU=
  go.opentelemetry.io/proto/otlp v1.0.0 h1:T0TX0tmXU8a3CbNXzEKGeU5mIVOdf0oykP+u2lIVU/I=
