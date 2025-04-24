@@ -12,7 +12,7 @@ lang: ru
 В данной схеме размещения узлы не будут иметь публичных IP-адресов и будут выходить в интернет через NAT-шлюз (NAT Gateway) Yandex Cloud. NAT-шлюз (NAT Gateway) использует случайные публичные IP-адреса из [выделенных диапазонов](https://yandex.cloud/ru/docs/overview/concepts/public-ips#virtual-private-cloud). Из-за этого невозможно добавить в белый список (whitelist) адреса облачных ресурсов, находящихся за конкретным NAT-шлюзом, на стороне других сервисов.
 {% endalert %}
 
-![Схема размещения Standard в Yandex Cloud](../../../../../images/cloud-provider-yandex/layout-standard.png)
+![Схема размещения Standard в Yandex Cloud](../../../../images/cloud-provider-yandex/layout-standard.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1WI8tu-QZYcz3DvYBNlZG4s5OKQ9JKyna7ESHjnjuCVQ/edit --->
 
 Пример конфигурации схемы размещения:
