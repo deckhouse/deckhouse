@@ -281,6 +281,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"proxyv2V1x19x7":   "imageHash-istio-proxyv2V1x19x7",
 		"proxyv2V1x21x6":   "imageHash-istio-proxyv2V1x21x6",
 		"proxyv2V1x25x2":   "imageHash-istio-proxyv2V1x25x2",
+		"ztunnelV1x25x2":   "imageHash-istio-ztunnelV1x25x2",
 	},
 	"keepalived": map[string]interface{}{
 		"keepalived": "imageHash-keepalived-keepalived",
