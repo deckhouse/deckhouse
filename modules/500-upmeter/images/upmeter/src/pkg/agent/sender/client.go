@@ -188,6 +188,9 @@ type KubeBearerTransport struct {
 func (t *KubeBearerTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	kubeAccess := &kubernetes.Accessor{}
 	token := kubeAccess.ServiceAccountToken()
+	if token == "" {
+		log.Error("httpClient RoundTrip: cannot read service account token")
+	}
 	req.Header.Add("Authorization", "Bearer "+token)
 	return t.next.RoundTrip(req)
 }

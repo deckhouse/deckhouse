@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -103,6 +104,7 @@ type Accessor struct {
 	cloudControllerManagerNamespace string
 	kubernetesDomain                string
 	tokenExpire                     int64
+	tokenRotationMu                 sync.Mutex
 }
 
 func (a *Accessor) Init(config *Config, userAgent string) error {
@@ -115,9 +117,14 @@ func (a *Accessor) Init(config *Config, userAgent string) error {
 	err := a.client.Init()
 	// first start
 	token := a.ServiceAccountToken()
-	if err != nil || len(token) == 0 {
-		return fmt.Errorf("cannot init kuberbetes client: %v", err)
+
+	if err != nil {
+		return fmt.Errorf("client init failed: %w", err)
 	}
+	if token == "" {
+		return fmt.Errorf("cannot read service account token")
+	}
+
 	a.schedulerProbeImage = NewProbeImage(&config.SchedulerProbeImage)
 	a.schedulerProbeNode = config.SchedulerProbeNode
 
@@ -168,6 +175,8 @@ func GetWarnafter(token string) (int64, error) {
 }
 
 func (a *Accessor) ServiceAccountToken() string {
+	a.tokenRotationMu.Lock()
+	defer a.tokenRotationMu.Unlock()
 	if a.saToken == "" {
 		if err := a.loadServiceAccountToken(); err != nil {
 			log.Error(err)
