@@ -17,56 +17,57 @@ Deckhouse поддерживает интеграцию с Yandex Lockbox с п�
 
 Для интеграции выполните следующие шаги:
 
-1. Создайте сервисный аккаунт:
+1. [Создайте сервисный аккаунт](https://cloud.yandex.com/ru/docs/iam/operations/sa/create), необходимый для работы External Secrets Operator:
 
-   ```console
+   ```shell
    yc iam service-account create --name eso-service-account
    ```
 
-1. Создайте авторизованный ключ:
+1. [Создайте авторизованный ключ](https://cloud.yandex.ru/ru/docs/iam/operations/authorized-key/create) для сервисного аккаунта и сохраните его в файл:
 
-   ```console
+   ```shell
    yc iam key create --service-account-name eso-service-account --output authorized-key.json
    ```
 
-1. Назначьте роли для доступа к Lockbox. Замените `<folder_id>` на ваш фактический идентификатор каталога:
+1. [Назначьте](https://cloud.yandex.ru/ru/docs/iam/operations/sa/assign-role-for-sa) сервисному аккаунту [роли](https://cloud.yandex.com/ru/docs/lockbox/security/#service-roles) `lockbox.editor`, `lockbox.payloadViewer` и `kms.keys.encrypterDecrypter` для доступа ко всем секретам каталога:
 
-   ```console
+   ```shell
    folder_id=<идентификатор каталога>
-
-   yc resource-manager folder add-access-binding --id=${folder_id} \
-     --service-account-name eso-service-account --role lockbox.editor
-
-   yc resource-manager folder add-access-binding --id=${folder_id} \
-     --service-account-name eso-service-account --role lockbox.payloadViewer
-
-   yc resource-manager folder add-access-binding --id=${folder_id} \
-     --service-account-name eso-service-account --role kms.keys.encrypterDecrypter
+   yc resource-manager folder add-access-binding --id=${folder_id} --service-account-name eso-service-account --role lockbox.editor
+   yc resource-manager folder add-access-binding --id=${folder_id} --service-account-name eso-service-account --role lockbox.payloadViewer
+   yc resource-manager folder add-access-binding --id=${folder_id} --service-account-name eso-service-account --role kms.keys.encrypterDecrypter
    ```
 
-1. Установите External Secrets Operator:
+   Для более тонкой настройки ознакомьтесь с [управлением доступом в Yandex Lockbox](https://cloud.yandex.com/ru/docs/lockbox/security).
 
-   - Скачайте и распакуйте Helm-чарт:
+1. Установите External Secrets Operator с помощью Helm-чарта согласно [инструкции](https://cloud.yandex.com/ru/docs/managed-kubernetes/operations/applications/external-secrets-operator#helm-install).
 
-     ```console
-     helm pull oci://cr.yandex/yc-marketplace/yandex-cloud/external-secrets/chart/external-secrets \
-       --version 0.5.5 \
-       --untar
-     ```
+   Обратите внимание, что вам может понадобиться задать `nodeSelector`, `tolerations` и другие параметры. Для этого используйте файл `./external-secrets/values.yaml` после распаковки Helm-чарта.
 
-   - Установите Helm-чарт с указанием ключа:
+   Скачайте и распакуйте чарт:
 
-     ```console
-     helm install -n external-secrets --create-namespace \
-       --set-file auth.json=authorized-key.json \
-       external-secrets ./external-secrets/
-     ```
+   ```shell
+   helm pull oci://cr.yandex/yc-marketplace/yandex-cloud/external-secrets/chart/external-secrets \
+     --version 0.5.5 \
+     --untar
+   ```
 
-     При необходимости задайте `nodeSelector`, `tolerations` и другие параметры через `./external-secrets/values.yaml`.
+   Установите Helm-чарт:
 
-1. Создайте `SecretStore`:
+   ```shell
+   helm install -n external-secrets --create-namespace \
+     --set-file auth.json=authorized-key.json \
+     external-secrets ./external-secrets/
+   ```
 
-   ```yaml
+   Где:
+
+   - `authorized-key.json` — название файла с авторизованным ключом из шага 2.
+
+1. Создайте хранилище секретов [SecretStore](https://external-secrets.io/latest/api/secretstore/), содержащее секрет `sa-creds`:
+
+   ```shell
+   kubectl -n external-secrets apply -f - <<< '
    apiVersion: external-secrets.io/v1alpha1
    kind: SecretStore
    metadata:
@@ -77,107 +78,137 @@ Deckhouse поддерживает интеграцию с Yandex Lockbox с п�
          auth:
            authorizedKeySecretRef:
              name: sa-creds
-             key: key
+             key: key'
    ```
 
-   `sa-creds` — секрет, содержащий ключ (`authorized-key.json`), созданный при установке чарта.
-   `key` — имя поля в `.data,` в котором находится содержимое ключа.
+   Где:
 
-1. Проверьте работоспособность с помощью команд:
+   - `sa-creds` — название `Secret`, содержащий авторизованный ключ. Этот секрет должен появиться после установки Helm-чарта.
+   - `key` — название ключа в поле `.data` секрета выше.
 
-   ```console
-   kubectl -n external-secrets get po
+1. Проверьте статус External Secrets Operator и созданного хранилища секретов:
 
-   kubectl -n external-secrets get secretstores.external-secrets.io
-   ```
+   ```shell
+   $ kubectl -n external-secrets get po
+   NAME                                                READY   STATUS    RESTARTS   AGE
+   external-secrets-55f78c44cf-dbf6q                   1/1     Running   0          77m
+   external-secrets-cert-controller-78cbc7d9c8-rszhx   1/1     Running   0          77m
+   external-secrets-webhook-6d7b66758-s7v9c            1/1     Running   0          77m
 
-   Пример корректного вывода:
-
-   ```console
+   $ kubectl -n external-secrets get secretstores.external-secrets.io 
    NAME           AGE   STATUS
    secret-store   69m   Valid
    ```
 
-1. Создайте объект `ExternalSecret`:
+1. [Создайте секрет](https://cloud.yandex.ru/ru/docs/lockbox/operations/secret-create) Yandex Lockbox со следующими параметрами:
 
-   - Создайте секрет в Lockbox с параметрами:
-     - Имя: `lockbox-secret`
-     - Ключ: `password`
-     - Значение: `p@$$w0rd`
+   - Имя — `lockbox-secret`.
+   - Ключ — введите неконфиденциальный идентификатор `password`.
+   - Значение — введите конфиденциальные данные для хранения `p@$$w0rd`.
 
-   - Создайте объект `ExternalSecret`:
+1. Создайте объект [ExternalSecret](https://external-secrets.io/latest/api/externalsecret/), указывающий на секрет `lockbox-secret` в хранилище `secret-store`:
 
-     ```yaml
-     apiVersion: external-secrets.io/v1alpha1
-     kind: ExternalSecret
-     metadata:
-       name: external-secret
-     spec:
-       refreshInterval: 1h
-       secretStoreRef:
-         name: secret-store
-         kind: SecretStore
-       target:
-         name: k8s-secret
-       data:
-       - secretKey: password
-         remoteRef:
-           key: <ИДЕНТИФИКАТОР_СЕКРЕТА>
-           property: password
-     ```
+   ```shell
+   kubectl -n external-secrets apply -f - <<< '
+   apiVersion: external-secrets.io/v1alpha1
+   kind: ExternalSecret
+   metadata:
+     name: external-secret
+   spec:
+     refreshInterval: 1h
+     secretStoreRef:
+       name: secret-store
+       kind: SecretStore
+     target:
+       name: k8s-secret
+     data:
+     - secretKey: password
+       remoteRef:
+         key: <ИДЕНТИФИКАТОР_СЕКРЕТА>
+         property: password'
+   ```
 
-   - Проверьте результат:
+   Где:
 
-     ```console
-     kubectl -n external-secrets get secret k8s-secret -ojson | jq -r '.data.password' | base64 -d
-     ```
+   - `spec.target.name` — имя нового секрета. External Secret Operator создаст этот секрет в кластере Deckhouse Kubernetes Platform и поместит в него параметры секрета Yandex Lockbox `lockbox-secret`.
+   - `spec.data[].secretKey` — название ключа в поле `.data` секрета, который создаст External Secret Operator.
+   - `spec.data[].remoteRef.key` — идентификатор созданного ранее секрета Yandex Lockbox `lockbox-secret`. Например, `e6q28nvfmhu539******`.
+   - `spec.data[].remoteRef.property` — ключ, указанный ранее, для секрета Yandex Lockbox `lockbox-secret`.
 
-     Вывод должен содержать значение `p@$$w0rd`.
+1. Убедитесь, что новый ключ `k8s-secret` содержит значение секрета `lockbox-secret`:
+
+   ```shell
+   kubectl -n external-secrets get secret k8s-secret -ojson | jq -r '.data.password' | base64 -d
+   ```
+
+   В выводе команды будет содержаться значение ключа `password` секрета `lockbox-secret`, созданного ранее:
+
+   ```shell
+   p@$$w0rd
+   ```
 
 ## Интеграция с Yandex Managed Service for Prometheus
 
-Deckhouse позволяет использовать Yandex Managed Service for Prometheus как внешнее хранилище для метрик.
+С помощью данной интеграции вы можете использовать [Yandex Managed Service for Prometheus](https://cloud.yandex.ru/ru/docs/monitoring/operations/prometheus/) в качестве внешнего хранилища метрик, например, для долгосрочного хранения.
 
-Для запись метрик (PrometheusRemoteWrite) выполните следующие шаги:
+Для записи метрик (PrometheusRemoteWrite) выполните следующие шаги:
 
-- Создайте сервисный аккаунт с ролью `monitoring.editor`.
-- Сгенерируйте API-ключ.
-- Примените манифест:
+1. [Создайте сервисный аккаунт](https://cloud.yandex.com/ru/docs/iam/operations/sa/create) с ролью `monitoring.editor`.
+1. [Создайте API-ключ](https://cloud.yandex.ru/ru/docs/iam/operations/api-key/create) для сервисного аккаунта.
+1. Создайте ресурс `PrometheusRemoteWrite`:
 
-  ```yaml
-  apiVersion: deckhouse.io/v1
-  kind: PrometheusRemoteWrite
-  metadata:
-    name: yc-remote-write
-  spec:
-    url: <URL_ЗАПИСИ_МЕТРИК>
-    bearerToken: <API_КЛЮЧ>
-  ```
+   ```yaml
+   kubectl apply -f - <<< '
+   
+   apiVersion: deckhouse.io/v1
+   kind: PrometheusRemoteWrite
+   metadata:
+     name: yc-remote-write
+   spec:
+     url: <URL_ЗАПИСИ_МЕТРИК>
+     bearerToken: <API_КЛЮЧ>
+   ```
 
-  > `URL` и `API_КЛЮЧ` можно получить в интерфейсе Yandex Cloud: Monitoring → Prometheus → Запись метрик.
+   Где:
+
+   - `<URL_ЗАПИСИ_МЕТРИК>` — URL со страницы Yandex Monitoring/Prometheus/Запись метрик.
+   - `<API_КЛЮЧ>` — API-ключ, созданный на предыдущем шаге. Например, `AQVN1HHJReSrfo9jU3aopsXrJyfq_UHs********`.
+
+   Также вы можете указать дополнительные параметры в соответствии с [документацией](../../modules/prometheus/cr.html#prometheusremotewrite).
+
+Подробнее с данной функциональностью можно ознакомиться в [документации Yandex Cloud](https://cloud.yandex.ru/ru/docs/monitoring/operations/prometheus/ingestion/remote-write).
 
 Для чтения метрик через Grafana:
 
-- Создайте сервисный аккаунт с ролью `monitoring.viewer`.
-- Сгенерируйте API-ключ.
-- Примените манифест:
+1. [Создайте сервисный аккаунт](https://cloud.yandex.com/ru/docs/iam/operations/sa/create) с ролью `monitoring.viewer`.
+1. [Создайте API-ключ](https://cloud.yandex.ru/ru/docs/iam/operations/api-key/create) для сервисного аккаунта.
+1. Создайте ресурс `GrafanaAdditionalDatasource`:
 
-  ```yaml
-  apiVersion: deckhouse.io/v1
-  kind: GrafanaAdditionalDatasource
-  metadata:
-    name: managed-prometheus
-  spec:
-    type: prometheus
-    access: Proxy
-    url: <URL_ЧТЕНИЕ_МЕТРИК_ЧЕРЕЗ_GRAFANA>
-    basicAuth: false
-    jsonData:
-      timeInterval: 30s
-      httpMethod: POST
-      httpHeaderName1: Authorization
-    secureJsonData:
-      httpHeaderValue1: Bearer <API_КЛЮЧ>
-  ```
+   ```shell
+   kubectl apply -f - <<< '
+   apiVersion: deckhouse.io/v1
+   kind: GrafanaAdditionalDatasource
+   metadata:
+     name: managed-prometheus
+   spec:
+     type: prometheus
+     access: Proxy
+     url: <URL_ЧТЕНИЕ_МЕТРИК_ЧЕРЕЗ_GRAFANA>
+     basicAuth: false
+     jsonData:
+       timeInterval: 30s
+       httpMethod: POST
+       httpHeaderName1: Authorization
+     secureJsonData:
+       httpHeaderValue1: Bearer <API_КЛЮЧ>
+   '
+   ```
 
-  `URL` можно получить в интерфейсе Yandex Monitoring → Prometheus → Чтение метрик.
+   Где:
+
+   - `<URL_ЧТЕНИЕ_МЕТРИК_ЧЕРЕЗ_GRAFANA>` — URL со страницы Yandex Monitoring/Prometheus/Чтение метрик через Grafana.
+   - `<API_КЛЮЧ>` — API-ключ, созданный на предыдущем шаге. Например, `AQVN1HHJReSrfo9jU3aopsXrJyfq_UHs********`.
+
+   Также вы можете указать дополнительные параметры в соответствии с [документацией](../../modules/prometheus/cr.html#grafanaadditionaldatasource).
+
+Подробнее с данной функциональностью можно ознакомиться в [документации Yandex Cloud](https://cloud.yandex.ru/ru/docs/monitoring/operations/prometheus/querying/grafana).

@@ -6,7 +6,6 @@ lang: ru
 
 Для того чтобы Deckhouse мог управлять ресурсами в Yandex Cloud, необходимо:
 
-- подготовить виртуальные машины;
 - создать сервисный аккаунт;
 - назначить ему необходимые IAM-роли;
 - сгенерировать авторизационный ключ;
@@ -17,7 +16,13 @@ lang: ru
 
 ## Подготовка окружения
 
-На всех виртуальных машинах, создаваемых для кластера, должен быть установлен и активен пакет `cloud-init`. После запуска ВМ убедитесь, что запущены следующие сервисы:
+На виртуальных машинах должен быть установлен пакет `cloud-init`. После запуска виртуальной машины должны быть запущены следующие службы, связанные с этим пакетом:
+
+* `cloud-config.service`;
+* `cloud-final.service`;
+* `cloud-init.service`.
+
+Проверить, что службы запущенны можно с помощью команд:
 
 ```console
 systemctl status cloud-config.service
@@ -26,6 +31,8 @@ systemctl status cloud-init.service
 ```
 
 ## Создание сервисного аккаунта
+
+Чтобы Deckhouse смог управлять ресурсами в облаке Yandex Cloud, необходимо создать сервисный аккаунт и выдать ему права на редактирование. Подробная инструкция по созданию сервисного аккаунта в Yandex Cloud доступна в [документации провайдера](https://cloud.yandex.com/en/docs/resource-manager/operations/cloud/set-access-bindings).
 
 Для создания сервисного аккаунта выполните команду:
 
@@ -77,9 +84,9 @@ yc iam key create --service-account-name deckhouse --output deckhouse-sa-key.jso
 
 Увеличение квот можно запросить через консоль Yandex Cloud.
 
-## (При необходимости) Резервирование публичного IP
+## Резервирование публичного IP
 
-Если используется схема размещения WithoutNAT или WithNATInstance, и требуется фиксированный внешний IP-адрес, выполните команду:
+Если используется схема размещения WithoutNAT или WithNATInstance, и требуется фиксированный внешний IP-адрес (например, для указания в `externalIPAddresses`, `natInstanceExternalAddress` или для bastion-хоста), выполните команду:
 
 ```console
 yc vpc address create --external-ipv4 zone=ru-central1-a
@@ -90,9 +97,11 @@ yc vpc address create --external-ipv4 zone=ru-central1-a
 ```yaml
 id: e9b4cfmmnc1mhgij75n7
 folder_id: b1gog0h9k05lhqe5d88l
+created_at: "2020-09-01T09:29:33Z"
 external_ipv4_address:
   address: 178.154.226.159
   zone_id: ru-central1-a
+  requirements: {}
 reserved: true
 ```
 
