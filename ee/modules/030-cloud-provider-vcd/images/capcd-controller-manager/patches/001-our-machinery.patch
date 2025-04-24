@@ -1,14 +1,8 @@
-Subject: [PATCH] deckhouse machinery
----
-Index: controllers/cluster_scripts/cloud_init.tmpl
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/controllers/cluster_scripts/cloud_init.tmpl b/controllers/cluster_scripts/cloud_init.tmpl
---- a/controllers/cluster_scripts/cloud_init.tmpl	(revision 79c0ed4e387552a992362f8025fd07cfaa1b253c)
-+++ b/controllers/cluster_scripts/cloud_init.tmpl	(revision b11cbe3702556eef31dadeb98e8485f3a58f8952)
-@@ -1,166 +1,1 @@
+index a0b49271..8692cde1 100644
+--- a/controllers/cluster_scripts/cloud_init.tmpl
++++ b/controllers/cluster_scripts/cloud_init.tmpl
+@@ -1,166 +1 @@
  #cloud-config
 -users:
 -  - name: root
@@ -175,15 +169,11 @@ diff --git a/controllers/cluster_scripts/cloud_init.tmpl b/controllers/cluster_s
 -preserve_hostname: false
 -hostname: "{{ .MachineName }}"
 -final_message: "The system is ready after $UPTIME seconds"
-Index: controllers/vcdcluster_controller.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/controllers/vcdcluster_controller.go b/controllers/vcdcluster_controller.go
---- a/controllers/vcdcluster_controller.go	(revision 79c0ed4e387552a992362f8025fd07cfaa1b253c)
-+++ b/controllers/vcdcluster_controller.go	(revision b11cbe3702556eef31dadeb98e8485f3a58f8952)
-@@ -679,7 +679,7 @@
+index a9f172ba..587e78d7 100644
+--- a/controllers/vcdcluster_controller.go
++++ b/controllers/vcdcluster_controller.go
+@@ -679,7 +679,7 @@ func (r *VCDClusterReconciler) reconcileRDE(ctx context.Context, cluster *cluste
  		return fmt.Errorf("failed to update defined entity with ID [%s] for cluster [%s]: [%v]", vcdCluster.Status.InfraId, vcdCluster.Name, err)
  	}
  
@@ -192,7 +182,7 @@ diff --git a/controllers/vcdcluster_controller.go b/controllers/vcdcluster_contr
  		// try to resolve the defined entity
  		entityState, resp, err := workloadVCDClient.APIClient.DefinedEntityApi.ResolveDefinedEntity(ctx, updatedRDE.Id, org.Org.ID)
  		if err != nil {
-@@ -954,117 +954,119 @@
+@@ -954,117 +954,119 @@ func (r *VCDClusterReconciler) reconcileNormal(ctx context.Context, cluster *clu
  	lbPoolNamePrefix := capisdk.GetLoadBalancerPoolNamePrefix(vcdCluster.Name, vcdCluster.Status.InfraId)
  	lbIpClaimMarker := capisdk.GetLoadBalancerIpClaimMarker(vcdCluster.Name, vcdCluster.Status.InfraId)
  
@@ -217,24 +207,6 @@ diff --git a/controllers/vcdcluster_controller.go b/controllers/vcdcluster_contr
 -				"virtualServiceName", vsError.VirtualServiceName, "error", err)
 -			return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 -		}
-+
-+	controlPlaneNodeIP := os.Getenv("KUBERNETES_SERVICE_HOST")
-+
-+	if _, ok := os.LookupEnv("USE_K8S_ENV_AS_CONTROL_PLANE_IP"); !ok {
-+		var oneArm *vcdsdk.OneArm = nil
-+		if vcdCluster.Spec.LoadBalancerConfigSpec.UseOneArm {
-+			oneArm = &OneArmDefault
-+		}
-+		var resourcesAllocated *vcdsdkutil.AllocatedResourcesMap
-+		controlPlaneNodeIP, resourcesAllocated, err = gateway.GetLoadBalancer(ctx,
-+			fmt.Sprintf("%s-tcp", virtualServiceNamePrefix), fmt.Sprintf("%s-tcp", lbPoolNamePrefix), oneArm)
-+
-+		if err != nil || controlPlaneNodeIP == "" {
-+			if vsError, ok := err.(*vcdsdk.VirtualServicePendingError); ok {
-+				log.Info("Error getting load balancer. Virtual Service is still pending",
-+					"virtualServiceName", vsError.VirtualServiceName, "error", err)
-+				return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
-+			}
  
 -		if vcdCluster.Spec.ControlPlaneEndpoint.Host != "" {
 -			controlPlanePort := vcdCluster.Spec.ControlPlaneEndpoint.Port
@@ -242,14 +214,16 @@ diff --git a/controllers/vcdcluster_controller.go b/controllers/vcdcluster_contr
 -				"host", vcdCluster.Spec.ControlPlaneEndpoint.Host, "port", controlPlanePort)
 -		} else {
 -			log.Info("Creating load balancer for the cluster")
--		}
-+			if vcdCluster.Spec.ControlPlaneEndpoint.Host != "" {
-+				controlPlanePort := vcdCluster.Spec.ControlPlaneEndpoint.Port
-+				log.Info("Creating load balancer for the cluster at user-specified endpoint",
-+					"host", vcdCluster.Spec.ControlPlaneEndpoint.Host, "port", controlPlanePort)
-+			} else {
-+				log.Info("Creating load balancer for the cluster")
-+			}
++	controlPlaneNodeIP := os.Getenv("KUBERNETES_SERVICE_HOST")
++
++	if _, ok := os.LookupEnv("USE_K8S_ENV_AS_CONTROL_PLANE_IP"); !ok {
++		var oneArm *vcdsdk.OneArm = nil
++		if vcdCluster.Spec.LoadBalancerConfigSpec.UseOneArm {
++			oneArm = &OneArmDefault
+ 		}
++		var resourcesAllocated *vcdsdkutil.AllocatedResourcesMap
++		controlPlaneNodeIP, resourcesAllocated, err = gateway.GetLoadBalancer(ctx,
++			fmt.Sprintf("%s-tcp", virtualServiceNamePrefix), fmt.Sprintf("%s-tcp", lbPoolNamePrefix), oneArm)
  
 -		resourcesAllocated = &vcdsdkutil.AllocatedResourcesMap{}
 -		// here we set enableVirtualServiceSharedIP to ensure that we don't use a DNAT rule. The variable is possibly
@@ -270,10 +244,21 @@ diff --git a/controllers/vcdcluster_controller.go b/controllers/vcdcluster_contr
 -					vcdCluster.Name, vcdCluster.Status.InfraId, err))
 -			if updatedErr != nil {
 -				log.Error(updatedErr, "failed to add LoadBalancerError into RDE", "rdeID", vcdCluster.Status.InfraId)
--			}
--			return ctrl.Result{}, errors.Wrapf(err, "failed to create load balancer for the cluster [%s(%s)]: [%v]",
--				vcdCluster.Name, vcdCluster.Status.InfraId, err)
--		}
++		if err != nil || controlPlaneNodeIP == "" {
++			if vsError, ok := err.(*vcdsdk.VirtualServicePendingError); ok {
++				log.Info("Error getting load balancer. Virtual Service is still pending",
++					"virtualServiceName", vsError.VirtualServiceName, "error", err)
++				return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
++			}
++
++			if vcdCluster.Spec.ControlPlaneEndpoint.Host != "" {
++				controlPlanePort := vcdCluster.Spec.ControlPlaneEndpoint.Port
++				log.Info("Creating load balancer for the cluster at user-specified endpoint",
++					"host", vcdCluster.Spec.ControlPlaneEndpoint.Host, "port", controlPlanePort)
++			} else {
++				log.Info("Creating load balancer for the cluster")
++			}
++
 +			resourcesAllocated = &vcdsdkutil.AllocatedResourcesMap{}
 +			// here we set enableVirtualServiceSharedIP to ensure that we don't use a DNAT rule. The variable is possibly
 +			// badly named. Though the user-facing name is good, the internal variable name could be better.
@@ -297,22 +282,7 @@ diff --git a/controllers/vcdcluster_controller.go b/controllers/vcdcluster_contr
 +				return ctrl.Result{}, errors.Wrapf(err, "failed to create load balancer for the cluster [%s(%s)]: [%v]",
 +					vcdCluster.Name, vcdCluster.Status.InfraId, err)
 +			}
- 
--		// Update VCDResourceSet even if the creation has failed since we may have partially
--		// created set of resources
--		if err = addLBResourcesToVCDResourceSet(ctx, rdeManager, resourcesAllocated, controlPlaneNodeIP); err != nil {
--			log.Error(fmt.Errorf("error occurred while adding LoadBalancer resources to VCD Resource set of RDE [%s]: [%v]",
--				vcdCluster.Status.InfraId, err), "failed to add LoadBalancer resources to VCD resource set of RDE")
--			updatedErr := capvcdRdeManager.AddToErrorSet(ctx, capisdk.RdeError, "", vcdCluster.Name,
--				fmt.Sprintf("failed to add VCD Resource [%s] of type [%s] from VCDResourceSet of RDE [%s]: [%v]",
--					vcdCluster.Name, VcdResourceTypeVM, vcdCluster.Status.InfraId, err))
--			if updatedErr != nil {
--				log.Error(updatedErr, "failed to add RdeError into RDE", "rdeID", vcdCluster.Status.InfraId)
--			}
--		}
--		if err = capvcdRdeManager.RdeManager.RemoveErrorByNameOrIdFromErrorSet(ctx, vcdsdk.ComponentCAPVCD, capisdk.RdeError, "", ""); err != nil {
--			log.Error(err, "failed to remove RdeError ", "rdeID", infraID)
--		}
++
 +			// Update VCDResourceSet even if the creation has failed since we may have partially
 +			// created set of resources
 +			if err = addLBResourcesToVCDResourceSet(ctx, rdeManager, resourcesAllocated, controlPlaneNodeIP); err != nil {
@@ -323,18 +293,61 @@ diff --git a/controllers/vcdcluster_controller.go b/controllers/vcdcluster_contr
 +					log.Error(updatedErr, "failed to add RdeError into RDE", "rdeID", vcdCluster.Status.InfraId)
 +				}
 +				return ctrl.Result{}, errors.Wrapf(err, "failed to add load balancer resources to RDE [%s]", infraID)
-+			}
+ 			}
+-			return ctrl.Result{}, errors.Wrapf(err, "failed to create load balancer for the cluster [%s(%s)]: [%v]",
+-				vcdCluster.Name, vcdCluster.Status.InfraId, err)
 +			if err = capvcdRdeManager.RdeManager.RemoveErrorByNameOrIdFromErrorSet(ctx, vcdsdk.ComponentCAPVCD, capisdk.RdeError, "", ""); err != nil {
 +				log.Error(err, "failed to remove RdeError ", "rdeID", infraID)
 +			}
- 
--		if len(resourcesAllocated.Get(vcdsdk.VcdResourceVirtualService)) > 0 {
--			virtualServiceHref = resourcesAllocated.Get(vcdsdk.VcdResourceVirtualService)[0].Id
--		}
++
 +			if len(resourcesAllocated.Get(vcdsdk.VcdResourceVirtualService)) > 0 {
 +				virtualServiceHref = resourcesAllocated.Get(vcdsdk.VcdResourceVirtualService)[0].Id
 +			}
++
++			if err != nil {
++				if vsError, ok := err.(*vcdsdk.VirtualServicePendingError); ok {
++					log.Info("Error creating load balancer for cluster. Virtual Service is still pending",
++						"virtualServiceName", vsError.VirtualServiceName, "error", err)
++					err1 := capvcdRdeManager.AddToErrorSet(ctx, capisdk.LoadBalancerPending, virtualServiceHref, "", fmt.Sprintf("Error creating load balancer: [%v]", err))
++					if err1 != nil {
++						log.Error(err1, "failed to add LoadBalancerPending into RDE", "rdeID", infraID)
++					}
++					return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
++				}
++				if err = capvcdRdeManager.RdeManager.RemoveErrorByNameOrIdFromErrorSet(ctx, vcdsdk.ComponentCAPVCD, capisdk.LoadBalancerError, "", ""); err != nil {
++					log.Error(err, "failed to remove LoadBalancerError ", "rdeID", infraID)
++				}
++				return ctrl.Result{}, errors.Wrapf(err,
++					"Error creating create load balancer [%s] for the cluster [%s]: [%v]",
++					virtualServiceNamePrefix, vcdCluster.Name, err)
++			}
++			log.Info("Resources Allocated in creation of load balancer",
++				"resourcesAllocated", resourcesAllocated)
+ 		}
  
+-		// Update VCDResourceSet even if the creation has failed since we may have partially
+-		// created set of resources
+ 		if err = addLBResourcesToVCDResourceSet(ctx, rdeManager, resourcesAllocated, controlPlaneNodeIP); err != nil {
+-			log.Error(fmt.Errorf("error occurred while adding LoadBalancer resources to VCD Resource set of RDE [%s]: [%v]",
+-				vcdCluster.Status.InfraId, err), "failed to add LoadBalancer resources to VCD resource set of RDE")
+ 			updatedErr := capvcdRdeManager.AddToErrorSet(ctx, capisdk.RdeError, "", vcdCluster.Name,
+ 				fmt.Sprintf("failed to add VCD Resource [%s] of type [%s] from VCDResourceSet of RDE [%s]: [%v]",
+ 					vcdCluster.Name, VcdResourceTypeVM, vcdCluster.Status.InfraId, err))
+ 			if updatedErr != nil {
+-				log.Error(updatedErr, "failed to add RdeError into RDE", "rdeID", vcdCluster.Status.InfraId)
++				log.Error(updatedErr, "failed to add RdeError (LBResources) into RDE", "rdeID", vcdCluster.Status.InfraId)
+ 			}
++			return ctrl.Result{}, errors.Wrapf(err, "failed to add load balancer resources to RDE [%s]", infraID)
+ 		}
+ 		if err = capvcdRdeManager.RdeManager.RemoveErrorByNameOrIdFromErrorSet(ctx, vcdsdk.ComponentCAPVCD, capisdk.RdeError, "", ""); err != nil {
+-			log.Error(err, "failed to remove RdeError ", "rdeID", infraID)
++			log.Error(err, "failed to remove RdeError from RDE", "rdeID", infraID)
+ 		}
+ 
+ 		if len(resourcesAllocated.Get(vcdsdk.VcdResourceVirtualService)) > 0 {
+ 			virtualServiceHref = resourcesAllocated.Get(vcdsdk.VcdResourceVirtualService)[0].Id
+ 		}
+-
 -		if err != nil {
 -			if vsError, ok := err.(*vcdsdk.VirtualServicePendingError); ok {
 -				log.Info("Error creating load balancer for cluster. Virtual Service is still pending",
@@ -355,27 +368,7 @@ diff --git a/controllers/vcdcluster_controller.go b/controllers/vcdcluster_contr
 -		log.Info("Resources Allocated in creation of load balancer",
 -			"resourcesAllocated", resourcesAllocated)
 -	}
-+			if err != nil {
-+				if vsError, ok := err.(*vcdsdk.VirtualServicePendingError); ok {
-+					log.Info("Error creating load balancer for cluster. Virtual Service is still pending",
-+						"virtualServiceName", vsError.VirtualServiceName, "error", err)
-+					err1 := capvcdRdeManager.AddToErrorSet(ctx, capisdk.LoadBalancerPending, virtualServiceHref, "", fmt.Sprintf("Error creating load balancer: [%v]", err))
-+					if err1 != nil {
-+						log.Error(err1, "failed to add LoadBalancerPending into RDE", "rdeID", infraID)
-+					}
-+					return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
-+				}
-+				if err = capvcdRdeManager.RdeManager.RemoveErrorByNameOrIdFromErrorSet(ctx, vcdsdk.ComponentCAPVCD, capisdk.LoadBalancerError, "", ""); err != nil {
-+					log.Error(err, "failed to remove LoadBalancerError ", "rdeID", infraID)
-+				}
-+				return ctrl.Result{}, errors.Wrapf(err,
-+					"Error creating create load balancer [%s] for the cluster [%s]: [%v]",
-+					virtualServiceNamePrefix, vcdCluster.Name, err)
-+			}
-+			log.Info("Resources Allocated in creation of load balancer",
-+				"resourcesAllocated", resourcesAllocated)
-+		}
- 
+-
 -	if err = addLBResourcesToVCDResourceSet(ctx, rdeManager, resourcesAllocated, controlPlaneNodeIP); err != nil {
 -		log.Error(fmt.Errorf("error occurred while adding LoadBalancer resources to VCD Resource set of RDE [%s]: [%v]",
 -			vcdCluster.Status.InfraId, err), "failed to add LoadBalancer resources to VCD resource set of RDE")
@@ -389,42 +382,26 @@ diff --git a/controllers/vcdcluster_controller.go b/controllers/vcdcluster_contr
 -	if err = capvcdRdeManager.RdeManager.RemoveErrorByNameOrIdFromErrorSet(ctx, vcdsdk.ComponentCAPVCD, capisdk.RdeError, "", ""); err != nil {
 -		log.Error(err, "failed to remove RdeError from RDE", "rdeID", infraID)
 -	}
-+		if err = addLBResourcesToVCDResourceSet(ctx, rdeManager, resourcesAllocated, controlPlaneNodeIP); err != nil {
-+			updatedErr := capvcdRdeManager.AddToErrorSet(ctx, capisdk.RdeError, "", vcdCluster.Name,
-+				fmt.Sprintf("failed to add VCD Resource [%s] of type [%s] from VCDResourceSet of RDE [%s]: [%v]",
-+					vcdCluster.Name, VcdResourceTypeVM, vcdCluster.Status.InfraId, err))
-+			if updatedErr != nil {
-+				log.Error(updatedErr, "failed to add RdeError (LBResources) into RDE", "rdeID", vcdCluster.Status.InfraId)
-+			}
-+			return ctrl.Result{}, errors.Wrapf(err, "failed to add load balancer resources to RDE [%s]", infraID)
-+		}
-+		if err = capvcdRdeManager.RdeManager.RemoveErrorByNameOrIdFromErrorSet(ctx, vcdsdk.ComponentCAPVCD, capisdk.RdeError, "", ""); err != nil {
-+			log.Error(err, "failed to remove RdeError from RDE", "rdeID", infraID)
-+		}
- 
+-
 -	if len(resourcesAllocated.Get(vcdsdk.VcdResourceVirtualService)) > 0 {
 -		virtualServiceHref = resourcesAllocated.Get(vcdsdk.VcdResourceVirtualService)[0].Id
-+		if len(resourcesAllocated.Get(vcdsdk.VcdResourceVirtualService)) > 0 {
-+			virtualServiceHref = resourcesAllocated.Get(vcdsdk.VcdResourceVirtualService)[0].Id
-+		}
  	}
  
  	vcdCluster.Spec.ControlPlaneEndpoint = infrav1.APIEndpoint{
-@@ -1158,10 +1160,9 @@
+@@ -1158,10 +1160,9 @@ func (r *VCDClusterReconciler) reconcileNormal(ctx context.Context, cluster *clu
  	if !strings.HasPrefix(vcdCluster.Status.InfraId, NoRdePrefix) {
  		if err := r.reconcileRDE(ctx, cluster, vcdCluster, workloadVCDClient, clusterVApp.VApp.ID, true); err != nil {
  			log.Error(err, "failed to add VApp ID to RDE", "rdeID", infraID, "vappID", clusterVApp.VApp.ID)
 -		} else {
 -			// err is nil; means rde was updated with the vapp ID
 -			log.Info("successfully updated external ID of RDE with VApp ID", "infraID", infraID, "vAppID", clusterVApp.VApp.ID)
--		}
 +			return ctrl.Result{}, errors.Wrapf(err, "failed to update RDE [%s] with VApp ID [%s]: [%v]", vcdCluster.Status.InfraId, clusterVApp.VApp.ID, err)
-+		}
+ 		}
 +		log.Info("successfully updated external ID of RDE with VApp ID", "infraID", infraID, "vAppID", clusterVApp.VApp.ID)
  	}
  
  	if metadataMap != nil && len(metadataMap) > 0 && !vcdCluster.Status.VAppMetadataUpdated {
-@@ -1178,14 +1179,14 @@
+@@ -1178,14 +1179,14 @@ func (r *VCDClusterReconciler) reconcileNormal(ctx context.Context, cluster *clu
  	err = rdeManager.AddToVCDResourceSet(ctx, vcdsdk.ComponentCAPVCD, VCDResourceVApp,
  		vcdCluster.Name, clusterVApp.VApp.ID, nil)
  	if err != nil {
@@ -441,7 +418,7 @@ diff --git a/controllers/vcdcluster_controller.go b/controllers/vcdcluster_contr
  	}
  	err = capvcdRdeManager.AddToEventSet(ctx, capisdk.InfraVappAvailable, clusterVApp.VApp.ID, "", "", skipRDEEventUpdates)
  	if err != nil {
-@@ -1265,7 +1266,7 @@
+@@ -1265,7 +1266,7 @@ func (r *VCDClusterReconciler) reconcileDelete(ctx context.Context,
  
  	// Delete the load balancer components
  	virtualServiceNamePrefix := capisdk.GetVirtualServiceNamePrefix(vcdCluster.Name, vcdCluster.Status.InfraId)
@@ -450,7 +427,7 @@ diff --git a/controllers/vcdcluster_controller.go b/controllers/vcdcluster_contr
  	lbIpClaimMarker := capisdk.GetLoadBalancerIpClaimMarker(vcdCluster.Name, vcdCluster.Status.InfraId)
  
  	controlPlanePort := vcdCluster.Spec.ControlPlaneEndpoint.Port
-@@ -1383,16 +1384,15 @@
+@@ -1383,16 +1384,15 @@ func (r *VCDClusterReconciler) reconcileDelete(ctx context.Context,
  		capisdk.StatusComponentNameCAPVCD, release.Version)
  	err = rdeManager.RemoveFromVCDResourceSet(ctx, vcdsdk.ComponentCAPVCD, VCDResourceVApp, vcdCluster.Name)
  	if err != nil {
@@ -470,15 +447,11 @@ diff --git a/controllers/vcdcluster_controller.go b/controllers/vcdcluster_contr
  	}
  	if err = capvcdRdeManager.RdeManager.RemoveErrorByNameOrIdFromErrorSet(ctx, vcdsdk.ComponentCAPVCD, capisdk.RdeError, "", vcdCluster.Name); err != nil {
  		log.Error(err, "failed to remove RdeError from RDE", "rdeID", vcdCluster.Status.InfraId)
-Index: controllers/vcdmachine_controller.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/controllers/vcdmachine_controller.go b/controllers/vcdmachine_controller.go
---- a/controllers/vcdmachine_controller.go	(revision 79c0ed4e387552a992362f8025fd07cfaa1b253c)
-+++ b/controllers/vcdmachine_controller.go	(revision b11cbe3702556eef31dadeb98e8485f3a58f8952)
-@@ -541,12 +541,20 @@
+index 944086aa..109ace37 100644
+--- a/controllers/vcdmachine_controller.go
++++ b/controllers/vcdmachine_controller.go
+@@ -541,12 +541,20 @@ func (r *VCDMachineReconciler) reconcileNormal(ctx context.Context, cluster *clu
  		vmExists = false
  	}
  	if !vmExists {
@@ -502,7 +475,7 @@ diff --git a/controllers/vcdmachine_controller.go b/controllers/vcdmachine_contr
  		if err != nil {
  			err1 := capvcdRdeManager.AddToErrorSet(ctx, capisdk.VCDMachineCreationError, "", machine.Name, fmt.Sprintf("%v", err))
  			if err1 != nil {
-@@ -576,15 +584,143 @@
+@@ -576,15 +584,143 @@ func (r *VCDMachineReconciler) reconcileNormal(ctx context.Context, cluster *clu
  		// 	VCDResourceSet can get bloated with VMs if the cluster contains a large number of worker nodes
  	}
  
@@ -647,7 +620,7 @@ diff --git a/controllers/vcdmachine_controller.go b/controllers/vcdmachine_contr
  	// checks before setting address in machine status
  	if vm.VM == nil {
  		log.Error(nil, fmt.Sprintf("Requeuing...; vm.VM should not be nil: [%#v]", vm))
-@@ -697,127 +833,6 @@
+@@ -697,127 +833,6 @@ func (r *VCDMachineReconciler) reconcileNormal(ctx context.Context, cluster *clu
  			"lbpool", lbPoolName)
  	}
  
@@ -775,7 +748,7 @@ diff --git a/controllers/vcdmachine_controller.go b/controllers/vcdmachine_contr
  	if hasCloudInitFailedBefore, err := r.hasCloudInitExecutionFailedBefore(ctx, workloadVCDClient, vm); hasCloudInitFailedBefore {
  		err1 := capvcdRdeManager.AddToErrorSet(ctx, capisdk.VCDMachineScriptExecutionError, "", machine.Name, fmt.Sprintf("%v", err))
  		if err1 != nil {
-@@ -834,41 +849,6 @@
+@@ -834,41 +849,6 @@ func (r *VCDMachineReconciler) reconcileNormal(ctx context.Context, cluster *clu
  		log.Error(err, "failed to remove VCDMachineCreationError from RDE", "rdeID", vcdCluster.Status.InfraId)
  	}
  
@@ -817,7 +790,7 @@ diff --git a/controllers/vcdmachine_controller.go b/controllers/vcdmachine_contr
  	err = capvcdRdeManager.RdeManager.RemoveErrorByNameOrIdFromErrorSet(ctx, vcdsdk.ComponentCAPVCD, capisdk.VCDMachineScriptExecutionError, "", "")
  	if err != nil {
  		log.Error(err, "failed to remove VCDMachineScriptExecutionError from RDE", "rdeID", vcdCluster.Status.InfraId)
-@@ -955,24 +935,33 @@
+@@ -955,24 +935,33 @@ func getPrimaryNetwork(vm *types.Vm) *types.NetworkConnection {
  
  // reconcileVMNetworks ensures that desired networks are attached to VMs
  // networks[0] refers the primary network
@@ -854,7 +827,7 @@ diff --git a/controllers/vcdmachine_controller.go b/controllers/vcdmachine_contr
  		connections.NetworkConnection = desiredConnectionArray
  		// update connection indexes for deterministic reconcilation
  		connections.PrimaryNetworkConnectionIndex = 0
-@@ -980,6 +969,7 @@
+@@ -980,6 +969,7 @@ func (r *VCDMachineReconciler) reconcileVMNetworks(vdcManager *vcdsdk.VdcManager
  			connection.NetworkConnectionIndex = index
  		}
  
@@ -862,7 +835,7 @@ diff --git a/controllers/vcdmachine_controller.go b/controllers/vcdmachine_contr
  		err = vm.UpdateNetworkConnectionSection(connections)
  		if err != nil {
  			return errors.Wrapf(err, "failed to update networks of VM")
-@@ -1011,35 +1001,45 @@
+@@ -1011,35 +1001,45 @@ OUTER:
  	return true
  }
  
@@ -912,7 +885,7 @@ diff --git a/controllers/vcdmachine_controller.go b/controllers/vcdmachine_contr
  	_, err = vApp.AddOrgNetwork(&govcd.VappNetworkSettings{}, ovdcNetwork.OrgVDCNetwork, false)
  	if err != nil {
  		return fmt.Errorf("unable to add ovdc network [%v] to vApp [%s]: [%v]",
-@@ -1050,7 +1050,6 @@
+@@ -1050,7 +1050,6 @@ func ensureNetworkIsAttachedToVApp(vdcManager *vcdsdk.VdcManager, vApp *govcd.VA
  }
  
  func (r *VCDMachineReconciler) getBootstrapData(ctx context.Context, machine *clusterv1.Machine) (string, error) {
@@ -920,7 +893,7 @@ diff --git a/controllers/vcdmachine_controller.go b/controllers/vcdmachine_contr
  	if machine.Spec.Bootstrap.DataSecretName == nil {
  		return "", errors.New("error retrieving bootstrap data: linked Machine's bootstrap.dataSecretName is nil")
  	}
-@@ -1068,8 +1067,6 @@
+@@ -1068,8 +1067,6 @@ func (r *VCDMachineReconciler) getBootstrapData(ctx context.Context, machine *cl
  		return "", errors.New("error retrieving bootstrap data: secret value key is missing")
  	}
  
@@ -929,7 +902,7 @@ diff --git a/controllers/vcdmachine_controller.go b/controllers/vcdmachine_contr
  	return string(value), nil
  }
  
-@@ -1351,16 +1348,14 @@
+@@ -1351,16 +1348,14 @@ func (r *VCDMachineReconciler) reconcileDelete(ctx context.Context, cluster *clu
  	rdeManager := vcdsdk.NewRDEManager(workloadVCDClient, vcdCluster.Status.InfraId, capisdk.StatusComponentNameCAPVCD, release.Version)
  	err = rdeManager.RemoveFromVCDResourceSet(ctx, vcdsdk.ComponentCAPVCD, VcdResourceTypeVM, machine.Name)
  	if err != nil {

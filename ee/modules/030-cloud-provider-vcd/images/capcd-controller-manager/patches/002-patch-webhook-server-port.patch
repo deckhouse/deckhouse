@@ -1,39 +1,69 @@
-Subject: [PATCH] patch webhookServer port
----
-Index: main.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/main.go b/main.go
---- a/main.go	(revision 79c0ed4e387552a992362f8025fd07cfaa1b253c)
-+++ b/main.go	(revision c3ff38adf2c05071a05fe77f23247a804d87bee7)
-@@ -15,6 +15,7 @@
-
+index d6c71651..12a4b81f 100644
+--- a/main.go
++++ b/main.go
+@@ -15,6 +15,7 @@ import (
+ 
  	"github.com/spf13/pflag"
  	"sigs.k8s.io/controller-runtime/pkg/cache"
 +	"sigs.k8s.io/controller-runtime/pkg/webhook"
-
+ 
  	"github.com/vmware/cluster-api-provider-cloud-director/release"
-
-@@ -51,6 +52,7 @@
+ 
+@@ -23,6 +24,8 @@ import (
+ 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+ 	"k8s.io/client-go/kubernetes/scheme"
+ 	"k8s.io/klog"
++	klogv2 "k8s.io/klog/v2"
++	"github.com/go-logr/logr"
+ 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/v1beta1"
+ 	bootstrapv1beta1 "sigs.k8s.io/cluster-api/bootstrap/kubeadm/api/v1beta1"
+ 	addonsv1 "sigs.k8s.io/cluster-api/exp/addons/api/v1beta1"
+@@ -51,8 +54,20 @@ var (
  	syncPeriod           time.Duration
  	concurrency          int
  	diagnosticsOptions   flags.DiagnosticsOptions
 +	port                 int
  )
-
+ 
++// Simple wrapper to redirect klog logs to zap
++type klogWrapper struct {
++	logger *logr.Logger
++}
++
++func (w *klogWrapper) Write(p []byte) (n int, err error) {
++	w.logger.Info(string(p))
++
++	return len(p), nil
++}
++
  func init() {
-@@ -77,6 +79,8 @@
+ 	klog.InitFlags(nil)
+ 	utilruntime.Must(scheme.AddToScheme(myscheme))
+@@ -77,6 +92,8 @@ func initFlags(fs *pflag.FlagSet) {
  		"The minimum interval at which watched resources are reconciled (e.g. 15m)")
  	fs.IntVar(&concurrency, "concurrency", 10,
  		"The number of VCD machines to process simultaneously")
 +	fs.IntVar(&port, "port", 4201,
 +		"Webhook server port")
-
+ 
  	flags.AddDiagnosticsOptions(fs, &diagnosticsOptions)
-
-@@ -109,7 +113,11 @@
+ 
+@@ -95,7 +112,12 @@ func main() {
+ 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
+ 	pflag.Parse()
+ 
+-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
++	logger := zap.New(zap.UseFlagOptions(&opts))
++
++	klog.SetOutput(&klogWrapper{logger: &logger})
++	ctrl.SetLogger(logger)
++	klogv2.SetLogger(logger)
++
+ 	if release.Version == "" {
+ 		setupLog.Error(fmt.Errorf("release.Version variable should not be empty"), "")
+ 	}
+@@ -109,7 +131,11 @@ func main() {
  		LeaderElectionID:       "capvcd-controller-manager-leader-election",
  		Cache: cache.Options{
  			SyncPeriod: &syncPeriod,
