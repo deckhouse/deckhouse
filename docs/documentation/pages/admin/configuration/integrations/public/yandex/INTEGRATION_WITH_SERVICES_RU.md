@@ -184,8 +184,7 @@ Deckhouse поддерживает интеграцию с Yandex Lockbox с п�
 1. [Создайте API-ключ](https://cloud.yandex.ru/ru/docs/iam/operations/api-key/create) для сервисного аккаунта.
 1. Создайте ресурс `GrafanaAdditionalDatasource`:
 
-   ```shell
-   kubectl apply -f - <<< '
+   ```yaml
    apiVersion: deckhouse.io/v1
    kind: GrafanaAdditionalDatasource
    metadata:
@@ -201,7 +200,6 @@ Deckhouse поддерживает интеграцию с Yandex Lockbox с п�
        httpHeaderName1: Authorization
      secureJsonData:
        httpHeaderValue1: Bearer <API_КЛЮЧ>
-   '
    ```
 
    Где:

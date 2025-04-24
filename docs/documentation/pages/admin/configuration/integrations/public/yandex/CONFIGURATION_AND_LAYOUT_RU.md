@@ -89,7 +89,7 @@ dhcpOptions:
 
 > **Внимание!** В модуле `cloud-provider-yandex` нет поддержки групп безопасности (security group), поэтому все узлы кластера будут доступны без ограничения подключения.
 
-![Схема размещения WithoutNAT в Yandex Cloud](../images/cloud-provider-yandex/layout-withoutnat.png)
+![Схема размещения WithoutNAT в Yandex Cloud](../../../images/cloud-provider-yandex/layout-withoutnat.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1I7M9DquzLNu-aTjqLx1_6ZexPckL__-501Mt393W1fw/edit --->
 
 Пример конфигурации схемы размещения:
@@ -167,7 +167,7 @@ dhcpOptions:
 
 Если `withNATInstance.externalSubnetID` указан в дополнение к предыдущим, NAT-инстанс будет подключен к нему через вторичный интерфейс.
 
-![Схема размещения WithNATInstance в Yandex Cloud](../images/cloud-provider-yandex/layout-withnatinstance.png)
+![Схема размещения WithNATInstance в Yandex Cloud](../../../images/cloud-provider-yandex/layout-withnatinstance.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1oVpZ_ldcuNxPnGCkx0dRtcAdL7BSEEvmsvbG8Aif1pE/edit --->
 
 Пример конфигурации схемы размещения:
@@ -447,10 +447,10 @@ spec:
 
 1. В консоли Yandex Cloud выберите сервис Virtual Private Cloud и перейдите в раздел *Группы безопасности*. У вас должна отображаться одна группа безопасности с пометкой `Default`.
 
-   ![Группа безопасности по умолчанию](../images/cloud-provider-yandex/sg-ru-default.png)
+   ![Группа безопасности по умолчанию](../../../images/cloud-provider-yandex/sg-ru-default.png)
 
 1. Создайте правила согласно [инструкции Yandex Cloud](https://cloud.yandex.ru/ru/docs/managed-kubernetes/operations/connect/security-groups#rules-internal).
 
-   ![Правила для группы безопасности](../images/cloud-provider-yandex/sg-ru-rules.png)
+   ![Правила для группы безопасности](../../../images/cloud-provider-yandex/sg-ru-rules.png)
 
 1. Удалите правило, разрешающее любой **входящий** трафик (на скриншоте выше оно уже удалено), и сохраните изменения.
