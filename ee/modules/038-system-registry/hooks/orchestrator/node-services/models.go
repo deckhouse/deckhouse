@@ -52,21 +52,29 @@ type LocalModeParams struct {
 	IngressCA *x509.Certificate
 }
 
-type ProcessResult struct {
-	nodes map[string]resultNode
-}
+type ProcessResult map[string]ProcessResultNode
 
-type resultNode struct {
+type ProcessResultNode struct {
 	Ready         bool
 	PodReady      bool
 	ConfigVersion string
+}
+
+func (result ProcessResult) IsReady() bool {
+	for _, node := range result {
+		if !node.Ready || !node.PodReady {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (result ProcessResult) GetConditionMessage() string {
 	ready := true
 	nodeMessages := make(map[string]string)
 
-	for name, node := range result.nodes {
+	for name, node := range result {
 		switch {
 		case !node.Ready:
 			nodeMessages[name] = "node is not in Ready state"
@@ -104,16 +112,33 @@ func (result ProcessResult) GetConditionMessage() string {
 }
 
 type State struct {
+	Run   bool                          `json:"run,omitempty"`
 	Nodes map[string]NodeServicesConfig `json:"nodes,omitempty"`
+}
+
+func (state *State) Stop(inputs Inputs) ([]string, error) {
+	result := make([]string, 0, len(inputs.Nodes))
+
+	state.Nodes = nil
+
+	for name, node := range inputs.Nodes {
+		if len(node.Pods) > 0 {
+			result = append(result, name)
+		}
+	}
+
+	if len(result) == 0 {
+		state.Run = false
+	}
+
+	return result, nil
 }
 
 func (state *State) Process(log go_hook.Logger, params Params, inputs Inputs) (ProcessResult, error) {
 	var (
 		nodesIP []string
 		err     error
-		result  = ProcessResult{
-			nodes: make(map[string]resultNode),
-		}
+		result  = make(ProcessResult)
 	)
 
 	if params.Local != nil {
@@ -151,13 +176,14 @@ func (state *State) Process(log go_hook.Logger, params Params, inputs Inputs) (P
 			}
 		}
 
-		result.nodes[name] = resultNode{
+		result[name] = ProcessResultNode{
 			Ready:         node.Ready,
 			PodReady:      isPodReady,
 			ConfigVersion: config.Version,
 		}
 	}
 
+	state.Run = true
 	return result, nil
 }
 

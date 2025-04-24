@@ -13,11 +13,7 @@ import (
 
 const (
 	ConditionTypeReady        = "Ready"
-	ConditionTypePKI          = "PKI"
-	ConditionTypeSecrets      = "Secrets"
-	ConditionTypeUsers        = "Users"
 	ConditionTypeNodeServices = "NodeServices"
-	ConditionTypeCleanup      = "Cleanup"
 
 	ConditionReasonReady      = "Ready"
 	ConditionReasonProcessing = "Processing"

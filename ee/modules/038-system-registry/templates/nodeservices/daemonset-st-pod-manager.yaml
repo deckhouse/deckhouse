@@ -13,8 +13,7 @@ memory: 10Mi
 {{- $hash := $orchestrator.hash -}}
 {{- $state := ($orchestrator.state).node_services -}}
 
-{{- if $state -}}
-{{- if $state.nodes -}}
+{{- if $state.run -}}
 
 {{- $images := dict }}
 
@@ -230,6 +229,5 @@ spec:
       - name: tmp
         emptyDir: {}
 
-{{- end }}
 {{- end }}
 {{- end }}

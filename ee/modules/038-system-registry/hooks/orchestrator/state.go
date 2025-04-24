@@ -7,6 +7,8 @@ package orchestrator
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -23,10 +25,10 @@ import (
 type State struct {
 	Mode registry_const.ModeType `json:"mode,omitempty"`
 
-	PKI          *pki.State          `json:"pki,omitempty"`
-	Secrets      *secrets.State      `json:"secrets,omitempty"`
-	Users        *users.State        `json:"users,omitempty"`
-	NodeServices *nodeservices.State `json:"node_services,omitempty"`
+	PKI          pki.State          `json:"pki,omitempty"`
+	Secrets      secrets.State      `json:"secrets,omitempty"`
+	Users        users.State        `json:"users,omitempty"`
+	NodeServices nodeservices.State `json:"node_services,omitempty"`
 
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
@@ -131,41 +133,17 @@ func (state *State) transitionToLocal(log go_hook.Logger, inputs Inputs) error {
 	}
 
 	// PKI
-	if state.PKI == nil {
-		state.PKI = &inputs.PKI
-	}
-
 	pkiResult, err := state.PKI.Process(log)
 	if err != nil {
 		return fmt.Errorf("cannot process PKI: %w", err)
 	}
 
-	state.setCondition(metav1.Condition{
-		Type:               ConditionTypePKI,
-		Status:             metav1.ConditionTrue,
-		ObservedGeneration: inputs.Params.Generation,
-	})
-
 	// Secrets
-	if state.Secrets == nil {
-		state.Secrets = &inputs.Secrets
-	}
-
 	if err := state.Secrets.Process(); err != nil {
 		return fmt.Errorf("cannot process Secrets: %w", err)
 	}
 
-	state.setCondition(metav1.Condition{
-		Type:               ConditionTypeSecrets,
-		Status:             metav1.ConditionTrue,
-		ObservedGeneration: inputs.Params.Generation,
-	})
-
 	// Users
-	if state.Users == nil {
-		state.Users = &users.State{}
-	}
-
 	usersParams := state.Users.GetParams()
 	usersParams.RO = true
 	usersParams.RW = true
@@ -175,17 +153,7 @@ func (state *State) transitionToLocal(log go_hook.Logger, inputs Inputs) error {
 		return fmt.Errorf("cannot process Users: %w", err)
 	}
 
-	state.setCondition(metav1.Condition{
-		Type:               ConditionTypeUsers,
-		Status:             metav1.ConditionTrue,
-		ObservedGeneration: inputs.Params.Generation,
-	})
-
 	// NodeServices
-	if state.NodeServices == nil {
-		state.NodeServices = &nodeservices.State{}
-	}
-
 	nodeservicesParams := nodeservices.Params{
 		CA:         pkiResult.CA,
 		Token:      pkiResult.Token,
@@ -212,14 +180,13 @@ func (state *State) transitionToLocal(log go_hook.Logger, inputs Inputs) error {
 		return fmt.Errorf("cannot process NodeServices: %w", err)
 	}
 
-	nodeServicesMessage := nodeServicesResult.GetConditionMessage()
-	if nodeServicesMessage != "" {
+	if !nodeServicesResult.IsReady() {
 		state.setCondition(metav1.Condition{
 			Type:               ConditionTypeNodeServices,
 			Status:             metav1.ConditionFalse,
 			ObservedGeneration: inputs.Params.Generation,
 			Reason:             ConditionReasonProcessing,
-			Message:            nodeServicesMessage,
+			Message:            nodeServicesResult.GetConditionMessage(),
 		})
 
 		state.setReadyCondition(false, inputs)
@@ -230,8 +197,6 @@ func (state *State) transitionToLocal(log go_hook.Logger, inputs Inputs) error {
 		Type:               ConditionTypeNodeServices,
 		Status:             metav1.ConditionTrue,
 		ObservedGeneration: inputs.Params.Generation,
-		Reason:             ConditionReasonReady,
-		Message:            nodeServicesMessage,
 	})
 
 	// TODO: configure ingress
@@ -248,18 +213,9 @@ func (state *State) transitionToLocal(log go_hook.Logger, inputs Inputs) error {
 
 	// TODO: stop in-cluster proxy
 
-	state.setCondition(metav1.Condition{
-		Type:               ConditionTypeCleanup,
-		Status:             metav1.ConditionTrue,
-		ObservedGeneration: inputs.Params.Generation,
-	})
-
+	// All done
 	state.Mode = inputs.Params.Mode
-	state.setCondition(metav1.Condition{
-		Type:               ConditionTypeReady,
-		Status:             metav1.ConditionTrue,
-		ObservedGeneration: inputs.Params.Generation,
-	})
+	state.setReadyCondition(true, inputs)
 
 	return nil
 }
@@ -273,41 +229,17 @@ func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 	}
 
 	// PKI
-	if state.PKI == nil {
-		state.PKI = &inputs.PKI
-	}
-
 	pkiResult, err := state.PKI.Process(log)
 	if err != nil {
 		return fmt.Errorf("cannot process PKI: %w", err)
 	}
 
-	state.setCondition(metav1.Condition{
-		Type:               ConditionTypePKI,
-		Status:             metav1.ConditionTrue,
-		ObservedGeneration: inputs.Params.Generation,
-	})
-
 	// Secrets
-	if state.Secrets == nil {
-		state.Secrets = &inputs.Secrets
-	}
-
 	if err := state.Secrets.Process(); err != nil {
 		return fmt.Errorf("cannot process Secrets: %w", err)
 	}
 
-	state.setCondition(metav1.Condition{
-		Type:               ConditionTypeSecrets,
-		Status:             metav1.ConditionTrue,
-		ObservedGeneration: inputs.Params.Generation,
-	})
-
 	// Users
-	if state.Users == nil {
-		state.Users = &users.State{}
-	}
-
 	usersParams := state.Users.GetParams()
 	usersParams.RO = true
 
@@ -315,19 +247,9 @@ func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 		return fmt.Errorf("cannot process Users: %w", err)
 	}
 
-	state.setCondition(metav1.Condition{
-		Type:               ConditionTypeUsers,
-		Status:             metav1.ConditionTrue,
-		ObservedGeneration: inputs.Params.Generation,
-	})
-
 	// TODO: check images in remote registry
 
 	// NodeServices
-	if state.NodeServices == nil {
-		state.NodeServices = &nodeservices.State{}
-	}
-
 	nodeservicesParams := nodeservices.Params{
 		CA:         pkiResult.CA,
 		Token:      pkiResult.Token,
@@ -385,8 +307,6 @@ func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 		Type:               ConditionTypeNodeServices,
 		Status:             metav1.ConditionTrue,
 		ObservedGeneration: inputs.Params.Generation,
-		Reason:             ConditionReasonReady,
-		Message:            nodeServicesMessage,
 	})
 
 	// TODO: configure bashible
@@ -396,6 +316,11 @@ func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 	// TODO: update deckhouse-registry secret
 
 	// Cleanup
+
+	// TODO: stop in-cluster proxy
+
+	// TODO: stop ingress from Local Mode
+
 	usersParams = users.Params{
 		RO: true,
 	}
@@ -404,16 +329,7 @@ func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 		return fmt.Errorf("cannot process Users: %w", err)
 	}
 
-	// TODO: stop in-cluster proxy
-
-	// TODO: stop ingress from Local Mode
-
-	state.setCondition(metav1.Condition{
-		Type:               ConditionTypeCleanup,
-		Status:             metav1.ConditionTrue,
-		ObservedGeneration: inputs.Params.Generation,
-	})
-
+	// All done
 	state.Mode = inputs.Params.Mode
 	state.setReadyCondition(true, inputs)
 
@@ -422,39 +338,14 @@ func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 
 func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error {
 	// PKI
-	if state.PKI == nil {
-		state.PKI = &inputs.PKI
-	}
-
 	pkiResult, err := state.PKI.Process(log)
 	if err != nil {
 		return fmt.Errorf("cannot process PKI: %w", err)
 	}
 
-	state.setCondition(metav1.Condition{
-		Type:               ConditionTypePKI,
-		Status:             metav1.ConditionTrue,
-		ObservedGeneration: inputs.Params.Generation,
-	})
-
 	// Secrets
-	if state.Secrets == nil {
-		state.Secrets = &inputs.Secrets
-	}
-
 	if err := state.Secrets.Process(); err != nil {
 		return fmt.Errorf("cannot process Secrets: %w", err)
-	}
-
-	state.setCondition(metav1.Condition{
-		Type:               ConditionTypeSecrets,
-		Status:             metav1.ConditionTrue,
-		ObservedGeneration: inputs.Params.Generation,
-	})
-
-	// Users
-	if state.Users == nil {
-		state.Users = &users.State{}
 	}
 
 	// TODO: configure in-cluster proxy
@@ -469,17 +360,21 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 	// TODO: update deckhouse-registry secret
 
 	// Cleanup
-	state.Users = nil
-	state.NodeServices = nil
+	nodeServicesReady, err := state.cleanupNodeServices(inputs)
+	if err != nil {
+		return fmt.Errorf("cannot cleanup NodeServices: %w", err)
+	}
 
-	// TODO: stop ingres from Local Mode
+	// TODO: stop ingress from Local Mode
 
-	state.setCondition(metav1.Condition{
-		Type:               ConditionTypeCleanup,
-		Status:             metav1.ConditionTrue,
-		ObservedGeneration: inputs.Params.Generation,
-	})
+	if !nodeServicesReady {
+		state.setReadyCondition(false, inputs)
+		return nil
+	}
 
+	state.Users = users.State{}
+
+	// All done
 	state.Mode = inputs.Params.Mode
 	state.setReadyCondition(true, inputs)
 
@@ -487,6 +382,8 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 }
 
 func (state *State) transitionToUnmanaged(log go_hook.Logger, inputs Inputs) error {
+	_ = log
+
 	// TODO: check images in remote registry
 
 	// TODO: configure bashible
@@ -494,27 +391,67 @@ func (state *State) transitionToUnmanaged(log go_hook.Logger, inputs Inputs) err
 	// TODO: update deckhouse-registry secret
 
 	// Cleanup
-	state.PKI = nil
-	state.Secrets = nil
-	state.Users = nil
-	state.NodeServices = nil
+	nodeServicesReady, err := state.cleanupNodeServices(inputs)
+	if err != nil {
+		return fmt.Errorf("cannot cleanup NodeServices: %w", err)
+	}
 
 	// TODO: remove service
 
-	// TODO: stop ingres from Local Mode
+	// TODO: stop ingress from Local Mode
 
 	// TODO: stop in-cluster proxy
 
-	state.setCondition(metav1.Condition{
-		Type:               ConditionTypeCleanup,
-		Status:             metav1.ConditionTrue,
-		ObservedGeneration: inputs.Params.Generation,
-	})
+	if !nodeServicesReady {
+		state.setReadyCondition(false, inputs)
+		return nil
+	}
 
+	state.PKI = pki.State{}
+	state.Secrets = secrets.State{}
+	state.Users = users.State{}
+
+	// All done
 	state.Mode = inputs.Params.Mode
 	state.setReadyCondition(true, inputs)
 
 	return nil
+}
+
+func (state *State) cleanupNodeServices(inputs Inputs) (bool, error) {
+	nodes, err := state.NodeServices.Stop(inputs.NodeServices)
+	if err != nil {
+		return false, fmt.Errorf("cannot stop: %w", err)
+	}
+
+	if len(nodes) > 0 {
+		sort.Strings(nodes)
+
+		builder := new(strings.Builder)
+
+		fmt.Fprintln(builder, "Waiting for nodes cleanup:")
+
+		for _, name := range nodes {
+			fmt.Fprintf(builder, "- %v\n", name)
+		}
+
+		state.setCondition(metav1.Condition{
+			Type:               ConditionTypeNodeServices,
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: inputs.Params.Generation,
+			Reason:             ConditionReasonProcessing,
+			Message:            builder.String(),
+		})
+		return false, nil
+	}
+
+	state.setCondition(metav1.Condition{
+		Type:               ConditionTypeNodeServices,
+		Status:             metav1.ConditionTrue,
+		ObservedGeneration: inputs.Params.Generation,
+	})
+
+	return true, nil
 }
 
 func (state *State) setReadyCondition(ready bool, inputs Inputs) {

@@ -75,6 +75,9 @@ properties:
               node_services:
                 type: object
                 properties:
+                  run:
+                    type: boolean
+                    default: false
                   nodes:
                     type: object
                     additionalProperties:
@@ -90,6 +93,7 @@ properties:
                 x-kubernetes-patch-strategy: merge
                 x-kubernetes-patch-merge-key: type
                 type: array
+                default: []
                 items:
                   type: object
                   properties:
@@ -108,17 +112,6 @@ properties:
                       format: int64
                       type: integer
 
-      state:
-        type: object
-        default: {}
-        properties:
-          staticpod_version:
-            type: string
-            default: "unknown"
-          nodes:
-            type: object
-            additionalProperties: true
-            x-kubernetes-preserve-unknown-fields: true
       bashible:
         type: object
         default: {}
