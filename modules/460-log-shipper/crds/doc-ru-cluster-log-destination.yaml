@@ -415,6 +415,29 @@ spec:
                     - pod_owner.
 
                     [Подробнее о путях к полям...](https://vector.dev/docs/reference/configuration/field-path-notation/)
+                transform:
+                  type: object
+                  description: |
+                    Дополнительные трасформации которые пользователь может задать
+                      замена точки на подчеркивание в лейблах
+                       `action: replaceDot`
+                      Проверяет что вложенный json правильный. Если нет то создает вложенный json message: {"text": .message}
+                       `action: fixNestedJson
+                        label: message` 
+                      Удаление лейбла example
+                       `action: del
+                        label: example`
+                  properties:
+                    action:
+                      type: string
+                      enum:
+                      - replaceDot
+                      - fixNestedJson
+                      - del
+                    label:
+                      type: string
+                    required:
+                    - action
                 buffer:
                   description: Параметры буфера.
                   properties:
