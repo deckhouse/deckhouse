@@ -46,7 +46,7 @@
 
            This should resolve all destructive changes in the cluster.
 
-        1. After that, the `terraform-auto-converger` Pod should complete the migration automatically.
+        2. After that, the `terraform-auto-converger` Pod should complete the migration automatically.
 
         If the automatic migration doesn't happen, use the `install` container with the current Deckhouse release and run the following command to enforce migration of the Terraform state to OpenTofu:
 
@@ -59,16 +59,16 @@
         To resolve this, follow these steps:
 
         1. In Deckhouse Commander, click **Delete manually** to temporarily remove the cluster from control.
-        1. In the cluster, remove the `commander-agent` module using the following command:
+        2. In the cluster, remove the `commander-agent` module using the following command:
 
            ```shell
            kubectl delete mc commander-agent
            ```
 
-        1. Using the `install` container with the previous major Deckhouse release (for example, `1.69.X`, while the cluster is now on `1.70.X`), run the following command to resolve all destructive changes in the cluster:
+        3. Using the `install` container with the previous major Deckhouse release (for example, `1.69.X`, while the cluster is now on `1.70.X`), run the following command to resolve all destructive changes in the cluster:
 
            ```shell
            dhctl converge
            ```
 
-        1. In Deckhouse Commander, click **Attach** to reattach the cluster.
+        4. In Deckhouse Commander, click **Attach** to reattach the cluster.
