@@ -32,14 +32,14 @@ SCAN_TARGET=""
 PROD_REGISTRY_DECKHOUSE_IMAGE="${PROD_REGISTRY}/deckhouse/fe"
 DEV_REGISTRY_DECKHOUSE_IMAGE="${DEV_REGISTRY}/sys/deckhouse-oss"
 
-while getopts “:hpr” OPTION
+while getopts “:hsr” OPTION
 do
   case $OPTION in
     h)
       usage
       exit 1
       ;;
-    p)
+    s)
       SCAN_TARGET="single"
       ;;
     r)
@@ -58,7 +58,7 @@ echo "Getting tags to scan"
 if [ "${SCAN_TARGET}" == "single" ]; then
   module_tags=("${TAG}")
 elif [ "${SCAN_TARGET}" == "regular" ]; then
-  module_tags=("main")
+  module_tags=("${TAG}")
   # Get release tags by regexp, sort by sevmer desc, cut to get minor version, uniq and get 3 latest
   releases=($(crane ls "${PROD_REGISTRY_DECKHOUSE_IMAGE}" | grep "^v[0-9]*\.[0-9]*\.[0-9]*$" | sort -V -r))
   latest_minor_releases=($(printf '%s\n' "${releases[@]}"| cut -d "." -f -2 | uniq | head -n 3))
@@ -69,13 +69,6 @@ fi
 echo "CVE Scan will be applied to the following tags of ${MODULE_NAME}"
 echo "${module_tags[@]}"
 
-
-
-
-#for module_tag in "${module_tags[@]}"; do
-#  echo "${module_tag}"|grep "^v[0-9]*\.[0-9]*\.[0-9]*$"
-
-
 # Scan in loop for provided list of tags
 for module_tag in "${module_tags[@]}"; do
   date_iso=$(date -I)
@@ -84,7 +77,6 @@ for module_tag in "${module_tags[@]}"; do
   module_workdir="${WORKDIR}/modules/${MODULE_NAME}_${module_tag}"
   module_reports="${module_workdir}/reports"
   mkdir -p {"${module_reports}","${WORKDIR}/artifacts"}
-
 
   # use a propper registry for selected tag - dev for pr and main and prod for releases
   if [ "${module_tag}" == "${TAG}" ] && echo "${module_tag}"|grep "^release-[0-9]\.[0-9]*$"; then
@@ -100,7 +92,6 @@ for module_tag in "${module_tags[@]}"; do
   echo "Severity: ${SEVERITY}"
   echo "----------------------------------------------"
   echo ""
-
   docker pull "${module_image}:${module_tag}"
   digests=$(docker run --rm "${module_image}:${module_tag}" cat /deckhouse/modules/images_digests.json)
 
@@ -113,11 +104,6 @@ for module_tag in "${module_tags[@]}"; do
     additional_image_name=$(echo "${additional_image}" | grep -o '[^/]*$')
     digests=$(echo "${digests}"|jq --arg i "${additional_image_name}" --arg s "${module_tag}" '.deckhouse += { ($i): ($s) }')
   done
-
-
-
-
-
 
   for module in $(jq -rc 'to_entries[]' <<< "${digests}"); do
     MODULE_NAME=$(jq -rc '.key' <<< "${module}")
@@ -221,4 +207,3 @@ for module_tag in "${module_tags[@]}"; do
     done
   done
 done
-
