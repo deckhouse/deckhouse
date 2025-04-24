@@ -105,6 +105,10 @@ entries:
                             en: Overview
                             ru: Обзор
                           url: /admin/integrations/public/yandex/yandex-overview.html
+                        - title:
+                            en: Integration with Yandex Cloud
+                            ru: Интеграция с Yandex Cloud
+                          url: /admin/integrations/public/yandex/yandex-integration.html
                     - title:
                         en: Integration with VK Cloud
                         ru: TODO Интеграция с VK Cloud
