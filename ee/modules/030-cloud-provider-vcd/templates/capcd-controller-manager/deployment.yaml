@@ -8,7 +8,6 @@
 {{- end }}
 - "--health-probe-bind-address=:9445"
 - "--zap-encoder=json"
-- "--logtostderr=false"
 {{- end }}
 
 {{- define "capcd_controller_manager_resources" }}

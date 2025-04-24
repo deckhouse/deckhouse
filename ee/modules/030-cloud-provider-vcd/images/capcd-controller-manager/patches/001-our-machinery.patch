@@ -170,9 +170,18 @@ index a0b49271..8692cde1 100644
 -hostname: "{{ .MachineName }}"
 -final_message: "The system is ready after $UPTIME seconds"
 diff --git a/controllers/vcdcluster_controller.go b/controllers/vcdcluster_controller.go
-index a9f172ba..587e78d7 100644
+index a9f172ba..b4592557 100644
 --- a/controllers/vcdcluster_controller.go
 +++ b/controllers/vcdcluster_controller.go
+@@ -31,7 +31,7 @@ import (
+ 	"github.com/vmware/go-vcloud-director/v2/types/v56"
+ 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+ 	"k8s.io/apimachinery/pkg/runtime"
+-	"k8s.io/klog"
++	"k8s.io/klog/v2"
+ 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+ 	kcpv1 "sigs.k8s.io/cluster-api/controlplane/kubeadm/api/v1beta1"
+ 	"sigs.k8s.io/cluster-api/util"
 @@ -679,7 +679,7 @@ func (r *VCDClusterReconciler) reconcileRDE(ctx context.Context, cluster *cluste
  		return fmt.Errorf("failed to update defined entity with ID [%s] for cluster [%s]: [%v]", vcdCluster.Status.InfraId, vcdCluster.Name, err)
  	}
@@ -448,9 +457,18 @@ index a9f172ba..587e78d7 100644
  	if err = capvcdRdeManager.RdeManager.RemoveErrorByNameOrIdFromErrorSet(ctx, vcdsdk.ComponentCAPVCD, capisdk.RdeError, "", vcdCluster.Name); err != nil {
  		log.Error(err, "failed to remove RdeError from RDE", "rdeID", vcdCluster.Status.InfraId)
 diff --git a/controllers/vcdmachine_controller.go b/controllers/vcdmachine_controller.go
-index 944086aa..109ace37 100644
+index 944086aa..07e7430f 100644
 --- a/controllers/vcdmachine_controller.go
 +++ b/controllers/vcdmachine_controller.go
+@@ -31,7 +31,7 @@ import (
+ 	"github.com/vmware/go-vcloud-director/v2/types/v56"
+ 	corev1 "k8s.io/api/core/v1"
+ 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+-	"k8s.io/klog"
++	"k8s.io/klog/v2"
+ 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+ 	"sigs.k8s.io/cluster-api/util"
+ 	"sigs.k8s.io/cluster-api/util/annotations"
 @@ -541,12 +541,20 @@ func (r *VCDMachineReconciler) reconcileNormal(ctx context.Context, cluster *clu
  		vmExists = false
  	}
