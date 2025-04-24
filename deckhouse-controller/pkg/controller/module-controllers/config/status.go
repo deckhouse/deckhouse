@@ -143,7 +143,7 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 		// However, there are too many addon-operator internals involved.
 		// We should consider moving these statuses to the `Module` resource,
 		// which is directly controlled by addon-operator.
-		case modules.CanRunHelmDone:
+		case modules.Ready:
 			module.Status.Phase = v1alpha1.ModulePhaseReady
 			module.SetConditionTrue(v1alpha1.ModuleConditionIsReady)
 
