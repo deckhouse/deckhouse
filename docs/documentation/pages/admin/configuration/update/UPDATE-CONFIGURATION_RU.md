@@ -124,23 +124,8 @@ sudo -i d8 k get deckhousereleases
   sudo -i d8 k patch DeckhouseRelease <DECKHOUSE-VERSION> --type=merge -p='{"approved": true}'
   ```
 
-- Включено подтверждение потенциально опасных disruptive-обновлений.
-
-  Это значит, что для параметра `update.disruptionApprovalMode` модуля `deckhouse`(#TODO) задано значение `Manual`.
-  Чтобы установить этот параметр в `Manual`, используйте следующую команду:
-
-  ```shell
-  sudo -i d8 k patch mc deckhouse --type=merge -p='{"spec":{"update":{"disruptionApprovalMode":"Manual"}}}'
-  ```
-
-  Для подтверждения потенциально опасного обновления
-  установите аннотацию `release.deckhouse.io/disruption-approved=true` на соответствующем ресурсе DeckhouseRelease(#TODO):
-
-  ```shell
-  sudo -i d8 k annotate DeckhouseRelease <DECKHOUSE-VERSION> release.deckhouse.io/disruption-approved=true
-  ```
-
-- Если для какой-либо группы узлов отключено автоматическое применение потенциально опасных обновлений.
+- Если для какой-либо группы узлов отключено автоматическое применение обновлений,
+  которые могут привести к кратковременному простою в работе системных компонентов.
 
   Это значит,
   что для параметра `spec.disruptions.approvalMode`(#TODO) у соответствующего ресурса NodeGroup задано значение `Manual`.
@@ -170,7 +155,7 @@ DKP позволяет задавать *окна обновлений* — вр
 Управлять окнами обновлений DKP можно следующими способами:
 
 - **для общего управления обновлениями** используйте параметр `update.windows` модуля `deckhouse`(#TODO);
-- **для управления потенциально опасными обновлениями (disruptive updates)** используйте параметры `disruptions.automatic.windows`(#TODO) и `disruptions.rollingUpdate.windows`(#TODO) ресурса NodeGroup.
+- **для управления обновлениями, которые могут привести к кратковременному простою в работе системных компонентов**, используйте параметры `disruptions.automatic.windows`(#TODO) и `disruptions.rollingUpdate.windows`(#TODO) ресурса NodeGroup.
 
 #### Примеры конфигурации
 
