@@ -411,7 +411,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			suite.setupReleaseController(testData, withBasicModulePhase(addonmodules.Startup))
 			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.0"))
 			require.NoError(suite.T(), err)
-			suite.setModulePhase(addonmodules.CanRunHelm)
+			suite.setModulePhase(addonmodules.CanRunHelmDone)
 			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.71.0"))
 			require.NoError(suite.T(), err)
 			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.72.0"))
@@ -679,7 +679,7 @@ func (s stubModulesManager) DisableModuleHooks(_ string) {
 
 func (s stubModulesManager) GetModule(name string) *addonmodules.BasicModule {
 	bm, _ := addonmodules.NewBasicModule(name, "", 900, nil, []byte{}, []byte{}, addonmodules.WithLogger(log.NewNop()))
-	bm.SetPhase(addonmodules.CanRunHelm)
+	bm.SetPhase(addonmodules.CanRunHelmDone)
 	if s.modulePhase != "" {
 		bm.SetPhase(s.modulePhase)
 	}

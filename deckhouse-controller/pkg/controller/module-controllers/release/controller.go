@@ -1292,5 +1292,5 @@ func isModuleReady(moduleManager moduleManager, moduleName string) bool {
 		return false
 	}
 
-	return basicModule.GetPhase() == addonmodules.CanRunHelm
+	return basicModule.GetPhase() == addonmodules.CanRunHelmDone
 }
