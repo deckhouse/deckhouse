@@ -14,33 +14,32 @@
       plk_markup_format: "markdown"
       summary: Terraform state must be migrated to OpenTofu.
       description: |
-        The Terraform version recorded in the cluster state does not match the current version.  
         This likely means the automatic migration to OpenTofu was canceled due to destructive changes detected in the cluster state.
 
         Verify the following:
 
         - Current Terraform version:
-        
+
           ```shell
           kubectl -n d8-system exec -it deployments/terraform-state-exporter -c exporter -- terraform version
           ```
-        
+
         - Version in the Terraform state:
-        
+
           ```shell
           kubectl -n d8-system get secret d8-cluster-terraform-state -o json | jq -r '.data["cluster-tf-state.json"] | @base64d | fromjson | .terraform_version'
           ```
-        
+
         - Check for destructive changes:
-          
+
           ```shell
           kubectl exec -it deploy/terraform-state-exporter -n d8-system -- dhctl terraform check
           ```
 
         To resolve the issue and migrate to OpenTofu manually, follow these steps:
-        
+
         1. Using the `install` container with the previous major Deckhouse release (for example, `1.69.X`, while the cluster is now on `1.70.X`), run:
-        
+
            ```shell
            dhctl converge
            ```
