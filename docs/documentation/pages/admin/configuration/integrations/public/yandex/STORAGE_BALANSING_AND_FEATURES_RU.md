@@ -138,3 +138,31 @@ dhcpOptions:
 - После изменения настроек потребуется:
   - выполнить `netplan apply` или аналог для обновления DHCP lease;
   - перезапустить все поды с `hostNetwork`, особенно `kube-dns`, чтобы обновился `resolv.conf`.
+
+## Дополнительные внешние сети
+
+DKP позволяет явно указать список дополнительных внешних сетей, IP-адреса из которых будут рассматриваться как External IP при создании и описании узлов.
+Для этого используется параметр `settings.additionalExternalNetworkIDs` в ресурсе ModuleConfig модуля `cloud-provider-yandex`.
+
+Этот параметр полезен, если:
+
+- у вас есть дополнительные подсети с внешним доступом, не указанные явно в `externalSubnetIDs`;
+- требуется точный контроль над тем, какие IP-адреса считаются публичными;
+- нужно работать с кастомными схемами маршрутизации или подключениями через шлюзы NAT.
+
+Если параметр `additionalExternalNetworkIDs` не задан, модуль сам определяет внешние сети только на основе настроек в YandexClusterConfiguration.
+
+Пример конфигурации ModuleConfig с указанием внешних сетей:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-yandex
+spec:
+  version: 1
+  enabled: true
+  settings:
+    additionalExternalNetworkIDs:
+      - enp6t4snovl2ko4p15em
+```
