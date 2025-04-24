@@ -22,10 +22,13 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
+	"os"
 	"time"
+
+	"d8.io/upmeter/pkg/kubernetes"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -80,7 +83,7 @@ func (c *Client) Send(reqBody []byte) error {
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("reding server response body: %v", err)
 	}
@@ -114,15 +117,9 @@ func createSecureHttpClient(useTLS bool, caPath string, timeout time.Duration) (
 		return nil, err
 	}
 
-	// Wrap tls transport to add Authorization header.
-	bearerToken, err := getServiceAccountToken()
-	if err != nil {
-		return nil, err
-	}
-
 	// Create https client with checking CA certificate and Authorization header
 	client := &http.Client{
-		Transport: NewKubeBearerTransport(tlsTransport, bearerToken),
+		Transport: NewKubeBearerTransport(tlsTransport),
 		Timeout:   timeout,
 	}
 
@@ -138,7 +135,7 @@ func createSecureTransport(caPath string, timeout time.Duration) (*http.Transpor
 		return tr, nil
 	}
 
-	caCertBytes, err := ioutil.ReadFile(caPath)
+	caCertBytes, err := os.ReadFile(caPath)
 	if err != nil {
 		return nil, fmt.Errorf("cannot read CA certificate from '%s': %v", caPath, err)
 	}
@@ -171,26 +168,26 @@ func newTransport(timeout time.Duration) *http.Transport {
 }
 
 func getServiceAccountToken() (string, error) {
-	bs, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
+	bs, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
 	if err != nil {
 		return "", fmt.Errorf("cannot read service account file: %v", err)
 	}
 	return string(bs), nil
 }
 
-func NewKubeBearerTransport(next http.RoundTripper, bearer string) *KubeBearerTransport {
+func NewKubeBearerTransport(next http.RoundTripper) *KubeBearerTransport {
 	return &KubeBearerTransport{
-		next:        next,
-		bearerToken: bearer,
+		next: next,
 	}
 }
 
 type KubeBearerTransport struct {
-	next        http.RoundTripper
-	bearerToken string
+	next http.RoundTripper
 }
 
 func (t *KubeBearerTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	req.Header.Add("Authorization", "Bearer "+t.bearerToken)
+	kubeAccess := &kubernetes.Accessor{}
+	token := kubeAccess.ServiceAccountToken()
+	req.Header.Add("Authorization", "Bearer "+token)
 	return t.next.RoundTrip(req)
 }
