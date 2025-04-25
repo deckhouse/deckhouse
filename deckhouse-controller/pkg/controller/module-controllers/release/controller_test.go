@@ -353,6 +353,71 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
 		require.NoError(suite.T(), err)
 	})
+
+	suite.Run("Sequential processing", func() {
+		suite.Run("sequential processing with patch release", func() {
+			testData := suite.fetchTestFileData("sequential-processing-patch.yaml")
+			suite.setupReleaseController(testData)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.0"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.1"))
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("sequential processing with minor release", func() {
+			testData := suite.fetchTestFileData("sequential-processing-minor.yaml")
+			suite.setupReleaseController(testData)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.0"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.71.0"))
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("sequential processing with minor pending release", func() {
+			testData := suite.fetchTestFileData("sequential-processing-minor-pending.yaml")
+			suite.setupReleaseController(testData)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.0"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.71.0"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.72.0"))
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("sequential processing with minor auto release", func() {
+			testData := suite.fetchTestFileData("sequential-processing-minor-auto.yaml")
+			suite.setupReleaseController(testData)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.0"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.71.0"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.72.0"))
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("sequential processing with minor notready release", func() {
+			testData := suite.fetchTestFileData("sequential-processing-minor-notready.yaml")
+			suite.setupReleaseController(testData, withBasicModulePhase(addonmodules.Startup))
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.0"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.71.0"))
+			require.Error(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.72.0"))
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("sequential processing with pending releases", func() {
+			testData := suite.fetchTestFileData("sequential-processing-pending.yaml")
+			suite.setupReleaseController(testData, withBasicModulePhase(addonmodules.Startup))
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.0"))
+			require.NoError(suite.T(), err)
+			suite.setModulePhase(addonmodules.Ready)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.71.0"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.72.0"))
+			require.NoError(suite.T(), err)
+		})
+	})
 }
 
 func (suite *ReleaseControllerTestSuite) loopUntilDeploy(dc *dependency.MockedContainer, releaseName string) {
