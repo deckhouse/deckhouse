@@ -1,0 +1,21 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: registry-staticpod-manager
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "system-registry-staticpod-manager")) | nindent 2 }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - name: https-api
+    protocol: TCP
+    targetPort: https-api
+    port: 4577
+  - name: http-healthz
+    protocol: TCP
+    targetPort: http-healthz
+    port: 8097
+  selector:
+    app: system-registry-staticpod-manager
