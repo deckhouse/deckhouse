@@ -101,8 +101,10 @@ huaweicloud:
 
 kubernetes:
   namespace: hashicorp
+  cloudName: DVP
   type: kubernetes
   version: 2.35.1
   artifact: terraform-provider-kubernetes
   artifactBinary: terraform-provider-kubernetes
   destinationBinary: terraform-provider-kubernetes
+  useOpentofu: true
