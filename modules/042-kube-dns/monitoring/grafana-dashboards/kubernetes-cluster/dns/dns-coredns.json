@@ -521,6 +521,7 @@
     },
     {
       "datasource": {
+        "type": "prometheus",
         "uid": "$ds_prometheus"
       },
       "fieldConfig": {
@@ -605,7 +606,7 @@
       },
       "gridPos": {
         "h": 7,
-        "w": 12,
+        "w": 24,
         "x": 0,
         "y": 16
       },
@@ -632,11 +633,12 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(coredns_forward_requests_total{job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval])) by (pod)",
+          "editorMode": "code",
+          "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{proxy_name=\"forward\", job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval])) by (pod, to)",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
-          "legendFormat": "{{pod}}",
+          "legendFormat": "__auto",
           "refId": "A",
           "step": 60
         },
@@ -644,227 +646,18 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(coredns_forward_requests_total{job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval]))",
+          "editorMode": "code",
+          "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{proxy_name=\"forward\", job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
+          "range": true,
           "refId": "B",
           "step": 60
         }
       ],
       "title": "Forwarded requests count",
       "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 12,
-        "x": 12,
-        "y": 16
-      },
-      "id": 35,
-      "options": {
-        "legend": {
-          "calcs": [
-            "mean",
-            "max",
-            "min"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "10.4.5",
-      "targets": [
-        {
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
-          "expr": "sum(rate(coredns_forward_request_duration_seconds_sum{job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval])) by (pod) / sum(rate(coredns_forward_requests_total{job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval])) by (pod)",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{pod}}",
-          "refId": "C",
-          "step": 40
-        }
-      ],
-      "title": "Forwarded requests duration",
-      "type": "timeseries"
-    },
-    {
-      "cards": {},
-      "color": {
-        "cardColor": "#b4ff00",
-        "colorScale": "sqrt",
-        "colorScheme": "interpolateMagma",
-        "exponent": 0.5,
-        "mode": "spectrum"
-      },
-      "dataFormat": "tsbuckets",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "$ds_prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "scaleDistribution": {
-              "type": "linear"
-            }
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 24,
-        "x": 0,
-        "y": 23
-      },
-      "heatmap": {},
-      "hideZeroBuckets": false,
-      "highlightCards": true,
-      "id": 98,
-      "legend": {
-        "show": false
-      },
-      "options": {
-        "calculate": false,
-        "calculation": {},
-        "cellGap": 2,
-        "cellValues": {},
-        "color": {
-          "exponent": 0.5,
-          "fill": "#b4ff00",
-          "mode": "scheme",
-          "reverse": false,
-          "scale": "exponential",
-          "scheme": "Magma",
-          "steps": 128
-        },
-        "exemplars": {
-          "color": "rgba(255,0,255,0.7)"
-        },
-        "filterValues": {
-          "le": 1e-9
-        },
-        "legend": {
-          "show": false
-        },
-        "rowsFrame": {
-          "layout": "auto"
-        },
-        "showValue": "never",
-        "tooltip": {
-          "mode": "single",
-          "showColorScale": false,
-          "yHistogram": false
-        },
-        "yAxis": {
-          "axisPlacement": "left",
-          "reverse": false,
-          "unit": "s"
-        }
-      },
-      "pluginVersion": "10.4.15",
-      "reverseYBuckets": false,
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "$ds_prometheus"
-          },
-          "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval])) by (le)",
-          "format": "heatmap",
-          "intervalFactor": 1,
-          "legendFormat": "{{le}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Forward duration",
-      "tooltip": {
-        "show": true,
-        "showHistogram": false
-      },
-      "type": "heatmap",
-      "xAxis": {
-        "show": true
-      },
-      "yAxis": {
-        "format": "s",
-        "logBase": 1,
-        "show": true
-      },
-      "yBucketBound": "auto"
     },
     {
       "datasource": {
@@ -952,7 +745,7 @@
         "h": 3,
         "w": 24,
         "x": 0,
-        "y": 28
+        "y": 23
       },
       "id": 203,
       "options": {
@@ -1067,7 +860,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 31
+        "y": 26
       },
       "id": 16,
       "options": {
@@ -1167,7 +960,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 31
+        "y": 26
       },
       "id": 15,
       "options": {
@@ -1287,7 +1080,7 @@
         "h": 4,
         "w": 12,
         "x": 0,
-        "y": 38
+        "y": 33
       },
       "id": 36,
       "options": {
@@ -1400,7 +1193,7 @@
         "h": 3,
         "w": 24,
         "x": 0,
-        "y": 42
+        "y": 37
       },
       "id": 14,
       "options": {
@@ -1456,7 +1249,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 45
+        "y": 40
       },
       "id": 38,
       "panels": [
@@ -1507,7 +1300,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -1523,7 +1317,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 46
+            "y": 41
           },
           "id": 12,
           "options": {
@@ -1606,7 +1400,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -1622,7 +1417,7 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 46
+            "y": 41
           },
           "id": 5,
           "options": {
@@ -1660,6 +1455,7 @@
         },
         {
           "datasource": {
+            "type": "prometheus",
             "uid": "$ds_prometheus"
           },
           "fieldConfig": {
@@ -1705,7 +1501,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -1741,7 +1538,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 53
+            "y": 48
           },
           "id": 47,
           "options": {
@@ -1766,7 +1563,8 @@
               "datasource": {
                 "uid": "$ds_prometheus"
               },
-              "expr": "sum(rate(coredns_forward_requests_total{job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval])) by (to)",
+              "editorMode": "code",
+              "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{proxy_name=\"forward\",job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval])) by (to)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -1778,10 +1576,12 @@
               "datasource": {
                 "uid": "$ds_prometheus"
               },
-              "expr": "sum(rate(coredns_forward_requests_total{job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval]))",
+              "editorMode": "code",
+              "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{proxy_name=\"forward\", job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
+              "range": true,
               "refId": "B",
               "step": 60
             }
@@ -1791,6 +1591,7 @@
         },
         {
           "datasource": {
+            "type": "prometheus",
             "uid": "$ds_prometheus"
           },
           "fieldConfig": {
@@ -1836,7 +1637,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -1872,7 +1674,7 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 53
+            "y": 48
           },
           "id": 49,
           "options": {
@@ -1897,7 +1699,8 @@
               "datasource": {
                 "uid": "$ds_prometheus"
               },
-              "expr": "sum(rate(coredns_forward_responses_total{job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval])) by (rcode)",
+              "editorMode": "code",
+              "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{proxy_name=\"forward\", job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval])) by (rcode)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -1909,10 +1712,12 @@
               "datasource": {
                 "uid": "$ds_prometheus"
               },
-              "expr": "sum(rate(coredns_forward_responses_total{job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval]))",
+              "editorMode": "code",
+              "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{proxy_name=\"forward\", job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
+              "range": true,
               "refId": "B"
             }
           ],
@@ -1921,6 +1726,7 @@
         },
         {
           "datasource": {
+            "type": "prometheus",
             "uid": "$ds_prometheus"
           },
           "description": "If the graph is non-empty, it means that some CoreDNS requests resulted in panic. You can see a specific error in the container logs.",
@@ -1967,7 +1773,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -2003,7 +1810,7 @@
             "h": 3,
             "w": 24,
             "x": 0,
-            "y": 60
+            "y": 55
           },
           "id": 204,
           "options": {
@@ -2029,10 +1836,12 @@
               "datasource": {
                 "uid": "$ds_prometheus"
               },
-              "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval])) by (upstream)",
+              "editorMode": "code",
+              "expr": "sum(rate(coredns_proxy_healthcheck_failures_total{proxy_name=\"forward\", job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval])) by (to, rcode)",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "{{pod}}",
+              "legendFormat": "__auto",
+              "range": true,
               "refId": "A",
               "step": 40
             },
@@ -2040,10 +1849,12 @@
               "datasource": {
                 "uid": "$ds_prometheus"
               },
-              "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval]))",
+              "editorMode": "code",
+              "expr": "sum(rate(coredns_proxy_healthcheck_failures_total{proxy_name=\"forward\", job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
+              "range": true,
               "refId": "B"
             }
           ],
@@ -2098,7 +1909,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -2114,7 +1926,7 @@
             "h": 3,
             "w": 24,
             "x": 0,
-            "y": 63
+            "y": 58
           },
           "id": 135,
           "options": {
@@ -2207,7 +2019,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -2223,7 +2036,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 66
+            "y": 61
           },
           "id": 80,
           "options": {
@@ -2306,7 +2119,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -2342,7 +2156,7 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 66
+            "y": 61
           },
           "id": 81,
           "options": {
@@ -2434,7 +2248,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -2470,7 +2285,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 73
+            "y": 68
           },
           "id": 2,
           "options": {
@@ -2549,7 +2364,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 80
+            "y": 75
           },
           "heatmap": {},
           "hideZeroBuckets": false,
@@ -2596,7 +2411,7 @@
               "unit": "s"
             }
           },
-          "pluginVersion": "10.4.5",
+          "pluginVersion": "10.4.15",
           "reverseYBuckets": false,
           "targets": [
             {
@@ -2614,117 +2429,6 @@
           "tooltip": {
             "show": true,
             "showHistogram": true
-          },
-          "type": "heatmap",
-          "xAxis": {
-            "show": true
-          },
-          "yAxis": {
-            "format": "s",
-            "logBase": 1,
-            "show": true
-          },
-          "yBucketBound": "auto"
-        },
-        {
-          "cards": {},
-          "color": {
-            "cardColor": "#b4ff00",
-            "colorScale": "sqrt",
-            "colorScheme": "interpolateMagma",
-            "exponent": 0.5,
-            "mode": "spectrum"
-          },
-          "dataFormat": "tsbuckets",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "$ds_prometheus"
-          },
-          "fieldConfig": {
-            "defaults": {
-              "custom": {
-                "hideFrom": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "scaleDistribution": {
-                  "type": "linear"
-                }
-              }
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 7,
-            "w": 24,
-            "x": 0,
-            "y": 87
-          },
-          "heatmap": {},
-          "hideZeroBuckets": false,
-          "highlightCards": true,
-          "id": 20,
-          "legend": {
-            "show": false
-          },
-          "options": {
-            "calculate": false,
-            "calculation": {},
-            "cellGap": 2,
-            "cellValues": {},
-            "color": {
-              "exponent": 0.5,
-              "fill": "#b4ff00",
-              "mode": "scheme",
-              "reverse": false,
-              "scale": "exponential",
-              "scheme": "Magma",
-              "steps": 128
-            },
-            "exemplars": {
-              "color": "rgba(255,0,255,0.7)"
-            },
-            "filterValues": {
-              "le": 1e-9
-            },
-            "legend": {
-              "show": false
-            },
-            "rowsFrame": {
-              "layout": "auto"
-            },
-            "showValue": "never",
-            "tooltip": {
-              "mode": "single",
-              "showColorScale": false,
-              "yHistogram": false
-            },
-            "yAxis": {
-              "axisPlacement": "left",
-              "reverse": false,
-              "unit": "s"
-            }
-          },
-          "pluginVersion": "10.4.5",
-          "reverseYBuckets": false,
-          "targets": [
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "$ds_prometheus"
-              },
-              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval])) by (le)",
-              "format": "heatmap",
-              "intervalFactor": 1,
-              "legendFormat": "{{le}}",
-              "refId": "A"
-            }
-          ],
-          "title": "Forward duration",
-          "tooltip": {
-            "show": true,
-            "showHistogram": false
           },
           "type": "heatmap",
           "xAxis": {
