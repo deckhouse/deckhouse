@@ -1008,6 +1008,9 @@ OpenStackClusterConfiguration
 OpenStackEE
 OpenStackInstanceClass
 OpenStackInstanceClasses
+opentofu
+Opentofu
+OpenTofu
 openvpn
 OpenVPN
 openvpn-admin
@@ -1551,6 +1554,8 @@ YadroStorageConnection
 yaml
 yandex
 Yandex
+Yandex.Cloud
+YandexCloud
 YandexClusterConfiguration
 YandexInstanceClass
 YandexInstanceClasses

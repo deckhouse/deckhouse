@@ -38,7 +38,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
 func (s *Service) CommanderAttach(server pb.DHCTL_CommanderAttachServer) error {
@@ -198,12 +197,11 @@ func (s *Service) commanderAttach(
 	}
 
 	attacher := attach.NewAttacher(&attach.Params{
-		CommanderMode:    request.Options.CommanderMode,
-		CommanderUUID:    commanderUUID,
-		SSHClient:        sshClient,
-		OnCheckResult:    onCheckResult,
-		TerraformContext: terraform.NewTerraformContext(),
-		OnPhaseFunc:      switchPhase,
+		CommanderMode: request.Options.CommanderMode,
+		CommanderUUID: commanderUUID,
+		SSHClient:     sshClient,
+		OnCheckResult: onCheckResult,
+		OnPhaseFunc:   switchPhase,
 		AttachResources: attach.AttachResources{
 			Template: request.ResourcesTemplate,
 			Values:   request.ResourcesValues.AsMap(),

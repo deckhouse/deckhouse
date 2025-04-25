@@ -1,10 +1,13 @@
 # Keep this versions in sync with candi/cloud-providers/*/terraform-modules/versions.tf
 # and ee/candi/cloud-providers/*/terraform-modules/versions.tf
 
-version: 0.14.8
+terraform: 0.14.8
+
+opentofu: 1.9.0
 
 aws:
   namespace: hashicorp
+  cloudName: AWS
   type: aws
   version: 4.50.0
   # artifact name with provider binary
@@ -16,6 +19,7 @@ aws:
 
 azure:
   namespace: hashicorp
+  cloudName: Azure
   type: azurerm
   version: 2.36.0
   artifact: terraform-provider-azure
@@ -24,6 +28,7 @@ azure:
 
 gcp:
   namespace: hashicorp
+  cloudName: GCP
   type: google
   version: 3.48.0
   artifact: terraform-provider-gcp
@@ -32,6 +37,7 @@ gcp:
 
 openstack:
   namespace: terraform-provider-openstack
+  cloudName: OpenStack
   type: openstack
   version: 1.54.1
   artifact: terraform-provider-openstack
@@ -40,6 +46,7 @@ openstack:
 
 ovirt:
   namespace: terraform-provider-ovirt
+  cloudName: Zvirt
   type: ovirt
   version: 2.1.5
   artifact: terraform-provider-ovirt
@@ -48,6 +55,7 @@ ovirt:
 
 vsphere:
   namespace: hashicorp
+  cloudName: vSphere
   type: vsphere
   version: 2.0.2
   artifact: terraform-provider-vsphere
@@ -56,6 +64,7 @@ vsphere:
 
 vcd:
   namespace: vmware
+  cloudName: VCD
   type: vcd
   versions: ["3.10.0", "3.14.1"]
   artifact: terraform-provider-vcd-artifact
@@ -64,14 +73,17 @@ vcd:
 
 yandex:
   namespace: yandex-cloud
+  cloudName: Yandex
   type: yandex
   version: 0.83.0
   artifact: terraform-provider-yandex
   artifactBinary: terraform-provider-yandex
   destinationBinary: terraform-provider-yandex
+  useOpentofu: true
 
 decort:
   namespace: terraform-provider-decort
+  cloudName: Dynamix
   type: decort
   version: 4.7.3
   artifact: terraform-provider-decort
@@ -80,6 +92,7 @@ decort:
 
 huaweicloud:
   namespace: terraform-provider-huaweicloud
+  cloudName: Huaweicloud
   type: huaweicloud
   version: 1.69.0
   artifact: terraform-provider-huaweicloud
