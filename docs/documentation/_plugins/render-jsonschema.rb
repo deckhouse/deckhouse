@@ -436,6 +436,10 @@ module JSONSchemaRenderer
         result = Array.new()
         ancestorsPathString = ''
 
+        if parent.has_key?('required') && parent['required'].include?(name)
+            result.push(%Q(<p class="resources__attrs required"><span class="resources__attrs_name required">#{get_i18n_term('required_value_sentence')}</span></p>))
+        end
+        
         if name.nil? or name == ''
             fullPath = ancestors + ['element']
             parameterTitle = get_i18n_term('element_of_array').capitalize
