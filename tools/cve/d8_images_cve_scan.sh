@@ -19,7 +19,7 @@ shopt -s failglob
 
 # This script will perform CVE scan for a Deckhouse in DEV registry for provided tag and show reports to output.
 #
-# Usage: OPTION=<value> d8_images_cve_scan.sh
+# Usage: OPTION=<value> make cve-report
 #
 # $IMAGE - Deckhouse image (by default: dev-registry.deckhouse.io/sys/deckhouse-oss)
 # $TAG - Deckhouse image tag (by default: main)
