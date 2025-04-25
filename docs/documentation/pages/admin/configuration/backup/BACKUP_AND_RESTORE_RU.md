@@ -74,7 +74,7 @@ lang: ru
    ls -la /var/lib/etcd/member/
    ```
 
-1. Поместите файл резервной копии etcd. Скопируйте или перенесите файл снапшота `etcd-backup.snapshot` в домашнюю директорию текущего пользователя (root):
+1. Переместите файл резервной копии etcd. Скопируйте или перенесите файл снапшота `etcd-backup.snapshot` в домашнюю директорию текущего пользователя (root):
 
    ```shell
    cp /путь/до/резервной/копии/etcd-backup.snapshot ~/etcd-backup.snapshot
@@ -113,11 +113,11 @@ lang: ru
 
 Для корректного восстановления мультимастерного кластера выполните следующие шаги:
 
-1. Активируйте режим High Availability (HA). Для этого используйте параметр [highAvailability](TODO). Это необходимо, чтобы сохранить хотя бы одну реплику Prometheus и его PVC, поскольку в кластере с одним master-узлом HA по умолчанию отключён.
+1. Активируйте режим High Availability (HA). Это необходимо, чтобы сохранить хотя бы одну реплику Prometheus и его PVC, поскольку в кластере с одним master-узлом HA по умолчанию отключён.
 
 1. Переведите кластер в режим с одним master-узлом:
 
-   - В облачном кластере воспользуйтесь [инструкцией].
+   - В облачном кластере воспользуйтесь [инструкцией](../platform-scaling/control-plane.html#типовые-сценарии-масштабирования).
    - В статическом кластере удалите лишние master-узлы вручную.
 
 1. Восстановите etcd из резервной копии на единственном оставшемся master-узле. Следуйте [инструкции](#восстановление-кластера-с-одним-control-plane-узлом) для кластера с одним control-plane узлом.
@@ -136,12 +136,9 @@ lang: ru
    kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
    ```
 
-1. Переведите кластер обратно в мультимастерный режим:
+1. Переведите кластер обратно в мультимастерный режим. Для облачных кластеров используйте [инструкцию](../platform-scaling/control-plane.html#типовые-сценарии-масштабирования).
 
-   - Для облачных кластеров используйте [инструкцию](TODO).
-   - Для статических и гибридных кластеров воспользуйтесь [инструкцией](TODO).
-
-   После этих шагов кластер будет успешно восстановлен в мультимастерной конфигурации.
+После этих шагов кластер будет успешно восстановлен в мультимастерной конфигурации.
 
 ## Восстановление отдельных объектов
 
@@ -232,45 +229,45 @@ kubectl delete po etcd-restore --force
    - `etcd` — должен соответствовать версии etcd, из которой был создан резервный снимок (snapshot).
    - `ubuntu` — вспомогательный контейнер для отладочных целей (в современных образах etcd может отсутствовать оболочка `bash` или `sh`).
 
-   Подставьте в шаблон актуальную версию образа etcd (аналогичную оригинальному кластеру) и создайте под с помощью команды:
+     Подставьте в шаблон актуальную версию образа etcd (аналогичную оригинальному кластеру) и создайте под с помощью команды:
 
-   ```shell
-   IMG=$(kubectl -n kube-system get pod -l component=etcd -o jsonpath="{.items[*].spec.containers[*].image}" | cut -f 1 -d ' ')
-   sed -i -e "s#ETCD_IMAGE#$IMG#" etcd.pod.yaml
-   kubectl create -f etcd.pod.yaml
-   ```
+     ```shell
+     IMG=$(kubectl -n kube-system get pod -l component=etcd -o jsonpath="{.items[*].spec.containers[*].image}" | cut -f 1 -d ' ')
+     sed -i -e "s#ETCD_IMAGE#$IMG#" etcd.pod.yaml
+     kubectl create -f etcd.pod.yaml
+     ```
 
-   {% offtopic title="Пример шаблона" %}
-   ```yaml
-   apiVersion: v1
-   kind: Pod
-   metadata:
-     name: etcd-restore
-   spec:
-     volumes:
-     - name: shared-data
-       emptyDir: {}  
-     - name: etcddir
-       emptyDir: {}
-     containers:
-     - name: etcd
-       image: ETCD_IMAGE
-       volumeMounts:
+     Пример шаблона:
+
+     ```yaml
+     apiVersion: v1
+     kind: Pod
+     metadata:
+       name: etcd-restore
+     spec:
+       volumes:
        - name: shared-data
-         mountPath: /etcd-backup
+         emptyDir: {}  
        - name: etcddir
-         mountPath: /default.etcd      
+         emptyDir: {}
+       containers:
+       - name: etcd
+         image: ETCD_IMAGE
+         volumeMounts:
+         - name: shared-data
+           mountPath: /etcd-backup
+         - name: etcddir
+           mountPath: /default.etcd      
   
-     - name: ubuntu
-       image: ubuntu:latest
-       command: ["/bin/sh", "-c", "sleep 100h"]
-       volumeMounts:
-       - name: shared-data
-         mountPath: /etcd-backup
+       - name: ubuntu
+         image: ubuntu:latest
+         command: ["/bin/sh", "-c", "sleep 100h"]
+         volumeMounts:
+         - name: shared-data
+           mountPath: /etcd-backup
 
-     restartPolicy: Never
-   ```
-   {% endofftopic %}
+       restartPolicy: Never
+      ```
 
 1. Скопируйте резервный снимок etcd в контейнер временного пода. Используйте команду `kubectl cp`, чтобы передать файл снапшота (например, `etcd-snapshot.bin`) в контейнер ubuntu:
 
@@ -328,7 +325,7 @@ kubectl delete po etcd-restore --force
 
    Под будет остановлен, а ресурсы, выгруженные в JSON-файлы, останутся доступными для дальнейшего восстановления в основном кластере.
 
-### Восстановление объектов Kubernetes из выгруженных JSON-файлов
+### Восстановление объектов кластера из выгруженных JSON-файлов
 
 Для восстановления объектов выполните следующие шаги:
 
@@ -367,7 +364,7 @@ kubectl delete po etcd-restore --force
 Для восстановления объектов из резервной копии etcd при смене IP-адреса выполните шаги:
 
 1. Восстановите etcd из резервной копии. Следуйте стандартной процедуре восстановления etcd с использованием снапшота. Убедитесь, что на этапе восстановления вы не изменяете никаких других параметров, кроме данных etcd.
-1. Обновите IP-адрес в статичных конфигурационных файлах^
+1. Обновите IP-адрес в статичных конфигурационных файлах:
 
    - Проверьте файлы манифестов компонентов Kubernetes, расположенные в `/etc/kubernetes/manifests/`.
    - Проверьте системные настройки kubelet (файлы в `/etc/systemd/system/kubelet.service.d/` или аналогичные директории).
@@ -376,7 +373,7 @@ kubectl delete po etcd-restore --force
 1. Перезапустите все сервисы, использующие обновлённые конфигурации и сертификаты. Заставьте kubelet перезапустить манифесты control-plane (API-сервер, etcd и т.д.). Перезагрузите системные службы (например, `systemctl restart kubelet`) или убедитесь, что все нужные процессы перезапущены автоматически.
 1. Дождитесь, пока kubelet обновит собственный сертификат.
 
-Данные действия можно произвести как [автоматизировано](автоматизированная-выгрузка-объектов-при-смене-ip-адреса) — с помощью скрипта, так и [вручную](ручное-восстановление) — путем выполнения одиночных команд.
+Данные действия можно произвести как [автоматизировано](#автоматизированная-выгрузка-объектов-при-смене-ip-адреса) — с помощью скрипта, так и [вручную](ручное-восстановление-объектов-при-смене-ip-адреса) — путем выполнения одиночных команд.
 
 ### Автоматизированная выгрузка объектов при смене IP-адреса
 
@@ -386,47 +383,48 @@ kubectl delete po etcd-restore --force
    - `ETCD_SNAPSHOT_PATH` — путь до резервного снапшота etcd.
    - `OLD_IP` — старый IP-адрес master-узла, под которым создавалась резервная копия.
    - `NEW_IP` — новый IP-адрес master-узла.
+
 1. Убедитесь, что версия Kubernetes (`KUBERNETES_VERSION`) совпадает с установленной в кластере. Это необходимо для корректной загрузки соответствующей версии kubeadm.
 
-   {% offtopic title="Скрипт для выгрузки объектов" %}
-   ```shell
-   ETCD_SNAPSHOT_PATH="./etcd-backup.snapshot" # Путь до резервного снимка (snapshot) etcd.
-   OLD_IP=10.242.32.34                         # IP-адрес старого master-узла.
-   NEW_IP=10.242.32.21                         # IP-адрес нового master-узла.
-   KUBERNETES_VERSION=1.28.0                   # Версия Kubernetes.
-
-   mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml 
-   mkdir ./etcd_old
-   mv /var/lib/etcd ~/etcd_old
-   ETCDCTL_PATH=$(find /var/lib/containerd/ -name etcdctl)
-
-   ETCDCTL_API=3 $ETCDCTL_PATH snapshot restore etcd-backup.snapshot --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt   --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd 
-
-   mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
-
-   find /etc/kubernetes/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
-   find /etc/systemd/system/kubelet.service.d -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
-   find  /var/lib/bashible/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
-
-   mkdir -p ./old_certs/etcd
-   mv /etc/kubernetes/pki/apiserver.* ./old_certs/
-   mv /etc/kubernetes/pki/etcd/server.* ./old_certs/etcd/
-   mv /etc/kubernetes/pki/etcd/peer.* ./old_certs/etcd/
-
-   curl -LO https://dl.k8s.io/v$KUBERNETES_VERSION/bin/linux/amd64/kubeadm
-   chmod +x kubeadm
-   ./kubeadm init phase certs all --config /etc/kubernetes/deckhouse/kubeadm/config.yaml
-
-   crictl ps --name 'kube-apiserver' -o json | jq -r '.containers[0].id' | xargs crictl stop
-   crictl ps --name 'kubernetes-api-proxy' -o json | jq -r '.containers[0].id' | xargs crictl stop
-   crictl ps --name 'etcd' -o json | jq -r '.containers[].id' | xargs crictl stop
-
-   systemctl daemon-reload
-   systemctl restart kubelet.service
-   ```
-   {% endofftopic %}
-
 1. После выполнения скрипта необходимо дождаться, пока kubelet обновит свой сертификат, учитывающий новый IP-адрес. Проверить это можно в директории `/var/lib/kubelet/pki/`, где должен появиться новый сертификат.
+
+{% offtopic title="Скрипт для выгрузки объектов" %}
+```shell
+ETCD_SNAPSHOT_PATH="./etcd-backup.snapshot" # Путь до резервного снимка (snapshot) etcd.
+OLD_IP=10.242.32.34                         # IP-адрес старого master-узла.
+NEW_IP=10.242.32.21                         # IP-адрес нового master-узла.
+KUBERNETES_VERSION=1.28.0                   # Версия Kubernetes.
+
+mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml 
+mkdir ./etcd_old
+mv /var/lib/etcd ~/etcd_old
+ETCDCTL_PATH=$(find /var/lib/containerd/ -name etcdctl)
+
+ETCDCTL_API=3 $ETCDCTL_PATH snapshot restore etcd-backup.snapshot --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt   --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd 
+
+mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
+
+find /etc/kubernetes/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
+find /etc/systemd/system/kubelet.service.d -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
+find  /var/lib/bashible/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
+
+mkdir -p ./old_certs/etcd
+mv /etc/kubernetes/pki/apiserver.* ./old_certs/
+mv /etc/kubernetes/pki/etcd/server.* ./old_certs/etcd/
+mv /etc/kubernetes/pki/etcd/peer.* ./old_certs/etcd/
+
+curl -LO https://dl.k8s.io/v$KUBERNETES_VERSION/bin/linux/amd64/kubeadm
+chmod +x kubeadm
+./kubeadm init phase certs all --config /etc/kubernetes/deckhouse/kubeadm/config.yaml
+
+crictl ps --name 'kube-apiserver' -o json | jq -r '.containers[0].id' | xargs crictl stop
+crictl ps --name 'kubernetes-api-proxy' -o json | jq -r '.containers[0].id' | xargs crictl stop
+crictl ps --name 'etcd' -o json | jq -r '.containers[].id' | xargs crictl stop
+
+systemctl daemon-reload
+systemctl restart kubelet.service
+```
+{% endofftopic %}
 
 ### Ручное восстановление объектов при смене IP-адреса
 
@@ -567,19 +565,33 @@ d8 backup etcd mybackup.snapshot
 
 #### Автоматическое резервное копирование etcd
 
-Deckhouse выполняет ежедневную резервную копию etcd автоматически с помощью CronJob. Задание запускается в поде `d8-etcd-backup` в пространстве имён `kube-system`.
-
-Внутри пода выполняются команды:
+Deckhouse автоматически выполняет ежедневное резервное копирование etcd с помощью CronJob, запускаемого в поде `d8-etcd-backup` в пространстве имён `kube-system`. В рамках задания создаётся снимок базы данных, архивируется и сохраняется локально на узле в директории `/var/lib/etcd/`:
 
 ```console
 etcdctl snapshot save etcd-backup.snapshot
 tar -czvf etcd-backup.tar.gz etcd-backup.snapshot
+mv etcd-backup.tar.gz /var/lib/etcd/etcd-backup.tar.gz
 ```
 
-Итоговый архив `etcd-backup.tar.gz` сохраняется локально на узле в директории `/var/lib/etcd/`:
+Для настройки автоматического резервного копирования используется модуль `control-plane-manager`. Необходимые параметры задаются в его конфигурации:
 
-```console
-mv etcd-backup.tar.gz /var/lib/etcd/etcd-backup.tar.gz
+| Параметр                 | Описание                                                                 |
+|--------------------------|--------------------------------------------------------------------------|
+| `etcd.backup.enabled`    | Включает ежедневное резервное копирование etcd.                         |
+| `etcd.backup.cronSchedule` | Расписание выполнения резервного копирования в формате cron. Используется локальное время `kube-controller-manager`. |
+| `etcd.backup.hostPath`   | Путь на мастер-узлах, где будут сохраняться архивы резервных копий etcd. |
+
+Пример фрагмента конфигурации:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+spec:
+  etcd:
+    backup:
+      enabled: true
+      cronSchedule: "0 1 * * *"
+      hostPath: "/var/lib/etcd"
 ```
 
 ### Резервное копирование конфигурации кластера
