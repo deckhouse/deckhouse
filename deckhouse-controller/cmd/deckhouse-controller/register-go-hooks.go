@@ -26,6 +26,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers"
 	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/https"
 	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator"
+	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/incluster-proxy"
 	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/node-services"
 	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/pki"
 	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/secrets"
