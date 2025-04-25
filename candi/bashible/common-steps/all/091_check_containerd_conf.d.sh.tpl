@@ -15,14 +15,17 @@
 {{- if eq .runType "Normal" }}
   {{- if eq .cri "Containerd" }}
 
-label_path="/var/lib/node_labels/containerd-custom-conf"
+label_path="/var/lib/node_labels/containerd-conf"
 
 # Check additional configs containerd
 if ls /etc/containerd/conf.d/*.toml >/dev/null 2>/dev/null; then
-  echo "node.deckhouse.io/containerd=custom-config" > ${label_path}
+  label_value="custom"
 else
-  rm -f ${label_path}
+  label_value="default"
 fi
 
+echo "node.deckhouse.io/containerd-config=${label_value}" > "${label_path}"
+  {{- else -}}
+rm -f /var/lib/node_labels/containerd-conf
   {{- end  }}
 {{- end  }}
