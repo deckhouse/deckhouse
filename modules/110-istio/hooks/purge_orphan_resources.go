@@ -25,6 +25,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/rest"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
@@ -45,6 +47,12 @@ var (
 		Version:  "v1alpha1",
 		Resource: "istiooperators",
 	}
+	istioClusterCRDs = []schema.GroupVersionResource{
+		{Group: "networking.istio.io", Version: "v1alpha3", Resource: "envoyfilters"},
+		{Group: "networking.istio.io", Version: "v1alpha3", Resource: "gateways"},
+		{Group: "security.istio.io", Version: "v1beta1", Resource: "peerauthentications"},
+		{Group: "security.istio.io", Version: "v1beta1", Resource: "requestauthentications"},
+	}
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -57,6 +65,17 @@ func purgeOrphanResources(input *go_hook.HookInput, dc dependency.Container) err
 		return err
 	}
 	k8sClient, err := dc.GetK8sClient()
+	if err != nil {
+		return err
+	}
+	// Create a rest.Config object
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		return err
+	}
+
+	// Create the dynamic client
+	dynamicClient, err := dynamic.NewForConfig(config)
 	if err != nil {
 		return err
 	}
@@ -144,6 +163,23 @@ func purgeOrphanResources(input *go_hook.HookInput, dc dependency.Container) err
 			return err
 		}
 		input.Logger.Infof("ValidatingWebhookConfiguration/%s deleted", ivwc.GetName())
+	}
+
+	// delete cluster-wide Custom Resources
+	for _, icwr := range istioClusterCRDs {
+		crList, err := dynamicClient.Resource(icwr).List(context.TODO(), metav1.ListOptions{})
+		if err != nil {
+			input.Logger.Warnf("Failed to list %s: %v", icwr.Resource, err)
+			continue
+		}
+		for _, cr := range crList.Items {
+			err := dynamicClient.Resource(icwr).Namespace(cr.GetNamespace()).Delete(context.TODO(), cr.GetName(), metav1.DeleteOptions{})
+			if err != nil {
+				input.Logger.Warnf("Failed to delete %s/%s: %v", icwr.Resource, cr.GetName(), err)
+			} else {
+				input.Logger.Infof("%s/%s deleted", icwr.Resource, cr.GetName())
+			}
+		}
 	}
 
 	return nil
