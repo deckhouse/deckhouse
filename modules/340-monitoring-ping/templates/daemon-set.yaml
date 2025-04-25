@@ -81,16 +81,18 @@ spec:
         livenessProbe:
           httpGet:
             path: /healthz
-            port: 8080
+            port: 4288
             scheme: HTTP
+            host: 127.0.0.1
           initialDelaySeconds: 5
           periodSeconds: 10
           failureThreshold: 3
         readinessProbe:
           httpGet:
             path: /readyz
-            port: 8080
+            port: 4288
             scheme: HTTP
+            host: 127.0.0.1
           initialDelaySeconds: 2
           periodSeconds: 5
           failureThreshold: 3
@@ -117,7 +119,7 @@ spec:
           - name: KUBE_RBAC_PROXY_CONFIG
             value: |
               upstreams:
-              - upstream: http://127.0.0.1:8080/
+              - upstream: http://127.0.0.1:4288/
                 path: /
                 authorization:
                   resourceAttributes:

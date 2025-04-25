@@ -40,7 +40,7 @@ func main() {
 	defer stop()
 
 	nodeTracker := NewNodeTracker()
-	if err := nodeTracker.Start(ctx, cfg.internalCM, cfg.externalCM, cfg.Namespace); err != nil {
+	if err := nodeTracker.Start(ctx, cfg.targetsCM, cfg.Namespace); err != nil {
 		log.Fatal("can't start node tracker: %v", err)
 	}
 
@@ -50,7 +50,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		StartPrometheusServer(ctx, ":8080", reg)
+		StartPrometheusServer(ctx, "127.0.0.1:4288", reg)
 	}()
 
 	// Ping

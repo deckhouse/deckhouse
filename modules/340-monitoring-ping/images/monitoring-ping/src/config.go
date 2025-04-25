@@ -17,16 +17,14 @@ package main
 import "os"
 
 type Config struct {
-	internalCM string
-	externalCM string
-	Namespace     string
+	targetsCM string
+	Namespace string
 }
 
 func LoadConfig() Config {
 	return Config{
-		internalCM: getEnvOrDefault("CONFIGMAP_INT", "monitoring-ping-config"),
-		externalCM: getEnvOrDefault("CONFIGMAP_EXT", "monitoring-ping-config-external"),
-		Namespace:     getEnvOrDefault("NAMESPACE", "d8-monitoring"),
+		targetsCM: getEnvOrDefault("CONFIGMAP_INT", "monitoring-ping-config"),
+		Namespace: getEnvOrDefault("NAMESPACE", "d8-monitoring"),
 	}
 }
 

@@ -16,14 +16,14 @@ package hooks
 
 import (
 	"encoding/json"
-	"fmt"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
+
+const jsonFile = "targets.json"
 
 type Target struct {
 	Name      string `json:"name"`
@@ -107,7 +107,10 @@ metadata:
 `
 
 var _ = Describe("Modules :: monitoring-ping :: hooks :: node_list", func() {
-	f := HookExecutionConfigInit(`{}`, `{}`)
+	f := HookExecutionConfigInit(
+		`{"monitoringPing":{"internal":{}},"global":{"enabledModules":[]}}`,
+		`{}`,
+	)
 
 	Context("List nodes", func() {
 		BeforeEach(func() {
@@ -117,26 +120,14 @@ var _ = Describe("Modules :: monitoring-ping :: hooks :: node_list", func() {
 
 		It("Targets should exist", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesResource("ConfigMap", "d8-monitoring", "monitoring-ping-config").Exists()).To(BeTrue())
-			obj := f.KubernetesResource("ConfigMap", "d8-monitoring", "monitoring-ping-config")
-			data, ok := obj["data"].(map[string]interface{})
-			if !ok {
-				fmt.Printf("data is not a map")
-			}
-
-			targetsJSON, ok := data["targets.json"].(string)
-			if !ok {
-				fmt.Printf("targets is not a map")
-			}
-
+			str := f.ValuesGet("monitoringPing.internal.targets").String()
 			var targets Targets
-			err := json.Unmarshal([]byte(targetsJSON), &targets)
+			err := json.Unmarshal([]byte(str), &targets)
 			if err != nil {
-				log.Fatal("failed to unmarshal targets.json: %v", err)
+				panic(err)
 			}
 
 			Expect(len(targets.Cluster)).To(Equal(2))
-
 		})
 	})
 })

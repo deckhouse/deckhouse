@@ -15,11 +15,8 @@
 package hooks
 
 import (
-	"encoding/json"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -36,7 +33,7 @@ type targets struct {
 
 func newTargets(length int) *targets {
 	return &targets{
-		Cluster: make([]nodeTarget, length),
+		Cluster: make([]nodeTarget, 0, length),
 	}
 }
 
@@ -61,22 +58,8 @@ func getAddress(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	return target, nil
 }
 
-func getConfigMap(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	configMap := &v1.ConfigMap{}
-	err := sdk.FromUnstructured(obj, configMap)
-	if err != nil {
-		return nil, err
-	}
-
-	return configMap, nil
-}
-
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Schedule: []go_hook.ScheduleConfig{
-		{
-			Name: "node_list",
-		},
-	},
+	Queue: "/modules/monitoring-ping/node_list",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "addresses",
@@ -84,32 +67,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "Node",
 			FilterFunc: getAddress,
 		},
-		{
-			Name:       "configmap",
-			ApiVersion: "v1",
-			Kind:       "ConfigMap",
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{"monitoring-ping-config"},
-			},
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{"d8-monitoring"},
-				},
-			},
-			FilterFunc: getConfigMap,
-		},
 	},
 }, updateNodeList)
 
 func updateNodeList(input *go_hook.HookInput) error {
-	lenSnapshot := len(input.Snapshots["node_list"])
+	lenSnapshot := len(input.Snapshots["addresses"])
 	targets := newTargets(lenSnapshot)
-
-	var configMap *v1.ConfigMap
-
-	if len(input.Snapshots["configmap"]) > 0 {
-		configMap = input.Snapshots["configmap"][0].(*v1.ConfigMap)
-	}
 
 	for _, item := range input.Snapshots["addresses"] {
 		if item == nil {
@@ -121,23 +84,7 @@ func updateNodeList(input *go_hook.HookInput) error {
 		}
 	}
 
-	if configMap != nil {
-		jsonData, err := json.Marshal(targets)
-		if err != nil {
-			return err
-		}
-
-		patch := map[string]interface{}{
-			"data": map[string]string{
-				"targets.json": string(jsonData),
-			},
-		}
-
-		input.PatchCollector.PatchWithMerge(
-			patch,
-			configMap.APIVersion, "ConfigMap", configMap.Namespace, configMap.Name,
-		)
-	}
+	input.Values.Set("monitoringPing.internal.targets", targets)
 
 	return nil
 }
