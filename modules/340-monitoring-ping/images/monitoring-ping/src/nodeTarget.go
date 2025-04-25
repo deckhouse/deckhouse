@@ -4,14 +4,13 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//    http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 package main
 
 import (
@@ -21,6 +20,7 @@ import (
 	"sync"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -41,7 +41,7 @@ func NewNodeTracker() *NodeTracker {
 	}
 }
 
-func (nt *NodeTracker) Start(ctx context.Context, internalCM, externalCM, namespace string) error {
+func (nt *NodeTracker) Start(ctx context.Context, configMapName, namespace string) error {
 	config, err := rest.InClusterConfig()
 	if err != nil {
 		return err
@@ -52,57 +52,61 @@ func (nt *NodeTracker) Start(ctx context.Context, internalCM, externalCM, namesp
 		return err
 	}
 
-	internalInformer := createInformer(internalCM, namespace, nt.onUpdate, true, clientset)
-	externalInformer := createInformer(externalCM, namespace, nt.onUpdate, false, clientset)
+	informer := createInformer(configMapName, namespace, nt.onUpdate, clientset)
+	go informer.Run(ctx.Done())
 
-	go internalInformer.Run(ctx.Done())
-	go externalInformer.Run(ctx.Done())
-
-	if !cache.WaitForCacheSync(ctx.Done(), internalInformer.HasSynced, externalInformer.HasSynced) {
-		return fmt.Errorf("failed to sync caches")
+	if !cache.WaitForCacheSync(ctx.Done(), informer.HasSynced) {
+		return fmt.Errorf("failed to sync cache")
 	}
 
 	return nil
 }
 
-func (t *InternalTargets) Update(nt *NodeTracker) {
-	nt.nodes = t.Cluster
-	log.Info(fmt.Sprintf("Updated internal targets: %d nodes", len(t.Cluster)))
-}
-
-func (t *ExternalTargets) Update(nt *NodeTracker) {
-	nt.externalTargets = t.Targets
-	log.Info(fmt.Sprintf("Updated external targets: %d hosts", len(t.Targets)))
-}
-
-func (nt *NodeTracker) updateTargets(jsonData string, target Targets) {
-	if err := json.Unmarshal([]byte(jsonData), target); err != nil {
+func (nt *NodeTracker) updateInternal(jsonData string) {
+	var t struct {
+		ClusterTargets []NodeTarget `json:"cluster_targets"`
+	}
+	if err := json.Unmarshal([]byte(jsonData), &t); err != nil {
 		log.Error("Failed to unmarshal targets.json: %v", err)
 		return
 	}
-
 	nt.Lock()
-	defer nt.Unlock()
-	target.Update(nt)
+	nt.nodes = t.ClusterTargets
+	nt.Unlock()
+	log.Info(fmt.Sprintf("Updated internal targets: %d nodes", len(t.ClusterTargets)))
 }
 
-func (nt *NodeTracker) onUpdate(obj interface{}, internal bool) {
+func (nt *NodeTracker) updateExternal(jsonData string) {
+	var t struct {
+		Targets []ExternalTarget `json:"targets"`
+	}
+	if err := json.Unmarshal([]byte(jsonData), &t); err != nil {
+		log.Error("Failed to unmarshal external_targets.json: %v", err)
+		return
+	}
+	nt.Lock()
+	nt.externalTargets = t.Targets
+	nt.Unlock()
+	log.Info(fmt.Sprintf("Updated external targets: %d hosts", len(t.Targets)))
+}
+
+func (nt *NodeTracker) onUpdate(obj interface{}) {
 	cfgMap, ok := obj.(*v1.ConfigMap)
 	if !ok {
 		log.Warn("unexpected object type in onUpdate")
 		return
 	}
 
-	jsonData, exists := cfgMap.Data["targets.json"]
-	if !exists {
+	if jsonData, exists := cfgMap.Data["targets.json"]; exists {
+		nt.updateInternal(jsonData)
+	} else {
 		log.Warn("targets.json not found in ConfigMap")
-		return
 	}
 
-	if internal {
-		nt.updateTargets(jsonData, &InternalTargets{})
+	if jsonData, exists := cfgMap.Data["external_targets.json"]; exists {
+		nt.updateExternal(jsonData)
 	} else {
-		nt.updateTargets(jsonData, &ExternalTargets{})
+		log.Warn("external_targets.json not found in ConfigMap")
 	}
 }
 
@@ -122,7 +126,7 @@ func (nt *NodeTracker) ListExternalTargets() []ExternalTarget {
 	return list
 }
 
-func createInformer(cfgMapName, namespace string, handler func(interface{}, bool), internal bool, clientset *kubernetes.Clientset) cache.SharedInformer {
+func createInformer(cfgMapName, namespace string, handler func(interface{}), clientset *kubernetes.Clientset) cache.SharedInformer {
 	lw := cache.NewFilteredListWatchFromClient(
 		clientset.CoreV1().RESTClient(),
 		"configmaps",
@@ -134,8 +138,8 @@ func createInformer(cfgMapName, namespace string, handler func(interface{}, bool
 
 	informer := cache.NewSharedInformer(lw, &v1.ConfigMap{}, 0)
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(obj interface{}) { handler(obj, internal) },
-		UpdateFunc: func(_, obj interface{}) { handler(obj, internal) },
+		AddFunc:    handler,
+		UpdateFunc: func(_, obj interface{}) { handler(obj) },
 		DeleteFunc: func(obj interface{}) {
 			log.Warn("%s deleted — list will not be updated until recreated", cfgMapName)
 		},
