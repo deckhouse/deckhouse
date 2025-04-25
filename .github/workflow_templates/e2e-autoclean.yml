@@ -36,7 +36,7 @@ jobs:
         python-version: '3.13'
     - name: Install deps
       run: |
-        pip install ${SCRIPT_DIR}/requirements.txt
+        pip install -r ${SCRIPT_DIR}/requirements.txt
     - name: Run clean
       run: |
         python ${SCRIPT_DIR}/main.py
