@@ -175,7 +175,7 @@ for d8_tag in "${d8_tags[@]}"; do
       done
 
       echo "----------------------------------------------"
-      echo "👾 Scaning image ${IMAGE_NAME} of moduleo ${MODULE_NAME} from Deckhouse tag: ${d8_tag}"
+      echo "👾 Scaning image ${IMAGE_NAME} of module ${MODULE_NAME} from Deckhouse tag: ${d8_tag}"
       echo ""
       if [ "${additional_image_detected}" == true ]; then
         ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --java-db-repository "${TRIVY_JAVA_DB_URL}" --db-repository "${TRIVY_DB_URL}" --exit-code 0 --severity "${SEVERITY}" --format table --scanners vuln --quiet "${d8_image}:${d8_tag}"
