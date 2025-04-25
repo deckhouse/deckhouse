@@ -88,7 +88,6 @@ if __name__ == "__main__":
             clusters_to_delete.append({"id": cluster_id, "name": cluster_name})
         else:
             print(f"Cluster {cluster_name} created less than {HOURS_TO_REMOVE} hours ago, skip")
-            skip_delete = True
 
     try:
         get_clusters_delete_status(clusters_to_delete)
