@@ -175,7 +175,7 @@ for d8_tag in "${d8_tags[@]}"; do
       done
 
       echo "----------------------------------------------"
-      echo "👾 Image: ${IMAGE_NAME}"
+      echo "👾 Scaning image ${IMAGE_NAME} of moduleo ${MODULE_NAME} from Deckhouse tag: ${d8_tag}"
       echo ""
       if [ "${additional_image_detected}" == true ]; then
         ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --java-db-repository "${TRIVY_JAVA_DB_URL}" --db-repository "${TRIVY_DB_URL}" --exit-code 0 --severity "${SEVERITY}" --format table --scanners vuln --quiet "${d8_image}:${d8_tag}"
@@ -201,7 +201,7 @@ for d8_tag in "${d8_tags[@]}"; do
         -F "verified=true" \
         -F "scan_type=Trivy Scan" \
         -F "close_old_findings=true" \
-        -F "do_not_reactivate=false" \
+        -F "do_not_reactivate=true" \
         -F "push_to_jira=false" \
         -F "file=@${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" \
         -F "product_type_name=Deckhouse images" \
