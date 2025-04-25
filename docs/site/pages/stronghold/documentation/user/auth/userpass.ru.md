@@ -19,23 +19,23 @@ lang: ru
 
 1. Включите метод аутентификации `userpass`, как представлено ниже:
 
-```shell
-d8 stronghold auth enable userpass
-```
+   ```shell
+   d8 stronghold auth enable userpass
+   ```
 
    Это позволяет включить метод аутентификации `userpass` по адресу `auth/userpass`. Чтобы включить его по другому пути, используйте флаг `-path`, как представлено ниже:
 
-```shell
-d8 stronghold auth enable -path=<path> userpass
-```
+   ```shell
+   d8 stronghold auth enable -path=<path> userpass
+   ```
 
 2. Настройте метод на пользователей, которым разрешена аутентификация:
 
-```shell
-d8 stronghold write auth/<userpass:path>/users/mitchellh \
-   password=foo \
-   policies=admins
-```
+   ```shell
+   d8 stronghold write auth/<userpass:path>/users/mitchellh \
+      password=foo \
+      policies=admins
+   ```
 
 В результате создается новый пользователь `mitchellh` с паролем `foo`, который будет связан с политикой `admins`. Это единственная необходимая конфигурация.
 
@@ -50,5 +50,4 @@ d8 stronghold write auth/<userpass:path>/users/mitchellh \
 
 Функцию блокировки пользователя можно отключить с помощью команды «auth tune», передав значение `disable_lockout` true
 
-!!! ПРИМЕЧАНИЕ
-    Этот функционал поддерживается только методами userpass, ldap и approle auth.
+{% alert level="warning" %}Этот функционал поддерживается только методами userpass, ldap и approle auth.{% endalert %}

@@ -22,20 +22,20 @@ lang: ru
 
 1. Запись произвольных данных:
 
-```shell
-   $ d8 stronghold write cubbyhole/my-secret my-value=s3cr3t
-
-   Success! Data written to: cubbyhole/my-secret
-```
+   ```console
+      $ d8 stronghold write cubbyhole/my-secret my-value=s3cr3t
+   
+      Success! Data written to: cubbyhole/my-secret
+   ```
 
 2. Чтение произвольных данных:
 
-```shell
-   $ d8 stronghold read cubbyhole/my-secret
-
-   Key         Value
-
-   ---         -----
-
-   my-value    s3cr3t
-```
+   ```console
+      $ d8 stronghold read cubbyhole/my-secret
+   
+      Key         Value
+   
+      ---         -----
+   
+      my-value    s3cr3t
+   ```

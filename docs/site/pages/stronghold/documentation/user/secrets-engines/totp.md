@@ -1,12 +1,10 @@
 ---
-title: TOTP
+title: TOTP secrets engine
 description: The TOTP secrets engine for Stronghold generates time-based one-time use passwords.
 permalink: en/stronghold/documentation/user/secrets-engines/totp.html
 lang: en
 
 ---
-
-# TOTP secrets engine
 
 The TOTP secrets engine generates time-based credentials according to the TOTP
 standard. The secrets engine can also be used to generate a new key and validate
@@ -28,7 +26,7 @@ Most secrets engines must be configured in advance before they can perform their
 functions. These steps are usually completed by an operator or configuration
 management tool.
 
-1.  Enable the TOTP secrets engine:
+1. Enable the TOTP secrets engine:
 
     ```text
     $ d8 stronghold secrets enable totp
@@ -38,7 +36,7 @@ management tool.
     By default, the secrets engine will mount at the name of the engine. To
     enable the secrets engine at a different path, use the `-path` argument.
 
-1.  Configure a named key. The name of this key will be a human identifier as to
+1. Configure a named key. The name of this key will be a human identifier as to
     its purpose.
 
     ```text
@@ -55,7 +53,7 @@ management tool.
 After the secrets engine is configured and a user/machine has an Stronghold token with
 the proper permission, it can generate credentials.
 
-1.  Generate a new time-based OTP by reading from the `/code` endpoint with the
+1. Generate a new time-based OTP by reading from the `/code` endpoint with the
     name of the key:
 
     ```text
@@ -80,7 +78,7 @@ Most secrets engines must be configured in advance before they can perform their
 functions. These steps are usually completed by an operator or configuration
 management tool.
 
-1.  Enable the TOTP secrets engine:
+1. Enable the TOTP secrets engine:
 
     ```text
     $ d8 stronghold secrets enable totp
@@ -90,7 +88,7 @@ management tool.
     By default, the secrets engine will mount at the name of the engine. To
     enable the secrets engine at a different path, use the `-path` argument.
 
-1.  Create a named key, using the `generate` option. This tells Stronghold to be the
+1. Create a named key, using the `generate` option. This tells Stronghold to be the
     provider:
 
     ```text

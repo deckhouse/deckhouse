@@ -1,16 +1,15 @@
 ---
+title: PKI secrets engine - quick start - root CA setup
 sidebar_label: Quick Start - Root CA Setup
 description: The PKI secrets engine for OpenBao generates TLS certificates.
 permalink: en/stronghold/documentation/user/secrets-engines/pki.html
 lang: en
 ---
 
-# PKI secrets engine - quick start - root CA setup
-
 This document provides a brief overview of setting up an Stronghold PKI Secrets
 Engine with a Root CA certificate.
 
-#### Mount the backend
+## Mount the backend
 
 The first step to using the PKI backend is to mount it. Unlike the `kv`
 backend, the `pki` backend is not mounted by default.
@@ -20,7 +19,7 @@ $ d8 stronghold secrets enable pki
 Successfully mounted 'pki' at 'pki'!
 ```
 
-#### Configure a CA certificate
+## Configure a CA certificate
 
 Next, Stronghold must be configured with a CA certificate and associated private
 key. We'll take advantage of the backend's self-signed root generation support,
@@ -95,7 +94,7 @@ serial_number   26:aa:f0:ff:d1:03:65:ba:78:0c:4c:5a:2e:38:74:bd:20:07:c8:18
 The returned certificate is purely informational; it and its private key are
 safely stored in the backend mount.
 
-#### Set URL configuration
+## Set URL configuration
 
 Generated certificates can have the CRL location and the location of the
 issuing certificate encoded. These values must be set manually and typically to FQDN associated to the Stronghold server, but can be changed at any time.
@@ -105,7 +104,7 @@ $ d8 stronghold write pki/config/urls issuing_certificates="http://openbao.examp
 Success! Data written to: pki/ca/urls
 ```
 
-#### Configure a role
+## Configure a role
 
 The next step is to configure a role. A role is a logical name that maps to a
 policy used to generate those credentials. For example, let's create an
@@ -118,7 +117,7 @@ $ d8 stronghold write pki/roles/example-dot-com \
 Success! Data written to: pki/roles/example-dot-com
 ```
 
-#### Issue certificates
+## Issue certificates
 
 By writing to the `roles/example-dot-com` path we are defining the
 `example-dot-com` role. To generate a new certificate, we simply write

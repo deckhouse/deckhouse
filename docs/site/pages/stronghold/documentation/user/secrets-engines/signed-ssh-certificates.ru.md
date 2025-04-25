@@ -64,11 +64,11 @@ $ stronghold write ssh-client-signer/config/ca \
 Открытый ключ доступен через API и не требует аутентификации.
 
 ```text
-$ curl -o /etc/ssh/trusted-user-ca-keys.pem http://127.0.0.1:8200/v1/ssh-client-signer/public_key
+curl -o /etc/ssh/trusted-user-ca-keys.pem http://127.0.0.1:8200/v1/ssh-client-signer/public_key
 ```
 
 ```text
-$ stronghold read -field=public_key ssh-client-signer/config/ca > /etc/ssh/trusted-user-ca-keys.pem
+stronghold read -field=public_key ssh-client-signer/config/ca > /etc/ssh/trusted-user-ca-keys.pem
 ```
 
  Добавьте путь, где хранится содержимое открытого ключа, в конфигурационный файл SSH в качестве опции `TrustedUserCAKeys`.
@@ -111,8 +111,9 @@ EOH
 - Найдите или сгенерируйте открытый ключ SSH. Обычно он расположен по пути `~/.ssh/id_rsa.pub`.
 
 Если у вас нет пары ключей SSH, сгенерируйте их:
+
 ```text
-$ ssh-keygen -t rsa -C "user@example.com"
+ssh-keygen -t rsa -C "user@example.com"
 ```
 
 - Попросите Stronghold подписать ваш **публичный ключ** (public key). Этот файл обычно заканчивается на `.pub`, а его содержимое начинается с `ssh-rsa ...`.
@@ -127,7 +128,6 @@ $ stronghold write ssh-client-signer/sign/my-role \
  serial_number   c73f26d2340276aa
  signed_key      ssh-rsa-cert-v01@openssh.com AAAAHHNzaC1...
 ```
-
 
 Результат будет содержать серийный номер (уникальный идентификатор сертификата) и подписанный ключ. Этот подписанный ключ является еще одним открытым ключом.
 Чтобы настроить параметры подписи, используйте запрос в формате JSON:
@@ -159,13 +159,13 @@ $ stronghold write -field=signed_key ssh-client-signer/sign/my-role \
 - (Необязательно) Просмотр включенных расширений, списка пользователей, хостов и метаданных подписанного ключа.
 
 ```text
-$ ssh-keygen -Lf ~/.ssh/signed-cert.pub
+ssh-keygen -Lf ~/.ssh/signed-cert.pub
 ```
 
 -Выполните на локальной машине команду `ssh`, используя подписанный ключ. Вы должны передать как подписанный открытый ключ, так и соответствующий закрытый ключ в качестве аутентификации для установки SSH-соединения.
 
 ```text
-$ ssh -i signed-cert.pub -i ~/.ssh/id_rsa username@10.0.23.5
+ssh -i signed-cert.pub -i ~/.ssh/id_rsa username@10.0.23.5
 ```
 
 ## Подпись ключа хоста (host)
@@ -209,7 +209,7 @@ $ stronghold write ssh-host-signer/config/ca \
 - Увеличение времени TTL сертификата ключа хоста.
 
 ```text
-$ stronghold secrets tune -max-lease-ttl=87600h ssh-host-signer
+stronghold secrets tune -max-lease-ttl=87600h ssh-host-signer
 ```
 
 - Создайте роль для подписи ключей хоста. Обязательно заполните список разрешенных доменов, установите `allow_bare_domains` или и то, и другое.
@@ -248,7 +248,7 @@ $ stronghold write -field=signed_key ssh-host-signer/sign/hostrole \
 Установите права доступа к сертификату на `0640`:
 
 ```text
-$ chmod 0640 /etc/ssh/ssh_host_rsa_key-cert.pub
+chmod 0640 /etc/ssh/ssh_host_rsa_key-cert.pub
 ```
 
 Добавьте ключ хоста и сертификат хоста в файл конфигурации SSH.
@@ -272,11 +272,11 @@ $ chmod 0640 /etc/ssh/ssh_host_rsa_key-cert.pub
 - Получите открытый ключ CA хоста для проверки подписи хоста.
 
 ```text
-$ curl http://127.0.0.1:8200/v1/ssh-host-signer/public_key
+curl http://127.0.0.1:8200/v1/ssh-host-signer/public_key
 ```
 
 ```text
-$ stronghold read -field=public_key ssh-host-signer/config/ca
+stronghold read -field=public_key ssh-host-signer/config/ca
 ```
 
 - Добавьте полученный открытый ключ в файл `known_hosts`.
@@ -304,7 +304,7 @@ LogLevel VERBOSE
 По умолчанию SSH ведет журнал в `/var/log/auth.log`, но в нем так же будут записи от других служб. Чтобы извлечь только журналы SSH, выполните следующие действия:
 
 ```shell-session
-$ tail -f /var/log/auth.log | grep --line-buffered "sshd"
+tail -f /var/log/auth.log | grep --line-buffered "sshd"
 ```
 
 Если вам не удается установить соединение с хостом, логи сервера SSH могут помочь в поиске причин.
@@ -417,6 +417,7 @@ EOH
 ```
 
 ### Комментарии для ключа
+
 Если требуется сохранение [атрибутов комментариев](https://www.rfc-editor.org/rfc/rfc4716#section-3.3.2) в ключах, то для этой операции могут быть необходимы дополнительные шаги.
 Закрытый и открытый ключи могут иметь комментарии, например, аналогично тому как используется `ssh-keygen` с параметром `-C`:
 
@@ -455,12 +456,11 @@ EOF
 curl -X POST -H "X-Vault-Token: ..." -d @payload.json http://127.0.0.1:8200/v1/hosts-ca/config/ca
 ```
 
-!!! warning
-    **ВАЖНО:** Не добавляйте пароль к закрытому ключу, так как Stronghold не сможет его расшифровать.
-    Уничтожьте открытый и закрытый ключи и `payload.json` с вашего хоста сразу после подтверждения успешной загрузки.
-
+{% alert level="warning" %}Не добавляйте пароль к закрытому ключу, так как Stronghold не сможет его расшифровать. Уничтожьте открытый и закрытый ключи и `payload.json` с вашего хоста сразу после подтверждения успешной загрузки.
+{% endalert %}
 
 ### Известные проблемы
+
 - В системах, поддерживающих SELinux, вам может потребоваться настроить связанные типы, чтобы демон SSH мог их читать.
 Например, установить для подписанного сертификата хоста тип `sshd_key_t`.
 

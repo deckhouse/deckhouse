@@ -1,5 +1,5 @@
 ---
-title: Signed Certificate
+title: Signed SSH certificates
 permalink: en/stronghold/documentation/user/secrets-engines/ssh.html
 lang: en
 description: >-
@@ -12,8 +12,6 @@ description: >-
 
   This key will be used to sign other SSH keys.
 ---
-
-# Signed SSH certificates
 
 The signed SSH certificates is the simplest and most powerful in terms of setup
 complexity and in terms of being platform agnostic. By leveraging Stronghold's
@@ -39,7 +37,7 @@ management tool like Chef, Puppet, Ansible, or Salt.
 The following steps are performed in advance by an Stronghold administrator, security
 team, or configuration management tooling.
 
-1.  Mount the secrets engine. Like all secrets engines in Stronghold, the SSH secrets engine
+1. Mount the secrets engine. Like all secrets engines in Stronghold, the SSH secrets engine
     must be mounted before use.
 
     ```text
@@ -52,7 +50,7 @@ team, or configuration management tooling.
     `-path` arguments. The name "ssh-client-signer" is not special - it can be
     any name, but this documentation will assume "ssh-client-signer".
 
-1.  Configure Stronghold with a CA for signing client keys using the `/config/ca`
+1. Configure Stronghold with a CA for signing client keys using the `/config/ca`
     endpoint. If you do not have an internal CA, Stronghold can generate a keypair for
     you.
 
@@ -83,16 +81,16 @@ team, or configuration management tooling.
     Regardless of whether it is generated or uploaded, the client signer public
     key is accessible via the API at the `/public_key` endpoint or the CLI (see next step).
 
-1.  Add the public key to all target host's SSH configuration. This process can
+1. Add the public key to all target host's SSH configuration. This process can
     be manual or automated using a configuration management tool. The public key is
     accessible via the API and does not require authentication.
 
     ```text
-    $ curl -o /etc/ssh/trusted-user-ca-keys.pem http://127.0.0.1:8200/v1/ssh-client-signer/public_key
+    curl -o /etc/ssh/trusted-user-ca-keys.pem http://127.0.0.1:8200/v1/ssh-client-signer/public_key
     ```
 
     ```text
-    $ d8 stronghold read -field=public_key ssh-client-signer/config/ca > /etc/ssh/trusted-user-ca-keys.pem
+    d8 stronghold read -field=public_key ssh-client-signer/config/ca > /etc/ssh/trusted-user-ca-keys.pem
     ```
 
     Add the path where the public key contents are stored to the SSH
@@ -106,7 +104,7 @@ team, or configuration management tooling.
 
     Restart the SSH service to pick up the changes.
 
-1.  Create a named Stronghold role for signing client keys.
+1. Create a named Stronghold role for signing client keys.
 
     Because of the way some SSH certificate features are implemented, options
     are passed as a map. The following example adds the `permit-pty` extension
@@ -136,14 +134,14 @@ The following steps are performed by the client (user) that wants to
 authenticate to machines managed by Stronghold. These commands are usually run from
 the client's local workstation.
 
-1.  Locate or generate the SSH public key. Usually this is `~/.ssh/id_rsa.pub`.
+1. Locate or generate the SSH public key. Usually this is `~/.ssh/id_rsa.pub`.
     If you do not have an SSH keypair, generate one:
 
     ```text
-    $ ssh-keygen -t rsa -C "user@example.com"
+    ssh-keygen -t rsa -C "user@example.com"
     ```
 
-1.  Ask Stronghold to sign your **public key**. This file usually ends in `.pub` and
+1. Ask Stronghold to sign your **public key**. This file usually ends in `.pub` and
     the contents begin with `ssh-rsa ...`.
 
     ```text
@@ -175,7 +173,7 @@ the client's local workstation.
     EOH
     ```
 
-1.  Save the resulting signed, public key to disk. Limit permissions as needed.
+1. Save the resulting signed, public key to disk. Limit permissions as needed.
 
     ```text
     $ d8 stronghold write -field=signed_key ssh-client-signer/sign/my-role \
@@ -186,19 +184,19 @@ the client's local workstation.
     the name with `-cert.pub` (`~/.ssh/id_rsa-cert.pub`). With this naming
     scheme, OpenSSH will automatically use it during authentication.
 
-1.  (Optional) View enabled extensions, principals, and metadata of the signed
+1. (Optional) View enabled extensions, principals, and metadata of the signed
     key.
 
     ```text
-    $ ssh-keygen -Lf ~/.ssh/signed-cert.pub
+    ssh-keygen -Lf ~/.ssh/signed-cert.pub
     ```
 
-1.  SSH into the host machine using the signed key. You must supply both the
+1. SSH into the host machine using the signed key. You must supply both the
     signed public key from Stronghold **and** the corresponding private key as
     authentication to the SSH call.
 
     ```text
-    $ ssh -i signed-cert.pub -i ~/.ssh/id_rsa username@10.0.23.5
+    ssh -i signed-cert.pub -i ~/.ssh/id_rsa username@10.0.23.5
     ```
 
 ## Host key signing
@@ -211,7 +209,7 @@ accidentally SSHing into an unmanaged or malicious machine.
 
 ### Signing key configuration
 
-1.  Mount the secrets engine. For the most security, mount at a different path from the
+1. Mount the secrets engine. For the most security, mount at a different path from the
     client signer.
 
     ```text
@@ -219,7 +217,7 @@ accidentally SSHing into an unmanaged or malicious machine.
     Successfully mounted 'ssh' at 'ssh-host-signer'!
     ```
 
-1.  Configure Stronghold with a CA for signing host keys using the `/config/ca`
+1. Configure Stronghold with a CA for signing host keys using the `/config/ca`
     endpoint. If you do not have an internal CA, Stronghold can generate a keypair for
     you.
 
@@ -242,13 +240,13 @@ accidentally SSHing into an unmanaged or malicious machine.
     Regardless of whether it is generated or uploaded, the host signer public
     key is accessible via the API at the `/public_key` endpoint.
 
-1.  Extend host key certificate TTLs.
+1. Extend host key certificate TTLs.
 
     ```text
-    $ d8 stronghold secrets tune -max-lease-ttl=87600h ssh-host-signer
+    d8 stronghold secrets tune -max-lease-ttl=87600h ssh-host-signer
     ```
 
-1.  Create a role for signing host keys. Be sure to fill in the list of allowed
+1. Create a role for signing host keys. Be sure to fill in the list of allowed
     domains, set `allow_bare_domains`, or both.
 
     ```text
@@ -261,7 +259,7 @@ accidentally SSHing into an unmanaged or malicious machine.
         allow_subdomains=true
     ```
 
-1.  Sign the host's SSH public key.
+1. Sign the host's SSH public key.
 
     ```text
     $ d8 stronghold write ssh-host-signer/sign/hostrole \
@@ -273,7 +271,7 @@ accidentally SSHing into an unmanaged or malicious machine.
     signed_key      ssh-rsa-cert-v01@openssh.com AAAAHHNzaC1y...
     ```
 
-1.  Set the resulting signed certificate as `HostCertificate` in the SSH
+1. Set the resulting signed certificate as `HostCertificate` in the SSH
     configuration on the host machine.
 
     ```text
@@ -285,7 +283,7 @@ accidentally SSHing into an unmanaged or malicious machine.
     Set permissions on the certificate to be `0640`:
 
     ```text
-    $ chmod 0640 /etc/ssh/ssh_host_rsa_key-cert.pub
+    chmod 0640 /etc/ssh/ssh_host_rsa_key-cert.pub
     ```
 
     Add host key and host certificate to the SSH configuration file.
@@ -306,25 +304,25 @@ accidentally SSHing into an unmanaged or malicious machine.
 
 ### Client-Side host verification
 
-1.  Retrieve the host signing CA public key to validate the host signature of
+1. Retrieve the host signing CA public key to validate the host signature of
     target machines.
 
     ```text
-    $ curl http://127.0.0.1:8200/v1/ssh-host-signer/public_key
+    curl http://127.0.0.1:8200/v1/ssh-host-signer/public_key
     ```
 
     ```text
-    $ d8 stronghold read -field=public_key ssh-host-signer/config/ca
+    d8 stronghold read -field=public_key ssh-host-signer/config/ca
     ```
 
-1.  Add the resulting public key to the `known_hosts` file with authority.
+1. Add the resulting public key to the `known_hosts` file with authority.
 
     ```text
     # ~/.ssh/known_hosts
     @cert-authority *.example.com ssh-rsa AAAAB3NzaC1yc2EAAA...
     ```
 
-1.  SSH into target machines as usual.
+1. SSH into target machines as usual.
 
 ## Troubleshooting
 
@@ -343,7 +341,7 @@ By default, SSH logs to `/var/log/auth.log`, but so do many other things. To
 extract just the SSH logs, use the following:
 
 ```shell-session
-$ tail -f /var/log/auth.log | grep --line-buffered "sshd"
+tail -f /var/log/auth.log | grep --line-buffered "sshd"
 ```
 
 If you are unable to make a connection to the host, the SSH server logs may
@@ -365,7 +363,7 @@ authenticating to the system. This is most likely due to an OpenSSH bug (see
 the `allowed_users` option value of "\*". Here are ways to work around this
 issue:
 
-1.  Set `default_user` in the role. If you are always authenticating as the same
+1. Set `default_user` in the role. If you are always authenticating as the same
     user, set the `default_user` in the role to the username you are SSHing into the
     target machine:
 
@@ -378,7 +376,7 @@ issue:
     EOH
     ```
 
-1.  Set `valid_principals` during signing. In situations where multiple users may
+1. Set `valid_principals` during signing. In situations where multiple users may
     be authenticating to SSH vian Stronghold, set the list of valid principles during key
     signing to include the current username:
 
@@ -469,17 +467,18 @@ forwarding. See [no prompt after login](#no-prompt-after-login) for examples.
 ```
 
 ### Key comments
+
 There are additional steps needed to preserve [comment attributes](https://www.rfc-editor.org/rfc/rfc4716#section-3.3.2)
-in keys which ought to be considered if they are required. Private and public 
-key may have comments applied to them and for example where `ssh-keygen` is used 
+in keys which ought to be considered if they are required. Private and public
+key may have comments applied to them and for example where `ssh-keygen` is used
 with its `-C` parameter - similar to:
 
 ```shell-session
 ssh-keygen -C "...Comments" -N "" -t rsa -b 4096 -f host-ca
 ```
 
-Adapted key values containing comments must be provided with the key related 
-parameters as per the Stronghold CLI and API steps demonstrated below. 
+Adapted key values containing comments must be provided with the key related
+parameters as per the Stronghold CLI and API steps demonstrated below.
 
 ```shell-extension
 # Using CLI:
@@ -517,6 +516,7 @@ Destroy the keypair and `payload.json` from your hosts immediately after they ha
 :::
 
 ### Known issues
+
 - On SELinux-enforcing systems, you may need to adjust related types so that the
   SSH daemon is able to read it. For example, adjust the signed host certificate
   to be an `sshd_key_t` type.
@@ -536,10 +536,13 @@ Destroy the keypair and `payload.json` from your hosts immediately after they ha
   ```text
   userauth_pubkey: certificate signature algorithm ssh-rsa: signature algorithm not supported [preauth]
   ```
+
   Fix is to add below line to /etc/ssh/sshd_config
+
   ```text
   CASignatureAlgorithms ^ssh-rsa
   ```
+
   The ssh-rsa algorithm is no longer supported in [OpenSSH 8.2](https://www.openssh.com/txt/release-8.2)
 
 ## API

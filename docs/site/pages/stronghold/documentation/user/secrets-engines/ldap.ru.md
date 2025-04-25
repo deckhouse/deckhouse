@@ -6,6 +6,7 @@ description: >-
   The LDAP secret engine manages LDAP entry passwords.
 ---
 
+{% raw %}
 Механизм секретов LDAP обеспечивает управление учетными данными LDAP, а также динамическое создание учетных данных. Он поддерживает интеграцию с реализациями протокола LDAP v3, включая OpenLDAP, Active Directory и IBM Resource Access Control Facility (RACF).
 
 Механизм секретов имеет три основные функции:
@@ -90,7 +91,6 @@ d8 stronghold write ldap/config \
  schema=ad
 ```
 
-
 ### Статические роли {#static-roles}
 
 #### Настройка
@@ -147,9 +147,13 @@ d8 stronghold write ldap/role/dynamic-role \
   max_ttl=24h
 ```
 
-!!! Внимание
-    Аргумент `rollback_ldif` необязателен, но рекомендуется. Операции, указанные в `rollback_ldif` будут выполнены, если создание по какой-либо причине завершится неудачей. Это поможет гарантировать, что все объекты будут удалены в случае неудачи.
+{% endraw %}
 
+{% alert level="warning" %}
+Аргумент `rollback_ldif` необязателен, но рекомендуется. Операции, указанные в `rollback_ldif` будут выполнены, если создание по какой-либо причине завершится неудачей. Это поможет гарантировать, что все объекты будут удалены в случае неудачи.
+{% endalert %}
+
+{% raw %}
 Чтобы сгенерировать учетные данные, выполните:
 
 ```bash
@@ -365,3 +369,5 @@ olcPPolicyForwardUpdates: FALSE
 olcPPolicyHashCleartext: TRUE
 olcPPolicyUseLockout: TRUE
 ```
+
+{% endraw %}

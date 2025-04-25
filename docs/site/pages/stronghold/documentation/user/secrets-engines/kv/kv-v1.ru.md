@@ -13,10 +13,8 @@ description: The KV secrets engine can store arbitrary secrets.
 
 Этот механизм секретов учитывает различие между операциями `create` и `update` в ACL-политиках.
 
-!!! Примечание
-    Пути и имена ключей _не_ обфусцируются и не шифруются; шифруются только
-    значения для ключей. Поэтому следует хранить конфиденциальную информацию как часть пути секрета.
-
+{% alert %}Пути и имена ключей _не_ обфусцируются и не шифруются; шифруются только значения для ключей. Поэтому следует хранить конфиденциальную информацию как часть пути секрета.
+{% endalert %}
 
 ## Как включить
 
@@ -32,74 +30,74 @@ d8 stronghold secrets enable -version=1 kv
 
 1. Запись произвольных данных:
 
-```shell-session
-$ d8 stronghold kv put kv/my-secret my-value=s3cr3t
-Success! Data written to: kv/my-secret
-```
+   ```shell-session
+   $ d8 stronghold kv put kv/my-secret my-value=s3cr3t
+   Success! Data written to: kv/my-secret
+   ```
 
-2. Чтение произвольных данных:
+1. Чтение произвольных данных:
 
-```shell-session
-$ d8 stronghold kv get kv/my-secret
-Key                 Value
----                 -----
-my-value            s3cr3t
-```
+   ```shell-session
+   $ d8 stronghold kv get kv/my-secret
+   Key                 Value
+   ---                 -----
+   my-value            s3cr3t
+   ```
 
-3. Получить список ключей:
+1. Получить список ключей:
 
-```shell-session
-$ d8 stronghold kv list kv/
-Keys
-----
-my-secret
-```
+   ```shell-session
+   $ d8 stronghold kv list kv/
+   Keys
+   ----
+   my-secret
+   ```
 
-4. Удалить ключ:
+1. Удалить ключ:
 
-```shell-session
-$ d8 stronghold kv delete kv/my-secret
-Success! Data deleted (if it existed) at: kv/my-secret
-```
+   ```shell-session
+   $ d8 stronghold kv delete kv/my-secret
+   Success! Data deleted (if it existed) at: kv/my-secret
+   ```
 
-Вы также можете использовать механизм [password policy] для генерации произвольных значений.
+   Вы также можете использовать механизм [password policy] для генерации произвольных значений.
 
-5. Создать политику для паролей:
+1. Создать политику для паролей:
 
-```shell-session
-$ d8 stronghold write sys/policies/password/example policy=-<<EOF
-
-  length=20
-
-  rule "charset" {
-    charset = "abcdefghij0123456789"
-    min-chars = 1
-  }
-
-  rule "charset" {
-    charset = "!@#$%^&*STUVWXYZ"
-    min-chars = 1
-  }
-
-EOF
-```
+   ```shell-session
+   $ d8 stronghold write sys/policies/password/example policy=-<<EOF
+   
+     length=20
+   
+     rule "charset" {
+       charset = "abcdefghij0123456789"
+       min-chars = 1
+     }
+   
+     rule "charset" {
+       charset = "!@#$%^&*STUVWXYZ"
+       min-chars = 1
+     }
+   
+   EOF
+   ```
 
 1. Сгенерировать пароль используя политику `example`:
 
-```shell-session
-$ d8 stronghold kv put kv/my-generated-secret \
-    password=$(d8 stronghold read -field password sys/policies/password/example/generate)
-```
+   ```shell-session
+   $ d8 stronghold kv put kv/my-generated-secret \
+       password=$(d8 stronghold read -field password sys/policies/password/example/generate)
+   ```
 
 1. Прочитать сгенерированное значение секрета:
 
-```shell-session
-$ d8 stronghold kv get kv/my-generated-secret
-====== Data ======
-Key         Value
----         -----
-password    ^dajd609Xf8Zhac$dW24
-```
+   ```shell-session
+   $ d8 stronghold kv get kv/my-generated-secret
+   ====== Data ======
+   Key         Value
+   ---         -----
+   password    ^dajd609Xf8Zhac$dW24
+   ```
 
 ## Время жизни ключей (TTL)
 

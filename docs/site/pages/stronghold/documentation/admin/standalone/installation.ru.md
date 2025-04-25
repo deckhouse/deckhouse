@@ -25,12 +25,12 @@ Stronghold поддерживает мультисерверный режим д
 
 ### Запуск через systemd-unit
 
-!!! Внимание
-    Все примеры предполагают, что существует пользователь `stronghold`, и сервис запущен под ним. Если вы хотите запустить сервис под другим пользователем, замените имя пользователя на необходимое. |
+{% alert level="warning" %}Все примеры предполагают, что существует пользователь `stronghold`, и сервис запущен под ним. Если вы хотите запустить сервис под другим пользователем, замените имя пользователя на необходимое.
+{% endalert %}
 
 Создайте файл `/etc/systemd/system/stronghold.service`:
 
-```
+```hcl
 [Unit]
 Description=Stronghold service
 Documentation=https://deckhouse.ru/products/stronghold/
@@ -60,7 +60,7 @@ WantedBy=multi-user.target
 
 Создайте каталог `/opt/stronghold/data` и установите права доступа на него:
 
-```
+```shell
 mkdir -p /opt/stronghold/data
 chown stronghold:stronghold /opt/stronghold/data
 chmod 0700 /opt/stronghold/data
@@ -92,20 +92,20 @@ chmod 0700 /opt/stronghold/data
 
 На первом узле перейдите в каталог `/opt/stronghold/tls/`. Если каталог ещё не существует — создайте его:
 
-```
+```shell
 mkdir -p /opt/stronghold/tls
 cd /opt/stronghold/tls/
 ```
 
 Сгенерируйте ключ для корневого сертификата:
 
-```
+```shell
 openssl genrsa 2048 > stronghold-ca-key.pem
 ```
 
 Выпустите корневой сертификат:
 
-```
+```console
 openssl req -new -x509 -nodes -days 3650 -key stronghold-ca-key.pem -out stronghold-ca.pem
 
 Country Name (2 letter code) [XX]:RU
@@ -118,7 +118,7 @@ Common Name (eg, your name or your server hostname) []:demo.tld
 
 Атрибуты сертификата приведены для примера. Для выпуска сертификатов узлов создайте конфигурационные файлы, содержащие `subjectAltName` (SAN). Например, файл для узла raft-node-1 будет выглядеть так:
 
-```
+```shell
 cat << EOF > node-1.cnf
 [v3_ca]
 subjectAltName = @alt_names
@@ -135,7 +135,7 @@ EOF
 
 Для каждого узла сформируйте файл запроса:
 
-```
+```shell
 openssl req -newkey rsa:2048 -nodes -keyout node-1-key.pem -out node-1-csr.pem -subj "/CN=raft-node-1.demo.tld"
 openssl req -newkey rsa:2048 -nodes -keyout node-2-key.pem -out node-2-csr.pem -subj "/CN=raft-node-2.demo.tld"
 openssl req -newkey rsa:2048 -nodes -keyout node-3-key.pem -out node-3-csr.pem -subj "/CN=raft-node-3.demo.tld"
@@ -143,7 +143,7 @@ openssl req -newkey rsa:2048 -nodes -keyout node-3-key.pem -out node-3-csr.pem -
 
 Выпустите сертификаты на основании запросов:
 
-```
+```shell
 openssl x509 -req -set_serial 01 -days 3650 -in node-1-csr.pem -out node-1-cert.pem -CA stronghold-ca.pem -CAkey stronghold-ca-key.pem -extensions v3_ca -extfile ./node-1.cnf
 openssl x509 -req -set_serial 01 -days 3650 -in node-2-csr.pem -out node-2-cert.pem -CA stronghold-ca.pem -CAkey stronghold-ca-key.pem -extensions v3_ca -extfile ./node-2.cnf
 openssl x509 -req -set_serial 01 -days 3650 -in node-3-csr.pem -out node-3-cert.pem -CA stronghold-ca.pem -CAkey stronghold-ca-key.pem -extensions v3_ca -extfile ./node-3.cnf
@@ -157,7 +157,7 @@ openssl x509 -req -set_serial 01 -days 3650 -in node-3-csr.pem -out node-3-cert.
 
 Например:
 
-```
+```shell
 scp ./node-2-key.pem ./node-2-cert.pem ./stronghold-ca.pem  raft-node-2.demo.tld:/opt/stronghold/tls
 scp ./node-3-key.pem ./node-3-cert.pem ./stronghold-ca.pem  raft-node-3.demo.tld:/opt/stronghold/tls
 ```
@@ -170,7 +170,7 @@ scp ./node-3-key.pem ./node-3-cert.pem ./stronghold-ca.pem  raft-node-3.demo.tld
 
 Добавьте разрешающие правила на сетевом экране для TCP-портов 8200 и 8201\. Вот пример для firewalld:
 
-```
+```console
 firewall-cmd --add-port=8200/tcp --permanent
 firewall-cmd --add-port=8201/tcp --permanent
 firewall-cmd --reload
@@ -180,7 +180,7 @@ firewall-cmd --reload
 
 Создайте файл `/opt/stronghold/config.hcl` для конфигурации Raft. Если каталог `/etc/stronghold/` не существует, создайте его. Добавьте в файл следующее содержимое, заменив значения соответствующих параметров своими:
 
-```
+```hcl
 ui = true
 cluster_addr  = "https://10.20.30.10:8201"
 api_addr      = "https://10.20.30.10:8200"
@@ -222,24 +222,23 @@ storage "raft" {
 
 Выполните запуск:
 
-```
+```shell
 systemctl start stronghold
 ```
 
 Выполните инициализацию:
 
-```
+```shell
 stronghold operator init -ca-cert /opt/stronghold/tls/stronghold-ca.pem
 ```
 
 Вы можете передать параметры `-key-shares` и `-key-threshold`, чтобы определить, на сколько частей будет разбит ключ и сколько из них будет достаточно для распечатывания хранилища. По умолчанию `key-shares=5`, а `key-threshold=3`.
 
-!!! Внимание
-    После завершения инициализации в терминал будут выведены все части ключа и корневой токен. Обязательно сохраните эти данные в надёжном месте. Части ключа и начальный корневой токен крайне важны. Если вы потеряете часть ключа, то не сможете получить доступ к данным Stronghold. |
+{% alert level="warning" %}После завершения инициализации в терминал будут выведены все части ключа и корневой токен. Обязательно сохраните эти данные в надёжном месте. Части ключа и начальный корневой токен крайне важны. Если вы потеряете часть ключа, то не сможете получить доступ к данным Stronghold.
 
 Дальше нужно распечатать кластер. Для этого выполните необходимое количество раз команду:
 
-```
+```shell
 stronghold operator unseal -ca-cert /opt/stronghold/tls/stronghold-ca.pem
 ```
 
@@ -249,7 +248,7 @@ stronghold operator unseal -ca-cert /opt/stronghold/tls/stronghold-ca.pem
 
 Остаётся только проверить работу кластера:
 
-```
+```console
 stronghold status -ca-cert /opt/stronghold/tls/stronghold-ca.pem
 Key                     Value
 ---                     -----

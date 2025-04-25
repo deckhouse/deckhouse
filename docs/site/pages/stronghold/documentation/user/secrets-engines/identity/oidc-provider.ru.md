@@ -137,4 +137,3 @@ $ curl -s http://127.0.0.1:8200/v1/identity/oidc/provider/default/.well-known/op
 Функция провайдера Stronghold OIDC в настоящее время поддерживает следующий процесс аутентификации:
 
 - [Authorization Code Flow](https://openid.net/specs/openid-connect-core-1_0.html#CodeFlowAuth).
-

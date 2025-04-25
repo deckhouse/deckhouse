@@ -68,7 +68,7 @@ Public Key Object; RSA 4096 bits
 
 Пример конфигурации Stronhold (config.hcl)
 
-```
+```hcl
 api_addr="https://0.0.0.0:8200"
 log_level = "warn"
 ui = true
@@ -128,7 +128,7 @@ Public Key Object; RSA 2048 bits
 
 Добавьте в конфигурацию Stronghold метод распечатки `pkcs11`
 
-```
+```console
 ...
 seal "pkcs11" {
   lib = "/usr/lib/librtpkcs11ecp.so"
@@ -170,7 +170,7 @@ HA Enabled               false
 
 Измените конфигурацию, добавив блок `seal`
 
-```
+```console
 ...
 seal "pkcs11" {
   lib = "/usr/lib/librtpkcs11ecp.so"
@@ -182,14 +182,13 @@ seal "pkcs11" {
 
 Перезапустите Stronghold. В логах вы увидите
 
-
-```
+```console
 2025-04-03T17:08:13.431+0300 [WARN]  core: entering seal migration mode; Stronghold will not automatically unseal even if using an autoseal: from_barrier_type=shamir to_barrier_type=pkcs11
 ```
 
 Выполните миграцию, введя ключи распечатки
 
-```
+```shell
 stronghold operator unseal -migrate
 ```
 
@@ -199,7 +198,7 @@ stronghold operator unseal -migrate
 
 Измените конфигурацию, добавив параметр `disabled = "true"` в раздел `seal`
 
-```
+```console
 ...
 seal "pkcs11" {
   lib = "/usr/lib/librtpkcs11ecp.so"
@@ -209,6 +208,7 @@ seal "pkcs11" {
   disabled = "true"
 }
 ```
+
 Перезапустите Stronghold.
 
 Выполните миграцию, введя recovery-ключи.

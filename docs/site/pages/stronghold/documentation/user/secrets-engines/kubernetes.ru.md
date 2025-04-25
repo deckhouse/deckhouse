@@ -13,10 +13,9 @@ Kubernetes Secrets Engine для Stronghold генерирует токены д
 Для большей информации о ресурсах Kubernetes ознакомьтесь с официальной документацией [Kubernetes service account](https://kubernetes.io/docs/concepts/security/service-accounts/)
 и [Kubernetes RBAC](https://kubernetes.io/docs/reference/access-authn-authz/rbac/).
 
-!!! Внимание
-    Мы не рекомендуем использовать токены, созданные механизмом секретов Kubernetes, для аутентификации
-    с помощью [Kubernetes Auth Method](../../auth/kubernetes). Это приведет к созданию
-    множества уникальных идентификаторов в Stronghold, которыми будет сложно управлять.
+{% alert level="warning" %}
+Мы не рекомендуем использовать токены, созданные механизмом секретов Kubernetes, для аутентификации с помощью [Kubernetes Auth Method](../../auth/kubernetes). Это приведет к созданию множества уникальных идентификаторов в Stronghold, которыми будет сложно управлять.
+{% endalert %}
 
 ## Настройка
 
@@ -34,6 +33,7 @@ Kubernetes Secrets Engine для Stronghold генерирует токены д
 Роль привязывается к учетной записи сервиса Stronghold с помощью привязки роли или привязки кластерной роли.
 
 Например, роль кластера только для создания токенов учетных записей сервиса:
+
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -47,6 +47,7 @@ rules:
 
 Аналогичным образом можно создать кластерную роль с бóльшими правами. В данном случае
 установлены права на управление токенами, учетными записями сервиса, привязками ролей к учетным записям сервиса и ролями.
+
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -89,16 +90,14 @@ rules:
   verbs: ["bind", "escalate", "create", "update", "delete"]
 ```
 
-!!! Внимание
-    Получение правильных разрешений для Stronghold, скорее всего,
-    потребует проб и ошибок, поскольку Kubernetes имеет строгую защиту от
-    повышения привилегий. Подробнее об этом можно прочитать в документации [Kubernetes RBAC](https://kubernetes.io/docs/reference/access-authn-authz/rbac/#privilege-escalation-prevention-and-bootstrapping)
+{% alert level="warning" %}
+Получение правильных разрешений для Stronghold, скорее всего, потребует проб и ошибок, поскольку Kubernetes имеет строгую защиту от повышения привилегий.
+Подробнее об этом можно прочитать в документации [Kubernetes RBAC](https://kubernetes.io/docs/reference/access-authn-authz/rbac/#privilege-escalation-prevention-and-bootstrapping)
+{% endalert %}
 
-
-!!! Внимание
-    Защитите учетную запись сервиса Stronghold, особенно если вы используете
-    для нее широкие права, поскольку она по сути является учетной записью администратора кластера.
-
+{% alert level="warning" %}
+Защитите учетную запись сервиса Stronghold, особенно если вы используете для нее широкие права, поскольку она по сути является учетной записью администратора кластера.
+{% endalert %}
 
 Создайте привязку роли, чтобы связать ее с учетной записью сервиса Stronghold и предоставить Stronghold разрешение на управление токенами.
 
@@ -124,10 +123,8 @@ subjects:
 (см. раздел [Автоматическое управление ролями и учетными записями сервиса](#roles-and-sa)), то вам
 необходимо настроить учетную запись сервиса, для которой Stronghold будет выпускать токены.
 
-!!! Внимание
-    Настоятельно рекомендуется, чтобы учетная запись сервиса, для которой
-    Stronghold выпускает токены, **НЕ** совпадала с учетной записью сервиса,
-    которую использует сам Stronghold.
+{% alert level="warning" %} Настоятельно рекомендуется, чтобы учетная запись сервиса, для которой Stronghold выпускает токены, **НЕ** совпадала с учетной записью сервиса, которую использует сам Stronghold.
+{% endalert %}
 
 Примеры, которые мы будем использовать, будут находиться в пространстве
 имен `test`, которое вы можете создать, если оно еще не существует.
@@ -140,6 +137,7 @@ namespace/test created
 Здесь представлена простая настройка учетной записи сервиса, роли и
 привязки роли в пространстве имен Kubernetes `test` с базовыми разрешениями,
 которые мы будем использовать:
+
 ```yaml
 apiVersion: v1
 kind: ServiceAccount
@@ -187,7 +185,7 @@ Success! Enabled the kubernetes Secrets Engine at: kubernetes/
 Настройте точку монтирования. Допускается пустая конфигурация.
 
 ```shell-session
-$ stronghold write -f kubernetes/config
+stronghold write -f kubernetes/config
 ```
 
 1. Теперь можно настроить роль Stronghold в механизме секретов Kubernetes
@@ -236,6 +234,7 @@ $ curl -sk $(kubectl config view --minify -o 'jsonpath={.clusters[].cluster.serv
 ```
 
 После истечения срока [аренды](../../concepts/lease/), можно удостовериться, что токен был отозван и больше не может быть использован для запросов к Kubernetes API.
+
 ```shell-session
 $ curl -sk $(kubectl config view --minify -o 'jsonpath={.clusters[].cluster.server}')/api/v1/namespaces/test/pods \
     --header "Authorization: Bearer eyJHbGci0iJSUzI1Ni..."
@@ -350,15 +349,14 @@ $ stronghold write kubernetes/roles/auto-managed-sa-role \
     kubernetes_role_name="test-role-list-pods"
 ```
 
-!!! Примечание
-      Учетной записи сервиса Stronghold также потребуется доступ к ресурсам, к которым
-      она предоставляет доступ. Это можно сделать для приведенных выше примеров с помощью
-      команды `kubectl -n test create rolebinding --role test-role-list-pods --serviceaccount=stronghold:stronghold stronghold stronghold-test-role-abilities`.
-      Так Kubernetes предотвращает эскалацию привилегий.
-      Более подробную информацию вы можете прочитать в документации к [Kubernetes RBAC](https://kubernetes.io/docs/reference/access-authn-authz/rbac/#privilege-escalation-prevention-and-bootstrapping).
-
+{% alert %}
+Учетной записи сервиса Stronghold также потребуется доступ к ресурсам, к которым она предоставляет доступ.
+Это можно сделать для приведенных выше примеров с помощью команды `kubectl -n test create rolebinding --role test-role-list-pods --serviceaccount=stronghold:stronghold stronghold stronghold-test-role-abilities`.
+Так Kubernetes предотвращает эскалацию привилегий. Более подробную информацию вы можете прочитать в документации к [Kubernetes RBAC](https://kubernetes.io/docs/reference/access-authn-authz/rbac/#privilege-escalation-prevention-and-bootstrapping).
+{% endalert %}
 
 После чего вы можете получить учетные данные с помощью автоматически созданной учетной записи сервиса.
+
 ```shell-session
 $ stronghold write kubernetes/creds/auto-managed-sa-role \
     kubernetes_namespace=test
@@ -381,7 +379,9 @@ $ stronghold write kubernetes/roles/auto-managed-sa-and-role \
     allowed_kubernetes_namespaces="test" \
     generated_role_rules='{"rules":[{"apiGroups":[""],"resources":["pods"],"verbs":["list"]}]}'
 ```
+
 После этого можно получить учетные данные тем же способом, что и раньше.
+
 ```shell-session
 $ stronghold write kubernetes/creds/auto-managed-sa-and-role \
     kubernetes_namespace=test
