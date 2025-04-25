@@ -23,7 +23,8 @@ import (
 )
 
 type State struct {
-	Mode registry_const.ModeType `json:"mode,omitempty"`
+	Mode       registry_const.ModeType `json:"mode,omitempty"`
+	TargetMode registry_const.ModeType `json:"target_mode,omitempty"`
 
 	PKI          pki.State          `json:"pki,omitempty"`
 	Secrets      secrets.State      `json:"secrets,omitempty"`
@@ -89,28 +90,25 @@ func (state *State) clearConditions() {
 }
 
 func (state *State) process(log go_hook.Logger, inputs Inputs) error {
-	params := inputs.Params
-
-	if params.Mode == "" {
-		params.Mode = registry_const.ModeUnmanaged
-	} else if params.Mode == registry_const.ModeDetached {
-		params.Mode = registry_const.ModeLocal
+	if inputs.Params.Mode == "" {
+		inputs.Params.Mode = registry_const.ModeUnmanaged
+	} else if inputs.Params.Mode == registry_const.ModeDetached {
+		inputs.Params.Mode = registry_const.ModeLocal
 	}
 
-	if params.Mode != state.Mode {
+	if state.TargetMode != inputs.Params.Mode {
+		state.TargetMode = inputs.Params.Mode
+
 		log.Warn(
 			"Mode change",
-			"old_mode", state.Mode,
-			"new_mode", params.Mode,
+			"mode", state.Mode,
+			"target_mode", state.TargetMode,
 		)
 
-		// TODO: it is clear conditions on each reconcillation during transition phase
 		state.clearConditions()
 	}
 
-	inputs.Params = params
-
-	switch params.Mode {
+	switch state.TargetMode {
 	case registry_const.ModeLocal:
 		return state.transitionToLocal(log, inputs)
 	case registry_const.ModeProxy:
@@ -120,7 +118,7 @@ func (state *State) process(log go_hook.Logger, inputs Inputs) error {
 	case registry_const.ModeUnmanaged:
 		return state.transitionToUnmanaged(log, inputs)
 	default:
-		return fmt.Errorf("unsupported mode: %v", params.Mode)
+		return fmt.Errorf("unsupported mode: %v", state.TargetMode)
 	}
 }
 
@@ -128,7 +126,7 @@ func (state *State) transitionToLocal(log go_hook.Logger, inputs Inputs) error {
 	if state.Mode == registry_const.ModeProxy {
 		return ErrTransitionNotSupported{
 			From: state.Mode,
-			To:   inputs.Params.Mode,
+			To:   state.TargetMode,
 		}
 	}
 
@@ -214,7 +212,7 @@ func (state *State) transitionToLocal(log go_hook.Logger, inputs Inputs) error {
 	// TODO: stop in-cluster proxy
 
 	// All done
-	state.Mode = inputs.Params.Mode
+	state.Mode = state.TargetMode
 	state.setReadyCondition(true, inputs)
 
 	return nil
@@ -224,7 +222,7 @@ func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 	if state.Mode == registry_const.ModeLocal {
 		return ErrTransitionNotSupported{
 			From: state.Mode,
-			To:   inputs.Params.Mode,
+			To:   state.TargetMode,
 		}
 	}
 
@@ -330,7 +328,7 @@ func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 	}
 
 	// All done
-	state.Mode = inputs.Params.Mode
+	state.Mode = state.TargetMode
 	state.setReadyCondition(true, inputs)
 
 	return nil
@@ -375,7 +373,7 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 	state.Users = users.State{}
 
 	// All done
-	state.Mode = inputs.Params.Mode
+	state.Mode = state.TargetMode
 	state.setReadyCondition(true, inputs)
 
 	return nil
@@ -412,7 +410,7 @@ func (state *State) transitionToUnmanaged(log go_hook.Logger, inputs Inputs) err
 	state.Users = users.State{}
 
 	// All done
-	state.Mode = inputs.Params.Mode
+	state.Mode = state.TargetMode
 	state.setReadyCondition(true, inputs)
 
 	return nil
@@ -467,7 +465,7 @@ func (state *State) setReadyCondition(ready bool, inputs Inputs) {
 			Status:             metav1.ConditionFalse,
 			ObservedGeneration: inputs.Params.Generation,
 			Reason:             ConditionReasonProcessing,
-			Message:            fmt.Sprintf("Transitioning to %v", inputs.Params.Mode),
+			Message:            fmt.Sprintf("Transitioning to %v", state.TargetMode),
 		})
 	}
 }
