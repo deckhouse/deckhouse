@@ -120,6 +120,13 @@ func handleAuditPolicy(input *go_hook.HookInput) error {
 		}
 	}
 
+	for _, module := range input.Values.Get("global.enabledModules").Array() {
+		if module.String() == "virtualization" {
+			appendVirtualizationPolicyRules(&policy)
+			break
+		}
+	}
+
 	if len(policy.Rules) == 0 {
 		input.Values.Remove("controlPlaneManager.internal.auditPolicy")
 		return nil
@@ -373,6 +380,85 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []go_hook.FilterResu
 			OmitStages: []audit.Stage{
 				audit.StageRequestReceived,
 			},
+		}
+		policy.Rules = append(policy.Rules, rule)
+	}
+}
+
+func appendVirtualizationPolicyRules(policy *audit.Policy) {
+	// fstec: virtualization.deckhouse.io
+	// VMOPs creation(reboot, shutdown, etc) should be logged
+	{
+		rule := audit.PolicyRule{
+			Level: audit.LevelRequestResponse,
+			Verbs: []string{"create"},
+			Resources: []audit.GroupResources{{
+				Group:     "virtualization.deckhouse.io",
+				Resources: []string{"virtualmachineoperations"},
+			}},
+		}
+		policy.Rules = append(policy.Rules, rule)
+	}
+	// fstec: virtualization.deckhouse.io
+	// Virtualization resources should be logged
+	{
+		rule := audit.PolicyRule{
+			Level:     audit.LevelMetadata,
+			Verbs:     []string{"create", "update", "patch", "delete"},
+			Resources: []audit.GroupResources{{Group: "virtualization.deckhouse.io"}},
+		}
+		policy.Rules = append(policy.Rules, rule)
+	}
+	// fstec: virtualization.deckhouse.io
+	// Virtualization subresources should be logged
+	{
+		rule := audit.PolicyRule{
+			Level: audit.LevelMetadata,
+			Verbs: []string{"update", "patch"},
+			Resources: []audit.GroupResources{{
+				Group:     "subresources.virtualization.deckhouse.io",
+				Resources: []string{"internalvirtualizationvirtualmachineinstances"},
+			}},
+		}
+		policy.Rules = append(policy.Rules, rule)
+	}
+	// fstec: virtualization.deckhouse.io
+	// Virtualization ignore the list subresources verb
+	{
+		rule := audit.PolicyRule{
+			Level:     audit.LevelMetadata,
+			Verbs:     []string{"get"},
+			Resources: []audit.GroupResources{{Group: "subresources.virtualization.deckhouse.io"}},
+		}
+		policy.Rules = append(policy.Rules, rule)
+	}
+	// fstec: virtualization.deckhouse.io
+	// Get all events from virt-launcher pods
+	{
+		rule := audit.PolicyRule{
+			Level:     audit.LevelMetadata,
+			Verbs:     []string{"create", "update", "patch", "delete"},
+			Resources: []audit.GroupResources{{Group: "", Resources: []string{"pods"}}},
+		}
+		policy.Rules = append(policy.Rules, rule)
+	}
+	// fstec: virtualization.deckhouse.io
+	// Get all events from d8-virtualization namespace
+	{
+		rule := audit.PolicyRule{
+			Level:      audit.LevelMetadata,
+			Verbs:      []string{"create", "update", "patch", "delete"},
+			Namespaces: []string{"d8-virtualization"},
+		}
+		policy.Rules = append(policy.Rules, rule)
+	}
+	// fstec: virtualization.deckhouse.io
+	// Get all events from moduleconfigs
+	{
+		rule := audit.PolicyRule{
+			Level:     audit.LevelMetadata,
+			Verbs:     []string{"create", "update", "patch", "delete"},
+			Resources: []audit.GroupResources{{Group: "deckhouse.io", Resources: []string{"moduleconfigs"}}},
 		}
 		policy.Rules = append(policy.Rules, rule)
 	}
