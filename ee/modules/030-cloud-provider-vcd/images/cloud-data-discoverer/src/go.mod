@@ -1,13 +1,13 @@
 module discoverer
 
-go 1.23.0
+go 1.23.1
 
-toolchain go1.23.4
+toolchain go1.24.1
 
 require (
 	github.com/alecthomas/kingpin v2.2.6+incompatible
 	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0-20250227202034-eda49647c2d9
-	github.com/sirupsen/logrus v1.9.3
+	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250115075301-5b6ae3aa8eb7
 	github.com/vmware/go-vcloud-director/v2 v2.26.1
 )
 
@@ -34,6 +34,7 @@ require (
 )
 
 require (
+	github.com/DataDog/gostackparse v0.7.0 // indirect
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
 	github.com/alecthomas/units v0.0.0-20240927000941-0f3dac36c52b // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -74,4 +75,6 @@ require (
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
-replace github.com/deckhouse/deckhouse/go_lib/cloud-data => /deckhouse/go_lib/cloud-data/
+replace github.com/deckhouse/deckhouse/go_lib/cloud-data => /deckhouse/go_lib/cloud-data
+
+replace github.com/deckhouse/deckhouse/pkg/log => /deckhouse/pkg/log

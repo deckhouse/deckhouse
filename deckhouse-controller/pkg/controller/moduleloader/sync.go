@@ -333,8 +333,8 @@ func (l *Loader) restoreAbsentModulesFromReleases(ctx context.Context) error {
 
 			// check if module symlink leads to the current version
 			if moduleVersion != release.GetModuleVersion() {
-				l.logger.Info("module symlink is incorrect, restore it", slog.String("name", release.Spec.ModuleName))
-				if err = l.createModuleSymlink(release.Spec.ModuleName, moduleVersion, source, release.Spec.Weight, false); err != nil {
+				l.logger.Info("module symlink is incorrect, restore it", slog.String("name", release.Spec.ModuleName), slog.String("current_version", moduleVersion), slog.String("desired_version", release.GetModuleVersion()))
+				if err = l.createModuleSymlink(release.Spec.ModuleName, release.GetModuleVersion(), source, release.Spec.Weight, false); err != nil {
 					return fmt.Errorf("create the '%s' module symlink: %w", release.Spec.ModuleName, err)
 				}
 			}
@@ -344,7 +344,7 @@ func (l *Loader) restoreAbsentModulesFromReleases(ctx context.Context) error {
 		if err = utils.SyncModuleRegistrySpec(l.downloadedModulesDir, release.Spec.ModuleName, release.GetModuleVersion(), source); err != nil {
 			return fmt.Errorf("sync the '%s' module's registry settings with the '%s' module source: %w", release.Spec.ModuleName, source.Name, err)
 		}
-		l.logger.Info("resynced module's registry settings with the module source", slog.String("name", release.Spec.ModuleName), slog.String("source_name", source.Name))
+		l.logger.Info("resynced module's registry settings with the module source", slog.String("name", release.Spec.ModuleName), slog.String("version", release.GetReleaseVersion()), slog.String("source_name", source.Name))
 	}
 	return nil
 }
@@ -394,7 +394,11 @@ func (l *Loader) deleteModulesWithAbsentRelease(ctx context.Context) error {
 // createModuleSymlink checks if there are any other symlinks for a module in the symlink dir and deletes them before
 // attempting to download version/tag of the module and creating correct symlink
 func (l *Loader) createModuleSymlink(moduleName, moduleVersion string, moduleSource *v1alpha1.ModuleSource, moduleWeight uint32, mpo bool) error {
-	l.logger.Info("module is absent on filesystem, restore it from source", slog.String("name", moduleName), slog.String("source_name", moduleSource.Name))
+	l.logger.Info("module is absent on filesystem, restore it from source",
+		slog.String("name", moduleName),
+		slog.String("version", moduleVersion),
+		slog.String("source_name", moduleSource.Name),
+	)
 
 	// remove possible symlink doubles
 	if err := deleteModuleSymlinks(l.symlinksDir, moduleName); err != nil {

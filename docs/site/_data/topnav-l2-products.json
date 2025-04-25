@@ -143,6 +143,26 @@
           "rel": "doc"
         }
       ]
+    },
+    {
+      "title": "Code",
+      "url": "/products/code/",
+      "target": "",
+      "rel": "",
+      "items": [
+        {
+          "title": "Learn more",
+          "url": "/products/code/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Documentation",
+          "url": "/products/code/documentation/",
+          "target": "",
+          "rel": "doc"
+        }
+      ]
     }
   ],
   "ru": [
@@ -330,7 +350,7 @@
           "title": "Документация",
           "url": "/products/code/documentation/",
           "target": "",
-          "rel": ""
+          "rel": "doc"
         }
       ]
     },

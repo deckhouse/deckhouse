@@ -119,7 +119,7 @@ spec:
   version: 2
   enabled: true
   settings:
-      # [<ru>] Настройки metaillb-пула для входящего трафика.
+      # [<ru>] Настройки metallb-пула для входящего трафика.
       # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/metallb/configuration.html#parameters-addresspools
       # [<en>] Metallb pool settings for incoming traffic.
       # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/metallb/configuration.html#parameters-addresspools
@@ -154,11 +154,11 @@ masterNodeGroup:
     etcdDiskSizeGb: 10
     # [<en>] List of IP addresses for control-plane node.
     # [<en>] We recommend using .2, .3 .4 addresses, for example: 10.15.11.2.
-    # [<ru>] Список IP-адресов для control-plane нод.
+    # [<ru>] Список IP-адресов для узлов control-plane.
     # [<ru>] Рекомендуем использовать .2, .3 .4 адреса, например: 10.15.11.2.
     mainNetworkIPAddresses:
     - !CHANGE_SUBNET*.2
-    rootDiskSizeGb: 40
+    rootDiskSizeGb: 50
     sizingPolicy: *!CHANGE_SIZING_POLICY*
     storageProfile: *!CHANGE_STORAGE_PROFILE*
     # [<en>] The name of the image, taking into account the vCloudDirector catalog path.
@@ -171,7 +171,7 @@ nodeGroups:
 - instanceClass:
     mainNetworkIPAddresses:
     - !CHANGE_SUBNET*.11
-    rootDiskSizeGb: 40
+    rootDiskSizeGb: 50
     sizingPolicy: *!CHANGE_SIZING_POLICY*
     storageProfile: *!CHANGE_STORAGE_PROFILE*
     # [<en>] The name of the image, taking into account the vCloudDirector catalog path.
@@ -194,7 +194,7 @@ provider:
   server: *!CHANGE_SERVER*
   username: *!CHANGE_USERNAME*
   password: *!CHANGE_PASSWORD*
-  # [<ru>] Укажите true, если vCloud Directorиспользует самоподписанный сертификат,
+  # [<ru>] Укажите true, если vCloud Director использует самоподписанный сертификат,
   # [<ru>] иначе укажите false (или удалите строку с параметром insecure).
   # [<en>] Set to true if vCloud Director has a self-signed certificate,
   # [<en>] otherwise set false (or delete the string below with the insecure parameter).

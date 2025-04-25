@@ -281,10 +281,10 @@ func CreateDeckhouseManifests(
 		})
 	}
 
-	if len(cfg.TerraformState) > 0 {
+	if len(cfg.InfrastructureState) > 0 {
 		tasks = append(tasks, actions.ManifestTask{
 			Name:     `Secret "d8-cluster-terraform-state"`,
-			Manifest: func() interface{} { return manifests.SecretWithTerraformState(cfg.TerraformState) },
+			Manifest: func() interface{} { return manifests.SecretWithInfrastructureState(cfg.InfrastructureState) },
 			CreateFunc: func(manifest interface{}) error {
 				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 				return err
@@ -296,8 +296,10 @@ func CreateDeckhouseManifests(
 		})
 	}
 
-	for nodeName, tfState := range cfg.NodesTerraformState {
-		getManifest := func() interface{} { return manifests.SecretWithNodeTerraformState(nodeName, "master", tfState, nil) }
+	for nodeName, tfState := range cfg.NodesInfrastructureState {
+		getManifest := func() interface{} {
+			return manifests.SecretWithNodeInfrastructureState(nodeName, "master", tfState, nil)
+		}
 		tasks = append(tasks, actions.ManifestTask{
 			Name:     fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
 			Manifest: getManifest,

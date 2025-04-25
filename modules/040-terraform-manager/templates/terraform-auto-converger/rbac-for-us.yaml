@@ -19,6 +19,9 @@ rules:
 - apiGroups: ["coordination.k8s.io"]
   resources: ["leases"]
   verbs: ["get", "list", "create", "patch", "update", "delete"]
+- apiGroups: ["apps"]
+  verbs: ["get", "patch"]
+  resources: ["deployments", "daemonsets", "statefulsets"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
