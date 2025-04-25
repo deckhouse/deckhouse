@@ -70,55 +70,54 @@ echo "Getting tags to scan"
 echo "Log in to DEV registry"
 echo "${DEV_REGISTRY_PASSWORD}" | docker login --username="${DEV_REGISTRY_USER}" --password-stdin ${DEV_REGISTRY}
 if [ "${SCAN_TARGET}" == "pr" ]; then
-  module_tags=("${TAG}")
+  d8_tags=("${TAG}")
 elif [ "${SCAN_TARGET}" == "regular" ]; then
   echo "Log in to PROD registry"
   echo "${PROD_REGISTRY_PASSWORD}" | docker login --username="${PROD_REGISTRY_USER}" --password-stdin ${PROD_REGISTRY}
-  module_tags=("${TAG}")
+  d8_tags=("${TAG}")
   # Get release tags by regexp, sort by sevmer desc, cut to get minor version, uniq and get 3 latest
   releases=($(crane ls "${PROD_REGISTRY_DECKHOUSE_IMAGE}" | grep "^v[0-9]*\.[0-9]*\.[0-9]*$" | sort -V -r))
   latest_minor_releases=($(printf '%s\n' "${releases[@]}"| cut -d "." -f -2 | uniq | head -n 3))
   for r in "${latest_minor_releases[@]}"; do
-    module_tags+=($(printf '%s\n' "${releases[@]}" | grep "${r}" | sort -V -r|head -n 1))
+    d8_tags+=($(printf '%s\n' "${releases[@]}" | grep "${r}" | sort -V -r|head -n 1))
   done
 fi
-echo "CVE Scan will be applied to the following tags of ${MODULE_NAME}"
-echo "${module_tags[@]}"
+echo "CVE Scan will be applied to the following tags of Deckhouse"
+echo "${d8_tags[@]}"
 
 # Scan in loop for provided list of tags
-for module_tag in "${module_tags[@]}"; do
+for d8_tag in "${d8_tags[@]}"; do
   date_iso=$(date -I)
-  dd_tag="${module_tag}"
-  module_image="${DEV_REGISTRY_DECKHOUSE_IMAGE}"
-  module_workdir="${WORKDIR}/modules/${MODULE_NAME}_${module_tag}"
-  module_reports="${module_workdir}/reports"
+  dd_tag="${d8_tag}"
+  d8_image="${DEV_REGISTRY_DECKHOUSE_IMAGE}"
+  module_reports="${WORKDIR}/deckhouse/${d8_tag}/reports"
   mkdir -p {"${module_reports}","${WORKDIR}/artifacts"}
 
   # use a propper registry for selected tag - dev for pr and main and prod for releases
-  if [ "${module_tag}" == "${TAG}" ] && echo "${module_tag}"|grep -s "^release-[0-9]\.[0-9]*$"; then
-    module_image="${PROD_REGISTRY_DECKHOUSE_IMAGE}"
-    selected_minor_version=$(echo "${module_tag}" | cut -d "-" -f 2)
-    module_tag=$(crane ls "${PROD_REGISTRY_DECKHOUSE_IMAGE}" | grep "^v${selected_minor_version}\.[0-9]*$" | sort -V -r|head -n 1)
-  # if module_tag is not the same as input TAG (pr, main or selected release) - that means we are using tag of latest 3 releases, so we need to take it from prod registry
-  elif [ "${module_tag}" != "${TAG}" ] && echo "${module_tag}"|grep -s "^v[0-9]\.[0-9]*\.[0-9]*$"; then
-    module_image="${PROD_REGISTRY_DECKHOUSE_IMAGE}"
+  if [ "${d8_tag}" == "${TAG}" ] && echo "${d8_tag}"|grep -s "^release-[0-9]\.[0-9]*$"; then
+    d8_image="${PROD_REGISTRY_DECKHOUSE_IMAGE}"
+    selected_minor_version=$(echo "${d8_tag}" | cut -d "-" -f 2)
+    d8_tag=$(crane ls "${PROD_REGISTRY_DECKHOUSE_IMAGE}" | grep "^v${selected_minor_version}\.[0-9]*$" | sort -V -r|head -n 1)
+  # if d8_tag is not the same as input TAG (pr, main or selected release) - that means we are using tag of latest 3 releases, so we need to take it from prod registry
+  elif [ "${d8_tag}" != "${TAG}" ] && echo "${d8_tag}"|grep -s "^v[0-9]\.[0-9]*\.[0-9]*$"; then
+    d8_image="${PROD_REGISTRY_DECKHOUSE_IMAGE}"
   fi
 
-  echo "Deckhouse image to check: ${module_image}:${module_tag}"
+  echo "Deckhouse image to check: ${d8_image}:${d8_tag}"
   echo "Severity: ${SEVERITY}"
   echo "----------------------------------------------"
   echo ""
-  docker pull "${module_image}:${module_tag}"
-  digests=$(docker run --rm "${module_image}:${module_tag}" cat /deckhouse/modules/images_digests.json)
+  docker pull "${d8_image}:${d8_tag}"
+  digests=$(docker run --rm "${d8_image}:${d8_tag}" cat /deckhouse/modules/images_digests.json)
 
   # Additional images to scan
-  declare -a additional_images=("${module_image}" 
-                "${module_image}/install"
-                "${module_image}/install-standalone"
+  declare -a additional_images=("${d8_image}" 
+                "${d8_image}/install"
+                "${d8_image}/install-standalone"
                 )
   for additional_image in "${additional_images[@]}"; do
     additional_image_name=$(echo "${additional_image}" | grep -o '[^/]*$')
-    digests=$(echo "${digests}"|jq --arg i "${additional_image_name}" --arg s "${module_tag}" '.deckhouse += { ($i): ($s) }')
+    digests=$(echo "${digests}"|jq --arg i "${additional_image_name}" --arg s "${d8_tag}" '.deckhouse += { ($i): ($s) }')
   done
 
   for module in $(jq -rc 'to_entries[]' <<< "${digests}"); do
@@ -179,11 +178,11 @@ for module_tag in "${module_tags[@]}"; do
       echo "👾 Image: ${IMAGE_NAME}"
       echo ""
       if [ "${additional_image_detected}" == true ]; then
-        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --java-db-repository "${TRIVY_JAVA_DB_URL}" --db-repository "${TRIVY_DB_URL}" --exit-code 0 --severity "${SEVERITY}" --format table --scanners vuln --quiet "${module_image}:${module_tag}"
-        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --java-db-repository "${TRIVY_JAVA_DB_URL}" --db-repository "${TRIVY_DB_URL}" --exit-code 0 --severity "${SEVERITY}" --format json --scanners vuln --output "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" --quiet "${module_image}:${module_tag}"
+        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --java-db-repository "${TRIVY_JAVA_DB_URL}" --db-repository "${TRIVY_DB_URL}" --exit-code 0 --severity "${SEVERITY}" --format table --scanners vuln --quiet "${d8_image}:${d8_tag}"
+        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --java-db-repository "${TRIVY_JAVA_DB_URL}" --db-repository "${TRIVY_DB_URL}" --exit-code 0 --severity "${SEVERITY}" --format json --scanners vuln --output "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" --quiet "${d8_image}:${d8_tag}"
       else
-        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --java-db-repository "${TRIVY_JAVA_DB_URL}" --db-repository "${TRIVY_DB_URL}" --exit-code 0 --severity "${SEVERITY}" --format table --scanners vuln --quiet "${module_image}@${IMAGE_HASH}"
-        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --java-db-repository "${TRIVY_JAVA_DB_URL}" --db-repository "${TRIVY_DB_URL}" --exit-code 0 --severity "${SEVERITY}" --format json --scanners vuln --output "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" --quiet "${module_image}@${IMAGE_HASH}"
+        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --java-db-repository "${TRIVY_JAVA_DB_URL}" --db-repository "${TRIVY_DB_URL}" --exit-code 0 --severity "${SEVERITY}" --format table --scanners vuln --quiet "${d8_image}@${IMAGE_HASH}"
+        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --java-db-repository "${TRIVY_JAVA_DB_URL}" --db-repository "${TRIVY_DB_URL}" --exit-code 0 --severity "${SEVERITY}" --format json --scanners vuln --output "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" --quiet "${d8_image}@${IMAGE_HASH}"
       fi
 
       echo ""
