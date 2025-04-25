@@ -56,9 +56,11 @@ echo "----------------------------------------------"
 echo ""
 echo "Getting Trivy"
 mkdir -p "${WORKDIR}/bin/trivy-${TRIVY_BIN_VERSION}"
-curl -s --fail-with-body "https://${DECKHOUSE_PRIVATE_REPO}/api/v4/projects/${TRIVY_REPO_ID}/packages/generic/trivy-${TRIVY_BIN_VERSION}/${TRIVY_BIN_VERSION}/trivy" -o "${WORKDIR}/bin/trivy-${TRIVY_BIN_VERSION}/trivy"
+curl --fail-with-body "https://${DECKHOUSE_PRIVATE_REPO}/api/v4/projects/${TRIVY_REPO_ID}/packages/generic/trivy-${TRIVY_BIN_VERSION}/${TRIVY_BIN_VERSION}/trivy" -o ${WORKDIR}/bin/trivy-${TRIVY_BIN_VERSION}/trivy
 chmod u+x ${WORKDIR}/bin/trivy-${TRIVY_BIN_VERSION}/trivy
 ln -s ${WORKDIR}/bin/trivy-${TRIVY_BIN_VERSION}/trivy ${WORKDIR}/bin/trivy
+ls -la ${WORKDIR}/bin/trivy-${TRIVY_BIN_VERSION}
+ls -la ${WORKDIR}/bin
 
 echo "----------------------------------------------"
 echo ""
