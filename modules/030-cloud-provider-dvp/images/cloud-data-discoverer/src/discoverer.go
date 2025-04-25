@@ -24,11 +24,11 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/sirupsen/logrus"
 	storagev1 "k8s.io/api/storage/v1"
 
 	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type CloudConfig struct {
@@ -36,7 +36,7 @@ type CloudConfig struct {
 }
 
 type Discoverer struct {
-	logger *logrus.Entry
+	logger *log.Logger
 	config *CloudConfig
 }
 
@@ -57,7 +57,7 @@ func (c *CloudConfig) client() (*api.DVPCloudAPI, error) {
 	return cloudAPI, nil
 }
 
-func NewDiscoverer(logger *logrus.Entry) *Discoverer {
+func NewDiscoverer(logger *log.Logger) *Discoverer {
 	config, err := newCloudConfig()
 	if err != nil {
 		logger.Fatalf("Cannot get opts from env: %v", err)
