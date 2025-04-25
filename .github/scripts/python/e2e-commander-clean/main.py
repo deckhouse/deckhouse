@@ -62,10 +62,10 @@ def get_clusters_delete_status(clusters: list[dict[str: str, str: str]]):
                 continue
             print(f'-  {cluster["name"]} --- {status}')
             if status == "deleted":
-                clusters.remove({"id": cluster_id, "name": cluster["name"]})
+                clusters.remove({"id": cluster["id"], "name": cluster["name"]})
             elif status == "deletion_failed":
-                deletion_failed_clusters.append({"id": cluster_id, "name": cluster["name"]})
-                clusters.remove({"id": cluster_id, "name": cluster["name"]})
+                deletion_failed_clusters.append({"id": cluster["id"], "name": cluster["name"]})
+                clusters.remove({"id": cluster["id"], "name": cluster["name"]})
             else:
                 continue
         if (len(deletion_failed_clusters) > 0 and len(clusters) == 0) or attempt >= max_attempt:
