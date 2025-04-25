@@ -94,12 +94,12 @@ for module_tag in "${module_tags[@]}"; do
   mkdir -p {"${module_reports}","${WORKDIR}/artifacts"}
 
   # use a propper registry for selected tag - dev for pr and main and prod for releases
-  if [ "${module_tag}" == "${TAG}" ] && echo "${module_tag}"|grep "^release-[0-9]\.[0-9]*$"; then
+  if [ "${module_tag}" == "${TAG}" ] && echo "${module_tag}"|grep -s "^release-[0-9]\.[0-9]*$"; then
     module_image="${PROD_REGISTRY_DECKHOUSE_IMAGE}"
     selected_minor_version=$(echo "${module_tag}" | cut -d "-" -f 2)
     module_tag=$(crane ls "${PROD_REGISTRY_DECKHOUSE_IMAGE}" | grep "^v${selected_minor_version}\.[0-9]*$" | sort -V -r|head -n 1)
-  # if module_tag is not the same as input TAG (pr or selected release) - that means we are using tag of latest 3 releases, so we need to take it from prod registry
-  else
+  # if module_tag is not the same as input TAG (pr, main or selected release) - that means we are using tag of latest 3 releases, so we need to take it from prod registry
+  elif [ "${module_tag}" != "${TAG}" ] && echo "${module_tag}"|grep -s "^v[0-9]\.[0-9]*\.[0-9]*$"; then
     module_image="${PROD_REGISTRY_DECKHOUSE_IMAGE}"
   fi
 
