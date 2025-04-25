@@ -39,8 +39,8 @@ jobs:
       E2E_COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
       E2E_COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
     name: Run
-    needs:
-    - skip_tests_repos
+#    needs:
+#    - skip_tests_repos
     runs-on: [self-hosted, regular]
     steps:
 
