@@ -11,6 +11,7 @@
     PROD_REGISTRY: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
     PROD_REGISTRY_USER: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
     PROD_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+    TRIVY_BIN_VERSION: "v0.58.1"
     TRIVY_PROJECT_ID: "2181"
     TRIVY_DB_URL: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-db:2
     TRIVY_JAVA_DB_URL: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-java-db:1
@@ -32,6 +33,7 @@
     DEV_REGISTRY: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
     DEV_REGISTRY_USER: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
     DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+    TRIVY_BIN_VERSION: "v0.58.1"
     TRIVY_PROJECT_ID: "2181"
     TRIVY_DB_URL: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-db:2
     TRIVY_JAVA_DB_URL: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-java-db:1
