@@ -14,7 +14,7 @@
 
 {{- if eq .runType "Normal" }}
   {{- if eq .cri "Containerd" }}
-
+mkdir -p /var/lib/node_labels
 label_path="/var/lib/node_labels/containerd-conf"
 
 # Check additional configs containerd
