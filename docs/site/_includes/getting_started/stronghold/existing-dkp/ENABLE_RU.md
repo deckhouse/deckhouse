@@ -12,7 +12,7 @@
 
 ## Включение модуля через CLI
 
-На хосте, имеющем доступ к кластеру DKP, выполните следующую команду, используя утилиту [Deckhouse CLI](/products/kubernetes-platform/documentation/v1/deckhouse-cli/):
+На хосте, имеющем доступ к кластеру DKP, выполните следующую команду, используя утилиту [Deckhouse CLI](/products/stronghold/reference/cli/d8/):
 
 ```bash
 d8 platform module enable stronghold

@@ -1,6 +1,6 @@
 ---
 title: "d8 (Deckhouse CLI)"
-permalink: ru/stronghold/reference/console-utilities/d8.html
+permalink: ru/stronghold/reference/cli/d8/
 search: false
 sitemap_include: false
 description: Deckhouse CLI — интерфейс командной строки для работы с кластерами от разработчиков Deckhouse.

@@ -1,6 +1,6 @@
 ---
 title: "Установка"
-permalink: ru/stronghold/documentation/admin/admin/standalone/installation.html
+permalink: ru/stronghold/documentation/admin/standalone/installation.html
 lang: ru
 ---
 

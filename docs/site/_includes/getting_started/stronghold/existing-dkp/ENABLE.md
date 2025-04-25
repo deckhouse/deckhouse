@@ -5,7 +5,7 @@ To install Deckhouse Stronghold, enable the stronghold module. The module can be
 
 ## Enabling the Module via CLI
 
-On a host with access to the DKP cluster, execute the following command using the [Deckhouse CLI](/products/kubernetes-platform/documentation/v1/deckhouse-cli/):
+On a host with access to the DKP cluster, execute the following command using the [Deckhouse CLI](/products/stronghold/reference/cli/d8/):
 
 ```bash
 d8 platform module enable stronghold

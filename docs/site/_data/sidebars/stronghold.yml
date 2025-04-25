@@ -19,15 +19,15 @@ entries:
             - title:
                 en: Installation
                 ru: Установка
-              url: /stronghold/documentation/admin/admin/standalone/installation.html
+              url: /stronghold/documentation/admin/standalone/installation.html
             - title:
                 en: Configuration
                 ru: Настройка
-              url: /stronghold/documentation/admin/admin/standalone/configuration.html
+              url: /stronghold/documentation/admin/standalone/configuration.html
             - title:
                 en: HSM Support
                 ru: Поддержка HSM
-              url: /stronghold/documentation/admin/admin/standalone/hsm.html
+              url: /stronghold/documentation/admin/standalone/hsm.html
         - title:
             en: Launch in DKP
             ru: Запуск в DKP
@@ -369,10 +369,6 @@ entries:
             en: Modules settings
             ru: Настройки модулей
           url: /stronghold/reference/mc.html
-        #- title:
-        #    en: Custom Resources
-        #    ru: Custom Resources
-        #  url: /stronghold/reference/cr/
         - title:
             en: Console utilities
             ru: Консольные утилиты
@@ -380,4 +376,4 @@ entries:
             - title:
                 en: d8 (Deckhouse CLI)
                 ru: d8 (Deckhouse CLI)
-              url: /stronghold/reference/console-utilities/d8.html
+              url: /stronghold/reference/cli/d8/

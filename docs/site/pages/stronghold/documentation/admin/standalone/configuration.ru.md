@@ -1,6 +1,6 @@
 ---
 title: "Конфигурация"
-permalink: ru/stronghold/documentation/admin/admin/standalone/configuration.html
+permalink: ru/stronghold/documentation/admin/standalone/configuration.html
 lang: ru
 ---
 

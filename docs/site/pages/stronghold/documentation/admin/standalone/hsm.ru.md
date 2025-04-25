@@ -1,6 +1,6 @@
 ---
 title: "Поддержка HSM"
-permalink: ru/stronghold/documentation/admin/admin/standalone/hsm.html
+permalink: ru/stronghold/documentation/admin/standalone/hsm.html
 lang: ru
 ---
 
