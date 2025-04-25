@@ -35,6 +35,11 @@ git:
   stageDependencies:
     install:
       - '**/*'
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
 shell:
   install:
   - git clone --depth=1 --branch v{{ $containerd_version }} {{ $.SOURCE_REPO }}/containerd/containerd.git /src/containerd
@@ -42,6 +47,7 @@ shell:
   - cd /src/containerd
   - git describe --match 'v[0-9]*' --dirty='.m' --always > VERSION
   - git rev-parse HEAD > REVISION
+  - git apply /patches/containerd/*.patch --verbose
   - cd /src/runc
   - git describe --dirty --long --always > COMMIT
   - rm -rf /src/containerd/.git
