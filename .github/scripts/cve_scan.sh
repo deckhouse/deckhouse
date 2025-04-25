@@ -17,12 +17,12 @@
 
 usage() {
 cat << EOF
-usage: $0 [-s] [-r] [-h]
+usage: $0 [-p] [-r] [-h]
 
 This script does foo.
 
 OPTIONS:
-   -s        Scan image from selected single tag. it can be pull request or release branch (release-x.xx).
+   -p        Scan image from PR tag.
    -r        Regular scan - main and latest 3 minor releases
    -h        Show help
 EOF
@@ -32,15 +32,15 @@ SCAN_TARGET=""
 PROD_REGISTRY_DECKHOUSE_IMAGE="${PROD_REGISTRY}/deckhouse/fe"
 DEV_REGISTRY_DECKHOUSE_IMAGE="${DEV_REGISTRY}/sys/deckhouse-oss"
 
-while getopts “:hsr” OPTION
+while getopts “:hpr” OPTION
 do
   case $OPTION in
     h)
       usage
       exit 1
       ;;
-    s)
-      SCAN_TARGET="single"
+    p)
+      SCAN_TARGET="pr"
       ;;
     r)
       SCAN_TARGET="regular"
@@ -52,12 +52,24 @@ do
   esac
 done
 
-###############
+echo "----------------------------------------------"
+echo ""
+echo "Getting Trivy"
+mkdir -p bin/trivy-${TRIVY_BIN_VERSION}
+curl -s --fail-with-body https://${DECKHOUSE_PRIVATE_REPO}/api/v4/projects/${TRIVY_REPO_ID}/packages/generic/trivy-${TRIVY_BIN_VERSION}/${TRIVY_BIN_VERSION}/trivy -o bin/trivy-${TRIVY_BIN_VERSION}/trivy
+chmod u+x bin/trivy-${TRIVY_BIN_VERSION}/trivy
+echo "${PWD}/bin/trivy-${TRIVY_BIN_VERSION}" >> $GITHUB_PATH
+bin/trivy-${TRIVY_BIN_VERSION}/trivy clean --all
 
+
+echo "----------------------------------------------"
+echo ""
 echo "Getting tags to scan"
-if [ "${SCAN_TARGET}" == "single" ]; then
+echo "${DEV_REGISTRY_PASSWORD}" | docker login --username="${DEV_REGISTRY_USER}" --password-stdin ${DEV_REGISTRY}
+if [ "${SCAN_TARGET}" == "pr" ]; then
   module_tags=("${TAG}")
 elif [ "${SCAN_TARGET}" == "regular" ]; then
+  echo "${PROD_REGISTRY_PASSWORD}" | docker login --username="${PROD_REGISTRY_USER}" --password-stdin ${PROD_REGISTRY}
   module_tags=("${TAG}")
   # Get release tags by regexp, sort by sevmer desc, cut to get minor version, uniq and get 3 latest
   releases=($(crane ls "${PROD_REGISTRY_DECKHOUSE_IMAGE}" | grep "^v[0-9]*\.[0-9]*\.[0-9]*$" | sort -V -r))
