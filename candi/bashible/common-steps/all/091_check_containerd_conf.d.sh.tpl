@@ -26,6 +26,6 @@ fi
 
 echo "node.deckhouse.io/containerd-config=${label_value}" > "${label_path}"
   {{- else -}}
-rm -f /var/lib/node_labels/containerd-conf
+rm -f "${label_path}"
   {{- end  }}
 {{- end  }}
