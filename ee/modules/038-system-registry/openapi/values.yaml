@@ -75,6 +75,21 @@ properties:
                     <<: *user
                   mirror_pusher:
                     <<: *user
+              in_cluster_proxy:
+                type: object
+                properties:
+                  run:
+                    type: boolean
+                    default: false
+                  config:
+                    type: object
+                    properties:
+                      config:
+                        type: object
+                        additionalProperties: true
+                        x-kubernetes-preserve-unknown-fields: true
+                      version:
+                        type: string
               node_services:
                 type: object
                 properties:

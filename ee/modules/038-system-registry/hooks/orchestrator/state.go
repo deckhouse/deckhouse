@@ -14,6 +14,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	inclusterproxy "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/incluster-proxy"
 	nodeservices "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/node-services"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/pki"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/secrets"
@@ -26,11 +27,12 @@ type State struct {
 	Mode       registry_const.ModeType `json:"mode,omitempty"`
 	TargetMode registry_const.ModeType `json:"target_mode,omitempty"`
 
-	PKI            pki.State          `json:"pki,omitempty"`
-	Secrets        secrets.State      `json:"secrets,omitempty"`
-	Users          users.State        `json:"users,omitempty"`
-	NodeServices   nodeservices.State `json:"node_services,omitempty"`
-	IngressEnabled bool               `json:"ingress_enabled,omitempty"`
+	PKI            pki.State            `json:"pki,omitempty"`
+	Secrets        secrets.State        `json:"secrets,omitempty"`
+	Users          users.State          `json:"users,omitempty"`
+	NodeServices   nodeservices.State   `json:"node_services,omitempty"`
+	InClusterProxy inclusterproxy.State `json:"in_cluster_proxy,omitempty"`
+	IngressEnabled bool                 `json:"ingress_enabled,omitempty"`
 
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
@@ -91,9 +93,10 @@ func (state *State) clearConditions() {
 }
 
 func (state *State) process(log go_hook.Logger, inputs Inputs) error {
-	if inputs.Params.Mode == "" {
+	switch inputs.Params.Mode {
+	case "":
 		inputs.Params.Mode = registry_const.ModeUnmanaged
-	} else if inputs.Params.Mode == registry_const.ModeDetached {
+	case registry_const.ModeDetached:
 		inputs.Params.Mode = registry_const.ModeLocal
 	}
 
@@ -210,7 +213,15 @@ func (state *State) transitionToLocal(log go_hook.Logger, inputs Inputs) error {
 
 	// Cleanup
 
-	// TODO: stop in-cluster proxy
+	inClusterProxyReady, err := state.cleanupInClusterProxy(inputs)
+	if err != nil {
+		return fmt.Errorf("cannot cleanup InClusterProxy: %w", err)
+	}
+
+	if !inClusterProxyReady {
+		state.setReadyCondition(false, inputs)
+		return nil
+	}
 
 	// All done
 	state.Mode = state.TargetMode
@@ -315,10 +326,17 @@ func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 	// TODO: update deckhouse-registry secret
 
 	// Cleanup
-
-	// TODO: stop in-cluster proxy
+	inClusterProxyReady, err := state.cleanupInClusterProxy(inputs)
+	if err != nil {
+		return fmt.Errorf("cannot cleanup InClusterProxy: %w", err)
+	}
 
 	state.IngressEnabled = false
+
+	if !inClusterProxyReady {
+		state.setReadyCondition(false, inputs)
+		return nil
+	}
 
 	usersParams = users.Params{
 		RO: true,
@@ -347,8 +365,63 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 		return fmt.Errorf("cannot process Secrets: %w", err)
 	}
 
-	// TODO: configure in-cluster proxy
-	_ = pkiResult
+	// Configure in-cluster proxy
+	inClusterProxyParams := inclusterproxy.Params{
+		CA:         pkiResult.CA,
+		Token:      pkiResult.Token,
+		HTTPSecret: state.Secrets.HTTP,
+		Upstream: inclusterproxy.UpstreamParams{
+			Scheme:     inputs.Params.Scheme,
+			ImagesRepo: inputs.Params.ImagesRepo,
+			UserName:   inputs.Params.UserName,
+			Password:   inputs.Params.Password,
+		},
+	}
+
+	if inputs.Params.CA != "" {
+		cert, err := registry_pki.DecodeCertificate([]byte(inputs.Params.CA))
+		if err != nil {
+			log.Error("Cannot decode upstream CA", "error", err)
+
+			state.setCondition(metav1.Condition{
+				Type:               ConditionTypeInClusterProxy,
+				Status:             metav1.ConditionFalse,
+				ObservedGeneration: inputs.Params.Generation,
+				Reason:             ConditionReasonError,
+				Message:            fmt.Sprintf("Cannot decode upstream CA: %v", err),
+			})
+
+			state.setReadyCondition(false, inputs)
+			return nil
+		}
+
+		inClusterProxyParams.Upstream.CA = cert
+	}
+
+	inClusterProxyResult, err := state.InClusterProxy.Process(log, inClusterProxyParams, inputs.InClusterProxy)
+	if err != nil {
+		return fmt.Errorf("cannot process InClusterProxy: %w", err)
+	}
+
+	inClusterProxyMessage := inClusterProxyResult.GetConditionMessage()
+	if inClusterProxyMessage != "" {
+		state.setCondition(metav1.Condition{
+			Type:               ConditionTypeInClusterProxy,
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: inputs.Params.Generation,
+			Reason:             ConditionReasonProcessing,
+			Message:            inClusterProxyMessage,
+		})
+
+		state.setReadyCondition(false, inputs)
+		return nil
+	}
+
+	state.setCondition(metav1.Condition{
+		Type:               ConditionTypeInClusterProxy,
+		Status:             metav1.ConditionTrue,
+		ObservedGeneration: inputs.Params.Generation,
+	})
 
 	// TODO: check images in remote registry
 
@@ -394,14 +467,20 @@ func (state *State) transitionToUnmanaged(log go_hook.Logger, inputs Inputs) err
 	if err != nil {
 		return fmt.Errorf("cannot cleanup NodeServices: %w", err)
 	}
+	inClusterProxyReady, err := state.cleanupInClusterProxy(inputs)
+	if err != nil {
+		return fmt.Errorf("cannot cleanup InClusterProxy: %w", err)
+	}
 
 	// TODO: remove service
 
 	state.IngressEnabled = false
 
-	// TODO: stop in-cluster proxy
-
 	if !nodeServicesReady {
+		state.setReadyCondition(false, inputs)
+		return nil
+	}
+	if !inClusterProxyReady {
 		state.setReadyCondition(false, inputs)
 		return nil
 	}
@@ -446,6 +525,42 @@ func (state *State) cleanupNodeServices(inputs Inputs) (bool, error) {
 
 	state.setCondition(metav1.Condition{
 		Type:               ConditionTypeNodeServices,
+		Status:             metav1.ConditionTrue,
+		ObservedGeneration: inputs.Params.Generation,
+	})
+
+	return true, nil
+}
+
+func (state *State) cleanupInClusterProxy(inputs Inputs) (bool, error) {
+	pods, err := state.InClusterProxy.Stop(inputs.InClusterProxy)
+	if err != nil {
+		return false, fmt.Errorf("cannot stop: %w", err)
+	}
+
+	if len(pods) > 0 {
+		sort.Strings(pods)
+
+		builder := new(strings.Builder)
+
+		fmt.Fprintln(builder, "Waiting for pods cleanup:")
+
+		for _, name := range pods {
+			fmt.Fprintf(builder, "- %v\n", name)
+		}
+
+		state.setCondition(metav1.Condition{
+			Type:               ConditionTypeInClusterProxy,
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: inputs.Params.Generation,
+			Reason:             ConditionReasonProcessing,
+			Message:            builder.String(),
+		})
+		return false, nil
+	}
+
+	state.setCondition(metav1.Condition{
+		Type:               ConditionTypeInClusterProxy,
 		Status:             metav1.ConditionTrue,
 		ObservedGeneration: inputs.Params.Generation,
 	})

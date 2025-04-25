@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers"
+	inclusterproxy "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/incluster-proxy"
 	nodeservices "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/node-services"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/pki"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/users"
@@ -27,12 +28,13 @@ const (
 	valuesPath    = "systemRegistry.internal.orchestrator"
 	SubmoduleName = "orchestrator"
 
-	configSnapName       = "config"
-	stateSnapName        = "state"
-	pkiSnapName          = "pki"
-	secretsSnapName      = "secrets"
-	usersSnapName        = "users"
-	nodeServicesSnapName = "node-services"
+	configSnapName         = "config"
+	stateSnapName          = "state"
+	pkiSnapName            = "pki"
+	secretsSnapName        = "secrets"
+	usersSnapName          = "users"
+	nodeServicesSnapName   = "node-services"
+	inClusterProxySnapName = "incluster-proxy"
 )
 
 func getKubernetesConfigs() []go_hook.KubernetesConfig {
@@ -104,6 +106,7 @@ func getKubernetesConfigs() []go_hook.KubernetesConfig {
 	}
 
 	ret = append(ret, nodeservices.KubernetsConfig(nodeServicesSnapName)...)
+	ret = append(ret, inclusterproxy.KubernetsConfig(inClusterProxySnapName)...)
 
 	return ret
 }
@@ -173,6 +176,11 @@ func handle(input *go_hook.HookInput) error {
 	inputs.NodeServices, err = nodeservices.InputsFromSnapshot(input, nodeServicesSnapName)
 	if err != nil {
 		return fmt.Errorf("get NodeServices snapshots error: %w", err)
+	}
+
+	inputs.InClusterProxy, err = inclusterproxy.InputsFromSnapshot(input, inClusterProxySnapName)
+	if err != nil {
+		return fmt.Errorf("get InClusterProxy snapshots error: %w", err)
 	}
 
 	values.Hash, err = helpers.ComputeHash(inputs)

@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package orchestrator
 
 import (
+	inclusterproxy "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/incluster-proxy"
 	nodeservices "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/node-services"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/pki"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/secrets"
@@ -29,10 +30,11 @@ type Inputs struct {
 
 	IngressCA string
 
-	PKI          pki.Inputs
-	Secrets      secrets.Inputs
-	Users        users.Inputs
-	NodeServices nodeservices.Inputs
+	PKI            pki.Inputs
+	Secrets        secrets.Inputs
+	Users          users.Inputs
+	NodeServices   nodeservices.Inputs
+	InClusterProxy inclusterproxy.Inputs
 }
 
 type Values struct {

@@ -12,8 +12,9 @@ import (
 )
 
 const (
-	ConditionTypeReady        = "Ready"
-	ConditionTypeNodeServices = "NodeServices"
+	ConditionTypeReady          = "Ready"
+	ConditionTypeNodeServices   = "NodeServices"
+	ConditionTypeInClusterProxy = "InClusterProxy"
 
 	ConditionReasonReady      = "Ready"
 	ConditionReasonProcessing = "Processing"
