@@ -51,7 +51,7 @@ func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause) *kingpin.
 			return err
 		}
 
-		if app.LegacyMode {
+		if app.SSHLegacyMode {
 			sshClient, err = clissh.NewInitClientFromFlags(true)
 		} else {
 			sshClient, err = gossh.NewInitClientFromFlags(true)
@@ -105,7 +105,7 @@ func DefineTestControlPlaneNodeReadyCommand(cmd *kingpin.CmdClause) *kingpin.Cmd
 			return err
 		}
 
-		if app.LegacyMode {
+		if app.SSHLegacyMode {
 			sshClient, err = clissh.NewInitClientFromFlags(true)
 		} else {
 			sshClient, err = gossh.NewInitClientFromFlags(true)

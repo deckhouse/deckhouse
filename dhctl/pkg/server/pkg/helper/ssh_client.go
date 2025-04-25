@@ -87,7 +87,7 @@ func CreateSSHClient(config *config.ConnectionConfig) (node.SSHClient, func() er
 	app.SSHExtraArgs = config.SSHConfig.SSHExtraArgs
 
 	var sshClient node.SSHClient
-	if app.LegacyMode {
+	if app.SSHLegacyMode {
 		sshClient = clissh.NewClient(sess, keys)
 	} else {
 		sshClient = gossh.NewClient(sess, keys)

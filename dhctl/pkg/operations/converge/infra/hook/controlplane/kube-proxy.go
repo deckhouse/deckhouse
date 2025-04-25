@@ -89,7 +89,7 @@ func (c *KubeProxyChecker) IsReady(ctx context.Context, nodeName string) (bool, 
 	var sshClient node.SSHClient
 
 	if c.input != nil {
-		if app.LegacyMode {
+		if app.SSHLegacyMode {
 			sshClient = clissh.NewClient(session.NewSession(*c.input), c.privateKeys)
 			// Avoid starting a new ssh agent
 			sshClient.(*clissh.Client).InitializeNewAgent = false
@@ -98,7 +98,7 @@ func (c *KubeProxyChecker) IsReady(ctx context.Context, nodeName string) (bool, 
 		}
 
 	} else {
-		if app.LegacyMode {
+		if app.SSHLegacyMode {
 			sshClient = clissh.NewClientFromFlags()
 		} else {
 			sshClient = gossh.NewClientFromFlags()

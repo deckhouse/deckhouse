@@ -54,7 +54,7 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, name, secret, dataKey string) 
 			return err
 		}
 
-		if app.LegacyMode {
+		if app.SSHLegacyMode {
 			sshClient, err = clissh.NewInitClientFromFlags(true)
 		} else {
 			sshClient, err = gossh.NewInitClientFromFlags(true)

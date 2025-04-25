@@ -93,7 +93,7 @@ var (
 func NewConvergeExporter(address, path string, interval time.Duration) *ConvergeExporter {
 	var sshClient node.SSHClient
 	var err error
-	if app.LegacyMode {
+	if app.SSHLegacyMode {
 		sshClient, err = clissh.NewInitClientFromFlags(true)
 	} else {
 		sshClient, err = gossh.NewInitClientFromFlags(true)

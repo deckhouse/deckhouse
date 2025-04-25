@@ -258,7 +258,7 @@ func (c *Converger) AutoConverge() error {
 			return err
 		}
 
-		if app.LegacyMode {
+		if app.SSHLegacyMode {
 			sshClient, err = clissh.NewInitClientFromFlags(false)
 		} else {
 			sshClient, err = gossh.NewInitClientFromFlags(false)

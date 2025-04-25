@@ -71,7 +71,7 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		if app.LegacyMode {
+		if app.SSHLegacyMode {
 			sshClient = clissh.NewClientFromFlags()
 		} else {
 			sshClient = gossh.NewClientFromFlags()

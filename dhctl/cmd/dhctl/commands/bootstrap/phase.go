@@ -42,7 +42,7 @@ func DefineBootstrapInstallDeckhouseCommand(cmd *kingpin.CmdClause) *kingpin.Cmd
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		var sshClient node.SSHClient
 		if len(app.SSHHosts) != 0 {
-			if app.LegacyMode {
+			if app.SSHLegacyMode {
 				sshClient = clissh.NewClientFromFlags()
 			} else {
 				sshClient = gossh.NewClientFromFlags()
@@ -68,7 +68,7 @@ func DefineBootstrapExecuteBashibleCommand(cmd *kingpin.CmdClause) *kingpin.CmdC
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		var sshClient node.SSHClient
 		var err error
-		if app.LegacyMode {
+		if app.SSHLegacyMode {
 			sshClient, err = clissh.NewClientFromFlagsWithHosts()
 		} else {
 			sshClient, err = gossh.NewClientFromFlagsWithHosts()
@@ -98,7 +98,7 @@ func DefineCreateResourcesCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		var sshClient node.SSHClient
 		if len(app.SSHHosts) != 0 {
-			if app.LegacyMode {
+			if app.SSHLegacyMode {
 				sshClient = clissh.NewClientFromFlags()
 			} else {
 				sshClient = gossh.NewClientFromFlags()
@@ -125,7 +125,7 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		var sshClient node.SSHClient
-		if app.LegacyMode {
+		if app.SSHLegacyMode {
 			sshClient = clissh.NewClientFromFlags()
 		} else {
 			sshClient = gossh.NewClientFromFlags()
@@ -163,7 +163,7 @@ func DefineExecPostBootstrapScript(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		var sshClient node.SSHClient
 		var err error
-		if app.LegacyMode {
+		if app.SSHLegacyMode {
 			sshClient, err = clissh.NewClientFromFlagsWithHosts()
 		} else {
 			sshClient, err = gossh.NewClientFromFlagsWithHosts()

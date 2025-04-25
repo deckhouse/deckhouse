@@ -215,7 +215,7 @@ deckhouse:
 		bootstrapState := &testState{}
 
 		var sshCl node.SSHClient
-		if app.LegacyMode {
+		if app.SSHLegacyMode {
 			sshCl = &gossh.Client{}
 		} else {
 			sshCl = &clissh.Client{}

@@ -459,7 +459,7 @@ func (d *StaticMastersDestroyer) switchToNodeuser(settings *session.Session) err
 
 	log.DebugLn("Private key written")
 
-	if !app.LegacyMode {
+	if !app.SSHLegacyMode {
 		log.DebugF("Old SSH Client: %-v\n", d.SSHClient)
 		log.DebugLn("Stopping old SSH client")
 		d.SSHClient.Stop()
@@ -480,7 +480,7 @@ func (d *StaticMastersDestroyer) switchToNodeuser(settings *session.Session) err
 	})
 
 	var newSSHClient node.SSHClient
-	if app.LegacyMode {
+	if app.SSHLegacyMode {
 		newSSHClient = clissh.NewClient(sess, []session.AgentPrivateKey{privateKey})
 		// Avoid starting a new ssh agent
 		newSSHClient.(*clissh.Client).InitializeNewAgent = false
@@ -495,7 +495,7 @@ func (d *StaticMastersDestroyer) switchToNodeuser(settings *session.Session) err
 	}
 
 	// adding keys to agent is actual only in legacy mode
-	if app.LegacyMode {
+	if app.SSHLegacyMode {
 		err = newSSHClient.(*clissh.Client).Agent.AddKeys(newSSHClient.PrivateKeys())
 		if err != nil {
 			return fmt.Errorf("failed to add keys to ssh agent: %w", err)

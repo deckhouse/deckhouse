@@ -196,7 +196,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			b.Params.NodeInterface = local.NewNodeInterface()
 		} else {
 			var sshClient node.SSHClient
-			if app.LegacyMode {
+			if app.SSHLegacyMode {
 				sshClient = clissh.NewClientFromFlags()
 			} else {
 				sshClient = gossh.NewClientFromFlags()

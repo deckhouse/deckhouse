@@ -45,7 +45,7 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		if app.LegacyMode {
+		if app.SSHLegacyMode {
 			sshClient, err = clissh.NewInitClientFromFlags(true)
 		} else {
 			sshClient, err = gossh.NewInitClientFromFlags(true)

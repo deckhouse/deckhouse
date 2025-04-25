@@ -48,7 +48,7 @@ func DefineTestSSHConnectionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		if app.LegacyMode {
+		if app.SSHLegacyMode {
 			sshCl, err = clissh.NewClientFromFlagsWithHosts()
 		} else {
 			sshCl, err = gossh.NewClientFromFlagsWithHosts()
@@ -100,7 +100,7 @@ func DefineTestSCPCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		if app.LegacyMode {
+		if app.SSHLegacyMode {
 			sshCl, err = clissh.NewClientFromFlagsWithHosts()
 		} else {
 			sshCl, err = gossh.NewClientFromFlagsWithHosts()
@@ -179,7 +179,7 @@ func DefineTestUploadExecCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		if app.LegacyMode {
+		if app.SSHLegacyMode {
 			sshClient, err = clissh.NewInitClientFromFlagsWithHosts(true)
 		} else {
 			sshClient, err = gossh.NewInitClientFromFlagsWithHosts(true)
@@ -233,7 +233,7 @@ func DefineTestBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		if app.LegacyMode {
+		if app.SSHLegacyMode {
 			sshClient, err = clissh.NewInitClientFromFlagsWithHosts(true)
 		} else {
 			sshClient, err = gossh.NewInitClientFromFlagsWithHosts(true)
