@@ -366,10 +366,6 @@ entries:
         ru: Справка
       folders:
         - title:
-            en: Modules settings
-            ru: Настройки модулей
-          url: /stronghold/reference/mc.html
-        - title:
             en: Console utilities
             ru: Консольные утилиты
           folders:
