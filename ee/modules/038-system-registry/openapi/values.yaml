@@ -92,6 +92,8 @@ properties:
                           x-kubernetes-preserve-unknown-fields: true
                         version:
                          type: string
+              ingress_enabled:
+                type: boolean
               conditions:
                 x-kubernetes-patch-strategy: merge
                 x-kubernetes-patch-merge-key: type

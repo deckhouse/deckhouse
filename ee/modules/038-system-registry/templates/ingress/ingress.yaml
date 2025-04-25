@@ -1,13 +1,16 @@
-{{- if eq .Values.systemRegistry.mode "Detached" }}
-  {{- if and (.Values.global.modules.publicDomainTemplate) (.Values.global.enabledModules | has "cert-manager") }}
+{{- $orchestrator := .Values.systemRegistry.internal.orchestrator -}}
+{{- if (($orchestrator).state).ingress_enabled -}}
+{{- if and (.Values.global.modules.publicDomainTemplate) (.Values.global.enabledModules | has "cert-manager") -}}
+
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: embedded-registry
   namespace: d8-system
-  {{- include "helm_lib_module_labels" (list . (dict "app" "embedded-registry")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry")) | nindent 2 }}
   annotations:
+    registry.deckhouse.io/config-hash: {{ $orchestrator.hash | quote }}
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
     nginx.ingress.kubernetes.io/upstream-hash-by: "$remote_addr"
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
@@ -32,7 +35,7 @@ spec:
               number: 5001
         path: /
         pathType: Prefix
-  {{- /* 
+  {{- /*
       TLS for the ingress
       Condition: enabled if mode == CustomCertificate or CertManager
       How it works:
@@ -45,5 +48,6 @@ spec:
     - {{ include "helm_lib_module_public_domain" (list . "embedded-registry") }}
     secretName: {{ include "helm_lib_module_https_secret_name" (list . "embedded-registry-ingress-tls") }}
   {{- end }}
-  {{- end }}
+
+{{- end }}
 {{- end }}

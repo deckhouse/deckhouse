@@ -26,10 +26,11 @@ type State struct {
 	Mode       registry_const.ModeType `json:"mode,omitempty"`
 	TargetMode registry_const.ModeType `json:"target_mode,omitempty"`
 
-	PKI          pki.State          `json:"pki,omitempty"`
-	Secrets      secrets.State      `json:"secrets,omitempty"`
-	Users        users.State        `json:"users,omitempty"`
-	NodeServices nodeservices.State `json:"node_services,omitempty"`
+	PKI            pki.State          `json:"pki,omitempty"`
+	Secrets        secrets.State      `json:"secrets,omitempty"`
+	Users          users.State        `json:"users,omitempty"`
+	NodeServices   nodeservices.State `json:"node_services,omitempty"`
+	IngressEnabled bool               `json:"ingress_enabled,omitempty"`
 
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
@@ -151,6 +152,8 @@ func (state *State) transitionToLocal(log go_hook.Logger, inputs Inputs) error {
 		return fmt.Errorf("cannot process Users: %w", err)
 	}
 
+	state.IngressEnabled = true
+
 	// NodeServices
 	nodeservicesParams := nodeservices.Params{
 		CA:         pkiResult.CA,
@@ -197,8 +200,6 @@ func (state *State) transitionToLocal(log go_hook.Logger, inputs Inputs) error {
 		ObservedGeneration: inputs.Params.Generation,
 	})
 
-	// TODO: configure ingress
-
 	// TODO: check images in local registry
 
 	// TODO: configure bashible
@@ -244,8 +245,6 @@ func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 	if err := state.Users.Process(usersParams, inputs.Users); err != nil {
 		return fmt.Errorf("cannot process Users: %w", err)
 	}
-
-	// TODO: check images in remote registry
 
 	// NodeServices
 	nodeservicesParams := nodeservices.Params{
@@ -307,6 +306,8 @@ func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 		ObservedGeneration: inputs.Params.Generation,
 	})
 
+	// TODO: check images in remote registry via proxy
+
 	// TODO: configure bashible
 
 	// TODO: service switch
@@ -317,7 +318,7 @@ func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 
 	// TODO: stop in-cluster proxy
 
-	// TODO: stop ingress from Local Mode
+	state.IngressEnabled = false
 
 	usersParams = users.Params{
 		RO: true,
@@ -363,7 +364,7 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 		return fmt.Errorf("cannot cleanup NodeServices: %w", err)
 	}
 
-	// TODO: stop ingress from Local Mode
+	state.IngressEnabled = false
 
 	if !nodeServicesReady {
 		state.setReadyCondition(false, inputs)
@@ -396,7 +397,7 @@ func (state *State) transitionToUnmanaged(log go_hook.Logger, inputs Inputs) err
 
 	// TODO: remove service
 
-	// TODO: stop ingress from Local Mode
+	state.IngressEnabled = false
 
 	// TODO: stop in-cluster proxy
 
