@@ -81,6 +81,4 @@ jobs:
 {!{- $annotations := dict "summary" "Daily e2e tests workflow failed" -}!}
 {!{- $annotations = coll.Merge $annotations (dict "description" "Check Daily e2e workflow log for more information or see another alerts in this group.") -}!}
 
-{!{- tmpl.Exec "e2e_send_alert_template" (slice (dict "labels" $labels "annotations" $annotations )) | strings.Indent 4 -}!}
-
 {!{- tmpl.Exec "send_alert_loop_template" (slice (dict "labels" $labels "annotations" $annotations )) | strings.Indent 4 -}!}
