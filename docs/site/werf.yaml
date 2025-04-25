@@ -46,7 +46,7 @@ gitWorktree:
 ---
 {{- if and (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
 image: site-external-artifacts
-fromCacheVersion: {{ div .Commit.Date.Unix (mul 60 60) }}v2
+fromCacheVersion: {{ div .Commit.Date.Unix (mul 60 60) }}v1
 from: {{ .Images.BASE_ALPINE }}
 final: false
 shell:
