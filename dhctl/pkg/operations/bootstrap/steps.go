@@ -47,6 +47,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
@@ -59,7 +60,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/frontend"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
@@ -711,9 +711,9 @@ func InstallDeckhouse(ctx context.Context, kubeCl *client.KubernetesClient, conf
 	return res, nil
 }
 
-func BootstrapTerraNodes(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraNodeGroups []config.TerraNodeGroupSpec, terraformContext *terraform.TerraformContext) error {
+func BootstrapTerraNodes(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraNodeGroups []config.TerraNodeGroupSpec, infrastructureContext *infrastructure.Context) error {
 	return log.Process("bootstrap", "Create CloudPermanent NG", func() error {
-		return operations.ParallelCreateNodeGroup(ctx, kubeCl, metaConfig, terraNodeGroups, terraformContext)
+		return operations.ParallelCreateNodeGroup(ctx, kubeCl, metaConfig, terraNodeGroups, infrastructureContext)
 	})
 }
 
@@ -763,7 +763,7 @@ func GetBastionHostFromCache() (string, error) {
 	return string(host), nil
 }
 
-func BootstrapAdditionalMasterNodes(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, addressTracker map[string]string, terraformContext *terraform.TerraformContext) error {
+func BootstrapAdditionalMasterNodes(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, addressTracker map[string]string, infrastructureContext *infrastructure.Context) error {
 	if metaConfig.MasterNodeGroupSpec.Replicas == 1 {
 		log.DebugF("Skip bootstrap additional master nodes because replicas == 1")
 		return nil
@@ -776,7 +776,7 @@ func BootstrapAdditionalMasterNodes(ctx context.Context, kubeCl *client.Kubernet
 		}
 
 		for i := 1; i < metaConfig.MasterNodeGroupSpec.Replicas; i++ {
-			outputs, err := operations.BootstrapAdditionalMasterNode(ctx, kubeCl, metaConfig, i, masterCloudConfig, false, terraformContext)
+			outputs, err := operations.BootstrapAdditionalMasterNode(ctx, kubeCl, metaConfig, i, masterCloudConfig, false, infrastructureContext)
 			if err != nil {
 				return err
 			}
