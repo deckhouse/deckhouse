@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 
 	"github.com/google/uuid"
@@ -28,6 +27,8 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
@@ -39,7 +40,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -55,11 +55,21 @@ func (s *Service) Check(server pb.DHCTL_CheckServer) error {
 	internalErrCh := make(chan error)
 	receiveCh := make(chan *pb.CheckRequest)
 	sendCh := make(chan *pb.CheckResponse)
-	logWriter := logger.NewLogWriter(logger.L(ctx).With(logTypeDHCTL), sendCh,
+
+	loggerDefault := logger.L(ctx).With(logTypeDHCTL)
+
+	logWriter := logger.NewLogWriter(loggerDefault, sendCh,
 		func(lines []string) *pb.CheckResponse {
 			return &pb.CheckResponse{Message: &pb.CheckResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
 		},
 	)
+
+	debugWriter := logger.NewDebugLogWriter(loggerDefault)
+
+	logOptions := logger.Options{
+		DebugWriter:   debugWriter,
+		DefaultWriter: logWriter,
+	}
 
 	startReceiver[*pb.CheckRequest, *pb.CheckResponse](server, receiveCh, doneCh, internalErrCh)
 	startSender[*pb.CheckRequest, *pb.CheckResponse](server, sendCh, internalErrCh)
@@ -89,7 +99,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.checkSafe(ctx, message.Start, logWriter)
+					result := s.checkSafe(ctx, message.Start, logOptions)
 					sendCh <- &pb.CheckResponse{Message: &pb.CheckResponse_Result{Result: result}}
 				}()
 
@@ -105,34 +115,28 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) checkSafe(
-	ctx context.Context,
-	request *pb.CheckStart,
-	logWriter io.Writer,
-) (result *pb.CheckResult) {
+func (s *Service) checkSafe(ctx context.Context, request *pb.CheckStart, options logger.Options) (result *pb.CheckResult) {
 	defer func() {
 		if r := recover(); r != nil {
 			result = &pb.CheckResult{Err: panicMessage(ctx, r)}
 		}
 	}()
 
-	return s.check(ctx, request, logWriter)
+	return s.check(ctx, request, options)
 }
 
-func (s *Service) check(
-	ctx context.Context,
-	request *pb.CheckStart,
-	logWriter io.Writer,
-) *pb.CheckResult {
+func (s *Service) check(ctx context.Context, request *pb.CheckStart, options logger.Options) *pb.CheckResult {
 	var err error
 
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream: logWriter,
-		Width:     int(request.Options.LogWidth),
+		OutStream:   options.DefaultWriter,
+		Width:       int(request.Options.LogWidth),
+		DebugStream: options.DebugWriter,
 	})
+
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
 	app.ResourcesTimeout = request.Options.ResourcesTimeout.AsDuration()
@@ -198,7 +202,7 @@ func (s *Service) check(
 			[]byte(request.ClusterConfig),
 			[]byte(request.ProviderSpecificClusterConfig),
 		),
-		TerraformContext: terraform.NewTerraformContext(),
+		InfrastructureContext: infrastructure.NewContextWithProvider(infrastructureprovider.ExecutorProvider(metaConfig)),
 	}
 
 	kubeClient, sshClient, cleanup, err := helper.InitializeClusterConnections(ctx, helper.ClusterConnectionsOptions{
