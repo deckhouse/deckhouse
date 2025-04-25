@@ -84,12 +84,40 @@ properties:
                   config:
                     type: object
                     properties:
-                      config:
-                        type: object
-                        additionalProperties: true
-                        x-kubernetes-preserve-unknown-fields: true
                       version:
                         type: string
+                      config:
+                        type: object
+                        properties:
+                          ca:
+                            type: string
+                          auth_cert:
+                            type: string
+                          auth_key:
+                            type: string
+                          token_cert:
+                            type: string
+                          token_key:
+                            type: string
+                          distribution_cert:
+                            type: string
+                          distribution_key:
+                            type: string
+                          http_secret:
+                            type: string
+                          upstream:
+                            type: object
+                            properties:
+                              scheme:
+                                type: string
+                              host:
+                                type: string
+                              path:
+                                type: string
+                              ca:
+                                type: string
+                              user:
+                                <<: *user
               node_services:
                 type: object
                 properties:

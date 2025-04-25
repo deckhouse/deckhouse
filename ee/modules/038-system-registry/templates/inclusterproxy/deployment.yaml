@@ -3,7 +3,7 @@
 
 # Prepare configs
 {{ $in_cluster_proxy_config_files_raw := (include "in_cluster_proxy_config_files" $ctx ) }}
-{{ $in_cluster_proxy_config_files_yaml := $in_cluster_proxy_config_files_raw | fromYamlArray }}
+{{ $in_cluster_proxy_config_files_mount_path := (include "in_cluster_proxy_config_files_mount_path" $ctx) }}
 
 {{- if ($ctx.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
@@ -22,13 +22,29 @@ spec:
     updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
-    - containerName: "registry-incluster-proxy"
+    - containerName: "distribution"
+      minAllowed:
+        {{- include "min_resources_for_registry_incluster_proxy" $ctx | nindent 8 }}
+      maxAllowed:
+        {{- include "max_resources_for_registry_incluster_proxy" $ctx | nindent 8 }}
+    - containerName: "auth"
       minAllowed:
         {{- include "min_resources_for_registry_incluster_proxy" $ctx | nindent 8 }}
       maxAllowed:
         {{- include "max_resources_for_registry_incluster_proxy" $ctx | nindent 8 }}
 {{- end }}
-
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: registry-incluster-proxy
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list $ctx (dict "app" "registry-incluster-proxy")) | nindent 2 }}
+spec:
+  maxUnavailable: {{ include "helm_lib_is_ha_to_value" (list $ctx 1 0) }}
+  selector:
+    matchLabels:
+      app: registry-incluster-proxy
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -67,7 +83,7 @@ spec:
         imagePullPolicy: IfNotPresent
         args:
           - serve
-          - /config/distribution_config.yaml
+          - "{{ $in_cluster_proxy_config_files_mount_path }}/distribution_config.yaml"
         env:
         {{- include "helm_lib_envs_for_proxy" $ctx | nindent 8 }}
         ports:
@@ -86,11 +102,9 @@ spec:
             port: emb-reg-dist
             scheme: HTTPS
         volumeMounts:
-          {{- range $file := $in_cluster_proxy_config_files_yaml }}
             - name: registry-incluster-proxy-config
-              mountPath: {{ $file.path }}
-              subPath: {{ $file.name }}
-          {{- end }}
+              mountPath: {{ $in_cluster_proxy_config_files_mount_path | quote }}
+              readOnly: true
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -98,7 +112,7 @@ spec:
             {{- include "min_resources_for_registry_incluster_proxy" $ctx | nindent 12 }}
             {{- end }}
       - name: auth
-        {{- include "helm_lib_envs_for_proxy" $ctx | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $ctx | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list $ctx "dockerAuth") }}
         imagePullPolicy: IfNotPresent
         ports:
@@ -116,13 +130,11 @@ spec:
             scheme: HTTPS
         args:
           - -logtostderr
-          - /config/auth_config.yaml
+          - "{{ $in_cluster_proxy_config_files_mount_path }}/auth_config.yaml"
         volumeMounts:
-          {{- range $file := $in_cluster_proxy_config_files_yaml }}
             - name: registry-incluster-proxy-config
-              mountPath: {{ $file.path }}
-              subPath: {{ $file.name }}
-          {{- end }}
+              mountPath: {{ $in_cluster_proxy_config_files_mount_path | quote }}
+              readOnly: true
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}

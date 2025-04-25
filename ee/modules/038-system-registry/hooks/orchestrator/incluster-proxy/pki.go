@@ -30,7 +30,7 @@ func ProcessAuthCertPair(log go_hook.Logger, certPair CertPair, ca pki.CertKey) 
 }
 
 func ProcessCertPair(log go_hook.Logger, certPair CertPair, ca pki.CertKey, hosts []string, cn string) (CertPair, error) {
-	isValid, err := certPair.IsValid(ca, hosts, cn)
+	isValid, err := certPair.IsValid(ca, hosts)
 	if !isValid {
 		log.Warn("Certificate pair is invalid, generating a new one.", "cn", cn, "error", err)
 		if err = certPair.Generate(ca, hosts, cn); err != nil {
@@ -45,7 +45,7 @@ type CertPair struct {
 	Key  string
 }
 
-func (certPair *CertPair) IsValid(ca pki.CertKey, hosts []string, expectedCN string) (bool, error) {
+func (certPair *CertPair) IsValid(ca pki.CertKey, hosts []string) (bool, error) {
 	if certPair.Cert == "" || certPair.Key == "" {
 		return false, fmt.Errorf("certificate or key is empty")
 	}
