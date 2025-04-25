@@ -401,6 +401,12 @@ func (suite *ReleaseControllerTestSuite) updateModuleReleasesStatuses() {
 	}
 }
 
+func (suite *ReleaseControllerTestSuite) setModulePhase(phase addonmodules.ModuleRunPhase) {
+	suite.ctr.moduleManager = stubModulesManager{
+		modulePhase: phase,
+	}
+}
+
 type reconcilerOption func(*reconciler)
 
 func withModuleUpdatePolicy(mup *v1alpha2.ModuleUpdatePolicySpec) reconcilerOption {
@@ -412,6 +418,12 @@ func withModuleUpdatePolicy(mup *v1alpha2.ModuleUpdatePolicySpec) reconcilerOpti
 func withDependencyContainer(dc dependency.Container) reconcilerOption {
 	return func(r *reconciler) {
 		r.dependencyContainer = dc
+	}
+}
+
+func withBasicModulePhase(phase addonmodules.ModuleRunPhase) reconcilerOption {
+	return func(r *reconciler) {
+		r.moduleManager = stubModulesManager{modulePhase: phase}
 	}
 }
 
@@ -589,7 +601,9 @@ func (suite *ReleaseControllerTestSuite) fetchResults() []byte {
 	return result.Bytes()
 }
 
-type stubModulesManager struct{}
+type stubModulesManager struct {
+	modulePhase addonmodules.ModuleRunPhase
+}
 
 func (s stubModulesManager) AreModulesInited() bool {
 	return true
@@ -600,6 +614,10 @@ func (s stubModulesManager) DisableModuleHooks(_ string) {
 
 func (s stubModulesManager) GetModule(name string) *addonmodules.BasicModule {
 	bm, _ := addonmodules.NewBasicModule(name, "", 900, nil, []byte{}, []byte{}, addonmodules.WithLogger(log.NewNop()))
+	bm.SetPhase(addonmodules.Ready)
+	if s.modulePhase != "" {
+		bm.SetPhase(s.modulePhase)
+	}
 	return bm
 }
 
