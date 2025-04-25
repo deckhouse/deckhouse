@@ -489,7 +489,7 @@
           "unit": "s"
         }
       },
-      "pluginVersion": "10.4.14",
+      "pluginVersion": "10.4.15",
       "reverseYBuckets": false,
       "targets": [
         {
@@ -835,7 +835,7 @@
           "unit": "s"
         }
       },
-      "pluginVersion": "10.4.14",
+      "pluginVersion": "10.4.15",
       "reverseYBuckets": false,
       "targets": [
         {
@@ -868,6 +868,7 @@
     },
     {
       "datasource": {
+        "type": "prometheus",
         "uid": "$ds_prometheus"
       },
       "description": "If the graph is non-empty, it means that some CoreDNS requests resulted in panic. You can see a specific error in the container logs.",
@@ -977,10 +978,12 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval])) by (pod)",
+          "editorMode": "code",
+          "expr": "sum(rate(coredns_proxy_healthcheck_failures_total{proxy_name=\"forward\",job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval])) by (pod, to, rcode)\n",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{pod}}",
+          "legendFormat": "__auto",
+          "range": true,
           "refId": "A",
           "step": 40
         },
@@ -988,10 +991,12 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval]))",
+          "editorMode": "code",
+          "expr": "sum(rate(coredns_proxy_healthcheck_failures_total{job=\"kube-dns\", pod=~\"$pod\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
+          "range": true,
           "refId": "B"
         }
       ],
@@ -1280,7 +1285,7 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 24,
+        "w": 12,
         "x": 0,
         "y": 38
       },
