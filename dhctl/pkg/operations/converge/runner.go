@@ -291,9 +291,13 @@ func (r *runner) converge(ctx *context.Context) error {
 		log.InfoLn("Skip converge nodes")
 	}
 
-	err = r.convergeDeckhouseConfiguration(ctx, r.commanderUUID)
-	if err != nil {
-		return err
+	if !r.isSkip(phases.DeckhouseConfigurationPhase) {
+		err = r.convergeDeckhouseConfiguration(ctx, r.commanderUUID)
+		if err != nil {
+			return err
+		}
+	} else {
+		log.InfoLn("Skip converge deckhouse configuration")
 	}
 
 	if kubeClientSwitched {
