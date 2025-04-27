@@ -494,7 +494,7 @@ jobs:
 
       - name: "Run e2e test: vSphere/Containerd/1.28"
         id: e2e_test_run
-        timeout-minutes: 120
+        timeout-minutes: 80
         env:
           SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: vSphere
@@ -1001,7 +1001,7 @@ jobs:
 
       - name: "Run e2e test: vSphere/Containerd/1.29"
         id: e2e_test_run
-        timeout-minutes: 120
+        timeout-minutes: 80
         env:
           SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: vSphere
@@ -1508,7 +1508,7 @@ jobs:
 
       - name: "Run e2e test: vSphere/Containerd/1.30"
         id: e2e_test_run
-        timeout-minutes: 120
+        timeout-minutes: 80
         env:
           SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: vSphere
@@ -2015,7 +2015,7 @@ jobs:
 
       - name: "Run e2e test: vSphere/Containerd/1.31"
         id: e2e_test_run
-        timeout-minutes: 120
+        timeout-minutes: 80
         env:
           SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: vSphere
@@ -2522,7 +2522,7 @@ jobs:
 
       - name: "Run e2e test: vSphere/Containerd/1.32"
         id: e2e_test_run
-        timeout-minutes: 120
+        timeout-minutes: 80
         env:
           SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: vSphere
@@ -3029,7 +3029,7 @@ jobs:
 
       - name: "Run e2e test: vSphere/Containerd/Automatic"
         id: e2e_test_run
-        timeout-minutes: 120
+        timeout-minutes: 80
         env:
           SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: vSphere
