@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 
 	"github.com/google/uuid"
@@ -40,7 +39,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -59,11 +57,21 @@ func (s *Service) Destroy(server pb.DHCTL_DestroyServer) error {
 	phaseSwitcher := &fsmPhaseSwitcher[*pb.DestroyResponse, any]{
 		f: f, dataFunc: s.destroySwitchPhaseData, sendCh: sendCh, next: make(chan error),
 	}
-	logWriter := logger.NewLogWriter(logger.L(ctx).With(logTypeDHCTL), sendCh,
+
+	loggerDefault := logger.L(ctx).With(logTypeDHCTL)
+
+	logWriter := logger.NewLogWriter(loggerDefault, sendCh,
 		func(lines []string) *pb.DestroyResponse {
 			return &pb.DestroyResponse{Message: &pb.DestroyResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
 		},
 	)
+
+	debugWriter := logger.NewDebugLogWriter(loggerDefault)
+
+	logOptions := logger.Options{
+		DebugWriter:   debugWriter,
+		DefaultWriter: logWriter,
+	}
 
 	startReceiver[*pb.DestroyRequest, *pb.DestroyResponse](server, receiveCh, doneCh, internalErrCh)
 	startSender[*pb.DestroyRequest, *pb.DestroyResponse](server, sendCh, internalErrCh)
@@ -93,7 +101,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.destroySafe(ctx, message.Start, phaseSwitcher.switchPhase(ctx), logWriter)
+					result := s.destroySafe(ctx, message.Start, phaseSwitcher.switchPhase(ctx), logOptions)
 					sendCh <- &pb.DestroyResponse{Message: &pb.DestroyResponse_Result{Result: result}}
 				}()
 
@@ -127,36 +135,28 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) destroySafe(
-	ctx context.Context,
-	request *pb.DestroyStart,
-	switchPhase phases.DefaultOnPhaseFunc,
-	logWriter io.Writer,
-) (result *pb.DestroyResult) {
+func (s *Service) destroySafe(ctx context.Context, request *pb.DestroyStart, switchPhase phases.DefaultOnPhaseFunc, options logger.Options) (result *pb.DestroyResult) {
 	defer func() {
 		if r := recover(); r != nil {
 			result = &pb.DestroyResult{Err: panicMessage(ctx, r)}
 		}
 	}()
 
-	return s.destroy(ctx, request, switchPhase, logWriter)
+	return s.destroy(ctx, request, switchPhase, options)
 }
 
-func (s *Service) destroy(
-	ctx context.Context,
-	request *pb.DestroyStart,
-	switchPhase phases.DefaultOnPhaseFunc,
-	logWriter io.Writer,
-) *pb.DestroyResult {
+func (s *Service) destroy(ctx context.Context, request *pb.DestroyStart, switchPhase phases.DefaultOnPhaseFunc, options logger.Options) *pb.DestroyResult {
 	var err error
 
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream: logWriter,
-		Width:     int(request.Options.LogWidth),
+		OutStream:   options.DefaultWriter,
+		Width:       int(request.Options.LogWidth),
+		DebugStream: options.DebugWriter,
 	})
+
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
 	app.ResourcesTimeout = request.Options.ResourcesTimeout.AsDuration()
@@ -249,7 +249,6 @@ func (s *Service) destroy(
 			[]byte(request.ClusterConfig),
 			[]byte(request.ProviderSpecificClusterConfig),
 		),
-		TerraformContext: terraform.NewTerraformContext(),
 	})
 	if err != nil {
 		return &pb.DestroyResult{Err: fmt.Errorf("unable to initialize cluster destroyer: %w", err).Error()}

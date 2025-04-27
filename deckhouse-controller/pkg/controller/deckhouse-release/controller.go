@@ -999,7 +999,7 @@ func (r *deckhouseReleaseReconciler) reconcileDeployedRelease(ctx context.Contex
 	}
 
 	if dr.GetIsUpdating() {
-		r.metricStorage.Grouped().GaugeSet(metricUpdatingGroup, metricUpdatingName, 1, map[string]string{"releaseChannel": r.updateSettings.Get().ReleaseChannel})
+		r.metricStorage.Grouped().GaugeSet(metricUpdatingGroup, metricUpdatingName, 1, map[string]string{"deployingRelease": dr.GetName()})
 
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}

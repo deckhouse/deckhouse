@@ -396,7 +396,7 @@
            ```
 
   - alert: DeckhouseUpdating
-    expr: max (d8_is_updating) == 1
+    expr: max by (deployingRelease) (d8_is_updating) == 1
     labels:
       severity_level: "4"
       tier: cluster
@@ -405,7 +405,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      summary: Deckhouse is being updated.
+      summary: Deckhouse is being updated to {{ $labels.deployingRelease }}.
 
   - alert: DeckhouseUpdatingFailed
     expr: max (d8_updating_is_failed) == 1
