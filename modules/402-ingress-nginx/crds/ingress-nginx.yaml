@@ -602,6 +602,37 @@ spec:
                       type: string
                       description: |
                         Hostname of the load balancer.
+                version:
+                  type: string
+                  description: The current applied version.
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - status
+                      - reason
+                    properties:
+                      type:
+                        description: Type of condition.
+                        type: string
+                      status:
+                        description: Status of the condition, one of True, False.
+                        type: string
+                        enum:
+                          - "True"
+                          - "False"
+                      lastUpdateTime:
+                        type: string
+                        format: date-time
+                        description: Last time the condition was updated.
+                      reason:
+                        description: The reason for the condition's last transition in CamelCase.
+                        type: string
+                      message:
+                        description: Human readable message indicating details about last transition.
+                        type: string
             spec:
               type: object
               required: ['inlet']

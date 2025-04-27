@@ -354,6 +354,27 @@ spec:
                     hostname:
                       description: |
                         DNS-имя балансировщика нагрузки.
+                version:
+                  description: |
+                    Текущая примененная версия.
+                conditions:
+                  items:
+                    properties:
+                      type:
+                        description: |
+                          Тип условия.
+                      status:
+                        description: |
+                          Статус условия, одно из значений True, False.
+                      lastUpdateTime:
+                        description: |
+                          Время последнего обновления условия.
+                      reason:
+                        description: |
+                          Причина последнего перехода состояния условия в формате CamelCase.
+                      message:
+                        description: |
+                          Человекочитаемое сообщение с подробностями о последнем переходе состояния.
             spec:
               properties:
                 ingressClass:
