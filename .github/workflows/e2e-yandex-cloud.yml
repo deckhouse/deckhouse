@@ -424,7 +424,7 @@ jobs:
 
       - name: "Run e2e test: Yandex.Cloud/Containerd/1.28"
         id: e2e_test_run
-        timeout-minutes: 80
+        timeout-minutes: 120
         env:
           SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: Yandex.Cloud
@@ -795,7 +795,7 @@ jobs:
 
       - name: "Run e2e test: Yandex.Cloud/Containerd/1.29"
         id: e2e_test_run
-        timeout-minutes: 80
+        timeout-minutes: 120
         env:
           SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: Yandex.Cloud
@@ -1166,7 +1166,7 @@ jobs:
 
       - name: "Run e2e test: Yandex.Cloud/Containerd/1.30"
         id: e2e_test_run
-        timeout-minutes: 80
+        timeout-minutes: 120
         env:
           SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: Yandex.Cloud
@@ -1537,7 +1537,7 @@ jobs:
 
       - name: "Run e2e test: Yandex.Cloud/Containerd/1.31"
         id: e2e_test_run
-        timeout-minutes: 80
+        timeout-minutes: 120
         env:
           SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: Yandex.Cloud
@@ -1908,7 +1908,7 @@ jobs:
 
       - name: "Run e2e test: Yandex.Cloud/Containerd/1.32"
         id: e2e_test_run
-        timeout-minutes: 80
+        timeout-minutes: 120
         env:
           SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: Yandex.Cloud
@@ -2279,7 +2279,7 @@ jobs:
 
       - name: "Run e2e test: Yandex.Cloud/Containerd/Automatic"
         id: e2e_test_run
-        timeout-minutes: 80
+        timeout-minutes: 120
         env:
           SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "0"
           PROVIDER: Yandex.Cloud

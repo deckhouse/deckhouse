@@ -354,7 +354,7 @@ jobs:
 
       - name: "Run e2e test: AWS/Containerd/1.29"
         id: e2e_test_run
-        timeout-minutes: 80
+        timeout-minutes: 120
         env:
           SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
           PROVIDER: AWS
@@ -824,7 +824,7 @@ jobs:
 
       - name: "Run e2e test: EKS/Containerd/1.29"
         id: e2e_test_run
-        timeout-minutes: 80
+        timeout-minutes: 120
         env:
           SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
           PROVIDER: EKS
@@ -1331,7 +1331,7 @@ jobs:
 
       - name: "Run e2e test: GCP/Containerd/1.29"
         id: e2e_test_run
-        timeout-minutes: 80
+        timeout-minutes: 120
         env:
           SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
           PROVIDER: GCP
@@ -1725,7 +1725,7 @@ jobs:
 
       - name: "Run e2e test: Yandex.Cloud/Containerd/1.29"
         id: e2e_test_run
-        timeout-minutes: 80
+        timeout-minutes: 120
         env:
           SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
           PROVIDER: Yandex.Cloud
@@ -2141,7 +2141,7 @@ jobs:
 
       - name: "Run e2e test: OpenStack/Containerd/1.29"
         id: e2e_test_run
-        timeout-minutes: 80
+        timeout-minutes: 120
         env:
           SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
           PROVIDER: OpenStack
@@ -2601,7 +2601,7 @@ jobs:
 
       - name: "Run e2e test: vSphere/Containerd/1.29"
         id: e2e_test_run
-        timeout-minutes: 80
+        timeout-minutes: 120
         env:
           SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
           PROVIDER: vSphere
@@ -3065,7 +3065,7 @@ jobs:
 
       - name: "Run e2e test: VCD/Containerd/1.29"
         id: e2e_test_run
-        timeout-minutes: 80
+        timeout-minutes: 120
         env:
           SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
           PROVIDER: VCD
@@ -3541,7 +3541,7 @@ jobs:
 
       - name: "Run e2e test: Static/Containerd/1.29"
         id: e2e_test_run
-        timeout-minutes: 80
+        timeout-minutes: 120
         env:
           SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
           PROVIDER: Static

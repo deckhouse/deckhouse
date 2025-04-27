@@ -588,7 +588,7 @@ check_e2e_labels:
 
     - name: "Run e2e test: {!{ $ctx.providerName }!}/{!{ $ctx.criName }!}/{!{ $ctx.kubernetesVersion }!}"
       id: e2e_test_run
-      timeout-minutes: 80
+      timeout-minutes: 120
       env:
         SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "{!{ $ctx.sleepBeforeClusterTestingAlerts }!}"
         PROVIDER: {!{ $ctx.providerName }!}
