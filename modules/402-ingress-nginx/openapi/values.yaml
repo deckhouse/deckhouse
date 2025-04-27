@@ -8,6 +8,8 @@ properties:
     x-required-for-helm:
       - ingressControllers
     properties:
+      appliedControllerVersion:
+        type: string
       admissionCertificate:
         type: object
         default: {}
