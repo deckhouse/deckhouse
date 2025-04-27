@@ -24,10 +24,10 @@ function log_autoscaler() {
   sleep 120
 
   echo "Cluster-autoscaler warning logs:"
-  kubectl -n d8-cloud-instance-manager logs -l app=cluster-autoscaler | grep -e "^W" || true
+  kubectl -n d8-cloud-instance-manager logs deployments/cluster-autoscaler | grep -e "^W" || true
 
   echo "Cluster-autoscaler error logs:"
-  kubectl -n d8-cloud-instance-manager logs -l app=cluster-autoscaler | grep -e "^E" || true
+  kubectl -n d8-cloud-instance-manager logs deployments/cluster-autoscaler | grep -e "^E" || true
 
   return 0
 }
@@ -154,8 +154,9 @@ function wait_become_autoscaler_instances_delete() {
   for i in $(seq $attempts); do
     autoscaler_nodes_in_cluster="$(kubectl get instances -l node.deckhouse.io/group=autoscaler -o json | jq --raw-output '.items | length')"
     if [[ "$autoscaler_nodes_in_cluster" == "$should_nodes_in_cluster" ]]; then
+      echo "Instances in autoscaler ng scaled down"
       log_autoscaler
-      echo "Instances in autoscaler ng scaled down'. Autoscaler test was processed!"
+      echo "Autoscaler test was processed!"
       return 0
     fi
 
