@@ -68,6 +68,7 @@ jobs:
 {!{-   $jobCtx := (dict "provider" $provider "commanderProviders" $commanderProviders "cri" $cri "criName" $criName "criEnv" $criEnv "layout" $layout) }!}
 {!{-   $jobCtx = coll.Merge $jobCtx (dict "kubernetesVersion" $kubernetesVersion "kubernetesVersionSlug" $kubernetesVersionSlug) }!}
 {!{-   $jobCtx = coll.Merge $jobCtx (dict "providerName" $providerName "workflowName" $workflowName "jobName" $jobName "jobID" $jobID) }!}
+{!{-   $jobCtx = coll.Merge $jobCtx (dict "sleepBeforeClusterTestingAlerts" "1800") }!}
 {!{   tmpl.Exec "e2e_run_job_template" $jobCtx | strings.Indent 2 }!}
 {!{- end }!}
 

@@ -137,7 +137,7 @@ jobs:
 {!{-     $jobName := printf "%s, %s, Kubernetes %s" $workflowName $criName $kubernetesVersion -}!}
 {!{-     $lastCommentNeeds = $lastCommentNeeds | append $jobID -}!}
 {!{-     $jobNames = coll.Merge $jobNames (dict $jobID $jobName) }!}
-{!{-     $jobCtx := coll.Merge $ctx (dict "manualRun" "yes" "cri" $cri "criName" $criName "criEnv" $criEnv "layout" $layout "kubernetesVersion" $kubernetesVersion "kubernetesVersionSlug" $kubernetesVersionSlug "workflowName" $workflowName "jobName" $jobName "jobID" $jobID) }!}
+{!{-     $jobCtx := coll.Merge $ctx (dict "sleepBeforeClusterTestingAlerts" "0" "manualRun" "yes" "cri" $cri "criName" $criName "criEnv" $criEnv "layout" $layout "kubernetesVersion" $kubernetesVersion "kubernetesVersionSlug" $kubernetesVersionSlug "workflowName" $workflowName "jobName" $jobName "jobID" $jobID) }!}
 {!{     tmpl.Exec "e2e_run_job_template" $jobCtx | strings.Indent 2 }!}
 {!{-   end -}!}
 {!{- end }!}
