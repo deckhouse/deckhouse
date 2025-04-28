@@ -17,7 +17,7 @@ Deckhouse Kubernetes Platform (DKP) предоставляет доступ к [
 
 DKP поддерживает все возможности оригинального `cert-manager`, включая:
 
-- заказ сертификатов во всех поддерживаемых источниках, таких как Let’s Encrypt, HashiCorp Vault, Venafi;
+- заказ сертификатов во всех поддерживаемых источниках, таких как [Let’s Encrypt](https://letsencrypt.org/), [HashiCorp Vault](https://developer.hashicorp.com/vault), [Venafi](https://docs.venafi.com/);
 - выпуск самоподписанных сертификатов;
 - автоматический перевыпуск и контроль срока действия сертификатов;
 - установку `cm-acme-http-solver` на master-узлы и выделенные узлы.
@@ -249,15 +249,15 @@ DKP экспортирует метрики в Prometheus, что позволя
    apiVersion: cert-manager.io/v1
    kind: Certificate
    metadata:
-     name: example-com                          # Имя сертификата.
+     name: example-com            # Имя сертификата.
      namespace: default
    spec:
-     secretName: example-com-tls                # Имя Secret, в котором будет сохранён приватный ключ и сертификат.
+     secretName: example-com-tls  # Имя Secret, в котором будет сохранён приватный ключ и сертификат.
      issuerRef:
-       kind: ClusterIssuer                      # Данные об издателе сертификата.
+       kind: ClusterIssuer        # Данные об издателе сертификата.
        name: letsencrypt
-     commonName: example.com                    # Основной домен сертификата.
-     dnsNames:                                  # Опциональные дополнительные домены сертификата (как минимум одно DNS-имя или IP-адрес).
+     commonName: example.com      # Основной домен сертификата.
+     dnsNames:                    # Опциональные дополнительные домены сертификата (как минимум одно DNS-имя или IP-адрес).
      - www.example.com
      - admin.example.com
    ```
