@@ -14,14 +14,18 @@
 
 package ssh
 
-import "context"
+import (
+	"context"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+)
 
 type RunScriptReverseTunnelChecker struct {
-	client     *Client
+	client     node.SSHClient
 	scriptPath string
 }
 
-func NewRunScriptReverseTunnelChecker(c *Client, scriptPath string) *RunScriptReverseTunnelChecker {
+func NewRunScriptReverseTunnelChecker(c node.SSHClient, scriptPath string) *RunScriptReverseTunnelChecker {
 	return &RunScriptReverseTunnelChecker{
 		client:     c,
 		scriptPath: scriptPath,
@@ -36,11 +40,11 @@ func (s *RunScriptReverseTunnelChecker) CheckTunnel(ctx context.Context) (string
 }
 
 type RunScriptReverseTunnelKiller struct {
-	client     *Client
+	client     node.SSHClient
 	scriptPath string
 }
 
-func NewRunScriptReverseTunnelKiller(c *Client, scriptPath string) *RunScriptReverseTunnelKiller {
+func NewRunScriptReverseTunnelKiller(c node.SSHClient, scriptPath string) *RunScriptReverseTunnelKiller {
 	return &RunScriptReverseTunnelKiller{
 		client:     c,
 		scriptPath: scriptPath,
@@ -52,4 +56,10 @@ func (s *RunScriptReverseTunnelKiller) KillTunnel(ctx context.Context) (string, 
 	script.Sudo()
 	out, err := script.Execute(ctx)
 	return string(out), err
+}
+
+type EmptyReverseTunnelKiller struct{}
+
+func (k EmptyReverseTunnelKiller) KillTunnel(ctx context.Context) (string, error) {
+	return "", nil
 }
