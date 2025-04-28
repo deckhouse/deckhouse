@@ -50,6 +50,9 @@ spec:
   settings:
     modules:
       publicDomainTemplate: "%s.k8s.smoke.flant.com"
+      placement:
+        customTolerationKeys:
+          - node
   version: 1
 ---
 apiVersion: deckhouse.io/v1alpha1
