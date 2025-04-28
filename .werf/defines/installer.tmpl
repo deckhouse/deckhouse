@@ -149,7 +149,7 @@
 # . is dict with keys:
 #   rootContext - context with .Files
 #   CI_COMMIT_TAG - CI_COMMIT_TAG env
-#   Env           - werf env
+#   Env - edition set up from ci
 {{- define "installer_prepare_with_shell" }}
 {{- $context := . -}}
 {{- $rootContext := $context.rootContext -}}
@@ -214,7 +214,7 @@ imageSpec:
 # render installer standalone setup script
 # . is dict with next params
 #   CI_COMMIT_TAG - CI_COMMIT_TAG env
-#   Env           - werf env
+#   Env - edition set up from ci
 {{- define "installer_standalone_setup_script" }}
 {{- $context := . -}}
 
