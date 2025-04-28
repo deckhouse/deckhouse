@@ -172,13 +172,13 @@ func (state *State) transitionToLocal(log go_hook.Logger, inputs Inputs) error {
 		},
 	}
 
-	if inputs.IngressCA != "" {
-		cert, err := registry_pki.DecodeCertificate([]byte(inputs.IngressCA))
+	if inputs.IngressClientCA != "" {
+		cert, err := registry_pki.DecodeCertificate([]byte(inputs.IngressClientCA))
 		if err != nil {
-			return fmt.Errorf("cannot decode Ingress CA: %w", err)
+			return fmt.Errorf("cannot decode Ingress client CA: %w", err)
 		}
 
-		nodeservicesParams.Local.IngressCA = cert
+		nodeservicesParams.Local.IngressClientCA = cert
 	}
 
 	nodeServicesResult, err := state.NodeServices.Process(log, nodeservicesParams, inputs.NodeServices)

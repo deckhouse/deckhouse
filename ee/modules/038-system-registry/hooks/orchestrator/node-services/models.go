@@ -49,7 +49,7 @@ type LocalModeParams struct {
 	UserPuller users.User
 	UserPusher users.User
 
-	IngressCA *x509.Certificate
+	IngressClientCA *x509.Certificate
 }
 
 type ProcessResult map[string]ProcessResultNode
@@ -232,8 +232,8 @@ func (nsc *NodeServicesConfig) processLocalMode(params LocalModeParams, nodeIP s
 		}
 	}
 
-	if params.IngressCA != nil {
-		cfg.IngressClientCACert = string(pki.EncodeCertificate(params.IngressCA))
+	if params.IngressClientCA != nil {
+		cfg.IngressClientCACert = string(pki.EncodeCertificate(params.IngressClientCA))
 	}
 
 	nsc.Config.LocalMode = &cfg

@@ -29,7 +29,7 @@ type Params struct {
 type Inputs struct {
 	Params Params
 
-	IngressCA string
+	IngressClientCA string
 
 	PKI             pki.Inputs
 	Secrets         secrets.Inputs

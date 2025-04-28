@@ -27,7 +27,7 @@ http:
     enabled: true
     clientcert:
       ca: /system_registry_pki/ingress-client-ca.crt
-      cn: nginx-ingress:nginx
+      cn: kube-rbac-proxy-ca-key-pair
 {{- end }}
 
 {{- with .Upstream }}

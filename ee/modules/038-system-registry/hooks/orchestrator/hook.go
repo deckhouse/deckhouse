@@ -165,6 +165,12 @@ func handle(input *go_hook.HookInput) error {
 		return fmt.Errorf("get Config snapshot error: %w", err)
 	}
 
+	ingressClientCA, exists := helpers.GetIngressClientCAFromGlobalValues(input)
+	if !exists {
+		return fmt.Errorf("get Ingress client CA value error: CA is empty")
+	}
+	inputs.IngressClientCA = ingressClientCA
+
 	inputs.PKI, err = pki.InputsFromSnapshot(input, pkiSnapName)
 	if err != nil && !errors.Is(err, helpers.ErrNoSnapshot) {
 		return fmt.Errorf("get PKI snapshot error: %w", err)
@@ -175,7 +181,6 @@ func handle(input *go_hook.HookInput) error {
 		return fmt.Errorf("get Users snapshot error: %w", err)
 	}
 
-	// TODO: extract ingress CA for local mode
 	inputs.NodeServices, err = nodeservices.InputsFromSnapshot(input, nodeServicesSnapName)
 	if err != nil {
 		return fmt.Errorf("get NodeServices snapshots error: %w", err)
