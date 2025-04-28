@@ -24,6 +24,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
@@ -34,14 +35,14 @@ type DeckhouseDestroyerOptions struct {
 
 type DeckhouseDestroyer struct {
 	convergeUnlocker func(fullUnlock bool)
-	sshClient        *ssh.Client
+	sshClient        node.SSHClient
 	kubeCl           *client.KubernetesClient
 	state            *State
 
 	DeckhouseDestroyerOptions
 }
 
-func NewDeckhouseDestroyer(sshClient *ssh.Client, state *State, opts DeckhouseDestroyerOptions) *DeckhouseDestroyer {
+func NewDeckhouseDestroyer(sshClient node.SSHClient, state *State, opts DeckhouseDestroyerOptions) *DeckhouseDestroyer {
 	return &DeckhouseDestroyer{
 		sshClient:                 sshClient,
 		state:                     state,
@@ -85,6 +86,11 @@ func (g *DeckhouseDestroyer) GetKubeClient(ctx context.Context) (*client.Kuberne
 	}
 
 	return kubeCl, err
+}
+
+func (g *DeckhouseDestroyer) KubeClient() *client.KubernetesClient {
+	kubeClient, _ := g.GetKubeClient(context.Background())
+	return kubeClient
 }
 
 func (g *DeckhouseDestroyer) DeleteResources(ctx context.Context, cloudType string) error {

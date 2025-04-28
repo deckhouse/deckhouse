@@ -143,7 +143,8 @@ func TestParseConnectionConfig(t *testing.T) {
 				"./mocks/id_passphrase_rsa",
 			),
 			opts: []ValidateOption{ValidateOptionCommanderMode(true)},
-			errContains: `ValidationFailed: [0] dhctl.deckhouse.io/v1, Kind=SSHConfig: "SSHConfig, dhctl.deckhouse.io/v1" document validation failed: 1 error occurred:
+			errContains: `ValidationFailed: [0] dhctl.deckhouse.io/v1, Kind=SSHConfig: "SSHConfig, dhctl.deckhouse.io/v1" document validation failed: 2 errors occurred:
+	* "" must validate at least one schema (anyOf)
 	* .sshUser is required
 
 `,
@@ -151,7 +152,8 @@ func TestParseConnectionConfig(t *testing.T) {
 		"invalid config: no agent private keys": {
 			config: invalidSSHConfigNoKeys,
 			opts:   []ValidateOption{ValidateOptionCommanderMode(true)},
-			errContains: `ValidationFailed: [0] dhctl.deckhouse.io/v1, Kind=SSHConfig: "SSHConfig, dhctl.deckhouse.io/v1" document validation failed: 1 error occurred:
+			errContains: `ValidationFailed: [0] dhctl.deckhouse.io/v1, Kind=SSHConfig: "SSHConfig, dhctl.deckhouse.io/v1" document validation failed: 2 errors occurred:
+	* "" must validate at least one schema (anyOf)
 	* .sshAgentPrivateKeys is required
 
 `,
