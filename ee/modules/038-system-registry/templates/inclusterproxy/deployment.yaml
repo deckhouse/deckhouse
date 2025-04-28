@@ -61,10 +61,12 @@ spec:
   selector:
     matchLabels:
       app: registry-incluster-proxy
+      type: incluster-proxy
   template:
     metadata:
       labels:
         app: registry-incluster-proxy
+        type: incluster-proxy
       annotations:
         registry.deckhouse.io/config-hash: {{ $in_cluster_proxy_config_files_raw | sha256sum | quote }}
         registry.deckhouse.io/config-version: {{ (include "in_cluster_proxy_version" $ctx ) | quote }}

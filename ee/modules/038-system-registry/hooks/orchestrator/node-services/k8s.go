@@ -75,7 +75,7 @@ func KubernetsConfig(name string) []go_hook.KubernetesConfig {
 					"app":       "system-registry",
 					"module":    "system-registry",
 					"component": "system-registry",
-					"type":      "static-pod",
+					"type":      "node-services",
 				},
 			},
 			FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {

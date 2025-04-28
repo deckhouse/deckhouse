@@ -8,7 +8,7 @@ metadata:
     app: system-registry
     component: system-registry
     tier: control-plane
-    type: static-pod
+    type: node-services
   annotations:
     registry.deckhouse.io/config-hash: {{ quote .Hash }}
     registry.deckhouse.io/config-version: {{ quote .Version }}

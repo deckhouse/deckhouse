@@ -20,6 +20,7 @@ import (
 	inclusterproxy "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/incluster-proxy"
 	nodeservices "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/node-services"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/pki"
+	registryservice "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/registry-service"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/users"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
 )
@@ -28,13 +29,14 @@ const (
 	valuesPath    = "systemRegistry.internal.orchestrator"
 	SubmoduleName = "orchestrator"
 
-	configSnapName         = "config"
-	stateSnapName          = "state"
-	pkiSnapName            = "pki"
-	secretsSnapName        = "secrets"
-	usersSnapName          = "users"
-	nodeServicesSnapName   = "node-services"
-	inClusterProxySnapName = "incluster-proxy"
+	configSnapName          = "config"
+	stateSnapName           = "state"
+	pkiSnapName             = "pki"
+	secretsSnapName         = "secrets"
+	usersSnapName           = "users"
+	nodeServicesSnapName    = "node-services"
+	inClusterProxySnapName  = "incluster-proxy"
+	registryServiceSnapName = "registry-service"
 )
 
 func getKubernetesConfigs() []go_hook.KubernetesConfig {
@@ -103,6 +105,7 @@ func getKubernetesConfigs() []go_hook.KubernetesConfig {
 		},
 		pki.KubernetsConfig(pkiSnapName),
 		users.KubernetsConfig(usersSnapName),
+		registryservice.KubernetsConfig(registryServiceSnapName),
 	}
 
 	ret = append(ret, nodeservices.KubernetsConfig(nodeServicesSnapName)...)
@@ -181,6 +184,11 @@ func handle(input *go_hook.HookInput) error {
 	inputs.InClusterProxy, err = inclusterproxy.InputsFromSnapshot(input, inClusterProxySnapName)
 	if err != nil {
 		return fmt.Errorf("get InClusterProxy snapshots error: %w", err)
+	}
+
+	inputs.RegistryService, err = registryservice.InputsFromSnapshot(input, registryServiceSnapName)
+	if err != nil && !errors.Is(err, helpers.ErrNoSnapshot) {
+		return fmt.Errorf("get PKI snapshot error: %w", err)
 	}
 
 	values.Hash, err = helpers.ComputeHash(inputs)

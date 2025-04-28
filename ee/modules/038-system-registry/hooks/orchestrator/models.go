@@ -9,6 +9,7 @@ import (
 	inclusterproxy "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/incluster-proxy"
 	nodeservices "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/node-services"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/pki"
+	registryservice "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/registry-service"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/secrets"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/users"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
@@ -30,11 +31,12 @@ type Inputs struct {
 
 	IngressCA string
 
-	PKI            pki.Inputs
-	Secrets        secrets.Inputs
-	Users          users.Inputs
-	NodeServices   nodeservices.Inputs
-	InClusterProxy inclusterproxy.Inputs
+	PKI             pki.Inputs
+	Secrets         secrets.Inputs
+	Users           users.Inputs
+	NodeServices    nodeservices.Inputs
+	InClusterProxy  inclusterproxy.Inputs
+	RegistryService registryservice.Inputs
 }
 
 type Values struct {

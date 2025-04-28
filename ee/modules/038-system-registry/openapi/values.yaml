@@ -137,6 +137,8 @@ properties:
                          type: string
               ingress_enabled:
                 type: boolean
+              registry_service:
+                type: string
               conditions:
                 x-kubernetes-patch-strategy: merge
                 x-kubernetes-patch-merge-key: type

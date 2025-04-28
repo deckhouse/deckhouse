@@ -17,6 +17,7 @@ import (
 	inclusterproxy "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/incluster-proxy"
 	nodeservices "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/node-services"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/pki"
+	registryservice "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/registry-service"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/secrets"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/users"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
@@ -27,12 +28,13 @@ type State struct {
 	Mode       registry_const.ModeType `json:"mode,omitempty"`
 	TargetMode registry_const.ModeType `json:"target_mode,omitempty"`
 
-	PKI            pki.State            `json:"pki,omitempty"`
-	Secrets        secrets.State        `json:"secrets,omitempty"`
-	Users          users.State          `json:"users,omitempty"`
-	NodeServices   nodeservices.State   `json:"node_services,omitempty"`
-	InClusterProxy inclusterproxy.State `json:"in_cluster_proxy,omitempty"`
-	IngressEnabled bool                 `json:"ingress_enabled,omitempty"`
+	PKI             pki.State            `json:"pki,omitempty"`
+	Secrets         secrets.State        `json:"secrets,omitempty"`
+	Users           users.State          `json:"users,omitempty"`
+	NodeServices    nodeservices.State   `json:"node_services,omitempty"`
+	InClusterProxy  inclusterproxy.State `json:"in_cluster_proxy,omitempty"`
+	IngressEnabled  bool                 `json:"ingress_enabled,omitempty"`
+	RegistryService registryservice.Mode `json:"registry_service,omitempty"`
 
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
@@ -207,7 +209,7 @@ func (state *State) transitionToLocal(log go_hook.Logger, inputs Inputs) error {
 
 	// TODO: configure bashible
 
-	// TODO: service switch
+	state.RegistryService = registryservice.ModeNodeServices
 
 	// TODO: update deckhouse-registry secret
 
@@ -321,7 +323,7 @@ func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 
 	// TODO: configure bashible
 
-	// TODO: service switch
+	state.RegistryService = registryservice.ModeNodeServices
 
 	// TODO: update deckhouse-registry secret
 
@@ -427,7 +429,7 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 
 	// TODO: configure bashible
 
-	// TODO: service switch
+	state.RegistryService = registryservice.ModeInClusterProxy
 
 	// TODO: update deckhouse-registry secret
 
@@ -472,7 +474,7 @@ func (state *State) transitionToUnmanaged(log go_hook.Logger, inputs Inputs) err
 		return fmt.Errorf("cannot cleanup InClusterProxy: %w", err)
 	}
 
-	// TODO: remove service
+	state.RegistryService = registryservice.ModeDisabled
 
 	state.IngressEnabled = false
 
