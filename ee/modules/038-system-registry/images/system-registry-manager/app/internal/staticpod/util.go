@@ -21,17 +21,17 @@ func computeHash(content []byte) string {
 
 // compareFileHash reads the file at the given path and compares its hash with the provided new content.
 func compareFileHash(path string, newContent []byte) (bool, string, error) {
+	newHash := computeHash(newContent)
+
 	currentContent, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
 		// File doesn't exist, so consider it different
-		return false, "", nil
+		return false, newHash, nil
 	} else if err != nil {
-		return false, "", err
+		return false, newHash, err
 	}
 
-	// Compute hashes for both the current file content and new content
 	currentHash := computeHash(currentContent)
-	newHash := computeHash(newContent)
 
 	// Return whether the hashes match
 	return currentHash == newHash, newHash, nil
