@@ -24,7 +24,6 @@ data:
           evictLocalStoragePods: {{ $d.evictLocalStoragePods }}
           {{- end }}
 
-          evictLocalStoragePods: false
           evictSystemCriticalPods: false
           ignorePvcPods: false
           evictFailedBarePods: true
