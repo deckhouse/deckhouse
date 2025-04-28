@@ -50,3 +50,5 @@ jobs:
           script: |
             const ci = require('./.github/scripts/js/ci');
             return await ci.runBuildForRelease({ github, context, core })
+{!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
+

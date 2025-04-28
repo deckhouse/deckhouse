@@ -809,6 +809,19 @@ jobs:
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
 
+      # <template: send_fail_report>
+      - name: Send fail report
+        if: failure()
+        env:
+          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          JOB_NAME: ${{ github.job }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
+        run: |
+          bash ./.github/scripts/send-report.sh
+      # </template: send_fail_report>
+
+
 
   build_ee:
     name: Build EE
@@ -1172,6 +1185,19 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
+
+      # <template: send_fail_report>
+      - name: Send fail report
+        if: failure()
+        env:
+          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          JOB_NAME: ${{ github.job }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
+        run: |
+          bash ./.github/scripts/send-report.sh
+      # </template: send_fail_report>
+
 
 
   build_se:
