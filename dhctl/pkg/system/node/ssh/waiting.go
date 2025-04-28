@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package frontend
+package ssh
 
 import (
 	"context"
@@ -21,20 +21,27 @@ import (
 	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
+type CommandConsumer func(*session.Session, string) node.Command
+
 type Check struct {
-	Session *session.Session
-	delay   time.Duration
+	Session       *session.Session
+	createCommand CommandConsumer
+	delay         time.Duration
 }
 
-func NewCheck(sess *session.Session) *Check {
-	return &Check{Session: sess}
+func NewCheck(createCommand CommandConsumer, sess *session.Session) *Check {
+	return &Check{
+		Session:       sess,
+		createCommand: createCommand,
+	}
 }
 
-func (c *Check) WithDelaySeconds(seconds int) *Check {
+func (c *Check) WithDelaySeconds(seconds int) node.Check {
 	c.delay = time.Duration(seconds) * time.Second
 	return c
 }
@@ -79,7 +86,7 @@ func (c *Check) CheckAvailability(ctx context.Context) error {
 }
 
 func (c *Check) ExpectAvailable(ctx context.Context) ([]byte, error) {
-	cmd := NewCommand(c.Session, "echo SUCCESS")
+	cmd := c.createCommand(c.Session, "echo SUCCESS")
 	cmd.Cmd(ctx)
 	output, err := cmd.CombinedOutput(ctx)
 	if err != nil {

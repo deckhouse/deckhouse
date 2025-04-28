@@ -37,6 +37,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
@@ -230,7 +231,7 @@ func (s *Service) abort(ctx context.Context, p abortParams) *pb.AbortResult {
 		return &pb.AbortResult{Err: err.Error()}
 	}
 
-	var sshClient *ssh.Client
+	var sshClient node.SSHClient
 	err = log.Process("default", "Preparing SSH client", func() error {
 		connectionConfig, err := config.ParseConnectionConfig(
 			p.request.ConnectionConfig,

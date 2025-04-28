@@ -38,6 +38,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
@@ -225,7 +226,7 @@ func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResul
 		return &pb.DestroyResult{Err: err.Error()}
 	}
 
-	var sshClient *ssh.Client
+	var sshClient node.SSHClient
 	err = log.Process("default", "Preparing SSH client", func() error {
 		connectionConfig, err := config.ParseConnectionConfig(
 			p.request.ConnectionConfig,

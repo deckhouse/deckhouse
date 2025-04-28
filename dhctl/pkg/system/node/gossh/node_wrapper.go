@@ -1,4 +1,4 @@
-// Copyright 2024 Flant JSC
+// Copyright 2025 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,21 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ssh
+package gossh
 
 import (
-	"reflect"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 )
 
 type NodeInterfaceWrapper struct {
-	sshClient node.SSHClient
+	sshClient *Client
 }
 
-func NewNodeInterfaceWrapper(sshClient node.SSHClient) *NodeInterfaceWrapper {
-	if sshClient == nil || reflect.ValueOf(sshClient).IsNil() {
+func NewNodeInterfaceWrapper(sshClient *Client) *NodeInterfaceWrapper {
+	if sshClient == nil {
 		return nil
 	}
 
@@ -38,19 +36,19 @@ func NewNodeInterfaceWrapper(sshClient node.SSHClient) *NodeInterfaceWrapper {
 func (n *NodeInterfaceWrapper) Command(name string, args ...string) node.Command {
 	log.DebugLn("Starting NodeInterfaceWrapper.command")
 	defer log.DebugLn("Stop NodeInterfaceWrapper.command")
-	return n.sshClient.Command(name, args...)
+	return NewSSHCommand(n.sshClient, name, args...)
 }
 
 func (n *NodeInterfaceWrapper) File() node.File {
-	return n.sshClient.File()
+	return NewSSHFile(n.sshClient.sshClient)
 }
 
 func (n *NodeInterfaceWrapper) UploadScript(scriptPath string, args ...string) node.Script {
 	log.DebugLn("Starting NodeInterfaceWrapper.UploadScript")
 	defer log.DebugLn("Stop NodeInterfaceWrapper.UploadScript")
-	return n.sshClient.UploadScript(scriptPath, args...)
+	return NewSSHUploadScript(n.sshClient, scriptPath, args...)
 }
 
-func (n *NodeInterfaceWrapper) Client() node.SSHClient {
+func (n *NodeInterfaceWrapper) Client() *Client {
 	return n.sshClient
 }
