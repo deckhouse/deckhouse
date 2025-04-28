@@ -219,4 +219,58 @@ metadata:
 		})
 	})
 
+	Context("Cluster with minimal settings and orphan istio resources including multicluster and federation", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.GenerateAfterDeleteHelmContext())
+			f.KubeStateSet("")
+			f := HookExecutionConfigInit(`{}`, `{}`)
+			f.RegisterCRD("deckhouse.io", "v1alpha1", "IstioMulticluster", true)
+			f.RegisterCRD("deckhouse.io", "v1alpha1", "IstioFederation", true)
+
+			// Create test resources
+			imc := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "deckhouse.io/v1alpha1",
+					"kind":       "IstioMulticluster",
+					"metadata": map[string]interface{}{
+						"name": "test-multicluster",
+					},
+				},
+			}
+
+			ifed := &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "deckhouse.io/v1alpha1",
+					"kind":       "IstioFederation",
+					"metadata": map[string]interface{}{
+						"name": "test-federation",
+					},
+				},
+			}
+
+			imcGVR := schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "istiomulticlusters"}
+			ifedGVR := schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "istiofederations"}
+
+			_, _ = f.KubeClient().Dynamic().Resource(imcGVR).Namespace("").Create(context.TODO(), imc, metav1.CreateOptions{})
+			_, _ = f.KubeClient().Dynamic().Resource(ifedGVR).Namespace("").Create(context.TODO(), ifed, metav1.CreateOptions{})
+
+			f.RunHook()
+		})
+
+		It("Should delete Deckhouse Istio resources", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			// Verify deletions
+			imcGVR := schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "istiomulticlusters"}
+			ifedGVR := schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "istiofederations"}
+
+			imcList, err := f.KubeClient().Dynamic().Resource(imcGVR).Namespace("").List(context.TODO(), metav1.ListOptions{})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(imcList.Items).To(HaveLen(0))
+
+			ifedList, err := f.KubeClient().Dynamic().Resource(ifedGVR).Namespace("").List(context.TODO(), metav1.ListOptions{})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(ifedList.Items).To(HaveLen(0))
+		})
+	})
 })
