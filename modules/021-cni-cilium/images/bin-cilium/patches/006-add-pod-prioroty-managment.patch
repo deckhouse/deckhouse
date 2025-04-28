@@ -1,7 +1,7 @@
 From e72ab6fce5eea6203771ac80445cf89205119626 Mon Sep 17 00:00:00 2001
 From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date: Tue, 22 Apr 2025 18:34:06 +0300
-Subject: [PATCH 1/2] add priority calc
+Subject: [PATCH 1/3] add priority calc
 
 Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 ---
@@ -316,7 +316,7 @@ index 40c714ee0f..9541281c22 100644
 From b1e78ba176092400a918de2eb77982389e3a13be Mon Sep 17 00:00:00 2001
 From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date: Fri, 25 Apr 2025 12:21:17 +0300
-Subject: [PATCH 2/2] move lxcmap module to ipcache
+Subject: [PATCH 2/3] move lxcmap module to ipcache
 
 Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 ---
@@ -1049,6 +1049,315 @@ index deb81c9af0..0000000000
 -
 -	return m, nil
 -}
+-- 
+2.34.1
+
+
+From e83477d0398e2970c39e96fbd9cbcd524560e4c1 Mon Sep 17 00:00:00 2001
+From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+Date: Mon, 28 Apr 2025 19:11:08 +0300
+Subject: [PATCH 3/3] patch lxcmap|ipcache logic for shared ip4 between pods
+
+Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+---
+ daemon/cmd/daemon.go                          |  13 +-
+ pkg/ipcache/ipcache.go                        | 117 +++++++++++++++++-
+ pkg/k8s/watchers/cilium_endpoint.go           |  15 +++
+ .../cilium_endpoint_slice_subscriber.go       |   9 +-
+ pkg/k8s/watchers/watcher.go                   |   1 +
+ 5 files changed, 146 insertions(+), 9 deletions(-)
+
+diff --git a/daemon/cmd/daemon.go b/daemon/cmd/daemon.go
+index 8161060573..7c672f9dea 100644
+--- a/daemon/cmd/daemon.go
++++ b/daemon/cmd/daemon.go
+@@ -13,12 +13,6 @@ import (
+ 	"runtime"
+ 	"sync"
+ 
+-	"github.com/cilium/hive/job"
+-	"github.com/cilium/statedb"
+-	"github.com/sirupsen/logrus"
+-	"github.com/vishvananda/netlink"
+-	"golang.org/x/sync/semaphore"
+-
+ 	"github.com/cilium/cilium/api/v1/models"
+ 	health "github.com/cilium/cilium/cilium-health/launch"
+ 	"github.com/cilium/cilium/daemon/cmd/cni"
+@@ -80,6 +74,11 @@ import (
+ 	"github.com/cilium/cilium/pkg/status"
+ 	"github.com/cilium/cilium/pkg/time"
+ 	wireguard "github.com/cilium/cilium/pkg/wireguard/agent"
++	"github.com/cilium/hive/job"
++	"github.com/cilium/statedb"
++	"github.com/sirupsen/logrus"
++	"github.com/vishvananda/netlink"
++	"golang.org/x/sync/semaphore"
+ )
+ 
+ const (
+@@ -411,6 +410,8 @@ func newDaemon(ctx context.Context, cleaner *daemonCleanup, params *daemonParams
+ 		maglevConfig:      params.MaglevConfig,
+ 	}
+ 
++	ipcache.SetGlobalIPCache(d.ipcache)
++
+ 	// initialize endpointRestoreComplete channel as soon as possible so that subsystems
+ 	// can wait on it to get closed and not block forever if they happen so start
+ 	// waiting when it is not yet initialized (which causes them to block forever).
+diff --git a/pkg/ipcache/ipcache.go b/pkg/ipcache/ipcache.go
+index 4325fbc6b3..4a29583038 100644
+--- a/pkg/ipcache/ipcache.go
++++ b/pkg/ipcache/ipcache.go
+@@ -27,6 +27,7 @@ import (
+ 	"github.com/cilium/cilium/pkg/logging/logfields"
+ 	"github.com/cilium/cilium/pkg/mac"
+ 	"github.com/cilium/cilium/pkg/metrics"
++	"github.com/cilium/cilium/pkg/node"
+ 	"github.com/cilium/cilium/pkg/option"
+ 	"github.com/cilium/cilium/pkg/source"
+ 	"github.com/cilium/cilium/pkg/types"
+@@ -51,6 +52,74 @@ var (
+ 	lxcMapOnce sync.Once
+ )
+ 
++type LxcEndpointInfo struct {
++	key    *EndpointKey
++	info   *EndpointInfo
++	active bool
++}
++
++var globalIPCache *IPCache
++
++func SetGlobalIPCache(ipcache *IPCache) {
++	globalIPCache = ipcache
++}
++
++func (ipc *IPCache) isIPCacheHostLocal(epAddr string, nodeIPv4 net.IP) bool {
++	ipKeyPair := ipc.ipToHostIPCache[epAddr]
++	host := ipKeyPair.IP
++	if host == nil {
++		// cilium_health ep always have nil host - force default behavior
++		return true
++	}
++	return host.Equal(nodeIPv4)
++}
++
++func (ipc *IPCache) checkLxcMapRelation(ip string, hostIP, oldHostIP net.IP) {
++	if hostIP.Equal(oldHostIP) {
++		return
++	}
++
++	hostIP4 := hostIP.To4()
++	if hostIP4 == nil {
++		return
++	}
++
++	lxc, exist := ipc.ipToEndpointInfo[ip]
++	if !exist {
++		return
++	}
++
++	nodeIPv4 := node.GetIPv4()
++	isLocal := nodeIPv4.Equal(hostIP4)
++	if isLocal && !lxc.active {
++		LXCMap().Update(lxc.key, lxc.info)
++		lxc.active = true
++		log.WithFields(logrus.Fields{
++			logfields.IPAddr: ip,
++		}).Debug("restore record in in cilium_lxc map")
++	} else if !isLocal && lxc.active {
++		LXCMap().Delete(lxc.key)
++		lxc.active = false
++		log.WithFields(logrus.Fields{
++			logfields.IPAddr: ip,
++		}).Debug("hiding record in in cilium_lxc map")
++	}
++}
++
++func getEndpointAddress(v *EndpointKey) string {
++	ip := v.ToIP()
++	if ip == nil {
++		return ""
++	}
++
++	ip4 := ip.To4()
++	if ip4 == nil {
++		return ""
++	}
++
++	return ip4.String()
++}
++
+ func LXCMap() *bpf.Map {
+ 	lxcMapOnce.Do(func() {
+ 		lxcMap = bpf.NewMap(MapName,
+@@ -203,9 +272,36 @@ func WriteEndpoint(f EndpointFrontend) error {
+ 	}
+ 
+ 	// FIXME: Revert on failure
++	nodeIPv4 := node.GetIPv4()
++	// for prevent race conditions between ipcache upsert method used common mutex
++	globalIPCache.Lock()
++	defer globalIPCache.Unlock()
+ 	for _, v := range GetBPFKeys(f) {
+-		if err := LXCMap().Update(v, info); err != nil {
+-			return err
++
++		epAddr := getEndpointAddress(v)
++		if epAddr == "" {
++			continue
++		}
++
++		if globalIPCache.isIPCacheHostLocal(epAddr, nodeIPv4) {
++			if err := LXCMap().Update(v, info); err != nil {
++				return err
++			}
++			globalIPCache.ipToEndpointInfo[epAddr] = &LxcEndpointInfo{
++				key:    v,
++				info:   info,
++				active: true,
++			}
++		} else {
++			LXCMap().Delete(v)
++			globalIPCache.ipToEndpointInfo[epAddr] = &LxcEndpointInfo{
++				key:    v,
++				info:   info,
++				active: false,
++			}
++			log.WithFields(logrus.Fields{
++				logfields.IPAddr: epAddr,
++			}).Debug("hiding pod address in cilium_lxc map")
+ 		}
+ 	}
+ 
+@@ -235,6 +331,9 @@ func SyncHostEntry(ip net.IP) (bool, error) {
+ 
+ // DeleteEntry deletes a single map entry
+ func DeleteEntry(ip net.IP) error {
++	globalIPCache.Lock()
++	defer globalIPCache.Unlock()
++	delete(globalIPCache.ipToEndpointInfo, ip.To4().String())
+ 	return LXCMap().Delete(NewEndpointKey(ip))
+ }
+ 
+@@ -243,6 +342,10 @@ func DeleteEntry(ip net.IP) error {
+ func DeleteElement(f EndpointFrontend) []error {
+ 	var errors []error
+ 	for _, k := range GetBPFKeys(f) {
++		ip := getEndpointAddress(k)
++		globalIPCache.Lock()
++		delete(globalIPCache.ipToEndpointInfo, ip)
++		globalIPCache.Unlock()
+ 		if err := LXCMap().Delete(k); err != nil {
+ 			errors = append(errors, fmt.Errorf("Unable to delete key %v from %s: %w", k, bpf.MapPath(MapName), err))
+ 		}
+@@ -364,6 +467,7 @@ type IPCache struct {
+ 	identityToIPCache map[identity.NumericIdentity]map[string]struct{}
+ 	ipToHostIPCache   map[string]IPKeyPair
+ 	ipToK8sMetadata   map[string]K8sMetadata
++	ipToEndpointInfo  map[string]*LxcEndpointInfo
+ 
+ 	listeners []IPIdentityMappingListener
+ 
+@@ -408,6 +512,7 @@ func NewIPCache(c *Configuration) *IPCache {
+ 		identityToIPCache: map[identity.NumericIdentity]map[string]struct{}{},
+ 		ipToHostIPCache:   map[string]IPKeyPair{},
+ 		ipToK8sMetadata:   map[string]K8sMetadata{},
++		ipToEndpointInfo:  map[string]*LxcEndpointInfo{},
+ 		controllers:       controller.NewManager(),
+ 		namedPorts:        types.NewNamedPortMultiMap(),
+ 		metadata:          newMetadata(),
+@@ -687,6 +792,7 @@ func (ipc *IPCache) upsertLocked(
+ 
+ 	scopedLog.Debug("Upserting IP into ipcache layer")
+ 
++	ipc.checkLxcMapRelation(ip, hostIP, oldHostIP)
+ 	// Update both maps.
+ 	ipc.ipToIdentityCache[ip] = newIdentity
+ 	// Delete the old identity, if any.
+@@ -732,6 +838,13 @@ func (ipc *IPCache) upsertLocked(
+ 	return namedPortsChanged, nil
+ }
+ 
++func (ipc *IPCache) IsIPcacheOwner(IP string, source source.Source, namespace, name string) (isOwner bool) {
++	ipc.mutex.Lock()
++	defer ipc.mutex.Unlock()
++	k8sMeta := ipc.getK8sMetadata(IP)
++	return k8sMeta != nil && k8sMeta.Namespace == namespace && k8sMeta.PodName == name
++}
++
+ // DumpToListener dumps the entire contents of the IPCache by triggering
+ // the listener's "OnIPIdentityCacheChange" method for each entry in the cache.
+ func (ipc *IPCache) DumpToListener(listener IPIdentityMappingListener) {
+diff --git a/pkg/k8s/watchers/cilium_endpoint.go b/pkg/k8s/watchers/cilium_endpoint.go
+index 79a64a2543..126ee2d547 100644
+--- a/pkg/k8s/watchers/cilium_endpoint.go
++++ b/pkg/k8s/watchers/cilium_endpoint.go
+@@ -287,3 +287,18 @@ func (k *K8sCiliumEndpointsWatcher) endpointDeleted(endpoint *types.CiliumEndpoi
+ 	}
+ 	hubblemetrics.ProcessCiliumEndpointDeletion(endpoint)
+ }
++
++func (k *K8sCiliumEndpointsWatcher) endpointIsIPcacheOwner(c *types.CiliumEndpoint) bool {
++	isOwner := true
++	if c.Networking != nil {
++		for _, pair := range c.Networking.Addressing {
++			if pair.IPV4 != "" {
++				isOwner = k.ipcache.IsIPcacheOwner(pair.IPV4, source.CustomResource, c.Namespace, c.Name)
++				if !isOwner {
++					break
++				}
++			}
++		}
++	}
++	return isOwner
++}
+diff --git a/pkg/k8s/watchers/cilium_endpoint_slice_subscriber.go b/pkg/k8s/watchers/cilium_endpoint_slice_subscriber.go
+index 8467720fb4..b2c02a7112 100644
+--- a/pkg/k8s/watchers/cilium_endpoint_slice_subscriber.go
++++ b/pkg/k8s/watchers/cilium_endpoint_slice_subscriber.go
+@@ -19,6 +19,7 @@ import (
+ type endpointWatcher interface {
+ 	endpointUpdated(oldC, newC *types.CiliumEndpoint)
+ 	endpointDeleted(c *types.CiliumEndpoint)
++	endpointIsIPcacheOwner(c *types.CiliumEndpoint) bool
+ }
+ 
+ type localEndpointCache interface {
+@@ -154,13 +155,19 @@ func (cs *cesSubscriber) deleteCEPfromCES(CEPName, CESName string, c *types.Cili
+ 			"CEPName": CEPName,
+ 		}).Debug("CEP deleted, calling endpointDeleted")
+ 		cs.epWatcher.endpointDeleted(c)
+-	} else {
++	} else if cs.epWatcher.endpointIsIPcacheOwner(c) {
+ 		log.WithFields(logrus.Fields{
+ 			"CESName": CESName,
+ 			"CEPName": CEPName,
+ 		}).Debug("CEP deleted, other CEP exists, calling endpointUpdated")
+ 		cs.epWatcher.endpointUpdated(c, cep)
++	} else {
++		log.WithFields(logrus.Fields{
++			"CESName": CESName,
++			"CEPName": CEPName,
++		}).Debug("not last CEP deleted and CEP don't own ipcache, skip ipcache changes")
+ 	}
++
+ }
+ 
+ // addCEPwithCES insert CEP with CES to the map and triggers endpointUpdated.
+diff --git a/pkg/k8s/watchers/watcher.go b/pkg/k8s/watchers/watcher.go
+index 0f4947864e..1f306ba4aa 100644
+--- a/pkg/k8s/watchers/watcher.go
++++ b/pkg/k8s/watchers/watcher.go
+@@ -115,6 +115,7 @@ type ipcacheManager interface {
+ 	UpsertLabels(prefix netip.Prefix, lbls labels.Labels, src source.Source, resource ipcacheTypes.ResourceID)
+ 	RemoveLabelsExcluded(lbls labels.Labels, toExclude map[netip.Prefix]struct{}, resource ipcacheTypes.ResourceID)
+ 	DeleteOnMetadataMatch(IP string, source source.Source, namespace, name string) (namedPortsChanged bool)
++	IsIPcacheOwner(IP string, source source.Source, namespace, name string) (isOwner bool)
+ }
+ 
+ type K8sWatcher struct {
 -- 
 2.34.1
 
