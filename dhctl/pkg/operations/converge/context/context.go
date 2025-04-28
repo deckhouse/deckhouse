@@ -38,7 +38,6 @@ type Context struct {
 	// but it is not recommended https://go.dev/wiki/CodeReviewComments#contexts
 	ctx              context.Context
 	phaseContext     phases.DefaultPhasedExecutionContext
-	metaConfig       *config.MetaConfig
 	terraformContext *terraform.TerraformContext
 	commanderParams  *commander.CommanderModeParams
 	changeParams     terraform.ChangeActionSettings
@@ -121,17 +120,11 @@ func (c *Context) CompleteExecutionPhase(data any) error {
 }
 
 func (c *Context) MetaConfig() (*config.MetaConfig, error) {
-	if c.metaConfig != nil {
-		return c.metaConfig, nil
-	}
-
 	if c.CommanderMode() {
 		metaConfig, err := commander.ParseMetaConfig(c.stateCache, c.commanderParams)
 		if err != nil {
 			return nil, fmt.Errorf("unable to parse meta configuration: %w", err)
 		}
-
-		c.metaConfig = metaConfig
 
 		return metaConfig, nil
 	}
@@ -140,8 +133,6 @@ func (c *Context) MetaConfig() (*config.MetaConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	c.metaConfig = metaConfig
 
 	return metaConfig, nil
 }
