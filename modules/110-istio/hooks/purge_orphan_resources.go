@@ -173,7 +173,7 @@ func purgeOrphanResources(input *go_hook.HookInput, dc dependency.Container) err
 			continue
 		}
 		for _, cr := range crList.Items {
-			err := dynamicClient.Resource(icwr).Namespace(cr.GetNamespace()).Delete(context.TODO(), cr.GetName(), metav1.DeleteOptions{})
+			err := dynamicClient.Resource(icwr).Delete(context.TODO(), cr.GetName(), metav1.DeleteOptions{})
 			if err != nil {
 				input.Logger.Warnf("Failed to delete %s/%s: %v", icwr.Resource, cr.GetName(), err)
 			} else {
