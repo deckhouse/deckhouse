@@ -120,7 +120,7 @@ entries:
                         - title:
                             en: Integration with Yandex Cloud services
                             ru: Интеграция с службами Yandex Cloud
-                          url: /admin/integrations/public/yandex/yandex-services.html  
+                          url: /admin/integrations/public/yandex/yandex-services.html
                     - title:
                         en: Integration with VK Cloud
                         ru: TODO Интеграция с VK Cloud
@@ -167,7 +167,7 @@ entries:
                       folders:
                         - title:
                             en: Overview
-                            ru: Обзор
+                            ru: Введение
                           url: /admin/integrations/public/gcp/gcp-overview.html
                         - title:
                             en: Connection and authorization
@@ -175,7 +175,7 @@ entries:
                           url: /admin/integrations/public/gcp/сonnection-and-authorization.html
                         - title:
                             en: Configuration and layout scheme
-                            ru: Конфигурация и схема размещения
+                            ru: Схемы размещения и настройка
                           url: /admin/integrations/public/gcp/сonfiguration-and-layout-scheme.html
                 - title:
                     en: Private cloud providers
