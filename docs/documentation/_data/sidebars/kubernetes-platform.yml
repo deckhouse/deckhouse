@@ -641,6 +641,26 @@ entries:
             ru: TODO Установка
           url: /architecture/installation.html
         - title:
+            en: Disaster resistance
+            ru: Катастрофоустойчивость
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /architecture/disaster-resistance.html
+            - title:
+                en: Using multiple accessibility zones (Multi AZ)
+                ru: Использование нескольких зон доступности (Multi AZ)
+              url: /architecture/multi-az.html
+            - title:
+                en: Using multiple regions (Multi Region)
+                ru: Использование нескольких регионов (Multi Region)
+              url: /architecture/multi-region.html
+            - title:
+                en: Combining multiple clusters (multicluster)
+                ru: Объединение нескольких кластеров (мультикластер)
+              url: /architecture/multicluster.html
+        - title:
             en: Updating
             ru: Обновление
           url: /architecture/updating.html
