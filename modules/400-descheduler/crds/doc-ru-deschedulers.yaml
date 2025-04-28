@@ -251,6 +251,11 @@ spec:
                       description: Имя класса приоритета.
                     value:
                       description: Значение класса приоритета.
+                evictLocalStoragePods:
+                  description: Позволяет вытеснять поды, использующие локальное хранилище.
+                  properties:
+                    enabled:
+                      description: Делает стратегию активной.
                 strategies:
                   description:
                     Настройки стратегий данного экземпляра ресурса Descheduler.
