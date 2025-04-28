@@ -2,8 +2,6 @@ module github.com/deckhouse/deckhouse
 
 go 1.23.8
 
-toolchain go1.24.0
-
 require (
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/Masterminds/sprig/v3 v3.2.3
@@ -12,9 +10,9 @@ require (
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/fatih/color v1.13.0 // indirect
-	github.com/flant/addon-operator v1.7.1-0.20250428142915-d07d8455667d
+	github.com/flant/addon-operator v1.7.1-0.20250428153356-38d1f7a8f8d7
 	github.com/flant/kube-client v1.3.0
-	github.com/flant/shell-operator v1.7.2-0.20250428142829-59d5334af8fe
+	github.com/flant/shell-operator v1.7.2-0.20250428153028-deb2e0694527
 	github.com/go-openapi/spec v0.19.8
 	github.com/gojuno/minimock/v3 v3.4.5
 	github.com/google/go-cmp v0.7.0
@@ -128,6 +126,7 @@ require (
 	github.com/exponent-io/jsonpath v0.0.0-20151013193312-d6023ce2651d // indirect
 	github.com/fatih/camelcase v1.0.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
+	github.com/flant/libjq-go v1.6.2 // indirect
 	github.com/flopp/go-findfont v0.1.0 // indirect
 	github.com/fogleman/gg v1.3.0 // indirect
 	github.com/fvbommel/sortorder v1.1.0 // indirect
