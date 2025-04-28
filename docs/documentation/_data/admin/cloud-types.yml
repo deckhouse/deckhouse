@@ -1,0 +1,7 @@
+types:
+  openstack-private:
+    name: "OpenStack"
+    link: "https://www.openstack.org/"
+  vk-private:
+    name: "VK Private Cloud"
+    link: "https://cloud.vk.com/private-cloud/"
