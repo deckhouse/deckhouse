@@ -201,16 +201,6 @@ shell:
 {{- end }}
 
 
-# render docker parameters for installer image
-{{- define "installer_docker_properties" }}
-imageSpec:
-  config:
-  # we need root permission for installer image
-    user: "0:0"
-    env: { "EDITOR": "vim" }
-{{- end }}
-
-
 # render installer standalone setup script
 # . is dict with next params
 #   CI_COMMIT_TAG - CI_COMMIT_TAG env
