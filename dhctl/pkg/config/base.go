@@ -42,6 +42,7 @@ var (
 	versionMap             = candiDir + "/version_map.yml"
 	InfrastructureVersions = candiDir + "/terraform_versions.yml"
 	imagesDigestsJSON      = candiDir + "/images_digests.json"
+	edition                = deckhouseDir + "/edition"
 
 	// This value is set on the dhctl build in the dhctl/Makefile script.
 	// Do not touch it !!!
@@ -328,6 +329,7 @@ func InitGlobalVars(pwd string) {
 	versionMap = candiDir + "/version_map.yml"
 	imagesDigestsJSON = candiDir + "/images_digests.json"
 	InfrastructureVersions = candiDir + "/terraform_versions.yml"
+	edition = deckhouseDir + "/edition"
 }
 
 func getInfrastructureModulesDir(provider string) string {

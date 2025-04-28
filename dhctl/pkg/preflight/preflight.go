@@ -265,6 +265,11 @@ func (pc *Checker) Global(ctx context.Context) error {
 			skipFlag:       app.RegistryCredentialsCheckArgName,
 		},
 		{
+			fun:            pc.CheckDhctlVersionObsolescence,
+			successMessage: "dhctl version is the same",
+			skipFlag:       app.DeckhouseVersionCheckArgName,
+		},
+		{
 			fun:            pc.CheckCidrIntersection,
 			successMessage: "CIDRs are not intersects",
 			skipFlag:       app.CIDRIntersection,

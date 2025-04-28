@@ -15,6 +15,8 @@
 package preflight
 
 import (
+	"context"
+
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 
@@ -43,7 +45,7 @@ func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolesc
 				Hex:       "95693712d292a6d2e1de6052a0b2189210501393f162616f5d21f2c9b5152129",
 			}, nil)
 
-	err = s.checker.CheckDhctlVersionObsolescence()
+	err = s.checker.CheckDhctlVersionObsolescence(context.Background())
 	t.NoError(err)
 }
 
@@ -71,7 +73,7 @@ func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolesc
 				Hex:       "95693712d292a6d2e1de6052a0b2189210501393f162616f5d21f2c9b5152129",
 			}, nil)
 
-	err = s.checker.CheckDhctlVersionObsolescence()
+	err = s.checker.CheckDhctlVersionObsolescence(context.Background())
 	t.NoError(err)
 }
 
@@ -97,7 +99,7 @@ func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolesc
 				Hex:       "a66bcd004c1c83c1cfb118f7652a30c784cad66ce976249aa64d60219ec5b199",
 			}, nil)
 
-	err = s.checker.CheckDhctlVersionObsolescence()
+	err = s.checker.CheckDhctlVersionObsolescence(context.Background())
 	t.ErrorIs(err, ErrInstallerVersionMismatch)
 }
 
@@ -125,7 +127,7 @@ func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolesc
 				Hex:       "a66bcd004c1c83c1cfb118f7652a30c784cad66ce976249aa64d60219ec5b199",
 			}, nil)
 
-	err = s.checker.CheckDhctlVersionObsolescence()
+	err = s.checker.CheckDhctlVersionObsolescence(context.Background())
 	t.ErrorIs(err, ErrInstallerVersionMismatch)
 }
 
@@ -150,7 +152,7 @@ func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolesc
 		Hex:       "3490720937602946739407683046730486738046346037406374068347",
 	}, nil)
 
-	err = s.checker.CheckDhctlVersionObsolescence()
+	err = s.checker.CheckDhctlVersionObsolescence(context.Background())
 	t.NoError(err)
 }
 
@@ -176,6 +178,6 @@ func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolesc
 		Hex:       "3490720937602946739407683046730486738046346037406374068347",
 	}, nil)
 
-	err = s.checker.CheckDhctlVersionObsolescence()
+	err = s.checker.CheckDhctlVersionObsolescence(context.Background())
 	t.NoError(err)
 }

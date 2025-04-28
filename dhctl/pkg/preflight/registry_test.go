@@ -22,6 +22,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -62,24 +63,7 @@ func (s *testState) StaticPreflightchecksWasRan() (bool, error) {
 	return false, nil
 }
 
-func TestCheckRegistryAccessThroughProxy(t *testing.T) {
-	tests := map[string]func(*testing.T){
-		"getProxyFromMetaConfig_NoProxy":    getProxyFromMetaConfigSuccessNoProxy,
-		"getProxyFromMetaConfig_HTTPSProxy": getProxyFromMetaConfigSuccessHTTPSProxy,
-		"getProxyFromMetaConfig_HTTPProxy":  getProxyFromMetaConfigSuccessHTTPProxy,
-
-		"checkResponse_Success_OK":           checkResponseSuccess_OKResponse,
-		"checkResponse_Success_Unauthorized": checkResponseSuccess_UnauthorizedResponse,
-		"checkResponse_NoAPIVersionHeader":   checkResponse_NoAPIVersionHeader,
-		"checkResponse_WrongResponseStatus":  checkResponse_WrongStatus,
-	}
-
-	for testCase, testFunc := range tests {
-		t.Run(testCase, testFunc)
-	}
-}
-
-func getProxyFromMetaConfigSuccessHTTPSProxy(t *testing.T) {
+func TestCheckgetProxyFromMetaConfigSuccessHTTPSProxy(t *testing.T) {
 	s := require.New(t)
 
 	metaConfig := &config.MetaConfig{
@@ -105,7 +89,7 @@ func getProxyFromMetaConfigSuccessHTTPSProxy(t *testing.T) {
 	s.ElementsMatch(noProxyList, []string{"127.0.0.1", "169.254.169.254", "cluster.local", "10.0.0.0/8", "11.0.0.0/8"})
 }
 
-func getProxyFromMetaConfigSuccessHTTPProxy(t *testing.T) {
+func TestCheckgetProxyFromMetaConfigSuccessHTTPProxy(t *testing.T) {
 	s := require.New(t)
 
 	metaConfig := &config.MetaConfig{
@@ -130,7 +114,7 @@ func getProxyFromMetaConfigSuccessHTTPProxy(t *testing.T) {
 	s.ElementsMatch(noProxyList, []string{"127.0.0.1", "169.254.169.254", "cluster.local", "10.0.0.0/8", "11.0.0.0/8"})
 }
 
-func getProxyFromMetaConfigSuccessNoProxy(t *testing.T) {
+func TestCheckgetProxyFromMetaConfigSuccessNoProxy(t *testing.T) {
 	s := require.New(t)
 
 	metaConfig := &config.MetaConfig{
@@ -221,28 +205,78 @@ deckhouse:
 	}
 }
 
-func checkResponseSuccess_OKResponse(t *testing.T) {
+func TestСheckResponseSuccess_OKResponse(t *testing.T) {
 	s := require.New(t)
 	resp := &http.Response{StatusCode: http.StatusOK, Header: http.Header{}}
 	resp.Header.Set("Docker-Distribution-API-Version", "registry/2.0")
 	s.Nil(checkResponseIsFromDockerRegistry(resp))
 }
 
-func checkResponseSuccess_UnauthorizedResponse(t *testing.T) {
+func TestСheckResponseSuccess_UnauthorizedResponse(t *testing.T) {
 	s := require.New(t)
 	resp := &http.Response{StatusCode: http.StatusUnauthorized, Header: http.Header{}}
 	resp.Header.Set("Docker-Distribution-API-Version", "registry/2.0")
 	s.Nil(checkResponseIsFromDockerRegistry(resp))
 }
 
-func checkResponse_NoAPIVersionHeader(t *testing.T) {
+func TestСheckResponse_NoAPIVersionHeader(t *testing.T) {
 	s := require.New(t)
 	resp := &http.Response{StatusCode: http.StatusUnauthorized, Header: http.Header{}}
 	s.ErrorIs(checkResponseIsFromDockerRegistry(resp), ErrRegistryUnreachable)
 }
 
-func checkResponse_WrongStatus(t *testing.T) {
+func TestСheckResponse_WrongStatus(t *testing.T) {
 	s := require.New(t)
 	resp := &http.Response{StatusCode: http.StatusForbidden, Header: http.Header{}}
 	s.ErrorIs(checkResponseIsFromDockerRegistry(resp), ErrRegistryUnreachable)
+}
+
+func TestCheckRegistryCredentials(t *testing.T) {
+	type fields struct {
+		installConfig *config.DeckhouseInstaller
+		metaConfig    *config.MetaConfig
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		wantErr assert.ErrorAssertionFunc
+	}{
+		{
+			name: "check registry.deckhouse.io/deckhouse/ce",
+			fields: fields{
+				installConfig: &config.DeckhouseInstaller{
+					DevBranch: "pr0001",
+					Registry: config.RegistryData{
+						Address:   "registry.deckhouse.io",
+						Path:      "/deckhouse/ce",
+						Scheme:    "https",
+						CA:        "",
+						DockerCfg: "eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbyI6IHt9fX0=",
+					},
+				},
+				metaConfig: &config.MetaConfig{
+					Registry: config.RegistryData{
+						Address:   "registry.deckhouse.io",
+						Path:      "/deckhouse/ce",
+						Scheme:    "https",
+						CA:        "",
+						DockerCfg: "eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbyI6IHt9fX0=",
+					},
+				},
+			},
+			wantErr: assert.NoError,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pc := &Checker{
+				installConfig: tt.fields.installConfig,
+				metaConfig:    tt.fields.metaConfig,
+			}
+			tt.wantErr(t,
+				pc.CheckRegistryCredentials(context.Background()),
+				fmt.Sprintf("CheckRegistryCredentials()"),
+			)
+		})
+	}
 }

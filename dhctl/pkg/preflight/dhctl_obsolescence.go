@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -39,6 +38,7 @@ const dhctlVersionMismatchError = "" +
 
 var (
 	ErrInstallerVersionMismatch                      = errors.New("Your installer image is outdated")
+	ErrInstallerEditionMismatch                      = errors.New("Your edition installer image does not match")
 	ErrDeckhouseDigestFileHashAlgMismatch            = errors.New("Digest hash algorithm does not match")
 	ErrDeckhouseUpdateChannelHasDiffirentReleaseOnIt = errors.New("Your installer version does not match latest release in selected release channel")
 )
@@ -46,6 +46,7 @@ var (
 // imageDescriptorProvider returns image manifest data, mainly image digest.
 type imageDescriptorProvider interface {
 	Descriptor(ref name.Reference, opts ...remote.Option) (*v1.Descriptor, error)
+	ConfigFile(ref name.Reference, opts ...remote.Option) (*v1.ConfigFile, error)
 }
 
 type buildDigestProvider interface {
@@ -57,6 +58,15 @@ type remoteDescriptorProvider struct{}
 
 func (remoteDescriptorProvider) Descriptor(ref name.Reference, opts ...remote.Option) (*v1.Descriptor, error) {
 	return remote.Head(ref, opts...)
+}
+
+func (remoteDescriptorProvider) ConfigFile(ref name.Reference, opts ...remote.Option) (*v1.ConfigFile, error) {
+
+	image, err := remote.Image(ref, opts...)
+	if err != nil {
+		return &v1.ConfigFile{}, err
+	}
+	return image.ConfigFile()
 }
 
 type dhctlBuildDigestProvider struct {
@@ -76,7 +86,7 @@ func (p *dhctlBuildDigestProvider) ThisBuildDigest() (v1.Hash, error) {
 	}, nil
 }
 
-func (pc *Checker) CheckDhctlVersionObsolescence() error {
+func (pc *Checker) CheckDhctlVersionObsolescence(ctx context.Context) error {
 	log.DebugLn("Checking if dhctl version is compatible with release to be installed")
 	if app.AppVersion == "local" {
 		log.DebugLn("dhctl version check is skipped for local builds")
@@ -87,8 +97,13 @@ func (pc *Checker) CheckDhctlVersionObsolescence() error {
 		return nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
-	defer cancel()
+	currentDeckhouseImageConfig, err := pc.getDeckhouseImageConfig(ctx)
+	if err != nil {
+		return fmt.Errorf("Cannot fetch deckhouse image config: %w.", err)
+	}
+	if currentDeckhouseImageConfig.Config.Labels["io.deckhouse.editio"] != "" {
+		return fmt.Errorf("Editions in registry and dhctl do not match.")
+	}
 
 	currentDeckhouseImageDigest, err := pc.fetchAndValidateDeckhouseImageHashFromReleaseChannel(ctx)
 	if err != nil {
@@ -115,6 +130,26 @@ func (pc *Checker) CheckDhctlVersionObsolescence() error {
 
 	return nil
 }
+
+func (pc *Checker) getDeckhouseImageConfig(ctx context.Context) (*v1.ConfigFile, error) {
+	creds, err := pc.findRegistryAuthCredentials()
+	if err != nil {
+		return nil, fmt.Errorf("parse ClusterConfiguration.deckhouse.registryDockerCfg: %w", err)
+	}
+
+	versionTagRef, err := name.ParseReference(pc.installConfig.GetImage(true))
+	if err != nil {
+		return nil, fmt.Errorf("parse image reference: %w", err)
+	}
+
+	config, err := pc.imageDescriptorProvider.ConfigFile(versionTagRef, remote.WithContext(ctx), remote.WithAuth(creds))
+	if err != nil {
+		return nil, fmt.Errorf("pull deckhouse image ConfigFile from registry: %w", err)
+	}
+
+	return config, nil
+}
+
 
 func (pc *Checker) fetchAndValidateDeckhouseImageHashFromReleaseChannel(ctx context.Context) (*v1.Hash, error) {
 	creds, err := pc.findRegistryAuthCredentials()

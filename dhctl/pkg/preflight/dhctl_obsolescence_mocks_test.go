@@ -27,6 +27,7 @@ type FakeImageDescriptorProvider struct {
 	expectedReference name.Reference
 
 	ReturnedDescriptor *v1.Descriptor
+	ReturnedConfigFile *v1.ConfigFile
 	ReturnedError      error
 
 	T *testing.T
@@ -41,6 +42,13 @@ func (f *FakeImageDescriptorProvider) Descriptor(ref name.Reference, _ ...remote
 		f.T.Fatalf("Expected name.Reference does not match actual: want %+v, got %+v", f.expectedReference, ref)
 	}
 	return f.ReturnedDescriptor, f.ReturnedError
+}
+
+func (f *FakeImageDescriptorProvider) ConfigFile(ref name.Reference, _ ...remote.Option) (*v1.ConfigFile, error) {
+	if !assert.Equal(f.T, f.expectedReference, ref) {
+		f.T.Fatalf("Expected name.Reference does not match actual: want %+v, got %+v", f.expectedReference, ref)
+	}
+	return f.ReturnedConfigFile, f.ReturnedError
 }
 
 func (f *FakeImageDescriptorProvider) ExpectReference(ref name.Reference) *FakeImageDescriptorProvider {
