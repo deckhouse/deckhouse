@@ -77,9 +77,7 @@ func (nt *NodeTracker) updateInternal(jsonData string) {
 }
 
 func (nt *NodeTracker) updateExternal(jsonData string) {
-	var t struct {
-		Targets []ExternalTarget `json:"targets"`
-	}
+	var t ExternalTargets
 	if err := json.Unmarshal([]byte(jsonData), &t); err != nil {
 		log.Error("Failed to unmarshal external_targets.json: %v", err)
 		return
