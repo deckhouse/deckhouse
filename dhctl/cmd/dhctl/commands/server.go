@@ -27,7 +27,7 @@ func DefineServerCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineServerFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		return server.Serve(app.ServerNetwork, app.ServerAddress, app.ServerParallelTasksLimit)
+		return server.Serve(app.ServerNetwork, app.ServerAddress, app.ServerParallelTasksLimit, app.ServerRequestsCounterMaxDuration)
 	})
 	return cmd
 }

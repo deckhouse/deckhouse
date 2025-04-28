@@ -55,8 +55,6 @@ func Test_sortNodeNames(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(strings.Join(test.unsorted, " "), func(t *testing.T) {
-			t.Parallel()
-
 			state := make(map[string][]byte)
 
 			for _, node := range test.unsorted {
@@ -124,8 +122,6 @@ func Test_getNodesToDeleteInfo(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-
 			state := make(map[string][]byte)
 
 			for _, node := range test.nodes {

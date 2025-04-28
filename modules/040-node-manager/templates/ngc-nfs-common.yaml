@@ -26,6 +26,6 @@ spec:
     case $(bb-is-bundle) in
       debian|ubuntu-lts|astra)  bb-apt-install nfs-common ;;
       altlinux)                 bb-apt-rpm-install nfs-utils ;;
-      centos|redos|rosa)        bb-yum-install nfs-utils ;;
+      centos|redos|rosa)        bb-dnf-install nfs-utils ;;
     esac
 

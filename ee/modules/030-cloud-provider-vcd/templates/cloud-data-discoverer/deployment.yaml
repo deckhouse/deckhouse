@@ -4,7 +4,7 @@ memory: 50Mi
 {{- end }}
 
 {{- $cddImageName := ""}}
-{{- if eq .Values.cloudProviderVcd.internal.providerClusterConfiguration.legacyMode true -}}
+{{- if eq .Values.cloudProviderVcd.internal.legacyMode true -}}
   {{- $cddImageName = "cloudDataDiscovererLegacy" }}
 {{- else -}}
   {{- $cddImageName = "cloudDataDiscoverer" }}

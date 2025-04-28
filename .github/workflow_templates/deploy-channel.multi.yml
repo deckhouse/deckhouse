@@ -388,12 +388,6 @@ production:
   kubeconfig: KUBECONFIG_BASE64_PROD_25
   werf_namespace: deckhouse-web-production
   werf_env: web-production
-oldproduction:
-  job: deploy_channels_cm_prod_old
-  job_name: '[OLD] Deploy channels to production'
-  kubeconfig: KUBECONFIG_BASE64_PROD_SEL
-  werf_namespace: deckhouse-web-production
-  werf_env: web-production
 stage:
   job: deploy_channels_cm_stage
   job_name: Deploy channels to staging
@@ -424,7 +418,7 @@ stage:
           python-version: '3.12.3'
 
       - name: Install dependencies
-        run: pip install ghapi=1.0.6 fastcore=1.7.28 kubernetes=32.0.1
+        run: pip install ghapi==1.0.6 fastcore==1.7.28 kubernetes==32.0.1
 
       - name: Prepare files to collect and deploy channels
         run: |
@@ -468,8 +462,6 @@ stage:
     runs-on: [self-hosted, regular]
     needs:
       - post_deploy_preparation
-    env:
-      WERF_CHANNEL: "ea"
     steps:
       {!{- tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
 
@@ -480,9 +472,9 @@ stage:
           path: publish-channels
 
       - name: Converge
-        uses: werf/actions/converge@v1.2
+        uses: {!{ index (ds "actions") "werf/actions/converge" }!}
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          version: ${{env.WERF_VERSION}}
           kube-config-base64-data: "${{ secrets.{!{ $env_properties.kubeconfig }!} }}"
           env: {!{ $env_properties.werf_env }!}
         env:

@@ -10,8 +10,10 @@ git:
 import:
 {{ include "installer_and_installer_standalone_generic_imports" (dict "Env" $.Env) }}
 {{ include "installer_and_installer_standalone_terraform_imports" (dict "Env" $.Env "TF" $.TF "Editions" $.Editions) }}
+{{ include "installer_and_installer_standalone_opentofu_imports" (dict "Env" $.Env "TF" $.TF "Editions" $.Editions) }}
 {{ include "installer_and_installer_standalone_libraries_and_binaries_imports" . }}
 
-{{ include "installer_docker_properties" . }}
-
 {{ include "installer_prepare_with_shell" (dict "rootContext" . "CI_COMMIT_TAG" .CI_COMMIT_TAG "Env" $.Env) }}
+
+{{ include "controller_and_install_image_labels" . }}
+    user: "0:0"

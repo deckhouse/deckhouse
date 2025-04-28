@@ -21,12 +21,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 )
 
 func TestStatistics_Format(t *testing.T) {
-	t.Parallel()
-
 	var statistics Statistics
 	err := yaml.Unmarshal([]byte(statisticsYAML), &statistics)
 	require.NoError(t, err)
@@ -85,9 +83,9 @@ nodes:
 var expectedStatistics = Statistics{
 	Cluster: ClusterCheckResult{
 		Status: "ok",
-		DestructiveChanges: &terraform.BaseInfrastructureDestructiveChanges{
-			PlanDestructiveChanges: terraform.PlanDestructiveChanges{
-				ResourcesRecreated: []terraform.ValueChange{
+		DestructiveChanges: &infrastructure.BaseInfrastructureDestructiveChanges{
+			PlanDestructiveChanges: infrastructure.PlanDestructiveChanges{
+				ResourcesRecreated: []infrastructure.ValueChange{
 					{
 						CurrentValue: map[string]any{"zone": "ru-central1-a"},
 						NextValue:    map[string]any{"zone": "ru-central1-b"},
@@ -111,8 +109,8 @@ var expectedStatistics = Statistics{
 			Group:  "master",
 			Name:   "akul-master-0",
 			Status: "destructively_changed",
-			DestructiveChanges: &terraform.PlanDestructiveChanges{
-				ResourcesRecreated: []terraform.ValueChange{
+			DestructiveChanges: &infrastructure.PlanDestructiveChanges{
+				ResourcesRecreated: []infrastructure.ValueChange{
 					{
 						CurrentValue: map[string]any{"zone": "ru-central1-a"},
 						NextValue:    map[string]any{"zone": "ru-central1-b"},
@@ -121,7 +119,7 @@ var expectedStatistics = Statistics{
 			},
 		},
 	},
-	TerraformPlan: []terraform.TerraformPlan{
+	InfrastructurePlan: []infrastructure.Plan{
 		{
 			"configuration":  map[string]any{},
 			"format_version": "0.1",
