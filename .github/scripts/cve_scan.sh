@@ -67,14 +67,10 @@ ln -s ${PWD}/${WORKDIR}/bin/trivy-${TRIVY_BIN_VERSION}/trivy ${WORKDIR}/bin/triv
 echo "----------------------------------------------"
 echo ""
 echo "Getting tags to scan"
-echo "Log in to DEV registry"
-echo "${DEV_REGISTRY_PASSWORD}" | docker login --username="${DEV_REGISTRY_USER}" --password-stdin ${DEV_REGISTRY}
-if [ "${SCAN_TARGET}" == "pr" ]; then
-  d8_tags=("${TAG}")
-elif [ "${SCAN_TARGET}" == "regular" ]; then
+d8_tags=("${TAG}")
+if [ "${SCAN_TARGET}" == "regular" ]; then
   echo "Log in to PROD registry"
   echo "${PROD_REGISTRY_PASSWORD}" | docker login --username="${PROD_REGISTRY_USER}" --password-stdin ${PROD_REGISTRY}
-  d8_tags=("${TAG}")
   # Get release tags by regexp, sort by sevmer desc, cut to get minor version, uniq and get 3 latest
   releases=($(crane ls "${PROD_REGISTRY_DECKHOUSE_IMAGE}" | grep "^v[0-9]*\.[0-9]*\.[0-9]*$" | sort -V -r))
   latest_minor_releases=($(printf '%s\n' "${releases[@]}"| cut -d "." -f -2 | uniq | head -n 3))
@@ -87,6 +83,13 @@ echo "${d8_tags[@]}"
 
 # Scan in loop for provided list of tags
 for d8_tag in "${d8_tags[@]}"; do
+  # Log in to registry before pulling each deckhouse image to avoid registry session end
+  echo "Log in to DEV registry"
+  echo "${DEV_REGISTRY_PASSWORD}" | docker login --username="${DEV_REGISTRY_USER}" --password-stdin ${DEV_REGISTRY}
+  if [ "${SCAN_TARGET}" == "regular" ]; then
+    echo "Log in to PROD registry"
+    echo "${PROD_REGISTRY_PASSWORD}" | docker login --username="${PROD_REGISTRY_USER}" --password-stdin ${PROD_REGISTRY}
+  fi
   date_iso=$(date -I)
   dd_tag="${d8_tag}"
   d8_image="${DEV_REGISTRY_DECKHOUSE_IMAGE}"
