@@ -1237,6 +1237,11 @@ function wait_cluster_ready() {
     return 1
   fi
 
+  if [[ "$SLEEP_BEFORE_TESTING_CLUSTER_ALERTS" != "" && "$SLEEP_BEFORE_TESTING_CLUSTER_ALERTS" != "0" ]]; then
+    echo "Sleeping $SLEEP_BEFORE_TESTING_CLUSTER_ALERTS seconds before check cluster alerts"
+    sleep "$SLEEP_BEFORE_TESTING_CLUSTER_ALERTS"
+  fi
+
   testAlerts=$(cat "$(pwd)/deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_alerts.sh")
 
   test_failed="true"
