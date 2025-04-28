@@ -4,7 +4,7 @@ permalink: ru/admin/security/events/kubernetes-api-audit.html
 lang: ru
 ---
 
-Процедура аудита в ([Kubernetes Auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/))
+Процедура аудита ([Kubernetes Auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/))
 позволяет отслеживать обращения к API-серверу и анализировать события, происходящие в кластере.
 Аудит может быть полезен для отладки неожиданных сценариев поведения, а также для соблюдения требований безопасности.
 

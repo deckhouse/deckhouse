@@ -172,17 +172,17 @@ Deckhouse Kubernetes Platform (DKP) поддерживает интеграци�
   kind: ClusterLoggingConfig
   metadata:
     name: kubelet-audit-logs
-    spec:
+  spec:
     destinationRefs:
-    - kuma-kafka
+      - kuma-kafka
     file:
       include:
-      - /var/log/kube-audit/audit.log
+        - /var/log/kube-audit/audit.log
     logFilter:
-    - field: userAgent
-      operator: Regex
-      values:
-      - kubelet.*
+      - field: userAgent
+        operator: Regex
+        values:
+          - kubelet.*
     type: File
   ```
 
@@ -222,9 +222,7 @@ Deckhouse Kubernetes Platform (DKP) поддерживает интеграци�
    - `Network Threat Protection (ID: 17)`;
    - `Web Control (ID: 26)`.
 
-   {% alert level="info" %}
-   В будущих версиях KESL список задач может отличаться.
-   {% endalert %}
+   > В будущих версиях KESL список задач может отличаться.
 
 1. Убедитесь, что ресурсы узлов соответствуют требованиям:
 

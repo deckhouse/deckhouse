@@ -16,7 +16,7 @@ DKP запускает регулярное сканирование всех к
 - соответствие CIS-стандартам (compliance-проверки).
 
 Для сканирования используются как [публичные базы уязвимостей](https://github.com/aquasecurity/trivy-db/tree/main/pkg/vulnsrc),
-так и обогащённые данные из Astra Linux, ALT Linux и РЕД ОС.
+так и обогащённые данные из [Astra Linux](https://astralinux.ru/), [ALT Linux](https://www.basealt.ru/products) и [РЕД ОС](https://redos.red-soft.ru/product/server/).
 
 ## Сканирование в пространствах имён
 
