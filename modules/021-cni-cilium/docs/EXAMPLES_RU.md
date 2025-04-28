@@ -34,7 +34,7 @@ metadata:
   name: myegressgw
 spec:
   nodeSelector:
-    node-role.deckhouse.io/egress: ""
+    dedicated/egress: ""
   sourceIP:
     mode: PrimaryIPFromEgressGatewayNodeInterface
     primaryIPFromEgressGatewayNodeInterface:
@@ -53,7 +53,7 @@ metadata:
   name: myeg
 spec:
   nodeSelector:
-    node-role.deckhouse.io/egress: ""
+    dedicated/egress: ""
   sourceIP:
     mode: VirtualIPAddress
     virtualIPAddress:
