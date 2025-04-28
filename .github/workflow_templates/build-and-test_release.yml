@@ -151,6 +151,8 @@ jobs:
       WERF_ENV: "FE"
 {!{ tmpl.Exec "build_template" (slice $ctx "release") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.build_fe) | strings.Indent 6 }!}
+{!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
+
 
 {!{ $jobNames = coll.Merge $jobNames (dict "build_ee" "Build EE") }!}
   build_ee:
@@ -166,6 +168,8 @@ jobs:
       WERF_ENV: "EE"
 {!{ tmpl.Exec "build_template" (slice $ctx "release") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.build_ee) | strings.Indent 6 }!}
+{!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
+
 
 {!{ $jobNames = coll.Merge $jobNames (dict "build_se" "Build SE") }!}
   build_se:
