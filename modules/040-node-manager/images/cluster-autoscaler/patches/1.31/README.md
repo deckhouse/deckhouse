@@ -30,3 +30,8 @@ TODO: add description
 ### 003-scale-from-zero.patch
 
 TODO: add description
+
+### 004-delete-mcm-annotations-from-md
+
+Remove additional cordoning nodes from mcm cloud provider.
+Remove adding "node.machine.sapcloud.io/trigger-deletion-by-mcm" annotation to machine deployment to avoid autoscaler warnings.
