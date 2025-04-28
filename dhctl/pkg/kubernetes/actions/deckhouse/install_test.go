@@ -98,7 +98,7 @@ func TestDeckhouseInstall(t *testing.T) {
 				conf := config.DeckhouseInstaller{
 					ClusterConfig:         []byte(`test`),
 					ProviderClusterConfig: []byte(`test`),
-					TerraformState:        []byte(`test`),
+					InfrastructureState:   []byte(`test`),
 				}
 				_, err := CreateDeckhouseManifests(ctx, fakeClient, &conf)
 				if err != nil {

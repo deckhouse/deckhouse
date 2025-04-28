@@ -34,6 +34,6 @@ for schema_path in $(find $MODULES_DIR -regex '^.*/crds/.*.yaml$' -print | grep 
     # Apply schema
     sed -i "/<!-- SCHEMA -->/i\{\{ site.data.schemas.${module_name}.${schema_path_relative} \| format_crd: \"${module_name}\" \}\}" ${module_path}/docs/CR.md
   else
-    echo "Skip: ${module_file_name}"
+    echo "Skip (no placeholder): ${module_file_name}"
   fi
 done

@@ -523,7 +523,7 @@ echo "$MYRESULTSTRING"
    - `--no-platform` — для пропуска загрузки пакета образов Deckhouse Kubernetes Platform (platform.tar);
    - `--no-modules` — для пропуска загрузки пакетов модулей (module-*.tar);
    - `--no-security-db` — для пропуска загрузки пакета баз данных сканера уязвимостей (security.tar);
-   - `--include-module` / `-i` = `name[@X.Y.Z]` — для загрузки только определенного набора модулей по принципу белого списка (и, при необходимости, их минимальных версий). Укажите несколько раз, чтобы добавить в белый список больше модулей. Эти флаги игнорируются, если используются совместно с `--no-modules`.
+   - `--include-module` / `-i` = `name[@Major.Minor]` — для загрузки только определенного набора модулей по принципу белого списка (и, при необходимости, их минимальных версий). Укажите несколько раз, чтобы добавить в белый список больше модулей. Эти флаги игнорируются, если используются совместно с `--no-modules`.
    - `--exclude-module` / `-e` = `name` — для пропуска загрузки определенного набора модулей по принципу черного списка. Укажите несколько раз, чтобы добавить в черный список больше модулей. Игнорируется, если используются `--no-modules` или `--include-module`.
    - `--modules-path-suffix` — для изменения суффикса пути к репозиторию модулей в основном репозитории Deckhouse. По умолчанию используется суффикс `/modules` (так, например, полный путь к репозиторию с модулями будет выглядеть как `registry.deckhouse.ru/deckhouse/EDITION/modules`).
    - `--since-version=X.Y` — чтобы скачать все версии Deckhouse, начиная с указанной минорной версии. Параметр будет проигнорирован, если указана версия выше чем версия находящаяся на канале обновлений Rock Solid. Параметр не может быть использован одновременно с параметром `--deckhouse-tag`;
@@ -532,7 +532,8 @@ echo "$MYRESULTSTRING"
    - `--source` — чтобы указать адрес источника хранилища образов Deckhouse (по умолчанию `registry.deckhouse.ru/deckhouse/ee`);
    - Для аутентификации в официальном хранилище образов Deckhouse нужно использовать лицензионный ключ и параметр `--license`;
    - Для аутентификации в стороннем хранилище образов нужно использовать параметры `--source-login` и `--source-password`;
-   - `--images-bundle-chunk-size=N` — для указания максимального размера файла (в ГБ), на которые нужно разбить архив образов. В результате работы вместо одного файла архива образов будет создан набор `.chunk`-файлов (например, `d8.tar.NNNN.chunk`). Чтобы загрузить образы из такого набора файлов, укажите в команде `d8 mirror push` имя файла без суффикса `.NNNN.chunk` (например, `d8.tar` для файлов `d8.tar.NNNN.chunk`).
+   - `--images-bundle-chunk-size=N` — для указания максимального размера файла (в ГБ), на которые нужно разбить архив образов. В результате работы вместо одного файла архива образов будет создан набор `.chunk`-файлов (например, `d8.tar.NNNN.chunk`). Чтобы загрузить образы из такого набора файлов, укажите в команде `d8 mirror push` имя файла без суффикса `.NNNN.chunk` (например, `d8.tar` для файлов `d8.tar.NNNN.chunk`);
+   - `--tmp-dir` — путь к директории для временных файлов, который будет использоваться во время операций загрузки и выгрузки образов. Вся обработка выполняется в этом каталоге. Он должен иметь достаточное количество свободного дискового пространства, чтобы вместить весь загружаемый пакет образов. По умолчанию используется поддиректория `.tmp` в директории с пакетами образов.
 
    Дополнительные параметры конфигурации для семейства команд `d8 mirror` доступны в виде переменных окружения:
 
@@ -540,7 +541,6 @@ echo "$MYRESULTSTRING"
    - `NO_PROXY` — список хостов, разделенных запятыми, которые следует исключить из проксирования. Каждое значение может быть представлено в виде IP-адреса (`1.2.3.4`), CIDR (`1.2.3.4/8`), домена или символа (`*`). IP-адреса и домены также могут включать номер порта (`1.2.3.4:80`). Доменное имя соответствует как самому себе, так и всем поддоменам. Доменное имя начинающееся с `.`, соответствует только поддоменам. Например, `foo.com` соответствует `foo.com` и `bar.foo.com`; `.y.com` соответствует `x.y.com`, но не соответствует `y.com`. Символ `*` отключает проксирование;
    - `SSL_CERT_FILE` — указывает путь до сертификата SSL. Если переменная установлена, системные сертификаты не используются;
    - `SSL_CERT_DIR` — список каталогов, разделенный двоеточиями. Определяет, в каких каталогах искать файлы сертификатов SSL. Если переменная установлена, системные сертификаты не используются. [Подробнее...](https://www.openssl.org/docs/man1.0.2/man1/c_rehash.html);
-   - `TMPDIR (*nix)`/`TMP (Windows)` — путь к директории для временных файлов, который будет использоваться во время операций загрузки и выгрузки образов. Вся обработка выполняется в этом каталоге. Он должен иметь достаточное количество свободного дискового пространства, чтобы вместить весь загружаемый пакет образов;
    - `MIRROR_BYPASS_ACCESS_CHECKS` — установите для этого параметра значение `1`, чтобы отключить проверку корректности переданных учетных данных для registry;
 
    Пример команды для загрузки всех версий Deckhouse EE начиная с версии 1.59 (укажите лицензионный ключ):
@@ -774,6 +774,8 @@ proxy:
   httpsProxy: "https://user:password@proxy.company.my:8443"
 ```
 
+{% raw %}
+
 ### Автозагрузка переменных proxy пользователям в CLI
 
 Начиная с версии платформы DKP v1.67 больше не настраивается файл `/etc/profile.d/d8-system-proxy.sh`, который устанавливал переменные proxy для пользователей. Для автозагрузки переменных proxy пользователям в CLI используйте ресурс `NodeGroupConfiguration`:
@@ -815,6 +817,8 @@ spec:
     rm -rf /etc/profile.d/profile-proxy.sh
     {{- end }}
 ```
+
+{% endraw %}
 
 ## Изменение конфигурации
 
@@ -868,7 +872,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
    ```shell
    DECKHOUSE_VERSION=$(kubectl -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $2}')
-   kubectl run se-image --image=registry.deckhouse.ru/deckhouse/ce/install:$DECKHOUSE_VERSION --command sleep -- infinity
+   kubectl run ce-image --image=registry.deckhouse.ru/deckhouse/ce/install:$DECKHOUSE_VERSION --command sleep -- infinity
    ```
 
    > Запускайте образ последней установленной версии Deckhouse в кластере. Определить, какая версия сейчас установлена, можно командой:
@@ -878,42 +882,6 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    > ```
 
 1. Как только под перейдёт в статус `Running`, выполните следующие команды:
-
-   * Получите значение `CE_SANDBOX_IMAGE`:
-
-     ```shell
-     CE_SANDBOX_IMAGE=$(kubectl exec ce-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.pause")
-     ```
-
-     Проверка:
-
-     ```shell
-     echo $CE_SANDBOX_IMAGE
-     ```
-
-     Пример вывода:
-
-     ```console
-     sha256:2a909cb9df4d0207f1fe5bd9660a0529991ba18ce6ce7b389dc008c05d9022d1
-     ```
-
-   * Получите значение `CE_K8S_API_PROXY`:
-
-     ```shell
-     CE_K8S_API_PROXY=$(kubectl exec ce-image -- cat deckhouse/candi/images_digests.json | jq -r ".controlPlaneManager.kubernetesApiProxy")
-     ```
-
-     Проверка:
-
-     ```shell
-     echo $CE_K8S_API_PROXY
-     ```
-
-     Пример вывода:
-
-     ```console
-     sha256:a5442437976a11dfa4860c2fbb025199d9d1b074222bb80173ed36b9006341dd
-     ```
 
    * Получите значение `CE_REGISTRY_PACKAGE_PROXY`:
 
@@ -1013,73 +981,6 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    Module node-local-dns disabled
    ```
 
-1. Создайте ресурс `NodeGroupConfiguration`:
-
-   ```shell
-   kubectl apply -f - <<EOF
-   apiVersion: deckhouse.io/v1alpha1
-   kind: NodeGroupConfiguration
-   metadata:
-     name: containerd-ce-config.sh
-   spec:
-     nodeGroups:
-     - '*'
-     bundles:
-     - '*'
-     weight: 30
-     content: |
-       _on_containerd_config_changed() {
-         bb-flag-set containerd-need-restart
-       }
-       bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
-
-       mkdir -p /etc/containerd/conf.d
-       bb-sync-file /etc/containerd/conf.d/ce-registry.toml - containerd-config-file-changed << "EOF_TOML"
-       [plugins]
-         [plugins."io.containerd.grpc.v1.cri"]
-           sandbox_image = "registry.deckhouse.ru/deckhouse/ce@$CE_SANDBOX_IMAGE"
-           [plugins."io.containerd.grpc.v1.cri".registry.configs]
-             [plugins."io.containerd.grpc.v1.cri".registry.configs."registry.deckhouse.ru".auth]
-               auth = ""
-       EOF_TOML
-
-       sed -i 's|image: .*|image: registry.deckhouse.ru/deckhouse/ce@$CE_K8S_API_PROXY|' /var/lib/bashible/bundle_steps/051_pull_and_configure_kubernetes_api_proxy.sh
-       sed -i 's|crictl pull .*|crictl pull registry.deckhouse.ru/deckhouse/ce@$CE_K8S_API_PROXY|' /var/lib/bashible/bundle_steps/051_pull_and_configure_kubernetes_api_proxy.sh
-
-   EOF
-   ```
-
-   Дождитесь появления файла `/etc/containerd/conf.d/ce-registry.toml` на узлах и завершения синхронизации bashible.
-
-   Статус синхронизации можно отследить по значению `UPTODATE` (отображаемое число узлов в этом статусе должно совпадать с общим числом узлов (`NODES`) в группе):
-
-   ```shell
-   kubectl get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
-   ```
-
-   Пример вывода:
-
-   ```console
-   NAME     NODES   READY   UPTODATE
-   master   1       1       1
-   worker   2       2       2
-   ```
-
-   Также в журнале systemd-сервиса bashible должно появиться сообщение `Configuration is in sync, nothing to do` в результате выполнения следующей команды:
-
-   ```shell
-   journalctl -u bashible -n 5
-   ```
-
-   Пример вывода:
-
-   ```console
-   Aug 21 11:04:28 master-ee-to-ce-0 bashible.sh[53407]: Configuration is in sync, nothing to do.
-   Aug 21 11:04:28 master-ee-to-ce-0 bashible.sh[53407]: Annotate node master-ee-to-ce-0 with annotation node.deckhouse.io/  configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
-   Aug 21 11:04:29 master-ee-to-ce-0 bashible.sh[53407]: Successful annotate node master-ee-to-ce-0 with annotation node.deckhouse.io/ configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
-   Aug 21 11:04:29 master-ee-to-ce-0 systemd[1]: bashible.service: Deactivated successfully.
-   ```
-
 1. Актуализируйте секрет доступа к registry Deckhouse, выполнив следующую команду:
 
    ```bash
@@ -1136,33 +1037,10 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    > kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable registry-packages-proxy
    > ```
 
-1. Удалите временные файлы, ресурс NodeGroupConfiguration и переменные:
+1. Удалите временный под Deckhouse CE:
 
    ```shell
-   kubectl delete ngc containerd-ce-config.sh
    kubectl delete pod ce-image
-   kubectl apply -f - <<EOF
-   apiVersion: deckhouse.io/v1alpha1
-   kind: NodeGroupConfiguration
-   metadata:
-     name: del-temp-config.sh
-   spec:
-     nodeGroups:
-     - '*'
-     bundles:
-     - '*'
-     weight: 90
-     content: |
-       if [ -f /etc/containerd/conf.d/ce-registry.toml ]; then
-         rm -f /etc/containerd/conf.d/ce-registry.toml
-       fi
-   EOF
-   ```
-
-   После синхронизации bashible (статус синхронизации на узлах можно отследить по значению `UPTODATE` у NodeGroup) удалите созданный ресурс NodeGroupConfiguration:
-
-   ```shell
-   kubectl delete ngc del-temp-config.sh
    ```
 
 ### Как переключить Deckhouse CE на EE?
@@ -1260,42 +1138,6 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
 1. Как только под перейдёт в статус `Running`, выполните следующие команды:
 
-   * Получите значение `EE_SANDBOX_IMAGE`:
-
-     ```shell
-     EE_SANDBOX_IMAGE=$(kubectl exec ee-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.pause")
-     ```
-
-     Проверка:
-
-     ```shell
-     echo $EE_SANDBOX_IMAGE
-     ```
-
-     Пример вывода:
-
-     ```console
-     sha256:2a909cb9df4d0207f1fe5bd9660a0529991ba18ce6ce7b389dc008c05d9022d1
-     ```
-
-   * Получите значение `EE_K8S_API_PROXY`:
-
-     ```shell
-     EE_K8S_API_PROXY=$(kubectl exec ee-image -- cat deckhouse/candi/images_digests.json | jq -r ".controlPlaneManager.kubernetesApiProxy")
-     ```
-
-     Проверка:
-
-     ```shell
-     echo $EE_K8S_API_PROXY
-     ```
-
-     Пример вывода:
-
-     ```console
-     sha256:80a2cf757adad6a29514f82e1c03881de205780dbd87c6e24da0941f48355d6c
-     ```
-
    * Получите значение `EE_REGISTRY_PACKAGE_PROXY`:
 
      ```shell
@@ -1313,69 +1155,6 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
      ```console
      Image is up to date for sha256:8127efa0f903a7194d6fb7b810839279b9934b200c2af5fc416660857bfb7832
      ```
-
-1. Создайте ресурс NodeGroupConfiguration:
-
-   ```shell
-   kubectl apply -f - <<EOF
-   apiVersion: deckhouse.io/v1alpha1
-   kind: NodeGroupConfiguration
-   metadata:
-     name: ee-set-sha-images.sh
-   spec:
-     nodeGroups:
-     - '*'
-     bundles:
-     - '*'
-     weight: 30
-     content: |
-       _on_containerd_config_changed() {
-         bb-flag-set containerd-need-restart
-       }
-       bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
-
-       bb-sync-file /etc/containerd/conf.d/ee-sandbox.toml - containerd-config-file-changed << "EOF_TOML"
-       [plugins]
-         [plugins."io.containerd.grpc.v1.cri"]
-           sandbox_image = "registry.deckhouse.ru/deckhouse/ee@$EE_SANDBOX_IMAGE"
-       EOF_TOML
-
-       sed -i 's|image: .*|image: registry.deckhouse.ru/deckhouse/ee@$EE_K8S_API_PROXY|' /var/lib/bashible/bundle_steps/051_pull_and_configure_kubernetes_api_proxy.sh
-       sed -i 's|crictl pull .*|crictl pull registry.deckhouse.ru/deckhouse/ee@$EE_K8S_API_PROXY|' /var/lib/bashible/bundle_steps/051_pull_and_configure_kubernetes_api_proxy.sh
-
-   EOF
-   ```
-
-   Дождитесь появления файла `/etc/containerd/conf.d/ee-sandbox.toml` на узлах и завершения синхронизации bashible.
-
-   Статус синхронизации можно отследить по значению `UPTODATE` (отображаемое число узлов в этом статусе должно совпадать с общим числом узлов (`NODES`) в группе):
-
-   ```shell
-   kubectl get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
-   ```
-
-   Пример вывода:
-
-   ```console
-   NAME     NODES   READY   UPTODATE
-   master   1       1       1
-   worker   2       2       2
-   ```
-
-   Также в журнале systemd-сервиса bashible должно появиться сообщение `Configuration is in sync, nothing to do` в результате выполнения следующей команды:
-
-   ```shell
-   journalctl -u bashible -n 5
-   ```
-
-   Пример вывода:
-
-   ```console
-   Aug 21 11:04:28 master-ce-to-ee-0 bashible.sh[53407]: Configuration is in sync, nothing to do.
-   Aug 21 11:04:28 master-ce-to-ee-0 bashible.sh[53407]: Annotate node master-ce-to-ee-0 with annotation node.deckhouse.io/ configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
-   Aug 21 11:04:29 master-ce-to-ee-0 bashible.sh[53407]: Successful annotate node master-ce-to-ee-0 with annotation node.deckhouse.io/ configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
-   Aug 21 11:04:29 master-ce-to-ee-0 systemd[1]: bashible.service: Deactivated successfully.
-   ```
 
 1. Актуализируйте секрет доступа к registry Deckhouse, выполнив следующую команду:
 
@@ -1430,7 +1209,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 1. Удалите временные файлы, ресурс `NodeGroupConfiguration` и переменные:
 
    ```shell
-   kubectl delete ngc containerd-ee-config.sh ee-set-sha-images.sh
+   kubectl delete ngc containerd-ee-config.sh
    kubectl delete pod ee-image
    kubectl apply -f - <<EOF
        apiVersion: deckhouse.io/v1alpha1
@@ -1446,9 +1225,6 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
          content: |
            if [ -f /etc/containerd/conf.d/ee-registry.toml ]; then
              rm -f /etc/containerd/conf.d/ee-registry.toml
-           fi
-           if [ -f /etc/containerd/conf.d/ee-sandbox.toml ]; then
-             rm -f /etc/containerd/conf.d/ee-sandbox.toml
            fi
    EOF
    ```
@@ -1558,42 +1334,6 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
 1. После перехода пода в статус `Running` выполните следующие команды:
 
-   * Получите значение `SE_SANDBOX_IMAGE`:
-
-     ```shell
-     SE_SANDBOX_IMAGE=$(kubectl exec se-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.pause")
-     ```
-
-     Проверка:
-
-     ```shell
-     echo $SE_SANDBOX_IMAGE
-     ```
-
-     Пример вывода:
-
-     ```console
-     sha256:2a909cb9df4d0207f1fe5bd9660a0529991ba18ce6ce7b389dc008c05d9022d1
-     ```
-
-   * Получите значение `SE_K8S_API_PROXY`:
-
-     ```shell
-     SE_K8S_API_PROXY=$(kubectl exec se-image -- cat deckhouse/candi/images_digests.json | jq -r ".controlPlaneManager.kubernetesApiProxy")
-     ```
-
-     Проверка:
-
-     ```shell
-     echo $SE_K8S_API_PROXY
-     ```
-
-     Пример вывода:
-
-     ```console
-     sha256:af92506a36f4bd032a6459295069f9478021ccf67d37557a664878bc467dd9fd
-     ```
-
    * Получите значение `SE_REGISTRY_PACKAGE_PROXY`:
 
      ```shell
@@ -1670,69 +1410,6 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
    Дождитесь, пока под Deckhouse перейдёт в состояние `Ready` и [убедитесь в выполнении всех задач в очереди](#как-проверить-очередь-заданий-в-deckhouse).
 
-1. Создайте ресурс NodeGroupConfiguration:
-
-   ```shell
-   kubectl apply -f - <<EOF
-   apiVersion: deckhouse.io/v1alpha1
-   kind: NodeGroupConfiguration
-   metadata:
-     name: se-set-sha-images.sh
-   spec:
-     nodeGroups:
-     - '*'
-     bundles:
-     - '*'
-     weight: 30
-     content: |
-       _on_containerd_config_changed() {
-         bb-flag-set containerd-need-restart
-       }
-       bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
-
-       bb-sync-file /etc/containerd/conf.d/se-sandbox.toml - containerd-config-file-changed << "EOF_TOML"
-       [plugins]
-         [plugins."io.containerd.grpc.v1.cri"]
-           sandbox_image = "registry.deckhouse.ru/deckhouse/se@$SE_SANDBOX_IMAGE"
-       EOF_TOML
-
-       sed -i 's|image: .*|image: registry.deckhouse.ru/deckhouse/se@$SE_K8S_API_PROXY|' /var/lib/bashible/bundle_steps/051_pull_and_configure_kubernetes_api_proxy.sh
-       sed -i 's|crictl pull .*|crictl pull registry.deckhouse.ru/deckhouse/se@$SE_K8S_API_PROXY|' /var/lib/bashible/bundle_steps/051_pull_and_configure_kubernetes_api_proxy.sh
-
-   EOF
-   ```
-
-   Дождитесь появления файла `/etc/containerd/conf.d/se-sandbox.toml` на узлах и завершения синхронизации bashible.
-
-   Статус синхронизации можно отследить по значению `UPTODATE` (отображаемое число узлов в этом статусе должно совпадать с общим числом узлов (`NODES`) в группе):
-
-   ```shell
-   kubectl get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
-   ```
-
-   Пример вывода:
-
-   ```console
-   NAME     NODES   READY   UPTODATE
-   master   1       1       1
-   worker   2       2       2
-   ```
-
-   Также в журнале systemd-сервиса bashible должно появиться сообщение `Configuration is in sync, nothing to do` в результате выполнения следующей команды:
-
-   ```shell
-   journalctl -u bashible -n 5
-   ```
-
-   Пример вывода:
-
-   ```console
-   Aug 21 11:04:28 master-ee-to-se-0 bashible.sh[53407]: Configuration is in sync, nothing to do.
-   Aug 21 11:04:28 master-ee-to-se-0 bashible.sh[53407]: Annotate node master-ee-to-se-0 with annotation node.deckhouse.io/   configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
-   Aug 21 11:04:29 master ee-to-se-0 bashible.sh[53407]: Successful annotate node master-ee-to-se-0 with annotation node.deckhouse.io/   configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
-   Aug 21 11:04:29 master-ee-to-se-0 systemd[1]: bashible.service: Deactivated successfully.
-   ```
-
 1. Актуализируйте секрет доступа к registry Deckhouse, выполнив следующую команду:
 
    ```shell
@@ -1789,7 +1466,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 1. Удалите временные файлы, ресурс `NodeGroupConfiguration` и переменные:
 
    ```shell
-   kubectl delete ngc containerd-se-config.sh se-set-sha-images.sh
+   kubectl delete ngc containerd-se-config.sh
    kubectl delete pod se-image
    kubectl apply -f - <<EOF
        apiVersion: deckhouse.io/v1alpha1
@@ -1805,9 +1482,6 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
          content: |
            if [ -f /etc/containerd/conf.d/se-registry.toml ]; then
              rm -f /etc/containerd/conf.d/se-registry.toml
-           fi
-           if [ -f /etc/containerd/conf.d/se-sandbox.toml ]; then
-             rm -f /etc/containerd/conf.d/se-sandbox.toml
            fi
    EOF
    ```

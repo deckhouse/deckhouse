@@ -192,7 +192,7 @@ function add_sudoer_group() {
 
     # Discover sudoer groups
     groups=($(cat $path |egrep "^%[a-z][-a-zA-Z0-9._]*\s+.+" |awk '{print $1}' |cut -c2-))
-    additional_groups=$(cat $sudoersd_path/* |egrep "^%[a-z][-a-zA-Z0-9._]*\s+.+" |awk '{print $1}' |cut -c2-)
+    additional_groups=$(find $sudoersd_path -type f -readable -exec egrep -h "^%[a-z][-a-zA-Z0-9._]*\s+.+" {} + | awk '{print $1}' |cut -c2-)
     groups+=($additional_groups)
 
     if [[ ! " ${groups[*]} " =~ [[:space:]]${groupname}[[:space:]] ]]

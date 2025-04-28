@@ -71,7 +71,7 @@ This function prevents a node from rebooting if it must be confirmed by adding a
 Other Bash Booster functions used:
 
 - [`bb-apt-install`](http://www.bashbooster.net/#apt): To install an apt package and send the `bb-package-installed` event when the package is installed.
-- [`bb-yum-install`](http://www.bashbooster.net/#yum): To install a yum package and send the `bb-package-installed` event when the package is installed.
+- [`bb-dnf-install`](http://www.bashbooster.net/#yum): To install a yum package and send the `bb-package-installed` event when the package is installed.
 - [`bb-event-on`](http://www.bashbooster.net/#event): To notify about a required node reboot if the `bb-package-installed` event has been sent.
 - [`bb-log-info`](http://www.bashbooster.net/#log): For logging.
 - [`bb-flag-set`](http://www.bashbooster.net/#flag): To notify that a node reboot is required.
@@ -141,7 +141,7 @@ spec:
     fi
 
     bb-deckhouse-get-disruptive-update-approval
-    bb-yum-install "kernel-${desired_version}"
+    bb-dnf-install "kernel-${desired_version}"
 ```
 
 ## Adding a root certificate
