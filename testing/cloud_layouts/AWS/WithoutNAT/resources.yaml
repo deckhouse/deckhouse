@@ -4,8 +4,6 @@ kind: NodeGroup
 metadata:
   name: system-a
 spec:
-  chaos:
-    mode: Disabled
   cloudInstances:
     classReference:
       kind: AWSInstanceClass
@@ -13,9 +11,11 @@ spec:
     maxPerZone: 1
     minPerZone: 1
     zones:
-    - eu-central-1a
+    - eu-west-1a
   disruptions:
     approvalMode: Manual
+  fencing:
+    mode: Watchdog
   nodeTemplate:
     labels:
       node-role.deckhouse.io/system: ""
@@ -31,8 +31,9 @@ metadata:
   name: system
 spec:
   diskSizeGb: 30
-  diskType: gp2
+  diskType: gp3
   instanceType: m5a.xlarge
+  spot: false
 ---
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
