@@ -8,7 +8,7 @@ package inclusterproxy
 import v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 const (
-	PodVersionAnnotation = "registry.deckhouse.io/config-version"
+	PodVersionAnnotation = "registry.deckhouse.io/incluster-proxy-version"
 )
 
 var (

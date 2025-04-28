@@ -1,9 +1,11 @@
-{{ $ctx := .}}
+{{- $ctx := .}}
 {{- if (include "in_cluster_proxy_enable" $ctx ) }}
 
-# Prepare configs
-{{ $in_cluster_proxy_config_files_raw := (include "in_cluster_proxy_config_files" $ctx ) }}
-{{ $in_cluster_proxy_config_files_mount_path := (include "in_cluster_proxy_config_files_mount_path" $ctx) }}
+# Prepare cfg and pki
+{{- $in_cluster_proxy_cfg_files_yaml_raw := (include "in_cluster_proxy_cfg_files" $ctx ) }}
+{{- $in_cluster_proxy_cfg_files_mount_path := (include "in_cluster_proxy_cfg_files_mount_path" $ctx) }}
+{{- $in_cluster_proxy_pki_files_yaml_raw := (include "in_cluster_proxy_pki_files" $ctx ) }}
+{{- $in_cluster_proxy_pki_files_mount_path := (include "in_cluster_proxy_pki_files_mount_path" $ctx) }}
 
 {{- if ($ctx.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
@@ -53,8 +55,10 @@ metadata:
   namespace: d8-system
   {{- include "helm_lib_module_labels" (list $ctx (dict "app" "registry-incluster-proxy")) | nindent 2 }}
   annotations:
-    registry.deckhouse.io/config-hash: {{ $in_cluster_proxy_config_files_raw | sha256sum | quote }}
-    registry.deckhouse.io/config-version: {{ (include "in_cluster_proxy_version" $ctx ) | quote }}
+    registry.deckhouse.io/orchestrator-hash: {{ (include "orchestrator_hash" $ctx ) | quote }}
+    registry.deckhouse.io/incluster-proxy-version: {{ (include "in_cluster_proxy_version" $ctx ) | quote }}
+    registry.deckhouse.io/incluster-proxy-cfg-hash: {{ $in_cluster_proxy_cfg_files_yaml_raw | sha256sum | quote }}
+    registry.deckhouse.io/incluster-proxy-pki-hash: {{ $in_cluster_proxy_pki_files_yaml_raw | sha256sum | quote }}
 spec:
   {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" $ctx | nindent 2 }}
   revisionHistoryLimit: 2
@@ -68,8 +72,9 @@ spec:
         app: registry-incluster-proxy
         type: incluster-proxy
       annotations:
-        registry.deckhouse.io/config-hash: {{ $in_cluster_proxy_config_files_raw | sha256sum | quote }}
-        registry.deckhouse.io/config-version: {{ (include "in_cluster_proxy_version" $ctx ) | quote }}
+        registry.deckhouse.io/incluster-proxy-version: {{ (include "in_cluster_proxy_version" $ctx ) | quote }}
+        registry.deckhouse.io/incluster-proxy-cfg-hash: {{ $in_cluster_proxy_cfg_files_yaml_raw | sha256sum | quote }}
+        registry.deckhouse.io/incluster-proxy-pki-hash: {{ $in_cluster_proxy_pki_files_yaml_raw | sha256sum | quote }}
     spec:
       {{- include "helm_lib_node_selector" (tuple $ctx "master") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple $ctx "any-node" "uninitialized") | nindent 6 }}
@@ -85,7 +90,7 @@ spec:
         imagePullPolicy: IfNotPresent
         args:
           - serve
-          - "{{ $in_cluster_proxy_config_files_mount_path }}/distribution_config.yaml"
+          - "{{ $in_cluster_proxy_cfg_files_mount_path }}/distribution_cfg.yaml"
         env:
         {{- include "helm_lib_envs_for_proxy" $ctx | nindent 8 }}
         ports:
@@ -104,8 +109,11 @@ spec:
             port: emb-reg-dist
             scheme: HTTPS
         volumeMounts:
-            - name: registry-incluster-proxy-config
-              mountPath: {{ $in_cluster_proxy_config_files_mount_path | quote }}
+            - name: registry-incluster-proxy-cfg
+              mountPath: {{ $in_cluster_proxy_cfg_files_mount_path | quote }}
+              readOnly: true
+            - name: registry-incluster-proxy-pki
+              mountPath: {{ $in_cluster_proxy_pki_files_mount_path | quote }}
               readOnly: true
         resources:
           requests:
@@ -132,10 +140,13 @@ spec:
             scheme: HTTPS
         args:
           - -logtostderr
-          - "{{ $in_cluster_proxy_config_files_mount_path }}/auth_config.yaml"
+          - "{{ $in_cluster_proxy_cfg_files_mount_path }}/auth_cfg.yaml"
         volumeMounts:
-            - name: registry-incluster-proxy-config
-              mountPath: {{ $in_cluster_proxy_config_files_mount_path | quote }}
+            - name: registry-incluster-proxy-cfg
+              mountPath: {{ $in_cluster_proxy_cfg_files_mount_path | quote }}
+              readOnly: true
+            - name: registry-incluster-proxy-pki
+              mountPath: {{ $in_cluster_proxy_pki_files_mount_path | quote }}
               readOnly: true
         resources:
           requests:
@@ -144,7 +155,10 @@ spec:
             {{- include "min_resources_for_registry_incluster_proxy" $ctx | nindent 12 }}
             {{- end }}
       volumes:
-        - name: registry-incluster-proxy-config
+        - name: registry-incluster-proxy-cfg
           secret:
-            secretName: registry-incluster-proxy-config
+            secretName: registry-incluster-proxy-cfg
+        - name: registry-incluster-proxy-pki
+          secret:
+            secretName: registry-incluster-proxy-pki
 {{- end }}
