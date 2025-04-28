@@ -47,6 +47,10 @@ exclude:
 - docker-compose*.yml
 - _tools/
 
+asciidoc:
+  processor: asciidoctor
+  ext: asciidoc,adoc,ad
+
 
 highlighter: rouge
 feedback_disable: true
@@ -55,6 +59,7 @@ plugins:
   - jekyll-regex-replace
   - jekyll_include_plugin
   - jekyll_asset_pipeline
+  - jekyll-asciidoc
 
 asset_pipeline:
   bundle: true
@@ -114,7 +119,7 @@ defaults:
       documentation_state: develop
       search_bage_enabled: true
       sidebar: code
-      sitemap_include: false    
+      sitemap_include: false
   - scope:
       path: "pages/virtualization-platform"
     values:

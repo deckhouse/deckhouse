@@ -1,13 +1,13 @@
 # To copy images, please use regcopy. You can find all the information in the tools/regcopy/README.md file.
 
 # REGISTRY_PATH is a special key which is concatenated with other base images
-REGISTRY_PATH: "registry.deckhouse.io/base_images/"
+REGISTRY_PATH: "localhost:4999/base_images/"
 
 BASE_ALPINE: "alpine:3.20.3@sha256:41628df7c9b935d248f64542634e7a843f9bc7f2252d7f878e77f7b79a947466"
 BASE_GOLANG_23_ALPINE: "golang:1.23.6-alpine3.20@sha256:3058c63e0e2532881949c4186414baa24a0f9a8f9349b1853daa49be816f42e9"
 BASE_GOLANG_23_BULLSEYE: "golang:1.23.6-bullseye@sha256:fad5b33791a319ba1c910a03a33575ea34fc8e142695a64be9a1a228e74af11e"
 BASE_GOLANG_23_BOOKWORM: "golang:1.23.6-bookworm@sha256:ca569d98545ab5a090449da29d637fb3f5a273d3a002554af328be9873777cef"
-BASE_JEKYLL: "jekyll:4.3.4-alpine@sha256:bc24cdaea4fa9ea14068440d53dcab6881018d77526e7b9a0574f6ff03f0945f"
+BASE_JEKYLL: "jekyll:4.3.4-alpine"
 BASE_NODE_16_ALPINE: "node:16.13.0-alpine3.14@sha256:5277c7d171e02ee76417bb290ef488aa80e4e64572119eec0cb9fffbcffb8f6a"
 BASE_NODE_20_ALPINE: "node:20.11.0-alpine3.18@sha256:bd2eb17dcdc3541d4986bebcfc997a24c499358827899b1029af3601d4c4569d"
 BASE_NODE_23_ALPINE: "node:23.6.1-alpine3.20@sha256:afe80e0dd357fc69595bc54a813dd992248fa3063448e2a1fa77ff47534ff51d"

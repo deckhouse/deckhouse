@@ -1,0 +1,112 @@
+---
+title: Подготовка к ADOC
+permalink: ru/guides/adoc.html
+description: adoc tests.
+lang: ru
+---
+:page-liquid:
+
+{{ page.lang }}
+
+====
+Here are your options:
+
+.Red Pill
+[%collapsible]
+======
+Escape into the real world.
+======
+
+.Blue Pill
+[%collapsible]
+======
+Live within the simulated reality without want or fear.
+======
+====
+
+== Level 1 Section Title
+
+=== Level 2 Section Title
+
+==== Level 3 Section Title
+
+===== Level 4 Section Title
+
+====== Level 5 Section Title
+
+== Another Level 1 Section Title
+
+== The Intrepid Chronicles
+
+This adventure begins on a frigid morning.
+We've run out of coffee beans, but leaving our office means venturing into certain peril.
+Yesterday, a colony of ravenous Wolpertingers descended from the foothills.
+No one can find the defensive operations manual, and our security experts are on an off-the-grid team-building retreat in Katchanga.
+
+What are we going to do?
+
+'''
+
+== Certain Peril
+
+Daylight trickles across the cobblestones...
+
+== Section title
+
+This is a regular paragraph.
+
+[.lead]
+This is a paragraph styled as a lead paragraph.
+
+[.text-center]
+This text is centered, so it must be important.
+
+Mark my words, #automation is essential#.
+
+[horizontal,labelwidth=25,itemwidth=75]
+A short term:: The term for this item likely fits inside the column's width.
+A long term that wraps across multiple lines:: The term for this item wraps since the width of the term column is restricted using the `labelwidth` attribute.
+
+The hail-and-rainbow protocol can be initiated at five levels:
+
+. doublefootnote:[The double hail-and-rainbow level makes my toes tingle.]
+. tertiary
+. supernumerary
+. supermassive
+. apocalyptic
+
+A bold statement!footnote:disclaimer[Opinions are my own.]
+
+Another outrageous statement.footnote:disclaimer[]
+
+WARNING: Wolpertingers are known to nest in server racks.
+Enter at your own risk.
+
+[IMPORTANT]
+.Feeding the Werewolves
+====
+While werewolves are hardy community members, keep in mind the following dietary concerns:
+
+. They are allergic to cinnamon.
+. More than two glasses of orange juice in 24 hours makes them howl in harmony with alarms and sirens.
+. Celery makes them sad.
+====
+
+:tip-caption: 💡
+
+[TIP]
+It's possible to use Unicode glyphs as admonition icons.
+
+.Optional Title
+****
+Sidebars are used to visually separate auxiliary bits of content
+that supplement the main text.
+
+TIP: They can contain any type of content.
+
+.Source code block in a sidebar
+[source,js]
+----
+const { expect, expectCalledWith, heredoc } = require('../test/test-utils')
+----
+****
