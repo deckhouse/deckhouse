@@ -326,8 +326,14 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 
 	kubectlSwitcher := convergectx.NewKubeClientSwitcher(convergeCtx, inLockRunner)
 
+	phasesToSkip := make([]phases.OperationPhase, 0)
+	if !c.CommanderMode {
+		phasesToSkip = []phases.OperationPhase{phases.DeckhouseConfigurationPhase}
+	}
+
 	r := newRunner(inLockRunner, kubectlSwitcher).
-		WithCommanderUUID(c.CommanderUUID)
+		WithCommanderUUID(c.CommanderUUID).
+		WithSkipPhases(phasesToSkip)
 
 	if c.CommanderMode {
 		log.InfoF("Need automatic migration for commander: %v\n", needAutomaticTofuMigrationForCommander)
@@ -404,7 +410,7 @@ func (c *Converger) AutoConverge() error {
 	r := newRunner(inLockRunner, convergectx.NewKubeClientSwitcher(convergeCtx, inLockRunner)).
 		WithCommanderUUID(c.CommanderUUID).
 		WithExcludedNodes([]string{app.RunningNodeName}).
-		WithSkipPhases([]phases.OperationPhase{phases.AllNodesPhase})
+		WithSkipPhases([]phases.OperationPhase{phases.AllNodesPhase, phases.DeckhouseConfigurationPhase})
 
 	converger := NewAutoConverger(r, app.AutoConvergeListenAddress, app.ApplyInterval)
 	return converger.Start(convergeCtx)
