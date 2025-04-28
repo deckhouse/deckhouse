@@ -6,9 +6,9 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/cluster-autoscaler/cloudprovider/mcm/mcm_manager.go b/cluster-autoscaler/cloudprovider/mcm/mcm_manager.go
---- a/cluster-autoscaler/cloudprovider/mcm/mcm_manager.go	(revision 36b348865994909216b64e3a12e9c776f1d24732)
-+++ b/cluster-autoscaler/cloudprovider/mcm/mcm_manager.go	(date 1745702750947)
-@@ -1112,7 +1112,7 @@
+--- a/cluster-autoscaler/cloudprovider/mcm/mcm_manager.go	(revision 669115a6814d33b9d5757aa801402710029cb5b5)
++++ b/cluster-autoscaler/cloudprovider/mcm/mcm_manager.go	(date 1745846227339)
+@@ -1120,7 +1120,7 @@
  	alreadyMarkedSet := sets.New(getMachineNamesTriggeredForDeletion(md)...)
 
  	uniqueForDeletionSet := forDeletionSet.Difference(alreadyMarkedSet)
@@ -17,7 +17,7 @@ diff --git a/cluster-autoscaler/cloudprovider/mcm/mcm_manager.go b/cluster-autos
 
  	data.RevisedToBeDeletedMachineNames = uniqueForDeletionSet
  	data.RevisedScaledownAmount = uniqueForDeletionSet.Len()
-@@ -1128,10 +1128,10 @@
+@@ -1136,10 +1136,10 @@
  		if mdCopy.Annotations == nil {
  			mdCopy.Annotations = make(map[string]string)
  		}
@@ -38,25 +38,20 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/cluster-autoscaler/cloudprovider/mcm/mcm_cloud_provider.go b/cluster-autoscaler/cloudprovider/mcm/mcm_cloud_provider.go
---- a/cluster-autoscaler/cloudprovider/mcm/mcm_cloud_provider.go	(revision 36b348865994909216b64e3a12e9c776f1d24732)
-+++ b/cluster-autoscaler/cloudprovider/mcm/mcm_cloud_provider.go	(date 1745702810634)
-@@ -25,7 +25,6 @@
- 	"context"
- 	"fmt"
+--- a/cluster-autoscaler/cloudprovider/mcm/mcm_cloud_provider.go	(revision 669115a6814d33b9d5757aa801402710029cb5b5)
++++ b/cluster-autoscaler/cloudprovider/mcm/mcm_cloud_provider.go	(date 1745846330291)
+@@ -31,10 +31,8 @@
+ 	"time"
+
  	"github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 -	"k8s.io/apimachinery/pkg/util/sets"
  	"k8s.io/autoscaler/cluster-autoscaler/core/scaledown/eligibility"
- 	"slices"
- 	"strconv"
-@@ -33,7 +32,6 @@
- 	"sync"
- 	"time"
 
 -	"github.com/gardener/machine-controller-manager/pkg/util/provider/machineutils"
  	apiv1 "k8s.io/api/core/v1"
  	"k8s.io/apimachinery/pkg/api/resource"
  	"k8s.io/apimachinery/pkg/types"
-@@ -332,34 +330,34 @@
+@@ -333,34 +331,34 @@
 
  // Refresh cordons the Nodes corresponding to the machines that have been marked for deletion in the TriggerDeletionByMCM annotation on the MachineDeployment
  func (ngImpl *nodeGroup) Refresh() error {
@@ -119,7 +114,7 @@ diff --git a/cluster-autoscaler/cloudprovider/mcm/mcm_cloud_provider.go b/cluste
  	return nil
  }
 
-@@ -567,10 +565,12 @@
+@@ -577,10 +575,12 @@
  // getMachineNamesTriggeredForDeletion returns the set of machine names contained within the machineutils.TriggerDeletionByMCM annotation on the given MachineDeployment
  // TODO: Move to using MCM annotations.GetMachineNamesTriggeredForDeletion after MCM release.
  func getMachineNamesTriggeredForDeletion(mcd *v1alpha1.MachineDeployment) []string {
