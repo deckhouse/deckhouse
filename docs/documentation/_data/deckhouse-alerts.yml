@@ -3250,7 +3250,7 @@ alerts:
       edition: ce
       description: ""
       summary: |
-        Deckhouse is being updated.
+        Deckhouse is being updated to {{ $labels.deployingRelease }}.
       severity: "4"
       markupFormat: markdown
     - name: DeckhouseUpdatingFailed
