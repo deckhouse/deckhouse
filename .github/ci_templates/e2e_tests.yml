@@ -127,6 +127,7 @@ run: |
     CRI=${CRI}
     LAYOUT=${LAYOUT}
     KUBERNETES_VERSION=${KUBERNETES_VERSION}
+    SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
     TMP_DIR_PATH=${TMP_DIR_PATH}
     MASTERS_COUNT=${MASTERS_COUNT}
 {!{- if and (eq $script_arg "run-test") $run_from_issue_or_pr }!}
@@ -177,6 +178,7 @@ run: |
   -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
   -e LAYOUT=${LAYOUT} \
   -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+  -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
   -e CRI=${CRI} \
   -e USER_RUNNER_ID=${user_runner_id} \
   -v $(pwd)/testing:/deckhouse/testing \
@@ -413,6 +415,7 @@ check_e2e_labels:
     issue_number: ${{ inputs.issue_number }}
     install_image_path: ${{ steps.setup.outputs.install-image-path }}
   env:
+    SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "{!{ $ctx.sleepBeforeClusterTestingAlerts }!}"
     PROVIDER: {!{ $ctx.providerName }!}
     CRI: {!{ $ctx.criName }!}
     LAYOUT: {!{ $ctx.layout }!}
@@ -585,8 +588,9 @@ check_e2e_labels:
 
     - name: "Run e2e test: {!{ $ctx.providerName }!}/{!{ $ctx.criName }!}/{!{ $ctx.kubernetesVersion }!}"
       id: e2e_test_run
-      timeout-minutes: 80
+      timeout-minutes: {!{ $ctx.e2eStepTimeoutMinutes }!}
       env:
+        SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "{!{ $ctx.sleepBeforeClusterTestingAlerts }!}"
         PROVIDER: {!{ $ctx.providerName }!}
         CRI: {!{ $ctx.criName }!}
         LAYOUT: {!{ $ctx.layout }!}
