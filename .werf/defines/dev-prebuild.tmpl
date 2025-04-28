@@ -94,9 +94,6 @@ imageSpec:
 {{- define "dev_image" }}
 image: dev
 fromImage: dev-prebuild
-imageSpec:
-  config:
-    labels: { "edition": {{ .Env | default "unknown" | quote }} }
 import:
 - image: images-digests
   add: /images_digests.json
