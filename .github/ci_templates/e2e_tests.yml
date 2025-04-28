@@ -72,6 +72,7 @@
   LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
 {!{- else if eq $provider "gcp" }!}
   LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
+  TEST_AUTOSCALER_ENABLED: "true"
 {!{- else if eq $provider "azure" }!}
   LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ secrets.LAYOUT_AZURE_SUBSCRIPTION_ID }}
   LAYOUT_AZURE_CLIENT_ID: ${{ secrets.LAYOUT_AZURE_CLIENT_ID }}
@@ -243,6 +244,7 @@ run: |
     -e LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
 {!{- else if eq $provider "gcp" }!}
     -e LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided} \
+    -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
 {!{- else if eq $provider "azure" }!}
     -e LAYOUT_AZURE_SUBSCRIPTION_ID=${LAYOUT_AZURE_SUBSCRIPTION_ID:-not_provided} \
     -e LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided} \
