@@ -133,7 +133,7 @@ spec:
       additionalPrinterColumns:
         - name: Weight
           jsonPath: .properties.weight
-          type: string
+          type: integer
           priority: 1
           description: Module weight
         - name: Stage
