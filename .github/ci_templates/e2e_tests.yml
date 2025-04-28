@@ -650,6 +650,16 @@ check_e2e_labels:
         labels: "e2e/cluster/failed"
 {!{- end }!}
 
+    - name: Check pause label
+      if: ${{ success() && needs.git_info.outputs.pr_number }}
+      uses: {!{ index (ds "actions") "actions/github-script" }!}
+      env:
+        PR_NUMBER: ${{needs.git_info.outputs.pr_number}}
+      with:
+        script: |
+          const waitPauseRemove = require('./.github/scripts/js/e2e/wait-remove-pause-label.js')({ github, context, core });
+          await waitPauseRemove();
+
     - name: Cleanup bootstrapped cluster
       if: {!{ coll.Has $ctx "manualRun" | test.Ternary "inputs.autodelete||success()" "always()" }!}
       id: cleanup_cluster
