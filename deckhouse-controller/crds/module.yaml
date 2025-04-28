@@ -131,6 +131,11 @@ spec:
       subresources:
         status: {}
       additionalPrinterColumns:
+        - name: Weight
+          jsonPath: .properties.weight
+          type: string
+          priority: 1
+          description: Module weight
         - name: Stage
           jsonPath: .properties.stage
           type: string
