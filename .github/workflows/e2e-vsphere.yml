@@ -614,6 +614,16 @@ jobs:
           number: ${{ needs.git_info.outputs.pr_number }}
           labels: "e2e/cluster/failed"
 
+      - name: Check pause label
+        if: ${{ success() && needs.git_info.outputs.pr_number }}
+        uses: actions/github-script@v6.4.1
+        env:
+          PR_NUMBER: ${{needs.git_info.outputs.pr_number}}
+        with:
+          script: |
+            const waitPauseRemove = require('./.github/scripts/js/e2e/wait-remove-pause-label.js')({ github, context, core });
+            await waitPauseRemove();
+
       - name: Cleanup bootstrapped cluster
         if: inputs.autodelete||success()
         id: cleanup_cluster
@@ -1120,6 +1130,16 @@ jobs:
           github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           number: ${{ needs.git_info.outputs.pr_number }}
           labels: "e2e/cluster/failed"
+
+      - name: Check pause label
+        if: ${{ success() && needs.git_info.outputs.pr_number }}
+        uses: actions/github-script@v6.4.1
+        env:
+          PR_NUMBER: ${{needs.git_info.outputs.pr_number}}
+        with:
+          script: |
+            const waitPauseRemove = require('./.github/scripts/js/e2e/wait-remove-pause-label.js')({ github, context, core });
+            await waitPauseRemove();
 
       - name: Cleanup bootstrapped cluster
         if: inputs.autodelete||success()
@@ -1628,6 +1648,16 @@ jobs:
           number: ${{ needs.git_info.outputs.pr_number }}
           labels: "e2e/cluster/failed"
 
+      - name: Check pause label
+        if: ${{ success() && needs.git_info.outputs.pr_number }}
+        uses: actions/github-script@v6.4.1
+        env:
+          PR_NUMBER: ${{needs.git_info.outputs.pr_number}}
+        with:
+          script: |
+            const waitPauseRemove = require('./.github/scripts/js/e2e/wait-remove-pause-label.js')({ github, context, core });
+            await waitPauseRemove();
+
       - name: Cleanup bootstrapped cluster
         if: inputs.autodelete||success()
         id: cleanup_cluster
@@ -2134,6 +2164,16 @@ jobs:
           github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           number: ${{ needs.git_info.outputs.pr_number }}
           labels: "e2e/cluster/failed"
+
+      - name: Check pause label
+        if: ${{ success() && needs.git_info.outputs.pr_number }}
+        uses: actions/github-script@v6.4.1
+        env:
+          PR_NUMBER: ${{needs.git_info.outputs.pr_number}}
+        with:
+          script: |
+            const waitPauseRemove = require('./.github/scripts/js/e2e/wait-remove-pause-label.js')({ github, context, core });
+            await waitPauseRemove();
 
       - name: Cleanup bootstrapped cluster
         if: inputs.autodelete||success()
@@ -2642,6 +2682,16 @@ jobs:
           number: ${{ needs.git_info.outputs.pr_number }}
           labels: "e2e/cluster/failed"
 
+      - name: Check pause label
+        if: ${{ success() && needs.git_info.outputs.pr_number }}
+        uses: actions/github-script@v6.4.1
+        env:
+          PR_NUMBER: ${{needs.git_info.outputs.pr_number}}
+        with:
+          script: |
+            const waitPauseRemove = require('./.github/scripts/js/e2e/wait-remove-pause-label.js')({ github, context, core });
+            await waitPauseRemove();
+
       - name: Cleanup bootstrapped cluster
         if: inputs.autodelete||success()
         id: cleanup_cluster
@@ -3148,6 +3198,16 @@ jobs:
           github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           number: ${{ needs.git_info.outputs.pr_number }}
           labels: "e2e/cluster/failed"
+
+      - name: Check pause label
+        if: ${{ success() && needs.git_info.outputs.pr_number }}
+        uses: actions/github-script@v6.4.1
+        env:
+          PR_NUMBER: ${{needs.git_info.outputs.pr_number}}
+        with:
+          script: |
+            const waitPauseRemove = require('./.github/scripts/js/e2e/wait-remove-pause-label.js')({ github, context, core });
+            await waitPauseRemove();
 
       - name: Cleanup bootstrapped cluster
         if: inputs.autodelete||success()
