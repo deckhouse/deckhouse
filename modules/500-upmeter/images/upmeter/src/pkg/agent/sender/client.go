@@ -61,10 +61,10 @@ type ClientConfig struct {
 	Timeout   time.Duration
 }
 
-func NewClient(config *ClientConfig) *Client {
+func NewClient(config *ClientConfig, access kubernetes.Access) *Client {
 	return &Client{
 		url:       getEndpoint(config),
-		client:    NewHttpClient(config),
+		client:    NewHttpClient(config, access),
 		UserAgent: config.UserAgent,
 	}
 }
@@ -95,8 +95,8 @@ func (c *Client) Send(reqBody []byte) error {
 	return nil
 }
 
-func NewHttpClient(config *ClientConfig) *http.Client {
-	client, err := createSecureHttpClient(config.TLS, config.CAPath, config.Timeout)
+func NewHttpClient(config *ClientConfig, access kubernetes.Access) *http.Client {
+	client, err := createSecureHttpClient(config.TLS, config.CAPath, config.Timeout, access)
 	if err != nil {
 		log.Errorf("falling back to default HTTP client: %v", err)
 		return &http.Client{
@@ -107,7 +107,7 @@ func NewHttpClient(config *ClientConfig) *http.Client {
 	return client
 }
 
-func createSecureHttpClient(useTLS bool, caPath string, timeout time.Duration) (*http.Client, error) {
+func createSecureHttpClient(useTLS bool, caPath string, timeout time.Duration, access kubernetes.Access) (*http.Client, error) {
 	if !useTLS {
 		return nil, fmt.Errorf("TLS is off by client")
 	}
@@ -119,7 +119,7 @@ func createSecureHttpClient(useTLS bool, caPath string, timeout time.Duration) (
 
 	// Create https client with checking CA certificate and Authorization header
 	client := &http.Client{
-		Transport: NewKubeBearerTransport(tlsTransport),
+		Transport: NewKubeBearerTransport(tlsTransport, access),
 		Timeout:   timeout,
 	}
 
@@ -175,19 +175,20 @@ func getServiceAccountToken() (string, error) {
 	return string(bs), nil
 }
 
-func NewKubeBearerTransport(next http.RoundTripper) *KubeBearerTransport {
+func NewKubeBearerTransport(next http.RoundTripper, access kubernetes.Access) *KubeBearerTransport {
 	return &KubeBearerTransport{
-		next: next,
+		next:   next,
+		access: access,
 	}
 }
 
 type KubeBearerTransport struct {
-	next http.RoundTripper
+	next   http.RoundTripper
+	access kubernetes.Access
 }
 
 func (t *KubeBearerTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	kubeAccess := &kubernetes.Accessor{}
-	token := kubeAccess.ServiceAccountToken()
+	token := t.access.ServiceAccountToken()
 	if token == "" {
 		log.Error("httpClient RoundTrip: cannot read service account token")
 	}
