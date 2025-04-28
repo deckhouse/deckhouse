@@ -331,8 +331,8 @@ features:
     en: The current version of the module is deprecated, a new version will be published soon.
     ru: Текущая версия модуля устарела, скоро будет опубликована новая версия.
   proprietaryOkmeter:
-    en: Additiona license required
-    ru: Требуется дополнительная лицензия
+    en: A separate license is required
+    ru: Требуется отдельная лицензия
   proprietaryOkmeter_long:
     en: This feature requires an <a href="https://okmeter.io">Okmeter</a> license.
     ru: Для этого компонента требуется лицензия <a href="https://okmeter.io">Okmeter</a>.
