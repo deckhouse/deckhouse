@@ -69,6 +69,7 @@ func main() {
 			default:
 				clusterTargets := nodeTracker.ListClusterTargets()
 				externalTargets := nodeTracker.ListExternalTargets()
+				metrics.CleanupMetrics(clusterTargets, externalTargets)
 				PingAll(ctx, clusterTargets, externalTargets, countPings, metrics)
 			}
 		}

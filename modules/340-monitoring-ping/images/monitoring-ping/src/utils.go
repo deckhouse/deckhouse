@@ -47,9 +47,39 @@ func Summarize(rtts []float64) (min, max, mean, std, sum float64) {
 	return
 }
 
+// GetTargetName returns the name if it's non-empty, otherwise returns the address.
 func GetTargetName(name, address string) string {
 	if name == "" {
 		return address
 	}
 	return name
+}
+
+// DiffMaps returns keys that exist in oldMap but not in newMap.
+func DiffMaps(oldMap, newMap map[string]string) map[string]string {
+	diff := make(map[string]string)
+	for k, v := range oldMap {
+		if _, exists := newMap[k]; !exists {
+			diff[k] = v
+		}
+	}
+	return diff
+}
+
+// BuildClusterMap builds a map of IP -> Name for cluster nodes, using GetTargetName.
+func BuildClusterMap(targets []NodeTarget) map[string]string {
+	m := make(map[string]string, len(targets))
+	for _, t := range targets {
+		m[t.IP] = GetTargetName(t.Name, t.IP)
+	}
+	return m
+}
+
+// BuildExternalMap builds a map of Host -> Name for external targets, using GetTargetName.
+func BuildExternalMap(targets []ExternalTarget) map[string]string {
+	m := make(map[string]string, len(targets))
+	for _, t := range targets {
+		m[t.Host] = GetTargetName(t.Name, t.Host)
+	}
+	return m
 }
