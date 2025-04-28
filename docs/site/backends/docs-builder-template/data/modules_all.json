@@ -14,10 +14,14 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "Additional license required",
-        "ru": "Требуется дополнительная лицензия"
+        "en": "A separate license is required",
+        "ru": "Требуется отдельная лицензия"
       }
     },
+    "commercialBadgeMessage": {
+        "en": "A separate license may be required",
+        "ru": "Может потребоваться отдельная лицензия"
+      },
     "external": "true",
     "path": "/products/kubernetes-platform/modules/commander/stable/"
   },
@@ -134,9 +138,13 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "Additional license required",
-        "ru": "Требуется дополнительная лицензия"
+        "en": "A separate license is required",
+        "ru": "Требуется отдельная лицензия"
       }
+    },
+    "commercialBadgeMessage": {
+      "en": "A separate license is required",
+      "ru": "Требуется отдельная лицензия"
     },
     "external": "true",
     "path": "/products/kubernetes-platform/modules/observability-platform/stable/"
@@ -221,9 +229,13 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "Additional license required",
-        "ru": "Требуется дополнительная лицензия"
+        "en": "A separate license is required",
+        "ru": "Требуется отдельная лицензия"
       }
+    },
+    "commercialBadgeMessage": {
+      "en": "A separate license is required",
+      "ru": "Требуется отдельная лицензия"
     },
     "external": "true",
     "path": "/products/kubernetes-platform/modules/stronghold/stable/"
