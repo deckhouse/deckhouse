@@ -47,6 +47,7 @@ git:
   to: /deckhouse
   includePaths:
     - "candi/openapi"
+    - "candi/terraform_versions.yml"
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-terraform-src-artifact
 final: false
