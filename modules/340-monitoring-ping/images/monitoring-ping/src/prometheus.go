@@ -39,6 +39,9 @@ type PrometheusExporterMetrics struct {
 	nodeMin      *prometheus.GaugeVec
 	nodeMax      *prometheus.GaugeVec
 	nodeMdev     *prometheus.GaugeVec
+
+	previousClusterMap  map[string]string
+	previousExternalMap map[string]string
 }
 
 func RegisterMetrics(reg prometheus.Registerer) *PrometheusExporterMetrics {
@@ -92,6 +95,9 @@ func RegisterMetrics(reg prometheus.Registerer) *PrometheusExporterMetrics {
 			Name: "external_ping_rtt_mdev",
 			Help: "Standard deviation of RTT",
 		}, []string{"destination_name", "destination_host"}),
+
+		previousClusterMap:  make(map[string]string),
+		previousExternalMap: make(map[string]string),
 	}
 
 	reg.MustRegister(
@@ -178,4 +184,56 @@ func StartPrometheusServer(ctx context.Context, addr string, reg *prometheus.Reg
 	} else {
 		log.Info("Prometheus server shut down cleanly")
 	}
+}
+
+// CleanupMetrics removes stale metrics for nodes and external hosts
+// that are no longer in the current active target lists.
+func (p *PrometheusExporterMetrics) CleanupMetrics(currentCluster []NodeTarget, currentExternal []ExternalTarget) {
+	// Current hosts map
+	currentClusterMap := BuildClusterMap(currentCluster)
+	currentExternalMap := BuildExternalMap(currentExternal)
+
+	diffCluster := DiffMaps(p.previousClusterMap, currentClusterMap)
+	diffExternal := DiffMaps(p.previousExternalMap, currentExternalMap)
+
+	// Remove metrics for orphans hosts
+	if len(diffCluster) > 0 {
+		for ip, name := range diffCluster {
+			p.DeleteNodeMetrics(name, ip)
+		}
+	}
+
+	if len(diffExternal) > 0 {
+		for host, name := range diffExternal {
+			p.DeleteExternalMetrics(name, host)
+		}
+	}
+
+	if len(diffCluster) > 0 || len(diffExternal) > 0 {
+		log.Info(fmt.Sprintf("Cleanup orphan metrics: %d cluster targets, %d external targets", len(diffCluster), len(diffExternal)))
+	}
+
+	// Update map
+	p.previousClusterMap = currentClusterMap
+	p.previousExternalMap = currentExternalMap
+}
+
+func (p *PrometheusExporterMetrics) DeleteNodeMetrics(name, ip string) {
+	labels := prometheus.Labels{"destination_node": name, "destination_node_ip_address": ip}
+	p.nodeSent.Delete(labels)
+	p.nodeReceived.Delete(labels)
+	p.nodeRtt.Delete(labels)
+	p.nodeMin.Delete(labels)
+	p.nodeMax.Delete(labels)
+	p.nodeMdev.Delete(labels)
+}
+
+func (p *PrometheusExporterMetrics) DeleteExternalMetrics(name, host string) {
+	labels := prometheus.Labels{"destination_name": name, "destination_host": host}
+	p.extSent.Delete(labels)
+	p.extReceived.Delete(labels)
+	p.extRtt.Delete(labels)
+	p.extMin.Delete(labels)
+	p.extMax.Delete(labels)
+	p.extMdev.Delete(labels)
 }
