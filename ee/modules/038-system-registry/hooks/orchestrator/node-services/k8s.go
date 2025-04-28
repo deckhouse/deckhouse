@@ -7,6 +7,7 @@ package nodeservices
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -18,8 +19,9 @@ import (
 )
 
 const (
-	nodesSnapName = "master-nodes"
-	podsSnapName  = "static-pods"
+	nodesSnapName   = "master-nodes"
+	podsSnapName    = "static-pods"
+	configsSnapName = "configs"
 )
 
 func snapName(prefix, name string) string {
@@ -118,7 +120,40 @@ func KubernetsConfig(name string) []go_hook.KubernetesConfig {
 				return ret, nil
 			},
 		},
-		// TODO: add node configs hook
+		{
+			Name:              snapName(name, configsSnapName),
+			ApiVersion:        "v1",
+			Kind:              "Secret",
+			NamespaceSelector: helpers.NamespaceSelector,
+			LabelSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app":  "registry",
+					"type": "registry-node-services-config",
+				},
+			},
+			FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+				var secret v1core.Secret
+
+				err := sdk.FromUnstructured(obj, &secret)
+				if err != nil {
+					return nil, fmt.Errorf("failed to convert secret \"%v\" to struct: %v", obj.GetName(), err)
+				}
+
+				if !strings.HasPrefix(secret.Name, configSecretPrefix) {
+					return nil, nil
+				}
+
+				nodeName := strings.TrimPrefix(secret.Name, configSecretPrefix)
+
+				hash, err := helpers.ComputeHash(secret.Data)
+				if err != nil {
+					return nil, fmt.Errorf("cannot compute hash: %w", err)
+				}
+
+				ret := helpers.NewKeyValue(nodeName, hash)
+				return ret, nil
+			},
+		},
 	}
 
 	return ret
@@ -140,18 +175,33 @@ func InputsFromSnapshot(input *go_hook.HookInput, name string) (Inputs, error) {
 		return ret, fmt.Errorf("get Pods snapshot error: %w", err)
 	}
 
-	for name, pod := range pods {
+	for nodeName, pod := range pods {
 		node, ok := ret.Nodes[pod.Node]
 		if !ok {
-			return ret, fmt.Errorf("cannot find Node \"%s\" for Pod \"%s\"", pod.Node, name)
+			return ret, fmt.Errorf("cannot find Node \"%s\" for Pod \"%s\"", pod.Node, nodeName)
 		}
 
 		if node.Pods == nil {
 			node.Pods = make(NodePods)
 		}
-		node.Pods[name] = pod.Pod
+		node.Pods[nodeName] = pod.Pod
 
 		ret.Nodes[pod.Node] = node
+	}
+
+	configs, err := helpers.SnapshotToMap[string, string](input, snapName(name, configsSnapName))
+	if err != nil {
+		return ret, fmt.Errorf("get configs snapshot error: %w", err)
+	}
+
+	for nodeName, hash := range configs {
+		node, ok := ret.Nodes[nodeName]
+		if !ok {
+			continue
+		}
+
+		node.ConfigSecretHash = hash
+		ret.Nodes[nodeName] = node
 	}
 
 	return ret, nil

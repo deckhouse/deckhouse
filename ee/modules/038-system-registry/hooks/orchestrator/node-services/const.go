@@ -9,6 +9,7 @@ import v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 const (
 	PodVersionAnnotation = "registry.deckhouse.io/config-version"
+	configSecretPrefix   = "registry-node-config-"
 )
 
 var (

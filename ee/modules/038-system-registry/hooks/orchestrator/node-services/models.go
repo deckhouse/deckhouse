@@ -319,7 +319,8 @@ type hookPod struct {
 type NodePods map[string]Pod
 
 type Node struct {
-	IP    string   `json:"ip,omitempty"`
-	Ready bool     `json:"ready,omitempty"`
-	Pods  NodePods `json:"pods,omitempty"`
+	IP               string
+	Ready            bool
+	Pods             NodePods
+	ConfigSecretHash string
 }
