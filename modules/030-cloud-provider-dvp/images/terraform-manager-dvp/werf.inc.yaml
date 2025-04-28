@@ -1,7 +1,7 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: {{ .ModuleName }}/base-terraform-manager-opentofu
 git:
-- add: /{{ .ModulePath }}candi/cloud-providers/dvp
+- add: /{{ .ModulePath }}modules/030-{{ .ModuleName }}/terraform
   to: /deckhouse/candi/cloud-providers/dvp
 import:
 - artifact: terraform-provider-kubernetes
