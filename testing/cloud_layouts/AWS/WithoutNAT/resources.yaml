@@ -9,9 +9,9 @@ spec:
       kind: AWSInstanceClass
       name: system
     maxPerZone: 1
-    minPerZone: 1
+    minPerZone: 3
     zones:
-    - eu-west-1a
+    - eu-central-1a
   disruptions:
     approvalMode: Manual
   fencing:
