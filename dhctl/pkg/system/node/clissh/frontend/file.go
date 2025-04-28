@@ -23,8 +23,8 @@ import (
 	uuid "gopkg.in/satori/go.uuid.v1"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/cmd"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh/cmd"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 )
 
 type File struct {
