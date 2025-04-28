@@ -111,16 +111,16 @@ entries:
                           url: /admin/integrations/public/yandex/yandex-authorization.html
                         - title:
                             en: Configuration and layout
-                            ru: Конфигурация и схема размещения
+                            ru: Схемы размещения и настройка
                           url: /admin/integrations/public/yandex/yandex-layout.html
+                        - title:
+                            en: Storage, balancing and features
+                            ru: Хранилище и балансировка
+                          url: /admin/integrations/public/yandex/yandex-storage.html
                         - title:
                             en: Integration with Yandex Cloud services
                             ru: Интеграция с службами Yandex Cloud
-                          url: /admin/integrations/public/yandex/yandex-services.html
-                        - title:
-                            en: Storage, balancing and features
-                            ru: Хранилище, балансировка и особенности эксплуатации
-                          url: /admin/integrations/public/yandex/yandex-storage.html
+                          url: /admin/integrations/public/yandex/yandex-services.html  
                     - title:
                         en: Integration with VK Cloud
                         ru: TODO Интеграция с VK Cloud

@@ -1,14 +1,233 @@
 ---
-title: Конфигурация и схема размещения
+title: Схемы размещения и настройка
 permalink: ru/admin/integrations/public/yandex/yandex-layout.html
 lang: ru
 ---
 
-Для интеграции Deckhouse Kubernetes Platform с Yandex Cloud необходимо описать инфраструктуру кластера с помощью ресурса Kubernetes типа YandexClusterConfiguration. Этот объект управляется модулем `cloud-provider-yandex` и содержит полную информацию о схеме размещения, зонах, параметрах узлов и сетевой конфигурации.
+Данный раздел описывает возможные схемы размещения узлов кластера в инфраструктуре Yandex Cloud и связанные с ними настройки. От выбора схемы (layout) зависят принципы сетевого взаимодействия, наличие публичных IP-адресов, маршрутизация исходящего трафика и способ подключения к узлам.
 
-Этот ресурс используется в процессе `bootstrap` и при модификации кластера с помощью утилиты `dhctl` или компонента `deckhouse-controller`.
+### Standard
+
+{% alert level="danger" %}
+В данной схеме размещения узлы не будут иметь публичных IP-адресов и будут выходить в интернет через NAT-шлюз (NAT Gateway) Yandex Cloud. NAT-шлюз (NAT Gateway) использует случайные публичные IP-адреса из [выделенных диапазонов](https://yandex.cloud/ru/docs/overview/concepts/public-ips#virtual-private-cloud). Из-за этого невозможно добавить в белый список (whitelist) адреса облачных ресурсов, находящихся за конкретным NAT-шлюзом, на стороне других сервисов.
+{% endalert %}
+
+![Схема размещения Standard в Yandex Cloud](../../../../images/cloud-provider-yandex/layout-standard.png)
+<!--- Исходник: https://docs.google.com/drawings/d/1WI8tu-QZYcz3DvYBNlZG4s5OKQ9JKyna7ESHjnjuCVQ/edit --->
+
+Пример конфигурации схемы размещения:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: YandexClusterConfiguration
+layout: Standard
+sshPublicKey: "<SSH_PUBLIC_KEY>"
+nodeNetworkCIDR: 192.168.12.13/24
+existingNetworkID: <EXISTING_NETWORK_ID>
+provider:
+  cloudID: <CLOUD_ID>
+  folderID: <FOLDER_ID>
+  serviceAccountJSON: |
+    {
+    "id": "id",
+    "service_account_id": "service_account_id",
+    "key_algorithm": "RSA_2048",
+    "public_key": "-----BEGIN PUBLIC KEY-----\nMIIwID....AQAB\n-----END PUBLIC KEY-----\n",
+    "private_key": "-----BEGIN PRIVATE KEY-----\nMIIE....1ZPJeBLt+\n-----END PRIVATE KEY-----\n"
+    }
+masterNodeGroup:
+  replicas: 3
+  zones:
+  - ru-central1-a
+  - ru-central1-b
+  - ru-central1-d
+  instanceClass:
+    cores: 4
+    memory: 8192
+    imageID: <IMAGE_ID>
+    externalIPAddresses:
+    - "<ZONE_A_EXTERNAL_IP_MASTER_1>"
+    - "Auto"
+    - "Auto"
+    externalSubnetIDs:
+    - <ZONE_A_SUBNET_ID>
+    - <ZONE_B_SUBNET_ID>
+    - <ZONE_D_SUBNET_ID>
+    additionalLabels:
+      takes: priority
+nodeGroups:
+- name: worker
+  replicas: 2
+  zones:
+  - ru-central1-a
+  - ru-central1-b
+  instanceClass:
+    cores: 4
+    memory: 8192
+    imageID: <IMAGE_ID>
+    coreFraction: 50
+    externalIPAddresses:
+    - "Auto"
+    - "Auto"
+    externalSubnetIDs:
+    - <ZONE_A_SUBNET_ID>
+    - <ZONE_B_SUBNET_ID>
+    additionalLabels:
+      role: example
+labels:
+  billing: prod
+dhcpOptions:
+  domainName: test.local
+  domainNameServers:
+  - <DNS_SERVER_1>
+  - <DNS_SERVER_2>
+```
+
+### WithoutNAT
+
+В данной схеме размещения NAT (любого вида) не используется, а каждому узлу выдается публичный IP-адрес.
+
+> **Внимание!** В модуле `cloud-provider-yandex` нет поддержки групп безопасности (security group), поэтому все узлы кластера будут доступны без ограничения подключения.
+
+![Схема размещения WithoutNAT в Yandex Cloud](../../../../images/cloud-provider-yandex/layout-withoutnat.png)
+<!--- Исходник: https://docs.google.com/drawings/d/1I7M9DquzLNu-aTjqLx1_6ZexPckL__-501Mt393W1fw/edit --->
+
+Пример конфигурации схемы размещения:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: YandexClusterConfiguration
+layout: WithoutNAT
+provider:
+  cloudID: <CLOUD_ID>
+  folderID: <FOLDER_ID>
+  serviceAccountJSON: |
+    {
+    "id": "id",
+    "service_account_id": "service_account_id",
+    "key_algorithm": "RSA_2048",
+    "public_key": "-----BEGIN PUBLIC KEY-----\nMIIwID....AQAB\n-----END PUBLIC KEY-----\n",
+    "private_key": "-----BEGIN PRIVATE KEY-----\nMIIE....1ZPJeBLt+\n-----END PRIVATE KEY-----\n"
+    }    
+masterNodeGroup:
+  replicas: 3
+  instanceClass:
+    cores: 4
+    memory: 8192
+    imageID: <IMAGE_ID>
+    externalIPAddresses:
+    - "Auto"
+    - "Auto"
+    - "Auto"
+    externalSubnetIDs:
+    - <ZONE_A_SUBNET_ID>
+    - <ZONE_B_SUBNET_ID>
+    - <ZONE_D_SUBNET_ID>
+    zones:
+    - ru-central1-a
+    - ru-central1-b
+    - ru-central1-d
+nodeGroups:
+- name: worker
+  replicas: 2
+  instanceClass:
+    cores: 4
+    memory: 8192
+    imageID: <IMAGE_ID>
+    coreFraction: 50
+    externalIPAddresses:
+    - "<ZONE_A_EXTERNAL_IP_WORKER_1>"
+    - "Auto"
+    externalSubnetIDs:
+    - <ZONE_A_SUBNET_ID>
+    - <ZONE_B_SUBNET_ID>
+    zones:
+    - ru-central1-a
+    - ru-central1-b
+sshPublicKey: "<SSH_PUBLIC_KEY>"
+nodeNetworkCIDR: 192.168.12.13/24
+existingNetworkID: <EXISTING_NETWORK_ID>
+dhcpOptions:
+  domainName: test.local
+  domainNameServers:
+  - <DNS_SERVER_1>
+  - <DNS_SERVER_2>
+```
+
+### WithNATInstance
+
+В данной схеме размещения в отдельной подсети создается NAT-инстанс, а в таблицу маршрутизации подсетей зон добавляется правило с маршрутом на 0.0.0.0/0 с NAT-инстансом в качестве nexthop'а.
+Эта отдельная подсеть необходима для избежания петли маршрутизации.
+
+Если задан `withNATInstance.internalSubnetID` — NAT-инстанс будет создан в зоне этого subnet.
+
+Если задан `withNATInstance.internalSubnetCIDR` — тогда будет создана новая внутренняя подсеть. NAT-инстанс будет создан в этой подсети.
+
+Один из параметров, `withNATInstance.internalSubnetID` или `withNATInstance.internalSubnetCIDR`, обязателен
+
+Если `withNATInstance.externalSubnetID` указан в дополнение к предыдущим, NAT-инстанс будет подключен к нему через вторичный интерфейс.
+
+![Схема размещения WithNATInstance в Yandex Cloud](../../../../images/cloud-provider-yandex/layout-withnatinstance.png)
+<!--- Исходник: https://docs.google.com/drawings/d/1oVpZ_ldcuNxPnGCkx0dRtcAdL7BSEEvmsvbG8Aif1pE/edit --->
+
+Пример конфигурации схемы размещения:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: YandexClusterConfiguration
+layout: WithNATInstance
+withNATInstance:
+  natInstanceExternalAddress: <NAT_INSTANCE_EXTERNAL_ADDRESS>
+  internalSubnetID: <INTERNAL_SUBNET_ID>
+  externalSubnetID: <EXTERNAL_SUBNET_ID>
+provider:
+  cloudID: <CLOUD_ID>
+  folderID: <FOLDER_ID>
+  serviceAccountJSON: |
+    {
+    "id": "id",
+    "service_account_id": "service_account_id",
+    "key_algorithm": "RSA_2048",
+    "public_key": "-----BEGIN PUBLIC KEY-----\nMIIwID....AQAB\n-----END PUBLIC KEY-----\n",
+    "private_key": "-----BEGIN PRIVATE KEY-----\nMIIE....1ZPJeBLt+\n-----END PRIVATE KEY-----\n"
+    }    
+masterNodeGroup:
+  replicas: 1
+  instanceClass:
+    cores: 4
+    memory: 8192
+    imageID: <IMAGE_ID>
+    externalIPAddresses:
+    - "Auto"
+    externalSubnetID: <EXTERNAL_SUBNET_ID>
+    zones:
+    - ru-central1-a
+nodeGroups:
+- name: worker
+  replicas: 1
+  instanceClass:
+    cores: 4
+    memory: 8192
+    imageID: <IMAGE_ID>
+    coreFraction: 50
+    externalIPAddresses:
+    - "Auto"
+    externalSubnetID: <EXTERNAL_SUBNET_ID>
+    zones:
+    - ru-central1-a
+sshPublicKey: "<SSH_PUBLIC_KEY>"
+nodeNetworkCIDR: 192.168.12.13/24
+existingNetworkID: <EXISTING_NETWORK_ID>
+dhcpOptions:
+  domainName: test.local
+  domainNameServers:
+  - <DNS_SERVER_1>
+  - <DNS_SERVER_2>
+```
 
 ## Назначение YandexClusterConfiguration
+
+Для интеграции Deckhouse Kubernetes Platform с Yandex Cloud необходимо описать инфраструктуру кластера с помощью ресурса YandexClusterConfiguration. Этот объект управляется модулем `cloud-provider-yandex` и содержит полную информацию о схеме размещения, зонах, параметрах узлов и сетевой конфигурации.
 
 YandexClusterConfiguration — это объект Custom Resource (CR), описывающий параметры интеграции с облаком Yandex Cloud. Он используется платформой Deckhouse для:
 
@@ -43,82 +262,102 @@ dhctl converge
 
 ### Пример конфигурации
 
-Ниже приведён пример полной рабочей конфигурации с тремя master-узлами и двумя worker-узлами, размещёнными в зонах `ru-central1-a`, `ru-central1-b`, `ru-central1-d`:
+Ниже приведён пример минимальной конфигурации ресурса YandexClusterConfiguration, описывающей кластер с одной master-группой и одной группой рабочих узлов. Конфигурация использует схему размещения Standard, заданы базовые параметры вычислительных ресурсов, публичный ключ SSH, а также идентификаторы облака и каталога:
 
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: YandexClusterConfiguration
 layout: Standard
-nodeNetworkCIDR: 192.168.12.13/24
+nodeNetworkCIDR: 127.0.0.1/8
+labels:
+  label-2: b
 sshPublicKey: "<SSH_PUBLIC_KEY>"
-
+masterNodeGroup:
+  replicas: 1
+  instanceClass:
+    cores: 4
+    memory: 8192
+    imageID: fd8nb7ecsbvj76dfaa8b
+nodeGroups:
+- name: worker
+  replicas: 1
+  zones:
+  - ru-central1-a
+  instanceClass:
+    cores: 4
+    memory: 8192
+    imageID: fd8nb7ecsbvj76dfaa8b
+    coreFraction: 50
+    externalIPAddresses:
+    - 198.51.100.5
+    - Auto
 provider:
   cloudID: "<CLOUD_ID>"
   folderID: "<FOLDER_ID>"
   serviceAccountJSON: |
     {
-      "id": "...",
-      "service_account_id": "...",
-      "key_algorithm": "RSA_2048",
-      "public_key": "...",
-      "private_key": "..."
+    "id": "id",
+    "service_account_id": "service_account_id",
+    "key_algorithm": "RSA_2048",
+    "public_key": "-----BEGIN PUBLIC KEY-----\nMIIwID....AQAB\n-----END PUBLIC KEY-----\n",
+    "private_key": "-----BEGIN PRIVATE KEY-----\nMIIE....1ZPJeBLt+\n-----END PRIVATE KEY-----\n"
     }
-
-masterNodeGroup:
-  replicas: 3
-  zones:
-    - ru-central1-a
-    - ru-central1-b
-    - ru-central1-d
-  instanceClass:
-    cores: 4
-    memory: 8192
-    imageID: <IMAGE_ID>
-    externalIPAddresses:
-      - "Auto"
-      - "Auto"
-      - "Auto"
-    externalSubnetIDs:
-      - <ZONE_A_SUBNET_ID>
-      - <ZONE_B_SUBNET_ID>
-      - <ZONE_D_SUBNET_ID>
-
-nodeGroups:
-- name: worker
-  replicas: 2
-  zones:
-    - ru-central1-a
-    - ru-central1-b
-  instanceClass:
-    cores: 4
-    memory: 8192
-    coreFraction: 50
-    imageID: <IMAGE_ID>
-    externalIPAddresses:
-      - "Auto"
-      - "Auto"
-    externalSubnetIDs:
-      - <ZONE_A_SUBNET_ID>
-      - <ZONE_B_SUBNET_ID>
 ```
+
+- Master-группа состоит из одного узла без явного указания зоны.
+- Worker-группа содержит один узел, размещённый в зоне `ru-central1-a`, с двумя внешними IP-адресами: один задан вручную (198.51.100.5), второй заказан автоматически (Auto).
+- Указан ключ `serviceAccountJSON`, необходимый для подключения к API Yandex Cloud.
+- Используется CIDR-подсеть `127.0.0.1/8` и добавлен label `label-2: b` на уровне кластера.
 
 ## Сетевые параметры и безопасность
 
-### nodeNetworkCIDR
+Далее описаны настройки, связанные с адресацией, маршрутизацией, внешним трафиком и безопасностью сети в кластере Deckhouse, развернутом в Yandex Cloud.
 
-Подсеть, которая будет автоматически разделена на три зоны (для Standard/WithNATInstance). Пример:
+### Внутренняя адресация узлов кластера
+
+Параметр `nodeNetworkCIDR` используется для задания диапазона IP-адресов, который будет распределён между зонами доступности и применён к внутренним интерфейсам узлов.
 
 ```yaml
 nodeNetworkCIDR: 192.168.12.13/24
 ```
 
-### externalSubnetIDs
+В зависимости от выбранной схемы размещения (Standard или WithNATInstance), эта подсеть будет автоматически разделена на три равные части для каждой зоны размещения:
 
-Массив ID подсетей, по одному на каждую зону. Используется для назначения публичных IP-адресов.
+- ru-central1-a
+- ru-central1-b
+- ru-central1-d
 
-### dhcpOptions (необязательно)
+Каждая из этих частей будет использоваться как отдельная внутренняя подсеть (subnet), к которой будут подключены узлы, создаваемые в соответствующей зоне.
 
-Позволяет задать параметры DHCP-сервера: поисковый домен и DNS-серверы.
+> В случае, если вы планируете использовать одну и ту же подсеть в нескольких кластерах (например, с `cni-simple-bridge`), необходимо учитывать ограничения: один кластер = одна таблица маршрутизации = одна подсеть. Разворачивание двух кластеров в одних и тех же подсетях с `cni-simple-bridge` невозможно. Если требуется использовать одинаковые подсети — используйте `cni-cilium`.
+
+### Назначение внешних IP-адресов и исходящего трафика
+
+Параметр `externalSubnetIDs` указывается в секциях `masterNodeGroup.instanceClass` и `nodeGroups.instanceClass` и представляет собой массив идентификаторов подсетей Yandex Cloud, в которые будут подключены внешние сетевые интерфейсы узлов. Этот параметр обязателен, если требуется:
+
+- Назначение публичного IP-адреса;
+- Определение маршрута по умолчанию для исходящего трафика с узлов;
+- Использование значений `"Auto"` в поле `externalIPAddresses`.
+
+Пример:
+
+```yaml
+externalSubnetIDs:
+  - <RU-CENTRAL1-A-SUBNET-ID>
+  - <RU-CENTRAL1-B-SUBNET-ID>
+  - <RU-CENTRAL1-D-SUBNET-ID>
+```
+
+> Параметр `externalSubnetIDs` обязателен для корректной работы автоматического назначения публичных IP через `externalIPAddresses: ["Auto", ...]`.
+
+### Настройка DNS и DHCP для внутренних сетей
+
+Параметр `dhcpOptions` позволяет задать настройки DHCP-сервера, которые будут применены ко всем подсетям, создаваемым в рамках кластера Deckhouse Kubernetes Platform в Yandex Cloud.
+
+Доступные поля:
+
+`domainName` — поисковый домен (search domain), который будет установлен в конфигурации сети.
+`domainNameServers` — массив IP-адресов DNS-серверов, которые будут использоваться как рекурсивные резолверы.
 
 Пример:
 
@@ -130,83 +369,88 @@ dhcpOptions:
   - 192.168.0.3
 ```
 
-> Использование внешних DNS имеет ограничения. Убедитесь, что DNS-серверы разрешают и внешние, и внутренние имена.
+> Указанные DNS-серверы в `domainNameServers` обязательно должны разрешать внешние и внутренние доменные зоны, используемые в кластере. В противном случае возможны сбои в работе сервисов.
 
-### Группы безопасности
+После внесения изменений в `dhcpOptions`:
 
-По умолчанию в облаке создаётся группа безопасности с разрешающими правилами. Не удаляйте их до завершения настройки.
+- Принудительно обновите `DHCP lease` на всех виртуальных машинах;
+- Перезапустите все поды с `hostNetwork: true` — в частности, `kube-dns`, чтобы пересчитать содержимое `resolv.conf`.
 
-Чтобы найти название используемой сети выполните команду:
+Для применения изменений можно использовать:
 
 ```console
-kubectl get secrets -n kube-system d8-cluster-configuration -ojson | \
-  jq -r '.data."cluster-configuration.yaml"' | base64 -d | grep prefix | cut -d: -f2
+netplan apply
 ```
 
-## Схемы размещения
+или другой способ, соответствующий вашей системе (например, `systemd-networkd`, `dhclient` и т.д.).
 
-Схема размещения указывается в поле `layout`. Поддерживаются три варианта: Standard, WithoutNAT, WithNATInstance.
+### Использование заранее созданных подсетей
 
-### Standard
-
-(image)[TODO]
-
-- Узлы без публичного IP.
-- Доступ в интернет через NAT-шлюз Yandex Cloud.
-- Поддерживаются группы безопасности.
-
-### WithoutNAT
-
-(image)[TODO]
-
-- Каждый узел получает публичный IP.
-- Нет NAT, но не поддерживаются группы безопасности — узлы доступны извне.
-
-### WithNATInstance
-
-(image)[TODO]
-
-- Создаётся отдельный NAT-инстанс.
-- На маршрут по умолчанию (0.0.0.0/0) назначается этот инстанс.
-- Можно указать внешний IP, либо позволить Deckhouse создать его автоматически.
-
-Пример:
-
-```yaml
-layout: WithNATInstance
-withNATInstance:
-  natInstanceExternalAddress: <IP>
-  internalSubnetID: <ID>
-  externalSubnetID: <ID>
-```
-
-Если передать `withNATInstance: {}`, все ресурсы будут созданы автоматически.
-
-В схеме размещения WithNATInstance можно задать параметр `withNATInstance.exporterAPIKey`. Этот параметр управляет развёртыванием экспортера метрик Yandex Cloud, позволяющего автоматически собирать и экспортировать метрики из облака.
+Параметр `existingZoneToSubnetIDMap` позволяет указать соответствия между зонами доступности и ранее созданными подсетями в Yandex Cloud. Это особенно важно, если вы не хотите, чтобы Deckhouse автоматически создавал подсети, а хотите использовать существующие.
 
 Пример использования:
 
 ```yaml
-withNATInstance:
-  natInstanceExternalAddress: <IP>
-  internalSubnetID: <ID>
-  externalSubnetID: <ID>
-  exporterAPIKey: "Auto"
+existingZoneToSubnetIDMap:
+  ru-central1-a: e2lu8r1tbbtryhdpa9ro
+  ru-central1-b: e2lu8r1tbbtryhdpa9ro
+  ru-central1-d: e2lu8r1tbbtryhdpa9ro
 ```
 
-Допустимые значения:
+> Deckhouse автоматически создаёт таблицу маршрутизации и не привязывает её к подсетям — это необходимо сделать вручную через интерфейс Yandex Cloud.
 
-- `""` (пустая строка) — экспортер не будет развёрнут (по умолчанию).
-- `"Auto"` — Deckhouse создаст сервисный аккаунт с ролью monitoring.viewer и сгенерирует API-ключ автоматически. Для этого основной `serviceAccount` должен иметь роль `admin`.
-- Любая строка (API-ключ) — используется указанный ключ. В этом случае вы должны заранее создать API-ключ вручную и назначить роль `monitoring.viewer` тому аккаунту, для которого он был создан.
+### Дополнительные внешние сети
 
-При использовании значения `"Auto"` убедитесь, что ваш основной сервисный аккаунт (из поля `provider.serviceAccountJSON`) имеет роль `admin` в каталоге (`folder`), иначе автоматическое создание ключа завершится ошибкой.
+Модуль `cloud-provider-yandex` позволяет явно указать список дополнительных внешних сетей, IP-адреса из которых будут интерпретироваться как публичные (External IP). Это задаётся в параметре `settings.additionalExternalNetworkIDs` в ресурсе ModuleConfig.
 
-### Дополнительные параметры и рекомендации
+Эта настройка полезна, если:
 
-`labels` — лейблы, назначаемые на облачные ресурсы.
-`zones` — допустимые зоны размещения: ru-central1-a, ru-central1-b, ru-central1-d.
-`diskSizeGB`, `coreFraction`, `platform`, `etcdDiskSizeGb` — детальная настройка виртуальных машин.
-`externalIPAddresses: ["Auto", ...]` — автоматическое получение публичных IP по зонам.
+- имеются внешние подсети, не указанные в `externalSubnetIDs`, но требующие учёта как внешние;
+- требуется точный контроль над интерпретацией IP-адресов при настройке балансировки, маршрутизации и экспорта статуса;
+- вы используете нестандартные схемы подключения, например через внешние NAT-шлюзы или ручное резервирование IP.
 
-> Количество IP-адресов и externalSubnetID должно соответствовать числу узлов и порядку зон.
+Пример:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-yandex
+spec:
+  version: 1
+  enabled: true
+  settings:
+    additionalExternalNetworkIDs:
+      - enp6t4sno
+```
+
+Если параметр не задан, модуль будет использовать только те подсети, что явно указаны в YandexClusterConfiguration (например, через `externalSubnetIDs`), чтобы определять публичность IP.
+
+## Настройка групп безопасности в Yandex Cloud
+
+При создании [облачной сети](https://cloud.yandex.ru/ru/docs/vpc/concepts/network#network), Yandex Cloud создаёт [группу безопасности](https://cloud.yandex.ru/ru/docs/vpc/concepts/security-groups) по умолчанию для всех подключенных сетей, включая сеть кластера Deckhouse Kubernetes Platform. Эта группа безопасности по умолчанию содержит правила разрешающие любой входящий и исходящий трафик и применяется для всех подсетей облачной сети, если на объект (интерфейс ВМ) явно не назначена другая группа безопасности.
+
+{% alert level="danger" %}
+Не удаляйте правила по умолчанию, разрешающие любой трафик, до того как закончите настройку правил группы безопасности. Это может нарушить работоспособность кластера.
+{% endalert %}
+
+Ниже приведены общие рекомендации по настройке группы безопасности. Некорректная настройка групп безопасности может сказаться на работоспособности кластера. Пожалуйста ознакомьтесь с [особенностями работы групп безопасности](https://cloud.yandex.ru/ru/docs/vpc/concepts/security-groups#security-groups-notes) в Yandex Cloud перед использованием в продуктивных средах.
+
+1. Определите облачную сеть, в которой работает кластер Deckhouse Kubernetes Platform.
+
+   Название сети совпадает с полем `prefix` ресурса [ClusterConfiguration](../../installing/configuration.html#clusterconfiguration). Его можно узнать с помощью команды:
+
+   ```bash
+   kubectl get secrets -n kube-system d8-cluster-configuration -ojson | \
+     jq -r '.data."cluster-configuration.yaml"' | base64 -d | grep prefix | cut -d: -f2
+   ```
+
+1. В консоли Yandex Cloud выберите сервис Virtual Private Cloud и перейдите в раздел *Группы безопасности*. У вас должна отображаться одна группа безопасности с пометкой `Default`.
+
+   ![Группа безопасности по умолчанию](../../../../images/cloud-provider-yandex/sg-ru-default.png)
+
+1. Создайте правила согласно [инструкции Yandex Cloud](https://cloud.yandex.ru/ru/docs/managed-kubernetes/operations/connect/security-groups#rules-internal).
+
+   ![Правила для группы безопасности](../../../../images/cloud-provider-yandex/sg-ru-rules.png)
+
+1. Удалите правило, разрешающее любой **входящий** трафик (на скриншоте выше оно уже удалено), и сохраните изменения.

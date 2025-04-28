@@ -1,5 +1,5 @@
 ---
-title: Хранилище, балансировка и особенности эксплуатации
+title: Хранилище и балансировка
 permalink: ru/admin/integrations/public/yandex/yandex-storage.html
 lang: ru
 ---
@@ -10,11 +10,15 @@ lang: ru
 - Автоматическое создание StorageClass;
 - Использование балансировщиков нагрузки;
 - Особенности применения изменений;
-- Работу с CloudStatic-узлами, bastion-хостами и параметрами DHCP.
+- Работу с CloudStatic-узлами и bastion-хостами.
 
 ## Хранилище (CSI и StorageClass)
 
-Модуль `cloud-provider-yandex` автоматически создаёт StorageClass под все поддерживаемые типы дисков Yandex Cloud:
+Модуль `cloud-provider-yandex` обеспечивает интеграцию с блочным хранилищем Yandex Cloud через компонент CSI (Container Storage Interface). Это позволяет кластерам Deckhouse автоматически заказывать и подключать диски, а также использовать стандартные Kubernetes-ресурсы PersistentVolumeClaim для работы с хранилищем.
+
+При установке модуля `cloud-provider-yandex` автоматически создаются ресурсы StorageClass для всех поддерживаемых типов дисков Yandex Cloud. Это позволяет пользователям сразу использовать хранилище, не создавая вручную описания классов.
+
+Поддерживаются следующие типы дисков:
 
 | Тип диска                 | Имя StorageClass          | Комментарии              |
 |--------------------------|---------------------------|--------------------------|
@@ -23,9 +27,11 @@ lang: ru
 | `network-ssd-nonreplicated` | `network-ssd-nonreplicated` | Размер кратен 93 ГБ      |
 | `network-ssd-io-m3`      | `network-ssd-io-m3`       | Размер кратен 93 ГБ      |
 
+> Размеры дисков `network-ssd-nonreplicated` и `network-ssd-io-m3` должны быть кратны 93 ГБ, иначе произойдёт ошибка при заказе тома.
+
 ### Исключение ненужных StorageClass
 
-Чтобы не создавать ненужные StorageClass, используйте параметр `exclude`:
+Если в кластере не планируется использовать определённые типы дисков, можно отключить автоматическое создание соответствующих StorageClass. Это делается с помощью параметра `settings.storageClass.exclude` в ресурсе ModuleConfig модуля:
 
 ```yaml
 settings:
@@ -35,23 +41,42 @@ settings:
     - network-hdd
 ```
 
+В приведённом примере модуль не создаст StorageClass для всех `network-ssd` дисков и для `network-hdd`.
+
 ### Назначение StorageClass по умолчанию
 
-Если требуется использовать конкретный StorageClass по умолчанию, задайте его в параметре `global.defaultClusterStorageClass`:
+По умолчанию Deckhouse выбирает StorageClass на основе аннотации `storageclass.kubernetes.io/is-default-class=true`.
+
+Чтобы задать другой StorageClass по умолчанию, необходимо использовать глобальный параметр Deckhouse `global.defaultClusterStorageClass`. Изменить его можно следующей командой:
 
 ```console
 kubectl edit mc global
 ```
 
+Если параметр `defaultClusterStorageClass` не указан, платформа будет определять StorageClass, используемый по умолчанию, в следующем порядке:
+
+- StorageClass с аннотацией `storageclass.kubernetes.io/is-default-class='true'` (если такой имеется в кластере).
+- Первый StorageClass по алфавиту среди тех, что автоматически создаются модулем облачного провайдера, если используется модуль облачного провайдера.
+- По умолчанию значение параметра `defaultClusterStorageClass` — пустая строка ("").
+
 ## Балансировка нагрузки
 
 ### Внешний LoadBalancer
 
-Deckhouse автоматически создаёт ресурсы NetworkLoadBalancer и TargetGroup в Yandex Cloud при создании Kubernetes-сервиса с типом `LoadBalancer`.
+Deckhouse автоматически подписывается на Kubernetes-объекты `Service` с типом `LoadBalancer`. При их создании в кластере, он создаёт соответствующие ресурсы:
+
+- `NetworkLoadBalancer` — сетевой балансировщик нагрузки в Yandex Cloud;
+- `TargetGroup` — группа конечных точек для балансировки трафика.
+
+Эти ресурсы позволяют Kubernetes-сервисам с типом `LoadBalancer` принимать входящий трафик из интернета или внутренних сетей в зависимости от настроек.
+
+Подробнее об архитектуре см. в [в документации Kubernetes Cloud Controller Manager for Yandex Cloud](https://github.com/flant/yandex-cloud-controller-manager).
 
 ### Внутренний LoadBalancer
 
-Чтобы создать внутренний балансировщик, добавьте аннотацию `yandex.cpi.flant.com/listener-subnet-id` в объект `Service`:
+Для создания внутреннего балансировщика нагрузки (INTERNAL LoadBalancer), необходимо явно указать подсеть, в которой должен быть создан слушатель (listener) балансировщика.
+
+Для этого добавьте следующую аннотацию в объект `Service`:
 
 ```yaml
 metadata:
@@ -59,46 +84,69 @@ metadata:
     yandex.cpi.flant.com/listener-subnet-id: <SubnetID>
 ```
 
+Значение SubnetID — это ID подсети, в которой будет создан внутренний слушатель Yandex LoadBalancer. Использование этой аннотации позволяет контролировать сетевую доступность балансировщика, ограничивая его только внутренними адресами.
+
 ## Особенности применения изменений
 
-При изменении параметров модуля `cloud-provider-yandex` пересоздание уже существующих объектов `Machine` не выполняется.
-Пересоздание происходит только при изменении параметров NodeGroup или YandexInstanceClass.
+Deckhouse не пересоздаёт уже существующие объекты Machine при изменении параметров модуля `cloud-provider-yandex`.
+Пересоздание узлов происходит только при изменении:
 
-После внесения изменений в YandexClusterConfiguration необходимо выполнить:
+- параметров в секции NodeGroup;
+- параметров YandexInstanceClass.
+
+Это поведение позволяет избежать лишних операций и простоя существующих узлов, однако требует ручного вмешательства при необходимости пересоздать машины.
+
+Если вы изменили объект YandexClusterConfiguration (например, изменили параметры провайдера, схемы размещения, подсетей и т.д.), чтобы изменения вступили в силу, выполните команду:
 
 ```console
 dhctl converge
 ```
 
-## CloudStatic-узлы
+Команда инициирует пересчёт конфигурации и приводит текущее состояние кластера в соответствие с описанным в ресурсах.
 
-Чтобы включить существующую ВМ в кластер как узел CloudStatic:
+## Интеграция вручную созданных ВМ
 
-1. В метаданные виртуальной машины (через консоль Yandex Cloud) добавьте:
+Платформа Deckhouse позволяет подключать существующие виртуальные машины в Yandex Cloud к Kubernetes-кластеру в качестве узлов. Такие узлы называются CloudStatic, поскольку они не управляются напрямую модулем `node-manager`, но могут использоваться в составе кластера.
 
-   ```yaml
-   key: node-network-cidr
-   value: <nodeNetworkCIDR из кластера>
-   ```
+Чтобы вручную подключить виртуальную машину в качестве CloudStatic-узла, необходимо:
 
-1. Узнать значение `nodeNetworkCIDR` можно командой:
+1. Узнать актуальное значение `nodeNetworkCIDR` из кластера:
 
    ```console
    kubectl -n kube-system get secret d8-provider-cluster-configuration -o json | \
      jq --raw-output '.data."cloud-provider-cluster-configuration.yaml"' | base64 -d | grep '^nodeNetworkCIDR'
    ```
 
-## Bastion-хост и bootstrap
+   Результатом будет строка вида:
 
-Для доступа к узлам через bastion-хост:
+   ```console
+   nodeNetworkCIDR: 192.168.12.13/24
+   ```
 
-1. Выполните bootstrap базовой инфраструктуры:
+   Это значение необходимо скопировать и указать как `value` в метаданных виртуальной машины.
+
+1. Задать параметр `node-network-cidr` в метаданных ВМ:
+
+   ```yaml
+   key: node-network-cidr
+   value: <nodeNetworkCIDR из кластера>
+   ```
+
+   Параметр `node-network-cidr` должен совпадать с тем значением, которое указано в объекте YandexClusterConfiguration, поле `nodeNetworkCIDR`.
+
+## Настройка доступа через bastion-хост
+
+Для подключения к узлам, находящимся в приватных подсетях (например, при использовании схемы размещения Standard или WithNATInstance), используется bastion-хост — промежуточная машина с публичным IP, через которую осуществляется SSH-доступ к узлам.
+
+Для настройки доступа выполните следующие шаги:
+
+1. Выполните bootstrap базовой инфраструктуры. Перед созданием bastion-хоста необходимо выполнить начальную фазу установки Deckhouse, которая подготовит сетевую инфраструктуру:
 
    ```console
    dhctl bootstrap-phase base-infra --config config.yml
    ```
 
-1. Создайте bastion-хост:
+1. Создайте bastion-хост в Yandex Cloud:
 
    ```console
    yc compute instance create \
@@ -113,56 +161,16 @@ dhctl converge
      --public-address 178.154.226.159
    ```
 
-1. Продолжите установку:
+   Убедитесь, что IP-адрес из параметра `--public-address` доступен из вашей сети и указан корректно.
+
+1. Запустите основной bootstrap Deckhouse через bastion-хост:
 
    ```console
    dhctl bootstrap --ssh-bastion-host=178.154.226.159 --ssh-bastion-user=yc-user \
      --ssh-user=ubuntu --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml
    ```
 
-## DHCP и DNS (dhcpOptions)
-
-Если используется секция `dhcpOptions`:
-
-```yaml
-dhcpOptions:
-  domainName: test.local
-  domainNameServers:
-  - 192.168.0.2
-  - 192.168.0.3
-```
-
-Важно:
-
-- Указанные DNS-серверы должны разрешать все необходимые зоны (внешние и внутренние).
-- После изменения настроек потребуется:
-  - выполнить `netplan apply` или аналог для обновления DHCP lease;
-  - перезапустить все поды с `hostNetwork`, особенно `kube-dns`, чтобы обновился `resolv.conf`.
-
-## Дополнительные внешние сети
-
-DKP позволяет явно указать список дополнительных внешних сетей, IP-адреса из которых будут рассматриваться как External IP при создании и описании узлов.
-Для этого используется параметр `settings.additionalExternalNetworkIDs` в ресурсе ModuleConfig модуля `cloud-provider-yandex`.
-
-Этот параметр полезен, если:
-
-- у вас есть дополнительные подсети с внешним доступом, не указанные явно в `externalSubnetIDs`;
-- требуется точный контроль над тем, какие IP-адреса считаются публичными;
-- нужно работать с кастомными схемами маршрутизации или подключениями через шлюзы NAT.
-
-Если параметр `additionalExternalNetworkIDs` не задан, модуль сам определяет внешние сети только на основе настроек в YandexClusterConfiguration.
-
-Пример конфигурации ModuleConfig с указанием внешних сетей:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: cloud-provider-yandex
-spec:
-  version: 1
-  enabled: true
-  settings:
-    additionalExternalNetworkIDs:
-      - enp6t4snovl2ko4p15em
-```
+   `--ssh-bastion-user` — пользователь для подключения к bastion-хосту
+   `--ssh-user` — пользователь на целевых узлах кластера
+   `--ssh-agent-private-keys` — путь до приватного SSH-ключа
+   `--config` — путь до конфигурационного файла Deckhouse
