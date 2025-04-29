@@ -1,10 +1,8 @@
-.github/                        @name212 @RomanenkoDenys @Nikolay1224
+.github/                        @RomanenkoDenys @Nikolay1224
 000-common/                     @name212 @sprait
-001-priority-class/             @name212 @sprait
 002-deckhouse/                  @yalosev @ldmonster
 005-external-module-manager/    @yalosev @ldmonster
 007-registrypackages/           @RomanenkoDenys @name212 @sprait
-011-flow-schema/                @name212 @sprait
 015-admission-policy-engine/    @yalosev @ldmonster
 021-cni-cilium/                 @apolovov
 025-static-routing-manager/     @apolovov
@@ -69,3 +67,4 @@ crds/                           @nabokihms @z9r5
 openapi/                        @nabokihms @z9r5
 /pkg/                           @yalosev @ldmonster
 /monitoring/prometheus-rules/   @sudoroot-null
+/release.yaml @yalosev @nabokihms

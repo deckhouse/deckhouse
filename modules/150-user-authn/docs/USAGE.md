@@ -149,9 +149,11 @@ Paste the generated `clientID` and `clientSecret` into the [DexProvider](cr.html
 
 #### Keycloak
 
-When setting up `realm`, in addition to registering a client, you have to create a [Client scope](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes) with the name `groups` and set the predefined mapping `groups` for this scope. Then, you have to add this newly created scope in the [Client scopes tab](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking_) for your client.
+After selecting a `realm` to configure, adding a user in the [Users](https://www.keycloak.org/docs/latest/server_admin/index.html#assembly-managing-users_server_administration_guide) section, and creating a client in the [Clients](https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide) section with [authentication](https://www.keycloak.org/docs/latest/server_admin/index.html#capability-config) enabled, which is required to generate the `clientSecret`, you need to perform the following steps:
 
-In the [Client](https://www.keycloak.org/docs/latest/server_admin/#general-settings), you also have to specify `Valid redirect URIs`, `Valid post logout redirect URIs`, and `Web origins` as `https://dex.<publicDomainTemplate>/*`, where `publicDomainTemplate` is a value of the [parameter](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate_) in the `global` module config.
+* Create a `scope` named `groups` in the [Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes) section and assign it the predefined mapping `groups`. ("Client scopes" → "Client scope details" → "Mappers" → "Add predefined mappers")
+* In the previously created client, add this `scope` in the [Client scopes tab](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) ("Clients" → "Client details" → "Client Scopes" → "Add client scope").
+* In the "Valid redirect URIs", "Valid post logout redirect URIs", and "Web origins" fields of [the client configuration](https://www.keycloak.org/docs/latest/server_admin/#general-settings), specify `https://dex.<publicDomainTemplate>/*`, where `publicDomainTemplate` is a value of the [parameter](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate_) in the `global` module config.
 
 The example shows the provider's settings for integration with Keycloak.
 
@@ -164,7 +166,7 @@ spec:
   type: OIDC
   displayName: My Company Keycloak
   oidc:
-    issuer: https://keycloak.my-company.com/realms/myrealm
+    issuer: https://keycloak.my-company.com/realms/myrealm # Use the name of your realm
     clientID: plainstring
     clientSecret: plainstring
     getUserInfo: true

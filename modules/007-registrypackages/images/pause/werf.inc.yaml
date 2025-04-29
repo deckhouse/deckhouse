@@ -1,0 +1,47 @@
+{{- $version := "08.04.25" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: builder/scratch
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /
+  to: /
+  includePaths:
+  - pause.tar
+  - install
+  - uninstall
+  before: setup
+imageSpec:
+  config:
+    labels: {"distro": "all", "version": "all", "pause": "{{ $version }}" }
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+fromImage: builder/golang-alpine
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /
+  stageDependencies:
+    setup:
+    - '**/*'
+import:
+- image: common/crane
+  add: /crane
+  to: /crane
+  before: setup
+dependencies:
+- image: common/pause
+  before: setup
+  imports:
+  - type: ImageDigest
+    targetEnv: PAUSE_IMAGE_DIGEST
+  - type: ImageRepo
+    targetEnv: PAUSE_IMAGE_REPO
+mount:
+- fromPath: ~/.docker
+  to: /root/.docker
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  setup:
+  - /crane pull $PAUSE_IMAGE_REPO@$PAUSE_IMAGE_DIGEST /pause.tar

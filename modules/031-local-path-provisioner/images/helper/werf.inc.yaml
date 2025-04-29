@@ -32,12 +32,10 @@ git:
   includePaths:
   - '**/*.go'
   - '**/*.mod'
-  - '**/*.sum'
   stageDependencies:
     install:
     - '**/*.go'
     - 'go.mod'
-    - 'go.sum'
 shell:
   install:
   - cd /src

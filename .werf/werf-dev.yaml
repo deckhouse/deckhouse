@@ -39,4 +39,5 @@ shell:
 {{ include "dev_prebuild_docker_properties" . }}
 ---
 {{ include "dev_image" . }}
+{{ include "controller_and_install_image_labels" . }}
 ---

@@ -37,5 +37,5 @@ post-install() {
   fi
 }
 
-bb-package-install "containerd:{{- index $.images.registrypackages "containerd1724" }}" "crictl:{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}" "toml-merge:{{ .images.registrypackages.tomlMerge01 }}"
+bb-package-install "containerd:{{- index $.images.registrypackages "containerd1727" }}" "crictl:{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}" "toml-merge:{{ .images.registrypackages.tomlMerge01 }}"
 {{- end }}

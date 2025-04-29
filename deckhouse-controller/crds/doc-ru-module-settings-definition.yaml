@@ -1,20 +1,20 @@
 spec:
-versions:
-  - name: v1alpha1
-    schema:
-      openAPIV3Schema:
-        description: |
-          Отображает настройки модулей Deckhouse.
-          Определяет список версий настроек модуля.
-        properties:
-          spec:
-            description: Спецификация настроек модуля.
-            properties:
-              versions:
-                description: Список версий настроек модуля. Каждая версия включает имя и схему.
-                items:
-                  properties:
-                    name:
-                      description: Версия настроек модуля.
-                    schema:
-                      description: Схема настроек для данной версии модуля.
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Отображает настройки модулей Deckhouse.
+            Определяет список версий настроек модуля.
+          properties:
+            spec:
+              description: Спецификация настроек модуля.
+              properties:
+                versions:
+                  description: Список версий настроек модуля. Каждая версия включает имя и схему.
+                  items:
+                    properties:
+                      name:
+                        description: Версия настроек модуля.
+                      schema:
+                        description: Схема настроек для данной версии модуля.

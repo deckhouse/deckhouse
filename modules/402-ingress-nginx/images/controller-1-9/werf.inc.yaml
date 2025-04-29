@@ -239,11 +239,11 @@ import:
   to: /chroot/lib64
   before: install
   includePaths:
-  - libpcre.so.1.2.13
-  - libpcre16.so.0.2.13
-  - libpcre32.so.0.0.13
-  - libpcrecpp.so.0.0.2
-  - libpcreposix.so.0.0.7
+  - libpcre.so*
+  - libpcre16.so*
+  - libpcre32.so*
+  - libpcrecpp.so*
+  - libpcreposix.so*
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-opentelemetry-artifact
   add: /etc/nginx/modules
   to: /chroot/modules_mount/etc/nginx/modules/otel
@@ -253,14 +253,14 @@ import:
   to: /chroot/lib64
   before: install
   includePaths:
-    - libcares.so.2
-    - libre2.so.9
-    - libgpr.so.16
-    - libaddress_sorting.so.16
-    - libgrpc++.so.1.38.0
-    - libprotobuf.so.27.0.0
-    - libgrpc.so.16
-    - libupb.so.16
+    - libcares.so*
+    - libre2.so*
+    - libgpr.so*
+    - libaddress_sorting.so*
+    - libgrpc++.so*
+    - libprotobuf.so*
+    - libgrpc.so*
+    - libupb.so*
 shell:
   install:
   {{- include "alt packages proxy" . | nindent 2 }}
