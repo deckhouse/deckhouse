@@ -123,6 +123,10 @@ entries:
               url: /admin/configuration/platform-scaling/overwiew.html
               folders:
                 - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /admin/configuration/platform-scaling/overview.html
+                - title:
                     en: Control plane management
                     ru: Управление control plane
                   url: /admin/configuration/platform-scaling/control-plane.html
@@ -134,6 +138,10 @@ entries:
                 en: Application scaling and resource management
                 ru: Масштабирование приложений и управление ресурсами
               folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /admin/configuration/app-scaling/overview.html
                 - title:
                     en: Scaling by metrics
                     ru: Масштабирование по метрикам
