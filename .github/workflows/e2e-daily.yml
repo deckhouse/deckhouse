@@ -1037,6 +1037,7 @@ jobs:
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
+      SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
       PROVIDER: Azure
       CRI: Containerd
       LAYOUT: Standard
@@ -1241,8 +1242,9 @@ jobs:
 
       - name: "Run e2e test: Azure/Containerd/1.29"
         id: e2e_test_run
-        timeout-minutes: 80
+        timeout-minutes: 120
         env:
+          SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "1800"
           PROVIDER: Azure
           CRI: Containerd
           LAYOUT: Standard
@@ -1275,6 +1277,7 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -1296,6 +1299,7 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
+            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -1312,6 +1316,16 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
+
+      - name: Check pause label
+        if: ${{ success() && needs.git_info.outputs.pr_number }}
+        uses: actions/github-script@v6.4.1
+        env:
+          PR_NUMBER: ${{needs.git_info.outputs.pr_number}}
+        with:
+          script: |
+            const waitPauseRemove = require('./.github/scripts/js/e2e/wait-remove-pause-label.js')({ github, context, core });
+            await waitPauseRemove();
 
       - name: Cleanup bootstrapped cluster
         if: always()
@@ -1349,6 +1363,7 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -1370,6 +1385,7 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
+            -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -1431,62 +1447,6 @@ jobs:
             chmod -f -R 777 "/deckhouse/testing" || true
             chmod -f -R 777 /tmp || true
           fi
-
-
-      # <template: send_alert_template>
-      - name: Check alerting credentials
-        id: check_alerting
-        if: always()
-        env:
-          KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
-        run: |
-          if [[ -n $KEY ]]; then echo "has_credentials=true" >> $GITHUB_OUTPUT; fi
-      - name: Send alert on fail
-        if: ${{ steps.check_alerting.outputs.has_credentials == 'true' && (github.ref == 'refs/heads/main' && (cancelled() || failure())) }}
-        env:
-          CLOUD_LAYOUT_TESTS_MADISON_KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
-        run: |
-          WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-          echo $WORKFLOW_URL
-
-          alertData=$(cat <<EOF
-          {
-            "labels": {
-              "cri": "Containerd",
-              "kube_version": "1.29",
-              "layout": "Standard",
-              "provider": "Azure",
-              "trigger": "CloudLayoutTestFailed",
-
-              "severity_level": 7
-            },
-            "annotations": {
-              "description": "Check Github workflow log for more information",
-              "plk_create_group_if_not_exists/cloudlayouttestfailed": "CloudLayoutTestFailedGroup",
-              "plk_grouped_by/cloudlayouttestfailed": "CloudLayoutTestFailedGroup",
-              "summary": "Cloud Layout Test failed",
-
-              "plk_link_url/job": "${WORKFLOW_URL}",
-              "plk_protocol_version": "1",
-              "plk_link_title_en/job": "Github job run"
-            }
-          }
-          EOF
-          )
-
-          for (( iter = 1; iter < 60; iter++ )); do
-            if curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" -H 'Content-Type: application/json' -d "${alertData}"; then
-              exit 0
-            fi
-
-            echo "Alert was not sent. Wait 5 seconds before next attempt"
-            sleep 5
-          done
-
-          echo "Alert was not sent. Timeout"
-          exit 1
-        # </template: send_alert_template>
-
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
