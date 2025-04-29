@@ -9,7 +9,7 @@ Authentication is the process of verifying a user's identity. In the Deckhouse K
 
 Authentication in DKP is based on a federated OIDC provider. You can learn more about the authentication architecture in DKP in the [Architecture](#TODO---link-to-authentication-architecture) section.
 
-At the core of DKP's authentication mechanism is the federated OpenID Connect provider `Dex`. Depending on the DKP configuration, authentication can use either the [internal user database](#local-authentication) (local authentication) or [external identity providers](#integration-with-external-authentication-providers). Connecting an external identity provider allows the use of existing credentials (e.g., LDAP, GitLab, GitHub, etc.) to access the system. It also enables the use of a single set of credentials to authenticate across multiple DKP clusters.
+The DKP authentication mechanism is based on the federated OpenID Connect provider `Dex`. Depending on the DKP configuration, authentication can use either the [internal user database](#local-authentication) (local authentication) or [external identity providers](#integration-with-external-authentication-providers) (providers). In the case of local authentication, User and Group data is stored in special resources. Importantly, the User resource stores a hashed (bcrypt) password, not the plain-text password. Connecting an external authentication provider allows the use of existing credentials (such as LDAP, GitLab, GitHub, etc.) for access, and enables single sign-on across multiple DKP clusters.
 
 From the perspective of a cluster user or application developer, the way authentication is configured in DKP does not matter — the authentication interface and methods for enabling authentication in an application are the same.
 
@@ -469,8 +469,12 @@ spec:
 
 ## Local authentication
 
-In addition to external authentication providers, DKP also supports local authentication.  
-Local authentication means creating `User` and `Group` objects in the cluster for static users and groups.
+In addition to external authentication providers, DKP also supports local authentication.
+
+Local authentication involves creating User and Group objects in the cluster for managing static users and groups:
+
+- User object stores user information, including the email address and a hashed password (the plain-text password is not stored).
+- Group object defines a list of users grouped together.
 
 1. Creating a static user.
 
