@@ -1,10 +1,10 @@
-{{- $ciliumVersion := "1.17.2" }}
+{{- $ciliumVersion := "1.17.3" }}
 ---
-# Based on https://github.com/cilium/cilium/blob/v1.17.2/images/hubble-relay/Dockerfile
-# and https://github.com/cilium/cilium/blob/v1.17.2/images/hubble-relay/download-grpc-health-probe.sh
+# Based on https://github.com/cilium/cilium/blob/v1.17.3/images/hubble-relay/Dockerfile
+# and https://github.com/cilium/cilium/blob/v1.17.3/images/hubble-relay/download-grpc-health-probe.sh
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 final: false
 import:
 - image: cni-cilium/bin-cilium-src-artifact
