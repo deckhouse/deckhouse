@@ -1,20 +1,30 @@
-{{- $ctx := .}}
-{{- if (include "in_cluster_proxy_enable" $ctx ) }}
+{{- define "registry_incluster_proxy_min_resources" }}
+cpu: 25m
+memory: 40Mi
+{{- end }}
 
-# Prepare cfg and pki
-{{- $in_cluster_proxy_cfg_files_yaml_raw := (include "in_cluster_proxy_cfg_files" $ctx ) }}
-{{- $in_cluster_proxy_cfg_files_mount_path := (include "in_cluster_proxy_cfg_files_mount_path" $ctx) }}
-{{- $in_cluster_proxy_pki_files_yaml_raw := (include "in_cluster_proxy_pki_files" $ctx ) }}
-{{- $in_cluster_proxy_pki_files_mount_path := (include "in_cluster_proxy_pki_files_mount_path" $ctx) }}
+{{- define "registry_incluster_proxy_max_resources" }}
+cpu: 50m
+memory: 50Mi
+{{- end }}
 
-{{- if ($ctx.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+{{- $orchestrator := .Values.systemRegistry.internal.orchestrator }}
+{{- if $orchestrator }}
+{{- $hash := $orchestrator.hash }}
+{{- $state := (($orchestrator.state).in_cluster_proxy).config }}
+{{- if $state }}
+{{- $version := $state.version }}
+{{- $config := $state.config }}
+{{- $config_checksum := printf "%s%s" (include (print $.Template.BasePath "/inclusterproxy/secret.yaml") $ | toString) | sha256sum }}
+
+{{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: registry-incluster-proxy
   namespace: d8-system
-  {{- include "helm_lib_module_labels" (list $ctx (dict "app" "registry-incluster-proxy")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "registry-incluster-proxy")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -26,14 +36,14 @@ spec:
     containerPolicies:
     - containerName: "distribution"
       minAllowed:
-        {{- include "min_resources_for_registry_incluster_proxy" $ctx | nindent 8 }}
+        {{- include "registry_incluster_proxy_min_resources" $ | nindent 8 }}
       maxAllowed:
-        {{- include "max_resources_for_registry_incluster_proxy" $ctx | nindent 8 }}
+        {{- include "registry_incluster_proxy_max_resources" $ | nindent 8 }}
     - containerName: "auth"
       minAllowed:
-        {{- include "min_resources_for_registry_incluster_proxy" $ctx | nindent 8 }}
+        {{- include "registry_incluster_proxy_min_resources" $ | nindent 8 }}
       maxAllowed:
-        {{- include "max_resources_for_registry_incluster_proxy" $ctx | nindent 8 }}
+        {{- include "registry_incluster_proxy_max_resources" $ | nindent 8 }}
 {{- end }}
 ---
 apiVersion: policy/v1
@@ -41,9 +51,9 @@ kind: PodDisruptionBudget
 metadata:
   name: registry-incluster-proxy
   namespace: d8-system
-  {{- include "helm_lib_module_labels" (list $ctx (dict "app" "registry-incluster-proxy")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "registry-incluster-proxy")) | nindent 2 }}
 spec:
-  maxUnavailable: {{ include "helm_lib_is_ha_to_value" (list $ctx 1 0) }}
+  maxUnavailable: {{ include "helm_lib_is_ha_to_value" (list $ 1 0) }}
   selector:
     matchLabels:
       app: registry-incluster-proxy
@@ -53,14 +63,13 @@ kind: Deployment
 metadata:
   name: registry-incluster-proxy
   namespace: d8-system
-  {{- include "helm_lib_module_labels" (list $ctx (dict "app" "registry-incluster-proxy")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "registry-incluster-proxy")) | nindent 2 }}
   annotations:
-    registry.deckhouse.io/orchestrator-hash: {{ (include "orchestrator_hash" $ctx ) | quote }}
-    registry.deckhouse.io/incluster-proxy-version: {{ (include "in_cluster_proxy_version" $ctx ) | quote }}
-    registry.deckhouse.io/incluster-proxy-cfg-hash: {{ $in_cluster_proxy_cfg_files_yaml_raw | sha256sum | quote }}
-    registry.deckhouse.io/incluster-proxy-pki-hash: {{ $in_cluster_proxy_pki_files_yaml_raw | sha256sum | quote }}
+    registry.deckhouse.io/hash: {{ $hash | quote }}
+    registry.deckhouse.io/version: {{ $version | quote }}
+    registry.deckhouse.io/config-checksum: {{ $config_checksum | sha256sum | quote }}
 spec:
-  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" $ctx | nindent 2 }}
+  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" $ | nindent 2 }}
   revisionHistoryLimit: 2
   selector:
     matchLabels:
@@ -72,27 +81,26 @@ spec:
         app: registry-incluster-proxy
         type: incluster-proxy
       annotations:
-        registry.deckhouse.io/incluster-proxy-version: {{ (include "in_cluster_proxy_version" $ctx ) | quote }}
-        registry.deckhouse.io/incluster-proxy-cfg-hash: {{ $in_cluster_proxy_cfg_files_yaml_raw | sha256sum | quote }}
-        registry.deckhouse.io/incluster-proxy-pki-hash: {{ $in_cluster_proxy_pki_files_yaml_raw | sha256sum | quote }}
+        registry.deckhouse.io/version: {{ $version | quote }}
+        registry.deckhouse.io/config-checksum: {{ $config_checksum | sha256sum | quote }}
     spec:
-      {{- include "helm_lib_node_selector" (tuple $ctx "master") | nindent 6 }}
-      {{- include "helm_lib_tolerations" (tuple $ctx "any-node" "uninitialized") | nindent 6 }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" $ctx | nindent 6 }}
-      {{- include "helm_lib_priority_class" (tuple $ctx "system-cluster-critical") | nindent 6 }}
-      {{- include "helm_lib_pod_anti_affinity_for_ha" (list $ctx (dict "app" "registry-incluster-proxy")) | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple $ "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple $ "any-node" "uninitialized") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" $ | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple $ "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list $ (dict "app" "registry-incluster-proxy")) | nindent 6 }}
       imagePullSecrets:
         - name: deckhouse-registry
       containers:
       - name: distribution
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $ctx | nindent 8 }}
-        image: {{ include "helm_lib_module_image" (list $ctx "dockerDistribution") }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $ | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list $ "dockerDistribution") }}
         imagePullPolicy: IfNotPresent
         args:
           - serve
-          - "{{ $in_cluster_proxy_cfg_files_mount_path }}/distribution_cfg.yaml"
+          - "/config/distribution_config.yaml"
         env:
-        {{- include "helm_lib_envs_for_proxy" $ctx | nindent 8 }}
+        {{- include "helm_lib_envs_for_proxy" $ | nindent 8 }}
         ports:
           - name: emb-reg-dist
             containerPort: 5001
@@ -109,21 +117,18 @@ spec:
             port: emb-reg-dist
             scheme: HTTPS
         volumeMounts:
-            - name: registry-incluster-proxy-cfg
-              mountPath: {{ $in_cluster_proxy_cfg_files_mount_path | quote }}
-              readOnly: true
-            - name: registry-incluster-proxy-pki
-              mountPath: {{ $in_cluster_proxy_pki_files_mount_path | quote }}
+            - name: registry-incluster-proxy-config
+              mountPath: /config
               readOnly: true
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-            {{- if not ( $ctx.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
-            {{- include "min_resources_for_registry_incluster_proxy" $ctx | nindent 12 }}
+            {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "registry_incluster_proxy_min_resources" $ | nindent 12 }}
             {{- end }}
       - name: auth
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $ctx | nindent 8 }}
-        image: {{ include "helm_lib_module_image" (list $ctx "dockerAuth") }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $ | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list $ "dockerAuth") }}
         imagePullPolicy: IfNotPresent
         ports:
           - name: emb-reg-auth
@@ -140,25 +145,20 @@ spec:
             scheme: HTTPS
         args:
           - -logtostderr
-          - "{{ $in_cluster_proxy_cfg_files_mount_path }}/auth_cfg.yaml"
+          - "/config/auth_config.yaml"
         volumeMounts:
-            - name: registry-incluster-proxy-cfg
-              mountPath: {{ $in_cluster_proxy_cfg_files_mount_path | quote }}
-              readOnly: true
-            - name: registry-incluster-proxy-pki
-              mountPath: {{ $in_cluster_proxy_pki_files_mount_path | quote }}
+            - name: registry-incluster-proxy-config
+              mountPath: /config
               readOnly: true
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-            {{- if not ( $ctx.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
-            {{- include "min_resources_for_registry_incluster_proxy" $ctx | nindent 12 }}
+            {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "registry_incluster_proxy_min_resources" $ | nindent 12 }}
             {{- end }}
       volumes:
-        - name: registry-incluster-proxy-cfg
+        - name: registry-incluster-proxy-config
           secret:
-            secretName: registry-incluster-proxy-cfg
-        - name: registry-incluster-proxy-pki
-          secret:
-            secretName: registry-incluster-proxy-pki
+            secretName: registry-incluster-proxy-config
+{{- end }}
 {{- end }}

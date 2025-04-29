@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	VersionAnnotation = "registry.deckhouse.io/incluster-proxy-version"
+	VersionAnnotation = "registry.deckhouse.io/version"
 	DeploymentName    = "registry-incluster-proxy"
 )
 
