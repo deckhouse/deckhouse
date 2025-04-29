@@ -43,12 +43,10 @@ func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolesc
 				"io.deckhouse.edition": "test",
 			}}}, nil)
 
-	s.checker.buildDigestProvider = NewFakeBuildDigestProvider(s.T()).
-		Return(
-			v1.Hash{
-				Algorithm: "sha256",
-				Hex:       "95693712d292a6d2e1de6052a0b2189210501393f162616f5d21f2c9b5152129",
-			}, nil)
+	s.checker.buildDigestProvider = NewFakeBuildDigestProvider(s.T()).Return(v1.Hash{
+		Algorithm: "sha256",
+		Hex:       "95693712d292a6d2e1de6052a0b2189210501393f162616f5d21f2c9b5152129",
+	}, nil)
 
 	err = s.checker.CheckDhctlVersionObsolescence(context.Background())
 	t.NoError(err)
@@ -76,12 +74,10 @@ func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolesc
 				"io.deckhouse.edition": "test",
 			}}}, nil)
 
-	s.checker.buildDigestProvider = NewFakeBuildDigestProvider(s.T()).
-		Return(
-			v1.Hash{
-				Algorithm: "sha256",
-				Hex:       "95693712d292a6d2e1de6052a0b2189210501393f162616f5d21f2c9b5152129",
-			}, nil)
+	s.checker.buildDigestProvider = NewFakeBuildDigestProvider(s.T()).Return(v1.Hash{
+		Algorithm: "sha256",
+		Hex:       "95693712d292a6d2e1de6052a0b2189210501393f162616f5d21f2c9b5152129",
+	}, nil)
 
 	err = s.checker.CheckDhctlVersionObsolescence(context.Background())
 	t.NoError(err)
@@ -107,12 +103,10 @@ func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolesc
 				"io.deckhouse.edition": "test",
 			}}}, nil)
 
-	s.checker.buildDigestProvider = NewFakeBuildDigestProvider(s.T()).
-		Return(
-			v1.Hash{
-				Algorithm: "sha256",
-				Hex:       "a66bcd004c1c83c1cfb118f7652a30c784cad66ce976249aa64d60219ec5b199",
-			}, nil)
+	s.checker.buildDigestProvider = NewFakeBuildDigestProvider(s.T()).Return(v1.Hash{
+		Algorithm: "sha256",
+		Hex:       "a66bcd004c1c83c1cfb118f7652a30c784cad66ce976249aa64d60219ec5b199",
+	}, nil)
 
 	err = s.checker.CheckDhctlVersionObsolescence(context.Background())
 	t.ErrorIs(err, ErrInstallerVersionMismatch)
@@ -139,12 +133,10 @@ func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolesc
 				"io.deckhouse.edition": "test",
 			}}}, nil)
 
-	s.checker.buildDigestProvider = NewFakeBuildDigestProvider(s.T()).
-		Return(
-			v1.Hash{
-				Algorithm: "sha256",
-				Hex:       "a66bcd004c1c83c1cfb118f7652a30c784cad66ce976249aa64d60219ec5b199",
-			}, nil)
+	s.checker.buildDigestProvider = NewFakeBuildDigestProvider(s.T()).Return(v1.Hash{
+		Algorithm: "sha256",
+		Hex:       "a66bcd004c1c83c1cfb118f7652a30c784cad66ce976249aa64d60219ec5b199",
+	}, nil)
 
 	err = s.checker.CheckDhctlVersionObsolescence(context.Background())
 	t.ErrorIs(err, ErrInstallerVersionMismatch)
@@ -155,6 +147,7 @@ func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolesc
 
 	app.AppVersion = "dev"
 	app.AppEdition = "test"
+	app.PreflightSkipDeckhouseVersionCheck = false
 	image := s.checker.installConfig.GetImage(false)
 	ref, err := name.ParseReference(image)
 	t.NoError(err)
@@ -170,13 +163,68 @@ func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolesc
 				"io.deckhouse.edition": "BAD",
 			}}}, nil)
 
-	s.checker.buildDigestProvider = NewFakeBuildDigestProvider(s.T()).
-		Return(
-			v1.Hash{
-				Algorithm: "sha256",
-				Hex:       "95693712d292a6d2e1de6052a0b2189210501393f162616f5d21f2c9b5152129",
-			}, nil)
+	s.checker.buildDigestProvider = NewFakeBuildDigestProvider(s.T()).Return(v1.Hash{
+		Algorithm: "sha256",
+		Hex:       "95693712d292a6d2e1de6052a0b2189210501393f162616f5d21f2c9b5152129",
+	}, nil)
 
 	err = s.checker.CheckDhctlVersionObsolescence(context.Background())
 	t.ErrorIs(err, ErrInstallerEditionMismatch)
+}
+
+func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolescence_VersionOverride_ReleaseChannel() {
+	t := s.Require()
+
+	app.PreflightSkipDeckhouseVersionCheck = true
+
+	image := s.checker.installConfig.GetImage(false)
+	ref, err := name.ParseReference(image)
+	t.NoError(err)
+
+	s.checker.imageDescriptorProvider = NewFakeImageDescriptorProvider(s.T()).
+		ExpectReference(ref).
+		Return(&v1.Descriptor{Digest: v1.Hash{
+			Algorithm: "sha256",
+			Hex:       "95693712d292a6d2e1de6052a0b2189210501393f162616f5d21f2c9b5152129",
+		}}, &v1.ConfigFile{
+			Config: v1.Config{Labels: map[string]string{
+				"io.deckhouse.edition": "test",
+			}}}, nil)
+
+	s.checker.buildDigestProvider = NewFakeBuildDigestProvider(s.T()).Return(v1.Hash{
+		Algorithm: "sha256",
+		Hex:       "3490720937602946739407683046730486738046346037406374068347",
+	}, nil)
+
+	err = s.checker.CheckDhctlVersionObsolescence(context.Background())
+	t.NoError(err)
+}
+
+func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolescence_VersionOverride_DevBranch() {
+	t := s.Require()
+
+	app.PreflightSkipDeckhouseVersionCheck = true
+	s.checker.installConfig.DevBranch = "pr1234"
+
+	image := s.checker.installConfig.GetImage(false)
+	ref, err := name.ParseReference(image)
+	t.NoError(err)
+
+	s.checker.imageDescriptorProvider = NewFakeImageDescriptorProvider(s.T()).
+		ExpectReference(ref).
+		Return(&v1.Descriptor{Digest: v1.Hash{
+			Algorithm: "sha256",
+			Hex:       "95693712d292a6d2e1de6052a0b2189210501393f162616f5d21f2c9b5152129",
+		}}, &v1.ConfigFile{
+			Config: v1.Config{Labels: map[string]string{
+				"io.deckhouse.edition": "test",
+			}}}, nil)
+
+	s.checker.buildDigestProvider = NewFakeBuildDigestProvider(s.T()).Return(v1.Hash{
+		Algorithm: "sha256",
+		Hex:       "3490720937602946739407683046730486738046346037406374068347",
+	}, nil)
+
+	err = s.checker.CheckDhctlVersionObsolescence(context.Background())
+	t.NoError(err)
 }
