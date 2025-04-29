@@ -89,6 +89,8 @@ spec:
           envFrom:
             - configMapRef:
                 name: trivy-operator-trivy-config
+          env:
+            {{- include "helm_lib_envs_for_proxy" . | nindent 12 }}
           ports:
             - name: trivy-http
               containerPort: 4954

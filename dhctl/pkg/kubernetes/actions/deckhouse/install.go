@@ -28,10 +28,8 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
@@ -283,10 +281,10 @@ func CreateDeckhouseManifests(
 		})
 	}
 
-	if len(cfg.TerraformState) > 0 {
+	if len(cfg.InfrastructureState) > 0 {
 		tasks = append(tasks, actions.ManifestTask{
 			Name:     `Secret "d8-cluster-terraform-state"`,
-			Manifest: func() interface{} { return manifests.SecretWithTerraformState(cfg.TerraformState) },
+			Manifest: func() interface{} { return manifests.SecretWithInfrastructureState(cfg.InfrastructureState) },
 			CreateFunc: func(manifest interface{}) error {
 				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 				return err
@@ -298,8 +296,10 @@ func CreateDeckhouseManifests(
 		})
 	}
 
-	for nodeName, tfState := range cfg.NodesTerraformState {
-		getManifest := func() interface{} { return manifests.SecretWithNodeTerraformState(nodeName, "master", tfState, nil) }
+	for nodeName, tfState := range cfg.NodesInfrastructureState {
+		getManifest := func() interface{} {
+			return manifests.SecretWithNodeInfrastructureState(nodeName, "master", tfState, nil)
+		}
 		tasks = append(tasks, actions.ManifestTask{
 			Name:     fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
 			Manifest: getManifest,
@@ -535,38 +535,4 @@ func WaitForKubernetesAPI(ctx context.Context, kubeCl *client.KubernetesClient) 
 			}
 			return fmt.Errorf("kubernetes API is not Ready: %w", err)
 		})
-}
-
-func ConfigureDeckhouseRelease(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	// if we have correct semver version we should create Deckhouse Release for prevent rollback on previous version
-	// if installer version > version in release channel
-	if tag, found := config.ReadVersionTagFromInstallerContainer(); found {
-		deckhouseRelease := unstructured.Unstructured{}
-		deckhouseRelease.SetUnstructuredContent(map[string]interface{}{
-			"apiVersion": "deckhouse.io/v1alpha1",
-			"kind":       "DeckhouseRelease",
-			"metadata": map[string]interface{}{
-				"name": tag,
-			},
-			"spec": map[string]interface{}{
-				"version": tag,
-			},
-		})
-
-		err := retry.NewLoop(fmt.Sprintf("Create deckhouse release for version %s", tag), 15, 5*time.Second).
-			BreakIf(apierrors.IsAlreadyExists).
-			RunContext(ctx, func() error {
-				_, err := kubeCl.Dynamic().Resource(v1alpha1.DeckhouseReleaseGVR).Create(ctx, &deckhouseRelease, metav1.CreateOptions{})
-				if err != nil {
-					return err
-				}
-
-				return nil
-			})
-		if err != nil && !apierrors.IsAlreadyExists(err) {
-			return err
-		}
-	}
-
-	return nil
 }

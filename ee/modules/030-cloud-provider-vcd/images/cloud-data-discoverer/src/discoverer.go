@@ -15,7 +15,7 @@ import (
 	"strconv"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/vmware/go-vcloud-director/v2/govcd"
 	"github.com/vmware/go-vcloud-director/v2/types/v56"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -24,7 +24,7 @@ import (
 )
 
 type Discoverer struct {
-	logger *log.Entry
+	logger *log.Logger
 	config *Config
 }
 
@@ -108,7 +108,7 @@ func (c *Config) client() (*govcd.VCDClient, error) {
 	return vcdClient, nil
 }
 
-func NewDiscoverer(logger *log.Entry) *Discoverer {
+func NewDiscoverer(logger *log.Logger) *Discoverer {
 	config, err := parseEnvToConfig()
 	if err != nil {
 		logger.Fatalf("Cannot get opts from env: %v", err)
@@ -118,6 +118,10 @@ func NewDiscoverer(logger *log.Entry) *Discoverer {
 		logger: logger,
 		config: config,
 	}
+}
+
+func (d *Discoverer) CheckCloudConditions(ctx context.Context) ([]v1alpha1.CloudCondition, error) {
+	return nil, nil
 }
 
 func (d *Discoverer) DiscoveryData(_ context.Context, cloudProviderDiscoveryData []byte) ([]byte, error) {

@@ -47,6 +47,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
@@ -59,7 +60,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/frontend"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
@@ -141,17 +141,17 @@ func checkBashibleAlreadyRun(ctx context.Context, nodeInterface node.Interface) 
 	isReady := false
 	err := log.Process("bootstrap", "Checking bashible is ready", func() error {
 		cmd := nodeInterface.Command("cat", DHCTLEndBootstrapBashiblePipeline)
-		cmd.Sudo()
+		cmd.Sudo(ctx)
 		cmd.WithTimeout(10 * time.Second)
-		if err := cmd.Run(ctx); err != nil {
+		stdout, stderr, err := cmd.Output(ctx)
+		if err != nil {
 			isReady = false
 			return err
 		}
 
-		stdout := string(cmd.StdoutBytes())
-		log.DebugF("cat %s stdout: '%s'\n", DHCTLEndBootstrapBashiblePipeline, stdout)
+		log.DebugF("cat %s stdout: '%s'; stderr: '%s'\n", DHCTLEndBootstrapBashiblePipeline, stdout, stderr)
 
-		isReady = strings.TrimSpace(stdout) == "OK"
+		isReady = strings.TrimSpace(string(stdout)) == "OK"
 
 		return nil
 	})
@@ -165,7 +165,7 @@ func getBashiblePIDs(ctx context.Context, nodeInterface node.Interface) ([]strin
 		psStrings = append(psStrings, l)
 	}
 	cmd := nodeInterface.Command("bash", "-c", `ps a --no-headers -o args:64 -o "|%p"`)
-	cmd.Sudo()
+	cmd.Sudo(ctx)
 	cmd.WithTimeout(10 * time.Second)
 	cmd.WithStdoutHandler(h)
 	if err := cmd.Run(ctx); err != nil {
@@ -206,7 +206,7 @@ func getBashiblePIDs(ctx context.Context, nodeInterface node.Interface) ([]strin
 
 func killBashible(ctx context.Context, nodeInterface node.Interface, pids []string) error {
 	cmd := nodeInterface.Command("kill", pids...)
-	cmd.Sudo()
+	cmd.Sudo(ctx)
 	cmd.WithTimeout(10 * time.Second)
 	if err := cmd.Run(ctx); err != nil {
 		var ee *exec.ExitError
@@ -226,7 +226,7 @@ func killBashible(ctx context.Context, nodeInterface node.Interface, pids []stri
 
 func unlockBashible(ctx context.Context, NodeInterface node.Interface) error {
 	cmd := NodeInterface.Command("rm", "-f", "/var/lock/bashible")
-	cmd.Sudo()
+	cmd.Sudo(ctx)
 	cmd.WithTimeout(10 * time.Second)
 	if err := cmd.Run(ctx); err != nil {
 		return err
@@ -313,7 +313,7 @@ func (r *registryClientConfigGetter) Get(_ string) (*registry.ClientConfig, erro
 	return &r.ClientConfig, nil
 }
 
-func StartRegistryPackagesProxy(config config.RegistryData, clusterDomain string) error {
+func StartRegistryPackagesProxy(ctx context.Context, config config.RegistryData, clusterDomain string) error {
 	cert, err := generateTLSCertificate(clusterDomain)
 	if err != nil {
 		return fmt.Errorf("Failed to generate TLS certificate for registry proxy: %v", err)
@@ -335,6 +335,11 @@ func StartRegistryPackagesProxy(config config.RegistryData, clusterDomain string
 	proxy := proxy.NewProxy(srv, listener, clientConfigGetter, registryPackagesProxyLogger{}, &registry.DefaultClient{})
 
 	go proxy.Serve()
+
+	go func() {
+		<-ctx.Done()
+		proxy.StopProxy()
+	}()
 
 	return nil
 }
@@ -416,13 +421,6 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 	}
 
 	log.DebugF("Got cluster domain: %s", clusterDomain)
-	log.DebugLn("Starting registry packages proxy")
-
-	// we need clusterDomain to generate proper certificate for packages proxy
-	err = StartRegistryPackagesProxy(cfg.Registry, clusterDomain)
-	if err != nil {
-		return fmt.Errorf("failed to start registry packages proxy: %v", err)
-	}
 
 	if err := CheckDHCTLDependencies(ctx, nodeInterface); err != nil {
 		return err
@@ -438,7 +436,7 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 
 		err := retry.NewLoop(fmt.Sprintf("Prepare %s", app.NodeDeckhouseDirectoryPath), 30, 10*time.Second).RunContext(ctx, func() error {
 			cmd := nodeInterface.Command("sh", "-c", fmt.Sprintf("umask 0022 ; mkdir -p -m 0755 %s", app.DeckhouseNodeBinPath))
-			cmd.Sudo()
+			cmd.Sudo(ctx)
 			if err = cmd.Run(ctx); err != nil {
 				return fmt.Errorf("ssh: mkdir -p %s -m 0755: %w", app.DeckhouseNodeBinPath, err)
 			}
@@ -451,7 +449,7 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 
 		err = retry.NewLoop(fmt.Sprintf("Prepare %s", app.DeckhouseNodeTmpPath), 30, 10*time.Second).RunContext(ctx, func() error {
 			cmd := nodeInterface.Command("sh", "-c", fmt.Sprintf("umask 0022 ; mkdir -p -m 1777 %s", app.DeckhouseNodeTmpPath))
-			cmd.Sudo()
+			cmd.Sudo(ctx)
 			if err := cmd.Run(ctx); err != nil {
 				return fmt.Errorf("ssh: mkdir -p -m 1777 %s: %w", app.DeckhouseNodeTmpPath, err)
 			}
@@ -466,7 +464,7 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 		// we need creating it before because we do not want handle errors from cat
 		return retry.NewLoop(fmt.Sprintf("Prepare %s", DHCTLEndBootstrapBashiblePipeline), 30, 10*time.Second).RunContext(ctx, func() error {
 			cmd := nodeInterface.Command("touch", DHCTLEndBootstrapBashiblePipeline)
-			cmd.Sudo()
+			cmd.Sudo(ctx)
 			if err := cmd.Run(ctx); err != nil {
 				return fmt.Errorf("touch error %s: %w", DHCTLEndBootstrapBashiblePipeline, err)
 			}
@@ -476,6 +474,33 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 	})
 	if err != nil {
 		return err
+	}
+
+	ready := false
+
+	err = retry.NewLoop("Checking bashible already ran", 30, 10*time.Second).RunContext(ctx, func() error {
+		log.DebugLn("Check bundle routine start")
+		var err error
+
+		ready, err = checkBashibleAlreadyRun(ctx, nodeInterface)
+
+		return err
+	})
+
+	if err != nil {
+		return err
+	}
+
+	if ready {
+		log.Success("Bashible already run! Skip bashible install\n\n")
+		return nil
+	}
+
+	log.DebugLn("Starting registry packages proxy")
+	// we need clusterDomain to generate proper certificate for packages proxy
+	err = StartRegistryPackagesProxy(ctx, cfg.Registry, clusterDomain)
+	if err != nil {
+		return fmt.Errorf("failed to start registry packages proxy: %v", err)
 	}
 
 	if wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper); ok {
@@ -505,16 +530,7 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 		RunContext(ctx, func() error {
 			// we do not need to restart tunnel because we have HealthMonitor
 
-			log.DebugLn("Check bundle routine start")
-			ready, err := checkBashibleAlreadyRun(ctx, nodeInterface)
-			if err != nil {
-				return err
-			}
-
-			if ready {
-				log.Success("Bashible already run!\n")
-				return nil
-			}
+			log.DebugLn("Stop bashible if need")
 
 			if err := cleanupPreviousBashibleRunIfNeed(ctx, nodeInterface); err != nil {
 				return err
@@ -695,9 +711,9 @@ func InstallDeckhouse(ctx context.Context, kubeCl *client.KubernetesClient, conf
 	return res, nil
 }
 
-func BootstrapTerraNodes(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraNodeGroups []config.TerraNodeGroupSpec, terraformContext *terraform.TerraformContext) error {
+func BootstrapTerraNodes(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraNodeGroups []config.TerraNodeGroupSpec, infrastructureContext *infrastructure.Context) error {
 	return log.Process("bootstrap", "Create CloudPermanent NG", func() error {
-		return operations.ParallelCreateNodeGroup(ctx, kubeCl, metaConfig, terraNodeGroups, terraformContext)
+		return operations.ParallelCreateNodeGroup(ctx, kubeCl, metaConfig, terraNodeGroups, infrastructureContext)
 	})
 }
 
@@ -747,7 +763,7 @@ func GetBastionHostFromCache() (string, error) {
 	return string(host), nil
 }
 
-func BootstrapAdditionalMasterNodes(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, addressTracker map[string]string, terraformContext *terraform.TerraformContext) error {
+func BootstrapAdditionalMasterNodes(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, addressTracker map[string]string, infrastructureContext *infrastructure.Context) error {
 	if metaConfig.MasterNodeGroupSpec.Replicas == 1 {
 		log.DebugF("Skip bootstrap additional master nodes because replicas == 1")
 		return nil
@@ -760,7 +776,7 @@ func BootstrapAdditionalMasterNodes(ctx context.Context, kubeCl *client.Kubernet
 		}
 
 		for i := 1; i < metaConfig.MasterNodeGroupSpec.Replicas; i++ {
-			outputs, err := operations.BootstrapAdditionalMasterNode(ctx, kubeCl, metaConfig, i, masterCloudConfig, false, terraformContext)
+			outputs, err := operations.BootstrapAdditionalMasterNode(ctx, kubeCl, metaConfig, i, masterCloudConfig, false, infrastructureContext)
 			if err != nil {
 				return err
 			}
@@ -832,11 +848,6 @@ func RunPostInstallTasks(ctx context.Context, kubeCl *client.KubernetesClient, r
 	}
 
 	return log.Process("bootstrap", "Run post bootstrap actions", func() error {
-		err := deckhouse.ConfigureDeckhouseRelease(ctx, kubeCl)
-		if err != nil {
-			return err
-		}
-
 		return applyPostBootstrapModuleConfigs(kubeCl, result.ManifestResult.PostBootstrapMCTasks)
 	})
 }

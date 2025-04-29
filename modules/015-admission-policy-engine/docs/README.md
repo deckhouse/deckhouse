@@ -86,6 +86,8 @@ spec:
 To apply the policy, it will be sufficient to set the label `operation-policy.deckhouse.io/enabled: "true"` on the desired namespace.
 The above policy is generic and recommended by Deckhouse team. Similarly, you can configure your own policy with the necessary settings.
 
+> **Warning**. The `allowPrivilegeEscalation` and `allowPrivileged` parameters default to `false` — even if not explicitly set. This means containers cannot run in privileged mode or escalate privileges by default. To allow this behavior, set the corresponding parameter to `true`.
+
 ### Security policies
 
 The module allows defining security policies for making sure the workload running in the cluster meets certain security requirements.

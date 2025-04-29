@@ -218,6 +218,13 @@ spec:
             name: frontend
             port:
               name: http
+      - path: /downloads/deckhouse-cli-trdl
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
       - path: /documentation/v1
         pathType: Prefix
         backend:
@@ -238,7 +245,7 @@ spec:
           service:
             name: frontend
             port:
-              name: http        
+              name: http
       - path: /products/virtualization-platform/documentation/
         pathType: Prefix
         backend:
@@ -268,6 +275,27 @@ spec:
             port:
               name: http
       - path: /products/virtualization-platform/modules/
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /products/stronghold/documentation/
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /products/stronghold/reference/
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /products/stronghold/gs/
         pathType: Prefix
         backend:
           service:

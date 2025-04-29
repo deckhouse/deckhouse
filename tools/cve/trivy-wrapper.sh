@@ -107,7 +107,46 @@ function prepareImageArgs() {
 
 function trivyGetCVEListForImage() (
   prepareImageArgs "$@"
-  bin/trivy i --policy "$TRIVY_POLICY_URL" --java-db-repository "$TRIVY_JAVA_DB_URL" --db-repository "$TRIVY_DB_URL" --exit-code 0 --severity $SEVERITY --ignorefile "$IGNORE" --format json --scanners vuln --quiet "$IMAGE_ARGS" | jq -r ".Results[]?.Vulnerabilities[]?.VulnerabilityID" | uniq | sort
+  attempt=1
+  max_attempts=5
+  delay=5
+  debug_flag=""
+  quiet_flag="--quiet"
+
+  while true; do
+    echo "[*] Trivy scan attempt $attempt (debug: ${debug_flag:+on}, quiet: ${quiet_flag:+on})"
+    set +e
+    bin/trivy i $debug_flag \
+    --username "$REGISTRY_USER" \
+    --password "$REGISTRY_PASSWORD"\
+    --policy "$TRIVY_POLICY_URL" \
+    --java-db-repository "$TRIVY_JAVA_DB_URL" \
+    --db-repository "$TRIVY_DB_URL" \
+    --exit-code 0 \
+    --severity $SEVERITY \
+    --ignorefile "$IGNORE" \
+    --image-src remote \
+    --format json \
+    --scanners vuln \
+    $quiet_flag "$IMAGE_ARGS" | jq -r ".Results[]?.Vulnerabilities[]?.VulnerabilityID" | uniq | sort
+    exit_code=$?
+    set -e
+    if [ $exit_code -eq 0 ]; then
+      break
+    fi
+    echo "[!] Trivy failed with code $exit_code on attempt $attempt"
+
+    if [ $attempt -ge $max_attempts ]; then
+      echo "[!] Failed after $max_attempts attempts, exiting"
+      exit $exit_code
+    fi
+
+    attempt=$((attempt + 1))
+    debug_flag="--debug"
+    quiet_flag=""
+    echo "[*] Retrying in $delay seconds..."
+    sleep $delay
+  done
   # bin/trivy i --severity=$SEVERITY --ignorefile "$IGNORE" --format json --quiet "$IMAGE_ARGS" | jq -r ".Results[]?.Vulnerabilities[]?.VulnerabilityID" | uniq | sort
 )
 
@@ -118,6 +157,47 @@ function htmlReportHeader() (
 function trivyGetJSONReportPartForImage() (
   prepareImageArgs "$@"
   echo -n "    <h1>$LABEL</h1>"
-  bin/trivy i --policy "$TRIVY_POLICY_URL" --java-db-repository "$TRIVY_JAVA_DB_URL" --db-repository "$TRIVY_DB_URL" --exit-code 0 --severity $SEVERITY --ignorefile "$IGNORE" --format json --scanners vuln --output $OUTPUT --quiet "$IMAGE_ARGS"
-  echo -n "    <br/>"
+  attempt=1
+  max_attempts=5
+  delay=5
+  debug_flag=""
+  quiet_flag="--quiet"
+
+  while true; do
+    echo "[*] Trivy scan attempt $attempt (debug: ${debug_flag:+on}, quiet: ${quiet_flag:+on})"
+    set +e
+    bin/trivy i $debug_flag \
+    --username "$REGISTRY_USER" \
+    --password "$REGISTRY_PASSWORD"\
+    --policy "$TRIVY_POLICY_URL" \
+    --java-db-repository "$TRIVY_JAVA_DB_URL" \
+    --db-repository "$TRIVY_DB_URL" \
+    --exit-code 0 \
+    --severity "$SEVERITY" \
+    --ignorefile "$IGNORE" \
+    --image-src remote \
+    --format json \
+    --scanners vuln \
+    --output "$OUTPUT" \
+    $quiet_flag \
+    "$IMAGE_ARGS"
+    exit_code=$?
+    set -e
+    if [ $exit_code -eq 0 ]; then
+      echo -n "    <br/>"
+      break
+    fi
+    echo "[!] Trivy failed with code $exit_code on attempt $attempt"
+
+    if [ $attempt -ge $max_attempts ]; then
+      echo "[!] Failed after $max_attempts attempts, exiting"
+      exit $exit_code
+    fi
+
+    attempt=$((attempt + 1))
+    debug_flag="--debug"
+    quiet_flag=""
+    echo "[*] Retrying in $delay seconds..."
+    sleep $delay
+  done
 )

@@ -41,7 +41,7 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_CHANNEL: "alpha"
+  WERF_VERSION: "v2.35.0"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -69,8 +69,8 @@ jobs:
       ref_full: ${{ steps.git_info.outputs.ref_full }}
       github_sha: ${{ steps.git_info.outputs.github_sha }}
       pr_number: ${{ steps.git_info.outputs.pr_number }}
-    # Skip the CI for automation PRs, e.g. changelog
-    if: ${{ github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
+    # Skip the CI for automation PRs, e.g. changelog, don't skip if Pull Request title contains "[run ci]".
+    if: ${{ contains(github.event.pull_request.title, '[run ci]') || github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
     steps:
       - id: git_info
         name: Get tag name and SHA
@@ -542,8 +542,6 @@ jobs:
             if [[ ${enable_push} == "true" ]] ; then
               echo "⚓️ 📤 [$(date -u)] Push '${SRC_NAME}' image as ${DST}."
               docker image push ${DST}
-              # add date label to pushed image
-              crane mutate -l io.deckhouse.${RELEASE_CHANNEL}-released="$(date -u +%Y-%m-%dT%H:%M:%SZ)" ${DST}
             fi
 
             echo "⚓️ 🧹 [$(date -u)] Remove local tag for '${SRC_NAME}'."
@@ -617,6 +615,9 @@ jobs:
           echo "⚓️ 💫 [$(date -u)] Publish 'release-channel-version' image to rw-registry using tag ${RELEASE_CHANNEL}".
           pull_push_rmi 'release-channel-version' ${SOURCE_RELEASE_VERSION_IMAGE} ${PROD_RELEASE_VERSION_IMAGE}
 
+          # add date label to pushed image
+          crane mutate -l io.deckhouse.releasedate="$(date -u +%Y-%m-%dT%H:%M:%SZ)" ${PROD_RELEASE_VERSION_IMAGE}
+
           echo "⚓️  [$(date -u)] Remove local source images."
           echo "  Delete local 'dev' source image ${SOURCE_IMAGE}"
           docker image rmi ${SOURCE_IMAGE} || true
@@ -675,8 +676,6 @@ jobs:
             if [[ ${enable_push} == "true" ]] ; then
               echo "⚓️ 📤 [$(date -u)] Push '${SRC_NAME}' image as ${DST}."
               docker image push ${DST}
-              # add date label to pushed image
-              crane mutate -l io.deckhouse.${RELEASE_CHANNEL}-released="$(date -u +%Y-%m-%dT%H:%M:%SZ)" ${DST}
             fi
 
             echo "⚓️ 🧹 [$(date -u)] Remove local tag for '${SRC_NAME}'."
@@ -750,6 +749,9 @@ jobs:
           echo "⚓️ 💫 [$(date -u)] Publish 'release-channel-version' image to rw-registry using tag ${RELEASE_CHANNEL}".
           pull_push_rmi 'release-channel-version' ${SOURCE_RELEASE_VERSION_IMAGE} ${PROD_RELEASE_VERSION_IMAGE}
 
+          # add date label to pushed image
+          crane mutate -l io.deckhouse.releasedate="$(date -u +%Y-%m-%dT%H:%M:%SZ)" ${PROD_RELEASE_VERSION_IMAGE}
+
           echo "⚓️  [$(date -u)] Remove local source images."
           echo "  Delete local 'dev' source image ${SOURCE_IMAGE}"
           docker image rmi ${SOURCE_IMAGE} || true
@@ -808,8 +810,6 @@ jobs:
             if [[ ${enable_push} == "true" ]] ; then
               echo "⚓️ 📤 [$(date -u)] Push '${SRC_NAME}' image as ${DST}."
               docker image push ${DST}
-              # add date label to pushed image
-              crane mutate -l io.deckhouse.${RELEASE_CHANNEL}-released="$(date -u +%Y-%m-%dT%H:%M:%SZ)" ${DST}
             fi
 
             echo "⚓️ 🧹 [$(date -u)] Remove local tag for '${SRC_NAME}'."
@@ -883,6 +883,9 @@ jobs:
           echo "⚓️ 💫 [$(date -u)] Publish 'release-channel-version' image to rw-registry using tag ${RELEASE_CHANNEL}".
           pull_push_rmi 'release-channel-version' ${SOURCE_RELEASE_VERSION_IMAGE} ${PROD_RELEASE_VERSION_IMAGE}
 
+          # add date label to pushed image
+          crane mutate -l io.deckhouse.releasedate="$(date -u +%Y-%m-%dT%H:%M:%SZ)" ${PROD_RELEASE_VERSION_IMAGE}
+
           echo "⚓️  [$(date -u)] Remove local source images."
           echo "  Delete local 'dev' source image ${SOURCE_IMAGE}"
           docker image rmi ${SOURCE_IMAGE} || true
@@ -941,8 +944,6 @@ jobs:
             if [[ ${enable_push} == "true" ]] ; then
               echo "⚓️ 📤 [$(date -u)] Push '${SRC_NAME}' image as ${DST}."
               docker image push ${DST}
-              # add date label to pushed image
-              crane mutate -l io.deckhouse.${RELEASE_CHANNEL}-released="$(date -u +%Y-%m-%dT%H:%M:%SZ)" ${DST}
             fi
 
             echo "⚓️ 🧹 [$(date -u)] Remove local tag for '${SRC_NAME}'."
@@ -1016,6 +1017,9 @@ jobs:
           echo "⚓️ 💫 [$(date -u)] Publish 'release-channel-version' image to rw-registry using tag ${RELEASE_CHANNEL}".
           pull_push_rmi 'release-channel-version' ${SOURCE_RELEASE_VERSION_IMAGE} ${PROD_RELEASE_VERSION_IMAGE}
 
+          # add date label to pushed image
+          crane mutate -l io.deckhouse.releasedate="$(date -u +%Y-%m-%dT%H:%M:%SZ)" ${PROD_RELEASE_VERSION_IMAGE}
+
           echo "⚓️  [$(date -u)] Remove local source images."
           echo "  Delete local 'dev' source image ${SOURCE_IMAGE}"
           docker image rmi ${SOURCE_IMAGE} || true
@@ -1074,8 +1078,6 @@ jobs:
             if [[ ${enable_push} == "true" ]] ; then
               echo "⚓️ 📤 [$(date -u)] Push '${SRC_NAME}' image as ${DST}."
               docker image push ${DST}
-              # add date label to pushed image
-              crane mutate -l io.deckhouse.${RELEASE_CHANNEL}-released="$(date -u +%Y-%m-%dT%H:%M:%SZ)" ${DST}
             fi
 
             echo "⚓️ 🧹 [$(date -u)] Remove local tag for '${SRC_NAME}'."
@@ -1149,6 +1151,9 @@ jobs:
           echo "⚓️ 💫 [$(date -u)] Publish 'release-channel-version' image to rw-registry using tag ${RELEASE_CHANNEL}".
           pull_push_rmi 'release-channel-version' ${SOURCE_RELEASE_VERSION_IMAGE} ${PROD_RELEASE_VERSION_IMAGE}
 
+          # add date label to pushed image
+          crane mutate -l io.deckhouse.releasedate="$(date -u +%Y-%m-%dT%H:%M:%SZ)" ${PROD_RELEASE_VERSION_IMAGE}
+
           echo "⚓️  [$(date -u)] Remove local source images."
           echo "  Delete local 'dev' source image ${SOURCE_IMAGE}"
           docker image rmi ${SOURCE_IMAGE} || true
@@ -1207,8 +1212,6 @@ jobs:
             if [[ ${enable_push} == "true" ]] ; then
               echo "⚓️ 📤 [$(date -u)] Push '${SRC_NAME}' image as ${DST}."
               docker image push ${DST}
-              # add date label to pushed image
-              crane mutate -l io.deckhouse.${RELEASE_CHANNEL}-released="$(date -u +%Y-%m-%dT%H:%M:%SZ)" ${DST}
             fi
 
             echo "⚓️ 🧹 [$(date -u)] Remove local tag for '${SRC_NAME}'."
@@ -1281,6 +1284,9 @@ jobs:
 
           echo "⚓️ 💫 [$(date -u)] Publish 'release-channel-version' image to rw-registry using tag ${RELEASE_CHANNEL}".
           pull_push_rmi 'release-channel-version' ${SOURCE_RELEASE_VERSION_IMAGE} ${PROD_RELEASE_VERSION_IMAGE}
+
+          # add date label to pushed image
+          crane mutate -l io.deckhouse.releasedate="$(date -u +%Y-%m-%dT%H:%M:%SZ)" ${PROD_RELEASE_VERSION_IMAGE}
 
           echo "⚓️  [$(date -u)] Remove local source images."
           echo "  Delete local 'dev' source image ${SOURCE_IMAGE}"
@@ -1363,7 +1369,6 @@ jobs:
       STABLE_VERSION: ${{ steps.post-deploy-preparation.outputs.stable_version }}
       LATEST_RELEASE_ID: ${{ steps.post-deploy-preparation.outputs.latest_release_id }}
       TARGET_RELEASE_ID: ${{ steps.post-deploy-preparation.outputs.target_release_id }}
-      DEPLOY_KUBECONFIG_BASE64_PROD_SEL: ${{ steps.post-deploy-preparation.outputs.DEPLOY_KUBECONFIG_BASE64_PROD_SEL }}
       DEPLOY_KUBECONFIG_BASE64_PROD_25: ${{ steps.post-deploy-preparation.outputs.DEPLOY_KUBECONFIG_BASE64_PROD_25 }}
       DEPLOY_KUBECONFIG_BASE64_DEV: ${{ steps.post-deploy-preparation.outputs.DEPLOY_KUBECONFIG_BASE64_DEV }}
     needs:
@@ -1381,7 +1386,7 @@ jobs:
           python-version: '3.12.3'
 
       - name: Install dependencies
-        run: pip install ghapi=1.0.6 fastcore=1.7.28 kubernetes=32.0.1
+        run: pip install ghapi==1.0.6 fastcore==1.7.28 kubernetes==32.0.1
 
       - name: Prepare files to collect and deploy channels
         run: |
@@ -1406,12 +1411,10 @@ jobs:
         run: python .github/scripts/python/post-deploy-preparation.py
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          KUBECONFIG_BASE64_PROD_SEL: ${{ secrets.KUBECONFIG_BASE64_PROD_SEL }}
-          NAMESPACE_KUBECONFIG_BASE64_PROD_SEL: "deckhouse-web-production"
           KUBECONFIG_BASE64_PROD_25: ${{ secrets.KUBECONFIG_BASE64_PROD_25 }}
           NAMESPACE_KUBECONFIG_BASE64_PROD_25: "deckhouse-web-production"
           KUBECONFIG_BASE64_DEV: ${{ secrets.KUBECONFIG_BASE64_DEV }}
-          NAMESPACE_KUBECONFIG_BASE64_DEV: "deckhouse-web-stage"          
+          NAMESPACE_KUBECONFIG_BASE64_DEV: "deckhouse-web-stage"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4.4.0
@@ -1421,47 +1424,12 @@ jobs:
           include-hidden-files: true
 
 
-  deploy_channels_cm_prod_old:
-    if: ${{ needs.post_deploy_preparation.outputs.DEPLOY_KUBECONFIG_BASE64_PROD_SEL == 'true' }}
-    name: "[OLD] Deploy channels to production"
-    runs-on: [self-hosted, regular]
-    needs:
-      - post_deploy_preparation
-    env:
-      WERF_CHANNEL: "ea"
-    steps:
-      # <template: checkout_step>
-      - name: Checkout sources
-        uses: actions/checkout@v3.5.2
-
-      # </template: checkout_step>
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v4.1.8
-        with:
-          name: channels-artifact
-          path: publish-channels
-
-      - name: Converge
-        uses: werf/actions/converge@v1.2
-        with:
-          channel: ${{env.WERF_CHANNEL}}
-          kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_PROD_SEL }}"
-          env: web-production
-        env:
-          WERF_NAMESPACE: "deckhouse-web-production"
-          WERF_DIR: "publish-channels"
-          WERF_DEV: "true"
-
-
   deploy_channels_cm_prod:
     if: ${{ needs.post_deploy_preparation.outputs.DEPLOY_KUBECONFIG_BASE64_PROD_25 == 'true' }}
     name: "Deploy channels to production"
     runs-on: [self-hosted, regular]
     needs:
       - post_deploy_preparation
-    env:
-      WERF_CHANNEL: "ea"
     steps:
       # <template: checkout_step>
       - name: Checkout sources
@@ -1476,9 +1444,9 @@ jobs:
           path: publish-channels
 
       - name: Converge
-        uses: werf/actions/converge@v1.2
+        uses: werf/actions/converge@v2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          version: ${{env.WERF_VERSION}}
           kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_PROD_25 }}"
           env: web-production
         env:
@@ -1493,8 +1461,6 @@ jobs:
     runs-on: [self-hosted, regular]
     needs:
       - post_deploy_preparation
-    env:
-      WERF_CHANNEL: "ea"
     steps:
       # <template: checkout_step>
       - name: Checkout sources
@@ -1509,9 +1475,9 @@ jobs:
           path: publish-channels
 
       - name: Converge
-        uses: werf/actions/converge@v1.2
+        uses: werf/actions/converge@v2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          version: ${{env.WERF_VERSION}}
           kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_DEV }}"
           env: web-stage
         env:

@@ -439,11 +439,28 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 	}
 
 	r.log.Debug("delete outdated releases for module", slog.String("module", release.GetModuleName()))
-	err = r.deleteOutdatedModuleReleases(ctx, release.GetModuleSource(), release.GetModuleName())
-	if err != nil {
+	if err = r.deleteOutdatedModuleReleases(ctx, release.GetModuleSource(), release.GetModuleName()); err != nil {
 		r.log.Error("failed to delete outdated module releases", slog.String("module", release.GetModuleName()), log.Err(err))
 
 		return ctrl.Result{}, fmt.Errorf("delete outdated module releases: %w", err)
+	}
+
+	settings := new(v1alpha1.ModuleSettingsDefinition)
+	if err = r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, settings); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return ctrl.Result{}, fmt.Errorf("get module settings: %w", err)
+		}
+		r.log.Warn("module settings not found", slog.String("module", release.GetModuleName()))
+
+		return ctrl.Result{}, nil
+	}
+
+	settings.OwnerReferences = []metav1.OwnerReference{ownerRef}
+
+	if err = r.client.Update(ctx, settings); err != nil {
+		r.log.Warn("failed to update module settings", slog.String("module", release.GetModuleName()), log.Err(err))
+
+		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil
@@ -522,6 +539,10 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 	task, err := taskCalculator.CalculatePendingReleaseTask(ctx, release)
 	if err != nil {
 		return res, err
+	}
+
+	if !task.IsSingle && !task.IsPatch && !isModuleReady(r.moduleManager, release.GetModuleName()) {
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
 	if release.GetForce() {
@@ -1263,4 +1284,13 @@ func newModuleReleaseWithName(name string) *v1alpha1.ModuleRelease {
 			Name: name,
 		},
 	}
+}
+
+func isModuleReady(moduleManager moduleManager, moduleName string) bool {
+	basicModule := moduleManager.GetModule(moduleName)
+	if basicModule == nil {
+		return false
+	}
+
+	return basicModule.GetPhase() == addonmodules.Ready
 }

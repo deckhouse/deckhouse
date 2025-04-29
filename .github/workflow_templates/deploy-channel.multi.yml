@@ -260,8 +260,6 @@ is used if DECKHOUSE_REGISTRY_HOST is not set.
             if [[ ${enable_push} == "true" ]] ; then
               echo "⚓️ 📤 [$(date -u)] Push '${SRC_NAME}' image as ${DST}."
               docker image push ${DST}
-              # add date label to pushed image
-              crane mutate -l io.deckhouse.${RELEASE_CHANNEL}-released="$(date -u +%Y-%m-%dT%H:%M:%SZ)" ${DST}
             fi
 
             echo "⚓️ 🧹 [$(date -u)] Remove local tag for '${SRC_NAME}'."
@@ -335,6 +333,9 @@ is used if DECKHOUSE_REGISTRY_HOST is not set.
           echo "⚓️ 💫 [$(date -u)] Publish 'release-channel-version' image to rw-registry using tag ${RELEASE_CHANNEL}".
           pull_push_rmi 'release-channel-version' ${SOURCE_RELEASE_VERSION_IMAGE} ${PROD_RELEASE_VERSION_IMAGE}
 
+          # add date label to pushed image
+          crane mutate -l io.deckhouse.releasedate="$(date -u +%Y-%m-%dT%H:%M:%SZ)" ${PROD_RELEASE_VERSION_IMAGE}
+
           echo "⚓️  [$(date -u)] Remove local source images."
           echo "  Delete local 'dev' source image ${SOURCE_IMAGE}"
           docker image rmi ${SOURCE_IMAGE} || true
@@ -387,12 +388,6 @@ production:
   kubeconfig: KUBECONFIG_BASE64_PROD_25
   werf_namespace: deckhouse-web-production
   werf_env: web-production
-oldproduction:
-  job: deploy_channels_cm_prod_old
-  job_name: '[OLD] Deploy channels to production'
-  kubeconfig: KUBECONFIG_BASE64_PROD_SEL
-  werf_namespace: deckhouse-web-production
-  werf_env: web-production
 stage:
   job: deploy_channels_cm_stage
   job_name: Deploy channels to staging
@@ -416,14 +411,14 @@ stage:
       - run_deploy
     steps:
       {!{- tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
-      
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12.3'
 
       - name: Install dependencies
-        run: pip install ghapi=1.0.6 fastcore=1.7.28 kubernetes=32.0.1
+        run: pip install ghapi==1.0.6 fastcore==1.7.28 kubernetes==32.0.1
 
       - name: Prepare files to collect and deploy channels
         run: |
@@ -451,7 +446,7 @@ stage:
           {!{- range $env, $env_properties := $envs }!}
           {!{   printf "%s: ${{ secrets.%s }}" $env_properties.kubeconfig $env_properties.kubeconfig }!}
           {!{   printf "NAMESPACE_%s: \"%s\"" $env_properties.kubeconfig $env_properties.werf_namespace -}!}
-          {!{- end }!}          
+          {!{- end }!}
 
       - name: Upload artifacts
         uses: {!{ index (ds "actions") "actions/upload-artifact" }!}
@@ -467,11 +462,9 @@ stage:
     runs-on: [self-hosted, regular]
     needs:
       - post_deploy_preparation
-    env:
-      WERF_CHANNEL: "ea"
     steps:
       {!{- tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
-      
+
       - name: Download artifacts
         uses: {!{ index (ds "actions") "actions/download-artifact" }!}
         with:
@@ -479,9 +472,9 @@ stage:
           path: publish-channels
 
       - name: Converge
-        uses: werf/actions/converge@v1.2
+        uses: {!{ index (ds "actions") "werf/actions/converge" }!}
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          version: ${{env.WERF_VERSION}}
           kube-config-base64-data: "${{ secrets.{!{ $env_properties.kubeconfig }!} }}"
           env: {!{ $env_properties.werf_env }!}
         env:

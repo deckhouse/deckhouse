@@ -41,7 +41,7 @@ lang: ru
 kubectl exec -i -t -n d8-code praefect-0 -c praefect -- praefect -config /etc/gitaly/config.toml verify --virtual-storage <virtual_storage> --storage <gitaly_pod_name>
 ```
 
-Данные всех репозиториев на `<gitaly_pod_name>` будут помечены как устаревшие для приоритизации перепроверки.
+Данные всех репозиториев на `<gitaly_pod_name>` будут помечены как устаревшие для приоритезации перепроверки.
 Перепроверка будет работать асинхронно в фоновом режиме.
 
 ## Удаление модуля
@@ -57,4 +57,4 @@ kubectl exec -i -t -n d8-code praefect-0 -c praefect -- praefect -config /etc/gi
   `kubectl delete ns d8-code`.
   ```
 
-  > **Внимание**. Перед удалением секретов не забудьте сохранить `secrets/rails-secret`, иначе вы потеряете возможность восстановиться из существующих бекапов в будущем.
+  > **Внимание**. Перед удалением секретов не забудьте сохранить `secrets/rails-secret`, иначе вы потеряете возможность восстановиться из существующих бэкапов в будущем.

@@ -32,11 +32,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/process"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
@@ -110,6 +110,11 @@ var (
 			DefineFunc: commands.DefineAutoConvergeCommand,
 		},
 		{
+			Name:       "converge-migration",
+			Help:       "Migrate state from terraform to opentofu. Starting converge if cluster has not infrastructure changes.",
+			DefineFunc: commands.DefineConvergeMigrationCommand,
+		},
+		{
 			Name: "lock",
 			Help: "Converge cluster lock",
 		},
@@ -125,19 +130,24 @@ var (
 			DefineFunc: commands.DefineDestroyCommand,
 		},
 		{
+			Name:       "session",
+			Help:       "SSH tunnel proxy to Kubernetes cluster and save local kubeconfig for kubectl.",
+			DefineFunc: commands.DefineSessionCommand,
+		},
+		{
 			Name: "terraform",
-			Help: "Terraform commands.",
+			Help: "Infrastructure commands.",
 		},
 		{
 			Name:       "converge-exporter",
-			Help:       "Run terraform converge exporter.",
-			DefineFunc: commands.DefineTerraformConvergeExporterCommand,
+			Help:       "Run infrastructure converge exporter.",
+			DefineFunc: commands.DefineInfrastructureConvergeExporterCommand,
 			Parrent:    "terraform",
 		},
 		{
 			Name:       "check",
-			Help:       "Check differences between state of Kubernetes cluster and Terraform state.",
-			DefineFunc: commands.DefineTerraformCheckCommand,
+			Help:       "Check differences between state of Kubernetes cluster and infrastructure state.",
+			DefineFunc: commands.DefineInfrastructureCheckCommand,
 			Parrent:    "terraform",
 		},
 		{
@@ -251,7 +261,7 @@ var (
 		},
 		{
 			Name:       "create-deployment",
-			Help:       "Install deckhouse after terraform is applied successful.",
+			Help:       "Install deckhouse after infrastructure is applied successful.",
 			DefineFunc: commands.DefineDeckhouseCreateDeployment,
 			Parrent:    "deckhouse",
 		},
@@ -287,7 +297,7 @@ func main() {
 	tomb.RegisterOnShutdown("Restore terminal if needed", restoreTerminal())
 	tomb.RegisterOnShutdown("Stop default SSH session", process.DefaultSession.Stop)
 	tomb.RegisterOnShutdown("Clear dhctl temporary directory", cache.ClearTemporaryDirs)
-	tomb.RegisterOnShutdown("Clear terraform data temporary directory", cache.ClearTerraformDir)
+	tomb.RegisterOnShutdown("Clear infrastructure data temporary directory", cache.ClearInfrastructureDir)
 
 	go tomb.WaitForProcessInterruption()
 
@@ -475,7 +485,7 @@ func initGlobalVars() {
 	config.InitGlobalVars(dhctlPath)
 	commands.InitGlobalVars(dhctlPath)
 	app.InitGlobalVars(dhctlPath)
-	terraform.InitGlobalVars(dhctlPath)
+	infrastructure.InitGlobalVars(dhctlPath)
 	manifests.InitGlobalVars(dhctlPath)
 	template.InitGlobalVars(dhctlPath)
 }

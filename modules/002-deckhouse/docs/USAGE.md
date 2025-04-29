@@ -68,23 +68,7 @@ Manual confirmation of Deckhouse version updates is provided in the following ca
   kubectl patch DeckhouseRelease v1.66.2 --type=merge -p='{"approved": true}'
   ```
 
-- Disruptive updates confirmation is enabled.
-
-  This means that the parameter [update.disruptionApprovalMode](configuration.html#parameters-update-disruptionapprovalmode) in the `deckhouse` ModuleConfig is set to `Manual`. You can use the following command to set it to `Manual`:
-  
-  ```shell
-  kubectl patch mc deckhouse --type=merge -p='{"spec":{"update":{"disruptionApprovalMode":"Manual"}}}'
-  ```
-
-  To confirm a disruptive update, you need to set the annotation `release.deckhouse.io/disruption-approved=true` on the corresponding [DeckhouseRelease](../../cr.html#deckhouserelease) resource.
-  
-  Example:
-
-  ```shell
-  kubectl annotate DeckhouseRelease v1.66.2 release.deckhouse.io/disruption-approved=true
-  ```
-
-- If automatic application of potentially dangerous updates is disabled for a node group.
+- If automatic application of disruptive updates is disabled for a node group.
 
   This means that the corresponding NodeGroup has the parameter [spec.disruptions.approvalMode](../node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode) set to `Manual`.
 

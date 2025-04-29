@@ -182,8 +182,11 @@ func (r *reconciler) runModuleEventLoop(ctx context.Context) error {
 }
 
 func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alpha1.ModuleConfig) (ctrl.Result, error) {
-	// send event to addon-operator(it is not necessary for NotInstalled modules)
-	r.handler.HandleEvent(moduleConfig, config.EventUpdate)
+	// send an event to addon-operator only if the module exists, or it is the global one
+	basicModule := r.moduleManager.GetModule(moduleConfig.Name)
+	if moduleConfig.Name == moduleGlobal || basicModule != nil {
+		r.handler.HandleEvent(moduleConfig, config.EventUpdate)
+	}
 
 	if err := r.refreshModuleConfig(ctx, moduleConfig.Name); err != nil {
 		return ctrl.Result{Requeue: true}, nil

@@ -22,8 +22,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 )
 
-func ClearTerraformDir() {
-	// do not clean tmp dir, because user may need temporary files to debug terraform
+func ClearInfrastructureDir() {
+	// do not clean tmp dir, because user may need temporary files to debug infra
 	if app.IsDebug {
 		return
 	}
@@ -32,7 +32,7 @@ func ClearTerraformDir() {
 }
 
 func ClearTemporaryDirs() {
-	// do not clean tmp dir, because user may need temporary files to debug terraform
+	// do not clean tmp dir, because user may need temporary files to debug infra
 	if app.IsDebug {
 		return
 	}

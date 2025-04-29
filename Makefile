@@ -105,7 +105,7 @@ help:
 
 
 GOLANGCI_VERSION = 1.54.2
-TRIVY_VERSION= 0.55.0
+TRIVY_VERSION= 0.60.0
 PROMTOOL_VERSION = 2.37.0
 GATOR_VERSION = 3.9.0
 GH_VERSION = 2.52.0
@@ -149,14 +149,16 @@ tests-modules: ## Run unit tests for modules hooks and templates.
 	go test -timeout=${TESTS_TIMEOUT} -vet=off ${TESTS_PATH}
 
 dmt-lint:
-	docker run --rm -v ${PWD}:/deckhouse-src --user $(id -u):$(id -g) ubuntu /deckhouse-src/tools/dmt-lint.sh
+	export DMT_METRICS_URL="${DMT_METRICS_URL}"
+	export DMT_METRICS_TOKEN="${DMT_METRICS_TOKEN}"
+	docker run --rm -v ${PWD}:/deckhouse-src -e DMT_METRICS_URL="${DMT_METRICS_URL}" -e DMT_METRICS_TOKEN="${DMT_METRICS_TOKEN}" --user $(id -u):$(id -g) ubuntu /deckhouse-src/tools/dmt-lint.sh
 
 
 tests-openapi: ## Run tests against modules openapi values schemas.
-	go test -vet=off ./testing/openapi_cases/
+	go test -timeout=${TESTS_TIMEOUT} -vet=off ./testing/openapi_cases/
 
 tests-controller: ## Run deckhouse-controller unit tests.
-	go test ./deckhouse-controller/... -v
+	go test -timeout=${TESTS_TIMEOUT} ./deckhouse-controller/... -v
 
 tests-webhooks: bin/yq ## Run python webhooks unit tests.
 	./testing/webhooks/run.sh
@@ -205,7 +207,7 @@ lint-src-artifact: set-build-envs ## Run src-artifact stapel linter
 
 .PHONY: generate render-workflow
 generate: bin/werf ## Run all generate-* jobs in bulk.
-	cd tools; go generate
+	cd tools; go generate -v
 
 render-workflow: ## Generate CI workflow instructions.
 	./.github/render-workflows.sh
@@ -216,7 +218,7 @@ bin/regcopy: bin ## App to copy docker images to the Deckhouse registry
 bin/trivy-${TRIVY_VERSION}/trivy:
 	mkdir -p bin/trivy-${TRIVY_VERSION}
 	# curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ./bin/trivy-${TRIVY_VERSION} v${TRIVY_VERSION}
-	curl --header "PRIVATE-TOKEN: ${TRIVY_TOKEN}" https://${DECKHOUSE_PRIVATE_REPO}/api/v4/projects/${TRIVY_PROJECT_ID}/packages/generic/deckhouse-trivy/v${TRIVY_VERSION}/trivy -o bin/trivy-${TRIVY_VERSION}/trivy
+	curl https://${DECKHOUSE_PRIVATE_REPO}/api/v4/projects/${TRIVY_PROJECT_ID}/packages/generic/trivy-v${TRIVY_VERSION}/v${TRIVY_VERSION}/trivy -o bin/trivy-${TRIVY_VERSION}/trivy
 
 .PHONY: trivy
 bin/trivy: bin bin/trivy-${TRIVY_VERSION}/trivy
@@ -224,14 +226,10 @@ bin/trivy: bin bin/trivy-${TRIVY_VERSION}/trivy
 	chmod u+x bin/trivy-${TRIVY_VERSION}/trivy
 	ln -s ${PWD}/bin/trivy-${TRIVY_VERSION}/trivy bin/trivy
 
-.PHONY: cve-report cve-base-images
+.PHONY: cve-report
 cve-report: bin/trivy bin/jq ## Generate CVE report for a Deckhouse release.
   ##~ Options: SEVERITY=CRITICAL,HIGH REPO=registry.deckhouse.io TAG=v1.30.0
 	./tools/cve/d8-images.sh
-
-cve-base-images: bin/trivy bin/jq ## Check CVE in our base images.
-  ##~ Options: SEVERITY=CRITICAL,HIGH
-	./tools/cve/base-images.sh
 
 cve-base-images-check-default-user: bin/trivy bin/jq ## Check CVE in our base images.
   ##~ Options: SEVERITY=CRITICAL,HIGH
@@ -330,6 +328,11 @@ update-lib-helm: ## Update lib-helm.
 	##~ Options: version=MAJOR.MINOR.PATCH
 	cd helm_lib/ && yq -i '.dependencies[0].version = "$(version)"' Chart.yaml && helm dependency update && tar -xf charts/deckhouse_lib_helm-*.tgz -C charts/ && rm charts/deckhouse_lib_helm-*.tgz && git add Chart.yaml Chart.lock charts/*
 
+.PHONY: update-base-images-versions
+update-base-images-versions:
+	##~ Options: version=vMAJOR.MINOR.PATCH
+	cd candi && curl --fail -sSLO https://fox.flant.com/api/v4/projects/deckhouse%2Fbase-images/packages/generic/base_images/$(version)/base_images.yml
+
 ##@ Build
 .PHONY: build
 set-build-envs:
@@ -378,7 +381,7 @@ set-build-envs:
   ifeq ($(DECKHOUSE_PRIVATE_REPO),)
   	export DECKHOUSE_PRIVATE_REPO=https://github.com
   endif
-  
+
 	export WERF_REPO=$(DEV_REGISTRY_PATH)
 	export REGISTRY_SUFFIX=$(shell echo $(WERF_ENV) | tr '[:upper:]' '[:lower:]')
 	export SECONDARY_REPO=--secondary-repo $(DECKHOUSE_REGISTRY_HOST)/deckhouse/$(REGISTRY_SUFFIX)

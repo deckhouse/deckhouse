@@ -22,11 +22,12 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"path/filepath"
 	"registry-modules-watcher/internal"
 	"registry-modules-watcher/internal/backends"
 	"strings"
 
-	v1 "github.com/google/go-containerregistry/pkg/v1"
+	crv1 "github.com/google/go-containerregistry/pkg/v1"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/deckhouse/module-sdk/pkg/dependency/cr"
@@ -34,7 +35,7 @@ import (
 
 // Constants for directory structure
 var (
-	documentationDirs = []string{"docs", "openapi", "crds"}
+	documentationDirs = []string{"docs", "openapi", "openapi/conversions", "crds"}
 )
 
 const versionFileName = "version.json"
@@ -171,7 +172,7 @@ func (s *registryscanner) extractTar(ctx context.Context, version *internal.Vers
 	return tarFile, nil
 }
 
-func (s *registryscanner) extractDocumentation(image v1.Image) ([]byte, error) {
+func (s *registryscanner) extractDocumentation(image crv1.Image) ([]byte, error) {
 	readCloser, err := cr.Extract(image)
 	if err != nil {
 		return nil, fmt.Errorf("extract: %w", err)
@@ -222,20 +223,19 @@ func (s *registryscanner) copyDocumentationFiles(source io.Reader, tarWriter *ta
 
 		if isDocumentationFile(hdr.Name) {
 			buf := bytes.NewBuffer(nil)
-			if _, err := io.Copy(buf, tarReader); err != nil {
+			if _, err = io.Copy(buf, tarReader); err != nil {
 				return fmt.Errorf("copy file content: %w", err)
 			}
 
-			if err := tarWriter.WriteHeader(hdr); err != nil {
+			if err = tarWriter.WriteHeader(hdr); err != nil {
 				return fmt.Errorf("write file header: %w", err)
 			}
 
-			if _, err := tarWriter.Write(buf.Bytes()); err != nil {
+			if _, err = tarWriter.Write(buf.Bytes()); err != nil {
 				return fmt.Errorf("write file content: %w", err)
 			}
 
-			s.logger.Debug("copied file",
-				slog.String("file", hdr.Name))
+			s.logger.Debug("copied file", slog.String("file", hdr.Name))
 		}
 	}
 
@@ -243,6 +243,10 @@ func (s *registryscanner) copyDocumentationFiles(source io.Reader, tarWriter *ta
 }
 
 func isDocumentationFile(filename string) bool {
+	if filepath.Ext(filename) == ".go" {
+		return false
+	}
+
 	for _, dir := range documentationDirs {
 		if strings.Contains(filename, dir+"/") {
 			return true
@@ -251,7 +255,7 @@ func isDocumentationFile(filename string) bool {
 	return false
 }
 
-func getVersionFromImage(releaseImage v1.Image) (string, error) {
+func getVersionFromImage(releaseImage crv1.Image) (string, error) {
 	readCloser, err := cr.Extract(releaseImage)
 	if err != nil {
 		return "", fmt.Errorf("extract image: %w", err)

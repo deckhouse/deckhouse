@@ -9,15 +9,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"sort"
 	"strings"
 
-	"github.com/sirupsen/logrus"
-
 	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/pkg/log"
 
 	ovirtclientlog "github.com/ovirt/go-ovirt-client-log/v3"
 	ovirtclient "github.com/ovirt/go-ovirt-client/v3"
@@ -32,7 +30,7 @@ const (
 )
 
 type Discoverer struct {
-	logger *logrus.Entry
+	logger *log.Logger
 	config *CloudConfig
 }
 
@@ -72,7 +70,7 @@ func newCloudConfig() (*CloudConfig, error) {
 
 // Client Creates a zvirt client
 func (c *CloudConfig) client() (ovirtclient.ClientWithLegacySupport, error) {
-	logger := ovirtclientlog.NewGoLogger(log.Default())
+	logger := ovirtclientlog.NewGoLogger()
 
 	tls := ovirtclient.TLS()
 
@@ -97,7 +95,7 @@ func (c *CloudConfig) client() (ovirtclient.ClientWithLegacySupport, error) {
 	return client, nil
 }
 
-func NewDiscoverer(logger *logrus.Entry) *Discoverer {
+func NewDiscoverer(logger *log.Logger) *Discoverer {
 	config, err := newCloudConfig()
 	if err != nil {
 		logger.Fatalf("Cannot get opts from env: %v", err)
@@ -107,6 +105,10 @@ func NewDiscoverer(logger *logrus.Entry) *Discoverer {
 		logger: logger,
 		config: config,
 	}
+}
+
+func (d *Discoverer) CheckCloudConditions(ctx context.Context) ([]v1alpha1.CloudCondition, error) {
+	return nil, nil
 }
 
 func (d *Discoverer) DiscoveryData(

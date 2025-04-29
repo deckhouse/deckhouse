@@ -156,6 +156,25 @@
         ```bash
         kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
         ```
+
+  - alert: ModuleIsInMaintenanceMode
+    expr: sum(deckhouse_mm_module_maintenance{state="NoResourceReconciliation"}) by (moduleName) > 0
+    labels:
+      severity_level: "6"
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_ignore_labels: "name"
+      summary: |
+        Module `{{ $labels.moduleName }}` is running in maintenance mode.
+      description: |
+        Module `{{ $labels.moduleName }}` is running in maintenance mode. In this mode, its state is not reconciled, which prevents configuration or hook changes from being applied automatically.
+
+        To switch the module back to normal mode, edit the corresponding ModuleConfig resource with the following command:
+        
+        ```bash
+        kubectl patch moduleconfig {{ $labels.moduleName }} --type=json -p='[{"op": "remove", "path": "/spec/maintenance"}]'
+        ```
       
   - alert: DeckhouseReleaseNotificationNotSent
     expr: sum by (name) (d8_release_info{notificationNotSent="true"})

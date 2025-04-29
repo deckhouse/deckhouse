@@ -1,10 +1,8 @@
-.github/                        @name212 @RomanenkoDenys @Nikolay1224
+.github/                        @RomanenkoDenys @Nikolay1224
 000-common/                     @name212 @sprait
-001-priority-class/             @name212 @sprait
 002-deckhouse/                  @yalosev @ldmonster
 005-external-module-manager/    @yalosev @ldmonster
 007-registrypackages/           @RomanenkoDenys @name212 @sprait
-011-flow-schema/                @name212 @sprait
 015-admission-policy-engine/    @yalosev @ldmonster
 021-cni-cilium/                 @apolovov
 025-static-routing-manager/     @apolovov
@@ -56,16 +54,17 @@
 610-service-with-healthchecks   @apolovov
 650-runtime-audit-engine/       @name212 @sprait
 800-deckhouse-tools/            @RomanenkoDenys @name212 @sprait
-810-documentation/              @zhbert
+810-documentation/              @z9r5
 bashible-apiserver/             @name212 @sprait
 candi/                          @name212 @sprait
 cloud-controller-manager/       @aleksey-su
 csi/                            @AleksZimin
 deckhouse-controller/           @yalosev @ldmonster
 dhctl/                          @name212 @sprait
-docs/                           @zhbert
+docs/                           @z9r5
 helm_lib/                       @name212 @sprait
-crds/                           @nabokihms @zhbert
-openapi/                        @nabokihms @zhbert
+crds/                           @nabokihms @z9r5
+openapi/                        @nabokihms @z9r5
 /pkg/                           @yalosev @ldmonster
 /monitoring/prometheus-rules/   @sudoroot-null
+/release.yaml @yalosev @nabokihms

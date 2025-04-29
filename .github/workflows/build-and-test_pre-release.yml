@@ -27,7 +27,7 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_CHANNEL: "alpha"
+  WERF_VERSION: "v2.35.0"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -70,8 +70,8 @@ jobs:
       ref_full: ${{ steps.git_info.outputs.ref_full }}
       github_sha: ${{ steps.git_info.outputs.github_sha }}
       pr_number: ${{ steps.git_info.outputs.pr_number }}
-    # Skip the CI for automation PRs, e.g. changelog
-    if: ${{ github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
+    # Skip the CI for automation PRs, e.g. changelog, don't skip if Pull Request title contains "[run ci]".
+    if: ${{ contains(github.event.pull_request.title, '[run ci]') || github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
     steps:
       - id: git_info
         name: Get tag name and SHA
@@ -182,24 +182,38 @@ jobs:
       - name: Install werf CLI
         uses: werf/actions/install@v2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
 
-      - name: Set up Go 1.23
-        uses: actions/setup-go@v3
+      - name: Set up Go 1.24
+        uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: '1.24'
+          cache: false
 
       - name: Run go generate
         run: |
 
-          (cd tools && go generate)
-          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate)
+          (cd tools && go generate -v)
+          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
 
       - name: Check generated code
         run: |
           git diff --exit-code
     # </template: go_generate_template>
+
+
+      # <template: send_fail_report>
+      - name: Send fail report
+        if: failure()
+        env:
+          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          JOB_NAME: ${{ github.job }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
+        run: |
+          bash ./.github/scripts/send-report.sh
+      # </template: send_fail_report>
 
 
   workflow_render:
@@ -350,7 +364,7 @@ jobs:
       - name: Install werf CLI
         uses: werf/actions/install@v2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
 
       # <template: login_git_step>
@@ -524,6 +538,19 @@ jobs:
     # </template: build_template>
 
 
+      # <template: send_fail_report>
+      - name: Send fail report
+        if: failure()
+        env:
+          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          JOB_NAME: ${{ github.job }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
+        run: |
+          bash ./.github/scripts/send-report.sh
+      # </template: send_fail_report>
+
+
   doc_web_build:
     name: Doc web build
     # Wait for success build of modules.
@@ -602,7 +629,7 @@ jobs:
       - name: Run doc web build
         uses: werf/actions/build@v2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          version: ${{env.WERF_VERSION}}
         env:
           WERF_DIR: "docs/documentation"
           WERF_LOG_VERBOSE: "on"
@@ -690,7 +717,7 @@ jobs:
       - name: Run main web build
         uses: werf/actions/build@v2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          version: ${{env.WERF_VERSION}}
         env:
           WERF_DIR: "docs/site"
           WERF_LOG_VERBOSE: "on"
@@ -775,7 +802,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images/golang:1.23.6-bullseye@sha256:fad5b33791a319ba1c910a03a33575ea34fc8e142695a64be9a1a228e74af11e"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images@sha256:15a61588f40a0adee525ca956f70d0e40eb9bc0a3220ef1bdc3cb4f66e241b28"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
@@ -814,7 +841,6 @@ jobs:
     # </template: tests_webhooks_template>
 
   tests_dmt_lint:
-    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: Tests DMT lint
     needs:
     - git_info
@@ -838,6 +864,9 @@ jobs:
           fetch-depth: 0
       # </template: checkout_full_step>
       - name: DMT lint
+        env:
+          DMT_METRICS_URL: "${{ secrets.DMT_METRICS_URL }}"
+          DMT_METRICS_TOKEN: "${{ secrets.DMT_METRICS_TOKEN }}"
         run: |
           make dmt-lint
     # </template: tests_dmt_lint>
@@ -1178,7 +1207,7 @@ jobs:
       - name: Install werf CLI
         uses: werf/actions/install@v2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
 
       - name: Prepare site structure
@@ -1454,7 +1483,7 @@ jobs:
       - name: Deploy documentation to production
         uses: werf/actions/converge@v2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          version: ${{env.WERF_VERSION}}
           kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_PROD_25 }}"
           env: web-production
         env:
@@ -1578,7 +1607,7 @@ jobs:
       - name: Deploy documentation to stage
         uses: werf/actions/converge@v2
         with:
-          channel: ${{env.WERF_CHANNEL}}
+          version: ${{env.WERF_VERSION}}
           kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_DEV }}"
           env: web-stage
         env:

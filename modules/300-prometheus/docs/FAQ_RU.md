@@ -72,9 +72,19 @@ spec:
 ...
 ```
 
+{% endraw %}
+
 {% alert level="warning" %}
 Системные и добавленные через [GrafanaDashboardDefinition](cr.html#grafanadashboarddefinition) дашборды нельзя изменить через интерфейс Grafana.
+
+Алерты, настроенные в панели dashboard, не работают с шаблонами datasource — такой dashboard является невалидным и не импортируется. В версии Grafana 9.0 функционал legacy alerting был признан [устаревшим](https://grafana.com/docs/grafana/latest/breaking-changes/breaking-changes-v10-0/#description) и заменён на Grafana Alerting. В связи с этим, мы не рекомендуем использовать legacy alerting (оповещения панели мониторинга) в dashboards.
 {% endalert %}
+
+{% alert level="info" %}
+Если после применения дашборд не появляется в Grafana, возможно, в JSON файле дашборда присутствует ошибка. Чтобы определить источник проблемы, воспользуйтесь командой `kubectl logs -n d8-monitoring deployments/grafana-v10 dashboard-provisioner` для просмотра логов компонента, который осуществляет применение дашбордов.
+{% endalert %}
+
+{% raw %}
 
 ## Как добавить алерты и/или recording-правила для вашего проекта?
 

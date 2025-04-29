@@ -22,11 +22,9 @@ import (
 	"log/slog"
 	"os"
 	"sync"
-	"syscall"
 	"time"
 
 	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
-	envmgr "github.com/flant/addon-operator/pkg/module_manager/environment_manager"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/go-logr/logr"
@@ -64,8 +62,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/moduledependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
-
-var DeckhouseVersion string
 
 const (
 	docsLeaseLabel = "deckhouse.io/documentation-builder-sync"
@@ -232,7 +228,7 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 	loader := moduleloader.New(runtimeManager.GetClient(), version, operator.ModuleManager.ModulesDir, operator.ModuleManager.GlobalHooksDir, dc, embeddedPolicy, logger.Named("module-loader"))
 	operator.ModuleManager.SetModuleLoader(loader)
 
-	err = deckhouserelease.NewDeckhouseReleaseController(ctx, runtimeManager, dc, operator.ModuleManager, settingsContainer, operator.MetricStorage, preflightCountDown, DeckhouseVersion, logger.Named("deckhouse-release-controller"))
+	err = deckhouserelease.NewDeckhouseReleaseController(ctx, runtimeManager, dc, operator.ModuleManager, settingsContainer, operator.MetricStorage, preflightCountDown, version, logger.Named("deckhouse-release-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("create deckhouse release controller: %w", err)
 	}
@@ -257,9 +253,9 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 		return nil, fmt.Errorf("register module pull override controller: %w", err)
 	}
 
-	err = docbuilder.NewModuleDocumentationController(runtimeManager, dc, logger.Named("module-documentation-controller"))
+	err = docbuilder.RegisterController(runtimeManager, dc, logger.Named("module-documentation-controller"))
 	if err != nil {
-		return nil, fmt.Errorf("create module documentation controller: %w", err)
+		return nil, fmt.Errorf("register module documentation controller: %w", err)
 	}
 
 	validation.RegisterAdmissionHandlers(
@@ -284,84 +280,7 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 }
 
 func setModulesEnvironment(operator *addonoperator.AddonOperator) {
-	operator.ModuleManager.AddObjectsToChrootEnvironment([]envmgr.ObjectDescriptor{
-		{
-			Source:            "/deckhouse/python_lib",
-			Flags:             syscall.MS_BIND | syscall.MS_RDONLY,
-			Type:              envmgr.Mount,
-			TargetEnvironment: envmgr.ShellHookEnvironment,
-		},
-		{
-			Source:            "/deckhouse/candi",
-			Flags:             syscall.MS_BIND | syscall.MS_RDONLY,
-			Type:              envmgr.Mount,
-			TargetEnvironment: envmgr.ShellHookEnvironment,
-		},
-		{
-			Source:            "/deckhouse/helm_lib",
-			Flags:             syscall.MS_BIND | syscall.MS_RDONLY,
-			Type:              envmgr.Mount,
-			TargetEnvironment: envmgr.ShellHookEnvironment,
-		},
-		{
-			Source:            "/chroot/tmp",
-			Target:            "/tmp",
-			Flags:             syscall.MS_BIND,
-			Type:              envmgr.Mount,
-			TargetEnvironment: envmgr.EnabledScriptEnvironment,
-		},
-		{
-			Source:            "/usr",
-			Flags:             syscall.MS_BIND | syscall.MS_RDONLY,
-			Type:              envmgr.Mount,
-			TargetEnvironment: envmgr.EnabledScriptEnvironment,
-		},
-		{
-			Source:            "/bin",
-			Flags:             syscall.MS_BIND | syscall.MS_RDONLY,
-			Type:              envmgr.Mount,
-			TargetEnvironment: envmgr.EnabledScriptEnvironment,
-		},
-		{
-			Source:            "/lib",
-			Flags:             syscall.MS_BIND | syscall.MS_RDONLY,
-			Type:              envmgr.Mount,
-			TargetEnvironment: envmgr.EnabledScriptEnvironment,
-		},
-		{
-			Source:            "/lib64",
-			Flags:             syscall.MS_BIND | syscall.MS_RDONLY,
-			Type:              envmgr.Mount,
-			TargetEnvironment: envmgr.EnabledScriptEnvironment,
-		},
-		{
-			Source:            "/deckhouse/shell_lib",
-			Flags:             syscall.MS_BIND | syscall.MS_RDONLY,
-			Type:              envmgr.Mount,
-			TargetEnvironment: envmgr.EnabledScriptEnvironment,
-		},
-		{
-			Source:            "/deckhouse/shell-operator",
-			Flags:             syscall.MS_BIND | syscall.MS_RDONLY,
-			Type:              envmgr.Mount,
-			TargetEnvironment: envmgr.EnabledScriptEnvironment,
-		},
-		{
-			Source:            "/proc/sys/kernel/cap_last_cap",
-			Type:              envmgr.File,
-			TargetEnvironment: envmgr.EnabledScriptEnvironment,
-		},
-		{
-			Source:            "/deckhouse/shell_lib.sh",
-			Type:              envmgr.File,
-			TargetEnvironment: envmgr.EnabledScriptEnvironment,
-		},
-		{
-			Target:            "/dev/null",
-			Type:              envmgr.DevNull,
-			TargetEnvironment: envmgr.EnabledScriptEnvironment,
-		},
-	}...)
+	operator.ModuleManager.AddObjectsToChrootEnvironment(getChrootObjectDescriptors()...)
 }
 
 // Start loads and ensures modules from FS, starts controllers and runs deckhouse config event loop

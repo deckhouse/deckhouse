@@ -2,22 +2,22 @@
 - add: /ee/be/modules/040-node-manager/openapi/config-values.yaml
   to: /deckhouse/modules/040-node-manager/openapi/config-values.yaml
   stageDependencies:
-    setup:
+    install:
         - '**/*'
 - add: /ee/be/modules/040-node-manager/openapi/doc-ru-config-values.yaml
   to: /deckhouse/modules/040-node-manager/openapi/doc-ru-config-values.yaml
   stageDependencies:
-    setup:
+    install:
         - '**/*'
 - add: /ee/be/modules/040-node-manager/openapi/openapi-case-tests.yaml
   to: /deckhouse/modules/040-node-manager/openapi/openapi-case-tests.yaml
   stageDependencies:
-    setup:
+    install:
         - '**/*'
 - add: /ee/be/modules/040-node-manager/openapi/values.yaml
   to: /deckhouse/modules/040-node-manager/openapi/values.yaml
   stageDependencies:
-    setup:
+    install:
         - '**/*'
 - add: /ee/be/modules/140-user-authz/templates/webhook
   to: /deckhouse/modules/140-user-authz/templates/webhook
@@ -61,22 +61,22 @@
 - add: /ee/se-plus/modules/021-cni-cilium/crds/doc-ru-egressgatewaypolicies.yaml
   to: /deckhouse/modules/021-cni-cilium/crds/doc-ru-egressgatewaypolicies.yaml
   stageDependencies:
-    setup:
+    install:
         - '**/*'
 - add: /ee/se-plus/modules/021-cni-cilium/crds/doc-ru-egressgateways.yaml
   to: /deckhouse/modules/021-cni-cilium/crds/doc-ru-egressgateways.yaml
   stageDependencies:
-    setup:
+    install:
         - '**/*'
 - add: /ee/se-plus/modules/021-cni-cilium/crds/egressgatewaypolicies.yaml
   to: /deckhouse/modules/021-cni-cilium/crds/egressgatewaypolicies.yaml
   stageDependencies:
-    setup:
+    install:
         - '**/*'
 - add: /ee/se-plus/modules/021-cni-cilium/crds/egressgateways.yaml
   to: /deckhouse/modules/021-cni-cilium/crds/egressgateways.yaml
   stageDependencies:
-    setup:
+    install:
         - '**/*'
 - add: /ee/se-plus/modules/021-cni-cilium/crds/internal
   to: /deckhouse/modules/021-cni-cilium/crds/internal
@@ -146,7 +146,7 @@
 - add: /ee/se-plus/modules/021-cni-cilium/monitoring/prometheus-rules/egressgatewaypolicies.yaml
   to: /deckhouse/modules/021-cni-cilium/monitoring/prometheus-rules/egressgatewaypolicies.yaml
   stageDependencies:
-    setup:
+    install:
         - '**/*'
 - add: /ee/se-plus/modules/030-cloud-provider-vsphere
   to: /deckhouse/modules/030-cloud-provider-vsphere
@@ -398,47 +398,47 @@
 - add: /ee/modules/110-istio/templates/validations.yaml
   to: /deckhouse/modules/110-istio/templates/validations.yaml
   stageDependencies:
-    setup:
+    install:
         - '**/*'
 - add: /ee/modules/110-istio/crds/doc-ru-istiofederation.yaml
   to: /deckhouse/modules/110-istio/crds/doc-ru-istiofederation.yaml
   stageDependencies:
-    setup:
+    install:
         - '**/*'
 - add: /ee/modules/110-istio/crds/doc-ru-istiomulticluster.yaml
   to: /deckhouse/modules/110-istio/crds/doc-ru-istiomulticluster.yaml
   stageDependencies:
-    setup:
+    install:
         - '**/*'
 - add: /ee/modules/110-istio/crds/istiofederation.yaml
   to: /deckhouse/modules/110-istio/crds/istiofederation.yaml
   stageDependencies:
-    setup:
+    install:
         - '**/*'
 - add: /ee/modules/110-istio/crds/istiomulticluster.yaml
   to: /deckhouse/modules/110-istio/crds/istiomulticluster.yaml
   stageDependencies:
-    setup:
+    install:
         - '**/*'
 - add: /ee/modules/110-istio/monitoring/prometheus-rules/dataplane.yaml
   to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/dataplane.yaml
   stageDependencies:
-    setup:
+    install:
         - '**/*'
 - add: /ee/modules/110-istio/monitoring/prometheus-rules/federation.yaml
   to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/federation.yaml
   stageDependencies:
-    setup:
+    install:
         - '**/*'
 - add: /ee/modules/110-istio/monitoring/prometheus-rules/multicluster.yaml
   to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/multicluster.yaml
   stageDependencies:
-    setup:
+    install:
         - '**/*'
 - add: /ee/modules/380-metallb/templates/_helper.tpl
   to: /deckhouse/modules/380-metallb/templates/_helper.tpl
   stageDependencies:
-    setup:
+    install:
         - '**/*'
 - add: /ee/modules/380-metallb/templates/controller
   to: /deckhouse/modules/380-metallb/templates/controller
@@ -466,20 +466,15 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-- add: /ee/modules/380-metallb/monitoring/grafana-dashboards/kubernetes-cluster/metallb-pool.json
-  to: /deckhouse/modules/380-metallb/monitoring/grafana-dashboards/kubernetes-cluster/metallb-pool.json
+- add: /ee/modules/380-metallb/monitoring/grafana-dashboards/kubernetes-cluster/metallb-bgp.json
+  to: /deckhouse/modules/380-metallb/monitoring/grafana-dashboards/kubernetes-cluster/metallb-bgp.json
   stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/modules/380-metallb/monitoring/grafana-dashboards/kubernetes-cluster/metallb.json
-  to: /deckhouse/modules/380-metallb/monitoring/grafana-dashboards/kubernetes-cluster/metallb.json
-  stageDependencies:
-    setup:
+    install:
         - '**/*'
 - add: /ee/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
   to: /deckhouse/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
   stageDependencies:
-    setup:
+    install:
         - '**/*'
 - add: /ee/modules/450-keepalived
   to: /deckhouse/modules/450-keepalived

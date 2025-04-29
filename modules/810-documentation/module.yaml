@@ -2,6 +2,9 @@ name: documentation
 weight: 810
 description: |
   Documentation module
+descriptions:
+  en: Documentation module
+namespace: d8-system
 
 requirements:
   bootstrapped: true
