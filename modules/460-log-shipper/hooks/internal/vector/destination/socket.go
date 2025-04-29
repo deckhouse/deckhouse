@@ -64,7 +64,7 @@ func NewSocket(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Socket {
 		if spec.TCP.TLS.VerifyHostname != nil {
 			tls.VerifyHostname = *spec.TCP.TLS.VerifyHostname
 		}
-		if spec.TCP.TLS.CAFile != "" || spec.TCP.TLS.CertFile != "" || spec.TCP.TLS.KeyFile != "" {
+		if spec.TCP.TLS.CAFile != "" || spec.TCP.TLS.CertFile != "" {
 			tls.Enabled = true
 		}
 
