@@ -74,6 +74,7 @@ shell:
   - |
         echo "Ruby: $(ruby --version)"
         echo "Gem: $(gem --version)"
+        gem install jekyll-asciidoc
         bundle --version
   setup:
   - |
