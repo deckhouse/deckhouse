@@ -1,5 +1,6 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
+fromCacheVersion: "2025.04.29.0"
 imageSpec:
   config:
     env: { "WORKDIR": "/" }
