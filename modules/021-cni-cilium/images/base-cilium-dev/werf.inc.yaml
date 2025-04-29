@@ -1,5 +1,5 @@
 # src of image BASE_ALT_DEV_CILIUM in candi/image_versions.yml
-{{- $protocVersion := "29.3" }}
+{{- $protocVersion := "30.2" }}
 {{- $bazelVersions := "6.5.0" }}
 {{- $bazeliskVersions := "v1.20.0" }}
 #
@@ -13,12 +13,12 @@
 # #####################################################################
 # BASE_DEV image for build binaries of all cilium components (based on Ubuntu)
 # based on original images: runtime, builder, compilers, cilium-envoy, iptables
-# Based on https://github.com/cilium/cilium/blob/v1.17.2/images/runtime/Dockerfile
-# and https://github.com/cilium/cilium/blob/v1.17.2/images/runtime/install-runtime-deps.sh
-# and https://github.com/cilium/cilium/blob/v1.17.2/images/builder/Dockerfile
+# Based on https://github.com/cilium/cilium/blob/v1.17.3/images/runtime/Dockerfile
+# and https://github.com/cilium/cilium/blob/v1.17.3/images/runtime/install-runtime-deps.sh
+# and https://github.com/cilium/cilium/blob/v1.17.3/images/builder/Dockerfile
 # and https://github.com/cilium/image-tools/blob/063fa0d879d9560b85b6134c48ece08e672fa057/images/compilers/Dockerfile
 # and https://github.com/cilium/image-tools/blob/063fa0d879d9560b85b6134c48ece08e672fa057/images/compilers/install-deps.sh
-# and https://github.com/cilium/cilium/blob/v1.17.2/images/cilium/Dockerfile#L9
+# and https://github.com/cilium/cilium/blob/v1.17.3/images/cilium/Dockerfile#L9
 # and https://github.com/cilium/proxy/blob/958bef243c6c66fcfd73ca319f2eb49fff1eb2ae/Dockerfile.builder
 # and https://github.com/cilium/image-tools/blob/0e4de6ffe79e97a9795f1ce887a45026e1af22a7/images/iptables/Dockerfile
 #
@@ -94,7 +94,7 @@ shell:
   - chmod o+rx /usr/local/bin/protoc && chmod o+rX -R /usr/local/include/google/
   # Install protoc plugins
   - git clone --depth 1 --branch cmd/protoc-gen-go-grpc/v1.5.1 {{ $.SOURCE_REPO }}/grpc/grpc-go.git /src/grpc-go
-  - git clone --depth 1 --branch v1.36.5 {{ $.SOURCE_REPO }}/protocolbuffers/protobuf-go.git /src/protobuf-go
+  - git clone --depth 1 --branch v1.36.6 {{ $.SOURCE_REPO }}/protocolbuffers/protobuf-go.git /src/protobuf-go
   - git clone --depth 1 --branch v1.5.0 {{ $.SOURCE_REPO }}/mfridman/protoc-gen-go-json.git /src/protoc-gen-go-json
   - git clone --depth 1 --branch v1.5.1 {{ $.SOURCE_REPO }}/pseudomuto/protoc-gen-doc.git /src/protoc-gen-doc
   - cd /src/grpc-go/cmd/protoc-gen-go-grpc && go install
