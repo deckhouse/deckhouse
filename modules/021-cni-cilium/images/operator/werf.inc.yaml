@@ -1,6 +1,6 @@
-{{- $ciliumVersion := "1.17.2" }}
+{{- $ciliumVersion := "1.17.3" }}
 # #####################################################################
-# Based on https://github.com/cilium/cilium/blob/v1.17.2/images/operator/Dockerfile
+# Based on https://github.com/cilium/cilium/blob/v1.17.3/images/operator/Dockerfile
 # #####################################################################
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact

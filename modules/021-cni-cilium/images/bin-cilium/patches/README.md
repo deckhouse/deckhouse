@@ -49,6 +49,3 @@ While we were previously satisfied with the older behavior, the agent is now una
 
 Please remove this change after `CES` becomes Stable. <https://github.com/cilium/cilium/issues/31904#issuecomment-2647858564>
 
-## 009-tshoot-envoy-tls.patch
-
-009-tshoot-envoy-tls.patch

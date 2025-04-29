@@ -5,7 +5,7 @@
 # Build LLVM binaries (based on base-cilium-dev)
 # Original IMAGE_TAG of LLVM is 1732033893-de666b6
 # Corresponding commit de666b61919632fb1e91fcf6259531f6bee467ee (https://github.com/cilium/image-tools/tree/de666b61919632fb1e91fcf6259531f6bee467ee)
-# Based on https://github.com/cilium/cilium/blob/v1.17.2/images/runtime/Dockerfile#L8
+# Based on https://github.com/cilium/cilium/blob/v1.17.3/images/runtime/Dockerfile#L8
 # and https://github.com/cilium/image-tools/blob/de666b61919632fb1e91fcf6259531f6bee467ee/images/llvm/Dockerfile
 # and https://github.com/cilium/image-tools/blob/de666b61919632fb1e91fcf6259531f6bee467ee/images/llvm/checkout-llvm.sh
 # and https://github.com/cilium/image-tools/blob/de666b61919632fb1e91fcf6259531f6bee467ee/images/llvm/build-llvm-native.sh
