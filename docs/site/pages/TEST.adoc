@@ -110,3 +110,45 @@ TIP: They can contain any type of content.
 const { expect, expectCalledWith, heredoc } = require('../test/test-utils')
 ----
 ****
+
+* Привет! +
+
+TIP: They can contain any type of content.
+
+* Привет! +
+
+TIP: They can contain any type of content.
+
+.Наименование таблицы
+[cols="2,1,1,1,1", hrows=2]
+|====
+.2+|Головка
+2+|Заголовок графы 1
+2+|Заголовок графы 2
+
+|Подзаголовок графы 1.1
+|Подзаголовок графы 1.2
+|Подзаголовок графы 2.1
+|Подзаголовок графы 2.2
+
+|Заголовок боковика 1
+|
+|
+|
+|
+
+|Заголовок боковика 2
+|
+|
+|
+|
+
+|Заголовок боковика 3
+|
+|
+|
+|
+
+|====
+
+
