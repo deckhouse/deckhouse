@@ -183,10 +183,11 @@ func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolesc
 
 	s.checker.imageDescriptorProvider = NewFakeImageDescriptorProvider(s.T()).
 		ExpectReference(ref).
-		Return(&v1.Descriptor{Digest: v1.Hash{
-			Algorithm: "sha256",
-			Hex:       "95693712d292a6d2e1de6052a0b2189210501393f162616f5d21f2c9b5152129",
-		}}, &v1.ConfigFile{
+		Return(&v1.Descriptor{
+			Digest: v1.Hash{
+				Algorithm: "sha256",
+				Hex:       "95693712d292a6d2e1de6052a0b2189210501393f162616f5d21f2c9b5152129",
+			}}, &v1.ConfigFile{
 			Config: v1.Config{Labels: map[string]string{
 				"io.deckhouse.edition": "test",
 			}}}, nil)
@@ -212,10 +213,11 @@ func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolesc
 
 	s.checker.imageDescriptorProvider = NewFakeImageDescriptorProvider(s.T()).
 		ExpectReference(ref).
-		Return(&v1.Descriptor{Digest: v1.Hash{
-			Algorithm: "sha256",
-			Hex:       "95693712d292a6d2e1de6052a0b2189210501393f162616f5d21f2c9b5152129",
-		}}, &v1.ConfigFile{
+		Return(&v1.Descriptor{
+			Digest: v1.Hash{
+				Algorithm: "sha256",
+				Hex:       "95693712d292a6d2e1de6052a0b2189210501393f162616f5d21f2c9b5152129",
+			}}, &v1.ConfigFile{
 			Config: v1.Config{Labels: map[string]string{
 				"io.deckhouse.edition": "test",
 			}}}, nil)
