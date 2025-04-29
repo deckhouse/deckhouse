@@ -1,6 +1,6 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
-fromCacheVersion: "2025.04.29.2"
+fromCacheVersion: "2025.04.29.3"
 imageSpec:
   config:
     env: { "WORKDIR": "/" }
@@ -12,6 +12,7 @@ import:
   before: setup
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+fromCacheVersion: "2025.04.29.0"
 fromImage: common/src-artifact
 final: false
 shell:
