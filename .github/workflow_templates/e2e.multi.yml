@@ -35,12 +35,11 @@ $CI_COMMIT_REF_SLUG is a tag of published deckhouse images. It has a form
 {!{- $providerNames := slice "AWS" "Azure" "GCP" "Yandex.Cloud" "OpenStack" "vSphere" "VCD" "Static" "EKS" -}!}
 {!{- $criNames := slice "Containerd" -}!}
 {!{- $kubernetesVersions := slice "1.28" "1.29" "1.30" "1.31" "1.32" "Automatic" -}!}
-{!{- $commanderProviders := "yandex-cloud" -}!}
 
 {!{- range $providerName := $providerNames -}!}
 {!{-   $provider := $providerName | replaceAll "." "-" | toLower -}!}
 {!{-   $kubernetesDefaultVersion := (tmpl.Exec "e2e_kubernetes_default_version" $ | strings.TrimSpace ) -}!}
-{!{-   $ctx := dict "provider" $provider "commanderProviders" $commanderProviders "providerName" $providerName "criNames" $criNames "kubernetesVersions" $kubernetesVersions "kubernetesDefaultVersion" $kubernetesDefaultVersion }!}
+{!{-   $ctx := dict "provider" $provider "providerName" $providerName "criNames" $criNames "kubernetesVersions" $kubernetesVersions "kubernetesDefaultVersion" $kubernetesDefaultVersion }!}
 {!{-   $outFile := printf "e2e-%s.yml" $provider }!}
 {!{-   $outPath := filepath.Join (getenv "OUTDIR") $outFile }!}
 {!{-   tmpl.Exec "e2e_workflow_template" $ctx | file.Write $outPath }!}

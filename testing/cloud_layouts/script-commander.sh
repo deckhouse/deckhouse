@@ -134,6 +134,19 @@ function prepare_environment() {
     SERVICE_ACCOUNT_JSON=$LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON
     ssh_user="redos"
     cluster_template_id="6a47d23a-e16f-4e7a-bf57-a65f7c05e8ae"
+    values="{
+      \"branch\": \"${DEV_BRANCH}\",
+      \"prefix\": \"a${PREFIX}\",
+      \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
+      \"defaultCRI\": \"${CRI}\",
+      \"masterCount\": \"${MASTERS_COUNT}\",
+      \"cloudId\": \"${CLOUD_ID}\",
+      \"folderId\": \"${FOLDER_ID}\",
+      \"serviceAccountJson\": \"${SERVICE_ACCOUNT_JSON}\",
+      \"sshPrivateKey\": \"${SSH_KEY}\",
+      \"sshUser\": \"${ssh_user}\",
+      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\"
+    }"
     ;;
 
   "GCP")
@@ -147,13 +160,22 @@ function prepare_environment() {
     ;;
 
   "AWS")
-    # shellcheck disable=SC2016
-    env AWS_ACCESS_KEY="$(base64 -d <<< "$LAYOUT_AWS_ACCESS_KEY")" AWS_SECRET_ACCESS_KEY="$(base64 -d <<< "$LAYOUT_AWS_SECRET_ACCESS_KEY")" \
-        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" MASTERS_COUNT="$MASTERS_COUNT" \
-        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${AWS_ACCESS_KEY} ${AWS_SECRET_ACCESS_KEY} ${MASTERS_COUNT}' \
-        <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
-
+    AWS_ACCESS_KEY="$(base64 -d <<< "$LAYOUT_AWS_ACCESS_KEY")"
+    AWS_SECRET_ACCESS_KEY="$(base64 -d <<< "$LAYOUT_AWS_SECRET_ACCESS_KEY")"
     ssh_user="ec2-user"
+    cluster_template_id="9b567623-91a9-4493-96de-f5c0b6acacfe"
+    values="{
+      \"branch\": \"${DEV_BRANCH}\",
+      \"prefix\": \"a${PREFIX}\",
+      \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
+      \"defaultCRI\": \"${CRI}\",
+      \"masterCount\": \"${MASTERS_COUNT}\",
+      \"AWSAccessKey\": \"${AWS_ACCESS_KEY}\",
+      \"AWSSecretKey\": \"${AWS_SECRET_ACCESS_KEY}\",
+      \"sshPrivateKey\": \"${SSH_KEY}\",
+      \"sshUser\": \"${ssh_user}\",
+      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\"
+    }"
     ;;
 
   "Azure")
@@ -457,19 +479,7 @@ function run-test() {
   payload="{
     \"name\": \"${PREFIX}\",
     \"cluster_template_version_id\": \"${cluster_template_version_id}\",
-    \"values\": {
-        \"branch\": \"${DEV_BRANCH}\",
-        \"prefix\": \"a${PREFIX}\",
-        \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
-        \"defaultCRI\": \"${CRI}\",
-        \"masterCount\": \"${MASTERS_COUNT}\",
-        \"cloudId\": \"${CLOUD_ID}\",
-        \"folderId\": \"${FOLDER_ID}\",
-        \"serviceAccountJson\": \"${SERVICE_ACCOUNT_JSON}\",
-        \"sshPrivateKey\": \"${SSH_KEY}\",
-        \"sshUser\": \"${ssh_user}\",
-        \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\"
-    }
+    \"values\": ${values}
   }"
 
   echo "Bootstrap payload: ${payload}"
