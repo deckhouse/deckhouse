@@ -50,10 +50,10 @@ jobs:
 {!{/* Jobs for each CRI and Kubernetes version */}!}
 {!{- $criName := "Containerd" -}!}
 {!{- $kubernetesVersion := "1.29" -}!}
-{!{- $providerNames := slice "AWS" "EKS" "GCP" "Yandex.Cloud" "OpenStack" "vSphere" "VCD" "Static" -}!}
+{!{- $providerNames := slice "AWS" "EKS" "Azure" "GCP" "Yandex.Cloud" "OpenStack" "vSphere" "VCD" "Static" -}!}
 {!{- $commanderProviders := "yandex-cloud" -}!}
 {!{- if $enableWorkflowOnTestRepos -}!}
-{!{-   $providerNames = slice "AWS" "OpenStack" -}!}
+{!{-   $providerNames = slice "AWS" "OpenStack" "Azure" -}!}
 {!{- end -}!}
 {!{- range $providerName := $providerNames -}!}
 {!{-   $provider := $providerName | replaceAll "." "-" | toLower -}!}
