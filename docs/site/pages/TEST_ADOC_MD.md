@@ -5,5 +5,6 @@ description: adoc tests.
 lang: ru
 ---
 
-{% include table.adoc %}
+{% capture my_include %}{% include table.adoc %}{% endcapture %}
+{{ my_include | asciidocify }}
 
