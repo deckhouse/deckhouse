@@ -76,11 +76,11 @@ spec:
 d8 k -n d8-csi-s3 get pod -owide -w
 ```
 
-## Известные ограничение GeeseFS
+## Ограничения
 
 S3 не является полноценной файловой системой, поэтому существуют определенные ограничения. Совместимость с POSIX зависит от используемого монтирующего модуля и провайдера S3. Некоторые хранилища могут не гарантировать консистентность данных [детали](https://github.com/gaul/are-we-consistent-yet#observed-consistency).
 
-Вы можете просмотреть таблицу совместимости с POSIX [здесь](https://github.com/yandex-cloud/geesefs#posix-compatibility-matrix).
+Вы можете просмотреть таблицу совместимости с POSIX [тут](https://github.com/yandex-cloud/geesefs#posix-compatibility-matrix).
 
 Основные ограничения:
 

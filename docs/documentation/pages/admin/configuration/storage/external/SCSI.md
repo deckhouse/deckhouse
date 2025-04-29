@@ -49,7 +49,7 @@ spec:
 EOF
 ```
 
-Wait for the module to transition to the `Ready` state.
+Wait for the module to transition to the `Ready` state. Verify the module’s status using the command:
 
 ```shell
 d8 k get module csi-scsi-generic -w
@@ -121,7 +121,7 @@ EOF
 
 Note that the example above uses two [SCSITargets](../../../reference/cr/scsitarget/). You can create multiple [SCSITargets](../../../reference/cr/scsitarget/) for either the same or different storage systems. This allows for the use of `multipath` to improve failover and performance.
 
-After creating [SCSITarget](../../../reference/cr/scsitarget/), verify their status. The `Phase` field should be `Created`.
+Verify the creation of the object with the following command. The `Phase` field should be `Created`:
 
 ```shell
 d8 k get scsitargets.storage.deckhouse.io <scsitarget name>
@@ -147,7 +147,7 @@ EOF
 
 Pay attention to the `scsiDeviceSelector`. This field is used to select the [SCSITarget](../../../reference/cr/scsitarget/) for PV creation based on labels. In the example above, all [SCSITargets](../../../reference/cr/scsitarget/) with the label `my-key: some-label-value` are selected. This label will be applied to all devices detected within the specified [SCSITarget](../../../reference/cr/scsitarget/).
 
-After creating [SCSIStorageClass](../../../reference/cr/scsistorageclass/), check its status. The `Phase` field should be `Created`.
+Verify the creation of the object with the following command. The `Phase` field should be `Created`.
 
 ```shell
 d8 k get scsistorageclasses.storage.deckhouse.io <scsistorageclass name>
@@ -155,7 +155,7 @@ d8 k get scsistorageclasses.storage.deckhouse.io <scsistorageclass name>
 
 ### Module Health Check
 
-Verify the module status by checking the state of pods in the `d8-csi-scsi-generic` namespace. All pods should be in the `Running` or `Completed` state and deployed on all cluster nodes.
+Check the status of pods in the `d8-csi-scsi-generic` namespace using the following command. All pods should be in the `Running` or `Completed` state and deployed on all nodes.
 
 ```shell
 d8 k -n d8-csi-scsi-generic get pod -owide -w
