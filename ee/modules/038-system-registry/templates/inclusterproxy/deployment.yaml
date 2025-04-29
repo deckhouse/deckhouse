@@ -100,7 +100,7 @@ spec:
           - serve
           - "/config/distribution_config.yaml"
         env:
-        {{- include "helm_lib_envs_for_proxy" $ | nindent 8 }}
+          {{- include "helm_lib_envs_for_proxy" $ | nindent 8 }}
         ports:
           - name: emb-reg-dist
             containerPort: 5001
@@ -117,14 +117,14 @@ spec:
             port: emb-reg-dist
             scheme: HTTPS
         volumeMounts:
-            - name: registry-incluster-proxy-config
-              mountPath: /config
-              readOnly: true
+          - name: registry-incluster-proxy-config
+            mountPath: /config
+            readOnly: true
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-            {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
-            {{- include "registry_incluster_proxy_min_resources" $ | nindent 12 }}
+            {{- if not ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+              {{- include "registry_incluster_proxy_min_resources" $ | nindent 12 }}
             {{- end }}
       - name: auth
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $ | nindent 8 }}
@@ -147,14 +147,14 @@ spec:
           - -logtostderr
           - "/config/auth_config.yaml"
         volumeMounts:
-            - name: registry-incluster-proxy-config
-              mountPath: /config
-              readOnly: true
+          - name: registry-incluster-proxy-config
+            mountPath: /config
+            readOnly: true
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-            {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
-            {{- include "registry_incluster_proxy_min_resources" $ | nindent 12 }}
+            {{- if not ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+              {{- include "registry_incluster_proxy_min_resources" $ | nindent 12 }}
             {{- end }}
       volumes:
         - name: registry-incluster-proxy-config
