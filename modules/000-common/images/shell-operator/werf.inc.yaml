@@ -82,7 +82,7 @@ shell:
   - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux
   - cd /src
   - go mod download -x
-  - go build -ldflags="-linkmode external -extldflags '-static' -s -w -X 'github.com/flant/shell-operator/pkg/app.Version={{ $shellOperatorVersion }}'" -o shell-operator ./cmd/shell-operator
+  - go build -ldflags="-s -w -X 'github.com/flant/shell-operator/pkg/app.Version={{ $shellOperatorVersion }}'" -o shell-operator ./cmd/shell-operator
   - mkdir -p /shell-operator
   - cp -r shell_lib.sh frameworks shell-operator /shell-operator
   - chown -R 64535:64535 /shell-operator
