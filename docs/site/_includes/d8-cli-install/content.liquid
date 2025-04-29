@@ -73,7 +73,7 @@
 1. {% if page.lang == 'ru' -%}Распакуйте архив{% else %}Extract the archive{% endif %}:
 
    ```bash
-   tar -xvf "d8-{{ site.data.supported_versions.d8.d8CliVersion }}-{{ include.os | downcase | replace: "macos", "darwin"  }}-{{ include.arch | downcase | replace: "x86-64", "amd64" }}.tar.gz" "{{ include.os | downcase | replace: "macos", "darwin"  }}-{{ include.arch | downcase | replace: "x86-64", "amd64" }}/d8"
+   tar -xvf "d8-{{ site.data.supported_versions.d8.d8CliVersion }}-{{ include.os | downcase | replace: "macos", "darwin"  }}-{{ include.arch | downcase | replace: "x86-64", "amd64" }}.tar.gz" "{{ include.os | downcase | replace: "macos", "darwin"  }}-{{ include.arch | downcase | replace: "x86-64", "amd64" }}/bin/d8"
    ```
 
 1. {% if page.lang == 'ru' -%}
@@ -83,7 +83,7 @@ Move the file `d8` to the directory listed in the `PATH` system environment vari
 {%- endif %}:
 
    ```bash
-   sudo mv "{{ include.os | downcase | replace: "macos", "darwin"  }}-{{ include.arch | downcase | replace: "x86-64", "amd64" }}/d8" /usr/local/bin/
+   sudo mv "{{ include.os | downcase | replace: "macos", "darwin"  }}-{{ include.arch | downcase | replace: "x86-64", "amd64" }}/bin/d8" /usr/local/bin/
    ```
 
    > {%- if page.lang == 'ru' -%}

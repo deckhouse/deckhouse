@@ -4,8 +4,10 @@
 
 
  - For new clusters in Yandex Cloud with the `withNATInstance` layout, `internalSubnetCIDR` or `internalSubnetID` must be specified.
+ - Ingress-nginx controller pods of v1.9 will be restated.
  - The minimum supported version of Kubernetes is now 1.28. All control plane components will restart.
  - Time-based retention in `loki` is no longer available. See the changelog for details.
+ - release upgrade will be blocked on AWS-based clusters where SA doesn't have DescribeAddressesAttribute and DescribeInstanceTopology roles. They are required for new Terraform AWS Provider version.
 
 ## Features
 
@@ -20,6 +22,8 @@
  - **[cni-cilium]** Added a new dashboard to visualize node connectivity status across the cluster. [#11960](https://github.com/deckhouse/deckhouse/pull/11960)
  - **[control-plane-manager]** Added alert for detecting stale service account tokens. [#12163](https://github.com/deckhouse/deckhouse/pull/12163)
  - **[dashboard]** Added the `auth.allowedUserEmails` option to restrict access to the application based on user email. [#12055](https://github.com/deckhouse/deckhouse/pull/12055)
+ - **[deckhouse]** enable UnmetCloudConditions check [#12957](https://github.com/deckhouse/deckhouse/pull/12957)
+    release upgrade will be blocked on AWS-based clusters where SA doesn't have DescribeAddressesAttribute and DescribeInstanceTopology roles. They are required for new Terraform AWS Provider version.
  - **[deckhouse]** Added `sudouser` alias for easier debugging of protected resources. [#12838](https://github.com/deckhouse/deckhouse/pull/12838)
  - **[deckhouse]** Added rollback flag to ModulePullOverride to restore the previous release after deletion. [#12758](https://github.com/deckhouse/deckhouse/pull/12758)
  - **[deckhouse]** Added ModuleSettingsDefinition CRD to store OpenAPI specs for module settings. [#12702](https://github.com/deckhouse/deckhouse/pull/12702)
@@ -36,7 +40,6 @@
  - **[dhctl]** Added a time drift check during cluster bootstrap to warn if local and remote server times differ by more than 10 minutes. [#12232](https://github.com/deckhouse/deckhouse/pull/12232)
  - **[dhctl]** Added a preflight check to detect CIDR intersection between `podSubnetCIDR` and `serviceSubnetCIDR`. [#12130](https://github.com/deckhouse/deckhouse/pull/12130)
  - **[dhctl]** Removed bundle from bashible-api contexts; nodegroupconfiguration scripts now use an auto-generated header to detect the bundle. [#11479](https://github.com/deckhouse/deckhouse/pull/11479)
- - **[docs]** Added NGINX configuration to proxy `deckhouse-cli-trdl` through the frontend, enabling downloads of Deckhouse CLI artifacts via deckhouse.ru. [#12837](https://github.com/deckhouse/deckhouse/pull/12837)
  - **[docs]** Enhanced registry watcher and docs-builder integration, including improved caching, error handling, and added retries. [#12337](https://github.com/deckhouse/deckhouse/pull/12337)
  - **[documentation]** Added the `auth.allowedUserEmails` option to restrict access to the application based on user email. [#12055](https://github.com/deckhouse/deckhouse/pull/12055)
  - **[ingress-nginx]** Added `controllerPodsAdditionalAnnotations` parameter to IngressNginxController for customizing pod annotations. [#11522](https://github.com/deckhouse/deckhouse/pull/11522)
@@ -52,6 +55,8 @@
  - **[monitoring-kubernetes-control-plane]** Added support for selecting multiple Kubernetes versions. [#12284](https://github.com/deckhouse/deckhouse/pull/12284)
  - **[multitenancy-manager]** Added namespace adoption mechanism; namespaces with the `projects.deckhouse.io/adopt` annotation are now automatically linked to empty projects. [#12423](https://github.com/deckhouse/deckhouse/pull/12423)
  - **[namespace-configurator]** Added exclusion of `deckhouse` and `multitenancy-manager` namespaces. [#12784](https://github.com/deckhouse/deckhouse/pull/12784)
+ - **[node-manager]** enable UnmetCloudConditions check [#12845](https://github.com/deckhouse/deckhouse/pull/12845)
+ - **[node-manager]** UnmetCloudConditions requirement and alert [#12530](https://github.com/deckhouse/deckhouse/pull/12530)
  - **[node-manager]** Removed bundle from bashible-api contexts; nodegroupconfiguration scripts now use an auto-generated header to detect the bundle. [#11479](https://github.com/deckhouse/deckhouse/pull/11479)
  - **[node-manager]** Added `nodeDrainTimeoutSecond` parameter to set custom node draining time for each CloudEphemeral NodeGroup. [#10962](https://github.com/deckhouse/deckhouse/pull/10962)
  - **[openvpn]** Added `defaultClientCertExpirationDays` option for setting the expiration time for client certificates. [#12172](https://github.com/deckhouse/deckhouse/pull/12172)
@@ -79,6 +84,7 @@
  - **[cloud-provider-dynamix]** Fixed the Terraform `cloudConfig` decoding. [#12493](https://github.com/deckhouse/deckhouse/pull/12493)
  - **[cloud-provider-huaweicloud]** Fixed `EIP` creation in `cloud-controller-manager`. [#12046](https://github.com/deckhouse/deckhouse/pull/12046)
  - **[cloud-provider-openstack]** Fixed empty metadata fields. [#12179](https://github.com/deckhouse/deckhouse/pull/12179)
+ - **[cloud-provider-vcd]** Add a hook to set `legacyMode` based on the detected `VCD API` version [#13015](https://github.com/deckhouse/deckhouse/pull/13015)
  - **[cloud-provider-vcd]** Fixed creation of PersistentVolumeClaim. [#12909](https://github.com/deckhouse/deckhouse/pull/12909)
  - **[cloud-provider-vcd]** Implemented a hack to migrate etcd disk to VCD independent disk to prevent deletion of etcd data. [#12651](https://github.com/deckhouse/deckhouse/pull/12651)
     To migrate, you must perform a `converge`, which causes the master server to be recreated. If you are using only one master server with the manual address assignment via the `mainNetworkIPAddresses` parameter, add two more IP addresses for the migration process.
@@ -87,25 +93,37 @@
  - **[cloud-provider-vsphere]** Fixed null StorageClasses in vSphere when StorageClasses are excluded from discovery. [#12597](https://github.com/deckhouse/deckhouse/pull/12597)
  - **[cloud-provider-yandex]** Fixed LoadBalancer service creation in hybrid clusters. [#12491](https://github.com/deckhouse/deckhouse/pull/12491)
  - **[cloud-provider-zvirt]** Fixed zvirt-csi-driver patching (token refresh fix patch). [#12313](https://github.com/deckhouse/deckhouse/pull/12313)
+ - **[control-plane-manager]** Stale service account alert fix. [#13129](https://github.com/deckhouse/deckhouse/pull/13129)
  - **[control-plane-manager]** Fixed `additionalAPIIssuers` and `additionalAPIAudiences` parameters and associated tests. [#12576](https://github.com/deckhouse/deckhouse/pull/12576)
  - **[control-plane-manager]** Fixed `d8-control-plane-manager` containers that were duplicated when updating Kubernetes. [#12561](https://github.com/deckhouse/deckhouse/pull/12561)
  - **[control-plane-manager]** Removed `etcd.externalMembersNames` from ModuleConfig settings. [#12422](https://github.com/deckhouse/deckhouse/pull/12422)
  - **[control-plane-manager]** Fixed the behavior when an etcd member couldn't be promoted from learner state if needed. [#11934](https://github.com/deckhouse/deckhouse/pull/11934)
+ - **[deckhouse]** Gracefully restore deployed modules on HA installations. [#13077](https://github.com/deckhouse/deckhouse/pull/13077)
  - **[deckhouse]** Removed duplicated alerts in CNI modules. [#12220](https://github.com/deckhouse/deckhouse/pull/12220)
+ - **[deckhouse-controller]** Fix runtime handling for the global config. [#12985](https://github.com/deckhouse/deckhouse/pull/12985)
  - **[deckhouse-tools]** Removed unnecessary secrets and fixed the Deckhouse CLI build. [#12290](https://github.com/deckhouse/deckhouse/pull/12290)
+ - **[dhctl]** fix bootstrap and abort config preparation [#13008](https://github.com/deckhouse/deckhouse/pull/13008)
  - **[dhctl]** Fixed the timeout value when downloading packets. [#12819](https://github.com/deckhouse/deckhouse/pull/12819)
  - **[dhctl]** Added a cleanup of failed or completed Deckhouse pods due to bootstrap. [#12798](https://github.com/deckhouse/deckhouse/pull/12798)
  - **[dhctl]** Added minimal preflight checks to the abort at a bootstrap phase. [#12562](https://github.com/deckhouse/deckhouse/pull/12562)
  - **[dhctl]** Fixed the CloudPermanent node converge process so that it must be drained before removal. [#12389](https://github.com/deckhouse/deckhouse/pull/12389)
  - **[dhctl]** Fixed the behavior when `SudoPassword` from the connection-config wasn't used in dhctl CLI and dhctl server. [#12368](https://github.com/deckhouse/deckhouse/pull/12368)
  - **[dhctl]** Improved logging and operation when performing `converge`. [#11926](https://github.com/deckhouse/deckhouse/pull/11926)
+ - **[ingress-nginx]** All necessary shared libraries are added to the container image. [#13124](https://github.com/deckhouse/deckhouse/pull/13124)
+    Ingress-nginx controller pods of v1.9 will be restated.
  - **[ingress-nginx]** Fixed patch names in `ingress-nginx`. [#12633](https://github.com/deckhouse/deckhouse/pull/12633)
  - **[ingress-nginx]** Fixed security vulnerabilities. [#12449](https://github.com/deckhouse/deckhouse/pull/12449)
  - **[istio]** Added Kubernetes version check in a Helm chart. [#12503](https://github.com/deckhouse/deckhouse/pull/12503)
  - **[istio]** Refactored secure api-proxy for multiclusters to improve reliability. [#12196](https://github.com/deckhouse/deckhouse/pull/12196)
+ - **[kube-dns]** Expanded pattern for `stubZones` to allow underscores (`_`) in domain names. [#13118](https://github.com/deckhouse/deckhouse/pull/13118)
+ - **[loki]** fix storage capacity calculator hook for Loki [#13003](https://github.com/deckhouse/deckhouse/pull/13003)
+    fixes the bug introduced in v1.69.0
  - **[node-manager]** Fixed kubeconfig generation for `CAPI`. [#12554](https://github.com/deckhouse/deckhouse/pull/12554)
  - **[node-manager]** Improved `handleDraining` hook to ignore timeout errors during node draining. [#12542](https://github.com/deckhouse/deckhouse/pull/12542)
  - **[node-manager]** Added validation of `instanceClass` deletion for being used by a NodeGroup. [#11830](https://github.com/deckhouse/deckhouse/pull/11830)
+ - **[operator-trivy]** Add proxy env variables support to the trivy server. [#13036](https://github.com/deckhouse/deckhouse/pull/13036)
+ - **[prometheus]** enable WAL for the grafana SQLite database to prevent locking errors, thus fixing in-dashboard alerting. [#13063](https://github.com/deckhouse/deckhouse/pull/13063)
+    the grafana deployment will be rollout restarted
  - **[prometheus]** Fixed security vulnerabilities in Grafana. [#12062](https://github.com/deckhouse/deckhouse/pull/12062)
  - **[prometheus]** Fixed security vulnerabilities in `mimir` and `promxy`. [#11978](https://github.com/deckhouse/deckhouse/pull/11978)
  - **[runtime-audit-engine]** Fixed built-in rules for `runtime-audit-engine`. [#12486](https://github.com/deckhouse/deckhouse/pull/12486)
@@ -113,6 +131,7 @@
  - **[service-with-healthchecks]** Removed unnecessary text data from the executable binary file. [#12492](https://github.com/deckhouse/deckhouse/pull/12492)
  - **[static-routing-manager]** Fixed regular expression to allow empty string in `nodeSelector` field. [#12510](https://github.com/deckhouse/deckhouse/pull/12510)
  - **[static-routing-manager]** Fixed `nodeSelector` parameter validation. [#12318](https://github.com/deckhouse/deckhouse/pull/12318)
+ - **[user-authn]** Fix secret generation on empty data field in the dex client app secret. [#13092](https://github.com/deckhouse/deckhouse/pull/13092)
  - **[user-authn]** Added security context with RuntimeDefault seccomp profile to dex container. [#12197](https://github.com/deckhouse/deckhouse/pull/12197)
  - **[vertical-pod-autoscaler]** Enabled the memory-save option to prevent the VPA recommender from consuming excessive amounts of RAM. [#12077](https://github.com/deckhouse/deckhouse/pull/12077)
 

@@ -41,11 +41,7 @@ shell:
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /src
   - go build -ldflags="-s -w" -o stale-dns-connections-cleaner .
-  - chmod +x /src/stale-dns-connections-cleaner
-  - setcap    cap_net_admin=+ep /src/stale-dns-connections-cleaner
-  - setcap -v cap_net_admin=+ep /src/stale-dns-connections-cleaner
-  - chmod -R 0700 /src/stale-dns-connections-cleaner
-  - chown -R 64535:64535 /src/stale-dns-connections-cleaner
+  - chmod 0700 /src/stale-dns-connections-cleaner
 ---
 image: {{ $.ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
@@ -54,6 +50,8 @@ import:
   add: /src/stale-dns-connections-cleaner
   to: /stale-dns-connections-cleaner
   before: install
+  owner: root
+  group: root
 imageSpec:
   config:
     entrypoint: ["/stale-dns-connections-cleaner"]

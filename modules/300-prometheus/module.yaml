@@ -5,6 +5,9 @@ subsystems:
 namespace: d8-monitoring
 description: |
   The Prometheus monitoring module
+descriptions:
+  en: |
+    The Prometheus monitoring module
 
 requirements:
   bootstrapped: true

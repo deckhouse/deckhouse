@@ -1,5 +1,20 @@
 require 'json'
 
+def doc_links_for_module(moduleName)
+    data = {
+      'overview' => {
+          'internal' => {
+            'en' => "/en/platform/modules/%s/" % moduleName,
+            'ru' => "/ru/platform/modules/%s/" % moduleName
+          },
+          'external' => {
+            'en' => "/products/kubernetes-platform/documentation/v1/modules/%s/" % moduleName,
+            'ru' => "/products/kubernetes-platform/documentation/v1/modules/%s/" % moduleName
+          }
+        },
+      'crds' => []
+    }
+end
 
 # Inserts the module-editions.liquid block into the module pages content.
 # The block is inserted at the beginning of the page's content if the page content is not empty.
@@ -89,6 +104,8 @@ Jekyll::Hooks.register :site, :pre_render do |site|
     if moduleData.has_key?("editionMinimumAvailable") then
       _index = _editionsToFillWith.find_index(moduleData['editionMinimumAvailable'])
       editions = _editionsToFillWith.slice(_index, _editionsToFillWith.length())
+    else
+      editions = editions | moduleData['editions'] if moduleData.has_key?("editions")
     end
     site.data['editions'].each do |edition, editionData|
       editions = editions | [edition] if editionData.has_key?("includeModules") && editionData['includeModules'].include?(moduleName)
@@ -98,6 +115,8 @@ Jekyll::Hooks.register :site, :pre_render do |site|
     editions = editions | moduleData['editionsWithRestrictions'] if moduleData.has_key?("editionsWithRestrictions")
     puts "Module #{moduleName} editions: #{editions}"
     site.data['modules']['all'][moduleName]['editions'] = editions
+
+    site.data['modules']['all'][moduleName]['docs'] = doc_links_for_module(moduleName)
   end
 
   # Exclude custom resource and module setting files from the search index by setting the 'searchable' parameter to false.
@@ -135,7 +154,7 @@ Jekyll::Hooks.register :site, :pre_render do |site|
 
     if page.data['module-kebab-name'] and !page.name.match?(/CR(\.ru|_RU)?\.md$/)
       insert_module_stage_block(site.data['sidebars'][page.data['sidebar']]['entries'], page)
-    
+
       if page.name.match?(/^README(\.ru|_RU)?\.md$/i) ||
          page.name.match?(/^CONFIGURATION(\.ru|_RU)?\.md$/i)
         insert_module_edition_block(page)

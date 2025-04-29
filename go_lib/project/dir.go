@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 func Dir() (string, error) {
@@ -31,21 +30,19 @@ func Dir() (string, error) {
 }
 
 func dir(pwd string) (string, error) {
-	const (
-		filePathSeparator = string(filepath.Separator)
-		d8Dir             = "deckhouse"
-	)
+	const d8Dir = "deckhouse"
 
-	var projectDir string
-	baseDir, _, ok := strings.Cut(pwd, filePathSeparator+d8Dir)
-	if ok {
-		if baseDir == "" {
-			baseDir = filePathSeparator
+	for {
+		if filepath.Base(pwd) == d8Dir {
+			return pwd, nil
 		}
-		projectDir = filepath.Join(baseDir, d8Dir)
-	} else {
-		projectDir = baseDir
+
+		parent := filepath.Dir(pwd)
+		if parent == pwd {
+			break
+		}
+		pwd = parent
 	}
 
-	return projectDir, nil
+	return "", nil
 }

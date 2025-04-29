@@ -1,0 +1,75 @@
+---
+title: "Выбор инфраструктуры"
+permalink: ru/stronghold/gs/index.html
+layout: page-nosidebar
+lang: ru
+toc: false
+---
+
+<link rel="stylesheet" type="text/css" href='{% css_asset_tag getting-started-css %}[_assets/css/getting-started.css]{% endcss_asset_tag %}' />
+<script type="text/javascript" src='{% javascript_asset_tag getting-started %}[_assets/js/getting-started.js]{% endjavascript_asset_tag %}'></script>
+
+<p>В данном руководстве рассмотрен пошаговый процесс установки Deckhouse Stronghold.</p>
+
+<p>Установка Deckhouse Stronghold отличается в случае установки в существующий кластере Deckhouse Kubernetes Platform, и в случае чистой установки, вместе с Deckhouse Kubernetes Platform.</p>
+
+<h2>Выберите вариант установки Deckhouse Stronghold</h2>
+
+<div class="block" style="margin: 0;">
+  <div class="block__columns block__columns_top">
+    <div>
+      <h3>Установка Deckhouse Kubernetes Platform со Stronghold</h3>
+      <div class="button-group">
+        {%- for provider in site.data.getting_started.stronghold.installTypes %}
+        {%- if provider[1].type == 'existing-dkp' %}{% continue %}{% endif %}
+        {%- if provider[1].languages %}
+          {%- unless provider[1].languages contains "ru" %}{% continue %}{% endunless %}
+        {%- endif %}
+        {%- if provider[1].wip == true %}
+        <a
+          class="button button_default button_card button_disabled">{{ provider[1].name[page.lang] }} ({{ site.data.i18n.soon[page.lang] }})</a>
+        {%- else %}
+        <a class="button button_default button_card" href="/products/stronghold/gs/{{ provider[0] }}/step2.html">
+          {% if provider[1].iconPath %}<div class="icon"><img src="/{{provider[1].iconPath}}" alt="{{ provider[1].name[page.lang] }} icon"/></div>{% endif %}
+          <span class="name">{{ provider[1].name[page.lang] }}</span>
+          {% if provider[1].extraIcons %}
+          <div class="footer">
+            {%- for extraIcon in provider[1].extraIcons %}
+            <img src="/{{extraIcon[1]}}" alt=""/>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </a>
+        {%- endif %}
+        {% endfor %}
+      </div>
+    </div>
+    <div>
+      <h3>Установка в существующем кластере</h3>
+      <div class="button-group">
+        {%- for provider in site.data.getting_started.stronghold.installTypes %}
+        {%- if provider[1].type != 'existing-dkp' %}{% continue %}{% endif %}
+        {%- if provider[1].languages %}
+          {%- unless provider[1].languages contains "ru" %}{% continue %}{% endunless %}
+        {%- endif %}
+        {%- if provider[1].wip == true %}
+        <a
+          class="button button_default button_card button_disabled">{{ provider[1].name[page.lang] }} ({{ site.data.i18n.soon[page.lang] }})</a>
+        {%- else %}
+        <a class="button button_default button_card" href="/products/stronghold/gs/{{ provider[0] }}/step2.html">
+          {% if provider[1].iconPath %}<div class="icon"><img src="/{{provider[1].iconPath}}" alt="{{ provider[1].name[page.lang] }} icon"/></div>{% endif %}
+          <span class="name">{{ provider[1].name[page.lang] }}</span>
+          {% if provider[1].extraIcons %}
+          <div class="footer">
+            {%- for extraIcon in provider[1].extraIcons %}
+            <img src="/{{extraIcon[1]}}" alt=""/>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </a>
+        {%- endif %}
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>

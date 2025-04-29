@@ -52,7 +52,7 @@ spec:
   selector:
     matchLabels:
       app: dex-authenticator
-      name: {{ $crd.name }}
+      name: {{ $crd.name | quote }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -73,12 +73,12 @@ spec:
   selector:
     matchLabels:
       app: dex-authenticator
-      name: {{ $crd.name }}
+      name: {{ $crd.name | quote }}
   template:
     metadata:
       labels:
         app: dex-authenticator
-        name: {{ $crd.name }}
+        name: {{ $crd.name | quote}}
       annotations:
         checksum/config: {{ $crd.credentials | toJson | b64enc | sha256sum }}
     spec:

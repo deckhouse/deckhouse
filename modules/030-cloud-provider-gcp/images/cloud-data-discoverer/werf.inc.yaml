@@ -15,27 +15,44 @@ final: false
 fromImage: common/src-artifact
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src
-  to: /src
+  to:  /src
+  excludePaths:
+    - "**/*.md"
+    - "**/*.yaml"
   stageDependencies:
     install:
-    - go.mod
-    - go.sum
-    - "**/*.go"
+      - go.mod
+      - go.sum
+      - "**/*.go"
 - add: /go_lib/cloud-data
   to: /src/go_lib/cloud-data
+  excludePaths:
+    - "**/*.md"
+    - "**/*.yaml"
   stageDependencies:
     install:
-    - go.mod
-    - go.sum
-    - "**/*.go"
+      - go.mod
+      - go.sum
+      - "**/*.go"
+- add: /pkg/log
+  to: /src/pkg/log
+  excludePaths:
+    - "**/*.md"
+    - "**/*.yaml"
+  stageDependencies:
+    install:
+      - go.mod
+      - go.sum
+      - "**/*.go"
 shell:
   install:
   - cd /src
   - sed -i -e 's# /deckhouse/go_lib/cloud-data# /src/go_lib/cloud-data#g' go.mod
+  - sed -i -e 's# /deckhouse/pkg/log# /src/pkg/log#g' go.mod
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
@@ -44,6 +61,9 @@ import:
 secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
 shell:
   install:
   - cd /src
@@ -53,6 +73,3 @@ shell:
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /discoverer
   - chown 64535:64535 /discoverer
   - chmod 0755 /discoverer
-mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg

@@ -51,7 +51,7 @@ properties:
           description: |
             The CoreDNS zone.
           type: string
-          pattern: '^[0-9a-zA-Z\.-_]+$'
+          pattern: '^[0-9a-zA-Z\.\-_]+$'
           x-doc-example: consul.local
         upstreamNameservers:
           minItems: 1
