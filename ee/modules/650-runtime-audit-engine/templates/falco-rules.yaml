@@ -44,10 +44,6 @@ spec:
         name: package_mgmt_ancestor_procs
         condition: proc.pname in (package_mgmt_binaries) or proc.aname[2] in (package_mgmt_binaries) or proc.aname[3] in (package_mgmt_binaries) or proc.aname[4] in (package_mgmt_binaries)
     - macro:
-        name: bin_dir_mkdir
-        condition: |
-          (evt.arg.path startswith /bin/ or evt.arg.path startswith /sbin/ or evt.arg.path startswith /usr/bin/ or evt.arg.path startswith /usr/sbin/)
-    - macro:
         name: bin_dir_rename
         condition: |
           (evt.arg.path startswith /bin/ or evt.arg.path startswith /sbin/ or evt.arg.path startswith /usr/bin/ or evt.arg.path startswith /usr/sbin/ or evt.arg.name startswith /bin/ or evt.arg.name startswith /sbin/ or evt.arg.name startswith /usr/bin/ or evt.arg.name startswith /usr/sbin/ or evt.arg.oldpath startswith /bin/ or evt.arg.oldpath startswith /sbin/ or evt.arg.oldpath startswith /usr/bin/ or evt.arg.oldpath startswith /usr/sbin/ or evt.arg.newpath startswith /bin/ or evt.arg.newpath startswith /sbin/ or evt.arg.newpath startswith /usr/bin/ or evt.arg.newpath startswith /usr/sbin/)
@@ -139,7 +135,7 @@ spec:
         desc: Package management process ran inside container
         output: |
           Package management process launched in container (user=%user.name user_loginuid=%user.loginuid command=%proc.cmdline pid=%proc.pid container_id=%container.id container_name=%container.name image=%container.image.repository:%container.image.tag exe_flags=%evt.arg.flags)
-        priority: Error
+        priority: ERROR
         tags:
           - fstec
           - container_drift
@@ -150,7 +146,7 @@ spec:
         desc: Detect if an executable not belonging to the base image of a container is being executed. The drop and execute pattern can be observed very often after an attacker gained an initial foothold. is_exe_upper_layer filter field only applies for container runtimes that use overlayfs as union mount filesystem.
         output: |
           Executing binary not part of base image (user=%user.name user_loginuid=%user.loginuid user_uid=%user.uid comm=%proc.cmdline exe=%proc.exe container_id=%container.id image=%container.image.repository proc.name=%proc.name proc.sname=%proc.sname proc.pname=%proc.pname proc.aname[2]=%proc.aname[2] exe_flags=%evt.arg.flags proc.exe_ino=%proc.exe_ino proc.exe_ino.ctime=%proc.exe_ino.ctime proc.exe_ino.mtime=%proc.exe_ino.mtime proc.exe_ino.ctime_duration_proc_start=%proc.exe_ino.ctime_duration_proc_start proc.exepath=%proc.exepath proc.cwd=%proc.cwd proc.tty=%proc.tty container.start_ts=%container.start_ts proc.sid=%proc.sid proc.vpgid=%proc.vpgid evt.res=%evt.res)
-        priority: Critical
+        priority: CRITICAL
         tags:
           - fstec
           - container_drift
@@ -164,7 +160,7 @@ spec:
           )
         desc: New executable created in a container due to chmod
         output: Drift detected (chmod), new executable created in a container (user=%user.name user_loginuid=%user.loginuid command=%proc.cmdline pid=%proc.pid filename=%evt.arg.filename name=%evt.arg.name mode=%evt.arg.mode event=%evt.type)
-        priority: Error
+        priority: ERROR
         tags:
           - fstec
           - container_drift
@@ -183,7 +179,7 @@ spec:
           evt.type in (open,openat,openat2,creat) and evt.is_open_exec=true and container and not runc_writing_exec_fifo and not runc_writing_var_lib_docker and not runc_writing_var_lib_containerd and not user_known_container_drift_activities and evt.rawres>=0
         desc: New executable created in a container due to open+create
         output: Drift detected (open+create), new executable created in a container (user=%user.name user_loginuid=%user.loginuid command=%proc.cmdline pid=%proc.pid filename=%evt.arg.filename name=%evt.arg.name mode=%evt.arg.mode event=%evt.type)
-        priority: Error
+        priority: ERROR
         tags:
           - fstec
           - container_drift
@@ -194,7 +190,7 @@ spec:
         desc: an attempt to modify any file below a set of binary directories.
         output: |
           File below known binary directory renamed/removed (user=%user.name user_loginuid=%user.loginuid command=%proc.cmdline pid=%proc.pid pcmdline=%proc.pcmdline operation=%evt.type file=%fd.name %evt.args container_id=%container.id image=%container.image.repository)
-        priority: Error
+        priority: ERROR
         tags:
           - fstec
           - container_drift
@@ -203,7 +199,7 @@ spec:
         condition: (kevt and kcreate and pod and response_successful)
         desc: Detect any attempt to create a pod
         output: K8s Pod Created (user=%ka.user.name pod=%ka.target.name ns=%ka.target.namespace resource=%ka.target.resource resp=%ka.response.code decision=%ka.auth.decision reason=%ka.auth.reason)
-        priority: Informational
+        priority: INFORMATIONAL
         tags:
           - fstec
           - container_drift
@@ -213,7 +209,7 @@ spec:
         condition: (kevt and kdelete and pod and response_successful)
         desc: Detect any attempt to delete a pod
         output: K8s Pod Deleted (user=%ka.user.name pod=%ka.target.name ns=%ka.target.namespace resource=%ka.target.resource resp=%ka.response.code decision=%ka.auth.decision reason=%ka.auth.reason)
-        priority: Informational
+        priority: INFORMATIONAL
         tags:
           - fstec
           - container_drift
@@ -224,7 +220,7 @@ spec:
           kevt and serviceaccount and kcreate and system_namespace and response_successful
         desc: Detect any attempt to create a serviceaccount in the kube-system or kube-public namespaces
         output: Service account created in kube namespace (user=%ka.user.name serviceaccount=%ka.target.name resource=%ka.target.resource ns=%ka.target.namespace)
-        priority: Warning
+        priority: WARNING
         tags:
           - fstec
           - rbac_drift
@@ -235,7 +231,7 @@ spec:
           kevt and clusterrolebinding and kcreate and ka.req.binding.role=cluster-admin
         desc: Detect any attempt to create a ClusterRoleBinding to the cluster-admin user
         output: Cluster Role Binding to cluster-admin role (user=%ka.user.name subject=%ka.req.binding.subjects)
-        priority: Warning
+        priority: WARNING
         tags:
           - fstec
           - rbac_drift
@@ -249,7 +245,7 @@ spec:
           )
         desc: Detect any attempt to create a Role/ClusterRole with wildcard resources or verbs
         output: Created Role/ClusterRole with wildcard (user=%ka.user.name role=%ka.target.name resource=%ka.target.resource rules=%ka.req.role.rules)
-        priority: Warning
+        priority: WARNING
         tags:
           - fstec
           - rbac_drift
@@ -262,7 +258,7 @@ spec:
         desc: |
           Detect any attempt to attach/exec to a pod
         output: Attach/Exec to pod (user=%ka.user.name pod=%ka.target.name resource=%ka.target.resource ns=%ka.target.namespace action=%ka.target.subresource command=%ka.uri.param[command])
-        priority: Notice
+        priority: NOTICE
         tags:
           - fstec
           - container_image_access
@@ -274,7 +270,7 @@ spec:
         desc: |
           Detect any ephemeral container created
         output: Ephemeral container is created in pod (user=%ka.user.name pod=%ka.target.name resource=%ka.target.resource ns=%ka.target.namespace ephemeral_container_name=%jevt.value[/requestObject/spec/ephemeralContainers/0/name] ephemeral_container_image=%jevt.value[/requestObject/spec/ephemeralContainers/0/image])
-        priority: Notice
+        priority: NOTICE
         tags:
           - fstec
           - container_image_access
@@ -285,7 +281,7 @@ spec:
           kevt and (role or clusterrole) and kcreate and writable_verbs
         desc: Detect any attempt to create a Role/ClusterRole that can perform write-related actions
         output: Created Role/ClusterRole with write privileges (user=%ka.user.name role=%ka.target.name resource=%ka.target.resource rules=%ka.req.role.rules)
-        priority: Notice
+        priority: NOTICE
         tags:
           - fstec
           - rbac_drift
@@ -296,7 +292,7 @@ spec:
           kevt and (role or clusterrole) and kcreate and ka.req.role.rules.resources intersects ("pods/exec")
         desc: Detect any attempt to create a Role/ClusterRole that can exec to pods
         output: Created Role/ClusterRole with pod exec privileges (user=%ka.user.name role=%ka.target.name resource=%ka.target.resource rules=%ka.req.role.rules)
-        priority: Warning
+        priority: WARNING
         tags:
           - fstec
           - rbac_drift
@@ -307,7 +303,7 @@ spec:
           kevt and (role or clusterrole) and (kmodify or kdelete) and (ka.target.name startswith "system:") and not ka.target.name in (system:coredns, system:managed-certificate-controller)
         desc: Detect any attempt to modify/delete a ClusterRole/Role starting with system
         output: System ClusterRole/Role modified or deleted (user=%ka.user.name role=%ka.target.name resource=%ka.target.resource action=%ka.verb)
-        priority: Warning
+        priority: WARNING
         tags:
           - fstec
           - rbac_drift
@@ -318,7 +314,7 @@ spec:
           kactivity and kcreate and serviceaccount and response_successful
         desc: Detect any attempt to create a service account
         output: K8s Serviceaccount Created (user=%ka.user.name serviceaccount=%ka.target.name ns=%ka.target.namespace resource=%ka.target.resource resp=%ka.response.code decision=%ka.auth.decision reason=%ka.auth.reason)
-        priority: Notice
+        priority: NOTICE
         tags:
           - fstec
           - rbac_drift
@@ -329,7 +325,7 @@ spec:
           kactivity and kdelete and serviceaccount and response_successful
         desc: Detect any attempt to delete a service account
         output: K8s Serviceaccount Deleted (user=%ka.user.name serviceaccount=%ka.target.name ns=%ka.target.namespace resource=%ka.target.resource resp=%ka.response.code decision=%ka.auth.decision reason=%ka.auth.reason)
-        priority: Notice
+        priority: NOTICE
         tags:
           - fstec
           - rbac_drift
@@ -340,7 +336,7 @@ spec:
           kactivity and kcreate and (clusterrole or role) and response_successful
         desc: Detect any attempt to create a cluster role/role
         output: K8s Cluster Role Created (user=%ka.user.name role=%ka.target.name resource=%ka.target.resource rules=%ka.req.role.rules resp=%ka.response.code decision=%ka.auth.decision reason=%ka.auth.reason)
-        priority: Notice
+        priority: NOTICE
         tags:
           - fstec
           - rbac_drift
@@ -350,7 +346,7 @@ spec:
         condition: kactivity and kdelete and (clusterrole or role) and response_successful
         desc: Detect any attempt to delete a cluster role/role
         output: K8s Cluster Role Deleted (user=%ka.user.name role=%ka.target.name resource=%ka.target.resource resp=%ka.response.code decision=%ka.auth.decision reason=%ka.auth.reason)
-        priority: Notice
+        priority: NOTICE
         tags:
           - fstec
           - rbac_drift
@@ -361,7 +357,7 @@ spec:
           kactivity and kcreate and clusterrolebinding and response_successful
         desc: Detect any attempt to create a clusterrolebinding
         output: K8s Cluster Role Binding Created (user=%ka.user.name binding=%ka.target.name resource=%ka.target.resource subjects=%ka.req.binding.subjects role=%ka.req.binding.role resp=%ka.response.code decision=%ka.auth.decision reason=%ka.auth.reason)
-        priority: Notice
+        priority: NOTICE
         tags:
           - fstec
           - rbac_drift
@@ -373,7 +369,7 @@ spec:
         desc: Detect any attempt to delete a clusterrolebinding
         output: |
           K8s Cluster Role Binding Deleted (user=%ka.user.name binding=%ka.target.name resource=%ka.target.resource resp=%ka.response.code decision=%ka.auth.decision reason=%ka.auth.reason)
-        priority: Notice
+        priority: NOTICE
         tags:
           - fstec
           - rbac_drift
@@ -385,7 +381,7 @@ spec:
         desc: An attempt to read container image file in the containerd directory
         output: |
           File below a known containerd directory opened for reading (user=%user.name user_loginuid=%user.loginuid command=%proc.cmdline pid=%proc.pid file=%fd.name parent=%proc.pname pcmdline=%proc.pcmdline gparent=%proc.aname[2] container_id=%container.id image=%container.image.repository)
-        priority: Notice
+        priority: NOTICE
         tags:
           - fstec
           - container_image_access
@@ -396,7 +392,7 @@ spec:
         desc: An attempt to change container image file in the containerd directory
         output: |
           File below a known containerd directory opened for writing (user=%user.name user_loginuid=%user.loginuid command=%proc.cmdline pid=%proc.pid file=%fd.name parent=%proc.pname pcmdline=%proc.pcmdline gparent=%proc.aname[2] container_id=%container.id image=%container.image.repository)
-        priority: Error
+        priority: ERROR
         tags:
           - fstec
           - container_image_drift
@@ -407,7 +403,7 @@ spec:
         desc: Not all pods are under integrity control in a system namespace
         output: |
           Not all containers are running with the sha256 sum as a tag in a system namespace, which is a potential integrity control mechanism misconfiguration (user=%ka.user.name binding=%ka.target.name resource=%ka.target.resource resp=%ka.response.code decision=%ka.auth.decision reason=%ka.auth.reason image=%ka.req.pod.containers.image)
-        priority: Notice
+        priority: NOTICE
         tags:
           - fstec
           - integrity_control
@@ -421,7 +417,7 @@ spec:
           ) and fd.sport=22
         desc: Detect Inbound SSH Connection
         output: Inbound SSH Connection (command=%proc.cmdline pid=%proc.pid connection=%fd.name user=%user.name user_loginuid=%user.loginuid type=%evt.type)
-        priority: Notice
+        priority: NOTICE
         tags:
           - fstec
           - auth_attempts
