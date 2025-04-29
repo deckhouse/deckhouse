@@ -386,9 +386,9 @@ $(echo -n $ENDPOINTS_STRING) endpoint status -w table
 
 Если в поле `ERRORS` вы видите подобное сообщение `alarm:NOSPACE`, значит вам нужно предпринять следующие шаги:
 
-1. Найдите строку с `--quota-backend-bytes` в файле манифеста пода etcd, расположенного по пути `/etc/kubernetes/manifests/etcd.yaml` и увеличьте значение, умножив указанный параметр в этой строке на два. Если такой строки нет — добавьте, например: `- --quota-backend-bytes=8589934592`. Эта настройка задает лимит на 8 ГБ.
+1. Найдите строку с `--quota-backend-bytes` в файле манифеста пода etcd, раположенного по пути `/etc/kubernetes/manifests/etcd.yaml` и увеличьте значение, умножив указанный параметр в этой строке на два. Если такой строки нет — добавьте, например: `- --quota-backend-bytes=8589934592`. Эта настройка задает лимит на 8 ГБ.
 
-2. Снимите активную тревогу, которая возникла из-за того, что лимит был достигнут. Для этого выполните команду:
+1. Сбросьте активное предупреждение (alarm) о нехватке места в базе данных. Для этого выполните следующую команду:
 
    ```shell
    kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
@@ -397,7 +397,7 @@ $(echo -n $ENDPOINTS_STRING) endpoint status -w table
    --endpoints https://127.0.0.1:2379/ alarm disarm
    ```
 
-3. Измените параметр [maxDbSize](configuration.html#parameters-etcd-maxdbsize) в настройках `control-plane-manager` на тот, который был задан в манифесте.
+1. Измените параметр [maxDbSize](configuration.html#parameters-etcd-maxdbsize) в настройках `control-plane-manager` на тот, который был задан в манифесте.
 
 ## Как настроить дополнительные политики аудита?
 
