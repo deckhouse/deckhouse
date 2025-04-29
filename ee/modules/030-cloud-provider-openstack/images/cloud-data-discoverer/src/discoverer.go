@@ -33,35 +33,73 @@ import (
 )
 
 type Discoverer struct {
-	logger       *log.Logger
+	logger *log.Logger
+
 	authOpts     gophercloud.AuthOptions
 	region       string
 	moduleConfig []byte
 	clusterUUID  string
 }
 
-func NewDiscoverer(logger *log.Logger) *Discoverer {
-	authOpts, err := openstack.AuthOptionsFromEnv()
-	if err != nil {
-		logger.Fatalf("Cannot get opts from env: %v", err)
+type Option func(d *Discoverer) error
+
+func WithOptionsFromEnv() Option {
+	return func(d *Discoverer) error {
+		authOpts, err := openstack.AuthOptionsFromEnv()
+		if err != nil {
+			return fmt.Errorf("cannot get opts from env: %w", err)
+		}
+		d.authOpts = authOpts
+
+		region := os.Getenv("OS_REGION")
+		if region == "" {
+			return fmt.Errorf("cannot get OS_REGION env")
+		}
+		d.region = region
+
+		clusterUUID, ok := os.LookupEnv("CLUSTER_UUID")
+		if ok {
+			d.clusterUUID = clusterUUID
+		}
+
+		moduleConfig, ok := os.LookupEnv("MODULE_CONFIG")
+		if ok {
+			d.moduleConfig = []byte(moduleConfig)
+		}
+
+		return nil
+	}
+}
+
+func WithAuthOptions(authOpts gophercloud.AuthOptions) Option {
+	return func(d *Discoverer) error {
+		d.authOpts = authOpts
+
+		return nil
+	}
+}
+
+func WithRegion(region string) Option {
+	return func(d *Discoverer) error {
+		d.region = region
+
+		return nil
+	}
+}
+
+func NewDiscoverer(logger *log.Logger, options ...Option) (*Discoverer, error) {
+	discoverer := &Discoverer{
+		logger: logger,
 	}
 
-	region := os.Getenv("OS_REGION")
-	if region == "" {
-		logger.Fatalf("Cannot get OS_REGION env")
+	for _, o := range options {
+		err := o(discoverer)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	clusterUUID := os.Getenv("CLUSTER_UUID")
-
-	moduleConfig := os.Getenv("MODULE_CONFIG")
-
-	return &Discoverer{
-		logger:       logger,
-		region:       region,
-		authOpts:     authOpts,
-		moduleConfig: []byte(moduleConfig),
-		clusterUUID:  clusterUUID,
-	}
+	return discoverer, nil
 }
 
 func (d *Discoverer) CheckCloudConditions(ctx context.Context) ([]v1alpha1.CloudCondition, error) {
@@ -96,28 +134,36 @@ func (d *Discoverer) InstanceTypes(ctx context.Context) ([]v1alpha1.InstanceType
 	return res, nil
 }
 
-func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryData []byte) ([]byte, error) {
+type DiscoveryDataOptions struct {
+	clusterUUID string
+
+	cloudProviderDiscoveryData []byte
+}
+
+func (d *Discoverer) DiscoveryData(ctx context.Context, options *DiscoveryDataOptions) ([]byte, error) {
 	var discoveryData OpenstackCloudDiscoveryData
 
-	if len(cloudProviderDiscoveryData) == 0 {
+	cloudProviderDiscoveryData := options.cloudProviderDiscoveryData
+
+	if len(options.cloudProviderDiscoveryData) == 0 {
 		cloudProviderDiscoveryData = d.moduleConfig
 	}
 
 	if len(cloudProviderDiscoveryData) > 0 {
 		err := json.Unmarshal(cloudProviderDiscoveryData, &discoveryData)
 		if err != nil {
-			return nil, fmt.Errorf("failed to unmarshal cloud provider discovery data: %v", err)
+			return nil, fmt.Errorf("failed to unmarshal cloud provider discovery data: %w", err)
 		}
 	}
 
 	provider, err := newProvider(d.authOpts, d.logger)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create OpenStack provider: %v", err)
+		return nil, fmt.Errorf("failed to create OpenStack provider: %w", err)
 	}
 
 	flavors, err := d.getFlavors(ctx, provider)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get flavors: %v", err)
+		return nil, fmt.Errorf("failed to get flavors: %w", err)
 	}
 
 	flavorNames := make([]string, 0, len(flavors))
