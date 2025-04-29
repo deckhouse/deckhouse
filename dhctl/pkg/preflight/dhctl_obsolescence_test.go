@@ -23,7 +23,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 )
 
-func (s *PreflightChecksTestSuite) Test_CheckDhctlVersionObsolescence_Success_ReleaseChannel() {
+func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolescence_Success_ReleaseChannel() {
 	t := s.Require()
 
 	app.AppVersion = "dev"
@@ -54,7 +54,7 @@ func (s *PreflightChecksTestSuite) Test_CheckDhctlVersionObsolescence_Success_Re
 	t.NoError(err)
 }
 
-func (s *PreflightChecksTestSuite) Test_CheckDhctlVersionObsolescence_Success_DevBranch() {
+func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolescence_Success_DevBranch() {
 	t := s.Require()
 
 	app.AppVersion = "dev"
@@ -87,7 +87,7 @@ func (s *PreflightChecksTestSuite) Test_CheckDhctlVersionObsolescence_Success_De
 	t.NoError(err)
 }
 
-func (s *PreflightChecksTestSuite) Test_CheckDhctlVersionObsolescence_VersionMismatch_ReleaseChannel() {
+func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolescence_VersionMismatch_ReleaseChannel() {
 	t := s.Require()
 
 	app.AppVersion = "dev"
@@ -118,7 +118,7 @@ func (s *PreflightChecksTestSuite) Test_CheckDhctlVersionObsolescence_VersionMis
 	t.ErrorIs(err, ErrInstallerVersionMismatch)
 }
 
-func (s *PreflightChecksTestSuite) Test_CheckDhctlVersionObsolescence_VersionMismatch_DevBranch() {
+func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolescence_VersionMismatch_DevBranch() {
 	t := s.Require()
 
 	app.AppVersion = "dev"
@@ -150,7 +150,7 @@ func (s *PreflightChecksTestSuite) Test_CheckDhctlVersionObsolescence_VersionMis
 	t.ErrorIs(err, ErrInstallerVersionMismatch)
 }
 
-func (s *PreflightChecksTestSuite) Test_CheckDhctlVersionObsolescence_getDeckhouseImageConfig() {
+func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolescence_VersionOverride_ReleaseChannel() {
 	t := s.Require()
 
 	app.AppVersion = "dev"
