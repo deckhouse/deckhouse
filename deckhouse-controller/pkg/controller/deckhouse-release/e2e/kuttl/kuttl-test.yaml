@@ -1,0 +1,11 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestSuite
+crdDir: ./tests/bootstrap/crds/
+manifestDirs:
+  - tests/bootstrap/
+timeout: 30
+parallel: 1
+testDirs:
+  - tests/e2e/
+commands:
+  - command: kubectl delete deckhouserelease --all

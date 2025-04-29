@@ -1,0 +1,101 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: e2e-deckhouse-release
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: http-webhook-receiver
+  namespace: e2e-deckhouse-release
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: http-webhook-receiver
+  template:
+    metadata:
+      labels:
+        app: http-webhook-receiver
+    spec:
+      automountServiceAccountToken: true
+      serviceAccountName: webhook
+      containers:
+        - name: http-webhook-receiver
+          image: ghcr.io/yalosev/k8s-webhook:v0.0.6
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+          ports:
+            - containerPort: 8080
+              name: http
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+          resources:
+            limits:
+              cpu: 200m
+              memory: 64Mi
+            requests:
+              cpu: 10m
+              memory: 16Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: webhook
+  namespace: e2e-deckhouse-release
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: http
+      name: http
+  selector:
+    app: http-webhook-receiver
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: webhook
+  namespace: e2e-deckhouse-release
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: webhook
+  namespace: e2e-deckhouse-release
+rules:
+  - apiGroups: ["test.deckhouse.io"]
+    resources: ["webhookrequests"]
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+      - deletecollection
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: webhook
+  namespace: e2e-deckhouse-release
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: webhook
+subjects:
+  - kind: ServiceAccount
+    name: webhook
+    namespace: e2e-deckhouse-release
