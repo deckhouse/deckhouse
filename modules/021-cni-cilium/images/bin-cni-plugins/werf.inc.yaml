@@ -2,9 +2,9 @@
 ---
 # #####################################################################
 # Build cni binaries
-# Based on https://github.com/cilium/cilium/blob/v1.17.2/images/runtime/Dockerfile (gops-cni-builder stage)
-# and https://github.com/cilium/cilium/blob/v1.17.2/images/runtime/download-cni.sh
-# and https://github.com/cilium/cilium/blob/v1.17.2/images/runtime/cni-version.sh
+# Based on https://github.com/cilium/cilium/blob/v1.17.3/images/runtime/Dockerfile (gops-cni-builder stage)
+# and https://github.com/cilium/cilium/blob/v1.17.3/images/runtime/download-cni.sh
+# and https://github.com/cilium/cilium/blob/v1.17.3/images/runtime/cni-version.sh
 # #####################################################################
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
