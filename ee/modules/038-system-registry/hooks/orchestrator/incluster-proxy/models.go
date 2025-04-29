@@ -8,7 +8,6 @@ package inclusterproxy
 import (
 	"crypto/x509"
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -18,13 +17,13 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/pki"
 )
 
-type Inputs struct {
-	Pods map[string]Pod
-}
+type Inputs = DeploymentStatus
 
-type Pod struct {
-	Ready   bool
-	Version string
+type DeploymentStatus struct {
+	IsExist    bool
+	IsRollout  bool
+	RolloutMsg string
+	Version    string
 }
 
 type Params struct {
@@ -42,16 +41,17 @@ type UpstreamParams struct {
 	CA         *x509.Certificate
 }
 
-type ProcessResult map[string]ProcessResultPod
+type ProcessResult struct {
+	Ready   bool
+	Message string
+}
 
-type ProcessResultPod struct {
-	Ready         bool
-	PodReady      bool
-	ConfigVersion string
+type StopResult struct {
+	Ready   bool
+	Message string
 }
 
 type State struct {
-	Run    bool         `json:"run,omitempty"`
 	Config *StateConfig `json:"config,omitempty"`
 }
 
@@ -80,85 +80,57 @@ type UpstreamRegistryConfig struct {
 	CACert string     `json:"ca,omitempty" yaml:"ca,omitempty"`
 }
 
-func (result ProcessResult) IsReady() bool {
-	for _, pod := range result {
-		if !pod.Ready || !pod.PodReady {
-			return false
-		}
-	}
-	return true
-}
-
-func (result ProcessResult) GetConditionMessage() string {
-	ready := true
-	podMessages := make(map[string]string)
-
-	for name, pod := range result {
-		switch {
-		case !pod.Ready:
-			podMessages[name] = "pod is not in Ready state"
-		case !pod.PodReady:
-			podMessages[name] = fmt.Sprintf("pod(s) not in Ready state or config version (%v) mismatch", pod.ConfigVersion)
-		default:
-			continue
-		}
-		ready = false
-	}
-
-	if ready {
-		return ""
-	}
-
-	podNames := make([]string, 0, len(podMessages))
-	for name := range podMessages {
-		podNames = append(podNames, name)
-	}
-	sort.Strings(podNames)
-
-	builder := new(strings.Builder)
-	fmt.Fprintln(builder, "Pods not ready:")
-	for _, name := range podNames {
-		fmt.Fprintf(builder, "- %v: %v\n", name, podMessages[name])
-	}
-	return builder.String()
-}
-
-func (state *State) Stop(inputs Inputs) ([]string, error) {
-	result := make([]string, 0, len(inputs.Pods))
+func (state *State) Stop(inputs Inputs) StopResult {
 	state.Config = nil
-
-	for name := range inputs.Pods {
-		result = append(result, name)
+	if inputs.IsExist {
+		return StopResult{
+			Ready:   false,
+			Message: "The incluster-proxy is currently active.",
+		}
 	}
-
-	if len(result) == 0 {
-		state.Run = false
+	return StopResult{
+		Ready:   true,
+		Message: "The incluster-proxy has been successfully stopped.",
 	}
-
-	return result, nil
 }
 
 func (state *State) Process(log go_hook.Logger, params Params, inputs Inputs) (ProcessResult, error) {
-	result := make(ProcessResult)
-
 	if state.Config == nil {
 		state.Config = &StateConfig{}
 	}
 
 	if err := state.Config.process(log, params); err != nil {
+		result := ProcessResult{
+			Ready:   false,
+			Message: "Configuration processing for incluster-proxy failed.",
+		}
 		return result, fmt.Errorf("cannot process config: %w", err)
 	}
 
-	for name, pod := range inputs.Pods {
-		isPodReady := pod.Ready && pod.Version == state.Config.Version
-		result[name] = ProcessResultPod{
-			Ready:         pod.Ready,
-			PodReady:      isPodReady,
-			ConfigVersion: state.Config.Version,
+	result := ProcessResult{
+		Ready:   true,
+		Message: "Configuration for incluster-proxy processed successfully.",
+	}
+	switch {
+	case !inputs.IsExist:
+		result = ProcessResult{
+			Ready:   false,
+			Message: "Incluster-proxy does not exist.",
+		}
+	case !inputs.IsRollout:
+		result = ProcessResult{
+			Ready:   false,
+			Message: fmt.Sprintf("Incluster-proxy is in progress: %s", inputs.RolloutMsg),
+		}
+	case inputs.Version != state.Config.Version:
+		result = ProcessResult{
+			Ready: false,
+			Message: fmt.Sprintf(
+				"Incluster-proxy version is out of sync. Current version: %s, expected version: %s.",
+				inputs.Version, state.Config.Version,
+			),
 		}
 	}
-
-	state.Run = true
 	return result, nil
 }
 

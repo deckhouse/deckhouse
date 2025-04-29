@@ -106,11 +106,10 @@ func getKubernetesConfigs() []go_hook.KubernetesConfig {
 		pki.KubernetsConfig(pkiSnapName),
 		users.KubernetsConfig(usersSnapName),
 		registryservice.KubernetsConfig(registryServiceSnapName),
+		inclusterproxy.KubernetesConfig(inClusterProxySnapName),
 	}
 
 	ret = append(ret, nodeservices.KubernetsConfig(nodeServicesSnapName)...)
-	ret = append(ret, inclusterproxy.KubernetsConfig(inClusterProxySnapName)...)
-
 	return ret
 }
 
@@ -187,7 +186,7 @@ func handle(input *go_hook.HookInput) error {
 	}
 
 	inputs.InClusterProxy, err = inclusterproxy.InputsFromSnapshot(input, inClusterProxySnapName)
-	if err != nil {
+	if err != nil && !errors.Is(err, helpers.ErrNoSnapshot) {
 		return fmt.Errorf("get InClusterProxy snapshots error: %w", err)
 	}
 

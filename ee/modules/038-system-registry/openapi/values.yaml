@@ -78,9 +78,6 @@ properties:
               in_cluster_proxy:
                 type: object
                 properties:
-                  run:
-                    type: boolean
-                    default: false
                   config:
                     type: object
                     properties:

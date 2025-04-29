@@ -215,10 +215,7 @@ func (state *State) transitionToLocal(log go_hook.Logger, inputs Inputs) error {
 
 	// Cleanup
 
-	inClusterProxyReady, err := state.cleanupInClusterProxy(inputs)
-	if err != nil {
-		return fmt.Errorf("cannot cleanup InClusterProxy: %w", err)
-	}
+	inClusterProxyReady := state.cleanupInClusterProxy(inputs)
 
 	if !inClusterProxyReady {
 		state.setReadyCondition(false, inputs)
@@ -328,10 +325,7 @@ func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 	// TODO: update deckhouse-registry secret
 
 	// Cleanup
-	inClusterProxyReady, err := state.cleanupInClusterProxy(inputs)
-	if err != nil {
-		return fmt.Errorf("cannot cleanup InClusterProxy: %w", err)
-	}
+	inClusterProxyReady := state.cleanupInClusterProxy(inputs)
 
 	state.IngressEnabled = false
 
@@ -400,19 +394,18 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 		inClusterProxyParams.Upstream.CA = cert
 	}
 
-	inClusterProxyResult, err := state.InClusterProxy.Process(log, inClusterProxyParams, inputs.InClusterProxy)
+	inClusterProxyProcessResult, err := state.InClusterProxy.Process(log, inClusterProxyParams, inputs.InClusterProxy)
 	if err != nil {
 		return fmt.Errorf("cannot process InClusterProxy: %w", err)
 	}
 
-	inClusterProxyMessage := inClusterProxyResult.GetConditionMessage()
-	if inClusterProxyMessage != "" {
+	if !inClusterProxyProcessResult.Ready {
 		state.setCondition(metav1.Condition{
 			Type:               ConditionTypeInClusterProxy,
 			Status:             metav1.ConditionFalse,
 			ObservedGeneration: inputs.Params.Generation,
 			Reason:             ConditionReasonProcessing,
-			Message:            inClusterProxyMessage,
+			Message:            inClusterProxyProcessResult.Message,
 		})
 
 		state.setReadyCondition(false, inputs)
@@ -469,10 +462,7 @@ func (state *State) transitionToUnmanaged(log go_hook.Logger, inputs Inputs) err
 	if err != nil {
 		return fmt.Errorf("cannot cleanup NodeServices: %w", err)
 	}
-	inClusterProxyReady, err := state.cleanupInClusterProxy(inputs)
-	if err != nil {
-		return fmt.Errorf("cannot cleanup InClusterProxy: %w", err)
-	}
+	inClusterProxyReady := state.cleanupInClusterProxy(inputs)
 
 	state.RegistryService = registryservice.ModeDisabled
 
@@ -534,31 +524,18 @@ func (state *State) cleanupNodeServices(inputs Inputs) (bool, error) {
 	return true, nil
 }
 
-func (state *State) cleanupInClusterProxy(inputs Inputs) (bool, error) {
-	pods, err := state.InClusterProxy.Stop(inputs.InClusterProxy)
-	if err != nil {
-		return false, fmt.Errorf("cannot stop: %w", err)
-	}
+func (state *State) cleanupInClusterProxy(inputs Inputs) bool {
+	inClusterProxyStopResult := state.InClusterProxy.Stop(inputs.InClusterProxy)
 
-	if len(pods) > 0 {
-		sort.Strings(pods)
-
-		builder := new(strings.Builder)
-
-		fmt.Fprintln(builder, "Waiting for pods cleanup:")
-
-		for _, name := range pods {
-			fmt.Fprintf(builder, "- %v\n", name)
-		}
-
+	if !inClusterProxyStopResult.Ready {
 		state.setCondition(metav1.Condition{
 			Type:               ConditionTypeInClusterProxy,
 			Status:             metav1.ConditionFalse,
 			ObservedGeneration: inputs.Params.Generation,
 			Reason:             ConditionReasonProcessing,
-			Message:            builder.String(),
+			Message:            inClusterProxyStopResult.Message,
 		})
-		return false, nil
+		return false
 	}
 
 	state.setCondition(metav1.Condition{
@@ -567,7 +544,7 @@ func (state *State) cleanupInClusterProxy(inputs Inputs) (bool, error) {
 		ObservedGeneration: inputs.Params.Generation,
 	})
 
-	return true, nil
+	return true
 }
 
 func (state *State) setReadyCondition(ready bool, inputs Inputs) {

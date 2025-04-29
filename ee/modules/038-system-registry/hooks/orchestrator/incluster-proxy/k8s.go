@@ -10,67 +10,63 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	v1core "k8s.io/api/core/v1"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers"
 )
 
 const (
-	podsSnapName = "pods"
+	VersionAnnotation = "registry.deckhouse.io/incluster-proxy-version"
+	DeploymentName    = "registry-incluster-proxy"
 )
 
-func snapName(prefix, name string) string {
-	return fmt.Sprintf("%s-->%s", prefix, name)
-}
+func KubernetesConfig(name string) go_hook.KubernetesConfig {
+	return go_hook.KubernetesConfig{
+		Name:              name,
+		ApiVersion:        "apps/v1",
+		Kind:              "Deployment",
+		NamespaceSelector: helpers.NamespaceSelector,
+		NameSelector: &types.NameSelector{
+			MatchNames: []string{DeploymentName},
+		},
+		FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+			var d appsv1.Deployment
+			err := sdk.FromUnstructured(obj, &d)
+			if err != nil {
+				return nil, fmt.Errorf("failed to convert deployment \"%s\" to struct: %v", obj.GetName(), err)
+			}
 
-func KubernetsConfig(name string) []go_hook.KubernetesConfig {
-	ret := []go_hook.KubernetesConfig{
-		{
-			Name:              snapName(name, podsSnapName),
-			ApiVersion:        "v1",
-			Kind:              "Pod",
-			NamespaceSelector: helpers.NamespaceSelector,
-			LabelSelector:     InClusterProxyPodsMatchLabels,
-			FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-				var pod v1core.Pod
+			rolloutMsg, isRollout := getDeploymentRolloutStatus(&d)
 
-				err := sdk.FromUnstructured(obj, &pod)
-				if err != nil {
-					return nil, fmt.Errorf("failed to convert pod to struct: %v", err)
-				}
-
-				isReady := false
-				for _, cond := range pod.Status.Conditions {
-					if cond.Type == "Ready" && cond.Status == "True" {
-						isReady = true
-						break
-					}
-				}
-
-				podObject := Pod{
-					Ready:   isReady,
-					Version: pod.Annotations[PodVersionAnnotation],
-				}
-
-				ret := helpers.NewKeyValue(pod.Name, podObject)
-				return ret, nil
-			},
+			ret := Inputs{
+				IsExist:    true,
+				IsRollout:  isRollout,
+				RolloutMsg: rolloutMsg,
+				Version:    d.Annotations[VersionAnnotation],
+			}
+			return ret, nil
 		},
 	}
-	return ret
 }
 
 func InputsFromSnapshot(input *go_hook.HookInput, name string) (Inputs, error) {
-	var (
-		ret Inputs
-		err error
-	)
+	return helpers.SnapshotToSingle[Inputs](input, name)
+}
 
-	pods, err := helpers.SnapshotToMap[string, Pod](input, snapName(name, podsSnapName))
-	if err != nil {
-		return ret, fmt.Errorf("get Pods snapshot error: %w", err)
+func getDeploymentRolloutStatus(deployment *appsv1.Deployment) (string, bool) {
+	if deployment.Generation <= deployment.Status.ObservedGeneration {
+		if deployment.Spec.Replicas != nil && deployment.Status.UpdatedReplicas < *deployment.Spec.Replicas {
+			return fmt.Sprintf("Waiting for deployment %q rollout to finish: %d out of %d new replicas have been updated...", deployment.Name, deployment.Status.UpdatedReplicas, *deployment.Spec.Replicas), false
+		}
+		if deployment.Status.Replicas > deployment.Status.UpdatedReplicas {
+			return fmt.Sprintf("Waiting for deployment %q rollout to finish: %d old replicas are pending termination...", deployment.Name, deployment.Status.Replicas-deployment.Status.UpdatedReplicas), false
+		}
+		if deployment.Status.AvailableReplicas < deployment.Status.UpdatedReplicas {
+			return fmt.Sprintf("Waiting for deployment %q rollout to finish: %d of %d updated replicas are available...", deployment.Name, deployment.Status.AvailableReplicas, deployment.Status.UpdatedReplicas), false
+		}
+		return fmt.Sprintf("Deployment %q successfully rolled out", deployment.Name), true
 	}
-	ret.Pods = pods
-	return ret, nil
+	return "Waiting for deployment spec update to be observed...", false
 }
