@@ -20,10 +20,10 @@ import (
 type Inputs = DeploymentStatus
 
 type DeploymentStatus struct {
-	IsExist    bool
-	IsRollout  bool
-	RolloutMsg string
-	Version    string
+	IsExist  bool
+	IsReady  bool
+	ReadyMsg string
+	Version  string
 }
 
 type Params struct {
@@ -117,10 +117,10 @@ func (state *State) Process(log go_hook.Logger, params Params, inputs Inputs) (P
 			Ready:   false,
 			Message: "Incluster-proxy does not exist.",
 		}
-	case !inputs.IsRollout:
+	case !inputs.IsReady:
 		result = ProcessResult{
 			Ready:   false,
-			Message: fmt.Sprintf("Incluster-proxy is in progress: %s", inputs.RolloutMsg),
+			Message: fmt.Sprintf("Incluster-proxy is in progress: %s", inputs.ReadyMsg),
 		}
 	case inputs.Version != state.Config.Version:
 		result = ProcessResult{

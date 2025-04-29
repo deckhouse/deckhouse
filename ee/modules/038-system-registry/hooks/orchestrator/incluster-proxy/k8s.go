@@ -38,13 +38,12 @@ func KubernetesConfig(name string) go_hook.KubernetesConfig {
 				return nil, fmt.Errorf("failed to convert deployment \"%s\" to struct: %v", obj.GetName(), err)
 			}
 
-			rolloutMsg, isRollout := getDeploymentRolloutStatus(&d)
-
+			readyMsg, isReady := assessDeploymentStatus(&d)
 			ret := Inputs{
-				IsExist:    true,
-				IsRollout:  isRollout,
-				RolloutMsg: rolloutMsg,
-				Version:    d.Annotations[VersionAnnotation],
+				IsExist:  true,
+				IsReady:  isReady,
+				ReadyMsg: readyMsg,
+				Version:  d.Annotations[VersionAnnotation],
 			}
 			return ret, nil
 		},
@@ -55,18 +54,69 @@ func InputsFromSnapshot(input *go_hook.HookInput, name string) (Inputs, error) {
 	return helpers.SnapshotToSingle[Inputs](input, name)
 }
 
-func getDeploymentRolloutStatus(deployment *appsv1.Deployment) (string, bool) {
-	if deployment.Generation <= deployment.Status.ObservedGeneration {
-		if deployment.Spec.Replicas != nil && deployment.Status.UpdatedReplicas < *deployment.Spec.Replicas {
-			return fmt.Sprintf("Waiting for deployment %q rollout to finish: %d out of %d new replicas have been updated...", deployment.Name, deployment.Status.UpdatedReplicas, *deployment.Spec.Replicas), false
-		}
-		if deployment.Status.Replicas > deployment.Status.UpdatedReplicas {
-			return fmt.Sprintf("Waiting for deployment %q rollout to finish: %d old replicas are pending termination...", deployment.Name, deployment.Status.Replicas-deployment.Status.UpdatedReplicas), false
-		}
-		if deployment.Status.AvailableReplicas < deployment.Status.UpdatedReplicas {
-			return fmt.Sprintf("Waiting for deployment %q rollout to finish: %d of %d updated replicas are available...", deployment.Name, deployment.Status.AvailableReplicas, deployment.Status.UpdatedReplicas), false
-		}
-		return fmt.Sprintf("Deployment %q successfully rolled out", deployment.Name), true
+// assessDeploymentStatus evaluates whether a Deployment has reached its desired state.
+// It checks the status fields to determine if the number of updated, available, and total replicas
+// match the expected specification.
+
+// Deployment status fields explanation:
+// - status.replicas:
+//     Total number of non-terminated Pods (Pending or Running) across all ReplicaSets
+// - status.availableReplicas:
+//     Number of Pods that have been available for at least minReadySeconds across all ReplicaSets
+// - status.unavailableReplicas:
+//     Difference between status.replicas and status.availableReplicas across all ReplicaSets
+// - status.readyReplicas:
+//     Number of Pods in Ready condition (may not be Available yet) across all ReplicaSets
+// - status.updatedReplicas:
+//     Number of Pods created using the latest Deployment template (podTemplateSpec)
+
+func assessDeploymentStatus(deployment *appsv1.Deployment) (string, bool) {
+	// Check if the Deployment controller has observed the latest desired spec
+	if deployment.Generation > deployment.Status.ObservedGeneration {
+		return "Deployment update is not yet observed by the controller", false
 	}
-	return "Waiting for deployment spec update to be observed...", false
+
+	// Default replicas to 1 if unspecified
+	// From spec:
+	// 		Number of desired pods. This is a pointer to distinguish between explicit
+	// 		zero and not specified. Defaults to 1.
+	var desiredReplicas int32 = 1
+	if deployment.Spec.Replicas != nil {
+		desiredReplicas = *deployment.Spec.Replicas
+	}
+
+	// Condition 1: Updated replicas must match the desired count
+	if deployment.Status.UpdatedReplicas < desiredReplicas {
+		msg := fmt.Sprintf(
+			"Deployment %q: %d of %d Pods have been updated to the latest specification",
+			deployment.Name,
+			deployment.Status.UpdatedReplicas,
+			desiredReplicas,
+		)
+		return msg, false
+	}
+
+	// Condition 2: All old replicas should be terminated
+	if deployment.Status.UpdatedReplicas < deployment.Status.Replicas {
+		msg := fmt.Sprintf(
+			"Deployment %q: %d outdated Pods are still running",
+			deployment.Name,
+			deployment.Status.Replicas-deployment.Status.UpdatedReplicas,
+		)
+		return msg, false
+	}
+
+	// Condition 3: All updated replicas must become available
+	if deployment.Status.AvailableReplicas < deployment.Status.UpdatedReplicas {
+		msg := fmt.Sprintf(
+			"Deployment %q: %d of %d updated Pods are currently available",
+			deployment.Name,
+			deployment.Status.AvailableReplicas,
+			deployment.Status.UpdatedReplicas,
+		)
+		return msg, false
+	}
+
+	// Deployment matches the desired specification
+	return fmt.Sprintf("Deployment %q is in the desired state", deployment.Name), true
 }
