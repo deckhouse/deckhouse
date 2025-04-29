@@ -117,11 +117,6 @@ func (state *State) Process(log go_hook.Logger, params Params, inputs Inputs) (P
 			Ready:   false,
 			Message: "Incluster-proxy does not exist.",
 		}
-	case !inputs.IsReady:
-		result = ProcessResult{
-			Ready:   false,
-			Message: fmt.Sprintf("Incluster-proxy is in progress: %s", inputs.ReadyMsg),
-		}
 	case inputs.Version != state.Config.Version:
 		result = ProcessResult{
 			Ready: false,
@@ -129,6 +124,11 @@ func (state *State) Process(log go_hook.Logger, params Params, inputs Inputs) (P
 				"Incluster-proxy version is out of sync. Current version: %s, expected version: %s.",
 				inputs.Version, state.Config.Version,
 			),
+		}
+	case !inputs.IsReady:
+		result = ProcessResult{
+			Ready:   false,
+			Message: fmt.Sprintf("Incluster-proxy is in progress: %s", inputs.ReadyMsg),
 		}
 	}
 	return result, nil
