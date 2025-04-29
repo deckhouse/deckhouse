@@ -72,6 +72,9 @@ spec:
     modules:
       publicDomainTemplate: "%s.k8s.smoke.flant.com"
       storageClass: localpath-all
+      placement:
+        customTolerationKeys:
+          - node
   version: 2
 ---
 apiVersion: deckhouse.io/v1alpha1

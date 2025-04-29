@@ -70,8 +70,8 @@ jobs:
       ref_full: ${{ steps.git_info.outputs.ref_full }}
       github_sha: ${{ steps.git_info.outputs.github_sha }}
       pr_number: ${{ steps.git_info.outputs.pr_number }}
-    # Skip the CI for automation PRs, e.g. changelog
-    if: ${{ github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
+    # Skip the CI for automation PRs, e.g. changelog, don't skip if Pull Request title contains "[run ci]".
+    if: ${{ contains(github.event.pull_request.title, '[run ci]') || github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
     steps:
       - id: git_info
         name: Get tag name and SHA
@@ -201,6 +201,19 @@ jobs:
         run: |
           git diff --exit-code
     # </template: go_generate_template>
+
+
+      # <template: send_fail_report>
+      - name: Send fail report
+        if: failure()
+        env:
+          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          JOB_NAME: ${{ github.job }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
+        run: |
+          bash ./.github/scripts/send-report.sh
+      # </template: send_fail_report>
 
 
   workflow_render:
@@ -523,6 +536,19 @@ jobs:
         run: |
           rm -f images_tags_werf.json
     # </template: build_template>
+
+
+      # <template: send_fail_report>
+      - name: Send fail report
+        if: failure()
+        env:
+          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          JOB_NAME: ${{ github.job }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
+        run: |
+          bash ./.github/scripts/send-report.sh
+      # </template: send_fail_report>
 
 
   doc_web_build:
