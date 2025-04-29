@@ -411,7 +411,7 @@ If you see a message like `alarm:NOSPACE` in the `ERRORS` field, you need to tak
 
 1. Make change to `/etc/kubernetes/manifests/etcd.yaml` — find the line with `--quota-backend-bytes` and edit it. If there is no such line — add, for example: `- --quota-backend-bytes=8589934592` - this sets the limit to 8 GB.
 
-2. Disarm the active alarm that occurred due to reaching the limit. To do this, execute the command:
+1. Disarm the active alarm that occurred due to reaching the limit. To do this, execute the command:
 
    ```shell
    kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
@@ -420,7 +420,7 @@ If you see a message like `alarm:NOSPACE` in the `ERRORS` field, you need to tak
    --endpoints https://127.0.0.1:2379/ alarm disarm
    ```
 
-3. Change the [maxDbSize](configuration.html#parameters-etcd-maxdbsize) parameter in the `control-plane-manager` settings  to match the value specified in the manifest.
+1. Change the [maxDbSize](configuration.html#parameters-etcd-maxdbsize) parameter in the `control-plane-manager` settings  to match the value specified in the manifest.
 
 ## How do I configure additional audit policies?
 
