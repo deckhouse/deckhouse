@@ -56,7 +56,7 @@ entries:
                 - title:
                     en: Authentication
                     ru: Аутентификация
-                  url: /admin/authentication.html
+                  url: /admin/configuration/access/authentication.html
                 - title:
                     en: Authorization
                     ru: Авторизация
