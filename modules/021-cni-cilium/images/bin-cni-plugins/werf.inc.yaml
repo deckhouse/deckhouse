@@ -2,9 +2,9 @@
 ---
 # #####################################################################
 # Build cni binaries
-# Based on https://github.com/cilium/cilium/blob/v1.17.2/images/runtime/Dockerfile (gops-cni-builder stage)
-# and https://github.com/cilium/cilium/blob/v1.17.2/images/runtime/download-cni.sh
-# and https://github.com/cilium/cilium/blob/v1.17.2/images/runtime/cni-version.sh
+# Based on https://github.com/cilium/cilium/blob/v1.17.3/images/runtime/Dockerfile (gops-cni-builder stage)
+# and https://github.com/cilium/cilium/blob/v1.17.3/images/runtime/download-cni.sh
+# and https://github.com/cilium/cilium/blob/v1.17.3/images/runtime/cni-version.sh
 # #####################################################################
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -24,7 +24,7 @@ shell:
   - rm -rf /src/plugins/.git
 ---
 image: {{ .ModuleName }}/cni-plugins-artifact
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact

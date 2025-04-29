@@ -2,8 +2,8 @@
 {{- $hubbleUIFrontVersion := "0.13.2" }}
 {{- $hubbleUIBackVersion := "0.13.2" }}
 ---
-# Based on https://github.com/cilium/cilium/blob/v1.17.2/install/kubernetes/cilium/values.yaml#L1698
-# and on https://github.com/cilium/cilium/blob/v1.17.2/install/kubernetes/cilium/values.yaml#L1732
+# Based on https://github.com/cilium/cilium/blob/v1.17.3/install/kubernetes/cilium/values.yaml#L1698
+# and on https://github.com/cilium/cilium/blob/v1.17.3/install/kubernetes/cilium/values.yaml#L1732
 # and on https://github.com/cilium/hubble-ui/blob/v0.13.2/Dockerfile
 # and on https://github.com/cilium/hubble-ui/blob/v0.13.2/backend/Dockerfile
 ---
@@ -31,7 +31,7 @@ shell:
 
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-backend-build-artifact
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact

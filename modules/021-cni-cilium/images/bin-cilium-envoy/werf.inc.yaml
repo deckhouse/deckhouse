@@ -1,17 +1,17 @@
-{{- $ciliumProxyRev := "efed3defcc70ab5b263a0fc44c93d316b846a211" }}
-{{- $ciliumProxyCacheRev := "v1.31.5-1741765102-efed3defcc70ab5b263a0fc44c93d316b846a211-alt-p11-llvm17-gcc11-v1" }}
-{{- $ciliumProxyDepsRev := "v1.31.5-1741765102-efed3defcc70ab5b263a0fc44c93d316b846a211-alt-p11-llvm17-gcc11-lfs-v2" }}
+{{- $ciliumProxyRev := "f9ddca7dcd91f7ca25a505560e655c47d3dec2cf" }}
+{{- $ciliumProxyCacheRev := "v1.32.5-1744305768-f9ddca7dcd91f7ca25a505560e655c47d3dec2cf-alt-p11-llvm17-gcc11-v1" }}
+{{- $ciliumProxyDepsRev := "v1.32.5-1744305768-f9ddca7dcd91f7ca25a505560e655c47d3dec2cf-alt-p11-llvm17-gcc11-lfs-v2" }}
 {{- $bazelVersions := "6.5.0" }}
-{{- $envoySHA := "688c4bbe47f4d05bb8ed268f5172bb026cf03242" }}
+{{- $envoySHA := "4be217df3694bfa500eb76b0dda4e3c7ec0afeeb" }}
 ---
 # #####################################################################
 # Build cilium-envoy binaries
-# Original IMAGE_TAG of cilium-envoy is v1.31.5-1741765102-efed3defcc70ab5b263a0fc44c93d316b846a211
-# Corresponding commit is efed3defcc70ab5b263a0fc44c93d316b846a211
-# Based on https://github.com/cilium/cilium/blob/v1.17.2/images/cilium/Dockerfile#L9
-# and https://github.com/cilium/proxy/blob/efed3defcc70ab5b263a0fc44c93d316b846a211/Dockerfile.builder
-# and https://github.com/cilium/proxy/blob/efed3defcc70ab5b263a0fc44c93d316b846a211/Dockerfile
-# and https://github.com/cilium/proxy/blob/efed3defcc70ab5b263a0fc44c93d316b846a211/.github/workflows/build-envoy-images-release.yaml
+# Original IMAGE_TAG of cilium-envoy is v1.32.5-1744305768-f9ddca7dcd91f7ca25a505560e655c47d3dec2cf
+# Corresponding commit is f9ddca7dcd91f7ca25a505560e655c47d3dec2cf
+# Based on https://github.com/cilium/cilium/blob/v1.17.3/images/cilium/Dockerfile#L9
+# and https://github.com/cilium/proxy/blob/f9ddca7dcd91f7ca25a505560e655c47d3dec2cf/Dockerfile.builder
+# and https://github.com/cilium/proxy/blob/f9ddca7dcd91f7ca25a505560e655c47d3dec2cf/Dockerfile
+# and https://github.com/cilium/proxy/blob/f9ddca7dcd91f7ca25a505560e655c47d3dec2cf/.github/workflows/build-envoy-images-release.yaml
 # #####################################################################
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -66,11 +66,11 @@ shell:
   - ln -f -s llvm-17.0 "/usr/lib/llvm-17"
   #
   - mkdir -p /tmp/bazel-cache
-  - git clone --depth 1 --branch {{ $ciliumProxyCacheRev }} {{ $.SOURCE_REPO }}/cilium/proxy-build-cache.git /tmp/bazel-cache && rm -rf /tmp/bazel-cache/.git
+  #- git clone --depth 1 --branch {{ $ciliumProxyCacheRev }} {{ $.SOURCE_REPO }}/cilium/proxy-build-cache.git /tmp/bazel-cache && rm -rf /tmp/bazel-cache/.git
   - chown -R 1337:1337 /tmp/bazel-cache
   - mkdir -p /tmp/bazel-deps
   - git lfs install
-  - git clone --depth 1 --branch {{ $ciliumProxyDepsRev }} {{ $.SOURCE_REPO }}/cilium/proxy-build-deps.git /tmp/bazel-deps && rm -rf /tmp/bazel-deps/.git
+  #- git clone --depth 1 --branch {{ $ciliumProxyDepsRev }} {{ $.SOURCE_REPO }}/cilium/proxy-build-deps.git /tmp/bazel-deps && rm -rf /tmp/bazel-deps/.git
   - chown -R 1337:1337 /tmp/bazel-deps
   #
   - export ALTWRAP_LLVM_VERSION=17.0 GCC_VERSION=11
@@ -85,7 +85,8 @@ shell:
   - mv proxylib/libcilium.so /tmp/install/usr/lib/libcilium.so
   #
   - export BAZEL_VERSION="{{ $bazelVersions }}" USE_BAZEL_VERSION="{{ $bazelVersions }}"
-  - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache --nofetch"
+  #- export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache --nofetch"
+  - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache"
   - export PKG_BUILD=1 V=$V DEBUG=$DEBUG DESTDIR=/tmp/install
   #
   - cd /cilium/proxy
