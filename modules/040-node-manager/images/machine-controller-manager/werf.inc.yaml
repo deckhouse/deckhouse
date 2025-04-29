@@ -17,7 +17,7 @@ fromImage: common/src-artifact
 final: false
 shell:
   install:
-  - git clone --depth 1 --branch v0.36.0-flant.21 {{ $.SOURCE_REPO }}/deckhouse/mcm.git /src
+  - git clone --depth 1 --branch v0.36.0-flant.22 {{ $.SOURCE_REPO }}/deckhouse/mcm.git /src
   - rm -rf /src/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
