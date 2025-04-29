@@ -549,62 +549,6 @@ jobs:
             chmod -f -R 777 "/deckhouse/testing" || true
             chmod -f -R 777 /tmp || true
           fi
-
-
-      # <template: send_alert_template>
-      - name: Check alerting credentials
-        id: check_alerting
-        if: always()
-        env:
-          KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
-        run: |
-          if [[ -n $KEY ]]; then echo "has_credentials=true" >> $GITHUB_OUTPUT; fi
-      - name: Send alert on fail
-        if: ${{ steps.check_alerting.outputs.has_credentials == 'true' && (github.ref == 'refs/heads/main' && (cancelled() || failure())) }}
-        env:
-          CLOUD_LAYOUT_TESTS_MADISON_KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
-        run: |
-          WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-          echo $WORKFLOW_URL
-
-          alertData=$(cat <<EOF
-          {
-            "labels": {
-              "cri": "Containerd",
-              "kube_version": "1.29",
-              "layout": "WithoutNAT",
-              "provider": "AWS",
-              "trigger": "CloudLayoutTestFailed",
-
-              "severity_level": 7
-            },
-            "annotations": {
-              "description": "Check Github workflow log for more information",
-              "plk_create_group_if_not_exists/cloudlayouttestfailed": "CloudLayoutTestFailedGroup",
-              "plk_grouped_by/cloudlayouttestfailed": "CloudLayoutTestFailedGroup",
-              "summary": "Cloud Layout Test failed",
-
-              "plk_link_url/job": "${WORKFLOW_URL}",
-              "plk_protocol_version": "1",
-              "plk_link_title_en/job": "Github job run"
-            }
-          }
-          EOF
-          )
-
-          for (( iter = 1; iter < 60; iter++ )); do
-            if curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" -H 'Content-Type: application/json' -d "${alertData}"; then
-              exit 0
-            fi
-
-            echo "Alert was not sent. Wait 5 seconds before next attempt"
-            sleep 5
-          done
-
-          echo "Alert was not sent. Timeout"
-          exit 1
-        # </template: send_alert_template>
-
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
@@ -1072,62 +1016,6 @@ jobs:
             chmod -f -R 777 "/deckhouse/testing" || true
             chmod -f -R 777 /tmp || true
           fi
-
-
-      # <template: send_alert_template>
-      - name: Check alerting credentials
-        id: check_alerting
-        if: always()
-        env:
-          KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
-        run: |
-          if [[ -n $KEY ]]; then echo "has_credentials=true" >> $GITHUB_OUTPUT; fi
-      - name: Send alert on fail
-        if: ${{ steps.check_alerting.outputs.has_credentials == 'true' && (github.ref == 'refs/heads/main' && (cancelled() || failure())) }}
-        env:
-          CLOUD_LAYOUT_TESTS_MADISON_KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
-        run: |
-          WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-          echo $WORKFLOW_URL
-
-          alertData=$(cat <<EOF
-          {
-            "labels": {
-              "cri": "Containerd",
-              "kube_version": "1.29",
-              "layout": "WithoutNAT",
-              "provider": "EKS",
-              "trigger": "CloudLayoutTestFailed",
-
-              "severity_level": 7
-            },
-            "annotations": {
-              "description": "Check Github workflow log for more information",
-              "plk_create_group_if_not_exists/cloudlayouttestfailed": "CloudLayoutTestFailedGroup",
-              "plk_grouped_by/cloudlayouttestfailed": "CloudLayoutTestFailedGroup",
-              "summary": "Cloud Layout Test failed",
-
-              "plk_link_url/job": "${WORKFLOW_URL}",
-              "plk_protocol_version": "1",
-              "plk_link_title_en/job": "Github job run"
-            }
-          }
-          EOF
-          )
-
-          for (( iter = 1; iter < 60; iter++ )); do
-            if curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" -H 'Content-Type: application/json' -d "${alertData}"; then
-              exit 0
-            fi
-
-            echo "Alert was not sent. Wait 5 seconds before next attempt"
-            sleep 5
-          done
-
-          echo "Alert was not sent. Timeout"
-          exit 1
-        # </template: send_alert_template>
-
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
@@ -1546,62 +1434,6 @@ jobs:
             chmod -f -R 777 "/deckhouse/testing" || true
             chmod -f -R 777 /tmp || true
           fi
-
-
-      # <template: send_alert_template>
-      - name: Check alerting credentials
-        id: check_alerting
-        if: always()
-        env:
-          KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
-        run: |
-          if [[ -n $KEY ]]; then echo "has_credentials=true" >> $GITHUB_OUTPUT; fi
-      - name: Send alert on fail
-        if: ${{ steps.check_alerting.outputs.has_credentials == 'true' && (github.ref == 'refs/heads/main' && (cancelled() || failure())) }}
-        env:
-          CLOUD_LAYOUT_TESTS_MADISON_KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
-        run: |
-          WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-          echo $WORKFLOW_URL
-
-          alertData=$(cat <<EOF
-          {
-            "labels": {
-              "cri": "Containerd",
-              "kube_version": "1.29",
-              "layout": "WithoutNAT",
-              "provider": "GCP",
-              "trigger": "CloudLayoutTestFailed",
-
-              "severity_level": 7
-            },
-            "annotations": {
-              "description": "Check Github workflow log for more information",
-              "plk_create_group_if_not_exists/cloudlayouttestfailed": "CloudLayoutTestFailedGroup",
-              "plk_grouped_by/cloudlayouttestfailed": "CloudLayoutTestFailedGroup",
-              "summary": "Cloud Layout Test failed",
-
-              "plk_link_url/job": "${WORKFLOW_URL}",
-              "plk_protocol_version": "1",
-              "plk_link_title_en/job": "Github job run"
-            }
-          }
-          EOF
-          )
-
-          for (( iter = 1; iter < 60; iter++ )); do
-            if curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" -H 'Content-Type: application/json' -d "${alertData}"; then
-              exit 0
-            fi
-
-            echo "Alert was not sent. Wait 5 seconds before next attempt"
-            sleep 5
-          done
-
-          echo "Alert was not sent. Timeout"
-          exit 1
-        # </template: send_alert_template>
-
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
@@ -1902,62 +1734,6 @@ jobs:
           else
             echo Not a directory.
           fi
-
-
-      # <template: send_alert_template>
-      - name: Check alerting credentials
-        id: check_alerting
-        if: always()
-        env:
-          KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
-        run: |
-          if [[ -n $KEY ]]; then echo "has_credentials=true" >> $GITHUB_OUTPUT; fi
-      - name: Send alert on fail
-        if: ${{ steps.check_alerting.outputs.has_credentials == 'true' && (github.ref == 'refs/heads/main' && (cancelled() || failure())) }}
-        env:
-          CLOUD_LAYOUT_TESTS_MADISON_KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
-        run: |
-          WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-          echo $WORKFLOW_URL
-
-          alertData=$(cat <<EOF
-          {
-            "labels": {
-              "cri": "Containerd",
-              "kube_version": "1.29",
-              "layout": "WithoutNAT",
-              "provider": "Yandex.Cloud",
-              "trigger": "CloudLayoutTestFailed",
-
-              "severity_level": 7
-            },
-            "annotations": {
-              "description": "Check Github workflow log for more information",
-              "plk_create_group_if_not_exists/cloudlayouttestfailed": "CloudLayoutTestFailedGroup",
-              "plk_grouped_by/cloudlayouttestfailed": "CloudLayoutTestFailedGroup",
-              "summary": "Cloud Layout Test failed",
-
-              "plk_link_url/job": "${WORKFLOW_URL}",
-              "plk_protocol_version": "1",
-              "plk_link_title_en/job": "Github job run"
-            }
-          }
-          EOF
-          )
-
-          for (( iter = 1; iter < 60; iter++ )); do
-            if curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" -H 'Content-Type: application/json' -d "${alertData}"; then
-              exit 0
-            fi
-
-            echo "Alert was not sent. Wait 5 seconds before next attempt"
-            sleep 5
-          done
-
-          echo "Alert was not sent. Timeout"
-          exit 1
-        # </template: send_alert_template>
-
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
@@ -2372,62 +2148,6 @@ jobs:
             chmod -f -R 777 "/deckhouse/testing" || true
             chmod -f -R 777 /tmp || true
           fi
-
-
-      # <template: send_alert_template>
-      - name: Check alerting credentials
-        id: check_alerting
-        if: always()
-        env:
-          KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
-        run: |
-          if [[ -n $KEY ]]; then echo "has_credentials=true" >> $GITHUB_OUTPUT; fi
-      - name: Send alert on fail
-        if: ${{ steps.check_alerting.outputs.has_credentials == 'true' && (github.ref == 'refs/heads/main' && (cancelled() || failure())) }}
-        env:
-          CLOUD_LAYOUT_TESTS_MADISON_KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
-        run: |
-          WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-          echo $WORKFLOW_URL
-
-          alertData=$(cat <<EOF
-          {
-            "labels": {
-              "cri": "Containerd",
-              "kube_version": "1.29",
-              "layout": "Standard",
-              "provider": "OpenStack",
-              "trigger": "CloudLayoutTestFailed",
-
-              "severity_level": 7
-            },
-            "annotations": {
-              "description": "Check Github workflow log for more information",
-              "plk_create_group_if_not_exists/cloudlayouttestfailed": "CloudLayoutTestFailedGroup",
-              "plk_grouped_by/cloudlayouttestfailed": "CloudLayoutTestFailedGroup",
-              "summary": "Cloud Layout Test failed",
-
-              "plk_link_url/job": "${WORKFLOW_URL}",
-              "plk_protocol_version": "1",
-              "plk_link_title_en/job": "Github job run"
-            }
-          }
-          EOF
-          )
-
-          for (( iter = 1; iter < 60; iter++ )); do
-            if curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" -H 'Content-Type: application/json' -d "${alertData}"; then
-              exit 0
-            fi
-
-            echo "Alert was not sent. Wait 5 seconds before next attempt"
-            sleep 5
-          done
-
-          echo "Alert was not sent. Timeout"
-          exit 1
-        # </template: send_alert_template>
-
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
@@ -2846,62 +2566,6 @@ jobs:
             chmod -f -R 777 "/deckhouse/testing" || true
             chmod -f -R 777 /tmp || true
           fi
-
-
-      # <template: send_alert_template>
-      - name: Check alerting credentials
-        id: check_alerting
-        if: always()
-        env:
-          KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
-        run: |
-          if [[ -n $KEY ]]; then echo "has_credentials=true" >> $GITHUB_OUTPUT; fi
-      - name: Send alert on fail
-        if: ${{ steps.check_alerting.outputs.has_credentials == 'true' && (github.ref == 'refs/heads/main' && (cancelled() || failure())) }}
-        env:
-          CLOUD_LAYOUT_TESTS_MADISON_KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
-        run: |
-          WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-          echo $WORKFLOW_URL
-
-          alertData=$(cat <<EOF
-          {
-            "labels": {
-              "cri": "Containerd",
-              "kube_version": "1.29",
-              "layout": "Standard",
-              "provider": "vSphere",
-              "trigger": "CloudLayoutTestFailed",
-
-              "severity_level": 7
-            },
-            "annotations": {
-              "description": "Check Github workflow log for more information",
-              "plk_create_group_if_not_exists/cloudlayouttestfailed": "CloudLayoutTestFailedGroup",
-              "plk_grouped_by/cloudlayouttestfailed": "CloudLayoutTestFailedGroup",
-              "summary": "Cloud Layout Test failed",
-
-              "plk_link_url/job": "${WORKFLOW_URL}",
-              "plk_protocol_version": "1",
-              "plk_link_title_en/job": "Github job run"
-            }
-          }
-          EOF
-          )
-
-          for (( iter = 1; iter < 60; iter++ )); do
-            if curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" -H 'Content-Type: application/json' -d "${alertData}"; then
-              exit 0
-            fi
-
-            echo "Alert was not sent. Wait 5 seconds before next attempt"
-            sleep 5
-          done
-
-          echo "Alert was not sent. Timeout"
-          exit 1
-        # </template: send_alert_template>
-
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
@@ -3332,62 +2996,6 @@ jobs:
             chmod -f -R 777 "/deckhouse/testing" || true
             chmod -f -R 777 /tmp || true
           fi
-
-
-      # <template: send_alert_template>
-      - name: Check alerting credentials
-        id: check_alerting
-        if: always()
-        env:
-          KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
-        run: |
-          if [[ -n $KEY ]]; then echo "has_credentials=true" >> $GITHUB_OUTPUT; fi
-      - name: Send alert on fail
-        if: ${{ steps.check_alerting.outputs.has_credentials == 'true' && (github.ref == 'refs/heads/main' && (cancelled() || failure())) }}
-        env:
-          CLOUD_LAYOUT_TESTS_MADISON_KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
-        run: |
-          WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-          echo $WORKFLOW_URL
-
-          alertData=$(cat <<EOF
-          {
-            "labels": {
-              "cri": "Containerd",
-              "kube_version": "1.29",
-              "layout": "Standard",
-              "provider": "VCD",
-              "trigger": "CloudLayoutTestFailed",
-
-              "severity_level": 7
-            },
-            "annotations": {
-              "description": "Check Github workflow log for more information",
-              "plk_create_group_if_not_exists/cloudlayouttestfailed": "CloudLayoutTestFailedGroup",
-              "plk_grouped_by/cloudlayouttestfailed": "CloudLayoutTestFailedGroup",
-              "summary": "Cloud Layout Test failed",
-
-              "plk_link_url/job": "${WORKFLOW_URL}",
-              "plk_protocol_version": "1",
-              "plk_link_title_en/job": "Github job run"
-            }
-          }
-          EOF
-          )
-
-          for (( iter = 1; iter < 60; iter++ )); do
-            if curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" -H 'Content-Type: application/json' -d "${alertData}"; then
-              exit 0
-            fi
-
-            echo "Alert was not sent. Wait 5 seconds before next attempt"
-            sleep 5
-          done
-
-          echo "Alert was not sent. Timeout"
-          exit 1
-        # </template: send_alert_template>
-
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
@@ -3802,62 +3410,6 @@ jobs:
             chmod -f -R 777 "/deckhouse/testing" || true
             chmod -f -R 777 /tmp || true
           fi
-
-
-      # <template: send_alert_template>
-      - name: Check alerting credentials
-        id: check_alerting
-        if: always()
-        env:
-          KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
-        run: |
-          if [[ -n $KEY ]]; then echo "has_credentials=true" >> $GITHUB_OUTPUT; fi
-      - name: Send alert on fail
-        if: ${{ steps.check_alerting.outputs.has_credentials == 'true' && (github.ref == 'refs/heads/main' && (cancelled() || failure())) }}
-        env:
-          CLOUD_LAYOUT_TESTS_MADISON_KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
-        run: |
-          WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-          echo $WORKFLOW_URL
-
-          alertData=$(cat <<EOF
-          {
-            "labels": {
-              "cri": "Containerd",
-              "kube_version": "1.29",
-              "layout": "Static",
-              "provider": "Static",
-              "trigger": "CloudLayoutTestFailed",
-
-              "severity_level": 7
-            },
-            "annotations": {
-              "description": "Check Github workflow log for more information",
-              "plk_create_group_if_not_exists/cloudlayouttestfailed": "CloudLayoutTestFailedGroup",
-              "plk_grouped_by/cloudlayouttestfailed": "CloudLayoutTestFailedGroup",
-              "summary": "Cloud Layout Test failed",
-
-              "plk_link_url/job": "${WORKFLOW_URL}",
-              "plk_protocol_version": "1",
-              "plk_link_title_en/job": "Github job run"
-            }
-          }
-          EOF
-          )
-
-          for (( iter = 1; iter < 60; iter++ )); do
-            if curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" -H 'Content-Type: application/json' -d "${alertData}"; then
-              exit 0
-            fi
-
-            echo "Alert was not sent. Wait 5 seconds before next attempt"
-            sleep 5
-          done
-
-          echo "Alert was not sent. Timeout"
-          exit 1
-        # </template: send_alert_template>
-
   # </template: e2e_run_job_template>
 
 
@@ -3867,58 +3419,6 @@ jobs:
     needs: ["skip_tests_repos","git_info","run_aws_containerd_1_29","run_eks_containerd_1_29","run_gcp_containerd_1_29","run_yandex_cloud_containerd_1_29","run_openstack_containerd_1_29","run_vsphere_containerd_1_29","run_vcd_containerd_1_29","run_static_containerd_1_29"]
     if: ${{ failure() }}
     steps:
-
-
-    # <template: send_alert_template>
-    - name: Check alerting credentials
-      id: check_alerting
-      if: always()
-      env:
-        KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
-      run: |
-        if [[ -n $KEY ]]; then echo "has_credentials=true" >> $GITHUB_OUTPUT; fi
-    - name: Send alert on fail
-      if: ${{ steps.check_alerting.outputs.has_credentials == 'true' }}
-      env:
-        CLOUD_LAYOUT_TESTS_MADISON_KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
-      run: |
-        WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-        echo $WORKFLOW_URL
-
-        alertData=$(cat <<EOF
-        {
-          "labels": {
-            "trigger": "DailyE2EWorkflowFailed",
-
-            "severity_level": 7
-          },
-          "annotations": {
-            "description": "Check Daily e2e workflow log for more information or see another alerts in this group.",
-            "plk_create_group_if_not_exists/cloudlayouttestfailed": "CloudLayoutTestFailedGroup",
-            "plk_grouped_by/cloudlayouttestfailed": "CloudLayoutTestFailedGroup",
-            "summary": "Daily e2e tests workflow failed",
-
-            "plk_link_url/job": "${WORKFLOW_URL}",
-            "plk_protocol_version": "1",
-            "plk_link_title_en/job": "Github job run"
-          }
-        }
-        EOF
-        )
-
-        for (( iter = 1; iter < 60; iter++ )); do
-          if curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" -H 'Content-Type: application/json' -d "${alertData}"; then
-            exit 0
-          fi
-
-          echo "Alert was not sent. Wait 5 seconds before next attempt"
-          sleep 5
-        done
-
-        echo "Alert was not sent. Timeout"
-        exit 1
-      # </template: send_alert_template>
-
     # <template: send_alert_loop_template>
     - name: Check loop alerting credentials
       id: check_loop_alerting

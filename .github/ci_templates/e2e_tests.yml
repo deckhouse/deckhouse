@@ -743,7 +743,6 @@ check_e2e_labels:
   {!{- $labels := dict "trigger" "CloudLayoutTestFailed" "provider" $ctx.providerName "layout" $ctx.layout "cri" $ctx.criName "kube_version" $ctx.kubernetesVersion -}!}
   {!{- $annotations := dict "summary" "Cloud Layout Test failed" "description" "Check Github workflow log for more information" -}!}
   {!{- $if := "github.ref == 'refs/heads/main' && (cancelled() || failure())" -}!}
-  {!{- tmpl.Exec "e2e_send_alert_template" (slice (dict "labels" $labels "annotations" $annotations "if" $if )) | strings.Indent 4 }!}
 
 {!{- end }!}
 # </template: e2e_run_job_template>
