@@ -1,76 +1,240 @@
+diff --git a/pkg/kubelet/kubelet.go b/pkg/kubelet/kubelet.go
+index baa98d09de6..45024cc7c77 100644
+--- a/pkg/kubelet/kubelet.go
++++ b/pkg/kubelet/kubelet.go
+@@ -915,6 +915,7 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
+ 		NodeRef:                          nodeRef,
+ 		GetPodsFunc:                      klet.GetActivePods,
+ 		KillPodFunc:                      killPodNow(klet.podWorkers, kubeDeps.Recorder),
++		GetNodeFunc:                      klet.GetNode,
+ 		SyncNodeStatusFunc:               klet.syncNodeStatus,
+ 		ShutdownGracePeriodRequested:     kubeCfg.ShutdownGracePeriod.Duration,
+ 		ShutdownGracePeriodCriticalPods:  kubeCfg.ShutdownGracePeriodCriticalPods.Duration,
+diff --git a/pkg/kubelet/nodeshutdown/nodeshutdown_manager.go b/pkg/kubelet/nodeshutdown/nodeshutdown_manager.go
+index aac590f967d..5f3473950c4 100644
+--- a/pkg/kubelet/nodeshutdown/nodeshutdown_manager.go
++++ b/pkg/kubelet/nodeshutdown/nodeshutdown_manager.go
+@@ -44,6 +44,7 @@ type Config struct {
+ 	NodeRef                          *v1.ObjectReference
+ 	GetPodsFunc                      eviction.ActivePodsFunc
+ 	KillPodFunc                      eviction.KillPodFunc
++	GetNodeFunc                      func() (*v1.Node, error)
+ 	SyncNodeStatusFunc               func()
+ 	ShutdownGracePeriodRequested     time.Duration
+ 	ShutdownGracePeriodCriticalPods  time.Duration
 diff --git a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
-index 8469cecdc0e..7d25da82e70 100644
+index 8469cecdc0e..c6c1d1c1af8 100644
 --- a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
 +++ b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
-@@ -22,6 +22,7 @@ package nodeshutdown
+@@ -21,6 +21,7 @@ limitations under the License.
+ package nodeshutdown
  
  import (
++	"context"
  	"fmt"
-+	"os"
  	"path/filepath"
  	"sort"
- 	"sync"
-@@ -277,6 +278,12 @@ func (m *managerImpl) start() (chan struct{}, error) {
+@@ -82,6 +83,8 @@ type managerImpl struct {
+ 	dbusCon     dbusInhibiter
+ 	inhibitLock systemd.InhibitLock
+ 
++	conditionChecker *conditionChecker
++
+ 	nodeShuttingDownMutex sync.Mutex
+ 	nodeShuttingDownNow   bool
+ 
+@@ -134,6 +137,10 @@ func NewManager(conf *Config) (Manager, lifecycle.PodAdmitHandler) {
+ 			Path: filepath.Join(conf.StateDirectory, localStorageStateFile),
+ 		},
+ 	}
++	manager.conditionChecker = &conditionChecker{
++		logger:  conf.Logger,
++		getNode: conf.GetNodeFunc,
++	}
+ 	manager.logger.Info("Creating node shutdown manager",
+ 		"shutdownGracePeriodRequested", conf.ShutdownGracePeriodRequested,
+ 		"shutdownGracePeriodCriticalPods", conf.ShutdownGracePeriodCriticalPods,
+@@ -239,7 +246,7 @@ func (m *managerImpl) start() (chan struct{}, error) {
+ 		return nil, err
+ 	}
+ 
+-	events, err := m.dbusCon.MonitorShutdown()
++	dbusEvents, err := m.dbusCon.MonitorShutdown()
+ 	if err != nil {
+ 		releaseErr := m.dbusCon.ReleaseInhibitLock(m.inhibitLock)
+ 		if releaseErr != nil {
+@@ -248,6 +255,24 @@ func (m *managerImpl) start() (chan struct{}, error) {
+ 		return nil, fmt.Errorf("failed to monitor shutdown: %v", err)
+ 	}
+ 
++	shutdownAfterPostpone := m.conditionChecker.MonitorGracefulShutdownPostpone()
++
++	shutdownEvents := make(chan bool, 2)
++	go func() {
++		select {
++		case isShuttingDown, ok := <-dbusEvents:
++			if !ok {
++				close(shutdownEvents)
++				return
++			}
++			shutdownEvents <- isShuttingDown
++		case isShuttingDown := <-shutdownAfterPostpone:
++			// Only one event from shutdownAfterPostpone is expected.
++			shutdownEvents <- isShuttingDown
++			return
++		}
++	}()
++
+ 	stop := make(chan struct{})
+ 	go func() {
+ 		// Monitor for shutdown events. This follows the logind Inhibit Delay pattern described on https://www.freedesktop.org/wiki/Software/systemd/inhibit/
+@@ -256,9 +281,10 @@ func (m *managerImpl) start() (chan struct{}, error) {
+ 		// 3. When shutdown(false) event is received, this indicates a previous shutdown was cancelled. In this case, acquire the inhibit lock again.
+ 		for {
+ 			select {
+-			case isShuttingDown, ok := <-events:
++			case isShuttingDown, ok := <-shutdownEvents:
+ 				if !ok {
+ 					m.logger.Error(err, "Ended to watching the node for shutdown events")
++					m.conditionChecker.Cleanup()
+ 					close(stop)
+ 					return
+ 				}
+@@ -277,6 +303,21 @@ func (m *managerImpl) start() (chan struct{}, error) {
  					m.recorder.Event(m.nodeRef, v1.EventTypeNormal, kubeletevents.NodeShutdown, "Shutdown manager detected shutdown cancellation")
  				}
  
++				// Check if shutdown is postponed by the condition and prevent setting m.nodeShuttingDownNow=true to keep Ready status for the Node.
 +				if isShuttingDown {
-+					// Wait until external inhibitors are unlocked before proceeding with shutdown.
-+					// Do not set m.nodeShuttingDownNow yet to keep Ready status for Node.
-+					m.waitForExternalInhibitorsToUnlock()
++					isPostponed, err := m.conditionChecker.IsPostponed()
++					if err != nil {
++						m.recorder.Eventf(m.nodeRef, v1.EventTypeNormal, kubeletevents.NodeShutdown, "Fail to check GracefulShutdownPostpone condition: %v", err)
++						break
++					}
++					if isPostponed {
++						m.conditionChecker.StartMonitor()
++						m.recorder.Event(m.nodeRef, v1.EventTypeNormal, kubeletevents.NodeShutdown, "Shutdown postponed by the condition")
++						break
++					}
++					m.conditionChecker.PauseMonitor()
 +				}
 +
  				m.nodeShuttingDownMutex.Lock()
  				m.nodeShuttingDownNow = isShuttingDown
  				m.nodeShuttingDownMutex.Unlock()
-@@ -417,6 +424,50 @@ func (m *managerImpl) processShutdownEvent() error {
- 	return nil
+@@ -491,3 +532,115 @@ type podShutdownGroup struct {
+ 	kubeletconfig.ShutdownGracePeriodByPodPriority
+ 	Pods []*v1.Pod
  }
- 
-+// waitForExternalInhibitorsToUnlock waits for external inhibitors to unlock before proceeding with shutdown.
-+func (m *managerImpl) waitForExternalInhibitorsToUnlock() {
-+	const (
-+		inhibitorsCheckInterval = 5 * time.Second
-+		progressLogInterval     = 20 * time.Second
-+	)
-+	// Do not wait if inhibitors not started.
-+	_, err := os.Stat("/var/run/d8-shutdown-inhibitor/enabled")
-+	if os.IsNotExist(err) {
-+		m.logger.V(1).Info("No external inhibitor locks enabled, proceed with shutdown")
-+		return
-+	}
 +
-+	m.logger.V(1).Info("Wait for external inhibitors to unlock")
++type conditionChecker struct {
++	logger klog.Logger
++
++	getNode func() (*v1.Node, error)
++
++	events chan bool
++	cancel context.CancelFunc
++
++	actions chan string
++}
++
++func (c *conditionChecker) MonitorGracefulShutdownPostpone() <-chan bool {
++	c.events = make(chan bool, 1)
++	ctx, cancel := context.WithCancel(context.Background())
++	c.cancel = cancel
++	go c.checkLoop(ctx)
++	return c.events
++}
++
++func (c *conditionChecker) StartMonitor() {
++	c.actions <- "start"
++}
++
++func (c *conditionChecker) PauseMonitor() {
++	c.actions <- "pause"
++}
++
++func (c *conditionChecker) Cleanup() {
++	close(c.events)
++	c.cancel()
++}
++
++// checkLoop is a main loop that checks GracefulShutdownPostpone condition.
++// The loop is designed with "shutdown cancel" in mind, so it can be paused.
++// If loop is not paused and condition is removed, it sends shutdown event to unlock
++// shutdown sequence in managerImpl.start.
++//
++// TODO We may have a rather long InhibitorsDelayMaxSec, but we should (should we?) let kubelet to do its job,
++// TODO so global timer can be added to unlock and run shutdown sequence anyway some minutes before InhibitorsDelayMaxSec is passed.
++// TODO It is still uncertain if we should implement this timer.
++func (c *conditionChecker) checkLoop(ctx context.Context) {
++	const (
++		checkInterval       = 5 * time.Second
++		progressLogInterval = 20 * time.Second
++	)
 +
 +	realClock := clock.RealClock{}
-+	ticker := realClock.NewTicker(inhibitorsCheckInterval)
++	ticker := realClock.NewTicker(checkInterval)
 +	defer ticker.Stop()
 +
 +	var lastLogTime time.Time
 +
++	isStarted := false
++
 +	for {
-+		_, err := os.Stat("/var/run/d8-shutdown-inhibitor/inhibited")
-+		if os.IsNotExist(err) {
-+			m.logger.V(1).Info("External inhibitors unlocked, proceed with shutdown")
++		select {
++		case action := <-c.actions:
++			switch action {
++			case "start":
++				isStarted = true
++			case "pause":
++				isStarted = false
++			}
++		case <-ticker.C():
++			// Check postpone condition if in the "started" state. If not postponed, send event to unpause shutdown sequence.
++			if isStarted {
++				isPostponed, err := c.IsPostponed()
++				if err != nil {
++					c.logger.V(1).Error(err, "Check postpone condition failed, will try later")
++					break
++				}
++				if isPostponed {
++					now := time.Now()
++					if lastLogTime.IsZero() || now.Sub(lastLogTime) > progressLogInterval {
++						lastLogTime = now
++						c.logger.V(1).Info("Graceful shutdown is still postponed")
++					}
++				} else {
++					c.logger.V(1).Info("Graceful shutdown postpone condition is removed, proceed with the shutdown sequence")
++
++					// Send event to unpause shutdown sequence. Self pause to prevent events spamming.
++					c.events <- true
++					isStarted = false
++				}
++			}
++		case <-ctx.Done():
 +			return
 +		}
-+
-+		now := time.Now()
-+		if lastLogTime.IsZero() || now.Sub(lastLogTime) > progressLogInterval {
-+			lastLogTime = now
-+			m.logger.V(1).Info("Shutdown still locked by external inhibitors")
-+		}
-+
-+		<-ticker.C()
 +	}
-+
-+	// We have a rather long InhibitorsDelayMaxSec, but we should let kubelet to do its job,
-+	// so global timer is added to kill Pods anyway some minutes before InhibitorsDelayMaxSec is passed.
-+	// TODO It is still uncertain if we should implement this timer.
-+	m.logger.V(1).Info("Timeout while waiting for external inhibitors, proceed with shutdown")
-+	return
 +}
 +
- func (m *managerImpl) periodRequested() time.Duration {
- 	var sum int64
- 	for _, period := range m.shutdownGracePeriodByPodPriority {
++// IsPostponed returns whether the Node has a GracefulShutdownPostpone condition.
++func (c *conditionChecker) IsPostponed() (bool, error) {
++	node, err := c.getNode()
++	if err != nil {
++		c.logger.V(1).Error(err, "Get node on shutdown event failed, will try later")
++		return false, fmt.Errorf("get node for postpone condition check: %v", err)
++	}
++
++	if node == nil {
++		return false, fmt.Errorf("get node for postpone condition check: node is nil")
++	}
++
++	for _, cond := range node.Status.Conditions {
++		if cond.Type == "GracefulShutdownPostpone" && cond.Status == "True" {
++			return true, nil
++		}
++	}
++
++	return false, nil
++}
