@@ -16,7 +16,6 @@ package preflight
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -24,9 +23,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 )
 
-func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolescence_Success_ReleaseChannel() {
+func (s *PreflightChecksTestSuite) Test_CheckDhctlVersionObsolescence_Success_ReleaseChannel() {
 	t := s.Require()
 
+	app.AppVersion = "dev"
+	app.AppEdition = "test"
 	image := s.checker.installConfig.GetImage(false)
 	ref, err := name.ParseReference(image)
 	t.NoError(err)
@@ -39,7 +40,7 @@ func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolesc
 				Hex:       "95693712d292a6d2e1de6052a0b2189210501393f162616f5d21f2c9b5152129",
 			}}, &v1.ConfigFile{
 			Config: v1.Config{Labels: map[string]string{
-				"io.deckhouse.edition": "FE",
+				"io.deckhouse.edition": "test",
 			}}}, nil)
 
 	s.checker.buildDigestProvider = NewFakeBuildDigestProvider(s.T()).
@@ -53,9 +54,11 @@ func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolesc
 	t.NoError(err)
 }
 
-func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolescence_Success_DevBranch() {
+func (s *PreflightChecksTestSuite) Test_CheckDhctlVersionObsolescence_Success_DevBranch() {
 	t := s.Require()
 
+	app.AppVersion = "dev"
+	app.AppEdition = "test"
 	s.checker.installConfig.DevBranch = "pr1234"
 
 	image := s.checker.installConfig.GetImage(false)
@@ -70,7 +73,7 @@ func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolesc
 				Hex:       "95693712d292a6d2e1de6052a0b2189210501393f162616f5d21f2c9b5152129",
 			}}, &v1.ConfigFile{
 			Config: v1.Config{Labels: map[string]string{
-				"io.deckhouse.edition": "FE",
+				"io.deckhouse.edition": "test",
 			}}}, nil)
 
 	s.checker.buildDigestProvider = NewFakeBuildDigestProvider(s.T()).
@@ -84,9 +87,11 @@ func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolesc
 	t.NoError(err)
 }
 
-func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolescence_VersionMismatch_ReleaseChannel() {
+func (s *PreflightChecksTestSuite) Test_CheckDhctlVersionObsolescence_VersionMismatch_ReleaseChannel() {
 	t := s.Require()
 
+	app.AppVersion = "dev"
+	app.AppEdition = "test"
 	image := s.checker.installConfig.GetImage(false)
 	ref, err := name.ParseReference(image)
 	t.NoError(err)
@@ -99,7 +104,7 @@ func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolesc
 				Hex:       "95693712d292a6d2e1de6052a0b2189210501393f162616f5d21f2c9b5152129",
 			}}, &v1.ConfigFile{
 			Config: v1.Config{Labels: map[string]string{
-				"io.deckhouse.edition": "FE",
+				"io.deckhouse.edition": "test",
 			}}}, nil)
 
 	s.checker.buildDigestProvider = NewFakeBuildDigestProvider(s.T()).
@@ -113,9 +118,11 @@ func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolesc
 	t.ErrorIs(err, ErrInstallerVersionMismatch)
 }
 
-func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolescence_VersionMismatch_DevBranch() {
+func (s *PreflightChecksTestSuite) Test_CheckDhctlVersionObsolescence_VersionMismatch_DevBranch() {
 	t := s.Require()
 
+	app.AppVersion = "dev"
+	app.AppEdition = "test"
 	s.checker.installConfig.DevBranch = "pr1234"
 
 	image := s.checker.installConfig.GetImage(false)
@@ -130,7 +137,7 @@ func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolesc
 				Hex:       "95693712d292a6d2e1de6052a0b2189210501393f162616f5d21f2c9b5152129",
 			}}, &v1.ConfigFile{
 			Config: v1.Config{Labels: map[string]string{
-				"io.deckhouse.edition": "FE",
+				"io.deckhouse.edition": "test",
 			}}}, nil)
 
 	s.checker.buildDigestProvider = NewFakeBuildDigestProvider(s.T()).
@@ -144,7 +151,7 @@ func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolesc
 	t.ErrorIs(err, ErrInstallerVersionMismatch)
 }
 
-func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolescence_VersionOverride_ReleaseChannel() {
+func (s *PreflightChecksTestSuite) Test_CheckDhctlVersionObsolescence_VersionOverride_ReleaseChannel() {
 	t := s.Require()
 
 	app.PreflightSkipDeckhouseVersionCheck = true
@@ -172,9 +179,11 @@ func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolesc
 	t.NoError(err)
 }
 
-func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolescence_VersionOverride_DevBranch() {
+func (s *PreflightChecksTestSuite) Test_CheckDhctlVersionObsolescence_VersionOverride_DevBranch() {
 	t := s.Require()
 
+	app.AppVersion = "dev"
+	app.AppEdition = "test"
 	app.PreflightSkipDeckhouseVersionCheck = true
 	s.checker.installConfig.DevBranch = "pr1234"
 
@@ -201,9 +210,11 @@ func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolesc
 	t.NoError(err)
 }
 
-func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolescence_getDeckhouseImageConfig() {
+func (s *PreflightChecksTestSuite) Test_CheckDhctlVersionObsolescence_getDeckhouseImageConfig() {
 	t := s.Require()
 
+	app.AppVersion = "dev"
+	app.AppEdition = "test"
 	image := s.checker.installConfig.GetImage(false)
 	ref, err := name.ParseReference(image)
 	t.NoError(err)
@@ -227,5 +238,5 @@ func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolesc
 			}, nil)
 
 	err = s.checker.CheckDhctlVersionObsolescence(context.Background())
-	t.Equal(fmt.Errorf("Editions in registry and dhctl do not match."), err)
+	t.ErrorIs(err, ErrInstallerEditionMismatch)
 }
