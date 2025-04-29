@@ -134,7 +134,7 @@ imageSpec:
 {{- $context := . -}}
 
 image: base-for-go
-fromImage: builder/golang-alpine
+fromImage: builder/Alt\ Linux
 import:
 {{ include "base components imports" (dict "k8sVersions" $context.k8sVersions "CandiVersionMap" $context.CandiVersionMap ) }}
 shell:
