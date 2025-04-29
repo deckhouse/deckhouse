@@ -19,11 +19,10 @@ package app
 import (
 	"context"
 	"fmt"
-	"sort"
 	"time"
 
-	"d8_shutdown_inhibitor/pkg/app/containerd"
 	"d8_shutdown_inhibitor/pkg/app/tasks"
+	"d8_shutdown_inhibitor/pkg/kubernetes"
 	"d8_shutdown_inhibitor/pkg/systemd"
 	"d8_shutdown_inhibitor/pkg/taskstarter"
 )
@@ -69,25 +68,6 @@ func (a *App) Done() <-chan struct{} {
 
 func (a *App) Err() error {
 	return a.taskStarter.Err()
-}
-
-// ListPods list all pods for testing purposes.
-func (a *App) ListPods() {
-	podList, err := containerd.ListPods(context.Background())
-	if err != nil {
-		fmt.Printf("List pods error: %v\n", err)
-		return
-	}
-
-	sort.SliceStable(podList.Items, func(i, j int) bool {
-		return podList.Items[i].Metadata.Name < podList.Items[j].Metadata.Name
-	})
-
-	fmt.Printf("Pods with label %s:\n", a.config.PodLabel)
-	matched := containerd.FilterPods(podList.Items, containerd.WithLabel(a.config.PodLabel), containerd.WithReadyState())
-	for _, pod := range matched {
-		fmt.Printf("  %s\n", pod.Metadata.Name)
-	}
 }
 
 func (a *App) overrideInhibitDelayMax() error {
@@ -150,13 +130,14 @@ func (a *App) wireAppTasks() []taskstarter.Task {
 			UnlockInhibitorsCh: unlockInhibitorsCh,
 		},
 		&tasks.PodObserver{
+			NodeName:              a.config.NodeName,
 			PodsCheckingInterval:  a.config.PodsCheckingInterval,
 			WallBroadcastInterval: a.config.WallBroadcastInterval,
 			ShutdownSignalCh:      shutdownSignalCh,
 			StopInhibitorsCh:      unlockInhibitorsCh,
-			PodMatchers: []containerd.PodMatcher{
-				containerd.WithLabel(a.config.PodLabel),
-				containerd.WithReadyState(),
+			PodMatchers: []kubernetes.PodMatcher{
+				kubernetes.WithLabel(a.config.PodLabel),
+				kubernetes.WithRunningPhase(),
 			},
 		},
 		&tasks.NodeCordoner{

@@ -45,9 +45,23 @@ func (k *Kubectl) Cordon(nodeName string) ([]byte, error) {
 	return cmd.CombinedOutput()
 }
 
-func (k *Kubectl) ListPods(nodeName string) ([]byte, error) {
+func (k *Kubectl) ListPods(nodeName string) (*PodList, error) {
+	out, err := k.listPods(nodeName)
+	if err != nil {
+		return nil, err
+	}
+
+	podList, err := podsListFromJSON(out)
+	if err != nil {
+		return nil, err
+	}
+
+	return podList, nil
+}
+
+func (k *Kubectl) listPods(nodeName string) ([]byte, error) {
 	nodeNameFieldSelector := fmt.Sprintf("spec.nodeName=%s", nodeName)
-	cmd := k.cmd("get", "po", "-A", "--field-selector", nodeNameFieldSelector)
+	cmd := k.cmd("get", "po", "-A", "-o", "json", "--field-selector", nodeNameFieldSelector)
 	return cmd.Output()
 }
 

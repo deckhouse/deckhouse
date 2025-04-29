@@ -14,11 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package containerd
-
-type PodState string
-
-const CriSandboxReady PodState = "SANDBOX_READY"
+package kubernetes
 
 type PodMatcher func(pod Pod) bool
 
@@ -27,14 +23,14 @@ func WithLabel(label string) func(pod Pod) bool {
 		if label == "" {
 			return false
 		}
-		_, ok := pod.Labels[label]
+		_, ok := pod.Metadata.Labels[label]
 		return ok
 	}
 }
 
-func WithReadyState() func(pod Pod) bool {
+func WithRunningPhase() func(pod Pod) bool {
 	return func(pod Pod) bool {
-		return pod.State == string(CriSandboxReady)
+		return pod.Status != nil && pod.Status.Phase == "Running"
 	}
 }
 
