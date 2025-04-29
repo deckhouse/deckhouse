@@ -28,6 +28,7 @@ func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolesc
 
 	app.AppVersion = "dev"
 	app.AppEdition = "test"
+	app.PreflightSkipDeckhouseVersionCheck = false
 	image := s.checker.installConfig.GetImage(false)
 	ref, err := name.ParseReference(image)
 	t.NoError(err)
@@ -57,6 +58,7 @@ func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolesc
 
 	app.AppVersion = "dev"
 	app.AppEdition = "test"
+	app.PreflightSkipDeckhouseVersionCheck = false
 	s.checker.installConfig.DevBranch = "pr1234"
 
 	image := s.checker.installConfig.GetImage(false)
@@ -88,6 +90,7 @@ func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolesc
 
 	app.AppVersion = "dev"
 	app.AppEdition = "test"
+	app.PreflightSkipDeckhouseVersionCheck = false
 	image := s.checker.installConfig.GetImage(false)
 	ref, err := name.ParseReference(image)
 	t.NoError(err)
@@ -117,6 +120,7 @@ func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolesc
 
 	app.AppVersion = "dev"
 	app.AppEdition = "test"
+	app.PreflightSkipDeckhouseVersionCheck = false
 	s.checker.installConfig.DevBranch = "pr1234"
 	image := s.checker.installConfig.GetImage(false)
 	ref, err := name.ParseReference(image)
