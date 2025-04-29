@@ -1,8 +1,9 @@
 {{- $ciliumProxyRev := "f9ddca7dcd91f7ca25a505560e655c47d3dec2cf" }}
-{{- $ciliumProxyCacheRev := "v1.32.5-1744305768-f9ddca7dcd91f7ca25a505560e655c47d3dec2cf-alt-p11-llvm17-gcc11-v1" }}
-{{- $ciliumProxyDepsRev := "v1.32.5-1744305768-f9ddca7dcd91f7ca25a505560e655c47d3dec2cf-alt-p11-llvm17-gcc11-lfs-v2" }}
 {{- $bazelVersions := "6.5.0" }}
 {{- $envoySHA := "4be217df3694bfa500eb76b0dda4e3c7ec0afeeb" }}
+{{- $ciliumProxyCacheRev := "v1.32.5-1744305768-f9ddca7dcd91f7ca25a505560e655c47d3dec2cf-alt-p11-llvm17-gcc11-v1" }}
+{{- $ciliumProxyDepsRev := "v1.32.5-1744305768-f9ddca7dcd91f7ca25a505560e655c47d3dec2cf-alt-p11-llvm17-gcc11-lfs-v2" }}
+{{- $buildWithPreparedCacheAndDeps := false }}
 ---
 # #####################################################################
 # Build cilium-envoy binaries
@@ -66,11 +67,15 @@ shell:
   - ln -f -s llvm-17.0 "/usr/lib/llvm-17"
   #
   - mkdir -p /tmp/bazel-cache
-  #- git clone --depth 1 --branch {{ $ciliumProxyCacheRev }} {{ $.SOURCE_REPO }}/cilium/proxy-build-cache.git /tmp/bazel-cache && rm -rf /tmp/bazel-cache/.git
+  {{- if $buildWithPreparedCacheAndDeps }}
+  - git clone --depth 1 --branch {{ $ciliumProxyCacheRev }} {{ $.SOURCE_REPO }}/cilium/proxy-build-cache.git /tmp/bazel-cache && rm -rf /tmp/bazel-cache/.git
+  {{- end }}
   - chown -R 1337:1337 /tmp/bazel-cache
   - mkdir -p /tmp/bazel-deps
   - git lfs install
-  #- git clone --depth 1 --branch {{ $ciliumProxyDepsRev }} {{ $.SOURCE_REPO }}/cilium/proxy-build-deps.git /tmp/bazel-deps && rm -rf /tmp/bazel-deps/.git
+  {{- if $buildWithPreparedCacheAndDeps }}
+  - git clone --depth 1 --branch {{ $ciliumProxyDepsRev }} {{ $.SOURCE_REPO }}/cilium/proxy-build-deps.git /tmp/bazel-deps && rm -rf /tmp/bazel-deps/.git
+  {{- end }}
   - chown -R 1337:1337 /tmp/bazel-deps
   #
   - export ALTWRAP_LLVM_VERSION=17.0 GCC_VERSION=11
@@ -85,8 +90,11 @@ shell:
   - mv proxylib/libcilium.so /tmp/install/usr/lib/libcilium.so
   #
   - export BAZEL_VERSION="{{ $bazelVersions }}" USE_BAZEL_VERSION="{{ $bazelVersions }}"
-  #- export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache --nofetch"
+  {{- if $buildWithPreparedCacheAndDeps }}
+  - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache --nofetch"
+  {{- else }}
   - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache"
+  {{- end }}
   - export PKG_BUILD=1 V=$V DEBUG=$DEBUG DESTDIR=/tmp/install
   #
   - cd /cilium/proxy
@@ -104,12 +112,11 @@ shell:
   - sudo -u cilium sed -i '\#"/usr/include"#a \        "/usr/lib/llvm-17.0/lib64/clang/17/include",' bazel/toolchains/BUILD
   - sudo -u cilium sed -i '134i \        "--gcc-install-dir=/usr/bin/../lib64/gcc/x86_64-alt-linux/11",' bazel/toolchains/BUILD
   #
-  #- sudo -u cilium PATH=${PATH} bazel fetch //:cilium-envoy-starter //:cilium-envoy
-  #
   - export BAZEL_OUTPUT_BASE=$(sudo -u cilium PATH=${PATH} bazel info output_base)
   - sudo -u cilium PATH=${PATH} mkdir -p ${BAZEL_OUTPUT_BASE}/external
-  #- sudo -u cilium PATH=${PATH} cat /tmp/bazel-deps/external.tar.gz-part* | tar -zxf - -C ${BAZEL_OUTPUT_BASE}/external
+  {{- if $buildWithPreparedCacheAndDeps }}
   - sudo -u cilium PATH=${PATH} tar -zxf /tmp/bazel-deps/external.tar.gz -C ${BAZEL_OUTPUT_BASE}/external
+  {{- end }}
   - rm -rf /tmp/bazel-deps
   #
   - sudo -u cilium PATH=${PATH} make clang.bazelrc
