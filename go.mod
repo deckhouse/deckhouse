@@ -2,7 +2,6 @@ module github.com/deckhouse/deckhouse
 
 go 1.23.8
 
-
 require (
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/Masterminds/sprig/v3 v3.2.3
@@ -11,7 +10,7 @@ require (
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/fatih/color v1.13.0 // indirect
-	github.com/flant/addon-operator v1.7.1-0.20250429145252-5e77bb4c8e68
+	github.com/flant/addon-operator v1.7.1-0.20250429184622-dfbbfc3488a2
 	github.com/flant/kube-client v1.3.0
 	github.com/flant/shell-operator v1.7.2-0.20250428153028-deb2e0694527
 	github.com/go-openapi/spec v0.19.8
