@@ -150,7 +150,7 @@ func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolesc
 	t.ErrorIs(err, ErrInstallerVersionMismatch)
 }
 
-func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolescence_VersionOverride_ReleaseChannel() {
+func (s *PreflightChecksTestSuite) Test_PreflightCheck_CheckDhctlVersionObsolescence_getDeckhouseImageConfig() {
 	t := s.Require()
 
 	app.AppVersion = "dev"
