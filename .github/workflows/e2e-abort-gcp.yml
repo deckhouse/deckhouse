@@ -86,6 +86,7 @@ jobs:
       edition: ${{ steps.check.outputs.edition }}
       multimaster: ${{ steps.check.outputs.multimaster }}
       cis: ${{ steps.check.outputs.cis }}
+      autoscaler: ${{ steps.check.outputs.autoscaler }}
     steps:
 
       # <template: checkout_step>
@@ -280,12 +281,12 @@ jobs:
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
-          TEST_AUTOSCALER_ENABLED: "true"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          TEST_AUTOSCALER_ENABLED: ${{ needs.check_e2e_labels.outputs.autoscaler }}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -323,8 +324,8 @@ jobs:
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided} \
-            -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
+            -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -571,12 +572,12 @@ jobs:
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
-          TEST_AUTOSCALER_ENABLED: "true"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          TEST_AUTOSCALER_ENABLED: ${{ needs.check_e2e_labels.outputs.autoscaler }}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -614,8 +615,8 @@ jobs:
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided} \
-            -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
+            -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -862,12 +863,12 @@ jobs:
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
-          TEST_AUTOSCALER_ENABLED: "true"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          TEST_AUTOSCALER_ENABLED: ${{ needs.check_e2e_labels.outputs.autoscaler }}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -905,8 +906,8 @@ jobs:
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided} \
-            -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
+            -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -1153,12 +1154,12 @@ jobs:
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
-          TEST_AUTOSCALER_ENABLED: "true"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          TEST_AUTOSCALER_ENABLED: ${{ needs.check_e2e_labels.outputs.autoscaler }}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -1196,8 +1197,8 @@ jobs:
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided} \
-            -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
+            -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -1444,12 +1445,12 @@ jobs:
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
-          TEST_AUTOSCALER_ENABLED: "true"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          TEST_AUTOSCALER_ENABLED: ${{ needs.check_e2e_labels.outputs.autoscaler }}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -1487,8 +1488,8 @@ jobs:
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided} \
-            -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
+            -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -1735,12 +1736,12 @@ jobs:
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
-          TEST_AUTOSCALER_ENABLED: "true"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          TEST_AUTOSCALER_ENABLED: ${{ needs.check_e2e_labels.outputs.autoscaler }}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -1778,8 +1779,8 @@ jobs:
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided} \
-            -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
+            -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
