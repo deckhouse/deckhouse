@@ -101,7 +101,7 @@ func (pc *Checker) CheckDhctlVersionObsolescence(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("Cannot fetch deckhouse image config: %w.", err)
 	}
-	if currentDeckhouseImageConfig.Config.Labels["io.deckhouse.editio"] != app.AppEdition {
+	if currentDeckhouseImageConfig.Config.Labels["io.deckhouse.edition"] != app.AppEdition {
 		return fmt.Errorf("Editions in registry and dhctl do not match.")
 	}
 
