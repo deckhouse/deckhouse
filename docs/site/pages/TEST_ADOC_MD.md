@@ -5,5 +5,5 @@ description: adoc tests.
 lang: ru
 ---
 
-{% include table.adoc | asciidocify %}
+{% include table.adoc %}
 
