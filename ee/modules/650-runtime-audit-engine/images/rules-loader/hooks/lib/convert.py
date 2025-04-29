@@ -40,7 +40,7 @@ def convert_spec(spec: dict) -> list:
 
             priority = item["rule"].get("priority")
             if priority is not None:
-                converted_item["priority"] = priority.capitalize()
+                converted_item["priority"] = priority.upper()
 
             result.append(converted_item)
             continue
