@@ -2,7 +2,6 @@ module github.com/deckhouse/deckhouse
 
 go 1.23.8
 
-toolchain go1.24.0
 
 require (
 	github.com/Masterminds/semver/v3 v3.2.1

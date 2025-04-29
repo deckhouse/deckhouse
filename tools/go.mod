@@ -2,7 +2,6 @@ module tools
 
 go 1.23.8
 
-toolchain go1.24.0
 
 require (
 	github.com/Masterminds/sprig v2.22.0+incompatible
