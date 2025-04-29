@@ -1,6 +1,6 @@
 ---
 {{ $grafanaVersion := "10.4.15" }}
-{{ $bundledPlugins := "petrslavotinek-carpetplot-panel,vonage-status-panel,btplc-status-dot-panel,natel-plotly-panel,savantly-heatmap-panel,grafana-piechart-panel,grafana-worldmap-panel,esnet-matrix-panel" }}
+{{ $bundledPlugins := "petrslavotinek-carpetplot-panel,vonage-status-panel,btplc-status-dot-panel,natel-plotly-panel,savantly-heatmap-panel,grafana-piechart-panel,grafana-worldmap-panel,esnet-matrix-panel,grafana-clickhouse-datasource,grafana-opensearch-datasource,grafana-sentry-datasource,yesoreyeram-infinity-datasource,grafana-polystat-panel,marcusolsson-gantt-panel,mtanda-histogram-panel,natel-discrete-panel,agenty-flowcharting-panel" }}
 {{ $gfPathPlugins := "/usr/share/grafana/plugins-bundled" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
