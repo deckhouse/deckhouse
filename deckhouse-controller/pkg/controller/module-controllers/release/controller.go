@@ -140,7 +140,7 @@ type reconciler struct {
 	symlinksDir          string
 	restartReason        string
 	clusterUUID          string
-	mtx                  sync.Mutex
+	mtx                  sync.RWMutex
 	delayTimer           *time.Timer
 
 	metricsUpdater MetricsUpdater
@@ -165,7 +165,7 @@ func (r *reconciler) preflight(ctx context.Context) error {
 		return fmt.Errorf("init module manager: %w", err)
 	}
 
-	r.clusterUUID = utils.GetClusterUUID(ctx, r.client)
+	r.setClusterUUID(utils.GetClusterUUID(ctx, r.client))
 
 	go r.restartLoop(ctx)
 
@@ -192,11 +192,11 @@ func (r *reconciler) preflight(ctx context.Context) error {
 
 func (r *reconciler) restartLoop(ctx context.Context) {
 	for {
-		r.mtx.Lock()
+		r.mtx.RLock()
 		select {
 		case <-r.delayTimer.C:
-			if r.restartReason != "" {
-				r.log.Info("restart Deckhouse", slog.String("reason", r.restartReason))
+			if r.getRestartReason() != "" {
+				r.log.Info("restart Deckhouse", slog.String("reason", r.getRestartReason()))
 				if err := syscall.Kill(1, syscall.SIGUSR2); err != nil {
 					r.log.Fatal("send SIGUSR2 signal failed", log.Err(err))
 				}
@@ -206,15 +206,32 @@ func (r *reconciler) restartLoop(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		}
-		r.mtx.Unlock()
+		r.mtx.RUnlock()
 	}
 }
 
-func (r *reconciler) emitRestart(msg string) {
+func (r *reconciler) getRestartReason() string {
+	r.mtx.RLock()
+	defer r.mtx.RUnlock()
+	return r.restartReason
+}
+
+func (r *reconciler) setRestartReason(reason string) {
 	r.mtx.Lock()
-	r.delayTimer.Reset(delayTimer)
-	r.restartReason = msg
-	r.mtx.Unlock()
+	defer r.mtx.Unlock()
+	r.restartReason = reason
+}
+
+func (r *reconciler) getClusterUUID() string {
+	r.mtx.RLock()
+	defer r.mtx.RUnlock()
+	return r.clusterUUID
+}
+
+func (r *reconciler) setClusterUUID(uuid string) {
+	r.mtx.Lock()
+	defer r.mtx.Unlock()
+	r.clusterUUID = uuid
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -243,10 +260,17 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 // handleRelease handles releases
 func (r *reconciler) handleRelease(ctx context.Context, release *v1alpha1.ModuleRelease) (ctrl.Result, error) {
+	select {
+	case <-ctx.Done():
+		return ctrl.Result{}, ctx.Err()
+	default:
+	}
+
 	res, err := r.preHandleCheck(ctx, release)
 	if err != nil {
-		r.log.Error("failed to update module release before handling", slog.String("release", release.GetName()), log.Err(err))
-
+		r.log.Error("failed to update module release before handling",
+			slog.String("release", release.GetName()),
+			log.Err(err))
 		return ctrl.Result{Requeue: true}, nil
 	}
 
@@ -258,9 +282,17 @@ func (r *reconciler) handleRelease(ctx context.Context, release *v1alpha1.Module
 	case "":
 		release.Status.Phase = v1alpha1.ModuleReleasePhasePending
 		release.Status.TransitionTime = metav1.NewTime(r.dependencyContainer.GetClock().Now().UTC())
-		if err := r.client.Status().Update(ctx, release); err != nil {
-			r.log.Error("failed to update module release status", slog.String("release", release.GetName()), log.Err(err))
-			return ctrl.Result{Requeue: true}, nil
+
+		select {
+		case <-ctx.Done():
+			return ctrl.Result{}, ctx.Err()
+		default:
+			if err := r.client.Status().Update(ctx, release); err != nil {
+				r.log.Error("failed to update module release status",
+					slog.String("release", release.GetName()),
+					log.Err(err))
+				return ctrl.Result{Requeue: true}, nil
+			}
 		}
 		// process to the next phase
 		return ctrl.Result{Requeue: true}, nil
@@ -327,7 +359,7 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 	var modulesChangedReason string
 	defer func() {
 		if modulesChangedReason != "" {
-			r.emitRestart(modulesChangedReason)
+			r.setRestartReason(modulesChangedReason)
 		}
 	}()
 
@@ -473,7 +505,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 	var modulesChangedReason string
 	defer func() {
 		if modulesChangedReason != "" {
-			r.emitRestart(modulesChangedReason)
+			r.setRestartReason(modulesChangedReason)
 		}
 	}()
 
@@ -805,7 +837,7 @@ func (r *reconciler) runReleaseDeploy(ctx context.Context, release *v1alpha1.Mod
 		return nil
 	}, ctrlutils.WithRetryOnConflictBackoff(backoff))
 	if err != nil {
-		return fmt.Errorf("update with retry: %w", err)
+		return fmt.Errorf("update release annotations and labels: %w", err)
 	}
 
 	err = ctrlutils.UpdateStatusWithRetry(ctx, r.client, release, func() error {
@@ -894,12 +926,14 @@ func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRel
 
 	// clear tmp dir
 	defer func() {
-		if err = os.RemoveAll(tmpDir); err != nil {
-			r.log.Error("failed to remove old module directory", slog.String("directory", tmpDir), log.Err(err))
+		if err := os.RemoveAll(tmpDir); err != nil {
+			r.log.Error("failed to remove temporary module directory",
+				slog.String("directory", tmpDir),
+				slog.String("error", err.Error()))
 		}
 	}()
 
-	options := utils.GenerateRegistryOptionsFromModuleSource(source, r.clusterUUID, r.log)
+	options := utils.GenerateRegistryOptionsFromModuleSource(source, r.getClusterUUID(), r.log)
 	md := downloader.NewModuleDownloader(r.dependencyContainer, tmpDir, source, options)
 
 	downloadStatistic, err := md.DownloadByModuleVersion(release.GetModuleName(), release.GetVersion().String())
@@ -1193,7 +1227,7 @@ func (r *reconciler) deleteRelease(ctx context.Context, release *v1alpha1.Module
 
 		// restart controller for completely remove module
 		// TODO: we need another solution for remove module from modulemanager
-		r.emitRestart("a module release was removed")
+		r.setRestartReason("a module release was removed")
 	}
 
 	if controllerutil.ContainsFinalizer(release, v1alpha1.ModuleReleaseFinalizerExistOnFs) {
