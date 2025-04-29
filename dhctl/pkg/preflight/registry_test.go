@@ -205,27 +205,27 @@ deckhouse:
 	}
 }
 
-func TestСheckResponseSuccess_OKResponse(t *testing.T) {
+func TestCheckResponseSuccess_OKResponse(t *testing.T) {
 	s := require.New(t)
 	resp := &http.Response{StatusCode: http.StatusOK, Header: http.Header{}}
 	resp.Header.Set("Docker-Distribution-API-Version", "registry/2.0")
 	s.Nil(checkResponseIsFromDockerRegistry(resp))
 }
 
-func TestСheckResponseSuccess_UnauthorizedResponse(t *testing.T) {
+func TestCheckResponseSuccess_UnauthorizedResponse(t *testing.T) {
 	s := require.New(t)
 	resp := &http.Response{StatusCode: http.StatusUnauthorized, Header: http.Header{}}
 	resp.Header.Set("Docker-Distribution-API-Version", "registry/2.0")
 	s.Nil(checkResponseIsFromDockerRegistry(resp))
 }
 
-func TestСheckResponse_NoAPIVersionHeader(t *testing.T) {
+func TestCheckResponse_NoAPIVersionHeader(t *testing.T) {
 	s := require.New(t)
 	resp := &http.Response{StatusCode: http.StatusUnauthorized, Header: http.Header{}}
 	s.ErrorIs(checkResponseIsFromDockerRegistry(resp), ErrRegistryUnreachable)
 }
 
-func TestСheckResponse_WrongStatus(t *testing.T) {
+func TestCheckResponse_WrongStatus(t *testing.T) {
 	s := require.New(t)
 	resp := &http.Response{StatusCode: http.StatusForbidden, Header: http.Header{}}
 	s.ErrorIs(checkResponseIsFromDockerRegistry(resp), ErrRegistryUnreachable)
