@@ -77,7 +77,7 @@ spec:
           - --address=127.0.0.1
           - --port=10258
           - --machine-drain-delay=1m
-          - -v=2
+          - -v=5
           livenessProbe:
             failureThreshold: 3
             httpGet:

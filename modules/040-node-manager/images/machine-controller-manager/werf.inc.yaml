@@ -13,6 +13,7 @@ import:
 image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
+fromCacheVersion: "04091244"
 shell:
   install:
   - git clone --depth 1 --branch del-stale-machines {{ $.SOURCE_REPO }}/deckhouse/mcm.git /src
