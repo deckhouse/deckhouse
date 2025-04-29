@@ -1,6 +1,6 @@
 ---
 # use image for actual terraform version for infra deployment in e2e
-image: e2e-terraform
+image: e2e-opentofu-eks
 # we use artifact with ubuntu because alpine can not unzip with `unzip` and `tar` command
 # current openstack zip-archive with error: "unzip: zip flag 8 (streaming) is not supported"
 fromImage: common/alt-p11-artifact

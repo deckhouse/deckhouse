@@ -46,7 +46,7 @@ shopt -s inherit_errexit
 shopt -s failglob
 
 bootstrap_log="${DHCTL_LOG_FILE}"
-terraform_state_file="/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.tfstate"
+opentofu_state_file="/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.tfstate"
 kubectl_config_file="/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig"
 
 function prepare_environment() {
@@ -106,23 +106,23 @@ function prepare_environment() {
 function bootstrap_eks() {
   # set -x
 
-  >&2 echo "Run terraform to create nodes for EKS cluster ..."
+  >&2 echo "Run opentofu to create nodes for EKS cluster ..."
 #  pushd "$cwd"
   cd $cwd
-  /image/bin/terraform init -input=false -plugin-dir=/usr/local/share/terraform/plugins || return $?
-  /image/bin/terraform apply -state="${terraform_state_file}" -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
+  /image/bin/opentofu init -input=false -plugin-dir=/usr/local/share/opentofu/plugins || return $?
+  /image/bin/opentofu apply -state="${opentofu_state_file}" -auto-approve -no-color | tee "$cwd/opentofu.log" || return $?
 #  popd
 
-  if ! cluster_endpoint="$(tail -n5 "$cwd/terraform.log" | grep "cluster_endpoint" | cut -d "=" -f2 | tr -d " \"")" ; then
-    >&2 echo "ERROR: can't parse cluster_endpoint from terraform output"
+  if ! cluster_endpoint="$(tail -n5 "$cwd/opentofu.log" | grep "cluster_endpoint" | cut -d "=" -f2 | tr -d " \"")" ; then
+    >&2 echo "ERROR: can't parse cluster_endpoint from opentofu output"
     return 1
   fi
-  if ! cluster_name="$(tail -n5 "$cwd/terraform.log" | grep "cluster_name" | cut -d "=" -f2 | tr -d " \"")" ; then
-    >&2 echo "ERROR: can't parse cluster_name from terraform output"
+  if ! cluster_name="$(tail -n5 "$cwd/opentofu.log" | grep "cluster_name" | cut -d "=" -f2 | tr -d " \"")" ; then
+    >&2 echo "ERROR: can't parse cluster_name from opentofu output"
     return 1
   fi
-  if ! region="$(tail -n5 "$cwd/terraform.log" | grep "region" | cut -d "=" -f2 | tr -d " \"")" ; then
-    >&2 echo "ERROR: can't parse region from terraform output"
+  if ! region="$(tail -n5 "$cwd/opentofu.log" | grep "region" | cut -d "=" -f2 | tr -d " \"")" ; then
+    >&2 echo "ERROR: can't parse region from opentofu output"
     return 1
   fi
 
@@ -257,12 +257,12 @@ function wait_cluster_ready() {
 }
 
 function destroy_eks_infra() {
-  >&2 echo "Run destroy_eks_infra from ${terraform_state_file}"
+  >&2 echo "Run destroy_eks_infra from ${opentofu_state_file}"
 
 #  pushd "$cwd"
   cd $cwd
-  /image/bin/terraform init -input=false -plugin-dir=/usr/local/share/terraform/plugins || return $?
-  /image/bin/terraform destroy -state="${terraform_state_file}" -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
+  /image/bin/opentofu init -input=false -plugin-dir=/usr/local/share/opentofu/plugins || return $?
+  /image/bin/opentofu destroy -state="${opentofu_state_file}" -auto-approve -no-color | tee "$cwd/opentofu.log" || return $?
 #  popd
 
   return $exitCode
