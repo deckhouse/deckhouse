@@ -181,8 +181,9 @@ function verify_that_nodes_were_cordoned() {
 
     echo "Cordon events:"
     echo "$cordon_events"
+    echo ""
 
-    cordon_events_count="$(echo -n "$cordon_events" | wc -l)"
+    cordon_events_count="$(echo -n "$cordon_events" | awk 'END {print NR}')"
 
     if [[ "$cordon_events_count" == "$nodes_during_scaling" ]]; then
       echo "Node cordoned before deleting!"
@@ -203,13 +204,14 @@ function verify_that_nodes_were_drained() {
   local drain_events
 
   for i in $(seq $attempts); do
-    drain_events="$(kubectl get events --sort-by metadata.creationTimestamp | { grep -i "SuccessfulDrainNode" || true; } )"
+    drain_events="$(kubectl -n d8-cloud-instance-manager get events --sort-by metadata.creationTimestamp | { grep -i "SuccessfulDrainNode" || true; } )"
     drain_events="$(echo "$drain_events" | { grep -i "autoscaler-" || true; } )"
 
     echo "Drain events:"
     echo "$drain_events"
+    echo ""
 
-    drain_events_count="$(echo -n "drain_events" | wc -l)"
+    drain_events_count="$(echo -n "$drain_events" | awk 'END {print NR}')"
 
     if [[ "$drain_events_count" == "$nodes_during_scaling" ]]; then
       echo "Node drained before deleting!"
