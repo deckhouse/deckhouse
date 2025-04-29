@@ -436,10 +436,6 @@ module JSONSchemaRenderer
         result = Array.new()
         ancestorsPathString = ''
 
-        if parent.has_key?('required') && parent['required'].include?(name)
-            result.push(%Q(<p class="resources__attrs required"><span class="resources__attrs_name required">#{get_i18n_term('required_value_sentence')}</span></p>))
-        end
-        
         if name.nil? or name == ''
             fullPath = ancestors + ['element']
             parameterTitle = get_i18n_term('element_of_array').capitalize
@@ -861,6 +857,7 @@ module JSONSchemaRenderer
             result.push('</font></p>')
             if !( get_hash_value(input, 'properties', 'settings' ) )
                input['properties'] = { "settings" => { "type" => "object", "properties" => input['properties'] } }
+               input['properties']['settings']['required'] = input['required'] if input['required']
             end
             if !( get_hash_value(input, 'i18n', 'en', 'properties', 'settings' ) )
                input['i18n']['en']['properties'] = { "settings" => { "type" => "object", "properties" => input['i18n']['en']['properties'] } }
