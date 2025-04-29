@@ -56,15 +56,17 @@ func (f *FakeImageDescriptorProvider) ExpectReference(ref name.Reference) *FakeI
 	return f
 }
 
-func (f *FakeImageDescriptorProvider) Return(desc *v1.Descriptor, err error) *FakeImageDescriptorProvider {
+func (f *FakeImageDescriptorProvider) Return(desc *v1.Descriptor, conf *v1.ConfigFile, err error) *FakeImageDescriptorProvider {
 	f.ReturnedDescriptor = desc
+	f.ReturnedConfigFile = conf
 	f.ReturnedError = err
 	return f
 }
 
 type FakeBuildDigestProvider struct {
-	ReturnedDigest v1.Hash
-	ReturnedError  error
+	ReturnedDigest     v1.Hash
+	ReturnedConfigFile v1.ConfigFile
+	ReturnedError      error
 
 	T *testing.T
 }

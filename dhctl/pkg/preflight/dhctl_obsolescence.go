@@ -101,7 +101,7 @@ func (pc *Checker) CheckDhctlVersionObsolescence(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("Cannot fetch deckhouse image config: %w.", err)
 	}
-	if currentDeckhouseImageConfig.Config.Labels["io.deckhouse.edition"] != app.AppEdition {
+	if currentDeckhouseImageConfig == nil || currentDeckhouseImageConfig.Config.Labels == nil || currentDeckhouseImageConfig.Config.Labels["io.deckhouse.edition"] != app.AppEdition {
 		return fmt.Errorf("Editions in registry and dhctl do not match.")
 	}
 
@@ -149,7 +149,6 @@ func (pc *Checker) getDeckhouseImageConfig(ctx context.Context) (*v1.ConfigFile,
 
 	return config, nil
 }
-
 
 func (pc *Checker) fetchAndValidateDeckhouseImageHashFromReleaseChannel(ctx context.Context) (*v1.Hash, error) {
 	creds, err := pc.findRegistryAuthCredentials()
