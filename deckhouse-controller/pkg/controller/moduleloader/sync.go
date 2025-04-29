@@ -122,6 +122,11 @@ func (l *Loader) restoreAbsentModulesFromOverrides(ctx context.Context) error {
 			continue
 		}
 
+		// skip unready mpo
+		if mpo.Status.Message != v1alpha1.ModulePullOverrideMessageReady {
+			continue
+		}
+
 		module := new(v1alpha1.Module)
 		if err := l.client.Get(ctx, client.ObjectKey{Name: mpo.Name}, module); err != nil {
 			if !apierrors.IsNotFound(err) {
