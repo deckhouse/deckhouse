@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 
 	"github.com/google/uuid"
@@ -39,7 +38,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
 func (s *Service) Abort(server pb.DHCTL_AbortServer) error {
@@ -57,11 +55,21 @@ func (s *Service) Abort(server pb.DHCTL_AbortServer) error {
 	phaseSwitcher := &fsmPhaseSwitcher[*pb.AbortResponse, any]{
 		f: f, dataFunc: s.abortSwitchPhaseData, sendCh: sendCh, next: make(chan error),
 	}
-	logWriter := logger.NewLogWriter(logger.L(ctx).With(logTypeDHCTL), sendCh,
+
+	loggerDefault := logger.L(ctx).With(logTypeDHCTL)
+
+	logWriter := logger.NewLogWriter(loggerDefault, sendCh,
 		func(lines []string) *pb.AbortResponse {
 			return &pb.AbortResponse{Message: &pb.AbortResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
 		},
 	)
+
+	debugWriter := logger.NewDebugLogWriter(loggerDefault)
+
+	logOptions := logger.Options{
+		DebugWriter:   debugWriter,
+		DefaultWriter: logWriter,
+	}
 
 	startReceiver[*pb.AbortRequest, *pb.AbortResponse](server, receiveCh, doneCh, internalErrCh)
 	startSender[*pb.AbortRequest, *pb.AbortResponse](server, sendCh, internalErrCh)
@@ -91,7 +99,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.abortSafe(ctx, message.Start, phaseSwitcher.switchPhase(ctx), logWriter)
+					result := s.abortSafe(ctx, message.Start, phaseSwitcher.switchPhase(ctx), logOptions)
 					sendCh <- &pb.AbortResponse{Message: &pb.AbortResponse_Result{Result: result}}
 				}()
 
@@ -125,36 +133,28 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) abortSafe(
-	ctx context.Context,
-	request *pb.AbortStart,
-	switchPhase phases.DefaultOnPhaseFunc,
-	logWriter io.Writer,
-) (result *pb.AbortResult) {
+func (s *Service) abortSafe(ctx context.Context, request *pb.AbortStart, switchPhase phases.DefaultOnPhaseFunc, options logger.Options) (result *pb.AbortResult) {
 	defer func() {
 		if r := recover(); r != nil {
 			result = &pb.AbortResult{Err: panicMessage(ctx, r)}
 		}
 	}()
 
-	return s.abort(ctx, request, switchPhase, logWriter)
+	return s.abort(ctx, request, switchPhase, options)
 }
 
-func (s *Service) abort(
-	ctx context.Context,
-	request *pb.AbortStart,
-	switchPhase phases.DefaultOnPhaseFunc,
-	logWriter io.Writer,
-) *pb.AbortResult {
+func (s *Service) abort(ctx context.Context, request *pb.AbortStart, switchPhase phases.DefaultOnPhaseFunc, options logger.Options) *pb.AbortResult {
 	var err error
 
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream: logWriter,
-		Width:     int(request.Options.LogWidth),
+		OutStream:   options.DefaultWriter,
+		Width:       int(request.Options.LogWidth),
+		DebugStream: options.DebugWriter,
 	})
+
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
 	app.ResourcesTimeout = request.Options.ResourcesTimeout.AsDuration()
@@ -178,6 +178,10 @@ func (s *Service) abort(
 			request.InitResources,
 			request.Resources,
 		} {
+			if len(cfg) == 0 {
+				continue
+			}
+
 			configPath, cleanup, err = util.WriteDefaultTempFile([]byte(cfg))
 			cleanuper.Add(cleanup)
 			if err != nil {
@@ -252,7 +256,6 @@ func (s *Service) abort(
 		OnPhaseFunc:       switchPhase,
 		CommanderMode:     request.Options.CommanderMode,
 		CommanderUUID:     commanderUUID,
-		TerraformContext:  terraform.NewTerraformContext(),
 	})
 
 	abortErr := bootstrapper.Abort(ctx, false)

@@ -105,7 +105,7 @@ help:
 
 
 GOLANGCI_VERSION = 1.54.2
-TRIVY_VERSION= 0.55.0
+TRIVY_VERSION= 0.60.0
 PROMTOOL_VERSION = 2.37.0
 GATOR_VERSION = 3.9.0
 GH_VERSION = 2.52.0
@@ -155,10 +155,10 @@ dmt-lint:
 
 
 tests-openapi: ## Run tests against modules openapi values schemas.
-	go test -vet=off ./testing/openapi_cases/
+	go test -timeout=${TESTS_TIMEOUT} -vet=off ./testing/openapi_cases/
 
 tests-controller: ## Run deckhouse-controller unit tests.
-	go test ./deckhouse-controller/... -v
+	go test -timeout=${TESTS_TIMEOUT} ./deckhouse-controller/... -v
 
 tests-webhooks: bin/yq ## Run python webhooks unit tests.
 	./testing/webhooks/run.sh
@@ -218,7 +218,7 @@ bin/regcopy: bin ## App to copy docker images to the Deckhouse registry
 bin/trivy-${TRIVY_VERSION}/trivy:
 	mkdir -p bin/trivy-${TRIVY_VERSION}
 	# curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ./bin/trivy-${TRIVY_VERSION} v${TRIVY_VERSION}
-	curl --header "PRIVATE-TOKEN: ${TRIVY_TOKEN}" https://${DECKHOUSE_PRIVATE_REPO}/api/v4/projects/${TRIVY_PROJECT_ID}/packages/generic/deckhouse-trivy/v${TRIVY_VERSION}/trivy -o bin/trivy-${TRIVY_VERSION}/trivy
+	curl https://${DECKHOUSE_PRIVATE_REPO}/api/v4/projects/${TRIVY_PROJECT_ID}/packages/generic/trivy-v${TRIVY_VERSION}/v${TRIVY_VERSION}/trivy -o bin/trivy-${TRIVY_VERSION}/trivy
 
 .PHONY: trivy
 bin/trivy: bin bin/trivy-${TRIVY_VERSION}/trivy
@@ -226,14 +226,10 @@ bin/trivy: bin bin/trivy-${TRIVY_VERSION}/trivy
 	chmod u+x bin/trivy-${TRIVY_VERSION}/trivy
 	ln -s ${PWD}/bin/trivy-${TRIVY_VERSION}/trivy bin/trivy
 
-.PHONY: cve-report cve-base-images
+.PHONY: cve-report
 cve-report: bin/trivy bin/jq ## Generate CVE report for a Deckhouse release.
   ##~ Options: SEVERITY=CRITICAL,HIGH REPO=registry.deckhouse.io TAG=v1.30.0
 	./tools/cve/d8-images.sh
-
-cve-base-images: bin/trivy bin/jq ## Check CVE in our base images.
-  ##~ Options: SEVERITY=CRITICAL,HIGH
-	./tools/cve/base-images.sh
 
 cve-base-images-check-default-user: bin/trivy bin/jq ## Check CVE in our base images.
   ##~ Options: SEVERITY=CRITICAL,HIGH

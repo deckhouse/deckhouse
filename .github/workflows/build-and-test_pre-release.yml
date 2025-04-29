@@ -70,8 +70,8 @@ jobs:
       ref_full: ${{ steps.git_info.outputs.ref_full }}
       github_sha: ${{ steps.git_info.outputs.github_sha }}
       pr_number: ${{ steps.git_info.outputs.pr_number }}
-    # Skip the CI for automation PRs, e.g. changelog
-    if: ${{ github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
+    # Skip the CI for automation PRs, e.g. changelog, don't skip if Pull Request title contains "[run ci]".
+    if: ${{ contains(github.event.pull_request.title, '[run ci]') || github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
     steps:
       - id: git_info
         name: Get tag name and SHA
@@ -185,10 +185,11 @@ jobs:
           version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
 
-      - name: Set up Go 1.23
-        uses: actions/setup-go@v3
+      - name: Set up Go 1.24
+        uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: '1.24'
+          cache: false
 
       - name: Run go generate
         run: |
@@ -200,6 +201,19 @@ jobs:
         run: |
           git diff --exit-code
     # </template: go_generate_template>
+
+
+      # <template: send_fail_report>
+      - name: Send fail report
+        if: failure()
+        env:
+          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          JOB_NAME: ${{ github.job }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
+        run: |
+          bash ./.github/scripts/send-report.sh
+      # </template: send_fail_report>
 
 
   workflow_render:
@@ -524,6 +538,19 @@ jobs:
     # </template: build_template>
 
 
+      # <template: send_fail_report>
+      - name: Send fail report
+        if: failure()
+        env:
+          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          JOB_NAME: ${{ github.job }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
+        run: |
+          bash ./.github/scripts/send-report.sh
+      # </template: send_fail_report>
+
+
   doc_web_build:
     name: Doc web build
     # Wait for success build of modules.
@@ -775,7 +802,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images/golang:1.23.6-bullseye@sha256:fad5b33791a319ba1c910a03a33575ea34fc8e142695a64be9a1a228e74af11e"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images@sha256:15a61588f40a0adee525ca956f70d0e40eb9bc0a3220ef1bdc3cb4f66e241b28"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'

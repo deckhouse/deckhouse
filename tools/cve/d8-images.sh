@@ -60,6 +60,7 @@ function __main__() {
 
   IMAGE_REPORT_NAME="deckhouse::$(echo "$IMAGE:$TAG" | sed 's/^.*\/\(.*\)/\1/')"
   mkdir -p out/json
+  touch out/.trivyignore
 
   date_iso=$(date -I)
 
@@ -134,7 +135,7 @@ function __main__() {
       echo ""
       echo " Uploading trivy CVE report for image ${IMAGE_NAME} of ${MODULE_NAME} module"
       echo ""
-      curl -s -X POST \
+      curl --retry 5 --retry-delay 5 --retry-all-errors -s -X POST \
         https://${DEFECTDOJO_HOST}/api/v2/reimport-scan/ \
         -H "accept: application/json" \
         -H "Content-Type: multipart/form-data"  \
@@ -161,8 +162,7 @@ function __main__() {
         -F "build_id=${IMAGE_HASH}" \
         -F "commit_hash=${GITHUB_SHA}" \
         -F "branch_tag=${TAG}" \
-        -F "apply_tags_to_findings=true" \
-      > /dev/null
+        -F "apply_tags_to_findings=true"
     done
   done
 }

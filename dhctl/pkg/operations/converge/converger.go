@@ -19,9 +19,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+
 	"github.com/google/uuid"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
@@ -30,8 +34,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
+	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
 // TODO(remove-global-app): Support all needed parameters in Params, remove usage of app.*
@@ -39,9 +43,8 @@ type Params struct {
 	SSHClient  *ssh.Client
 	KubeClient *client.KubernetesClient // optional
 
-	OnPhaseFunc            phases.DefaultOnPhaseFunc
-	AutoDismissDestructive bool
-	AutoApprove            bool
+	OnPhaseFunc     phases.DefaultOnPhaseFunc
+	ChangesSettings infrastructure.ChangeActionSettings
 
 	*client.KubernetesInitParams
 
@@ -52,7 +55,9 @@ type Params struct {
 	OnCheckResult              func(*check.CheckResult) error
 	ApproveDestructiveChangeID string
 
-	TerraformContext *terraform.TerraformContext
+	InfrastructureContext *infrastructure.Context
+
+	CheckHasTerraformStateBeforeMigration bool
 }
 
 type Converger struct {
@@ -88,6 +93,101 @@ func (c *Converger) applyParams() error {
 		app.KubeConfig = c.KubernetesInitParams.KubeConfig
 		app.KubeConfigContext = c.KubernetesInitParams.KubeConfigContext
 	}
+	return nil
+}
+
+func (c *Converger) ConvergeMigration(ctx context.Context) error {
+	{
+		// TODO(dhctl-for-commander): pass stateCache externally using params as in the Destroyer, this block will be unneeded then
+		state, err := phases.ExtractDhctlState(cache.Global())
+		if err != nil {
+			return fmt.Errorf("unable to extract dhctl state: %w", err)
+		}
+		c.lastState = state
+	}
+
+	if err := c.applyParams(); err != nil {
+		return err
+	}
+
+	var err error
+	var kubeCl *client.KubernetesClient
+
+	if c.KubeClient != nil {
+		kubeCl = c.KubeClient
+	} else {
+		var sshClient *ssh.Client
+		sshClient, err = ssh.NewInitClientFromFlags(false)
+		if err != nil {
+			return err
+		}
+
+		kubeCl = client.NewKubernetesClient().WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient))
+		if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
+			return err
+		}
+	}
+
+	if !c.CommanderMode {
+		cacheIdentity := ""
+		if app.KubeConfigInCluster {
+			cacheIdentity = "in-cluster"
+		}
+		if c.SSHClient != nil {
+			cacheIdentity = c.SSHClient.Check().String()
+		}
+		if app.KubeConfig != "" {
+			cacheIdentity = cache.GetCacheIdentityFromKubeconfig(
+				app.KubeConfig,
+				app.KubeConfigContext,
+			)
+		}
+		if cacheIdentity == "" {
+			return fmt.Errorf("Incorrect cache identity. Need to pass --ssh-host or --kube-client-from-cluster or --kubeconfig")
+		}
+
+		err = cache.InitWithOptions(cacheIdentity, cache.CacheOptions{})
+		if err != nil {
+			return fmt.Errorf("unable to initialize cache %s: %w", cacheIdentity, err)
+		}
+	}
+
+	stateCache := cache.Global()
+
+	if err := c.PhasedExecutionContext.InitPipeline(stateCache); err != nil {
+		return err
+	}
+	c.lastState = nil
+	defer c.PhasedExecutionContext.Finalize(stateCache)
+
+	var convergeCtx *convergectx.Context
+	if c.Params.CommanderMode {
+		convergeCtx = convergectx.NewCommanderContext(ctx, kubeCl, stateCache, c.Params.CommanderModeParams, c.Params.ChangesSettings)
+	} else {
+		convergeCtx = convergectx.NewContext(ctx, kubeCl, stateCache, c.Params.ChangesSettings)
+	}
+
+	convergeCtx.WithPhaseContext(c.PhasedExecutionContext).
+		WithInfrastructureContext(c.Params.InfrastructureContext)
+
+	var inLockRunner *lock.InLockRunner
+	// No need for converge-lock in commander mode for bootstrap and converge operations
+	if !c.CommanderMode {
+		inLockRunner = lock.NewInLockLocalRunner(convergeCtx, "local-converger")
+	}
+
+	r := newRunner(inLockRunner, nil).
+		WithCommanderUUID(c.CommanderUUID)
+
+	err = r.RunConvergeMigration(convergeCtx, c.Params.CheckHasTerraformStateBeforeMigration)
+	if err != nil {
+		return fmt.Errorf("converge problem: %v", err)
+	}
+
+	if err := c.PhasedExecutionContext.CompletePipeline(stateCache); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -145,11 +245,17 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 		}
 	}
 
+	hasTerraformState := false
+
 	if c.CommanderMode {
 		checkRes, err := c.Checker.Check(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("check failed: %w", err)
 		}
+
+		hasTerraformState = checkRes.HasTerraformState
+
+		log.InfoF("Has terraform state: %v\n", hasTerraformState)
 
 		if c.Params.OnCheckResult != nil {
 			if err := c.Params.OnCheckResult(checkRes); err != nil {
@@ -188,20 +294,29 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 	c.lastState = nil
 	defer c.PhasedExecutionContext.Finalize(stateCache)
 
-	changesSettings := terraform.ChangeActionSettings{
-		AutoDismissDestructive: c.AutoDismissDestructive,
-		AutoApprove:            c.AutoApprove,
-	}
-
 	var convergeCtx *convergectx.Context
 	if c.Params.CommanderMode {
-		convergeCtx = convergectx.NewCommanderContext(ctx, kubeCl, stateCache, c.Params.CommanderModeParams, changesSettings)
+		convergeCtx = convergectx.NewCommanderContext(ctx, kubeCl, stateCache, c.Params.CommanderModeParams, c.Params.ChangesSettings)
 	} else {
-		convergeCtx = convergectx.NewContext(ctx, kubeCl, stateCache, changesSettings)
+		convergeCtx = convergectx.NewContext(ctx, kubeCl, stateCache, c.Params.ChangesSettings)
+	}
+
+	metaConfig, err := convergeCtx.MetaConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	needAutomaticTofuMigrationForCommander := false
+
+	if infrastructureprovider.NeedToUseOpentofu(metaConfig) {
+		needAutomaticTofuMigrationForCommander = hasTerraformState && c.CommanderMode
+		if !c.CommanderMode {
+			convergeCtx.WithStateChecker(infrastructurestate.AskCanIConvergeTerraformStateWhenWeUseTofu)
+		}
 	}
 
 	convergeCtx.WithPhaseContext(c.PhasedExecutionContext).
-		WithTerraformContext(c.Params.TerraformContext)
+		WithInfrastructureContext(c.Params.InfrastructureContext)
 
 	var inLockRunner *lock.InLockRunner
 	// No need for converge-lock in commander mode for bootstrap and converge operations
@@ -211,10 +326,26 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 
 	kubectlSwitcher := convergectx.NewKubeClientSwitcher(convergeCtx, inLockRunner)
 
-	r := newRunner(inLockRunner, kubectlSwitcher).
-		WithCommanderUUID(c.CommanderUUID)
+	phasesToSkip := make([]phases.OperationPhase, 0)
+	if !c.CommanderMode {
+		phasesToSkip = []phases.OperationPhase{phases.DeckhouseConfigurationPhase}
+	}
 
-	err = r.RunConverge(convergeCtx)
+	r := newRunner(inLockRunner, kubectlSwitcher).
+		WithCommanderUUID(c.CommanderUUID).
+		WithSkipPhases(phasesToSkip)
+
+	if c.CommanderMode {
+		log.InfoF("Need automatic migration for commander: %v\n", needAutomaticTofuMigrationForCommander)
+	}
+
+	if needAutomaticTofuMigrationForCommander {
+		log.WarnF("Need migrate to opentofu. Switch to migrator\n")
+		err = r.RunConvergeMigration(convergeCtx, true)
+	} else {
+		err = r.RunConverge(convergeCtx)
+	}
+
 	if err != nil {
 		return nil, fmt.Errorf("converge problem: %v", err)
 	}
@@ -234,7 +365,7 @@ func (c *Converger) AutoConverge() error {
 	}
 
 	if app.RunningNodeName == "" {
-		return fmt.Errorf("Need to pass running node name. It is may taints terraform state while converge")
+		return fmt.Errorf("Need to pass running node name. It is may taints infrastructure state while converge")
 	}
 
 	var err error
@@ -256,13 +387,19 @@ func (c *Converger) AutoConverge() error {
 	}
 
 	var convergeCtx *convergectx.Context
-	convergeCtx = convergectx.NewContext(context.Background(), kubeCl, cache.Global(), terraform.ChangeActionSettings{
-		AutoDismissDestructive: c.AutoDismissDestructive,
-		AutoApprove:            c.AutoApprove,
-	})
+	convergeCtx = convergectx.NewContext(context.Background(), kubeCl, cache.Global(), c.Params.ChangesSettings)
+
+	metaConfig, err := convergeCtx.MetaConfig()
+	if err != nil {
+		return err
+	}
+
+	if infrastructureprovider.NeedToUseOpentofu(metaConfig) {
+		convergeCtx.WithStateChecker(infrastructurestate.CheckCanIConvergeTerraformStateWhenWeUseTofu)
+	}
 
 	convergeCtx.WithPhaseContext(c.PhasedExecutionContext).
-		WithTerraformContext(c.Params.TerraformContext)
+		WithInfrastructureContext(c.Params.InfrastructureContext)
 
 	inLockRunner := lock.NewInLockRunner(convergeCtx, lock.AutoConvergerIdentity).
 		// never force lock
@@ -273,7 +410,7 @@ func (c *Converger) AutoConverge() error {
 	r := newRunner(inLockRunner, convergectx.NewKubeClientSwitcher(convergeCtx, inLockRunner)).
 		WithCommanderUUID(c.CommanderUUID).
 		WithExcludedNodes([]string{app.RunningNodeName}).
-		WithSkipPhases([]phases.OperationPhase{phases.AllNodesPhase})
+		WithSkipPhases([]phases.OperationPhase{phases.AllNodesPhase, phases.DeckhouseConfigurationPhase})
 
 	converger := NewAutoConverger(r, app.AutoConvergeListenAddress, app.ApplyInterval)
 	return converger.Start(convergeCtx)

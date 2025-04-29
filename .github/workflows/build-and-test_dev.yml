@@ -76,8 +76,8 @@ jobs:
       changes_docs: ${{ steps.changes.outputs.docs }}
       changes_not_markdown: ${{ steps.changes.outputs.not_markdown }}
 
-    # Skip pull_request and pull_request_target triggers for PRs authored by deckhouse-BOaTswain, e.g. changelog PRs.
-    if: ${{ ! (startsWith(github.event_name, 'pull_request') && github.event.pull_request.user.login == 'deckhouse-BOaTswain') }}
+    # Skip pull_request and pull_request_target triggers for PRs authored by deckhouse-BOaTswain, e.g. changelog PRs, don't skip if Pull Request title contains "[run ci]".
+    if: ${{ ! (startsWith(github.event_name, 'pull_request') && github.event.pull_request.user.login == 'deckhouse-BOaTswain' && !contains(github.event.pull_request.title, '[run ci]')) }}
     steps:
       - name: Get PR info for push trigger
         id: push_info
@@ -312,8 +312,8 @@ jobs:
       ref_full: ${{ steps.git_info.outputs.ref_full }}
       github_sha: ${{ steps.git_info.outputs.github_sha }}
       pr_number: ${{ steps.git_info.outputs.pr_number }}
-    # Skip the CI for automation PRs, e.g. changelog
-    if: ${{ github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
+    # Skip the CI for automation PRs, e.g. changelog, don't skip if Pull Request title contains "[run ci]".
+    if: ${{ contains(github.event.pull_request.title, '[run ci]') || github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
     steps:
       - id: git_info
         name: Get tag name and SHA
@@ -489,10 +489,11 @@ jobs:
           version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
 
-      - name: Set up Go 1.23
-        uses: actions/setup-go@v3
+      - name: Set up Go 1.24
+        uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: '1.24'
+          cache: false
 
       - name: Run go generate
         run: |
@@ -1003,9 +1004,7 @@ jobs:
         env:
           TAG: ${{needs.pull_request_info.outputs.ref_slug}}
           IMAGE: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
-          TRIVY_TOKEN: ${{secrets.FOX_ACCESS_TOKEN}}
           DECKHOUSE_PRIVATE_REPO: ${{secrets.DECKHOUSE_PRIVATE_REPO}}
-          TRIVY_PROJECT_ID: ${{ vars.TRIVY_PROJECT_ID }}
         run: |
           echo "⚓️ 🏎 Running default user validation on ${TAG}..."
           make cve-base-images-check-default-user
@@ -1096,7 +1095,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images/golang:1.23.6-bullseye@sha256:fad5b33791a319ba1c910a03a33575ea34fc8e142695a64be9a1a228e74af11e"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images@sha256:15a61588f40a0adee525ca956f70d0e40eb9bc0a3220ef1bdc3cb4f66e241b28"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'

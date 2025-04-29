@@ -69,7 +69,7 @@ spec:
                     You can find a list of available images in the [provider documentation](https://cloud.google.com/compute/docs/images#ubuntu).
 
                     The list of OS and their versions supported by Deckhouse can be found in the [Deckhouse documentation](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (take into account the Deckhouse version used).
-                  x-doc-examples: ["https://www.googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911"]
+                  x-doc-examples: ["https://www.googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20250313"]
                   x-doc-required: false
                   type: string
                 preemptible:

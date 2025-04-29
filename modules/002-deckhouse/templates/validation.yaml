@@ -89,10 +89,11 @@ spec:
         operator: In
         values:
         - "deckhouse"
-      - key: "managementState"
+      - key: maintenance.deckhouse.io/no-resource-reconcillation
         operator: NotIn
         values:
-        - "Unmanaged"
+        - ""
+        - "true"
 {{- end }}
 ---
 {{- $policyName := "update-policy-label-objects.deckhouse.io" }}

@@ -29,13 +29,6 @@ internalNetworkCIDRs:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: flant-integration
-spec:
-  enabled: false
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
   name: cni-cilium
 spec:
   version: 1
@@ -50,6 +43,9 @@ spec:
   settings:
     modules:
       publicDomainTemplate: "%s.k8s.smoke.flant.com"
+      placement:
+        customTolerationKeys:
+          - node
   version: 1
 ---
 apiVersion: deckhouse.io/v1alpha1

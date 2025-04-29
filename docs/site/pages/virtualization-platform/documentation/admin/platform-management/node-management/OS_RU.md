@@ -65,7 +65,7 @@ spec:
 Помимо этого, используются следующие конструкции Bash Booster:
 
 - [`bb-apt-install`](http://www.bashbooster.net/#apt) для установки apt-пакета и отправки события `bb-package-installed`, если пакет был установлен;
-- [`bb-yum-install`](http://www.bashbooster.net/#yum) для установки yum-пакета и отправки события `bb-package-installed`, если пакет был установлен;
+- [`bb-dnf-install`](http://www.bashbooster.net/#yum) для установки yum-пакета и отправки события `bb-package-installed`, если пакет был установлен;
 - [`bb-event-on`](http://www.bashbooster.net/#event) для сигнализации, что нужна перезагрузка узла, если отправлено событие `bb-package-installed`;
 - [`bb-log-info`](http://www.bashbooster.net/#log) для логирования;
 - [`bb-flag-set`](http://www.bashbooster.net/#flag) для сигнализации, что нужен перезапуск узла.
@@ -135,7 +135,7 @@ spec:
     fi
 
     bb-deckhouse-get-disruptive-update-approval
-    bb-yum-install "kernel-${desired_version}"
+    bb-dnf-install "kernel-${desired_version}"
 ```
 
 ## Добавление корневого сертификата

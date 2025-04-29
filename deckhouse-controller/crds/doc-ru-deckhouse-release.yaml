@@ -20,7 +20,8 @@ spec:
                 requirements:
                   description: Требования для установки релиза.
                 disruptions:
-                  description: Потенциально опасные изменения в релизе.
+                  x-doc-deprecated: true
+                  description: Изменения в релизе, которые могут привести к кратковременному простою в работе системных компонентов.
                 changelog:
                   description: Изменения включенных модулей в данном релизе.
                 changelogLink:

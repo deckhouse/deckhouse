@@ -30,11 +30,11 @@ spec:
 
 ## Просмотр метрик
 
-Для получения метрик можно использовать PromQL-запрос `falco_events{}`:
+Для получения метрик можно использовать PromQL-запрос `falcosecurity_falcosidekick_falco_events_total{}`:
 
 ```shell
 kubectl -n d8-monitoring exec -it prometheus-main-0 prometheus -- \
-  curl -s http://127.0.0.1:9090/api/v1/query\?query\=falco_events | jq
+  curl -s "http://127.0.0.1:9090/api/v1/query?query=falcosecurity_falcosidekick_falco_events_total" | jq
 ```
 
 В будущем мы добавим Grafana dashboard для просмотра метрик.
@@ -55,39 +55,20 @@ kubectl run falco-event-generator --image=falcosecurity/event-generator run
 
 ## Эмуляция события Falcosidekick
 
-Вы можете использовать [Falcosidekick](https://github.com/falcosecurity/falcosidekick) `/test` HTTP endpoint для отправки тестового события во все включенные выходы.
+Вы можете использовать [Falcosidekick](https://github.com/falcosecurity/falcosidekick) `/test` HTTP endpoint для отправки тестового события.
 
-- Получите список подов в пространстве имен `d8-runtime-audit-engine`:
-
-  ```shell
-  kubectl -n d8-runtime-audit-engine get pods
-  ```
-
-  Пример вывода:
-
-  ```text
-  NAME                         READY   STATUS    RESTARTS   AGE
-  runtime-audit-engine-4cpjc   4/4     Running   0          3d12h
-  runtime-audit-engine-rn7nj   4/4     Running   0          3d12h
-  ```
-
-- Получите IP-адрес пода `runtime-audit-engine-4cpjc`:
+- Создайте отладочное событие, выполнив команду:
 
   ```shell
-  export POD_IP=$(kubectl -n d8-runtime-audit-engine get pod runtime-audit-engine-4cpjc --template '{{.status.podIP}}')
-  ```
-
-- Создайте отладочное событие, выполнив запрос:
-
-  ```shell
-  kubectl run curl --image=curlimages/curl curl -X POST -H "Content-Type: application/json" -H "Accept: application/json" $POD_IP:2801/test
+  nsenter -t $(pidof falcosidekick) curl -X POST -H "Content-Type: application/json" -H "Accept: application/json" http://localhost:2801/test
   ```
 
 - Проверьте метрику отладочного события:
 
   ```shell
-  kubectl -n d8-monitoring exec -it prometheus-main-0 prometheus --  \
-    curl -s http://127.0.0.1:9090/api/v1/query\?query\=falco_events | jq
+  kubectl -n d8-monitoring exec -it prometheus-main-0 prometheus -- \
+    curl -s "http://127.0.0.1:9090/api/v1/query?query=falcosecurity_falcosidekick_falco_events_total" \
+    | jq '.data.result.[] | select (.metric.priority_raw == "debug")'
   ```
 
 - Пример вывода:
@@ -95,18 +76,21 @@ kubectl run falco-event-generator --image=falcosecurity/event-generator run
   ```json
   {
     "metric": {
-      "__name__": "falco_events",
+      "__name__": "falcosecurity_falcosidekick_falco_events_total",
       "container": "kube-rbac-proxy",
-      "instance": "192.168.199.60:4212",
+      "hostname": "falcosidekick",
+      "instance": "192.168.208.7:4212",
       "job": "runtime-audit-engine",
       "node": "dev-master-0",
-      "priority": "Debug",
+      "priority": "1",
+      "priority_raw": "debug",
       "rule": "Test rule",
+      "source": "internal",
       "tier": "cluster"
     },
     "value": [
-      1687150913.828,
-      "2"
+      1744234729.799,
+      "1"
     ]
   }
   ```

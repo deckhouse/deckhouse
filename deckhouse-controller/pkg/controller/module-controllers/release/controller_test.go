@@ -353,6 +353,93 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
 		require.NoError(suite.T(), err)
 	})
+
+	suite.Run("Sequential processing", func() {
+		suite.Run("sequential processing with patch release", func() {
+			testData := suite.fetchTestFileData("sequential-processing-patch.yaml")
+			suite.setupReleaseController(testData)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.0"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.1"))
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("sequential processing with minor release", func() {
+			testData := suite.fetchTestFileData("sequential-processing-minor.yaml")
+			suite.setupReleaseController(testData)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.0"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.71.0"))
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("sequential processing with minor pending release", func() {
+			testData := suite.fetchTestFileData("sequential-processing-minor-pending.yaml")
+			suite.setupReleaseController(testData)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.0"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.71.0"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.72.0"))
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("sequential processing with minor auto release", func() {
+			testData := suite.fetchTestFileData("sequential-processing-minor-auto.yaml")
+			suite.setupReleaseController(testData)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.0"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.71.0"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.72.0"))
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("sequential processing with minor notready release", func() {
+			testData := suite.fetchTestFileData("sequential-processing-minor-notready.yaml")
+			suite.setupReleaseController(testData, withBasicModulePhase(addonmodules.Startup))
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.0"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.71.0"))
+			require.Error(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.72.0"))
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("sequential processing with pending releases", func() {
+			testData := suite.fetchTestFileData("sequential-processing-pending.yaml")
+			suite.setupReleaseController(testData, withBasicModulePhase(addonmodules.Startup))
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.0"))
+			require.NoError(suite.T(), err)
+			suite.setModulePhase(addonmodules.Ready)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.71.0"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.72.0"))
+			require.NoError(suite.T(), err)
+		})
+	})
+
+	suite.Run("Process pending releases", func() {
+		// Setup initial state
+		suite.setupReleaseController(suite.fetchTestFileData("apply-pending-releases.yaml"))
+
+		// Test updating Parca module
+		mr := suite.getModuleRelease("parca-1.2.2")
+		_, err := suite.ctr.handleRelease(ctx, mr)
+		require.NoError(suite.T(), err)
+
+		// Test updating Commander module
+		mr = suite.getModuleRelease("commander-1.0.3")
+		_, err = suite.ctr.handleRelease(ctx, mr)
+		require.NoError(suite.T(), err)
+
+		// Verify the final state
+		parca := suite.getModuleRelease("parca-1.2.2")
+		require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, parca.Status.Phase)
+
+		commander := suite.getModuleRelease("commander-1.0.3")
+		require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, commander.Status.Phase)
+	})
 }
 
 func (suite *ReleaseControllerTestSuite) loopUntilDeploy(dc *dependency.MockedContainer, releaseName string) {
@@ -401,6 +488,12 @@ func (suite *ReleaseControllerTestSuite) updateModuleReleasesStatuses() {
 	}
 }
 
+func (suite *ReleaseControllerTestSuite) setModulePhase(phase addonmodules.ModuleRunPhase) {
+	suite.ctr.moduleManager = stubModulesManager{
+		modulePhase: phase,
+	}
+}
+
 type reconcilerOption func(*reconciler)
 
 func withModuleUpdatePolicy(mup *v1alpha2.ModuleUpdatePolicySpec) reconcilerOption {
@@ -412,6 +505,12 @@ func withModuleUpdatePolicy(mup *v1alpha2.ModuleUpdatePolicySpec) reconcilerOpti
 func withDependencyContainer(dc dependency.Container) reconcilerOption {
 	return func(r *reconciler) {
 		r.dependencyContainer = dc
+	}
+}
+
+func withBasicModulePhase(phase addonmodules.ModuleRunPhase) reconcilerOption {
+	return func(r *reconciler) {
+		r.moduleManager = stubModulesManager{modulePhase: phase}
 	}
 }
 
@@ -589,7 +688,9 @@ func (suite *ReleaseControllerTestSuite) fetchResults() []byte {
 	return result.Bytes()
 }
 
-type stubModulesManager struct{}
+type stubModulesManager struct {
+	modulePhase addonmodules.ModuleRunPhase
+}
 
 func (s stubModulesManager) AreModulesInited() bool {
 	return true
@@ -600,6 +701,11 @@ func (s stubModulesManager) DisableModuleHooks(_ string) {
 
 func (s stubModulesManager) GetModule(name string) *addonmodules.BasicModule {
 	bm, _ := addonmodules.NewBasicModule(name, "", 900, nil, []byte{}, []byte{}, addonmodules.WithLogger(log.NewNop()))
+	bm.SetPhase(addonmodules.Ready)
+	if s.modulePhase != "" {
+		bm.SetPhase(s.modulePhase)
+	}
+
 	return bm
 }
 
