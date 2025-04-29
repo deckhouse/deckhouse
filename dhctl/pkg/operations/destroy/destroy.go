@@ -30,6 +30,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/controller"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
@@ -195,13 +196,18 @@ func (d *ClusterDestroyer) DestroyCluster(ctx context.Context, autoApprove bool)
 
 			d.staticDestroyer.SetUserCredentials(nodeUserCredentials)
 
-			ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
-			defer cancel()
-
 			err = entity.CreateNodeUser(ctx, d.d8Destroyer, nodeUser)
 			if err != nil {
 				return err
 			}
+
+			err = d.staticDestroyer.waitNodeUserPresent(global.ConvergeNodeUserName, ctx)
+			if err != nil {
+				return err
+			}
+
+			// wait for other nodes NodeUser will be created as well
+			time.Sleep(20 * time.Second)
 		}
 	default:
 		return fmt.Errorf("Unknown cluster type '%s'", clusterType)
@@ -397,9 +403,6 @@ func (d *StaticMastersDestroyer) processStaticHost(ctx context.Context, host ses
 func (d *ClusterDestroyer) GetMasterNodesIPs(ctx context.Context) ([]NodeIP, error) {
 	var nodeIPs []NodeIP
 
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
-
 	kubeCl, err := d.d8Destroyer.GetKubeClient(ctx)
 	if err != nil {
 		log.DebugF("Cannot get kubernetes client. Got error: %v", err)
@@ -513,4 +516,16 @@ func (d *StaticMastersDestroyer) switchToNodeuser(settings *session.Session) err
 	d.SSHClient = newSSHClient
 
 	return nil
+}
+
+func (d *StaticMastersDestroyer) waitNodeUserPresent(name string, ctx context.Context) error {
+	command := "stat /home/deckhouse/" + name + "/.ssh/authorized_keys"
+
+	err := retry.NewLoop("Checking if NodeUser present on node", 20, 5*time.Second).RunContext(ctx, func() error {
+		cmd := d.d8Destroyer.sshClient.Command(command)
+		cmd.Sudo(ctx)
+		return cmd.Run(ctx)
+	})
+
+	return err
 }

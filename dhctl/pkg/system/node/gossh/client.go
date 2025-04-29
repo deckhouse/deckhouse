@@ -224,7 +224,6 @@ func (s *Client) keepAlive() {
 			s.stopChan = nil
 			return
 		default:
-			time.Sleep(10 * time.Second)
 			session, err := s.sshClient.NewSession()
 			if err != nil {
 				log.DebugF("Keep-alive to %s failed: %v", s.Settings.Host(), err)
@@ -254,6 +253,7 @@ func (s *Client) keepAlive() {
 				s.sessionList = nil
 				return
 			}
+			time.Sleep(30 * time.Second)
 		}
 	}
 }
