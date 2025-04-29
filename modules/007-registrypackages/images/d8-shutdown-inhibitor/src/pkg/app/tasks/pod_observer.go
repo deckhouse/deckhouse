@@ -21,15 +21,16 @@ import (
 	"fmt"
 	"time"
 
-	"d8_shutdown_inhibitor/pkg/app/containerd"
+	"d8_shutdown_inhibitor/pkg/kubernetes"
 	"d8_shutdown_inhibitor/pkg/system"
 )
 
 // PodObserver starts to check Pods on node and stops inhibitors when no pods to wait remain.
 type PodObserver struct {
+	NodeName              string
 	PodsCheckingInterval  time.Duration
 	WallBroadcastInterval time.Duration
-	PodMatchers           []containerd.PodMatcher
+	PodMatchers           []kubernetes.PodMatcher
 	ShutdownSignalCh      <-chan struct{}
 	//PowerKeyPressedCh <-chan struct{}
 	StopInhibitorsCh chan<- struct{}
@@ -56,13 +57,13 @@ func (p *PodObserver) Run(ctx context.Context, errCh chan error) {
 
 	lastWall := time.Time{}
 	for {
-		matchedPods, err := p.podsToWait(ctx)
+		matchedPods, err := p.ListMatchedPods()
 		if err != nil {
 			fmt.Printf("podObserver(s2): error listing Pods: %v\n", err)
 			// TODO add maximum retry count.
 			continue
 		}
-		if matchedPods == 0 {
+		if len(matchedPods) == 0 {
 			fmt.Printf("podObserver(s2): no pods to wait, unlock inhibitors and exit\n")
 			close(p.StopInhibitorsCh)
 			return
@@ -88,33 +89,23 @@ func (p *PodObserver) Run(ctx context.Context, errCh chan error) {
 	}
 }
 
-func (p *PodObserver) podsToWait(ctx context.Context) (int, error) {
+func (p *PodObserver) ListMatchedPods() ([]kubernetes.Pod, error) {
 	if len(p.PodMatchers) == 0 {
-		return 0, nil
+		return nil, nil
 	}
 
-	podList, err := p.listPods(ctx)
-	if err != nil {
-		// Assume we still have pods on error. Caller will retry listing.
-		return 0, err
-	}
-
-	if podList == nil || len(podList.Items) == 0 {
-		return 0, nil
-	}
-
-	matchedPods := containerd.FilterPods(podList.Items, p.PodMatchers...) // := 0
-
-	return len(matchedPods), nil
-}
-
-func (p *PodObserver) listPods(ctx context.Context) (*containerd.PodList, error) {
-	// Run crictl pods
-	podList, err := containerd.ListPods(ctx)
+	kubectl := kubernetes.NewDefaultKubectl()
+	podList, err := kubectl.ListPods(p.NodeName)
 	if err != nil {
 		fmt.Printf("list pods: %v\n", err)
 		return nil, err
 	}
 
-	return podList, nil
+	if podList == nil || len(podList.Items) == 0 {
+		return nil, nil
+	}
+
+	matchedPods := kubernetes.FilterPods(podList.Items, p.PodMatchers...)
+
+	return matchedPods, nil
 }

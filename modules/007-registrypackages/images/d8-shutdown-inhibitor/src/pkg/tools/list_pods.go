@@ -19,9 +19,10 @@ package tools
 import (
 	"fmt"
 	"os"
-	"time"
+	"sort"
 
-	"d8_shutdown_inhibitor/pkg/app"
+	"d8_shutdown_inhibitor/pkg/app/tasks"
+	"d8_shutdown_inhibitor/pkg/kubernetes"
 )
 
 func ListPods(podLabel string) {
@@ -31,13 +32,25 @@ func ListPods(podLabel string) {
 		os.Exit(1)
 	}
 
-	// Create application.
-	app := app.NewApp(app.AppConfig{
-		InhibitDelayMax:       30 * time.Minute,
-		WallBroadcastInterval: 30 * time.Second,
-		PodLabel:              podLabel,
-		NodeName:              nodeName,
+	podObserver := &tasks.PodObserver{
+		NodeName: nodeName,
+		PodMatchers: []kubernetes.PodMatcher{
+			kubernetes.WithLabel(podLabel),
+			kubernetes.WithRunningPhase(),
+		},
+	}
+
+	pods, err := podObserver.ListMatchedPods()
+	if err != nil {
+		fmt.Printf("List matched Pods: %v\n", err)
+	}
+
+	sort.SliceStable(pods, func(i, j int) bool {
+		return pods[i].Metadata.Name < pods[j].Metadata.Name
 	})
 
-	app.ListPods()
+	fmt.Printf("Pods with label %s:\n", podLabel)
+	for _, pod := range pods {
+		fmt.Printf("  %s\n", pod.Metadata.Name)
+	}
 }
