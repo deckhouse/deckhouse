@@ -18,6 +18,7 @@ require (
 require (
 	github.com/alecthomas/kingpin v2.2.6+incompatible
 	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250704135428-7600b0581807
+	github.com/gophercloud/gophercloud v1.14.1
 	github.com/prometheus/client_golang v1.12.1
 	k8s.io/api v0.25.5
 )
