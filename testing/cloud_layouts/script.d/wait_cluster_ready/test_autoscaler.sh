@@ -176,12 +176,13 @@ function verify_that_nodes_were_cordoned() {
   local cordon_events
 
   for i in $(seq $attempts); do
-    cordon_events="$(kubectl get events --sort-by metadata.creationTimestamp | grep -i "NodeNotSchedulable" | grep -i "autoscaler-")"
+    cordon_events="$(kubectl get events --sort-by metadata.creationTimestamp | { grep -i "NodeNotSchedulable" || true; } )"
+    cordon_events="$(echo "$cordon_events" | { grep -i "autoscaler-" || true; } )"
 
     echo "Cordon events:"
     echo "$cordon_events"
 
-    cordon_events_count="$(echo "$cordon_events" | wc -l)"
+    cordon_events_count="$(echo -n "$cordon_events" | wc -l)"
 
     if [[ "$cordon_events_count" == "$nodes_during_scaling" ]]; then
       echo "Node cordoned before deleting!"
@@ -202,12 +203,13 @@ function verify_that_nodes_were_drained() {
   local drain_events
 
   for i in $(seq $attempts); do
-    drain_events="$(kubectl get events --sort-by metadata.creationTimestamp | grep -i "SuccessfulDrainNode" | grep -i "autoscaler-")"
+    drain_events="$(kubectl get events --sort-by metadata.creationTimestamp | { grep -i "SuccessfulDrainNode" || true; } )"
+    drain_events="$(echo "$drain_events" | { grep -i "autoscaler-" || true; } )"
 
     echo "Drain events:"
     echo "$drain_events"
 
-    drain_events_count="$(echo "drain_events" | wc -l)"
+    drain_events_count="$(echo -n "drain_events" | wc -l)"
 
     if [[ "$drain_events_count" == "$nodes_during_scaling" ]]; then
       echo "Node drained before deleting!"
