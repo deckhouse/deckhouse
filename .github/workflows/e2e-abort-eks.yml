@@ -238,7 +238,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG="${arrPath[1]}"
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
-          TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-terraform:${DECKHOUSE_IMAGE_TAG}"
+          TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-opentofu-eks:${DECKHOUSE_IMAGE_TAG}"
 
           if [ "${MULTIMASTER}" == true ] ; then
             MASTERS_COUNT=3
@@ -533,7 +533,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG="${arrPath[1]}"
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
-          TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-terraform:${DECKHOUSE_IMAGE_TAG}"
+          TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-opentofu-eks:${DECKHOUSE_IMAGE_TAG}"
 
           if [ "${MULTIMASTER}" == true ] ; then
             MASTERS_COUNT=3
@@ -828,7 +828,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG="${arrPath[1]}"
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
-          TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-terraform:${DECKHOUSE_IMAGE_TAG}"
+          TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-opentofu-eks:${DECKHOUSE_IMAGE_TAG}"
 
           if [ "${MULTIMASTER}" == true ] ; then
             MASTERS_COUNT=3
@@ -1123,7 +1123,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG="${arrPath[1]}"
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
-          TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-terraform:${DECKHOUSE_IMAGE_TAG}"
+          TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-opentofu-eks:${DECKHOUSE_IMAGE_TAG}"
 
           if [ "${MULTIMASTER}" == true ] ; then
             MASTERS_COUNT=3
@@ -1418,7 +1418,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG="${arrPath[1]}"
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
-          TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-terraform:${DECKHOUSE_IMAGE_TAG}"
+          TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-opentofu-eks:${DECKHOUSE_IMAGE_TAG}"
 
           if [ "${MULTIMASTER}" == true ] ; then
             MASTERS_COUNT=3
@@ -1713,7 +1713,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG="${arrPath[1]}"
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
-          TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-terraform:${DECKHOUSE_IMAGE_TAG}"
+          TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-opentofu-eks:${DECKHOUSE_IMAGE_TAG}"
 
           if [ "${MULTIMASTER}" == true ] ; then
             MASTERS_COUNT=3
