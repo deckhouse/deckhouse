@@ -17,6 +17,7 @@ set -Eeuo pipefail
 
 deployment_name="autoscaler-test"
 should_nodes_in_cluster="0"
+nodes_during_scaling="1"
 
 
 function log_autoscaler() {
@@ -154,9 +155,7 @@ function wait_become_autoscaler_instances_delete() {
   for i in $(seq $attempts); do
     autoscaler_nodes_in_cluster="$(kubectl get instances -l node.deckhouse.io/group=autoscaler -o json | jq --raw-output '.items | length')"
     if [[ "$autoscaler_nodes_in_cluster" == "$should_nodes_in_cluster" ]]; then
-      echo "Instances in autoscaler ng scaled down"
-      log_autoscaler
-      echo "Autoscaler test was processed!"
+      echo "Instances in autoscaler ng scaled down!"
       return 0
     fi
 
@@ -169,11 +168,40 @@ function wait_become_autoscaler_instances_delete() {
   return 1
 }
 
+function verify_that_nodes_were_cordoned() {
+  local attempts=10
+
+  for i in $(seq $attempts); do
+    cordon_events="$(kubectl get events --sort-by metadata.creationTimestamp | grep -i "NodeNotSchedulable" | grep -i "autoscaler-")"
+
+    echo "Cordon events:"
+    echo "$cordon_events"
+
+    cordon_events_count="$(echo "$cordon_events" | wc -l)"
+
+    if [[ "$cordon_events_count" == "$nodes_during_scaling" ]]; then
+      echo "Node cordoned before deleting!"
+      return 0
+    fi
+
+    >&2 echo "Cluster has $cordon_events_count cordon events, should be ${nodes_during_scaling}. Waiting get cordon events from cluster. Attempt $i/$attempts. Sleeping 10 seconds..."
+    sleep 10
+  done
+
+  echo "Waiting cordon events for deleted node to $nodes_during_scaling timeout exited. Exit."
+  log_autoscaler
+  return 1
+}
+
 
 create_deployment
 wait_deployment_become_ready
 scale_down_deployment
 wait_become_autoscaler_nodes_delete
 wait_become_autoscaler_instances_delete
+verify_that_nodes_were_cordoned
+log_autoscaler
+
+echo "Autoscaler test was processed!"
 
 exit 0
