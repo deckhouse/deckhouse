@@ -17,6 +17,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"time"
 
 	klient "github.com/flant/kube-client/client"
@@ -77,7 +78,7 @@ func (k *KubernetesClient) WithNodeInterface(client node.Interface) *KubernetesC
 }
 
 func (k *KubernetesClient) NodeInterfaceAsSSHClient() *ssh.Client {
-	if k.NodeInterface == nil {
+	if k.NodeInterface == nil || reflect.ValueOf(k.NodeInterface).IsNil() {
 		return nil
 	}
 

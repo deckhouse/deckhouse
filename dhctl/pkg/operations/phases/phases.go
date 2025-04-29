@@ -36,9 +36,10 @@ const (
 	DeleteResourcesPhase                   OperationPhase = "DeleteResources"
 	ExecPostBootstrapPhase                 OperationPhase = "ExecPostBootstrap"
 	// converge only
-	AllNodesPhase            OperationPhase = "AllNodes"
-	ScaleToMultiMasterPhase  OperationPhase = "ScaleToMultiMaster"
-	ScaleToSingleMasterPhase OperationPhase = "ScaleToSingleMaster"
+	AllNodesPhase               OperationPhase = "AllNodes"
+	ScaleToMultiMasterPhase     OperationPhase = "ScaleToMultiMaster"
+	ScaleToSingleMasterPhase    OperationPhase = "ScaleToSingleMaster"
+	DeckhouseConfigurationPhase OperationPhase = "DeckhouseConfiguration"
 	// all
 	FinalizationPhase OperationPhase = "Finalization"
 )

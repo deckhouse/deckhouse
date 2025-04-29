@@ -24,6 +24,13 @@ apiVersions:
         uniqueItems: true
       instances:
         type: object
+        properties:
+          vpcSubnetId:
+            type: string
+          vpcIPv4SubnetId:
+            type: string
+          securityGroupId:
+            type: string
       volumeTypes:
         type: array
         description: |

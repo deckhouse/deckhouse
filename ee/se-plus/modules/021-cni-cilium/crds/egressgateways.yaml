@@ -54,14 +54,14 @@ spec:
                         A method for determining the source IP address to be assigned to requests through this gateway.
 
                         Possible options:
-                        * `PrimaryIPFromEgressGatewayNodeInterface` — the primary IP address on the _public_ network interface of the node will be used as the source IP address.
+                        * `PrimaryIPFromEgressGatewayNodeInterface` (basic mode) — the primary IP address on the _public_ network interface of the node will be used as the source IP address.
 
                           Particularities:
                           * When the active node goes down and a new node is assigned, the outgoing IP address will change.
                           * The network subsystem on all egress nodes must be configured in advance:
                             * the _public_ interfaces must have the same name (eth1, for example),
                             * all necessary routes for access to all external public services must be configured.
-                        * `VirtualIPAddress` — explicitly specify the outgoing IP address.
+                        * `VirtualIPAddress` (Virtual IP mode) — explicitly specify the outgoing IP address.
 
                           Particularities:
                           * If the active node goes down, the outgoing IP address will not change.
@@ -73,6 +73,8 @@ spec:
                         - PrimaryIPFromEgressGatewayNodeInterface
                       type: string
                     virtualIPAddress:
+                      description: |-
+                        **Used for mode with Virtual IP (if `mode: PrimaryIPFromEgressGatewayNodeInterface`).**
                       properties:
                         ip:
                           x-doc-d8Revision: ee
@@ -87,6 +89,8 @@ spec:
                             type: string
                       type: object
                     primaryIPFromEgressGatewayNodeInterface:
+                      description: |-
+                        **Used for basic mode (if `mode: PrimaryIPFromEgressGatewayNodeInterface`).**
                       properties:
                         interfaceName:
                           x-doc-d8Revision: ee

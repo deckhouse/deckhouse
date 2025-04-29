@@ -63,3 +63,4 @@ spec:
                     Подробно про лейблы можно прочитать [в официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
     - name: v1
       schema: *schema
+

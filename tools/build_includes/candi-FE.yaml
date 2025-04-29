@@ -2,35 +2,35 @@
 - add: /ee/se-plus/candi/cloud-providers/vsphere
   to: /deckhouse/candi/cloud-providers/vsphere
   stageDependencies:
-    setup:
+    install:
         - '**/*'
 - add: /ee/se-plus/candi/cloud-providers/zvirt
   to: /deckhouse/candi/cloud-providers/zvirt
   stageDependencies:
-    setup:
+    install:
         - '**/*'
 - add: /ee/candi/cloud-providers/openstack
   to: /deckhouse/candi/cloud-providers/openstack
   stageDependencies:
-    setup:
+    install:
         - '**/*'
 - add: /ee/candi/cloud-providers/vcd
   to: /deckhouse/candi/cloud-providers/vcd
   stageDependencies:
-    setup:
+    install:
         - '**/*'
 - add: /ee/candi/cloud-providers/dynamix
   to: /deckhouse/candi/cloud-providers/dynamix
   stageDependencies:
-    setup:
+    install:
         - '**/*'
 - add: /ee/candi/cloud-providers/huaweicloud
   to: /deckhouse/candi/cloud-providers/huaweicloud
   stageDependencies:
-    setup:
+    install:
         - '**/*'
 - add: /ee/fe/candi/bashible/common-steps/all/098_upd_tfadm.sh.tpl
   to: /deckhouse/candi/bashible/common-steps/all/098_upd_tfadm.sh.tpl
   stageDependencies:
-    setup:
+    install:
         - '**/*'

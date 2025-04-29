@@ -47,7 +47,7 @@ spec:
                   default: 15s
                 rollback:
                   type: boolean
-                  description: Indicates whether the module release should be rollback after deleting mpo.
+                  description: Indicates whether the module release should be rollback after deleting ModulePullOverride.
                   default: false
             status:
               type: object

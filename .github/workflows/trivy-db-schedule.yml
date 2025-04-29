@@ -195,11 +195,16 @@ jobs:
           ./oras push --artifact-type application/vnd.aquasec.trivy.config.v1+json ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-java-db:1 javadb.tar.gz:application/vnd.aquasec.trivy.javadb.layer.v1.tar+gzip
           ./oras push --artifact-type application/vnd.aquasec.trivy.config.v1+json ${{secrets.DECKHOUSE_DEV_CSE_REGISTRY_HOST}}/sys/deckhouse-cse/security/trivy-java-db:1 javadb.tar.gz:application/vnd.aquasec.trivy.javadb.layer.v1.tar+gzip
           rm -f javadb.tar.gz
+
+      # <template: send_fail_report>
       - name: Send fail report
         if: failure()
         env:
-          LOOP_TOKEN: ${{secrets.LOOP_CVE_REPORTS_SEND_TOKEN}}
-          LOOP_CHANNEL_ID: ${{secrets.LOOP_E2E_REPORT_CHANEL_ID}}
+          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          JOB_NAME: ${{ github.job }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
         run: |
-          WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-          bash ./.github/scripts/send-report.sh --message "🛑Trivy db shedule failure🛑\n[URL]($WORKFLOW_URL)"
+          bash ./.github/scripts/send-report.sh
+      # </template: send_fail_report>
+

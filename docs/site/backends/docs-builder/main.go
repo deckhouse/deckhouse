@@ -23,11 +23,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/flant/docs-builder/internal/docs"
 	v1 "github.com/flant/docs-builder/internal/http/v1"
 	"github.com/flant/docs-builder/pkg/k8s"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // flags
@@ -52,7 +53,8 @@ func main() {
 	defer stopNotify()
 
 	logger := log.NewLogger(log.Options{
-		Level: log.LogLevelFromStr(os.Getenv("LOG_LEVEL")).Level(),
+		Level:       log.LogLevelFromStr(os.Getenv("LOG_LEVEL")).Level(),
+		HandlerType: log.TextHandlerType,
 	})
 
 	lManager, err := k8s.NewLeasesManager(logger)

@@ -243,7 +243,12 @@ unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
   fi
 
 {{ if eq .runType "Normal" }}
-  if [[ -f $CONFIGURATION_CHECKSUM_FILE ]] && [[ "$(<$CONFIGURATION_CHECKSUM_FILE)" == "$CONFIGURATION_CHECKSUM" ]] && [[ -f $UPTIME_FILE ]] && [[ "$(<$UPTIME_FILE)" < "$(current_uptime)" ]] 2>/dev/null; then
+  if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
+      REBOOT_ANNOTATION="$( kubectl_exec get no "$D8_NODE_HOSTNAME" -o json |jq -r '.metadata.annotations."update.node.deckhouse.io/reboot"' )"
+    else
+      REBOOT_ANNOTATION=null
+  fi
+  if [[ -f $CONFIGURATION_CHECKSUM_FILE ]] && [[ "$(<$CONFIGURATION_CHECKSUM_FILE)" == "$CONFIGURATION_CHECKSUM" ]] && [[ "$REBOOT_ANNOTATION" == "null" ]] && [[ -f $UPTIME_FILE ]] && [[ "$(<$UPTIME_FILE)" < "$(current_uptime)" ]] 2>/dev/null; then
     echo "Configuration is in sync, nothing to do."
     annotate_node node.deckhouse.io/configuration-checksum=${CONFIGURATION_CHECKSUM}
     current_uptime > $UPTIME_FILE

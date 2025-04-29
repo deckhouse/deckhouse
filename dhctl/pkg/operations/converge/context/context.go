@@ -21,12 +21,14 @@ import (
 	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	dstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
 type Context struct {
@@ -36,32 +38,31 @@ type Context struct {
 	stateCache dstate.Cache
 	// yes we want to save context in struct,
 	// but it is not recommended https://go.dev/wiki/CodeReviewComments#contexts
-	ctx              context.Context
-	phaseContext     phases.DefaultPhasedExecutionContext
-	metaConfig       *config.MetaConfig
-	terraformContext *terraform.TerraformContext
-	commanderParams  *commander.CommanderModeParams
-	changeParams     terraform.ChangeActionSettings
-	stateStore       stateStore
+	ctx                   context.Context
+	phaseContext          phases.DefaultPhasedExecutionContext
+	infrastructureContext *infrastructure.Context
+	commanderParams       *commander.CommanderModeParams
+	changeParams          infrastructure.ChangeActionSettings
+	stateStore            stateStore
+	stateChecker          infrastructure.StateChecker
 }
 
-func newContext(ctx context.Context, kubeClient *client.KubernetesClient, cache dstate.Cache, changeParams terraform.ChangeActionSettings) *Context {
+func newContext(ctx context.Context, kubeClient *client.KubernetesClient, cache dstate.Cache, changeParams infrastructure.ChangeActionSettings) *Context {
 	return &Context{
 		kubeClient:   kubeClient,
 		stateCache:   cache,
 		changeParams: changeParams,
 		ctx:          ctx,
 
-		terraformContext: terraform.NewTerraformContext(),
-		stateStore:       newInSecretStateStore(),
+		stateStore: newInSecretStateStore(),
 	}
 }
 
-func NewContext(ctx context.Context, kubeClient *client.KubernetesClient, cache dstate.Cache, changeParams terraform.ChangeActionSettings) *Context {
+func NewContext(ctx context.Context, kubeClient *client.KubernetesClient, cache dstate.Cache, changeParams infrastructure.ChangeActionSettings) *Context {
 	return newContext(ctx, kubeClient, cache, changeParams)
 }
 
-func NewCommanderContext(ctx context.Context, kubeClient *client.KubernetesClient, cache dstate.Cache, params *commander.CommanderModeParams, changeParams terraform.ChangeActionSettings) *Context {
+func NewCommanderContext(ctx context.Context, kubeClient *client.KubernetesClient, cache dstate.Cache, params *commander.CommanderModeParams, changeParams infrastructure.ChangeActionSettings) *Context {
 	c := newContext(ctx, kubeClient, cache, changeParams)
 	c.commanderParams = params
 	return c
@@ -72,8 +73,17 @@ func (c *Context) WithPhaseContext(phaseContext phases.DefaultPhasedExecutionCon
 	return c
 }
 
-func (c *Context) WithTerraformContext(ctx *terraform.TerraformContext) *Context {
-	c.terraformContext = ctx
+func (c *Context) WithStateChecker(checker infrastructure.StateChecker) *Context {
+	c.stateChecker = checker
+	return c
+}
+
+func (c *Context) WithInfrastructureContext(ctx *infrastructure.Context) *Context {
+	c.infrastructureContext = ctx
+	return c
+}
+
+func (c *Context) KubeProvider() kubernetes.KubeClientProvider {
 	return c
 }
 
@@ -84,8 +94,17 @@ func (c *Context) KubeClient() *client.KubernetesClient {
 	return c.kubeClient
 }
 
-func (c *Context) Terraform() *terraform.TerraformContext {
-	return c.terraformContext
+func (c *Context) InfrastructureContext(metaConfig *config.MetaConfig) *infrastructure.Context {
+	var ctx *infrastructure.Context
+	if c.infrastructureContext != nil {
+		ctx = c.infrastructureContext
+	} else {
+		ctx = infrastructure.NewContextWithProvider(infrastructureprovider.ExecutorProvider(metaConfig))
+	}
+
+	ctx.WithStateChecker(c.stateChecker)
+
+	return ctx
 }
 
 func (c *Context) Ctx() context.Context {
@@ -121,17 +140,11 @@ func (c *Context) CompleteExecutionPhase(data any) error {
 }
 
 func (c *Context) MetaConfig() (*config.MetaConfig, error) {
-	if c.metaConfig != nil {
-		return c.metaConfig, nil
-	}
-
 	if c.CommanderMode() {
 		metaConfig, err := commander.ParseMetaConfig(c.stateCache, c.commanderParams)
 		if err != nil {
 			return nil, fmt.Errorf("unable to parse meta configuration: %w", err)
 		}
-
-		c.metaConfig = metaConfig
 
 		return metaConfig, nil
 	}
@@ -141,12 +154,10 @@ func (c *Context) MetaConfig() (*config.MetaConfig, error) {
 		return nil, err
 	}
 
-	c.metaConfig = metaConfig
-
 	return metaConfig, nil
 }
 
-func (c *Context) ChangesSettings() terraform.ChangeActionSettings {
+func (c *Context) ChangesSettings() infrastructure.ChangeActionSettings {
 	return c.changeParams
 }
 

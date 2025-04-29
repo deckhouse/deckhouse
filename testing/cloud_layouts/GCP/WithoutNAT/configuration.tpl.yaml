@@ -29,7 +29,7 @@ masterNodeGroup:
   - europe-west3-b
   instanceClass:
     machineType: n1-standard-4
-    image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20240523a
+    image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20250313
     diskSizeGb: 50
 provider:
   region: europe-west3
@@ -54,6 +54,9 @@ spec:
   settings:
     modules:
       publicDomainTemplate: "%s.k8s.smoke.flant.com"
+      placement:
+        customTolerationKeys:
+          - node
   version: 1
 ---
 apiVersion: deckhouse.io/v1alpha1
