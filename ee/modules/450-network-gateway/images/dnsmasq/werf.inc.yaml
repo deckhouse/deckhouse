@@ -3,53 +3,52 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 fromImage: common/relocate-artifact
 final: false
-shell:
-  beforeInstall:
-  - apt-get install -y dnsmasq libsqlite3
-  install:
-  - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
-fromImage: base/python
-final: false
 git:
-- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/requirements.txt
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/requirements.txt
   to: /requirements.txt
   stageDependencies:
     install:
     - '**/*'
 import:
-- image: common/wheel-artifact
-  add: /wheels
-  to: /wheels
+- image: common/python-static
+  add: /opt/python-static
+  to: /opt/python-static
   before: install
 shell:
+  beforeInstall:
+  - apt-get install -y git dnsmasq libsqlite3
   install:
-  - pip3 install -f file:///wheels --no-index -r /requirements.txt
+  - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
+  - /opt/python-static/bin/pip3 install -f file:///wheels --no-index -r requirements.txt
+  - rm -rf /wheels
+  - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 git:
-- add: /{{ $.ModulePath }}modules/450-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/prepare-config.py
-  to: /prepare-config.py
+  - add: /{{ $.ModulePath }}modules/450-{{ $.ModuleName }}/images/{{ $.ImageName }}/prepare-config.py
+    to: /prepare-config.py
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /relocate
-  to: /
-  before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /
-  to: /
-  before: install
-  includePaths:
-  - etc/dnsmasq.conf
-  - etc/dnsmasq.conf.d
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
-  add: /
-  to: /
-  before: install
-  includePaths:
-  - lib/ld-musl-x86_64*
-  - usr/bin/python3*
-  - usr/lib/python3*
-  - usr/lib/libc.so
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+    add: /relocate
+    to: /
+    before: install
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+    add: /etc/dnsmasq.conf
+    before: install
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+    add: /etc/dnsmasq.conf.d
+    before: install
+  - image: common/python-static
+    add: /opt/python-static/bin
+    to: /usr/bin
+    before: install
+    includePaths:
+    - python3*
+    - python3
+  - image: common/python-static
+    add: /opt/python-static/lib
+    to: /usr/lib
+    before: install
+    includePaths:
+    - python3*
