@@ -14,22 +14,43 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package containerd
+package kubernetes
+
+import (
+	"encoding/json"
+	"fmt"
+)
 
 type PodList struct {
 	Items []Pod `json:"items"`
 }
 
 type Pod struct {
-	Labels      map[string]string      `json:"labels"`
-	Annotations map[string]string      `json:"annotations"`
-	Metadata    *PodMetadata           `json:"metadata"`
-	State       string                 `json:"state"`
-	Others      map[string]interface{} `json:"-"`
+	Metadata *PodMetadata           `json:"metadata"`
+	Status   *PodStatus             `json:"status"`
+	Others   map[string]interface{} `json:"-"`
 }
 
 type PodMetadata struct {
-	Name      string                 `json:"name"`
-	Namespace string                 `json:"namespace"`
-	Others    map[string]interface{} `json:"-"`
+	Name        string                 `json:"name"`
+	Namespace   string                 `json:"namespace"`
+	Labels      map[string]string      `json:"labels"`
+	Annotations map[string]string      `json:"annotations"`
+	Others      map[string]interface{} `json:"-"`
+}
+
+type PodStatus struct {
+	Phase  string                 `json:"phase"`
+	Others map[string]interface{} `json:"-"`
+}
+
+func podsListFromJSON(podsJson []byte) (*PodList, error) {
+	var podList PodList
+
+	err := json.Unmarshal(podsJson, &podList)
+	if err != nil {
+		return nil, fmt.Errorf("pods list json unmarshal: %w", err)
+	}
+
+	return &podList, nil
 }
