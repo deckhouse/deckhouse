@@ -49,6 +49,13 @@ import:
   includePaths:
   - usr/bin/*awk*
   before: setup
+- image: tools/find
+  add: /
+  to: /
+  includePaths:
+    - usr/bin/*find*
+    - usr/bin/xargs
+  before: setup
 imageSpec:
   config:
     entrypoint: ["/usr/bin/tini", "--", "/shell-operator"]
