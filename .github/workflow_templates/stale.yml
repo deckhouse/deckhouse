@@ -38,3 +38,4 @@ jobs:
         stale-issue-label: "status/needs-triage"
         remove-issue-stale-when-updated: false
         labels-to-remove-when-unstale: ""
+{!{ tmpl.Exec "send_fail_report"                   | strings.Indent 4 }!}
