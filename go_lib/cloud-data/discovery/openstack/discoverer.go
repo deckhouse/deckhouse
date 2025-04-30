@@ -6,7 +6,6 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package openstack
 
 import (
-	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -14,7 +13,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"strconv"
 	"time"
 
@@ -39,58 +37,23 @@ type Discoverer struct {
 	region       string
 	moduleConfig []byte
 	clusterUUID  string
+
+	transport *http.Transport
 }
 
 type Option func(d *Discoverer) error
-
-func WithOptionsFromEnv() Option {
-	return func(d *Discoverer) error {
-		authOpts, err := openstack.AuthOptionsFromEnv()
-		if err != nil {
-			return fmt.Errorf("cannot get opts from env: %w", err)
-		}
-		d.authOpts = authOpts
-
-		region := os.Getenv("OS_REGION")
-		if region == "" {
-			return fmt.Errorf("cannot get OS_REGION env")
-		}
-		d.region = region
-
-		clusterUUID, ok := os.LookupEnv("CLUSTER_UUID")
-		if ok {
-			d.clusterUUID = clusterUUID
-		}
-
-		moduleConfig, ok := os.LookupEnv("MODULE_CONFIG")
-		if ok {
-			d.moduleConfig = []byte(moduleConfig)
-		}
-
-		return nil
-	}
-}
-
-func WithAuthOptions(authOpts gophercloud.AuthOptions) Option {
-	return func(d *Discoverer) error {
-		d.authOpts = authOpts
-
-		return nil
-	}
-}
-
-func WithRegion(region string) Option {
-	return func(d *Discoverer) error {
-		d.region = region
-
-		return nil
-	}
-}
 
 func NewDiscoverer(logger *log.Logger, options ...Option) (*Discoverer, error) {
 	discoverer := &Discoverer{
 		logger: logger,
 	}
+
+	config := &tls.Config{}
+	config.RootCAs = x509.NewCertPool()
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.TLSClientConfig = config
+
+	discoverer.transport = &http.Transport{}
 
 	for _, o := range options {
 		err := o(discoverer)
@@ -107,7 +70,7 @@ func (d *Discoverer) CheckCloudConditions(ctx context.Context) ([]v1alpha1.Cloud
 }
 
 func (d *Discoverer) InstanceTypes(ctx context.Context) ([]v1alpha1.InstanceType, error) {
-	provider, err := newProvider(d.authOpts, d.logger)
+	provider, err := d.newProvider()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create OpenStack provider: %v", err)
 	}
@@ -156,7 +119,7 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, options *DiscoveryDataOp
 		}
 	}
 
-	provider, err := newProvider(d.authOpts, d.logger)
+	provider, err := d.newProvider()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create OpenStack provider: %w", err)
 	}
@@ -212,7 +175,7 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, options *DiscoveryDataOp
 }
 
 func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error) {
-	provider, err := newProvider(d.authOpts, d.logger)
+	provider, err := d.newProvider()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create OpenStack provider: %v", err)
 	}
@@ -231,35 +194,20 @@ func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error)
 	return disksMeta, nil
 }
 
-func newProvider(authOpts gophercloud.AuthOptions, logger *log.Logger) (*gophercloud.ProviderClient, error) {
-	provider, err := openstack.NewClient(authOpts.IdentityEndpoint)
+func (d *Discoverer) newProvider() (*gophercloud.ProviderClient, error) {
+	provider, err := openstack.NewClient(d.authOpts.IdentityEndpoint)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create OpenStack client: %v", err)
 	}
 
-	// Check if a custom CA cert was provided.
-	if caCertPath := os.Getenv("OS_CACERT"); caCertPath != "" {
-		caCert, err := os.ReadFile(caCertPath)
-		if err != nil {
-			return nil, fmt.Errorf("error reading CA Cert: %s", err)
-		}
-		config := &tls.Config{}
-		caCertPool := x509.NewCertPool()
-		if ok := caCertPool.AppendCertsFromPEM(bytes.TrimSpace(caCert)); !ok {
-			return nil, fmt.Errorf("error parsing CA Cert from %s", caCertPath)
-		}
-		config.RootCAs = caCertPool
-		transport := http.DefaultTransport.(*http.Transport).Clone()
-		transport.TLSClientConfig = config
-		provider.HTTPClient = http.Client{Transport: transport}
-	}
-	err = openstack.Authenticate(provider, authOpts)
+	provider.HTTPClient = http.Client{Transport: d.transport}
+	err = openstack.Authenticate(provider, d.authOpts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to authenticate OpenStack client: %v", err)
 	}
 	provider.MaxBackoffRetries = 3
-	provider.RetryFunc = RetryFunc(logger)
-	provider.RetryBackoffFunc = RetryBackoffFunc(logger)
+	provider.RetryFunc = RetryFunc(d.logger)
+	provider.RetryBackoffFunc = RetryBackoffFunc(d.logger)
 
 	return provider, nil
 }
