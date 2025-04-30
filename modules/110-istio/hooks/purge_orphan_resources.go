@@ -22,6 +22,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -145,35 +146,23 @@ func purgeOrphanResources(input *go_hook.HookInput, dc dependency.Container) err
 			}
 		}
 
-		// Get the creationTimestamp of the istio-ca-root-cert ConfigMap in d8-istio namespace
-		rootCertCM, err := k8sClient.CoreV1().ConfigMaps(istioSystemNs).Get(context.TODO(), istioRootCertConfigMapName, metav1.GetOptions{})
-		if err == nil {
-			// List all namespaces
-			namespaces, err := k8sClient.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
-			if err != nil {
-				return err
+		// Delete the istio-ca-root-cert ConfigMap in namespaces
+		namespaces, err := k8sClient.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
+		if err != nil {
+			return err
+		}
+
+		for _, namespace := range namespaces.Items {
+			if namespace.Name == istioSystemNs {
+				continue
 			}
 
-			// Delete istio-ca-root-cert ConfigMaps in all namespaces that match the creationTimestamp
-			for _, namespace := range namespaces.Items {
-				if namespace.Name == istioSystemNs {
-					continue // Skip the d8-istio namespace as we'll handle it later
-				}
-
-				cm, err := k8sClient.CoreV1().ConfigMaps(namespace.Name).Get(context.TODO(), istioRootCertConfigMapName, metav1.GetOptions{})
-				if err != nil {
-					continue // ConfigMap doesn't exist in this namespace
-				}
-
-				if cm.CreationTimestamp == rootCertCM.CreationTimestamp {
-					err := k8sClient.CoreV1().ConfigMaps(namespace.Name).Delete(context.TODO(), istioRootCertConfigMapName, metav1.DeleteOptions{})
-					if err != nil {
-						input.Logger.Warnf("Failed to delete ConfigMap/%s in namespace %s: %v", istioRootCertConfigMapName, namespace.Name, err)
-						continue
-					}
-					input.Logger.Infof("ConfigMap/%s deleted from namespace %s", istioRootCertConfigMapName, namespace.Name)
-				}
+			err := k8sClient.CoreV1().ConfigMaps(namespace.Name).Delete(context.TODO(), istioRootCertConfigMapName, metav1.DeleteOptions{})
+			if err != nil && !k8serrors.IsNotFound(err) {
+				input.Logger.Warnf("Failed to delete ConfigMap/%s in namespace %s: %v", istioRootCertConfigMapName, namespace.Name, err)
+				continue
 			}
+			input.Logger.Infof("ConfigMap/%s deleted from namespace %s", istioRootCertConfigMapName, namespace.Name)
 		}
 
 		// delete NS
