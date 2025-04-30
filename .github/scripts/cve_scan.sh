@@ -73,7 +73,7 @@ if [ "${SCAN_TARGET}" == "regular" ]; then
   echo "${PROD_REGISTRY_PASSWORD}" | docker login --username="${PROD_REGISTRY_USER}" --password-stdin ${PROD_REGISTRY}
   if [ "${TAG}" != "main" ]; then
     # if some specific release is defined - scan only it
-    if echo "${TAG}"|grep -s "^[0-9]\.[0-9]*$"
+    if echo "${TAG}"|grep -s "^[0-9]\.[0-9]*$"; then
       d8_tags=($(crane ls "${PROD_REGISTRY_DECKHOUSE_IMAGE}" | grep "^v${TAG}\.[0-9]*$" | sort -V -r | head -n 1))
     else
       echo "ERROR: Please specify required release in the following format: [0-9]\.[0-9]*"
@@ -100,11 +100,11 @@ for d8_tag in "${d8_tags[@]}"; do
     echo "Log in to PROD registry"
     echo "${PROD_REGISTRY_PASSWORD}" | docker login --username="${PROD_REGISTRY_USER}" --password-stdin ${PROD_REGISTRY}
   fi
-  date_iso=$(date -I)
-  d8_image="${DEV_REGISTRY_DECKHOUSE_IMAGE}"
   dd_short_release_tag=""
   dd_full_release_tag=""
   dd_image_version="${d8_tag}"
+  date_iso=$(date -I)
+  d8_image="${DEV_REGISTRY_DECKHOUSE_IMAGE}"
   module_reports="${WORKDIR}/deckhouse/${d8_tag}/reports"
   mkdir -p {"${module_reports}","${WORKDIR}/artifacts"}
 
