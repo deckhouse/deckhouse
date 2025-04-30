@@ -1,8 +1,0 @@
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}
-final: false
-fromImage: common/src-artifact
-shell:
-  install:
-  - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
-  - rm -rf /wheels/.git

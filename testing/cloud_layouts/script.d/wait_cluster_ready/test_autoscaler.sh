@@ -90,6 +90,7 @@ EOD
 function wait_deployment_become_ready() {
   # 15 minutes
   local attempts=90
+  local available_replicas
 
   for i in $(seq $attempts); do
     available_replicas="$(kubectl get deployment "$deployment_name" -o json | jq '.status.availableReplicas // empty')"
@@ -131,6 +132,7 @@ function scale_down_deployment() {
 function wait_become_autoscaler_nodes_delete() {
   # 25 minutes
   local attempts=150
+  local autoscaler_nodes_in_cluster
 
   for i in $(seq $attempts); do
     autoscaler_nodes_in_cluster="$(kubectl get no -l node-role/autoscaler="" -o json | jq --raw-output '.items | length')"
@@ -151,6 +153,7 @@ function wait_become_autoscaler_nodes_delete() {
 function wait_become_autoscaler_instances_delete() {
   # 15 minutes
   local attempts=90
+  local autoscaler_nodes_in_cluster
 
   for i in $(seq $attempts); do
     autoscaler_nodes_in_cluster="$(kubectl get instances -l node.deckhouse.io/group=autoscaler -o json | jq --raw-output '.items | length')"
@@ -170,14 +173,17 @@ function wait_become_autoscaler_instances_delete() {
 
 function verify_that_nodes_were_cordoned() {
   local attempts=10
+  local cordon_events
 
   for i in $(seq $attempts); do
-    cordon_events="$(kubectl get events --sort-by metadata.creationTimestamp | grep -i "NodeNotSchedulable" | grep -i "autoscaler-")"
+    cordon_events="$(kubectl get events --sort-by metadata.creationTimestamp | { grep -i "NodeNotSchedulable" || true; } )"
+    cordon_events="$(echo "$cordon_events" | { grep -i "autoscaler-" || true; } )"
 
     echo "Cordon events:"
     echo "$cordon_events"
+    echo ""
 
-    cordon_events_count="$(echo "$cordon_events" | wc -l)"
+    cordon_events_count="$(echo -n "$cordon_events" | awk 'END {print NR}')"
 
     if [[ "$cordon_events_count" == "$nodes_during_scaling" ]]; then
       echo "Node cordoned before deleting!"
@@ -193,6 +199,34 @@ function verify_that_nodes_were_cordoned() {
   return 1
 }
 
+function verify_that_nodes_were_drained() {
+  local attempts=10
+  local drain_events
+
+  for i in $(seq $attempts); do
+    drain_events="$(kubectl -n d8-cloud-instance-manager get events --sort-by metadata.creationTimestamp | { grep -i "SuccessfulDrainNode" || true; } )"
+    drain_events="$(echo "$drain_events" | { grep -i "autoscaler-" || true; } )"
+
+    echo "Drain events:"
+    echo "$drain_events"
+    echo ""
+
+    drain_events_count="$(echo -n "$drain_events" | awk 'END {print NR}')"
+
+    if [[ "$drain_events_count" == "$nodes_during_scaling" ]]; then
+      echo "Node drained before deleting!"
+      return 0
+    fi
+
+    >&2 echo "Cluster has $drain_events_count drain events, should be ${nodes_during_scaling}. Waiting get drain events from cluster. Attempt $i/$attempts. Sleeping 10 seconds..."
+    sleep 10
+  done
+
+  echo "Waiting drain events for deleted node to $nodes_during_scaling timeout exited. Exit."
+  log_autoscaler
+  return 1
+}
+
 
 create_deployment
 wait_deployment_become_ready
@@ -200,6 +234,7 @@ scale_down_deployment
 wait_become_autoscaler_nodes_delete
 wait_become_autoscaler_instances_delete
 verify_that_nodes_were_cordoned
+verify_that_nodes_were_drained
 log_autoscaler
 
 echo "Autoscaler test was processed!"

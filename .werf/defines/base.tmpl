@@ -80,10 +80,6 @@ import:
   to: /
   before: setup
   includePaths:
-  - usr/bin/python*
-  - usr/lib/python*
-  - usr/lib/libc.so
-  - lib/ld-musl-x86_64.so.1
   - usr/lib64/libz.so*
   - usr/lib64/libexpat.so*
   - usr/lib64/libssl.so.*
@@ -92,6 +88,11 @@ import:
   - usr/bin/openssl
   - etc/pki
   - usr/share/ca-certificates/ca-bundle.crt
+  - usr/bin/python3
+  - usr/bin/python3.12
+  - usr/lib/python3
+  - usr/lib64/python3
+  - usr/lib64/python3.12
   - usr/lib64/libffi.so*
   - usr/lib64/libb2.so*
   - usr/share/vim

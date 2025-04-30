@@ -84,5 +84,5 @@ spec:
   source: losev-test
 status:
   imageDigest: sha256:379b341598e85104ffe01643af6eeff5e1022ca60b4cc90be639b8ec59c61a47
-  message: ""
+  message: "Ready"
   updatedAt: "2024-05-22T10:05:45Z"
