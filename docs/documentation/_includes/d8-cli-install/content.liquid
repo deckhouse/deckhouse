@@ -53,6 +53,16 @@
    ```
 {% endif %}
 
+{% if page.lang == 'ru' %}
+{% alert level="warning" %}
+Версия Deckhouse CLI `{{ site.data.supported_versions.d8.d8CliVersion }}` входит в состав текущей версии Deckhouse. Если вы используете другую версию платформы, убедитесь, что загружаете совместимую версию утилиты. Последняя доступная версия опубликована на [GitHub](https://github.com/deckhouse/deckhouse-cli/releases).
+{% endalert %}
+{% else %}
+{% alert level="warning" %}
+Deckhouse CLI version `{{ site.data.supported_versions.d8.d8CliVersion }}` is bundled with this version of Deckhouse. If you're using a different version of the platform, make sure to download a compatible CLI version. The latest version is available on [GitHub](https://github.com/deckhouse/deckhouse-cli/releases).
+{% endalert %}
+{% endif %}
+
 {% if include.os == "Windows" %}
 {%    if page.lang == 'ru' -%}
 1. Распакуйте архив, переместите файл `d8.exe` в выбранный вами каталог и добавьте каталог в переменную `PATH` операционной системы.
