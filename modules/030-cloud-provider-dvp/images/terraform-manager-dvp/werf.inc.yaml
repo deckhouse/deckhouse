@@ -1,7 +1,7 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: terraform-manager/base-terraform-manager-opentofu
+fromImage: {{ .ModuleName }}/base-terraform-manager
 git:
-- add: /{{ .ModulePath }}modules/030-{{ .ModuleName }}/infrastructure
+- add: /{{ .ModulePath }}candi/cloud-providers/dvp
   to: /deckhouse/candi/cloud-providers/dvp
 import:
 - artifact: terraform-provider-kubernetes
@@ -9,41 +9,29 @@ import:
   to: /plugins/registry.terraform.io/{{ .TF.kubernetes.namespace }}/{{ .TF.kubernetes.type }}/{{ .TF.kubernetes.version }}/linux_amd64/terraform-provider-kubernetes
   before: setup
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-final: false
-fromImage: common/src-artifact
-git:
-- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-  to: /patches
-  stageDependencies:
-    install:
-    - '**/*'
-shell:
-  install:
-  - git clone --depth 1 --branch v{{ .TF.kubernetes.version }} {{ $.SOURCE_REPO }}/hashicorp/terraform-provider-kubernetes.git /src
-  - cd /src
-  - git apply /patches/*.patch --verbose
-  - rm -rf .git
----
 image: terraform-provider-kubernetes
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 final: false
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
-import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src
-  to: /src
-  before: install
+git:
+- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make bash
+  - apk add --no-cache git openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
+  - mkdir /src
   - export GOPROXY={{ $.GOPROXY }}
+  - git clone --depth 1 --branch v{{ .TF.kubernetes.version }} {{ $.SOURCE_REPO }}/hashicorp/terraform-provider-kubernetes.git /src
   - cd /src
-  - go mod download
+  - find /patches -name '*.patch' | xargs git apply --verbose
+  - go mod tidy
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\" -X main.version={{ .TF.kubernetes.version }} -X main.commit=00000000" -o terraform-provider-kubernetes ./
   - mv /src/terraform-provider-kubernetes /terraform-provider-kubernetes
   - chmod -R 755 /terraform-provider-kubernetes
