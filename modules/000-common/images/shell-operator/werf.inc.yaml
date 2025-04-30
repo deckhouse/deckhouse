@@ -34,6 +34,9 @@ import:
 - image: tools/sed
   add: /usr/bin/sed
   before: setup
+- image: tools/grep
+  add: /usr/bin/grep
+  before: setup
 - image: tools/gawk
   add: /
   to: /
