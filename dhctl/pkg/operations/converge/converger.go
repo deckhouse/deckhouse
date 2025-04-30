@@ -116,7 +116,9 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 		c.lastState = state
 	}
 
-	defer c.Params.SSHClient.Stop()
+	if c.Params.SSHClient != nil {
+		defer c.Params.SSHClient.Stop()
+	}
 
 	if err := c.applyParams(); err != nil {
 		return err
