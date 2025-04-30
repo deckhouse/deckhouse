@@ -35,7 +35,7 @@
         <td style="text-align: center; width: 170px; font-weight: 600; padding: 5px 10px;">CSE Lite, CSE Pro</td>
         <td style="text-align: center; width: 170px; white-space: nowrap; font-weight: 600; padding: 0 10px;">BE, SE, SE+, EE</td>
       {%- else %}
-        <td style="text-align: center; width: 170px; font-weight: 600; padding: 0 10px;">CE, BE, SE, EE</td>
+        <td style="text-align: center; width: 170px; font-weight: 600; padding: 0 10px;">CE, BE, SE, SE+, EE</td>
       {%- endif %}
       <td></td>
     </tr>
@@ -48,6 +48,7 @@
 {% if site.data.supported_versions.osDistributions[osKey]['cse_support'] %}
 {% assign comma_counter = 1 %}
 <tr>
+  <!-- OS name -->
   <td class="name" rowspan="2">
     <span>
       {%- if site.data.supported_versions.osDistributions[osKey].url %}
@@ -56,6 +57,7 @@
       {%- endif %}
     </span>
   </td>
+  <!-- Versions list -->
   <td class="versions">
 {%- for osData in osItem[1] %}
 {%- assign osVersion = osData[0] %}
@@ -71,6 +73,7 @@
 {%- endfor %}
   </td>
   {%- if page.lang == 'ru' %}
+  <!-- CE row (ru) -->
   <td style="text-align: center; width: 170px;">
     <div class="icon">
       {% if site.data.supported_versions.osDistributions[osKey]['ru_support'] == "true" %}
@@ -80,6 +83,7 @@
       {% endif %}
     </div>
   </td>
+  <!-- CSE row -->
   <td style="text-align: center; width: 170px;">
     <div class="icon">
       <img src="{{ supported_img_url }}">
@@ -99,8 +103,10 @@
     </div>
   </td>
 </tr>
-  <tr>
-    <td class="versions">
+<tr>
+   <!-- The second raw, for the not supported by CSE -->
+   <!-- Versions list -->
+  <td class="versions">
 {%- for osData in osItem[1] %}
   {%- assign osVersion = osData[0] %}
   {%- assign exclude = false %}
@@ -125,20 +131,22 @@
     <td style="text-align: center; width: 170px;">
       <div class="icon"><img src="{{ not_supported_img_url }}"></div>
     </td>
+    <!-- BE, SE, SE+, EE row -->
     <td style="text-align: center; width: 170px;">
       <div class="icon">
-        <img src="{{ not_supported_img_url }}">
+        <img src="{{ supported_img_url }}">
       </div></td>
     <td style="text-align: center;">
       <div class="icon">
         {% if site.data.supported_versions.osDistributions[osKey]['note_content'] %}
           <img src="{{ notes_img_url }}" data-tippy-content="{{ site.data.supported_versions.osDistributions[osKey]['note_content'][page.lang] }}">
-        {% endif %} 
+        {% endif %}
       </div>
-    </td>
-  </tr>
+  </td>
+</tr>
 {% else %}
   <tr>
+    <!-- OS name -->
     <td class="name">
     <span>
       {%- if site.data.supported_versions.osDistributions[osKey].url %}
@@ -147,6 +155,7 @@
       {%- endif %}
     </span>
     </td>
+  <!-- Versions list -->
     <td class="versions">
       {%- for osData in osItem[1] %}
         {%- assign osVersion = osData[0] %}
@@ -155,6 +164,7 @@
       {%- endfor %}
     </td>
     {%- if page.lang == 'ru' %}
+      <!-- CE row (ru) -->
       <td style="text-align: center; width: 170px;">
         <div class="icon">
           {% if site.data.supported_versions.osDistributions[osKey]['ru_support'] == "true" %}
@@ -177,7 +187,8 @@
     <td style="text-align: center; width: 170px;">
       <div class="icon">
         <img src="{{ supported_img_url }}">
-      </div></td>
+      </div>
+    </td>
     <td style="text-align: center;">
       <div class="icon">
         {% if site.data.supported_versions.osDistributions[osKey]['note_content'] %}

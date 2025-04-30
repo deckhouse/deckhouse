@@ -22,7 +22,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 )
 
 func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
@@ -60,7 +60,7 @@ func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 		b.NodeInterface,
 		metaConfig,
 		app.InternalNodeIP,
-		terraform.DataDevices{
+		infrastructure.DataDevices{
 			KubeDataDevicePath:           app.KubeDataDevicePath,
 			SystemRegistryDataDevicePath: app.SystemRegistryDataDevicePath,
 		},

@@ -152,6 +152,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-upmeter:smoke-mini",
 	"system:serviceaccount:d8-upmeter:upmeter",
 	"system:serviceaccount:d8-upmeter:upmeter-agent",
+	"system:serviceaccount:d8-user-authn:basic-auth-proxy",
 	"system:serviceaccount:d8-user-authn:dex",
 	"system:serviceaccount:d8-user-authz:d8-node-local-dns",
 	"system:serviceaccount:d8-user-authz:stale-dns-connections-cleaner",

@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 
@@ -40,7 +39,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
 func (s *Service) Bootstrap(server pb.DHCTL_BootstrapServer) error {
@@ -58,11 +56,21 @@ func (s *Service) Bootstrap(server pb.DHCTL_BootstrapServer) error {
 	phaseSwitcher := &fsmPhaseSwitcher[*pb.BootstrapResponse, any]{
 		f: f, dataFunc: s.bootstrapSwitchPhaseData, sendCh: sendCh, next: make(chan error),
 	}
-	logWriter := logger.NewLogWriter(logger.L(ctx).With(logTypeDHCTL), sendCh,
+
+	loggerDefault := logger.L(ctx).With(logTypeDHCTL)
+
+	logWriter := logger.NewLogWriter(loggerDefault, sendCh,
 		func(lines []string) *pb.BootstrapResponse {
 			return &pb.BootstrapResponse{Message: &pb.BootstrapResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
 		},
 	)
+
+	debugWriter := logger.NewDebugLogWriter(loggerDefault)
+
+	logOptions := logger.Options{
+		DebugWriter:   debugWriter,
+		DefaultWriter: logWriter,
+	}
 
 	startReceiver[*pb.BootstrapRequest, *pb.BootstrapResponse](server, receiveCh, doneCh, internalErrCh)
 	startSender[*pb.BootstrapRequest, *pb.BootstrapResponse](server, sendCh, internalErrCh)
@@ -92,7 +100,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.bootstrapSafe(ctx, message.Start, phaseSwitcher.switchPhase(ctx), logWriter)
+					result := s.bootstrapSafe(ctx, message.Start, phaseSwitcher.switchPhase(ctx), logOptions)
 					sendCh <- &pb.BootstrapResponse{Message: &pb.BootstrapResponse_Result{Result: result}}
 				}()
 
@@ -126,36 +134,28 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) bootstrapSafe(
-	ctx context.Context,
-	request *pb.BootstrapStart,
-	switchPhase phases.DefaultOnPhaseFunc,
-	logWriter io.Writer,
-) (result *pb.BootstrapResult) {
+func (s *Service) bootstrapSafe(ctx context.Context, request *pb.BootstrapStart, switchPhase phases.DefaultOnPhaseFunc, options logger.Options) (result *pb.BootstrapResult) {
 	defer func() {
 		if r := recover(); r != nil {
 			result = &pb.BootstrapResult{Err: panicMessage(ctx, r)}
 		}
 	}()
 
-	return s.bootstrap(ctx, request, switchPhase, logWriter)
+	return s.bootstrap(ctx, request, switchPhase, options)
 }
 
-func (s *Service) bootstrap(
-	ctx context.Context,
-	request *pb.BootstrapStart,
-	switchPhase phases.DefaultOnPhaseFunc,
-	logWriter io.Writer,
-) *pb.BootstrapResult {
+func (s *Service) bootstrap(ctx context.Context, request *pb.BootstrapStart, switchPhase phases.DefaultOnPhaseFunc, options logger.Options) *pb.BootstrapResult {
 	var err error
 
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream: logWriter,
-		Width:     int(request.Options.LogWidth),
+		OutStream:   options.DefaultWriter,
+		Width:       int(request.Options.LogWidth),
+		DebugStream: options.DebugWriter,
 	})
+
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
 	app.CacheDir = s.cacheDir
@@ -265,7 +265,6 @@ func (s *Service) bootstrap(
 		OnPhaseFunc:                switchPhase,
 		CommanderMode:              request.Options.CommanderMode,
 		CommanderUUID:              commanderUUID,
-		TerraformContext:           terraform.NewTerraformContext(),
 		ConfigPaths:                configPaths,
 		ResourcesTimeout:           request.Options.ResourcesTimeout.AsDuration(),
 		DeckhouseTimeout:           request.Options.DeckhouseTimeout.AsDuration(),

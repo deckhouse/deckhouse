@@ -21,7 +21,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
@@ -59,7 +59,7 @@ func logTemplatesData(name string, data map[string]interface{}) {
 	log.DebugF("Data %s\n%s", name, string(formattedData))
 }
 
-func PrepareBundle(templateController *Controller, nodeIP string, dataDevices terraform.DataDevices, metaConfig *config.MetaConfig) error {
+func PrepareBundle(templateController *Controller, nodeIP string, dataDevices infrastructure.DataDevices, metaConfig *config.MetaConfig) error {
 	kubeadmData, err := metaConfig.ConfigForKubeadmTemplates("")
 	if err != nil {
 		return err
@@ -85,7 +85,7 @@ func PrepareBundle(templateController *Controller, nodeIP string, dataDevices te
 	return templateController.RenderBashBooster(bashboosterDir, bashibleDir, bashibleData)
 }
 
-func PrepareBashibleBundle(templateController *Controller, templateData map[string]interface{}, provider string, dataDevices terraform.DataDevices) error {
+func PrepareBashibleBundle(templateController *Controller, templateData map[string]interface{}, provider string, dataDevices infrastructure.DataDevices) error {
 
 	saveInfo := []saveFromTo{
 		{

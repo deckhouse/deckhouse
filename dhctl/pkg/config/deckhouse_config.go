@@ -44,8 +44,8 @@ type DeckhouseInstaller struct {
 	ProviderSecondaryDevicesConfig []byte
 	ProviderClusterConfig          []byte
 	StaticClusterConfig            []byte
-	TerraformState                 []byte
-	NodesTerraformState            map[string][]byte
+	InfrastructureState            []byte
+	NodesInfrastructureState       map[string][]byte
 	NodesDataDevices               map[string]NodeDataDevices
 	CloudDiscovery                 []byte
 	ModuleConfigs                  []*ModuleConfig

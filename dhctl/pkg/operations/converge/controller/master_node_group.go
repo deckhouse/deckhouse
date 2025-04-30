@@ -20,15 +20,16 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/hook/controlplane"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
+	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/maputil"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
@@ -39,11 +40,14 @@ type MasterNodeGroupController struct {
 
 	nodeToHost    map[string]string
 	convergeState *context.State
+
+	skipChecks bool
 }
 
-func NewMasterNodeGroupController(controller *NodeGroupController) *MasterNodeGroupController {
+func NewMasterNodeGroupController(controller *NodeGroupController, skipChecks bool) *MasterNodeGroupController {
 	masterNodeGroupController := &MasterNodeGroupController{
 		NodeGroupController: controller,
+		skipChecks:          skipChecks,
 	}
 	masterNodeGroupController.layoutStep = "master-node"
 	masterNodeGroupController.nodeGroup = masterNodeGroupController
@@ -68,7 +72,7 @@ func (c *MasterNodeGroupController) populateNodeToHost(ctx *context.Context) err
 	}
 
 	nodeToHost, err := ssh.CheckSSHHosts(userPassedHosts, nodesNames, string(c.convergeState.Phase), func(msg string) bool {
-		if ctx.CommanderMode() {
+		if ctx.CommanderMode() || ctx.ChangesSettings().AutoApprove {
 			return true
 		}
 		return input.NewConfirmation().WithMessage(msg).Ask()
@@ -187,7 +191,14 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 		candidateName := fmt.Sprintf("%s-%s-%v", metaConfig.ClusterPrefix, c.name, index)
 
 		if _, ok := c.state.State[candidateName]; !ok {
-			output, err := operations.BootstrapAdditionalMasterNode(ctx.Ctx(), ctx.KubeClient(), metaConfig, index, c.cloudConfig, true, ctx.Terraform())
+			output, err := operations.BootstrapAdditionalMasterNode(
+				ctx.Ctx(),
+				ctx.KubeClient(),
+				metaConfig,
+				index,
+				c.cloudConfig,
+				true, ctx.InfrastructureContext(metaConfig),
+			)
 			if err != nil {
 				return err
 			}
@@ -196,7 +207,7 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 			nodeInternalIPList = append(nodeInternalIPList, output.NodeInternalIP)
 
 			count++
-			c.state.State[candidateName] = output.TerraformState
+			c.state.State[candidateName] = output.InfrastructureState
 			nodesToWait = append(nodesToWait, candidateName)
 		}
 		index++
@@ -243,7 +254,7 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 
 	nodeIndex, err := config.GetIndexFromNodeName(nodeName)
 	if err != nil {
-		log.ErrorF("can't extract index from terraform state secret (%v), skip %s\n", err, nodeName)
+		log.ErrorF("can't extract index from infrastructure state secret (%v), skip %s\n", err, nodeName)
 		return nil
 	}
 
@@ -251,27 +262,25 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 
 	var nodeGroupSettingsFromConfig []byte
 
-	nodeRunner := ctx.Terraform().GetConvergeNodeRunner(metaConfig, terraform.NodeRunnerOptions{
-		AutoDismissDestructive: ctx.ChangesSettings().AutoDismissDestructive,
-		AutoApprove:            ctx.ChangesSettings().AutoApprove,
-		NodeName:               nodeName,
-		NodeGroupName:          c.name,
-		NodeGroupStep:          c.layoutStep,
-		NodeIndex:              nodeIndex,
-		NodeState:              nodeState,
-		NodeCloudConfig:        c.cloudConfig,
-		CommanderMode:          ctx.CommanderMode(),
-		StateCache:             ctx.StateCache(),
-		AdditionalStateSaverDestinations: []terraform.SaverDestination{
-			entity.NewNodeStateSaver(ctx, nodeName, global.MasterNodeGroupName, nodeGroupSettingsFromConfig),
+	nodeRunner := ctx.InfrastructureContext(metaConfig).GetConvergeNodeRunner(metaConfig, infrastructure.NodeRunnerOptions{
+		NodeName:        nodeName,
+		NodeGroupName:   c.name,
+		NodeGroupStep:   c.layoutStep,
+		NodeIndex:       nodeIndex,
+		NodeState:       nodeState,
+		NodeCloudConfig: c.cloudConfig,
+		CommanderMode:   ctx.CommanderMode(),
+		StateCache:      ctx.StateCache(),
+		AdditionalStateSaverDestinations: []infrastructure.SaverDestination{
+			infrastructurestate.NewNodeStateSaver(ctx, nodeName, global.MasterNodeGroupName, nodeGroupSettingsFromConfig),
 		},
 		Hook: hook,
-	})
+	}, ctx.ChangesSettings().AutomaticSettings)
 
-	outputs, err := terraform.ApplyPipeline(ctx.Ctx(), nodeRunner, nodeName, terraform.GetMasterNodeResult)
+	outputs, err := infrastructure.ApplyPipeline(ctx.Ctx(), nodeRunner, nodeName, infrastructure.GetMasterNodeResult)
 	if err != nil {
-		if errors.Is(err, controlplane.ErrSingleMasterClusterTerraformPlanHasDestructiveChanges) {
-			confirmation := input.NewConfirmation().WithMessage("A single-master cluster has disruptive changes in the Terraform plan. Trying to migrate to a multi-master cluster and back to a single-master cluster. Do you want to continue?")
+		if errors.Is(err, controlplane.ErrSingleMasterClusterInfrastructurePlanHasDestructiveChanges) {
+			confirmation := input.NewConfirmation().WithMessage("A single-master cluster has disruptive changes in the infrastructure plan. Trying to migrate to a multi-master cluster and back to a single-master cluster. Do you want to continue?")
 			if !ctx.ChangesSettings().AutoApprove && !confirmation.Ask() {
 				log.InfoLn("Aborted")
 				return nil
@@ -294,7 +303,7 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 			return nil
 		}
 
-		log.ErrorF("Terraform exited with an error:\n%s\n", err.Error())
+		log.ErrorF("Infrastructure utility exited with an error:\n%s\n", err.Error())
 
 		return err
 	}
@@ -303,17 +312,17 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 		return global.ErrConvergeInterrupted
 	}
 
-	err = entity.SaveMasterNodeTerraformState(ctx.Ctx(), ctx.KubeClient(), nodeName, outputs.TerraformState, outputs.GetDataDevices())
+	err = infrastructurestate.SaveMasterNodeInfrastructureState(ctx.Ctx(), ctx.KubeClient(), nodeName, outputs.InfrastructureState, outputs.GetDataDevices())
 	if err != nil {
 		return err
 	}
 
-	c.state.State[nodeName] = outputs.TerraformState
+	c.state.State[nodeName] = outputs.InfrastructureState
 
 	return entity.WaitForSingleNodeBecomeReady(ctx.Ctx(), ctx.KubeClient(), nodeName)
 }
 
-func (c *MasterNodeGroupController) newHookForUpdatePipeline(ctx *context.Context, convergedNode string, metaConfig *config.MetaConfig) terraform.InfraActionHook {
+func (c *MasterNodeGroupController) newHookForUpdatePipeline(ctx *context.Context, convergedNode string, metaConfig *config.MetaConfig) infrastructure.InfraActionHook {
 	err := c.populateNodeToHost(ctx)
 	if err != nil {
 		return nil
@@ -331,7 +340,7 @@ func (c *MasterNodeGroupController) newHookForUpdatePipeline(ctx *context.Contex
 		}
 	}
 
-	return controlplane.NewHookForUpdatePipeline(ctx, nodesToCheck, metaConfig.UUID, ctx.CommanderMode()).
+	return controlplane.NewHookForUpdatePipeline(ctx, nodesToCheck, metaConfig.UUID, ctx.CommanderMode(), c.skipChecks).
 		WithSourceCommandName("converge").
 		WithNodeToConverge(convergedNode).
 		WithConfirm(confirm)
@@ -353,7 +362,7 @@ func (c *MasterNodeGroupController) deleteNodes(ctx *context.Context, nodesToDel
 
 	title := fmt.Sprintf("Delete Nodes from NodeGroup %s (replicas: %v)", global.MasterNodeGroupName, c.desiredReplicas)
 	return log.Process("converge", title, func() error {
-		return c.deleteRedundantNodes(ctx, c.state.Settings, nodesToDeleteInfo, func(nodeName string) terraform.InfraActionHook {
+		return c.deleteRedundantNodes(ctx, c.state.Settings, nodesToDeleteInfo, func(nodeName string) infrastructure.InfraActionHook {
 			return controlplane.NewHookForDestroyPipeline(ctx, nodeName, ctx.CommanderMode())
 		})
 	})

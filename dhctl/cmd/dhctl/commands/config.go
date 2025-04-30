@@ -26,7 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 )
 
 var (
@@ -56,7 +56,7 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			templateController,
 			templateData,
 			metaConfig.ProviderName,
-			terraform.DataDevices{
+			infrastructure.DataDevices{
 				KubeDataDevicePath:           "",
 				SystemRegistryDataDevicePath: "",
 			},

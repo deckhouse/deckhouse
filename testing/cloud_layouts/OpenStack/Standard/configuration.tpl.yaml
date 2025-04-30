@@ -85,4 +85,7 @@ spec:
   settings:
     modules:
       publicDomainTemplate: "%s.k8s.smoke.flant.com"
+      placement:
+        customTolerationKeys:
+          - node
   version: 1

@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"reflect"
 	"time"
 
@@ -25,13 +26,14 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/hook/controlplane"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
@@ -43,7 +45,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
@@ -86,7 +87,7 @@ type Params struct {
 	OnPhaseFunc                phases.DefaultOnPhaseFunc
 	CommanderMode              bool
 	CommanderUUID              uuid.UUID
-	TerraformContext           *terraform.TerraformContext
+	InfrastructureContext      *infrastructure.Context
 
 	ConfigPaths             []string
 	ResourcesTimeout        time.Duration
@@ -187,6 +188,8 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return err
 	}
 
+	b.InfrastructureContext = infrastructure.NewContextWithProvider(infrastructureprovider.ExecutorProvider(metaConfig))
+
 	if b.Params.NodeInterface == nil || reflect.ValueOf(b.Params.NodeInterface).IsNil() {
 		log.DebugLn("NodeInterface is nil")
 		if len(app.SSHHosts) == 0 && metaConfig.IsStatic() {
@@ -280,7 +283,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	}
 
 	var nodeIP string
-	var dataDevices terraform.DataDevices
+	var dataDevices infrastructure.DataDevices
 	var resourcesTemplateData map[string]interface{}
 
 	if metaConfig.ClusterType == config.CloudClusterType {
@@ -289,9 +292,9 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			return err
 		}
 		err = log.Process("bootstrap", "Cloud infrastructure", func() error {
-			baseRunner := b.TerraformContext.GetBootstrapBaseInfraRunner(metaConfig, stateCache)
+			baseRunner := b.InfrastructureContext.GetBootstrapBaseInfraRunner(metaConfig, stateCache)
 
-			baseOutputs, err := terraform.ApplyPipeline(ctx, baseRunner, "Kubernetes cluster", terraform.GetBaseInfraResult)
+			baseOutputs, err := infrastructure.ApplyPipeline(ctx, baseRunner, "Kubernetes cluster", infrastructure.GetBaseInfraResult)
 			if err != nil {
 				return err
 			}
@@ -309,8 +312,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			}
 
 			masterNodeName := fmt.Sprintf("%s-master-0", metaConfig.ClusterPrefix)
-			masterRunner := b.Params.TerraformContext.GetBootstrapNodeRunner(metaConfig, stateCache, terraform.BootstrapNodeRunnerOptions{
-				AutoApprove:     true,
+			masterRunner := b.Params.InfrastructureContext.GetBootstrapNodeRunner(metaConfig, stateCache, infrastructure.BootstrapNodeRunnerOptions{
 				NodeName:        masterNodeName,
 				NodeGroupStep:   "master-node",
 				NodeGroupName:   "master",
@@ -319,7 +321,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 				RunnerLogger:    log.GetDefaultLogger(),
 			})
 
-			masterOutputs, err := terraform.ApplyPipeline(ctx, masterRunner, masterNodeName, terraform.GetMasterNodeResult)
+			masterOutputs, err := infrastructure.ApplyPipeline(ctx, masterRunner, masterNodeName, infrastructure.GetMasterNodeResult)
 			if err != nil {
 				return err
 			}
@@ -327,7 +329,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			log.DebugLn("First control-plane node was created")
 
 			deckhouseInstallConfig.CloudDiscovery = baseOutputs.CloudDiscovery
-			deckhouseInstallConfig.TerraformState = baseOutputs.TerraformState
+			deckhouseInstallConfig.InfrastructureState = baseOutputs.InfrastructureState
 
 			if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
 				sshClient := wrapper.Client()
@@ -341,8 +343,8 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			nodeIP = masterOutputs.NodeInternalIP
 			dataDevices = masterOutputs.GetDataDevices()
 
-			deckhouseInstallConfig.NodesTerraformState = make(map[string][]byte)
-			deckhouseInstallConfig.NodesTerraformState[masterNodeName] = masterOutputs.TerraformState
+			deckhouseInstallConfig.NodesInfrastructureState = make(map[string][]byte)
+			deckhouseInstallConfig.NodesInfrastructureState[masterNodeName] = masterOutputs.InfrastructureState
 
 			deckhouseInstallConfig.NodesDataDevices = make(map[string]config.NodeDataDevices)
 			dataDevices := masterOutputs.GetDataDevices()
@@ -460,7 +462,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		}
 
 		err := localBootstraper(func() error {
-			return bootstrapAdditionalNodesForCloudCluster(ctx, kubeCl, metaConfig, masterAddressesForSSH, b.TerraformContext)
+			return bootstrapAdditionalNodesForCloudCluster(ctx, kubeCl, metaConfig, masterAddressesForSSH, b.InfrastructureContext)
 		})
 		if err != nil {
 			return err
@@ -585,8 +587,8 @@ func generateClusterUUID(stateCache state.Cache) (string, error) {
 	return clusterUUID, err
 }
 
-func bootstrapAdditionalNodesForCloudCluster(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, masterAddressesForSSH map[string]string, terraformContext *terraform.TerraformContext) error {
-	if err := BootstrapAdditionalMasterNodes(ctx, kubeCl, metaConfig, masterAddressesForSSH, terraformContext); err != nil {
+func bootstrapAdditionalNodesForCloudCluster(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, masterAddressesForSSH map[string]string, infrastructureContext *infrastructure.Context) error {
+	if err := BootstrapAdditionalMasterNodes(ctx, kubeCl, metaConfig, masterAddressesForSSH, infrastructureContext); err != nil {
 		return err
 	}
 
@@ -598,7 +600,7 @@ func bootstrapAdditionalNodesForCloudCluster(ctx context.Context, kubeCl *client
 		bootstrapAdditionalTerraNodeGroups = operations.BootstrapSequentialTerraNodes
 	}
 
-	if err := bootstrapAdditionalTerraNodeGroups(ctx, kubeCl, metaConfig, terraNodeGroups, terraformContext); err != nil {
+	if err := bootstrapAdditionalTerraNodeGroups(ctx, kubeCl, metaConfig, terraNodeGroups, infrastructureContext); err != nil {
 		return err
 	}
 
