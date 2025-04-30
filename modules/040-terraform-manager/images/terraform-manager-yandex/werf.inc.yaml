@@ -1,5 +1,5 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: {{ .ModuleName }}/base-terraform-manager-opentofu
+fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "yandex") }}'
 git:
 - add: /{{ .ModulePath }}candi/cloud-providers/yandex
   to: /deckhouse/candi/cloud-providers/yandex
