@@ -2,41 +2,31 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/shell-operator
 import:
-  - image: common/yq4-artifact
-    add: /usr/local/bin/yq
-    to: /usr/local/bin/yq
-    before: install
-  - image: common/semver-artifact
-    add: /usr/local/bin/semver
-    to: /usr/local/bin/semver
-    before: setup
-  - image: prometheus/prometheus
-    add: /bin/promtool
-    to: /usr/local/bin/promtool
-    before: setup
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-    add: /usr/bin
-    to: /usr/bin
-    before: setup
-    includePaths:
-    - python3
-    - python3.12
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-    add: /usr/lib/python3
-    to: /usr/lib/python3
-    before: setup
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-    add: /usr/lib64/python3
-    to: /usr/lib64/python3
-    before: setup
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-    add: /usr/lib64/python3.12
-    to: /usr/lib64/python3.12
-    before: setup
-  - image: {{ $.ModuleName }}/{{ .ImageName }}-label-converter-artifact
-    add: /label-converter
-    to: /usr/local/bin/label-converter
-    before: setup
+- image: common/yq4-artifact
+  add: /usr/local/bin/yq
+  to: /usr/local/bin/yq
+  before: install
+- image: common/semver-artifact
+  add: /usr/local/bin/semver
+  to: /usr/local/bin/semver
+  before: setup
+- image: prometheus/prometheus
+  add: /bin/promtool
+  to: /usr/local/bin/promtool
+  before: setup
+- image: {{ $.ModuleName }}/{{ .ImageName }}-label-converter-artifact
+  add: /label-converter
+  to: /usr/local/bin/label-converter
+  before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
+  add: /
+  to: /
+  before: install
+  includePaths:
+  - lib/ld-musl-x86_64*
+  - usr/bin/python3*
+  - usr/lib/python3*
+  - usr/lib/libc.so
 git:
 - add: /{{ .ModulePath }}
   to: /available_hooks
@@ -50,7 +40,7 @@ git:
   stageDependencies:
     install:
       - '**/*'
-- add: /{{ .ModulePath }}modules/002-deckhouse/images/webhook-handler/entrypoint.sh
+- add: /{{ .ModulePath }}modules/002-deckhouse/images/webhook-handler/src/entrypoint.sh
   to: /entrypoint.sh
   stageDependencies:
     install:
@@ -74,7 +64,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}-label-converter-src-artifact
 final: false
 fromImage: common/src-artifact
 git:
-- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/label-converter
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src/label-converter
   to: /src
   includePaths:
   - '**/*.go'
@@ -88,7 +78,7 @@ git:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-label-converter-artifact
 final: false
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang
 mount:
 {{ include "mount points for golang builds" . }}
 import:
@@ -107,17 +97,20 @@ shell:
     - chown 64535:64535 /label-converter
     - chmod 755 /label-converter
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
+fromImage: base/python
 final: false
-fromImage: common/alt-p11-artifact
 git:
-- add: /{{ .ModulePath }}modules/002-deckhouse/images/webhook-handler/requirements.txt
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/requirements.txt
   to: /requirements.txt
   stageDependencies:
     install:
-      - '**/*'
+    - '**/*'
+import:
+- image: common/wheel-artifact
+  add: /wheels
+  to: /wheels
+  before: install
 shell:
   install:
-    - apt-get update
-    - apt-get install -y python3 python3-module-pip-run
-    - pip3 install -r /requirements.txt
+  - pip3 install -f file:///wheels --no-index -r /requirements.txt
