@@ -23,7 +23,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 )
 
-func (s *PreflightChecksTestSuite) Test_bad() {
+func (s *PreflightChecksTestSuite) TestEditionBad() {
 	t := s.Require()
 
 	app.AppVersion = "dev"
@@ -44,7 +44,7 @@ func (s *PreflightChecksTestSuite) Test_bad() {
 	t.Error(err)
 }
 
-func (s *PreflightChecksTestSuite) Test_ok() {
+func (s *PreflightChecksTestSuite) TestOk() {
 	t := s.Require()
 
 	app.AppVersion = "dev"
@@ -65,7 +65,7 @@ func (s *PreflightChecksTestSuite) Test_ok() {
 	t.NoError(err)
 }
 
-func (s *PreflightChecksTestSuite) Test_disable() {
+func (s *PreflightChecksTestSuite) TestCheckDisable() {
 	t := s.Require()
 
 	app.AppVersion = "dev"
