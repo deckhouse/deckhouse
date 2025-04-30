@@ -71,12 +71,22 @@ d8_tags=("${TAG}")
 if [ "${SCAN_TARGET}" == "regular" ]; then
   echo "Log in to PROD registry"
   echo "${PROD_REGISTRY_PASSWORD}" | docker login --username="${PROD_REGISTRY_USER}" --password-stdin ${PROD_REGISTRY}
-  # Get release tags by regexp, sort by sevmer desc, cut to get minor version, uniq and get 3 latest
-  releases=($(crane ls "${PROD_REGISTRY_DECKHOUSE_IMAGE}" | grep "^v[0-9]*\.[0-9]*\.[0-9]*$" | sort -V -r))
-  latest_minor_releases=($(printf '%s\n' "${releases[@]}"| cut -d "." -f -2 | uniq | head -n 3))
-  for r in "${latest_minor_releases[@]}"; do
-    d8_tags+=($(printf '%s\n' "${releases[@]}" | grep "${r}" | sort -V -r|head -n 1))
-  done
+  if [ "${TAG}" != "main" ]; then
+    # if some specific release is defined - scan only it
+    if echo "${TAG}"|grep -s "^[0-9]\.[0-9]*$"
+      d8_tags=($(crane ls "${PROD_REGISTRY_DECKHOUSE_IMAGE}" | grep "^v${TAG}\.[0-9]*$" | sort -V -r | head -n 1))
+    else
+      echo "ERROR: Please specify required release in the following format: [0-9]\.[0-9]*"
+      exit 1
+    fi
+  else
+    # Get release tags by regexp, sort by sevmer desc, cut to get minor version, uniq and get 3 latest
+    releases=($(crane ls "${PROD_REGISTRY_DECKHOUSE_IMAGE}" | grep "^v[0-9]*\.[0-9]*\.[0-9]*$" | sort -V -r))
+    latest_minor_releases=($(printf '%s\n' "${releases[@]}"| cut -d "." -f -2 | uniq | head -n 3))
+    for r in "${latest_minor_releases[@]}"; do
+      d8_tags+=($(printf '%s\n' "${releases[@]}" | grep "${r}" | sort -V -r|head -n 1))
+    done
+  fi
 fi
 echo "CVE Scan will be applied to the following tags of Deckhouse"
 echo "${d8_tags[@]}"
@@ -91,19 +101,19 @@ for d8_tag in "${d8_tags[@]}"; do
     echo "${PROD_REGISTRY_PASSWORD}" | docker login --username="${PROD_REGISTRY_USER}" --password-stdin ${PROD_REGISTRY}
   fi
   date_iso=$(date -I)
-  dd_tag="${d8_tag}"
   d8_image="${DEV_REGISTRY_DECKHOUSE_IMAGE}"
+  dd_short_release_tag=""
+  dd_full_release_tag=""
+  dd_image_version="${d8_tag}"
   module_reports="${WORKDIR}/deckhouse/${d8_tag}/reports"
   mkdir -p {"${module_reports}","${WORKDIR}/artifacts"}
 
-  # use a propper registry for selected tag - dev for pr and main and prod for releases
-  if [ "${d8_tag}" == "${TAG}" ] && echo "${d8_tag}"|grep -s "^release-[0-9]\.[0-9]*$"; then
+  # if d8_tag is for release - we need to take it from prod registry
+  if echo "${d8_tag}"|grep -s "^v[0-9]\.[0-9]*\.[0-9]*$"; then
     d8_image="${PROD_REGISTRY_DECKHOUSE_IMAGE}"
-    selected_minor_version=$(echo "${d8_tag}" | cut -d "-" -f 2)
-    d8_tag=$(crane ls "${PROD_REGISTRY_DECKHOUSE_IMAGE}" | grep "^v${selected_minor_version}\.[0-9]*$" | sort -V -r|head -n 1)
-  # if d8_tag is not the same as input TAG (pr, main or selected release) - that means we are using tag of latest 3 releases, so we need to take it from prod registry
-  elif [ "${d8_tag}" != "${TAG}" ] && echo "${d8_tag}"|grep -s "^v[0-9]\.[0-9]*\.[0-9]*$"; then
-    d8_image="${PROD_REGISTRY_DECKHOUSE_IMAGE}"
+    dd_short_release_tag="release:$(echo ${d8_tag} | cut -d '.' -f -2 | sed 's/^v//')"
+    dd_full_release_tag="image_release_tag:${d8_tag}"
+    dd_image_version="$(echo ${dd_short_release_tag} | sed 's/^release\://')"
   fi
 
   echo "Deckhouse image to check: ${d8_image}:${d8_tag}"
@@ -181,11 +191,11 @@ for d8_tag in "${d8_tags[@]}"; do
       echo "👾 Scaning image ${IMAGE_NAME} of module ${MODULE_NAME} from Deckhouse tag: ${d8_tag}"
       echo ""
       if [ "${additional_image_detected}" == true ]; then
-        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --java-db-repository "${TRIVY_JAVA_DB_URL}" --db-repository "${TRIVY_DB_URL}" --exit-code 0 --severity "${SEVERITY}" --format table --scanners vuln --quiet "${d8_image}:${d8_tag}"
-        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --java-db-repository "${TRIVY_JAVA_DB_URL}" --db-repository "${TRIVY_DB_URL}" --exit-code 0 --severity "${SEVERITY}" --format json --scanners vuln --output "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" --quiet "${d8_image}:${d8_tag}"
+        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --java-db-repository "${TRIVY_JAVA_DB_URL}" --db-repository "${TRIVY_DB_URL}" --exit-code 0 --severity "${SEVERITY}" --format table --scanners vuln --quiet "${d8_image}:${d8_tag}" --image-src remote 
+        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --java-db-repository "${TRIVY_JAVA_DB_URL}" --db-repository "${TRIVY_DB_URL}" --exit-code 0 --severity "${SEVERITY}" --format json --scanners vuln --output "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" --quiet "${d8_image}:${d8_tag}" --image-src remote 
       else
-        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --java-db-repository "${TRIVY_JAVA_DB_URL}" --db-repository "${TRIVY_DB_URL}" --exit-code 0 --severity "${SEVERITY}" --format table --scanners vuln --quiet "${d8_image}@${IMAGE_HASH}"
-        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --java-db-repository "${TRIVY_JAVA_DB_URL}" --db-repository "${TRIVY_DB_URL}" --exit-code 0 --severity "${SEVERITY}" --format json --scanners vuln --output "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" --quiet "${d8_image}@${IMAGE_HASH}"
+        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --java-db-repository "${TRIVY_JAVA_DB_URL}" --db-repository "${TRIVY_DB_URL}" --exit-code 0 --severity "${SEVERITY}" --format table --scanners vuln --quiet "${d8_image}@${IMAGE_HASH}" --image-src remote 
+        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --java-db-repository "${TRIVY_JAVA_DB_URL}" --db-repository "${TRIVY_DB_URL}" --exit-code 0 --severity "${SEVERITY}" --format json --scanners vuln --output "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" --quiet "${d8_image}@${IMAGE_HASH}" --image-src remote 
       fi
 
       echo ""
@@ -214,12 +224,12 @@ for d8_tag in "${d8_tags[@]}"; do
         -F "service=${MODULE_NAME} / ${IMAGE_NAME}" \
         -F "group_by=component_name+component_version" \
         -F "deduplication_on_engagement=false" \
-        -F "tags=deckhouse_image,module:${MODULE_NAME},image:${IMAGE_NAME},branch:${dd_tag}${codeowner_tags}" \
-        -F "test_title=[${MODULE_NAME}]: ${IMAGE_NAME}:${dd_tag}" \
-        -F "version=${dd_tag}" \
+        -F "tags=deckhouse_image,module:${MODULE_NAME},image:${IMAGE_NAME},branch:${dd_image_version}${codeowner_tags},${dd_short_release_tag},${dd_full_release_tag}" \
+        -F "test_title=[${MODULE_NAME}]: ${IMAGE_NAME}:${dd_image_version}" \
+        -F "version=${dd_image_version}" \
         -F "build_id=${IMAGE_HASH}" \
         -F "commit_hash=${GITHUB_SHA}" \
-        -F "branch_tag=${dd_tag}" \
+        -F "branch_tag=${d8_tag}" \
         -F "apply_tags_to_findings=true" \
       > /dev/null
     done
