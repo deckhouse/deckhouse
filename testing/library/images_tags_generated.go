@@ -383,7 +383,7 @@ var DefaultImagesDigests = map[string]interface{}{
 	},
 	"registrypackages": map[string]interface{}{
 		"amazonEc2Utils220":         "imageHash-registrypackages-amazonEc2Utils220",
-		"containerd1724":            "imageHash-registrypackages-containerd1724",
+		"containerd1727":            "imageHash-registrypackages-containerd1727",
 		"crictl128":                 "imageHash-registrypackages-crictl128",
 		"crictl129":                 "imageHash-registrypackages-crictl129",
 		"crictl130":                 "imageHash-registrypackages-crictl130",
@@ -447,7 +447,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"agent": "imageHash-staticRoutingManager-agent",
 	},
 	"terraformManager": map[string]interface{}{
-		"baseTerraformManager":        "imageHash-terraformManager-baseTerraformManager",
 		"terraformManagerAws":         "imageHash-terraformManager-terraformManagerAws",
 		"terraformManagerAzure":       "imageHash-terraformManager-terraformManagerAzure",
 		"terraformManagerDynamix":     "imageHash-terraformManager-terraformManagerDynamix",

@@ -253,9 +253,9 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 		return nil, fmt.Errorf("register module pull override controller: %w", err)
 	}
 
-	err = docbuilder.NewModuleDocumentationController(runtimeManager, dc, logger.Named("module-documentation-controller"))
+	err = docbuilder.RegisterController(runtimeManager, dc, logger.Named("module-documentation-controller"))
 	if err != nil {
-		return nil, fmt.Errorf("create module documentation controller: %w", err)
+		return nil, fmt.Errorf("register module documentation controller: %w", err)
 	}
 
 	validation.RegisterAdmissionHandlers(

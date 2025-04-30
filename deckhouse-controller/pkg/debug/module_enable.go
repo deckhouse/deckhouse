@@ -82,7 +82,7 @@ func setModuleConfigEnabled(ctx context.Context, kubeClient k8s.Client, name str
 		return fmt.Errorf("kubernetes client is not initialized")
 	}
 
-	if _, err := kubeClient.Dynamic().Resource(v1alpha1.ModuleConfigGVR).Get(ctx, name, metav1.GetOptions{}); err != nil {
+	if _, err := kubeClient.Dynamic().Resource(v1alpha1.ModuleGVR).Get(ctx, name, metav1.GetOptions{}); err != nil {
 		if apierrors.IsNotFound(err) {
 			return errors.New("module not found")
 		}

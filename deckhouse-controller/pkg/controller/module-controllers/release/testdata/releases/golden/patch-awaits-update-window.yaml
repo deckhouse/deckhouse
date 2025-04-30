@@ -1,0 +1,47 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/exist-on-fs
+  labels:
+    module: parca
+    status: deployed
+  name: parca-1.26.2
+  resourceVersion: "1000"
+spec:
+  moduleName: parca
+  version: 1.26.2
+  weight: 900
+status:
+  approved: true
+  message: ""
+  phase: Deployed
+  pullDuration: 0s
+  size: 0
+  transitionTime: "2021-12-08T08:34:01Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  annotations:
+    modules.deckhouse.io/isUpdating: "false"
+    modules.deckhouse.io/notified: "true"
+  creationTimestamp: null
+  labels:
+    module: parca
+    modules.deckhouse.io/update-policy: ""
+  name: parca-1.26.3
+  resourceVersion: "1003"
+spec:
+  moduleName: parca
+  version: 1.26.3
+  weight: 900
+status:
+  approved: true
+  message: Release is waiting for the update window until 18 Oct 19 08:00 UTC
+  phase: Pending
+  pullDuration: 0s
+  size: 0
+  transitionTime: null

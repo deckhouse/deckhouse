@@ -107,8 +107,8 @@ jobs:
       ref_full: ${{ steps.git_info.outputs.ref_full }}
       github_sha: ${{ steps.git_info.outputs.github_sha }}
       pr_number: ${{ steps.git_info.outputs.pr_number }}
-    # Skip the CI for automation PRs, e.g. changelog
-    if: ${{ github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
+    # Skip the CI for automation PRs, e.g. changelog, don't skip if Pull Request title contains "[run ci]".
+    if: ${{ contains(github.event.pull_request.title, '[run ci]') || github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
     steps:
       - id: git_info
         name: Get tag name and SHA
@@ -202,6 +202,37 @@ jobs:
           if [[ $EMPTY_EDITIONS == "yes" ]] ; then
             echo "No editions requested. Building only FE."
           fi
+  check_branch_name:
+    name: Check branch name
+    runs-on: ubuntu-latest
+    steps:
+
+    # <template: checkout_step>
+    - name: Checkout sources
+      uses: actions/checkout@v3.5.2
+
+    # </template: checkout_step>
+      with:
+        fetch-depth: 0
+    - name: Check branch name
+      id: check_branch_name
+      env:
+        CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+      run: |
+        if [ -z "${CI_COMMIT_TAG}" ]; then
+          exit 0 # Skip job if there is no tag
+        fi
+        TAG_NAME="${GITHUB_REF#refs/tags/}" # Remove "refs/tags/" prefix
+        echo "TAG_NAME=${TAG_NAME}"
+        MAJOR=$(echo "$TAG_NAME" | cut -d'.' -f1 | tr -d 'v')
+        MINOR=$(echo "$TAG_NAME" | cut -d'.' -f2)
+        RELEASE_BRANCH_NAME="release-${MAJOR}.${MINOR}"
+        echo "RELEASE_BRANCH_NAME=${RELEASE_BRANCH_NAME}"
+        echo "GITHUB_SHA=${GITHUB_SHA}"
+        echo "Current commit in branch:"
+        git branch -r --contains ${GITHUB_SHA}
+        # grep returns exit code 1 if branch not found
+        git branch -r --contains ${GITHUB_SHA} | grep ${RELEASE_BRANCH_NAME}
 
   comment_on_start:
     name: Update issue comment
@@ -233,6 +264,7 @@ jobs:
     name: Go Generate
     needs:
       - git_info
+      - check_branch_name
 
     # <template: go_generate_template>
     runs-on: [self-hosted, regular]
@@ -333,6 +365,7 @@ jobs:
     name: Render workflow
     needs:
       - git_info
+      - check_branch_name
 
     # <template: workflow_render_template>
     runs-on: [self-hosted, regular]
@@ -671,10 +704,10 @@ jobs:
             INSTALL_IMAGE=${BRANCH_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}
             pull_push_rmi 'dev/install-standalone' ${INSTALL_IMAGE_SRC} ${INSTALL_IMAGE}
 
-            echo "⚓️ 💫 [$(date -u)] Publish 'e2e-terraform' image to dev-registry using tag ${IMAGE_TAG}".
-            INSTALL_IMAGE_SRC="$(jq -r '.Images."e2e-terraform".DockerImageName' images_tags_werf.json)"
-            INSTALL_IMAGE=${BRANCH_REGISTRY_PATH}/e2e-terraform:${IMAGE_TAG}
-            pull_push_rmi 'e2e-terraform' ${INSTALL_IMAGE_SRC} ${INSTALL_IMAGE}
+            echo "⚓️ 💫 [$(date -u)] Publish 'e2e-opentofu-eks' image to dev-registry using tag ${IMAGE_TAG}".
+            INSTALL_IMAGE_SRC="$(jq -r '.Images."e2e-opentofu-eks".DockerImageName' images_tags_werf.json)"
+            INSTALL_IMAGE=${BRANCH_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}
+            pull_push_rmi 'e2e-opentofu-eks' ${INSTALL_IMAGE_SRC} ${INSTALL_IMAGE}
           fi
 
 
@@ -775,6 +808,19 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
+
+      # <template: send_fail_report>
+      - name: Send fail report
+        if: failure()
+        env:
+          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          JOB_NAME: ${{ github.job }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
+        run: |
+          bash ./.github/scripts/send-report.sh
+      # </template: send_fail_report>
+
 
 
   build_ee:
@@ -1035,10 +1081,10 @@ jobs:
             INSTALL_IMAGE=${BRANCH_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}
             pull_push_rmi 'dev/install-standalone' ${INSTALL_IMAGE_SRC} ${INSTALL_IMAGE}
 
-            echo "⚓️ 💫 [$(date -u)] Publish 'e2e-terraform' image to dev-registry using tag ${IMAGE_TAG}".
-            INSTALL_IMAGE_SRC="$(jq -r '.Images."e2e-terraform".DockerImageName' images_tags_werf.json)"
-            INSTALL_IMAGE=${BRANCH_REGISTRY_PATH}/e2e-terraform:${IMAGE_TAG}
-            pull_push_rmi 'e2e-terraform' ${INSTALL_IMAGE_SRC} ${INSTALL_IMAGE}
+            echo "⚓️ 💫 [$(date -u)] Publish 'e2e-opentofu-eks' image to dev-registry using tag ${IMAGE_TAG}".
+            INSTALL_IMAGE_SRC="$(jq -r '.Images."e2e-opentofu-eks".DockerImageName' images_tags_werf.json)"
+            INSTALL_IMAGE=${BRANCH_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}
+            pull_push_rmi 'e2e-opentofu-eks' ${INSTALL_IMAGE_SRC} ${INSTALL_IMAGE}
           fi
 
 
@@ -1139,6 +1185,19 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
+
+      # <template: send_fail_report>
+      - name: Send fail report
+        if: failure()
+        env:
+          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          JOB_NAME: ${{ github.job }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
+        run: |
+          bash ./.github/scripts/send-report.sh
+      # </template: send_fail_report>
+
 
 
   build_se:
@@ -1399,10 +1458,10 @@ jobs:
             INSTALL_IMAGE=${BRANCH_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}
             pull_push_rmi 'dev/install-standalone' ${INSTALL_IMAGE_SRC} ${INSTALL_IMAGE}
 
-            echo "⚓️ 💫 [$(date -u)] Publish 'e2e-terraform' image to dev-registry using tag ${IMAGE_TAG}".
-            INSTALL_IMAGE_SRC="$(jq -r '.Images."e2e-terraform".DockerImageName' images_tags_werf.json)"
-            INSTALL_IMAGE=${BRANCH_REGISTRY_PATH}/e2e-terraform:${IMAGE_TAG}
-            pull_push_rmi 'e2e-terraform' ${INSTALL_IMAGE_SRC} ${INSTALL_IMAGE}
+            echo "⚓️ 💫 [$(date -u)] Publish 'e2e-opentofu-eks' image to dev-registry using tag ${IMAGE_TAG}".
+            INSTALL_IMAGE_SRC="$(jq -r '.Images."e2e-opentofu-eks".DockerImageName' images_tags_werf.json)"
+            INSTALL_IMAGE=${BRANCH_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}
+            pull_push_rmi 'e2e-opentofu-eks' ${INSTALL_IMAGE_SRC} ${INSTALL_IMAGE}
           fi
 
 
@@ -1763,10 +1822,10 @@ jobs:
             INSTALL_IMAGE=${BRANCH_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}
             pull_push_rmi 'dev/install-standalone' ${INSTALL_IMAGE_SRC} ${INSTALL_IMAGE}
 
-            echo "⚓️ 💫 [$(date -u)] Publish 'e2e-terraform' image to dev-registry using tag ${IMAGE_TAG}".
-            INSTALL_IMAGE_SRC="$(jq -r '.Images."e2e-terraform".DockerImageName' images_tags_werf.json)"
-            INSTALL_IMAGE=${BRANCH_REGISTRY_PATH}/e2e-terraform:${IMAGE_TAG}
-            pull_push_rmi 'e2e-terraform' ${INSTALL_IMAGE_SRC} ${INSTALL_IMAGE}
+            echo "⚓️ 💫 [$(date -u)] Publish 'e2e-opentofu-eks' image to dev-registry using tag ${IMAGE_TAG}".
+            INSTALL_IMAGE_SRC="$(jq -r '.Images."e2e-opentofu-eks".DockerImageName' images_tags_werf.json)"
+            INSTALL_IMAGE=${BRANCH_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}
+            pull_push_rmi 'e2e-opentofu-eks' ${INSTALL_IMAGE_SRC} ${INSTALL_IMAGE}
           fi
 
 
@@ -2127,10 +2186,10 @@ jobs:
             INSTALL_IMAGE=${BRANCH_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}
             pull_push_rmi 'dev/install-standalone' ${INSTALL_IMAGE_SRC} ${INSTALL_IMAGE}
 
-            echo "⚓️ 💫 [$(date -u)] Publish 'e2e-terraform' image to dev-registry using tag ${IMAGE_TAG}".
-            INSTALL_IMAGE_SRC="$(jq -r '.Images."e2e-terraform".DockerImageName' images_tags_werf.json)"
-            INSTALL_IMAGE=${BRANCH_REGISTRY_PATH}/e2e-terraform:${IMAGE_TAG}
-            pull_push_rmi 'e2e-terraform' ${INSTALL_IMAGE_SRC} ${INSTALL_IMAGE}
+            echo "⚓️ 💫 [$(date -u)] Publish 'e2e-opentofu-eks' image to dev-registry using tag ${IMAGE_TAG}".
+            INSTALL_IMAGE_SRC="$(jq -r '.Images."e2e-opentofu-eks".DockerImageName' images_tags_werf.json)"
+            INSTALL_IMAGE=${BRANCH_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}
+            pull_push_rmi 'e2e-opentofu-eks' ${INSTALL_IMAGE_SRC} ${INSTALL_IMAGE}
           fi
 
 
@@ -2491,10 +2550,10 @@ jobs:
             INSTALL_IMAGE=${BRANCH_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}
             pull_push_rmi 'dev/install-standalone' ${INSTALL_IMAGE_SRC} ${INSTALL_IMAGE}
 
-            echo "⚓️ 💫 [$(date -u)] Publish 'e2e-terraform' image to dev-registry using tag ${IMAGE_TAG}".
-            INSTALL_IMAGE_SRC="$(jq -r '.Images."e2e-terraform".DockerImageName' images_tags_werf.json)"
-            INSTALL_IMAGE=${BRANCH_REGISTRY_PATH}/e2e-terraform:${IMAGE_TAG}
-            pull_push_rmi 'e2e-terraform' ${INSTALL_IMAGE_SRC} ${INSTALL_IMAGE}
+            echo "⚓️ 💫 [$(date -u)] Publish 'e2e-opentofu-eks' image to dev-registry using tag ${IMAGE_TAG}".
+            INSTALL_IMAGE_SRC="$(jq -r '.Images."e2e-opentofu-eks".DockerImageName' images_tags_werf.json)"
+            INSTALL_IMAGE=${BRANCH_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}
+            pull_push_rmi 'e2e-opentofu-eks' ${INSTALL_IMAGE_SRC} ${INSTALL_IMAGE}
           fi
 
 
@@ -2843,6 +2902,7 @@ jobs:
     name: Tests
     needs:
       - git_info
+      - check_branch_name
 
     # <template: tests_before_build_template>
     runs-on: [self-hosted, regular]
