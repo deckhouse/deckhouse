@@ -12,14 +12,22 @@ git:
   stageDependencies:
     install:
     - '**/*'
+- add: /{{ .ModulePath }}modules/{{ $.ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches/
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $docker_auth_version }} $(cat /run/secrets/SOURCE_REPO)/cesanta/docker_auth.git /src/docker_auth
-  - git clone --depth 1 --branch v{{ $docker_version }} $(cat /run/secrets/SOURCE_REPO)/distribution/distribution.git /src/distribution
+  - git clone --depth 1 --branch {{ $docker_auth_version }} {{ .SOURCE_REPO }}/cesanta/docker_auth.git /src/docker_auth
+  - cd /src/docker_auth
+  - git apply /patches/docker_auth/*.patch --verbose
+  - git clone --depth 1 --branch v{{ $docker_version }} {{ .SOURCE_REPO }}/distribution/distribution.git /src/distribution
   - rm -rf /src/docker_auth/.git
+  - rm -rf /src/distribution/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-{{ $image_version }}
 from: {{ $.Images.BASE_SCRATCH }}
@@ -44,7 +52,7 @@ imageSpec:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
 final: false
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
   add: /src
