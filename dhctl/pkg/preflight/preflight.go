@@ -262,7 +262,7 @@ func (pc *Checker) Global(ctx context.Context) error {
 		},
 		{
 			fun:            pc.CheckDhctlEdition,
-			successMessage: "dhctl version is the same",
+			successMessage: "dhctl edition is the same",
 			skipFlag:       app.DeckhouseEditionCheckArgName,
 		},
 		{
