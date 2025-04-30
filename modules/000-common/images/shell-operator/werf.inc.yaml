@@ -40,7 +40,7 @@ import:
   includePaths:
   - usr/bin/*awk*
   before: setup
-- image: tools/find
+- image: tools/findutils
   add: /usr/bin/find
   before: setup
 imageSpec:
