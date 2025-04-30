@@ -162,7 +162,7 @@ shell:
   - |
     ln -fs /dhctl /usr/bin/dhctl
     cat <<"EOD" > /etc/inputrc
-    {{- $rootContext.Files.Get "deckhouse-controller/files/inputrc" | nindent 4 }}
+    {{- $rootContext.Files.Get (printf "%sdeckhouse-controller/files/inputrc" $prefix) | nindent 4 }}
     EOD
 
     cat <<"EOD" > /etc/bashrc
