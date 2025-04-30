@@ -49,7 +49,7 @@ func PingAll(ctx context.Context, cluster []NodeTarget, external []ExternalTarge
 	}
 
 	// Initialize fastping with list of hosts
-	fp := fastping.NewPinger(allHosts, countPings, 2*time.Second, 35*time.Second)
+	fp := fastping.NewPinger(allHosts, countPings, 1*time.Second, 5*time.Second)
 
 	// Collect RTTs per host
 	rttsMap := make(map[string][]float64, len(allHosts))
