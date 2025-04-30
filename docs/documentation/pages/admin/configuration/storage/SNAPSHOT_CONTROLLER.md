@@ -5,7 +5,7 @@ permalink: en/admin/storage/snapshot-controller.html
 
 Deckhouse Kubernetes Platform supports volume snapshot creation for CSI drivers in a Kubernetes cluster.
 
-Snapshots allow you to capture the state of a volume at a specific point in time and use it for data recovery or volume cloning. The availability of snapshot functionality depends on the CSI driver in use.
+Snapshots capture the state of a volume at a specific point in time and can be used for data recovery or volume cloning. The ability to create snapshots depends on the capabilities of the CSI driver in use.
 
 ## Supported CSI Drivers
 
@@ -20,7 +20,7 @@ The following CSI drivers support snapshot creation:
 - [Replicated storage based on DRBD](../storage/sds/lvm-replicated.html);
 - [NFS-based storage](../storage/external/nfs.html).
 
-## Using Snapshots
+## Creating Snapshots
 
 Before creating snapshots, make sure that [VolumeSnapshotClass](../../reference/cr/volumesnapshotclass/) resources are configured in the cluster. You can list available classes with the following command:
 

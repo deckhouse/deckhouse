@@ -17,18 +17,18 @@ Deckhouse Kubernetes Platform offers a wide range of solutions, which can be div
 
 ### Software-Defined Storage
 
-- [Local storage based on LVM (Logical Volume Manager)](../storage/admin/sds/lvm-local.html)
-- [Replicated storage based on DRBD (Distributed Replicated Block Device)](../storage/admin/sds/lvm-replicated.html)
+- [Local storage based on LVM (Logical Volume Manager)](../storage/sds/lvm-local.html)
+- [Replicated storage based on DRBD (Distributed Replicated Block Device)](../storage/sds/lvm-replicated.html)
 
 ### External Storage
 
-- [Distributed Ceph storage](../storage/admin/external/ceph.html)
-- [HPE data storage](../storage/admin/external/hpe.html)
-- [Huawei data storage](../storage/admin/external/huawei.html)
-- [NFS data storage](../storage/admin/external/nfs.html)
-- [S3-based object storage](../storage/admin/external/s3.html)
-- [SCSI-based data storage](../storage/admin/external/scsi.html)
-- [TATLIN.UNIFIED (Yadro) unified storage](../storage/admin/external/yadro.html)
+- [Distributed Ceph storage](../storage/external/ceph.html)
+- [HPE data storage](../storage/external/hpe.html)
+- [Huawei data storage](../storage/external/huawei.html)
+- [NFS data storage](../storage/external/nfs.html)
+- [S3-based object storage](../storage/external/s3.html)
+- [SCSI-based data storage](../storage/external/scsi.html)
+- [TATLIN.UNIFIED (Yadro) unified storage](../storage/external/yadro.html)
 
 ## Key Features
 

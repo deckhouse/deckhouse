@@ -79,13 +79,13 @@ To ensure stable module operation, avoid rebooting multiple nodes at the same ti
    d8 k drain test-node-1 --ignore-daemonsets --delete-emptydir-data
    ```
 
-1. Check for faulty DRBD resources or resources in the `SyncTarget` state. If any are found, wait for synchronization to finish or take corrective actions:
+1. Make sure there are no faulty DRBD resources or resources in the `SyncTarget` state. To check this, run the following command and analyze the output:
 
    ```shell
    d8 k -n d8-sds-replicated-volume exec -t deploy/linstor-controller -- linstor r l --faulty
    ```
 
-   Example output:
+   If any resources are in the SyncTarget state, wait for the synchronization to complete or take corrective actions. Example output:
 
    ```console
    Defaulted container "linstor-controller" out of: linstor-controller, kube-rbac-proxy
@@ -106,37 +106,37 @@ If you need to reboot another node, repeat the procedure.
 
 ## Moving resources to free up space in a Storage Pool
 
-1. List Storage Pools:
+1. List the Storage Pools on the source node to identify which one is running low on free space:
 
    ```shell
    d8 k exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor storage-pool list -n OLD_NODE
    ```
 
-1. Determine the location of volumes:
+1. Determine which volumes are located in the overloaded Storage Pool to identify potential candidates for migration:
 
    ```shell
    d8 k exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor volume list -n OLD_NODE
    ```
 
-1. Get a list of resources to move:
+1. Get the list of resources that own these volumes so that you can proceed with moving them:
 
    ```shell
    d8 k exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor resource list-volumes
    ```
 
-1. Move the selected resources to another node (no more than 1–2 at a time):
+1. Create the selected resources on another node (no more than 1–2 at a time):
 
    ```shell
    d8 k exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor --yes-i-am-sane-and-i-understand-what-i-am-doing resource create NEW_NODE RESOURCE_NAME
    ```
 
-1. Wait for synchronization:
+1. Wait for the resource synchronization to complete to ensure the data has been replicated properly:
 
    ```shell
    d8 k exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor resource-definition wait-sync RESOURCE_NAME
    ```
 
-1. Delete the resource from the original node:
+1. Remove the resource from the source node to free up space in the overloaded Storage Pool:
 
    ```shell
    d8 k exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor --yes-i-am-sane-and-i-understand-what-i-am-doing resource delete OLD_NODE RESOURCE_NAME
@@ -144,10 +144,10 @@ If you need to reboot another node, repeat the procedure.
 
 ## Evicting DRBD resources from a node
 
-The `evict.sh` script performs eviction in two modes:
+Eviction of DRBD resources from a node is performed using the `evict.sh` script. It can operate in two modes:
 
-- **Node removal** — additional replicas are created for every resource, after which the node is removed from LINSTOR and Kubernetes.
-- **Resource removal** — replicas are created for the resources, after which the resources themselves are removed from LINSTOR (the node remains in the cluster).
+- Node removal — additional replicas are created for every resource, after which the node is removed from LINSTOR and Kubernetes.
+- Resource removal — replicas are created for the resources, after which the resources themselves are removed from LINSTOR (the node remains in the cluster).
 
 ### Preparing and running the script
 
@@ -292,9 +292,9 @@ dmesg | grep 'Remote failed to finish a request within'
 
 If the output contains messages like *Remote failed to finish a request within …*, the disk subsystem may be too slow for DRBD to operate correctly.
 
-## Removing a leftover Storage Pool after deleting a ReplicatedStoragePool
+## After the ReplicatedStoragePool resource is deleted, the corresponding Storage Pool remains in the backend
 
-The `sds-replicated-volume` module does not handle deletion operations for the [ReplicatedStoragePool](../../../reference/cr/replicatedstoragepool/) resource.
+This is expected behavior. The `sds-replicated-volume` module does not handle deletion operations for the [ReplicatedStoragePool](../../../reference/cr/replicatedstoragepool/) resource.
 
 ## Restrictions on changing ReplicatedStorageClass spec
 
@@ -396,6 +396,20 @@ The backup is stored in encoded segments in Secrets named `linstor-%date_time%-b
 
    ```shell
    ls ./backup
+   TMPDIR=$(mktemp -d)
+   echo "Temporary directory: $TMPDIR"
+   ```
+
+    Example output:
+
+   ```console
+   ebsremotes.yaml                    layerdrbdvolumedefinitions.yaml        layerwritecachevolumes.yaml  propscontainers.yaml      satellitescapacity.yaml  secidrolemap.yaml         trackingdate.yaml
+   files.yaml                         layerdrbdvolumes.yaml                  linstorremotes.yaml          resourceconnections.yaml  schedules.yaml           secobjectprotection.yaml  volumeconnections.yaml
+   keyvaluestore.yaml                 layerluksvolumes.yaml                  linstorversion.yaml          resourcedefinitions.yaml  secaccesstypes.yaml      secroles.yaml             volumedefinitions.yaml
+   layerbcachevolumes.yaml            layeropenflexresourcedefinitions.yaml  nodeconnections.yaml         resourcegroups.yaml       secaclmap.yaml           sectyperules.yaml         volumegroups.yaml
+   layercachevolumes.yaml             layeropenflexvolumes.yaml              nodenetinterfaces.yaml       resources.yaml            secconfiguration.yaml    sectypes.yaml             volumes.yaml
+   layerdrbdresourcedefinitions.yaml  layerresourceids.yaml                  nodes.yaml                   rollback.yaml             secdfltroles.yaml        spacehistory.yaml
+   layerdrbdresources.yaml            layerstoragevolumes.yaml               nodestorpool.yaml            s3remotes.yaml            secidentities.yaml       storpooldefinitions.yaml
    ```
 
 1. Restore the required entity by applying the corresponding YAML file:
@@ -575,7 +589,7 @@ The [ReplicatedStoragePool](../../../reference/cr/replicatedstoragepool/) resour
 During migration the module control plane and its CSI are unavailable. This prevents creation, expansion, or deletion of PVs and the creation or deletion of pods that use DRBD PVs for the duration of the migration.
 
 {% alert level="warning" %}
-> **Important.** User data is not affected because migration occurs to a new namespace and new components are added to provide future volume‑management functionality.
+The migration will not affect user data, as it is performed in a new namespace and volume management will be handled by new components that will replace the functionality of the previous module.
 {% endalert %}
 
 ### Migration procedure

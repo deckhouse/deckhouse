@@ -298,7 +298,7 @@ done
 echo "Data migration completed"
 ```
 
-Usage:
+To use the script, run the following command:
 
 ```shell
 migrate.sh NAMESPACE SOURCE_PVC_NAME DESTINATION_PVC_NAME
