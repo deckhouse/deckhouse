@@ -22,9 +22,9 @@ webIfaces:
 
 Чтобы использовать управляющие политики L7 HTTP Cilium вместе с Istio:
 
-* **В режиме Sidecar:** Отключите Istio mTLS для тех рабочих нагрузок, которые вы хотите управлять с помощью политики L7 Cilium, настроив `mtls.mode=DISABLE` в [PeerAuthentication Istio](https://istio.io/latest/docs/reference/config/security/peer_authentication/#PeerAuthentication).
+* **В режиме Sidecar:** Отключите Istio mTLS для тех рабочих нагрузок, которыми вы хотите управлять с помощью политики L7 Cilium, настроив `mtls.mode=DISABLE` в [PeerAuthentication Istio](https://istio.io/latest/docs/reference/config/security/peer_authentication/#PeerAuthentication).
 
-* **В режиме Ambient:**  Удалите те рабочие нагрузки, которыми вы хотите управлять с помощью политики L7 Cilium, удалив метку `istio.io/dataplane-mode` из пространства имен или добавив аннотацию для подов, которые вы хотите управлять с помощью Cilium L7, с указанием `ambient.istio.io/redirection: disabled`.
+* **В режиме Ambient:**  Удалите те рабочие нагрузки, которыми вы хотите управлять с помощью политики L7 Cilium, удалив метку `istio.io/dataplane-mode` из пространства имен или добавив аннотацию для подов, которыми вы хотите управлять с помощью Cilium L7, с указанием `ambient.istio.io/redirection: disabled`.
 
 В случае, если это не будет сделано, трафик между управляемыми Istio нагрузками будет зашифрован Istio с помощью mTLS, и Cilium не сможет обработать его для применения политики L7.
 
