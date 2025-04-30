@@ -2,8 +2,8 @@
 {{- $bazelVersions := "6.5.0" }}
 {{- $envoySHA := "4be217df3694bfa500eb76b0dda4e3c7ec0afeeb" }}
 {{- $ciliumProxyCacheRev := "v1.32.5-1744305768-f9ddca7dcd91f7ca25a505560e655c47d3dec2cf-alt-p11-llvm17-gcc11-v1" }}
-{{- $ciliumProxyDepsRev := "v1.32.5-1744305768-f9ddca7dcd91f7ca25a505560e655c47d3dec2cf-alt-p11-llvm17-gcc11-lfs-v2" }}
-{{- $buildWithPreparedCacheAndDeps := false }}
+{{- $ciliumProxyDepsRev := "v1.32.5-1744305768-f9ddca7dcd91f7ca25a505560e655c47d3dec2cf-alt-p11-llvm17-gcc11-lfs-v1" }}
+{{- $buildWithPreparedCacheAndDeps := true }}
 ---
 # #####################################################################
 # Build cilium-envoy binaries
