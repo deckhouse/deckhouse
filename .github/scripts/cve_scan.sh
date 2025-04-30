@@ -48,11 +48,20 @@ do
       ;;
     ?)
       usage
-      exit
+      exit 1
       ;;
   esac
 done
 
+
+login_prod_registry() {
+  echo "Log in to PROD registry"
+  echo "${PROD_REGISTRY_PASSWORD}" | docker login --username="${PROD_REGISTRY_USER}" --password-stdin ${PROD_REGISTRY}
+}
+login_dev_registry() {
+  echo "Log in to DEV registry"
+  echo "${DEV_REGISTRY_PASSWORD}" | docker login --username="${DEV_REGISTRY_USER}" --password-stdin ${DEV_REGISTRY}
+}
 
 echo "----------------------------------------------"
 echo ""
@@ -69,8 +78,7 @@ echo ""
 echo "Getting tags to scan"
 d8_tags=("${TAG}")
 if [ "${SCAN_TARGET}" == "regular" ]; then
-  echo "Log in to PROD registry"
-  echo "${PROD_REGISTRY_PASSWORD}" | docker login --username="${PROD_REGISTRY_USER}" --password-stdin ${PROD_REGISTRY}
+  login_prod_registry
   if [ "${TAG}" != "main" ]; then
     # if some specific release is defined - scan only it
     if echo "${TAG}"|grep -s "^[0-9]\.[0-9]*$"; then
@@ -94,17 +102,17 @@ echo "${d8_tags[@]}"
 # Scan in loop for provided list of tags
 for d8_tag in "${d8_tags[@]}"; do
   # Log in to registry before pulling each deckhouse image to avoid registry session end
-  echo "Log in to DEV registry"
-  echo "${DEV_REGISTRY_PASSWORD}" | docker login --username="${DEV_REGISTRY_USER}" --password-stdin ${DEV_REGISTRY}
+  login_dev_registry
   if [ "${SCAN_TARGET}" == "regular" ]; then
-    echo "Log in to PROD registry"
-    echo "${PROD_REGISTRY_PASSWORD}" | docker login --username="${PROD_REGISTRY_USER}" --password-stdin ${PROD_REGISTRY}
+    login_prod_registry
   fi
   dd_short_release_tag=""
   dd_full_release_tag=""
   dd_image_version="${d8_tag}"
   date_iso=$(date -I)
   d8_image="${DEV_REGISTRY_DECKHOUSE_IMAGE}"
+  trivy_registry_user="${DEV_REGISTRY_USER}"
+  trivy_registry_pass="${DEV_REGISTRY_PASSWORD}"
   module_reports="${WORKDIR}/deckhouse/${d8_tag}/reports"
   mkdir -p {"${module_reports}","${WORKDIR}/artifacts"}
 
@@ -114,6 +122,8 @@ for d8_tag in "${d8_tags[@]}"; do
     dd_short_release_tag="release:$(echo ${d8_tag} | cut -d '.' -f -2 | sed 's/^v//')"
     dd_full_release_tag="image_release_tag:${d8_tag}"
     dd_image_version="$(echo ${dd_short_release_tag} | sed 's/^release\://')"
+    trivy_registry_user="${PROD_REGISTRY_USER}"
+    trivy_registry_pass="${PROD_REGISTRY_PASSWORD}"
   fi
 
   echo "Deckhouse image to check: ${d8_image}:${d8_tag}"
@@ -191,11 +201,11 @@ for d8_tag in "${d8_tags[@]}"; do
       echo "👾 Scaning image ${IMAGE_NAME} of module ${MODULE_NAME} from Deckhouse tag: ${d8_tag}"
       echo ""
       if [ "${additional_image_detected}" == true ]; then
-        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --java-db-repository "${TRIVY_JAVA_DB_URL}" --db-repository "${TRIVY_DB_URL}" --exit-code 0 --severity "${SEVERITY}" --format table --scanners vuln --quiet "${d8_image}:${d8_tag}" --image-src remote 
-        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --java-db-repository "${TRIVY_JAVA_DB_URL}" --db-repository "${TRIVY_DB_URL}" --exit-code 0 --severity "${SEVERITY}" --format json --scanners vuln --output "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" --quiet "${d8_image}:${d8_tag}" --image-src remote 
+        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --java-db-repository "${TRIVY_JAVA_DB_URL}" --db-repository "${TRIVY_DB_URL}" --exit-code 0 --severity "${SEVERITY}" --format table --scanners vuln --quiet "${d8_image}:${d8_tag}" --username "${trivy_registry_user}" --password "${trivy_registry_pass}" --image-src remote 
+        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --java-db-repository "${TRIVY_JAVA_DB_URL}" --db-repository "${TRIVY_DB_URL}" --exit-code 0 --severity "${SEVERITY}" --format json --scanners vuln --output "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" --quiet "${d8_image}:${d8_tag}" --username "${trivy_registry_user}" --password "${trivy_registry_pass}" --image-src remote 
       else
-        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --java-db-repository "${TRIVY_JAVA_DB_URL}" --db-repository "${TRIVY_DB_URL}" --exit-code 0 --severity "${SEVERITY}" --format table --scanners vuln --quiet "${d8_image}@${IMAGE_HASH}" --image-src remote 
-        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --java-db-repository "${TRIVY_JAVA_DB_URL}" --db-repository "${TRIVY_DB_URL}" --exit-code 0 --severity "${SEVERITY}" --format json --scanners vuln --output "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" --quiet "${d8_image}@${IMAGE_HASH}" --image-src remote 
+        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --java-db-repository "${TRIVY_JAVA_DB_URL}" --db-repository "${TRIVY_DB_URL}" --exit-code 0 --severity "${SEVERITY}" --format table --scanners vuln --quiet "${d8_image}@${IMAGE_HASH}" --username "${trivy_registry_user}" --password "${trivy_registry_pass}" --image-src remote 
+        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --java-db-repository "${TRIVY_JAVA_DB_URL}" --db-repository "${TRIVY_DB_URL}" --exit-code 0 --severity "${SEVERITY}" --format json --scanners vuln --output "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" --quiet "${d8_image}@${IMAGE_HASH}" --username "${trivy_registry_user}" --password "${trivy_registry_pass}" --image-src remote 
       fi
 
       echo ""
