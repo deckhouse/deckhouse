@@ -30,9 +30,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-const dhctlEditionMismatchError = "" +
-	"%w\nThere is a possibility that you will not be able to install latest versions of Deckhouse correctly with this image.\n" +
-	`To fix this, check that the labels of the installer and the version being installed match, or use the --preflight-skip-deckhouse-edition-check flag`
+const dhctlEditionMismatchError = "Your edition installer image does not match.\n" +
+	"  The edition of the dhctl installer is - %s\n" +
+	"  Editing images in registry is         - %s\n"
 
 // imageDescriptorProvider returns image manifest data, mainly image digest.
 type imageDescriptorProvider interface {
@@ -61,15 +61,14 @@ func (pc *Checker) CheckDhctlEdition(ctx context.Context) error {
 		return nil
 	}
 
-	currentDeckhouseImageConfig, err := pc.getDeckhouseImageConfig(ctx)
+	imageConfig, err := pc.getDeckhouseImageConfig(ctx)
 	if err != nil {
 		return fmt.Errorf("Cannot fetch deckhouse image config: %w.", err)
 	}
-	if currentDeckhouseImageConfig == nil ||
-		currentDeckhouseImageConfig.Config.Labels == nil ||
-		currentDeckhouseImageConfig.Config.Labels["io.deckhouse.edition"] != app.AppEdition {
-		return fmt.Errorf(dhctlEditionMismatchError, errors.New(
-			fmt.Sprintf("Your edition installer image does not match.\n `crane config %s:%s | jq -r jq -r '.config.Labels.\"io.deckhouse.editio\"'`", pc.installConfig.GetImage(true), app.AppVersion)))
+	if imageConfig == nil ||
+		imageConfig.Config.Labels == nil ||
+		imageConfig.Config.Labels["io.deckhouse.edition"] != app.AppEdition {
+		return errors.New(fmt.Sprintf(dhctlEditionMismatchError, app.AppEdition, imageConfig.Config.Labels["io.deckhouse.edition"]))
 	}
 
 	return nil
