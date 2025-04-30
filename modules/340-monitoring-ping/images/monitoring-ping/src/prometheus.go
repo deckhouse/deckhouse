@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/http/pprof"
+	_ "net/http/pprof"
 	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -159,6 +161,13 @@ func StartPrometheusServer(ctx context.Context, addr string, reg *prometheus.Reg
 
 	// Metrics
 	mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg}))
+
+	// pprof endpoints
+	mux.HandleFunc("/debug/pprof/", pprof.Index)
+	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 
 	srv := &http.Server{
 		Addr:    addr,

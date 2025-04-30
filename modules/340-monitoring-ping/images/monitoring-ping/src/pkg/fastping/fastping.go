@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -36,7 +37,9 @@ func (p *Pinger) RunWithContext(ctx context.Context) error {
 	errCh := make(chan error, 2)
 
 	// Context for goroutines, cancellable independently
-	gctx, cancel := context.WithCancel(ctx)
+	// gctx, cancel := context.WithCancel(ctx)
+	durationPingWithTimeuout := p.count*int(p.interval) + int(p.timeout)
+	gctx, cancel := context.WithTimeout(ctx, time.Duration(durationPingWithTimeuout))
 	defer cancel()
 
 	go func() {

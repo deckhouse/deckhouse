@@ -149,7 +149,7 @@ func (s *socketConn) SendPacket(host string) error {
 
 // ReadPacket reads an ICMP Echo Reply packet from the raw socket,
 // extracts the kernel timestamp (SO_TIMESTAMPNS), and returns the RTT excluding kernel delay.
-func (s *socketConn) ReadPacket(timeout time.Duration) (string, time.Duration, error) {
+func (s *socketConn) ReadPacket(ctx context.Context, timeout time.Duration) (string, time.Duration, error) {
 	// Allocate buffer for packet data and out-of-band control messages (for timestamp)
 	buf := make([]byte, 1500)
 	oob := make([]byte, 512)
@@ -158,82 +158,87 @@ func (s *socketConn) ReadPacket(timeout time.Duration) (string, time.Duration, e
 	deadline := time.Now().Add(timeout)
 
 	for {
-		// Receive message using recvmsg to also get control messages
-		n, oobn, _, from, err := syscall.Recvmsg(s.fd, buf, oob, 0)
-		if err != nil {
-			if err == syscall.EAGAIN || err == syscall.EWOULDBLOCK {
-				if time.Now().After(deadline) {
-					return "", 0, fmt.Errorf("read timeout after %s", timeout)
+		select {
+		case <-ctx.Done():
+			return "", 0, ctx.Err()
+		default:
+			// Receive message using recvmsg to also get control messages
+			n, oobn, _, from, err := syscall.Recvmsg(s.fd, buf, oob, 0)
+			if err != nil {
+				if err == syscall.EAGAIN || err == syscall.EWOULDBLOCK {
+					if time.Now().After(deadline) {
+						return "", 0, fmt.Errorf("read timeout after %s", timeout)
+					}
+					time.Sleep(10 * time.Microsecond)
+					continue
 				}
-				time.Sleep(10 * time.Microsecond)
+				if err == syscall.EINTR {
+					continue
+				}
+				return "", 0, fmt.Errorf("recvmsg error: %w", err)
+			}
+
+			// Extract sender IP address
+			var ip string
+			if sa, ok := from.(*syscall.SockaddrInet4); ok {
+				ip = net.IP(sa.Addr[:]).String()
+			} else {
+				return "", 0, fmt.Errorf("unexpected sockaddr type")
+			}
+
+			// Skip IP header to get ICMP message
+			ipHeaderLen := (buf[0] & 0x0F) * 4
+			icmpData := buf[ipHeaderLen:n]
+
+			// Ensure this is an Echo Reply with at least 16 bytes (header + timestamp)
+			if len(icmpData) < 16 || icmpData[0] != 0 {
+				continue // Not an Echo Reply or invalid length
+			}
+
+			// Parse identifier and sequence number
+			pktID := int(binary.BigEndian.Uint16(icmpData[4:6]))
+			pktSeq := int(binary.BigEndian.Uint16(icmpData[6:8]))
+
+			// Skip replies from other pinger instances
+			if pktID != s.id {
 				continue
 			}
-			if err == syscall.EINTR {
+
+			// Extract embedded send timestamp (written during SendPacket)
+			sendUnixNano := int64(binary.BigEndian.Uint64(icmpData[8:16]))
+			sendTime := time.Unix(0, sendUnixNano)
+
+			// Extract kernel timestamp from control message (SO_TIMESTAMPNS)
+			kernelTime := extractTimestampNS(oob[:oobn])
+			if kernelTime.IsZero() {
+				log.Warn(fmt.Sprintf("Missing kernel timestamp for packet from %s", ip))
 				continue
 			}
-			return "", 0, fmt.Errorf("recvmsg error: %w", err)
+
+			// Calculate kernel-to-user latency
+			kernelDelay := time.Since(kernelTime)
+
+			// Total RTT is time from sending until now
+			fullRTT := time.Since(sendTime)
+
+			// Subtract time spent in userspace after the kernel received the packet
+			userRTT := fullRTT - kernelDelay
+
+			// Log for debug
+			// log.Info(fmt.Sprintf("RTT: %v | KernelDelay: %v | UserDelay: %v", fullRTT, kernelDelay, userRTT))
+
+			// Match the reply with our pending requests
+			key := makeKey(ip, pktSeq)
+			val, ok := s.pending.LoadAndDelete(key)
+			if !ok {
+				log.Debug(fmt.Sprintf("received unexpected packet from %s, seq=%d", ip, pktSeq))
+				continue
+			}
+			packetInfo := val.(pendingPacket)
+
+			// Return user-level RTT excluding kernel-induced delay
+			return packetInfo.host, userRTT, nil
 		}
-
-		// Extract sender IP address
-		var ip string
-		if sa, ok := from.(*syscall.SockaddrInet4); ok {
-			ip = net.IP(sa.Addr[:]).String()
-		} else {
-			return "", 0, fmt.Errorf("unexpected sockaddr type")
-		}
-
-		// Skip IP header to get ICMP message
-		ipHeaderLen := (buf[0] & 0x0F) * 4
-		icmpData := buf[ipHeaderLen:n]
-
-		// Ensure this is an Echo Reply with at least 16 bytes (header + timestamp)
-		if len(icmpData) < 16 || icmpData[0] != 0 {
-			continue // Not an Echo Reply or invalid length
-		}
-
-		// Parse identifier and sequence number
-		pktID := int(binary.BigEndian.Uint16(icmpData[4:6]))
-		pktSeq := int(binary.BigEndian.Uint16(icmpData[6:8]))
-
-		// Skip replies from other pinger instances
-		if pktID != s.id {
-			continue
-		}
-
-		// Extract embedded send timestamp (written during SendPacket)
-		sendUnixNano := int64(binary.BigEndian.Uint64(icmpData[8:16]))
-		sendTime := time.Unix(0, sendUnixNano)
-
-		// Extract kernel timestamp from control message (SO_TIMESTAMPNS)
-		kernelTime := extractTimestampNS(oob[:oobn])
-		if kernelTime.IsZero() {
-			log.Warn(fmt.Sprintf("Missing kernel timestamp for packet from %s", ip))
-			continue
-		}
-
-		// Calculate kernel-to-user latency
-		kernelDelay := time.Since(kernelTime)
-
-		// Total RTT is time from sending until now
-		fullRTT := time.Since(sendTime)
-
-		// Subtract time spent in userspace after the kernel received the packet
-		userRTT := fullRTT - kernelDelay
-
-		// Log for debug
-		// log.Info(fmt.Sprintf("RTT: %v | KernelDelay: %v | UserDelay: %v", fullRTT, kernelDelay, userRTT))
-
-		// Match the reply with our pending requests
-		key := makeKey(ip, pktSeq)
-		val, ok := s.pending.LoadAndDelete(key)
-		if !ok {
-			log.Debug(fmt.Sprintf("received unexpected packet from %s, seq=%d", ip, pktSeq))
-			continue
-		}
-		packetInfo := val.(pendingPacket)
-
-		// Return user-level RTT excluding kernel-induced delay
-		return packetInfo.host, userRTT, nil
 	}
 }
 
@@ -244,7 +249,7 @@ func (p *Pinger) listenReplies(ctx context.Context, conn *socketConn) error {
 			log.Info("listenReplies stopped due to context cancellation")
 			return nil
 		default:
-			addr, rtt, err := conn.ReadPacket(p.timeout)
+			addr, rtt, err := conn.ReadPacket(ctx, p.timeout)
 			if err != nil {
 				if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 					continue // Skip logging timeouts to reduce noise
