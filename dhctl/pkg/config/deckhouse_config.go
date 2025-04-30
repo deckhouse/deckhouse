@@ -34,19 +34,21 @@ const (
 )
 
 type DeckhouseInstaller struct {
-	Registry                 RegistryData
-	LogLevel                 string
-	Bundle                   string
-	DevBranch                string
-	UUID                     string
-	KubeDNSAddress           string
-	ClusterConfig            []byte
-	ProviderClusterConfig    []byte
-	StaticClusterConfig      []byte
-	InfrastructureState      []byte
-	NodesInfrastructureState map[string][]byte
-	CloudDiscovery           []byte
-	ModuleConfigs            []*ModuleConfig
+	Registry                       Registry
+	LogLevel                       string
+	Bundle                         string
+	DevBranch                      string
+	UUID                           string
+	KubeDNSAddress                 string
+	ClusterConfig                  []byte
+	ProviderSecondaryDevicesConfig []byte
+	ProviderClusterConfig          []byte
+	StaticClusterConfig            []byte
+	InfrastructureState            []byte
+	NodesInfrastructureState       map[string][]byte
+	NodesDataDevices               map[string]NodeDataDevices
+	CloudDiscovery                 []byte
+	ModuleConfigs                  []*ModuleConfig
 
 	KubeadmBootstrap   bool
 	MasterNodeSelector bool
@@ -57,10 +59,15 @@ type DeckhouseInstaller struct {
 	CommanderUUID uuid.UUID
 }
 
+type NodeDataDevices struct {
+	KubeDataDevicePath           string
+	SystemRegistryDataDevicePath string
+}
+
 func (c *DeckhouseInstaller) GetImage(forceVersionTag bool) string {
 	registryNameTemplate := "%s%s:%s"
 	if tag, ok := os.LookupEnv("DHCTL_TEST_VERSION_TAG"); ok {
-		return fmt.Sprintf(registryNameTemplate, c.Registry.Address, c.Registry.Path, tag)
+		return fmt.Sprintf(registryNameTemplate, c.Registry.Data.Address, c.Registry.Data.Path, tag)
 	}
 	tag := c.DevBranch
 	if forceVersionTag {
@@ -74,11 +81,11 @@ func (c *DeckhouseInstaller) GetImage(forceVersionTag bool) string {
 		panic("You are probably using a development image. please use devBranch")
 	}
 
-	return fmt.Sprintf(registryNameTemplate, c.Registry.Address, c.Registry.Path, tag)
+	return fmt.Sprintf(registryNameTemplate, c.Registry.Data.Address, c.Registry.Data.Path, tag)
 }
 
 func (c *DeckhouseInstaller) IsRegistryAccessRequired() bool {
-	return c.Registry.DockerCfg != ""
+	return c.Registry.Data.DockerCfg != ""
 }
 
 func ReadVersionTagFromInstallerContainer() (string, bool) {
@@ -135,6 +142,11 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 		return nil, fmt.Errorf("Marshal static config failed: %v", err)
 	}
 
+	providerSecondaryDevicesConfig, err := metaConfig.ProviderSecondaryDevicesConfig.ToYAML()
+	if err != nil {
+		return nil, fmt.Errorf("Marshal provider secondary devices config failed: %v", err)
+	}
+
 	bundle := DefaultBundle
 	logLevel := DefaultLogLevel
 
@@ -171,17 +183,18 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 	}
 
 	installConfig := DeckhouseInstaller{
-		UUID:                  metaConfig.UUID,
-		Registry:              metaConfig.Registry,
-		DevBranch:             metaConfig.DeckhouseConfig.DevBranch,
-		Bundle:                bundle,
-		LogLevel:              logLevel,
-		KubeDNSAddress:        metaConfig.ClusterDNSAddress,
-		ProviderClusterConfig: providerClusterConfig,
-		StaticClusterConfig:   staticClusterConfig,
-		ClusterConfig:         clusterConfig,
-		ModuleConfigs:         metaConfig.ModuleConfigs,
-		InstallerVersion:      metaConfig.InstallerVersion,
+		UUID:                           metaConfig.UUID,
+		Registry:                       metaConfig.Registry,
+		DevBranch:                      metaConfig.DeckhouseConfig.DevBranch,
+		Bundle:                         bundle,
+		LogLevel:                       logLevel,
+		KubeDNSAddress:                 metaConfig.ClusterDNSAddress,
+		ProviderSecondaryDevicesConfig: providerSecondaryDevicesConfig,
+		ProviderClusterConfig:          providerClusterConfig,
+		StaticClusterConfig:            staticClusterConfig,
+		ClusterConfig:                  clusterConfig,
+		ModuleConfigs:                  metaConfig.ModuleConfigs,
+		InstallerVersion:               metaConfig.InstallerVersion,
 	}
 
 	return &installConfig, nil

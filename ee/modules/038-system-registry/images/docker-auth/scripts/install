@@ -1,0 +1,8 @@
+#!/bin/bash
+#
+# Copyright 2023 Flant JSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+
+set -Eeo pipefail
+mkdir -p /opt/deckhouse/bin
+cp -f auth_server /opt/deckhouse/bin
