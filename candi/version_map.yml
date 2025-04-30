@@ -59,7 +59,7 @@ k8s:
       livenessprobe: v2.15.0
   "1.29":
     status: available
-    patch: 14
+    patch: 15
     bashible: *bashible
     clusterAutoscalerPatch: 1
     crictlPatch: 0
@@ -84,7 +84,7 @@ k8s:
   "1.30":
     default: true
     status: available
-    patch: 10
+    patch: 12
     bashible: *bashible
     clusterAutoscalerPatch: '0'
     crictlPatch: 1
@@ -108,7 +108,7 @@ k8s:
       livenessprobe: v2.15.0
   "1.31":
     status: available
-    patch: 6
+    patch: 8
     bashible: *bashible
     clusterAutoscalerPatch: '0'
     crictlPatch: 1
@@ -132,7 +132,7 @@ k8s:
       livenessprobe: v2.15.0
   "1.32":
     status: preview
-    patch: 2
+    patch: 4
     bashible: *bashible
     clusterAutoscalerPatch: '0'
     crictlPatch: 0
