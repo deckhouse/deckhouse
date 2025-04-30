@@ -66,15 +66,17 @@ cleanup:
 
 # goproxy  settings
 {{- $_ := set . "GOPROXY" (env "GOPROXY") }}
+# Files.Get prefix
+{{- $_ := set . "prefix" "" }}
 ---
 # render ssh-static
 {{ include "ssh_static_artifact" (dict "Images" .Images "SOURCE_REPO" .SOURCE_REPO "DistroPackagesProxy" .DistroPackagesProxy) }}
 ---
-{{ include "common_base_image" (dict "rootContext" . "k8sVersions" .kubectlForBaseComponents "CandiVersionMap" $.CandiVersionMap "prefix" "") }}
+{{ include "common_base_image" (dict "rootContext" . "k8sVersions" .kubectlForBaseComponents "CandiVersionMap" $.CandiVersionMap "prefix" .prefix) }}
 ---
-{{ include "base_for_go_image" (dict "rootContext" . "k8sVersions" .kubectlForBaseComponents "CandiVersionMap" $.CandiVersionMap "prefix" "") }}
+{{ include "base_for_go_image" (dict "rootContext" . "k8sVersions" .kubectlForBaseComponents "CandiVersionMap" $.CandiVersionMap "prefix" .prefix) }}
 ---
-{{ include "dhctl_src_artifact" (dict "gitPrefix" "") }}
+{{ include "dhctl_src_artifact" (dict "gitPrefix" .prefix) }}
 ---
 {{ include "dhctl_artifact" (dict "GOPROXY" .GOPROXY "CI_COMMIT_TAG" .CI_COMMIT_TAG "DEFAULT_KUBERNETES_VERSION" .defaultKubernetesVersion ) }}
 ---
