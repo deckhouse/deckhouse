@@ -106,7 +106,9 @@
   COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
   COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
 {!{- end }!}
-{!{- if or (eq $provider "gcp") (and (eq $script_arg "run-test") $run_from_issue_or_pr) }!}
+{!{- if and (eq $provider "gcp") (not $run_from_issue_or_pr) }!}
+  TEST_AUTOSCALER_ENABLED: "true"
+{!{- else if and (eq $script_arg "run-test") $run_from_issue_or_pr }!}
   TEST_AUTOSCALER_ENABLED: ${{ needs.check_e2e_labels.outputs.autoscaler }}
 {!{- end }!}
 {!{- if and (eq $script_arg "run-test") $run_from_issue_or_pr }!}
@@ -134,6 +136,7 @@ run: |
     MASTERS_COUNT=${MASTERS_COUNT}
 {!{- if and (eq $script_arg "run-test") $run_from_issue_or_pr }!}
     CIS_ENABLED=${CIS_ENABLED}
+    TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED}
 {!{- end }!}
   "
 {!{ if not (has $commanderProviders $provider) }!}
