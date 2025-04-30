@@ -39,7 +39,6 @@ var (
 	deckhouseDir             = "/deckhouse"
 	VersionFile              = deckhouseDir + "/version"
 	EditionFile              = deckhouseDir + "/edition"
-	DeckhouseImageDigestFile = deckhouseDir + "/image_digest"
 )
 
 var TmpDirName = filepath.Join(os.TempDir(), "dhctl")
@@ -124,5 +123,4 @@ func InitGlobalVars(pwd string) {
 	deckhouseDir = pwd + "/deckhouse"
 	VersionFile = deckhouseDir + "/version"
 	EditionFile = deckhouseDir + "/edition"
-	DeckhouseImageDigestFile = deckhouseDir + "/image_digest"
 }

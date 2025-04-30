@@ -44,7 +44,6 @@ type Checker struct {
 	installConfig           *config.DeckhouseInstaller
 	bootstrapState          State
 	imageDescriptorProvider imageDescriptorProvider
-	buildDigestProvider     buildDigestProvider
 }
 
 type checkStep struct {
@@ -65,9 +64,6 @@ func NewChecker(
 		installConfig:           config,
 		bootstrapState:          bootstrapState,
 		imageDescriptorProvider: remoteDescriptorProvider{},
-		buildDigestProvider: &dhctlBuildDigestProvider{
-			DigestFilePath: app.DeckhouseImageDigestFile,
-		},
 	}
 }
 
@@ -265,9 +261,9 @@ func (pc *Checker) Global(ctx context.Context) error {
 			skipFlag:       app.RegistryCredentialsCheckArgName,
 		},
 		{
-			fun:            pc.CheckDhctlVersionObsolescence,
+			fun:            pc.CheckDhctlEdition,
 			successMessage: "dhctl version is the same",
-			skipFlag:       app.DeckhouseVersionCheckArgName,
+			skipFlag:       app.DeckhouseEditionCheckArgName,
 		},
 		{
 			fun:            pc.CheckCidrIntersection,
