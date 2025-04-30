@@ -170,8 +170,8 @@ function prepare_environment() {
       \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
       \"defaultCRI\": \"${CRI}\",
       \"masterCount\": \"${MASTERS_COUNT}\",
-      \"AWSAccessKey\": \"${AWS_ACCESS_KEY}\",
-      \"AWSSecretKey\": \"${AWS_SECRET_ACCESS_KEY}\",
+      \"awsAccessKey\": \"${AWS_ACCESS_KEY}\",
+      \"awsSecretKey\": \"${AWS_SECRET_ACCESS_KEY}\",
       \"sshPrivateKey\": \"${SSH_KEY}\",
       \"sshUser\": \"${ssh_user}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\"
