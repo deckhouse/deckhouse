@@ -57,6 +57,8 @@ spec:
   selector:
     matchLabels:
       app: registry-incluster-proxy
+      component: system-registry
+      type: incluster-proxy
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -74,11 +76,13 @@ spec:
   selector:
     matchLabels:
       app: registry-incluster-proxy
+      component: system-registry
       type: incluster-proxy
   template:
     metadata:
       labels:
         app: registry-incluster-proxy
+        component: system-registry
         type: incluster-proxy
       annotations:
         registry.deckhouse.io/version: {{ $version | quote }}
