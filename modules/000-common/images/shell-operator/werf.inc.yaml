@@ -22,26 +22,17 @@ import:
   to: /usr/bin/kubectl
   before: setup
 - image: tools/tini
-  add: /
-  to: /
+  add: /usr/bin/tini
   before: setup
-  includePaths:
-  - usr/bin/tini
 - image: tools/bash
   add: /usr/bin/bash
   to: /bin/bash
   before: setup
 - image: tools/jq
-  add: /
-  to: /
+  add: /usr/bin/jq
   before: setup
-  includePaths:
-  - usr/bin/jq
 - image: tools/sed
-  add: /
-  to: /
-  includePaths:
-  - usr/bin/sed
+  add: /usr/bin/sed
   before: setup
 - image: tools/gawk
   add: /
@@ -50,11 +41,7 @@ import:
   - usr/bin/*awk*
   before: setup
 - image: tools/find
-  add: /
-  to: /
-  includePaths:
-    - usr/bin/*find*
-    - usr/bin/xargs
+  add: /usr/bin/find
   before: setup
 imageSpec:
   config:
