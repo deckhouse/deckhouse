@@ -19,19 +19,20 @@ package hooks
 import (
 	"context"
 	"encoding/json"
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
 const (
 	istioSystemNs                = "d8-istio"
 	istioComponentsLabelSelector = "install.operator.istio.io/owning-resource-namespace=d8-istio"
+	istioRootCertConfigMapName   = "istio-ca-root-cert"
 )
 
 var (
@@ -45,17 +46,15 @@ var (
 		Version:  "v1alpha1",
 		Resource: "istiooperators",
 	}
-	//istioClusterCRDs = []schema.GroupVersionResource{
-	//	{Group: "networking.istio.io", Version: "v1alpha3", Resource: "envoyfilters"},
-	//	{Group: "networking.istio.io", Version: "v1alpha3", Resource: "gateways"},
-	//	{Group: "security.istio.io", Version: "v1beta1", Resource: "peerauthentications"},
-	//	{Group: "security.istio.io", Version: "v1beta1", Resource: "requestauthentications"},
-	//	{Group: "deckhouse.io", Version: "v1alpha1", Resource: "IstioMulticluster"},
-	//	{Group: "deckhouse.io", Version: "v1alpha1", Resource: "IstioFederation"},
-	//}
-	istioClusterCRDs = []schema.GroupVersionResource{
-		{Group: "deckhouse.io", Version: "v1alpha1", Resource: "istiomulticlusters"},
-		{Group: "deckhouse.io", Version: "v1alpha1", Resource: "istiofederations"},
+	istioFederationGVR = schema.GroupVersionResource{
+		Group:    "deckhouse.io",
+		Version:  "v1alpha1",
+		Resource: "istiofederations",
+	}
+	istioMulticlusterGVR = schema.GroupVersionResource{
+		Group:    "deckhouse.io",
+		Version:  "v1alpha1",
+		Resource: "istiomulticlusters",
 	}
 )
 
@@ -71,6 +70,56 @@ func purgeOrphanResources(input *go_hook.HookInput, dc dependency.Container) err
 	k8sClient, err := dc.GetK8sClient()
 	if err != nil {
 		return err
+	}
+
+	// Clean up cluster-wide IstioFederation resources
+	federations, err := k8sClient.Dynamic().Resource(istioFederationGVR).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		input.Logger.Warnf("Failed to list IstioFederation resources: %v", err)
+	} else {
+		for _, fed := range federations.Items {
+			_, err = k8sClient.Dynamic().Resource(istioFederationGVR).Patch(context.TODO(), fed.GetName(), types.MergePatchType, patch, metav1.PatchOptions{})
+			if err != nil {
+				input.Logger.Warnf("Failed to remove finalizers from IstioFederation/%s: %v", fed.GetName(), err)
+				continue
+			}
+			input.Logger.Infof("Finalizers from IstioFederation/%s removed", fed.GetName())
+
+			_, fedDeletionTimestampExists := fed.GetAnnotations()["deletionTimestamp"]
+			if !fedDeletionTimestampExists {
+				err := k8sClient.Dynamic().Resource(istioFederationGVR).Delete(context.TODO(), fed.GetName(), metav1.DeleteOptions{})
+				if err != nil {
+					input.Logger.Warnf("Failed to delete IstioFederation/%s: %v", fed.GetName(), err)
+					continue
+				}
+				input.Logger.Infof("IstioFederation/%s deleted", fed.GetName())
+			}
+		}
+	}
+
+	// Clean up cluster-wide IstioMulticluster resources
+	multiclusters, err := k8sClient.Dynamic().Resource(istioMulticlusterGVR).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		input.Logger.Warnf("Failed to list IstioMulticluster resources: %v", err)
+	} else {
+		for _, mc := range multiclusters.Items {
+			_, err = k8sClient.Dynamic().Resource(istioMulticlusterGVR).Patch(context.TODO(), mc.GetName(), types.MergePatchType, patch, metav1.PatchOptions{})
+			if err != nil {
+				input.Logger.Warnf("Failed to remove finalizers from IstioMulticluster/%s: %v", mc.GetName(), err)
+				continue
+			}
+			input.Logger.Infof("Finalizers from IstioMulticluster/%s removed", mc.GetName())
+
+			_, mcDeletionTimestampExists := mc.GetAnnotations()["deletionTimestamp"]
+			if !mcDeletionTimestampExists {
+				err := k8sClient.Dynamic().Resource(istioMulticlusterGVR).Delete(context.TODO(), mc.GetName(), metav1.DeleteOptions{})
+				if err != nil {
+					input.Logger.Warnf("Failed to delete IstioMulticluster/%s: %v", mc.GetName(), err)
+					continue
+				}
+				input.Logger.Infof("IstioMulticluster/%s deleted", mc.GetName())
+			}
+		}
 	}
 
 	ns, _ := k8sClient.CoreV1().Namespaces().Get(context.TODO(), istioSystemNs, metav1.GetOptions{})
@@ -95,6 +144,46 @@ func purgeOrphanResources(input *go_hook.HookInput, dc dependency.Container) err
 				input.Logger.Infof("IstioOperator/%s deleted from namespace %s", iop.GetName(), istioSystemNs)
 			}
 		}
+
+		// Get the creationTimestamp of the istio-ca-root-cert ConfigMap in d8-istio namespace
+		rootCertCM, err := k8sClient.CoreV1().ConfigMaps(istioSystemNs).Get(context.TODO(), istioRootCertConfigMapName, metav1.GetOptions{})
+		if err == nil {
+			// List all namespaces
+			namespaces, err := k8sClient.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
+			if err != nil {
+				return err
+			}
+
+			// Delete istio-ca-root-cert ConfigMaps in all namespaces that match the creationTimestamp
+			for _, namespace := range namespaces.Items {
+				if namespace.Name == istioSystemNs {
+					continue // Skip the d8-istio namespace as we'll handle it later
+				}
+
+				cm, err := k8sClient.CoreV1().ConfigMaps(namespace.Name).Get(context.TODO(), istioRootCertConfigMapName, metav1.GetOptions{})
+				if err != nil {
+					continue // ConfigMap doesn't exist in this namespace
+				}
+
+				if cm.CreationTimestamp == rootCertCM.CreationTimestamp {
+					err := k8sClient.CoreV1().ConfigMaps(namespace.Name).Delete(context.TODO(), istioRootCertConfigMapName, metav1.DeleteOptions{})
+					if err != nil {
+						input.Logger.Warnf("Failed to delete ConfigMap/%s in namespace %s: %v", istioRootCertConfigMapName, namespace.Name, err)
+						continue
+					}
+					input.Logger.Infof("ConfigMap/%s deleted from namespace %s", istioRootCertConfigMapName, namespace.Name)
+				}
+			}
+
+			// Delete the istio-ca-root-cert ConfigMap in d8-istio namespace
+			err = k8sClient.CoreV1().ConfigMaps(istioSystemNs).Delete(context.TODO(), istioRootCertConfigMapName, metav1.DeleteOptions{})
+			if err != nil {
+				input.Logger.Warnf("Failed to delete ConfigMap/%s in namespace %s: %v", istioRootCertConfigMapName, istioSystemNs, err)
+			} else {
+				input.Logger.Infof("ConfigMap/%s deleted from namespace %s", istioRootCertConfigMapName, istioSystemNs)
+			}
+		}
+
 		// delete NS
 		_, nsDeletionTimestampExists := ns.GetAnnotations()["deletionTimestamp"]
 		if !nsDeletionTimestampExists {
@@ -156,41 +245,6 @@ func purgeOrphanResources(input *go_hook.HookInput, dc dependency.Container) err
 			return err
 		}
 		input.Logger.Infof("ValidatingWebhookConfiguration/%s deleted", ivwc.GetName())
-	}
-
-	// delete cluster-wide Custom Resources
-	for _, gvr := range istioClusterCRDs {
-		// Skip if not in our target group
-		if gvr.Group != "deckhouse.io" {
-			continue
-		}
-
-		// Check if API exists first
-		_, err := k8sClient.Discovery().ServerResourcesForGroupVersion(gvr.GroupVersion().String())
-		if err != nil {
-			if errors.IsNotFound(err) || meta.IsNoMatchError(err) {
-				input.Logger.Infof("API GroupVersion %s not found, skipping", gvr.GroupVersion().String())
-				continue
-			}
-			return err
-		}
-
-		// List and delete resources
-		resources, err := k8sClient.Dynamic().Resource(gvr).List(context.TODO(), metav1.ListOptions{})
-		if err != nil {
-			if errors.IsNotFound(err) {
-				continue
-			}
-			return err
-		}
-
-		for _, resource := range resources.Items {
-			err := k8sClient.Dynamic().Resource(gvr).Delete(context.TODO(), resource.GetName(), metav1.DeleteOptions{})
-			if err != nil && !errors.IsNotFound(err) {
-				return err
-			}
-			input.Logger.Infof("%s/%s deleted", gvr.Resource, resource.GetName())
-		}
 	}
 
 	return nil
