@@ -24,4 +24,4 @@ for module in $ENABLED_MODULES; do
  fi
 done
 
-exec /sbin/tini -- /shell-operator "$@"
+exec /usr/bin/tini -- /shell-operator "$@"
