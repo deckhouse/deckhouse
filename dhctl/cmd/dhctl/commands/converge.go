@@ -16,6 +16,7 @@ package commands
 
 import (
 	"context"
+	"reflect"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
@@ -122,6 +123,10 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		}
 		if err != nil {
 			return err
+		}
+
+		if reflect.ValueOf(sshClient).IsNil() {
+			sshClient = nil
 		}
 
 		converger := converge.NewConverger(&converge.Params{
