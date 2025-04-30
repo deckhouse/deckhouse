@@ -65,6 +65,18 @@ func (k *Kubectl) listPods(nodeName string) ([]byte, error) {
 	return cmd.Output()
 }
 
+func (k *Kubectl) PatchCondition(kind, name, condType, status, reason, message string) error {
+	patch := fmt.Sprintf(`{"status":{"conditions":[{"type":"%s", "status":"%s", "reason":"%s", "message":"%s"}]}}`,
+		condType, status, reason, message)
+	return k.patchStatusStrategic(kind, name, patch)
+}
+
+func (k *Kubectl) patchStatusStrategic(kind, name, patch string) error {
+	cmd := k.cmd("patch", kind, name, "--subresource=status", "--type", "strategic", "-p", patch)
+	_, err := cmd.Output()
+	return err
+}
+
 func (k *Kubectl) cmd(args ...string) *exec.Cmd {
 	kArgs := append([]string{}, "--kubeconfig", KubeConfigPath)
 	kArgs = append(kArgs, args...)
