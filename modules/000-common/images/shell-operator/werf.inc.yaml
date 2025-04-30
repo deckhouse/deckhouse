@@ -46,6 +46,12 @@ import:
 - image: tools/findutils
   add: /usr/bin/find
   before: setup
+- image: tools/coreutils
+  add: /
+  to: /
+  includePaths:
+  - usr/bin/*
+  before: setup
 imageSpec:
   config:
     entrypoint: ["/usr/bin/tini", "--", "/shell-operator"]
