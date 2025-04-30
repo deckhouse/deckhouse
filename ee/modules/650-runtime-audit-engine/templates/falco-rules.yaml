@@ -44,10 +44,6 @@ spec:
         name: package_mgmt_ancestor_procs
         condition: proc.pname in (package_mgmt_binaries) or proc.aname[2] in (package_mgmt_binaries) or proc.aname[3] in (package_mgmt_binaries) or proc.aname[4] in (package_mgmt_binaries)
     - macro:
-        name: bin_dir_mkdir
-        condition: |
-          (evt.arg.path startswith /bin/ or evt.arg.path startswith /sbin/ or evt.arg.path startswith /usr/bin/ or evt.arg.path startswith /usr/sbin/)
-    - macro:
         name: bin_dir_rename
         condition: |
           (evt.arg.path startswith /bin/ or evt.arg.path startswith /sbin/ or evt.arg.path startswith /usr/bin/ or evt.arg.path startswith /usr/sbin/ or evt.arg.name startswith /bin/ or evt.arg.name startswith /sbin/ or evt.arg.name startswith /usr/bin/ or evt.arg.name startswith /usr/sbin/ or evt.arg.oldpath startswith /bin/ or evt.arg.oldpath startswith /sbin/ or evt.arg.oldpath startswith /usr/bin/ or evt.arg.oldpath startswith /usr/sbin/ or evt.arg.newpath startswith /bin/ or evt.arg.newpath startswith /sbin/ or evt.arg.newpath startswith /usr/bin/ or evt.arg.newpath startswith /usr/sbin/)
