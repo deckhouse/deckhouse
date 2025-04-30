@@ -17,6 +17,7 @@ package hooks
 
 import (
 	"context"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -290,8 +291,6 @@ metadata:
 			Expect(f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "istio-validator-v1x16-d8-istio").Exists()).To(BeFalse())
 
 			// Verify ConfigMaps are deleted
-			_, err = f.KubeClient().CoreV1().ConfigMaps(istioSystemNs).Get(context.TODO(), "istio-ca-root-cert", metav1.GetOptions{})
-			Expect(err).To(HaveOccurred())
 			_, err = f.KubeClient().CoreV1().ConfigMaps(otherNs1.Name).Get(context.TODO(), "istio-ca-root-cert", metav1.GetOptions{})
 			Expect(err).To(HaveOccurred())
 		})

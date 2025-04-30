@@ -174,14 +174,6 @@ func purgeOrphanResources(input *go_hook.HookInput, dc dependency.Container) err
 					input.Logger.Infof("ConfigMap/%s deleted from namespace %s", istioRootCertConfigMapName, namespace.Name)
 				}
 			}
-
-			// Delete the istio-ca-root-cert ConfigMap in d8-istio namespace
-			err = k8sClient.CoreV1().ConfigMaps(istioSystemNs).Delete(context.TODO(), istioRootCertConfigMapName, metav1.DeleteOptions{})
-			if err != nil {
-				input.Logger.Warnf("Failed to delete ConfigMap/%s in namespace %s: %v", istioRootCertConfigMapName, istioSystemNs, err)
-			} else {
-				input.Logger.Infof("ConfigMap/%s deleted from namespace %s", istioRootCertConfigMapName, istioSystemNs)
-			}
 		}
 
 		// delete NS
