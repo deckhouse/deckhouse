@@ -72,6 +72,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-cloud-provider-huaweicloud:caphc-controller-manager",
 	"system:serviceaccount:d8-cloud-provider-huaweicloud:cloud-controller-manager",
 	"system:serviceaccount:d8-cloud-provider-huaweicloud:cloud-data-discoverer",
+	"system:serviceaccount:d8-cloud-provider-openstack:capo-controller-manager",
 	"system:serviceaccount:d8-cloud-provider-openstack:cloud-controller-manager",
 	"system:serviceaccount:d8-cloud-provider-openstack:cloud-data-discoverer",
 	"system:serviceaccount:d8-cloud-provider-vcd:capcd-controller-manager",

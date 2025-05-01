@@ -83,6 +83,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"huaweicloudCsiDriver":   "imageHash-cloudProviderHuaweicloud-huaweicloudCsiDriver",
 	},
 	"cloudProviderOpenstack": map[string]interface{}{
+		"capoControllerManager":     "imageHash-cloudProviderOpenstack-capoControllerManager",
 		"cinderCsiPlugin128":        "imageHash-cloudProviderOpenstack-cinderCsiPlugin128",
 		"cinderCsiPlugin129":        "imageHash-cloudProviderOpenstack-cinderCsiPlugin129",
 		"cinderCsiPlugin130":        "imageHash-cloudProviderOpenstack-cinderCsiPlugin130",
