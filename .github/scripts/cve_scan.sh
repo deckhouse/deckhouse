@@ -101,11 +101,6 @@ echo "${d8_tags[@]}"
 
 # Scan in loop for provided list of tags
 for d8_tag in "${d8_tags[@]}"; do
-  # Log in to registry before pulling each deckhouse image to avoid registry session end
-  login_dev_registry
-  if [ "${SCAN_TARGET}" == "regular" ]; then
-    login_prod_registry
-  fi
   dd_short_release_tag=""
   dd_full_release_tag=""
   dd_image_version="${d8_tag}"
@@ -115,6 +110,12 @@ for d8_tag in "${d8_tags[@]}"; do
   trivy_registry_pass="${DEV_REGISTRY_PASSWORD}"
   module_reports="${WORKDIR}/deckhouse/${d8_tag}/reports"
   mkdir -p {"${module_reports}","${WORKDIR}/artifacts"}
+
+  # Log in to registry before pulling each deckhouse image to avoid registry session end
+  login_dev_registry
+  if [ "${SCAN_TARGET}" == "regular" ]; then
+    login_prod_registry
+  fi
 
   # if d8_tag is for release - we need to take it from prod registry
   if echo "${d8_tag}"|grep -s "^v[0-9]\.[0-9]*\.[0-9]*$"; then
@@ -198,7 +199,7 @@ for d8_tag in "${d8_tags[@]}"; do
       done
 
       echo "----------------------------------------------"
-      echo "👾 Scaning image ${IMAGE_NAME} of module ${MODULE_NAME} from Deckhouse tag: ${d8_tag}"
+      echo "👾 Scaning Deckhouse image \"${IMAGE_NAME}\" of module \"${MODULE_NAME}\" for tag \"${d8_tag}\""
       echo ""
       if [ "${additional_image_detected}" == true ]; then
         ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --java-db-repository "${TRIVY_JAVA_DB_URL}" --db-repository "${TRIVY_DB_URL}" --exit-code 0 --severity "${SEVERITY}" --format table --scanners vuln --quiet "${d8_image}:${d8_tag}" --username "${trivy_registry_user}" --password "${trivy_registry_pass}" --image-src remote 
@@ -209,7 +210,7 @@ for d8_tag in "${d8_tags[@]}"; do
       fi
 
       echo ""
-      echo " Uploading trivy CVE report for image ${IMAGE_NAME} of ${MODULE_NAME} module"
+      echo " Uploading trivy CVE report for image \"${IMAGE_NAME}\" of \"${MODULE_NAME}\" module"
       echo ""
       curl -X POST \
         --retry 3 \
