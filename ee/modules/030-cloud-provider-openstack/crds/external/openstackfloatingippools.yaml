@@ -1,0 +1,263 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-openstack
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.5
+  name: openstackfloatingippools.infrastructure.cluster.x-k8s.io
+spec:
+  group: infrastructure.cluster.x-k8s.io
+  names:
+    kind: OpenStackFloatingIPPool
+    listKind: OpenStackFloatingIPPoolList
+    plural: openstackfloatingippools
+    singular: openstackfloatingippool
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: OpenStackFloatingIPPool is the Schema for the openstackfloatingippools
+          API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: OpenStackFloatingIPPoolSpec defines the desired state of
+              OpenStackFloatingIPPool.
+            properties:
+              floatingIPNetwork:
+                description: FloatingIPNetwork is the external network to use for
+                  floating ips, if there's only one external network it will be used
+                  by default
+                maxProperties: 1
+                minProperties: 1
+                properties:
+                  filter:
+                    description: Filter specifies a filter to select an OpenStack
+                      network. If provided, cannot be empty.
+                    minProperties: 1
+                    properties:
+                      description:
+                        type: string
+                      name:
+                        type: string
+                      notTags:
+                        description: |-
+                          NotTags is a list of tags to filter by. If specified, resources which
+                          contain all of the given tags will be excluded from the result.
+                        items:
+                          description: |-
+                            NeutronTag represents a tag on a Neutron resource.
+                            It may not be empty and may not contain commas.
+                          minLength: 1
+                          pattern: ^[^,]+$
+                          type: string
+                        type: array
+                        x-kubernetes-list-type: set
+                      notTagsAny:
+                        description: |-
+                          NotTagsAny is a list of tags to filter by. If specified, resources
+                          which contain any of the given tags will be excluded from the result.
+                        items:
+                          description: |-
+                            NeutronTag represents a tag on a Neutron resource.
+                            It may not be empty and may not contain commas.
+                          minLength: 1
+                          pattern: ^[^,]+$
+                          type: string
+                        type: array
+                        x-kubernetes-list-type: set
+                      projectID:
+                        type: string
+                      tags:
+                        description: |-
+                          Tags is a list of tags to filter by. If specified, the resource must
+                          have all of the tags specified to be included in the result.
+                        items:
+                          description: |-
+                            NeutronTag represents a tag on a Neutron resource.
+                            It may not be empty and may not contain commas.
+                          minLength: 1
+                          pattern: ^[^,]+$
+                          type: string
+                        type: array
+                        x-kubernetes-list-type: set
+                      tagsAny:
+                        description: |-
+                          TagsAny is a list of tags to filter by. If specified, the resource
+                          must have at least one of the tags specified to be included in the
+                          result.
+                        items:
+                          description: |-
+                            NeutronTag represents a tag on a Neutron resource.
+                            It may not be empty and may not contain commas.
+                          minLength: 1
+                          pattern: ^[^,]+$
+                          type: string
+                        type: array
+                        x-kubernetes-list-type: set
+                    type: object
+                  id:
+                    description: ID is the ID of the network to use. If ID is provided,
+                      the other filters cannot be provided. Must be in UUID format.
+                    format: uuid
+                    type: string
+                type: object
+              identityRef:
+                description: IdentityRef is a reference to a identity to be used when
+                  reconciling this pool.
+                properties:
+                  cloudName:
+                    description: CloudName specifies the name of the entry in the
+                      clouds.yaml file to use.
+                    type: string
+                  name:
+                    description: |-
+                      Name is the name of a secret in the same namespace as the resource being provisioned.
+                      The secret must contain a key named `clouds.yaml` which contains an OpenStack clouds.yaml file.
+                      The secret may optionally contain a key named `cacert` containing a PEM-encoded CA certificate.
+                    type: string
+                  region:
+                    description: |-
+                      Region specifies an OpenStack region to use. If specified, it overrides
+                      any value in clouds.yaml. If specified for an OpenStackMachine, its
+                      value will be included in providerID.
+                    type: string
+                required:
+                - cloudName
+                - name
+                type: object
+                x-kubernetes-validations:
+                - message: region is immutable
+                  rule: (!has(self.region) && !has(oldSelf.region)) || self.region
+                    == oldSelf.region
+              maxIPs:
+                description: |-
+                  MaxIPs is the maximum number of floating ips that can be allocated from this pool, if nil there is no limit.
+                  If set, the pool will stop allocating floating ips when it reaches this number of ClaimedIPs.
+                type: integer
+              preAllocatedFloatingIPs:
+                description: |-
+                  PreAllocatedFloatingIPs is a list of floating IPs precreated in OpenStack that should be used by this pool.
+                  These are used before allocating new ones and are not deleted from OpenStack when the pool is deleted.
+                items:
+                  type: string
+                type: array
+              reclaimPolicy:
+                description: The stratergy to use for reclaiming floating ips when
+                  they are released from a machine
+                enum:
+                - Retain
+                - Delete
+                type: string
+            required:
+            - identityRef
+            - reclaimPolicy
+            type: object
+          status:
+            description: OpenStackFloatingIPPoolStatus defines the observed state
+              of OpenStackFloatingIPPool.
+            properties:
+              availableIPs:
+                default: []
+                items:
+                  type: string
+                type: array
+              claimedIPs:
+                default: []
+                items:
+                  type: string
+                type: array
+              conditions:
+                description: Conditions provide observations of the operational state
+                  of a Cluster API resource.
+                items:
+                  description: Condition defines an observation of a Cluster API resource
+                    operational state.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        Last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed. If that is not known, then using the time when
+                        the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        A human readable message indicating details about the transition.
+                        This field may be empty.
+                      type: string
+                    reason:
+                      description: |-
+                        The reason for the condition's last transition in CamelCase.
+                        The specific API may choose whether or not this field is considered a guaranteed API.
+                        This field may be empty.
+                      type: string
+                    severity:
+                      description: |-
+                        severity provides an explicit classification of Reason code, so the users or machines can immediately
+                        understand the current situation and act accordingly.
+                        The Severity field MUST be set only when Status=False.
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: |-
+                        type of condition in CamelCase or in foo.example.com/CamelCase.
+                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions
+                        can be useful (see .node.status.conditions), the ability to deconflict is important.
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - status
+                  - type
+                  type: object
+                type: array
+              failedIPs:
+                description: FailedIPs contains a list of floating ips that failed
+                  to be allocated
+                items:
+                  type: string
+                type: array
+              floatingIPNetwork:
+                description: floatingIPNetwork contains information about the network
+                  used for floating ips
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  tags:
+                    items:
+                      type: string
+                    type: array
+                required:
+                - id
+                - name
+                type: object
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

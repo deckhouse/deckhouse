@@ -1,0 +1,1251 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-openstack
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.5
+  name: openstackmachines.infrastructure.cluster.x-k8s.io
+spec:
+  group: infrastructure.cluster.x-k8s.io
+  names:
+    categories:
+    - cluster-api
+    kind: OpenStackMachine
+    listKind: OpenStackMachineList
+    plural: openstackmachines
+    shortNames:
+    - osm
+    singular: openstackmachine
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: Cluster to which this OpenStackMachine belongs
+      jsonPath: .metadata.labels.cluster\.x-k8s\.io/cluster-name
+      name: Cluster
+      type: string
+    - description: Machine ready status
+      jsonPath: .status.ready
+      name: Ready
+      type: string
+    - description: OpenStack instance ID
+      jsonPath: .spec.providerID
+      name: ProviderID
+      type: string
+    - description: Machine object which owns with this OpenStackMachine
+      jsonPath: .metadata.ownerReferences[?(@.kind=="Machine")].name
+      name: Machine
+      type: string
+    - description: Time duration since creation of OpenStackMachine
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: OpenStackMachine is the Schema for the openstackmachines API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: OpenStackMachineSpec defines the desired state of OpenStackMachine.
+            properties:
+              additionalBlockDevices:
+                description: AdditionalBlockDevices is a list of specifications for
+                  additional block devices to attach to the server instance
+                items:
+                  description: AdditionalBlockDevice is a block device to attach to
+                    the server.
+                  properties:
+                    name:
+                      description: |-
+                        Name of the block device in the context of a machine.
+                        If the block device is a volume, the Cinder volume will be named
+                        as a combination of the machine name and this name.
+                        Also, this name will be used for tagging the block device.
+                        Information about the block device tag can be obtained from the OpenStack
+                        metadata API or the config drive.
+                        Name cannot be 'root', which is reserved for the root volume.
+                      type: string
+                    sizeGiB:
+                      description: SizeGiB is the size of the block device in gibibytes
+                        (GiB).
+                      minimum: 1
+                      type: integer
+                    storage:
+                      description: |-
+                        Storage specifies the storage type of the block device and
+                        additional storage options.
+                      properties:
+                        type:
+                          description: |-
+                            Type is the type of block device to create.
+                            This can be either "Volume" or "Local".
+                          type: string
+                        volume:
+                          description: Volume contains additional storage options
+                            for a volume block device.
+                          properties:
+                            availabilityZone:
+                              description: |-
+                                AvailabilityZone is the volume availability zone to create the volume
+                                in. If not specified, the volume will be created without an explicit
+                                availability zone.
+                              properties:
+                                from:
+                                  default: Name
+                                  description: |-
+                                    From specifies where we will obtain the availability zone for the
+                                    volume. The options are "Name" and "Machine". If "Name" is specified
+                                    then the Name field must also be specified. If "Machine" is specified
+                                    the volume will use the value of FailureDomain, if any, from the
+                                    associated Machine.
+                                  enum:
+                                  - Name
+                                  - Machine
+                                  type: string
+                                name:
+                                  description: |-
+                                    Name is the name of a volume availability zone to use. It is required
+                                    if From is "Name". The volume availability zone name may not contain
+                                    spaces.
+                                  minLength: 1
+                                  pattern: ^[^ ]+$
+                                  type: string
+                              type: object
+                              x-kubernetes-validations:
+                              - message: name is required when from is 'Name' or default
+                                rule: '!has(self.from) || self.from == ''Name'' ?
+                                  has(self.name) : !has(self.name)'
+                            type:
+                              description: |-
+                                Type is the Cinder volume type of the volume.
+                                If omitted, the default Cinder volume type that is configured in the OpenStack cloud
+                                will be used.
+                              type: string
+                          type: object
+                      required:
+                      - type
+                      type: object
+                  required:
+                  - name
+                  - sizeGiB
+                  - storage
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
+              configDrive:
+                description: Config Drive support
+                type: boolean
+              flavor:
+                description: The flavor reference for the flavor for your server instance.
+                minLength: 1
+                type: string
+              flavorID:
+                description: |-
+                  FlavorID allows flavors to be specified by ID.  This field takes precedence
+                  over Flavor.
+                minLength: 1
+                type: string
+              floatingIPPoolRef:
+                description: |-
+                  floatingIPPoolRef is a reference to a IPPool that will be assigned
+                  to an IPAddressClaim. Once the IPAddressClaim is fulfilled, the FloatingIP
+                  will be assigned to the OpenStackMachine.
+                properties:
+                  apiGroup:
+                    description: |-
+                      APIGroup is the group for the resource being referenced.
+                      If APIGroup is not specified, the specified Kind must be in the core API group.
+                      For any other third-party types, APIGroup is required.
+                    type: string
+                  kind:
+                    description: Kind is the type of resource being referenced
+                    type: string
+                  name:
+                    description: Name is the name of resource being referenced
+                    type: string
+                required:
+                - kind
+                - name
+                type: object
+                x-kubernetes-map-type: atomic
+              identityRef:
+                description: |-
+                  IdentityRef is a reference to a secret holding OpenStack credentials
+                  to be used when reconciling this machine. If not specified, the
+                  credentials specified in the cluster will be used.
+                properties:
+                  cloudName:
+                    description: CloudName specifies the name of the entry in the
+                      clouds.yaml file to use.
+                    type: string
+                  name:
+                    description: |-
+                      Name is the name of a secret in the same namespace as the resource being provisioned.
+                      The secret must contain a key named `clouds.yaml` which contains an OpenStack clouds.yaml file.
+                      The secret may optionally contain a key named `cacert` containing a PEM-encoded CA certificate.
+                    type: string
+                  region:
+                    description: |-
+                      Region specifies an OpenStack region to use. If specified, it overrides
+                      any value in clouds.yaml. If specified for an OpenStackMachine, its
+                      value will be included in providerID.
+                    type: string
+                required:
+                - cloudName
+                - name
+                type: object
+                x-kubernetes-validations:
+                - message: region is immutable
+                  rule: (!has(self.region) && !has(oldSelf.region)) || self.region
+                    == oldSelf.region
+              image:
+                description: |-
+                  The image to use for your server instance.
+                  If the rootVolume is specified, this will be used when creating the root volume.
+                maxProperties: 1
+                minProperties: 1
+                properties:
+                  filter:
+                    description: |-
+                      Filter describes a query for an image. If specified, the combination
+                      of name and tags must return a single matching image or an error will
+                      be raised.
+                    minProperties: 1
+                    properties:
+                      name:
+                        description: The name of the desired image. If specified,
+                          the combination of name and tags must return a single matching
+                          image or an error will be raised.
+                        type: string
+                      tags:
+                        description: The tags associated with the desired image. If
+                          specified, the combination of name and tags must return
+                          a single matching image or an error will be raised.
+                        items:
+                          type: string
+                        type: array
+                        x-kubernetes-list-type: set
+                    type: object
+                  id:
+                    description: ID is the uuid of the image. ID will not be validated
+                      before use.
+                    format: uuid
+                    type: string
+                  imageRef:
+                    description: |-
+                      ImageRef is a reference to an ORC Image in the same namespace as the
+                      referring object.
+                    properties:
+                      name:
+                        description: Name is the name of the referenced resource
+                        type: string
+                    required:
+                    - name
+                    type: object
+                type: object
+              ports:
+                description: |-
+                  Ports to be attached to the server instance. They are created if a port with the given name does not already exist.
+                  If not specified a default port will be added for the default cluster network.
+                items:
+                  properties:
+                    adminStateUp:
+                      description: AdminStateUp specifies whether the port should
+                        be created in the up (true) or down (false) state. The default
+                        is up.
+                      type: boolean
+                    allowedAddressPairs:
+                      description: |-
+                        AllowedAddressPairs is a list of address pairs which Neutron will
+                        allow the port to send traffic from in addition to the port's
+                        addresses. If not specified, the MAC Address will be the MAC Address
+                        of the port. Depending on the configuration of Neutron, it may be
+                        supported to specify a CIDR instead of a specific IP address.
+                      items:
+                        properties:
+                          ipAddress:
+                            description: |-
+                              IPAddress is the IP address of the allowed address pair. Depending on
+                              the configuration of Neutron, it may be supported to specify a CIDR
+                              instead of a specific IP address.
+                            type: string
+                          macAddress:
+                            description: |-
+                              MACAddress is the MAC address of the allowed address pair. If not
+                              specified, the MAC address will be the MAC address of the port.
+                            type: string
+                        required:
+                        - ipAddress
+                        type: object
+                      type: array
+                    description:
+                      description: Description is a human-readable description for
+                        the port.
+                      type: string
+                    disablePortSecurity:
+                      description: |-
+                        DisablePortSecurity enables or disables the port security when set.
+                        When not set, it takes the value of the corresponding field at the network level.
+                      type: boolean
+                    fixedIPs:
+                      description: FixedIPs is a list of pairs of subnet and/or IP
+                        address to assign to the port. If specified, these must be
+                        subnets of the port's network.
+                      items:
+                        properties:
+                          ipAddress:
+                            description: |-
+                              IPAddress is a specific IP address to assign to the port. If Subnet
+                              is also specified, IPAddress must be a valid IP address in the
+                              subnet. If Subnet is not specified, IPAddress must be a valid IP
+                              address in any subnet of the port's network.
+                            type: string
+                          subnet:
+                            description: |-
+                              Subnet is an openstack subnet query that will return the id of a subnet to create
+                              the fixed IP of a port in. This query must not return more than one subnet.
+                            maxProperties: 1
+                            minProperties: 1
+                            properties:
+                              filter:
+                                description: Filter specifies a filter to select the
+                                  subnet. It must match exactly one subnet.
+                                minProperties: 1
+                                properties:
+                                  cidr:
+                                    type: string
+                                  description:
+                                    type: string
+                                  gatewayIP:
+                                    type: string
+                                  ipVersion:
+                                    type: integer
+                                  ipv6AddressMode:
+                                    type: string
+                                  ipv6RAMode:
+                                    type: string
+                                  name:
+                                    type: string
+                                  notTags:
+                                    description: |-
+                                      NotTags is a list of tags to filter by. If specified, resources which
+                                      contain all of the given tags will be excluded from the result.
+                                    items:
+                                      description: |-
+                                        NeutronTag represents a tag on a Neutron resource.
+                                        It may not be empty and may not contain commas.
+                                      minLength: 1
+                                      pattern: ^[^,]+$
+                                      type: string
+                                    type: array
+                                    x-kubernetes-list-type: set
+                                  notTagsAny:
+                                    description: |-
+                                      NotTagsAny is a list of tags to filter by. If specified, resources
+                                      which contain any of the given tags will be excluded from the result.
+                                    items:
+                                      description: |-
+                                        NeutronTag represents a tag on a Neutron resource.
+                                        It may not be empty and may not contain commas.
+                                      minLength: 1
+                                      pattern: ^[^,]+$
+                                      type: string
+                                    type: array
+                                    x-kubernetes-list-type: set
+                                  projectID:
+                                    type: string
+                                  tags:
+                                    description: |-
+                                      Tags is a list of tags to filter by. If specified, the resource must
+                                      have all of the tags specified to be included in the result.
+                                    items:
+                                      description: |-
+                                        NeutronTag represents a tag on a Neutron resource.
+                                        It may not be empty and may not contain commas.
+                                      minLength: 1
+                                      pattern: ^[^,]+$
+                                      type: string
+                                    type: array
+                                    x-kubernetes-list-type: set
+                                  tagsAny:
+                                    description: |-
+                                      TagsAny is a list of tags to filter by. If specified, the resource
+                                      must have at least one of the tags specified to be included in the
+                                      result.
+                                    items:
+                                      description: |-
+                                        NeutronTag represents a tag on a Neutron resource.
+                                        It may not be empty and may not contain commas.
+                                      minLength: 1
+                                      pattern: ^[^,]+$
+                                      type: string
+                                    type: array
+                                    x-kubernetes-list-type: set
+                                type: object
+                              id:
+                                description: ID is the uuid of the subnet. It will
+                                  not be validated.
+                                format: uuid
+                                type: string
+                            type: object
+                        type: object
+                      type: array
+                      x-kubernetes-list-type: atomic
+                    hostID:
+                      description: HostID specifies the ID of the host where the port
+                        resides.
+                      type: string
+                    macAddress:
+                      description: MACAddress specifies the MAC address of the port.
+                        If not specified, the MAC address will be generated.
+                      type: string
+                    nameSuffix:
+                      description: NameSuffix will be appended to the name of the
+                        port if specified. If unspecified, instead the 0-based index
+                        of the port in the list is used.
+                      type: string
+                    network:
+                      description: |-
+                        Network is a query for an openstack network that the port will be created or discovered on.
+                        This will fail if the query returns more than one network.
+                      maxProperties: 1
+                      minProperties: 1
+                      properties:
+                        filter:
+                          description: Filter specifies a filter to select an OpenStack
+                            network. If provided, cannot be empty.
+                          minProperties: 1
+                          properties:
+                            description:
+                              type: string
+                            name:
+                              type: string
+                            notTags:
+                              description: |-
+                                NotTags is a list of tags to filter by. If specified, resources which
+                                contain all of the given tags will be excluded from the result.
+                              items:
+                                description: |-
+                                  NeutronTag represents a tag on a Neutron resource.
+                                  It may not be empty and may not contain commas.
+                                minLength: 1
+                                pattern: ^[^,]+$
+                                type: string
+                              type: array
+                              x-kubernetes-list-type: set
+                            notTagsAny:
+                              description: |-
+                                NotTagsAny is a list of tags to filter by. If specified, resources
+                                which contain any of the given tags will be excluded from the result.
+                              items:
+                                description: |-
+                                  NeutronTag represents a tag on a Neutron resource.
+                                  It may not be empty and may not contain commas.
+                                minLength: 1
+                                pattern: ^[^,]+$
+                                type: string
+                              type: array
+                              x-kubernetes-list-type: set
+                            projectID:
+                              type: string
+                            tags:
+                              description: |-
+                                Tags is a list of tags to filter by. If specified, the resource must
+                                have all of the tags specified to be included in the result.
+                              items:
+                                description: |-
+                                  NeutronTag represents a tag on a Neutron resource.
+                                  It may not be empty and may not contain commas.
+                                minLength: 1
+                                pattern: ^[^,]+$
+                                type: string
+                              type: array
+                              x-kubernetes-list-type: set
+                            tagsAny:
+                              description: |-
+                                TagsAny is a list of tags to filter by. If specified, the resource
+                                must have at least one of the tags specified to be included in the
+                                result.
+                              items:
+                                description: |-
+                                  NeutronTag represents a tag on a Neutron resource.
+                                  It may not be empty and may not contain commas.
+                                minLength: 1
+                                pattern: ^[^,]+$
+                                type: string
+                              type: array
+                              x-kubernetes-list-type: set
+                          type: object
+                        id:
+                          description: ID is the ID of the network to use. If ID is
+                            provided, the other filters cannot be provided. Must be
+                            in UUID format.
+                          format: uuid
+                          type: string
+                      type: object
+                    profile:
+                      description: |-
+                        Profile is a set of key-value pairs that are used for binding
+                        details. We intentionally don't expose this as a map[string]string
+                        because we only want to enable the users to set the values of the
+                        keys that are known to work in OpenStack Networking API.  See
+                        https://docs.openstack.org/api-ref/network/v2/index.html?expanded=create-port-detail#create-port
+                        To set profiles, your tenant needs permissions rule:create_port, and
+                        rule:create_port:binding:profile
+                      properties:
+                        ovsHWOffload:
+                          description: |-
+                            OVSHWOffload enables or disables the OVS hardware offload feature.
+                            This flag is not required on OpenStack clouds since Yoga as Nova will set it automatically when the port is attached.
+                            See: https://bugs.launchpad.net/nova/+bug/2020813
+                          type: boolean
+                        trustedVF:
+                          description: TrustedVF enables or disables the “trusted
+                            mode” for the VF.
+                          type: boolean
+                      type: object
+                    propagateUplinkStatus:
+                      description: PropageteUplinkStatus enables or disables the propagate
+                        uplink status on the port.
+                      type: boolean
+                    securityGroups:
+                      description: SecurityGroups is a list of the names, uuids, filters
+                        or any combination these of the security groups to assign
+                        to the instance.
+                      items:
+                        description: SecurityGroupParam specifies an OpenStack security
+                          group. It may be specified by ID or filter, but not both.
+                        maxProperties: 1
+                        minProperties: 1
+                        properties:
+                          filter:
+                            description: Filter specifies a query to select an OpenStack
+                              security group. If provided, cannot be empty.
+                            minProperties: 1
+                            properties:
+                              description:
+                                type: string
+                              name:
+                                type: string
+                              notTags:
+                                description: |-
+                                  NotTags is a list of tags to filter by. If specified, resources which
+                                  contain all of the given tags will be excluded from the result.
+                                items:
+                                  description: |-
+                                    NeutronTag represents a tag on a Neutron resource.
+                                    It may not be empty and may not contain commas.
+                                  minLength: 1
+                                  pattern: ^[^,]+$
+                                  type: string
+                                type: array
+                                x-kubernetes-list-type: set
+                              notTagsAny:
+                                description: |-
+                                  NotTagsAny is a list of tags to filter by. If specified, resources
+                                  which contain any of the given tags will be excluded from the result.
+                                items:
+                                  description: |-
+                                    NeutronTag represents a tag on a Neutron resource.
+                                    It may not be empty and may not contain commas.
+                                  minLength: 1
+                                  pattern: ^[^,]+$
+                                  type: string
+                                type: array
+                                x-kubernetes-list-type: set
+                              projectID:
+                                type: string
+                              tags:
+                                description: |-
+                                  Tags is a list of tags to filter by. If specified, the resource must
+                                  have all of the tags specified to be included in the result.
+                                items:
+                                  description: |-
+                                    NeutronTag represents a tag on a Neutron resource.
+                                    It may not be empty and may not contain commas.
+                                  minLength: 1
+                                  pattern: ^[^,]+$
+                                  type: string
+                                type: array
+                                x-kubernetes-list-type: set
+                              tagsAny:
+                                description: |-
+                                  TagsAny is a list of tags to filter by. If specified, the resource
+                                  must have at least one of the tags specified to be included in the
+                                  result.
+                                items:
+                                  description: |-
+                                    NeutronTag represents a tag on a Neutron resource.
+                                    It may not be empty and may not contain commas.
+                                  minLength: 1
+                                  pattern: ^[^,]+$
+                                  type: string
+                                type: array
+                                x-kubernetes-list-type: set
+                            type: object
+                          id:
+                            description: ID is the ID of the security group to use.
+                              If ID is provided, the other filters cannot be provided.
+                              Must be in UUID format.
+                            format: uuid
+                            type: string
+                        type: object
+                      type: array
+                      x-kubernetes-list-type: atomic
+                    tags:
+                      description: |-
+                        Tags applied to the port (and corresponding trunk, if a trunk is configured.)
+                        These tags are applied in addition to the instance's tags, which will also be applied to the port.
+                      items:
+                        type: string
+                      type: array
+                      x-kubernetes-list-type: set
+                    trunk:
+                      description: |-
+                        Trunk specifies whether trunking is enabled at the port level. If not
+                        provided the value is inherited from the machine, or false for a
+                        bastion host.
+                      type: boolean
+                    valueSpecs:
+                      description: |-
+                        Value specs are extra parameters to include in the API request with OpenStack.
+                        This is an extension point for the API, so what they do and if they are supported,
+                        depends on the specific OpenStack implementation.
+                      items:
+                        description: ValueSpec represents a single value_spec key-value
+                          pair.
+                        properties:
+                          key:
+                            description: Key is the key in the key-value pair.
+                            type: string
+                          name:
+                            description: |-
+                              Name is the name of the key-value pair.
+                              This is just for identifying the pair and will not be sent to the OpenStack API.
+                            type: string
+                          value:
+                            description: Value is the value in the key-value pair.
+                            type: string
+                        required:
+                        - key
+                        - name
+                        - value
+                        type: object
+                      type: array
+                      x-kubernetes-list-map-keys:
+                      - name
+                      x-kubernetes-list-type: map
+                    vnicType:
+                      description: |-
+                        VNICType specifies the type of vNIC which this port should be
+                        attached to. This is used to determine which mechanism driver(s) to
+                        be used to bind the port. The valid values are normal, macvtap,
+                        direct, baremetal, direct-physical, virtio-forwarder, smart-nic and
+                        remote-managed, although these values will not be validated in this
+                        API to ensure compatibility with future neutron changes or custom
+                        implementations. What type of vNIC is actually available depends on
+                        deployments. If not specified, the Neutron default value is used.
+                      type: string
+                  type: object
+                type: array
+              providerID:
+                description: ProviderID is the unique identifier as specified by the
+                  cloud provider.
+                type: string
+              rootVolume:
+                description: The volume metadata to boot from
+                properties:
+                  availabilityZone:
+                    description: |-
+                      AvailabilityZone is the volume availability zone to create the volume
+                      in. If not specified, the volume will be created without an explicit
+                      availability zone.
+                    properties:
+                      from:
+                        default: Name
+                        description: |-
+                          From specifies where we will obtain the availability zone for the
+                          volume. The options are "Name" and "Machine". If "Name" is specified
+                          then the Name field must also be specified. If "Machine" is specified
+                          the volume will use the value of FailureDomain, if any, from the
+                          associated Machine.
+                        enum:
+                        - Name
+                        - Machine
+                        type: string
+                      name:
+                        description: |-
+                          Name is the name of a volume availability zone to use. It is required
+                          if From is "Name". The volume availability zone name may not contain
+                          spaces.
+                        minLength: 1
+                        pattern: ^[^ ]+$
+                        type: string
+                    type: object
+                    x-kubernetes-validations:
+                    - message: name is required when from is 'Name' or default
+                      rule: '!has(self.from) || self.from == ''Name'' ? has(self.name)
+                        : !has(self.name)'
+                  sizeGiB:
+                    description: SizeGiB is the size of the block device in gibibytes
+                      (GiB).
+                    minimum: 1
+                    type: integer
+                  type:
+                    description: |-
+                      Type is the Cinder volume type of the volume.
+                      If omitted, the default Cinder volume type that is configured in the OpenStack cloud
+                      will be used.
+                    type: string
+                required:
+                - sizeGiB
+                type: object
+              schedulerHintAdditionalProperties:
+                description: |-
+                  SchedulerHintAdditionalProperties are arbitrary key/value pairs that provide additional hints
+                  to the OpenStack scheduler. These hints can influence how instances are placed on the infrastructure,
+                  such as specifying certain host aggregates or availability zones.
+                items:
+                  description: |-
+                    SchedulerHintAdditionalProperty represents a single additional property for a scheduler hint.
+                    It includes a Name to identify the property and a Value that can be of various types.
+                  properties:
+                    name:
+                      description: |-
+                        Name is the name of the scheduler hint property.
+                        It is a unique identifier for the property.
+                      minLength: 1
+                      type: string
+                    value:
+                      description: |-
+                        Value is the value of the scheduler hint property, which can be of various types
+                        (e.g., bool, string, int). The type is indicated by the Value.Type field.
+                      properties:
+                        bool:
+                          description: |-
+                            Bool is the boolean value of the scheduler hint, used when Type is "Bool".
+                            This field is required if type is 'Bool', and must not be set otherwise.
+                          type: boolean
+                        number:
+                          description: |-
+                            Number is the integer value of the scheduler hint, used when Type is "Number".
+                            This field is required if type is 'Number', and must not be set otherwise.
+                          type: integer
+                        string:
+                          description: |-
+                            String is the string value of the scheduler hint, used when Type is "String".
+                            This field is required if type is 'String', and must not be set otherwise.
+                          maxLength: 255
+                          minLength: 1
+                          type: string
+                        type:
+                          description: |-
+                            Type represents the type of the value.
+                            Valid values are Bool, String, and Number.
+                          enum:
+                          - Bool
+                          - String
+                          - Number
+                          type: string
+                      required:
+                      - type
+                      type: object
+                      x-kubernetes-validations:
+                      - message: bool is required when type is Bool, and forbidden
+                          otherwise
+                        rule: 'has(self.type) && self.type == ''Bool'' ? has(self.bool)
+                          : !has(self.bool)'
+                      - message: number is required when type is Number, and forbidden
+                          otherwise
+                        rule: 'has(self.type) && self.type == ''Number'' ? has(self.number)
+                          : !has(self.number)'
+                      - message: string is required when type is String, and forbidden
+                          otherwise
+                        rule: 'has(self.type) && self.type == ''String'' ? has(self.string)
+                          : !has(self.string)'
+                  required:
+                  - name
+                  - value
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
+              securityGroups:
+                description: The names of the security groups to assign to the instance
+                items:
+                  description: SecurityGroupParam specifies an OpenStack security
+                    group. It may be specified by ID or filter, but not both.
+                  maxProperties: 1
+                  minProperties: 1
+                  properties:
+                    filter:
+                      description: Filter specifies a query to select an OpenStack
+                        security group. If provided, cannot be empty.
+                      minProperties: 1
+                      properties:
+                        description:
+                          type: string
+                        name:
+                          type: string
+                        notTags:
+                          description: |-
+                            NotTags is a list of tags to filter by. If specified, resources which
+                            contain all of the given tags will be excluded from the result.
+                          items:
+                            description: |-
+                              NeutronTag represents a tag on a Neutron resource.
+                              It may not be empty and may not contain commas.
+                            minLength: 1
+                            pattern: ^[^,]+$
+                            type: string
+                          type: array
+                          x-kubernetes-list-type: set
+                        notTagsAny:
+                          description: |-
+                            NotTagsAny is a list of tags to filter by. If specified, resources
+                            which contain any of the given tags will be excluded from the result.
+                          items:
+                            description: |-
+                              NeutronTag represents a tag on a Neutron resource.
+                              It may not be empty and may not contain commas.
+                            minLength: 1
+                            pattern: ^[^,]+$
+                            type: string
+                          type: array
+                          x-kubernetes-list-type: set
+                        projectID:
+                          type: string
+                        tags:
+                          description: |-
+                            Tags is a list of tags to filter by. If specified, the resource must
+                            have all of the tags specified to be included in the result.
+                          items:
+                            description: |-
+                              NeutronTag represents a tag on a Neutron resource.
+                              It may not be empty and may not contain commas.
+                            minLength: 1
+                            pattern: ^[^,]+$
+                            type: string
+                          type: array
+                          x-kubernetes-list-type: set
+                        tagsAny:
+                          description: |-
+                            TagsAny is a list of tags to filter by. If specified, the resource
+                            must have at least one of the tags specified to be included in the
+                            result.
+                          items:
+                            description: |-
+                              NeutronTag represents a tag on a Neutron resource.
+                              It may not be empty and may not contain commas.
+                            minLength: 1
+                            pattern: ^[^,]+$
+                            type: string
+                          type: array
+                          x-kubernetes-list-type: set
+                      type: object
+                    id:
+                      description: ID is the ID of the security group to use. If ID
+                        is provided, the other filters cannot be provided. Must be
+                        in UUID format.
+                      format: uuid
+                      type: string
+                  type: object
+                type: array
+              serverGroup:
+                description: The server group to assign the machine to.
+                maxProperties: 1
+                minProperties: 1
+                properties:
+                  filter:
+                    description: Filter specifies a query to select an OpenStack server
+                      group. If provided, it cannot be empty.
+                    minProperties: 1
+                    properties:
+                      name:
+                        description: Name is the name of a server group to look for.
+                        type: string
+                    type: object
+                  id:
+                    description: ID is the ID of the server group to use.
+                    format: uuid
+                    type: string
+                type: object
+              serverMetadata:
+                description: Metadata mapping. Allows you to create a map of key value
+                  pairs to add to the server instance.
+                items:
+                  properties:
+                    key:
+                      description: Key is the server metadata key
+                      maxLength: 255
+                      type: string
+                    value:
+                      description: Value is the server metadata value
+                      maxLength: 255
+                      type: string
+                  required:
+                  - key
+                  - value
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - key
+                x-kubernetes-list-type: map
+              sshKeyName:
+                description: The ssh key to inject in the instance
+                type: string
+              tags:
+                description: |-
+                  Tags which will be added to the machine and all dependent resources
+                  which support them. These are in addition to Tags defined on the
+                  cluster.
+                  Requires Nova api 2.52 minimum!
+                items:
+                  type: string
+                type: array
+                x-kubernetes-list-type: set
+              trunk:
+                description: Whether the server instance is created on a trunk port
+                  or not.
+                type: boolean
+            required:
+            - image
+            type: object
+            x-kubernetes-validations:
+            - message: at least one of flavor or flavorID must be set
+              rule: (has(self.flavor) || has(self.flavorID))
+          status:
+            description: OpenStackMachineStatus defines the observed state of OpenStackMachine.
+            properties:
+              addresses:
+                description: Addresses contains the OpenStack instance associated
+                  addresses.
+                items:
+                  description: NodeAddress contains information for the node's address.
+                  properties:
+                    address:
+                      description: The node address.
+                      type: string
+                    type:
+                      description: Node address type, one of Hostname, ExternalIP
+                        or InternalIP.
+                      type: string
+                  required:
+                  - address
+                  - type
+                  type: object
+                type: array
+              conditions:
+                description: Conditions provide observations of the operational state
+                  of a Cluster API resource.
+                items:
+                  description: Condition defines an observation of a Cluster API resource
+                    operational state.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        Last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed. If that is not known, then using the time when
+                        the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        A human readable message indicating details about the transition.
+                        This field may be empty.
+                      type: string
+                    reason:
+                      description: |-
+                        The reason for the condition's last transition in CamelCase.
+                        The specific API may choose whether or not this field is considered a guaranteed API.
+                        This field may be empty.
+                      type: string
+                    severity:
+                      description: |-
+                        severity provides an explicit classification of Reason code, so the users or machines can immediately
+                        understand the current situation and act accordingly.
+                        The Severity field MUST be set only when Status=False.
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: |-
+                        type of condition in CamelCase or in foo.example.com/CamelCase.
+                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions
+                        can be useful (see .node.status.conditions), the ability to deconflict is important.
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - status
+                  - type
+                  type: object
+                type: array
+              failureMessage:
+                description: |-
+                  FailureMessage will be set in the event that there is a terminal problem
+                  reconciling the Machine and will contain a more verbose string suitable
+                  for logging and human consumption.
+
+                  This field should not be set for transitive errors that a controller
+                  faces that are expected to be fixed automatically over
+                  time (like service outages), but instead indicate that something is
+                  fundamentally wrong with the Machine's spec or the configuration of
+                  the controller, and that manual intervention is required. Examples
+                  of terminal errors would be invalid combinations of settings in the
+                  spec, values that are unsupported by the controller, or the
+                  responsible controller itself being critically misconfigured.
+
+                  Any transient errors that occur during the reconciliation of Machines
+                  can be added as events to the Machine object and/or logged in the
+                  controller's output.
+                type: string
+              failureReason:
+                description: DeprecatedCAPIMachineStatusError defines errors states
+                  for Machine objects.
+                type: string
+              instanceID:
+                description: InstanceID is the OpenStack instance ID for this machine.
+                type: string
+              instanceState:
+                description: |-
+                  InstanceState is the state of the OpenStack instance for this machine.
+                  This field is not set anymore by the OpenStackMachine controller.
+                  Instead, it's set by the OpenStackServer controller.
+                type: string
+              ready:
+                description: Ready is true when the provider resource is ready.
+                type: boolean
+              resolved:
+                description: |-
+                  Resolved contains parts of the machine spec with all external
+                  references fully resolved.
+                properties:
+                  flavorID:
+                    description: FlavorID is the ID of the flavor to use.
+                    type: string
+                  imageID:
+                    description: ImageID is the ID of the image to use for the machine
+                      and is calculated based on ImageFilter.
+                    type: string
+                  ports:
+                    description: Ports is the fully resolved list of ports to create
+                      for the machine.
+                    items:
+                      description: ResolvedPortSpec is a PortOpts with all contained
+                        references fully resolved.
+                      properties:
+                        adminStateUp:
+                          description: AdminStateUp specifies whether the port should
+                            be created in the up (true) or down (false) state. The
+                            default is up.
+                          type: boolean
+                        allowedAddressPairs:
+                          description: |-
+                            AllowedAddressPairs is a list of address pairs which Neutron will
+                            allow the port to send traffic from in addition to the port's
+                            addresses. If not specified, the MAC Address will be the MAC Address
+                            of the port. Depending on the configuration of Neutron, it may be
+                            supported to specify a CIDR instead of a specific IP address.
+                          items:
+                            properties:
+                              ipAddress:
+                                description: |-
+                                  IPAddress is the IP address of the allowed address pair. Depending on
+                                  the configuration of Neutron, it may be supported to specify a CIDR
+                                  instead of a specific IP address.
+                                type: string
+                              macAddress:
+                                description: |-
+                                  MACAddress is the MAC address of the allowed address pair. If not
+                                  specified, the MAC address will be the MAC address of the port.
+                                type: string
+                            required:
+                            - ipAddress
+                            type: object
+                          type: array
+                        description:
+                          description: Description is a human-readable description
+                            for the port.
+                          type: string
+                        disablePortSecurity:
+                          description: |-
+                            DisablePortSecurity enables or disables the port security when set.
+                            When not set, it takes the value of the corresponding field at the network level.
+                          type: boolean
+                        fixedIPs:
+                          description: FixedIPs is a list of pairs of subnet and/or
+                            IP address to assign to the port. If specified, these
+                            must be subnets of the port's network.
+                          items:
+                            description: ResolvedFixedIP is a FixedIP with the Subnet
+                              resolved to an ID.
+                            properties:
+                              ipAddress:
+                                description: |-
+                                  IPAddress is a specific IP address to assign to the port. If SubnetID
+                                  is also specified, IPAddress must be a valid IP address in the
+                                  subnet. If Subnet is not specified, IPAddress must be a valid IP
+                                  address in any subnet of the port's network.
+                                type: string
+                              subnet:
+                                description: SubnetID is the id of a subnet to create
+                                  the fixed IP of a port in.
+                                type: string
+                            type: object
+                          type: array
+                          x-kubernetes-list-type: atomic
+                        hostID:
+                          description: HostID specifies the ID of the host where the
+                            port resides.
+                          type: string
+                        macAddress:
+                          description: MACAddress specifies the MAC address of the
+                            port. If not specified, the MAC address will be generated.
+                          type: string
+                        name:
+                          description: Name is the name of the port.
+                          type: string
+                        networkID:
+                          description: NetworkID is the ID of the network the port
+                            will be created in.
+                          type: string
+                        profile:
+                          description: |-
+                            Profile is a set of key-value pairs that are used for binding
+                            details. We intentionally don't expose this as a map[string]string
+                            because we only want to enable the users to set the values of the
+                            keys that are known to work in OpenStack Networking API.  See
+                            https://docs.openstack.org/api-ref/network/v2/index.html?expanded=create-port-detail#create-port
+                            To set profiles, your tenant needs permissions rule:create_port, and
+                            rule:create_port:binding:profile
+                          properties:
+                            ovsHWOffload:
+                              description: |-
+                                OVSHWOffload enables or disables the OVS hardware offload feature.
+                                This flag is not required on OpenStack clouds since Yoga as Nova will set it automatically when the port is attached.
+                                See: https://bugs.launchpad.net/nova/+bug/2020813
+                              type: boolean
+                            trustedVF:
+                              description: TrustedVF enables or disables the “trusted
+                                mode” for the VF.
+                              type: boolean
+                          type: object
+                        propagateUplinkStatus:
+                          description: PropageteUplinkStatus enables or disables the
+                            propagate uplink status on the port.
+                          type: boolean
+                        securityGroups:
+                          description: SecurityGroups is a list of security group
+                            IDs to assign to the port.
+                          items:
+                            type: string
+                          type: array
+                          x-kubernetes-list-type: atomic
+                        tags:
+                          description: Tags applied to the port (and corresponding
+                            trunk, if a trunk is configured.)
+                          items:
+                            type: string
+                          type: array
+                          x-kubernetes-list-type: set
+                        trunk:
+                          description: Trunk specifies whether trunking is enabled
+                            at the port level.
+                          type: boolean
+                        valueSpecs:
+                          description: |-
+                            Value specs are extra parameters to include in the API request with OpenStack.
+                            This is an extension point for the API, so what they do and if they are supported,
+                            depends on the specific OpenStack implementation.
+                          items:
+                            description: ValueSpec represents a single value_spec
+                              key-value pair.
+                            properties:
+                              key:
+                                description: Key is the key in the key-value pair.
+                                type: string
+                              name:
+                                description: |-
+                                  Name is the name of the key-value pair.
+                                  This is just for identifying the pair and will not be sent to the OpenStack API.
+                                type: string
+                              value:
+                                description: Value is the value in the key-value pair.
+                                type: string
+                            required:
+                            - key
+                            - name
+                            - value
+                            type: object
+                          type: array
+                          x-kubernetes-list-map-keys:
+                          - name
+                          x-kubernetes-list-type: map
+                        vnicType:
+                          description: |-
+                            VNICType specifies the type of vNIC which this port should be
+                            attached to. This is used to determine which mechanism driver(s) to
+                            be used to bind the port. The valid values are normal, macvtap,
+                            direct, baremetal, direct-physical, virtio-forwarder, smart-nic and
+                            remote-managed, although these values will not be validated in this
+                            API to ensure compatibility with future neutron changes or custom
+                            implementations. What type of vNIC is actually available depends on
+                            deployments. If not specified, the Neutron default value is used.
+                          type: string
+                      required:
+                      - description
+                      - name
+                      - networkID
+                      type: object
+                    type: array
+                  serverGroupID:
+                    description: ServerGroupID is the ID of the server group the machine
+                      should be added to and is calculated based on ServerGroupFilter.
+                    type: string
+                type: object
+              resources:
+                description: Resources contains references to OpenStack resources
+                  created for the machine.
+                properties:
+                  ports:
+                    description: Ports is the status of the ports created for the
+                      machine.
+                    items:
+                      properties:
+                        id:
+                          description: ID is the unique identifier of the port.
+                          type: string
+                      required:
+                      - id
+                      type: object
+                    type: array
+                type: object
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

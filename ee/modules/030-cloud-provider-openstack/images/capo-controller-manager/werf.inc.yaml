@@ -1,0 +1,43 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /caph0-controller-manager
+  to: /caph0-controller-manager
+  before: setup
+imageSpec:
+  config:
+    entrypoint: ["/caph0-controller-manager"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+shell:
+  install:
+  - export VERSION="v0.12.3"
+  - git clone --depth 1 --branch ${VERSION} {{ $.SOURCE_REPO }}/kubernetes-sigs/cluster-api-provider-openstack /src
+  - cd /src
+  - rm -rf .git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+final: false
+from: builder/golang-alpine
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - cd /src
+  - export GOPROXY={{ $.GOPROXY }}
+  - go mod download
+  setup:
+  - cd /src
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o /capo-controller-manager cmd/main.go
+  - chown 64535:64535 /capo-controller-manager
+  - chmod 0700 /capo-controller-manager
