@@ -130,9 +130,10 @@ spec:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
 {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "openstack_controller_manager_resources" . | nindent 12 }}
+
+{{- end }}
       volumes:
         - name: cert
           secret:
             defaultMode: 420
             secretName: capo-controller-manager-webhook-tls
-{{- end }}
