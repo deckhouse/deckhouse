@@ -217,7 +217,7 @@ bin/regcopy: bin ## App to copy docker images to the Deckhouse registry
 
 bin/trivy-${TRIVY_VERSION}/trivy:
 	mkdir -p bin/trivy-${TRIVY_VERSION}
-	curl https://${DECKHOUSE_PRIVATE_REPO}/api/v4/projects/${TRIVY_PROJECT_ID}/packages/generic/deckhouse-trivy/v${TRIVY_VERSION}/trivy -o bin/trivy-${TRIVY_VERSION}/trivy
+	curl https://${DECKHOUSE_PRIVATE_REPO}/api/v4/projects/${TRIVY_PROJECT_ID}/packages/generic/trivy-v${TRIVY_VERSION}/v${TRIVY_VERSION}/trivy -o bin/trivy-${TRIVY_VERSION}/trivy
 
 .PHONY: trivy
 bin/trivy: bin bin/trivy-${TRIVY_VERSION}/trivy
