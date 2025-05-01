@@ -395,6 +395,7 @@ metadata:
                       "type": "Containerd"
                     },
 				    "name": "proper1",
+                    "engine": "MCM",
                     "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
 				  {
@@ -424,6 +425,7 @@ metadata:
                       "type": "Containerd"
                     },
 				    "name": "proper2",
+                    "engine": "MCM",
                     "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  }
 				]
@@ -467,16 +469,17 @@ metadata:
                       "type": "Containerd"
                     },
 					"manualRolloutID": "",
-		   "kubelet": {
-			"containerLogMaxSize": "50Mi",
-			"containerLogMaxFiles": 4,
-			"resourceReservation": {
-				"mode": "Auto"
-			},
-			"topologyManager": {}
-		    },
+		            "kubelet": {
+			          "containerLogMaxSize": "50Mi",
+			          "containerLogMaxFiles": 4,
+                      "resourceReservation": {
+				        "mode": "Auto"
+			          },
+			          "topologyManager": {}
+		            },
                     "name": "cp1",
                     "nodeType": "CloudPermanent",
+                    "engine": "None",
                     "updateEpoch": "` + calculateEpoch("cp1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
                   },
 				  {
@@ -507,6 +510,7 @@ metadata:
                       "type": "Containerd"
                     },
 				    "name": "proper1",
+                    "engine": "MCM",
                     "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
 				  {
@@ -536,6 +540,7 @@ metadata:
                       "type": "Containerd"
                     },
 				    "name": "proper2",
+                    "engine": "MCM",
                     "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
                   {
@@ -544,16 +549,17 @@ metadata:
                       "type": "Containerd"
                     },
                     "manualRolloutID": "",
-		   "kubelet": {
-			"containerLogMaxSize": "50Mi",
-			"containerLogMaxFiles": 4,
-			"resourceReservation": {
-				"mode": "Auto"
-			},
-			"topologyManager": {}
-		    },
+		            "kubelet": {
+			          "containerLogMaxSize": "50Mi",
+                      "containerLogMaxFiles": 4,
+			          "resourceReservation": {
+				         "mode": "Auto"
+			          },
+			          "topologyManager": {}
+		            },
                     "name": "static1",
                     "nodeType": "Static",
+                    "engine": "None",
                     "updateEpoch": "` + calculateEpoch("static1", f.ValuesGet("global.discovery.clusterUUID").String()) + `",
                     "static": {
                       "internalNetworkCIDRs": ["172.18.200.0/24"]
@@ -589,16 +595,17 @@ metadata:
 					"cri": {
                       "type": "Containerd"
                     },
-		    "kubelet": {
-			"containerLogMaxSize": "50Mi",
-			"containerLogMaxFiles": 4,
-			"resourceReservation": {
-				"mode": "Auto"
-			},
-			"topologyManager": {}
-		    },
+		            "kubelet": {
+			          "containerLogMaxSize": "50Mi",
+			          "containerLogMaxFiles": 4,
+			          "resourceReservation": {
+				        "mode": "Auto"
+			          },
+			          "topologyManager": {}
+                    },
                     "manualRolloutID": "",
                     "name": "cp1",
+                    "engine": "None",
                     "nodeType": "CloudPermanent",
                     "updateEpoch": "` + calculateEpoch("cp1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
                   },
@@ -630,6 +637,7 @@ metadata:
                       "type": "Containerd"
                     },
 				    "name": "proper1",
+                    "engine": "MCM",
                     "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
 				  {
@@ -659,6 +667,7 @@ metadata:
                       "type": "Containerd"
                     },
 				    "name": "proper2",
+                    "engine": "MCM",
                     "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
                   {
@@ -666,16 +675,17 @@ metadata:
 					"cri": {
                       "type": "Containerd"
                     },
-		    "kubelet": {
-			"containerLogMaxSize": "50Mi",
-			"containerLogMaxFiles": 4,
-			"resourceReservation": {
-				"mode": "Auto"
-			},
-			"topologyManager": {}
-		    },
+		            "kubelet": {
+			          "containerLogMaxSize": "50Mi",
+			          "containerLogMaxFiles": 4,
+			          "resourceReservation": {
+				        "mode": "Auto"
+			          },
+			          "topologyManager": {}
+		            },
                     "manualRolloutID": "",
                     "name": "static1",
+                    "engine": "None",
                     "nodeType": "Static",
                     "updateEpoch": "` + calculateEpoch("static1", f.ValuesGet("global.discovery.clusterUUID").String()) + `",
                     "static": {
@@ -733,6 +743,7 @@ metadata:
                       "type": "Containerd"
                     },
 				    "name": "proper1",
+                    "engine": "MCM",
                     "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
 				  {
@@ -762,6 +773,7 @@ metadata:
                       "type": "Containerd"
                     },
 				    "name": "proper2",
+                    "engine": "MCM",
                     "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  }
 				]
@@ -831,6 +843,7 @@ metadata:
 				    },
                     "nodeType": "CloudEphemeral",
 				    "name": "proper1",
+                    "engine": "MCM",
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.28",
 					"cri": {
@@ -860,6 +873,7 @@ metadata:
 				    },
                     "nodeType": "CloudEphemeral",
 				    "name": "proper2",
+                    "engine": "MCM",
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.28",
 					"cri": {
@@ -959,6 +973,7 @@ metadata:
 				    },
                     "nodeType": "CloudEphemeral",
 				    "name": "proper1",
+                    "engine": "MCM",
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.28",
 					"cri": {
@@ -988,6 +1003,7 @@ metadata:
 				    },
                     "nodeType": "CloudEphemeral",
 				    "name": "proper2",
+                    "engine": "MCM",
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.28",
 					"cri": {

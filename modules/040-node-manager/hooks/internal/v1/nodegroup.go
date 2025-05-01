@@ -34,12 +34,17 @@ import (
 
 // NodeType type of node
 type NodeType string
+type NodeGroupEngine string
 
 const (
 	NodeTypeStatic         NodeType = "Static"
 	NodeTypeCloudEphemeral NodeType = "CloudEphemeral"
 	NodeTypeCloudPermanent NodeType = "CloudPermanent"
 	NodeTypeCloudStatic    NodeType = "CloudStatic"
+
+	NodeGroupEngineMCM  NodeGroupEngine = "MCM"
+	NodeGroupEngineNone NodeGroupEngine = "None"
+	NodeGroupEngineCAPI NodeGroupEngine = "CAPI"
 )
 
 func (nt NodeType) String() string {
@@ -432,6 +437,8 @@ func (c *NodeGroupCondition) ToMap() map[string]interface{} {
 }
 
 type NodeGroupStatus struct {
+	// type of node manager management controller MCM or CAPI
+	Engine NodeGroupEngine `json:"engine,omitempty"`
 	// Number of ready Kubernetes nodes in the group.
 	Ready int32 `json:"ready,omitempty"`
 

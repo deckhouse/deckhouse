@@ -61,6 +61,10 @@ const moduleValues = `
     topologyEnabled: true
   ignoreVolumeMicroversion: false
   internal:
+    capoControllerManagerWebhookCert:
+      ca: ca
+      crt: crt
+      key: key
     storageClasses:
       - name: fastssd
         type: Fast HDD

@@ -24,6 +24,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/shared"
+
 	"github.com/Masterminds/semver/v3"
 	cljson "github.com/clarketm/json"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -66,6 +68,7 @@ type NodeGroupCrdInfo struct {
 	Name            string
 	Spec            ngv1.NodeGroupSpec
 	ManualRolloutID string
+	EngineParams    shared.NodeGroupEngineParam
 }
 
 // applyNodeGroupCrdFilter returns name, spec and manualRolloutID from the NodeGroup
@@ -80,6 +83,7 @@ func applyNodeGroupCrdFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 		Name:            nodeGroup.GetName(),
 		Spec:            nodeGroup.Spec,
 		ManualRolloutID: nodeGroup.GetAnnotations()["manual-rollout-id"],
+		EngineParams:    shared.NodeGroupToNodeGroupEngineParam(&nodeGroup),
 	}, nil
 }
 
@@ -302,6 +306,18 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 		// Copy manualRolloutID and name.
 		ngForValues["name"] = nodeGroup.Name
 		ngForValues["manualRolloutID"] = nodeGroup.ManualRolloutID
+
+		engine, err := shared.CalculateEngine(nodeGroup.EngineParams, shared.GetCloudEphemeralNodeGroupEngineDefault(input))
+		if err != nil {
+			return fmt.Errorf("failed to calculate node group %s engine: %v", nodeGroup.Name, err)
+		}
+
+		input.Logger.Infof("Calculated node group %s engine: %v", nodeGroup.Name, engine)
+		if nodeGroup.EngineParams.Engine == "" {
+			shared.StatusEnginePatch(input, nodeGroup.Name, engine)
+		}
+
+		ngForValues["engine"] = engine
 
 		if nodeGroup.Spec.NodeType == ngv1.NodeTypeStatic {
 			if staticValue, has := input.Values.GetOk("nodeManager.internal.static"); has {

@@ -253,6 +253,7 @@ properties:
         items:
           type: object
           properties:
+            engine:
             name:
               type: string
               description: |

@@ -129,6 +129,7 @@ internal:
           zoneb: mysubnetidb
   nodeGroups:
   - name: worker
+    engine: MCM
     instanceClass:
       ami: myami
       diskSizeGb: 50
@@ -183,6 +184,7 @@ internal:
       additionalTags: []
   nodeGroups:
   - name: worker
+    engine: MCM
     instanceClass:
       flavorName: m1.large
       imageName: ubuntu-18-04-cloud-amd64
@@ -204,6 +206,7 @@ internal:
       - zonea
       - zoneb
   - name: aaa
+    engine: MCM
     instanceClass:
       acceleratedNetworking: false
       machineSize: test
@@ -218,6 +221,7 @@ internal:
       zones:
       - zonea
   - name: bbb
+    engine: MCM
     instanceClass:
       acceleratedNetworking: true
       machineSize: bbb
@@ -266,6 +270,7 @@ internal:
       serviceAccountJSON: '{"client_email":"client_email"}'
   nodeGroups:
   - name: worker
+    engine: MCM
     instanceClass: # maximum filled
       flavorName: m1.large
       imageName: ubuntu-18-04-cloud-amd64
@@ -384,6 +389,7 @@ internal:
         aaa: xxx
   nodeGroups:
   - name: worker
+    engine: MCM
     instanceClass:
       flavorName: m1.large
       imageName: ubuntu-18-04-cloud-amd64
@@ -405,6 +411,7 @@ internal:
       - zonea
       - zoneb
   - name: simple
+    engine: MCM
     instanceClass:
       flavorName: m1.xlarge
       additionalSecurityGroups:
@@ -458,6 +465,7 @@ internal:
       vmFolderPath: dev/test
   nodeGroups:
   - name: worker
+    engine: MCM
     instanceClass:
       flavorName: m1.large
       imageName: ubuntu-18-04-cloud-amd64
@@ -485,6 +493,7 @@ internal:
       - zonea
       - zoneb
   - name: worker-with-disabled-nested-virt
+    engine: MCM
     instanceClass:
       flavorName: m1.large
       imageName: ubuntu-18-04-cloud-amd64
@@ -547,6 +556,7 @@ internal:
         zoneb: subnetb
   nodeGroups:
   - name: worker
+    engine: MCM
     instanceClass:
       flavorName: m1.large
       imageName: ubuntu-18-04-cloud-amd64
@@ -1785,6 +1795,7 @@ internal:
       insecure: true
   nodeGroups:
   - name: worker
+    engine: CAPI
     nodeCapacity:
       cpu: "2"
       memory: "2Gi"
@@ -1808,6 +1819,7 @@ internal:
       - zonea
       - zoneb
   - name: worker-big
+    engine: CAPI
     nodeCapacity:
       cpu: "2"
       memory: "2Gi"

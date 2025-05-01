@@ -6,6 +6,6 @@ metadata:
   namespace: d8-cloud-provider-openstack
   {{- include "helm_lib_module_labels" (list . (dict "app" "capo-controller-manager")) | nindent 2 }}
 data:
-  ca.crt: {{ .Values.cloudProviderVcd.internal.capoControllerManagerWebhookCert.ca | b64enc }}
-  tls.crt: {{ .Values.cloudProviderVcd.internal.capoControllerManagerWebhookCert.crt | b64enc }}
-  tls.key: {{ .Values.cloudProviderVcd.internal.capoControllerManagerWebhookCert.key | b64enc }}
+  ca.crt: {{ .Values.cloudProviderOpenstack.internal.capoControllerManagerWebhookCert.ca | b64enc }}
+  tls.crt: {{ .Values.cloudProviderOpenstack.internal.capoControllerManagerWebhookCert.crt | b64enc }}
+  tls.key: {{ .Values.cloudProviderOpenstack.internal.capoControllerManagerWebhookCert.key | b64enc }}
