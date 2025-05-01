@@ -21,5 +21,5 @@ var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLS
 
 	Namespace:            "d8-cloud-provider-openstack",
 	TLSSecretName:        "capo-controller-manager-webhook-tls",
-	FullValuesPathPrefix: "cloudProviderVcd.internal.capoControllerManagerWebhookCert",
+	FullValuesPathPrefix: "cloudProviderOpenstack.internal.capoControllerManagerWebhookCert",
 })
