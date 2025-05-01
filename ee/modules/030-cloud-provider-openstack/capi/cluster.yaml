@@ -1,0 +1,47 @@
+{{- define "openstack_clouds_yaml" }}
+{{- $providerClusterConfiguration := . }}
+clouds:
+  openstack:
+    auth:
+      auth_url: {{ $providerClusterConfiguration.connection.authURL | quote }}
+      username: {{ $providerClusterConfiguration.connection.username | quote }}
+      password: {{ $providerClusterConfiguration.connection.password | quote }}
+      project_name: {{ $providerClusterConfiguration.connection.tenantName | quote }}
+      project_id: {{ $providerClusterConfiguration.connection.tenantID | quote }}
+      user_domain_name: {{ $providerClusterConfiguration.connection.domainName | quote }}
+    region_name: {{ $providerClusterConfiguration.connection.region | quote }}
+    identity_api_version: 3
+{{- end }}
+
+{{- $providerClusterConfiguration := .openstack | required "internal.providerClusterConfiguration is required" }}
+{{- $clusterName := .clusterName | required "clusterName is required" }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: capi-user-credentials
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capo-controller-manager")) | nindent 2 }}
+type: Opaque
+data:
+{{- if hasKey $providerClusterConfiguration.connection "caCert" }}
+  {{- if $providerClusterConfiguration.connection.caCert. }}
+  cacert: {{ $providerClusterConfiguration.connection.caCert | b64enc | quote }}
+  {{- end }}
+{{- end }}
+  clouds.yaml: {{ include "openstack_clouds_yaml" $providerClusterConfiguration | b64enc | quote }}
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: OpenStackCluster
+metadata:
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capo-controller-manager")) | nindent 2 }}
+  namespace: d8-cloud-instance-manager
+  name: {{ $clusterName | quote }}
+spec:
+  apiServerLoadBalancer:
+    enabled: false
+#  externalNetwork:
+#    id: ${OPENSTACK_EXTERNAL_NETWORK_ID}
+  identityRef:
+    cloudName: openstack
+    name: capi-user-credentials

@@ -1,0 +1,100 @@
+{{- $catalog := ""}}
+{{- $template := .nodeGroup.instanceClass.template }}
+
+{{- $templateParts := regexSplit "/" .nodeGroup.instanceClass.template -1 }}
+{{- if eq (len $templateParts) 2 }}
+  {{- $catalog = $templateParts | first }}
+  {{- $template = $templateParts | last }}
+{{- end }}
+
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: VCDMachineTemplate
+metadata:
+  annotations:
+    checksum/instance-class: {{ .instanceClassChecksum | quote }}
+    # todo using for keep machine template after rollout
+    # see this https://github.com/kubernetes-sigs/cluster-api/issues/6588#issuecomment-1925433449
+    helm.sh/resource-policy: keep
+  namespace: d8-cloud-instance-manager
+  name: {{ .templateName | quote }}
+  {{- include "helm_lib_module_labels" (list . (dict "node-group" .nodeGroup.name)) | nindent 2 }}
+spec:
+  template:
+    spec:
+      configDrive: true
+      flavor: {{ .nodeGroup.instanceClass.flavorName | quote}}
+    {{- if hasKey .nodeGroup.instanceClass "imageName" }}
+      image: {{ .nodeGroup.instanceClass.imageName }}
+    {{- else if hasKey .Values.nodeManager.internal.cloudProvider.openstack.instances "imageName" }}
+      image: {{ .Values.nodeManager.internal.cloudProvider.openstack.instances.imageName }}
+    {{- else }}
+      {{ cat "No imageName provided neither in cloud provider configuration nor in OpenStackInstanceClass" .nodeGroup.cloudInstances.classReference.name | fail }}
+    {{- end }}
+  {{- if hasKey .Values.nodeManager.internal.cloudProvider.openstack "instances" }}
+    {{- if hasKey .Values.nodeManager.internal.cloudProvider.openstack.instances "sshKeyPairName" }}
+      sshKeyName: {{ .Values.nodeManager.internal.cloudProvider.openstack.instances.sshKeyPairName }}
+    {{- end }}
+    {{- $securityGroups := list }}
+    {{- if hasKey .Values.nodeManager.internal.cloudProvider.openstack.instances "securityGroups" }}
+      {{- $securityGroups = concat $securityGroups .Values.nodeManager.internal.cloudProvider.openstack.instances.securityGroups }}
+    {{- end }}
+    {{- if hasKey .nodeGroup.instanceClass "additionalSecurityGroups" }}
+      {{- $securityGroups = concat $securityGroups .nodeGroup.instanceClass.additionalSecurityGroups }}
+    {{- end }}
+    {{- if gt (len $securityGroups) 0 }}
+      securityGroups:
+      {{- range $securityGroups | uniq }}
+      - filter:
+        name: {{ . }}
+    {{- end }}
+      ports:
+      {{- $networks := list }}
+      {{- if hasKey .nodeGroup.instanceClass "additionalNetworks" }}
+        {{- range $additionalNetwork := .nodeGroup.instanceClass.additionalNetworks }}
+          {{- $networks = append $networks $additionalNetwork }}
+       {{- end }}
+      {{- else if hasKey .Values.nodeManager.internal.cloudProvider.openstack.instances "additionalNetworks" }}
+        {{- range $additionalNetwork := .Values.nodeManager.internal.cloudProvider.openstack.instances.additionalNetworks }}
+          {{- $networks = append $networks $additionalNetwork }}
+        {{- end }}
+      {{- end }}
+      {{- if hasKey .nodeGroup.instanceClass "mainNetwork" }}
+        {{- $networks = prepend $networks .nodeGroup.instanceClass.mainNetwork }}
+      {{- else if hasKey .Values.nodeManager.internal.cloudProvider.openstack.instances "mainNetwork" }}
+        {{- $networks = prepend $networks .Values.nodeManager.internal.cloudProvider.openstack.instances.mainNetwork }}
+      {{- else}}
+        {{ cat "No mainNetwork provided neither in cloud provider configuration nor in OpenStackInstanceClass" .nodeGroup.cloudInstances.classReference.name | fail }}
+      {{- end }}
+      {{- range $networks | uniq }}
+      - filter:
+          name: {{ . | quote }}
+        securityGroups:
+        {{- range $securityGroups | uniq }}
+        - filter:
+            name: {{ . }}
+        {{- end }}
+    {{- end }}
+  {{- end }}
+    {{- if hasKey .nodeGroup.instanceClass "rootDiskSize" }}
+      rootVolume:
+        sizeGiB: { { .nodeGroup.instanceClass.rootDiskSize } }
+    {{- end }}
+      tags:
+      {{- $tags := dict }}
+      {{- if .Values.nodeManager.internal.cloudProvider.openstack.tags }}
+        {{- $tags = merge $tags .Values.nodeManager.internal.cloudProvider.openstack.tags }}
+      {{- end }}
+      {{- if hasKey .nodeGroup.instanceClass "additionalTags" }}
+        {{- $tags = mergeOverwrite $tags .nodeGroup.instanceClass.additionalTags }}
+      {{- end }}
+      {{- range $k, $v := $tags }}
+        {{ $k }}: {{ $v | quote }}
+      {{- end }}
+        # These tags are mandatory as the safety controller uses them to identify VMs created by this controller.
+        kubernetes.io-cluster-deckhouse-{{ .Values.global.discovery.clusterUUID }}: "1"
+        kubernetes.io-role-deckhouse-{{ .nodeGroup.name }}-{{ .zoneName }}: "1"
+      schedulerHintAdditionalProperties:
+      - name: deckhouse-zone
+        value:
+          type: String
+          string: {{ .zoneName }}

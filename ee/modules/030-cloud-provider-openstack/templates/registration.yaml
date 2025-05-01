@@ -68,5 +68,10 @@ data:
   {{- else }}
     {{ cat "No key internalNetworkNames in deckhouse configmap" $internal.internalNetworkNames | fail }}
   {{- end }}
+  {{- if hasKey $internal "internalNetworkNames" }}
+      {{- $_ := set $openstackValues "internalNetworkNames" $internal.internalNetworkNames }}
+  {{- else }}
+      {{ cat "No key internalNetworkNames in deckhouse configmap" $internal.internalNetworkNames | fail }}
+  {{- end }}
   {{- $_ := set $openstackValues "podNetworkMode" $internal.podNetworkMode }}
   openstack: {{ $openstackValues | toJson | b64enc | quote }}
