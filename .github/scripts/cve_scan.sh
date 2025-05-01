@@ -81,7 +81,7 @@ if [ "${SCAN_TARGET}" == "regular" ]; then
   login_prod_registry
   if [ "${TAG}" != "main" ]; then
     # if some specific release is defined - scan only it
-    if echo "${TAG}"|grep -s "^[0-9]\.[0-9]*$"; then
+    if echo "${TAG}"|grep -q "^[0-9]\.[0-9]*$"; then
       d8_tags=($(crane ls "${PROD_REGISTRY_DECKHOUSE_IMAGE}" | grep "^v${TAG}\.[0-9]*$" | sort -V -r | head -n 1))
     else
       echo "ERROR: Please specify required release in the following format: [0-9]\.[0-9]*"
@@ -118,7 +118,7 @@ for d8_tag in "${d8_tags[@]}"; do
   fi
 
   # if d8_tag is for release - we need to take it from prod registry
-  if echo "${d8_tag}"|grep -s "^v[0-9]\.[0-9]*\.[0-9]*$"; then
+  if echo "${d8_tag}"|grep -q "^v[0-9]\.[0-9]*\.[0-9]*$"; then
     d8_image="${PROD_REGISTRY_DECKHOUSE_IMAGE}"
     dd_short_release_tag="release:$(echo ${d8_tag} | cut -d '.' -f -2 | sed 's/^v//')"
     dd_full_release_tag="image_release_tag:${d8_tag}"
@@ -213,8 +213,9 @@ for d8_tag in "${d8_tags[@]}"; do
       echo " Uploading trivy CVE report for image \"${IMAGE_NAME}\" of \"${MODULE_NAME}\" module"
       echo ""
       curl -X POST \
-        --retry 3 \
-        --retry-delay 5 \
+        --retry 5 \
+        --retry-delay 10 \
+        --retry-all-errors \
         https://${DEFECTDOJO_HOST}/api/v2/reimport-scan/ \
         -H "accept: application/json" \
         -H "Content-Type: multipart/form-data"  \
