@@ -797,6 +797,7 @@ module JSONSchemaRenderer
             result.push('</font></p>')
             if !( get_hash_value(input, 'properties', 'settings' ) )
                input['properties'] = { "settings" => { "type" => "object", "properties" => input['properties'] } }
+               input['properties']['settings']['required'] = input['required'] if input['required']
             end
             if !( get_hash_value(input, 'i18n', 'en', 'properties', 'settings' ) )
                input['i18n']['en']['properties'] = { "settings" => { "type" => "object", "properties" => input['i18n']['en']['properties'] } }
