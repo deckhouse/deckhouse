@@ -104,6 +104,7 @@ for d8_tag in "${d8_tags[@]}"; do
   dd_short_release_tag=""
   dd_full_release_tag=""
   dd_image_version="${d8_tag}"
+  dd_branch="${d8_tag}"
   date_iso=$(date -I)
   d8_image="${DEV_REGISTRY_DECKHOUSE_IMAGE}"
   trivy_registry_user="${DEV_REGISTRY_USER}"
@@ -123,6 +124,7 @@ for d8_tag in "${d8_tags[@]}"; do
     dd_short_release_tag="release:$(echo ${d8_tag} | cut -d '.' -f -2 | sed 's/^v//')"
     dd_full_release_tag="image_release_tag:${d8_tag}"
     dd_image_version="$(echo ${dd_short_release_tag} | sed 's/^release\://')"
+    dd_branch="$(echo ${dd_short_release_tag} | sed 's/\:/\-/')"
     trivy_registry_user="${PROD_REGISTRY_USER}"
     trivy_registry_pass="${PROD_REGISTRY_PASSWORD}"
   fi
@@ -212,7 +214,7 @@ for d8_tag in "${d8_tags[@]}"; do
       echo ""
       echo " Uploading trivy CVE report for image \"${IMAGE_NAME}\" of \"${MODULE_NAME}\" module"
       echo ""
-      curl -X POST \
+      curl -f -X POST \
         --retry 5 \
         --retry-delay 10 \
         --retry-all-errors \
@@ -236,7 +238,7 @@ for d8_tag in "${d8_tags[@]}"; do
         -F "service=${MODULE_NAME} / ${IMAGE_NAME}" \
         -F "group_by=component_name+component_version" \
         -F "deduplication_on_engagement=false" \
-        -F "tags=deckhouse_image,module:${MODULE_NAME},image:${IMAGE_NAME},branch:${dd_image_version}${codeowner_tags},${dd_short_release_tag},${dd_full_release_tag}" \
+        -F "tags=deckhouse_image,module:${MODULE_NAME},image:${IMAGE_NAME},branch:${dd_branch}${codeowner_tags},${dd_short_release_tag},${dd_full_release_tag}" \
         -F "test_title=[${MODULE_NAME}]: ${IMAGE_NAME}:${dd_image_version}" \
         -F "version=${dd_image_version}" \
         -F "build_id=${IMAGE_HASH}" \
