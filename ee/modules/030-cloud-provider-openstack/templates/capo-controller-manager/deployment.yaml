@@ -79,32 +79,6 @@ spec:
         imagePullPolicy: IfNotPresent
         args:
           - "--leader-elect"
-        env:
-          - name: HUAWEICLOUD_CLOUD
-            valueFrom:
-              secretKeyRef:
-                name: openstack-credentials
-                key: cloud
-          - name: HUAWEICLOUD_REGION
-            valueFrom:
-              secretKeyRef:
-                name: openstack-credentials
-                key: region
-          - name: HUAWEICLOUD_ACCESS_KEY
-            valueFrom:
-              secretKeyRef:
-                name: openstack-credentials
-                key: access-key
-          - name: HUAWEICLOUD_SECRET_KEY
-            valueFrom:
-              secretKeyRef:
-                name: openstack-credentials
-                key: secret-key
-          - name: HUAWEICLOUD_PROJECT_ID
-            valueFrom:
-              secretKeyRef:
-                name: openstack-credentials
-                key: project-id
         ports:
           - containerPort: 4201
             name: webhook-server

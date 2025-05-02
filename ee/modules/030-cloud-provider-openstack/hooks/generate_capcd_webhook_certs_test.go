@@ -24,7 +24,7 @@ import (
 const clusterDomain = "cluster.local"
 
 func genWebhookCa(logger *log.Logger) (*certificate.Authority, error) {
-	ca, err := certificate.GenerateCA(logger, "capcd-controller-manager-webhook", certificate.WithKeyAlgo("ecdsa"),
+	ca, err := certificate.GenerateCA(logger, "capo-controller-manager-webhook", certificate.WithKeyAlgo("ecdsa"),
 		certificate.WithKeySize(256),
 		certificate.WithCAExpiry("87600h"))
 	if err != nil {
@@ -46,10 +46,10 @@ func genWebhookTLS(input *go_hook.HookInput, ca *certificate.Authority, cn strin
 			"requestheader-client",
 		}),
 		certificate.WithSANs(
-			sanPrefix+".d8-cloud-provider-vcd",
-			sanPrefix+".d8-cloud-provider-vcd.svc",
-			sanPrefix+".d8-cloud-provider-vcd."+clusterDomain,
-			sanPrefix+".d8-cloud-provider-vcd.svc."+clusterDomain,
+			sanPrefix+".d8-cloud-provider-openstack",
+			sanPrefix+".d8-cloud-provider-openstack.svc",
+			sanPrefix+".d8-cloud-provider-openstack."+clusterDomain,
+			sanPrefix+".d8-cloud-provider-openstack.svc."+clusterDomain,
 		),
 	)
 	if err != nil {
@@ -60,7 +60,7 @@ func genWebhookTLS(input *go_hook.HookInput, ca *certificate.Authority, cn strin
 }
 
 var _ = Describe("Node Manager hooks :: generate_webhook_certs ::", func() {
-	f := HookExecutionConfigInit(`{"global": {"discovery": {"clusterDomain": "`+clusterDomain+`"}},"cloudProviderVcd":{"internal":{"capcdControllerManagerWebhookCert": {}}}}`, "")
+	f := HookExecutionConfigInit(`{"global": {"discovery": {"clusterDomain": "`+clusterDomain+`"}},"cloudProviderOpenstack":{"internal":{"capoControllerManagerWebhookCert": {}}}}`, "")
 
 	Context("Without secret", func() {
 		BeforeEach(func() {
@@ -72,26 +72,26 @@ var _ = Describe("Node Manager hooks :: generate_webhook_certs ::", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 
-			Expect(f.ValuesGet("cloudProviderVcd.internal.capcdControllerManagerWebhookCert.crt").Exists()).To(BeTrue())
-			Expect(f.ValuesGet("cloudProviderVcd.internal.capcdControllerManagerWebhookCert.key").Exists()).To(BeTrue())
-			Expect(f.ValuesGet("cloudProviderVcd.internal.capcdControllerManagerWebhookCert.crt").Exists()).To(BeTrue())
+			Expect(f.ValuesGet("cloudProviderOpenstack.internal.capoControllerManagerWebhookCert.crt").Exists()).To(BeTrue())
+			Expect(f.ValuesGet("cloudProviderOpenstack.internal.capoControllerManagerWebhookCert.key").Exists()).To(BeTrue())
+			Expect(f.ValuesGet("cloudProviderOpenstack.internal.capoControllerManagerWebhookCert.crt").Exists()).To(BeTrue())
 
-			blockCA, _ := pem.Decode([]byte(f.ValuesGet("cloudProviderVcd.internal.capcdControllerManagerWebhookCert.ca").String()))
+			blockCA, _ := pem.Decode([]byte(f.ValuesGet("cloudProviderOpenstack.internal.capoControllerManagerWebhookCert.ca").String()))
 			certCA, err := x509.ParseCertificate(blockCA.Bytes)
 			Expect(err).To(BeNil())
 			Expect(certCA.IsCA).To(BeTrue())
-			Expect(certCA.Subject.CommonName).To(Equal("capcd-controller-manager-webhook"))
+			Expect(certCA.Subject.CommonName).To(Equal("capo-controller-manager-webhook"))
 
-			block, _ := pem.Decode([]byte(f.ValuesGet("cloudProviderVcd.internal.capcdControllerManagerWebhookCert.crt").String()))
+			block, _ := pem.Decode([]byte(f.ValuesGet("cloudProviderOpenstack.internal.capoControllerManagerWebhookCert.crt").String()))
 			cert, err := x509.ParseCertificate(block.Bytes)
 			Expect(err).To(BeNil())
 			Expect(cert.IsCA).To(BeFalse())
-			Expect(cert.Subject.CommonName).To(Equal("capcd-controller-manager-webhook"))
+			Expect(cert.Subject.CommonName).To(Equal("capo-controller-manager-webhook"))
 		})
 	})
 	Context("With secrets", func() {
 		caAuthority, _ := genWebhookCa(nil)
-		tlsAuthority, _ := genWebhookTLS(&go_hook.HookInput{Logger: log.NewNop()}, caAuthority, "capcd-manager-webhook", "capcd-controller-manager-webhook-service")
+		tlsAuthority, _ := genWebhookTLS(&go_hook.HookInput{Logger: log.NewNop()}, caAuthority, "capo-controller-manager-webhook", "capo-controller-manager-webhook-service")
 
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(fmt.Sprintf(`
@@ -100,8 +100,8 @@ apiVersion: v1
 kind: Secret
 type: kubernetes.io/tls
 metadata:
-  name: capcd-controller-manager-webhook-tls
-  namespace: d8-cloud-provider-vcd
+  name: capo-controller-manager-webhook-tls
+  namespace: d8-cloud-provider-openstack
 data:
   ca.crt: %[1]s
   tls.crt: %[2]s
@@ -116,10 +116,10 @@ data:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 
-			ca := f.ValuesGet("cloudProviderVcd.internal.capcdControllerManagerWebhookCert.ca").String()
+			ca := f.ValuesGet("cloudProviderOpenstack.internal.capoControllerManagerWebhookCert.ca").String()
 			Expect(ca).To(Equal(caAuthority.Cert))
-			Expect(f.ValuesGet("cloudProviderVcd.internal.capcdControllerManagerWebhookCert.key").String()).To(Equal(tlsAuthority.Key))
-			Expect(f.ValuesGet("cloudProviderVcd.internal.capcdControllerManagerWebhookCert.crt").String()).To(Equal(tlsAuthority.Cert))
+			Expect(f.ValuesGet("cloudProviderOpenstack.internal.capoControllerManagerWebhookCert.key").String()).To(Equal(tlsAuthority.Key))
+			Expect(f.ValuesGet("cloudProviderOpenstack.internal.capoControllerManagerWebhookCert.crt").String()).To(Equal(tlsAuthority.Cert))
 		})
 	})
 })

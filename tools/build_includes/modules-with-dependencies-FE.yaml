@@ -588,6 +588,29 @@
   stageDependencies:
     install:
         - '**/*.go'
+- add: /ee/modules/040-node-manager/capi/openstack
+  to: /deckhouse/modules/040-node-manager/capi/openstack
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    install:
+        - '**/*.go'
 - add: /ee/modules/040-node-manager/capi/vcd
   to: /deckhouse/modules/040-node-manager/capi/vcd
   excludePaths:

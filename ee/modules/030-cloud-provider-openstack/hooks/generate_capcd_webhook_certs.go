@@ -11,10 +11,10 @@ import (
 
 var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLSHookConf{
 	SANs: tls_certificate.DefaultSANs([]string{
-		"capo-controller-manager-webhook-service.d8-cloud-provider-vcd",
-		"capo-controller-manager-webhook-service.d8-cloud-provider-vcd.svc",
-		tls_certificate.ClusterDomainSAN("capo-controller-manager-webhook-service.d8-cloud-provider-vcd"),
-		tls_certificate.ClusterDomainSAN("capo-controller-manager-webhook-service.d8-cloud-provider-vcd.svc"),
+		"capo-controller-manager-webhook-service.d8-cloud-provider-openstack",
+		"capo-controller-manager-webhook-service.d8-cloud-provider-openstack.svc",
+		tls_certificate.ClusterDomainSAN("capo-controller-manager-webhook-service.d8-cloud-provider-openstack"),
+		tls_certificate.ClusterDomainSAN("capo-controller-manager-webhook-service.d8-cloud-provider-openstack.svc"),
 	}),
 
 	CN: "capo-controller-manager-webhook",
