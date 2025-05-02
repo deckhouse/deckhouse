@@ -8,7 +8,7 @@
 {{- end }}
 
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
-kind: VCDMachineTemplate
+kind: OpenstackMachineTemplate
 metadata:
   annotations:
     checksum/instance-class: {{ .instanceClassChecksum | quote }}

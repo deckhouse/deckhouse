@@ -14,6 +14,12 @@ data:
   instanceClassKind: {{ b64enc "OpenStackInstanceClass" | quote }}
   machineClassKind: {{ b64enc "OpenStackMachineClass" | quote }}
 
+  capiClusterKind: {{ b64enc "OpenstackCluster" | quote }}
+  capiClusterAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1beta2" | quote }}
+  capiClusterName: {{ b64enc "openstack" | quote }}
+  capiMachineTemplateKind: {{ b64enc "OpenstackMachineTemplate" | quote }}
+  capiMachineTemplateAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1beta2" | quote }}
+
   # openstack
   {{- $internal := .Values.cloudProviderOpenstack.internal }}
   {{- $openstackValues := dict "connection" dict }}

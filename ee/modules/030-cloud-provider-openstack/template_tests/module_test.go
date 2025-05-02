@@ -279,6 +279,51 @@ var _ = Describe("Module :: cloud-provider-openstack :: helm template ::", func(
 		openstackCheck(f, "1.28")
 	})
 
+	Context("Openstack CAPI", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
+			f.ValuesSetFromYaml("global.discovery.defaultStorageClass", `slowhdd`)
+			f.HelmRender()
+		})
+
+		It("Everything must render properly for registration secret", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			regSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
+			Expect(regSecret.Exists()).To(BeTrue())
+			Expect(regSecret.Field("data.capiClusterName").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("openstack"))))
+		})
+
+		It("Everything must render properly for deployment and webhook", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			deploymentController := f.KubernetesResource("Deployment", "d8-cloud-provider-openstack", "capo-controller-manager")
+			Expect(deploymentController.Exists()).To(BeTrue())
+
+			secretCAWebhook := f.KubernetesResource("Secret", "d8-cloud-provider-openstack", "capo-controller-manager-webhook-tls")
+			Expect(secretCAWebhook.Exists()).To(BeTrue())
+			Expect(secretCAWebhook.Field("data.ca\\.crt").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("ca"))))
+			Expect(secretCAWebhook.Field("data.tls\\.crt").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("crt"))))
+			Expect(secretCAWebhook.Field("data.tls\\.key").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("key"))))
+
+		})
+
+		Context("vertical-pod-autoscaler module enabled", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler"]`)
+			})
+
+			It("Should render VPA resource", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				d := f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-provider-openstack", "capo-controller-manager")
+				Expect(d.Exists()).To(BeTrue())
+			})
+		})
+	})
+
 	Context("Openstack with default StorageClass specified", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
