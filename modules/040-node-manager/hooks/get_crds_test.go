@@ -1553,6 +1553,29 @@ spec:
 status:
   engine: CAPI
 `
+			cloudEphemeralWithoutEngineNGAndUseMCMAnnotation = `
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  annotations:
+    node.deckhouse.io/use-mcm: ""
+  name: test
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    minPerZone: 3
+    maxPerZone: 3
+    classReference:
+      kind: D8TestInstanceClass
+      name: cap
+    zones: [a,b]
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: D8TestInstanceClass
+metadata:
+  name: cap
+spec: {}
+`
 		)
 		for _, module := range shared.ProvidersWithCAPIOnly {
 			Context(fmt.Sprintf("Cloud ephemeral node group for CAPI only %s", module), func() {
@@ -1629,6 +1652,21 @@ status:
 						Expect(ng.Field("status.engine").Value()).To(Equal("MCM"))
 					})
 				})
+
+				Context("Cloud ephemeral ng with annotation node.deckhouse.io/use-mcm", func() {
+					BeforeEach(func() {
+						f.BindingContexts.Set(f.KubeStateSet(cloudEphemeralWithoutEngineNGAndUseMCMAnnotation))
+						f.ValuesSet("global.enabledModules", []string{module})
+						f.RunHook()
+					})
+
+					It("Should set engine to CAPI", func() {
+						Expect(f).To(ExecuteSuccessfully())
+						ng := f.KubernetesGlobalResource("NodeGroup", "test")
+						Expect(ng.Field("status.engine").Value()).To(Equal("MCM"))
+					})
+				})
+
 			})
 		}
 
