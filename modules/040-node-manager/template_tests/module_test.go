@@ -17,11 +17,16 @@ limitations under the License.
 package template_tests
 
 import (
+	"encoding/base64"
 	"fmt"
 	"os"
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/tidwall/gjson"
+
+	"github.com/onsi/gomega/format"
 
 	"github.com/google/go-cmp/cmp"
 	. "github.com/onsi/ginkgo"
@@ -32,6 +37,8 @@ import (
 )
 
 func Test(t *testing.T) {
+	format.MaxLength = 100000
+	format.MaxDepth = 100
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "")
 }
@@ -697,6 +704,8 @@ const vsphereCIMPath = "/deckhouse/ee/se-plus/modules/030-cloud-provider-vsphere
 const vsphereCIMSymlink = "/deckhouse/modules/040-node-manager/cloud-providers/vsphere"
 const vcdCAPIPath = "/deckhouse/ee/modules/030-cloud-provider-vcd/capi"
 const vcdCAPISymlink = "/deckhouse/modules/040-node-manager/capi/vcd"
+const openstackCAPIPath = "/deckhouse/ee/modules/030-cloud-provider-openstack/capi"
+const openstackCAPISymlink = "/deckhouse/modules/040-node-manager/capi/openstack"
 
 var _ = Describe("Module :: node-manager :: helm template ::", func() {
 	f := SetupHelmConfig(``)
@@ -708,6 +717,8 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 		Expect(err).ShouldNot(HaveOccurred())
 		err = os.Symlink(vcdCAPIPath, vcdCAPISymlink)
 		Expect(err).ShouldNot(HaveOccurred())
+		err = os.Symlink(openstackCAPIPath, openstackCAPISymlink)
+		Expect(err).ShouldNot(HaveOccurred())
 	})
 
 	AfterSuite(func() {
@@ -716,6 +727,8 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 		err = os.Remove(vsphereCIMSymlink)
 		Expect(err).ShouldNot(HaveOccurred())
 		err = os.Remove(vcdCAPISymlink)
+		Expect(err).ShouldNot(HaveOccurred())
+		err = os.Remove(openstackCAPISymlink)
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
@@ -1932,6 +1945,9 @@ internal:
 		Context("Openstack", func() {
 			const nodeManagerOpenstack = `
 internal:
+  capiControllerManagerEnabled: true
+  bootstrapTokens:
+    worker: mytoken
   capiControllerManagerWebhookCert:
     ca: string
     key: string
@@ -1947,6 +1963,11 @@ internal:
   cloudProvider:
     type: openstack
     machineClassKind: OpenStackMachineClass
+    capiClusterKind: "OpenstackCluster"
+    capiClusterAPIVersion: "infrastructure.cluster.x-k8s.io/v1beta2"
+    capiClusterName: "openstack"
+    capiMachineTemplateKind: "OpenstackMachineTemplate"
+    capiMachineTemplateAPIVersion: "infrastructure.cluster.x-k8s.io/v1beta2"
     openstack:
       podNetworkMode: DirectRoutingWithPortSecurityEnabled
       connection:
@@ -1966,8 +1987,17 @@ internal:
       externalNetworkNames: [shared]
   nodeGroups:
   - name: worker
+    engine: CAPI
+    nodeCapacity:
+      cpu: "2"
+      memory: "2Gi"
     instanceClass:
       flavorName: m1.large
+      imageName: ubuntu-18-04-cloud-amd64
+      rootDiskSize: 30
+      additionalNetworks: ["internal"]
+      additionalTags:
+        project: my
     nodeType: CloudEphemeral
     kubernetesVersion: "1.29"
     cri:
@@ -1994,35 +2024,60 @@ internal:
 			It("Everything must render properly", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-				assertVCDCluster := func(f *Config) {
+				assertOpenstackCluster := func(f *Config) {
 					secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "capi-user-credentials")
 					Expect(secret.Exists()).To(BeTrue())
-					Expect(secret.Field("data.username").String()).To(Equal("dXNlcg==")) // user
-					Expect(secret.Field("data.password").String()).To(Equal("cGFzcw==")) // pass
+					Expect(secret.Field("data.cacert").String()).To(Equal("bXljYWNlcnQ=")) // mycacert
+					cloudsYaml := base64.StdEncoding.EncodeToString([]byte(`
+clouds:
+  openstack:
+    auth:
+      auth_url: "https://mycloud.qqq/3/"
+      username: "myuname"
+      password: "pPaAsS"
+      project_name: "mytname"
+      user_domain_name: "Default"
+    region_name: "myreg"
+    identity_api_version: 3`))
+					expectedYaml := secret.Field("data.clouds\\.yaml").String()
+					Expect(expectedYaml).To(Equal(cloudsYaml)) // pass
 
-					vcdCluster := f.KubernetesResource("VCDCluster", "d8-cloud-instance-manager", "app")
-					Expect(vcdCluster.Exists()).To(BeTrue())
-					Expect(vcdCluster.Field("spec.site").String()).To(Equal("https://localhost:5000"))
-					Expect(vcdCluster.Field("spec.org").String()).To(Equal("org"))
-					Expect(vcdCluster.Field("spec.ovdc").String()).To(Equal("dc"))
+					openstackCluster := f.KubernetesResource("OpenstackCluster", "d8-cloud-instance-manager", "openstack")
+					Expect(openstackCluster.Exists()).To(BeTrue())
 				}
 
 				type mdParams struct {
 					name         string
 					templateName string
+					zone         string
+				}
+
+				assertSecurityGroupOrPort := func(sg gjson.Result, name string) {
+					Expect(sg.Get("filter.name").Exists()).To(BeTrue())
+					Expect(sg.Get("filter.name").String()).To(Equal(name))
+				}
+
+				assertPortFully := func(port gjson.Result, networkName string) {
+					assertSecurityGroupOrPort(port, networkName)
+					portSgs := port.Get("securityGroups")
+					Expect(portSgs.Exists()).To(BeTrue())
+					portSgsAr := portSgs.Array()
+					Expect(portSgsAr).To(HaveLen(2))
+					assertSecurityGroupOrPort(portSgsAr[0], "groupa")
+					assertSecurityGroupOrPort(portSgsAr[1], "groupb")
 				}
 
 				assertMachineDeploymentAndItsDeps := func(f *Config, d mdParams) {
 					md := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", d.name)
 					Expect(md.Exists()).To(BeTrue())
 
-					Expect(md.Field("spec.clusterName").String()).To(Equal("app"))
-					Expect(md.Field("spec.template.spec.clusterName").String()).To(Equal("app"))
+					Expect(md.Field("spec.clusterName").String()).To(Equal("openstack"))
+					Expect(md.Field("spec.template.spec.clusterName").String()).To(Equal("openstack"))
 					Expect(md.Field("spec.template.spec.bootstrap.dataSecretName").String()).To(Equal(d.templateName))
 					Expect(md.Field("spec.template.spec.infrastructureRef.name").String()).To(Equal(d.templateName))
 
 					annotations := md.Field("metadata.annotations").Map()
-					Expect(annotations["cluster.x-k8s.io/cluster-api-autoscaler-node-group-min-size"].String()).To(Equal("4"))
+					Expect(annotations["cluster.x-k8s.io/cluster-api-autoscaler-node-group-min-size"].String()).To(Equal("2"))
 					Expect(annotations["cluster.x-k8s.io/cluster-api-autoscaler-node-group-max-size"].String()).To(Equal("5"))
 					Expect(annotations["capacity.cluster-autoscaler.kubernetes.io/cpu"].String()).To(Equal("2"))
 					Expect(annotations["capacity.cluster-autoscaler.kubernetes.io/memory"].String()).To(Equal("2Gi"))
@@ -2030,42 +2085,69 @@ internal:
 					secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", d.templateName)
 					Expect(secret.Exists()).To(BeTrue())
 
-					vcdTemplate := f.KubernetesResource("VCDMachineTemplate", "d8-cloud-instance-manager", d.templateName)
-					Expect(vcdTemplate.Exists()).To(BeTrue())
+					openstackTemplate := f.KubernetesResource("OpenstackMachineTemplate", "d8-cloud-instance-manager", d.templateName)
+					Expect(openstackTemplate.Exists()).To(BeTrue())
 
-					Expect(vcdTemplate.Field("spec.template.spec.diskSize").String()).To(Equal("21474836480"))
-					Expect(vcdTemplate.Field("spec.template.spec.sizingPolicy").String()).To(Equal("s-c572-MSK1-S1-vDC1"))
-					Expect(vcdTemplate.Field("spec.template.spec.placementPolicy").String()).To(Equal("policy"))
-					Expect(vcdTemplate.Field("spec.template.spec.storageProfile").String()).To(Equal("vHDD"))
-					Expect(vcdTemplate.Field("spec.template.spec.template").String()).To(Equal("Ubuntu"))
+					Expect(openstackTemplate.Field("spec.template.spec.sshKeyName").String()).To(Equal("mysshkey"))
+					securityGroups := openstackTemplate.Field("spec.template.spec.securityGroups")
+					Expect(securityGroups.Exists()).To(BeTrue())
+					securityGroupsAr := securityGroups.Array()
+					Expect(securityGroupsAr).To(HaveLen(2))
+					assertSecurityGroupOrPort(securityGroupsAr[0], "groupa")
+					assertSecurityGroupOrPort(securityGroupsAr[1], "groupb")
 
-					Expect(vcdTemplate.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("9a87428aa818245d4b86ee9438255d53e6ae2d8a76d43cfb1b7560a6f0eab02e"), "Prevent checksum changing")
-					Expect(md.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("9a87428aa818245d4b86ee9438255d53e6ae2d8a76d43cfb1b7560a6f0eab02e"), "Prevent checksum changing")
+					ports := openstackTemplate.Field("spec.template.spec.ports")
+					Expect(ports.Exists()).To(BeTrue())
+					portsAr := ports.Array()
+					Expect(portsAr).To(HaveLen(2))
+					assertPortFully(portsAr[0], "shared")
+					assertPortFully(portsAr[1], "internal")
+
+					Expect(openstackTemplate.Field("spec.template.spec.rootVolume.sizeGiB").Int()).To(Equal(int64(30)))
+
+					tags := openstackTemplate.Field("spec.template.spec.tags")
+					Expect(tags.Exists()).To(BeTrue())
+					tagsMap := tags.Map()
+					Expect(tagsMap).To(HaveLen(3))
+					Expect(tagsMap).To(HaveKey("project"))
+					Expect(tagsMap["project"].String()).To(Equal("my"))
+					Expect(tagsMap).To(HaveKey("kubernetes.io-cluster-deckhouse-f49dd1c3-a63a-4565-a06c-625e35587eab"))
+					Expect(tagsMap["kubernetes.io-cluster-deckhouse-f49dd1c3-a63a-4565-a06c-625e35587eab"].String()).To(Equal("1"))
+					Expect(tagsMap).To(HaveKey(fmt.Sprintf("kubernetes.io-role-deckhouse-worker-%s", d.zone)))
+					Expect(tagsMap[fmt.Sprintf("kubernetes.io-role-deckhouse-worker-%s", d.zone)].String()).To(Equal("1"))
+
+					scheduleHints := openstackTemplate.Field("spec.template.spec.schedulerHintAdditionalProperties")
+					Expect(ports.Exists()).To(BeTrue())
+					scheduleHintsAr := scheduleHints.Array()
+					Expect(scheduleHintsAr).To(HaveLen(1))
+					Expect(scheduleHintsAr[0].Get("name").String()).To(Equal("deckhouse-zone"))
+					Expect(scheduleHintsAr[0].Get("value.type").String()).To(Equal("String"))
+					Expect(scheduleHintsAr[0].Get("value.string").String()).To(Equal(d.zone))
+
+					Expect(openstackTemplate.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("f399cab27acac142c38f0c0eb31ed5a6bb842fd784d4b0623106894597473d5e"), "Prevent checksum changing")
+					Expect(md.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("f399cab27acac142c38f0c0eb31ed5a6bb842fd784d4b0623106894597473d5e"), "Prevent checksum changing")
 				}
 
 				registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
 				Expect(registrySecret.Exists()).To(BeTrue())
 
-				assertClusterResources(f, "app")
+				assertClusterResources(f, "openstack")
 
-				assertVCDCluster(f)
+				assertOpenstackCluster(f)
 
 				// zonea
 				assertMachineDeploymentAndItsDeps(f, mdParams{
 					name:         "myprefix-worker-02320933",
-					templateName: "worker-6656f66e",
+					templateName: "worker-9a1e4640",
+					zone:         "zonea",
 				})
 
 				// zoneb
 				assertMachineDeploymentAndItsDeps(f, mdParams{
 					name:         "myprefix-worker-6bdb5b0d",
-					templateName: "worker-d30762c9",
+					templateName: "worker-6054501b",
+					zone:         "zoneb",
 				})
-
-				vcdTemplateWithCatalog := f.KubernetesResource("VCDMachineTemplate", "d8-cloud-instance-manager", "worker-big-c10b569f")
-				Expect(vcdTemplateWithCatalog.Exists()).To(BeTrue())
-				Expect(vcdTemplateWithCatalog.Field("spec.template.spec.template").String()).To(Equal("Ubuntu"))
-				Expect(vcdTemplateWithCatalog.Field("spec.template.spec.catalog").String()).To(Equal("catalog"))
 			})
 		})
 	})
