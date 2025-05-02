@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/shared"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -1419,6 +1420,362 @@ spec:
 		It("Internal fencing values should be generated", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.fencing.mode").Value()).To(Equal("Watchdog"))
+		})
+	})
+
+	FContext("Set nodegroup engine", func() {
+		const (
+			cloudEphemeralWithEngineNGTpl = `---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: test
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    minPerZone: 3
+    maxPerZone: 3
+    classReference:
+      kind: D8TestInstanceClass
+      name: caperror
+    zones: [a,b]
+status:
+  engine: %s
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: D8TestInstanceClass
+metadata:
+  name: caperror
+spec: {}
+`
+			cloudEphemeralWithoutEngineNG = `---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: test
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    minPerZone: 3
+    maxPerZone: 3
+    classReference:
+      kind: D8TestInstanceClass
+      name: caperror
+    zones: [a,b]
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: D8TestInstanceClass
+metadata:
+  name: caperror
+spec: {}
+`
+			cloudPermanentNGWithoutEngine = `
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: test
+spec:
+  nodeType: CloudPermanent
+`
+			cloudPermanentNGWithEngine = `
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: test
+spec:
+  nodeType: CloudPermanent
+status:
+  engine: None
+`
+			cloudStaticNGWithoutEngine = `
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: test
+spec:
+  nodeType: CloudStatic
+`
+			cloudStaticNGWithEngine = `
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: test
+spec:
+  nodeType: CloudStatic
+status:
+  engine: None
+`
+			staticGeneralNGWithoutEngine = `
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: test
+spec:
+  nodeType: Static
+`
+			staticGeneralNGWittEngine = `
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: test
+spec:
+  nodeType: Static
+status:
+  engine: None
+`
+			staticWithInstancesNGWithoutEngine = `
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: test
+spec:
+  nodeType: Static
+  staticInstances:
+    count: 0
+    labelSelector:
+      matchLabels:
+        node-group: worker
+`
+			staticWithInstancesNGWithEngine = `
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: test
+spec:
+  nodeType: Static
+  staticInstances:
+    count: 0
+    labelSelector:
+      matchLabels:
+        node-group: worker
+status:
+  engine: CAPI
+`
+		)
+		for _, module := range shared.ProvidersWithCAPIOnly {
+			Context(fmt.Sprintf("Cloud ephemeral node group for CAPI only %s", module), func() {
+				Context("Without engine", func() {
+					BeforeEach(func() {
+						f.BindingContexts.Set(f.KubeStateSet(cloudEphemeralWithoutEngineNG))
+						f.ValuesSet("global.enabledModules", []string{module})
+						f.RunHook()
+					})
+
+					It("Should set engine to CAPI", func() {
+						Expect(f).To(ExecuteSuccessfully())
+						ng := f.KubernetesGlobalResource("NodeGroup", "test")
+						Expect(ng.Field("status.engine").Value()).To(Equal("CAPI"))
+					})
+				})
+
+				Context("With engine", func() {
+					BeforeEach(func() {
+						f.BindingContexts.Set(f.KubeStateSet(fmt.Sprintf(cloudEphemeralWithEngineNGTpl, "CAPI")))
+						f.ValuesSet("global.enabledModules", []string{module})
+						f.RunHook()
+					})
+
+					It("Should not change engine", func() {
+						Expect(f).To(ExecuteSuccessfully())
+						ng := f.KubernetesGlobalResource("NodeGroup", "test")
+						Expect(ng.Field("status.engine").Value()).To(Equal("CAPI"))
+					})
+				})
+			})
+		}
+
+		for _, module := range shared.ProvidersWithCAPIAnsMCM {
+			Context(fmt.Sprintf("Cloud ephemeral node group for CAPI and MCM %s", module), func() {
+				Context("Without engine", func() {
+					BeforeEach(func() {
+						f.BindingContexts.Set(f.KubeStateSet(cloudEphemeralWithoutEngineNG))
+						f.ValuesSet("global.enabledModules", []string{module})
+						f.RunHook()
+					})
+
+					It("Should set engine to CAPI", func() {
+						Expect(f).To(ExecuteSuccessfully())
+						ng := f.KubernetesGlobalResource("NodeGroup", "test")
+						Expect(ng.Field("status.engine").Value()).To(Equal("CAPI"))
+					})
+				})
+
+				Context("With engine CAPI", func() {
+					BeforeEach(func() {
+						f.BindingContexts.Set(f.KubeStateSet(fmt.Sprintf(cloudEphemeralWithEngineNGTpl, "CAPI")))
+						f.ValuesSet("global.enabledModules", []string{module})
+						f.RunHook()
+					})
+
+					It("Should not change engine", func() {
+						Expect(f).To(ExecuteSuccessfully())
+						ng := f.KubernetesGlobalResource("NodeGroup", "test")
+						Expect(ng.Field("status.engine").Value()).To(Equal("CAPI"))
+					})
+				})
+
+				Context("With engine MCM", func() {
+					BeforeEach(func() {
+						f.BindingContexts.Set(f.KubeStateSet(fmt.Sprintf(cloudEphemeralWithEngineNGTpl, "MCM")))
+						f.ValuesSet("global.enabledModules", []string{module})
+						f.RunHook()
+					})
+
+					It("Should not change engine", func() {
+						Expect(f).To(ExecuteSuccessfully())
+						ng := f.KubernetesGlobalResource("NodeGroup", "test")
+						Expect(ng.Field("status.engine").Value()).To(Equal("MCM"))
+					})
+				})
+			})
+		}
+
+		for _, module := range []string{"cloud-provider-aws", "cloud-provider-azure", "cloud-provider-gcp", "cloud-provider-yandex", "cloud-provider-vsphere"} {
+			Context(fmt.Sprintf("Cloud ephemeral node group for MCM only %s", module), func() {
+				Context("Without engine", func() {
+					BeforeEach(func() {
+						f.BindingContexts.Set(f.KubeStateSet(cloudEphemeralWithoutEngineNG))
+						f.ValuesSet("global.enabledModules", []string{module})
+						f.RunHook()
+					})
+
+					It("Should set engine to MCM", func() {
+						Expect(f).To(ExecuteSuccessfully())
+						ng := f.KubernetesGlobalResource("NodeGroup", "test")
+						Expect(ng.Field("status.engine").Value()).To(Equal("MCM"))
+					})
+				})
+
+				Context("With engine", func() {
+					BeforeEach(func() {
+						f.BindingContexts.Set(f.KubeStateSet(fmt.Sprintf(cloudEphemeralWithEngineNGTpl, "MCM")))
+						f.ValuesSet("global.enabledModules", []string{module})
+						f.RunHook()
+					})
+
+					It("Should not change engine", func() {
+						Expect(f).To(ExecuteSuccessfully())
+						ng := f.KubernetesGlobalResource("NodeGroup", "test")
+						Expect(ng.Field("status.engine").Value()).To(Equal("MCM"))
+					})
+				})
+			})
+		}
+
+		Context("Cloud permanent node group", func() {
+			Context("Without status", func() {
+				BeforeEach(func() {
+					f.BindingContexts.Set(f.KubeStateSet(cloudPermanentNGWithoutEngine))
+					f.RunHook()
+				})
+
+				It("Should set engine to None", func() {
+					Expect(f).To(ExecuteSuccessfully())
+					ng := f.KubernetesGlobalResource("NodeGroup", "test")
+					Expect(ng.Field("status.engine").Value()).To(Equal("None"))
+				})
+			})
+
+			Context("With status", func() {
+				BeforeEach(func() {
+					f.BindingContexts.Set(f.KubeStateSet(cloudPermanentNGWithEngine))
+					f.RunHook()
+				})
+
+				It("Should not change engine", func() {
+					Expect(f).To(ExecuteSuccessfully())
+					ng := f.KubernetesGlobalResource("NodeGroup", "test")
+					Expect(ng.Field("status.engine").Value()).To(Equal("None"))
+				})
+			})
+		})
+
+		Context("Cloud static node group", func() {
+			Context("Without status", func() {
+				BeforeEach(func() {
+					f.BindingContexts.Set(f.KubeStateSet(cloudStaticNGWithoutEngine))
+					f.RunHook()
+				})
+
+				It("Should set engine to None", func() {
+					Expect(f).To(ExecuteSuccessfully())
+					ng := f.KubernetesGlobalResource("NodeGroup", "test")
+					Expect(ng.Field("status.engine").Value()).To(Equal("None"))
+				})
+			})
+
+			Context("With status", func() {
+				BeforeEach(func() {
+					f.BindingContexts.Set(f.KubeStateSet(cloudStaticNGWithEngine))
+					f.RunHook()
+				})
+
+				It("Should not change engine", func() {
+					Expect(f).To(ExecuteSuccessfully())
+					ng := f.KubernetesGlobalResource("NodeGroup", "test")
+					Expect(ng.Field("status.engine").Value()).To(Equal("None"))
+				})
+			})
+		})
+
+		Context("Static node group", func() {
+			Context("Without staticInstances", func() {
+				Context("Without status", func() {
+					BeforeEach(func() {
+						f.BindingContexts.Set(f.KubeStateSet(staticGeneralNGWithoutEngine))
+						f.RunHook()
+					})
+
+					It("Should set engine to None", func() {
+						Expect(f).To(ExecuteSuccessfully())
+						ng := f.KubernetesGlobalResource("NodeGroup", "test")
+						Expect(ng.Field("status.engine").Value()).To(Equal("None"))
+					})
+				})
+
+				Context("With status", func() {
+					BeforeEach(func() {
+						f.BindingContexts.Set(f.KubeStateSet(staticGeneralNGWittEngine))
+						f.RunHook()
+					})
+
+					It("Should not change engine", func() {
+						Expect(f).To(ExecuteSuccessfully())
+						ng := f.KubernetesGlobalResource("NodeGroup", "test")
+						Expect(ng.Field("status.engine").Value()).To(Equal("None"))
+					})
+				})
+			})
+
+			Context("With staticInstances (CAPS)", func() {
+				Context("Without status", func() {
+					BeforeEach(func() {
+						f.BindingContexts.Set(f.KubeStateSet(staticWithInstancesNGWithoutEngine))
+						f.RunHook()
+					})
+
+					It("Should set engine to CAPI", func() {
+						Expect(f).To(ExecuteSuccessfully())
+						ng := f.KubernetesGlobalResource("NodeGroup", "test")
+						Expect(ng.Field("status.engine").Value()).To(Equal("CAPI"))
+					})
+				})
+
+				Context("With status", func() {
+					BeforeEach(func() {
+						f.BindingContexts.Set(f.KubeStateSet(staticWithInstancesNGWithEngine))
+						f.RunHook()
+					})
+
+					It("Should not change engine", func() {
+						Expect(f).To(ExecuteSuccessfully())
+						ng := f.KubernetesGlobalResource("NodeGroup", "test")
+						Expect(ng.Field("status.engine").Value()).To(Equal("CAPI"))
+					})
+				})
+			})
 		})
 	})
 })
