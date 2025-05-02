@@ -1423,7 +1423,7 @@ spec:
 		})
 	})
 
-	FContext("Set nodegroup engine", func() {
+	Context("Set nodegroup engine", func() {
 		const (
 			cloudEphemeralWithEngineNGTpl = `---
 apiVersion: deckhouse.io/v1
@@ -1437,7 +1437,7 @@ spec:
     maxPerZone: 3
     classReference:
       kind: D8TestInstanceClass
-      name: caperror
+      name: cap
     zones: [a,b]
 status:
   engine: %s
@@ -1445,7 +1445,7 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: D8TestInstanceClass
 metadata:
-  name: caperror
+  name: cap
 spec: {}
 `
 			cloudEphemeralWithoutEngineNG = `---
@@ -1460,13 +1460,13 @@ spec:
     maxPerZone: 3
     classReference:
       kind: D8TestInstanceClass
-      name: caperror
+      name: cap
     zones: [a,b]
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: D8TestInstanceClass
 metadata:
-  name: caperror
+  name: cap
 spec: {}
 `
 			cloudPermanentNGWithoutEngine = `
