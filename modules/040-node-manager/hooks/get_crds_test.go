@@ -1660,7 +1660,7 @@ spec: {}
 						f.RunHook()
 					})
 
-					It("Should set engine to CAPI", func() {
+					It("Should set engine to MCM", func() {
 						Expect(f).To(ExecuteSuccessfully())
 						ng := f.KubernetesGlobalResource("NodeGroup", "test")
 						Expect(ng.Field("status.engine").Value()).To(Equal("MCM"))
