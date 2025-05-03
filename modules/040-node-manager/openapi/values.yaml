@@ -254,7 +254,7 @@ properties:
           type: object
           properties:
             engine:
-            name:
+              name:
               type: string
               description: |
                 A name of the NodeGroup.
