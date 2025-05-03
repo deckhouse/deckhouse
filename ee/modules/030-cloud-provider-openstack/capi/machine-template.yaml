@@ -1,5 +1,5 @@
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-kind: OpenstackMachineTemplate
+kind: OpenStackMachineTemplate
 metadata:
   annotations:
     checksum/instance-class: {{ .instanceClassChecksum | quote }}
