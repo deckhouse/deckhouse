@@ -15,9 +15,13 @@ spec:
       configDrive: true
       flavor: {{ .nodeGroup.instanceClass.flavorName | quote}}
     {{- if hasKey .nodeGroup.instanceClass "imageName" }}
-      image: {{ .nodeGroup.instanceClass.imageName }}
+      image:
+        filter:
+          name: {{ .nodeGroup.instanceClass.imageName }}
     {{- else if hasKey .Values.nodeManager.internal.cloudProvider.openstack.instances "imageName" }}
-      image: {{ .Values.nodeManager.internal.cloudProvider.openstack.instances.imageName }}
+      image:
+        fileter:
+          name: {{ .Values.nodeManager.internal.cloudProvider.openstack.instances.imageName }}
     {{- else }}
       {{ cat "No imageName provided neither in cloud provider configuration nor in OpenStackInstanceClass" .nodeGroup.cloudInstances.classReference.name | fail }}
     {{- end }}
@@ -81,11 +85,11 @@ spec:
         {{- $tags = mergeOverwrite $tags .nodeGroup.instanceClass.additionalTags }}
       {{- end }}
       {{- range $k, $v := $tags }}
-        {{ $k }}: {{ $v | quote }}
+       - {{ (printf "%s=%s" $k $v) | quote }}
       {{- end }}
         # These tags are mandatory as the safety controller uses them to identify VMs created by this controller.
-        kubernetes.io-cluster-deckhouse-{{ .Values.global.discovery.clusterUUID }}: "1"
-        kubernetes.io-role-deckhouse-{{ .nodeGroup.name }}-{{ .zoneName }}: "1"
+       - "kubernetes.io-cluster-deckhouse-{{ .Values.global.discovery.clusterUUID }}=1"
+       - "kubernetes.io-role-deckhouse-{{ .nodeGroup.name }}-{{ .zoneName }}=1"
       schedulerHintAdditionalProperties:
       - name: deckhouse-zone
         value:

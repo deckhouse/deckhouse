@@ -2088,7 +2088,10 @@ clouds:
 					openstackTemplate := f.KubernetesResource("OpenstackMachineTemplate", "d8-cloud-instance-manager", d.templateName)
 					Expect(openstackTemplate.Exists()).To(BeTrue())
 
+					Expect(openstackTemplate.Field("spec.template.spec.image.filter.name").String()).To(Equal("ubuntu-18-04-cloud-amd64"))
+
 					Expect(openstackTemplate.Field("spec.template.spec.sshKeyName").String()).To(Equal("mysshkey"))
+
 					securityGroups := openstackTemplate.Field("spec.template.spec.securityGroups")
 					Expect(securityGroups.Exists()).To(BeTrue())
 					securityGroupsAr := securityGroups.Array()
@@ -2107,14 +2110,11 @@ clouds:
 
 					tags := openstackTemplate.Field("spec.template.spec.tags")
 					Expect(tags.Exists()).To(BeTrue())
-					tagsMap := tags.Map()
-					Expect(tagsMap).To(HaveLen(3))
-					Expect(tagsMap).To(HaveKey("project"))
-					Expect(tagsMap["project"].String()).To(Equal("my"))
-					Expect(tagsMap).To(HaveKey("kubernetes.io-cluster-deckhouse-f49dd1c3-a63a-4565-a06c-625e35587eab"))
-					Expect(tagsMap["kubernetes.io-cluster-deckhouse-f49dd1c3-a63a-4565-a06c-625e35587eab"].String()).To(Equal("1"))
-					Expect(tagsMap).To(HaveKey(fmt.Sprintf("kubernetes.io-role-deckhouse-worker-%s", d.zone)))
-					Expect(tagsMap[fmt.Sprintf("kubernetes.io-role-deckhouse-worker-%s", d.zone)].String()).To(Equal("1"))
+					tagsAr := tags.Array()
+					Expect(tagsAr).To(HaveLen(3))
+					Expect(tagsAr[0].String()).To(Equal("project=my"))
+					Expect(tagsAr[1].String()).To(Equal("kubernetes.io-cluster-deckhouse-f49dd1c3-a63a-4565-a06c-625e35587eab=1"))
+					Expect(tagsAr[2].String()).To(Equal(fmt.Sprintf("kubernetes.io-role-deckhouse-worker-%s=1", d.zone)))
 
 					scheduleHints := openstackTemplate.Field("spec.template.spec.schedulerHintAdditionalProperties")
 					Expect(ports.Exists()).To(BeTrue())
