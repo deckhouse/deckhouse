@@ -72,15 +72,20 @@ spec:
       imagePullSecrets:
         - name: deckhouse-registry
       terminationGracePeriodSeconds: 10
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       containers:
       - name: capo-controller-manager
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "capoControllerManager") }}
         imagePullPolicy: IfNotPresent
+
         args:
           - "--leader-elect"
           - "--health-addr"
-          - ":8081"
+          - ":9445"
+          - "--webhook-port"
+          - "4201"
         ports:
           - containerPort: 4201
             name: webhook-server
@@ -92,13 +97,13 @@ spec:
         livenessProbe:
           httpGet:
             path: /healthz
-            port: 8081
+            port: 9445
           initialDelaySeconds: 15
           periodSeconds: 20
         readinessProbe:
           httpGet:
             path: /readyz
-            port: 8081
+            port: 9445
           initialDelaySeconds: 5
           periodSeconds: 10
         resources:
