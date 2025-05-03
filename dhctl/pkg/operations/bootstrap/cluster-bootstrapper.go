@@ -18,7 +18,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"reflect"
 	"time"
 
@@ -27,7 +26,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -102,8 +103,7 @@ type Params struct {
 type ClusterBootstrapper struct {
 	*Params
 	PhasedExecutionContext phases.DefaultPhasedExecutionContext
-
-	initializeNewAgent bool
+	initializeNewAgent     bool
 	// TODO(dhctl-for-commander): pass stateCache externally using params as in Destroyer, this variable will be unneeded then
 	lastState phases.DhctlState
 }
@@ -374,14 +374,18 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	// next parse and check resources
 	// do it after bootstrap cloud because resources can be template
 	// and we want to fail immediately if template has errors
-	var resourcesToCreate template.Resources
+	var resourcesToCreateBeforeDeckhouseBootstrap template.Resources
+	var resourcesToCreateAfterDeckhouseBootstrap template.Resources
 	if metaConfig.ResourcesYAML != "" {
 		parsedResources, err := template.ParseResourcesContent(metaConfig.ResourcesYAML, resourcesTemplateData)
 		if err != nil {
 			return err
 		}
 
-		resourcesToCreate = parsedResources
+		before, after := splitResourcesOnPreAndPostDeckhouseInstall(parsedResources)
+
+		resourcesToCreateBeforeDeckhouseBootstrap = before
+		resourcesToCreateAfterDeckhouseBootstrap = after
 	}
 
 	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.RegistryPackagesProxyPhase, false, stateCache, nil); err != nil {
@@ -420,6 +424,11 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	}
 
 	kubeCl, err := kubernetes.ConnectToKubernetesAPI(ctx, b.NodeInterface)
+	if err != nil {
+		return err
+	}
+
+	err = createResources(ctx, kubeCl, resourcesToCreateBeforeDeckhouseBootstrap, metaConfig, nil)
 	if err != nil {
 		return err
 	}
@@ -467,7 +476,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return err
 	}
 
-	err = createResources(ctx, kubeCl, resourcesToCreate, metaConfig, installDeckhouseResult)
+	err = createResources(ctx, kubeCl, resourcesToCreateAfterDeckhouseBootstrap, metaConfig, installDeckhouseResult)
 	if err != nil {
 		return err
 	}
@@ -606,19 +615,41 @@ func bootstrapAdditionalNodesForCloudCluster(ctx context.Context, kubeCl *client
 		return nil
 	})
 }
+func splitResourcesOnPreAndPostDeckhouseInstall(resourcesToCreate template.Resources) (before template.Resources, after template.Resources) {
+	before = make(template.Resources, 0, len(resourcesToCreate))
+	after = make(template.Resources, 0, len(resourcesToCreate))
 
-func createResources(ctx context.Context, kubeCl *client.KubernetesClient, resourcesToCreate template.Resources, metaConfig *config.MetaConfig, result *InstallDeckhouseResult) error {
-	log.WarnLn("Some resources require at least one non-master node to be added to the cluster.")
-
-	tasks := result.ManifestResult.WithResourcesMCTasks
-
-	if resourcesToCreate == nil {
-		for _, task := range tasks {
-			return retry.NewLoop(task.Title, 60, 5*time.Second).RunContext(ctx, func() error {
-				return task.Do(kubeCl)
-			})
+	for _, resource := range resourcesToCreate {
+		annotations := resource.Object.GetAnnotations()
+		if annotations == nil || annotations["dhctl.deckhouse.io/bootstrap-resource-place"] != "before-deckhouse" {
+			after = append(after, resource)
 		}
 
+		before = append(before, resource)
+	}
+
+	return before, after
+}
+
+func createResources(ctx context.Context, kubeCl *client.KubernetesClient, resourcesToCreate template.Resources, metaConfig *config.MetaConfig, result *InstallDeckhouseResult) error {
+	tasks := make([]actions.ModuleConfigTask, 0)
+	if result != nil {
+		log.WarnLn("Some resources require at least one non-master node to be added to the cluster.")
+
+		tasks = result.ManifestResult.WithResourcesMCTasks
+
+		if len(resourcesToCreate) == 0 {
+			for _, task := range tasks {
+				return retry.NewLoop(task.Title, 60, 5*time.Second).RunContext(ctx, func() error {
+					return task.Do(kubeCl)
+				})
+			}
+
+			return nil
+		}
+	}
+
+	if len(resourcesToCreate) == 0 {
 		return nil
 	}
 
