@@ -119,10 +119,10 @@ func setNodeGroupEngine(input *go_hook.HookInput) error {
 
 	for _, ngRaw := range input.Snapshots["ngs"] {
 		ng := ngRaw.(shared.NodeGroupEngineParam)
-		//if ng.Engine != "" {
-		//	input.Logger.Infof("Skipping node group %s engine type migration becauseit was set to %s", ng.NodeGroupName, ng.Engine)
-		//	continue
-		//}
+		if ng.Engine != "" {
+			input.Logger.Infof("Skipping node group %s engine type migration becauseit was set to %s", ng.NodeGroupName, ng.Engine)
+			continue
+		}
 
 		engine, err := shared.CalculateEngine(ng, cloudEphemeralEngineDefault)
 		if err != nil {
