@@ -1,0 +1,375 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.17.1
+  name: flavors.openstack.k-orc.cloud
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-openstack
+spec:
+  group: openstack.k-orc.cloud
+  names:
+    categories:
+      - openstack
+    kind: Flavor
+    listKind: FlavorList
+    plural: flavors
+    singular: flavor
+  scope: Namespaced
+  versions:
+    - additionalPrinterColumns:
+        - description: Resource ID
+          jsonPath: .status.id
+          name: ID
+          type: string
+        - description: Availability status of resource
+          jsonPath: .status.conditions[?(@.type=='Available')].status
+          name: Available
+          type: string
+        - description: Message describing current progress status
+          jsonPath: .status.conditions[?(@.type=='Progressing')].message
+          name: Message
+          type: string
+      name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: Flavor is the Schema for an ORC resource.
+          properties:
+            apiVersion:
+              description: |-
+                APIVersion defines the versioned schema of this representation of an object.
+                Servers should convert recognized schemas to the latest internal value, and
+                may reject unrecognized values.
+                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+              type: string
+            kind:
+              description: |-
+                Kind is a string value representing the REST resource this object represents.
+                Servers may infer this from the endpoint the client submits requests to.
+                Cannot be updated.
+                In CamelCase.
+                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: spec specifies the desired state of the resource.
+              properties:
+                cloudCredentialsRef:
+                  description: cloudCredentialsRef points to a secret containing OpenStack
+                    credentials
+                  properties:
+                    cloudName:
+                      description: cloudName specifies the name of the entry in the
+                        clouds.yaml file to use.
+                      maxLength: 256
+                      minLength: 1
+                      type: string
+                    secretName:
+                      description: |-
+                        secretName is the name of a secret in the same namespace as the resource being provisioned.
+                        The secret must contain a key named `clouds.yaml` which contains an OpenStack clouds.yaml file.
+                        The secret may optionally contain a key named `cacert` containing a PEM-encoded CA certificate.
+                      maxLength: 253
+                      minLength: 1
+                      type: string
+                  required:
+                    - cloudName
+                    - secretName
+                  type: object
+                import:
+                  description: |-
+                    import refers to an existing OpenStack resource which will be imported instead of
+                    creating a new one.
+                  maxProperties: 1
+                  minProperties: 1
+                  properties:
+                    filter:
+                      description: |-
+                        filter contains a resource query which is expected to return a single
+                        result. The controller will continue to retry if filter returns no
+                        results. If filter returns multiple results the controller will set an
+                        error state and will not continue to retry.
+                      minProperties: 1
+                      properties:
+                        disk:
+                          description: disk is the size of the root disk in GiB.
+                          format: int32
+                          minimum: 0
+                          type: integer
+                        name:
+                          description: name of the existing resource
+                          maxLength: 255
+                          minLength: 1
+                          pattern: ^[^,]+$
+                          type: string
+                        ram:
+                          description: ram is the memory of the flavor, measured in
+                            MB.
+                          format: int32
+                          minimum: 1
+                          type: integer
+                        vcpus:
+                          description: vcpus is the number of vcpus for the flavor.
+                          format: int32
+                          minimum: 1
+                          type: integer
+                      type: object
+                    id:
+                      description: |-
+                        id contains the unique identifier of an existing OpenStack resource. Note
+                        that when specifying an import by ID, the resource MUST already exist.
+                        The ORC object will enter an error state if the resource does not exist.
+                      format: uuid
+                      type: string
+                  type: object
+                managedOptions:
+                  description: managedOptions specifies options which may be applied
+                    to managed objects.
+                  properties:
+                    onDelete:
+                      default: delete
+                      description: |-
+                        onDelete specifies the behaviour of the controller when the ORC
+                        object is deleted. Options are `delete` - delete the OpenStack resource;
+                        `detach` - do not delete the OpenStack resource. If not specified, the
+                        default is `delete`.
+                      enum:
+                        - delete
+                        - detach
+                      type: string
+                  type: object
+                managementPolicy:
+                  default: managed
+                  description: |-
+                    managementPolicy defines how ORC will treat the object. Valid values are
+                    `managed`: ORC will create, update, and delete the resource; `unmanaged`:
+                    ORC will import an existing resource, and will not apply updates to it or
+                    delete it.
+                  enum:
+                    - managed
+                    - unmanaged
+                  type: string
+                  x-kubernetes-validations:
+                    - message: managementPolicy is immutable
+                      rule: self == oldSelf
+                resource:
+                  description: |-
+                    resource specifies the desired state of the resource.
+
+                    resource may not be specified if the management policy is `unmanaged`.
+
+                    resource must be specified if the management policy is `managed`.
+                  properties:
+                    description:
+                      description: description contains a free form description of the
+                        flavor.
+                      maxLength: 65535
+                      minLength: 1
+                      type: string
+                    disk:
+                      description: |-
+                        disk is the size of the root disk that will be created in GiB. If 0
+                        the root disk will be set to exactly the size of the image used to
+                        deploy the instance. However, in this case the scheduler cannot
+                        select the compute host based on the virtual image size. Therefore,
+                        0 should only be used for volume booted instances or for testing
+                        purposes. Volume-backed instances can be enforced for flavors with
+                        zero root disk via the
+                        os_compute_api:servers:create:zero_disk_flavor policy rule.
+                      format: int32
+                      minimum: 0
+                      type: integer
+                    ephemeral:
+                      description: |-
+                        ephemeral is the size of the ephemeral disk that will be created, in GiB.
+                        Ephemeral disks may be written over on server state changes. So should only
+                        be used as a scratch space for applications that are aware of its
+                        limitations. Defaults to 0.
+                      format: int32
+                      minimum: 0
+                      type: integer
+                    isPublic:
+                      description: isPublic flags a flavor as being available to all
+                        projects or not.
+                      type: boolean
+                    name:
+                      description: |-
+                        name will be the name of the created resource. If not specified, the
+                        name of the ORC object will be used.
+                      maxLength: 255
+                      minLength: 1
+                      pattern: ^[^,]+$
+                      type: string
+                    ram:
+                      description: ram is the memory of the flavor, measured in MB.
+                      format: int32
+                      minimum: 1
+                      type: integer
+                    swap:
+                      description: |-
+                        swap is the size of a dedicated swap disk that will be allocated, in
+                        MiB. If 0 (the default), no dedicated swap disk will be created.
+                      format: int32
+                      minimum: 0
+                      type: integer
+                    vcpus:
+                      description: vcpus is the number of vcpus for the flavor.
+                      format: int32
+                      minimum: 1
+                      type: integer
+                  required:
+                    - disk
+                    - ram
+                    - vcpus
+                  type: object
+                  x-kubernetes-validations:
+                    - message: FlavorResourceSpec is immutable
+                      rule: self == oldSelf
+              required:
+                - cloudCredentialsRef
+              type: object
+              x-kubernetes-validations:
+                - message: resource must be specified when policy is managed
+                  rule: 'self.managementPolicy == ''managed'' ? has(self.resource) : true'
+                - message: import may not be specified when policy is managed
+                  rule: 'self.managementPolicy == ''managed'' ? !has(self.__import__)
+                : true'
+                - message: resource may not be specified when policy is unmanaged
+                  rule: 'self.managementPolicy == ''unmanaged'' ? !has(self.resource)
+                : true'
+                - message: import must be specified when policy is unmanaged
+                  rule: 'self.managementPolicy == ''unmanaged'' ? has(self.__import__)
+                : true'
+                - message: managedOptions may only be provided when policy is managed
+                  rule: 'has(self.managedOptions) ? self.managementPolicy == ''managed''
+                : true'
+            status:
+              description: status defines the observed state of the resource.
+              properties:
+                conditions:
+                  description: |-
+                    conditions represents the observed status of the object.
+                    Known .status.conditions.type are: "Available", "Progressing"
+
+                    Available represents the availability of the OpenStack resource. If it is
+                    true then the resource is ready for use.
+
+                    Progressing indicates whether the controller is still attempting to
+                    reconcile the current state of the OpenStack resource to the desired
+                    state. Progressing will be False either because the desired state has
+                    been achieved, or because some terminal error prevents it from ever being
+                    achieved and the controller is no longer attempting to reconcile. If
+                    Progressing is True, an observer waiting on the resource should continue
+                    to wait.
+                  items:
+                    description: Condition contains details for one aspect of the current
+                      state of this API Resource.
+                    properties:
+                      lastTransitionTime:
+                        description: |-
+                          lastTransitionTime is the last time the condition transitioned from one status to another.
+                          This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                        format: date-time
+                        type: string
+                      message:
+                        description: |-
+                          message is a human readable message indicating details about the transition.
+                          This may be an empty string.
+                        maxLength: 32768
+                        type: string
+                      observedGeneration:
+                        description: |-
+                          observedGeneration represents the .metadata.generation that the condition was set based upon.
+                          For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                          with respect to the current state of the instance.
+                        format: int64
+                        minimum: 0
+                        type: integer
+                      reason:
+                        description: |-
+                          reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                          Producers of specific condition types may define expected values and meanings for this field,
+                          and whether the values are considered a guaranteed API.
+                          The value should be a CamelCase string.
+                          This field may not be empty.
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                        type: string
+                      status:
+                        description: status of the condition, one of True, False, Unknown.
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        type: string
+                      type:
+                        description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  maxItems: 32
+                  type: array
+                  x-kubernetes-list-map-keys:
+                    - type
+                  x-kubernetes-list-type: map
+                id:
+                  description: id is the unique identifier of the OpenStack resource.
+                  type: string
+                resource:
+                  description: resource contains the observed state of the OpenStack
+                    resource.
+                  properties:
+                    description:
+                      description: description is a human-readable description for the
+                        resource.
+                      maxLength: 65535
+                      type: string
+                    disk:
+                      description: disk is the size of the root disk that will be created
+                        in GiB.
+                      format: int32
+                      type: integer
+                    ephemeral:
+                      description: ephemeral is the size of the ephemeral disk, in GiB.
+                      format: int32
+                      type: integer
+                    isPublic:
+                      description: isPublic flags a flavor as being available to all
+                        projects or not.
+                      type: boolean
+                    name:
+                      description: name is a Human-readable name for the flavor. Might
+                        not be unique.
+                      maxLength: 1024
+                      type: string
+                    ram:
+                      description: ram is the memory of the flavor, measured in MB.
+                      format: int32
+                      type: integer
+                    swap:
+                      description: |-
+                        swap is the size of a dedicated swap disk that will be allocated, in
+                        MiB.
+                      format: int32
+                      type: integer
+                    vcpus:
+                      description: vcpus is the number of vcpus for the flavor.
+                      format: int32
+                      type: integer
+                  type: object
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
