@@ -114,6 +114,12 @@ rules:
       - huaweicloudclusters
       - huaweicloudmachines
       - huaweicloudmachinetemplates
+      - openstackclusters
+      - openstackclustertemplates
+      - openstackfloatingippools
+      - openstackmachines
+      - openstackmachinetemplates
+      - openstackservers
     verbs:
       - create
       - delete
