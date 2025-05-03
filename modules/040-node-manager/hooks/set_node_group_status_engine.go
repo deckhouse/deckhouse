@@ -32,7 +32,7 @@ import (
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        "/modules/node-manager/set_node_group_status_engine",
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 1},
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:                         "ngs",
