@@ -79,6 +79,8 @@ spec:
         imagePullPolicy: IfNotPresent
         args:
           - "--leader-elect"
+          - "--health-addr"
+          - ":8081"
         ports:
           - containerPort: 4201
             name: webhook-server
