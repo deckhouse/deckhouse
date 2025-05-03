@@ -1,0 +1,226 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: resource-controller
+  namespace: d8-cloud-provider-openstack
+  {{- include "helm_lib_module_labels" (list . (dict "app" "resource-controller")) | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:cloud-provider-openstack:resource-controller-image-viewer-role
+  {{- include "helm_lib_module_labels" (list . (dict "app" "resource-controller")) | nindent 2 }}
+rules:
+  - apiGroups:
+      - openstack.k-orc.cloud
+    resources:
+      - images
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - openstack.k-orc.cloud
+    resources:
+      - images/status
+    verbs:
+      - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:cloud-provider-openstack:resource-controller-metrics-reader
+  {{- include "helm_lib_module_labels" (list . (dict "app" "resource-controller")) | nindent 2 }}
+rules:
+  - nonResourceURLs:
+      - /metrics
+    verbs:
+      - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:cloud-provider-openstack:resource-controller-metrics-auth-role
+  {{- include "helm_lib_module_labels" (list . (dict "app" "resource-controller")) | nindent 2 }}
+rules:
+  - apiGroups:
+      - authentication.k8s.io
+    resources:
+      - tokenreviews
+    verbs:
+      - create
+  - apiGroups:
+      - authorization.k8s.io
+    resources:
+      - subjectaccessreviews
+    verbs:
+      - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:cloud-provider-openstack:resource-controller
+  {{- include "helm_lib_module_labels" (list . (dict "app" "resource-controller")) | nindent 2 }}
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - openstack.k-orc.cloud
+    resources:
+      - flavors
+      - images
+      - networks
+      - ports
+      - projects
+      - routerinterfaces
+      - routers
+      - securitygroups
+      - servers
+      - subnets
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - openstack.k-orc.cloud
+    resources:
+      - flavors/status
+      - images/status
+      - networks/status
+      - ports/status
+      - projects/status
+      - routerinterfaces/status
+      - routers/status
+      - securitygroups/status
+      - servers/status
+      - subnets/status
+    verbs:
+      - get
+      - patch
+      - update
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:cloud-provider-openstack:resource-controller
+  {{- include "helm_lib_module_labels" (list . (dict "app" "resource-controller")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:cloud-provider-openstack:resource-controller
+subjects:
+- kind: ServiceAccount
+  name: resource-controller
+  namespace: d8-cloud-provider-openstack
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:cloud-provider-openstack:resource-controller-metrics-auth-role
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:cloud-provider-openstack:resource-controller-metrics-auth-role
+subjects:
+  - kind: ServiceAccount
+    name: resource-controller
+    namespace: d8-cloud-provider-openstack
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:cloud-provider-openstack:resource-controller-metrics-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:cloud-provider-openstack:resource-controller-metrics-reader
+subjects:
+  - kind: ServiceAccount
+    name: resource-controller
+    namespace: d8-cloud-provider-openstack
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:cloud-provider-openstack:resource-controller-image-viewer-role
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:cloud-provider-openstack:resource-controller-image-viewer-role
+subjects:
+  - kind: ServiceAccount
+    name: resource-controller
+    namespace: d8-cloud-provider-openstack
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: resource-controller-leader-election-role
+  namespace: d8-cloud-provider-openstack
+  {{- include "helm_lib_module_labels" (list . (dict "app" "resource-controller")) | nindent 2 }}
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: resource-controller-leader-election-role
+  namespace: d8-cloud-provider-openstack
+  {{- include "helm_lib_module_labels" (list . (dict "app" "resource-controller")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: resource-controller-leader-election-role
+subjects:
+- kind: ServiceAccount
+  name: resource-controller
+  namespace: d8-cloud-provider-openstack

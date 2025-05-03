@@ -75,6 +75,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-cloud-provider-openstack:capo-controller-manager",
 	"system:serviceaccount:d8-cloud-provider-openstack:cloud-controller-manager",
 	"system:serviceaccount:d8-cloud-provider-openstack:cloud-data-discoverer",
+	"system:serviceaccount:d8-cloud-provider-openstack:resource-controller",
 	"system:serviceaccount:d8-cloud-provider-vcd:capcd-controller-manager",
 	"system:serviceaccount:d8-cloud-provider-vcd:cloud-controller-manager",
 	"system:serviceaccount:d8-cloud-provider-vcd:cloud-data-discoverer",

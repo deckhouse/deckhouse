@@ -279,6 +279,40 @@ var _ = Describe("Module :: cloud-provider-openstack :: helm template ::", func(
 		openstackCheck(f, "1.28")
 	})
 
+	Context("Openstack resource manager", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
+			f.ValuesSetFromYaml("global.discovery.defaultStorageClass", `slowhdd`)
+			f.HelmRender()
+		})
+
+		It("Everything must render properly for deployment", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			deploymentController := f.KubernetesResource("Deployment", "d8-cloud-provider-openstack", "resource-controller")
+			Expect(deploymentController.Exists()).To(BeTrue())
+
+			service := f.KubernetesResource("Service", "d8-cloud-provider-openstack", "resource-controller")
+			Expect(service.Exists()).To(BeTrue())
+
+		})
+
+		Context("vertical-pod-autoscaler module enabled", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler"]`)
+			})
+
+			It("Should render VPA resource", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				d := f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-provider-openstack", "resource-controller")
+				Expect(d.Exists()).To(BeTrue())
+			})
+		})
+	})
+
 	Context("Openstack CAPI", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
