@@ -428,12 +428,9 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return err
 	}
 
-	err = createResources(ctx, kubeCl, resourcesToCreateBeforeDeckhouseBootstrap, metaConfig, nil)
-	if err != nil {
-		return err
-	}
-
-	installDeckhouseResult, err := InstallDeckhouse(ctx, kubeCl, deckhouseInstallConfig)
+	installDeckhouseResult, err := InstallDeckhouse(ctx, kubeCl, deckhouseInstallConfig, func() error {
+		return createResources(ctx, kubeCl, resourcesToCreateBeforeDeckhouseBootstrap, metaConfig, nil)
+	})
 	if err != nil {
 		return err
 	}
@@ -622,9 +619,12 @@ func splitResourcesOnPreAndPostDeckhouseInstall(resourcesToCreate template.Resou
 	for _, resource := range resourcesToCreate {
 		annotations := resource.Object.GetAnnotations()
 		if annotations == nil || annotations["dhctl.deckhouse.io/bootstrap-resource-place"] != "before-deckhouse" {
+			log.DebugF("Add resource %s - %s to after queue\n", resource.String(), resource.Object.GetName())
 			after = append(after, resource)
+			continue
 		}
 
+		log.DebugF("Add resource %s - %s to before queue\n", resource.String(), resource.Object.GetName())
 		before = append(before, resource)
 	}
 
