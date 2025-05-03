@@ -8,7 +8,7 @@ import:
   before: setup
 imageSpec:
   config:
-    entrypoint: ["/caph0-controller-manager"]
+    entrypoint: ["/capo-controller-manager"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
