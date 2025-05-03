@@ -41,7 +41,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc:                   filterNodeGroupEngine,
 			WaitForSynchronization:       ptr.To(true),
 			ExecuteHookOnEvents:          ptr.To(false),
-			ExecuteHookOnSynchronization: ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(true),
 		},
 		{
 			Name:       "migration_status",
@@ -58,7 +58,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc:                   filterMigrationStatus,
 			WaitForSynchronization:       ptr.To(true),
 			ExecuteHookOnEvents:          ptr.To(false),
-			ExecuteHookOnSynchronization: ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(true),
 		},
 	},
 }, setNodeGroupEngine)
