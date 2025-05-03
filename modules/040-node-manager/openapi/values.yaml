@@ -253,6 +253,10 @@ properties:
         items:
           type: object
           properties:
+            name:
+              type: string
+              description: |
+                A name of the NodeGroup.
             engine:
               type: string
               description: |
