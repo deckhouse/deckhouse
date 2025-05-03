@@ -1590,6 +1590,7 @@ spec: {}
 						Expect(f).To(ExecuteSuccessfully())
 						ng := f.KubernetesGlobalResource("NodeGroup", "test")
 						Expect(ng.Field("status.engine").Value()).To(Equal("CAPI"))
+						Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.engine").Value()).To(Equal("CAPI"))
 					})
 				})
 
@@ -1604,6 +1605,7 @@ spec: {}
 						Expect(f).To(ExecuteSuccessfully())
 						ng := f.KubernetesGlobalResource("NodeGroup", "test")
 						Expect(ng.Field("status.engine").Value()).To(Equal("CAPI"))
+						Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.engine").Value()).To(Equal("CAPI"))
 					})
 				})
 			})
@@ -1622,6 +1624,7 @@ spec: {}
 						Expect(f).To(ExecuteSuccessfully())
 						ng := f.KubernetesGlobalResource("NodeGroup", "test")
 						Expect(ng.Field("status.engine").Value()).To(Equal("CAPI"))
+						Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.engine").Value()).To(Equal("CAPI"))
 					})
 				})
 
@@ -1636,6 +1639,7 @@ spec: {}
 						Expect(f).To(ExecuteSuccessfully())
 						ng := f.KubernetesGlobalResource("NodeGroup", "test")
 						Expect(ng.Field("status.engine").Value()).To(Equal("CAPI"))
+						Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.engine").Value()).To(Equal("CAPI"))
 					})
 				})
 
@@ -1650,6 +1654,7 @@ spec: {}
 						Expect(f).To(ExecuteSuccessfully())
 						ng := f.KubernetesGlobalResource("NodeGroup", "test")
 						Expect(ng.Field("status.engine").Value()).To(Equal("MCM"))
+						Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.engine").Value()).To(Equal("MCM"))
 					})
 				})
 
@@ -1664,6 +1669,7 @@ spec: {}
 						Expect(f).To(ExecuteSuccessfully())
 						ng := f.KubernetesGlobalResource("NodeGroup", "test")
 						Expect(ng.Field("status.engine").Value()).To(Equal("MCM"))
+						Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.engine").Value()).To(Equal("MCM"))
 					})
 				})
 
@@ -1683,6 +1689,7 @@ spec: {}
 						Expect(f).To(ExecuteSuccessfully())
 						ng := f.KubernetesGlobalResource("NodeGroup", "test")
 						Expect(ng.Field("status.engine").Value()).To(Equal("MCM"))
+						Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.engine").Value()).To(Equal("MCM"))
 					})
 				})
 
@@ -1697,6 +1704,7 @@ spec: {}
 						Expect(f).To(ExecuteSuccessfully())
 						ng := f.KubernetesGlobalResource("NodeGroup", "test")
 						Expect(ng.Field("status.engine").Value()).To(Equal("MCM"))
+						Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.engine").Value()).To(Equal("MCM"))
 					})
 				})
 			})
@@ -1713,6 +1721,7 @@ spec: {}
 					Expect(f).To(ExecuteSuccessfully())
 					ng := f.KubernetesGlobalResource("NodeGroup", "test")
 					Expect(ng.Field("status.engine").Value()).To(Equal("None"))
+					Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.engine").Value()).To(Equal("None"))
 				})
 			})
 
@@ -1726,6 +1735,7 @@ spec: {}
 					Expect(f).To(ExecuteSuccessfully())
 					ng := f.KubernetesGlobalResource("NodeGroup", "test")
 					Expect(ng.Field("status.engine").Value()).To(Equal("None"))
+					Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.engine").Value()).To(Equal("None"))
 				})
 			})
 		})
@@ -1741,6 +1751,7 @@ spec: {}
 					Expect(f).To(ExecuteSuccessfully())
 					ng := f.KubernetesGlobalResource("NodeGroup", "test")
 					Expect(ng.Field("status.engine").Value()).To(Equal("None"))
+					Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.engine").Value()).To(Equal("None"))
 				})
 			})
 
@@ -1754,6 +1765,7 @@ spec: {}
 					Expect(f).To(ExecuteSuccessfully())
 					ng := f.KubernetesGlobalResource("NodeGroup", "test")
 					Expect(ng.Field("status.engine").Value()).To(Equal("None"))
+					Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.engine").Value()).To(Equal("None"))
 				})
 			})
 		})
@@ -1770,6 +1782,7 @@ spec: {}
 						Expect(f).To(ExecuteSuccessfully())
 						ng := f.KubernetesGlobalResource("NodeGroup", "test")
 						Expect(ng.Field("status.engine").Value()).To(Equal("None"))
+						Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.engine").Value()).To(Equal("None"))
 					})
 				})
 
@@ -1783,6 +1796,7 @@ spec: {}
 						Expect(f).To(ExecuteSuccessfully())
 						ng := f.KubernetesGlobalResource("NodeGroup", "test")
 						Expect(ng.Field("status.engine").Value()).To(Equal("None"))
+						Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.engine").Value()).To(Equal("None"))
 					})
 				})
 			})
@@ -1798,6 +1812,7 @@ spec: {}
 						Expect(f).To(ExecuteSuccessfully())
 						ng := f.KubernetesGlobalResource("NodeGroup", "test")
 						Expect(ng.Field("status.engine").Value()).To(Equal("CAPI"))
+						Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.engine").Value()).To(Equal("CAPI"))
 					})
 				})
 
@@ -1811,6 +1826,7 @@ spec: {}
 						Expect(f).To(ExecuteSuccessfully())
 						ng := f.KubernetesGlobalResource("NodeGroup", "test")
 						Expect(ng.Field("status.engine").Value()).To(Equal("CAPI"))
+						Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.engine").Value()).To(Equal("CAPI"))
 					})
 				})
 			})

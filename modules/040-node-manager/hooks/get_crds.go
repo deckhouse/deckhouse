@@ -307,13 +307,15 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 		ngForValues["name"] = nodeGroup.Name
 		ngForValues["manualRolloutID"] = nodeGroup.ManualRolloutID
 
-		engine, err := shared.CalculateEngine(nodeGroup.EngineParams, shared.GetCloudEphemeralNodeGroupEngineDefault(input))
-		if err != nil {
-			return fmt.Errorf("failed to calculate node group %s engine: %v", nodeGroup.Name, err)
-		}
+		engine := nodeGroup.EngineParams.Engine
 
-		input.Logger.Infof("Calculated node group %s engine: %v", nodeGroup.Name, engine)
-		if nodeGroup.EngineParams.Engine == "" {
+		if engine == "" {
+			engine, err = shared.CalculateEngine(nodeGroup.EngineParams, shared.GetCloudEphemeralNodeGroupEngineDefault(input))
+			if err != nil {
+				return fmt.Errorf("failed to calculate node group %s engine: %v", nodeGroup.Name, err)
+			}
+
+			input.Logger.Infof("Calculated node group %s engine: %v", nodeGroup.Name, engine)
 			shared.StatusEnginePatch(input, nodeGroup.Name, engine)
 		}
 
