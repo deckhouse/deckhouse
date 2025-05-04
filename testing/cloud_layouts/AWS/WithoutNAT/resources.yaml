@@ -144,6 +144,8 @@ spec:
           image: dev-registry.deckhouse.io/base_images@sha256:07cf494de0cc3f644562b9edf20ac2f2395ff6d9586cc909498dc71176e7fa10
           imagePullPolicy: Always
           env:
+            - name: SHELL_OPERATOR_LISTEN_PORT
+              value: "11115"
             - name: VALIDATING_WEBHOOK_LISTEN_PORT
               value: "11114"
             - name: SHELL_OPERATOR_NAMESPACE
