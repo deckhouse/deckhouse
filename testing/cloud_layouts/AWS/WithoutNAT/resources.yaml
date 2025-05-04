@@ -169,6 +169,7 @@ spec:
               readOnly: true
       serviceAccountName: prom-rules-mutating
       hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       tolerations:
         - operator: "Exists"
       volumes:
