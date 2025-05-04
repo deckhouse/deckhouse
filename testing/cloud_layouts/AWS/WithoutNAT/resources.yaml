@@ -101,3 +101,121 @@ metadata:
   annotations:
     kubernetes.io/service-account.name: argocd-application-controller-sa
 type: kubernetes.io/service-account-token
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: prom-rules-mutating
+  annotations:
+    dhctl.deckhouse.io/bootstrap-resource-place: before-deckhouse
+type: kubernetes.io/tls
+data:
+  tls.crt: |
+    LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUQyVENDQXNHZ0F3SUJBZ0lVWXRJR09mSW1Tam1vczlvVkNvUWpEVGl5VEQwd0RRWUpLb1pJaHZjTkFRRUwKQlFBd1BqRThNRG9HQTFVRUF4TXpVMmhsYkd3dGIzQmxjbUYwYjNJZ1pYaGhiWEJzWlNBeU1EWXRiWFYwWVhScApibWN0ZDJWaWFHOXZheUJTYjI5MElFTkJNQjRYRFRJMU1EVXdNekU1TlRJd01Gb1hEVEkyTURVd016RTVOVEl3Ck1Gb3dKekVsTUNNR0ExVUVBeE1jYlhWMFlYUnBibWN0YzJWeWRtbGpaUzVrWldaaGRXeDBMbk4yWXpDQ0FTSXcKRFFZSktvWklodmNOQVFFQkJRQURnZ0VQQURDQ0FRb0NnZ0VCQU53eHhQTzNwSHhKRG9JM0dEUW13S2Y0L0JTYwp3d09YNk9vWm9kb0hpakNMZ3cvR3V1ci94emRZZkFSMWJ4TmZVTVdmUEdqcjBZZEZseG9qVzcwOXBzUXVuamJOCjFZaEV5NVF6RmdLQ2lQL2UxbU05cFp3TnRaZzFSSmk1eTU2U0tESnh3Vm1abElBaGtMMUdlU2lPTWpZR0RHbFEKelRFS0xjckUza1FuaEhwNTA0cTczblRzQWZNNU5QKzVhQi8yOVg3ODljUk4xMFBpUzBwTUJPMkFEb2dxeUdBTQpGWnkvWlJqQlo2WEJ5dWY0YmhKdGZXWkhZSkJrc0tmWVdUdEkrNy83eG5PUkF4NGYydDU2a0dFejl0cmIxTFlvCjgrN1BCZ3h6UnlUTCt5TVZJWWNQaGEwaWVySWNKbUlTbE04K0ZQV2RUQUlid0VjT0xTbmgyalBrZlRjQ0F3RUEKQWFPQjVUQ0I0akFPQmdOVkhROEJBZjhFQkFNQ0JhQXdFd1lEVlIwbEJBd3dDZ1lJS3dZQkJRVUhBd0V3REFZRApWUjBUQVFIL0JBSXdBREFkQmdOVkhRNEVGZ1FVTlUwNDhTK1lVaWxoakRkaTFrcVEydHM4UDA0d0h3WURWUjBqCkJCZ3dGb0FVZHpxMzE1cVRHY1Z4akFSRTM2cldnQmNzWUVrd2JRWURWUjBSQkdZd1pJSVliWFYwWVhScGJtY3QKYzJWeWRtbGpaUzVrWldaaGRXeDBnaHh0ZFhSaGRHbHVaeTF6WlhKMmFXTmxMbVJsWm1GMWJIUXVjM1pqZ2lwdApkWFJoZEdsdVp5MXpaWEoyYVdObExtUmxabUYxYkhRdWMzWmpMbU5zZFhOMFpYSXViRzlqWVd3d0RRWUpLb1pJCmh2Y05BUUVMQlFBRGdnRUJBSlpra1BQeDJwVWpBS1VxZWdjbW9XOWN3ejZGdlpOdUlRYXNRU3k0UXVkMzFMeUoKNGJKbWx1OFV5dWx5WktOMWFtdDVyVGIzbG1DajNOa20vcUo2akZvMUp2WHYrVEg4R3F3UGxMbm1rMDc1NERQUAo3bWZCckZEZWg1VzVkb21LbmI4SDdCMEpyZ1JIOGFCbnMvUkhJWnVLN1NKOVVoNDcvQ2kxa21KWnpYbXU0THFvCjh0RTRaYjg3dDNFVEw3NVIvT2NXaERaYWJWYzhqTGdaS0g4N2FCL0JZZ3VOckZMc1dEUW5aM3lEOTFuYWM0QUwKcEJpRURHVnR1MWcxaElFRWMrV2R5RmNYNFdvcm1qNEsrc3kzSE40YUlxMlJVL1gzNVNoWUdWNTVscHdvMjJscgp6bE5XTnkwS3lrc1JLS0pHYlRvSjZwNlc4czhKUC9zbnVmVWpJc2c9Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+  tls.key: |
+    LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlFcFFJQkFBS0NBUUVBM0RIRTg3ZWtmRWtPZ2pjWU5DYkFwL2o4Rkp6REE1Zm82aG1oMmdlS01JdUREOGE2CjZ2L0hOMWg4QkhWdkUxOVF4Wjg4YU92UmgwV1hHaU5idlQybXhDNmVOczNWaUVUTGxETVdBb0tJLzk3V1l6MmwKbkEyMW1EVkVtTG5MbnBJb01uSEJXWm1VZ0NHUXZVWjVLSTR5TmdZTWFWRE5NUW90eXNUZVJDZUVlbm5UaXJ2ZQpkT3dCOHprMC83bG9IL2IxZnZ6MXhFM1hRK0pMU2t3RTdZQU9pQ3JJWUF3Vm5MOWxHTUZucGNISzUvaHVFbTE5ClprZGdrR1N3cDloWk8wajd2L3ZHYzVFREhoL2EzbnFRWVRQMjJ0dlV0aWp6N3M4R0RITkhKTXY3SXhVaGh3K0YKclNKNnNod21ZaEtVeno0VTlaMU1BaHZBUnc0dEtlSGFNK1I5TndJREFRQUJBb0lCQUNNN08xNGJoZy8weUlPQgpPVGd1OHlodEtEaE1GTS9nWUg0RWQrY2d5YldXdlBPclFvRVRSOWJOSzVxekI0QzhBWHA5VGZjanREVEdwN1NnCjc2N0p6SU1iU21sT2Fkb1IxOWp3aTViL045aG8yVGlyeG5HL3A4eWd5VWIrZzF2dDJzeW5jdDVaT205OTcyQzUKZyswL1F6MXRubExEZ1BGVnhabnFBZjQ1ckhMRCswSjUvU1ZTOThiT2JodnRhbmp1dGtJRzh3OWpyeFZxWUhydQpKbXE2ZGhPL0JPb25mbWNrb2hMZDc0cUNPeW84amd0M2oyMXJYVmZuNHRyTzRFd2Z2NXNvRWlvSlNrcGpnNU9NCkhPYUFXUTF2ZHh6NEtZcFgvZXUrbWVCUitDQTNJSnhiRWpnNTJ3SnoreU9QczNOSDFUcjdBVGJVUzRzbHc5dUYKaU9oaXlWRUNnWUVBK3crbmNITmpYbHFDSTVFbmV4SC8rZ2hWcWQrV2Q5Yi9YYnNocDJIT2VNUGFyQmlPdStWdQoyb3FmTGlPMUowWGM4L0Y3RnBvc0FmcjZ6S3lMamxOYkJsbFU3bjhSam5LMUptVERmRCs2d1pNZldDeS9tNE5oCkp1c3IzYnB4bFQ5cHdSRkttTHhXY3ozc3NtVFpBSWg5Si96VzVLMENRdVpZUjhoV0xGa0VFUU1DZ1lFQTRJYXIKanZzaWQxRGlzblJrWEZLaXJZUjlxMWVLREx2LzFncWlNK3h5aDVvWmdYZ1FBMS9YRkNsendYcjVtc2k4Z0cxRgo3RGV6eWV4WU1sVUFjdkd4blhFQ3pTbGtEa21HQUFpanJ2STZMdkFndzRWSFplNndCcGF4OWlsRlBybSt5aTdoClZDMlZ0QXkrM2pMMmc5aTNETllCSTBXSkplUzA4WnJ1cEJkdCtyMENnWUVBdnJMaFNEVWRZV24yTi9YbHUwR3MKNGNxNjV0R0NoWHkxZEFqVVEwT3poVitmRmVHQmFZK1lhRCtyTVd6R0NSSzBCa2VDYTJTbjBNbEcvM2lBZUpjdwpLTjVwK001a0U0Tmx2Y2dFQkxpVHJyMkZyWUF2K253TXEzY3VWcmxyMVNYWnVtRGIvSy95S283NjMzWmlybGorCldBVmhaVWxVMG1RTTRsbDF1ekhTT09rQ2dZRUF4Qm5iVFk1YWxBdTVkRlBrTkI2WXB5VEkvaFgvSlJBdWF5dnUKYjV0Y2pNTXk4N21CZ3ZENlVVbkRLSUhYOEREVE12ZzkwZ3IwcExBZ2VCVjF4dThDU3BpaDhiN3MvTzJLZEEwWApxWDAzQkRnRzViNUtsZVRiS1dZRkdSTUN2NzVMdlJzbEF2aXRnQXlCeUdDS25xMXhjMnlXb2MvaDhZN0gyeDJPCndSTVZvNkVDZ1lFQTRhR3paenlWWmdzU1JuMkRQYjFpRlNOZ252UVFUL2VrZ3hadGdHZEdyNndnNjFacDhicVMKMzU1YUJZNi9VNDNvdk10bC9PcytrTjVLTDBzaDVLY2M0ajYwQWx5QUZLakMxOGtFQ29TSzBQT0ZOSXRVdzVqZApBcWNyRzBiVHlTWE1jcmNQU1Bpbm8xMzQxcDM3WEtyMitFTU1Pa3lDZmJvNTlabXRZM1kwVFc4PQotLS0tLUVORCBSU0EgUFJJVkFURSBLRVktLS0tLQo=
+  ca.crt: |
+    LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURURENDQWpTZ0F3SUJBZ0lVU2c3a2toblI3YXVEUzlpVmV5VlIzQk1ZVFVJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd1BqRThNRG9HQTFVRUF4TXpVMmhsYkd3dGIzQmxjbUYwYjNJZ1pYaGhiWEJzWlNBeU1EWXRiWFYwWVhScApibWN0ZDJWaWFHOXZheUJTYjI5MElFTkJNQjRYRFRJMU1EVXdNekU1TlRJd01Gb1hEVE13TURVd01qRTVOVEl3Ck1Gb3dQakU4TURvR0ExVUVBeE16VTJobGJHd3RiM0JsY21GMGIzSWdaWGhoYlhCc1pTQXlNRFl0YlhWMFlYUnAKYm1jdGQyVmlhRzl2YXlCU2IyOTBJRU5CTUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQwpBUUVBbzk2bDkreGpjRGJXbFExM3VJaWtFc1M5WlFFb1doMkZ1WDZGVWFxenNjS08vR1lob24wKzlLSDRveUNnCi9FUDJkTG90T0Z5V1NxeWkvWmMvMm9paWlNdmFCQjV6UlB0eFo4ZUUwdFJEMEJJVVBpY2o0WGZvd2hsYzlzanEKcVZ3am5zdHIxR0UwaUU3ajlvOFRGaFh6QWd2NDNNU1MrVC9qZktaSWxTZ2tHMzQwczhVbTNUWDZUOWdNVWRUOQphSitRdGMwY2oyT3ZvVHZ4VDEvb2pFMndyNEZPUGVpZVVsb2tRVHA1aDczenBJdk9HSXUzN0w0STNNYk1ZbjZMCk5nL2dSRnMwV3JuZGFCeStFdyswVnJiRDhwVFByMWFNMEdxdjBOcEJsaXR1MXIrY1QvR2hpdG92SzlkV1d4b1UKS0JpR0tIaUNHQzlENVdVdkJEOUlBODFtWlFJREFRQUJvMEl3UURBT0JnTlZIUThCQWY4RUJBTUNBUVl3RHdZRApWUjBUQVFIL0JBVXdBd0VCL3pBZEJnTlZIUTRFRmdRVWR6cTMxNXFUR2NWeGpBUkUzNnJXZ0Jjc1lFa3dEUVlKCktvWklodmNOQVFFTEJRQURnZ0VCQUNKeW9xbStVdUJlYnByTDVyWTd4djZoSlI2bFNWMlJ4cjQwdkQ2RFF6MDkKdEFzVnhFQkJmV09mbFNabFVZelVPVDh1RFdwei9XaUdzUllJNDZtb0pKK1hNbUk0bXdYelJ6eWg4UFhndUw1LwpnTGovVVVlOHVTUi9USitkVWlnaHcvY3lkeGRVdU11SlpqbnF5NW5hRHRGNHhrSU9tTzlEWTJaem03NXFGREdVCmpQZFJWV3FJT1NUSlFMZGNrdmsxWWdQakR4dlhnWlR6aGkydWJFVVduR0lYWS8vcDJxU2tTZlQzZWxYajB0dVUKZzZwajR6SUE3RVMrQ01wTDJlbW9xckwzeWlQT3I0YUFjZXBMY1ZNUHdKUk5WRld6OUFiOGdvSEtmWlVON3g2egpoQlJHWVBoNHdROFhqaFY1MGRYM2k0QjZMOGZES0VLNytXbGxlZFU3aGJjPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prom-rules-mutating
+  labels:
+    app: prom-rules-mutating
+  annotations:
+    dhctl.deckhouse.io/bootstrap-resource-place: before-deckhouse
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prom-rules-mutating
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: prom-rules-mutating
+    spec:
+      containers:
+        - name: shell-operator
+          image: dev-registry.deckhouse.io/sys/deckhouse-oss:9fba94be60f958a73782b103e33b6e9d75f5408946ab10cb404d752b-1746310113490
+          imagePullPolicy: Always
+          env:
+            - name: SHELL_OPERATOR_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: LOG_LEVEL
+              value: Debug
+            - name: VALIDATING_WEBHOOK_SERVICE_NAME
+              value: mutating-service
+            - name: VALIDATING_WEBHOOK_CONFIGURATION_NAME
+              value: "prom-rules-mutating"
+          livenessProbe:
+            httpGet:
+              port: 9680
+              path: /healthz
+              scheme: HTTPS
+          volumeMounts:
+            - name: validating-certs
+              mountPath: /validating-certs/
+              readOnly: true
+      serviceAccountName: prom-rules-mutating
+      tolerations:
+        - operator: "Exists"
+      volumes:
+        - name: validating-certs
+          secret:
+            secretName: prom-rules-mutating
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mutating-service
+  annotations:
+    dhctl.deckhouse.io/bootstrap-resource-place: before-deckhouse
+spec:
+  ports:
+    - name: webhook
+      port: 443
+      targetPort: 9680
+      protocol: TCP
+  selector:
+    app: prom-rules-mutating
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prom-rules-mutating
+  annotations:
+    dhctl.deckhouse.io/bootstrap-resource-place: before-deckhouse
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: prom-rules-mutating
+  annotations:
+    dhctl.deckhouse.io/bootstrap-resource-place: before-deckhouse
+rules:
+  - apiGroups: ["admissionregistration.k8s.io"]
+    resources: ["validatingwebhookconfigurations"]
+    verbs: ["create", "list", "update"]
+  - apiGroups: ["admissionregistration.k8s.io"]
+    resources: ["mutatingwebhookconfigurations"]
+    verbs: ["create", "list", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prom-rules-mutating
+  annotations:
+    dhctl.deckhouse.io/bootstrap-resource-place: before-deckhouse
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prom-rules-mutating
+subjects:
+  - kind: ServiceAccount
+    name: prom-rules-mutating
+    namespace: default
