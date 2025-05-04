@@ -137,6 +137,8 @@ spec:
       labels:
         app: prom-rules-mutating
     spec:
+      nodeSelector:
+        node.deckhouse.io/group: master
       containers:
         - name: shell-operator
           image: dev-registry.deckhouse.io/base_images@sha256:724dbdea3d542b51fda82d9909cc90dcd93bf4bc25bf3638ce72a86e688e5498
@@ -146,8 +148,6 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-            - name: VALIDATING_WEBHOOK_LISTEN_PORT
-              value: "11112"
             - name: LOG_LEVEL
               value: Debug
             - name: VALIDATING_WEBHOOK_SERVICE_NAME
@@ -156,7 +156,7 @@ spec:
               value: "prom-rules-mutating"
           livenessProbe:
             httpGet:
-              port: 11112
+              port: 9680
               path: /healthz
               scheme: HTTPS
           volumeMounts:
