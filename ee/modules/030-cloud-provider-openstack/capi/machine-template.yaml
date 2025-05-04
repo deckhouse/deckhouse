@@ -88,8 +88,9 @@ spec:
        - {{ (printf "%s=%s" $k $v) | quote }}
       {{- end }}
         # These tags are mandatory as the safety controller uses them to identify VMs created by this controller.
-       - "kubernetes.io-cluster-deckhouse-{{ .Values.global.discovery.clusterUUID }}=1"
-       - "kubernetes.io-role-deckhouse-{{ .nodeGroup.name }}-{{ .zoneName }}=1"
+       - "deckhouse-{{ .Values.global.discovery.clusterUUID }}=1"
+       - "role-deckhouse-{{ .nodeGroup.name }}-{{ .zoneName }}=1"
+       - "use-cluster-api=1"
       schedulerHintAdditionalProperties:
       - name: deckhouse-zone
         value:
