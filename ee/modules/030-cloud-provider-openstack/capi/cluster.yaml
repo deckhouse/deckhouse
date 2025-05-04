@@ -13,6 +13,7 @@ clouds:
       project_id: {{ $providerClusterConfiguration.connection.tenantID | quote }}
     {{- end }}
       user_domain_name: {{ $providerClusterConfiguration.connection.domainName | quote }}
+      project_domain_name: {{ $providerClusterConfiguration.connection.domainName | quote }}
     region_name: {{ $providerClusterConfiguration.connection.region | quote }}
     identity_api_version: 3
 {{- end }}
