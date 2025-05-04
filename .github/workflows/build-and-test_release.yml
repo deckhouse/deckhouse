@@ -3412,7 +3412,7 @@ jobs:
           echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
           docker pull ${TESTS_IMAGE_NAME}
           echo "⚓️ 🏎 [$(date -u)] Run tests..."
-          docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} sh -c "go generate tools/register.go && GOGC=50 GOFLAGS=\"-buildvcs=false\" golangci-lint run && cd /deckhouse/dhctl && GOGC=50 GOFLAGS=\"-buildvcs=false\" golangci-lint run"
+          docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} sh -c "go generate tools/register.go && GOGC=50 GOFLAGS=\"-buildvcs=false\" golangci-lint run && cd /deckhouse/dhctl && GOGC=50 GOFLAGS=\"-buildvcs=false\" golangci-lint run -v -c .golangci.yaml"
     # </template: tests_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish

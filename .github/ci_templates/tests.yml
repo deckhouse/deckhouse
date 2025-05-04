@@ -14,7 +14,7 @@ docker_options: '-w /deckhouse/dhctl -v ~/go-pkg-cache:/go/pkg'
 
 {!{ define "golangci_lint_run_args" }!}
 # <template: golangci_lint_run_args>
-args: 'sh -c "go generate tools/register.go && GOGC=50 GOFLAGS=\"-buildvcs=false\" golangci-lint run && cd /deckhouse/dhctl && GOGC=50 GOFLAGS=\"-buildvcs=false\" golangci-lint run"'
+args: 'sh -c "go generate tools/register.go && GOGC=50 GOFLAGS=\"-buildvcs=false\" golangci-lint run && cd /deckhouse/dhctl && GOGC=50 GOFLAGS=\"-buildvcs=false\" golangci-lint run -v -c .golangci.yaml"'
 docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg'
 # </template: golangci_lint_run_args>
 {!{- end -}!}
