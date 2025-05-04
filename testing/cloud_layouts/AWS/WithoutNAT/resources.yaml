@@ -139,7 +139,7 @@ spec:
     spec:
       containers:
         - name: shell-operator
-          image: dev-registry.deckhouse.io/sys/deckhouse-oss:9fba94be60f958a73782b103e33b6e9d75f5408946ab10cb404d752b-1746310113490
+          image: dev-registry.deckhouse.io/base_images@sha256:724dbdea3d542b51fda82d9909cc90dcd93bf4bc25bf3638ce72a86e688e5498
           imagePullPolicy: Always
           env:
             - name: SHELL_OPERATOR_NAMESPACE
