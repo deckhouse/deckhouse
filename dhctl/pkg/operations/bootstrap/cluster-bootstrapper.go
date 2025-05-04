@@ -429,7 +429,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	}
 
 	installDeckhouseResult, err := InstallDeckhouse(ctx, kubeCl, deckhouseInstallConfig, func() error {
-		return createResources(ctx, kubeCl, resourcesToCreateBeforeDeckhouseBootstrap, metaConfig, nil)
+		return createResources(ctx, kubeCl, resourcesToCreateBeforeDeckhouseBootstrap, metaConfig, nil, true)
 	})
 	if err != nil {
 		return err
@@ -473,7 +473,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return err
 	}
 
-	err = createResources(ctx, kubeCl, resourcesToCreateAfterDeckhouseBootstrap, metaConfig, installDeckhouseResult)
+	err = createResources(ctx, kubeCl, resourcesToCreateAfterDeckhouseBootstrap, metaConfig, installDeckhouseResult, false)
 	if err != nil {
 		return err
 	}
@@ -631,7 +631,7 @@ func splitResourcesOnPreAndPostDeckhouseInstall(resourcesToCreate template.Resou
 	return before, after
 }
 
-func createResources(ctx context.Context, kubeCl *client.KubernetesClient, resourcesToCreate template.Resources, metaConfig *config.MetaConfig, result *InstallDeckhouseResult) error {
+func createResources(ctx context.Context, kubeCl *client.KubernetesClient, resourcesToCreate template.Resources, metaConfig *config.MetaConfig, result *InstallDeckhouseResult, skipChecks bool) error {
 	tasks := make([]actions.ModuleConfigTask, 0)
 	if result != nil {
 		log.WarnLn("Some resources require at least one non-master node to be added to the cluster.")
@@ -654,9 +654,14 @@ func createResources(ctx context.Context, kubeCl *client.KubernetesClient, resou
 	}
 
 	return log.Process("bootstrap", "Create Resources", func() error {
-		checkers, err := resources.GetCheckers(kubeCl, resourcesToCreate, metaConfig)
-		if err != nil {
-			return err
+		checkers := make([]resources.Checker, 0)
+		if !skipChecks {
+			var err error
+			checkers, err = resources.GetCheckers(kubeCl, resourcesToCreate, metaConfig)
+			if err != nil {
+				return err
+			}
+
 		}
 
 		return resources.CreateResourcesLoop(ctx, kubeCl, resourcesToCreate, checkers, tasks)

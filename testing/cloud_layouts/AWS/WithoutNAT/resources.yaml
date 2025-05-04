@@ -146,6 +146,8 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+            - name: VALIDATING_WEBHOOK_LISTEN_PORT
+              value: "11112"
             - name: LOG_LEVEL
               value: Debug
             - name: VALIDATING_WEBHOOK_SERVICE_NAME
