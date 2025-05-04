@@ -2037,6 +2037,7 @@ clouds:
       password: "pPaAsS"
       project_name: "mytname"
       user_domain_name: "Default"
+      project_domain_name: "Default"
     region_name: "myreg"
     identity_api_version: 3`))
 					expectedYaml := secret.Field("data.clouds\\.yaml").String()
@@ -2044,6 +2045,7 @@ clouds:
 
 					openstackCluster := f.KubernetesResource("OpenstackCluster", "d8-cloud-instance-manager", "openstack")
 					Expect(openstackCluster.Exists()).To(BeTrue())
+					Expect(openstackCluster.Field("spec.externalNetwork.filter.name").String()).To(Equal("shared"))
 				}
 
 				type mdParams struct {

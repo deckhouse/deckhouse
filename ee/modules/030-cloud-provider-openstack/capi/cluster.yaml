@@ -45,6 +45,17 @@ metadata:
 spec:
   apiServerLoadBalancer:
     enabled: false
+{{- if hasKey $providerClusterConfiguration "externalNetworkNames" }}
+  {{- if gt (len $providerClusterConfiguration.externalNetworkNames) 0 }}
+  externalNetwork:
+    filter:
+      name: {{ first $providerClusterConfiguration.externalNetworkNames }}
+  {{- else }}
+  disableExternalNetwork: true
+  {{- end }}
+{{- else }}
+  disableExternalNetwork: true
+{{- end }}
 #  externalNetwork:
 #    id: ${OPENSTACK_EXTERNAL_NETWORK_ID}
   identityRef:
