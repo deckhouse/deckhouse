@@ -45,6 +45,9 @@ metadata:
 spec:
   apiServerLoadBalancer:
     enabled: false
+  network:
+     filter:
+      name: {{ first $providerClusterConfiguration.internalNetworkNames }}
 {{- if hasKey $providerClusterConfiguration "externalNetworkNames" }}
   {{- if gt (len $providerClusterConfiguration.externalNetworkNames) 0 }}
   externalNetwork:

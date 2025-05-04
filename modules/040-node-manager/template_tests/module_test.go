@@ -2046,6 +2046,7 @@ clouds:
 					openstackCluster := f.KubernetesResource("OpenstackCluster", "d8-cloud-instance-manager", "openstack")
 					Expect(openstackCluster.Exists()).To(BeTrue())
 					Expect(openstackCluster.Field("spec.externalNetwork.filter.name").String()).To(Equal("shared"))
+					Expect(openstackCluster.Field("spec.network.filter.name").String()).To(Equal("mynetwork"))
 				}
 
 				type mdParams struct {
