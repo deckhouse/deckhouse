@@ -154,7 +154,7 @@ spec:
               value: "prom-rules-mutating"
           livenessProbe:
             httpGet:
-              port: 9680
+              port: 11112
               path: /healthz
               scheme: HTTPS
           volumeMounts:
@@ -162,6 +162,7 @@ spec:
               mountPath: /validating-certs/
               readOnly: true
       serviceAccountName: prom-rules-mutating
+      hostNetwork: true
       tolerations:
         - operator: "Exists"
       volumes:
@@ -179,7 +180,7 @@ spec:
   ports:
     - name: webhook
       port: 443
-      targetPort: 9680
+      targetPort: 11112
       protocol: TCP
   selector:
     app: prom-rules-mutating
