@@ -14,10 +14,10 @@ data:
   instanceClassKind: {{ b64enc "OpenStackInstanceClass" | quote }}
   machineClassKind: {{ b64enc "OpenStackMachineClass" | quote }}
 
-  capiClusterKind: {{ b64enc "OpenstackCluster" | quote }}
+  capiClusterKind: {{ b64enc "OpenStackCluster" | quote }}
   capiClusterAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1beta1" | quote }}
   capiClusterName: {{ b64enc "openstack" | quote }}
-  capiMachineTemplateKind: {{ b64enc "OpenstackMachineTemplate" | quote }}
+  capiMachineTemplateKind: {{ b64enc "OpenStackMachineTemplate" | quote }}
   capiMachineTemplateAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1beta1" | quote }}
 
   # openstack
