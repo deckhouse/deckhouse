@@ -147,11 +147,10 @@ import:
   to: /src
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
 secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
   {{- include "alpine packages proxy" . | nindent 2 }}

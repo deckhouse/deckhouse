@@ -29,10 +29,8 @@ import:
   add: /src
   to: /src
   before: install
-
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
 secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}

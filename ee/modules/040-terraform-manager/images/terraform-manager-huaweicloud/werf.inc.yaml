@@ -1,5 +1,5 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: {{ .ModuleName }}/base-terraform-manager
+fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "huaweicloud") }}'
 git:
   - add: /{{ .ModulePath }}candi/cloud-providers/huaweicloud
     to: /deckhouse/candi/cloud-providers/huaweicloud
@@ -33,8 +33,7 @@ image: terraform-provider-huaweicloud
 final: false
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src

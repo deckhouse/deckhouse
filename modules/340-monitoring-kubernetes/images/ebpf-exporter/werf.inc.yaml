@@ -40,8 +40,7 @@ import:
   to: /entrypoint
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
 secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
@@ -62,8 +61,7 @@ import:
   to: /build
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
 secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}

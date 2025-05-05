@@ -114,8 +114,7 @@ import:
   to: /src
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
 secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
@@ -137,6 +136,9 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
 fromImage: common/alt-p11-artifact
 final: false
+mount:
+- from: tmp_dir
+  to: /tmp
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/ingress-nginx/images/nginx-1.25/rootfs/

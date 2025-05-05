@@ -62,5 +62,4 @@ shell:
   - chown 64535:64535 /registry-packages-proxy
   - chmod 0755 /registry-packages-proxy
 mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
+{{ include "mount points for golang builds" . }}
