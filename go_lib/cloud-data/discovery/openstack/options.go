@@ -71,6 +71,9 @@ func WithCaCert(pemData []byte) Option {
 	}
 }
 
+// TODO: check ca cert file continuously at runtime.
+// Ca cert updating might be needed to support prev discoverer version's
+// functionality
 func WithCertFile(caCertPath string) Option {
 	return func(d *Discoverer) error {
 		caCert, err := os.ReadFile(caCertPath)
