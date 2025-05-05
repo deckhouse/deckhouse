@@ -213,8 +213,6 @@ spec:
               value: "/certs"
             - name: ADDON_OPERATOR_CRD_EXTRA_LABELS
               value: "heritage=deckhouse"
-            - name: HELM3LIB
-              value: "yes"
             - name: HELM_HISTORY_MAX
               value: "3"
             - name: MODULES_DIR
