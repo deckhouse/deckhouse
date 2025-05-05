@@ -1,17 +1,20 @@
-Subject: [PATCH] Ignore static nodes
----
-Index: pkg/ccm/instances.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/pkg/ccm/instances.go b/pkg/ccm/instances.go
---- a/pkg/ccm/instances.go	(revision a0a0e916a5eda50705f9f3e3b7da8471bd6ff763)
-+++ b/pkg/ccm/instances.go	(date 1741840814883)
-@@ -146,6 +146,10 @@
+index 541e5fcc..145e7f75 100644
+--- a/pkg/ccm/instances.go
++++ b/pkg/ccm/instances.go
+@@ -13,7 +13,7 @@ import (
+ 	v1 "k8s.io/api/core/v1"
+ 	"k8s.io/apimachinery/pkg/types"
+ 	cloudProvider "k8s.io/cloud-provider"
+-	"k8s.io/klog"
++	"k8s.io/klog/v2"
+ 	"runtime/debug"
+ 	"strings"
+ )
+@@ -146,6 +146,10 @@ func (i *instances) CurrentNodeName(ctx context.Context, hostName string) (types
  func (i *instances) InstanceExistsByProviderID(ctx context.Context, providerID string) (bool, error) {
  	klog.Infof("instances.InstanceExistsByProviderID() called with provider ID [%s]", providerID)
- 
+
 +	if strings.HasPrefix(providerID, "static://") {
 +		return true, nil
 +	}

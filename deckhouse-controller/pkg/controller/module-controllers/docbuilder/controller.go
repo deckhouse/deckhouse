@@ -49,28 +49,28 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/module"
-	docs_builder "github.com/deckhouse/deckhouse/go_lib/module/docs-builder"
+	docsbuilder "github.com/deckhouse/deckhouse/go_lib/module/docs-builder"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const defaultDocumentationCheckInterval = 10 * time.Second
 
-type moduleDocumentationReconciler struct {
+type reconciler struct {
 	client               client.Client
 	downloadedModulesDir string
 
 	dc          dependency.Container
-	docsBuilder *docs_builder.Client
+	docsBuilder *docsbuilder.Client
 
 	logger *log.Logger
 }
 
-func NewModuleDocumentationController(mgr manager.Manager, dc dependency.Container, logger *log.Logger) error {
-	c := &moduleDocumentationReconciler{
+func RegisterController(mgr manager.Manager, dc dependency.Container, logger *log.Logger) error {
+	r := &reconciler{
 		client:               mgr.GetClient(),
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		dc:                   dependency.NewDependencyContainer(),
-		docsBuilder:          docs_builder.NewClient(dc.GetHTTPClient()),
+		docsBuilder:          docsbuilder.NewClient(dc.GetHTTPClient()),
 		logger:               logger,
 	}
 
@@ -78,7 +78,7 @@ func NewModuleDocumentationController(mgr manager.Manager, dc dependency.Contain
 		MaxConcurrentReconciles: 1, // don't use concurrent reconciles here, because docs-builder doesn't support multiply requests at once
 		CacheSyncTimeout:        15 * time.Minute,
 		NeedLeaderElection:      ptr.To(false),
-		Reconciler:              c,
+		Reconciler:              r,
 	})
 	if err != nil {
 		return err
@@ -86,7 +86,7 @@ func NewModuleDocumentationController(mgr manager.Manager, dc dependency.Contain
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.ModuleDocumentation{}).
-		Watches(&coordv1.Lease{}, handler.EnqueueRequestsFromMapFunc(c.enqueueLeaseMapFunc), builder.WithPredicates(predicate.Funcs{
+		Watches(&coordv1.Lease{}, handler.EnqueueRequestsFromMapFunc(r.enqueueLeaseMapFunc), builder.WithPredicates(predicate.Funcs{
 			CreateFunc: func(event event.CreateEvent) bool {
 				ns := event.Object.GetNamespace()
 				if ns != "d8-system" {
@@ -108,13 +108,13 @@ func NewModuleDocumentationController(mgr manager.Manager, dc dependency.Contain
 		Complete(ctr)
 }
 
-func (mdr *moduleDocumentationReconciler) enqueueLeaseMapFunc(ctx context.Context, _ client.Object) []reconcile.Request {
+func (r *reconciler) enqueueLeaseMapFunc(ctx context.Context, _ client.Object) []reconcile.Request {
 	requests := make([]reconcile.Request, 0)
 
 	err := retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 		mdl := new(v1alpha1.ModuleDocumentationList)
 
-		err := mdr.client.List(ctx, mdl)
+		err := r.client.List(ctx, mdl)
 		if err != nil {
 			return err
 		}
@@ -136,12 +136,11 @@ func (mdr *moduleDocumentationReconciler) enqueueLeaseMapFunc(ctx context.Contex
 
 const documentationExistsFinalizer = "modules.deckhouse.io/documentation-exists"
 
-func (mdr *moduleDocumentationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	var result ctrl.Result
 	md := new(v1alpha1.ModuleDocumentation)
 
-	err := mdr.client.Get(ctx, req.NamespacedName, md)
-	if err != nil {
+	if err := r.client.Get(ctx, req.NamespacedName, md); err != nil {
 		return result, client.IgnoreNotFound(err)
 	}
 
@@ -150,17 +149,17 @@ func (mdr *moduleDocumentationReconciler) Reconcile(ctx context.Context, req ctr
 			return result, nil
 		}
 
-		return mdr.deleteReconcile(ctx, md)
+		return r.deleteReconcile(ctx, md)
 	}
 
-	return mdr.createOrUpdateReconcile(ctx, md)
+	return r.createOrUpdateReconcile(ctx, md)
 }
 
-func (mdr *moduleDocumentationReconciler) deleteReconcile(ctx context.Context, md *v1alpha1.ModuleDocumentation) (ctrl.Result, error) {
+func (r *reconciler) deleteReconcile(ctx context.Context, md *v1alpha1.ModuleDocumentation) (ctrl.Result, error) {
 	var result ctrl.Result
 
 	// get addresses from cluster, not status, because them more actual
-	addrs, err := mdr.getDocsBuilderAddresses(ctx)
+	addrs, err := r.getDocsBuilderAddresses(ctx)
 	if err != nil {
 		return result, fmt.Errorf("get docs builder addresses: %w", err)
 	}
@@ -170,11 +169,10 @@ func (mdr *moduleDocumentationReconciler) deleteReconcile(ctx context.Context, m
 		return result, nil
 	}
 
-	now := metav1.NewTime(mdr.dc.GetClock().Now().UTC())
+	now := metav1.NewTime(r.dc.GetClock().Now().UTC())
 
 	for _, addr := range addrs {
-		err := mdr.deleteDocumentation(ctx, addr, md.Name)
-		if err == nil {
+		if err = r.deleteDocumentation(ctx, addr, md.Name); err == nil {
 			continue
 		}
 
@@ -189,8 +187,8 @@ func (mdr *moduleDocumentationReconciler) deleteReconcile(ctx context.Context, m
 		md.Status.Conditions[idx].Message = delErr.Error()
 		md.Status.Conditions[idx].LastTransitionTime = now
 
-		if err := mdr.client.Status().Update(ctx, md); err != nil {
-			mdr.logger.Error("update status when delete documentation", log.Err(err))
+		if err = r.client.Status().Update(ctx, md); err != nil {
+			r.logger.Error("update status when delete documentation", log.Err(err))
 
 			return result, fmt.Errorf("update status when delete documentation: %w", errors.Join(delErr, err))
 		}
@@ -199,8 +197,8 @@ func (mdr *moduleDocumentationReconciler) deleteReconcile(ctx context.Context, m
 	}
 
 	controllerutil.RemoveFinalizer(md, documentationExistsFinalizer)
-	if err := mdr.client.Update(ctx, md); err != nil {
-		mdr.logger.Error("update finalizer", log.Err(err))
+	if err = r.client.Update(ctx, md); err != nil {
+		r.logger.Error("update finalizer", log.Err(err))
 
 		return result, fmt.Errorf("update finalizer: %w", err)
 	}
@@ -208,12 +206,12 @@ func (mdr *moduleDocumentationReconciler) deleteReconcile(ctx context.Context, m
 	return result, nil
 }
 
-func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Context, md *v1alpha1.ModuleDocumentation) (ctrl.Result, error) {
+func (r *reconciler) createOrUpdateReconcile(ctx context.Context, md *v1alpha1.ModuleDocumentation) (ctrl.Result, error) {
 	var result ctrl.Result
 	moduleName := md.Name
 
-	mdr.logger.Info("Updating documentation for module", slog.String("name", moduleName))
-	addrs, err := mdr.getDocsBuilderAddresses(ctx)
+	r.logger.Info("Updating documentation for module", slog.String("name", moduleName))
+	addrs, err := r.getDocsBuilderAddresses(ctx)
 	if err != nil {
 		return result, fmt.Errorf("get docs builder addresses: %w", err)
 	}
@@ -225,11 +223,11 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 
 	b := new(bytes.Buffer)
 
-	mdr.logger.Debug("Getting module's documentation locally", slog.String("moduleName", moduleName))
-	fetchModuleErr := mdr.getDocumentationFromModuleDir(md.Spec.Path, b)
+	r.logger.Debug("Getting module's documentation locally", slog.String("moduleName", moduleName))
+	fetchModuleErr := r.getDocumentationFromModuleDir(md.Spec.Path, b)
 
 	var rendered int
-	now := metav1.NewTime(mdr.dc.GetClock().Now().UTC())
+	now := metav1.NewTime(r.dc.GetClock().Now().UTC())
 
 	mdCopy := md.DeepCopy()
 	mdCopy.Status.Conditions = make([]v1alpha1.ModuleDocumentationCondition, 0, len(addrs))
@@ -261,7 +259,7 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 			continue
 		}
 
-		err = mdr.buildDocumentation(ctx, bytes.NewReader(b.Bytes()), addr, moduleName, md.Spec.Version)
+		err = r.buildDocumentation(ctx, bytes.NewReader(b.Bytes()), addr, moduleName, md.Spec.Version)
 		if err != nil {
 			cond.Type = v1alpha1.TypeError
 			cond.Message = err.Error()
@@ -285,8 +283,7 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 		mdCopy.Status.RenderResult = v1alpha1.ResultPartially
 	}
 
-	err = mdr.client.Status().Patch(ctx, mdCopy, client.MergeFrom(md))
-	if err != nil {
+	if err = r.client.Status().Patch(ctx, mdCopy, client.MergeFrom(md)); err != nil {
 		return result, err
 	}
 
@@ -296,8 +293,8 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 
 	if !controllerutil.ContainsFinalizer(mdCopy, documentationExistsFinalizer) {
 		controllerutil.AddFinalizer(mdCopy, documentationExistsFinalizer)
-		if err := mdr.client.Update(ctx, mdCopy); err != nil {
-			mdr.logger.Error("update finalizer", log.Err(err))
+		if err = r.client.Update(ctx, mdCopy); err != nil {
+			r.logger.Error("update finalizer", log.Err(err))
 
 			return result, err
 		}
@@ -306,9 +303,9 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 	return result, nil
 }
 
-func (mdr *moduleDocumentationReconciler) getDocsBuilderAddresses(ctx context.Context) ([]string, error) {
+func (r *reconciler) getDocsBuilderAddresses(ctx context.Context) ([]string, error) {
 	var leasesList coordv1.LeaseList
-	if err := mdr.client.List(ctx, &leasesList, client.InNamespace("d8-system"), client.HasLabels{"deckhouse.io/documentation-builder-sync"}); err != nil {
+	if err := r.client.List(ctx, &leasesList, client.InNamespace("d8-system"), client.HasLabels{"deckhouse.io/documentation-builder-sync"}); err != nil {
 		return nil, fmt.Errorf("list leases: %w", err)
 	}
 
@@ -319,7 +316,7 @@ func (mdr *moduleDocumentationReconciler) getDocsBuilderAddresses(ctx context.Co
 		}
 
 		// a stale lease found
-		if lease.Spec.RenewTime.Add(time.Duration(*lease.Spec.LeaseDurationSeconds) * time.Second).Before(mdr.dc.GetClock().Now()) {
+		if lease.Spec.RenewTime.Add(time.Duration(*lease.Spec.LeaseDurationSeconds) * time.Second).Before(r.dc.GetClock().Now()) {
 			continue
 		}
 
@@ -329,8 +326,8 @@ func (mdr *moduleDocumentationReconciler) getDocsBuilderAddresses(ctx context.Co
 	return addresses, nil
 }
 
-func (mdr *moduleDocumentationReconciler) getDocumentationFromModuleDir(modulePath string, buf *bytes.Buffer) error {
-	moduleDir := path.Join(mdr.downloadedModulesDir, modulePath) + "/"
+func (r *reconciler) getDocumentationFromModuleDir(modulePath string, buf *bytes.Buffer) error {
+	moduleDir := path.Join(r.downloadedModulesDir, modulePath) + "/"
 
 	dir, err := os.Stat(moduleDir)
 	if err != nil {
@@ -349,6 +346,10 @@ func (mdr *moduleDocumentationReconciler) getDocumentationFromModuleDir(modulePa
 			return err
 		}
 
+		if filepath.Ext(file) == ".go" {
+			return nil
+		}
+
 		if !module.IsDocsPath(strings.TrimPrefix(file, moduleDir)) {
 			return nil
 		}
@@ -360,7 +361,7 @@ func (mdr *moduleDocumentationReconciler) getDocumentationFromModuleDir(modulePa
 
 		header.Name = strings.TrimPrefix(file, moduleDir)
 
-		if err := tw.WriteHeader(header); err != nil {
+		if err = tw.WriteHeader(header); err != nil {
 			return err
 		}
 
@@ -374,9 +375,9 @@ func (mdr *moduleDocumentationReconciler) getDocumentationFromModuleDir(modulePa
 		}
 		defer f.Close()
 
-		mdr.logger.Warn("copy file", slog.String("path", file))
+		r.logger.Warn("copy file", slog.String("path", file))
 
-		if _, err := io.Copy(tw, f); err != nil {
+		if _, err = io.Copy(tw, f); err != nil {
 			return err
 		}
 
@@ -389,28 +390,24 @@ func (mdr *moduleDocumentationReconciler) getDocumentationFromModuleDir(modulePa
 	return nil
 }
 
-func (mdr *moduleDocumentationReconciler) buildDocumentation(ctx context.Context, docsArchive io.Reader, baseAddr, moduleName, moduleVersion string) error {
-	err := mdr.docsBuilder.SendDocumentation(ctx, baseAddr, moduleName, moduleVersion, docsArchive)
-	if err != nil {
+func (r *reconciler) buildDocumentation(ctx context.Context, docsArchive io.Reader, baseAddr, moduleName, moduleVersion string) error {
+	if err := r.docsBuilder.SendDocumentation(ctx, baseAddr, moduleName, moduleVersion, docsArchive); err != nil {
 		return fmt.Errorf("send documentation: %w", err)
 	}
 
-	err = mdr.docsBuilder.BuildDocumentation(ctx, baseAddr)
-	if err != nil {
+	if err := r.docsBuilder.BuildDocumentation(ctx, baseAddr); err != nil {
 		return fmt.Errorf("build documentation: %w", err)
 	}
 
 	return nil
 }
 
-func (mdr *moduleDocumentationReconciler) deleteDocumentation(ctx context.Context, baseAddr, moduleName string) error {
-	err := mdr.docsBuilder.DeleteDocumentation(ctx, baseAddr, moduleName)
-	if err != nil {
+func (r *reconciler) deleteDocumentation(ctx context.Context, baseAddr, moduleName string) error {
+	if err := r.docsBuilder.DeleteDocumentation(ctx, baseAddr, moduleName); err != nil {
 		return fmt.Errorf("delete documentation: %w", err)
 	}
 
-	err = mdr.docsBuilder.BuildDocumentation(ctx, baseAddr)
-	if err != nil {
+	if err := r.docsBuilder.BuildDocumentation(ctx, baseAddr); err != nil {
 		return fmt.Errorf("build documentation: %w", err)
 	}
 

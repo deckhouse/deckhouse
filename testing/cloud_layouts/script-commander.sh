@@ -282,7 +282,7 @@ EOF
   ssh_command="ssh -F /tmp/cloud-test-ssh-config -i id_rsa "
 }
 
-function wait_allerts_resolve() {
+function wait_alerts_resolve() {
 
   allow_alerts=(
   "D8DeckhouseIsNotOnReleaseChannel" # Tests may be made on dev branch
@@ -566,7 +566,14 @@ function run-test() {
   done
 
   wait_upmeter_green
-  wait_allerts_resolve
+
+  if [[ "$SLEEP_BEFORE_TESTING_CLUSTER_ALERTS" != "" && "$SLEEP_BEFORE_TESTING_CLUSTER_ALERTS" != "0" ]]; then
+    echo "Sleeping $SLEEP_BEFORE_TESTING_CLUSTER_ALERTS seconds before check cluster alerts"
+    sleep "$SLEEP_BEFORE_TESTING_CLUSTER_ALERTS"
+  fi
+
+  wait_alerts_resolve
+
   set_common_ssh_parameters
 
   testScript=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_commander_script.sh")
@@ -583,7 +590,7 @@ function run-test() {
     change_deckhouse_image "${SWITCH_TO_IMAGE_TAG}" || return $?
     wait_deckhouse_ready || return $?
     wait_upmeter_green || return $?
-    wait_allerts_resolve || return $?
+    wait_alerts_resolve || return $?
 
     testScript=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_script.sh")
 

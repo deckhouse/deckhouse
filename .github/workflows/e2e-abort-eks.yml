@@ -238,7 +238,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG="${arrPath[1]}"
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
-          TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-terraform:${DECKHOUSE_IMAGE_TAG}"
+          TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-opentofu-eks:${DECKHOUSE_IMAGE_TAG}"
 
           if [ "${MULTIMASTER}" == true ] ; then
             MASTERS_COUNT=3
@@ -302,6 +302,7 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -326,6 +327,7 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -531,7 +533,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG="${arrPath[1]}"
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
-          TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-terraform:${DECKHOUSE_IMAGE_TAG}"
+          TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-opentofu-eks:${DECKHOUSE_IMAGE_TAG}"
 
           if [ "${MULTIMASTER}" == true ] ; then
             MASTERS_COUNT=3
@@ -595,6 +597,7 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -619,6 +622,7 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -824,7 +828,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG="${arrPath[1]}"
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
-          TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-terraform:${DECKHOUSE_IMAGE_TAG}"
+          TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-opentofu-eks:${DECKHOUSE_IMAGE_TAG}"
 
           if [ "${MULTIMASTER}" == true ] ; then
             MASTERS_COUNT=3
@@ -888,6 +892,7 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -912,6 +917,7 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -1117,7 +1123,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG="${arrPath[1]}"
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
-          TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-terraform:${DECKHOUSE_IMAGE_TAG}"
+          TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-opentofu-eks:${DECKHOUSE_IMAGE_TAG}"
 
           if [ "${MULTIMASTER}" == true ] ; then
             MASTERS_COUNT=3
@@ -1181,6 +1187,7 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -1205,6 +1212,7 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -1410,7 +1418,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG="${arrPath[1]}"
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
-          TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-terraform:${DECKHOUSE_IMAGE_TAG}"
+          TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-opentofu-eks:${DECKHOUSE_IMAGE_TAG}"
 
           if [ "${MULTIMASTER}" == true ] ; then
             MASTERS_COUNT=3
@@ -1474,6 +1482,7 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -1498,6 +1507,7 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -1703,7 +1713,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG="${arrPath[1]}"
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
-          TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-terraform:${DECKHOUSE_IMAGE_TAG}"
+          TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-opentofu-eks:${DECKHOUSE_IMAGE_TAG}"
 
           if [ "${MULTIMASTER}" == true ] ; then
             MASTERS_COUNT=3
@@ -1767,6 +1777,7 @@ jobs:
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
@@ -1791,6 +1802,7 @@ jobs:
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+          -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -v $(pwd)/testing:/deckhouse/testing \

@@ -59,8 +59,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "Additional license required",
-        "ru": "Требуется дополнительная лицензия"
+        "en": "A separate license is required",
+        "ru": "Требуется отдельная лицензия"
       }
     },
     "external": "true",
@@ -208,8 +208,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "Additional license required",
-        "ru": "Требуется дополнительная лицензия"
+        "en": "A separate license is required",
+        "ru": "Требуется отдельная лицензия"
       }
     },
     "external": "true",
@@ -270,8 +270,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "Restriction on the ability to create snapshots",
-        "ru": "Ограничение на возможность создания снимков"
+        "en": "Restriction on the ability to create snapshots",
+        "ru": "Ограничение на возможность создания снимков"
       }
     },
     "external": "true",
@@ -305,8 +305,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "Additional license required",
-        "ru": "Требуется дополнительная лицензия"
+        "en": "A separate license is required",
+        "ru": "Требуется отдельная лицензия"
       }
     },
     "external": "true",

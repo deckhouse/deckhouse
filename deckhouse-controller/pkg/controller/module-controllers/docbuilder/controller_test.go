@@ -60,7 +60,7 @@ type ControllerTestSuite struct {
 	suite.Suite
 
 	kubeClient client.Client
-	ctr        *moduleDocumentationReconciler
+	ctr        *reconciler
 
 	tmpDir           string
 	testDataFileName string
@@ -278,7 +278,7 @@ func (suite *ControllerTestSuite) setupController(yamlDoc string) {
 	_ = coordv1.AddToScheme(sc)
 	cl := fake.NewClientBuilder().WithScheme(sc).WithObjects(initObjects...).WithStatusSubresource(&v1alpha1.ModuleDocumentation{}).Build()
 	dc := dependency.NewDependencyContainer()
-	rec := &moduleDocumentationReconciler{
+	rec := &reconciler{
 		client:               cl,
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		logger:               log.NewNop(),
