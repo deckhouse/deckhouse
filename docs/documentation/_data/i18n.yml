@@ -164,6 +164,9 @@ common:
   module_available_without_limitations_prefix:
     en: Available without limitations in
     ru: Доступно без ограничений в редакциях
+  parameter_available_editions_prefix:
+    en: Available in editions
+    ru: Доступно в редакциях
   warning_ee_version:
     en: Available only in
     ru: Доступно только в

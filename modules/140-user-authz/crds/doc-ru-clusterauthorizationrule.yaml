@@ -136,7 +136,8 @@ spec:
                         Если указаны одновременно `matchExpressions` и `matchLabels`, учитываются оба фильтра (AND).
                       properties:
                         matchExpressions:
-                          description: Список фильтров на основе выражений.
+                          description: |
+                            Список фильтров на основе выражений.
                           items:
                             properties:
                               key:
@@ -146,7 +147,8 @@ spec:
                               values:
                                 description: Значение метки.
                         matchLabels:
-                          description: Фильтр на основе совпадения/несовпадения меток.
+                          description: |
+                            Фильтр на основе совпадения/несовпадения меток.
                 limitNamespaces:
                   description: |
                     Список разрешенных namespace в формате регулярных выражений.

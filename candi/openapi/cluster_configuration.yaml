@@ -136,7 +136,13 @@ apiVersions:
         - "1.32"
         - "Automatic"
       proxy:
-        x-doc-d8Revision: ee
+        x-doc-d8Editions:
+          - be
+          - se
+          - se+
+          - ee
+          - cse-lite
+          - cse-pro
         type: object
         description: |
           Global proxy setup (mainly for working in air-gapped environments).
@@ -148,7 +154,13 @@ apiVersions:
         properties:
           httpProxy:
             type: string
-            x-doc-d8Revision: ee
+            x-doc-d8Editions:
+              - be
+              - se
+              - se+
+              - ee
+              - cse-lite
+              - cse-pro
             pattern: ^https?://([!*'();&=+$,/?%#\[\]0-9a-zA-Z\.\-\_]+(\:[!*'();:@&=+$,/?%#\[\]0-9a-zA-Z\.\-\_]+)?@)?[0-9a-zA-Z\.\-]+(\:[0-9]{1,5})?$
             description: |
               Proxy URL for HTTP requests.
@@ -161,7 +173,13 @@ apiVersions:
             - 'https://user%40domain.local:password@proxy.company.my:8443'
           httpsProxy:
             type: string
-            x-doc-d8Revision: ee
+            x-doc-d8Editions:
+              - be
+              - se
+              - se+
+              - ee
+              - cse-lite
+              - cse-pro
             pattern: ^https?://([!*'();&=+$,/?%#\[\]0-9a-zA-Z\.\-\_]+(\:[!*'();:@&=+$,/?%#\[\]0-9a-zA-Z\.\-\_]+)?@)?[0-9a-zA-Z\.\-]+(\:[0-9]{1,5})?$
             description: |
               Proxy URL for HTTPS requests.
@@ -173,7 +191,13 @@ apiVersions:
             - 'https://DOMAIN%5Cuser:password@proxy.company.my:8443'
             - 'https://user%40domain.local:password@proxy.company.my:8443'
           noProxy:
-            x-doc-d8Revision: ee
+            x-doc-d8Editions:
+              - be
+              - se
+              - se+
+              - ee
+              - cse-lite
+              - cse-pro
             description: |
               List of no proxy IP and domain entries.
 

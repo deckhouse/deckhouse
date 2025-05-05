@@ -23,6 +23,7 @@ module JSONSchemaRenderer
       input
     end
 
+    # TODO: Refactor this according to the new data structure - x-doc-d8Editions instead of x-doc-d8Revision
     # moduleName
     # revision - Deckhouse revision
     # resourceType - can be 'crd' or 'moduleConfig' or 'clusterConfig'
@@ -340,7 +341,42 @@ module JSONSchemaRenderer
             end
         end
 
-        if attributes.has_key?('x-doc-d8Revision')
+        if attributes.has_key?('x-doc-d8Editions')
+          result.push(%Q(<p><strong>#{@site.data['i18n']['common']['module_available_editions_prefix'][lang]}: #{
+                attributes['x-doc-d8Editions']
+                  # Filter editions present in module-editions
+                  .select { |edition| @site.data['modules']['editions-addition'].key?(edition.sub('+', '-plus')) }
+                  # Skip edition with language defined in _data/modules/editions-addition.yml and if it is not the current language.
+                  .select {
+                    |edition|
+                      ! @site.data['modules']['editions-addition'][edition.sub('+', '-plus')]['languages'] or
+                      @site.data['modules']['editions-addition'][edition.sub('+', '-plus')]['languages'].include?(lang)
+                  }
+                  # Sort by edition weight (_data/modules/editions-weight.yml)
+                  .sort_by{
+                    |edition|
+                      weight = @site.data['modules']['editions-weight'][edition.sub('+', '-plus')]
+                      weight.nil? ? Float::INFINITY : weight
+                  }
+                  # Map edition to titles
+                  .map{
+                    |edition|
+                      editionData = @site.data['modules']['editions-addition'][edition.sub('+', '-plus')]
+                      # The condition will always be true, as we selected only editions present in module-editions, but let it be
+                      if editionData
+                        if editionData['name_version']
+                          editionData['name_version']
+                        elsif editionData['name']
+                          editionData['name']
+                        else
+                          puts "[WARN] No edition name for '#{edition}'"
+                        end
+                      else
+                        puts "[WARN] No edition '#{edition}' (parameter - #{name}, parent - #{parent})"
+                      end
+                  }.join(', ')
+                }</strong></p>))
+        elsif attributes.has_key?('x-doc-d8Revision') # Deprecated!
           case attributes['x-doc-d8Revision']
           when "ee"
             result.push(%Q(<p><strong>#{@site.data['i18n']['features']['ee'][lang].capitalize}</strong></p>))
