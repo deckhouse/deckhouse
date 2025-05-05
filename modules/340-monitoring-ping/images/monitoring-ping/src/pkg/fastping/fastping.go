@@ -71,8 +71,12 @@ func (p *Pinger) RunWithContext(ctx context.Context) error {
 
 	select {
 	case err := <-errCh:
-		log.Info(fmt.Sprintf("RunWithContext exiting with error: %v", err))
-		return err
+		if err != nil {
+			log.Info(fmt.Sprintf("RunWithContext exiting with error: %v", err))
+			return err
+		}
+		log.Info("RunWithContext exiting normally (no error)")
+		return nil
 	case <-ctx.Done():
 		log.Info("RunWithContext stopped due to context cancellation")
 		return ctx.Err()
