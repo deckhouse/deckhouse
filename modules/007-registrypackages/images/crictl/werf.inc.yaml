@@ -65,12 +65,9 @@ import:
   to: /src
   before: install
 mount:
+{{ include "mount points for golang builds" . }}
 - from: tmp_dir
   to: /src/cri-tools/build
-- from: tmp_dir
-  to: /go/pkg
-- from: tmp_dir
-  to: /root/.cache/go-build
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" $ | nindent 2 }}
