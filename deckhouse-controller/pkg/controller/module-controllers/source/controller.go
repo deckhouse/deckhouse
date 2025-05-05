@@ -352,7 +352,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			availableModules = append(availableModules, availableModule)
 			pullErrorsExist = true
 			// set the downloading error phase for the module
-			err = utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
+			err = utils.UpdateStatus(ctx, r.client, module, func(module *v1alpha1.Module) bool {
 				if module.Status.Phase == v1alpha1.ModulePhaseAvailable || module.Status.Phase == v1alpha1.ModulePhaseConflict {
 					module.Status.Phase = v1alpha1.ModulePhaseDownloadingError
 					module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDownloadingError, err.Error())
@@ -367,7 +367,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		}
 
 		if availableModule.Checksum != meta.Checksum || (meta.ModuleVersion != "" && !exists) {
-			err = utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
+			err = utils.UpdateStatus(ctx, r.client, module, func(module *v1alpha1.Module) bool {
 				if module.Status.Phase == v1alpha1.ModulePhaseAvailable || module.Status.Phase == v1alpha1.ModulePhaseConflict {
 					module.Status.Phase = v1alpha1.ModulePhaseDownloading
 					module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDownloading, v1alpha1.ModuleMessageDownloading)
@@ -389,7 +389,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 	}
 
 	// update source status
-	err := utils.UpdateStatus[*v1alpha1.ModuleSource](ctx, r.client, source, func(source *v1alpha1.ModuleSource) bool {
+	err := utils.UpdateStatus(ctx, r.client, source, func(source *v1alpha1.ModuleSource) bool {
 		source.Status.Phase = v1alpha1.ModuleSourcePhaseActive
 		source.Status.SyncTime = metav1.NewTime(r.dependencyContainer.GetClock().Now().UTC())
 		source.Status.AvailableModules = availableModules
@@ -405,7 +405,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 	}
 
 	// set finalizer
-	err = utils.Update[*v1alpha1.ModuleSource](ctx, r.client, source, func(source *v1alpha1.ModuleSource) bool {
+	err = utils.Update(ctx, r.client, source, func(source *v1alpha1.ModuleSource) bool {
 		if !controllerutil.ContainsFinalizer(source, v1alpha1.ModuleSourceFinalizerModuleExists) {
 			controllerutil.AddFinalizer(source, v1alpha1.ModuleSourceFinalizerModuleExists)
 			return true
@@ -441,7 +441,7 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 
 			// prevent deletion if there are deployed releases
 			if len(releases.Items) > 0 {
-				err := utils.UpdateStatus[*v1alpha1.ModuleSource](ctx, r.client, source, func(source *v1alpha1.ModuleSource) bool {
+				err := utils.UpdateStatus(ctx, r.client, source, func(source *v1alpha1.ModuleSource) bool {
 					source.Status.Message = "The source contains at least 1 deployed release and cannot be deleted. Please delete target ModuleReleases manually to continue"
 					return true
 				})
