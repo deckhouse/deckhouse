@@ -1,7 +1,7 @@
 From e72ab6fce5eea6203771ac80445cf89205119626 Mon Sep 17 00:00:00 2001
 From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date: Tue, 22 Apr 2025 18:34:06 +0300
-Subject: [PATCH 1/3] add priority calc
+Subject: [PATCH 1/4] add priority calc
 
 Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 ---
@@ -316,7 +316,7 @@ index 40c714ee0f..9541281c22 100644
 From b1e78ba176092400a918de2eb77982389e3a13be Mon Sep 17 00:00:00 2001
 From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date: Fri, 25 Apr 2025 12:21:17 +0300
-Subject: [PATCH 2/3] move lxcmap module to ipcache
+Subject: [PATCH 2/4] move lxcmap module to ipcache
 
 Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 ---
@@ -1056,7 +1056,7 @@ index deb81c9af0..0000000000
 From e83477d0398e2970c39e96fbd9cbcd524560e4c1 Mon Sep 17 00:00:00 2001
 From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date: Mon, 28 Apr 2025 19:11:08 +0300
-Subject: [PATCH 3/3] patch lxcmap|ipcache logic for shared ip4 between pods
+Subject: [PATCH 3/4] patch lxcmap|ipcache logic for shared ip4 between pods
 
 Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 ---
@@ -1358,6 +1358,97 @@ index 0f4947864e..1f306ba4aa 100644
  }
  
  type K8sWatcher struct {
+-- 
+2.34.1
+
+
+From b1d423574e6e5d1d2464482181c3e8d6b353bc4d Mon Sep 17 00:00:00 2001
+From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+Date: Mon, 5 May 2025 14:20:37 +0300
+Subject: [PATCH 4/4] force slice update when new VM ready
+
+Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+---
+ .../pkg/ciliumendpointslice/endpointslice.go  | 24 +++++++++----------
+ 1 file changed, 12 insertions(+), 12 deletions(-)
+
+diff --git a/operator/pkg/ciliumendpointslice/endpointslice.go b/operator/pkg/ciliumendpointslice/endpointslice.go
+index 66159bcaa5..bc380e3247 100644
+--- a/operator/pkg/ciliumendpointslice/endpointslice.go
++++ b/operator/pkg/ciliumendpointslice/endpointslice.go
+@@ -278,14 +278,14 @@ func (c *Controller) onEndpointUpdate(cep *cilium_api_v2.CiliumEndpoint) {
+ 	}
+ 
+ 	// TODO use delay
+-	oldOwner, _, newOwner := filter.filterAddressByPriority(cep)
++	oldOwner, delay, newOwner := filter.filterAddressByPriority(cep)
+ 	if oldOwner != nil {
+ 		touchedCESs := c.manager.UpdateCEPMapping(k8s.ConvertCEPToCoreCEP(oldOwner), oldOwner.Namespace)
+-		c.enqueueCESReconciliation(touchedCESs)
++		c.enqueueCESReconciliation(touchedCESs, delay)
+ 	}
+ 
+ 	touchedCESs := c.manager.UpdateCEPMapping(k8s.ConvertCEPToCoreCEP(newOwner), newOwner.Namespace)
+-	c.enqueueCESReconciliation(touchedCESs)
++	c.enqueueCESReconciliation(touchedCESs, delay)
+ }
+ 
+ func (c *Controller) onEndpointDelete(cep *cilium_api_v2.CiliumEndpoint) {
+@@ -293,29 +293,29 @@ func (c *Controller) onEndpointDelete(cep *cilium_api_v2.CiliumEndpoint) {
+ 
+ 	if hiddenCep != nil {
+ 		touchedCESs := c.manager.UpdateCEPMapping(k8s.ConvertCEPToCoreCEP(hiddenCep), hiddenCep.Namespace)
+-		c.enqueueCESReconciliation(touchedCESs)
++		c.enqueueCESReconciliation(touchedCESs, DefaultCESSyncTime)
+ 	}
+ 
+ 	touchedCES := c.manager.RemoveCEPMapping(k8s.ConvertCEPToCoreCEP(cep), cep.Namespace)
+-	c.enqueueCESReconciliation([]CESKey{touchedCES})
++	c.enqueueCESReconciliation([]CESKey{touchedCES}, DefaultCESSyncTime)
+ }
+ 
+ func (c *Controller) onSliceUpdate(ces *capi_v2a1.CiliumEndpointSlice) {
+-	c.enqueueCESReconciliation([]CESKey{NewCESKey(ces.Name, ces.Namespace)})
++	c.enqueueCESReconciliation([]CESKey{NewCESKey(ces.Name, ces.Namespace)}, DefaultCESSyncTime)
+ }
+ 
+ func (c *Controller) onSliceDelete(ces *capi_v2a1.CiliumEndpointSlice) {
+-	c.enqueueCESReconciliation([]CESKey{NewCESKey(ces.Name, ces.Namespace)})
++	c.enqueueCESReconciliation([]CESKey{NewCESKey(ces.Name, ces.Namespace)}, DefaultCESSyncTime)
+ }
+ 
+-func (c *Controller) addToQueue(ces CESKey) {
++func (c *Controller) addToQueue(ces CESKey, delay time.Duration) {
+ 	c.priorityNamespacesLock.RLock()
+ 	_, exists := c.priorityNamespaces[ces.Namespace]
+ 	c.priorityNamespacesLock.RUnlock()
+-	time.AfterFunc(c.syncDelay, func() {
++	time.AfterFunc(delay, func() {
+ 		c.cond.L.Lock()
+ 		defer c.cond.L.Unlock()
+-		if exists {
++		if exists || delay == ForceCESSyncTime {
+ 			c.fastQueue.Add(ces)
+ 		} else {
+ 			c.standardQueue.Add(ces)
+@@ -326,7 +326,7 @@ func (c *Controller) addToQueue(ces CESKey) {
+ 
+ }
+ 
+-func (c *Controller) enqueueCESReconciliation(cess []CESKey) {
++func (c *Controller) enqueueCESReconciliation(cess []CESKey, delay time.Duration) {
+ 	for _, ces := range cess {
+ 		c.logger.Debug("Enqueueing CES (if not empty name)", logfields.CESName, ces.string())
+ 		if ces.Name != "" {
+@@ -335,7 +335,7 @@ func (c *Controller) enqueueCESReconciliation(cess []CESKey) {
+ 				c.enqueuedAt[ces] = time.Now()
+ 			}
+ 			c.enqueuedAtLock.Unlock()
+-			c.addToQueue(ces)
++			c.addToQueue(ces, delay)
+ 		}
+ 	}
+ }
 -- 
 2.34.1
 
