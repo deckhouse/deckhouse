@@ -25,27 +25,35 @@ spec:
           type: object
           description: |
             Custom resource for setting remote cluster as trusted one.
-          x-doc-d8Revision: ee
+          x-doc-d8Editions:
+            - ee
+            - cse-pro
           required:
           - spec
           properties:
             spec:
               type: object
-              x-doc-d8Revision: ee
+              x-doc-d8Editions:
+                - ee
+                - cse-pro
               required:
               - metadataEndpoint
               properties:
                 enableIngressGateway:
                   type: boolean
                   default: true
-                  x-doc-d8Revision: ee
+                  x-doc-d8Editions:
+                    - ee
+                    - cse-pro
                   description: |
                     Using IngressGateway for accessing remote Pods.
 
                     If remote Pods are accessible directly from our cluster (flat network), it is efficient not to use extra hop.
                 metadataEndpoint:
                   type: string
-                  x-doc-d8Revision: ee
+                  x-doc-d8Editions:
+                    - ee
+                    - cse-pro
                   description: |
                     HTTPS endpoint with remote cluster metadata.
                   pattern: '^(https|file)://[0-9a-zA-Z._/-]+$'
@@ -55,12 +63,16 @@ spec:
                   properties:
                     ca:
                       type: string
-                      x-doc-d8Revision: ee
+                      x-doc-d8Editions:
+                        - ee
+                        - cse-pro
                       description: |
                         HTTPS certificate authority for remote cluster metadata.
                     insecureSkipVerify:
                       type: boolean
-                      x-doc-d8Revision: ee
+                      x-doc-d8Editions:
+                        - ee
+                        - cse-pro
                       description: |
                         HTTPS check or not for remote cluster metadata.
                       default: false
