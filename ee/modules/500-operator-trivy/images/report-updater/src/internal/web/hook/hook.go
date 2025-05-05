@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"report-updater/cache"
+	"report-updater/internal/cache"
 
 	"github.com/aquasecurity/trivy-operator/pkg/apis/aquasecurity/v1alpha1"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -54,7 +54,7 @@ func (h *Handler) StartRenewCacheLoop(ctx context.Context) {
 		select {
 		case <-ticker.C:
 			h.logger.Println("Starting periodic dictionary update")
-			h.dictionary.RenewBduDictionary(ctx)
+			h.dictionary.Renew(ctx)
 		}
 	}
 }

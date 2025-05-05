@@ -15,8 +15,8 @@ import (
 	"os"
 	"time"
 
-	"report-updater/cache"
-	"report-updater/web/hook"
+	"report-updater/internal/cache"
+	"report-updater/internal/web/hook"
 )
 
 const (
