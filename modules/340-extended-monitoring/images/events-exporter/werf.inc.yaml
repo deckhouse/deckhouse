@@ -21,13 +21,11 @@ shell:
   - git apply /patches/*.patch --verbose
   - rm -rf /src/.git
 git:
-  - add: /modules/340-extended-monitoring/images/{{ $.ImageName }}
-    to: /
+  - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+    to: /patches
     stageDependencies:
       setup:
         - "**/*"
-    includePaths:
-      - patches
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
