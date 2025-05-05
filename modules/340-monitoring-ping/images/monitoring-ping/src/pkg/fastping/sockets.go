@@ -98,7 +98,7 @@ func newSocket(ctx context.Context) (*socketConn, error) {
 		pending:    sync.Map{},
 	}
 
-	go conn.cleanupLoop(ctx)
+	// go conn.cleanupLoop(ctx)
 
 	return conn, nil
 }
@@ -329,27 +329,27 @@ func (p *Pinger) sendPings(ctx context.Context, conn *socketConn) error {
 	return nil
 }
 
-func (s *socketConn) cleanupLoop(ctx context.Context) {
-	ticker := time.NewTicker(10 * time.Second)
-	defer ticker.Stop()
+// func (s *socketConn) cleanupLoop(ctx context.Context) {
+// 	ticker := time.NewTicker(10 * time.Second)
+// 	defer ticker.Stop()
 
-	for {
-		select {
-		case <-ctx.Done():
-			log.Info("cleanupLoop stopped due to context cancellation")
-			return
-		case <-ticker.C:
-			now := time.Now().UnixNano()
-			s.pending.Range(func(k, v any) bool {
-				pp := v.(pendingPacket)
-				if now-pp.sentTime > int64(64*time.Second) {
-					s.pending.Delete(k)
-				}
-				return true
-			})
-		}
-	}
-}
+// 	for {
+// 		select {
+// 		case <-ctx.Done():
+// 			log.Info("cleanupLoop stopped due to context cancellation")
+// 			return
+// 		case <-ticker.C:
+// 			now := time.Now().UnixNano()
+// 			s.pending.Range(func(k, v any) bool {
+// 				pp := v.(pendingPacket)
+// 				if now-pp.sentTime > int64(64*time.Second) {
+// 					s.pending.Delete(k)
+// 				}
+// 				return true
+// 			})
+// 		}
+// 	}
+// }
 
 // func buildICMP(seq int, connId int, sendTime time.Time) []byte {
 // 	pkt := make([]byte, 8+8) // 8 byte header + 8 byte timestamp
