@@ -1,19 +1,17 @@
 diff --git a/go.mod b/go.mod
-index 03525a2d477..7f255adeb41 100644
+index 03525a2d477..254b9171b27 100644
 --- a/go.mod
 +++ b/go.mod
-@@ -6,7 +6,9 @@
+@@ -6,7 +6,7 @@
  
  module k8s.io/kubernetes
  
 -go 1.20
-+go 1.23.0
-+
-+toolchain go1.24.2
++go 1.24.2
  
  require (
  	bitbucket.org/bertimus9/systemstat v0.5.0
-@@ -29,11 +31,11 @@ require (
+@@ -29,11 +29,11 @@ require (
  	github.com/cyphar/filepath-securejoin v0.2.4
  	github.com/docker/distribution v2.8.2+incompatible
  	github.com/docker/go-units v0.5.0
@@ -28,7 +26,7 @@ index 03525a2d477..7f255adeb41 100644
  	github.com/gogo/protobuf v1.3.2
  	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da
  	github.com/golang/mock v1.6.0
-@@ -41,20 +43,20 @@ require (
+@@ -41,20 +41,20 @@ require (
  	github.com/google/cadvisor v0.47.3
  	github.com/google/cel-go v0.16.1
  	github.com/google/gnostic-models v0.6.8
@@ -54,7 +52,7 @@ index 03525a2d477..7f255adeb41 100644
  	github.com/pkg/errors v0.9.1
  	github.com/pmezard/go-difflib v1.0.0
  	github.com/prometheus/client_golang v1.16.0
-@@ -63,32 +65,32 @@ require (
+@@ -63,32 +63,32 @@ require (
  	github.com/robfig/cron/v3 v3.0.1
  	github.com/spf13/cobra v1.7.0
  	github.com/spf13/pflag v1.0.5
@@ -105,7 +103,7 @@ index 03525a2d477..7f255adeb41 100644
  	google.golang.org/protobuf v1.33.0
  	gopkg.in/gcfg.v1 v1.2.3
  	gopkg.in/square/go-jose.v2 v2.6.0
-@@ -132,7 +134,7 @@ require (
+@@ -132,7 +132,7 @@ require (
  )
  
  require (
@@ -114,7 +112,7 @@ index 03525a2d477..7f255adeb41 100644
  	cloud.google.com/go/compute/metadata v0.2.3 // indirect
  	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
  	github.com/Azure/go-autorest v14.2.0+incompatible // indirect
-@@ -150,9 +152,8 @@ require (
+@@ -150,9 +150,8 @@ require (
  	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
  	github.com/cespare/xxhash/v2 v2.2.0 // indirect
  	github.com/chai2010/gettext-go v1.0.2 // indirect
@@ -126,7 +124,7 @@ index 03525a2d477..7f255adeb41 100644
  	github.com/containerd/ttrpc v1.2.2 // indirect
  	github.com/coredns/caddy v1.1.1 // indirect
  	github.com/coreos/go-semver v0.3.1 // indirect
-@@ -172,18 +173,19 @@ require (
+@@ -172,18 +171,19 @@ require (
  	github.com/go-openapi/swag v0.22.3 // indirect
  	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
  	github.com/gofrs/uuid v4.4.0+incompatible // indirect
@@ -149,7 +147,7 @@ index 03525a2d477..7f255adeb41 100644
  	github.com/inconshreveable/mousetrap v1.1.0 // indirect
  	github.com/jonboulle/clockwork v0.2.2 // indirect
  	github.com/josharian/intern v1.0.0 // indirect
-@@ -195,7 +197,8 @@ require (
+@@ -195,7 +195,8 @@ require (
  	github.com/mistifyio/go-zfs v2.1.2-0.20190413222219-f784269be439+incompatible // indirect
  	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
  	github.com/moby/spdystream v0.2.0 // indirect
@@ -159,7 +157,7 @@ index 03525a2d477..7f255adeb41 100644
  	github.com/moby/term v0.0.0-20221205130635-1aeaba878587 // indirect
  	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
  	github.com/modern-go/reflect2 v1.0.2 // indirect
-@@ -203,14 +206,14 @@ require (
+@@ -203,14 +204,14 @@ require (
  	github.com/monochromegane/go-gitignore v0.0.0-20200626010858-205db1a8cc00 // indirect
  	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
  	github.com/opencontainers/go-digest v1.0.0 // indirect
@@ -176,7 +174,7 @@ index 03525a2d477..7f255adeb41 100644
  	github.com/soheilhy/cmux v0.1.5 // indirect
  	github.com/stoewer/go-strcase v1.2.0 // indirect
  	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635 // indirect
-@@ -224,19 +227,18 @@ require (
+@@ -224,19 +225,18 @@ require (
  	go.etcd.io/etcd/raft/v3 v3.5.9 // indirect
  	go.etcd.io/etcd/server/v3 v3.5.9 // indirect
  	go.opencensus.io v0.24.0 // indirect
@@ -9194,21 +9192,19 @@ index 6d9dfba6328..8d1b370d4c1 100644
  sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd/go.mod h1:B8JuhiUyNFVKdsE8h686QcCxMaH6HrOAZj4vswFpcB0=
  sigs.k8s.io/structured-merge-diff/v4 v4.2.3 h1:PRbqxJClWWYMNV1dhaG4NsibJbArud9kFxnAMREiWFE=
 diff --git a/staging/src/k8s.io/kube-proxy/go.mod b/staging/src/k8s.io/kube-proxy/go.mod
-index 58846cb0978..4d42a4dde93 100644
+index 58846cb0978..5212b593882 100644
 --- a/staging/src/k8s.io/kube-proxy/go.mod
 +++ b/staging/src/k8s.io/kube-proxy/go.mod
-@@ -2,7 +2,9 @@
+@@ -2,7 +2,7 @@
  
  module k8s.io/kube-proxy
  
 -go 1.20
-+go 1.23.0
-+
-+toolchain go1.24.2
++go 1.24.2
  
  require (
  	k8s.io/apimachinery v0.0.0
-@@ -13,10 +15,10 @@ require (
+@@ -13,10 +13,10 @@ require (
  	github.com/beorn7/perks v1.0.1 // indirect
  	github.com/blang/semver/v4 v4.0.0 // indirect
  	github.com/cespare/xxhash/v2 v2.2.0 // indirect
@@ -9221,7 +9217,7 @@ index 58846cb0978..4d42a4dde93 100644
  	github.com/google/gofuzz v1.2.0 // indirect
  	github.com/inconshreveable/mousetrap v1.1.0 // indirect
  	github.com/json-iterator/go v1.1.12 // indirect
-@@ -30,9 +32,9 @@ require (
+@@ -30,9 +30,9 @@ require (
  	github.com/prometheus/procfs v0.10.1 // indirect
  	github.com/spf13/cobra v1.7.0 // indirect
  	github.com/spf13/pflag v1.0.5 // indirect
