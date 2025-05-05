@@ -1,18 +1,16 @@
 diff --git a/auth_server/go.mod b/auth_server/go.mod
-index 8f82107..cb27449 100644
+index 8f82107..516fcca 100644
 --- a/auth_server/go.mod
 +++ b/auth_server/go.mod
-@@ -1,6 +1,8 @@
+@@ -1,6 +1,6 @@
  module github.com/cesanta/docker_auth/auth_server
  
 -go 1.23
-+go 1.23.0
-+
-+toolchain go1.24.2
++go 1.24.2
  
  require (
  	cloud.google.com/go/storage v1.29.0
-@@ -18,8 +20,8 @@ require (
+@@ -18,8 +18,8 @@ require (
  	github.com/mattn/go-sqlite3 v2.0.3+incompatible
  	github.com/syndtr/goleveldb v1.0.0
  	go.mongodb.org/mongo-driver v1.10.2
@@ -23,7 +21,7 @@ index 8f82107..cb27449 100644
  	golang.org/x/oauth2 v0.13.0
  	google.golang.org/api v0.126.0
  	gopkg.in/fsnotify.v1 v1.4.7
-@@ -34,7 +36,7 @@ require (
+@@ -34,7 +34,7 @@ require (
  	cloud.google.com/go/compute/metadata v0.2.3 // indirect
  	cloud.google.com/go/iam v0.13.0 // indirect
  	github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible // indirect
@@ -32,7 +30,7 @@ index 8f82107..cb27449 100644
  	github.com/goccy/go-json v0.9.11 // indirect
  	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
  	github.com/golang/mock v1.6.0 // indirect
-@@ -60,9 +62,9 @@ require (
+@@ -60,9 +60,9 @@ require (
  	github.com/xdg-go/stringprep v1.0.3 // indirect
  	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a // indirect
  	go.opencensus.io v0.24.0 // indirect

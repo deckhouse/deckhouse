@@ -1,14 +1,12 @@
 diff --git a/go.mod b/go.mod
-index 93f40007..01051f81 100644
+index 93f40007..a3f899fe 100644
 --- a/go.mod
 +++ b/go.mod
-@@ -1,25 +1,27 @@
+@@ -1,25 +1,25 @@
  module github.com/kubernetes-sigs/cri-tools
  
 -go 1.21
-+go 1.23.0
-+
-+toolchain go1.24.2
++go 1.24.2
  
  require (
  	github.com/distribution/reference v0.5.0
@@ -38,7 +36,7 @@ index 93f40007..01051f81 100644
  	gopkg.in/yaml.v3 v3.0.1
  	k8s.io/api v0.0.0
  	k8s.io/apimachinery v0.0.0
-@@ -27,7 +29,7 @@ require (
+@@ -27,7 +27,7 @@ require (
  	k8s.io/cri-api v0.0.0
  	k8s.io/kubectl v0.0.0
  	k8s.io/kubelet v0.0.0
@@ -47,7 +45,7 @@ index 93f40007..01051f81 100644
  	sigs.k8s.io/yaml v1.4.0
  )
  
-@@ -75,24 +77,25 @@ require (
+@@ -75,24 +75,25 @@ require (
  	github.com/russross/blackfriday/v2 v2.1.0 // indirect
  	github.com/spf13/pflag v1.0.5 // indirect
  	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
@@ -84,7 +82,7 @@ index 93f40007..01051f81 100644
  	gopkg.in/inf.v0 v0.9.1 // indirect
  	gopkg.in/yaml.v2 v2.4.0 // indirect
  	k8s.io/apiextensions-apiserver v0.0.0 // indirect
-@@ -107,33 +110,33 @@ require (
+@@ -107,33 +108,33 @@ require (
  )
  
  replace (
