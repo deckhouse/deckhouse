@@ -757,7 +757,8 @@ func (r *reconciler) getIntermediateModuleVersions(ctx context.Context, moduleNa
 		}
 	}
 	if len(versions) == 0 {
-		return nil, fmt.Errorf("no suitable versions found between %s and %s", currentVersion, targetVersion)
+		versions = append(versions, targetVersion)
+		return versions, nil
 	}
 	sort.Sort(semver.Collection(versions))
 	return versions, nil
@@ -1264,14 +1265,6 @@ func (r *reconciler) updateReleaseStatusMessage(ctx context.Context, release *v1
 	}
 
 	return nil
-}
-
-func newModuleReleaseWithName(name string) *v1alpha1.ModuleRelease {
-	return &v1alpha1.ModuleRelease{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-	}
 }
 
 func isModuleReady(moduleManager moduleManager, moduleName string) bool {

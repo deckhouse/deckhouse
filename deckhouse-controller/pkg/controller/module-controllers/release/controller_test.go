@@ -135,6 +135,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	require.NoError(suite.T(), err)
 	ctx := suite.Context()
 
+	dependency.TestDC.CRClient.ListTagsMock.Return([]string{"parca-v1.4.3"}, nil)
 	dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
 		ManifestStub: func() (*crv1.Manifest, error) {
 			return &crv1.Manifest{
@@ -142,7 +143,10 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			}, nil
 		},
 		LayersStub: func() ([]crv1.Layer, error) {
-			return []crv1.Layer{&utils.FakeLayer{}}, nil
+			return []crv1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "v1.4.3"}`}}}, nil
+		},
+		DigestStub: func() (crv1.Hash, error) {
+			return crv1.Hash{Algorithm: "sha256"}, nil
 		},
 	}, nil)
 
