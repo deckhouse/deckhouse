@@ -1,7 +1,22 @@
+/*
+Copyright 2022 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package checker
 
 import (
-	"fmt"
 	"time"
 
 	"d8.io/upmeter/pkg/check"
@@ -16,10 +31,13 @@ type convergeStatusChecker struct {
 	logger              *logrus.Entry
 }
 
-const (
-	windowSize          = 6
-	taskGrowthThreshold = 0.01
-	freezeThreshold     = 5 * time.Minute
+const ()
+
+var (
+	windowSize                  = 6
+	freezeThreshold             = 5 * time.Minute
+	allowedTasksPerTimeInterval = 10.0
+	taskGrowthThreshold         = allowedTasksPerTimeInterval / float64(windowSize) // 10 tasks per 5 minutes
 )
 
 func (c *convergeStatusChecker) Check() check.Error {
@@ -31,63 +49,63 @@ func (c *convergeStatusChecker) Check() check.Error {
 	// deckhouse restarted, cleanup all previous c.history if startup converge was already done in this window,
 	// so we don't get exceeding growth rate
 	if c.startupConvergeDone && !pollResult.StartupConvergeDone && !c.historyCleaned {
-		fmt.Printf("restart detected, cleaning up c.history")
+		c.logger.Debugf("restart detected, cleaning up c.history")
 		c.history = []status{}
 		c.historyCleaned = true
 	}
 
 	if pollResult.StartupConvergeDone {
-		fmt.Printf("startup converge was done, resetting historyCleaned marker")
+		c.logger.Debugf("startup converge was done, resetting historyCleaned marker")
 
 		c.historyCleaned = false
 		c.startupConvergeDone = true
 	}
 
-	fmt.Printf("poll ended %+v\n", pollResult)
+	c.logger.Debugf("poll ended %+v\n", pollResult)
 	c.history = append(c.history, *pollResult)
 
 	if len(c.history) > windowSize {
-		fmt.Printf("history more than window size, removing oldest element")
+		c.logger.Debugf("history more than window size, removing oldest element")
 		c.history = c.history[1:]
 	}
-	fmt.Printf("append to history %+v\n", c.history)
+	c.logger.Debugf("append to history %+v\n", c.history)
 
 	if len(c.history) < 2 {
 		// not enough data
-		fmt.Printf("not enough data yet, %d\n", len(c.history))
+		c.logger.Debugf("not enough data yet, %d\n", len(c.history))
 		return nil
 	}
 
 	latest := c.history[len(c.history)-1]
 
 	if latest.ConvergeWaitTask {
-		fmt.Printf("queue is empty, skip check\n")
+		c.logger.Debugf("queue is empty, skip check\n")
 
 		// queue is empty, deckhouse is waiting for tasks
 		return nil
 	}
 
 	start, end := c.history[0], latest
-	startTasks := toInt(start.ConvergeInProgress) + toInt(start.StartupConvergeInProgress)
-	endTasks := toInt(end.ConvergeInProgress) + toInt(end.StartupConvergeInProgress)
-	fmt.Printf("start tasks %d, end tasks %d\n", startTasks, endTasks)
+	startTasks := start.ConvergeInProgress + start.StartupConvergeInProgress
+	endTasks := end.ConvergeInProgress + end.StartupConvergeInProgress
+	c.logger.Debugf("start tasks %d, end tasks %d\n", startTasks, endTasks)
 
 	duration := time.Duration(len(c.history)) * (time.Second * 60)
-	fmt.Printf("duration %d\n", duration)
+	c.logger.Debugf("duration %d\n", duration)
 
 	growthRate := float64(endTasks-startTasks) / duration.Seconds()
-	fmt.Printf("growth rate %d\n", growthRate)
+	c.logger.Debugf("growth rate %f\n", growthRate)
 
 	if growthRate > taskGrowthThreshold {
-		fmt.Printf("growth rate exceeds task growth threshold %d\n", growthRate)
+		c.logger.Debugf("growth rate %f exceeds task growth threshold %f\n", growthRate, taskGrowthThreshold)
 		return check.ErrFail("growth rate exceeds task growth threshold")
 	}
 
 	// check for frozen queue
 	allEqual := true
-	ref := toInt(c.history[0].ConvergeInProgress) + toInt(c.history[0].StartupConvergeInProgress)
+	ref := c.history[0].ConvergeInProgress + c.history[0].StartupConvergeInProgress
 	for _, h := range c.history[1:] {
-		cur := toInt(h.ConvergeInProgress) + toInt(h.StartupConvergeInProgress)
+		cur := h.ConvergeInProgress + h.StartupConvergeInProgress
 		if cur != ref {
 			allEqual = false
 			break
@@ -102,11 +120,4 @@ func (c *convergeStatusChecker) Check() check.Error {
 	}
 
 	return nil
-}
-
-func toInt(ptr *int) int {
-	if ptr == nil {
-		return 0
-	}
-	return *ptr
 }

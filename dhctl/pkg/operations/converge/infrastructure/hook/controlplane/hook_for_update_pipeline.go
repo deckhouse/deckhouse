@@ -115,7 +115,7 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 		return false, fmt.Errorf("not all nodes are ready: %v", err)
 	}
 
-	err = removeControlPlaneRoleFromNode(ctx, h.kubeGetter.KubeClient(), h.nodeToConverge)
+	err = removeControlPlaneRoleFromNode(ctx, h.kubeGetter.KubeClient(), h.nodeToConverge, h.commanderMode)
 	if err != nil {
 		return false, fmt.Errorf("failed to remove control plane role from node '%s': %v", h.nodeToConverge, err)
 	}

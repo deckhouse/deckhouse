@@ -1,5 +1,5 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: {{ .ModuleName }}/base-terraform-manager
+fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "decort") -}}'
 git:
   - add: /{{ .ModulePath }}candi/cloud-providers/dynamix
     to: /deckhouse/candi/cloud-providers/dynamix

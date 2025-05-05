@@ -120,7 +120,7 @@ spec:
         - --balance-similar-node-groups=true
         - --expander=priority,least-waste
         - --max-failing-time=120m
-        - --v=2
+        - --v=5
         env:
         - name: CONTROL_NAMESPACE
           value: d8-cloud-instance-manager

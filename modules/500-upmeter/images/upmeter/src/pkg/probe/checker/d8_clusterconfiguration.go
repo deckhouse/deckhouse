@@ -53,11 +53,15 @@ type D8ClusterConfiguration struct {
 	Logger           *logrus.Entry
 	PreflightChecker check.Checker
 
-	PodAccessTimeout    time.Duration
-	ObjectChangeTimeout time.Duration
+	PodAccessTimeout            time.Duration
+	ObjectChangeTimeout         time.Duration
+	WindowSize                  int
+	FreezeThreshold             time.Duration
+	AllowedTasksPerTimeInterval float64
+	TaskGrowthThreshold         float64
 }
 
-// Verify deckhouse pod is up, and running, and ready
+// Verify deckhouse queue is not stale, and tasks are not growing
 // Set value to CR spec
 // Wait for CR spec to be modified by hook
 func (c *D8ClusterConfiguration) Checker() check.Checker {
@@ -298,10 +302,10 @@ func newPoller(access kubernetes.Access, namespace string, svcname string, clien
 }
 
 type status struct {
-	ConvergeInProgress        *int `json:"CONVERGE_IN_PROGRESS"`
+	ConvergeInProgress        int  `json:"CONVERGE_IN_PROGRESS"`
 	ConvergeWaitTask          bool `json:"CONVERGE_WAIT_TASK"`
 	StartupConvergeDone       bool `json:"STARTUP_CONVERGE_DONE"`
-	StartupConvergeInProgress *int `json:"STARTUP_CONVERGE_IN_PROGRESS"`
+	StartupConvergeInProgress int  `json:"STARTUP_CONVERGE_IN_PROGRESS"`
 	StartupConvergeNotStarted bool `json:"STARTUP_CONVERGE_NOT_STARTED"`
 }
 

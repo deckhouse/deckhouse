@@ -58,7 +58,7 @@ func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infras
 
 	h.oldMasterIPForSSH = outputs.MasterIPForSSH
 
-	err = removeControlPlaneRoleFromNode(ctx, h.getter.KubeClient(), h.nodeToDestroy)
+	err = removeControlPlaneRoleFromNode(ctx, h.getter.KubeClient(), h.nodeToDestroy, h.commanderMode)
 	if err != nil {
 		return false, fmt.Errorf("failed to remove control plane role from node '%s': %v", h.nodeToDestroy, err)
 	}
@@ -85,7 +85,7 @@ func (h *HookForDestroyPipeline) IsReady() error {
 	return nil
 }
 
-func removeControlPlaneRoleFromNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string) error {
+func removeControlPlaneRoleFromNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string, commanderMode bool) error {
 	err := removeLabelsFromNode(ctx, kubeCl, nodeName, []string{
 		"node-role.kubernetes.io/control-plane",
 		"node-role.kubernetes.io/master",
@@ -100,7 +100,7 @@ func removeControlPlaneRoleFromNode(ctx context.Context, kubeCl *client.Kubernet
 		return fmt.Errorf("failed to check etcd has no member '%s': %v", nodeName, err)
 	}
 
-	err = infra_utils.TryToDrainNode(ctx, kubeCl, nodeName)
+	err = infra_utils.TryToDrainNode(ctx, kubeCl, nodeName, infra_utils.GetDrainConfirmation(commanderMode))
 	if err != nil {
 		return fmt.Errorf("failed to drain node '%s': %v", nodeName, err)
 	}

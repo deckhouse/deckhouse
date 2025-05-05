@@ -84,6 +84,11 @@ func createTarball() *bytes.Buffer {
 			Args: []string{"-c", "kubectl get modules -o json | jq '.items[]'"},
 		},
 		{
+			File: "deckhouse-maintenance-modules.txt",
+			Cmd:  "bash",
+			Args: []string{"-c", `kubectl get moduleconfig -ojson | jq -r '.items[] | select(.spec.maintenance == "NoResourceReconciliation") | .metadata.name'`},
+		},
+		{
 			File: "events.json",
 			Cmd:  "kubectl",
 			Args: []string{"get", "events", "--sort-by=.metadata.creationTimestamp", "-A", "-o", "json"},
@@ -167,11 +172,6 @@ func createTarball() *bytes.Buffer {
 			File: "prometheus-logs.txt",
 			Cmd:  "kubectl",
 			Args: []string{"-n", "d8-monitoring", "logs", "-l", "prometheus=main", "--tail=3000", "-c", "prometheus", "--ignore-errors=true"},
-		},
-		{
-			File: "terraform-check.json",
-			Cmd:  "bash",
-			Args: []string{"-c", `kubectl get modules terraform-manager -o json | jq -r 'select(.status.phase == "Ready") | "kubectl -n d8-system exec deploy/terraform-state-exporter -- dhctl terraform check --logger-type json -o json"' | bash | jq -c '.terraform_plan[]?.variables.providerClusterConfiguration.value.provider = "REDACTED"'`},
 		},
 		{
 			File: "alerts.json",
