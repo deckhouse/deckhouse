@@ -227,7 +227,7 @@ func (c *VulnerabilityCache) getData(ctx context.Context) error {
 	for _, desc := range successors {
 		switch desc.MediaType {
 		case tarGzMediaType:
-			if err = c.processImage(ctx, store, descriptor); err != nil {
+			if err = c.processDescriptor(ctx, store, desc); err != nil {
 				return fmt.Errorf("renew BDU base: process tar archive: %w", err)
 			}
 		default:
@@ -238,8 +238,8 @@ func (c *VulnerabilityCache) getData(ctx context.Context) error {
 	return nil
 }
 
-func (c *VulnerabilityCache) processImage(ctx context.Context, store *memory.Store, descriptor ocispec.Descriptor) error {
-	tarGz, err := store.Fetch(ctx, descriptor)
+func (c *VulnerabilityCache) processDescriptor(ctx context.Context, store *memory.Store, desc ocispec.Descriptor) error {
+	tarGz, err := store.Fetch(ctx, desc)
 	if err != nil {
 		return fmt.Errorf("renew BDU base: fetch tar archive: %w", err)
 	}
