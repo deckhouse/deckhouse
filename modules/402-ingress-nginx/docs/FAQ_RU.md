@@ -288,15 +288,17 @@ kubectl drain <node_name> --delete-emptydir-data --ignore-daemonsets --force
 ```
 
 ## Web Application Firewall (WAF)
+
 Для защиты веб-приложений от L7-атак используется программное обеспечение известное как Web Application Firewall (WAF).
 В ingress-nginx контроллер встроен WAF под названием `ModSecurity` (проект OpenSource Web Application Firewall).
 
 По умолчанию ModSecurity выключен.
 
-### Включение ModSecurity.
+### Включение ModSecurity
+
 Для включения ModSecurity необходимо в CR IngressNginxController прописать следующие параметры в секции `config`:
 
-```
+```yaml
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
@@ -311,7 +313,8 @@ spec:
 После этого ModSecurity начнет работать для всего трафика, проходящего через данный ingress-nginx контроллер.
 При этом используется режиме аудита (`DetectionOnly`) и [базовая рекомендуемая конфигурация](https://github.com/owasp-modsecurity/ModSecurity/blob/v3/master/modsecurity.conf-recommended)
 
-### Настройка ModSecurity.
+### Настройка ModSecurity
+
 Вы можете настраивать ModSecurity двумя способами:
 - Для всего ingress-nginx контроллера
   - необходимые директивы описываются в секции `config.modsecurity-snippet` в CR IngressNginxController, как в примере выше.
@@ -320,7 +323,8 @@ spec:
 
 Для того чтобы начали выполняться действия, а не только логирование, необходимо добавить директиву `SecRuleEngine On`.
 Например так
-```
+
+```yaml
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
