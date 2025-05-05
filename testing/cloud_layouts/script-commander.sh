@@ -160,8 +160,6 @@ function prepare_environment() {
     ;;
 
   "AWS")
-    AWS_ACCESS_KEY="$(base64 -d <<< "$LAYOUT_AWS_ACCESS_KEY")"
-    AWS_SECRET_ACCESS_KEY="$(base64 -d <<< "$LAYOUT_AWS_SECRET_ACCESS_KEY")"
     ssh_user="ec2-user"
     cluster_template_id="9b567623-91a9-4493-96de-f5c0b6acacfe"
     values="{
@@ -170,8 +168,8 @@ function prepare_environment() {
       \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
       \"defaultCRI\": \"${CRI}\",
       \"masterCount\": \"${MASTERS_COUNT}\",
-      \"awsAccessKey\": \"${AWS_ACCESS_KEY}\",
-      \"awsSecretKey\": \"${AWS_SECRET_ACCESS_KEY}\",
+      \"awsAccessKey\": \"${LAYOUT_AWS_ACCESS_KEY}\",
+      \"awsSecretKey\": \"${LAYOUT_AWS_SECRET_ACCESS_KEY}\",
       \"sshPrivateKey\": \"${SSH_KEY}\",
       \"sshUser\": \"${ssh_user}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\"
