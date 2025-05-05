@@ -435,6 +435,8 @@ A dedicated [GitHub Action](https://github.com/deckhouse/modules-actions/blob/ma
 
 To connect the DMT, add the following step to your build workflow configuration in `[project].github/workflows/build.yml`:
 
+{% raw %}
+
 ```yaml
 jobs:
   lint:
@@ -445,9 +447,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: deckhouse/modules-actions/lint@main
       env:
-        DMT_METRICS_URL: ${{ secrets.DMT_METRICS_URL }}
-        DMT_METRICS_TOKEN: ${{ secrets.DMT_METRICS_TOKEN }}
+         DMT_METRICS_URL: ${{ secrets.DMT_METRICS_URL }}
+         DMT_METRICS_TOKEN: ${{ secrets.DMT_METRICS_TOKEN }}
 ```
+
+{% endraw %}
 
 The `DMT_METRICS_URL` and `DMT_METRICS_TOKEN` variables are optional. If set, the DMT will send telemetry to the specified endpoint.
 

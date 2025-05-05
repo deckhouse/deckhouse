@@ -441,6 +441,8 @@ kubectl annotate mr module-1-v1.23.2 modules.deckhouse.io/approved="true"
 
 Чтобы подключить DMT, в конфигурации workflow сборки `[project].github/workflows/build.yml` добавьте шаг для выполнения проверки:
 
+{% raw %}
+
 ```yaml
 jobs:
   lint:
@@ -454,6 +456,8 @@ jobs:
          DMT_METRICS_URL: ${{ secrets.DMT_METRICS_URL }}
          DMT_METRICS_TOKEN: ${{ secrets.DMT_METRICS_TOKEN }}
 ```
+
+{% endraw %}
 
 Переменные `DMT_METRICS_URL` и `DMT_METRICS_TOKEN` – необязательные. При их наличии DMT будет отправлять телеметрию на указанный адрес.
 
