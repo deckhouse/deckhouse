@@ -313,36 +313,8 @@ module JSONSchemaRenderer
             # result.push(convert('**' + get_i18n_term('not_required_value_sentence')  + '**'))
         end
 
-        result.push(sprintf(%q(<div class="resources__prop_description">%s</div>),escape_chars(convert(get_i18n_description(primaryLanguage, fallbackLanguage, attributes))))) if attributes['description']
-
-        if attributes.has_key?('x-doc-default')
-            if attributes['x-doc-default'].is_a?(Array) or attributes['x-doc-default'].is_a?(Hash)
-                if !( attributes['x-doc-default'].is_a?(Hash) and attributes['x-doc-default'].length < 1 )
-                    result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <span class="resources__attrs_content"><code>%s</code></span></p>), get_i18n_term("default_value").capitalize, attributes['x-doc-default'].to_json))
-                end
-            else
-                if attributes['type'] == 'string'
-                    result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <span class="resources__attrs_content"><code>"%s"</code></span></p>), get_i18n_term("default_value").capitalize, attributes['x-doc-default']))
-                else
-                    result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <span class="resources__attrs_content"><code>%s</code></span></p>), get_i18n_term("default_value").capitalize, attributes['x-doc-default']))
-                end
-            end
-        elsif attributes.has_key?('default')
-            if attributes['default'].is_a?(Array) or attributes['default'].is_a?(Hash)
-                if !( attributes['default'].is_a?(Hash) and attributes['default'].length < 1 )
-                    result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <span class="resources__attrs_content"><code>%s</code></span></p>), get_i18n_term("default_value").capitalize, attributes['default'].to_json))
-                end
-            else
-                if attributes['type'] == 'string'
-                    result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <span class="resources__attrs_content"><code>"%s"</code></span></p>), get_i18n_term("default_value").capitalize, attributes['default']))
-                else
-                    result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <span class="resources__attrs_content"><code>%s</code></span></p>), get_i18n_term("default_value").capitalize, attributes['default']))
-                end
-            end
-        end
-
         if attributes.has_key?('x-doc-d8Editions')
-          result.push(%Q(<p><strong>#{@site.data['i18n']['common']['module_available_editions_prefix'][lang]}: #{
+          editionsString = %Q(<p><strong>#{@site.data['i18n']['common']['module_available_editions_prefix'][lang]}: #{
                 attributes['x-doc-d8Editions']
                   # Filter editions present in module-editions
                   .select { |edition| @site.data['modules']['editions-addition'].key?(edition.sub('+', '-plus')) }
@@ -375,23 +347,44 @@ module JSONSchemaRenderer
                         puts "[WARN] No edition '#{edition}' (parameter - #{name}, parent - #{parent})"
                       end
                   }.join(', ')
-                }</strong></p>))
+                }</strong></p>)
         elsif attributes.has_key?('x-doc-d8Revision') # Deprecated!
           case attributes['x-doc-d8Revision']
           when "ee"
-            result.push(%Q(<p><strong>#{@site.data['i18n']['features']['ee'][lang].capitalize}</strong></p>))
+            editionsString = %Q(<p><strong>#{@site.data['i18n']['features']['ee'][lang].capitalize}</strong></p>)
           end
         end
 
-        if attributes.has_key?('x-doc-featureStatus')
-          case attributes['x-doc-featureStatus']
-          when "proprietaryOkmeter"
-            result.push(%Q(<p><strong>#{@site.data['i18n']['features']['proprietaryOkmeter'][lang].capitalize}</strong></p>))
-          when "experimental"
-            result.push(%Q(<p><strong>#{@site.data['i18n']['features']['experimental'][lang].capitalize}</strong></p>))
-          when "temporaryDeprecated"
-            result.push(%Q(<p><strong>#{@site.data['i18n']['features']['temporaryDeprecated'][lang].capitalize}</strong></p>))
-          end
+        if attributes['description']
+          result.push(sprintf(%q(<div class="resources__prop_description">%s%s</div>),editionsString,escape_chars(convert(get_i18n_description(primaryLanguage, fallbackLanguage, attributes)))))
+        elsif editionsString and editionsString.size > 0
+          result.push(sprintf(%q(<div class="resources__prop_description">%s</div>),editionsString))
+        end
+
+        if attributes.has_key?('x-doc-default')
+            if attributes['x-doc-default'].is_a?(Array) or attributes['x-doc-default'].is_a?(Hash)
+                if !( attributes['x-doc-default'].is_a?(Hash) and attributes['x-doc-default'].length < 1 )
+                    result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <span class="resources__attrs_content"><code>%s</code></span></p>), get_i18n_term("default_value").capitalize, attributes['x-doc-default'].to_json))
+                end
+            else
+                if attributes['type'] == 'string'
+                    result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <span class="resources__attrs_content"><code>"%s"</code></span></p>), get_i18n_term("default_value").capitalize, attributes['x-doc-default']))
+                else
+                    result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <span class="resources__attrs_content"><code>%s</code></span></p>), get_i18n_term("default_value").capitalize, attributes['x-doc-default']))
+                end
+            end
+        elsif attributes.has_key?('default')
+            if attributes['default'].is_a?(Array) or attributes['default'].is_a?(Hash)
+                if !( attributes['default'].is_a?(Hash) and attributes['default'].length < 1 )
+                    result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <span class="resources__attrs_content"><code>%s</code></span></p>), get_i18n_term("default_value").capitalize, attributes['default'].to_json))
+                end
+            else
+                if attributes['type'] == 'string'
+                    result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <span class="resources__attrs_content"><code>"%s"</code></span></p>), get_i18n_term("default_value").capitalize, attributes['default']))
+                else
+                    result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <span class="resources__attrs_content"><code>%s</code></span></p>), get_i18n_term("default_value").capitalize, attributes['default']))
+                end
+            end
         end
 
         if attributes.has_key?('minimum') or attributes.has_key?('maximum')

@@ -156,7 +156,7 @@ common:
     en: Search...
     ru: Поиск...
   module_available_editions_prefix:
-    en: Available in
+    en: Available in editions
     ru: Доступно в редакциях
   module_available_with_limitations_prefix:
     en: Available with limitations in
