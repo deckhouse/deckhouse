@@ -36,5 +36,5 @@ spec:
     - example
   - action: delete
     labels: 
-    - example.first
-    - example.second
+    - first
+    - .second

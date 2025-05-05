@@ -18,9 +18,10 @@ var testCases = []struct {
 		".example = parse_json(.example) ?? { \"text\": .example }\n"},
 	{"fixNestedJson without label", v1alpha1.Transform{Action: "wrapNotJson", Labels: []string{}},
 		".message = parse_json(.message) ?? { \"text\": .message }\n"},
-	{"del", v1alpha1.Transform{Action: "delete", Labels: []string{"example"}}, "del(.example)\n"},
+	{"del", v1alpha1.Transform{Action: "delete", Labels: []string{"first", "second"}},
+		"if exists(.first) {\n del(.first)\n}\nif exists(.second) {\n del(.second)\n}\n"},
 	{"replaceDot", v1alpha1.Transform{Action: "replaceDot", Labels: []string{}},
-		"if exists(.pod_labels) {\n.pod_labels = map_keys(object!(.pod_labels), recursive: true) -> |key| { replace(key, \".\", \"_\")})\n}"},
+		"if exists(.pod_labels) {\n.pod_labels = map_keys(object!(.pod_labels), recursive: true) -> |key| { replace(key, \".\", \"_\")}\n}"},
 }
 
 func TestReplaceDot(t *testing.T) {

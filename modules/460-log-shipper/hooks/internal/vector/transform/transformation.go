@@ -23,17 +23,16 @@ func BuildModes(tms []v1alpha1.Transform) ([]apis.LogTransform, error) {
 			if len(tm.Labels) == 0 {
 				tm.Labels = []string{"pod_labels"}
 			}
-			module = swapDot{labels: tm.Labels}
+			module = replaceDot{labels: tm.Labels}
 		case "wrapNotJson":
 			if len(tm.Labels) == 0 {
 				tm.Labels = []string{"message"}
 			}
 			module = wrapNotJson{labels: tm.Labels}
 		case "delete":
-			if len(tm.Labels) == 0 {
-				return nil, fmt.Errorf("Transform operation delete haven`t label")
+			if len(tm.Labels) > 0 {
+				module = delete{labels: tm.Labels}
 			}
-			module = delete{labels: tm.Labels}
 		default:
 			return nil, fmt.Errorf("TransformMod: action %s not found", tm.Action)
 		}
@@ -43,17 +42,17 @@ func BuildModes(tms []v1alpha1.Transform) ([]apis.LogTransform, error) {
 	return transforms, nil
 }
 
-type swapDot struct {
+type replaceDot struct {
 	labels []string
 }
 
-func (swap swapDot) getTransform() apis.LogTransform {
+func (rd replaceDot) getTransform() apis.LogTransform {
 	var vrl string
-	name := fmt.Sprintf("tf_key_rename_%s", strings.Join(swap.labels, "_"))
-	labels := checkFixDotPrefix(swap.labels)
-	fmt.Println(labels, swap.labels)
+	name := fmt.Sprintf("tf_key_rename_%s", splitAndremoveDot(rd.labels))
+	labels := checkFixDotPrefix(rd.labels)
+	fmt.Println(labels, rd.labels)
 	for _, l := range labels {
-		vrl = fmt.Sprintf("%sif exists(%s) {\n%s = map_keys(object!(%s), recursive: true) -> |key| { replace(key, \".\", \"_\")})\n}",
+		vrl = fmt.Sprintf("%sif exists(%s) {\n%s = map_keys(object!(%s), recursive: true) -> |key| { replace(key, \".\", \"_\")}\n}",
 			vrl, l, l, l)
 	}
 	return NewTransformation(name, vrl)
@@ -65,7 +64,7 @@ type wrapNotJson struct {
 
 func (wrap wrapNotJson) getTransform() apis.LogTransform {
 	var vrl string
-	name := fmt.Sprintf("tf_warp_not_json_%s", strings.Join(wrap.labels, "_"))
+	name := fmt.Sprintf("tf_warp_not_json_%s", splitAndremoveDot(wrap.labels))
 	labels := checkFixDotPrefix(wrap.labels)
 	for _, l := range labels {
 		vrl = fmt.Sprintf("%s%s = parse_json(%s) ?? { \"text\": %s }\n", vrl, l, l, l)
@@ -78,10 +77,12 @@ type delete struct {
 }
 
 func (d delete) getTransform() apis.LogTransform {
-	name := fmt.Sprintf("tf_delete_%s", strings.Join(d.labels, "_"))
+	var vrl string
+	name := fmt.Sprintf("tf_delete_%s", splitAndremoveDot(d.labels))
 	labels := checkFixDotPrefix(d.labels)
-	strLabels := strings.Join(labels, ", ")
-	vrl := fmt.Sprintf("del(%s)\n", strLabels)
+	for _, l := range labels {
+		vrl = fmt.Sprintf("%sif exists(%s) {\n del(%s)\n}\n", vrl, l, l)
+	}
 	return NewTransformation(name, vrl)
 }
 
@@ -97,6 +98,14 @@ func NewTransformation(name, vrl string) *DynamicTransform {
 			"drop_on_abort": false,
 		},
 	}
+}
+func splitAndremoveDot(labels []string) string {
+	var s string
+	for _, l := range labels {
+		l = strings.Replace(l, ".", "", -1)
+		s = fmt.Sprintf("%s_%s", s, l)
+	}
+	return s
 }
 
 // add Dot in label prefix  if not exist

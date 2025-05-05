@@ -8,50 +8,50 @@
     }
   },
   "transforms": {
-    "transform/destination/test-kafka-dest/00_tf_key_rename_pod_labels": {
+    "transform/destination/test-kafka-dest/00_tf_key_rename__pod_labels": {
       "drop_on_abort": false,
       "inputs": [
         "transform/source/test-source/01_clean_up"
       ],
-      "source": "if exists(.pod_labels) {\n.pod_labels = map_keys(object!(.pod_labels), recursive: true) -\u003e |key| { replace(key, \".\", \"_\")})\n}",
+      "source": "if exists(.pod_labels) {\n.pod_labels = map_keys(object!(.pod_labels), recursive: true) -\u003e |key| { replace(key, \".\", \"_\")}\n}",
       "type": "remap"
     },
-    "transform/destination/test-kafka-dest/01_tf_warp_not_json_message": {
+    "transform/destination/test-kafka-dest/01_tf_warp_not_json__message": {
       "drop_on_abort": false,
       "inputs": [
-        "transform/destination/test-kafka-dest/00_tf_key_rename_pod_labels"
+        "transform/destination/test-kafka-dest/00_tf_key_rename__pod_labels"
       ],
       "source": ".message = parse_json(.message) ?? { \"text\": .message }\n",
       "type": "remap"
     },
-    "transform/destination/test-kafka-dest/02_tf_key_rename_example": {
+    "transform/destination/test-kafka-dest/02_tf_key_rename__example": {
       "drop_on_abort": false,
       "inputs": [
-        "transform/destination/test-kafka-dest/01_tf_warp_not_json_message"
+        "transform/destination/test-kafka-dest/01_tf_warp_not_json__message"
       ],
-      "source": "if exists(.example) {\n.example = map_keys(object!(.example), recursive: true) -\u003e |key| { replace(key, \".\", \"_\")})\n}",
+      "source": "if exists(.example) {\n.example = map_keys(object!(.example), recursive: true) -\u003e |key| { replace(key, \".\", \"_\")}\n}",
       "type": "remap"
     },
-    "transform/destination/test-kafka-dest/03_tf_warp_not_json_example": {
+    "transform/destination/test-kafka-dest/03_tf_warp_not_json__example": {
       "drop_on_abort": false,
       "inputs": [
-        "transform/destination/test-kafka-dest/02_tf_key_rename_example"
+        "transform/destination/test-kafka-dest/02_tf_key_rename__example"
       ],
       "source": ".example = parse_json(.example) ?? { \"text\": .example }\n",
       "type": "remap"
     },
-    "transform/destination/test-kafka-dest/04_tf_delete_example.first_example.second": {
+    "transform/destination/test-kafka-dest/04_tf_delete__first_second": {
       "drop_on_abort": false,
       "inputs": [
-        "transform/destination/test-kafka-dest/03_tf_warp_not_json_example"
+        "transform/destination/test-kafka-dest/03_tf_warp_not_json__example"
       ],
-      "source": "del(.example.first, .example.second)\n",
+      "source": "if exists(.first) {\n del(.first)\n}\nif exists(.second) {\n del(.second)\n}\n",
       "type": "remap"
     },
     "transform/destination/test-kafka-dest/05_del_parsed_data": {
       "drop_on_abort": false,
       "inputs": [
-        "transform/destination/test-kafka-dest/04_tf_delete_example.first_example.second"
+        "transform/destination/test-kafka-dest/04_tf_delete__first_second"
       ],
       "source": "if exists(.parsed_data) {\n    del(.parsed_data)\n}",
       "type": "remap"
