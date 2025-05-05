@@ -511,7 +511,7 @@ spec:
        principals: ["foo.local/*", "bar.local/*"]
 ```
 
-### Разрешить любые запросы только кластеров foo или bar, при этом из nространства имён baz
+### Разрешить любые запросы только кластеров foo или bar, при этом из пространства имён baz
 
 ```yaml
 apiVersion: security.istio.io/v1beta1
