@@ -303,7 +303,7 @@ fi
 ## Установка Deckhouse
 
 {% alert level="info" %}
-При установке Deckhouse Enterprise Edition из официального container registry `registry.deckhouse.ru`, необходимо предварительно пройти авторизацию с использованием лицензионного ключа:
+При установке коммерческой редакции Deckhouse Kubernetes Platform из официального container registry `registry.deckhouse.ru`, необходимо предварительно пройти аутентификацию с использованием лицензионного ключа:
 
 ```shell
 docker login -u license-token registry.deckhouse.ru
