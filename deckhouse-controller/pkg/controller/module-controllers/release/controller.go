@@ -736,89 +736,77 @@ func (r *reconciler) ApplyRelease(ctx context.Context, mr *v1alpha1.ModuleReleas
 	return nil
 }
 
-// runReleaseDeploy
-//
-// 1) download module
-// 2) bump previous deployment status superseded (retry if error)
-// 3) bump release annotations (retry if error)
-// 3) bump release status to deployed (retry if error)
+// getIntermediateModuleVersions returns a sorted list of versions between currentVersion and targetVersion (including target)
+func (r *reconciler) getIntermediateModuleVersions(ctx context.Context, moduleName string, currentVersion, targetVersion *semver.Version) ([]*semver.Version, error) {
+	// registryClient must be available via dependencyContainer
+	registryClient, err := r.dependencyContainer.GetRegistryClient(moduleName)
+	if err != nil {
+		return nil, fmt.Errorf("get registry client: %w", err)
+	}
+	tags, err := registryClient.ListTags(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list tags: %w", err)
+	}
+	var versions []*semver.Version
+	for _, tag := range tags {
+		v, err := semver.NewVersion(tag)
+		if err == nil {
+			if (v.GreaterThan(currentVersion) || v.Equal(currentVersion)) && (v.LessThan(targetVersion) || v.Equal(targetVersion)) {
+				versions = append(versions, v)
+			}
+		}
+	}
+	if len(versions) == 0 {
+		return nil, fmt.Errorf("no suitable versions found between %s and %s", currentVersion, targetVersion)
+	}
+	sort.Sort(semver.Collection(versions))
+	return versions, nil
+}
+
 func (r *reconciler) runReleaseDeploy(ctx context.Context, release *v1alpha1.ModuleRelease, deployedReleaseInfo *releaseUpdater.ReleaseInfo) error {
 	r.log.Info("applying release", slog.String("release", release.GetName()))
 
-	downloadStatistic, err := r.loadModule(ctx, release)
-	if err != nil {
-		return fmt.Errorf("load module: %w", err)
+	// Get current and target versions
+	currentVersion := release.GetVersion() // current version from release
+	targetVersion := currentVersion
+	if deployedReleaseInfo != nil && deployedReleaseInfo.Version != nil {
+		targetVersion = deployedReleaseInfo.Version
 	}
 
-	if deployedReleaseInfo != nil {
-		err = r.updateReleaseStatus(ctx, newModuleReleaseWithName(deployedReleaseInfo.Name), &v1alpha1.ModuleReleaseStatus{
-			Phase:   v1alpha1.ModuleReleasePhaseSuperseded,
-			Message: "",
+	// Get all intermediate versions
+	versions, err := r.getIntermediateModuleVersions(ctx, release.GetModuleName(), currentVersion, targetVersion)
+	if err != nil {
+		return fmt.Errorf("get intermediate versions: %w", err)
+	}
+
+	for _, v := range versions {
+		release.Spec.Version = v.String()
+		downloadStatistic, err := r.loadModule(ctx, release)
+		if err != nil {
+			return fmt.Errorf("load module version %s: %w", v.String(), err)
+		}
+		// Update status and metadata after each step
+		err = ctrlutils.UpdateStatusWithRetry(ctx, r.client, release, func() error {
+			release.Status.Phase = v1alpha1.ModuleReleasePhaseDeployed
+			release.Status.Message = ""
+			release.Status.Size = downloadStatistic.Size
+			release.Status.PullDuration = metav1.Duration{Duration: downloadStatistic.PullDuration}
+			release.Status.TransitionTime = metav1.NewTime(r.dependencyContainer.GetClock().Now().UTC())
+			if release.Labels == nil {
+				release.Labels = make(map[string]string)
+			}
+			release.Labels[v1alpha1.ModuleReleaseLabelStatus] = v1alpha1.ModuleReleaseLabelDeployed
+			if release.Annotations == nil {
+				release.Annotations = make(map[string]string)
+			}
+			delete(release.Annotations, v1alpha1.ModuleReleaseAnnotationIsUpdating)
+			delete(release.Annotations, v1alpha1.ModuleReleaseAnnotationNotified)
+			delete(release.Annotations, v1alpha1.ModuleReleaseAnnotationNotificationTimeShift)
+			return nil
 		})
 		if err != nil {
-			r.log.Error("update status", slog.String("release", deployedReleaseInfo.Name), log.Err(err))
+			return fmt.Errorf("update status for version %s: %w", v.String(), err)
 		}
-	}
-
-	backoff := &wait.Backoff{
-		Steps: 6,
-		// magic number
-		Duration: 20 * time.Millisecond,
-		Factor:   1.0,
-		Jitter:   0.1,
-	}
-
-	err = ctrlutils.UpdateWithRetry(ctx, r.client, release, func() error {
-		annotations := map[string]string{
-			v1alpha1.ModuleReleaseAnnotationIsUpdating: "true",
-			v1alpha1.ModuleReleaseAnnotationNotified:   "false",
-		}
-
-		if len(release.Annotations) == 0 {
-			release.Annotations = make(map[string]string, 2)
-		}
-
-		for k, v := range annotations {
-			release.Annotations[k] = v
-		}
-
-		if len(release.ObjectMeta.Labels) == 0 {
-			release.ObjectMeta.Labels = make(map[string]string, 1)
-		}
-
-		release.ObjectMeta.Labels[v1alpha1.ModuleReleaseLabelStatus] = v1alpha1.ModuleReleaseLabelDeployed
-
-		if release.GetApplyNow() {
-			delete(release.Annotations, v1alpha1.ModuleReleaseAnnotationApplyNow)
-		}
-
-		if release.GetForce() {
-			delete(release.Annotations, v1alpha1.ModuleReleaseAnnotationForce)
-		}
-
-		if release.GetReinstall() {
-			delete(release.Annotations, v1alpha1.ModuleReleaseAnnotationReinstall)
-		}
-
-		controllerutil.AddFinalizer(release, v1alpha1.ModuleReleaseFinalizerExistOnFs)
-
-		return nil
-	}, ctrlutils.WithRetryOnConflictBackoff(backoff))
-	if err != nil {
-		return fmt.Errorf("update with retry: %w", err)
-	}
-
-	err = ctrlutils.UpdateStatusWithRetry(ctx, r.client, release, func() error {
-		release.Status.Phase = v1alpha1.ModuleReleasePhaseDeployed
-		release.Status.Message = ""
-
-		release.Status.Size = downloadStatistic.Size
-		release.Status.PullDuration = metav1.Duration{Duration: downloadStatistic.PullDuration}
-
-		return nil
-	}, ctrlutils.WithRetryOnConflictBackoff(backoff))
-	if err != nil {
-		return fmt.Errorf("update status with retry: %w", err)
 	}
 
 	return nil
