@@ -204,6 +204,7 @@ func (r *reconciler) restartLoop(ctx context.Context) {
 			r.delayTimer.Reset(delayTimer)
 
 		case <-ctx.Done():
+			r.mtx.Unlock()
 			return
 		}
 		r.mtx.Unlock()
