@@ -3,13 +3,13 @@ title: "NFS data storage"
 permalink: en/admin/storage/external/nfs.html
 ---
 
-Deckhouse supports working with NFS (Network File System), providing the ability to connect and manage network file storage in Kubernetes. This allows for centralized data storage and file sharing between containers.
+Deckhouse supports NFS (Network File System), enabling the connection and management of network file storage in Kubernetes. This helps organize centralized data storage and shared file usage between containers.
 
-This page provides instructions on connecting NFS storage to Deckhouse, configuring the connection, creating a StorageClass, and verifying system functionality.
+This page provides instructions for connecting NFS storage in Deckhouse, configuring the connection, creating a StorageClass, and verifying system operability.
 
-## Enabling the module
+## Enabling the Module
 
-To manage volumes based on the NFS (Network File System) protocol, the `csi-nfs` module is used, allowing the creation of StorageClass through custom resources like [NFSStorageClass](../../../reference/cr/nfsstorageclass/). To enable the module, run the following command:
+The `csi-nfs` module manages volumes based on the Network File System (NFS) protocol and supports StorageClass creation through custom [NFSStorageClass](../../../reference/cr/nfsstorageclass/) resources. To enable the module, execute the command:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -36,9 +36,13 @@ NAME      WEIGHT   STATE     SOURCE     STAGE   STATUS
 csi-nfs   910      Enabled   Embedded           Ready
 ```
 
-## Creating the StorageClass
+## Creating a StorageClass
 
-To create a StorageClass, you need to use the [NFSStorageClas](../../../reference/cr/nfsstorageclass/) resource. Manually creating a StorageClass without [NFSStorageClas](../../../reference/cr/nfsstorageclass/) may lead to errors. Example of creating a StorageClass based on NFS:
+To create a StorageClass, use the [NFSStorageClass](../../../reference/cr/nfsstorageclass/) resource. Manually creating a StorageClass without using [NFSStorageClass](../../../reference/cr/nfsstorageclass/) can lead to errors.
+
+The NFS server address and mount point path must be explicitly specified. You must also specify the NFS server version (e.g., "4.1").
+
+Example command to create an NFS-based StorageClass:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -48,21 +52,10 @@ metadata:
   name: nfs-storage-class
 spec:
   connection:
-    # Address of the NFS server.
     host: 10.223.187.3
-    # Path to the mount point on the NFS server.
     share: /
-    # Version of the NFS server.
     nfsVersion: "4.1"
-  # Reclaim policy when deleting PVC.
-  # Allowed values:
-  # - Delete (PVC deletion will also delete PV and data on the NFS server).
-  # - Retain (PVC deletion will not delete PV or data on the NFS server, requiring manual removal by the user).
-  # [Learn more...](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#reclaiming)
   reclaimPolicy: Delete
-  # Volume creation mode.
-  # Allowed values: "Immediate", "WaitForFirstConsumer".
-  # [Learn more...](https://kubernetes.io/docs/concepts/storage/storage-classes/#volume-binding-mode)
   volumeBindingMode: WaitForFirstConsumer
 EOF
 ```

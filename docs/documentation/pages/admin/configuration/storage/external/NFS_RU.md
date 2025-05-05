@@ -4,13 +4,13 @@ permalink: ru/admin/storage/external/nfs.html
 lang: ru
 ---
 
-Deckhouse поддерживает работу с NFS (Network File System), обеспечивая возможность подключения и управления сетевыми файловыми хранилищами в Kubernetes. Это позволяет организовать централизованное хранение данных и совместное использование файлов между контейнерами.
+Deckhouse поддерживает работу с NFS (Network File System), обеспечивая подключение и управление сетевыми файловыми хранилищами в Kubernetes. Это помогает организовать централизованное хранение данных и совместное использование файлов между контейнерами.
 
-На этой странице представлены инструкции по подключению NFS-хранилища в Deckhouse, настройке соединения, созданию StorageClass, а также проверке работоспособности системы.
+На этой странице представлены инструкции по подключению NFS-хранилища в Deckhouse, настройке соединения, созданию StorageClass и проверке работоспособности системы.
 
 ## Включение модуля
 
-Для управления томами на основе протокола NFS (Network File System) используется модуль `csi-nfs`, позволяющий создавать StorageClass через создание пользовательских ресурсов [NFSStorageClass](../../../reference/cr/nfsstorageclass/). Чтобы включить модуль выполните команду:
+Для управления томами на основе протокола NFS (Network File System) используется модуль `csi-nfs`, который создаёт StorageClass через пользовательские ресурсы [NFSStorageClass](../../../reference/cr/nfsstorageclass/). Чтобы включить модуль, выполните команду:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -39,7 +39,11 @@ csi-nfs   910      Enabled   Embedded           Ready
 
 ## Создание StorageClass
 
-Для создания StorageClass необходимо использовать ресурс [NFSStorageClass](../../../reference/cr/nfsstorageclass/). Ручное создание ресурса StorageClass без [NFSStorageClass](../../../reference/cr/nfsstorageclass/) может привести к ошибкам. Пример команды для создания класса хранения на базе NFS:
+Для создания StorageClass используйте ресурс [NFSStorageClass](../../../reference/cr/nfsstorageclass/). Ручное создание ресурса StorageClass без использования [NFSStorageClass](../../../reference/cr/nfsstorageclass/) может привести к ошибкам.
+
+Адрес NFS-сервера и путь к точке монтирования должны быть указаны явно. Также необходимо указать версию NFS-сервера (например, "4.1").
+
+Пример команды для создания StorageClass на базе NFS:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -49,23 +53,12 @@ metadata:
   name: nfs-storage-class
 spec:
   connection:
-    # Адрес NFS сервера.
     host: 10.223.187.3
-    # Путь к точке монтирования на NFS сервере.
     share: /
-    # Версия NFS сервера.
     nfsVersion: "4.1"
-  # Режим поведения при удалении PVC.
-  # Допустимые значения:
-  # - Delete (при удалении PVC будет удален PV и данные на NFS-сервере);
-  # - Retain (при удалении PVC не будут удалены PV и данные на NFS-сервере, потребуют ручного удаления пользователем).
-  # [Подробнее...](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#reclaiming)
   reclaimPolicy: Delete
-  # Режим создания тома.
-  # Допустимые значения: "Immediate", "WaitForFirstConsumer". 
-  # [Подробнее...](https://kubernetes.io/docs/concepts/storage/storage-classes/#volume-binding-mode)
   volumeBindingMode: WaitForFirstConsumer
-EOF
+  EOF
 ```
 
 Проверьте, что созданный ресурс [NFSStorageClass](../../../reference/cr/nfsstorageclass/) перешел в состояние `Created`, выполнив следующую команду:

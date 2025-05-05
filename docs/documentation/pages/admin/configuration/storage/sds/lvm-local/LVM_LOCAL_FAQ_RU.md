@@ -297,7 +297,7 @@ done
 echo "Data migration completed"
 ```
 
-Использование:
+Для запуска скрипта выполните команду:
 
 ```shell
 migrate.sh NAMESPACE SOURCE_PVC_NAME DESTINATION_PVC_NAME

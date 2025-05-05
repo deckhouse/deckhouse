@@ -5,7 +5,7 @@ permalink: en/admin/storage/sds/lvm-replicated.html
 
 Data replication across multiple nodes ensures fault tolerance and data availability, even if a hardware or software failure occurs on one of the nodes. This guarantees data preservation on other nodes, maintaining continuous access. Such a model is essential for critical data and distributed infrastructures requiring high availability and minimizing data loss during failures.
 
-To create replicated block objects in StorageClass based on the distributed replicated block device (DRBD), you can enable the `sds-replicated-volume` module, which uses [LINSTOR](https://linbit.com/linstor/) as its backend.
+To create replicated block StorageClass objects based on DRBD (Distributed Replicated Block Device), the `sds-replicated-volume` module is used. It leverages [LINSTOR](https://linbit.com/linstor/) as the backend.
 
 ## Enabling the module
 
@@ -54,7 +54,7 @@ spec:
 EOF
 ```
 
-This will install the DRBD kernel module on all nodes in the cluster, register the CSI driver, and start the service pods of the `sds-replicated-volume` components.
+This will install the DRBD kernel module on all cluster nodes, register the CSI driver, and launch the `sds-replicated-volume` component pods.
 
 Wait until the `sds-replicated-volume` module reaches the `Ready` status. To check the module status, run the following command:
 

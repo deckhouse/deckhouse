@@ -18,18 +18,18 @@ Deckhouse Kubernetes Platform предлагает широкий спектр �
 
 ### Программно-определяемые хранилища
 
-- [Локальное хранилище на основе LVM (Logical Volume Manager)](../admin/sds/lvm-local.html)
-- [Реплицируемое хранилище на основе DRBD (Distributed Replicated Block Device)](../admin/sds/lvm-replicated.html).
+- [Локальное хранилище на основе LVM (Logical Volume Manager)](../storage/sds/lvm-local.html)
+- [Реплицируемое хранилище на основе DRBD (Distributed Replicated Block Device)](../storage/sds/lvm-replicated.html).
 
 ### Внешние хранилища
 
-- [Распределённое хранилище Ceph](../admin/external/ceph.html)
-- [Хранилище данных HPE](../admin/external/hpe.html)
-- [Хранилище данных Huawei](../admin/external/huawei.html)
-- [Хранилище данных NFS](../admin/external/nfs.html)
-- [Объектное хранилище на основе S3](../admin/external/s3.html)
-- [Хранилище данных на основе протокола SCSI](../admin/external/scsi.html)
-- [Унифицированное хранилище TATLIN.UNIFIED (Yadro)](../admin/external/yadro.html)
+- [Распределённое хранилище Ceph](../storage/external/ceph.html)
+- [Хранилище данных HPE](../storage/external/hpe.html)
+- [Хранилище данных Huawei](../storage/external/huawei.html)
+- [Хранилище данных NFS](../storage/external/nfs.html)
+- [Объектное хранилище на основе S3](../storage/external/s3.html)
+- [Хранилище данных на основе протокола SCSI](../storage/external/scsi.html)
+- [Унифицированное хранилище TATLIN.UNIFIED (Yadro)](../storage/external/yadro.html)
 
 ## Ключевые возможности
 
