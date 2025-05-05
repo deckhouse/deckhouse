@@ -359,10 +359,6 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			Value: "heritage=deckhouse",
 		},
 		{
-			Name:  "HELM3LIB",
-			Value: "yes",
-		},
-		{
 			Name:  "HELM_HISTORY_MAX",
 			Value: "3",
 		},
