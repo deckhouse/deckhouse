@@ -23,7 +23,7 @@ index aac590f967d..5f3473950c4 100644
  	ShutdownGracePeriodRequested     time.Duration
  	ShutdownGracePeriodCriticalPods  time.Duration
 diff --git a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
-index 8469cecdc0e..604b23110fa 100644
+index 8469cecdc0e..9468ddf9787 100644
 --- a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
 +++ b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
 @@ -21,6 +21,7 @@ limitations under the License.
@@ -63,7 +63,7 @@ index 8469cecdc0e..604b23110fa 100644
  	if err != nil {
  		releaseErr := m.dbusCon.ReleaseInhibitLock(m.inhibitLock)
  		if releaseErr != nil {
-@@ -248,6 +255,28 @@ func (m *managerImpl) start() (chan struct{}, error) {
+@@ -248,6 +255,30 @@ func (m *managerImpl) start() (chan struct{}, error) {
  		return nil, fmt.Errorf("failed to monitor shutdown: %v", err)
  	}
  
@@ -72,27 +72,29 @@ index 8469cecdc0e..604b23110fa 100644
 +	// Set capacity to 2 to not block our sources.
 +	shutdownEvents := make(chan bool, 2)
 +	go func() {
-+		select {
-+		case isShuttingDown, ok := <-dbusEvents:
-+			if !ok {
-+				m.logger.Info("Ended to watching the DBus for shutdown events")
-+				close(shutdownEvents)
++		for {
++			select {
++			case isShuttingDown, ok := <-dbusEvents:
++				if !ok {
++					m.logger.Info("Ended to watching the DBus for shutdown events")
++					close(shutdownEvents)
++					return
++				}
++				m.logger.Info("Got event from DBus", "isShuttingDown", isShuttingDown)
++				shutdownEvents <- isShuttingDown
++			case isShuttingDown := <-shutdownAfterPostpone:
++				// Only one event from shutdownAfterPostpone is expected.
++				m.logger.Info("Got event from condition checker", "isShuttingDown", isShuttingDown)
++				shutdownEvents <- isShuttingDown
 +				return
 +			}
-+			m.logger.Info("Got event from DBus", "isShuttingDown", isShuttingDown)
-+			shutdownEvents <- isShuttingDown
-+		case isShuttingDown := <-shutdownAfterPostpone:
-+			// Only one event from shutdownAfterPostpone is expected.
-+			m.logger.Info("Got event from condition checker", "isShuttingDown", isShuttingDown)
-+			shutdownEvents <- isShuttingDown
-+			return
 +		}
 +	}()
 +
  	stop := make(chan struct{})
  	go func() {
  		// Monitor for shutdown events. This follows the logind Inhibit Delay pattern described on https://www.freedesktop.org/wiki/Software/systemd/inhibit/
-@@ -255,10 +284,12 @@ func (m *managerImpl) start() (chan struct{}, error) {
+@@ -255,10 +286,12 @@ func (m *managerImpl) start() (chan struct{}, error) {
  		// 2. When shutdown(true) event is received, process the shutdown and release the inhibit lock.
  		// 3. When shutdown(false) event is received, this indicates a previous shutdown was cancelled. In this case, acquire the inhibit lock again.
  		for {
@@ -106,7 +108,7 @@ index 8469cecdc0e..604b23110fa 100644
  					close(stop)
  					return
  				}
-@@ -277,6 +308,24 @@ func (m *managerImpl) start() (chan struct{}, error) {
+@@ -277,6 +310,24 @@ func (m *managerImpl) start() (chan struct{}, error) {
  					m.recorder.Event(m.nodeRef, v1.EventTypeNormal, kubeletevents.NodeShutdown, "Shutdown manager detected shutdown cancellation")
  				}
  
@@ -131,7 +133,7 @@ index 8469cecdc0e..604b23110fa 100644
  				m.nodeShuttingDownMutex.Lock()
  				m.nodeShuttingDownNow = isShuttingDown
  				m.nodeShuttingDownMutex.Unlock()
-@@ -491,3 +540,116 @@ type podShutdownGroup struct {
+@@ -491,3 +542,116 @@ type podShutdownGroup struct {
  	kubeletconfig.ShutdownGracePeriodByPodPriority
  	Pods []*v1.Pod
  }
@@ -218,8 +220,8 @@ index 8469cecdc0e..604b23110fa 100644
 +					c.logger.V(1).Info("Graceful shutdown postpone condition is removed, proceed with the shutdown sequence")
 +
 +					// Send event to unpause shutdown sequence. Self pause to prevent events spamming.
-+					c.events <- true
 +					isStarted = false
++					c.events <- true
 +				}
 +			}
 +		case <-ctx.Done():
