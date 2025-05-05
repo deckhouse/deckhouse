@@ -26,7 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha1"
+	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
 	"caps-controller-manager/internal/providerid"
 	"caps-controller-manager/internal/scope"
 	"caps-controller-manager/internal/ssh"
