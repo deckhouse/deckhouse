@@ -270,8 +270,7 @@ spec:
                       properties:
                         matchExpressions:
                           type: array
-                          description: |
-                            An array of set-based expressions.
+                          description: An array of set-based expressions.
                           x-doc-examples:
                             - - key: tier
                                 operator: In
