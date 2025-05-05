@@ -37,7 +37,10 @@ cleanup:
 {{- if not (hasKey $editionsDict .Env) }}
   {{ fail (printf "Editions name not found %v" .Env) }}
 {{- end }}
-
+---
+# Files.Get prefix
+{{- $_ := set . "prefix" "" }}
+{{- $_ := set . "gitPrefix" "" }}
 ---
 # Base Images
 {{- include "parse_base_images_map" . }}
@@ -67,9 +70,6 @@ cleanup:
 # goproxy  settings
 {{- $_ := set . "GOPROXY" (env "GOPROXY") }}
 
-# Files.Get prefix
-{{- $_ := set . "prefix" "" }}
-{{- $_ := set . "gitPrefix" "" }}
 ---
 # render ssh-static
 {{ include "ssh_static_artifact" (dict "Images" .Images "SOURCE_REPO" .SOURCE_REPO "DistroPackagesProxy" .DistroPackagesProxy) }}
