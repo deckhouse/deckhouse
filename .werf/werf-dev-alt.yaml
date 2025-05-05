@@ -18,7 +18,7 @@ import:
   - usr/lib/libc.so
 - image: base/python
   add: /lib/ld-musl-x86_64.so.1
-  to: /usr/lib64/ld-musl-x86_64.so.1
+  to: /usr/lib/ld-musl-x86_64.so.1
   before: install
   includePaths:
     - usr/bin/python3*
