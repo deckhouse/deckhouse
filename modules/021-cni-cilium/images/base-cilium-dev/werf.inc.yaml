@@ -40,8 +40,9 @@ image: {{ .ModuleName }}/base-cilium-dev
 fromImage: common/alt-p11-artifact
 final: false
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+- from: tmp_dir
+  to: /root/.cache/bazel
 import:
 - image: {{ .ModuleName }}/golang-artifact
   add: /usr/local/go
@@ -118,4 +119,4 @@ shell:
     done
 imageSpec:
   config:
-    env: { "GOROOT": "/usr/local/go", "GOPATH": "/go", "PATH": "${PATH}:${GOROOT}/bin:${GOPATH}/bin", "GOOS": "linux", "GOARCH": "amd64" }
+    env: { "GOROOT": "/usr/local/go", "GOPATH": "/go", "PATH": "${PATH}:/usr/local/go/bin:/go/bin", "GOOS": "linux", "GOARCH": "amd64" }

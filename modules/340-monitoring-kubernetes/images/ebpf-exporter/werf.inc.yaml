@@ -37,8 +37,7 @@ import:
   to: /entrypoint
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
 shell:
   install:
   - cd /entrypoint
@@ -56,8 +55,7 @@ import:
   to: /build
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
 shell:
   beforeInstall:
   {{- include "debian packages proxy" . | nindent 2 }}
