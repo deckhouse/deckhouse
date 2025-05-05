@@ -49,7 +49,7 @@ mount:
 {{ include "mount points for golang builds" . }}
 secrets:
 - id: GOPROXY
-  value: {{ .GOPROXY }}
+  value: {{ $.GOPROXY }}
 shell:
   install:
   - cd /src
