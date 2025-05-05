@@ -212,13 +212,6 @@ jobs:
           ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_CSE_REGISTRY_HOST}}/deckhouse/cse/security/trivy-bdu:1 
           ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-bdu:1 
           ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_DEV_CSE_REGISTRY_HOST}}/sys/deckhouse-cse/security/trivy-bdu:1 
-          ./oras pull ghcr.io/aquasecurity/trivy-java-db:1
-          ./oras push --artifact-type application/vnd.aquasec.trivy.config.v1+json ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee/security/trivy-java-db:1 javadb.tar.gz:application/vnd.aquasec.trivy.javadb.layer.v1.tar+gzip
-          ./oras push --artifact-type application/vnd.aquasec.trivy.config.v1+json ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe/security/trivy-java-db:1 javadb.tar.gz:application/vnd.aquasec.trivy.javadb.layer.v1.tar+gzip
-          ./oras push --artifact-type application/vnd.aquasec.trivy.config.v1+json ${{secrets.DECKHOUSE_CSE_REGISTRY_HOST}}/deckhouse/cse/security/trivy-java-db:1 javadb.tar.gz:application/vnd.aquasec.trivy.javadb.layer.v1.tar+gzip
-          ./oras push --artifact-type application/vnd.aquasec.trivy.config.v1+json ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-java-db:1 javadb.tar.gz:application/vnd.aquasec.trivy.javadb.layer.v1.tar+gzip
-          ./oras push --artifact-type application/vnd.aquasec.trivy.config.v1+json ${{secrets.DECKHOUSE_DEV_CSE_REGISTRY_HOST}}/sys/deckhouse-cse/security/trivy-java-db:1 javadb.tar.gz:application/vnd.aquasec.trivy.javadb.layer.v1.tar+gzip
-          rm -f javadb.tar.gz
 
       # <template: send_fail_report>
       - name: Send fail report
@@ -231,4 +224,3 @@ jobs:
         run: |
           bash ./.github/scripts/send-report.sh
       # </template: send_fail_report>
-
