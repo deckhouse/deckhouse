@@ -18,9 +18,12 @@
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --branch "{{ $llvmRev }}" {{ $.SOURCE_REPO }}/llvm/llvm-project.git /src/llvm
+  - git clone --branch "{{ $llvmRev }}" $(cat /run/secrets/SOURCE_REPO)/llvm/llvm-project.git /src/llvm
   - cd /src/llvm
   # CSE
   - rm -rf clang-tools-extra/clangd/clients/clangd-vscode
@@ -34,10 +37,13 @@ import:
   add: /src
   to: /src
   before: install
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   setup:
   - mkdir -p /tmp/ccache-dir
-  - git clone --depth 1 --branch {{ $llvmCacheRev }} {{ $.SOURCE_REPO }}/llvm/llvm-build-cache.git /tmp/ccache-dir
+  - git clone --depth 1 --branch {{ $llvmCacheRev }} $(cat /run/secrets/SOURCE_REPO)/llvm/llvm-build-cache.git /tmp/ccache-dir
   - rm -rf /tmp/ccache-dir/.git
   #
   - export GCC_VERSION=11
