@@ -1,15 +1,14 @@
 diff --git a/go.mod b/go.mod
-index ff963142..ec3a6f3d 100644
+index ff963142..a64aabe4 100644
 --- a/go.mod
 +++ b/go.mod
-@@ -1,12 +1,12 @@
+@@ -1,12 +1,10 @@
  module github.com/kubernetes-sigs/cri-tools
  
 -go 1.22.0
-+go 1.23.0
- 
+-
 -toolchain go1.22.1
-+toolchain go1.24.2
++go 1.24.2
  
  require (
  	github.com/distribution/reference v0.6.0
@@ -18,7 +17,7 @@ index ff963142..ec3a6f3d 100644
  	github.com/docker/go-units v0.5.0
  	github.com/golang/protobuf v1.5.4
  	github.com/google/uuid v1.6.0
-@@ -14,7 +14,7 @@ require (
+@@ -14,7 +12,7 @@ require (
  	github.com/onsi/ginkgo/v2 v2.17.1
  	github.com/onsi/gomega v1.32.0
  	github.com/opencontainers/go-digest v1.0.0
@@ -27,7 +26,7 @@ index ff963142..ec3a6f3d 100644
  	github.com/opencontainers/selinux v1.11.0
  	github.com/sirupsen/logrus v1.9.3
  	github.com/urfave/cli/v2 v2.27.1
-@@ -22,10 +22,10 @@ require (
+@@ -22,10 +20,10 @@ require (
  	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.25.0
  	go.opentelemetry.io/otel/sdk v1.25.0
  	go.opentelemetry.io/otel/trace v1.25.0
@@ -42,7 +41,7 @@ index ff963142..ec3a6f3d 100644
  	gopkg.in/yaml.v3 v3.0.1
  	k8s.io/api v0.0.0
  	k8s.io/apimachinery v0.0.0
-@@ -33,7 +33,7 @@ require (
+@@ -33,7 +31,7 @@ require (
  	k8s.io/cri-api v0.0.0
  	k8s.io/kubectl v0.0.0
  	k8s.io/kubelet v0.0.0
@@ -51,7 +50,7 @@ index ff963142..ec3a6f3d 100644
  	sigs.k8s.io/yaml v1.4.0
  )
  
-@@ -81,15 +81,16 @@ require (
+@@ -81,15 +79,16 @@ require (
  	github.com/russross/blackfriday/v2 v2.1.0 // indirect
  	github.com/spf13/pflag v1.0.5 // indirect
  	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
@@ -71,7 +70,7 @@ index ff963142..ec3a6f3d 100644
  	google.golang.org/appengine v1.6.8 // indirect
  	google.golang.org/genproto/googleapis/api v0.0.0-20240227224415-6ceb2ff114de // indirect
  	google.golang.org/genproto/googleapis/rpc v0.0.0-20240401170217-c3f982113cda // indirect
-@@ -109,33 +110,33 @@ require (
+@@ -109,33 +108,33 @@ require (
  )
  
  replace (

@@ -1,7 +1,15 @@
 diff --git a/go.mod b/go.mod
-index 4b607f50..0dd23377 100644
+index 4b607f50..774c0d68 100644
 --- a/go.mod
 +++ b/go.mod
+@@ -1,6 +1,6 @@
+ module sigs.k8s.io/cri-tools
+ 
+-go 1.23.0
++go 1.24.2
+ 
+ require (
+ 	github.com/distribution/reference v0.6.0
 @@ -19,9 +19,9 @@ require (
  	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.32.0
  	go.opentelemetry.io/otel/sdk v1.32.0
