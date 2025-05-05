@@ -239,6 +239,9 @@ spec:
         - "--default-fstype=ext4"
         - "--leader-election=true"
         - "--leader-election-namespace=$(NAMESPACE)"
+        - "--leader-election-lease-duration=20s"
+        - "--leader-election-renew-deadline=20s"
+        - "--leader-election-retry-period=5s"
         - "--enable-capacity"
         - "--capacity-ownerref-level=2"
   {{- if $extraCreateMetadataEnabled }}
@@ -276,6 +279,9 @@ spec:
         - "--csi-address=$(ADDRESS)"
         - "--leader-election=true"
         - "--leader-election-namespace=$(NAMESPACE)"
+        - "--leader-election-lease-duration=20s"
+        - "--leader-election-renew-deadline=20s"
+        - "--leader-election-retry-period=5s"
         - "--worker-threads={{ $attacherWorkers }}"
         env:
         - name: ADDRESS
@@ -304,6 +310,9 @@ spec:
         - "--csi-address=$(ADDRESS)"
         - "--leader-election=true"
         - "--leader-election-namespace=$(NAMESPACE)"
+        - "--leader-election-lease-duration=20s"
+        - "--leader-election-renew-deadline=20s"
+        - "--leader-election-retry-period=5s"
         - "--workers={{ $resizerWorkers }}"
         env:
         - name: ADDRESS
@@ -360,6 +369,9 @@ spec:
         - "--csi-address=$(ADDRESS)"
         - "--leader-election=true"
         - "--leader-election-namespace=$(NAMESPACE)"
+        - "--leader-election-lease-duration=20s"
+        - "--leader-election-renew-deadline=20s"
+        - "--leader-election-retry-period=5s"
         - "--worker-threads={{ $snapshotterWorkers }}"
         env:
         - name: ADDRESS
