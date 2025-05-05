@@ -41,6 +41,7 @@ const (
 	modulesWithDependencies    = "modules-with-dependencies-%s.yaml"
 	candiFileName              = "candi-%s.yaml"
 	modulesExcluded            = "modules-excluded-%s.yaml"
+	infrastructureFileName     = "infrastructure-%s.yaml"
 )
 
 var workDir = cwd()
@@ -99,6 +100,8 @@ type writeSettings struct {
 	StageDependencies map[string][]string
 	ExcludedModules   map[string]struct{}
 }
+
+var cloudProviderNameRe = regexp.MustCompile(`cloud-provider-([a-zA-Z0-9]+)`)
 
 func writeExcludedModules(settings writeSettings, modules map[string]string, ed edition) {
 	saveTo := fmt.Sprintf(settings.SaveTo, settings.Edition)
@@ -429,10 +432,19 @@ func (e *executor) executeEdition(editionName string) {
 
 		}
 
+		writeSettingsInfrastructure := writeSettings{
+			Edition:           editionName,
+			Prefix:            prefix,
+			SaveTo:            infrastructureFileName,
+			Dir:               "modules",
+			StageDependencies: stageDependenciesFile,
+		}
+
 		writeSections(writeSettingsModules)
 		writeSections(writeSettingsExcludeFileName)
 		writeSections(writeSettingStageDeps)
 		writeSections(writeSettingCandi)
+		writeInfrastructureSections(writeSettingsInfrastructure)
 
 		if ed.Name == editionName {
 			// only for one edition
@@ -480,4 +492,78 @@ func fileExists(parts ...string) (bool, error) {
 		return false, err
 	}
 	return true, nil
+}
+
+func writeInfrastructureSections(settings writeSettings) {
+	saveTo := fmt.Sprintf(settings.SaveTo, settings.Edition)
+	var addEntries []addEntry
+	prefix := filepath.Join(workDir, settings.Prefix)
+	searchDir := filepath.Join(prefix, settings.Dir, "*")
+
+	files, err := filepath.Glob(searchDir)
+	if err != nil {
+		log.Fatalf("globbing: %v", err)
+	}
+
+	addNewFileEntry := func(file string) {
+		info, err := os.Stat(file)
+		if err != nil {
+			log.Fatalf("cannot stat file %s: %v", file, err)
+		}
+		if !info.IsDir() {
+			return
+		}
+		nameMatch := cloudProviderNameRe.FindSubmatch([]byte(file))
+		if len(nameMatch) == 0 {
+			return
+		}
+		cloudProviderName := string(nameMatch[1])
+
+		addEntries = append(addEntries, addEntry{
+			Add: strings.TrimPrefix(
+				filepath.Join(
+					file,
+					"infrastructure",
+				),
+				workDir,
+			),
+			To:                filepath.Join("/deckhouse", "candi", "cloud-providers", cloudProviderName),
+			ExcludePaths:      settings.ExcludePaths,
+			StageDependencies: settings.StageDependencies,
+		})
+	}
+
+	for _, file := range files {
+		info, err := os.Stat(file)
+		if err != nil {
+			continue
+		}
+
+		if !info.IsDir() {
+			continue
+		}
+
+		if !cloudProviderNameRe.MatchString(file) {
+			continue
+		}
+
+		info, err = os.Stat(filepath.Join(file, "infrastructure"))
+		if err != nil || !info.IsDir() {
+			continue
+		}
+
+		addNewFileEntry(file)
+	}
+
+	var result []byte
+	if len(addEntries) != 0 {
+		result, err = yaml.Marshal(addEntries)
+		if err != nil {
+			log.Fatalf("converting entries to YAML: %v", err)
+		}
+	}
+
+	if err := writeToFile(saveTo, result); err != nil {
+		log.Fatal(err)
+	}
 }

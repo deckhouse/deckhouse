@@ -15,6 +15,7 @@ git:
 {{ include "dev_prebuild_git_shell_operator" . }}
 {{ .Files.Get (printf "tools/build_includes/modules-with-exclude-%s.yaml" .Env) }}
 {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
+{{ .Files.Get (printf "tools/build_includes/infrastructure-%s.yaml" .Env) }}
 import:
 {{ include "dev_prebuild_images_imports" (dict "Env" .Env) }}
 mount:
