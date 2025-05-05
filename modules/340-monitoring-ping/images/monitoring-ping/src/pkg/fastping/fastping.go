@@ -29,6 +29,7 @@ func (p *Pinger) RunWithContext(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to create socket: %w", err)
 	}
+
 	defer conn.Close()
 
 	var wg sync.WaitGroup
@@ -70,6 +71,7 @@ func (p *Pinger) RunWithContext(ctx context.Context) error {
 
 	select {
 	case err := <-errCh:
+		log.Info(fmt.Sprintf("RunWithContext exiting with error: %v", err))
 		return err
 	case <-ctx.Done():
 		log.Info("RunWithContext stopped due to context cancellation")
