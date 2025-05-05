@@ -1,5 +1,5 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: {{ .ModuleName }}/base-terraform-manager-opentofu
+fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "kubernetes") }}'
 git:
 - add: /{{ .ModulePath }}candi/cloud-providers/dvp
   to: /deckhouse/candi/cloud-providers/dvp
