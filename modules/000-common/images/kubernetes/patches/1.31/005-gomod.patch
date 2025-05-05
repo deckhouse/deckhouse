@@ -4843,21 +4843,19 @@ index 64337a994e9..29d4477850c 100644
  sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd/go.mod h1:B8JuhiUyNFVKdsE8h686QcCxMaH6HrOAZj4vswFpcB0=
  sigs.k8s.io/structured-merge-diff/v4 v4.4.1 h1:150L+0vs/8DA78h1u02ooW1/fFq/Lwr+sGiqlzvrtq4=
 diff --git a/staging/src/k8s.io/kube-proxy/go.mod b/staging/src/k8s.io/kube-proxy/go.mod
-index cda97151d3f..b851e530845 100644
+index cda97151d3f..c2f98ac0865 100644
 --- a/staging/src/k8s.io/kube-proxy/go.mod
 +++ b/staging/src/k8s.io/kube-proxy/go.mod
-@@ -2,7 +2,9 @@
+@@ -2,7 +2,7 @@
  
  module k8s.io/kube-proxy
  
 -go 1.22.0
-+go 1.23.0
-+
-+toolchain go1.24.2
++go 1.24.2
  
  require (
  	k8s.io/apimachinery v0.0.0
-@@ -31,9 +33,9 @@ require (
+@@ -31,9 +31,9 @@ require (
  	github.com/spf13/cobra v1.8.1 // indirect
  	github.com/spf13/pflag v1.0.5 // indirect
  	github.com/x448/float16 v0.8.4 // indirect

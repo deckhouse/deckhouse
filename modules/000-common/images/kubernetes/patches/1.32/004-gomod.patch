@@ -1,7 +1,16 @@
 diff --git a/go.mod b/go.mod
-index 341092e8038..158c96c1c33 100644
+index 341092e8038..1012858dccf 100644
 --- a/go.mod
 +++ b/go.mod
+@@ -6,7 +6,7 @@
+ 
+ module k8s.io/kubernetes
+ 
+-go 1.23.0
++go 1.24.2
+ 
+ godebug default=go1.23
+ 
 @@ -66,7 +66,7 @@ require (
  	go.etcd.io/etcd/api/v3 v3.5.16
  	go.etcd.io/etcd/client/pkg/v3 v3.5.16
@@ -4519,9 +4528,21 @@ index 3c66da350b1..e70fc96db35 100644
  sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3/go.mod h1:18nIHnGi6636UCz6m8i4DhaJ65T6EruyzmoQqI2BVDo=
  sigs.k8s.io/structured-merge-diff/v4 v4.4.2 h1:MdmvkGuXi/8io6ixD5wud3vOLwc1rj0aNqRlpuvjmwA=
 diff --git a/staging/src/k8s.io/kube-proxy/go.mod b/staging/src/k8s.io/kube-proxy/go.mod
-index 21293460f9a..48721a5a103 100644
+index 21293460f9a..a9dd10025a7 100644
 --- a/staging/src/k8s.io/kube-proxy/go.mod
 +++ b/staging/src/k8s.io/kube-proxy/go.mod
+@@ -2,9 +2,9 @@
+ 
+ module k8s.io/kube-proxy
+ 
+-go 1.23.0
++go 1.24.2
+ 
+-godebug default=go1.23
++godebug default=go1.24.2
+ 
+ godebug winsymlink=0
+ 
 @@ -38,9 +38,9 @@ require (
  	github.com/x448/float16 v0.8.4 // indirect
  	go.opentelemetry.io/otel v1.28.0 // indirect
