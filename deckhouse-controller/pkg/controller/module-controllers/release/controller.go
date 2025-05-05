@@ -204,6 +204,7 @@ func (r *reconciler) restartLoop(ctx context.Context) {
 			r.delayTimer.Reset(delayTimer)
 
 		case <-ctx.Done():
+			r.mtx.RUnlock()
 			return
 		}
 		r.mtx.RUnlock()
@@ -219,6 +220,7 @@ func (r *reconciler) getRestartReason() string {
 func (r *reconciler) setRestartReason(reason string) {
 	r.mtx.Lock()
 	defer r.mtx.Unlock()
+	r.delayTimer.Reset(delayTimer)
 	r.restartReason = reason
 }
 
