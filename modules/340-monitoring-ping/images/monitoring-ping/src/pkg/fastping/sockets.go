@@ -95,6 +95,7 @@ func newSocket(ctx context.Context) (*socketConn, error) {
 		fd:         fd,
 		id:         genIdentifier(),
 		seqPerHost: make(map[string]int),
+		pending:    sync.Map{},
 	}
 
 	go conn.cleanupLoop(ctx)
@@ -103,7 +104,19 @@ func newSocket(ctx context.Context) (*socketConn, error) {
 }
 
 func (s *socketConn) Close() error {
-	return syscall.Close(s.fd)
+	// Close the raw socket
+	if err := syscall.Close(s.fd); err != nil {
+		log.Warn(fmt.Sprintf("failed to close socket fd: %v", err))
+	}
+
+	// Clear the pending map to free memory and avoid memory leak
+	s.pending.Range(func(key, value any) bool {
+		s.pending.Delete(key)
+		return true
+	})
+
+	log.Info("socketConn closed and pending map cleared")
+	return nil
 }
 
 // SendPacket builds and sends an ICMP Echo Request packet to the target host
@@ -254,7 +267,7 @@ func (p *Pinger) listenReplies(ctx context.Context, conn *socketConn) error {
 				if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 					continue // Skip logging timeouts to reduce noise
 				}
-				log.Warn(fmt.Sprintf("failed to read packet: %v from address: %s", err, addr))
+				// log.Warn(fmt.Sprintf("failed to read packet: %v from address: %s", err, addr))
 				continue
 			}
 			if addr == "" {
