@@ -25,12 +25,16 @@ spec:
       mechanism: PLAIN
       username: test
       password: test
-  transform:
+  transformation:
   - action: replaceDot
-    label: test
-  - action: del
-    label: example.pod
-  - action: fixNestedJson
-    label: test
-  - action: del
-    label: example
+  - action: wrapNotJson
+  - action: replaceDot
+    labels:
+    - example
+  - action: wrapNotJson
+    labels:
+    - example
+  - action: delete
+    labels: 
+    - example.first
+    - example.second

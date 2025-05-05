@@ -68,16 +68,15 @@ type ClusterLogDestinationSpec struct {
 	// Add rateLimit for sink
 	RateLimit RateLimitSpec `json:"rateLimit,omitempty"`
 
-	Buffer    *Buffer        `json:"buffer,omitempty"`
-	Transform []TransformMod `json:"transform,omitempty"`
+	Buffer         *Buffer     `json:"buffer,omitempty"`
+	Transformation []Transform `json:"transformation,omitempty"`
 }
 
 // Modules labeles transformation that users can use
-type TransformMod struct {
+type Transform struct {
 	// Name module
-	Action string `json:"action"`
-	// exist label for transformation
-	Label string `json:"label,omitempty"`
+	Action string   `json:"action"`
+	Labels []string `json:"labels,omitempty"`
 }
 
 type ClusterLogDestinationStatus struct {

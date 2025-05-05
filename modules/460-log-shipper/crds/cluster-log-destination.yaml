@@ -834,29 +834,19 @@ spec:
                     anyOf:
                       - pattern: '^[a-zA-Z0-9_\-]+$'
                       - pattern: '^\{\{\ [a-zA-Z0-9\\\-][a-zA-Z0-9\[\]_\\\-\.]+\ \}\}$'
-                transform:
+                transformion:
                   type: object
-                  description: |
-                    Additioal transformations that the user can specify
-                      replace dot with underscore in labels
-                        `action: replaceDot` 
-                      check if nested json is valid else create nested json `message: {"text": .message}`
-                       `action: fixNestedJson
-                        label: message`  
-                      delete lable example
-                       `action: del
-                        label: example` 
                   properties:
                     action:
                       type: string
-                      enum:
+                      enum: 
                       - replaceDot
-                      - fixNestedJson
-                      - del
-                    label:
-                      type: string
-                  required:
-                  - action
+                      - warpNotJson
+                      - delete
+                      description: Transformation
+                    labels:
+                      items: 
+                        type: string
                 buffer:
                   type: object
                   oneOf:

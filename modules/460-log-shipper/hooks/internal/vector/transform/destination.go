@@ -26,8 +26,8 @@ import (
 func CreateLogDestinationTransforms(name string, dest v1alpha1.ClusterLogDestination) ([]apis.LogTransform, error) {
 	var err error
 	transforms := make([]apis.LogTransform, 0)
-	if len(dest.Spec.Transform) > 0 {
-		if transforms, err = BuildModes(dest.Spec.Transform); err != nil {
+	if len(dest.Spec.Transformation) > 0 {
+		if transforms, err = BuildModes(dest.Spec.Transformation); err != nil {
 			return nil, err
 		}
 	}

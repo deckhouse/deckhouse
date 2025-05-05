@@ -9,24 +9,24 @@ import (
 
 var testCases = []struct {
 	name string
-	in   v1alpha1.TransformMod
+	in   v1alpha1.Transform
 	out  string
 }{
-	{"fixNestedJson lable message", v1alpha1.TransformMod{Action: "fixNestedJson", Label: "example"},
+	{"fixNestedJson lable message", v1alpha1.Transform{Action: "wrapNotJson", Labels: []string{"example"}},
 		".example = parse_json(.example) ?? { \"text\": .example }\n"},
-	{"fixNestedJson lable with dot", v1alpha1.TransformMod{Action: "fixNestedJson", Label: ".example"},
+	{"fixNestedJson lable with dot", v1alpha1.Transform{Action: "wrapNotJson", Labels: []string{".example"}},
 		".example = parse_json(.example) ?? { \"text\": .example }\n"},
-	{"fixNestedJson without label", v1alpha1.TransformMod{Action: "fixNestedJson", Label: ""},
+	{"fixNestedJson without label", v1alpha1.Transform{Action: "wrapNotJson", Labels: []string{}},
 		".message = parse_json(.message) ?? { \"text\": .message }\n"},
-	{"del", v1alpha1.TransformMod{Action: "del", Label: "example"}, "del(.example)\n"},
-	{"replaceDot", v1alpha1.TransformMod{Action: "replaceDot", Label: "example"},
-		"if exists(.pod_labels) {\n    .pod_labels = map_keys(object!(.pod_labels), recursive: true) -> |key| { replace(key, \".\", \"_\") }\n}"},
+	{"del", v1alpha1.Transform{Action: "delete", Labels: []string{"example"}}, "del(.example)\n"},
+	{"replaceDot", v1alpha1.Transform{Action: "replaceDot", Labels: []string{}},
+		"if exists(.pod_labels) {\n.pod_labels = map_keys(object!(.pod_labels), recursive: true) -> |key| { replace(key, \".\", \"_\")})\n}"},
 }
 
 func TestReplaceDot(t *testing.T) {
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
-			tr, err := BuildModes([]v1alpha1.TransformMod{test.in})
+			tr, err := BuildModes([]v1alpha1.Transform{test.in})
 			if err != nil {
 				t.Error(err)
 			}
