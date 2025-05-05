@@ -164,7 +164,7 @@ data:
 
   {{- if ne .Values.cniCilium.encryptionMode "Disabled" }}
   enable-wireguard: "true"
-  {{- if eq .Values.cniCilium.encryptionMode "NodeToNode" }}
+    {{- if eq .Values.cniCilium.encryptionMode "NodeToNode" }}
   encrypt-node: "true"
-  {{- end }}
+    {{- end }}
   {{- end }}
