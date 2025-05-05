@@ -3,7 +3,7 @@ title: "How to run and verify a module in the DKP cluster"
 permalink: en/module-development/run/
 ---
 
-This section describes the process of running a module in a Deckhouse Kubernetes Platform (DKP) cluster, as well as connecting Deckhouse Module Tools for setting up validation (linting) and metrics collection.
+This section describes the process of running a module in a Deckhouse Kubernetes Platform (DKP) cluster, as well as connecting Deckhouse Module Tools for setting up validation and metrics collection.
 
 Follow these steps to run the module in a cluster:
 
@@ -425,15 +425,15 @@ The example output above illustrates ModuleRelease message when the update mode 
 kubectl annotate mr module-1-v1.23.2 modules.deckhouse.io/approved="true"
 ```
 
-## Integrating Deckhouse Module Tools for Module Validation and Metrics Collection
+## Integrating Deckhouse Module Tools for Module Validation
 
-To enable linting (automatic validation of the module structure) and, if needed, metrics reporting, you can integrate Deckhouse Module Tools (DMT) into your build process.
+To enable automatic validation of the module structure and, if needed, metrics reporting, you can integrate Deckhouse Module Tools (DMT) into your build process.
 
 ### For GitHub Projects
 
-A dedicated [GitHub Action](https://github.com/deckhouse/modules-actions/blob/main/lint/action.yml) is available for integrating the linter into your module.
+A dedicated [GitHub Action](https://github.com/deckhouse/modules-actions/blob/main/lint/action.yml) is available for integrating the DMT into your module.
 
-To connect the DMT linter, add the following step to your build workflow configuration in `[project].github/workflows/build.yml`:
+To connect the DMT, add the following step to your build workflow configuration in `[project].github/workflows/build.yml`:
 
 ```yaml
 jobs:
@@ -449,7 +449,7 @@ jobs:
         DMT_METRICS_TOKEN: ${{ secrets.DMT_METRICS_TOKEN }}
 ```
 
-The `DMT_METRICS_URL` and `DMT_METRICS_TOKEN` variables are optional. If set, the module will send telemetry to the specified endpoint.
+The `DMT_METRICS_URL` and `DMT_METRICS_TOKEN` variables are optional. If set, the DMT will send telemetry to the specified endpoint.
 
 > If the module resides in the `deckhouse` GitHub organization, these variables will be automatically populated from the configured secrets.
 
@@ -464,7 +464,7 @@ For GitLab projects, ready-to-use templates are available and can be included in
 - **Setup**: [Setup configuration template](https://github.com/deckhouse/modules-gitlab-ci/blob/main/templates/Setup.gitlab-ci.yml)
 - **Build**: [Build process configuration template](https://github.com/deckhouse/modules-gitlab-ci/blob/main/templates/Build.gitlab-ci.yml)
 
-#### Steps to connect linter
+#### Steps to connect
 
 1. In your project's `.gitlab-ci.yml` file, add references to the templates:
 

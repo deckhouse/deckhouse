@@ -4,7 +4,7 @@ permalink: ru/module-development/run/
 lang: ru
 ---
 
-В этом разделе рассмотрен процесс запуска модуля в кластере Deckhouse Kubernetes Platform (DKP), а также подключение Deckhouse Module Tools для проверки корректности (линтинг) и сбора метрик.
+В этом разделе рассмотрен процесс запуска модуля в кластере Deckhouse Kubernetes Platform (DKP), а также подключение Deckhouse Module Tools для проверки модуля и сбора метрик.
 
 ## Запуск модуля в кластере DKP
 
@@ -431,15 +431,15 @@ module-1-v1.23.2     Pending      example-update-policy  3m               Waitin
 kubectl annotate mr module-1-v1.23.2 modules.deckhouse.io/approved="true"
 ```
 
-## Подключение Deckhouse Module Tools для проверки модуля и сбора статистики
+## Подключение Deckhouse Module Tools для проверки модуля
 
-Для линтинга (автоматической проверки структуры модуля) и, при необходимости, отправки статистики, в сборку можно подключить Deckhouse Module Tools (DMT).
+Для автоматической проверки структуры модуля и, при необходимости, отправки статистики, в сборку можно подключить Deckhouse Module Tools (DMT).
 
 ### Для GitHub-проектов
 
-Для GitHub доступен отдельный [GitHub Action](https://github.com/deckhouse/modules-actions/blob/main/lint/action.yml) для подключения линтера к модулю.
+Для GitHub доступен отдельный [GitHub Action](https://github.com/deckhouse/modules-actions/blob/main/lint/action.yml) для подключения DMT к модулю.
 
-Чтобы подключить линтер DMT, в конфигурации workflow сборки `[project].github/workflows/build.yml` добавьте шаг для выполнения проверки:
+Чтобы подключить DMT, в конфигурации workflow сборки `[project].github/workflows/build.yml` добавьте шаг для выполнения проверки:
 
 ```yaml
 jobs:
@@ -455,7 +455,7 @@ jobs:
          DMT_METRICS_TOKEN: ${{ secrets.DMT_METRICS_TOKEN }}
 ```
 
-Переменные `DMT_METRICS_URL` и `DMT_METRICS_TOKEN` – необязательные. При их наличии модуль будет отправлять телеметрию на указанный адрес.
+Переменные `DMT_METRICS_URL` и `DMT_METRICS_TOKEN` – необязательные. При их наличии DMT будет отправлять телеметрию на указанный адрес.
 
 > Если модуль находится в GitHub-группе `deckhouse`, значения этих переменных будут автоматически получены из настроенных секретов.
 
@@ -470,7 +470,7 @@ jobs:
 - **Setup**: [Шаблон конфигурации для настройки](https://github.com/deckhouse/modules-gitlab-ci/blob/main/templates/Setup.gitlab-ci.yml).
 - **Build**: [Шаблон конфигурации для процесса сборки](https://github.com/deckhouse/modules-gitlab-ci/blob/main/templates/Build.gitlab-ci.yml).
 
-#### Шаги для подключения линтера
+#### Шаги для подключения
 
 1. В файле `.gitlab-ci.yml` вашего проекта добавьте ссылки на шаблоны:
 
