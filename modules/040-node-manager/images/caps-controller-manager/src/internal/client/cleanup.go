@@ -21,7 +21,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha1"
+	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
 	"caps-controller-manager/internal/scope"
 	"caps-controller-manager/internal/ssh"
 )
