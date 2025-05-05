@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package web
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
@@ -65,7 +66,7 @@ type ServerConfig struct {
 }
 
 func NewServer(config *ServerConfig) (*Server, error) {
-	c, err := cache.NewVulnerabilityCache(config.Logger)
+	c, err := cache.NewVulnerabilityCache(context.Background(), config.Logger)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +114,7 @@ func (s *Server) prepareHTTPServer() (*http.Server, error) {
 }
 
 // Run starts webhook server and its configuration renewal. It exits only if the webserver stops listening.
-func (s *Server) Run() error {
+func (s *Server) Run(ctx context.Context) error {
 	httpServer, err := s.prepareHTTPServer()
 	if err != nil {
 		return err
@@ -121,8 +122,8 @@ func (s *Server) Run() error {
 
 	s.logger.Printf("server is starting to listen on '%s' ...\n", listenAddr)
 
-	go s.handler.StartRenewCacheLoop()
-	if err := httpServer.ListenAndServeTLS(sslListenCert, sslListenKey); err != nil && err != http.ErrServerClosed {
+	go s.handler.StartRenewCacheLoop(ctx)
+	if err = httpServer.ListenAndServeTLS(sslListenCert, sslListenKey); err != nil && err != http.ErrServerClosed {
 		return fmt.Errorf("could not listen on %s: %w", listenAddr, err)
 	}
 
