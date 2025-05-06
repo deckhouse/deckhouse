@@ -212,7 +212,7 @@ for d8_tag in "${d8_tags[@]}"; do
       echo ""
       echo " Uploading trivy CVE report for image \"${IMAGE_NAME}\" of \"${MODULE_NAME}\" module"
       echo ""
-      curl -s -S --fail-with-body -X POST \
+      curl -s -S -o /dev/null --fail-with-body -X POST \
         --retry 5 \
         --retry-delay 10 \
         --retry-all-errors \
