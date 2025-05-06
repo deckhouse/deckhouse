@@ -1,3 +1,4 @@
+{{- $commit := "05fe7b3cd32f2b0340ea0068e140b6d3f0a4ea07" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 final: false
@@ -5,4 +6,5 @@ fromImage: common/src-artifact
 shell:
   install:
   - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
+  - git reset --hard {{ $commit }}
   - rm -rf /wheels/.git
