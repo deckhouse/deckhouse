@@ -16,12 +16,6 @@ linters-settings:
         - kind: Deployment
           name: documentation
           container: web
-  templates:
-    exclude-rules:
-      ingress:
-        - kind: Ingress
-          name: documentation
-
   module:
     oss:
       disable: true

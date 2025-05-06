@@ -7,8 +7,8 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "documentation")) | nindent 2 }}
   annotations:
     nginx.ingress.kubernetes.io/use-regex: "true"
-    nginx.ingress.kubernetes.io/configuration-snippet: |-
-      {{- include "helm_lib_module_ingress_configuration_snippet" $ | trim | nindent 6 }}
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      {{ include "helm_lib_module_ingress_configuration_snippet" $ | nindent 6 }}
 spec:
   ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
   rules:
@@ -58,7 +58,7 @@ metadata:
       proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
       proxy_ssl_protocols TLSv1.2;
       proxy_ssl_session_reuse on;
-      {{- include "helm_lib_module_ingress_configuration_snippet" $ | trim | nindent 6 }}
+      {{- include "helm_lib_module_ingress_configuration_snippet" $ | nindent 6 }}
   {{- end }}
       rewrite ^/(en|ru)/?$ /$1/platform/ redirect;
       rewrite ^/modules/(.+) /en/modules/$1 redirect;
