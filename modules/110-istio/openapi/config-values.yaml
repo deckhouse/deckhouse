@@ -41,7 +41,9 @@ properties:
       Whether to handle HTTP/1.0 requests in istio-sidecars or deny them with `426 Upgrade Required` response.
   federation:
     type: object
-    x-doc-d8Revision: ee
+    x-doc-d8Editions:
+      - ee
+      - cse-pro
     description: Parameters for federating with other clusters.
     default: {}
     properties:
@@ -52,7 +54,9 @@ properties:
         x-examples: [true]
   multicluster:
     type: object
-    x-doc-d8Revision: ee
+    x-doc-d8Editions:
+      - ee
+      - cse-pro
     description: Multicluster parameters.
     default: {}
     properties:
@@ -63,20 +67,26 @@ properties:
         x-examples: [true]
   alliance:
     type: object
-    x-doc-d8Revision: ee
+    x-doc-d8Editions:
+      - ee
+      - cse-pro
     description: Common options both for federation and multicluster.
     default: {}
     properties:
       ingressGateway:
         type: object
         description: ingressgateway settings.
-        x-doc-d8Revision: ee
+        x-doc-d8Editions:
+          - ee
+          - cse-pro
         default: {}
         properties:
           advertise:
             type: array
             description: The actual addresses that will be announced to remote clusters for organizing intercluster application requests. If not specified, the addresses will be discovered automatically.
-            x-doc-d8Revision: ee
+            x-doc-d8Editions:
+              - ee
+              - cse-pro
             default: []
             x-examples: [[{"ip": "172.16.0.5", "port": 15443}]]
             items:
@@ -95,7 +105,9 @@ properties:
             type: string
             enum: [LoadBalancer, NodePort]
             x-examples: [LoadBalancer]
-            x-doc-d8Revision: ee
+            x-doc-d8Editions:
+              - ee
+              - cse-pro
             description: |
               The method for exposing ingressgateway.
               - `LoadBalancer` — is a recommended method if you have a cloud-based cluster and it supports Load Balancing.
@@ -104,7 +116,9 @@ properties:
           nodePort:
             type: object
             description: Special settings for NodePort inlet.
-            x-doc-d8Revision: ee
+            x-doc-d8Editions:
+              - ee
+              - cse-pro
             default: {}
             x-examples: [{}, {"port": 30001}]
             properties:
@@ -118,7 +132,9 @@ properties:
             additionalProperties:
               type: string
             description: Additional service annotations. They can be used, e.g., for configuring a local LB in the Yandex Cloud (using the `yandex.cpi.flant.com/listener-subnet-id` annotation).
-            x-doc-d8Revision: ee
+            x-doc-d8Editions:
+              - ee
+              - cse-pro
             example:
               yandex.cpi.flant.com/listener-subnet-id: xyz-123
           nodeSelector:
@@ -130,14 +146,18 @@ properties:
               ingressgateway DaemonSet nodeSelector.
 
               The same as the `spec.nodeSelector` pod parameter in Kubernetes.
-            x-doc-d8Revision: ee
+            x-doc-d8Editions:
+              - ee
+              - cse-pro
           tolerations:
             type: array
             description: |
               ingressgateway DaemonSet tolerations.
 
               The same as `spec.tolerations` for the Kubernetes pod.
-            x-doc-d8Revision: ee
+            x-doc-d8Editions:
+              - ee
+              - cse-pro
             items:
               type: object
               properties:

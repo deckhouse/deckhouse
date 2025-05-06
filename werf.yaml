@@ -15,7 +15,7 @@ cleanup:
   disableGitHistoryBasedPolicy: {{ env "WERF_DISABLE_META_TAGS" "false" }}
 ---
 {{- $_ := set . "DistroPackagesProxy" (env "DISTRO_PACKAGES_PROXY" "") }}
-{{- $_ := set . "CargoProxy" (env "CARGO_PROXY" "") }}
+{{- $_ := set . "CargoProxy" (env "CARGO_PROXY" "false") }}
 ---
 # revisions settings
 {{- $editionsSettings := (.Files.Get "editions.yaml" | fromYaml) }}
@@ -58,18 +58,18 @@ cleanup:
 
 # source repo with protected cloud providers
 # use example.com as default because we can fail build without env
-{{- $_ := set . "CLOUD_PROVIDERS_SOURCE_REPO" (env "CLOUD_PROVIDERS_SOURCE_REPO" | default "https://example.com") }}
+{{- $_ := set . "CLOUD_PROVIDERS_SOURCE_REPO" (env "CLOUD_PROVIDERS_SOURCE_REPO" "https://example.com") }}
 
 # Source repo with observability private code
 {{- $_ := set . "OBSERVABILITY_SOURCE_REPO" (env "OBSERVABILITY_SOURCE_REPO" | default "https://example.com") }}
 
-{{- $_ := set . "DECKHOUSE_PRIVATE_REPO" (env "DECKHOUSE_PRIVATE_REPO") }}
+# Stronghold repo access for building d8 cli
+{{- $_ := set . "DECKHOUSE_PRIVATE_REPO" (env "DECKHOUSE_PRIVATE_REPO" "example.com") }}
 
 {{- $_ := set . "CI_COMMIT_TAG" (env "CI_COMMIT_TAG" "dev") }}
 
 # goproxy  settings
-{{- $_ := set . "GOPROXY" (env "GOPROXY") }}
-
+{{- $_ := set . "GOPROXY" (env "GOPROXY" "https://proxy.golang.org,direct") }}
 ---
 # render ssh-static
 {{ include "ssh_static_artifact" (dict "Images" .Images "SOURCE_REPO" .SOURCE_REPO "DistroPackagesProxy" .DistroPackagesProxy) }}

@@ -677,7 +677,7 @@ type InstallDeckhouseResult struct {
 	ManifestResult *deckhouse.ManifestsResult
 }
 
-func InstallDeckhouse(ctx context.Context, kubeCl *client.KubernetesClient, config *config.DeckhouseInstaller) (*InstallDeckhouseResult, error) {
+func InstallDeckhouse(ctx context.Context, kubeCl *client.KubernetesClient, config *config.DeckhouseInstaller, beforeDeckhouseTask func() error) (*InstallDeckhouseResult, error) {
 	res := &InstallDeckhouseResult{}
 	err := log.Process("bootstrap", "Install Deckhouse", func() error {
 		err := CheckPreventBreakAnotherBootstrappedCluster(ctx, kubeCl, config)
@@ -685,7 +685,7 @@ func InstallDeckhouse(ctx context.Context, kubeCl *client.KubernetesClient, conf
 			return err
 		}
 
-		resManifests, err := deckhouse.CreateDeckhouseManifests(ctx, kubeCl, config)
+		resManifests, err := deckhouse.CreateDeckhouseManifests(ctx, kubeCl, config, beforeDeckhouseTask)
 		if err != nil {
 			return fmt.Errorf("deckhouse create manifests: %v", err)
 		}
