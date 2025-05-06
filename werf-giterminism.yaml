@@ -12,6 +12,9 @@ config:
       - DISTRO_PACKAGES_PROXY
       - CARGO_PROXY
       - DECKHOUSE_PRIVATE_REPO
+      - COSIGN_LOGIN
+      - COSIGN_PASSWORD
+      - COSIGN_KEY
       - REGISTRY_USER
       - REGISTRY_PASSWORD
       - SVACE_ENABLED
@@ -26,6 +29,9 @@ config:
       - DECKHOUSE_PRIVATE_REPO
       - REGISTRY_USER
       - REGISTRY_PASSWORD
+      - COSIGN_LOGIN
+      - COSIGN_PASSWORD
+      - COSIGN_KEY
   stapel:
     mount:
       allowBuildDir: true

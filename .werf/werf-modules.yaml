@@ -59,6 +59,9 @@
       {{- $_ := set $ctx "DECKHOUSE_PRIVATE_REPO" $Root.DECKHOUSE_PRIVATE_REPO }}
       {{- $_ := set $ctx "DistroPackagesProxy" $Root.DistroPackagesProxy }}
       {{- $_ := set $ctx "CargoProxy" $Root.CargoProxy }}
+      {{- $_ := set $ctx "CosignLogin" $Root.CosignLogin }}
+      {{- $_ := set $ctx "CosignPassword" $Root.CosignPassword }}
+      {{- $_ := set $ctx "CosignKey" $Root.CosignKey }}
       {{- $_ := set $ctx "RegistryUser" $Root.RegistryUser }}
       {{- $_ := set $ctx "RegistryPassword" $Root.RegistryPassword }}
 
@@ -66,7 +69,7 @@
       {{- $_ := set $ctx "SVACE_ENABLED" $Root.SVACE_ENABLED }}
       {{- $_ := set $ctx "SVACE_ANALYZE_HOST" $Root.SVACE_ANALYZE_HOST }}
       {{- $_ := set $ctx "SVACE_ANALYZE_SSH_USER" $Root.SVACE_ANALYZE_SSH_USER }}
-      {{- $_ := set $ctx "Commit" $Root.Commit }}  
+      {{- $_ := set $ctx "Commit" $Root.Commit }}
       {{- $_ := set $ctx "gitPrefix" $Root.gitPrefix }}
 ---
 {{ include "module_image_template" $ctx }}
