@@ -30,13 +30,13 @@ spec:
                   properties:
                     cpu:
                       description: |
-                        CPU setting for VM.
+                        CPU setting for the VM.
                       type: object
                       required: [cores]
                       properties:
                         cores:
                           description: |
-                            Amount of CPU cores for VM.
+                            Amount of CPU cores for the VM.
                           minumum: 1
                           format: int32
                           type: integer
@@ -60,7 +60,7 @@ spec:
                           type: string
                           pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                           description: |
-                            Amount of memory resources allowed for VM.
+                            Amount of memory resources allowed for the VM.
                           x-doc-example: "4Gi"
                     bootloader:
                       type: string
@@ -70,7 +70,7 @@ spec:
                         - EFIWithSecureBoot
                       default: EFI
                       description: >
-                        Defines a bootloader for a VM.
+                        Defines a bootloader for a the VM.
 
 
                         * `BIOS`: Use BIOS.
@@ -82,7 +82,7 @@ spec:
                 rootDisk:
                   type: object
                   description: |
-                    Specifies settings for the root disk of VM.
+                    Specifies settings for the root disk of the VM.
                   required:
                     - size
                     - image

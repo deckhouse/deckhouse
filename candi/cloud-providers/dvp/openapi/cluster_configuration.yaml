@@ -134,14 +134,14 @@ apiVersions:
                   properties:
                     cpu:
                       description: |
-                        CPU setting for VM.
+                        CPU setting for the VM.
                       type: object
                       additionalProperties: false
                       required: [cores]
                       properties:
                         cores:
                           description: |
-                            Amount of CPU cores for VM.
+                            Number of CPU cores for the VM.
                           minumum: 1
                           format: int32
                           type: integer
@@ -164,7 +164,7 @@ apiVersions:
                           type: string
                           pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                           description: |
-                            Amount of memory resources allowed for VM.
+                            Amount of memory resources allowed for the VM.
                           example: 4Gi
                     bootloader:
                       type: string
@@ -181,7 +181,7 @@ apiVersions:
 
                         * `EFI`: Use Unified Extensible Firmware (EFI/UEFI).
 
-                        * `EFIWithSecureBoot`: Use UEFI/EFI with the Secure Boot
+                        * `EFIWithSecureBoot`: Use UEFI/EFI with Secure Boot
                         support.
                     ipAddresses:
                       type: array
@@ -257,7 +257,7 @@ apiVersions:
                 rootDisk: &instanceClassRootDisk
                   type: object
                   description: |
-                    Specifies settings for the root disk of VM.
+                    Specifies settings for the root disk of the VM.
                   required:
                     - size
                     - image
@@ -291,7 +291,7 @@ apiVersions:
                           type: string
                           description: |
                             The name of the image that will be used to create the root disk.
-                            > The installation requires linux OS images with cloud-init pre-installed
+                            > The installation requires Linux OS images with cloud-init pre-installed.
                 etcdDisk:
                   type: object
                   description: |
@@ -419,7 +419,7 @@ apiVersions:
         region:
           type: string
           description: |
-            The name of region.
+            The name of the region.
             To use this setting, the `topology.kubernetes.io/region` label must be set on DVP nodes.
             Read [more](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion) about topological labels.
             > Caution! To set the required label for a DVP node, follow the NodeGroup [documentation](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).

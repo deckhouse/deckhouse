@@ -37,11 +37,11 @@ apiVersions:
                 > Внимание! Чтобы установить требуемую метку для узла DVP, обратитесь к документации по NodeGroup [документация](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
             instanceClass:
               description: |
-                Параметры виртуальной машины и ее дисков для созданного главного узла.
+                Параметры виртуальной машины и ее дисков для созданного master-узла.
               properties:
                 virtualMachine: &instanceClassVirtualMachine
                   description: |
-                    Настройки виртуальной машины для созданного главного узла.
+                    Настройки виртуальной машины для созданного master-узла.
                   properties:
                     cpu:
                       description: |
@@ -113,7 +113,7 @@ apiVersions:
                         name:
                           description: |
                             Имя образа, который будет использоваться для создания корневого диска.
-                            > Для установки требуются образы ОС linux с предустановленным cloud-init
+                            > Для установки требуются образы ОС Linux с предустановленным cloud-init.
                 etcdDisk:
                   description: |
                     Указание настроек для диска данных ETCD.
