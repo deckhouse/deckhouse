@@ -1,9 +1,9 @@
 ---
-title: "How to start module in the DKP cluster?"
+title: "How to run and verify a module in the DKP cluster"
 permalink: en/module-development/run/
 ---
 
-This section covers the process of running a configured module in a cluster managed by Deckhouse Kubernetes Platform (DKP).
+This section describes the process of running a module in a Deckhouse Kubernetes Platform (DKP) cluster, as well as connecting Deckhouse Module Tools for setting up validation and metrics collection.
 
 Follow these steps to run the module in a cluster:
 
@@ -424,3 +424,70 @@ The example output above illustrates ModuleRelease message when the update mode 
 ```shell
 kubectl annotate mr module-1-v1.23.2 modules.deckhouse.io/approved="true"
 ```
+
+## Integrating Deckhouse Module Tools for Module Validation
+
+To enable automatic validation of the module structure and, if needed, metrics reporting, you can integrate Deckhouse Module Tools (DMT) into your build process.
+
+### For GitHub Projects
+
+A dedicated [GitHub Action](https://github.com/deckhouse/modules-actions/blob/main/lint/action.yml) is available for integrating the DMT into your module.
+
+To connect the DMT, add the following step to your build workflow configuration in `[project].github/workflows/build.yml`:
+
+{% raw %}
+
+```yaml
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    name: Linting
+    steps:
+      - uses: actions/checkout@v4
+      - uses: deckhouse/modules-actions/lint@main
+      env:
+         DMT_METRICS_URL: ${{ secrets.DMT_METRICS_URL }}
+         DMT_METRICS_TOKEN: ${{ secrets.DMT_METRICS_TOKEN }}
+```
+
+{% endraw %}
+
+The `DMT_METRICS_URL` and `DMT_METRICS_TOKEN` variables are optional. If set, the DMT will send telemetry to the specified endpoint.
+
+> If the module resides in the `deckhouse` GitHub organization, these variables will be automatically populated from the configured secrets.
+
+A complete example of the configuration can be found in the [build_dev.yml](https://github.com/deckhouse/csi-nfs/blob/main/.github/workflows/build_dev.yml#L39C1-L42C62) file.
+
+To simplify your setup, you can also use the provided [configuration templates](https://github.com/deckhouse/modules-actions/blob/main/.examples/build.yml).
+
+### For GitLab Projects
+
+For GitLab projects, ready-to-use templates are available and can be included in your `.gitlab-ci.yml` file to automatically configure the build and validation processes:
+
+- **Setup**: [Setup configuration template](https://github.com/deckhouse/modules-gitlab-ci/blob/main/templates/Setup.gitlab-ci.yml)
+- **Build**: [Build process configuration template](https://github.com/deckhouse/modules-gitlab-ci/blob/main/templates/Build.gitlab-ci.yml)
+
+#### Steps to connect
+
+1. In your project's `.gitlab-ci.yml` file, add references to the templates:
+
+    ```yaml
+    include:
+      - remote: https://raw.githubusercontent.com/deckhouse/modules-gitlab-ci/refs/heads/main/templates/Setup.gitlab-ci.yml
+      - remote: https://raw.githubusercontent.com/deckhouse/modules-gitlab-ci/refs/heads/main/templates/Build.gitlab-ci.yml
+    ```
+
+   Example of template inclusion:  
+   [GitLab `.gitlab-ci.yml`, line 2](https://fox.flant.com/deckhouse/flant-integration/-/blob/main/.gitlab-ci.yml?ref_type=heads#L2)
+
+1. After adding the templates, in the same `.gitlab-ci.yml` configuration, add a step to perform the check:
+
+    ```yaml
+    Lint:
+      extends: .lint
+    ```
+
+   For an example of how to add a check step, see [GitLab `.gitlab-ci.yml`, line 48](https://fox.flant.com/deckhouse/flant-integration/-/blob/main/.gitlab-ci.yml?ref_type=heads#L48).
+
+> If your project is hosted in the [https://fox.flant.com/deckhouse](https://fox.flant.com/deckhouse) group, the metrics variables are already configured. No additional setup is required.
