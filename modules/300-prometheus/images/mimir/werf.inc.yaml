@@ -10,8 +10,6 @@ git:
   stageDependencies:
     install:
       - "**/*"
-  includePaths:
-    - patches
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
