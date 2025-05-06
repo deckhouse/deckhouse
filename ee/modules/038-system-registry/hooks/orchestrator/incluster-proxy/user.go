@@ -13,7 +13,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models/users"
 )
 
-func ProcessUserPasswordHash(log go_hook.Logger, user users.User) (users.User, error) {
+func processUserPasswordHash(log go_hook.Logger, user users.User) (users.User, error) {
 	if !user.IsPasswordHashValid() {
 		log.Warn("Password hash is invalid, generating a new one.", "user", user.UserName)
 		if err := user.UpdatePasswordHash(); err != nil {

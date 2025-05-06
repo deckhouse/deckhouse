@@ -151,7 +151,7 @@ func (cfg *StateConfig) process(log go_hook.Logger, params Params) error {
 }
 
 func (cfg *InclusterProxyConfig) process(log go_hook.Logger, params Params) error {
-	upstreamUser, err := ProcessUserPasswordHash(
+	upstreamUser, err := processUserPasswordHash(
 		log,
 		users.User{
 			UserName:       params.Upstream.UserName,
@@ -162,7 +162,7 @@ func (cfg *InclusterProxyConfig) process(log go_hook.Logger, params Params) erro
 		return fmt.Errorf("cannot process Upstream User password hash: %w", err)
 	}
 
-	authCertPair, err := ProcessAuthCertPair(
+	authCertPair, err := processAuthCertPair(
 		log,
 		CertPair{Cert: cfg.AuthCert, Key: cfg.AuthKey},
 		params.CA,
@@ -171,7 +171,7 @@ func (cfg *InclusterProxyConfig) process(log go_hook.Logger, params Params) erro
 		return fmt.Errorf("cannot process Auth cert and key: %w", err)
 	}
 
-	distributionCertPair, err := ProcessDistributionCertPair(
+	distributionCertPair, err := processDistributionCertPair(
 		log,
 		CertPair{Cert: cfg.DistributionCert, Key: cfg.DistributionKey},
 		params.CA,

@@ -18,8 +18,8 @@ import (
 )
 
 const (
-	VersionAnnotation = "registry.deckhouse.io/version"
-	DeploymentName    = "registry-incluster-proxy"
+	versionAnnotation = "registry.deckhouse.io/version"
+	deploymentName    = "registry-incluster-proxy"
 )
 
 func KubernetesConfig(name string) go_hook.KubernetesConfig {
@@ -29,7 +29,7 @@ func KubernetesConfig(name string) go_hook.KubernetesConfig {
 		Kind:              "Deployment",
 		NamespaceSelector: helpers.NamespaceSelector,
 		NameSelector: &types.NameSelector{
-			MatchNames: []string{DeploymentName},
+			MatchNames: []string{deploymentName},
 		},
 		FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 			var d appsv1.Deployment
@@ -43,7 +43,7 @@ func KubernetesConfig(name string) go_hook.KubernetesConfig {
 				IsExist:  true,
 				IsReady:  isReady,
 				ReadyMsg: readyMsg,
-				Version:  d.Annotations[VersionAnnotation],
+				Version:  d.Annotations[versionAnnotation],
 			}
 			return ret, nil
 		},

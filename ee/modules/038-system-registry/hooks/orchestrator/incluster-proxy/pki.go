@@ -15,21 +15,21 @@ import (
 )
 
 const (
-	AuthCertCN         = "registry-auth"
-	DistributionCertCN = "registry-distribution"
+	authCertCN         = "registry-auth"
+	distributionCertCN = "registry-distribution"
 )
 
-func ProcessDistributionCertPair(log go_hook.Logger, certPair CertPair, ca pki.CertKey) (CertPair, error) {
+func processDistributionCertPair(log go_hook.Logger, certPair CertPair, ca pki.CertKey) (CertPair, error) {
 	hosts := []string{"127.0.0.1", "localhost", helpers.RegistryServiceDNSName}
-	return ProcessCertPair(log, certPair, ca, hosts, DistributionCertCN)
+	return processCertPair(log, certPair, ca, hosts, distributionCertCN)
 }
 
-func ProcessAuthCertPair(log go_hook.Logger, certPair CertPair, ca pki.CertKey) (CertPair, error) {
+func processAuthCertPair(log go_hook.Logger, certPair CertPair, ca pki.CertKey) (CertPair, error) {
 	hosts := []string{"127.0.0.1", "localhost", helpers.RegistryServiceDNSName}
-	return ProcessCertPair(log, certPair, ca, hosts, AuthCertCN)
+	return processCertPair(log, certPair, ca, hosts, authCertCN)
 }
 
-func ProcessCertPair(log go_hook.Logger, certPair CertPair, ca pki.CertKey, hosts []string, cn string) (CertPair, error) {
+func processCertPair(log go_hook.Logger, certPair CertPair, ca pki.CertKey, hosts []string, cn string) (CertPair, error) {
 	isValid, err := certPair.IsValid(ca, hosts)
 	if !isValid {
 		log.Warn("Certificate pair is invalid, generating a new one.", "cn", cn, "error", err)
