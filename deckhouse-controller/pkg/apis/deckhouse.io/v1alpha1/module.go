@@ -46,6 +46,7 @@ const (
 	ModulePhaseInstalling       = "Installing"
 	ModulePhaseDownloaded       = "Downloaded"
 	ModulePhaseConflict         = "Conflict"
+	ModulePhaseDeployed         = "Deployed"
 	ModulePhaseReady            = "Ready"
 	ModulePhaseError            = "Error"
 
@@ -66,6 +67,7 @@ const (
 	ModuleReasonModuleError                 = "ModuleError"
 	ModuleReasonReconciling                 = "Reconciling"
 	ModuleReasonInstalling                  = "Installing"
+	ModuleReasonReadyChecking               = "ReadyChecking"
 	ModuleReasonError                       = "Error"
 
 	ModuleMessageBundle                      = "turned off by bundle"
@@ -82,6 +84,7 @@ const (
 	ModuleMessageDownloading                 = "downloading"
 	ModuleMessageReconciling                 = "reconciling"
 	ModuleMessageInstalling                  = "installing"
+	ModuleMessageReadyChecking               = "checking if module is ready"
 	ModuleMessageOnStartupHook               = "onStartup hooks done"
 
 	DeckhouseRequirementFieldName        string = "deckhouse"
