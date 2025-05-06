@@ -30,7 +30,7 @@ apiVersions:
             - europe-west3-b
           instanceClass:
             machineType: n1-standard-4
-            image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20250313
+            image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20250425
             diskSizeGb: 50
         nodeGroups:
           - name: static
@@ -39,7 +39,7 @@ apiVersions:
               - europe-west3-b
             instanceClass:
               machineType: n1-standard-4
-              image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20250313
+              image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20250425
               diskSizeGb: 50
               additionalNetworkTags:
                 - tag1
@@ -124,7 +124,7 @@ apiVersions:
                   GCP [lets you](https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type#create) specify a custom amount of resources (CPU and RAM), e.g., `custom-8-40960` or `n2-custom-8-40960`.
               image: &instanceClassImage
                 type: string
-                example: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20250313
+                example: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20250425
                 description: |
                   Image to use while provisioning GCP servers.
 
