@@ -33,9 +33,12 @@ git:
     install:
       - '**/*'
 {{- end }}
+secrets:
+- id: SOURCE_REPO
+  value: {{ $.SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $value.ccm.azure }}  {{ $.SOURCE_REPO }}/kubernetes-sigs/cloud-provider-azure.git /src
+  - git clone --depth 1 --branch {{ $value.ccm.azure }}  $(cat /run/secrets/SOURCE_REPO)/kubernetes-sigs/cloud-provider-azure.git /src
   - cd /src
   {{- if $patch}}
   - git apply /patches/*.patch --verbose
@@ -52,11 +55,13 @@ import:
   before: install
 mount:
 {{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ $.GOPROXY }}
 shell:
   install:
   - cd /src
-  - export GOPROXY={{ $.GOPROXY }}
-  - go mod download
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:
   - cd /src
   - go build -a -o bin/azure-cloud-controller-manager ./cmd/cloud-controller-manager

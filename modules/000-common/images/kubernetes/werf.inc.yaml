@@ -22,9 +22,12 @@ git:
     install:
     - '**/*'
   {{- end }}
+secrets:
+- id: SOURCE_REPO
+  value: {{ $.SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ $full_version }} {{ $.SOURCE_REPO }}/kubernetes/kubernetes.git /src
+  - git clone --depth 1 --branch v{{ $full_version }} $(cat /run/secrets/SOURCE_REPO)/kubernetes/kubernetes.git /src
   - cd /src
   - |
     cat <<EOF > .kube-version
@@ -51,15 +54,18 @@ mount:
 {{ include "mount points for golang builds" . }}
 - from: tmp_dir
   to: /src/_output/local/go
+secrets:
+- id: GOPROXY
+  value: {{ $.GOPROXY }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" $ | nindent 2 }}
   - apk add --no-cache make bash rsync
   install:
-  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} GOWORK=off
+  - export GO_VERSION=${GOLANG_VERSION} GOWORK=off
   - cd /src
   - export KUBE_GIT_VERSION_FILE=.kube-version
-  - go mod vendor
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
   - make all WHAT=cmd/kube-apiserver kube-controller-manager kube-scheduler kube-proxy kubelet kubectl kubeadm GOLDFLAGS="-s -w -extldflags \"-static\"" KUBE_STATIC_OVERRIDES="kubelet"
   - rm -rf vendor
 {{- end }}

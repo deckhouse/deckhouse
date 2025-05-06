@@ -15,9 +15,12 @@ image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
 fromCacheVersion: "2025.04.29.1"
 fromImage: common/src-artifact
 final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v0.36.0-flant.22 {{ $.SOURCE_REPO }}/deckhouse/mcm.git /src
+  - git clone --depth 1 --branch v0.36.0-flant.22 $(cat /run/secrets/SOURCE_REPO)/deckhouse/mcm.git /src
   - rm -rf /src/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
@@ -30,10 +33,13 @@ import:
   before: install
 mount:
 {{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
   - cd /src
-  - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - go build -o machine-controller-manager cmd/machine-controller-manager/controller_manager.go
   - chown 64535:64535 machine-controller-manager
   - chmod 0700 machine-controller-manager

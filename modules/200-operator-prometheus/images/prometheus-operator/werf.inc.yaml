@@ -9,9 +9,12 @@ git:
     stageDependencies:
       install:
       - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-    - git clone --depth 1 --branch "v{{ $version }}" {{ $.SOURCE_REPO }}/prometheus-operator/prometheus-operator.git /src
+    - git clone --depth 1 --branch "v{{ $version }}" $(cat /run/secrets/SOURCE_REPO)/prometheus-operator/prometheus-operator.git /src
     - cd /src
     - git apply /patches/*.patch --verbose
     - rm -r .git
@@ -25,11 +28,14 @@ import:
     before: install
 mount:
 {{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
     - cd /src
-    - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-    - go mod download -x
+    - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
     - go mod vendor
     - export VERSION=$(cat VERSION | tr -d " \t\n\r")
     - export GO_BUILD_LDFLAGS="-X github.com/prometheus/common/version.Version=${VERSION} -X github.com/prometheus/common/version.BuildUser=deckhouse"

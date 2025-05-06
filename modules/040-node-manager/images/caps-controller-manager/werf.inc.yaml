@@ -42,11 +42,13 @@ import:
   before: install
 mount:
 {{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
-  - export GOPROXY={{ $.GOPROXY }}
   - cd /src
-  - go mod download -x
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o /caps-controller-manager cmd/main.go
   - chown 64535:64535 /caps-controller-manager
   - chmod 0700 /caps-controller-manager

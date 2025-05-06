@@ -48,11 +48,14 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v0.17.0 {{ .SOURCE_REPO }}/prometheus/promu.git /src/promu
-  - git clone --depth 1 --branch v2.55.1 {{ .SOURCE_REPO }}/prometheus/prometheus-deps.git /src/prometheus-deps
-  - git clone --depth 1 --branch v2.55.1 {{ .SOURCE_REPO }}/prometheus/prometheus.git /src/prometheus
+  - git clone --depth 1 --branch v0.17.0 $(cat /run/secrets/SOURCE_REPO)/prometheus/promu.git /src/promu
+  - git clone --depth 1 --branch v2.55.1 $(cat /run/secrets/SOURCE_REPO)/prometheus/prometheus-deps.git /src/prometheus-deps
+  - git clone --depth 1 --branch v2.55.1 $(cat /run/secrets/SOURCE_REPO)/prometheus/prometheus.git /src/prometheus
   - cd /src/prometheus
   - git apply /patches/*.patch --verbose
   - rm -rf web/ui/*
@@ -70,9 +73,12 @@ import:
   before: install
 mount:
 {{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
-  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - cd /src
   - go build -ldflags="-s -w" -o promu ./main.go
 ---
@@ -90,9 +96,12 @@ import:
   add: /src/prometheus
   to: /src
   before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
-  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - cd /src
   - go generate -tags plugins ./plugins
   - /bin/promu build --prefix /src

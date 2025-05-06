@@ -34,6 +34,9 @@ import:
   before: install
 mount:
 {{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
   - mkdir /deckhouse /out
@@ -59,7 +62,7 @@ shell:
   - go generate ./tools/register.go
   # Go modules depend on `register-go-hooks.go` file, hence we cannot split downloading dependencies and building
   # into separate phases.
-  - go mod download
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   - cd /deckhouse/deckhouse-controller
   - D8_VERSION=${CI_COMMIT_TAG} DEFAULT_KUBERNETES_VERSION={{ .defaultKubernetesVersion }} ./go-build.sh
   - mv deckhouse-controller /out

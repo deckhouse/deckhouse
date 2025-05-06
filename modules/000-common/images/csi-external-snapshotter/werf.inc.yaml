@@ -33,10 +33,13 @@ git:
     install:
     - '**/*'
     {{- end }}
+secrets:
+- id: SOURCE_REPO
+  value: {{ $.SOURCE_REPO }}
 shell:
   install:
   - cd /src
-  - git clone --depth 1 --branch {{ $src_version }} {{ $.SOURCE_REPO }}/kubernetes-csi/external-snapshotter.git .
+  - git clone --depth 1 --branch {{ $src_version }} $(cat /run/secrets/SOURCE_REPO)/kubernetes-csi/external-snapshotter.git .
   {{- if $patch }}
   - git apply /patches/*.patch --verbose
   {{- end }}
@@ -53,14 +56,17 @@ import:
   add: /src
   to: /src
   before: install
+secrets:
+- id: GOPROXY
+  value: {{ $.GOPROXY }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" $ | nindent 2 }}
   - apk add --no-cache make bash git
   install:
-  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - export GO_VERSION=${GOLANG_VERSION} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - cd /src
-  - go mod download
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   - make build
   - cp bin/snapshot-controller bin/csi-snapshotter bin/snapshot-validation-webhook /
   - chown 64535:64535 /snapshot-controller /csi-snapshotter /snapshot-validation-webhook

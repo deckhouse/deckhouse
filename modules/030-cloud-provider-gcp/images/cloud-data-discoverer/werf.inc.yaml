@@ -58,13 +58,15 @@ import:
   add: /src
   to: /src
   before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 mount:
 {{ include "mount points for golang builds" . }}
 shell:
   install:
   - cd /src
-  - export GOPROXY={{ $.GOPROXY }}
-  - go mod download
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:
   - cd /src
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /discoverer

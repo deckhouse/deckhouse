@@ -20,9 +20,12 @@ imageSpec:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
 fromImage: common/src-artifact
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-    - git clone --depth 1 --branch {{ $version }} {{ $.SOURCE_REPO }}/deckhouse/yandex-csi-driver.git /go/src/app
+    - git clone --depth 1 --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/deckhouse/yandex-csi-driver.git /go/src/app
     - cd /go/src/app
     - rm -rf .git
 ---
@@ -36,11 +39,13 @@ import:
     before: install
 mount:
 {{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
   - cd /go/src/app
-  - export GOPROXY={{ $.GOPROXY }}
-  - go mod download
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:
     - cd /go/src/app
     - |

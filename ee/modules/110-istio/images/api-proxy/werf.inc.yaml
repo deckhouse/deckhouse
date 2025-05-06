@@ -26,7 +26,7 @@ shell:
   - apk add --no-cache bash git binutils
   install:
   - cd /src
-  - go mod download
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:
   - cd /src
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0

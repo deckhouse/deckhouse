@@ -44,9 +44,12 @@ git:
       - go.mod
       - go.sum
       - "**/*.go"
+secrets:
+- id: CLOUD_PROVIDERS_SOURCE_REPO
+  value: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v0.0.1-flant {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/ovirt/go-ovirt /src/go-ovirt
+  - git clone --depth 1 --branch v0.0.1-flant $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/ovirt/go-ovirt /src/go-ovirt
   - cd /src
   - sed -i -e 's# /deckhouse/go_lib/cloud-data# /src/go_lib/cloud-data#g' go.mod
   - sed -i -e 's# /deckhouse/pkg/log# /src/pkg/log#g' go.mod
@@ -55,6 +58,9 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
 fromImage: builder/golang-alpine
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
@@ -65,8 +71,7 @@ mount:
 shell:
   install:
   - cd /src
-  - export GOPROXY={{ $.GOPROXY }}
-  - go mod download
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:
   - cd /src
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /discoverer

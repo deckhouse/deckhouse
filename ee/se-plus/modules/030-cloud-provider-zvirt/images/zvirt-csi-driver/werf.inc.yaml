@@ -36,10 +36,15 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+- id: CLOUD_PROVIDERS_SOURCE_REPO
+  value: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $version }} {{ $.SOURCE_REPO }}/openshift/ovirt-csi-driver.git /src
-  - git clone --depth 1 --branch v0.0.1-flant {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/ovirt/go-ovirt /src/go-ovirt
+  - git clone --depth 1 --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/openshift/ovirt-csi-driver.git /src
+  - git clone --depth 1 --branch v0.0.1-flant $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/ovirt/go-ovirt /src/go-ovirt
   - cd /src
   - git apply /patches/*.patch --verbose
   - echo "replace github.com/ovirt/go-ovirt => /src/go-ovirt" >> go.mod
@@ -55,11 +60,13 @@ import:
     before: install
 mount:
 {{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
   - cd /src
-  - export GOPROXY={{ $.GOPROXY }}
-  - go mod download
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:
   - cd /src
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X version.Version={{ $version }}" -o /ovirt-csi-driver ./cmd/ovirt-csi-driver/ovirt-csi-driver.go

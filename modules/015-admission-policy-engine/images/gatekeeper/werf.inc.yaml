@@ -19,9 +19,12 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v3.18.1 {{ .SOURCE_REPO }}/open-policy-agent/gatekeeper.git /src
+  - git clone --depth 1 --branch v3.18.1 $(cat /run/secrets/SOURCE_REPO)/open-policy-agent/gatekeeper.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
   - rm -rf website
@@ -37,11 +40,13 @@ import:
   before: install
 mount:
 {{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
-  - export GOPROXY={{ .GOPROXY }}
   - cd /src
-  - go mod vendor
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -mod vendor -ldflags="-s -w" -o /gatekeeper .
   - chown 64535:64535 /gatekeeper
   - chmod 0700 /gatekeeper

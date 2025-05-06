@@ -35,6 +35,9 @@ import:
   before: install
 mount:
 {{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
@@ -42,9 +45,9 @@ shell:
   install:
   - cd /src/istio/
   - echo {{ $istioVersion }} > version
-  - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64
+  - export GOOS=linux GOARCH=amd64
   - export LDFLAGS='-extldflags -static -s -w'
-  - go mod download
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   - common/scripts/gobuild.sh /src/istio/out/ -tags=agent,disable_pgv /src/istio/cni/cmd/install-cni/
   - common/scripts/gobuild.sh /src/istio/out/ -tags=agent,disable_pgv /src/istio/cni/cmd/istio-cni/
   - strip /src/istio/out/install-cni

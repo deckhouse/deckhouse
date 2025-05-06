@@ -21,12 +21,15 @@ git:
     install:
     - '**/*'
     {{- end }}
+secrets:
+- id: SOURCE_REPO
+  value: {{ $.SOURCE_REPO }}
 shell:
   install:
   - mkdir -p /tmp/autoscaler
   - cd /tmp/autoscaler
     {{- $clusterAutoscalerVersion := $version }}
-  - git clone --depth 1 --branch v{{ $clusterAutoscalerVersion }}.{{ $value.clusterAutoscalerPatch }} {{ $.SOURCE_REPO }}/gardener/autoscaler.git .
+  - git clone --depth 1 --branch v{{ $clusterAutoscalerVersion }}.{{ $value.clusterAutoscalerPatch }} $(cat /run/secrets/SOURCE_REPO)/gardener/autoscaler.git .
     {{- if $patch }}
   - git apply /patches/*.patch --verbose
     {{- end }}
@@ -44,11 +47,14 @@ import:
   before: install
 mount:
 {{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ $.GOPROXY }}
 shell:
   install:
   - cd /src
-  - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-  - go mod download
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   - go build -ldflags='-s -w -extldflags "-static"' -o cluster-autoscaler
   - echo "{{ $clusterAutoscalerVersion }}.{{ $value.clusterAutoscalerPatch }}-flant" > VERSION
 ---

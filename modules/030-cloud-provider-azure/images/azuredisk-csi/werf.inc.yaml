@@ -38,9 +38,12 @@ git:
     install:
       - '**/*'
 {{- end }}
+secrets:
+- id: SOURCE_REPO
+  value: {{ $.SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $value.csi.azure }} {{ $.SOURCE_REPO }}/kubernetes-sigs/azuredisk-csi-driver.git /src
+  - git clone --depth 1 --branch {{ $value.csi.azure }} $(cat /run/secrets/SOURCE_REPO)/kubernetes-sigs/azuredisk-csi-driver.git /src
   - cd /src
   {{- if $patch }}
   - git apply /patches/*.patch --verbose
@@ -57,11 +60,13 @@ import:
   before: install
 mount:
 {{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ $.GOPROXY }}
 shell:
   install:
   - cd /src
-  - export GOPROXY={{ $.GOPROXY }}
-  - go mod download
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:
   - cd /src
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -tags azurediskv2 -o _output/amd64/azurediskplugin ./pkg/azurediskplugin
