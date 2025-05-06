@@ -297,34 +297,29 @@ func (p *Pinger) listenReplies(ctx context.Context, conn *socketConn) error {
 func (p *Pinger) sendPings(ctx context.Context, conn *socketConn) error {
 	log.Info(fmt.Sprintf("Sending pings, count: %d", p.count))
 
-	var wg sync.WaitGroup
-
-	// For each host, spawn a separate goroutine to send pings
-	for _, host := range p.hosts {
-		wg.Add(1)
-		go func(host string) {
-			defer wg.Done()
-
-			for i := 0; i < p.count; i++ {
-				select {
-				case <-ctx.Done():
-					log.Info(fmt.Sprintf("sendPings for host %s stopped due to context cancellation", host))
-					return
-				default:
-					if err := conn.SendPacket(host); err != nil {
-						log.Warn(fmt.Sprintf("failed to send ping to %s: %v", host, err))
-						continue
-					}
-					p.mu.Lock()
-					p.sentCount[host]++
-					p.mu.Unlock()
-					time.Sleep(p.interval)
+	for i := 0; i < p.count; i++ {
+		for _, host := range p.hosts {
+			select {
+			case <-ctx.Done():
+				log.Info("sendPings loop interrupted by context cancellation")
+				return ctx.Err()
+			default:
+				if err := conn.SendPacket(host); err != nil {
+					log.Warn(fmt.Sprintf("failed to send ping to %s: %v", host, err))
+					continue
 				}
+				p.mu.Lock()
+				p.sentCount[host]++
+				p.mu.Unlock()
 			}
-		}(host)
+		}
+
+		// Sleep between rounds
+		if i < p.count-1 {
+			time.Sleep(p.interval)
+		}
 	}
 
-	wg.Wait()
 	log.Info(fmt.Sprintf("Completed sending %d pings per host", p.count))
 	return nil
 }
