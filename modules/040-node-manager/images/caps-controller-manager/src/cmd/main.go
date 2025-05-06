@@ -39,7 +39,8 @@ import (
 
 	//+kubebuilder:scaffold:imports
 
-	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha1"
+	deckhousev1alpha1 "caps-controller-manager/api/deckhouse.io/v1alpha1"
+	deckhousev1alpha2 "caps-controller-manager/api/deckhouse.io/v1alpha2"
 	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
 	"caps-controller-manager/internal/client"
 	deckhouseiocontroller "caps-controller-manager/internal/controller/deckhouse.io"
@@ -57,7 +58,8 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(infrav1.AddToScheme(scheme))
 	utilruntime.Must(clusterv1.AddToScheme(scheme))
-	utilruntime.Must(deckhousev1.AddToScheme(scheme))
+	utilruntime.Must(deckhousev1alpha1.AddToScheme(scheme))
+	utilruntime.Must(deckhousev1alpha2.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -126,7 +128,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "StaticMachine")
 		os.Exit(1)
 	}
-	if err = (&deckhousev1.StaticInstance{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = (&deckhousev1alpha2.StaticInstance{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "StaticInstance")
 		os.Exit(1)
 	}
@@ -143,7 +145,7 @@ func main() {
 		setupLog.Error(err, "unable to create webhook", "webhook", "StaticMachine")
 		os.Exit(1)
 	}
-	if err = (&deckhousev1.SSHCredentials{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = (&deckhousev1alpha2.SSHCredentials{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "SSHCredentials")
 		os.Exit(1)
 	}
