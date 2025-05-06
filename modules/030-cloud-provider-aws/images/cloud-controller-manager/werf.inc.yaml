@@ -32,9 +32,12 @@ git:
       install:
         - '**/*'
 {{- end }}
+secrets:
+- id: SOURCE_REPO
+  value: {{ $.SOURCE_REPO }}
 shell:
   install:
-    - git clone --depth 1 --branch {{ $value.ccm.aws }} {{ $.SOURCE_REPO }}/kubernetes/cloud-provider-aws.git /src
+    - git clone --depth 1 --branch {{ $value.ccm.aws }} $(cat /run/secrets/SOURCE_REPO)/kubernetes/cloud-provider-aws.git /src
     - cd /src
     {{- if $patch }}
     - git apply /patches/*.patch --verbose
@@ -51,11 +54,13 @@ import:
     before: install
 mount:
 {{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ $.GOPROXY }}
 shell:
   install:
   - cd /src
-  - export GOPROXY={{ $.GOPROXY }}
-  - go mod download
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:
   - cd /src
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-w -s -X k8s.io/component-base/version.gitVersion={{ $value.ccm.aws }} -X main.gitVersion={{ $value.ccm.aws }}" -o=aws-cloud-controller-manager cmd/aws-cloud-controller-manager/main.go

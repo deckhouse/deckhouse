@@ -36,6 +36,9 @@ import:
   add: /src/kiali
   to: /src/kiali
   before: setup
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
@@ -43,9 +46,9 @@ shell:
   setup:
   - cd /src/kiali/
   - echo {{ $kialiVersion }} > version
-  - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64
+  - export GOOS=linux GOARCH=amd64
   - export LDFLAGS='-X main.version=${kialiVersion}'
-  - go mod download
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   - go build -o /src/kiali/out/kiali /src/kiali/
   - strip /src/kiali/out/kiali
   - chmod 0755 /src/kiali/out/kiali

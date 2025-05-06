@@ -15,9 +15,12 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ $cniVersion }} {{ $.SOURCE_REPO }}/containernetworking/plugins.git /src/plugins
+  - git clone --depth 1 --branch v{{ $cniVersion }} $(cat /run/secrets/SOURCE_REPO)/containernetworking/plugins.git /src/plugins
   - cd /src/plugins
   - git apply --verbose /patches/*.patch
   - rm -rf /src/plugins/.git
@@ -32,12 +35,15 @@ import:
   before: install
 mount:
 {{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache bash git binutils tar
   install:
-  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /src/plugins
   - go mod vendor && go mod verify

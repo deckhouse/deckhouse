@@ -13,9 +13,12 @@ imageSpec:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
 fromImage: common/src-artifact
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v1.24.0 {{ $.SOURCE_REPO }}/aws/aws-node-termination-handler.git /src
+  - git clone --depth 1 --branch v1.24.0 $(cat /run/secrets/SOURCE_REPO)/aws/aws-node-termination-handler.git /src
   - cd /src
   - rm -rf .git vendor
 ---
@@ -29,11 +32,13 @@ import:
   add: /src
   to: /src
   before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
   - cd /src
-  - export GOPROXY={{ $.GOPROXY }}
-  - go mod download
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:
   - cd /src
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /node-termination-handler ./cmd/node-termination-handler.go

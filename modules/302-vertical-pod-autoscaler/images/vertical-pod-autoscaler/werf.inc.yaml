@@ -7,9 +7,12 @@ git:
   stageDependencies:
     install:
       - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-    - git clone --depth 1 -b vertical-pod-autoscaler-1.2.1 {{ $.SOURCE_REPO }}/kubernetes/autoscaler.git /src/autoscaler
+    - git clone --depth 1 -b vertical-pod-autoscaler-1.2.1 $(cat /run/secrets/SOURCE_REPO)/kubernetes/autoscaler.git /src/autoscaler
     - cd /src/autoscaler
     - git apply /patches/*.patch --verbose
     - mv vertical-pod-autoscaler /src/vertical-pod-autoscaler
@@ -25,12 +28,14 @@ import:
     before: install
 mount:
 {{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
-    - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - export GO_VERSION=${GOLANG_VERSION} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - cd /src/vertical-pod-autoscaler/
-    - go mod download -x
-    - go mod vendor
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
 
     - cd /src/vertical-pod-autoscaler/pkg/admission-controller
     - go build -ldflags="-s -w" -o /admission-controller

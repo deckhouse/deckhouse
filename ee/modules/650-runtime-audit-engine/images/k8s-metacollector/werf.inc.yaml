@@ -18,10 +18,13 @@ git:
   stageDependencies:
     install:
     - '**/*.patch'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   - cd /src
-  - git clone --depth 1 --branch v0.1.1 {{ .SOURCE_REPO }}/falcosecurity/k8s-metacollector.git .
+  - git clone --depth 1 --branch v0.1.1 $(cat /run/secrets/SOURCE_REPO)/falcosecurity/k8s-metacollector.git .
   - git apply /patches/*.patch --verbose
   - git describe --tags --always --dirty > GIT_VERSION
   - git rev-parse HEAD > GIT_HASH
@@ -37,13 +40,16 @@ import:
   add: /src
   to: /src
   before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache make bash
   install:
   - cd /src
-  - export GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - RELEASE="$(cat GIT_VERSION)" COMMIT="$(cat GIT_HASH)" make build
   - chown 64535:64535 manager
   - chmod 0755 manager

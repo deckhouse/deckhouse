@@ -9,12 +9,15 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   - cd /src
-  - git clone -b libmnl-1.0.5 --depth 1 {{ .SOURCE_REPO }}/netfilter/libmnl ./libmnl
+  - git clone -b libmnl-1.0.5 --depth 1 $(cat /run/secrets/SOURCE_REPO)/netfilter/libmnl ./libmnl
   - rm -r libmnl/.git
-  - git clone -b v{{ $version }} --depth 1 {{ .SOURCE_REPO }}/ethtool/ethtool.git ./ethtool
+  - git clone -b v{{ $version }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/ethtool/ethtool.git ./ethtool
   - rm -r ethtool/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-ethtool-artifact

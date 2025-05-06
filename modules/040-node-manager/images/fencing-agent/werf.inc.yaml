@@ -16,13 +16,16 @@ import:
   before: install
 mount:
 {{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
   - cd /src
-  - GOPROXY={{ $.GOPROXY }} go mod download -x
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download -x
   setup:
   - cd /src
-  - CGO_ENABLED=0 GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o fencing-agent ./cmd/main.go
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o fencing-agent ./cmd/main.go
   - chown 64535:64535 /src/fencing-agent
   - chmod 0700 /src/fencing-agent
 ---

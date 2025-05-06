@@ -21,9 +21,12 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone {{ $.SOURCE_REPO }}/cilium/proxy.git /src/proxy
+  - git clone $(cat /run/secrets/SOURCE_REPO)/cilium/proxy.git /src/proxy
   - cd /src/proxy
   - git checkout {{ $ciliumProxyRev }}
   - git apply --verbose /patches/*.patch
@@ -51,6 +54,11 @@ mount:
   to: /tmp/bazel-cache
 - from: tmp_dir
   to: /tmp/bazel-deps
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   beforeInstall:
   - |
@@ -71,11 +79,11 @@ shell:
   - chmod -R a+w /tmp
   setup:
   # cache
-  - git clone --depth 1 --branch {{ $ciliumProxyCacheRev }} {{ .SOURCE_REPO }}/cilium/proxy-build-cache.git /tmp/bazel-cache 
-  - git clone --depth 1 --branch {{ $ciliumProxyDepsRev }} {{ .SOURCE_REPO }}/cilium/proxy-build-deps.git /tmp/bazel-deps
+  - git clone --depth 1 --branch {{ $ciliumProxyCacheRev }} $(cat /run/secrets/SOURCE_REPO)/cilium/proxy-build-cache.git /tmp/bazel-cache 
+  - git clone --depth 1 --branch {{ $ciliumProxyDepsRev }} $(cat /run/secrets/SOURCE_REPO)/cilium/proxy-build-deps.git /tmp/bazel-deps
   - chown -R cilium:cilium /tmp/bazel-cache /tmp/bazel-deps /home/cilium/.cache/
 
-  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /cilium/proxy
   - go mod vendor && go mod verify
@@ -90,7 +98,7 @@ shell:
   #
   - cd /cilium/proxy
   - sudo -u cilium echo "{{ $ciliumProxyRev }}" >SOURCE_VERSION
-  - sudo -u cilium sed -i "s,https://github.com,{{ $.SOURCE_REPO }}," WORKSPACE
+  - sudo -u cilium sed -i "s,https://github.com,$(cat /run/secrets/SOURCE_REPO)," WORKSPACE
   - sudo -u cilium sed -i 's/$(SUDO) apt info clang-17 || $(call add_clang_apt_source,$(shell lsb_release -cs))/rpm -q clang17.0/' Makefile
   - sudo -u cilium sed -i "/\$(SUDO) apt install -y clang-17 llvm-17-dev lld-17 clang-format-17/d" Makefile
   - sudo -u cilium sed -i '\#"/usr/include"#a \        "/usr/lib/llvm-17.0/lib64/clang/17/include",' bazel/toolchains/BUILD

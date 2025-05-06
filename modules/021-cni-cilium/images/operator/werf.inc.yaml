@@ -13,16 +13,18 @@ import:
   before: install
 mount:
 {{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache make git bash
   install:
   - export GO_VERSION=${GOLANG_VERSION}
-  - export GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64
   - cd /src/cilium
-  - go mod vendor && go mod verify
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
   - make DESTDIR=/out/linux/amd64 build-container-operator install-container-binary-operator
   - chown 64535:64535 /out/linux/amd64/usr/bin/cilium-operator
   - chmod 0700 /out/linux/amd64/usr/bin/cilium-operator

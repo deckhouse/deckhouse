@@ -8,10 +8,13 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   - cd /src
-  - git clone -b v0.14.8 {{ $.SOURCE_REPO }}/metallb/metallb.git .
+  - git clone -b v0.14.8 $(cat /run/secrets/SOURCE_REPO)/metallb/metallb.git .
   - git apply /patches/*.patch --verbose
   - rm -rf e2etest
   - rm -rf /src/.git
@@ -26,11 +29,14 @@ import:
   before: install
 mount:
 {{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
   - cd /src
   - export GO_VERSION=${GOLANG_VERSION}
-  - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd controller
   - go build -ldflags="-s -w" -o /controller
   - chown 64535:64535 /controller

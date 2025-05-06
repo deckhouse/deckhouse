@@ -13,15 +13,18 @@ imageSpec:
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 final: false
 fromImage: common/src-artifact
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   - cd /src
-  - git clone --depth 1 -b 1.7.9 {{ .SOURCE_REPO }}/pmacct/pmacct.git .
+  - git clone --depth 1 -b 1.7.9 $(cat /run/secrets/SOURCE_REPO)/pmacct/pmacct.git .
   - |
-    cat > .gitmodules <<"EOF"
+    cat > .gitmodules <<EOF
     [submodule "src/external_libs/libcdada"]
       path = src/external_libs/libcdada
-      url = {{ .SOURCE_REPO }}/msune/libcdada.git
+      url = $(cat /run/secrets/SOURCE_REPO)/msune/libcdada.git
     EOF
   - git submodule update --init
   - rm -rf /src/.git

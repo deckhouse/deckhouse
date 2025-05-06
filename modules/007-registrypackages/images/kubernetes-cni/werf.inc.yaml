@@ -19,13 +19,16 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ $cni_version }} {{ $.SOURCE_REPO }}/containernetworking/plugins.git /src/plugins
+  - git clone --depth 1 --branch v{{ $cni_version }} $(cat /run/secrets/SOURCE_REPO)/containernetworking/plugins.git /src/plugins
   - cd /src/plugins
   - git apply /patches/plugins/*.patch --verbose
   - rm -rf .git
-  - git clone --depth 1 --branch v{{ $cni_flannel_version }} {{ $.SOURCE_REPO }}/flannel-io/cni-plugin.git /src/cni-plugin
+  - git clone --depth 1 --branch v{{ $cni_flannel_version }} $(cat /run/secrets/SOURCE_REPO)/flannel-io/cni-plugin.git /src/cni-plugin
   - cd /src/cni-plugin
   - git apply /patches/cni-plugins/*.patch --verbose
   - rm -rf .git
@@ -78,12 +81,15 @@ import:
   add: /src
   to: /src
   before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache make bash
   setup:
-    - export GOPROXY={{ $.GOPROXY }}
+    - export GOPROXY=$(cat /run/secrets/GOPROXY)
     - cd /src/plugins
     - go mod vendor
     - CGO_ENABLED=0 ./build_linux.sh -ldflags '-extldflags -static -X github.com/containernetworking/plugins/pkg/utils/buildversion.BuildVersion={{ $cni_version }}'

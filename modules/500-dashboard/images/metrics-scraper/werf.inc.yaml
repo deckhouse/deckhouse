@@ -22,11 +22,14 @@ import:
   before: install
 mount:
 {{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
   - cd /src/modules/metrics-scraper
-  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-  - go mod download
+  - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   - go build -trimpath -ldflags="-s -w -X k8s.io/dashboard/metrics-scraper/pkg/environment.Version=v{{ $version }}" -o /dashboard-metrics-scraper .
   - chown 64535:64535 /dashboard-metrics-scraper
   - chmod 0755 /dashboard-metrics-scraper
@@ -34,8 +37,11 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 final: false
 fromImage: common/src-artifact
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   - cd /src
-  - git clone --depth 1 -b metrics-scraper/v{{ $version }} {{ .SOURCE_REPO }}/kubernetes/dashboard .
+  - git clone --depth 1 -b metrics-scraper/v{{ $version }} $(cat /run/secrets/SOURCE_REPO)/kubernetes/dashboard .
   - rm -r .git .github charts docs hack

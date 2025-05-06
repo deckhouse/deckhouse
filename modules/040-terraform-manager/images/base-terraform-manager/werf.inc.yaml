@@ -58,9 +58,12 @@ git:
   stageDependencies:
     install:
       - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ .TF.terraform }} {{ $.SOURCE_REPO }}/hashicorp/terraform.git /src
+  - git clone --depth 1 --branch v{{ .TF.terraform }} $(cat /run/secrets/SOURCE_REPO)/hashicorp/terraform.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
   - rm -rf .git
@@ -68,9 +71,12 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-opentofu-src-artifact
 final: false
 fromImage: common/src-artifact
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ .TF.opentofu }} {{ $.SOURCE_REPO }}/opentofu/opentofu.git /src
+  - git clone --depth 1 --branch v{{ .TF.opentofu }} $(cat /run/secrets/SOURCE_REPO)/opentofu/opentofu.git /src
   - cd /src
   - rm -rf .git
 ---
@@ -85,13 +91,16 @@ import:
   before: install
 mount:
 {{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
   - apk add --no-cache openssh-client
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   - cd /src
-  - export GOPROXY={{ $.GOPROXY }}
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\"" -o /terraform/terraform .
   - chmod 755 /terraform/terraform
 ---
@@ -107,12 +116,15 @@ import:
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
   - apk add --no-cache openssh-client
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   - cd /src
-  - export GOPROXY={{ $.GOPROXY }}
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\" -X github.com/opentofu/opentofu/version.dev=no" -o /opentofu/opentofu ./cmd/tofu
   - chmod 755 /opentofu/opentofu

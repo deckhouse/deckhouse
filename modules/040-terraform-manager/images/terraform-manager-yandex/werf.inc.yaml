@@ -18,9 +18,12 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ .TF.yandex.version }} {{ $.SOURCE_REPO }}/yandex-cloud/terraform-provider-yandex.git /src
+  - git clone --depth 1 --branch v{{ .TF.yandex.version }} $(cat /run/secrets/SOURCE_REPO)/yandex-cloud/terraform-provider-yandex.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
   - rm -rf .git
@@ -35,12 +38,15 @@ import:
   add: /src
   to: /src
   before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache make bash
   install:
-  - export GOPROXY={{ $.GOPROXY }}
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - cd /src
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/yandex-cloud/terraform-provider-yandex/version.ProviderVersion={{ .TF.yandex.version }}"
   - mv /go/bin/terraform-provider-yandex /terraform-provider-yandex

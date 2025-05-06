@@ -2,9 +2,12 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --branch 7.4.0 --depth 1 {{ $.SOURCE_REPO }}/redis/redis.git /src
+  - git clone --branch 7.4.0 --depth 1 $(cat /run/secrets/SOURCE_REPO)/redis/redis.git /src
   - rm -r /src/utils
   - rm -r /src/.git
 ---
