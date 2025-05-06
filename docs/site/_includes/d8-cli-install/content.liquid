@@ -55,11 +55,13 @@
 
 {% if page.lang == 'ru' %}
 {% alert level="warning" %}
-Версия Deckhouse CLI {{ site.data.supported_versions.d8.d8CliVersion }} соответствует версии утилиты, поставляемой с Deckhouse в рамках этой версии документации. Последняя доступная сборка доступна на [GitHub](https://github.com/deckhouse/deckhouse-cli/releases).
+Команды ниже актуальны для Deckhouse CLI версии {{ site.data.supported_versions.d8.d8CliVersion }}, поставляемой с Deckhouse Kubernetes Platform. Последняя версия Deckhouse CLI доступна на [GitHub](https://github.com/deckhouse/deckhouse-cli/releases).
+Узнать используемую версию Deckhouse CLI можно при помощи команды `d8 --version`. 
 {% endalert %}
 {% else %}
 {% alert level="warning" %}
-Deckhouse CLI version {{ site.data.supported_versions.d8.d8CliVersion }} matches the version bundled with Deckhouse for this version of the documentation. The latest release is available on [GitHub](https://github.com/deckhouse/deckhouse-cli/releases).
+The commands below apply to Deckhouse CLI version {{ site.data.supported_versions.d8.d8CliVersion }}, which is bundled with the Deckhouse Kubernetes Platform. The latest version of Deckhouse CLI is available on [GitHub](https://github.com/deckhouse/deckhouse-cli/releases).
+You can check your current Deckhouse CLI version using the `d8 --version` command.
 {% endalert %}
 {% endif %}
 
