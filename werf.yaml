@@ -89,9 +89,9 @@ build:
 {{- $_ := set . "GOPROXY" (env "GOPROXY" "https://proxy.golang.org,direct") }}
 
 # cosign  settings
-{{- $_ := set . "CosignLogin" (env "COSIGN_LOGIN" "") }}
-{{- $_ := set . "CosignPassword" (env "COSIGN_PASSWORD" "") }}
-{{- $_ := set . "CosignKey" (env "COSIGN_KEY" "") }}
+{{- $_ := set . "CosignLogin" (env "COSIGN_LOGIN" "test") }}
+{{- $_ := set . "CosignPassword" (env "COSIGN_PASSWORD" "test") }}
+{{- $_ := set . "CosignKey" (env "COSIGN_KEY" "test") }}
 
 # registry auth
 {{- $_ := set . "RegistryUser" (env "REGISTRY_USER" "test") }}
