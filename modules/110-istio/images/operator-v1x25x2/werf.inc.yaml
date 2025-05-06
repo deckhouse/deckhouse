@@ -40,7 +40,7 @@ shell:
   - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64
   - export LDFLAGS='-extldflags -static -s -w'
   - go mod download
-  - common/scripts/gobuild.sh /src/istio/out/ /src/operator/cmd/main.go
+  - common/scripts/gobuild.sh /src/operator/out/ /src/operator/cmd/main.go
   - strip /src/operator/out/main
   - mv /src/operator/out/main /src/operator/out/operator
   - chmod 0700 /src/operator/out/operator
