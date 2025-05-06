@@ -245,10 +245,15 @@ properties:
                   Configuring memory limits.
   encryptionMode:
     type: string
-    enum: ["Disabled", "Default", "NodeToNode"]
+    enum: ["Disabled", "Wireguard"]
     default: "Disabled"
     description: |
       Encryption mode:
       - `Disabled` — encryption is disabled.
-      - `Default` — traffic encryption between pods is enabled using WireGuard.
-      - `NodeToNode` — traffic encryption between pods and nodes is enabled using Wireguard.
+      - `Wireguard` — traffic encryption between pods and nodes is enabled using WireGuard.
+
+      > Note! Before enabling WireGuard, please ensure that the Linux distribution running on the cluster nodes has support for WireGuard in kernel mode (either, kernel config CONFIG_WIREGUARD=m is set on Linux 5.6 and newer, or via an external WireGuard module on older kernels).
+
+      > Note! Enabling WireGuard may entail significant CPU comsumption by Cilium agent pods.
+
+      > Note! The node-to-node traffic from and to the control-plane nodes is left unencrypted to prevent possible communication issues between control-plane and worker nodes when renewing Wireguard public key.
