@@ -304,7 +304,6 @@ apiVersions:
                           type: string
                           description: |
                             The name of the image that will be used to create the root disk.
-
                             > The installation requires Linux OS images with cloud-init pre-installed.
                 etcdDisk:
                   type: object
