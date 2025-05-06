@@ -332,10 +332,13 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		// download module metadata from the specified release channel
 		meta, err := md.DownloadMetadataFromReleaseChannel(moduleName, policy.Spec.ReleaseChannel, cachedChecksum)
 		if err != nil {
-			r.logger.Warn("failed to download module", slog.String("name", moduleName), log.Err(err))
-			availableModule.PullError = err.Error()
-			availableModules = append(availableModules, availableModule)
-			pullErrorsExist = true
+			if module.HasCondition(v1alpha1.ModuleConditionEnabledByModuleConfig) {
+				r.logger.Warn("failed to download module", slog.String("name", moduleName), log.Err(err))
+				availableModule.PullError = err.Error()
+				availableModules = append(availableModules, availableModule)
+				pullErrorsExist = true
+			}
+			availableModule.Version = "unknown"
 			continue
 		}
 
@@ -358,12 +361,12 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			if err = r.ensureModuleRelease(ctx, source.GetUID(), source.Name, moduleName, policy.Name, meta); err != nil {
 				return fmt.Errorf("ensure module release for the '%s' module: %w", moduleName, err)
 			}
+		}
 
-			// update checksum
+		if meta.Checksum != "" {
 			availableModule.Checksum = meta.Checksum
 		}
 
-		// set module version
 		if meta.ModuleVersion != "" {
 			availableModule.Version = meta.ModuleVersion
 		}

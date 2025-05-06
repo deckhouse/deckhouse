@@ -18,12 +18,14 @@ spec:
 status:
   message: ""
   modules:
-  - name: disabledmodule
+  - checksum: 'sha256:'
+    name: disabledmodule
     version: v1.2.3
   - checksum: 'sha256:'
     name: enabledmodule
     version: v1.2.3
-  - name: notthissourcemodule
+  - checksum: 'sha256:'
+    name: notthissourcemodule
     version: v1.2.3
   - checksum: 'sha256:'
     name: withpolicymodule
