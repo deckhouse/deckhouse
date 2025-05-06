@@ -40,12 +40,17 @@ func (p *Pinger) RunWithContext(ctx context.Context) error {
 	// Context for goroutines, cancellable independently
 	// gctx, cancel := context.WithCancel(ctx)
 	durationPingWithTimeuout := p.count*int(p.interval) + int(p.timeout)
-	gctx, cancel := context.WithTimeout(ctx, time.Duration(durationPingWithTimeuout))
-	defer cancel()
+	durationPing := p.count*int(p.interval) + int(p.timeout)
+	sendCtx, sendCancel := context.WithTimeout(ctx, time.Duration(durationPing))
+
+	listenCtx, listenCancel := context.WithTimeout(ctx, time.Duration(durationPingWithTimeuout))
+	defer listenCancel()
+	defer sendCancel()
 
 	go func() {
 		defer wg.Done()
-		if err := p.listenReplies(gctx, conn); err != nil && !errors.Is(err, context.Canceled) {
+
+		if err := p.listenReplies(listenCtx, conn); err != nil && !errors.Is(err, context.Canceled) {
 			log.Warn(fmt.Sprintf("listenReplies error: %v", err))
 			errCh <- err
 		}
@@ -54,13 +59,11 @@ func (p *Pinger) RunWithContext(ctx context.Context) error {
 
 	go func() {
 		defer wg.Done()
-		if err := p.sendPings(gctx, conn); err != nil && !errors.Is(err, context.Canceled) {
+		if err := p.sendPings(sendCtx, conn); err != nil && !errors.Is(err, context.Canceled) {
 			log.Warn(fmt.Sprintf("sendPings error: %v", err))
 			errCh <- err
 		}
 		log.Debug("sendPings goroutine stopped")
-		// Cancel context to signal listenReplies to wrap up
-		cancel()
 	}()
 
 	// Wait for goroutines to finish

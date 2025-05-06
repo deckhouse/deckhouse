@@ -15,6 +15,7 @@
 package fastping
 
 import (
+	"context"
 	"encoding/binary"
 	"fmt"
 	"strings"
@@ -76,4 +77,17 @@ func extractTimestampNS(oob []byte) time.Time {
 		}
 	}
 	return time.Time{}
+}
+
+// Delay returns nil after the specified duration or error if interrupted.
+func SleepWithContext(ctx context.Context, d time.Duration) bool {
+	t := time.NewTimer(d)
+	defer t.Stop()
+
+	select {
+	case <-ctx.Done():
+		return false
+	case <-t.C:
+		return true
+	}
 }
