@@ -68,7 +68,7 @@ masterNodeGroup:
   replicas: 1
   instanceClass:
     machineType: n1-standard-4
-    image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20250313
+    image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20250425
     disableExternalIP: false
 subnetworkCIDR: 10.0.0.0/24
 sshKey: test_ssh
