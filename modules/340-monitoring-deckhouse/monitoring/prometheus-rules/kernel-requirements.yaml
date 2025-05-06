@@ -14,12 +14,9 @@
         description: |-
           Deckhouse has detected that some nodes don't meet the required kernel constraints.
           As a result, certain modules can't run on these nodes.
-          
+
           Kernel requirements for each module:
-          
-          - **Cilium module**: Kernel version must be **>= 4.9.17**.
-          - **Cilium with Istio**: Kernel version must be **>= 5.7**.
-          - **Cilium with OpenVPN**: Kernel version must be **>= 5.7**.
-          - **Cilium with Node-local-dns**: Kernel version must be **>= 5.7**.
+
+          - **Cilium module**: Kernel version must be **>= 5.8**.
 
           To list all affected nodes, use the `d8_node_kernel_does_not_satisfy_requirements == 1` expression in Prometheus.
