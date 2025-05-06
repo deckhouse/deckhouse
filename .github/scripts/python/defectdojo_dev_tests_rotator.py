@@ -23,7 +23,6 @@ defectdojo_host = os.getenv('DEFECTDOJO_HOST')
 defectdojo_token = os.getenv('DEFECTDOJO_API_TOKEN')
 days_to_keep_dev = int(os.getenv('DEFECTDOJO_DEV_TESTS_ROTATION_DAYS', 3))
 days_to_keep_release = int(os.getenv('DEFECTDOJO_UNUPDATED_RELEASE_TESTS_ROTATION_DAYS', 14))
-release_versions_to_keep = int(os.getenv('DEFECTDOJO_RELEASE_TESTS_ROTATION_VERSIONS_AMOUNT', 3))
 
 # Static vars
 defectdojo_proto = "https://"
