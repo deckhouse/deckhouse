@@ -23,7 +23,7 @@ metadata:
     nginx.ingress.kubernetes.io/satisfy: "any"
   {{- end }}
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
-    nginx.ingress.kubernetes.io/configuration-snippet: |-
+    nginx.ingress.kubernetes.io/configuration-snippet: |
       if ($host = '{{ include "helm_lib_module_public_domain" (list . "prometheus") }}' ) {
         rewrite ^ {{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "grafana") }}$request_uri permanent;
       }
@@ -32,7 +32,7 @@ metadata:
       proxy_ssl_protocols TLSv1.2;
       proxy_ssl_session_reuse on;
       more_set_headers "X-Content-Type-Options: nosniff";
-      {{- include "helm_lib_module_ingress_configuration_snippet" . | trim | nindent 6 }}
+      {{- include "helm_lib_module_ingress_configuration_snippet" . | nindent 6 }}
     # In Deckhouse, Grafana is an "IAC" configured platform.
     # This rewrite forbids users to log in and get higher privileges.
     nginx.ingress.kubernetes.io/server-snippet: |
