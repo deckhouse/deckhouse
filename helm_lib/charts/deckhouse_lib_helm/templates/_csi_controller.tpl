@@ -56,12 +56,14 @@ memory: 50Mi
   {{- $attacherWorkers := $config.attacherWorkers | default "10" }}
   {{- $resizerWorkers := $config.resizerWorkers | default "10" }}
   {{- $snapshotterWorkers := $config.snapshotterWorkers | default "10" }}
+  {{- $additionalCsiControllerPodAnnotations := $config.additionalCsiControllerPodAnnotations | default false }}
   {{- $additionalControllerEnvs := $config.additionalControllerEnvs }}
   {{- $additionalSyncerEnvs := $config.additionalSyncerEnvs }}
   {{- $additionalControllerArgs := $config.additionalControllerArgs }}
   {{- $additionalControllerVolumes := $config.additionalControllerVolumes }}
   {{- $additionalControllerVolumeMounts := $config.additionalControllerVolumeMounts }}
   {{- $additionalContainers := $config.additionalContainers }}
+  {{- $csiControllerHostNetwork := $config.csiControllerHostNetwork | default "true" }}
   {{- $livenessProbePort := $config.livenessProbePort | default 9808 }}
   {{- $initContainers := $config.initContainers }}
   {{- $customNodeSelector := $config.customNodeSelector }}
@@ -174,10 +176,6 @@ metadata:
   namespace: d8-{{ $context.Chart.Name }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "csi-controller")) | nindent 2 }}
 
-  {{- if eq $context.Chart.Name "csi-nfs" }}
-  annotations:
-    pod-reloader.deckhouse.io/auto: "true"
-  {{- end }}
 spec:
   replicas: 1
   revisionHistoryLimit: 2
@@ -190,13 +188,20 @@ spec:
     metadata:
       labels:
         app: {{ $fullname }}
-    {{- if hasPrefix "cloud-provider-" $context.Chart.Name }}
+      {{- if or (hasPrefix "cloud-provider-" $context.Chart.Name) ($additionalCsiControllerPodAnnotations) }}
       annotations:
+      {{- if hasPrefix "cloud-provider-" $context.Chart.Name }}
         cloud-config-checksum: {{ include (print $context.Template.BasePath "/cloud-controller-manager/secret.yaml") $context | sha256sum }}
-    {{- end }}
+      {{- end }}
+      {{- if $additionalCsiControllerPodAnnotations }}
+        {{- $additionalCsiControllerPodAnnotations | toYaml | nindent 8 }}
+      {{- end }}
+      {{- end }}
     spec:
-      hostNetwork: true
+      hostNetwork: {{ $csiControllerHostNetwork }}
+      {{- if eq $csiControllerHostNetwork "true" }}
       dnsPolicy: ClusterFirstWithHostNet
+      {{- end }}
       imagePullSecrets:
       - name: deckhouse-registry
       {{- if $additionalPullSecrets }}
@@ -216,6 +221,7 @@ spec:
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       {{- end }}
       serviceAccountName: csi
+      automountServiceAccountToken: true
       containers:
       - name: provisioner
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
@@ -396,14 +402,25 @@ spec:
         image: {{ $livenessprobeImage | quote }}
         args:
         - "--csi-address=$(ADDRESS)"
+  {{- if eq $csiControllerHostNetwork "true" }}
         - "--http-endpoint=$(HOST_IP):{{ $livenessProbePort }}"
+  {{- else }}
+        - "--http-endpoint=$(POD_IP):{{ $livenessProbePort }}"
+  {{- end }}
         env:
         - name: ADDRESS
           value: /csi/csi.sock
+  {{- if eq $csiControllerHostNetwork "true" }}
         - name: HOST_IP
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
+  {{- else }}
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+  {{- end }}
         volumeMounts:
         - name: socket-dir
           mountPath: /csi
@@ -489,6 +506,7 @@ metadata:
   name: csi
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | nindent 2 }}
+automountServiceAccountToken: false
 
 # ===========
 # provisioner
