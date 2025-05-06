@@ -15,8 +15,8 @@ import:
   to: /app
   before: setup
 - image: pdf-file-builder
-  add: /app/_site/ru/deckhouse-admin-guide_ru.pdf
-  to: /app/ru/deckhouse-admin-guide_ru.pdf
+  add: /app/_site/ru/deckhouse-admin-guide.pdf
+  to: /app/ru/deckhouse-admin-guide.pdf
   before: setup
 - image: pdf-file-builder
   add: /app/_site/en/deckhouse-admin-guide.pdf
@@ -51,10 +51,10 @@ shell:
         echo "$(wkhtmltopdf --version)"
         echo "Generating RU PDF..."
         cd /app/_site/ru
-        wkhtmltopdf --enable-local-file-access --encoding utf-8 -d 2400 -g --image-dpi 1200 --disable-external-links --image-quality 100 --margin-bottom 12mm --margin-top 12mm --minimum-font-size 10 --header-left "Deckhouse Kubernetes Platform CSE. Справочник администратора - [subsection]" --header-font-size 8 --header-spacing 3 --header-line --footer-right "Страница [page]" --footer-font-size 8 --footer-spacing 3 --footer-line --load-media-error-handling ignore toc --toc-header-text 'Deckhouse Kubernetes Platform CSE: Справочник администратора' --toc-text-size-shrink 1 "deckhouse-admin-guide.html" "deckhouse-admin-guide_ru.pdf"
+        wkhtmltopdf --enable-local-file-access --encoding utf-8 -d 2400 -g --image-dpi 1200 --disable-external-links --image-quality 100 --margin-bottom 12mm --margin-top 12mm --minimum-font-size 10 --header-left "Deckhouse Kubernetes Platform. [subsection]" --header-font-size 8 --header-spacing 3 --header-line --footer-right "Страница [page]" --footer-font-size 8 --footer-spacing 3 --footer-line --load-media-error-handling ignore toc --toc-header-text 'Deckhouse Kubernetes Platform' --toc-text-size-shrink 1 "deckhouse-admin-guide.html" "deckhouse-admin-guide.pdf"
         echo "Generating EN PDF..."
         cd /app/_site/en
-        wkhtmltopdf --enable-local-file-access --encoding utf-8 -d 2400 -g --image-dpi 1200 --disable-external-links --image-quality 100 --margin-bottom 12mm --margin-top 12mm --minimum-font-size 10 --header-left "Deckhouse Kubernetes Platform CSE. Справочник администратора - [subsection]" --header-font-size 8 --header-spacing 3 --header-line --footer-right "Страница [page]" --footer-font-size 8 --footer-spacing 3 --footer-line --load-media-error-handling ignore toc --toc-header-text 'Deckhouse Kubernetes Platform CSE: Справочник администратора' --toc-text-size-shrink 1 "deckhouse-admin-guide.html" "deckhouse-admin-guide.pdf"
+        wkhtmltopdf --enable-local-file-access --encoding utf-8 -d 2400 -g --image-dpi 1200 --disable-external-links --image-quality 100 --margin-bottom 12mm --margin-top 12mm --minimum-font-size 10 --header-left "Deckhouse Kubernetes Platform. [subsection]" --header-font-size 8 --header-spacing 3 --header-line --footer-right "Page [page]" --footer-font-size 8 --footer-spacing 3 --footer-line --load-media-error-handling ignore toc --toc-header-text 'Deckhouse Kubernetes Platform' --toc-text-size-shrink 1 "deckhouse-admin-guide.html" "deckhouse-admin-guide.pdf"
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}/static
   add: /app/_site
@@ -67,7 +67,7 @@ final: false
 shell:
   setup:
   - |
-        echo "Generate PDF pagess..."
+        echo "Generate PDF pages..."
         cd /srv/jekyll-data/site
         bash ./prepare_for_pdf.sh
 git:
@@ -80,12 +80,16 @@ git:
     to: /srv/jekyll-data/site/modules
     stageDependencies:
       setup:
-        - "*"
+        - "**/*.md"
+        - "**/*.yaml"
+        - "**/*.yml"
   - add: /ee
     to: /srv/jekyll-data/site/ee
     stageDependencies:
       setup:
-        - "*"
+        - "**/*.md"
+        - "**/*.yaml"
+        - "**/*.yml"
   - add: /tools/docs/pdf/prepare_for_pdf.sh
     to: /srv/jekyll-data/site/prepare_for_pdf.sh
     stageDependencies:

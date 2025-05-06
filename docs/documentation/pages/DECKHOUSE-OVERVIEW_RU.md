@@ -5,7 +5,7 @@ lang: ru
 ---
 
 <p>    
-    <a href="deckhouse-admin-guide_ru.pdf" class="button">
+    <a href="deckhouse-admin-guide.pdf" class="button">
        <i class="fa fa-download"></i>
           Download PDF version
     </a>
