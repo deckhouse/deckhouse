@@ -16,6 +16,13 @@
 image: {{ $imageName }}-vex-artifact
 fromImage: builder/alt
 final: false
+secrets:
+- id: COSIGN_LOGIN
+  value: {{ $context.CosignLogin }}
+- id: COSIGN_PASSWORD
+  value: {{ $context.CosignPassword }}
+- id: COSIGN_KEY
+  value: {{ $context.CosignKey }}
 import:
 - image: tools/cosign
   add: /usr/bin/cosign
@@ -40,6 +47,15 @@ dependencies:
 shell:
   setup:
   - COSIGN_PASSWORD="" cosign generate-key-pair
-  - cosign attest --predicate /known_vulnerabilities.vex --type openvex --key cosign.key --tlog-upload=false -y "${IMAGE_REPO}@${IMAGE_DIGEST}"
+  - |
+    cosign attest \
+      --registry-username="$(cat /run/secrets/COSIGN_LOGIN)" \
+      --registry-password="$(cat /run/secrets/COSIGN_PASSWORD)" \
+      --predicate /known_vulnerabilities.vex \
+      --type openvex \
+      --key cosign.key \
+      --tlog-upload=false \
+      -y \
+      "${IMAGE_REPO}@${IMAGE_DIGEST}"
   {{- end }}
 {{- end }}

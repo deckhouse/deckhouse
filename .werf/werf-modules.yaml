@@ -58,6 +58,9 @@
       {{- $_ := set $ctx "DECKHOUSE_PRIVATE_REPO" $Root.DECKHOUSE_PRIVATE_REPO }}
       {{- $_ := set $ctx "DistroPackagesProxy" $Root.DistroPackagesProxy }}
       {{- $_ := set $ctx "CargoProxy" $Root.CargoProxy }}
+      {{- $_ := set $ctx "CosignLogin" $Root.CosignLogin }}
+      {{- $_ := set $ctx "CosignPassword" $Root.CosignPassword }}
+      {{- $_ := set $ctx "CosignKey" $Root.CosignKey }}
 ---
 {{ include "module_image_template" $ctx }}
   {{- range $ImageYamlMainfest := regexSplit "\n?---[ \t]*\n" (include "module_image_template" $ctx) -1 }}
