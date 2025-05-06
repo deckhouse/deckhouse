@@ -82,7 +82,7 @@ properties:
             enum: [DVPClusterConfiguration]
           sshPublicKey:
             type: string
-            description: a public key for accessing nodes.
+            description: A public key for accessing nodes.
           masterNodeGroup:
             type: object
             additionalProperties: false

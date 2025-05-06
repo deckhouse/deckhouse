@@ -65,8 +65,8 @@ spec:
                 bootloader:
                   default: EFI
                   description:
-                    Bootloader holds the type of underlying firmware this
-                    VM runs on. Must be kept in sync with DVP bootloader enum.
+                    Bootloader specifies the type of underlying firmware on which
+                    the VM runs. It must be kept in sync with the DVP bootloader enum.
                   enum:
                     - BIOS
                     - EFI
@@ -74,8 +74,8 @@ spec:
                   type: string
                 cpu:
                   description:
-                    CPU holds number of cores and processing time allocated
-                    to them.
+                    CPU specifies the number of cores and the share of CPU time
+                    allocated to them.
                   properties:
                     cores:
                       default: 4
@@ -86,7 +86,7 @@ spec:
                       default: 100%
                       description: |-
                         Fraction is a guaranteed share of CPU time that will be allocated to the VM.
-                        Expressed as percentage.
+                        Expressed as a percentage.
                       enum:
                         - 5%
                         - 10%
@@ -103,7 +103,7 @@ spec:
                     - type: integer
                     - type: string
                   default: 8Gi
-                  description: Memory is this machine's RAM amount.
+                  description: Memory specifies the amount of RAM for this machine.
                   pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                   x-kubernetes-int-or-string: true
                 providerID:
@@ -121,12 +121,12 @@ spec:
                 rootDiskStorageClass:
                   description:
                     RootDiskStorageClass holds the name of the StorageClass
-                    to use for bootable disk.
+                    to use for the bootable disk.
                   type: string
                 vmClassName:
                   description: |-
-                    VMClassName defines the name of the VirtualMachineClass resource describing requirements
-                    for a virtual CPU, memory, and the resource allocation policy of this machine.
+                    VMClassName defines the name of the VirtualMachineClass resource that describes the requirements
+                    for virtual CPUs, memory, and the resource allocation policy of this machine.
                   type: string
               required:
                 - bootDiskImageRef
