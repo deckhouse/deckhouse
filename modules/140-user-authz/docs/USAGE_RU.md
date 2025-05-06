@@ -310,7 +310,7 @@ spec:
    EOF
    ```
 
-   Если в конфигурации Deckhouse включён режим мультитенантности (параметр [enableMultiTenancy](configuration.html#parameters-enablemultitenancy)), настройте доступные для ServiceAccount пространства имён (параметр [namespaceSelector](cr.html#clusterauthorizationrule-v1-spec-namespaceselector)).
+   Если в конфигурации Deckhouse включён режим мультитенантности (в параметре [`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)), настройте доступные для ServiceAccount пространства имён (в параметре [`namespaceSelector`](cr.html#clusterauthorizationrule-v1-spec-namespaceselector)).
 
 1. Определите значения переменных (они будут использоваться далее), выполнив следующие команды (**подставьте свои значения**):
 

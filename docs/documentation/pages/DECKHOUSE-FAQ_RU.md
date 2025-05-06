@@ -627,7 +627,7 @@ echo "$MYRESULTSTRING"
 ### Как переключить работающий кластер Deckhouse на использование стороннего registry?
 
 {% alert level="warning" %}
-Использование registry, отличных от `registry.deckhouse.io` и `registry.deckhouse.ru`, доступно только в коммерческих редакция Deckhouse Kubernetes Platform.
+Использование registry, отличных от `registry.deckhouse.io` и `registry.deckhouse.ru`, доступно только в коммерческих редакциях Deckhouse Kubernetes Platform.
 {% endalert %}
 
 Для переключения кластера Deckhouse на использование стороннего registry выполните следующие действия:
@@ -861,7 +861,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 ### Как переключить Deckhouse EE на CE?
 
 {% alert level="warning" %}
-Инструкция подразумевает использование публичного адреса container registry: `registry.deckhouse.ru`. Использование registry отличных от `registry.deckhouse.io` и `registry.deckhouse.ru` доступно только в коммерческих редакция Deckhouse Kubernetes Platform.
+Инструкция подразумевает использование публичного адреса container registry: `registry.deckhouse.ru`. Использование registry, отличных от `registry.deckhouse.io` и `registry.deckhouse.ru`, доступно только в коммерческих редакциях Deckhouse Kubernetes Platform.
 
 В Deckhouse CE не поддерживается работа облачных кластеров на OpenStack и VMware vSphere.
 {% endalert %}
