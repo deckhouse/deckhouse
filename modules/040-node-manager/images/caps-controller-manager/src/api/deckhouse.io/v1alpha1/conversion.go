@@ -18,7 +18,10 @@ package v1alpha1
 
 import (
 	"caps-controller-manager/api/deckhouse.io/v1alpha2"
+	"context"
 	"encoding/base64"
+
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"k8s.io/apimachinery/pkg/conversion"
 )
@@ -34,7 +37,9 @@ func Convert_v1alpha2_SSHCredentialsSpec_To_v1alpha1_SSHCredentialsSpec(in *v1al
 
 func Convert_v1alpha1_SSHCredentialsSpec_To_v1alpha2_SSHCredentialsSpec(in *SSHCredentialsSpec, out *v1alpha2.SSHCredentialsSpec, s conversion.Scope) error {
 	encodedPass := base64.StdEncoding.EncodeToString([]byte(in.SudoPassword))
+	logger := log.FromContext(context.Background())
+	logger.Info("conversing from v1alpha1 to v1alpha2")
 
-	out.SudoPasswordEncoded = string(encodedPass)
+	out.SudoPasswordEncoded = encodedPass
 	return autoConvert_v1alpha1_SSHCredentialsSpec_To_v1alpha2_SSHCredentialsSpec(in, out, s)
 }
