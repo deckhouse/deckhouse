@@ -481,7 +481,7 @@ entries:
             - title:
                 en: Backup and restore
                 ru: Резервное копирование и восстановление
-              url: /admin/configuration/backup/backup-and-restore.html  
+              url: /admin/configuration/backup/backup-and-restore.html
 # ------------- Using -------------
     - title:
         en: Using
@@ -780,7 +780,11 @@ entries:
         - title:
             en: Console utilities
             ru: Консольные утилиты
-          url: /reference/console-utilities.html
+          folders:
+          - title:
+              en: Deckhouse CLI (d8)
+              ru: Deckhouse CLI (d8)
+            url: /reference/cli-tools/d8/
 # ------------- Versions -------------
         - title:
             en: Release notes
