@@ -85,8 +85,13 @@ build:
 
 {{- $_ := set . "SVACE_ANALYZE_SSH_USER" (env "SVACE_ANALYZE_SSH_USER" "user") }}
 
-# goproxy  settings
+# goproxy settings
 {{- $_ := set . "GOPROXY" (env "GOPROXY" "https://proxy.golang.org,direct") }}
+
+# cosign  settings
+{{- $_ := set . "CosignLogin" (env "COSIGN_LOGIN" "") }}
+{{- $_ := set . "CosignPassword" (env "COSIGN_PASSWORD" "") }}
+{{- $_ := set . "CosignKey" (env "COSIGN_KEY" "") }}
 ---
 # render ssh-static
 {{ include "ssh_static_artifact" (dict "Images" .Images "SOURCE_REPO" .SOURCE_REPO "DistroPackagesProxy" .DistroPackagesProxy) }}
