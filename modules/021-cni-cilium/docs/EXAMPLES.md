@@ -4,7 +4,7 @@ title: "The cni-cilium module: examples"
 
 ## Egress Gateway
 
-{% alert level="warning" %} Feature is only available in Enterprise Edition {% endalert %}
+{% alert level="warning" %}This feature is available in the following editions: SE+, EE.{% endalert %}
 
 ### Operation principle
 
