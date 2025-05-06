@@ -485,7 +485,7 @@ spec:
                     - required: ["value"]
                 evictLocalStoragePods:
                   type: object
-                  description: Allows Pods using local storage to be evicted.
+                  description: Allows pods that use local storage to be evicted.
                   properties:
                     enabled:
                       type: boolean
