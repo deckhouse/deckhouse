@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"log/slog"
 	"sort"
 	"sync"
@@ -40,6 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
@@ -281,6 +281,9 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		// clear pull error
 		availableModule.PullError = ""
 
+		// clear overridden
+		availableModule.Overridden = false
+
 		// get update policy
 		policy, err := utils.UpdatePolicy(ctx, r.client, r.embeddedPolicy, moduleName)
 		if err != nil {
@@ -299,15 +302,13 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		if err != nil {
 			return fmt.Errorf("get pull override for the '%s' module: %w", moduleName, err)
 		}
+
+		// skip overridden module
 		if exists {
-			// skip overridden module
 			availableModule.Overridden = true
 			availableModules = append(availableModules, availableModule)
 			continue
 		}
-
-		// clear overridden
-		availableModule.Overridden = false
 
 		var cachedChecksum = availableModule.Checksum
 
@@ -316,6 +317,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		if err != nil {
 			return fmt.Errorf("check if the '%s' module has a release: %w", moduleName, err)
 		}
+
 		// if release does not exist or the version is unset, clear checksum to trigger meta downloading
 		if !exists || availableModule.Version == "" {
 			cachedChecksum = ""
@@ -370,7 +372,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 	}
 
 	// update source status
-	err := utils.UpdateStatus[*v1alpha1.ModuleSource](ctx, r.client, source, func(source *v1alpha1.ModuleSource) bool {
+	err := ctrlutils.UpdateStatusWithRetry(ctx, r.client, source, func() error {
 		source.Status.Phase = v1alpha1.ModuleSourcePhaseActive
 		source.Status.SyncTime = metav1.NewTime(r.dependencyContainer.GetClock().Now().UTC())
 		source.Status.AvailableModules = availableModules
@@ -379,7 +381,8 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		if pullErrorsExist {
 			source.Status.Message = v1alpha1.ModuleSourceMessagePullErrors
 		}
-		return true
+
+		return nil
 	})
 	if err != nil {
 		return fmt.Errorf("update the '%s' module source status: %w", source.Name, err)
@@ -389,8 +392,10 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 	err = utils.Update[*v1alpha1.ModuleSource](ctx, r.client, source, func(source *v1alpha1.ModuleSource) bool {
 		if !controllerutil.ContainsFinalizer(source, v1alpha1.ModuleSourceFinalizerModuleExists) {
 			controllerutil.AddFinalizer(source, v1alpha1.ModuleSourceFinalizerModuleExists)
+
 			return true
 		}
+
 		return false
 	})
 	if err != nil {
