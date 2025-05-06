@@ -204,17 +204,15 @@ for d8_tag in "${d8_tags[@]}"; do
       echo "👾 Scaning Deckhouse image \"${IMAGE_NAME}\" of module \"${MODULE_NAME}\" for tag \"${d8_tag}\""
       echo ""
       if [ "${additional_image_detected}" == true ]; then
-        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --java-db-repository "${TRIVY_JAVA_DB_URL}" --db-repository "${TRIVY_DB_URL}" --exit-code 0 --severity "${SEVERITY}" --format table --scanners vuln --quiet "${d8_image}:${d8_tag}" --username "${trivy_registry_user}" --password "${trivy_registry_pass}" --image-src remote 
         ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --java-db-repository "${TRIVY_JAVA_DB_URL}" --db-repository "${TRIVY_DB_URL}" --exit-code 0 --severity "${SEVERITY}" --format json --scanners vuln --output "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" --quiet "${d8_image}:${d8_tag}" --username "${trivy_registry_user}" --password "${trivy_registry_pass}" --image-src remote 
       else
-        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --java-db-repository "${TRIVY_JAVA_DB_URL}" --db-repository "${TRIVY_DB_URL}" --exit-code 0 --severity "${SEVERITY}" --format table --scanners vuln --quiet "${d8_image}@${IMAGE_HASH}" --username "${trivy_registry_user}" --password "${trivy_registry_pass}" --image-src remote 
         ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --java-db-repository "${TRIVY_JAVA_DB_URL}" --db-repository "${TRIVY_DB_URL}" --exit-code 0 --severity "${SEVERITY}" --format json --scanners vuln --output "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" --quiet "${d8_image}@${IMAGE_HASH}" --username "${trivy_registry_user}" --password "${trivy_registry_pass}" --image-src remote 
       fi
 
       echo ""
       echo " Uploading trivy CVE report for image \"${IMAGE_NAME}\" of \"${MODULE_NAME}\" module"
       echo ""
-      curl -f -X POST \
+      curl -s -S --fail-with-body -X POST \
         --retry 5 \
         --retry-delay 10 \
         --retry-all-errors \
@@ -244,8 +242,7 @@ for d8_tag in "${d8_tags[@]}"; do
         -F "build_id=${IMAGE_HASH}" \
         -F "commit_hash=${GITHUB_SHA}" \
         -F "branch_tag=${d8_tag}" \
-        -F "apply_tags_to_findings=true" \
-      > /dev/null
+        -F "apply_tags_to_findings=true"
     done
   done
 done
