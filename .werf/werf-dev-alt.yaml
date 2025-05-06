@@ -24,7 +24,7 @@ shell:
   beforeInstall:
   - apt-get install -y ca-certificates openssl vim-console bash-completion gettext libexpat libcrypto3 glibc-pthread locale
   install:
-  - pip3 install -f file:///wheels --no-index pyOpenSSL==24.3.0 cryptography==44.0.1
+  - pip3 install -f file:///wheels --no-index pyOpenSSL==24.3.0 cryptography==44.0.1 bcrypt==4.11
   - rm -rf /wheels
   - /binary_replace.sh -i "/usr/bin/envsubst" -o /relocate
 ---
