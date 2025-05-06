@@ -15,16 +15,27 @@
       plk_ignore_labels: "job"
       plk_create_group_if_not_exists__d8_prometheus_operator_unavailable: "D8PrometheusOperatorUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_prometheus_operator_unavailable: "D8PrometheusOperatorUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      description: |-
-        The `prometheus-operator` Pod is not available.
-
-        The new `Prometheus`, `PrometheusRules`, `ServiceMonitor` settings cannot be applied in the cluster; however, all existing and configured components continue to operate correctly.
-        This problem will not affect alerting or monitoring in the short term (a few days).
-
-        The recommended course of action:
-        1. Analyze the Deployment info: `kubectl -n d8-operator-prometheus describe deploy prometheus-operator`;
-        2. Examine the status of the Pod and try to figure out why it is not running: `kubectl -n d8-operator-prometheus describe pod -l app=prometheus-operator`.
       summary: Prometheus is unable to scrape `prometheus-operator` metrics.
+      description: |-
+        The `prometheus-operator` Pod is unavailable.
+
+        As a result, new `Prometheus`, `PrometheusRules`, and `ServiceMonitor` configurations cannot be applied in the cluster.
+        However, all existing and configured components will continue to operate normally.
+        This problem will not affect alerting or monitoring in the short term (for a few days).
+
+        Troubleshooting steps:
+
+        1. Analyze the Deployment details:
+        
+           ```shell
+           kubectl -n d8-operator-prometheus describe deploy prometheus-operator
+           ```
+
+        2. Examine the Pod's to determine why it is not running:
+        
+           ```shell
+           kubectl -n d8-operator-prometheus describe pod -l app=prometheus-operator
+           ```
 
   - alert: D8PrometheusOperatorTargetAbsent
     expr: absent(up{job="prometheus-operator"}) == 1
@@ -39,12 +50,17 @@
       plk_markup_format: "markdown"
       plk_create_group_if_not_exists__d8_prometheus_operator_unavailable: "D8PrometheusOperatorUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_prometheus_operator_unavailable: "D8PrometheusOperatorUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      summary: There is no `prometheus-operator` target in Prometheus.
+      summary: Prometheus-operator target is missing in Prometheus.
       description: |
-        The new `Prometheus`, `PrometheusRules`, `ServiceMonitor` settings cannot be applied in the cluster; however, all existing and configured components continue to operate correctly.
-        This problem will not affect alerting or monitoring in the short term (a few days).
+        As a result, new `Prometheus`, `PrometheusRules`, and `ServiceMonitor` configurations cannot be applied in the cluster.
+        However, all existing and configured components will continue to operate normally.
+        This problem will not affect alerting or monitoring in the short term (for a few days).
 
-        The recommended course of action is to analyze the deployment information: `kubectl -n d8-operator-prometheus describe deploy prometheus-operator`.
+        To resolve the issue, analyze the Deployment details:
+
+        ```shell
+        kubectl -n d8-operator-prometheus describe deploy prometheus-operator
+        ```
 
   - alert: D8PrometheusOperatorPodIsNotReady
     expr: min by (pod) (kube_pod_status_ready{condition="true", namespace="d8-operator-prometheus", pod=~"prometheus-operator-.*"}) != 1
@@ -62,12 +78,23 @@
       plk_grouped_by__d8_prometheus_operator_unavailable: "D8PrometheusOperatorUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: The `prometheus-operator` Pod is NOT Ready.
       description: |
-        The new `Prometheus`, `PrometheusRules`, `ServiceMonitor` settings cannot be applied in the cluster; however, all existing and configured components continue to operate correctly.
-        This problem will not affect alerting or monitoring in the short term (a few days).
+        As a result, new `Prometheus`, `PrometheusRules`, and `ServiceMonitor` configurations cannot be applied in the cluster.
+        However, all existing and configured components will continue to operate normally.
+        This problem will not affect alerting or monitoring in the short term (for a few days).
 
-        The recommended course of action:
-        1. Analyze the Deployment info: `kubectl -n d8-operator-prometheus describe deploy prometheus-operator`;
-        2. Examine the status of the Pod and try to figure out why it is not running: `kubectl -n d8-operator-prometheus describe pod -l app=prometheus-operator`.
+        Troubleshooting steps:
+
+        1. Analyze the Deployment details:
+        
+           ```shell
+           kubectl -n d8-operator-prometheus describe deploy prometheus-operator
+           ```
+
+        2. Examine the Pod's to determine why it is not running:
+        
+           ```shell
+           kubectl -n d8-operator-prometheus describe pod -l app=prometheus-operator
+           ```
 
   - alert: D8PrometheusOperatorPodIsNotRunning
     expr: absent(kube_pod_status_phase{namespace="d8-operator-prometheus",phase="Running",pod=~"prometheus-operator-.*"})
@@ -84,9 +111,20 @@
       plk_grouped_by__d8_prometheus_operator_unavailable: "D8PrometheusOperatorUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: The `prometheus-operator` Pod is NOT Running.
       description: |
-        The new `Prometheus`, `PrometheusRules`, `ServiceMonitor` settings cannot be applied in the cluster; however, all existing and configured components continue to operate correctly.
-        This problem will not affect alerting or monitoring in the short term (a few days).
+        As a result, new `Prometheus`, `PrometheusRules`, and `ServiceMonitor` configurations cannot be applied in the cluster.
+        However, all existing and configured components will continue to operate normally.
+        This problem will not affect alerting or monitoring in the short term (for a few days).
 
-        The recommended course of action:
-        1. Analyze the Deployment info: `kubectl -n d8-operator-prometheus describe deploy prometheus-operator`;
-        2. Examine the status of the Pod and try to figure out why it is not running: `kubectl -n d8-operator-prometheus describe pod -l app=prometheus-operator`.
+        Troubleshooting steps:
+
+        1. Analyze the Deployment details:
+        
+           ```shell
+           kubectl -n d8-operator-prometheus describe deploy prometheus-operator
+           ```
+
+        2. Examine the Pod's to determine why it is not running:
+        
+           ```shell
+           kubectl -n d8-operator-prometheus describe pod -l app=prometheus-operator
+           ```

@@ -8,8 +8,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_labels_as_annotations: "instance,pod"
-      description: '{{ $labels.job }} target is down.'
-      summary: Target is down
+      summary: A target is down.
+      description: Deckhouse has detected that the `{{ $labels.job }}` target is is currently unreachable.
 
   - alert: TargetDown
     expr: up == 0 unless on (job) ALERTS{alertname=~".+TargetDown"}
@@ -19,8 +19,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_labels_as_annotations: "instance,pod"
-      description: '{{ $labels.job }} target is down.'
-      summary: Target is down
+      summary: A target is down.
+      description: Deckhouse has detected that the `{{ $labels.job }}` target is is currently unreachable.
 
   - alert: TargetDown
     expr: up == 0 unless on (job) ALERTS{alertname=~".+TargetDown"}
@@ -30,8 +30,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_labels_as_annotations: "instance,pod"
-      description: '{{ $labels.job }} target is down.'
-      summary: Target is down
+      summary: A target is down.
+      description: Deckhouse has detected that the `{{ $labels.job }}` target is is currently unreachable.
 
   - alert: TargetSampleLimitExceeded
     expr: |
@@ -44,9 +44,9 @@
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       plk_labels_as_annotations: "instance,pod"
+      summary: Scrapes are exceeding the sample limit.
       description: |
-        Target are down because of a sample limit exceeded.
-      summary: Scrapes are exceeding sample limit
+        One or more targets are down because the Prometheus sample limit was exceeded during a scrape.
 
   - alert: TargetSampleLimitExceeded
     expr: |
@@ -59,6 +59,6 @@
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       plk_labels_as_annotations: "instance,pod"
+      summary: Sampling limit is nearly reached.
       description: |
-        The target is close to exceeding the sampling limit. less than 10% left to the limit
-      summary: The sampling limit is close.
+        The target is close to exceeding the Prometheus’s sampling limit. Less than 10% of the allowed samples are left.
