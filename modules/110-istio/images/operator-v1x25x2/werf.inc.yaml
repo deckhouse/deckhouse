@@ -1,5 +1,5 @@
 ---
-{{- $istioVersion := "1.25.1" }}
+{{- $istioVersion := "1.25.2" }}
 {{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioVersion)) }} {{- /* 1.25.2 -> v1x25x2 */}}
 ---
 # Based on https://github.com/istio/istio/blob/1.21.6/operator/docker/Dockerfile.operator
@@ -58,7 +58,7 @@ final: false
 #     - '**/*'
 shell:
   install:
-  - git clone --depth 1 --branch {{ $istioVersion }} {{ $.SOURCE_REPO }}/istio/sail-operator.git /src/operator
+  - git clone --depth 1 --branch 1.25.1 {{ $.SOURCE_REPO }}/istio/sail-operator.git /src/operator
   - cd /src/operator/
   # - git apply --verbose /patches/*.patch
 ---
