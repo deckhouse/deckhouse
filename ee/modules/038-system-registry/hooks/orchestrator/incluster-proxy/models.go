@@ -107,15 +107,13 @@ func (state *State) Process(log go_hook.Logger, params Params, inputs Inputs) (P
 		return result, fmt.Errorf("cannot process config: %w", err)
 	}
 
-	result := ProcessResult{
-		Ready:   true,
-		Message: "Configuration for incluster-proxy processed successfully.",
-	}
+	var result ProcessResult
+
 	switch {
 	case !inputs.IsExist:
 		result = ProcessResult{
 			Ready:   false,
-			Message: "Incluster-proxy does not exist.",
+			Message: "Deploying incluster-proxy...",
 		}
 	case inputs.Version != state.Config.Version:
 		result = ProcessResult{
@@ -129,6 +127,11 @@ func (state *State) Process(log go_hook.Logger, params Params, inputs Inputs) (P
 		result = ProcessResult{
 			Ready:   false,
 			Message: fmt.Sprintf("Incluster-proxy is in progress: %s", inputs.ReadyMsg),
+		}
+	default:
+		result = ProcessResult{
+			Ready:   true,
+			Message: "Configuration for incluster-proxy processed successfully.",
 		}
 	}
 	return result, nil
