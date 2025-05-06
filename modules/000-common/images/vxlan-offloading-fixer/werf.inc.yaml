@@ -9,12 +9,15 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   - cd /src
-  - git clone -b libmnl-1.0.5 --depth 1 {{ .SOURCE_REPO }}/netfilter/libmnl ./libmnl
+  - git clone -b libmnl-1.0.5 --depth 1 $(cat /run/secrets/SOURCE_REPO)/netfilter/libmnl ./libmnl
   - rm -r libmnl/.git
-  - git clone -b v{{ $version }} --depth 1 {{ .SOURCE_REPO }}/ethtool/ethtool.git ./ethtool
+  - git clone -b v{{ $version }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/ethtool/ethtool.git ./ethtool
   - rm -r ethtool/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-ethtool-artifact
@@ -29,8 +32,7 @@ import:
   - libmnl
   - ethtool
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
@@ -54,6 +56,8 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 final: false
+mount:
+{{ include "mount points for golang builds" . }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/vxlan-offloading-fixer
