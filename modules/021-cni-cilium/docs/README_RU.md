@@ -82,7 +82,7 @@ Cilium полностью заменяет собой функционал мо�
 
 ## Использование Egress Gateway
 
-{% alert level="warning" %} Функция доступна только в Enterprise Edition {% endalert %}
+{% alert level="warning" %}Доступно в следующих редакциях Deckhouse Kubernetes Platform: SE+, EE, CSE Lite (1.67), CSE Pro (1.67).{% endalert %}
 
 ### Базовый режим
 

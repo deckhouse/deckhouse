@@ -27,7 +27,7 @@ Deckhouse будет установлен в **минимальной** конф
 ```shell
 bash -c "$(curl -Ls https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/kind-d8.sh)"
 ```
-- Либо выполните следующую команду для установки Deckhouse **Enterprise Edition**, указав лицензионный ключ:
+- Либо выполните следующую команду для установки коммерческой редакции Deckhouse Kubernetes Platform, указав лицензионный ключ:
 ```shell
  echo <LICENSE_KEY> | docker login -u license-token --password-stdin registry.deckhouse.io
 bash -c "$(curl -Ls https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/kind-d8.sh)" -- --key <LICENSE_KEY>

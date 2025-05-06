@@ -279,7 +279,7 @@ spec:
 
 ## Проверка подписи образов
 
-{% alert level="warning" %}Доступно только в Enterprise edition.{% endalert %}
+{% alert level="warning" %}Доступно в следующих редакциях: SE+, EE, CSE Lite (1.67), CSE Pro (1.67).{% endalert %}
 
 В модуле реализована функция проверки подписи образов контейнеров, подписанных с помощью инструмента [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/#:~:text=To%20generate%20a%20key%20pair,prompted%20to%20provide%20a%20password.&text=Alternatively%2C%20you%20can%20use%20the,%2C%20ECDSA%2C%20and%20ED25519%20keys). Проверка подписи образов контейнеров позволяет убедиться в их целостности (что образ не был изменен после его создания) и подлинности (что образ был создан доверенным источником). Включить проверку подписи образов контейнеров в кластере можно с помощью параметра [policies.verifyImageSignatures](cr.html#securitypolicy-v1alpha1-spec-policies-verifyimagesignatures) ресурса SecurityPolicy.
 

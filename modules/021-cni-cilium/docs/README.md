@@ -81,7 +81,7 @@ Cilium fully replaces the functionality of the `kube-proxy` module, so `kube-pro
 
 ## Using Egress Gateway
 
-{% alert level="warning" %} The feature is available only in the Enterprise Edition {% endalert %}
+{% alert level="warning" %}The feature is available only in the following Deckhouse Kubernetes Platform editions: SE+, EE.{% endalert %}
 
 ### Basic mode
 
