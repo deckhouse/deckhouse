@@ -120,9 +120,9 @@ Other operations with master nodes are discussed in the section [working with ma
 
 ### Versioning
 
-Updating the **patch version** of control plane components (i.e. within a minor version, e.g. from `1.27.3` to `1.27.5`) happens automatically when you upgrade the Deckhouse version. You cannot manage patch version upgrades.
+Updating the **patch version** of control plane components (i.e. within a minor version, e.g. from `1.29.13` to `1.29.14`) happens automatically when you upgrade the Deckhouse version. You cannot manage patch version upgrades.
 
-Updating the **minor version** of control plane components (e.g. from `1.26.*` to `1.28.*`) can be managed using the [kubernetesVersion](/products/virtualization-platform/reference/cr/clusterconfiguration.html#clusterconfiguration-kubernetesversion) parameter, which allows you to select the automatic upgrade mode (`Automatic`) or specify the desired minor version. The version that is used by default (`kubernetesVersion: Automatic`) and the list of supported Kubernetes versions can be found in the [documentation](/products/kubernetes-platform/documentation/v1.66/supported_versions.html).
+Updating the **minor version** of control plane components (e.g. from `1.29.*` to `1.31.*`) can be managed using the [kubernetesVersion](/products/virtualization-platform/reference/cr/clusterconfiguration.html#clusterconfiguration-kubernetesversion) parameter, which allows you to select the automatic upgrade mode (`Automatic`) or specify the desired minor version. The version that is used by default (`kubernetesVersion: Automatic`) and the list of supported Kubernetes versions can be found in the [documentation](/products/kubernetes-platform/documentation/v1.66/supported_versions.html).
 
 The control plane upgrade is performed safely for both `multi-master` and `single-master` configurations. During the upgrade, the API server may be briefly unavailable. The upgrade does not affect the operation of applications in the cluster and can be performed without allocating a maintenance window.
 
@@ -131,7 +131,7 @@ If the version specified for the upgrade (the [kubernetesVersion](/products/virt
 - General notes:
   - Upgrades in different NodeGroups are performed in parallel. Within each NodeGroup, nodes are upgraded sequentially, one at a time.
 - When upgrading:
-  - The upgrade occurs in **sequential stages**, one minor version at a time: 1.26 -> 1.27, 1.27 -> 1.28, 1.28 -> 1.29.
+  - The upgrade occurs in **sequential stages**, one minor version at a time: 1.29 -> 1.30, 1.30 -> 1.31, 1.31 -> 1.32.
   - At each stage, the control plane version is first updated, then the kubelet on the cluster nodes is updated.
 - When downgrading:
   - A successful downgrade is guaranteed only one version down from the highest minor control plane version ever used in the cluster.

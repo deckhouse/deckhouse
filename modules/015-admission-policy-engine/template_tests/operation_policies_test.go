@@ -28,7 +28,7 @@ const (
 )
 
 var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation policies", func() {
-	f := SetupHelmConfig(`{global: {discovery: {kubernetesVersion: "1.27.3"}},admissionPolicyEngine: {denyVulnerableImages: {}, podSecurityStandards: {}, internal: {"bootstrapped": true, "ratify": {"webhook": {"key": "YjY0ZW5jX3N0cmluZwo=", "crt": "YjY0ZW5jX3N0cmluZwo=" , "ca": "YjY0ZW5jX3N0cmluZwo="}}, "podSecurityStandards": {"enforcementActions": ["deny"]}, "operationPolicies": [
+	f := SetupHelmConfig(`{global: {discovery: {kubernetesVersion: "1.29.14"}},admissionPolicyEngine: {denyVulnerableImages: {}, podSecurityStandards: {}, internal: {"bootstrapped": true, "ratify": {"webhook": {"key": "YjY0ZW5jX3N0cmluZwo=", "crt": "YjY0ZW5jX3N0cmluZwo=" , "ca": "YjY0ZW5jX3N0cmluZwo="}}, "podSecurityStandards": {"enforcementActions": ["deny"]}, "operationPolicies": [
 {
 	"metadata":{"name":"genpolicy"},
 	"spec":{
@@ -92,7 +92,6 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation 
 			Expect(f.KubernetesGlobalResource("D8RequiredAnnotations", testPolicyName).Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("D8ContainerDuplicates", testPolicyName).Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("D8ReplicaLimits", testPolicyName).Exists()).To(BeTrue())
-
 		})
 	})
 })
