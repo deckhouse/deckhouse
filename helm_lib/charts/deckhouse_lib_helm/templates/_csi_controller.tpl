@@ -216,7 +216,6 @@ spec:
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       {{- end }}
       serviceAccountName: csi
-      automountServiceAccountToken: true
       containers:
       - name: provisioner
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
@@ -478,7 +477,6 @@ metadata:
   name: csi
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | nindent 2 }}
-automountServiceAccountToken: false
 
 # ===========
 # provisioner
