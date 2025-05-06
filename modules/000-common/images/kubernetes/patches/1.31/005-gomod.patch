@@ -554,16 +554,14 @@ index 84f1888aa7f..186fa27cf28 100644
  sigs.k8s.io/kustomize/kustomize/v5 v5.4.2/go.mod h1:5ypfJVYlPb2MKKeoGknVLxvHemDlQT+szI4+KOhnD6k=
  sigs.k8s.io/kustomize/kyaml v0.17.1 h1:TnxYQxFXzbmNG6gOINgGWQt09GghzgTP6mIurOgrLCQ=
 diff --git a/go.work b/go.work
-index 51b38eb127e..8d435e0c717 100644
+index 51b38eb127e..174fe8ac38c 100644
 --- a/go.work
 +++ b/go.work
-@@ -1,6 +1,8 @@
+@@ -1,6 +1,6 @@
  // This is a generated file. Do not edit directly.
  
 -go 1.22.0
-+go 1.23.0
-+
-+toolchain go1.24.2
++go 1.24.2
  
  use (
  	.

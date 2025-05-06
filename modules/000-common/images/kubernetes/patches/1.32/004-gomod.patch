@@ -1,7 +1,16 @@
 diff --git a/go.mod b/go.mod
-index 341092e8038..158c96c1c33 100644
+index 341092e8038..1012858dccf 100644
 --- a/go.mod
 +++ b/go.mod
+@@ -6,7 +6,7 @@
+ 
+ module k8s.io/kubernetes
+ 
+-go 1.23.0
++go 1.24.2
+ 
+ godebug default=go1.23
+ 
 @@ -66,7 +66,7 @@ require (
  	go.etcd.io/etcd/api/v3 v3.5.16
  	go.etcd.io/etcd/client/pkg/v3 v3.5.16
