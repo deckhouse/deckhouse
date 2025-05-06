@@ -16,7 +16,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os/signal"
+	"runtime"
 	"sync"
 	"syscall"
 	"time"
@@ -71,6 +73,7 @@ func main() {
 				externalTargets := nodeTracker.ListExternalTargets()
 				metrics.CleanupMetrics(clusterTargets, externalTargets)
 				PingAll(ctx, clusterTargets, externalTargets, countPings, metrics)
+				fmt.Printf("\033[31mCURRENT COUNT GOROUTINE: %d\033[0m\n", runtime.NumGoroutine())
 			}
 		}
 	}()
