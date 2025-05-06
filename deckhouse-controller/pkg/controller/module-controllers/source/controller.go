@@ -332,7 +332,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		// download module metadata from the specified release channel
 		meta, err := md.DownloadMetadataFromReleaseChannel(moduleName, policy.Spec.ReleaseChannel, cachedChecksum)
 		if err != nil {
-			if module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
+			if module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) && module.Properties.Source == source.Name {
 				r.logger.Warn("failed to download module", slog.String("name", moduleName), log.Err(err))
 				availableModule.PullError = err.Error()
 				pullErrorsExist = true
