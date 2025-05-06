@@ -27,7 +27,7 @@ A Kubernetes cluster will be deployed and Deckhouse will be installed into a clu
 ```shell
 bash -c "$(curl -Ls https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/kind-d8.sh)"
 ```
-- Or run the following command for installing Deckhouse **Enterprise Edition** by providing a license key:
+- Or run the following command for installing a commercial edition of Deckhouse Kubernetes Platform by providing a license key:
 ```shell
  echo <LICENSE_KEY> | docker login -u license-token --password-stdin registry.deckhouse.io
 bash -c "$(curl -Ls https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/kind-d8.sh)" -- --key <LICENSE_KEY>

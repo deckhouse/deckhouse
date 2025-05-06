@@ -4,7 +4,7 @@ title: "Модуль cni-cilium: примеры"
 
 ## Egress Gateway
 
-{% alert level="warning" %} Функция доступна только в Enterprise Edition {% endalert %}
+{% alert level="warning" %}Доступно в следующих редакциях: SE+, EE, CSE Lite (1.67), CSE Pro (1.67).{% endalert %}
 
 ### Принцип работы
 
