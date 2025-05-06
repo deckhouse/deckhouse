@@ -118,7 +118,7 @@ k8s:
       aws: v1.32.0
       vsphere: v1.32.2
       azure: v1.32.4
-      gcp: ccm/v33.0.0
+      gcp: ccm/v30.1.4
     csi:
       aws: v1.40.0
       azure: v1.31.2
@@ -142,7 +142,7 @@ k8s:
       aws: v1.32.0
       vsphere: v1.32.2
       azure: v1.32.4
-      gcp: ccm/v33.0.0
+      gcp: ccm/v30.1.4
     csi:
       aws: v1.40.0
       azure: v1.31.2
@@ -153,7 +153,7 @@ k8s:
       attacher: v4.8.1
       resizer: v1.13.2
       registrar: v2.13.0
-      snapshotter: v8.2.1
+      snapshotter: v8.1.1
       livenessprobe: v2.15.0
 d8:
   d8CliVersion: v0.11.3
