@@ -257,7 +257,7 @@ alerts:
       severity: "4"
       markupFormat: default
     - name: CronJobAuthenticationFailure
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -274,7 +274,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: CronJobAuthorizationFailure
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -291,7 +291,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: CronJobBadImageFormat
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -339,7 +339,7 @@ alerts:
       severity: "5"
       markupFormat: default
     - name: CronJobImageAbsent
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -387,7 +387,7 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: CronJobRegistryUnavailable
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -419,7 +419,7 @@ alerts:
       severity: "6"
       markupFormat: markdown
     - name: CronJobUnknownError
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -2630,7 +2630,7 @@ alerts:
       severity: "8"
       markupFormat: markdown
     - name: D8TerraformStateExporterClusterStateChanged
-      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-state-exporter.tpl
+      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-manager/terraform-state-exporter.tpl
       moduleUrl: 040-terraform-manager
       module: terraform-manager
       edition: ce
@@ -2645,7 +2645,7 @@ alerts:
       severity: "8"
       markupFormat: markdown
     - name: D8TerraformStateExporterClusterStateError
-      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-state-exporter.tpl
+      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-manager/terraform-state-exporter.tpl
       moduleUrl: 040-terraform-manager
       module: terraform-manager
       edition: ce
@@ -2660,7 +2660,7 @@ alerts:
       severity: "8"
       markupFormat: markdown
     - name: D8TerraformStateExporterHasErrors
-      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-state-exporter.tpl
+      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-manager/terraform-state-exporter.tpl
       moduleUrl: 040-terraform-manager
       module: terraform-manager
       edition: ce
@@ -2673,7 +2673,7 @@ alerts:
       severity: "8"
       markupFormat: markdown
     - name: D8TerraformStateExporterNodeStateChanged
-      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-state-exporter.tpl
+      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-manager/terraform-state-exporter.tpl
       moduleUrl: 040-terraform-manager
       module: terraform-manager
       edition: ce
@@ -2688,7 +2688,7 @@ alerts:
       severity: "8"
       markupFormat: markdown
     - name: D8TerraformStateExporterNodeStateError
-      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-state-exporter.tpl
+      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-manager/terraform-state-exporter.tpl
       moduleUrl: 040-terraform-manager
       module: terraform-manager
       edition: ce
@@ -2703,7 +2703,7 @@ alerts:
       severity: "8"
       markupFormat: markdown
     - name: D8TerraformStateExporterNodeTemplateChanged
-      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-state-exporter.tpl
+      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-manager/terraform-state-exporter.tpl
       moduleUrl: 040-terraform-manager
       module: terraform-manager
       edition: ce
@@ -2718,7 +2718,7 @@ alerts:
       severity: "8"
       markupFormat: markdown
     - name: D8TerraformStateExporterPodIsNotReady
-      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-state-exporter.tpl
+      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-manager/terraform-state-exporter.tpl
       moduleUrl: 040-terraform-manager
       module: terraform-manager
       edition: ce
@@ -2733,7 +2733,7 @@ alerts:
       severity: "8"
       markupFormat: markdown
     - name: D8TerraformStateExporterPodIsNotRunning
-      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-state-exporter.tpl
+      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-manager/terraform-state-exporter.tpl
       moduleUrl: 040-terraform-manager
       module: terraform-manager
       edition: ce
@@ -2748,7 +2748,7 @@ alerts:
       severity: "8"
       markupFormat: markdown
     - name: D8TerraformStateExporterTargetAbsent
-      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-state-exporter.tpl
+      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-manager/terraform-state-exporter.tpl
       moduleUrl: 040-terraform-manager
       module: terraform-manager
       edition: ce
@@ -2760,7 +2760,7 @@ alerts:
       severity: "8"
       markupFormat: markdown
     - name: D8TerraformStateExporterTargetDown
-      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-state-exporter.tpl
+      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-manager/terraform-state-exporter.tpl
       moduleUrl: 040-terraform-manager
       module: terraform-manager
       edition: ce
@@ -3115,7 +3115,7 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: DaemonSetAuthenticationFailure
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3132,7 +3132,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: DaemonSetAuthorizationFailure
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3149,7 +3149,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: DaemonSetBadImageFormat
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3166,7 +3166,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: DaemonSetImageAbsent
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3183,7 +3183,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: DaemonSetRegistryUnavailable
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3200,7 +3200,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: DaemonSetUnknownError
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3366,7 +3366,7 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: DeploymentAuthenticationFailure
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3383,7 +3383,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: DeploymentAuthorizationFailure
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3400,7 +3400,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: DeploymentBadImageFormat
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3428,7 +3428,7 @@ alerts:
       severity: "4"
       markupFormat: default
     - name: DeploymentImageAbsent
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3445,7 +3445,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: DeploymentRegistryUnavailable
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3462,7 +3462,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: DeploymentUnknownError
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3790,7 +3790,7 @@ alerts:
       severity: "3"
       markupFormat: default
     - name: K8SKubeletDown
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubelet.tpl
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/kubelet.tpl
       moduleUrl: 340-monitoring-kubernetes
       module: monitoring-kubernetes
       edition: ce
@@ -3800,7 +3800,7 @@ alerts:
       severity: "3"
       markupFormat: default
     - name: K8SKubeletDown
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubelet.tpl
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/kubelet.tpl
       moduleUrl: 340-monitoring-kubernetes
       module: monitoring-kubernetes
       edition: ce
@@ -3810,7 +3810,7 @@ alerts:
       severity: "4"
       markupFormat: default
     - name: K8SKubeletTooManyPods
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubelet.tpl
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/kubelet.tpl
       moduleUrl: 340-monitoring-kubernetes
       module: monitoring-kubernetes
       edition: ce
@@ -3820,7 +3820,7 @@ alerts:
       severity: "7"
       markupFormat: default
     - name: K8SManyNodesNotReady
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubelet.tpl
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/kubelet.tpl
       moduleUrl: 340-monitoring-kubernetes
       module: monitoring-kubernetes
       edition: ce
@@ -3830,7 +3830,7 @@ alerts:
       severity: "3"
       markupFormat: default
     - name: K8SNodeNotReady
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubelet.tpl
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/kubelet.tpl
       moduleUrl: 340-monitoring-kubernetes
       module: monitoring-kubernetes
       edition: ce
@@ -5734,7 +5734,7 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: StatefulSetAuthenticationFailure
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -5751,7 +5751,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: StatefulSetAuthorizationFailure
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -5768,7 +5768,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: StatefulSetBadImageFormat
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -5785,7 +5785,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: StatefulSetImageAbsent
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -5802,7 +5802,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: StatefulSetRegistryUnavailable
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -5819,7 +5819,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: StatefulSetUnknownError
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -5840,7 +5840,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: StorageClassCloudManual
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/storage-class.tpl
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/storage-class.tpl
       moduleUrl: 340-monitoring-kubernetes
       module: monitoring-kubernetes
       edition: ce
@@ -5854,7 +5854,7 @@ alerts:
       severity: "6"
       markupFormat: markdown
     - name: StorageClassDefaultDuplicate
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/storage-class.tpl
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/storage-class.tpl
       moduleUrl: 340-monitoring-kubernetes
       module: monitoring-kubernetes
       edition: ce
@@ -5936,7 +5936,7 @@ alerts:
       severity: "6"
       markupFormat: markdown
     - name: UnsupportedContainerRuntimeVersion
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/cri-version.tpl
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/cri-version.tpl
       moduleUrl: 340-monitoring-kubernetes
       module: monitoring-kubernetes
       edition: ce
