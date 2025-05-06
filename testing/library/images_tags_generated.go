@@ -275,6 +275,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"metricsExporter":  "imageHash-istio-metricsExporter",
 		"operatorV1x19x7":  "imageHash-istio-operatorV1x19x7",
 		"operatorV1x21x6":  "imageHash-istio-operatorV1x21x6",
+		"operatorV1x25x2":  "imageHash-istio-operatorV1x25x2",
 		"pilotV1x19x7":     "imageHash-istio-pilotV1x19x7",
 		"pilotV1x21x6":     "imageHash-istio-pilotV1x21x6",
 		"pilotV1x25x2":     "imageHash-istio-pilotV1x25x2",
