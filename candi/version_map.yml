@@ -34,32 +34,8 @@ bashible: &bashible
     "10.2":
     "11":
 k8s:
-  "1.28":
-    status: end-of-life
-    patch: 15
-    bashible: *bashible
-    clusterAutoscalerPatch: 3
-    crictlPatch: 0
-    ccm:
-      openstack: v1.28.3
-      aws: v1.28.11
-      vsphere: v1.28.1
-      azure: v1.28.13
-      gcp: ccm/v28.10.0
-    csi:
-      aws: v1.34.0
-      azure: v1.28.11
-      gcp: v1.12.13
-      vsphere: v3.0.3
-      openstack: v1.28.3
-      provisioner: v5.2.0
-      attacher: v4.4.0
-      resizer: v1.9.0
-      registrar: v2.13.0
-      snapshotter: v8.1.1
-      livenessprobe: v2.15.0
   "1.29":
-    status: available
+    status: end-of-life
     patch: 15
     bashible: *bashible
     clusterAutoscalerPatch: "2"
@@ -152,6 +128,30 @@ k8s:
       provisioner: v5.2.0
       attacher: v4.8.0
       resizer: v1.13.0
+      registrar: v2.13.0
+      snapshotter: v8.1.1
+      livenessprobe: v2.15.0
+  "1.33":
+    status: preview
+    patch: 0
+    bashible: *bashible
+    clusterAutoscalerPatch: '0'
+    crictlPatch: 0
+    ccm:
+      openstack: v1.31.2
+      aws: v1.32.0
+      vsphere: v1.32.2
+      azure: v1.32.0
+      gcp: ccm/v30.1.4
+    csi:
+      aws: v1.40.0
+      azure: v1.31.2
+      gcp: v1.15.4
+      vsphere: v3.0.3
+      openstack: v1.31.2
+      provisioner: v5.2.0
+      attacher: v4.8.1
+      resizer: v1.13.2
       registrar: v2.13.0
       snapshotter: v8.1.1
       livenessprobe: v2.15.0
