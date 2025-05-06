@@ -1,5 +1,5 @@
 /*
-Copyright 2024 Flant JSC
+Copyright 2025 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
@@ -85,12 +85,12 @@ func (state *State) Stop(inputs Inputs) StopResult {
 	if inputs.IsExist {
 		return StopResult{
 			Ready:   false,
-			Message: "The incluster-proxy is currently active.",
+			Message: "Incluster-proxy is active. Stopping now...",
 		}
 	}
 	return StopResult{
 		Ready:   true,
-		Message: "The incluster-proxy has been successfully stopped.",
+		Message: "Incluster-proxy stopped successfully.",
 	}
 }
 
@@ -119,19 +119,19 @@ func (state *State) Process(log go_hook.Logger, params Params, inputs Inputs) (P
 		result = ProcessResult{
 			Ready: false,
 			Message: fmt.Sprintf(
-				"Incluster-proxy version is out of sync. Current version: %s, expected version: %s.",
+				"Incluster-proxy deployment version mismatch: current %s, expected %s.",
 				inputs.Version, state.Config.Version,
 			),
 		}
 	case !inputs.IsReady:
 		result = ProcessResult{
 			Ready:   false,
-			Message: fmt.Sprintf("Incluster-proxy is in progress: %s", inputs.ReadyMsg),
+			Message: fmt.Sprintf("Incluster-proxy deploying in progress: %s.", inputs.ReadyMsg),
 		}
 	default:
 		result = ProcessResult{
 			Ready:   true,
-			Message: "Configuration for incluster-proxy processed successfully.",
+			Message: "Incluster-proxy deployed successfully.",
 		}
 	}
 	return result, nil
@@ -151,38 +151,33 @@ func (cfg *StateConfig) process(log go_hook.Logger, params Params) error {
 }
 
 func (cfg *InclusterProxyConfig) process(log go_hook.Logger, params Params) error {
-	upstreamUser, err := processUserPasswordHash(
-		log,
-		users.User{
-			UserName:       params.Upstream.UserName,
-			Password:       params.Upstream.Password,
-			HashedPassword: cfg.Upstream.User.HashedPassword,
-		})
-	if err != nil {
+	upstreamUser := users.User{
+		UserName:       params.Upstream.UserName,
+		Password:       params.Upstream.Password,
+		HashedPassword: cfg.Upstream.User.HashedPassword,
+	}
+	if err := processUserPasswordHash(log, &upstreamUser); err != nil {
 		return fmt.Errorf("cannot process Upstream User password hash: %w", err)
 	}
 
-	authCertPair, err := processAuthCertPair(
-		log,
-		CertPair{Cert: cfg.AuthCert, Key: cfg.AuthKey},
-		params.CA,
-	)
-	if err != nil {
-		return fmt.Errorf("cannot process Auth cert and key: %w", err)
-	}
-
-	distributionCertPair, err := processDistributionCertPair(
-		log,
-		CertPair{Cert: cfg.DistributionCert, Key: cfg.DistributionKey},
-		params.CA,
-	)
-	if err != nil {
-		return fmt.Errorf("cannot process Distribution cert and key: %w", err)
+	inclusterProxyPKI := inclusterProxyPKI{}
+	if err := inclusterProxyPKI.Process(log, params.CA, *cfg); err != nil {
+		return fmt.Errorf("cannot process PKI: %w", err)
 	}
 
 	tokenKey, err := pki.EncodePrivateKey(params.Token.Key)
 	if err != nil {
 		return fmt.Errorf("cannot encode Token key: %w", err)
+	}
+
+	authKey, err := pki.EncodePrivateKey(inclusterProxyPKI.Auth.Key)
+	if err != nil {
+		return fmt.Errorf("cannot encode Auth key: %w", err)
+	}
+
+	distributionKey, err := pki.EncodePrivateKey(inclusterProxyPKI.Distribution.Key)
+	if err != nil {
+		return fmt.Errorf("cannot encode Distribution key: %w", err)
 	}
 
 	var upstreamCA string
@@ -193,12 +188,12 @@ func (cfg *InclusterProxyConfig) process(log go_hook.Logger, params Params) erro
 	host, path := getRegistryAddressAndPathFromImagesRepo(params.Upstream.ImagesRepo)
 	*cfg = InclusterProxyConfig{
 		CACert:           string(pki.EncodeCertificate(params.CA.Cert)),
-		AuthCert:         authCertPair.Cert,
-		AuthKey:          authCertPair.Key,
 		TokenCert:        string(pki.EncodeCertificate(params.Token.Cert)),
 		TokenKey:         string(tokenKey),
-		DistributionCert: distributionCertPair.Cert,
-		DistributionKey:  distributionCertPair.Key,
+		AuthCert:         string(pki.EncodeCertificate(inclusterProxyPKI.Auth.Cert)),
+		AuthKey:          string(authKey),
+		DistributionCert: string(pki.EncodeCertificate(inclusterProxyPKI.Distribution.Cert)),
+		DistributionKey:  string(distributionKey),
 		HTTPSecret:       params.HTTPSecret,
 		Upstream: UpstreamRegistryConfig{
 			Scheme: strings.ToLower(params.Upstream.Scheme),

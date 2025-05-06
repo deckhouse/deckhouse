@@ -1,5 +1,5 @@
 /*
-Copyright 2024 Flant JSC
+Copyright 2025 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
@@ -13,12 +13,17 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models/users"
 )
 
-func processUserPasswordHash(log go_hook.Logger, user users.User) (users.User, error) {
-	if !user.IsPasswordHashValid() {
-		log.Warn("Password hash is invalid, generating a new one.", "user", user.UserName)
-		if err := user.UpdatePasswordHash(); err != nil {
-			return user, fmt.Errorf("cannot update password hash for user \"%v\": %w", user.UserName, err)
-		}
+func processUserPasswordHash(log go_hook.Logger, user *users.User) error {
+	log = log.With("action", "ProcessUserPasswordHash", "username", user.UserName)
+
+	if user.IsPasswordHashValid() {
+		return nil
 	}
-	return user, nil
+	log.Warn("Password hash is invalid")
+
+	log.Info("Generating new password hash")
+	if err := user.UpdatePasswordHash(); err != nil {
+		return fmt.Errorf("failed to update password hash for user \"%s\": %w", user.UserName, err)
+	}
+	return nil
 }

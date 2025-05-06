@@ -1,11 +1,12 @@
 /*
-Copyright 2024 Flant JSC
+Copyright 2025 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
 package inclusterproxy
 
 import (
+	"crypto/x509"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -15,70 +16,84 @@ import (
 )
 
 const (
-	authCertCN         = "registry-auth"
-	distributionCertCN = "registry-distribution"
+	inclusterProxyAuthCertCN         = "registry-auth"
+	inclusterProxyDistributionCertCN = "registry-distribution"
 )
 
-func processDistributionCertPair(log go_hook.Logger, certPair CertPair, ca pki.CertKey) (CertPair, error) {
-	hosts := []string{"127.0.0.1", "localhost", helpers.RegistryServiceDNSName}
-	return processCertPair(log, certPair, ca, hosts, distributionCertCN)
+type inclusterProxyPKI struct {
+	Auth         *pki.CertKey
+	Distribution *pki.CertKey
 }
 
-func processAuthCertPair(log go_hook.Logger, certPair CertPair, ca pki.CertKey) (CertPair, error) {
-	hosts := []string{"127.0.0.1", "localhost", helpers.RegistryServiceDNSName}
-	return processCertPair(log, certPair, ca, hosts, authCertCN)
-}
-
-func processCertPair(log go_hook.Logger, certPair CertPair, ca pki.CertKey, hosts []string, cn string) (CertPair, error) {
-	isValid, err := certPair.IsValid(ca, hosts)
-	if !isValid {
-		log.Warn("Certificate pair is invalid, generating a new one.", "cn", cn, "error", err)
-		if err = certPair.Generate(ca, hosts, cn); err != nil {
-			return certPair, fmt.Errorf("failed to generate certificate pair: %w", err)
-		}
-	}
-	return certPair, nil
-}
-
-type CertPair struct {
-	Cert string
-	Key  string
-}
-
-func (certPair *CertPair) IsValid(ca pki.CertKey, hosts []string) (bool, error) {
-	if certPair.Cert == "" || certPair.Key == "" {
-		return false, fmt.Errorf("certificate or key is empty")
-	}
-
-	decodedCertKey, err := pki.DecodeCertKey([]byte(certPair.Cert), []byte(certPair.Key))
+func (nc *inclusterProxyPKI) generate(ca pki.CertKey, hosts []string) error {
+	authPKI, err := pki.GenerateCertificate(inclusterProxyAuthCertCN, ca, hosts...)
 	if err != nil {
-		return false, fmt.Errorf("failed to decode the certificate pair: %w", err)
+		return fmt.Errorf("cannot generate Auth PKI: %w", err)
 	}
 
-	if err := pki.ValidateCertWithCAChain(decodedCertKey.Cert, ca.Cert); err != nil {
-		return false, fmt.Errorf("failed certificate validation: %w", err)
+	distributionPKI, err := pki.GenerateCertificate(inclusterProxyDistributionCertCN, ca, hosts...)
+	if err != nil {
+		return fmt.Errorf("cannot generate Distribution PKI: %w", err)
+	}
+
+	nc.Auth = &authPKI
+	nc.Distribution = &distributionPKI
+	return nil
+}
+
+func (nc *inclusterProxyPKI) loadFromConfig(config InclusterProxyConfig, ca *x509.Certificate, hosts []string) error {
+	if config.AuthCert == "" ||
+		config.AuthKey == "" ||
+		config.DistributionCert == "" ||
+		config.DistributionKey == "" {
+		return fmt.Errorf("missing PKI configuration")
+	}
+
+	authPKI, err := pki.DecodeCertKey([]byte(config.AuthCert), []byte(config.AuthKey))
+	if err != nil {
+		return fmt.Errorf("cannot decode Auth PKI: %w", err)
+	}
+
+	distributionPKI, err := pki.DecodeCertKey([]byte(config.DistributionCert), []byte(config.DistributionKey))
+	if err != nil {
+		return fmt.Errorf("cannot decode Distribution PKI: %w", err)
+	}
+
+	if err := pki.ValidateCertWithCAChain(authPKI.Cert, ca); err != nil {
+		return fmt.Errorf("error validating Auth certificate: %w", err)
+	}
+
+	if err := pki.ValidateCertWithCAChain(distributionPKI.Cert, ca); err != nil {
+		return fmt.Errorf("error validating Distribution certificate: %w", err)
 	}
 
 	for _, host := range hosts {
-		if err := decodedCertKey.Cert.VerifyHostname(host); err != nil {
-			return false, fmt.Errorf("hostname verification failed for \"%v\": %w", host, err)
+		if err := authPKI.Cert.VerifyHostname(host); err != nil {
+			return fmt.Errorf("hostname \"%v\" not supported by Auth certificate: %w", host, err)
+		}
+		if err := distributionPKI.Cert.VerifyHostname(host); err != nil {
+			return fmt.Errorf("hostname \"%v\" not supported by Distribution certificate: %w", host, err)
 		}
 	}
-	return true, nil
+
+	nc.Auth = &authPKI
+	nc.Distribution = &distributionPKI
+	return nil
 }
 
-func (certPair *CertPair) Generate(ca pki.CertKey, hosts []string, cn string) error {
-	newCertPair, err := pki.GenerateCertificate(cn, ca, hosts...)
-	if err != nil {
-		return fmt.Errorf("failed to generate certificate pair: %w", err)
-	}
+func (nc *inclusterProxyPKI) Process(log go_hook.Logger, ca pki.CertKey, config InclusterProxyConfig) error {
+	certHosts := []string{"127.0.0.1", "localhost", helpers.RegistryServiceDNSName}
+	log = log.With("action", "ProcessInclusterProxyPKI")
 
-	certPair.Cert = string(pki.EncodeCertificate(newCertPair.Cert))
-
-	encodedKey, err := pki.EncodePrivateKey(newCertPair.Key)
-	if err != nil {
-		return fmt.Errorf("failed to encode private key: %w", err)
+	err := nc.loadFromConfig(config, ca.Cert, certHosts)
+	if err == nil {
+		return nil
 	}
-	certPair.Key = string(encodedKey)
+	log.Warn("Failed to decode PKI from config", "error", err)
+
+	log.Info("Generating new PKI")
+	if err := nc.generate(ca, certHosts); err != nil {
+		return fmt.Errorf("cannot generate new PKI: %w", err)
+	}
 	return nil
 }
