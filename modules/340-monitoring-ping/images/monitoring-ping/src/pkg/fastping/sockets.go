@@ -16,6 +16,7 @@ package fastping
 
 import (
 	"bytes"
+	"container/heap"
 	"context"
 	"encoding/binary"
 	"fmt"
@@ -294,35 +295,93 @@ func (p *Pinger) listenReplies(ctx context.Context, conn *socketConn) error {
 	}
 }
 
-func (p *Pinger) sendPings(ctx context.Context, conn *socketConn) error {
-	log.Info(fmt.Sprintf("Sending pings, count: %d", p.count))
+// sendEventLoop schedules ping packets using a priority queue and sends them at precise intervals.
+// It avoids spawning many goroutines, providing efficient timing even for thousands of hosts.
+func (p *Pinger) sendEventLoop(ctx context.Context, conn *socketConn) error {
+	log.Info("Starting sendEventLoop with min-heap scheduling")
 
-	for i := 0; i < p.count; i++ {
-		for _, host := range p.hosts {
-			select {
-			case <-ctx.Done():
-				log.Info("sendPings loop interrupted by context cancellation")
-				return ctx.Err()
-			default:
-				if err := conn.SendPacket(host); err != nil {
-					log.Warn(fmt.Sprintf("failed to send ping to %s: %v", host, err))
-					continue
-				}
-				p.mu.Lock()
-				p.sentCount[host]++
-				p.mu.Unlock()
-			}
+	h := &pingHeap{}
+	heap.Init(h)
+
+	now := time.Now()
+
+	// Initialize first wave of scheduled pings for all hosts
+	for _, host := range p.hosts {
+		heap.Push(h, &scheduledPing{
+			host:   host,
+			sendAt: now,
+			count:  p.count,
+		})
+	}
+
+	for h.Len() > 0 {
+		select {
+		case <-ctx.Done():
+			log.Info("sendEventLoop stopped due to context cancellation")
+			return ctx.Err()
+		default:
 		}
 
-		// Sleep between rounds
-		if i < p.count-1 {
-			time.Sleep(p.interval)
+		next := (*h)[0]
+		now = time.Now()
+		sleepDur := next.sendAt.Sub(now)
+
+		if sleepDur > 0 {
+			time.Sleep(sleepDur)
+		}
+
+		// Send the actual ICMP packet
+		if err := conn.SendPacket(next.host); err != nil {
+			log.Warn(fmt.Sprintf("Failed to send ping to %s: %v", next.host, err))
+		} else {
+			p.mu.Lock()
+			p.sentCount[next.host]++
+			p.mu.Unlock()
+		}
+
+		heap.Pop(h)
+
+		// Schedule the next ping if remaining
+		next.count--
+		if next.count > 0 {
+			next.sendAt = next.sendAt.Add(p.interval)
+			heap.Push(h, next)
 		}
 	}
 
-	log.Info(fmt.Sprintf("Completed sending %d pings per host", p.count))
+	log.Info("Completed all scheduled pings")
 	return nil
 }
+
+// func (p *Pinger) sendPings(ctx context.Context, conn *socketConn) error {
+// 	log.Info(fmt.Sprintf("Sending pings, count: %d", p.count))
+
+// 	for i := 0; i < p.count; i++ {
+// 		for _, host := range p.hosts {
+// 			select {
+// 			case <-ctx.Done():
+// 				log.Info("sendPings loop interrupted by context cancellation")
+// 				return ctx.Err()
+// 			default:
+// 				if err := conn.SendPacket(host); err != nil {
+// 					log.Warn(fmt.Sprintf("failed to send ping to %s: %v", host, err))
+// 					continue
+// 				}
+// 				p.mu.Lock()
+// 				p.sentCount[host]++
+// 				p.mu.Unlock()
+// 			}
+// 		}
+
+// 		// Sleep between rounds
+// 		if i < p.count-1 {
+// 			time.Sleep(p.interval)
+// 		}
+// 	}
+
+// 	log.Info(fmt.Sprintf("Completed sending %d pings per host", p.count))
+// 	return nil
+// }
 
 // func (s *socketConn) cleanupLoop(ctx context.Context) {
 // 	ticker := time.NewTicker(10 * time.Second)
