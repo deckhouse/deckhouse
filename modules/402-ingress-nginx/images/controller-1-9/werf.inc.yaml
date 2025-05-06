@@ -151,6 +151,8 @@ mount:
 secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   {{- include "alpine packages proxy" . | nindent 2 }}
