@@ -284,3 +284,58 @@ are backed by Advanced DaemonSets):
 ```shell
 kubectl drain <node_name> --delete-emptydir-data --ignore-daemonsets --force
 ```
+
+## Web Application Firewall (WAF)
+
+Software known as a Web Application Firewall (WAF) is used to protect web applications from Layer 7 attacks.
+Ingress-nginx controller has a built-in WAF called `ModSecurity' (The Open Worldwide Application Security Project).
+
+ModSecurity is disabled by default.
+
+### Enabling ModSecurity
+
+To enable ModSecurity, you must specify the following parameters in the `config` section of the CR IngressNginxController:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: <name_of_the_controller>
+spec:
+  config:
+    enable-modsecurity: "true"
+    modsecurity-snippet: |
+      Include /etc/nginx/modsecurity/modsecurity.conf
+```
+
+After that, ModSecurity will start working for all traffic passing through this ingress-nginx controller.
+This uses the audit mode (`DetectionOnly`) and [basic recommended configuration](https://github.com/owasp-modsecurity/ModSecurity/blob/v3/master/modsecurity.conf-recommended)
+
+### Setting up ModSecurity
+
+You can configure ModSecurity in two ways:
+- For the entire ingress-nginx controller
+  - the necessary directives are described in the section `config.modsecurity-snippet` in CR IngressNginxController, as in the example above.
+- For each CR Ingress separately
+  - the necessary directives are described in the annotation `nginx.ingress.kubernetes.io/modsecurity-snippet : |` directly in Ingress manifests.
+
+In order to start performing actions, not just logging, you need to add the `SecRuleEngine On` directive.
+
+For example like this:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: <name_of_the_controller>
+spec:
+  config:
+    enable-modsecurity: "true"
+    modsecurity-snippet: |
+      Include /etc/nginx/modsecurity/modsecurity.conf
+      SecRuleEngine On
+```
+
+A full list and description of the directives can be found in the [official documentation](https://github.com/owasp-modsecurity/ModSecurity/wiki/Reference-Manual-%28v3.x%29 ).
+
+Currently, the OWASP Core Rule Set (CRS) is not available.
