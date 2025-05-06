@@ -489,7 +489,7 @@ spec:
                   properties:
                     enabled:
                       type: boolean
-                      description: Make the option is active.
+                      description: Make the option active.
                 strategies:
                   type: object
                   description: Settings of strategies for the Descheduler instances.
