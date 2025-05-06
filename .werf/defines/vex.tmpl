@@ -14,7 +14,7 @@
   {{- if $vexFile }}
 ---
 image: {{ $imageName }}-vex-artifact
-fromImage: builder/alt
+fromImage: builder/alpine
 final: false
 secrets:
 - id: COSIGN_LOGIN
