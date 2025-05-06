@@ -1,0 +1,44 @@
+# put image with vex mitigations to registry.
+# Mitigations can be found in the known_vulnerabilities.vex file in the image directory
+# input parameters:
+# list of $ and image name.
+# list ($ "common/kubernetes")
+{{- define "vex_mitigation" }}
+  {{- $context := index . 0 }}
+  {{- $imageName := index . 1 }}
+  {{- $knownVulnPath := (printf "/%smodules/%s-%s/images/%s/known_vulnerabilities.vex" $context.ModulePath $context.ModulePriority $context.ModuleName $context.ImageName) }}
+  {{- $vexFile := false }}
+  {{- if eq (len ($context.Files.Glob $knownVulnPath)) 1 }}
+    {{- $vexFile = true }}
+  {{- end }}
+  {{- if $vexFile }}
+---
+image: {{ $imageName }}-vex-artifact
+fromImage: builder/alt
+final: false
+import:
+- image: tools/cosign
+  add: /usr/bin/cosign
+  to: /usr/bin/cosign
+  before: setup
+git:
+- add: /{{ $knownVulnPath }}
+  to: /known_vulnerabilities.vex
+  includePaths:
+  - '**/*'
+  stageDependencies:
+    setup:
+    - '**/*'
+dependencies:
+- image: {{ $imageName }}
+  before: setup
+  imports:
+  - type: ImageDigest
+    targetEnv: IMAGE_DIGEST
+  - type: ImageRepo
+    targetEnv: IMAGE_REPO
+shell:
+  setup:
+  - cosign attest --predicate /known_vulnerabilities.vex --type openvex "${IMAGE_REPO}@${IMAGE_DIGEST}"
+  {{- end }}
+{{- end }}
