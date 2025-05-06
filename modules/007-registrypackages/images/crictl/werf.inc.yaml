@@ -40,7 +40,7 @@ shell:
   - rm -rf hack/tools .git vendor
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-from: {{ $.Images.BASE_SCRATCH }}
+fromImage: builder/scratch
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
@@ -61,7 +61,7 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/alpine
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
   add: /src
