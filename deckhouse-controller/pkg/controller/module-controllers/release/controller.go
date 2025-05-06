@@ -723,32 +723,30 @@ func (r *reconciler) updatePolicy(ctx context.Context, release *v1alpha1.ModuleR
 
 // ApplyRelease applies predicted release
 func (r *reconciler) ApplyRelease(ctx context.Context, mr *v1alpha1.ModuleRelease, task *releaseUpdater.Task) error {
-	var dri *releaseUpdater.ReleaseInfo
+	var (
+		dri            *releaseUpdater.ReleaseInfo
+		currentVersion *semver.Version
+	)
 
-	if task != nil {
+	if task != nil && task.DeployedReleaseInfo != nil {
 		dri = task.DeployedReleaseInfo
+		currentVersion = dri.Version
 	}
 
-	versions, err := r.getIntermediateModuleVersions(ctx, mr.GetModuleName(), mr.GetVersion(), mr.GetVersion())
+	versions, err := r.getIntermediateModuleVersions(ctx, mr.GetModuleName(), currentVersion, mr.GetVersion())
 	if err != nil {
 		return fmt.Errorf("get intermediate versions: %w", err)
 	}
 
-	taskCalculator := releaseUpdater.NewModuleReleaseTaskCalculator(r.client, r.log)
-
 	for _, version := range versions {
 		tmpMr := mr.DeepCopy()
 		tmpMr.Spec.Version = version.String()
-		err := r.runReleaseDeploy(ctx, tmpMr, dri)
-		if err != nil {
+		if err = r.runReleaseDeploy(ctx, tmpMr, dri); err != nil {
 			return fmt.Errorf("run release deploy: %w", err)
 		}
-		task, err := taskCalculator.CalculatePendingReleaseTask(ctx, tmpMr)
-		if err != nil && !errors.Is(err, releaseupdater.ErrReleasePhaseIsNotPending) {
-			return fmt.Errorf("failed to calculate pending release task: %w", err)
-		}
-		if task != nil {
-			dri = task.DeployedReleaseInfo
+		dri = &releaseupdater.ReleaseInfo{
+			Name:    tmpMr.GetName(),
+			Version: version,
 		}
 	}
 

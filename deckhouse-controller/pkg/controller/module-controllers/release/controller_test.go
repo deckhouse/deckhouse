@@ -135,17 +135,6 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	require.NoError(suite.T(), err)
 	ctx := suite.Context()
 
-	// dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
-	// 	ManifestStub: func() (*crv1.Manifest, error) {
-	// 		return &crv1.Manifest{
-	// 			Layers: []crv1.Descriptor{},
-	// 		}, nil
-	// 	},
-	// 	LayersStub: func() ([]crv1.Layer, error) {
-	// 		return []crv1.Layer{}, nil
-	// 	},
-	// }, nil)
-
 	suite.Run("simple", func() {
 		dc := newMockedContainerWithData(nil, "v1.4.3", []string{"parca-v1.4.3"})
 		suite.setupReleaseController(suite.fetchTestFileData("simple.yaml"), withDependencyContainer(dc))
@@ -207,6 +196,14 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		suite.setupReleaseController(suite.fetchTestFileData("clean-up-outdated-module-releases-for-deployed.yaml"), withDependencyContainer(dc))
 		suite.updateModuleReleasesStatuses()
 		_, err = suite.ctr.handleDeployedRelease(context.TODO(), suite.getModuleRelease("echo-v0.4.54"))
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("step-by-step", func() {
+		dc := newMockedContainerWithData(nil, "v1.27.0", []string{"v1.26.2", "v1.26.3", "v1.26.4", "v1.27.0", "v1.27.1"})
+		suite.setupReleaseController(suite.fetchTestFileData("step-by-step.yaml"), withDependencyContainer(dc))
+		mr := suite.getModuleRelease("parca-1.27.0")
+		_, err = suite.ctr.handleRelease(context.TODO(), mr)
 		require.NoError(suite.T(), err)
 	})
 
