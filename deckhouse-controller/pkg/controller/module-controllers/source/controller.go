@@ -335,10 +335,10 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			if module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
 				r.logger.Warn("failed to download module", slog.String("name", moduleName), log.Err(err))
 				availableModule.PullError = err.Error()
-				availableModules = append(availableModules, availableModule)
 				pullErrorsExist = true
 			}
 			availableModule.Version = "unknown"
+			availableModules = append(availableModules, availableModule)
 			continue
 		}
 
