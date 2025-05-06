@@ -1,6 +1,6 @@
 module github.com/deckhouse/deckhouse/dhctl
 
-go 1.23.1
+go 1.23.8
 
 require (
 	github.com/BurntSushi/toml v1.3.2
