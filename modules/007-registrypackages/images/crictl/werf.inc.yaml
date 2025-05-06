@@ -61,7 +61,7 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
-fromImage: builder/alpine
+fromImage: builder/golang-alpine
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
   add: /src
