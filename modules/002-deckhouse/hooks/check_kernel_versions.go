@@ -51,20 +51,8 @@ type nodeConstraint struct {
 
 var constraints = []nodeConstraint{
 	{
-		KernelVersionConstraint: ">= 4.9.17",
+		KernelVersionConstraint: ">= 5.8",
 		ModulesListInUse:        []string{"cni-cilium"},
-	},
-	{
-		KernelVersionConstraint: ">= 5.7",
-		ModulesListInUse:        []string{"cni-cilium", "istio"},
-	},
-	{
-		KernelVersionConstraint: ">= 5.7",
-		ModulesListInUse:        []string{"cni-cilium", "openvpn"},
-	},
-	{
-		KernelVersionConstraint: ">= 5.7",
-		ModulesListInUse:        []string{"cni-cilium", "node-local-dns"},
 	},
 }
 
