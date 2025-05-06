@@ -257,7 +257,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
-	suite.Run("source with module with pull error", func() {
+	suite.Run("source with pull error", func() {
 		dependency.TestDC.CRClient.ListTagsMock.Return([]string{"enabledmodule", "errormodule"}, nil)
 		dependency.TestDC.CRClient.ImageMock.Set(func(tag string) (crv1.Image, error) {
 			if tag == "alpha" {

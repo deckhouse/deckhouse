@@ -168,6 +168,32 @@ func (r *reconciler) releaseExists(ctx context.Context, sourceName, moduleName, 
 	return true, nil
 }
 
+// needToEnsureRelease checks that the module enabled, the source is the active source,
+// release exists, and checksum not changed.
+func (r *reconciler) needToEnsureRelease(source *v1alpha1.ModuleSource,
+	module *v1alpha1.Module,
+	sourceModule v1alpha1.AvailableModule,
+	meta downloader.ModuleDownloadResult,
+	releaseExists bool) bool {
+	// check the active source
+	if module.Properties.Source != source.Name {
+		r.logger.Debug("source not active, skip module",
+			slog.String("source_name", source.Name),
+			slog.String("name", module.Name))
+
+		return false
+	}
+
+	// check the module enabled
+	if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
+		r.logger.Debug("skip disabled module", slog.String("name", module.Name))
+
+		return false
+	}
+
+	return sourceModule.Checksum != meta.Checksum || (meta.ModuleVersion != "" && !releaseExists)
+}
+
 func (r *reconciler) ensureModuleRelease(ctx context.Context, sourceUID types.UID, sourceName, moduleName, policy string, meta downloader.ModuleDownloadResult) error {
 	release := new(v1alpha1.ModuleRelease)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: fmt.Sprintf("%s-%s", moduleName, meta.ModuleVersion)}, release); err != nil {
@@ -265,7 +291,7 @@ func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, r
 		if !apierrors.IsNotFound(err) {
 			return nil, fmt.Errorf("get the '%s' module: %w", moduleName, err)
 		}
-		r.logger.Debug("module not installed", slog.String("name", moduleName))
+
 		module = &v1alpha1.Module{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       v1alpha1.ModuleGVK.Kind,
@@ -279,6 +305,7 @@ func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, r
 			},
 		}
 		r.logger.Debug("module not found, create it", slog.String("name", moduleName))
+
 		if err = r.client.Create(ctx, module); err != nil {
 			return nil, fmt.Errorf("create the '%s' module: %w", moduleName, err)
 		}

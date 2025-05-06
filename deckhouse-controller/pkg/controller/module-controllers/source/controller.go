@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"log/slog"
 	"sort"
 	"sync"
@@ -265,7 +266,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 	var pullErrorsExist bool
 	for _, moduleName := range pulledModules {
 		if moduleName == "modules" || len(moduleName) > 64 {
-			r.logger.Warn("the modules has a forbidden name, skip it.", slog.String("name", moduleName))
+			r.logger.Warn("the module has a forbidden name, skip it", slog.String("name", moduleName))
 			continue
 		}
 
@@ -294,12 +295,6 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			return fmt.Errorf("ensure the '%s' module: %w", moduleName, err)
 		}
 
-		if module == nil {
-			availableModules = append(availableModules, availableModule)
-			// skip module
-			continue
-		}
-
 		exists, err := utils.ModulePullOverrideExists(ctx, r.client, moduleName)
 		if err != nil {
 			return fmt.Errorf("get pull override for the '%s' module: %w", moduleName, err)
@@ -314,18 +309,6 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		// clear overridden
 		availableModule.Overridden = false
 
-		if module.Properties.Source != source.Name {
-			availableModules = append(availableModules, availableModule)
-			r.logger.Debug("source not active, skip it", slog.String("source_name", source.Name), slog.String("name", moduleName))
-			continue
-		}
-
-		if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
-			availableModules = append(availableModules, availableModule)
-			r.logger.Debug("skip disabled module", slog.String("name", moduleName))
-			continue
-		}
-
 		var cachedChecksum = availableModule.Checksum
 
 		// check if release exists
@@ -333,59 +316,51 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		if err != nil {
 			return fmt.Errorf("check if the '%s' module has a release: %w", moduleName, err)
 		}
+		// if release does not exist or the version is unset, clear checksum to trigger meta downloading
 		if !exists || availableModule.Version == "" {
-			// if release does not exist or the version is unset, clear checksum to trigger meta downloading
 			cachedChecksum = ""
 		}
 
-		// download module metadata from the specified release channel
 		r.logger.Debug(
 			"download meta from release channel for module from module source",
 			slog.String("release channel", policy.Spec.ReleaseChannel),
 			slog.String("name", moduleName),
 			slog.String("source_name", source.Name),
 		)
+		// download module metadata from the specified release channel
 		meta, err := md.DownloadMetadataFromReleaseChannel(moduleName, policy.Spec.ReleaseChannel, cachedChecksum)
 		if err != nil {
 			r.logger.Warn("failed to download module", slog.String("name", moduleName), log.Err(err))
 			availableModule.PullError = err.Error()
 			availableModules = append(availableModules, availableModule)
 			pullErrorsExist = true
-			// set the downloading error phase for the module
-			err = utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
-				if module.Status.Phase == v1alpha1.ModulePhaseAvailable || module.Status.Phase == v1alpha1.ModulePhaseConflict {
-					module.Status.Phase = v1alpha1.ModulePhaseDownloadingError
-					module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDownloadingError, err.Error())
-					return true
-				}
-				return false
-			})
-			if err != nil {
-				return fmt.Errorf("update the '%s' module: %w", moduleName, err)
-			}
 			continue
 		}
 
-		if availableModule.Checksum != meta.Checksum || (meta.ModuleVersion != "" && !exists) {
-			err = utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
+		if r.needToEnsureRelease(source, module, availableModule, meta, exists) {
+			err = ctrlutils.UpdateStatusWithRetry(ctx, r.client, module, func() error {
 				if module.Status.Phase == v1alpha1.ModulePhaseAvailable || module.Status.Phase == v1alpha1.ModulePhaseConflict {
 					module.Status.Phase = v1alpha1.ModulePhaseDownloading
 					module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDownloading, v1alpha1.ModuleMessageDownloading)
-					return true
 				}
-				return false
+
+				return nil
 			})
 			if err != nil {
 				return fmt.Errorf("update the '%s' module: %w", moduleName, err)
 			}
 
-			r.logger.Debug("ensure module release for module for the module source", slog.String("name", moduleName), slog.String("source_name", source.Name))
+			r.logger.Debug("ensure module release from the source",
+				slog.String("name", moduleName),
+				slog.String("source_name", source.Name))
 			if err = r.ensureModuleRelease(ctx, source.GetUID(), source.Name, moduleName, policy.Name, meta); err != nil {
 				return fmt.Errorf("ensure module release for the '%s' module: %w", moduleName, err)
 			}
+
+			// update checksum
 			availableModule.Checksum = meta.Checksum
-			availableModule.Version = meta.ModuleVersion
 		}
+
 		// set module version
 		if meta.ModuleVersion != "" {
 			availableModule.Version = meta.ModuleVersion

@@ -19,10 +19,12 @@ status:
   message: ""
   modules:
   - name: disabledmodule
+    version: v1.2.3
   - checksum: 'sha256:'
     name: enabledmodule
     version: v1.2.3
   - name: notthissourcemodule
+    version: v1.2.3
   - checksum: 'sha256:'
     name: withpolicymodule
     policy: test-alpha
