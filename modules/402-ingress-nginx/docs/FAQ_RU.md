@@ -290,7 +290,7 @@ kubectl drain <node_name> --delete-emptydir-data --ignore-daemonsets --force
 ## Web Application Firewall (WAF)
 
 Для защиты веб-приложений от L7-атак используется программное обеспечение известное как Web Application Firewall (WAF).
-В ingress-nginx контроллер встроен WAF под названием `ModSecurity` (проект OpenSource Web Application Firewall).
+В ingress-nginx контроллер встроен WAF под названием `ModSecurity` (проект Open Worldwide Application Security).
 
 По умолчанию ModSecurity выключен.
 

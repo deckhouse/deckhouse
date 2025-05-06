@@ -288,7 +288,7 @@ kubectl drain <node_name> --delete-emptydir-data --ignore-daemonsets --force
 ## Web Application Firewall (WAF)
 
 Software known as a Web Application Firewall (WAF) is used to protect web applications from Layer 7 attacks.
-Ingress-nginx controller has a built-in WAF called `ModSecurity' (OpenSource Web Application Firewall project).
+Ingress-nginx controller has a built-in WAF called `ModSecurity' (The Open Worldwide Application Security Project).
 
 ModSecurity is disabled by default.
 
