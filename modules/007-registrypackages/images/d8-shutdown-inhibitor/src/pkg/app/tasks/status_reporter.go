@@ -20,8 +20,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-
-	"d8_shutdown_inhibitor/pkg/kubernetes"
 )
 
 const (
@@ -36,8 +34,6 @@ const (
 type StatusReporter struct {
 	// UnlockInhibitorsCh is a channel to get event about unlocking inhibitors.
 	UnlockInhibitorsCh <-chan struct{}
-
-	NodeName string
 }
 
 func (s *StatusReporter) Run(ctx context.Context, errCh chan error) {
@@ -53,11 +49,6 @@ func (s *StatusReporter) Run(ctx context.Context, errCh chan error) {
 		errCh <- fmt.Errorf("statusReporter create files: %w", err)
 		return
 	}
-	err = s.patchCondition("True", "DeckhouseInhibitorIsLockedByLabeledPods")
-	if err != nil {
-		errCh <- fmt.Errorf("statusReporter set Node condition: %w", err)
-		return
-	}
 
 	// Wait until inhibitors are unlocked.
 	select {
@@ -68,8 +59,6 @@ func (s *StatusReporter) Run(ctx context.Context, errCh chan error) {
 	}
 
 	s.cleanupFiles()
-	err = s.patchCondition("False", "DeckhouseInhibitorIsUnlocked")
-	fmt.Printf("statusReporter(s1): inhibitors unlocked, failed to unset condition on Node: %v\n", err)
 }
 
 func (s *StatusReporter) ensureReportDir() error {
@@ -98,9 +87,4 @@ func (s *StatusReporter) createFiles() error {
 func (s *StatusReporter) cleanupFiles() {
 	_ = os.Remove(enabledFilePath)
 	_ = os.Remove(inhibitedFilePath)
-}
-
-func (s *StatusReporter) patchCondition(status, reason string) error {
-	k := kubernetes.NewDefaultKubectl()
-	return k.PatchCondition("Node", s.NodeName, "GracefulShutdownPostpone", status, reason, "")
 }
