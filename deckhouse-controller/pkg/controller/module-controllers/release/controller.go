@@ -55,6 +55,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -743,7 +744,7 @@ func (r *reconciler) ApplyRelease(ctx context.Context, mr *v1alpha1.ModuleReleas
 			return fmt.Errorf("run release deploy: %w", err)
 		}
 		task, err := taskCalculator.CalculatePendingReleaseTask(ctx, tmpMr)
-		if err != nil {
+		if err != nil && !errors.Is(err, releaseupdater.ErrReleasePhaseIsNotPending) {
 			return fmt.Errorf("failed to calculate pending release task: %w", err)
 		}
 		if task != nil {
