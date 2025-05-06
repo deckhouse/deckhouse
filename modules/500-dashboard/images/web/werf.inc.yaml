@@ -29,15 +29,15 @@ import:
   add: /src
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
-- from: tmp_dir
-  to: /root/.cache/go-build
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
   - cd /src/modules/web
-  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-  - go mod download
+  - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   - go build -trimpath -ldflags="-s -w -X k8s.io/dashboard/web/pkg/environment.Version=v{{ $version }}" -o /dashboard-web .
   - chown 64535:64535 /dashboard-web
   - chmod 0755 /dashboard-web
@@ -49,9 +49,6 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   before: install
-mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
@@ -77,9 +74,12 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   - cd /src
-  - git clone --depth 1 -b web/v{{ $version }} {{ .SOURCE_REPO }}/kubernetes/dashboard .
+  - git clone --depth 1 -b web/v{{ $version }} $(cat /run/secrets/SOURCE_REPO)/kubernetes/dashboard .
   - cp /patches/* /src/modules/web/
   - rm -r .git .github charts docs
