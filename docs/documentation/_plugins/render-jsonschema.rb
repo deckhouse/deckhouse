@@ -945,11 +945,8 @@ module JSONSchemaRenderer
         end
 
         result.push('<div markdown="0">')
-        if page['layout'] == "pdf"
-          result.push(convert(%Q(<h3>#{input["kind"]}</h3>)))
-        else
-          result.push(convert(%Q(<h2>#{input["kind"]}</h2>)))
-        end
+        headerLevel = @page['layout'] == "pdf" ? 3 : 2
+        result.push(%Q(<h#{headerLevel}>#{input["kind"]}</h#{headerLevel}>))
 
         for i in 0..(input["apiVersions"].length-1)
           result.push("<p><font size='-1'>Version: #{input["apiVersions"][i]["apiVersion"]}</font></p>")
