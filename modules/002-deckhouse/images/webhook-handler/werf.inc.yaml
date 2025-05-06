@@ -2,13 +2,13 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/shell-operator
 import:
-- image: common/yq4-artifact
-  add: /usr/local/bin/yq
-  to: /usr/local/bin/yq
+- image: tools/yq
+  add: /usr/bin/yq
+  to: /usr/bin/yq
   before: install
-- image: common/semver-artifact
-  add: /usr/local/bin/semver
-  to: /usr/local/bin/semver
+- image: tools/semver
+  add: /usr/bin/semver
+  to: /usr/bin/semver
   before: setup
 - image: prometheus/prometheus
   add: /bin/promtool
