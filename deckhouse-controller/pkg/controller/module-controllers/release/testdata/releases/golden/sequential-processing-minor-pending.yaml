@@ -94,7 +94,7 @@ status:
   message: ""
   phase: Superseded
   pullDuration: 9m15s
-  size: 0
+  size: 21
   transitionTime: "2019-10-17T15:33:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -132,5 +132,5 @@ status:
   message: ""
   phase: Deployed
   pullDuration: 9m15s
-  size: 0
+  size: 21
   transitionTime: "2024-05-03T20:55:49Z"

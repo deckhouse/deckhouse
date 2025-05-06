@@ -93,7 +93,7 @@ status:
   message: ""
   phase: Deployed
   pullDuration: 9m15s
-  size: 0
+  size: 21
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -145,5 +145,5 @@ status:
   message: ""
   phase: Deployed
   pullDuration: 9m15s
-  size: 0
+  size: 21
   transitionTime: null
