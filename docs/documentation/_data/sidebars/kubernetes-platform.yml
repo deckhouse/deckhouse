@@ -777,6 +777,14 @@ entries:
                 ru: Проекты
               url: /test/admin/projects.html
         - title:
+            en: Using
+            ru: Использование
+          folders:
+            - title:
+                en: Projects
+                ru: Проекты
+              url: /test/user/projects.html
+        - title:
             en: Architecture
             ru: Архитектура
           folders:
