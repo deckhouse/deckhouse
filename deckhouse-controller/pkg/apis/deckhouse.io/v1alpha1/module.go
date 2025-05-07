@@ -46,7 +46,6 @@ const (
 	ModulePhaseInstalling       = "Installing"
 	ModulePhaseDownloaded       = "Downloaded"
 	ModulePhaseConflict         = "Conflict"
-	ModulePhaseDeployed         = "Deployed"
 	ModulePhaseReady            = "Ready"
 	ModulePhaseError            = "Error"
 
