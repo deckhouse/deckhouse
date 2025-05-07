@@ -105,6 +105,7 @@ jobs:
     - name: Send success report
       if: ${{ steps.create-pull-request.outputs.pull-request-operation == 'created' }}
       env:
+        LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
         LOOP_TOKEN: ${{secrets.LOOP_CVE_REPORTS_SEND_TOKEN}}
         LOOP_CHANNEL_ID: ${{secrets.LOOP_E2E_REPORT_CHANEL_ID}}
       run: |
@@ -113,6 +114,7 @@ jobs:
     - name: Send failure report
       if: failure()
       env:
+        LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
         LOOP_TOKEN: ${{secrets.LOOP_CVE_REPORTS_SEND_TOKEN}}
         LOOP_CHANNEL_ID: ${{secrets.LOOP_E2E_REPORT_CHANEL_ID}}
       run: |
