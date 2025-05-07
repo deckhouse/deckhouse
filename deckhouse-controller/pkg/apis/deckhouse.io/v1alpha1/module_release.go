@@ -168,13 +168,13 @@ func (mr *ModuleRelease) GetPhase() string {
 }
 
 func (mr *ModuleRelease) GetForce() bool {
-	v, ok := mr.Annotations[ModuleReleaseAnnotationForce]
+	// handle deckhouse release annotation too
+	v, ok := mr.Annotations[DeckhouseReleaseAnnotationForce]
 	if ok && v == "true" {
 		return true
 	}
 
-	// handle deckhouse release annotation too
-	v, ok = mr.Annotations[DeckhouseReleaseAnnotationForce]
+	v, ok = mr.Annotations[ModuleReleaseAnnotationForce]
 	return ok && v == "true"
 }
 
