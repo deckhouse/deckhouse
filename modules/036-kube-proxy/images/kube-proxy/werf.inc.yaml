@@ -31,4 +31,6 @@ git:
 imageSpec:
   config:
     entrypoint: ["/usr/bin/kube-proxy"]
-  {{- end }}
+---
+{{- include "vex_mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName ($version | replace "." "-"))) }}
+{{- end }}

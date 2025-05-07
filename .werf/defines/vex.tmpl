@@ -46,8 +46,8 @@ dependencies:
     targetEnv: IMAGE_REPO
 shell:
   setup:
-  - COSIGN_PASSWORD="" cosign generate-key-pair
   - |
+    COSIGN_PASSWORD="" \
     cosign attest \
       --registry-username="$(cat /run/secrets/COSIGN_LOGIN)" \
       --registry-password="$(cat /run/secrets/COSIGN_PASSWORD)" \
