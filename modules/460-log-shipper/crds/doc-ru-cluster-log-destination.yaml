@@ -191,6 +191,13 @@ spec:
                     encoding:
                       description: |
                         В каком формате закодировать сообщение.
+                      properties:
+                        codec:
+                          description: |
+                            Доступные форматы для декодирования.
+                        cef:
+                          description: |
+                            Поля конфигурации, специфичные для CEF. Применяется только в том случае, если для кодирования установлено значение «CEF».
                     keyField:
                       description: |
                         Позволяет задать поле [key_field](https://vector.dev/docs/reference/configuration/sinks/kafka/#key_field).
