@@ -1,9 +1,7 @@
 {{- if (.Values.global.enabledModules | has "operator-prometheus") }}
-  {{- $versions := .Values.istio.internal.operatorVersionsToInstall }}
-  {{- if not (and (eq (len $versions) 1) (eq (first $versions) "1.25")) }}
-    {{- range $version := .Values.istio.internal.operatorVersionsToInstall }}
-      {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
-      {{- $revision := get $versionInfo "revision" }}
+  {{- range $version := .Values.istio.internal.operatorVersionsToInstall }}
+    {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
+    {{- $revision := get $versionInfo "revision" }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
@@ -40,6 +38,5 @@ spec:
     - sourceLabels: [__meta_kubernetes_pod_ready]
       regex: "true"
       action: keep
-    {{- end }}
   {{- end }}
 {{- end }}
