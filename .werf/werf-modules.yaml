@@ -73,15 +73,15 @@
       {{- $_ := set $ctx "gitPrefix" $Root.gitPrefix }}
 ---
 {{ include "module_image_template" $ctx }}
-  {{- range $ImageYamlMainfest := regexSplit "^---[ \t]*\n" (include "module_image_template" $ctx) -1 }}
-  {{- $ImageManifest := $ImageYamlMainfest | fromYaml }}
-  {{- if $ImageManifest.image }}
-  {{- if ne $ImageManifest.final false }}
-  {{- $ModulesImagesDigestList = append $ModulesImagesDigestList $ImageManifest.image }}
+  {{- range $ImageYamlMainfest := regexSplit "\n?---[ \t]*\n" (include "module_image_template" $ctx) -1 }}
+    {{- $ImageManifest := $ImageYamlMainfest | fromYaml }}
+    {{- if $ImageManifest.image }}
+      {{- if ne $ImageManifest.final false }}
+        {{- $ModulesImagesDigestList = append $ModulesImagesDigestList $ImageManifest.image }}
+      {{- end }}
+    {{- end }}
   {{- end }}
-  {{- end }}
-  {{- end }}
-  {{- end }}
+{{- end }}
 ---
 # render images digest image
 {{ include "images_digest_image" (dict "Images" .Images "ModulesImagesDigestList" $ModulesImagesDigestList) }}
