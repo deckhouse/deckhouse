@@ -160,6 +160,7 @@ spec:
             value: "false"
           - name: OPERATOR_USE_LOCAL_POLICIES
             value: "true"
+          {{- include "helm_lib_envs_for_proxy" . | nindent 10 }}
         ports:
           - name: metrics
             containerPort: 8080

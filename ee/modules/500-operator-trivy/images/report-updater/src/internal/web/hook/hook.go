@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hook
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -13,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"report-updater/cache"
+	"report-updater/internal/cache"
 
 	"github.com/aquasecurity/trivy-operator/pkg/apis/aquasecurity/v1alpha1"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -46,14 +47,14 @@ func NewHandler(logger *log.Logger, dict cache.Cache, settings *HandlerSettings)
 	}, nil
 }
 
-func (h *Handler) StartRenewCacheLoop() {
+func (h *Handler) StartRenewCacheLoop(ctx context.Context) {
 	ticker := time.NewTicker(h.settings.DictRenewInterval)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
 			h.logger.Println("Starting periodic dictionary update")
-			h.dictionary.RenewBduDictionary()
+			h.dictionary.Renew(ctx)
 		}
 	}
 }
@@ -94,15 +95,17 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	admissionReviewReq := &admissionv1.AdmissionReview{}
-	var err error
+	admissionReviewReq := new(admissionv1.AdmissionReview)
 	if err := json.NewDecoder(r.Body).Decode(admissionReviewReq); err != nil {
 		// this case is exceptional
 		h.logger.Fatalf("cannot unmarshal kubernetes request: %v", err)
+		return
 	}
 
+	var err error
 	if admissionReviewReq, err = h.mutateRequest(admissionReviewReq); err != nil {
 		h.logger.Fatalf("cannot mutate report: %s: %v", admissionReviewReq.Request.Name, err)
+		return
 	}
 
 	respData, err := json.Marshal(admissionReviewReq)

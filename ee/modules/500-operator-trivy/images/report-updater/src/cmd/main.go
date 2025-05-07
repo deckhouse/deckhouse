@@ -6,12 +6,13 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
 	"os"
 	"time"
 
-	"report-updater/web"
+	"report-updater/internal/web"
 )
 
 var config web.ServerConfig
@@ -32,11 +33,12 @@ func init() {
 }
 
 func main() {
-	newServer, err := web.NewServer(&config)
+	server, err := web.NewServer(&config)
 	if err != nil {
 		config.Logger.Fatal(err)
 	}
-	if err := newServer.Run(); err != nil {
+
+	if err = server.Run(context.Background()); err != nil {
 		config.Logger.Fatal(err)
 	}
 }
