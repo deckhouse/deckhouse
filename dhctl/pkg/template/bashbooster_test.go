@@ -33,6 +33,7 @@ proxy:
   httpProxy: http://10.130.0.31:8888
   httpsProxy: http://10.130.0.31:8888
 `
+
 var initConfig = `
 ---
 apiVersion: deckhouse.io/v1
@@ -45,7 +46,6 @@ deckhouse:
 `
 
 func TestRenderBashBooster(t *testing.T) {
-
 	metaConfig, err := config.ParseConfigFromData(clusterConfig + initConfig)
 	if err != nil {
 		t.Errorf("ParseConfigFromData error: %v", err)
