@@ -62,7 +62,7 @@ function upload_file() {
 
 function send_post() {
   file_ids=$(IFS=,; echo "[${file_id_array[*]}]")
-  curl -f -L -X POST "${server_url}/api/v4/posts" \
+  curl -f -v -L -X POST "${server_url}/api/v4/posts" \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer ${token}" \
     --data "{\"channel_id\": \"${channel_id}\",\"message\": \"${message}\",\"file_ids\": ${file_ids}}"
