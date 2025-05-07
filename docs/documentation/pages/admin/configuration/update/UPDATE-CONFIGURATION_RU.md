@@ -28,7 +28,7 @@ sudo -i d8 k get mc deckhouse -o yaml | grep releaseChannel
 
 ## Смена канала обновлений
 
-Чтобы сменить канал обновлений, укажите его название в параметре `settings.releaseChannel` модуля `deckhouse`(#TODO).
+Чтобы сменить канал обновлений, укажите его название в [параметре `settings.releaseChannel`](../../../reference/mc/deckhouse/#parameters-releasechannel) модуля `deckhouse`.
 
 Пример конфигурации с каналом `Stable`:
 
@@ -80,11 +80,11 @@ spec:
 
 ### Автоматическое обновление
 
-Автоматический режим активируется при указании параметра `releaseChannel` в конфигурации модуля `deckhouse` (#TODO).
+Автоматический режим активируется при указании параметра [`releaseChannel`](../../../reference/mc/deckhouse/#parameters-releasechannel) в конфигурации модуля `deckhouse`.
 При выполнении этого условия:
 
 1. DKP раз в минуту проверяет канал обновлений на наличие нового релиза.
-1. При появлении нового релиза DKP скачивает его в кластер и создает кастомный ресурс DeckhouseRelease(#TODO).
+1. При появлении нового релиза DKP скачивает его в кластер и создает [кастомный ресурс DeckhouseRelease](../../../reference/cr/deckhouserelease).
 1. После появления кастомного ресурса DeckhouseRelease в кластере
    DKP выполняет обновление на соответствующую версию согласно установленным параметрам обновления
    (по умолчанию — автоматически, в любое время).
@@ -107,7 +107,7 @@ sudo -i d8 k get deckhousereleases
 {% endalert %}
 
 Чтобы полностью отключить автоматическое обновление DKP,
-удалите параметр `releaseChannel` в конфигурации модуля `deckhouse`(#TODO).
+удалите [параметр `releaseChannel`](../../../reference/mc/deckhouse/#parameters-releasechannel) в конфигурации модуля `deckhouse`.
 
 ### Ручное подтверждение обновлений
 
@@ -115,7 +115,7 @@ sudo -i d8 k get deckhousereleases
 
 - Включен режим подтверждения обновлений DKP.
 
-  Это значит, что для параметра `settings.update.mode` модуля `deckhouse`(#TODO) задано значение `Manual`
+  Это значит, что для [параметра `settings.update.mode`](../../../reference/mc/deckhouse/#parameters-update-mode) модуля `deckhouse` задано значение `Manual`
   (подтверждение как патч-версии, так и минорной версии DKP) или `AutoPatch` (подтверждение минорной версии DKP).
 
   Для подтверждения обновления выполните следующую команду, указав необходимую версию DKP вместо `<DECKHOUSE-VERSION>`:
@@ -128,7 +128,7 @@ sudo -i d8 k get deckhousereleases
   которые могут привести к кратковременному простою в работе системных компонентов.
 
   Это значит,
-  что для параметра `spec.disruptions.approvalMode`(#TODO) у соответствующего ресурса NodeGroup задано значение `Manual`.
+  что для [параметра `spec.disruptions.approvalMode`](../../../reference/cr/nodegroup/#nodegroup-v1-spec-disruptions-approvalmode) у соответствующего ресурса NodeGroup задано значение `Manual`.
 
   Для обновления узлов в такой группе установите аннотацию `update.node.deckhouse.io/disruption-approved=` на каждый узел.
 
@@ -154,8 +154,8 @@ DKP позволяет задавать *окна обновлений* — вр
 
 Управлять окнами обновлений DKP можно следующими способами:
 
-- **для общего управления обновлениями** используйте параметр `update.windows` модуля `deckhouse`(#TODO);
-- **для управления обновлениями, которые могут привести к кратковременному простою в работе системных компонентов**, используйте параметры `disruptions.automatic.windows`(#TODO) и `disruptions.rollingUpdate.windows`(#TODO) ресурса NodeGroup.
+- **для общего управления обновлениями** используйте [параметр `update.windows`](../../../reference/mc/deckhouse/#parameters-update-windows) модуля `deckhouse`;
+- **для управления обновлениями, которые могут привести к кратковременному простою в работе системных компонентов**, используйте параметры [`disruptions.automatic.windows`](../../../reference/cr/nodegroup/#nodegroup-v1-spec-disruptions-automatic-windows) и [`disruptions.rollingUpdate.windows`](../../../reference/cr/nodegroup/#nodegroup-v1-spec-disruptions-rollingupdate-windows) ресурса NodeGroup.
 
 #### Примеры конфигурации
 
