@@ -70,7 +70,7 @@
       {{- $_ := set $ctx "Commit" $Root.Commit }}
 ---
 {{ include "module_image_template" $ctx }}
-  {{- range $ImageYamlMainfest := regexSplit "\n?---[ \t]*\n" (include "module_image_template" $ctx) -1 }}
+  {{- range $ImageYamlMainfest := regexSplit "^---[ \t]*\n" (include "module_image_template" $ctx) -1 }}
   {{- $ImageManifest := $ImageYamlMainfest | fromYaml }}
   {{- if $ImageManifest.image }}
   {{- if ne $ImageManifest.final false }}
