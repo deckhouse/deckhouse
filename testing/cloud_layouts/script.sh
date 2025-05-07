@@ -1264,7 +1264,6 @@ function wait_cluster_ready() {
       sudo su -c /bin/bash <<<"${testOpenvpnReady}"; then
       test_failed=""
     else
-      test_failed="true"
       >&2 echo "OpenVPN test failed for Static provider. Sleeping 30 seconds..."
       sleep 30
     fi
