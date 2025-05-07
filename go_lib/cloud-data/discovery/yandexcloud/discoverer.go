@@ -33,6 +33,7 @@ import (
 
 	v1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/cloud-data/discovery/meta"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -87,7 +88,7 @@ func (d *Discoverer) InstanceTypes(_ context.Context) ([]v1alpha1.InstanceType, 
 	return nil, nil
 }
 
-func (d *Discoverer) DiscoveryData(ctx context.Context) ([]byte, error) {
+func (d *Discoverer) DiscoveryData(ctx context.Context, _ meta.DiscoveryDataOptions) ([]byte, error) {
 	var (
 		discoveryData = v1.DiscoveryData{}
 		err           error
