@@ -1,0 +1,127 @@
+kind: YandexCloudProviderDiscoveryData
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    type: object
+    description: |
+      Contains information about data discovered from the cloud.
+    required:
+      - kind
+      - version
+      - diskTypes
+      - images
+      - zones
+      - networks
+      - subnets
+      - externalAddresses
+    properties:
+      apiVersion:
+        type: string
+        enum: [deckhouse.io/v1alpha1]
+      kind:
+        type: string
+        enum: [YandexCloudProviderDiscoveryData]
+      diskTypes:
+        type: array
+        items:
+          type: string
+          minLength: 1
+        uniqueItems: true
+      networks:
+        type: array
+        items:
+          type: object
+          required:
+            - name
+            - id
+            - createdAt
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            createdAt:
+              type: string
+              format: date-time
+      subnets:
+        type: array
+        items:
+          type: object
+          required:
+            - name
+            - id
+            - networkId
+            - v4cidr
+            - createdAt
+            - zone
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            networkId:
+              type: string
+              description: id of network subnet belongs to
+            v4cidr:
+              type: string
+              example: 10.0.0.0/24
+            createdAt:
+              type: string
+              format: date-time
+            zone:
+              type: string
+      externalAddresses:
+        type: array
+        items:
+          type: object
+          required:
+            - id
+            - ip
+            - zone
+            - used
+          properties:
+            id:
+              type: string
+            zone:
+              type: string
+            ip:
+              type: string
+              description: ipv4 external address
+              format: ipv4
+              example: "91.12.34.2"
+            used:
+              type: boolean
+      images:
+        type: array
+        items:
+          type: object
+          required:
+            - imageId
+            - name
+            - family
+            - createdAt
+          properties:
+            imageId:
+              type: string
+            name:
+              type: string
+            family:
+              type: string
+            createdAt:
+              type: string
+              format: date-time
+      zones:
+        type: array
+        items:
+          type: string
+          minLength: 1
+        minItems: 1
+        uniqueItems: true
+      platforms:
+        description: list of all available platform IDs
+        type: array
+        items:
+          type: string
+          minLength: 1
+        minItems: 1
+        uniqueItems: true
