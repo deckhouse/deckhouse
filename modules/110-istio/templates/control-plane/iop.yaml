@@ -46,6 +46,7 @@ securityContext:
   {{ end }}
 {{ end }}
 
+{{- $versions := .Values.istio.internal.operatorVersionsToInstall }}
 {{- range $version := .Values.istio.internal.versionsToInstall }}
   {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
   {{- $revision := get $versionInfo "revision"}}
