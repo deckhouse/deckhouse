@@ -173,6 +173,7 @@ func (mr *ModuleRelease) GetForce() bool {
 		return true
 	}
 
+	// handle deckhouse release annotation too
 	v, ok = mr.Annotations[DeckhouseReleaseAnnotationForce]
 	return ok && v == "true"
 }
