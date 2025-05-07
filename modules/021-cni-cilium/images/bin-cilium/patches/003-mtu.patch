@@ -1,13 +1,13 @@
-diff --git a/plugins/cilium-cni/main.go b/plugins/cilium-cni/main.go
-index 217981d3a1..78cd95b662 100644
---- a/plugins/cilium-cni/main.go
-+++ b/plugins/cilium-cni/main.go
-@@ -492,7 +492,7 @@ func cmdAdd(args *skel.CmdArgs) (err error) {
- 			peer      netlink.Link
- 			tmpIfName string
- 		)
--		veth, peer, tmpIfName, err = connector.SetupVeth(ep.ContainerID, int(conf.DeviceMTU),
-+		veth, peer, tmpIfName, err = connector.SetupVeth(ep.ContainerID, int(conf.RouteMTU),
- 			int(conf.GROMaxSize), int(conf.GSOMaxSize),
- 			int(conf.GROIPV4MaxSize), int(conf.GSOIPV4MaxSize), ep)
- 		if err != nil {
+diff --git a/plugins/cilium-cni/cmd/cmd.go b/plugins/cilium-cni/cmd/cmd.go
+index 4b22b204a5..451db580fd 100644
+--- a/plugins/cilium-cni/cmd/cmd.go
++++ b/plugins/cilium-cni/cmd/cmd.go
+@@ -590,7 +590,7 @@ func (cmd *Cmd) Add(args *skel.CmdArgs) (err error) {
+ 		switch conf.DatapathMode {
+ 		case datapathOption.DatapathModeVeth:
+ 			cniID := ep.ContainerID + ":" + ep.ContainerInterfaceName
+-			veth, peer, tmpIfName, err := connector.SetupVeth(cniID, int(conf.DeviceMTU),
++			veth, peer, tmpIfName, err := connector.SetupVeth(cniID, int(conf.RouteMTU),
+ 				int(conf.GROMaxSize), int(conf.GSOMaxSize),
+ 				int(conf.GROIPV4MaxSize), int(conf.GSOIPV4MaxSize), ep, sysctl)
+ 			if err != nil {
