@@ -19,9 +19,12 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v1.3.1 {{ $.SOURCE_REPO }}/ratify-project/ratify.git /src
+  - git clone --depth 1 --branch v1.3.1 $(cat /run/secrets/SOURCE_REPO)/ratify-project/ratify.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
   - rm -rf .git
@@ -35,11 +38,13 @@ import:
   to: /src
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
-  - export GOPROXY={{ .GOPROXY }}
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - cd /src
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /ratify cmd/ratify/main.go
   - chown 64535:64535 /ratify

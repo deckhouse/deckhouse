@@ -516,10 +516,10 @@ jobs:
             INSTALL_IMAGE=${BRANCH_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}
             pull_push_rmi 'dev/install-standalone' ${INSTALL_IMAGE_SRC} ${INSTALL_IMAGE}
 
-            echo "⚓️ 💫 [$(date -u)] Publish 'e2e-terraform' image to dev-registry using tag ${IMAGE_TAG}".
-            INSTALL_IMAGE_SRC="$(jq -r '.Images."e2e-terraform".DockerImageName' images_tags_werf.json)"
-            INSTALL_IMAGE=${BRANCH_REGISTRY_PATH}/e2e-terraform:${IMAGE_TAG}
-            pull_push_rmi 'e2e-terraform' ${INSTALL_IMAGE_SRC} ${INSTALL_IMAGE}
+            echo "⚓️ 💫 [$(date -u)] Publish 'e2e-opentofu-eks' image to dev-registry using tag ${IMAGE_TAG}".
+            INSTALL_IMAGE_SRC="$(jq -r '.Images."e2e-opentofu-eks".DockerImageName' images_tags_werf.json)"
+            INSTALL_IMAGE=${BRANCH_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}
+            pull_push_rmi 'e2e-opentofu-eks' ${INSTALL_IMAGE_SRC} ${INSTALL_IMAGE}
           fi
 
 
@@ -802,7 +802,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images@sha256:15a61588f40a0adee525ca956f70d0e40eb9bc0a3220ef1bdc3cb4f66e241b28"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images@sha256:7f2838a3779bb9759accba1cbea7ea7aa086cc67ec763718004febb47948570c"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'

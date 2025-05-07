@@ -511,7 +511,7 @@ spec:
        principals: ["foo.local/*", "bar.local/*"]
 ```
 
-### Разрешить любые запросы только кластеров foo или bar, при этом из nространства имён baz
+### Разрешить любые запросы только кластеров foo или bar, при этом из пространства имён baz
 
 ```yaml
 apiVersion: security.istio.io/v1beta1
@@ -563,7 +563,7 @@ spec:
 
 ## Устройство федерации из двух кластеров с помощью кастомного ресурса IstioFederation
 
-> Доступно только в редакции Enterprise Edition.
+{% alert level="warning" %}Доступно в редакциях Enterprise Edition и Certified Security Edition Pro (1.67).{% endalert %}
 
 Cluster A:
 
@@ -591,7 +591,7 @@ spec:
 
 ## Устройство мультикластера из двух кластеров с помощью ресурса IstioMulticluster
 
-> Доступно только в редакции Enterprise Edition.
+{% alert level="warning" %}Доступно только в редакции Enterprise Edition.{% endalert %}
 
 Cluster A:
 
@@ -666,6 +666,6 @@ kubectl get pods -A -o json | jq --arg revision "v1x19" \
 
 ### Автоматическое обновление data plane Istio
 
-> Доступно только в редакции Enterprise Edition.
+{% alert level="warning" %}Доступно в редакциях Enterprise Edition и Certified Security Edition Pro (1.67).{% endalert %}
 
 Для автоматизации обновления istio-sidecar'ов установите лейбл `istio.deckhouse.io/auto-upgrade="true"` на `Namespace` либо на отдельный ресурс — `Deployment`, `DaemonSet` или `StatefulSet`.

@@ -5,6 +5,11 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 final: false
 fromImage: common/relocate-artifact
+import:
+- image: common/python-static
+  add: /opt/python-static
+  to: /opt/python-static
+  before: install
 shell:
   install:
   - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
@@ -27,13 +32,26 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 git:
-- add: /{{ $.ModulePath }}modules/450-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/iptables-loop.py
+- add: /{{ $.ModulePath }}modules/450-{{ $.ModuleName }}/images/{{ $.ImageName }}/iptables-loop.py
   to: /iptables-loop.py
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /relocate
   to: /
   before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /opt/python-static/bin
+  to: /usr/bin
+  before: install
+  includePaths:
+  - python3*
+  - python3
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /opt/python-static/lib
+  to: /usr/lib
+  before: install
+  includePaths:
+  - python3*
 - image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
   add: /
   to: /sbin
@@ -45,12 +63,3 @@ import:
   add: /iptables-wrapper
   to: /sbin/iptables-wrapper
   before: setup
-- image: base/python
-  add: /
-  to: /
-  before: install
-  includePaths:
-  - lib/ld-musl-x86_64*
-  - usr/bin/python3*
-  - usr/lib/python3*
-  - usr/lib/libc.so
