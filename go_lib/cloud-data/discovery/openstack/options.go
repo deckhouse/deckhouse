@@ -2,6 +2,8 @@ package openstack
 
 import (
 	"bytes"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"os"
 
@@ -34,7 +36,7 @@ func WithOptionsFromEnv() Option {
 		}
 
 		if caCertPath := os.Getenv("OS_CACERT"); caCertPath != "" {
-			err = WithCertFile(caCertPath)(d)
+			err = WithCaCertFile(caCertPath)(d)
 			if err != nil {
 				return err
 			}
@@ -62,8 +64,7 @@ func WithRegion(region string) Option {
 
 func WithCaCert(pemData []byte) Option {
 	return func(d *Discoverer) error {
-		ok := d.transport.TLSClientConfig.
-			RootCAs.AppendCertsFromPEM(bytes.TrimSpace(pemData))
+		ok := d.loadCaCert(pemData, false)
 		if !ok {
 			return fmt.Errorf("error parsing CA Cert")
 		}
@@ -71,15 +72,21 @@ func WithCaCert(pemData []byte) Option {
 	}
 }
 
-// TODO: check ca cert file continuously at runtime.
-// Ca cert updating might be needed to support prev discoverer version's
-// functionality
-func WithCertFile(caCertPath string) Option {
+func WithCaCertFile(caCertPath string) Option {
 	return func(d *Discoverer) error {
-		caCert, err := os.ReadFile(caCertPath)
-		if err != nil {
-			return fmt.Errorf("error reading CA Cert: %s", err)
-		}
-		return WithCaCert(caCert)(d)
+		d.caCertPath = caCertPath
+		return nil
 	}
+}
+
+// loadCaCert adds PEM CA certificate to discoverer transport. Cert will be appended to chain, if overwrite is set to false.
+// If overwrite is true, provided cert will replace the whole existing chain (needed to preserve previous version's logic).
+func (d *Discoverer) loadCaCert(pemData []byte, overwrite bool) bool {
+	if overwrite {
+		config := &tls.Config{}
+		config.RootCAs = x509.NewCertPool()
+		d.transport.TLSClientConfig = config
+	}
+	return d.transport.TLSClientConfig.
+		RootCAs.AppendCertsFromPEM(bytes.TrimSpace(pemData))
 }

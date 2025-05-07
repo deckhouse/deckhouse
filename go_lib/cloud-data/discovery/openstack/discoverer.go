@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -33,12 +34,14 @@ import (
 type Discoverer struct {
 	logger *log.Logger
 
-	authOpts     gophercloud.AuthOptions
+	authOpts gophercloud.AuthOptions
+
 	region       string
 	moduleConfig []byte
 	clusterUUID  string
 
-	transport *http.Transport
+	transport  *http.Transport
+	caCertPath string
 }
 
 type Option func(d *Discoverer) error
@@ -53,7 +56,7 @@ func NewDiscoverer(logger *log.Logger, options ...Option) (*Discoverer, error) {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.TLSClientConfig = config
 
-	discoverer.transport = &http.Transport{}
+	discoverer.transport = transport
 
 	for _, o := range options {
 		err := o(discoverer)
@@ -198,6 +201,16 @@ func (d *Discoverer) newProvider() (*gophercloud.ProviderClient, error) {
 	provider, err := openstack.NewClient(d.authOpts.IdentityEndpoint)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create OpenStack client: %v", err)
+	}
+
+	if d.caCertPath != "" {
+		pemData, err := os.ReadFile(d.caCertPath)
+		if err != nil {
+			return nil, fmt.Errorf("error reading CA Cert: %w", err)
+		}
+		if ok := d.loadCaCert(pemData, true); !ok {
+			return nil, fmt.Errorf("error parsing CA Cert from %s", d.caCertPath)
+		}
 	}
 
 	provider.HTTPClient = http.Client{Transport: d.transport}
