@@ -18,9 +18,8 @@ import (
 	"strings"
 	"testing"
 
-	"sigs.k8s.io/yaml"
-
 	"github.com/stretchr/testify/require"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
