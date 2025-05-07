@@ -32,11 +32,9 @@ webhooks:
         resources:
           - ingresses
         scope: Namespaced
-    {{- if semverCompare ">= 1.28" $kubernetesVersion }}
     matchConditions:
       - name: 'exclude-ingress-class-name'
         expression: (has(object.spec.ingressClassName) && object.spec.ingressClassName == '{{ $crd.spec.ingressClass }}') || (has(object.metadata.annotations) && ('kubernetes.io/ingress.class' in object.metadata.annotations) && object.metadata.annotations['kubernetes.io/ingress.class'] == '{{ $crd.spec.ingressClass }}')
-    {{- end }}
     failurePolicy: Fail
     sideEffects: None
     timeoutSeconds: 28
@@ -67,11 +65,9 @@ webhooks:
         resources:
           - ingresses
         scope: Namespaced
-    {{- if semverCompare ">= 1.28" $kubernetesVersion }}
     matchConditions:
       - name: 'exclude-ingress-class-name'
         expression: (has(object.spec.ingressClassName) && object.spec.ingressClassName == '{{ $crd.spec.ingressClass }}') || (has(object.metadata.annotations) && ('kubernetes.io/ingress.class' in object.metadata.annotations) && object.metadata.annotations['kubernetes.io/ingress.class'] == '{{ $crd.spec.ingressClass }}')
-    {{- end }}
     failurePolicy: Ignore
     sideEffects: None
     timeoutSeconds: 5

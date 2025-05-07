@@ -19,7 +19,7 @@ import:
   add: /src/jq/jq
   to: /usr/local/bin/jq
   before: setup
-{{- $k8sVersion := "1.28" }}
+{{- $k8sVersion := "1.29" }}
 {{- $image_version := printf "%s.%d" $k8sVersion (index $.CandiVersionMap "k8s" $k8sVersion "patch") | replace "." "-" }}
 - image: common/kubernetes-artifact-{{ $image_version }}
   add: /src/_output/bin/kubectl

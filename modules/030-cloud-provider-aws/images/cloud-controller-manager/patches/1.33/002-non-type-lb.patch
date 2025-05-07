@@ -1,14 +1,8 @@
-Subject: [PATCH] patch
----
-Index: pkg/providers/v1/aws.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/pkg/providers/v1/aws.go b/pkg/providers/v1/aws.go
---- a/pkg/providers/v1/aws.go	(revision 8ed070cd7501f6032ac056a4e79b9afc70fe522c)
-+++ b/pkg/providers/v1/aws.go	(revision 1ce51ed4d0411d100cbe689bfd3b1acd5908000f)
-@@ -321,6 +321,13 @@
+index ca56321..49c4ca2 100644
+--- a/pkg/providers/v1/aws.go
++++ b/pkg/providers/v1/aws.go
+@@ -321,6 +321,13 @@ var backendProtocolMapping = map[string]string{
  	"tcp":   "ssl",
  }
  
@@ -22,7 +16,7 @@ diff --git a/pkg/providers/v1/aws.go b/pkg/providers/v1/aws.go
  // MaxReadThenCreateRetries sets the maximum number of attempts we will make when
  // we read to see if something exists and then try to create it if we didn't find it.
  // This can fail once in a consistent system if done in parallel
-@@ -4079,7 +4086,7 @@
+@@ -4051,7 +4058,7 @@ func (c *Cloud) EnsureLoadBalancer(ctx context.Context, clusterName string, apiS
  			continue
  		}
  
@@ -31,24 +25,23 @@ diff --git a/pkg/providers/v1/aws.go b/pkg/providers/v1/aws.go
  			portMapping := nlbPortMapping{
  				FrontendPort:     int64(port.Port),
  				FrontendProtocol: string(port.Protocol),
-@@ -4090,7 +4097,11 @@
- 			if portMapping.HealthCheckConfig, err = c.buildNLBHealthCheckConfiguration(apiService); err != nil {
+@@ -4063,6 +4070,12 @@ func (c *Cloud) EnsureLoadBalancer(ctx context.Context, clusterName string, apiS
  				return nil, err
  			}
--
+ 
 +			if isNone(annotations) {
 +				portMapping.HealthCheckConfig.Protocol = elbv2.ProtocolEnumHttp
 +				portMapping.HealthCheckConfig.Port = "10256" // ProxyHealthzPort
 +				portMapping.HealthCheckConfig.Path = "/healthz"
 +			}
++
  			certificateARN := annotations[ServiceAnnotationLoadBalancerCertificate]
  			if port.Protocol != v1.ProtocolUDP && certificateARN != "" && (sslPorts == nil || sslPorts.numbers.Has(int64(port.Port)) || sslPorts.names.Has(port.Name)) {
  				portMapping.FrontendProtocol = elbv2.ProtocolEnumTls
-@@ -4101,7 +4112,18 @@
- 					portMapping.TrafficProtocol = elbv2.ProtocolEnumTls
+@@ -4074,6 +4087,19 @@ func (c *Cloud) EnsureLoadBalancer(ctx context.Context, clusterName string, apiS
  				}
  			}
--
+ 
 +			if isNone(annotations) {
 +				instanceProtocol := annotations[ServiceAnnotationLoadBalancerBEProtocol]
 +				if instanceProtocol == "" {
@@ -61,13 +54,14 @@ diff --git a/pkg/providers/v1/aws.go b/pkg/providers/v1/aws.go
 +					portMapping.TrafficProtocol = protocol
 +				}
 +			}
++
  			v2Mappings = append(v2Mappings, portMapping)
  		} else {
  			listener, err := buildListener(port, annotations, sslPorts)
-@@ -4134,7 +4156,58 @@
- 	} else if internalAnnotation != "" {
+@@ -4107,6 +4133,57 @@ func (c *Cloud) EnsureLoadBalancer(ctx context.Context, clusterName string, apiS
  		internalELB = true
  	}
+ 
 +	if isNone(annotations) {
 +		if path, healthCheckNodePort := servicehelpers.GetServiceHealthCheckPathPort(apiService); path != "" {
 +			for i := range v2Mappings {
@@ -76,15 +70,13 @@ diff --git a/pkg/providers/v1/aws.go b/pkg/providers/v1/aws.go
 +				v2Mappings[i].HealthCheckConfig.Protocol = elbv2.ProtocolEnumHttp
 +			}
 +		}
-+
 +		loadBalancerName := c.GetLoadBalancerName(ctx, clusterName, apiService)
 +		serviceName := types.NamespacedName{Namespace: apiService.Namespace, Name: apiService.Name}
- 
++
 +		instanceIDs := []string{}
 +		for id := range instances {
 +			instanceIDs = append(instanceIDs, string(id))
 +		}
-+
 +		// Get additional tags set by the user
 +		tags := getKeyValuePropertiesFromAnnotation(annotations, ServiceAnnotationLoadBalancerAdditionalTags)
 +		// Add default tags
@@ -120,10 +112,11 @@ diff --git a/pkg/providers/v1/aws.go b/pkg/providers/v1/aws.go
 +		},
 +		}, nil
 +	}
++
  	if isNLB(annotations) {
  		// Find the subnets that the ELB will live in
  		discoveredSubnetIDs, err := c.getLoadBalancerSubnets(apiService, internalELB)
-@@ -4461,7 +4534,34 @@
+@@ -4433,6 +4510,34 @@ func (c *Cloud) GetLoadBalancer(ctx context.Context, clusterName string, service
  		return nil, false, nil
  	}
  	loadBalancerName := c.GetLoadBalancerName(ctx, clusterName, service)
@@ -136,7 +129,7 @@ diff --git a/pkg/providers/v1/aws.go b/pkg/providers/v1/aws.go
 +			if err != nil {
 +				return nil, false, err
 +			}
- 
++
 +			if tg != nil {
 +				tgCount++
 +			}
@@ -155,10 +148,10 @@ diff --git a/pkg/providers/v1/aws.go b/pkg/providers/v1/aws.go
 +			}, true, nil
 +		}
 +	}
+ 
  	if isNLB(service.Annotations) {
  		lb, err := c.describeLoadBalancerv2(loadBalancerName)
- 		if err != nil {
-@@ -4725,6 +4825,25 @@
+@@ -4697,6 +4802,26 @@ func (c *Cloud) EnsureLoadBalancerDeleted(ctx context.Context, clusterName strin
  	}
  	loadBalancerName := c.GetLoadBalancerName(ctx, clusterName, service)
  
@@ -181,10 +174,11 @@ diff --git a/pkg/providers/v1/aws.go b/pkg/providers/v1/aws.go
 +
 +		return nil
 +	}
++
  	if isNLB(service.Annotations) {
  		lb, err := c.describeLoadBalancerv2(loadBalancerName)
  		if err != nil {
-@@ -4915,6 +5034,10 @@
+@@ -4887,6 +5012,10 @@ func (c *Cloud) UpdateLoadBalancer(ctx context.Context, clusterName string, serv
  		return err
  	}
  	loadBalancerName := c.GetLoadBalancerName(ctx, clusterName, service)
@@ -195,26 +189,19 @@ diff --git a/pkg/providers/v1/aws.go b/pkg/providers/v1/aws.go
  	if isNLB(service.Annotations) {
  		lb, err := c.describeLoadBalancerv2(loadBalancerName)
  		if err != nil {
-@@ -5276,6 +5399,10 @@
- 	return volumeAttachmentStatusInitialDelay
- }
+@@ -3359,3 +3359,7 @@
  
+ 	return cfg.GetRegion(metadata)
+ }
++
 +func generateTgName(prefix, suffix string) string {
 +	return prefix[0:32-1-len(suffix)] + "-" + suffix
 +}
-+
- // describeNetworkInterfaces returns network interface information for the given DNS name.
- func (c *Cloud) describeNetworkInterfaces(nodeName string) (*ec2.NetworkInterface, error) {
- 	eniEndpoint := strings.TrimPrefix(nodeName, fargateNodeNamePrefix)
-Index: pkg/providers/v1/aws_loadbalancer.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/pkg/providers/v1/aws_loadbalancer.go b/pkg/providers/v1/aws_loadbalancer.go
---- a/pkg/providers/v1/aws_loadbalancer.go	(revision 8ed070cd7501f6032ac056a4e79b9afc70fe522c)
-+++ b/pkg/providers/v1/aws_loadbalancer.go	(revision 1ce51ed4d0411d100cbe689bfd3b1acd5908000f)
-@@ -87,6 +87,13 @@
+index c39ea3d..7f90505 100644
+--- a/pkg/providers/v1/aws_loadbalancer.go
++++ b/pkg/providers/v1/aws_loadbalancer.go
+@@ -87,6 +87,13 @@ func isLBExternal(annotations map[string]string) bool {
  	return false
  }
  
@@ -228,7 +215,7 @@ diff --git a/pkg/providers/v1/aws_loadbalancer.go b/pkg/providers/v1/aws_loadbal
  type healthCheckConfig struct {
  	Port               string
  	Path               string
-@@ -137,6 +144,21 @@
+@@ -137,6 +144,21 @@ func getKeyValuePropertiesFromAnnotation(annotations map[string]string, annotati
  	return additionalTags
  }
  
@@ -250,7 +237,7 @@ diff --git a/pkg/providers/v1/aws_loadbalancer.go b/pkg/providers/v1/aws_loadbal
  // ensureLoadBalancerv2 ensures a v2 load balancer is created
  func (c *Cloud) ensureLoadBalancerv2(namespacedName types.NamespacedName, loadBalancerName string, mappings []nlbPortMapping, instanceIDs, discoveredSubnetIDs []string, internalELB bool, annotations map[string]string) (*elbv2.LoadBalancer, error) {
  	loadBalancer, err := c.describeLoadBalancerv2(loadBalancerName)
-@@ -576,7 +598,7 @@
+@@ -576,7 +598,7 @@ func (c *Cloud) deleteListenerV2(listener *elbv2.Listener) error {
  }
  
  // ensureTargetGroup creates a target group with a set of instances.
@@ -259,7 +246,7 @@ diff --git a/pkg/providers/v1/aws_loadbalancer.go b/pkg/providers/v1/aws_loadbal
  	dirty := false
  	expectedTargets := c.computeTargetGroupExpectedTargets(instances, mapping.TrafficPort)
  	if targetGroup == nil {
-@@ -597,6 +619,10 @@
+@@ -597,6 +619,10 @@ func (c *Cloud) ensureTargetGroup(targetGroup *elbv2.TargetGroup, serviceName ty
  			// HealthCheckTimeoutSeconds:  Currently not configurable, 6 seconds for HTTP, 10 for TCP/HTTPS
  		}
  
@@ -270,7 +257,7 @@ diff --git a/pkg/providers/v1/aws_loadbalancer.go b/pkg/providers/v1/aws_loadbal
  		if mapping.HealthCheckConfig.Protocol != elbv2.ProtocolEnumTcp {
  			input.HealthCheckPath = aws.String(mapping.HealthCheckConfig.Path)
  		}
-@@ -626,6 +652,21 @@
+@@ -626,6 +652,21 @@ func (c *Cloud) ensureTargetGroup(targetGroup *elbv2.TargetGroup, serviceName ty
  		return tg, nil
  	}
  
