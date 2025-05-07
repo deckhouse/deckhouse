@@ -216,7 +216,7 @@ func createTarball() *bytes.Buffer {
 		{
 			File: "d8-istio-system-logs.txt",
 			Cmd:  "bash",
-			Args: []string{"-c", `for deployment in istiod-v1x21 istiod-v1x19; do echo "Logs for $deployment:" && kubectl -n d8-istio logs deployments/$deployment; done || true`},
+			Args: []string{"-c", `for deployment in $(kubectl -n d8-istio get deployments -o jsonpath='{.items[*].metadata.name}' | tr ' ' '\n' | grep '^istiod-v'); do echo "Logs for $deployment:" && kubectl -n d8-istio logs deployments/$deployment; done || true`},
 		},
 		{
 			File: "d8-istio-ingress-logs.txt",
