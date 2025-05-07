@@ -55,7 +55,7 @@
 
 
     - alert: D8IstioRemoteClusterNotSynced
-      expr:  max by (cluster_id, secret, istiod) (istio_remote_cluster_up) == 0
+      expr:  min by (cluster_id, secret, istiod) (istio_remote_cluster_up) == 0
       for: 5m
       labels:
         severity_level: "4"
