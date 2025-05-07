@@ -14,7 +14,7 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
-# limitations under the License.
+# limitations under the License. # TODO Debug
 
 name: K8S autoupdate
 on:
@@ -25,7 +25,7 @@ jobs:
   skip_tests_repos:
     name: Skip tests repos
     runs-on: ubuntu-latest
-    if: ${{ false || github.repository == 'deckhouse/deckhouse' }}
+    if: ${{ true || github.repository == 'deckhouse/deckhouse' }}
     steps:
     - name: Do nothing
       run: echo "Empty action to fulfil Github requirements."
@@ -97,20 +97,19 @@ jobs:
         title: "[run ci] Automated Change: Update k8s patch version"
         body-path: ".github/k8s_autoupdate_pull_request_template.md"
         branch: chore/k8s-autoupdate
-        branch-suffix: timestamp
         token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
         base: main
         labels: e2e/run/yandex-cloud
         milestone: ${{ steps.get_milestone.outputs.milestone }}
         delete-branch: true
     - name: Send success report
-      if: ${{ steps.create-pull-request.outputs.pull-request-url != '' }}
+      if: ${{ steps.create-pull-request.outputs.pull-request-operation == 'created' }}
       env:
         LOOP_TOKEN: ${{secrets.LOOP_CVE_REPORTS_SEND_TOKEN}}
         LOOP_CHANNEL_ID: ${{secrets.LOOP_E2E_REPORT_CHANEL_ID}}
       run: |
         PULL_REQUEST_URL="${{ steps.create-pull-request.outputs.pull-request-url }}"
-        bash ./.github/scripts/send-report.sh --message "✅Kubernetes has been automatically updated✅\n[URL]($PULL_REQUEST_URL)"
+        bash ./.github/scripts/send-report.sh --custom-message "✅Kubernetes has been automatically updated✅\n[URL]($PULL_REQUEST_URL)"
     - name: Send failure report
       if: failure()
       env:
@@ -118,6 +117,6 @@ jobs:
         LOOP_CHANNEL_ID: ${{secrets.LOOP_E2E_REPORT_CHANEL_ID}}
       run: |
         WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-        bash ./.github/scripts/send-report.sh --message "🛑Kubernetes failed to update automatically🛑\n[URL]($WORKFLOW_URL)"
+        bash ./.github/scripts/send-report.sh --custom-message "🛑Kubernetes failed to update automatically🛑\n[URL]($WORKFLOW_URL)"
 
 
