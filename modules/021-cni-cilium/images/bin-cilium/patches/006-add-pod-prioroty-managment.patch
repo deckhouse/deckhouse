@@ -326,7 +326,7 @@ index bf47c44de9..ece7d4a286 100644
  		m.RemoveCEPFromCache(GetCEPNameFromCCEP(cep2, "kube-system"), DefaultCESSyncTime)
  		remCEPs := m.getRemovedCEPs(cesName)
 diff --git a/operator/watchers/cilium_endpoint.go b/operator/watchers/cilium_endpoint.go
-index 7c1b240f77..30b1a2780f 100644
+index 7c1b240f77..5836519f09 100644
 --- a/operator/watchers/cilium_endpoint.go
 +++ b/operator/watchers/cilium_endpoint.go
 @@ -7,8 +7,11 @@ import (
@@ -692,7 +692,7 @@ index 4a2b401797..64b4012b74 100644
  	"github.com/cilium/cilium/pkg/metrics"
  	"github.com/cilium/cilium/pkg/monitor/notifications"
 diff --git a/pkg/ipcache/ipcache.go b/pkg/ipcache/ipcache.go
-index 59f89704c1..bb61ec3ed9 100644
+index 59f89704c1..999df50441 100644
 --- a/pkg/ipcache/ipcache.go
 +++ b/pkg/ipcache/ipcache.go
 @@ -12,6 +12,10 @@ import (
@@ -706,7 +706,7 @@ index 59f89704c1..bb61ec3ed9 100644
  	cmtypes "github.com/cilium/cilium/pkg/clustermesh/types"
  	"github.com/cilium/cilium/pkg/controller"
  	"github.com/cilium/cilium/pkg/identity"
-@@ -22,12 +26,340 @@ import (
+@@ -22,12 +26,344 @@ import (
  	"github.com/cilium/cilium/pkg/labels/cidr"
  	"github.com/cilium/cilium/pkg/lock"
  	"github.com/cilium/cilium/pkg/logging/logfields"
@@ -1005,6 +1005,8 @@ index 59f89704c1..bb61ec3ed9 100644
 +
 +// DeleteEntry deletes a single map entry
 +func DeleteEntry(ip net.IP) error {
++	globalIPCache.Lock()
++	defer globalIPCache.Unlock()
 +	delete(globalIPCache.ipToEndpointInfo, ip.To4().String())
 +	return LXCMap().Delete(NewEndpointKey(ip))
 +}
@@ -1015,7 +1017,9 @@ index 59f89704c1..bb61ec3ed9 100644
 +	var errors []error
 +	for _, k := range GetBPFKeys(f) {
 +		ip := getEndpointAddress(k)
++		globalIPCache.Lock()
 +		delete(globalIPCache.ipToEndpointInfo, ip)
++		globalIPCache.Unlock()
 +		if err := LXCMap().Delete(k); err != nil {
 +			errors = append(errors, fmt.Errorf("Unable to delete key %v from %s: %w", k, bpf.MapPath(MapName), err))
 +		}
@@ -1047,7 +1051,7 @@ index 59f89704c1..bb61ec3ed9 100644
  // Identity is the identity representation of an IP<->Identity cache.
  type Identity struct {
  	// ID is the numeric identity
-@@ -99,6 +431,7 @@ type IPCache struct {
+@@ -99,6 +435,7 @@ type IPCache struct {
  	identityToIPCache map[identity.NumericIdentity]map[string]struct{}
  	ipToHostIPCache   map[string]IPKeyPair
  	ipToK8sMetadata   map[string]K8sMetadata
@@ -1055,7 +1059,7 @@ index 59f89704c1..bb61ec3ed9 100644
  
  	listeners []IPIdentityMappingListener
  
-@@ -140,6 +473,7 @@ func NewIPCache(c *Configuration) *IPCache {
+@@ -140,6 +477,7 @@ func NewIPCache(c *Configuration) *IPCache {
  		identityToIPCache: map[identity.NumericIdentity]map[string]struct{}{},
  		ipToHostIPCache:   map[string]IPKeyPair{},
  		ipToK8sMetadata:   map[string]K8sMetadata{},
@@ -1063,7 +1067,7 @@ index 59f89704c1..bb61ec3ed9 100644
  		controllers:       controller.NewManager(),
  		namedPorts:        types.NewNamedPortMultiMap(),
  		metadata:          newMetadata(),
-@@ -389,6 +723,8 @@ func (ipc *IPCache) upsertLocked(
+@@ -389,6 +727,8 @@ func (ipc *IPCache) upsertLocked(
  
  	scopedLog.Debug("Upserting IP into ipcache layer")
  
@@ -1072,7 +1076,7 @@ index 59f89704c1..bb61ec3ed9 100644
  	// Update both maps.
  	ipc.ipToIdentityCache[ip] = newIdentity
  	// Delete the old identity, if any.
-@@ -686,6 +1022,13 @@ func (ipc *IPCache) DeleteOnMetadataMatch(IP string, source source.Source, names
+@@ -686,6 +1026,13 @@ func (ipc *IPCache) DeleteOnMetadataMatch(IP string, source source.Source, names
  	return false
  }
  
