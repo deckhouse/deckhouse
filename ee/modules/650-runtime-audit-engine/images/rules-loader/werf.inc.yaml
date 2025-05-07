@@ -2,19 +2,6 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/shell-operator
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
-  add: /opt/python-static/bin
-  to: /usr/bin
-  before: install
-  includePaths:
-  - python3*
-  - python3
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
-  add: /opt/python-static/lib
-  to: /usr/lib
-  before: install
-  includePaths:
-  - python3*
 - image: {{ $.ModuleName }}/falco-artifact
   add: /falco-package
   to: /
@@ -26,8 +13,17 @@ import:
   add: /src/falcoctl
   to: /usr/bin/falcoctl
   before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
+  add: /
+  to: /
+  before: install
+  includePaths:
+  - lib/ld-musl-x86_64*
+  - usr/bin/python3*
+  - usr/lib/python3*
+  - usr/lib/libc.so
 git:
-- add: /{{ $.ModulePath }}modules/650-{{ $.ModuleName }}/images/{{ $.ImageName }}/hooks
+- add: /{{ $.ModulePath }}modules/650-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/hooks
   to: /hooks
   stageDependencies:
     install:
@@ -38,26 +34,20 @@ imageSpec:
     entrypoint: ["tini", "--", "/shell-operator"]
     cmd: ["start"]
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
-fromImage: common/alt-p11-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
+fromImage: base/python
 final: false
 git:
-- add: /{{ $.ModulePath }}modules/650-{{ $.ModuleName }}/images/{{ $.ImageName }}/requirements.txt
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/requirements.txt
   to: /requirements.txt
   stageDependencies:
     install:
     - '**/*'
 import:
-- image: common/python-static
-  add: /opt/python-static
-  to: /opt/python-static
+- image: common/wheel-artifact
+  add: /wheels
+  to: /wheels
   before: install
 shell:
-  beforeInstall:
-  - apt-get install -y git
   install:
-  - export SOURCE_REPO={{ .SOURCE_REPO }}
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
-  - /opt/python-static/bin/pip3 install -f file:///wheels --no-index -r requirements.txt
-  - rm -rf /wheels
+  - pip3 install -f file:///wheels --no-index -r /requirements.txt

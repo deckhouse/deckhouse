@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 # Copyright 2023 Flant JSC
 #
@@ -24,4 +24,4 @@ for module in $ENABLED_MODULES; do
  fi
 done
 
-exec /sbin/tini -- /shell-operator "$@"
+exec /usr/bin/tini -- /shell-operator "$@"

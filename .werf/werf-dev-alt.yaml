@@ -2,11 +2,29 @@
 image: dev-alt-artifact
 final: false
 fromImage: common/relocate-artifact
+import:
+- image: common/wheel-artifact
+  add: /wheels
+  to: /wheels
+  before: install
+- image: base/python
+  add: /
+  to: /
+  before: install
+  includePaths:
+  - usr/bin/python3*
+  - usr/bin/pip3*
+  - usr/lib/python3*
+  - usr/lib/libc.so
+- image: base/python
+  add: /lib/ld-musl-x86_64.so.1
+  to: /usr/lib/ld-musl-x86_64.so.1
+  before: install
 shell:
   beforeInstall:
-    - apt-get install -y ca-certificates openssl vim-console bash-completion python3 pip python3-module-chardet gettext libexpat libcrypto3 glibc-pthread locale
-    - apt-get install -y python3-module-cryptography
-    - pip install pyOpenSSL==24.3.0
+  - apt-get install -y ca-certificates openssl vim-console bash-completion gettext libexpat libcrypto3 glibc-pthread locale
   install:
-    - /binary_replace.sh -i "/usr/bin/envsubst" -o /relocate
+  - pip3 install -f file:///wheels --no-index pyOpenSSL==24.3.0 cryptography==44.0.1 bcrypt==4.1.1
+  - rm -rf /wheels
+  - /binary_replace.sh -i "/usr/bin/envsubst" -o /relocate
 ---
