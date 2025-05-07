@@ -46,13 +46,23 @@
       plk_labels_as_annotations: "phase"
       summary: One or more Grafana Pods are NOT Running.
       description: |-
-        The number of Grafana replicas is less than the specified number.
+        The number of Grafana replicas is lower than the specified number.
 
-        The Deployment is in the MinimumReplicasUnavailable state.
+        The Deployment is in the `MinimumReplicasUnavailable` state.
 
-        Run the following command to check the status of the Deployment: `kubectl -n d8-monitoring get deployment grafana-v10 -o json | jq .status`.
+        Troubleshooting options:
+        
+        - To check the Deployment's status:
+        
+          ```shell
+          kubectl -n d8-monitoring get deployment grafana-v10 -o json | jq .status
+          ```
 
-        Run the following command to check the status of the Pods: `kubectl -n d8-monitoring get pods -l app=grafana-v10 -o json | jq '.items[] | {(.metadata.name):.status}'`.
+        - To check a Pod's status:
+        
+          ```shell
+          kubectl -n d8-monitoring get pods -l app=grafana-v10 -o json | jq '.items[] | {(.metadata.name):.status}'
+          ```
 
   - alert: D8GrafanaTargetDown
     expr: max by (job) (up{job="grafana-v10", namespace="d8-monitoring"} == 0)
@@ -84,16 +94,31 @@
       plk_protocol_version: "1"
       plk_create_group_if_not_exists__d8_grafana_malfunctioning: "D8GrafanaMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_grafana_malfunctioning: "D8GrafanaMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      summary: There is no Grafana target in Prometheus.
+      summary: Grafana target is missing in Prometheus.
       description: |-
         Grafana visualizes metrics collected by Prometheus. Grafana is critical for some tasks,
         such as monitoring the state of applications and the cluster as a whole. Additionally,
-        Grafana unavailability can negatively impact users who actively use it in their work.
+        Grafana's unavailability can negatively impact users who actively use it in their work.
 
         The recommended course of action:
-        1. Check the availability and status of Grafana Pods: `kubectl -n d8-monitoring get pods -l app=grafana-v10`;
-        2. Check the availability of the Grafana Deployment: `kubectl -n d8-monitoring get deployment grafana-v10`;
-        3. Examine the status of the Grafana Deployment: `kubectl -n d8-monitoring describe deployment grafana-v10`.
+
+        1. Check the availability and status of Grafana Pods:
+
+           ```shell
+           kubectl -n d8-monitoring get pods -l app=grafana-v10
+           ```
+
+        2. Check the availability of the Grafana Deployment:
+
+           ```shell
+           kubectl -n d8-monitoring get deployment grafana-v10
+           ```
+
+        3. Examine the status of the Grafana Deployment:
+
+           ```shell
+           kubectl -n d8-monitoring describe deployment grafana-v10
+           ```
 
 - name: d8.grafana.malfunctioning
   rules:
@@ -117,13 +142,17 @@
       plk_create_group_if_not_exists__d8_grafana_malfunctioning: "D8GrafanaMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_grafana_malfunctioning: "D8GrafanaMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_labels_as_annotations: "pod"
-      summary: Excessive Grafana restarts are detected.
+      summary: Excessive Grafana restarts detected.
       description: |
-        The number of restarts in the last hour: {{ $value }}.
+        Grafana has restarted {{ $value }} times in the last hour.
 
-        Excessive Grafana restarts indicate that something is wrong. Normally, Grafana should be up and running all the time.
+        Frequent restarts indicate a problem. Grafana is expected to run continuously without interruption.
+      
+        To investigate the issue, check the logs:
 
-        Please, refer to the corresponding logs: `kubectl -n d8-monitoring logs -f -l app=grafana-v10 -c grafana`.
+        ```shell
+        kubectl -n d8-monitoring logs -f -l app=grafana-v10 -c grafana
+        ```
 
   - alert: D8GrafanaDeprecatedCustomDashboardDefinition
     expr: |
@@ -136,9 +165,11 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      summary: The deprecated ConfigMap for defining Grafana dashboards is detected.
+      summary: Deprecated ConfigMap for Grafana dashboards detected.
       description: |-
-        The `grafana-dashboard-definitions-custom` ConfigMap was found in the `d8-monitoring` namespace. This means that the deprecated method of registering custom dashboards in Grafana is being used.
+        The ConfigMap `grafana-dashboard-definitions-custom` has been found in the `d8-monitoring` namespace.
+        This indicates that a deprecated method for registering custom dashboards in Grafana is used.
 
-        **This method is no longer used!**
-        Please, use the custom [GrafanaDashboardDefinition](https://github.com/deckhouse/deckhouse/blob/main/modules/300-prometheus/docs/internal/GRAFANA_DASHBOARD_DEVELOPMENT.md) resource instead.
+        **This method is no longer supported**.
+
+        Migrate to using the custom [GrafanaDashboardDefinition resource](https://github.com/deckhouse/deckhouse/blob/main/modules/300-prometheus/docs/internal/GRAFANA_DASHBOARD_DEVELOPMENT.md) instead.
