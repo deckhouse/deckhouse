@@ -22,7 +22,8 @@ secrets:
 - id: COSIGN_PASSWORD
   value: {{ $context.CosignPassword }}
 - id: COSIGN_KEY
-  value: {{ $context.CosignKey }}
+  value: |
+    {{- $context.CosignKey | toString | b64dec | nindent 4 }}
 import:
 - image: tools/cosign
   add: /usr/bin/cosign
@@ -46,7 +47,6 @@ dependencies:
     targetEnv: IMAGE_REPO
 shell:
   setup:
-  - cat /run/secrets/COSIGN_KEY
   - |
     COSIGN_PASSWORD="" \
     cosign attest \

@@ -91,7 +91,7 @@ build:
 # cosign  settings
 {{- $_ := set . "CosignLogin" (env "COSIGN_LOGIN" "test") }}
 {{- $_ := set . "CosignPassword" (env "COSIGN_PASSWORD" "test") }}
-{{- $_ := set . "CosignKey" (env "COSIGN_KEY" "test") }}
+{{- $_ := set . "CosignKey" (env "COSIGN_KEY" (b64enc "test")) }}
 
 # registry auth
 {{- $_ := set . "RegistryUser" (env "REGISTRY_USER" "test") }}
