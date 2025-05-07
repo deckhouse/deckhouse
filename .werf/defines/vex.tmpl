@@ -53,7 +53,7 @@ shell:
       --registry-password="$(cat /run/secrets/COSIGN_PASSWORD)" \
       --predicate /known_vulnerabilities.vex \
       --type openvex \
-      --key cosign.key \
+      --key /run/secrets/COSIGN_KEY \
       --tlog-upload=false \
       -y \
       "${IMAGE_REPO}@${IMAGE_DIGEST}"
