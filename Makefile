@@ -104,7 +104,7 @@ help:
 	  /^##@/                  { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
 
-GOLANGCI_VERSION = 1.54.2
+GOLANGCI_VERSION = 2.1.2
 TRIVY_VERSION= 0.60.0
 PROMTOOL_VERSION = 2.37.0
 GATOR_VERSION = 3.9.0
