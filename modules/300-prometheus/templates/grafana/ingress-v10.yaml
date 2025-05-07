@@ -32,6 +32,7 @@ metadata:
       proxy_ssl_protocols TLSv1.2;
       proxy_ssl_session_reuse on;
       more_set_headers "X-Content-Type-Options: nosniff";
+      {{- include "helm_lib_module_ingress_configuration_snippet" . | nindent 6 }}
     # In Deckhouse, Grafana is an "IAC" configured platform.
     # This rewrite forbids users to log in and get higher privileges.
     nginx.ingress.kubernetes.io/server-snippet: |
