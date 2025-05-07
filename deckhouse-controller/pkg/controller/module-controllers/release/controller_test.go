@@ -367,6 +367,20 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
+	suite.Run("Process force release", func() {
+		// Setup initial state
+		suite.setupReleaseController(suite.fetchTestFileData("apply-force-release.yaml"))
+
+		mr := suite.getModuleRelease("parca-1.2.1")
+		_, err := suite.ctr.handleRelease(context.TODO(), mr)
+		require.NoError(suite.T(), err)
+
+		// Verify the final state
+		mr = suite.getModuleRelease("parca-1.5.2")
+		_, err = suite.ctr.handleRelease(context.TODO(), mr)
+		require.NoError(suite.T(), err)
+	})
+
 	suite.Run("Sequential processing", func() {
 		suite.Run("sequential processing with patch release", func() {
 			testData := suite.fetchTestFileData("sequential-processing-patch.yaml")
