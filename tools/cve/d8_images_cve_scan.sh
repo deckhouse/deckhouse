@@ -26,7 +26,6 @@ shopt -s failglob
 # $SEVERITY - output only entries with specified severity levels (by default: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL)
 # TRIVYIGNORE - path to trivy .trivyignore (by default: empty file is used)
 
-TRIVY_BIN_VERSION="v0.58.1"
 TRIVY_PROJECT_ID="2181"
 TRIVY_DB_URL="dev-registry.deckhouse.io/sys/deckhouse-oss/security/trivy-db:2"
 TRIVY_JAVA_DB_URL="dev-registry.deckhouse.io/sys/deckhouse-oss/security/trivy-java-db:1"
