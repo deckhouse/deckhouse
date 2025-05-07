@@ -46,6 +46,7 @@ securityContext:
   {{ end }}
 {{ end }}
 
+{{- $versions := .Values.istio.internal.operatorVersionsToInstall }}
 {{- range $version := .Values.istio.internal.versionsToInstall }}
   {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
   {{- $revision := get $versionInfo "revision"}}
@@ -63,13 +64,16 @@ spec:
 {{ include "helm_lib_resources_management_vpa_spec" (list "apps/v1" "Deployment" (printf "istiod-%s" $revision) "discovery" $.Values.istio.controlPlane.resourcesManagement ) | nindent 2 }}
   {{- end }}
 ---
-apiVersion: install.istio.io/v1alpha1
-kind: IstioOperator
+apiVersion: {{ if not (eq (first $versions) "1.25") }}install.istio.io/v1alpha1{{ else }}sailoperator.io/v1{{ end }} 
+kind: {{ if not (eq (first $versions) "1.25") }}IstioOperator{{ else }}Istio{{ end }}
 metadata:
   name: {{ $revision }}
   namespace: d8-{{ $.Chart.Name }}
   {{- include "helm_lib_module_labels" (list $ (dict "app" "istiod" "istio.io/rev" $revision)) | nindent 2 }}
 spec:
+  {{- if (eq (first $versions) "1.25") }}
+  namespace: d8-{{ $.Chart.Name }}
+  {{- end }}
   revision: {{ $revision }}
 
   components:
