@@ -56,7 +56,7 @@ ovirt:
   artifact: terraform-provider-ovirt
   artifactBinary: terraform-provider-ovirt
   destinationBinary: terraform-provider-ovirt
-  useOpentofu: false
+  useOpentofu: true
 
 vsphere:
   namespace: hashicorp
