@@ -23,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -372,11 +373,19 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 				return fmt.Errorf("update the '%s' module: %w", moduleName, err)
 			}
 
-			r.logger.Debug("ensure module release from the source",
-				slog.String("name", moduleName),
-				slog.String("source_name", source.Name))
-			if err = r.ensureModuleRelease(ctx, source.GetUID(), source.Name, moduleName, policy.Name, meta); err != nil {
-				return fmt.Errorf("ensure module release for the '%s' module: %w", moduleName, err)
+			versions, errGet := r.getIntermediateModuleVersions(ctx, moduleName, module.GetVersion(), meta.ModuleVersion)
+			if errGet != nil {
+				return fmt.Errorf("get intermediate versions: %w", err)
+			}
+			for _, v := range versions {
+				r.logger.Debug("ensure module release for module for the module source",
+					slog.String("name", moduleName),
+					slog.String("source_name", source.Name))
+				m := meta
+				m.ModuleVersion = v.String()
+				if err = r.ensureModuleRelease(ctx, source.GetUID(), source.Name, moduleName, policy.Name, m); err != nil {
+					return fmt.Errorf("ensure module release for the '%s' module: %w", moduleName, err)
+				}
 			}
 		}
 
@@ -485,4 +494,44 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 	}
 
 	return ctrl.Result{}, nil
+}
+
+// getIntermediateModuleVersions returns a sorted list of versions between currentVersion and targetVersion (including target)
+func (r *reconciler) getIntermediateModuleVersions(
+	ctx context.Context,
+	moduleName, currentVersionStr, targetVersionStr string) ([]*semver.Version, error) {
+	currentVersion, err := semver.NewVersion(currentVersionStr)
+	if err != nil {
+		return nil, fmt.Errorf("parse current version: %w", err)
+	}
+	targetVersion, err := semver.NewVersion(targetVersionStr)
+	if err != nil {
+		return nil, fmt.Errorf("parse target version: %w", err)
+	}
+
+	// registryClient must be available via dependencyContainer
+	registryClient, err := r.dependencyContainer.GetRegistryClient(moduleName)
+	if err != nil {
+		return nil, fmt.Errorf("get registry client: %w", err)
+	}
+	tags, err := registryClient.ListTags(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list tags: %w", err)
+	}
+
+	var (
+		versions []*semver.Version
+		v        *semver.Version
+	)
+	for _, tag := range tags {
+		v, err = semver.NewVersion(tag)
+		if err == nil {
+			if (v.Compare(currentVersion) > -1) && (v.Compare(targetVersion) < 1) {
+				versions = append(versions, v)
+			}
+		}
+	}
+
+	sort.Sort(semver.Collection(versions))
+	return versions, nil
 }
