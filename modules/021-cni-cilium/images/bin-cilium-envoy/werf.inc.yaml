@@ -117,11 +117,11 @@ shell:
   #
   - cd /cilium/proxy
   - sudo -u cilium echo "{{ $ciliumProxyRev }}" >SOURCE_VERSION
-  - sudo -u cilium sed -i "29,56d" WORKSPACE
-  - sudo -u cilium sed -i '30i local_repository(' WORKSPACE
-  - sudo -u cilium sed -i '31i \    name = "envoy",' WORKSPACE
-  - sudo -u cilium sed -i '32i \    path = "/src/envoy",' WORKSPACE
-  - sudo -u cilium sed -i '33i )' WORKSPACE
+  - sudo -u cilium sed -i "29,48d" WORKSPACE
+  - sudo -u cilium sed -i '29i local_repository(' WORKSPACE
+  - sudo -u cilium sed -i '30i \    name = "envoy",' WORKSPACE
+  - sudo -u cilium sed -i '31i \    path = "/src/envoy",' WORKSPACE
+  - sudo -u cilium sed -i '32i )' WORKSPACE
   #
   - sudo -u cilium sed -i 's/$(SUDO) apt info clang-17 || $(call add_clang_apt_source,$(shell lsb_release -cs))/rpm -q clang17.0/' Makefile
   - sudo -u cilium sed -i "/\$(SUDO) apt install -y clang-17 llvm-17-dev lld-17 clang-format-17/d" Makefile
