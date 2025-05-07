@@ -1,5 +1,5 @@
 {{- $REPO := "https://github.com/deckhouse/3p-distribution.git"}}
-{{- $BRANCH := "flant-2.8"}}
+{{- $BRANCH := "deckhouse"}}
 {{- $GIT_CLONE_DEST_PATH := "/src"}}
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
