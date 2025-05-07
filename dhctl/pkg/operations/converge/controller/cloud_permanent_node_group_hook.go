@@ -17,9 +17,8 @@ package controller
 import (
 	"context"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	infra_utils "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/utils"
 )
 
