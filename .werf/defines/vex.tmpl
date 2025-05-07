@@ -22,8 +22,7 @@ secrets:
 - id: COSIGN_PASSWORD
   value: {{ $context.CosignPassword }}
 - id: COSIGN_KEY
-  value: |
-    {{- $context.CosignKey | toString | b64dec | nindent 4 }}
+  value: {{ $context.CosignKey }}
 import:
 - image: tools/cosign
   add: /usr/bin/cosign
@@ -49,12 +48,13 @@ shell:
   setup:
   - |
     COSIGN_PASSWORD="" \
+    COSIGN_KEY=$(cat /run/secrets/COSIGN_KEY | base64 -d) \
     cosign attest \
       --registry-username="$(cat /run/secrets/COSIGN_LOGIN)" \
       --registry-password="$(cat /run/secrets/COSIGN_PASSWORD)" \
       --predicate /known_vulnerabilities.vex \
       --type openvex \
-      --key /run/secrets/COSIGN_KEY \
+      --key env://COSIGN_KEY \
       --tlog-upload=false \
       -y \
       "${IMAGE_REPO}@${IMAGE_DIGEST}"
