@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/cloud-data/discovery/meta"
 )
 
 type Discoverer struct {
@@ -100,18 +101,12 @@ func (d *Discoverer) InstanceTypes(ctx context.Context) ([]v1alpha1.InstanceType
 	return res, nil
 }
 
-type DiscoveryDataOptions struct {
-	clusterUUID string
-
-	cloudProviderDiscoveryData []byte
-}
-
-func (d *Discoverer) DiscoveryData(ctx context.Context, options *DiscoveryDataOptions) ([]byte, error) {
+func (d *Discoverer) DiscoveryData(ctx context.Context, options *meta.DiscoveryDataOptions) ([]byte, error) {
 	var discoveryData OpenstackCloudDiscoveryData
 
-	cloudProviderDiscoveryData := options.cloudProviderDiscoveryData
+	cloudProviderDiscoveryData := options.CloudProviderDiscoveryData
 
-	if len(options.cloudProviderDiscoveryData) == 0 {
+	if len(options.CloudProviderDiscoveryData) == 0 {
 		cloudProviderDiscoveryData = d.moduleConfig
 	}
 
@@ -258,11 +253,15 @@ func (d *Discoverer) getVolumes(ctx context.Context, provider *gophercloud.Provi
 
 	client.Context = ctx
 
-	allPages, err := volumes.List(client, volumes.ListOpts{
-		Metadata: map[string]string{
+	listOpts := volumes.ListOpts{}
+
+	if d.clusterUUID != "" {
+		listOpts.Metadata = map[string]string{
 			"cinder.csi.openstack.org/cluster": d.clusterUUID,
-		},
-	}).AllPages()
+		}
+	}
+
+	allPages, err := volumes.List(client, listOpts).AllPages()
 	if err != nil {
 		return nil, fmt.Errorf("failed to list volumes: %v", err)
 	}
