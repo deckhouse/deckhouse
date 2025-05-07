@@ -3,6 +3,7 @@
 {{- $envoySHA := "4be217df3694bfa500eb76b0dda4e3c7ec0afeeb" }}
 {{- $ciliumProxyCacheRev := "v1.32.5-1744305768-f9ddca7dcd91f7ca25a505560e655c47d3dec2cf-alt-p11-llvm17-gcc11-v1" }}
 {{- $ciliumProxyDepsRev := "v1.32.5-1744305768-f9ddca7dcd91f7ca25a505560e655c47d3dec2cf-alt-p11-llvm17-gcc11-lfs-v1" }}
+#  to force manual creation of fresh build cache
 {{- $buildWithPreparedCacheAndDeps := true }}
 ---
 # #####################################################################
@@ -38,6 +39,7 @@ shell:
   - git clone $(cat /run/secrets/SOURCE_REPO)/envoyproxy/envoy.git /src/envoy
   - cd /src/envoy
   - git checkout {{ $envoySHA }}
+  # original cilium patches
   - git apply --verbose /src/proxy/patches/*.patch
   - rm -rf /src/envoy/.git
 ---

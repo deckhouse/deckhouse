@@ -6,8 +6,9 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{ include "helm_lib_module_labels" (list .) | nindent 2 }}
 data:
-  # For NetworkPolicy
+  # For CiliumNetworkPolicy and NetworkPolicy
   policy-cidr-match-mode: "nodes"
+  # For CiliumNetworkPolicy
   enable-node-selector-labels: "true"
   #
   bpf-lb-source-range-all-types: "true"
