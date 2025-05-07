@@ -95,6 +95,9 @@ spec:
                       name:
                         type: string
                         description: The module name.
+                      version:
+                        type: string
+                        description: The module version.
                       checksum:
                         type: string
                         description: The module checksum.
