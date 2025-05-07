@@ -365,7 +365,9 @@ spec:
                           Тип условия.
                       status:
                         description: |
-                          Статус условия, одно из значений True, False.
+                          Статус условия. Возможные значения:
+                          - `True`, 
+                          - `False`.
                       lastUpdateTime:
                         description: |
                           Время последнего обновления условия.
