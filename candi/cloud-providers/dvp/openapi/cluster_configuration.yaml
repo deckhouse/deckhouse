@@ -142,7 +142,7 @@ apiVersions:
                         cores:
                           description: |
                             Number of CPU cores for the VM.
-                          minumum: 1
+                          minimum: 1
                           format: int32
                           type: integer
                         coreFraction:
