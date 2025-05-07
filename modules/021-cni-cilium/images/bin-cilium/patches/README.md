@@ -31,7 +31,7 @@ Upstream issue <https://github.com/cilium/cilium/issues/23711>
 
 Added DHCP server for pods (ebpf implementation).
 
-## 006-add-pod-prioroty-managment.patch
+## 006-add-pod-prioroty-management.patch
 
 Added a `network.deckhouse.io/pod-common-ip-priority` label allows you to share a single IP between  several Pods and to switch the actual owner.
 
