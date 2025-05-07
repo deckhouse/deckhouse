@@ -186,7 +186,7 @@ apiVersions:
                     ipAddresses:
                       type: array
                       description: |
-                        Static ip addresses to be assigned to the VM's network interfaces. The number of addresses should correspond to the number of repilicas to be created. Each ip address will be assigned to the corresponding VM instance.
+                        Static ip addresses to be assigned to the VM's network interfaces. The number of addresses should correspond to the number of replicas to be created. Each ip address will be assigned to the corresponding VM instance.
                         For example: the number of replicas is 3, and we have the following list of ip addresses: ip1, ip2, ip3. As a result, ip1 will be assigned to the first replica, ip2 to the second, and ip3 to the third.
                         > Caution! These addresses must belong to the address range specified in the virtualization module configuration in the virtualMachineCIDRs parameter.
                       items:
