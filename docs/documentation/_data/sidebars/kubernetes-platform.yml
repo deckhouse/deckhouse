@@ -481,7 +481,7 @@ entries:
             - title:
                 en: Backup and restore
                 ru: Резервное копирование и восстановление
-              url: /admin/configuration/backup/backup-and-restore.html  
+              url: /admin/configuration/backup/backup-and-restore.html
 # ------------- Using -------------
     - title:
         en: Using
@@ -791,3 +791,32 @@ entries:
         en: FAQ
         ru: TODO Вопросы и ответы
       url: /faq/faq-overview.html
+# ------------- TEST -------------
+    - title:
+        en: Projects (TEST)
+        ru: Проекты (ТЕСТ)
+      folders:
+        - title:
+            en: Administration
+            ru: Администрирование
+          folders:
+            - title:
+                en: Projects
+                ru: Проекты
+              url: /test/admin/projects.html
+        - title:
+            en: Using
+            ru: Использование
+          folders:
+            - title:
+                en: Projects
+                ru: Проекты
+              url: /test/user/projects.html
+        - title:
+            en: Architecture
+            ru: Архитектура
+          folders:
+            - title:
+                en: Projects
+                ru: Проекты
+              url: /test/architecture/projects.html
