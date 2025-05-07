@@ -618,7 +618,10 @@ spec:
                         description: Type of condition.
                         type: string
                       status:
-                        description: Status of the condition, one of True, False.
+                        description: |
+                        Status of the condition. Possible values:
+                        - `True`,
+                        - `False`.
                         type: string
                         enum:
                           - "True"
