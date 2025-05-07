@@ -4,7 +4,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
 git:
-  - add: /modules/462-loki/images/{{ $.ImageName }}/patches
+  - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
     to: /patches
     stageDependencies:
       install:

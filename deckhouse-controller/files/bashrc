@@ -6,7 +6,7 @@ source /etc/bashrc.d/bash_completion.sh
 if [ -s /tmp/kubectl_version ]; then
  kubernetes_version="$(cat /tmp/kubectl_version)"
 else
- kubectl_version="1.28"
+ kubectl_version="1.29"
 fi
 
 case "$kubernetes_version" in
