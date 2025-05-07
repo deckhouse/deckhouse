@@ -43,6 +43,9 @@ spec:
                       name:
                         type: string
                         description: Имя модуля.
+                      version:
+                        type: string
+                        description: Версия модуля
                       pullError:
                         type: string
                         description: Ошибка скачивания модуля.
