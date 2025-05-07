@@ -4,7 +4,7 @@
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
 fromImage: builder/golang-alpine
-fromCacheVersion: 2025050701
+fromCacheVersion: 2025050702
 final: false
 mount:
   - fromPath: ~/go-pkg-cache
