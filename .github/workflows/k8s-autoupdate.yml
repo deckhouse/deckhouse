@@ -14,7 +14,7 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
-# limitations under the License. # TODO Debug
+# limitations under the License.
 
 name: K8S autoupdate
 on:
@@ -25,7 +25,7 @@ jobs:
   skip_tests_repos:
     name: Skip tests repos
     runs-on: ubuntu-latest
-    if: ${{ true || github.repository == 'deckhouse/deckhouse' }}
+    if: ${{ false || github.repository == 'deckhouse/deckhouse' }}
     steps:
     - name: Do nothing
       run: echo "Empty action to fulfil Github requirements."
@@ -106,8 +106,6 @@ jobs:
       if: ${{ steps.create-pull-request.outputs.pull-request-operation == 'created' }}
       env:
         LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
-        LOOP_TOKEN: ${{secrets.LOOP_CVE_REPORTS_SEND_TOKEN}}
-        LOOP_CHANNEL_ID: ${{secrets.LOOP_E2E_REPORT_CHANEL_ID}}
       run: |
         PULL_REQUEST_URL="${{ steps.create-pull-request.outputs.pull-request-url }}"
         bash ./.github/scripts/send-report.sh --custom-message "✅Kubernetes has been automatically updated✅\n[URL]($PULL_REQUEST_URL)"
@@ -115,8 +113,6 @@ jobs:
       if: failure()
       env:
         LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
-        LOOP_TOKEN: ${{secrets.LOOP_CVE_REPORTS_SEND_TOKEN}}
-        LOOP_CHANNEL_ID: ${{secrets.LOOP_E2E_REPORT_CHANEL_ID}}
       run: |
         WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
         bash ./.github/scripts/send-report.sh --custom-message "🛑Kubernetes failed to update automatically🛑\n[URL]($WORKFLOW_URL)"

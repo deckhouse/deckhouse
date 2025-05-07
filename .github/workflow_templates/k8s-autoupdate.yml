@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{!{- $enableWorkflowOnTestRepos := true }!} # TODO Debug
+{!{- $enableWorkflowOnTestRepos := false }!}
 
 name: K8S autoupdate
 on:
@@ -99,8 +99,6 @@ jobs:
       if: ${{ steps.create-pull-request.outputs.pull-request-operation == 'created' }}
       env:
         LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
-        LOOP_TOKEN: ${{secrets.LOOP_CVE_REPORTS_SEND_TOKEN}}
-        LOOP_CHANNEL_ID: ${{secrets.LOOP_E2E_REPORT_CHANEL_ID}}
       run: |
         PULL_REQUEST_URL="${{ steps.create-pull-request.outputs.pull-request-url }}"
         bash ./.github/scripts/send-report.sh --custom-message "✅Kubernetes has been automatically updated✅\n[URL]($PULL_REQUEST_URL)"
@@ -108,8 +106,6 @@ jobs:
       if: failure()
       env:
         LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
-        LOOP_TOKEN: ${{secrets.LOOP_CVE_REPORTS_SEND_TOKEN}}
-        LOOP_CHANNEL_ID: ${{secrets.LOOP_E2E_REPORT_CHANEL_ID}}
       run: |
         WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
         bash ./.github/scripts/send-report.sh --custom-message "🛑Kubernetes failed to update automatically🛑\n[URL]($WORKFLOW_URL)"
