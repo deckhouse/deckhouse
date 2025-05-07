@@ -21,6 +21,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/gojuno/minimock/v3"
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/fake"
 	"github.com/stretchr/testify/require"
@@ -33,7 +34,7 @@ import (
 func TestDownloadMetadataFromReleaseChannelError(t *testing.T) {
 	ms := &v1alpha1.ModuleSource{}
 
-	dependency.TestDC.CRClient.ImageMock.When("stable").Then(&fake.FakeImage{
+	dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
 		ManifestStub: func() (*crv1.Manifest, error) {
 			return &crv1.Manifest{
 				SchemaVersion: 2,
