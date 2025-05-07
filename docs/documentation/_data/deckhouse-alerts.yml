@@ -4339,7 +4339,7 @@ alerts:
       severity: "6"
       markupFormat: markdown
     - name: KubernetesDnsTargetDown
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/kube-dns.yaml
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/kube-dns.tpl
       moduleUrl: 340-monitoring-kubernetes
       module: monitoring-kubernetes
       edition: ce
