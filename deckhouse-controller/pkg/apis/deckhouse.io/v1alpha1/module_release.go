@@ -168,7 +168,8 @@ func (mr *ModuleRelease) GetPhase() string {
 }
 
 func (mr *ModuleRelease) GetForce() bool {
-	return false
+	v, ok := mr.Annotations[ModuleReleaseAnnotationForce]
+	return ok && v == "true"
 }
 
 func (mr *ModuleRelease) GetReinstall() bool {
