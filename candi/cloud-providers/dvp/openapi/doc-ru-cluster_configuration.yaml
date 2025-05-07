@@ -2,7 +2,7 @@ apiVersions:
   - apiVersion: deckhouse.io/v1
     openAPISpec:
       description: |
-        Описывает конфигурацию облачного кластера в Azure.
+        Описывает конфигурацию облачного кластера в Deckhouse Virtualization Platform (DVP).
 
         Используется облачным провайдером, если управляющий слой (control plane) кластера размещен в облаке.
 
