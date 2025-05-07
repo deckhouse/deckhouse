@@ -55,6 +55,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -722,18 +723,63 @@ func (r *reconciler) updatePolicy(ctx context.Context, release *v1alpha1.ModuleR
 
 // ApplyRelease applies predicted release
 func (r *reconciler) ApplyRelease(ctx context.Context, mr *v1alpha1.ModuleRelease, task *releaseUpdater.Task) error {
-	var dri *releaseUpdater.ReleaseInfo
+	var (
+		dri            *releaseUpdater.ReleaseInfo
+		currentVersion *semver.Version
+	)
 
-	if task != nil {
+	if task != nil && task.DeployedReleaseInfo != nil {
 		dri = task.DeployedReleaseInfo
+		currentVersion = dri.Version
 	}
 
-	err := r.runReleaseDeploy(ctx, mr, dri)
+	versions, err := r.getIntermediateModuleVersions(ctx, mr.GetModuleName(), currentVersion, mr.GetVersion())
 	if err != nil {
-		return fmt.Errorf("run release deploy: %w", err)
+		return fmt.Errorf("get intermediate versions: %w", err)
+	}
+
+	for _, version := range versions {
+		tmpMr := mr.DeepCopy()
+		tmpMr.ObjectMeta.Name = fmt.Sprintf("%s-%s", mr.GetModuleName(), version.String())
+		tmpMr.Spec.Version = version.String()
+		if err = r.runReleaseDeploy(ctx, tmpMr, dri); err != nil {
+			return fmt.Errorf("run release deploy: %w", err)
+		}
+		dri = &releaseupdater.ReleaseInfo{
+			Name:    tmpMr.GetName(),
+			Version: version,
+		}
 	}
 
 	return nil
+}
+
+// getIntermediateModuleVersions returns a sorted list of versions between currentVersion and targetVersion (including target)
+func (r *reconciler) getIntermediateModuleVersions(ctx context.Context, moduleName string, currentVersion, targetVersion *semver.Version) ([]*semver.Version, error) {
+	// registryClient must be available via dependencyContainer
+	registryClient, err := r.dependencyContainer.GetRegistryClient(moduleName)
+	if err != nil {
+		return nil, fmt.Errorf("get registry client: %w", err)
+	}
+	tags, err := registryClient.ListTags(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list tags: %w", err)
+	}
+	var versions []*semver.Version
+	for _, tag := range tags {
+		v, err := semver.NewVersion(tag)
+		if err == nil {
+			if (v.GreaterThan(currentVersion) || v.Equal(currentVersion)) && (v.LessThan(targetVersion) || v.Equal(targetVersion)) {
+				versions = append(versions, v)
+			}
+		}
+	}
+	if len(versions) == 0 {
+		versions = append(versions, targetVersion)
+		return versions, nil
+	}
+	sort.Sort(semver.Collection(versions))
+	return versions, nil
 }
 
 // runReleaseDeploy

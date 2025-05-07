@@ -135,72 +135,78 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	require.NoError(suite.T(), err)
 	ctx := suite.Context()
 
-	dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
-		ManifestStub: func() (*crv1.Manifest, error) {
-			return &crv1.Manifest{
-				Layers: []crv1.Descriptor{},
-			}, nil
-		},
-		LayersStub: func() ([]crv1.Layer, error) {
-			return []crv1.Layer{&utils.FakeLayer{}}, nil
-		},
-	}, nil)
-
 	suite.Run("simple", func() {
-		suite.setupReleaseController(suite.fetchTestFileData("simple.yaml"))
+		dc := newMockedContainerWithData(nil, "v1.4.3", []string{"parca-v1.4.3"})
+		suite.setupReleaseController(suite.fetchTestFileData("simple.yaml"), withDependencyContainer(dc))
 		mr := suite.getModuleRelease(suite.testMRName)
 		_, err = suite.ctr.handleRelease(context.TODO(), mr)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("with annotation", func() {
-		suite.setupReleaseController(suite.fetchTestFileData("with-annotation.yaml"))
+		dc := newMockedContainerWithData(nil, "v1.3.10", []string{"deckhouse-commander-v1.3.10"})
+		suite.setupReleaseController(suite.fetchTestFileData("with-annotation.yaml"), withDependencyContainer(dc))
 		mr := suite.getModuleRelease(suite.testMRName)
 		_, err = suite.ctr.handleRelease(context.TODO(), mr)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("deckhouse suitable version", func() {
-		suite.setupReleaseController(suite.fetchTestFileData("dVersion-suitable.yaml"))
+		dc := newMockedContainerWithData(nil, "v1.4.3", []string{"parca-v1.4.3-suitable"})
+		suite.setupReleaseController(suite.fetchTestFileData("dVersion-suitable.yaml"), withDependencyContainer(dc))
 		mr := suite.getModuleRelease(suite.testMRName)
 		_, err = suite.ctr.handleRelease(context.TODO(), mr)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("deckhouse unsuitable version", func() {
-		suite.setupReleaseController(suite.fetchTestFileData("dVersion-suitable.yaml"))
+		dc := newMockedContainerWithData(nil, "v1.4.3", []string{"parca-v1.4.3-unsuitable"})
+		suite.setupReleaseController(suite.fetchTestFileData("dVersion-unsuitable.yaml"), withDependencyContainer(dc))
 		mr := suite.getModuleRelease(suite.testMRName)
 		_, err = suite.ctr.handleRelease(context.TODO(), mr)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("kubernetes suitable version", func() {
-		suite.setupReleaseController(suite.fetchTestFileData("kVersion-suitable.yaml"))
+		dc := newMockedContainerWithData(nil, "v1.4.3", []string{"parca-v1.4.3-kube-suitable"})
+		suite.setupReleaseController(suite.fetchTestFileData("kVersion-suitable.yaml"), withDependencyContainer(dc))
 		mr := suite.getModuleRelease(suite.testMRName)
 		_, err = suite.ctr.handleRelease(context.TODO(), mr)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("kubernetes unsuitable version", func() {
-		suite.setupReleaseController(suite.fetchTestFileData("kVersion-suitable.yaml"))
+		dc := newMockedContainerWithData(nil, "v1.4.3", []string{"parca-v1.4.3-kube-unsuitable"})
+		suite.setupReleaseController(suite.fetchTestFileData("kVersion-unsuitable.yaml"), withDependencyContainer(dc))
 		mr := suite.getModuleRelease(suite.testMRName)
 		_, err = suite.ctr.handleRelease(context.TODO(), mr)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("deploy with outdated module releases", func() {
-		dependency.TestDC.CRClient.ListTagsMock.Return([]string{}, nil)
-		suite.setupReleaseController(suite.fetchTestFileData("clean-up-outdated-module-releases-when-deploy.yaml"))
+		dc := newMockedContainerWithData(nil, "v0.4.54", []string{"echo-v0.4.54"})
+		suite.setupReleaseController(suite.fetchTestFileData("clean-up-outdated-module-releases-when-deploy.yaml"), withDependencyContainer(dc))
 		suite.updateModuleReleasesStatuses()
 		_, err = suite.ctr.handlePendingRelease(context.TODO(), suite.getModuleRelease("echo-v0.4.54"))
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("clean up for a deployed module release with outdated module releases", func() {
-		dependency.TestDC.CRClient.ListTagsMock.Return([]string{}, nil)
-		suite.setupReleaseController(suite.fetchTestFileData("clean-up-outdated-module-releases-for-deployed.yaml"))
+		dc := newMockedContainerWithData(nil, "v0.4.54", []string{"echo-v0.4.54"})
+		suite.setupReleaseController(suite.fetchTestFileData("clean-up-outdated-module-releases-for-deployed.yaml"), withDependencyContainer(dc))
 		suite.updateModuleReleasesStatuses()
 		_, err = suite.ctr.handleDeployedRelease(context.TODO(), suite.getModuleRelease("echo-v0.4.54"))
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("step-by-step", func() {
+		dc := newMockedContainerWithData(nil, "v1.27.0", []string{"v1.26.2", "v1.26.3", "v1.26.4", "v1.27.0", "v1.27.1"})
+		suite.setupReleaseController(suite.fetchTestFileData("step-by-step.yaml"), withDependencyContainer(dc))
+		mr := suite.getModuleRelease("parca-1.26.2")
+		_, err = suite.ctr.handleRelease(context.TODO(), mr)
+		require.NoError(suite.T(), err)
+		mr = suite.getModuleRelease("parca-1.27.0")
+		_, err = suite.ctr.handleRelease(context.TODO(), mr)
 		require.NoError(suite.T(), err)
 	})
 
@@ -239,8 +245,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 				ReleaseChannel: "Stable",
 			}
 
+			dc := newMockedContainerWithData(nil, "v1.26.3", []string{"parca-1.26.2", "parca-v1.26.3"})
 			testData := suite.fetchTestFileData("auto-patch-patch-update.yaml")
-			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
+			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup), withDependencyContainer(dc))
 
 			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
 			require.NoError(suite.T(), err)
@@ -259,8 +266,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 				ReleaseChannel: "Stable",
 			}
 
+			dc := newMockedContainerWithData(nil, "v1.27.0", []string{"parca-1.26.2", "parca-v1.27.0"})
 			testData := suite.fetchTestFileData("auto-patch-minor-update.yaml")
-			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
+			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup), withDependencyContainer(dc))
 
 			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
 			require.NoError(suite.T(), err)
@@ -279,8 +287,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 				ReleaseChannel: "Stable",
 			}
 
+			dc := newMockedContainerWithData(nil, "v1.27.0", []string{"parca-1.26.2", "parca-1.27.0"})
 			testData := suite.fetchTestFileData("auto-mode.yaml")
-			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
+			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup), withDependencyContainer(dc))
 
 			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
 			require.NoError(suite.T(), err)
@@ -294,8 +303,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			mup := embeddedMUP.DeepCopy()
 			mup.Update.Mode = v1alpha1.UpdateModeAutoPatch.String()
 
+			dc := newMockedContainerWithData(nil, "v1.26.3", []string{"parca-1.26.2", "parca-1.26.3"})
 			testData := suite.fetchTestFileData("auto-patch-mode.yaml")
-			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
+			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup), withDependencyContainer(dc))
 
 			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
 			require.NoError(suite.T(), err)
@@ -309,8 +319,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			mup := embeddedMUP.DeepCopy()
 			mup.Update.Mode = v1alpha1.UpdateModeAutoPatch.String()
 
+			dc := newMockedContainerWithData(nil, "v1.27.0", []string{"parca-1.26.2", "parca-1.27.0"})
 			testData := suite.fetchTestFileData("auto-patch-mode-minor-release.yaml")
-			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
+			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup), withDependencyContainer(dc))
 
 			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
 			require.NoError(suite.T(), err)
@@ -324,8 +335,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			mup := embeddedMUP.DeepCopy()
 			mup.Update.Mode = v1alpha1.UpdateModeAutoPatch.String()
 
+			dc := newMockedContainerWithData(nil, "v1.27.0", []string{"parca-1.26.2", "parca-1.27.0"})
 			testData := suite.fetchTestFileData("auto-patch-mode-minor-release-approved.yaml")
-			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
+			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup), withDependencyContainer(dc))
 
 			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
 			require.NoError(suite.T(), err)
@@ -340,8 +352,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		mup := embeddedMUP.DeepCopy()
 		mup.Update.Windows = update.Windows{{From: "8:00", To: "8:01", Days: update.Everyday()}}
 
+		dc := newMockedContainerWithData(nil, "v1.26.3", []string{"parca-1.26.2", "parca-1.26.3"})
 		testData := suite.fetchTestFileData("patch-awaits-update-window.yaml")
-		suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
+		suite.setupReleaseController(testData, withModuleUpdatePolicy(mup), withDependencyContainer(dc))
 
 		_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
 		require.NoError(suite.T(), err)
@@ -358,8 +371,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			ReleaseChannel: "Stable",
 		}
 
+		dc := newMockedContainerWithData(nil, "v1.26.2", []string{"parca-1.26.2"})
 		testData := suite.fetchTestFileData("reinstall-annotation.yaml")
-		suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
+		suite.setupReleaseController(testData, withModuleUpdatePolicy(mup), withDependencyContainer(dc))
 
 		_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
 		require.NoError(suite.T(), err)
@@ -369,8 +383,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("Sequential processing", func() {
 		suite.Run("sequential processing with patch release", func() {
+			dc := newMockedContainerWithData(nil, "v1.70.1", []string{"upmeter-v1.70.0", "upmeter-v1.70.1"})
 			testData := suite.fetchTestFileData("sequential-processing-patch.yaml")
-			suite.setupReleaseController(testData)
+			suite.setupReleaseController(testData, withDependencyContainer(dc))
 			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.0"))
 			require.NoError(suite.T(), err)
 			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.1"))
@@ -378,8 +393,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		})
 
 		suite.Run("sequential processing with minor release", func() {
+			dc := newMockedContainerWithData(nil, "v1.71.0", []string{"upmeter-v1.70.0", "upmeter-v1.71.0"})
 			testData := suite.fetchTestFileData("sequential-processing-minor.yaml")
-			suite.setupReleaseController(testData)
+			suite.setupReleaseController(testData, withDependencyContainer(dc))
 			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.0"))
 			require.NoError(suite.T(), err)
 			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.71.0"))
@@ -387,8 +403,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		})
 
 		suite.Run("sequential processing with minor pending release", func() {
+			dc := newMockedContainerWithData(nil, "v1.72.0", []string{"upmeter-v1.70.0", "upmeter-v1.71.0", "upmeter-v1.72.0"})
 			testData := suite.fetchTestFileData("sequential-processing-minor-pending.yaml")
-			suite.setupReleaseController(testData)
+			suite.setupReleaseController(testData, withDependencyContainer(dc))
 			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.0"))
 			require.NoError(suite.T(), err)
 			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.71.0"))
@@ -398,8 +415,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		})
 
 		suite.Run("sequential processing with minor auto release", func() {
+			dc := newMockedContainerWithData(nil, "v1.72.0", []string{"upmeter-v1.70.0", "upmeter-v1.71.0", "upmeter-v1.72.0"})
 			testData := suite.fetchTestFileData("sequential-processing-minor-auto.yaml")
-			suite.setupReleaseController(testData)
+			suite.setupReleaseController(testData, withDependencyContainer(dc))
 			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.0"))
 			require.NoError(suite.T(), err)
 			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.71.0"))
@@ -409,8 +427,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		})
 
 		suite.Run("sequential processing with minor notready release", func() {
+			dc := newMockedContainerWithData(nil, "v1.72.0", []string{"upmeter-v1.70.0", "upmeter-v1.71.0", "upmeter-v1.72.0"})
 			testData := suite.fetchTestFileData("sequential-processing-minor-notready.yaml")
-			suite.setupReleaseController(testData, withBasicModulePhase(addonmodules.Startup))
+			suite.setupReleaseController(testData, withBasicModulePhase(addonmodules.Startup), withDependencyContainer(dc))
 			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.0"))
 			require.NoError(suite.T(), err)
 			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.71.0"))
@@ -420,8 +439,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		})
 
 		suite.Run("sequential processing with pending releases", func() {
+			dc := newMockedContainerWithData(nil, "v1.72.0", []string{"upmeter-v1.70.0", "upmeter-v1.71.0", "upmeter-v1.72.0"})
 			testData := suite.fetchTestFileData("sequential-processing-pending.yaml")
-			suite.setupReleaseController(testData, withBasicModulePhase(addonmodules.Startup))
+			suite.setupReleaseController(testData, withBasicModulePhase(addonmodules.Startup), withDependencyContainer(dc))
 			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.0"))
 			require.NoError(suite.T(), err)
 			suite.setModulePhase(addonmodules.Ready)
@@ -433,8 +453,11 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("Process pending releases", func() {
+		dc := newMockedContainerWithData(nil, "v1.0.3", []string{"commander-1.0.1", "commander-1.0.2", "commander-1.0.3"})
+		dc = newMockedContainerWithData(dc, "v1.2.2", []string{"parca-1.2.1", "parca-1.2.2"})
+
 		// Setup initial state
-		suite.setupReleaseController(suite.fetchTestFileData("apply-pending-releases.yaml"))
+		suite.setupReleaseController(suite.fetchTestFileData("apply-pending-releases.yaml"), withDependencyContainer(dc))
 
 		// Test updating Parca module
 		mr := suite.getModuleRelease("parca-1.2.2")
@@ -772,4 +795,26 @@ func TestValidateModule(t *testing.T) {
 	check("validation/module-failed", true)
 	check("validation/module-values-failed", true)
 	check("validation/virtualization", false)
+}
+
+func newMockedContainerWithData(dc *dependency.MockedContainer, version string, tags []string) *dependency.MockedContainer {
+	if dc == nil {
+		dc = dependency.NewMockedContainer()
+	}
+	dc.CRClient.ListTagsMock.Return(tags, nil)
+	dc.CRClient.ImageMock.Return(&crfake.FakeImage{
+		ManifestStub: func() (*crv1.Manifest, error) {
+			return &crv1.Manifest{
+				Layers: []crv1.Descriptor{},
+			}, nil
+		},
+		LayersStub: func() ([]crv1.Layer, error) {
+			return []crv1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "` + version + `"}`}}}, nil
+		},
+		DigestStub: func() (crv1.Hash, error) {
+			return crv1.Hash{Algorithm: "sha256"}, nil
+		},
+	}, nil)
+
+	return dc
 }
