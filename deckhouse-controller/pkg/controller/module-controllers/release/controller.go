@@ -740,6 +740,7 @@ func (r *reconciler) ApplyRelease(ctx context.Context, mr *v1alpha1.ModuleReleas
 
 	for _, version := range versions {
 		tmpMr := mr.DeepCopy()
+		tmpMr.ObjectMeta.Name = fmt.Sprintf("%s-%s", mr.GetModuleName(), version.String())
 		tmpMr.Spec.Version = version.String()
 		if err = r.runReleaseDeploy(ctx, tmpMr, dri); err != nil {
 			return fmt.Errorf("run release deploy: %w", err)

@@ -202,7 +202,10 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	suite.Run("step-by-step", func() {
 		dc := newMockedContainerWithData(nil, "v1.27.0", []string{"v1.26.2", "v1.26.3", "v1.26.4", "v1.27.0", "v1.27.1"})
 		suite.setupReleaseController(suite.fetchTestFileData("step-by-step.yaml"), withDependencyContainer(dc))
-		mr := suite.getModuleRelease("parca-1.27.0")
+		mr := suite.getModuleRelease("parca-1.26.2")
+		_, err = suite.ctr.handleRelease(context.TODO(), mr)
+		require.NoError(suite.T(), err)
+		mr = suite.getModuleRelease("parca-1.27.0")
 		_, err = suite.ctr.handleRelease(context.TODO(), mr)
 		require.NoError(suite.T(), err)
 	})
