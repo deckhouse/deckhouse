@@ -168,7 +168,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("deckhouse unsuitable version", func() {
-		suite.setupReleaseController(suite.fetchTestFileData("dVersion-suitable.yaml"))
+		suite.setupReleaseController(suite.fetchTestFileData("dVersion-unsuitable.yaml"))
 		mr := suite.getModuleRelease(suite.testMRName)
 		_, err = suite.ctr.handleRelease(context.TODO(), mr)
 		require.NoError(suite.T(), err)
@@ -182,7 +182,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("kubernetes unsuitable version", func() {
-		suite.setupReleaseController(suite.fetchTestFileData("kVersion-suitable.yaml"))
+		suite.setupReleaseController(suite.fetchTestFileData("kVersion-unsuitable.yaml"))
 		mr := suite.getModuleRelease(suite.testMRName)
 		_, err = suite.ctr.handleRelease(context.TODO(), mr)
 		require.NoError(suite.T(), err)
