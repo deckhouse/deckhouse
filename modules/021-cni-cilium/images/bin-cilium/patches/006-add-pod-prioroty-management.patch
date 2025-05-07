@@ -10,7 +10,7 @@ index 3b3ffc13ef..66159bcaa5 100644
 +	"strconv"
 +	"strings"
  	"time"
- 
+
  	"github.com/cilium/hive/cell"
 @@ -18,6 +21,7 @@ import (
  	cilium_api_v2 "github.com/cilium/cilium/pkg/k8s/apis/cilium.io/v2"
@@ -19,18 +19,18 @@ index 3b3ffc13ef..66159bcaa5 100644
 +	"github.com/cilium/cilium/pkg/labels"
  	"github.com/cilium/cilium/pkg/logging/logfields"
  )
- 
+
 @@ -49,10 +53,209 @@ const (
  	// batched and synced together after a short delay.
  	DefaultCESSyncTime = 500 * time.Millisecond
- 
+
 +	// Force CES update
 +	ForceCESSyncTime = 5 * time.Millisecond
 +
  	CESWriteQPSLimitMax = 50
  	CESWriteQPSBurstMax = 100
  )
- 
+
 +type cepPriority uint32
 +
 +const (
@@ -246,7 +246,7 @@ index 3b3ffc13ef..66159bcaa5 100644
 +	touchedCESs := c.manager.UpdateCEPMapping(k8s.ConvertCEPToCoreCEP(newOwner), newOwner.Namespace)
  	c.enqueueCESReconciliation(touchedCESs)
  }
- 
+
  func (c *Controller) onEndpointDelete(cep *cilium_api_v2.CiliumEndpoint) {
 +	hiddenCep := filter.removeCEPFromFilter(cep)
 +
@@ -295,9 +295,9 @@ index 40c714ee0f..9541281c22 100644
 +	// network access
 +	IDNamePriority = "network.deckhouse.io/pod-common-ip-priority"
  )
- 
+
  var (
--- 
+--
 2.34.1
 
 
@@ -331,25 +331,25 @@ index fb2e5f7682..434d78f164 100644
 +++ b/cilium-dbg/cmd/bpf_endpoint_delete.go
 @@ -9,7 +9,7 @@ import (
  	"github.com/spf13/cobra"
- 
+
  	"github.com/cilium/cilium/pkg/common"
 -	"github.com/cilium/cilium/pkg/maps/lxcmap"
 +	lxcmap "github.com/cilium/cilium/pkg/ipcache"
  )
- 
+
  var bpfEndpointDeleteCmd = &cobra.Command{
 diff --git a/cilium-dbg/cmd/bpf_endpoint_list.go b/cilium-dbg/cmd/bpf_endpoint_list.go
 index ce72120d24..0249739c44 100644
 --- a/cilium-dbg/cmd/bpf_endpoint_list.go
 +++ b/cilium-dbg/cmd/bpf_endpoint_list.go
 @@ -10,7 +10,7 @@ import (
- 
+
  	"github.com/cilium/cilium/pkg/command"
  	"github.com/cilium/cilium/pkg/common"
 -	"github.com/cilium/cilium/pkg/maps/lxcmap"
 +	lxcmap "github.com/cilium/cilium/pkg/ipcache"
  )
- 
+
  const (
 diff --git a/daemon/cmd/datapath.go b/daemon/cmd/datapath.go
 index a8680acbac..f6e8efcd0d 100644
@@ -489,9 +489,9 @@ index 34e46fba68..4325fbc6b3 100644
 --- a/pkg/ipcache/ipcache.go
 +++ b/pkg/ipcache/ipcache.go
 @@ -12,6 +12,9 @@ import (
- 
+
  	"github.com/sirupsen/logrus"
- 
+
 +	"fmt"
 +
 +	"github.com/cilium/cilium/pkg/bpf"
@@ -550,7 +550,7 @@ index 34e46fba68..4325fbc6b3 100644
 +	// namespace
 +	EndpointFlagAtHostNS = 2
  )
- 
+
 +// EndpointFrontend is the interface to implement for an object to synchronize
 +// with the endpoint BPF map.
 +type EndpointFrontend interface {
@@ -763,7 +763,7 @@ index 301d7c2c35..5d4049abe7 100644
 +	lxcmap "github.com/cilium/cilium/pkg/ipcache"
  	"github.com/cilium/cilium/pkg/time"
  )
- 
+
 diff --git a/pkg/maps/lxcmap/doc.go b/pkg/maps/lxcmap/doc.go
 deleted file mode 100644
 index 01af96c4ad..0000000000
@@ -1037,7 +1037,7 @@ index deb81c9af0..0000000000
 -
 -	return m, nil
 -}
--- 
+--
 2.34.1
 
 
@@ -1062,7 +1062,7 @@ index 8161060573..7c672f9dea 100644
 @@ -13,12 +13,6 @@ import (
  	"runtime"
  	"sync"
- 
+
 -	"github.com/cilium/hive/job"
 -	"github.com/cilium/statedb"
 -	"github.com/sirupsen/logrus"
@@ -1082,12 +1082,12 @@ index 8161060573..7c672f9dea 100644
 +	"github.com/vishvananda/netlink"
 +	"golang.org/x/sync/semaphore"
  )
- 
+
  const (
 @@ -411,6 +410,8 @@ func newDaemon(ctx context.Context, cleaner *daemonCleanup, params *daemonParams
  		maglevConfig:      params.MaglevConfig,
  	}
- 
+
 +	ipcache.SetGlobalIPCache(d.ipcache)
 +
  	// initialize endpointRestoreComplete channel as soon as possible so that subsystems
@@ -1108,7 +1108,7 @@ index 4325fbc6b3..4a29583038 100644
 @@ -51,6 +52,74 @@ var (
  	lxcMapOnce sync.Once
  )
- 
+
 +type LxcEndpointInfo struct {
 +	key    *EndpointKey
 +	info   *EndpointInfo
@@ -1182,7 +1182,7 @@ index 4325fbc6b3..4a29583038 100644
  		lxcMap = bpf.NewMap(MapName,
 @@ -203,9 +272,36 @@ func WriteEndpoint(f EndpointFrontend) error {
  	}
- 
+
  	// FIXME: Revert on failure
 +	nodeIPv4 := node.GetIPv4()
 +	// for prevent race conditions between ipcache upsert method used common mutex
@@ -1218,9 +1218,9 @@ index 4325fbc6b3..4a29583038 100644
 +			}).Debug("hiding pod address in cilium_lxc map")
  		}
  	}
- 
+
 @@ -235,6 +331,9 @@ func SyncHostEntry(ip net.IP) (bool, error) {
- 
+
  // DeleteEntry deletes a single map entry
  func DeleteEntry(ip net.IP) error {
 +	globalIPCache.Lock()
@@ -1228,7 +1228,7 @@ index 4325fbc6b3..4a29583038 100644
 +	delete(globalIPCache.ipToEndpointInfo, ip.To4().String())
  	return LXCMap().Delete(NewEndpointKey(ip))
  }
- 
+
 @@ -243,6 +342,10 @@ func DeleteEntry(ip net.IP) error {
  func DeleteElement(f EndpointFrontend) []error {
  	var errors []error
@@ -1245,9 +1245,9 @@ index 4325fbc6b3..4a29583038 100644
  	ipToHostIPCache   map[string]IPKeyPair
  	ipToK8sMetadata   map[string]K8sMetadata
 +	ipToEndpointInfo  map[string]*LxcEndpointInfo
- 
+
  	listeners []IPIdentityMappingListener
- 
+
 @@ -408,6 +512,7 @@ func NewIPCache(c *Configuration) *IPCache {
  		identityToIPCache: map[identity.NumericIdentity]map[string]struct{}{},
  		ipToHostIPCache:   map[string]IPKeyPair{},
@@ -1257,9 +1257,9 @@ index 4325fbc6b3..4a29583038 100644
  		namedPorts:        types.NewNamedPortMultiMap(),
  		metadata:          newMetadata(),
 @@ -687,6 +792,7 @@ func (ipc *IPCache) upsertLocked(
- 
+
  	scopedLog.Debug("Upserting IP into ipcache layer")
- 
+
 +	ipc.checkLxcMapRelation(ip, hostIP, oldHostIP)
  	// Update both maps.
  	ipc.ipToIdentityCache[ip] = newIdentity
@@ -1267,7 +1267,7 @@ index 4325fbc6b3..4a29583038 100644
 @@ -732,6 +838,13 @@ func (ipc *IPCache) upsertLocked(
  	return namedPortsChanged, nil
  }
- 
+
 +func (ipc *IPCache) IsIPcacheOwner(IP string, source source.Source, namespace, name string) (isOwner bool) {
 +	ipc.mutex.Lock()
 +	defer ipc.mutex.Unlock()
@@ -1311,7 +1311,7 @@ index 8467720fb4..b2c02a7112 100644
  	endpointDeleted(c *types.CiliumEndpoint)
 +	endpointIsIPcacheOwner(c *types.CiliumEndpoint) bool
  }
- 
+
  type localEndpointCache interface {
 @@ -154,13 +155,19 @@ func (cs *cesSubscriber) deleteCEPfromCES(CEPName, CESName string, c *types.Cili
  			"CEPName": CEPName,
@@ -1332,7 +1332,7 @@ index 8467720fb4..b2c02a7112 100644
  	}
 +
  }
- 
+
  // addCEPwithCES insert CEP with CES to the map and triggers endpointUpdated.
 diff --git a/pkg/k8s/watchers/watcher.go b/pkg/k8s/watchers/watcher.go
 index 0f4947864e..1f306ba4aa 100644
@@ -1344,9 +1344,9 @@ index 0f4947864e..1f306ba4aa 100644
  	DeleteOnMetadataMatch(IP string, source source.Source, namespace, name string) (namedPortsChanged bool)
 +	IsIPcacheOwner(IP string, source source.Source, namespace, name string) (isOwner bool)
  }
- 
+
  type K8sWatcher struct {
--- 
+--
 2.34.1
 
 
@@ -1367,7 +1367,7 @@ index 66159bcaa5..8e11d9d7ff 100644
 @@ -277,15 +277,14 @@ func (c *Controller) onEndpointUpdate(cep *cilium_api_v2.CiliumEndpoint) {
  		return
  	}
- 
+
 -	// TODO use delay
 -	oldOwner, _, newOwner := filter.filterAddressByPriority(cep)
 +	oldOwner, delay, newOwner := filter.filterAddressByPriority(cep)
@@ -1376,36 +1376,36 @@ index 66159bcaa5..8e11d9d7ff 100644
 -		c.enqueueCESReconciliation(touchedCESs)
 +		c.enqueueCESReconciliation(touchedCESs, delay)
  	}
- 
+
  	touchedCESs := c.manager.UpdateCEPMapping(k8s.ConvertCEPToCoreCEP(newOwner), newOwner.Namespace)
 -	c.enqueueCESReconciliation(touchedCESs)
 +	c.enqueueCESReconciliation(touchedCESs, delay)
  }
- 
+
  func (c *Controller) onEndpointDelete(cep *cilium_api_v2.CiliumEndpoint) {
 @@ -293,29 +292,29 @@ func (c *Controller) onEndpointDelete(cep *cilium_api_v2.CiliumEndpoint) {
- 
+
  	if hiddenCep != nil {
  		touchedCESs := c.manager.UpdateCEPMapping(k8s.ConvertCEPToCoreCEP(hiddenCep), hiddenCep.Namespace)
 -		c.enqueueCESReconciliation(touchedCESs)
 +		c.enqueueCESReconciliation(touchedCESs, DefaultCESSyncTime)
  	}
- 
+
  	touchedCES := c.manager.RemoveCEPMapping(k8s.ConvertCEPToCoreCEP(cep), cep.Namespace)
 -	c.enqueueCESReconciliation([]CESKey{touchedCES})
 +	c.enqueueCESReconciliation([]CESKey{touchedCES}, DefaultCESSyncTime)
  }
- 
+
  func (c *Controller) onSliceUpdate(ces *capi_v2a1.CiliumEndpointSlice) {
 -	c.enqueueCESReconciliation([]CESKey{NewCESKey(ces.Name, ces.Namespace)})
 +	c.enqueueCESReconciliation([]CESKey{NewCESKey(ces.Name, ces.Namespace)}, DefaultCESSyncTime)
  }
- 
+
  func (c *Controller) onSliceDelete(ces *capi_v2a1.CiliumEndpointSlice) {
 -	c.enqueueCESReconciliation([]CESKey{NewCESKey(ces.Name, ces.Namespace)})
 +	c.enqueueCESReconciliation([]CESKey{NewCESKey(ces.Name, ces.Namespace)}, DefaultCESSyncTime)
  }
- 
+
 -func (c *Controller) addToQueue(ces CESKey) {
 +func (c *Controller) addToQueue(ces CESKey, delay time.Duration) {
  	c.priorityNamespacesLock.RLock()
@@ -1421,9 +1421,9 @@ index 66159bcaa5..8e11d9d7ff 100644
  		} else {
  			c.standardQueue.Add(ces)
 @@ -326,7 +325,7 @@ func (c *Controller) addToQueue(ces CESKey) {
- 
+
  }
- 
+
 -func (c *Controller) enqueueCESReconciliation(cess []CESKey) {
 +func (c *Controller) enqueueCESReconciliation(cess []CESKey, delay time.Duration) {
  	for _, ces := range cess {
@@ -1438,6 +1438,6 @@ index 66159bcaa5..8e11d9d7ff 100644
  		}
  	}
  }
--- 
+--
 2.34.1
 
