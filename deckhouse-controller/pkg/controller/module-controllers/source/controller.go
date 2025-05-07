@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"path"
 	"sort"
 	"sync"
 	"time"
@@ -373,7 +374,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 				return fmt.Errorf("update the '%s' module: %w", moduleName, err)
 			}
 
-			versions, errGet := r.getIntermediateModuleVersions(ctx, moduleName, module.GetVersion(), meta.ModuleVersion)
+			versions, errGet := r.getIntermediateModuleVersions(ctx, source, opts, moduleName, module.GetVersion(), meta.ModuleVersion)
 			if errGet != nil {
 				return fmt.Errorf("get intermediate versions: %w", err)
 			}
@@ -499,6 +500,8 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 // getIntermediateModuleVersions returns a sorted list of versions between currentVersion and targetVersion (including target)
 func (r *reconciler) getIntermediateModuleVersions(
 	ctx context.Context,
+	source *v1alpha1.ModuleSource,
+	opts []cr.Option,
 	moduleName, currentVersionStr, targetVersionStr string) ([]*semver.Version, error) {
 	currentVersion, err := semver.NewVersion(currentVersionStr)
 	if err != nil {
@@ -509,8 +512,7 @@ func (r *reconciler) getIntermediateModuleVersions(
 		return nil, fmt.Errorf("parse target version: %w", err)
 	}
 
-	// registryClient must be available via dependencyContainer
-	registryClient, err := r.dependencyContainer.GetRegistryClient(moduleName)
+	registryClient, err := r.dependencyContainer.GetRegistryClient(path.Join(source.Spec.Registry.Repo, moduleName), opts...)
 	if err != nil {
 		return nil, fmt.Errorf("get registry client: %w", err)
 	}
