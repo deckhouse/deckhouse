@@ -9,8 +9,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "Restriction on the ability to use signature verification policies for container images and the ability to prohibit the launch of containers with vulnerabilities",
-        "ru": "Ограничение на возможность использования политик проверки подписи образов контейнеров и возможность установки запрета на запуск контейнеров с уязвимостями"
+        "en": "Restriction on&nbsp;the ability to&nbsp;use signature verification policies for container images and the ability to&nbsp;prohibit the launch of&nbsp;containers with vulnerabilities",
+        "ru": "Ограничение на&nbsp;возможность использования политик проверки подписи образов контейнеров и&nbsp;возможность установки запрета на&nbsp;запуск контейнеров с&nbsp;уязвимостями"
       }
     }
   },
@@ -39,8 +39,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "Restriction on the ability to configure fault&ndash;tolerant Egress Gateways",
-        "ru": "Ограничение на возможность настройки отказоустойчивых выходных узлов (Egress Gateway)"
+        "en": "Restriction on&nbsp;the ability to&nbsp;configure fault tolerant Egress Gateways",
+        "ru": "Ограничение на&nbsp;возможность настройки отказоустойчивых выходных узлов (Egress Gateway)"
       }
     }
   },
@@ -59,8 +59,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "A separate license is required",
-        "ru": "Требуется отдельная лицензия"
+        "en": "A&nbsp;separate license is&nbsp;required",
+        "ru": "Требуется отдельная лицензия"
       }
     },
     "external": "true",
@@ -82,8 +82,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "View-only access",
-        "ru": "Доступ только на просмотр"
+        "en": "View-only access",
+        "ru": "Доступ только на просмотр"
       }
     },
     "editions": [
@@ -172,8 +172,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "Restriction on the use of federation and multicluster features",
-        "ru": "Ограничение на использование федерации и мультикластерной конфигурации"
+        "en": "Restriction on&nbsp;the use of&nbsp;federation and multicluster features",
+        "ru": "Ограничение на&nbsp;использование федерации и&nbsp;мультикластерной конфигурации"
       }
     }
   },
@@ -193,8 +193,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "Restriction on the use of the BGP load balancer for services",
-        "ru": "Ограничение на использование BGP-балансировщика для сервисов"
+        "en": "Restriction on&nbsp;the use of&nbsp;the BGP load balancer for services",
+        "ru": "Ограничение на&nbsp;использование BGP-балансировщика для сервисов"
       }
     },
     "path": "modules/metallb/"
@@ -208,8 +208,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "A separate license is required",
-        "ru": "Требуется отдельная лицензия"
+        "en": "A&nbsp;separate license is&nbsp;required",
+        "ru": "Требуется отдельная лицензия"
       }
     },
     "external": "true",
@@ -239,8 +239,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "Restriction on the ability to create snapshots",
-        "ru": "Ограничение на возможность создания снимков"
+        "en": "Restriction on&nbsp;the ability to&nbsp;create snapshots",
+        "ru": "Ограничение на&nbsp;возможность создания снимков"
       }
     },
     "external": "true",
@@ -270,8 +270,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "Restriction on the ability to create snapshots",
-        "ru": "Ограничение на возможность создания снимков"
+        "en": "Restriction on&nbsp;the ability to&nbsp;create snapshots",
+        "ru": "Ограничение на&nbsp;возможность создания снимков"
       }
     },
     "external": "true",
@@ -305,8 +305,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "A separate license is required",
-        "ru": "Требуется отдельная лицензия"
+        "en": "A&nbsp;separate license is&nbsp;required",
+        "ru": "Требуется отдельная лицензия"
       }
     },
     "external": "true",
@@ -330,8 +330,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "Restriction on the use of namespace filtering in the role-based access model",
-        "ru": "Ограничение на использование фильтрации по пространствам имен в ролевой модели доступа"
+        "en": "Restriction on&nbsp;the use of&nbsp;namespace filtering in&nbsp;the role-based access model",
+        "ru": "Ограничение на&nbsp;использование фильтрации по&nbsp;пространствам имен в&nbsp;ролевой модели доступа"
       }
     },
     "path": "modules/user-authz/"
@@ -346,8 +346,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "Restriction on the VM migration without interruption",
-        "ru": "Ограничение на возможность беспростойной миграции виртуальных машин при изменении конфигурации"
+        "en": "Restriction on&nbsp;the&nbsp;VM migration without interruption",
+        "ru": "Ограничение на&nbsp;возможность беспростойной миграции виртуальных машин при изменении конфигурации"
       }
     },
     "external": "true",

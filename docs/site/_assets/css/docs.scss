@@ -333,14 +333,15 @@
   margin-top: 25px;
 }
 
-.layout-sidebar__sidebar,
-.layout-sidebar__sidebar_right {
+.layout-sidebar__sidebar {
   position: relative;
   width: 297px;
   min-width: 297px;
 }
 
 .layout-sidebar__sidebar_right {
+  position: relative;
+  width: 297px;
   padding-top: 63px;
 }
 
@@ -1957,6 +1958,10 @@ select#contact-select {
   .alertslist__badge_severity-s9  span {
     color: #ddd;
   }
+}
+
+.tippy-box {
+  min-width: 255px;
 }
 
 .tippy-box[data-theme~='light'] {
