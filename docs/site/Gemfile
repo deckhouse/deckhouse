@@ -9,3 +9,4 @@ gem "jekyll_asset_pipeline"
 gem "sass"
 gem 'cssminify2'
 gem "octicons"
+gem 'jekyll-asciidoc'
