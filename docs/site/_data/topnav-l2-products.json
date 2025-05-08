@@ -203,8 +203,8 @@
           "rel": ""
         },
         {
-          "title": "Подготовка к Production",
-          "url": "/products/kubernetes-platform/guides/production.html",
+          "title": "Руководства",
+          "url": "/products/kubernetes-platform/guides/",
           "target": "",
           "rel": ""
         }
