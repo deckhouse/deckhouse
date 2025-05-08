@@ -1,48 +1,52 @@
-{{- $binaries := "/usr/bin/python3 /lib64/libz.so* /lib64/libexpat.so* /usr/lib64/libffi.so* /lib64/libcrypto.so* /lib64/libssl.so*" }}
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
-final: false
-fromImage: common/alt-p11-artifact
-git:
-  - add: /{{ $.ModulePath }}modules/340-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/requirements.txt
-    to: /requirements.txt
-    stageDependencies:
-      install:
-        - '**/*'
-import:
-- image: common/python-static
-  add: /opt/python-static
-  to: /opt/python-static
-  before: install
-shell:
-  beforeInstall:
-  - apt-get install -y git
-  install:
-    - export SOURCE_REPO={{ .SOURCE_REPO }}
-    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-    - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
-    - rm -rf /wheels/.git
-    - /opt/python-static/bin/pip3 install -f file:///wheels --no-index -r /requirements.txt
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
-git:
-  - add: /{{ $.ModulePath }}modules/340-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/extended-monitoring.py
-    to: /app/extended-monitoring.py
-import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
-  add: /opt/python-static/bin
-  to: /usr/bin
-  before: install
-  includePaths:
-  - python3*
-  - python3
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
-  add: /opt/python-static/lib
-  to: /usr/lib
-  before: install
-  includePaths:
-  - python3*
 imageSpec:
   config:
-    entrypoint: ["python3"]
+    entrypoint: ["/extended-monitoring-exporter"]
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /extended-monitoring-exporter
+  after: setup
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src
+  to: /src
+  includePaths:
+  - '**/*.go'
+  - '**/*.mod'
+  - '**/*.sum'
+  stageDependencies:
+    install:
+    - '**/*.go'
+    - 'go.mod'
+    - 'go.sum'
+shell:
+  install:
+  - cd /src
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: builder/golang-alpine
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  - go test ./... -v
+  - go build -ldflags="-s -w" -o /extended-monitoring-exporter main.go
+  - chown 64535:64535 /extended-monitoring-exporter
+  - chmod 0700 /extended-monitoring-exporter
