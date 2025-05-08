@@ -217,7 +217,6 @@ bin/regcopy: bin ## App to copy docker images to the Deckhouse registry
 
 bin/trivy-${TRIVY_VERSION}/trivy:
 	mkdir -p bin/trivy-${TRIVY_VERSION}
-	# curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ./bin/trivy-${TRIVY_VERSION} v${TRIVY_VERSION}
 	curl https://${DECKHOUSE_PRIVATE_REPO}/api/v4/projects/${TRIVY_PROJECT_ID}/packages/generic/trivy-v${TRIVY_VERSION}/v${TRIVY_VERSION}/trivy -o bin/trivy-${TRIVY_VERSION}/trivy
 
 .PHONY: trivy
@@ -229,7 +228,7 @@ bin/trivy: bin bin/trivy-${TRIVY_VERSION}/trivy
 .PHONY: cve-report
 cve-report: bin/trivy bin/jq ## Generate CVE report for a Deckhouse release.
   ##~ Options: SEVERITY=CRITICAL,HIGH REPO=registry.deckhouse.io TAG=v1.30.0
-	./tools/cve/d8-images.sh
+	./tools/cve/d8_images_cve_scan.sh
 
 cve-base-images-check-default-user: bin/trivy bin/jq ## Check CVE in our base images.
   ##~ Options: SEVERITY=CRITICAL,HIGH
