@@ -409,3 +409,52 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   };
 });
+
+document.addEventListener("DOMContentLoaded", function() {
+  const preElement = document.querySelectorAll('pre');
+
+  preElement.forEach(pre => {
+    pre.classList.add('code__transfer');
+    const code = pre.querySelector('code');
+
+    const button = document.createElement('button');
+    button.textContent = 'Unwrap';
+    code.classList.add('wrap');
+    button.classList.add('wrap__button');
+    pre.appendChild(button);
+
+    let isWrapper = false;
+
+    button.addEventListener('click', function() {
+      isWrapper = !isWrapper;
+      code.classList.toggle('wrap');
+      button.textContent = isWrapper ? 'Wrap' : 'Unwrap';
+      code.style.userSelect = isWrapper ? 'auto' : 'none';
+    });
+
+    const codeText = code.textContent;
+    const lines = codeText.split('\n');
+
+    const wrapperCode = document.createElement('div');
+    wrapperCode.classList.add('code__wrapper');
+
+    const codeContainer = document.createElement('div');
+    codeContainer.classList.add('code__container');
+
+    code.parentNode.insertBefore(wrapperCode, code);
+    codeContainer.appendChild(code);
+    wrapperCode.appendChild(codeContainer);
+
+    const lineNumber = document.createElement('ol');
+    lineNumber.classList.add('line-number');
+    wrapperCode.insertBefore(lineNumber, codeContainer);
+
+    lines.forEach((line, index) => {
+      if(line.trim().length !== 0) {
+        const listItem = document.createElement('li');
+        listItem.textContent = index + 1 + '.';
+        lineNumber.appendChild(listItem)
+      }
+    })
+  })
+})
