@@ -26,8 +26,9 @@ func TestGetCloudsUseOpentofu(t *testing.T) {
 	m, err := getCloudNameToUseOpentofuMap(config.InfrastructureVersions)
 	require.NoError(t, err)
 
-	require.Len(t, m, 1)
+	require.Len(t, m, 2)
 	require.Contains(t, m, "yandex")
+	require.Contains(t, m, "dvp")
 }
 
 func TestNeedToUseOpentofu(t *testing.T) {
