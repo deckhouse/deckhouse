@@ -56,6 +56,9 @@ spec:
                 releaseChannel:
                   type: string
                   description: Module release channel.
+                exclusiveGroup:
+                  type: string
+                  description: Indicates the group where only one module can be active at a time.
                 updatePolicy:
                   type: string
                   description: Module update policy.

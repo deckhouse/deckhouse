@@ -32,6 +32,8 @@ spec:
                   description: Текущая стадия жизненного цикла модуля.
                 version:
                   description: Версия модуля.
+                exclusiveGroup:
+                  description: Принадлежность модуля к группе, где может быть активен только один модуль.
                 disableOptions:
                   description: Параметры защиты от отключения модуля.
                 requirements:
