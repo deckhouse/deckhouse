@@ -109,6 +109,21 @@ internal:
           cpu: 14
           memory: 23
           pods: 3
+  - name: test4
+    evictLocalStoragePods:
+      enabled: true
+    strategies:
+      lowNodeUtilization:
+        enabled: true
+        thresholds:
+          cpu: 10
+          memory: 20
+          pods: 30
+        targetThresholds:
+          cpu: 40
+          memory: 50
+          pods: 50
+          gpu: "gpuNode"
 `
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
@@ -230,6 +245,36 @@ profiles:
     balance:
       enabled:
       - HighNodeUtilization
+    filter:
+      enabled:
+      - DefaultEvictor
+    preEvictionFilter:
+      enabled:
+      - DefaultEvictor
+- name: test4
+  pluginConfig:
+  - args:
+      evictFailedBarePods: true
+      evictLocalStoragePods: true
+      evictSystemCriticalPods: false
+      ignorePvcPods: false
+      nodeFit: true
+    name: DefaultEvictor
+  - args:
+      targetThresholds:
+        cpu: 40
+        gpu: gpuNode
+        memory: 50
+        pods: 50
+      thresholds:
+        cpu: 10
+        memory: 20
+        pods: 30
+    name: LowNodeUtilization
+  plugins:
+    balance:
+      enabled:
+      - LowNodeUtilization
     filter:
       enabled:
       - DefaultEvictor
