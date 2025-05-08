@@ -1,0 +1,9 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  annotations:
+    dryrun: "true"
+  name: v1.66.0
+spec:
+  version: v1.66.0
