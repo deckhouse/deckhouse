@@ -1,0 +1,589 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.17.1
+  name: securitygroups.openstack.k-orc.cloud
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-openstack
+spec:
+  group: openstack.k-orc.cloud
+  names:
+    categories:
+      - openstack
+    kind: SecurityGroup
+    listKind: SecurityGroupList
+    plural: securitygroups
+    singular: securitygroup
+  scope: Namespaced
+  versions:
+    - additionalPrinterColumns:
+        - description: Resource ID
+          jsonPath: .status.id
+          name: ID
+          type: string
+        - description: Availability status of resource
+          jsonPath: .status.conditions[?(@.type=='Available')].status
+          name: Available
+          type: string
+        - description: Message describing current progress status
+          jsonPath: .status.conditions[?(@.type=='Progressing')].message
+          name: Message
+          type: string
+      name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: SecurityGroup is the Schema for an ORC resource.
+          properties:
+            apiVersion:
+              description: |-
+                APIVersion defines the versioned schema of this representation of an object.
+                Servers should convert recognized schemas to the latest internal value, and
+                may reject unrecognized values.
+                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+              type: string
+            kind:
+              description: |-
+                Kind is a string value representing the REST resource this object represents.
+                Servers may infer this from the endpoint the client submits requests to.
+                Cannot be updated.
+                In CamelCase.
+                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: spec specifies the desired state of the resource.
+              properties:
+                cloudCredentialsRef:
+                  description: cloudCredentialsRef points to a secret containing OpenStack
+                    credentials
+                  properties:
+                    cloudName:
+                      description: cloudName specifies the name of the entry in the
+                        clouds.yaml file to use.
+                      maxLength: 256
+                      minLength: 1
+                      type: string
+                    secretName:
+                      description: |-
+                        secretName is the name of a secret in the same namespace as the resource being provisioned.
+                        The secret must contain a key named `clouds.yaml` which contains an OpenStack clouds.yaml file.
+                        The secret may optionally contain a key named `cacert` containing a PEM-encoded CA certificate.
+                      maxLength: 253
+                      minLength: 1
+                      type: string
+                  required:
+                    - cloudName
+                    - secretName
+                  type: object
+                import:
+                  description: |-
+                    import refers to an existing OpenStack resource which will be imported instead of
+                    creating a new one.
+                  maxProperties: 1
+                  minProperties: 1
+                  properties:
+                    filter:
+                      description: |-
+                        filter contains a resource query which is expected to return a single
+                        result. The controller will continue to retry if filter returns no
+                        results. If filter returns multiple results the controller will set an
+                        error state and will not continue to retry.
+                      minProperties: 1
+                      properties:
+                        description:
+                          description: description of the existing resource
+                          maxLength: 255
+                          minLength: 1
+                          type: string
+                        name:
+                          description: name of the existing resource
+                          maxLength: 255
+                          minLength: 1
+                          pattern: ^[^,]+$
+                          type: string
+                        notTags:
+                          description: |-
+                            notTags is a list of tags to filter by. If specified, resources which
+                            contain all of the given tags will be excluded from the result.
+                          items:
+                            description: |-
+                              NeutronTag represents a tag on a Neutron resource.
+                              It may not be empty and may not contain commas.
+                            maxLength: 255
+                            minLength: 1
+                            type: string
+                          maxItems: 32
+                          type: array
+                          x-kubernetes-list-type: set
+                        notTagsAny:
+                          description: |-
+                            notTagsAny is a list of tags to filter by. If specified, resources
+                            which contain any of the given tags will be excluded from the result.
+                          items:
+                            description: |-
+                              NeutronTag represents a tag on a Neutron resource.
+                              It may not be empty and may not contain commas.
+                            maxLength: 255
+                            minLength: 1
+                            type: string
+                          maxItems: 32
+                          type: array
+                          x-kubernetes-list-type: set
+                        tags:
+                          description: |-
+                            tags is a list of tags to filter by. If specified, the resource must
+                            have all of the tags specified to be included in the result.
+                          items:
+                            description: |-
+                              NeutronTag represents a tag on a Neutron resource.
+                              It may not be empty and may not contain commas.
+                            maxLength: 255
+                            minLength: 1
+                            type: string
+                          maxItems: 32
+                          type: array
+                          x-kubernetes-list-type: set
+                        tagsAny:
+                          description: |-
+                            tagsAny is a list of tags to filter by. If specified, the resource
+                            must have at least one of the tags specified to be included in the
+                            result.
+                          items:
+                            description: |-
+                              NeutronTag represents a tag on a Neutron resource.
+                              It may not be empty and may not contain commas.
+                            maxLength: 255
+                            minLength: 1
+                            type: string
+                          maxItems: 32
+                          type: array
+                          x-kubernetes-list-type: set
+                      type: object
+                    id:
+                      description: |-
+                        id contains the unique identifier of an existing OpenStack resource. Note
+                        that when specifying an import by ID, the resource MUST already exist.
+                        The ORC object will enter an error state if the resource does not exist.
+                      format: uuid
+                      type: string
+                  type: object
+                managedOptions:
+                  description: managedOptions specifies options which may be applied
+                    to managed objects.
+                  properties:
+                    onDelete:
+                      default: delete
+                      description: |-
+                        onDelete specifies the behaviour of the controller when the ORC
+                        object is deleted. Options are `delete` - delete the OpenStack resource;
+                        `detach` - do not delete the OpenStack resource. If not specified, the
+                        default is `delete`.
+                      enum:
+                        - delete
+                        - detach
+                      type: string
+                  type: object
+                managementPolicy:
+                  default: managed
+                  description: |-
+                    managementPolicy defines how ORC will treat the object. Valid values are
+                    `managed`: ORC will create, update, and delete the resource; `unmanaged`:
+                    ORC will import an existing resource, and will not apply updates to it or
+                    delete it.
+                  enum:
+                    - managed
+                    - unmanaged
+                  type: string
+                  x-kubernetes-validations:
+                    - message: managementPolicy is immutable
+                      rule: self == oldSelf
+                resource:
+                  description: |-
+                    resource specifies the desired state of the resource.
+
+                    resource may not be specified if the management policy is `unmanaged`.
+
+                    resource must be specified if the management policy is `managed`.
+                  properties:
+                    description:
+                      description: description is a human-readable description for the
+                        resource.
+                      maxLength: 255
+                      minLength: 1
+                      type: string
+                      x-kubernetes-validations:
+                        - message: Property is immutable
+                          rule: self == oldSelf
+                    name:
+                      description: |-
+                        name will be the name of the created resource. If not specified, the
+                        name of the ORC object will be used.
+                      maxLength: 255
+                      minLength: 1
+                      pattern: ^[^,]+$
+                      type: string
+                      x-kubernetes-validations:
+                        - message: Property is immutable
+                          rule: self == oldSelf
+                    rules:
+                      description: rules is a list of security group rules belonging
+                        to this SG.
+                      items:
+                        description: SecurityGroupRule defines a Security Group rule
+                        minProperties: 1
+                        properties:
+                          description:
+                            description: description is a human-readable description
+                              for the resource.
+                            maxLength: 255
+                            minLength: 1
+                            type: string
+                          direction:
+                            description: |-
+                              direction represents the direction in which the security group rule
+                              is applied. Can be ingress or egress.
+                            enum:
+                              - ingress
+                              - egress
+                            type: string
+                          ethertype:
+                            description: |-
+                              ethertype must be IPv4 or IPv6, and addresses represented in CIDR
+                              must match the ingress or egress rules.
+                            enum:
+                              - IPv4
+                              - IPv6
+                            type: string
+                          portRange:
+                            description: |-
+                              portRange sets the minimum and maximum ports range that the security group rule
+                              matches. If the protocol is [tcp, udp, dccp sctp,udplite] PortRange.Min must be less than
+                              or equal to the PortRange.Max attribute value.
+                              If the protocol is ICMP, this PortRamge.Min must be an ICMP code and PortRange.Max
+                              should be an ICMP type
+                            properties:
+                              max:
+                                description: |-
+                                  max is the maximum port number in the range that is matched by the security group rule.
+                                  If the protocol is TCP, UDP, DCCP, SCTP or UDP-Lite this value must be greater than or equal
+                                  to the port_range_min attribute value. If the protocol is ICMP, this value must be an ICMP code.
+                                format: int32
+                                maximum: 65535
+                                minimum: 0
+                                type: integer
+                              min:
+                                description: |-
+                                  min is the minimum port number in the range that is matched by the security group rule.
+                                  If the protocol is TCP, UDP, DCCP, SCTP or UDP-Lite this value must be less than or equal
+                                  to the port_range_max attribute value. If the protocol is ICMP, this value must be an ICMP type
+                                format: int32
+                                maximum: 65535
+                                minimum: 0
+                                type: integer
+                            required:
+                              - max
+                              - min
+                            type: object
+                          protocol:
+                            description: protocol is the IP protocol is represented
+                              by a string
+                            enum:
+                              - ah
+                              - dccp
+                              - egp
+                              - esp
+                              - gre
+                              - icmp
+                              - icmpv6
+                              - igmp
+                              - ipip
+                              - ipv6-encap
+                              - ipv6-frag
+                              - ipv6-icmp
+                              - ipv6-nonxt
+                              - ipv6-opts
+                              - ipv6-route
+                              - ospf
+                              - pgm
+                              - rsvp
+                              - sctp
+                              - tcp
+                              - udp
+                              - udplite
+                              - vrrp
+                            type: string
+                          remoteIPPrefix:
+                            description: remoteIPPrefix is an IP address block. Should
+                              match the Ethertype (IPv4 or IPv6)
+                            format: cidr
+                            maxLength: 49
+                            minLength: 1
+                            type: string
+                        required:
+                          - ethertype
+                        type: object
+                        x-kubernetes-validations:
+                          - message: portRangeMax should be equal or greater than portRange.min
+                            rule: (!has(self.portRange)|| !(self.protocol == 'tcp'|| self.protocol
+                              == 'udp' || self.protocol == 'dccp' || self.protocol ==
+                              'sctp' || self.protocol == 'udplite') || (self.portRange.min
+                              <= self.portRange.max))
+                          - message: When protocol is ICMP or ICMPv6 portRange.min should
+                              be between 0 and 255
+                            rule: '!(self.protocol == ''icmp'' || self.protocol == ''icmpv6'')
+                          || !has(self.portRange)|| (self.portRange.min >= 0 && self.portRange.min
+                          <= 255)'
+                          - message: When protocol is ICMP or ICMPv6 portRange.max should
+                              be between 0 and 255
+                            rule: '!(self.protocol == ''icmp'' || self.protocol == ''icmpv6'')
+                          || !has(self.portRange)|| (self.portRange.max >= 0 && self.portRange.max
+                          <= 255)'
+                      maxItems: 256
+                      type: array
+                      x-kubernetes-list-type: atomic
+                    stateful:
+                      description: stateful indicates if the security group is stateful
+                        or stateless.
+                      type: boolean
+                      x-kubernetes-validations:
+                        - message: Property is immutable
+                          rule: self == oldSelf
+                    tags:
+                      description: tags is a list of tags which will be applied to the
+                        security group.
+                      items:
+                        description: |-
+                          NeutronTag represents a tag on a Neutron resource.
+                          It may not be empty and may not contain commas.
+                        maxLength: 255
+                        minLength: 1
+                        type: string
+                      maxItems: 32
+                      type: array
+                      x-kubernetes-list-type: set
+                      x-kubernetes-validations:
+                        - message: Property is immutable
+                          rule: self == oldSelf
+                  type: object
+              required:
+                - cloudCredentialsRef
+              type: object
+              x-kubernetes-validations:
+                - message: resource must be specified when policy is managed
+                  rule: 'self.managementPolicy == ''managed'' ? has(self.resource) : true'
+                - message: import may not be specified when policy is managed
+                  rule: 'self.managementPolicy == ''managed'' ? !has(self.__import__)
+                : true'
+                - message: resource may not be specified when policy is unmanaged
+                  rule: 'self.managementPolicy == ''unmanaged'' ? !has(self.resource)
+                : true'
+                - message: import must be specified when policy is unmanaged
+                  rule: 'self.managementPolicy == ''unmanaged'' ? has(self.__import__)
+                : true'
+                - message: managedOptions may only be provided when policy is managed
+                  rule: 'has(self.managedOptions) ? self.managementPolicy == ''managed''
+                : true'
+            status:
+              description: status defines the observed state of the resource.
+              properties:
+                conditions:
+                  description: |-
+                    conditions represents the observed status of the object.
+                    Known .status.conditions.type are: "Available", "Progressing"
+
+                    Available represents the availability of the OpenStack resource. If it is
+                    true then the resource is ready for use.
+
+                    Progressing indicates whether the controller is still attempting to
+                    reconcile the current state of the OpenStack resource to the desired
+                    state. Progressing will be False either because the desired state has
+                    been achieved, or because some terminal error prevents it from ever being
+                    achieved and the controller is no longer attempting to reconcile. If
+                    Progressing is True, an observer waiting on the resource should continue
+                    to wait.
+                  items:
+                    description: Condition contains details for one aspect of the current
+                      state of this API Resource.
+                    properties:
+                      lastTransitionTime:
+                        description: |-
+                          lastTransitionTime is the last time the condition transitioned from one status to another.
+                          This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                        format: date-time
+                        type: string
+                      message:
+                        description: |-
+                          message is a human readable message indicating details about the transition.
+                          This may be an empty string.
+                        maxLength: 32768
+                        type: string
+                      observedGeneration:
+                        description: |-
+                          observedGeneration represents the .metadata.generation that the condition was set based upon.
+                          For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                          with respect to the current state of the instance.
+                        format: int64
+                        minimum: 0
+                        type: integer
+                      reason:
+                        description: |-
+                          reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                          Producers of specific condition types may define expected values and meanings for this field,
+                          and whether the values are considered a guaranteed API.
+                          The value should be a CamelCase string.
+                          This field may not be empty.
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                        type: string
+                      status:
+                        description: status of the condition, one of True, False, Unknown.
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        type: string
+                      type:
+                        description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  maxItems: 32
+                  type: array
+                  x-kubernetes-list-map-keys:
+                    - type
+                  x-kubernetes-list-type: map
+                id:
+                  description: id is the unique identifier of the OpenStack resource.
+                  type: string
+                resource:
+                  description: resource contains the observed state of the OpenStack
+                    resource.
+                  properties:
+                    createdAt:
+                      description: createdAt shows the date and time when the resource
+                        was created. The date and time stamp format is ISO 8601
+                      format: date-time
+                      type: string
+                    description:
+                      description: description is a human-readable description for the
+                        resource.
+                      maxLength: 1024
+                      type: string
+                    name:
+                      description: name is a Human-readable name for the security group.
+                        Might not be unique.
+                      maxLength: 1024
+                      type: string
+                    projectID:
+                      description: projectID is the project owner of the security group.
+                      maxLength: 1024
+                      type: string
+                    revisionNumber:
+                      description: revisionNumber optionally set via extensions/standard-attr-revisions
+                      format: int64
+                      type: integer
+                    rules:
+                      description: rules is a list of security group rules belonging
+                        to this SG.
+                      items:
+                        properties:
+                          description:
+                            description: description is a human-readable description
+                              for the resource.
+                            maxLength: 1024
+                            type: string
+                          direction:
+                            description: |-
+                              direction represents the direction in which the security group rule
+                              is applied. Can be ingress or egress.
+                            maxLength: 1024
+                            type: string
+                          ethertype:
+                            description: |-
+                              ethertype must be IPv4 or IPv6, and addresses represented in CIDR
+                              must match the ingress or egress rules.
+                            maxLength: 1024
+                            type: string
+                          id:
+                            description: id is the ID of the security group rule.
+                            maxLength: 1024
+                            type: string
+                          portRange:
+                            description: |-
+                              portRange sets the minimum and maximum ports range that the security group rule
+                              matches. If the protocol is [tcp, udp, dccp sctp,udplite] PortRange.Min must be less than
+                              or equal to the PortRange.Max attribute value.
+                              If the protocol is ICMP, this PortRamge.Min must be an ICMP code and PortRange.Max
+                              should be an ICMP type
+                            properties:
+                              max:
+                                description: |-
+                                  max is the maximum port number in the range that is matched by the security group rule.
+                                  If the protocol is TCP, UDP, DCCP, SCTP or UDP-Lite this value must be greater than or equal
+                                  to the port_range_min attribute value. If the protocol is ICMP, this value must be an ICMP code.
+                                format: int32
+                                type: integer
+                              min:
+                                description: |-
+                                  min is the minimum port number in the range that is matched by the security group rule.
+                                  If the protocol is TCP, UDP, DCCP, SCTP or UDP-Lite this value must be less than or equal
+                                  to the port_range_max attribute value. If the protocol is ICMP, this value must be an ICMP type
+                                format: int32
+                                type: integer
+                            type: object
+                          protocol:
+                            description: |-
+                              protocol is the IP protocol can be represented by a string, an
+                              integer, or null
+                            maxLength: 1024
+                            type: string
+                          remoteGroupID:
+                            description: |-
+                              remoteGroupID is the remote group UUID to associate with this security group rule
+                              RemoteGroupID
+                            maxLength: 1024
+                            type: string
+                          remoteIPPrefix:
+                            description: remoteIPPrefix is an IP address block. Should
+                              match the Ethertype (IPv4 or IPv6)
+                            maxLength: 1024
+                            type: string
+                        type: object
+                      maxItems: 256
+                      type: array
+                      x-kubernetes-list-type: atomic
+                    stateful:
+                      description: stateful indicates if the security group is stateful
+                        or stateless.
+                      type: boolean
+                    tags:
+                      description: tags is the list of tags on the resource.
+                      items:
+                        maxLength: 1024
+                        type: string
+                      maxItems: 32
+                      type: array
+                      x-kubernetes-list-type: atomic
+                    updatedAt:
+                      description: updatedAt shows the date and time when the resource
+                        was updated. The date and time stamp format is ISO 8601
+                      format: date-time
+                      type: string
+                  type: object
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}

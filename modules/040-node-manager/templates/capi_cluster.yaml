@@ -2,7 +2,6 @@
   {{- $prefix := .Values.nodeManager.internal.cloudProvider.capiClusterName }}
   {{- if and $prefix .Values.nodeManager.internal.cloudProvider.capiClusterKind }}
 
-
 {{- include "capi_infrastructure_cluster" . }}
 ---
 apiVersion: cluster.x-k8s.io/v1beta1

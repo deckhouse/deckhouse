@@ -1,0 +1,43 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /openstack-resource-controller
+  to: /openstack-resource-controller
+  before: setup
+imageSpec:
+  config:
+    entrypoint: ["/openstack-resource-controller"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+shell:
+  install:
+  - export VERSION="v2.1.0"
+  - git clone --depth 1 --branch ${VERSION} {{ $.SOURCE_REPO }}/k-orc/openstack-resource-controller /src
+  - cd /src
+  - rm -rf .git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+final: false
+fromImage: builder/golang-alpine
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - cd /src
+  - export GOPROXY={{ $.GOPROXY }}
+  - go mod download
+  setup:
+  - cd /src
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -extldflags \"-static\"" -a -o /openstack-resource-controller cmd/manager/main.go
+  - chown 64535:64535 /openstack-resource-controller
+  - chmod 0700 /openstack-resource-controller
