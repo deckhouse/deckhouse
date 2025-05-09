@@ -31,11 +31,9 @@ import:
 git:
 - add: /{{ $knownVulnPath }}
   to: /known_vulnerabilities.vex
-  includePaths:
-  - '**/*'
   stageDependencies:
     setup:
-    - '**/*'
+    - 'known_vulnerabilities.vex'
 dependencies:
 - image: {{ $imageName }}
   before: setup
