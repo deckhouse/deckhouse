@@ -1,0 +1,60 @@
+# put image with vex mitigations to registry.
+# Mitigations can be found in the known_vulnerabilities.vex file in the image directory
+# input parameters:
+# list of $ and image name.
+# list ($ "common/kubernetes")
+{{- define "vex_mitigation" }}
+  {{- $context := index . 0 }}
+  {{- $imageName := index . 1 }}
+  {{- $knownVulnPath := (printf "/%smodules/%s-%s/images/%s/known_vulnerabilities.vex" $context.ModulePath $context.ModulePriority $context.ModuleName $context.ImageName) }}
+  {{- $vexFile := false }}
+  {{- if eq (len ($context.Files.Glob $knownVulnPath)) 1 }}
+    {{- $vexFile = true }}
+  {{- end }}
+  {{- if $vexFile }}
+---
+image: {{ $imageName }}-vex-artifact
+fromImage: builder/alpine
+final: false
+secrets:
+- id: COSIGN_LOGIN
+  value: {{ $context.CosignLogin }}
+- id: COSIGN_PASSWORD
+  value: {{ $context.CosignPassword }}
+- id: COSIGN_KEY
+  value: {{ $context.CosignKey }}
+import:
+- image: tools/cosign
+  add: /usr/bin/cosign
+  to: /usr/bin/cosign
+  before: setup
+git:
+- add: /{{ $knownVulnPath }}
+  to: /known_vulnerabilities.vex
+  stageDependencies:
+    setup:
+    - 'known_vulnerabilities.vex'
+dependencies:
+- image: {{ $imageName }}
+  before: setup
+  imports:
+  - type: ImageDigest
+    targetEnv: IMAGE_DIGEST
+  - type: ImageRepo
+    targetEnv: IMAGE_REPO
+shell:
+  setup:
+  - |
+    COSIGN_PASSWORD="" \
+    COSIGN_KEY=$(cat /run/secrets/COSIGN_KEY | base64 -d) \
+    cosign attest \
+      --registry-username="$(cat /run/secrets/COSIGN_LOGIN)" \
+      --registry-password="$(cat /run/secrets/COSIGN_PASSWORD)" \
+      --predicate /known_vulnerabilities.vex \
+      --type openvex \
+      --key env://COSIGN_KEY \
+      --tlog-upload=false \
+      -y \
+      "${IMAGE_REPO}@${IMAGE_DIGEST}"
+  {{- end }}
+{{- end }}
