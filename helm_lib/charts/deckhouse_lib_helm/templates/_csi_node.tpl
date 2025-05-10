@@ -17,18 +17,21 @@ memory: 25Mi
   {{- $nodeImage := $config.nodeImage | required "$config.nodeImage is required" }}
   {{- $driverFQDN := $config.driverFQDN | required "$config.driverFQDN is required" }}
   {{- $serviceAccount := $config.serviceAccount | default "" }}
+  {{- $additionalNodeVPA := $config.additionalNodeVPA }}
   {{- $additionalNodeEnvs := $config.additionalNodeEnvs }}
   {{- $additionalNodeArgs := $config.additionalNodeArgs }}
   {{- $additionalNodeVolumes := $config.additionalNodeVolumes }}
   {{- $additionalNodeVolumeMounts := $config.additionalNodeVolumeMounts }}
   {{- $additionalNodeLivenessProbesCmd := $config.additionalNodeLivenessProbesCmd }}
+  {{- $livenessProbePort := $config.livenessProbePort }}
   {{- $additionalNodeSelectorTerms := $config.additionalNodeSelectorTerms }}
   {{- $customNodeSelector := $config.customNodeSelector }}
   {{- $forceCsiNodeAndStaticNodesDepoloy := $config.forceCsiNodeAndStaticNodesDepoloy | default false }}
   {{- $additionalContainers := $config.additionalContainers }} 
   {{- $initContainers := $config.initContainers }}
   {{- $additionalPullSecrets := $config.additionalPullSecrets }}
-
+  {{- $additionalCsiNodePodAnnotations := $config.additionalCsiNodePodAnnotations | default false }}
+  {{- $csiNodeHostNetwork := $config.csiNodeHostNetwork | default "true" }}
   {{- $kubernetesSemVer := semver $context.Values.global.discovery.kubernetesVersion }}
   {{- $driverRegistrarImageName := join "" (list "csiNodeDriverRegistrar" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
   {{- $driverRegistrarImage := include "helm_lib_module_common_image_no_fail" (list $context $driverRegistrarImageName) }}
@@ -51,6 +54,9 @@ spec:
     updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
+    {{- if $additionalNodeVPA }}
+    {{- $additionalNodeVPA | toYaml | nindent 4 }}
+    {{- end }}
     - containerName: "node-driver-registrar"
       minAllowed:
         {{- include "node_driver_registrar_resources" $context | nindent 8 }}
@@ -71,11 +77,6 @@ metadata:
   name: {{ $fullname }}
   namespace: d8-{{ $context.Chart.Name }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "csi-node")) | nindent 2 }}
-
-  {{- if eq $context.Chart.Name "csi-nfs" }}
-  annotations:
-    pod-reloader.deckhouse.io/auto: "true"
-  {{- end }}
 spec:
   updateStrategy:
     type: RollingUpdate
@@ -86,6 +87,15 @@ spec:
     metadata:
       labels:
         app: {{ $fullname }}
+      {{- if or (hasPrefix "cloud-provider-" $context.Chart.Name) ($additionalCsiNodePodAnnotations) }}
+      annotations:
+      {{- if hasPrefix "cloud-provider-" $context.Chart.Name }}
+        cloud-config-checksum: {{ include (print $context.Template.BasePath "/cloud-controller-manager/secret.yaml") $context | sha256sum }}
+      {{- end }}
+      {{- if $additionalCsiNodePodAnnotations }}
+        {{- $additionalCsiNodePodAnnotations | toYaml | nindent 8 }}
+      {{- end }}
+      {{- end }}
     spec:
       {{- if $customNodeSelector }}
       nodeSelector:
@@ -117,16 +127,21 @@ spec:
       {{- include "helm_lib_priority_class" (tuple $context "system-node-critical") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple $context "any-node" "with-no-csi") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
-      hostNetwork: true
+      hostNetwork: {{ $csiNodeHostNetwork }}
+      {{- if eq $csiNodeHostNetwork "true" }}
       dnsPolicy: ClusterFirstWithHostNet
+      {{- end }}
       containers:
       - name: node-driver-registrar
-        {{- include "helm_lib_module_container_security_context_not_allow_privilege_escalation" $context | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $context | nindent 8 }}
         image: {{ $driverRegistrarImage | quote }}
         args:
         - "--v=5"
         - "--csi-address=$(CSI_ENDPOINT)"
         - "--kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)"
+        {{- if $livenessProbePort }}
+        - "--http-endpoint=:{{ $livenessProbePort }}"
+        {{- end }}
         env:
         - name: CSI_ENDPOINT
           value: "/csi/csi.sock"
@@ -157,6 +172,7 @@ spec:
       - name: node
         securityContext:
           privileged: true
+          readOnlyRootFilesystem: true
         image: {{ $nodeImage }}
         args:
       {{- if $additionalNodeArgs }}
@@ -166,6 +182,14 @@ spec:
         env:
         {{- $additionalNodeEnvs | toYaml | nindent 8 }}
       {{- end }}
+      {{- if $livenessProbePort }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: {{ $livenessProbePort }}
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+      {{- end }}      
         volumeMounts:
         - name: kubelet-dir
           mountPath: /var/lib/kubelet
@@ -200,6 +224,7 @@ spec:
 
       serviceAccount: {{ $serviceAccount | quote }}
       serviceAccountName: {{ $serviceAccount | quote }}
+      automountServiceAccountToken: true
       volumes:
       - name: registration-dir
         hostPath:
