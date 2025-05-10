@@ -19,6 +19,9 @@ deployment_name="autoscaler-test"
 should_nodes_in_cluster="0"
 nodes_during_scaling="1"
 
+autoscaler_nodes=""
+autoscaler_nodes_count=""
+
 
 function log_autoscaler() {
   echo "Sleep 2 minutes for collecting errors and warnings logs"
@@ -129,6 +132,26 @@ function scale_down_deployment() {
   return 1
 }
 
+function save_autoscaler_nodes() {
+  local attempts=10
+
+  for i in $(seq $attempts); do
+    autoscaler_nodes="$(kubectl get no -l node-role/autoscaler="" -o json | jq -rM '.items[].metadata.name')"
+    autoscaler_nodes_count="$(echo -n "$autoscaler_nodes" | awk 'END {print NR}')"
+    if [[ "$autoscaler_nodes_count" == "$nodes_during_scaling" ]]; then
+      echo "Nodes names saved successful: $autoscaler_nodes"
+      return 0
+    fi
+
+    >&2 echo "Cannot save autoscaler nodes names $autoscaler_nodes. Attempt $i/$attempts. Sleeping 10 seconds..."
+    sleep 10
+  done
+
+  echo "Waiting saving autoscaler nodes names timeout exited. Exit"
+  log_autoscaler
+  return 1
+}
+
 function wait_become_autoscaler_nodes_delete() {
   # 25 minutes
   local attempts=150
@@ -171,26 +194,61 @@ function wait_become_autoscaler_instances_delete() {
   return 1
 }
 
+function check_cordon_events() {
+  cordon_events="$1"
+  echo "Cordon events:"
+  echo "$cordon_events"
+  echo ""
+
+  local captured_events
+  captured_events=0
+
+  for n in $autoscaler_nodes; do
+    local cordon_events_for_node
+    local cordon_events_count
+
+    cordon_events_for_node="$(echo "$cordon_events" | { grep -i "$n" || true; } )"
+    cordon_events_count="$(echo -n "$cordon_events_for_node" | awk 'END {print NR}')"
+
+    if [[ "$cordon_events_count" == "1" ]]; then
+      echo "Node $n cordoned before deleting!"
+      ((captured_events++))
+    else
+      echo "Cordon events for node $n not found"
+      break
+    fi
+  done
+
+  if [[ "$captured_events" == "$autoscaler_nodes_count" ]]; then
+    echo "All nodes cordoned before deleting!"
+    return 0
+  fi
+
+  >&2 echo "Cluster has $captured_events cordon events for nodes $autoscaler_nodes, should be ${autoscaler_nodes_count}."
+
+  return 1
+}
+
 function verify_that_nodes_were_cordoned() {
   local attempts=10
   local cordon_events
 
   for i in $(seq $attempts); do
     cordon_events="$(kubectl get events --sort-by metadata.creationTimestamp | { grep -i "NodeNotSchedulable" || true; } )"
-    cordon_events="$(echo "$cordon_events" | { grep -i "autoscaler-" || true; } )"
+    if check_cordon_events "$cordon_events"; then
+        return 0
+    else
+      # During testing,
+      # we encountered the fact that events about the cordon node are not always set by kubernetes,
+      # but at the same time we have events from the autoscaler. We check them
+      cordon_events="$(kubectl get events --sort-by metadata.creationTimestamp | { grep -i "marked the node as toBeDeleted/unschedulable" || true; } )"
 
-    echo "Cordon events:"
-    echo "$cordon_events"
-    echo ""
-
-    cordon_events_count="$(echo -n "$cordon_events" | awk 'END {print NR}')"
-
-    if [[ "$cordon_events_count" == "$nodes_during_scaling" ]]; then
-      echo "Node cordoned before deleting!"
-      return 0
+      if check_cordon_events "$cordon_events"; then
+        return 0
+      fi
     fi
 
-    >&2 echo "Cluster has $cordon_events_count cordon events, should be ${nodes_during_scaling}. Waiting get cordon events from cluster. Attempt $i/$attempts. Sleeping 10 seconds..."
+    echo "Waiting get cordon events from cluster. Attempt $i/$attempts. Sleeping 10 seconds..."
     sleep 10
   done
 
@@ -205,20 +263,36 @@ function verify_that_nodes_were_drained() {
 
   for i in $(seq $attempts); do
     drain_events="$(kubectl -n d8-cloud-instance-manager get events --sort-by metadata.creationTimestamp | { grep -i "SuccessfulDrainNode" || true; } )"
-    drain_events="$(echo "$drain_events" | { grep -i "autoscaler-" || true; } )"
 
     echo "Drain events:"
     echo "$drain_events"
     echo ""
 
-    drain_events_count="$(echo -n "$drain_events" | awk 'END {print NR}')"
+    local captured_events
+    captured_events=0
 
-    if [[ "$drain_events_count" == "$nodes_during_scaling" ]]; then
-      echo "Node drained before deleting!"
+    for n in $autoscaler_nodes; do
+      local drain_events_for_node
+      local drain_events_count
+
+      drain_events_for_node="$(echo "$drain_events" | { grep -i "$n" || true; } )"
+      drain_events_count="$(echo -n "$drain_events_for_node" | awk 'END {print NR}')"
+
+      if [[ "$drain_events_count" == "1" ]]; then
+        echo "Node $n drained before deleting!"
+        ((captured_events++))
+      else
+        echo "Drain events for node $n not found"
+        break
+      fi
+    done
+
+    if [[ "$captured_events" == "$autoscaler_nodes_count" ]]; then
+      echo "All nodes drained before deleting!"
       return 0
     fi
 
-    >&2 echo "Cluster has $drain_events_count drain events, should be ${nodes_during_scaling}. Waiting get drain events from cluster. Attempt $i/$attempts. Sleeping 10 seconds..."
+    >&2 echo "Cluster has $captured_events drain events, should be ${autoscaler_nodes_count}. Waiting get drain events from cluster. Attempt $i/$attempts. Sleeping 10 seconds..."
     sleep 10
   done
 
@@ -230,6 +304,7 @@ function verify_that_nodes_were_drained() {
 
 create_deployment
 wait_deployment_become_ready
+save_autoscaler_nodes
 scale_down_deployment
 wait_become_autoscaler_nodes_delete
 wait_become_autoscaler_instances_delete
