@@ -14,16 +14,25 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package hooks
+package main
 
-import (
-	"testing"
+import "os"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-)
+type Config struct {
+	targetsCM string
+	Namespace string
+}
 
-func Test(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "")
+func LoadConfig() Config {
+	return Config{
+		targetsCM: getEnvOrDefault("CONFIGMAP_INT", "monitoring-ping-config"),
+		Namespace: getEnvOrDefault("NAMESPACE", "d8-monitoring"),
+	}
+}
+
+func getEnvOrDefault(key, def string) string {
+	if val := os.Getenv(key); val != "" {
+		return val
+	}
+	return def
 }

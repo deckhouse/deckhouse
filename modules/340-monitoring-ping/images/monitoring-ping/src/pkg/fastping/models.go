@@ -14,16 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package hooks
+package fastping
 
-import (
-	"testing"
+import "time"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-)
+// PacketResult represents the result of a received ICMP packet.
+type PacketResult struct {
+	Host string
+	RTT  time.Duration
+}
 
-func Test(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "")
+// PacketStat for internal accumulation
+type PacketStat struct {
+	Sent     int
+	Received int
+	RTTs     []time.Duration
 }

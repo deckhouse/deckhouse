@@ -14,16 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package hooks
+package main
 
-import (
-	"testing"
+type ExternalTarget struct {
+	Name string `json:"name,omitempty"`
+	Host string `json:"host"`
+}
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-)
-
-func Test(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "")
+type NodeTarget struct {
+	Name string `json:"name,omitempty"`
+	IP   string `json:"ipAddress"`
 }
