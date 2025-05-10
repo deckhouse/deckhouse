@@ -212,7 +212,7 @@ function check_cordon_events() {
 
     if [[ "$cordon_events_count" == "1" ]]; then
       echo "Node $n cordoned before deleting!"
-      ((captured_events++))
+      ((captured_events+=1))
     else
       echo "Cordon events for node $n not found"
       break
@@ -280,7 +280,7 @@ function verify_that_nodes_were_drained() {
 
       if [[ "$drain_events_count" == "1" ]]; then
         echo "Node $n drained before deleting!"
-        ((captured_events++))
+        ((captured_events+=1))
       else
         echo "Drain events for node $n not found"
         break
