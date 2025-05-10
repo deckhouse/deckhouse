@@ -6,13 +6,25 @@ positive:
         host: test.com
   values:
     - internal:
-        targets: {}
+        clusterTargets:
+          - ipAddress: 10.0.0.1
+            name: node1
+          - ipAddress: 10.0.0.2
+
 negative:
   configValues:
+    # missing required "host"
     - externalTargets:
-      - abc: def
-    - externalTargets:
-        name: test
+        - name: test
+    # wrong type: should be list of objects
+    - externalTargets: not_a_list
+    # unknown key
+    - foo: bar
   values:
+    # invalid key, not defined in schema
     - internal:
         nonTarget: []
+    # wrong type: clusterTargets should be array
+    - internal:
+        clusterTargets: {}
+
