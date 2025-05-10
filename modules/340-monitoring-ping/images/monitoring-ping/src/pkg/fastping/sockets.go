@@ -1,16 +1,18 @@
-// Package ping Copyright 2025 Flant JSC
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+Copyright 2025 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 
 package fastping
 
@@ -300,14 +302,14 @@ func (p *Pinger) listenReplies(ctx context.Context, conn *socketConn) error {
 func (p *Pinger) sendEventLoop(ctx context.Context, conn *socketConn) error {
 	log.Info("Starting sendEventLoop with min-heap scheduling")
 
-	h := &pingHeap{}
-	heap.Init(h)
+	h := make(pingHeap, 0, len(p.hosts)*p.count)
+	heap.Init(&h)
 
 	now := time.Now()
 
 	// Initialize first wave of scheduled pings for all hosts
 	for _, host := range p.hosts {
-		heap.Push(h, &scheduledPing{
+		heap.Push(&h, &scheduledPing{
 			host:   host,
 			sendAt: now,
 			count:  p.count,
@@ -322,7 +324,7 @@ func (p *Pinger) sendEventLoop(ctx context.Context, conn *socketConn) error {
 		default:
 		}
 
-		next := (*h)[0]
+		next := heap.Pop(&h).(*scheduledPing)
 		now = time.Now()
 		sleepDur := next.sendAt.Sub(now)
 
@@ -339,94 +341,14 @@ func (p *Pinger) sendEventLoop(ctx context.Context, conn *socketConn) error {
 			p.mu.Unlock()
 		}
 
-		heap.Pop(h)
-
 		// Schedule the next ping if remaining
 		next.count--
 		if next.count > 0 {
 			next.sendAt = next.sendAt.Add(p.interval)
-			heap.Push(h, next)
+			heap.Push(&h, next)
 		}
 	}
 
 	log.Info("Completed all scheduled pings")
 	return nil
 }
-
-// func (p *Pinger) sendPings(ctx context.Context, conn *socketConn) error {
-// 	log.Info(fmt.Sprintf("Sending pings, count: %d", p.count))
-
-// 	for i := 0; i < p.count; i++ {
-// 		for _, host := range p.hosts {
-// 			select {
-// 			case <-ctx.Done():
-// 				log.Info("sendPings loop interrupted by context cancellation")
-// 				return ctx.Err()
-// 			default:
-// 				if err := conn.SendPacket(host); err != nil {
-// 					log.Warn(fmt.Sprintf("failed to send ping to %s: %v", host, err))
-// 					continue
-// 				}
-// 				p.mu.Lock()
-// 				p.sentCount[host]++
-// 				p.mu.Unlock()
-// 			}
-// 		}
-
-// 		// Sleep between rounds
-// 		if i < p.count-1 {
-// 			time.Sleep(p.interval)
-// 		}
-// 	}
-
-// 	log.Info(fmt.Sprintf("Completed sending %d pings per host", p.count))
-// 	return nil
-// }
-
-// func (s *socketConn) cleanupLoop(ctx context.Context) {
-// 	ticker := time.NewTicker(10 * time.Second)
-// 	defer ticker.Stop()
-
-// 	for {
-// 		select {
-// 		case <-ctx.Done():
-// 			log.Info("cleanupLoop stopped due to context cancellation")
-// 			return
-// 		case <-ticker.C:
-// 			now := time.Now().UnixNano()
-// 			s.pending.Range(func(k, v any) bool {
-// 				pp := v.(pendingPacket)
-// 				if now-pp.sentTime > int64(64*time.Second) {
-// 					s.pending.Delete(k)
-// 				}
-// 				return true
-// 			})
-// 		}
-// 	}
-// }
-
-// func buildICMP(seq int, connId int, sendTime time.Time) []byte {
-// 	pkt := make([]byte, 8+8) // 8 byte header + 8 byte timestamp
-// 	id := uint16(connId)
-// 	s := uint16(seq)
-
-// 	pkt[0] = uint8(8) // Type = Echo Request
-// 	pkt[1] = uint8(0) // Code = 0
-// 	pkt[2] = uint8(0) // Checksum placeholder
-// 	pkt[3] = 0
-
-// 	pkt[4] = byte(id >> 8) // Identifier
-// 	pkt[5] = byte(id)
-// 	pkt[6] = byte(s >> 8) // Sequence number
-// 	pkt[7] = byte(s)
-
-// 	// Timestamp into payload
-// 	binary.BigEndian.PutUint64(pkt[8:], uint64(sendTime.UnixNano()))
-
-// 	// Checksum
-// 	cs := computeChecksum(pkt)
-// 	pkt[2] = byte(cs >> 8)
-// 	pkt[3] = byte(cs & 0xff)
-
-// 	return pkt
-// }

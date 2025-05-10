@@ -1,16 +1,18 @@
-// Package ping Copyright 2025 Flant JSC
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+Copyright 2025 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 
 package hooks
 
@@ -28,13 +30,7 @@ type nodeTarget struct {
 }
 
 type targets struct {
-	Cluster []nodeTarget `json:"cluster_targets"`
-}
-
-func newTargets(length int) *targets {
-	return &targets{
-		Cluster: make([]nodeTarget, 0, length),
-	}
+	Cluster []nodeTarget `json:"clusterTargets"`
 }
 
 func getAddress(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -72,7 +68,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func updateNodeList(input *go_hook.HookInput) error {
 	lenSnapshot := len(input.Snapshots["addresses"])
-	targets := newTargets(lenSnapshot)
+	nodes := make([]nodeTarget, 0, lenSnapshot)
 
 	for _, item := range input.Snapshots["addresses"] {
 		if item == nil {
@@ -80,11 +76,11 @@ func updateNodeList(input *go_hook.HookInput) error {
 		}
 		nt := item.(nodeTarget)
 		if nt.Address != "" {
-			targets.Cluster = append(targets.Cluster, nt)
+			nodes = append(nodes, nt)
 		}
 	}
 
-	input.Values.Set("monitoringPing.internal.targets", targets)
+	input.Values.Set("monitoringPing.internal.clusterTargets", nodes)
 
 	return nil
 }
