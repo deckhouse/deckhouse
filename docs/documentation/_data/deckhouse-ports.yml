@@ -212,6 +212,11 @@ groups:
     description:
       en: chrony-exporter metrics port
       ru: Метрики chrony-exporter
+  - ports: "4288, 4229"
+    protocol: TCP
+    description:
+      en: "monitoring-ping metrics"
+      ru: "Метрики monitoring-ping"
 
 - group: ExternalToMaster
   description:

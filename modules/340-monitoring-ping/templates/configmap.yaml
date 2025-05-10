@@ -7,6 +7,6 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "monitoring-ping")) | nindent 2 }}
 data:
   targets.json: |
-    {{ dict "cluster_targets" .Values.monitoringPing.internal.targets.cluster_targets | toJson | nindent 4 }}
+    {{ .Values.monitoringPing.internal.clusterTargets | toJson | nindent 4 }}
   external_targets.json: |
-    {{ dict "targets" .Values.monitoringPing.externalTargets | toJson | nindent 4 }}
+    {{ .Values.monitoringPing.externalTargets | toJson | nindent 4 }}
