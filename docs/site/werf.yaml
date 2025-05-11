@@ -47,7 +47,7 @@ gitWorktree:
 {{- if and (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
 image: site-external-artifacts
 fromCacheVersion: {{ div .Commit.Date.Unix (mul 60 60) }}v1
-from: {{ .Images.BASE_ALPINE }}
+fromImage: builder/alpine
 final: false
 shell:
   install:
@@ -324,7 +324,7 @@ import:
 {{- end }}
 ---
 image: web-backend-srv
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 final: false
 shell:
   install:
@@ -346,7 +346,7 @@ image: web-backend
 imageSpec:
   config:
     workingDir: "/app"
-from: {{ .Images.BASE_ALPINE }}
+fromImage: builder/alpine
 shell:
   install:
   - apk add --no-cache curl jq
@@ -367,7 +367,7 @@ image: web-frontend
 imageSpec:
   config:
     workingDir: "/app"
-from: {{ .Images.BASE_ALPINE }}
+fromImage: builder/alpine
 shell:
   beforeSetup:
   - apk add --no-cache nginx
@@ -396,7 +396,7 @@ import:
 ---
 # Build scanner, which fetch modules documentation from list of specified registries
 image: registry-modules-watcher-artifact
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 shell:
   install:
   - cd /go/src/app
@@ -412,7 +412,7 @@ git:
       setup: '**/*'
 ---
 image: registry-modules-watcher
-from: {{ .Images.BASE_ALPINE }}
+fromImage: builder/alpine
 imageSpec:
   config:
     workingDir: "/app"
