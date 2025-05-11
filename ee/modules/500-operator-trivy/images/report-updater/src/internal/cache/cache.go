@@ -214,7 +214,7 @@ func (c *VulnerabilityCache) getData(ctx context.Context) error {
 	// copy the requested image from remote repository to oras in-memory storage and save its descriptor
 	descriptor, err := oras.Copy(ctx, repo, c.sourceConfig.tag, store, c.sourceConfig.tag, oras.DefaultCopyOptions)
 	if err != nil {
-		return fmt.Errorf("ren BDU base: copy BDU image to memory: %w", err)
+		return fmt.Errorf("renew BDU base: copy BDU image to memory: %w", err)
 	}
 
 	// get successor descriptors of the descriptor
