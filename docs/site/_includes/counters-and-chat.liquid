@@ -9,10 +9,12 @@
 {%- endif %}
 
 <!-- Yandex.Metrika counter -->
-<script type="text/javascript">
-let lang = {{ page.lang }};
-let metricId = lang === 'ru' ? {{ site.metrics.yandex_ru }} : {{ site.metrics.yandex_en }};
+<script type="text/javascript" >
+
 if ([{{ siteUrls }}].includes(window.location.hostname)) {
+  let lang = {{ page.lang }};
+  let metricId = lang == 'ru' ? {{ site.metrics.yandex_ru }} : {{ site.metrics.yandex_en }};
+
   (function (m, e, t, r, i, k, a) {
     m[i] = m[i] || function () {
       (m[i].a = m[i].a || []).push(arguments)
@@ -22,24 +24,60 @@ if ([{{ siteUrls }}].includes(window.location.hostname)) {
   })
   (window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
 
-  ym(metricId, 'init', {
+  ym(metricId, "init", {
     clickmap: true,
     trackLinks: true,
     accurateTrackBounce: true,
-    webvisor: true,
+    webvisor: true
   });
 
-  function getCookie (name) {
+  function getCookie(name) {
     let value = '; ' + document.cookie;
     let parts = value.split(`; ${name}=`);
     if (parts.length == 2) return parts.pop().split(';').shift();
   }
 
-  var token = getCookie('license-token') ? getCookie('license-token') : getCookie('demotoken')
+  var token = getCookie('license-token') ? getCookie('license-token') : getCookie('demotoken');
   if (token) {
-    window.yaParams = { 'license-token': token }
+    window.yaParams = {"license-token": token};
     ym(metricId, 'params', window.yaParams || {});
   }
+}
+
+export default class yaMetrika {
+  static generateGoalName (action, extra = '') {
+    let urlPath = window.location.pathname;
+
+    urlPath = urlPath.startsWith('/') ? urlPath.slice(1) : urlPath;
+    urlPath = urlPath.endsWith('/') ? urlPath.slice(0, -1) : urlPath;
+
+    const extraPart = extra ? `_${extra}` : '';
+
+    return `${basePath}${extraPart}_${action}`;
+  }
+
+  static reachGoal (action, extra = '') {
+    if (!ym_is_loaded()) {
+      return;
+    }
+
+    const goalName = this.generateGoalName(action, extra);
+
+    if (typeof ymData !== 'undefined' && ymData.metricId) {
+      ym(ymData.metricId, 'reachGoal', goalName);
+    } else {
+      console.warn('Данные счетчика Яндекс.Метрики не загружены');
+    }
+  }
+}
+
+const ym_is_loaded = () => {
+  if (typeof ym !== 'function') {
+    console.warn('Яндекс Метрика не загружена или ym() не доступен.');
+    return false;
+  }
+
+  return true;
 }
 
 </script>
