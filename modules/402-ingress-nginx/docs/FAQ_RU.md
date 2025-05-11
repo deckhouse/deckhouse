@@ -2,11 +2,9 @@
 title: "Модуль ingress-nginx: FAQ"
 ---
 
-## Как разрешить доступ к приложению внутри кластера только от ingress controller?
+## Как ограничить доступ к приложению внутри кластера только от ingress controller?
 
-Если необходимо ограничить доступ к вашему приложению внутри кластера исключительно от подов ingress, необходимо в под с приложением добавить контейнер с kube-rbac-proxy:
-
-### Пример Deployment для защищенного приложения
+Если необходимо ограничить доступ к вашему приложению внутри кластера исключительно от подов ingress, необходимо в под с приложением добавить контейнер с kube-rbac-proxy, как показано в примере ниже:
 
 {% raw %}
 
@@ -38,14 +36,15 @@ spec:
             port: 443
             scheme: HTTPS
       - name: kube-rbac-proxy
-        image: flant/kube-rbac-proxy:v0.1.0 # Рекомендуется использовать прокси из нашего репозитория.
+        image: flant/kube-rbac-proxy:v0.1.0
+        # Рекомендуется использовать прокси из репозитория Deckhouse.
         args:
         - "--secure-listen-address=0.0.0.0:443"
         - "--config-file=/etc/kube-rbac-proxy/config-file.yaml"
         - "--v=2"
         - "--logtostderr=true"
         # Если kube-apiserver недоступен, аутентификация и авторизация пользователей невозможна.
-        # Stale Cache хранит только результаты успешной авторизации и используется, только если apiserver недоступен.
+        # Stale Cache хранит результаты успешной авторизации и используется лишь в случае, если apiserver недоступен.
         - "--stale-cache-interval=1h30m"
         ports:
         - containerPort: 443
@@ -62,14 +61,13 @@ spec:
 {% endraw %}
 
 Приложение принимает запросы на адресе `127.0.0.1`, это означает, что по незащищенному соединению к нему можно подключиться только внутри пода.
-Прокси слушает на адресе `0.0.0.0` и перехватывает весь внешний трафик к поду.
+Прокси прослушивает порт на адресе `0.0.0.0` и перехватывает весь внешний трафик к поду.
 
-### Как дать минимальные права для Service Account?
+### Как выдать минимальные права для ServiceAccount?
 
 Чтобы аутентифицировать и авторизовывать пользователей с помощью kube-apiserver, у прокси должны быть права на создание `TokenReview` и `SubjectAccessReview`.
 
-В кластерах DKP [уже есть готовая ClusterRole](https://github.com/deckhouse/deckhouse/blob/main/modules/002-deckhouse/templates/common/rbac/kube-rbac-proxy.yaml) — **d8-rbac-proxy**.
-Создавать ее самостоятельно не нужно! Необходимо прикрепить ее к Service Account'у вашего Deployment'а.
+В кластерах DKP [уже есть готовая ClusterRole](https://github.com/deckhouse/deckhouse/blob/main/modules/002-deckhouse/templates/common/rbac/kube-rbac-proxy.yaml) — **d8-rbac-proxy**, создавать её самостоятельно не требуется! Свяжите её с ServiceAccount вашего Deployment'а, как показано в примере ниже.
 {% raw %}
 
 ```yaml
@@ -104,10 +102,13 @@ metadata:
 data:
   config-file.yaml: |+
     excludePaths:
-    - /healthz # Не требуем авторизацию для liveness пробы.
+    - /healthz 
+  # Не требуем авторизацию для liveness пробы.
     upstreams:
-    - upstream: http://127.0.0.1:8081/ # Куда проксируем.
-      path: / # Location прокси, с которого запросы будут проксированы на upstream.
+    - upstream: http://127.0.0.1:8081/
+  # Адрес upstream-сервиса, на который будет перенаправлен входящий трафик.
+      path: / 
+  # Путь, обрабатываемый прокси, по которому принимаются запросы и перенаправляются на upstream.
       authorization:
         resourceAttributes:
           namespace: my-namespace
@@ -119,10 +120,12 @@ data:
 ```
 
 {% endraw %}
+
 Согласно конфигурации, у пользователя должны быть права доступа к Deployment с именем `my-app`
-и его дополнительному ресурсу `http` в пространство имён `my-namespace`.
+и его дополнительному ресурсу `http` в пространстве имён `my-namespace`.
 
 Выглядят такие права в виде RBAC следующим образом:
+
 {% raw %}
 
 ```yaml
@@ -153,7 +156,7 @@ subjects:
   name: ingress-nginx:auth
 ```
 
-Для ingress-ресурса необходимо добавить параметры:
+Для ingress-ресурса добавьте параметры:
 
 ```yaml
 nginx.ingress.kubernetes.io/backend-protocol: HTTPS
@@ -178,7 +181,7 @@ nginx.ingress.kubernetes.io/configuration-snippet: |
 
 ## Как настроить работу через MetalLB с доступом только из внутренней сети?
 
-Пример MetalLB с доступом только из внутренней сети:
+Пример MetalLB с настройками доступа только из внутренней сети:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -198,6 +201,8 @@ spec:
 {% endalert %}
 
 ## Как добавить дополнительные поля для логирования в nginx-controller?
+
+Пример добавления дополнительных полей:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -219,17 +224,17 @@ spec:
 Режим HPA возможен только при `minReplicas` != `maxReplicas`, в противном случае deployment `hpa-scaler` не создается.
 {% endalert %}
 
-HPA выставляется с помощью аттрибутов `minReplicas` и `maxReplicas` в [IngressNginxController CR](cr.html#ingressnginxcontroller).
+Для включения HPA используйте атрибуты `minReplicas` и `maxReplicas` в [IngressNginxController CR](cr.html#ingressnginxcontroller).
 
 IngressNginxController разворачивается с помощью DaemonSet. DaemonSet не предоставляет возможности горизонтального масштабирования, поэтому создается дополнительный deployment `hpa-scaler` и HPA resource, который следит за предварительно созданной метрикой `prometheus-metrics-adapter-d8-ingress-nginx-cpu-utilization-for-hpa`. Если CPU utilization превысит 50%, HPA закажет новую реплику для `hpa-scaler` (с учетом minReplicas и maxReplicas).
 
-Deployment `hpa-scaler` обладает HardPodAntiAffinity, поэтому он попытается выделить для себя новый узел (если это возможно
+Deployment `hpa-scaler` обладает HardPodAntiAffinity (запрет на размещение подов с одинаковыми метками на одном узле), поэтому он попытается выделить для себя новый узел (если это возможно
 в рамках своей группы узлов), куда автоматически будет размещен еще один instance Ingress-контроллера.
 
 {% alert level="info" %}
 
-- Минимальное реальное количество реплик IngressNginxController не может быть меньше минимального количества узлов в группе узлов, в которую разворачивается IngressNginxController.
-- Максимальное реальное количество реплик IngressNginxController не может быть больше максимального количества узлов в группе узлов, в которую разворачивается IngressNginxController.
+- Минимальное реальное количество реплик IngressNginxController не может быть меньше минимального количества узлов в группе узлов, куда он разворачивается.
+- Максимальное реальное количество реплик IngressNginxController не может быть больше максимального количества узлов в группе узлов, куда он разворачивается.
 
 {% endalert %}
 
@@ -274,15 +279,74 @@ kubectl label ingress test-site -n development ingress.deckhouse.io/discard-metr
 
 ## Как корректно вывести из эксплуатации (drain) узел с запущенным IngressNginxController?
 
-Доступно два способа вывода такого узла из эксплуатации - или с помощью аннотации узла (аннотация будет удалена после завершения операции):
+Доступно два способа корректного вывода из эксплуатации узла, на котором запущен IngressNginxController.
 
-```shell
-kubectl annotate node <node_name> update.node.deckhouse.io/draining=user
+1. С помощью аннотации.
+
+    Аннотация будет автоматически удалена после завершения операции.
+
+    ```shell
+    kubectl annotate node <node_name> update.node.deckhouse.io/draining=user
+    ```
+
+1. С помощью kubectl drain.
+
+    При использовании стандартной команды kubectl drain необходимо указать флаг `--force` даже при наличии `--ignore-daemonsets`,
+    поскольку IngressNginxController развёрнут с использованием Advanced DaemonSet:
+
+    ```shell
+    kubectl drain <node_name> --delete-emptydir-data --ignore-daemonsets --force
+    ```
+
+## Как включить Web Application Firewall (WAF)?
+
+Для защиты веб-приложений от L7-атак используется программное обеспечение известное как Web Application Firewall (WAF).
+В ingress-nginx контроллер встроен WAF под названием `ModSecurity` (проект Open Worldwide Application Security).
+
+По умолчанию ModSecurity выключен.
+
+### Включение ModSecurity
+
+Для включения ModSecurity необходимо задать параметры в кастомном ресурсе IngressNginxController, в секции `config`:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: <имя_контроллера>
+spec:
+  config:
+    enable-modsecurity: "true"
+    modsecurity-snippet: |
+      Include /etc/nginx/modsecurity/modsecurity.conf
 ```
 
-или с помощью базового функционала kubectl drain (тут стоит отметить, что необходимо указать флаг --force, несмотря на то, что указан флаг --ignore-daemonsets, так как IngressNginxController
-разворачивается с помощью Advanced DaemonSet):
+После применения настроек ModSecurity начнет работать для всего трафика, проходящего через данный ingress-nginx контроллер.
+При этом используется режим аудита (`DetectionOnly`) и [базовая рекомендуемая конфигурация](https://github.com/owasp-modsecurity/ModSecurity/blob/v3/master/modsecurity.conf-recommended).
 
-```shell
-kubectl drain <node_name> --delete-emptydir-data --ignore-daemonsets --force
+### Настройка ModSecurity
+
+ModSecurity можно настраивать двумя способами:
+1. Для всего ingress-nginx контроллера
+   - необходимые директивы описываются в секции `config.modsecurity-snippet` в кастомном ресурсе IngressNginxController, как в примере выше.
+1. Для каждого кастомного ресурса Ingress по отдельности
+   - необходимые директивы описываются в аннотации `nginx.ingress.kubernetes.io/modsecurity-snippet: |` непосредственно в манифестах Ingress.
+
+Чтобы включить выполнение правил (а не только логирование), добавьте директиву `SecRuleEngine On` по примеру ниже:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: <имя_контролера>
+spec:
+  config:
+    enable-modsecurity: "true"
+    modsecurity-snippet: |
+      Include /etc/nginx/modsecurity/modsecurity.conf
+      SecRuleEngine On
 ```
+
+Полный перечень и описание директив вы можете найти в [официальной документации](https://github.com/owasp-modsecurity/ModSecurity/wiki/Reference-Manual-%28v3.x%29).
+
+На данный момент использование набора правил OWASP Core Rule Set (CRS) недоступно.
