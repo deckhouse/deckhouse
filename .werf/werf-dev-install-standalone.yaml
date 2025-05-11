@@ -15,7 +15,7 @@ import:
 ---
 image: install-standalone-builder
 final: false
-from: {{ .Images.BASE_ALPINE }}
+fromImage: builder/alpine
 import:
 - image: install-standalone-builder-content
   add: /
