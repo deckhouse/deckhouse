@@ -14,6 +14,15 @@ configVersion: 1
 ---
 # Base Images
 {{- $_ := set . "Images" (.Files.Get "../../candi/image_versions.yml" | fromYaml) }}
+{{- $_ := set . "BaseImages" (.Files.Get "../../candi/base_images.yml" | fromYaml) }}
+  {{- range $k, $v := .BaseImages }}
+    {{- $baseImagePath := (printf "%s@%s" $.BaseImages.REGISTRY_PATH (trimSuffix "/" $v)) }}
+    {{- if ne $k "REGISTRY_PATH" }}
+      {{- $_ := set $.BaseImages $k $baseImagePath }}
+    {{- end }}
+  {{- end }}
+  {{- $_ := unset $.BaseImages "REGISTRY_PATH" }}
+  
   {{- range $k, $v := .Images }}
     {{- $baseImagePath := (printf "%s%s" $.Images.REGISTRY_PATH (trimSuffix "/" $v)) }}
     {{- if or (eq $.Mode "development") (eq $.Mode "module") (eq $.Mode "local") }}
