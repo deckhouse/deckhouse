@@ -272,7 +272,7 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 }
 
 func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.ModuleSource, opts []cr.Option, pulledModules []string) error {
-	_, span := otel.Tracer(controllerName).Start(ctx, "processModules")
+	ctx, span := otel.Tracer(controllerName).Start(ctx, "processModules")
 	defer span.End()
 
 	md := downloader.NewModuleDownloader(r.dependencyContainer, r.downloadedModulesDir, source, opts)
