@@ -15,7 +15,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
-fromCacheVersion: "2025-05-12.01"
 final: false
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
@@ -54,7 +53,6 @@ shell:
 ---
 image: {{ .ModuleName }}/cilium-envoy-artifact
 fromImage: {{ .ModuleName }}/base-cilium-dev
-fromCacheVersion: "2025-05-12.01"
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
