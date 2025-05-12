@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 
 	"github.com/google/uuid"
@@ -46,6 +45,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
+type detachParams struct {
+	request    *pb.CommanderDetachStart
+	logOptions logger.Options
+}
+
 func (s *Service) CommanderDetach(server pb.DHCTL_CommanderDetachServer) error {
 	ctx, cancel := operationCtx(server)
 	defer cancel()
@@ -58,11 +62,21 @@ func (s *Service) CommanderDetach(server pb.DHCTL_CommanderDetachServer) error {
 	internalErrCh := make(chan error)
 	receiveCh := make(chan *pb.CommanderDetachRequest)
 	sendCh := make(chan *pb.CommanderDetachResponse)
-	logWriter := logger.NewLogWriter(logger.L(ctx).With(logTypeDHCTL), sendCh,
+
+	loggerDefault := logger.L(ctx).With(logTypeDHCTL)
+
+	logWriter := logger.NewLogWriter(loggerDefault, sendCh,
 		func(lines []string) *pb.CommanderDetachResponse {
 			return &pb.CommanderDetachResponse{Message: &pb.CommanderDetachResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
 		},
 	)
+
+	debugWriter := logger.NewDebugLogWriter(loggerDefault)
+
+	logOptions := logger.Options{
+		DebugWriter:   debugWriter,
+		DefaultWriter: logWriter,
+	}
 
 	startReceiver[*pb.CommanderDetachRequest, *pb.CommanderDetachResponse](server, receiveCh, doneCh, internalErrCh)
 	startSender[*pb.CommanderDetachRequest, *pb.CommanderDetachResponse](server, sendCh, internalErrCh)
@@ -92,7 +106,10 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.commanderDetachSafe(ctx, message.Start, logWriter)
+					result := s.commanderDetachSafe(ctx, detachParams{
+						request:    message.Start,
+						logOptions: logOptions,
+					})
 					sendCh <- &pb.CommanderDetachResponse{Message: &pb.CommanderDetachResponse_Result{Result: result}}
 				}()
 
@@ -108,40 +125,33 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) commanderDetachSafe(
-	ctx context.Context,
-	request *pb.CommanderDetachStart,
-	logWriter io.Writer,
-) (result *pb.CommanderDetachResult) {
+func (s *Service) commanderDetachSafe(ctx context.Context, p detachParams) (result *pb.CommanderDetachResult) {
 	defer func() {
 		if r := recover(); r != nil {
 			result = &pb.CommanderDetachResult{Err: panicMessage(ctx, r)}
 		}
 	}()
 
-	return s.commanderDetach(ctx, request, logWriter)
+	return s.commanderDetach(ctx, p)
 }
 
-func (s *Service) commanderDetach(
-	ctx context.Context,
-	request *pb.CommanderDetachStart,
-	logWriter io.Writer,
-) *pb.CommanderDetachResult {
+func (s *Service) commanderDetach(ctx context.Context, p detachParams) *pb.CommanderDetachResult {
 	var err error
 
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream: logWriter,
-		Width:     int(request.Options.LogWidth),
+		OutStream:   p.logOptions.DefaultWriter,
+		Width:       int(p.request.Options.LogWidth),
+		DebugStream: p.logOptions.DefaultWriter,
 	})
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
-	app.ResourcesTimeout = request.Options.ResourcesTimeout.AsDuration()
-	app.DeckhouseTimeout = request.Options.DeckhouseTimeout.AsDuration()
+	app.ResourcesTimeout = p.request.Options.ResourcesTimeout.AsDuration()
+	app.DeckhouseTimeout = p.request.Options.DeckhouseTimeout.AsDuration()
 	app.CacheDir = s.cacheDir
-	app.ApplyPreflightSkips(request.Options.CommonOptions.SkipPreflightChecks)
+	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
 	defer func() { log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName) }()
@@ -149,10 +159,10 @@ func (s *Service) commanderDetach(
 	var metaConfig *config.MetaConfig
 	err = log.Process("default", "Parsing cluster config", func() error {
 		metaConfig, err = config.ParseConfigFromData(
-			input.CombineYAMLs(request.ClusterConfig, request.ProviderSpecificClusterConfig),
-			config.ValidateOptionCommanderMode(request.Options.CommanderMode),
-			config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
-			config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
+			input.CombineYAMLs(p.request.ClusterConfig, p.request.ProviderSpecificClusterConfig),
+			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
+			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
+			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
 		)
 		if err != nil {
 			return fmt.Errorf("parsing cluster meta config: %w", err)
@@ -166,8 +176,8 @@ func (s *Service) commanderDetach(
 	err = log.Process("default", "Preparing DHCTL state", func() error {
 		cachePath := metaConfig.CachePath()
 		var initialState phases.DhctlState
-		if request.State != "" {
-			err = json.Unmarshal([]byte(request.State), &initialState)
+		if p.request.State != "" {
+			err = json.Unmarshal([]byte(p.request.State), &initialState)
 			if err != nil {
 				return fmt.Errorf("unmarshalling dhctl state: %w", err)
 			}
@@ -188,11 +198,11 @@ func (s *Service) commanderDetach(
 	var sshClient *ssh.Client
 	err = log.Process("default", "Preparing SSH client", func() error {
 		connectionConfig, err := config.ParseConnectionConfig(
-			request.ConnectionConfig,
+			p.request.ConnectionConfig,
 			s.schemaStore,
-			config.ValidateOptionCommanderMode(request.Options.CommanderMode),
-			config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
-			config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
+			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
+			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
+			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
 		)
 		if err != nil {
 			return fmt.Errorf("parsing connection config: %w", err)
@@ -211,8 +221,8 @@ func (s *Service) commanderDetach(
 	}
 
 	var commanderUUID uuid.UUID
-	if request.Options.CommanderUuid != "" {
-		commanderUUID, err = uuid.Parse(request.Options.CommanderUuid)
+	if p.request.Options.CommanderUuid != "" {
+		commanderUUID, err = uuid.Parse(p.request.Options.CommanderUuid)
 		if err != nil {
 			return &pb.CommanderDetachResult{Err: fmt.Errorf("unable to parse commander uuid: %w", err).Error()}
 		}
@@ -223,23 +233,23 @@ func (s *Service) commanderDetach(
 	checker := check.NewChecker(&check.Params{
 		SSHClient:     sshClient,
 		StateCache:    stateCache,
-		CommanderMode: request.Options.CommanderMode,
+		CommanderMode: p.request.Options.CommanderMode,
 		CommanderUUID: commanderUUID,
 		CommanderModeParams: commander.NewCommanderModeParams(
-			[]byte(request.ClusterConfig),
-			[]byte(request.ProviderSpecificClusterConfig),
+			[]byte(p.request.ClusterConfig),
+			[]byte(p.request.ProviderSpecificClusterConfig),
 		),
 		InfrastructureContext: infrastructure.NewContextWithProvider(infrastructureprovider.ExecutorProvider(metaConfig)),
 	})
 
 	detacher := detach.NewDetacher(checker, sshClient, detach.DetacherOptions{
 		CreateDetachResources: detach.DetachResources{
-			Template: request.CreateResourcesTemplate,
-			Values:   request.CreateResourcesValues.AsMap(),
+			Template: p.request.CreateResourcesTemplate,
+			Values:   p.request.CreateResourcesValues.AsMap(),
 		},
 		DeleteDetachResources: detach.DetachResources{
-			Template: request.DeleteResourcesTemplate,
-			Values:   request.DeleteResourcesValues.AsMap(),
+			Template: p.request.DeleteResourcesTemplate,
+			Values:   p.request.DeleteResourcesValues.AsMap(),
 		},
 		OnCheckResult: onCheckResult,
 	})
