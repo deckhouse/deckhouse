@@ -74,7 +74,7 @@ type CRD struct {
 func applyCRDFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var crd apiextensionsv1.CustomResourceDefinition
 
-	err := sdk.FromUnstructured(obj, crd)
+	err := sdk.FromUnstructured(obj, &crd)
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert kubernetes object: %v", err)
 	}
@@ -105,6 +105,9 @@ func injectCAtoCRD(input *go_hook.HookInput) error {
 		bundle := input.Snapshots["cabundle"][0]
 		crds := input.Snapshots["sshcredentials"]
 		for _, crd := range crds {
+			if crd == nil {
+				continue
+			}
 			patch := map[string]interface{}{
 				"spec": map[string]interface{}{
 					"conversion": map[string]interface{}{
@@ -116,7 +119,7 @@ func injectCAtoCRD(input *go_hook.HookInput) error {
 					},
 				},
 			}
-			input.PatchCollector.PatchWithMerge(patch, "apiextensions.k8s.io/v1", "CustomResourceDefinition", "", crd.(CRD).Name)
+			input.PatchCollector.PatchWithMerge(patch, "apiextensions.k8s.io/v1", "CustomResourceDefinition", "", crd.(*CRD).Name)
 		}
 	}
 
