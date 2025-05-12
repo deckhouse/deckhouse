@@ -622,7 +622,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 		r.metricsUpdater.UpdateReleaseMetric(release.GetName(), metricLabels)
 	}()
 
-	reasons := checker.MetRequirements(release)
+	reasons := checker.MetRequirements(ctx, release)
 	if len(reasons) > 0 {
 		metricLabels.SetTrue(releaseUpdater.RequirementsNotMet)
 		msgs := make([]string, 0, len(reasons))
@@ -737,6 +737,9 @@ func (r *reconciler) updatePolicy(ctx context.Context, release *v1alpha1.ModuleR
 
 // ApplyRelease applies predicted release
 func (r *reconciler) ApplyRelease(ctx context.Context, mr *v1alpha1.ModuleRelease, task *releaseUpdater.Task) error {
+	ctx, span := otel.Tracer(controllerName).Start(ctx, "applyRelease")
+	defer span.End()
+
 	var dri *releaseUpdater.ReleaseInfo
 
 	if task != nil {
@@ -1011,6 +1014,9 @@ var ErrPreApplyCheckIsFailed = errors.New("pre apply check is failed")
 //
 // - Calculating deploy time (if zero - deploy)
 func (r *reconciler) PreApplyReleaseCheck(ctx context.Context, mr *v1alpha1.ModuleRelease, task *releaseUpdater.Task, us *releaseUpdater.Settings, metricLabels releaseUpdater.MetricLabels) error {
+	ctx, span := otel.Tracer(controllerName).Start(ctx, "preApplyReleaseCheck")
+	defer span.End()
+
 	timeResult := r.DeployTimeCalculate(ctx, mr, task, us, metricLabels)
 
 	if timeResult == nil {
@@ -1113,7 +1119,7 @@ func (r *reconciler) DeployTimeCalculate(ctx context.Context, mr v1alpha1.Releas
 
 	// for minor release we must check additional conditions
 	checker := releaseUpdater.NewPreApplyChecker(us, r.log)
-	reasons := checker.MetRequirements(&mr)
+	reasons := checker.MetRequirements(ctx, &mr)
 	if len(reasons) > 0 {
 		metricLabels.SetTrue(releaseUpdater.DisruptionApprovalRequired)
 
