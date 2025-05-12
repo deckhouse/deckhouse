@@ -32,6 +32,11 @@ import (
 	"github.com/flant/kube-client/client"
 	shapp "github.com/flant/shell-operator/pkg/app"
 	"github.com/shirou/gopsutil/v3/process"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	sdkresource "go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
 	"gopkg.in/alecthomas/kingpin.v2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -56,6 +61,7 @@ const (
 	modulesDirEnv      = "MODULES_DIR"
 	skipEntrypointEnv  = "SKIP_ENTRYPOINT_EXECUTION"
 
+	serviceDeckhouse = "deckhouse"
 	leaseName        = "deckhouse-leader-election"
 	defaultNamespace = "d8-system"
 	leaseDuration    = 35
@@ -235,6 +241,8 @@ func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log
 		return fmt.Errorf("ensure crds: %w", err)
 	}
 
+	telemetryShutdown := registryTelemetry(ctx)
+
 	// we have to lock the controller run if dhctl lock configmap exists
 	if err := lockOnBootstrap(ctx, operator.KubeClient(), logger); err != nil {
 		return fmt.Errorf("lock on bootstrap: %w", err)
@@ -271,6 +279,7 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 		select {
 		case <-ctx.Done():
 			logger.Info("Context canceled - exiting")
+
 			exitCh <- struct{}{}
 			return
 
@@ -283,6 +292,8 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 					environ = append(environ, skipEntrypointKeyValue)
 				}
 				logger.Info(fmt.Sprintf("A %q signal was received, Deckhouse is restarting", sig.String()))
+				_ = telemetryShutdown(ctx)
+
 				if *operatorStarted {
 					operator.Stop()
 				}
@@ -350,6 +361,8 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 
 			case syscall.SIGINT, syscall.SIGTERM:
 				logger.Info(fmt.Sprintf("A %q signal was received, Deckhouse is shutting down", sig.String()))
+				_ = telemetryShutdown(ctx)
+
 				if *operatorStarted {
 					operator.Stop()
 				}
@@ -416,4 +429,26 @@ func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Log
 
 		return nil
 	})
+}
+
+func registryTelemetry(ctx context.Context) func(ctx context.Context) error {
+	var endpoint = "jaeger-inmemory-instance-collector.default.svc.cluster.local:4317"
+	exporter, _ := otlptracegrpc.New(ctx, otlptracegrpc.WithInsecure(), otlptracegrpc.WithEndpoint(endpoint))
+
+	resource := sdkresource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.ServiceNameKey.String(serviceDeckhouse),
+		semconv.ServiceVersionKey.String(DeckhouseVersion),
+		semconv.TelemetrySDKLanguageKey.String("en"),
+		semconv.K8SDeploymentName(serviceDeckhouse),
+		semconv.K8SPodNameKey.String(serviceDeckhouse))
+
+	provider := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(exporter),
+		sdktrace.WithResource(resource),
+	)
+
+	otel.SetTracerProvider(provider)
+
+	return provider.Shutdown
 }

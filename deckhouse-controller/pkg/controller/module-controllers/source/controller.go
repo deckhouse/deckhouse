@@ -23,6 +23,9 @@ import (
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -185,6 +188,11 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 }
 
 func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.ModuleSource) (ctrl.Result, error) {
+	ctx, span := otel.Tracer(controllerName).Start(ctx, "handleModuleSource")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("source", source.Name))
+
 	// generate options for connecting to the registry
 	opts := utils.GenerateRegistryOptionsFromModuleSource(source, r.clusterUUID, r.logger)
 
@@ -218,6 +226,8 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 		return ctrl.Result{Requeue: true}, nil
 	}
 
+	span.AddEvent("fetch tags from the registry")
+
 	// list available modules(tags) from the registry
 	r.logger.Debug("fetch modules from the module source", slog.String("source_name", source.Name))
 	pulledModules, err := registryClient.ListTags(ctx)
@@ -228,6 +238,9 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 		}
 		return ctrl.Result{RequeueAfter: defaultScanInterval}, nil
 	}
+
+	span.AddEvent("successfully fetched the tags for the registry",
+		trace.WithAttributes(attribute.Int("count", len(pulledModules))))
 
 	// limit pulled module
 	if len(pulledModules) > maxModulesLimit {
@@ -259,6 +272,9 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 }
 
 func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.ModuleSource, opts []cr.Option, pulledModules []string) error {
+	_, span := otel.Tracer(controllerName).Start(ctx, "processModules")
+	defer span.End()
+
 	md := downloader.NewModuleDownloader(r.dependencyContainer, r.downloadedModulesDir, source, opts)
 	sort.Strings(pulledModules)
 
