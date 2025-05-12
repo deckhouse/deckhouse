@@ -346,6 +346,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"openvpn":         "imageHash-openvpn-openvpn",
 		"ovpnAdmin":       "imageHash-openvpn-ovpnAdmin",
 		"pmacct":          "imageHash-openvpn-pmacct",
+		"kubectl":         "imageHash-openvpn-kubectl",
 	},
 	"operatorPrometheus": map[string]interface{}{
 		"prometheusConfigReloader": "imageHash-operatorPrometheus-prometheusConfigReloader",
