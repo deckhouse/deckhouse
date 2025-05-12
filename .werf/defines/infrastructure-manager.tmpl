@@ -1,0 +1,18 @@
+# calculate base image for terraform-auto-exporter and terraform-state-exporteer
+# . is dict with keys:
+#   TF - TF from werf.yaml
+#   providerName - from terraform_versions.yaml key in root like azure or decort for example
+
+{{- define "infrastructure_manager_base_image" }}
+{{- $context := . -}}
+{{- if hasKey $context.TF $context.providerName -}}
+  {{- $provider := get $context.TF $context.providerName -}}
+  {{- if $provider.useOpentofu -}}
+terraform-manager/base-terraform-manager-opentofu
+  {{- else -}}
+terraform-manager/base-terraform-manager
+  {{- end -}}
+{{- else }}
+    {{- fail (printf "provider %s not found" $context.providerName) -}}
+{{- end }}
+{{- end }}

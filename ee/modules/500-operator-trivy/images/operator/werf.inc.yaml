@@ -28,9 +28,12 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v0.22.0 {{ .SOURCE_REPO }}/aquasecurity/trivy-operator.git /src/trivy-operator
+  - git clone --depth 1 --branch v0.22.0 $(cat /run/secrets/SOURCE_REPO)/aquasecurity/trivy-operator.git /src/trivy-operator
   - rm -rf /src/trivy-operator/.git
   - mv /src/trivy-operator/* /src
   - rm -rf /src/trivy-operator
@@ -47,14 +50,15 @@ import:
   to: /src
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
-  - export GOPROXY={{ .GOPROXY }}
   - cd /src
   - ln -s ./trivy-db ./original-trivy-db
-  - go mod download -x
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /operator-trivy ./cmd/trivy-operator/main.go
   - chown 64535:64535 /operator-trivy
   - chmod 0700 /operator-trivy

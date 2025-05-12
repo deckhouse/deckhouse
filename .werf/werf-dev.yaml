@@ -18,8 +18,7 @@ git:
 import:
 {{ include "dev_prebuild_images_imports" (dict "Env" .Env) }}
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
 shell:
   setup:
   - |

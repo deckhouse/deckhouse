@@ -348,7 +348,7 @@ Queue 'main': length 0, status: 'waiting for task 0s'
 ### How do I configure Deckhouse to use a third-party registry?
 
 {% alert level="warning" %}
-This feature is available in Enterprise Edition only.
+This feature is available in the following editions: BE, SE, SE+, EE.
 {% endalert %}
 
 {% alert level="warning" %}
@@ -438,10 +438,10 @@ The following requirements must be met if the [Nexus](https://github.com/sonatyp
    * `Remote storage` must be set to `https://registry.deckhouse.io/`.
    * You can disable `Auto blocking enabled` and `Not found cache enabled` for debugging purposes, otherwise they must be enabled.
    * `Maximum Metadata Age` must be set to `0`.
-   * `Authentication` must be enabled if you plan to use Deckhouse Enterprise Edition and the related fields must be set as follows:
+   * `Authentication` must be enabled if you plan to use a commercial edition of Deckhouse Kubernetes Platform, and the related fields must be set as follows:
      * `Authentication Type` must be set to `Username`.
      * `Username` must be set to `license-token`.
-     * `Password` must contain your license key for Deckhouse Enterprise Edition.
+     * `Password` must contain your Deckhouse Kubernetes Platform license key.
 
    ![Repository settings example 1](images/registry/nexus/nexus-repo-example-1.png)
    ![Repository settings example 2](images/registry/nexus/nexus-repo-example-2.png)
@@ -467,7 +467,7 @@ Use the [Harbor Proxy Cache](https://github.com/goharbor/harbor) feature.
   * `Provider`: `Docker Registry`.
   * `Name` — specify any of your choice.
   * `Endpoint URL`: `https://registry.deckhouse.io`.
-  * Specify the `Access ID` and `Access Secret` for Deckhouse Enterprise Edition.
+  * Specify the `Access ID` and `Access Secret` (the Deckhouse Kubernetes Platform license key).
 
   ![Create a Registry](images/registry/harbor/harbor1.png)
 
@@ -625,7 +625,7 @@ Check [releases.deckhouse.io](https://releases.deckhouse.io) for the current sta
 ### How do I switch a running Deckhouse cluster to use a third-party registry?
 
 {% alert level="warning" %}
-Using a registry other than `registry.deckhouse.io` is only available in the Enterprise Edition.
+Using a registry other than `registry.deckhouse.io` is only available in a commercial edition of Deckhouse Kubernetes Platform.
 {% endalert %}
 
 To switch the Deckhouse cluster to using a third-party registry, follow these steps:
@@ -709,7 +709,7 @@ If you want to disable automatic updates for an already installed Deckhouse (inc
 ### Using a proxy server
 
 {% alert level="warning" %}
-This feature is available in Enterprise Edition only.
+This feature is available in the following editions: BE, SE, SE+, EE.
 {% endalert %}
 
 {% offtopic title="Example of steps for configuring a Squid-based proxy server..." %}
@@ -859,7 +859,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 ### How to switch Deckhouse EE to CE?
 
 {% alert level="warning" %}
-The instruction implies using the public address of the container registry: `registry.deckhouse.io`. Using a registry other than `registry.deckhouse.io` is only available in the Enterprise Edition.
+The instruction implies using the public address of the container registry: `registry.deckhouse.io`. Using a registry other than `registry.deckhouse.io` is only available in a commercial edition of Deckhouse Kubernetes Platform.
 
 Deckhouse CE does not support cloud clusters on OpenStack and VMware vSphere.
 {% endalert %}
