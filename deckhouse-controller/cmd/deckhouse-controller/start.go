@@ -270,7 +270,7 @@ func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log
 }
 
 func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonoperator.AddonOperator, operatorStarted *bool, logger *log.Logger) {
-	telemetryShutdown := registryTelemetry(ctx)
+	telemetryShutdown := registerTelemetry(ctx)
 
 	interruptCh := make(chan os.Signal, 5)
 	signal.Notify(interruptCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGUSR1, syscall.SIGUSR2, syscall.SIGCHLD)
@@ -292,7 +292,9 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 					environ = append(environ, skipEntrypointKeyValue)
 				}
 				logger.Info(fmt.Sprintf("A %q signal was received, Deckhouse is restarting", sig.String()))
-				_ = telemetryShutdown(ctx)
+				if err := telemetryShutdown(ctx); err != nil {
+					logger.Error("telemetry shutdown", log.Err(err))
+				}
 
 				if *operatorStarted {
 					operator.Stop()
@@ -361,7 +363,9 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 
 			case syscall.SIGINT, syscall.SIGTERM:
 				logger.Info(fmt.Sprintf("A %q signal was received, Deckhouse is shutting down", sig.String()))
-				_ = telemetryShutdown(ctx)
+				if err := telemetryShutdown(ctx); err != nil {
+					logger.Error("telemetry shutdown", log.Err(err))
+				}
 
 				if *operatorStarted {
 					operator.Stop()
@@ -431,9 +435,19 @@ func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Log
 	})
 }
 
-func registryTelemetry(ctx context.Context) func(ctx context.Context) error {
-	var endpoint = "jaeger-inmemory-instance-collector.default.svc.cluster.local:4317"
-	exporter, _ := otlptracegrpc.New(ctx, otlptracegrpc.WithInsecure(), otlptracegrpc.WithEndpoint(endpoint))
+func registerTelemetry(ctx context.Context) func(ctx context.Context) error {
+	endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+
+	opts := make([]otlptracegrpc.Option, 0, 1)
+
+	if endpoint == "" {
+		endpoint = "jaeger-inmemory-instance-collector.default.svc.cluster.local:4317"
+	}
+
+	opts = append(opts, otlptracegrpc.WithEndpoint(endpoint))
+	opts = append(opts, otlptracegrpc.WithInsecure())
+
+	exporter, _ := otlptracegrpc.New(ctx, opts...)
 
 	resource := sdkresource.NewWithAttributes(
 		semconv.SchemaURL,
