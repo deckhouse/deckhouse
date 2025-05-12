@@ -28,6 +28,17 @@ rules:
       - patch
       - delete
       - deletecollection
+  - apiGroups: 
+      - sailoperator.io
+    resources: 
+      - istiocnis
+      - ztunnels
+      - istiorevisions
+      - istiorevisiontags
+      - istios
+    verbs: 
+      - list
+      - watch
   - apiGroups:
       - networking.istio.io
     resources:
