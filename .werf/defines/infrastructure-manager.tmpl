@@ -30,7 +30,6 @@ terraform-manager/base-terraform-manager
 {{- fail (printf "provider aaa not found" ) -}}
 registry.opentofu.org
   {{- else -}}
-{{- fail (printf "provider bbb not found" ) -}}
 registry.terraform.io
   {{- end -}}
 {{- else }}
