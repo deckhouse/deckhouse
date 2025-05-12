@@ -314,7 +314,7 @@ import:
 {{- end }}
 ---
 image: web-backend-srv
-fromImage: builder/golang-alpine
+fromImage: {{ index .BaseImages "builder/golang-alpine
 final: false
 shell:
   install:
@@ -382,11 +382,12 @@ import:
 {{- $_ := set $context "ImageName" "builder" }}
 {{- $_ := set $context "ModulePath" "../../" }}
 {{- $_ := set $context "GOPROXY" "https://proxy.golang.org/" }}
+{{- $_ := set $context "BaseImages" $.BaseImages }}
 {{ tpl (.Files.Get "werf-docs-builder.inc.yaml") $context }}
 ---
 # Build scanner, which fetch modules documentation from list of specified registries
 image: registry-modules-watcher-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ index .BaseImages "builder/golang-alpine
 shell:
   install:
   - cd /go/src/app
