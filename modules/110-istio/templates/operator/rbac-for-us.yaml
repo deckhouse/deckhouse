@@ -39,6 +39,20 @@ rules:
       - list
       - watch
   - apiGroups:
+      - sailoperator.io
+    resources:
+      - istiorevisions
+    verbs:
+      - create
+      - list
+      - watch
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istios/status
+    verbs:
+      - patch
+  - apiGroups:
       - networking.istio.io
     resources:
       - destinationrules
