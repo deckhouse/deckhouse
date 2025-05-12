@@ -523,7 +523,7 @@ alerts:
       module: ceph-csi
       edition: ce
       description: |
-        CephCsi module is deprecated and will be removed at Deckhouse 1.70! Please, use [csi-ceph](https://deckhouse.io/products/kubernetes-platform/modules/csi-ceph/stable/) module instead.
+        Ceph-csi module is deprecated and will be removed in Deckhouse 1.70! Please, use [csi-ceph](https://deckhouse.io/products/kubernetes-platform/modules/csi-ceph/stable/) module instead.
       summary: |
         CephCsi module is deprecated.
       severity: "5"
