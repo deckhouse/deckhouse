@@ -26,6 +26,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gojuno/minimock/v3"
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
 	"github.com/stretchr/testify/assert"
@@ -78,7 +79,15 @@ func TestControllerTestSuite(t *testing.T) {
 	suite.Run(t, new(ControllerTestSuite))
 }
 
-func (suite *ControllerTestSuite) setupTestController(raw string) {
+type reconcilerOption func(*reconciler)
+
+func withDependencyContainer(dc dependency.Container) reconcilerOption {
+	return func(r *reconciler) {
+		r.dependencyContainer = dc
+	}
+}
+
+func (suite *ControllerTestSuite) setupTestController(raw string, options ...reconcilerOption) {
 	manifests := releaseutil.SplitManifests(raw)
 
 	var objects = make([]client.Object, 0, len(manifests))
@@ -96,7 +105,7 @@ func (suite *ControllerTestSuite) setupTestController(raw string) {
 		WithStatusSubresource(&v1alpha1.Module{}, &v1alpha1.ModuleSource{}, &v1alpha1.ModuleRelease{}).
 		Build()
 
-	suite.r = &reconciler{
+	rec := &reconciler{
 		init:                 new(sync.WaitGroup),
 		client:               suite.client,
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
@@ -110,6 +119,12 @@ func (suite *ControllerTestSuite) setupTestController(raw string) {
 			ReleaseChannel: "Stable",
 		}),
 	}
+
+	for _, option := range options {
+		option(rec)
+	}
+
+	suite.r = rec
 }
 
 func (suite *ControllerTestSuite) parseKubernetesObject(raw []byte) client.Object {
@@ -187,7 +202,7 @@ func (suite *ControllerTestSuite) TearDownSubTest() {
 	exp := splitManifests(raw)
 	got := splitManifests(currentObjects)
 
-	assert.Equal(suite.T(), len(got), len(exp), "The number of `got` manifests must be equal to the number of `exp` manifests")
+	require.Equal(suite.T(), len(got), len(exp), "The number of `got` manifests must be equal to the number of `exp` manifests")
 	for i := range got {
 		assert.YAMLEq(suite.T(), exp[i], got[i], "Got and exp manifests must match")
 	}
@@ -234,7 +249,6 @@ func splitManifests(doc []byte) []string {
 
 func (suite *ControllerTestSuite) TestCreateReconcile() {
 	suite.Run("empty source", func() {
-		dependency.TestDC.CRClient.ListTagsMock.Return([]string{"foo", "bar"}, nil)
 		suite.setupTestController(string(suite.parseTestdata("empty.yaml")))
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
 		require.NoError(suite.T(), err)
@@ -448,4 +462,46 @@ func (suite *ControllerTestSuite) moduleSource(name string) *v1alpha1.ModuleSour
 	require.NoError(suite.T(), err)
 
 	return source
+}
+
+func newMockedContainerWithData(t minimock.Tester, version string, modules, tags []string) *dependency.MockedContainer {
+	moduleVersionsMock := cr.NewClientMock(t)
+	if len(tags) > 0 {
+		moduleVersionsMock.ListTagsMock.Return(tags, nil)
+	}
+	moduleVersionsMock.ImageMock.Set(func(_ context.Context, tag string) (crv1.Image, error) {
+		return &crfake.FakeImage{
+			ManifestStub: manifestStub,
+			LayersStub: func() ([]crv1.Layer, error) {
+				return []crv1.Layer{
+					&utils.FakeLayer{},
+					&utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "` + version + `"}`}},
+				}, nil
+			},
+			DigestStub: func() (crv1.Hash, error) {
+				return crv1.Hash{Algorithm: "sha256"}, nil
+			},
+		}, nil
+	})
+
+	dc := dependency.NewMockedContainer()
+	dc.CRClientMap = map[string]cr.Client{
+		"dev-registry.deckhouse.io/deckhouse/modules":                     cr.NewClientMock(t).ListTagsMock.Return(modules, nil),
+		"dev-registry.deckhouse.io/deckhouse/modules/enabledmodule":       moduleVersionsMock,
+		"dev-registry.deckhouse.io/deckhouse/modules/disabledmodule":      moduleVersionsMock,
+		"dev-registry.deckhouse.io/deckhouse/modules/withpolicymodule":    moduleVersionsMock,
+		"dev-registry.deckhouse.io/deckhouse/modules/notthissourcemodule": moduleVersionsMock,
+	}
+	dc.CRClient.ListTagsMock.Return(modules, nil)
+	dc.CRClient.ImageMock.Return(&crfake.FakeImage{
+		ManifestStub: manifestStub,
+		LayersStub: func() ([]crv1.Layer, error) {
+			return []crv1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "` + version + `"}`}}}, nil
+		},
+		DigestStub: func() (crv1.Hash, error) {
+			return crv1.Hash{Algorithm: "sha256"}, nil
+		},
+	}, nil)
+
+	return dc
 }
