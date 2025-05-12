@@ -1,12 +1,66 @@
+{{- $context := . }}
 {{- if hasKey .Values.openvpn "inlet" }}
-
+{{- $tcpServiceName :=  printf "%s-external" .Chart.Name }}
+{{- $udpServiceName :=  printf "%s-external-udp" .Chart.Name }}
   {{- if eq .Values.openvpn.inlet "LoadBalancer" }}
+    {{ $loadBalancerClass := "" }}
+    {{- if .Values.openvpn.loadBalancer.loadBalancerClass }}
+      {{ $loadBalancerClass = .Values.openvpn.loadBalancer.loadBalancerClass }}
+    {{- end }}
+    {{- $previousLoadBalancerClass := "" }}
+    {{- $serviceName := "" }}
+    {{- if .Values.openvpn.tcpEnabled }}
+      {{- $previousLoadBalancerClass := "" }}
+      {{- $serviceName := $tcpServiceName }}
+      {{- $existingService := lookup "v1" "Service" "d8-openvpn" $serviceName }}
+      {{- if $existingService }}
+        {{- $previousLoadBalancerClass = $existingService.spec.loadBalancerClass | default "" }}
+      {{- end }}
+    {{- end }}
+  {{- if .Values.openvpn.udpEnabled }}
+    {{- $previousLoadBalancerClass := "" }}
+    {{- $serviceName := $udpServiceName }}
+    {{- $existingService := lookup "v1" "Service" "d8-openvpn" $serviceName }}
+    {{- if $existingService }}
+      {{- $previousLoadBalancerClass = $existingService.spec.loadBalancerClass | default "" }}
+    {{- end }}
+  {{- end }}
+  {{- if or (and (not $previousLoadBalancerClass) $loadBalancerClass) (and $previousLoadBalancerClass (ne $previousLoadBalancerClass $loadBalancerClass)) }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cleanup-service-{{ $serviceName }}-{{ $loadBalancerClass | default "no-class" | sha1sum | trunc 8 }}-{{ randAlphaNum 5 | lower }}
+  namespace: d8-ingress-nginx
+  annotations:
+    "helm.sh/hook": pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  template:
+    spec:
+      serviceAccountName: ingress-nginx
+      restartPolicy: OnFailure
+      containers:
+        - name: cleanup
+          image: {{ include "helm_lib_module_image" (list $context "kubectl") }}
+          command:
+            - /kubectl
+            - delete
+            - service
+            - {{ $serviceName }}
+            - -n
+            - d8-openvpn
+            - --ignore-not-found=true
+            - --wait=false
+    {{- end }}
+
     {{- if .Values.openvpn.tcpEnabled }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Chart.Name }}-external
+  name: {{ $tcpServiceName }}
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
   {{- if .Values.openvpn.loadBalancer.annotations }}
@@ -37,7 +91,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Chart.Name }}-external-udp
+  name: {{ $udpServiceName }}
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
   {{- if .Values.openvpn.loadBalancer.annotations }}
@@ -69,7 +123,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Chart.Name }}-external
+  name: {{ $tcpServiceName }}
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
 spec:
@@ -89,7 +143,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Chart.Name }}-external-udp
+  name: {{ $udpServiceName }}
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
 spec:
