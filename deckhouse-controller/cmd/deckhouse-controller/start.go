@@ -437,11 +437,11 @@ func registryTelemetry(ctx context.Context) func(ctx context.Context) error {
 
 	resource := sdkresource.NewWithAttributes(
 		semconv.SchemaURL,
-		semconv.ServiceNameKey.String(serviceDeckhouse),
+		semconv.ServiceNameKey.String(AppName),
 		semconv.ServiceVersionKey.String(DeckhouseVersion),
 		semconv.TelemetrySDKLanguageKey.String("en"),
-		semconv.K8SDeploymentName(serviceDeckhouse),
-		semconv.K8SPodNameKey.String(serviceDeckhouse))
+		semconv.K8SDeploymentName(AppName),
+		semconv.K8SPodNameKey.String(AppName))
 
 	provider := sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(exporter),
