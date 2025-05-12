@@ -20,9 +20,12 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"sync"
 	"time"
+
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
@@ -98,6 +101,11 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 			return nil, fmt.Errorf("add to scheme: %w", err)
 		}
 	}
+
+	// inject otel tripper
+	operator.KubeClient().RestConfig().Wrap(func(t http.RoundTripper) http.RoundTripper {
+		return otelhttp.NewTransport(t)
+	})
 
 	// Setting the controller-runtime logger to a no-op logger by default,
 	// unless debug mode is enabled. This is because the controller-runtime

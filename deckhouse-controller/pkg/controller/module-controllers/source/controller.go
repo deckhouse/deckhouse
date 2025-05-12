@@ -346,7 +346,8 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			slog.String("source_name", source.Name),
 		)
 		// download module metadata from the specified release channel
-		meta, err := md.DownloadMetadataFromReleaseChannel(moduleName, policy.Spec.ReleaseChannel, cachedChecksum)
+		r.logger.Debug("download meta ", slog.String("release_channel", policy.Spec.ReleaseChannel), slog.String("module_name", moduleName), slog.String("module_source", source.Name))
+		meta, err := md.DownloadMetadataFromReleaseChannel(ctx, moduleName, policy.Spec.ReleaseChannel, cachedChecksum)
 		if err != nil {
 			if module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) && module.Properties.Source == source.Name {
 				r.logger.Warn("failed to download module", slog.String("name", moduleName), log.Err(err))
