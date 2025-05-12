@@ -47,6 +47,7 @@ rules:
       - create
       - list
       - watch
+      - update
   - apiGroups:
       - sailoperator.io
     resources:
