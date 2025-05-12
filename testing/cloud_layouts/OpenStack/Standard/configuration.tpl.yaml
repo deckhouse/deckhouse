@@ -52,8 +52,9 @@ nodeGroups:
       node-role.kubernetes.io/worker: ''
   replicas: 1
   instanceClass:
-    instanceType: e2e
-    ami: "redos-STD-MINIMAL-8.0.0"
+    rootDiskSize: 50
+    flavorName: e2e
+    imageName: "redos-STD-MINIMAL-8.0.0"
   volumeTypeMap:
     ru-3a: "fast.ru-3a"
 ---
