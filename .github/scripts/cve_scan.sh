@@ -91,12 +91,15 @@ if [ "${SCAN_TARGET}" == "regular" ]; then
       exit 1
     fi
   else
-    # Get release tags by regexp, sort by sevmer desc, cut to get minor version, uniq and get 3 latest
-    releases=($(crane ls "${PROD_REGISTRY_DECKHOUSE_IMAGE}" | grep "^v[0-9]*\.[0-9]*\.[0-9]*$" | sort -V -r))
-    latest_minor_releases=($(printf '%s\n' "${releases[@]}"| cut -d "." -f -2 | uniq | head -n 3))
-    for r in "${latest_minor_releases[@]}"; do
-      d8_tags+=($(printf '%s\n' "${releases[@]}" | grep "${r}" | sort -V -r|head -n 1))
-    done
+    if [ "${{ github.event_name }}" != "push" ]; then
+      # Get release tags by regexp, sort by sevmer desc, cut to get minor version, uniq and get 3 latest
+      releases=($(crane ls "${PROD_REGISTRY_DECKHOUSE_IMAGE}" | grep "^v[0-9]*\.[0-9]*\.[0-9]*$" | sort -V -r))
+      latest_minor_releases=($(printf '%s\n' "${releases[@]}"| cut -d "." -f -2 | uniq | head -n 3))
+      for r in "${latest_minor_releases[@]}"; do
+        d8_tags+=($(printf '%s\n' "${releases[@]}" | grep "${r}" | sort -V -r|head -n 1))
+      done
+    # else - this was push to main so scan only main branch
+    fi
   fi
 fi
 echo "CVE Scan will be applied to the following tags of Deckhouse"
