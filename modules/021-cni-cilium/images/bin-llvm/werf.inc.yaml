@@ -43,6 +43,7 @@ shell:
 ---
 image: {{ .ModuleName }}/llvm-artifact
 fromImage: {{ .ModuleName }}/base-cilium-dev
+fromCacheVersion: "2025-05-12.01"
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
