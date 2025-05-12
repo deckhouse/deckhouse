@@ -99,6 +99,8 @@ func NewTransformation(name, vrl string) *DynamicTransform {
 		},
 	}
 }
+
+// name transform couldn't have dot
 func splitAndremoveDot(labels []string) string {
 	var s string
 	for _, l := range labels {
@@ -108,12 +110,15 @@ func splitAndremoveDot(labels []string) string {
 	return s
 }
 
-// add Dot in label prefix  if not exist
-func checkFixDotPrefix(labels []string) []string {
-	for i, l := range labels {
+// dot in label prefix need for vector
+func checkFixDotPrefix(lbs []string) []string {
+	labels := []string{}
+	for _, l := range lbs {
 		if !strings.HasPrefix(l, ".") {
-			labels[i] = fmt.Sprintf(".%s", l)
+			labels = append(labels, fmt.Sprintf(".%s", l))
+			continue
 		}
+		labels = append(labels, l)
 	}
 	return labels
 }

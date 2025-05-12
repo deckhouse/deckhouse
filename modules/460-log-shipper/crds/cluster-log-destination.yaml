@@ -847,6 +847,8 @@ spec:
                     labels:
                       items: 
                         type: string
+                    required:
+                    - action
                 buffer:
                   type: object
                   oneOf:

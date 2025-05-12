@@ -420,22 +420,24 @@ spec:
                   description: |
                     Дополнительные трасформации которые пользователь может задать
                       замена точки на подчеркивание в лейблах
-                       `action: replaceDot`
+                       `action: replaceDot
+                        labels: ["pod_labels"]`
                       Проверяет что вложенный json правильный. Если нет то создает вложенный json message: {"text": .message}
-                       `action: fixNestedJson
-                        label: message` 
+                       `action: wrapNotJson
+                        labels: ["message"]` 
                       Удаление лейбла example
-                       `action: del
-                        label: example`
+                       `action: delete
+                        labels: ["example"]`
                   properties:
                     action:
                       type: string
                       enum:
                       - replaceDot
-                      - fixNestedJson
-                      - del
-                    label:
-                      type: string
+                      - wrapNotJson
+                      - delete
+                    labels:
+                      items: 
+                        type: string
                     required:
                     - action
                 buffer:
