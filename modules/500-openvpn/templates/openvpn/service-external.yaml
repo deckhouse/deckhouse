@@ -21,6 +21,9 @@ spec:
     {{- .Values.openvpn.loadBalancer.sourceRanges | toYaml | nindent 4 }}
   {{- end }}
   type: LoadBalancer
+  {{- if .Values.openvpn.loadBalancer.loadBalancerClass }}
+  loadBalancerClass: {{ .Values.openvpn.loadBalancer.loadBalancerClass }}
+  {{- end }}
   ports:
     - name: ovpn-tcp
       protocol: TCP
@@ -49,6 +52,9 @@ spec:
     {{- .Values.openvpn.loadBalancer.sourceRanges | toYaml | nindent 4 }}
   {{- end }}
   type: LoadBalancer
+  {{- if .Values.openvpn.loadBalancer.loadBalancerClass }}
+  loadBalancerClass: {{ .Values.openvpn.loadBalancer.loadBalancerClass }}
+  {{- end }}
   ports:
     - name: ovpn-udp
       protocol: UDP
