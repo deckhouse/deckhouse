@@ -438,8 +438,8 @@ spec:
                     labels:
                       items: 
                         type: string
-                    required:
-                    - action
+                  required:
+                  - action
                 buffer:
                   description: Параметры буфера.
                   properties:
