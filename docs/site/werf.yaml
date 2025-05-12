@@ -36,6 +36,7 @@ gitWorktree:
 # Base Images
 {{- include "parse_base_images_map" . }}
 ---
+
 {{- if and (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
 image: site-external-artifacts
 fromCacheVersion: {{ div .Commit.Date.Unix (mul 60 60) }}v1
@@ -314,7 +315,7 @@ import:
 {{- end }}
 ---
 image: web-backend-srv
-fromImage: {{ index .BaseImages "builder/golang-alpine
+fromImage: builder/golang-alpine
 final: false
 shell:
   install:
@@ -387,7 +388,7 @@ import:
 ---
 # Build scanner, which fetch modules documentation from list of specified registries
 image: registry-modules-watcher-artifact
-fromImage: {{ index .BaseImages "builder/golang-alpine
+fromImage: builder/golang-alpine
 shell:
   install:
   - cd /go/src/app
