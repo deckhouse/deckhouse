@@ -11,7 +11,7 @@
 <!-- Yandex.Metrika counter -->
 <script type="text/javascript">
 let lang = {{ page.lang }};
-let metricId = lang === 'ru' ? {{ site.metrics.yandex_ru }} : {{ site.metrics.yandex_en }};
+let metricId = lang === 'ru' ? {{ site.metrics.yandex['ru'] }} : {{ site.metrics.yandex['en'] }};
 if ([{{ siteUrls }}].includes(window.location.hostname)) {
   (function (m, e, t, r, i, k, a) {
     m[i] = m[i] || function () {
