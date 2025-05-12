@@ -191,6 +191,13 @@ rules:
   - apiGroups:
       - ""
     resources:
+      - resourcequotas
+    verbs:
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
       - configmaps
       - endpoints
       - events
