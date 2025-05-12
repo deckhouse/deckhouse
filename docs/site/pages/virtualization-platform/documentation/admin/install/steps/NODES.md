@@ -23,7 +23,7 @@ Next, we'll cover the process of adding two worker nodes. For more detailed info
 
      Expected output:
 
-     ```shell
+     ```console
      401 Unauthorized
      ```
 
