@@ -281,13 +281,13 @@ There are two ways to gracefully drain a node running IngressNginxController.
 1. Using an annotation.
 
     The annotation will be automatically removed after the operation completes.
-    
+
     ```shell
     kubectl annotate node <node_name> update.node.deckhouse.io/draining=user
     ```
 
 1. Using kubectl drain.
-    
+
     When using the standard kubectl drain command, you must specify the `--force` flag even if `--ignore-daemonsets` is present,
     since IngressNginxController is deployed using Advanced DaemonSet:
 
