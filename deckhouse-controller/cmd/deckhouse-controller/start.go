@@ -441,7 +441,10 @@ func registerTelemetry(ctx context.Context) func(ctx context.Context) error {
 	opts := make([]otlptracegrpc.Option, 0, 1)
 
 	if endpoint == "" {
-		endpoint = "jaeger-inmemory-instance-collector.default.svc.cluster.local:4317"
+		return func(ctx context.Context) error {
+			return nil
+		}
+		// endpoint = "jaeger-inmemory-instance-collector.default.svc.cluster.local:4317"
 	}
 
 	opts = append(opts, otlptracegrpc.WithEndpoint(endpoint))
@@ -454,11 +457,13 @@ func registerTelemetry(ctx context.Context) func(ctx context.Context) error {
 		semconv.ServiceNameKey.String(AppName),
 		semconv.ServiceVersionKey.String(DeckhouseVersion),
 		semconv.TelemetrySDKLanguageKey.String("en"),
-		semconv.K8SDeploymentName(AppName))
+		semconv.K8SDeploymentName(AppName),
+	)
 
 	provider := sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(exporter),
 		sdktrace.WithResource(resource),
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 	)
 
 	otel.SetTracerProvider(provider)
