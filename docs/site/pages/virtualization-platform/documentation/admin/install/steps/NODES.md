@@ -3,13 +3,31 @@ title: "Adding nodes"
 permalink: en/virtualization-platform/documentation/admin/install/steps/nodes.html
 ---
 
-## Adding nodes
-
 After the initial installation, the cluster consists of only one node — the master node. To run virtual machines on the prepared worker nodes, they need to be added to the cluster.
 
 Next, we'll cover the process of adding two worker nodes. For more detailed information about adding static nodes to the cluster, refer to the [documentation](../../platform-management/node-management/adding-node.html).
 
-Ensure that all preparation steps have been completed (see [preparation of worker nodes](/products/virtualization-platform/documentation/admin/install/steps/prepare.html)).
+## Node preparation
+
+1. Make sure that Intel-VT (VMX) or AMD-V (SVM) virtualization support is enabled in the BIOS/UEFI on all cluster nodes.
+
+1. Install one of the [supported operating systems](../requirements.html#supported-os-for-platform-nodes) on each cluster node. Pay attention to the version and architecture of the system.
+
+1. Check access to the container image registry:
+   - Ensure that each node has access to a container image registry. By default, the installer uses the public registry `registry.deckhouse.io`. Configure network connectivity and the necessary security policies to access this repository.
+   - To check access, use the following command:
+
+     ```shell
+     curl https://registry.deckhouse.io/v2/
+     ```
+
+     Expected output:
+
+     ```console
+     401 Unauthorized
+     ```
+
+## Adding prepared nodes
 
 Create the [NodeGroup](/products/virtualization-platform/reference/cr/nodegroup.html) resource `worker`. To do this, execute the following command on the **master node**:
 
