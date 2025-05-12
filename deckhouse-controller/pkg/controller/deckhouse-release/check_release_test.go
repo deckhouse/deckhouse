@@ -268,14 +268,6 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 	})
 
 	suite.Run("Release has cooldown", func() {
-		dependency.TestDC.CRClient.ListTagsMock.Return([]string{
-			"v1.16.0",
-			"v1.16.1",
-			"v1.16.2",
-			"v1.17.0",
-			"v1.17.1",
-			"v1.17.2",
-		}, nil)
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, testDeckhouseVersion).Then(testDeckhouseVersionImage, nil)
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
 			ManifestStub: ManifestStub,
