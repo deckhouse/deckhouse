@@ -70,6 +70,7 @@ require (
 	github.com/shirou/gopsutil/v3 v3.24.5
 	github.com/slok/kubewebhook/v2 v2.5.0
 	github.com/sylabs/oci-tools v0.16.0
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.60.0
 	go.opentelemetry.io/otel v1.35.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.21.0
 	go.opentelemetry.io/otel/sdk v1.21.0

@@ -440,8 +440,7 @@ func registryTelemetry(ctx context.Context) func(ctx context.Context) error {
 		semconv.ServiceNameKey.String(AppName),
 		semconv.ServiceVersionKey.String(DeckhouseVersion),
 		semconv.TelemetrySDKLanguageKey.String("en"),
-		semconv.K8SDeploymentName(AppName),
-		semconv.K8SPodNameKey.String(AppName))
+		semconv.K8SDeploymentName(AppName))
 
 	provider := sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(exporter),
