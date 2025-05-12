@@ -12,6 +12,7 @@
 ## Features
 
 
+ - **[candi]** Add rosa 12.6. [#13369](https://github.com/deckhouse/deckhouse/pull/13369)
  - **[candi]** The `bashible` service now sends events to the `default` namespace when a node update starts and finishes. [#12327](https://github.com/deckhouse/deckhouse/pull/12327)
  - **[candi]** Added support for Kubernetes 1.32 and discontinued support for Kubernetes 1.27. [#11501](https://github.com/deckhouse/deckhouse/pull/11501)
     The minimum supported version of Kubernetes is now 1.28. All control plane components will restart.
@@ -93,6 +94,7 @@
  - **[cloud-provider-vcd]** Added a patch for `cloud-controller-manager` that ignores a node if `providerID` has the `static://` prefix. [#12556](https://github.com/deckhouse/deckhouse/pull/12556)
  - **[cloud-provider-vcd]** Enabled support for legacy API versions below `37.2`. [#12361](https://github.com/deckhouse/deckhouse/pull/12361)
  - **[cloud-provider-vsphere]** Fixed null StorageClasses in vSphere when StorageClasses are excluded from discovery. [#12597](https://github.com/deckhouse/deckhouse/pull/12597)
+ - **[cloud-provider-yandex]** fix WithNATInstance clusters converge [#13189](https://github.com/deckhouse/deckhouse/pull/13189)
  - **[cloud-provider-yandex]** Fixed LoadBalancer service creation in hybrid clusters. [#12491](https://github.com/deckhouse/deckhouse/pull/12491)
  - **[cloud-provider-zvirt]** Fixed zvirt-csi-driver patching (token refresh fix patch). [#12313](https://github.com/deckhouse/deckhouse/pull/12313)
  - **[control-plane-manager]** Stale service account alert fix. [#13129](https://github.com/deckhouse/deckhouse/pull/13129)
@@ -122,6 +124,7 @@
  - **[kube-dns]** Expanded pattern for `stubZones` to allow underscores (`_`) in domain names. [#13118](https://github.com/deckhouse/deckhouse/pull/13118)
  - **[loki]** fix storage capacity calculator hook for Loki [#13003](https://github.com/deckhouse/deckhouse/pull/13003)
     fixes the bug introduced in v1.69.0
+ - **[node-manager]** Autoscaler - remove additional cordon node by mcm provider. [#13391](https://github.com/deckhouse/deckhouse/pull/13391)
  - **[node-manager]** Increase verbosity and revert versions and fix bug with unsupported mcm annotation [#13180](https://github.com/deckhouse/deckhouse/pull/13180)
  - **[node-manager]** Fixed kubeconfig generation for `CAPI`. [#12554](https://github.com/deckhouse/deckhouse/pull/12554)
  - **[node-manager]** Improved `handleDraining` hook to ignore timeout errors during node draining. [#12542](https://github.com/deckhouse/deckhouse/pull/12542)
