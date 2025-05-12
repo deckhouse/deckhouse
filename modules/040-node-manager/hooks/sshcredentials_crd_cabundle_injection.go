@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/deckhouse/deckhouse/go_lib/certificate"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -29,6 +28,8 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+
+	"github.com/deckhouse/deckhouse/go_lib/certificate"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -84,11 +85,12 @@ func applyCRDFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 	caBundle := string(crd.Spec.Conversion.Webhook.ClientConfig.CABundle)
 
 	if len(caBundle) > 0 {
-		decoded, err := base64.StdEncoding.DecodeString(string(caBundle))
+		decoded, err := base64.StdEncoding.DecodeString(caBundle)
 		if err != nil {
 			caBundle = ""
+		} else {
+			caBundle = string(decoded)
 		}
-		caBundle = string(decoded)
 	}
 
 	return CRD{Name: crd.Name, CABundle: caBundle}, nil
