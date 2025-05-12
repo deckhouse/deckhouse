@@ -241,8 +241,6 @@ func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log
 		return fmt.Errorf("ensure crds: %w", err)
 	}
 
-	telemetryShutdown := registryTelemetry(ctx)
-
 	// we have to lock the controller run if dhctl lock configmap exists
 	if err := lockOnBootstrap(ctx, operator.KubeClient(), logger); err != nil {
 		return fmt.Errorf("lock on bootstrap: %w", err)
@@ -272,6 +270,8 @@ func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log
 }
 
 func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonoperator.AddonOperator, operatorStarted *bool, logger *log.Logger) {
+	telemetryShutdown := registryTelemetry(ctx)
+
 	interruptCh := make(chan os.Signal, 5)
 	signal.Notify(interruptCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGUSR1, syscall.SIGUSR2, syscall.SIGCHLD)
 	rm := reaperMutex{}
