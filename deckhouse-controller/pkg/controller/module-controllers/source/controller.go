@@ -493,8 +493,7 @@ func (r *reconciler) getIntermediateModuleVersions(
 	}
 
 	if currentVersionStr == "" {
-		result := []*semver.Version{targetVersion}
-		return result, nil
+		return []*semver.Version{targetVersion}, nil
 	}
 
 	currentVersion, err := semver.NewVersion(currentVersionStr)
