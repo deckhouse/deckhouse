@@ -376,7 +376,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 
 			versions, errGet := r.getIntermediateModuleVersions(ctx, source, opts, moduleName, module.GetVersion(), meta.ModuleVersion)
 			if errGet != nil {
-				return fmt.Errorf("get intermediate versions: %w", err)
+				return fmt.Errorf("get intermediate versions: %w", errGet)
 			}
 			for _, v := range versions {
 				r.logger.Debug("ensure module release for module for the module source",
