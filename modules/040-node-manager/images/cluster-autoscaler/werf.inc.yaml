@@ -26,13 +26,15 @@ shell:
   - mkdir -p /tmp/autoscaler
   - cd /tmp/autoscaler
     {{- $clusterAutoscalerVersion := $version }}
+    {{- if semverCompare ">=1.30" $version }}
+      {{- $clusterAutoscalerVersion = "1.30" }}
+    {{- end }}
   - git clone --depth 1 --branch v{{ $clusterAutoscalerVersion }}.{{ $value.clusterAutoscalerPatch }} {{ $.SOURCE_REPO }}/gardener/autoscaler.git .
     {{- if $patch }}
   - git apply /patches/*.patch --verbose
     {{- end }}
   - mv ./cluster-autoscaler/* /src
   - rm -rf /tmp/autoscaler /src/vendor
-  - rm -rf /src/cloudprovider/azure/test
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
