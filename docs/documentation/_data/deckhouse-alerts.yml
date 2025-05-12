@@ -2368,7 +2368,7 @@ alerts:
       moduleUrl: 040-node-manager
       module: node-manager
       edition: ce
-      description: "Node `{{ $labels.node }}` in NodeGroup `{{ $labels.node_group }}` detected a new update, requested and received approval, started the update, and encountered a step that could cause downtime.  \nThe update manager (the `update_approval` hook of the `node-group` module) granted downtime approval, but no success message was received, which indicates that the update has not completed.\n\nTo investigate the details, view Bashible logs on the Node:\n\n```shell\njournalctl -fu bashible\n````\n"
+      description: "Node `{{ $labels.node }}` in NodeGroup `{{ $labels.node_group }}` detected a new update, requested and received approval, started the update, and encountered a step that could cause downtime.  \nThe update manager (the `update_approval` hook of the `node-group` module) granted downtime approval, but no success message was received, which indicates that the update has not completed.\n\nTo investigate the details, view Bashible logs on the Node:\n\n```shell\njournalctl -fu bashible\n```\n"
       summary: |
         Node {{ $labels.node }} cannot complete the update.
       severity: "7"
@@ -2432,7 +2432,7 @@ alerts:
       description: |
         The {{ $labels.node }} Node is not managed by the [`node-manager`](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/) module.
 
-        To resolve this issue, follow the instructions how to clean up the node and add it to the cluster: https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster
+        To resolve this issue, follow the [instructions](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster) how to clean up the node and add it to the cluster.
       summary: |
         The {{ $labels.node }} Node is not managed by the node-manager module.
       severity: "9"
@@ -3354,7 +3354,7 @@ alerts:
       moduleUrl: 500-upmeter
       module: upmeter
       edition: ce
-      description: "The average number of probe Pods per `upmeter-agent` Pod is {{ $value }}.\n\n`upmeter-agent` should automatically clean up Pods created by the `control-plane/scheduler` probe.  \nThere should not be more of these Pods than there are master nodes (since `upmeter-agent` runs as a DaemonSet with a master `nodeSelector`), and they should be deleted within seconds.\n\nThis may indicate:\n\n- A problem with the `kube-apiserver`.\n- Stale Pods left from old `upmeter-agent` Pods after an Upmeter update.\n\nTroubleshooting steps:\n\n1. Check `upmeter-agent` logs:\n\n   ```shell\n   kubectl -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group==\"control-plane\" and .probe == \"scheduler\") | [.time, .level, .msg] | @tsv'\n   ```\n\n2. Ensure the control plane is operating normally.\n\n3. Delete stale Pods manually:\n\n   ```shell\n   kubectl -n d8-upmeter delete po -l upmeter-probe=scheduler\n   ```\n"
+      description: "The average number of probe Pods per `upmeter-agent` Pod is {{ $value }}.\n\n`upmeter-agent` should automatically clean up Pods created by the `control-plane/scheduler` probe.  \nThere should not be more of these Pods than there are master nodes (since `upmeter-agent` runs as a DaemonSet with a master `nodeSelector`), and they should be deleted within seconds.\n\nThis may indicate:\n\n- A problem with the `kube-apiserver`.\n- Stale Pods left from old `upmeter-agent` Pods after an Upmeter update.\n\nTroubleshooting steps:\n\n1. Check `upmeter-agent` logs:\n\n   ```shell\n   kubectl -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group==\"control-plane\" and .probe == \"scheduler\") | [.time, .level, .msg] | @tsv'\n   ```\n\n2. Ensure the control plane is operating normally.\n\n3. Delete stale Pods manually:\n\n   ```shell\n   kubectl -n d8-upmeter delete pods -l upmeter-probe=scheduler\n   ```\n"
       summary: |
         Garbage Pods from the scheduler probe are not being cleaned up.
       severity: "9"

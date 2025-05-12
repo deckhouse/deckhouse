@@ -87,13 +87,13 @@
         2. Verify availability of the `machine-controller-manager` Deployment:
 
            ```shell
-           kubectl -n d8-cloud-instance-manager get deploy machine-controller-manager
+           kubectl -n d8-cloud-instance-manager get deployment machine-controller-manager
            ```
 
         3. Check the Deployment’s status:
 
            ```shell
-           kubectl -n d8-cloud-instance-manager describe deploy machine-controller-manager
+           kubectl -n d8-cloud-instance-manager describe deployment machine-controller-manager
            ```
 
 - name: d8.machine-controller-manager.malfunctioning
