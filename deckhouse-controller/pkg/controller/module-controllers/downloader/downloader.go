@@ -106,7 +106,7 @@ func (md *ModuleDownloader) DownloadDevImageTag(moduleName, imageTag, checksum s
 }
 
 func (md *ModuleDownloader) DownloadByModuleVersion(ctx context.Context, moduleName, moduleVersion string) (*DownloadStatistic, error) {
-	ctx, span := otel.Tracer(tracerName).Start(ctx, "DownloadByModuleVersion")
+	_, span := otel.Tracer(tracerName).Start(ctx, "DownloadByModuleVersion")
 	defer span.End()
 
 	if !strings.HasPrefix(moduleVersion, "v") {
@@ -121,7 +121,7 @@ func (md *ModuleDownloader) DownloadByModuleVersion(ctx context.Context, moduleN
 // DownloadMetadataFromReleaseChannel downloads only module release image with metadata: version.json, checksum.json(soon)
 // does not fetch and install the desired version on the module, only fetches its module definition
 func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(ctx context.Context, moduleName, releaseChannel, moduleChecksum string) (ModuleDownloadResult, error) {
-	ctx, span := otel.Tracer(tracerName).Start(ctx, "DownloadMetadataFromReleaseChannel")
+	_, span := otel.Tracer(tracerName).Start(ctx, "DownloadMetadataFromReleaseChannel")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("module", moduleName))
