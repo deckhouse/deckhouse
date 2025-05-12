@@ -383,7 +383,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 					slog.String("name", moduleName),
 					slog.String("source_name", source.Name))
 				m := meta
-				m.ModuleVersion = v.String()
+				m.ModuleVersion = v.Original()
 				if err = r.ensureModuleRelease(ctx, source.GetUID(), source.Name, moduleName, policy.Name, m); err != nil {
 					return fmt.Errorf("ensure module release for the '%s' module: %w", moduleName, err)
 				}
@@ -502,14 +502,21 @@ func (r *reconciler) getIntermediateModuleVersions(
 	ctx context.Context,
 	source *v1alpha1.ModuleSource,
 	opts []cr.Option,
-	moduleName, currentVersionStr, targetVersionStr string) ([]*semver.Version, error) {
-	currentVersion, err := semver.NewVersion(currentVersionStr)
-	if err != nil {
-		return nil, fmt.Errorf("parse current version: %w", err)
-	}
+	moduleName, currentVersionStr, targetVersionStr string,
+) ([]*semver.Version, error) {
 	targetVersion, err := semver.NewVersion(targetVersionStr)
 	if err != nil {
 		return nil, fmt.Errorf("parse target version: %w", err)
+	}
+
+	if currentVersionStr == "" {
+		result := []*semver.Version{targetVersion}
+		return result, nil
+	}
+
+	currentVersion, err := semver.NewVersion(currentVersionStr)
+	if err != nil {
+		return nil, fmt.Errorf("parse current version: %w", err)
 	}
 
 	registryClient, err := r.dependencyContainer.GetRegistryClient(path.Join(source.Spec.Registry.Repo, moduleName), opts...)
