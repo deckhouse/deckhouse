@@ -692,6 +692,15 @@ updates:
 
 # pip
 - package-ecosystem: "pip"
+  directory: "/.github/scripts/python/e2e-commander-clean"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "pip"
   directory: "/ee/modules/450-network-gateway/images/dnsmasq"
   labels:
   - "type/dependencies"
