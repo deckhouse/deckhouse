@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"encoding/base64"
 	"fmt"
 	"time"
 
@@ -68,7 +69,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, injectCAtoCRD)
 
 type CRD struct {
-	Name string
+	Name     string
+	CABundle string
 }
 
 func applyCRDFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -79,16 +81,22 @@ func applyCRDFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 		return nil, fmt.Errorf("cannot convert kubernetes object: %v", err)
 	}
 
-	if len(crd.Spec.Conversion.Webhook.ClientConfig.CABundle) == 0 {
-		return &CRD{Name: crd.Name}, nil
+	caBundle := string(crd.Spec.Conversion.Webhook.ClientConfig.CABundle)
+
+	if len(caBundle) > 0 {
+		decoded, err := base64.StdEncoding.DecodeString(string(caBundle))
+		if err != nil {
+			caBundle = ""
+		}
+		caBundle = string(decoded)
 	}
 
-	return nil, nil
+	return CRD{Name: crd.Name, CABundle: caBundle}, nil
 }
 
 func applyCAPSWebhookTLSFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	secret := new(v1.Secret)
-	err := sdk.FromUnstructured(obj, secret)
+	var secret v1.Secret
+	err := sdk.FromUnstructured(obj, &secret)
 	if err != nil {
 		return nil, err
 	}
@@ -103,24 +111,26 @@ func applyCAPSWebhookTLSFilter(obj *unstructured.Unstructured) (go_hook.FilterRe
 func injectCAtoCRD(input *go_hook.HookInput) error {
 	if len(input.Snapshots["cabundle"]) > 0 {
 		bundle := input.Snapshots["cabundle"][0]
-		crds := input.Snapshots["sshcredentials"]
-		for _, crd := range crds {
-			if crd == nil {
-				continue
-			}
-			patch := map[string]interface{}{
-				"spec": map[string]interface{}{
-					"conversion": map[string]interface{}{
-						"webhook": map[string]interface{}{
-							"clientConfig": map[string]interface{}{
-								"caBundle": bundle.(certificate.Certificate).CA,
-							},
+		crd := input.Snapshots["sshcredentials"][0]
+		if crd == nil {
+			return nil
+		}
+
+		if crd.(CRD).CABundle == bundle.(certificate.Certificate).CA {
+			return nil
+		}
+		patch := map[string]interface{}{
+			"spec": map[string]interface{}{
+				"conversion": map[string]interface{}{
+					"webhook": map[string]interface{}{
+						"clientConfig": map[string]interface{}{
+							"caBundle": base64.StdEncoding.EncodeToString([]byte(bundle.(certificate.Certificate).CA)),
 						},
 					},
 				},
-			}
-			input.PatchCollector.PatchWithMerge(patch, "apiextensions.k8s.io/v1", "CustomResourceDefinition", "", crd.(*CRD).Name)
+			},
 		}
+		input.PatchCollector.PatchWithMerge(patch, "apiextensions.k8s.io/v1", "CustomResourceDefinition", "", crd.(CRD).Name)
 	}
 
 	return nil
