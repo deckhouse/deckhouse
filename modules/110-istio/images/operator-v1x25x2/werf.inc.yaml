@@ -14,9 +14,14 @@ import:
   add: /src/istio/manifests
   to: /var/lib/istio/manifests
   after: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/operator/resources
+  to: /var/lib/sail-operator/resources
+  after: setup
 imageSpec:
   config:
     user: "1337:1337"
+    workingDir: "/"
     entrypoint: ["/usr/local/bin/operator"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
@@ -58,7 +63,7 @@ final: false
 #     - '**/*'
 shell:
   install:
-  - git clone --depth 1 --branch 1.25.1 {{ $.SOURCE_REPO }}/istio/sail-operator.git /src/operator
+  - git clone --depth 1 --branch {{ $istioVersion }} {{ $.SOURCE_REPO }}/istio/sail-operator.git /src/operator
   - cd /src/operator/
   # - git apply --verbose /patches/*.patch
 ---
