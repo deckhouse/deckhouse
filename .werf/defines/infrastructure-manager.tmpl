@@ -24,7 +24,6 @@ terraform-manager/base-terraform-manager
 
 {{- define "infrastructure_manager_plugin_dir" }}
 {{- $context := . -}}
-{{- fail (printf "provider %s not found" $context.providerName) -}}
 {{- if hasKey $context.TF $context.providerName -}}
   {{- $provider := get $context.TF $context.providerName -}}
   {{- if $provider.useOpentofu -}}
