@@ -45,7 +45,7 @@ spec:
               description: DeckhouseMachineSpec defines the desired state of DeckhouseMachine.
               properties:
                 bootDiskImageRef:
-                  description: BootDiskImageRef holds the image to boot this VM from.
+                  description: BootDiskImageRef holds the image to boot this virtual machine from.
                   properties:
                     kind:
                       default: VirtualImage
@@ -66,7 +66,7 @@ spec:
                   default: EFI
                   description:
                     Bootloader specifies the type of underlying firmware on which
-                    the VM runs. It must be kept in sync with the DVP bootloader enum.
+                    the virtual machine runs. It must be kept in sync with the DVP bootloader enum.
                   enum:
                     - BIOS
                     - EFI
@@ -85,7 +85,7 @@ spec:
                     cpuFraction:
                       default: 100%
                       description: |-
-                        Fraction is a guaranteed share of CPU time that will be allocated to the VM.
+                        Fraction is a guaranteed share of CPU time that will be allocated to the virtual machine.
                         Expressed as a percentage.
                       enum:
                         - 5%
@@ -108,7 +108,7 @@ spec:
                   x-kubernetes-int-or-string: true
                 providerID:
                   description:
-                    ProviderID is the UUID of the VM, prefixed with 'dvp://'
+                    ProviderID is the UUID of the virtual machine, prefixed with 'dvp://'
                     proto.
                   type: string
                 rootDiskSize:
@@ -143,7 +143,7 @@ spec:
                   description:
                     Addresses holds a list of the host names, external IP
                     addresses, internal IP addresses, external DNS names, and/or internal
-                    DNS names for the VM.
+                    DNS names for the virtual machine.
                   items:
                     properties:
                       address:
@@ -214,7 +214,7 @@ spec:
                     goes wrong during Machine lifecycle.
                   type: string
                 ready:
-                  description: Ready indicates the VM has been provisioned and is ready.
+                  description: Ready indicates the virtual machine has been provisioned and is ready.
                   type: boolean
               type: object
           type: object

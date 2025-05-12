@@ -122,26 +122,26 @@ apiVersions:
             instanceClass:
               type: object
               description: |
-                VM and its disks settings for the created master node.
+                Virtual machine and its disks settings for the created master node.
               additionalProperties: false
               required: [virtualMachine, rootDisk, etcdDisk]
               properties:
                 virtualMachine: &instanceClassVirtualMachine
                   type: object
                   description: |
-                    VM settings for the created master node.
+                    Virtual machine settings for the created master node.
                   required: [cpu, memory]
                   properties:
                     cpu:
                       description: |
-                        CPU setting for the VM.
+                        CPU setting for the virtual machine.
                       type: object
                       additionalProperties: false
                       required: [cores]
                       properties:
                         cores:
                           description: |
-                            Number of CPU cores for the VM.
+                            Number of CPU cores for the virtual machine.
                           minimum: 1
                           format: int32
                           type: integer
@@ -150,13 +150,13 @@ apiVersions:
                           default: "100%"
                           enum: ["5%", "10%", "25%", "50%", "100%"]
                           description: |
-                            Guaranteed share of CPU that will be allocated to the VM. Specified as a percentage.
+                            Guaranteed share of CPU that will be allocated to the virtual machine. Specified as a percentage.
                             Supported values: `5%`, `10%`, `25%`, `50%`, `100%`.
                           example: "100%"
                     memory:
                       type: object
                       description: |
-                        Specifies the memory settings for the VM.
+                        Specifies the memory settings for the virtual machine.
                       required:
                         - size
                       properties:
@@ -164,7 +164,7 @@ apiVersions:
                           type: string
                           pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                           description: |
-                            Amount of memory resources allowed for the VM.
+                            Amount of memory resources allowed for the virtual machine.
                           example: 4Gi
                     bootloader:
                       type: string
@@ -174,20 +174,16 @@ apiVersions:
                         - EFIWithSecureBoot
                       default: EFI
                       description: >
-                        Defines a bootloader for a VM.
+                        Defines a bootloader for a virtual machine.
 
-
-                        * `BIOS`: Use BIOS.
-
-                        * `EFI`: Use Unified Extensible Firmware (EFI/UEFI).
-
-                        * `EFIWithSecureBoot`: Use UEFI/EFI with Secure Boot
-                        support.
+                        * `BIOS`: Use BIOS;
+                        * `EFI`: Use Unified Extensible Firmware (EFI/UEFI);
+                        * `EFIWithSecureBoot`: Use UEFI/EFI with Secure Boot support.
                     ipAddresses:
                       type: array
                       description: |
-                        Static ip addresses to be assigned to the VM's network interfaces. The number of addresses should correspond to the number of replicas to be created. Each ip address will be assigned to the corresponding VM instance.
-                        For example: the number of replicas is 3, and we have the following list of ip addresses: ip1, ip2, ip3. As a result, ip1 will be assigned to the first replica, ip2 to the second, and ip3 to the third.
+                        Static IP addresses to be assigned to the network interfaces of the virtual machines. The number of addresses must match the number of replicas being created — each IP address will be assigned to a specific virtual machine replica.
+                        For example, if 3 replicas are specified and the IP addresses provided are: ip1, ip2, and ip3, then ip1 will be assigned to the first replica, ip2 to the second, and ip3 to the third.
                         > Caution! These addresses must belong to the address range specified in the virtualization module configuration in the virtualMachineCIDRs parameter.
                       items:
                         type: string
@@ -200,7 +196,7 @@ apiVersions:
                         cluster-owner: user
                         ```
                       description: |
-                        Additional labels for VM resource.
+                        Additional labels for virtual machine resource.
                       additionalProperties:
                         type: string
 
@@ -211,7 +207,7 @@ apiVersions:
                         cluster-owner: user
                         ```
                       description: |
-                        Additional annotations for VM resource.
+                        Additional annotations for virtual machine resource.
                       additionalProperties:
                         type: string
 
@@ -219,7 +215,7 @@ apiVersions:
                       additionalProperties:
                         type: string
                       description: |
-                        Allows VM to be assigned to specified DVP nodes.
+                        Allows virtual machines to be assigned to specified DVP nodes.
                         [The same](https://kubernetes.io/docs/tasks/configure-pod-container/assign-pods-nodes//) as in the pods `spec.nodeSelector` parameter in Kubernetes;
                       type: object
 
@@ -231,7 +227,7 @@ apiVersions:
                     tolerations:
                       type: array
                       description: |
-                        Allows you to set tolerations for VM for a DVP node.
+                        Allows you to set tolerations for virtual machines for a DVP node.
                         [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) as in the pods `spec.tolerations` parameter in Kubernetes;
                       items:
                         type: object
@@ -257,7 +253,7 @@ apiVersions:
                 rootDisk: &instanceClassRootDisk
                   type: object
                   description: |
-                    Specifies settings for the root disk of the VM.
+                    Specifies settings for the root disk of the virtual machine.
                   required:
                     - size
                     - image
@@ -271,11 +267,11 @@ apiVersions:
                     storageClass:
                       type: string
                       description: |
-                        The name of the existing StorageClass will be used to create the VM's root disk.
+                        The name of the existing StorageClass will be used to create the virtual machine's root disk.
                     image:
                       type: object
                       description: |
-                        Image parameters that will be used to create the VM's root disk.
+                        Image parameters that will be used to create the virtual machine's root disk.
                       required:
                         - kind
                         - name
@@ -405,7 +401,7 @@ apiVersions:
                 required: [virtualMachine, rootDisk]
                 type: object
                 description: |
-                  VM and Disk settings for the created static node.
+                  Virtual machine and Disk settings for the created static node.
                 properties:
                   virtualMachine: *instanceClassVirtualMachine
                   rootDisk: *instanceClassRootDisk

@@ -98,7 +98,7 @@ spec:
                         bootDiskImageRef:
                           description:
                             BootDiskImageRef holds the image to boot this
-                            VM from.
+                            virtual machine from.
                           properties:
                             kind:
                               default: VirtualImage
@@ -119,7 +119,7 @@ spec:
                           default: EFI
                           description:
                             Bootloader specifies the type of underlying firmware
-                            on which the VM runs. It must be kept in sync with the DVP
+                            on which the virtual machine runs. It must be kept in sync with the DVP
                             bootloader enum.
                           enum:
                             - BIOS
@@ -139,7 +139,7 @@ spec:
                             cpuFraction:
                               default: 100%
                               description: |-
-                                Fraction is a guaranteed share of CPU time that will be allocated to the VM.
+                                Fraction is a guaranteed share of CPU time that will be allocated to the virtual machine.
                                 Expressed as a percentage.
                               enum:
                                 - 5%

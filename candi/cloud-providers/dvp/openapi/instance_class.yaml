@@ -25,18 +25,18 @@ spec:
                 virtualMachine:
                   type: object
                   description: |
-                    VM settings for the created master node.
+                    Virtual machine settings for the created master node.
                   required: [cpu, memory]
                   properties:
                     cpu:
                       description: |
-                        CPU setting for the VM.
+                        CPU setting for the virtual machine.
                       type: object
                       required: [cores]
                       properties:
                         cores:
                           description: |
-                            Amount of CPU cores for the VM.
+                            Amount of CPU cores for the virtual machine.
                           minimum: 1
                           format: int32
                           type: integer
@@ -46,8 +46,7 @@ spec:
                           default: "100%"
                           enum: ["5%", "10%", "25%", "50%", "100%"]
                           description: |
-                            Guaranteed share of CPU that will be allocated to the VM. Specified as a percentage.
-                            Supported values: `5%`, `10%`, `25%`, `50%`, `100%`.
+                            Guaranteed share of CPU that will be allocated to the virtual machine. Specified as a percentage.
                           x-doc-example: "100%"
                     memory:
                       type: object
@@ -60,7 +59,7 @@ spec:
                           type: string
                           pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                           description: |
-                            Amount of memory resources allowed for the VM.
+                            Amount of memory resources allowed for the virtual machine.
                           x-doc-example: "4Gi"
                     bootloader:
                       type: string
@@ -70,19 +69,15 @@ spec:
                         - EFIWithSecureBoot
                       default: EFI
                       description: >
-                        Defines a bootloader for a the VM.
+                        Defines a bootloader for a the virtual machine.
 
-
-                        * `BIOS`: Use BIOS.
-
-                        * `EFI`: Use Unified Extensible Firmware (EFI/UEFI).
-
-                        * `EFIWithSecureBoot`: Use UEFI/EFI with the Secure Boot
-                        support.
+                        * `BIOS`: Use BIOS;
+                        * `EFI`: Use Unified Extensible Firmware (EFI/UEFI);
+                        * `EFIWithSecureBoot`: Use UEFI/EFI with the Secure Boot support.
                 rootDisk:
                   type: object
                   description: |
-                    Specifies settings for the root disk of the VM.
+                    Specifies settings for the root disk of the virtual machine.
                   required:
                     - size
                     - image
@@ -96,11 +91,11 @@ spec:
                     storageClass:
                       type: string
                       description: |
-                        The name of the existing StorageClass will be used to create the VM's root disk.
+                        The name of the existing StorageClass will be used to create the virtual machine's root disk.
                     image:
                       type: object
                       description: |
-                        Image parameters that will be used to create the VM's root disk.
+                        Image parameters that will be used to create the virtual machine's root disk.
                       required:
                         - kind
                         - name
@@ -117,6 +112,7 @@ spec:
                           type: string
                           description: |
                             The name of the image that will be used to create the root disk.
+
                             > The installation requires linux OS images with cloud-init pre-installed
   scope: Cluster
   names:

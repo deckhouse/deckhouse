@@ -32,8 +32,10 @@ apiVersions:
             zones:
               description: |
                 Набор зон, в которых могут быть созданы узлы.
+
                 Чтобы использовать эту настройку, на узлах DVP должена быть установлена метка `topology.kubernetes.io/zone`.
-                [Подробней](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion) о топологических метках
+                [Подробней](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion) о топологических метках.
+
                 > Внимание! Чтобы установить требуемую метку для узла DVP, обратитесь к документации по NodeGroup [документация](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
             instanceClass:
               description: |
@@ -52,46 +54,43 @@ apiVersions:
                             Количество ядер процессора для виртуальной машины.
                         coreFraction:
                           description: |
-                            Гарантированная доля ЦП, которая будет выделена ВМ. Указывается в процентах.
-                            Поддерживаемые значения: `5%`, `10%`, `25%`, `50%`, `100%`.
+                            Процент гарантированной доли CPU, которая будет выделена для виртуальной машины.
                     memory:
                       description: |
                         Определяет параметры памяти для виртуальной машины.
                       properties:
                         size:
                           description: |
-                            Количество ресурсов памяти, разрешенных для ВМ.
+                            Количество ресурсов памяти, разрешенных для виртуальной машины.
                     bootloader:
                       description: >
                         Определяет загрузчик для виртуальной машины.
 
-
-                        * `BIOS`: Используется BIOS.
-
-                        * `EFI`: Используется Unified Extensible Firmware (EFI/UEFI).
-
+                        * `BIOS`: Используется BIOS;
+                        * `EFI`: Используется Unified Extensible Firmware (EFI/UEFI);
                         * `EFIWithSecureBoot`: Используется UEFI/EFI c Secure Boot support.
                     ipAddresses:
                       description: |
-                        Статические ip-адреса, которые будут назначены сетевым интерфейсам ВМ. Количество адресов должно соответствовать количеству создаваемых репилов. Каждый ip-адрес будет назначен соответствующему экземпляру ВМ.
-                        Например: количество реплик равно 3, и у нас есть следующий список ip-адресов: ip1, ip2, ip3. В результате ip1 будет назначен первой реплике, ip2 - второй, а ip3 - третьей.
+                        Статические IP-адреса, назначаемые сетевым интерфейсам виртуальных машин. Количество адресов должно соответствовать числу создаваемых реплик — каждый IP-адрес будет закреплён за конкретной репликой.
+                        Например, если задано 3 реплики и указаны IP-адреса: ip1, ip2, ip3, то ip1 будет назначен первой реплике, ip2 — второй, а ip3 — третьей.
+
                         > Внимание! Эти адреса должны принадлежать диапазону адресов, указанному в конфигурации модуля виртуализации в параметре virtualMachineCIDRs.
                     additionalLabels:
                       description: |
-                        Дополнительные метки для ресурса VM.
+                        Дополнительные метки для ресурса виртуальной машины.
                     additionalAnnotations:
                       description: |
-                        Дополнительные аннотации для ресурса VM.
+                        Дополнительные аннотации для ресурса виртуальной машины.
                     nodeSelector:
                       description: |
-                        Позволяет назначить VM на указанные узлы DVP.
+                        Позволяет назначить виртуальную машину на указанные узлы DVP.
                         [Подробнее](https://kubernetes.io/docs/tasks/configure-pod-container/assign-pods-nodes/) как в параметре `spec.nodeSelector` подов в Kubernetes;
                     priorityClassName:
                       description: |
                         [Подробнее](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/) как в параметре `spec.priorityClassName` подов в Kubernetes;
                     tolerations:
                       description: |
-                        Позволяет установить допуски для VM для узла DVP.
+                        Позволяет установить допуски для виртуальной машины для узла DVP.
                         [Подробней](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) как в параметре `spec.tolerations` подов в Kubernetes;
                 rootDisk: &instanceClassRootDisk
                   description: |
@@ -102,10 +101,10 @@ apiVersions:
                         Размер корневого диска.
                     storageClass:
                       description: |
-                        Имя существующего StorageClass будет использоваться для создания корневого диска ВМ.
+                        Имя существующего StorageClass будет использоваться для создания корневого диска виртуальной машины.
                     image:
                       description: |
-                        Параметры образа, который будет использоваться для создания корневого диска ВМ.
+                        Параметры образа, который будет использоваться для создания корневого диска виртуальной машины.
                       properties:
                         kind:
                           description: |
@@ -116,14 +115,14 @@ apiVersions:
                             > Для установки требуются образы ОС Linux с предустановленным cloud-init.
                 etcdDisk:
                   description: |
-                    Указание настроек для диска данных ETCD.
+                    Указание настроек для диска данных etcd.
                   properties:
                     size:
                       description: |
-                        Размер диска ETCD.
+                        Размер диска etcd.
                     storageClass:
                       description: |
-                        Имя существующего StorageClass будет использоваться для создания диска данных ETCD.
+                        Имя существующего StorageClass будет использоваться для создания диска данных etcd.
                 additionalLabels:
                   description: |
                     Дополнительные метки.
@@ -141,7 +140,7 @@ apiVersions:
               zones:
                 description: |
                   Набор зон, в которых могут быть созданы узлы.
-                  Чтобы использовать эту настройку, на узлах DVP должена быть установлена метка `topology.kubernetes.io/zone`.
+                  Чтобы использовать эту настройку, на узлах DVP должна быть установлена метка `topology.kubernetes.io/zone`.
                   [Подробней](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion) о топологических метках
                   > Внимание! Чтобы установить требуемую метку для узла DVP, обратитесь к документации по NodeGroup [документация](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
               nodeTemplate:
@@ -177,13 +176,15 @@ apiVersions:
         region:
           description: |
             Название региона.
-            Чтобы использовать эту настройку, на узлах DVP должена быть установлена метка `topology.kubernetes.io/region`.
+
+            Чтобы использовать эту настройку, на узлах DVP должна быть установлена метка `topology.kubernetes.io/region`.
             [Подробней](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion) о топологических метках.
+
             > Внимание! Чтобы установить требуемую метку для узла DVP, выполните команду NodeGroup [documentation](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
         zones:
           description: |
             Набор зон, в которых могут быть созданы узлы.
-            Чтобы использовать эту настройку, на узлах DVP должена быть установлена метка `topology.kubernetes.io/zone`.
+            Чтобы использовать эту настройку, на узлах DVP должна быть установлена метка `topology.kubernetes.io/zone`.
             [Подробней](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion) о топологических метках
             > Внимание! Чтобы установить требуемую метку для узла DVP, обратитесь к документации по NodeGroup [документация](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
         provider:
@@ -192,8 +193,9 @@ apiVersions:
           properties:
             kubeconfigDataBase64:
               description: |
-                Kubeconfig для подключения к Deckhouse Kubernetes Platform API в кодировке base64.
+                Kubeconfig для подключения к Deckhouse Kubernetes Platform API в кодировке Base64.
             namespace:
               description: |
                 Пространство имен, в котором будут созданы ресурсы кластера DKP.
+
                 > Внимание! Если не указано явно, будет использоваться пространство имен по умолчанию для kubeconfig.
