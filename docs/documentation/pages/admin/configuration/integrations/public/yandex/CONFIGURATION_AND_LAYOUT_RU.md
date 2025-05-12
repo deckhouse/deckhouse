@@ -87,7 +87,7 @@ dhcpOptions:
 
 В данной схеме размещения NAT (любого вида) не используется, а каждому узлу выдается публичный IP-адрес.
 
-> **Внимание!** В модуле `cloud-provider-yandex` нет поддержки групп безопасности (security group), поэтому все узлы кластера будут доступны без ограничения подключения.
+> **Внимание!** В DKP нет поддержки групп безопасности (security group), поэтому все узлы кластера будут доступны без ограничения подключения.
 
 ![Схема размещения WithoutNAT в Yandex Cloud](../../../../images/cloud-provider-yandex/layout-withoutnat.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1I7M9DquzLNu-aTjqLx1_6ZexPckL__-501Mt393W1fw/edit --->
@@ -227,7 +227,7 @@ dhcpOptions:
 
 ## Назначение YandexClusterConfiguration
 
-Для интеграции Deckhouse Kubernetes Platform с Yandex Cloud необходимо описать инфраструктуру кластера с помощью ресурса YandexClusterConfiguration. Этот объект управляется модулем `cloud-provider-yandex` и содержит полную информацию о схеме размещения, зонах, параметрах узлов и сетевой конфигурации.
+Для интеграции Deckhouse Kubernetes Platform с Yandex Cloud необходимо описать инфраструктуру кластера с помощью ресурса YandexClusterConfiguration.
 
 YandexClusterConfiguration — это объект Custom Resource (CR), описывающий параметры интеграции с облаком Yandex Cloud. Он используется платформой Deckhouse для:
 
@@ -401,7 +401,7 @@ existingZoneToSubnetIDMap:
 
 ### Дополнительные внешние сети
 
-Модуль `cloud-provider-yandex` позволяет явно указать список дополнительных внешних сетей, IP-адреса из которых будут интерпретироваться как публичные (External IP). Это задаётся в параметре `settings.additionalExternalNetworkIDs` в ресурсе ModuleConfig.
+DKP позволяет явно указать список дополнительных внешних сетей, IP-адреса из которых будут интерпретироваться как публичные (External IP). Это задаётся в параметре `settings.additionalExternalNetworkIDs` в ресурсе ModuleConfig.
 
 Эта настройка полезна, если:
 
@@ -424,7 +424,7 @@ spec:
       - enp6t4sno
 ```
 
-Если параметр не задан, модуль будет использовать только те подсети, что явно указаны в YandexClusterConfiguration (например, через `externalSubnetIDs`), чтобы определять публичность IP.
+Если параметр не задан, DKP будет использовать только те подсети, что явно указаны в YandexClusterConfiguration (например, через `externalSubnetIDs`), чтобы определять публичность IP.
 
 ## Настройка групп безопасности в Yandex Cloud
 
