@@ -80,8 +80,8 @@ shell:
   - cp target/release/vector /relocate/usr/bin/vector
   - cp -pr /etc/pki /relocate/etc
   - rm -rf /srv/.cargo/config.toml ~/.gitconfig
-  - chown 64535:64535 /usr/bin/vector
-  - chmod 0700 /usr/bin/vector
+  - chown 64535:64535 /relocate/usr/bin/vector
+  - chmod 0700 /relocate/usr/bin/vector
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-reloader-artifact
 fromImage: builder/golang-alpine
