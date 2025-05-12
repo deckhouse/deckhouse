@@ -52,7 +52,7 @@ nodeGroups:
       node-role.kubernetes.io/worker: ''
   replicas: 1
   instanceClass:
-    mainNetwork: "external-network"
+    mainNetwork: 'candi-${PREFIX}'
     rootDiskSize: 50
     flavorName: e2e
     imageName: "redos-STD-MINIMAL-8.0.0"
