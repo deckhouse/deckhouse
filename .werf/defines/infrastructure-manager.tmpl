@@ -27,7 +27,6 @@ terraform-manager/base-terraform-manager
 {{- if hasKey $context.TF $context.providerName -}}
   {{- $provider := get $context.TF $context.providerName -}}
   {{- if $provider.useOpentofu -}}
-{{- fail (printf "provider aaa not found" ) -}}
 registry.opentofu.org
   {{- else -}}
 registry.terraform.io
