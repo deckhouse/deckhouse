@@ -61,7 +61,6 @@ const (
 	ModuleReasonDisabled                    = "Disabled"
 	ModuleReasonConflict                    = "Conflict"
 	ModuleReasonDownloading                 = "Downloading"
-	ModuleReasonDownloadingError            = "DownloadingError"
 	ModuleReasonHookError                   = "HookError"
 	ModuleReasonModuleError                 = "ModuleError"
 	ModuleReasonReconciling                 = "Reconciling"

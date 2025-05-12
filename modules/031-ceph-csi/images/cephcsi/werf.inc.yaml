@@ -9,10 +9,13 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   - cd /src
-  - git clone --branch v3.7.2 --depth 1 {{ $.SOURCE_REPO }}/ceph/ceph-csi.git .
+  - git clone --branch v3.7.2 --depth 1 $(cat /run/secrets/SOURCE_REPO)/ceph/ceph-csi.git .
   - git apply /patches/*.patch --verbose
   - git describe --tags --dirty > GIT_COMMIT
   - rm -rf .git vendor
@@ -26,17 +29,17 @@ import:
   to: /src
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /root/go/pkg
-- from: tmp_dir
-  to: /root/.cache/go-build
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
   - apt-get install -y golang make gcc build-essential librbd-devel librados-devel ceph-common ceph-fuse rbd-nbd e2fsprogs xfsprogs
   - find /var/lib/apt/ /var/cache/apt/ -type f -delete
   install:
     - cd /src
-    - export GOPROXY={{ $.GOPROXY }}
+    - export GOPROXY=$(cat /run/secrets/GOPROXY)
     - export CGO_ENABLED=1
     - export GIT_COMMIT=$(cat GIT_COMMIT)
     - go mod vendor
