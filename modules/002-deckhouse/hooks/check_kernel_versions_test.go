@@ -35,7 +35,7 @@ metadata:
     node.deckhouse.io/group: test
 status:
   nodeInfo:
-    kernelVersion: 5.4.0-90-generic
+    kernelVersion: 5.8.0-90-generic
 `
 		stateNode2 = `
 ---
@@ -97,34 +97,10 @@ status:
 			It("Hook must execute successfully, metric must be set", func() {
 				Expect(f).To(ExecuteSuccessfully())
 				m := f.MetricsCollector.CollectedMetrics()
-				Expect(m).To(HaveLen(6))
+				Expect(m).To(HaveLen(2))
 				Expect(m[1].Labels).To(Equal(map[string]string{
 					"affected_module": "cni-cilium",
-					"constraint":      ">= 4.9.17",
-					"node":            "node-2",
-					"kernel_version":  "3.10.0-1127.el7.x86_64",
-				}))
-				Expect(m[2].Labels).To(Equal(map[string]string{
-					"affected_module": "cni-cilium,istio",
-					"constraint":      ">= 5.7",
-					"node":            "node-1",
-					"kernel_version":  "5.4.0-90-generic",
-				}))
-				Expect(m[3].Labels).To(Equal(map[string]string{
-					"affected_module": "cni-cilium,istio",
-					"constraint":      ">= 5.7",
-					"node":            "node-2",
-					"kernel_version":  "3.10.0-1127.el7.x86_64",
-				}))
-				Expect(m[4].Labels).To(Equal(map[string]string{
-					"affected_module": "cni-cilium,openvpn",
-					"constraint":      ">= 5.7",
-					"node":            "node-1",
-					"kernel_version":  "5.4.0-90-generic",
-				}))
-				Expect(m[5].Labels).To(Equal(map[string]string{
-					"affected_module": "cni-cilium,openvpn",
-					"constraint":      ">= 5.7",
+					"constraint":      ">= 5.8",
 					"node":            "node-2",
 					"kernel_version":  "3.10.0-1127.el7.x86_64",
 				}))
