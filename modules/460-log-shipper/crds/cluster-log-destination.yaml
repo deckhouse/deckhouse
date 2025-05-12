@@ -841,7 +841,7 @@ spec:
                       type: string
                       enum: 
                       - replaceDot
-                      - warpNotJson
+                      - wrapNotJson
                       - delete
                       description: Transformation
                     labels:
