@@ -92,7 +92,7 @@
 
         ```shell
         journalctl -fu bashible
-        ````
+        ```
 
   - alert: D8NodeUpdateStuckWaitingForDisruptionApproval
     expr: |

@@ -2049,13 +2049,13 @@ alerts:
         2. Verify availability of the `machine-controller-manager` Deployment:
 
            ```shell
-           kubectl -n d8-cloud-instance-manager get deploy machine-controller-manager
+           kubectl -n d8-cloud-instance-manager get deployment machine-controller-manager
            ```
 
         3. Check the Deployment’s status:
 
            ```shell
-           kubectl -n d8-cloud-instance-manager describe deploy machine-controller-manager
+           kubectl -n d8-cloud-instance-manager describe deployment machine-controller-manager
            ```
       summary: |
         Machine-controller-manager target is missing in Prometheus.
@@ -2577,7 +2577,7 @@ alerts:
         1. Analyze the Deployment details:
 
            ```shell
-           kubectl -n d8-operator-prometheus describe deploy prometheus-operator
+           kubectl -n d8-operator-prometheus describe deployment prometheus-operator
            ```
 
         2. Examine the Pod's to determine why it is not running:
@@ -2604,7 +2604,7 @@ alerts:
         1. Analyze the Deployment details:
 
            ```shell
-           kubectl -n d8-operator-prometheus describe deploy prometheus-operator
+           kubectl -n d8-operator-prometheus describe deployment prometheus-operator
            ```
 
         2. Examine the Pod's to determine why it is not running:
@@ -2629,7 +2629,7 @@ alerts:
         To resolve the issue, analyze the Deployment details:
 
         ```shell
-        kubectl -n d8-operator-prometheus describe deploy prometheus-operator
+        kubectl -n d8-operator-prometheus describe deployment prometheus-operator
         ```
       summary: |
         Prometheus-operator target is missing in Prometheus.
@@ -2652,7 +2652,7 @@ alerts:
         1. Analyze the Deployment details:
 
            ```shell
-           kubectl -n d8-operator-prometheus describe deploy prometheus-operator
+           kubectl -n d8-operator-prometheus describe deployment prometheus-operator
            ```
 
         2. Examine the Pod's to determine why it is not running:
@@ -2752,7 +2752,7 @@ alerts:
         1. Examine the Deployment's details:
 
            ```shell
-           kubectl -n d8-snapshot-controller describe deploy snapshot-controller
+           kubectl -n d8-snapshot-controller describe deployment snapshot-controller
            ```
 
         2. Check the Pod's status to determine the cause why it is not running:
@@ -2775,7 +2775,7 @@ alerts:
         1. Examine the Deployment's details:
 
            ```shell
-           kubectl -n d8-snapshot-controller describe deploy snapshot-controller
+           kubectl -n d8-snapshot-controller describe deployment snapshot-controller
            ```
 
         2. Check the Pod's status to determine the cause why it is not running:
@@ -2846,7 +2846,7 @@ alerts:
         1. Examine the Deployment's details:
 
            ```shell
-           kubectl -n d8-snapshot-controller describe deploy snapshot-validation-webhook
+           kubectl -n d8-snapshot-controller describe deployment snapshot-validation-webhook
            ```
 
         2. Check the Pod's status to determine the cause why it is not running:
@@ -2869,7 +2869,7 @@ alerts:
         1. Examine the Deployment's details:
 
            ```shell
-           kubectl -n d8-snapshot-controller describe deploy snapshot-validation-webhook
+           kubectl -n d8-snapshot-controller describe deployment snapshot-validation-webhook
            ```
 
         2. Check the Pod's status to determine the cause why it is not running:
@@ -3046,7 +3046,7 @@ alerts:
         1. Deployment description:
 
            ```shell
-           kubectl -n d8-system describe deploy terraform-state-exporter
+           kubectl -n d8-system describe deployment terraform-state-exporter
            ```
 
         2. Pod status:
@@ -3071,7 +3071,7 @@ alerts:
         1. Deployment description:
 
            ```shell
-           kubectl -n d8-system describe deploy terraform-state-exporter
+           kubectl -n d8-system describe deployment terraform-state-exporter
            ```
 
         2. Pod status:
@@ -3333,7 +3333,7 @@ alerts:
         3. Delete stale Deployments manually:
 
            ```shell
-           kubectl -n d8-upmeter delete deploy -l heritage=upmeter
+           kubectl -n d8-upmeter delete deployment -l heritage=upmeter
            ```
       summary: |
         Garbage Deployments from the controller-manager probe are not being cleaned up.
@@ -3389,7 +3389,7 @@ alerts:
         3. Delete stale Pods manually:
 
            ```shell
-           kubectl -n d8-upmeter delete po -l upmeter-probe=controller-manager
+           kubectl -n d8-upmeter delete pods -l upmeter-probe=controller-manager
            ```
       summary: |
         Garbage Pods from the controller-manager probe are not being cleaned up.

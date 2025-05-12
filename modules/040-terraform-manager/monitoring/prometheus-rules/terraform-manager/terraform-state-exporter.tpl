@@ -92,7 +92,7 @@
         1. Deployment description:
 
            ```shell
-           kubectl -n d8-system describe deploy terraform-state-exporter
+           kubectl -n d8-system describe deployment terraform-state-exporter
            ```
 
         2. Pod status:
@@ -123,7 +123,7 @@
         1. Deployment description:
 
            ```shell
-           kubectl -n d8-system describe deploy terraform-state-exporter
+           kubectl -n d8-system describe deployment terraform-state-exporter
            ```
 
         2. Pod status:

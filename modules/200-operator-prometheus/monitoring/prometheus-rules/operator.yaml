@@ -28,7 +28,7 @@
         1. Analyze the Deployment details:
         
            ```shell
-           kubectl -n d8-operator-prometheus describe deploy prometheus-operator
+           kubectl -n d8-operator-prometheus describe deployment prometheus-operator
            ```
 
         2. Examine the Pod's to determine why it is not running:
@@ -59,7 +59,7 @@
         To resolve the issue, analyze the Deployment details:
 
         ```shell
-        kubectl -n d8-operator-prometheus describe deploy prometheus-operator
+        kubectl -n d8-operator-prometheus describe deployment prometheus-operator
         ```
 
   - alert: D8PrometheusOperatorPodIsNotReady
@@ -87,7 +87,7 @@
         1. Analyze the Deployment details:
         
            ```shell
-           kubectl -n d8-operator-prometheus describe deploy prometheus-operator
+           kubectl -n d8-operator-prometheus describe deployment prometheus-operator
            ```
 
         2. Examine the Pod's to determine why it is not running:
@@ -120,7 +120,7 @@
         1. Analyze the Deployment details:
         
            ```shell
-           kubectl -n d8-operator-prometheus describe deploy prometheus-operator
+           kubectl -n d8-operator-prometheus describe deployment prometheus-operator
            ```
 
         2. Examine the Pod's to determine why it is not running:

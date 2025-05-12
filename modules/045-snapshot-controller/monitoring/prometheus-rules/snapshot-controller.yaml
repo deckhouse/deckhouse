@@ -77,7 +77,7 @@
           1. Examine the Deployment's details:
           
              ```shell
-             kubectl -n d8-snapshot-controller describe deploy snapshot-controller
+             kubectl -n d8-snapshot-controller describe deployment snapshot-controller
              ```
 
           2. Check the Pod's status to determine the cause why it is not running:
@@ -104,7 +104,7 @@
           1. Examine the Deployment's details:
           
              ```shell
-             kubectl -n d8-snapshot-controller describe deploy snapshot-controller
+             kubectl -n d8-snapshot-controller describe deployment snapshot-controller
              ```
 
           2. Check the Pod's status to determine the cause why it is not running:

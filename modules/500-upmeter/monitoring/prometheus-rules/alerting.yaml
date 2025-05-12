@@ -292,7 +292,7 @@
           3. Delete stale Deployments manually:
 
              ```shell
-             kubectl -n d8-upmeter delete deploy -l heritage=upmeter
+             kubectl -n d8-upmeter delete deployment -l heritage=upmeter
              ```
 
     - alert: D8UpmeterProbeGarbagePodsFromDeployments
@@ -341,7 +341,7 @@
           3. Delete stale Pods manually:
 
              ```shell
-             kubectl -n d8-upmeter delete po -l upmeter-probe=controller-manager
+             kubectl -n d8-upmeter delete pods -l upmeter-probe=controller-manager
              ```
 
     - alert: D8UpmeterProbeGarbagePods
@@ -389,7 +389,7 @@
           3. Delete stale Pods manually:
 
              ```shell
-             kubectl -n d8-upmeter delete po -l upmeter-probe=scheduler
+             kubectl -n d8-upmeter delete pods -l upmeter-probe=scheduler
              ```
 
     - alert: D8UpmeterProbeGarbageNamespaces
