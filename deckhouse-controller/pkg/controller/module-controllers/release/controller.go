@@ -923,7 +923,7 @@ func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRel
 	options := utils.GenerateRegistryOptionsFromModuleSource(source, r.clusterUUID, r.log)
 	md := downloader.NewModuleDownloader(r.dependencyContainer, tmpDir, source, options)
 
-	downloadStatistic, err := md.DownloadByModuleVersion(release.GetModuleName(), release.GetVersion().String())
+	downloadStatistic, err := md.DownloadByModuleVersion(ctx, release.GetModuleName(), release.GetVersion().String())
 	if err != nil {
 		return nil, fmt.Errorf("download the '%s/%s' module: %w", release.GetModuleName(), release.GetVersion().String(), err)
 	}
