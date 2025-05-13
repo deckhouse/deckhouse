@@ -1,0 +1,12 @@
+{{- $registryAddress := $.Values.global.modulesImages.registry.address }}
+{{- $registryPath := $.Values.global.modulesImages.registry.path }}
+{{- $imageHash := $.Values.global.modulesImages.digests.common.debugContainer }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: debug-container
+  namespace: default
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+data:
+  container_name: {{ printf "%s%s@%s" $registryAddress $registryPath $imageHash }}
