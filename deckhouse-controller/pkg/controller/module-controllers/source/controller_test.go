@@ -300,7 +300,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
-	suite.Run("source with modules and module version", func() {
+	suite.Run("source with module versions", func() {
 		dc := newMockedContainerWithData(suite.T(),
 			"v1.4.2",
 			[]string{"enabledmodule"},
