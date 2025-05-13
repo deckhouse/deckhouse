@@ -16,43 +16,23 @@
 
 set -e
 
-usage() {
-cat << EOF
-usage: $0 [-p] [-r] [-h]
+#SCAN_TARGET description:
+#  only_main - Scan only main branch. executes on push to main.
+#  pr - Scan image from PR tag. executes on PRs.
+#  regular - Scan main and latest 3 minor releases. executes on schedule and manual run.
 
-This script does foo.
 
-OPTIONS:
-   -p        Scan image from PR tag.
-   -r        Regular scan - main and latest 3 minor releases
-   -h        Show help
-EOF
-}
+case ${SCAN_TARGET} in
+  only_main | pr | regular )
+    echo "SCAN_TARGET: ${SCAN_TARGET}"
+    ;;
+  *)
+    echo "SCAN_TARGET is not valid"
+    exit 1
+esac
 
-SCAN_TARGET=""
 PROD_REGISTRY_DECKHOUSE_IMAGE="${PROD_REGISTRY}/deckhouse/fe"
 DEV_REGISTRY_DECKHOUSE_IMAGE="${DEV_REGISTRY}/sys/deckhouse-oss"
-
-while getopts “:hpr” OPTION
-do
-  case $OPTION in
-    h)
-      usage
-      exit 1
-      ;;
-    p)
-      SCAN_TARGET="pr"
-      ;;
-    r)
-      SCAN_TARGET="regular"
-      ;;
-    ?)
-      usage
-      exit 1
-      ;;
-  esac
-done
-
 
 login_prod_registry() {
   echo "Log in to PROD registry"
@@ -92,16 +72,14 @@ if [ "${SCAN_TARGET}" == "regular" ]; then
       exit 1
     fi
   else
-    if [ "${{ github.event_name }}" != "push" ]; then
-      # Get release tags by regexp, sort by sevmer desc, cut to get minor version, uniq and get 3 latest
-      releases=($(crane ls "${PROD_REGISTRY_DECKHOUSE_IMAGE}" | grep "^v[0-9]*\.[0-9]*\.[0-9]*$" | sort -V -r))
-      latest_minor_releases=($(printf '%s\n' "${releases[@]}"| cut -d "." -f -2 | uniq | head -n 3))
-      for r in "${latest_minor_releases[@]}"; do
-        d8_tags+=($(printf '%s\n' "${releases[@]}" | grep "${r}" | sort -V -r|head -n 1))
-      done
-    # else - this was push to main so scan only main branch
-    fi
+    # Get release tags by regexp, sort by sevmer desc, cut to get minor version, uniq and get 3 latest
+    releases=($(crane ls "${PROD_REGISTRY_DECKHOUSE_IMAGE}" | grep "^v[0-9]*\.[0-9]*\.[0-9]*$" | sort -V -r))
+    latest_minor_releases=($(printf '%s\n' "${releases[@]}"| cut -d "." -f -2 | uniq | head -n 3))
+    for r in "${latest_minor_releases[@]}"; do
+      d8_tags+=($(printf '%s\n' "${releases[@]}" | grep "${r}" | sort -V -r|head -n 1))
+    done
   fi
+# else - this is push to main or PR, so scan only them.
 fi
 echo "CVE Scan will be applied to the following tags of Deckhouse"
 echo "${d8_tags[@]}"
