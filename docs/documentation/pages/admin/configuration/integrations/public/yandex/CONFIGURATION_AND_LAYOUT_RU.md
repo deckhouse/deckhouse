@@ -87,7 +87,7 @@ dhcpOptions:
 
 В данной схеме размещения NAT (любого вида) не используется, а каждому узлу выдается публичный IP-адрес.
 
-> **Внимание!** В модуле `cloud-provider-yandex` нет поддержки групп безопасности (security group), поэтому все узлы кластера будут доступны без ограничения подключения.
+> **Внимание!** В DKP нет поддержки групп безопасности (security group), поэтому все узлы кластера будут доступны без ограничения подключения.
 
 ![Схема размещения WithoutNAT в Yandex Cloud](../../../../images/cloud-provider-yandex/layout-withoutnat.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1I7M9DquzLNu-aTjqLx1_6ZexPckL__-501Mt393W1fw/edit --->
@@ -227,7 +227,7 @@ dhcpOptions:
 
 ## Назначение YandexClusterConfiguration
 
-Для интеграции Deckhouse Kubernetes Platform с Yandex Cloud необходимо описать инфраструктуру кластера с помощью ресурса YandexClusterConfiguration. Этот объект управляется модулем `cloud-provider-yandex` и содержит полную информацию о схеме размещения, зонах, параметрах узлов и сетевой конфигурации.
+Для интеграции Deckhouse Kubernetes Platform с Yandex Cloud необходимо описать инфраструктуру кластера с помощью ресурса YandexClusterConfiguration.
 
 YandexClusterConfiguration — это объект Custom Resource (CR), описывающий параметры интеграции с облаком Yandex Cloud. Он используется платформой Deckhouse для:
 
@@ -254,7 +254,7 @@ kind: YandexClusterConfiguration
 kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
 ```
 
-После внесения изменений их необходимо применить с помощью:
+После внесения изменений их необходимо применить с помощью команды:
 
 ```console
 dhctl converge
@@ -401,7 +401,7 @@ existingZoneToSubnetIDMap:
 
 ### Дополнительные внешние сети
 
-Модуль `cloud-provider-yandex` позволяет явно указать список дополнительных внешних сетей, IP-адреса из которых будут интерпретироваться как публичные (External IP). Это задаётся в параметре `settings.additionalExternalNetworkIDs` в ресурсе ModuleConfig.
+DKP позволяет явно указать список дополнительных внешних сетей, IP-адреса из которых будут интерпретироваться как публичные (External IP). Это задаётся в параметре `settings.additionalExternalNetworkIDs` в ресурсе ModuleConfig.
 
 Эта настройка полезна, если:
 
@@ -424,7 +424,7 @@ spec:
       - enp6t4sno
 ```
 
-Если параметр не задан, модуль будет использовать только те подсети, что явно указаны в YandexClusterConfiguration (например, через `externalSubnetIDs`), чтобы определять публичность IP.
+Если параметр не задан, DKP будет использовать только те подсети, что явно указаны в YandexClusterConfiguration (например, через `externalSubnetIDs`), чтобы определять публичность IP.
 
 ## Настройка групп безопасности в Yandex Cloud
 
@@ -454,3 +454,44 @@ spec:
    ![Правила для группы безопасности](../../../../images/cloud-provider-yandex/sg-ru-rules.png)
 
 1. Удалите правило, разрешающее любой **входящий** трафик (на скриншоте выше оно уже удалено), и сохраните изменения.
+
+## Настройка доступа через bastion-хост
+
+Для подключения к узлам, находящимся в приватных подсетях (например, при использовании схемы размещения Standard или WithNATInstance), используется bastion-хост — промежуточная машина с публичным IP, через которую осуществляется SSH-доступ к узлам.
+
+Для настройки доступа выполните следующие шаги:
+
+1. Выполните bootstrap базовой инфраструктуры. Перед созданием bastion-хоста необходимо выполнить начальную фазу установки Deckhouse, которая подготовит сетевую инфраструктуру:
+
+   ```console
+   dhctl bootstrap-phase base-infra --config config.yml
+   ```
+
+1. Создайте bastion-хост в Yandex Cloud:
+
+   ```console
+   yc compute instance create \
+     --name bastion \
+     --hostname bastion \
+     --create-boot-disk image-family=ubuntu-2204-lts,image-folder-id=standard-images,size=20,type=network-hdd \
+     --memory 2 \
+     --cores 2 \
+     --core-fraction 100 \
+     --ssh-key ~/.ssh/id_rsa.pub \
+     --zone ru-central1-a \
+     --public-address 178.154.226.159
+   ```
+
+   Убедитесь, что IP-адрес из параметра `--public-address` доступен из вашей сети и указан корректно.
+
+1. Запустите основной bootstrap Deckhouse через bastion-хост:
+
+   ```console
+   dhctl bootstrap --ssh-bastion-host=178.154.226.159 --ssh-bastion-user=yc-user \
+     --ssh-user=ubuntu --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml
+   ```
+
+   `--ssh-bastion-user` — пользователь для подключения к bastion-хосту
+   `--ssh-user` — пользователь на целевых узлах кластера
+   `--ssh-agent-private-keys` — путь до приватного SSH-ключа
+   `--config` — путь до конфигурационного файла Deckhouse

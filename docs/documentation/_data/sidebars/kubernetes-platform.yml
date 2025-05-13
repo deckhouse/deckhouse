@@ -187,12 +187,28 @@ entries:
                           url: /admin/integrations/public/openstack/сonfiguration-and-layout-scheme.html
                     - title:
                         en: Integration with Amazon Web Services (AWS)
-                        ru: TODO Интеграция с Amazon Web Services (AWS)
+                        ru: Интеграция с Amazon Web Services (AWS)
                       folders:
                         - title:
                             en: Overview
-                            ru: Обзор
-                          url: /admin/integrations/public/aws/aws-overview.html
+                            ru: Введение
+                          url: /admin/integrations/public/amazon/amazon-overview.html
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/public/amazon/amazon-authorization.html
+                        - title:
+                            en: Configuration and layout
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/public/amazon/amazon-layout.html
+                        - title:
+                            en: Storage, balancing and features
+                            ru: Хранилище и балансировка
+                          url: /admin/integrations/public/amazon/amazon-storage.html
+                        - title:
+                            en: Integration with Amazon Web Services
+                            ru: Интеграция с службами Amazon Web Services
+                          url: /admin/integrations/public/amazon/amazon-services.html
                     - title:
                         en: Integration with Microsoft Azure
                         ru: TODO Интеграция с Microsoft Azure

@@ -14,9 +14,9 @@ lang: ru
 
 ## Хранилище (CSI и StorageClass)
 
-Модуль `cloud-provider-yandex` обеспечивает интеграцию с блочным хранилищем Yandex Cloud через компонент CSI (Container Storage Interface). Это позволяет кластерам Deckhouse автоматически заказывать и подключать диски, а также использовать стандартные Kubernetes-ресурсы PersistentVolumeClaim для работы с хранилищем.
+DKP обеспечивает интеграцию с блочным хранилищем Yandex Cloud через компонент CSI (Container Storage Interface). Это позволяет кластерам Deckhouse автоматически заказывать и подключать диски, а также использовать стандартные Kubernetes-ресурсы PersistentVolumeClaim для работы с хранилищем.
 
-При установке модуля `cloud-provider-yandex` автоматически создаются ресурсы StorageClass для всех поддерживаемых типов дисков Yandex Cloud. Это позволяет пользователям сразу использовать хранилище, не создавая вручную описания классов.
+DKP автоматически создает ресурсы StorageClass для всех поддерживаемых типов дисков Yandex Cloud. Это позволяет пользователям сразу использовать хранилище, не создавая вручную описания классов.
 
 Поддерживаются следующие типы дисков:
 
@@ -31,7 +31,7 @@ lang: ru
 
 ### Исключение ненужных StorageClass
 
-Если в кластере не планируется использовать определённые типы дисков, можно отключить автоматическое создание соответствующих StorageClass. Это делается с помощью параметра `settings.storageClass.exclude` в ресурсе ModuleConfig модуля:
+Если в кластере не планируется использовать определённые типы дисков, можно отключить автоматическое создание соответствующих StorageClass. Это делается с помощью параметра `settings.storageClass.exclude` в ресурсе ModuleConfig:
 
 ```yaml
 settings:
@@ -41,7 +41,7 @@ settings:
     - network-hdd
 ```
 
-В приведённом примере модуль не создаст StorageClass для всех `network-ssd` дисков и для `network-hdd`.
+В приведённом примере DKP не создаст StorageClass для всех `network-ssd` дисков и для `network-hdd`.
 
 ### Назначение StorageClass по умолчанию
 
@@ -56,7 +56,7 @@ kubectl edit mc global
 Если параметр `defaultClusterStorageClass` не указан, платформа будет определять StorageClass, используемый по умолчанию, в следующем порядке:
 
 - StorageClass с аннотацией `storageclass.kubernetes.io/is-default-class='true'` (если такой имеется в кластере).
-- Первый StorageClass по алфавиту среди тех, что автоматически создаются модулем облачного провайдера, если используется модуль облачного провайдера.
+- Первый StorageClass по алфавиту среди тех, что автоматически создаются облачным провайдером.
 - По умолчанию значение параметра `defaultClusterStorageClass` — пустая строка ("").
 
 ## Балансировка нагрузки
@@ -88,7 +88,7 @@ metadata:
 
 ## Особенности применения изменений
 
-Deckhouse не пересоздаёт уже существующие объекты Machine при изменении параметров модуля `cloud-provider-yandex`.
+Deckhouse не пересоздаёт уже существующие объекты Machine при изменении параметров.
 Пересоздание узлов происходит только при изменении:
 
 - параметров в секции NodeGroup;
@@ -133,44 +133,3 @@ dhctl converge
    ```
 
    Параметр `node-network-cidr` должен совпадать с тем значением, которое указано в объекте YandexClusterConfiguration, поле `nodeNetworkCIDR`.
-
-## Настройка доступа через bastion-хост
-
-Для подключения к узлам, находящимся в приватных подсетях (например, при использовании схемы размещения Standard или WithNATInstance), используется bastion-хост — промежуточная машина с публичным IP, через которую осуществляется SSH-доступ к узлам.
-
-Для настройки доступа выполните следующие шаги:
-
-1. Выполните bootstrap базовой инфраструктуры. Перед созданием bastion-хоста необходимо выполнить начальную фазу установки Deckhouse, которая подготовит сетевую инфраструктуру:
-
-   ```console
-   dhctl bootstrap-phase base-infra --config config.yml
-   ```
-
-1. Создайте bastion-хост в Yandex Cloud:
-
-   ```console
-   yc compute instance create \
-     --name bastion \
-     --hostname bastion \
-     --create-boot-disk image-family=ubuntu-2204-lts,image-folder-id=standard-images,size=20,type=network-hdd \
-     --memory 2 \
-     --cores 2 \
-     --core-fraction 100 \
-     --ssh-key ~/.ssh/id_rsa.pub \
-     --zone ru-central1-a \
-     --public-address 178.154.226.159
-   ```
-
-   Убедитесь, что IP-адрес из параметра `--public-address` доступен из вашей сети и указан корректно.
-
-1. Запустите основной bootstrap Deckhouse через bastion-хост:
-
-   ```console
-   dhctl bootstrap --ssh-bastion-host=178.154.226.159 --ssh-bastion-user=yc-user \
-     --ssh-user=ubuntu --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml
-   ```
-
-   `--ssh-bastion-user` — пользователь для подключения к bastion-хосту
-   `--ssh-user` — пользователь на целевых узлах кластера
-   `--ssh-agent-private-keys` — путь до приватного SSH-ключа
-   `--config` — путь до конфигурационного файла Deckhouse
