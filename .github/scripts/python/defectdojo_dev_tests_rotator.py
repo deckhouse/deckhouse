@@ -21,8 +21,8 @@ from datetime import datetime
 # Env vars
 defectdojo_host = os.getenv('DEFECTDOJO_HOST')
 defectdojo_token = os.getenv('DEFECTDOJO_API_TOKEN')
-days_to_keep = int(os.getenv('DEFECTDOJO_DEV_TESTS_ROTATION_DAYS', 3))
-release_versions_to_keep = int(os.getenv('DEFECTDOJO_RELEASE_TESTS_ROTATION_VERSIONS_AMOUNT', 3))
+days_to_keep_dev = int(os.getenv('DEFECTDOJO_DEV_TESTS_ROTATION_DAYS', 3))
+days_to_keep_release = int(os.getenv('DEFECTDOJO_UNUPDATED_RELEASE_TESTS_ROTATION_DAYS', 14))
 
 # Static vars
 defectdojo_proto = "https://"
@@ -45,29 +45,13 @@ def delete_test(test, removed_tests_counter):
 
 def get_releases_to_keep(eng_tests):
     releases_to_keep=[]
-    release_versions=[]
-    v_versions=[]
     for item in eng_tests:
-        if re.match(r"^release-*", item["version"]):
-            release_versions.append(item["version"])
-        elif re.match(r"^v\d+[\.\d+]*$", item["version"]):
-            v_versions.append(item["version"])
-    if release_versions:
+        if re.match(r"^\d*\.\d*$", item["version"]) and (current_date - datetime.fromisoformat(item["updated"]).date()).days <= days_to_keep_release:
+            releases_to_keep.append(item["version"])
+    if releases_to_keep:
         # uniquify and sort if list not empty
-        release_versions = list(set(release_versions))
-        release_versions.sort(reverse=True)
-        if len(release_versions) > release_versions_to_keep:
-            releases_to_keep.extend(release_versions[:release_versions_to_keep])
-        else:
-            releases_to_keep.extend(release_versions)
-    if v_versions:
-        # uniquify and sort if list not empty
-        v_versions = list(set(v_versions))
-        v_versions.sort(reverse=True)
-        if len(v_versions) > release_versions_to_keep:
-            releases_to_keep.extend(v_versions[:release_versions_to_keep])
-        else:
-            releases_to_keep.extend(v_versions)
+        releases_to_keep = list(set(releases_to_keep))
+        releases_to_keep.sort(reverse=True)
     return releases_to_keep
 
 
@@ -85,15 +69,14 @@ def get_old_tests():
             for test in eng_tests:
                 #if version == mr* or pr* and older then days_to_keep_dev - delete
                 if re.match(r"^mr*|^pr*", test["version"]):
-                    if (current_date - datetime.fromisoformat(test["created"]).date()).days > days_to_keep:
+                    if (current_date - datetime.fromisoformat(test["created"]).date()).days > days_to_keep_dev:
                         obsolete_tests_counter += 1
                         removed_tests_counter = delete_test(test, removed_tests_counter)
 
-                #if version == release-* or ^v\d+[\.\d+]*$ and older then 3 releases - delete
-                elif re.match(r"^release-*|^v\d+[\.\d+]*$", test["version"]):
-                    if test["version"] not in releases_to_keep:
-                        obsolete_tests_counter += 1
-                        removed_tests_counter = delete_test(test, removed_tests_counter)
+                #if it is not release version that we should keep - delete
+                elif test["version"] not in releases_to_keep:
+                    obsolete_tests_counter += 1
+                    removed_tests_counter = delete_test(test, removed_tests_counter)
 
                 #if other version - delete as most likely it is from dev branch
                 else:
