@@ -149,7 +149,7 @@ roleRef:
   kind: Role
   name: kube-rbac-proxy:my-app
 subjects:
-# All user certificates of ingress-controllers are issued for one specific group.
+# All user certificates of Ingress controllers are issued for one specific group.
 - kind: Group
   name: ingress-nginx:auth
 ```
