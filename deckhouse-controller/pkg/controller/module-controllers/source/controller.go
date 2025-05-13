@@ -509,6 +509,7 @@ func (r *reconciler) getIntermediateModuleVersions(
 		return nil, fmt.Errorf("parse target version: %w", err)
 	}
 
+	// if current version is empty, return only target version
 	if currentVersionStr == "" {
 		return []*semver.Version{targetVersion}, nil
 	}
@@ -516,6 +517,17 @@ func (r *reconciler) getIntermediateModuleVersions(
 	currentVersion, err := semver.NewVersion(currentVersionStr)
 	if err != nil {
 		return nil, fmt.Errorf("parse current version: %w", err)
+	}
+
+	// if versions they differ only in patch, return only target version
+	if currentVersion.Major() == targetVersion.Major() &&
+		currentVersion.Minor() == targetVersion.Minor() {
+		return []*semver.Version{targetVersion}, nil
+	}
+	// if versions they differ only in one minor version, return only target version
+	if currentVersion.Major() == targetVersion.Major() &&
+		currentVersion.IncMinor().Minor() == targetVersion.Minor() {
+		return []*semver.Version{targetVersion}, nil
 	}
 
 	registryClient, err := r.dependencyContainer.GetRegistryClient(path.Join(source.Spec.Registry.Repo, moduleName), opts...)
@@ -541,5 +553,23 @@ func (r *reconciler) getIntermediateModuleVersions(
 	}
 
 	sort.Sort(semver.Collection(versions))
-	return versions, nil
+
+	return keepLastPatchVersion(versions), nil
+}
+
+func keepLastPatchVersion(versions []*semver.Version) []*semver.Version {
+	// check versions and keep only last patch version for each minor version
+	versionsMap := make(map[string]*semver.Version)
+	for _, v := range versions {
+		index := fmt.Sprintf("%d.%d", v.Major(), v.Minor())
+		versionsMap[index] = v
+	}
+
+	var result []*semver.Version
+	for _, v := range versionsMap {
+		result = append(result, v)
+	}
+
+	sort.Sort(semver.Collection(result))
+	return result
 }

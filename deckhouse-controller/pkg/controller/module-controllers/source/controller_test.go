@@ -26,6 +26,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/gojuno/minimock/v3"
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
@@ -515,4 +516,89 @@ func newMockedContainerWithData(t minimock.Tester, version string, modules, tags
 	}, nil)
 
 	return dc
+}
+
+func Test_keepLastPatchVersion(t *testing.T) {
+	type args struct {
+		versions []*semver.Version
+	}
+	tests := []struct {
+		name string
+		args args
+		want []*semver.Version
+	}{
+		{
+			name: "empty",
+			args: args{
+				versions: []*semver.Version{},
+			},
+			want: []*semver.Version(nil),
+		},
+		{
+			name: "one",
+			args: args{
+				versions: []*semver.Version{
+					semver.MustParse("1.2.3"),
+				},
+			},
+			want: []*semver.Version{
+				semver.MustParse("1.2.3"),
+			},
+		},
+		{
+			name: "two",
+			args: args{
+				versions: []*semver.Version{
+					semver.MustParse("1.2.3"),
+					semver.MustParse("1.2.4"),
+				},
+			},
+			want: []*semver.Version{
+				semver.MustParse("1.2.4"),
+			},
+		},
+		{
+			name: "three",
+			args: args{
+				versions: []*semver.Version{
+					semver.MustParse("1.2.3"),
+					semver.MustParse("1.2.4"),
+					semver.MustParse("1.3.1"),
+					semver.MustParse("1.3.2"),
+					semver.MustParse("1.4.1"),
+					semver.MustParse("1.4.2"),
+					semver.MustParse("1.4.3"),
+				},
+			},
+			want: []*semver.Version{
+				semver.MustParse("1.2.4"),
+				semver.MustParse("1.3.2"),
+				semver.MustParse("1.4.3"),
+			},
+		},
+		{
+			name: "four",
+			args: args{
+				versions: []*semver.Version{
+					semver.MustParse("1.2.3"),
+					semver.MustParse("1.2.4"),
+					semver.MustParse("2.3.1"),
+					semver.MustParse("2.3.2"),
+					semver.MustParse("2.4.1"),
+					semver.MustParse("2.4.2"),
+					semver.MustParse("2.4.3"),
+				},
+			},
+			want: []*semver.Version{
+				semver.MustParse("1.2.4"),
+				semver.MustParse("2.3.2"),
+				semver.MustParse("2.4.3"),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equalf(t, tt.want, keepLastPatchVersion(tt.args.versions), "keepLastPatchVersion(%v)", tt.args.versions)
+		})
+	}
 }
