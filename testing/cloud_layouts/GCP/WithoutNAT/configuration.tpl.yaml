@@ -58,13 +58,6 @@ spec:
         customTolerationKeys:
           - node
   version: 1
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: flant-integration
-spec:
-  enabled: false
 # move ingres from resources yaml for testing dhctl configuration with 3-rd party resources
 ---
 apiVersion: deckhouse.io/v1
