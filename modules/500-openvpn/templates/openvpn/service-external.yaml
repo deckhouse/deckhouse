@@ -10,28 +10,26 @@
     {{- $previousLoadBalancerClass := "" }}
     {{- $serviceName := "" }}
     {{- if .Values.openvpn.tcpEnabled }}
-      {{- $previousLoadBalancerClass := "" }}
       {{- $serviceName := $tcpServiceName }}
       {{- $existingService := lookup "v1" "Service" "d8-openvpn" $serviceName }}
       {{- if $existingService }}
         {{- $previousLoadBalancerClass = $existingService.spec.loadBalancerClass | default "" }}
       {{- end }}
     {{- end }}
-  {{- if .Values.openvpn.udpEnabled }}
-    {{- $previousLoadBalancerClass := "" }}
-    {{- $serviceName := $udpServiceName }}
-    {{- $existingService := lookup "v1" "Service" "d8-openvpn" $serviceName }}
-    {{- if $existingService }}
-      {{- $previousLoadBalancerClass = $existingService.spec.loadBalancerClass | default "" }}
+    {{- if .Values.openvpn.udpEnabled }}
+      {{- $serviceName := $udpServiceName }}
+      {{- $existingService := lookup "v1" "Service" "d8-openvpn" $serviceName }}
+      {{- if $existingService }}
+        {{- $previousLoadBalancerClass = $existingService.spec.loadBalancerClass | default "" }}
+      {{- end }}
     {{- end }}
-  {{- end }}
   {{- if or (and (not $previousLoadBalancerClass) $loadBalancerClass) (and $previousLoadBalancerClass (ne $previousLoadBalancerClass $loadBalancerClass)) }}
 ---
 apiVersion: batch/v1
 kind: Job
 metadata:
   name: cleanup-service-{{ $serviceName }}-{{ $loadBalancerClass | default "no-class" | sha1sum | trunc 8 }}-{{ randAlphaNum 5 | lower }}
-  namespace: d8-ingress-nginx
+  namespace: d8-openvpn
   annotations:
     "helm.sh/hook": pre-upgrade
     "helm.sh/hook-weight": "-5"
@@ -39,7 +37,7 @@ metadata:
 spec:
   template:
     spec:
-      serviceAccountName: ingress-nginx
+      serviceAccountName: openvpn
       restartPolicy: OnFailure
       containers:
         - name: cleanup
