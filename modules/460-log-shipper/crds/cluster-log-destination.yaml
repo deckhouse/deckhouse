@@ -432,26 +432,6 @@ spec:
                           type: string
                           enum: ["JSON", "CEF"]
                           default: "JSON"
-                        cef:
-                          type: object
-                          description: |
-                            CEF-specific configuration fields. Only applicable when codec is set to "CEF".
-                          properties:
-                            deviceVendor:
-                              minLength: 1
-                              type: string
-                              description: The device vendor field in CEF format
-                              x-doc-examples: ["MyCompany"]
-                            deviceProduct:
-                              minLength: 1
-                              type: string
-                              description: The device product field in CEF format
-                              x-doc-examples: ["MyProduct"]
-                            deviceVersion:
-                              minLength: 1
-                              type: string
-                              description: The device version field in CEF format
-                              x-doc-examples: ["v0.0.1"]
                     keyField:
                       type: string
                       description: |
