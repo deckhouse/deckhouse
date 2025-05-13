@@ -82,12 +82,8 @@ func applyCRDFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 		return nil, fmt.Errorf("cannot convert kubernetes object: %v", err)
 	}
 
-	if crd.Spec.Conversion == nil || crd.Spec.Conversion.Webhook == nil || crd.Spec.Conversion.Webhook.ClientConfig == nil {
-		return nil, nil
-	}
-
 	var caBundle string
-	if crd.Spec.Conversion.Webhook.ClientConfig.CABundle != nil {
+	if crd.Spec.Conversion != nil && crd.Spec.Conversion.Webhook != nil && crd.Spec.Conversion.Webhook.ClientConfig != nil && crd.Spec.Conversion.Webhook.ClientConfig.CABundle != nil {
 		caBundle = string(crd.Spec.Conversion.Webhook.ClientConfig.CABundle)
 	}
 
@@ -128,13 +124,23 @@ func injectCAtoCRD(input *go_hook.HookInput) error {
 		if crd.(CRD).CABundle == bundle.(certificate.Certificate).CA {
 			return nil
 		}
+
+		// when updating CRD, the spec.conversion field is not updated, so conversion webhook won't work
+		// in this case, we have to set the whole section by appropriate values
 		patch := map[string]interface{}{
 			"spec": map[string]interface{}{
 				"conversion": map[string]interface{}{
+					"strategy": "Webhook",
 					"webhook": map[string]interface{}{
 						"clientConfig": map[string]interface{}{
 							"caBundle": base64.StdEncoding.EncodeToString([]byte(bundle.(certificate.Certificate).CA)),
+							"service": map[string]interface{}{
+								"namespace": "d8-cloud-instance-manager",
+								"name":      "caps-controller-manager-webhook-service",
+								"path":      "/convert",
+							},
 						},
+						"conversionReviewVersions": []string{"v1"},
 					},
 				},
 			},

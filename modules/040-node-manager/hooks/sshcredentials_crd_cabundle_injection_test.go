@@ -564,7 +564,7 @@ spec:
 		})
 		It("Should be a CRD with caBundle injected", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesResource("CustomResourceDefinition", "", "sshcredentials.deckhouse.io").Field(`spec.conversion.webhook.clientConfig.caBundle`).Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("CustomResourceDefinition", "", "sshcredentials.deckhouse.io").Field(`spec.conversion.webhook.clientConfig.caBundle`).Exists()).To(BeTrue())
 		})
 	})
 
