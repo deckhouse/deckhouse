@@ -47,6 +47,7 @@ rules:
       - list
       - watch
       - update
+      - patch
   - apiGroups:
       - sailoperator.io
     resources:
