@@ -14,9 +14,9 @@ clusterDomain: "cluster.local"
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
-  devBranch: '${DEV_BRANCH}'
   imagesRepo: dev-registry.deckhouse.io/sys/deckhouse-oss
   registryDockerCfg: '${DECKHOUSE_DOCKERCFG}'
+  devBranch: '${DEV_BRANCH}'
 ---
 apiVersion: deckhouse.io/v1
 kind: GCPClusterConfiguration
