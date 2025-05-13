@@ -15,8 +15,9 @@
 package app
 
 import (
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
 	"time"
+
+	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
 var (

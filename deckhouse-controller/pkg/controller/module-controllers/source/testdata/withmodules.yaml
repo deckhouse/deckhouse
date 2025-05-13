@@ -10,6 +10,10 @@ spec:
     dockerCfg: YXNiCg==
     repo: dev-registry.deckhouse.io/deckhouse/modules
     scheme: HTTPS
+status:
+  message: ""
+  modules:
+    - name: enabledmodule
 ---
 apiVersion: deckhouse.io/v1alpha2
 kind: ModuleUpdatePolicy
@@ -29,7 +33,7 @@ properties:
   availableSources:
     - test-source-1
 status:
-  phase: NotInstalled
+  phase: Available
   conditions:
     - type: EnabledByModuleConfig
       status: "False"
@@ -43,7 +47,7 @@ properties:
   availableSources:
     - test-source-1
 status:
-  phase: NotInstalled
+  phase: Available
   conditions:
     - type: EnabledByModuleConfig
       status: "True"
@@ -58,7 +62,7 @@ properties:
   availableSources:
     - test-source-1
 status:
-  phase: NotInstalled
+  phase: Available
   conditions:
     - type: EnabledByModuleConfig
       status: "True"
@@ -72,7 +76,7 @@ properties:
   availableSources:
     - test-source-1
 status:
-  phase: NotInstalled
+  phase: Available
   conditions:
     - type: EnabledByModuleConfig
       status: "True"

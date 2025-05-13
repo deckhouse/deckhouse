@@ -1,37 +1,5 @@
 Subject: [PATCH] ++
 ---
-Index: cluster-autoscaler/cloudprovider/mcm/mcm_manager.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/cluster-autoscaler/cloudprovider/mcm/mcm_manager.go b/cluster-autoscaler/cloudprovider/mcm/mcm_manager.go
---- a/cluster-autoscaler/cloudprovider/mcm/mcm_manager.go	(revision 669115a6814d33b9d5757aa801402710029cb5b5)
-+++ b/cluster-autoscaler/cloudprovider/mcm/mcm_manager.go	(date 1745846227339)
-@@ -1120,7 +1120,7 @@
- 	alreadyMarkedSet := sets.New(getMachineNamesTriggeredForDeletion(md)...)
-
- 	uniqueForDeletionSet := forDeletionSet.Difference(alreadyMarkedSet)
--	toBeMarkedSet := alreadyMarkedSet.Union(forDeletionSet)
-+	//toBeMarkedSet := alreadyMarkedSet.Union(forDeletionSet)
-
- 	data.RevisedToBeDeletedMachineNames = uniqueForDeletionSet
- 	data.RevisedScaledownAmount = uniqueForDeletionSet.Len()
-@@ -1136,10 +1136,10 @@
- 		if mdCopy.Annotations == nil {
- 			mdCopy.Annotations = make(map[string]string)
- 		}
--		triggerDeletionAnnotValue := createMachinesTriggeredForDeletionAnnotValue(toBeMarkedSet.UnsortedList())
--		if mdCopy.Annotations[machineutils.TriggerDeletionByMCM] != triggerDeletionAnnotValue {
--			mdCopy.Annotations[machineutils.TriggerDeletionByMCM] = triggerDeletionAnnotValue
--		}
-+		//triggerDeletionAnnotValue := createMachinesTriggeredForDeletionAnnotValue(toBeMarkedSet.UnsortedList())
-+		//if mdCopy.Annotations[machineutils.TriggerDeletionByMCM] != triggerDeletionAnnotValue {
-+		//	mdCopy.Annotations[machineutils.TriggerDeletionByMCM] = triggerDeletionAnnotValue
-+		//}
- 		mdCopy.Spec.Replicas = expectedReplicas
- 		data.RevisedMachineDeployment = mdCopy
- 	}
 Index: cluster-autoscaler/cloudprovider/mcm/mcm_cloud_provider.go
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -39,7 +7,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/cluster-autoscaler/cloudprovider/mcm/mcm_cloud_provider.go b/cluster-autoscaler/cloudprovider/mcm/mcm_cloud_provider.go
 --- a/cluster-autoscaler/cloudprovider/mcm/mcm_cloud_provider.go	(revision 669115a6814d33b9d5757aa801402710029cb5b5)
-+++ b/cluster-autoscaler/cloudprovider/mcm/mcm_cloud_provider.go	(date 1745846330291)
++++ b/cluster-autoscaler/cloudprovider/mcm/mcm_cloud_provider.go	(date 1746781221962)
 @@ -31,10 +31,8 @@
  	"time"
 
@@ -131,3 +99,66 @@ diff --git a/cluster-autoscaler/cloudprovider/mcm/mcm_cloud_provider.go b/cluste
  }
 
  // TODO: Move to using MCM annotations.CreateMachinesTriggeredForDeletionAnnotValue after MCM release
+Index: cluster-autoscaler/cloudprovider/mcm/mcm_manager.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/cluster-autoscaler/cloudprovider/mcm/mcm_manager.go b/cluster-autoscaler/cloudprovider/mcm/mcm_manager.go
+--- a/cluster-autoscaler/cloudprovider/mcm/mcm_manager.go	(revision 669115a6814d33b9d5757aa801402710029cb5b5)
++++ b/cluster-autoscaler/cloudprovider/mcm/mcm_manager.go	(date 1746781249737)
+@@ -538,18 +538,18 @@
+ 	}
+ 	klog.V(2).Infof("MachineDeployment %q size decreased from %d to %d, TriggerDeletionByMCM Annotation Value: %q", md.Name, md.Spec.Replicas, updatedMd.Spec.Replicas, updatedMd.Annotations[machineutils.TriggerDeletionByMCM])
+
+-	toBeCordonedNodeNames := make([]string, 0, len(data.RevisedToBeDeletedMachineNames))
+-	for _, mInfo := range toBeDeletedMachineInfos {
+-		if data.RevisedToBeDeletedMachineNames.Has(mInfo.Key.Name) {
+-			toBeCordonedNodeNames = append(toBeCordonedNodeNames, mInfo.NodeName)
+-			klog.V(2).Infof("For MachineDeployment %q, will cordon node: %q corresponding to machine %q", md.Name, mInfo.NodeName, mInfo.Key.Name)
+-		}
+-	}
+-	err = m.cordonNodes(toBeCordonedNodeNames)
+-	if err != nil {
+-		// Do not return error as cordoning is best-effort
+-		klog.Warningf("NodeGroup.deleteMachines() of %q ran into error cordoning nodes: %v", md.Name, err)
+-	}
++	//toBeCordonedNodeNames := make([]string, 0, len(data.RevisedToBeDeletedMachineNames))
++	//for _, mInfo := range toBeDeletedMachineInfos {
++	//	if data.RevisedToBeDeletedMachineNames.Has(mInfo.Key.Name) {
++	//		toBeCordonedNodeNames = append(toBeCordonedNodeNames, mInfo.NodeName)
++	//		klog.V(2).Infof("For MachineDeployment %q, will cordon node: %q corresponding to machine %q", md.Name, mInfo.NodeName, mInfo.Key.Name)
++	//	}
++	//}
++	//err = m.cordonNodes(toBeCordonedNodeNames)
++	//if err != nil {
++	//	// Do not return error as cordoning is best-effort
++	//	klog.Warningf("NodeGroup.deleteMachines() of %q ran into error cordoning nodes: %v", md.Name, err)
++	//}
+ 	return false, nil
+ }
+
+@@ -1120,7 +1120,7 @@
+ 	alreadyMarkedSet := sets.New(getMachineNamesTriggeredForDeletion(md)...)
+
+ 	uniqueForDeletionSet := forDeletionSet.Difference(alreadyMarkedSet)
+-	toBeMarkedSet := alreadyMarkedSet.Union(forDeletionSet)
++	//toBeMarkedSet := alreadyMarkedSet.Union(forDeletionSet)
+
+ 	data.RevisedToBeDeletedMachineNames = uniqueForDeletionSet
+ 	data.RevisedScaledownAmount = uniqueForDeletionSet.Len()
+@@ -1136,10 +1136,10 @@
+ 		if mdCopy.Annotations == nil {
+ 			mdCopy.Annotations = make(map[string]string)
+ 		}
+-		triggerDeletionAnnotValue := createMachinesTriggeredForDeletionAnnotValue(toBeMarkedSet.UnsortedList())
+-		if mdCopy.Annotations[machineutils.TriggerDeletionByMCM] != triggerDeletionAnnotValue {
+-			mdCopy.Annotations[machineutils.TriggerDeletionByMCM] = triggerDeletionAnnotValue
+-		}
++		//triggerDeletionAnnotValue := createMachinesTriggeredForDeletionAnnotValue(toBeMarkedSet.UnsortedList())
++		//if mdCopy.Annotations[machineutils.TriggerDeletionByMCM] != triggerDeletionAnnotValue {
++		//	mdCopy.Annotations[machineutils.TriggerDeletionByMCM] = triggerDeletionAnnotValue
++		//}
+ 		mdCopy.Spec.Replicas = expectedReplicas
+ 		data.RevisedMachineDeployment = mdCopy
+ 	}

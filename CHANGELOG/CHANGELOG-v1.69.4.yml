@@ -1,0 +1,51 @@
+candi:
+  fixes:
+    - summary: Return support `.cri.notManaged.criSocketPath`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13169
+deckhouse:
+  fixes:
+    - summary: Restore only ready mpo.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13231
+deckhouse-controller:
+  features:
+    - summary: sequential processing of module releases
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13216
+    - summary: sequential processing of module releases
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13084
+dhctl:
+  fixes:
+    - summary: <Disable caching metaconfig during converge and disable converge deckhouse manifests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13230
+    - summary: Fix incorrect behavior that fails sudoers preflight check if password contains whitespaces.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13140
+docs:
+  fixes:
+    - summary: Fixed Dynamix layout at documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13218
+    - summary: >-
+        Add support of `x-doc-d8Editions` array instead of `x-doc-d8Revision` field to JSON schema
+        renderer.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13072
+node-manager:
+  fixes:
+    - summary: Increase verbosity and revert versions and fix bug with unsupported mcm annotation
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13180
+testing:
+  features:
+    - summary: Add e2e tests for autoscaler and enable it permanent for GCP.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13243
+    - summary: Add e2e tests for autoscaler and enable it permanent for GCP
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13232
+upmeter:
+  fixes:
+    - summary: upmeter sa token rotation
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13201
+user-authn:
+  fixes:
+    - summary: Add separate ServiceAccount to basic-auth-proxy.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13214
+user-authz:
+  fixes:
+    - summary: Exclude deckhouse clusterrolebindings from webhook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13146
+

@@ -8,10 +8,13 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   - cd /src
-  - git clone -b v5.2 --depth=1 {{ .SOURCE_REPO }}/schweikert/fping.git ./fping
+  - git clone -b v5.2 --depth=1 $(cat /run/secrets/SOURCE_REPO)/schweikert/fping.git ./fping
   - rm -rf fping/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-fping-artifact

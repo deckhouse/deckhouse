@@ -44,7 +44,7 @@ spec:
     encoding:
       codec: "JSON"
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingConfig
 metadata:
   name: kubelet-audit-logs
@@ -75,7 +75,7 @@ spec:
     encoding:
       codec: "JSON"
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingConfig
 metadata:
   name: kubelet-audit-logs
@@ -109,7 +109,7 @@ spec:
     encoding:
       codec: "CEF"
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingConfig
 metadata:
   name: kubelet-audit-logs
@@ -144,7 +144,7 @@ spec:
     encoding:
       codec: "Syslog"
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingConfig
 metadata:
   name: kubelet-audit-logs
@@ -179,7 +179,7 @@ spec:
       - kafka-address:9092 # Replace with the current value during the setup
     topic: k8s-logs
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingConfig
 metadata:
   name: kubelet-audit-logs

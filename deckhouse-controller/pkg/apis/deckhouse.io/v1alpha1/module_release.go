@@ -168,7 +168,14 @@ func (mr *ModuleRelease) GetPhase() string {
 }
 
 func (mr *ModuleRelease) GetForce() bool {
-	return false
+	// handle deckhouse release annotation too
+	v, ok := mr.Annotations[DeckhouseReleaseAnnotationForce]
+	if ok && v == "true" {
+		return true
+	}
+
+	v, ok = mr.Annotations[ModuleReleaseAnnotationForce]
+	return ok && v == "true"
 }
 
 func (mr *ModuleRelease) GetReinstall() bool {

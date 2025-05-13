@@ -56,8 +56,8 @@ func escapeKey(key string, writer *hash.Hash) {
 }
 
 func escapeValue(value interface{}, writer *hash.Hash) {
-	(*writer).Write([]byte(fmt.Sprintf(`%T`, value)))
-	(*writer).Write([]byte(fmt.Sprintf("%v", value)))
+	fmt.Fprintf(*writer, `%T`, value)
+	fmt.Fprintf(*writer, "%v", value)
 }
 
 func sortedKeys(sum map[string]interface{}) []string {

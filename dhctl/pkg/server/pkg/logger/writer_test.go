@@ -23,9 +23,10 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 )
 
 func TestLogWriter(t *testing.T) {

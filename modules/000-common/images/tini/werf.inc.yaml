@@ -8,10 +8,13 @@ git:
   stageDependencies:
     install:
       - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
     - cd /src
-    - git clone --depth 1 {{ .SOURCE_REPO }}/krallin/tini --branch v0.19.0 .
+    - git clone --depth 1 $(cat /run/secrets/SOURCE_REPO)/krallin/tini --branch v0.19.0 .
     - git apply /patches/*.patch --verbose
     - rm -rf /src/.git
 ---

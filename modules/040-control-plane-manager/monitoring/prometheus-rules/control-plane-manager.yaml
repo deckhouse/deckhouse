@@ -81,3 +81,27 @@
         ```bash
         jq 'select(.annotations["authentication.k8s.io/stale-token"]) | {auditID, stageTimestamp, requestURI, verb, user: .user.username, stale_token: .annotations["authentication.k8s.io/stale-token"]}' /var/log/kube-audit/audit.log
         ```
+
+        If you do not see the necessary logs, [add an additional audit policy](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/faq.html#how-do-i-configure-additional-audit-policies) to log actions of all service accounts.
+
+        ```yaml
+        - level: Metadata
+          omitStages:
+          - RequestReceived
+          userGroups:
+          - system:serviceaccounts
+        ```
+
+        Example of applying an additional audit policy:
+
+        ```bash
+        kubectl apply -f - <<EOF
+        apiVersion: v1
+        kind: Secret
+        metadata:
+          name: audit-policy
+          namespace: kube-system
+        data:
+          audit-policy.yaml: YXBpVmVyc2lvbjogYXVkaXQuazhzLmlvL3YxCmtpbmQ6IFBvbGljeQpydWxlczoKLSBsZXZlbDogTWV0YWRhdGEKICBvbWl0U3RhZ2VzOgogIC0gUmVxdWVzdFJlY2VpdmVkCiAgdXNlckdyb3VwczoKICAtIHN5c3RlbTpzZXJ2aWNlYWNjb3VudHM=
+        EOF
+        ```

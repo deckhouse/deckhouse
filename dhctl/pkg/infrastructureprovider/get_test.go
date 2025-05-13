@@ -17,9 +17,9 @@ package infrastructureprovider
 import (
 	"testing"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-
 	"github.com/stretchr/testify/require"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 )
 
 func TestGetCloudsUseOpentofu(t *testing.T) {

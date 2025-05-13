@@ -290,7 +290,7 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 	}
 
 	for _, node := range ar.nodes {
-		if !((node.IsDisruptionRequired || node.IsRollingUpdate) && !node.IsDraining) {
+		if node.IsDraining || (!node.IsDisruptionRequired && !node.IsRollingUpdate) {
 			continue
 		}
 

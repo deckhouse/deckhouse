@@ -1,3 +1,4 @@
+{{- if ( .Values.global.enabledModules | has "kube-dns") }}
 - name: kubernetes.dns
   rules:
   - alert: KubernetesDnsTargetDown
@@ -26,3 +27,4 @@
            ```bash
            kubectl -n kube-system describe pod -l k8s-app=kube-dns
            ```
+{{- end }}

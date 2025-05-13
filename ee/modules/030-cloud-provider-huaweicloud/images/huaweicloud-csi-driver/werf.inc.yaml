@@ -39,10 +39,13 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   - export VERSION="evs-0.1.11"
-  - git clone --depth 1 --branch ${VERSION} {{ $.SOURCE_REPO }}/huaweicloud/huaweicloud-csi-driver /src
+  - git clone --depth 1 --branch ${VERSION} $(cat /run/secrets/SOURCE_REPO)/huaweicloud/huaweicloud-csi-driver /src
   - cd /src
   - git apply /patches/*.patch --verbose
   - rm -rf .git vendor
@@ -56,13 +59,14 @@ import:
   to: /src
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
   - cd /src
-  - export GOPROXY={{ $.GOPROXY }}
-  - go mod download
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:
   - cd /src
   - export VERSION="evs-0.1.11"

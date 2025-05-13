@@ -53,7 +53,9 @@ func TestDeckhouseInstall(t *testing.T) {
 		{
 			"Empty config",
 			func() error {
-				_, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{})
+				_, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{}, func() error {
+					return nil
+				})
 				return err
 			},
 			false,
@@ -61,11 +63,15 @@ func TestDeckhouseInstall(t *testing.T) {
 		{
 			"Double install",
 			func() error {
-				_, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{})
+				_, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{}, func() error {
+					return nil
+				})
 				if err != nil {
 					return err
 				}
-				_, err = CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{})
+				_, err = CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{}, func() error {
+					return nil
+				})
 				return err
 			},
 			false,
@@ -75,6 +81,8 @@ func TestDeckhouseInstall(t *testing.T) {
 			func() error {
 				_, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
 					Registry: config.RegistryData{DockerCfg: "YW55dGhpbmc="},
+				}, func() error {
+					return nil
 				})
 				if err != nil {
 					return err
@@ -100,7 +108,9 @@ func TestDeckhouseInstall(t *testing.T) {
 					ProviderClusterConfig: []byte(`test`),
 					InfrastructureState:   []byte(`test`),
 				}
-				_, err := CreateDeckhouseManifests(ctx, fakeClient, &conf)
+				_, err := CreateDeckhouseManifests(ctx, fakeClient, &conf, func() error {
+					return nil
+				})
 				if err != nil {
 					return err
 				}
@@ -139,6 +149,8 @@ func TestDeckhouseInstallWithDevBranch(t *testing.T) {
 
 	_, err = CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
 		DevBranch: "pr1111",
+	}, func() error {
+		return nil
 	})
 
 	require.NoError(t, err)
@@ -175,6 +187,8 @@ func TestDeckhouseInstallWithModuleConfig(t *testing.T) {
 	_, err = CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
 		DevBranch:     "pr1111",
 		ModuleConfigs: []*config.ModuleConfig{mc1},
+	}, func() error {
+		return nil
 	})
 
 	require.NoError(t, err)
@@ -233,6 +247,8 @@ func TestDeckhouseInstallWithModuleConfigs(t *testing.T) {
 	_, err = CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
 		DevBranch:     "pr1111",
 		ModuleConfigs: []*config.ModuleConfig{mc1, mc2},
+	}, func() error {
+		return nil
 	})
 
 	require.NoError(t, err)
@@ -273,6 +289,8 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 			res, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
 				DevBranch:     "pr1111",
 				ModuleConfigs: []*config.ModuleConfig{mc},
+			}, func() error {
+				return nil
 			})
 			require.NoError(t, err)
 
@@ -310,6 +328,8 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 			res, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
 				DevBranch:     "pr1111",
 				ModuleConfigs: []*config.ModuleConfig{mc},
+			}, func() error {
+				return nil
 			})
 			require.NoError(t, err)
 
@@ -339,6 +359,8 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 			res, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
 				DevBranch:     "pr1111",
 				ModuleConfigs: []*config.ModuleConfig{mc},
+			}, func() error {
+				return nil
 			})
 			require.NoError(t, err)
 
@@ -378,6 +400,8 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 			res, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
 				DevBranch:     "pr1111",
 				ModuleConfigs: []*config.ModuleConfig{mcDeckhouse, mcGlobal},
+			}, func() error {
+				return nil
 			})
 			require.NoError(t, err)
 

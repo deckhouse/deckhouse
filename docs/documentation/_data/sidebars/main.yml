@@ -57,8 +57,8 @@ entries:
                 ru: Сборка и публикация
               url: /module-development/build/
             - title:
-                en: Running in the cluster
-                ru: Запуск в кластере
+                en: Running and verifying in the cluster
+                ru: Запуск и проверка в кластере
               url: /module-development/run/
             - title:
                 en: Module dependencies

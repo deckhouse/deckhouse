@@ -129,6 +129,7 @@ func initDeckhouse(access kubernetes.Access, preflight checker.Doer, logger *log
 				AllowedTasksPerTimeInterval: config.AllowedTasksPerTimeInterval,
 				TaskGrowthThreshold:         config.TaskGrowthThreshold,
 				Logger:                      logEntry.WithField("probe", "cluster-configuration"),
+				Period:                      period,
 			},
 		},
 	}

@@ -59,8 +59,7 @@ import:
   to: /usr/local/bin/golangci-lint
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
 shell:
   install:
   - go install github.com/onsi/ginkgo/ginkgo@latest

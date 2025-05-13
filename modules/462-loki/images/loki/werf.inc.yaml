@@ -4,19 +4,20 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
 git:
-  - add: /modules/462-loki/images/{{ $.ImageName }}
-    to: /
+  - add: /modules/462-loki/images/{{ $.ImageName }}/patches
+    to: /patches
     stageDependencies:
       install:
         - "**/*"
-    includePaths:
-      - patches
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-    - git clone --depth 1 --branch {{ $LokiVersion }} {{ .SOURCE_REPO }}/grafana/loki.git /src
+    - git clone --depth 1 --branch {{ $LokiVersion }} $(cat /run/secrets/SOURCE_REPO)/grafana/loki.git /src
     - cd /src
     - git apply --verbose /patches/*.patch
-    - rm -r .git
+    - rm -r .git vendor
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
@@ -26,17 +27,19 @@ import:
     add: /src
     before: install
 mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
     - cd /src
-    - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-    - go mod download -x
-    - go mod vendor
+    - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
     - go build -o loki ./cmd/loki
     - chown -R 64535:64535 /src/loki
     - chmod 0700 /src/loki
+    - rm -rf vendor
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless

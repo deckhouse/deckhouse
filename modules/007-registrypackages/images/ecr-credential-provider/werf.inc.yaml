@@ -26,10 +26,13 @@ git:
     install:
     - '**/*'
   {{- end }}
+secrets:
+- id: SOURCE_REPO
+  value: {{ $.SOURCE_REPO }}
 shell:
   install:
   - cd /src
-  - git clone --depth=1 --branch {{ $value.ccm.aws }} {{ $.SOURCE_REPO }}/kubernetes/cloud-provider-aws.git
+  - git clone --depth=1 --branch {{ $value.ccm.aws }} $(cat /run/secrets/SOURCE_REPO)/kubernetes/cloud-provider-aws.git
   - cd cloud-provider-aws
   {{- if $patch }}
   - git apply /patches/*.patch --verbose
@@ -65,14 +68,16 @@ import:
   to: /src
   before: install
 mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ $.GOPROXY }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" $ | nindent 2 }}
   - apk add --no-cache make bash
   install:
-    - export GOPROXY={{ $.GOPROXY }}
+    - export GOPROXY=$(cat /run/secrets/GOPROXY)
     - export CGO_ENABLED=0
     - export GOOS=linux
     - export GOARCH=amd64

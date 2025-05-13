@@ -25,20 +25,26 @@ spec:
           type: object
           description: |
             Custom resource for setting remote cluster as trusted one.
-          x-doc-d8Revision: ee
+          x-doc-d8Editions:
+            - ee
+            - cse-pro
           required:
           - spec
           properties:
             spec:
               type: object
-              x-doc-d8Revision: ee
+              x-doc-d8Editions:
+                - ee
+                - cse-pro
               required:
               - trustDomain
               - metadataEndpoint
               properties:
                 trustDomain:
                   type: string
-                  x-doc-d8Revision: ee
+                  x-doc-d8Editions:
+                    - ee
+                    - cse-pro
                   description: |
                     The TrustDomain of the remote cluster.
 
@@ -47,7 +53,9 @@ spec:
                   x-doc-examples: ['cluster.local']
                 metadataEndpoint:
                   type: string
-                  x-doc-d8Revision: ee
+                  x-doc-d8Editions:
+                    - ee
+                    - cse-pro
                   description: |
                     HTTPS endpoint with remote cluster metadata.
                   pattern: '^(https|file)://[0-9a-zA-Z._/-]+$'
@@ -57,14 +65,18 @@ spec:
                   properties:
                     insecureSkipVerify:
                       type: boolean
-                      x-doc-d8Revision: ee
+                      x-doc-d8Editions:
+                        - ee
+                        - cse-pro
                       default: false
                       description: |
                         Skip validation certificate on HTTPS endpoint with remote cluster metadata.
                       x-doc-examples: ['true']
                     ca:
                       type: string
-                      x-doc-d8Revision: ee
+                      x-doc-d8Editions:
+                        - ee
+                        - cse-pro
                       description: |
                         Certificate for validation HTTPS endpoint with remote cluster metadata.
                       x-doc-examples: ['-----BEGIN CERTIFICATE----- ..... -----END CERTIFICATE-----']

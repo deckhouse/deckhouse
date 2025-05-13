@@ -279,7 +279,7 @@ Then, in order to fulfill the requirements of the above security policies, the f
 
 ## Verification of image signatures
 
-{% alert level="warning" %}This feature is available in Enterprise Edition only.{% endalert %}
+{% alert level="warning" %}This feature is available in the following editions: SE+, EE.{% endalert %}
 
 The module implements a function for checking the signatures of container images signed using [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/#:~:text=To%20generate%20a%20key%20pair,prompted%20to%20provide%20a%20password.&text=Alternatively%2C%20you%20can%20use%20the,%2C%20ECDSA%2C%20and%20ED25519%20keys). Checking the signatures of container images allows you to ensure their integrity (that the image has not been modified since its creation) and authenticity (that the image was created by a trusted source). You can enable container image signature verification in the cluster using the [policies.verifyImageSignatures](cr.html#securitypolicy-v1alpha1-spec-policies-verifyimagesignatures) parameter of the SecurityPolicy resource.
 
