@@ -293,11 +293,11 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 
 var NumPercentRegex = regexp.MustCompile(`^([0-9]+)%$`)
 
-func intOrPercent(val *intstr.IntOrString, max int) int {
+func intOrPercent(val *intstr.IntOrString, maxValue int) int {
 	matches := NumPercentRegex.FindStringSubmatch(val.StrVal)
 	if len(matches) > 1 {
 		percent, _ := strconv.Atoi(matches[1])
-		return int(float64(max) * float64(percent) / 100.0)
+		return int(float64(maxValue) * float64(percent) / 100.0)
 	}
 
 	return val.IntValue()

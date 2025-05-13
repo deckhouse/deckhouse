@@ -15,6 +15,19 @@
 # limitations under the License.
 */}}
 
+{{- $bbnn := .Files.Get "deckhouse/candi/bashible/bb_node_name.sh.tpl" -}}
+{{- tpl (printf `
+%s
+
+{{ template "bb-d8-node-name" . }}
+
+{{ template "bb-discover-node-name"   . }}
+`
+(index (splitList "\n---\n" $bbnn) 0)) . | nindent 0 }}
+
+bb-discover-node-name
+export D8_NODE_HOSTNAME=$(bb-d8-node-name)
+
 function get_bundle() {
   resource="$1"
   name="$2"
@@ -45,12 +58,6 @@ mkdir -p "$BOOTSTRAP_DIR" "$TMPDIR"
 chmod 0700 $BOOTSTRAP_DIR
 
 unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
-
-{{- if and (ne .nodeGroup.nodeType "Static") (ne .nodeGroup.nodeType "CloudStatic" )}}
-export D8_NODE_HOSTNAME=$(hostname -s)
-{{- else }}
-export D8_NODE_HOSTNAME=$(hostname)
-{{- end }}
 
 {{- if or (eq .nodeGroup.nodeType "CloudEphemeral") (hasKey .nodeGroup "staticInstances") }}
 # Put bootstrap log information to Machine resource status if it is a cloud installation or cluster-api static machine

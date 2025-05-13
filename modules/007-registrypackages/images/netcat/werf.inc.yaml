@@ -10,9 +10,12 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch applied/{{ $version }} {{ $.SOURCE_REPO }}/netcat /src/netcat
+  - git clone --depth 1 --branch applied/{{ $version }} $(cat /run/secrets/SOURCE_REPO)/netcat /src/netcat
   - rm -rf /src/netcat/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}

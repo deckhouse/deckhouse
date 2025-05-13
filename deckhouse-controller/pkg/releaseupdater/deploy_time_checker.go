@@ -61,7 +61,7 @@ func (c *DeployTimeService) ProcessPatchReleaseDeployTime(release v1alpha1.Relea
 		return nil
 	}
 
-	if res.ReleaseApplyTime == c.now {
+	if res.ReleaseApplyTime.Equal(c.now) {
 		res.ReleaseApplyTime = time.Time{}
 	}
 
@@ -80,7 +80,7 @@ func (c *DeployTimeService) ProcessMinorReleaseDeployTime(release v1alpha1.Relea
 		return nil
 	}
 
-	if res.ReleaseApplyTime == c.now {
+	if res.ReleaseApplyTime.Equal(c.now) {
 		res.ReleaseApplyTime = time.Time{}
 	}
 

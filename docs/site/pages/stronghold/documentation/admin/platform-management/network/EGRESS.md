@@ -18,7 +18,7 @@ The EgressGateway resource describes a node group that functions as an Egress ga
 To add a node to this group, assign a corresponding label to it:
 
 ```shell
-d8 k label node <node name> node-role.deckhouse.io/egress=
+d8 k label node <node name> dedicated/egress=
 ```
 
 ### PrimaryIPFromEgressGatewayNodeInterface mode
@@ -36,7 +36,7 @@ metadata:
   name: egress-gw
 spec:
   nodeSelector:
-    node-role.deckhouse.io/egress: ""
+    dedicated/egress: ""
   sourceIP:
     # The primary IP address bound to the public network interface of the node will be used as the IP address
     mode: PrimaryIPFromEgressGatewayNodeInterface
@@ -66,7 +66,7 @@ metadata:
   name: egress-gw
 spec:
   nodeSelector:
-    node-role.deckhouse.io/egress: ""
+    dedicated/egress: ""
   sourceIP:
     # The primary IP address bound to the public network interface of the node will be used as the IP address
     mode: VirtualIPAddress
@@ -90,7 +90,7 @@ To check whether a node is suitable for inclusion to the Egress gateway group, r
 
 ```shell
 # Display nodes specified by spec.nodeSelector:
-d8 k get nodes -l node-role.deckhouse.io/egress="" -ojson | jq -r '.items[].metadata.name'
+d8 k get nodes -l dedicated/egress="" -ojson | jq -r '.items[].metadata.name'
 
 # Display nodes in the Ready status:
 d8 k get nodes -ojson | jq -r '.items[] | select(.status.conditions[] | select(.type == "Ready" and .status == "True")) | .metadata.name'

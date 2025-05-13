@@ -5,3 +5,6 @@ config:
   stapel:
     git:
       allowBranch: true
+  secrets:
+    allowValueIds:
+    - GOPROXY

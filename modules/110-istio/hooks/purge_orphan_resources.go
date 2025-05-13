@@ -22,6 +22,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -32,6 +33,7 @@ import (
 const (
 	istioSystemNs                = "d8-istio"
 	istioComponentsLabelSelector = "install.operator.istio.io/owning-resource-namespace=d8-istio"
+	istioRootCertConfigMapName   = "istio-ca-root-cert"
 )
 
 var (
@@ -44,6 +46,16 @@ var (
 		Group:    "install.istio.io",
 		Version:  "v1alpha1",
 		Resource: "istiooperators",
+	}
+	istioFederationGVR = schema.GroupVersionResource{
+		Group:    "deckhouse.io",
+		Version:  "v1alpha1",
+		Resource: "istiofederations",
+	}
+	istioMulticlusterGVR = schema.GroupVersionResource{
+		Group:    "deckhouse.io",
+		Version:  "v1alpha1",
+		Resource: "istiomulticlusters",
 	}
 )
 
@@ -59,6 +71,56 @@ func purgeOrphanResources(input *go_hook.HookInput, dc dependency.Container) err
 	k8sClient, err := dc.GetK8sClient()
 	if err != nil {
 		return err
+	}
+
+	// Clean up cluster-wide IstioFederation resources
+	federations, err := k8sClient.Dynamic().Resource(istioFederationGVR).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		input.Logger.Warnf("Failed to list IstioFederation resources: %v", err)
+	} else {
+		for _, fed := range federations.Items {
+			_, err = k8sClient.Dynamic().Resource(istioFederationGVR).Patch(context.TODO(), fed.GetName(), types.MergePatchType, patch, metav1.PatchOptions{})
+			if err != nil {
+				input.Logger.Warnf("Failed to remove finalizers from IstioFederation/%s: %v", fed.GetName(), err)
+				continue
+			}
+			input.Logger.Infof("Finalizers from IstioFederation/%s removed", fed.GetName())
+
+			_, fedDeletionTimestampExists := fed.GetAnnotations()["deletionTimestamp"]
+			if !fedDeletionTimestampExists {
+				err := k8sClient.Dynamic().Resource(istioFederationGVR).Delete(context.TODO(), fed.GetName(), metav1.DeleteOptions{})
+				if err != nil {
+					input.Logger.Warnf("Failed to delete IstioFederation/%s: %v", fed.GetName(), err)
+					continue
+				}
+				input.Logger.Infof("IstioFederation/%s deleted", fed.GetName())
+			}
+		}
+	}
+
+	// Clean up cluster-wide IstioMulticluster resources
+	multiclusters, err := k8sClient.Dynamic().Resource(istioMulticlusterGVR).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		input.Logger.Warnf("Failed to list IstioMulticluster resources: %v", err)
+	} else {
+		for _, mc := range multiclusters.Items {
+			_, err = k8sClient.Dynamic().Resource(istioMulticlusterGVR).Patch(context.TODO(), mc.GetName(), types.MergePatchType, patch, metav1.PatchOptions{})
+			if err != nil {
+				input.Logger.Warnf("Failed to remove finalizers from IstioMulticluster/%s: %v", mc.GetName(), err)
+				continue
+			}
+			input.Logger.Infof("Finalizers from IstioMulticluster/%s removed", mc.GetName())
+
+			_, mcDeletionTimestampExists := mc.GetAnnotations()["deletionTimestamp"]
+			if !mcDeletionTimestampExists {
+				err := k8sClient.Dynamic().Resource(istioMulticlusterGVR).Delete(context.TODO(), mc.GetName(), metav1.DeleteOptions{})
+				if err != nil {
+					input.Logger.Warnf("Failed to delete IstioMulticluster/%s: %v", mc.GetName(), err)
+					continue
+				}
+				input.Logger.Infof("IstioMulticluster/%s deleted", mc.GetName())
+			}
+		}
 	}
 
 	ns, _ := k8sClient.CoreV1().Namespaces().Get(context.TODO(), istioSystemNs, metav1.GetOptions{})
@@ -83,6 +145,26 @@ func purgeOrphanResources(input *go_hook.HookInput, dc dependency.Container) err
 				input.Logger.Infof("IstioOperator/%s deleted from namespace %s", iop.GetName(), istioSystemNs)
 			}
 		}
+
+		// Delete the istio-ca-root-cert ConfigMap in namespaces
+		namespaces, err := k8sClient.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
+		if err != nil {
+			return err
+		}
+
+		for _, namespace := range namespaces.Items {
+			if namespace.Name == istioSystemNs {
+				continue
+			}
+
+			err := k8sClient.CoreV1().ConfigMaps(namespace.Name).Delete(context.TODO(), istioRootCertConfigMapName, metav1.DeleteOptions{})
+			if err != nil && !k8serrors.IsNotFound(err) {
+				input.Logger.Warnf("Failed to delete ConfigMap/%s in namespace %s: %v", istioRootCertConfigMapName, namespace.Name, err)
+				continue
+			}
+			input.Logger.Infof("ConfigMap/%s deleted from namespace %s", istioRootCertConfigMapName, namespace.Name)
+		}
+
 		// delete NS
 		_, nsDeletionTimestampExists := ns.GetAnnotations()["deletionTimestamp"]
 		if !nsDeletionTimestampExists {
