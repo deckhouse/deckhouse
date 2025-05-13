@@ -37,7 +37,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		ExecutionMinInterval: 5 * time.Second,
 		ExecutionBurst:       3,
 	},
-	Queue: "/modules/node-manager/sshcredentials-crd",
+	Queue:      "/modules/node-manager/sshcredentials-crd",
+	OnAfterAll: &go_hook.OrderedConfig{Order: 20},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:                         "sshcredentials",
