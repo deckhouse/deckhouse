@@ -10,7 +10,7 @@
 
 <!-- Yandex.Metrika counter -->
 <script type="text/javascript">
-let lang = {{ page.lang }};
+const lang = document.documentElement.getAttribute('lang');
 let metricId = lang === 'ru' ? {{ site.metrics.yandex['ru'] }} : {{ site.metrics.yandex['en'] }};
 if ([{{ siteUrls }}].includes(window.location.hostname)) {
   (function (m, e, t, r, i, k, a) {
