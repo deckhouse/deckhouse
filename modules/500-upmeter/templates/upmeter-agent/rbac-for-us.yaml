@@ -32,7 +32,8 @@ rules:
   # - In deckhouse-controller probe we need to discover deckhouse-leader service
   - apiGroups: [""]
     resources: ["services"]
-    verbs: ["get", "list"]
+    verbs: ["get"]
+    resourceNames: ["deckhouse-leader"]
   # Deckhouse hooks checked via the CR change sync, and nodegroup probes
   - apiGroups: ["deckhouse.io"]
     resources: ["upmeterhookprobes" , "nodegroups"]

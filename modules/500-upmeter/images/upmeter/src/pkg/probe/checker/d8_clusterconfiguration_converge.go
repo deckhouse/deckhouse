@@ -1,5 +1,5 @@
 /*
-Copyright 2022 Flant JSC
+Copyright 2025 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -29,16 +29,12 @@ type convergeStatusChecker struct {
 	historyCleaned      bool
 	poller              poller
 	logger              *logrus.Entry
+
+	windowSize          int
+	period              time.Duration
+	freezeThreshold     time.Duration
+	taskGrowthThreshold float64
 }
-
-const ()
-
-var (
-	windowSize                  = 6
-	freezeThreshold             = 5 * time.Minute
-	allowedTasksPerTimeInterval = 10.0
-	taskGrowthThreshold         = allowedTasksPerTimeInterval / float64(windowSize) // 10 tasks per 5 minutes
-)
 
 func (c *convergeStatusChecker) Check() check.Error {
 	pollResult, err := c.poller.Poll()
@@ -64,7 +60,7 @@ func (c *convergeStatusChecker) Check() check.Error {
 	c.logger.Debugf("poll ended %+v\n", pollResult)
 	c.history = append(c.history, *pollResult)
 
-	if len(c.history) > windowSize {
+	if len(c.history) > c.windowSize {
 		c.logger.Debugf("history more than window size, removing oldest element")
 		c.history = c.history[1:]
 	}
@@ -90,15 +86,15 @@ func (c *convergeStatusChecker) Check() check.Error {
 	endTasks := end.ConvergeInProgress + end.StartupConvergeInProgress
 	c.logger.Debugf("start tasks %d, end tasks %d\n", startTasks, endTasks)
 
-	duration := time.Duration(len(c.history)) * (time.Second * 60)
+	duration := len(c.history) * int(c.period.Seconds())
 	c.logger.Debugf("duration %d\n", duration)
 
-	growthRate := float64(endTasks-startTasks) / duration.Seconds()
+	growthRate := float64((endTasks - startTasks) / duration)
 	c.logger.Debugf("growth rate %f\n", growthRate)
 
-	if growthRate > taskGrowthThreshold {
-		c.logger.Debugf("growth rate %f exceeds task growth threshold %f\n", growthRate, taskGrowthThreshold)
-		return check.ErrFail("growth rate exceeds task growth threshold")
+	if growthRate > c.taskGrowthThreshold {
+		c.logger.Debugf("growth rate %f exceeds task growth threshold %f\n", growthRate, c.taskGrowthThreshold)
+		return check.ErrFail("deckhouse queue grows faster then expected")
 	}
 
 	// check for frozen queue
@@ -114,8 +110,8 @@ func (c *convergeStatusChecker) Check() check.Error {
 
 	if allEqual {
 		frozenDuration := time.Duration(len(c.history)) * (time.Second * 60)
-		if frozenDuration >= freezeThreshold {
-			return check.ErrFail("queue size haven't changed in 5 minutes, possibly frozen")
+		if frozenDuration >= c.freezeThreshold {
+			return check.ErrFail("queue size haven't changed in 5 minutes, queue is frozen")
 		}
 	}
 

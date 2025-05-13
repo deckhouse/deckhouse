@@ -10,9 +10,12 @@ git:
   stageDependencies:
     install:
       - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ $ciliumVersion }} {{ $.SOURCE_REPO }}/cilium/cilium.git /src
+  - git clone --depth 1 --branch v{{ $ciliumVersion }} $(cat /run/secrets/SOURCE_REPO)/cilium/cilium.git /src
   - rm -r /src/.git
   - cd /src
   - git apply /patches/*.patch --verbose
@@ -26,8 +29,10 @@ import:
   to: /src
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" $ | nindent 2 }}
@@ -36,7 +41,7 @@ shell:
   - cd /src
   - go mod vendor && go mod download -x
   setup:
-  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /src/hubble-relay
   - make

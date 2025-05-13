@@ -53,24 +53,29 @@ type D8ClusterConfiguration struct {
 	Logger           *logrus.Entry
 	PreflightChecker check.Checker
 
-	PodAccessTimeout            time.Duration
-	ObjectChangeTimeout         time.Duration
-	WindowSize                  int
-	FreezeThreshold             time.Duration
-	AllowedTasksPerTimeInterval float64
-	TaskGrowthThreshold         float64
+	PodAccessTimeout    time.Duration
+	ObjectChangeTimeout time.Duration
+	WindowSize          int
+	FreezeThreshold     time.Duration
+	TaskGrowthThreshold float64
+	Period              time.Duration
 }
 
 // Verify deckhouse queue is not stale, and tasks are not growing
 // Set value to CR spec
 // Wait for CR spec to be modified by hook
 func (c *D8ClusterConfiguration) Checker() check.Checker {
-	poller := newPoller(c.Access, c.DeckhouseNamespace, svcName, *newInsecureClient(5 * time.Second))
+	poll := newPoller(c.Access, c.DeckhouseNamespace, svcName, *newInsecureClient(5 * time.Second))
 
 	checkDeckhouse := withTimeout(
 		&convergeStatusChecker{
-			poller: *poller,
+			poller: poll,
 			logger: c.Logger,
+
+			windowSize:          c.WindowSize,
+			period:              c.Period,
+			freezeThreshold:     c.FreezeThreshold,
+			taskGrowthThreshold: c.TaskGrowthThreshold,
 		},
 		c.PodAccessTimeout,
 	)
@@ -99,7 +104,7 @@ func (c *D8ClusterConfiguration) Checker() check.Checker {
 			name:   c.CustomResourceName,
 			getter: objectHandler,
 			logger: c.Logger.WithField("component", "verifier"),
-			poller: *poller,
+			poller: poll,
 		},
 		c.ObjectChangeTimeout,
 	)
@@ -285,15 +290,19 @@ func (c *checkMirrorValueChecker) Check() check.Error {
 	return nil
 }
 
-type poller struct {
+type poller interface {
+	Poll() (*status, check.Error)
+}
+
+type poll struct {
 	access    kubernetes.Access
 	namespace string
 	svcname   string
 	client    http.Client
 }
 
-func newPoller(access kubernetes.Access, namespace string, svcname string, client http.Client) *poller {
-	return &poller{
+func newPoller(access kubernetes.Access, namespace string, svcname string, client http.Client) poller {
+	return &poll{
 		access:    access,
 		namespace: namespace,
 		svcname:   svcname,
@@ -309,7 +318,7 @@ type status struct {
 	StartupConvergeNotStarted bool `json:"STARTUP_CONVERGE_NOT_STARTED"`
 }
 
-func (c *poller) Poll() (*status, check.Error) {
+func (c *poll) Poll() (*status, check.Error) {
 	url, err := c.extractServiceURL()
 	if err != nil {
 		return nil, check.ErrUnknown("cannot get svc url %s: %v", c.namespace, err)
@@ -340,7 +349,7 @@ func (c *poller) Poll() (*status, check.Error) {
 	return &status, nil
 }
 
-func (c *poller) extractServiceURL() (string, error) {
+func (c *poll) extractServiceURL() (string, error) {
 	service, err := c.access.Kubernetes().CoreV1().Services(c.namespace).Get(context.TODO(), svcName, metav1.GetOptions{})
 	if err != nil {
 		return "", err

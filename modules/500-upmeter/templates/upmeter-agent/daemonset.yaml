@@ -145,11 +145,11 @@ spec:
             value: "info"
           - name: LOG_TYPE
             value: "json"
-          - name: UPMETER_AGENT_DECKHOUSE_WINDOW_SIZE
+          - name: UPMETER_DECKHOUSE_CONTROLLER_PROBE_WINDOW_SIZE
             value: "5"
-          - name: UPMETER_AGENT_DECKHOUSE_FREEZE_THRESHOLD
+          - name: UPMETER_DECKHOUSE_CONTROLLER_PROBE_FREEZE_THRESHOLD
             value: "5m"
-          - name: UPMETER_AGENT_DECKHOUSE_ALLOWED_TASKS_PER_INTERVAL
+          - name: UPMETER_DECKHOUSE_CONTROLLER_PROBE_ALLOWED_TASKS_PER_INTERVAL
             value: "10"
           - name: UPMETER_EXPORT_TIMEOUT
             value: "15s"

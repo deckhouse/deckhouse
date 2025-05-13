@@ -13,9 +13,12 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ $ciliumVersion }} {{ $.SOURCE_REPO }}/cilium/cilium.git /src/cilium
+  - git clone --depth 1 --branch v{{ $ciliumVersion }} $(cat /run/secrets/SOURCE_REPO)/cilium/cilium.git /src/cilium
   - cd /src/cilium
   - git apply --verbose /patches/*.patch
   - rm -rf Documentation
@@ -50,8 +53,10 @@ import:
   to: /bin/gops
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
   - export GOROOT=/usr/local/go GOPATH=/go
@@ -59,7 +64,7 @@ shell:
   # Because of this, the code is built with errors. We haven't figured out why this is happening yet.
   # As a workaround, we explicitly specified PATH.
   - export PATH=${GOROOT}/bin:${GOPATH}/bin:/root/bin:/sbin:/usr/sbin:/usr/local/sbin:/bin:/usr/bin:/usr/local/bin
-  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /src/cilium
   - go mod vendor && go mod verify
