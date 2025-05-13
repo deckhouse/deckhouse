@@ -6,7 +6,7 @@ lang: ru
 
 В этом разделе рассматривается настройка интеграции Deckhouse Kubernetes Platform (DKP) с облачными ресурсами провайдера [Google Cloud Platform](https://cloud.google.com/) (GCP).
 
-Интеграция использовать ресурсы GCP при заказе узлов для заданной [группы узлов](../../../configuration/platform-scaling/node-management.html#конфигурация-группы-узлов).
+Интеграция даёт возможность использовать ресурсы GCP при заказе узлов для заданной [группы узлов](../../../configuration/platform-scaling/node-management.html#конфигурация-группы-узлов).
 
 Основные возможности:
 
