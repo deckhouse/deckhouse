@@ -83,7 +83,7 @@ from: istio/proxyv2:1.19.7@sha256:680eac0faff1835f994ba9047750d7cfe989e868324a93
 final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-agent-artifact
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine-1.23
 final: false
 import:
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact

@@ -35,7 +35,7 @@ shell:
 ---
 image: terraform-provider-vcd-artifact
 final: false
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine-1.23
 mount:
 {{ include "mount points for golang builds" . }}
 import:

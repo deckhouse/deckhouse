@@ -82,7 +82,7 @@ shell:
   - rm -rf /srv/.cargo/config.toml ~/.gitconfig
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-reloader-artifact
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine-1.23
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact

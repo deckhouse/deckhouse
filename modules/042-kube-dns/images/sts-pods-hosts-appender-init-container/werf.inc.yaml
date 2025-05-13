@@ -10,7 +10,7 @@ git:
     - '**/*'
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine-1.23
 final: false
 mount:
 {{ include "mount points for golang builds" . }}

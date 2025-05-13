@@ -64,7 +64,7 @@ shell:
   - rm -r documentation/examples/remote_storage
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-promu-artifact
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine-1.23
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -83,7 +83,7 @@ shell:
   - go build -ldflags="-s -w" -o promu ./main.go
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine-1.23
 final: false
 mount:
 {{ include "mount points for golang builds" . }}

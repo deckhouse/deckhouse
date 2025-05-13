@@ -37,7 +37,7 @@ import:
   add: /src
   to: /src
   before: install
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine-1.23
 secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}

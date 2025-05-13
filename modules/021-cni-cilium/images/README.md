@@ -8,7 +8,7 @@
   - based on `common/alt-p11-artifact` image
   - includes `(!!! loaded from internet)`:
     - packages from repo: p11
-    - binaries of go (1.23.1) from `BASE_GOLANG_23_ALPINE` image
+    - binaries of go (1.23.1) from `builder/golang-alpine-1.23` image
     - binaries and plugins of protoc (22.3) from github releases
     - binaries of bazel and wrapper shell-scripts from github releases
       - 3.7.0 3.7.1 3.7.2 6.3.2
@@ -16,17 +16,17 @@
 ### Building utility binaries
 
 - `+` `hubble`
-  - based on `BASE_GOLANG_23_ALPINE` image
+  - based on `builder/golang-alpine-1.23` image
   - includes:
     - src of hubble *(loaded from fox)*
     - binaries hubble-cli *(built from src)*
 - `+` `gops`
-  - based on `BASE_GOLANG_23_ALPINE` image
+  - based on `builder/golang-alpine-1.23` image
   - includes:
     - src of gops *(loaded from fox)*
     - binaries of gops *(built from src)*
 - `+` `cni-plugins`
-  - based on `BASE_GOLANG_23_ALPINE` image
+  - based on `builder/golang-alpine-1.23` image
   - includes:
     - src of cni-plugins *(loaded from fox)*
     - binaries of cni-plugins *(built from src)*

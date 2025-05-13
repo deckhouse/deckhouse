@@ -15,8 +15,7 @@ imageSpec:
     entrypoint: ["/metadata-exporter"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
-fromCacheVersion: "2025-02-05.2"
+fromImage: builder/golang-alpine-1.23
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact

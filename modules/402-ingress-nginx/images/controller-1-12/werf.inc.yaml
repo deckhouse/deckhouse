@@ -85,7 +85,7 @@ shell:
   - luarocks-5.1 install lua-iconv-7-3.src.rock
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-controller-artifact
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine-1.23
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
