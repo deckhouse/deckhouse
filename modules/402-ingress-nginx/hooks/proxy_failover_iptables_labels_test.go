@@ -67,7 +67,7 @@ metadata:
   name: frontend-2
   labels:
     node-role.deckhouse.io/frontend: ""
-    ingress-nginx-controller.deckhouse.io/with-failover-node: "true"
+    ingress-nginx-controller.deckhouse.io/need-hostwithfailover-cleanup: "false"
 spec:
   podCIDR: 10.111.2.0/24
   podCIDRs:
@@ -80,9 +80,9 @@ status:
 
 var _ = Describe("Modules :: ingress-nginx :: hooks :: proxy_failover_iptables_labels", func() {
 	f := HookExecutionConfigInit(`{}`, `{}`)
-	const labelKey = "ingress-nginx-controller.deckhouse.io/with-failover-node"
+	const labelKey = "ingress-nginx-controller.deckhouse.io/need-hostwithfailover-cleanup"
 
-	Context("Node with ready proxy-failover pod", func() {
+	Context("Node with proxy-failover pod", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(nodeFrontend1 + readyProxyPod))
 			f.RunGoHook()
@@ -93,7 +93,7 @@ var _ = Describe("Modules :: ingress-nginx :: hooks :: proxy_failover_iptables_l
 			Expect(f.KubernetesGlobalResource("Node", "frontend-1").
 				Field("metadata.labels").Map()).To(HaveKey(labelKey))
 			Expect(f.KubernetesGlobalResource("Node", "frontend-1").
-				Field("metadata.labels").Map()[labelKey].Bool()).To(BeTrue())
+				Field("metadata.labels").Map()[labelKey].Bool()).To(BeFalse())
 		})
 	})
 
@@ -108,7 +108,7 @@ var _ = Describe("Modules :: ingress-nginx :: hooks :: proxy_failover_iptables_l
 			Expect(f.KubernetesGlobalResource("Node", "frontend-2").
 				Field("metadata.labels").Map()).To(HaveKey(labelKey))
 			Expect(f.KubernetesGlobalResource("Node", "frontend-2").
-				Field("metadata.labels").Map()[labelKey].Bool()).To(BeFalse())
+				Field("metadata.labels").Map()[labelKey].Bool()).To(BeTrue())
 		})
 	})
 })
