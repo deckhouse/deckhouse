@@ -18,9 +18,7 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os/signal"
-	"runtime"
 	"sync"
 	"syscall"
 	"time"
