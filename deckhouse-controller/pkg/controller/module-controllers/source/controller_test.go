@@ -256,18 +256,12 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("source with modules", func() {
-		dependency.TestDC.CRClient.ListTagsMock.Return([]string{"enabledmodule", "disabledmodule", "withpolicymodule", "notthissourcemodule"}, nil)
-		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
-			ManifestStub: manifestStub,
-			LayersStub: func() ([]crv1.Layer, error) {
-				return []crv1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "v1.2.3"}`}}}, nil
-			},
-			DigestStub: func() (crv1.Hash, error) {
-				return crv1.Hash{Algorithm: "sha256"}, nil
-			},
-		}, nil)
-
-		suite.setupTestController(string(suite.parseTestdata("withmodules.yaml")))
+		dc := newMockedContainerWithData(suite.T(),
+			"v1.2.3",
+			[]string{"enabledmodule", "disabledmodule", "withpolicymodule", "notthissourcemodule"},
+			// versions differ only in patch and we don't have requests to registry
+			[]string{})
+		suite.setupTestController(string(suite.parseTestdata("withmodules.yaml")), withDependencyContainer(dc))
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
 		require.NoError(suite.T(), err)
 	})
@@ -299,7 +293,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		dc := newMockedContainerWithData(suite.T(),
 			"v1.2.3",
 			[]string{"enabledmodule", "disabledmodule", "withpolicymodule", "notthissourcemodule"},
-			[]string{"v1.2.2", "v1.2.3", "v1.2.4", "v1.2.5"})
+			// versions differ only in patch and we don't have requests to registry
+			[]string{})
 		suite.setupTestController(string(suite.parseTestdata("withmoduleversion.yaml")), withDependencyContainer(dc))
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
 		require.NoError(suite.T(), err)
