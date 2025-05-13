@@ -21,7 +21,7 @@ spec:
       terminationGracePeriodSeconds: 0
       dnsPolicy: ClusterFirstWithHostNet
       nodeSelector:
-        ingress-nginx-controller.deckhouse.io/with-failover-node: "false"
+        ingress-nginx-controller.deckhouse.io/need-hostwithfailover-cleanup: "true"
       {{- include "helm_lib_priority_class" (tuple $context "cluster-medium") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple $context "any-node") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" $context | nindent 6 }}

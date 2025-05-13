@@ -26,9 +26,9 @@ import (
 	kubernetes "k8s.io/client-go/kubernetes"
 )
 
-const labelKey = "ingress-nginx-controller.deckhouse.io/with-failover-node"
+const labelKey = "ingress-nginx-controller.deckhouse.io/need-hostwithfailover-cleanup"
 
-// HasFailoverLabelOnNode checks if the current node has a failover label with value false.
+// HasFailoverLabelOnNode checks if the current node has a failover label with value true.
 // This is used to decide whether iptables rules should be preserved on termination.
 func HasFailoverLabelOnNode(ctx context.Context, client kubernetes.Interface, nodeName string) (bool, error) {
 	node, err := client.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
@@ -37,7 +37,7 @@ func HasFailoverLabelOnNode(ctx context.Context, client kubernetes.Interface, no
 	}
 
 	val, ok := node.Labels[labelKey]
-	return ok && val == "false", nil
+	return ok && val == "true", nil
 }
 
 func RemoveFailoverLabel(ctx context.Context, client kubernetes.Interface, nodeName string) error {

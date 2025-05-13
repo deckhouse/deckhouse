@@ -21,6 +21,7 @@ package hooks
 import (
 	"fmt"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -29,19 +30,17 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-const labelKey = "ingress-nginx-controller.deckhouse.io/with-failover-node"
+const labelKey = "ingress-nginx-controller.deckhouse.io/need-hostwithfailover-cleanup"
 
 type Node struct {
-	Name       string
-	Labels     map[string]string
-	Conditions []corev1.NodeCondition
+	Name   string
+	Labels map[string]string
 }
 
 type Pod struct {
 	Name     string
 	NodeName string
 	Labels   map[string]string
-	Ready    bool
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -80,19 +79,10 @@ func applyProxyFailoverPodFilter(obj *unstructured.Unstructured) (go_hook.Filter
 		return nil, err
 	}
 
-	isReady := false
-	for _, cond := range pod.Status.Conditions {
-		if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
-			isReady = true
-			break
-		}
-	}
-
 	return Pod{
 		Name:     pod.Name,
 		NodeName: pod.Spec.NodeName,
 		Labels:   pod.Labels,
-		Ready:    isReady,
 	}, nil
 }
 
@@ -103,20 +93,19 @@ func applyNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 		return nil, err
 	}
 	return Node{
-		Name:       node.Name,
-		Labels:     node.Labels,
-		Conditions: node.Status.Conditions,
+		Name:   node.Name,
+		Labels: node.Labels,
 	}, nil
 }
 
 func setProxyFailoverLabel(input *go_hook.HookInput) error {
 	// Collect nodes that have a Ready proxy-failover Pod running
-	nodesWithFailover := make(map[string]struct{}, len(input.Snapshots["proxyFailoverPods"])) // All active nodes
+	nodesWithRunningFailover := make(map[string]struct{}, len(input.Snapshots["proxyFailoverPods"])) // All active nodes
 
 	for _, snap := range input.Snapshots["proxyFailoverPods"] {
 		pod := snap.(Pod)
-		if pod.Ready && pod.NodeName != "" {
-			nodesWithFailover[pod.NodeName] = struct{}{}
+		if pod.NodeName != "" {
+			nodesWithRunningFailover[pod.NodeName] = struct{}{}
 		}
 	}
 
@@ -124,15 +113,15 @@ func setProxyFailoverLabel(input *go_hook.HookInput) error {
 	for _, snap := range input.Snapshots["nodes"] {
 		node := snap.(Node)
 
-		_, podExists := nodesWithFailover[node.Name]
+		_, podExists := nodesWithRunningFailover[node.Name]
 		_, labelExists := node.Labels[labelKey]
 
 		if podExists {
-			fmt.Printf("Adding label %q to node %q", labelKey, node.Name)
+			log.Info(fmt.Sprintf("Adding label %q to node %q", labelKey, node.Name))
 			input.PatchCollector.PatchWithMerge(map[string]interface{}{
 				"metadata": map[string]interface{}{
 					"labels": map[string]interface{}{
-						labelKey: "true",
+						labelKey: "false",
 					},
 				},
 			}, "v1", "Node", "", node.Name)
@@ -140,11 +129,11 @@ func setProxyFailoverLabel(input *go_hook.HookInput) error {
 
 		// Change label value to false if node have not a proxy-failover Pod
 		if labelExists && !podExists {
-			fmt.Printf("Changed label %q to node %q on false value", labelKey, node.Name)
+			log.Info(fmt.Sprintf("Changed label %q to node %q on false value", labelKey, node.Name))
 			input.PatchCollector.PatchWithMerge(map[string]interface{}{
 				"metadata": map[string]interface{}{
 					"labels": map[string]interface{}{
-						labelKey: "false",
+						labelKey: "true",
 					},
 				},
 			}, "v1", "Node", "", node.Name)
