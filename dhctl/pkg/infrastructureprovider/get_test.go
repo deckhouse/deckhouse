@@ -28,7 +28,7 @@ func TestGetCloudsUseOpentofu(t *testing.T) {
 
 	require.Len(t, m, 2)
 	require.Contains(t, m, "yandex")
-	require.Contains(t, m, "decort")
+	require.Contains(t, m, "dynamix")
 }
 
 func TestNeedToUseOpentofu(t *testing.T) {
