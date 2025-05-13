@@ -167,27 +167,27 @@ JSON-файл с конфигурацией необходимых прав:
 
 1. Создайте политики:
 
-- Перейдите в раздел «Identity and Access Management (IAM)» → «Policies».
-- Нажмите «Create policy».
-- Перейдите на вкладку «JSON» и вставьте подготовленную JSON-спецификацию.
-- Нажмите «Next: Tags», затем «Next: Review».
-- Укажите имя политики, например D8CloudProviderAWS.
-- Нажмите «Create policy».
+   - Перейдите в раздел «Identity and Access Management (IAM)» → «Policies».
+   - Нажмите «Create policy».
+   - Перейдите на вкладку «JSON» и вставьте подготовленную JSON-спецификацию.
+   - Нажмите «Next: Tags», затем «Next: Review».
+   - Укажите имя политики, например D8CloudProviderAWS.
+   - Нажмите «Create policy».
 
 1. Создайте пользователя:
 
-- Перейдите в «IAM» → «Users».
-- Нажмите «Add users».
-- В поле «User name» укажите, например, deckhouse.
-- В разделе «Select AWS credential type» выберите опцию «Access key» → «Programmatic access».
-- Нажмите «Next: Permissions».
+   - Перейдите в «IAM» → «Users».
+   - Нажмите «Add users».
+   - В поле «User name» укажите, например, deckhouse.
+   - В разделе «Select AWS credential type» выберите опцию «Access key» → «Programmatic access».
+   - Нажмите «Next: Permissions».
 
 1. Привяжите политики к пользователю:
 
-- Выберите «Attach existing policies directly».
-- Введите имя ранее созданной политики в поле фильтрации и установите флажок рядом с нужной политикой.
-- Нажмите «Next: Tags», затем «Next: Review».
-- Нажмите «Create user».
+   - Выберите «Attach existing policies directly».
+   - Введите имя ранее созданной политики в поле фильтрации и установите флажок рядом с нужной политикой.
+   - Нажмите «Next: Tags», затем «Next: Review».
+   - Нажмите «Create user».
 
   > Сохраните полученные `Access key ID` и `Secret access key`. Эти данные потребуются для настройки Deckhouse.
 
@@ -195,7 +195,7 @@ JSON-файл с конфигурацией необходимых прав:
 
 ![Разрешить использование региона](../../../../images/cloud-provider-aws/region_enable.png)
 
-В этом случае нажмите Continue, чтобы разрешить использование региона.
+В этом случае нажмите «Continue», чтобы разрешить использование региона.
 
 ### Настройка IAM через AWS CLI
 
