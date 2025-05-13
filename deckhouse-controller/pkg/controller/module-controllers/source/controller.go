@@ -560,7 +560,7 @@ func keepLastPatchVersion(versions []*semver.Version) []*semver.Version {
 		versionsMap[index] = v
 	}
 
-	var result []*semver.Version
+	result := make([]*semver.Version, 0)
 	for _, v := range versionsMap {
 		result = append(result, v)
 	}
