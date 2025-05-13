@@ -534,10 +534,8 @@ func (r *reconciler) getIntermediateModuleVersions(
 		return nil, fmt.Errorf("list tags: %w", err)
 	}
 
-	var (
-		versions []*semver.Version
-		v        *semver.Version
-	)
+	v := &semver.Version{}
+	versions := make([]*semver.Version, 0, len(tags))
 	for _, tag := range tags {
 		v, err = semver.NewVersion(tag)
 		if err == nil {
