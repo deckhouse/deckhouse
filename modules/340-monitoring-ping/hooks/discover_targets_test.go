@@ -106,7 +106,7 @@ metadata:
   name: d8-monitoring
 `
 
-var _ = Describe("Modules :: monitoring-ping :: hooks :: node_list", func() {
+var _ = Describe("Modules :: monitoring-ping :: hooks :: discover_targets", func() {
 	f := HookExecutionConfigInit(
 		`{"monitoringPing":{"internal":{}},"global":{"enabledModules":[]}}`,
 		`{}`,

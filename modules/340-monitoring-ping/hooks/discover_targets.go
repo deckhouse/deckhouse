@@ -56,7 +56,7 @@ func getAddress(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
-	Queue: "/modules/monitoring-ping/node_list",
+	Queue:        "/modules/monitoring-ping/discover_targets",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "addresses",
