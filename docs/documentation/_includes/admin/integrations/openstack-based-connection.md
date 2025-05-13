@@ -1,4 +1,4 @@
-Чтобы Deckhouse Kubernetes Platform могла управлять ресурсами в {{ site.data.admin.cloud-types.types[page.cloud_type].name }}, необходимо необходимо подключиться к {{ site.data.admin.cloud-types.types[page.cloud_type].name }} API.
+Для управления ресурсами в {{ site.data.admin.cloud-types.types[page.cloud_type].name }} с помощью Deckhouse Kubernetes Platform необходимо необходимо подключиться к {{ site.data.admin.cloud-types.types[page.cloud_type].name }} API.
 
 Перечень API-сервисов {{ site.data.admin.cloud-types.types[page.cloud_type].name }}, доступ до которых необходим для развертывания, доступен в разделе [настройки](./configuration.html#список-необходимых-сервисов-openstack).  
 Доступы пользователя, необходимые для подключения к {{ site.data.admin.cloud-types.types[page.cloud_type].name }} API, находятся в openrc-файле (OpenStack RC file).

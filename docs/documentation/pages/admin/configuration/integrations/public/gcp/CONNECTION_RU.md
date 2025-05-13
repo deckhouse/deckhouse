@@ -4,7 +4,7 @@ permalink: ru/admin/integrations/public/gcp/сonnection-and-authorization.html
 lang: ru
 ---
 
-Чтобы Deckhouse Kubernetes Platform могла управлять ресурсами в Google Cloud, необходимо создать в нём service account.
+Для управления ресурсами в Google Cloud с помощью Deckhouse Kubernetes Platform необходимо создать service account.
 
 Далее представлена краткая последовательность действий по созданию и использованию service account.
 
