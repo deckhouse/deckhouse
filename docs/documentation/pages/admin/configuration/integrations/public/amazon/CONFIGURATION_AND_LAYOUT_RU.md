@@ -214,7 +214,7 @@ vpcNetworkCIDR: 10.241.0.0/16
 
 ### Создание кластера в новом VPC с доступом через имеющийся bastion-хост
 
-1. Выполние bootstrap базовой инфраструктуры кластера:
+1. Выполните bootstrap базовой инфраструктуры кластера:
 
    ```shell
    dhctl bootstrap-phase base-infra --config config
