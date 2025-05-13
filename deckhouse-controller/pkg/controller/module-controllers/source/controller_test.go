@@ -536,7 +536,7 @@ func Test_keepLastPatchVersion(t *testing.T) {
 			args: args{
 				versions: []*semver.Version{},
 			},
-			want: []*semver.Version(nil),
+			want: []*semver.Version{},
 		},
 		{
 			name: "one",
