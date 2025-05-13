@@ -1,5 +1,5 @@
 /*
-Copyright 2025 Flant JSC
+Copyright 2021 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -55,6 +55,7 @@ func getAddress(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Queue: "/modules/monitoring-ping/node_list",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
