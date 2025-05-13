@@ -46,6 +46,20 @@ settings:
       iopsPerGB: "50"
 ```
 
+### Увеличение объема тома (volume)
+
+Чтобы изменить размер тома (например, при нехватке дискового пространства), выполните следующие шаги:
+
+1. Измените параметр `spec.resources.requests.storage` в соответствующем объекте `PersistentVolumeClaim`.
+1. Операция выполняется автоматически и обычно занимает не более одной минуты.
+1. За ходом процесса можно наблюдать с помощью команды:
+
+   ```shell
+   kubectl describe pvc <имя-claim>
+   ```
+
+1. После изменения объема подождите не менее 6 часов и убедитесь, что статус volume — `in-use` или `available`. Только после этого возможны повторные изменения. Подробности см. в [официальной документации AWS](https://docs.aws.amazon.com/ebs/latest/userguide/modify-volume-requirements.html).
+
 ## Балансировка нагрузки
 
 Deckhouse поддерживает работу c LoadBalancer Service через AWS Load Balancer Controller.
@@ -69,6 +83,26 @@ metadata:
 > При изменении значения этой аннотации `cloud-controller-manager` попытается пересоздать Target Group. Если она уже используется в связке с NLB или ALB, удалить её не удастся, и контроллер будет бесконечно повторять попытку. Чтобы избежать этого, необходимо вручную отсоединить балансировщик от группы.
 >
 > Если Ingress-узлы есть не во всех зонах, укажите явно подсети в `aws-load-balancer-subnets`.
+
+### Настройка балансировщика при отсутствии Ingress-узлов в некоторых зонах
+
+Если Ingress-узлы присутствуют не во всех зонах AWS, необходимо явно указать, какие подсети использовать для балансировщика. Это делается с помощью аннотации `service.beta.kubernetes.io/aws-load-balancer-subnets`:
+
+```yaml
+metadata:
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-subnets: "subnet-foo,subnet-bar"
+```
+
+Это особенно важно при ручной настройке Ingress-контроллеров или нестандартной схеме размещения узлов.
+
+Чтобы получить список текущих подсетей, используемых в установке Deckhouse, выполните команду:
+
+```console
+kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse \
+  -- deckhouse-controller module values cloud-provider-aws -o json | \
+  jq -r '.cloudProviderAws.internal.zoneToSubnetIdMap'
+```
 
 ## Подключение CloudStatic-узлов
 
