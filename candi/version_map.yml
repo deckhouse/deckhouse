@@ -23,6 +23,7 @@ bashible: &bashible
     "7.9":
     "12.4":
     "12.5":
+    "12.6":
   astra:
     "1.7":
     "1.8":
@@ -61,7 +62,7 @@ k8s:
     status: available
     patch: 14
     bashible: *bashible
-    clusterAutoscalerPatch: 1
+    clusterAutoscalerPatch: "2"
     crictlPatch: 0
     ccm:
       openstack: v1.29.1
@@ -86,7 +87,7 @@ k8s:
     status: available
     patch: 10
     bashible: *bashible
-    clusterAutoscalerPatch: '0'
+    clusterAutoscalerPatch: '2'
     crictlPatch: 1
     ccm:
       openstack: v1.30.2

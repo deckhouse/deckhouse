@@ -10,9 +10,12 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone -b v{{ $version }} --depth 1 {{ $.SOURCE_REPO }}/amazonlinux/amazon-ec2-utils.git /src/amazon-ec2-utils
+  - git clone -b v{{ $version }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/amazonlinux/amazon-ec2-utils.git /src/amazon-ec2-utils
   - rm -rf /src/amazon-ec2-utils/.git
   - cp /src/amazon-ec2-utils/ebsnvme-id /ebsnvme-id
 ---

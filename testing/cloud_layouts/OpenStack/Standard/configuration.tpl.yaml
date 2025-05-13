@@ -49,6 +49,19 @@ masterNodeGroup:
     imageName: "redos-STD-MINIMAL-8.0.0"
   volumeTypeMap:
     ru-3a: "fast.ru-3a"
+nodeGroups:
+- name: cloud-permanent
+  nodeTemplate:
+    labels:
+      node-role.kubernetes.io/worker: ''
+  replicas: 1
+  instanceClass:
+    mainNetwork: 'candi-${PREFIX}'
+    rootDiskSize: 50
+    flavorName: e2e
+    imageName: "redos-STD-MINIMAL-8.0.0"
+  volumeTypeMap:
+    ru-3a: "fast.ru-3a"
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig

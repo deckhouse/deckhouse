@@ -25,9 +25,12 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v0.44.0 {{ .SOURCE_REPO }}/vectordotdev/vector.git /src/vector
+  - git clone --depth 1 --branch v0.44.0 $(cat /run/secrets/SOURCE_REPO)/vectordotdev/vector.git /src/vector
   - rm -rf /src/vector/website /src/vector/scripts/integration
   - rm -rf /src/vector/.git
 ---
@@ -39,20 +42,33 @@ import:
   add: /src/vector
   to: /src
   before: install
+mount:
+- from: tmp_dir
+  to: /root/.cargo
+- from: tmp_dir
+  to: /src/target
+secrets:
+- id: CARGO_PROXY
+  value: {{ .CargoProxy }}
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   beforeInstall:
   {{- include "alt packages proxy" . | nindent 2 }}
   - apt-get install -y build-essential git openssl-devel wget perl-IPC-Cmd protobuf-compiler libsasl2-devel unzip zlib-devel rust rust-cargo
+  - find /var/lib/apt/ /var/cache/apt/ -type f -delete
   install:
   - export CARGO_NET_GIT_FETCH_WITH_CLI=true
   - cd /src
-{{- if $.CargoProxy }}
-  - echo '[source.crates-io]' >> .cargo/config.toml
-  - echo 'replace-with = "crates-io-mirror"' >> .cargo/config.toml
-  - echo '[registries.crates-io-mirror]' >> .cargo/config.toml
-  - echo 'index = "sparse+http://{{ $.CargoProxy }}/index/"' >> .cargo/config.toml
-{{- end }}
-  - git config --global url."{{ $.SOURCE_REPO }}".insteadOf https://github.com
+  - |
+    export CARGO_PROXY=$(cat /run/secrets/CARGO_PROXY)
+    if ! [[ "${CARGO_PROXY}" = "false" ]]; then
+      echo '[source.crates-io]' >> .cargo/config.toml
+      echo 'replace-with = "crates-io-mirror"' >> .cargo/config.toml
+      echo '[registries.crates-io-mirror]' >> .cargo/config.toml
+      echo 'index = "sparse+http://'${CARGO_PROXY}'/index/"' >> .cargo/config.toml
+    fi
+  - git config --global url."$(cat /run/secrets/SOURCE_REPO)".insteadOf https://github.com
   - |
     cargo build \
     --release \
@@ -63,6 +79,7 @@ shell:
   - mkdir -p /relocate/etc /relocate/usr/bin
   - cp target/release/vector /relocate/usr/bin/vector
   - cp -pr /etc/pki /relocate/etc
+  - rm -rf /srv/.cargo/config.toml ~/.gitconfig
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-reloader-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
@@ -73,12 +90,14 @@ import:
   to: /src
   before: install
 mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
   - cd /src
-  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - go build -ldflags="-s -w" -o /reloader main.go
   - chown 64535:64535 /reloader
   - chmod 755 /reloader

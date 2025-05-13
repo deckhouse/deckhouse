@@ -2,6 +2,11 @@
 image: golangci-lint-artifact
 fromImage: builder/golang-alpine
 final: false
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   beforeInstall:
   - apk add --no-cache git openssh-client

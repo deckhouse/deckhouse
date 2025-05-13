@@ -11,13 +11,16 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone -b libmnl-1.0.5 --depth 1 {{ $.SOURCE_REPO }}/netfilter/libmnl /src/libmnl
+  - git clone -b libmnl-1.0.5 --depth 1 $(cat /run/secrets/SOURCE_REPO)/netfilter/libmnl /src/libmnl
   - rm -rf /src/libmnl/.git
-  - git clone -b libnftnl-1.2.6 --depth 1  {{ $.SOURCE_REPO }}/netfilter/libnftnl /src/libnftnl
+  - git clone -b libnftnl-1.2.6 --depth 1  $(cat /run/secrets/SOURCE_REPO)/netfilter/libnftnl /src/libnftnl
   - rm -rf /src/libnftnl/.git
-  - git clone -b v{{ $version }} --depth 1  {{ $.SOURCE_REPO }}/netfilter/iptables /src/iptables
+  - git clone -b v{{ $version }} --depth 1  $(cat /run/secrets/SOURCE_REPO)/netfilter/iptables /src/iptables
   - rm -rf /src/iptables/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
@@ -50,8 +53,7 @@ import:
   to: /src
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}

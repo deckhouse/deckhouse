@@ -178,6 +178,7 @@ func CreateDeckhouseManifests(
 	ctx context.Context,
 	kubeCl *client.KubernetesClient,
 	cfg *config.DeckhouseInstaller,
+	beforeDeckhouseTask func() error,
 ) (*ManifestsResult, error) {
 	tasks := []actions.ManifestTask{
 		{
@@ -495,6 +496,11 @@ func CreateDeckhouseManifests(
 				return err
 			},
 		})
+	}
+
+	err := beforeDeckhouseTask()
+	if err != nil {
+		return nil, err
 	}
 
 	lockCmTask, err := LockDeckhouseQueueBeforeCreatingModuleConfigs(ctx, kubeCl)

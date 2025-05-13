@@ -160,6 +160,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/ee/modules/110-istio/images/metrics-exporter/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/ee/modules/500-operator-trivy/images/report-updater/src"
   labels:
   - "type/dependencies"
@@ -709,6 +718,15 @@ updates:
   open-pull-requests-limit: 0
 
 # pip
+- package-ecosystem: "pip"
+  directory: "/.github/scripts/python/e2e-commander-clean"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
 - package-ecosystem: "pip"
   directory: "/ee/modules/450-network-gateway/images/dnsmasq"
   labels:
