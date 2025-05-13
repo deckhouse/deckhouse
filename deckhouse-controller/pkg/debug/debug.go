@@ -198,6 +198,36 @@ func createTarball() *bytes.Buffer {
 			Cmd:  "kubectl",
 			Args: []string{"get", "moduleconfig", "-o", "json"},
 		},
+		{
+			File: "d8-istio-resources.json",
+			Cmd:  "kubectl",
+			Args: []string{"-n", "d8-istio", "get", "all", "-o", "json"},
+		},
+		{
+			File: "d8-istio-custom-resources.json",
+			Cmd:  "bash",
+			Args: []string{"-c", `for crd in $(kubectl get crds | grep -E 'istio.io|gateway.networking.k8s.io' | awk '{print $1}'); do echo "Listing resources for CRD: $crd" && kubectl get $crd -A -o json; done`},
+		},
+		{
+			File: "d8-istio-envoy-config.json",
+			Cmd:  "bash",
+			Args: []string{"-c", `kubectl port-forward daemonset/ingressgateway -n d8-istio 15000:15000 & sleep 5; (curl http://localhost:15000/config_dump?include_eds=true | jq 'del(.configs[6].dynamic_active_secrets)' && kill $!) || { kill $!; exit 1; }`},
+		},
+		{
+			File: "d8-istio-system-logs.txt",
+			Cmd:  "bash",
+			Args: []string{"-c", `kubectl -n d8-istio logs deployments -l app=istiod`},
+		},
+		{
+			File: "d8-istio-ingress-logs.txt",
+			Cmd:  "bash",
+			Args: []string{"-c", `kubectl -n d8-istio logs daemonset/ingressgateway || true`},
+		},
+		{
+			File: "d8-istio-users-logs.txt",
+			Cmd:  "bash",
+			Args: []string{"-c", `kubectl get pods --all-namespaces -o jsonpath='{range .items[?(@.metadata.annotations.istio\.io/rev)]}{.metadata.namespace}{" "}{.metadata.name}{" "}{.spec.containers[*].name}{"\n"}{end}' | awk '/istio-proxy/ {print $0}' | shuf -n 1 | while read namespace pod_name containers; do echo "Collecting logs from istio-proxy in Pod $pod_name (Namespace: $namespace)"; kubectl logs "$pod_name" -n "$namespace" -c istio-proxy; done`},
+		},
 	}
 
 	for _, cmd := range debugCommands {
