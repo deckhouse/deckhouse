@@ -305,6 +305,16 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
+	suite.Run("source with modules and module version", func() {
+		dc := newMockedContainerWithData(suite.T(),
+			"v1.4.2",
+			[]string{"enabledmodule"},
+			[]string{"v1.2.2", "v1.2.3", "v1.2.4", "v1.3.1", "v1.3.2", "v1.4.1", "v1.4.2", "v1.4.3"})
+		suite.setupTestController(string(suite.parseTestdata("modulewithversions.yaml")), withDependencyContainer(dc))
+		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
+		require.NoError(suite.T(), err)
+	})
+
 }
 
 func (suite *ControllerTestSuite) parseTestdata(filename string) []byte {
