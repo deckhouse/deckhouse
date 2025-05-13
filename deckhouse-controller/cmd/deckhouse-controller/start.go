@@ -441,7 +441,7 @@ func registerTelemetry(ctx context.Context) func(ctx context.Context) error {
 	opts := make([]otlptracegrpc.Option, 0, 1)
 
 	if endpoint == "" {
-		return func(ctx context.Context) error {
+		return func(_ context.Context) error {
 			return nil
 		}
 	}
