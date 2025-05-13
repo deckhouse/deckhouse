@@ -67,5 +67,5 @@ subjects:
     namespace: d8-openvpn
 roleRef:
   kind: Role
-  name: controller-clean-service
+  name: openvpn:controller-clean-service
   apiGroup: rbac.authorization.k8s.io
