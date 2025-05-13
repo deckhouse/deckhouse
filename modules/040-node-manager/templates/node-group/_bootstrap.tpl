@@ -49,14 +49,17 @@ ssl.match_hostname = lambda cert, hostname: True
 request = Request(sys.argv[1], headers={'Authorization': 'Bearer ' + sys.argv[2]})
 try:
     response = urlopen(request, cafile='/var/lib/bashible/ca.crt', timeout=10)
+    data = json.loads(response.read())
+    sys.stdout.write(data["bootstrap"])
 except HTTPError as e:
     if e.getcode() == 401:
         sys.stderr.write("Bootstrap-token compiled in this bootstrap.sh script is expired. Looks like more than 4 hours passed from the time it's been issued.\n")
         sys.exit(2)
-    sys.stderr.write("Access to {} return HTTP Error {}: {}".format(sys.argv[2], e.getcode(), e.read()[:255]))
+    sys.stderr.write("Access to {} returned HTTP Error {}: {}\n".format(sys.argv[1], e.getcode(), e.read()[:255]))
     sys.exit(1)
-data = json.loads(response.read())
-sys.stdout.write(data["bootstrap"])
+except Exception as e:
+    sys.stderr.write("Error fetching bootstrap from {}: {}\n".format(sys.argv[1], e))
+    sys.exit(1)
 EOF
 }
 
@@ -64,21 +67,29 @@ function get_phase2() {
   bootstrap_ng_name="{{ $ng.name }}"
   token="$(<${BOOTSTRAP_DIR}/bootstrap-token)"
   check_python
+
+  local 401_err_count=0
+  local max_401_err_count=6
+
   while true; do
     for server in {{ $context.Values.nodeManager.internal.clusterMasterAddresses | join " " }}; do
       url="https://${server}/apis/bashible.deckhouse.io/v1alpha1/bootstrap/${bootstrap_ng_name}"
       if eval "${python_binary}" - "${url}" "${token}" <<< "$(load_phase2_script)"; then
         return 0
-      else
-        if [ $? -eq 2 ]; then
+      fi
+      if [ $? -eq 2 ]; then
+        ((401_err_count++))
+        if [ $401_err_count -ge $max_401_err_count ]; then
           return 1
         fi
+      else
+        >&2 echo "failed to get bootstrap ${bootstrap_ng_name} from $url (exit code $rc)"
       fi
-      >&2 echo "failed to get bootstrap ${bootstrap_ng_name} from $url"
     done
     sleep 10
   done
 }
+
 
   {{- if $bb_package_install := $context.Files.Get "candi/bashible/bb_package_install.sh.tpl" -}}
     {{- tpl ( $bb_package_install ) $tpl_context | nindent 0 }}
