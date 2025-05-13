@@ -40,7 +40,7 @@
 # - Remove old directories (based on information from deckhouse_hosts_state.json)
 # - Save the new state to deckhouse_hosts_state.json
 
-discovered_node_ip="$(</var/lib/bashible/discovered-node-ip)"
+discovered_node_ip="$(bb-d8-node-ip)"
 
 {{- range $host := .registry.hosts }}
   {{- if not (has $host.host $exist_registry_host_list) }}

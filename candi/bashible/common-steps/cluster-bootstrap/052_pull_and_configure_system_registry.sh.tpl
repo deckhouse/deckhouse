@@ -52,7 +52,7 @@
 {{ $imgPause := printf "%s@%s" .registry.imagesBase (index $.images.common "pause") }}
 
 # Prepare vars
-discovered_node_ip="$(</var/lib/bashible/discovered-node-ip)"
+discovered_node_ip="$(bb-d8-node-ip)"
 registry_pki_path="/etc/kubernetes/system-registry/pki"
 
 

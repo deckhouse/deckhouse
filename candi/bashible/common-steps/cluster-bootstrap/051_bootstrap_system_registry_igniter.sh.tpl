@@ -48,7 +48,7 @@
 
 
 # Prepare vars
-discovered_node_ip="$(</var/lib/bashible/discovered-node-ip)"
+discovered_node_ip="$(bb-d8-node-ip)"
 
 # Install igniter packages
 bb-package-install "dockerAuth:{{ .images.systemRegistry.dockerAuth }}" "dockerDistribution:{{ .images.systemRegistry.dockerDistribution }}" "cfssl:{{ .images.registrypackages.cfssl165 }}"
