@@ -2,7 +2,7 @@
 title: "The ingress-nginx module: FAQ"
 ---
 
-## How do I limit access to the application in the cluster to ingress controllers only?
+## How do I limit access to the application in the cluster to Ingress controllers only?
 
 If you need to limit access to your application inside the cluster exclusively from ingress Pods, you should add a kube-rbac-proxy container to the application Pod as shown in the example below:
 
