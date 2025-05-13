@@ -96,7 +96,7 @@ decort:
   artifact: terraform-provider-decort
   artifactBinary: terraform-provider-decort
   destinationBinary: terraform-provider-decort
-  useOpentofu: false
+  useOpentofu: true
 
 huaweicloud:
   namespace: terraform-provider-huaweicloud
