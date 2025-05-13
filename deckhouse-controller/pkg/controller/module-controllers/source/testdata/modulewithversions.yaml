@@ -1,0 +1,40 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    modules.deckhouse.io/registry-spec-checksum: 90f0955ee984feab5c50611987008def
+  name: test-source-1
+spec:
+  registry:
+    dockerCfg: YXNiCg==
+    repo: dev-registry.deckhouse.io/deckhouse/modules
+    scheme: HTTPS
+status:
+  message: ""
+  modules:
+    - name: enabledmodule
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: ModuleUpdatePolicy
+metadata:
+  name: test-alpha
+spec:
+  releaseChannel: Alpha
+  update:
+    mode: Manual
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: enabledmodule
+properties:
+  version: 1.2.2
+  source: test-source-1
+  availableSources:
+    - test-source-1
+status:
+  phase: Available
+  conditions:
+    - type: EnabledByModuleConfig
+      status: "True"
