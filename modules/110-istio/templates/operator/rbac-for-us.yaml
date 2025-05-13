@@ -306,6 +306,7 @@ rules:
       - roles
       - rolebindings
     verbs:
+      - create
       - get
       - list
       - watch
