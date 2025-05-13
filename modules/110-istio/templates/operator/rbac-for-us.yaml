@@ -43,19 +43,132 @@ rules:
       - sailoperator.io
     resources:
       - istiorevisions
-      - istiorevisions/status
     verbs:
       - create
+      - delete
+      - get
       - list
-      - watch
-      - update
       - patch
+      - update
+      - watch
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istiorevisions/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istiorevisions/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istiorevisiontags
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istiorevisiontags/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istiorevisiontags/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istiocnis
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istiocnis/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istiocnis/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istios
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istios/finalizers
+    verbs:
+     - update
   - apiGroups:
       - sailoperator.io
     resources:
       - istios/status
     verbs:
+      - get
       - patch
+      - update
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - remoteistios
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - remoteistios/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - remoteistios/status
+    verbs:
+      - get
+      - patch
+      - update
   - apiGroups:
       - networking.istio.io
     resources:
