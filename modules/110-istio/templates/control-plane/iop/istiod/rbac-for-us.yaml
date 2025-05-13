@@ -7,9 +7,6 @@ kind: ServiceAccount
 metadata:
   name: istiod-{{ $revision }}
   namespace: d8-{{ $.Chart.Name }}
-  annotations:
-    meta.helm.sh/release-name: v1x25-istiod ## TODO
-    meta.helm.sh/release-namespace: d8-istio
   {{- include "helm_lib_module_labels" (list $ (dict "app" "istiod" "istio.io/rev" $revision)) | nindent 2 }}
 imagePullSecrets:
   - name: d8-istio-sidecar-registry
