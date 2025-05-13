@@ -156,7 +156,7 @@ subjects:
   name: ingress-nginx:auth
 ```
 
-Для ingress-ресурса добавьте параметры:
+Для Ingress-ресурса добавьте параметры:
 
 ```yaml
 nginx.ingress.kubernetes.io/backend-protocol: HTTPS
