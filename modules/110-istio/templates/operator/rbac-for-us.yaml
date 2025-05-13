@@ -43,6 +43,7 @@ rules:
       - sailoperator.io
     resources:
       - istiorevisions
+      - istiorevisions/status
     verbs:
       - create
       - list
