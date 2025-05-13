@@ -309,7 +309,6 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
 		require.NoError(suite.T(), err)
 	})
-
 }
 
 func (suite *ControllerTestSuite) parseTestdata(filename string) []byte {
@@ -486,7 +485,7 @@ func newMockedContainerWithData(t minimock.Tester, version string, modules, tags
 	if len(tags) > 0 {
 		moduleVersionsMock.ListTagsMock.Return(tags, nil)
 	}
-	moduleVersionsMock.ImageMock.Set(func(_ context.Context, tag string) (crv1.Image, error) {
+	moduleVersionsMock.ImageMock.Set(func(_ context.Context, _ string) (crv1.Image, error) {
 		return &crfake.FakeImage{
 			ManifestStub: manifestStub,
 			LayersStub: func() ([]crv1.Layer, error) {
