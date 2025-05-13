@@ -309,7 +309,7 @@ resource "aws_iam_user_policy_attachment" "policy-attachment" {
 }
 ```
 
-## Использование своей IAM-роли для узлов (iamNodeRole)
+### Использование своей IAM-роли для узлов (iamNodeRole)
 
 Параметр `iamNodeRole` в ресурсе AWSClusterConfiguration позволяет переопределить IAM-роль по умолчанию, которую Deckhouse назначает всем EC2-инстансам узлов кластера.
 
