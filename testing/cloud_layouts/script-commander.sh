@@ -583,6 +583,21 @@ function run-test() {
     return 1
   fi
 
+  testOpenvpnReady=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_openvpn_ready.sh")
+
+  test_failed="true"
+    if $ssh_command $ssh_bastion "$ssh_user@$master_ip" \
+      sudo su -c /bin/bash <<<"${testOpenvpnReady}"; then
+      test_failed=""
+    else
+      >&2 echo "OpenVPN test failed for Static provider. Sleeping 30 seconds..."
+      sleep 30
+    fi
+
+    if [[ $test_failed == "true" ]]; then
+      return 1
+    fi
+
   if [[ -n ${SWITCH_TO_IMAGE_TAG} ]]; then
     echo "Starting switch deckhouse image"
     change_deckhouse_image "${SWITCH_TO_IMAGE_TAG}" || return $?
