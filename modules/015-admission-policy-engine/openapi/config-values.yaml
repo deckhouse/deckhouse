@@ -56,7 +56,10 @@ properties:
   denyVulnerableImages:
     type: object
     default: {}
-    x-doc-d8Revision: ee
+    x-doc-d8Editions:
+      - ee
+      - cse-lite
+      - cse-pro
     description: |
       Trivy provider will deny creation of the `Pod`/`Deployment`/`StatefulSet`/`DaemonSet` with vulnerable images in namespaces with `security.deckhouse.io/trivy-provider: ""` label.
     properties:
@@ -67,9 +70,9 @@ properties:
           The name of the StorageClass to use for `trivy-provider`.
 
           If the value is not specified, the StorageClass will be used according to the [global storageClass parameter](../../deckhouse-configure-global.html#parameters-storageclass) setting.
-            
+
           The global `storageClass` parameter is only considered when the module is enabled. Changing the global `storageClass` parameter while the module is enabled will not trigger disk re-provisioning.
-          
+
           **Warning.** Specifying a value different from the one currently used (in the existing PVC) will result in disk re-provisioning and all data will be deleted.
 
           If `false` is specified, `emptyDir` will be forced to be used.

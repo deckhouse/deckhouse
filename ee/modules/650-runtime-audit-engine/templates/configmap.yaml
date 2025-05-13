@@ -19,6 +19,61 @@ data:
     # Choose the appropriate engine kind based on your system's configuration and requirements.
     engine:
       kind: modern_ebpf
+      modern_ebpf:
+        # @- [Description]
+        #
+        # This is an index that controls the dimension of the syscall buffers.
+        # The syscall buffer is the shared space between Falco and its drivers where all the syscall events
+        # are stored.
+        # Falco uses a syscall buffer for every online CPU, and all these buffers share the same dimension.
+        # So this parameter allows you to control the size of all the buffers!
+        #
+        # @- [Usage]
+        #
+        # You can choose between different indexes: from `1` to `10` (`0` is reserved for future uses).
+        # Every index corresponds to a dimension in bytes:
+        #
+        # [(*), 1 MB, 2 MB, 4 MB, 8 MB, 16 MB, 32 MB, 64 MB, 128 MB, 256 MB, 512 MB]
+        #   ^    ^     ^     ^     ^     ^      ^      ^       ^       ^       ^
+        #   |    |     |     |     |     |      |      |       |       |       |
+        #   0    1     2     3     4     5      6      7       8       9       10
+        #
+        # As you can see the `0` index is reserved, while the index `1` corresponds to
+        # `1 MB` and so on.
+        #
+        # These dimensions in bytes derive from the fact that the buffer size must be:
+        # (1) a power of 2.
+        # (2) a multiple of your system_page_dimension.
+        # (3) greater than `2 * (system_page_dimension)`.
+        #
+        # According to these constraints, it is possible that sometimes you cannot use all the indexes, let's consider an
+        # example to better understand it:
+        # If you have a `page_size` of 1 MB the first available buffer size is 4 MB because 2 MB is exactly
+        # `2 * (system_page_size)` -> `2 * 1 MB`, but this is not enough we need more than `2 * (system_page_size)`!
+        # So from this example, it is clear that if you have a page size of 1 MB the first index that you can use is `3`.
+        #
+        # Please note: this is a very extreme case just to let you understand the mechanism, usually the page size is something
+        # like 4 KB so you have no problem at all, and you can use all the indexes (from `1` to `10`).
+        #
+        # To check your system page size, use the Falco `@page-size` command line option. The output on a system with a page
+        # size of 4096 Bytes (4 KB) should be the following:
+        #
+        # "Your system page size is: 4096 bytes."
+        #
+        # @- [Suggestions]
+        #
+        # Before the introduction of this param the buffer size was fixed to 8 MB (so index `4`, as you can see
+        # in the default value below).
+        # You can increase the buffer size when you face syscall drops. A size of 16 MB (so index `5`) can reduce
+        # syscall drops in production-heavy systems without noticeable impact. Very large buffers, however, could
+        # slow down the entire machine.
+        # On the other side, you can try to reduce the buffer size to speed up the system, but this could
+        # increase the number of syscall drops!
+        # As a final remark, consider that the buffer size is mapped twice in the process' virtual memory, so a buffer of 8 MB
+        # will result in a 16 MB area in the process virtual memory.
+        # Please pay attention when you use this parameter and change it only if the default size doesn't fit your use case.
+        # @ This is an index that controls the dimension of the syscall buffers.
+        buf_size_preset: 4
 
     #
     # Plugins that are available for use. These plugins are not loaded by
@@ -181,61 +236,6 @@ data:
       # after which you want Falco to alert.
       max_consecutives: 1000
 
-    # @- [Description]
-    #
-    # This is an index that controls the dimension of the syscall buffers.
-    # The syscall buffer is the shared space between Falco and its drivers where all the syscall events
-    # are stored.
-    # Falco uses a syscall buffer for every online CPU, and all these buffers share the same dimension.
-    # So this parameter allows you to control the size of all the buffers!
-    #
-    # @- [Usage]
-    #
-    # You can choose between different indexes: from `1` to `10` (`0` is reserved for future uses).
-    # Every index corresponds to a dimension in bytes:
-    #
-    # [(*), 1 MB, 2 MB, 4 MB, 8 MB, 16 MB, 32 MB, 64 MB, 128 MB, 256 MB, 512 MB]
-    #   ^    ^     ^     ^     ^     ^      ^      ^       ^       ^       ^
-    #   |    |     |     |     |     |      |      |       |       |       |
-    #   0    1     2     3     4     5      6      7       8       9       10
-    #
-    # As you can see the `0` index is reserved, while the index `1` corresponds to
-    # `1 MB` and so on.
-    #
-    # These dimensions in bytes derive from the fact that the buffer size must be:
-    # (1) a power of 2.
-    # (2) a multiple of your system_page_dimension.
-    # (3) greater than `2 * (system_page_dimension)`.
-    #
-    # According to these constraints is possible that sometimes you cannot use all the indexes, let's consider an
-    # example to better understand it:
-    # If you have a `page_size` of 1 MB the first available buffer size is 4 MB because 2 MB is exactly
-    # `2 * (system_page_size)` -> `2 * 1 MB`, but this is not enough we need more than `2 * (system_page_size)`!
-    # So from this example is clear that if you have a page size of 1 MB the first index that you can use is `3`.
-    #
-    # Please note: this is a very extreme case just to let you understand the mechanism, usually the page size is something
-    # like 4 KB so you have no problem at all and you can use all the indexes (from `1` to `10`).
-    #
-    # To check your system page size use the Falco `@page-size` command line option. The output on a system with a page
-    # size of 4096 Bytes (4 KB) should be the following:
-    #
-    # "Your system page size is: 4096 bytes."
-    #
-    # @- [Suggestions]
-    #
-    # Before the introduction of this param the buffer size was fixed to 8 MB (so index `4`, as you can see
-    # in the default value below).
-    # You can increase the buffer size when you face syscall drops. A size of 16 MB (so index `5`) can reduce
-    # syscall drops in production-heavy systems without noticeable impact. Very large buffers however could
-    # slow down the entire machine.
-    # On the other side you can try to reduce the buffer size to speed up the system, but this could
-    # increase the number of syscall drops!
-    # As a final remark consider that the buffer size is mapped twice in the process' virtual memory so a buffer of 8 MB
-    # will result in a 16 MB area in the process virtual memory.
-    # Please pay attention when you use this parameter and change it only if the default size doesn't fit your use case.
-    # @ This is an index that controls the dimension of the syscall buffers.
-    syscall_buf_size_preset: 4
-
     # Falco continuously monitors outputs performance. When an output channel does not allow
     # to deliver an alert within a given deadline, an error is reported indicating
     # which output is blocking notifications.
@@ -252,27 +252,6 @@ data:
     # for up to 2 seconds without reaching the timeout.
     # @ Duration in milliseconds to wait before considering the output timeout deadline exceed.
     output_timeout: 2000
-
-    # A throttling mechanism implemented as a token bucket limits the
-    # rate of Falco notifications. One rate limiter is assigned to each event
-    # source, so that alerts coming from one can't influence the throttling
-    # mechanism of the others. This is controlled by the following options:
-    #  - rate: the number of tokens (i.e. right to send a notification)
-    #    gained per second. When 0, the throttling mechanism is disabled.
-    #    Defaults to 0.
-    #  - max_burst: the maximum number of tokens outstanding. Defaults to 1000.
-    #
-    # With these defaults, the throttling mechanism is disabled.
-    # For example, by setting rate to 1 Falco could send up to 1000 notifications
-    # after an initial quiet period, and then up to 1 notification per second
-    # afterward. It would gain the full burst back after 1000 seconds of
-    # no activity.
-
-    outputs:
-      # @ Number of tokens gained per second.
-      rate: 1
-      # @ Maximum number of tokens outstanding.
-      max_burst: 1000
 
     # Where security notifications should go.
     # Multiple outputs can be enabled.
@@ -391,14 +370,6 @@ data:
       # @ Enable the gRPC output and events will be kept in memory until you read them with a gRPC client.
       enabled: false
 
-    # Container orchestrator metadata fetching params
-    metadata_download:
-      # @ Max allowed response size (in Mb) when fetching metadata from Kubernetes.
-      max_mb: 100
-      # @ Sleep time (in μs) for each download chunck when fetching metadata from Kubernetes.
-      chunk_wait_us: 1000
-      # @ Watch frequency (in seconds) when fetching metadata from Kubernetes.
-      watch_freq_sec: 1
     # [Experimental] `rule_matching`
     #
     # The `rule_matching` configuration key's values are:

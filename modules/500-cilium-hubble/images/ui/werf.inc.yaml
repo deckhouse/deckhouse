@@ -15,12 +15,15 @@ git:
   stageDependencies:
     install:
       - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  #- git clone --depth 1 --branch v{{ $hubbleUIVersion }} {{ $.SOURCE_REPO }}/cilium/hubble-ui.git /src
+  #- git clone --depth 1 --branch v{{ $hubbleUIVersion }} $(cat /run/secrets/SOURCE_REPO)/cilium/hubble-ui.git /src
   - cd /src
   - git init .
-  - git remote add origin -f {{ $.SOURCE_REPO }}/cilium/hubble-ui.git
+  - git remote add origin -f $(cat /run/secrets/SOURCE_REPO)/cilium/hubble-ui.git
   - git checkout v{{ $hubbleUIVersion }}
   - git apply /patches/*.patch --verbose
   - chown -R 64535:64535 /src/server/public
@@ -35,15 +38,16 @@ import:
   to: /src
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
   - export GO_VERSION=${GOLANG_VERSION}
-  - export GOPROXY={{ $.GOPROXY }}
   - export "GOARCH=amd64"
   - cd /src/backend
-  - go mod vendor && go mod download -x
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
   - CGO_ENABLED=0 go build -ldflags "-s -w" -o backend
   - chown 64535:64535 /src/backend/backend
   - chmod 0700 /src/backend/backend

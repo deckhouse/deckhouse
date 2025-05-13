@@ -30,7 +30,7 @@ properties:
   availableSources:
     - test-source-1
 status:
-  phase: NotInstalled
+  phase: Available
   conditions:
     - type: EnabledByModuleConfig
       status: "True"
@@ -44,7 +44,7 @@ properties:
   availableSources:
     - test-source-1
 status:
-  phase: NotInstalled
+  phase: Available
   conditions:
     - type: EnabledByModuleConfig
       status: "True"

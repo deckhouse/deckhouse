@@ -15,10 +15,13 @@ git:
     - '**/*.go'
     - 'go.mod'
     - 'go.sum'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   - cd /src
-  - git clone --depth 1 --branch {{ $version }} {{ .SOURCE_REPO }}/chrony/chrony /src/chrony && rm -rf /src/chrony/.git
+  - git clone --depth 1 --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/chrony/chrony /src/chrony && rm -rf /src/chrony/.git
 ---
 image: {{ .ModuleName }}/build-chrony-static-artifact
 from: {{ .Images.BASE_ALPINE }}
@@ -51,12 +54,14 @@ import:
   to: /src
   before: install
 mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
   - cd /src
-  - GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags='-extldflags "-static" -s -w' -o /entrypoint main.go
+  - GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags='-extldflags "-static" -s -w' -o /entrypoint main.go
   - chown -R 64535:64535 /entrypoint
   - chmod +x /entrypoint
 ---
