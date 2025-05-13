@@ -1,5 +1,5 @@
 {{- $context := . }}
-{{- $namespace := "d8-%s" .Chart.Name }}
+{{- $namespace := printf "d8-%s" .Chart.Name }}
 {{- if hasKey .Values.openvpn "inlet" }}
 {{- $tcpServiceName :=  printf "%s-external" .Chart.Name }}
 {{- $udpServiceName :=  printf "%s-external-udp" .Chart.Name }}
