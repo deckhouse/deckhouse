@@ -519,14 +519,9 @@ func (r *reconciler) getIntermediateModuleVersions(
 		return nil, fmt.Errorf("parse current version: %w", err)
 	}
 
-	// if versions they differ only in patch, return only target version
+	// if versions they differ only in patch or differ only in one minor version, return only target version
 	if currentVersion.Major() == targetVersion.Major() &&
-		currentVersion.Minor() == targetVersion.Minor() {
-		return []*semver.Version{targetVersion}, nil
-	}
-	// if versions they differ only in one minor version, return only target version
-	if currentVersion.Major() == targetVersion.Major() &&
-		currentVersion.IncMinor().Minor() == targetVersion.Minor() {
+		(currentVersion.Minor() == targetVersion.Minor() || currentVersion.IncMinor().Minor() == targetVersion.Minor()) {
 		return []*semver.Version{targetVersion}, nil
 	}
 
