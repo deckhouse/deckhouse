@@ -82,7 +82,10 @@ func applyCRDFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 		return nil, fmt.Errorf("cannot convert kubernetes object: %v", err)
 	}
 
-	caBundle := string(crd.Spec.Conversion.Webhook.ClientConfig.CABundle)
+	var caBundle string
+	if crd.Spec.Conversion.Webhook.ClientConfig.CABundle != nil {
+		caBundle = string(crd.Spec.Conversion.Webhook.ClientConfig.CABundle)
+	}
 
 	if len(caBundle) > 0 {
 		decoded, err := base64.StdEncoding.DecodeString(caBundle)
