@@ -123,28 +123,68 @@ entries:
                           url: /admin/integrations/public/yandex/yandex-services.html
                     - title:
                         en: Integration with VK Cloud
-                        ru: TODO Интеграция с VK Cloud
+                        ru: Интеграция с VK Cloud
                       folders:
                         - title:
                             en: Overview
                             ru: Обзор
-                          url: /admin/integrations/public/vk-cloud/vk-cloud-overview.html
+                          url: /admin/integrations/public/vk/overview.html
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/public/vk/сonnection-and-authorization.html
+                        - title:
+                            en: Configuration and layout scheme
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/public/vk/сonfiguration-and-layout-scheme.html
                     - title:
                         en: Integration with Selectel Cloud
-                        ru: TODO Интеграция с Selectel Cloud
+                        ru: Интеграция с Selectel Cloud
                       folders:
                         - title:
                             en: Overview
                             ru: Обзор
-                          url: /admin/integrations/public/selectel/selectel-overview.html
+                          url: /admin/integrations/public/selectel/overview.html
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/public/selectel/сonnection-and-authorization.html
+                        - title:
+                            en: Configuration and layout scheme
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/public/selectel/сonfiguration-and-layout-scheme.html
+                    - title:
+                        en: Integration with OVH Cloud
+                        ru: Интеграция с OVH Cloud
+                      folders:
+                        - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/public/ovh/overview.html
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/public/ovh/сonnection-and-authorization.html
+                        - title:
+                            en: Configuration and layout scheme
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/public/ovh/сonfiguration-and-layout-scheme.html
                     - title:
                         en: Integration with OpenStack-based clouds
-                        ru: TODO Интеграция с облаками на базе OpenStack
+                        ru: Интеграция с облаками на базе OpenStack
                       folders:
                         - title:
                             en: Overview
                             ru: Обзор
-                          url: /admin/integrations/public/open-stack/open-stack-overview.html
+                          url: /admin/integrations/public/openstack/overview.html
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/public/openstack/сonnection-and-authorization.html
+                        - title:
+                            en: Configuration and layout scheme
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/public/openstack/сonfiguration-and-layout-scheme.html
                     - title:
                         en: Integration with Amazon Web Services (AWS)
                         ru: TODO Интеграция с Amazon Web Services (AWS)
@@ -182,25 +222,41 @@ entries:
                     ru: Частные облака
                   folders:
                     - title:
-                        en: Обзор
-                        ru: Overview
+                        en: Overview
+                        ru: Обзор
                       url: /admin/integrations/private/overview.html
                     - title:
                         en: Integration with VK Cloud
-                        ru: TODO Интеграция с VK Cloud
+                        ru: Интеграция с VK Cloud
                       folders:
                         - title:
                             en: Overview
                             ru: Обзор
-                          url: /admin/integrations/private/yandex/yandex-overview.html
+                          url: /admin/integrations/private/vk/overview.html
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/private/vk/сonnection-and-authorization.html
+                        - title:
+                            en: Configuration and layout scheme
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/private/vk/сonfiguration-and-layout-scheme.html
                     - title:
                         en: Integration with OpenStack
-                        ru: TODO Интеграция с OpenStack
+                        ru: Интеграция с OpenStack
                       folders:
                         - title:
                             en: Overview
                             ru: Обзор
-                          url: /admin/integrations/private/openstack/openstack-overview.html
+                          url: /admin/integrations/private/openstack/overview.html
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/private/openstack/сonnection-and-authorization.html
+                        - title:
+                            en: Configuration and layout scheme
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/private/openstack/сonfiguration-and-layout-scheme.html
                 - title:
                     en: Virtualization systems
                     ru: Системы виртуализации
