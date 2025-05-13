@@ -49,7 +49,6 @@ status:
   nodeInfo:
     kernelVersion: 3.10.0-1127.el7.x86_64
 `
-
 		stateNode3 = `
 ---
 apiVersion: v1
@@ -64,7 +63,7 @@ status:
 `
 	)
 
-	f := HookExecutionConfigInit(`{"deckhouse": { "internal":{}}}`, `{}`)
+	f := HookExecutionConfigInit(`{"cniCilium": { "internal":{}}}`, `{}`)
 
 	Context("Cluster is empty", func() {
 		BeforeEach(func() {
@@ -74,6 +73,30 @@ status:
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
+		})
+	})
+
+	Context("Values cniCilium.internal.kernelVersionConstraint is set when only cni-cilium enabled", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateNode1 + stateNode2 + stateNode3))
+			f.ValuesSetFromYaml("global.enabledModules", []byte("[cni-cilium]"))
+			f.RunHook()
+		})
+
+		It("Hook must execute successfully", func() {
+			Expect(f.ValuesGet("cniCilium.internal.kernelVersionConstraint").String()).To(Equal(">= 4.9.17"))
+		})
+	})
+
+	Context("Values cniCilium.internal.kernelVersionConstraint is set when cni-cilium,istio,openvpn enabled", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateNode1 + stateNode2 + stateNode3))
+			f.ValuesSetFromYaml("global.enabledModules", []byte("[cni-cilium, istio, openvpn]"))
+			f.RunHook()
+		})
+
+		It("Hook must execute successfully", func() {
+			Expect(f.ValuesGet("cniCilium.internal.kernelVersionConstraint").String()).To(Equal(">= 5.7"))
 		})
 	})
 

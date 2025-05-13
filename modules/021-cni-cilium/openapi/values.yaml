@@ -176,4 +176,8 @@ properties:
               type: array
               items:
                 type: string
-
+      kernelVersionConstraint:
+        type: string
+        default: "4.9.17"
+        description: |
+          The minimal version of the Linux kernel for the normal functioning of the network components of the cluster
