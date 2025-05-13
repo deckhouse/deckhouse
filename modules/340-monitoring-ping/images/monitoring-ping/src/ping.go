@@ -67,7 +67,7 @@ func PingAll(ctx context.Context, cluster []NodeTarget, external []ExternalTarge
 
 	// Run pinger
 	if err := fp.RunWithContext(ctx); err != nil && !errors.Is(err, context.Canceled) {
-		fmt.Printf("Failed to run pinger: %v\n", err)
+		log.Error(fmt.Sprintf("Failed to run pinger: %v\n", err))
 		return
 	}
 
