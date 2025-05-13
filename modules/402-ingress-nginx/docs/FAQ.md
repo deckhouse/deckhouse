@@ -154,7 +154,7 @@ subjects:
   name: ingress-nginx:auth
 ```
 
-For the ingress resource, add parameters:
+For the Ingress resource, add parameters:
 
 ```yaml
 nginx.ingress.kubernetes.io/backend-protocol: HTTPS
