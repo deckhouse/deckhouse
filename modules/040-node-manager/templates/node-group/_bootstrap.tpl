@@ -68,8 +68,8 @@ function get_phase2() {
   token="$(<${BOOTSTRAP_DIR}/bootstrap-token)"
   check_python
 
-  local 401_err_count=0
-  local max_401_err_count=6
+  local http_401_count=0
+  local max_http_401_count=6
 
   while true; do
     for server in {{ $context.Values.nodeManager.internal.clusterMasterAddresses | join " " }}; do
@@ -78,8 +78,8 @@ function get_phase2() {
         return 0
       fi
       if [ $? -eq 2 ]; then
-        ((401_err_count++))
-        if [ $401_err_count -ge $max_401_err_count ]; then
+        ((http_401_count++))
+        if [ $http_401_count -ge $max_http_401_count ]; then
           return 1
         fi
       else
