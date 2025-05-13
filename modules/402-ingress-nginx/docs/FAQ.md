@@ -318,7 +318,7 @@ spec:
       Include /etc/nginx/modsecurity/modsecurity.conf
 ```
 
-After applying the settings, ModSecurity will start working for all traffic passing through this ingress-nginx controller.
+After applying the settings, ModSecurity will start working for all traffic passing through this Ingress nginx controller.
 This uses the audit mode (`DetectionOnly`) and [basic recommended configuration](https://github.com/owasp-modsecurity/ModSecurity/blob/v3/master/modsecurity.conf-recommended).
 
 ### Setting up ModSecurity
