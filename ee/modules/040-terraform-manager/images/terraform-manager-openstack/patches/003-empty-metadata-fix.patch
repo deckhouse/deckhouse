@@ -1,0 +1,21 @@
+Subject: [PATCH] ++
+---
+Index: openstack/resource_openstack_compute_instance_v2.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/openstack/resource_openstack_compute_instance_v2.go b/openstack/resource_openstack_compute_instance_v2.go
+--- a/openstack/resource_openstack_compute_instance_v2.go	(revision a6cf040ae7c8118ff9c3a37b9045b364f9a50ae8)
++++ b/openstack/resource_openstack_compute_instance_v2.go	(date 1747161978214)
+@@ -684,6 +684,10 @@
+
+ 	log.Printf("[DEBUG] Retrieved Server %s: %+v", d.Id(), server)
+
++	if server.Metadata == nil {
++		d.Set("metadata", make(map[string]string))
++	}
++
+ 	d.Set("name", server.Name)
+ 	d.Set("created", server.Created.String())
+ 	d.Set("updated", server.Updated.String())
