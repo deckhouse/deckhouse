@@ -71,11 +71,23 @@
 #    - dict CandiVersionMap from werf.yaml
 {{- define "common_base_image" }}
 {{- $context := . -}}
-
-image: common-base
-fromImage: builder/alt
+---
+image: common-base-python-artifact
+final: false
+fromImage: base/python
 import:
-- image: dev-alt-artifact
+- image: common/wheel-artifact
+  add: /wheels
+  to: /wheels
+  before: install
+shell:
+  install:
+  - pip3 install -f file:///wheels --no-index pyOpenSSL==24.3.0 cryptography==44.0.1 bcrypt==4.1.1
+---
+image: common-base
+fromImage: base/distroless
+import:
+- image: common-base-python-artifact
   add: /
   to: /
   before: setup
@@ -84,42 +96,56 @@ import:
   - usr/lib/python*
   - usr/lib/libc.so
   - usr/lib/ld-musl-x86_64.so.1
-  - usr/lib64/libz.so*
-  - usr/lib64/libexpat.so*
-  - usr/lib64/libssl.so.*
-  - usr/lib64/libcrypto.so.*
-  - usr/lib64/libpthread.so.0*
-  - usr/bin/openssl
-  - etc/pki
-  - usr/share/ca-certificates/ca-bundle.crt
-  - usr/lib64/libffi.so*
-  - usr/lib64/libb2.so*
-  - usr/share/vim
-  - etc/vim
-  - etc/bash_completion.d
-  - etc/bashrc.d/bash_completion.sh
-  - usr/share/bash-completion
-  - usr/lib/locale/C.utf8
-  - usr/bin/vim-console
 {{ include "base components imports" (dict "k8sVersions" $context.k8sVersions "CandiVersionMap" $context.CandiVersionMap ) }}
-
-- image: common/distroless
-  add: /etc/ssl
-  to: /etc/ssl
-  before: setup
-
 - image: registrypackages/d8-curl-artifact-8-9-1
   add: /d8-curl
   to: /usr/bin/curl
   before: setup
-
+- image: tools/bash
+  add: /usr/bin/bash
+  to: /bin/bash
+  before: setup
+- image: tools/jq
+  add: /usr/bin/jq
+  before: setup
+- image: tools/yq
+  add: /usr/bin/yq
+  before: setup
+- image: tools/sed
+  add: /usr/bin/sed
+  before: setup
+- image: tools/grep
+  add: /usr/bin/grep
+  before: setup
+- image: tools/gawk
+  add: /
+  to: /
+  includePaths:
+  - usr/bin/*awk*
+  before: setup
+- image: tools/findutils
+  add: /usr/bin/find
+  before: setup
+- image: tools/coreutils
+  add: /
+  to: /
+  includePaths:
+  - usr/bin/*
+  before: setup
+- image: libs/openssl
+  add: /usr/bin/openssl
+  to: /usr/bin/openssl
+  before: setup
+- image: tools/vim
+  add: /usr/bin/vim
+  to: /usr/bin/vim
+  before: setup
 shell:
   beforeInstall:
   {{- include "base components" (list $context.rootContext $context.prefix) | nindent 2 }}
-
 imageSpec:
   config:
-    env: { "CRYPTOGRAPHY_OPENSSL_NO_LEGACY": "true" }
+    env: { "CRYPTOGRAPHY_OPENSSL_NO_LEGACY": "true", "EDITOR": "/usr/bin/vim" }
 {{- end }}
 
 
