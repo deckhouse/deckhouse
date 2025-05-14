@@ -4,7 +4,7 @@
 # and https://github.com/cilium/cilium/blob/v1.17.4/images/hubble-relay/download-grpc-health-probe.sh
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
-fromImage: builder/golang-alpine
+fromImage:  builder/golang-alpine-1.23
 final: false
 import:
 - image: cni-cilium/bin-cilium-src-artifact
