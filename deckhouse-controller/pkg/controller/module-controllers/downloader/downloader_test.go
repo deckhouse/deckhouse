@@ -51,3 +51,34 @@ func TestDownloadMetadataFromReleaseChannelError(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "no version found")
 }
+
+func TestDownloadMetadataByVersion(t *testing.T) {
+	ms := &v1alpha1.ModuleSource{}
+
+	dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "v1.2.3").Then(&fake.FakeImage{
+		ManifestStub: func() (*v1.Manifest, error) {
+			return &v1.Manifest{
+				SchemaVersion: 2,
+				Layers:        []v1.Descriptor{},
+			}, nil
+		},
+		LayersStub: func() ([]v1.Layer, error) {
+			return []v1.Layer{
+				&utils.FakeLayer{},
+				&utils.FakeLayer{
+					FilesContent: map[string]string{
+						"version.json":   `{"version": "v1.2.3"}`,
+						"changelog.yaml": "feat:\n- Added new feature\n",
+					}}}, nil
+		},
+		DigestStub: func() (v1.Hash, error) {
+			return v1.Hash{Algorithm: "sha256"}, nil
+		},
+	}, nil)
+
+	md := NewModuleDownloader(dependency.TestDC, os.TempDir(), ms, nil)
+	meta, err := md.DownloadMetadataByVersion("commander", "v1.2.3")
+	require.NoError(t, err)
+	require.Equal(t, "v1.2.3", meta.ModuleVersion)
+	require.Equal(t, map[string]any(map[string]any{"feat": []any{"Added new feature"}}), meta.Changelog)
+}

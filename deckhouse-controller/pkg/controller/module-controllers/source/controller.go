@@ -382,8 +382,10 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 				r.logger.Debug("ensure module release for module for the module source",
 					slog.String("name", moduleName),
 					slog.String("source_name", source.Name))
-				m := meta
-				m.ModuleVersion = v.Original()
+				m, err := md.DownloadMetadataByVersion(moduleName, v.Original())
+				if err != nil {
+					return fmt.Errorf("download metadata for the '%s' module: %w", moduleName, err)
+				}
 				if err = r.ensureModuleRelease(ctx, source.GetUID(), source.Name, moduleName, policy.Name, m); err != nil {
 					return fmt.Errorf("ensure module release for the '%s' module: %w", moduleName, err)
 				}
@@ -550,8 +552,10 @@ func (r *reconciler) getIntermediateModuleVersions(
 	return keepLastPatchVersion(versions), nil
 }
 
+// keepLastPatchVersion keeps only the last patch version for each minor version
+// and returns a sorted list of versions
+// e.g. 1.0.0, 1.0.1, 1.1.0, 1.1.1 -> 1.0.1, 1.1.1
 func keepLastPatchVersion(versions []*semver.Version) []*semver.Version {
-	// check versions and keep only last patch version for each minor version
 	versionsMap := make(map[string]*semver.Version)
 	for _, v := range versions {
 		index := fmt.Sprintf("%d.%d", v.Major(), v.Minor())
