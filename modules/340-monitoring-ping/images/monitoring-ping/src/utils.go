@@ -17,8 +17,13 @@ limitations under the License.
 package main
 
 import (
+	"fmt"
 	"math"
+	"os"
+	"path/filepath"
 	"slices"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func Summarize(rtts []float64) (min, max, mean, std, sum float64) {
@@ -84,4 +89,27 @@ func BuildExternalMap(targets []ExternalTarget) map[string]string {
 		m[t.Host] = GetTargetName(t.Name, t.Host)
 	}
 	return m
+}
+
+// TODO remove this function in future release
+// Removed deprecated prometheus exporter file to avoid stale metrics in grafana.
+func CleanUpDeprecatedExporterFile() {
+	dirPath := "/node-exporter-textfile"
+	filePattern := "monitoring-ping*.prom"
+	fullPath := filepath.Join(dirPath, filePattern)
+
+	files, err := filepath.Glob(fullPath)
+	if err != nil {
+		log.Error(fmt.Sprintf("Failed to find files with pattern %s: %v", fullPath, err))
+		return
+	}
+
+	for _, file := range files {
+		err := os.Remove(file)
+		if err != nil {
+			log.Error(fmt.Sprintf("Failed to remove file %s: %v", file, err))
+			continue
+		}
+		log.Info(fmt.Sprintf("File %s removed", file))
+	}
 }

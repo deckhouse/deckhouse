@@ -33,6 +33,9 @@ var (
 
 func main() {
 
+	// TODO remove volumes in future, need for clean staled medtrics
+	CleanUpDeprecatedExporterFile()
+
 	reg := prometheus.NewRegistry()
 	metrics := RegisterMetrics(reg)
 	cfg := LoadConfig()
