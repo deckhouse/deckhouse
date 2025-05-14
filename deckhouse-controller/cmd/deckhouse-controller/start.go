@@ -447,10 +447,6 @@ func registerTelemetry(ctx context.Context) func(ctx context.Context) error {
 
 	opts := make([]otlptracegrpc.Option, 0, 1)
 
-	if endpoint == "test" {
-		endpoint = "jaeger-inmemory-instance-collector.default.svc.cluster.local:4317"
-	}
-
 	opts = append(opts, otlptracegrpc.WithEndpoint(endpoint))
 	opts = append(opts, otlptracegrpc.WithInsecure())
 
