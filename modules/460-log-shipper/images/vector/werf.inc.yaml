@@ -69,6 +69,7 @@ shell:
       echo 'index = "sparse+http://'${CARGO_PROXY}'/index/"' >> .cargo/config.toml
     fi
   - git config --global url."$(cat /run/secrets/SOURCE_REPO)".insteadOf https://github.com
+  - rustup target add x86_64-unknown-linux-musl
   - |
     RUSTFLAGS='-C target-feature=+crt-static' \
     cargo build \
