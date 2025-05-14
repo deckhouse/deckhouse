@@ -56,7 +56,7 @@ ovirt:
   artifact: terraform-provider-ovirt
   artifactBinary: terraform-provider-ovirt
   destinationBinary: terraform-provider-ovirt
-  useOpentofu: false
+  useOpentofu: true
 
 vsphere:
   namespace: hashicorp
@@ -96,7 +96,7 @@ decort:
   artifact: terraform-provider-decort
   artifactBinary: terraform-provider-decort
   destinationBinary: terraform-provider-decort
-  useOpentofu: false
+  useOpentofu: true
 
 huaweicloud:
   namespace: terraform-provider-huaweicloud

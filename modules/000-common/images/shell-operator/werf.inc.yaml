@@ -1,7 +1,7 @@
-{{- $shellOperatorVersion := "v1.5.3"}}
+{{- $shellOperatorVersion := "v1.7.2"}}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/alt-p11
+fromImage: base/distroless
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /shell-operator/shell-operator
@@ -15,54 +15,60 @@ import:
   add: /shell-operator/frameworks
   to: /frameworks
   before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /src/jq/jq
-  to: /usr/local/bin/jq
-  before: setup
-{{- $k8sVersion := "1.29" }}
+{{- $k8sVersion := "1.31" }}
 {{- $image_version := printf "%s.%d" $k8sVersion (index $.CandiVersionMap "k8s" $k8sVersion "patch") | replace "." "-" }}
 - image: common/kubernetes-artifact-{{ $image_version }}
   add: /src/_output/bin/kubectl
-  to: /usr/local/bin/kubectl
+  to: /usr/bin/kubectl
   before: setup
-- image: common/tini-artifact
-  add: /tini/tini-static
-  to: /sbin/tini
+- image: tools/tini
+  add: /usr/bin/tini
+  before: setup
+- image: tools/bash
+  add: /usr/bin/bash
+  to: /bin/bash
+  before: setup
+- image: tools/jq
+  add: /usr/bin/jq
+  before: setup
+- image: tools/sed
+  add: /usr/bin/sed
+  before: setup
+- image: tools/grep
+  add: /usr/bin/grep
+  before: setup
+- image: tools/gawk
+  add: /
+  to: /
+  includePaths:
+  - usr/bin/*awk*
+  before: setup
+- image: tools/findutils
+  add: /usr/bin/find
+  before: setup
+- image: tools/coreutils
+  add: /
+  to: /
+  includePaths:
+  - usr/bin/*
   before: setup
 imageSpec:
   config:
-    entrypoint: ["tini", "--", "/shell-operator"]
-shell:
-  setup:
-  - find /var/lib/apt/ /var/cache/apt/ -type f -delete
+    entrypoint: ["/usr/bin/tini", "--", "/shell-operator"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromImage: common/src-artifact
+fromImage: builder/src
 final: false
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --branch {{ $shellOperatorVersion }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/flant/shell-operator.git /src/shell-operator
-  - rm -r /src/shell-operator/.git
-  - git clone --depth 1 $(cat /run/secrets/SOURCE_REPO)/jqlang/jq --branch "jq-1.7.1" /src/jq
-  - cd /src/jq
-  - |
-    cat > .gitmodules <<EOF
-    [submodule "modules/oniguruma"]
-        path = modules/oniguruma
-        url = $(cat /run/secrets/SOURCE_REPO)/flant/oniguruma.git
-    EOF
-  - git submodule update --init
-  - rm -r docs
-  - rm -r /src/jq/.git
-  - rm -r /src/jq/modules/oniguruma/.git
-  - mkdir -p docs/content/manual
-  - touch docs/content/manual/manual.yml
+  - git clone --branch {{ $shellOperatorVersion }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/flant/shell-operator.git /src
+  - rm -r /src/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: builder/golang-alpine-1.23
+fromImage: builder/golang-alpine
 final: false
 mount:
 {{ include "mount points for golang builds" . }}
@@ -79,20 +85,10 @@ shell:
   {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache automake autoconf libtool build-base git
   install:
-  - export CGO_ENABLED=1 GOOS=linux
-  - cd /src/jq
-  - autoreconf -fi
-  - ./configure CFLAGS=-fPIC --disable-maintainer-mode --enable-all-static --disable-shared --disable-docs --disable-tls --disable-valgrind --with-oniguruma=builtin --prefix=/libjq
-  - make -j4
-  - make install-libLTLIBRARIES install-includeHEADERS
-  - cp -f modules/oniguruma/src/.libs/libonig.* /libjq/lib
-  - mkdir -p /jq
-  - cp jq /jq
-  - chown -R 64535:64535 /jq
-  - chmod 700 /jq/jq
-  - cd /src/shell-operator
-  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
-  - CGO_CFLAGS="-I/libjq/include" CGO_LDFLAGS="-L/libjq/lib" go build -ldflags="-linkmode external -extldflags '-static' -s -w -X 'github.com/flant/shell-operator/pkg/app.Version={{ $shellOperatorVersion }}'" -tags use_libjq -o shell-operator ./cmd/shell-operator
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux
+  - cd /src
+  - go mod download -x
+  - go build -ldflags="-s -w -X 'github.com/flant/shell-operator/pkg/app.Version={{ $shellOperatorVersion }}'" -o shell-operator ./cmd/shell-operator
   - mkdir -p /shell-operator
   - cp -r shell_lib.sh frameworks shell-operator /shell-operator
   - chown -R 64535:64535 /shell-operator
