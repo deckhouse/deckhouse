@@ -13,10 +13,15 @@
       plk_grouped_by__main: "ClusterHasCniCiliumNonStandardVXLANPort,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: Cilium configuration uses a non-standard VXLAN port.
       description: |
-        The Cilium configuration specifies a non-standard VXLAN port {{`{{ $labels.port }}`}}. This port falls outside the recommended range (considering the cluster might be deployed on virtual machines):
+        The Cilium configuration specifies a non-standard VXLAN port {{`{{ $labels.port }}`}}. This port falls outside the recommended range:
+{{- if eq (.Values.global.discovery.dvpNestingLevel | int) 0 }}
 
-        - `{{ add 4298 (.Values.global.discovery.dvpNestingLevel | default 0) }}`: When the virtualization module is enabled.
-        - `{{ add 4299 (.Values.global.discovery.dvpNestingLevel | default 0) }}`: For a standard Deckhouse setup.
+        - `4298`: When the virtualization module is enabled.
+        - `4299`: For a standard Deckhouse setup.
+{{- else }}
+
+        - `{{ sub 4298 (.Values.global.discovery.dvpNestingLevel | int) }}`: For a nested Deckhouse setup with the nesting level of `{{ .Values.global.discovery.dvpNestingLevel }}`.
+{{- end }}
 
         To resolve this issue, update the `tunnel-port` parameter in the `cilium-configmap` ConfigMap located in the `d8-cni-cilium` namespace to match the recommended range.
         
