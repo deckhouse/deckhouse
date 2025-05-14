@@ -17,8 +17,6 @@ git:
 {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
 import:
 {{ include "dev_prebuild_images_imports" (dict "Env" .Env) }}
-mount:
-{{ include "mount points for golang builds" . }}
 shell:
   setup:
   - |
