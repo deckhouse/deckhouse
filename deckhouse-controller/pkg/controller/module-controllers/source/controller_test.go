@@ -309,6 +309,16 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
 		require.NoError(suite.T(), err)
 	})
+
+	suite.Run("source with module releases", func() {
+		dc := newMockedContainerWithData(suite.T(),
+			"v1.4.4",
+			[]string{"parca"},
+			[]string{})
+		suite.setupTestController(string(suite.parseTestdata("modulewithmr.yaml")), withDependencyContainer(dc))
+		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
+		require.NoError(suite.T(), err)
+	})
 }
 
 func (suite *ControllerTestSuite) parseTestdata(filename string) []byte {
@@ -502,11 +512,10 @@ func newMockedContainerWithData(t minimock.Tester, version string, modules, tags
 
 	dc := dependency.NewMockedContainer()
 	dc.CRClientMap = map[string]cr.Client{
-		"dev-registry.deckhouse.io/deckhouse/modules":                     cr.NewClientMock(t).ListTagsMock.Return(modules, nil),
-		"dev-registry.deckhouse.io/deckhouse/modules/enabledmodule":       moduleVersionsMock,
-		"dev-registry.deckhouse.io/deckhouse/modules/disabledmodule":      moduleVersionsMock,
-		"dev-registry.deckhouse.io/deckhouse/modules/withpolicymodule":    moduleVersionsMock,
-		"dev-registry.deckhouse.io/deckhouse/modules/notthissourcemodule": moduleVersionsMock,
+		"dev-registry.deckhouse.io/deckhouse/modules": cr.NewClientMock(t).ListTagsMock.Return(modules, nil),
+	}
+	for _, module := range modules {
+		dc.CRClientMap["dev-registry.deckhouse.io/deckhouse/modules/"+module] = moduleVersionsMock
 	}
 	dc.CRClient.ListTagsMock.Return(modules, nil)
 	dc.CRClient.ImageMock.Return(&crfake.FakeImage{
