@@ -55,7 +55,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false
-fromImage: builder/golang-alpine
+fromImage:  builder/golang-alpine-1.23
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
