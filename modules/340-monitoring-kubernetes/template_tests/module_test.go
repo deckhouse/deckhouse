@@ -78,7 +78,7 @@ var _ = Describe("Module :: monitoring-kubernetes :: helm template ::", func() {
 			})
 		}
 
-		ds:= []string{"node-exporter", "oom-kills-exporter"}
+		ds := []string{"node-exporter", "oom-kills-exporter"}
 		for _, i := range ds {
 			It(fmt.Sprintf("DaemonSet %s Exists", i), func() {
 				test := f.KubernetesResource("DaemonSet", "d8-monitoring", i)
