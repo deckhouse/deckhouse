@@ -61,66 +61,74 @@ const (
 func getTransitionRules(instStatus installationStatus, virtStatus virtualizationStatus, virtNestingLevel int) []transitionRule {
 	switch instStatus {
 	case existingInstallation: // (ConfigMap exists)
-		switch virtStatus {
-		case virtualizationEnabled:
+		switch {
+		case virtNestingLevel > 0: // (Nested installation)
 			return []transitionRule{
-				// cm has configured 8469 port, will leave it as is
-				{source: 8469, target: 8469},
+				// regular setup with certain nesting level
+				{source: 4298 - virtNestingLevel, target: 4298 - virtNestingLevel},
 
-				// dreamy case — virtualization was enabled with upgrading d8 simultaneously
-				{source: 0, target: 8469},
-
-				// dreamy case — virtualization was enabled with upgrading d8 simultaneously and
-				// someone configured the port for setup without virtualization 8472 manually, will set the right one considering virtualization nesting level
-				{source: 8472, target: 4298 + virtNestingLevel},
-
-				// virtualization module was enabled on regular setup with the correct port, nesting level wasn't detected automatically, but configured manually
-				{source: 4299, target: 4298 + virtNestingLevel},
-
-				// virtualization module was enabled on regular setup with the correct port, will set the 4298 plus virtualization nesting level
-				{source: 4299 + virtNestingLevel, target: 4298 + virtNestingLevel},
-
-				// regular setup with enabled virtualization module and correct port, nesting level wasn't detected automatically, but configured manually
-				{source: 4298, target: 4298 + virtNestingLevel},
-
-				// regular setup with enabled virtualization module and correct port, will leave it as is
-				{source: 4298 + virtNestingLevel, target: 4298 + virtNestingLevel},
-
-				// if the "source" port is non-standard and didn't mention here, will leave it as is and fire the alert
+				// empty configmap for some reason - reset the port considering the nesting level
+				{source: 0, target: 4298 - virtNestingLevel},
 			}
 
-		case virtualizationDisabled:
-			return []transitionRule{
-				// our previous standard setup, will set the old default port explicitly
-				{source: 0, target: 8472},
+		default:
+			switch virtStatus {
+			case virtualizationEnabled:
+				return []transitionRule{
+					// cm has configured 8469 port, will leave it as is
+					{source: 8469, target: 8469},
 
-				// our previous standard setup with explicitly configured 8472 port, will leave the 8472
-				{source: 8472, target: 8472},
+					// dreamy case — virtualization was enabled with upgrading d8 simultaneously
+					{source: 0, target: 8469},
 
-				// virtualization module was disabled with the correct port, nesting level wasn't detected automatically, but configured manually
-				{source: 4298, target: 4299 + virtNestingLevel},
+					// dreamy case — virtualization was enabled with upgrading d8 simultaneously and
+					// someone configured the port for setup without virtualization 8472 manually, will set the right one
+					{source: 8472, target: 4298},
 
-				// virtualization module was disabled with the correct port, will set the 4299 plus virtualization nesting level
-				{source: 4298 + virtNestingLevel, target: 4299 + virtNestingLevel},
+					// virtualization module was enabled on regular setup with the right port, will set the 4298
+					{source: 4299, target: 4298},
 
-				// regular setup with standard 4299 port, nesting level wasn't detected automatically, but configured manually
-				{source: 4299, target: 4299 + virtNestingLevel},
+					// regular setup with enabled virtualization module and right port, will leave it as is
+					{source: 4298, target: 4298},
 
-				// regular setup with standard 4299 plus virtualization nesting level port, will leave it as is
-				{source: 4299 + virtNestingLevel, target: 4299 + virtNestingLevel},
+					// if the "source" port is non-standard and didn't mention here, will leave it as is and fire the alert
+				}
+
+			case virtualizationDisabled:
+				return []transitionRule{
+					// our previous standard setup, will set the old default port explicitly
+					{source: 0, target: 8472},
+
+					// our previous standard setup with explicitly configured 8472 port, will leave the 8472
+					{source: 8472, target: 8472},
+
+					// regular setup with standard 4298 port, will leave it as is
+					{source: 4298, target: 4299},
+
+					// regular setup with standard 4299 port, will leave it as is
+					{source: 4299, target: 4299},
+				}
 			}
 		}
 
 	case newInstallation: // (ConfigMap does not exist)
-		switch virtStatus {
-		case virtualizationEnabled:
+		switch {
+		case virtNestingLevel > 0: // (Nested installation)
 			return []transitionRule{
-				{source: 0, target: 4298 + virtNestingLevel},
+				{source: 0, target: 4298 - virtNestingLevel},
 			}
 
-		case virtualizationDisabled:
-			return []transitionRule{
-				{source: 0, target: 4299 + virtNestingLevel},
+		default:
+			switch virtStatus {
+			case virtualizationEnabled:
+				return []transitionRule{
+					{source: 0, target: 4298},
+				}
+
+			case virtualizationDisabled:
+				return []transitionRule{
+					{source: 0, target: 4299},
+				}
 			}
 		}
 	}
@@ -190,7 +198,7 @@ func discoverVXLANPort(input *go_hook.HookInput) error {
 
 	if len(input.Snapshots["cilium-configmap"]) > 0 {
 		instStatus = existingInstallation
-		if port, ok := input.Snapshots["cilium-configmap"][0].(int); ok {
+		if port, ok := input.Snapshots["cilium-configmap"][0].(int); ok && port > 0 {
 			sourcePort = port
 		}
 	}
