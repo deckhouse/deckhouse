@@ -72,11 +72,8 @@
   to: /usr/bin/openssl
   before: install
 - image: tools/vim
-  add: /
-  to: /
-  includePaths:
-  - usr/bin/vim
-  - usr/bin/vi
+  add: /usr/bin/vim
+  to: /usr/bin/vim
   before: install
 {{- end }}
 
