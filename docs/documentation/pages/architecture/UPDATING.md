@@ -171,4 +171,4 @@ If any of the following incompatibilities are detected, the update is aborted:
   - The cluster contains resources that are [deprecated](https://kubernetes.io/docs/reference/using-api/deprecation-guide/) in the new version.
 - The installed Ingress controller version is incompatible with the new release.
 - Nodes are running outdated or unsupported operating systems.
-- The cluster has an enabled module that is `deprecated` or hams been reoved in the new release.
+- The cluster has an enabled module that is `deprecated` or has been removed in the new release.
