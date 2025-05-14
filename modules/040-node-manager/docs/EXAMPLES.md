@@ -324,7 +324,7 @@ spec:
 **`StaticInstance` static-worker-1:**
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: StaticInstance
 metadata:
   name: static-worker-1
