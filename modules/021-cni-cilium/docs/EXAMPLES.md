@@ -16,7 +16,7 @@ Configuring an egress gateway requires two custom resources:
      Attributes of an eligible node:
      - The node is in `Ready` state.
        - The node is not in the maintenance state (i.e., it is not cordoned).
-       - The cilium-agent on the node is in the `Ready` state.
+       - The `cilium-agent` on the node is in the `Ready` state.
      - When using EgressGateway in `VirtualIP` mode, an agent is launched on the active node which emulates a "virtual" IP address using the ARP protocol. The status of this agent's pod is also taken into account when determining the eligibility of a node.
      - Different EgressGateways can use the same nodes for operation. The active node is selected independently for each EgressGateway, which allows for load balancing between them.
 1. EgressGatewayPolicy — describes the policy for routing network requests from pods in the cluster to a specific egress gateway defined using EgressGateway.
