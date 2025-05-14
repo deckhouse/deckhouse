@@ -70,9 +70,10 @@ shell:
     fi
   - git config --global url."$(cat /run/secrets/SOURCE_REPO)".insteadOf https://github.com
   - |
-    RUSTFLAGS='-Ctarget-feature=+crt-static' \
+    RUSTFLAGS='-C target-feature=+crt-static' \
     cargo build \
     --release \
+    --target x86_64-unknown-linux-musl \
     -j $(($(nproc) /2)) \
     --no-default-features \
     --features "api,api-client,enrichment-tables,sources-host_metrics,sources-internal_metrics,sources-file,sources-kubernetes_logs,transforms,sinks-prometheus,sinks-blackhole,sinks-elasticsearch,sinks-file,sinks-loki,sinks-socket,sinks-console,sinks-vector,sinks-kafka,sinks-splunk_hec,unix,rdkafka?/gssapi-vendored"
