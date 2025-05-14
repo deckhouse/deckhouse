@@ -1,6 +1,6 @@
 ---
 title: "Как настроить?"
-permalink: ru/old
+permalink: ru/
 lang: ru
 ---
 

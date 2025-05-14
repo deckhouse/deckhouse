@@ -1,6 +1,6 @@
 ---
 title: "How to configure?"
-permalink: en/old
+permalink: en/
 ---
 
 Deckhouse consists of the Deckhouse operator and modules. A module is a bundle of Helm chart, [Addon-operator](https://github.com/flant/addon-operator/) hooks, commands for building module components (Deckhouse components) and other files.
