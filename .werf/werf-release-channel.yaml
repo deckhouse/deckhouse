@@ -39,7 +39,7 @@ git:
 
 ---
 image: release-channel-version
-from: {{ .Images.BASE_SCRATCH }}
+fromImage: builder/scratch
 import:
 - image: release-channel-version-prebuild
   add: /
