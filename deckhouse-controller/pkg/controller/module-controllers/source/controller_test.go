@@ -324,7 +324,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		dc := newMockedContainerWithData(suite.T(),
 			"v1.7.1",
 			[]string{"parca"},
-			[]string{"v1.4.1", "v1.5.2", "v1.5.3", "v1.6.1", "v1.6.2", "v1.7.1", "v1.7.2"})
+			[]string{"v1.3.1", "v1.4.1", "v1.5.2", "v1.5.3", "v1.6.1", "v1.6.2", "v1.7.1", "v1.7.2"})
 		suite.setupTestController(string(suite.parseTestdata("modulewithmr-registry.yaml")), withDependencyContainer(dc))
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
 		require.NoError(suite.T(), err)
