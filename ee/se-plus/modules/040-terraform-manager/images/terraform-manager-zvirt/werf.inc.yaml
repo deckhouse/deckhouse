@@ -6,7 +6,7 @@ git:
 import:
   - image: terraform-provider-ovirt
     add: /terraform-provider-ovirt
-    to: /plugins/registry.terraform.io/{{ .TF.ovirt.namespace }}/{{ .TF.ovirt.type }}/{{ .TF.ovirt.version }}/linux_amd64/terraform-provider-ovirt
+    to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "ovirt") }}/{{ .TF.ovirt.namespace }}/{{ .TF.ovirt.type }}/{{ .TF.ovirt.version }}/linux_amd64/terraform-provider-ovirt
     before: setup
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact

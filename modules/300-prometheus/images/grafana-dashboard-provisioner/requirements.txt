@@ -1,2 +1,0 @@
-deckhouse==0.4.7
-python-slugify==8.0.1

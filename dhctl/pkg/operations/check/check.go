@@ -316,11 +316,16 @@ func CheckState(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig
 		statistics.Cluster.Status = DestructiveStatus
 		statistics.Cluster.DestructiveChanges = baseRes.DestructiveChanges
 	}
-	if baseRes.Plan != nil {
-		statistics.InfrastructurePlan = append(statistics.InfrastructurePlan, baseRes.Plan)
-	}
 
-	hasTerraformState := baseRes.IsTerraformState
+	hasTerraformState := false
+
+	if baseRes != nil {
+		if baseRes.Plan != nil {
+			statistics.InfrastructurePlan = append(statistics.InfrastructurePlan, baseRes.Plan)
+		}
+
+		hasTerraformState = baseRes.IsTerraformState
+	}
 
 	log.DebugF("Base infrastructure has terraform state %v\n", hasTerraformState)
 
@@ -472,15 +477,17 @@ func CheckState(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig
 			}
 
 			statistics.Node = append(statistics.Node, checkResult)
-			if nodeRes.Plan != nil {
-				statistics.InfrastructurePlan = append(statistics.InfrastructurePlan, nodeRes.Plan)
-			}
+			if nodeRes != nil {
+				if nodeRes.Plan != nil {
+					statistics.InfrastructurePlan = append(statistics.InfrastructurePlan, nodeRes.Plan)
+				}
 
-			log.DebugF("Node %s has terraform state: %v\n", name, nodeRes.IsTerraformState)
+				log.DebugF("Node %s has terraform state: %v\n", name, nodeRes.IsTerraformState)
 
-			if nodeRes.IsTerraformState && !hasTerraformState {
-				hasTerraformState = nodeRes.IsTerraformState
-				log.DebugF("Has terraform state after node %s: %v\n", name, hasTerraformState)
+				if nodeRes.IsTerraformState && !hasTerraformState {
+					hasTerraformState = nodeRes.IsTerraformState
+					log.DebugF("Has terraform state after node %s: %v\n", name, hasTerraformState)
+				}
 			}
 		}
 	}

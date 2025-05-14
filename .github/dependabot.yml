@@ -142,6 +142,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/ee/modules/110-istio/images/metrics-exporter/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/ee/modules/500-operator-trivy/images/report-updater/src"
   labels:
   - "type/dependencies"
@@ -268,7 +277,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/002-deckhouse/images/webhook-handler/label-converter"
+  directory: "/modules/002-deckhouse/images/webhook-handler/src/label-converter"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -683,7 +692,7 @@ updates:
 
 # pip
 - package-ecosystem: "pip"
-  directory: "/ee/modules/450-network-gateway/images/dnsmasq"
+  directory: "/.github/scripts/python/e2e-commander-clean"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -692,7 +701,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "pip"
-  directory: "/ee/modules/650-runtime-audit-engine/images/rules-loader"
+  directory: "/ee/modules/450-keepalived/images/keepalived/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -701,7 +710,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "pip"
-  directory: "/modules/002-deckhouse/images/webhook-handler"
+  directory: "/ee/modules/450-network-gateway/images/dnsmasq/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -710,7 +719,25 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "pip"
-  directory: "/modules/300-prometheus/images/grafana-dashboard-provisioner"
+  directory: "/ee/modules/650-runtime-audit-engine/images/rules-loader/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "pip"
+  directory: "/modules/002-deckhouse/images/webhook-handler/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "pip"
+  directory: "/modules/300-prometheus/images/grafana-dashboard-provisioner/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

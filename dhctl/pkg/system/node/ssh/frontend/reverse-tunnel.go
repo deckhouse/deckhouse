@@ -23,11 +23,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/cmd"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 type ReverseTunnelChecker interface {

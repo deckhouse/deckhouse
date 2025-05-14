@@ -34,14 +34,14 @@ metadata:
   name: my-egressgw
 spec:
   nodeSelector:
-    node-role.deckhouse.io/egress: ""
+    dedicated/egress: ""
   sourceIP:
     mode: PrimaryIPFromEgressGatewayNodeInterface
     primaryIPFromEgressGatewayNodeInterface:
       # The "public" interface must have the same name on all nodes that matching the nodeSelector.
       # If the active node fails, traffic will be redirected through the backup node and
       # the source IP address of the network packets will change.
-      interfaceName: eth1 
+      interfaceName: eth1
 ```
 
 #### EgressGateway in VirtualIPAddress mode (Virtual IP mode)
@@ -53,7 +53,7 @@ metadata:
   name: my-egressgw
 spec:
   nodeSelector:
-    node-role.deckhouse.io/egress: ""
+    dedicated/egress: ""
   sourceIP:
     mode: VirtualIPAddress
     virtualIPAddress:
