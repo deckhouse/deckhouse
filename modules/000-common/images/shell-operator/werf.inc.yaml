@@ -45,7 +45,8 @@ import:
   add: /
   to: /
   includePaths:
-  - usr/bin/*awk*
+  - usr/bin/awk
+  - usr/bin/gawk
   before: setup
 - image: tools/findutils
   add: /usr/bin/find
