@@ -41,6 +41,8 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: discover_vxlan_port ::", fun
 		It("VXLAN Tunnel Port should be 4299", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cniCilium.internal.tunnelPortVXLAN").String()).To(Equal("4299"))
+
+			Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(1))
 		})
 	})
 
@@ -57,6 +59,8 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: discover_vxlan_port ::", fun
 		It("VXLAN Tunnel Port should be 4298", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cniCilium.internal.tunnelPortVXLAN").String()).To(Equal("4298"))
+
+			Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(1))
 		})
 	})
 
@@ -70,9 +74,11 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: discover_vxlan_port ::", fun
 			f.RunHook()
 		})
 
-		It("VXLAN Tunnel Port should be 4300", func() {
+		It("VXLAN Tunnel Port should be 4297", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("cniCilium.internal.tunnelPortVXLAN").String()).To(Equal("4300"))
+			Expect(f.ValuesGet("cniCilium.internal.tunnelPortVXLAN").String()).To(Equal("4297"))
+
+			Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(1))
 		})
 	})
 
@@ -90,13 +96,15 @@ enabledModules:
 			f.RunHook()
 		})
 
-		It("VXLAN Tunnel Port should be 4299", func() {
+		It("VXLAN Tunnel Port should be 4297", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("cniCilium.internal.tunnelPortVXLAN").String()).To(Equal("4299"))
+			Expect(f.ValuesGet("cniCilium.internal.tunnelPortVXLAN").String()).To(Equal("4297"))
+
+			Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(1))
 		})
 	})
 
-	Context("New cluster :: ConfigMap set to 4299 :: Virtualization Off :: Nesting level is not set", func() {
+	Context("Existing cluster :: ConfigMap set to 4299 :: Virtualization Off :: Nesting level is not set", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(getCiliumConfigMapWithPort("4299"))
 			f.BindingContexts.Set(
@@ -108,10 +116,12 @@ enabledModules:
 		It("VXLAN Tunnel Port should be 4299", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cniCilium.internal.tunnelPortVXLAN").String()).To(Equal("4299"))
+
+			Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(1))
 		})
 	})
 
-	Context("New cluster :: ConfigMap set to 4298 :: Virtualization On :: Nesting level is not set", func() {
+	Context("Existing cluster :: ConfigMap set to 4298 :: Virtualization On :: Nesting level is not set", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(getCiliumConfigMapWithPort("4298"))
 			f.BindingContexts.Set(
@@ -124,10 +134,12 @@ enabledModules:
 		It("VXLAN Tunnel Port should be 4298", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cniCilium.internal.tunnelPortVXLAN").String()).To(Equal("4298"))
+
+			Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(1))
 		})
 	})
 
-	Context("New cluster :: ConfigMap set to 4299 :: Virtualization Off :: Nesting level is 1 :: Migrating to a greater port number", func() {
+	Context("Existing cluster :: ConfigMap set to 4299 :: Virtualization Off :: Nesting level is 1", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(getCiliumConfigMapWithPort("4299"))
 			f.BindingContexts.Set(
@@ -137,13 +149,20 @@ enabledModules:
 			f.RunHook()
 		})
 
-		It("VXLAN Tunnel Port should be 4300", func() {
+		It("VXLAN Tunnel Port should be 4299, There is an alert about non-standard port", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("cniCilium.internal.tunnelPortVXLAN").String()).To(Equal("4300"))
+			Expect(f.ValuesGet("cniCilium.internal.tunnelPortVXLAN").String()).To(Equal("4299"))
+
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(2))
+			Expect(m[0].Action).Should(Equal("expire"))
+			Expect(m[1].Name).Should(Equal("d8_cni_cilium_non_standard_vxlan_port"))
+			Expect(m[1].Action).To(BeEquivalentTo("set"))
+			Expect(m[1].Value).To(BeEquivalentTo(ptr.To(1.0)))
 		})
 	})
 
-	Context("New cluster :: ConfigMap set to 4298 :: Virtualization On :: Nesting level is 1 :: Migrating to a greater port number", func() {
+	Context("Exising cluster :: ConfigMap set to 4298 :: Virtualization On :: Nesting level is 1", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(getCiliumConfigMapWithPort("4298"))
 			f.BindingContexts.Set(
@@ -157,13 +176,20 @@ enabledModules:
 			f.RunHook()
 		})
 
-		It("VXLAN Tunnel Port should be 4299", func() {
+		It("VXLAN Tunnel Port should be 4298, There is an alert about non-standard port", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("cniCilium.internal.tunnelPortVXLAN").String()).To(Equal("4299"))
+			Expect(f.ValuesGet("cniCilium.internal.tunnelPortVXLAN").String()).To(Equal("4298"))
+
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(2))
+			Expect(m[0].Action).Should(Equal("expire"))
+			Expect(m[1].Name).Should(Equal("d8_cni_cilium_non_standard_vxlan_port"))
+			Expect(m[1].Action).To(BeEquivalentTo("set"))
+			Expect(m[1].Value).To(BeEquivalentTo(ptr.To(1.0)))
 		})
 	})
 
-	Context("New cluster :: ConfigMap set to 4300 :: Virtualization Off :: Nesting level is 1 :: Migration is not needed", func() {
+	Context("Existing cluster :: ConfigMap set to 4300 :: Virtualization Off :: Nesting level is 1", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(getCiliumConfigMapWithPort("4300"))
 			f.BindingContexts.Set(
@@ -173,13 +199,20 @@ enabledModules:
 			f.RunHook()
 		})
 
-		It("VXLAN Tunnel Port should be 4300", func() {
+		It("VXLAN Tunnel Port should be 4300, There is an alert about non-standard port", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cniCilium.internal.tunnelPortVXLAN").String()).To(Equal("4300"))
+
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(2))
+			Expect(m[0].Action).Should(Equal("expire"))
+			Expect(m[1].Name).Should(Equal("d8_cni_cilium_non_standard_vxlan_port"))
+			Expect(m[1].Action).To(BeEquivalentTo("set"))
+			Expect(m[1].Value).To(BeEquivalentTo(ptr.To(1.0)))
 		})
 	})
 
-	Context("New cluster :: ConfigMap set to 4299 :: Virtualization On :: Nesting level is 1 :: Migration is not needed", func() {
+	Context("Existing cluster :: ConfigMap set to 4299 :: Virtualization On :: Nesting level is 1", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(getCiliumConfigMapWithPort("4299"))
 			f.BindingContexts.Set(
@@ -193,45 +226,16 @@ enabledModules:
 			f.RunHook()
 		})
 
-		It("VXLAN Tunnel Port should be 4299", func() {
+		It("VXLAN Tunnel Port should be 4299, There is an alert about non-standard port", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cniCilium.internal.tunnelPortVXLAN").String()).To(Equal("4299"))
-		})
-	})
 
-	Context("New cluster :: ConfigMap set to 4299 :: Virtualization On :: Nesting levev is not set :: Migrating to a less port number", func() {
-		BeforeEach(func() {
-			f.KubeStateSet(getCiliumConfigMapWithPort("4299"))
-			f.BindingContexts.Set(
-				f.GenerateBeforeHelmContext(),
-			)
-			f.ValuesSetFromYaml("global.enabledModules", []byte(`[virtualization]`))
-			f.RunHook()
-		})
-
-		It("VXLAN Tunnel Port should be 4298", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("cniCilium.internal.tunnelPortVXLAN").String()).To(Equal("4298"))
-		})
-	})
-
-	Context("New cluster :: ConfigMap set to 4299 :: Virtualization On :: Nesting levev is 1 :: Migration is not needed", func() {
-		BeforeEach(func() {
-			f.KubeStateSet(getCiliumConfigMapWithPort("4299"))
-			f.BindingContexts.Set(
-				f.GenerateBeforeHelmContext(),
-			)
-			f.ValuesSetFromYaml("global", []byte(`
-discovery:
-  dvpNestingLevel: 1
-enabledModules:
-- virtualization`))
-			f.RunHook()
-		})
-
-		It("VXLAN Tunnel Port should be 4299", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("cniCilium.internal.tunnelPortVXLAN").String()).To(Equal("4299"))
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(2))
+			Expect(m[0].Action).Should(Equal("expire"))
+			Expect(m[1].Name).Should(Equal("d8_cni_cilium_non_standard_vxlan_port"))
+			Expect(m[1].Action).To(BeEquivalentTo("set"))
+			Expect(m[1].Value).To(BeEquivalentTo(ptr.To(1.0)))
 		})
 	})
 
@@ -247,6 +251,8 @@ enabledModules:
 		It("VXLAN Tunnel Port should be 8472", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cniCilium.internal.tunnelPortVXLAN").String()).To(Equal("8472"))
+
+			Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(1))
 		})
 	})
 
@@ -263,6 +269,48 @@ enabledModules:
 		It("VXLAN Tunnel Port should be 8469", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cniCilium.internal.tunnelPortVXLAN").String()).To(Equal("8469"))
+
+			Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(1))
+		})
+	})
+
+	Context("Existing cluster :: ConfigMap empty :: Virtualization On :: Nesting level is 1", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(getCiliumConfigMapWithPort(""))
+			f.BindingContexts.Set(
+				f.GenerateBeforeHelmContext(),
+			)
+			f.ValuesSetFromYaml("global", []byte(`
+discovery:
+  dvpNestingLevel: 1
+enabledModules:
+- virtualization`))
+			f.RunHook()
+		})
+
+		It("VXLAN Tunnel Port should be 4297", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("cniCilium.internal.tunnelPortVXLAN").String()).To(Equal("4297"))
+
+			Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(1))
+		})
+	})
+
+	Context("Existing cluster :: ConfigMap empty :: Virtualization Off :: Nesting level is 5", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(getCiliumConfigMapWithPort(""))
+			f.BindingContexts.Set(
+				f.GenerateBeforeHelmContext(),
+			)
+			f.ValuesSetFromYaml("global.discovery.dvpNestingLevel", []byte(`5`))
+			f.RunHook()
+		})
+
+		It("VXLAN Tunnel Port should be 4293", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("cniCilium.internal.tunnelPortVXLAN").String()).To(Equal("4293"))
+
+			Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(1))
 		})
 	})
 
@@ -278,6 +326,8 @@ enabledModules:
 		It("VXLAN Tunnel Port should be 8472", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cniCilium.internal.tunnelPortVXLAN").String()).To(Equal("8472"))
+
+			Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(1))
 		})
 	})
 
@@ -294,6 +344,8 @@ enabledModules:
 		It("VXLAN Tunnel Port should be 8469", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cniCilium.internal.tunnelPortVXLAN").String()).To(Equal("8469"))
+
+			Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(1))
 		})
 	})
 
@@ -310,6 +362,8 @@ enabledModules:
 		It("VXLAN Tunnel Port should be 4298", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cniCilium.internal.tunnelPortVXLAN").String()).To(Equal("4298"))
+
+			Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(1))
 		})
 	})
 
@@ -327,9 +381,16 @@ enabledModules:
 			f.RunHook()
 		})
 
-		It("VXLAN Tunnel Port should be 4299", func() {
+		It("VXLAN Tunnel Port should be 8472, There is an alert about non-standard port", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("cniCilium.internal.tunnelPortVXLAN").String()).To(Equal("4299"))
+			Expect(f.ValuesGet("cniCilium.internal.tunnelPortVXLAN").String()).To(Equal("8472"))
+
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(2))
+			Expect(m[0].Action).Should(Equal("expire"))
+			Expect(m[1].Name).Should(Equal("d8_cni_cilium_non_standard_vxlan_port"))
+			Expect(m[1].Action).To(BeEquivalentTo("set"))
+			Expect(m[1].Value).To(BeEquivalentTo(ptr.To(1.0)))
 		})
 	})
 
@@ -356,7 +417,7 @@ enabledModules:
 		})
 	})
 
-	Context("Existing cluster :: ConfigMap has a faulty value :: Virtualization On", func() {
+	Context("Existing cluster :: ConfigMap has a faulty value :: Virtualization On :: Nesting level is not set", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(getCiliumConfigMapWithPort("abc"))
 			f.BindingContexts.Set(
@@ -369,6 +430,8 @@ enabledModules:
 		It("VXLAN Tunnel Port should be 8469", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cniCilium.internal.tunnelPortVXLAN").String()).To(Equal("8469"))
+
+			Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(1))
 		})
 	})
 
@@ -384,6 +447,8 @@ enabledModules:
 		It("VXLAN Tunnel Port should be 4299", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cniCilium.internal.tunnelPortVXLAN").String()).To(Equal("4299"))
+
+			Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(1))
 		})
 	})
 
@@ -397,9 +462,16 @@ enabledModules:
 			f.RunHook()
 		})
 
-		It("VXLAN Tunnel Port should be 4300", func() {
+		It("VXLAN Tunnel Port should be 4299, There is an alert about non-standard port", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("cniCilium.internal.tunnelPortVXLAN").String()).To(Equal("4300"))
+			Expect(f.ValuesGet("cniCilium.internal.tunnelPortVXLAN").String()).To(Equal("4299"))
+
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(2))
+			Expect(m[0].Action).Should(Equal("expire"))
+			Expect(m[1].Name).Should(Equal("d8_cni_cilium_non_standard_vxlan_port"))
+			Expect(m[1].Action).To(BeEquivalentTo("set"))
+			Expect(m[1].Value).To(BeEquivalentTo(ptr.To(1.0)))
 		})
 	})
 })

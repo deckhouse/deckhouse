@@ -20,7 +20,6 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -33,28 +32,12 @@ type masterNodeInfo struct {
 
 const (
 	nodeRole               = "master"
-	cmFieldName            = "level"
 	masterNodeGroup        = "node.deckhouse.io/group"
 	virtualizationLevelKey = "node.deckhouse.io/dvp-nesting-level"
-	cmSnapshotName         = "virtualization_level_configmap"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
-		{
-			Name:       cmSnapshotName,
-			ApiVersion: "v1",
-			Kind:       "ConfigMap",
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{"d8-virtualization-level"},
-			},
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{"d8-system"},
-				},
-			},
-			FilterFunc: applyConfigMapFilter,
-		},
 		{
 			Name:          "master_nodes",
 			ApiVersion:    "v1",
@@ -64,25 +47,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 	},
 }, setGlobalVirtualizationLevel)
-
-func applyConfigMapFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	cm := new(corev1.ConfigMap)
-	if err := sdk.FromUnstructured(obj, cm); err != nil {
-		return nil, err
-	}
-
-	level, ok := cm.Data[cmFieldName]
-	if !ok {
-		return nil, nil
-	}
-
-	virtualizationLevel, err := strconv.Atoi(level)
-	if err != nil {
-		return nil, nil
-	}
-
-	return virtualizationLevel, nil
-}
 
 func applyMasterNodesFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	node := new(corev1.Node)
@@ -104,45 +68,11 @@ func applyMasterNodesFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 }
 
 func setGlobalVirtualizationLevel(input *go_hook.HookInput) error {
-	virtualizationLevel := 0
-
-	virtualizationLevelFromLabels := getVirtualizationLevelFromMasterNodesLabels(input.Snapshots["master_nodes"])
-	if len(input.Snapshots[cmSnapshotName]) != 0 && input.Snapshots[cmSnapshotName][0] != nil {
-		virtualizationLevel = input.Snapshots[cmSnapshotName][0].(int)
-		// if master nodes' labels report a deeper level of virtualization than the configmap, override the configmap value with the label-based on
-		if virtualizationLevelFromLabels > virtualizationLevel {
-			virtualizationLevel = virtualizationLevelFromLabels
-			createOrUpdateVirtualizationLevelCM(input, virtualizationLevelFromLabels)
-		}
-	} else { // set virtualization level based on labels as configmap either doesn't exist or contains a faulty value
-		virtualizationLevel = virtualizationLevelFromLabels
-		createOrUpdateVirtualizationLevelCM(input, virtualizationLevel)
-	}
-
+	virtualizationLevel := getVirtualizationLevelFromMasterNodesLabels(input.Snapshots["master_nodes"])
 	input.Values.Set("global.discovery.dvpNestingLevel", virtualizationLevel)
 	input.Logger.Infof("set DVP nesting level to: %d", virtualizationLevel)
 
 	return nil
-}
-
-func createOrUpdateVirtualizationLevelCM(input *go_hook.HookInput, virtualizationLevel int) {
-	configmap := &corev1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ConfigMap",
-			APIVersion: "v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "d8-virtualization-level",
-			Namespace: "d8-system",
-			Labels: map[string]string{
-				"app":      "deckhouse",
-				"module":   "deckhouse",
-				"heritage": "deckhouse",
-			},
-		},
-		Data: map[string]string{"level": (strconv.Itoa(virtualizationLevel))},
-	}
-	input.PatchCollector.CreateOrUpdate(configmap)
 }
 
 func getVirtualizationLevelFromMasterNodesLabels(masterNodeInfoSnaps []go_hook.FilterResult) int {
