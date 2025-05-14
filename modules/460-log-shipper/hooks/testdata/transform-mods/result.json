@@ -8,7 +8,7 @@
     }
   },
   "transforms": {
-    "transform/destination/test-kafka-dest/00_tf_key_rename__pod_labels": {
+    "transform/destination/test-kafka-dest/00_tf_normolazeLabelKeys": {
       "drop_on_abort": false,
       "inputs": [
         "transform/source/test-source/01_clean_up"
@@ -16,42 +16,26 @@
       "source": "if exists(.pod_labels) {\n.pod_labels = map_keys(object!(.pod_labels), recursive: true) -\u003e |key| { replace(key, \".\", \"_\")}\n}",
       "type": "remap"
     },
-    "transform/destination/test-kafka-dest/01_tf_warp_not_json__message": {
+    "transform/destination/test-kafka-dest/01_tf_ensureStructuredMessage": {
       "drop_on_abort": false,
       "inputs": [
-        "transform/destination/test-kafka-dest/00_tf_key_rename__pod_labels"
+        "transform/destination/test-kafka-dest/00_tf_normolazeLabelKeys"
       ],
-      "source": ".message = parse_json(.message) ?? { \"text\": .message }\n",
+      "source": ".message = parse_json(.message) ?? { \"pod_labels\": .message }\n",
       "type": "remap"
     },
-    "transform/destination/test-kafka-dest/02_tf_key_rename__example": {
+    "transform/destination/test-kafka-dest/02_tf_delete__first_second": {
       "drop_on_abort": false,
       "inputs": [
-        "transform/destination/test-kafka-dest/01_tf_warp_not_json__message"
-      ],
-      "source": "if exists(.example) {\n.example = map_keys(object!(.example), recursive: true) -\u003e |key| { replace(key, \".\", \"_\")}\n}",
-      "type": "remap"
-    },
-    "transform/destination/test-kafka-dest/03_tf_warp_not_json__example": {
-      "drop_on_abort": false,
-      "inputs": [
-        "transform/destination/test-kafka-dest/02_tf_key_rename__example"
-      ],
-      "source": ".example = parse_json(.example) ?? { \"text\": .example }\n",
-      "type": "remap"
-    },
-    "transform/destination/test-kafka-dest/04_tf_delete__first_second": {
-      "drop_on_abort": false,
-      "inputs": [
-        "transform/destination/test-kafka-dest/03_tf_warp_not_json__example"
+        "transform/destination/test-kafka-dest/01_tf_ensureStructuredMessage"
       ],
       "source": "if exists(.first) {\n del(.first)\n}\nif exists(.second) {\n del(.second)\n}\n",
       "type": "remap"
     },
-    "transform/destination/test-kafka-dest/05_del_parsed_data": {
+    "transform/destination/test-kafka-dest/03_del_parsed_data": {
       "drop_on_abort": false,
       "inputs": [
-        "transform/destination/test-kafka-dest/04_tf_delete__first_second"
+        "transform/destination/test-kafka-dest/02_tf_delete__first_second"
       ],
       "source": "if exists(.parsed_data) {\n    del(.parsed_data)\n}",
       "type": "remap"
@@ -77,7 +61,7 @@
     "destination/cluster/test-kafka-dest": {
       "type": "kafka",
       "inputs": [
-        "transform/destination/test-kafka-dest/05_del_parsed_data"
+        "transform/destination/test-kafka-dest/03_del_parsed_data"
       ],
       "healthcheck": {
         "enabled": false

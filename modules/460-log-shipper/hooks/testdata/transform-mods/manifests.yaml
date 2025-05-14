@@ -26,15 +26,10 @@ spec:
       username: test
       password: test
   transformation:
-  - action: replaceDot
-  - action: wrapNotJson
-  - action: replaceDot
-    labels:
-    - example
-  - action: wrapNotJson
-    labels:
-    - example
-  - action: delete
+  - action: normalizeLabelKeys
+  - action: ensureStructuredMessage
+    targetField: pod_labels
+  - action: dropLabels
     labels: 
     - first
     - .second
