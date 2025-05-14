@@ -319,7 +319,7 @@ function main() {
         while true
         do
           # Emulate pkill -U $local_user_id
-          ps aux | grep "^$(id -nu $local_user_id)" | awk '{print $2}' | xargs kill -9
+          ps -u "$(id -nu $local_user_id)" --no-headers | awk '{print $1}' | xargs kill -9
 
           if userdel -r "$(id -nu $local_user_id)"; then
             break
