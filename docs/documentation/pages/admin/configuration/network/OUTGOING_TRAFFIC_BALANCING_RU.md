@@ -1,6 +1,6 @@
 ---
 title: "Балансировка исходящего трафика"
-permalink: ru/admin/network/outgoing-traffic-balancing.html
+permalink: ru/admin/configuration/network/outgoing-traffic-balancing.html
 lang: ru
 ---
 

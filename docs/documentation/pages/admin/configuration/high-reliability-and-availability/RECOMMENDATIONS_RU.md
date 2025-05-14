@@ -1,6 +1,6 @@
 ---
 title: Рекомендации по конфигурации узлов кластера и предотвращению перегрузки
-permalink: ru/admin/high-reliability-and-availability/recommendations.html
+permalink: ru/admin/configuration/high-reliability-and-availability/recommendations.html
 lang: ru
 ---
 

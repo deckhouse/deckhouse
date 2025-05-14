@@ -1,6 +1,6 @@
 ---
 title: Synchronizing time on nodes
-permalink: en/admin/network/ntp.html
+permalink: en/admin/configuration/network/ntp.html
 ---
 
 To synchronize time on Deckhouse cluster nodes,

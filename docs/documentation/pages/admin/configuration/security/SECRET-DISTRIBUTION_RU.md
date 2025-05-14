@@ -1,6 +1,6 @@
 ---
 title: Автоматическое распространение секретов по пространствам имён
-permalink: ru/admin/security/secret-distribution.html
+permalink: ru/admin/configuration/security/secret-distribution.html
 lang: ru
 ---
 

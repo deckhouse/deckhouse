@@ -1,6 +1,6 @@
 ---
 title: Политики безопасности
-permalink: ru/admin/security/policies.html
+permalink: ru/admin/configuration/security/policies.html
 lang: ru
 ---
 

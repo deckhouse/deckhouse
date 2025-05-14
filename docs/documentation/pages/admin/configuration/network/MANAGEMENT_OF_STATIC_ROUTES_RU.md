@@ -1,6 +1,6 @@
 ---
 title: "Управление статичными маршрутами и правилами ip rule на узлах кластера"
-permalink: ru/admin/network/management-of-static-routes.html
+permalink: ru/admin/configuration/network/management-of-static-routes.html
 lang: ru
 ---
 

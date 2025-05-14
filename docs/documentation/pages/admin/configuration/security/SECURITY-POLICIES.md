@@ -1,4 +1,4 @@
 ---
 title: Security policies
-permalink: en/admin/security/policies.html
+permalink: en/admin/configuration/security/policies.html
 ---

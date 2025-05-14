@@ -1,6 +1,6 @@
 ---
 title: "Storage configuration"
-permalink: en/admin/storage/supported-storage.html
+permalink: en/admin/configuration/storage/supported-storage.html
 ---
 
 Storage setup involves several steps depending on the selected [storage type](../storage/overview.html#supported-storage-types). The main configuration steps include:

@@ -1,6 +1,6 @@
 ---
 title: Синхронизация времени на узлах
-permalink: ru/admin/network/ntp.html
+permalink: ru/admin/configuration/network/ntp.html
 lang: ru
 ---
 

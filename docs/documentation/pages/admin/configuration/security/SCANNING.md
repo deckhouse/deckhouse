@@ -1,6 +1,6 @@
 ---
 title: Container image vulnerability scanning
-permalink: en/admin/security/scanning.html
+permalink: en/admin/configuration/security/scanning.html
 ---
 
 

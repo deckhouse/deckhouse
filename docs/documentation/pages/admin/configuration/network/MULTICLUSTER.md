@@ -1,6 +1,6 @@
 ---
 title: "Multicluster"
-permalink: en/admin/network/multicluster.html
+permalink: en/admin/configuration/network/multicluster.html
 ---
 
 ## Multicluster of Istio funds

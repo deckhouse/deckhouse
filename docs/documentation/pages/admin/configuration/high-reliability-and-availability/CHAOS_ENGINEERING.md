@@ -1,6 +1,6 @@
 ---
 title: Chaos engineering
-permalink: en/admin/high-reliability-and-availability/chaos-engineering.html
+permalink: en/admin/configuration/high-reliability-and-availability/chaos-engineering.html
 description: Cluster fault tolerance testing
 ---
 

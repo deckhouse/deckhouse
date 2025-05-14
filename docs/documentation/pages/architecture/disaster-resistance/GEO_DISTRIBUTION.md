@@ -1,4 +1,4 @@
 ---
 title: Geo-distribution
-permalink: en/architecture/geo-distribution.html
+permalink: en/architecture/disaster-resistance/geo-distribution.html
 ---

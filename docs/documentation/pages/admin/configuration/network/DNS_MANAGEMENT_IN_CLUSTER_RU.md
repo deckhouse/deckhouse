@@ -1,6 +1,6 @@
 ---
 title: "Управление DNS в кластере Kubernetes"
-permalink: ru/admin/network/dns-management-in-cluster.html
+permalink: ru/admin/configuration/network/dns-management-in-cluster.html
 lang: ru
 ---
 

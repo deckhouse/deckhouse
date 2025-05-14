@@ -1,6 +1,6 @@
 ---
 title: "Network policies"
-permalink: en/admin/network/network-policies-overview.html
+permalink: en/admin/configuration/network/network-policies-overview.html
 ---
 
 <!-- Transferred from https://deckhouse.io/products/kubernetes-platform/documentation/latest/network_security_setup.html -->

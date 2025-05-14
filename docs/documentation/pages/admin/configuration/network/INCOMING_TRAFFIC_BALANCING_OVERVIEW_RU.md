@@ -1,6 +1,6 @@
 ---
 title: "Общие сведения о балансировке входящего трафика"
-permalink: ru/admin/network/incoming-traffic-balancing-overview.html
+permalink: ru/admin/configuration/network/incoming-traffic-balancing-overview.html
 lang: ru
 ---
 

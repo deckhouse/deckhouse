@@ -1,6 +1,6 @@
 ---
 title: Управление режимом HA
-permalink: ru/admin/high-reliability-and-availability/enable.html
+permalink: ru/admin/configuration/high-reliability-and-availability/enable.html
 description: Управление режимом HA
 lang: ru
 ---

@@ -1,6 +1,6 @@
 ---
 title: "Обеспечение высокой доступности и отказоустойчивости (keepalived)"
-permalink: ru/admin/network/keepalived.html
+permalink: ru/admin/configuration/network/keepalived.html
 lang: ru
 ---
 

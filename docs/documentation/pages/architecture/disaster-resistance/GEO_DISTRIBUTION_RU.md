@@ -1,6 +1,6 @@
 ---
 title: Геораспределённость
-permalink: ru/architecture/geo-distribution.html
+permalink: ru/architecture/disaster-resistance/geo-distribution.html
 lang: ru
 ---
 

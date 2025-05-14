@@ -1,6 +1,6 @@
 ---
 title: "Управление реплицируемым хранилищем на основе DRBD"
-permalink: ru/admin/storage/sds/lvm-replicated-faq.html
+permalink: ru/admin/configuration/storage/sds/lvm-replicated-faq.html
 lang: ru
 ---
 

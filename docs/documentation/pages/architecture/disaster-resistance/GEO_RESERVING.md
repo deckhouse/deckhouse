@@ -1,4 +1,4 @@
 ---
 title: Geo-reserving
-permalink: en/architecture/geo-reserving.html
+permalink: en/architecture/disaster-resistance/geo-reserving.html
 ---

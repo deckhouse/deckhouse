@@ -1,6 +1,6 @@
 ---
 title: "Настройка создания снимков томов"
-permalink: ru/admin/storage/snapshot-controller.html
+permalink: ru/admin/configuration/storage/snapshot-controller.html
 lang: ru
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: "Режимы работы bpfLB для обработки внешнего трафика"
-permalink: ru/admin/network/bpflb-external-traffic.html
+permalink: ru/admin/configuration/network/bpflb-external-traffic.html
 lang: ru
 ---
 

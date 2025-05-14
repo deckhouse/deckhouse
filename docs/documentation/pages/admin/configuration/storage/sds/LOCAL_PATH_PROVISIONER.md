@@ -1,6 +1,6 @@
 ---
 title: "Local path provisioner storage"
-permalink: en/admin/storage/sds/local-path-provisioner.html
+permalink: en/admin/configuration/storage/sds/local-path-provisioner.html
 ---
 
 Deckhouse Kubernetes Platform provides the ability to configure local storage using Local Path Provisioner. This is a simple solution without support for snapshots or volume size limits, best suited for development, testing, and small clusters. It uses local disk space on Kubernetes nodes to create PersistentVolumes without relying on external storage systems.

@@ -1,6 +1,6 @@
 ---
 title: "Управление локальным хранилищем на основе LVM"
-permalink: ru/admin/storage/sds/lvm-local-faq.html
+permalink: ru/admin/configuration/storage/sds/lvm-local-faq.html
 lang: ru
 ---
 

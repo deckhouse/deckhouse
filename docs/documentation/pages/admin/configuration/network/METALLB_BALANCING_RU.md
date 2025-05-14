@@ -1,6 +1,6 @@
 ---
 title: "Балансировка средствами MetalLB"
-permalink: ru/admin/network/metallb-balancing.html
+permalink: ru/admin/configuration/network/metallb-balancing.html
 lang: ru
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: "HPE data storage"
-permalink: en/admin/storage/external/hpe.html
+permalink: en/admin/configuration/storage/external/hpe.html
 ---
 
 Deckhouse includes support for HPE 3PAR storage systems, enabling volume management in Kubernetes using a CSI driver. This integration provides reliable, scalable, and high-performance storage suitable for mission-critical workloads. The `csi-hpe` module is used to work with HPE 3PAR systems, allowing StorageClass creation in Kubernetes through the [HPEStorageClass](../../../reference/cr/hpestorageclass/) resource.

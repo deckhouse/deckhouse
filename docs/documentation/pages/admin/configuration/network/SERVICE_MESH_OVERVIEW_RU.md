@@ -1,6 +1,6 @@
 ---
 title: "Servise Mesh"
-permalink: ru/admin/network/service-mesh-overview.html
+permalink: ru/admin/configuration/network/service-mesh-overview.html
 lang: ru
 ---
 

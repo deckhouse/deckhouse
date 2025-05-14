@@ -1,6 +1,6 @@
 ---
 title: "Переключение с CNI flannel на cilium"
-permalink: ru/admin/network/flannel-cilium-switching.html
+permalink: ru/admin/configuration/network/flannel-cilium-switching.html
 lang: ru
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: "Хранилище данных NFS"
-permalink: ru/admin/storage/external/nfs.html
+permalink: ru/admin/configuration/storage/external/nfs.html
 lang: ru
 ---
 

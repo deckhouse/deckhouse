@@ -1,6 +1,6 @@
 ---
 title: Сканирование контейнерных образов на уязвимости
-permalink: ru/admin/security/scanning.html
+permalink: ru/admin/configuration/security/scanning.html
 lang: ru
 ---
 

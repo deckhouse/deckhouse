@@ -1,6 +1,6 @@
 ---
 title: "ServiceWithHealthcheck balancer"
-permalink: en/admin/network/service-with-healthcheck.html
+permalink: en/admin/configuration/network/service-with-healthcheck.html
 ---
 
 <!-- Transferred from https://deckhouse.io/products/kubernetes-platform/documentation/latest/modules/service-with-healthchecks/ -->

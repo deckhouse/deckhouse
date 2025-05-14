@@ -1,6 +1,6 @@
 ---
 title: Управление сертификатами
-permalink: ru/admin/security/certificates.html
+permalink: ru/admin/configuration/security/certificates.html
 lang: ru
 ---
 
