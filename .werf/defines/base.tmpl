@@ -4,9 +4,8 @@
 #   CandiVersionMap - dict CandiVersionMap from werf.yaml
 {{- define "base components imports" }}
 {{- $context := . -}}
-
-- image: common/tini-artifact
-  add: /tini/tini-static
+- image: tools/tini
+  add: /usr/bin/tini
   to: /usr/bin/tini
   before: setup
 - image: tools/semver
@@ -17,7 +16,7 @@
     {{- $image_version := printf "%s.%d" $k8sVersion (index $context.CandiVersionMap "k8s" $k8sVersion "patch") | replace "." "-" }}
 - image: common/kubernetes-artifact-{{ $image_version }}
   add: /src/_output/bin/kubectl
-  to: /usr/local/bin/kubectl-{{ $k8sVersion }}
+  to: /usr/bin/kubectl-{{ $k8sVersion }}
   before: setup
   {{- end }}
 
@@ -34,10 +33,10 @@
 
 - |
   # Install kubectl wrapper
-  cat <<"EOD" > /usr/local/bin/kubectl
+  cat <<"EOD" > /usr/bin/kubectl
   {{- $context.Files.Get (printf "%sdeckhouse-controller/files/kubectl_wrapper.sh" $prefix) | nindent 2 }}
   EOD
-  chmod +x /usr/local/bin/kubectl
+  chmod +x /usr/bin/kubectl
   # Shell comfort: inputrc
   cat <<"EOD" > /etc/inputrc
   {{- $context.Files.Get (printf "%sdeckhouse-controller/files/inputrc" $prefix) | nindent 2 }}
