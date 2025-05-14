@@ -77,7 +77,8 @@ function get_phase2() {
       if eval "${python_binary}" - "${url}" "${token}" <<< "$(load_phase2_script)"; then
         return 0
       fi
-      if [ $? -eq 2 ]; then
+      local rc=$?
+      if [ $rc -eq 2 ]; then
         ((http_401_count++))
         if [ $http_401_count -ge $max_http_401_count ]; then
           return 1
