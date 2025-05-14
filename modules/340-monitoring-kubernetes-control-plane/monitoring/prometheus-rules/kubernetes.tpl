@@ -102,8 +102,11 @@ Consider enabling the `control-plane-manager` module for advanced debugging.
       severity_level: "5"
     annotations:
       plk_protocol_version: "1"
-      summary: High latency of the API server  `{{`{{$labels.instance}}`}}`.
-      description: The API server is experiencing high latency, which may lead to additional issues in the cluster. Verify whether there are sufficient resources on the master nodes.
+      summary: High latency of the API server `{{`{{$labels.instance}}`}}`.
+      description: |
+        The API server is experiencing high latency, which may lead to degraded performance and additional issues in the cluster.
+        
+        To resolve the issue, verify whether the master nodes have sufficient CPU, memory, and disk resources.
   - alert: K8sCertificateExpiration
     expr: sum(label_replace(rate(apiserver_client_certificate_expiration_seconds_bucket{le="604800", job=~"kubelet|kube-apiserver"}[1m]) > 0, "component", "$1", "job", "(.*)")) by (component, node)
     labels:
