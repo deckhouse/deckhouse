@@ -55,12 +55,9 @@ var _ = Describe("Global hooks :: virtualization_level", func() {
 			f.RunHook()
 		})
 
-		It("Create configmap, set global value dvpNestingLevel to 0", func() {
+		It("Set global value dvpNestingLevel to 0", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("global.discovery.dvpNestingLevel").String()).To(Equal("0"))
-
-			configmap := f.KubernetesResource("ConfigMap", "d8-system", "d8-virtualization-level")
-			Expect(configmap.Field("data.level").String()).To(Equal("0"))
 		})
 	})
 
@@ -76,11 +73,9 @@ var _ = Describe("Global hooks :: virtualization_level", func() {
 			f.RunHook()
 		})
 
-		It("Create configmap, set global value dvpNestingLevel", func() {
+		It("Set global value dvpNestingLevel", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("global.discovery.dvpNestingLevel").String()).To(Equal("1"))
-			configmap := f.KubernetesResource("ConfigMap", "d8-system", "d8-virtualization-level")
-			Expect(configmap.Field("data.level").String()).To(Equal("1"))
 		})
 	})
 
@@ -96,11 +91,9 @@ var _ = Describe("Global hooks :: virtualization_level", func() {
 			f.RunHook()
 		})
 
-		It("Create configmap, set global value dvpNestingLevel", func() {
+		It("Set global value dvpNestingLevel", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("global.discovery.dvpNestingLevel").String()).To(Equal("3"))
-			configmap := f.KubernetesResource("ConfigMap", "d8-system", "d8-virtualization-level")
-			Expect(configmap.Field("data.level").String()).To(Equal("3"))
 		})
 	})
 
@@ -116,11 +109,9 @@ var _ = Describe("Global hooks :: virtualization_level", func() {
 			f.RunHook()
 		})
 
-		It("Create configmap, set global value dvpNestingLevel", func() {
+		It("Set global value dvpNestingLevel", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("global.discovery.dvpNestingLevel").String()).To(Equal("0"))
-			configmap := f.KubernetesResource("ConfigMap", "d8-system", "d8-virtualization-level")
-			Expect(configmap.Field("data.level").String()).To(Equal("0"))
 		})
 	})
 
@@ -136,133 +127,12 @@ var _ = Describe("Global hooks :: virtualization_level", func() {
 			f.RunHook()
 		})
 
-		It("Create configmap, set global value dvpNestingLevel", func() {
+		It("set global value dvpNestingLevel", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("global.discovery.dvpNestingLevel").String()).To(Equal("0"))
-			configmap := f.KubernetesResource("ConfigMap", "d8-system", "d8-virtualization-level")
-			Expect(configmap.Field("data.level").String()).To(Equal("0"))
-		})
-	})
-
-	Context("Cluster with 3 virtual master nodes and an empty configmap", func() {
-		nodesLevels := map[string]any{
-			"kube-master-1": 1,
-			"kube-master-2": 1,
-			"kube-master-3": 1,
-		}
-
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(generateMasterNodesManifests(nodesLevels) + generateCMManigest("")))
-			f.RunHook()
-		})
-
-		It("Create configmap, set global value dvpNestingLevel", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("global.discovery.dvpNestingLevel").String()).To(Equal("1"))
-			configmap := f.KubernetesResource("ConfigMap", "d8-system", "d8-virtualization-level")
-			Expect(configmap.Field("data.level").String()).To(Equal("1"))
-		})
-	})
-
-	Context("Cluster with 3 virtual master nodes and a configmap overriding the nodes' labels", func() {
-		nodesLevels := map[string]any{
-			"kube-master-1": 1,
-			"kube-master-2": 1,
-			"kube-master-3": 1,
-		}
-
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(generateMasterNodesManifests(nodesLevels) + generateCMManigest("2")))
-			f.RunHook()
-		})
-
-		It("Create configmap, set global value dvpNestingLevel", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("global.discovery.dvpNestingLevel").String()).To(Equal("2"))
-			configmap := f.KubernetesResource("ConfigMap", "d8-system", "d8-virtualization-level")
-			Expect(configmap.Field("data.level").String()).To(Equal("2"))
-		})
-	})
-
-	Context("Cluster with 3 virtual master nodes and a configmap with a faulty value", func() {
-		nodesLevels := map[string]any{
-			"kube-master-1": 3,
-			"kube-master-2": 3,
-			"kube-master-3": 3,
-		}
-
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(generateMasterNodesManifests(nodesLevels) + generateCMManigest("x")))
-			f.RunHook()
-		})
-
-		It("Create configmap, set global value dvpNestingLevel", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("global.discovery.dvpNestingLevel").String()).To(Equal("3"))
-			configmap := f.KubernetesResource("ConfigMap", "d8-system", "d8-virtualization-level")
-			Expect(configmap.Field("data.level").String()).To(Equal("3"))
-		})
-	})
-
-	Context("Cluster with 3 virtual master nodes and a configmap having less value", func() {
-		nodesLevels := map[string]any{
-			"kube-master-1": 1,
-			"kube-master-2": 1,
-			"kube-master-3": 1,
-		}
-
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(generateMasterNodesManifests(nodesLevels) + generateCMManigest("0")))
-			f.RunHook()
-		})
-
-		It("Create configmap, set global value dvpNestingLevel", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("global.discovery.dvpNestingLevel").String()).To(Equal("1"))
-			configmap := f.KubernetesResource("ConfigMap", "d8-system", "d8-virtualization-level")
-			Expect(configmap.Field("data.level").String()).To(Equal("1"))
-		})
-	})
-
-	Context("Cluster with 3 virtual master nodes and a configmap having greater value", func() {
-		nodesLevels := map[string]any{
-			"kube-master-1": 1,
-			"kube-master-2": 1,
-			"kube-master-3": 1,
-		}
-
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(generateMasterNodesManifests(nodesLevels) + generateCMManigest("2")))
-			f.RunHook()
-		})
-
-		It("Create configmap, set global value dvpNestingLevel", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("global.discovery.dvpNestingLevel").String()).To(Equal("2"))
-			configmap := f.KubernetesResource("ConfigMap", "d8-system", "d8-virtualization-level")
-			Expect(configmap.Field("data.level").String()).To(Equal("2"))
 		})
 	})
 })
-
-func generateCMManigest(level string) string {
-	var result strings.Builder
-	result.WriteString(`
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: d8-virtualization-level
-  namespace: d8-system
-data:`)
-
-	if len(level) > 0 {
-		result.WriteString(fmt.Sprintf(`
-  level: "%s"`, level))
-	}
-
-	return result.String()
-}
 
 func generateMasterNodesManifests(nodeLevels map[string]any) string {
 	var manifests strings.Builder
