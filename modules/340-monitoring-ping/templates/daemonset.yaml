@@ -78,6 +78,9 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: spec.nodeName
+        volumeMounts: # TODO remove volumes in future, need for clean staled metrics
+          - name: textfile
+            mountPath: /node-exporter-textfile
         livenessProbe:
           httpGet:
             path: /healthz
@@ -148,5 +151,9 @@ spec:
   {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
   {{- end }}
+      volumes: # TODO remove volumes in future, need for clean staled metrics
+        - name: textfile
+          hostPath:
+            path: /var/run/node-exporter-textfile
       imagePullSecrets:
       - name: deckhouse-registry
