@@ -140,6 +140,8 @@ import:
 shell:
   install:
   {{- include "base components" (list $context.rootContext $context.prefix) | nindent 2 }}
+  # create /run directory
+  - mkdir -p /run
 imageSpec:
   config:
     env: { "CRYPTOGRAPHY_OPENSSL_NO_LEGACY": "true", "EDITOR": "/usr/bin/vim" }
