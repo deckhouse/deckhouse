@@ -77,18 +77,18 @@ func BashibleConfigHook(order float64, queue string) bool {
 		)
 		switch mode := inputData.Mode; mode {
 		case registry_const.ModeProxy:
-			if modeData := inputData.Proxy; modeData == nil {
-				return fmt.Errorf("incorrect input data, empty proxy mode data")
-			} else {
+			if modeData := inputData.Proxy; modeData != nil {
 				CACert = modeData.CA
 				user = modeData.User
+			} else {
+				return fmt.Errorf("incorrect input data, empty proxy mode data")
 			}
 		case registry_const.ModeDetached:
-			if modeData := inputData.Detached; modeData == nil {
-				return fmt.Errorf("incorrect input data, empty detached mode data")
-			} else {
+			if modeData := inputData.Detached; modeData != nil {
 				CACert = modeData.CA
 				user = modeData.User
+			} else {
+				return fmt.Errorf("incorrect input data, empty detached mode data")
 			}
 		default:
 			bashible_config.Remove(hookInput)
