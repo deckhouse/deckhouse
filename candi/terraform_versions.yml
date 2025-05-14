@@ -109,7 +109,7 @@ huaweicloud:
   useOpentofu: false
 
 kubernetes:
-  namespace: hashicorp
+  namespace: terraform-provider-kubernetes
   cloudName: DVP
   type: kubernetes
   version: 2.35.1
