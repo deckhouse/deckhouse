@@ -29,7 +29,7 @@ region: spb5-region
 zones:
 - spb5-zone
 internalNetworkNames:
-- DPortGroup-lab-vms
+- "DPortGroup-lab-vms-SPB-5-192.168.240.0[24]"
 internalNetworkCIDR: 192.168.240.0/24
 baseResourcePool: cloud-layout-tests
 masterNodeGroup:
@@ -38,7 +38,7 @@ masterNodeGroup:
     numCPUs: 4
     memory: 8192
     template: vm-teamplates/redos8-cloudinit-2cfg
-    mainNetwork: DPortGroup-lab-vms
+    mainNetwork: "DPortGroup-lab-vms-SPB-5-192.168.240.0[24]"
     datastore: vsan-spb-5-datastore
     rootDiskSize: 50
     runtimeOptions:

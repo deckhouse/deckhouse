@@ -7,7 +7,7 @@ spec:
   numCPUs: 4
   memory: 8192
   rootDiskSize: 40
-  mainNetwork: DPortGroup-lab-vms
+  mainNetwork: "DPortGroup-lab-vms-SPB-5-192.168.240.0[24]"
   datastore: SPB-5/vsan-spb-5-datastore
 ---
 apiVersion: deckhouse.io/v1
