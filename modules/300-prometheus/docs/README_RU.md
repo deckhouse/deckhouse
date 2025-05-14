@@ -9,8 +9,6 @@ webIfaces:
 
 Модуль устанавливает и настраивает [Prometheus](https://prometheus.io/), а также настраивает сбор метрик из многих приложений и предоставляет минимальный набор алертов для Prometheus и дашбордов Grafana.
 
-Если используется StorageClass с поддержкой автоматического расширения (`allowVolumeExpansion: true`), при нехватке места на диске для данных Prometheus его емкость будет увеличена.
-
 Ресурсы CPU и memory автоматически выставляются при пересоздании пода на основе истории потребления, благодаря модулю [Vertical Pod Autoscaler](../../modules/vertical-pod-autoscaler/). Также, благодаря кэшированию запросов к Prometheus с помощью [Trickster](https://github.com/trickstercache/trickster), потребление памяти Prometheus сильно сокращается.
 
 Поддерживается как pull-, так и push-модель получения метрик.

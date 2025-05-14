@@ -14,8 +14,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Colors to identify the chip
+BOLD='\033[1m'
+GREEN='\033[0;32m'
+PURPLE='\033[0;35m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+#  Checking OS and getting a chip name
+if uname -s | grep -q "Darwin"; then
+    chip_info=$(sysctl -n machdep.cpu.brand_string)
+    if [[ "$chip_info" == *"Apple M"* ]]; then
+    # Retrieving the processor generation for Apple on the M
+    chip_model=$(echo "$chip_info" | awk -F'Apple ' '{print $2}' | cut -d' ' -f1-2 | sed 's/ / /')
+    # Display an alert for Apple on M
+    echo -e "${BOLD}${PURPLE}Warning. ${CYAN}Your computer has been identified as: ${GREEN}Apple $chip_model ${NC}
+    ${YELLOW}Disable Rosetta support in Docker Desktop before installation.
+    To do this, in Docker Desktop go to ${CYAN}Settings > General > Virtual Machine Options ${YELLOW}and uncheck the ${CYAN}Use Rosetta for x86_64/amd64 emulation on Apple Silicon ${YELLOW}option.${NC}"
+    fi
+fi
+
 CONFIG_DIR=~/.kind-d8
-KIND_IMAGE=kindest/node:v1.30.8@sha256:17cd608b3971338d9180b00776cb766c50d0a0b6b904ab4ff52fd3fc5c6369bf
+KIND_IMAGE=kindest/node:v1.31.6@sha256:28b7cbb993dfe093c76641a0c95807637213c9109b761f1d422c2400e22b8e87
 D8_RELEASE_CHANNEL_TAG=stable
 D8_RELEASE_CHANNEL_NAME=Stable
 D8_REGISTRY_ADDRESS=registry.deckhouse.io
@@ -25,11 +46,11 @@ D8_LICENSE_KEY=
 KIND_INSTALL_DIRECTORY=$CONFIG_DIR
 KIND_PATH=kind
 KIND_CLUSTER_NAME=d8
-KIND_VERSION=v0.26.0
+KIND_VERSION=v0.27.0
 
 KUBECTL_INSTALL_DIRECTORY=$CONFIG_DIR
 KUBECTL_PATH=kubectl
-KUBECTL_VERSION=v1.30.8
+KUBECTL_VERSION=v1.31.6
 
 REQUIRE_MEMORY_MIN_BYTES=4000000000 # 4GB
 
@@ -400,12 +421,20 @@ kind: ModuleConfig
 metadata:
   name: global
 spec:
-  version: 1
+  version: 2
   settings:
     modules:
       publicDomainTemplate: "%s.127.0.0.1.sslip.io"
       https:
-          mode: Disabled
+        mode: Disabled
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cert-manager
+spec:
+  version: 1
+  enabled: true
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -435,13 +464,6 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: ingress-nginx
-spec:
-  enabled: true
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: operator-prometheus
 spec:
   enabled: true
 ---

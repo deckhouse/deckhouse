@@ -386,7 +386,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		}
 
 		if task.DeployedReleaseInfo == nil {
-			drs.Message = "can not find deployed version, awaiting"
+			drs.Message = "could not find deployed version, awaiting"
 		} else {
 			drs.Message = fmt.Sprintf("awaiting for Deckhouse v%s pod to be ready", task.DeployedReleaseInfo.Version.String())
 		}
@@ -990,8 +990,16 @@ func (r *deckhouseReleaseReconciler) reconcileDeployedRelease(ctx context.Contex
 		return res, nil
 	}
 
+	err := ctrlutils.UpdateStatusWithRetry(ctx, r.client, dr, func() error {
+		dr.Status.Message = ""
+		return nil
+	})
+	if err != nil {
+		return res, err
+	}
+
 	if dr.GetIsUpdating() {
-		r.metricStorage.Grouped().GaugeSet(metricUpdatingGroup, metricUpdatingName, 1, map[string]string{"releaseChannel": r.updateSettings.Get().ReleaseChannel})
+		r.metricStorage.Grouped().GaugeSet(metricUpdatingGroup, metricUpdatingName, 1, map[string]string{"deployingRelease": dr.GetName()})
 
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}

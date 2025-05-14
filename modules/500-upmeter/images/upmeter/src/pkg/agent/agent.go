@@ -118,7 +118,7 @@ func (a *Agent) Start(ctx context.Context) error {
 
 	ch := make(chan []check.Episode)
 
-	client := sender.NewClient(a.config.ClientConfig)
+	client := sender.NewClient(a.config.ClientConfig, kubeAccess)
 	storage := sender.NewStorage(dbctx)
 
 	a.sender = sender.New(client, ch, storage, a.config.Interval)

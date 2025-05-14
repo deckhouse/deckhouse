@@ -30,6 +30,9 @@ git:
   stageDependencies:
     install:
       - '*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   beforeInstall:
   {{- include "alt packages proxy" . | nindent 2 }}
@@ -37,11 +40,11 @@ shell:
   setup:
   - mkdir -p /src
   - cd /src
-  - git clone --branch v1.2.5 --depth 1 {{ $.SOURCE_REPO }}/yelp/dumb-init.git
-  - git clone --branch 0.4.1 {{ $.SOURCE_REPO }}/starwing/lua-protobuf
-  - git clone --branch 7-3 {{ $.SOURCE_REPO }}/luarocks-sorces/lua-iconv
-  - git clone --branch 8.45 --depth 1 {{ $.SOURCE_REPO }}/pcre/pcre.git
-  - git clone --branch {{ $controllerBranch }} --depth 1 {{ $.SOURCE_REPO }}/kubernetes/ingress-nginx.git
+  - git clone --branch v1.2.5 --depth 1 $(cat /run/secrets/SOURCE_REPO)/yelp/dumb-init.git
+  - git clone --branch 0.4.1 $(cat /run/secrets/SOURCE_REPO)/starwing/lua-protobuf
+  - git clone --branch 7-3 $(cat /run/secrets/SOURCE_REPO)/luarocks-sorces/lua-iconv
+  - git clone --branch 8.45 --depth 1 $(cat /run/secrets/SOURCE_REPO)/pcre/pcre.git
+  - git clone --branch {{ $controllerBranch }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/kubernetes/ingress-nginx.git
   # Cannot git apply, return error
   - cd /src/ingress-nginx
   - echo "export COMMIT_SHA=git-$(git rev-parse --short HEAD)" > .env_pass
@@ -144,8 +147,12 @@ import:
   to: /src
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   {{- include "alpine packages proxy" . | nindent 2 }}
@@ -153,7 +160,7 @@ shell:
   - apk --no-cache add make bash git openssh
   setup:
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone --branch {{ $controllerBranch }} --depth 1 {{ $.SOURCE_REPO }}/kubernetes/ingress-nginx-jaegertracing-deps.git /root/.hunter
+  - git clone --branch {{ $controllerBranch }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/kubernetes/ingress-nginx-jaegertracing-deps.git /root/.hunter
   - rm -r /root/.hunter/.git
   - export GOPROXY={{ $.GOPROXY }}
   - export GOARCH=amd64
@@ -240,11 +247,11 @@ import:
   to: /chroot/lib64
   before: install
   includePaths:
-  - libpcre.so.1.2.13
-  - libpcre16.so.0.2.13
-  - libpcre32.so.0.0.13
-  - libpcrecpp.so.0.0.2
-  - libpcreposix.so.0.0.7
+  - libpcre.so*
+  - libpcre16.so*
+  - libpcre32.so*
+  - libpcrecpp.so*
+  - libpcreposix.so*
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-opentelemetry-artifact
   add: /etc/nginx/modules
   to: /chroot/modules_mount/etc/nginx/modules/otel
@@ -254,14 +261,14 @@ import:
   to: /chroot/lib64
   before: install
   includePaths:
-    - libcares.so.2
-    - libre2.so.9
-    - libgpr.so.16
-    - libaddress_sorting.so.16
-    - libgrpc++.so.1.38.0
-    - libprotobuf.so.27.0.0
-    - libgrpc.so.16
-    - libupb.so.16
+    - libcares.so*
+    - libre2.so*
+    - libgpr.so*
+    - libaddress_sorting.so*
+    - libgrpc++.so*
+    - libprotobuf.so*
+    - libgrpc.so*
+    - libupb.so*
 shell:
   install:
   {{- include "alt packages proxy" . | nindent 2 }}

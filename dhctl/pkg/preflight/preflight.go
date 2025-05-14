@@ -84,6 +84,11 @@ func (pc *Checker) Static(ctx context.Context) error {
 
 	err = pc.do(ctx, "Preflight checks for static-cluster", []checkStep{
 		{
+			fun:            pc.CheckStaticInstancesIPDuplication,
+			successMessage: "IP of StaticInstances are unique",
+			skipFlag:       app.StaticInstancesIPDuplication,
+		},
+		{
 			fun:            pc.CheckSingleSSHHostForStatic,
 			successMessage: "only one --ssh-host parameter used",
 			skipFlag:       app.OneSSHHostCheckArgName,

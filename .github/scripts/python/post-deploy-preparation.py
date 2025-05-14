@@ -132,9 +132,10 @@ def determine_clusters_need_deploy (kubeconf_name,kubeconf64):
     try:
         kubeconf = yaml.safe_load(base64.b64decode(kubeconf64).decode('utf-8'))
         config.load_kube_config_from_dict(kubeconf)
-    except:
+    except Exception as e:
         print(f'::warning file=.github/scripts/python/{os.path.basename(__file__)},line={inspect.currentframe().f_lineno}::Unable to load "{kubeconf_name}". Unable to connect to "{kubeconf_name}". Skipping.')
         write_output(output_prefix+kubeconf_name,'false')
+        print(f'Error: {e}')
         return
       
     namespace = os.getenv(f'NAMESPACE_{kubeconf_name}')
@@ -142,18 +143,19 @@ def determine_clusters_need_deploy (kubeconf_name,kubeconf64):
     v1 = client.CoreV1Api()
     try:
         cm = v1.read_namespaced_config_map(CM_NAME,namespace)
-    except:
-        print(f'::warning file=.github/scripts/python/{os.path.basename(__file__)},line={inspect.currentframe().f_lineno}::Unable to load "{kubeconf_name}". Cluster {kubeconf_name} will be skipped.')
+    except Exception as e:
+        print(f'::warning file=.github/scripts/python/{os.path.basename(__file__)},line={inspect.currentframe().f_lineno}::Unable to load configmap. Cluster {kubeconf_name} will be skipped.')
         write_output(output_prefix+kubeconf_name,'false')
+        print(f'Error: {e}')
         return
 
     data = yamldata.format(**result_channels)
     if (data != cm.data['channels.yaml']):
         write_output(output_prefix+kubeconf_name,'true')
-        print(f'{kubeconf_name} will be deployed.')
+        print(f'Channels info needs to be updated. {kubeconf_name} will be deployed.')
     else:
         write_output(output_prefix+kubeconf_name,'false')
-        print(f'{kubeconf_name} will be skipped.')
+        print(f'Nothing to update. {kubeconf_name} will be skipped.')
 
 def determine_release_id():
     github = GhApi(owner=GITHUB_OWNER, repo=GITHUB_REPO, token=GITHUB_TOKEN)

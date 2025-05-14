@@ -9,7 +9,9 @@
 {%- endif %}
 
 <!-- Yandex.Metrika counter -->
-<script type="text/javascript" >
+<script type="text/javascript">
+const lang = document.documentElement.getAttribute('lang');
+let metricId = lang === 'ru' ? {{ site.metrics.yandex['ru'] }} : {{ site.metrics.yandex['en'] }};
 if ([{{ siteUrls }}].includes(window.location.hostname)) {
   (function (m, e, t, r, i, k, a) {
     m[i] = m[i] || function () {
@@ -20,23 +22,23 @@ if ([{{ siteUrls }}].includes(window.location.hostname)) {
   })
   (window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
 
-  ym({{ site.metrics.yandex }}, "init", {
+  ym(metricId, 'init', {
     clickmap: true,
     trackLinks: true,
     accurateTrackBounce: true,
-    webvisor: true
+    webvisor: true,
   });
 
-  function getCookie(name) {
+  function getCookie (name) {
     let value = '; ' + document.cookie;
     let parts = value.split(`; ${name}=`);
     if (parts.length == 2) return parts.pop().split(';').shift();
   }
 
-  var token = getCookie('license-token') ? getCookie('license-token') : getCookie('demotoken');
+  var token = getCookie('license-token') ? getCookie('license-token') : getCookie('demotoken')
   if (token) {
-    window.yaParams = {"license-token": token};
-    ym(78422802, 'params', window.yaParams || {});
+    window.yaParams = { 'license-token': token }
+    ym(metricId, 'params', window.yaParams || {});
   }
 }
 </script>

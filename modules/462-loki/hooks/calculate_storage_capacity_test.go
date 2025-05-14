@@ -74,6 +74,7 @@ spec:
 	Context("Cluster with PVCs", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(pvcs))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 
@@ -86,7 +87,7 @@ spec:
 
 	Context("Cluster with PVC and high logs throughput", func() {
 		BeforeEach(func() {
-			f.ConfigValuesSet("loki.lokiConfig.ingestionRateMB", highLogsThroughputRate)
+			f.ValuesSet("loki.lokiConfig.ingestionRateMB", highLogsThroughputRate)
 			f.BindingContexts.Set(f.KubeStateSet(pvcs))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()

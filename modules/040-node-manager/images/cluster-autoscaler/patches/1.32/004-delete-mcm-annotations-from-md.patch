@@ -1,0 +1,164 @@
+Subject: [PATCH] ++
+---
+Index: cluster-autoscaler/cloudprovider/mcm/mcm_cloud_provider.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/cluster-autoscaler/cloudprovider/mcm/mcm_cloud_provider.go b/cluster-autoscaler/cloudprovider/mcm/mcm_cloud_provider.go
+--- a/cluster-autoscaler/cloudprovider/mcm/mcm_cloud_provider.go	(revision 669115a6814d33b9d5757aa801402710029cb5b5)
++++ b/cluster-autoscaler/cloudprovider/mcm/mcm_cloud_provider.go	(date 1746781221962)
+@@ -31,10 +31,8 @@
+ 	"time"
+
+ 	"github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+-	"k8s.io/apimachinery/pkg/util/sets"
+ 	"k8s.io/autoscaler/cluster-autoscaler/core/scaledown/eligibility"
+
+-	"github.com/gardener/machine-controller-manager/pkg/util/provider/machineutils"
+ 	apiv1 "k8s.io/api/core/v1"
+ 	"k8s.io/apimachinery/pkg/api/resource"
+ 	"k8s.io/apimachinery/pkg/types"
+@@ -333,34 +331,34 @@
+
+ // Refresh cordons the Nodes corresponding to the machines that have been marked for deletion in the TriggerDeletionByMCM annotation on the MachineDeployment
+ func (ngImpl *nodeGroup) Refresh() error {
+-	mcd, err := ngImpl.mcmManager.GetMachineDeploymentObject(ngImpl.Name)
+-	if err != nil {
+-		return err
+-	}
+-	toBeDeletedMachineNames := getMachineNamesTriggeredForDeletion(mcd)
+-	if len(toBeDeletedMachineNames) == 0 {
+-		return nil
+-	}
+-	machinesOfNodeGroup, err := ngImpl.mcmManager.getMachinesForMachineDeployment(ngImpl.Name)
+-	if err != nil {
+-		klog.Warningf("NodeGroup.Refresh() of %q failed to get machines for MachineDeployment due to: %v", ngImpl.Name, err)
+-		return nil
+-	}
+-	toBeDeletedMachines := filterMachinesMatchingNames(machinesOfNodeGroup, sets.New(toBeDeletedMachineNames...))
+-	if len(toBeDeletedMachines) == 0 {
+-		klog.Warningf("NodeGroup.Refresh() of %q could not find Machine objects for toBeDeletedMachineNames %q", ngImpl.Name, toBeDeletedMachineNames)
+-		return nil
+-	}
+-	toBeDeletedNodeNames := getNodeNamesFromMachines(toBeDeletedMachines)
+-	if len(toBeDeletedNodeNames) == 0 {
+-		klog.Warningf("NodeGroup.Refresh() of %q could not find toBeDeletedNodeNames for toBeDeletedMachineNames %q of MachineDeployment", ngImpl.Name, toBeDeletedMachineNames)
+-		return nil
+-	}
+-	err = ngImpl.mcmManager.cordonNodes(toBeDeletedNodeNames)
+-	if err != nil {
+-		// we do not return error since we don't want this to block CA operation. This is best-effort.
+-		klog.Warningf("NodeGroup.Refresh() of %q ran into error cordoning nodes: %v", ngImpl.Name, err)
+-	}
++	//mcd, err := ngImpl.mcmManager.GetMachineDeploymentObject(ngImpl.Name)
++	//if err != nil {
++	//	return err
++	//}
++	//toBeDeletedMachineNames := getMachineNamesTriggeredForDeletion(mcd)
++	//if len(toBeDeletedMachineNames) == 0 {
++	//	return nil
++	//}
++	//machinesOfNodeGroup, err := ngImpl.mcmManager.getMachinesForMachineDeployment(ngImpl.Name)
++	//if err != nil {
++	//	klog.Warningf("NodeGroup.Refresh() of %q failed to get machines for MachineDeployment due to: %v", ngImpl.Name, err)
++	//	return nil
++	//}
++	//toBeDeletedMachines := filterMachinesMatchingNames(machinesOfNodeGroup, sets.New(toBeDeletedMachineNames...))
++	//if len(toBeDeletedMachines) == 0 {
++	//	klog.Warningf("NodeGroup.Refresh() of %q could not find Machine objects for toBeDeletedMachineNames %q", ngImpl.Name, toBeDeletedMachineNames)
++	//	return nil
++	//}
++	//toBeDeletedNodeNames := getNodeNamesFromMachines(toBeDeletedMachines)
++	//if len(toBeDeletedNodeNames) == 0 {
++	//	klog.Warningf("NodeGroup.Refresh() of %q could not find toBeDeletedNodeNames for toBeDeletedMachineNames %q of MachineDeployment", ngImpl.Name, toBeDeletedMachineNames)
++	//	return nil
++	//}
++	//err = ngImpl.mcmManager.cordonNodes(toBeDeletedNodeNames)
++	//if err != nil {
++	//	// we do not return error since we don't want this to block CA operation. This is best-effort.
++	//	klog.Warningf("NodeGroup.Refresh() of %q ran into error cordoning nodes: %v", ngImpl.Name, err)
++	//}
+ 	return nil
+ }
+
+@@ -577,10 +575,12 @@
+ // getMachineNamesTriggeredForDeletion returns the set of machine names contained within the machineutils.TriggerDeletionByMCM annotation on the given MachineDeployment
+ // TODO: Move to using MCM annotations.GetMachineNamesTriggeredForDeletion after MCM release.
+ func getMachineNamesTriggeredForDeletion(mcd *v1alpha1.MachineDeployment) []string {
+-	if mcd.Annotations == nil || mcd.Annotations[machineutils.TriggerDeletionByMCM] == "" {
+-		return nil
+-	}
+-	return strings.Split(mcd.Annotations[machineutils.TriggerDeletionByMCM], ",")
++	//if mcd.Annotations == nil || mcd.Annotations[machineutils.TriggerDeletionByMCM] == "" {
++	//	return nil
++	//}
++	//return strings.Split(mcd.Annotations[machineutils.TriggerDeletionByMCM], ",")
++
++	return nil
+ }
+
+ // TODO: Move to using MCM annotations.CreateMachinesTriggeredForDeletionAnnotValue after MCM release
+Index: cluster-autoscaler/cloudprovider/mcm/mcm_manager.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/cluster-autoscaler/cloudprovider/mcm/mcm_manager.go b/cluster-autoscaler/cloudprovider/mcm/mcm_manager.go
+--- a/cluster-autoscaler/cloudprovider/mcm/mcm_manager.go	(revision 669115a6814d33b9d5757aa801402710029cb5b5)
++++ b/cluster-autoscaler/cloudprovider/mcm/mcm_manager.go	(date 1746781249737)
+@@ -538,18 +538,18 @@
+ 	}
+ 	klog.V(2).Infof("MachineDeployment %q size decreased from %d to %d, TriggerDeletionByMCM Annotation Value: %q", md.Name, md.Spec.Replicas, updatedMd.Spec.Replicas, updatedMd.Annotations[machineutils.TriggerDeletionByMCM])
+
+-	toBeCordonedNodeNames := make([]string, 0, len(data.RevisedToBeDeletedMachineNames))
+-	for _, mInfo := range toBeDeletedMachineInfos {
+-		if data.RevisedToBeDeletedMachineNames.Has(mInfo.Key.Name) {
+-			toBeCordonedNodeNames = append(toBeCordonedNodeNames, mInfo.NodeName)
+-			klog.V(2).Infof("For MachineDeployment %q, will cordon node: %q corresponding to machine %q", md.Name, mInfo.NodeName, mInfo.Key.Name)
+-		}
+-	}
+-	err = m.cordonNodes(toBeCordonedNodeNames)
+-	if err != nil {
+-		// Do not return error as cordoning is best-effort
+-		klog.Warningf("NodeGroup.deleteMachines() of %q ran into error cordoning nodes: %v", md.Name, err)
+-	}
++	//toBeCordonedNodeNames := make([]string, 0, len(data.RevisedToBeDeletedMachineNames))
++	//for _, mInfo := range toBeDeletedMachineInfos {
++	//	if data.RevisedToBeDeletedMachineNames.Has(mInfo.Key.Name) {
++	//		toBeCordonedNodeNames = append(toBeCordonedNodeNames, mInfo.NodeName)
++	//		klog.V(2).Infof("For MachineDeployment %q, will cordon node: %q corresponding to machine %q", md.Name, mInfo.NodeName, mInfo.Key.Name)
++	//	}
++	//}
++	//err = m.cordonNodes(toBeCordonedNodeNames)
++	//if err != nil {
++	//	// Do not return error as cordoning is best-effort
++	//	klog.Warningf("NodeGroup.deleteMachines() of %q ran into error cordoning nodes: %v", md.Name, err)
++	//}
+ 	return false, nil
+ }
+
+@@ -1120,7 +1120,7 @@
+ 	alreadyMarkedSet := sets.New(getMachineNamesTriggeredForDeletion(md)...)
+
+ 	uniqueForDeletionSet := forDeletionSet.Difference(alreadyMarkedSet)
+-	toBeMarkedSet := alreadyMarkedSet.Union(forDeletionSet)
++	//toBeMarkedSet := alreadyMarkedSet.Union(forDeletionSet)
+
+ 	data.RevisedToBeDeletedMachineNames = uniqueForDeletionSet
+ 	data.RevisedScaledownAmount = uniqueForDeletionSet.Len()
+@@ -1136,10 +1136,10 @@
+ 		if mdCopy.Annotations == nil {
+ 			mdCopy.Annotations = make(map[string]string)
+ 		}
+-		triggerDeletionAnnotValue := createMachinesTriggeredForDeletionAnnotValue(toBeMarkedSet.UnsortedList())
+-		if mdCopy.Annotations[machineutils.TriggerDeletionByMCM] != triggerDeletionAnnotValue {
+-			mdCopy.Annotations[machineutils.TriggerDeletionByMCM] = triggerDeletionAnnotValue
+-		}
++		//triggerDeletionAnnotValue := createMachinesTriggeredForDeletionAnnotValue(toBeMarkedSet.UnsortedList())
++		//if mdCopy.Annotations[machineutils.TriggerDeletionByMCM] != triggerDeletionAnnotValue {
++		//	mdCopy.Annotations[machineutils.TriggerDeletionByMCM] = triggerDeletionAnnotValue
++		//}
+ 		mdCopy.Spec.Replicas = expectedReplicas
+ 		data.RevisedMachineDeployment = mdCopy
+ 	}

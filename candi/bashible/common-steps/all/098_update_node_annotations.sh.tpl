@@ -18,10 +18,10 @@ function kubectl_exec() {
 
 {{- if hasKey .nodeGroup "staticInstances" }}
 if [[ -f /var/lib/bashible/node-spec-provider-id ]]; then
-  PROVIDER_ID="$( kubectl_exec get no "$D8_NODE_HOSTNAME" -o json | jq -r '.spec.providerID' )"
+  PROVIDER_ID="$( kubectl_exec get no $(bb-d8-node-name) -o json | jq -r '.spec.providerID' )"
 
   if [[ "${PROVIDER_ID}" == "static://" ]]; then
-    kubectl_exec annotate node "${D8_NODE_HOSTNAME}" node.deckhouse.io/provider-id="$(cat /var/lib/bashible/node-spec-provider-id)"
+    kubectl_exec annotate node $(bb-d8-node-name) node.deckhouse.io/provider-id="$(cat /var/lib/bashible/node-spec-provider-id)"
   fi
 fi
 {{- end }}

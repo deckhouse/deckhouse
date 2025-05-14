@@ -5,3 +5,5 @@ subsystems:
 namespace: d8-cloud-instance-manager
 description: |
   Managing nodes
+descriptions:
+  en: Managing nodes

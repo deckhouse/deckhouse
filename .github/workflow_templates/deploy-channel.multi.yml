@@ -388,12 +388,6 @@ production:
   kubeconfig: KUBECONFIG_BASE64_PROD_25
   werf_namespace: deckhouse-web-production
   werf_env: web-production
-oldproduction:
-  job: deploy_channels_cm_prod_old
-  job_name: '[OLD] Deploy channels to production'
-  kubeconfig: KUBECONFIG_BASE64_PROD_SEL
-  werf_namespace: deckhouse-web-production
-  werf_env: web-production
 stage:
   job: deploy_channels_cm_stage
   job_name: Deploy channels to staging
@@ -478,7 +472,7 @@ stage:
           path: publish-channels
 
       - name: Converge
-        uses: werf/actions/converge@v1.2
+        uses: {!{ index (ds "actions") "werf/actions/converge" }!}
         with:
           version: ${{env.WERF_VERSION}}
           kube-config-base64-data: "${{ secrets.{!{ $env_properties.kubeconfig }!} }}"

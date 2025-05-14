@@ -41,7 +41,7 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.35.0"
+  WERF_VERSION: "v2.35.10"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -69,8 +69,8 @@ jobs:
       ref_full: ${{ steps.git_info.outputs.ref_full }}
       github_sha: ${{ steps.git_info.outputs.github_sha }}
       pr_number: ${{ steps.git_info.outputs.pr_number }}
-    # Skip the CI for automation PRs, e.g. changelog
-    if: ${{ github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
+    # Skip the CI for automation PRs, e.g. changelog, don't skip if Pull Request title contains "[run ci]".
+    if: ${{ contains(github.event.pull_request.title, '[run ci]') || github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
     steps:
       - id: git_info
         name: Get tag name and SHA
@@ -1369,7 +1369,6 @@ jobs:
       STABLE_VERSION: ${{ steps.post-deploy-preparation.outputs.stable_version }}
       LATEST_RELEASE_ID: ${{ steps.post-deploy-preparation.outputs.latest_release_id }}
       TARGET_RELEASE_ID: ${{ steps.post-deploy-preparation.outputs.target_release_id }}
-      DEPLOY_KUBECONFIG_BASE64_PROD_SEL: ${{ steps.post-deploy-preparation.outputs.DEPLOY_KUBECONFIG_BASE64_PROD_SEL }}
       DEPLOY_KUBECONFIG_BASE64_PROD_25: ${{ steps.post-deploy-preparation.outputs.DEPLOY_KUBECONFIG_BASE64_PROD_25 }}
       DEPLOY_KUBECONFIG_BASE64_DEV: ${{ steps.post-deploy-preparation.outputs.DEPLOY_KUBECONFIG_BASE64_DEV }}
     needs:
@@ -1412,8 +1411,6 @@ jobs:
         run: python .github/scripts/python/post-deploy-preparation.py
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          KUBECONFIG_BASE64_PROD_SEL: ${{ secrets.KUBECONFIG_BASE64_PROD_SEL }}
-          NAMESPACE_KUBECONFIG_BASE64_PROD_SEL: "deckhouse-web-production"
           KUBECONFIG_BASE64_PROD_25: ${{ secrets.KUBECONFIG_BASE64_PROD_25 }}
           NAMESPACE_KUBECONFIG_BASE64_PROD_25: "deckhouse-web-production"
           KUBECONFIG_BASE64_DEV: ${{ secrets.KUBECONFIG_BASE64_DEV }}
@@ -1425,37 +1422,6 @@ jobs:
           name: channels-artifact
           path: publish-channels
           include-hidden-files: true
-
-
-  deploy_channels_cm_prod_old:
-    if: ${{ needs.post_deploy_preparation.outputs.DEPLOY_KUBECONFIG_BASE64_PROD_SEL == 'true' }}
-    name: "[OLD] Deploy channels to production"
-    runs-on: [self-hosted, regular]
-    needs:
-      - post_deploy_preparation
-    steps:
-      # <template: checkout_step>
-      - name: Checkout sources
-        uses: actions/checkout@v3.5.2
-
-      # </template: checkout_step>
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v4.1.8
-        with:
-          name: channels-artifact
-          path: publish-channels
-
-      - name: Converge
-        uses: werf/actions/converge@v1.2
-        with:
-          version: ${{env.WERF_VERSION}}
-          kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_PROD_SEL }}"
-          env: web-production
-        env:
-          WERF_NAMESPACE: "deckhouse-web-production"
-          WERF_DIR: "publish-channels"
-          WERF_DEV: "true"
 
 
   deploy_channels_cm_prod:
@@ -1478,7 +1444,7 @@ jobs:
           path: publish-channels
 
       - name: Converge
-        uses: werf/actions/converge@v1.2
+        uses: werf/actions/converge@v2
         with:
           version: ${{env.WERF_VERSION}}
           kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_PROD_25 }}"
@@ -1509,7 +1475,7 @@ jobs:
           path: publish-channels
 
       - name: Converge
-        uses: werf/actions/converge@v1.2
+        uses: werf/actions/converge@v2
         with:
           version: ${{env.WERF_VERSION}}
           kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_DEV }}"

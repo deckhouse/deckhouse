@@ -1,14 +1,16 @@
-Subject: [PATCH] bump deps
-
----
- go.mod | 14 +++++++-------
- go.sum | 28 ++++++++++++++--------------
- 2 files changed, 21 insertions(+), 21 deletions(-)
-
 diff --git a/go.mod b/go.mod
-index f1ee9e18..3bb9bdaf 100644
+index f1ee9e18..00729e5f 100644
 --- a/go.mod
 +++ b/go.mod
+@@ -22,7 +22,7 @@ require (
+ 	k8s.io/api v0.29.3
+ 	k8s.io/apimachinery v0.29.3
+ 	k8s.io/client-go v0.29.3
+-	k8s.io/klog v1.0.0
++	k8s.io/klog/v2 v2.110.1
+ 	sigs.k8s.io/cluster-api v1.7.4
+ 	sigs.k8s.io/controller-runtime v0.17.3
+ 	sigs.k8s.io/yaml v1.4.0
 @@ -97,16 +97,16 @@ require (
  	go.opentelemetry.io/otel/trace v1.20.0 // indirect
  	go.opentelemetry.io/proto/otlp v1.0.0 // indirect
@@ -33,6 +35,15 @@ index f1ee9e18..3bb9bdaf 100644
  	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
  	google.golang.org/appengine v1.6.7 // indirect
  	google.golang.org/genproto/googleapis/api v0.0.0-20231106174013-bbf56f31fb17 // indirect
+@@ -120,7 +120,7 @@ require (
+ 	k8s.io/apiserver v0.29.3 // indirect
+ 	k8s.io/cluster-bootstrap v0.29.3 // indirect
+ 	k8s.io/component-base v0.29.3 // indirect
+-	k8s.io/klog/v2 v2.110.1 // indirect
++	k8s.io/klog v1.0.0 // indirect
+ 	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00 // indirect
+ 	k8s.io/utils v0.0.0-20231127182322-b307cd553661 // indirect
+ 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.28.0 // indirect
 diff --git a/go.sum b/go.sum
 index 9ddd255a..bb6e8314 100644
 --- a/go.sum
@@ -108,5 +119,3 @@ index 9ddd255a..bb6e8314 100644
  golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
  golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
  golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
---
-2.48.1

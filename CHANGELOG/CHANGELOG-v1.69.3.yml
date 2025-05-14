@@ -1,0 +1,32 @@
+control-plane-manager:
+  fixes:
+    - summary: Stale service account alert fix.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13129
+deckhouse:
+  fixes:
+    - summary: Limit module name.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13114
+    - summary: Fix mpo/source requeue.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12867
+docs:
+  fixes:
+    - summary: Add info about debug GrafanaDashboardDefenition.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13038
+extended-monitoring:
+  fixes:
+    - summary: Fix x509_certificate_exporter_resources deployment
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13121
+ingress-nginx:
+  fixes:
+    - summary: All necessary shared libraries are added to the container image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13124
+      impact: Ingress-nginx controller pods of v1.9 will be restated.
+kube-dns:
+  fixes:
+    - summary: Expanded pattern for `stubZones` to allow underscores (`_`) in domain names.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13118
+user-authn:
+  fixes:
+    - summary: Fix secret generation on empty data field in the dex client app secret.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13092
+

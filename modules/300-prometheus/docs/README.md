@@ -9,8 +9,6 @@ webIfaces:
 
 This module installs and configures the [Prometheus](https://prometheus.io/) monitoring system. Also, it configures metrics scraping for many typical applications and provides the basic set of Prometheus alerts and Grafana dashboards.
 
-If a StorageClass supports automatic volume expansion (allowVolumeExpansion: true), it can automatically expand the volume if there is not enough disk space for Prometheus data. Otherwise, you will receive an alert that the volume space in Prometheus is running out.
-
 The [Vertical Pod Autoscaler](../../modules/vertical-pod-autoscaler/) module makes it possible to automatically request CPU and memory resources based on the utilization history when the Pod is recreated. Also, the Prometheus memory consumption is minimized by caching requests to it via [Trickster](https://github.com/trickstercache/trickster).
 
 Both pulling and pushing of metrics are supported.

@@ -232,14 +232,15 @@ func makeUserGroupsMap(groups []go_hook.FilterResult, targetGroup string, accumu
 		accumulatedGroupList = append(accumulatedGroupList, targetGroup)
 	}
 	for _, member := range group.Spec.Members {
-		if member.Kind == "User" {
+		switch member.Kind {
+		case "User":
 			if mapOfUsersToGroups[member.Name] == nil {
 				mapOfUsersToGroups[member.Name] = map[string]bool{}
 			}
 			for _, g := range accumulatedGroupList {
 				mapOfUsersToGroups[member.Name][g] = true
 			}
-		} else if member.Kind == "Group" {
+		case "Group":
 			makeUserGroupsMap(groups, member.Name, accumulatedGroupList, mapOfUsersToGroups)
 		}
 	}

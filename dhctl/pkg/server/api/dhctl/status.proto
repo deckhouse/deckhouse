@@ -22,5 +22,6 @@ message GetStatusRequest {}
 
 message GetStatusResponse {
   map<string, int64> requests_by_method = 1;
+  optional int64 requests_in_progress = 2;
 }
 

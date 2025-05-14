@@ -25,10 +25,16 @@ import (
 )
 
 func TestRequestsCounter(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	numCurrentTasks := 2
 
-	counter := rt.New(time.Microsecond)
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// cancel context so that counter clean up runs only one time
+	cancel()
+
+	taskChan := make(chan struct{}, numCurrentTasks)
+
+	counter := rt.New(time.Microsecond, taskChan)
 
 	counter.Add("/dhctl.DHCTL/Check")
 	counter.Add("/dhctl.DHCTL/Check")
@@ -38,7 +44,12 @@ func TestRequestsCounter(t *testing.T) {
 		counter.CountRecentRequests(),
 	)
 
+	for range numCurrentTasks {
+		taskChan <- struct{}{}
+	}
+
 	counter.Run(ctx)
+
 	<-time.After(time.Millisecond)
 
 	assert.Equal(t,
@@ -52,4 +63,7 @@ func TestRequestsCounter(t *testing.T) {
 		map[string]int64{"/dhctl.DHCTL/Check": 1, "/dhctl.DHCTL/Converge": 1},
 		counter.CountRecentRequests(),
 	)
+
+	assert.Equal(t, numCurrentTasks, len(taskChan))
+	assert.Equal(t, int64(numCurrentTasks), counter.CountCurrentRequests())
 }

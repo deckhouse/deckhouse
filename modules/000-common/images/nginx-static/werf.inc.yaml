@@ -4,10 +4,13 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone -b release-{{ $NginxVersion }} --single-branch --depth=1 {{ $.SOURCE_REPO }}/nginx/nginx.git /src/nginx
-  - git clone -b openssl-{{ $OpenSSLVersion }} --single-branch --depth=1 {{ $.SOURCE_REPO }}/openssl/openssl.git /src/openssl
+  - git clone -b release-{{ $NginxVersion }} --single-branch --depth=1 $(cat /run/secrets/SOURCE_REPO)/nginx/nginx.git /src/nginx
+  - git clone -b openssl-{{ $OpenSSLVersion }} --single-branch --depth=1 $(cat /run/secrets/SOURCE_REPO)/openssl/openssl.git /src/openssl
   - rm -r /src/nginx/.git /src/openssl/.git
 ---
 image: {{ $.ModuleName }}/build-nginx-static-artifact

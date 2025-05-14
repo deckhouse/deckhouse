@@ -17,9 +17,12 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ $version }} {{ $.SOURCE_REPO }}/kubernetes-sigs/cluster-api.git /src
+  - git clone --depth 1 --branch v{{ $version }} $(cat /run/secrets/SOURCE_REPO)/kubernetes-sigs/cluster-api.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
   - rm -rf .git hack test
@@ -33,14 +36,16 @@ import:
   to: /src
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache make bash git
   install:
-  - export GOPROXY={{ $.GOPROXY }}
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - cd /src
   - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - go build -trimpath -ldflags "-s -w -extldflags \"-static\"" -o bin/manager sigs.k8s.io/cluster-api

@@ -23,11 +23,11 @@ spec:
     retentionDays: 7
     storageClass: rbd
     nodeSelector:
-      node-role/example: ""
+      node-role/monitoring: ""
     tolerations:
-    - key: dedicated
+    - key: dedicated.deckhouse.io
       operator: Equal
-      value: example
+      value: monitoring
 ```
 
 ## Writing Prometheus data to the longterm storage

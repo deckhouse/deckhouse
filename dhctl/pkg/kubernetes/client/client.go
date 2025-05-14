@@ -17,6 +17,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"time"
 
 	klient "github.com/flant/kube-client/client"
@@ -24,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
-
 	// oidc allows using oidc provider in kubeconfig
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 
@@ -77,7 +77,7 @@ func (k *KubernetesClient) WithNodeInterface(client node.Interface) *KubernetesC
 }
 
 func (k *KubernetesClient) NodeInterfaceAsSSHClient() *ssh.Client {
-	if k.NodeInterface == nil {
+	if k.NodeInterface == nil || reflect.ValueOf(k.NodeInterface).IsNil() {
 		return nil
 	}
 

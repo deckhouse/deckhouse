@@ -21,9 +21,12 @@ while [[ "$#" -gt 0 ]]; do
       upload_files=($2)
       shift
       ;;
-    --message)
-      message="$2"
+    --custom-message)
+      custom_message="$2"
       shift
+      ;;
+    --direct-post)
+      direct_post_flag=true
       ;;
     *)
       echo "Unsupported argument: $1"
@@ -33,14 +36,18 @@ while [[ "$#" -gt 0 ]]; do
   shift
 done
 
-if [[ -z "$message" ]]; then
-  echo "Error: The --message flag is required and cannot be empty."
-  exit 1
-fi
-
 token="${LOOP_TOKEN}"
 channel_id="${LOOP_CHANNEL_ID}"
-server_url="https://loop.flant.ru"
+server_url="${LOOP_SERVICE_NOTIFICATIONS}"
+job_name="${JOB_NAME}"
+workflow_name="${WORKFLOW_NAME}"
+workflow_url="${WORKFLOW_URL}"
+message="${custom_message}"
+
+if [[ -z "$message" ]]; then
+  message="🛑 Workflow: **${workflow_name}** Job: **${job_name}** failed! 🛑\n[URL]($workflow_url)"
+fi
+
 file_id_array=()
 
 function upload_file() {
@@ -48,24 +55,33 @@ function upload_file() {
   -H "Content-Type: multipart/form-data" \
   -H "Accept: application/json" \
   -H "Authorization: Bearer ${token}" \
-  -F "data=@$1" | jq -M -c -r '.file_infos[].id' 2>/dev/null)
+  -F "data=@$1" | grep -oP '\"id\":\s*\".*?\"' | sed -E 's/\"id\":\s*\"(.*?)\"/\1/' 2>/dev/null)
 
   echo "$file_id"
 }
 
 function send_post() {
   file_ids=$(IFS=,; echo "[${file_id_array[*]}]")
-
   curl -f -L -X POST "${server_url}/api/v4/posts" \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer ${token}" \
     --data "{\"channel_id\": \"${channel_id}\",\"message\": \"${message}\",\"file_ids\": ${file_ids}}"
 }
-
+function send_post_with_webhook() {
+  file_ids=$(IFS=,; echo "[${file_id_array[*]}]")
+  curl -f -L -X POST $server_url \
+    -H "Content-Type: application/json" \
+    --data "{\"type\": \"ci_fail\",\"message\":\"${message}\"}"
+}
 if [ "$upload" = true ]; then
   for file_path in ${upload_files[@]}; do
     file_id=$(upload_file "$file_path")
     file_id_array+=("$file_id")
   done
 fi
-send_post
+
+if [ "$direct_post_flag" = true ]; then
+  send_post
+else
+  send_post_with_webhook
+fi

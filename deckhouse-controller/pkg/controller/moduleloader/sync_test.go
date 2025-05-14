@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -558,7 +559,36 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromReleases() {
 		suite.cleanupPaths([]string{module.downloadedPath, module.symlinkPath})
 	})
 
-	// should remove wrong symlink and ensure new
+	// HA deckhouse installations could have previous version symlink on the standby masters
+	// have to delete it and add an actual one
+	suite.Run("Old version symlink", func() {
+		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
+			ManifestStub: manifestStub,
+			LayersStub: func() ([]crv1.Layer, error) {
+				return []crv1.Layer{&utils.FakeLayer{}}, nil
+			},
+		}, nil)
+
+		require.NoError(suite.T(), module.prepare(true, false))
+
+		require.NoError(suite.T(), os.MkdirAll(filepath.Join(suite.tmpDir, "echo", "v0.9.0"), 0750))
+
+		symlink := filepath.Join(suite.tmpDir, "modules", fmt.Sprintf("900-%s", module.name))
+		require.NoError(suite.T(), os.Symlink(filepath.Join(suite.tmpDir, "echo", "v0.9.0"), symlink))
+
+		time.Sleep(50 * time.Millisecond)
+
+		suite.setupModuleLoader(string(suite.parseTestdata("releases", "release.yaml")))
+		require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromReleases(context.TODO()))
+
+		symlinkTarget, err := filepath.EvalSymlinks(symlink)
+		require.NoError(suite.T(), err)
+
+		assert.True(suite.T(), strings.HasSuffix(symlinkTarget, "echo/v1.0.0"), "module have to be restored to the v1.0.0 version")
+
+		suite.cleanupPaths([]string{symlink, module.downloadedPath, module.symlinkPath})
+	})
+
 	suite.Run("WrongSymlink", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
 			ManifestStub: manifestStub,

@@ -5,6 +5,8 @@ subsystems:
 namespace: d8-cni-cilium
 description: |
     The cilium-hubble module
+descriptions:
+  en: The cilium-hubble module
 requirements:
   bootstrapped: true
   modules:

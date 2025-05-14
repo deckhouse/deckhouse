@@ -118,7 +118,7 @@
         },
         {
           "title": "Documentation",
-          "url": "/products/kubernetes-platform/modules/stronghold/stable/",
+          "url": "/products/stronghold/documentation/",
           "target": "",
           "rel": "doc"
         }
@@ -302,9 +302,15 @@
         },
         {
           "title": "Документация",
-          "url": "/products/kubernetes-platform/modules/stronghold/stable/",
+          "url": "/products/stronghold/documentation/",
           "target": "",
           "rel": "doc"
+        },
+        {
+          "title": "Быстрый старт",
+          "url": "/products/stronghold/gs/",
+          "target": "",
+          "rel": ""
         }
       ]
     },

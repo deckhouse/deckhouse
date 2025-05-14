@@ -1,13 +1,15 @@
 module discoverer
 
-go 1.23
+go 1.23.1
+
+toolchain go1.24.1
 
 require (
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.6.0
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute v1.0.0
 	github.com/alecthomas/kingpin v2.2.6+incompatible
 	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0-00010101000000-000000000000
-	github.com/sirupsen/logrus v1.9.0
+	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250115075301-5b6ae3aa8eb7
 	k8s.io/apimachinery v0.25.5
 )
 
@@ -15,6 +17,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.11.1 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/internal v1.8.0 // indirect
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.2.2 // indirect
+	github.com/DataDog/gostackparse v0.7.0 // indirect
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/emicklei/go-restful/v3 v3.8.0 // indirect
@@ -73,4 +76,6 @@ require (
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
-replace github.com/deckhouse/deckhouse/go_lib/cloud-data => /deckhouse/go_lib/cloud-data/
+replace github.com/deckhouse/deckhouse/go_lib/cloud-data => /deckhouse/go_lib/cloud-data
+
+replace github.com/deckhouse/deckhouse/pkg/log => /deckhouse/pkg/log

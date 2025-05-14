@@ -10,9 +10,12 @@ git:
     stageDependencies:
       install:
         - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-    - git clone --depth 1 --branch v{{ $version }} {{ $.SOURCE_REPO }}/openkruise/kruise.git /src
+    - git clone --depth 1 --branch v{{ $version }} $(cat /run/secrets/SOURCE_REPO)/openkruise/kruise.git /src
     - rm -rf /src/tools
     - cd /src
     - git apply /patches/*.patch --verbose
@@ -27,13 +30,15 @@ import:
   to: /src
   before: install
 mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   setup:
-    - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - cd /src
-    - go mod download
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
     - go mod vendor
     - go build -a -mod=vendor -o /tmp/manager main.go
     - chown -R 64535:64535 /tmp/manager

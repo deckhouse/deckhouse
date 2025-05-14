@@ -80,7 +80,7 @@ kind: ModuleConfig
 metadata:
   name: user-authn
 spec:
-  version: 1
+  version: 2
   enabled: true
   settings:
     controlPlaneConfigurator:
@@ -95,6 +95,26 @@ spec:
         mode: Global
         global:
           kubeconfigGeneratorMasterCA: ""
+---
+# [<en>] cni-cilium module settings.
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cni-cilium/configuration.html
+# [<ru>] Настройки модуля cni-cilium.
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cni-cilium/configuration.html
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cni-cilium
+spec:
+  version: 1
+  # [<en>] Enable cni-cilium module.
+  # [<ru>] Включить модуль cni-cilium.
+  enabled: true
+  settings:
+    # [<en>] cni-cilium module settings.
+    # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cni-cilium/configuration.html
+    # [<ru>] Настройки модуля cni-cilium.
+    # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cni-cilium/configuration.html
+    tunnelMode: VXLAN
 ---
 # [<en>] Cloud provider settings.
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-zvirt/cluster_configuration.html
@@ -114,16 +134,10 @@ clusterID: *!CHANGE_CLUSTER_ID*
 # [<en>] Zvirt API access parameters
 # [<ru>] параметры доступа к Zvirt API
 provider:
-  # [<en>] Url address to access Zvirt API.
-  # [<ru>] Url адрес доступа к Zvirt API.
-  # [<en>] You might consider changing this.
-  # [<ru>] Возможно, захотите изменить.
+  # [<en>] URL to access Zvirt API.
+  # [<ru>] URL-адрес доступа к Zvirt API.
   server: *!CHANGE_API_URL*
-  # [<en>] You might consider changing this.
-  # [<ru>] Возможно, захотите изменить.
   username: *!CHANGE_USERNAME*
-  # [<en>] You might consider changing this.
-  # [<ru>] Возможно, захотите изменить.
   password: *!CHANGE_PASSWORD*
 masterNodeGroup:
   replicas: 1
@@ -132,11 +146,11 @@ masterNodeGroup:
     # [<ru>] Количество выделеных CPU для виртуальной машины.
     numCPUs: 4
     # [<en>] The amount of allocated RAM for the virtual machine.
-    # [<ru>] Количество выделеной оперативной памяти для виртуальной машины.
+    # [<ru>] Количество выделенной оперативной памяти для виртуальной машины.
     memory: 8192
     # [<en>] Disk size for the root FS.
     # [<ru>] Размер диска для корневой ФС.
-    rootDiskSizeGb: 40
+    rootDiskSizeGb: 50
     # [<en>] Virtual machine template name.
     # [<ru>] Название шаблона виртуальной машины.
     template: *!CHANGE_TEMPLATE*
@@ -160,7 +174,7 @@ spec:
   # [<ru>] Количество выделеных CPU для виртуальной машины.
   numCPUs: 4
   # [<en>] The amount of allocated RAM for the virtual machine.
-  # [<ru>] Количество выделеной оперативной памяти для виртуальной машины.
+  # [<ru>] Количество выделенной оперативной памяти для виртуальной машины.
   memory: 8192
   # [<en>] Disk size for the root FS.
   # [<ru>] Размер диска для корневой ФС.
@@ -190,8 +204,8 @@ spec:
     # [<ru>] Максимальное количество инстансов в каждой зоне (используется при масштабировании).
     # [<ru>] Возможно, захотите изменить.
     maxPerZone: 1
-    # [<en>] The minimum number of instances for the group in each zone.
-    # [<ru>] Минимальное количество инстансов в каждой зоне.
+    # [<en>] The minimum number of instances for the group in each zone. To launch more nodes, increase maxPerZone or add more zones.
+    # [<ru>] Минимальное количество инстансов в каждой зоне. Чтобы запустить больше узлов, увеличьте maxPerZone или добавьте зоны.
     minPerZone: 1
   disruptions:
     approvalMode: Automatic
@@ -207,11 +221,17 @@ metadata:
   name: nginx
 spec:
   ingressClass: nginx
-  inlet: LoadBalancer
-  # [<en>] Describes on which nodes the Ingress Controller will be located. Label node.deckhouse.io/group: <NAME_GROUP_NAME> is set automatically.
-  # [<ru>] Описывает, на каких узлах будет находиться Ingress-контроллер. Лейбл node.deckhouse.io/group: <NODE_GROUP_NAME> устанавливается автоматически.
+  # [<en>] The way traffic goes to cluster from the outer network.
+  # [<ru>] Способ поступления трафика из внешнего мира.
+  inlet: HostPort
+  hostPort:
+    httpPort: 80
+    httpsPort: 443
+    realIPHeader: X-Forwarded-For
   nodeSelector:
-    node.deckhouse.io/group: worker
+    node-role.kubernetes.io/control-plane: ""
+  tolerations:
+  - operator: Exists
 ---
 # [<en>] RBAC and authorization settings.
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authz/cr.html#clusterauthorizationrule

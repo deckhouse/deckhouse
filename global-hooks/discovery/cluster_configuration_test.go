@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -98,6 +98,9 @@ metadata:
 data:
   "cluster-configuration.yaml": ` + base64.StdEncoding.EncodeToString([]byte(stateCClusterConfiguration))
 	)
+
+	// Set default value for test purposes. Normally this var set to specific kubernetes version on the build stage.
+	hooks.DefaultKubernetesVersion = "1.32"
 
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 
@@ -198,7 +201,7 @@ data:
 			Expect(f.ValuesGet("global.clusterConfiguration.podSubnetCIDR").String()).To(Equal("10.122.0.0/16"))
 			Expect(f.ValuesGet("global.clusterConfiguration.podSubnetNodeCIDRPrefix").String()).To(Equal("26"))
 			Expect(f.ValuesGet("global.clusterConfiguration.serviceSubnetCIDR").String()).To(Equal("10.213.0.0/16"))
-			Expect(f.ValuesGet("global.clusterConfiguration.kubernetesVersion").String()).To(Equal(config.DefaultKubernetesVersion))
+			Expect(f.ValuesGet("global.clusterConfiguration.kubernetesVersion").String()).To(Equal(hooks.DefaultKubernetesVersion))
 
 			Expect(f.ValuesGet("global.discovery.podSubnet").String()).To(Equal("10.122.0.0/16"))
 			Expect(f.ValuesGet("global.discovery.serviceSubnet").String()).To(Equal("10.213.0.0/16"))

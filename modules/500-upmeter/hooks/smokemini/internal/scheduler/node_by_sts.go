@@ -70,17 +70,17 @@ func (f *filterByMinSts) selectNodes(nodes []snapshot.Node, x string) set.Set {
 
 func selectKeysByMinValue(kv map[string]int) []string {
 	// Find minimum value
-	min := math.MaxInt32
+	minv := math.MaxInt32
 	for _, v := range kv {
-		if min > v {
-			min = v
+		if minv > v {
+			minv = v
 		}
 	}
 
 	// Collect keys
 	ks := make([]string, 0)
 	for k, v := range kv {
-		if v == min {
+		if v == minv {
 			ks = append(ks, k)
 		}
 	}

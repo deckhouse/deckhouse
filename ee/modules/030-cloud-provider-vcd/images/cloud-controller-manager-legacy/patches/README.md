@@ -14,4 +14,8 @@ TODO
 
 ### 003-go-mod.patch
 
-TODO
+Update dependencies
+
+### 004-klog.patch
+
+Update klog to klog/v2 in other files

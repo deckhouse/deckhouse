@@ -210,7 +210,7 @@ spec:
     node-role/frontend: ''
   tolerations:
     - effect: NoExecute
-      key: dedicated
+      key: dedicated.deckhouse.io
       operator: Equal
       value: frontend
   resourcesRequests:
@@ -562,7 +562,7 @@ spec:
 
 ## Setting up federation for two clusters using the IstioFederation CR
 
-> Available in Enterprise Edition only.
+{% alert level="warning" %}Available only in Enterprise Edition.{% endalert %}
 
 Cluster A:
 
@@ -590,7 +590,7 @@ spec:
 
 ## Setting up multicluster for two clusters using the IstioMulticluster CR
 
-> Available in Enterprise Edition only.
+{% alert level="warning" %}Available only in Enterprise Edition.{% endalert %}
 
 Cluster A:
 
@@ -663,6 +663,6 @@ kubectl get pods -A -o json | jq --arg revision "v1x19" \
 
 ### Auto upgrading istio data-plane
 
-> Available in Enterprise Edition only.
+{% alert level="warning" %}Available only in Enterprise Edition.{% endalert %}
 
 To automate istio-sidecar upgrading, set a label `istio.deckhouse.io/auto-upgrade="true"` on the application `Namespace` or on the individual resources — `Deployment`, `DaemonSet` or `StatefulSet`.

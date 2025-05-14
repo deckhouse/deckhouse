@@ -100,7 +100,7 @@ function nodeuser_patch() {
 function nodeuser_add_error() {
   local username="$1"
   local message="$2"
-  local machine_name="${D8_NODE_HOSTNAME}"
+  local machine_name=$(bb-d8-node-name)
   if [ -f ${BOOTSTRAP_DIR}/machine-name ]; then
     local machine_name="$(<${BOOTSTRAP_DIR}/machine-name)"
   fi
@@ -117,7 +117,7 @@ function nodeuser_add_error() {
 # $1 - username
 function nodeuser_clear_error() {
   local username="$1"
-  local machine_name="${D8_NODE_HOSTNAME}"
+  local machine_name=$(bb-d8-node-name)
   if [ -f ${BOOTSTRAP_DIR}/machine-name ]; then
     local machine_name="$(<${BOOTSTRAP_DIR}/machine-name)"
   fi
@@ -192,7 +192,7 @@ function add_sudoer_group() {
 
     # Discover sudoer groups
     groups=($(cat $path |egrep "^%[a-z][-a-zA-Z0-9._]*\s+.+" |awk '{print $1}' |cut -c2-))
-    additional_groups=$(cat $sudoersd_path/* |egrep "^%[a-z][-a-zA-Z0-9._]*\s+.+" |awk '{print $1}' |cut -c2-)
+    additional_groups=$(find $sudoersd_path -type f -readable -exec egrep -h "^%[a-z][-a-zA-Z0-9._]*\s+.+" {} + | awk '{print $1}' |cut -c2-)
     groups+=($additional_groups)
 
     if [[ ! " ${groups[*]} " =~ [[:space:]]${groupname}[[:space:]] ]]

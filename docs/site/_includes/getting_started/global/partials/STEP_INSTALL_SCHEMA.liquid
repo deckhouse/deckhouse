@@ -118,6 +118,8 @@ Scheme of Deckhouse installation in a private environment:<br />
    - [supported OS](/products/kubernetes-platform/documentation/v1/supported_versions.html)
    - Linux kernel version >= `5.7`
    - **Unique hostname** within servers (virtual machines) of the cluster
+   - one of the package managers (`apt`/`apt-get`, `yum`, or `rpm`) should be installed
+   - Python should be installed
    {% if page.platform_code == "bm-private" %}
    - access to a proxy registry or to a private container image registry containing Deckhouse images
    - access to the default OS package repositories (via a proxy server or an internal package repository server);
@@ -128,7 +130,6 @@ Scheme of Deckhouse installation in a private environment:<br />
    - SSH key access from the **personal computer** (section 1)
    - network access from the **personal computer** (section 1) via port <code>22322/TCP</code>
    - container runtime packages, such as containerd or docker, should not be installed on the node
-   - `cloud-utils` and `cloud-init` packages should be installed on the node
    {% endofftopic %}
 {%- endif %}
 </li>

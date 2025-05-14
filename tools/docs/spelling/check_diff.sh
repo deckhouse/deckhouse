@@ -78,7 +78,7 @@ done < ${pr_diff}
 check "${file_name}" "${file_changes}"
 
 if [ "${exit_code}" -ne 0 ]; then
-  echo -e "\nFix the problem or use 'docs/documentation-validation' PR label to skip."
+  echo -e "\nFix the problem or skip the linter.\nTo skip the linter set 'skip/documentation-validation' label onto the PR and re-run ALL jobs."
 fi
 
 exit ${exit_code}

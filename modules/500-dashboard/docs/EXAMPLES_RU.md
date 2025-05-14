@@ -14,11 +14,11 @@ spec:
   enabled: true
   settings:
     nodeSelector:
-      node-role/example: ""
+      node-role/system: ""
     tolerations:
-    - key: dedicated
+    - key: dedicated.deckhouse.io
       operator: Equal
-      value: example
+      value: system
     externalAuthentication:
       authURL: "https://<applicationDomain>/auth"
       authSignInURL: "https://<applicationDomain>/sign-in"

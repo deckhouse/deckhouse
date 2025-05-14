@@ -299,7 +299,7 @@ fi
 ## Installing Deckhouse
 
 {% alert level="info" %}
-When you install Deckhouse Enterprise Edition from the official container registry `registry.deckhouse.io`, you must first log in with your license key:
+When installing a commercial edition of Deckhouse Kubernetes Platform from the official container registry `registry.deckhouse.io`, you must first log in with your license key:
 
 ```shell
 docker login -u license-token registry.deckhouse.io
@@ -382,7 +382,7 @@ List of checks performed by the installer before starting Deckhouse installation
    - SSH connection is possible using the specified authentication data.
    - SSH tunneling to the master node server (or VM) is possible.
    - The server (VM) meets the minimum requirements for setting up the master node.
-   - Python and required libraries are installed on the master node server (VM).
+   - Python is installed on the master node server (VM).
    - The container image registry is accessible through a proxy (if proxy settings are specified in the installation configuration).
    - Required installation ports are free on the master node server (VM) and the installer host.
    - DNS must resolve `localhost` to IP address 127.0.0.1.

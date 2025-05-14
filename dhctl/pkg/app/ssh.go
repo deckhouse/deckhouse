@@ -21,8 +21,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	"gopkg.in/alecthomas/kingpin.v2"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 )
 
 const DefaultSSHAgentPrivateKeys = "~/.ssh/id_rsa"
@@ -56,7 +57,7 @@ func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
 		IsSetByUser(&sshFlagSetByUser).
 		Envar(configEnvName("SSH_AGENT_PRIVATE_KEYS")).
 		StringsVar(&SSHAgentPrivateKeys)
-	cmd.Flag("ssh-bastion-host", "Jumper (bastion) host to connect to servers (will be used both by terraform and ansible). Only IPs or hostnames are supported, name from ssh-config will not work.").
+	cmd.Flag("ssh-bastion-host", "Jumper (bastion) host to connect to servers (will be used both by infrastructure creation utility and ansible). Only IPs or hostnames are supported, name from ssh-config will not work.").
 		IsSetByUser(&sshFlagSetByUser).
 		Envar(configEnvName("SSH_BASTION_HOST")).
 		StringVar(&SSHBastionHost)

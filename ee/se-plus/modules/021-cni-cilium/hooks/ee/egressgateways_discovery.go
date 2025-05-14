@@ -414,11 +414,12 @@ func makeEGStatusPatchForState(egState egressGatewayState, egInstances []EgressG
 
 	var c ConditionTypeChecker
 
-	if egState.Mode == "VirtualIPAddress" {
+	switch egState.Mode {
+	case "VirtualIPAddress":
 		c = *conditionlTypeCheckerWithDefaults(metav1.ConditionTrue, "ElectionSucceedAndVirtualIPAnnounced", fmt.Sprintf("Node %s was elected as active node and VirtualIP is announced", egState.DesiredActiveNode)).
 			WithDesiredNodeCheck(egState).
 			WithReadyNodesCountCheck(len(readyOwnedInstances))
-	} else if egState.Mode == "PrimaryIPFromEgressGatewayNodeInterface" {
+	case "PrimaryIPFromEgressGatewayNodeInterface":
 		c = *conditionlTypeCheckerWithDefaults(metav1.ConditionTrue, "ElectionSucceed", "Node was elected as active node").
 			WithDesiredNodeCheck(egState)
 	}

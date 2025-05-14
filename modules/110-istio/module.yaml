@@ -6,5 +6,7 @@ subsystems:
 namespace: d8-istio
 description: |
   Service Mesh
+descriptions:
+  en: Service Mesh
 requirements:
   bootstrapped: true

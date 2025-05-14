@@ -1853,12 +1853,6 @@ internal:
 					Expect(vcdCluster.Field("spec.site").String()).To(Equal("https://localhost:5000"))
 					Expect(vcdCluster.Field("spec.org").String()).To(Equal("org"))
 					Expect(vcdCluster.Field("spec.ovdc").String()).To(Equal("dc"))
-
-					Expect(vcdCluster.Field("spec.proxyConfigSpec.httpProxy").String()).To(Equal("https://example.com"))
-					Expect(vcdCluster.Field("spec.proxyConfigSpec.httpsProxy").String()).To(Equal("https://example.com"))
-					Expect(vcdCluster.Field("spec.proxyConfigSpec.noProxy").AsStringSlice()).To(Equal([]string{
-						"127.0.0.1", "169.254.169.254", "cluster.local", "10.111.0.0/16", "10.222.0.0/16", "example.com",
-					}))
 				}
 
 				type mdParams struct {

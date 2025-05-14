@@ -22,10 +22,9 @@ Deckhouse CLI — это интерфейс командной строки дл
 * `d8 mirror` — команды, которые позволяют скопировать образы дистрибутива DKP в частный container registry (ранее для этого использовалась утилита `dhctl mirror`).
   Например, можно выполнить `d8 mirror pull -l <LICENSE> <TAR-BUNDLE-PATH>` вместо `dhctl mirror --license <LICENSE> --images-bundle-path <TAR-BUNDLE-PATH>`.
 
-  Сценарии использования:
+  Сценарий использования:
 
-  - [ручная загрузка образов в изолированный приватный registry](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#%D1%80%D1%83%D1%87%D0%BD%D0%B0%D1%8F-%D0%B7%D0%B0%D0%B3%D1%80%D1%83%D0%B7%D0%BA%D0%B0-%D0%BE%D0%B1%D1%80%D0%B0%D0%B7%D0%BE%D0%B2-%D0%B2-%D0%B8%D0%B7%D0%BE%D0%BB%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%BD%D1%8B%D0%B9-%D0%BF%D1%80%D0%B8%D0%B2%D0%B0%D1%82%D0%BD%D1%8B%D0%B9-registry);
-  - [ручная загрузка образов подключаемых модулей Deckhouse в изолированный приватный registry](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#%D1%80%D1%83%D1%87%D0%BD%D0%B0%D1%8F-%D0%B7%D0%B0%D0%B3%D1%80%D1%83%D0%B7%D0%BA%D0%B0-%D0%BE%D0%B1%D1%80%D0%B0%D0%B7%D0%BE%D0%B2-%D0%BF%D0%BE%D0%B4%D0%BA%D0%BB%D1%8E%D1%87%D0%B0%D0%B5%D0%BC%D1%8B%D1%85-%D0%BC%D0%BE%D0%B4%D1%83%D0%BB%D0%B5%D0%B9-deckhouse-%D0%B2-%D0%B8%D0%B7%D0%BE%D0%BB%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%BD%D1%8B%D0%B9-%D0%BF%D1%80%D0%B8%D0%B2%D0%B0%D1%82%D0%BD%D1%8B%D0%B9-registry).
+  - [ручная загрузка образов в изолированный приватный registry](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#ручная-загрузка-образов-deckhouse-kubernetes-platform-бд-сканера-уязвимостей-и-модулей-deckhouse-в-приватный-registry).
 
 * `d8 v` — команды, отвечающие за работу с виртуальными машинами, созданными [Deckhouse Virtualization Platform](https://deckhouse.ru/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html).  
     Например, команда `d8 virtualization console` подключает к консоли виртуальной машины.
@@ -41,6 +40,22 @@ Deckhouse CLI — это интерфейс командной строки дл
     </ul>
     </details>
     </div>
+
+* `d8 backup` — команды для создания резервных копий ключевых компонентов кластера:
+
+  * `etcd` — полная резервная копия ключевого хранилища etcd;
+  * `cluster-config` — архив конфигурационных объектов;
+  * `loki` — выгрузка логов из встроенного Loki API.
+
+    Например:
+
+    ```console
+    d8 backup etcd ./etcd.snapshot
+    d8 backup cluster-config ./cluster-config.tar
+    d8 backup loki --days 1 > ./loki.log
+    ```
+
+    Список доступных флагов `d8 backup` можно получить через команду `d8 backup --help`.
 
 ## Как установить Deckhouse CLI
 

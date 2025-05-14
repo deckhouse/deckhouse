@@ -17,7 +17,7 @@ limitations under the License.
 package checker
 
 import (
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -166,7 +166,7 @@ func newDummyLogger() *logrus.Entry {
 	logger := logrus.New()
 
 	// logger.Level = logrus.DebugLevel
-	logger.SetOutput(ioutil.Discard)
+	logger.SetOutput(io.Discard)
 
 	return logrus.NewEntry(logger)
 }

@@ -27,7 +27,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	log "github.com/sirupsen/logrus"
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/ptr"
 
@@ -35,11 +35,11 @@ import (
 )
 
 type Discoverer struct {
-	logger *log.Entry
+	logger *log.Logger
 	region string
 }
 
-func NewDiscoverer(logger *log.Entry) *Discoverer {
+func NewDiscoverer(logger *log.Logger) *Discoverer {
 	region := os.Getenv("AWS_REGION")
 	if region == "" {
 		logger.Fatal("AWS_REGION not found")
@@ -66,7 +66,7 @@ func (d *Discoverer) CheckCloudConditions(ctx context.Context) ([]v1alpha1.Cloud
 	var res []v1alpha1.CloudCondition
 
 	// check permission for DescribeAddressesAttribute
-	log.Debugln("checking permission for DescribeAddressesAttribute")
+	log.Debug("checking permission for DescribeAddressesAttribute")
 	_, err = ec2Client.DescribeAddressesAttribute(&ec2.DescribeAddressesAttributeInput{
 		DryRun: aws.Bool(true),
 	})
@@ -86,7 +86,7 @@ func (d *Discoverer) CheckCloudConditions(ctx context.Context) ([]v1alpha1.Cloud
 	}
 
 	// check permission for DescribeInstanceTopology
-	log.Debugln("checking permission for DescribeInstanceTopology")
+	log.Debug("checking permission for DescribeInstanceTopology")
 	_, err = ec2Client.DescribeInstanceTopology(&ec2.DescribeInstanceTopologyInput{
 		DryRun: aws.Bool(true),
 	})

@@ -14,6 +14,9 @@ import:
   to: /bin/etcdctl
   before: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /usr/lib/locale/C.utf8
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /relocate
   to: /
   before: setup

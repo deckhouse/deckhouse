@@ -59,7 +59,7 @@ if [ -f /var/lib/bashible/kubernetes_data_device_path ]; then
     return 0
   fi
 else
-  cloud_disk_name="$(get_data_device_secret | jq -re --arg hostname "$HOSTNAME" '.data[$hostname]' | base64 -d)"
+  cloud_disk_name="$(get_data_device_secret | jq -re --arg hostname "$(bb-d8-node-name)" '.data[$hostname]' | base64 -d)"
 fi
 
 echo "$(discover_device_path "$cloud_disk_name")" > /var/lib/bashible/kubernetes_data_device_path

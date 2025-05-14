@@ -1,14 +1,8 @@
-Subject: [PATCH] Add vAppTemplate search by vAppTemplate ID
----
-Index: pkg/vcdsdk/vapp.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/pkg/vcdsdk/vapp.go b/pkg/vcdsdk/vapp.go
---- a/pkg/vcdsdk/vapp.go	(revision f3f44d21165e798e1a8e1a14324b09e01fe35fd4)
-+++ b/pkg/vcdsdk/vapp.go	(revision 62c3e9620155db4beb6b046c6c94a10e855b9457)
-@@ -552,13 +552,24 @@
+index 0c545c82..d5ad922b 100644
+--- a/pkg/vcdsdk/vapp.go
++++ b/pkg/vcdsdk/vapp.go
+@@ -552,13 +552,24 @@ func (vdc *VdcManager) AddNewMultipleVM(vapp *govcd.VApp, vmNamePrefix string, v
  		return govcd.Task{}, fmt.Errorf("unable to query templates of catalog [%s]: [%v]", catalogName, err)
  	}
 
@@ -38,7 +32,7 @@ diff --git a/pkg/vcdsdk/vapp.go b/pkg/vcdsdk/vapp.go
  	if queryVAppTemplate == nil {
  		return govcd.Task{}, fmt.Errorf("unable to get template of name [%s] in catalog [%s]",
  			templateName, catalogName)
-@@ -851,13 +862,24 @@
+@@ -851,13 +862,24 @@ func (vdc *VdcManager) AddNewVM(vmNamePrefix string, VAppName string, vmNum int,
  		return fmt.Errorf("unable to query templates of catalog [%s]: [%v]", catalogName, err)
  	}
 

@@ -3,14 +3,15 @@ cpu: 25m
 memory: 40Mi
 {{- end }}
 
-{{- $etcdQuotaBackendBytes := "" -}}
-{{- if hasKey .Values.controlPlaneManager.internal "etcdQuotaBackendBytes" -}}
-  {{- $etcdQuotaBackendBytes = .Values.controlPlaneManager.internal.etcdQuotaBackendBytes -}}
-{{- end -}}
+{{- $backupEnabled := (((.Values.controlPlaneManager).etcd).backup).enabled -}}
+{{- $backupSchedule := (((.Values.controlPlaneManager).etcd).backup).cronSchedule | default "0 0 * * *" -}}
+{{- $backupHostPath := (((.Values.controlPlaneManager).etcd).backup).hostPath | default "/var/lib/etcd" -}}
+{{- $etcdQuotaBackendBytes := (.Values.controlPlaneManager.internal).etcdQuotaBackendBytes | default "2147483648" -}}
 
-{{- if .Values.global.clusterIsBootstrapped }}
-  {{- if hasKey .Values.controlPlaneManager.internal "mastersNode" }}
-    {{- range $node := .Values.controlPlaneManager.internal.mastersNode }}
+{{- if $backupEnabled }}
+  {{- if .Values.global.clusterIsBootstrapped }}
+    {{- if hasKey .Values.controlPlaneManager.internal "mastersNode" }}
+      {{- range $node := .Values.controlPlaneManager.internal.mastersNode }}
 ---
 apiVersion: batch/v1
 kind: CronJob
@@ -19,7 +20,7 @@ metadata:
   namespace: kube-system
   {{- include "helm_lib_module_labels" (list $ (dict "app" "d8-etcd-backup")) | nindent 2 }}
 spec:
-  schedule: "0 0 * * *"
+  schedule: {{ $backupSchedule | quote }}
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 1
   failedJobsHistoryLimit: 1
@@ -45,7 +46,9 @@ spec:
             imagePullPolicy: IfNotPresent
             env:
             - name: ETCDQUOTA
-              value: {{ $etcdQuotaBackendBytes | default "2147483648" | quote }}
+              value: {{ $etcdQuotaBackendBytes | quote }}
+            - name: HOSTPATH
+              value: {{ $backupHostPath | quote }}
             resources:
               requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | nindent 16 }}
@@ -56,8 +59,8 @@ spec:
             - mountPath: /etc/kubernetes/pki/etcd
               name: etcd-certs
               readOnly: true
-            - mountPath: /var/lib/etcd
-              name: etcd-data
+            - mountPath: /var/backup
+              name: backup-data
             - mountPath: /tmp
               name: tmp
           volumes:
@@ -66,11 +69,12 @@ spec:
               type: DirectoryOrCreate
             name: etcd-certs
           - hostPath:
-              path: /var/lib/etcd
+              path: {{ $backupHostPath | quote }}
               type: DirectoryOrCreate
-            name: etcd-data
+            name: backup-data
           - name: tmp
             emptyDir: {}
+      {{- end }}
     {{- end }}
   {{- end }}
 {{- end }}

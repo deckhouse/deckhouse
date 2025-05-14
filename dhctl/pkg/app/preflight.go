@@ -17,25 +17,26 @@ package app
 import "gopkg.in/alecthomas/kingpin.v2"
 
 var (
-	PreflightSkipAll                        = false
-	PreflightSkipSSHForward                 = false
-	PreflightSkipAvailabilityPorts          = false
-	PreflightSkipResolvingLocalhost         = false
-	PreflightSkipDeckhouseVersionCheck      = false
-	PreflightSkipRegistryThroughProxy       = false
-	PreflightSkipPublicDomainTemplateCheck  = false
-	PreflightSkipSSHCredentialsCheck        = false
-	PreflightSkipRegistryCredentials        = false
-	PreflightSkipContainerdExistCheck       = false
-	PreflightSkipPythonChecks               = false
-	PreflightSkipSudoIsAllowedForUserCheck  = false
-	PreflightSkipSystemRequirementsCheck    = false
-	PreflightSkipOneSSHHost                 = false
-	PreflightSkipCloudAPIAccessibility      = false
-	PreflightSkipTimeDrift                  = false
-	PreflightSkipCIDRIntersection           = false
-	PreflightSkipDeckhouseUserCheck         = false
-	PreflightSkipYandexWithNatInstanceCheck = false
+	PreflightSkipAll                          = false
+	PreflightSkipSSHForward                   = false
+	PreflightSkipAvailabilityPorts            = false
+	PreflightSkipResolvingLocalhost           = false
+	PreflightSkipDeckhouseVersionCheck        = false
+	PreflightSkipRegistryThroughProxy         = false
+	PreflightSkipPublicDomainTemplateCheck    = false
+	PreflightSkipSSHCredentialsCheck          = false
+	PreflightSkipRegistryCredentials          = false
+	PreflightSkipContainerdExistCheck         = false
+	PreflightSkipPythonChecks                 = false
+	PreflightSkipSudoIsAllowedForUserCheck    = false
+	PreflightSkipSystemRequirementsCheck      = false
+	PreflightSkipOneSSHHost                   = false
+	PreflightSkipCloudAPIAccessibility        = false
+	PreflightSkipTimeDrift                    = false
+	PreflightSkipCIDRIntersection             = false
+	PreflightSkipDeckhouseUserCheck           = false
+	PreflightSkipYandexWithNatInstanceCheck   = false
+	PreflightSkipStaticInstancesIPDuplication = false
 )
 
 const (
@@ -57,6 +58,7 @@ const (
 	CIDRIntersection                 = "preflight-skip-cidr-intersection"
 	DeckhouseUserCheckName           = "preflight-skip-deckhouse-user-check"
 	YandexWithNatInstance            = "preflight-skip-yandex-with-nat-instance-check"
+	StaticInstancesIPDuplication     = "preflight-skip-staticinstances-ip-duplication"
 )
 
 var PreflightSkipOptionsMap = map[string]*bool{
@@ -75,6 +77,7 @@ var PreflightSkipOptionsMap = map[string]*bool{
 	SystemRequirementsArgName:        &PreflightSkipSystemRequirementsCheck,
 	OneSSHHostCheckArgName:           &PreflightSkipOneSSHHost,
 	CIDRIntersection:                 &PreflightSkipCIDRIntersection,
+	StaticInstancesIPDuplication:     &PreflightSkipStaticInstancesIPDuplication,
 	DeckhouseUserCheckName:           &PreflightSkipDeckhouseUserCheck,
 	TimeDriftArgName:                 &PreflightSkipTimeDrift,
 	YandexWithNatInstance:            &PreflightSkipYandexWithNatInstanceCheck,
@@ -146,4 +149,7 @@ func DefinePreflight(cmd *kingpin.CmdClause) {
 	cmd.Flag(YandexWithNatInstance, "Skip verifying Yandex Cloud WithNatInstance configuration").
 		Envar(configEnvName("PREFLIGHT_SKIP_YANDEX_WITH_NAT_INSTANCE_CHECK")).
 		BoolVar(PreflightSkipOptionsMap[YandexWithNatInstance])
+	cmd.Flag(StaticInstancesIPDuplication, "Skip verifying StaticInstances IP intersection").
+		Envar(configEnvName("PREFLIGHT_SKIP_SI_IP_DUPLICATION")).
+		BoolVar(PreflightSkipOptionsMap[StaticInstancesIPDuplication])
 }

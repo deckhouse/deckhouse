@@ -4,7 +4,7 @@ memory: 50Mi
 {{- end }}
 
 {{- $ccmImageName := ""}}
-{{- if eq .Values.cloudProviderVcd.internal.providerClusterConfiguration.legacyMode true -}}
+{{- if eq .Values.cloudProviderVcd.internal.legacyMode true -}}
   {{- $ccmImageName = "cloudControllerManagerLegacy" }}
 {{- else -}}
   {{- $ccmImageName = "cloudControllerManager" }}

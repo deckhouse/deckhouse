@@ -15,3 +15,7 @@ linters-settings:
         - kind: Deployment
           name: test-dex-authenticator
           container: redis
+  openapi:
+    exclude-rules:
+      enum:
+        - "spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.github.properties.teamNameField"

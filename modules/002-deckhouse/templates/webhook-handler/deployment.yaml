@@ -33,6 +33,8 @@ apiVersion: apps/v1
 metadata:
   name: webhook-handler
   namespace: d8-system
+  annotations:
+    helm.sh/resource-policy: keep
   {{- include "helm_lib_module_labels" (list . (dict "app" "webhook-handler")) | nindent 2 }}
 spec:
   replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}

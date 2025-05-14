@@ -918,10 +918,9 @@ func (f *DeckhouseReleaseFetcher) parseAndFilterVersions(tags []string) []*semve
 }
 
 func isVersionInRange(ver, actual, target *semver.Version) bool {
-	return !(actual.Major() > ver.Major() ||
-		(actual.Major() == ver.Major() && actual.Minor() > ver.Minor()) ||
-		target.Major() < ver.Major() ||
-		(target.Major() == ver.Major() && target.Minor() < ver.Minor()))
+	return (ver.Major() > actual.Major() ||
+		(ver.Major() == actual.Major() && ver.Minor() >= actual.Minor())) &&
+		(ver.Major() < target.Major() || (ver.Major() == target.Major() && ver.Minor() <= target.Minor()))
 }
 
 func isVersionGreaterThanTarget(ver, target *semver.Version) bool {

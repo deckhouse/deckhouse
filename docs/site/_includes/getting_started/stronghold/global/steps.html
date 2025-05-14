@@ -1,0 +1,63 @@
+{%- assign step = page.step | to_integer %}
+{%- assign prev_step = step | minus: 1 %}
+{%- assign next_step = step | plus: 1 %}
+<div class="gs-steps">
+  <div class="gs-steps__sections">
+    {% for i in (2..page.steps) %}
+
+      {%- if step >= i %}
+        {% assign section_class = 'gs-steps__section_past' %}
+      {% else %}
+        {% assign section_class = '' %}
+      {% endif %}
+
+      <div class="gs-steps__section {{ section_class }}"></div>
+    {% endfor %}
+  </div>
+  <div class="gs-steps__points">
+    {% for i in (1..page.steps) %}
+     {% assign i_step_code = 'step' | append: i %}
+     {% assign i_step_name = site.data.getting_started.[page.gs_data_key].installTypes[page.platform_code]['steps'][i_step_code]['name'][page.lang] | default: '' %}
+
+     {%- if step == i %}
+     <div class="gs-steps__point">
+     {% else %}
+     <a class="gs-steps__point" href="{{ page.url_prefix }}/gs/
+     {%- if i == 1 and site.data.getting_started.[page.gs_data_key].installTypes.size == 1 %}{{ page.platform_code }}/{% endif %}
+     {%- if i > 1 %}{{ page.platform_code }}/step{{ i }}.html{% endif %}">
+     {% endif %}
+        {%- if step == i %}
+          <div class="gs-steps__point-num gs-steps__point-num_active">
+            <span>{{ i }}</span>
+          </div>
+          <div class="gs-steps__point-title gs-steps__point-title_active">
+            {{ page.step_name }}
+          </div>
+        {% elsif step > i %}
+          <div class="gs-steps__point-num gs-steps__point-num_past">
+            <span>{{ i }}</span>
+          </div>
+          <div class="gs-steps__point-title">
+            {%- if i == 1 and site.data.getting_started.[page.gs_data_key].installTypes.size > 1 %}
+              {{ site.data.getting_started.[page.gs_data_key].global.step1['name'][page.lang] }}
+            {%- else %}
+              {{ i_step_name }}
+            {%- endif %}
+          </div>
+        {% else %}
+          <div class="gs-steps__point-num gs-steps__point-num_future"
+            href="{{ page.url_prefix }}/gs/{% if i > 1 %}{{ page.platform_code }}/step{{ i }}.html{% endif %}">
+            <span>{% if step == 1 and site.data.getting_started.[page.gs_data_key].installTypes.size > 1 %}?{% else %}{{ i }}{% endif %} </span>
+          </div>
+          <div class="gs-steps__point-title gs-steps__point-title_future">
+            {{ i_step_name }}
+          </div>
+        {% endif %}
+      {%- if step == i %}
+      </div>
+      {% else %}
+      </a>
+      {% endif %}
+    {% endfor %}
+  </div>
+</div>

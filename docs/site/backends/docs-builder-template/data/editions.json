@@ -5,10 +5,7 @@
   },
   "be": {
     "name": "BE",
-    "title": "Basic Edition",
-    "excludeModules": [
-      "sds-replicated-volume"
-    ]
+    "title": "Basic Edition"
   },
   "se": {
     "name": "SE",
@@ -20,113 +17,24 @@
   },
   "cse-lite": {
     "name": "CSE Lite",
-    "name_version": "CSE Lite (1.64)",
-    "title": "Certified Security Edition Lite (1.64)",
+    "name_version": "CSE Lite (1.67)",
+    "title": "Certified Security Edition Lite (1.67)",
     "title_version": "Certified Security Edition Lite",
     "languages": [
       "ru"
-    ],
-    "includeModules": [
-    "admission-policy-engine",
-    "chrony",
-    "cni-flannel",
-    "cni-cilium",
-    "control-plane-manager",
-    "deckhouse",
-    "flow-schema",
-    "ingress-nginx",
-    "kube-dns",
-    "kube-proxy",
-    "local-path-provisioner",
-    "log-shipper",
-    "loki",
-    "monitoring-deckhouse",
-    "monitoring-kubernetes",
-    "monitoring-kubernetes-control-plane",
-    "multitenancy-manager",
-    "node-manager",
-    "operator-prometheus",
-    "operator-prometheus-crd",
-    "operator-trivy",
-    "priority-class",
-    "prometheus",
-    "prometheus-crd",
-    "prometheus-metrics-adapter",
-    "registrypackages",
-    "registry-packages-proxy",
-    "runtime-audit-engine",
-    "user-authn",
-    "user-authn-crd",
-    "user-authz"
     ]
   },
   "cse-pro": {
     "name": "CSE Pro",
-    "name_version": "CSE Pro (1.64)",
+    "name_version": "CSE Pro (1.67)",
     "title": "Certified Security Edition Pro",
-    "title_version": "Certified Security Edition Pro (1.64)",
+    "title_version": "Certified Security Edition Pro (1.67)",
     "languages": [
       "ru"
-    ],
-    "includeModules": [
-    "admission-policy-engine",
-    "chrony",
-    "cni-cilium",
-    "cni-flannel",
-    "control-plane-manager",
-    "deckhouse",
-    "documentation",
-    "flow-schema",
-    "ingress-nginx",
-    "kube-dns",
-    "kube-proxy",
-    "local-path-provisioner",
-    "log-shipper",
-    "loki",
-    "metallb",
-    "monitoring-deckhouse",
-    "monitoring-kubernetes",
-    "monitoring-kubernetes-control-plane",
-    "multitenancy-manager",
-    "node-local-dns",
-    "node-manager",
-    "operator-prometheus",
-    "operator-prometheus-crd",
-    "operator-trivy",
-    "priority-class",
-    "prometheus",
-    "prometheus-crd",
-    "prometheus-metrics-adapter",
-    "registrypackages",
-    "registry-packages-proxy",
-    "runtime-audit-engine",
-    "snapshot-controller",
-    "vertical-pod-autoscaler",
-    "user-authn",
-    "user-authn-crd",
-    "user-authz",
-    "csi-ceph",
-    "csi-nfs"
     ]
   },
   "se-plus": {
     "name": "SE+",
-    "title": "Standard Edition+",
-    "excludeModules": [
-      "cloud-provider-dynamix",
-      "cloud-provider-openstack",
-      "cloud-provider-vcd",
-      "dashboard",
-      "keepalived",
-      "network-gateway",
-      "operator-trivy",
-      "runtime-audit-engine",
-      "static-routing-manager",
-      "virtualization"
-    ],
-    "includeModules": [
-      "cloud-provider-vsphere",
-      "cloud-provider-zvirt"
-    ]
+    "title": "Standard Edition+"
   }
 }

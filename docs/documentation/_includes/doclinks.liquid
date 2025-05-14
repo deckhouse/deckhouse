@@ -1,0 +1,10 @@
+{% unless jekyll.environment == "development" -%}
+{"modules": {
+{%- for module in site.data['modules']['all'] -%}
+"{{ module[0] }}": {{ module[1]['docs'] | jsonify }}
+{%- unless forloop.last %}, {% endunless %}
+{%- endfor -%}
+},
+"crds": {{ site.data['modules']['crds'] | jsonify }}
+}
+{%- endunless %}

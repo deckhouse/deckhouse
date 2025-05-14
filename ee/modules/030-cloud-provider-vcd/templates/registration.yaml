@@ -29,7 +29,7 @@ data:
   {{- $_ := set $vcdValues "virtualDataCenter" $providerClusterConfiguration.virtualDataCenter  }}
   {{- $_ := set $vcdValues "mainNetwork" $providerClusterConfiguration.mainNetwork  }}
   {{- $_ := set $vcdValues "virtualApplicationName" $providerClusterConfiguration.virtualApplicationName }}
-  {{- $_ := set $vcdValues "server" $providerClusterConfiguration.provider.server }}
+  {{- $_ := set $vcdValues "server" ($providerClusterConfiguration.provider.server | trimSuffix "/") }}
   {{- $_ := set $vcdValues "username" $providerClusterConfiguration.provider.username }}
   {{- $_ := set $vcdValues "password" $providerClusterConfiguration.provider.password }}
   {{- $_ := set $vcdValues "apiToken" $providerClusterConfiguration.provider.apiToken }}

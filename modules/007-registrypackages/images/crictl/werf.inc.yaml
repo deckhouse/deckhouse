@@ -27,9 +27,12 @@ git:
     install:
     - '**/*'
   {{- end }}
+secrets:
+- id: SOURCE_REPO
+  value: {{ $.SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ $full_version }} {{ $.SOURCE_REPO }}/kubernetes-sigs/cri-tools.git /src/cri-tools
+  - git clone --depth 1 --branch v{{ $full_version }} $(cat /run/secrets/SOURCE_REPO)/kubernetes-sigs/cri-tools.git /src/cri-tools
   - cd /src/cri-tools
   {{- if $patch }}
   - git apply /patches/*.patch --verbose
@@ -65,18 +68,18 @@ import:
   to: /src
   before: install
 mount:
+{{ include "mount points for golang builds" . }}
 - from: tmp_dir
   to: /src/cri-tools/build
-- from: tmp_dir
-  to: /go/pkg
-- from: tmp_dir
-  to: /root/.cache/go-build
+secrets:
+- id: GOPROXY
+  value: {{ $.GOPROXY }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" $ | nindent 2 }}
   - apk add --no-cache make
   setup:
-  - export GOPROXY={{ $.GOPROXY }}
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - cd /src/cri-tools
   - go mod vendor
   - export VERSION={{ $full_version }}

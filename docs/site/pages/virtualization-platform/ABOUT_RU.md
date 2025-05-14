@@ -13,7 +13,7 @@ DVP работает на основе [Deckhouse Kubernetes Platform](https://d
 
   ![Запуск ВМ](/../../images/virtualization-platform/cases-vms.ru.png)
 
-- Запуск виртуальных машин и контейнеризованных приложений в одном окружении.
+- Запуск виртуальных машин и контейнеризированных приложений в одном окружении.
 
   ![Запуск ВМ и приложений](../../../images/virtualization-platform/cases-pods-and-vms.ru.png)
 

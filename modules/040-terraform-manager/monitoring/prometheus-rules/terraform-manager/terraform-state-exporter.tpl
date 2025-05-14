@@ -15,12 +15,23 @@
       plk_create_group_if_not_exists__d8_terraform_state_exporter_malfunctioning: "D8TerraformStateExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_terraform_state_exporter_malfunctioning: "D8TerraformStateExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_ignore_labels: "job"
-      description: >
-        To get more details:
+      summary: Prometheus can't scrape terraform-state-exporter.
+      description: |
+        Prometheus is unable to scrape metrics from the `terraform-state-exporter`.
+        
+        To investigate the details:
 
-        Check pods state: `kubectl -n d8-system get pod -l app=terraform-state-exporter`
-        or logs: `kubectl -n d8-system logs -l app=terraform-state-exporter -c exporter`
-      summary: Prometheus can't scrape terraform-state-exporter
+        - Check the Pod status:
+        
+          ```shell
+          kubectl -n d8-system get pod -l app=terraform-state-exporter
+          ```
+
+        - Check the container logs:
+        
+          ```shell
+          kubectl -n d8-system logs -l app=terraform-state-exporter -c exporter
+          ```
 
   - alert: D8TerraformStateExporterTargetAbsent
     expr: absent(up{job="terraform-state-exporter"}) == 1
@@ -36,12 +47,23 @@
       plk_ignore_labels: "job"
       plk_create_group_if_not_exists__d8_terraform_state_exporter_malfunctioning: "D8TerraformStateExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_terraform_state_exporter_malfunctioning: "D8TerraformStateExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      description: >
-        To get more details:
+      summary: Terraform-state-exporter target is missing in Prometheus.
+      description: |
+        Prometheus cannot find the `terraform-state-exporter` target.
 
-        Check pods state: `kubectl -n d8-system get pod -l app=terraform-state-exporter`
-        or logs: `kubectl -n d8-system logs -l app=terraform-state-exporter -c exporter`
-      summary: Prometheus has no `terraform-state-exporter` target
+        To investigate the details:
+
+        - Check the Pod status:
+        
+          ```shell
+          kubectl -n d8-system get pod -l app=terraform-state-exporter
+          ```
+
+        - Check the container logs:
+        
+          ```shell
+          kubectl -n d8-system logs -l app=terraform-state-exporter -c exporter
+          ```
 
   - alert: D8TerraformStateExporterPodIsNotReady
     expr: |
@@ -61,13 +83,23 @@
       plk_labels_as_annotations: "pod"
       plk_create_group_if_not_exists__d8_terraform_state_exporter_malfunctioning: "D8TerraformStateExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_terraform_state_exporter_malfunctioning: "D8TerraformStateExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      summary: Pod terraform-state-exporter is not Ready
+      summary: Terraform-state-exporter Pod is not Ready.
       description: |
-        Terraform-state-exporter doesn't check the difference between real Kubernetes cluster state and Terraform state.
+        The `terraform-state-exporter` cannot check the difference between the actual Kubernetes cluster state and the Terraform state.
 
-        Pease, check:
-        1. Deployment description: `kubectl -n d8-system describe deploy terraform-state-exporter`
-        2. Pod status: `kubectl -n d8-system describe pod -l app=terraform-state-exporter`
+        To resolve the issue, check the following:
+
+        1. Deployment description:
+
+           ```shell
+           kubectl -n d8-system describe deployment terraform-state-exporter
+           ```
+
+        2. Pod status:
+
+           ```shell
+           kubectl -n d8-system describe pod -l app=terraform-state-exporter
+           ```
 
   - alert: D8TerraformStateExporterPodIsNotRunning
     expr: absent(kube_pod_status_phase{namespace="d8-system",phase="Running",pod=~"terraform-state-exporter-.*"})
@@ -82,13 +114,23 @@
       plk_markup_format: "markdown"
       plk_create_group_if_not_exists__d8_terraform_state_exporter_malfunctioning: "D8TerraformStateExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_terraform_state_exporter_malfunctioning: "D8TerraformStateExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      summary: Pod terraform-state-exporter is not Running
+      summary: Terraform-state-exporter Pod is not Running.
       description: |
-        Terraform-state-exporter doesn't check the difference between real Kubernetes cluster state and Terraform state.
+        The `terraform-state-exporter` cannot check the difference between the actual Kubernetes cluster state and the Terraform state.
 
-        Pease, check:
-        1. Deployment description: `kubectl -n d8-system describe deploy terraform-state-exporter`
-        2. Pod status: `kubectl -n d8-system describe pod -l app=terraform-state-exporter`
+        To resolve the issue, check the following:
+
+        1. Deployment description:
+
+           ```shell
+           kubectl -n d8-system describe deployment terraform-state-exporter
+           ```
+
+        2. Pod status:
+
+           ```shell
+           kubectl -n d8-system describe pod -l app=terraform-state-exporter
+           ```
 
 - name: d8.terraform-manager.terraform-state-exporter.checks
   rules:
@@ -107,11 +149,15 @@
       plk_markup_format: "markdown"
       plk_create_group_if_not_exists__d8_terraform_state_exporter_malfunctioning: "D8TerraformStateExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_terraform_state_exporter_malfunctioning: "D8TerraformStateExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: Terraform-state-exporter has encountered errors.
       description: |
-        Errors occurred while terraform-state-exporter working.
+        Errors occurred during the operation of the `terraform-state-exporter`.
 
-        Check pods logs to get more details: `kubectl -n d8-system logs -l app=terraform-state-exporter -c exporter`
-      summary: Terraform-state-exporter has errors
+        To get more details, check the Pod logs:
+        
+        ```shell
+        kubectl -n d8-system logs -l app=terraform-state-exporter -c exporter
+        ```
 
   - alert: D8TerraformStateExporterClusterStateChanged
     expr: |
@@ -127,13 +173,25 @@
       plk_markup_format: "markdown"
       plk_create_group_if_not_exists__d8_terraform_state_exporter_malfunctioning: "D8TerraformStateExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_terraform_state_exporter_malfunctioning: "D8TerraformStateExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: Terraform-state-exporter cluster state change detected.
       description: |
-        Real Kubernetes cluster state is `{{`{{ $labels.status }}`}}` comparing to Terraform state.
+        The current Kubernetes cluster state is `{{`{{ $labels.status }}`}}` compared to the Terraform state.
 
-        It's important to make them equal.
-        First, run the `dhctl terraform check` command to check what will change.
-        To converge state of Kubernetes cluster, use `dhctl converge` command.
-      summary: Terraform-state-exporter cluster state changed
+        It is important to reconcile the states.
+
+        Troubleshooting steps:
+
+        1. View the differences:
+
+           ```shell
+           dhctl terraform check
+           ```
+        
+        2. Apply the necessary changes to bring the cluster in sync:
+
+           ```shell
+           dhctl converge
+           ```
 
   - alert: D8TerraformStateExporterNodeStateChanged
     expr: |
@@ -149,13 +207,25 @@
       plk_markup_format: "markdown"
       plk_create_group_if_not_exists__d8_terraform_state_exporter_malfunctioning: "D8TerraformStateExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_terraform_state_exporter_malfunctioning: "D8TerraformStateExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: Terraform-state-exporter node state change detected.
       description: |
-        Real Node `{{"{{ $labels.node_group }}/{{ $labels.name }}"}}` state is `{{`{{ $labels.status }}`}}` comparing to Terraform state.
+        The current state of node `{{"{{ $labels.node_group }}/{{ $labels.name }}"}}` is `{{`{{ $labels.status }}`}}` compared to the Terraform state.
 
-        It's important to make them equal.
-        First, run the `dhctl terraform check` command to check what will change.
-        To converge state of Kubernetes cluster, use `dhctl converge` command.
-      summary: Terraform-state-exporter node state changed
+        It is important to reconcile the states.
+
+        Troubleshooting steps:
+
+        1. View the differences:
+
+           ```shell
+           dhctl terraform check
+           ```
+        
+        2. Apply the necessary changes to bring the cluster in sync:
+
+           ```shell
+           dhctl converge
+           ```
 
   - alert: D8TerraformStateExporterClusterStateError
     expr: |
@@ -171,12 +241,25 @@
       plk_markup_format: "markdown"
       plk_create_group_if_not_exists__d8_terraform_state_exporter_malfunctioning: "D8TerraformStateExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_terraform_state_exporter_malfunctioning: "D8TerraformStateExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: Terraform-state-exporter cluster state error.
       description: |
-        Terraform-state-exporter can't check difference between Kubernetes cluster state and Terraform state.
+        The `terraform-state-exporter` can't check difference between the Kubernetes cluster state and the Terraform state.
 
-        Probably, it occurred because Terraform-state-exporter had failed to run terraform with current state and config.
-        First, run the `dhctl terraform check` command to check what will change.
-        To converge state of Kubernetes cluster, use `dhctl converge` command.
+        That was likely caused by `terraform-state-exporter` failing to run Terraform with the current state and configuration.
+
+        Troubleshooting steps:
+
+        1. View the differences:
+
+           ```shell
+           dhctl terraform check
+           ```
+        
+        2. Apply the necessary changes to bring the cluster in sync:
+
+           ```shell
+           dhctl converge
+           ```
 
 {{- if (.Values.global.enabledModules | has "cloud-provider-aws") }}
 {{ if .Values.global.modules.publicDomainTemplate }}
@@ -187,7 +270,6 @@
         1. `ec2:DescribeInstanceTypes`,
         2. `ec2:DescribeSecurityGroupRules`.
 {{- end }}
-      summary: Terraform-state-exporter cluster state error
 
   - alert: D8TerraformStateExporterNodeStateError
     expr: |
@@ -203,12 +285,25 @@
       plk_markup_format: "markdown"
       plk_create_group_if_not_exists__d8_terraform_state_exporter_malfunctioning: "D8TerraformStateExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_terraform_state_exporter_malfunctioning: "D8TerraformStateExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: Terraform-state-exporter node state error.
       description: |
-        Terraform-state-exporter can't check difference between Node `{{"{{ $labels.node_group }}/{{ $labels.name }}"}}` state and Terraform state.
+        The `terraform-state-exporter` can't check the difference between the node `{{"{{ $labels.node_group }}/{{ $labels.name }}"}}` state and the Terraform state.
 
-        Probably, it occurred because Terraform-manager had failed to run terraform with current state and config.
-        First, run the `dhctl terraform check` command to check what will change.
-        To converge state of Kubernetes cluster, use `dhctl converge` command.
+        Probably, it occurred because `terraform-manager` had failed to run Terraform with the current state and configuration.
+
+        Troubleshooting steps:
+
+        1. View the differences:
+
+           ```shell
+           dhctl terraform check
+           ```
+        
+        2. Apply the necessary changes to bring the cluster in sync:
+
+           ```shell
+           dhctl converge
+           ```
 
 {{- if (.Values.global.enabledModules | has "cloud-provider-aws") }}
 {{ if .Values.global.modules.publicDomainTemplate }}
@@ -219,7 +314,6 @@
         1. `ec2:DescribeInstanceTypes`,
         2. `ec2:DescribeSecurityGroupRules`.
 {{- end }}
-      summary: Terraform-state-exporter node state error
 
   - alert: D8TerraformStateExporterNodeTemplateChanged
     expr: |
@@ -235,10 +329,22 @@
       plk_markup_format: "markdown"
       plk_create_group_if_not_exists__d8_terraform_state_exporter_malfunctioning: "D8TerraformStateExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_terraform_state_exporter_malfunctioning: "D8TerraformStateExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: Terraform-state-exporter node template change detected.
       description: |
-        Terraform-state-exporter found difference between node template from cluster provider configuration and from NodeGroup `{{`{{ $labels.name }}`}}`.
+        The `terraform-state-exporter` has detected a mismatch between the node template in the cluster provider configuration and the one specified in the NodeGroup {{`{{ $labels.name }}`}}`.
+        
         Node template is `{{`{{ $labels.status }}`}}`.
 
-        First, run the `dhctl terraform check` command to check what will change.
-        Use `dhctl converge` command or manually adjust NodeGroup settings to fix the issue.
-      summary: Terraform-state-exporter node template changed
+        Troubleshooting steps:
+
+        1. View the differences:
+
+           ```shell
+           dhctl terraform check
+           ```
+        
+        2. Adjust NodeGroup settings to fix the issue or bring the cluster in sync via the following command:
+
+           ```shell
+           dhctl converge
+           ```

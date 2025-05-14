@@ -4,3 +4,4 @@ subsystems:
   - storage
   - infrastructure
 namespace: d8-ceph-csi
+stage: "Deprecated"

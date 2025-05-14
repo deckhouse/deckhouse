@@ -50,10 +50,9 @@ jobs:
 {!{/* Jobs for each CRI and Kubernetes version */}!}
 {!{- $criName := "Containerd" -}!}
 {!{- $kubernetesVersion := "1.29" -}!}
-{!{- $providerNames := slice "AWS" "EKS" "GCP" "Yandex.Cloud" "OpenStack" "vSphere" "VCD" "Static" -}!}
-{!{- $commanderProviders := "yandex-cloud" -}!}
+{!{- $providerNames := slice "AWS" "EKS" "Azure" "GCP" "Yandex.Cloud" "OpenStack" "vSphere" "VCD" "Static" -}!}
 {!{- if $enableWorkflowOnTestRepos -}!}
-{!{-   $providerNames = slice "AWS" "OpenStack" -}!}
+{!{-   $providerNames = slice "AWS" "OpenStack" "Azure" -}!}
 {!{- end -}!}
 {!{- range $providerName := $providerNames -}!}
 {!{-   $provider := $providerName | replaceAll "." "-" | toLower -}!}
@@ -65,9 +64,10 @@ jobs:
 {!{-   $jobID := printf "run_%s_%s_%s" $providerForJobId $cri $kubernetesVersionSlug -}!}
 {!{-   $dependsJobsForAlert = $dependsJobsForAlert | coll.Append $jobID -}!}
 {!{-   $jobName := printf "%s, %s, Kubernetes %s" $providerName $criName $kubernetesVersion -}!}
-{!{-   $jobCtx := (dict "provider" $provider "commanderProviders" $commanderProviders "cri" $cri "criName" $criName "criEnv" $criEnv "layout" $layout) }!}
+{!{-   $jobCtx := (dict "provider" $provider "cri" $cri "criName" $criName "criEnv" $criEnv "layout" $layout) }!}
 {!{-   $jobCtx = coll.Merge $jobCtx (dict "kubernetesVersion" $kubernetesVersion "kubernetesVersionSlug" $kubernetesVersionSlug) }!}
 {!{-   $jobCtx = coll.Merge $jobCtx (dict "providerName" $providerName "workflowName" $workflowName "jobName" $jobName "jobID" $jobID) }!}
+{!{-   $jobCtx = coll.Merge $jobCtx (dict "sleepBeforeClusterTestingAlerts" "1800" "e2eStepTimeoutMinutes" "120") }!}
 {!{   tmpl.Exec "e2e_run_job_template" $jobCtx | strings.Indent 2 }!}
 {!{- end }!}
 
@@ -80,7 +80,5 @@ jobs:
 {!{- $labels := dict "trigger" "DailyE2EWorkflowFailed" -}!}
 {!{- $annotations := dict "summary" "Daily e2e tests workflow failed" -}!}
 {!{- $annotations = coll.Merge $annotations (dict "description" "Check Daily e2e workflow log for more information or see another alerts in this group.") -}!}
-
-{!{- tmpl.Exec "e2e_send_alert_template" (slice (dict "labels" $labels "annotations" $annotations )) | strings.Indent 4 -}!}
 
 {!{- tmpl.Exec "send_alert_loop_template" (slice (dict "labels" $labels "annotations" $annotations )) | strings.Indent 4 -}!}

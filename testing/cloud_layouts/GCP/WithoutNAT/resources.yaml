@@ -1,5 +1,37 @@
 ---
 apiVersion: deckhouse.io/v1
+kind: GCPInstanceClass
+metadata:
+  name: autoscaler
+spec:
+  diskSizeGb: 40
+  machineType: n2-standard-2
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: autoscaler
+spec:
+  cloudInstances:
+    classReference:
+      kind: GCPInstanceClass
+      name: autoscaler
+    maxPerZone: 1
+    minPerZone: 0
+    zones:
+      - europe-west3-a
+  disruptions:
+    approvalMode: Manual
+  nodeTemplate:
+    labels:
+      node-role/autoscaler: ""
+    taints:
+      - effect: NoExecute
+        key: node
+        value: autoscaler
+  nodeType: CloudEphemeral
+---
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: system

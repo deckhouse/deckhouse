@@ -9,9 +9,12 @@
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $gopsVersion }} {{ $.SOURCE_REPO }}/google/gops.git /src/gops && rm -rf /src/gops/.git
+  - git clone --depth 1 --branch {{ $gopsVersion }} $(cat /run/secrets/SOURCE_REPO)/google/gops.git /src/gops && rm -rf /src/gops/.git
   - cd /src/gops
 ---
 image: {{ .ModuleName }}/gops-artifact
@@ -23,14 +26,16 @@ import:
   to: /src
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache bash git binutils
   install:
-  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /src/gops
   - mkdir -p "/out/linux/amd64/bin"

@@ -20,8 +20,6 @@ import (
 	"fmt"
 	"os/exec"
 
-	"github.com/alessio/shellescape"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
@@ -33,21 +31,15 @@ func (pc *Checker) CheckSudoIsAllowedForUser(ctx context.Context) error {
 		return nil
 	}
 
-	if app.AskBecomePass {
-		return callSudo(ctx, pc.nodeInterface, app.BecomePass)
-	}
-
-	return callSudo(ctx, pc.nodeInterface, app.BecomePass)
+	return callSudo(ctx, pc.nodeInterface)
 
 }
 
-func callSudo(ctx context.Context, nodeInterface node.Interface, password string) error {
-	args := []string{"-Sv", "<<<", shellescape.Quote(password)}
-	if password == "" {
-		args = []string{"-n", "echo", "-n"}
-	}
+func callSudo(ctx context.Context, nodeInterface node.Interface) error {
+	cmd := nodeInterface.Command("echo")
+	cmd.Sudo(ctx)
 
-	err := nodeInterface.Command("sudo", args...).Run(ctx)
+	err := cmd.Run(ctx)
 	if err != nil {
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) && exitErr.ExitCode() != 255 {

@@ -17,8 +17,15 @@ limitations under the License.
 package kubernetes
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
+	"strings"
+	"sync"
+	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	kube "github.com/flant/kube-client/client"
 	v1 "k8s.io/api/core/v1"
@@ -89,16 +96,15 @@ type Config struct {
 
 // Accessor provides Kubernetes access in pod
 type Accessor struct {
-	client    kube.Client
-	saToken   string
-	userAgent string
-
-	schedulerProbeImage *ProbeImage
-	schedulerProbeNode  string
-
+	client                          kube.Client
+	saToken                         string
+	userAgent                       string
+	schedulerProbeImage             *ProbeImage
+	schedulerProbeNode              string
 	cloudControllerManagerNamespace string
-
-	kubernetesDomain string
+	kubernetesDomain                string
+	tokenExpire                     int64
+	tokenRotationMu                 sync.Mutex
 }
 
 func (a *Accessor) Init(config *Config, userAgent string) error {
@@ -109,16 +115,15 @@ func (a *Accessor) Init(config *Config, userAgent string) error {
 	a.client.WithRateLimiterSettings(config.ClientQps, config.ClientBurst)
 	// TODO(nabokihms): add kubernetes client metrics
 	err := a.client.Init()
-	if err != nil {
-		return fmt.Errorf("cannot init kuberbetes client: %v", err)
-	}
+	// first start
+	token := a.ServiceAccountToken()
 
-	// Service account token
-	token, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
 	if err != nil {
-		return fmt.Errorf("pod expected, cannot read service account token: %v", err)
+		return fmt.Errorf("client init failed: %w", err)
 	}
-	a.saToken = string(token)
+	if token == "" {
+		return fmt.Errorf("cannot read service account token")
+	}
 
 	a.schedulerProbeImage = NewProbeImage(&config.SchedulerProbeImage)
 	a.schedulerProbeNode = config.SchedulerProbeNode
@@ -135,7 +140,55 @@ func (a *Accessor) Kubernetes() kube.Client {
 	return a.client
 }
 
+func (a *Accessor) loadServiceAccountToken() error {
+	tokenData, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
+	if err != nil {
+		return fmt.Errorf("cannot read service account token: %v", err)
+	}
+	token := string(tokenData)
+	expire, err := GetWarnafter(token)
+	if err != nil {
+		return err
+	}
+	a.saToken = token
+	a.tokenExpire = expire
+	return nil
+}
+
+func GetWarnafter(token string) (int64, error) {
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		return 0, fmt.Errorf("invalid token format: expected 3 parts, got %d", len(parts))
+	}
+	payloadB64 := parts[1]
+	data, err := base64.RawURLEncoding.DecodeString(payloadB64)
+	if err != nil {
+		return 0, fmt.Errorf("failed to base64-decode payload: %w", err)
+	}
+
+	var sa ServiceAccountTokenStruct
+	if err := json.Unmarshal(data, &sa); err != nil {
+		return 0, fmt.Errorf("failed to unmarshal ServiceAccountToken: %w", err)
+	}
+
+	return sa.Kubernetes.Warnafter, nil
+}
+
 func (a *Accessor) ServiceAccountToken() string {
+	a.tokenRotationMu.Lock()
+	defer a.tokenRotationMu.Unlock()
+	if a.saToken == "" {
+		if err := a.loadServiceAccountToken(); err != nil {
+			log.Error(err)
+			return ""
+		}
+		return a.saToken
+	}
+	if time.Now().Unix() >= a.tokenExpire {
+		if err := a.loadServiceAccountToken(); err != nil {
+			log.Error(err)
+		}
+	}
 	return a.saToken
 }
 

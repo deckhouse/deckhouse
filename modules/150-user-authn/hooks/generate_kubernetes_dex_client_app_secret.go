@@ -72,6 +72,12 @@ func kubernetesDexClientAppSecret(input *go_hook.HookInput) error {
 			return fmt.Errorf("cannot conver kubernetes secret to bytes")
 		}
 
+		// if secret field was removed, generate a new one
+		if len(secretContent) == 0 {
+			input.Values.Set(secretPath, pwgen.AlphaNum(20))
+			return nil
+		}
+
 		input.Values.Set(secretPath, string(secretContent))
 		return nil
 	}

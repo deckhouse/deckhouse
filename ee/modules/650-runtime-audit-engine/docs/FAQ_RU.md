@@ -12,7 +12,7 @@ title: "Модуль runtime-audit-engine: FAQ"
 Пример конфигурации [ClusterLoggingConfig](../log-shipper/cr.html#clusterloggingconfig) для модуля `log-shipper`:
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingConfig
 metadata:
   name: falco-events
@@ -57,7 +57,7 @@ spec:
           Check you events journal for more details.
         summary: Falco detects a critical security incident
       expr: |
-        sum by (node) (rate(falco_events{priority="Critical"}[5m]) > 0)
+        sum by (node) (rate(falcosecurity_falcosidekick_falco_events_total{priority="Critical"}[5m]) > 0)
 ```
 
 {% endraw %}

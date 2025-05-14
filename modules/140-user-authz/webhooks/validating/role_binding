@@ -41,6 +41,8 @@ kubernetesValidating:
   matchConditions:
   - expression: ("system:apiserver" != request.userInfo.username)
     name: exclude-kube-apiserver
+  - expression: ("system:serviceaccount:d8-system:deckhouse" != request.userInfo.username)
+    name: exclude-deckhouse
   rules:
   - apiGroups:   ["rbac.authorization.k8s.io"]
     apiVersions: ["*"]

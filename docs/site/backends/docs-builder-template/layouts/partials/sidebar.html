@@ -1,5 +1,6 @@
 {{- $modulesList := .Site.Data.modules.channels }}
 {{- $channelsInfo := .Site.Data.channels.info }}
+{{- $lang := .Site.Language.Lang }}
 {{- $sidebarRootMenu := slice }}
 {{- $pages := (where $.Site.RegularPages ".Section" "modules").ByWeight }}
 {{- $ctx := $ }}
@@ -72,7 +73,11 @@
                   <span class="sidebar__badge--container">
                     {{- if and (gt (len $sidebarItem.module) 0) (index $.Site.Data.modules_all $sidebarItem.module) }}
                       {{- $moduleEditions := index (index $.Site.Data.modules_all $sidebarItem.module) "editions" }}
-                      {{- if not (in $moduleEditions "ce") }}<span class="sidebar__badge_v2 sidebar__badge_commercial" title='{{ T "commercial" }}'>{{ T "currency_sign"  }}</span>
+                      {{- $moduleCommercialBadgeMessage := index (index $.Site.Data.modules_all $sidebarItem.module) "commercialBadgeMessage" $lang}}
+                      {{- if $moduleCommercialBadgeMessage }}
+                      <span class="sidebar__badge_v2 sidebar__badge_commercial" title='{{ $moduleCommercialBadgeMessage }}'>{{ T "currency_sign"  }}</span>
+                      {{- else if not (in $moduleEditions "ce") }}
+                      <span class="sidebar__badge_v2 sidebar__badge_commercial" title='{{ T "commercial" }}'>{{ T "currency_sign"  }}</span>
                       {{- end }}
                     {{- end }}
                     {{- if and $sidebarItem.moduleStatus (index $.Site.Data.helpers.moduleStageBageMap ( replace (lower $sidebarItem.moduleStatus) " " "_")) -}}

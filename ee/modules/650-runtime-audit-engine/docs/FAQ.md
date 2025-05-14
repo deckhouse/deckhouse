@@ -12,7 +12,7 @@ Those events can then be collected by [log-shipper-agents](../log-shipper/) and 
 Below is an example [ClusterLoggingConfig](../log-shipper/cr.html#clusterloggingconfig) configuration for the `log-shipper` module:
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingConfig
 metadata:
   name: falco-events
@@ -56,7 +56,7 @@ spec:
           Check you events journal for details.
         summary: Falco detects a critical security incident
       expr: |
-        sum by (node) (rate(falco_events{priority="Critical"}[5m]) > 0)
+        sum by (node) (rate(falcosecurity_falcosidekick_falco_events_total{priority="Critical"}[5m]) > 0)
 ```
 
 {% endraw %}

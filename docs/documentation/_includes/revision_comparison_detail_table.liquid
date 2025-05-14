@@ -45,7 +45,6 @@
   <tbody>
   {%- for module in modules %}
     {%- assign moduleName = module[0] %}
-    {%- assign REMOVEmoduleEdition = module[1].editionMinimumAvailable %}
     {%- assign moduleDoesntBelongToEdition = false %}
 
     {%- unless module[1].editions contains siteD8Edition %}

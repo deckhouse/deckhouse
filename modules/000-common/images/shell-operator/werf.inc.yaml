@@ -39,17 +39,20 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --branch {{ $shellOperatorVersion }} --depth 1 {{ $.SOURCE_REPO }}/flant/shell-operator.git /src/shell-operator
+  - git clone --branch {{ $shellOperatorVersion }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/flant/shell-operator.git /src/shell-operator
   - rm -r /src/shell-operator/.git
-  - git clone --depth 1 {{ $.SOURCE_REPO }}/jqlang/jq --branch "jq-1.7.1" /src/jq
+  - git clone --depth 1 $(cat /run/secrets/SOURCE_REPO)/jqlang/jq --branch "jq-1.7.1" /src/jq
   - cd /src/jq
   - |
-    cat > .gitmodules <<"EOF"
+    cat > .gitmodules <<EOF
     [submodule "modules/oniguruma"]
         path = modules/oniguruma
-        url = {{ .SOURCE_REPO }}/flant/oniguruma.git
+        url = $(cat /run/secrets/SOURCE_REPO)/flant/oniguruma.git
     EOF
   - git submodule update --init
   - rm -r docs
@@ -62,21 +65,21 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 final: false
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
-- from: tmp_dir
-  to: /root/.cache/go-build
+{{ include "mount points for golang builds" . }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache automake autoconf libtool build-base git
   install:
-  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=1 GOOS=linux
+  - export CGO_ENABLED=1 GOOS=linux
   - cd /src/jq
   - autoreconf -fi
   - ./configure CFLAGS=-fPIC --disable-maintainer-mode --enable-all-static --disable-shared --disable-docs --disable-tls --disable-valgrind --with-oniguruma=builtin --prefix=/libjq
@@ -88,7 +91,7 @@ shell:
   - chown -R 64535:64535 /jq
   - chmod 700 /jq/jq
   - cd /src/shell-operator
-  - go mod download -x
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   - CGO_CFLAGS="-I/libjq/include" CGO_LDFLAGS="-L/libjq/lib" go build -ldflags="-linkmode external -extldflags '-static' -s -w -X 'github.com/flant/shell-operator/pkg/app.Version={{ $shellOperatorVersion }}'" -tags use_libjq -o shell-operator ./cmd/shell-operator
   - mkdir -p /shell-operator
   - cp -r shell_lib.sh frameworks shell-operator /shell-operator
