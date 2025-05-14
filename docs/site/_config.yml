@@ -20,7 +20,9 @@ d8Revision: EE
 
 metrics:
   google: G-4X28CEP7W2
-  yandex: 78422802
+  yandex:
+    ru: 78422802
+    en: 100410448
 
 chat_script_url:
   en: "https://crm.flant.ru/upload/crm/site_button/loader_2_qurrbf.js"
@@ -114,7 +116,7 @@ defaults:
       documentation_state: develop
       search_bage_enabled: true
       sidebar: code
-      sitemap_include: false    
+      sitemap_include: false
   - scope:
       path: "pages/virtualization-platform"
     values:
