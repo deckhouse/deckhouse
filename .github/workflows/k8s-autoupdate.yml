@@ -95,8 +95,6 @@ jobs:
           Automated Change: Update k8s patch version
 
           Signed-off-by: deckhouse-BOaTswain <89150800+deckhouse-boatswain@users.noreply.github.com>
-        signoff: true
-        sign-commits: true
         title: "[run ci] Automated Change: Update k8s patch version"
         body-path: ".github/k8s_autoupdate_pull_request_template.md"
         branch: chore/k8s-autoupdate
