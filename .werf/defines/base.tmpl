@@ -4,10 +4,6 @@
 #   CandiVersionMap - dict CandiVersionMap from werf.yaml
 {{- define "base components imports" }}
 {{- $context := . -}}
-- image: tools/tini
-  add: /usr/bin/tini
-  to: /usr/bin/tini
-  before: setup
 - image: tools/semver
   add: /usr/bin/semver
   to: /usr/bin/semver
@@ -131,11 +127,8 @@ import:
   to: /usr/bin/openssl
   before: install
 - image: tools/vim
-  add: /
-  to: /
-  includePaths:
-  - usr/bin/vim
-  - usr/bin/vi
+  add: /usr/bin/vim
+  to: /usr/bin/vim
   before: install
 shell:
   install:
