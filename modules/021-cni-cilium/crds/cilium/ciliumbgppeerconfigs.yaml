@@ -48,8 +48,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: Spec is the specification of the desired behavior of the
-              CiliumBGPPeerConfig.
+            description: Spec is the specification of the desired behavior of the CiliumBGPPeerConfig.
             properties:
               authSecretRef:
                 description: |-
@@ -77,7 +76,8 @@ spec:
 
                   If not specified, the default families of IPv6/unicast and IPv4/unicast will be created.
                 items:
-                  description: CiliumBGPFamilyWithAdverts represents a AFI/SAFI address
+                  description: |-
+                    CiliumBGPFamilyWithAdverts represents a AFI/SAFI address
                     family pair along with reference to BGP Advertisements.
                   properties:
                     advertisements:
@@ -90,20 +90,18 @@ spec:
                         Use CiliumBGPPeeringPolicy advertisement options instead.
                       properties:
                         matchExpressions:
-                          description: matchExpressions is a list of label selector
-                            requirements. The requirements are ANDed.
+                          description: matchExpressions is a list of label selector requirements. The requirements are ANDed.
                           items:
                             description: |-
                               A label selector requirement is a selector that contains values, a key, and an operator that
                               relates the key and values.
                             properties:
                               key:
-                                description: key is the label key that the selector
-                                  applies to.
+                                description: Key is the label key that the selector applies to.
                                 type: string
                               operator:
                                 description: |-
-                                  operator represents a key's relationship to a set of values.
+                                  Operator represents a key's relationship to a set of values.
                                   Valid operators are In, NotIn, Exists and DoesNotExist.
                                 enum:
                                 - In
@@ -129,8 +127,7 @@ spec:
                           x-kubernetes-list-type: atomic
                         matchLabels:
                           additionalProperties:
-                            description: MatchLabelsValue represents the value from
-                              the MatchLabels {key,value} pair.
+                            description: MatchLabelsValue represents the value from the MatchLabels {key,value} pair.
                             maxLength: 63
                             pattern: ^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$
                             type: string
@@ -142,8 +139,7 @@ spec:
                       type: object
                       x-kubernetes-map-type: atomic
                     afi:
-                      description: Afi is the Address Family Identifier (AFI) of the
-                        family.
+                      description: Afi is the Address Family Identifier (AFI) of the family.
                       enum:
                       - ipv4
                       - ipv6
@@ -152,8 +148,7 @@ spec:
                       - opaque
                       type: string
                     safi:
-                      description: Safi is the Subsequent Address Family Identifier
-                        (SAFI) of the family.
+                      description: Safi is the Subsequent Address Family Identifier (SAFI) of the family.
                       enum:
                       - unicast
                       - multicast
@@ -276,8 +271,7 @@ spec:
               conditions:
                 description: The current conditions of the CiliumBGPPeerConfig
                 items:
-                  description: Condition contains details for one aspect of the current
-                    state of this API Resource.
+                  description: Condition contains details for one aspect of the current state of this API Resource.
                   properties:
                     lastTransitionTime:
                       description: |-
@@ -287,13 +281,13 @@ spec:
                       type: string
                     message:
                       description: |-
-                        message is a human readable message indicating details about the transition.
+                        Message is a human readable message indicating details about the transition.
                         This may be an empty string.
                       maxLength: 32768
                       type: string
                     observedGeneration:
                       description: |-
-                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        ObservedGeneration represents the .metadata.generation that the condition was set based upon.
                         For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
                         with respect to the current state of the instance.
                       format: int64
@@ -301,7 +295,7 @@ spec:
                       type: integer
                     reason:
                       description: |-
-                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Reason contains a programmatic identifier indicating the reason for the condition's last transition.
                         Producers of specific condition types may define expected values and meanings for this field,
                         and whether the values are considered a guaranteed API.
                         The value should be a CamelCase string.
@@ -311,14 +305,14 @@ spec:
                       pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
                       type: string
                     status:
-                      description: status of the condition, one of True, False, Unknown.
+                      description: Status of the condition, one of True, False, Unknown.
                       enum:
                       - "True"
                       - "False"
                       - Unknown
                       type: string
                     type:
-                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      description: Type of condition in CamelCase or in foo.example.com/CamelCase.
                       maxLength: 316
                       pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                       type: string

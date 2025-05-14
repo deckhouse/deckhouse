@@ -258,16 +258,14 @@ spec:
                               rather than by name.
                             properties:
                               matchExpressions:
-                                description: matchExpressions is a list of label selector
-                                  requirements. The requirements are ANDed.
+                                description: matchExpressions is a list of label selector requirements. The requirements are ANDed.
                                 items:
                                   description: |-
                                     A label selector requirement is a selector that contains values, a key, and an operator that
                                     relates the key and values.
                                   properties:
                                     key:
-                                      description: key is the label key that the selector
-                                        applies to.
+                                      description: key is the label key that the selector applies to.
                                       type: string
                                     operator:
                                       description: |-
@@ -297,8 +295,7 @@ spec:
                                 x-kubernetes-list-type: atomic
                               matchLabels:
                                 additionalProperties:
-                                  description: MatchLabelsValue represents the value
-                                    from the MatchLabels {key,value} pair.
+                                  description: MatchLabelsValue represents the value from the MatchLabels {key,value} pair.
                                   maxLength: 63
                                   pattern: ^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$
                                   type: string
@@ -377,8 +374,7 @@ spec:
                             x-kubernetes-list-type: atomic
                           matchLabels:
                             additionalProperties:
-                              description: MatchLabelsValue represents the value from
-                                the MatchLabels {key,value} pair.
+                              description: MatchLabelsValue represents the value from the MatchLabels {key,value} pair.
                               maxLength: 63
                               pattern: ^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$
                               type: string

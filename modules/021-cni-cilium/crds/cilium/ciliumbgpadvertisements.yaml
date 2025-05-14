@@ -29,8 +29,7 @@ spec:
     name: v2alpha1
     schema:
       openAPIV3Schema:
-        description: CiliumBGPAdvertisement is the Schema for the ciliumbgpadvertisements
-          API
+        description: CiliumBGPAdvertisement is the Schema for the ciliumbgpadvertisements API.
         properties:
           apiVersion:
             description: |-
@@ -59,8 +58,7 @@ spec:
                     set to the advertised routes.
                   properties:
                     advertisementType:
-                      description: AdvertisementType defines type of advertisement
-                        which has to be advertised.
+                      description: AdvertisementType defines type of advertisement which has to be advertised.
                       enum:
                       - PodCIDR
                       - CiliumPodIPPool
@@ -77,8 +75,7 @@ spec:
                             If not specified, no community attribute is set.
                           properties:
                             large:
-                              description: Large holds a list of the BGP Large Communities
-                                Attribute (RFC 8092) values.
+                              description: Large holds a list of the BGP Large Communities Attribute (RFC 8092) values.
                               items:
                                 description: |-
                                   BGPLargeCommunity type represents a value of the BGP Large Communities Attribute (RFC 8092),
@@ -87,7 +84,8 @@ spec:
                                 type: string
                               type: array
                             standard:
-                              description: Standard holds a list of "standard" 32-bit
+                              description: |-
+                                Standard holds a list of "standard" 32-bit
                                 BGP Communities Attribute (RFC 1997) values defined
                                 as numeric values.
                               items:
@@ -103,7 +101,8 @@ spec:
                                 WellKnown holds a list "standard" 32-bit BGP Communities Attribute (RFC 1997) values defined as
                                 well-known string aliases to their numeric values.
                               items:
-                                description: "BGPWellKnownCommunity type represents
+                                description: |-
+                                  "BGPWellKnownCommunity type represents
                                   a value of the \"standard\" 32-bit BGP Communities
                                   Attribute (RFC 1997)\nas a well-known string alias
                                   to its numeric value. Allowed values and their mapping
@@ -153,7 +152,8 @@ spec:
                         If not specified, no objects of the type specified by AdvertisementType are selected for advertisement.
                       properties:
                         matchExpressions:
-                          description: matchExpressions is a list of label selector
+                          description: |-
+                            matchExpressions is a list of label selector
                             requirements. The requirements are ANDed.
                           items:
                             description: |-
@@ -161,12 +161,11 @@ spec:
                               relates the key and values.
                             properties:
                               key:
-                                description: key is the label key that the selector
-                                  applies to.
+                                description: Key is the label key that the selector applies to.
                                 type: string
                               operator:
                                 description: |-
-                                  operator represents a key's relationship to a set of values.
+                                  Operator represents a key's relationship to a set of values.
                                   Valid operators are In, NotIn, Exists and DoesNotExist.
                                 enum:
                                 - In
@@ -192,8 +191,7 @@ spec:
                           x-kubernetes-list-type: atomic
                         matchLabels:
                           additionalProperties:
-                            description: MatchLabelsValue represents the value from
-                              the MatchLabels {key,value} pair.
+                            description: MatchLabelsValue represents the value from the MatchLabels {key,value} pair.
                             maxLength: 63
                             pattern: ^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$
                             type: string
@@ -205,12 +203,10 @@ spec:
                       type: object
                       x-kubernetes-map-type: atomic
                     service:
-                      description: Service defines configuration options for advertisementType
-                        service.
+                      description: Service defines configuration options for advertisementType service.
                       properties:
                         addresses:
-                          description: Addresses is a list of service address types
-                            which needs to be advertised via BGP.
+                          description: Addresses is a list of service address types which needs to be advertised via BGP.
                           items:
                             description: |-
                               BGPServiceAddressType defines type of service address to be advertised.
