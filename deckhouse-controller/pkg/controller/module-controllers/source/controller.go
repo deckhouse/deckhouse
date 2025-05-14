@@ -19,10 +19,12 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"path"
 	"sort"
 	"sync"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -355,11 +357,21 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 				return fmt.Errorf("update the '%s' module: %w", moduleName, err)
 			}
 
-			r.logger.Debug("ensure module release from the source",
-				slog.String("name", moduleName),
-				slog.String("source_name", source.Name))
-			if err = r.ensureModuleRelease(ctx, source.GetUID(), source.Name, moduleName, policy.Name, meta); err != nil {
-				return fmt.Errorf("ensure module release for the '%s' module: %w", moduleName, err)
+			versions, errGet := r.getIntermediateModuleVersions(ctx, source, opts, moduleName, module.GetVersion(), meta.ModuleVersion)
+			if errGet != nil {
+				return fmt.Errorf("get intermediate versions: %w", errGet)
+			}
+			for _, v := range versions {
+				r.logger.Debug("ensure module release for module for the module source",
+					slog.String("name", moduleName),
+					slog.String("source_name", source.Name))
+				m, err := md.DownloadMetadataByVersion(moduleName, v.Original())
+				if err != nil {
+					return fmt.Errorf("download metadata for the '%s' module: %w", moduleName, err)
+				}
+				if err = r.ensureModuleRelease(ctx, source.GetUID(), source.Name, moduleName, policy.Name, m); err != nil {
+					return fmt.Errorf("ensure module release for the '%s' module: %w", moduleName, err)
+				}
 			}
 		}
 
@@ -392,7 +404,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 	}
 
 	// set finalizer
-	err = utils.Update[*v1alpha1.ModuleSource](ctx, r.client, source, func(source *v1alpha1.ModuleSource) bool {
+	err = utils.Update(ctx, r.client, source, func(source *v1alpha1.ModuleSource) bool {
 		if !controllerutil.ContainsFinalizer(source, v1alpha1.ModuleSourceFinalizerModuleExists) {
 			controllerutil.AddFinalizer(source, v1alpha1.ModuleSourceFinalizerModuleExists)
 
@@ -430,7 +442,7 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 
 			// prevent deletion if there are deployed releases
 			if len(releases.Items) > 0 {
-				err := utils.UpdateStatus[*v1alpha1.ModuleSource](ctx, r.client, source, func(source *v1alpha1.ModuleSource) bool {
+				err := utils.UpdateStatus(ctx, r.client, source, func(source *v1alpha1.ModuleSource) bool {
 					source.Status.Message = "The source contains at least 1 deployed release and cannot be deleted. Please delete target ModuleReleases manually to continue"
 					return true
 				})
@@ -468,4 +480,97 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 	}
 
 	return ctrl.Result{}, nil
+}
+
+// getIntermediateModuleVersions returns a sorted list of versions between currentVersion and targetVersion (including target)
+func (r *reconciler) getIntermediateModuleVersions(
+	ctx context.Context,
+	source *v1alpha1.ModuleSource,
+	opts []cr.Option,
+	moduleName, currentVersionStr, targetVersionStr string,
+) ([]*semver.Version, error) {
+	targetVersion, err := semver.NewVersion(targetVersionStr)
+	if err != nil {
+		return nil, fmt.Errorf("parse target version: %w", err)
+	}
+
+	// if current version is empty, return only target version
+	if currentVersionStr == "" {
+		return []*semver.Version{targetVersion}, nil
+	}
+
+	currentVersion, err := semver.NewVersion(currentVersionStr)
+	if err != nil {
+		return nil, fmt.Errorf("parse current version: %w", err)
+	}
+
+	// if versions they differ only in patch or differ only in one minor version, return only target version
+	if currentVersion.Major() == targetVersion.Major() &&
+		(currentVersion.Minor() == targetVersion.Minor() || currentVersion.IncMinor().Minor() == targetVersion.Minor()) {
+		return []*semver.Version{targetVersion}, nil
+	}
+
+	releases := new(v1alpha1.ModuleReleaseList)
+	if err := r.client.List(ctx, releases, client.MatchingLabels{"module": moduleName}); err != nil {
+		return nil, fmt.Errorf("list releases: %w", err)
+	}
+
+	if len(releases.Items) > 0 {
+		lastRelease := releases.Items[len(releases.Items)-1]
+		lastReleaseVersion, err := semver.NewVersion(lastRelease.Spec.Version)
+		if err != nil {
+			return nil, fmt.Errorf("parse last release version: %w", err)
+		}
+		if lastReleaseVersion.Major() == targetVersion.Major() &&
+			(lastReleaseVersion.Minor() == targetVersion.Minor() || lastReleaseVersion.IncMinor().Minor() == targetVersion.Minor()) {
+			return []*semver.Version{targetVersion}, nil
+		}
+
+		// we need to get all versions what not present in cluster
+		currentVersion = lastReleaseVersion
+	}
+
+	// if versions in cluster are not in the same major version, we need to get all versions
+	registryClient, err := r.dependencyContainer.GetRegistryClient(path.Join(source.Spec.Registry.Repo, moduleName), opts...)
+	if err != nil {
+		return nil, fmt.Errorf("get registry client: %w", err)
+	}
+	tags, err := registryClient.ListTags(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list tags: %w", err)
+	}
+
+	v := &semver.Version{}
+	versions := make([]*semver.Version, 0, len(tags))
+	for _, tag := range tags {
+		v, err = semver.NewVersion(tag)
+		if err == nil {
+			if (v.Compare(currentVersion) > -1) && (v.Compare(targetVersion) < 1) {
+				versions = append(versions, v)
+			}
+		}
+	}
+
+	sort.Sort(semver.Collection(versions))
+
+	return keepLastPatchVersion(versions), nil
+}
+
+// keepLastPatchVersion keeps only the last patch version for each minor version
+// and returns a sorted list of versions
+// e.g. 1.0.0, 1.0.1, 1.1.0, 1.1.1 -> 1.0.1, 1.1.1
+func keepLastPatchVersion(versions []*semver.Version) []*semver.Version {
+	versionsMap := make(map[string]*semver.Version)
+	for _, v := range versions {
+		index := fmt.Sprintf("%d.%d", v.Major(), v.Minor())
+		versionsMap[index] = v
+	}
+
+	result := make([]*semver.Version, 0)
+	for _, v := range versionsMap {
+		result = append(result, v)
+	}
+
+	sort.Sort(semver.Collection(result))
+	return result
 }

@@ -26,6 +26,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
+	"github.com/gojuno/minimock/v3"
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
 	"github.com/stretchr/testify/assert"
@@ -78,7 +80,15 @@ func TestControllerTestSuite(t *testing.T) {
 	suite.Run(t, new(ControllerTestSuite))
 }
 
-func (suite *ControllerTestSuite) setupTestController(raw string) {
+type reconcilerOption func(*reconciler)
+
+func withDependencyContainer(dc dependency.Container) reconcilerOption {
+	return func(r *reconciler) {
+		r.dependencyContainer = dc
+	}
+}
+
+func (suite *ControllerTestSuite) setupTestController(raw string, options ...reconcilerOption) {
 	manifests := releaseutil.SplitManifests(raw)
 
 	var objects = make([]client.Object, 0, len(manifests))
@@ -96,7 +106,7 @@ func (suite *ControllerTestSuite) setupTestController(raw string) {
 		WithStatusSubresource(&v1alpha1.Module{}, &v1alpha1.ModuleSource{}, &v1alpha1.ModuleRelease{}).
 		Build()
 
-	suite.r = &reconciler{
+	rec := &reconciler{
 		init:                 new(sync.WaitGroup),
 		client:               suite.client,
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
@@ -110,6 +120,12 @@ func (suite *ControllerTestSuite) setupTestController(raw string) {
 			ReleaseChannel: "Stable",
 		}),
 	}
+
+	for _, option := range options {
+		option(rec)
+	}
+
+	suite.r = rec
 }
 
 func (suite *ControllerTestSuite) parseKubernetesObject(raw []byte) client.Object {
@@ -187,7 +203,7 @@ func (suite *ControllerTestSuite) TearDownSubTest() {
 	exp := splitManifests(raw)
 	got := splitManifests(currentObjects)
 
-	assert.Equal(suite.T(), len(got), len(exp), "The number of `got` manifests must be equal to the number of `exp` manifests")
+	require.Equal(suite.T(), len(got), len(exp), "The number of `got` manifests must be equal to the number of `exp` manifests")
 	for i := range got {
 		assert.YAMLEq(suite.T(), exp[i], got[i], "Got and exp manifests must match")
 	}
@@ -234,32 +250,25 @@ func splitManifests(doc []byte) []string {
 
 func (suite *ControllerTestSuite) TestCreateReconcile() {
 	suite.Run("empty source", func() {
-		dependency.TestDC.CRClient.ListTagsMock.Return([]string{"foo", "bar"}, nil)
 		suite.setupTestController(string(suite.parseTestdata("empty.yaml")))
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("source with modules", func() {
-		dependency.TestDC.CRClient.ListTagsMock.Return([]string{"enabledmodule", "disabledmodule", "withpolicymodule", "notthissourcemodule"}, nil)
-		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
-			ManifestStub: manifestStub,
-			LayersStub: func() ([]crv1.Layer, error) {
-				return []crv1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "v1.2.3"}`}}}, nil
-			},
-			DigestStub: func() (crv1.Hash, error) {
-				return crv1.Hash{Algorithm: "sha256"}, nil
-			},
-		}, nil)
-
-		suite.setupTestController(string(suite.parseTestdata("withmodules.yaml")))
+		dc := newMockedContainerWithData(suite.T(),
+			"v1.2.3",
+			[]string{"enabledmodule", "disabledmodule", "withpolicymodule", "notthissourcemodule"},
+			// versions differ only in patch and we don't have requests to registry
+			[]string{})
+		suite.setupTestController(string(suite.parseTestdata("withmodules.yaml")), withDependencyContainer(dc))
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("source with pull error", func() {
 		dependency.TestDC.CRClient.ListTagsMock.Return([]string{"enabledmodule", "errormodule"}, nil)
-		dependency.TestDC.CRClient.ImageMock.Set(func(tag string) (crv1.Image, error) {
+		dependency.TestDC.CRClient.ImageMock.Set(func(_ context.Context, tag string) (crv1.Image, error) {
 			if tag == "alpha" {
 				return nil, errors.New("GET https://registry.deckhouse.io/v2/deckhouse/ee/modules/errormodule/release/manifests/alpha:\n      MANIFEST_UNKNOWN: manifest unknown; map[Tag:alpha]")
 			}
@@ -276,6 +285,47 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		})
 
 		suite.setupTestController(string(suite.parseTestdata("withmodulepullerror.yaml")))
+		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("source with modules and module version", func() {
+		dc := newMockedContainerWithData(suite.T(),
+			"v1.2.3",
+			[]string{"enabledmodule", "disabledmodule", "withpolicymodule", "notthissourcemodule"},
+			// versions differ only in patch and we don't have requests to registry
+			[]string{})
+		suite.setupTestController(string(suite.parseTestdata("withmoduleversion.yaml")), withDependencyContainer(dc))
+		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("source with module versions", func() {
+		dc := newMockedContainerWithData(suite.T(),
+			"v1.4.2",
+			[]string{"enabledmodule"},
+			[]string{"v1.2.2", "v1.2.3", "v1.2.4", "v1.3.1", "v1.3.2", "v1.4.1", "v1.4.2", "v1.4.3"})
+		suite.setupTestController(string(suite.parseTestdata("modulewithversions.yaml")), withDependencyContainer(dc))
+		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("source with module releases", func() {
+		dc := newMockedContainerWithData(suite.T(),
+			"v1.4.4",
+			[]string{"parca"},
+			[]string{})
+		suite.setupTestController(string(suite.parseTestdata("modulewithmr.yaml")), withDependencyContainer(dc))
+		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("source with module releases and registry check", func() {
+		dc := newMockedContainerWithData(suite.T(),
+			"v1.7.1",
+			[]string{"parca"},
+			[]string{"v1.3.1", "v1.4.1", "v1.5.2", "v1.5.3", "v1.6.1", "v1.6.2", "v1.7.1", "v1.7.2"})
+		suite.setupTestController(string(suite.parseTestdata("modulewithmr-registry.yaml")), withDependencyContainer(dc))
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
 		require.NoError(suite.T(), err)
 	})
@@ -448,4 +498,130 @@ func (suite *ControllerTestSuite) moduleSource(name string) *v1alpha1.ModuleSour
 	require.NoError(suite.T(), err)
 
 	return source
+}
+
+func newMockedContainerWithData(t minimock.Tester, version string, modules, tags []string) *dependency.MockedContainer {
+	moduleVersionsMock := cr.NewClientMock(t)
+	if len(tags) > 0 {
+		moduleVersionsMock.ListTagsMock.Return(tags, nil)
+	}
+	moduleVersionsMock.ImageMock.Set(func(_ context.Context, imageTag string) (crv1.Image, error) {
+		return &crfake.FakeImage{
+			ManifestStub: manifestStub,
+			LayersStub: func() ([]crv1.Layer, error) {
+				return []crv1.Layer{
+					&utils.FakeLayer{},
+					&utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "` + imageTag + `"}`}},
+				}, nil
+			},
+			DigestStub: func() (crv1.Hash, error) {
+				return crv1.Hash{Algorithm: "sha256"}, nil
+			},
+		}, nil
+	})
+
+	dc := dependency.NewMockedContainer()
+	dc.CRClientMap = map[string]cr.Client{
+		"dev-registry.deckhouse.io/deckhouse/modules": cr.NewClientMock(t).ListTagsMock.Return(modules, nil),
+	}
+	for _, module := range modules {
+		dc.CRClientMap["dev-registry.deckhouse.io/deckhouse/modules/"+module] = moduleVersionsMock
+	}
+	dc.CRClient.ListTagsMock.Return(modules, nil)
+	dc.CRClient.ImageMock.Return(&crfake.FakeImage{
+		ManifestStub: manifestStub,
+		LayersStub: func() ([]crv1.Layer, error) {
+			return []crv1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "` + version + `"}`}}}, nil
+		},
+		DigestStub: func() (crv1.Hash, error) {
+			return crv1.Hash{Algorithm: "sha256"}, nil
+		},
+	}, nil)
+
+	return dc
+}
+
+func Test_keepLastPatchVersion(t *testing.T) {
+	type args struct {
+		versions []*semver.Version
+	}
+	tests := []struct {
+		name string
+		args args
+		want []*semver.Version
+	}{
+		{
+			name: "empty",
+			args: args{
+				versions: []*semver.Version{},
+			},
+			want: []*semver.Version{},
+		},
+		{
+			name: "one",
+			args: args{
+				versions: []*semver.Version{
+					semver.MustParse("1.2.3"),
+				},
+			},
+			want: []*semver.Version{
+				semver.MustParse("1.2.3"),
+			},
+		},
+		{
+			name: "two",
+			args: args{
+				versions: []*semver.Version{
+					semver.MustParse("1.2.3"),
+					semver.MustParse("1.2.4"),
+				},
+			},
+			want: []*semver.Version{
+				semver.MustParse("1.2.4"),
+			},
+		},
+		{
+			name: "three",
+			args: args{
+				versions: []*semver.Version{
+					semver.MustParse("1.2.3"),
+					semver.MustParse("1.2.4"),
+					semver.MustParse("1.3.1"),
+					semver.MustParse("1.3.2"),
+					semver.MustParse("1.4.1"),
+					semver.MustParse("1.4.2"),
+					semver.MustParse("1.4.3"),
+				},
+			},
+			want: []*semver.Version{
+				semver.MustParse("1.2.4"),
+				semver.MustParse("1.3.2"),
+				semver.MustParse("1.4.3"),
+			},
+		},
+		{
+			name: "four",
+			args: args{
+				versions: []*semver.Version{
+					semver.MustParse("1.2.3"),
+					semver.MustParse("1.2.4"),
+					semver.MustParse("2.3.1"),
+					semver.MustParse("2.3.2"),
+					semver.MustParse("2.4.1"),
+					semver.MustParse("2.4.2"),
+					semver.MustParse("2.4.3"),
+				},
+			},
+			want: []*semver.Version{
+				semver.MustParse("1.2.4"),
+				semver.MustParse("2.3.2"),
+				semver.MustParse("2.4.3"),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equalf(t, tt.want, keepLastPatchVersion(tt.args.versions), "keepLastPatchVersion(%v)", tt.args.versions)
+		})
+	}
 }
