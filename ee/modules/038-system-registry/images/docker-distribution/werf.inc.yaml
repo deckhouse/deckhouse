@@ -1,10 +1,10 @@
 {{- $REPO := "https://github.com/deckhouse/3p-distribution.git"}}
-{{- $BRANCH := "bad-proxy-impl"}}
+{{- $BRANCH := "deckhouse"}}
 {{- $GIT_CLONE_DEST_PATH := "/src"}}
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
 fromImage: builder/golang-alpine
-fromCacheVersion: 2025051300
+fromCacheVersion: 2025051400
 final: false
 mount:
   - fromPath: ~/go-pkg-cache
