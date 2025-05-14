@@ -9,7 +9,7 @@ import:
   before: install
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: builder/golang-alpine
+fromImage:  builder/golang-alpine-1.23
 final: false
 shell:
   beforeInstall:

@@ -31,23 +31,41 @@ gitWorktree:
   forceShallowClone: true
 ---
 # Base Images
-{{- $_ := set . "Images" (.Files.Get "../../candi/image_versions.yml" | fromYaml) }}
-  {{- range $k, $v := .Images }}
-    {{- $baseImagePath := (printf "%s%s" $.Images.REGISTRY_PATH (trimSuffix "/" $v)) }}
-    {{- if or (eq $.Mode "development") (eq $.Mode "module") (eq $.Mode "local") }}
-      {{- if or ( ne $k "BASE_JEKYLL" ) ( and (not $.UsePrebuildJekyllImage ) ( eq $k "BASE_JEKYLL" ) )}}
-        {{- $baseImagePath = trimSuffix "/" $v | splitList "@" | first }}
+  {{- $imageVersions := .Files.Get "../../candi/image_versions.yml" | fromYaml }}
+  {{- $baseImages := .Files.Get "../../candi/base_images.yml" | fromYaml }}
+    {{- range $k, $v := $baseImages }}
+      {{- $baseImagePath := (printf "%s@%s" $baseImages.REGISTRY_PATH (trimSuffix "/" $v)) }}
+      {{- if ne $k "REGISTRY_PATH" }}
+        {{- $_ := set $baseImages $k $baseImagePath }}
       {{- end }}
     {{- end }}
-    {{- if ne $k "REGISTRY_PATH" }}
-      {{- $_ := set $.Images $k $baseImagePath }}
+    {{- $_ := unset $baseImages "REGISTRY_PATH" }}
+    {{- range $k, $v := $imageVersions }}
+      {{- $baseImagePath := (printf "%s%s" $imageVersions.REGISTRY_PATH (trimSuffix "/" $v)) }}
+      {{- if or (eq $.Mode "development") (eq $.Mode "module") (eq $.Mode "local") }}
+        {{- if or ( ne $k "BASE_JEKYLL" ) ( and (not $.UsePrebuildJekyllImage ) ( eq $k "BASE_JEKYLL" ) )}}
+          {{- $baseImagePath = trimSuffix "/" $v | splitList "@" | first }}
+        {{- end }}
+      {{- end }}
+      {{- if ne $k "REGISTRY_PATH" }}
+        {{- $_ := set $imageVersions $k $baseImagePath }}
+      {{- end }}
     {{- end }}
+{{- $_ := unset $imageVersions "REGISTRY_PATH" }}
+{{- $_ := set . "Images" (mustMerge $imageVersions $baseImages) }}
+  # base images artifacts
+  {{- range $k, $v := .Images }}
+---
+image: {{ $k }}
+from: {{ $v }}
+final: false
   {{- end }}
 ---
+
 {{- if and (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
 image: site-external-artifacts
 fromCacheVersion: {{ div .Commit.Date.Unix (mul 60 60) }}v1
-from: {{ .Images.BASE_ALPINE }}
+fromImage: builder/alpine
 final: false
 shell:
   install:
@@ -324,7 +342,7 @@ import:
 {{- end }}
 ---
 image: web-backend-srv
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+fromImage:  builder/golang-alpine-1.23
 final: false
 shell:
   install:
@@ -346,7 +364,7 @@ image: web-backend
 imageSpec:
   config:
     workingDir: "/app"
-from: {{ .Images.BASE_ALPINE }}
+fromImage: builder/alpine
 shell:
   install:
   - apk add --no-cache curl jq
@@ -367,7 +385,7 @@ image: web-frontend
 imageSpec:
   config:
     workingDir: "/app"
-from: {{ .Images.BASE_ALPINE }}
+fromImage: builder/alpine
 shell:
   beforeSetup:
   - apk add --no-cache nginx
@@ -392,11 +410,12 @@ import:
 {{- $_ := set $context "ImageName" "builder" }}
 {{- $_ := set $context "ModulePath" "../../" }}
 {{- $_ := set $context "GOPROXY" "https://proxy.golang.org/" }}
+{{- $_ := set $context "BaseImages" $.BaseImages }}
 {{ tpl (.Files.Get "werf-docs-builder.inc.yaml") $context }}
 ---
 # Build scanner, which fetch modules documentation from list of specified registries
 image: registry-modules-watcher-artifact
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+fromImage:  builder/golang-alpine-1.23
 shell:
   install:
   - cd /go/src/app
@@ -412,7 +431,7 @@ git:
       setup: '**/*'
 ---
 image: registry-modules-watcher
-from: {{ .Images.BASE_ALPINE }}
+fromImage: builder/alpine
 imageSpec:
   config:
     workingDir: "/app"
