@@ -1,0 +1,55 @@
+diff --git a/controllers/istiorevision/istiorevision_controller.go b/controllers/istiorevision/istiorevision_controller.go
+index 5e97cde4..8c7f22b8 100644
+--- a/controllers/istiorevision/istiorevision_controller.go
++++ b/controllers/istiorevision/istiorevision_controller.go
+@@ -21,6 +21,7 @@ import (
+ 	"path"
+ 	"reflect"
+ 	"regexp"
++	"strings"
+ 
+ 	"github.com/go-logr/logr"
+ 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+@@ -164,13 +165,37 @@ func (r *Reconciler) installHelmCharts(ctx context.Context, rev *v1.IstioRevisio
+ 		BlockOwnerDeletion: ptr.Of(true),
+ 	}
+ 
+-	values := helm.FromValues(rev.Spec.Values)
++	// Get original values
++	originalValues := helm.FromValues(rev.Spec.Values)
++
++	// First try normal install
+ 	_, err := r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(rev),
+-		values, rev.Spec.Namespace, getReleaseName(rev), ownerReference)
+-	if err != nil {
+-		return fmt.Errorf("failed to install/update Helm chart %q: %w", constants.IstiodChartName, err)
++		originalValues, rev.Spec.Namespace, getReleaseName(rev), ownerReference)
++	if err == nil {
++		return nil
+ 	}
+-	return nil
++
++	// If error contains ownership conflict, try with force
++	if strings.Contains(err.Error(), "invalid ownership metadata") {
++		log := logf.FromContext(ctx)
++		log.Info("Found conflicting resources, attempting force update")
++
++		// Create a new map with the original values + force flag
++		forcedValues := make(map[string]interface{})
++		for k, v := range originalValues {
++			forcedValues[k] = v
++		}
++		forcedValues["force"] = true
++
++		_, forceErr := r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(rev),
++			forcedValues, rev.Spec.Namespace, getReleaseName(rev), ownerReference)
++		if forceErr != nil {
++			return fmt.Errorf("failed to install/update Helm chart %q (with force): %w", constants.IstiodChartName, forceErr)
++		}
++		return nil
++	}
++
++	return fmt.Errorf("failed to install/update Helm chart %q: %w", constants.IstiodChartName, err)
+ }
+ 
+ func getReleaseName(rev *v1.IstioRevision) string {
