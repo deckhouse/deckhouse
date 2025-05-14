@@ -36,24 +36,45 @@
 
 # render imports for install images for relocate binaries and libraries
 {{- define "installer_and_installer_standalone_libraries_and_binaries_imports" }}
-- image: dev-alt-artifact
-  add: /relocate
-  to: /
+- image: tools/bash
+  add: /usr/bin/bash
+  to: /bin/bash
   before: setup
-- image: dev-alt-artifact
+- image: tools/jq
+  add: /usr/bin/jq
+  before: setup
+- image: tools/yq
+  add: /usr/bin/yq
+  before: setup
+- image: tools/sed
+  add: /usr/bin/sed
+  before: setup
+- image: tools/grep
+  add: /usr/bin/grep
+  before: setup
+- image: tools/gawk
   add: /
   to: /
-  before: setup
   includePaths:
-  - etc/pki
-  - usr/share/ca-certificates/ca-bundle.crt
-  - usr/share/vim
-  - etc/vim
-  - etc/bash_completion.d
-  - etc/bashrc.d/bash_completion.sh
-  - usr/share/bash-completion
-  - usr/bin/vim-console
-
+  - usr/bin/*awk*
+  before: setup
+- image: tools/findutils
+  add: /usr/bin/find
+  before: setup
+- image: tools/coreutils
+  add: /
+  to: /
+  includePaths:
+  - usr/bin/*
+  before: setup
+- image: libs/openssl
+  add: /usr/bin/openssl
+  to: /usr/bin/openssl
+  before: setup
+- image: tools/vim
+  add: /usr/bin/vim
+  to: /usr/bin/vim
+  before: setup
 {{- end }}
 
 
