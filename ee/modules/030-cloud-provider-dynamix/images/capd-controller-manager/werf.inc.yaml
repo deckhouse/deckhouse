@@ -31,7 +31,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false
-fromImage: builder/golang-alpine-1.23
+fromImage: builder/golang-alpine
 fromCacheVersion: "2025-02-14.2"
 mount:
 {{ include "mount points for golang builds" . }}

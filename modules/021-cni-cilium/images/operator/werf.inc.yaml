@@ -4,7 +4,7 @@
 # #####################################################################
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
-fromImage: builder/golang-alpine-1.23
+fromImage: builder/golang-alpine
 final: false
 import:
 - image: {{ .ModuleName }}/bin-cilium-src-artifact

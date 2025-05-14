@@ -7,7 +7,7 @@ git:
   to: /src
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: builder/golang-alpine-1.23
+fromImage: builder/golang-alpine
 final: false
 import:
 - image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact

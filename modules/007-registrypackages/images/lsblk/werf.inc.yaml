@@ -39,7 +39,7 @@ shell:
   - rm -rf /src/util-linux/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-fromImage: builder/golang-alpine-1.23
+fromImage: builder/golang-alpine
 final: false
 mount:
 {{ include "mount points for golang builds" . }}

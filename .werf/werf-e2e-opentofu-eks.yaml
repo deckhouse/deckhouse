@@ -86,7 +86,7 @@ shell:
 ---
 image: e2e-eks-terraform-plugins
 final: false
-fromImage: builder/golang-alpine-1.23
+fromImage: builder/golang-alpine
 import:
 - image: e2e-eks-terraform-plugins-src-artifact
   add: /src

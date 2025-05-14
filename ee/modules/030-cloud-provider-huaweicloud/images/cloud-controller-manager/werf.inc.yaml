@@ -31,7 +31,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
-fromImage: builder/golang-bullseye-1.23
+fromImage: builder/golang-bullseye
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
     add: /src

@@ -16,7 +16,7 @@ git:
       - 'go.sum'
 ---
 image: {{ .ModuleName }}/build-proxy-failover-artifact
-fromImage: builder/golang-alpine-1.23
+fromImage: builder/golang-alpine
 final: false
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact

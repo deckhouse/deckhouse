@@ -46,7 +46,7 @@ shell:
   - rm -rf .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-fromImage: builder/golang-alpine-1.23
+fromImage: builder/golang-alpine
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}

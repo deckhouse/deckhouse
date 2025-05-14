@@ -27,7 +27,7 @@ imageSpec:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
-fromImage: builder/golang-alpine-1.23
+fromImage: builder/golang-alpine
 import:
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/istio

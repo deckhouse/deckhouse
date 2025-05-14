@@ -57,7 +57,7 @@ shell:
   - rm -rf /src/falcoctl/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-falcoctl-artifact
-fromImage: builder/golang-alpine-1.23
+fromImage: builder/golang-alpine
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact

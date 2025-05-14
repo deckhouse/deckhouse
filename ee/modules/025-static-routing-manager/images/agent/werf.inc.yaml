@@ -20,7 +20,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
 final: false
-fromImage: builder/golang-alpine-1.23
+fromImage: builder/golang-alpine
 mount:
 {{ include "mount points for golang builds" . }}
 import:

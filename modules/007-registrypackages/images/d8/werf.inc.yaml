@@ -38,7 +38,7 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
-fromImage: builder/golang-bullseye-1.23
+fromImage: builder/golang-bullseye
 mount:
 {{ include "mount points for golang builds" . }}
 import:

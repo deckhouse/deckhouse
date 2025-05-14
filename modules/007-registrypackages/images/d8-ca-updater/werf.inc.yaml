@@ -25,7 +25,7 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
-fromImage: builder/golang-bookworm-1.23
+fromImage: builder/golang-bookworm
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /

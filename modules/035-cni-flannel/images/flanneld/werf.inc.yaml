@@ -24,7 +24,7 @@ shell:
     done
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
-fromImage: builder/golang-alpine-1.23
+fromImage: builder/golang-alpine
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -43,7 +43,7 @@ shell:
   - go build -ldflags="-s -w" -o /entrypoint main.go
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: builder/golang-alpine-1.23
+fromImage: builder/golang-alpine
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact

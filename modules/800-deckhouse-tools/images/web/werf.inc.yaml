@@ -42,7 +42,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false
-fromImage: builder/golang-bookworm-1.23
+fromImage: builder/golang-bookworm
 import:
   - image: {{ .ModuleName }}/{{ .ImageName }}-frontend-artifact
     add: /app/dist

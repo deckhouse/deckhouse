@@ -20,7 +20,7 @@ shell:
   - rm -rf /src/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-exporter-artifact
-fromImage: builder/golang-alpine-1.23
+fromImage: builder/golang-alpine
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-exporter-src-artifact

@@ -139,7 +139,7 @@ shell:
 ---
 # Controller artifact
 image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
-fromImage: builder/golang-alpine-1.23
+fromImage: builder/golang-alpine
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact

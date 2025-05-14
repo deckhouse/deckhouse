@@ -22,7 +22,7 @@ shell:
 ---
 image: {{ .ModuleName }}/build-artifact
 final: false
-fromImage: builder/golang-alpine-1.23
+fromImage: builder/golang-alpine
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
@@ -43,7 +43,7 @@ shell:
   - chmod 0700 /descheduler
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+fromImage: base/distroless
 import:
   - image: {{ .ModuleName }}/build-artifact
     add: /descheduler

@@ -84,7 +84,7 @@ imageSpec:
 #=====================================================================================================
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-agent-artifact
-fromImage: builder/golang-alpine-1.23
+fromImage: builder/golang-alpine
 final: false
 import:
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
@@ -229,7 +229,7 @@ shell:
 #=====================================================================================================
 ---
 image: {{ .ModuleName }}/golang-artifact
-fromImage: builder/golang-alpine-1.23
+fromImage: builder/golang-alpine
 final: false
 ---
 image: {{ $.ModuleName }}/{{ .ImageName }}-build-image-artifact

@@ -46,7 +46,7 @@ shell:
     - git apply --whitespace=fix -v /patches/*.patch
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-dex-k8s-authenticator-artifact
-fromImage: builder/golang-alpine-1.23
+fromImage: builder/golang-alpine
 final: false
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-dex-k8s-authenticator-src-artifact

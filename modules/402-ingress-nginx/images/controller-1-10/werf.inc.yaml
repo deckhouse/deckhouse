@@ -106,7 +106,7 @@ shell:
   - luarocks-5.1 install lua-iconv-7-3.src.rock
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-controller-artifact
-fromImage: builder/golang-alpine-1.23
+fromImage: builder/golang-alpine
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact

@@ -316,7 +316,7 @@ import:
 {{- end }}
 ---
 image: web-backend-srv
-fromImage: builder/golang-alpine-1.23
+fromImage: builder/golang-alpine
 final: false
 shell:
   install:
@@ -388,7 +388,7 @@ import:
 ---
 # Build scanner, which fetch modules documentation from list of specified registries
 image: registry-modules-watcher-artifact
-fromImage: builder/golang-alpine-1.23
+fromImage: builder/golang-alpine
 shell:
   install:
   - cd /go/src/app

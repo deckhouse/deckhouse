@@ -38,7 +38,7 @@ shell:
   - rm -rf /src/cloudprovider/azure/test
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-fromImage: builder/golang-alpine-1.23
+fromImage: builder/golang-alpine
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}-src-artifact

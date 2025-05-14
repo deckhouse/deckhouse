@@ -26,7 +26,7 @@ shell:
   - rm -rf /src/plugins/.git
 ---
 image: {{ .ModuleName }}/cni-plugins-artifact
-fromImage: builder/golang-alpine-1.23
+fromImage: builder/golang-alpine
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact

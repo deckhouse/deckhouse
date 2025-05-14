@@ -41,7 +41,7 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
-fromImage: builder/golang-bookworm-1.23
+fromImage: builder/golang-bookworm
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
   add: /src

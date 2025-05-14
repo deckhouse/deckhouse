@@ -44,7 +44,7 @@ shell:
     - rm -rf examples
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-dex-artifact
-fromImage: builder/golang-bookworm-1.23
+fromImage: builder/golang-bookworm
 final: false
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-dex-src-artifact

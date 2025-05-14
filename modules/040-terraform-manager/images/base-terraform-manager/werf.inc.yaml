@@ -83,7 +83,7 @@ shell:
 # use artifact for one place import for base and install images
 image: terraform
 final: false
-fromImage: builder/golang-alpine-1.23
+fromImage: builder/golang-alpine
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-terraform-src-artifact
   add: /src
@@ -107,7 +107,7 @@ shell:
 # use artifact for one place import for base and install images
 image: opentofu
 final: false
-fromImage: builder/golang-alpine-1.23
+fromImage: builder/golang-alpine
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-opentofu-src-artifact
   add: /src
