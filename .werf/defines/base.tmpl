@@ -131,8 +131,10 @@ import:
   to: /usr/bin/openssl
   before: install
 - image: tools/vim
-  add: /usr/bin/vim
-  to: /usr/bin/vim
+  includePaths:
+  add: /
+  to: /
+  - usr/bin/*
   before: install
 shell:
   install:
