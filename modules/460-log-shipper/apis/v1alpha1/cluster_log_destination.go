@@ -75,8 +75,9 @@ type ClusterLogDestinationSpec struct {
 // Modules labeles transformation that users can use
 type Transform struct {
 	// Name module
-	Action string   `json:"action"`
-	Labels []string `json:"labels,omitempty"`
+	Action      string   `json:"action"`
+	TargetField string   `json:"targetField"`
+	Labels      []string `json:"labels,omitempty"`
 }
 
 type ClusterLogDestinationStatus struct {

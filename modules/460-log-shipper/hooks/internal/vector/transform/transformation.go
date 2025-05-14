@@ -9,6 +9,18 @@ import (
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 )
 
+//TODO name plugins and filtres
+// transform:
+//   plugins or modules or addons
+//   addons:
+//     - wrapNotJson
+//     - replaceDot
+//   filters:
+//     - delete
+//       labels: []
+// delete module interface
+// create one transform
+
 type module interface {
 	getTransform() apis.LogTransform
 }
@@ -18,20 +30,19 @@ func BuildModes(tms []v1alpha1.Transform) ([]apis.LogTransform, error) {
 	var module module
 	for _, tm := range tms {
 		switch tm.Action {
-		case "replaceDot":
-			fmt.Println("Labels ", len(tm.Labels))
-			if len(tm.Labels) == 0 {
-				tm.Labels = []string{"pod_labels"}
-			}
-			module = replaceDot{labels: tm.Labels}
-		case "wrapNotJson":
-			if len(tm.Labels) == 0 {
-				tm.Labels = []string{"message"}
-			}
-			module = wrapNotJson{labels: tm.Labels}
-		case "delete":
+		case "normalizeLabelKeys":
+			// if len(tm.Labels) == 0 {
+			// tm.Labels = []string{"pod_labels"}
+			// }
+			module = normalizeLabelKeys{}
+		case "ensureStructuredMessage":
+			// if len(tm.Labels) == 0 {
+			// tm.Labels = []string{"message"}
+			// }
+			module = ensureStructuredMessage{targetField: tm.TargetField}
+		case "dropLabels":
 			if len(tm.Labels) > 0 {
-				module = delete{labels: tm.Labels}
+				module = dropLabels{labels: tm.Labels}
 			}
 		default:
 			return nil, fmt.Errorf("TransformMod: action %s not found", tm.Action)
@@ -42,41 +53,31 @@ func BuildModes(tms []v1alpha1.Transform) ([]apis.LogTransform, error) {
 	return transforms, nil
 }
 
-type replaceDot struct {
-	labels []string
-}
+type normalizeLabelKeys struct{}
 
-func (rd replaceDot) getTransform() apis.LogTransform {
+func (nlk normalizeLabelKeys) getTransform() apis.LogTransform {
 	var vrl string
-	name := fmt.Sprintf("tf_key_rename_%s", splitAndremoveDot(rd.labels))
-	labels := checkFixDotPrefix(rd.labels)
-	fmt.Println(labels, rd.labels)
-	for _, l := range labels {
-		vrl = fmt.Sprintf("%sif exists(%s) {\n%s = map_keys(object!(%s), recursive: true) -> |key| { replace(key, \".\", \"_\")}\n}",
-			vrl, l, l, l)
-	}
+	name := "tf_normolazeLabelKeys"
+	vrl = "if exists(.pod_labels) {\n.pod_labels = map_keys(object!(.pod_labels)), recursive: true) -> |key| { replace(key, \".\", \"_\")}\n}"
 	return NewTransformation(name, vrl)
 }
 
-type wrapNotJson struct {
-	labels []string
+type ensureStructuredMessage struct {
+	targetField string
 }
 
-func (wrap wrapNotJson) getTransform() apis.LogTransform {
+func (esm ensureStructuredMessage) getTransform() apis.LogTransform {
 	var vrl string
-	name := fmt.Sprintf("tf_warp_not_json_%s", splitAndremoveDot(wrap.labels))
-	labels := checkFixDotPrefix(wrap.labels)
-	for _, l := range labels {
-		vrl = fmt.Sprintf("%s%s = parse_json(%s) ?? { \"text\": %s }\n", vrl, l, l, l)
-	}
+	name := "tf_ensureStructuredMessage"
+	vrl = fmt.Sprintf(".message = parse_json(.message) ?? { \"%s\": .message }\n", esm.targetField)
 	return NewTransformation(name, vrl)
 }
 
-type delete struct {
+type dropLabels struct {
 	labels []string
 }
 
-func (d delete) getTransform() apis.LogTransform {
+func (d dropLabels) getTransform() apis.LogTransform {
 	var vrl string
 	name := fmt.Sprintf("tf_delete_%s", splitAndremoveDot(d.labels))
 	labels := checkFixDotPrefix(d.labels)
