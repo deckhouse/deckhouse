@@ -15,7 +15,7 @@
 name: E2E Autoclean
 on:
   schedule:
-  - cron: '0 */7 * * *'
+  - cron: '0 7 * * *'
   workflow_dispatch:
 
 jobs:
