@@ -34,10 +34,28 @@ shell:
   - mkdir /empty
   - chmod 755 /empty
 ---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
+fromImage: base/python
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/requirements.txt
+  to: /requirements.txt
+  stageDependencies:
+    install:
+    - '**/*'
+import:
+- image: common/wheel-artifact
+  add: /wheels
+  to: /wheels
+  before: install
+shell:
+  install:
+  - pip3 install -f file:///wheels --no-index -r /requirements.txt
+---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 git:
-- add: /{{ $.ModulePath }}modules/450-{{ $.ModuleName }}/images/{{ $.ImageName }}/prepare-config.py
+- add: /{{ $.ModulePath }}modules/450-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/prepare-config.py
   to: /prepare-config.py
 import:
 - image: {{ $.ModuleName }}/build-keepalived
@@ -52,16 +70,12 @@ import:
   add: /empty
   to: /run
   before: install
-- image: common/python-static
-  add: /opt/python-static/bin
-  to: /usr/bin
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
+  add: /
+  to: /
   before: install
   includePaths:
-  - python3*
-  - python3
-- image: common/python-static
-  add: /opt/python-static/lib
-  to: /usr/lib
-  before: install
-  includePaths:
-  - python3*
+  - lib/ld-musl-x86_64*
+  - usr/bin/python3*
+  - usr/lib/python3*
+  - usr/lib/libc.so

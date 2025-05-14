@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 import json
 # Copyright 2025 Flant JSC
 #
