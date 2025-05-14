@@ -30,8 +30,8 @@ import (
 const labelKey = "ingress-nginx-controller.deckhouse.io/need-hostwithfailover-cleanup"
 
 type Node struct {
-	Name   string
-	Labels map[string]string
+	Name      string
+	IsLabeled bool
 }
 
 type Pod struct {
@@ -89,9 +89,12 @@ func applyNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 	if err != nil {
 		return nil, err
 	}
+
+	_, labeled := node.Labels[labelKey]
+
 	return Node{
-		Name:   node.Name,
-		Labels: node.Labels,
+		Name:      node.Name,
+		IsLabeled: labeled,
 	}, nil
 }
 
@@ -111,7 +114,6 @@ func setProxyFailoverLabel(input *go_hook.HookInput) error {
 		node := snap.(Node)
 
 		_, podExists := nodesWithRunningFailover[node.Name]
-		_, labelExists := node.Labels[labelKey]
 
 		if podExists {
 			log.Info(fmt.Sprintf("Adding label %q to node %q", labelKey, node.Name))
@@ -125,7 +127,7 @@ func setProxyFailoverLabel(input *go_hook.HookInput) error {
 		}
 
 		// Change label value to false if node have not a proxy-failover Pod
-		if labelExists && !podExists {
+		if node.IsLabeled && !podExists {
 			log.Info(fmt.Sprintf("Changed label %q to node %q on false value", labelKey, node.Name))
 			input.PatchCollector.PatchWithMerge(map[string]interface{}{
 				"metadata": map[string]interface{}{
