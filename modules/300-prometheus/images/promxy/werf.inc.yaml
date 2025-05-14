@@ -12,7 +12,7 @@ shell:
     - rm -rf .git ./vendor/github.com/prometheus/prometheus/web
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: builder/golang-alpine
+fromImage:  builder/golang-alpine-1.23
 final: false
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
