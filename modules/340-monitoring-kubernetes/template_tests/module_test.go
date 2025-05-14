@@ -70,7 +70,7 @@ var _ = Describe("Module :: monitoring-kubernetes :: helm template ::", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 		})
 
-		var deploy []string = []string{"kube-state-metrics"}
+		deploy := []string{"kube-state-metrics"}
 		for _, i := range deploy {
 			It(fmt.Sprintf("Deployment %s Exists", i), func() {
 				test := f.KubernetesResource("Deployment", "d8-monitoring", i)
@@ -78,7 +78,7 @@ var _ = Describe("Module :: monitoring-kubernetes :: helm template ::", func() {
 			})
 		}
 
-		var ds []string = []string{"node-exporter", "oom-kills-exporter"}
+		ds:= []string{"node-exporter", "oom-kills-exporter"}
 		for _, i := range ds {
 			It(fmt.Sprintf("DaemonSet %s Exists", i), func() {
 				test := f.KubernetesResource("DaemonSet", "d8-monitoring", i)
