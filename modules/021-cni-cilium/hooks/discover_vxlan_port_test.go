@@ -162,7 +162,7 @@ enabledModules:
 		})
 	})
 
-	Context("Exising cluster :: ConfigMap set to 4298 :: Virtualization On :: Nesting level is 1", func() {
+	Context("Existing cluster :: ConfigMap set to 4298 :: Virtualization On :: Nesting level is 1", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(getCiliumConfigMapWithPort("4298"))
 			f.BindingContexts.Set(
