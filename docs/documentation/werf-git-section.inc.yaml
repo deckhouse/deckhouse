@@ -340,6 +340,27 @@
   includePaths: ['*cluster_configuration.yaml']
   stageDependencies:
     setup: ['**/*']
+- add: /candi/cloud-providers/dvp/openapi
+  to: /src/modules/030-cloud-provider-dvp/crds
+  owner: jekyll
+  group: jekyll
+  includePaths: ['*instance_class.yaml']
+  stageDependencies:
+    setup: ['**/*']
+- add: /candi/cloud-providers/dvp/openapi
+  to: /src/modules/030-cloud-provider-dvp/openapi
+  owner: jekyll
+  group: jekyll
+  includePaths: ['*cluster_configuration.yaml']
+  stageDependencies:
+    setup: ['**/*']
+- add: /candi/cloud-providers/dvp/docs
+  to: /src/modules/030-cloud-provider-dvp/docs
+  owner: jekyll
+  group: jekyll
+  includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']
+  stageDependencies:
+    setup: ['**/*']
 - add: /candi/version_map.yml
   to: /srv/jekyll-data/documentation/_data/version_map.yml
   owner: jekyll
