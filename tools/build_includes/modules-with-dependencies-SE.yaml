@@ -2,22 +2,22 @@
 - add: /ee/be/modules/040-node-manager/openapi/config-values.yaml
   to: /deckhouse/modules/040-node-manager/openapi/config-values.yaml
   stageDependencies:
-    setup:
+    install:
         - '**/*'
 - add: /ee/be/modules/040-node-manager/openapi/doc-ru-config-values.yaml
   to: /deckhouse/modules/040-node-manager/openapi/doc-ru-config-values.yaml
   stageDependencies:
-    setup:
+    install:
         - '**/*'
 - add: /ee/be/modules/040-node-manager/openapi/openapi-case-tests.yaml
   to: /deckhouse/modules/040-node-manager/openapi/openapi-case-tests.yaml
   stageDependencies:
-    setup:
+    install:
         - '**/*'
 - add: /ee/be/modules/040-node-manager/openapi/values.yaml
   to: /deckhouse/modules/040-node-manager/openapi/values.yaml
   stageDependencies:
-    setup:
+    install:
         - '**/*'
 - add: /ee/be/modules/140-user-authz/templates/webhook
   to: /deckhouse/modules/140-user-authz/templates/webhook
@@ -40,7 +40,7 @@
     - '**/*_test.go'
     - '**/*.sh'
   stageDependencies:
-    setup:
+    install:
         - '**/*.go'
 - add: /ee/be/modules/350-node-local-dns
   to: /deckhouse/modules/350-node-local-dns
@@ -63,7 +63,7 @@
     - '**/*_test.go'
     - '**/*.sh'
   stageDependencies:
-    setup:
+    install:
         - '**/*.go'
 - add: /ee/se/modules/380-metallb
   to: /deckhouse/modules/380-metallb
@@ -86,5 +86,5 @@
     - '**/*_test.go'
     - '**/*.sh'
   stageDependencies:
-    setup:
+    install:
         - '**/*.go'

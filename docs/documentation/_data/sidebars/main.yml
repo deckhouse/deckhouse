@@ -57,8 +57,8 @@ entries:
                 ru: Сборка и публикация
               url: /module-development/build/
             - title:
-                en: Running in the cluster
-                ru: Запуск в кластере
+                en: Running and verifying in the cluster
+                ru: Запуск и проверка в кластере
               url: /module-development/run/
             - title:
                 en: Module dependencies
@@ -1856,8 +1856,4 @@ entries:
     - title:
         en: Release notes
         ru: История изменений
-      folders:
-      - title:
-          en: Version 1.68
-          ru: Версия 1.68
-        url: /release-notes/1-68.html
+      url: /release-notes.html

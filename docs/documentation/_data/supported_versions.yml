@@ -14,11 +14,7 @@ osDistributions:
     en_support: 'false'
     cse_support:
       versions:
-        - '1.7.2'
-        - '1.7.3'
-        - '1.7.4'
-        - '1.7.5'
-        - '1.7.6'
+        - '1.7'
       note_content:
         ru: |
           В версии <b>1.7.6</b> модуль <b>runtime-audit-engine будет работать с ядром <a href='./modules/runtime-audit-engine/#%D1%82%D1%80%D0%B5%D0%B1%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D1%8F'>5.15-generic</a></b>.
@@ -60,7 +56,7 @@ osDistributions:
     note_content:
       ru: <b>Ubuntu 18.04</b> более не поддерживается разработчиками дистрибутива Ubuntu
       en: <b>Ubuntu 18.04</b> is no longer supported by Ubuntu developers
-  '_redos':
+  'redos':
     name: 'РЕД ОС'
     url: https://redos.red-soft.ru/product/server/
     ru_support: 'true'
@@ -68,7 +64,7 @@ osDistributions:
     cse_support:
       versions:
         - '7.3'
-  '_rosa':
+  'rosa':
     name: 'РОСА Сервер'
     url: https://rosa.ru
     ru_support: 'true'

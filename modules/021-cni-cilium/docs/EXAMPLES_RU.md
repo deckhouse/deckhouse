@@ -4,7 +4,7 @@ title: "Модуль cni-cilium: примеры"
 
 ## Egress Gateway
 
-{% alert level="warning" %} Функция доступна только в Enterprise Edition {% endalert %}
+{% alert level="warning" %}Доступно в следующих редакциях: SE+, EE, CSE Lite (1.67), CSE Pro (1.67).{% endalert %}
 
 ### Принцип работы
 
@@ -25,7 +25,7 @@ title: "Модуль cni-cilium: примеры"
 
 ### Пример настройки
 
-#### EgressGateway в режиме PrimaryIPFromEgressGatewayNodeInterface
+#### EgressGateway в режиме PrimaryIPFromEgressGatewayNodeInterface (базовый режим)
 
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
@@ -34,7 +34,7 @@ metadata:
   name: myegressgw
 spec:
   nodeSelector:
-    node-role.deckhouse.io/egress: ""
+    dedicated/egress: ""
   sourceIP:
     mode: PrimaryIPFromEgressGatewayNodeInterface
     primaryIPFromEgressGatewayNodeInterface:
@@ -44,7 +44,7 @@ spec:
       interfaceName: eth1
 ```
 
-#### EgressGateway в режиме VirtualIPAddress
+#### EgressGateway в режиме VirtualIPAddress (режим с Virtual IP)
 
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
@@ -53,7 +53,7 @@ metadata:
   name: myeg
 spec:
   nodeSelector:
-    node-role.deckhouse.io/egress: ""
+    dedicated/egress: ""
   sourceIP:
     mode: VirtualIPAddress
     virtualIPAddress:

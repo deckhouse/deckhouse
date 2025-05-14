@@ -4,7 +4,7 @@ title: "The cni-cilium module: examples"
 
 ## Egress Gateway
 
-{% alert level="warning" %} Feature is only available in Enterprise Edition {% endalert %}
+{% alert level="warning" %}This feature is available in the following editions: SE+, EE.{% endalert %}
 
 ### Operation principle
 
@@ -25,7 +25,7 @@ The `CiliumEgressGatewayPolicy` implies configuring only a single node as an egr
 
 ### Examples
 
-#### EgressGateway in PrimaryIPFromEgressGatewayNodeInterface mode
+#### EgressGateway in PrimaryIPFromEgressGatewayNodeInterface mode (basic mode)
 
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
@@ -34,17 +34,17 @@ metadata:
   name: my-egressgw
 spec:
   nodeSelector:
-    node-role.deckhouse.io/egress: ""
+    dedicated/egress: ""
   sourceIP:
     mode: PrimaryIPFromEgressGatewayNodeInterface
     primaryIPFromEgressGatewayNodeInterface:
       # The "public" interface must have the same name on all nodes that matching the nodeSelector.
       # If the active node fails, traffic will be redirected through the backup node and
       # the source IP address of the network packets will change.
-      interfaceName: eth1 
+      interfaceName: eth1
 ```
 
-#### EgressGateway in VirtualIPAddress mode
+#### EgressGateway in VirtualIPAddress mode (Virtual IP mode)
 
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
@@ -53,7 +53,7 @@ metadata:
   name: my-egressgw
 spec:
   nodeSelector:
-    node-role.deckhouse.io/egress: ""
+    dedicated/egress: ""
   sourceIP:
     mode: VirtualIPAddress
     virtualIPAddress:

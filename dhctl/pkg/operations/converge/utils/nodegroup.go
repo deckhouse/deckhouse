@@ -19,7 +19,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
-func SortNodeGroupsStateKeys(state map[string]state.NodeGroupTerraformState, sortedNodeGroupsFromConfig []string) []string {
+func SortNodeGroupsStateKeys(state map[string]state.NodeGroupInfrastructureState, sortedNodeGroupsFromConfig []string) []string {
 	nodeGroupsFromConfigSet := make(map[string]struct{}, len(sortedNodeGroupsFromConfig))
 	for _, key := range sortedNodeGroupsFromConfig {
 		nodeGroupsFromConfigSet[key] = struct{}{}

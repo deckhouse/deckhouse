@@ -34,7 +34,7 @@ $CI_COMMIT_REF_SLUG is a tag of published deckhouse images. It has a form
 
 {!{- $providerNames := slice "AWS" "Azure" "GCP" "Yandex.Cloud" "OpenStack" "vSphere" "VCD" "Static" "EKS" -}!}
 {!{- $criNames := slice "Containerd" -}!}
-{!{- $kubernetesVersions := slice "1.28" "1.29" "1.30" "1.31" "1.32" "Automatic" -}!}
+{!{- $kubernetesVersions := slice "1.28" "1.29" "1.30" "1.31" "1.32" "1.33" "Automatic" -}!}
 
 {!{- range $providerName := $providerNames -}!}
 {!{-   $provider := $providerName | replaceAll "." "-" | toLower -}!}
@@ -136,7 +136,7 @@ jobs:
 {!{-     $jobName := printf "%s, %s, Kubernetes %s" $workflowName $criName $kubernetesVersion -}!}
 {!{-     $lastCommentNeeds = $lastCommentNeeds | append $jobID -}!}
 {!{-     $jobNames = coll.Merge $jobNames (dict $jobID $jobName) }!}
-{!{-     $jobCtx := coll.Merge $ctx (dict "manualRun" "yes" "cri" $cri "criName" $criName "criEnv" $criEnv "layout" $layout "kubernetesVersion" $kubernetesVersion "kubernetesVersionSlug" $kubernetesVersionSlug "workflowName" $workflowName "jobName" $jobName "jobID" $jobID) }!}
+{!{-     $jobCtx := coll.Merge $ctx (dict "e2eStepTimeoutMinutes" "80" "sleepBeforeClusterTestingAlerts" "0" "manualRun" "yes" "cri" $cri "criName" $criName "criEnv" $criEnv "layout" $layout "kubernetesVersion" $kubernetesVersion "kubernetesVersionSlug" $kubernetesVersionSlug "workflowName" $workflowName "jobName" $jobName "jobID" $jobID) }!}
 {!{     tmpl.Exec "e2e_run_job_template" $jobCtx | strings.Indent 2 }!}
 {!{-   end -}!}
 {!{- end }!}

@@ -27,12 +27,12 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
-	state_terraform "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
+	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
@@ -41,7 +41,7 @@ type NodeGroupController struct {
 	excludedNodes map[string]bool
 
 	name  string
-	state state.NodeGroupTerraformState
+	state state.NodeGroupInfrastructureState
 
 	nodeGroup nodeGroupController
 
@@ -50,7 +50,7 @@ type NodeGroupController struct {
 	layoutStep      string
 }
 
-func NewNodeGroupController(name string, state state.NodeGroupTerraformState, excludeNodes map[string]bool) *NodeGroupController {
+func NewNodeGroupController(name string, state state.NodeGroupInfrastructureState, excludeNodes map[string]bool) *NodeGroupController {
 	controller := &NodeGroupController{
 		excludedNodes: excludeNodes,
 		name:          name,
@@ -131,7 +131,7 @@ func (c *NodeGroupController) deleteRedundantNodes(
 	ctx *context.Context,
 	settings []byte,
 	nodesToDeleteInfo []nodeToDeleteInfo,
-	getHookByNodeName func(nodeName string) terraform.InfraActionHook,
+	getHookByNodeName func(nodeName string) infrastructure.InfraActionHook,
 ) error {
 	cfg, err := ctx.MetaConfig()
 	if err != nil {
@@ -164,7 +164,7 @@ func (c *NodeGroupController) deleteRedundantNodes(
 
 		nodeIndex, err := config.GetIndexFromNodeName(nodeToDeleteInfo.name)
 		if err != nil {
-			log.ErrorF("can't extract index from terraform state secret (%v), skip %s\n", err, nodeToDeleteInfo.name)
+			log.ErrorF("can't extract index from infrastructure state secret (%v), skip %s\n", err, nodeToDeleteInfo.name)
 			return nil
 		}
 
@@ -174,24 +174,22 @@ func (c *NodeGroupController) deleteRedundantNodes(
 			nodeState = nodeToDeleteInfo.state
 		}
 
-		nodeRunner := ctx.Terraform().GetConvergeNodeDeleteRunner(cfg, terraform.NodeDeleteRunnerOptions{
-			AutoDismissDestructive: ctx.ChangesSettings().AutoDismissDestructive,
-			AutoApprove:            ctx.ChangesSettings().AutoApprove,
-			NodeName:               nodeToDeleteInfo.name,
-			NodeGroupName:          c.name,
-			LayoutStep:             c.layoutStep,
-			NodeIndex:              nodeIndex,
-			NodeState:              nodeState,
-			NodeCloudConfig:        c.cloudConfig,
-			CommanderMode:          ctx.CommanderMode(),
-			StateCache:             ctx.StateCache(),
-			AdditionalStateSaverDestinations: []terraform.SaverDestination{
-				entity.NewNodeStateSaver(ctx, nodeToDeleteInfo.name, c.name, nil),
+		nodeRunner := ctx.InfrastructureContext(cfg).GetConvergeNodeDeleteRunner(cfg, infrastructure.NodeDeleteRunnerOptions{
+			NodeName:        nodeToDeleteInfo.name,
+			NodeGroupName:   c.name,
+			LayoutStep:      c.layoutStep,
+			NodeIndex:       nodeIndex,
+			NodeState:       nodeState,
+			NodeCloudConfig: c.cloudConfig,
+			CommanderMode:   ctx.CommanderMode(),
+			StateCache:      ctx.StateCache(),
+			AdditionalStateSaverDestinations: []infrastructure.SaverDestination{
+				infrastructurestate.NewNodeStateSaver(ctx, nodeToDeleteInfo.name, c.name, nil),
 			},
 			Hook: getHookByNodeName(nodeToDeleteInfo.name),
-		})
+		}, ctx.ChangesSettings().AutomaticSettings)
 
-		if err := terraform.DestroyPipeline(ctx.Ctx(), nodeRunner, nodeToDeleteInfo.name); err != nil {
+		if err := infrastructure.DestroyPipeline(ctx.Ctx(), nodeRunner, nodeToDeleteInfo.name); err != nil {
 			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %w", nodeToDeleteInfo.name, err))
 			continue
 		}
@@ -206,12 +204,12 @@ func (c *NodeGroupController) deleteRedundantNodes(
 			continue
 		}
 
-		if err := state_terraform.DeleteNodeTerraformStateFromCache(nodeToDeleteInfo.name, ctx.StateCache()); err != nil {
-			allErrs = multierror.Append(allErrs, fmt.Errorf("unable to delete node %s terraform state from cache: %w", nodeToDeleteInfo.name, err))
+		if err := infrastructurestate.DeleteNodeInfrastructureStateFromCache(nodeToDeleteInfo.name, ctx.StateCache()); err != nil {
+			allErrs = multierror.Append(allErrs, fmt.Errorf("unable to delete node %s infrastructure state from cache: %w", nodeToDeleteInfo.name, err))
 			continue
 		}
 
-		if err := entity.DeleteTerraformState(ctx.Ctx(), ctx.KubeClient(), fmt.Sprintf("d8-node-terraform-state-%s", nodeToDeleteInfo.name)); err != nil {
+		if err := infrastructurestate.DeleteInfrastructureState(ctx.Ctx(), ctx.KubeClient(), fmt.Sprintf("d8-node-terraform-state-%s", nodeToDeleteInfo.name)); err != nil {
 			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %w", nodeToDeleteInfo.name, err))
 			continue
 		}

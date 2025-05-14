@@ -8,7 +8,7 @@ The `cni-cilium module` provides a network in a cluster. It is based on the [Cil
 ## Limitations
 
 1. Services with type `NodePort` and `LoadBalancer` are incompatible with hostNetwork endpoints in LB mode `DSR`. Switch to `SNAT` mode if it is required.
-2. `HostPort` pods only bind to [one IP address](https://github.com/deckhouse/deckhouse/issues/3035). If the OS has multiple ultiple interfaces/IP, Cilium will choose one, preferring `private` to `public`.
+2. `HostPort` pods only bind to [one IP address](https://github.com/deckhouse/deckhouse/issues/3035). If the OS has multiple interfaces/IP, Cilium will choose one, preferring `private` to `public`.
 3. Kernel requirements:
    * Linux kernel version not lower than `5.7` for the `cni-cilium` module to work and work together with the [istio](../istio/), [openvpn](../openvpn/) or [node-local-dns]({% if site.d8Revision == 'CE' %}{{ site.urls.ru}}/products/kubernetes-platform/documentation/v1/modules/{% else %}..{% endif %}/node-local-dns/) modules.
 4. OS compatibility:
@@ -81,7 +81,9 @@ Cilium fully replaces the functionality of the `kube-proxy` module, so `kube-pro
 
 ## Using Egress Gateway
 
-{% alert level="warning" %} The feature is available only in the Enterprise Edition {% endalert %}
+{% alert level="warning" %}The feature is available only in the following Deckhouse Kubernetes Platform editions: SE+, EE.{% endalert %}
+
+Egress Gateway in Deckhouse Kubernetes Platform can be used in one of two modes: [Basic](#basic-mode) and [Mode with Virtual IP](#mode-with-virtual-ip). Use Custom Resource [EgressGateway](cr.html#egressgateway) (parameter `spec.sourceIP.node`) to select the mode.
 
 ### Basic mode
 

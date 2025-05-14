@@ -5,6 +5,10 @@ positive:
           sourceRanges:
           - 192.168.0.0/24
           port: 2533
+    - etcd:
+        backup:
+          cronSchedule: "0 0 * * *"
+          hostPath: "/var/backup/etcd"
   values:
     - internal:
         effectiveKubernetesVersion: "1.29"

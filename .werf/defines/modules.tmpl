@@ -5,6 +5,11 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 context: {{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}
 dockerfile: Dockerfile
 ssh: default
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+- id: DECKHOUSE_PRIVATE_REPO
+  value: {{ .DECKHOUSE_PRIVATE_REPO }}
 args:
   BASE_ALPINE: {{ .Images.BASE_ALPINE }}
   BASE_GOLANG_23_ALPINE: {{ .Images.BASE_GOLANG_23_ALPINE }}
@@ -23,8 +28,6 @@ args:
   CLOUD_PROVIDERS_SOURCE_REPO: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
   OBSERVABILITY_SOURCE_REPO: {{ .OBSERVABILITY_SOURCE_REPO }}
   DECKHOUSE_PRIVATE_REPO: {{ .DECKHOUSE_PRIVATE_REPO }}
-  # proxies for various packages
-  GOPROXY: {{ .GOPROXY }}
     {{- if not (has (list .ModuleName .ImageName | join "/") (list "common/distroless")) }}
 dependencies:
 - image: common/distroless
@@ -63,7 +66,7 @@ dependencies:
 {{- end }}
 
 import:
-- image: common/jq-artifact
+- image: tools/jq
   add: /usr/bin/jq
   to: /usr/bin/jq
   before: setup

@@ -118,7 +118,7 @@
         },
         {
           "title": "Documentation",
-          "url": "/products/kubernetes-platform/modules/stronghold/stable/",
+          "url": "/products/stronghold/documentation/",
           "target": "",
           "rel": "doc"
         }
@@ -139,6 +139,26 @@
         {
           "title": "Documentation",
           "url": "/products/kubernetes-platform/modules/delivery-kit/stable/",
+          "target": "",
+          "rel": "doc"
+        }
+      ]
+    },
+    {
+      "title": "Code",
+      "url": "/products/code/",
+      "target": "",
+      "rel": "",
+      "items": [
+        {
+          "title": "Learn more",
+          "url": "/products/code/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Documentation",
+          "url": "/products/code/documentation/",
           "target": "",
           "rel": "doc"
         }
@@ -282,9 +302,15 @@
         },
         {
           "title": "Документация",
-          "url": "/products/kubernetes-platform/modules/stronghold/stable/",
+          "url": "/products/stronghold/documentation/",
           "target": "",
           "rel": "doc"
+        },
+        {
+          "title": "Быстрый старт",
+          "url": "/products/stronghold/gs/",
+          "target": "",
+          "rel": ""
         }
       ]
     },
@@ -305,6 +331,40 @@
           "url": "/products/kubernetes-platform/modules/delivery-kit/stable/",
           "target": "",
           "rel": "doc"
+        }
+      ]
+    },
+    {
+      "title": "Code",
+      "url": "/products/code/",
+      "target": "",
+      "rel": "",
+      "items": [
+        {
+          "title": "О продукте",
+          "url": "/products/code/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Документация",
+          "url": "/products/code/documentation/",
+          "target": "",
+          "rel": "doc"
+        }
+      ]
+    },
+    {
+      "title": "Prom++",
+      "url": "/products/prompp/",
+      "target": "",
+      "rel": "",
+      "items": [
+        {
+          "title": "О продукте",
+          "url": "/products/prompp/",
+          "target": "",
+          "rel": ""
         }
       ]
     }
