@@ -12,7 +12,7 @@ secrets:
   value: {{ .DECKHOUSE_PRIVATE_REPO }}
 args:
   BASE_ALPINE: builder/alpine
-  BASE_GOLANG_23_ALPINE: builder/golang-alpine
+  BASE_GOLANG_23_ALPINE: builder/golang-alpine-1.23
   BASE_GOLANG_23_BULLSEYE: {{ .Images.BASE_GOLANG_23_BULLSEYE }}
   BASE_GOLANG_23_BOOKWORM: {{ .Images.BASE_GOLANG_23_BOOKWORM }}
   BASE_NODE_16_ALPINE: {{ .Images.BASE_NODE_16_ALPINE }}
