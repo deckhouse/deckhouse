@@ -254,14 +254,16 @@ spec:
         - "{{ include "get_network_with_bitmask" (list . .Values.openvpn.tunnelNetwork) }}"
         {{- if hasKey .Values.openvpn "inlet" }}
           {{- if eq .Values.openvpn.inlet "LoadBalancer" }}
+            {{- if not (hasKey .Values.openvpn "externalHost") }}
         - --ovpn.server.behindLB
-            {{- if .Values.openvpn.udpEnabled }}
+              {{- if .Values.openvpn.udpEnabled }}
         - --ovpn.service
         - openvpn-external-udp
-            {{- end }}
-            {{- if .Values.openvpn.tcpEnabled }}
+              {{- end }}
+              {{- if .Values.openvpn.tcpEnabled }}
         - --ovpn.service
         - openvpn-external
+              {{- end }}
             {{- end }}
           {{- end }}
         {{- end }}
