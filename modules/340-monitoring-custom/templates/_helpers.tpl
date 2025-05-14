@@ -62,9 +62,6 @@
 
 {{- define "tls_config" }}
 {{- $tls_secret_name := . }}
-bearerTokenSecret:
-  name: "prometheus-token"
-  key: "token"
 tlsConfig:
   insecureSkipVerify: true
   {{- if $tls_secret_name }}
