@@ -22,8 +22,9 @@ import:
   add: /lib/udev/scsi_id
   to: /lib/udev/scsi_id
   before: setup
-docker:
-  ENTRYPOINT: ["/dvp-csi-driver"]
+imageSpec:
+  config:
+    entrypoint: ["/dvp-csi-driver"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
@@ -56,7 +57,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg

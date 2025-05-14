@@ -26,7 +26,7 @@ shell:
   - rm -rf .git
 ---
 image: terraform-provider-kubernetes
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 final: false
 mount:
 - fromPath: ~/go-pkg-cache
