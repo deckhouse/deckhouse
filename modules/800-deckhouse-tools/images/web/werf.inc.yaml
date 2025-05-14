@@ -29,9 +29,12 @@ git:
   stageDependencies:
     setup:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} {{ $.SOURCE_REPO }}/deckhouse/deckhouse-cli.git /src/deckhouse-cli
+  - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} $(cat /run/secrets/SOURCE_REPO)/deckhouse/deckhouse-cli.git /src/deckhouse-cli
   - cd /src/deckhouse-cli
   - git describe --tags > VERSION
   - sed -i "s|sh:\ git describe --tags|sh:\ cat VERSION|" Taskfile.yml
@@ -58,19 +61,20 @@ import:
     to: /usr/local/bin/task
     before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
-- from: tmp_dir
-  to: /root/.cache/go-build
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+- id: DECKHOUSE_PRIVATE_REPO
+  value: {{ .DECKHOUSE_PRIVATE_REPO }}
 shell:
   beforeInstall:
     {{- include "debian packages proxy" . | nindent 4 }}
     - apt-get install -y libbtrfs-dev jq
     - find /var/lib/apt/ /var/cache/apt/ -type f -delete
   install:
-    - export GOPROXY={{ $.GOPROXY }}
-
-    - export PRIVATE_REPO={{ $.DECKHOUSE_PRIVATE_REPO }}
+    - export GOPROXY=$(cat /run/secrets/GOPROXY)
+    - export PRIVATE_REPO=$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO)
     - GOPRIVATE="flant.internal"
     - git config --global url."ssh://git@${PRIVATE_REPO}/".insteadOf "https://flant.internal/"
     - git config --global --add safe.directory '*'

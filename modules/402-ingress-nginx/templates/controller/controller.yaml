@@ -23,6 +23,7 @@
 {{- $gracePeriod = (kindIs "invalid" $crd.spec.waitLoadBalancerOnTerminating) | ternary $defaultGracePeriod $crd.spec.waitLoadBalancerOnTerminating }}
 {{- $defaultSSLCertificate := $crd.spec.defaultSSLCertificate | default dict }}
 {{- $defaultSSLCertificateSecretRef := $defaultSSLCertificate.secretRef | default dict }}
+{{- $logLevels := dict "Error" 0 "Warn" 1 "Info" 2 "Extended" 3 "Debug" 4 "Trace" 5 -}}
 
 {{- if ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
@@ -201,7 +202,7 @@ spec:
         args:
         - /nginx-ingress-controller
         - --configmap=$(POD_NAMESPACE)/{{ $name }}-config
-        - --v=2
+        - --v={{ get $logLevels (default "Info" $crd.spec.controllerLogLevel) }}
         - --ingress-class={{ $crd.spec.ingressClass }}
         - --healthz-port=10254
         - --http-port=80

@@ -17,17 +17,19 @@ package infrastructureprovider
 import (
 	"testing"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-
 	"github.com/stretchr/testify/require"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 )
 
 func TestGetCloudsUseOpentofu(t *testing.T) {
 	m, err := getCloudNameToUseOpentofuMap(config.InfrastructureVersions)
 	require.NoError(t, err)
 
-	require.Len(t, m, 1)
+	require.Len(t, m, 3)
 	require.Contains(t, m, "yandex")
+	require.Contains(t, m, "dynamix")
+	require.Contains(t, m, "zvirt")
 }
 
 func TestNeedToUseOpentofu(t *testing.T) {
@@ -43,8 +45,6 @@ func TestNeedToUseOpentofu(t *testing.T) {
 		"vSphere",
 		"Azure",
 		"VCD",
-		"Zvirt",
-		"Dynamix",
 		"Huaweicloud",
 	}
 

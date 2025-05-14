@@ -240,9 +240,9 @@ spec:
     name: some-group-name
   accessLevel: PrivilegedUser
   portForwarding: true
-  # This option is only available if the enableMultiTenancy parameter is set (Enterprise Edition version)
+  # This option is only available if the enableMultiTenancy parameter is set.
   allowAccessToSystemNamespaces: false
-  # This option is only available if the enableMultiTenancy parameter is set (Enterprise Edition version)
+  # This option is only available if the enableMultiTenancy parameter is set.
   namespaceSelector:
     labelSelector:
       matchExpressions:
@@ -305,12 +305,12 @@ You may need to create a ServiceAccount with access to the Kubernetes API when, 
        name: gitlab-runner-deploy
        namespace: d8-service-accounts
      accessLevel: SuperAdmin
-     # This option is only available if the enableMultiTenancy parameter is set (Enterprise Edition version)
+     # This option is only available if the enableMultiTenancy parameter is set.
      allowAccessToSystemNamespaces: true      
    EOF
    ```
 
-   If multitenancy is enabled in the Deckhouse configuration (the [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) parameter; it is only available in Enterprise Edition), configure the namespaces the ServiceAccount has access to (the [namespaceSelector](cr.html#clusterauthorizationrule-v1-spec-namespaceselector) parameter).
+   If multitenancy is enabled in the Deckhouse configuration (via the [`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy) parameter), configure the namespaces the ServiceAccount has access to (via the [`namespaceSelector`](cr.html#clusterauthorizationrule-v1-spec-namespaceselector) parameter).
 
 1. Set the variable values (they will be used later) by running the following commands (**insert your own values**):
 

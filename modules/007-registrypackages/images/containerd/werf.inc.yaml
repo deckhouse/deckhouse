@@ -40,10 +40,13 @@ git:
   stageDependencies:
     install:
       - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth=1 --branch v{{ $containerd_version }} {{ $.SOURCE_REPO }}/containerd/containerd.git /src/containerd
-  - git clone --depth=1 --branch v{{ $runc_version }} {{ $.SOURCE_REPO }}/opencontainers/runc /src/runc
+  - git clone --depth=1 --branch v{{ $containerd_version }} $(cat /run/secrets/SOURCE_REPO)/containerd/containerd.git /src/containerd
+  - git clone --depth=1 --branch v{{ $runc_version }} $(cat /run/secrets/SOURCE_REPO)/opencontainers/runc /src/runc
   - cd /src/containerd
   - git describe --match 'v[0-9]*' --dirty='.m' --always > VERSION
   - git rev-parse HEAD > REVISION
@@ -62,23 +65,22 @@ import:
   to: /src
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
   {{- include "debian packages proxy" . | nindent 2 }}
   - apt-get update && apt-get install libseccomp-dev -y
   install:
-  - export GOPROXY={{ $.GOPROXY }}
   - cd /src/containerd
   - git config --global user.email "builder@deckhouse.io"
-  - go mod download
-  - go mod vendor
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
   - make STATIC=1 VERSION="$(cat VERSION)" REVISION="$(cat REVISION)" all
   - mv bin/* /
   - cd /src/runc
-  - go mod download
-  - go mod vendor
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
   - git config --global user.email "builder@deckhouse.io"
   - make COMMIT="$(cat COMMIT)" static
   - mv runc /runc
