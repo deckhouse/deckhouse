@@ -12,7 +12,7 @@ Those events can then be collected by [log-shipper-agents](../log-shipper/) and 
 Below is an example [ClusterLoggingConfig](../log-shipper/cr.html#clusterloggingconfig) configuration for the `log-shipper` module:
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLoggingConfig
 metadata:
   name: falco-events
