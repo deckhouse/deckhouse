@@ -25,18 +25,6 @@ import (
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 )
 
-//TODO name plugins and filtres
-// transform:
-//   plugins or modules or addons
-//   addons:
-//     - wrapNotJson
-//     - replaceDot
-//   filters:
-//     - delete
-//       labels: []
-// delete module interface
-// create one transform
-
 type module interface {
 	getTransform() apis.LogTransform
 }
@@ -47,14 +35,8 @@ func BuildModes(tms []v1alpha1.Transform) ([]apis.LogTransform, error) {
 	for _, tm := range tms {
 		switch tm.Action {
 		case "normalizeLabelKeys":
-			// if len(tm.Labels) == 0 {
-			// tm.Labels = []string{"pod_labels"}
-			// }
 			module = normalizeLabelKeys{}
 		case "ensureStructuredMessage":
-			// if len(tm.Labels) == 0 {
-			// tm.Labels = []string{"message"}
-			// }
 			module = ensureStructuredMessage{targetField: tm.TargetField}
 		case "dropLabels":
 			if len(tm.Labels) > 0 {
