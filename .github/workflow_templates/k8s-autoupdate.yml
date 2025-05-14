@@ -84,7 +84,10 @@ jobs:
       id: create-pull-request
       uses: {!{ index (ds "actions") "peter-evans/create-pull-request" }!}
       with:
-        commit-message: "Automated Change: Update k8s patch version"
+        commit-message: |
+          Automated Change: Update k8s patch version
+
+          Signed-off-by: deckhouse-BOaTswain <89150800+deckhouse-boatswain@users.noreply.github.com>
         signoff: true
         sign-commits: true
         title: "[run ci] Automated Change: Update k8s patch version"
