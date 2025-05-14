@@ -227,7 +227,7 @@ alerts:
       module: cni-cilium
       edition: ce
       description: |
-        The Cilium configuration specifies a non-standard VXLAN port {{ $labels.port }}. This port falls outside the recommended range (considering the cluster might be deployed on virtual machines):
+        The Cilium configuration specifies a non-standard VXLAN port {{ $labels.port }}. This port falls outside the recommended range:
 
         - `4298`: When the virtualization module is enabled.
         - `4299`: For a standard Deckhouse setup.
