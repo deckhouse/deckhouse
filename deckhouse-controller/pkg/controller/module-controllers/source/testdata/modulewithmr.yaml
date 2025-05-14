@@ -29,7 +29,7 @@ kind: Module
 metadata:
   name: parca
 properties:
-  version: 1.2.2
+  version: 1.4.1
   source: test-source-1
   availableSources:
     - test-source-1
