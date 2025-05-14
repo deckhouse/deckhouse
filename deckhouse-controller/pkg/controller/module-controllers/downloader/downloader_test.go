@@ -80,5 +80,5 @@ func TestDownloadMetadataByVersion(t *testing.T) {
 	meta, err := md.DownloadMetadataByVersion("commander", "v1.2.3")
 	require.NoError(t, err)
 	require.Equal(t, "v1.2.3", meta.ModuleVersion)
-	require.Equal(t, map[string]any(map[string]any{"feat": []any{"Added new feature"}}), meta.Changelog)
+	require.Equal(t, map[string]any{"feat": []any{"Added new feature"}}, meta.Changelog)
 }
