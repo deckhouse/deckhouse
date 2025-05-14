@@ -527,6 +527,27 @@ func (r *reconciler) getIntermediateModuleVersions(
 		return []*semver.Version{targetVersion}, nil
 	}
 
+	releases := new(v1alpha1.ModuleReleaseList)
+	if err := r.client.List(ctx, releases, client.MatchingLabels{"module": moduleName}); err != nil {
+		return nil, fmt.Errorf("list releases: %w", err)
+	}
+
+	if len(releases.Items) > 0 {
+		lastRelease := releases.Items[len(releases.Items)-1]
+		lastReleaseVersion, err := semver.NewVersion(lastRelease.Spec.Version)
+		if err != nil {
+			return nil, fmt.Errorf("parse last release version: %w", err)
+		}
+		if lastReleaseVersion.Major() == targetVersion.Major() &&
+			(lastReleaseVersion.Minor() == targetVersion.Minor() || lastReleaseVersion.IncMinor().Minor() == targetVersion.Minor()) {
+			return []*semver.Version{targetVersion}, nil
+		}
+
+		// we need to get all versions what not present in cluster
+		currentVersion = lastReleaseVersion
+	}
+
+	// if versions in cluster are not in the same major version, we need to get all versions
 	registryClient, err := r.dependencyContainer.GetRegistryClient(path.Join(source.Spec.Registry.Repo, moduleName), opts...)
 	if err != nil {
 		return nil, fmt.Errorf("get registry client: %w", err)
