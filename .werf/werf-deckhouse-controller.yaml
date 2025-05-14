@@ -65,4 +65,5 @@ shell:
   - cd /deckhouse/deckhouse-controller
   - D8_VERSION=${CI_COMMIT_TAG} DEFAULT_KUBERNETES_VERSION={{ .defaultKubernetesVersion }} ./go-build.sh
   - mv deckhouse-controller /out
+  - setcap "cap_sys_chroot=ep cap_sys_admin=ep cap_mknod=ep" /out/deckhouse-controller
 ---
