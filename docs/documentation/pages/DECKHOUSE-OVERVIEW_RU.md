@@ -1,6 +1,6 @@
 ---
 title: Введение в документацию
-permalink: ru/old-deckhouse-overview.html
+permalink: ru/deckhouse-overview.html
 lang: ru
 ---
 
