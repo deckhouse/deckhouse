@@ -45,10 +45,7 @@
   cat <<"EOD" > /etc/bashrc
   {{- $context.Files.Get (printf "%sdeckhouse-controller/files/bashrc" $prefix) | nindent 2 }}
   EOD
-  # Shell comfort: add bashrc for root
-  rm -f /root/.bashrc
-  ln -s /etc/bashrc /root/.bashrc
-  # Shell comfort: add bashrc for nobody
+  # Shell comfort: add bashrc for deckhouse
   rm -f /.bashrc
   ln -s /etc/bashrc /.bashrc
   # Shell comfort: create /etc/vim
@@ -57,9 +54,7 @@
   cat <<"EOD" > /etc/vim/vimrc.local
   {{- $context.Files.Get (printf "%sdeckhouse-controller/files/vimrc.local" $prefix) | nindent 2 }}
   EOD
-
 {{- end }}
-
 
 # common-base image
 # . is dict have keys:
