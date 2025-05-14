@@ -436,9 +436,8 @@ func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Log
 }
 
 func registerTelemetry(ctx context.Context) func(ctx context.Context) error {
-	endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
-
-	opts := make([]otlptracegrpc.Option, 0, 1)
+	endpoint := os.Getenv("TRACING_OTLP_ENDPOINT")
+	authToken := os.Getenv("TRACING_OTLP_AUTH_TOKEN")
 
 	if endpoint == "" {
 		return func(_ context.Context) error {
@@ -446,12 +445,20 @@ func registerTelemetry(ctx context.Context) func(ctx context.Context) error {
 		}
 	}
 
+	opts := make([]otlptracegrpc.Option, 0, 1)
+
 	if endpoint == "test" {
 		endpoint = "jaeger-inmemory-instance-collector.default.svc.cluster.local:4317"
 	}
 
 	opts = append(opts, otlptracegrpc.WithEndpoint(endpoint))
 	opts = append(opts, otlptracegrpc.WithInsecure())
+
+	if authToken != "" {
+		opts = append(opts, otlptracegrpc.WithHeaders(map[string]string{
+			"Authorization": "Bearer " + strings.TrimSpace(authToken),
+		}))
+	}
 
 	exporter, _ := otlptracegrpc.New(ctx, opts...)
 

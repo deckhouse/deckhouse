@@ -242,6 +242,18 @@ spec:
             - name: ADDON_OPERATOR_SHELL_CHROOT_DIR
               value: "/chroot"
 {{- end }}
+            - name: TRACING_OTLP_ENDPOINT
+              valueFrom: 
+                secretKeyRef:
+                  name: d8-otlp-tracing
+                  key: endpoint
+                  optional: true
+            - name: TRACING_OTLP_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: d8-otlp-tracing
+                  key: token
+                  optional: true
           ports:
             - containerPort: 4222
               name: self
