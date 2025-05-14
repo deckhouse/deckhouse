@@ -485,13 +485,13 @@ func newMockedContainerWithData(t minimock.Tester, version string, modules, tags
 	if len(tags) > 0 {
 		moduleVersionsMock.ListTagsMock.Return(tags, nil)
 	}
-	moduleVersionsMock.ImageMock.Set(func(_ context.Context, _ string) (crv1.Image, error) {
+	moduleVersionsMock.ImageMock.Set(func(_ context.Context, imageTag string) (crv1.Image, error) {
 		return &crfake.FakeImage{
 			ManifestStub: manifestStub,
 			LayersStub: func() ([]crv1.Layer, error) {
 				return []crv1.Layer{
 					&utils.FakeLayer{},
-					&utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "` + version + `"}`}},
+					&utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "` + imageTag + `"}`}},
 				}, nil
 			},
 			DigestStub: func() (crv1.Hash, error) {
