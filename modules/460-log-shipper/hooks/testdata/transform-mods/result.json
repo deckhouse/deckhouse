@@ -21,7 +21,7 @@
       "inputs": [
         "transform/destination/test-kafka-dest/00_tf_normolazeLabelKeys"
       ],
-      "source": ".message = parse_json(.message) ?? { \"pod_labels\": .message }\n",
+      "source": ".message = parse_json(.message) ?? { \"text\": .message }\n",
       "type": "remap"
     },
     "transform/destination/test-kafka-dest/02_tf_delete__first_second": {

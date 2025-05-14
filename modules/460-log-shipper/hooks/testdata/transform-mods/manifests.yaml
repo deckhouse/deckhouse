@@ -28,7 +28,7 @@ spec:
   transformation:
   - action: normalizeLabelKeys
   - action: ensureStructuredMessage
-    targetField: pod_labels
+    targetField: text
   - action: dropLabels
     labels: 
     - first
