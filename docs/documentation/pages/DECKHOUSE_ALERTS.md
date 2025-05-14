@@ -2,6 +2,7 @@
 title: "The list of alerts"
 permalink: en/alerts.html
 ---
+<!-- mirrored on /admin/configuration/monitoring/alert-settings.html  -->
 
 The page displays a list of all alerts of monitoring in the Deckhouse Kubernetes Platform.
 
