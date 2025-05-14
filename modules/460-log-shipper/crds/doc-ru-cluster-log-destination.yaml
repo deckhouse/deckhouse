@@ -415,31 +415,46 @@ spec:
                     - pod_owner.
 
                     [Подробнее о путях к полям...](https://vector.dev/docs/reference/configuration/field-path-notation/)
-                transform:
-                  type: object
-                  description: |
-                    Дополнительные трасформации которые пользователь может задать
-                      замена точки на подчеркивание в лейблах
-                       `action: replaceDot
-                        labels: ["pod_labels"]`
-                      Проверяет что вложенный json правильный. Если нет то создает вложенный json message: {"text": .message}
-                       `action: wrapNotJson
-                        labels: ["message"]` 
-                      Удаление лейбла example
-                       `action: delete
-                        labels: ["example"]`
-                  properties:
-                    action:
-                      type: string
-                      enum:
-                      - replaceDot
-                      - wrapNotJson
-                      - delete
-                    labels:
-                      items: 
-                        type: string
-                  required:
-                  - action
+                transformation:
+                  type: array
+                  description: >
+                    Список шагов трансформации. Каждый шаг определяет определенное действие и параметры к нему.
+                  items:
+                    oneOf:
+                      - description: "Нормализует имена меток, заменяя точки на подчеркивания"
+                        type: object
+                        required:
+                          - action
+                        properties:
+                          action:
+                            type: string
+                            enum: ["normalizeLabelKeys"]
+                      - description: "Гарантирует, что поле message содержит JSON-объект"
+                        type: object
+                        required:
+                          - action
+                          - targetField
+                        properties:
+                          action:
+                            type: string
+                            enum: ["ensureStructuredMessage"]
+                          targetField:
+                            type: string
+                            description: "Целевое поле, в которое помещается обертка сообщения"
+                      - description: "Удаляет указанные метки"
+                        type: object
+                        required:
+                          - action
+                          - labels
+                        properties:
+                          action:
+                            type: string
+                            enum: ["dropLabels"]
+                          labels:
+                            type: array
+                            description: "Список меток, которые необходимо удалить"
+                            items:
+                              type: string
                 buffer:
                   description: Параметры буфера.
                   properties:
