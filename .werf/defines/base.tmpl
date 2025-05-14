@@ -99,48 +99,48 @@ import:
 - image: registrypackages/d8-curl-artifact-8-9-1
   add: /d8-curl
   to: /usr/bin/curl
-  before: setup
+  before: install
 - image: tools/bash
   add: /usr/bin/bash
   to: /bin/bash
-  before: setup
+  before: install
 - image: tools/jq
   add: /usr/bin/jq
-  before: setup
+  before: install
 - image: tools/yq
   add: /usr/bin/yq
-  before: setup
+  before: install
 - image: tools/sed
   add: /usr/bin/sed
-  before: setup
+  before: install
 - image: tools/grep
   add: /usr/bin/grep
-  before: setup
+  before: install
 - image: tools/gawk
   add: /
   to: /
   includePaths:
   - usr/bin/*awk*
-  before: setup
+  before: install
 - image: tools/findutils
   add: /usr/bin/find
-  before: setup
+  before: install
 - image: tools/coreutils
   add: /
   to: /
   includePaths:
   - usr/bin/*
-  before: setup
+  before: install
 - image: libs/openssl
   add: /usr/bin/openssl
   to: /usr/bin/openssl
-  before: setup
+  before: install
 - image: tools/vim
   add: /usr/bin/vim
   to: /usr/bin/vim
-  before: setup
+  before: install
 shell:
-  beforeInstall:
+  install:
   {{- include "base components" (list $context.rootContext $context.prefix) | nindent 2 }}
 imageSpec:
   config:
