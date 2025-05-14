@@ -1288,6 +1288,10 @@ spec:
           jsonPath: .status.deckhouse.synced
           type: string
           description: Status message if current version of the node group was processed by the operator.
+        - name: Engine
+          jsonPath: .status.engine
+          type: string
+          description: Node manager engine type CAPI or MCM
         - name: Observed
           jsonPath: .status.deckhouse.observed.lastTimestamp
           type: string
@@ -1354,6 +1358,13 @@ spec:
               type: object
               required: []
               properties:
+                engine:
+                  type: string
+                  enum:
+                    - "CAPI"
+                    - "MCM"
+                    - "None"
+                  description: Type of node manager management controller MCM or CAPI
                 ready:
                   type: integer
                   description: Number of ready Kubernetes nodes in the group.

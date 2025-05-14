@@ -1,7 +1,7 @@
 {{- range $ng := .Values.nodeManager.internal.nodeGroups }}
   {{- if or (eq $ng.nodeType "CloudEphemeral") (eq $ng.nodeType "Cloud") }}
     {{- if hasKey $.Values.nodeManager.internal "cloudProvider" }}
-      {{- if $.Values.nodeManager.internal.cloudProvider.capiClusterKind }}
+      {{- if eq $ng.engine "CAPI" }}
         {{- range $zone_name := $ng.cloudInstances.zones }}
           {{ $instance_class_checksum := include "capi_node_group_instance_class_checksum" (list $ $ng) }}
           {{ $instance_class_hash := printf "%v%v%v" $.Values.global.discovery.clusterUUID $zone_name $instance_class_checksum | sha256sum | trunc 8 }}
@@ -11,12 +11,14 @@
           {{- include "capi_node_group_machine_template" (list $ $ng $zone_name $template_name $instance_class_checksum) }}
           {{- include "capi_node_group_machine_deployment" (list $ $ng $zone_name $template_name $bootstrap_secret_name $instance_class_checksum) }}
         {{- end }}
-      {{- else }}
+      {{- else if eq $ng.engine "MCM" }}
         {{- range $zone_name := $ng.cloudInstances.zones }}
           {{- include "node_group_machine_class" (list $ $ng $zone_name) }}
           {{- include "node_group_machine_class_secret" (list $ $ng $zone_name) }}
           {{- include "node_group_machine_deployment" (list $ $ng $zone_name) }}
         {{- end }}
+      {{- else }}
+        {{- fail (printf "Incorrect engine % for node group %s" $ng.engine $ng.name) }}
       {{- end }}
     {{- end }}
   {{- else }}

@@ -257,6 +257,10 @@ properties:
               type: string
               description: |
                 A name of the NodeGroup.
+            engine:
+              type: string
+              description: |
+                Engine of node group
             manualRolloutID:
               type: string
               description: |
