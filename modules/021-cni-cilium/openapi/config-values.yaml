@@ -252,8 +252,8 @@ properties:
       - `Disabled` — encryption is disabled.
       - `Wireguard` — traffic encryption between pods and nodes is enabled using WireGuard.
 
-      > Note! Before enabling WireGuard, please ensure that the Linux distribution running on the cluster nodes has support for WireGuard in kernel mode (either, kernel config CONFIG_WIREGUARD=m is set on Linux 5.6 and newer, or via an external WireGuard module on older kernels).
+      > Note! Before using WireGuard encryption, please ensure that the Linux kernel running on the cluster nodes has support WireGuard (either, kernel config CONFIG_WIREGUARD=m is set on Linux 5.6 and newer, or via an external WireGuard module on older kernels).
 
-      > Note! Enabling WireGuard may entail significant CPU comsumption by Cilium agent pods.
+      > Note! Using WireGuard may entail significant CPU comsumption by Cilium agent pods.
 
-      > Note! The node-to-node traffic from and to the control-plane nodes is left unencrypted to prevent possible communication issues between control-plane and worker nodes when renewing Wireguard public key.
+      > Note! The node-to-node traffic from and to the control-plane nodes is left unencrypted to prevent possible communication issues when renewing WireGuard public key.
