@@ -10,7 +10,7 @@ title: "The cni-cilium module: examples"
 
 Configuring an egress gateway requires two custom resources:
 
-1. EgressGateway`— describes the group of nodes that perform the egress gateway function in hot-standby mode:
+1. EgressGateway— describes the group of nodes that perform the egress gateway function in hot-standby mode:
    - Among the group of nodes match the `spec.nodeSelector`, the eligible nodes will be selected. One of them will be assigned as the active gateway. The active node is selected in [alphabetical order](https://docs.cilium.io/en/latest/network/egress-gateway/egress-gateway/index.html#selecting-and-configuring-the-gateway-node).
 
      Attributes of an eligible node:
