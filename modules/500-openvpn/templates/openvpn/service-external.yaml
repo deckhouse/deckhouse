@@ -47,7 +47,12 @@ spec:
             - /kubectl
             - delete
             - service
-            - {{ $serviceName }}
+            {{- if .Values.openvpn.tcpEnabled }}
+            - {{ $tcpServiceName }}
+            {{- end }}
+            {{- if .Values.openvpn.udpEnabled }}
+            - {{ $udpServiceName }}
+            {{- end }}
             - -n
             - {{ $namespace }}
             - --ignore-not-found=true
