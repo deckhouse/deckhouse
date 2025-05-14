@@ -21,7 +21,7 @@ shell:
   - rm -rf /src/cloud-utils/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-from: {{ $.Images.BASE_SCRATCH }}
+fromImage: builder/scratch
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
