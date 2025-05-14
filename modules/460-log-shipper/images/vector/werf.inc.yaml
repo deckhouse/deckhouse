@@ -1,6 +1,6 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/alt-p11
+fromImage: common/distroless
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-reloader-artifact
     add: /reloader
@@ -70,6 +70,7 @@ shell:
     fi
   - git config --global url."$(cat /run/secrets/SOURCE_REPO)".insteadOf https://github.com
   - |
+    RUSTFLAGS='-Ctarget-feature=+crt-static' \
     cargo build \
     --release \
     -j $(($(nproc) /2)) \
