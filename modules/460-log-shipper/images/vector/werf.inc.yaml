@@ -1,6 +1,6 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/distroless
+fromImage: common/alt-p11
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-reloader-artifact
     add: /reloader
