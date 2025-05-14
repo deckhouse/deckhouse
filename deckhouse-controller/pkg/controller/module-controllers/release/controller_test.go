@@ -30,7 +30,7 @@ import (
 
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
+	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -136,13 +136,13 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	ctx := suite.Context()
 
 	dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
-		ManifestStub: func() (*v1.Manifest, error) {
-			return &v1.Manifest{
-				Layers: []v1.Descriptor{},
+		ManifestStub: func() (*crv1.Manifest, error) {
+			return &crv1.Manifest{
+				Layers: []crv1.Descriptor{},
 			}, nil
 		},
-		LayersStub: func() ([]v1.Layer, error) {
-			return []v1.Layer{&utils.FakeLayer{}}, nil
+		LayersStub: func() ([]crv1.Layer, error) {
+			return []crv1.Layer{&utils.FakeLayer{}}, nil
 		},
 	}, nil)
 
@@ -206,8 +206,8 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("loop until deploy: canary", func() {
 		dc := dependency.NewMockedContainer()
-		dc.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
-			return []v1.Layer{&utils.FakeLayer{}}, nil
+		dc.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]crv1.Layer, error) {
+			return []crv1.Layer{&utils.FakeLayer{}}, nil
 		}}, nil)
 
 		mup := &v1alpha2.ModuleUpdatePolicySpec{
@@ -336,6 +336,19 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		})
 	})
 
+	suite.Run("Patch awaits update window", func() {
+		mup := embeddedMUP.DeepCopy()
+		mup.Update.Windows = update.Windows{{From: "8:00", To: "8:01", Days: update.Everyday()}}
+
+		testData := suite.fetchTestFileData("patch-awaits-update-window.yaml")
+		suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
+
+		_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
+		require.NoError(suite.T(), err)
+		_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.3"))
+		require.NoError(suite.T(), err)
+	})
+
 	suite.Run("Reinstall", func() {
 		mup := &v1alpha2.ModuleUpdatePolicySpec{
 			Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
@@ -351,6 +364,18 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
 		require.NoError(suite.T(), err)
 		_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("Process force release", func() {
+		suite.setupReleaseController(suite.fetchTestFileData("apply-force-release.yaml"))
+
+		mr := suite.getModuleRelease("parca-1.2.1")
+		_, err := suite.ctr.handleRelease(context.TODO(), mr)
+		require.NoError(suite.T(), err)
+
+		mr = suite.getModuleRelease("parca-1.5.2")
+		_, err = suite.ctr.handleRelease(context.TODO(), mr)
 		require.NoError(suite.T(), err)
 	})
 

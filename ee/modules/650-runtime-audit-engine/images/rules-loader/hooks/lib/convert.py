@@ -38,6 +38,10 @@ def convert_spec(spec: dict) -> list:
             if source is not None:
                 converted_item["source"] = snakecase(source)
 
+            priority = item["rule"].get("priority")
+            if priority is not None:
+                converted_item["priority"] = priority.upper()
+
             result.append(converted_item)
             continue
         if item.get("macro") is not None:

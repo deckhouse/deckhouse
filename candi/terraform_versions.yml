@@ -16,6 +16,7 @@ aws:
   artifactBinary: terraform-provider-aws
   # provider binary name with destination image
   destinationBinary: terraform-provider-aws
+  useOpentofu: false
 
 azure:
   namespace: hashicorp
@@ -25,6 +26,7 @@ azure:
   artifact: terraform-provider-azure
   artifactBinary: terraform-provider-azurerm
   destinationBinary: terraform-provider-azurerm
+  useOpentofu: false
 
 gcp:
   namespace: hashicorp
@@ -34,6 +36,7 @@ gcp:
   artifact: terraform-provider-gcp
   artifactBinary: terraform-provider-gcp
   destinationBinary: terraform-provider-google
+  useOpentofu: false
 
 openstack:
   namespace: terraform-provider-openstack
@@ -43,6 +46,7 @@ openstack:
   artifact: terraform-provider-openstack
   artifactBinary: terraform-provider-openstack
   destinationBinary: terraform-provider-openstack
+  useOpentofu: false
 
 ovirt:
   namespace: terraform-provider-ovirt
@@ -52,6 +56,7 @@ ovirt:
   artifact: terraform-provider-ovirt
   artifactBinary: terraform-provider-ovirt
   destinationBinary: terraform-provider-ovirt
+  useOpentofu: true
 
 vsphere:
   namespace: hashicorp
@@ -61,6 +66,7 @@ vsphere:
   artifact: terraform-provider-vsphere
   artifactBinary: terraform-provider-vsphere
   destinationBinary: terraform-provider-vsphere
+  useOpentofu: false
 
 vcd:
   namespace: vmware
@@ -70,6 +76,7 @@ vcd:
   artifact: terraform-provider-vcd-artifact
   artifactBinary: terraform-provider-vcd
   destinationBinary: terraform-provider-vcd
+  useOpentofu: false
 
 yandex:
   namespace: yandex-cloud
@@ -89,6 +96,7 @@ decort:
   artifact: terraform-provider-decort
   artifactBinary: terraform-provider-decort
   destinationBinary: terraform-provider-decort
+  useOpentofu: true
 
 huaweicloud:
   namespace: terraform-provider-huaweicloud
@@ -98,3 +106,4 @@ huaweicloud:
   artifact: terraform-provider-huaweicloud
   artifactBinary: terraform-provider-huaweicloud
   destinationBinary: terraform-provider-huaweicloud
+  useOpentofu: false

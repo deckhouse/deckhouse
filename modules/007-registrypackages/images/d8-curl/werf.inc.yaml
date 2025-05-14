@@ -10,9 +10,12 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch curl-{{ $version | replace "." "_"}} {{ $.SOURCE_REPO }}/curl/curl.git /src/curl
+  - git clone --depth 1 --branch curl-{{ $version | replace "." "_"}} $(cat /run/secrets/SOURCE_REPO)/curl/curl.git /src/curl
   - rm -rf /src/curl/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}

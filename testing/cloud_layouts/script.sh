@@ -1215,6 +1215,33 @@ function wait_cluster_ready() {
     return 1
   fi
 
+  if [[ $TEST_AUTOSCALER_ENABLED == "true" ]] ; then
+    testAutoscalerScript=$(cat "$(pwd)/deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_autoscaler.sh")
+
+    testRunAttempts=5
+    for ((i=1; i<=$testRunAttempts; i++)); do
+      if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testAutoscalerScript}"; then
+        test_failed=""
+        break
+      else
+        test_failed="true"
+        >&2 echo "Run test script via SSH: attempt $i/$testRunAttempts failed. Sleeping 30 seconds..."
+        sleep 30
+      fi
+    done
+  else
+    echo "Autoscaler test skipped."
+  fi
+
+  if [[ $test_failed == "true" ]] ; then
+    return 1
+  fi
+
+  if [[ "$SLEEP_BEFORE_TESTING_CLUSTER_ALERTS" != "" && "$SLEEP_BEFORE_TESTING_CLUSTER_ALERTS" != "0" ]]; then
+    echo "Sleeping $SLEEP_BEFORE_TESTING_CLUSTER_ALERTS seconds before check cluster alerts"
+    sleep "$SLEEP_BEFORE_TESTING_CLUSTER_ALERTS"
+  fi
+
   testAlerts=$(cat "$(pwd)/deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_alerts.sh")
 
   test_failed="true"
@@ -1229,6 +1256,21 @@ function wait_cluster_ready() {
   if [[ $test_failed == "true" ]] ; then
       return 1
   fi
+
+  testOpenvpnReady=$(cat "/deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_openvpn_ready.sh")
+
+  test_failed="true"
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" \
+      sudo su -c /bin/bash <<<"${testOpenvpnReady}"; then
+      test_failed=""
+    else
+      >&2 echo "OpenVPN test failed for Static provider. Sleeping 30 seconds..."
+      sleep 30
+    fi
+
+    if [[ $test_failed == "true" ]]; then
+      return 1
+    fi
 
   if [[ $CIS_ENABLED == "true" ]]; then
     testCisScript=$(cat "$(pwd)/deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_cis.sh")

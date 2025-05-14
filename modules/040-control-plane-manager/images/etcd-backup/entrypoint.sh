@@ -18,6 +18,7 @@ set -xe
 cd /tmp/
 etcd=etcd-backup.snapshot
 archive=etcd-backup.tar.gz
+backup_dir_on_host=${HOSTPATH}
 etcdctl \
     --endpoints=https://127.0.0.1:2379 \
     --cacert=/etc/kubernetes/pki/etcd/ca.crt \
@@ -26,10 +27,10 @@ etcdctl \
     snapshot save "${etcd}"
 tar -czvf "${archive}" "${etcd}"
 # Check that there is enough free space
-if [ $(df -B1 /var/lib/etcd/ | tail -1 | awk -v ETCDQUOTA="${ETCDQUOTA}" '{printf "%.0f\n", $4 - (ETCDQUOTA * 2)}') -ge 0 ]; then
+if [ $(df -B1 /var/backup | tail -1 | awk -v ETCDQUOTA="${ETCDQUOTA}" '{printf "%.0f\n", $4 - (ETCDQUOTA * 2)}') -ge 0 ]; then
     chmod 0600 "${archive}"
-    mv "${archive}" "/var/lib/etcd/${archive}"
+    mv "${archive}" "/var/backup/${archive}"
 else
-    echo "Free space in /var/lib/etcd/ is too small for backup should be more than double size ETCDQUOTA (${ETCDQUOTA} bytes)"
+    echo "Free space in ${backup_dir_on_host} is too small for backup should be more than double size ETCDQUOTA (${ETCDQUOTA} bytes)"
     exit 1
 fi

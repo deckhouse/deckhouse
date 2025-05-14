@@ -1,0 +1,79 @@
+{{- if .Values.istio.multicluster.enabled }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: multicluster-metrics-exporter
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "metrics-exporter")) | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:istio:multicluster:metrics-exporter:d8-rbac-proxy
+  {{- include "helm_lib_module_labels" (list . (dict "app" "metrics-exporter")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:rbac-proxy
+subjects:
+- kind: ServiceAccount
+  name: multicluster-metrics-exporter
+  namespace: d8-{{ $.Chart.Name }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:istio:multicluster:metrics-exporter
+  {{- include "helm_lib_module_labels" (list . (dict "app" "metrics-exporter")) | nindent 2 }}
+rules:
+  - apiGroups: [""]
+    resources: ["serviceaccounts/token"]
+    verbs: ["create"]
+  - apiGroups: ["authentication.k8s.io"]
+    resources: ["tokenreviews"]
+    verbs: ["create"]
+  - apiGroups: ["authorization.k8s.io"]
+    resources: ["subjectaccessreviews"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:istio:multicluster:metrics-exporter
+  {{- include "helm_lib_module_labels" (list . (dict "app" "metrics-exporter")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:istio:multicluster:metrics-exporter
+subjects:
+- kind: ServiceAccount
+  name: multicluster-metrics-exporter
+  namespace: d8-{{ $.Chart.Name }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: multicluster:metrics-exporter
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "metrics-exporter")) | nindent 2 }}
+rules:
+  - apiGroups: [ "" ]
+    resources: [ "pods" ]
+    verbs: [ "get", "list", "watch" ]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: multicluster:metrics-exporter
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "metrics-exporter")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: multicluster:metrics-exporter
+subjects:
+- kind: ServiceAccount
+  name: multicluster-metrics-exporter
+  namespace: d8-istio
+{{- end }}

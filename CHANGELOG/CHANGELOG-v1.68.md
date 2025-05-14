@@ -145,6 +145,7 @@
  - **[registrypackages]** CVE update ec2-describe-tags. [#12115](https://github.com/deckhouse/deckhouse/pull/12115)
  - **[registrypackages]** Bumped the `docker_auth` version in in `docker-registry`. [#11600](https://github.com/deckhouse/deckhouse/pull/11600)
  - **[registrypackages]** Fixed security vulnerabilities in `crictl`. [#11523](https://github.com/deckhouse/deckhouse/pull/11523)
+ - **[runtime-audit-engine]** Fix CrashLoopBack due to invalid config. [#13144](https://github.com/deckhouse/deckhouse/pull/13144)
  - **[runtime-audit-engine]** copy falcosecurity_falcosidekick_falco_events_total metric to falco_events for backward compatibility [#12873](https://github.com/deckhouse/deckhouse/pull/12873)
  - **[runtime-audit-engine]** Fixed security vulnerabilities in `k8s-metacollector` and `rules-loader`. [#11581](https://github.com/deckhouse/deckhouse/pull/11581)
  - **[service-with-healthchecks]** Fixed several issues. [#12272](https://github.com/deckhouse/deckhouse/pull/12272)

@@ -19,7 +19,7 @@ package checker
 import (
 	"crypto/tls"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 
@@ -81,7 +81,7 @@ func doRequest(client *http.Client, req *http.Request) ([]byte, check.Error) {
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, check.ErrFail("cannot read response body: %v", err)
 	}

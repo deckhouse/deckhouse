@@ -1,0 +1,20 @@
+Subject: [PATCH] fix ListRoutes implementation
+---
+Index: pkg/providers/v1/aws_routes.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/providers/v1/aws_routes.go b/pkg/providers/v1/aws_routes.go
+--- a/pkg/providers/v1/aws_routes.go	(revision a5c80a4686394a1971d117d39eb0460694877636)
++++ b/pkg/providers/v1/aws_routes.go	(date 1746511538247)
+@@ -116,7 +116,8 @@
+ 			if found {
+ 				node, err := c.instanceIDToNodeName(InstanceID(instanceID))
+ 				if err != nil {
+-					return nil, err
++					klog.Errorf("error converting instance ID '%s' to node name: %w", instanceID, err)
++					continue
+ 				}
+ 				route.TargetNode = node
+ 				routes = append(routes, route)

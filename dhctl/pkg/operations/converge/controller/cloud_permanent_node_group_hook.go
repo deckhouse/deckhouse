@@ -17,9 +17,8 @@ package controller
 import (
 	"context"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	infra_utils "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/utils"
 )
 
@@ -44,7 +43,7 @@ func NewHookForDestroyPipeline(getter kubernetes.KubeClientProvider, nodeToDestr
 }
 
 func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infrastructure.RunnerInterface) (runPostAction bool, err error) {
-	err = infra_utils.TryToDrainNode(ctx, h.getter.KubeClient(), h.nodeToDestroy)
+	err = infra_utils.TryToDrainNode(ctx, h.getter.KubeClient(), h.nodeToDestroy, infra_utils.GetDrainConfirmation(h.commanderMode), infra_utils.DrainOptions{Force: false})
 	if err != nil {
 		return false, err
 	}
