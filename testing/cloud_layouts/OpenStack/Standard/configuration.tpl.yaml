@@ -46,7 +46,7 @@ masterNodeGroup:
   volumeTypeMap:
     ru-3a: "fast.ru-3a"
 nodeGroups:
-- name: cloud-permanent
+- name: cp
   nodeTemplate:
     labels:
       node-role.kubernetes.io/worker: ''
