@@ -17,8 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"context"
-	"fmt"
 	"strings"
 	"time"
 
@@ -28,14 +26,9 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnAfterDeleteHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "ingress-nginx-daemonset",
@@ -54,7 +47,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: filterIngressNginxDaemonset,
 		},
 	},
-}, dependency.WithExternalDependencies(handleIngressNginxControllerStatus))
+}, handleStatusUpdater)
 
 type DaemonSet struct {
 	Metadata struct {
@@ -97,59 +90,7 @@ func filterIngressNginxDaemonset(obj *unstructured.Unstructured) (go_hook.Filter
 	}, nil
 }
 
-func handleIngressNginxControllerStatus(input *go_hook.HookInput, dc dependency.Container) error {
-	// Handle module disabling
-	enabledModules := set.NewFromValues(input.Values, "global.enabledModules")
-	if !enabledModules.Has("ingress-nginx") {
-		k8sClient, err := dc.GetK8sClient()
-		if err != nil {
-			return fmt.Errorf("failed to initialize Kubernetes client: %w", err)
-		}
-
-		controllersList, err := k8sClient.Dynamic().Resource(schema.GroupVersionResource{
-			Group:    "deckhouse.io",
-			Version:  "v1",
-			Resource: "ingressnginxcontrollers",
-		}).List(context.TODO(), metav1.ListOptions{})
-		if err != nil {
-			return fmt.Errorf("error to read list of IngressNginxControllers: %w", err)
-		}
-
-		for _, unstructuredController := range controllersList.Items {
-			controllerName, found, err := unstructured.NestedString(unstructuredController.Object, "metadata", "name")
-			if err != nil || !found {
-				return fmt.Errorf("failed to get metadata.name for controller: %v", err)
-			}
-
-			statusPatch := map[string]any{
-				"status": map[string]any{
-					"version": "unknown",
-					"conditions": []map[string]any{
-						{
-							"type":           "Ready",
-							"status":         "False",
-							"lastUpdateTime": time.Now().Format(time.RFC3339),
-							"reason":         "ModuleDisabled",
-							"message":        "Ingress-nginx module is disabled",
-						},
-					},
-				},
-			}
-
-			input.PatchCollector.MergePatch(
-				statusPatch,
-				"deckhouse.io/v1",
-				"IngressNginxController",
-				"",
-				controllerName,
-				object_patch.WithSubresource("/status"),
-			)
-		}
-		input.Values.Remove("ingressNginx.internal.appliedControllerVersion")
-		return nil
-	}
-
-	// Handle status changing
+func handleStatusUpdater(input *go_hook.HookInput) error {
 	daemonSetSnapshots := input.Snapshots["ingress-nginx-daemonset"]
 	for _, snap := range daemonSetSnapshots {
 		daemonSetInfo := snap.(DaemonSetFilterResult)
