@@ -473,6 +473,9 @@ list:
 
 `nginx.ingress.kubernetes.io/configuration-snippet: | {{ include "helm_lib_module_ingress_configuration_snippet" . | nindent 6 }} `
 
+#### Arguments
+
+-  Template context with .Values, .Chart, etc 
 
 ## Module Init Container
 

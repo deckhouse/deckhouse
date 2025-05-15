@@ -62,6 +62,7 @@ memory: 50Mi
   {{- $additionalControllerArgs := $config.additionalControllerArgs }}
   {{- $additionalControllerVolumes := $config.additionalControllerVolumes }}
   {{- $additionalControllerVolumeMounts := $config.additionalControllerVolumeMounts }}
+  {{- $additionalControllerVPA := $config.additionalControllerVPA }}
   {{- $additionalContainers := $config.additionalContainers }}
   {{- $csiControllerHostNetwork := $config.csiControllerHostNetwork | default "true" }}
   {{- $livenessProbePort := $config.livenessProbePort | default 9808 }}
@@ -155,6 +156,9 @@ spec:
       maxAllowed:
         cpu: 20m
         memory: 100Mi
+    {{- if $additionalControllerVPA }}
+    {{- $additionalControllerVPA | toYaml | nindent 4 }}
+    {{- end }}
     {{- end }}
 ---
 apiVersion: policy/v1
