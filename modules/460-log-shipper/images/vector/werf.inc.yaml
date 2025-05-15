@@ -10,6 +10,14 @@ import:
     add: /relocate
     to: /
     before: install
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+    add: /relocate/lib64
+    to: /lib
+    before: install
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+    add: /relocate/lib64
+    to: /lib64
+    before: install
 imageSpec:
   config:
     entrypoint: ["/usr/bin/vector"]
@@ -69,12 +77,9 @@ shell:
       echo 'index = "sparse+http://'${CARGO_PROXY}'/index/"' >> .cargo/config.toml
     fi
   - git config --global url."$(cat /run/secrets/SOURCE_REPO)".insteadOf https://github.com
-  - rustup target add x86_64-unknown-linux-musl
   - |
-    RUSTFLAGS='-C target-feature=+crt-static' \
     cargo build \
     --release \
-    --target x86_64-unknown-linux-musl \
     -j $(($(nproc) /2)) \
     --no-default-features \
     --features "api,api-client,enrichment-tables,sources-host_metrics,sources-internal_metrics,sources-file,sources-kubernetes_logs,transforms,sinks-prometheus,sinks-blackhole,sinks-elasticsearch,sinks-file,sinks-loki,sinks-socket,sinks-console,sinks-vector,sinks-kafka,sinks-splunk_hec,unix,rdkafka?/gssapi-vendored"
@@ -106,3 +111,15 @@ shell:
   - go build -ldflags="-s -w" -o /reloader main.go
   - chown 64535:64535 /reloader
   - chmod 755 /reloader
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+final: false
+fromImage: common/relocate-artifact
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /relocate
+    to: /
+    before: install
+shell:
+  install:
+  - /binary_replace.sh -i /usr/bin/vector -o /relocate
