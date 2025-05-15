@@ -121,6 +121,10 @@ func (c *MasterNodeGroupController) Run() error {
 		if err := c.lockRunner.Run(c.run); err != nil {
 			return fmt.Errorf("failed to run lock runner: %w", err)
 		}
+	} else {
+		if err := c.run(); err != nil {
+			return fmt.Errorf("failed to run runner: %w", err)
+		}
 	}
 
 	return nil
