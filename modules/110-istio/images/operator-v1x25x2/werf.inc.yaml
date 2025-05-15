@@ -18,6 +18,9 @@ import:
   add: /src/operator/resources
   to: /var/lib/sail-operator/resources
   after: setup
+shell:
+  beforeInstall:
+  - rm -rf /var/lib/sail-operator/resources/v1.25.2/charts/istiod/templates/serviceaccount.yaml
 imageSpec:
   config:
     user: "1337:1337"
@@ -55,15 +58,15 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
-git:
-- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
-  to: /patches
-  stageDependencies:
-    install:
-    - '**/*'
+# git:
+# - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+#   to: /patches
+#   stageDependencies:
+#     install:
+#     - '**/*'
 shell:
   install:
   - git clone --depth 1 --branch {{ $istioVersion }} {{ $.SOURCE_REPO }}/istio/sail-operator.git /src/operator
   - cd /src/operator/
-  - git apply --verbose /patches/*.patch
+  # - git apply --verbose /patches/*.patch
 ---
