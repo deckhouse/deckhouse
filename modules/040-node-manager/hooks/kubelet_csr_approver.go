@@ -30,14 +30,14 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	cv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"k8s.io/klog/v2"
 )
 
 type CsrInfo struct {
@@ -63,21 +63,6 @@ func csrFilterFunc(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 	err := sdk.FromUnstructured(obj, csr)
 	if err != nil {
 		return nil, err
-	}
-
-	// CSR already has a certificate, ignoring
-	if len(csr.Status.Certificate) != 0 {
-		return nil, nil
-	}
-
-	// CSR already has a approval status
-	for _, c := range csr.Status.Conditions {
-		if c.Type == cv1.CertificateApproved {
-			return nil, nil
-		}
-		if c.Type == cv1.CertificateDenied {
-			return nil, nil
-		}
 	}
 
 	ret := &CsrInfo{
@@ -170,6 +155,12 @@ func hasExactUsages(csr *cv1.CertificateSigningRequest, usages []cv1.KeyUsage) b
 }
 
 func appendApprovalCondition(csr *cv1.CertificateSigningRequest) {
+	for _, cond := range csr.Status.Conditions {
+		if cond.Type == cv1.CertificateApproved || cond.Type == cv1.CertificateDenied {
+			klog.Info("Filter in appendApprovalCondition func,CSR already approved/denied, skipping", "name", csr.Name)
+			return
+		}
+	}
 	csr.Status.Conditions = append(csr.Status.Conditions, cv1.CertificateSigningRequestCondition{
 		Type:    cv1.CertificateApproved,
 		Status:  corev1.ConditionTrue,
