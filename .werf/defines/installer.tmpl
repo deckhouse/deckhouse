@@ -178,7 +178,6 @@
   add: /usr/lib64
   to: /usr/lib
   includePaths:
-  - usr/bin/openssl
   - libcrypto.so*
   - libssl.so*
   - engines-3
@@ -187,7 +186,6 @@
 - image: libs/openssl
   add: /usr/bin/openssl
   to: /usr/bin/openssl
-  before: install
   before: install
 - image: tools/vim
   add: /
