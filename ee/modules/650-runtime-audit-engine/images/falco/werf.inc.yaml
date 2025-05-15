@@ -1,4 +1,4 @@
-{{- $falcoVersion := "0.39.2" }}
+{{- $falcoVersion := "0.40.0" }}
 {{- $falcoctlVersion := "0.10.1" }}
 {{- $pluginsVersion := "plugins/kafka/v0.1.3" }}
 ---
