@@ -310,13 +310,9 @@ shell:
 
     EOD
 
-    rm -f /root/.bashrc
+    mkdir -p /root
     ln -s /etc/bashrc /root/.bashrc
-    rm -f  /.bashrc
     ln -s /etc/bashrc /.bashrc
-
-    ln -fs /usr/bin/vim-console /usr/bin/vim
-    ln -fs /usr/bin/vim-console /usr/bin/vi
 
     mkdir -p /etc/vim
     cat <<"EOD" > /etc/vim/vimrc.local
@@ -326,7 +322,7 @@ shell:
     echo 'eval "$(dhctl --completion-script-bash)"' >> /etc/bashrc
     echo '{{- $context.CI_COMMIT_TAG }}' > /deckhouse/version
 
-    cat << EOD > /root/.tofurc
+    cat << EOD > /.tofurc
     provider_installation {
       filesystem_mirror {
         path    = "/plugins"
@@ -334,6 +330,7 @@ shell:
       }
     }
     EOD
+    ln -s /.tofurc /root/.tofurc
 
 {{- end }}
 
