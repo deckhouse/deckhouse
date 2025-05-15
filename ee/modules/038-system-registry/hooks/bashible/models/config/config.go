@@ -23,7 +23,7 @@ const (
 	ConfigSpecLocation = "systemRegistry.internal.bashible.config"
 )
 
-type ConfigModel registry_models.BashibleConfigSecret
+type ConfigModel registry_models.Config
 
 func Get(input *go_hook.HookInput) (*ConfigModel, error) {
 	var ret ConfigModel
