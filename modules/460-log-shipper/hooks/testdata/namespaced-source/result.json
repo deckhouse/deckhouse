@@ -190,6 +190,20 @@
         "verify_certificate": true
       },
       "compression": "gzip",
+      "labels": {
+        "container": "{{ container }}",
+        "foo": "bar",
+        "host": "{{ host }}",
+        "image": "{{ image }}",
+        "namespace": "{{ namespace }}",
+        "node": "{{ node }}",
+        "node_group": "{{ node_group }}",
+        "pod": "{{ pod }}",
+        "pod_ip": "{{ pod_ip }}",
+        "pod_labels_*": "{{ pod_labels }}",
+        "pod_owner": "{{ pod_owner }}",
+        "stream": "{{ stream }}"
+      },
       "bulk": {
         "action": "index",
         "index": "logs-%F"

@@ -114,6 +114,20 @@
       },
       "pipeline": "testpipe",
       "mode": "bulk",
+      "labels": {
+        "container": "{{ container }}",
+        "foo": "bar",
+        "host": "{{ host }}",
+        "image": "{{ image }}",
+        "namespace": "{{ namespace }}",
+        "node": "{{ node }}",
+        "node_group": "{{ node_group }}",
+        "pod": "{{ pod }}",
+        "pod_ip": "{{ pod_ip }}",
+        "pod_labels_*": "{{ pod_labels }}",
+        "pod_owner": "{{ pod_owner }}",
+        "stream": "{{ stream }}"
+      },
       "suppress_type_name": true
     }
   }
