@@ -54,8 +54,8 @@ ln -s ${PWD}/${WORKDIR}/bin/trivy-${TRIVY_BIN_VERSION}/trivy ${WORKDIR}/bin/triv
 
 echo "Updating Trivy Data Bases"
 mkdir -p "${WORKDIR}/bin/trivy_cache"
-${WORKDIR}/bin/trivy image --username "${trivy_registry_user}" --password "${trivy_registry_pass}" --download-db-only --db-repository "${TRIVY_DB_URL}" --cache-dir "${WORKDIR}/bin/trivy_cache"
-${WORKDIR}/bin/trivy image --username "${trivy_registry_user}" --password "${trivy_registry_pass}" --download-java-db-only --java-db-repository "${TRIVY_JAVA_DB_URL}" --cache-dir "${WORKDIR}/bin/trivy_cache"
+${WORKDIR}/bin/trivy image --username "${DEV_REGISTRY_USER}" --password "${DEV_REGISTRY_PASSWORD}" --download-db-only --db-repository "${TRIVY_DB_URL}" --cache-dir "${WORKDIR}/bin/trivy_cache"
+${WORKDIR}/bin/trivy image --username "${DEV_REGISTRY_USER}" --password "${DEV_REGISTRY_PASSWORD}" --download-java-db-only --java-db-repository "${TRIVY_JAVA_DB_URL}" --cache-dir "${WORKDIR}/bin/trivy_cache"
 
 echo "----------------------------------------------"
 echo ""
