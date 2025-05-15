@@ -1,0 +1,75 @@
+diff --git a/controllers/istiorevision/istiorevision_controller.go b/controllers/istiorevision/istiorevision_controller.go
+index 5e97cde4..9bcba5c0 100644
+--- a/controllers/istiorevision/istiorevision_controller.go
++++ b/controllers/istiorevision/istiorevision_controller.go
+@@ -21,6 +21,8 @@ import (
+ 	"path"
+ 	"reflect"
+ 	"regexp"
++	"strings"
++	"time"
+ 
+ 	"github.com/go-logr/logr"
+ 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+@@ -164,13 +166,56 @@ func (r *Reconciler) installHelmCharts(ctx context.Context, rev *v1.IstioRevisio
+ 		BlockOwnerDeletion: ptr.Of(true),
+ 	}
+ 
++	releaseName := getReleaseName(rev)
+ 	values := helm.FromValues(rev.Spec.Values)
+-	_, err := r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(rev),
+-		values, rev.Spec.Namespace, getReleaseName(rev), ownerReference)
+-	if err != nil {
+-		return fmt.Errorf("failed to install/update Helm chart %q: %w", constants.IstiodChartName, err)
++	maxAttempts := 3
++	attempt := 0
++
++	for {
++		attempt++
++		_, err := r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(rev),
++			values, rev.Spec.Namespace, releaseName, ownerReference)
++
++		if err == nil {
++			return nil // Success
++		}
++
++		// Handle uninstall conflict
++		if strings.Contains(err.Error(), "unexpected helm release status uninstalling") {
++			if attempt >= maxAttempts {
++				return fmt.Errorf("failed after %d attempts (last error: %w)", maxAttempts, err)
++			}
++
++			// Exponential backoff
++			waitTime := time.Duration(attempt*attempt) * time.Second
++			logf.FromContext(ctx).Info("Waiting for uninstall to complete", "attempt", attempt, "waitTime", waitTime)
++			time.Sleep(waitTime)
++			continue
++		}
++
++		// Handle other errors (ownership conflicts, etc.)
++		return r.handleOtherErrors(ctx, rev, err, values, ownerReference)
+ 	}
+-	return nil
++}
++
++func (r *Reconciler) handleOtherErrors(ctx context.Context, rev *v1.IstioRevision, err error, values map[string]interface{}, owner metav1.OwnerReference) error {
++	// Your existing error handling logic here
++	if strings.Contains(err.Error(), "invalid ownership metadata") {
++		// Handle ownership conflicts
++		forcedValues := make(map[string]interface{})
++		for k, v := range values {
++			forcedValues[k] = v
++		}
++		forcedValues["force"] = true
++
++		_, forceErr := r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(rev),
++			forcedValues, rev.Spec.Namespace, getReleaseName(rev), owner)
++		if forceErr != nil {
++			return fmt.Errorf("failed with force install: %w", forceErr)
++		}
++		return nil
++	}
++	return fmt.Errorf("failed to install chart: %w", err)
+ }
+ 
+ func getReleaseName(rev *v1.IstioRevision) string {
