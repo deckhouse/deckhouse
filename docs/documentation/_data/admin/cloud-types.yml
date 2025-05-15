@@ -1,0 +1,16 @@
+types:
+  openstack:
+    name: "OpenStack"
+    link: "https://www.openstack.org/"
+  vk-private:
+    name: "VK Private Cloud"
+    link: "https://cloud.vk.com/private-cloud/"
+  vk:
+    name: "VK Cloud"
+    link: "https://cloud.vk.com/"
+  selectel:
+    name: "Selectel"
+    link: "https://selectel.ru/"
+  ovh:
+    name: "OVHcloud"
+    link: "https://www.ovhcloud.com/en-ie/"
