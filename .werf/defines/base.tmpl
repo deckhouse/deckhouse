@@ -250,7 +250,10 @@ import:
   - usr/bin/vim
   - usr/share/vim
   before: install
-
+- image: tools/less
+  add: /usr/bin/less
+  to: /usr/bin/less
+  before: install
 shell:
   install:
   {{- include "base components" (list $context.rootContext $context.prefix) | nindent 2 }}

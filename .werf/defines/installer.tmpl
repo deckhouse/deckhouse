@@ -196,6 +196,10 @@
   - usr/bin/vim
   - usr/share/vim
   before: install
+- image: tools/less
+  add: /usr/bin/less
+  to: /usr/bin/less
+  before: install
 {{- end }}
 
 
