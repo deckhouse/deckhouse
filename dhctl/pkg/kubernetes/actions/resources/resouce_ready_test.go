@@ -59,7 +59,7 @@ data:
 
 	t.Run("Static instance should return `not ready` if status.currentStatus.phase == Pending", func(t *testing.T) {
 		resourceUnstruct, name := toUnstructured(`
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: StaticInstance
 metadata:
   name: master-0
@@ -90,7 +90,7 @@ status:
 
 	t.Run("Static instance should return `ready` if status.currentStatus.phase == Running", func(t *testing.T) {
 		resourceUnstruct, name := toUnstructured(`
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: StaticInstance
 metadata:
   name: master-0

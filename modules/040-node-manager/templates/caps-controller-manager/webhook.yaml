@@ -12,7 +12,7 @@ webhooks:
       service:
         namespace: d8-cloud-instance-manager
         name: caps-controller-manager-webhook-service
-        path: /validate-deckhouse-io-v1alpha1-sshcredentials
+        path: /validate-deckhouse-io-v1alpha2-sshcredentials
       caBundle: {{ .Values.nodeManager.internal.capsControllerManagerWebhookCert.ca | b64enc }}
     failurePolicy: Fail
     name: vsshcredentials.deckhouse.io
@@ -20,7 +20,7 @@ webhooks:
       - apiGroups:
           - deckhouse.io
         apiVersions:
-          - v1alpha1
+          - v1alpha2
         operations:
           - CREATE
           - UPDATE
@@ -33,7 +33,7 @@ webhooks:
       service:
         namespace: d8-cloud-instance-manager
         name: caps-controller-manager-webhook-service
-        path: /validate-deckhouse-io-v1alpha1-staticinstance
+        path: /validate-deckhouse-io-v1alpha2-staticinstance
       caBundle: {{ .Values.nodeManager.internal.capsControllerManagerWebhookCert.ca | b64enc }}
     failurePolicy: Fail
     name: vstaticinstance.deckhouse.io
@@ -41,7 +41,7 @@ webhooks:
       - apiGroups:
           - deckhouse.io
         apiVersions:
-          - v1alpha1
+          - v1alpha2
         operations:
           - UPDATE
           - DELETE

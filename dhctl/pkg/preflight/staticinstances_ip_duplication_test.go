@@ -37,7 +37,7 @@ func TestCheckSIIPIntersection(t *testing.T) {
 			name: "happy path: 2 instances, different addresses",
 			fields: fields{metaConfig: &config.MetaConfig{
 				ResourcesYAML: `---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: StaticInstance
 metadata:
   name: static-0
@@ -47,7 +47,7 @@ spec:
     kind: SSHCredentials
     name: credentials
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: StaticInstance
 metadata:
   name: static-1
@@ -71,7 +71,7 @@ spec:
 			name: "happy path: single instance",
 			fields: fields{metaConfig: &config.MetaConfig{
 				ResourcesYAML: `---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: StaticInstance
 metadata:
   name: static-0
@@ -88,7 +88,7 @@ spec:
 			name: "intersects addresses",
 			fields: fields{metaConfig: &config.MetaConfig{
 				ResourcesYAML: `---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: StaticInstance
 metadata:
   name: static-0
@@ -98,7 +98,7 @@ spec:
     kind: SSHCredentials
     name: credentials
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: StaticInstance
 metadata:
   name: static-1
@@ -108,7 +108,7 @@ spec:
     kind: SSHCredentials
     name: credentials
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: StaticInstance
 metadata:
   name: static-2
@@ -118,7 +118,7 @@ spec:
     kind: SSHCredentials
     name: credentials
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: StaticInstance
 metadata:
   name: static-3
