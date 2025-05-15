@@ -152,3 +152,4 @@ shell:
   - cp libk8smeta.so /falco-package/usr/share/falco/plugins
   - make clean
   - /binary_replace.sh -i "/falco-package/usr/bin/falco" -o /falco-package
+  - rm -rf /falco-package/falco-package
