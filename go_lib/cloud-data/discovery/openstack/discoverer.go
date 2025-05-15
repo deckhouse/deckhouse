@@ -7,8 +7,6 @@ package openstack
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -52,13 +50,7 @@ func NewDiscoverer(logger *log.Logger, options ...Option) (*Discoverer, error) {
 		logger: logger,
 	}
 
-	systemCertPool, err := x509.SystemCertPool()
-	if err != nil {
-		return nil, fmt.Errorf("failed to copy system cert pool: %w", err)
-	}
-
 	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.TLSClientConfig = &tls.Config{RootCAs: systemCertPool}
 
 	discoverer.transport = transport
 
