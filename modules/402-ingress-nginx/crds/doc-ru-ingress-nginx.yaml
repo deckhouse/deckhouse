@@ -356,6 +356,9 @@ spec:
                 version:
                   description: |
                     Текущая примененная версия.
+                observedGeneration:
+                  description: |
+                    Значение `metadata.generation`, которое было обработано контроллером для данного объекта.
                 conditions:
                   items:
                     properties:
@@ -365,7 +368,7 @@ spec:
                       status:
                         description: |
                           Статус условия. Возможные значения:
-                          - `True`, 
+                          - `True`,
                           - `False`.
                       lastUpdateTime:
                         description: |
@@ -785,4 +788,3 @@ spec:
                     - "Журналы на уровне трассировки с подробным пошаговым контекстом."
                   description: |
                     Определяет уровень логирования для журналов Ingress controller.
-
