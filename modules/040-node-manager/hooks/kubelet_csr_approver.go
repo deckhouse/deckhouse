@@ -170,6 +170,11 @@ func hasExactUsages(csr *cv1.CertificateSigningRequest, usages []cv1.KeyUsage) b
 }
 
 func appendApprovalCondition(csr *cv1.CertificateSigningRequest) {
+	for _, cond := range csr.Status.Conditions {
+		if cond.Type == cv1.CertificateApproved || cond.Type == cv1.CertificateDenied {
+			return
+		}
+	}
 	csr.Status.Conditions = append(csr.Status.Conditions, cv1.CertificateSigningRequestCondition{
 		Type:    cv1.CertificateApproved,
 		Status:  corev1.ConditionTrue,
