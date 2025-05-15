@@ -357,6 +357,9 @@ spec:
                 version:
                   description: |
                     Текущая примененная версия.
+                observedGeneration:
+                  description: |
+                    Значение `metadata.generation`, которое было обработано контроллером для данного объекта.
                 conditions:
                   items:
                     properties:
@@ -366,7 +369,7 @@ spec:
                       status:
                         description: |
                           Статус условия. Возможные значения:
-                          - `True`, 
+                          - `True`,
                           - `False`.
                       lastUpdateTime:
                         description: |
@@ -869,3 +872,4 @@ spec:
                     > **Внимание.** Включение этой опции значительно увеличивает использование памяти и замедляет обработку запросов HTTP/HTTPS процессом NGINX.
 
                     > **Внимание.** Когда включена опция, под контроллера ingress-nginx запускается в привилегированном режиме.
+                    Определяет уровень логирования для журналов Ingress controller.
