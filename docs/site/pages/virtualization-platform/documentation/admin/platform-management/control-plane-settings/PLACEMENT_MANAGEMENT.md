@@ -49,7 +49,7 @@ For example:
 
 ```shell
 d8 k create -f - <<EOF
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: StaticInstance
 metadata:
 name: system-1

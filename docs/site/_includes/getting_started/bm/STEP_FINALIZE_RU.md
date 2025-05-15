@@ -123,7 +123,7 @@ ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
 <div markdown="1">
 ```bash
 sudo -i d8 k create -f - <<EOF
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: SSHCredentials
 metadata:
   name: caps
@@ -174,7 +174,7 @@ pdpl-user -i 63 caps
 # Укажите IP-адрес узла, который необходимо подключить к кластеру.
 export NODE=<NODE-IP-ADDRESS>
 sudo -i d8 k create -f - <<EOF
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: StaticInstance
 metadata:
   name: d8cluster-worker
