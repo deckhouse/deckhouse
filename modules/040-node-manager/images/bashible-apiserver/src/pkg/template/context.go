@@ -23,7 +23,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"sort"
 	"strings"
@@ -372,7 +371,7 @@ func (c *BashibleContext) update(src string) {
 	}
 
 	// write for ability to check generated context from container
-	_ = ioutil.WriteFile("/tmp/context.yaml", rawData, 0666)
+	_ = os.WriteFile("/tmp/context.yaml", rawData, 0666)
 
 	if len(checksumErrors) > 0 {
 		klog.Warning("Context was saved without checksums. Bashible context hasn't been upgraded")
@@ -381,7 +380,7 @@ func (c *BashibleContext) update(src string) {
 			_, _ = errStr.WriteString(fmt.Sprintf("\t%s: %s\n", bundle, err))
 		}
 		klog.Warningf("bundles checksums have errors:\n%s", errStr.String())
-		_ = ioutil.WriteFile("/tmp/context.error", []byte(errStr.String()), 0644)
+		_ = os.WriteFile("/tmp/context.error", []byte(errStr.String()), 0644)
 		return
 	}
 
