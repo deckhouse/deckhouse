@@ -20,6 +20,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack"
 	"github.com/gophercloud/gophercloud/openstack/blockstorage/v3/volumes"
 	"github.com/gophercloud/gophercloud/openstack/blockstorage/v3/volumetypes"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/availabilityzones"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
 	"github.com/gophercloud/gophercloud/openstack/imageservice/v2/images"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
@@ -148,6 +149,16 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, options *meta.DiscoveryD
 		return nil, fmt.Errorf("failed to get volume types: %v", err)
 	}
 
+	var zones []string
+	if discoveryData.Zones != nil {
+		zones = discoveryData.Zones
+	} else {
+		zones, err = d.getZones(ctx, provider)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get availability zones: %w", err)
+		}
+	}
+
 	discoveryDataJson, err := json.Marshal(v1alpha1.OpenStackCloudProviderDiscoveryData{
 		APIVersion:               "deckhouse.io/v1alpha1",
 		Kind:                     "OpenStackCloudProviderDiscoveryData",
@@ -157,7 +168,7 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, options *meta.DiscoveryD
 		DefaultImageName:         discoveryData.Instances.ImageName,
 		Images:                   images,
 		MainNetwork:              discoveryData.Instances.MainNetwork,
-		Zones:                    discoveryData.Zones,
+		Zones:                    zones,
 		VolumeTypes:              volumeTypes,
 	})
 	if err != nil {
@@ -236,6 +247,36 @@ func (d *Discoverer) getFlavors(ctx context.Context, provider *gophercloud.Provi
 	}
 
 	return flavors, nil
+}
+
+func (d *Discoverer) getZones(ctx context.Context, provider *gophercloud.ProviderClient) ([]string, error) {
+	client, err := openstack.NewComputeV2(provider, gophercloud.EndpointOpts{
+		Region: d.region,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create ComputeV2 client: %v", err)
+	}
+
+	client.Context = ctx
+
+	allPages, err := availabilityzones.List(client).AllPages()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list availability zones: %v", err)
+	}
+
+	osZones, err := availabilityzones.ExtractAvailabilityZones(allPages)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract availability zones: %v", err)
+	}
+
+	zones := make([]string, 0, len(osZones))
+	for _, zone := range osZones {
+		if zone.ZoneState.Available {
+			zones = append(zones, zone.ZoneName)
+		}
+	}
+
+	return zones, nil
 }
 
 func (d *Discoverer) getVolumes(ctx context.Context, provider *gophercloud.ProviderClient) ([]volumes.Volume, error) {
