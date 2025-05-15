@@ -130,6 +130,21 @@
       },
       "mode": "tcp",
       "address": "0.0.0.0:7252",
+      "labels": {
+        "cef.name": "d8",
+        "cef.severity": "1",
+        "container": "{{ container }}",
+        "host": "{{ host }}",
+        "image": "{{ image }}",
+        "namespace": "{{ namespace }}",
+        "node": "{{ node }}",
+        "node_group": "{{ node_group }}",
+        "pod": "{{ pod }}",
+        "pod_ip": "{{ pod_ip }}",
+        "pod_labels_*": "{{ pod_labels }}",
+        "pod_owner": "{{ pod_owner }}",
+        "stream": "{{ stream }}"
+      },
       "tls": {
         "verify_hostname": true,
         "verify_certificate": true
@@ -167,19 +182,6 @@
             "timestamp": "timestamp"
           }
         }
-      },
-      "labels": {
-        "container": "{{ container }}",
-        "host": "{{ host }}",
-        "image": "{{ image }}",
-        "namespace": "{{ namespace }}",
-        "node": "{{ node }}",
-        "node_group": "{{ node_group }}",
-        "pod": "{{ pod }}",
-        "pod_ip": "{{ pod_ip }}",
-        "pod_labels_*": "{{ pod_labels }}",
-        "pod_owner": "{{ pod_owner }}",
-        "stream": "{{ stream }}"
       },
       "mode": "udp",
       "address": "0.0.0.0:7252"

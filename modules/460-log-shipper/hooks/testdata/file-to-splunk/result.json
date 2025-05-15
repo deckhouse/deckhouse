@@ -50,6 +50,7 @@
         "timestamp_format": "rfc3339"
       },
       "labels": {
+        "app": "{{ parsed_data.pod_labels.app }}",
         "container": "{{ container }}",
         "host": "{{ host }}",
         "image": "{{ image }}",
