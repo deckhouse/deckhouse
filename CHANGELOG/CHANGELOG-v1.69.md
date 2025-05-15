@@ -97,6 +97,7 @@
  - **[cloud-provider-yandex]** fix WithNATInstance clusters converge [#13189](https://github.com/deckhouse/deckhouse/pull/13189)
  - **[cloud-provider-yandex]** Fixed LoadBalancer service creation in hybrid clusters. [#12491](https://github.com/deckhouse/deckhouse/pull/12491)
  - **[cloud-provider-zvirt]** Fixed zvirt-csi-driver patching (token refresh fix patch). [#12313](https://github.com/deckhouse/deckhouse/pull/12313)
+ - **[cni-cilium]** Fixed race condition when deleting element from ipcache map during VM migration. [#13344](https://github.com/deckhouse/deckhouse/pull/13344)
  - **[control-plane-manager]** Stale service account alert fix. [#13129](https://github.com/deckhouse/deckhouse/pull/13129)
  - **[control-plane-manager]** Fixed `additionalAPIIssuers` and `additionalAPIAudiences` parameters and associated tests. [#12576](https://github.com/deckhouse/deckhouse/pull/12576)
  - **[control-plane-manager]** Fixed `d8-control-plane-manager` containers that were duplicated when updating Kubernetes. [#12561](https://github.com/deckhouse/deckhouse/pull/12561)
@@ -124,6 +125,8 @@
  - **[kube-dns]** Expanded pattern for `stubZones` to allow underscores (`_`) in domain names. [#13118](https://github.com/deckhouse/deckhouse/pull/13118)
  - **[loki]** fix storage capacity calculator hook for Loki [#13003](https://github.com/deckhouse/deckhouse/pull/13003)
     fixes the bug introduced in v1.69.0
+ - **[metallb]** Fixed IP pool exhaustion on LoadBalancer deletion. [#13352](https://github.com/deckhouse/deckhouse/pull/13352)
+ - **[node-manager]** Revert cluster autoscaler [#13416](https://github.com/deckhouse/deckhouse/pull/13416)
  - **[node-manager]** Autoscaler - remove additional cordon node by mcm provider. [#13391](https://github.com/deckhouse/deckhouse/pull/13391)
  - **[node-manager]** Increase verbosity and revert versions and fix bug with unsupported mcm annotation [#13180](https://github.com/deckhouse/deckhouse/pull/13180)
  - **[node-manager]** Fixed kubeconfig generation for `CAPI`. [#12554](https://github.com/deckhouse/deckhouse/pull/12554)
