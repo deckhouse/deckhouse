@@ -25,3 +25,5 @@ spec:
       mechanism: PLAIN
       username: test
       password: test
+  extraLabels:
+    foo: bar
