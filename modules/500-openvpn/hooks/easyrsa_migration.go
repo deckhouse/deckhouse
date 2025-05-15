@@ -111,11 +111,7 @@ func migration(input *go_hook.HookInput) error {
 	// TODO Handle as v0->v1 conversion on migrating to DeckhouseConfig objects in PR#1729.
 	// input.ConfigValues.Remove("openvpn.storageClass")
 
-	migrated := false
-
-	if len(input.Snapshots["easyrsa_migrated"]) > 0 {
-		migrated = true
-	}
+	migrated := len(input.Snapshots["easyrsa_migrated"]) > 0
 
 	// if pvc does not exist then no migration is required
 	if len(input.Snapshots["openvpn_pvc"]) == 0 {

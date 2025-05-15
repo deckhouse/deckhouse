@@ -108,6 +108,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-istio:ingress-gateway-controller",
 	"system:serviceaccount:d8-istio:kiali",
 	"system:serviceaccount:d8-istio:multicluster-api-proxy",
+	"system:serviceaccount:d8-istio:multicluster-metrics-exporter",
 	"system:serviceaccount:d8-local-path-provisioner:local-path-provisioner",
 	"system:serviceaccount:d8-log-shipper:log-shipper",
 	"system:serviceaccount:d8-metallb:controller",

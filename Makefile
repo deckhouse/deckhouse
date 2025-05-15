@@ -104,7 +104,7 @@ help:
 	  /^##@/                  { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
 
-GOLANGCI_VERSION = 1.54.2
+GOLANGCI_VERSION = 2.1.2
 TRIVY_VERSION= 0.60.0
 PROMTOOL_VERSION = 2.37.0
 GATOR_VERSION = 3.9.0
@@ -217,7 +217,6 @@ bin/regcopy: bin ## App to copy docker images to the Deckhouse registry
 
 bin/trivy-${TRIVY_VERSION}/trivy:
 	mkdir -p bin/trivy-${TRIVY_VERSION}
-	# curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ./bin/trivy-${TRIVY_VERSION} v${TRIVY_VERSION}
 	curl https://${DECKHOUSE_PRIVATE_REPO}/api/v4/projects/${TRIVY_PROJECT_ID}/packages/generic/trivy-v${TRIVY_VERSION}/v${TRIVY_VERSION}/trivy -o bin/trivy-${TRIVY_VERSION}/trivy
 
 .PHONY: trivy
@@ -229,7 +228,7 @@ bin/trivy: bin bin/trivy-${TRIVY_VERSION}/trivy
 .PHONY: cve-report
 cve-report: bin/trivy bin/jq ## Generate CVE report for a Deckhouse release.
   ##~ Options: SEVERITY=CRITICAL,HIGH REPO=registry.deckhouse.io TAG=v1.30.0
-	./tools/cve/d8-images.sh
+	./tools/cve/d8_images_cve_scan.sh
 
 cve-base-images-check-default-user: bin/trivy bin/jq ## Check CVE in our base images.
   ##~ Options: SEVERITY=CRITICAL,HIGH
@@ -326,7 +325,7 @@ update-k8s-patch-versions: ## Run update-patchversion script to generate new ver
 .PHONY: update-lib-helm
 update-lib-helm: ## Update lib-helm.
 	##~ Options: version=MAJOR.MINOR.PATCH
-	cd helm_lib/ && yq -i '.dependencies[0].version = "$(version)"' Chart.yaml && helm dependency update && tar -xf charts/deckhouse_lib_helm-*.tgz -C charts/ && rm charts/deckhouse_lib_helm-*.tgz && git add Chart.yaml Chart.lock charts/*
+	cd helm_lib/ && yq -i -y '.dependencies[0].version = "$(version)"' Chart.yaml && helm dependency update && tar -xf charts/deckhouse_lib_helm-*.tgz -C charts/ && rm charts/deckhouse_lib_helm-*.tgz && git add Chart.yaml Chart.lock charts/*
 
 .PHONY: update-base-images-versions
 update-base-images-versions:

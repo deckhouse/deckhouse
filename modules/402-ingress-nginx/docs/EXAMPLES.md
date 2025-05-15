@@ -138,7 +138,7 @@ metallb:
 
 ## An example for Bare metal (MetalLB L2 LoadBalancer)
 
-{% alert level="warning" %}This feature is available in Enterprise Edition only.{% endalert %}
+{% alert level="warning" %}This feature is available in the following editions: SE, SE+, EE.{% endalert %}
 
 1. Enable the `metallb` module:
 
