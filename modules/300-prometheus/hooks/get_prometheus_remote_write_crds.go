@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"crypto/x509"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -37,7 +38,14 @@ func filterRemoteWriteCRD(obj *unstructured.Unstructured) (go_hook.FilterResult,
 	if !ok {
 		return nil, fmt.Errorf("prometheusRemoteWrite has no spec field")
 	}
-
+	ca, ok, err := unstructured.NestedString(obj.Object, "spec", "tlsConfig", "ca")
+	if err == nil && ok {
+		roots := x509.NewCertPool()
+		ok := roots.AppendCertsFromPEM([]byte(ca))
+		if !ok {
+			return new(RemoteWrite), fmt.Errorf("tlsConfig:ca in PremetheusRemoteWrite not valid: %v", err)
+		}
+	}
 	rw := new(RemoteWrite)
 	rw.Name = obj.GetName()
 	rw.Spec = spec
