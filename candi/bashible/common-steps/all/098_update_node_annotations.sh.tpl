@@ -25,3 +25,5 @@ if [[ -f /var/lib/bashible/node-spec-provider-id ]]; then
   fi
 fi
 {{- end }}
+
+kubectl_exec annotate node $(bb-d8-node-name) registry.deckhouse.io/version={{ .registry.version | quote }}

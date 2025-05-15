@@ -134,12 +134,13 @@ func NewContext(ctx context.Context, stepsStorage *StepsStorage, kubeClient clie
 
 	contextSecretUpdates := c.subscribe(ctx, contextSecretFactory, contextSecretName)
 
-	registryDataUpdates := registry.NewStateController().SetupWithManager(ctx, ctrlManager)
+	registryStateCtrl := &registry.StateController{}
+	registryDataCh := registryStateCtrl.SetupWithManager(ctx, ctrlManager)
 
 	c.subscribeOnNodeUserCRD(ctx, nodeUserCRDFactory)
 	c.subscribeOnModuleSource(ctx, moduleSourcesFactory)
 
-	go c.onSecretsUpdate(ctx, contextSecretUpdates, registryDataUpdates)
+	go c.onSecretsUpdate(ctx, contextSecretUpdates, registryDataCh)
 
 	return &c
 }
@@ -290,7 +291,7 @@ func (c *BashibleContext) runFilesWatcher() {
 	}
 }
 
-func (c *BashibleContext) onSecretsUpdate(ctx context.Context, contextSecretC chan map[string][]byte, registryDataC chan registry.RegistryDataWithHash) {
+func (c *BashibleContext) onSecretsUpdate(ctx context.Context, contextSecretC chan map[string][]byte, registryDataCh <-chan registry.HashedRegistryData) {
 	for {
 		select {
 		case data := <-contextSecretC:
@@ -312,13 +313,13 @@ func (c *BashibleContext) onSecretsUpdate(ctx context.Context, contextSecretC ch
 			c.saveChecksum(dataKey, checksum)
 			c.update("secret: bashible-apiserver-context")
 
-		case data := <-registryDataC:
-			if c.isChecksumEqual("registry", data.HashSum) {
+		case registryData := <-registryDataCh:
+			if c.isChecksumEqual("registry", registryData.HashSum) {
 				continue
 			}
-			c.contextBuilder.SetRegistryData(data.RegistryData)
+			c.contextBuilder.SetRegistryData(registryData.Data)
 			c.registrySynced = true
-			c.saveChecksum("registry", data.HashSum)
+			c.saveChecksum("registry", registryData.HashSum)
 			c.update("secret: registry")
 
 		case <-c.stepsStorage.OnNodeGroupConfigurationsChanged():

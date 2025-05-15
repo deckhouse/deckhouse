@@ -113,8 +113,6 @@ updateEpoch: "1680009541"
 			ImagesBase:     "registry.deckhouse.io/deckhouse/ce",
 			Version:        "Unknown",
 			ProxyEndpoints: []string{},
-			Hosts:          []registry.RegistryDataHostsObject{},
-			PrepullHosts:   []registry.RegistryDataHostsObject{},
 		},
 
 		Proxy: map[string]interface{}{

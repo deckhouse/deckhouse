@@ -1,16 +1,18 @@
-// Copyright 2024 Flant JSC
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+Copyright 2025 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 
 package registry
 
@@ -30,116 +32,110 @@ import (
 )
 
 const (
-	Namespace      = "d8-system"
-	ControllerName = "registry-state-controller"
+	namespace           = "d8-system"
+	stateControllerName = "registry-state-controller"
 )
 
-type RegistryStateController = registryStateController
+var _ reconcile.Reconciler = &StateController{}
 
-var _ reconcile.Reconciler = &registryStateController{}
-
-type registryStateController struct {
-	Namespace      string
+type StateController struct {
+	controllerName string
+	namespace      string
 	client         client.Client
-	registryDataCh chan RegistryDataWithHash
+	dataCh         chan HashedRegistryData
 }
 
-type RegistryDataWithHash struct {
-	HashSum      string
-	RegistryData RegistryData
+type HashedRegistryData struct {
+	HashSum string
+	Data    RegistryData
 }
 
-func NewStateController() *RegistryStateController {
-	return &RegistryStateController{
-		Namespace: Namespace,
-	}
-}
-
-func (sc *registryStateController) SetupWithManager(ctx context.Context, ctrlManager ctrl.Manager) chan RegistryDataWithHash {
-	controllerName := ControllerName
+func (sc *StateController) SetupWithManager(ctx context.Context, ctrlManager ctrl.Manager) <-chan HashedRegistryData {
+	sc.controllerName = stateControllerName
+	sc.namespace = namespace
 	sc.client = ctrlManager.GetClient()
-	sc.registryDataCh = make(chan RegistryDataWithHash)
+	sc.dataCh = make(chan HashedRegistryData)
 
 	secretsPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
-		if obj.GetNamespace() != sc.Namespace {
+		if obj.GetNamespace() != sc.namespace {
 			return false
 		}
 		name := obj.GetName()
-		return name == DeckhouseRegistrySecretName ||
-			name == RegistryBashibleConfigSecretName
+		return name == deckhouseRegistrySecretName ||
+			name == bashibleConfigSecretName
 	})
 
-	klog.Infof("Setting up controller %q with manager", controllerName)
+	klog.Infof("Setting up controller %q with manager", sc.controllerName)
 
 	err := ctrl.NewControllerManagedBy(ctrlManager).
-		Named(controllerName).
+		Named(sc.controllerName).
 		For(&corev1.Secret{}, builder.WithPredicates(secretsPredicate)).
 		Complete(sc)
 	if err != nil {
-		klog.Fatalf("cannot build %q controller: %v", controllerName, err)
+		klog.Fatalf("cannot build %q controller: %v", sc.controllerName, err)
 	}
-	return sc.registryDataCh
+	return sc.dataCh
 }
 
-func (sc *registryStateController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	deckhouseRegistrySecret, err := sc.loadDeckhouseRegistrySecrets(ctx)
+func (sc *StateController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	deckhouseRegistrySecret, err := sc.loadDeckhouseRegistrySecret(ctx)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("cannot load deckhouse registry secrets: %w", err)
+		return ctrl.Result{}, fmt.Errorf("cannot load deckhouse registry secret: %w", err)
 	}
 
-	registryBashibleConfigSecret, err := sc.loadRegistryBashibleConfigSecret(ctx)
+	bashibleCfgSecret, err := sc.loadBashibleCfgSecret(ctx)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("cannot load registry bashible config secrets: %w", err)
+		return ctrl.Result{}, fmt.Errorf("cannot load bashible config secret: %w", err)
 	}
 
-	registryData := RegistryData{}
-	err = registryData.FromInputData(deckhouseRegistrySecret, registryBashibleConfigSecret)
+	rData := RegistryData{}
+	err = rData.loadFromInput(deckhouseRegistrySecret, bashibleCfgSecret)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("cannot create registry data: %w", err)
 	}
 
-	err = registryData.Validate()
+	err = rData.Validate()
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("validation error for registry data: %w", err)
 	}
 
-	hashSum, err := registryData.hashSum()
+	hashSum, err := rData.hashSum()
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("hash sum generate error for registry data: %w", err)
 	}
 
-	sc.registryDataCh <- RegistryDataWithHash{HashSum: hashSum, RegistryData: registryData}
+	sc.dataCh <- HashedRegistryData{HashSum: hashSum, Data: rData}
 	return ctrl.Result{}, nil
 }
 
-func (sc *registryStateController) loadDeckhouseRegistrySecrets(ctx context.Context) (deckhouseRegistry, error) {
+func (sc *StateController) loadDeckhouseRegistrySecret(ctx context.Context) (deckhouseRegistrySecret, error) {
+	ret := deckhouseRegistrySecret{}
 	secret := corev1.Secret{}
 	key := types.NamespacedName{
-		Name:      DeckhouseRegistrySecretName,
-		Namespace: sc.Namespace,
+		Name:      deckhouseRegistrySecretName,
+		Namespace: sc.namespace,
 	}
 
 	if err := sc.client.Get(ctx, key, &secret); err != nil {
-		return deckhouseRegistry{}, fmt.Errorf("cannot get secret %v k8s object: %w", key.Name, err)
+		return ret, fmt.Errorf("cannot get secret %v k8s object: %w", key.Name, err)
 	}
 
-	ret := deckhouseRegistry{}
-	if err := ret.DecodeSecret(&secret); err != nil {
-		return deckhouseRegistry{}, fmt.Errorf("cannot decode from secret: %w", err)
+	if err := ret.Decode(&secret); err != nil {
+		return ret, fmt.Errorf("cannot decode from secret: %w", err)
 	}
 
 	if err := ret.Validate(); err != nil {
-		return deckhouseRegistry{}, fmt.Errorf("validation error: %w", err)
+		return ret, fmt.Errorf("validation error: %w", err)
 	}
 
 	return ret, nil
 }
 
-func (sc *registryStateController) loadRegistryBashibleConfigSecret(ctx context.Context) (*registryBashibleConfig, error) {
+func (sc *StateController) loadBashibleCfgSecret(ctx context.Context) (*bashibleConfigSecret, error) {
 	secret := corev1.Secret{}
 	key := types.NamespacedName{
-		Name:      RegistryBashibleConfigSecretName,
-		Namespace: sc.Namespace,
+		Name:      bashibleConfigSecretName,
+		Namespace: sc.namespace,
 	}
 
 	if err := sc.client.Get(ctx, key, &secret); err != nil {
@@ -149,8 +145,8 @@ func (sc *registryStateController) loadRegistryBashibleConfigSecret(ctx context.
 		return nil, fmt.Errorf("cannot get secret %v k8s object: %w", key.Name, err)
 	}
 
-	ret := registryBashibleConfig{}
-	if err := ret.DecodeSecret(&secret); err != nil {
+	ret := bashibleConfigSecret{}
+	if err := ret.decode(&secret); err != nil {
 		return nil, fmt.Errorf("cannot decode from secret: %w", err)
 	}
 

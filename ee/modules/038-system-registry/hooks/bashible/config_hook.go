@@ -113,8 +113,8 @@ func BashibleConfigHook(order float64, queue string) bool {
 			Version:        inputData.Version,
 			ImagesBase:     registry_const.HostWithPath,
 			ProxyEndpoints: proxyEndpoints,
-			Hosts:          []registry_models.HostsObject{{Host: registry_const.Host, CA: CA, Mirrors: mirrors}},
-			PrepullHosts:   []registry_models.HostsObject{{Host: registry_const.Host, CA: CA, Mirrors: prepullMirrors}},
+			Hosts:          map[string]registry_models.Hosts{registry_const.Host: {CA: CA, Mirrors: mirrors}},
+			PrepullHosts:   map[string]registry_models.Hosts{registry_const.Host: {CA: CA, Mirrors: prepullMirrors}},
 		}
 
 		bashible_config.Set(hookInput, bashibleConfigModel)
@@ -139,15 +139,17 @@ func extractFromSnapNodeInternalIP(snaps []go_hook.FilterResult) []string {
 	return set.NewFromSnapshot(snaps).Slice()
 }
 
-func createMirrors(rUser common_models.UserModel, hosts []string) []registry_models.MirrorHostObject {
-	mirrors := make([]registry_models.MirrorHostObject, 0, len(hosts))
+func createMirrors(rUser common_models.UserModel, hosts []string) []registry_models.MirrorHost {
+	mirrors := make([]registry_models.MirrorHost, 0, len(hosts))
 	for _, host := range hosts {
-		mirrors = append(mirrors, registry_models.MirrorHostObject{
-			Host:     host,
-			Username: rUser.Name,
-			Password: rUser.Password,
-			Auth:     rUser.Auth(),
-			Scheme:   registry_const.Scheme,
+		mirrors = append(mirrors, registry_models.MirrorHost{
+			Host: host,
+			Auth: registry_models.Auth{
+				Username: rUser.Name,
+				Password: rUser.Password,
+				Auth:     rUser.Auth(),
+			},
+			Scheme: registry_const.Scheme,
 		})
 	}
 	return mirrors

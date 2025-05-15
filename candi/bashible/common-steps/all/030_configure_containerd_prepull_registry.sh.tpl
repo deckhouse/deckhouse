@@ -41,40 +41,50 @@
 
 discovered_node_ip="$(bb-d8-node-ip)"
 
-{{- range $host := .registry.prepullHosts }}
-  {{- if not (has $host.host $exist_registry_host_list) }}
-    {{- $exist_registry_host_list = append $exist_registry_host_list $host.host }}
+{{- range $hostName, $hostValues := .registry.prepullHosts }}
+  {{- if not (has $hostName $exist_registry_host_list) }}
+    {{- $exist_registry_host_list = append $exist_registry_host_list $hostName }}
   {{- end }}
 
-mkdir -p "/etc/containerd/registry_prepull.d/{{ $host.host }}"
+mkdir -p "/etc/containerd/registry_prepull.d/{{ $hostName }}"
   {{- $ca_files_path := list }}
-  {{- range $index, $CA := $host.ca }}
-  {{- $ca_file_path := printf "/etc/containerd/registry_prepull.d/%s/ca_%d.crt" $host.host $index }}
+  {{- range $index, $CA := $hostValues.ca }}
+  {{- $ca_file_path := printf "/etc/containerd/registry_prepull.d/%s/ca_%d.crt" $hostName $index }}
   {{- $ca_files_path = append $ca_files_path $ca_file_path }}
 bb-sync-file {{ $ca_file_path | quote }} - << EOF
 {{ $CA }}
 EOF
   {{- end }}
 
-bb-sync-file "/etc/containerd/registry_prepull.d/{{ $host.host }}/hosts.toml" - << EOF
+bb-sync-file "/etc/containerd/registry_prepull.d/{{ $hostName }}/hosts.toml" - << EOF
 [host]
-{{- range $mirror := $host.mirrors }}
+{{- range $mirror := $hostValues.mirrors }}
   {{- $mirrorHostWithScheme := (printf "%s://%s" $mirror.scheme $mirror.host) }}
 
   [host.{{ $mirrorHostWithScheme | quote }}]
   capabilities = ["pull", "resolve"]
-  {{- if gt (len $ca_files_path) 0 }}
+  {{- if eq $mirror.scheme "https" }}
+    {{- if gt (len $ca_files_path) 0 }}
   ca = {{- printf "[%q]" (join "\", \"" $ca_files_path) }}
+    {{- end }}
   {{- end }}
 
-    {{- if or $mirror.auth $mirror.username $mirror.password }}
+    {{- with $mirror.auth }}
+      {{- if or .auth .username .password }}
     [host.{{ $mirrorHostWithScheme | quote }}.auth]
-      {{- if $mirror.auth }}
-    auth = {{ $mirror.auth | quote }}
-      {{- else }}
-    username = {{ $mirror.username | quote }}
-    password = {{ $mirror.password | quote }}
+        {{- if .auth }}
+    auth = {{ .auth | quote }}
+        {{- else }}
+    username = {{ .username | quote }}
+    password = {{ .password | quote }}
+        {{- end }}
       {{- end }}
+    {{- end }}
+
+    {{- range $mirror.rewrites }}
+    [host.{{ $mirrorHostWithScheme | quote }}.rewrite]
+    regex = {{ .from | quote }}
+    replace = {{ .to | quote }}
     {{- end }}
 {{- end }}
 EOF
@@ -82,28 +92,22 @@ EOF
 {{- end }}
 
 {{- if eq .runType "Normal" }}
-  {{- range $host, $CA := .normal.moduleSourcesCA }}
-    {{- if not (has $host $exist_registry_host_list) }}
-      {{- if $CA }}
-      {{- $exist_registry_host_list = append $exist_registry_host_list $host }}
+  {{- range $hostName, $CA := .normal.moduleSourcesCA }}
+    {{- if and (not (has $hostName $exist_registry_host_list)) $CA }}
+      {{- $exist_registry_host_list = append $exist_registry_host_list $hostName }}
 
 # Sync module sources host.toml and ca.crt
-mkdir -p "/etc/containerd/registry_prepull.d/{{ $host }}"
-bb-sync-file "/etc/containerd/registry_prepull.d/{{ $host }}/ca.crt" - << EOF
+mkdir -p "/etc/containerd/registry_prepull.d/{{ $hostName }}"
+bb-sync-file "/etc/containerd/registry_prepull.d/{{ $hostName }}/ca.crt" - << EOF
 {{ $CA }}
 EOF
 
-bb-sync-file "/etc/containerd/registry_prepull.d/{{ $host }}/hosts.toml" - << EOF
-# Server specifies the default server for this registry host namespace.
-# When host(s) are specified, the hosts are tried first in the order listed.
-# https://github.com/containerd/containerd/blob/v1.7.24/docs/hosts.md#hoststoml-content-description---detail
-
-server = {{ $host | quote }}
-ca = ["/etc/containerd/registry_prepull.d/{{ $host }}/ca.crt"]
+bb-sync-file "/etc/containerd/registry_prepull.d/{{ $hostName }}/hosts.toml" - << EOF
+server = {{ $hostName | quote }}
+ca = ["/etc/containerd/registry_prepull.d/{{ $hostName }}/ca.crt"]
 
 [host]
 EOF
-      {{- end }}
     {{- end }}
   {{- end }}
 {{- end }}

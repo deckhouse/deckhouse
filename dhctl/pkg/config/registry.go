@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
-	registry_models "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models/bashible"
+	registry_bashible "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models/bashible"
 	registry_pki "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/pki"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -263,56 +263,62 @@ func (r Registry) BashibleBundleTemplateContext() (map[string]interface{}, error
 	}
 
 	// prepare mirrrors and proxy endpoints
-	mirrors := []registry_models.MirrorHostObject{}
-	prepullMirrors := []registry_models.MirrorHostObject{}
+	mirrors := []registry_bashible.MirrorHost{}
+	prepullMirrors := []registry_bashible.MirrorHost{}
 	proxyEndpoints := []string{}
 	if registry_const.ShouldRunStaticPodRegistry(r.Mode()) {
 		// If static pod registry
 		for _, host := range []string{registry_const.ProxyHost} {
-			mirrors = append(mirrors, registry_models.MirrorHostObject{
-				Host:     host,
-				Username: "",
-				Password: "",
-				Auth:     auth,
-				Scheme:   r.Data.Scheme,
+			mirrors = append(mirrors, registry_bashible.MirrorHost{
+				Host:   host,
+				Scheme: r.Data.Scheme,
+				Auth: registry_bashible.Auth{
+					Username: "",
+					Password: "",
+					Auth:     auth,
+				},
 			})
 		}
 		// ${discovered_node_ip} - bashible will use this as a placeholder on envsubst call
 		// address will be discovered in one of bashible steps
 		proxyEndpoints = registry_const.GenerateProxyEndpoints([]string{"${discovered_node_ip}"})
 		for _, host := range append([]string{registry_const.ProxyHost}, proxyEndpoints...) {
-			prepullMirrors = append(prepullMirrors, registry_models.MirrorHostObject{
-				Host:     host,
-				Username: "",
-				Password: "",
-				Auth:     auth,
-				Scheme:   r.Data.Scheme,
+			prepullMirrors = append(prepullMirrors, registry_bashible.MirrorHost{
+				Host:   host,
+				Scheme: r.Data.Scheme,
+				Auth: registry_bashible.Auth{
+					Username: "",
+					Password: "",
+					Auth:     auth,
+				},
 			})
 		}
 	} else {
 		// if not static pod registry
 		for _, host := range []string{r.Data.Address} {
-			mirrors = append(mirrors, registry_models.MirrorHostObject{
-				Host:     host,
-				Username: "",
-				Password: "",
-				Auth:     auth,
-				Scheme:   r.Data.Scheme,
+			mirrors = append(mirrors, registry_bashible.MirrorHost{
+				Host:   host,
+				Scheme: r.Data.Scheme,
+				Auth: registry_bashible.Auth{
+					Username: "",
+					Password: "",
+					Auth:     auth,
+				},
 			})
 		}
 		prepullMirrors = slices.Clone(mirrors)
 	}
 
-	cfg := registry_models.BashibleContext{
+	cfg := registry_bashible.Config{
 		Mode:           r.Mode(),
 		Version:        registry_const.UnknownVersion,
 		ImagesBase:     imagesBase,
 		ProxyEndpoints: proxyEndpoints,
-		Hosts:          []registry_models.HostsObject{{Host: r.Data.Address, CA: CA, Mirrors: mirrors}},
-		PrepullHosts:   []registry_models.HostsObject{{Host: r.Data.Address, CA: CA, Mirrors: prepullMirrors}},
+		Hosts:          map[string]registry_bashible.Hosts{r.Data.Address: {CA: CA, Mirrors: mirrors}},
+		PrepullHosts:   map[string]registry_bashible.Hosts{r.Data.Address: {CA: CA, Mirrors: prepullMirrors}},
 	}
 
-	mapData, err := registry_models.ToMap(cfg)
+	mapData, err := registry_bashible.ToMap(cfg)
 	if err != nil {
 		return nil, err
 	}
