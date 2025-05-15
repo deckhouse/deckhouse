@@ -3192,6 +3192,7 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          TEST_AUTOSCALER_ENABLED: ${{ needs.check_e2e_labels.outputs.autoscaler }}
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
@@ -3207,6 +3208,7 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
             CIS_ENABLED=${CIS_ENABLED}
+            TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED}
           "
 
           ls -lh $(pwd)/testing
@@ -3255,6 +3257,7 @@ jobs:
             -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
             -e USER_RUNNER_ID=${user_runner_id} \
             -e CIS_ENABLED=${CIS_ENABLED} \
+            -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
