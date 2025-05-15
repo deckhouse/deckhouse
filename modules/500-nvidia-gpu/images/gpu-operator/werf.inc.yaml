@@ -10,6 +10,7 @@ shell:
   install:
   - git clone --depth 1 --branch v{{ $operatorVersion }} $(cat /run/secrets/SOURCE_REPO)/NVIDIA/gpu-operator.git /src
   - cd /src
+  - echo $(git rev-parse --short HEAD)-amd64 > .version
   - rm -rf /src/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
@@ -28,9 +29,8 @@ secrets:
 shell:
   install:
   - cd /src
-  - export VERSION=$(git rev-parse --short HEAD)-amd64
+  - export VERSION=$(cat .version)
   - export VERSION_PKG=github.com/NVIDIA/gpu-operator/internal/info
-  - cat github.com/NVIDIA/gpu-operator/internal/info
   - GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X $(VERSION_PKG).gitCommit=$(GIT_COMMIT) -X $(VERSION_PKG).version=$(VERSION)" -o gpu-operator ./cmd/gpu-operator/...
   - chown 64535:64535 /gpu-operator
   - chmod 0700 /gpu-operator
