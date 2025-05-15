@@ -26,16 +26,17 @@ import (
 )
 
 const (
-	nodeGroupMetricsGroup        = "node_group"
-	nodeGroupMetricReadyName     = "d8_node_group_ready"
-	nodeGroupMetricNodesName     = "d8_node_group_nodes"
-	nodeGroupMetricInstancesName = "d8_node_group_instances"
-	nodeGroupMetricDesiredName   = "d8_node_group_desired"
-	nodeGroupMetricMinName       = "d8_node_group_min"
-	nodeGroupMetricMaxName       = "d8_node_group_max"
-	nodeGroupMetricUpToDateName  = "d8_node_group_up_to_date"
-	nodeGroupMetricStandbyName   = "d8_node_group_standby"
-	nodeGroupMetricHasErrorsName = "d8_node_group_has_errors"
+	nodeGroupMetricsGroup         = "node_group"
+	nodeGroupMetricReadyName      = "d8_node_group_ready"
+	nodeGroupMetricNodesName      = "d8_node_group_nodes"
+	nodeGroupMetricInstancesName  = "d8_node_group_instances"
+	nodeGroupMetricDesiredName    = "d8_node_group_desired"
+	nodeGroupMetricMinName        = "d8_node_group_min"
+	nodeGroupMetricMaxName        = "d8_node_group_max"
+	nodeGroupMetricUpToDateName   = "d8_node_group_up_to_date"
+	nodeGroupMetricStandbyName    = "d8_node_group_standby"
+	nodeGroupMetricHasErrorsName  = "d8_node_group_has_errors"
+	nodeGroupMetricHasErrorsNameS = "d8_node_group_has_errors"
 )
 
 type nodeGroupStatus struct {
