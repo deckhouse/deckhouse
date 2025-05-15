@@ -82,7 +82,7 @@ shell:
   - chmod 0755 falcoctl
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: common/alt-p11-artifact
+fromImage: common/relocate-artifact
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -151,3 +151,4 @@ shell:
   - make
   - cp libk8smeta.so /falco-package/usr/share/falco/plugins
   - make clean
+  - /binary_replace.sh -i "/falco-package/usr/bin/falco" -o /falco-package
