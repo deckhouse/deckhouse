@@ -89,6 +89,23 @@ for user in `cat /etc/passwd |grep "created by deckhouse" |egrep -o "^[^:]+"`; d
 done
 rm -rf /home/deckhouse
 
+# remove d8-dhctl-converger
+
+if [[ `getent passwd d8-dhctl-converger` ]]
+  then
+    cat <<'EOF2' >> /root/cleanup.sh
+#!/bin/bash
+
+userdel d8-dhctl-converger
+(cat /root/old_crontab) | crontab -
+rm -f /root/old_crontab
+rm -f /root/cleanup.sh
+EOF2
+    chmod +x /root/cleanup.sh
+    crontab -l 2>/dev/null > /root/old_crontab
+    (crontab -l 2>/dev/null; echo "@reboot /root/cleanup.sh") | crontab -
+fi
+
 shutdown -r -t 5
 EOF
 {{- end }}
