@@ -189,9 +189,9 @@ for d8_tag in "${d8_tags[@]}"; do
       echo "👾 Scaning Deckhouse image \"${IMAGE_NAME}\" of module \"${MODULE_NAME}\" for tag \"${d8_tag}\""
       echo ""
       if [ "${additional_image_detected}" == true ]; then
-        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --cache-dir "${WORKDIR}/bin/trivy_cache" --skip-db-update --skip-java-db-update --exit-code 0 --severity "${SEVERITY}" --format json --scanners vuln --output "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" --quiet "${d8_image}:${d8_tag}" --username "${trivy_registry_user}" --password "${trivy_registry_pass}" --image-src remote 
+        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --cache-dir "${WORKDIR}/bin/trivy_cache" --skip-db-update --skip-java-db-update --exit-code 0 --severity "${SEVERITY}" --format json --scanners vuln --output "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" --quiet "${d8_image}:${d8_tag}" --username "${trivy_registry_user}" --password "${trivy_registry_pass}" --image-src remote
       else
-        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --cache-dir "${WORKDIR}/bin/trivy_cache" --skip-db-update --skip-java-db-update --exit-code 0 --severity "${SEVERITY}" --format json --scanners vuln --output "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" --quiet "${d8_image}@${IMAGE_HASH}" --username "${trivy_registry_user}" --password "${trivy_registry_pass}" --image-src remote 
+        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --cache-dir "${WORKDIR}/bin/trivy_cache" --skip-db-update --skip-java-db-update --exit-code 0 --severity "${SEVERITY}" --format json --scanners vuln --output "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" --quiet "${d8_image}@${IMAGE_HASH}" --username "${trivy_registry_user}" --password "${trivy_registry_pass}" --image-src remote
       fi
 
       echo ""
