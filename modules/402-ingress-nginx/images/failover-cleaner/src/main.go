@@ -101,9 +101,13 @@ func main() {
 					continue
 				}
 
-				// Let kube-scheduler evict the pod after label is gone
-				log.Println("Label removed, exiting to allow pod eviction")
+				log.Println("Label removed. Waiting for SIGTERM to exit gracefully...")
+				ticker.Stop()
+
+				// Waiting SIGTERM signal
+				<-stopCh
 				cancel()
+				log.Println("Received shutdown signal. Exiting.")
 				return
 			}
 		}
