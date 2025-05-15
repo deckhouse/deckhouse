@@ -6,7 +6,7 @@ build:
     author: "Deckhouse Kubernetes Platform <contact@deckhouse.io>"
     clearHistory: true
     config:
-      clearWerfLabels: true
+      keepEssentialWerfLabels: true
       removeLabels:
         - /.*/
 gitWorktree:

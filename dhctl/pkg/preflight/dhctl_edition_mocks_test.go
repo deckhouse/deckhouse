@@ -27,6 +27,7 @@ type FakeImageDescriptorProvider struct {
 	expectedReference name.Reference
 
 	ReturnedDescriptor *v1.Descriptor
+	ReturnedConfigFile *v1.ConfigFile
 	ReturnedError      error
 
 	T *testing.T
@@ -36,11 +37,11 @@ func NewFakeImageDescriptorProvider(t *testing.T) *FakeImageDescriptorProvider {
 	return &FakeImageDescriptorProvider{T: t}
 }
 
-func (f *FakeImageDescriptorProvider) Descriptor(ref name.Reference, _ ...remote.Option) (*v1.Descriptor, error) {
+func (f *FakeImageDescriptorProvider) ConfigFile(ref name.Reference, _ ...remote.Option) (*v1.ConfigFile, error) {
 	if !assert.Equal(f.T, f.expectedReference, ref) {
 		f.T.Fatalf("Expected name.Reference does not match actual: want %+v, got %+v", f.expectedReference, ref)
 	}
-	return f.ReturnedDescriptor, f.ReturnedError
+	return f.ReturnedConfigFile, f.ReturnedError
 }
 
 func (f *FakeImageDescriptorProvider) ExpectReference(ref name.Reference) *FakeImageDescriptorProvider {
@@ -48,29 +49,8 @@ func (f *FakeImageDescriptorProvider) ExpectReference(ref name.Reference) *FakeI
 	return f
 }
 
-func (f *FakeImageDescriptorProvider) Return(desc *v1.Descriptor, err error) *FakeImageDescriptorProvider {
-	f.ReturnedDescriptor = desc
-	f.ReturnedError = err
-	return f
-}
-
-type FakeBuildDigestProvider struct {
-	ReturnedDigest v1.Hash
-	ReturnedError  error
-
-	T *testing.T
-}
-
-func NewFakeBuildDigestProvider(t *testing.T) *FakeBuildDigestProvider {
-	return &FakeBuildDigestProvider{T: t}
-}
-
-func (f *FakeBuildDigestProvider) ThisBuildDigest() (v1.Hash, error) {
-	return f.ReturnedDigest, f.ReturnedError
-}
-
-func (f *FakeBuildDigestProvider) Return(hash v1.Hash, err error) *FakeBuildDigestProvider {
-	f.ReturnedDigest = hash
+func (f *FakeImageDescriptorProvider) Return(conf *v1.ConfigFile, err error) *FakeImageDescriptorProvider {
+	f.ReturnedConfigFile = conf
 	f.ReturnedError = err
 	return f
 }
