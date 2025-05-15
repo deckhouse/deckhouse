@@ -74,7 +74,7 @@ spec:
                     splunk: {}
                     type:
                       enum:
-                      - Splunk
+                        - Splunk
                   required:
                     - type
                     - splunk
@@ -84,8 +84,8 @@ spec:
                       enum:
                         - Socket
                   required:
-                  - type
-                  - socket
+                    - type
+                    - socket
               properties:
                 type:
                   type: string
@@ -419,7 +419,7 @@ spec:
                         A list of host and port pairs that are the addresses of the Kafka brokers in a “bootstrap” Kafka cluster that a Kafka client connects to initially to bootstrap itself.
                       default: []
                       x-doc-examples:
-                      - ["10.14.22.123:9092", "10.14.23.332:9092"]
+                        - ["10.14.22.123:9092", "10.14.23.332:9092"]
                       items:
                         type: string
                         pattern: '^(.+)\:\d{1,5}$'
@@ -432,7 +432,9 @@ spec:
                             codec:
                               type: string
                               enum: ["JSON"]
-                        - required: ["codec", "cef"]
+                          not:
+                            required: ["cef"]
+                        - required: ["codec"]
                           properties:
                             codec:
                               type: string
@@ -441,10 +443,6 @@ spec:
                               type: object
                               description: |
                                 CEF-specific configuration fields. Only applicable when codec is set to "CEF".
-                              required:
-                                - deviceVendor
-                                - deviceProduct
-                                - deviceVersion
                               properties:
                                 deviceVendor:
                                   type: string
@@ -539,14 +537,14 @@ spec:
                 splunk:
                   type: object
                   required:
-                  - token
-                  - endpoint
+                    - token
+                    - endpoint
                   properties:
                     endpoint:
                       type: string
                       description: Base URL of the Splunk instance.
                       x-doc-examples:
-                      - "https://http-inputs-hec.splunkcloud.com"
+                        - "https://http-inputs-hec.splunkcloud.com"
                     token:
                       type: string
                       description: Default Splunk HEC token. If an event has a token set in its metadata, it will have priority over the one set here.
@@ -770,15 +768,15 @@ spec:
                         - field: foo
                           operator: NotIn
                           values:
-                          - dev
-                          - 42
-                          - "true"
-                          - "3.14"
+                            - dev
+                            - 42
+                            - "true"
+                            - "3.14"
                         - field: bar
                           operator: Regex
                           values:
-                          - '^abc'
-                          - '^\d.+$'
+                            - '^abc'
+                            - '^\d.+$'
                       items:
                         type: object
                         required:
