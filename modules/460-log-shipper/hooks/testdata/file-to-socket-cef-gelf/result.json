@@ -133,6 +133,19 @@
         "timestamp_format": "rfc3339"
       },
       "mode": "tcp",
+      "labels": {
+        "container": "{{ container }}",
+        "host": "{{ host }}",
+        "image": "{{ image }}",
+        "namespace": "{{ namespace }}",
+        "node": "{{ node }}",
+        "node_group": "{{ node_group }}",
+        "pod": "{{ pod }}",
+        "pod_ip": "{{ pod_ip }}",
+        "pod_labels_*": "{{ pod_labels }}",
+        "pod_owner": "{{ pod_owner }}",
+        "stream": "{{ stream }}"
+      },
       "address": "graylog.svc.cluster.local:9200",
       "tls": {
         "verify_hostname": true,
