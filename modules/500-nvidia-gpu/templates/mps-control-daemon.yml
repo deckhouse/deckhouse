@@ -1,0 +1,182 @@
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: mps-control-daemon
+  namespace: d8-nvidia-gpu
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu" "component" "mps-control-daemon")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: mps-control-daemon
+  updatePolicy:
+    updateMode: "Initial"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: mps-config-manager
+      minAllowed:
+        cpu: 50m
+        memory: 64Mi
+      maxAllowed:
+        cpu: 100m
+        memory: 128Mi
+    - containerName: mps-control-daemon-ctr
+      minAllowed:
+        cpu: 50m
+        memory: 64Mi
+      maxAllowed:
+        cpu: 100m
+        memory: 128Mi
+{{- end }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: mps-control-daemon
+  namespace: d8-nvidia-gpu
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu" "component" "mps-control-daemon")) | nindent 2 }}
+spec:
+  selector:
+    matchLabels:
+     component: mps-control-daemon
+  template:
+    metadata:
+      labels:
+        component: mps-control-daemon
+    spec:
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      nodeSelector:
+        nvidia.com/mps.capable: "true"
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+      priorityClassName: cluster-medium
+      serviceAccountName: nvidia-device-plugin
+      hostPID: true
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      initContainers:
+      - name: mps-control-daemon-mounts
+        image: {{ include "helm_lib_module_image" (list . "nvidiaDevicePlugin") }}
+        command: [/mps-control-daemon, mount-shm]
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: mps-root
+          mountPath: /mps
+          mountPropagation: Bidirectional
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+        {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            cpu: 50m
+            memory: 64Mi
+        {{- end }}
+      - name: mps-control-daemon-init
+        image: {{ include "helm_lib_module_image" (list . "nvidiaDevicePlugin") }}
+        command: ["/config-manager"]
+        {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 8 }}
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+        {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            cpu: 50m
+            memory: 64Mi
+        {{- end }}
+        env:
+        - name: ONESHOT
+          value: "true"
+        - name: KUBECONFIG
+          value: ""
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: "spec.nodeName"
+        - name: NODE_LABEL
+          value: "node.deckhouse.io/device-gpu.config"
+        - name: CONFIG_FILE_SRCDIR
+          value: "/available-configs"
+        - name: CONFIG_FILE_DST
+          value: "/config/config.yaml"
+        - name: DEFAULT_CONFIG
+          value: ""
+        - name: SEND_SIGNAL
+          value: "false"
+        - name: SIGNAL
+          value: ""
+        - name: PROCESS_TO_SIGNAL
+          value: ""
+      containers:
+        - name: mps-config-manager
+          image: {{ include "helm_lib_module_image" (list . "nvidiaDevicePlugin") }}
+          command: ["/config-manager"]
+          securityContext:
+            privileged: true
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+              cpu: 50m
+              memory: 64Mi
+          {{- end }}
+          env:
+          - name: ONESHOT
+            value: "false"
+          - name: KUBECONFIG
+            value: ""
+          - name: NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: "spec.nodeName"
+          - name: NODE_LABEL
+            value: "node.deckhouse.io/device-gpu.config"
+          - name: CONFIG_FILE_SRCDIR
+            value: "/available-configs"
+          - name: CONFIG_FILE_DST
+            value: "/config/config.yaml"
+          - name: DEFAULT_CONFIG
+            value: ""
+          - name: SEND_SIGNAL
+            value: "true"
+          - name: SIGNAL
+            value: "1"
+          - name: PROCESS_TO_SIGNAL
+            value: "/usr/bin/mps-control-daemon"
+        - name: mps-control-daemon-ctr
+          image: {{ include "helm_lib_module_image" (list . "nvidiaDevicePlugin") }}
+          command: ["/mps-control-daemon"]
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+              cpu: 50m
+              memory: 64Mi
+          {{- end }}
+          env:
+          - name: NODE_NAME
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: spec.nodeName
+          - name: NVIDIA_VISIBLE_DEVICES
+            value: all
+          - name: NVIDIA_DRIVER_CAPABILITIES
+            value: compute,utility
+          securityContext:
+            privileged: true
+          volumeMounts:
+          - name: mps-shm
+            mountPath: /dev/shm
+          - name: mps-root
+            mountPath: /mps
+      volumes:
+      - name: mps-root
+        hostPath:
+          path: /run/nvidia/mps
+          type: DirectoryOrCreate
+      - name: mps-shm
+        hostPath:
+          path: /run/nvidia/mps/shm
