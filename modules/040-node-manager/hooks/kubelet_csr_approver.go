@@ -37,6 +37,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/klog/v2"
 )
 
 type CsrInfo struct {
@@ -154,12 +155,12 @@ func hasExactUsages(csr *cv1.CertificateSigningRequest, usages []cv1.KeyUsage) b
 }
 
 func appendApprovalCondition(csr *cv1.CertificateSigningRequest) {
-	//for _, cond := range csr.Status.Conditions {
-	//	if cond.Type == cv1.CertificateApproved || cond.Type == cv1.CertificateDenied {
-	//		klog.Info("Filter in appendApprovalCondition func,CSR already approved/denied, skipping", "name", csr.Name)
-	//		return
-	//	}
-	//}
+	for _, cond := range csr.Status.Conditions {
+		if cond.Type == cv1.CertificateApproved || cond.Type == cv1.CertificateDenied {
+			klog.Info("Filter in appendApprovalCondition func,CSR already approved/denied, skipping", "name", csr.Name)
+			return
+		}
+	}
 	csr.Status.Conditions = append(csr.Status.Conditions, cv1.CertificateSigningRequestCondition{
 		Type:    cv1.CertificateApproved,
 		Status:  corev1.ConditionTrue,
