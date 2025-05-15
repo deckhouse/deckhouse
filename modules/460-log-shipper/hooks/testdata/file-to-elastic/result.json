@@ -59,6 +59,19 @@
         "max_bytes": 10485760,
         "timeout_secs": 1
       },
+      "labels": {
+        "container": "{{ container }}",
+        "host": "{{ host }}",
+        "image": "{{ image }}",
+        "namespace": "{{ namespace }}",
+        "node": "{{ node }}",
+        "node_group": "{{ node_group }}",
+        "pod": "{{ pod }}",
+        "pod_ip": "{{ pod_ip }}",
+        "pod_labels_*": "{{ pod_labels }}",
+        "pod_owner": "{{ pod_owner }}",
+        "stream": "{{ stream }}"
+      },
       "tls": {
         "verify_hostname": true,
         "verify_certificate": false
