@@ -341,6 +341,9 @@ var DefaultImagesDigests = map[string]interface{}{
 		"fencingAgent":             "imageHash-nodeManager-fencingAgent",
 		"machineControllerManager": "imageHash-nodeManager-machineControllerManager",
 	},
+	"nvidiaGpu": map[string]interface{}{
+		"gpuOperator": "imageHash-nvidiaGpu-gpuOperator",
+	},
 	"openvpn": map[string]interface{}{
 		"easyrsaMigrator": "imageHash-openvpn-easyrsaMigrator",
 		"openvpn":         "imageHash-openvpn-openvpn",

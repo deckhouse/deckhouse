@@ -1,0 +1,47 @@
+{{ $operatorVersion := "25.3.0" }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ $operatorVersion }} $(cat /run/secrets/SOURCE_REPO)/NVIDIA/gpu-operator.git /src
+  - cd /src
+  - rm -rf /src/.git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+final: false
+fromImage: builder/golang-alpine-1.24
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - export VERSION=$(git rev-parse --short HEAD)-amd64
+  - export VERSION_PKG=github.com/NVIDIA/gpu-operator/internal/info
+  - cat github.com/NVIDIA/gpu-operator/internal/info
+  - GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X $(VERSION_PKG).gitCommit=$(GIT_COMMIT) -X $(VERSION_PKG).version=$(VERSION)" -o gpu-operator ./cmd/gpu-operator/...
+  - chown 64535:64535 /gpu-operator
+  - chmod 0700 /gpu-operator
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /gpu-operator
+  to: /gpu-operator
+  before: setup
+imageSpec:
+  config:
+    entrypoint: ["/gpu-operator"]
