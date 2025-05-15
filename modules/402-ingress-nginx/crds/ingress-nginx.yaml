@@ -605,6 +605,10 @@ spec:
                 version:
                   type: string
                   description: The current applied version.
+                observedGeneration:
+                  format: int64
+                  type: integer
+                  description: ObservedGeneration is the latest generation observed by the controller.
                 conditions:
                   type: array
                   items:
@@ -619,9 +623,9 @@ spec:
                         type: string
                       status:
                         description: |
-                        Status of the condition. Possible values:
-                        - `True`,
-                        - `False`.
+                          Status of the condition. Possible values:
+                          - `True`,
+                          - `False`.
                         type: string
                         enum:
                           - "True"
