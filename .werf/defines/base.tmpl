@@ -230,14 +230,18 @@ import:
   - usr/bin/yes
   before: install
 - image: libs/openssl
-  add: /
-  to: /
+  add: /usr/lib64
+  to: /usr/lib
   includePaths:
   - usr/bin/openssl
-  - usr/lib64/libcrypto.so*
-  - usr/lib64/libssl.so*
-  - usr/lib64/engines3
-  - usr/lib64/ossl-modules
+  - libcrypto.so*
+  - libssl.so*
+  - engines-3
+  - ossl-modules
+  before: install
+- image: libs/openssl
+  add: /usr/bin/openssl
+  to: /usr/bin/openssl
   before: install
 - image: tools/vim
   add: /
