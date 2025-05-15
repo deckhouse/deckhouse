@@ -17,6 +17,8 @@ limitations under the License.
 package destination
 
 import (
+	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
@@ -33,6 +35,8 @@ type Socket struct {
 	Address string `json:"address,omitempty"`
 
 	TLS CommonTLS `json:"tls,omitempty"`
+
+	Labels map[string]string `json:"labels,omitempty"`
 }
 
 func NewSocket(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Socket {
@@ -108,6 +112,37 @@ func NewSocket(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Socket {
 		encoding.Codec = "json"
 	}
 
+	labels := map[string]string{
+		// Kubernetes logs labels
+		"namespace":    "{{ namespace }}",
+		"container":    "{{ container }}",
+		"image":        "{{ image }}",
+		"pod":          "{{ pod }}",
+		"node":         "{{ node }}",
+		"pod_ip":       "{{ pod_ip }}",
+		"stream":       "{{ stream }}",
+		"pod_labels_*": "{{ pod_labels }}",
+		"node_group":   "{{ node_group }}",
+		"pod_owner":    "{{ pod_owner }}",
+		"host":         "{{ host }}",
+	}
+
+	var dataField string
+	keys := make([]string, 0, len(cspec.ExtraLabels))
+	for key := range cspec.ExtraLabels {
+		keys = append(keys, key)
+	}
+
+	sort.Strings(keys)
+	for _, k := range keys {
+		if validMustacheTemplate.MatchString(cspec.ExtraLabels[k]) {
+			dataField = validMustacheTemplate.FindStringSubmatch(cspec.ExtraLabels[k])[1]
+			labels[k] = fmt.Sprintf("{{ parsed_data.%s }}", dataField)
+		} else {
+			labels[k] = cspec.ExtraLabels[k]
+		}
+	}
+	result.Labels = labels
 	result.Encoding = encoding
 	return result
 }
