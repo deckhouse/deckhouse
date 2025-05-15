@@ -15,7 +15,7 @@ final: false
 fromImage: common/src-artifact
 git:
 - add: /go_lib/cloud-data
-  to: /go_lib/cloud-data
+  to: /deckhouse/go_lib/cloud-data
   excludePaths:
   - "**/*.md"
   - "**/*.yaml"
@@ -24,36 +24,52 @@ git:
     - go.mod
     - go.sum
     - "**/*.go"
+- add: /pkg/log
+  to: /deckhouse/pkg/log
+  excludePaths:
+  - "**/*.md"
+  - "**/*.yaml"
+  stageDependencies:
+    install:
+    - go.mod
+    - go.sum
+    - "**/*.go"
+secrets:
+- id: CLOUD_PROVIDERS_SOURCE_REPO
+  value: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
 shell:
   install:
-  - export VERSION="v0.3.0"
+  - export VERSION="v0.5.0"
   - export VERSION_COMMON="v0.3.0"
-  - git clone --depth 1 --branch ${VERSION} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/cloud-data-discoverer.git /src
-  - git clone --depth 1 --branch ${VERSION_COMMON} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/dynamix-common.git /src/dynamix-common
+  - git clone --depth 1 --branch ${VERSION} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/dynamix/cloud-data-discoverer.git /src
+  - git clone --depth 1 --branch ${VERSION_COMMON} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/dynamix/dynamix-common.git /src/dynamix-common
+  - mv /deckhouse/go_lib /src
+  - mv /deckhouse/pkg /src
   - cd /src
-  - mv /go_lib /src
   - rm -rf .git vendor
   - sed -i -e 's# ../dynamix-common# /src/dynamix-common#g' go.mod
-  - sed -i -e 's# /deckhouse/go_lib/cloud-data/# /src/go_lib/cloud-data/#g' go.mod
+  - sed -i -e 's# /deckhouse/go_lib/cloud-data# /src/go_lib/cloud-data#g' go.mod
+  - sed -i -e 's# /deckhouse/pkg/log# /src/pkg/log#g' go.mod
   - cd /src/dynamix-common
   - rm -rf .git vendor
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
     - cd /src
-    - export GOPROXY={{ $.GOPROXY }}
-    - go mod download
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /discoverer
     - chown 64535:64535 /discoverer
     - chmod 0755 /discoverer

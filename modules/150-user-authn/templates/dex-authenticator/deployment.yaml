@@ -52,7 +52,7 @@ spec:
   selector:
     matchLabels:
       app: dex-authenticator
-      name: {{ $crd.name }}
+      name: {{ $crd.name | quote }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -73,12 +73,12 @@ spec:
   selector:
     matchLabels:
       app: dex-authenticator
-      name: {{ $crd.name }}
+      name: {{ $crd.name | quote }}
   template:
     metadata:
       labels:
         app: dex-authenticator
-        name: {{ $crd.name }}
+        name: {{ $crd.name | quote}}
       annotations:
         checksum/config: {{ $crd.credentials | toJson | b64enc | sha256sum }}
     spec:
@@ -119,10 +119,10 @@ spec:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
           limits:
             memory: 10Mi
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted" . | nindent 8 }}
       containers:
       - name: dex-authenticator
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list $context "dexAuthenticator") }}
         args:
         - --provider=oidc
@@ -211,7 +211,7 @@ spec:
           containerPort: 8443
           protocol: TCP
       - name: redis
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted" . | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list $context "redisStatic") }}
         args:
           - "--save"

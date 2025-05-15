@@ -182,7 +182,7 @@ resource "openstack_compute_instance_v2" "master" {
 
 resource "openstack_blockstorage_volume_v3" "bastion" {
   name                 = "candi-${PREFIX}-bastion-0"
-  size                 = "30"
+  size                 = "60"
   image_id             = data.openstack_images_image_v2.astra_image.id
   volume_type          = var.volume_type
   availability_zone    = var.az_zone
@@ -276,13 +276,9 @@ resource "openstack_compute_instance_v2" "worker" {
   }
 }
 
-resource "openstack_compute_floatingip_v2" "bastion" {
-  pool = data.openstack_networking_network_v2.external.name
-}
-
-resource "openstack_compute_floatingip_associate_v2" "bastion" {
-  floating_ip = openstack_compute_floatingip_v2.bastion.address
-  instance_id = openstack_compute_instance_v2.bastion.id
+resource "openstack_networking_floatingip_v2" "bastion" {
+  port_id             = openstack_networking_port_v2.bastion_internal_without_security.id
+  pool                = "external-network"
 }
 
 output "master_ip_address_for_ssh" {
@@ -306,5 +302,5 @@ output "worker_rosa_ip_address_for_ssh" {
 }
 
 output "bastion_ip_address_for_ssh" {
-  value = openstack_compute_floatingip_v2.bastion.address
+  value = openstack_networking_floatingip_v2.bastion.address
 }

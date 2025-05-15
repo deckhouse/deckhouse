@@ -1,23 +1,40 @@
 bashible: &bashible
   ubuntu:
-    '18.04':
-    '20.04':
-    '22.04':
-    '24.04':
+    "18.04":
+    "20.04":
+    "22.04":
+    "24.04":
   debian:
-    '10':
-    '11':
-    '12':
+    "10":
+    "11":
+    "12":
   centos:
-    '7':
-    '8':
-    '9':
+    "7":
+    "8":
+    "9":
   opensuse:
-    '15.4':
-    '15.5':
-    '15.6':
+    "15.4":
+    "15.5":
+    "15.6":
+  redos:
+    "7.3":
+    "8.0":
+  rosa:
+    "7.9":
+    "12.4":
+    "12.5":
+    "12.6":
+  astra:
+    "1.7":
+    "1.8":
+  altlinux:
+    "p10":
+    "10.0":
+    "10.1":
+    "10.2":
+    "11":
 k8s:
-  '1.28':
+  "1.28":
     status: end-of-life
     patch: 15
     bashible: *bashible
@@ -38,14 +55,14 @@ k8s:
       provisioner: v5.2.0
       attacher: v4.4.0
       resizer: v1.9.0
-      registrar: v2.9.0
+      registrar: v2.13.0
       snapshotter: v8.1.1
       livenessprobe: v2.15.0
-  '1.29':
+  "1.29":
     status: available
     patch: 14
     bashible: *bashible
-    clusterAutoscalerPatch: 2
+    clusterAutoscalerPatch: "2"
     crictlPatch: 0
     ccm:
       openstack: v1.29.1
@@ -62,14 +79,15 @@ k8s:
       provisioner: v5.2.0
       attacher: v4.5.0
       resizer: v1.9.3
-      registrar: v2.10.0
+      registrar: v2.13.0
       snapshotter: v8.1.1
       livenessprobe: v2.15.0
-  '1.30':
+  "1.30":
+    default: true
     status: available
     patch: 10
     bashible: *bashible
-    clusterAutoscalerPatch: 2
+    clusterAutoscalerPatch: '2'
     crictlPatch: 1
     ccm:
       openstack: v1.30.2
@@ -86,14 +104,14 @@ k8s:
       provisioner: v5.2.0
       attacher: v4.6.1
       resizer: v1.11.0
-      registrar: v2.11.0
+      registrar: v2.13.0
       snapshotter: v8.1.1
       livenessprobe: v2.15.0
-  '1.31':
+  "1.31":
     status: available
     patch: 6
     bashible: *bashible
-    clusterAutoscalerPatch: 2
+    clusterAutoscalerPatch: '0'
     crictlPatch: 1
     ccm:
       openstack: v1.31.2
@@ -110,14 +128,14 @@ k8s:
       provisioner: v5.2.0
       attacher: v4.7.0
       resizer: v1.12.0
-      registrar: v2.12.0
+      registrar: v2.13.0
       snapshotter: v8.1.1
       livenessprobe: v2.15.0
-  '1.32':
+  "1.32":
     status: preview
     patch: 2
     bashible: *bashible
-    clusterAutoscalerPatch: 2
+    clusterAutoscalerPatch: '0'
     crictlPatch: 0
     ccm:
       openstack: v1.31.2
@@ -138,6 +156,6 @@ k8s:
       snapshotter: v8.1.1
       livenessprobe: v2.15.0
 d8:
-  d8CliVersion: v0.10.4
+  d8CliVersion: v0.11.3
 jq:
   version: 1.7.1

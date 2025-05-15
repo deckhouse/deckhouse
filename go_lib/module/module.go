@@ -18,6 +18,7 @@ package module
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -109,7 +110,7 @@ func GetHTTPSSecretName(prefix string, moduleName string, input *go_hook.HookInp
 	case "OnlyInURI":
 		return ""
 	default:
-		input.Logger.Warnf("ERROR: https.mode must be in [CertManager, CustomCertificate, OnlyInURI], returning %s", prefix)
+		input.Logger.Warn("ERROR: https.mode must be in [CertManager, CustomCertificate, OnlyInURI], returning", slog.String("value", prefix))
 		return prefix
 	}
 }

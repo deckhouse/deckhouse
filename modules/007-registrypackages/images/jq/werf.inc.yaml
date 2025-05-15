@@ -15,6 +15,11 @@ import:
 imageSpec:
   config:
     labels: { "distro": "all", "version": "all", "jq": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
@@ -29,7 +34,7 @@ git:
     setup:
     - '**/*'
 import:
-- image: common/jq-artifact
+- image: tools/jq
   add: /usr/bin/jq
   to: /jq
   before: setup

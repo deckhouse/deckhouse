@@ -1,38 +1,34 @@
+version: "2"
 run:
   timeout: 10m
 
-issues:
-  exclude:
-    - ST1005.*
-    - "should not use dot imports"
-    - "don't use an underscore in package name"
-    - "exported: .*"
-  exclude-dirs:
-    # this code has been copied from kubectl cli. No need to lint external code.
-    - go_lib/dependency/k8s/drain
-    # this code has been copied from kubernetes vertical-pod-autoscaler. No need to lint external code.
-    - modules/302-vertical-pod-autoscaler/hooks/internal/vertical-pod-autoscaler/v1
-
-linters-settings:
-  gci:
-    sections:
-      - standard
-      - default
-      - prefix(github.com/deckhouse/)
-  goimports:
-    local-prefixes: github.com/deckhouse/
-  # TODO: replace deprecated methods
-  # ignore deprecated 
-  # https://staticcheck.dev/docs/checks/#SA1019
-  staticcheck:
-     checks: ["all","-SA1019"]
-  errcheck:
-    # Is Depricateed, use exclude-functions: https://github.com/kisielk/errcheck#excluding-functions
-    exclude-functions:
-      - fmt:.*[rR]ead|[wW]rite|[cC]lose
-      - io:Copy
-  sloglint:
-      # Enforce not mixing key-value pairs and attributes.
+linters:
+  default: none
+  enable:
+    - copyloopvar
+    - dogsled
+    - errcheck
+    - gocritic
+    - govet
+    - ineffassign
+    - misspell
+    - musttag
+    - nonamedreturns
+    - prealloc
+    - revive
+    - sloglint
+    - staticcheck
+    - unconvert
+    - unparam
+    - whitespace
+  settings:
+    errcheck:
+      exclude-functions:
+        - fmt:.*[rR]ead|[wW]rite|[cC]lose
+        - io:Copy
+    nonamedreturns:
+      report-error-in-defer: false
+    sloglint:
       no-mixed-args: true
       # Enforce using key-value pairs only (overrides no-mixed-args, incompatible with attr-only).
       kv-only: false
@@ -47,7 +43,7 @@ linters-settings:
       # Enforce using constants instead of raw keys.
       no-raw-keys: false
       # Enforce a single key naming convention.
-      key-naming-case: ""
+#      key-naming-case: ""
       # Enforce not using specific keys.
       forbidden-keys:
         - level
@@ -58,32 +54,54 @@ linters-settings:
         - time
       # Enforce putting arguments on separate lines.
       args-on-sep-lines: false
-  nonamedreturns:
-    # Report named error if it is assigned inside defer.
-    # Default: false
-    report-error-in-defer: false
-
-linters:
-  disable-all: true
+    staticcheck:
+      checks:
+        - all
+        - '-SA1019' # waiting for logger to be fixed
+        - '-ST1003' # waiting for package name will be fixed (underscores)
+        - '-QF1008' # not need to fix; we understand how to call nested structs
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - path: (.+)\.go$
+        text: ST1005.*
+      - path: (.+)\.go$
+        text: should not use dot imports
+      - path: (.+)\.go$
+        text: don't use an underscore in package name
+      - path: (.+)\.go$
+        text: 'exported: .*'
+    paths:
+      - go_lib/dependency/k8s/drain
+      - modules/302-vertical-pod-autoscaler/hooks/internal/vertical-pod-autoscaler/v1
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
   enable:
-  - dogsled
-  - errcheck
-  - gci
-  - gocritic
-  - gofmt
-  - goimports
-  - gosimple
-  - govet
-  - ineffassign
-  - misspell
-  - revive
-  - sloglint
-  - staticcheck
-#  - structcheck
-  - typecheck
-  - unconvert
-  - unparam
-  - whitespace
-  - copyloopvar
-  - nonamedreturns
-  - musttag
+    - gci
+    - gofmt
+    - goimports
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/deckhouse/)
+        - localmodule
+    goimports:
+      local-prefixes:
+        - github.com/deckhouse/
+  exclusions:
+    generated: lax
+    paths:
+      - go_lib/dependency/k8s/drain
+      - modules/302-vertical-pod-autoscaler/hooks/internal/vertical-pod-autoscaler/v1
+      - third_party$
+      - builtin$
+      - examples$

@@ -26,7 +26,7 @@ import (
 	"testing"
 	"time"
 
-	v1 "github.com/google/go-containerregistry/pkg/v1"
+	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -51,9 +51,9 @@ import (
 var (
 	generateGolden     bool
 	manifestsDelimiter *regexp.Regexp
-	manifestStub       = func() (*v1.Manifest, error) {
-		return &v1.Manifest{
-			Layers: []v1.Descriptor{},
+	manifestStub       = func() (*crv1.Manifest, error) {
+		return &crv1.Manifest{
+			Layers: []crv1.Descriptor{},
 		}, nil
 	}
 )
@@ -101,7 +101,7 @@ func (suite *ControllerTestSuite) setupTestController(raw string) {
 		client:               suite.client,
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		dependencyContainer:  dependency.NewDependencyContainer(),
-		log:                  log.NewNop(),
+		logger:               log.NewNop(),
 
 		embeddedPolicy: helpers.NewModuleUpdatePolicySpecContainer(&v1alpha2.ModuleUpdatePolicySpec{
 			Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
@@ -244,11 +244,11 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		dependency.TestDC.CRClient.ListTagsMock.Return([]string{"enabledmodule", "disabledmodule", "withpolicymodule", "notthissourcemodule"}, nil)
 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
 			ManifestStub: manifestStub,
-			LayersStub: func() ([]v1.Layer, error) {
-				return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "v1.2.3"}`}}}, nil
+			LayersStub: func() ([]crv1.Layer, error) {
+				return []crv1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "v1.2.3"}`}}}, nil
 			},
-			DigestStub: func() (v1.Hash, error) {
-				return v1.Hash{Algorithm: "sha256"}, nil
+			DigestStub: func() (crv1.Hash, error) {
+				return crv1.Hash{Algorithm: "sha256"}, nil
 			},
 		}, nil)
 
@@ -257,20 +257,20 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
-	suite.Run("source with module with pull error", func() {
+	suite.Run("source with pull error", func() {
 		dependency.TestDC.CRClient.ListTagsMock.Return([]string{"enabledmodule", "errormodule"}, nil)
-		dependency.TestDC.CRClient.ImageMock.Set(func(tag string) (v1.Image, error) {
+		dependency.TestDC.CRClient.ImageMock.Set(func(tag string) (crv1.Image, error) {
 			if tag == "alpha" {
 				return nil, errors.New("GET https://registry.deckhouse.io/v2/deckhouse/ee/modules/errormodule/release/manifests/alpha:\n      MANIFEST_UNKNOWN: manifest unknown; map[Tag:alpha]")
 			}
 
 			return &crfake.FakeImage{
 				ManifestStub: manifestStub,
-				LayersStub: func() ([]v1.Layer, error) {
-					return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "v1.2.3"}`}}}, nil
+				LayersStub: func() ([]crv1.Layer, error) {
+					return []crv1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "v1.2.3"}`}}}, nil
 				},
-				DigestStub: func() (v1.Hash, error) {
-					return v1.Hash{Algorithm: "sha256"}, nil
+				DigestStub: func() (crv1.Hash, error) {
+					return crv1.Hash{Algorithm: "sha256"}, nil
 				},
 			}, nil
 		})

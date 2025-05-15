@@ -30,8 +30,12 @@
 - image: deckhouse-controller-artifact
   add: /out/deckhouse-controller
   to: /usr/bin/deckhouse-controller
-  after: setup
-- image: common/jq-artifact
+  after: install
+- image: deckhouse-controller-artifact
+  add: /out/deckhouse-controller
+  to: /usr/bin/caps-deckhouse-controller
+  after: install
+- image: tools/jq
   add: /usr/bin/jq
   to: /usr/bin/jq
   after: setup
@@ -99,4 +103,8 @@ import:
   add: /images_digests.json
   to: /deckhouse/modules/040-node-manager/images_digests.json
   after: setup
+shell:
+  setup:
+  # import all installed libs
+  - ldconfig
 {{- end }}

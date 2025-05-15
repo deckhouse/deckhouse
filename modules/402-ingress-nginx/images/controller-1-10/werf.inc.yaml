@@ -25,6 +25,9 @@ git:
   stageDependencies:
     install:
       - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   beforeInstall:
   {{- include "alt packages proxy" . | nindent 2 }}
@@ -32,26 +35,37 @@ shell:
   setup:
   - mkdir -p /src
   - cd /src
-  - git clone --branch v1.2.5 --depth 1 {{ $.SOURCE_REPO }}/yelp/dumb-init.git
-  - git clone --branch 0.5.1 {{ $.SOURCE_REPO }}/starwing/lua-protobuf
-  - git clone --branch 7-3 {{ $.SOURCE_REPO }}/luarocks-sorces/lua-iconv
+  - git clone --branch v1.2.5 --depth 1 $(cat /run/secrets/SOURCE_REPO)/yelp/dumb-init.git
+  - git clone --branch 0.5.1 $(cat /run/secrets/SOURCE_REPO)/starwing/lua-protobuf
+  - git clone --branch 7-3 $(cat /run/secrets/SOURCE_REPO)/luarocks-sorces/lua-iconv
   - git clone --branch {{ $controllerBranch }} --depth 1 {{$.SOURCE_REPO}}/kubernetes/ingress-nginx.git
   - cd /src/ingress-nginx
-  - patch -p1 < /patches/lua-info.patch
-  - patch -p1 < /patches/01-gomod.patch
-  - patch -p1 < /patches/makefile.patch
-  - patch -p1 < /patches/healthcheck.patch
-  - patch -p1 < /patches/metrics-SetSSLExpireTime.patch
-  - patch -p1 < /patches/util.patch
-  - patch -p1 < /patches/fix-cleanup.patch
-  - patch -p1 < /patches/add-http3.patch
-  - patch -p1 < /patches/nginx-build.patch
-  - patch -p1 < /patches/new-metrics.patch
-  - patch -p1 < /patches/default-backend-fix.patch
+  - patch -p1 < /patches/004-lua-info.patch
+  - patch -p1 < /patches/001-go-mod.patch
+  - patch -p1 < /patches/005-makefile.patch
+  - patch -p1 < /patches/002-healthcheck.patch
+  - patch -p1 < /patches/006-metrics-SetSSLExpireTime.patch
+  - patch -p1 < /patches/008-util.patch
+  - patch -p1 < /patches/009-fix-cleanup.patch
+  - patch -p1 < /patches/011-add-http3.patch
+  - patch -p1 < /patches/010-nginx-build.patch
+  - patch -p1 < /patches/012-new-metrics.patch
+  - patch -p1 < /patches/013-default-backend-fix.patch
+  - patch -p1 < /patches/015-fix-validating-webhook-cve.patch
   - cd /src/ingress-nginx/rootfs
-  - patch -p1 < /patches/balancer-lua.patch
-  - patch -p1 < /patches/nginx-tmpl.patch
-  - patch -p1 < /patches/auth-cookie-always.patch
+  - patch -p1 < /patches/014-balancer-lua.patch
+  - patch -p1 < /patches/003-nginx-tmpl.patch
+  - patch -p1 < /patches/007-auth-cookie-always.patch
+  # pass env for build
+  - cd /src/ingress-nginx
+  - echo "export COMMIT_SHA=git-$(git rev-parse --short HEAD)" > .env_pass
+  - echo "export REPO_INFO=$(git config --get remote.origin.url)" >> .env_pass
+  - echo "export TAG=$(git describe --tags --always)" >> .env_pass
+  - rm -rf /src/dumb-init/.git   
+  - rm -rf /src/lua-protobuf/.git   
+  - rm -rf /src/lua-iconv/.git   
+  - rm -rf /src/ingress-nginx/.git   
+  
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-dumb-init-artifact
 fromImage: common/alt-p11-artifact
@@ -100,22 +114,31 @@ import:
   to: /src
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
   {{- include "alpine packages proxy" . | nindent 2 }}
   # git needs for getting tag and commit sha for build purposes
   - apk --no-cache add make bash git
   setup:
-  - export GOPROXY={{ $.GOPROXY }}
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - export GOARCH=amd64
+  - export PKG="k8s.io/ingress-nginx"
   - cd /src/
-  - make GO111MODULE=on USE_DOCKER=false build
+  - |
+    source /src/.env_pass && \
+    echo "Loaded: COMMIT_SHA=$COMMIT_SHA, REPO_INFO=$REPO_INFO, ARCH=$GOARCH, PKG=$PKG TAG=$TAG" && \
+    make GO111MODULE=on USE_DOCKER=false build
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
 fromImage: common/alt-p11-artifact
 final: false
+mount:
+- from: tmp_dir
+  to: /tmp
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/ingress-nginx/images/nginx-1.25/rootfs/
@@ -125,14 +148,17 @@ import:
   add: /src/rootfs/etc
   to: /src/etc
   before: install
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   # git needs for getting dependencies from our repo
   - apt-get install -y liblua5.3-devel lua5.3 libaio-devel libaom3 libbrotli-devel libcap-utils libcurl-devel libgrpc++-devel libgrpc++ libre2-devel libre2 libgrpc libgrpc-devel libssl-devel libmaxminddb libmaxminddb-devel libpcre-devel libpcre16 git cmake ninja-build libabseil-cpp-devel build-essential libgrpc-devel libprotobuf-devel grpc-plugins openssl libpcre2-devel libcares-devel
   - apt-get install -y liblua5.1-devel --download-only
   setup:
-  - export SOURCE_REPO={{ $.SOURCE_REPO }}
-  - git config --global url."{{ .SOURCE_REPO }}".insteadOf https://github.com
+  - export SOURCE_REPO=$(cat /run/secrets/SOURCE_REPO)
+  - git config --global url."${SOURCE_REPO}".insteadOf https://github.com
   - cp -R /src/etc/* /etc/
   - rm -rf /src/etc
   - /build.sh
@@ -333,6 +359,8 @@ shell:
 # remove ruby from libs because it has cve's but not using in image
 # ruby install with grpc-plugins packet it needs for building nginx
   - rm -rf /chroot/usr/lib64/ruby
+# remove owasp-modsecurity-crs/util bash scripts cve
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs
 imageSpec:
   config:
     workingDir: /

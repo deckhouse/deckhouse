@@ -7,6 +7,7 @@ package ee
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	eeCrd "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee/lib/crd"
 	"github.com/deckhouse/deckhouse/go_lib/jwt"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
+	"github.com/deckhouse/deckhouse/pkg/log"
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
@@ -162,23 +164,23 @@ federationsLoop:
 		}
 
 		if federationInfo.TrustDomain == myTrustDomain {
-			input.Logger.Warnf("skipping IstioFederation %s with trustDomain equals to ours: %s", federationInfo.Name, federationInfo.TrustDomain)
+			input.Logger.Warn("skipping IstioFederation with trustDomain equals to ours", slog.String("name", federationInfo.Name), slog.String("trust_domain", federationInfo.TrustDomain))
 			continue federationsLoop
 		}
 		if federationInfo.Public == nil {
-			input.Logger.Warnf("public metadata for IstioFederation %s wasn't fetched yet", federationInfo.Name)
+			input.Logger.Warn("public metadata for IstioFederation wasn't fetched yet", slog.String("name", federationInfo.Name))
 			continue federationsLoop
 		}
 
 		remotePublicMetadata[federationInfo.Public.ClusterUUID] = *federationInfo.Public
 
 		if federationInfo.PublicServices == nil {
-			input.Logger.Warnf("private metadata for IstioFederation %s wasn't fetched yet", federationInfo.Name)
+			input.Logger.Warn("private metadata for IstioFederation wasn't fetched yet", slog.String("name", federationInfo.Name))
 			continue
 		}
 
 		if federationInfo.IngressGateways == nil || len(*federationInfo.IngressGateways) == 0 {
-			input.Logger.Warnf("private metadata for IstioFederation %s wasn't fetched yet", federationInfo.Name)
+			input.Logger.Warn("private metadata for IstioFederation wasn't fetched yet", slog.String("name", federationInfo.Name))
 			continue federationsLoop
 		}
 
@@ -197,19 +199,19 @@ multiclustersLoop:
 		}
 
 		if multiclusterInfo.Public == nil {
-			input.Logger.Warnf("public metadata for IstioMulticluster %s wasn't fetched yet", multiclusterInfo.Name)
+			input.Logger.Warn("public metadata for IstioMulticluster wasn't fetched yet", slog.String("name", multiclusterInfo.Name))
 			continue multiclustersLoop
 		}
 
 		remotePublicMetadata[multiclusterInfo.Public.ClusterUUID] = *multiclusterInfo.Public
 
 		if multiclusterInfo.APIHost == "" || multiclusterInfo.NetworkName == "" {
-			input.Logger.Warnf("private metadata for IstioMulticluster %s wasn't fetched yet", multiclusterInfo.Name)
+			input.Logger.Warn("private metadata for IstioMulticluster wasn't fetched yet", slog.String("name", multiclusterInfo.Name))
 			continue multiclustersLoop
 		}
 		if multiclusterInfo.EnableIngressGateway &&
 			(multiclusterInfo.IngressGateways == nil || len(*multiclusterInfo.IngressGateways) == 0) {
-			input.Logger.Warnf("ingressGateways for IstioMulticluster %s weren't fetched yet", multiclusterInfo.Name)
+			input.Logger.Warn("ingressGateways for IstioMulticluster weren't fetched yet", slog.String("name", multiclusterInfo.Name))
 			continue multiclustersLoop
 		}
 
@@ -224,7 +226,7 @@ multiclustersLoop:
 		// multiclusterInfo.APIJWT, err = jwt.GenerateJWT(privKey, claims, time.Hour*25)
 		multiclusterInfo.APIJWT, err = jwt.GenerateJWT(privKey, claims, time.Hour*24*366)
 		if err != nil {
-			input.Logger.Warnf("can't generate auth token for remote api of IstioMulticluster %s, error: %s", multiclusterInfo.Name, err.Error())
+			input.Logger.Warn("can't generate auth token for remote api of IstioMulticluster", slog.String("name", multiclusterInfo.Name), log.Err(err))
 			continue multiclustersLoop
 		}
 

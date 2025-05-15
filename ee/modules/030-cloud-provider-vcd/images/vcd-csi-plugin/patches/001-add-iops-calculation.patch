@@ -1,0 +1,80 @@
+Subject: [PATCH] iops calculate
+---
+Index: pkg/vcdcsiclient/disks.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/vcdcsiclient/disks.go b/pkg/vcdcsiclient/disks.go
+--- a/pkg/vcdcsiclient/disks.go	(revision 4d45eb49052c9ff2e5a72c80a74f7fb4484e7b74)
++++ b/pkg/vcdcsiclient/disks.go	(date 1744029622113)
+@@ -9,17 +9,19 @@
+ 	"context"
+ 	"encoding/json"
+ 	"fmt"
+-	"github.com/vmware/cloud-director-named-disk-csi-driver/pkg/util"
+-	"github.com/vmware/cloud-director-named-disk-csi-driver/pkg/vcdtypes"
+-	"github.com/vmware/cloud-director-named-disk-csi-driver/version"
++	"net/http"
++	"strings"
++	"time"
++
+ 	"github.com/vmware/cloud-provider-for-cloud-director/pkg/vcdsdk"
+ 	swaggerClient "github.com/vmware/cloud-provider-for-cloud-director/pkg/vcdswaggerclient_37_2"
+ 	"github.com/vmware/go-vcloud-director/v2/govcd"
+ 	"github.com/vmware/go-vcloud-director/v2/types/v56"
+ 	"k8s.io/klog"
+-	"net/http"
+-	"strings"
+-	"time"
++
++	"github.com/vmware/cloud-director-named-disk-csi-driver/pkg/util"
++	"github.com/vmware/cloud-director-named-disk-csi-driver/pkg/vcdtypes"
++	"github.com/vmware/cloud-director-named-disk-csi-driver/version"
+ )
+ 
+ type DiskManager struct {
+@@ -151,16 +153,41 @@
+ 		Xmlns: types.XMLNamespaceVCloud,
+ 		Disk:  d,
+ 	}
++	klog.Infof("Storage profile: %s", storageProfile)
++
+ 	if storageProfile != "" {
+ 		storageReference, err := diskManager.VCDClient.VDC.FindStorageProfileReference(storageProfile)
+ 		if err != nil {
+-			return nil, fmt.Errorf("unable to find storage profile [%s] for disk [%s]",
+-				storageProfile, diskName)
++			return nil, fmt.Errorf("unable to find storage profile [%s] for disk [%s]: [%v]",
++				storageProfile, diskName, err)
+ 		}
+ 
+ 		diskParams.Disk.StorageProfile = &types.Reference{
+ 			HREF: storageReference.HREF,
+ 		}
++
++		storageProfileData, err := diskManager.VCDClient.VCDClient.GetStorageProfileByHref(storageReference.HREF)
++		if err != nil {
++			return nil, fmt.Errorf("unable to get storage profile [%s] for disk [%s] by HREF [%s]: [%v]",
++				storageProfile, diskName, storageReference.HREF, err)
++		}
++
++		klog.Infof("Storage profile data iops settings [%s]: %v", storageProfileData.Name, storageProfileData.IopsSettings)
++		klog.Infof("Storage profile data iops allocated [%s] %v", storageProfileData.Name, storageProfileData.IopsAllocated)
++
++		if storageProfileData.IopsSettings != nil {
++			if storageProfileData.IopsSettings.Enabled {
++				// If storageProfile Max IOPS per Gb is set
++				iops := storageProfileData.IopsSettings.DiskIopsPerGbMax * d.SizeMb / 1024
++				if iops == 0 {
++					iops = storageProfileData.IopsSettings.DiskIopsMax
++					if iops == 0 {
++						iops = storageProfileData.IopsSettings.DiskIopsDefault
++					}
++				}
++				d.Iops = iops
++			}
++		}
+ 	}
+ 
+ 	task, err := diskManager.createDisk(diskParams)

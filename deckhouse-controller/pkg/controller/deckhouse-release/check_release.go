@@ -31,7 +31,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
+	"github.com/flant/shell-operator/pkg/metric"
 	registryv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/iancoleman/strcase"
 	"github.com/jonboulle/clockwork"
@@ -75,7 +75,7 @@ type DeckhouseReleaseFetcherConfig struct {
 	releaseChannel          string
 	releaseVersionImageHash string
 
-	metricStorage *metricstorage.MetricStorage
+	metricStorage metric.Storage
 
 	logger *log.Logger
 }
@@ -170,7 +170,7 @@ type DeckhouseReleaseFetcher struct {
 	releaseChannel          string
 	releaseVersionImageHash string
 
-	metricStorage *metricstorage.MetricStorage
+	metricStorage metric.Storage
 
 	logger *log.Logger
 }
@@ -181,12 +181,6 @@ func (f *DeckhouseReleaseFetcher) GetReleaseChannel() string {
 
 // fetchDeckhouseRelease is a complete flow for loop
 func (f *DeckhouseReleaseFetcher) fetchDeckhouseRelease(ctx context.Context) error {
-	// get image info from release channel
-	imageInfo, imageErr := f.GetNewImageInfo(ctx, f.releaseVersionImageHash)
-	if imageErr != nil && !errors.Is(imageErr, ErrImageNotChanged) {
-		return fmt.Errorf("get new image: %w", imageErr)
-	}
-
 	releases, err := f.listDeckhouseReleases(ctx)
 	if err != nil {
 		return fmt.Errorf("list deckhouse releases: %w", err)
@@ -230,8 +224,14 @@ func (f *DeckhouseReleaseFetcher) fetchDeckhouseRelease(ctx context.Context) err
 		}
 	}
 
+	// get image info from release channel
+	imageInfo, err := f.GetNewImageInfo(ctx, f.releaseVersionImageHash)
+	if err != nil && !errors.Is(err, ErrImageNotChanged) {
+		return fmt.Errorf("get new image: %w", err)
+	}
+
 	// no new image found
-	if errors.Is(imageErr, ErrImageNotChanged) {
+	if err != nil {
 		return nil
 	}
 
@@ -391,6 +391,15 @@ func (f *DeckhouseReleaseFetcher) restoreCurrentDeployedRelease(ctx context.Cont
 		return nil, fmt.Errorf("create release: %w", err)
 	}
 
+	patch := client.MergeFrom(release.DeepCopy())
+
+	release.Status.Phase = v1alpha1.DeckhouseReleasePhaseDeployed
+
+	err = f.k8sClient.Status().Patch(ctx, release, patch)
+	if err != nil {
+		return nil, fmt.Errorf("patch release status: %w", err)
+	}
+
 	return release, nil
 }
 
@@ -412,15 +421,11 @@ func (f *DeckhouseReleaseFetcher) createReleases(
 	releasesInCluster []*v1alpha1.DeckhouseRelease,
 	newSemver *semver.Version) (*ReleaseMetadata, error) {
 	var (
-		cooldownUntil, notificationShiftTime *metav1.Time
+		notificationShiftTime *metav1.Time
 	)
 
-	if releaseMetadata.Cooldown != nil {
-		cooldownUntil = releaseMetadata.Cooldown
-	}
-
 	if len(releasesInCluster) == 0 {
-		err := f.createRelease(ctx, releaseMetadata, cooldownUntil, notificationShiftTime, "no releases in cluster")
+		err := f.createRelease(ctx, releaseMetadata, notificationShiftTime, "no releases in cluster")
 		if err != nil {
 			return nil, fmt.Errorf("create release %s: %w", releaseMetadata.Version, err)
 		}
@@ -431,7 +436,7 @@ func (f *DeckhouseReleaseFetcher) createReleases(
 	// create release if deployed release and new release are in updating sequence
 	actual := releaseForUpdate
 	if isUpdatingSequence(actual.GetVersion(), newSemver) {
-		err := f.createRelease(ctx, releaseMetadata, cooldownUntil, notificationShiftTime, "from deployed")
+		err := f.createRelease(ctx, releaseMetadata, notificationShiftTime, "from deployed")
 		if err != nil {
 			return nil, fmt.Errorf("create release %s: %w", releaseMetadata.Version, err)
 		}
@@ -454,22 +459,13 @@ func (f *DeckhouseReleaseFetcher) createReleases(
 		// create release if last release and new release are in updating sequence
 		if isUpdatingSequence(actual.GetVersion(), newSemver) {
 			// TODO: remove cooldown?
-			err := f.createRelease(ctx, releaseMetadata, cooldownUntil, notificationShiftTime, "from last release in cluster")
+			err := f.createRelease(ctx, releaseMetadata, notificationShiftTime, "from last release in cluster")
 			if err != nil {
 				return nil, fmt.Errorf("create release %s: %w", releaseMetadata.Version, err)
 			}
 
 			return releaseMetadata, nil
 		}
-	}
-
-	// inherit cooldown from previous patch release
-	// we need this to automatically set cooldown for next patch releases
-	if cooldownUntil == nil &&
-		actual.GetCooldownUntil() != nil &&
-		actual.GetVersion().Major() == newSemver.Major() &&
-		actual.GetVersion().Minor() == newSemver.Minor() {
-		cooldownUntil = &metav1.Time{Time: *actual.GetCooldownUntil()}
 	}
 
 	if actual.GetNotificationShift() &&
@@ -479,29 +475,27 @@ func (f *DeckhouseReleaseFetcher) createReleases(
 		notificationShiftTime = &metav1.Time{Time: *actual.GetApplyAfter()}
 	}
 
+	metricLabels := map[string]string{
+		"version": releaseForUpdate.GetVersion().Original(),
+	}
+
 	metas, err := f.GetNewReleasesMetadata(ctx, actual.GetVersion(), newSemver)
 	if err != nil {
 		f.logger.Error("step by step update failed", log.Err(err))
 
-		labels := map[string]string{
-			"version": releaseForUpdate.GetVersion().Original(),
-		}
-
-		f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup, "d8_updating_is_failed", 1, labels)
+		f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup, "d8_updating_is_failed", 1, metricLabels)
 
 		return nil, fmt.Errorf("get new releases metadata: %w", err)
 	}
 
+	f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup, "d8_updating_is_failed", 0, metricLabels)
+
 	for _, meta := range metas {
 		releaseMetadata = &meta
 
-		err = f.createRelease(ctx, releaseMetadata, cooldownUntil, notificationShiftTime, "step-by-step")
+		err = f.createRelease(ctx, releaseMetadata, notificationShiftTime, "step-by-step")
 		if err != nil {
 			return nil, fmt.Errorf("create release %s: %w", releaseMetadata.Version, err)
-		}
-
-		if releaseMetadata.Cooldown != nil {
-			cooldownUntil = releaseMetadata.Cooldown
 		}
 	}
 
@@ -515,7 +509,6 @@ func (f *DeckhouseReleaseFetcher) createReleases(
 func (f *DeckhouseReleaseFetcher) createRelease(
 	ctx context.Context,
 	releaseMetadata *ReleaseMetadata,
-	cooldownUntil,
 	notificationShiftTime *metav1.Time,
 	createProcess string,
 ) error {
@@ -524,9 +517,6 @@ func (f *DeckhouseReleaseFetcher) createRelease(
 	ts := metav1.Time{Time: f.clock.Now()}
 	if releaseMetadata.IsCanaryRelease(f.GetReleaseChannel()) {
 		// if cooldown is set, calculate canary delay from cooldown time, not current
-		if cooldownUntil != nil && cooldownUntil.After(ts.Time) {
-			ts = *cooldownUntil
-		}
 		applyAfter = releaseMetadata.CalculateReleaseDelay(f.GetReleaseChannel(), ts, f.clusterUUID)
 	}
 
@@ -563,9 +553,6 @@ func (f *DeckhouseReleaseFetcher) createRelease(
 				v1alpha1.DeckhouseReleaseAnnotationNotified:    "false",
 				v1alpha1.DeckhouseReleaseAnnotationChangeCause: changeCause,
 			},
-			Labels: map[string]string{
-				"heritage": "deckhouse",
-			},
 		},
 		Spec: v1alpha1.DeckhouseReleaseSpec{
 			Version:       releaseMetadata.Version,
@@ -580,9 +567,6 @@ func (f *DeckhouseReleaseFetcher) createRelease(
 
 	if releaseMetadata.Suspend {
 		release.ObjectMeta.Annotations[v1alpha1.DeckhouseReleaseAnnotationSuspended] = "true"
-	}
-	if cooldownUntil != nil {
-		release.ObjectMeta.Annotations[v1alpha1.DeckhouseReleaseAnnotationCooldown] = cooldownUntil.UTC().Format(time.RFC3339)
 	}
 	if notificationShiftTime != nil {
 		release.ObjectMeta.Annotations[v1alpha1.DeckhouseReleaseAnnotationNotificationTimeShift] = "true"
@@ -913,7 +897,7 @@ func (f *DeckhouseReleaseFetcher) getNewVersions(ctx context.Context, actual, ta
 
 func (f *DeckhouseReleaseFetcher) parseAndFilterVersions(tags []string) []*semver.Version {
 	versionMatcher := regexp.MustCompile(`^v(([0-9]+).([0-9]+).([0-9]+))$`)
-	var versions []*semver.Version
+	versions := make([]*semver.Version, 0)
 
 	for _, tag := range tags {
 		if !versionMatcher.MatchString(tag) {
@@ -934,10 +918,9 @@ func (f *DeckhouseReleaseFetcher) parseAndFilterVersions(tags []string) []*semve
 }
 
 func isVersionInRange(ver, actual, target *semver.Version) bool {
-	return !(actual.Major() > ver.Major() ||
-		(actual.Major() == ver.Major() && actual.Minor() > ver.Minor()) ||
-		target.Major() < ver.Major() ||
-		(target.Major() == ver.Major() && target.Minor() < ver.Minor()))
+	return (ver.Major() > actual.Major() ||
+		(ver.Major() == actual.Major() && ver.Minor() >= actual.Minor())) &&
+		(ver.Major() < target.Major() || (ver.Major() == target.Major() && ver.Minor() <= target.Minor()))
 }
 
 func isVersionGreaterThanTarget(ver, target *semver.Version) bool {

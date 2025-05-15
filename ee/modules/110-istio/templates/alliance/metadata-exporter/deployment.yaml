@@ -1,7 +1,3 @@
-{{- define "metadata_discovery_resources" }}
-cpu: 10m
-memory: 25Mi
-{{- end }}
 {{- define "metadata_exporter_resources" }}
 cpu: 10m
 memory: 25Mi
@@ -25,12 +21,6 @@ spec:
     updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
-    - containerName: metadata-discovery
-      minAllowed:
-        {{- include "metadata_discovery_resources" . | nindent 8 }}
-      maxAllowed:
-        cpu: 20m
-        memory: 50Mi
     - containerName: metadata-exporter
       minAllowed:
         {{- include "metadata_exporter_resources" . | nindent 8 }}
@@ -72,6 +62,10 @@ spec:
         env:
         - name: CLUSTER_UUID
           value: {{ .Values.global.discovery.clusterUUID }}
+        - name: CLUSTER_DOMAIN
+          value: {{ $.Values.global.discovery.clusterDomain | quote }}
+        - name: INLET
+          value: {{ $.Values.istio.alliance.ingressGateway.inlet | quote }}
   {{- if .Values.istio.federation.enabled }}
         - name: FEDERATION_ENABLED
           value: "true"
@@ -107,53 +101,4 @@ spec:
   {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "metadata_discovery_resources" . | nindent 12 }}
   {{- end }}
-        volumeMounts:
-        - name: istio-ca-root-cert
-          mountPath: /certs/
-        - name: authn-keypair
-          mountPath: /keys/pub.pem
-          subPath: pub.pem
-        - name: remote-public-metadata
-          mountPath: /remote/
-        - name: metadata
-          mountPath: /metadata/
-      - name: metadata-discovery
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: {{ include "helm_lib_module_image" (list . "metadataDiscovery") }}
-        imagePullPolicy: IfNotPresent
-        env:
-        - name: DEBUG_UNIX_SOCKET
-          value: /tmp/shell-operator-debug.socket
-        - name: CLUSTER_DOMAIN
-          value: {{ $.Values.global.discovery.clusterDomain | quote }}
-        - name: INLET
-          value: {{ $.Values.istio.alliance.ingressGateway.inlet | quote }}
-        resources:
-          requests:
-            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
-            {{- include "metadata_discovery_resources" . | nindent 12 }}
-  {{- end }}
-        volumeMounts:
-        - name: metadata
-          mountPath: /metadata/
-        - name: tmp
-          mountPath: /tmp/
-      volumes:
-      - name: istio-ca-root-cert
-        configMap:
-          name: istio-ca-root-cert
-      - name: authn-keypair
-        secret:
-          defaultMode: 420
-          optional: true
-          secretName: d8-remote-authn-keypair
-      - name: remote-public-metadata
-        secret:
-          defaultMode: 420
-          secretName: d8-remote-clusters-public-metadata
-      - name: metadata
-        emptyDir: {}
-      - name: tmp
-        emptyDir: {}
 {{- end }}

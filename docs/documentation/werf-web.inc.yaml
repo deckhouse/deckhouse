@@ -1,7 +1,9 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 {{ if eq .ModuleName "docs" }}
-from: {{ .Images.BASE_NGINX_ALPINE }}
+from: {{ .Images.BASE_ALPINE }}
 shell:
+  beforeSetup:
+  - apk add --no-cache nginx
   setup:
   - |
       cat <<"EOD" > /etc/nginx/nginx.conf
@@ -107,7 +109,8 @@ shell:
 
         echo '[] Filling in the array of supported OS & K8S versions...'
         cd _data
-        sed '/^bashible:/r version_map_addition.yml' version_map.yml >> supported_versions.yml
+        yq eval version_map.yml -j > version_map.json && rm version_map.yml
+        jq -MsS '.[0] * .[1]' version_map.json version_map_addition.json | yq eval -P >> supported_versions.yml
 
         echo '[] Converting editions structure...'
         yq e -j editions-repo-data.yaml | jq -M 'reduce .editions[] as $item ({}; .[$item.name | ascii_downcase] = $item)' | jq -Ms '.[0] * .[1]' - modules/editions-addition.json | jq '. as $editions | input as $be | .["be"].excludeModules += $be.excludeModules' - modules/be-addition.json > editions.json
@@ -193,6 +196,8 @@ git:
     - site/_plugins/gs_generator.rb
     - site/_plugins/dvp_resource_generator.rb
     - site/pages/virtualization-platform
+    - site/pages/code
+    - site/pages/stronghold
 {{ end }}
   stageDependencies:
     install: ['site/Gemfile','site/Gemfile.lock']

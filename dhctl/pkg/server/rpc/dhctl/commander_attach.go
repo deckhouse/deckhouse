@@ -38,11 +38,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
 func (s *Service) CommanderAttach(server pb.DHCTL_CommanderAttachServer) error {
-	ctx := operationCtx(server)
+	ctx, cancel := operationCtx(server)
+	defer cancel()
 
 	logger.L(ctx).Info("started")
 
@@ -89,7 +89,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.commanderAttachSafe(ctx, message.Start, phaseSwitcher.switchPhase, logWriter)
+					result := s.commanderAttachSafe(ctx, message.Start, phaseSwitcher.switchPhase(ctx), logWriter)
 					sendCh <- &pb.CommanderAttachResponse{Message: &pb.CommanderAttachResponse_Result{Result: result}}
 				}()
 
@@ -110,6 +110,9 @@ connectionProcessor:
 				case pb.Continue_CONTINUE_ERROR:
 					phaseSwitcher.next <- errors.New(message.Continue.Err)
 				}
+
+			case *pb.CommanderAttachRequest_Cancel:
+				cancel()
 
 			default:
 				logger.L(ctx).Error("got unprocessable message",
@@ -144,7 +147,7 @@ func (s *Service) commanderAttach(
 	var err error
 
 	cleanuper := callback.NewCallback()
-	defer cleanuper.Call()
+	defer func() { _ = cleanuper.Call() }()
 
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
 		OutStream: logWriter,
@@ -158,9 +161,7 @@ func (s *Service) commanderAttach(
 	app.ApplyPreflightSkips(request.Options.CommonOptions.SkipPreflightChecks)
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
-	defer func() {
-		log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName)
-	}()
+	defer func() { log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName) }()
 
 	var sshClient *ssh.Client
 	err = log.Process("default", "Preparing SSH client", func() error {
@@ -196,12 +197,11 @@ func (s *Service) commanderAttach(
 	}
 
 	attacher := attach.NewAttacher(&attach.Params{
-		CommanderMode:    request.Options.CommanderMode,
-		CommanderUUID:    commanderUUID,
-		SSHClient:        sshClient,
-		OnCheckResult:    onCheckResult,
-		TerraformContext: terraform.NewTerraformContext(),
-		OnPhaseFunc:      switchPhase,
+		CommanderMode: request.Options.CommanderMode,
+		CommanderUUID: commanderUUID,
+		SSHClient:     sshClient,
+		OnCheckResult: onCheckResult,
+		OnPhaseFunc:   switchPhase,
 		AttachResources: attach.AttachResources{
 			Template: request.ResourcesTemplate,
 			Values:   request.ResourcesValues.AsMap(),

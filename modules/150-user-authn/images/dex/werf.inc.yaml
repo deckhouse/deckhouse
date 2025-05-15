@@ -21,7 +21,7 @@ final: false
 git:
   - url: {{ $.SOURCE_REPO }}/dexidp/dex.git
     to: /src
-    tag: v2.41.1
+    tag: v2.42.0
     stageDependencies:
       install:
         - '**/*.go'
@@ -52,11 +52,13 @@ import:
     to: /src
     before: install
 mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
-    - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64
+    - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=1 GOOS=linux GOARCH=amd64
     - cd /src
     - go build -ldflags '-s -w' -ldflags "-linkmode external -extldflags -static" -tags netgo -o dex ./cmd/dex
     - chown 64535:64535 dex

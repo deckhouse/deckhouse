@@ -16,6 +16,7 @@ spec:
     repo: dev-registry.deckhouse.io/team/foxtrot/modules
     scheme: HTTPS
 status:
+  phase: ""
   message: ""
   modules:
     - name: mcplay-unsuitable

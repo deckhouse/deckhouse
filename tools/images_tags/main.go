@@ -79,12 +79,6 @@ func main() {
 		"CI_COMMIT_REF_NAME=",
 		"CI_COMMIT_TAG=",
 		"WERF_ENV=FE",
-		"SOURCE_REPO=",
-		"GOPROXY=",
-		"CLOUD_PROVIDERS_SOURCE_REPO=",
-		"OBSERVABILITY_SOURCE_REPO=",
-		"STRONGHOLD_PULL_TOKEN=",
-		"DECKHOUSE_PRIVATE_REPO=",
 	)
 	cmd.Dir = path.Join("..")
 	out, err := cmd.CombinedOutput()

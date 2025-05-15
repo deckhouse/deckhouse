@@ -15,17 +15,17 @@
 package bootstrap
 
 import (
+	"context"
 	"fmt"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
-func (b *ClusterBootstrapper) InstallDeckhouse() error {
+func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
 	if restore, err := b.applyParams(); err != nil {
 		return err
 	} else {
@@ -64,11 +64,13 @@ func (b *ClusterBootstrapper) InstallDeckhouse() error {
 		return err
 	}
 
-	kubeCl, err := kubernetes.ConnectToKubernetesAPI(b.NodeInterface)
+	kubeCl, err := kubernetes.ConnectToKubernetesAPI(ctx, b.NodeInterface)
 	if err != nil {
 		return err
 	}
 
-	_, err = InstallDeckhouse(kubeCl, installConfig)
+	_, err = InstallDeckhouse(ctx, kubeCl, installConfig, func() error {
+		return nil
+	})
 	return err
 }

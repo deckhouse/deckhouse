@@ -57,6 +57,50 @@
 {{- end }}
 
 
+# render opentofu imports for install and install standalone images
+# . is dict with next params
+#   Env - werf env
+#   TF - TF from werf.yaml
+#   Editions - Editions from werf.yaml
+{{- define "installer_and_installer_standalone_opentofu_imports" }}
+{{- $context := . -}}
+
+- image: opentofu # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
+  add: /opentofu/opentofu
+  to: /bin/opentofu
+  before: setup
+{{- range $_, $edition := $context.Editions }}
+  {{- if $edition.terraformProviders }}
+    {{- range $_, $tfProvider := $edition.terraformProviders }}
+      {{- $tf := index $context.TF $tfProvider }}
+
+        {{- if not $tf.useOpentofu  }}
+          {{- continue }}
+        {{- end }}
+
+        {{- if eq $tf.type "vcd" }}
+          {{- range $version := $tf.versions }}
+- image: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
+  add: /{{ $tf.artifactBinary }}-v{{ $version }}
+  to: /plugins/registry.opentofu.org/{{ $tf.namespace }}/{{ $tf.type }}/{{ $version }}/linux_amd64/{{ $tf.destinationBinary }}
+  before: setup
+          {{- end }}
+        {{- else }}
+- image: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
+  add: /{{ $tf.artifactBinary }}
+  to: /plugins/registry.opentofu.org/{{ $tf.namespace }}/{{ $tf.type }}/{{ $tf.version }}/linux_amd64/{{ $tf.destinationBinary }}
+  before: setup
+        {{- end }}
+    {{- end }}
+  {{- end }}
+  {{- if eq $.Env $edition.name }}
+    {{- break -}}
+  {{- end }}
+{{- end }}
+
+{{- end }}
+
+
 # render terraform imports for install and install standalone images
 # . is dict with next params
 #   Env - werf env
@@ -73,10 +117,24 @@
   {{- if $edition.terraformProviders }}
     {{- range $_, $tfProvider := $edition.terraformProviders }}
       {{- $tf := index $context.TF $tfProvider }}
+
+        {{- if $tf.useOpentofu  }}
+          {{- continue }}
+        {{- end }}
+
+        {{- if eq $tf.type "vcd" }}
+          {{- range $version := $tf.versions }}
+- image: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
+  add: /{{ $tf.artifactBinary }}-v{{ $version }}
+  to: /plugins/registry.terraform.io/{{ $tf.namespace }}/{{ $tf.type }}/{{ $version }}/linux_amd64/{{ $tf.destinationBinary }}
+  before: setup
+          {{- end }}
+        {{- else }}
 - image: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
   add: /{{ $tf.artifactBinary }}
   to: /plugins/registry.terraform.io/{{ $tf.namespace }}/{{ $tf.type }}/{{ $tf.version }}/linux_amd64/{{ $tf.destinationBinary }}
   before: setup
+        {{- end }}
     {{- end }}
   {{- end }}
   {{- if eq $.Env $edition.name }}
@@ -128,6 +186,15 @@ shell:
 
     echo 'eval "$(dhctl --completion-script-bash)"' >> /etc/bashrc
     echo '{{- $context.CI_COMMIT_TAG }}' > /deckhouse/version
+
+    cat << EOD > /root/.tofurc
+    provider_installation {
+      filesystem_mirror {
+        path    = "/plugins"
+        include = ["registry.opentofu.org/*/*"]
+      }
+    }
+    EOD
 
 {{- end }}
 

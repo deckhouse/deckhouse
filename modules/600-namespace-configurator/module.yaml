@@ -1,5 +1,5 @@
 name: namespace-configurator
 weight: 600
-
+namespace: d8-system
 requirements:
   bootstrapped: true

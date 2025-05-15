@@ -19,6 +19,7 @@ package hooks
 import (
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"time"
@@ -95,20 +96,20 @@ func handleGatekeeperBootstrap(input *go_hook.HookInput) error {
 			values, ok := existingTemplates[name]
 			if !ok {
 				// required template isn't found in the cluster
-				input.Logger.Warnf("admission-policy-engine isn't bootstrapped yet: missing %s ConstraintTemplate", name)
+				input.Logger.Warn("admission-policy-engine isn't bootstrapped yet: missing ConstraintTemplate", slog.String("name", name))
 				bootstrapped = false
 				break
 			}
 
 			if !values.Processed {
 				// status.created field of a constraint template isn't found - highly likely the constraint template wasn't processed for some reasons
-				input.Logger.Warnf("admission-policy-engine isn't bootstrapped yet: ConstraintTemplate %s not processed", name)
+				input.Logger.Warn("admission-policy-engine isn't bootstrapped yet: ConstraintTemplate not processed", slog.String("name", name))
 				bootstrapped = false
 				break
 			}
 			if !values.Created {
 				// status.created field equals false, there might be some errors in processing there
-				input.Logger.Warnf("admission-policy-engine isn't bootstrapped yet: CRD for ConstraintTemplate %s not created", name)
+				input.Logger.Warn("admission-policy-engine isn't bootstrapped yet: CRD for ConstraintTemplate not created", slog.String("name", name))
 				bootstrapped = false
 				break
 			}

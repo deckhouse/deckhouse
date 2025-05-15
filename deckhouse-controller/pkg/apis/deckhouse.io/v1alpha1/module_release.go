@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"encoding/json"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -28,13 +29,15 @@ import (
 )
 
 const (
-	ModuleReleaseResource        = "modulereleases"
-	ModuleReleaseKind            = "ModuleRelease"
-	ModuleReleasePhasePending    = "Pending"
-	ModuleReleasePhaseDeployed   = "Deployed"
-	ModuleReleasePhaseSuperseded = "Superseded"
-	ModuleReleasePhaseSuspended  = "Suspended"
-	ModuleReleasePhaseSkipped    = "Skipped"
+	ModuleReleaseResource = "modulereleases"
+	ModuleReleaseKind     = "ModuleRelease"
+
+	ModuleReleasePhasePending     = "Pending"
+	ModuleReleasePhaseDeployed    = "Deployed"
+	ModuleReleasePhaseSuperseded  = "Superseded"
+	ModuleReleasePhaseSuspended   = "Suspended"
+	ModuleReleasePhaseSkipped     = "Skipped"
+	ModuleReleasePhaseTerminating = "Terminating"
 
 	ModuleReleaseApprovalAnnotation              = "modules.deckhouse.io/approved"
 	ModuleReleaseAnnotationIsUpdating            = "modules.deckhouse.io/isUpdating"
@@ -57,6 +60,8 @@ const (
 )
 
 var (
+	ModuleReleaseLabelDeployed = strings.ToLower(ModuleReleasePhaseDeployed)
+
 	ModuleReleaseGVR = schema.GroupVersionResource{
 		Group:    SchemeGroupVersion.Group,
 		Version:  SchemeGroupVersion.Version,
@@ -102,6 +107,10 @@ type ModuleRelease struct {
 
 func (mr *ModuleRelease) GetVersion() *semver.Version {
 	return semver.MustParse(mr.Spec.Version)
+}
+
+func (mr *ModuleRelease) GetModuleVersion() string {
+	return "v" + semver.MustParse(mr.Spec.Version).String()
 }
 
 func (mr *ModuleRelease) GetName() string {
@@ -159,7 +168,14 @@ func (mr *ModuleRelease) GetPhase() string {
 }
 
 func (mr *ModuleRelease) GetForce() bool {
-	return false
+	// handle deckhouse release annotation too
+	v, ok := mr.Annotations[DeckhouseReleaseAnnotationForce]
+	if ok && v == "true" {
+		return true
+	}
+
+	v, ok = mr.Annotations[ModuleReleaseAnnotationForce]
+	return ok && v == "true"
 }
 
 func (mr *ModuleRelease) GetReinstall() bool {

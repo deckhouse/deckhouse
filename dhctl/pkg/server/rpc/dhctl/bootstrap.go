@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 
@@ -40,12 +39,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
 func (s *Service) Bootstrap(server pb.DHCTL_BootstrapServer) error {
-	ctx := operationCtx(server)
+	ctx, cancel := operationCtx(server)
+	defer cancel()
 
 	logger.L(ctx).Info("started")
 
@@ -58,11 +56,21 @@ func (s *Service) Bootstrap(server pb.DHCTL_BootstrapServer) error {
 	phaseSwitcher := &fsmPhaseSwitcher[*pb.BootstrapResponse, any]{
 		f: f, dataFunc: s.bootstrapSwitchPhaseData, sendCh: sendCh, next: make(chan error),
 	}
-	logWriter := logger.NewLogWriter(logger.L(ctx).With(logTypeDHCTL), sendCh,
+
+	loggerDefault := logger.L(ctx).With(logTypeDHCTL)
+
+	logWriter := logger.NewLogWriter(loggerDefault, sendCh,
 		func(lines []string) *pb.BootstrapResponse {
 			return &pb.BootstrapResponse{Message: &pb.BootstrapResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
 		},
 	)
+
+	debugWriter := logger.NewDebugLogWriter(loggerDefault)
+
+	logOptions := logger.Options{
+		DebugWriter:   debugWriter,
+		DefaultWriter: logWriter,
+	}
 
 	startReceiver[*pb.BootstrapRequest, *pb.BootstrapResponse](server, receiveCh, doneCh, internalErrCh)
 	startSender[*pb.BootstrapRequest, *pb.BootstrapResponse](server, sendCh, internalErrCh)
@@ -92,7 +100,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.bootstrapSafe(ctx, message.Start, phaseSwitcher.switchPhase, logWriter)
+					result := s.bootstrapSafe(ctx, message.Start, phaseSwitcher.switchPhase(ctx), logOptions)
 					sendCh <- &pb.BootstrapResponse{Message: &pb.BootstrapResponse_Result{Result: result}}
 				}()
 
@@ -114,6 +122,9 @@ connectionProcessor:
 					phaseSwitcher.next <- errors.New(message.Continue.Err)
 				}
 
+			case *pb.BootstrapRequest_Cancel:
+				cancel()
+
 			default:
 				logger.L(ctx).Error("got unprocessable message",
 					slog.String("message", fmt.Sprintf("%T", message)))
@@ -123,67 +134,61 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) bootstrapSafe(
-	ctx context.Context,
-	request *pb.BootstrapStart,
-	switchPhase phases.DefaultOnPhaseFunc,
-	logWriter io.Writer,
-) (result *pb.BootstrapResult) {
+func (s *Service) bootstrapSafe(ctx context.Context, request *pb.BootstrapStart, switchPhase phases.DefaultOnPhaseFunc, options logger.Options) (result *pb.BootstrapResult) {
 	defer func() {
 		if r := recover(); r != nil {
 			result = &pb.BootstrapResult{Err: panicMessage(ctx, r)}
 		}
 	}()
 
-	return s.bootstrap(ctx, request, switchPhase, logWriter)
+	return s.bootstrap(ctx, request, switchPhase, options)
 }
 
-func (s *Service) bootstrap(
-	_ context.Context,
-	request *pb.BootstrapStart,
-	switchPhase phases.DefaultOnPhaseFunc,
-	logWriter io.Writer,
-) *pb.BootstrapResult {
+func (s *Service) bootstrap(ctx context.Context, request *pb.BootstrapStart, switchPhase phases.DefaultOnPhaseFunc, options logger.Options) *pb.BootstrapResult {
 	var err error
 
 	cleanuper := callback.NewCallback()
-	defer cleanuper.Call()
+	defer func() { _ = cleanuper.Call() }()
 
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream: logWriter,
-		Width:     int(request.Options.LogWidth),
+		OutStream:   options.DefaultWriter,
+		Width:       int(request.Options.LogWidth),
+		DebugStream: options.DebugWriter,
 	})
+
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
 	app.CacheDir = s.cacheDir
 	app.ApplyPreflightSkips(request.Options.CommonOptions.SkipPreflightChecks)
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
-	defer func() {
-		log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName)
-	}()
+	defer func() { log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName) }()
 
 	var (
+		configPaths             []string
 		configPath              string
-		resourcesPath           string
 		postBootstrapScriptPath string
 		cleanup                 func() error
 	)
 	err = log.Process("default", "Preparing configuration", func() error {
-		configPath, cleanup, err = util.WriteDefaultTempFile([]byte(input.CombineYAMLs(
-			request.ClusterConfig, request.InitConfig, request.ProviderSpecificClusterConfig,
-		)))
-		cleanuper.Add(cleanup)
-		if err != nil {
-			return fmt.Errorf("failed to write init configuration: %w", err)
-		}
+		for _, cfg := range []string{
+			request.ClusterConfig,
+			request.InitConfig,
+			request.ProviderSpecificClusterConfig,
+			request.InitResources,
+			request.Resources,
+		} {
+			if len(cfg) == 0 {
+				continue
+			}
 
-		resourcesPath, cleanup, err = util.WriteDefaultTempFile([]byte(input.CombineYAMLs(
-			request.InitResources, request.Resources,
-		)))
-		cleanuper.Add(cleanup)
-		if err != nil {
-			return fmt.Errorf("failed to write resources: %w", err)
+			configPath, cleanup, err = util.WriteDefaultTempFile([]byte(cfg))
+			cleanuper.Add(cleanup)
+			if err != nil {
+				return fmt.Errorf("failed to write configuration: %w", err)
+			}
+
+			configPaths = append(configPaths, configPath)
 		}
 
 		postBootstrapScriptPath, cleanup, err = util.WriteDefaultTempFile([]byte(request.PostBootstrapScript))
@@ -260,9 +265,7 @@ func (s *Service) bootstrap(
 		OnPhaseFunc:                switchPhase,
 		CommanderMode:              request.Options.CommanderMode,
 		CommanderUUID:              commanderUUID,
-		TerraformContext:           terraform.NewTerraformContext(),
-		ConfigPaths:                []string{configPath},
-		ResourcesPath:              resourcesPath,
+		ConfigPaths:                configPaths,
 		ResourcesTimeout:           request.Options.ResourcesTimeout.AsDuration(),
 		DeckhouseTimeout:           request.Options.DeckhouseTimeout.AsDuration(),
 		PostBootstrapScriptPath:    postBootstrapScriptPath,
@@ -271,7 +274,7 @@ func (s *Service) bootstrap(
 		KubernetesInitParams:       nil,
 	})
 
-	bootstrapErr := bootstrapper.Bootstrap()
+	bootstrapErr := bootstrapper.Bootstrap(ctx)
 	state := bootstrapper.GetLastState()
 	stateData, marshalErr := json.Marshal(state)
 	err = errors.Join(bootstrapErr, marshalErr)

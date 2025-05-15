@@ -20,6 +20,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -29,7 +30,7 @@ import (
 
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
+	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -135,13 +136,13 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	ctx := suite.Context()
 
 	dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
-		ManifestStub: func() (*v1.Manifest, error) {
-			return &v1.Manifest{
-				Layers: []v1.Descriptor{},
+		ManifestStub: func() (*crv1.Manifest, error) {
+			return &crv1.Manifest{
+				Layers: []crv1.Descriptor{},
 			}, nil
 		},
-		LayersStub: func() ([]v1.Layer, error) {
-			return []v1.Layer{&utils.FakeLayer{}}, nil
+		LayersStub: func() ([]crv1.Layer, error) {
+			return []crv1.Layer{&utils.FakeLayer{}}, nil
 		},
 	}, nil)
 
@@ -205,8 +206,8 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("loop until deploy: canary", func() {
 		dc := dependency.NewMockedContainer()
-		dc.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
-			return []v1.Layer{&utils.FakeLayer{}}, nil
+		dc.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]crv1.Layer, error) {
+			return []crv1.Layer{&utils.FakeLayer{}}, nil
 		}}, nil)
 
 		mup := &v1alpha2.ModuleUpdatePolicySpec{
@@ -335,6 +336,19 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		})
 	})
 
+	suite.Run("Patch awaits update window", func() {
+		mup := embeddedMUP.DeepCopy()
+		mup.Update.Windows = update.Windows{{From: "8:00", To: "8:01", Days: update.Everyday()}}
+
+		testData := suite.fetchTestFileData("patch-awaits-update-window.yaml")
+		suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
+
+		_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
+		require.NoError(suite.T(), err)
+		_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.3"))
+		require.NoError(suite.T(), err)
+	})
+
 	suite.Run("Reinstall", func() {
 		mup := &v1alpha2.ModuleUpdatePolicySpec{
 			Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
@@ -351,6 +365,105 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		require.NoError(suite.T(), err)
 		_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
 		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("Process force release", func() {
+		suite.setupReleaseController(suite.fetchTestFileData("apply-force-release.yaml"))
+
+		mr := suite.getModuleRelease("parca-1.2.1")
+		_, err := suite.ctr.handleRelease(context.TODO(), mr)
+		require.NoError(suite.T(), err)
+
+		mr = suite.getModuleRelease("parca-1.5.2")
+		_, err = suite.ctr.handleRelease(context.TODO(), mr)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("Sequential processing", func() {
+		suite.Run("sequential processing with patch release", func() {
+			testData := suite.fetchTestFileData("sequential-processing-patch.yaml")
+			suite.setupReleaseController(testData)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.0"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.1"))
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("sequential processing with minor release", func() {
+			testData := suite.fetchTestFileData("sequential-processing-minor.yaml")
+			suite.setupReleaseController(testData)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.0"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.71.0"))
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("sequential processing with minor pending release", func() {
+			testData := suite.fetchTestFileData("sequential-processing-minor-pending.yaml")
+			suite.setupReleaseController(testData)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.0"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.71.0"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.72.0"))
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("sequential processing with minor auto release", func() {
+			testData := suite.fetchTestFileData("sequential-processing-minor-auto.yaml")
+			suite.setupReleaseController(testData)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.0"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.71.0"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.72.0"))
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("sequential processing with minor notready release", func() {
+			testData := suite.fetchTestFileData("sequential-processing-minor-notready.yaml")
+			suite.setupReleaseController(testData, withBasicModulePhase(addonmodules.Startup))
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.0"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.71.0"))
+			require.Error(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.72.0"))
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("sequential processing with pending releases", func() {
+			testData := suite.fetchTestFileData("sequential-processing-pending.yaml")
+			suite.setupReleaseController(testData, withBasicModulePhase(addonmodules.Startup))
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.70.0"))
+			require.NoError(suite.T(), err)
+			suite.setModulePhase(addonmodules.Ready)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.71.0"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("upmeter-v1.72.0"))
+			require.NoError(suite.T(), err)
+		})
+	})
+
+	suite.Run("Process pending releases", func() {
+		// Setup initial state
+		suite.setupReleaseController(suite.fetchTestFileData("apply-pending-releases.yaml"))
+
+		// Test updating Parca module
+		mr := suite.getModuleRelease("parca-1.2.2")
+		_, err := suite.ctr.handleRelease(ctx, mr)
+		require.NoError(suite.T(), err)
+
+		// Test updating Commander module
+		mr = suite.getModuleRelease("commander-1.0.3")
+		_, err = suite.ctr.handleRelease(ctx, mr)
+		require.NoError(suite.T(), err)
+
+		// Verify the final state
+		parca := suite.getModuleRelease("parca-1.2.2")
+		require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, parca.Status.Phase)
+
+		commander := suite.getModuleRelease("commander-1.0.3")
+		require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, commander.Status.Phase)
 	})
 }
 
@@ -383,7 +496,7 @@ func (suite *ReleaseControllerTestSuite) loopUntilDeploy(dc *dependency.MockedCo
 		if i > maxIterations {
 			suite.T().Fatal("Too many iterations")
 		}
-		suite.ctr.log.Infof("Iteration %d result: %+v\n", i, result)
+		suite.ctr.log.Info("Iteration result:", slog.Int("iteration", i), slog.Any("result", result))
 	}
 
 	suite.T().Fatal("Loop was broken")
@@ -400,6 +513,12 @@ func (suite *ReleaseControllerTestSuite) updateModuleReleasesStatuses() {
 	}
 }
 
+func (suite *ReleaseControllerTestSuite) setModulePhase(phase addonmodules.ModuleRunPhase) {
+	suite.ctr.moduleManager = stubModulesManager{
+		modulePhase: phase,
+	}
+}
+
 type reconcilerOption func(*reconciler)
 
 func withModuleUpdatePolicy(mup *v1alpha2.ModuleUpdatePolicySpec) reconcilerOption {
@@ -411,6 +530,12 @@ func withModuleUpdatePolicy(mup *v1alpha2.ModuleUpdatePolicySpec) reconcilerOpti
 func withDependencyContainer(dc dependency.Container) reconcilerOption {
 	return func(r *reconciler) {
 		r.dependencyContainer = dc
+	}
+}
+
+func withBasicModulePhase(phase addonmodules.ModuleRunPhase) reconcilerOption {
+	return func(r *reconciler) {
+		r.moduleManager = stubModulesManager{modulePhase: phase}
 	}
 }
 
@@ -588,7 +713,9 @@ func (suite *ReleaseControllerTestSuite) fetchResults() []byte {
 	return result.Bytes()
 }
 
-type stubModulesManager struct{}
+type stubModulesManager struct {
+	modulePhase addonmodules.ModuleRunPhase
+}
 
 func (s stubModulesManager) AreModulesInited() bool {
 	return true
@@ -599,6 +726,11 @@ func (s stubModulesManager) DisableModuleHooks(_ string) {
 
 func (s stubModulesManager) GetModule(name string) *addonmodules.BasicModule {
 	bm, _ := addonmodules.NewBasicModule(name, "", 900, nil, []byte{}, []byte{}, addonmodules.WithLogger(log.NewNop()))
+	bm.SetPhase(addonmodules.Ready)
+	if s.modulePhase != "" {
+		bm.SetPhase(s.modulePhase)
+	}
+
 	return bm
 }
 

@@ -1,64 +1,81 @@
-{{- $binaries := "/usr/bin/python3 /lib64/libz.so* /lib64/libexpat.so* /usr/lib64/libffi.so* /lib64/libcrypto.so* /lib64/libssl.so* /usr/lib64/libsqlite3.so* /usr/bin/pip3" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 -b v2.2.7 $(cat /run/secrets/SOURCE_REPO)/acassen/keepalived.git /src
+  - rm -rf /src/.git
 ---
 image: {{ .ModuleName }}/build-keepalived
 final: false
-from: {{ .Images.BASE_ALPINE_DEV }}
+from: {{ .Images.BASE_ALPINE }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 shell:
   beforeInstall:
-  - apk add --no-cache openssh-client
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make autoconf automake build-base linux-headers openssl-dev openssl-libs-static pcre-dev pcre2-dev net-snmp-dev
   install:
-    - mkdir build && cd build
-    - git clone -b v2.2.7 --single-branch --depth=1 {{ $.SOURCE_REPO }}/acassen/keepalived.git ./src
-    - cd ./src
-    - ./autogen.sh
-    - CFLAGS='-static -s' LDFLAGS=-static ./configure --disable-dynamic-linking --prefix=/usr --exec-prefix=/usr --bindir=/usr/bin --sbindir=/usr/sbin --sysconfdir=/etc --datadir=/usr/share --localstatedir=/var --mandir=/usr/share/man --enable-bfd --enable-snmp --enable-snmp-rfc --enable-nftables --enable-regex --enable-json --enable-vrrp # --enable-libnl-dynamic
-    - make
-    - DESTDIR=/opt/keepalived-static make install
-    - chown -R 64535:64535 /opt/keepalived-static
-    - chmod 0700 /opt/keepalived-static/usr/sbin/keepalived
-    - chmod 0700 /opt/keepalived-static/usr/bin/genhash
+  - cd /src
+  - ./autogen.sh
+  - CFLAGS='-static -s' LDFLAGS=-static ./configure --disable-dynamic-linking --prefix=/usr --exec-prefix=/usr --bindir=/usr/bin --sbindir=/usr/sbin --sysconfdir=/etc --datadir=/usr/share --localstatedir=/var --mandir=/usr/share/man --enable-bfd --enable-snmp --enable-snmp-rfc --enable-nftables --enable-regex --enable-json --enable-vrrp # --enable-libnl-dynamic
+  - make
+  - DESTDIR=/opt/keepalived-static make install
+  - chown -R 64535:64535 /opt/keepalived-static
+  - chmod 0700 /opt/keepalived-static/usr/sbin/keepalived
+  - chmod 0700 /opt/keepalived-static/usr/bin/genhash
+  - mkdir /empty
+  - chmod 755 /empty
 ---
-image: {{ $.ModuleName }}/python
+image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
+fromImage: base/python
 final: false
-from: {{ $.Images.BASE_ALT_DEV }}
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/requirements.txt
+  to: /requirements.txt
+  stageDependencies:
+    install:
+    - '**/*'
+import:
+- image: common/wheel-artifact
+  add: /wheels
+  to: /wheels
+  before: install
 shell:
   install:
-    - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
-    - mkdir /empty
-    - chmod 644 /empty
+  - pip3 install -f file:///wheels --no-index -r /requirements.txt
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 git:
-  - add: /{{ $.ModulePath }}modules/450-{{ $.ModuleName }}/images/{{ $.ImageName }}/prepare-config.py
-    to: /prepare-config.py
+- add: /{{ $.ModulePath }}modules/450-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/prepare-config.py
+  to: /prepare-config.py
 import:
-  - image: {{ $.ModuleName }}/python
-    add: /relocate
-    to: /
-    before: install
-  - image: {{ $.ModuleName }}/python
-    add: /usr/lib64/python3
-    to: /usr/lib64/python3
-    before: install
-  - image: {{ $.ModuleName }}/python
-    add: /usr/local/lib/python3/site-packages
-    to: /usr/local/lib/python3/site-packages
-    before: install
-  - image: {{ $.ModuleName }}/python
-    add: /usr/lib64/python3.9
-    to: /usr/lib64/python3.9
-    before: install
-  - image: {{ $.ModuleName }}/build-keepalived
-    add: /opt/keepalived-static/usr/sbin/keepalived
-    to: /usr/sbin/keepalived
-    before: install
-  - image: {{ $.ModuleName }}/build-keepalived
-    add: /opt/keepalived-static/usr/bin/genhash
-    to: /usr/bin/genhash
-    before: install
-  - image: {{ $.ModuleName }}/python
-    add: /empty
-    to: /run
-    before: setup
+- image: {{ $.ModuleName }}/build-keepalived
+  add: /opt/keepalived-static/usr/sbin/keepalived
+  to: /usr/sbin/keepalived
+  before: install
+- image: {{ $.ModuleName }}/build-keepalived
+  add: /opt/keepalived-static/usr/bin/genhash
+  to: /usr/bin/genhash
+  before: install
+- image: {{ $.ModuleName }}/build-keepalived
+  add: /empty
+  to: /run
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
+  add: /
+  to: /
+  before: install
+  includePaths:
+  - lib/ld-musl-x86_64*
+  - usr/bin/python3*
+  - usr/lib/python3*
+  - usr/lib/libc.so

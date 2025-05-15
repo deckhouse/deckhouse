@@ -47,15 +47,15 @@ func newPostRenderer(project *v1alpha2.Project, versions map[string]struct{}, lo
 
 // Run post renderer which will remove all namespaces except the project one
 // or will add a project namespace if it does not exist in manifests
-func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *bytes.Buffer, err error) {
+func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	// clear resources
 	r.project.Status.Resources = make(map[string]map[string]v1alpha2.ResourceKind)
 
-	var coreFound bool
+	var core *unstructured.Unstructured
 	builder := strings.Builder{}
 	for _, manifest := range releaseutil.SplitManifests(renderedManifests.String()) {
 		object := new(unstructured.Unstructured)
-		if err = yaml.Unmarshal([]byte(manifest), object); err != nil {
+		if err := yaml.Unmarshal([]byte(manifest), object); err != nil {
 			r.logger.Info("failed to unmarshal manifest", "project", r.project.Name, "manifest", manifest, "error", err.Error())
 			return renderedManifests, err
 		}
@@ -75,26 +75,9 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *
 			}
 		}
 
-		// inject project annotations
-		if len(r.project.Spec.ResourceAnnotations) != 0 {
-			annotations := object.GetAnnotations()
-			if len(annotations) == 0 {
-				annotations = map[string]string{}
-			}
-			for k, v := range r.project.Spec.ResourceAnnotations {
-				annotations[k] = v
-			}
-			object.SetAnnotations(annotations)
-		}
-
 		labels := object.GetLabels()
 		if len(labels) == 0 {
 			labels = make(map[string]string)
-		}
-
-		// inject project labels
-		for k, v := range r.project.Spec.ResourceLabels {
-			labels[k] = v
 		}
 
 		// inject multitenancy-manager
@@ -104,16 +87,16 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *
 
 		object.SetLabels(labels)
 
-		if object.GetKind() != "Namespace" {
-			object.SetNamespace(r.project.Name)
-		} else {
+		if object.GetKind() == "Namespace" {
 			// skip other namespaces
-			if object.GetName() != r.project.Name {
-				r.logger.Info("namespace skipped during render project", "project", r.project.Name, "namespace", object.GetName())
-				continue
+			if object.GetName() == r.project.Name {
+				r.project.AddResource(object, true)
+				core = object
 			}
-			coreFound = true
+			continue
 		}
+
+		object.SetNamespace(r.project.Name)
 
 		r.project.AddResource(object, true)
 
@@ -122,11 +105,15 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *
 	}
 
 	buf := bytes.NewBuffer(nil)
+
 	// ensure core namespace
-	if !coreFound {
-		core := r.newNamespace(r.project.Name)
-		buf.WriteString("\n---\n" + string(core))
+	if core == nil {
+		buf.WriteString("\n---\n" + string(r.newNamespace(r.project.Name)))
+	} else {
+		data, _ := yaml.Marshal(core.Object)
+		buf.WriteString("\n---\n" + string(data))
 	}
+
 	buf.WriteString(builder.String())
 
 	return buf, nil
@@ -142,16 +129,6 @@ func (r *postRenderer) newNamespace(name string) []byte {
 			Name:   name,
 			Labels: map[string]string{},
 		},
-	}
-
-	// inject project annotations
-	if len(r.project.Spec.ResourceAnnotations) != 0 {
-		obj.SetAnnotations(r.project.Spec.ResourceAnnotations)
-	}
-
-	// inject project labels
-	if len(r.project.Spec.ResourceLabels) != 0 {
-		obj.SetLabels(r.project.Spec.ResourceLabels)
 	}
 
 	obj.Labels[v1alpha2.ResourceLabelHeritage] = v1alpha2.ResourceHeritageMultitenancy

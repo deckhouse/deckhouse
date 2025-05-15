@@ -16,7 +16,8 @@ proxy:
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
-  imagesRepo: dev-registry.deckhouse.io/sys/deckhouse-oss
+  registryScheme: "HTTP"
+  imagesRepo: '${IMAGES_REPO}'
   registryDockerCfg: '${DECKHOUSE_DOCKERCFG}'
   devBranch: '${DEV_BRANCH}'
 ---
@@ -24,13 +25,6 @@ apiVersion: deckhouse.io/v1
 kind: StaticClusterConfiguration
 internalNetworkCIDRs:
 - 192.168.199.0/24
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: flant-integration
-spec:
-  enabled: false
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -49,6 +43,9 @@ spec:
   settings:
     modules:
       publicDomainTemplate: "%s.k8s.smoke.flant.com"
+      placement:
+        customTolerationKeys:
+          - node
   version: 1
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -88,3 +85,13 @@ spec:
   settings:
     ebpfExporterEnabled: false
   version: 1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: openvpn
+spec:
+  version: 2
+  enabled: true
+  settings:
+

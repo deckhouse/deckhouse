@@ -15,6 +15,7 @@
 package frontend
 
 import (
+	"context"
 	"fmt"
 	"math/rand/v2"
 	"os"
@@ -22,19 +23,18 @@ import (
 	"sync"
 	"time"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/cmd"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 type ReverseTunnelChecker interface {
-	CheckTunnel() (string, error)
+	CheckTunnel(ctx context.Context) (string, error)
 }
 
 type ReverseTunnelKiller interface {
-	KillTunnel() (string, error)
+	KillTunnel(ctx context.Context) (string, error)
 }
 
 type tunnelWaitResult struct {
@@ -87,7 +87,7 @@ func (t *ReverseTunnel) upNewTunnel(oldId int) (int, error) {
 			"-R", t.Address,
 		).
 		WithExitWhenTunnelFailure(true).
-		Cmd()
+		Cmd(context.Background())
 
 	err := t.sshCmd.Start()
 	if err != nil {
@@ -119,17 +119,17 @@ func (t *ReverseTunnel) isStarted() bool {
 	return r
 }
 
-func (t *ReverseTunnel) tryToRestart(id int, killer ReverseTunnelKiller) (int, error) {
+func (t *ReverseTunnel) tryToRestart(ctx context.Context, id int, killer ReverseTunnelKiller) (int, error) {
 	t.stop(id, false)
 	log.DebugF("[%d] Kill tunnel\n", id)
-	if out, err := killer.KillTunnel(); err != nil {
+	if out, err := killer.KillTunnel(ctx); err != nil {
 		log.DebugF("[%d] Kill tunnel was finished with error: %v; stdout: '%s'\n", id, err, out)
 		return id, err
 	}
 	return t.upNewTunnel(id)
 }
 
-func (t *ReverseTunnel) StartHealthMonitor(checker ReverseTunnelChecker, killer ReverseTunnelKiller) {
+func (t *ReverseTunnel) StartHealthMonitor(ctx context.Context, checker ReverseTunnelChecker, killer ReverseTunnelKiller) {
 	t.tunMutex.Lock()
 	t.stopCh = make(chan struct{})
 	t.tunMutex.Unlock()
@@ -137,8 +137,8 @@ func (t *ReverseTunnel) StartHealthMonitor(checker ReverseTunnelChecker, killer 
 	checkReverseTunnel := func(id int) bool {
 		log.DebugF("[%d] Start Check reverse tunnel\n", id)
 
-		err := retry.NewSilentLoop("Check reverse tunnel", 2, 2*time.Second).Run(func() error {
-			out, err := checker.CheckTunnel()
+		err := retry.NewSilentLoop("Check reverse tunnel", 2, 2*time.Second).RunContext(ctx, func() error {
+			out, err := checker.CheckTunnel(ctx)
 			if err != nil {
 				log.DebugF("[%d] Cannot check ssh tunnel: '%v': stderr: '%s'\n", id, err, out)
 				return err
@@ -185,7 +185,7 @@ func (t *ReverseTunnel) StartHealthMonitor(checker ReverseTunnelChecker, killer 
 					panic("Reverse tunnel restarts count exceeds 1024")
 				}
 
-				newId, err := t.tryToRestart(oldId, killer)
+				newId, err := t.tryToRestart(ctx, oldId, killer)
 				if err != nil {
 					log.DebugF("[%d] Restart failed with error: %v\n", oldId, err)
 					go restart(oldId)

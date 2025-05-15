@@ -19,6 +19,7 @@ package project
 import (
 	"context"
 	"fmt"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
@@ -118,12 +119,18 @@ func (m *Manager) ensureProject(ctx context.Context, project *v1alpha2.Project) 
 
 func (m *Manager) projectTemplateByName(ctx context.Context, name string) (*v1alpha1.ProjectTemplate, error) {
 	template := new(v1alpha1.ProjectTemplate)
+
+	if name == "" {
+		return template, nil
+	}
+
 	if err := m.client.Get(ctx, client.ObjectKey{Name: name}, template); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("get the '%s' project template: %w", name, err)
 	}
+
 	return template, nil
 }
 

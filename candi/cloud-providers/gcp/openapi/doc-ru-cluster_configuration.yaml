@@ -50,16 +50,6 @@ apiVersions:
               Количество создаваемых master-узлов.
 
               Для обеспечения кворума важно, чтобы оно было нечетным.
-          additionalNetworkTags:
-            description: |
-              Список дополнительных тегов.
-
-              К примеру, теги позволяют применять к инстансам правила firewall. Подробно про network tags можно прочитать в [официальной документации](https://cloud.google.com/vpc/docs/add-remove-network-tags).
-          additionalLabels:
-            description: |
-              Список дополнительных label'ов.
-
-              Подробно про label'ы можно прочитать в [официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
           instanceClass:
             description: Частичное содержимое полей [GCPInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-gcp/cr.html#gcpinstanceclass).
             properties: &instanceClassProperties_ru
@@ -91,10 +81,20 @@ apiVersions:
                   `true` — узлы не имеют публичных адресов, доступ в интернет осуществляется через `CloudNAT`.
 
                   `false` — для узлов создаются статические публичные адреса, они же используются для One-to-One NAT.
-          zones:
+              additionalNetworkTags:
+                description: |
+                  Список дополнительных сетевых тегов (network tags).
+
+                  Сетевые теги позволяют применять к инстансам firewall-правила. Подробно о сетевых тегах можно прочитать [в документации Google Cloud](https://cloud.google.com/vpc/docs/add-remove-network-tags).
+              additionalLabels:
+                description: |
+                  Список дополнительных лейблов.
+
+                  Подробно про лейблы можно прочитать [в документации Google Cloud](https://cloud.google.com/resource-manager/docs/creating-managing-labels).                  
+          zones: &NodeGroupZones_ru
             description: |
                 Список зон, в которых допустимо создавать узлы.
-                
+
                 Порядок указания зон не влияет на порядок создания узлов. Узлы будут размещаться в зонах в алфавитном порядке: первый узел — в зоне, стоящей первой по алфавиту, второй — во второй зоне и так далее. Если количество зон меньше числа узлов, то после размещения узла в последней зоне по алфавиту распределение продолжится сначала списка.
       nodeGroups:
         description: Массив дополнительных NodeGroup для создания статических узлов (например, для выделенных фронтов или шлюзов).
@@ -130,11 +130,7 @@ apiVersions:
               description: Частичное содержимое полей [GCPInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-gcp/cr.html#gcpinstanceclass).
               properties:
                 <<: *instanceClassProperties_ru
-            zones:
-              description: |
-                Список зон, в которых допустимо создавать узлы.
-
-                Порядок указания зон не влияет на порядок создания узлов. Узлы будут размещаться в зонах в алфавитном порядке: первый узел — в зоне, стоящей первой по алфавиту, второй — во второй зоне и так далее. Если количество зон меньше числа узлов, то после размещения узла в последней зоне по алфавиту распределение продолжится сначала списка.
+            zones: *NodeGroupZones_ru
       layout:
         description: |
           Название схемы размещения.
@@ -159,5 +155,5 @@ apiVersions:
               Ключ к Service Account'у с правами Project Admin (`service account key`) в JSON-формате.
 
               [Как получить](https://cloud.google.com/iam/docs/creating-managing-service-account-keys#creating_service_account_keys) `service account key`.
-      zones:
-        description: Список зон, в которых допустимо создавать узлы.
+      zones: *NodeGroupZones_ru
+

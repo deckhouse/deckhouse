@@ -72,9 +72,19 @@ spec:
 ...
 ```
 
+{% endraw %}
+
 {% alert level="warning" %}
 System dashboards and dashboards added using [GrafanaDashboardDefinition](cr.html#grafanadashboarddefinition) cannot be modified via the Grafana interface.
+
+Alerts configured in the dashboard do not work with datasource templates - such a dashboard is invalid and cannot be imported. In Grafana 9.0, the legacy alerting functionality was [deprecated](https://grafana.com/docs/grafana/latest/breaking-changes/breaking-changes-v10-0/#description) and replaced with Grafana Alerting. Therefore, we do not recommend using legacy alerting in dashboards.
 {% endalert %}
+
+{% alert level="info" %}
+If the dashboard does not appear in Grafana after being applied, there might be an error in the dashboard's JSON file. To identify the source of the problem, use the command `kubectl logs -n d8-monitoring deployments/grafana-v10 dashboard-provisioner` to view the logs of the component responsible for applying dashboards.
+{% endalert %}
+
+{% raw %}
 
 ## How do I add alerts and/or recording rules?
 

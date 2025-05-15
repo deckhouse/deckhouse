@@ -21,9 +21,10 @@ services:
       - deckhouse
     volumes:
       - ".helm/channels.yaml:/app/releasedata/channels.yaml:ro"
+    working_dir: "/app"
   front:
     image: $WERF_WEB_FRONTEND_DOCKER_IMAGE_NAME
-    #image: nginx:latest
+    command: ["nginx", "-g", "daemon off;"]
     volumes:
       - ".werf/nginx-dev.conf:/etc/nginx/nginx.conf:ro"
       - "./backends/docs-builder-template/public/en/modules:/app/en/modules:ro"

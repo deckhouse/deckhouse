@@ -17,6 +17,7 @@ package confighandler
 import (
 	"context"
 	"errors"
+	"sync"
 
 	"github.com/flant/addon-operator/pkg/kube_config_manager/backend"
 	"github.com/flant/addon-operator/pkg/kube_config_manager/config"
@@ -25,7 +26,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
-	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -37,20 +37,22 @@ var _ backend.ConfigHandler = &Handler{}
 
 type Handler struct {
 	client            client.Client
-	log               *log.Logger
 	deckhouseConfigCh chan<- utils.Values
-	configEventCh     chan<- config.Event
+
+	l             sync.Mutex
+	configEventCh chan<- config.Event
 }
 
-func New(client client.Client, deckhouseConfigCh chan<- utils.Values, logger *log.Logger) *Handler {
+func New(client client.Client, deckhouseConfigCh chan<- utils.Values) *Handler {
 	return &Handler{
-		log:               logger,
 		client:            client,
 		deckhouseConfigCh: deckhouseConfigCh,
 	}
 }
 
 func (h *Handler) ModuleConfigChannelIsSet() bool {
+	h.l.Lock()
+	defer h.l.Unlock()
 	return h.configEventCh != nil
 }
 
@@ -72,6 +74,9 @@ func (h *Handler) HandleEvent(moduleConfig *v1alpha1.ModuleConfig, op config.Op)
 	} else {
 		addonOperatorModuleConfig := utils.NewModuleConfig(moduleConfig.Name, values)
 		addonOperatorModuleConfig.IsEnabled = moduleConfig.Spec.Enabled
+		if len(moduleConfig.Spec.Maintenance) > 0 {
+			addonOperatorModuleConfig.Maintenance = utils.Maintenance(moduleConfig.Spec.Maintenance)
+		}
 		kubeConfig.Modules[moduleConfig.Name] = &config.ModuleKubeConfig{
 			ModuleConfig: *addonOperatorModuleConfig,
 			Checksum:     addonOperatorModuleConfig.Checksum(),
@@ -86,9 +91,11 @@ func (h *Handler) HandleEvent(moduleConfig *v1alpha1.ModuleConfig, op config.Op)
 	h.configEventCh <- config.Event{Key: moduleConfig.Name, Config: kubeConfig, Op: op}
 }
 
-// StartInformer does not start informer, it just registers channels, this name used just to implement interface
+// StartInformer does not start informer, it just registers channels, this name is used just to implement interface
 func (h *Handler) StartInformer(_ context.Context, eventCh chan config.Event) {
+	h.l.Lock()
 	h.configEventCh = eventCh
+	h.l.Unlock()
 }
 
 // LoadConfig loads initial modules config before starting
@@ -115,7 +122,9 @@ func (h *Handler) LoadConfig(ctx context.Context, _ ...string) (*config.KubeConf
 
 		addonOperatorModuleConfig := utils.NewModuleConfig(moduleConfig.Name, values)
 		addonOperatorModuleConfig.IsEnabled = moduleConfig.Spec.Enabled
-
+		if len(moduleConfig.Spec.Maintenance) > 0 {
+			addonOperatorModuleConfig.Maintenance = utils.Maintenance(moduleConfig.Spec.Maintenance)
+		}
 		kubeConfig.Modules[moduleConfig.Name] = &config.ModuleKubeConfig{
 			ModuleConfig: *addonOperatorModuleConfig,
 			Checksum:     addonOperatorModuleConfig.Checksum(),
@@ -126,8 +135,6 @@ func (h *Handler) LoadConfig(ctx context.Context, _ ...string) (*config.KubeConf
 			h.deckhouseConfigCh <- values
 		}
 	}
-
-	h.log.Debug("ConfigHandler loaded initial config")
 
 	return kubeConfig, nil
 }

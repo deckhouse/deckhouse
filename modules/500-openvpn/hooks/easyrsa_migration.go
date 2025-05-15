@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"fmt"
+	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -110,11 +111,7 @@ func migration(input *go_hook.HookInput) error {
 	// TODO Handle as v0->v1 conversion on migrating to DeckhouseConfig objects in PR#1729.
 	// input.ConfigValues.Remove("openvpn.storageClass")
 
-	migrated := false
-
-	if len(input.Snapshots["easyrsa_migrated"]) > 0 {
-		migrated = true
-	}
+	migrated := len(input.Snapshots["easyrsa_migrated"]) > 0
 
 	// if pvc does not exist then no migration is required
 	if len(input.Snapshots["openvpn_pvc"]) == 0 {
@@ -130,7 +127,7 @@ func migration(input *go_hook.HookInput) error {
 	if len(statefulsets) > 0 {
 		if migrated && statefulsets[0].(string) != "true" {
 			input.PatchCollector.Delete("apps/v1", "StatefulSet", "d8-openvpn", "openvpn")
-			input.Logger.Infof("statefulset/openvpn deleted (%t/%s)", migrated, statefulsets[0].(string))
+			input.Logger.Info("statefulset/openvpn deleted", slog.Bool("migrated", migrated), slog.String("sts", statefulsets[0].(string)))
 		}
 	}
 

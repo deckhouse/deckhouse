@@ -20,7 +20,7 @@ spec:
   enabled: true
   version: 1
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingConfig
 metadata:
   name: development-logs
@@ -28,8 +28,11 @@ spec:
   type: KubernetesPods
   kubernetesPods:
     namespaceSelector:
-      matchNames:
-        - development
+      labelSelector:
+        matchExpressions:
+        - key: "kubernetes.io/metadata.name"
+          operator: In
+          values: [development]
   destinationRefs:
     - d8-loki
 ```

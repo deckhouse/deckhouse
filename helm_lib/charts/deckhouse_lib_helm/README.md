@@ -35,8 +35,12 @@
 | [helm_lib_module_image_no_fail](#helm_lib_module_image_no_fail) |
 | [helm_lib_module_common_image](#helm_lib_module_common_image) |
 | [helm_lib_module_common_image_no_fail](#helm_lib_module_common_image_no_fail) |
+| [helm_lib_module_image_digest](#helm_lib_module_image_digest) |
+| [helm_lib_module_image_digest_no_fail](#helm_lib_module_image_digest_no_fail) |
 | **Module Ingress Class** |
 | [helm_lib_module_ingress_class](#helm_lib_module_ingress_class) |
+| **Module Ingress Snippets** |
+| [helm_lib_module_ingress_configuration_snippet](#helm_lib_module_ingress_configuration_snippet) |
 | **Module Init Container** |
 | [helm_lib_module_init_container_chown_nobody_volume](#helm_lib_module_init_container_chown_nobody_volume) |
 | [helm_lib_module_init_container_chown_deckhouse_volume](#helm_lib_module_init_container_chown_deckhouse_volume) |
@@ -64,6 +68,7 @@
 | [helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add](#helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add) |
 | [helm_lib_module_container_security_context_capabilities_drop_all_and_add](#helm_lib_module_container_security_context_capabilities_drop_all_and_add) |
 | [helm_lib_module_container_security_context_capabilities_drop_all_and_run_as_user_custom](#helm_lib_module_container_security_context_capabilities_drop_all_and_run_as_user_custom) |
+| [helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted](#helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted) |
 | **Module Storage Class** |
 | [helm_lib_module_storage_class_annotations](#helm_lib_module_storage_class_annotations) |
 | **Monitoring Grafana Dashboards** |
@@ -361,7 +366,7 @@ list:
 
 #### Usage
 
-`{{ include "helm_lib_module_image" (list . "<container-name>") }} `
+`{{ include "helm_lib_module_image" (list . "<container-name>" "<module-name>(optional)") }} `
 
 #### Arguments
 
@@ -414,6 +419,36 @@ list:
 -  Template context with .Values, .Chart, etc 
 -  Container name 
 
+
+### helm_lib_module_image_digest
+
+ returns image digest 
+
+#### Usage
+
+`{{ include "helm_lib_module_image_digest" (list . "<container-name>" "<module-name>(optional)") }} `
+
+#### Arguments
+
+list:
+-  Template context with .Values, .Chart, etc 
+-  Container name 
+
+
+### helm_lib_module_image_digest_no_fail
+
+ returns image digest if found 
+
+#### Usage
+
+`{{ include "helm_lib_module_image_digest_no_fail" (list . "<container-name>" "<module-name>(optional)") }} `
+
+#### Arguments
+
+list:
+-  Template context with .Values, .Chart, etc 
+-  Container name 
+
 ## Module Ingress Class
 
 ### helm_lib_module_ingress_class
@@ -423,6 +458,20 @@ list:
 #### Usage
 
 `{{ include "helm_lib_module_ingress_class" . }} `
+
+#### Arguments
+
+-  Template context with .Values, .Chart, etc 
+
+## Module Ingress Snippets
+
+### helm_lib_module_ingress_configuration_snippet
+
+ returns nginx ingress additional headers (e.g. HSTS) if HTTPS is enabled 
+
+#### Usage
+
+`nginx.ingress.kubernetes.io/configuration-snippet: | {{ include "helm_lib_module_ingress_configuration_snippet" . | nindent 6 }} `
 
 #### Arguments
 
@@ -733,6 +782,19 @@ list:
 -  User id 
 -  Group id 
 
+
+### helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted
+
+ returns SecurityContext parameters for Container with minimal required settings to comply with the Restricted mode of the Pod Security Standards 
+
+#### Usage
+
+`{{ include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted" . }} `
+
+#### Arguments
+
+-  Template context with .Values, .Chart, etc 
+
 ## Module Storage Class
 
 ### helm_lib_module_storage_class_annotations
@@ -1013,7 +1075,7 @@ list:
 
 ### helm_lib_priority_class
 
- returns priority class if priority-class module enabled, otherwise returns nothing 
+ returns priority class 
 
 #### Arguments
 

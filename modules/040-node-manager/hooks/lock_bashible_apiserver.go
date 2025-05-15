@@ -76,7 +76,7 @@ func lockHandler(input *go_hook.HookInput) error {
 		}
 
 		input.MetricsCollector.Set("d8_bashible_apiserver_locked", 1, nil)
-		input.PatchCollector.MergePatch(annotationsPatch, "v1", "Secret", bashibleNamespace, "bashible-apiserver-context", object_patch.WithIgnoreMissingObject(true))
+		input.PatchCollector.MergePatch(annotationsPatch, "v1", "Secret", bashibleNamespace, "bashible-apiserver-context", object_patch.WithIgnoreMissingObject())
 		return nil
 	}
 
@@ -94,7 +94,7 @@ func lockHandler(input *go_hook.HookInput) error {
 	}
 
 	input.MetricsCollector.Set("d8_bashible_apiserver_locked", 0, nil)
-	input.PatchCollector.MergePatch(annotationsPatch, "v1", "Secret", bashibleNamespace, "bashible-apiserver-context", object_patch.WithIgnoreMissingObject(true))
+	input.PatchCollector.MergePatch(annotationsPatch, "v1", "Secret", bashibleNamespace, "bashible-apiserver-context", object_patch.WithIgnoreMissingObject())
 
 	return nil
 }

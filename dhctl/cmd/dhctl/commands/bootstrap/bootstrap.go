@@ -15,12 +15,13 @@
 package bootstrap
 
 import (
+	"context"
+
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
 func DefineBootstrapCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
@@ -37,10 +38,8 @@ func DefineBootstrapCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefinePreflight(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-			TerraformContext: terraform.NewTerraformContext(),
-		})
-		return bootstraper.Bootstrap()
+		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{})
+		return bootstraper.Bootstrap(context.Background())
 	})
 
 	return cmd

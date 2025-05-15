@@ -16,16 +16,23 @@ spec:
     repo: dev-registry.deckhouse.io/deckhouse/modules
     scheme: HTTPS
 status:
-  message: Ready
+  message: ""
   modules:
-  - name: disabledmodule
+  - checksum: 'sha256:'
+    name: disabledmodule
+    version: v1.2.3
   - checksum: 'sha256:'
     name: enabledmodule
-  - name: notthissourcemodule
+    version: v1.2.3
+  - checksum: 'sha256:'
+    name: notthissourcemodule
+    version: v1.2.3
   - checksum: 'sha256:'
     name: withpolicymodule
     policy: test-alpha
+    version: v1.2.3
   modulesCount: 4
+  phase: Active
   syncTime: "2019-10-17T15:33:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1

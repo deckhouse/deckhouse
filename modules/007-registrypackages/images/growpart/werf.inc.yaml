@@ -10,11 +10,14 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone -b v2.40.1 --depth 1 {{ $.SOURCE_REPO }}/util-linux/util-linux.git  /src/util-linux
+  - git clone -b v2.40.1 --depth 1 $(cat /run/secrets/SOURCE_REPO)/util-linux/util-linux.git  /src/util-linux
   - rm -rf /src/util-linux/.git
-  - git clone -b {{ $version }} --depth 1 {{ $.SOURCE_REPO }}/canonical/cloud-utils.git /src/cloud-utils
+  - git clone -b {{ $version }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/canonical/cloud-utils.git /src/cloud-utils
   - rm -rf /src/cloud-utils/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
@@ -38,6 +41,11 @@ import:
 imageSpec:
   config:
     labels: { "distro": "all", "version": "all", "growpart": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-fdisk-{{ $image_version }}
 final: false

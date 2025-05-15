@@ -198,14 +198,13 @@ username = {{ nova_service_user_name }}
 
 ### Disks in OpenStack
 
-The node disk can be local or network. A local disk in OpenStack, is an ephemeral disk, and a network disk is a persistent disk (cinder storage). The first one is deleted along with the VM, and the second one remains in the cloud when the VM is deleted.
+The node disk can be local or network. A local disk in OpenStack, is an ephemeral disk, and a network disk is a persistent disk (cinder storage). Nodes with local disks cannot migrate between hypervisors.
 
 * A network disk is preferred for the master node so that the node can migrate between hypervisors.
 * A local disk is preffered for the ephemeral node to save on cost. Not all cloud providers support the use of local disks. If local disks are not supported, you have to use network disks for ephemeral nodes.
 
 | Local disk (ephemeral)        | Network disk (persistent)                    |
 | ----------------------------- | -------------------------------------------- |
-| Is removed along with the VM  | Stays in the cloud and can be reused         |
 | Cheaper                       | More expensive                               |
 | Suitable for ephemeral nodes  | Suitable for master nodes                    |
 
@@ -218,17 +217,19 @@ The `OpenStackInstanceClass` has a `rootDiskSize` parameter, and OpenStack flavo
 | **`rootDiskSize` is not specified** | ❗️*You need to set the size*. Without specifying the size, there will be an error creating a VM. | Local disk with size according to the flavor    |
 | **`rootDiskSize` is specified**     | Network disk with the `rootDiskSize` size                                         | ❗ Network disk (rootDiskSize) and local disk (according to the flavor). Avoid using this option, as the cloud provider will charge for both disks. |
 
+> Please note, that to create a node with the `CloudEphemeral` type in a zone other than zone A, you must first create a flavor with a disk of the required size. The [rootDiskSize](/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-rootdisksize) parameter does not need to be specified.
+
 #### Network disk is recommended for master nodes and bastion host
 
-- Use flavor with a zero disk size.
-- Set the `rootDiskSize` in the `OpenStackInstanceClass`.
-- Check the disk type. The disk type will be taken from the OS image if it is [set](#how-to-override-a-default-volume-type-of-cloud-provider). If it is not set, the disk type will be taken from [volumeTypeMap](cluster_configuration.html#openstackclusterconfiguration-masternodegroup-volumetypemap).
+* Use flavor with a zero disk size.
+* Set the `rootDiskSize` in the `OpenStackInstanceClass`.
+* Check the disk type. The disk type will be taken from the OS image if it is [set](#how-to-override-a-default-volume-type-of-cloud-provider). If it is not set, the disk type will be taken from [volumeTypeMap](cluster_configuration.html#openstackclusterconfiguration-masternodegroup-volumetypemap).
 
 #### Local disk is recommended for ephemeral nodes
 
-- Use flavor with the specified disk size.
-- Do not use the `rootDiskSize` parameter in the `OpenStackInstanceClass`.
-- Check the disk type. The disk type will be taken from the OS image if it is [set](#how-to-override-a-default-volume-type-of-cloud-provider). If it is not set, the default disk type of the cloud provider will be used.
+* Use flavor with the specified disk size.
+* Do not use the `rootDiskSize` parameter in the `OpenStackInstanceClass`.
+* Check the disk type. The disk type will be taken from the OS image if it is [set](#how-to-override-a-default-volume-type-of-cloud-provider). If it is not set, the default disk type of the cloud provider will be used.
 
 ### How do I check the disk volume in a flavor?
 

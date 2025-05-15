@@ -48,9 +48,9 @@ spec:
     - name: 'exclude-groups'
       expression: '!(["system:nodes", "system:serviceaccounts:kube-system", "system:serviceaccounts:d8-system"].exists(e, (e in request.userInfo.groups)))'
     - name: 'exclude-users'
-      expression: '!(["system:apiserver", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl", "observability"].exists(e, (e == request.userInfo.username)))'
+      expression: '!(["system:sudouser", "system:apiserver", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl", "observability"].exists(e, (e == request.userInfo.username)))'
     - name: 'exclude-kinds'
-      expression: '!(has(request.kind) && ["StorageClass"].exists(e, (e == request.kind.kind)))'
+      expression: '!(has(request.kind) && ["StorageClass", "DeckhouseRelease", "ModuleRelease"].exists(e, (e == request.kind.kind)))'
     - name: 'exclude-restartedAt'
       expression: '!((has(object.spec) && has(object.spec.template) && has(object.spec.template.metadata)
           && has(oldObject.spec) && has(oldObject.spec.template) && has(oldObject.spec.template.metadata))
@@ -84,8 +84,16 @@ spec:
   validationActions: [Deny, Audit]
   matchResources:
     objectSelector:
-      matchLabels:
-        heritage: deckhouse
+      matchExpressions:
+      - key: "heritage"
+        operator: In
+        values:
+        - "deckhouse"
+      - key: maintenance.deckhouse.io/no-resource-reconcillation
+        operator: NotIn
+        values:
+        - ""
+        - "true"
 {{- end }}
 ---
 {{- $policyName := "update-policy-label-objects.deckhouse.io" }}

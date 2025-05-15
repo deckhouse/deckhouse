@@ -98,6 +98,12 @@ properties:
     default: {}
     description: Grafana installation-related settings.
     properties:
+      enabled:
+        type: boolean
+        default: true
+        x-examples: [false]
+        description: |
+          Enables Grafana deploy in the cluster.
       useDarkTheme:
         type: boolean
         default: false
@@ -364,11 +370,9 @@ properties:
     type: integer
     description: |
       Deprecated and will be removed. Doesn't affect anything.
-      The maximum size (in GiB) that the main Prometheus' volume can automatically resize to.
     x-doc-deprecated: true
   longtermMaxDiskSizeGigabytes:
     type: integer
     x-doc-deprecated: true
     description: |
       Deprecated and will be removed. Doesn't affect anything.
-      The maximum size (in GiB) to which the Longterm Prometheus' disk can be automatically resized.

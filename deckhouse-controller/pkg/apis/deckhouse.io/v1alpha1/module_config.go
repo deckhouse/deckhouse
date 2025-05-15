@@ -108,6 +108,7 @@ type ModuleConfigSpec struct {
 	Enabled      *bool          `json:"enabled,omitempty"`
 	UpdatePolicy string         `json:"updatePolicy,omitempty"`
 	Source       string         `json:"source,omitempty"`
+	Maintenance  string         `json:"maintenance,omitempty"`
 }
 
 type ModuleConfigStatus struct {

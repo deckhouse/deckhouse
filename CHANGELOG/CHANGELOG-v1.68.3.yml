@@ -1,0 +1,17 @@
+deckhouse:
+  fixes:
+    - summary: Add initial module config validation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12227
+deckhouse-controller:
+  fixes:
+    - summary: Update addon-operator.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12448
+dhctl:
+  fixes:
+    - summary: sudoPassword from the connection-config not used in dhctl CLI and dhctl server
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12419
+metallb:
+  fixes:
+    - summary: Fixed module startup error with empty Selector value in SVC.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12328
+

@@ -174,7 +174,7 @@ _Network type_ должен быть _Routed_:
 
 ![Настройка шаблона, шаг 2](../../images/cloud-provider-vcd/template/Screenshot2.png)
 
-Выберите скаченный шаблон и загрузите его в каталог:
+Выберите скачанный шаблон и загрузите его в каталог:
 
 ![Настройка шаблона, шаг 3](../../images/cloud-provider-vcd/template/Screenshot3.png)
 

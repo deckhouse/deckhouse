@@ -25,7 +25,7 @@
         1. Subscribe to one of the regular release channels by adjusting the [`deckhouse` module configuration](https://deckhouse.io/products/kubernetes-platform/documentation/latest/modules/deckhouse/configuration.html#parameters-releasechannel).
 
   - alert: DeckhouseReleaseIsWaitingManualApproval
-    expr: sum by (name) (d8_release_info{manualApproval="true", releaseQueueDepth=~"(nil|one)"})
+    expr: sum by (name) (d8_release_info{manualApproval="true", releaseQueueDepth=~"(nil|0|1)"})
     labels:
       severity_level: "9"
       d8_module: deckhouse
@@ -47,7 +47,7 @@
         ```
 
   - alert: DeckhouseReleaseIsWaitingManualApproval
-    expr: sum by (name) (d8_release_info{manualApproval="true", releaseQueueDepth="two"})
+    expr: sum by (name) (d8_release_info{manualApproval="true", releaseQueueDepth="2"})
     labels:
       severity_level: "6"
       d8_module: deckhouse
@@ -69,7 +69,7 @@
         ```
 
   - alert: DeckhouseReleaseIsWaitingManualApproval
-    expr: sum by (name) (d8_release_info{manualApproval="true", releaseQueueDepth="three"})
+    expr: sum by (name) (d8_release_info{manualApproval="true", releaseQueueDepth="3"})
     labels:
       severity_level: "3"
       d8_module: deckhouse
@@ -139,7 +139,7 @@
         ```
 
   - alert: ModuleReleaseIsWaitingManualApproval
-    expr: sum(deckhouse_mm_module_info{enabled="true"} * on(moduleName) group_left(name) d8_module_release_info{manualApproval="true"}) by (name, moduleName)
+    expr: sum(deckhouse_mm_module_info{enabled="true"} * on(moduleName) group_left(name) sum by (name, moduleName, manualApproval) (d8_module_release_info{manualApproval="true"})) by (name, moduleName)
     labels:
       severity_level: "6"
     annotations:
@@ -155,6 +155,25 @@
         
         ```bash
         kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
+        ```
+
+  - alert: ModuleIsInMaintenanceMode
+    expr: sum(deckhouse_mm_module_maintenance{state="NoResourceReconciliation"}) by (moduleName) > 0
+    labels:
+      severity_level: "6"
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_ignore_labels: "name"
+      summary: |
+        Module `{{ $labels.moduleName }}` is running in maintenance mode.
+      description: |
+        Module `{{ $labels.moduleName }}` is running in maintenance mode. In this mode, its state is not reconciled, which prevents configuration or hook changes from being applied automatically.
+
+        To switch the module back to normal mode, edit the corresponding ModuleConfig resource with the following command:
+        
+        ```bash
+        kubectl patch moduleconfig {{ $labels.moduleName }} --type=json -p='[{"op": "remove", "path": "/spec/maintenance"}]'
         ```
       
   - alert: DeckhouseReleaseNotificationNotSent
@@ -179,7 +198,7 @@
         ```
 
   - alert: ModuleReleaseIsBlockedByRequirements
-    expr: sum(deckhouse_mm_module_info{enabled="true"} * on(moduleName) group_left(name) d8_module_release_info{requirementsNotMet="true"}) by (name, moduleName)
+    expr: sum(deckhouse_mm_module_info{enabled="true"} * on(moduleName) group_left(name) sum by (name, moduleName, requirementsNotMet) (d8_module_release_info{requirementsNotMet="true"})) by (name, moduleName)
     labels:
       severity_level: "6"
     annotations:

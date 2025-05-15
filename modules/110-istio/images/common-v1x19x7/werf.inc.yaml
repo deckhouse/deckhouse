@@ -11,15 +11,18 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $istioVersion }} {{ $.SOURCE_REPO }}/istio/istio.git /src/istio/
+  - git clone --depth 1 --branch {{ $istioVersion }} $(cat /run/secrets/SOURCE_REPO)/istio/istio.git /src/istio/
   - cd /src/istio/
-  - git apply --verbose /patches/istio-*.patch
+  - git apply --verbose /patches/001-istio-apply_go.patch /patches/002-istio-go-mod.patch
   - rm -rf /src/istio/.git
-  - git clone --depth 1 --branch {{ $kialiVersion }} {{ $.SOURCE_REPO }}/istio/kiali.git /src/kiali/
+  - git clone --depth 1 --branch {{ $kialiVersion }} $(cat /run/secrets/SOURCE_REPO)/istio/kiali.git /src/kiali/
   - cd /src/kiali/
-  - git apply --verbose /patches/kiali-*.patch
+  - git apply --verbose /patches/001-kiali-node.patch /patches/002-kiali-go-mod.patch
   - rm -rf /src/kiali/.git
 
   # getting rid of unused vulnerable code

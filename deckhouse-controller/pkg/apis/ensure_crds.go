@@ -17,14 +17,16 @@ package apis
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"path/filepath"
 	"strings"
 
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	crdinstaller "github.com/deckhouse/module-sdk/pkg/crd-installer"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // list of CRDs to delete, like "externalmodulesources.deckhouse.io"
@@ -58,9 +60,9 @@ func EnsureCRDs(ctx context.Context, client kubeClient, crdsGlob string) error {
 
 	deletedCRDs, err := inst.DeleteCRDs(ctx, deprecatedCRDs)
 	if err != nil {
-		log.Warnf("Couldn't delete deprecated CRDs: %s", err)
+		log.Warn("Couldn't delete deprecated CRDs", log.Err(err))
 	} else {
-		log.Infof("The following deprecated CRDs were deleted: %v", deletedCRDs)
+		log.Info("The following deprecated CRDs were deleted", slog.String("crds", strings.Join(deletedCRDs, ",")))
 	}
 
 	err = inst.Run(ctx)

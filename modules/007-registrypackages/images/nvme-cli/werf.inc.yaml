@@ -2,7 +2,7 @@
 {{- $image_version := $version | replace "." "-" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-{{ $image_version }}
-from: {{ .Images.BASE_SCRATCH }}
+from: {{ $.Images.BASE_SCRATCH }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
   add: /relocate
@@ -15,6 +15,11 @@ import:
 imageSpec:
   config:
     labels: {"distro": "all", "version": "all", "nvme-cli": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
 final: false
@@ -25,11 +30,14 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone -b v{{ $version }} --depth 1 {{ .SOURCE_REPO }}/linux-nvme/nvme-cli.git /src/nvme-cli
-  - git clone -b v1.11.1 --depth 1 {{ .SOURCE_REPO }}/linux-nvme/libnvme.git /src/nvme-cli/subprojects/libnvme
+  - git clone -b v{{ $version }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/linux-nvme/nvme-cli.git /src/nvme-cli
+  - git clone -b v1.11.1 --depth 1 $(cat /run/secrets/SOURCE_REPO)/linux-nvme/libnvme.git /src/nvme-cli/subprojects/libnvme
   - rm -rf /src/nvme-cli/.git /src/nvme-cli/subprojects/libnvme/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}

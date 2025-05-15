@@ -30,7 +30,7 @@ apiVersions:
           instanceClass:
             cores: 4
             memory: 8192
-            imageID: fd8nb7ecsbvj76dfaa8b
+            imageID: fd85m9q2qspfnsv055rh
         nodeGroups:
           - name: worker
             replicas: 1
@@ -39,7 +39,7 @@ apiVersions:
             instanceClass:
               cores: 4
               memory: 8192
-              imageID: fd8nb7ecsbvj76dfaa8b
+              imageID: fd85m9q2qspfnsv055rh
               coreFraction: 50
               externalIPAddresses:
                 - "198.51.100.5"
@@ -120,7 +120,7 @@ apiVersions:
                 type: string
                 description: |
                   Image ID to use while provisioning Yandex Compute Instances.
-                example: fd8nb7ecsbvj76dfaa8b
+                example: fd85m9q2qspfnsv055rh
               diskSizeGB: &instanceClassDiskSizeGB
                 type: integer
                 description: |
@@ -332,7 +332,7 @@ apiVersions:
         description: |
           One or more pre-existing subnets mapped to respective zone.
 
-          > **Warning!** Deckhouse will create a route table that must be manually attached to these subnets.
+          > **Warning!** Deckhouse will create a route table that must be manually attached to these subnets. You can only associate one routing table with a given subnet. This means you cannot run multiple clusters using `cni-simple-bridge` in the same subnets. To run multiple clusters in the same network ranges, use `cni-cilium` instead.
         x-examples:
           - ru-central1-a: e2lu8r1tbbtryhdpa9ro
             ru-central1-b: e2lu8r1tbbtryhdpa9ro
@@ -404,6 +404,9 @@ apiVersions:
             description: |
               ID of a subnet for the internal interface.
             type: string
+          internalSubnetCIDR:
+            description: |
+              CIDR of an automatically created subnet for the internal interface. Overrides `internalSubnetID` parameter.
           externalSubnetID:
             description: |
               If specified, an additional network interface will be added to the node (the node will use it as a default route).

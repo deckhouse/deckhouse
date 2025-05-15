@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
+	"log/slog"
 	"strconv"
 	"time"
 
@@ -37,6 +38,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/autoscaler/capacity"
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -195,7 +197,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 	// Kind is changed, so objects in "dynamic-kind" can be ignored. Update kind and stop the hook.
 	if kindInUse != kindFromSecret {
 		if kindFromSecret == "" {
-			input.Logger.Infof("InstanceClassKind has changed from '%s' to '': disable binding 'ics'", kindInUse)
+			input.Logger.Info("InstanceClassKind has changed: disable binding 'ics'")
 			*input.BindingActions = append(*input.BindingActions, go_hook.BindingAction{
 				Name:       "ics",
 				Action:     "Disable",
@@ -203,7 +205,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 				ApiVersion: "",
 			})
 		} else {
-			input.Logger.Infof("InstanceClassKind has changed from '%s' to '%s': update kind for binding 'ics'", kindInUse, kindFromSecret)
+			input.Logger.Info("InstanceClassKind has changed: update kind for binding 'ics'", slog.String("from", kindInUse), slog.String("to", kindFromSecret))
 			*input.BindingActions = append(*input.BindingActions, go_hook.BindingAction{
 				Name:   "ics",
 				Action: "UpdateKind",
@@ -296,7 +298,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 		nodeGroup := v.(NodeGroupCrdInfo)
 		ngForValues := nodeGroupForValues(nodeGroup.Spec.DeepCopy())
 		// set observed status fields
-		input.PatchCollector.PatchWithMutatingFunc(set_cr_statuses.SetObservedStatus(v, applyNodeGroupCrdFilter), "deckhouse.io/v1", "nodegroup", "", nodeGroup.Name, object_patch.WithSubresource("/status"), object_patch.WithIgnoreHookError(true))
+		input.PatchCollector.PatchWithMutatingFunc(set_cr_statuses.SetObservedStatus(v, applyNodeGroupCrdFilter), "deckhouse.io/v1", "nodegroup", "", nodeGroup.Name, object_patch.WithSubresource("/status"), object_patch.WithIgnoreHookError())
 		// Copy manualRolloutID and name.
 		ngForValues["name"] = nodeGroup.Name
 		ngForValues["manualRolloutID"] = nodeGroup.ManualRolloutID
@@ -333,7 +335,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 					}
 				}
 
-				input.Logger.Errorf("Bad NodeGroup '%s': %s", nodeGroup.Name, errorMsg)
+				input.Logger.Error("Bad NodeGroup", slog.String("name", nodeGroup.Name), slog.String("error_msg", errorMsg))
 				setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, errorStatusField, errorMsg)
 				continue
 			}
@@ -361,7 +363,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 					}
 				}
 
-				input.Logger.Errorf("Bad NodeGroup '%s': %s", nodeGroup.Name, errorMsg)
+				input.Logger.Error("Bad NodeGroup", slog.String("name", nodeGroup.Name), slog.String("error_msg", errorMsg))
 				setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, errorStatusField, errorMsg)
 				continue
 			}
@@ -373,7 +375,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 					// capacity calculation required only for scaling from zero, we can save some time in the other cases
 					nodeCapacity, err := capacity.CalculateNodeTemplateCapacity(nodeGroupInstanceClassKind, instanceClassSpec, instanceTypeCatalog)
 					if err != nil {
-						input.Logger.Errorf("Calculate capacity failed for: %s with spec: %v. Error: %s", nodeGroupInstanceClassKind, instanceClassSpec, err)
+						input.Logger.Error("Calculate capacity failed", slog.String("node_group", nodeGroupInstanceClassKind), slog.Any("spec", instanceClassSpec), log.Err(err))
 						setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, errorStatusField, fmt.Sprintf("%s capacity is not set and instance type could not be found in the built-it types. ScaleFromZero would not work until you set a capacity spec into the %s/%s", nodeGroupInstanceClassKind, nodeGroupInstanceClassKind, nodeGroup.Spec.CloudInstances.ClassReference.Name))
 						continue
 					}
@@ -397,7 +399,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 				}
 				if containCount != len(nodeGroup.Spec.CloudInstances.Zones) {
 					errorMsg := fmt.Sprintf("unknown cloudInstances.zones: %v", unknownZones)
-					input.Logger.Errorf("Bad NodeGroup '%s': %s", nodeGroup.Name, errorMsg)
+					input.Logger.Error("Bad NodeGroup", slog.String("name", nodeGroup.Name), slog.String("error_msg", errorMsg))
 
 					setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, errorStatusField, errorMsg)
 					continue
@@ -501,6 +503,12 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 	if !input.Values.Exists("nodeManager.internal") {
 		input.Values.Set("nodeManager.internal", map[string]interface{}{})
 	}
+
+	if len(input.Snapshots["ngs"]) != len(finalNodeGroups) {
+		return fmt.Errorf("incorrect final nodegroups count (%d) should be %d in snapshots. See errors above for additional information",
+			len(finalNodeGroups), len(input.Snapshots["ngs"]))
+	}
+
 	input.Values.Set("nodeManager.internal.nodeGroups", finalNodeGroups)
 	return nil
 }

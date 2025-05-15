@@ -15,18 +15,20 @@
 package entity
 
 import (
+	"context"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	state_terraform "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
+	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 )
 
-func GetMetaConfig(kubeCl *client.KubernetesClient) (*config.MetaConfig, error) {
-	metaConfig, err := config.ParseConfigFromCluster(kubeCl)
+func GetMetaConfig(ctx context.Context, kubeCl *client.KubernetesClient) (*config.MetaConfig, error) {
+	metaConfig, err := config.ParseConfigFromCluster(ctx, kubeCl)
 	if err != nil {
 		return nil, err
 	}
 
-	metaConfig.UUID, err = state_terraform.GetClusterUUID(kubeCl)
+	metaConfig.UUID, err = infrastructurestate.GetClusterUUID(ctx, kubeCl)
 	if err != nil {
 		return nil, err
 	}

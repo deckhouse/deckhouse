@@ -1,4 +1,40 @@
 {{- if and .Values.global.modules.publicDomainTemplate .Values.global.clusterIsBootstrapped }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: documentation-free-assets
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "documentation")) | nindent 2 }}
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/configuration-snippet: |-
+      {{- include "helm_lib_module_ingress_configuration_snippet" $ | nindent 6 }}
+spec:
+  ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
+  rules:
+  - host: {{ include "helm_lib_module_public_domain" (list . "documentation") }}
+    http:
+      paths:
+      - path: /(android-chrome|apple-touch|favicon|mstile|safari-pinned)(-[a-z0-9-]*)?\.(png|ico|svg)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: documentation
+            port:
+              name: http
+      - path: /(site.webmanifest|browserconfig.xml)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: documentation
+            port:
+              name: http
+  {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
+  tls:
+    - hosts:
+        - {{ include "helm_lib_module_public_domain" (list . "documentation") }}
+      secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
+  {{- end }}
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -17,21 +53,18 @@ metadata:
     nginx.ingress.kubernetes.io/auth-type: basic
     nginx.ingress.kubernetes.io/auth-secret: documentation-basic-auth
     nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
-    nginx.ingress.kubernetes.io/configuration-snippet: |
+    nginx.ingress.kubernetes.io/configuration-snippet: |-
       proxy_ssl_certificate /etc/nginx/ssl/client.crt;
       proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
       proxy_ssl_protocols TLSv1.2;
       proxy_ssl_session_reuse on;
   {{- end }}
-      rewrite ^/$ /en/platform/ permanent;
-      rewrite ^/((ru|en)/(.+)/modules)/[0-9]+-([^/]+/.*)$ /$1/$4 permanent;
-      rewrite ^/(en|ru)/$ /$1/platform/ permanent;
-      rewrite ^/modules/(.+) /en/modules/$1 permanent;
-      rewrite ^/platform/(.+) /en/platform/$1 permanent;
-      rewrite ^/(ru|en)/(modules/[0-9]+-[^/]+/.*)$ /$1/platform/$2 permanent;
-      rewrite ^/(en|ru)/modules/810-deckhouse-web(/.*)$ /$1/modules/810-documentation$2 permanent;
-      rewrite ^/documentation/v[\d]+[^\/]*/(.*)?$ /en/platform/$3 permanent;
-      rewrite ^(/(ru|en))/documentation/v[\d]+[^\/]*/(.*)?$ $1/platform/$3 permanent;
+      rewrite ^/(en|ru)/?$ /$1/platform/ redirect;
+      rewrite ^/modules/(.+) /en/modules/$1 redirect;
+      rewrite ^/(ru|en)/modules$ /$1/modules/ permanent;
+      # The old naming
+      rewrite ^/(ru|en)/(platform/)?modules/[0-9]+-([^/]+/.*)$ /$1/platform/modules/$3 redirect;
+      {{- include "helm_lib_module_ingress_configuration_snippet" $ | nindent 6 }}
   {{- if .Values.documentation.auth.satisfyAny }}
     nginx.ingress.kubernetes.io/satisfy: "any"
   {{- end }}

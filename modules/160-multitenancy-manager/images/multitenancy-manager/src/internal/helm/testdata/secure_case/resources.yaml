@@ -1,39 +1,23 @@
 
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: AuthorizationRule
-metadata:
-  labels:
-    heritage: multitenancy-manager
-    projects.deckhouse.io/project: test
-    projects.deckhouse.io/project-template: secure
-  name: user-gmail.com
-  namespace: test
-spec:
-  accessLevel: Admin
-  subjects:
-  - kind: User
-    name: user@gmail.com
-
----
 apiVersion: v1
-kind: ResourceQuota
+kind: Namespace
 metadata:
+  annotations: {}
   labels:
+    extended-monitoring.deckhouse.io/enabled: ""
     heritage: multitenancy-manager
     projects.deckhouse.io/project: test
     projects.deckhouse.io/project-template: secure
-  name: all-pods
-  namespace: test
-spec:
-  hard:
-    limits.memory: 15Gi
-    requests.cpu: 1
+    security-scanning.deckhouse.io/enabled: ""
+    security.deckhouse.io/pod-policy: baseline
+  name: test
 
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
+  annotations: {}
   labels:
     heritage: multitenancy-manager
     projects.deckhouse.io/project: test
@@ -80,6 +64,7 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: OperationPolicy
 metadata:
+  annotations: {}
   labels:
     heritage: multitenancy-manager
     projects.deckhouse.io/project: test
@@ -102,6 +87,7 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: SecurityPolicy
 metadata:
+  annotations: {}
   labels:
     heritage: multitenancy-manager
     projects.deckhouse.io/project: test
@@ -123,14 +109,34 @@ spec:
       rule: MustRunAs
 
 ---
-apiVersion: v1
-kind: Namespace
+apiVersion: deckhouse.io/v1alpha1
+kind: AuthorizationRule
 metadata:
+  annotations: {}
   labels:
-    extended-monitoring.deckhouse.io/enabled: ""
     heritage: multitenancy-manager
     projects.deckhouse.io/project: test
     projects.deckhouse.io/project-template: secure
-    security-scanning.deckhouse.io/enabled: ""
-    security.deckhouse.io/pod-policy: baseline
-  name: test
+  name: user-gmail.com
+  namespace: test
+spec:
+  accessLevel: Admin
+  subjects:
+  - kind: User
+    name: user@gmail.com
+
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  annotations: {}
+  labels:
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: secure
+  name: all-pods
+  namespace: test
+spec:
+  hard:
+    limits.memory: 15Gi
+    requests.cpu: 1

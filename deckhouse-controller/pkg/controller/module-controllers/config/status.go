@@ -19,6 +19,7 @@ package config
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"time"
 
@@ -43,7 +44,7 @@ import (
 
 // refreshModule refreshes module in cluster
 func (r *reconciler) refreshModule(ctx context.Context, moduleName string) error {
-	r.log.Debugf("refresh the %q module status", moduleName)
+	r.log.Debug("refresh module status", slog.String("name", moduleName))
 
 	// events happen quite often, so conflicts happen often, default backoff not suitable
 	backoff := wait.Backoff{
@@ -68,7 +69,7 @@ func (r *reconciler) refreshModule(ctx context.Context, moduleName string) error
 
 // refreshModuleConfig refreshes module config in cluster
 func (r *reconciler) refreshModuleConfig(ctx context.Context, configName string) error {
-	r.log.Debugf("refresh the %q module config status", configName)
+	r.log.Debug("refresh module config status", slog.String("name", configName))
 
 	// clear metrics
 	metricGroup := fmt.Sprintf("obsoleteVersion_%s", configName)
@@ -79,7 +80,7 @@ func (r *reconciler) refreshModuleConfig(ctx context.Context, configName string)
 		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			if err := r.client.Get(ctx, client.ObjectKey{Name: configName}, moduleConfig); err != nil {
 				if apierrors.IsNotFound(err) {
-					r.log.Debugf("the module '%s' config not found", configName)
+					r.log.Debug("module config not found", slog.String("name", configName))
 					return nil
 				}
 				return fmt.Errorf("refresh the '%s' module config: %w", configName, err)
@@ -142,7 +143,7 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 		// However, there are too many addon-operator internals involved.
 		// We should consider moving these statuses to the `Module` resource,
 		// which is directly controlled by addon-operator.
-		case modules.CanRunHelm:
+		case modules.Ready:
 			module.Status.Phase = v1alpha1.ModulePhaseReady
 			module.SetConditionTrue(v1alpha1.ModuleConditionIsReady)
 
@@ -161,14 +162,6 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 			} else {
 				module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonInstalling, v1alpha1.ModuleMessageOnStartupHook)
 			}
-
-		case modules.WaitForSynchronization:
-			module.Status.Phase = v1alpha1.ModulePhaseWaitSyncTasks
-			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonWaitSyncTasks, v1alpha1.ModuleMessageWaitSyncTasks)
-
-		case modules.HooksDisabled:
-			module.Status.Phase = v1alpha1.ModulePhaseHooksDisabled
-			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonHooksDisabled, v1alpha1.ModuleMessageHooksDisabled)
 		}
 
 		return

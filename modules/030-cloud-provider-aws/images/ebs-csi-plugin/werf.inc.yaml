@@ -39,9 +39,12 @@ git:
     install:
       - '**/*'
 {{- end }}
+secrets:
+- id: SOURCE_REPO
+  value: {{ $.SOURCE_REPO }}
 shell:
   install:
-    - git clone --depth 1 --branch {{ $value.csi.aws }} {{ $.SOURCE_REPO }}/kubernetes-sigs/aws-ebs-csi-driver.git /src
+    - git clone --depth 1 --branch {{ $value.csi.aws }} $(cat /run/secrets/SOURCE_REPO)/kubernetes-sigs/aws-ebs-csi-driver.git /src
     - cd /src
     {{- if $patch}}
     - git apply /patches/*.patch --verbose
@@ -57,14 +60,15 @@ import:
     to: /src
     before: install
 mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ $.GOPROXY }}
 shell:
   install:
   - cd /src
-  - export GOPROXY={{ $.GOPROXY }}
   - go mod edit -go=1.23.4
-  - go mod download
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:
   - cd /src
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="X github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver.driverVersion={{ $value.csi.aws }} -X github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud.driverVersion={{ $value.csi.aws }} -s -w" -o /aws-ebs-csi-driver ./cmd/main.go

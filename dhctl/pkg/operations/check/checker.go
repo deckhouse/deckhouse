@@ -22,13 +22,14 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
 type Params struct {
@@ -38,7 +39,7 @@ type Params struct {
 	CommanderUUID uuid.UUID
 	*commander.CommanderModeParams
 
-	TerraformContext *terraform.TerraformContext
+	InfrastructureContext *infrastructure.Context
 
 	KubeClient *client.KubernetesClient // optional
 }
@@ -63,12 +64,15 @@ func NewChecker(params *Params) *Checker {
 }
 
 func (c *Checker) Check(ctx context.Context) (*CheckResult, error) {
-	kubeCl, err := c.GetKubeClient()
+	kubeCl, err := c.GetKubeClient(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	metaConfig, err := commander.ParseMetaConfig(c.StateCache, c.Params.CommanderModeParams)
+	if c.InfrastructureContext == nil {
+		c.InfrastructureContext = infrastructure.NewContextWithProvider(infrastructureprovider.ExecutorProvider(metaConfig))
+	}
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse meta configuration: %w", err)
 	}
@@ -87,21 +91,25 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, error) {
 		}
 	}
 
+	hasTerraformState := false
+
 	if metaConfig.ClusterType == config.CloudClusterType {
-		status, statusDetails, err := c.checkInfra(ctx, kubeCl, metaConfig, c.TerraformContext)
+		resInfra, err := c.checkInfra(ctx, kubeCl, metaConfig, c.InfrastructureContext)
 		if err != nil {
 			return nil, fmt.Errorf("unable to check infra state: %w", err)
 		}
-		res.Status = res.Status.CombineStatus(status)
+		res.Status = res.Status.CombineStatus(resInfra.Status)
 
-		if status == CheckStatusDestructiveOutOfSync {
-			res.DestructiveChangeID, err = DestructiveChangeID(statusDetails)
+		if resInfra.Status == CheckStatusDestructiveOutOfSync {
+			res.DestructiveChangeID, err = DestructiveChangeID(resInfra.Statistics)
 			if err != nil {
 				return nil, fmt.Errorf("unable to generate destructive change id: %w", err)
 			}
 		}
 
-		res.StatusDetails.Statistics = *statusDetails
+		hasTerraformState = resInfra.HasTerraformState
+		res.StatusDetails.Statistics = *resInfra.Statistics
+		res.StatusDetails.OpentofuMigrationStatus = resInfra.MigrationOpentofuStatus
 	}
 
 	configurationStatus, err := c.checkConfiguration(ctx, kubeCl, metaConfig)
@@ -110,6 +118,7 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, error) {
 	}
 	res.Status = res.Status.CombineStatus(configurationStatus)
 	res.StatusDetails.ConfigurationStatus = configurationStatus
+	res.HasTerraformState = hasTerraformState
 
 	return res, nil
 }
@@ -124,7 +133,7 @@ func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.Kuberne
 		return "", fmt.Errorf("unable to get provider cluster config yaml: %w", err)
 	}
 
-	inClusterMetaConfig, err := entity.GetMetaConfig(kubeCl)
+	inClusterMetaConfig, err := entity.GetMetaConfig(ctx, kubeCl)
 	if err != nil {
 		return "", fmt.Errorf("unable to get in-cluster meta config: %w", err)
 	}
@@ -143,16 +152,23 @@ func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.Kuberne
 	return CheckStatusOutOfSync, nil
 }
 
-func (c *Checker) checkInfra(_ context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraformContext *terraform.TerraformContext) (CheckStatus, *Statistics, error) {
-	stat, err := CheckState(
-		kubeCl, metaConfig, terraformContext,
+type InfraResult struct {
+	Status                  CheckStatus
+	Statistics              *Statistics
+	HasTerraformState       bool
+	MigrationOpentofuStatus CheckStatus
+}
+
+func (c *Checker) checkInfra(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, infrastructureContext *infrastructure.Context) (*InfraResult, error) {
+	stat, hasTerraformState, err := CheckState(
+		ctx, kubeCl, metaConfig, infrastructureContext,
 		CheckStateOptions{
 			CommanderMode: c.CommanderMode,
 			StateCache:    c.StateCache,
 		},
 	)
 	if err != nil {
-		return CheckStatusDestructiveOutOfSync, stat, err
+		return nil, err
 	}
 
 	checkStatus := CheckStatusInSync
@@ -167,7 +183,19 @@ func (c *Checker) checkInfra(_ context.Context, kubeCl *client.KubernetesClient,
 		checkStatus = checkStatus.CombineStatus(resolveStatisticsStatus(stat.Cluster.Status))
 	}
 
-	return checkStatus, stat, nil
+	migrateToTofuStatus := CheckStatusInSync
+
+	if infrastructureprovider.NeedToUseOpentofu(metaConfig) && hasTerraformState {
+		checkStatus = checkStatus.CombineStatus(CheckStatusOutOfSync)
+		migrateToTofuStatus = CheckStatusOutOfSync
+	}
+
+	return &InfraResult{
+		Status:                  checkStatus,
+		Statistics:              stat,
+		HasTerraformState:       hasTerraformState,
+		MigrationOpentofuStatus: migrateToTofuStatus,
+	}, nil
 }
 
 func resolveStatisticsStatus(status string) CheckStatus {
@@ -193,12 +221,12 @@ func resolveStatisticsStatus(status string) CheckStatus {
 	panic(fmt.Sprintf("unknown check infra status: %q", status))
 }
 
-func (c *Checker) GetKubeClient() (*client.KubernetesClient, error) {
+func (c *Checker) GetKubeClient(ctx context.Context) (*client.KubernetesClient, error) {
 	if c.KubeClient != nil {
 		return c.KubeClient, nil
 	}
 
-	kubeCl, err := kubernetes.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(c.SSHClient))
+	kubeCl, err := kubernetes.ConnectToKubernetesAPI(ctx, ssh.NewNodeInterfaceWrapper(c.SSHClient))
 	if err != nil {
 		return nil, fmt.Errorf("unable to connect to kubernetes api over ssh: %w", err)
 	}

@@ -8,7 +8,7 @@ all: up
 registry:
 		@if ! docker ps | grep -q registry ; then \
 			docker rm -f registry 2>/dev/null 1>/dev/null; \
-			docker run -d -p 4999:5000 --restart=always --name registry registry:2 ; \
+			docker run -d -p 4999:5000 -e REGISTRY_STORAGE_DELETE_ENABLED=true --restart=always --name registry registry:2 ; \
 		fi
 
 .PHONY:
@@ -33,4 +33,11 @@ dev: network
 debug: network
 		werf compose up --config werf-debug.yaml --follow --docker-compose-command-options='-d --force-recreate' --docker-compose-options='-f docker-compose-debug.yml'  --dev --env development --repo localhost:4999/docs
 
-.PHONY: up dev
+regenerate-menu:
+		curl --retry-delay 5 --retry 5 ${DOC_API_URL}?api-key=${DOC_API_KEY}  -o /tmp/menus.json
+		jq '.header | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty header array!") else ( . | {"topnav": { "en": [{"items": .en}], "ru": [ {"items": .ru}  ]}}) end ' /tmp/menus.json > _data/topnav.json
+		jq '."header-products" | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty header array!") else . end' /tmp/menus.json > _data/topnav-l2-products.json
+		jq '.footer | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty footer array!") else ( . | {"columns": . }) end ' /tmp/menus.json > _data/footer.json
+		jq '.copyright | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty copyright array!") else . end ' /tmp/menus.json > _data/copyright.json
+
+.PHONY: up dev regenerate-menu

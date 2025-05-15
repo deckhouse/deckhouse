@@ -22,7 +22,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
@@ -81,7 +80,7 @@ func (op *Detacher) Detach(ctx context.Context) error {
 			return fmt.Errorf("unable to parse resources to create: %w", err)
 		}
 
-		kubeClient, err := op.Checker.GetKubeClient()
+		kubeClient, err := op.Checker.GetKubeClient(ctx)
 		if err != nil {
 			return fmt.Errorf("unable to get kube client: %w", err)
 		}
@@ -91,7 +90,7 @@ func (op *Detacher) Detach(ctx context.Context) error {
 			return fmt.Errorf("unable to get resource checkers: %w", err)
 		}
 
-		err = resources.CreateResourcesLoop(kubeClient, detachResources, checkers, nil)
+		err = resources.CreateResourcesLoop(ctx, kubeClient, detachResources, checkers, nil)
 		if err != nil {
 			return fmt.Errorf("unable to create resources: %w", err)
 		}
@@ -111,7 +110,7 @@ func (op *Detacher) Detach(ctx context.Context) error {
 			return fmt.Errorf("unable to parse resources to delete: %w", err)
 		}
 
-		kubeClient, err := op.Checker.GetKubeClient()
+		kubeClient, err := op.Checker.GetKubeClient(ctx)
 		if err != nil {
 			return fmt.Errorf("unable to get kube client: %w", err)
 		}

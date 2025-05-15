@@ -8,7 +8,7 @@ description: Примеры использования модуля log-shipper 
 ## Чтение логов из всех подов кластера и направление их в Loki
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingConfig
 metadata:
   name: all-logs
@@ -32,7 +32,7 @@ spec:
 Чтение логов подов из namespace `whispers` только с label `app=booking` и перенаправление одновременно в Loki и Elasticsearch:
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingConfig
 metadata:
   name: whispers-booking-logs
@@ -40,8 +40,11 @@ spec:
   type: KubernetesPods
   kubernetesPods:
     namespaceSelector:
-      matchNames:
-        - whispers
+      labelSelector:
+        matchExpressions:
+        - key: "kubernetes.io/metadata.name"
+          operator: In
+          values: [whispers]
     labelSelector:
       matchLabels:
         app: booking
@@ -400,7 +403,7 @@ spec:
 Выложите в кластер следующий `ClusterLoggingConfig`, чтобы собирать сообщения с пода `events-exporter`:
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingConfig
 metadata:
   name: kubernetes-events
@@ -411,8 +414,11 @@ spec:
       matchLabels:
         app: events-exporter
     namespaceSelector:
-      matchNames:
-      - d8-monitoring
+      labelSelector:
+        matchExpressions:
+        - key: "kubernetes.io/metadata.name"
+          operator: In
+          values: [d8-monitoring]
   destinationRefs:
   - loki-storage
 ```
@@ -427,7 +433,7 @@ spec:
 ### Сборка логов только для контейнера `nginx`
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingConfig
 metadata:
   name: nginx-logs
@@ -444,7 +450,7 @@ spec:
 ### Сборка логов без строки, содержащей `GET /status" 200`
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingConfig
 metadata:
   name: all-logs
@@ -462,7 +468,7 @@ spec:
 ### Аудит событий kubelet'а
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingConfig
 metadata:
   name: kubelet-audit-logs
@@ -482,7 +488,7 @@ spec:
 ### Системные логи Deckhouse
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingConfig
 metadata:
   name: system-logs
@@ -512,7 +518,7 @@ spec:
 ## Настройка сборки логов с продуктовых пространств имен, используя опцию namespace label selector
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingConfig
 metadata:
   name: production-logs

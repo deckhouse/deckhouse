@@ -120,6 +120,13 @@ func handleAuditPolicy(input *go_hook.HookInput) error {
 		}
 	}
 
+	for _, module := range input.Values.Get("global.enabledModules").Array() {
+		if module.String() == "virtualization" {
+			appendVirtualizationPolicyRules(&policy)
+			break
+		}
+	}
+
 	if len(policy.Rules) == 0 {
 		input.Values.Remove("controlPlaneManager.internal.auditPolicy")
 		return nil
@@ -134,7 +141,7 @@ func handleAuditPolicy(input *go_hook.HookInput) error {
 }
 
 func appendBasicPolicyRules(policy *audit.Policy, extraData []go_hook.FilterResult) {
-	var appendDropResourcesRule = func(resource audit.GroupResources) {
+	appendDropResourcesRule := func(resource audit.GroupResources) {
 		rule := audit.PolicyRule{
 			Level: audit.LevelNone,
 			Resources: []audit.GroupResources{
@@ -250,6 +257,25 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []go_hook.FilterResu
 
 		policy.Rules = append(policy.Rules, rule)
 	}
+	// fstec
+	// - K8s Pod created
+	// - K8s Pod deleted
+	// - Container tag is not @sha256
+	{
+		rule := audit.PolicyRule{
+			Level: audit.LevelRequest,
+			Resources: []audit.GroupResources{
+				{
+					Resources: []string{"pods"},
+				},
+			},
+			Verbs: []string{"create", "delete", "patch", "update"},
+			OmitStages: []audit.Stage{
+				audit.StageRequestReceived,
+			},
+		}
+		policy.Rules = append(policy.Rules, rule)
+	}
 	// A rule collecting logs about actions taken on the resources in system namespaces.
 	{
 		rule := audit.PolicyRule{
@@ -270,6 +296,169 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []go_hook.FilterResu
 			Verbs:      []string{"list"},
 			Namespaces: []string{}, // every namespace
 			// no stage omitted, since apiserver might crash with OOM before it responds, and we want to catch it
+		}
+		policy.Rules = append(policy.Rules, rule)
+	}
+
+	// fstec
+	// - K8s ServiceAccount created
+	// - K8s ServiceAccount deleted
+	// - ServiceAccount created in a system namespace
+	{
+		rule := audit.PolicyRule{
+			Level: audit.LevelMetadata,
+			Resources: []audit.GroupResources{
+				{
+					Group:     "",
+					Resources: []string{"serviceaccounts"},
+				},
+			},
+			Verbs: []string{"create", "delete"},
+			OmitStages: []audit.Stage{
+				audit.StageRequestReceived,
+			},
+		}
+		policy.Rules = append(policy.Rules, rule)
+	}
+
+	// fstec
+	// - ClusterRole with wildcard created
+	// - ClusterRole with write privileges created
+	// - System ClusterRole modified/deleted
+	// - K8s Role/ClusterRole created
+	// - K8s Role/ClusterRole deleted
+	{
+		rule := audit.PolicyRule{
+			Level: audit.LevelRequest,
+			Resources: []audit.GroupResources{
+				{
+					Group:     "rbac.authorization.k8s.io",
+					Resources: []string{"roles", "clusterroles"},
+				},
+			},
+			Verbs: []string{"create", "update", "delete", "patch"},
+			OmitStages: []audit.Stage{
+				audit.StageRequestReceived,
+			},
+		}
+		policy.Rules = append(policy.Rules, rule)
+	}
+
+	// fstec
+	// - Attach to cluster-admin Role
+	// - K8s Role/ClusterRole binding created
+	// - K8s Role/ClusterRole binding deleted
+	{
+		rule := audit.PolicyRule{
+			Level: audit.LevelRequest,
+			Resources: []audit.GroupResources{
+				{
+					Group:     "rbac.authorization.k8s.io",
+					Resources: []string{"clusterrolebindings"},
+				},
+			},
+			Verbs: []string{"create", "update", "delete"},
+			OmitStages: []audit.Stage{
+				audit.StageRequestReceived,
+			},
+		}
+		policy.Rules = append(policy.Rules, rule)
+	}
+
+	// fstec
+	// - Attach/Exec Pod fstec
+	// - EphemeralContainers created
+	{
+		rule := audit.PolicyRule{
+			Level: audit.LevelRequest,
+			Resources: []audit.GroupResources{
+				{
+					Resources: []string{"pods/exec", "pods/attach", "pods/ephemeralcontainers"},
+				},
+			},
+			Verbs: []string{"get", "patch"},
+			OmitStages: []audit.Stage{
+				audit.StageRequestReceived,
+			},
+		}
+		policy.Rules = append(policy.Rules, rule)
+	}
+}
+
+func appendVirtualizationPolicyRules(policy *audit.Policy) {
+	// fstec: virtualization.deckhouse.io
+	// VMOPs creation(reboot, shutdown, etc) should be logged
+	{
+		rule := audit.PolicyRule{
+			Level: audit.LevelRequestResponse,
+			Verbs: []string{"create"},
+			Resources: []audit.GroupResources{{
+				Group:     "virtualization.deckhouse.io",
+				Resources: []string{"virtualmachineoperations"},
+			}},
+		}
+		policy.Rules = append(policy.Rules, rule)
+	}
+	// fstec: virtualization.deckhouse.io
+	// Virtualization resources should be logged
+	{
+		rule := audit.PolicyRule{
+			Level:     audit.LevelMetadata,
+			Verbs:     []string{"create", "update", "patch", "delete"},
+			Resources: []audit.GroupResources{{Group: "virtualization.deckhouse.io"}},
+		}
+		policy.Rules = append(policy.Rules, rule)
+	}
+	// fstec: virtualization.deckhouse.io
+	// Virtualization subresources should be logged
+	{
+		rule := audit.PolicyRule{
+			Level: audit.LevelMetadata,
+			Verbs: []string{"update", "patch"},
+			Resources: []audit.GroupResources{{
+				Group:     "subresources.virtualization.deckhouse.io",
+				Resources: []string{"internalvirtualizationvirtualmachineinstances"},
+			}},
+		}
+		policy.Rules = append(policy.Rules, rule)
+	}
+	// fstec: virtualization.deckhouse.io
+	// Virtualization ignore the list subresources verb
+	{
+		rule := audit.PolicyRule{
+			Level:     audit.LevelMetadata,
+			Verbs:     []string{"get"},
+			Resources: []audit.GroupResources{{Group: "subresources.virtualization.deckhouse.io"}},
+		}
+		policy.Rules = append(policy.Rules, rule)
+	}
+	// fstec: virtualization.deckhouse.io
+	// Get all events from virt-launcher pods
+	{
+		rule := audit.PolicyRule{
+			Level:     audit.LevelMetadata,
+			Verbs:     []string{"create", "update", "patch", "delete"},
+			Resources: []audit.GroupResources{{Group: "", Resources: []string{"pods"}}},
+		}
+		policy.Rules = append(policy.Rules, rule)
+	}
+	// fstec: virtualization.deckhouse.io
+	// Get all events from d8-virtualization namespace
+	{
+		rule := audit.PolicyRule{
+			Level:      audit.LevelMetadata,
+			Verbs:      []string{"create", "update", "patch", "delete"},
+			Namespaces: []string{"d8-virtualization"},
+		}
+		policy.Rules = append(policy.Rules, rule)
+	}
+	// fstec: virtualization.deckhouse.io
+	// Get all events from moduleconfigs
+	{
+		rule := audit.PolicyRule{
+			Level:     audit.LevelMetadata,
+			Verbs:     []string{"create", "update", "patch", "delete"},
+			Resources: []audit.GroupResources{{Group: "deckhouse.io", Resources: []string{"moduleconfigs"}}},
 		}
 		policy.Rules = append(policy.Rules, rule)
 	}

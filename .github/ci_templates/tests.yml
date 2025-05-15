@@ -14,7 +14,7 @@ docker_options: '-w /deckhouse/dhctl -v ~/go-pkg-cache:/go/pkg'
 
 {!{ define "golangci_lint_run_args" }!}
 # <template: golangci_lint_run_args>
-args: 'sh -c "go generate tools/register.go && GOGC=50 GOFLAGS=\"-buildvcs=false\" golangci-lint run"'
+args: 'sh -c "go generate tools/register.go && golangci-lint version && GOGC=50 GOFLAGS=\"-buildvcs=false\" golangci-lint run"'
 docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg'
 # </template: golangci_lint_run_args>
 {!{- end -}!}
@@ -84,7 +84,7 @@ steps:
 {!{ tmpl.Exec "login_rw_registry_step"  $ctx | strings.Indent 2 }!}
   - name: Run tests
     env:
-      TESTS_IMAGE_NAME: {!{ printf "%s%s" (datasource "image_versions").REGISTRY_PATH (datasource "image_versions").BASE_GOLANG_23_BULLSEYE | quote }!}
+      TESTS_IMAGE_NAME: {!{ printf "%s@%s" (datasource "base_images").REGISTRY_PATH (index (datasource "base_images") "builder/golang-bullseye") | quote }!}
     run: |
       # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
       echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
@@ -116,6 +116,9 @@ steps:
 {!{ tmpl.Exec "started_at_output"       $ctx | strings.Indent 2 }!}
 {!{ tmpl.Exec "checkout_full_step"      $ctx | strings.Indent 2 }!}
   - name: DMT lint
+    env:
+      DMT_METRICS_URL: "${{ secrets.DMT_METRICS_URL }}"
+      DMT_METRICS_TOKEN: "${{ secrets.DMT_METRICS_TOKEN }}"
     run: |
       make dmt-lint
 # </template: tests_dmt_lint>

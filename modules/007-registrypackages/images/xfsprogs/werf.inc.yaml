@@ -10,9 +10,12 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ $version }} {{ $.SOURCE_REPO }}/xfs/xfsprogs-dev.git /src/xfsprogs-dev
+  - git clone --depth 1 --branch v{{ $version }} $(cat /run/secrets/SOURCE_REPO)/xfs/xfsprogs-dev.git /src/xfsprogs-dev
   - rm -rf /src/xfsprogs-dev/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
@@ -30,10 +33,15 @@ import:
 imageSpec:
   config:
     labels: {"distro": "all", "version": "all", "xfsprogs": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
-from: {{ $.Images.BASE_UBUNTU }}
+from: {{ $.Images.BASE_GOLANG_23_BOOKWORM }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
   add: /src
@@ -41,7 +49,7 @@ import:
   before: install
 shell:
   beforeInstall:
-  {{- include "ubuntu packages proxy" . | nindent 2 }}
+  {{- include "debian packages proxy" . | nindent 2 }}
   - apt-get update && apt-get install -y make libinih-dev libblkid-dev gettext liburcu-dev libtool libicu-dev pkg-config
   setup:
   - cd /src/xfsprogs-dev

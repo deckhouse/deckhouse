@@ -15,6 +15,7 @@
 package preflight
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -150,7 +151,7 @@ func getProxyFromMetaConfigSuccessNoProxy(t *testing.T) {
 	s.Nil(noProxyList)
 }
 
-func TestshouldSkipProxyCheck(t *testing.T) {
+func TestShouldSkipProxyCheck(t *testing.T) {
 	s := require.New(t)
 
 	var tests = []struct {
@@ -211,7 +212,7 @@ deckhouse:
 
 		preflightChecker := NewChecker(ssh.NewNodeInterfaceWrapper(&ssh.Client{}), installer, metaConfig, bootstrapState)
 
-		err = preflightChecker.CheckRegistryAccessThroughProxy()
+		err = preflightChecker.CheckRegistryAccessThroughProxy(context.Background())
 		if test.skipped {
 			s.NoError(err)
 		} else {

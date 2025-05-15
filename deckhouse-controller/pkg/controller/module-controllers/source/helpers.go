@@ -19,6 +19,7 @@ import (
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"path/filepath"
 	"slices"
 	"time"
@@ -149,12 +150,48 @@ func (r *reconciler) releaseExists(ctx context.Context, sourceName, moduleName, 
 		return false, fmt.Errorf("list module releases: %w", err)
 	}
 	if len(moduleReleases.Items) == 0 {
-		r.log.Debugf("no module release with '%s' checksum for the '%s' module of the '%s' source", checksum, moduleName, sourceName)
+		r.logger.Debug(
+			"no module release with checksum for the module of source",
+			slog.String("checksum", checksum),
+			slog.String("name", moduleName),
+			slog.String("source_name", sourceName),
+		)
 		return false, nil
 	}
 
-	r.log.Debugf("the module release with '%s' checksum exists for the '%s' module of the '%s' source", checksum, moduleName, sourceName)
+	r.logger.Debug(
+		"module release with checksum exists for the module of source",
+		slog.String("checksum", checksum),
+		slog.String("name", moduleName),
+		slog.String("source_name", sourceName),
+	)
 	return true, nil
+}
+
+// needToEnsureRelease checks that the module enabled, the source is the active source,
+// release exists, and checksum not changed.
+func (r *reconciler) needToEnsureRelease(source *v1alpha1.ModuleSource,
+	module *v1alpha1.Module,
+	sourceModule v1alpha1.AvailableModule,
+	meta downloader.ModuleDownloadResult,
+	releaseExists bool) bool {
+	// check the active source
+	if module.Properties.Source != source.Name {
+		r.logger.Debug("source not active, skip module",
+			slog.String("source_name", source.Name),
+			slog.String("name", module.Name))
+
+		return false
+	}
+
+	// check the module enabled
+	if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
+		r.logger.Debug("skip disabled module", slog.String("name", module.Name))
+
+		return false
+	}
+
+	return sourceModule.Checksum != meta.Checksum || (meta.ModuleVersion != "" && !releaseExists)
 }
 
 func (r *reconciler) ensureModuleRelease(ctx context.Context, sourceUID types.UID, sourceName, moduleName, policy string, meta downloader.ModuleDownloadResult) error {
@@ -254,7 +291,7 @@ func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, r
 		if !apierrors.IsNotFound(err) {
 			return nil, fmt.Errorf("get the '%s' module: %w", moduleName, err)
 		}
-		r.log.Debugf("the '%s' module not installed", moduleName)
+
 		module = &v1alpha1.Module{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       v1alpha1.ModuleGVK.Kind,
@@ -267,7 +304,8 @@ func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, r
 				AvailableSources: []string{sourceName},
 			},
 		}
-		r.log.Debugf("the '%s' module not found, create it", moduleName)
+		r.logger.Debug("module not found, create it", slog.String("name", moduleName))
+
 		if err = r.client.Create(ctx, module); err != nil {
 			return nil, fmt.Errorf("create the '%s' module: %w", moduleName, err)
 		}
@@ -277,7 +315,6 @@ func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, r
 		// init just created downloaded modules
 		if module.Status.Phase == "" {
 			module.Status.Phase = v1alpha1.ModulePhaseAvailable
-			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
 			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, "", "")
 			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
 		}

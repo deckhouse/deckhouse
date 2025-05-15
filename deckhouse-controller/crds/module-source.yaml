@@ -77,6 +77,12 @@ spec:
                 syncTime:
                   type: string
                   description: When the repository was synchronized.
+                phase:
+                  type: string
+                  description: The current phase.
+                  enum:
+                    - Active
+                    - Terminating
                 modulesCount:
                   type: integer
                   description: The number of modules available.
@@ -89,6 +95,9 @@ spec:
                       name:
                         type: string
                         description: The module name.
+                      version:
+                        type: string
+                        description: The module version.
                       checksum:
                         type: string
                         description: The module checksum.
@@ -110,6 +119,10 @@ spec:
           type: integer
           jsonPath: .status.modulesCount
           description: The number of modules available.
+        - name: status
+          type: string
+          jsonPath: .status.phase
+          description: The current phase.
         - name: sync
           type: date
           jsonPath: .status.syncTime

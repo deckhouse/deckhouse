@@ -18,8 +18,11 @@ on:
     - cron: '30 9 * * *'
 
 jobs:
+{!{ tmpl.Exec "skip_tests_repos" . | strings.Indent 2 }!}
   stale:
     runs-on: ubuntu-latest
+    needs:
+      - skip_tests_repos
     steps:
     - uses: actions/stale@v7
       with:
@@ -35,3 +38,4 @@ jobs:
         stale-issue-label: "status/needs-triage"
         remove-issue-stale-when-updated: false
         labels-to-remove-when-unstale: ""
+{!{ tmpl.Exec "send_fail_report"                   | strings.Indent 4 }!}

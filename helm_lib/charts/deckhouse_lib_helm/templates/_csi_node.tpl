@@ -24,14 +24,16 @@ memory: 25Mi
   {{- $additionalNodeLivenessProbesCmd := $config.additionalNodeLivenessProbesCmd }}
   {{- $additionalNodeSelectorTerms := $config.additionalNodeSelectorTerms }}
   {{- $customNodeSelector := $config.customNodeSelector }}
-  {{- $additionalContainers := $config.additionalContainers }}
+  {{- $forceCsiNodeAndStaticNodesDepoloy := $config.forceCsiNodeAndStaticNodesDepoloy | default false }}
+  {{- $additionalContainers := $config.additionalContainers }} 
   {{- $initContainers := $config.initContainers }}
+  {{- $additionalPullSecrets := $config.additionalPullSecrets }}
 
   {{- $kubernetesSemVer := semver $context.Values.global.discovery.kubernetesVersion }}
   {{- $driverRegistrarImageName := join "" (list "csiNodeDriverRegistrar" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
   {{- $driverRegistrarImage := include "helm_lib_module_common_image_no_fail" (list $context $driverRegistrarImageName) }}
   {{- if $driverRegistrarImage }}
-    {{- if or (include "_helm_lib_cloud_or_hybrid_cluster" $context) ($context.Values.global.enabledModules | has "ceph-csi") ($context.Values.global.enabledModules | has "csi-nfs") ($context.Values.global.enabledModules | has "csi-ceph") ($context.Values.global.enabledModules | has "csi-yadro") ($context.Values.global.enabledModules | has "csi-scsi-generic") ($context.Values.global.enabledModules | has "csi-hpe") ($context.Values.global.enabledModules | has "csi-s3") ($context.Values.global.enabledModules | has "csi-huawei") }}
+    {{- if or $forceCsiNodeAndStaticNodesDepoloy (include "_helm_lib_cloud_or_hybrid_cluster" $context) ($context.Values.global.enabledModules | has "ceph-csi") ($context.Values.global.enabledModules | has "csi-nfs") ($context.Values.global.enabledModules | has "csi-ceph") ($context.Values.global.enabledModules | has "csi-scsi-generic") ($context.Values.global.enabledModules | has "csi-hpe") ($context.Values.global.enabledModules | has "csi-s3") ($context.Values.global.enabledModules | has "csi-huawei") }}
       {{- if ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -100,7 +102,7 @@ spec:
                 - CloudEphemeral
                 - CloudPermanent
                 - CloudStatic
-                {{- if or (eq $fullname "csi-node-rbd") (eq $fullname "csi-node-cephfs") (eq $fullname "csi-nfs") (eq $fullname "csi-yadro") (eq $fullname "csi-scsi-generic") (eq $fullname "csi-hpe") (eq $fullname "csi-s3") (eq $fullname "csi-huawei") }}
+                {{- if or $forceCsiNodeAndStaticNodesDepoloy (eq $fullname "csi-node-rbd") (eq $fullname "csi-node-cephfs") (eq $fullname "csi-nfs") (eq $fullname "csi-scsi-generic") (eq $fullname "csi-hpe") (eq $fullname "csi-s3") (eq $fullname "csi-huawei") }}
                 - Static
                 {{- end }}
               {{- if $additionalNodeSelectorTerms }}
@@ -109,6 +111,9 @@ spec:
       {{- end }}
       imagePullSecrets:
       - name: deckhouse-registry
+      {{- if $additionalPullSecrets }}
+      {{- $additionalPullSecrets | toYaml | nindent 6 }}
+      {{- end }}
       {{- include "helm_lib_priority_class" (tuple $context "system-node-critical") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple $context "any-node" "with-no-csi") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}

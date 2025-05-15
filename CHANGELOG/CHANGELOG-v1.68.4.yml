@@ -1,0 +1,21 @@
+candi:
+  fixes:
+    - summary: Fix add_node_users.sh search for sudoersd_path.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12474
+deckhouse-controller:
+  fixes:
+    - summary: Fix DeckhouseRelease approval in the Manual update mode.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12527
+dhctl:
+  fixes:
+    - summary: Escape special shell characters in sudo preflight check.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12533
+docs:
+  fixes:
+    - summary: Fixed typos at VMware configuration parameters.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12472
+upmeter:
+  fixes:
+    - summary: Add D8UpmeterDiskUsage alert.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12102
+

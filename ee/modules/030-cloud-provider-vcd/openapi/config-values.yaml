@@ -4,7 +4,7 @@ properties:
     type: object
     default: {}
     description: |
-      The module automatically creates StorageClasses that are available in OpenStack.
+      The module automatically creates StorageClasses that are available in VCD (VMware Cloud Director).
     properties:
       exclude:
         type: array

@@ -15,17 +15,19 @@
 package bootstrap
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
-func (b *ClusterBootstrapper) BaseInfrastructure() error {
+func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 	if restore, err := b.applyParams(); err != nil {
 		return err
 	} else {
@@ -33,6 +35,8 @@ func (b *ClusterBootstrapper) BaseInfrastructure() error {
 	}
 
 	metaConfig, err := config.ParseConfig(app.ConfigPaths)
+	b.InfrastructureContext = infrastructure.NewContextWithProvider(infrastructureprovider.ExecutorProvider(metaConfig))
+
 	if err != nil {
 		return err
 	}
@@ -61,9 +65,9 @@ func (b *ClusterBootstrapper) BaseInfrastructure() error {
 	metaConfig.UUID = clusterUUID
 
 	return log.Process("bootstrap", "Cloud infrastructure", func() error {
-		baseRunner := b.Params.TerraformContext.GetBootstrapBaseInfraRunner(metaConfig, stateCache)
+		baseRunner := b.Params.InfrastructureContext.GetBootstrapBaseInfraRunner(metaConfig, stateCache)
 
-		_, err := terraform.ApplyPipeline(baseRunner, "Kubernetes cluster", terraform.GetBaseInfraResult)
+		_, err := infrastructure.ApplyPipeline(ctx, baseRunner, "Kubernetes cluster", infrastructure.GetBaseInfraResult)
 		return err
 	})
 }

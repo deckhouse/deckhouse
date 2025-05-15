@@ -291,7 +291,7 @@ func generateConfig(input *go_hook.HookInput) error {
 
 	clusterDomain := input.Values.Get("global.discovery.clusterDomain").String()
 
-	var destinations []v1alpha1.ClusterLogDestination
+	destinations := make([]v1alpha1.ClusterLogDestination, 0)
 
 	for _, destination := range destSnap {
 		dest := destination.(v1alpha1.ClusterLogDestination)

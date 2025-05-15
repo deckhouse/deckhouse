@@ -18,12 +18,13 @@ import (
 	"context"
 	"testing"
 
-	sdk "github.com/deckhouse/module-sdk/pkg/utils"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/ptr"
+
+	sdk "github.com/deckhouse/module-sdk/pkg/utils"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -46,6 +47,7 @@ func createMC(name string, settings map[string]interface{}) *config.ModuleConfig
 }
 
 func TestPrepareDeckhouseModuleConfig(t *testing.T) {
+	ctx := context.Background()
 	log.InitLogger("json")
 
 	t.Run("ModuleConfig deckhouse with releaseChannel should remove releaseChannel from mc and adds to result task with returning releaseChannel to post bootstrap tasks", func(t *testing.T) {
@@ -60,7 +62,7 @@ func TestPrepareDeckhouseModuleConfig(t *testing.T) {
 		})
 
 		res := &ManifestsResult{}
-		prepareModuleConfig(mc, res)
+		prepareModuleConfig(ctx, mc, res)
 
 		require.NotContains(t, mc.Spec.Settings, "releaseChannel")
 		require.Contains(t, mc.Spec.Settings, "bundle")
@@ -111,7 +113,7 @@ func TestPrepareDeckhouseModuleConfig(t *testing.T) {
 		})
 
 		res := &ManifestsResult{}
-		prepareModuleConfig(mc, res)
+		prepareModuleConfig(ctx, mc, res)
 
 		require.NotContains(t, mc.Spec.Settings, "releaseChannel")
 		require.Contains(t, mc.Spec.Settings, "bundle")
@@ -128,6 +130,7 @@ func TestPrepareDeckhouseModuleConfig(t *testing.T) {
 }
 
 func TestPrepareGlobalModuleConfig(t *testing.T) {
+	ctx := context.Background()
 	log.InitLogger("json")
 
 	assertSaveAnotherFields := func(t *testing.T, mc *unstructured.Unstructured, publicDomainTemplateFound bool) {
@@ -186,7 +189,7 @@ func TestPrepareGlobalModuleConfig(t *testing.T) {
 			})
 
 			res := &ManifestsResult{}
-			prepareModuleConfig(mc, res)
+			prepareModuleConfig(ctx, mc, res)
 
 			assertMCAfterPrepare(t, mc)
 
@@ -230,7 +233,7 @@ func TestPrepareGlobalModuleConfig(t *testing.T) {
 			})
 
 			res := &ManifestsResult{}
-			prepareModuleConfig(mc, res)
+			prepareModuleConfig(ctx, mc, res)
 
 			require.NotContains(t, mc.Spec.Settings, "modules")
 			require.True(t, mc.Spec.Settings["highAvailability"].(bool))
@@ -270,7 +273,7 @@ func TestPrepareGlobalModuleConfig(t *testing.T) {
 		})
 
 		res := &ManifestsResult{}
-		prepareModuleConfig(mc, res)
+		prepareModuleConfig(ctx, mc, res)
 
 		assertMCAfterPrepare(t, mc)
 

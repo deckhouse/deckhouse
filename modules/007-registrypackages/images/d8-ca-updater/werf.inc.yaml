@@ -1,4 +1,4 @@
-{{- $version := "06.08.24" }}
+{{- $version := "20.02.25" }}
 {{- $image_version := $version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
@@ -13,32 +13,40 @@ import:
   - ca-bundle.crt
   - install
   - uninstall
-  before: setup
+  before: install
 imageSpec:
   config:
     labels: {"distro": "all", "version": "all", "d8-ca-updater": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
-from: {{ $.Images.BASE_UBUNTU_DEV }}
+from: {{ $.Images.BASE_GOLANG_23_BOOKWORM }}
 git:
-  - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
-    to: /
-    stageDependencies:
-      setup:
-      - '**/*'
-  - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/ca-certificates
-    to: /ca-certificates
-    stageDependencies:
-      setup:
-      - '**/*'
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /
+  stageDependencies:
+    install:
+    - '**/*'
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/ca-certificates
+  to: /ca-certificates
+  stageDependencies:
+    install:
+    - '**/*'
 shell:
-  setup:
-    - mkdir /certs
-    - mv /mk-ca-bundle.pl /ca-certificates/mozilla
-    - cd ca-certificates/mozilla
-    - perl mk-ca-bundle.pl -n
-    - mv ca-bundle.crt /ca-bundle.crt
-    - python3 certdata2pem.py
-    - mv *.crt /certs/
-    - chmod +x /d8-ca-updater /install /uninstall
+  beforeInstall:
+  {{- include "debian packages proxy" . | nindent 2 }}
+  - apt-get install -y python3-cryptography
+  install:
+  - mv /mk-ca-bundle.pl /ca-certificates/mozilla
+  - cd /ca-certificates/mozilla
+  - perl mk-ca-bundle.pl -n
+  - mv ca-bundle.crt /ca-bundle.crt
+  - python3 certdata2pem.py
+  - mkdir /certs
+  - mv *.crt /certs/
+  - chmod +x /d8-ca-updater /install /uninstall

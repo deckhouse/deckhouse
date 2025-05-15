@@ -48,6 +48,8 @@ spec:
                           description: Отключение проверки сертификата.
                 internal:
                   type: object
+                  required:
+                    - route
                   description: Параметры настройки внутренного Alertmanager.
                   properties:
                     inhibitRules:

@@ -75,10 +75,11 @@ properties:
         enum:
           - 'Auto'
           - 'Manual'
+        x-doc-deprecated: true
         description: |
-          Deckhouse release update disruption mode:
-          - `Auto` — approves release with disruptions (potentially dangerous changes) automatically.
-          - `Manual` — requires manual release confirmation (set the `release.deckhouse.io/disruption-approved=true` annotation on the appropriate [DeckhouseRelease](../../cr.html#deckhouserelease) resource to apply the update).
+          Update mode for disruptive Deckhouse releases:
+          - `Auto` — a disruptive release is approved automatically.
+          - `Manual` — requires a manual release confirmation (set the `release.deckhouse.io/disruption-approved=true` annotation on the appropriate [DeckhouseRelease](../../cr.html#deckhouserelease) resource to apply the update).
       windows:
         type: array
         description: |
@@ -240,7 +241,7 @@ properties:
 
       If the parameter is omitted or `false`, `nodeSelector` will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
 
-      **Cation!** Deckhouse will stop working if there is a nonexistent label in `nodeSelector`. You need to change the values to the correct ones in `ModuleConfig/deckhouse` and `deployment/deckhouse` to get Deckhouse back on track.
+      **Caution!** Deckhouse will stop working if there is a nonexistent label in `nodeSelector`. You need to change the values to the correct ones in `ModuleConfig/deckhouse` and `deployment/deckhouse` to get Deckhouse back on track.
   tolerations:
     type: array
     description: |
@@ -248,7 +249,7 @@ properties:
 
       If the parameter is omitted or `false`, `tolerations` will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
 
-      **Cation!**  Deckhouse will stop working if `tolerations` specified are incorrect. You need to change the values to the correct ones in `ModuleConfig/deckhouse` and `deployment/deckhouse` to get Deckhouse back on track.
+      **Caution!**  Deckhouse will stop working if `tolerations` specified are incorrect. You need to change the values to the correct ones in `ModuleConfig/deckhouse` and `deployment/deckhouse` to get Deckhouse back on track.
     items:
       type: object
       properties:

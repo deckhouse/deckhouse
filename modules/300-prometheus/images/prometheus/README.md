@@ -5,8 +5,8 @@ Current prometheus version is `PROMETHEUS_VERSION=v2.55.1`.
 To build prometheus we need to repush used third-party libs to own registry. To do this we need to run specific Dockerfile:
 
 ```dockerfile
-ARG BASE_GOLANG_22_BULLSEYE_DEV
-FROM $BASE_GOLANG_22_BULLSEYE_DEV
+ARG BASE_GOLANG_23_BULLSEYE
+FROM $BASE_GOLANG_23_BULLSEYE
 ARG PROMETHEUS_VERSION
 ARG SOURCE_REPO
 
@@ -25,8 +25,8 @@ To run Dockerfile exec the command:
 export PROMETHEUS_VERSION=v2.55.1
 # Check the image:tag used in the runner that will execute `npm run build`,
 # and for consistency, ensure they are the same.”
-export BASE_GOLANG_22_BULLSEYE_DEV=registry.deckhouse.io/base_images/dev-golang:1.22.8-bullseye@sha256:b79c06949dd2a4e19b900b1c29372219cfb0418109439c8b38fc485d26bbccdb
-docker build --build-arg SOURCE_REPO=https://github.com --build-arg BASE_GOLANG_22_BULLSEYE_DEV=${BASE_GOLANG_22_BULLSEYE_DEV} --build-arg PROMETHEUS_VERSION=${PROMETHEUS_VERSION} -t prometheus-deps . --progress=plain --no-cache
+export BASE_GOLANG_23_BULLSEYE=golang:1.23.6-bullseye
+docker build --build-arg SOURCE_REPO=https://github.com --build-arg BASE_GOLANG_23_BULLSEYE=${BASE_GOLANG_23_BULLSEYE} --build-arg PROMETHEUS_VERSION=${PROMETHEUS_VERSION} -t prometheus-deps . --progress=plain --no-cache
 ```
 
 Than copy folders from container:

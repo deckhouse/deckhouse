@@ -45,6 +45,7 @@ module Jekyll
       return text.to_s.gsub(/\n/m,'#RET').
               gsub(/{{\s*\$labels\.annotation\s*\}\}/m,'ANNOTATION_NAME').
               gsub(/{{\s*\$labels\.api_host\s*\}\}/m,'API_HOST').
+              gsub(/{{\s*\$labels\.cluster_id\s*\}\}/m,'CLUSTER_ID').
               gsub(/{{\s*\$labels\.cni\s*\}\}/m,'CNI_NAME').
               gsub(/{{\s*\$labels\.component\s*\}\}/m,'COMPONENT_NAME').
               gsub(/{{\s*\$labels\.component_id\s*\}\}/m,'COMPONENT_ID').
@@ -75,6 +76,7 @@ module Jekyll
               gsub(/{{\s*\$labels\.ingress\s*\}\}/m,'INGRESS').
               gsub(/{{\s*\$labels\.instance\s*\}\}/m,'INSTANCE_NAME').
               gsub(/{{\s*\$labels\.istio_version\s*\}\}/m,'VERSION_NUMBER').
+              gsub(/{{\s*\$labels\.istiod\s*\}\}/m,'INSTANCE_NAME').
               gsub(/{{\s*\$labels\.job\s*\}\}/m,'JOB_NAME').
               gsub(/{{\s*\$labels\.job_name\s*\}\}/m,'JOB_NAME').
               gsub(/{{\s*\$labels\.k8s_version\s*\}\}/m,'VERSION_NUMBER').
@@ -108,6 +110,7 @@ module Jekyll
               gsub(/{{\s*\$labels\.revision\s*\}\}/m,'REVISION_NUMBER').
               gsub(/{{\s*\$labels\.scheme\s*\}\}/m,'SCHEME').
               gsub(/{{\s*\$labels\.secret_name\s*\}\}/m,'SECRET_NAME').
+              gsub(/{{\s*\$labels\.secret_namespace\s*\}\}/m,'SECRET_NAMESPACE').
               gsub(/{{\s*\$labels\.service\s*\}\}/m,'SERVICE_NAME').
               gsub(/{{\s*\$labels\.service_port\s*\}\}/m,'SERVICE_PORT').
               gsub(/{{\s*\$labels\.stage\s*\}\}/m,'STAGE_NAME').

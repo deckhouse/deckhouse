@@ -122,7 +122,7 @@ masterNodeGroup:
     # [<ru>] Количество выделеных CPU для виртуальной машины.
     numCPUs: 4
     # [<en>] The amount of allocated RAM for the virtual machine.
-    # [<ru>] Количество выделеной оперативной памяти для виртуальной машины.
+    # [<ru>] Количество выделенной оперативной памяти для виртуальной машины.
     memory: 8192
     # [<en>] Disk size for the root FS.
     # [<ru>] Размер диска для корневой ФС.
@@ -158,7 +158,7 @@ spec:
   # [<ru>] Количество выделеных CPU для виртуальной машины.
   numCPUs: 4
   # [<en>] The amount of allocated RAM for the virtual machine.
-  # [<ru>] Количество выделеной оперативной памяти для виртуальной машины.
+  # [<ru>] Количество выделенной оперативной памяти для виртуальной машины.
   memory: 8192
   # [<en>] OS image name to use for VM deployment.
   # [<ru>] Имя образа ОС, используемое для развертывания ВМ.
@@ -188,8 +188,8 @@ spec:
     # [<ru>] Максимальное количество инстансов в каждой зоне (используется при масштабировании).
     # [<ru>] Возможно, захотите изменить.
     maxPerZone: 1
-    # [<en>] The minimum number of instances for the group in each zone.
-    # [<ru>] Минимальное количество инстансов в каждой зоне.
+    # [<en>] The minimum number of instances for the group in each zone. To launch more nodes, increase maxPerZone or add more zones.
+    # [<ru>] Минимальное количество инстансов в каждой зоне. Чтобы запустить больше узлов, увеличьте maxPerZone или добавьте зоны.
     minPerZone: 1
   disruptions:
     approvalMode: Automatic

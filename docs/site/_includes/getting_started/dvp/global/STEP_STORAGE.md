@@ -26,7 +26,7 @@ EOF
 Wait for the module to start; you can use the following command for this:
 
 ```shell
-kubectl wait module sds-replicated-volume --for='jsonpath={.status.status}=Ready' --timeout=1200s
+kubectl wait module sds-replicated-volume --for='jsonpath={.status.phase}=Ready' --timeout=1200s
 ```
 
 Combine the available block devices on the nodes into LVM volume groups. To obtain the available block devices, run the command:
@@ -68,14 +68,14 @@ EOF
 Wait for the created LVMVolumeGroup resource to enter the `Operational` state:
 
 ```shell
-sudo -i d8 k get lvg vg-on-worker-0 -w
+sudo -i d8 k get lvg vg-on-dvp-worker -w
 ```
 
 Example of the output:
 
 ```console
-NAME             THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE       ALLOCATED SIZE   VG   AGE
-vg-on-worker-0   1/1         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
+NAME               THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE       ALLOCATED SIZE   VG   AGE
+vg-on-dvp-worker   1/1         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
 ```
 
 Create an LVM volume pool:

@@ -215,7 +215,7 @@ kubectl label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 
 Применение изменений потребует некоторого времени.
 
-## Как зачистить узел для последующего ввода в кластер?
+## Как очистить узел для последующего ввода в кластер?
 
 Это необходимо только в том случае, если нужно переместить статический узел из одного кластера в другой. Имейте в виду, что эти операции удаляют данные локального хранилища. Если необходимо просто изменить `NodeGroup`, следуйте [этой инструкции](#как-изменить-nodegroup-у-статического-узла).
 
@@ -387,7 +387,7 @@ spec:
     fi
 
     bb-deckhouse-get-disruptive-update-approval
-    bb-yum-install "kernel-${desired_version}"
+    bb-dnf-install "kernel-${desired_version}"
 ```
 
 ## Какие параметры NodeGroup к чему приводят?
@@ -618,7 +618,7 @@ spec:
    kubectl annotate node <имя master-узла> update.node.deckhouse.io/disruption-approved=
    ```
 
-1. Дождаитесь перехода обновленного master-узла в `Ready`. Выполните итерацию для следующего master-узла.
+1. Дождитесь перехода обновленного master-узла в `Ready`. Выполните итерацию для следующего master-узла.
 
 ## Как добавить шаг для конфигурации узлов?
 
@@ -776,7 +776,7 @@ spec:
       distribution=$(. /etc/os-release;echo $ID$VERSION_ID) \
       curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.repo | sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
     fi
-    bb-yum-install nvidia-container-toolkit nvidia-driver
+    bb-dnf-install nvidia-container-toolkit nvidia-driver
     nvidia-ctk config --set nvidia-container-runtime.log-level=error --in-place
   nodeGroups:
   - gpu

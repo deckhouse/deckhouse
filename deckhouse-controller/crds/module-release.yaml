@@ -79,6 +79,7 @@ spec:
                     - Superseded
                     - Suspended
                     - Skipped
+                    - Terminating
                   description: Current status of the release.
                 message:
                   type: string

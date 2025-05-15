@@ -47,7 +47,7 @@ properties:
       из того же проекта с ролью Администратора DNS.
   email:
     description: |
-      Почтовый ящик проекта, на который LetsEncrypt будет слать уведомления.
+      Email проекта, на который LetsEncrypt будет слать уведомления.
   cleanupOrphanSecrets:
     description: |
       Удалять Secret с сертификатом автоматически, если соответствующий ресурс Certificate удален из кластера.

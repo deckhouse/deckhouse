@@ -15,6 +15,7 @@
 package operations
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -41,6 +42,7 @@ func TestExporterGetStatistic(t *testing.T) {
 			MetricsPath:     "/metrics",
 			CheckInterval:   time.Second,
 			existedEntities: newPreviouslyExistedEntities(),
+			OneGaugeMetrics: make(map[string]prometheus.Gauge),
 			GaugeMetrics:    make(map[string]*prometheus.GaugeVec),
 			CounterMetrics:  make(map[string]*prometheus.CounterVec),
 		}
@@ -49,7 +51,7 @@ func TestExporterGetStatistic(t *testing.T) {
 	exporter.registerMetrics()
 
 	t.Run("Should increment errors metric because nothing exists in a cluster", func(t *testing.T) {
-		exporter.recordStatistic(exporter.getStatistic())
+		exporter.recordStatistic(exporter.getStatistic(context.Background()))
 
 		errorsCounter, err := exporter.CounterMetrics["errors"].GetMetricWith(prometheus.Labels{})
 		require.NoError(t, err)
@@ -67,7 +69,7 @@ func TestExporterGetStatistic(t *testing.T) {
 			},
 		}
 
-		exporter.recordStatistic(&statistic)
+		exporter.recordStatistic(&statistic, false)
 		firstNodesStatus, err := exporter.GaugeMetrics["node_status"].GetMetricWith(prometheus.Labels{
 			"node_group": "test",
 			"name":       "test-0",
@@ -97,7 +99,7 @@ func TestExporterGetStatistic(t *testing.T) {
 		}
 
 		// if node disappears from statistic, we should mark its status as 0
-		exporter.recordStatistic(&statisticWithoutOneNode)
+		exporter.recordStatistic(&statisticWithoutOneNode, false)
 
 		secondNodeStatus, err = exporter.GaugeMetrics["node_status"].GetMetricWith(prometheus.Labels{
 			"node_group": "test",

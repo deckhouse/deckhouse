@@ -1,19 +1,35 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/alt-p11-artifact
+fromImage: common/alt-p11
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /node-collector
     to: /usr/local/bin/node-collector
     before: setup
+  - image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+    add: /usr/bin
+    to: /usr/bin
+    before: setup
+    includePaths:
+    - 'ps'
+    - 'pgrep'
+  - image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+    add: /usr/lib64
+    to: /usr/lib64
+    before: setup
+    includePaths:
+    - 'libproc2.so.0*'
 imageSpec:
   config:
     entrypoint: [ "/usr/local/bin/node-collector" ]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+fromImage: common/alt-p11-artifact
+final: false
 shell:
   setup:
   - apt-get update
   - apt-get install procps -y
-  - rm /var/lib/apt/lists/ftp* -f
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -24,9 +40,12 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v0.3.1 {{ .SOURCE_REPO }}/aquasecurity/k8s-node-collector.git /src
+  - git clone --depth 1 --branch v0.3.1 $(cat /run/secrets/SOURCE_REPO)/aquasecurity/k8s-node-collector.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
   - rm -rf .git
@@ -40,11 +59,13 @@ import:
   to: /src
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
-  - export GOPROXY={{ .GOPROXY }}
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - cd /src
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /node-collector cmd/node-collector/main.go
   - chown root:root /node-collector

@@ -1853,12 +1853,6 @@ internal:
 					Expect(vcdCluster.Field("spec.site").String()).To(Equal("https://localhost:5000"))
 					Expect(vcdCluster.Field("spec.org").String()).To(Equal("org"))
 					Expect(vcdCluster.Field("spec.ovdc").String()).To(Equal("dc"))
-
-					Expect(vcdCluster.Field("spec.proxyConfigSpec.httpProxy").String()).To(Equal("https://example.com"))
-					Expect(vcdCluster.Field("spec.proxyConfigSpec.httpsProxy").String()).To(Equal("https://example.com"))
-					Expect(vcdCluster.Field("spec.proxyConfigSpec.noProxy").AsStringSlice()).To(Equal([]string{
-						"127.0.0.1", "169.254.169.254", "cluster.local", "10.111.0.0/16", "10.222.0.0/16", "example.com",
-					}))
 				}
 
 				type mdParams struct {
@@ -1928,7 +1922,7 @@ internal:
 func verifyClusterAutoscalerDeploymentArgs(deployment object_store.KubeObject, mds ...object_store.KubeObject) error {
 	args := deployment.Field("spec.template.spec.containers.0.args").AsStringSlice()
 
-	var nodesArgs []string
+	nodesArgs := make([]string, 0)
 	for _, arg := range args {
 		if !strings.HasPrefix(arg, "--nodes") {
 			continue
@@ -1937,7 +1931,7 @@ func verifyClusterAutoscalerDeploymentArgs(deployment object_store.KubeObject, m
 		nodesArgs = append(nodesArgs, strings.Split(arg, ".")[1])
 	}
 
-	var mdsNames []string
+	mdsNames := make([]string, 0, len(mds))
 	for _, md := range mds {
 		mdsNames = append(mdsNames, md.Field("metadata.name").String())
 	}

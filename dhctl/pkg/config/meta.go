@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -161,6 +162,42 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		}
 	}
 
+	if cloud.Provider == "VCD" {
+		// Set default version for terraform-provider-vcd to 3.10.0 if legacyMode is true
+		// This is a temporary solution to avoid breaking changes in the VCD API
+
+		var legacyMode bool
+
+		_, ok := m.ProviderClusterConfig["legacyMode"]
+		if ok {
+			err := json.Unmarshal(m.ProviderClusterConfig["legacyMode"], &legacyMode)
+			if err != nil {
+				return nil, fmt.Errorf("failed to unmarshal legacyMode from provider cluster configuration: %v", err)
+			}
+		}
+
+		infrastructureModulesDir := getInfrastructureModulesDir("vcd")
+
+		versionsFilePath := filepath.Join(infrastructureModulesDir, "versions.tf")
+
+		err := os.Remove(versionsFilePath)
+		if err != nil && !os.IsNotExist(err) {
+			return nil, fmt.Errorf("failed to remove versions.tf: %v", err)
+		}
+
+		if legacyMode {
+			err := os.Symlink(filepath.Join(infrastructureModulesDir, "versions-legacy.tf"), versionsFilePath)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create symlink to versions-legacy.tf: %v", err)
+			}
+		} else {
+			err := os.Symlink(filepath.Join(infrastructureModulesDir, "versions-new.tf"), versionsFilePath)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create symlink to versions-new.tf: %v", err)
+			}
+		}
+	}
+
 	m.TerraNodeGroupSpecs = []TerraNodeGroupSpec{}
 	nodeGroups, ok := m.ProviderClusterConfig["nodeGroups"]
 	if ok {
@@ -269,7 +306,7 @@ func (m *MetaConfig) ExtractMasterNodeGroupStaticSettings() map[string]interface
 	return static
 }
 
-// NodeGroupManifest prepares NodeGroup custom resource for static nodes, which were ordered by Terraform
+// NodeGroupManifest prepares NodeGroup custom resource for static nodes, which were ordered by infrastructure utility
 func (m *MetaConfig) NodeGroupManifest(terraNodeGroup TerraNodeGroupSpec) map[string]interface{} {
 	if terraNodeGroup.NodeTemplate == nil {
 		terraNodeGroup.NodeTemplate = make(map[string]interface{})
@@ -446,7 +483,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 	return configForBashibleBundleTemplate, nil
 }
 
-// NodeGroupConfig returns values for terraform to order master node or static node
+// NodeGroupConfig returns values for infrastructure utility to order master node or static node
 func (m *MetaConfig) NodeGroupConfig(nodeGroupName string, nodeIndex int, cloudConfig string) []byte {
 	result := map[string]interface{}{
 		"clusterConfiguration":         m.ClusterConfig,

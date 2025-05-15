@@ -28,6 +28,14 @@ for schema_path in $(find $MODULES_DIR -regex '^.*/openapi/config-values.yaml$' 
      echo -e "\ni18n:\n  ru:" >>_data/schemas/${module_name}/config-values.yaml
      cat $module_path/openapi/doc-ru-config-values.yaml | sed '1{/^---$/d}; s/^/    /' >>_data/schemas/${module_name}/config-values.yaml
   fi
+  # Processing files from the conversions folder
+  if [ -d $module_path/openapi/conversions ]; then
+    mkdir -p _data/schemas/${module_name}/conversions
+    for conversion_file in $(find $module_path/openapi/conversions -name 'v*.yaml' -o -name 'v*.yml'); do
+      cp -f $conversion_file _data/schemas/${module_name}/conversions/
+    done
+  fi
+
   if [ ! -f ${module_path}/docs/CONFIGURATION.md ]; then
       continue
   fi

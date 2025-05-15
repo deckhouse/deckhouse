@@ -137,10 +137,16 @@ spec:
                             description: Max value for the `hostPort`.
                     allowPrivileged:
                       type: boolean
-                      description: Allows running containers in a privileged mode.
+                      description: |
+                        Allows running containers in a privileged mode.
+
+                        **By default** (if not specified) — `false`. This means that if the field is omitted or explicitly set to `false`, the container is denied any privilege escalation. If you want to allow elevated privileges, set this parameter to `true`.
                     allowPrivilegeEscalation:
                       type: boolean
-                      description: Allows container processes to gain more privileges than its parent process.
+                      description: |
+                        Allows container processes to gain more privileges than its parent process.
+
+                        **By default** (if not specified) — `false`. This means that if the field is omitted or explicitly set to `false`, the container is denied any privilege escalation. If you want to allow elevated privileges, set this parameter to `true`.
                     allowedProcMount:
                       type: string
                       description: Allows `/proc` mount type for containers.
@@ -356,7 +362,21 @@ spec:
                       properties:
                         allowedProfiles:
                           type: array
-                          description: The list of allowed profile values for seccomp on Pods/containers.
+                          description: |
+                            The list of allowed profile values for seccomp on Pods/containers.
+
+                            Both formats are supported:
+                            - Via annotations: `runtime/default`, `docker/default`, `unconfined`, `localhost/some-profile.json`.
+                              `localhost/*` allows any local profile.
+                            - Via securityContext: `RuntimeDefault`, `Unconfined`, `Localhost`.
+                              For `Localhost`, specify the allowed profiles using the `allowedLocalhostFiles` parameter.
+
+                            Profile types:
+                            - `Unconfined` — no restrictions (not recommended for security reasons).
+                            - `RuntimeDefault` — the default profile provided by the container runtime (e.g., Docker, CRI-O).
+                            - `Localhost` — a custom profile defined on the host (flexible and tailored to the application).
+
+                            Using `*` allows all profiles. It's not necessary to specify both formats — they are automatically mapped to each other.
                           items:
                             type: string
                         allowedLocalhostFiles:
@@ -425,7 +445,11 @@ spec:
                           - vsphereVolume
                     verifyImageSignatures:
                       type: array
-                      x-doc-d8Revision: ee
+                      x-doc-d8Editions:
+                        - se+
+                        - ee
+                        - cse-lite
+                        - cse-pro
                       x-doc-examples:
                         - - reference: docker.io/myrepo/*
                             publicKeys:

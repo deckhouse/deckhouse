@@ -46,6 +46,11 @@ properties:
   policyAuditMode:
     description: |
       Отключает влияние сетевых политик на трафик. Сетевые запросы, попавшие под запрет политик, просто логируются.
+  exclusiveCNIPlugin:
+    description: |
+      Предотвращает включение дополнительных CNI-плагинов на узлах кластера. Если [настройка модуля Istio `dataPlane.trafficRedirectionSetupMode`](../istio/configuration.html#parameters-dataplane-trafficredirectionsetupmode) установлена в значение `CNIPlugin`, то данная опция автоматически будет установлена в значение `false`.
+
+      Явно отключать эту опцию рекомендуется только при использовании дополнительного CNI или специфичного CNI-плагина в кластере. Примером такого использования может быть CNI-плагин Linkerd.
   bpfLBMode:
     description: |
       Режим работы балансировщика eBPF:

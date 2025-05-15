@@ -189,23 +189,47 @@ rules:
 			}
 
 			// All rules, except last three are dropping rules.
-			for i := 0; i < len(policy.Rules)-3; i++ {
+			for i := 0; i < len(policy.Rules)-8; i++ {
 				Expect(policy.Rules[i].Level).To(Equal(audit.LevelNone))
 			}
 
 			allServiceAccounts := append(auditPolicyBasicServiceAccounts, istiodServiceAccounts...)
 
-			saRule := policy.Rules[len(policy.Rules)-3]
+			saRule := policy.Rules[len(policy.Rules)-8]
 			Expect(saRule.Level).To(Equal(audit.LevelMetadata))
 			Expect(saRule.Users).To(Equal(allServiceAccounts))
 
-			namespaceRule := policy.Rules[len(policy.Rules)-2]
+			namespaceRule := policy.Rules[len(policy.Rules)-6]
 			Expect(namespaceRule.Level).To(Equal(audit.LevelMetadata))
 			Expect(namespaceRule.Namespaces).To(Equal(auditPolicyBasicNamespaces))
 
-			listRule := policy.Rules[len(policy.Rules)-1]
+			listRule := policy.Rules[len(policy.Rules)-5]
 			Expect(listRule.Level).To(Equal(audit.LevelMetadata))
 			Expect(listRule.Namespaces).To(BeEmpty())
+		})
+	})
+
+	Context("Cluster started with virtualization audit policies", func() {
+		BeforeEach(func() {
+			f.ValuesSet("global.enabledModules", []string{"virtualization"})
+			f.BindingContexts.Set(f.KubeStateSet(configmap))
+			f.RunHook()
+		})
+
+		It("controlPlaneManager.internal.auditPolicy must contain proper rules", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			data, _ := base64.StdEncoding.DecodeString(f.ValuesGet("controlPlaneManager.internal.auditPolicy").String())
+			var policy audit.Policy
+			_ = yaml.UnmarshalStrict(data, &policy)
+
+			// All rules, except first one are metedata level rules.
+			for i := 1; i < len(policy.Rules); i++ {
+				v := policy.Rules[i]
+				Expect(v.Level).To(Equal(audit.LevelMetadata))
+			}
+
+			vmopRule := policy.Rules[0]
+			Expect(vmopRule.Level).To(Equal(audit.LevelRequestResponse))
 		})
 	})
 })

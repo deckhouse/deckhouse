@@ -29,9 +29,7 @@ import (
 )
 
 var _ = Describe("Modules :: control-plane-manager :: hooks :: reconcile-etcd-members ::", func() {
-	var (
-		initValuesString = `{"controlPlaneManager":{"internal": {}, "apiserver": {"authn": {}, "authz": {}}}}`
-	)
+	initValuesString := `{"controlPlaneManager":{"internal": {}, "apiserver": {"authn": {}, "authz": {}}}}`
 	const (
 		initConfigValuesString = ``
 	)
@@ -122,21 +120,6 @@ status:
 				Expect(f).Should(ExecuteSuccessfully())
 				resp, _ := dependency.TestDC.EtcdClient.MemberList(context.TODO())
 				Expect(resp.Members).To(HaveLen(2))
-			})
-		})
-
-		Context("etcd external member defined", func() {
-			BeforeEach(func() {
-				setEtcdMembers()
-				f.ValuesSet("controlPlaneManager.etcd.externalMembersNames", []string{"main-master-2"})
-				f.BindingContexts.Set(f.KubeStateSet(testETCDSecret + reconcileChangedState))
-				f.RunHook()
-			})
-
-			It("External etcd member should left", func() {
-				Expect(f).Should(ExecuteSuccessfully())
-				resp, _ := dependency.TestDC.EtcdClient.MemberList(context.TODO())
-				Expect(resp.Members).To(HaveLen(3))
 			})
 		})
 

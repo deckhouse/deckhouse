@@ -15,6 +15,7 @@
 package preflight
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os/exec"
@@ -24,27 +25,21 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 )
 
-func (pc *Checker) CheckSudoIsAllowedForUser() error {
+func (pc *Checker) CheckSudoIsAllowedForUser(ctx context.Context) error {
 	if app.PreflightSkipSudoIsAllowedForUserCheck {
 		log.DebugLn("sudoers preflight check is skipped")
 		return nil
 	}
 
-	if app.AskBecomePass {
-		return callSudo(pc.nodeInterface, app.BecomePass)
-	}
-
-	return callSudo(pc.nodeInterface, "")
+	return callSudo(ctx, pc.nodeInterface)
 
 }
 
-func callSudo(nodeInterface node.Interface, password string) error {
-	args := []string{"-Sv", "<<<", password}
-	if password == "" {
-		args = []string{"-n", "echo", "-n"}
-	}
+func callSudo(ctx context.Context, nodeInterface node.Interface) error {
+	cmd := nodeInterface.Command("echo")
+	cmd.Sudo(ctx)
 
-	err := nodeInterface.Command("sudo", args...).Run()
+	err := cmd.Run(ctx)
 	if err != nil {
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) && exitErr.ExitCode() != 255 {

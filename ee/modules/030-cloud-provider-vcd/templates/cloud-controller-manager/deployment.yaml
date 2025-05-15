@@ -4,10 +4,10 @@ memory: 50Mi
 {{- end }}
 
 {{- $ccmImageName := ""}}
-{{- if semverCompare ">=37.2" .Values.cloudProviderVcd.internal.discoveryData.vcdAPIVersion -}}
-  {{- $ccmImageName = "cloudControllerManager" }}
-{{- else -}}
+{{- if eq .Values.cloudProviderVcd.internal.legacyMode true -}}
   {{- $ccmImageName = "cloudControllerManagerLegacy" }}
+{{- else -}}
+  {{- $ccmImageName = "cloudControllerManager" }}
 {{- end }}
 
 {{- $ccmImage := include "helm_lib_module_image_no_fail" (list . $ccmImageName) }}

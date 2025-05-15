@@ -12,12 +12,13 @@ metadata:
   labels:
     heritage: deckhouse
   name: v1.15.0
-  resourceVersion: "1"
+  resourceVersion: "2"
 spec:
   version: v1.15.0
 status:
   approved: false
   message: ""
+  phase: Deployed
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -29,8 +30,6 @@ metadata:
     release.deckhouse.io/isUpdating: "false"
     release.deckhouse.io/notified: "false"
   creationTimestamp: null
-  labels:
-    heritage: deckhouse
   name: v1.16.5
   resourceVersion: "1"
 spec:

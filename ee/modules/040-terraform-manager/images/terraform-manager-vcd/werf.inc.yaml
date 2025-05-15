@@ -1,14 +1,16 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: {{ .ModuleName }}/base-terraform-manager
+fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "vcd") }}'
 git:
 - add: /{{ .ModulePath }}candi/cloud-providers/vcd
   to: /deckhouse/candi/cloud-providers/vcd
 import:
+{{- range $version := .TF.vcd.versions }}
 - image: terraform-provider-vcd-artifact
-  add: /terraform-provider-vcd
-  to: /plugins/registry.terraform.io/{{ .TF.vcd.namespace }}/{{ .TF.vcd.type }}/{{ .TF.vcd.version }}/linux_amd64/terraform-provider-vcd
+  add: /terraform-provider-vcd-v{{ $version }}
+  to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" $.TF "providerName" "vcd") }}/{{ $.TF.vcd.namespace }}/{{ $.TF.vcd.type }}/{{ $version }}/linux_amd64/terraform-provider-vcd
   before: setup
+{{- end }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
@@ -19,32 +21,40 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ .TF.vcd.version }} {{ $.SOURCE_REPO }}/vmware/terraform-provider-vcd.git /src
-  - cd /src
-  - git apply /patches/*.patch --verbose
+{{- range $version := .TF.vcd.versions }}
+  - git clone --depth 1 --branch v{{ $version }} $(cat /run/secrets/SOURCE_REPO)/vmware/terraform-provider-vcd.git /src/v{{ $version }}
+  - cd /src/v{{ $version }}
+  - git apply /patches/v{{ $version }}/*.patch --verbose
   - rm -rf .git
+{{- end }}
 ---
 image: terraform-provider-vcd-artifact
 final: false
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache make bash
   install:
-  - export GOPROXY={{ $.GOPROXY }}
-  - cd /src
-  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\""
-  - mv /go/bin/terraform-provider-vcd /terraform-provider-vcd
-  - chmod -R 755 /terraform-provider-vcd
-  - chown 64535:64535 /terraform-provider-vcd
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
+{{- range $version := .TF.vcd.versions }}
+  - cd /src/v{{ $version }}
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\" -X 'github.com/vmware/terraform-provider-vcd/v3/vcd.BuildVersion={{ $version }}'" -o /terraform-provider-vcd-v{{ $version }}  .
+  - chmod -R 755 /terraform-provider-vcd-v{{ $version }}
+  - chown 64535:64535 /terraform-provider-vcd-v{{ $version }}
+{{- end }}

@@ -15,22 +15,26 @@
 package bootstrap
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/controller"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	terrastate "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
+	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
-func (b *ClusterBootstrapper) Abort(forceAbortFromCache bool) error {
+func (b *ClusterBootstrapper) Abort(ctx context.Context, forceAbortFromCache bool) error {
 	if restore, err := b.applyParams(); err != nil {
 		return err
 	} else {
@@ -41,7 +45,7 @@ func (b *ClusterBootstrapper) Abort(forceAbortFromCache bool) error {
 		log.WarnLn(bootstrapAbortCheckMessage)
 	}
 
-	return log.Process("bootstrap", "Abort", func() error { return b.doRunBootstrapAbort(forceAbortFromCache) })
+	return log.Process("bootstrap", "Abort", func() error { return b.doRunBootstrapAbort(ctx, forceAbortFromCache) })
 }
 
 func (b *ClusterBootstrapper) initSSHClient() error {
@@ -77,8 +81,10 @@ func (b *ClusterBootstrapper) initSSHClient() error {
 	return nil
 }
 
-func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) error {
+func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbortFromCache bool) error {
 	metaConfig, err := config.ParseConfig(app.ConfigPaths)
+	b.InfrastructureContext = infrastructure.NewContextWithProvider(infrastructureprovider.ExecutorProvider(metaConfig))
+
 	if err != nil {
 		return err
 	}
@@ -126,10 +132,10 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 		if !ok || forceAbortFromCache {
 			log.DebugF(fmt.Sprintf("Abort from cache. tf-state-and-manifests-in-cluster=%v; Force abort %v\n", ok, forceAbortFromCache))
 			if metaConfig.ClusterType == config.CloudClusterType {
-				terraStateLoader := terrastate.NewFileTerraStateLoader(stateCache, metaConfig)
-				destroyer = infrastructure.NewClusterInfraWithOptions(
-					terraStateLoader, stateCache, b.TerraformContext,
-					infrastructure.ClusterInfraOptions{
+				terraStateLoader := infrastructurestate.NewFileTerraStateLoader(stateCache, metaConfig)
+				destroyer = controller.NewClusterInfraWithOptions(
+					terraStateLoader, stateCache, b.InfrastructureContext,
+					controller.ClusterInfraOptions{
 						PhasedExecutionContext: b.PhasedExecutionContext,
 					},
 				)
@@ -174,7 +180,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 			StateCache:             cache.Global(),
 			PhasedExecutionContext: b.PhasedExecutionContext,
 			SkipResources:          app.SkipResources,
-			TerraformContext:       b.TerraformContext,
+			InfrastructureContext:  b.InfrastructureContext,
 		}
 
 		if b.CommanderMode {
@@ -203,6 +209,27 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 		return err
 	}
 
+	if err := terminal.AskBecomePassword(); err != nil {
+		return err
+	}
+
+	if metaConfig.IsStatic() {
+		deckhouseInstallConfig, err := config.PrepareDeckhouseInstallConfig(metaConfig)
+		if err != nil {
+			return err
+		}
+
+		if b.CommanderMode {
+			deckhouseInstallConfig.CommanderMode = b.CommanderMode
+			deckhouseInstallConfig.CommanderUUID = b.CommanderUUID
+		}
+		bootstrapState := NewBootstrapState(stateCache)
+		preflightChecker := preflight.NewChecker(b.NodeInterface, deckhouseInstallConfig, metaConfig, bootstrapState)
+		if err := preflightChecker.StaticSudo(ctx); err != nil {
+			return err
+		}
+	}
+
 	if destroyer == nil {
 		return fmt.Errorf("Destroyer not initialized")
 	}
@@ -212,7 +239,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 	}
 	defer b.PhasedExecutionContext.Finalize(stateCache)
 
-	if err := destroyer.DestroyCluster(app.SanityCheck); err != nil {
+	if err := destroyer.DestroyCluster(ctx, app.SanityCheck); err != nil {
 		b.lastState = b.PhasedExecutionContext.GetLastState()
 		return err
 	}

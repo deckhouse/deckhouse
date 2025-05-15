@@ -109,7 +109,7 @@ resource "openstack_compute_instance_v2" "node" {
     update = var.resourceManagementTimeout
   }
 
-  metadata = local.metadata_tags
+  metadata = length(local.metadata_tags) > 0 ? local.metadata_tags : {}
 }
 
 resource "openstack_compute_floatingip_v2" "floating_ip" {

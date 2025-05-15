@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"log/slog"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -86,25 +88,25 @@ func setReplicasFilterNG(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 		return nil, err
 	}
 
-	var min, max int32
+	var minr, maxr int32
 
 	if ng.Spec.StaticInstances != nil {
 		count := ng.Spec.StaticInstances.Count
-		min, max = count, count
+		minr, maxr = count, count
 	}
 
 	if ng.Spec.CloudInstances.MinPerZone != nil {
-		min = *ng.Spec.CloudInstances.MinPerZone
+		minr = *ng.Spec.CloudInstances.MinPerZone
 	}
 
 	if ng.Spec.CloudInstances.MaxPerZone != nil {
-		max = *ng.Spec.CloudInstances.MaxPerZone
+		maxr = *ng.Spec.CloudInstances.MaxPerZone
 	}
 
 	return setReplicasNodeGroup{
 		Name: ng.Name,
-		Min:  min,
-		Max:  max,
+		Min:  minr,
+		Max:  maxr,
 	}, nil
 }
 
@@ -150,7 +152,7 @@ func calculateReplicasAndPatchMachineDeployment(
 
 		ng, ok := nodeGroups[md.NodeGroup]
 		if !ok {
-			input.Logger.Warnf("can't find NodeGroup %s to get min and max instances per zone", md.NodeGroup)
+			input.Logger.Warn("can't find NodeGroup to get min and max instances per zone", slog.String("name", md.NodeGroup))
 			continue
 		}
 

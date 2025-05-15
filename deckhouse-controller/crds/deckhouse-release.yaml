@@ -53,7 +53,8 @@ spec:
                   type: array
                   items:
                     type: string
-                  description: Deckhouse disruption keys.
+                  x-doc-deprecated: true
+                  description: Disruptive changes in the release.
                 changelog:
                   type: object
                   description: Release's changelog for enabled modules.

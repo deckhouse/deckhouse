@@ -17,8 +17,6 @@ limitations under the License.
 package releaseupdater
 
 import (
-	"context"
-	"fmt"
 	"log/slog"
 	"time"
 
@@ -32,20 +30,18 @@ type DeployTimeService struct {
 
 	settings *Settings
 
-	now                   time.Time
-	deckhousePodReadyFunc func(ctx context.Context) bool
+	now time.Time
 
 	logger *log.Logger
 }
 
-func NewDeployTimeService(dc dependency.Container, settings *Settings, deckhousePodReadyFunc func(ctx context.Context) bool, logger *log.Logger) *DeployTimeService {
+func NewDeployTimeService(dc dependency.Container, settings *Settings, logger *log.Logger) *DeployTimeService {
 	return &DeployTimeService{
 		releaseNotifier: NewReleaseNotifier(settings),
 
 		settings: settings,
 
-		now:                   dc.GetClock().Now().UTC(),
-		deckhousePodReadyFunc: deckhousePodReadyFunc,
+		now: dc.GetClock().Now().UTC(),
 
 		logger: logger,
 	}
@@ -65,7 +61,7 @@ func (c *DeployTimeService) ProcessPatchReleaseDeployTime(release v1alpha1.Relea
 		return nil
 	}
 
-	if res.ReleaseApplyTime == c.now {
+	if res.ReleaseApplyTime.Equal(c.now) {
 		res.ReleaseApplyTime = time.Time{}
 	}
 
@@ -79,29 +75,12 @@ func (c *DeployTimeService) ProcessPatchReleaseDeployTime(release v1alpha1.Relea
 // for minor release we check:
 // - Deckhouse pod is ready
 // - No delay from calculated deploy time
-func (c *DeployTimeService) ProcessMinorReleaseDeployTime(ctx context.Context, release v1alpha1.Release, res *DeployTimeResult, dri *ReleaseInfo) *ProcessedDeployTimeResult {
-	// check: Deckhouse pod is ready
-	if !c.deckhousePodReadyFunc(ctx) {
-		c.logger.Info("Deckhouse is not ready. Skipping upgrade")
-
-		if dri == nil {
-			return &ProcessedDeployTimeResult{
-				Message:               "can not find deployed version, awaiting",
-				ReleaseApplyAfterTime: res.ReleaseApplyAfterTime,
-			}
-		}
-
-		return &ProcessedDeployTimeResult{
-			Message:               fmt.Sprintf("awaiting for Deckhouse v%s pod to be ready", dri.Version.String()),
-			ReleaseApplyAfterTime: res.ReleaseApplyAfterTime,
-		}
-	}
-
+func (c *DeployTimeService) ProcessMinorReleaseDeployTime(release v1alpha1.Release, res *DeployTimeResult) *ProcessedDeployTimeResult {
 	if release.GetApplyNow() || res.Reason.IsNoDelay() {
 		return nil
 	}
 
-	if res.ReleaseApplyTime == c.now {
+	if res.ReleaseApplyTime.Equal(c.now) {
 		res.ReleaseApplyTime = time.Time{}
 	}
 
@@ -159,25 +138,12 @@ func (c *DeployTimeService) processWindow(dtr *DeployTimeResult) {
 	dtr.Reason = dtr.Reason.add(outOfWindowReason)
 }
 
-func (c *DeployTimeService) checkCooldown(dtr *DeployTimeResult, release v1alpha1.Release) {
-	// check: release cooldown
-	if release.GetCooldownUntil() != nil {
-		cooldownUntil := *release.GetCooldownUntil()
-		if c.now.Before(cooldownUntil) {
-			c.logger.Warn("release in cooldown", slog.String("name", release.GetName()))
-
-			dtr.ReleaseApplyTime = *release.GetCooldownUntil()
-			dtr.Reason = dtr.Reason.add(cooldownDelayReason)
-		}
-	}
-}
-
 // CalculatePatchDeployTime calculates deploy time, returns deploy time or postpone time and reason.
 // To calculate deploy time, we need to check:
 //
 // 1) Canary
 // 2) Notify
-// 3) Window (only in "AutoPatch" mode)
+// 3) Window (in not "Manual" mode)
 // 4) Manual approve (only in "Manual" mode)
 //
 // Notify reason must override any other reason
@@ -194,7 +160,7 @@ func (c *DeployTimeService) CalculatePatchDeployTime(release v1alpha1.Release, m
 	c.checkCanary(result, release)
 	c.checkNotify(result, release)
 
-	if c.settings.Mode == v1alpha1.UpdateModeAutoPatch && !c.settings.Windows.IsAllowed(result.ReleaseApplyTime) {
+	if c.settings.Mode != v1alpha1.UpdateModeManual && !c.settings.Windows.IsAllowed(result.ReleaseApplyTime) {
 		c.processWindow(result)
 	}
 
@@ -230,8 +196,6 @@ func (c *DeployTimeService) CalculateMinorDeployTime(release v1alpha1.Release, m
 	if release.GetApplyNow() {
 		return result
 	}
-
-	c.checkCooldown(result, release)
 
 	if !c.settings.InManualMode() {
 		c.checkCanary(result, release)

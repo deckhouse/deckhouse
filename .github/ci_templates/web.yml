@@ -20,7 +20,7 @@ steps:
   - name: Run {!{ $docPart }!} web build
     uses: {!{ index (ds "actions") "werf/actions/build" }!}
     with:
-      channel: ${{env.WERF_CHANNEL}}
+      version: ${{env.WERF_VERSION}}
     env:
       WERF_DIR: "{!{ $dir }!}"
       WERF_LOG_VERBOSE: "on"
@@ -200,21 +200,12 @@ steps:
   {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD_25 }}" -}!}
   {!{- $dcName = "prod-25" -}!}
 {!{- end -}!}
-{!{- if eq $env "oldproduction" -}!}
-  {!{- $repo = "${{ steps.check_readonly_registry.outputs.web_registry_path }}" -}!}
-  {!{- $url = "deckhouse.io" -}!}
-  {!{- $urlRu = "deckhouse.ru" -}!}
-  {!{- $ns = "deckhouse-web-production" -}!}
-  {!{- $webEnv = "web-production" -}!}
-  {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD_SEL }}" -}!}
-  {!{- $dcName = "prod-sel" -}!}
-{!{- end -}!}
 
 # <template: deploy_doc_template>
 - name: Deploy documentation to {!{ $env }!}
   uses: {!{ index (ds "actions") "werf/actions/converge" }!}
   with:
-    channel: ${{env.WERF_CHANNEL}}
+    version: ${{env.WERF_VERSION}}
     kube-config-base64-data: "{!{ $kubeConfig }!}"
     env: {!{ $webEnv }!}
   env:
@@ -246,15 +237,6 @@ steps:
   {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD_25 }}" -}!}
   {!{- $dcName = "prod-25" -}!}
 {!{- end -}!}
-{!{- if eq $env "oldproduction" -}!}
-  {!{- $repo = "${{ steps.check_readonly_registry.outputs.web_registry_path }}" -}!}
-  {!{- $url = "deckhouse.io" -}!}
-  {!{- $urlRu = "deckhouse.ru" -}!}
-  {!{- $ns = "deckhouse-web-production" -}!}
-  {!{- $webEnv = "web-production" -}!}
-  {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD_SEL }}" -}!}
-  {!{- $dcName = "prod-sel" -}!}
-{!{- end -}!}
 
 {!{- $siteDomainMap := printf "{\"en\" : \"%s\", \"ru\" : \"%s\"}" $url $urlRu -}!}
 
@@ -262,7 +244,7 @@ steps:
 - name: Deploy site to {!{ $env }!}
   uses: {!{ index (ds "actions") "werf/actions/converge" }!}
   with:
-    channel: ${{env.WERF_CHANNEL}}
+    version: ${{env.WERF_VERSION}}
     kube-config-base64-data: "{!{ $kubeConfig }!}"
     env: {!{ $webEnv }!}
   env:

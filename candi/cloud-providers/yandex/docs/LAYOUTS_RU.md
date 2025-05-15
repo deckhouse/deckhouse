@@ -86,7 +86,7 @@ dhcpOptions:
 
 В данной схеме размещения NAT (любого вида) не используется, а каждому узлу выдается публичный IP-адрес.
 
-> **Внимание!** В модуле `cloud-provider-yandex` пока нет поддержки групп безопасности (security group), поэтому все узлы кластера будут смотреть *наружу*.
+> **Внимание!** В модуле `cloud-provider-yandex` нет поддержки групп безопасности (security group), поэтому все узлы кластера будут доступны без ограничения подключения.
 
 ![Схема размещения WithoutNAT в Yandex Cloud](../../images/cloud-provider-yandex/layout-withoutnat.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1I7M9DquzLNu-aTjqLx1_6ZexPckL__-501Mt393W1fw/edit --->
@@ -155,15 +155,16 @@ dhcpOptions:
 
 ## WithNATInstance
 
-В данной схеме размещения создается NAT-инстанс, а в таблицу маршрутизации добавляется правило на 0.0.0.0/0 с NAT-инстанса nexthop'ом.
+В данной схеме размещения в отдельной подсети создается NAT-инстанс, а в таблицу маршрутизации подсетей зон добавляется правило с маршрутом на 0.0.0.0/0 с NAT-инстансом в качестве nexthop'а.
+Эта отдельная подсеть необходима для избежания петли маршрутизации.
 
-Если задан `withNATInstance.externalSubnetID` — NAT-инстанс будет создан в зоне этого subnet.
+Если задан `withNATInstance.internalSubnetID` — NAT-инстанс будет создан в зоне этого subnet.
 
-Если `withNATInstance.externalSubnetID` не задан, а `withNATInstance.internalSubnetID` задан — NAT-инстанс будет создан в зоне этого subnet.
+Если задан `withNATInstance.internalSubnetCIDR` — тогда будет создана новая внутренняя подсеть. NAT-инстанс будет создан в этой подсети.
 
-Если ни `withNATInstance.externalSubnetID`, ни `withNATInstance.internalSubnetID` не заданы — NAT-инстанс создастся в зоне `ru-central1-a`.
+Один из параметров, `withNATInstance.internalSubnetID` или `withNATInstance.internalSubnetCIDR`, обязателен
 
-Если IP-адрес NAT-инстанса не имеет значения, можно передать пустой объект `withNATInstance: {}`, тогда необходимые сети и динамический IP-адрес будут созданы автоматически.
+Если `withNATInstance.externalSubnetID` указан в дополнение к предыдущим, NAT-инстанс будет подключен к нему через вторичный интерфейс.
 
 ![Схема размещения WithNATInstance в Yandex Cloud](../../images/cloud-provider-yandex/layout-withnatinstance.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1oVpZ_ldcuNxPnGCkx0dRtcAdL7BSEEvmsvbG8Aif1pE/edit --->

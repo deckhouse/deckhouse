@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 
 # Copyright 2024 Flant JSC
 #
@@ -37,7 +37,7 @@ kubernetes:
         "members": .spec.members
       }
   - name: users
-    apiVersion: deckhouse.io/v1alpha1
+    apiVersion: deckhouse.io/v1
     kind: User
     queue: "users"
     group: main

@@ -17,13 +17,10 @@ package config
 import (
 	"testing"
 
-	"github.com/go-openapi/spec"
 	"github.com/stretchr/testify/require"
 )
 
 func TestValidateResources(t *testing.T) {
-	t.Parallel()
-
 	tests := map[string]struct {
 		config      string
 		errContains string
@@ -69,7 +66,6 @@ metadata:
 	for name, tt := range tests {
 		tt := tt
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
 			err := ValidateResources(tt.config, validateOpts...)
 			if tt.errContains == "" {
 				require.NoError(t, err)
@@ -81,12 +77,9 @@ metadata:
 }
 
 func TestValidateInitConfiguration(t *testing.T) {
-	t.Parallel()
-
 	const schemasDir = "./../../../candi/openapi"
-	newStore := newSchemaStore([]string{schemasDir})
-	newStore.moduleConfigsCache["deckhouse"] = &spec.Schema{}
-	newStore.modulesCache["deckhouse"] = struct{}{}
+	const deckhouseSchemasDir = "./../../../modules/002-deckhouse/openapi"
+	newStore := newSchemaStore([]string{schemasDir, deckhouseSchemasDir})
 
 	tests := map[string]struct {
 		config      string
@@ -101,7 +94,6 @@ apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
   imagesRepo: registry.deckhouse.io/deckhouse/ce
-  releaseChannel: Alpha
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -140,13 +132,11 @@ apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
   imagesRepo: registry.deckhouse.io/deckhouse/ce
-  releaseChannel: Alpha
 ---
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
-  imagesRepo: registry.deckhouse.io/deckhouse/ce
-  releaseChannel: Stable`,
+  imagesRepo: registry.deckhouse.io/deckhouse/ce`,
 			errContains: `ValidationFailed: exactly one "InitConfiguration" required`,
 		},
 		"extra kinds": {
@@ -155,7 +145,6 @@ apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
   imagesRepo: registry.deckhouse.io/deckhouse/ce
-  releaseChannel: Alpha
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterConfiguration
@@ -176,7 +165,6 @@ metadata:
 	for name, tt := range tests {
 		tt := tt
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
 			err := ValidateInitConfiguration(tt.config, newStore, validateOpts...)
 			if tt.errContains == "" {
 				require.NoError(t, err)
@@ -188,8 +176,6 @@ metadata:
 }
 
 func TestValidateClusterConfiguration(t *testing.T) {
-	t.Parallel()
-
 	const schemasDir = "./../../../candi/openapi"
 	newStore := newSchemaStore([]string{schemasDir})
 
@@ -272,7 +258,6 @@ clusterType: Static
 	for name, tt := range tests {
 		tt := tt
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
 			clusterConfig, err := ValidateClusterConfiguration(tt.config, newStore, validateOpts...)
 			require.Equal(t, tt.expected, clusterConfig)
 			if tt.errContains == "" {
@@ -285,8 +270,6 @@ clusterType: Static
 }
 
 func TestValidateProviderSpecificClusterConfiguration(t *testing.T) {
-	t.Parallel()
-
 	const schemasDir = "./../../../candi/cloud-providers"
 	newStore := newSchemaStore([]string{schemasDir})
 
@@ -463,7 +446,6 @@ sshPublicKey: ssh-key`,
 	for name, tt := range tests {
 		tt := tt
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
 			err := ValidateProviderSpecificClusterConfiguration(tt.config, tt.clusterConfig, newStore, validateOpts...)
 			if tt.errContains == "" {
 				require.NoError(t, err)
@@ -475,8 +457,6 @@ sshPublicKey: ssh-key`,
 }
 
 func TestValidateStaticClusterConfiguration(t *testing.T) {
-	t.Parallel()
-
 	const schemasDir = "./../../../candi/openapi"
 	newStore := newSchemaStore([]string{schemasDir})
 
@@ -530,7 +510,6 @@ internalNetworkCIDRs:
 	for name, tt := range tests {
 		tt := tt
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
 			err := ValidateStaticClusterConfiguration(tt.config, newStore, validateOpts...)
 			if tt.errContains == "" {
 				require.NoError(t, err)

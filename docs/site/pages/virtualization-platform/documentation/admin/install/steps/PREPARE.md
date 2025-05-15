@@ -27,8 +27,8 @@ Before installing the virtualization platform, you need to plan its parameters:
      > The domain used in the template must not coincide with the domain specified in the `clusterDomain` parameter. For example, if `clusterDomain: cluster.local` (the default value) is used, then `publicDomainTemplate` cannot be `%s.cluster.local`.
 
 1. Choose the storage to be used:
-   - You can select a storage system from the [supported list](../../platform-management/storage/supported-storage.html);
-   - Storage configuration will be done after the basic platform installation.
+   - You can select a storage system from the [supported list](../../install/requirements.html#supported-storage-systems);
+   - [Storage configuration](../../install/steps/storage.html) will be done after the basic platform installation.
 
 ## Node Preparation
 

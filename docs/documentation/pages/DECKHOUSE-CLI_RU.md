@@ -21,12 +21,11 @@ Deckhouse CLI — это интерфейс командной строки дл
 * `d8 mirror` — команды, которые позволяют скопировать образы дистрибутива DKP в частный container registry (ранее для этого использовалась утилита `dhctl mirror`).
   Например, можно выполнить `d8 mirror pull -l <LICENSE> <TAR-BUNDLE-PATH>` вместо `dhctl mirror --license <LICENSE> --images-bundle-path <TAR-BUNDLE-PATH>`.
 
-  Сценарии использования:
+  Сценарий использования:
 
-  - [ручная загрузка образов в изолированный приватный registry](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#%D1%80%D1%83%D1%87%D0%BD%D0%B0%D1%8F-%D0%B7%D0%B0%D0%B3%D1%80%D1%83%D0%B7%D0%BA%D0%B0-%D0%BE%D0%B1%D1%80%D0%B0%D0%B7%D0%BE%D0%B2-%D0%B2-%D0%B8%D0%B7%D0%BE%D0%BB%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%BD%D1%8B%D0%B9-%D0%BF%D1%80%D0%B8%D0%B2%D0%B0%D1%82%D0%BD%D1%8B%D0%B9-registry);
-  - [ручная загрузка образов подключаемых модулей Deckhouse в изолированный приватный registry](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#%D1%80%D1%83%D1%87%D0%BD%D0%B0%D1%8F-%D0%B7%D0%B0%D0%B3%D1%80%D1%83%D0%B7%D0%BA%D0%B0-%D0%BE%D0%B1%D1%80%D0%B0%D0%B7%D0%BE%D0%B2-%D0%BF%D0%BE%D0%B4%D0%BA%D0%BB%D1%8E%D1%87%D0%B0%D0%B5%D0%BC%D1%8B%D1%85-%D0%BC%D0%BE%D0%B4%D1%83%D0%BB%D0%B5%D0%B9-deckhouse-%D0%B2-%D0%B8%D0%B7%D0%BE%D0%BB%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%BD%D1%8B%D0%B9-%D0%BF%D1%80%D0%B8%D0%B2%D0%B0%D1%82%D0%BD%D1%8B%D0%B9-registry).
+  - [ручная загрузка образов в изолированный приватный registry](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#ручная-загрузка-образов-deckhouse-kubernetes-platform-бд-сканера-уязвимостей-и-модулей-deckhouse-в-приватный-registry).
 
-* `d8 v` — команды, отвечающие за работу с виртуальными машинами, созданными [Deckhouse Virtualization Platform](/modules/virtualization/stable/).  
+* `d8 v` — команды, отвечающие за работу с виртуальными машинами, созданными [Deckhouse Virtualization Platform](https://deckhouse.ru/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html).  
     Например, команда `d8 virtualization console` подключает к консоли виртуальной машины.
 
     <div markdown="0">
@@ -41,14 +40,38 @@ Deckhouse CLI — это интерфейс командной строки дл
     </details>
     </div>
 
+* `d8 backup` — команды для создания резервных копий ключевых компонентов кластера:
+
+  * `etcd` — полная резервная копия ключевого хранилища etcd;
+  * `cluster-config` — архив конфигурационных объектов;
+  * `loki` — диагностическая выгрузка логов из встроенного Loki API (не предназначена для восстановления).
+
+    Например:
+
+    ```console
+    d8 backup etcd ./etcd.snapshot
+    d8 backup cluster-config ./cluster-config.tar
+    d8 backup loki --days 1 > ./loki.log
+    ```
+
+    Список доступных флагов `d8 backup` можно получить через команду `d8 backup --help`.
+
 ## Как установить Deckhouse CLI
 
-Начиная с версии 0.10 Deckhouse CLI, установить её можно с помощью [trdl](https://ru.trdl.dev/).
+Установить Deckhouse CLI возможно двумя способами:
 
-{% alert %}
+* Начиная с версии 0.10 доступна установка с помощью [trdl](https://ru.trdl.dev/). Такой способ позволяет непрерывно получать свежие версии утилиты со всеми доработками и исправлениями.
+  > Обратите внимание, что для установки через trdl необходим доступ в Интернет к tuf-репозиторию с утилитой. В кластере с закрытым окружением такой способ работать не будет!
+* Вручную скачав исполняемый файл и установив его в системе.
+
+### Установка с помощью trdl
+
+Начиная с версии 0.10 Deckhouse CLI установить её можно с помощью [trdl](https://ru.trdl.dev/).
+
+{% alert level="warning" %}
 Если у вас установлена версия ниже 0.10, то её необходимо предварительно удалить.
 
-Если вам нужно установить одну из версий ниже 0.10, воспользуйтесь [устаревшим способом установки](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.67/deckhouse-cli/#how-do-i-install-deckhouse-cli).
+Если вам нужно установить одну из версий ниже 0.10, воспользуйтесь [устаревшим способом установки](#установка-исполняемого-файла).
 {% endalert %}
 
 1. Установите [клиент trdl](https://ru.trdl.dev/quickstart.html#%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B0-%D0%BA%D0%BB%D0%B8%D0%B5%D0%BD%D1%82%D0%B0).
@@ -56,27 +79,24 @@ Deckhouse CLI — это интерфейс командной строки дл
 1. Добавьте репозиторий Deckhouse CLI в trdl:
 
    ```bash
-   URL=https://trrr.flant.dev/trdl-deckhouse-cli
+   URL=https://deckhouse.ru/downloads/deckhouse-cli-trdl
    ROOT_VERSION=1
-   ROOT_SHA512=$(curl -Ls ${URL}/${ROOT_VERSION}.root.json | sha512sum | tr -d '\-[:space:]\n')
-   REPO=trdl-deckhouse-cli
-   
+   ROOT_SHA512=343bd5f0d8811254e5f0b6fe292372a7b7eda08d276ff255229200f84e58a8151ab2729df3515cb11372dc3899c70df172a4e54c8a596a73d67ae790466a0491
+   REPO=d8
+
    trdl add $REPO $URL $ROOT_VERSION $ROOT_SHA512
    ```
 
-1. Установите актуальный стабильный релиз:
+1. Установите последний стабильный выпуск утилиты `d8` и проверьте ее работоспособность:
 
    ```bash
-   trdl update $REPO $ROOT_VERSION stable
+   . $(trdl use d8 0 stable) && d8 --version
    ```
 
-1. Убедитесь, что исполняемый файл `d8` установлен и работоспособен:
+Если вы не хотите вызывать `. $(trdl use d8 0 stable)` перед каждым использованием Deckhouse CLI, добавьте строку `alias d8='trdl exec d8 0 stable -- "$@"'` в RC-файл вашей командной оболочки.
 
-   ```bash
-   . $(trdl use $REPO $ROOT_VERSION stable) && d8 --version
-   ```
+Готово, вы установили Deckhouse CLI.
 
-{% alert level="warning" %}
-Если вы используете macOS, вам может потребоваться удалить атрибут карантина с исполняемого файла, чтобы Gatekeeper не блокировал его.
-(`sudo xattr -d com.apple.quarantine /path/to/d8`)
-{% endalert %}
+### Установка исполняемого файла
+
+{% include d8-cli-install/main.liquid %}

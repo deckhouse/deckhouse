@@ -127,6 +127,20 @@ spec:
 status:
   ipRoutingTableID: 500
 `
+
+		rtWildYAML = `
+---
+apiVersion: network.deckhouse.io/v1alpha1
+kind: RoutingTable
+metadata:
+  name: testrt-wild
+spec:
+  routes:
+  - destination: 10.0.0.0/16
+    gateway: 10.0.0.1
+  nodeSelector:
+    node.deckhouse.io/group: '*'
+`
 		nrt11YAML = `
 ---
 apiVersion: internal.network.deckhouse.io/v1alpha1
@@ -556,6 +570,21 @@ status:
 			Expect(rtstatus.Conditions[0].LastHeartbeatTime).NotTo(Equal(nil))
 			Expect(rtstatus.Conditions[0].LastTransitionTime).NotTo(Equal(nil))
 
+		})
+	})
+
+	Context("Checking error handling with wildcard nodeSelector node.deckhouse.io/group: '*'", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(rtWildYAML + node1YAML + node2YAML))
+			f.RunHook()
+		})
+
+		It("Hook must execute successfully and handle invalid nodeSelector", func() {
+
+			Expect(f).To(ExecuteSuccessfully())
+
+			logOutput := string(f.LoggerOutput.Contents())
+			Expect(logOutput).To(ContainSubstring("Invalid nodeSelector in RoutingTable"), "Expected log to contain error about invalid nodeSelector")
 		})
 	})
 
