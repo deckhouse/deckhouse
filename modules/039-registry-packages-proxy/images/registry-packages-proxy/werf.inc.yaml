@@ -1,6 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+fromImage: base/distroless
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /registry-packages-proxy
@@ -11,7 +11,7 @@ imageSpec:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 final: false
-fromImage: common/src-artifact
+fromImage: builder/src
 git:
 - add: /{{ .ModulePath }}modules/039-{{ .ModuleName }}/images/{{ .ImageName }}/src
   to: /src
@@ -38,7 +38,7 @@ git:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
@@ -48,11 +48,13 @@ import:
   add: /go_lib/registry-packages-proxy
   to: /go_lib/registry-packages-proxy
   before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
   - cd /src
-  - export GOPROXY={{ .GOPROXY }}
-  - go mod download
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:
   - cd /src
   - go test ./... -v
@@ -60,5 +62,4 @@ shell:
   - chown 64535:64535 /registry-packages-proxy
   - chmod 0755 /registry-packages-proxy
 mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
+{{ include "mount points for golang builds" . }}

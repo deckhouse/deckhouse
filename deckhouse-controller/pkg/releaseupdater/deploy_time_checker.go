@@ -61,7 +61,7 @@ func (c *DeployTimeService) ProcessPatchReleaseDeployTime(release v1alpha1.Relea
 		return nil
 	}
 
-	if res.ReleaseApplyTime == c.now {
+	if res.ReleaseApplyTime.Equal(c.now) {
 		res.ReleaseApplyTime = time.Time{}
 	}
 
@@ -80,7 +80,7 @@ func (c *DeployTimeService) ProcessMinorReleaseDeployTime(release v1alpha1.Relea
 		return nil
 	}
 
-	if res.ReleaseApplyTime == c.now {
+	if res.ReleaseApplyTime.Equal(c.now) {
 		res.ReleaseApplyTime = time.Time{}
 	}
 
@@ -143,7 +143,7 @@ func (c *DeployTimeService) processWindow(dtr *DeployTimeResult) {
 //
 // 1) Canary
 // 2) Notify
-// 3) Window (only in "AutoPatch" mode)
+// 3) Window (in not "Manual" mode)
 // 4) Manual approve (only in "Manual" mode)
 //
 // Notify reason must override any other reason
@@ -160,7 +160,7 @@ func (c *DeployTimeService) CalculatePatchDeployTime(release v1alpha1.Release, m
 	c.checkCanary(result, release)
 	c.checkNotify(result, release)
 
-	if c.settings.Mode == v1alpha1.UpdateModeAutoPatch && !c.settings.Windows.IsAllowed(result.ReleaseApplyTime) {
+	if c.settings.Mode != v1alpha1.UpdateModeManual && !c.settings.Windows.IsAllowed(result.ReleaseApplyTime) {
 		c.processWindow(result)
 	}
 

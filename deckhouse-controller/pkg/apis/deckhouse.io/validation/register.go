@@ -32,6 +32,7 @@ type registerer interface {
 
 type moduleStorage interface {
 	GetModuleByName(name string) (*moduletypes.Module, error)
+	GetModulesByExclusiveGroup(exclusiveGroup string) []string
 }
 
 type moduleManager interface {
@@ -47,7 +48,7 @@ func RegisterAdmissionHandlers(
 	storage moduleStorage,
 	metricStorage metric.Storage,
 ) {
-	reg.RegisterHandler("/validate/v1alpha1/module-configs", moduleConfigValidationHandler(cli, storage, metricStorage, validator))
+	reg.RegisterHandler("/validate/v1alpha1/module-configs", moduleConfigValidationHandler(cli, storage, metricStorage, mm, validator))
 	reg.RegisterHandler("/validate/v1alpha1/modules", moduleValidationHandler())
 	reg.RegisterHandler("/validate/v1/configuration-secret", kubernetesVersionHandler(mm))
 	reg.RegisterHandler("/validate/v1alpha1/update-policies", updatePolicyHandler(cli))

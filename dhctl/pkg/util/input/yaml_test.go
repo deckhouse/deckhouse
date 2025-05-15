@@ -17,8 +17,9 @@ package input_test
 import (
 	"testing"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
 func TestCombineYAMLs(t *testing.T) {

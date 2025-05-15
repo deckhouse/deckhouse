@@ -18,14 +18,14 @@ rm -f /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf # for centos
 rm -f /var/lib/kubelet/kubeadm-flags.env
 
 # Read previously discovered IP
-discovered_node_ip="$(</var/lib/bashible/discovered-node-ip)"
-
-cri_config=""
+discovered_node_ip="$(bb-d8-node-ip)"
 
 {{- if eq .cri "Containerd" }}
-cri_config="--container-runtime=remote --container-runtime-endpoint=unix:/var/run/containerd/containerd.sock"
-{{- else if eq .cri "NotManaged" }}
-  {{- if (and .nodeGroup.cri.notManaged .nodeGroup.cri.notManaged.criSocketPath) }}
+cri_socket_path="/run/containerd/containerd.sock"
+{{- end }}
+
+{{- if eq .cri "NotManaged" }}
+  {{- if (((.nodeGroup.cri).notManaged).criSocketPath) }}
 cri_socket_path={{ .nodeGroup.cri.notManaged.criSocketPath | quote }}
   {{- else }}
   if [[ -S "/run/containerd/containerd.sock" ]]; then
@@ -38,9 +38,9 @@ if [[ -z "${cri_socket_path}" ]]; then
   bb-log-error 'CRI socket is not found, need to manually set "nodeGroup.cri.notManaged.criSocketPath"'
   exit 1
 fi
-
-cri_config="--container-runtime=remote --container-runtime-endpoint=unix:${cri_socket_path}"
 {{- end }}
+
+cri_config="--container-runtime-endpoint=unix://${cri_socket_path}"
 
 credential_provider_flags=""
 {{- if semverCompare ">=1.28" .kubernetesVersion }}
@@ -87,7 +87,9 @@ $([ -n "$discovered_node_ip" ] && echo -e "\n    --node-ip=${discovered_node_ip}
 {{- if hasKey .nodeGroup "kubelet" }}
     --root-dir={{ .nodeGroup.kubelet.rootDir | default "/var/lib/kubelet" }} \\
 {{- end }}
+    ${cri_config} \\
     ${credential_provider_flags} \\
+    --hostname-override=$(bb-d8-node-name) \\
     --v=2
 EOF
 

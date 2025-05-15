@@ -16,9 +16,11 @@ package log
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"maps"
 	"slices"
+	"strconv"
 	"strings"
 )
 
@@ -240,19 +242,29 @@ func (r *Render) FieldsToString(m map[string]any, keyPrefix string) {
 			k = keyPrefix + "." + k
 		}
 
-		if str, ok := v.(string); ok {
-			r.TextQuotedKeyValue(k, str)
-			r.buf = append(r.buf, ' ')
-
+		switch val := v.(type) {
+		case string:
+			r.TextQuotedKeyValue(k, val)
+		case float64:
+			r.TextQuotedKeyValue(k, strconv.FormatFloat(val, 'f', -1, 64))
+		case int:
+			r.TextQuotedKeyValue(k, strconv.Itoa(val))
+		case uint:
+			r.TextQuotedKeyValue(k, strconv.FormatUint(uint64(val), 10))
+		case int64:
+			r.TextQuotedKeyValue(k, strconv.FormatInt(val, 10))
+		case uint64:
+			r.TextQuotedKeyValue(k, strconv.FormatUint(val, 10))
+		case bool:
+			r.TextQuotedKeyValue(k, strconv.FormatBool(val))
+		case map[string]any:
+			r.FieldsToString(val, k)
+			continue
+		default:
+			r.buf = append(r.buf, fmt.Sprintf("!SOMETHING GOES WRONG. type: %T", v)...)
 			continue
 		}
 
-		if nested, ok := v.(map[string]any); ok {
-			r.FieldsToString(nested, k)
-
-			continue
-		}
-
-		r.buf = append(r.buf, "!%SOMETHING GOES WRONG"...)
+		r.buf = append(r.buf, ' ')
 	}
 }

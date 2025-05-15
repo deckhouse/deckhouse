@@ -23,6 +23,7 @@ module JSONSchemaRenderer
       input
     end
 
+    # TODO: Refactor this according to the new data structure - x-doc-d8Editions instead of x-doc-d8Revision
     # moduleName
     # revision - Deckhouse revision
     # resourceType - can be 'crd' or 'moduleConfig' or 'clusterConfig'
@@ -316,7 +317,53 @@ module JSONSchemaRenderer
             # result.push(convert('**' + get_i18n_term('not_required_value_sentence')  + '**'))
         end
 
-        result.push(sprintf(%q(<div class="resources__prop_description">%s</div>),escape_chars(convert(get_i18n_description(primaryLanguage, fallbackLanguage, attributes))))) if attributes['description']
+        if attributes.has_key?('x-doc-d8Editions')
+          editionsString = %Q(<p><strong>#{@site.data['i18n']['common']['module_available_editions_prefix'][lang]}: #{
+                attributes['x-doc-d8Editions']
+                  # Filter editions present in module-editions
+                  .select { |edition| @site.data['modules']['editions-addition'].key?(edition.sub('+', '-plus')) }
+                  # Skip edition with language defined in _data/modules/editions-addition.yml and if it is not the current language.
+                  .select {
+                    |edition|
+                      ! @site.data['modules']['editions-addition'][edition.sub('+', '-plus')]['languages'] or
+                      @site.data['modules']['editions-addition'][edition.sub('+', '-plus')]['languages'].include?(lang)
+                  }
+                  # Sort by edition weight (_data/modules/editions-weight.yml)
+                  .sort_by{
+                    |edition|
+                      weight = @site.data['modules']['editions-weight'][edition.sub('+', '-plus')]
+                      weight.nil? ? Float::INFINITY : weight
+                  }
+                  # Map edition to titles
+                  .map{
+                    |edition|
+                      editionData = @site.data['modules']['editions-addition'][edition.sub('+', '-plus')]
+                      # The condition will always be true, as we selected only editions present in module-editions, but let it be
+                      if editionData
+                        if editionData['name_version']
+                          editionData['name_version']
+                        elsif editionData['name']
+                          editionData['name']
+                        else
+                          puts "[WARN] No edition name for '#{edition}'"
+                        end
+                      else
+                        puts "[WARN] No edition '#{edition}' (parameter - #{name}, parent - #{parent})"
+                      end
+                  }.join(', ')
+                }</strong></p>)
+        elsif attributes.has_key?('x-doc-d8Revision') # Deprecated!
+          case attributes['x-doc-d8Revision']
+          when "ee"
+            editionsString = %Q(<p><strong>#{@site.data['i18n']['features']['ee'][lang].capitalize}</strong></p>)
+          end
+        end
+
+        if attributes['description']
+          result.push(sprintf(%q(<div class="resources__prop_description">%s%s</div>),editionsString,escape_chars(convert(get_i18n_description(primaryLanguage, fallbackLanguage, attributes)))))
+        elsif editionsString and editionsString.size > 0
+          result.push(sprintf(%q(<div class="resources__prop_description">%s</div>),editionsString))
+        end
 
         if attributes.has_key?('x-doc-default')
             if attributes['x-doc-default'].is_a?(Array) or attributes['x-doc-default'].is_a?(Hash)
@@ -342,24 +389,6 @@ module JSONSchemaRenderer
                     result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <span class="resources__attrs_content"><code>%s</code></span></p>), get_i18n_term("default_value").capitalize, attributes['default']))
                 end
             end
-        end
-
-        if attributes.has_key?('x-doc-d8Revision')
-          case attributes['x-doc-d8Revision']
-          when "ee"
-            result.push(%Q(<p><strong>#{@site.data['i18n']['features']['ee'][lang].capitalize}</strong></p>))
-          end
-        end
-
-        if attributes.has_key?('x-doc-featureStatus')
-          case attributes['x-doc-featureStatus']
-          when "proprietaryOkmeter"
-            result.push(%Q(<p><strong>#{@site.data['i18n']['features']['proprietaryOkmeter'][lang].capitalize}</strong></p>))
-          when "experimental"
-            result.push(%Q(<p><strong>#{@site.data['i18n']['features']['experimental'][lang].capitalize}</strong></p>))
-          when "temporaryDeprecated"
-            result.push(%Q(<p><strong>#{@site.data['i18n']['features']['temporaryDeprecated'][lang].capitalize}</strong></p>))
-          end
         end
 
         if attributes.has_key?('minimum') or attributes.has_key?('maximum')
@@ -585,6 +614,8 @@ module JSONSchemaRenderer
 
         @moduleName = moduleName
         @resourceType = "crd"
+        resourceName = ''
+        resourceGroup = ''
 
         if ( @lang == 'en' )
             fallbackLanguageName = 'ru'
@@ -606,8 +637,9 @@ module JSONSchemaRenderer
                 # v1beta1 CRD
                 versionAPI = 'v1beta1'
                 resourceName = input["spec"]["names"]["kind"]
+                resourceGroup = get_hash_value(input,'metadata','name')
                 fullPath = [sprintf(%q(v1beta1-%s), input["spec"]["names"]["kind"])]
-                result.push(convert("## " + input["spec"]["names"]["kind"]))
+                result.push("<h2>#{resourceName}</h2>")
                 result.push('<p><font size="-1">Scope: ' + input["spec"]["scope"])
                 if input["spec"].has_key?("version") then
                    result.push('<br/>Version: ' + input["spec"]["version"] + '</font></p>')
@@ -661,7 +693,9 @@ module JSONSchemaRenderer
                      return nil
                  end
 
-                 result.push(%Q(<h2>#{input["spec"]["names"]["kind"]}</h2>))
+                 resourceName = input["spec"]["names"]["kind"]
+                 resourceGroup = get_hash_value(input,'metadata','name')
+                 result.push("<h2>#{resourceName}</h2>")
 
                  if  input["spec"]["versions"].length > 1 then
                      result.push('<p><font size="-1">Scope: ' + input["spec"]["scope"] + '</font></p>')
@@ -794,6 +828,29 @@ module JSONSchemaRenderer
             end
         end
         result.push('</div>')
+
+        # Add CRD to the list of module resources.
+        if resourceGroup && moduleName && site.data.dig('modules','all',moduleName) then
+            site.data['modules']['all'][moduleName]['docs'] = {} if ! site.data['modules']['all'][moduleName].has_key?('docs')
+            site.data['modules']['all'][moduleName]['docs']['crds'] = [] if ! site.data['modules']['all'][moduleName]['docs'].has_key?('crds')
+            # Add CRD to the list of module resources.
+            site.data['modules']['all'][moduleName]['docs']['crds'] = site.data['modules']['all'][moduleName]['docs']['crds'] | [resourceGroup]
+            # Add CRD to the list of all resources.
+            site.data['modules']['crds'] = {} if ! site.data['modules'].has_key?('crds')
+            if ! site.data['modules']['crds'].has_key?(resourceGroup)
+              site.data['modules']['crds'][resourceGroup] = {
+                    'internal' => {
+                      'en' => "/en/platform/modules/%s/cr.html\#%s" % [ moduleName, resourceName.downcase ],
+                      'ru' => "/ru/platform/modules/%s/cr.html\#%s" % [ moduleName, resourceName.downcase ]
+                    },
+                    'external' => {
+                      'en' => "/products/kubernetes-platform/documentation/v1/modules/%s/cr.html\#%s" % [ moduleName, resourceName.downcase ],
+                      'ru' => "/products/kubernetes-platform/documentation/v1/modules/%s/cr.html\#%s" % [ moduleName, resourceName.downcase ]
+                    }
+              }
+            end
+        end
+
         result.join
     end
 
@@ -833,6 +890,7 @@ module JSONSchemaRenderer
             result.push('</font></p>')
             if !( get_hash_value(input, 'properties', 'settings' ) )
                input['properties'] = { "settings" => { "type" => "object", "properties" => input['properties'] } }
+               input['properties']['settings']['required'] = input['required'] if input['required']
             end
             if !( get_hash_value(input, 'i18n', 'en', 'properties', 'settings' ) )
                input['i18n']['en']['properties'] = { "settings" => { "type" => "object", "properties" => input['i18n']['en']['properties'] } }

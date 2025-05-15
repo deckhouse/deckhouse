@@ -3,15 +3,18 @@ image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
 git:
-- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src
-  to: /src/monitoring-ping
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src/monitoring-ping.py
+  to: /src/monitoring-ping.py
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   - cd /src
-  - git clone -b v5.2 --depth=1 {{ .SOURCE_REPO }}/schweikert/fping.git ./fping
+  - git clone -b v5.2 --depth=1 $(cat /run/secrets/SOURCE_REPO)/schweikert/fping.git ./fping
   - rm -rf fping/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-fping-artifact
@@ -35,39 +38,44 @@ shell:
   - chown -R 64535:64535 /opt/fping-static
   - chmod 0700 /opt/fping-static/sbin/fping
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
-fromImage: common/alt-p11-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
+fromImage: base/python
 final: false
-import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-  add: /src/monitoring-ping/requirements.txt
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/requirements.txt
   to: /requirements.txt
-  before: install
-- image: common/python-static
-  add: /opt/python-static
+  stageDependencies:
+    install:
+    - '**/*'
+import:
+- image: common/wheel-artifact
+  add: /wheels
+  to: /wheels
   before: install
 shell:
-  beforeInstall:
-  - apt-get install -y git
   install:
-  - git clone --depth 1 {{ .SOURCE_REPO }}/python-modules/wheels /wheels
-  - /opt/python-static/bin/pip3 install -f file:///wheels --no-index -r requirements.txt
-  - rm -rf /wheels
+  - pip3 install -f file:///wheels --no-index -r /requirements.txt
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-  add: /src/monitoring-ping
-  to: /src
-  before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
-  add: /opt/python-static
+  add: /src/monitoring-ping.py
+  to: /monitoring-ping.py
   before: install
 - image: {{ .ModuleName }}/{{ .ImageName }}-fping-artifact
   add: /opt/fping-static/sbin/fping
   to: /usr/sbin/fping
   before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
+  add: /
+  to: /
+  before: install
+  includePaths:
+  - lib/ld-musl-x86_64*
+  - usr/bin/python3*
+  - usr/lib/python3*
+  - usr/lib/libc.so
 imageSpec:
   config:
-    entrypoint: ["/opt/python-static/bin/python3", "/src/monitoring-ping.py"]
+    entrypoint: ["/usr/bin/python3", "/monitoring-ping.py"]

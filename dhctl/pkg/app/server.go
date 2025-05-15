@@ -15,13 +15,16 @@
 package app
 
 import (
+	"time"
+
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
 var (
-	ServerNetwork            string
-	ServerAddress            string
-	ServerParallelTasksLimit int
+	ServerNetwork                    string
+	ServerAddress                    string
+	ServerParallelTasksLimit         int
+	ServerRequestsCounterMaxDuration time.Duration
 )
 
 func DefineServerFlags(cmd *kingpin.CmdClause) {
@@ -36,4 +39,8 @@ func DefineServerFlags(cmd *kingpin.CmdClause) {
 		Envar(configEnvName("SERVER_PARALLEL_TASKS_LIMIT")).
 		Default("10").
 		IntVar(&ServerParallelTasksLimit)
+	cmd.Flag("server-requests-counter-max-duration", "").
+		Default("2h").
+		Envar(configEnvName("SERVER_REQUESTS_COUNTER_MAX_DURATION")).
+		DurationVar(&ServerRequestsCounterMaxDuration)
 }

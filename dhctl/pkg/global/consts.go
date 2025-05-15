@@ -22,4 +22,8 @@ const (
 
 	ConvergeNodeUserName = "d8-dhctl-converger"
 	ConvergeNodeUserUID  = 64536
+
+	D8SystemNamespace = "d8-system"
+
+	InfrastructureStateBackupLabelKey = "dhctl.deckhouse.io/state-backup"
 )
