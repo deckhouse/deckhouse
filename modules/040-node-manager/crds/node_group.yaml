@@ -1501,6 +1501,61 @@ spec:
                   type: integer
                   description: |
                     Maximum duration (in seconds) for which the controller attempts to reschedule pods to a new machine during node draining.
+                gpu:
+                  type: object
+                  description: |
+                    GPU parameters.
+                  properties:
+                    sharing:
+                      type: string
+                      description: |
+                        GPU sharing strategy.
+                      enum:
+                        - Mps
+                        - TimeSlicing
+                        - Mig
+                        - Exclusive
+                    mig:
+                      type: object
+                      properties:
+                        partedConfig:
+                          type: string
+                          description: |
+                            Selected parted-config for MIG.
+                          x-doc-default: all-1g.5gb
+                    mps:
+                      type: object
+                      properties:
+                        replicas:
+                          type: string
+                          description: |
+                            Count of replicas with MPS.
+                          x-doc-default: "4"
+                    timeSlicing:
+                      description: |
+                        Time-slicing parameters.
+                      type: object
+                    exclusive:
+                      type: object
+                      description: |
+                        Without GPU sharing.
+                  oneOf:
+                    - properties:
+                        sharing:
+                          enum: [TimeSlicing]
+                        timeSlicing: {}
+                    - properties:
+                        sharing:
+                          enum: [Mig]
+                        mig: {}
+                    - properties:
+                        sharing:
+                          enum: [Mps]
+                        mps: {}
+                    - properties:
+                        sharing:
+                          enum: [Exclusive]
+                        exclusive: {}
                 cri:
                   type: object
                   description: |
