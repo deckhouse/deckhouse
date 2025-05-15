@@ -428,7 +428,7 @@ dependencies:
   - `deckhouse` — *Строка.* Зависимость модуля [от версии Deckhouse Kubernetes Platform](../dependencies/#зависимость-от-версии-deckhouse-kubernetes-platform), с которой совместим модуль.
   - `kubernetes` — *Строка.* Зависимость модуля [от версии Kubernetes](../dependencies/#зависимость-от-версии-kubernetes), с которой совместим модуль.
   - `modules` — *Объект.* Зависимость модуля [от версии других модулей](../dependencies/#зависимость-от-версии-других-модулей).
-- `stage` — *Строка.* [Стадия жизненного цикла модуля](../versioning/#как-понять-насколько-модуль-стабилен). Допустимые значения: `Experimental`, `Preview`, `General Availability`, `Deprecated`.
+- `stage` — *Строка.* [Стадия жизненного цикла модуля](../versioning/#как-понять-насколько-модуль-стабилен). Допустимые значения: `Experimental`, `Preview`, `General Availability`, `Deprecated`.
 - `tags` — *Массив строк.* Список дополнительных тегов модуля. Теги преобразуются в лейблы объекта [Module](../../cr.html#module) в соответствии с шаблоном `module.deckhouse.io/<TAG>=""` (где `<TAG>` — название тега).
 
   Например, если указать `tags: ["test", "myTag"]`, то на соответствующий объект Module в кластере будут назначены лейблы `module.deckhouse.io/test=""` и `module.deckhouse.io/myTag=""`.
@@ -442,7 +442,7 @@ dependencies:
 name: hello-world
 tags: ["test", "myTag"]
 weight: 960
-stage: "Sandbox"
+stage: "Experimental"
 namespace: "test"
 exclusiveGroup: "group"
 subsystems:
@@ -450,7 +450,7 @@ subsystems:
   - test1
 descriptions: 
   en: "The module to say hello to the world."
-  ru: "Модуль чтобы сказать миру привет."
+  ru: "Модуль, который приветствует мир."
 requirements:
     deckhouse: ">= 1.61"
     kubernetes: ">= 1.27"
