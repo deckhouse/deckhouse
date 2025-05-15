@@ -427,7 +427,7 @@ If confirmation is required to disable a module (the `confirmation` parameter is
 - `deckhouse` — *String.* Pod dependency [on Deckhouse Kubernetes Platform version](../dependencies/#deckhouse-kubernetes-platform-version-dependency) that the pod is compatible with.
 - `kubernetes` — *String.* Pod dependency [on Kubernetes version](../dependencies/#kubernetes-version-dependency) that the pod is compatible with.
 - `modules` — *Object.* Module dependency [on the version of other modules](../dependencies/#dependency-on-the-version-of-other-modules).
-- `stage` — *String.* [Module lifecycle stage](../versioning/#how-do-i-figure-out-how-stable-a-module-is). Possible values: `Experimental`, `Preview`, `General Availability`, `Deprecated`.
+- `stage` — *String.* [Module lifecycle stage](../versioning/#how-do-i-figure-out-how-stable-a-module-is). Possible values: `Experimental`, `Preview`, `General Availability`, `Deprecated`.
 - `tags` — *Array of strings.* List of additional module tags. Tags are converted to [Module](../../cr.html#module) object labels according to the template `module.deckhouse.io/<TAG>=""` (where `<TAG>` is the tag name).
 
 For example, if you specify `tags: ["test", "myTag"]`, then the corresponding Module object in the cluster will be assigned the labels `module.deckhouse.io/test=""` and `module.deckhouse.io/myTag=""`.
@@ -441,13 +441,14 @@ Example of metadata description for the `hello-world` module:
 name: hello-world
 tags: ["test", "myTag"]
 weight: 960
-stage: "Sandbox"
+stage: "Experimental"
 namespace: "test"
 subsystems:
   - test
   - test1
 descriptions: 
   en: "The module to say hello to the world."
+  ru: "Модуль, который приветствует мир."
 requirements:
     deckhouse: ">= 1.61"
     kubernetes: ">= 1.27"
