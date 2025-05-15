@@ -519,7 +519,6 @@ jobs:
           WERF_ENV: CE
           SKIP_PUSH_FOR_DEPLOY: ${{secrets.SKIP_PUSH_FOR_DEPLOY}}
         run: |
-          exit 1
           # SRC_NAME is a name of image from werf.yaml.
           # SRC is a source image name.
           # DST is an image name for docker push.
@@ -654,7 +653,6 @@ jobs:
           WERF_ENV: EE
           SKIP_PUSH_FOR_DEPLOY: ${{secrets.SKIP_PUSH_FOR_DEPLOY}}
         run: |
-          exit 1
           # SRC_NAME is a name of image from werf.yaml.
           # SRC is a source image name.
           # DST is an image name for docker push.
@@ -789,7 +787,6 @@ jobs:
           WERF_ENV: FE
           SKIP_PUSH_FOR_DEPLOY: ${{secrets.SKIP_PUSH_FOR_DEPLOY}}
         run: |
-          exit 1
           # SRC_NAME is a name of image from werf.yaml.
           # SRC is a source image name.
           # DST is an image name for docker push.
@@ -924,7 +921,6 @@ jobs:
           WERF_ENV: BE
           SKIP_PUSH_FOR_DEPLOY: ${{secrets.SKIP_PUSH_FOR_DEPLOY}}
         run: |
-          exit 1
           # SRC_NAME is a name of image from werf.yaml.
           # SRC is a source image name.
           # DST is an image name for docker push.
@@ -1059,7 +1055,6 @@ jobs:
           WERF_ENV: SE
           SKIP_PUSH_FOR_DEPLOY: ${{secrets.SKIP_PUSH_FOR_DEPLOY}}
         run: |
-          exit 1
           # SRC_NAME is a name of image from werf.yaml.
           # SRC is a source image name.
           # DST is an image name for docker push.
@@ -1194,7 +1189,6 @@ jobs:
           WERF_ENV: SE-plus
           SKIP_PUSH_FOR_DEPLOY: ${{secrets.SKIP_PUSH_FOR_DEPLOY}}
         run: |
-          exit 1
           # SRC_NAME is a name of image from werf.yaml.
           # SRC is a source image name.
           # DST is an image name for docker push.

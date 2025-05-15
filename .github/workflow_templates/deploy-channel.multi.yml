@@ -237,7 +237,6 @@ is used if DECKHOUSE_REGISTRY_HOST is not set.
           WERF_ENV: {!{ $werfEnv }!}
           SKIP_PUSH_FOR_DEPLOY: ${{secrets.SKIP_PUSH_FOR_DEPLOY}}
         run: |
-          exit 1
           # SRC_NAME is a name of image from werf.yaml.
           # SRC is a source image name.
           # DST is an image name for docker push.
