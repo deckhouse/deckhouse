@@ -52,10 +52,13 @@ func NewDiscoverer(logger *log.Logger, options ...Option) (*Discoverer, error) {
 		logger: logger,
 	}
 
-	config := &tls.Config{}
-	config.RootCAs = x509.NewCertPool()
+	systemCertPool, err := x509.SystemCertPool()
+	if err != nil {
+		return nil, fmt.Errorf("failed to copy system cert pool: %w", err)
+	}
+
 	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.TLSClientConfig = config
+	transport.TLSClientConfig = &tls.Config{RootCAs: systemCertPool}
 
 	discoverer.transport = transport
 
