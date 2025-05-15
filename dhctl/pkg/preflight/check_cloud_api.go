@@ -29,8 +29,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	cca "github.com/deckhouse/deckhouse/dhctl/pkg/preflight/check-cloud-api"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/frontend"
 )
 
 var (
@@ -46,7 +46,7 @@ func (pc *Checker) CheckCloudAPIAccessibility(ctx context.Context) error {
 
 	log.DebugLn("Checking if Cloud API is accessible from first master host")
 	wrapper, ok := pc.nodeInterface.(*ssh.NodeInterfaceWrapper)
-	var tun *frontend.Tunnel
+	var tun node.Tunnel
 
 	if !ok {
 		log.InfoLn("Checking if Cloud API is accessible through proxy was skipped (local run)")
