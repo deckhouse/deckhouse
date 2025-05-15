@@ -49,7 +49,8 @@ jobs:
 
 {!{/* Jobs for each CRI and Kubernetes version */}!}
 {!{- $criName := "Containerd" -}!}
-{!{- $kubernetesVersion := "1.29" -}!}
+{!{- $kubernetesVersion := "Automatic" -}!}
+{!{- $kubernetesDefaultVersion := (tmpl.Exec "e2e_kubernetes_default_version" $ | strings.TrimSpace ) -}!}
 {!{- $providerNames := slice "AWS" "EKS" "Azure" "GCP" "Yandex.Cloud" "OpenStack" "vSphere" "VCD" "Static" -}!}
 {!{- if $enableWorkflowOnTestRepos -}!}
 {!{-   $providerNames = slice "AWS" "OpenStack" "Azure" -}!}
@@ -65,7 +66,7 @@ jobs:
 {!{-   $dependsJobsForAlert = $dependsJobsForAlert | coll.Append $jobID -}!}
 {!{-   $jobName := printf "%s, %s, Kubernetes %s" $providerName $criName $kubernetesVersion -}!}
 {!{-   $jobCtx := (dict "provider" $provider "cri" $cri "criName" $criName "criEnv" $criEnv "layout" $layout) }!}
-{!{-   $jobCtx = coll.Merge $jobCtx (dict "kubernetesVersion" $kubernetesVersion "kubernetesVersionSlug" $kubernetesVersionSlug) }!}
+{!{-   $jobCtx = coll.Merge $jobCtx (dict "kubernetesVersion" $kubernetesVersion "kubernetesVersionSlug" $kubernetesVersionSlug "kubernetesDefaultVersion" $kubernetesDefaultVersion) }!}
 {!{-   $jobCtx = coll.Merge $jobCtx (dict "providerName" $providerName "workflowName" $workflowName "jobName" $jobName "jobID" $jobID) }!}
 {!{-   $jobCtx = coll.Merge $jobCtx (dict "sleepBeforeClusterTestingAlerts" "1800" "e2eStepTimeoutMinutes" "120") }!}
 {!{   tmpl.Exec "e2e_run_job_template" $jobCtx | strings.Indent 2 }!}
