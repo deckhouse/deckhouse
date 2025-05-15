@@ -64,10 +64,10 @@ func csrFilterFunc(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 		return nil, err
 	}
 
-	// CSR already has a certificate, ignoring
-	if len(csr.Status.Certificate) != 0 {
-		return nil, nil
-	}
+	//// CSR already has a certificate, ignoring
+	//if len(csr.Status.Certificate) != 0 {
+	//	return nil, nil
+	//}
 
 	//// CSR already has a approval status
 	//for _, c := range csr.Status.Conditions {
