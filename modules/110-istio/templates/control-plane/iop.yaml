@@ -180,8 +180,9 @@ spec:
       {{- end }}
   {{- end }}
 
+      variant: debug
       logging:
-        level: "default:info"
+        level: "all:debug"
       logAsJson: false
       imagePullPolicy: IfNotPresent
       imagePullSecrets:
