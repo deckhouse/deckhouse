@@ -50,7 +50,7 @@ properties:
         description: |
           The class name of the Ingress controller ([IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)) used for Deckhouse modules.
 
-          If the IngressClass name is `nginx`, the corresponding Ingress controller is automatically considered the default IngressClass. Using any other name will not make the controller the **default**.
+          If the IngressClass name is set to `nginx`, the corresponding Ingress controller is automatically considered the default IngressClass for all modules. If any other Ingress controller name is used, it will not be used by default.
         x-examples: [ "nginx" ]
         pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
       publicDomainTemplate:
