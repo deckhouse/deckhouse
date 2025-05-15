@@ -29,7 +29,7 @@ spec:
     node-role/frontend: ''
   tolerations:
     - effect: NoExecute
-      key: dedicated
+      key: key: dedicated.deckhouse.io
       operator: Equal
       value: frontend
   resourcesRequests:

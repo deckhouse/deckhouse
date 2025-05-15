@@ -70,7 +70,7 @@ kubectl describe vpa my-app-vpa
 
 1. Создайте конфигурации модуля VPA.
 
-   Для настройки VPA  нужно создать файл конфигурации для модуля. Пример конфигурации:
+   Для настройки VPA нужно создать файл конфигурации для модуля. Пример конфигурации:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -82,11 +82,11 @@ kubectl describe vpa my-app-vpa
      enabled: true
      settings:
        nodeSelector:
-         node-role/example: ""
+         node-role/system: ""
        tolerations:
-       - key: dedicated
+       - key: dedicated.deckhouse.io
          operator: Equal
-         value: example
+         value: system
       ```
 
 1. Примените файл конфигурации для VPA с помощью `kubectl apply -f <имя файла конфигурации>`.

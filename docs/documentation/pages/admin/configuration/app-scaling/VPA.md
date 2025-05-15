@@ -81,11 +81,11 @@ In the status section, you’ll see the following parameters:
      enabled: true
      settings:
        nodeSelector:
-         node-role/example: ""
+         node-role/system: ""
        tolerations:
-       - key: dedicated
+       - key: dedicated.deckhouse.io
          operator: Equal
-         value: example
+         value: system
     ```
 
 1. Apply the VPA configuration file using `kubectl apply -f <your-config-file-name>`.
