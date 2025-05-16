@@ -1,5 +1,5 @@
 {{- $falcoVersion := "0.40.0" }}
-{{- $falcoctlVersion := "0.10.1" }}
+{{- $falcoctlVersion := "0.11.0" }}
 {{- $pluginsVersion := "plugins/kafka/v0.1.3" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
@@ -30,14 +30,6 @@ imageSpec:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
-git:
-- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches/falcoctl
-  to: /patches/falcoctl
-  includePaths:
-  - '**/*.patch'
-  stageDependencies:
-    install:
-    - '**/*.patch'
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -49,7 +41,6 @@ shell:
   - cd /src/plugins
   - rm -rf shared plugins/cloudtrail plugins/dummy* plugins/gcpaudit plugins/github plugins/k8saudit-* plugins/kafka plugins/okta build docs
   - cd /src/falcoctl
-  - git apply /patches/falcoctl/*.patch --verbose
   - git rev-parse HEAD > RELEASE
   - git rev-parse HEAD > COMMIT
   - rm -rf /src/falco/.git
@@ -57,7 +48,7 @@ shell:
   - rm -rf /src/falcoctl/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-falcoctl-artifact
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+from: builder/golang-alpine
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
