@@ -9,6 +9,8 @@
         {{- $patch = true }}
       {{- end }}
     {{- end }}
+
+{{- $goVersion := ternary 1.24 1.23 (semverCompare ">=1.33.0" $version) }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 fromImage: common/distroless
@@ -42,11 +44,11 @@ shell:
     {{- if $patch }}
     - git apply /patches/*.patch --verbose
     {{- end }}
-    - rm -rf .git vendor
+    - rm -rf .git vendor tests/e2e
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine-{{ $goVersion }}
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
     add: /src
