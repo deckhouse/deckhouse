@@ -72,10 +72,15 @@ func clusterConfiguration(input *go_hook.HookInput, handler Handler) error {
 		secretFound           bool
 	)
 
-	snap := input.Snapshots["provider_cluster_configuration"]
-	if len(snap) > 0 {
+	snaps := input.NewSnapshots.Get("provider_cluster_configuration")
+	if len(snaps) > 0 {
 		secretFound = true
-		secret := snap[0].(*v1.Secret)
+		var secret = new(v1.Secret)
+		err := snaps[0].UnmarhalTo(secret)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal secret: %w", err)
+		}
+
 		if clusterConfigurationYAML, ok := secret.Data["cloud-provider-cluster-configuration.yaml"]; ok && len(clusterConfigurationYAML) > 0 {
 			m, err := config.ParseConfigFromData(string(clusterConfigurationYAML))
 			if err != nil {

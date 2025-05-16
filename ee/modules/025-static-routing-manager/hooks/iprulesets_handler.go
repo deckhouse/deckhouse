@@ -21,6 +21,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/hooks/lib"
 	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/hooks/lib/v1alpha1"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 const (
@@ -174,23 +175,35 @@ func ipRuleSetsHandler(input *go_hook.HookInput) error {
 	desiredIRSStatuses := make(map[string]irsStatusPlus)
 	desiredNodeIPRuleSets := make([]desiredNIRSInfo, 0)
 
+	nodes, err := sdkobjectpatch.UnmarshalToStruct[lib.NodeInfo](input.NewSnapshots, "nodes")
+	if err != nil {
+		return fmt.Errorf("unmarshal to struct: %v", err)
+	}
+
 	// Filling allNodes
-	for _, nodeRaw := range input.Snapshots["nodes"] {
-		node := nodeRaw.(lib.NodeInfo)
+	for _, node := range nodes {
 		allNodes[node.Name] = struct{}{}
 	}
 
+	rts, err := sdkobjectpatch.UnmarshalToStruct[RTLiteInfo](input.NewSnapshots, "routingtables")
+	if err != nil {
+		return fmt.Errorf("unmarshal to struct: %v", err)
+	}
+
 	// Filling allRTs
-	for _, rtRaw := range input.Snapshots["routingtables"] {
-		rt := rtRaw.(RTLiteInfo)
+	for _, rt := range rts {
 		if rt.IPRoutingTableID != 0 {
 			allRTs[rt.Name] = rt.IPRoutingTableID
 		}
 	}
 
+	nirss, err := sdkobjectpatch.UnmarshalToStruct[SDNInternalNodeIPRuleSetInfo](input.NewSnapshots, "nodeiprulesets")
+	if err != nil {
+		return fmt.Errorf("unmarshal to struct: %v", err)
+	}
+
 	// Filling actualNodeIPRuleSets and delete finalizers from orphan NIRSs
-	for _, nirsRaw := range input.Snapshots["nodeiprulesets"] {
-		nirs := nirsRaw.(SDNInternalNodeIPRuleSetInfo)
+	for _, nirs := range nirss {
 		actualNodeIPRuleSets[nirs.Name] = nirs
 		if _, ok := allNodes[nirs.NodeName]; !ok && nirs.IsDeleted {
 			input.Logger.Infof("An orphan NIRS %v was found. It will be deleted", nirs.Name)
@@ -204,10 +217,13 @@ func ipRuleSetsHandler(input *go_hook.HookInput) error {
 		}
 	}
 
-	// main loop
-	for _, irsiRaw := range input.Snapshots["iprulesets"] {
-		irsi := irsiRaw.(IPRuleSetInfo)
+	irsis, err := sdkobjectpatch.UnmarshalToStruct[IPRuleSetInfo](input.NewSnapshots, "iprulesets")
+	if err != nil {
+		return fmt.Errorf("unmarshal to struct: %v", err)
+	}
 
+	// main loop
+	for _, irsi := range irsis {
 		// DIRS stands for Desired IP Rule Set
 		tmpDIRSStatus := new(irsStatusPlus)
 		tmpDIRSStatus.failedNodes = make([]string, 0)
@@ -243,9 +259,7 @@ func ipRuleSetsHandler(input *go_hook.HookInput) error {
 
 		// Generate desired AffectedNodeIPRuleSets and ReadyNodeIPRuleSets, and filling affectedNodes
 		validatedSelector, _ := labels.ValidatedSelectorFromSet(irsi.NodeSelector)
-		for _, nodeiRaw := range input.Snapshots["nodes"] {
-			nodei := nodeiRaw.(lib.NodeInfo)
-
+		for _, nodei := range nodes {
 			if validatedSelector.Matches(labels.Set(nodei.Labels)) {
 				tmpDIRSStatus.AffectedNodeIPRuleSets++
 				nirsName := irsi.Name + "-" + lib.GenerateShortHash(irsi.Name+"#"+nodei.Name)

@@ -41,7 +41,7 @@ func ObjFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 }
 
 func foundStsInNamespaces(input *go_hook.HookInput) error {
-	namespaces := set.NewFromSnapshot(input.Snapshots["statefulsets"]).Slice()
+	namespaces := set.NewFromSnapshot(input.NewSnapshots.Get("statefulsets")).Slice()
 	input.Values.Set("kubeDns.internal.stsNamespaces", namespaces)
 	return nil
 }

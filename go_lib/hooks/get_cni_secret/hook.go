@@ -71,7 +71,7 @@ func RegisterHook(moduleName string) bool {
 
 func setCNISecretData(moduleName string) func(input *go_hook.HookInput) error {
 	return func(input *go_hook.HookInput) error {
-		cniSecretSnap := input.Snapshots["cni_secret"]
+		cniSecretSnap := input.NewSnapshots.Get("cni_secret")
 		if len(cniSecretSnap) == 0 {
 			input.Logger.Info("No cni secret received, skipping setting values")
 			return nil
@@ -83,7 +83,16 @@ func setCNISecretData(moduleName string) func(input *go_hook.HookInput) error {
 		}
 
 		path := fmt.Sprintf("%s.internal.cniSecretData", moduleName)
-		input.Values.Set(path, cniSecretSnap[0].(string))
+
+		var cniSecret string
+
+		err := cniSecretSnap[0].UnmarhalTo(&cniSecret)
+		if err != nil {
+			return fmt.Errorf("cannot unmarshal cni secret data: %w", err)
+		}
+
+		input.Values.Set(path, cniSecret)
+
 		return nil
 	}
 }
