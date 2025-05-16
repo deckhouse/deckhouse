@@ -124,9 +124,17 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, options *meta.DiscoveryD
 	}
 
 	flavorNames := make([]string, 0, len(flavors))
+	flavorsDetails := make([]v1alpha1.OpenstackFlavorDetails, 0, len(flavors))
 
 	for _, flavor := range flavors {
 		flavorNames = append(flavorNames, flavor.Name)
+		flavorsDetails = append(flavorsDetails, v1alpha1.OpenstackFlavorDetails{
+			Name:  flavor.Name,
+			VCPUs: flavor.VCPUs,
+			RAM:   flavor.RAM,
+			Disk:  flavor.Disk,
+		},
+		)
 	}
 
 	additionalSecurityGroups, err := d.getAdditionalSecurityGroups(ctx, provider)
@@ -163,6 +171,7 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, options *meta.DiscoveryD
 		APIVersion:               "deckhouse.io/v1alpha1",
 		Kind:                     "OpenStackCloudProviderDiscoveryData",
 		Flavors:                  flavorNames,
+		FlavorsDetails:           flavorsDetails,
 		AdditionalNetworks:       additionalNetworks,
 		AdditionalSecurityGroups: additionalSecurityGroups,
 		DefaultImageName:         discoveryData.Instances.ImageName,
