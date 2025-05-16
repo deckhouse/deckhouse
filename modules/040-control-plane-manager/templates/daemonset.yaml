@@ -36,6 +36,7 @@ memory: 10Mi
 {{- $_ := set $tpl_context "registry" $registry }}
 {{- $_ := set $tpl_context "clusterConfiguration" .Values.global.clusterConfiguration }}
 {{- $_ := set $tpl_context.clusterConfiguration "kubernetesVersion" .Values.controlPlaneManager.internal.effectiveKubernetesVersion }}
+{{- $_ := set $tpl_context "kubeadmDir"  (ternary "kubeadm/v1beta4" "kubeadm/v1beta3" (semverCompare ">=1.31" $tpl_context.clusterConfiguration.kubernetesVersion))}}
 {{- $_ := set $tpl_context "apiserver" dict }}
 {{- $_ := set $tpl_context "scheduler" dict }}
 {{- $_ := set $tpl_context "resourcesRequestsMilliCpuControlPlane" .Values.global.internal.modules.resourcesRequests.milliCpuControlPlane }}
@@ -120,10 +121,10 @@ memory: 10Mi
 {{- define "control_plane_config" }}
   {{- $context := index . 0 }}
   {{- $tpl_context := index . 1 }}
-kubeadm-config.yaml: {{ tpl ($context.Files.Get "kubeadm/config.yaml.tpl") $tpl_context | b64enc }}
-  {{- range $patch_file, $_ := $context.Files.Glob "kubeadm/patches/*" }}
-{{ base $patch_file }}: {{ tpl ($context.Files.Get $patch_file) $tpl_context | b64enc }}
-  {{- end }}
+kubeadm-config.yaml: {{ tpl ($context.Files.Get (printf "%s/config.yaml.tpl" $tpl_context.kubeadmDir)) $tpl_context | b64enc }}
+{{- range $path, $_ := $context.Files.Glob (printf "%s/patches/*" $tpl_context.kubeadmDir) }}
+{{ base $path }}: {{ tpl ($context.Files.Get $path) $tpl_context | b64enc }}
+{{- end }}
   {{- if $tpl_context.apiserver.oidcCA }}
 extra-file-oidc-ca.crt: {{ $tpl_context.apiserver.oidcCA | b64enc }}
   {{- end }}
