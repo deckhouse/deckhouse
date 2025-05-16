@@ -9,6 +9,7 @@ Deckhouse Virtualization Platform поставляется в редакциях
 Краткое сравнение ключевых возможностей и особенностей редакций:
 
 {% capture coming_soon %}<img src="/images/icons/intermediate_v2.svg" title="{{ site.data.i18n.common.coming_soon[page.lang] }}" aria-expanded="false">{% endcapture %}
+{% capture read_only %}<img src="/images/icons/intermediate_v2.svg" title="{{ site.data.i18n.common.read_only[page.lang] }}" aria-expanded="false">{% endcapture %}
 {% assign not_supported = '<img src="/images/icons/not_supported_v2.svg">' %}
 {% assign supported = '<img src="/images/icons/supported_v2.svg">' %}
 
@@ -24,9 +25,9 @@ Deckhouse Virtualization Platform поставляется в редакциях
 | Политики сайзинга виртуальных машин (VirtualMachineClass)       | {{ supported }}      | {{ supported }}  |
 | Унификация CPU-инструкций на гипервизорах (VirtualMachineClass) | {{ supported }}      | {{ supported }}  |
 | **Возможности управления**                                      |                      |                  |
-| Веб-интерфейс администратора                                    | {{ coming_soon }}    | {{ supported }}  |
+| Веб-интерфейс администратора                                    | {{ read_only }}    | {{ supported }}  |
 | Управление через CLI и доступ через API                         | {{ supported }}      | {{ supported }}  |
-| Импорт образов и дисков ВМ (qcow, vmdk, raw, vdi)     | {{ supported }}      | {{ supported }}  |
+| Импорт образов и дисков ВМ (qcow, vmdk, raw, vdi)               | {{ supported }}      | {{ supported }}  |
 | Общие и проектные образы для создания виртуальных машин         | {{ supported }}      | {{ supported }}  |
 | Кастомизация ОС ВМ при первом запуске                           | {{ supported }}      | {{ supported }}  |
 | Живая миграция виртуальных машин без простоя                    | {{ supported }}      | {{ supported }}  |

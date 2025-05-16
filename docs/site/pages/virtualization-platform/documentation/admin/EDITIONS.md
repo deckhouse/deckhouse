@@ -8,6 +8,7 @@ The Deckhouse Virtualization Platform is available in Community Edition (CE) and
 The table below provides brief a comparison of editions listing its main features and functions:
 
 {% capture coming_soon %}<img src="/images/icons/intermediate_v2.svg" title="{{ site.data.i18n.common.coming_soon[page.lang] }}" aria-expanded="false">{% endcapture %}
+{% capture read_only %}<img src="/images/icons/intermediate_v2.svg" title="{{ site.data.i18n.common.read_only[page.lang] }}" aria-expanded="false">{% endcapture %}
 {% assign not_supported = '<img src="/images/icons/not_supported_v2.svg">' %}
 {% assign supported = '<img src="/images/icons/supported_v2.svg">' %}
 
@@ -22,7 +23,7 @@ The table below provides brief a comparison of editions listing its main feature
 | Policies for sizing virtual machines (VirtualMachineClass)           | {{ supported }}        | {{ supported }}     |
 | Unification of CPU instructions on hypervisors (VirtualMachineClass) | {{ supported }}        | {{ supported }}     |
 | **Management capabilities**                                          |                        |                     |
-| Administrator web interface                                          | {{ coming_soon }}      | {{ supported }}     |
+| Administrator web interface                                          | {{ read_only }}      | {{ supported }}     |
 | Management through CLI and access via API                            | {{ supported }}        | {{ supported }}     |
 | Importing VM images and disks (qcow, vmdk, raw, vdi)                 | {{ supported }}        | {{ supported }}     |
 | Public and project images for creating virtual machines              | {{ supported }}        | {{ supported }}     |
