@@ -93,12 +93,10 @@ jobs:
       with:
         commit-message: |
           Automated Change: Update k8s patch version
-
-          Signed-off-by: deckhouse-BOaTswain <89150800+deckhouse-boatswain@users.noreply.github.com>
         title: "[run ci] Automated Change: Update k8s patch version"
         body-path: ".github/k8s_autoupdate_pull_request_template.md"
+        signoff: true
         branch: chore/k8s-autoupdate
-        token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
         base: main
         labels: e2e/run/yandex-cloud
         milestone: ${{ steps.get_milestone.outputs.milestone }}
