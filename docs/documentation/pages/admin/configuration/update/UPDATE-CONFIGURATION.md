@@ -104,14 +104,70 @@ regardless of update mode or update windows.
 A new patch release is automatically applied when it appears on the configured release channel.
 {% endalert %}
 
-#### Disabling automatic updates
+#### Release pinning
 
-{% alert level="danger" %}
-Disabling automatic updates blocks the installation of patch releases,
-which may contain critical vulnerability and bug fixes.
-{% endalert %}
+*Release pinning* refers to fully or partially disabling automatic updates.
 
-To completely disable automatic DKP updates, remove the [`releaseChannel`](../../../reference/mc/deckhouse/#parameters-releasechannel) parameter from the `deckhouse` module configuration.
+There are three ways to restrict automatic updates in Deckhouse:
+
+- Enable manual update approval mode.
+
+  In this mode, DKP will receive updates into the cluster,
+  but applying patch and minor versions will require [manual approval](#manual-update-approval).
+  
+  To enable manual update approval mode,
+  set the [`settings.update.mode`](../../../reference/mc/deckhouse/#parameters-update-mode) parameter to `Manual` in the `deckhouse` module configuration using the following command:
+
+  ```shell
+  kubectl patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"Manual"}}}}'
+  ```
+
+  To approve an update, run the following command, replacing `<DECKHOUSE-VERSION>` with the target DKP version:
+
+  ```shell
+  sudo -i d8 k patch DeckhouseRelease <DECKHOUSE-VERSION> --type=merge -p='{"approved": true}'
+  ```
+
+- Enable automatic updates for patch versions only.
+
+  In this mode, DKP will receive updates into the cluster,
+  but applying minor versions will require [manual approval](#manual-update-approval).
+  Patch versions within the current minor version will be applied automatically.
+
+  For example, if you have DKP version `v1.65.2` installed,
+  after enabling this mode, Deckhouse can automatically update to `v1.65.6`,
+  but it will not update to `v1.66.*` without manual approval.
+
+  To enable automatic updates for patch versions only,
+  set the [`settings.update.mode`](../../../reference/mc/deckhouse/#parameters-update-mode) parameter to `AutoPatch` in the `deckhouse` module configuration using the following command:
+
+  ```shell
+  kubectl patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"AutoPatch"}}}}'
+  ```
+
+  To approve a minor version update,
+  run the following command, replacing `<DECKHOUSE-VERSION>` with the target DKP version:
+
+  ```shell
+  sudo -i d8 k patch DeckhouseRelease <DECKHOUSE-VERSION> --type=merge -p='{"approved": true}'
+  ```
+
+- Manually set the target DKP version tag for the `deckhouse` Deployment
+  and remove the [`releaseChannel`](../../../reference/mc/deckhouse/#parameters-releasechannel) parameter from the `deckhouse` module configuration.
+
+  In this case, DKP will remain at the specified version,
+  and no information about newer available versions (DeckhouseRelease objects) will appear in the cluster.
+  
+  > **Important**. This mode blocks the installation of patch releases,
+  > which may include critical security or bug fixes.
+
+  Example of pinning version `v1.66.3` for DKP EE
+  and removing the `releaseChannel` parameter from the `deckhouse` module configuration:
+
+  ```shell
+  kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- kubectl set image deployment/deckhouse deckhouse=registry.deckhouse.ru/deckhouse/ee:v1.66.3
+  kubectl patch mc deckhouse --type=json -p='[{"op": "remove", "path": "/spec/settings/releaseChannel"}]'
+  ```
 
 ### Manual update approval
 
