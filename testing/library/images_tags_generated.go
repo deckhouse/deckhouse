@@ -255,6 +255,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"controller110":         "imageHash-ingressNginx-controller110",
 		"controller112":         "imageHash-ingressNginx-controller112",
 		"controller19":          "imageHash-ingressNginx-controller19",
+		"failoverCleaner":       "imageHash-ingressNginx-failoverCleaner",
 		"kruise":                "imageHash-ingressNginx-kruise",
 		"kruiseStateMetrics":    "imageHash-ingressNginx-kruiseStateMetrics",
 		"kubeRbacProxy":         "imageHash-ingressNginx-kubeRbacProxy",

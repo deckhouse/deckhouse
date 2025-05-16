@@ -104,6 +104,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-dashboard:metrics-scraper",
 	"system:serviceaccount:d8-dashboard:web",
 	"system:serviceaccount:d8-descheduler:descheduler",
+	"system:serviceaccount:d8-ingress-nginx:failover-cleaner",
 	"system:serviceaccount:d8-ingress-nginx:ingress-nginx",
 	"system:serviceaccount:d8-ingress-nginx:kruise",
 	"system:serviceaccount:d8-istio:alliance-ingressgateway",
