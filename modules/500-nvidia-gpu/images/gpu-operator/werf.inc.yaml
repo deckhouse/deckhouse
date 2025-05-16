@@ -3,6 +3,12 @@
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
+git:
+- add: /{{ .ModulePath }}modules/500-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -11,6 +17,7 @@ shell:
   - git clone --depth 1 --branch v{{ $operatorVersion }} $(cat /run/secrets/SOURCE_REPO)/NVIDIA/gpu-operator.git /src
   - cd /src
   - echo $(git rev-parse --short HEAD)-amd64 > .GIT_HASH
+  - git apply /patches/*.patch --verbose
   - rm -rf /src/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
