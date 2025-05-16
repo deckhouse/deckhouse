@@ -60,7 +60,7 @@ spec:
       containers:
       - name: gpu-operator
         {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 8 }}
-        image: {{ include "helm_lib_module_common_image" (list . "nvidiaGpu") }}
+        image: {{ include "helm_lib_module_image" (list . "gpuOperator") }}
         command: ["/gpu-operator"]
         env:
         - name: WATCH_NAMESPACE
