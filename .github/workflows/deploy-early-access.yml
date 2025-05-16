@@ -1329,6 +1329,14 @@ jobs:
           git checkout -b "${RELEASE_BRANCH_NAME}"
           git push --force origin "${RELEASE_BRANCH_NAME}"
 
+      - name: Send failure report
+        if: failure()
+        env:
+          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+        run: |
+          WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
+          bash ./.github/scripts/send-report.sh --custom-message "🛑Deploy to channel early-access failed!🛑\n[URL]($WORKFLOW_URL)"
+
       # <template: update_comment_on_finish>
       - name: Update comment on finish
         id: update_comment_on_finish
