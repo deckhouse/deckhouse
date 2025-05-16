@@ -1,4 +1,4 @@
-{{- if eq .Values.cloudProviderVsphere.internal.compatibilityFlag "legacy" }}
+{{- if eq .Values.cloudProviderVsphere.internal.compatibilityFlag "Legacy" }}
 {{- range $index, $storageClass := .Values.cloudProviderVsphere.internal.storageClasses }}
 ---
 apiVersion: storage.k8s.io/v1

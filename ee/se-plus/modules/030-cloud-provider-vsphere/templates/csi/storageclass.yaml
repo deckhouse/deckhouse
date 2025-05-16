@@ -1,4 +1,4 @@
-{{- if ne .Values.cloudProviderVsphere.internal.compatibilityFlag "legacy" }}
+{{- if ne .Values.cloudProviderVsphere.internal.compatibilityFlag "Legacy" }}
 {{- range $index, $storageClass := .Values.cloudProviderVsphere.internal.storageClasses }}
 {{- if eq $storageClass.datastoreType "Datastore" }}
 ---
