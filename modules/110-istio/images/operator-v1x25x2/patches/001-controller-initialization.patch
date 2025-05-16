@@ -1,5 +1,5 @@
 diff --git a/controllers/istiorevision/istiorevision_controller.go b/controllers/istiorevision/istiorevision_controller.go
-index 5e97cde4..fb57ac29 100644
+index 5e97cde4..cb65d74a 100644
 --- a/controllers/istiorevision/istiorevision_controller.go
 +++ b/controllers/istiorevision/istiorevision_controller.go
 @@ -18,10 +18,6 @@ import (
@@ -95,7 +95,7 @@ index 5e97cde4..fb57ac29 100644
  		APIVersion:         v1.GroupVersion.String(),
  		Kind:               v1.IstioRevisionKind,
  		Name:               rev.Name,
-@@ -163,12 +190,286 @@ func (r *Reconciler) installHelmCharts(ctx context.Context, rev *v1.IstioRevisio
+@@ -163,12 +190,283 @@ func (r *Reconciler) installHelmCharts(ctx context.Context, rev *v1.IstioRevisio
  		Controller:         ptr.Of(true),
  		BlockOwnerDeletion: ptr.Of(true),
  	}
@@ -114,15 +114,14 @@ index 5e97cde4..fb57ac29 100644
 +func (r *Reconciler) installHelmCharts(ctx context.Context, rev *v1.IstioRevision) (ctrl.Result, error) {
 +	log := logf.FromContext(ctx)
 +	releaseName := getReleaseName(rev)
-+	targetNamespace := rev.Spec.Namespace
++	namespace := rev.Spec.Namespace
 +
-+	// Check for manual override annotation
++	// Check for force reinstall annotation
 +	if rev.Annotations["sail.istio.io/force-reinstall"] == "true" {
-+		log.Info("Force reinstall requested via annotation")
 +		if err := r.forceCleanup(ctx, rev); err != nil {
 +			return ctrl.Result{}, fmt.Errorf("force cleanup failed: %w", err)
 +		}
-+		// Remove the annotation after cleanup
++		// Remove annotation
 +		patch := client.MergeFrom(rev.DeepCopy())
 +		delete(rev.Annotations, "sail.istio.io/force-reinstall")
 +		if err := r.Client.Patch(ctx, rev, patch); err != nil {
@@ -130,53 +129,51 @@ index 5e97cde4..fb57ac29 100644
 +		}
 +	}
 +
-+	// First attempt normal installation
-+	log.Info("Attempting Helm install/upgrade", "release", releaseName)
++	// Attempt installation
 +	_, err := r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(rev),
-+		helm.FromValues(rev.Spec.Values), targetNamespace, releaseName,
-+		getOwnerReference(rev))
++		helm.FromValues(rev.Spec.Values), namespace, releaseName, getOwnerReference(rev))
 +
 +	if err == nil {
 +		return ctrl.Result{}, nil
 +	}
 +
-+	// Handle uninstalling state
++	// Handle specific error cases
 +	if strings.Contains(err.Error(), "unexpected helm release status uninstalling") {
-+		log.Info("Release stuck in uninstalling state, investigating...")
-+
-+		// Find and log stuck resources
-+		if stuckResources, listErr := r.findStuckResources(ctx, releaseName, targetNamespace); listErr == nil {
-+			for _, res := range stuckResources {
-+				log.Info("Stuck resource found",
-+					"kind", res.GetKind(),
-+					"name", res.GetName(),
-+					"namespace", res.GetNamespace())
-+			}
-+		}
-+
-+		// Recommend manual cleanup
-+		log.Error(nil, "Release stuck in uninstalling state - manual intervention required",
-+			"action", fmt.Sprintf("Run: helm delete -n %s %s --no-hooks", targetNamespace, releaseName),
-+			"alternative", "Annotate IstioRevision with sail.istio.io/force-reinstall=true")
-+
-+		return ctrl.Result{}, fmt.Errorf("release %s stuck in uninstalling state - manual cleanup required", releaseName)
++		return r.handleStuckRelease(ctx, rev, err)
 +	}
 +
-+	// Handle ownership conflicts
-+	if strings.Contains(err.Error(), "invalid ownership metadata") {
-+		log.Info("Ownership conflict detected, attempting force install")
-+
-+		forcedValues := createValuesWithForce(rev.Spec.Values)
-+
-+		if _, forceErr := r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(rev),
-+			forcedValues, targetNamespace, releaseName, getOwnerReference(rev)); forceErr != nil {
-+			return ctrl.Result{}, fmt.Errorf("force install failed: %w", forceErr)
-+		}
-+		return ctrl.Result{}, nil
++	if strings.Contains(err.Error(), "is forbidden") {
++		return ctrl.Result{}, fmt.Errorf("RBAC permissions missing: %w", err)
 +	}
 +
-+	// All other errors
 +	return ctrl.Result{}, fmt.Errorf("installation failed: %w", err)
++}
++
++func (r *Reconciler) handleStuckRelease(ctx context.Context, rev *v1.IstioRevision, installErr error) (ctrl.Result, error) {
++	log := logf.FromContext(ctx)
++	releaseName := getReleaseName(rev)
++	namespace := rev.Spec.Namespace
++
++	// Log detailed error
++	log.Error(installErr, "Release stuck in uninstalling state")
++
++	// Find and log stuck resources
++	if stuckResources, err := r.findStuckResources(ctx, releaseName, namespace); err == nil {
++		for _, res := range stuckResources {
++			log.Info("Stuck resource",
++				"kind", res.GetKind(),
++				"name", res.GetName(),
++				"namespace", res.GetNamespace())
++		}
++	}
++
++	// Provide clear recovery instructions
++	log.Info("Manual recovery required",
++		"action1", fmt.Sprintf("kubectl delete secret -n %s -l owner=helm,name=%s", namespace, releaseName),
++		"action2", fmt.Sprintf("kubectl delete deploy,svc,sa -n %s -l release=%s", namespace, releaseName),
++		"action3", "kubectl annotate istiorevision "+rev.Name+" sail.istio.io/force-reinstall=true --overwrite")
++
++	return ctrl.Result{}, fmt.Errorf("release %s stuck in uninstalling state - manual cleanup required", releaseName)
 +}
 +
 +// Force cleanup implementation
