@@ -96,6 +96,7 @@ jobs:
         title: "[run ci] Automated Change: Update k8s patch version"
         body-path: ".github/k8s_autoupdate_pull_request_template.md"
         signoff: true
+        token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
         branch: chore/k8s-autoupdate
         base: main
         labels: e2e/run/yandex-cloud
