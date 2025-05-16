@@ -89,6 +89,9 @@ common:
   contact_us_button:
     en: Contact us
     ru: Свяжитесь с нами
+  read_only:
+    en: "In read only mode"
+    ru: "В режиме только для чтения"
   coming_soon:
     en: "coming soon..."
     ru: "скоро..."
