@@ -52,15 +52,14 @@ spec:
       affinity:
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       serviceAccountName: nvidia-gpu-operator
       imagePullSecrets:
       - name: deckhouse-registry
       {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
       containers:
       - name: gpu-operator
-        securityContext:
-          privileged: true
-          readOnlyRootFilesystem: true
+        {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "nvidiaGpu") }}
         command: ["/gpu-operator"]
         env:
