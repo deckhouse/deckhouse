@@ -2,16 +2,13 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
-fromCacheVersion: "2025-02-20 10:00"
 final: false
 git:
-- add: /modules/300-prometheus/images/{{ $.ImageName }}
-  to: /
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
   stageDependencies:
     install:
       - "**/*"
-  includePaths:
-    - patches
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -23,7 +20,7 @@ shell:
     - rm -rf .git ./operations
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 final: false
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact

@@ -4,7 +4,7 @@ image: e2e-opentofu-eks
 # current openstack zip-archive with error: "unzip: zip flag 8 (streaming) is not supported"
 fromImage: common/alt-p11-artifact
 import:
-  {{- $k8sVersion := "1.28"}}
+  {{- $k8sVersion := "1.29"}}
   {{- $image_version := printf "%s.%d" $k8sVersion (index $.CandiVersionMap "k8s" $k8sVersion "patch") | replace "." "-" }}
   - image: common/kubernetes-artifact-{{ $image_version }}
     add: /src/_output/bin/kubectl
@@ -86,7 +86,7 @@ shell:
 ---
 image: e2e-eks-terraform-plugins
 final: false
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 import:
 - image: e2e-eks-terraform-plugins-src-artifact
   add: /src

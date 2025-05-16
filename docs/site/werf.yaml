@@ -30,19 +30,11 @@ cleanup:
 gitWorktree:
   forceShallowClone: true
 ---
+# Files.Get prefix
+{{- $_ := set . "prefix" "" }}
+---
 # Base Images
-{{- $_ := set . "Images" (.Files.Get "../../candi/image_versions.yml" | fromYaml) }}
-  {{- range $k, $v := .Images }}
-    {{- $baseImagePath := (printf "%s%s" $.Images.REGISTRY_PATH (trimSuffix "/" $v)) }}
-    {{- if or (eq $.Mode "development") (eq $.Mode "module") (eq $.Mode "local") }}
-      {{- if or ( ne $k "BASE_JEKYLL" ) ( and (not $.UsePrebuildJekyllImage ) ( eq $k "BASE_JEKYLL" ) )}}
-        {{- $baseImagePath = trimSuffix "/" $v | splitList "@" | first }}
-      {{- end }}
-    {{- end }}
-    {{- if ne $k "REGISTRY_PATH" }}
-      {{- $_ := set $.Images $k $baseImagePath }}
-    {{- end }}
-  {{- end }}
+{{- include "parse_base_images_map" . }}
 ---
 {{- if and (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
 image: site-external-artifacts
@@ -324,7 +316,7 @@ import:
 {{- end }}
 ---
 image: web-backend-srv
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 final: false
 shell:
   install:
@@ -396,7 +388,7 @@ import:
 ---
 # Build scanner, which fetch modules documentation from list of specified registries
 image: registry-modules-watcher-artifact
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 shell:
   install:
   - cd /go/src/app

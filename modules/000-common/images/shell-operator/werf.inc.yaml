@@ -28,6 +28,10 @@ import:
   add: /usr/bin/bash
   to: /bin/bash
   before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /shell-operator/sh
+  to: /bin/sh
+  before: setup
 - image: tools/jq
   add: /usr/bin/jq
   before: setup
@@ -93,3 +97,4 @@ shell:
   - cp -r shell_lib.sh frameworks shell-operator /shell-operator
   - chown -R 64535:64535 /shell-operator
   - chmod 700 /shell-operator/shell-operator
+  - ln -s /bin/sh /bin/bash && ln -s /bin/bash /shell-operator/sh

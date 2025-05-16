@@ -12,7 +12,7 @@
     - includes:
      - binaries install-cni *(built from src)*
      - binaries istio-cni *(built from src)*
-  - build image based on `BASE_GOLANG_23_ALPINE` image
+  - build image based on `builder/golang-alpine-1.23` image
   - includes:
     - src of istio *(loaded from common-ver artifact)*
     - binaries install-cni *(built from src)*
@@ -23,7 +23,7 @@
     - includes:
       - binaries operator *(built from src)*
       - manifests of istio *(loaded from common-ver artifact)*
-  - build image based on `BASE_GOLANG_23_ALPINE` image
+  - build image based on `builder/golang-alpine-1.23` image
     - includes:
       - src of istio *(loaded from common-ver artifact)*
       - binaries operator *(built from src)*
@@ -34,7 +34,7 @@
     - includes:
       - binaries pilot-discovery *(built from src)*
       - templates for envoy bootstrap *(loaded from common-ver artifact)*
-  - build image based on `BASE_GOLANG_23_ALPINE` image
+  - build image based on `builder/golang-alpine-1.23` image
     - includes:
       - src of istio *(loaded from common-ver artifact)*
       - binaries pilot-discovery *(built from src)*
@@ -49,7 +49,7 @@
       - binaries pilot-agent *(built from src)*
       - templates for envoy bootstrap *(loaded from common-ver artifact)*
       - binaries envoy *(!!!from image loaded from hub.docker.com)*
-  - image for build pilot-agent based on `BASE_GOLANG_23_ALPINE` image
+  - image for build pilot-agent based on `builder/golang-alpine-1.23` image
     - includes:
         - src of istio/proxy *(loaded from fox)*
         - binaries pilot-agent *(built from src)*
@@ -62,7 +62,7 @@
       - binaries pilot-agent *(built from src)*
       - templates for envoy bootstrap *(loaded from common-ver artifact)*
       - binaries envoy *(built from src, see the description below)*
-  - image for build pilot-agent based on `BASE_GOLANG_23_ALPINE` image
+  - image for build pilot-agent based on `builder/golang-alpine-1.23` image
     - includes:
         - src of istio/proxy *(loaded from fox)*
         - patches in src of istio for fix CVE
