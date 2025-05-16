@@ -16,7 +16,7 @@ shell:
   install:
   - git clone --depth 1 --branch v{{ $operatorVersion }} $(cat /run/secrets/SOURCE_REPO)/NVIDIA/gpu-operator.git /src
   - cd /src
-  - echo $(git rev-parse --short HEAD)-amd64 > .GIT_HASH
+  - echo $(git rev-parse --short HEAD) > .GIT_HASH
   - git apply /patches/*.patch --verbose
   - rm -rf /src/.git
 ---
