@@ -834,6 +834,46 @@ spec:
                     anyOf:
                       - pattern: '^[a-zA-Z0-9_\-]+$'
                       - pattern: '^\{\{\ [a-zA-Z0-9\\\-][a-zA-Z0-9\[\]_\\\-\.]+\ \}\}$'
+                transformation:
+                  type: array
+                  description: >
+                    List of transformation steps. Each step defines a specific action and parameters for it
+                  items:
+                    oneOf:
+                      - description: "Normalizes names with a dot, replacing dots with underscores"
+                        type: object
+                        required:
+                          - action
+                        properties:
+                          action:
+                            type: string
+                            enum: ["normalizeLabelKeys"]
+                      - description: "Ensures that the message field contains a Json object"
+                        type: object
+                        required:
+                          - action
+                          - targetField
+                        properties:
+                          action:
+                            type: string
+                            enum: ["ensureStructuredMessage"]
+                          targetField:
+                            type: string
+                            description: "The target field into which wrapped string is placed"
+                      - description: "Removes the specified labels"
+                        type: object
+                        required:
+                          - action
+                          - labels
+                        properties:
+                          action:
+                            type: string
+                            enum: ["dropLabels"]
+                          labels:
+                            type: array
+                            description: "List of labels to remove"
+                            items:
+                              type: string
                 buffer:
                   type: object
                   oneOf:
