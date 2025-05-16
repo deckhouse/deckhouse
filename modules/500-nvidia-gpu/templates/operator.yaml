@@ -60,6 +60,7 @@ spec:
       - name: gpu-operator
         securityContext:
           privileged: true
+          readOnlyRootFilesystem: true
         image: {{ include "helm_lib_module_common_image" (list . "nvidiaGpu") }}
         command: ["/gpu-operator"]
         env:
