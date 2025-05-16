@@ -3,6 +3,33 @@ cpu: 200m
 memory: 100Mi
 {{- end }}
 ---
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: nvidia-gpu-operator
+  namespace: d8-nvidia-gpu
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu-operator")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: nvidia-gpu-operator
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: gpu-operator
+      minAllowed:
+        cpu: 200m
+        memory: 100Mi
+      maxAllowed:
+        cpu: 500m
+        memory: 350Mi
+{{- end }}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -11,6 +38,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu-operator")) | nindent 2 }}
 spec:
   replicas: 1
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app.kubernetes.io/component: "nvidia-gpu-operator"
@@ -20,8 +48,6 @@ spec:
       labels:
         app.kubernetes.io/component: "nvidia-gpu-operator"
         app: "nvidia-gpu-operator"
-      annotations:
-        {{- toYaml .Values.operator.annotations | nindent 8 }}
     spec:
       affinity:
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
@@ -32,6 +58,8 @@ spec:
       {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
       containers:
       - name: gpu-operator
+        securityContext:
+          privileged: true
         image: {{ include "helm_lib_module_common_image" (list . "nvidiaGpu") }}
         command: ["/gpu-operator"]
         env:

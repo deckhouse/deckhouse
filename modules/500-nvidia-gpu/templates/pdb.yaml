@@ -1,0 +1,12 @@
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: nvidia-gpu-operator
+  namespace: d8-nvidia-gpu
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu-operator")) | nindent 2 }}
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: "nvidia-gpu-operator"
