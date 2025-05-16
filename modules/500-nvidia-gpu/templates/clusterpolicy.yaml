@@ -44,7 +44,6 @@ spec:
     repository: nvcr.io/nvidia/k8s
     image: k8s-device-plugin
     version: v0.17.1
-    # resources: {{ toYaml .Values.devicePlugin.resources | nindent 6 }}
     env:
       - name: PASS_DEVICE_SPECS
         value: "true"
