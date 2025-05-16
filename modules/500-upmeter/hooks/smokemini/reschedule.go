@@ -24,12 +24,12 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"github.com/tidwall/gjson"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini/internal/scheduler"
 	"github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 )
 
 const (
@@ -166,6 +166,10 @@ func reschedule(input *go_hook.HookInput) error {
 	// Update values
 	state[x] = newSts
 	input.Values.Set(statePath, state)
+
+	maxUnavailable := maxStsPerNode(state)
+	input.Values.Set("upmeter.internal.smokeMini.pdb.maxUnavailable", maxUnavailable)
+
 	return nil
 }
 
@@ -240,4 +244,26 @@ func firstNonEmpty(xs ...string) string {
 func smokeMiniEnabled(v go_hook.PatchableValuesCollector) bool {
 	disabled := v.Get("upmeter.smokeMiniDisabled").Bool()
 	return !disabled
+}
+
+func maxStsPerNode(state scheduler.State) int {
+	counts := make(map[string]int)
+	minValue := 1
+
+	for _, sts := range state {
+		if sts.Node != "" {
+			counts[sts.Node]++
+		}
+	}
+
+	max := 0
+	for _, c := range counts {
+		if c > max {
+			max = c
+		}
+	}
+	if max == 0 {
+		return minValue
+	}
+	return max
 }
