@@ -123,6 +123,11 @@
       },
       "pipeline": "testpipe",
       "mode": "bulk",
+      "labels": {
+        "app": "{{ parsed_data.ap_p[0].a }}",
+        "app-with-line": "{{ parsed_data.ap-p[0].a }}",
+        "foo": "bar"
+      },
       "suppress_type_name": true
     }
   }

@@ -1,22 +1,22 @@
-/*
-Copyright 2021 Flant JSC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// Copyright 2025 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package destination
 
 import (
+	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
@@ -37,6 +37,8 @@ type Kafka struct {
 	TLS CommonTLS `json:"tls"`
 
 	SASL KafkaSASL `json:"sasl,omitempty"`
+
+	Labels map[string]string `json:"labels,omitempty"`
 }
 
 type KafkaSASL struct {
@@ -49,6 +51,24 @@ type KafkaSASL struct {
 
 func NewKafka(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Kafka {
 	spec := cspec.Kafka
+
+	labels := make(map[string]string)
+
+	var dataField string
+	keys := make([]string, 0, len(cspec.ExtraLabels))
+	for key := range cspec.ExtraLabels {
+		keys = append(keys, key)
+	}
+
+	sort.Strings(keys)
+	for _, k := range keys {
+		if validMustacheTemplate.MatchString(cspec.ExtraLabels[k]) {
+			dataField = validMustacheTemplate.FindStringSubmatch(cspec.ExtraLabels[k])[1]
+			labels[k] = fmt.Sprintf("{{ parsed_data.%s }}", dataField)
+		} else {
+			labels[k] = cspec.ExtraLabels[k]
+		}
+	}
 
 	tls := CommonTLS{
 		CAFile:            decodeB64(spec.TLS.CAFile),
@@ -83,12 +103,26 @@ func NewKafka(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Kafka {
 		TimestampFormat: "rfc3339",
 	}
 	if spec.Encoding.Codec == v1alpha1.EncodingCodecCEF {
+		deviceVendor := "Deckhouse"
+		if spec.Encoding.CEF.DeviceVendor != "" {
+			deviceVendor = spec.Encoding.CEF.DeviceVendor
+		}
+
+		deviceProduct := "log-shipper-agent"
+		if spec.Encoding.CEF.DeviceProduct != "" {
+			deviceProduct = spec.Encoding.CEF.DeviceProduct
+		}
+
+		deviceVersion := "1"
+		if spec.Encoding.CEF.DeviceVersion != "" {
+			deviceVersion = spec.Encoding.CEF.DeviceVersion
+		}
 		encoding.Codec = "cef"
 		encoding.CEF = CEFEncoding{
 			Version:            "V1",
-			DeviceVendor:       "Deckhouse",
-			DeviceProduct:      "log-shipper-agent",
-			DeviceVersion:      "1",
+			DeviceVendor:       deviceVendor,
+			DeviceProduct:      deviceProduct,
+			DeviceVersion:      deviceVersion,
 			DeviceEventClassID: "Log event",
 			Name:               "cef.name",
 			Severity:           "cef.severity",
@@ -120,6 +154,7 @@ func NewKafka(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Kafka {
 		SASL:             sasl,
 		KeyField:         spec.KeyField,
 		Compression:      "gzip",
+		Labels:           labels,
 		BootstrapServers: strings.Join(spec.BootstrapServers, ","),
 	}
 }
