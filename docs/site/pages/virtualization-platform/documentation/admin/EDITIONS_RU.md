@@ -8,9 +8,9 @@ Deckhouse Virtualization Platform поставляется в редакциях
 
 Краткое сравнение ключевых возможностей и особенностей редакций:
 
-{% capture coming_soon %}<img src="/images/icons/note.svg" title="{{ site.data.i18n.common.coming_soon[page.lang] }}" aria-expanded="false">{% endcapture %}
-{% assign not_supported = '<img src="/images/icons/not_supported.svg">' %}
-{% assign supported = '<img src="/images/icons/supported.svg">' %}
+{% capture coming_soon %}<img src="/images/icons/intermediate_v2.svg" title="{{ site.data.i18n.common.coming_soon[page.lang] }}" aria-expanded="false">{% endcapture %}
+{% assign not_supported = '<img src="/images/icons/not_supported_v2.svg">' %}
+{% assign supported = '<img src="/images/icons/supported_v2.svg">' %}
 
 | Возможности                                                     | CE                   | EE               |
 |-----------------------------------------------------------------|----------------------|------------------|
