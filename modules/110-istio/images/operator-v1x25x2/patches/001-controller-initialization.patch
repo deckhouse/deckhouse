@@ -1,24 +1,42 @@
 diff --git a/controllers/istiorevision/istiorevision_controller.go b/controllers/istiorevision/istiorevision_controller.go
-index 5e97cde4..cf79bcf4 100644
+index 5e97cde4..fb57ac29 100644
 --- a/controllers/istiorevision/istiorevision_controller.go
 +++ b/controllers/istiorevision/istiorevision_controller.go
-@@ -18,9 +18,15 @@ import (
+@@ -18,10 +18,6 @@ import (
  	"context"
  	"errors"
  	"fmt"
-+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-+	"k8s.io/apimachinery/pkg/runtime/schema"
-+	"math"
- 	"path"
- 	"reflect"
- 	"regexp"
-+	"strconv"
-+	"strings"
-+	"time"
- 
+-	"path"
+-	"reflect"
+-	"regexp"
+-
  	"github.com/go-logr/logr"
  	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
-@@ -99,18 +105,26 @@ func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *ru
+ 	"github.com/istio-ecosystem/sail-operator/pkg/config"
+@@ -42,8 +38,13 @@ import (
+ 	rbacv1 "k8s.io/api/rbac/v1"
+ 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+ 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+ 	"k8s.io/apimachinery/pkg/runtime"
++	"k8s.io/apimachinery/pkg/runtime/schema"
+ 	"k8s.io/apimachinery/pkg/types"
++	"path"
++	"reflect"
++	"regexp"
+ 	ctrl "sigs.k8s.io/controller-runtime"
+ 	"sigs.k8s.io/controller-runtime/pkg/builder"
+ 	"sigs.k8s.io/controller-runtime/pkg/client"
+@@ -53,6 +54,8 @@ import (
+ 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+ 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+ 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
++	"strconv"
++	"strings"
+ 
+ 	"istio.io/istio/pkg/ptr"
+ )
+@@ -99,18 +102,26 @@ func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *ru
  func (r *Reconciler) Reconcile(ctx context.Context, rev *v1.IstioRevision) (ctrl.Result, error) {
  	log := logf.FromContext(ctx)
  
@@ -49,76 +67,205 @@ index 5e97cde4..cf79bcf4 100644
  	}
  
  	log.Info("Installing Helm chart")
-@@ -154,7 +168,93 @@ func (r *Reconciler) validate(ctx context.Context, rev *v1.IstioRevision) error
+@@ -153,9 +164,25 @@ func (r *Reconciler) validate(ctx context.Context, rev *v1.IstioRevision) error
+ 
  	return nil
  }
++func createValuesWithForce(values *v1.Values) map[string]interface{} {
++	forcedValues := make(map[string]interface{})
  
 -func (r *Reconciler) installHelmCharts(ctx context.Context, rev *v1.IstioRevision) error {
+-	ownerReference := metav1.OwnerReference{
++	// Convert Values struct to map[string]interface{} first
++	baseValues := helm.FromValues(values)
++
++	// Copy all values
++	for k, v := range baseValues {
++		forcedValues[k] = v
++	}
++
++	// Add force flag
++	forcedValues["force"] = true
++	return forcedValues
++}
++
++// Helper function to create owner reference
++func getOwnerReference(rev *v1.IstioRevision) metav1.OwnerReference {
++	return metav1.OwnerReference{
+ 		APIVersion:         v1.GroupVersion.String(),
+ 		Kind:               v1.IstioRevisionKind,
+ 		Name:               rev.Name,
+@@ -163,12 +190,286 @@ func (r *Reconciler) installHelmCharts(ctx context.Context, rev *v1.IstioRevisio
+ 		Controller:         ptr.Of(true),
+ 		BlockOwnerDeletion: ptr.Of(true),
+ 	}
++}
++
++// Helper function to check if resource belongs to release
++func belongsToRelease(obj unstructured.Unstructured, releaseName string) bool {
++	annotations := obj.GetAnnotations()
++	if annotations == nil {
++		return false
++	}
++	return annotations["meta.helm.sh/release-name"] == releaseName
++}
++
++// Main installation function
 +func (r *Reconciler) installHelmCharts(ctx context.Context, rev *v1.IstioRevision) (ctrl.Result, error) {
 +	log := logf.FromContext(ctx)
 +	releaseName := getReleaseName(rev)
 +	targetNamespace := rev.Spec.Namespace
 +
-+	// Get retry count from context or annotation
-+	retryCount := 0
-+	if val, ok := rev.Annotations["retry-count"]; ok {
-+		if count, err := strconv.Atoi(val); err == nil {
-+			retryCount = count
++	// Check for manual override annotation
++	if rev.Annotations["sail.istio.io/force-reinstall"] == "true" {
++		log.Info("Force reinstall requested via annotation")
++		if err := r.forceCleanup(ctx, rev); err != nil {
++			return ctrl.Result{}, fmt.Errorf("force cleanup failed: %w", err)
++		}
++		// Remove the annotation after cleanup
++		patch := client.MergeFrom(rev.DeepCopy())
++		delete(rev.Annotations, "sail.istio.io/force-reinstall")
++		if err := r.Client.Patch(ctx, rev, patch); err != nil {
++			log.Error(err, "Failed to remove force-reinstall annotation")
 +		}
 +	}
-+
-+	if retryCount >= 3 {
-+		log.Error(nil, "Maximum retries reached for uninstalling release",
-+			"release", releaseName)
-+		return ctrl.Result{}, fmt.Errorf("release %s stuck in uninstalling state after %d attempts", releaseName, retryCount)
-+	}
-+
-+	log.Info("Installing Helm chart",
-+		"release", releaseName,
-+		"namespace", targetNamespace,
-+		"chart", constants.IstiodChartName,
-+		"version", rev.Spec.Version,
-+		"attempt", retryCount+1)
 +
 +	// First attempt normal installation
-+	result, installErr := r.tryInstall(ctx, rev)
-+	if installErr == nil {
-+		// Clear retry count on success
-+		if retryCount > 0 {
-+			if err := r.clearRetryCount(ctx, rev); err != nil {
-+				log.Error(err, "Failed to clear retry count")
-+			}
-+		}
-+		return result, nil
++	log.Info("Attempting Helm install/upgrade", "release", releaseName)
++	_, err := r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(rev),
++		helm.FromValues(rev.Spec.Values), targetNamespace, releaseName,
++		getOwnerReference(rev))
++
++	if err == nil {
++		return ctrl.Result{}, nil
 +	}
 +
 +	// Handle uninstalling state
-+	if strings.Contains(installErr.Error(), "unexpected helm release status uninstalling") {
-+		// Increment retry count
-+		retryCount++
-+		if err := r.setRetryCount(ctx, rev, retryCount); err != nil {
-+			log.Error(err, "Failed to update retry count")
++	if strings.Contains(err.Error(), "unexpected helm release status uninstalling") {
++		log.Info("Release stuck in uninstalling state, investigating...")
++
++		// Find and log stuck resources
++		if stuckResources, listErr := r.findStuckResources(ctx, releaseName, targetNamespace); listErr == nil {
++			for _, res := range stuckResources {
++				log.Info("Stuck resource found",
++					"kind", res.GetKind(),
++					"name", res.GetName(),
++					"namespace", res.GetNamespace())
++			}
 +		}
 +
-+		log.Info("Investigating stuck uninstall", "release", releaseName)
++		// Recommend manual cleanup
++		log.Error(nil, "Release stuck in uninstalling state - manual intervention required",
++			"action", fmt.Sprintf("Run: helm delete -n %s %s --no-hooks", targetNamespace, releaseName),
++			"alternative", "Annotate IstioRevision with sail.istio.io/force-reinstall=true")
 +
-+		if cleanupErr := r.cleanupOrphanedResources(ctx, rev); cleanupErr != nil {
-+			log.Error(cleanupErr, "Failed to cleanup orphaned resources")
-+		}
-+
-+		// Progressive backoff: 1m, 2m, 4m
-+		requeueAfter := time.Duration(math.Pow(2, float64(retryCount-1))) * time.Minute
-+
-+		log.Info("Release still uninstalling, will retry",
-+			"release", releaseName,
-+			"retryCount", retryCount,
-+			"nextAttemptIn", requeueAfter)
-+
-+		return ctrl.Result{RequeueAfter: requeueAfter}, nil
++		return ctrl.Result{}, fmt.Errorf("release %s stuck in uninstalling state - manual cleanup required", releaseName)
 +	}
 +
-+	// Handle other errors
-+	return result, installErr
++	// Handle ownership conflicts
++	if strings.Contains(err.Error(), "invalid ownership metadata") {
++		log.Info("Ownership conflict detected, attempting force install")
++
++		forcedValues := createValuesWithForce(rev.Spec.Values)
++
++		if _, forceErr := r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(rev),
++			forcedValues, targetNamespace, releaseName, getOwnerReference(rev)); forceErr != nil {
++			return ctrl.Result{}, fmt.Errorf("force install failed: %w", forceErr)
++		}
++		return ctrl.Result{}, nil
++	}
++
++	// All other errors
++	return ctrl.Result{}, fmt.Errorf("installation failed: %w", err)
++}
++
++// Force cleanup implementation
++func (r *Reconciler) forceCleanup(ctx context.Context, rev *v1.IstioRevision) error {
++	log := logf.FromContext(ctx)
++	releaseName := getReleaseName(rev)
++	namespace := rev.Spec.Namespace
++
++	// 1. Delete the helm secret
++	if err := r.deleteHelmSecret(ctx, releaseName, namespace); err != nil {
++		log.Error(err, "Failed to delete helm secret")
++	}
+ 
++	// 2. Clean up remaining resources
++	resourceTypes := []schema.GroupVersionKind{
++		{Group: "apps", Version: "v1", Kind: "Deployment"},
++		{Group: "", Version: "v1", Kind: "Service"},
++		{Group: "", Version: "v1", Kind: "ServiceAccount"},
++	}
++
++	for _, gvk := range resourceTypes {
++		if err := r.deleteResourcesByType(ctx, gvk, namespace, releaseName); err != nil {
++			log.Error(err, "Failed to cleanup resources", "kind", gvk.Kind)
++		}
++	}
++
++	return nil
++}
++
++// Delete helm secrets
++func (r *Reconciler) deleteHelmSecret(ctx context.Context, releaseName, namespace string) error {
++	secretList := &corev1.SecretList{}
++	if err := r.Client.List(ctx, secretList, client.InNamespace(namespace)); err != nil {
++		return err
++	}
++
++	for _, secret := range secretList.Items {
++		if secret.Type == "helm.sh/release.v1" && strings.HasPrefix(secret.Name, "sh.helm.release.v1."+releaseName) {
++			if err := r.Client.Delete(ctx, &secret); err != nil {
++				return err
++			}
++		}
++	}
++	return nil
++}
++
++// Delete resources by type
++func (r *Reconciler) deleteResourcesByType(ctx context.Context, gvk schema.GroupVersionKind, namespace, releaseName string) error {
++	list := &unstructured.UnstructuredList{}
++	list.SetGroupVersionKind(gvk)
++
++	if err := r.Client.List(ctx, list, client.InNamespace(namespace)); err != nil {
++		return err
++	}
++
++	for _, item := range list.Items {
++		if belongsToRelease(item, releaseName) {
++			if err := r.Client.Delete(ctx, &item); err != nil && !apierrors.IsNotFound(err) {
++				return err
++			}
++		}
++	}
++	return nil
++}
++
++// Find stuck resources
++func (r *Reconciler) findStuckResources(ctx context.Context, releaseName, namespace string) ([]unstructured.Unstructured, error) {
++	var stuckResources []unstructured.Unstructured
++	resourceTypes := []schema.GroupVersionKind{
++		{Group: "apps", Version: "v1", Kind: "Deployment"},
++		{Group: "", Version: "v1", Kind: "Service"},
++		{Group: "", Version: "v1", Kind: "ServiceAccount"},
++	}
++
++	for _, gvk := range resourceTypes {
++		list := &unstructured.UnstructuredList{}
++		list.SetGroupVersionKind(gvk)
++
++		if err := r.Client.List(ctx, list, client.InNamespace(namespace)); err != nil {
++			return nil, err
++		}
++
++		for _, item := range list.Items {
++			if belongsToRelease(item, releaseName) {
++				stuckResources = append(stuckResources, item)
++			}
++		}
++	}
++	return stuckResources, nil
 +}
 +
 +func (r *Reconciler) setRetryCount(ctx context.Context, rev *v1.IstioRevision, count int) error {
@@ -140,15 +287,16 @@ index 5e97cde4..cf79bcf4 100644
 +}
 +
 +func (r *Reconciler) tryInstall(ctx context.Context, rev *v1.IstioRevision) (ctrl.Result, error) {
-+	values := helm.FromValues(rev.Spec.Values)
- 	ownerReference := metav1.OwnerReference{
- 		APIVersion:         v1.GroupVersion.String(),
- 		Kind:               v1.IstioRevisionKind,
-@@ -164,15 +264,100 @@ func (r *Reconciler) installHelmCharts(ctx context.Context, rev *v1.IstioRevisio
- 		BlockOwnerDeletion: ptr.Of(true),
- 	}
- 
--	values := helm.FromValues(rev.Spec.Values)
+ 	values := helm.FromValues(rev.Spec.Values)
++	ownerReference := metav1.OwnerReference{
++		APIVersion:         v1.GroupVersion.String(),
++		Kind:               v1.IstioRevisionKind,
++		Name:               rev.Name,
++		UID:                rev.UID,
++		Controller:         ptr.Of(true),
++		BlockOwnerDeletion: ptr.Of(true),
++	}
++
 +	// First try normal install
  	_, err := r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(rev),
  		values, rev.Spec.Namespace, getReleaseName(rev), ownerReference)
@@ -235,16 +383,4 @@ index 5e97cde4..cf79bcf4 100644
 +		}
  	}
  	return nil
- }
- 
-+func belongsToRelease(obj unstructured.Unstructured, releaseName string) bool {
-+	annotations := obj.GetAnnotations()
-+	if annotations == nil {
-+		return false
-+	}
-+	return annotations["meta.helm.sh/release-name"] == releaseName
-+}
-+
- func getReleaseName(rev *v1.IstioRevision) string {
- 	return fmt.Sprintf("%s-%s", rev.Name, constants.IstiodChartName)
  }
