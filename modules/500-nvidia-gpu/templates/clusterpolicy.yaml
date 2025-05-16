@@ -2,7 +2,7 @@ apiVersion: nvidia.com/v1
 kind: ClusterPolicy
 metadata:
   name: cluster-policy
-  {{- include "helm_lib_module_labels" (list . (dict "app" nvidia-gpu)) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
 spec:
   hostPaths:
     rootFS: "/"
@@ -15,7 +15,7 @@ spec:
       version: 12.8.1-base-ubi9
       imagePullPolicy: IfNotPresent
   daemonsets:
-  {{- include "helm_lib_module_labels" (list . (dict "app" nvidia-gpu)) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
     priorityClassName: system-node-critical
     updateStrategy: RollingUpdate
     rollingUpdate:

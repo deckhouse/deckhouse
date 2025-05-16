@@ -4,13 +4,13 @@ kind: ServiceAccount
 metadata:
   name: nvidia-gpu-operator
   namespace: d8-nvidia-gpu
-  {{- include "helm_lib_module_labels" (list . (dict "app" nvidia-gpu)) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: nvidia-gpu-operator
-  {{- include "helm_lib_module_labels" (list . (dict "app" nvidia-gpu)) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
 rules:
 - apiGroups:
   - ""
@@ -112,7 +112,7 @@ kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: nvidia-gpu-operator
-  {{- include "helm_lib_module_labels" (list . (dict "app" nvidia-gpu)) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
 subjects:
 - kind: ServiceAccount
   name: nvidia-gpu-operator
@@ -126,7 +126,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: nvidia-gpu-operator
-  {{- include "helm_lib_module_labels" (list . (dict "app" nvidia-gpu)) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
 rules:
 - apiGroups:
   - apps
@@ -196,7 +196,7 @@ kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: nvidia-gpu-operator
-  {{- include "helm_lib_module_labels" (list . (dict "app" nvidia-gpu)) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
 subjects:
 - kind: ServiceAccount
   name: nvidia-gpu-operator
