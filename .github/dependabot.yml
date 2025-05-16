@@ -160,15 +160,6 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/ee/modules/610-service-with-healthchecks/images/artifact"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
   directory: "/ee/modules/650-runtime-audit-engine/hack/far-converter"
   labels:
   - "type/dependencies"
