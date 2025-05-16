@@ -1577,7 +1577,7 @@ spec:
                   properties:
                     labelSelector:
                       description: A label selector is a label query over a set
-                        of resources. The result of matchLabels and matchExpressions
+                        of `staticInstances` resources. The result of matchLabels and matchExpressions
                         are ANDed. An empty label selector matches all objects.
                         A null label selector matches no objects.
                       properties:
@@ -1637,7 +1637,7 @@ spec:
                       x-kubernetes-map-type: atomic
                     count:
                       description: |
-                          The number of existing instances to bootstrap and add to the cluster.
+                          The number of existing `staticInstances` to bootstrap and add to the cluster.
                       type: integer
                       minimum: 0
                       default: 0

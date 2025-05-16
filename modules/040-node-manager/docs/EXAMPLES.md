@@ -193,9 +193,10 @@ A brief example of adding a static node to a cluster using [Cluster API Provider
    EOF
    ```
 
-   > The `labelSelector` field in the `NodeGroup` resource is immutable. To update the `labelSelector`, you need to create a new `NodeGroup` and move the static nodes into it by changing their labels.
 
-1. Create a [NodeGroup](cr.html#nodegroup) resource in the cluster:
+1. Create a [NodeGroup](cr.html#nodegroup) resource in the cluster. Value of `count` defines number of `staticInstances`  which fall under the `labelSelector` that will be bootstrapped and joined into the `nodeGroup`, in this example this is `1`:
+
+   > The `labelSelector` field in the `NodeGroup` resource is immutable. To update the `labelSelector`, you need to create a new `NodeGroup` and move the static nodes into it by changing their labels.
 
    ```shell
    kubectl create -f - <<EOF
