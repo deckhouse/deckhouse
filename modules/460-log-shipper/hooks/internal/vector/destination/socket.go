@@ -42,6 +42,8 @@ type Socket struct {
 func NewSocket(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Socket {
 	spec := cspec.Socket
 
+	var labels map[string]string
+
 	result := &Socket{
 		CommonSettings: CommonSettings{
 			Name:   ComposeName(name),
@@ -110,21 +112,6 @@ func NewSocket(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Socket {
 		encoding.Codec = "gelf"
 	default:
 		encoding.Codec = "json"
-	}
-
-	labels := map[string]string{
-		// Kubernetes logs labels
-		"namespace":    "{{ namespace }}",
-		"container":    "{{ container }}",
-		"image":        "{{ image }}",
-		"pod":          "{{ pod }}",
-		"node":         "{{ node }}",
-		"pod_ip":       "{{ pod_ip }}",
-		"stream":       "{{ stream }}",
-		"pod_labels_*": "{{ pod_labels }}",
-		"node_group":   "{{ node_group }}",
-		"pod_owner":    "{{ pod_owner }}",
-		"host":         "{{ host }}",
 	}
 
 	var dataField string

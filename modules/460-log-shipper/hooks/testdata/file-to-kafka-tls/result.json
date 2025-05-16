@@ -78,19 +78,6 @@
       },
       "topic": "logs",
       "compression": "gzip",
-      "labels": {
-        "container": "{{ container }}",
-        "host": "{{ host }}",
-        "image": "{{ image }}",
-        "namespace": "{{ namespace }}",
-        "node": "{{ node }}",
-        "node_group": "{{ node_group }}",
-        "pod": "{{ pod }}",
-        "pod_ip": "{{ pod_ip }}",
-        "pod_labels_*": "{{ pod_labels }}",
-        "pod_owner": "{{ pod_owner }}",
-        "stream": "{{ stream }}"
-      },
       "tls": {
         "crt_file": "-----BEGIN CERTIFICATE-----\nMIIC/TCCAeWgAwIBAgIIM699xN0eSrIwDQYJKoZIhvcNAQELBQAwFTETMBEGA1UE\nAxMKa3ViZXJuZXRlczAeFw0yMDA4MTIxNjIyNTNaFw0yMTA4MTIxNjIyNTRaMD8x\nFTATBgNVBAoTDHN5c3RlbTpub2RlczEmMCQGA1UEAxMdc3lzdGVtOm5vZGU6c3Rh\nbmRhcmQtbWFzdGVyLTAwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQD8\nZmCrwGH8z11dUSysJwQCrQwLm4ro84dbgKYpleHF3Sysi1LBVCTJeSZDRFyWWg9P\ny9FSCD4amR6/NYZslKpAoXBxkYjXg2/6X5t7vff0vZ0pbdiZLAlf7c9hEy487Fz2\nBRpAqeFxZZY11lwXe8yA/EhnlJEViBGPY7CGYvZ0YfWvPS0bDbbfLNCvOTBxzUg4\nOjoCstHgNBglLr1JwyN6qulxKeCf/LbzV9YxxTMWYtwkQrF9Tm9nroqcxw5lRgeV\nms+GcXOopiNyktXROFdbFNWe9F+CpDPk++ojOZ4e0egYlR/ZgY6kO+RXY968EuZR\n87n7GEA8FxVMi92hLRDxAgMBAAGjJzAlMA4GA1UdDwEB/wQEAwIFoDATBgNVHSUE\nDDAKBggrBgEFBQcDAjANBgkqhkiG9w0BAQsFAAOCAQEAKUmzzTWhlTBRJMEVSO1p\nIhWhgopjyIzqe6lPFnQ3f/1k5pdeARlnyx+r8lT/u5zlpk+cv8VOvpN2teAK/XaW\npyCof8elxL60z0AR8Rom90qI6Hme9i5nYz20FGAdyf18rcV5DoQ8FkFTPXqHK+rq\ngrp/7HqKXJcwaREcXofnXyOXIZZIQFJSa24CyijLPBTFt+aIUtx1OhupLWOLfJn7\nuVoRpXe0Z9J7TFgwctzggJFGSgSXeVVcmZDU+cFDeSDd0ktS4Z3wXJRXfdvSFoCK\nyqaDNZ9MTZfev7U2DXEOSGNTx7GJN3wiNjnp1k9ZF9RiN5ZgTexZjv2BNKgjKx3m\nmQ==\n-----END CERTIFICATE-----\n",
         "key_file": "-----BEGIN RSA PRIVATE KEY-----\nMIIEpgIBAAKCAQEA/GZgq8Bh/M9dXVEsrCcEAq0MC5uK6POHW4CmKZXhxd0srItS\nwVQkyXkmQ0RclloPT8vRUgg+GpkevzWGbJSqQKFwcZGI14Nv+l+be7339L2dKW3Y\nmSwJX+3PYRMuPOxc9gUaQKnhcWWWNdZcF3vMgPxIZ5SRFYgRj2OwhmL2dGH1rz0t\nGw223yzQrzkwcc1IODo6ArLR4DQYJS69ScMjeqrpcSngn/y281fWMcUzFmLcJEKx\nfU5vZ66KnMcOZUYHlZrPhnFzqKYjcpLV0ThXWxTVnvRfgqQz5PvqIzmeHtHoGJUf\n2YGOpDvkV2PevBLmUfO5+xhAPBcVTIvdoS0Q8QIDAQABAoIBAQCp0T/tjuzeqa5J\noNoLodyC6GcYUDiv71n86JvjkuJqvBrYpIyzYqe1nntt+srIpiNzLtDQ/pa6Updr\nUtn0qDm8bmI3JxII3ngy3qzAHtp7oi/htfRrakOMdXZ3++26M9V/+YLmSuZR42Wj\nJ2yiqDq59gPJHR5YfEpETXBxmpfzSLd0hPGVO2ZatWSEdzOAnnub5DelzeptmbkQ\nEE0z+ZZK4qgfTukR3w9CHvgrPIXjwfhkx5/YehJMYVBib5y57aavg22Q4qCU3Np5\nS10qzc4pteGIPX/YJGC9TiavWVC2G8Yz9f9yxtlzkTnN74IOgcIxdd70tnlsvw3y\nP4YloYk5AoGBAP7YWlDXpYNtJMAVODD9yGz5rD+ePaXp763IEQph/GEEzyIwRNx3\nePq3Wa8DhENTe2+/lvDrqFy5Ad6OzEzQ/owjUvvto6JAeYxL6xF3FasuL7yiQAVz\nQKywSCwDjebOssA+Ry0q4KlWPXJhUoAXy0GoCUtZFSosIUgeAnv37+VfAoGBAP2L\nMChvIWVl0U8qXEPPvR5wMeyh8YS/K2Z8mUAE3tE0TkYoCjSznsuW7uTOzXnv7zbB\nTsxOwUk1I3ojUlLjj400kII1rMw+JMSh8qK5Wy4uYYUUEpQ/abNL+mYoT0yhHAfF\nhMUCZ3awx/emYbjCSQJimOG8Hj6sJ/KiEyCJaduvAoGBAOuE2VrzINSoTplyQt8L\n+2mzCFw3CvRFkasCRbVZvxuOjTskbs9tXpIeVrTmxBpQkbhB0OZQc+VVWYPsZqTr\nVQQANVX8VgjCG1Lsao9WheEQqy9ip1YiIHg35ks+8aqIBiyiobb9dGkq+Vi21r7o\nvoCsIgLPjj7OT+fNTDBzf/JzAoGBAJVn3uIE0p4oyJWo9aO0F9KG9LRnnaXG7TFA\nfSIffJm1A+cNky4JJqr77xx/zM9tFv6iHOgCBJ46JQTFKa7Uj/P6pKlGLeRRPmNs\nt0kyhsuI40iDUotvbr8MJ6rpWAlk6tqdhyZ8yzFC7SM/NViljFZOeZ6TtxLhaczt\nuu2ya+HbAoGBAPMp9CvGQ7cCD3WsiOtR/wlIh9gis3SuOcSiqrTq2GJKt5zxsIhS\n1VUhvicD0BBLQPlhagzozF8ETXylLaIE+xHjZ743GmIOPK2gTmknrEjzge3OtF0a\ncUFmAb4OkfCOSvPH/EY3j9458Ypy8zUCCKZcsUEJARsna1Qh7FFjm8fm\n-----END RSA PRIVATE KEY-----\n",

@@ -238,18 +238,7 @@
       },
       "mode": "bulk",
       "labels": {
-        "container": "{{ container }}",
-        "foo": "bar",
-        "host": "{{ host }}",
-        "image": "{{ image }}",
-        "namespace": "{{ namespace }}",
-        "node": "{{ node }}",
-        "node_group": "{{ node_group }}",
-        "pod": "{{ pod }}",
-        "pod_ip": "{{ pod_ip }}",
-        "pod_labels_*": "{{ pod_labels }}",
-        "pod_owner": "{{ pod_owner }}",
-        "stream": "{{ stream }}"
+        "foo": "bar"
       },
       "suppress_type_name": true
     },
@@ -281,18 +270,7 @@
         "enabled": true
       },
       "labels": {
-        "container": "{{ container }}",
-        "foo": "bar",
-        "host": "{{ host }}",
-        "image": "{{ image }}",
-        "namespace": "{{ namespace }}",
-        "node": "{{ node }}",
-        "node_group": "{{ node_group }}",
-        "pod": "{{ pod }}",
-        "pod_ip": "{{ pod_ip }}",
-        "pod_labels_*": "{{ pod_labels }}",
-        "pod_owner": "{{ pod_owner }}",
-        "stream": "{{ stream }}"
+        "foo": "bar"
       },
       "keepalive": {
         "time_secs": 7200
@@ -325,18 +303,7 @@
       },
       "labels": {
         "app": "{{ parsed_data.ap_p[0].a }}",
-        "container": "{{ container }}",
-        "foo": "bar",
-        "host": "{{ host }}",
-        "image": "{{ image }}",
-        "namespace": "{{ namespace }}",
-        "node": "{{ node }}",
-        "node_group": "{{ node_group }}",
-        "pod": "{{ pod }}",
-        "pod_ip": "{{ pod_ip }}",
-        "pod_labels_*": "{{ pod_labels }}",
-        "pod_owner": "{{ pod_owner }}",
-        "stream": "{{ stream }}"
+        "foo": "bar"
       },
       "remove_label_fields": true,
       "out_of_order_action": "rewrite_timestamp"

@@ -96,19 +96,6 @@
       },
       "mode": "tcp",
       "address": "192.168.1.1:9200",
-      "labels": {
-        "container": "{{ container }}",
-        "host": "{{ host }}",
-        "image": "{{ image }}",
-        "namespace": "{{ namespace }}",
-        "node": "{{ node }}",
-        "node_group": "{{ node_group }}",
-        "pod": "{{ pod }}",
-        "pod_ip": "{{ pod_ip }}",
-        "pod_labels_*": "{{ pod_labels }}",
-        "pod_owner": "{{ pod_owner }}",
-        "stream": "{{ stream }}"
-      },
       "tls": {
         "verify_hostname": false,
         "verify_certificate": true
@@ -127,19 +114,6 @@
         "timestamp_format": "rfc3339"
       },
       "mode": "udp",
-      "labels": {
-        "container": "{{ container }}",
-        "host": "{{ host }}",
-        "image": "{{ image }}",
-        "namespace": "{{ namespace }}",
-        "node": "{{ node }}",
-        "node_group": "{{ node_group }}",
-        "pod": "{{ pod }}",
-        "pod_ip": "{{ pod_ip }}",
-        "pod_labels_*": "{{ pod_labels }}",
-        "pod_owner": "{{ pod_owner }}",
-        "stream": "{{ stream }}"
-      },
       "address": "192.168.1.1:3000"
     },
     "destination/cluster/test-socket3-dest": {
@@ -158,18 +132,7 @@
       "address": "0.0.0.0:7252",
       "labels": {
         "cef.name": "d8",
-        "cef.severity": "1",
-        "container": "{{ container }}",
-        "host": "{{ host }}",
-        "image": "{{ image }}",
-        "namespace": "{{ namespace }}",
-        "node": "{{ node }}",
-        "node_group": "{{ node_group }}",
-        "pod": "{{ pod }}",
-        "pod_ip": "{{ pod_ip }}",
-        "pod_labels_*": "{{ pod_labels }}",
-        "pod_owner": "{{ pod_owner }}",
-        "stream": "{{ stream }}"
+        "cef.severity": "1"
       },
       "tls": {
         "verify_hostname": true,
@@ -210,19 +173,6 @@
         }
       },
       "mode": "udp",
-      "labels": {
-        "container": "{{ container }}",
-        "host": "{{ host }}",
-        "image": "{{ image }}",
-        "namespace": "{{ namespace }}",
-        "node": "{{ node }}",
-        "node_group": "{{ node_group }}",
-        "pod": "{{ pod }}",
-        "pod_ip": "{{ pod_ip }}",
-        "pod_labels_*": "{{ pod_labels }}",
-        "pod_owner": "{{ pod_owner }}",
-        "stream": "{{ stream }}"
-      },
       "address": "0.0.0.0:7252"
     }
   }

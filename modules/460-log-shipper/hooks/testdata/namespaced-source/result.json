@@ -152,18 +152,7 @@
         "verify_certificate": true
       },
       "labels": {
-        "container": "{{ container }}",
-        "foo": "bar",
-        "host": "{{ host }}",
-        "image": "{{ image }}",
-        "namespace": "{{ namespace }}",
-        "node": "{{ node }}",
-        "node_group": "{{ node_group }}",
-        "pod": "{{ pod }}",
-        "pod_ip": "{{ pod_ip }}",
-        "pod_labels_*": "{{ pod_labels }}",
-        "pod_owner": "{{ pod_owner }}",
-        "stream": "{{ stream }}"
+        "foo": "bar"
       },
       "remove_label_fields": true,
       "out_of_order_action": "rewrite_timestamp"
@@ -191,18 +180,7 @@
       },
       "compression": "gzip",
       "labels": {
-        "container": "{{ container }}",
-        "foo": "bar",
-        "host": "{{ host }}",
-        "image": "{{ image }}",
-        "namespace": "{{ namespace }}",
-        "node": "{{ node }}",
-        "node_group": "{{ node_group }}",
-        "pod": "{{ pod }}",
-        "pod_ip": "{{ pod_ip }}",
-        "pod_labels_*": "{{ pod_labels }}",
-        "pod_owner": "{{ pod_owner }}",
-        "stream": "{{ stream }}"
+        "foo": "bar"
       },
       "bulk": {
         "action": "index",

@@ -47,20 +47,7 @@ type Splunk struct {
 func NewSplunk(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Splunk {
 	spec := cspec.Splunk
 
-	labels := map[string]string{
-		// Kubernetes logs labels
-		"namespace":    "{{ namespace }}",
-		"container":    "{{ container }}",
-		"image":        "{{ image }}",
-		"pod":          "{{ pod }}",
-		"node":         "{{ node }}",
-		"pod_ip":       "{{ pod_ip }}",
-		"stream":       "{{ stream }}",
-		"pod_labels_*": "{{ pod_labels }}",
-		"node_group":   "{{ node_group }}",
-		"pod_owner":    "{{ pod_owner }}",
-		"host":         "{{ host }}",
-	}
+	var labels map[string]string
 
 	var dataField string
 	keys := make([]string, 0, len(cspec.ExtraLabels))

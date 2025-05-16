@@ -50,18 +50,7 @@
         "timestamp_format": "rfc3339"
       },
       "labels": {
-        "app": "{{ parsed_data.pod_labels.app }}",
-        "container": "{{ container }}",
-        "host": "{{ host }}",
-        "image": "{{ image }}",
-        "namespace": "{{ namespace }}",
-        "node": "{{ node }}",
-        "node_group": "{{ node_group }}",
-        "pod": "{{ pod }}",
-        "pod_ip": "{{ pod_ip }}",
-        "pod_labels_*": "{{ pod_labels }}",
-        "pod_owner": "{{ pod_owner }}",
-        "stream": "{{ stream }}"
+        "app": "{{ parsed_data.pod_labels.app }}"
       },
       "compression": "gzip",
       "default_token": "test-token",

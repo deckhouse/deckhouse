@@ -125,18 +125,7 @@
       "labels": {
         "app": "{{ parsed_data.ap_p[0].a }}",
         "app-with-line": "{{ parsed_data.ap-p[0].a }}",
-        "container": "{{ container }}",
-        "foo": "bar",
-        "host": "{{ host }}",
-        "image": "{{ image }}",
-        "namespace": "{{ namespace }}",
-        "node": "{{ node }}",
-        "node_group": "{{ node_group }}",
-        "pod": "{{ pod }}",
-        "pod_ip": "{{ pod_ip }}",
-        "pod_labels_*": "{{ pod_labels }}",
-        "pod_owner": "{{ pod_owner }}",
-        "stream": "{{ stream }}"
+        "foo": "bar"
       },
       "mode": "bulk",
       "suppress_type_name": true
