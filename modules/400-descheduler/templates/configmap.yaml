@@ -19,7 +19,7 @@ data:
           {{- if $d.nodeLabelSelector }}
           nodeSelector: {{ $d.nodeLabelSelector }}
           {{- end }}
-          evictLocalStoragePods: {{ if $d.evictLocalStoragePods }}{{ $d.evictLocalStoragePods.enabled }}{{- else }}false{{- end }}
+          evictLocalStoragePods: {{ if $d.evictLocalStoragePods }}{{ $d.evictLocalStoragePods }}{{- else }}false{{- end }}
           evictSystemCriticalPods: false
           ignorePvcPods: false
           evictFailedBarePods: true
