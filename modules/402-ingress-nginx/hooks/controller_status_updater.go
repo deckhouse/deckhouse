@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -27,27 +28,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
-
-var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Kubernetes: []go_hook.KubernetesConfig{
-		{
-			Name:       "ingress-nginx-daemonset",
-			ApiVersion: "apps.kruise.io/v1alpha1",
-			Kind:       "DaemonSet",
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{"d8-ingress-nginx"},
-				},
-			},
-			LabelSelector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": "controller",
-				},
-			},
-			FilterFunc: filterIngressNginxDaemonset,
-		},
-	},
-}, handleStatusUpdater)
 
 type DaemonSet struct {
 	Metadata struct {
@@ -68,6 +48,49 @@ type DaemonSetFilterResult struct {
 	DesiredNumber     int64
 	UpdatedNumber     int64
 }
+
+type IngressNginxController struct {
+	Metadata struct {
+		Generation int64  `json:"generation"`
+		Name       string `json:"name"`
+	} `json:"metadata"`
+	Status struct {
+		ObservedGeneration int64 `json:"observedGeneration"`
+	} `json:"status"`
+}
+
+type IngressNginxControllerFilterResult struct {
+	Name               string
+	Generation         int64
+	ObservedGeneration int64
+}
+
+var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	Kubernetes: []go_hook.KubernetesConfig{
+		{
+			Name:       "ingress-nginx-daemonset",
+			ApiVersion: "apps.kruise.io/v1alpha1",
+			Kind:       "DaemonSet",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"d8-ingress-nginx"},
+				},
+			},
+			LabelSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": "controller",
+				},
+			},
+			FilterFunc: filterIngressNginxDaemonset,
+		},
+		{
+			Name:       "ingress-nginx-controller",
+			ApiVersion: "deckhouse.io/v1",
+			Kind:       "IngressNginxController",
+			FilterFunc: filterIngressNginxController,
+		},
+	},
+}, handleStatusUpdater)
 
 func filterIngressNginxDaemonset(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var ds DaemonSet
@@ -90,52 +113,106 @@ func filterIngressNginxDaemonset(obj *unstructured.Unstructured) (go_hook.Filter
 	}, nil
 }
 
+func filterIngressNginxController(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var controller IngressNginxController
+	err := sdk.FromUnstructured(obj, &controller)
+	if err != nil {
+		return nil, err
+	}
+
+	return IngressNginxControllerFilterResult{
+		Name:               controller.Metadata.Name,
+		Generation:         controller.Metadata.Generation,
+		ObservedGeneration: controller.Status.ObservedGeneration,
+	}, nil
+}
+
 func handleStatusUpdater(input *go_hook.HookInput) error {
+	// Prepare a cache
+	if !input.Values.Exists("ingressNginx.internal.appliedControllerVersion") {
+		input.Values.Set("ingressNginx.internal.appliedControllerVersion", map[string]any{})
+	}
+	if !input.Values.Exists("ingressNginx.internal.controllerState") {
+		input.Values.Set("ingressNginx.internal.controllerState", map[string]any{})
+	}
+
+	controllerSnapshots := input.Snapshots["ingress-nginx-controller"]
+	for _, snap := range controllerSnapshots {
+		controllerInfo := snap.(IngressNginxControllerFilterResult)
+		controllerState := map[string]any{
+			"generation":         controllerInfo.Generation,
+			"observedGeneration": controllerInfo.ObservedGeneration,
+		}
+		keyValueForState := fmt.Sprintf("ingressNginx.internal.controllerState.%s", controllerInfo.Name)
+		input.Values.Set(keyValueForState, controllerState)
+	}
+
+	// DaemonSet handler
 	daemonSetSnapshots := input.Snapshots["ingress-nginx-daemonset"]
 	for _, snap := range daemonSetSnapshots {
 		daemonSetInfo := snap.(DaemonSetFilterResult)
+		controllerName := strings.TrimPrefix(daemonSetInfo.Name, "controller-")
+		keyValueForVersion := fmt.Sprintf("ingressNginx.internal.appliedControllerVersion.%s", controllerName)
+		keyValueForState := fmt.Sprintf("ingressNginx.internal.controllerState.%s", controllerName)
+
+		var generationState int64
+		var observedGenerationState int64
+		if val, ok := input.Values.GetOk(keyValueForState); ok {
+			if item, ok := val.Map()["generation"]; ok {
+				generationState = item.Int()
+			}
+			if item, ok := val.Map()["observedGeneration"]; ok {
+				observedGenerationState = item.Int()
+			}
+		}
 
 		var appliedVersion = "unknown"
 		var conditions map[string]any
-		now := time.Now().Format(time.RFC3339)
-		if daemonSetInfo.NumberReady == daemonSetInfo.DesiredNumber && daemonSetInfo.UpdatedNumber == daemonSetInfo.DesiredNumber {
+		var observedGeneration int64
+
+		isReady := daemonSetInfo.DesiredNumber > 0 && daemonSetInfo.NumberReady == daemonSetInfo.DesiredNumber
+		isUpdated := daemonSetInfo.DesiredNumber > 0 && daemonSetInfo.UpdatedNumber == daemonSetInfo.DesiredNumber
+		if isReady && isUpdated {
 			conditions = map[string]any{
 				"type":           "Ready",
 				"status":         "True",
-				"lastUpdateTime": now,
+				"lastUpdateTime": time.Now().Format(time.RFC3339),
 				"reason":         "AllPodsReady",
 				"message":        "All controller pods are ready",
 			}
+			observedGeneration = generationState
 
 			appliedVersion = daemonSetInfo.ControllerVersion
-			input.Values.Set("ingressNginx.internal.appliedControllerVersion", appliedVersion)
+			input.Values.Set(keyValueForVersion, appliedVersion)
 		} else {
 			conditions = map[string]any{
 				"type":           "Ready",
 				"status":         "False",
-				"lastUpdateTime": now,
+				"lastUpdateTime": time.Now().Format(time.RFC3339),
 				"reason":         "PodsNotReady",
 				"message":        "Controller pods are not ready",
 			}
+			observedGeneration = observedGenerationState
 
-			if val, ok := input.Values.GetOk("ingressNginx.internal.appliedControllerVersion"); ok {
+			if val, ok := input.Values.GetOk(keyValueForVersion); ok {
 				appliedVersion = val.String()
 			}
 		}
 
 		statusPatch := map[string]any{
 			"status": map[string]any{
-				"version":    appliedVersion,
-				"conditions": []map[string]any{conditions},
+				"version":            appliedVersion,
+				"observedGeneration": observedGeneration,
+				"conditions":         []map[string]any{conditions},
 			},
 		}
 
-		input.PatchCollector.MergePatch(
+		input.PatchCollector.PatchWithMerge(
 			statusPatch,
 			"deckhouse.io/v1",
 			"IngressNginxController",
 			"",
-			strings.TrimPrefix(daemonSetInfo.Name, "controller-"),
+			controllerName,
 			object_patch.WithSubresource("/status"),
 		)
 	}

@@ -29,6 +29,7 @@ const (
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
+  generation: 20
   name: main
 spec:
   annotationValidationEnabled: false
@@ -51,6 +52,8 @@ spec:
     operator: Exists
   underscoresInHeaders: false
   validationEnabled: true
+status:
+  observedGeneration: 19
 `
 )
 
@@ -83,7 +86,7 @@ status:
   observedGeneration: 2
   updatedNumberScheduled: 1
 ` + ingressNginxControllerManifest))
-			f.ValuesSetFromYaml("global.enabledModules", []byte(`[ingress-nginx]`))
+			// f.ValuesSetFromYaml("global.enabledModules", []byte(`[ingress-nginx]`))
 			f.RunHook()
 		})
 
@@ -94,7 +97,7 @@ status:
 			Expect(ingress.Field("status.version").String()).To(Equal("1.12"))
 			conditions := ingress.Field("status.conditions").Array()
 			Expect(conditions[0].Get("status").String()).To(Equal("True"))
-			Expect(f.ValuesGet("ingressNginx.internal.appliedControllerVersion").String()).To(Equal("1.12"))
+			Expect(f.ValuesGet("ingressNginx.internal.appliedControllerVersion.main").String()).To(Equal("1.12"))
 		})
 	})
 
@@ -122,7 +125,7 @@ status:
   observedGeneration: 2
   updatedNumberScheduled: 1
 ` + ingressNginxControllerManifest))
-			f.ValuesSetFromYaml("global.enabledModules", []byte(`[ingress-nginx]`))
+			// f.ValuesSetFromYaml("global.enabledModules", []byte(`[ingress-nginx]`))
 			f.RunHook()
 		})
 
@@ -133,13 +136,13 @@ status:
 			Expect(ingress.Field("status.version").String()).To(Equal("unknown"))
 			conditions := ingress.Field("status.conditions").Array()
 			Expect(conditions[0].Get("status").String()).To(Equal("False"))
-			Expect(f.ValuesGet("ingressNginx.internal.appliedControllerVersion").String()).To(Equal(""))
+			Expect(f.ValuesGet("ingressNginx.internal.appliedControllerVersion.main").String()).To(Equal(""))
 		})
 	})
 
 	Context("DaemonSet is not ready with applied version in Values", func() {
 		BeforeEach(func() {
-			f.ValuesSet("ingressNginx.internal.appliedControllerVersion", "1.10")
+			f.ValuesSet("ingressNginx.internal.appliedControllerVersion.main", "1.10")
 			f.BindingContexts.Set(f.KubeStateSet(`
 ---
 apiVersion: apps.kruise.io/v1alpha1
@@ -162,7 +165,7 @@ status:
   observedGeneration: 2
   updatedNumberScheduled: 1
 ` + ingressNginxControllerManifest))
-			f.ValuesSetFromYaml("global.enabledModules", []byte(`[ingress-nginx]`))
+			// f.ValuesSetFromYaml("global.enabledModules", []byte(`[ingress-nginx]`))
 			f.RunHook()
 		})
 
@@ -173,7 +176,7 @@ status:
 			Expect(ingress.Field("status.version").String()).To(Equal("1.10"))
 			conditions := ingress.Field("status.conditions").Array()
 			Expect(conditions[0].Get("status").String()).To(Equal("False"))
-			Expect(f.ValuesGet("ingressNginx.internal.appliedControllerVersion").String()).To(Equal("1.10"))
+			Expect(f.ValuesGet("ingressNginx.internal.appliedControllerVersion.main").String()).To(Equal("1.10"))
 		})
 	})
 })

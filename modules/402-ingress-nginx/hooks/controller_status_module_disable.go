@@ -74,7 +74,7 @@ func handleStatusUpdaterForModuleDisable(input *go_hook.HookInput, dc dependency
 				},
 			}
 
-			input.PatchCollector.MergePatch(
+			input.PatchCollector.PatchWithMerge(
 				statusPatch,
 				"deckhouse.io/v1",
 				"IngressNginxController",
