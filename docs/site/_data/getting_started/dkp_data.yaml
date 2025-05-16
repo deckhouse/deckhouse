@@ -739,7 +739,7 @@ installTypes:
           en: What can I do next?
           ru: Куда двигаться дальше?
         template: getting_started/global/STEP_FINISH.md
-  dvp:
+  dvp-provider:
     iconPath: images/icons/platforms/dvp.png
     ee_only: true
     layout:
