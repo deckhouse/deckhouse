@@ -93,7 +93,6 @@ jobs:
       with:
         commit-message: "Automated Change: Update k8s patch version"
         signoff: true
-        sign-commits: true
         title: "[run ci] Automated Change: Update k8s patch version"
         body-path: ".github/k8s_autoupdate_pull_request_template.md"
         branch: chore/k8s-autoupdate
