@@ -165,7 +165,7 @@ spec:
           value: {{ include "istioNetworkName" $ }}
         - name: ISTIO_META_CLUSTER_ID
           value: {{ $.Values.global.discovery.clusterDomain | replace "." "-" }}-{{ adler32sum $.Values.global.discovery.clusterUUID }}
-  {{- if $.Values.istio.enableHTTP10 }}
+  {{- if $.Values.istio.dataPlane.enableHTTP10 }}
         - name: ISTIO_META_HTTP10
           value: "1"
   {{- end }}
