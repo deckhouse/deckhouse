@@ -1,5 +1,9 @@
 cilium-hubble:
     - version: 2
+cloud-provider-vsphere:
+    - version: 2
+      description:
+        ru: Если поле `.storageClass.compatibilityFlag` существует, перепишите значение с заглавной буквы.
 control-plane-manager:
     - version: 2
       description:
