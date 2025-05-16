@@ -66,6 +66,8 @@ spec:
         envFrom:
         - configMapRef:
             name: report-updater
+        env:
+          {{- include "helm_lib_envs_for_proxy" . | nindent 10 }}
         volumeMounts:
         - mountPath: /etc/ssl/report-updater
           name: report-updater-webhook-ssl
