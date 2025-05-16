@@ -101,18 +101,7 @@
       },
       "mode": "tcp",
       "labels": {
-        "cef.severity": "1",
-        "container": "{{ container }}",
-        "host": "{{ host }}",
-        "image": "{{ image }}",
-        "namespace": "{{ namespace }}",
-        "node": "{{ node }}",
-        "node_group": "{{ node_group }}",
-        "pod": "{{ pod }}",
-        "pod_ip": "{{ pod_ip }}",
-        "pod_labels_*": "{{ pod_labels }}",
-        "pod_owner": "{{ pod_owner }}",
-        "stream": "{{ stream }}"
+        "cef.severity": "1"
       },
       "address": "192.168.1.1:9200",
       "tls": {
