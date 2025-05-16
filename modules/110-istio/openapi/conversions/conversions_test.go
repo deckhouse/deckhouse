@@ -22,17 +22,52 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 )
 
+type testCase struct {
+	name            string
+	settings        string
+	expected        string
+	currentVersion  int
+	expectedVersion int
+}
+
 func TestIstioConversions(t *testing.T) {
-	conversions := "."
-	cases := []struct {
-		name            string
-		settings        string
-		expected        string
-		currentVersion  int
-		expectedVersion int
-	}{
+	conversionPath := "."
+
+	tests := []testCase{
 		{
-			name: "should convert from 1 to 2 version",
+			name: "Move enableHTTP10 to dataPlane",
+			settings: `
+field1: 123
+enableHTTP10: True
+`,
+			expected: `
+field1: 123
+dataPlane:
+  enableHTTP10: True
+`,
+			currentVersion:  2,
+			expectedVersion: 3,
+		},
+		{
+			name: "Move proxyConfig to dataPlane",
+			settings: `
+field1: 123
+proxyConfig:
+  holdApplicationUntilProxyStarts: True
+  idleTimeout: 10s
+`,
+			expected: `
+field1: 123
+dataPlane:
+  proxyConfig:
+    holdApplicationUntilProxyStarts: True
+    idleTimeout: 10s
+`,
+			currentVersion:  2,
+			expectedVersion: 3,
+		},
+		{
+			name: "Should convert from 1 to 2 version",
 			settings: `
 auth:
   password: password
@@ -55,9 +90,9 @@ auth:
 		},
 	}
 
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			err := conversion.TestConvert(c.settings, c.expected, conversions, c.currentVersion, c.expectedVersion)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := conversion.TestConvert(tc.settings, tc.expected, conversionPath, tc.currentVersion, tc.expectedVersion)
 			if err != nil {
 				t.Error(err)
 			}

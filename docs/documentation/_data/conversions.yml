@@ -20,6 +20,17 @@ extended-monitoring:
         ru: Если для поля `.imageAvailability.skipRegistryCertVerification` установлено значение `true`, добавьте поле `.imageAvailability.registry.tlsConfig.insecureSkipVerify=true`. После этого удалите поле `.imageAvailability.skipRegistryCertVerification` из объекта. Если в результате объект `.imageAvailability` становится пуст, удалите его.
 istio:
     - version: 2
+      description:
+        en: Delete `.settings.auth.password`.
+        ru: Удалите `.settings.auth.password`.
+    - version: 3
+      description:
+        en: |
+            * Move `.settings.enableHTTP10` to `.settings.dataPlane.enableHTTP10`.
+            * Move `.settings.proxyConfig` to `.settings.dataPlane.proxyConfig`.
+        ru: |
+            * Перенесите `.settings.enableHTTP10` в `.settings.dataPlane.enableHTTP10`.
+            * Перенесите `.settings.proxyConfig` в `.settings.dataPlane.proxyConfig`.
 metallb:
     - version: 2
 node-manager:
