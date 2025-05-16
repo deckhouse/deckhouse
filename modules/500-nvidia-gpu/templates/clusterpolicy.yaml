@@ -15,7 +15,7 @@ spec:
       version: 12.8.1-base-ubi9
       imagePullPolicy: IfNotPresent
   daemonsets:
-  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 4 }}
     priorityClassName: system-node-critical
     updateStrategy: RollingUpdate
     rollingUpdate:
@@ -31,6 +31,8 @@ spec:
           value: "false"
   mig:
     strategy: single
+  driver:
+    enabled: false
 
   toolkit:
     enabled: true
@@ -71,6 +73,11 @@ spec:
         version: v1
         flags:
           migStrategy: mixed
+  dcgm:
+    enabled: false
+  dcgmExporter:
+    enabled: false
+
   gfd:
     enabled: true
     repository: nvcr.io/nvidia
@@ -119,3 +126,5 @@ spec:
                 mig-devices:
                   "3g.40gb": 1
                   "4g.40gb": 1
+  nodeStatusExporter:
+    enabled: false
