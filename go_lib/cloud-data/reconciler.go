@@ -27,6 +27,7 @@ import (
 	"syscall"
 	"time"
 
+	discoverymeta "github.com/deckhouse/deckhouse/go_lib/cloud-data/discovery/meta"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -43,7 +44,7 @@ import (
 
 type Discoverer interface {
 	InstanceTypes(ctx context.Context) ([]v1alpha1.InstanceType, error)
-	DiscoveryData(ctx context.Context, cloudProviderDiscoveryData []byte) ([]byte, error)
+	DiscoveryData(ctx context.Context, options *discoverymeta.DiscoveryDataOptions) ([]byte, error)
 	DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error)
 	CheckCloudConditions(ctx context.Context) ([]v1alpha1.CloudCondition, error)
 }
@@ -448,7 +449,7 @@ func (c *Reconciler) discoveryDataReconcile(ctx context.Context) {
 		return
 	}
 
-	discoveryData, err := c.discoverer.DiscoveryData(ctx, cloudDiscoveryData)
+	discoveryData, err := c.discoverer.DiscoveryData(ctx, &discoverymeta.DiscoveryDataOptions{CloudProviderDiscoveryData: cloudDiscoveryData})
 	if err != nil {
 		c.logger.Errorf("Getting discovery data error: %v\n", err)
 		c.cloudRequestErrorMetric.WithLabelValues("discovery_data").Set(1.0)

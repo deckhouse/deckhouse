@@ -26,6 +26,7 @@ type OpenStackCloudProviderDiscoveryData struct {
 	MainNetwork              string                                          `json:"mainNetwork"`
 	Zones                    []string                                        `json:"zones"`
 	VolumeTypes              []OpenStackCloudProviderDiscoveryDataVolumeType `json:"volumeTypes"`
+	FlavorsDetails           []OpenstackFlavorDetails                        `json:"flavorsDetails"`
 }
 
 type OpenStackCloudProviderDiscoveryDataVolumeType struct {
@@ -35,4 +36,11 @@ type OpenStackCloudProviderDiscoveryDataVolumeType struct {
 	ExtraSpecs  map[string]string `json:"extraSpecs,omitempty"`
 	IsPublic    bool              `json:"isPublic,omitempty"`
 	QosSpecID   string            `json:"qosSpecID,omitempty"`
+}
+
+type OpenstackFlavorDetails struct {
+	Name  string `json:"name"`
+	RAM   int    `json:"ram"`
+	VCPUs int    `json:"vcpus"`
+	Disk  int    `json:"disk"`
 }
