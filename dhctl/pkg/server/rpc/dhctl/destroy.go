@@ -42,6 +42,13 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
+type destroyParams struct {
+	request      *pb.DestroyStart
+	switchPhase  phases.DefaultOnPhaseFunc
+	sendProgress phases.OnProgressFunc
+	logOptions   logger.Options
+}
+
 func (s *Service) Destroy(server pb.DHCTL_DestroyServer) error {
 	ctx, cancel := operationCtx(server)
 	defer cancel()
@@ -56,6 +63,12 @@ func (s *Service) Destroy(server pb.DHCTL_DestroyServer) error {
 	sendCh := make(chan *pb.DestroyResponse)
 	phaseSwitcher := &fsmPhaseSwitcher[*pb.DestroyResponse, any]{
 		f: f, dataFunc: s.destroySwitchPhaseData, sendCh: sendCh, next: make(chan error),
+	}
+	pt := progressTracker[*pb.DestroyResponse]{
+		sendCh: sendCh,
+		dataFunc: func(progress phases.Progress) *pb.DestroyResponse {
+			return &pb.DestroyResponse{Message: &pb.DestroyResponse_Progress{Progress: convertProgress(progress)}}
+		},
 	}
 
 	loggerDefault := logger.L(ctx).With(logTypeDHCTL)
@@ -101,7 +114,12 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.destroySafe(ctx, message.Start, phaseSwitcher.switchPhase(ctx), logOptions)
+					result := s.destroySafe(ctx, destroyParams{
+						request:      message.Start,
+						switchPhase:  phaseSwitcher.switchPhase(ctx),
+						sendProgress: pt.sendProgress(),
+						logOptions:   logOptions,
+					})
 					sendCh <- &pb.DestroyResponse{Message: &pb.DestroyResponse_Result{Result: result}}
 				}()
 
@@ -135,34 +153,34 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) destroySafe(ctx context.Context, request *pb.DestroyStart, switchPhase phases.DefaultOnPhaseFunc, options logger.Options) (result *pb.DestroyResult) {
+func (s *Service) destroySafe(ctx context.Context, p destroyParams) (result *pb.DestroyResult) {
 	defer func() {
 		if r := recover(); r != nil {
 			result = &pb.DestroyResult{Err: panicMessage(ctx, r)}
 		}
 	}()
 
-	return s.destroy(ctx, request, switchPhase, options)
+	return s.destroy(ctx, p)
 }
 
-func (s *Service) destroy(ctx context.Context, request *pb.DestroyStart, switchPhase phases.DefaultOnPhaseFunc, options logger.Options) *pb.DestroyResult {
+func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResult {
 	var err error
 
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream:   options.DefaultWriter,
-		Width:       int(request.Options.LogWidth),
-		DebugStream: options.DebugWriter,
+		OutStream:   p.logOptions.DefaultWriter,
+		Width:       int(p.request.Options.LogWidth),
+		DebugStream: p.logOptions.DebugWriter,
 	})
 
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
-	app.ResourcesTimeout = request.Options.ResourcesTimeout.AsDuration()
-	app.DeckhouseTimeout = request.Options.DeckhouseTimeout.AsDuration()
+	app.ResourcesTimeout = p.request.Options.ResourcesTimeout.AsDuration()
+	app.DeckhouseTimeout = p.request.Options.DeckhouseTimeout.AsDuration()
 	app.CacheDir = s.cacheDir
-	app.ApplyPreflightSkips(request.Options.CommonOptions.SkipPreflightChecks)
+	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
 	defer func() { log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName) }()
@@ -170,10 +188,10 @@ func (s *Service) destroy(ctx context.Context, request *pb.DestroyStart, switchP
 	var metaConfig *config.MetaConfig
 	err = log.Process("default", "Parsing cluster config", func() error {
 		metaConfig, err = config.ParseConfigFromData(
-			input.CombineYAMLs(request.ClusterConfig, request.InitConfig, request.ProviderSpecificClusterConfig),
-			config.ValidateOptionCommanderMode(request.Options.CommanderMode),
-			config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
-			config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
+			input.CombineYAMLs(p.request.ClusterConfig, p.request.InitConfig, p.request.ProviderSpecificClusterConfig),
+			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
+			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
+			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
 		)
 		if err != nil {
 			return fmt.Errorf("parsing cluster meta config: %w", err)
@@ -187,8 +205,8 @@ func (s *Service) destroy(ctx context.Context, request *pb.DestroyStart, switchP
 	err = log.Process("default", "Preparing DHCTL state", func() error {
 		cachePath := metaConfig.CachePath()
 		var initialState phases.DhctlState
-		if request.State != "" {
-			err = json.Unmarshal([]byte(request.State), &initialState)
+		if p.request.State != "" {
+			err = json.Unmarshal([]byte(p.request.State), &initialState)
 			if err != nil {
 				return fmt.Errorf("unmarshalling dhctl state: %w", err)
 			}
@@ -209,11 +227,11 @@ func (s *Service) destroy(ctx context.Context, request *pb.DestroyStart, switchP
 	var sshClient *ssh.Client
 	err = log.Process("default", "Preparing SSH client", func() error {
 		connectionConfig, err := config.ParseConnectionConfig(
-			request.ConnectionConfig,
+			p.request.ConnectionConfig,
 			s.schemaStore,
-			config.ValidateOptionCommanderMode(request.Options.CommanderMode),
-			config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
-			config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
+			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
+			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
+			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
 		)
 		if err != nil {
 			return fmt.Errorf("parsing connection config: %w", err)
@@ -232,22 +250,23 @@ func (s *Service) destroy(ctx context.Context, request *pb.DestroyStart, switchP
 	}
 
 	var commanderUUID uuid.UUID
-	if request.Options.CommanderUuid != "" {
-		commanderUUID, err = uuid.Parse(request.Options.CommanderUuid)
+	if p.request.Options.CommanderUuid != "" {
+		commanderUUID, err = uuid.Parse(p.request.Options.CommanderUuid)
 		if err != nil {
 			return &pb.DestroyResult{Err: fmt.Errorf("unable to parse commander uuid: %w", err).Error()}
 		}
 	}
 
 	destroyer, err := destroy.NewClusterDestroyer(&destroy.Params{
-		NodeInterface: ssh.NewNodeInterfaceWrapper(sshClient),
-		StateCache:    cache.Global(),
-		OnPhaseFunc:   switchPhase,
-		CommanderMode: true,
-		CommanderUUID: commanderUUID,
+		NodeInterface:  ssh.NewNodeInterfaceWrapper(sshClient),
+		StateCache:     cache.Global(),
+		OnPhaseFunc:    p.switchPhase,
+		OnProgressFunc: p.sendProgress,
+		CommanderMode:  true,
+		CommanderUUID:  commanderUUID,
 		CommanderModeParams: commander.NewCommanderModeParams(
-			[]byte(request.ClusterConfig),
-			[]byte(request.ProviderSpecificClusterConfig),
+			[]byte(p.request.ClusterConfig),
+			[]byte(p.request.ProviderSpecificClusterConfig),
 		),
 	})
 	if err != nil {
@@ -282,20 +301,14 @@ func (s *Service) destroyServerTransitions() []fsm.Transition {
 	}
 }
 
-func (s *Service) destroySwitchPhaseData(
-	completedPhase phases.OperationPhase,
-	completedPhaseState phases.DhctlState,
-	_ any,
-	nextPhase phases.OperationPhase,
-	nextPhaseCritical bool,
-) (*pb.DestroyResponse, error) {
+func (s *Service) destroySwitchPhaseData(onPhaseData phases.OnPhaseFuncData[any]) (*pb.DestroyResponse, error) {
 	return &pb.DestroyResponse{
 		Message: &pb.DestroyResponse_PhaseEnd{
 			PhaseEnd: &pb.DestroyPhaseEnd{
-				CompletedPhase:      string(completedPhase),
-				CompletedPhaseState: completedPhaseState,
-				NextPhase:           string(nextPhase),
-				NextPhaseCritical:   nextPhaseCritical,
+				CompletedPhase:      string(onPhaseData.CompletedPhase),
+				CompletedPhaseState: onPhaseData.CompletedPhaseState,
+				NextPhase:           string(onPhaseData.NextPhase),
+				NextPhaseCritical:   onPhaseData.NextPhaseCritical,
 			},
 		},
 	}, nil

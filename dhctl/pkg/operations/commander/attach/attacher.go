@@ -46,6 +46,7 @@ type Params struct {
 	OnCheckResult         func(*check.CheckResult) error
 	InfrastructureContext *infrastructure.Context
 	OnPhaseFunc           OnPhaseFunc
+	OnProgressFunc        phases.OnProgressFunc
 	AttachResources       AttachResources
 	ScanOnly              *bool
 }
@@ -71,8 +72,10 @@ func NewAttacher(params *Params) *Attacher {
 	// }
 
 	return &Attacher{
-		Params:                 params,
-		PhasedExecutionContext: phases.NewPhasedExecutionContext[PhaseData](params.OnPhaseFunc),
+		Params: params,
+		PhasedExecutionContext: phases.NewPhasedExecutionContext[PhaseData](
+			phases.OperationCommanderAttach, params.OnPhaseFunc, params.OnProgressFunc,
+		),
 	}
 }
 
@@ -90,7 +93,7 @@ func (i *Attacher) Attach(ctx context.Context) (*AttachResult, error) {
 	}
 	defer i.PhasedExecutionContext.Finalize(stateCache)
 
-	if shouldStop, err := i.PhasedExecutionContext.StartPhase(ScanPhase, false, stateCache); err != nil {
+	if shouldStop, err := i.PhasedExecutionContext.StartPhase(phases.CommanderAttachScanPhase, false, stateCache); err != nil {
 		return nil, fmt.Errorf("unable to switch phase: %w", err)
 	} else if shouldStop {
 		return &AttachResult{}, nil
@@ -111,7 +114,7 @@ func (i *Attacher) Attach(ctx context.Context) (*AttachResult, error) {
 	}
 
 	if shouldStop, err := i.PhasedExecutionContext.SwitchPhase(
-		CapturePhase,
+		phases.CommanderAttachCapturePhase,
 		false,
 		stateCache,
 		PhaseData{ScanResult: scanResult},
@@ -127,7 +130,7 @@ func (i *Attacher) Attach(ctx context.Context) (*AttachResult, error) {
 	}
 
 	if shouldStop, err := i.PhasedExecutionContext.SwitchPhase(
-		CheckPhase,
+		phases.CommanderAttachCheckPhase,
 		false,
 		stateCache,
 		PhaseData{},

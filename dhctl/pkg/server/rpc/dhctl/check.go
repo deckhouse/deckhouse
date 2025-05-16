@@ -43,6 +43,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
+type checkParams struct {
+	request    *pb.CheckStart
+	logOptions logger.Options
+}
+
 func (s *Service) Check(server pb.DHCTL_CheckServer) error {
 	ctx, cancel := operationCtx(server)
 	defer cancel()
@@ -99,7 +104,10 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.checkSafe(ctx, message.Start, logOptions)
+					result := s.checkSafe(ctx, checkParams{
+						request:    message.Start,
+						logOptions: logOptions,
+					})
 					sendCh <- &pb.CheckResponse{Message: &pb.CheckResponse_Result{Result: result}}
 				}()
 
@@ -115,34 +123,34 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) checkSafe(ctx context.Context, request *pb.CheckStart, options logger.Options) (result *pb.CheckResult) {
+func (s *Service) checkSafe(ctx context.Context, p checkParams) (result *pb.CheckResult) {
 	defer func() {
 		if r := recover(); r != nil {
 			result = &pb.CheckResult{Err: panicMessage(ctx, r)}
 		}
 	}()
 
-	return s.check(ctx, request, options)
+	return s.check(ctx, p)
 }
 
-func (s *Service) check(ctx context.Context, request *pb.CheckStart, options logger.Options) *pb.CheckResult {
+func (s *Service) check(ctx context.Context, p checkParams) *pb.CheckResult {
 	var err error
 
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream:   options.DefaultWriter,
-		Width:       int(request.Options.LogWidth),
-		DebugStream: options.DebugWriter,
+		OutStream:   p.logOptions.DefaultWriter,
+		Width:       int(p.request.Options.LogWidth),
+		DebugStream: p.logOptions.DebugWriter,
 	})
 
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
-	app.ResourcesTimeout = request.Options.ResourcesTimeout.AsDuration()
-	app.DeckhouseTimeout = request.Options.DeckhouseTimeout.AsDuration()
+	app.ResourcesTimeout = p.request.Options.ResourcesTimeout.AsDuration()
+	app.DeckhouseTimeout = p.request.Options.DeckhouseTimeout.AsDuration()
 	app.CacheDir = s.cacheDir
-	app.ApplyPreflightSkips(request.Options.CommonOptions.SkipPreflightChecks)
+	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
 	defer func() { log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName) }()
@@ -150,10 +158,10 @@ func (s *Service) check(ctx context.Context, request *pb.CheckStart, options log
 	var metaConfig *config.MetaConfig
 	err = log.Process("default", "Parsing cluster config", func() error {
 		metaConfig, err = config.ParseConfigFromData(
-			input.CombineYAMLs(request.ClusterConfig, request.ProviderSpecificClusterConfig),
-			config.ValidateOptionCommanderMode(request.Options.CommanderMode),
-			config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
-			config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
+			input.CombineYAMLs(p.request.ClusterConfig, p.request.ProviderSpecificClusterConfig),
+			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
+			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
+			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
 		)
 		if err != nil {
 			return fmt.Errorf("parsing cluster meta config: %w", err)
@@ -167,8 +175,8 @@ func (s *Service) check(ctx context.Context, request *pb.CheckStart, options log
 	err = log.Process("default", "Preparing DHCTL state", func() error {
 		cachePath := metaConfig.CachePath()
 		var initialState phases.DhctlState
-		if request.State != "" {
-			err = json.Unmarshal([]byte(request.State), &initialState)
+		if p.request.State != "" {
+			err = json.Unmarshal([]byte(p.request.State), &initialState)
 			if err != nil {
 				return fmt.Errorf("unmarshalling dhctl state: %w", err)
 			}
@@ -187,8 +195,8 @@ func (s *Service) check(ctx context.Context, request *pb.CheckStart, options log
 	}
 
 	var commanderUUID uuid.UUID
-	if request.Options.CommanderUuid != "" {
-		commanderUUID, err = uuid.Parse(request.Options.CommanderUuid)
+	if p.request.Options.CommanderUuid != "" {
+		commanderUUID, err = uuid.Parse(p.request.Options.CommanderUuid)
 		if err != nil {
 			return &pb.CheckResult{Err: fmt.Errorf("unable to parse commander uuid: %w", err).Error()}
 		}
@@ -196,25 +204,25 @@ func (s *Service) check(ctx context.Context, request *pb.CheckStart, options log
 
 	checkParams := &check.Params{
 		StateCache:    cache.Global(),
-		CommanderMode: request.Options.CommanderMode,
+		CommanderMode: p.request.Options.CommanderMode,
 		CommanderUUID: commanderUUID,
 		CommanderModeParams: commander.NewCommanderModeParams(
-			[]byte(request.ClusterConfig),
-			[]byte(request.ProviderSpecificClusterConfig),
+			[]byte(p.request.ClusterConfig),
+			[]byte(p.request.ProviderSpecificClusterConfig),
 		),
 		InfrastructureContext: infrastructure.NewContextWithProvider(infrastructureprovider.ExecutorProvider(metaConfig)),
 	}
 
 	kubeClient, sshClient, cleanup, err := helper.InitializeClusterConnections(ctx, helper.ClusterConnectionsOptions{
-		CommanderMode: request.Options.CommanderMode,
-		ApiServerUrl:  request.Options.ApiServerUrl,
+		CommanderMode: p.request.Options.CommanderMode,
+		ApiServerUrl:  p.request.Options.ApiServerUrl,
 		ApiServerOptions: helper.ApiServerOptions{
-			Token:                    request.Options.ApiServerToken,
-			InsecureSkipTLSVerify:    request.Options.ApiServerInsecureSkipTlsVerify,
-			CertificateAuthorityData: util.StringToBytes(request.Options.ApiServerCertificateAuthorityData),
+			Token:                    p.request.Options.ApiServerToken,
+			InsecureSkipTLSVerify:    p.request.Options.ApiServerInsecureSkipTlsVerify,
+			CertificateAuthorityData: util.StringToBytes(p.request.Options.ApiServerCertificateAuthorityData),
 		},
 		SchemaStore:         s.schemaStore,
-		SSHConnectionConfig: request.ConnectionConfig,
+		SSHConnectionConfig: p.request.ConnectionConfig,
 	})
 	cleanuper.Add(cleanup)
 	if err != nil {
