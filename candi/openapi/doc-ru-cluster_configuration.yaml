@@ -74,13 +74,13 @@ apiVersions:
           Начиная с версии **1.31**, kubeadm использует указанный алгоритм асимметричного
           шифрования при генерации ключей и сертификатов для следующих компонентов control-plane:
 
-          - `apiserver`;  
-          - `apiserver-kubelet-client`;  
-          - `apiserver-etcd-client`;  
-          - `front-proxy-client`;  
-          - `etcd-server`;  
-          - `etcd-peer`;  
-          - `etcd-healthcheck-client`.  
+          - `apiserver`
+          - `apiserver-kubelet-client`
+          - `apiserver-etcd-client`
+          - `front-proxy-client`
+          - `etcd-server`
+          - `etcd-peer`
+          - `etcd-healthcheck-client`
 
           При изменении этого параметра, cертификаты для выше указанных компонентов будут перевыпущены с выбранным алгоритмом и длиной ключа.
 

@@ -143,13 +143,13 @@ apiVersions:
           Starting from version **1.31**, kubeadm use the specified asymmetric encryption algorithm
           when generating keys and certificates for the following control-plane components:
 
-          - `apiserver`;  
-          - `apiserver-kubelet-client`;  
-          - `apiserver-etcd-client`;  
-          - `front-proxy-client`;  
-          - `etcd-server`;  
-          - `etcd-peer`;  
-          - `etcd-healthcheck-client`;  
+          - `apiserver`
+          - `apiserver-kubelet-client`
+          - `apiserver-etcd-client`
+          - `front-proxy-client`
+          - `etcd-server`
+          - `etcd-peer`
+          - `etcd-healthcheck-client`
 
           Certificates for the components listed above will be reissued using the selected algorithm and key length.
 
