@@ -90,6 +90,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/500-cilium-hubble/hooks/https"
 	_ "github.com/deckhouse/deckhouse/modules/500-dashboard/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/500-dashboard/hooks/https"
+	_ "github.com/deckhouse/deckhouse/modules/500-nvidia-gpu/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/500-okmeter/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/500-openvpn/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/500-openvpn/hooks/https"
