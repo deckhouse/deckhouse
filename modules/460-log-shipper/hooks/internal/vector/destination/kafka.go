@@ -52,7 +52,7 @@ type KafkaSASL struct {
 func NewKafka(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Kafka {
 	spec := cspec.Kafka
 
-	var labels map[string]string
+	labels := make(map[string]string)
 
 	var dataField string
 	keys := make([]string, 0, len(cspec.ExtraLabels))

@@ -47,7 +47,7 @@ type Splunk struct {
 func NewSplunk(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Splunk {
 	spec := cspec.Splunk
 
-	var labels map[string]string
+	labels := make(map[string]string)
 
 	var dataField string
 	keys := make([]string, 0, len(cspec.ExtraLabels))

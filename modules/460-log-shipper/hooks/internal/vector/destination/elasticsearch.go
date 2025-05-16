@@ -82,7 +82,7 @@ type ElasticsearchBulk struct {
 func NewElasticsearch(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Elasticsearch {
 	spec := cspec.Elasticsearch
 
-	var labels map[string]string
+	labels := make(map[string]string)
 
 	var dataField string
 	keys := make([]string, 0, len(cspec.ExtraLabels))

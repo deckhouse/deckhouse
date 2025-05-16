@@ -47,7 +47,7 @@ type LogstashKeepalive struct {
 func NewLogstash(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Logstash {
 	spec := cspec.Logstash
 
-	var labels map[string]string
+	labels := make(map[string]string)
 
 	var dataField string
 	keys := make([]string, 0, len(cspec.ExtraLabels))

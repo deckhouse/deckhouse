@@ -45,7 +45,7 @@ type VectorKeepalive struct {
 func NewVector(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Vector {
 	spec := cspec.Vector
 
-	var labels map[string]string
+	labels := make(map[string]string)
 
 	var dataField string
 	keys := make([]string, 0, len(cspec.ExtraLabels))

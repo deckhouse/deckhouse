@@ -42,8 +42,6 @@ type Socket struct {
 func NewSocket(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Socket {
 	spec := cspec.Socket
 
-	var labels map[string]string
-
 	result := &Socket{
 		CommonSettings: CommonSettings{
 			Name:   ComposeName(name),
@@ -113,6 +111,8 @@ func NewSocket(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Socket {
 	default:
 		encoding.Codec = "json"
 	}
+
+	labels := make(map[string]string)
 
 	var dataField string
 	keys := make([]string, 0, len(cspec.ExtraLabels))
