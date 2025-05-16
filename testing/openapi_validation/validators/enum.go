@@ -151,6 +151,20 @@ var (
 			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
 			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
 		},
+		"modules/030-cloud-provider-dvp/openapi/values.yaml": {
+			// ignore internal values
+			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
+			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
+			"properties.internal.properties.providerClusterConfiguration.properties.masterNodeGroup.properties.instanceClass.properties.virtualMachine.properties.cpu.properties.coreFraction",
+			"properties.internal.properties.providerClusterConfiguration.properties.nodeGroups.items.properties.instanceClass.properties.virtualMachine.properties.cpu.properties.coreFraction",
+		},
+		"candi/cloud-providers/dvp/openapi/instance_class.yaml": {
+			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.virtualMachine.properties.cpu.properties.coreFraction",
+		},
+		"candi/cloud-providers/dvp/openapi/cluster_configuration.yaml": {
+			"apiVersions[0].openAPISpec.properties.nodeGroups.items.properties.instanceClass.properties.virtualMachine.properties.cpu.properties.coreFraction",
+			"apiVersions[0].openAPISpec.properties.masterNodeGroup.properties.instanceClass.properties.virtualMachine.properties.cpu.properties.coreFraction",
+		},
 		"modules/030-cloud-provider-huaweicloud/openapi/values.yaml": {
 			// ignore internal values
 			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",

@@ -237,6 +237,16 @@ func (l *Loader) GetModuleByName(name string) (*moduletypes.Module, error) {
 	return module, nil
 }
 
+func (l *Loader) GetModulesByExclusiveGroup(exclusiveGroup string) []string {
+	modules := []string{}
+	for _, module := range l.modules {
+		if module.GetModuleDefenition().ExclusiveGroup == exclusiveGroup {
+			modules = append(modules, module.GetBasicModule().Name)
+		}
+	}
+	return modules
+}
+
 // LoadModulesFromFS parses and ensures modules from FS
 func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 	// load the 'global' module conversions
@@ -344,6 +354,7 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 			module.Properties.Weight = def.Weight
 			module.Properties.Stage = def.Stage
 			module.Properties.DisableOptions = def.DisableOptions
+			module.Properties.ExclusiveGroup = def.ExclusiveGroup
 
 			module.SetAnnotations(def.Annotations())
 			module.SetLabels(def.Labels())
