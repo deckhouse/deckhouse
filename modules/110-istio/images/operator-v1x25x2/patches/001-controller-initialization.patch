@@ -1,21 +1,24 @@
 diff --git a/controllers/istiorevision/istiorevision_controller.go b/controllers/istiorevision/istiorevision_controller.go
-index 5e97cde4..a0ec70c7 100644
+index 5e97cde4..cf79bcf4 100644
 --- a/controllers/istiorevision/istiorevision_controller.go
 +++ b/controllers/istiorevision/istiorevision_controller.go
-@@ -18,9 +18,12 @@ import (
+@@ -18,9 +18,15 @@ import (
  	"context"
  	"errors"
  	"fmt"
 +	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
++	"k8s.io/apimachinery/pkg/runtime/schema"
++	"math"
  	"path"
  	"reflect"
  	"regexp"
++	"strconv"
 +	"strings"
 +	"time"
  
  	"github.com/go-logr/logr"
  	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
-@@ -99,18 +102,26 @@ func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *ru
+@@ -99,18 +105,26 @@ func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *ru
  func (r *Reconciler) Reconcile(ctx context.Context, rev *v1.IstioRevision) (ctrl.Result, error) {
  	log := logf.FromContext(ctx)
  
@@ -46,7 +49,7 @@ index 5e97cde4..a0ec70c7 100644
  	}
  
  	log.Info("Installing Helm chart")
-@@ -154,7 +165,62 @@ func (r *Reconciler) validate(ctx context.Context, rev *v1.IstioRevision) error
+@@ -154,7 +168,93 @@ func (r *Reconciler) validate(ctx context.Context, rev *v1.IstioRevision) error
  	return nil
  }
  
@@ -56,42 +59,55 @@ index 5e97cde4..a0ec70c7 100644
 +	releaseName := getReleaseName(rev)
 +	targetNamespace := rev.Spec.Namespace
 +
-+	// Check if we've retried too many times
-+	if retryCount, ok := ctx.Value("retryCount").(int); ok && retryCount >= 3 {
++	// Get retry count from context or annotation
++	retryCount := 0
++	if val, ok := rev.Annotations["retry-count"]; ok {
++		if count, err := strconv.Atoi(val); err == nil {
++			retryCount = count
++		}
++	}
++
++	if retryCount >= 3 {
 +		log.Error(nil, "Maximum retries reached for uninstalling release",
-+			"release", releaseName,
-+			"retryCount", retryCount)
-+		return ctrl.Result{}, fmt.Errorf("release %s stuck in uninstalling state", releaseName)
++			"release", releaseName)
++		return ctrl.Result{}, fmt.Errorf("release %s stuck in uninstalling state after %d attempts", releaseName, retryCount)
 +	}
 +
 +	log.Info("Installing Helm chart",
 +		"release", releaseName,
 +		"namespace", targetNamespace,
 +		"chart", constants.IstiodChartName,
-+		"version", rev.Spec.Version)
++		"version", rev.Spec.Version,
++		"attempt", retryCount+1)
 +
 +	// First attempt normal installation
 +	result, installErr := r.tryInstall(ctx, rev)
 +	if installErr == nil {
++		// Clear retry count on success
++		if retryCount > 0 {
++			if err := r.clearRetryCount(ctx, rev); err != nil {
++				log.Error(err, "Failed to clear retry count")
++			}
++		}
 +		return result, nil
 +	}
 +
 +	// Handle uninstalling state
 +	if strings.Contains(installErr.Error(), "unexpected helm release status uninstalling") {
++		// Increment retry count
++		retryCount++
++		if err := r.setRetryCount(ctx, rev, retryCount); err != nil {
++			log.Error(err, "Failed to update retry count")
++		}
++
 +		log.Info("Investigating stuck uninstall", "release", releaseName)
 +
-+		// 1. Check for remaining resources
 +		if cleanupErr := r.cleanupOrphanedResources(ctx, rev); cleanupErr != nil {
 +			log.Error(cleanupErr, "Failed to cleanup orphaned resources")
-+			return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 +		}
 +
-+		// 2. Progressive backoff
-+		retryCount := 1
-+		if ctxRetry, ok := ctx.Value("retryCount").(int); ok {
-+			retryCount = ctxRetry + 1
-+		}
-+		requeueAfter := time.Duration(retryCount) * time.Minute
++		// Progressive backoff: 1m, 2m, 4m
++		requeueAfter := time.Duration(math.Pow(2, float64(retryCount-1))) * time.Minute
 +
 +		log.Info("Release still uninstalling, will retry",
 +			"release", releaseName,
@@ -105,12 +121,30 @@ index 5e97cde4..a0ec70c7 100644
 +	return result, installErr
 +}
 +
++func (r *Reconciler) setRetryCount(ctx context.Context, rev *v1.IstioRevision, count int) error {
++	patch := client.MergeFrom(rev.DeepCopy())
++	if rev.Annotations == nil {
++		rev.Annotations = make(map[string]string)
++	}
++	rev.Annotations["retry-count"] = strconv.Itoa(count)
++	return r.Client.Patch(ctx, rev, patch)
++}
++
++func (r *Reconciler) clearRetryCount(ctx context.Context, rev *v1.IstioRevision) error {
++	if rev.Annotations == nil || rev.Annotations["retry-count"] == "" {
++		return nil
++	}
++	patch := client.MergeFrom(rev.DeepCopy())
++	delete(rev.Annotations, "retry-count")
++	return r.Client.Patch(ctx, rev, patch)
++}
++
 +func (r *Reconciler) tryInstall(ctx context.Context, rev *v1.IstioRevision) (ctrl.Result, error) {
 +	values := helm.FromValues(rev.Spec.Values)
  	ownerReference := metav1.OwnerReference{
  		APIVersion:         v1.GroupVersion.String(),
  		Kind:               v1.IstioRevisionKind,
-@@ -164,15 +230,76 @@ func (r *Reconciler) installHelmCharts(ctx context.Context, rev *v1.IstioRevisio
+@@ -164,15 +264,100 @@ func (r *Reconciler) installHelmCharts(ctx context.Context, rev *v1.IstioRevisio
  		BlockOwnerDeletion: ptr.Of(true),
  	}
  
@@ -148,20 +182,35 @@ index 5e97cde4..a0ec70c7 100644
 +	releaseName := getReleaseName(rev)
 +	namespace := rev.Spec.Namespace
 +
-+	// List of resource types that might be stuck
-+	resourceTypes := []client.Object{
-+		&appsv1.Deployment{},
-+		&corev1.Service{},
-+		&corev1.ServiceAccount{},
-+		&corev1.Secret{},
++	// List of resource types with their GVK
++	resourceTypes := []struct {
++		gvk schema.GroupVersionKind
++		obj client.Object
++	}{
++		{
++			gvk: schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "Deployment"},
++			obj: &appsv1.Deployment{},
++		},
++		{
++			gvk: schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Service"},
++			obj: &corev1.Service{},
++		},
++		{
++			gvk: schema.GroupVersionKind{Group: "", Version: "v1", Kind: "ServiceAccount"},
++			obj: &corev1.ServiceAccount{},
++		},
++		{
++			gvk: schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"},
++			obj: &corev1.Secret{},
++		},
 +	}
 +
-+	for _, obj := range resourceTypes {
-+		list := unstructured.UnstructuredList{}
-+		list.SetGroupVersionKind(obj.GetObjectKind().GroupVersionKind())
++	for _, resource := range resourceTypes {
++		list := &unstructured.UnstructuredList{}
++		list.SetGroupVersionKind(resource.gvk)
 +
-+		if err := r.Client.List(ctx, &list, client.InNamespace(namespace)); err != nil {
-+			log.Error(err, "Failed to list resources for cleanup")
++		if err := r.Client.List(ctx, list, client.InNamespace(namespace)); err != nil {
++			log.Error(err, "Failed to list resources", "kind", resource.gvk.Kind)
 +			continue
 +		}
 +
@@ -169,8 +218,17 @@ index 5e97cde4..a0ec70c7 100644
 +			if belongsToRelease(item, releaseName) {
 +				log.Info("Cleaning up orphaned resource",
 +					"kind", item.GetKind(),
-+					"name", item.GetName())
-+				if err := r.Client.Delete(ctx, &item); err != nil {
++					"name", item.GetName(),
++					"namespace", item.GetNamespace())
++
++				// Convert back to typed object for proper deletion
++				obj := resource.obj.DeepCopyObject().(client.Object)
++				if err := runtime.DefaultUnstructuredConverter.FromUnstructured(item.Object, obj); err != nil {
++					log.Error(err, "Failed to convert unstructured object")
++					continue
++				}
++
++				if err := r.Client.Delete(ctx, obj); err != nil && !apierrors.IsNotFound(err) {
 +					log.Error(err, "Failed to delete orphaned resource")
 +				}
 +			}
