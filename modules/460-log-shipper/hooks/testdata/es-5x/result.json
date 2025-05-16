@@ -161,7 +161,7 @@
         "app": "{{ parsed_data.ap_p[0].a }}",
         "foo": "bar",
         "X-Device-Id": "{{ parsed_data.X-Device-Id }}",
-        "X-Device-Version": "X-Device-Version",
+        "X-Device-Version": "X-Device-Version"
       },
       "pipeline": "testpipe",
       "mode": "bulk",

@@ -161,7 +161,7 @@
       "pipeline": "testpipe",
       "labels": {
         "app": "{{ parsed_data.ap_p[0].a }}",
-        "foo": "bar",
+        "foo": "bar"
       },
       "mode": "bulk",
       "suppress_type_name": true
