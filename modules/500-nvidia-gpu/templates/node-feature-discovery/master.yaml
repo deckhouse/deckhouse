@@ -54,8 +54,8 @@ spec:
           args:
             - "-enable-leader-election"
             - "-feature-gates=NodeFeatureGroupAPI=false"
-            - "-metrics=8081
-            - "-grpc-health=8082
+            - "-metrics=8081"
+            - "-grpc-health=8082"
           volumeMounts:
             - name: nfd-master-conf
               mountPath: "/etc/kubernetes/node-feature-discovery"
