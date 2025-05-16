@@ -538,9 +538,11 @@ alerts:
       module: ceph-csi
       edition: ce
       description: |
-        Ceph-csi module is deprecated and will be removed in Deckhouse 1.70! Please, use [csi-ceph](https://deckhouse.io/products/kubernetes-platform/modules/csi-ceph/stable/) module instead.
+        The `ceph-csi` module is deprecated and will be removed in Deckhouse 1.70.
+
+        Use the [`csi-ceph`](https://deckhouse.io/products/kubernetes-platform/modules/csi-ceph/stable/) module instead.
       summary: |
-        CephCsi module is deprecated.
+        Ceph-csi module is deprecated.
       severity: "5"
       markupFormat: markdown
     - name: D8CertExporterPodIsNotReady

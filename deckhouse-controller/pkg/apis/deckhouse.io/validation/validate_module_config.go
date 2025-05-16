@@ -49,7 +49,13 @@ type ObjectMeta struct {
 const disableReasonSuffix = "Please annotate ModuleConfig with `modules.deckhouse.io/allow-disabling=true` if you're sure that you want to disable the module."
 
 // moduleConfigValidationHandler validations for ModuleConfig creation
-func moduleConfigValidationHandler(cli client.Client, moduleStorage moduleStorage, metricStorage metric.Storage, configValidator *configtools.Validator) http.Handler {
+func moduleConfigValidationHandler(
+	cli client.Client,
+	moduleStorage moduleStorage,
+	metricStorage metric.Storage,
+	moduleManager moduleManager,
+	configValidator *configtools.Validator,
+) http.Handler {
 	vf := kwhvalidating.ValidatorFunc(func(ctx context.Context, review *kwhmodel.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
 		var (
 			cfg = new(v1alpha1.ModuleConfig)
@@ -178,6 +184,29 @@ func moduleConfigValidationHandler(cli client.Client, moduleStorage moduleStorag
 			return rejectResult(res.Error)
 		} else if res.Warning != "" {
 			warning = res.Warning
+		}
+
+		module, err := moduleStorage.GetModuleByName(cfg.Name)
+		if err != nil {
+			return nil, fmt.Errorf("module not found %s: %w", cfg.Name, err)
+		}
+		exclusiveGroup := module.GetModuleExclusiveGroup()
+		if exclusiveGroup != nil {
+			modules := moduleStorage.GetModulesByExclusiveGroup(*exclusiveGroup)
+
+			for _, moduleName := range modules {
+				// if any module with same unique key enabled, return error
+				if moduleManager.IsModuleEnabled(moduleName) && moduleName != cfg.Name {
+					return rejectResult(
+						fmt.Sprintf(
+							"can't enable module %q because different module %q with same exclusiveGroup %s enabled",
+							cfg.Name,
+							moduleName,
+							*exclusiveGroup,
+						),
+					)
+				}
+			}
 		}
 
 		metricStorage.GaugeSet("d8_moduleconfig_allowed_to_disable", allowedToDisableMetric, map[string]string{"module": cfg.GetName()})
