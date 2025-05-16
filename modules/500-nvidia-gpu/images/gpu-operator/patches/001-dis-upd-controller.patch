@@ -119,3 +119,32 @@ index 4aba8739..81739557 100644
 -	}
 -	return false
 -}
+diff --git a/controllers/state_manager.go b/controllers/state_manager.go
+index d8f3ef7e..9e23e4be 100644
+--- a/controllers/state_manager.go
++++ b/controllers/state_manager.go
+@@ -28,7 +28,6 @@ import (
+ 	configv1 "github.com/openshift/client-go/config/clientset/versioned/typed/config/v1"
+ 	"golang.org/x/mod/semver"
+ 	corev1 "k8s.io/api/core/v1"
+-	apierrors "k8s.io/apimachinery/pkg/api/errors"
+ 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+ 	"k8s.io/apimachinery/pkg/runtime"
+ 	"k8s.io/client-go/discovery"
+@@ -769,11 +768,11 @@ func (n *ClusterPolicyController) init(ctx context.Context, reconciler *ClusterP
+ 			os.Exit(1)
+ 		}
+ 
+-		version, err := OpenshiftVersion(ctx)
+-		if err != nil && !apierrors.IsNotFound(err) {
+-			return err
+-		}
+-		n.openshift = version
++		// version, err := OpenshiftVersion(ctx)
++		// if err != nil && !apierrors.IsNotFound(err) {
++		// 	return err
++		// }
++		// n.openshift = version
+ 
+ 		k8sVersion, err := KubernetesVersion()
+ 		if err != nil {
