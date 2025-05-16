@@ -110,8 +110,7 @@ internal:
           memory: 23
           pods: 3
   - name: test4
-    evictLocalStoragePods:
-      enabled: true
+    evictLocalStoragePods: true
     strategies:
       lowNodeUtilization:
         enabled: true

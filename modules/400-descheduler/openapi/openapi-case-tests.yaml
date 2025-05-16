@@ -41,8 +41,7 @@ positive:
                   pods: 50
                   gpu: "gpuNode"
           - name: test3
-            evictLocalStoragePods:
-              enabled: false
+            evictLocalStoragePods: false
             strategies:
               lowNodeUtilization:
                 enabled: true

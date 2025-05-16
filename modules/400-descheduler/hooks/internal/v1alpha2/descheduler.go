@@ -51,9 +51,7 @@ type PriorityClassThreshold struct {
 	Value int    `json:"value,omitempty" yaml:"value,omitempty"`
 }
 
-type EvictLocalStoragePods struct {
-	Enabled bool `json:"enabled" yaml:"enabled"`
-}
+type EvictLocalStoragePods bool
 
 type Strategies struct {
 	LowNodeUtilization                      *LowNodeUtilization                      `json:"lowNodeUtilization,omitempty" yaml:"lowNodeUtilization,omitempty"`

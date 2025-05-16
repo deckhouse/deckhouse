@@ -140,10 +140,7 @@ properties:
                 - required: ["name"]
                 - required: ["value"]
             evictLocalStoragePods:
-              type: object
-              properties:
-                enabled:
-                  type: boolean
+              type: boolean
             strategies:
               type: object
               default: {}
