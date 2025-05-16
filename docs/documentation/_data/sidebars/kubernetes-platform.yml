@@ -224,7 +224,7 @@ entries:
                         - title:
                             en: Overview
                             ru: Введение
-                          url: /admin/integrations/public/gcp/gcp-overview.html
+                          url: /admin/integrations/public/gcp/overview.html
                         - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
@@ -283,12 +283,20 @@ entries:
                       url: /admin/integrations/virtualization/overview.html
                     - title:
                         en: Integration with VMware vSphere
-                        ru: TODO Интеграция с VMware vSphere
+                        ru: Интеграция с VMware vSphere
                       folders:
                         - title:
                             en: Overview
                             ru: Обзор
-                          url: /admin/integrations/virtualization/vmware/vmware-overview.html
+                          url: /admin/integrations/virtualization/vmware/overview.html
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/virtualization/vmware/сonnection-and-authorization.html
+                        - title:
+                            en: Configuration and layout scheme
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/virtualization/vmware/сonfiguration-and-layout-scheme.html
                     - title:
                         en: Integration with RED
                         ru: TODO Интеграция с РЭД виртуализацией
