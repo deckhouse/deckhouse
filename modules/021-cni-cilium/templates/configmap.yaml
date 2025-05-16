@@ -162,7 +162,7 @@ data:
 
   skip-crd-creation: "true"
 
-  {{- if eq .Values.cniCilium.encryptionMode "Wireguard" }}
+  {{- if eq .Values.cniCilium.encryptionMode "WireGuard" }}
   enable-wireguard: "true"
   encrypt-node: "true"
   {{- end }}
