@@ -12,7 +12,7 @@ spec:
                   properties:
                     cpu:
                       description: |
-                        Настройка процессора для виртуальной машины.
+                        Настройки процессора для виртуальной машины.
                       properties:
                         cores:
                           description: |
@@ -31,9 +31,9 @@ spec:
                       description: >
                         Определяет загрузчик для виртуальной машины.
 
-                        * `BIOS`: Используется BIOS.
-                        * `EFI`: Используется Unified Extensible Firmware (EFI/UEFI).
-                        * `EFIWithSecureBoot`: Используется UEFI/EFI c Secure Boot support.
+                        * `BIOS` — используется BIOS;
+                        * `EFI` — используется Unified Extensible Firmware (EFI/UEFI);
+                        * `EFIWithSecureBoot` — используется UEFI/EFI c поддержкой Secure Boot.
                 rootDisk:
                   description: |
                     Указывает настройки для корневого диска виртуальной машины.
