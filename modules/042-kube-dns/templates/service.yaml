@@ -20,6 +20,7 @@ spec:
     targetPort: dns-tcp
     protocol: TCP
 ---
+#TODO: remove the service in future releases
 apiVersion: v1
 kind: Service
 metadata:
