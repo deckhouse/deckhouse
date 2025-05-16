@@ -24,12 +24,12 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"github.com/tidwall/gjson"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini/internal/scheduler"
 	"github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot"
 	"github.com/deckhouse/deckhouse/pkg/log"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 )
 
 const (
@@ -256,14 +256,14 @@ func maxStsPerNode(state scheduler.State) int {
 		}
 	}
 
-	max := 0
+	maxValue := 0
 	for _, c := range counts {
-		if c > max {
-			max = c
+		if c > maxValue {
+			maxValue = c
 		}
 	}
-	if max == 0 {
+	if maxValue == 0 {
 		return minValue
 	}
-	return max
+	return maxValue
 }
