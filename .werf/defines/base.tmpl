@@ -253,6 +253,10 @@ import:
   add: /usr/bin/less
   to: /usr/bin/less
   before: install
+- image: tools/util-linux
+  add: /usr/bin/rev
+  to: /usr/bin/rev
+  before: install
 shell:
   install:
   {{- include "base components" (list $context.rootContext $context.prefix) | nindent 2 }}
