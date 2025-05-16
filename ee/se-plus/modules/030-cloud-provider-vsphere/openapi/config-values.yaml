@@ -3,7 +3,7 @@ properties:
   host:
     type: string
     description: |
-      The domain of the vCenter server.
+      The domain of the vCenter server. Yes!
   username:
     type: string
     description: |
