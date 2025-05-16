@@ -425,37 +425,34 @@ spec:
                         pattern: '^(.+)\:\d{1,5}$'
                     encoding:
                       type: object
-                      description: How to encode the message.
+                      properties:
+                        codec:
+                          type: string
+                          enum: ["JSON", "CEF"]
+                        cef:
+                          type: object
+                          description: |
+                            CEF-specific configuration fields. Only applicable when codec is set to "CEF".
+                          properties:
+                            deviceVendor:
+                              type: string
+                              minLength: 1
+                            deviceProduct:
+                              type: string
+                              minLength: 1
+                            deviceVersion:
+                              type: string
+                              minLength: 1
                       oneOf:
-                        - required: ["codec"]
-                          properties:
+                        - properties:
                             codec:
-                              type: string
                               enum: ["JSON"]
-                          not:
-                            required: ["cef"]
-                        - required: ["codec"]
-                          properties:
+                          allOf:
+                            - not:
+                                required: ["cef"]
+                        - properties:
                             codec:
-                              type: string
                               enum: ["CEF"]
-                            cef:
-                              type: object
-                              description: |
-                                CEF-specific configuration fields. Only applicable when codec is set to "CEF".
-                              properties:
-                                deviceVendor:
-                                  type: string
-                                  minLength: 1
-                                  description: The device vendor field in CEF format
-                                deviceProduct:
-                                  type: string
-                                  minLength: 1
-                                  description: The device product field in CEF format
-                                deviceVersion:
-                                  type: string
-                                  minLength: 1
-                                  description: The device version field in CEF format
                     keyField:
                       type: string
                       description: |
