@@ -432,7 +432,7 @@ spec:
                         cef:
                           type: object
                           description: |
-                            CEF-specific configuration fields. Only applicable when codec is set to "CEF".
+                            CEF-specific configuration fields. Only applicable when codec is set to `CEF`.
                           properties:
                             deviceVendor:
                               type: string
