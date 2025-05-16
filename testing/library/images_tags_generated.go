@@ -442,10 +442,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"k8sMetacollector": "imageHash-runtimeAuditEngine-k8sMetacollector",
 		"rulesLoader":      "imageHash-runtimeAuditEngine-rulesLoader",
 	},
-	"serviceWithHealthchecks": map[string]interface{}{
-		"agent":      "imageHash-serviceWithHealthchecks-agent",
-		"controller": "imageHash-serviceWithHealthchecks-controller",
-	},
 	"snapshotController": map[string]interface{}{
 		"snapshotController":        "imageHash-snapshotController-snapshotController",
 		"snapshotValidationWebhook": "imageHash-snapshotController-snapshotValidationWebhook",
