@@ -335,12 +335,6 @@
     "editionsWithRestrictions": [
       "ce"
     ],
-    "editionsWithRestrictionsComments": {
-      "all": {
-        "en": "Restriction on the VM migration without interruption",
-        "ru": "Ограничение на возможность беспростойной миграции виртуальных машин при изменении конфигурации"
-      }
-    },
     "external": "true",
     "path": "/products/kubernetes-platform/modules/virtualization/stable/"
   }
