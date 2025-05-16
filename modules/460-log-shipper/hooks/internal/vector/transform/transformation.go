@@ -103,7 +103,7 @@ func NewTransformation(name, vrl string) *DynamicTransform {
 func splitAndremoveDot(labels []string) string {
 	var s string
 	for _, l := range labels {
-		l = strings.Replace(l, ".", "", -1)
+		l = strings.ReplaceAll(l, ".", "")
 		s = fmt.Sprintf("%s_%s", s, l)
 	}
 	return s
