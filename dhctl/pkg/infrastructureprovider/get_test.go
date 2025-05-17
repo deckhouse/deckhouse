@@ -44,7 +44,6 @@ func TestNeedToUseOpentofu(t *testing.T) {
 		"AWS",
 		"GCP",
 		"vSphere",
-		"Azure",
 		"VCD",
 		"Huaweicloud",
 	}
