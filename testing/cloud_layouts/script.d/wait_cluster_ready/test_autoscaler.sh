@@ -71,6 +71,13 @@ spec:
             cpu: "1"
       nodeSelector:
         node-role/autoscaler: ""
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: $deployment_name
+            topologyKey: kubernetes.io/hostname
       tolerations:
       - key: node
         operator: Equal
