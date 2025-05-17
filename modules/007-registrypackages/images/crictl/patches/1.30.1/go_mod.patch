@@ -1,26 +1,32 @@
 diff --git a/go.mod b/go.mod
-index ff963142..a7984b87 100644
+index ff963142..a64aabe4 100644
 --- a/go.mod
 +++ b/go.mod
-@@ -6,7 +6,7 @@ toolchain go1.22.1
+@@ -1,12 +1,10 @@
+ module github.com/kubernetes-sigs/cri-tools
+ 
+-go 1.22.0
+-
+-toolchain go1.22.1
++go 1.24.2
  
  require (
  	github.com/distribution/reference v0.6.0
 -	github.com/docker/docker v26.0.1+incompatible
-+	github.com/docker/docker v26.1.5+incompatible
++	github.com/docker/docker v27.1.1+incompatible
  	github.com/docker/go-units v0.5.0
  	github.com/golang/protobuf v1.5.4
  	github.com/google/uuid v1.6.0
-@@ -14,7 +14,7 @@ require (
+@@ -14,7 +12,7 @@ require (
  	github.com/onsi/ginkgo/v2 v2.17.1
  	github.com/onsi/gomega v1.32.0
  	github.com/opencontainers/go-digest v1.0.0
 -	github.com/opencontainers/runc v1.1.12
-+	github.com/opencontainers/runc v1.1.14
++	github.com/opencontainers/runc v1.2.0-rc.3
  	github.com/opencontainers/selinux v1.11.0
  	github.com/sirupsen/logrus v1.9.3
  	github.com/urfave/cli/v2 v2.27.1
-@@ -22,10 +22,10 @@ require (
+@@ -22,10 +20,10 @@ require (
  	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.25.0
  	go.opentelemetry.io/otel/sdk v1.25.0
  	go.opentelemetry.io/otel/trace v1.25.0
@@ -28,28 +34,43 @@ index ff963142..a7984b87 100644
 -	golang.org/x/sys v0.19.0
 -	golang.org/x/term v0.19.0
 -	golang.org/x/text v0.14.0
-+	golang.org/x/net v0.33.0
-+	golang.org/x/sys v0.28.0
-+	golang.org/x/term v0.27.0
-+	golang.org/x/text v0.21.0
++	golang.org/x/net v0.38.0
++	golang.org/x/sys v0.31.0
++	golang.org/x/term v0.30.0
++	golang.org/x/text v0.23.0
  	gopkg.in/yaml.v3 v3.0.1
  	k8s.io/api v0.0.0
  	k8s.io/apimachinery v0.0.0
-@@ -86,10 +86,11 @@ require (
+@@ -33,7 +31,7 @@ require (
+ 	k8s.io/cri-api v0.0.0
+ 	k8s.io/kubectl v0.0.0
+ 	k8s.io/kubelet v0.0.0
+-	k8s.io/kubernetes v0.0.0
++	k8s.io/kubernetes v1.32.2
+ 	sigs.k8s.io/yaml v1.4.0
+ )
+ 
+@@ -81,15 +79,16 @@ require (
+ 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
+ 	github.com/spf13/pflag v1.0.5 // indirect
+ 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
+-	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.42.0 // indirect
++	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.46.0 // indirect
+ 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.44.0 // indirect
  	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.25.0 // indirect
  	go.opentelemetry.io/otel/metric v1.25.0 // indirect
  	go.opentelemetry.io/proto/otlp v1.1.0 // indirect
 -	golang.org/x/mod v0.15.0 // indirect
 +	golang.org/x/mod v0.17.0 // indirect
  	golang.org/x/oauth2 v0.17.0 // indirect
-+	golang.org/x/sync v0.10.0 // indirect
++	golang.org/x/sync v0.12.0 // indirect
  	golang.org/x/time v0.3.0 // indirect
 -	golang.org/x/tools v0.18.0 // indirect
 +	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d // indirect
  	google.golang.org/appengine v1.6.8 // indirect
  	google.golang.org/genproto/googleapis/api v0.0.0-20240227224415-6ceb2ff114de // indirect
  	google.golang.org/genproto/googleapis/rpc v0.0.0-20240401170217-c3f982113cda // indirect
-@@ -109,33 +110,33 @@ require (
+@@ -109,33 +108,33 @@ require (
  )
  
  replace (
@@ -82,38 +103,38 @@ index ff963142..a7984b87 100644
 -	k8s.io/mount-utils => k8s.io/kubernetes/staging/src/k8s.io/mount-utils v0.0.0-20240417172702-7c48c2bd72b9
 -	k8s.io/pod-security-admission => k8s.io/kubernetes/staging/src/k8s.io/pod-security-admission v0.0.0-20240417172702-7c48c2bd72b9
 -	k8s.io/sample-apiserver => k8s.io/kubernetes/staging/src/k8s.io/sample-apiserver v0.0.0-20240417172702-7c48c2bd72b9
-+	k8s.io/api => k8s.io/kubernetes/staging/src/k8s.io/api v0.0.0-20241210112504-354eac776046
-+	k8s.io/apiextensions-apiserver => k8s.io/kubernetes/staging/src/k8s.io/apiextensions-apiserver v0.0.0-20241210112504-354eac776046
-+	k8s.io/apimachinery => k8s.io/kubernetes/staging/src/k8s.io/apimachinery v0.0.0-20241210112504-354eac776046
-+	k8s.io/apiserver => k8s.io/kubernetes/staging/src/k8s.io/apiserver v0.0.0-20241210112504-354eac776046
-+	k8s.io/cli-runtime => k8s.io/kubernetes/staging/src/k8s.io/cli-runtime v0.0.0-20241210112504-354eac776046
-+	k8s.io/client-go => k8s.io/kubernetes/staging/src/k8s.io/client-go v0.0.0-20241210112504-354eac776046
-+	k8s.io/cloud-provider => k8s.io/kubernetes/staging/src/k8s.io/cloud-provider v0.0.0-20241210112504-354eac776046
-+	k8s.io/cluster-bootstrap => k8s.io/kubernetes/staging/src/k8s.io/cluster-bootstrap v0.0.0-20241210112504-354eac776046
-+	k8s.io/code-generator => k8s.io/kubernetes/staging/src/k8s.io/code-generator v0.0.0-20241210112504-354eac776046
-+	k8s.io/component-base => k8s.io/kubernetes/staging/src/k8s.io/component-base v0.0.0-20241210112504-354eac776046
-+	k8s.io/component-helpers => k8s.io/kubernetes/staging/src/k8s.io/component-helpers v0.0.0-20241210112504-354eac776046
-+	k8s.io/controller-manager => k8s.io/kubernetes/staging/src/k8s.io/controller-manager v0.0.0-20241210112504-354eac776046
-+	k8s.io/cri-api => k8s.io/kubernetes/staging/src/k8s.io/cri-api v0.0.0-20241210112504-354eac776046
-+	k8s.io/csi-translation-lib => k8s.io/kubernetes/staging/src/k8s.io/csi-translation-lib v0.0.0-20241210112504-354eac776046
-+	k8s.io/dynamic-resource-allocation => k8s.io/kubernetes/staging/src/k8s.io/dynamic-resource-allocation v0.0.0-20241210112504-354eac776046
-+	k8s.io/endpointslice => k8s.io/kubernetes/staging/src/k8s.io/endpointslice v0.0.0-20241210112504-354eac776046
-+	k8s.io/kms => k8s.io/kubernetes/staging/src/k8s.io/kms v0.0.0-20241210112504-354eac776046
-+	k8s.io/kube-aggregator => k8s.io/kubernetes/staging/src/k8s.io/kube-aggregator v0.0.0-20241210112504-354eac776046
-+	k8s.io/kube-controller-manager => k8s.io/kubernetes/staging/src/k8s.io/kube-controller-manager v0.0.0-20241210112504-354eac776046
-+	k8s.io/kube-proxy => k8s.io/kubernetes/staging/src/k8s.io/kube-proxy v0.0.0-20241210112504-354eac776046
-+	k8s.io/kube-scheduler => k8s.io/kubernetes/staging/src/k8s.io/kube-scheduler v0.0.0-20241210112504-354eac776046
-+	k8s.io/kubectl => k8s.io/kubernetes/staging/src/k8s.io/kubectl v0.0.0-20241210112504-354eac776046
-+	k8s.io/kubelet => k8s.io/kubernetes/staging/src/k8s.io/kubelet v0.0.0-20241210112504-354eac776046
-+	k8s.io/kubernetes => k8s.io/kubernetes v1.30.8
-+	k8s.io/legacy-cloud-providers => k8s.io/kubernetes/staging/src/k8s.io/legacy-cloud-providers v0.0.0-20241210112504-354eac776046
-+	k8s.io/metrics => k8s.io/kubernetes/staging/src/k8s.io/metrics v0.0.0-20241210112504-354eac776046
-+	k8s.io/mount-utils => k8s.io/kubernetes/staging/src/k8s.io/mount-utils v0.0.0-20241210112504-354eac776046
-+	k8s.io/pod-security-admission => k8s.io/kubernetes/staging/src/k8s.io/pod-security-admission v0.0.0-20241210112504-354eac776046
-+	k8s.io/sample-apiserver => k8s.io/kubernetes/staging/src/k8s.io/sample-apiserver v0.0.0-20241210112504-354eac776046
++	k8s.io/api => k8s.io/kubernetes/staging/src/k8s.io/api v0.0.0-20250311195105-6a074997c960
++	k8s.io/apiextensions-apiserver => k8s.io/kubernetes/staging/src/k8s.io/apiextensions-apiserver v0.0.0-20250311195105-6a074997c960
++	k8s.io/apimachinery => k8s.io/kubernetes/staging/src/k8s.io/apimachinery v0.0.0-20250311195105-6a074997c960
++	k8s.io/apiserver => k8s.io/kubernetes/staging/src/k8s.io/apiserver v0.0.0-20250311195105-6a074997c960
++	k8s.io/cli-runtime => k8s.io/kubernetes/staging/src/k8s.io/cli-runtime v0.0.0-20250311195105-6a074997c960
++	k8s.io/client-go => k8s.io/kubernetes/staging/src/k8s.io/client-go v0.0.0-20250311195105-6a074997c960
++	k8s.io/cloud-provider => k8s.io/kubernetes/staging/src/k8s.io/cloud-provider v0.0.0-20250311195105-6a074997c960
++	k8s.io/cluster-bootstrap => k8s.io/kubernetes/staging/src/k8s.io/cluster-bootstrap v0.0.0-20250311195105-6a074997c960
++	k8s.io/code-generator => k8s.io/kubernetes/staging/src/k8s.io/code-generator v0.0.0-20250311195105-6a074997c960
++	k8s.io/component-base => k8s.io/kubernetes/staging/src/k8s.io/component-base v0.0.0-20250311195105-6a074997c960
++	k8s.io/component-helpers => k8s.io/kubernetes/staging/src/k8s.io/component-helpers v0.0.0-20250311195105-6a074997c960
++	k8s.io/controller-manager => k8s.io/kubernetes/staging/src/k8s.io/controller-manager v0.0.0-20250311195105-6a074997c960
++	k8s.io/cri-api => k8s.io/kubernetes/staging/src/k8s.io/cri-api v0.0.0-20250311195105-6a074997c960
++	k8s.io/csi-translation-lib => k8s.io/kubernetes/staging/src/k8s.io/csi-translation-lib v0.0.0-20250311195105-6a074997c960
++	k8s.io/dynamic-resource-allocation => k8s.io/kubernetes/staging/src/k8s.io/dynamic-resource-allocation v0.0.0-20250311195105-6a074997c960
++	k8s.io/endpointslice => k8s.io/kubernetes/staging/src/k8s.io/endpointslice v0.0.0-20250311195105-6a074997c960
++	k8s.io/kms => k8s.io/kubernetes/staging/src/k8s.io/kms v0.0.0-20250311195105-6a074997c960
++	k8s.io/kube-aggregator => k8s.io/kubernetes/staging/src/k8s.io/kube-aggregator v0.0.0-20250311195105-6a074997c960
++	k8s.io/kube-controller-manager => k8s.io/kubernetes/staging/src/k8s.io/kube-controller-manager v0.0.0-20250311195105-6a074997c960
++	k8s.io/kube-proxy => k8s.io/kubernetes/staging/src/k8s.io/kube-proxy v0.0.0-20250311195105-6a074997c960
++	k8s.io/kube-scheduler => k8s.io/kubernetes/staging/src/k8s.io/kube-scheduler v0.0.0-20250311195105-6a074997c960
++	k8s.io/kubectl => k8s.io/kubernetes/staging/src/k8s.io/kubectl v0.0.0-20250311195105-6a074997c960
++	k8s.io/kubelet => k8s.io/kubernetes/staging/src/k8s.io/kubelet v0.0.0-20250311195105-6a074997c960
++	k8s.io/kubernetes => k8s.io/kubernetes v1.30.11
++	k8s.io/legacy-cloud-providers => k8s.io/kubernetes/staging/src/k8s.io/legacy-cloud-providers v0.0.0-20250311195105-6a074997c960
++	k8s.io/metrics => k8s.io/kubernetes/staging/src/k8s.io/metrics v0.0.0-20250311195105-6a074997c960
++	k8s.io/mount-utils => k8s.io/kubernetes/staging/src/k8s.io/mount-utils v0.0.0-20250311195105-6a074997c960
++	k8s.io/pod-security-admission => k8s.io/kubernetes/staging/src/k8s.io/pod-security-admission v0.0.0-20250311195105-6a074997c960
++	k8s.io/sample-apiserver => k8s.io/kubernetes/staging/src/k8s.io/sample-apiserver v0.0.0-20250311195105-6a074997c960
  )
 diff --git a/go.sum b/go.sum
-index a3c71859..d50a8ad7 100644
+index a3c71859..ad361a41 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -33,8 +33,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
@@ -122,8 +143,8 @@ index a3c71859..d50a8ad7 100644
  github.com/distribution/reference v0.6.0/go.mod h1:BbU0aIcezP1/5jX/8MP0YiH4SdvB5Y4f/wlDRiLyi3E=
 -github.com/docker/docker v26.0.1+incompatible h1:t39Hm6lpXuXtgkF0dm1t9a5HkbUfdGy6XbWexmGr+hA=
 -github.com/docker/docker v26.0.1+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
-+github.com/docker/docker v26.1.5+incompatible h1:NEAxTwEjxV6VbBMBoGG3zPqbiJosIApZjxlbrG9q3/g=
-+github.com/docker/docker v26.1.5+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
++github.com/docker/docker v27.1.1+incompatible h1:hO/M4MtV36kzKldqnA37IWhebRA+LnqqcqDja6kVaKY=
++github.com/docker/docker v27.1.1+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
  github.com/docker/go-units v0.5.0 h1:69rxXcBk27SvSaaxTtLh/8llcHD8vYHT7WSdRZ/jvr4=
  github.com/docker/go-units v0.5.0/go.mod h1:fgPhTUdO+D/Jk86RDLlptpiXQzgHJF7gydDDbaIK4Dk=
  github.com/emicklei/go-restful/v3 v3.11.0 h1:rAQeMHw1c7zTmncogyy8VvRZwtkmkZ4FxERmMY4rD+g=
@@ -133,11 +154,22 @@ index a3c71859..d50a8ad7 100644
  github.com/opencontainers/go-digest v1.0.0/go.mod h1:0JzlMkj0TRzQZfJkVvzbP0HBR3IKzErnv2BNG4W4MAM=
 -github.com/opencontainers/runc v1.1.12 h1:BOIssBaW1La0/qbNZHXOOa71dZfZEQOzW7dqQf3phss=
 -github.com/opencontainers/runc v1.1.12/go.mod h1:S+lQwSfncpBha7XTy/5lBwWgm5+y5Ma/O44Ekby9FK8=
-+github.com/opencontainers/runc v1.1.14 h1:rgSuzbmgz5DUJjeSnw337TxDbRuqjs6iqQck/2weR6w=
-+github.com/opencontainers/runc v1.1.14/go.mod h1:E4C2z+7BxR7GHXp0hAY53mek+x49X1LjPNeMTfRGvOA=
++github.com/opencontainers/runc v1.2.0-rc.3 h1:5vQhejBp4S5w1DwFZ7L3CSOQX9cmcc8JKFy/mOBTJlo=
++github.com/opencontainers/runc v1.2.0-rc.3/go.mod h1:HADgqJU4nqAmOpe+uYBTJ4ZRvjks3ptCjKXp1pHqmCc=
  github.com/opencontainers/selinux v1.11.0 h1:+5Zbo97w3Lbmb3PeqQtpmTkMwsW5nRI3YaLpt7tQ7oU=
  github.com/opencontainers/selinux v1.11.0/go.mod h1:E5dMC3VPuVvVHDYmi78qvhJp8+M586T4DlDRYpFkyec=
  github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
+@@ -164,8 +164,8 @@ github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673/go.mod h1:N3UwUGtsr
+ github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
+ github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
+ github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
+-go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.42.0 h1:ZOLJc06r4CB42laIXg/7udr0pbZyuAihN10A/XuiQRY=
+-go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.42.0/go.mod h1:5z+/ZWJQKXa9YT34fQNx5K8Hd1EoIhvtUygUQPqEOgQ=
++go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.46.0 h1:PzIubN4/sjByhDRHLviCjJuweBXWFZWhghjg7cS28+M=
++go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.46.0/go.mod h1:Ct6zzQEuGK3WpJs2n4dn+wfJYzd/+hNnxMRTWjGn30M=
+ go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.44.0 h1:KfYpVmrjI7JuToy5k8XV3nkapjWx48k4E4JOtVstzQI=
+ go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.44.0/go.mod h1:SeQhzAEccGVZVEy7aH87Nh0km+utSpo1pTv6eMMop48=
+ go.opentelemetry.io/otel v1.25.0 h1:gldB5FfhRl7OJQbUHt/8s0a7cE8fbsPAtdpRaApKy4k=
 @@ -191,16 +191,16 @@ golang.org/x/crypto v0.0.0-20210921155107-089bfa567519/go.mod h1:GvvjBRRGRdwPK5y
  golang.org/x/mod v0.2.0/go.mod h1:s0Qsj1ACt9ePp/hMypM3fl4fZqREWJwdYDEqhRiZZUA=
  golang.org/x/mod v0.3.0/go.mod h1:s0Qsj1ACt9ePp/hMypM3fl4fZqREWJwdYDEqhRiZZUA=
@@ -154,8 +186,8 @@ index a3c71859..d50a8ad7 100644
  golang.org/x/net v0.0.0-20220722155237-a158d28d115b/go.mod h1:XRhObCWvk6IyKnWLug+ECip1KBveYUHfp+8e9klMJ9c=
 -golang.org/x/net v0.24.0 h1:1PcaxkF854Fu3+lvBIx5SYn9wRlBzzcnHZSiaFFAb0w=
 -golang.org/x/net v0.24.0/go.mod h1:2Q7sJY5mzlzWjKtYUEXSlBWCdyaioyXzRB2RtU8KVE8=
-+golang.org/x/net v0.33.0 h1:74SYHlV8BIgHIFC/LrYkOGIwL19eTYXQ5wc6TBuO36I=
-+golang.org/x/net v0.33.0/go.mod h1:HXLR5J+9DxmrqMwG9qjGCxZ+zKXxBru04zlTvWlWuN4=
++golang.org/x/net v0.38.0 h1:vRMAPTMaeGqVhG5QyLJHqNDwecKTomGeqbnfZyKlBI8=
++golang.org/x/net v0.38.0/go.mod h1:ivrbrMbzFq5J41QOQh0siUuly180yBYtLp+CKbEaFx8=
  golang.org/x/oauth2 v0.17.0 h1:6m3ZPmLEFdVxKKWnKq4VqZ60gutO35zm+zrAHVmHyDQ=
  golang.org/x/oauth2 v0.17.0/go.mod h1:OzPDGQiuQMguemayvdylqddI7qcD9lnSDb+1FiwQ5HA=
  golang.org/x/sync v0.0.0-20181221193216-37e7f081c4d4/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
@@ -165,8 +197,8 @@ index a3c71859..d50a8ad7 100644
  golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 -golang.org/x/sync v0.6.0 h1:5BMeUDZ7vkXGfEr1x9B4bRcTH4lpkTkpdh0T/J+qjbQ=
 -golang.org/x/sync v0.6.0/go.mod h1:Czt+wKu1gCyEFDUtn0jG5QVvpJ6rzVqr5aXyt9drQfk=
-+golang.org/x/sync v0.10.0 h1:3NQrjDixjgGwUOCaF8w2+VYHv0Ve/vGYSbdkTa98gmQ=
-+golang.org/x/sync v0.10.0/go.mod h1:Czt+wKu1gCyEFDUtn0jG5QVvpJ6rzVqr5aXyt9drQfk=
++golang.org/x/sync v0.12.0 h1:MHc5BpPuC30uJk597Ri8TV3CNZcTLu6B6z4lJy+g6Jw=
++golang.org/x/sync v0.12.0/go.mod h1:1dzgHSNfp02xaA81J2MS99Qcpr2w7fw1gpm99rleRqA=
  golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
  golang.org/x/sys v0.0.0-20190412213103-97732733099d/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
  golang.org/x/sys v0.0.0-20191204072324-ce4227a45e2e/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
@@ -176,22 +208,22 @@ index a3c71859..d50a8ad7 100644
  golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 -golang.org/x/sys v0.19.0 h1:q5f1RH2jigJ1MoAWp2KTp3gm5zAGFUTarQZ5U386+4o=
 -golang.org/x/sys v0.19.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=
-+golang.org/x/sys v0.28.0 h1:Fksou7UEQUWlKvIdsqzJmUmCX3cZuD2+P3XyyzwMhlA=
-+golang.org/x/sys v0.28.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=
++golang.org/x/sys v0.31.0 h1:ioabZlmFYtWhL+TRYpcnNlLwhyxaM9kWTDEmfnprqik=
++golang.org/x/sys v0.31.0/go.mod h1:BJP2sWEmIv4KK5OTEluFJCKSidICx8ciO85XgH3Ak8k=
  golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1/go.mod h1:bj7SfCRtBDWHUb9snDiAeCFNEtKQo2Wmx5Cou7ajbmo=
  golang.org/x/term v0.0.0-20210927222741-03fcf44c2211/go.mod h1:jbD1KX2456YbFQfuXm/mYQcufACuNUgVhRMnK/tPxf8=
 -golang.org/x/term v0.19.0 h1:+ThwsDv+tYfnJFhF4L8jITxu1tdTWRTZpdsWgEgjL6Q=
 -golang.org/x/term v0.19.0/go.mod h1:2CuTdWZ7KHSQwUzKva0cbMg6q2DMI3Mmxp+gKJbskEk=
-+golang.org/x/term v0.27.0 h1:WP60Sv1nlK1T6SupCHbXzSaN0b9wUmsPoRS9b61A23Q=
-+golang.org/x/term v0.27.0/go.mod h1:iMsnZpn0cago0GOrHO2+Y7u7JPn5AylBrcoWkElMTSM=
++golang.org/x/term v0.30.0 h1:PQ39fJZ+mfadBm0y5WlL4vlM7Sx1Hgf13sMIY2+QS9Y=
++golang.org/x/term v0.30.0/go.mod h1:NYYFdzHoI5wRh/h5tDMdMqCqPJZEuNqVR5xJLd/n67g=
  golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
  golang.org/x/text v0.3.3/go.mod h1:5Zoc/QRtKVWzQhOtBMvqHzDpF6irO9z98xDceosuGiQ=
  golang.org/x/text v0.3.7/go.mod h1:u+2+/6zg+i71rQMx5EYifcz6MCKuco9NR6JIITiCfzQ=
  golang.org/x/text v0.3.8/go.mod h1:E6s5w1FMmriuDzIBO73fBruAKo1PCIq6d2Q6DHfQ8WQ=
 -golang.org/x/text v0.14.0 h1:ScX5w1eTa3QqT8oi6+ziP7dTV1S2+ALU0bI+0zXKWiQ=
 -golang.org/x/text v0.14.0/go.mod h1:18ZOQIKpY8NJVqYksKHtTdi31H5itFRjB5/qKTNYzSU=
-+golang.org/x/text v0.21.0 h1:zyQAAkrwaneQ066sspRyJaG9VNi/YJ1NfzcGB3hZ/qo=
-+golang.org/x/text v0.21.0/go.mod h1:4IBbMaMmOPCJ8SecivzSH54+73PCFmPWxNTLm+vZkEQ=
++golang.org/x/text v0.23.0 h1:D71I7dUrlY+VX0gQShAThNGHFxZ13dGLBHQLVl1mJlY=
++golang.org/x/text v0.23.0/go.mod h1:/BLNzu4aZCJ1+kcD0DNRotWKage4q2rGVAg4o22unh4=
  golang.org/x/time v0.3.0 h1:rg5rLMjNzMS1RkNLzCG38eapWhnYLFYXDXj2gOlr8j4=
  golang.org/x/time v0.3.0/go.mod h1:tRJNPiyCQ0inRvYxbN9jk5I+vvW/OXSQhTDSoE431IQ=
  golang.org/x/tools v0.0.0-20180917221912-90fa682c2a6e/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
@@ -232,28 +264,28 @@ index a3c71859..d50a8ad7 100644
 -k8s.io/kubernetes/staging/src/k8s.io/kubectl v0.0.0-20240417172702-7c48c2bd72b9/go.mod h1:WuomGAL3Q6+EQK2bfHud4HD3RruJvIQRA4uuoZ4Ew+w=
 -k8s.io/kubernetes/staging/src/k8s.io/kubelet v0.0.0-20240417172702-7c48c2bd72b9 h1:Ic4LiR04UWvImJQme8/zIn9GKbx7JbByiyXDvKmGnyg=
 -k8s.io/kubernetes/staging/src/k8s.io/kubelet v0.0.0-20240417172702-7c48c2bd72b9/go.mod h1:J3s04GUInRh4RD9N0tbJpkP1lciQ3WqFk69BvbNRtaQ=
-+k8s.io/kubernetes v1.30.8 h1:QY8y6PpXsyqBdLIv9ObB6S/X3rrJLtbLKgLZ+wNYgdQ=
-+k8s.io/kubernetes v1.30.8/go.mod h1:hV3c+sqOEO0eVqgSo0KW5dOJ6UjGJ2l3Pd9+Qvft8UI=
-+k8s.io/kubernetes/staging/src/k8s.io/api v0.0.0-20241210112504-354eac776046 h1:8HVZCTs1GksNZpUdHnggK+KlIEsI+HZFDP3CXsF9Lfw=
-+k8s.io/kubernetes/staging/src/k8s.io/api v0.0.0-20241210112504-354eac776046/go.mod h1:MT0Wu+tcrQr/oMnfrjzdSZ7mzCiwx4+KDhIqa/+Br/I=
-+k8s.io/kubernetes/staging/src/k8s.io/apiextensions-apiserver v0.0.0-20241210112504-354eac776046 h1:0IFMRmsW36ozvKTrety29n4quQScKR1a16gefywjeh8=
-+k8s.io/kubernetes/staging/src/k8s.io/apiextensions-apiserver v0.0.0-20241210112504-354eac776046/go.mod h1:DPOzzIf6n1/l8+PABfoqj81RjqyBLI6+/Pjkys3zrQo=
-+k8s.io/kubernetes/staging/src/k8s.io/apimachinery v0.0.0-20241210112504-354eac776046 h1:XXf84KajWQyGP3xaVoisicbyef+sPqHQVyPGbOjvAfw=
-+k8s.io/kubernetes/staging/src/k8s.io/apimachinery v0.0.0-20241210112504-354eac776046/go.mod h1:t8MQn0aJW4Wz3tmdr/QDNyBZquwqtqEUKqbKhQKjbp0=
-+k8s.io/kubernetes/staging/src/k8s.io/apiserver v0.0.0-20241210112504-354eac776046 h1:pkxQDM8OlhuyMinRJ/JeswtOp+pgOCNpUhKZ7DGyE7Q=
-+k8s.io/kubernetes/staging/src/k8s.io/apiserver v0.0.0-20241210112504-354eac776046/go.mod h1:BLlLzrTZg8X+yyLEcUv0M+o/X+TMLA3bsDZiQ1CBMjE=
-+k8s.io/kubernetes/staging/src/k8s.io/cli-runtime v0.0.0-20241210112504-354eac776046 h1:+JU2JNcP1PN0KO7Cdytd2D1MadtZ5iUkRzonGeuW5Ls=
-+k8s.io/kubernetes/staging/src/k8s.io/cli-runtime v0.0.0-20241210112504-354eac776046/go.mod h1:qzsasJdVj8wPJy0h4FrdC+Cqc6LGDP0PRlMUHxXx4mM=
-+k8s.io/kubernetes/staging/src/k8s.io/client-go v0.0.0-20241210112504-354eac776046 h1:1M02TvxlndDEzuxA3hnERIop5S+yUIhaKoyqlPopm1c=
-+k8s.io/kubernetes/staging/src/k8s.io/client-go v0.0.0-20241210112504-354eac776046/go.mod h1:JD8I9iUwU+k8A7QHfmBGYfu5UrkbQW3nDnG28rLlkFE=
-+k8s.io/kubernetes/staging/src/k8s.io/component-base v0.0.0-20241210112504-354eac776046 h1:zj9IV1Hsb5jnOrK1+yyJ1RtYpoO4/deR3N8xvag5Nqw=
-+k8s.io/kubernetes/staging/src/k8s.io/component-base v0.0.0-20241210112504-354eac776046/go.mod h1:z0h1kSKwTKBb7mekPRApPIiQKjQ/97LEewIX0U2fTco=
-+k8s.io/kubernetes/staging/src/k8s.io/cri-api v0.0.0-20241210112504-354eac776046 h1:QV4uhFZPxO+N0h32lwdvZQFfqdjWd9L+foR28nhcRu0=
-+k8s.io/kubernetes/staging/src/k8s.io/cri-api v0.0.0-20241210112504-354eac776046/go.mod h1:/fkfIpAg9LQ3JKsBg3Zqxq1kpwX7uK8K66o573HlRZc=
-+k8s.io/kubernetes/staging/src/k8s.io/kubectl v0.0.0-20241210112504-354eac776046 h1:A4tgL5fs3Zrb4oQZX+KsqOLS+JMIp/DkMDACMqmGiH8=
-+k8s.io/kubernetes/staging/src/k8s.io/kubectl v0.0.0-20241210112504-354eac776046/go.mod h1:WuomGAL3Q6+EQK2bfHud4HD3RruJvIQRA4uuoZ4Ew+w=
-+k8s.io/kubernetes/staging/src/k8s.io/kubelet v0.0.0-20241210112504-354eac776046 h1:jjRpys2G0h/pQcJFUp9sQO1Kq056tiBwcF3LGJE7luw=
-+k8s.io/kubernetes/staging/src/k8s.io/kubelet v0.0.0-20241210112504-354eac776046/go.mod h1:J3s04GUInRh4RD9N0tbJpkP1lciQ3WqFk69BvbNRtaQ=
++k8s.io/kubernetes v1.30.11 h1:CWMxX1vZT3GcyA2UfsKPTTuOrGrt9MQHqINJfNM1/uc=
++k8s.io/kubernetes v1.30.11/go.mod h1:DGWYRXHx5NhImLiR9FvIVBsOKxwKZOX6bPF/YP7TqHY=
++k8s.io/kubernetes/staging/src/k8s.io/api v0.0.0-20250311195105-6a074997c960 h1:q7rjY/1Tq0gwJUzWEt7ZCluRTA+yjvywEquGLyqXHcA=
++k8s.io/kubernetes/staging/src/k8s.io/api v0.0.0-20250311195105-6a074997c960/go.mod h1:MT0Wu+tcrQr/oMnfrjzdSZ7mzCiwx4+KDhIqa/+Br/I=
++k8s.io/kubernetes/staging/src/k8s.io/apiextensions-apiserver v0.0.0-20250311195105-6a074997c960 h1:4XTZtwBFl1hoM458SEQiXc5kUAqcHRAPnne3tGT94Zg=
++k8s.io/kubernetes/staging/src/k8s.io/apiextensions-apiserver v0.0.0-20250311195105-6a074997c960/go.mod h1:DPOzzIf6n1/l8+PABfoqj81RjqyBLI6+/Pjkys3zrQo=
++k8s.io/kubernetes/staging/src/k8s.io/apimachinery v0.0.0-20250311195105-6a074997c960 h1:7I134U9NHKM8Zn1QJkisWjBewetLoMy2ecGMlUgUkX0=
++k8s.io/kubernetes/staging/src/k8s.io/apimachinery v0.0.0-20250311195105-6a074997c960/go.mod h1:t8MQn0aJW4Wz3tmdr/QDNyBZquwqtqEUKqbKhQKjbp0=
++k8s.io/kubernetes/staging/src/k8s.io/apiserver v0.0.0-20250311195105-6a074997c960 h1:GH7vGDVS3S28ZiLfmuotF9LEtr18MEUsj7DHSkTIRLE=
++k8s.io/kubernetes/staging/src/k8s.io/apiserver v0.0.0-20250311195105-6a074997c960/go.mod h1:BLlLzrTZg8X+yyLEcUv0M+o/X+TMLA3bsDZiQ1CBMjE=
++k8s.io/kubernetes/staging/src/k8s.io/cli-runtime v0.0.0-20250311195105-6a074997c960 h1:jHBw+kCIzW+h97A99J6QsNET0N0BcDUEwe+33TAys1M=
++k8s.io/kubernetes/staging/src/k8s.io/cli-runtime v0.0.0-20250311195105-6a074997c960/go.mod h1:qzsasJdVj8wPJy0h4FrdC+Cqc6LGDP0PRlMUHxXx4mM=
++k8s.io/kubernetes/staging/src/k8s.io/client-go v0.0.0-20250311195105-6a074997c960 h1:BxEsnLnLNMrBqh0dlsDAGft+2wdP4fOGEG4l/MamsEc=
++k8s.io/kubernetes/staging/src/k8s.io/client-go v0.0.0-20250311195105-6a074997c960/go.mod h1:JD8I9iUwU+k8A7QHfmBGYfu5UrkbQW3nDnG28rLlkFE=
++k8s.io/kubernetes/staging/src/k8s.io/component-base v0.0.0-20250311195105-6a074997c960 h1:ymuitHXMnngve5sJORtaoZG5feHgMfCBzUI5EK6QYsQ=
++k8s.io/kubernetes/staging/src/k8s.io/component-base v0.0.0-20250311195105-6a074997c960/go.mod h1:z0h1kSKwTKBb7mekPRApPIiQKjQ/97LEewIX0U2fTco=
++k8s.io/kubernetes/staging/src/k8s.io/cri-api v0.0.0-20250311195105-6a074997c960 h1:AgJSCut6njG2mItvrR6hWALgJza0tEuf5RFIQYZ5Eb8=
++k8s.io/kubernetes/staging/src/k8s.io/cri-api v0.0.0-20250311195105-6a074997c960/go.mod h1:/fkfIpAg9LQ3JKsBg3Zqxq1kpwX7uK8K66o573HlRZc=
++k8s.io/kubernetes/staging/src/k8s.io/kubectl v0.0.0-20250311195105-6a074997c960 h1:p8aHxy2oRvfKZX113XvDRf6e9ZV38ddnLWyGwvQIXJY=
++k8s.io/kubernetes/staging/src/k8s.io/kubectl v0.0.0-20250311195105-6a074997c960/go.mod h1:WuomGAL3Q6+EQK2bfHud4HD3RruJvIQRA4uuoZ4Ew+w=
++k8s.io/kubernetes/staging/src/k8s.io/kubelet v0.0.0-20250311195105-6a074997c960 h1:5p0GaZzMIHwUA3o3tL6fsKsv23x21/wEp5FBl/edUxw=
++k8s.io/kubernetes/staging/src/k8s.io/kubelet v0.0.0-20250311195105-6a074997c960/go.mod h1:J3s04GUInRh4RD9N0tbJpkP1lciQ3WqFk69BvbNRtaQ=
  k8s.io/utils v0.0.0-20230726121419-3b25d923346b h1:sgn3ZU783SCgtaSJjpcVVlRqd6GSnlTLKgpAAttJvpI=
  k8s.io/utils v0.0.0-20230726121419-3b25d923346b/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
  sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd h1:EDPBXCAspyGV4jQlpZSudPeMmr1bNJefnuqLsRAsHZo=
