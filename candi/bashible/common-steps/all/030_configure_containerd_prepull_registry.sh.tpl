@@ -82,7 +82,7 @@ bb-sync-file "/etc/containerd/registry_prepull.d/{{ $hostName }}/hosts.toml" - <
     {{- end }}
 
     {{- range $mirror.rewrites }}
-    [host.{{ $mirrorHostWithScheme | quote }}.rewrite]
+    [[host.{{ $mirrorHostWithScheme | quote }}.rewrite]]
     regex = {{ .from | quote }}
     replace = {{ .to | quote }}
     {{- end }}
