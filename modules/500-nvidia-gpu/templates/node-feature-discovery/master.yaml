@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node-feature-discovery-master
+  namespace: d8-nvidia-gpu
+  labels:
+    role: master
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      role: master
+  template:
+    metadata:
+      labels:
+        role: master
+    spec:
+      imagePullSecrets:
+      - name: deckhouse-registry
+      serviceAccountName: node-feature-discovery-master
+      enableServiceLinks: false
+      containers:
+        - name: master
+          image: "registry.k8s.io/nfd/node-feature-discovery:v0.17.3"
+          imagePullPolicy: IfNotPresent
+          startupProbe:
+            grpc:
+              port: 8082
+            failureThreshold: 30
+          livenessProbe:
+            grpc:
+              port: 8082
+          readinessProbe:
+            grpc:
+              port: 8082
+            failureThreshold: 10
+          ports:
+          - containerPort: 8081
+            name: metrics
+          - containerPort: 8082
+            name: health
+          env:
+          - name: NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+          command:
+            - "nfd-master"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          args:
+            - "-enable-leader-election"
+            - "-feature-gates=NodeFeatureGroupAPI=false"
+            - "-metrics=8081"
+            - "-grpc-health=8082"
+          volumeMounts:
+            - name: nfd-master-conf
+              mountPath: "/etc/kubernetes/node-feature-discovery"
+              readOnly: true
+      volumes:
+        - name: nfd-master-conf
+          configMap:
+            name: node-feature-discovery-master-conf
+            items:
+              - key: nfd-master.conf
+                path: nfd-master.conf
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 1
+              preference:
+                matchExpressions:
+                  - key: "node-role.kubernetes.io/master"
+                    operator: In
+                    values: [""]
+            - weight: 1
+              preference:
+                matchExpressions:
+                  - key: "node-role.kubernetes.io/control-plane"
+                    operator: In
+                    values: [""]
+      tolerations:
+      - key: "node-role.kubernetes.io/master"
+        operator: "Equal"
+        value: ""
+        effect: "NoSchedule"
+      - key: "node-role.kubernetes.io/control-plane"
+        operator: "Equal"
+        value: ""
+        effect: "NoSchedule"
+

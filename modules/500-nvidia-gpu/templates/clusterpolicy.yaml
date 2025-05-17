@@ -1,0 +1,130 @@
+apiVersion: nvidia.com/v1
+kind: ClusterPolicy
+metadata:
+  name: cluster-policy
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
+spec:
+  hostPaths:
+    rootFS: "/"
+    driverInstallDir: "/run/nvidia/driver"
+  operator:
+    runtimeClass: nvidia
+    initContainer:
+      repository: nvcr.io/nvidia
+      image: cuda
+      version: 12.8.1-base-ubi9
+      imagePullPolicy: IfNotPresent
+  daemonsets:
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 4 }}
+    priorityClassName: system-node-critical
+    updateStrategy: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: "1"
+  validator:
+    repository: nvcr.io/nvidia/cloud-native
+    image: gpu-operator-validator
+    version: v25.3.0
+    imagePullPolicy: IfNotPresent
+    plugin:
+      env:
+        - name: WITH_WORKLOAD
+          value: "false"
+  mig:
+    strategy: single
+  driver:
+    enabled: false
+
+  toolkit:
+    enabled: true
+    repository: nvcr.io/nvidia/k8s
+    image: container-toolkit
+    version: v1.17.6-ubuntu20.04
+    imagePullPolicy: IfNotPresent
+    installDir: "/usr/local/nvidia"
+  devicePlugin:
+    enabled: true
+    repository: nvcr.io/nvidia/k8s
+    image: k8s-device-plugin
+    version: v0.17.1
+    env:
+      - name: PASS_DEVICE_SPECS
+        value: "true"
+      - name: FAIL_ON_INIT_ERROR
+        value: "true"
+      - name: DEVICE_LIST_STRATEGY
+        value: envvar
+      - name: DEVICE_ID_STRATEGY
+        value: uuid
+      - name: NVIDIA_VISIBLE_DEVICES
+        value: all
+      - name: NVIDIA_DRIVER_CAPABILITIES
+        value: all
+    config:
+      name: device-plugin-config
+      default: |-
+        version: v1
+        flags:
+          migStrategy: none
+      mig-single: |-
+        version: v1
+        flags:
+          migStrategy: single
+      mig-mixed: |-
+        version: v1
+        flags:
+          migStrategy: mixed
+  dcgm:
+    enabled: false
+  dcgmExporter:
+    enabled: false
+
+  gfd:
+    enabled: true
+    repository: nvcr.io/nvidia
+    image: k8s-device-plugin
+    version: v0.17.1
+    imagePullPolicy: IfNotPresent
+    env:
+      - name: GFD_SLEEP_INTERVAL
+        value: 60s
+      - name: GFD_FAIL_ON_INIT_ERROR
+        value: "true"
+  migManager:
+    enabled: true
+    repository: nvcr.io/nvidia/cloud-native
+    image: k8s-mig-manager
+    version: v0.12.1-ubuntu20.04
+    imagePullPolicy: IfNotPresent
+    imagePullSecrets: []
+    env:
+      - name: WITH_REBOOT
+        value: "false"
+    config:
+      name: custom-mig-parted-configs
+      create: false
+      data:
+        config.yaml: |-
+          version: v1
+          mig-configs:
+            all-disabled:
+              - devices: all
+                mig-enabled: false
+            custom-mig:
+              - devices: [0]
+                mig-enabled: false
+              - devices: [1]
+                mig-enabled: true
+                mig-devices:
+                  "1g.10gb": 7
+              - devices: [2]
+                mig-enabled: true
+                mig-devices:
+                  "2g.20gb": 2
+                  "3g.40gb": 1
+              - devices: [3]
+                mig-enabled: true
+                mig-devices:
+                  "3g.40gb": 1
+                  "4g.40gb": 1
+  nodeStatusExporter:
+    enabled: false

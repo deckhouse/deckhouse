@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: node-feature-discovery-worker-conf
+  namespace: d8-nvidia-gpu
+data:
+  nfd-worker.conf: |-
+    sources:
+      pci:
+        deviceClassWhitelist:
+        - "02"
+        - "0200"
+        - "0207"
+        - "0300"
+        - "0302"
+        deviceLabelFields:
+        - vendor

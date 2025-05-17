@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: node-feature-discovery-worker
+  namespace: d8-nvidia-gpu
+  labels:
+    role: worker
+spec:
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      role: worker
+  template:
+    metadata:
+      labels:
+        role: worker
+    spec:
+      dnsPolicy: ClusterFirstWithHostNet
+      serviceAccountName: node-feature-discovery-worker
+      containers:
+      - name: worker
+        image: "registry.k8s.io/nfd/node-feature-discovery:v0.17.3"
+        livenessProbe:
+          grpc:
+            port: 8082
+        readinessProbe:
+          grpc:
+            port: 8082
+          failureThreshold: 10
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_UID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.uid
+        resources:
+          requests:
+            cpu: 5m
+            memory: 64Mi
+        command:
+        - "nfd-worker"
+        args:
+        - -feature-gates=NodeFeatureGroupAPI=false
+        - -metrics=8081
+        - -grpc-health=8082
+        ports:
+          - containerPort: 8081
+            name: metrics
+          - containerPort: 8082
+            name: health
+        volumeMounts:
+        - name: host-boot
+          mountPath: "/host-boot"
+          readOnly: true
+        - name: host-os-release
+          mountPath: "/host-etc/os-release"
+          readOnly: true
+        - name: host-sys
+          mountPath: "/host-sys"
+          readOnly: true
+        - name: host-usr-lib
+          mountPath: "/host-usr/lib"
+          readOnly: true
+        - name: host-lib
+          mountPath: "/host-lib"
+          readOnly: true
+        - name: host-proc-swaps
+          mountPath: "/host-proc/swaps"
+          readOnly: true
+        - name: features-d
+          mountPath: "/etc/kubernetes/node-feature-discovery/features.d/"
+          readOnly: true
+        - name: nfd-worker-conf
+          mountPath: "/etc/kubernetes/node-feature-discovery"
+          readOnly: true
+      volumes:
+        - name: host-boot
+          hostPath:
+            path: "/boot"
+        - name: host-os-release
+          hostPath:
+            path: "/etc/os-release"
+        - name: host-sys
+          hostPath:
+            path: "/sys"
+        - name: host-usr-lib
+          hostPath:
+            path: "/usr/lib"
+        - name: host-lib
+          hostPath:
+            path: "/lib"
+        - name: host-proc-swaps
+          hostPath:
+            path: "/proc/swaps"
+        - name: features-d
+          hostPath:
+            path: "/etc/kubernetes/node-feature-discovery/features.d/"
+        - name: nfd-worker-conf
+          configMap:
+            name: node-feature-discovery-worker-conf
+            items:
+              - key: nfd-worker.conf
+                path: nfd-worker.conf

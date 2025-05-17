@@ -1,0 +1,150 @@
+diff --git a/cmd/gpu-operator/main.go b/cmd/gpu-operator/main.go
+index 4aba8739..81739557 100644
+--- a/cmd/gpu-operator/main.go
++++ b/cmd/gpu-operator/main.go
+@@ -20,7 +20,6 @@ import (
+ 	"flag"
+ 	"fmt"
+ 	"os"
+-	"strings"
+ 	"time"
+ 
+ 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
+@@ -29,13 +28,8 @@ import (
+ 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+ 	"sigs.k8s.io/controller-runtime/pkg/cache"
+ 
+-	"github.com/NVIDIA/k8s-operator-libs/pkg/upgrade"
+-	apiconfigv1 "github.com/openshift/api/config/v1"
+-	apiimagev1 "github.com/openshift/api/image/v1"
+-	secv1 "github.com/openshift/api/security/v1"
+ 	promv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+ 	_ "go.uber.org/automaxprocs"
+-	corev1 "k8s.io/api/core/v1"
+ 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+ 	"k8s.io/apimachinery/pkg/runtime"
+ 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+@@ -49,7 +43,6 @@ import (
+ 	clusterpolicyv1 "github.com/NVIDIA/gpu-operator/api/nvidia/v1"
+ 	nvidiav1alpha1 "github.com/NVIDIA/gpu-operator/api/nvidia/v1alpha1"
+ 	"github.com/NVIDIA/gpu-operator/controllers"
+-	"github.com/NVIDIA/gpu-operator/controllers/clusterinfo"
+ 	"github.com/NVIDIA/gpu-operator/internal/consts"
+ 	"github.com/NVIDIA/gpu-operator/internal/info"
+ 	// +kubebuilder:scaffold:imports
+@@ -66,9 +59,6 @@ func init() {
+ 	utilruntime.Must(apiextensionsv1.AddToScheme(scheme))
+ 	utilruntime.Must(nvidiav1alpha1.AddToScheme(scheme))
+ 	utilruntime.Must(promv1.AddToScheme(scheme))
+-	utilruntime.Must(secv1.Install(scheme))
+-	utilruntime.Must(apiconfigv1.Install(scheme))
+-	utilruntime.Must(apiimagev1.Install(scheme))
+ }
+ 
+ func main() {
+@@ -149,48 +139,6 @@ func main() {
+ 		os.Exit(1)
+ 	}
+ 
+-	// setup upgrade controller
+-	upgrade.SetDriverName("gpu")
+-	upgradeLogger := ctrl.Log.WithName("controllers").WithName("Upgrade")
+-	clusterUpgradeStateManager, err := upgrade.NewClusterUpgradeStateManager(
+-		upgradeLogger,
+-		mgr.GetConfig(),
+-		mgr.GetEventRecorderFor("nvidia-gpu-operator"),
+-	)
+-	if err != nil {
+-		setupLog.Error(err, "unable to create new ClusterUpdateStateManager", "controller", "Upgrade")
+-		os.Exit(1)
+-	}
+-	clusterUpgradeStateManager = clusterUpgradeStateManager.WithPodDeletionEnabled(gpuPodSpecFilter).WithValidationEnabled("app=nvidia-operator-validator")
+-
+-	if err = (&controllers.UpgradeReconciler{
+-		Client:       mgr.GetClient(),
+-		Log:          upgradeLogger,
+-		Scheme:       mgr.GetScheme(),
+-		StateManager: clusterUpgradeStateManager,
+-	}).SetupWithManager(ctx, mgr); err != nil {
+-		setupLog.Error(err, "unable to create controller", "controller", "Upgrade")
+-		os.Exit(1)
+-	}
+-
+-	clusterInfo, err := clusterinfo.New(
+-		ctx,
+-		clusterinfo.WithKubernetesConfig(mgr.GetConfig()),
+-		clusterinfo.WithOneShot(false),
+-	)
+-	if err != nil {
+-		setupLog.Error(err, "failed to get cluster wide information needed by controllers")
+-		os.Exit(1)
+-	}
+-
+-	if err = (&controllers.NVIDIADriverReconciler{
+-		Client:      mgr.GetClient(),
+-		Scheme:      mgr.GetScheme(),
+-		ClusterInfo: clusterInfo,
+-	}).SetupWithManager(ctx, mgr); err != nil {
+-		setupLog.Error(err, "unable to create controller", "controller", "NVIDIADriver")
+-		os.Exit(1)
+-	}
+ 	// +kubebuilder:scaffold:builder
+ 	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {
+ 		setupLog.Error(err, "unable to set up health check")
+@@ -207,27 +155,3 @@ func main() {
+ 		os.Exit(1)
+ 	}
+ }
+-
+-func gpuPodSpecFilter(pod corev1.Pod) bool {
+-	gpuInResourceList := func(rl corev1.ResourceList) bool {
+-		for resourceName := range rl {
+-			str := string(resourceName)
+-			if strings.HasPrefix(str, "nvidia.com/gpu") || strings.HasPrefix(str, "nvidia.com/mig-") {
+-				return true
+-			}
+-		}
+-		return false
+-	}
+-
+-	//  ignore pods other than in running and pending state
+-	if pod.Status.Phase != corev1.PodRunning && pod.Status.Phase != corev1.PodPending {
+-		return false
+-	}
+-
+-	for _, c := range pod.Spec.Containers {
+-		if gpuInResourceList(c.Resources.Limits) || gpuInResourceList(c.Resources.Requests) {
+-			return true
+-		}
+-	}
+-	return false
+-}
+diff --git a/controllers/state_manager.go b/controllers/state_manager.go
+index d8f3ef7e..9e23e4be 100644
+--- a/controllers/state_manager.go
++++ b/controllers/state_manager.go
+@@ -28,7 +28,6 @@ import (
+ 	configv1 "github.com/openshift/client-go/config/clientset/versioned/typed/config/v1"
+ 	"golang.org/x/mod/semver"
+ 	corev1 "k8s.io/api/core/v1"
+-	apierrors "k8s.io/apimachinery/pkg/api/errors"
+ 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+ 	"k8s.io/apimachinery/pkg/runtime"
+ 	"k8s.io/client-go/discovery"
+@@ -769,11 +768,11 @@ func (n *ClusterPolicyController) init(ctx context.Context, reconciler *ClusterP
+ 			os.Exit(1)
+ 		}
+ 
+-		version, err := OpenshiftVersion(ctx)
+-		if err != nil && !apierrors.IsNotFound(err) {
+-			return err
+-		}
+-		n.openshift = version
++		// version, err := OpenshiftVersion(ctx)
++		// if err != nil && !apierrors.IsNotFound(err) {
++		// 	return err
++		// }
++		// n.openshift = version
+ 
+ 		k8sVersion, err := KubernetesVersion()
+ 		if err != nil {
