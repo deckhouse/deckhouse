@@ -27,6 +27,147 @@ rules:
       - patch
       - delete
       - deletecollection
+  - apiGroups: 
+      - sailoperator.io
+    resources: 
+      - istiocnis
+      - ztunnels
+      - istiorevisions
+      - istiorevisiontags
+      - istios
+    verbs: 
+      - list
+      - watch
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istiorevisions
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istiorevisions/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istiorevisions/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istiorevisiontags
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istiorevisiontags/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istiorevisiontags/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istiocnis
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istiocnis/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istiocnis/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istios
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istios/finalizers
+    verbs:
+     - update
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istios/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - remoteistios
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - remoteistios/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - remoteistios/status
+    verbs:
+      - get
+      - patch
+      - update
   - apiGroups:
       - networking.istio.io
     resources:
@@ -165,6 +306,7 @@ rules:
       - roles
       - rolebindings
     verbs:
+      - create
       - get
       - list
       - watch
@@ -176,6 +318,13 @@ rules:
       - get
       - create
       - update
+  - apiGroups:
+      - ""
+    resources:
+      - resourcequotas
+    verbs:
+      - list
+      - watch
   - apiGroups:
       - ""
     resources:
