@@ -16,7 +16,7 @@ imageSpec:
     labels: {"distro": "all", "version": "all", "kubernetes-api-proxy": "{{ $version }}" }
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-fromImage:  builder/golang-alpine-1.23
+fromImage: builder/golang-alpine
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts

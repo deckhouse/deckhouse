@@ -1,6 +1,6 @@
 ---
 image: release-channel-version-prebuild
-fromImage: builder/alpine
+fromImage: builder/alpine-3.20
 dependencies:
 - image: dev
   before: setup
