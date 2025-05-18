@@ -19,7 +19,7 @@ shell:
     - rm -rf /src/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: builder/alpine
+fromImage: builder/alpine-3.20
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
