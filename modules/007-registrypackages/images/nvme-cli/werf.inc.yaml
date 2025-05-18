@@ -42,7 +42,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
 final: false
-from: {{ .Images.BASE_ALT_P11 }}
+fromImage: builder/alt
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
   add: /src
