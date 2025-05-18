@@ -6,7 +6,7 @@
 {{- end }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ .Images.BASE_ALT_P11 }}
+fromImage: builder/alt
 final: false
 shell:
   beforeInstall:
@@ -17,7 +17,7 @@ shell:
   - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: {{ .Images.BASE_ALT_P11 }}
+fromImage: builder/alt
 final: false
 shell:
   beforeInstall:
