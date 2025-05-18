@@ -2,6 +2,41 @@
 apiVersion: deckhouse.io/v1
 kind: VsphereInstanceClass
 metadata:
+  name: autoscaler
+spec:
+  numCPUs: 4
+  memory: 8192
+  rootDiskSize: 40
+  mainNetwork: DPortGroup-lab-vms
+  datastore: SPB-5/vsan-spb-5-datastore
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: autoscaler
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    zones:
+    - spb5-zone
+    minPerZone: 1
+    maxPerZone: 1
+    classReference:
+      kind: VsphereInstanceClass
+      name: autoscaler
+  nodeTemplate:
+    labels:
+      node-role.deckhouse.io/autoscaler: ""
+    taints:
+    - effect: NoExecute
+      key: dedicated.deckhouse.io
+      value: autoscaler
+  chaos:
+    mode: Disabled
+---
+apiVersion: deckhouse.io/v1
+kind: VsphereInstanceClass
+metadata:
   name: system
 spec:
   numCPUs: 4

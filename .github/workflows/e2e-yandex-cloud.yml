@@ -475,6 +475,9 @@ jobs:
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
+          export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+          export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+          export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
 
           bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
@@ -856,6 +859,9 @@ jobs:
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
+          export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+          export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+          export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
 
           bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
@@ -1237,6 +1243,9 @@ jobs:
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
+          export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+          export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+          export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
 
           bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
@@ -1618,6 +1627,9 @@ jobs:
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
+          export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+          export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+          export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
 
           bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
@@ -1999,6 +2011,9 @@ jobs:
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
+          export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+          export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+          export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
 
           bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
@@ -2380,6 +2395,9 @@ jobs:
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
+          export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+          export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+          export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
 
           bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
@@ -2761,6 +2779,9 @@ jobs:
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
+          export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+          export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+          export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
           export CIS_ENABLED=${CIS_ENABLED}
 
           bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test

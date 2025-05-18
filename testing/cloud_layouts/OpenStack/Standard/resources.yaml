@@ -1,5 +1,36 @@
 ---
 apiVersion: deckhouse.io/v1
+kind: OpenStackInstanceClass
+metadata:
+  name: autoscaler
+spec:
+  rootDiskSize: 30
+  flavorName: e2e
+  imageName: "debian-12-genericcloud-amd64"
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: autoscaler
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    minPerZone: 1
+    maxPerZone: 1
+    classReference:
+      kind: OpenStackInstanceClass
+      name: autoscaler
+  disruptions:
+    approvalMode: Manual
+  nodeTemplate:
+    labels:
+      node-role.deckhouse.io/autoscaler: ""
+    taints:
+    - effect: NoExecute
+      key: dedicated.deckhouse.io
+      value: autoscaler
+---
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: system
