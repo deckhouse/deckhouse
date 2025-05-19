@@ -122,6 +122,7 @@
   - nodes
   - namespaces
   - endpoints
+  - replicationcontrollers
   verbs:
   - get
   - list
@@ -139,13 +140,6 @@
   resources:
   - ingresses
   - ingressclasses
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - networking.k8s.io
-  resources:
   - ingresses/status
   verbs:
   - get
@@ -203,20 +197,13 @@
   - multicluster.x-k8s.io
   resources:
   - serviceexports
+  - serviceimports
   verbs:
   - get
   - watch
   - list
   - create
   - delete
-- apiGroups:
-  - multicluster.x-k8s.io
-  resources:
-  - serviceimports
-  verbs:
-  - get
-  - watch
-  - list
 - apiGroups:
   - coordination.k8s.io
   resources:
@@ -230,4 +217,12 @@
   - patch
   - delete
   - deletecollection
+- apiGroups:
+  - networking.x-k8s.io
+  resources:
+  - gateways
+  verbs:
+  - get
+  - watch
+  - list
 {{- end -}}
