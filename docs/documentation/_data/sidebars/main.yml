@@ -492,6 +492,10 @@ entries:
                 en: Platform uninstalling
                 ru: Удаление платформы
               url: /uninstalling/
+            - title:
+                en: FAQ
+                ru: FAQ
+              url: /deckhouse-faq.html
 
 # ------------- Using -------------
     - title:
@@ -715,6 +719,43 @@ entries:
             en: Network security settings
             ru: Настройка сетевых политик
           url: /network_security_setup.html
+
+        - title:
+            en: Module development
+            ru: Разработка модуля
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /module-development/
+            - title:
+                en: Module structure
+                ru: Структура
+              url: /module-development/structure/
+            - title:
+                en: Building and publication
+                ru: Сборка и публикация
+              url: /module-development/build/
+            - title:
+                en: Running and verifying in the cluster
+                ru: Запуск и проверка в кластере
+              url: /module-development/run/
+            - title:
+                en: Module dependencies
+                ru: Зависимости модуля
+              url: /module-development/dependencies/
+            - title:
+                en: Versioning
+                ru: Версионирование
+              url: /module-development/versioning/
+            - title:
+                en: Examples
+                ru: Примеры
+              url: /module-development/example/
+            - title:
+                en: Development and debugging
+                ru: Разработка и отладка
+              url: /module-development/development/
         - title:
             en: Disaster resistance
             ru: Катастрофоустойчивость
@@ -798,42 +839,6 @@ entries:
         ru: Deckhouse Kubernetes Platform
       folders:
         - title:
-            en: Module development
-            ru: Разработка модуля
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /module-development/
-            - title:
-                en: Module structure
-                ru: Структура
-              url: /module-development/structure/
-            - title:
-                en: Building and publication
-                ru: Сборка и публикация
-              url: /module-development/build/
-            - title:
-                en: Running and verifying in the cluster
-                ru: Запуск и проверка в кластере
-              url: /module-development/run/
-            - title:
-                en: Module dependencies
-                ru: Зависимости модуля
-              url: /module-development/dependencies/
-            - title:
-                en: Versioning
-                ru: Версионирование
-              url: /module-development/versioning/
-            - title:
-                en: Examples
-                ru: Примеры
-              url: /module-development/example/
-            - title:
-                en: Development and debugging
-                ru: Разработка и отладка
-              url: /module-development/development/
-        - title:
             en: Security software settings
             ru: Настройка ПО безопасности
           folders:
@@ -861,10 +866,6 @@ entries:
                     en: KESL
                     ru: KESL
                   url: /security/kesl.html
-        - title:
-            en: FAQ
-            ru: FAQ
-          url: /deckhouse-faq.html
         - title:
             en: Modules
             ru: Модули
