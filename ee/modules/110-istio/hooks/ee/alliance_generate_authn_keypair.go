@@ -55,7 +55,7 @@ func generateKeypair(input *go_hook.HookInput) error {
 
 	snaps := input.NewSnapshots.Get("secret")
 	if len(snaps) == 1 {
-		err := snaps[0].UnmarhalTo(secret)
+		err := snaps[0].UnmarshalTo(secret)
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal secret: %v", err)
 		}

@@ -60,7 +60,7 @@ func customLogoHandler(input *go_hook.HookInput) error {
 
 	var logoData string
 
-	err := snaps[0].UnmarhalTo(&logoData)
+	err := snaps[0].UnmarshalTo(&logoData)
 	if err != nil {
 		input.Logger.Warn("cannot unmarshal logo data", log.Err(err))
 		return nil

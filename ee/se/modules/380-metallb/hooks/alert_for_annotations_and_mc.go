@@ -81,7 +81,7 @@ func checkServicesForDeprecatedAnnotations(input *go_hook.HookInput) error {
 
 	mc := new(ModuleConfig)
 
-	err := mcSnaps[0].UnmarhalTo(mc)
+	err := mcSnaps[0].UnmarshalTo(mc)
 	if err != nil {
 		return fmt.Errorf("cannot unmarshal ModuleConfig: %w", err)
 	}

@@ -123,7 +123,7 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 		return fmt.Errorf("cloud_provider_discovery_data snapshot is empty")
 	}
 
-	err := snaps[0].UnmarhalTo(secret)
+	err := snaps[0].UnmarshalTo(secret)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal secret: %v", err)
 	}

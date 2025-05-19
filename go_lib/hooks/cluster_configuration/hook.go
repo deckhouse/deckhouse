@@ -76,7 +76,7 @@ func clusterConfiguration(input *go_hook.HookInput, handler Handler) error {
 	if len(snaps) > 0 {
 		secretFound = true
 		var secret = new(v1.Secret)
-		err := snaps[0].UnmarhalTo(secret)
+		err := snaps[0].UnmarshalTo(secret)
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal secret: %w", err)
 		}

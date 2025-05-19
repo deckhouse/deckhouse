@@ -116,7 +116,7 @@ func restorePasswordFromSnapshot(snapshot []sdkpkg.Snapshot) (string, error) {
 
 	secretData := make(map[string][]byte, 0)
 
-	err := snapshot[0].UnmarhalTo(&secretData)
+	err := snapshot[0].UnmarshalTo(&secretData)
 	if err != nil {
 		return "", fmt.Errorf("unmarshal to: %w", err)
 	}

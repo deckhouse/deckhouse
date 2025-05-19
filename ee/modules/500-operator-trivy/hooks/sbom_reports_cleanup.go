@@ -83,7 +83,7 @@ func cleanUpReports(input *go_hook.HookInput, dc dependency.Container) error {
 
 	snaps := input.NewSnapshots.Get("module_config")
 	if len(snaps) > 0 {
-		err := snaps[0].UnmarhalTo(&disableSBOM)
+		err := snaps[0].UnmarshalTo(&disableSBOM)
 		if err != nil {
 			return fmt.Errorf("cannot unmarshal module config: %w", err)
 		}

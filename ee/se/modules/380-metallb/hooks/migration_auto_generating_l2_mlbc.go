@@ -175,7 +175,7 @@ func migrateMCtoMLBC(input *go_hook.HookInput) error {
 
 	mc := new(ModuleConfig)
 
-	err := snapsMC[0].UnmarhalTo(mc)
+	err := snapsMC[0].UnmarshalTo(mc)
 	if err != nil || mc.Spec.Version >= 2 {
 		input.Logger.Info("processing skipped", "ModuleConfig version", mc.Spec.Version)
 		return nil

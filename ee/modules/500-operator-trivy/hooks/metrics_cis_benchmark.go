@@ -79,7 +79,7 @@ func cisBencmarkMetricHandler(input *go_hook.HookInput) error {
 
 	compReport := new(filteredComplianceReport)
 
-	err := snaps[0].UnmarhalTo(compReport)
+	err := snaps[0].UnmarshalTo(compReport)
 	if err != nil {
 		return fmt.Errorf("cannot unmarshal filtered compliance report: %w", err)
 	}

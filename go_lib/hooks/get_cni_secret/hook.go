@@ -86,7 +86,7 @@ func setCNISecretData(moduleName string) func(input *go_hook.HookInput) error {
 
 		var cniSecret string
 
-		err := cniSecretSnap[0].UnmarhalTo(&cniSecret)
+		err := cniSecretSnap[0].UnmarshalTo(&cniSecret)
 		if err != nil {
 			return fmt.Errorf("cannot unmarshal cni secret data: %w", err)
 		}
