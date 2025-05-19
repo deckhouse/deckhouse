@@ -35,6 +35,10 @@ type PowerKeyEvent struct {
 	powerKeyDevices    []inputdev.Device
 }
 
+func (p *PowerKeyEvent) Name() string {
+	return "powerKeyReader"
+}
+
 func (p *PowerKeyEvent) Run(ctx context.Context, errCh chan error) {
 	// List all devices in /dev/input
 	err := p.prepare()
