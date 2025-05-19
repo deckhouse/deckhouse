@@ -56,14 +56,14 @@ func TestDownloadMetadataByVersion(t *testing.T) {
 	ms := &v1alpha1.ModuleSource{}
 
 	dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "v1.2.3").Then(&fake.FakeImage{
-		ManifestStub: func() (*v1.Manifest, error) {
-			return &v1.Manifest{
+		ManifestStub: func() (*crv1.Manifest, error) {
+			return &crv1.Manifest{
 				SchemaVersion: 2,
-				Layers:        []v1.Descriptor{},
+				Layers:        []crv1.Descriptor{},
 			}, nil
 		},
-		LayersStub: func() ([]v1.Layer, error) {
-			return []v1.Layer{
+		LayersStub: func() ([]crv1.Layer, error) {
+			return []crv1.Layer{
 				&utils.FakeLayer{},
 				&utils.FakeLayer{
 					FilesContent: map[string]string{
@@ -71,8 +71,8 @@ func TestDownloadMetadataByVersion(t *testing.T) {
 						"changelog.yaml": "feat:\n- Added new feature\n",
 					}}}, nil
 		},
-		DigestStub: func() (v1.Hash, error) {
-			return v1.Hash{Algorithm: "sha256"}, nil
+		DigestStub: func() (crv1.Hash, error) {
+			return crv1.Hash{Algorithm: "sha256"}, nil
 		},
 	}, nil)
 
