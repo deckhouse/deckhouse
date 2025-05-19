@@ -98,12 +98,6 @@ To view the list and status of all releases in the cluster, run the following co
 sudo -i d8 k get deckhousereleases
 ```
 
-{% alert level="info" %}
-Patch updates (for example, from `1.30.1` to `1.30.2`) are installed automatically,
-regardless of update mode or update windows.
-A new patch release is automatically applied when it appears on the configured release channel.
-{% endalert %}
-
 #### Release pinning
 
 *Release pinning* refers to fully or partially disabling automatic updates.
@@ -132,7 +126,8 @@ There are three ways to restrict automatic updates in Deckhouse:
 
   In this mode, DKP will receive updates into the cluster,
   but applying minor versions will require [manual approval](#manual-update-approval).
-  Patch versions within the current minor version will be applied automatically.
+  Patch versions within the current minor version will be applied automatically,
+  taking update windows into account if they are configured.
 
   For example, if you have DKP version `v1.65.2` installed,
   after enabling this mode, Deckhouse can automatically update to `v1.65.6`,
