@@ -186,9 +186,11 @@ func moduleConfigValidationHandler(
 			warning = res.Warning
 		}
 
+		metricStorage.GaugeSet("d8_moduleconfig_allowed_to_disable", allowedToDisableMetric, map[string]string{"module": cfg.GetName()})
+
 		module, err := moduleStorage.GetModuleByName(cfg.Name)
 		if err != nil {
-			return nil, fmt.Errorf("module not found %s: %w", cfg.Name, err)
+			return allowResult(warning)
 		}
 		exclusiveGroup := module.GetModuleExclusiveGroup()
 		if exclusiveGroup != nil {
@@ -208,8 +210,6 @@ func moduleConfigValidationHandler(
 				}
 			}
 		}
-
-		metricStorage.GaugeSet("d8_moduleconfig_allowed_to_disable", allowedToDisableMetric, map[string]string{"module": cfg.GetName()})
 
 		// Return allow with warning.
 		return allowResult(warning)

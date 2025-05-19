@@ -107,6 +107,9 @@ spec:
 {{- if .Values.deckhouse.tolerations }}
       tolerations:
         {{- .Values.deckhouse.tolerations | toYaml | nindent 8 }}
+        - key: node.deckhouse.io/uninitialized
+          operator: "Exists"
+          effect: "NoSchedule"        
 {{- else }}
       {{- include "helm_lib_tolerations" (tuple . "wildcard") | nindent 6 }}
 {{- end }}
