@@ -720,25 +720,25 @@ entries:
             ru: Мониторинг
           url: /architecture/monitoring/
         - title:
-            en: Architecture of the cluster with Istio enabled
-            ru: Архитектура кластера с включенным Istio
-          url: /architecture/cluster-with-istio.html
-        - title:
-            en: Application service architecture with Istio enabled
-            ru: Архитектура прикладного сервиса с включенным Istio
-          url: /architecture/service-with-istio.html
-        - title:
-            en: Architecture of the cluster with Istio enabled
-            ru: Архитектура кластера с включенным Istio
-          url: /architecture/cluster-with-istio.html
-        - title:
-            en: Application service architecture with Istio enabled
-            ru: Архитектура прикладного сервиса с включенным Istio
-          url: /architecture/service-with-istio.html
-        - title:
-            en: Table
-            ru: Таблица (Мэгтона)
-          url: /architecture/functional-table.html
+            en: Network
+            ru: Сеть
+          folders:
+          - title:
+              en: Architecture of the cluster with Istio enabled
+              ru: Архитектура кластера с включенным Istio
+            url: /architecture/cluster-with-istio.html
+          - title:
+              en: Application service architecture with Istio enabled
+              ru: Архитектура прикладного сервиса с включенным Istio
+            url: /architecture/service-with-istio.html
+          - title:
+              en: Architecture of the cluster with Istio enabled
+              ru: Архитектура кластера с включенным Istio
+            url: /architecture/cluster-with-istio.html
+          - title:
+              en: Application service architecture with Istio enabled
+              ru: Архитектура прикладного сервиса с включенным Istio
+            url: /architecture/service-with-istio.html
         - title:
             en: Multitenancy
             ru: Мультитенантность
