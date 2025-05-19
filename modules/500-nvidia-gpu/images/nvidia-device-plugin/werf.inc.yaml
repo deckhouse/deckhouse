@@ -28,7 +28,7 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   beforeInstall:
-    - apk add --no-cache gcc musl-dev 
+  - apk add --no-cache gcc musl-dev 
   install:
   - cd /src
   - export CLI_VERSION_PACKAGE=github.com/NVIDIA/k8s-device-plugin/internal/info
