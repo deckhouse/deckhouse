@@ -18,7 +18,7 @@ shell:
   - rm -rf fping/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-fping-artifact
-from: {{ .Images.BASE_GOLANG_23_BOOKWORM }}
+fromImage: builder/golang-bookworm
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact

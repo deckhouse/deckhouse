@@ -163,7 +163,7 @@ shell:
   - |
     ln -fs /dhctl /usr/bin/dhctl
     cat <<"EOD" > /etc/inputrc
-    {{- $rootContext.Files.Get "deckhouse-controller/files/inputrc" | nindent 4 }}
+    {{- $rootContext.Files.Get (printf "%sdeckhouse-controller/files/inputrc" $rootContext.prefix) | nindent 4 }}
     EOD
 
     cat <<"EOD" > /etc/bashrc
@@ -182,7 +182,7 @@ shell:
 
     mkdir -p /etc/vim
     cat <<"EOD" > /etc/vim/vimrc.local
-    {{- $rootContext.Files.Get "deckhouse-controller/files/vimrc.local" | nindent 4 }}
+    {{- $rootContext.Files.Get (printf "%sdeckhouse-controller/files/vimrc.local" $rootContext.prefix) | nindent 4 }}
     EOD
 
     echo 'eval "$(dhctl --completion-script-bash)"' >> /etc/bashrc
