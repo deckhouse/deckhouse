@@ -19,8 +19,9 @@ package transform
 import (
 	"testing"
 
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 )
 
 var testCases = []struct {
@@ -30,8 +31,6 @@ var testCases = []struct {
 }{
 	{"fixNestedJson lable message", v1alpha1.Transform{Action: "EnsureStructuredMessage", TargetField: "text"},
 		".message = parse_json(.message) ?? { \"text\": .message }\n"},
-	// {"del_Not_labels", v1alpha1.Transform{Action: "dropLabels", Labels: []string{}},
-	// "if exists(.first) {\n del(.first)\n}\nif exists(.second) {\n del(.second)\n}\n"},
 	{"del", v1alpha1.Transform{Action: "DropLabels", Labels: []string{"first", "second"}},
 		"if exists(.first) {\n del(.first)\n}\nif exists(.second) {\n del(.second)\n}\n"},
 	{"replaceDot", v1alpha1.Transform{Action: "NormalizeLabelKeys"},
