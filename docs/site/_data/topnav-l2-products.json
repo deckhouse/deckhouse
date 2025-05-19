@@ -25,8 +25,8 @@
           "rel": ""
         },
         {
-          "title": "Going to Production",
-          "url": "/products/kubernetes-platform/guides/production.html",
+          "title": "Guides",
+          "url": "/products/kubernetes-platform/guides/",
           "target": "",
           "rel": ""
         }
@@ -203,8 +203,8 @@
           "rel": ""
         },
         {
-          "title": "Подготовка к Production",
-          "url": "/products/kubernetes-platform/guides/production.html",
+          "title": "Гайды",
+          "url": "/products/kubernetes-platform/guides/",
           "target": "",
           "rel": ""
         }

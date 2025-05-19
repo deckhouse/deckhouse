@@ -1,0 +1,15 @@
+.gadline__title {
+    margin-top: 0;
+    margin-bottom: 24px;
+    font-weight: 400;
+    font-size: 36px;
+    line-height: 100%;
+    color: #00122C;
+}
+
+.block__tile {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 40px;
+}
