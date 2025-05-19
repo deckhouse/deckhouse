@@ -51,7 +51,7 @@ spec:
           value: ""
       containers:
       - name: gpu-feature-discovery-ctr
-        image: {{ include "helm_lib_module_image" (list . "nvidiaDevicePlugin") }}
+        image: nvcr.io/nvidia/k8s-device-plugin:v0.17.2
         command: ["gpu-feature-discovery"]
         env:
           - name: GFD_SLEEP_INTERVAL
