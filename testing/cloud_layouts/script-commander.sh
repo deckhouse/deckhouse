@@ -439,7 +439,7 @@ function update_comment() {
   # Check for HTTP errors
   if [[ ${http_code} -ge 400 ]]; then
     echo "Error: Getting comment error ${http_code}" >&2
-    echo "$response" >&2
+    echo "$comment" >&2
     return 1
   fi
 
