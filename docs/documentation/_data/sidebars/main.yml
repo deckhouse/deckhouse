@@ -715,10 +715,10 @@ entries:
             en: Alerts
             ru: Алерты
           url: /alerts.html
-        - title:
-            en: Network security settings
-            ru: Настройка сетевых политик
-          url: /network_security_setup.html
+        #- title:
+        #    en: Network security settings
+        #    ru: Настройка сетевых политик
+        #  url: /network_security_setup.html
 
         - title:
             en: Module development
