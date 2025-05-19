@@ -24,7 +24,7 @@ spec:
       serviceAccountName: nvidia-gpu-feature-discovery
       initContainers:
       - name: gpu-feature-discovery-init
-        image: {{ include "helm_lib_module_image" (list . "nvidiaDevicePlugin") }}
+        image: nvcr.io/nvidia/k8s-device-plugin:v0.17.2
         command: ["config-manager"]
         env:
         - name: ONESHOT
@@ -74,7 +74,7 @@ spec:
           - name: host-sys
             mountPath: "/sys"
       - name: gpu-feature-discovery-sidecar
-        image: {{ include "helm_lib_module_image" (list . "nvidiaDevicePlugin") }}
+        image: nvcr.io/nvidia/k8s-device-plugin:v0.17.2
         command: ["config-manager"]
         env:
         - name: ONESHOT

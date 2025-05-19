@@ -21,7 +21,7 @@ spec:
       shareProcessNamespace: true
       initContainers:
       - name: nvidia-device-plugin-init
-        image: {{ include "helm_lib_module_image" (list . "nvidiaDevicePlugin") }}
+        image: nvcr.io/nvidia/k8s-device-plugin:v0.17.2
         command: ["config-manager"]
         env:
         - name: ONESHOT
@@ -55,7 +55,7 @@ spec:
             mountPath: /config
       containers:
       - name: nvidia-device-plugin-sidecar
-        image: {{ include "helm_lib_module_image" (list . "nvidiaDevicePlugin") }}
+        image: nvcr.io/nvidia/k8s-device-plugin:v0.17.2
         command: ["config-manager"]
         securityContext:
           privileged: true
@@ -90,7 +90,7 @@ spec:
           - name: config
             mountPath: /config
       - name: nvidia-device-plugin-ctr
-        image: {{ include "helm_lib_module_image" (list . "nvidiaDevicePlugin") }}
+        image: nvcr.io/nvidia/k8s-device-plugin:v0.17.2
         command: ["nvidia-device-plugin"]
         env:
           - name: MPS_ROOT
