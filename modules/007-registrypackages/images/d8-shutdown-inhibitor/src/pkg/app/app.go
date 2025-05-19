@@ -144,8 +144,12 @@ func (a *App) wireAppTasks() []taskstarter.Task {
 			NodeName:         a.config.NodeName,
 			ShutdownSignalCh: shutdownSignalCh,
 		},
-		&tasks.StatusReporter{
+		&tasks.NodeConditionSetter{
+			NodeName:           a.config.NodeName,
 			UnlockInhibitorsCh: unlockInhibitorsCh,
 		},
+		//&tasks.StatusReporter{
+		//	UnlockInhibitorsCh: unlockInhibitorsCh,
+		//},
 	}
 }

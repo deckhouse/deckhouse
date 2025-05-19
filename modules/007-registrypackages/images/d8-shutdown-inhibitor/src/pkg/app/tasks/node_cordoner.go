@@ -29,6 +29,10 @@ type NodeCordoner struct {
 	ShutdownSignalCh <-chan struct{}
 }
 
+func (n *NodeCordoner) Name() string {
+	return "nodeCordoner"
+}
+
 func (n *NodeCordoner) Run(ctx context.Context, _ chan error) {
 	// Stage 1. Wait for shutdown.
 	fmt.Printf("nodeCordoner: wait for PrepareForShutdown signal or power key press\n")

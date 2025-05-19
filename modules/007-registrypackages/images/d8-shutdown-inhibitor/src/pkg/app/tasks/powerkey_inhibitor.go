@@ -29,6 +29,10 @@ type PowerKeyInhibitor struct {
 	inhibitLock        systemd.InhibitLock
 }
 
+func (p *PowerKeyInhibitor) Name() string {
+	return "powerKeyInhibitor"
+}
+
 func (p *PowerKeyInhibitor) Run(ctx context.Context, errCh chan error) {
 	err := p.acquireLock()
 	if err != nil {

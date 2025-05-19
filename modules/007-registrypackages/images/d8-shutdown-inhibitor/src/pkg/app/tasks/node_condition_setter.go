@@ -32,6 +32,10 @@ type NodeConditionSetter struct {
 	UnlockInhibitorsCh <-chan struct{}
 }
 
+func (n *NodeConditionSetter) Name() string {
+	return "nodeConditionSetter"
+}
+
 const (
 	ConditionType        = "GracefulShutdownPostpone"
 	ConditionStatusTrue  = "True"
@@ -44,13 +48,14 @@ func (n *NodeConditionSetter) Run(ctx context.Context, errCh chan error) {
 		errCh <- fmt.Errorf("nodeConditionSetter set Node condition: %w", err)
 		return
 	}
+	fmt.Printf("nodeConditionSetter(s1): Node condition updated\n")
 
 	// Wait until inhibitors are unlocked.
 	select {
 	case <-ctx.Done():
-		fmt.Printf("nodeConditionSetter(s1): stop on global exit\n")
+		fmt.Printf("nodeConditionSetter(s2): stop on global exit\n")
 	case <-n.UnlockInhibitorsCh:
-		fmt.Printf("nodeConditionSetter(s1): inhibitors unlocked, remove file reports\n")
+		fmt.Printf("nodeConditionSetter(s2): inhibitors unlocked, unset Node condition\n")
 	}
 
 	err = n.patchCondition(ConditionStatusFalse)

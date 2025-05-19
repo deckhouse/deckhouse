@@ -36,6 +36,10 @@ type StatusReporter struct {
 	UnlockInhibitorsCh <-chan struct{}
 }
 
+func (s *StatusReporter) Name() string {
+	return "statusReporter"
+}
+
 func (s *StatusReporter) Run(ctx context.Context, errCh chan error) {
 	err := s.ensureReportDir()
 	if err != nil {

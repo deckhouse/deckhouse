@@ -36,6 +36,10 @@ type PodObserver struct {
 	StopInhibitorsCh chan<- struct{}
 }
 
+func (p *PodObserver) Name() string {
+	return "podObserver"
+}
+
 const wallMessage = `Pods with shutdown inhibitor label are still running, waiting for them to stop.
 Use 'kubectl get po -A -l pod.deckhouse.io/inhibit-node-shutdown' to list them or
 use 'kubectl drain' to move Pods to other Nodes.

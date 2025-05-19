@@ -30,6 +30,10 @@ type ShutdownInhibitor struct {
 	inhibitLock        systemd.InhibitLock
 }
 
+func (s *ShutdownInhibitor) Name() string {
+	return "shutdownInhibitor"
+}
+
 func (s *ShutdownInhibitor) Run(ctx context.Context, errCh chan error) {
 	err := s.acquireLock()
 	if err != nil {
