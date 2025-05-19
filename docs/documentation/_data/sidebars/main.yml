@@ -755,15 +755,6 @@ entries:
                 en: Architecture of security event audit
                 ru: Архитектура аудита событий безопасности
               url: /architecture/security/runtime-audit.html
-        - title:
-            en: Release notes
-            ru: История изменений
-          folders:
-            - title:
-                en: Version 1.68
-                ru: Версия 1.68
-              url: /architecture/release-notes/1-68.html
-
 #-- -------------- --
 
     - title:
