@@ -93,11 +93,11 @@ common:
     en: "In read only mode"
     ru: "В режиме только для чтения"
   restrictions_and_supported_storage:
-    en: "Available with restrictions and must be supported by the storage"
-    ru: "Доступно с ограничениями и должны поддерживаться хранилищем"
+    en: "Available with restrictions. The storage must support snapshots"
+    ru: "Доступно с ограничениями. Хранилище должно поддерживать снимки"
   supported_storage:
-    en: "Must be supported by the storage"
-    ru: "Должны поддерживаться хранилищем"
+    en: "The storage must support snapshots"
+    ru: "Хранилище должно поддерживать снимки"
   coming_soon:
     en: "coming soon..."
     ru: "скоро..."
