@@ -49,6 +49,11 @@ spec:
           value: ""
         - name: PROCESS_TO_SIGNAL
           value: ""
+        volumeMounts:
+          - name: available-configs
+            mountPath: /available-configs
+          - name: config
+            mountPath: /config
       containers:
       - name: gpu-feature-discovery-ctr
         image: nvcr.io/nvidia/k8s-device-plugin:v0.17.2
@@ -73,6 +78,10 @@ spec:
             mountPath: "/etc/kubernetes/node-feature-discovery/features.d"
           - name: host-sys
             mountPath: "/sys"
+          - name: available-configs
+            mountPath: /available-configs
+          - name: config
+            mountPath: /config
       - name: gpu-feature-discovery-sidecar
         image: nvcr.io/nvidia/k8s-device-plugin:v0.17.2
         command: ["config-manager"]
@@ -99,6 +108,11 @@ spec:
           value: "1" # SIGHUP
         - name: PROCESS_TO_SIGNAL
           value: "gpu-feature-discovery"
+        volumeMounts:
+          - name: available-configs
+            mountPath: /available-configs
+          - name: config
+            mountPath: /config
       volumes:
         - name: output-dir
           hostPath:
@@ -106,3 +120,8 @@ spec:
         - name: host-sys
           hostPath:
             path: "/sys"
+        - name: available-configs
+          configMap:
+            name: modules/500-nvidia-gpu/templates/plugin_config.yaml
+        - name: config
+          emptyDir: {}
