@@ -38,7 +38,7 @@ const (
 var (
 	deckhouseDir             = "/deckhouse"
 	VersionFile              = deckhouseDir + "/version"
-	DeckhouseImageDigestFile = deckhouseDir + "/image_digest"
+	EditionFile              = deckhouseDir + "/edition"
 )
 
 var TmpDirName = filepath.Join(os.TempDir(), "dhctl")
@@ -47,6 +47,7 @@ var (
 	// AppVersion is overridden in CI environment via a linker "-X" flag with a CI commit tag or just "dev" if there is none.
 	// "local" is kept for manual builds only
 	AppVersion = "local"
+	AppEdition = "local"
 
 	ConfigPaths = make([]string, 0)
 	SanityCheck = false
@@ -61,7 +62,12 @@ func init() {
 	if os.Getenv("DHCTL_DEBUG") == "yes" {
 		IsDebug = true
 	}
-	file, err := os.OpenFile(VersionFile, os.O_RDONLY, 0644)
+	setVar(&AppVersion, VersionFile)
+	setVar(&AppEdition, EditionFile)
+}
+
+func setVar(env *string, filePath string) {
+	file, err := os.OpenFile(filePath, os.O_RDONLY, 0644)
 	if err != nil {
 		return
 	}
@@ -69,8 +75,8 @@ func init() {
 	buf := make([]byte, 30)
 	n, err := file.Read(buf)
 	if n > 0 && (errors.Is(err, io.EOF) || err == nil) {
-		AppVersion = strings.TrimSpace(string(buf))
-		AppVersion = strings.Replace(AppVersion, "\n", "", -1)
+		*env = strings.TrimSpace(string(buf[:n]))
+		*env = strings.Replace(*env, "\n", "", -1)
 	}
 }
 
@@ -116,5 +122,5 @@ func configEnvName(name string) string {
 func InitGlobalVars(pwd string) {
 	deckhouseDir = pwd + "/deckhouse"
 	VersionFile = deckhouseDir + "/version"
-	DeckhouseImageDigestFile = deckhouseDir + "/image_digest"
+	EditionFile = deckhouseDir + "/edition"
 }
