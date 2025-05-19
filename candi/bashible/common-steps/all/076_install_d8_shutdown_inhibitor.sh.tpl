@@ -15,6 +15,7 @@
 {{- $inhibitorPkgName := "d8-shutdown-inhibitor" }}
 {{- $inhibitorIndex := "d8ShutdownInhibitor" }}
 {{- $inhibitorVersion := "0.1" | replace "." "" }}
+{{- $stopInhibitor := .stopAdditionalNodeShutdownInhibitor }}
 
 
 old_inhibitor_hash=""
@@ -42,8 +43,50 @@ if bb-flag? reboot; then
   exit 0
 fi
 
+{{ if $stopInhibitor }}
+
+if systemctl is-enabled "d8-shutdown-inhibitor.service"; then
+  bb-log-warning "Deckhouse shutdown inhibitor service is enabled. Disable it..."
+  if systemctl disable "d8-shutdown-inhibitor.service"; then
+    bb-log-info "Deckhouse shutdown inhibitor was disabled."
+  else
+    systemctl status "d8-shutdown-inhibitor.service"
+    bb-log-error "Deckhouse shutdown inhibitor has not disabled. Exit"
+    exit 1
+  fi
+fi
+
+# Do nothing if already stopped.
+if ! systemctl is-active --quiet "d8-shutdown-inhibitor.service"; then
+  bb-log-warning "Deckhouse shutdown inhibitor service is already stopped."
+  exit 0
+fi
+
+bb-log-warning "Deckhouse shutdown inhibitor service is running. Stop it..."
+if systemctl stop "d8-shutdown-inhibitor.service"; then
+  bb-log-info "Deckhouse shutdown inhibitor was started."
+else
+  systemctl status "d8-shutdown-inhibitor.service"
+  bb-log-error "Deckhouse shutdown inhibitor has not stopped. Exit"
+  exit 1
+fi
+
+{{ else }}
+
+if ! systemctl is-enabled "d8-shutdown-inhibitor.service"; then
+  bb-log-warning "Deckhouse shutdown inhibitor service is disabled. Enable it..."
+  if systemctl enable "d8-shutdown-inhibitor.service"; then
+    bb-log-info "Deckhouse shutdown inhibitor was disabled."
+  else
+    systemctl status "d8-shutdown-inhibitor.service"
+    bb-log-error "Deckhouse shutdown inhibitor has not disabled. Exit"
+    exit 1
+  fi
+fi
+
 # Do nothing if already started.
 if systemctl is-active --quiet "d8-shutdown-inhibitor.service"; then
+  bb-log-warning "Deckhouse shutdown inhibitor service is already running."
   exit 0
 fi
 
@@ -55,3 +98,5 @@ else
   bb-log-error "Deckhouse shutdown inhibitor has not started. Exit"
   exit 1
 fi
+{{ end }}
+

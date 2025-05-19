@@ -44,14 +44,13 @@ func (s *Starter) Start(ctx context.Context) {
 	var wg sync.WaitGroup
 	errCh := make(chan error)
 
-	for i, item := range s.tasks {
+	for i := range s.tasks {
 		wg.Add(1)
-		task := item
-		go func() {
+		go func(task Task) {
 			defer wg.Done()
 			task.Run(s.ctx, errCh)
-			fmt.Printf("Task %d done\n", i)
-		}()
+			fmt.Printf("Task %s done\n", task.Name())
+		}(s.tasks[i])
 	}
 
 	// Error handler: cancel tasks on error, but wait until all tasks are done.
