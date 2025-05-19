@@ -1,10 +1,10 @@
-{{- $cniVersion := "1.6.0" }}
+{{- $cniVersion := "1.7.1" }}
 ---
 # #####################################################################
 # Build cni binaries
-# Based on https://github.com/cilium/cilium/blob/v1.17.3/images/runtime/Dockerfile (gops-cni-builder stage)
-# and https://github.com/cilium/cilium/blob/v1.17.3/images/runtime/download-cni.sh
-# and https://github.com/cilium/cilium/blob/v1.17.3/images/runtime/cni-version.sh
+# Based on https://github.com/cilium/cilium/blob/v1.17.4/images/runtime/Dockerfile (gops-cni-builder stage)
+# and https://github.com/cilium/cilium/blob/v1.17.4/images/runtime/download-cni.sh
+# and https://github.com/cilium/cilium/blob/v1.17.4/images/runtime/cni-version.sh
 # #####################################################################
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -23,7 +23,7 @@ shell:
   install:
   - git clone --depth 1 --branch v{{ $cniVersion }} $(cat /run/secrets/SOURCE_REPO)/containernetworking/plugins.git /src/plugins
   - cd /src/plugins
-  - git apply --verbose /patches/*.patch
+  - ls /patches/*.patch >/dev/null 2>&1 && git apply --verbose --allow-empty /patches/*.patch
   - rm -rf /src/plugins/.git
 ---
 image: {{ .ModuleName }}/cni-plugins-artifact
