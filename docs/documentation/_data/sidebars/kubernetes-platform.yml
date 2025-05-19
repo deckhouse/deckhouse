@@ -323,12 +323,20 @@ entries:
                           url: /admin/integrations/virtualization/red/red-overview.html
                     - title:
                         en: Integration with zVirt
-                        ru: TODO Интеграция с zVirt
+                        ru: Интеграция с zVirt
                       folders:
                         - title:
                             en: Overview
                             ru: Обзор
-                          url: /admin/integrations/virtualization/zvirt/zvirt-overview.html
+                          url: /admin/integrations/virtualization/zvirt/overview.html
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/virtualization/zvirt/сonnection-and-authorization.html
+                        - title:
+                            en: Configuration and layout scheme
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/virtualization/zvirt/сonfiguration-and-layout-scheme.html
                 - title:
                     en: Hibrid integration
                     ru: Гибридная интеграция
