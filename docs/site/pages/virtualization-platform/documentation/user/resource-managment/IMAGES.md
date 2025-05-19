@@ -5,6 +5,8 @@ permalink: en/virtualization-platform/documentation/user/resource-management/ima
 
 The [VirtualImage](../../../reference/cr/virtualimage.html) resource is designed for uploading virtual machine images and subsequently using them to create virtual machine disks. This resource is only accessible within the namespace or project where it was created.
 
+When connected to a virtual machine, the image is accessed in read-only mode.
+
 The image creation process involves the following steps:
 
 1. The user creates a [VirtualImage](../../../reference/cr/virtualimage.html) resource.
@@ -13,15 +15,39 @@ The image creation process involves the following steps:
 
 There are different types of images:
 
-- ISO Image: An image used for the initial installation of an operating system. Such images are released by OS vendors and are used for installation on physical and virtual servers.
-- Preinstalled System Disk Image: Contains configured operating system, ready for use after creating a virtual machine. These images are offered by various vendors and can come in formats such as qcow2, raw, vmdk, and others.
+- **ISO image**: an installation image used for the initial installation of an operating system. Such images are released by OS vendors and are used for installation on physical and virtual servers.
+- **Preinstalled disk image**: contains an already installed and configured operating system ready for use after the virtual machine is created. Ready images can be obtained from the distribution developers' resources or created by yourself.
 
 Examples of resources for obtaining virtual machine images:
 
-- [Ubuntu](https://cloud-images.ubuntu.com)
-- [Debian](https://cdimage.debian.org/images/cloud/)
-- [RockyLinux](https://download.rockylinux.org/pub/rocky/9.5/images/x86_64/)
-- [CentOS](https://cloud.centos.org/centos/7/images/)
+- Ubuntu
+  - [24.04 LTS (Noble Numbat)](https://cloud-images.ubuntu.com/noble/current/)
+  - [22.04 LTS (Jammy Jellyfish)](https://cloud-images.ubuntu.com/jammy/current/)
+  - [20.04 LTS (Focal Fossa)](https://cloud-images.ubuntu.com/focal/current/)
+  - [Minimal images](https://cloud-images.ubuntu.com/minimal/releases/)
+- Debian
+  - [12 bookworm](https://cdimage.debian.org/images/cloud/bookworm/latest/)
+  - [11 bullseye](https://cdimage.debian.org/images/cloud/bullseye/latest/)
+- AlmaLinux
+  - [9](https://repo.almalinux.org/almalinux/9/cloud/x86_64/images/)
+  - [8](https://repo.almalinux.org/almalinux/8/cloud/x86_64/images/)
+- RockyLinux
+  - [9.5](https://download.rockylinux.org/pub/rocky/9.5/images/x86_64/)
+  - [8.10](https://download.rockylinux.org/pub/rocky/8.10/images/x86_64/)
+- CentOS
+  - [10 Stream](https://cloud.centos.org/centos/10-stream/x86_64/images/)
+  - [9 Stream](https://cloud.centos.org/centos/9-stream/x86_64/images/)
+  - [8 Stream](https://cloud.centos.org/centos/8-stream/x86_64/)
+  - [8](https://cloud.centos.org/centos/8/x86_64/images/)
+
+The following preinstalled image formats are supported:
+
+- qcow2
+- raw
+- vmdk
+- vdi
+
+Image files can also be compressed with one of the following compression algorithms: gz, xz.
 
 After creating the resource, the type and size of the image are automatically determined, and this information is reflected in the resource's status.
 
@@ -43,7 +69,7 @@ d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualImage
 metadata:
-  name: ubuntu-22.04
+  name: ubuntu-22-04
 spec:
   # Save the image in DVCR
   storage: ContainerRegistry
@@ -51,24 +77,24 @@ spec:
   dataSource:
     type: HTTP
     http:
-      url: "https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img"
+      url: https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img
 EOF
 ```
 
 Verifying the creation of [VirtualImage](../../../reference/cr/virtualimage.html):
 
 ```bash
-d8 k get virtualimage ubuntu-22.04
+d8 k get virtualimage ubuntu-22-04
 
 # A shorter version of the command
-d8 k get vi ubuntu-22.04
+d8 k get vi ubuntu-22-04
 ```
 
 Example output:
 
 ```console
 NAME           PHASE   CDROM   PROGRESS   AGE
-ubuntu-22.04   Ready   false   100%       23h
+ubuntu-22-04   Ready   false   100%       23h
 ```
 
 After creation, the [VirtualImage](../../../reference/cr/virtualimage.html) resource can be in the following states:
@@ -78,33 +104,35 @@ After creation, the [VirtualImage](../../../reference/cr/virtualimage.html) reso
 - `Provisioning` — The image creation process is ongoing.
 - `Ready` — The image is created and ready for use.
 - `Failed` — An error occurred during the image creation process.
-- `Terminating` — The image deletion process is ongoing; this process may "hang" in this state if the image is still attached to a virtual machine.
+- `Terminating` - the image is being deleted. The image may "hang" in this state if it is still connected to the virtual machine.
 
 Until the image transitions to the `Ready` phase, the entire `.spec` block can be modified. Changing it will restart the image creation process. Once the image reaches the `Ready` phase, the contents of the `.spec` block can no longer be changed.
+
+Diagnosing problems with a resource is done by analyzing the information in the `.status.conditions` block.
 
 To monitor the image creation process, add the `-w` flag to the previous command:
 
 ```bash
-d8 k get vi ubuntu-22.04 -w
+d8 k get vi ubuntu-22-04 -w
 ```
 
 Example output:
 
 ```console
 NAME           PHASE          CDROM   PROGRESS   AGE
-ubuntu-22.04   Provisioning   false              4s
-ubuntu-22.04   Provisioning   false   0.0%       4s
-ubuntu-22.04   Provisioning   false   28.2%      6s
-ubuntu-22.04   Provisioning   false   66.5%      8s
-ubuntu-22.04   Provisioning   false   100.0%     10s
-ubuntu-22.04   Provisioning   false   100.0%     16s
-ubuntu-22.04   Ready          false   100%       18s
+ubuntu-22-04   Provisioning   false              4s
+ubuntu-22-04   Provisioning   false   0.0%       4s
+ubuntu-22-04   Provisioning   false   28.2%      6s
+ubuntu-22-04   Provisioning   false   66.5%      8s
+ubuntu-22-04   Provisioning   false   100.0%     10s
+ubuntu-22-04   Provisioning   false   100.0%     16s
+ubuntu-22-04   Ready          false   100%       18s
 ```
 
 You can obtain additional information about the downloaded image in the [VirtualImage](../../../reference/cr/virtualimage.html) resource description:
 
 ```bash
-d8 k describe vi ubuntu-22.04
+d8 k describe vi ubuntu-22-04
 ```
 
 Now, let's look at an example of creating an image stored in a PVC:
@@ -114,30 +142,34 @@ d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualImage
 metadata:
-  name: ubuntu-22.04-pvc
+  name: ubuntu-22-04-pvc
 spec:
-  # Configuration for storing the project image.
   storage: PersistentVolumeClaim
-  # Source for creating the image.
+  persistentVolumeClaim:
+    # Substitute your StorageClass name.
+    storageClassName: i-sds-replicated-thin-r2
+  # Source for image creation.
   dataSource:
     type: HTTP
     http:
-      url: "https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img"
+      url: https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img
 EOF
 ```
 
 Check the result of creating the [VirtualImage](../../../reference/cr/virtualimage.html):
 
 ```bash
-d8 k get vi ubuntu-22.04-pvc
+d8 k get vi ubuntu-22-04-pvc
 ```
 
 Example output:
 
 ```console
 NAME              PHASE   CDROM   PROGRESS   AGE
-ubuntu-22.04-pvc  Ready   false   100%       23h
+ubuntu-22-04-pvc  Ready   false   100%       23h
 ```
+
+If the `.spec.persistentVolumeClaim.storageClassName` parameter is not specified, the default `StorageClass` at the cluster level will be used, or for images if specified in [module settings](../../admin/install/steps/virtualization.html#parameter-description).
 
 ### Creating an image from a container registry
 
@@ -212,11 +244,15 @@ There are two upload options available: from a cluster node and from an external
 
 ```bash
 d8 k get vi some-image -o jsonpath="{.status.imageUploadURLs}"  | jq
+```
 
-# {
-#   "external":"https://virtualization.example.com/upload/g2OuLgRhdAWqlJsCMyNvcdt4o5ERIwmm",
-#   "inCluster":"http://10.222.165.239/upload"
-# }
+Example output:
+
+```json
+{
+  "external":"https://virtualization.example.com/upload/g2OuLgRhdAWqlJsCMyNvcdt4o5ERIwmm",
+  "inCluster":"http://10.222.165.239/upload"
+}
 ```
 
 Download the Cirros image as an example:

@@ -16,25 +16,22 @@ In the `spec` parameters, you need to set:
 Example of virtualization module configuration:
 
 ```yaml
-sudo -i d8 k create -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: virtualization
 spec:
   enabled: true
+  version: 1
   settings:
     dvcr:
       storage:
         persistentVolumeClaim:
           size: 50G
+          storageClassName: sds-replicated-thin-r1
         type: PersistentVolumeClaim
     virtualMachineCIDRs:
-    - 10.66.10.0/24
-    - 10.66.20.0/24
-    - 10.66.30.0/24
-  version: 1
-EOF
+      - 10.66.10.0/24
 ```
 
 Wait until all the pods of the module are in the `Running` status:
@@ -63,3 +60,89 @@ vm-route-forge-288z7                         1/1     Running   0             10m
 vm-route-forge-829wm                         1/1     Running   0             10m
 vm-route-forge-nq9xr                         1/1     Running   0             10m
 ```
+
+## Parameter description
+
+**Enable the module**
+The module state is controlled through the `.spec.enabled` field. Specify:
+
+- `true`: To enable the module.
+- `false`: To disable the module.
+
+**Configuration version**
+
+The `.spec.version` parameter defines the version of the configuration schema. The parameter structure may change between versions. The current values are given in the settings section.
+
+**Deckhouse Virtualization Container Registry (DVCR)**
+
+The `.spec.settings.dvcr.storage` block configures a persistent volume for storing images:
+
+- `.spec.settings.dvcr.storage.persistentVolumeClaim.size`: Volume size (for example, `50G`). To expand the storage, increase the value of the parameter.
+- `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName`: StorageClass name (for example, `sds-replicated-thin-r1`).
+
+**Network settings**
+
+The `.spec.settings.virtualMachineCIDRs` block specifies subnets in CIDR format (for example, `10.66.10.0/24`). IP addresses for virtual machines are allocated from these ranges automatically or on request.
+
+Example:
+
+```yaml
+spec:
+  settings:
+    virtualMachineCIDRs:
+      - 10.66.10.0/24
+      - 10.66.20.0/24
+      - 10.77.20.0/16
+```
+
+The first and the last subnet address are reserved and not available for use.
+
+{% alert level="warning" %}
+The subnets in the `.spec.settings.virtualMachineCIDRs` block must not overlap with cluster node subnets, services subnet, or pods subnet (`podCIDR`).
+
+It is forbidden to delete subnets if addresses from them have already been issued to virtual machines.
+{% endalert %}
+
+**Storage class settings for images**
+
+The storage class settings for images are defined in the `.spec.settings.virtualImages` parameter of the module settings.
+
+Example:
+
+```yaml
+spec:
+  ...
+  settings:
+    virtualImages:
+      allowedStorageClassNames:
+      - sc-1
+      - sc-2
+      defaultStorageClassName: sc-1
+```
+
+Where:
+
+- `allowedStorageClassNames` (optional): A list of the allowed StorageClasses for creating a VirtualImage that can be explicitly specified in the resource specification.
+- `defaultStorageClassName` (optional): The StorageClass used by default when creating a VirtualImage if the `.spec.persistentVolumeClaim.storageClassName` parameter is not set.
+
+**Storage class settings for disks**
+
+The storage class settings for disks are defined in the `.spec.settings.virtualDisks` parameter of the module settings.
+
+Example:
+
+```yaml
+spec:
+  ...
+  settings:
+    virtualDisks:
+      allowedStorageClassNames:
+      - sc-1
+      - sc-2
+      defaultStorageClassName: sc-1
+```
+
+Where:
+
+- `allowedStorageClassNames` (optional): A list of the allowed StorageClass for creating a VirtualDisk that can be explicitly specified in the resource specification.
+- `defaultStorageClassName` (optional): The StorageClass used by default when creating a VirtualDisk if the `.spec.persistentVolumeClaim.storageClassName` parameter is not specified.

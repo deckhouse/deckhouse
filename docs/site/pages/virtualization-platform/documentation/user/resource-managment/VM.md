@@ -94,6 +94,203 @@ linux-vm   Running   virtlab-pt-2   10.66.10.12   11m
 
 After creation, the virtual machine will automatically receive an IP address from the range specified in the module settings (block `virtualMachineCIDRs`).
 
+## Virtual Machine Life Cycle
+
+A virtual machine (VM) goes through several phases in its existence, from creation to deletion. These stages are called phases and reflect the current state of the VM. To understand what is happening with the VM, you should check its status (`.status.phase` field), and for more detailed information - `.status.conditions` block. All the main phases of the VM life cycle, their meaning and peculiarities are described below.
+
+![Virtual Machine Life Cycle](/../../../../images/virtualization-platform/vm-lifecycle.ru.png)
+
+- `Pending` - waiting for resources to be ready
+
+    A VM has just been created, restarted or started after a shutdown and is waiting for the necessary resources (disks, images, ip addresses, etc.) to be ready.
+    - Possible problems:
+      - Dependent resources are not ready: disks, images, VM classes, secret with initial configuration script, etc.
+    - Diagnostics: In `.status.conditions` you should pay attention to `*Ready` conditions. By them you can determine what is blocking the transition to the next phase, for example, waiting for disks to be ready (BlockDevicesReady) or VM class (VirtualMachineClassReady).
+
+      ``` bash
+      d8 k get vm <vm-name> -o json | jq '.status.conditions[] | select(.type | test(".*Ready"))'
+      ```
+
+- `Starting` - starting the virtual machine
+
+    All dependent VM resources are ready and the system is attempting to start the VM on one of the cluster nodes.
+    - Possible problems:
+      - There is no suitable node to start.
+      - There is not enough CPU or memory on suitable nodes.
+      - Neumspace or project quotas have been exceeded.
+    - Diagnostics:
+      - If the startup is delayed, check `.status.conditions`, the `type: Running` condition
+
+      ``` bash
+      d8 k get vm <vm-name> -o json | jq '.status.conditions[] | select(.type=="Running")'
+      ```
+
+- `Running` - the virtual machine is running
+
+    The VM is successfully started and running.
+    - Features:
+      - When qemu-guest-agent is installed in the guest system, the `AgentReady` condition will be true and `.status.guestOSInfo` will display information about the running guest OS.
+      - The `type: FirmwareUpToDate, status: False` condition informs that the VM firmware needs to be updated.
+      - Condition `type: ConfigurationApplied, status: False` informs that the VM configuration is not applied to the running VM.
+      - The `type: AwaitingRestartToApplyConfiguration, status: True` condition displays information about the need to manually reboot the VM because some configuration changes cannot be applied without rebooting the VM.
+    - Possible problems:
+      - An internal failure in the VM or hypervisor.
+    - Diagnosis:
+      - Check `.status.conditions`, condition `type: Running`.
+
+      ``` bash
+      d8 k get vm <vm-name> -o json | jq '.status.conditions[] | select(.type=="Running")'
+      ```
+
+- `Stopping` - The VM is stopped or rebooted.
+
+- `Stopped` - The VM is stopped and is not consuming computational resources
+
+- `Terminating` - the VM is deleted.
+
+    This phase is irreversible. All resources associated with the VM are released, but are not automatically deleted.
+
+- `Migrating` - live migration of a VM
+
+    The VM is migrated to another node in the cluster (live migration).
+    - Features:
+      - VM migration is supported only for non-local disks, the `type: Migratable` condition displays information about whether the VM can migrate or not.
+    - Possible issues:
+      - Incompatibility of processor instructions (when using host or host-passthrough processor types).
+      - Difference in kernel versions on hypervisor nodes.
+      - Not enough CPU or memory on eligible nodes.
+      - Neumspace or project quotas have been exceeded.
+    - Diagnostics:
+      - Check the `.status.conditions` condition `type: Migrating` as well as the `.status.migrationState` block
+
+    ```bash
+    d8 k get vm <vm-name> -o json | jq '.status | {condition: .conditions[] | select(.type=="Migrating"), migrationState}'
+    ```
+
+The `type: SizingPolicyMatched, status: False` condition indicates that the resource configuration does not comply with the sizing policy of the VirtualMachineClass being used. If the policy is violated, it is impossible to save VM parameters without making the resources conform to the policy.
+
+Conditions display information about the state of the VM, as well as on problems that arise. You can understand what is wrong with the VM by analyzing them:
+
+```bash
+d8 k get vm fedora -o json | jq '.status.conditions[] | select(.message != "")'
+```
+
+## Guest OS Agent
+
+To improve VM management efficiency, it is recommended to install the QEMU Guest Agent, a tool that enables communication between the hypervisor and the operating system inside the VM.
+
+How will the agent help?
+
+- It will provide consistent snapshots of disks and VMs.
+- Will provide information about the running OS, which will be reflected in the status of the VM.
+  Example:
+
+  ```yaml
+  status:
+    guestOSInfo:
+      id: fedora
+      kernelRelease: 6.11.4-301.fc41.x86_64
+      kernelVersion: '#1 SMP PREEMPT_DYNAMIC Sun Oct 20 15:02:33 UTC 2024'
+      machine: x86_64
+      name: Fedora Linux
+      prettyName: Fedora Linux 41 (Cloud Edition)
+      version: 41 (Cloud Edition)
+      versionId: “41”
+  ```
+
+- Will allow tracking that the OS has actually booted:
+
+  ```bash
+  d8 k get vm -o wide
+  ```
+
+  Sample output (`AGENT` column):
+  ```console
+  NAME     PHASE     CORES   COREFRACTION   MEMORY   NEED RESTART   AGENT   MIGRATABLE   NODE           IPADDRESS    AGE
+  fedora   Running   6       5%             8000Mi   False          True    True         virtlab-pt-1   10.66.10.1   5d21h
+  ```
+
+How to install QEMU Guest Agent:
+
+For Debian-based OS:
+
+```bash
+sudo apt install qemu-guest-agent
+```
+
+For Centos-based OS:
+
+```bash
+sudo yum install qemu-guest-agent
+```
+
+Starting the agent service:
+
+```bash
+sudo systemctl enable --now qemu-guest-agent
+```
+
+## Automatic CPU Topology Configuration
+
+The CPU topology of a virtual machine (VM) determines how the CPU cores are allocated across sockets. This is important to ensure optimal performance and compatibility with applications that may depend on the CPU configuration. In the VM configuration, you specify only the total number of processor cores, and the topology (the number of sockets and cores in each socket) is automatically calculated based on this value.
+
+The number of processor cores is specified in the VM configuration as follows:
+
+```yaml
+spec:
+  cpu:
+    cores: 1
+```
+
+Next, the system automatically determines the topology depending on the specified number of cores. The calculation rules depend on the range of the number of cores and are described below.
+
+- If the number of cores is between 1 and 16 (1 ≤ `.spec.cpu.cores` ≤ 16):
+  - 1 socket is used.
+  - The number of cores in the socket is equal to the specified value.
+  - Change step: 1 (you can increase or decrease the number of cores one at a time).
+  - Valid values: any integer from 1 to 16 inclusive.
+  - Example: If `.spec.cpu.cores` = 8, topology: 1 socket with 8 cores.
+- If the number of cores is from 17 to 32 (16 < `.spec.cpu.cores` ≤ 32):
+  - 2 sockets are used.
+  - Cores are evenly distributed between sockets (the number of cores in each socket is the same).
+  - Change step: 2 (total number of cores must be even).
+  - Allowed values: 18, 20, 22, 24, 26, 28, 30, 32.
+  - Limitations: minimum 9 cores per socket, maximum 16 cores per socket.
+  - Example: If `.spec.cpu.cores` = 20, topology: 2 sockets with 10 cores each.
+- If the number of cores is between 33 and 64 (32 < `.spec.cpu.cores` ≤ 64):
+  - 4 sockets are used.
+  - Cores are evenly distributed among the sockets.
+  - Step change: 4 (the total number of cores must be a multiple of 4).
+  - Allowed values: 36, 40, 44, 48, 52, 56, 60, 64.
+  - Limitations: minimum 9 cores per socket, maximum 16 cores per socket.
+  - Example: If `.spec.cpu.cores` = 40, topology: 4 sockets with 10 cores each.
+- If the number of cores is greater than 64 (`.spec.cpu.cores` > 64):
+  - 8 sockets are used.
+  - Cores are evenly distributed among the sockets.
+  - Step change: 8 (the total number of cores must be a multiple of 8).
+  - Valid values: 72, 80, 88, 88, 96, and so on up to 248
+  - Limitations: minimum 9 cores per socket.
+  - Example: If `.spec.cpu.cores` = 80, topology: 8 sockets with 10 cores each.
+
+The change step indicates by how much the total number of cores can be increased or decreased so that they are evenly distributed across the sockets.
+
+The maximum possible number of cores is 248.
+
+The current VM topology (number of sockets and cores in each socket) is displayed in the VM status in the following format:
+
+```yaml
+status:
+  resources:
+    cpu:
+      coreFraction: 10%
+      cores: 1
+      requestedCores: "1"
+      runtimeOverhead: "0"
+      topology:
+        sockets: 1
+        coresPerSocket: 1
+```
+
 ## Connecting to a virtual machine
 
 There are several ways to connect to a virtual machine:
@@ -199,13 +396,15 @@ If the virtual machine is in a stopped state (`.status.phase: Stopped`), the cha
 
 If the virtual machine is running (`.status.phase: Running`), the method of applying the changes depends on their type:
 
-| Configuration Block                        | How the changes are applied |
-| ------------------------------------------ | --------------------------- |
-| `.metadata.labels`                         | Applied immediately         |
-| `.metadata.annotations`                    | Applied immediately         |
-| `.spec.runPolicy`                          | Applied immediately         |
-| `.spec.disruptions.restartApprovalMode`    | Applied immediately         |
-| `.spec.*`                                  | Requires a VM restart       |
+| Configuration block                     | How changes are applied                                 |
+| --------------------------------------- | --------------------------------------------------------|
+| `.metadata.annotations`                 | Applies immediately                                     |
+| `.spec.liveMigrationPolicy`             | Applies immediately                                     |
+| `.spec.runPolicy`                       | Applies immediately                                     |
+| `.spec.disruptions.restartApprovalMode` | Applies immediately                                     |
+| `.spec.affinity`                        | EE, SE+: Applies immediately, CE: Only after VM restart |
+| `.spec.nodeSelector`                    | EE, SE+: Applies immediately, CE: Only after VM restart |
+| `.spec.*`                               | Only after VM restart                                   |
 
 Let's consider an example of changing the virtual machine's configuration:
 
@@ -218,7 +417,7 @@ d8 v ssh cloud@linux-vm --local-ssh --command "nproc"
 Example output:
 
 ```console
-# 1
+1
 ```
 
 Apply the following patch to the virtual machine to change the number of CPU cores from 1 to 2.
@@ -242,7 +441,7 @@ d8 v ssh cloud@linux-vm --local-ssh --command "nproc"
 Example output:
 
 ```console
-# 1
+1
 ```
 
 To apply this change, a restart of the virtual machine is required. Run the following command to see the changes that are pending application (which require a restart):
@@ -253,7 +452,7 @@ d8 k get vm linux-vm -o jsonpath="{.status.restartAwaitingChanges}" | jq .
 
 Example output:
 
-```console
+```json
 [
   {
     "currentValue": 1,
@@ -291,10 +490,15 @@ Run the following command to verify:
 
 ```shell
 d8 v ssh cloud@linux-vm --local-ssh --command "nproc"
-# 2
 ```
 
-By default, the changes to a virtual machine are applied through a manual restart. If you need the changes to be applied immediately and automatically, you can modify the change application policy as follows:
+Example output:
+
+```txt
+2
+```
+
+The default behavior is to apply changes to the virtual machine through a "manual" restart. If you want to apply the changes immediately and automatically, you need to change the change application policy:
 
 ```yaml
 spec:
@@ -441,7 +645,7 @@ spec:
             topologyKey: "kubernetes.io/hostname"
 ```
 
-![virtualMachineAndPodAffinity](/images/virtualization-platform/placement-vm-affinity.png)
+![virtualMachineAndPodAffinity](/../../../../images/virtualization-platform/placement-vm-affinity.png)
 
 In this example, the virtual machine will be placed on nodes that do **not** have any virtual machine labeled with `server: database` on the same node, as the goal is to avoid co-location of certain virtual machines.
 
@@ -525,6 +729,8 @@ After creating the `VirtualMachineBlockDeviceAttachment`, it can be in the follo
 - `InProgress` - the device attachment process is ongoing.
 - `Attached` - the device is successfully attached.
 
+Diagnosing problems with a resource is done by analyzing the information in the `.status.conditions` block
+
 Check the state of your resource:
 
 ```shell
@@ -580,17 +786,119 @@ EOF
 
 ## Live migration of virtual machines
 
-Live migration of virtual machines is an important feature in managing virtualized infrastructure. It allows running virtual machines to be moved from one physical node to another without being powered off.
+Live virtual machine (VM) migration is the process of moving a running VM from one physical host to another without shutting it down. This feature plays a key role in the management of virtualized infrastructure, ensuring application continuity during maintenance, load balancing, or upgrades.
 
-Migration can occur automatically in the following cases:
+### How live migration works
 
-- Virtual machine firmware updates.
-- Load balancing across cluster nodes.
-- Putting nodes into maintenance mode for maintenance operations.
+The live migration process involves several steps:
 
-Additionally, virtual machine migration can be performed on-demand by the user. Let's look at an example:
+1. **Creation of a new VM instance**
 
-Before starting the migration, check the current status of the virtual machine:
+   A new VM is created on the target host in a suspended state. Its configuration (CPU, disks, network) is copied from the source node.
+
+2. **Primary Memory Transfer**
+
+   The entire RAM of the VM is copied to the target node over the network. This is called primary transfer.
+
+3. **Change Tracking (Dirty Pages)**
+
+    While memory is being transferred, the VM continues to run on the source node and may change some memory pages. These pages are called dirty pages and the hypervisor marks them.
+
+4. **Iterative synchronization**.
+
+   After the initial transfer, only the modified pages are resent. This process is repeated in several cycles:
+   - The higher the load on the VM, the more "dirty" pages appear, and the longer the migration takes.
+   - With good network bandwidth, the amount of unsynchronized data gradually decreases.
+
+5. **Final synchronization and switching**.
+
+    When the number of dirty pages becomes minimal, the VM on the source node is suspended (typically for 100 milliseconds):
+    - The remaining memory changes are transferred to the target node.
+    - The state of the CPU, devices, and open connections are synchronized.
+    - The VM is started on the new node and the source copy is deleted.
+
+![Life Migration](/../../../../images/virtualization-platform/migration.png)
+
+{% alert level="warning" %}
+Network speed plays an important role. If bandwidth is low, there are more iterations and VM downtime can increase. In the worst case, the migration may not complete at all.
+{% endalert %}
+
+### AutoConverge mechanism
+
+If the network struggles to handle data transfer and the number of "dirty" pages keeps growing, the AutoConverge mechanism can be useful. It helps complete migration even with low network bandwidth.
+
+The working principles of AutoConverge mechanism:
+
+1. **VM CPU slowdown**.
+
+    The hypervisor gradually reduces the CPU frequency of the source VM. This reduces the rate at which new "dirty" pages appear. The higher the load on the VM, the greater the slowdown.
+
+2. **Synchronization acceleration**.
+
+    Once the data transfer rate exceeds the memory change rate, final synchronization is started and the VM switches to the new node.
+
+3. **Automatic Termination**
+
+    Final synchronization is started when the data transfer rate exceeds the memory change rate.
+
+AutoConverge is a kind of "insurance" that ensures that the migration completes even if the network struggles to handle data transfer. However, CPU slowdown can affect the performance of applications running on the VM, so its use should be monitored.
+
+### Configuring Migration Policy
+
+To configure migration behavior, use the  `.spec.liveMigrationPolicy` parameter in the VM configuration. The following options are available:
+
+- `AlwaysSafe` - Migration is performed without slowing down the CPU (AutoConverge is not used). Suitable for cases where maximizing VM performance is important but requires high network bandwidth.
+- `PreferSafe` - (used as the default policy) By default, migration runs without AutoConverge, but CPU slowdown can be enabled manually if the migration fails to complete. This is done by using the VirtualMachineOperation resource with `type=Evict` and `force=true`.
+- `AlwaysForced` - Migration always uses AutoConverge, meaning the CPU is slowed down when necessary. This ensures that the migration completes even if the network is bad, but may degrade VM performance.
+- `PreferForced` - By default migration goes with AutoConverge, but slowdown can be manually disabled via VirtualMachineOperation with the parameter `type=Evict` and `force=false`.
+
+### Migration Types
+
+Migration can be performed manually by the user, or automatically by the following system events:
+
+- Updating the "firmware" of a virtual machine.
+- Redistribution of load in the cluster.
+- Transferring a node into maintenance mode (Node drain).
+- When you change [VM placement settings](#placement-of-virtual-machines-on-nodes) (not available in Community edition).
+
+The trigger for live migration is the appearance of the `VirtualMachineOperations` resource with the `Evict` type.
+
+The table shows the `VirtualMachineOperations` resource name prefixes with the `Evict` type that are created for live migrations caused by system events:
+
+| Type of system event | Resource name prefix |
+|----------------------------------|------------------------|
+| Firmware-update-* | firmware-update-* |
+| Load shifting | evacuation-* |
+| Drain node | evacuation-* |
+| Modify placement parameters | nodeplacement-update-* |
+
+This resource can be in the following states:
+
+- `Pending` - the operation is pending.
+- `InProgress` - live migration is in progress.
+- `Completed` - live migration of the virtual machine has been completed successfully.
+- `Failed` - the live migration of the virtual machine has failed.
+
+Diagnosing problems with a resource is done by analyzing the information in the `.status.conditions` block.
+
+You can view active operations using the command:
+
+```bash
+d8 k get vmop
+```
+
+Example output:
+
+```txt
+NAME                    PHASE       TYPE    VIRTUALMACHINE      AGE
+firmware-update-fnbk2   Completed   Evict   static-vm-node-00   148m
+```
+
+You can interrupt any live migration while it is in the `Pending`, `InProgress` phase by deleting the corresponding `VirtualMachineOperations` resource.
+
+### How to perform a live migration of a virtual machine using `VirtualMachineOperations`
+
+Let's look at an example. Before starting the migration, view the current status of the virtual machine:
 
 ```shell
 d8 k get vm
@@ -605,7 +913,14 @@ linux-vm   Running   virtlab-pt-1   10.66.10.14   79m
 
 The virtual machine is running on the `virtlab-pt-1` node.
 
-To perform a migration of the virtual machine from one node to another, considering the placement requirements of the virtual machine, use the `VirtualMachineOperation` (`vmop`) resource with the `Evict` type.
+To migrate a virtual machine from one host to another, taking into account the virtual machine placement requirements, the command is used:
+
+```bash
+d8 v evict -n <namespace> <vm-name>
+```
+
+execution of this command leads to the creation of the `VirtualMachineOperations` resource.
+You can also start the migration by creating a `VirtualMachineOperations` (`vmop`) resource with the `Evict` type manually:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -621,7 +936,7 @@ spec:
 EOF
 ```
 
-Immediately after creating the `vmop` resource, run the following command:
+To track the migration of a virtual machine immediately after the `vmop` resource is created, run the command:
 
 ```shell
 d8 k get vm -w
@@ -642,6 +957,32 @@ You can also perform the migration using the following command:
 ```shell
 d8 v evict <vm-name>
 ```
+
+#### Live migration of virtual machine when changing placement parameters (not available in CE edition)
+
+Let's consider the migration mechanism on the example of a cluster with two node groups (`NodeGroups`): green and blue. Suppose a virtual machine (VM) is initially running on a node in the green group and its configuration contains no placement restrictions.
+
+Step 1: Add the placement parameter
+Let's specify in the VM specification the requirement for placement in the green group :
+
+```yaml
+spec:
+  nodeSelector:
+    node.deckhouse.io/group: green
+```
+
+After saving the changes, the VM will continue to run on the current node, since the `nodeSelector` condition is already met.
+
+Step 2: Change the placement parameter
+Let's change the placement requirement to group blue :
+
+```yaml
+spec:
+  nodeSelector:
+    node.deckhouse.io/group: blue
+```
+
+Now the current node (groups green) does not match the new conditions. The system will automatically create a `VirtualMachineOperations` object of type Evict, which will initiate a live migration of the VM to an available node in group blue .
 
 ## Maintenance mode
 
