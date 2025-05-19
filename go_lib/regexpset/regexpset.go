@@ -21,6 +21,8 @@ import (
 	"regexp"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 )
 
 // NewFromSnapshot expects snapshot to contain only strings, otherwise it panics
@@ -36,7 +38,7 @@ func NewFromSnapshot(snapshot []go_hook.FilterResult) (RegExpSet, error) {
 }
 
 // NewFromValues expects values array to contain only strings
-func NewFromValues(values go_hook.PatchableValuesCollector, path string) (RegExpSet, error) {
+func NewFromValues(values sdkpkg.PatchableValuesCollector, path string) (RegExpSet, error) {
 	s := RegExpSet{}
 	for _, m := range values.Get(path).Array() {
 		err := s.Add(m.String())

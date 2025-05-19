@@ -24,6 +24,7 @@ import (
 	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/hooks/lib"
 	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/hooks/lib/v1alpha1"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 const (
@@ -193,15 +194,23 @@ func routingTablesHandler(input *go_hook.HookInput) error {
 	desiredRTStatus := make(map[string]rtStatusPlus)
 	desiredNodeRoutingTables := make([]desiredNRTInfo, 0)
 
+	nodes, err := sdkobjectpatch.UnmarshalToStruct[lib.NodeInfo](input.NewSnapshots, "nodes")
+	if err != nil {
+		return fmt.Errorf("unmarshal to struct: %v", err)
+	}
+
 	// Filling allNodes
-	for _, nodeRaw := range input.Snapshots["nodes"] {
-		node := nodeRaw.(lib.NodeInfo)
+	for _, node := range nodes {
 		allNodes[node.Name] = struct{}{}
 	}
 
+	nrts, err := sdkobjectpatch.UnmarshalToStruct[SDNInternalNodeRoutingTableInfo](input.NewSnapshots, "noderoutingtables")
+	if err != nil {
+		return fmt.Errorf("unmarshal to struct: %v", err)
+	}
+
 	// Filling actualNodeRoutingTables and delete finalizers from orphan NRTs
-	for _, nrtRaw := range input.Snapshots["noderoutingtables"] {
-		nrtis := nrtRaw.(SDNInternalNodeRoutingTableInfo)
+	for _, nrtis := range nrts {
 		actualNodeRoutingTables[nrtis.Name] = nrtis
 		if _, ok := allNodes[nrtis.NodeName]; !ok && nrtis.IsDeleted {
 			input.Logger.Infof("An orphan NRT %v was found. It will be deleted", nrtis.Name)
@@ -215,18 +224,20 @@ func routingTablesHandler(input *go_hook.HookInput) error {
 		}
 	}
 
+	rts, err := sdkobjectpatch.UnmarshalToStruct[RoutingTableInfo](input.NewSnapshots, "routingtables")
+	if err != nil {
+		return fmt.Errorf("unmarshal to struct: %v", err)
+	}
+
 	// Filling utilizedIDs
-	for _, rtiRaw := range input.Snapshots["routingtables"] {
-		rti := rtiRaw.(RoutingTableInfo)
+	for _, rti := range rts {
 		if rti.IPRoutingTableID != 0 {
 			idi.UtilizedIDs[rti.IPRoutingTableID] = struct{}{}
 		}
 	}
 
 	// main loop
-	for _, rtiRaw := range input.Snapshots["routingtables"] {
-		rti := rtiRaw.(RoutingTableInfo)
-
+	for _, rti := range rts {
 		// DRT stands for Desired Routing Table
 		tmpDRTS := new(rtStatusPlus)
 		tmpDRTS.failedNodes = make([]string, 0)

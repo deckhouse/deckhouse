@@ -114,7 +114,7 @@ func enableCni(input *go_hook.HookInput) error {
 	requirements.RemoveValue(cniConfigurationSettledKey)
 
 	cniNameSnap := input.Snapshots["cni_name"]
-	deckhouseMCSnap := input.Snapshots["deckhouse_mc"]
+	deckhouseMCSnap := input.NewSnapshots.Get("deckhouse_mc")
 
 	explicitlyEnabledCNIs := set.NewFromSnapshot(deckhouseMCSnap)
 

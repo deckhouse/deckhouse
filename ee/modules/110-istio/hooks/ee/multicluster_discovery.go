@@ -7,6 +7,7 @@ package ee
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"strings"
 	"time"
@@ -24,6 +25,8 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/jwt"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var (
@@ -41,7 +44,7 @@ type IstioMulticlusterDiscoveryCrdInfo struct {
 	PrivateMetadataEndpoint  string
 }
 
-func (i *IstioMulticlusterDiscoveryCrdInfo) SetMetricMetadataEndpointError(mc go_hook.MetricsCollector, endpoint string, isError float64) {
+func (i *IstioMulticlusterDiscoveryCrdInfo) SetMetricMetadataEndpointError(mc sdkpkg.MetricsCollector, endpoint string, isError float64) {
 	labels := map[string]string{
 		"multicluster_name": i.Name,
 		"endpoint":          endpoint,
@@ -119,8 +122,10 @@ func multiclusterDiscovery(input *go_hook.HookInput, dc dependency.Container) er
 		return nil
 	}
 
-	for _, multicluster := range input.Snapshots["multiclusters"] {
-		multiclusterInfo := multicluster.(IstioMulticlusterDiscoveryCrdInfo)
+	for multiclusterInfo, err := range sdkobjectpatch.SnapshotIter[IstioMulticlusterDiscoveryCrdInfo](input.NewSnapshots.Get("multiclusters")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over multiclusters: %v", err)
+		}
 
 		var publicMetadata eeCrd.AlliancePublicMetadata
 		var privateMetadata eeCrd.MulticlusterPrivateMetadata

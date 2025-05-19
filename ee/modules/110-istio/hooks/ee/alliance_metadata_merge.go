@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package ee
 
 import (
+	"fmt"
 	"log/slog"
 	"strings"
 	"time"
@@ -18,6 +19,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/jwt"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 type IstioFederationMergeCrdInfo struct {
@@ -147,7 +149,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, metadataMerge)
 
 func metadataMerge(input *go_hook.HookInput) error {
-	var err error
 	var properFederations = make([]IstioFederationMergeCrdInfo, 0)
 	var properMulticlusters = make([]IstioMulticlusterMergeCrdInfo, 0)
 	var multiclustersNeedIngressGateway = false
@@ -157,8 +158,11 @@ func metadataMerge(input *go_hook.HookInput) error {
 	var myTrustDomain = input.Values.Get("global.discovery.clusterDomain").String()
 
 federationsLoop:
-	for _, federation := range input.Snapshots["federations"] {
-		federationInfo := federation.(IstioFederationMergeCrdInfo)
+	for federationInfo, err := range sdkobjectpatch.SnapshotIter[IstioFederationMergeCrdInfo](input.NewSnapshots.Get("federations")) {
+		if err != nil {
+			return fmt.Errorf("cannot iterate over federations: %w", err)
+		}
+
 		if federationInfo.TrustDomain == myTrustDomain {
 			input.Logger.Warn("skipping IstioFederation with trustDomain equals to ours", slog.String("name", federationInfo.Name), slog.String("trust_domain", federationInfo.TrustDomain))
 			continue federationsLoop
@@ -185,8 +189,10 @@ federationsLoop:
 	}
 
 multiclustersLoop:
-	for _, multicluster := range input.Snapshots["multiclusters"] {
-		multiclusterInfo := multicluster.(IstioMulticlusterMergeCrdInfo)
+	for multiclusterInfo, err := range sdkobjectpatch.SnapshotIter[IstioMulticlusterMergeCrdInfo](input.NewSnapshots.Get("multiclusters")) {
+		if err != nil {
+			return fmt.Errorf("cannot iterate over multiclusters: %w", err)
+		}
 
 		if multiclusterInfo.EnableIngressGateway {
 			multiclustersNeedIngressGateway = true

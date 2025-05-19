@@ -16,6 +16,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 const (
@@ -91,8 +92,14 @@ func updateConfig(input *go_hook.HookInput) error {
 				InsecureDbRegistry: "false",
 			}
 		)
-		if len(input.Snapshots["trivy_config"]) != 0 {
-			trivyConfig = input.Snapshots["trivy_config"][0].(trivySettings)
+
+		snaps, err := sdkobjectpatch.UnmarshalToStruct[trivySettings](input.NewSnapshots, "trivy_config")
+		if err != nil {
+			return fmt.Errorf("unmarshal to struct: %v", err)
+		}
+
+		if len(snaps) != 0 {
+			trivyConfig = snaps[0]
 		}
 
 		trivyData := make(map[string]string, 0)
@@ -101,6 +108,7 @@ func updateConfig(input *go_hook.HookInput) error {
 		if len(customCA) != 0 {
 			trivyData[registryCAKey] = customCA
 		}
+
 		trivyData[insecureKey] = trivyConfig.InsecureDbRegistry
 		for k, v := range trivyConfig.InsecureRegistries {
 			trivyData[k] = v
