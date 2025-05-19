@@ -3,9 +3,9 @@
 ---
 # #####################################################################
 # Final image of cilium-agent (used in helm-templates)
-# Based on https://github.com/cilium/cilium/blob/v1.17.3/images/runtime/Dockerfile
-# and https://github.com/cilium/cilium/blob/v1.17.3/images/runtime/install-runtime-deps.sh
-# and https://github.com/cilium/cilium/blob/v1.17.3/images/cilium/Dockerfile (release stage)
+# Based on https://github.com/cilium/cilium/blob/v1.17.4/images/runtime/Dockerfile
+# and https://github.com/cilium/cilium/blob/v1.17.4/images/runtime/install-runtime-deps.sh
+# and https://github.com/cilium/cilium/blob/v1.17.4/images/cilium/Dockerfile (release stage)
 ---
 # #####################################################################
 # List of binary files used by agent
@@ -248,6 +248,14 @@ import:
   before: install
 imageSpec:
   config:
-    env: { "LD_LIBRARY_PATH": "/lib:/usr/lib", "HUBBLE_SERVER": "unix:///var/run/cilium/hubble.sock", "INITSYSTEM": "SYSTEMD", "HUBBLE_COMPAT": "legacy-json-output", "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", "LANG": "C.UTF-8", "LANGUAGE": "C.UTF-8", "LC_ALL": "C.UTF-8" }
+    env:
+      INITSYSTEM: "SYSTEMD"
+      LD_LIBRARY_PATH: "/lib:/usr/lib"
+      HUBBLE_SERVER: "unix:///var/run/cilium/hubble.sock"
+      HUBBLE_COMPAT: "legacy-json-output"
+      LANG: "C.UTF-8"
+      LANGUAGE: "C.UTF-8"
+      LC_ALL: "C.UTF-8"
+      PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
     workingDir: "/home/cilium"
     cmd: ["/usr/bin/cilium-dbg"]

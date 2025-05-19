@@ -1,8 +1,8 @@
-{{- $ciliumVersion := "1.17.3" }}
+{{- $ciliumVersion := "1.17.4" }}
 ---
 # #####################################################################
 # Build cilium-agent binaries
-# Based on https://github.com/cilium/cilium/blob/v1.17.3/images/cilium/Dockerfile (builder stage)
+# Based on https://github.com/cilium/cilium/blob/v1.17.4/images/cilium/Dockerfile (builder stage)
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -20,7 +20,7 @@ shell:
   install:
   - git clone --depth 1 --branch v{{ $ciliumVersion }} $(cat /run/secrets/SOURCE_REPO)/cilium/cilium.git /src/cilium
   - cd /src/cilium
-  - git apply --verbose /patches/*.patch
+  - ls /patches/*.patch >/dev/null 2>&1 && git apply --verbose --allow-empty /patches/*.patch
   - rm -rf Documentation
   - rm -rf /src/cilium/.git
 ---
