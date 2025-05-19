@@ -60,13 +60,13 @@ spec:
         name: monitoring-ping
         {{- /*
           UID: 0 GID:0 using for privilege access for fping because using hostNetwork
+          it is necessary to make a launch from user deckhouse after allocation of the file /var/run/node-exporter-textfile/monitoring-ping_*.prom
         */}}
         securityContext:
-          allowPrivilegeEscalation: true
+          allowPrivilegeEscalation: false
           capabilities:
             add:
             - NET_RAW
-            - DAC_OVERRIDE
             drop:
             - ALL
           readOnlyRootFilesystem: true

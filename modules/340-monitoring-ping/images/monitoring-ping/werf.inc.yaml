@@ -34,7 +34,7 @@ shell:
     - cd /src
     - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - go build -ldflags="-s -w" -o /src/monitoring-ping
-    - chmod 0700 /src/monitoring-ping
+    - chmod 0700 /src/monitoring-ping # it is necessary to make a launch from user deckhouse after allocation of the file /var/run/node-exporter-textfile/monitoring-ping_*.prom
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
