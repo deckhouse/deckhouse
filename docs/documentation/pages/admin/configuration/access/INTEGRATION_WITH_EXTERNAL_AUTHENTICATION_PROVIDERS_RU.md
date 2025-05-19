@@ -28,7 +28,7 @@ DKP поддерживает подключение следующих внеш�
       Важно. При указании Redirect URI подставьте значение `publicDomainTemplate` без `%s`. Например, если указано `publicDomainTemplate: '%s.sandbox1.deckhouse-docs.flant.com'`, то фактический URI будет `https://dex.sandbox20.deckhouse-docs.flant.com/callback`.
 
       Для того, чтобы узнать адрес Dex (URI), выполните команду:
-     
+
       ```console
       kubectl -n d8-user-authn get ingress dex -o jsonpath="{.spec.rules[*].host}"
       ```
