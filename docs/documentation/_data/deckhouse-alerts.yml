@@ -538,9 +538,11 @@ alerts:
       module: ceph-csi
       edition: ce
       description: |
-        Ceph-csi module is deprecated and will be removed in Deckhouse 1.70! Please, use [csi-ceph](https://deckhouse.io/products/kubernetes-platform/modules/csi-ceph/stable/) module instead.
+        The `ceph-csi` module is deprecated and will be removed in Deckhouse 1.70.
+
+        Use the [`csi-ceph`](https://deckhouse.io/products/kubernetes-platform/modules/csi-ceph/stable/) module instead.
       summary: |
-        CephCsi module is deprecated.
+        Ceph-csi module is deprecated.
       severity: "5"
       markupFormat: markdown
     - name: D8CertExporterPodIsNotReady
@@ -5978,7 +5980,7 @@ alerts:
         - Alternatively, check the admission-policy-engine Grafana dashboard.
       summary: |
         At least one object violates the configured cluster operation policies.
-      severity: "7"
+      severity: "3"
       markupFormat: markdown
     - name: PersistentVolumeClaimBytesUsage
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/persistent-volume-claim.yaml
@@ -6082,7 +6084,7 @@ alerts:
         - Alternatively, check the admission-policy-engine Grafana dashboard.
       summary: |
         At least one pod violates the configured cluster pod security standards.
-      severity: "7"
+      severity: "3"
       markupFormat: markdown
     - name: PodStatusIsIncorrect
       sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/pod-status.yaml
@@ -6237,7 +6239,7 @@ alerts:
         - Alternatively, check the admission-policy-engine Grafana dashboard.
       summary: |
         At least one object violates the configured cluster security policies.
-      severity: "7"
+      severity: "3"
       markupFormat: markdown
     - name: StandbyHolderDeploymentReplicasUnavailable
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/standby-deployment-unavailable.yaml

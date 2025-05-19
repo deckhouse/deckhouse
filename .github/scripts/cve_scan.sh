@@ -16,43 +16,23 @@
 
 set -e
 
-usage() {
-cat << EOF
-usage: $0 [-p] [-r] [-h]
+#SCAN_TARGET description:
+#  only_main - Scan only main branch. executes on push to main.
+#  pr - Scan image from PR tag. executes on PRs.
+#  regular - Scan main and latest 3 minor releases. executes on schedule and manual run.
 
-This script does foo.
 
-OPTIONS:
-   -p        Scan image from PR tag.
-   -r        Regular scan - main and latest 3 minor releases
-   -h        Show help
-EOF
-}
+case ${SCAN_TARGET} in
+  only_main | pr | regular )
+    echo "SCAN_TARGET: ${SCAN_TARGET}"
+    ;;
+  *)
+    echo "SCAN_TARGET is not valid"
+    exit 1
+esac
 
-SCAN_TARGET=""
 PROD_REGISTRY_DECKHOUSE_IMAGE="${PROD_REGISTRY}/deckhouse/fe"
 DEV_REGISTRY_DECKHOUSE_IMAGE="${DEV_REGISTRY}/sys/deckhouse-oss"
-
-while getopts “:hpr” OPTION
-do
-  case $OPTION in
-    h)
-      usage
-      exit 1
-      ;;
-    p)
-      SCAN_TARGET="pr"
-      ;;
-    r)
-      SCAN_TARGET="regular"
-      ;;
-    ?)
-      usage
-      exit 1
-      ;;
-  esac
-done
-
 
 login_prod_registry() {
   echo "Log in to PROD registry"
@@ -72,6 +52,10 @@ chmod u+x ${WORKDIR}/bin/trivy-${TRIVY_BIN_VERSION}/trivy
 rm -rf ${WORKDIR}/bin/trivy
 ln -s ${PWD}/${WORKDIR}/bin/trivy-${TRIVY_BIN_VERSION}/trivy ${WORKDIR}/bin/trivy
 
+echo "Updating Trivy Data Bases"
+mkdir -p "${WORKDIR}/bin/trivy_cache"
+${WORKDIR}/bin/trivy image --username "${DEV_REGISTRY_USER}" --password "${DEV_REGISTRY_PASSWORD}" --download-db-only --db-repository "${TRIVY_DB_URL}" --cache-dir "${WORKDIR}/bin/trivy_cache"
+${WORKDIR}/bin/trivy image --username "${DEV_REGISTRY_USER}" --password "${DEV_REGISTRY_PASSWORD}" --download-java-db-only --java-db-repository "${TRIVY_JAVA_DB_URL}" --cache-dir "${WORKDIR}/bin/trivy_cache"
 
 echo "----------------------------------------------"
 echo ""
@@ -95,6 +79,7 @@ if [ "${SCAN_TARGET}" == "regular" ]; then
       d8_tags+=($(printf '%s\n' "${releases[@]}" | grep "${r}" | sort -V -r|head -n 1))
     done
   fi
+# else - this is push to main or PR, so scan only them.
 fi
 echo "CVE Scan will be applied to the following tags of Deckhouse"
 echo "${d8_tags[@]}"
@@ -204,9 +189,9 @@ for d8_tag in "${d8_tags[@]}"; do
       echo "👾 Scaning Deckhouse image \"${IMAGE_NAME}\" of module \"${MODULE_NAME}\" for tag \"${d8_tag}\""
       echo ""
       if [ "${additional_image_detected}" == true ]; then
-        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --java-db-repository "${TRIVY_JAVA_DB_URL}" --db-repository "${TRIVY_DB_URL}" --exit-code 0 --severity "${SEVERITY}" --format json --scanners vuln --output "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" --quiet "${d8_image}:${d8_tag}" --username "${trivy_registry_user}" --password "${trivy_registry_pass}" --image-src remote 
+        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --cache-dir "${WORKDIR}/bin/trivy_cache" --skip-db-update --skip-java-db-update --exit-code 0 --severity "${SEVERITY}" --format json --scanners vuln --output "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" --quiet "${d8_image}:${d8_tag}" --username "${trivy_registry_user}" --password "${trivy_registry_pass}" --image-src remote
       else
-        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --java-db-repository "${TRIVY_JAVA_DB_URL}" --db-repository "${TRIVY_DB_URL}" --exit-code 0 --severity "${SEVERITY}" --format json --scanners vuln --output "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" --quiet "${d8_image}@${IMAGE_HASH}" --username "${trivy_registry_user}" --password "${trivy_registry_pass}" --image-src remote 
+        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --cache-dir "${WORKDIR}/bin/trivy_cache" --skip-db-update --skip-java-db-update --exit-code 0 --severity "${SEVERITY}" --format json --scanners vuln --output "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" --quiet "${d8_image}@${IMAGE_HASH}" --username "${trivy_registry_user}" --password "${trivy_registry_pass}" --image-src remote
       fi
 
       echo ""
