@@ -25,8 +25,8 @@ spec:
       hostNetwork: true
       shareProcessNamespace: true
       initContainers:
-      - image: nvcr.io/nvidia/k8s-device-plugin:v0.17.2
-        name: mps-control-daemon-mounts
+      - name: mps-control-daemon-mounts
+        image: {{ include "helm_lib_module_image" (list . "nvidiaDevicePlugin") }}
         command: [mps-control-daemon, mount-shm]
         securityContext:
           privileged: true
@@ -38,8 +38,8 @@ spec:
         resources:
           {{- toYaml . | nindent 12 }}
         {{- end }}
-      - image: nvcr.io/nvidia/k8s-device-plugin:v0.17.2
-        name: mps-control-daemon-init
+      - name: mps-control-daemon-init
+        image: {{ include "helm_lib_module_image" (list . "nvidiaDevicePlugin") }}
         command: ["config-manager"]
         env:
         - name: ONESHOT
@@ -70,8 +70,8 @@ spec:
           - name: config
             mountPath: /config
       containers:
-        - image: nvcr.io/nvidia/k8s-device-plugin:v0.17.2
-          name: mps-config-manager
+        - name: mps-config-manager
+          image: {{ include "helm_lib_module_image" (list . "nvidiaDevicePlugin") }}
           command: ["config-manager"]
           securityContext:
             privileged: true
@@ -103,9 +103,8 @@ spec:
               mountPath: /available-configs
             - name: config
               mountPath: /config
-        - image: nvcr.io/nvidia/k8s-device-plugin:v0.17.2
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
-          name: mps-control-daemon-ctr
+        - name: mps-control-daemon-ctr
+          image: {{ include "helm_lib_module_image" (list . "nvidiaDevicePlugin") }}
           command: [mps-control-daemon]
           env:
           - name: NODE_NAME

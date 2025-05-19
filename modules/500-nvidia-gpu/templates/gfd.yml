@@ -23,8 +23,8 @@ spec:
       priorityClassName: system-node-critical
       serviceAccountName: nvidia-gpu-feature-discovery
       initContainers:
-      - image: nvcr.io/nvidia/k8s-device-plugin:v0.17.2
-        name: gpu-feature-discovery-init
+      - name: gpu-feature-discovery-init
+        image: {{ include "helm_lib_module_image" (list . "nvidiaDevicePlugin") }}
         command: ["config-manager"]
         env:
         - name: ONESHOT
@@ -50,8 +50,8 @@ spec:
         - name: PROCESS_TO_SIGNAL
           value: ""
       containers:
-      - image: nvcr.io/nvidia/k8s-device-plugin:v0.17.2
-        name: gpu-feature-discovery-ctr
+      - name: gpu-feature-discovery-ctr
+        image: {{ include "helm_lib_module_image" (list . "nvidiaDevicePlugin") }}
         command: ["gpu-feature-discovery"]
         env:
           - name: GFD_SLEEP_INTERVAL
@@ -73,8 +73,8 @@ spec:
             mountPath: "/etc/kubernetes/node-feature-discovery/features.d"
           - name: host-sys
             mountPath: "/sys"
-      - image: nvcr.io/nvidia/k8s-device-plugin:v0.17.2
-        name: gpu-feature-discovery-sidecar
+      - name: gpu-feature-discovery-sidecar
+        image: {{ include "helm_lib_module_image" (list . "nvidiaDevicePlugin") }}
         command: ["config-manager"]
         env:
         - name: ONESHOT
