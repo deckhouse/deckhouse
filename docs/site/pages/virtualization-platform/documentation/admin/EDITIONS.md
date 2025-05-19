@@ -9,6 +9,8 @@ The table below provides brief a comparison of editions listing its main feature
 
 {% capture coming_soon %}<img src="/images/icons/intermediate_v2.svg" title="{{ site.data.i18n.common.coming_soon[page.lang] }}" aria-expanded="false">{% endcapture %}
 {% capture read_only %}<img src="/images/icons/intermediate_v2.svg" title="{{ site.data.i18n.common.read_only[page.lang] }}" aria-expanded="false">{% endcapture %}
+{% capture snapshot_ee %}<img src="/images/icons/intermediate_v2.svg" title="{{ site.data.i18n.common.supported_storage[page.lang] }}" aria-expanded="false">{% endcapture %}
+{% capture snapshot_ce %}<img src="/images/icons/intermediate_v2.svg" title="{{ site.data.i18n.common.restrictions_and_supported_storage[page.lang] }}" aria-expanded="false">{% endcapture %}
 {% assign not_supported = '<img src="/images/icons/not_supported_v2.svg">' %}
 {% assign supported = '<img src="/images/icons/supported_v2.svg">' %}
 
@@ -29,7 +31,7 @@ The table below provides brief a comparison of editions listing its main feature
 | Public and project images for creating virtual machines              | {{ supported }}        | {{ supported }}     |
 | Customization of the VM OS at first launch                           | {{ supported }}        | {{ supported }}     |
 | Live VM migration without downtime                                   | {{ supported }}        | {{ supported }}     |
-| Consistent disk snapshots                                            | {{ supported }}        | {{ supported }}     |
+| Consistent disk snapshots                                            | {{ snapshot_ce }}      | {{ snapshot_ee }}     |
 | Adding and changing VM disk sizes without rebooting                  | {{ supported }}        | {{ supported }}     |
 | VM launch policies                                                   | {{ supported }}        | {{ supported }}     |
 | VM placement management (affinity/antiaffinity)                      | {{ supported }}        | {{ supported }}     |

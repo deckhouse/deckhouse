@@ -92,6 +92,12 @@ common:
   read_only:
     en: "In read only mode"
     ru: "В режиме только для чтения"
+  restrictions_and_supported_storage:
+    en: "Available with restrictions and must be supported by the storage"
+    ru: "Доступно с ограничениями и должны поддерживаться хранилищем"
+  supported_storage:
+    en: "Must be supported by the storage"
+    ru: "Должны поддерживаться хранилищем"
   coming_soon:
     en: "coming soon..."
     ru: "скоро..."
