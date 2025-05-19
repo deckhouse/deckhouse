@@ -161,6 +161,7 @@
   resources:
   - configmaps
   verbs:
+  - delete
   - create
   - get
   - list
@@ -192,6 +193,9 @@
   resources:
   - secrets
   verbs:
+  - create
+  - update
+  - delete
   - get
   - watch
   - list
