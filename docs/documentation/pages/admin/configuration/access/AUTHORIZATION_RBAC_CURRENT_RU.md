@@ -16,10 +16,10 @@ lang: ru
 Особенности текущей ролевой модели:
 
 - Реализует role-based-подсистему сквозной авторизации, расширяя функционал стандартного механизма RBAC.
-- Настройка прав доступа происходит с помощью кастомных ресурсов [ClusterAuthorizationRule](../../reference/cr/ clusterauthorizationrule/) и [AuthorizationRule](../../reference/cr/authorizationrule/).
-- Управление доступом к инструментам масштабирования (параметр `allowScale` ресурса [ClusterAuthorizationRule] (../../reference/cr/clusterauthorizationrule/) или [AuthorizationRule](../../reference/cr/authorizationrule/)).
-- Управление доступом к форвардингу портов (параметр `portForwarding` ресурса [ClusterAuthorizationRule](../../ reference/cr/clusterauthorizationrule/) или [AuthorizationRule](../../reference/cr/authorizationrule/)).
-- Управление списком разрешённых пространств имён в формате labelSelector (параметр `namespaceSelector` ресурса [ClusterAuthorizationRule](../../reference/cr/clusterauthorizationrule/)).
+- Настройка прав доступа происходит с помощью кастомных ресурсов [ClusterAuthorizationRule](../../reference/cr/clusterauthorizationrule/) и [AuthorizationRule](../../reference/cr/authorizationrule/).
+- Управление доступом к инструментам масштабирования (параметр `allowScale` ресурса [ClusterAuthorizationRule](../../reference/cr/clusterauthorizationrule/#authorizationrule-v1alpha1-spec-allowscale) или [AuthorizationRule](../../reference/cr/authorizationrule//#authorizationrule-v1alpha1-spec-allowscale)).
+- Управление доступом к форвардингу портов (параметр `portForwarding` ресурса [ClusterAuthorizationRule](../../reference/cr/clusterauthorizationrule/#authorizationrule-v1alpha1-spec-portforwarding) или [AuthorizationRule](../../reference/cr/authorizationrule/#authorizationrule-v1alpha1-spec-portforwarding)).
+- Управление списком разрешённых пространств имён в формате labelSelector (параметр `namespaceSelector` ресурса [ClusterAuthorizationRule](../../reference/cr/clusterauthorizationrule/#clusterauthorizationrule-v1-spec-namespaceselector)).
 
 ## Высокоуровневые роли, используемые для реализации модели
 
@@ -33,6 +33,31 @@ lang: ru
 - `ClusterAdmin` — то же самое, что и `ClusterEditor` + `Admin`, но позволяет управлять служебными `cluster-wide`-объектами (производные ресурсы, например `MachineSets`, `Machines`, `OpenstackInstanceClasses` и т. п., а также `ClusterAuthorizationRule`, `ClusterRoleBindings` и `ClusterRole`). Роль для работы администратора кластера. **Важно**, что `ClusterAdmin`, поскольку он уполномочен редактировать `ClusterRoleBindings`, может **сам себе расширить полномочия**;
 - `SuperAdmin` — разрешены любые действия с любыми объектами, при этом ограничения `namespaceSelector` и `limitNamespaces` продолжат работать.
 
+Таблица РАЗ
+
+| Роль              | Описание                                                                                                              |
+|-------------------|-----------------------------------------------------------------------------------------------------------------------|
+| **User**          | Доступ к информации обо всех объектах и журналам подов. Нет доступа к контейнерам, секретам и перенаправлению портов.  |
+| **PrivilegedUser**| Все от `User` + доступ к контейнерам, секретам и возможность удаления подов.                                         |
+| **Editor**        | Все от `PrivilegedUser` + создание, изменение и удаление большинства объектов для прикладных задач.                   |
+| **Admin**         | Все от `Editor` + удаление служебных объектов (например, `ReplicaSet` и др.).                                         |
+| **ClusterEditor** | Все от `Editor` + управление некоторыми `cluster-wide` объектами (например, `DaemonSet`). Роль оператора кластера.    |
+| **ClusterAdmin**  | Все от `ClusterEditor` + `Admin` + управление служебными `cluster-wide` объектами. Может редактировать `ClusterRoleBindings`. |
+| **SuperAdmin**    | Без ограничений на действия с объектами. Ограничения `namespaceSelector` и `limitNamespaces` все еще действуют.       |
+
+__
+
+Таблица ДВА
+
+| Роль             | Примеры доступных действий                                                                 | Ограничения                                  |
+|------------------|-------------------------------------------------------------------------------------------|---------------------------------------------|
+| **User**         | Просмотр подов, логов, деплойментов                                                       | Нет доступа к секретам, портам, контейнерам |
+| **PrivilegedUser** | Вход в контейнеры (`kubectl exec`), чтение секретов, удаление подов                       | Не может изменять Deployment/Service        |
+| **Editor**       | Создание/удаление Deployment, Service, ConfigMap                                          | Нет доступа к `ReplicaSet`, `ClusterRoles`  |
+| **Admin**        | Удаление `ReplicaSet`, управление RBAC в namespace                                        | Нет доступа к cluster-wide ресурсам         |
+| **ClusterEditor** | Создание `DaemonSet`, `ClusterRole` (но не всех)                                          | Не может удалять `MachineSets`              |
+| **ClusterAdmin** | Полный доступ к `ClusterRoleBindings`, `Machines`, `OpenstackInstanceClasses`             | Может повысить свои права                   |
+| **SuperAdmin**   | Любые действия (включая `*` в RBAC), но с учетом `limitNamespaces`                        | Ограничения только через политики кластера  |
 {% alert level="warning" %}
 Режим multitenancy (авторизация по пространству имён) в данный момент реализован по временной схеме и **не гарантирует безопасность**.
 {% endalert %}

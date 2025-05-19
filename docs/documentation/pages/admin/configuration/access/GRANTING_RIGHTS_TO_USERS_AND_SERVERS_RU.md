@@ -55,7 +55,7 @@ spec:
 
 [ClusterAuthorizationRule](../../reference/cr/clusterauthorizationrule/) действует во всем кластере. Используйте его, если нужно предоставить права пользователю во всех пространствах имен, включая системные (например, для предоставления прав администратора).
 
-При необходимости можно ограничить область действия прав, предоставляемых с помощью [ClusterAuthorizationRule](../../reference/cr/clusterauthorizationrule/), одним или несколькими пространствами имен, указав в манифесте соответствующие ограничения (но, если позволяет возможность, рекомендуемый вариант для этого — использование AuthorizationRule). Пример:
+При необходимости можно ограничить область действия прав, предоставляемых с помощью [ClusterAuthorizationRule](../../reference/cr/clusterauthorizationrule/), одним или несколькими пространствами имен, указав в манифесте соответствующие ограничения (но, если позволяет возможность, рекомендуемый вариант для этого — использование [AuthorizationRule](../../reference/cr/authorizationrule/)). Пример:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -150,7 +150,7 @@ apiVersion: deckhouse.io/v1
           --kubeconfig=$FILE_NAME
         ```
 
-   * Если прямого доступа до API-сервера нет, используйте один следующих вариантов:
+   * Если прямого доступа к API-серверу нет, используйте один следующих вариантов:
       * включите доступ к API-серверу через Ingress-контроллер (параметр [publishAPI](../../reference/mc/user-authn/#parameters-publishapi)) и укажите адреса, с которых будут идти запросы (параметр [whitelistSourceRanges](../../reference/mc/user-authn/#parameters-publishapi/#parameters-publishapi-whitelistsourceranges));
       * укажите адреса, с которых будут идти запросы, в отдельном Ingress-контроллере (параметр [acceptRequestsFrom](../../reference/cr/ingressnginxcontroller/#ingressnginxcontroller-v1-spec-acceptrequestsfrom)).
 

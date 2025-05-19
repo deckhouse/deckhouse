@@ -10,7 +10,9 @@ lang: ru
 * `user` — имя пользователя;
 * `groups` — группы пользователя.
 
-> При совместном использовании с модулем `user-authn` группы и имя пользователя можно посмотреть в логах Dex с помощью команды `kubectl -n d8-user-authn logs -l app=dex` (видны только при авторизации).
+{% alert level="info" %}
+При совместном использовании с модулем `user-authn` группы и имя пользователя можно посмотреть в логах Dex с помощью команды `kubectl -n d8-user-authn logs -l app=dex` (видны только при авторизации).
+{% endalert %}
 
 ```shell
 cat  <<EOF | 2>&1 kubectl  create --raw  /apis/authorization.k8s.io/v1/subjectaccessreviews -f - | jq .status
