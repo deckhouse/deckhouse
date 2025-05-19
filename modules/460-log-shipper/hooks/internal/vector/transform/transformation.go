@@ -34,11 +34,11 @@ func BuildModes(tms []v1alpha1.Transform) ([]apis.LogTransform, error) {
 	var module module
 	for _, tm := range tms {
 		switch tm.Action {
-		case "normalizeLabelKeys":
+		case "NormalizeLabelKeys":
 			module = normalizeLabelKeys{}
-		case "ensureStructuredMessage":
+		case "EnsureStructuredMessage":
 			module = ensureStructuredMessage{targetField: tm.TargetField}
-		case "dropLabels":
+		case "DropLabels":
 			if len(tm.Labels) > 0 {
 				module = dropLabels{labels: tm.Labels}
 			}

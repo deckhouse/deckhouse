@@ -28,13 +28,13 @@ var testCases = []struct {
 	in   v1alpha1.Transform
 	out  string
 }{
-	{"fixNestedJson lable message", v1alpha1.Transform{Action: "ensureStructuredMessage", TargetField: "text"},
+	{"fixNestedJson lable message", v1alpha1.Transform{Action: "EnsureStructuredMessage", TargetField: "text"},
 		".message = parse_json(.message) ?? { \"text\": .message }\n"},
 	// {"del_Not_labels", v1alpha1.Transform{Action: "dropLabels", Labels: []string{}},
 	// "if exists(.first) {\n del(.first)\n}\nif exists(.second) {\n del(.second)\n}\n"},
-	{"del", v1alpha1.Transform{Action: "dropLabels", Labels: []string{"first", "second"}},
+	{"del", v1alpha1.Transform{Action: "DropLabels", Labels: []string{"first", "second"}},
 		"if exists(.first) {\n del(.first)\n}\nif exists(.second) {\n del(.second)\n}\n"},
-	{"replaceDot", v1alpha1.Transform{Action: "normalizeLabelKeys"},
+	{"replaceDot", v1alpha1.Transform{Action: "NormalizeLabelKeys"},
 		"if exists(.pod_labels) {\n.pod_labels = map_keys(object!(.pod_labels), recursive: true) -> |key| { replace(key, \".\", \"_\")}\n}"},
 }
 

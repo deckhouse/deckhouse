@@ -847,7 +847,7 @@ spec:
                         properties:
                           action:
                             type: string
-                            enum: ["normalizeLabelKeys"]
+                            enum: ["NormalizeLabelKeys"]
                       - description: "Ensures that the message field contains a Json object"
                         type: object
                         required:
@@ -856,7 +856,7 @@ spec:
                         properties:
                           action:
                             type: string
-                            enum: ["ensureStructuredMessage"]
+                            enum: ["EnsureStructuredMessage"]
                           targetField:
                             type: string
                             description: "The target field into which wrapped string is placed"
@@ -868,7 +868,7 @@ spec:
                         properties:
                           action:
                             type: string
-                            enum: ["dropLabels"]
+                            enum: ["DropLabels"]
                           labels:
                             type: array
                             description: "List of labels to remove"
