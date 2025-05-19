@@ -139,7 +139,6 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-multitenancy-manager:multitenancy-manager",
 	"system:serviceaccount:d8-nvidia-gpu:nvidia-gpu",
 	"system:serviceaccount:d8-nvidia-gpu:nvidia-gpu-feature-discovery",
-	"system:serviceaccount:d8-nvidia-gpu:nvidia-gpu-operator",
 	"system:serviceaccount:d8-openvpn:openvpn",
 	"system:serviceaccount:d8-operator-prometheus:operator-prometheus",
 	"system:serviceaccount:d8-operator-trivy:operator-trivy",
