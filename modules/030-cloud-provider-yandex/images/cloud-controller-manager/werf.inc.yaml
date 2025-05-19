@@ -1,4 +1,4 @@
-{{- $version := "v0.32.0" }}
+{{- $version := "fix-lb-tg-sync" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
