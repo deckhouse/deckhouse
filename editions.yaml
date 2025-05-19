@@ -40,7 +40,6 @@ editions:
 
   # exclude modules from templates and images
   excludeModules:
-  - ceph-csi
   - openvpn
 
 - name: SE
