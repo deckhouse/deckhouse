@@ -64,10 +64,8 @@ bb-sync-file "/etc/containerd/registry.d/{{ $hostName }}/hosts.toml" - << EOF
 
   [host.{{ $mirrorHostWithScheme | quote }}]
   capabilities = ["pull", "resolve"]
-  {{- if eq $mirror.scheme "https" }}
-    {{- if gt (len $ca_files_path) 0 }}
-  ca = {{- printf "[%q]" (join "\", \"" $ca_files_path) }}
-    {{- end }}
+  {{- if and (eq $mirror.scheme "https") (gt (len $ca_files_path) 0) }}
+  ca = [{{- range $i, $path := $ca_files_path }}{{ if $i }}, {{ end }}{{ $path | quote }}{{- end }}]
   {{- end }}
 
     {{- with $mirror.auth }}
