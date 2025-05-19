@@ -50,7 +50,7 @@ for schema_path in $(find $MODULES_DIR -regex '^.*/openapi/\(doc-ru-\)\?config-v
 done
 
 if [ -d /src/global ]; then
-  mkdir -p /srv/jekyll-data/documentation/_data/schemas/modules/global/
+  mkdir -p /srv/jekyll-data/documentation/_data/schemas/modules/global/crds
   mkdir -p /srv/jekyll-data/documentation/_data/schemas/crds/
   # OpenAPI spec for Deckhouse global config
   cp -f /src/global/config-values.yaml _data/schemas/modules/global/
