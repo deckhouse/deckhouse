@@ -660,6 +660,26 @@ entries:
           url: /architecture/installation.html
           draft: true
         - title:
+            en: Release channels
+            ru: Каналы обновлений
+          url: /deckhouse-release-channels.html
+        - title:
+            en: Supported K8s & OS versions
+            ru: Поддерживаемые версии K8s и ОС
+          url: /supported_versions.html
+        - title:
+            en: Revision comparison
+            ru: Сравнение редакций
+          url: /revision-comparison.html
+        - title:
+            en: Alerts
+            ru: Алерты
+          url: /alerts.html
+        - title:
+            en: Network security settings
+            ru: Настройка сетевых политик
+          url: /network_security_setup.html
+        - title:
             en: Disaster resistance
             ru: Катастрофоустойчивость
           folders:
@@ -819,18 +839,6 @@ entries:
                 ru: Разработка и отладка
               url: /module-development/development/
         - title:
-            en: Release channels
-            ru: Каналы обновлений
-          url: /deckhouse-release-channels.html
-        - title:
-            en: Supported K8s & OS versions
-            ru: Поддерживаемые версии K8s и ОС
-          url: /supported_versions.html
-        - title:
-            en: Revision comparison
-            ru: Сравнение редакций
-          url: /revision-comparison.html
-        - title:
             en: Security software settings
             ru: Настройка ПО безопасности
           folders:
@@ -858,14 +866,6 @@ entries:
                     en: KESL
                     ru: KESL
                   url: /security/kesl.html
-        - title:
-            en: Alerts
-            ru: Алерты
-          url: /alerts.html
-        - title:
-            en: Network security settings
-            ru: Настройка сетевых политик
-          url: /network_security_setup.html
         - title:
             en: FAQ
             ru: FAQ
