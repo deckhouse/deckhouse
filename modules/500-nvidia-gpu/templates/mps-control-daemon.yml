@@ -64,11 +64,6 @@ spec:
           value: ""
         - name: PROCESS_TO_SIGNAL
           value: ""
-        volumeMounts:
-          - name: available-configs
-            mountPath: /available-configs
-          - name: config
-            mountPath: /config
       containers:
         - name: mps-config-manager
           image: nvcr.io/nvidia/k8s-device-plugin:v0.17.2
@@ -98,11 +93,6 @@ spec:
             value: "1"
           - name: PROCESS_TO_SIGNAL
             value: "/usr/bin/mps-control-daemon"
-          volumeMounts:
-            - name: available-configs
-              mountPath: /available-configs
-            - name: config
-              mountPath: /config
         - name: mps-control-daemon-ctr
           image: nvcr.io/nvidia/k8s-device-plugin:v0.17.2
           command: ["mps-control-daemon"]
