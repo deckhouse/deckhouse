@@ -10,6 +10,36 @@ entries:
         ru: Администрирование
       folders:
             - title:
+                en: Platform installation
+                ru: Установка платформы
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /installing/
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /installing/configuration.html
+            - title:
+                en: Platform configuration
+                ru: Настройка платформы
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /
+                - title:
+                    en: Global configuration
+                    ru: Глобальные настройки
+                  url: /deckhouse-configure-global.html
+                - title:
+                    en: Custom Resources
+                    ru: Custom Resources
+                  url: /cr.html
+
+
+            - title:
                 en: Access
                 ru: Доступ
               folders:
@@ -457,6 +487,12 @@ entries:
                 en: Backup and restore
                 ru: Резервное копирование и восстановление
               url: /admin/configuration/backup/backup-and-restore.html
+
+            - title:
+                en: Platform uninstalling
+                ru: Удаление платформы
+              url: /uninstalling/
+
 # ------------- Using -------------
     - title:
         en: Using
@@ -761,38 +797,6 @@ entries:
         en: Deckhouse Kubernetes Platform
         ru: Deckhouse Kubernetes Platform
       folders:
-        - title:
-            en: Platform installation
-            ru: Установка платформы
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /installing/
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /installing/configuration.html
-        - title:
-            en: Platform configuration
-            ru: Настройка платформы
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /
-            - title:
-                en: Global configuration
-                ru: Глобальные настройки
-              url: /deckhouse-configure-global.html
-            - title:
-                en: Custom Resources
-                ru: Custom Resources
-              url: /cr.html
-        - title:
-            en: Platform uninstalling
-            ru: Удаление платформы
-          url: /uninstalling/
         - title:
             en: Module development
             ru: Разработка модуля
