@@ -27,26 +27,26 @@ for schema_path in $(find $MODULES_DIR -regex '^.*/openapi/\(doc-ru-\)\?config-v
   mkdir -p _data/schemas/modules/${module_name}
   cp -f $schema_path _data/schemas/modules/${module_name}/
 
-  #if [ -f $module_path/openapi/doc-ru-config-values.yaml ]; then
-  #   echo -e "\ni18n:\n  ru:" >>_data/schemas/modules/${module_name}/config-values.yaml
-  #   cat $module_path/openapi/doc-ru-config-values.yaml | sed '1{/^---$/d}; s/^/    /' >>_data/schemas/modules/${module_name}/config-values.yaml
-  #fi
-  #if [ ! -f ${module_path}/docs/CONFIGURATION.md ]; then
-  #    continue
-  #fi
+  if [ -f $module_path/openapi/doc-ru-config-values.yaml ]; then
+     echo -e "\ni18n:\n  ru:" >>_data/schemas/modules/${module_name}/config-values.yaml
+     cat $module_path/openapi/doc-ru-config-values.yaml | sed '1{/^---$/d}; s/^/    /' >>_data/schemas/modules/${module_name}/config-values.yaml
+  fi
+  if [ ! -f ${module_path}/docs/CONFIGURATION.md ]; then
+      continue
+  fi
 
-  #if grep -q '<!-- SCHEMA -->' ${module_path}/docs/CONFIGURATION.md; then
-  #  # Apply schema
-  #  sed -i "/<!-- SCHEMA -->/i\{\% include module-configuration.liquid \%\}" ${module_path}/docs/CONFIGURATION.md
-  #elif grep -q 'module-settings.liquid' ${module_path}/docs/CONFIGURATION.md; then
-  #  # It is a normal case. Manually configured schema rendering.
-  #  continue
-  #else
-  #  PARAMETERS_COUNT=$(cat $schema_path | yq eval '.properties| length' - )
-  #  if [ $PARAMETERS_COUNT -gt 0 ]; then
-  #    echo "WARN: Found schema for ${module_name} module, but there is no '<!-- SCHEMA -->' placeholder in the CONFIGURATION.md file."
-  #  fi
-  #fi
+  if grep -q '<!-- SCHEMA -->' ${module_path}/docs/CONFIGURATION.md; then
+    # Apply schema
+    sed -i "/<!-- SCHEMA -->/i\{\% include module-configuration.liquid \%\}" ${module_path}/docs/CONFIGURATION.md
+  elif grep -q 'module-settings.liquid' ${module_path}/docs/CONFIGURATION.md; then
+    # It is a normal case. Manually configured schema rendering.
+    continue
+  else
+    PARAMETERS_COUNT=$(cat $schema_path | yq eval '.properties| length' - )
+    if [ $PARAMETERS_COUNT -gt 0 ]; then
+      echo "WARN: Found schema for ${module_name} module, but there is no '<!-- SCHEMA -->' placeholder in the CONFIGURATION.md file."
+    fi
+  fi
 done
 
 if [ -d /src/global ]; then
@@ -69,7 +69,7 @@ if [ -d /src/global ]; then
   cp /src/global/crds/doc-ru-module* /srv/jekyll-data/documentation/_data/schemas/crds/
   for i in /src/global/crds/module* ; do
     cp -v $i /srv/jekyll-data/documentation/_data/schemas/crds/
-    #echo -e "\ni18n:\n  ru:" >>/srv/jekyll-data/documentation/_data/schemas/modules/global/crds/$(echo $i | sed 's#/src/global/crds/##' )
-    #cat /src/global/crds/doc-ru-$(echo $i | sed 's#/src/global/crds/##' ) | sed 's/^/    /' >>_data/schemas/modules/global/crds/$(echo $i | sed 's#/src/global/crds/##' )
+    echo -e "\ni18n:\n  ru:" >>/srv/jekyll-data/documentation/_data/schemas/modules/global/crds/$(echo $i | sed 's#/src/global/crds/##' )
+    cat /src/global/crds/doc-ru-$(echo $i | sed 's#/src/global/crds/##' ) | sed 's/^/    /' >>_data/schemas/modules/global/crds/$(echo $i | sed 's#/src/global/crds/##' )
   done
 fi
