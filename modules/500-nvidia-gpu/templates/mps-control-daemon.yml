@@ -23,7 +23,6 @@ spec:
       serviceAccountName: nvidia-device-plugin
       hostPID: true
       hostNetwork: true
-      shareProcessNamespace: true
       initContainers:
       - name: mps-control-daemon-mounts
         image: nvcr.io/nvidia/k8s-device-plugin:v0.17.2
