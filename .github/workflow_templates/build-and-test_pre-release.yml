@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{!{- $ctx := . -}!}
-{!{- $jobNames := dict }!}
+{!{- $ctx := . }!}
 
 name: Build and test for release branches
 
@@ -22,10 +21,12 @@ on:
   push:
     branches:
       - 'release-*'
+      - 'main'
 
 env:
 {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
 {!{ tmpl.Exec "git_source_envs" | strings.Indent 2 }!}
+{!{ tmpl.Exec "dmt_envs" | strings.Indent 2 }!}
 
 # Cancel in-progress jobs for the same branch.
 concurrency:
@@ -63,8 +64,8 @@ jobs:
 
   doc_web_build:
     name: Doc web build
-    # Wait for success build of modules.
     if: ${{ github.repository == 'deckhouse/deckhouse' }}
+    # Wait for success build of modules.
     needs:
       - git_info
 {!{ tmpl.Exec "web_build_template" (slice $ctx "doc" "release") | strings.Indent 4 }!}
@@ -116,6 +117,15 @@ jobs:
       - build_deckhouse
 {!{ tmpl.Exec "tests_template" (slice $ctx "openapi_test_cases" "build_deckhouse") | strings.Indent 4 }!}
 
+  security_scan_images:
+    name: Security scan images
+    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' }}
+    runs-on: [self-hosted, large]
+    needs:
+      - git_info
+      - build_deckhouse
+{!{ tmpl.Exec "security_scan_template" (slice $ctx "main") | strings.Indent 4 }!}
+
   web_links_test:
     name: Web links test
     if: ${{ github.repository == 'deckhouse/deckhouse' }}
@@ -134,9 +144,8 @@ jobs:
 {!{ tmpl.Exec "tests_template" (slice $ctx "validators" "build_deckhouse") | strings.Indent 4 }!}
 
 {!{/* Autodeploy documentation to the production on push to release branch */}!}
-{!{- $jobNames = coll.Merge $jobNames (dict "deploy_release_doc_prod" "(Prod) Deploy release documentation") }!}
   deploy_release_doc_prod:
-    name: {!{ $jobNames.deploy_release_doc_prod }!}
+    name: (Prod) Deploy release documentation
     continue-on-error: true
     needs:
       - git_info
@@ -150,12 +159,10 @@ jobs:
 {!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 6 }!}
 {!{ tmpl.Exec "doc_release_version_template" | strings.Indent 6 }!}
 {!{ tmpl.Exec "deploy_doc_template" "production" | strings.Indent 6 }!}
-{!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.deploy_release_doc_prod) | strings.Indent 6 }!}
 
 {!{/* Autodeploy documentation to stage envs on push to release branch */}!}
-{!{- $jobNames = coll.Merge $jobNames (dict "deploy_release_doc_stage" "(Stage) Deploy release documentation") }!}
   deploy_release_doc_stage:
-    name: {!{ $jobNames.deploy_release_doc_stage }!}
+    name: (Stage) Deploy release documentation
     continue-on-error: true
     needs:
       - git_info
@@ -169,4 +176,38 @@ jobs:
 {!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 6 }!}
 {!{ tmpl.Exec "doc_release_version_template" | strings.Indent 6 }!}
 {!{ tmpl.Exec "deploy_doc_template" "stage" | strings.Indent 6 }!}
-{!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.deploy_release_doc_stage) | strings.Indent 6 }!}
+
+{!{/* Autodeploy site to the production env on push to the main branch. */}!}
+  deploy_latest_web_site_prod:
+    name: (Prod) Deploy latest site
+    continue-on-error: true
+    needs:
+      - git_info
+      - doc_web_build
+      - main_web_build
+    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' && github.repository == 'deckhouse/deckhouse' }}
+    runs-on: [self-hosted, regular]
+    steps:
+{!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
+{!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 6}!}
+{!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 6 }!}
+{!{ tmpl.Exec "doc_version_template" | strings.Indent 6 }!}
+{!{ tmpl.Exec "deploy_site_template" "production" | strings.Indent 6 }!}
+
+{!{/* Autodeploy docs to the production env on push to the main branch. */}!}
+  deploy_latest_web_doc_prod:
+    name: (Prod) Deploy latest doc
+    continue-on-error: true
+    needs:
+      - git_info
+      - doc_web_build
+      - main_web_build
+    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' && github.repository == 'deckhouse/deckhouse' }}
+    runs-on: [self-hosted, regular]
+    steps:
+{!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
+{!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 6}!}
+{!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 6 }!}
+{!{ tmpl.Exec "doc_version_template" | strings.Indent 6 }!}
+{!{ tmpl.Exec "deploy_doc_template" "production" | strings.Indent 6 }!}
+

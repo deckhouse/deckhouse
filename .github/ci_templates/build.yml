@@ -15,8 +15,7 @@ steps:
 
   - name: Run go generate
     run: |
-      {!{/* TODO replace with 'make generate' when make become available on runners */}!}
-      (cd tools && go generate -v)
+      (make generate)
       (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
 
   - name: Check generated code
@@ -80,10 +79,6 @@ steps:
       CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
 {!{- end }!}
     run: |
-      # Set cosign auth values
-      export COSIGN_LOGIN="${DECKHOUSE_DEV_REGISTRY_USER}"
-      export COSIGN_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
-
       # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
       REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
       if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
@@ -98,161 +93,102 @@ steps:
       # - Build using dev-registry as primary and deckhouse registry as secondary.
       # - Push dev and dev/install images with prNUM tags and push to dev-registry.
       # The "release" mode builds branches and tags:
-      # - Build using dev-registry as primary and deckhouse registry as secondary.
+      # - Build using deckhouse registry as final and dev-registry as primary.
       # - Push dev and dev/install images to dev-registry with tag equal to a branch name (main or release-X.Y).
-      # - Build using deckhouse registry as primary and dev-registry as secondary.
       # - Push dev, dev/install and release-channel-version images to deckhouse registry with tag equels to a Git tag.
 
-      # SRC_NAME is a name of image from werf.yaml.
-      # SRC is a source image name (stage name from werf build report).
-      # DST is an image name for docker push.
-      function pull_push_rmi() {
-        SRC_NAME=$1
-        SRC=$2
-        DST=$3
-        echo "⚓️ 📥 [$(date -u)] Pull '${SRC_NAME}' image as ${SRC}."
-        docker pull ${SRC}
-        echo "⚓️ 🏷 [$(date -u)] Tag '${SRC_NAME}' image as ${DST}."
-        docker image tag ${SRC} ${DST}
-        echo "⚓️ 📤 [$(date -u)] Push '${SRC_NAME}' image as ${DST}."
-        docker image push ${DST}
-        echo "⚓️ 🧹 [$(date -u)] Remove local tag for '${SRC_NAME}'."
-        docker image rmi ${DST} || true;
+      # IMAGE_NAME is a name of image from werf.yaml.
+      # IMAGE_DST is an image name for docker push.
+      function publish_image() {
+        IMAGE_NAME=$1
+        IMAGE_DST=$2
+        IMAGE_SRC="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerImageName" images_tags_werf.json)"
+        echo "⚓️ 💫 [$(date -u)] Publishing '${IMAGE_NAME}' image to ${IMAGE_DST}".
+        echo "⚓️ 📥 [$(date -u)] Pull '${IMAGE_NAME}' image as ${IMAGE_SRC}."
+        docker pull "${IMAGE_SRC}"
+        echo "⚓️ 🏷 [$(date -u)] Tag '${IMAGE_NAME}' image as ${IMAGE_DST}."
+        docker image tag "${IMAGE_SRC}" "${IMAGE_DST}"
+        echo "⚓️ 📤 [$(date -u)] Push '${IMAGE_NAME}' image as ${IMAGE_DST}."
+        docker image push "${IMAGE_DST}"
+        echo "⚓️ 🧹 [$(date -u)] Remove local tag for '${IMAGE_NAME}'."
+        docker image rmi "${IMAGE_DST}" || true;
       }
-
-      if [[ -n "${DEV_REGISTRY_PATH}" ]]; then export WERF_REPO="${DEV_REGISTRY_PATH}"; fi
-      type werf && source $(werf ci-env github --verbose --as-file)
 
       # CE/EE/FE -> ce/ee/fe
       REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
-      #temporary: move temp dir
+      # Temporary directory is moved to ensure
       TEMP_WORKDIR="$(dirname "${{github.workspace}}")/${{github.run_id}}-$REGISTRY_SUFFIX"
       mkdir -p "$TEMP_WORKDIR"
 
-      # Registry path to publish images for Git branches.
-      BRANCH_REGISTRY_PATH=
       # Registry path to publish images for Git tags.
-      SEMVER_REGISTRY_PATH=
-
       if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-        # Build using dev-registry as primary repo and prod registry as secondary (ro) repo.
-        # This build will put stages to "dev" registry. If "dev" registry is empty, existing stages are copied from prod registry.
-
-        SECONDARY_REPO="--cache-repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
-
-        if [[ -n "${CI_COMMIT_BRANCH}" && ! "${CI_COMMIT_BRANCH}" =~ ^(main|release-.+)$ ]]; then
-          SECONDARY_REPO=
-        fi
-
-        werf build \
-          ${SECONDARY_REPO} \
-          --verbose \
-          --parallel=true --parallel-tasks-limit=5 \
-          --save-build-report=true \
-          --tmp-dir="$TEMP_WORKDIR" \
-          --build-report-path images_tags_werf.json
-        BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
         SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
       else
-        # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
-        # Build using dev-registry as a single primary repo and push:
-        # - branches to Dev registry to run e2e tests.
-        # - semver tags to Github Container Registry for testing release process.
-        werf build \
-          --verbose \
-          --parallel=true --parallel-tasks-limit=5 \
-          --save-build-report=true \
-          --tmp-dir="$TEMP_WORKDIR" \
-          --build-report-path images_tags_werf.json
-        BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
         SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
-        echo "⚓️ 🧪 [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish to Github Container Registry '${PROD_REGISTRY_PATH}'"
       fi
 
-      cp images_tags_werf.json "$TEMP_WORKDIR"
+      export WERF_REPO="${DEV_REGISTRY_PATH}"
+      if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        # Release tag build, set deckhouse registry as final
+        export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}"
 
-      # Publish images for Git branch.
-      if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
-        # Add edition name for non-FE builds
+        # Set cosign auth values
+        export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
+        export COSIGN_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+
+        # The Git tag may contain a '+' sign, so use slugify for this situation.
+        # Slugify doesn't change a tag with safe-only characters.
+        IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
+
+        export WERF_DISABLE_META_TAGS=true
+      else
+        # Other build, set deckhouse registry as secondary
+        export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}"
+
+        # Set cosign auth values
+        export COSIGN_LOGIN="${DECKHOUSE_DEV_REGISTRY_USER}"
+        export COSIGN_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+
+        # Determine image tag
         if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
           IMAGE_EDITION=${WERF_ENV,,}
         fi
         # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
         # Use it as image tag. Add suffix to not overlap with PRs in main repo.
         IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
-
-        echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
-
-        echo "⚓️ 💫 [$(date -u)] Publish 'dev' image to dev-registry using tag ${IMAGE_TAG}".
-        DECKHOUSE_IMAGE_SRC="$(jq -r '.Images."dev".DockerImageName' images_tags_werf.json)"
-        DECKHOUSE_IMAGE=${BRANCH_REGISTRY_PATH}:${IMAGE_TAG}
-        pull_push_rmi 'dev' ${DECKHOUSE_IMAGE_SRC} ${DECKHOUSE_IMAGE}
-
-        echo "⚓️ 💫 [$(date -u)] Publish 'dev/install' image to dev-registry using tag ${IMAGE_TAG}".
-        INSTALL_IMAGE_SRC="$(jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json)"
-        INSTALL_IMAGE=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
-        pull_push_rmi 'dev/install' ${INSTALL_IMAGE_SRC} ${INSTALL_IMAGE}
-
-        echo "⚓️ 💫 [$(date -u)] Publish 'dev/install-standalone' image to dev-registry using tag ${IMAGE_TAG}".
-        INSTALL_IMAGE_SRC="$(jq -r '.Images."dev/install-standalone".DockerImageName' images_tags_werf.json)"
-        INSTALL_IMAGE=${BRANCH_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}
-        pull_push_rmi 'dev/install-standalone' ${INSTALL_IMAGE_SRC} ${INSTALL_IMAGE}
-
-        echo "⚓️ 💫 [$(date -u)] Publish 'e2e-opentofu-eks' image to dev-registry using tag ${IMAGE_TAG}".
-        INSTALL_IMAGE_SRC="$(jq -r '.Images."e2e-opentofu-eks".DockerImageName' images_tags_werf.json)"
-        INSTALL_IMAGE=${BRANCH_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}
-        pull_push_rmi 'e2e-opentofu-eks' ${INSTALL_IMAGE_SRC} ${INSTALL_IMAGE}
       fi
+      type werf && source $(werf ci-env github --verbose --as-file)
 
-{!{ if eq $buildType "release" }!}
-      # Set cosign auth values
-      export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
-      export COSIGN_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+      werf build \
+        --parallel=true --parallel-tasks-limit=5 \
+        --save-build-report=true \
+        --tmp-dir="$TEMP_WORKDIR" \
+        --build-report-path images_tags_werf.json
+
+      cp images_tags_werf.json "$TEMP_WORKDIR"
+
+      # Publish images for Git branch.
+      if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
+        echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
+        publish_image 'dev' "${DEV_REGISTRY_PATH}:${IMAGE_TAG}"
+        publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}"
+        publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
+        publish_image 'e2e-opentofu-eks' "${DEV_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
+      else
+        echo "Branch unset, skipping branch publish."
+      fi
 
       # Publish images for Git tag.
-      if [[ -n "${CI_COMMIT_TAG}" ]]; then
-        # The Git tag may contain a '+' sign, so use slugify for this situation.
-        # Slugify doesn't change a tag with safe-only characters.
-        IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
-
+      if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
         echo "⚓️ 💫 [$(date -u)] Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
-        if [[ -n ${DECKHOUSE_REGISTRY_HOST} ]] ; then
-          # Copy stages to prod registry from dev registry.
-          export WERF_DISABLE_META_TAGS=true
-          werf build \
-            --verbose \
-            --repo ${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX} \
-            --secondary-repo $WERF_REPO \
-            --parallel=true --parallel-tasks-limit=5 \
-            --save-build-report=true \
-            --tmp-dir="$TEMP_WORKDIR" \
-            --build-report-path images_tags_werf.json
-          cp images_tags_werf.json "$TEMP_WORKDIR"
-        fi
-        # Note: do not run second werf build for test repo, as it has no secondary repo.
-
-        echo "⚓️ 💫 [$(date -u)] Publish 'dev' image to deckhouse registry using tag ${IMAGE_TAG} ..."
-        DECKHOUSE_IMAGE_SRC="$(jq -r '.Images."dev".DockerImageName' images_tags_werf.json)"
-        DECKHOUSE_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${IMAGE_TAG}
-        pull_push_rmi 'dev' ${DECKHOUSE_IMAGE_SRC} ${DECKHOUSE_IMAGE}
-
-        echo "⚓️ 💫 [$(date -u)] Publish 'dev/install' image to deckhouse registry using tag ${IMAGE_TAG} ..."
-        INSTALL_IMAGE_SRC="$(jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json)"
-        INSTALL_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}
-        pull_push_rmi 'dev/install' ${INSTALL_IMAGE_SRC} ${INSTALL_IMAGE}
-
-        echo "⚓️ 💫 [$(date -u)] Publish 'dev/install-standalone' image to deckhouse registry using tag ${IMAGE_TAG} ..."
-        INSTALL_IMAGE_SRC="$(jq -r '.Images."dev/install-standalone".DockerImageName' images_tags_werf.json)"
-        INSTALL_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone:${IMAGE_TAG}
-        pull_push_rmi 'dev/install-standalone' ${INSTALL_IMAGE_SRC} ${INSTALL_IMAGE}
-
-        echo "⚓️ 💫 [$(date -u)] Publish 'release-channel-version' image to deckhouse registry using tag ${IMAGE_TAG} ..."
-        RELEASE_CHANNEL_IMAGE_SRC="$(jq -r '.Images."release-channel-version".DockerImageName' images_tags_werf.json)"
-        RELEASE_CHANNEL_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${IMAGE_TAG}
-        pull_push_rmi 'release-channel-version' ${RELEASE_CHANNEL_IMAGE_SRC} ${RELEASE_CHANNEL_IMAGE}
+        publish_image 'dev' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${IMAGE_TAG}"
+        publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}"
+        publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone:${IMAGE_TAG}"
+        publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${IMAGE_TAG}"
+      else
+        echo "Not a release tag, skipping tag publish."
       fi
-{!{- end }!}
 
       # Save 'tests' image name to pass it as output for 'tests' jobs.
       TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
@@ -261,7 +197,6 @@ steps:
       # Encode as gzip+base64 to evade github's SecretMasker error: "Skip output since it may contain secret".
       echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
 
-{!{- if eq $buildType "release" }!}
   - name: Check DKP images manifests in public registry
     if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
     id: check_images
@@ -272,11 +207,6 @@ steps:
       EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
       ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
-{!{- end }!}
 
-  - name: Cleanup
-    if: ${{ always() }}
-    run: |
-      rm -f images_tags_werf.json
 # </template: build_template>
 {!{ end }!}
