@@ -27,6 +27,9 @@ istio:
     - version: 2
 metallb:
     - version: 2
+      description:
+        en: Remove all `addressPool` elements with the `layer2` protocol.
+        ru: Удалите все элементы `addressPool` с протоколом `layer2`.
 node-manager:
     - version: 2
       description:
