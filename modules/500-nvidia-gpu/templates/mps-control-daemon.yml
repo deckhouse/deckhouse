@@ -105,7 +105,7 @@ spec:
               mountPath: /config
         - name: mps-control-daemon-ctr
           image: {{ include "helm_lib_module_image" (list . "nvidiaDevicePlugin") }}
-          command: [mps-control-daemon]
+          command: ["mps-control-daemon"]
           env:
           - name: NODE_NAME
             valueFrom:
