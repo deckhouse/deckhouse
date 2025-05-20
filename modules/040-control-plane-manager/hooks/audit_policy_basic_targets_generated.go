@@ -3,7 +3,6 @@ package hooks
 
 var auditPolicyBasicNamespaces = []string{
 	"d8-admission-policy-engine",
-	"d8-ceph-csi",
 	"d8-cert-manager",
 	"d8-chrony",
 	"d8-cloud-instance-manager",

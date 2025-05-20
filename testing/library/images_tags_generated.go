@@ -12,9 +12,6 @@ var DefaultImagesDigests = map[string]interface{}{
 	"basicAuth": map[string]interface{}{
 		"nginx": "imageHash-basicAuth-nginx",
 	},
-	"cephCsi": map[string]interface{}{
-		"cephcsi": "imageHash-cephCsi-cephcsi",
-	},
 	"certManager": map[string]interface{}{
 		"certManagerAcmeSolver": "imageHash-certManager-certManagerAcmeSolver",
 		"certManagerCainjector": "imageHash-certManager-certManagerCainjector",
