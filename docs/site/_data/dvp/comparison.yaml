@@ -110,9 +110,9 @@ featureSections:
             ru: "Хранилище должно поддерживать снимки"
           ee:
             en: |
-                Available with restrictions. <a target='_blank' href='https://deckhouse.o/products/kubernetes-platform/pricing/'>Learn more...</a>
+                Available with <a target='_blank' href='https://deckhouse.o/products/kubernetes-platform/pricing/'>restrictions</a>
             ru: |
-              Доступно с ограничениями. <a target='_blank' href='https://deckhouse.ru/products/kubernetes-platform/pricing/'>Подробнее...</a>
+              Доступно <a target='_blank' href='https://deckhouse.ru/products/kubernetes-platform/pricing/'>с ограничениями</a>
       - title:
           ru: Добавление и изменение размеров дисков ВМ без перезагрузки
           en: Adding and changing VM disk sizes without rebooting
