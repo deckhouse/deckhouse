@@ -115,6 +115,10 @@ func applyCAPSWebhookTLSFilter(obj *unstructured.Unstructured) (go_hook.FilterRe
 }
 
 func injectCAtoCRD(input *go_hook.HookInput) error {
+	if len(input.Snapshots["sshcredentials"]) == 0 {
+		return nil
+	}
+
 	if len(input.Snapshots["cabundle"]) > 0 {
 		bundle := input.Snapshots["cabundle"][0]
 		crd := input.Snapshots["sshcredentials"][0]
