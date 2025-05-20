@@ -132,6 +132,16 @@ func TestCredsFromDockerCfg(t *testing.T) {
 			wantPass: "",
 		},
 		{
+			name: "empty fields",
+			config: fmt.Sprintf(
+				`{"auths":{"registry.io":{"username":"","password":"","auth":"%s"}}}`,
+				base64.StdEncoding.EncodeToString([]byte(":")),
+			),
+			host:     "registry.io",
+			wantUser: "",
+			wantPass: "",
+		},
+		{
 			name:     "missing host entry",
 			config:   `{"auths":{"another.io":{"username":"x","password":"y"}}}`,
 			host:     "not-found.io",
@@ -151,9 +161,11 @@ func TestCredsFromDockerCfg(t *testing.T) {
 			wantError: true,
 		},
 		{
-			name:   "empty credentials strings",
-			config: `{"auths":{"registry.io":{"username":"","password":"","auth":""}}}`,
-			host:   "registry.io",
+			name:     "empty credentials strings",
+			config:   `{"auths":{"registry.io":{"username":"","password":"","auth":""}}}`,
+			host:     "registry.io",
+			wantUser: "",
+			wantPass: "",
 		},
 		{
 			name:     "missing auths section",

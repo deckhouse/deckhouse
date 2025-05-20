@@ -34,20 +34,18 @@ properties:
             type: object
             default: {}
             properties:
-              mode:
-                type: string
-                enum: [Unmanaged, Direct, Proxy, Local]
               target_mode:
                 type: string
                 enum: [Unmanaged, Direct, Proxy, Local]
               actual_params:
                 type: object
                 properties:
+                  mode:
+                    type: string
+                    enum: [Unmanaged, Direct, Proxy, Local]
                   generation:
                     type: integer
                     format: int64
-                  mode:
-                    type: string
                   images_repo:
                     type: string
                   username:

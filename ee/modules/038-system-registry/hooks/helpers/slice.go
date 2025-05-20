@@ -13,18 +13,18 @@ import (
 
 func DeduplicateSlice[T comparable](in []T) []T {
 	seen := make(map[T]struct{}, len(in))
-	var result []T
+	var ret []T
 	for _, v := range in {
 		if _, ok := seen[v]; !ok {
 			seen[v] = struct{}{}
-			result = append(result, v)
+			ret = append(ret, v)
 		}
 	}
-	return result
+	return ret
 }
 
 func DeduplicateAndSortSlice[T constraints.Ordered](in []T) []T {
-	result := DeduplicateSlice(in)
-	slices.Sort(result)
-	return result
+	ret := DeduplicateSlice(in)
+	slices.Sort(ret)
+	return ret
 }
