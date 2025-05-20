@@ -169,15 +169,17 @@ func handle(input *go_hook.HookInput) error {
 				"Cannot restore state from secret, will initialize new",
 				"error", err,
 			)
-
-			values.State = State{
-				ActualParams: Params{
-					Mode: registry_const.ModeUnmanaged,
-				},
-			}
 		} else {
 			input.Logger.Info("State successfully restored from secret")
 		}
+	}
+
+	if values.State.ActualParams.Mode == "" {
+		values.State.ActualParams.Mode = registry_const.ModeUnmanaged
+
+		input.Logger.Warn(
+			"State has no mode set, will set to Unmanaged",
+		)
 	}
 
 	inputs.Params, err = helpers.SnapshotToSingle[Params](input, configSnapName)
