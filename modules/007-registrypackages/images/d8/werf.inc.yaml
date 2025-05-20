@@ -1,6 +1,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
+fromCacheVersion: "2025-05-21.01"
 fromImage: common/src-artifact
 git:
 - add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
@@ -13,11 +14,13 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} $(cat /run/secrets/SOURCE_REPO)/deckhouse/deckhouse-cli.git /src/deckhouse-cli
+  # - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} {{ $.SOURCE_REPO }}/deckhouse/deckhouse-cli.git /src/deckhouse-cli
+  - git clone --depth 1 --branch debug-command-wrapper https://github.com/deckhouse/deckhouse-cli.git /src/deckhouse-cli
 #  - rm -rf /src/deckhouse-cli/.git # https://github.com/deckhouse/deckhouse-cli/blob/main/Taskfile.yml#L9
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ $.Images.BASE_SCRATCH }}
+fromCacheVersion: "2025-05-21.01"
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /
@@ -39,6 +42,7 @@ imageSpec:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
 fromImage: builder/golang-bullseye
+fromCacheVersion: "2025-05-21.01"
 mount:
 {{ include "mount points for golang builds" . }}
 import:
@@ -77,6 +81,7 @@ shell:
   - ssh-keyscan -H ${PRIVATE_REPO} >> ~/.ssh/known_hosts
 
   - cd /src/deckhouse-cli
+  - git tag {{ .CandiVersionMap.d8.d8CliVersion }}
   - task build:dist:linux:amd64
   - mv ./dist/{{ .CandiVersionMap.d8.d8CliVersion }}/linux-amd64/bin/d8 /d8
   - mv /src/scripts/* /

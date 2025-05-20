@@ -1,0 +1,44 @@
+{{- $version := "1.0.9" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ $version }} $(cat /run/secrets/SOURCE_REPO)/cilium/pwru.git /src/pwru
+  - rm -rf /src/pwru/.git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+fromImage: builder/golang-bookworm
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+shell:
+  beforeInstall:
+  {{- include "debian packages proxy" . | nindent 2 }}
+  - apt update
+  - apt install -y make git clang-15 llvm curl gcc flex bison gcc-x86-64* libc6-dev-amd64-cross
+  - ln -s /usr/bin/clang-15 /usr/bin/clang
+  - apt clean
+  - rm -rf /var/lib/apt/lists/*
+  setup:
+  - cd /src/pwru
+  - make pwru TARGET_GOARCH=amd64 VERSION=v{{ $version }}
+  - chown 64535:64535 ./pwru
+  - chmod 0755 ./pwru
+  - mv ./pwru /pwru
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: builder/scratch
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /pwru
+  to: /pwru
+  before: setup

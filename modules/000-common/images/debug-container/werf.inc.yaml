@@ -1,0 +1,38 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+fromImage: common/relocate-artifact
+final: false
+import:
+- image: tools/coreutils
+  add: /usr
+  to: /coreutils/usr
+  before: install
+- image: tools/bash
+  add: /usr
+  to: /bash/usr
+  before: install
+shell:
+  install:
+  - mkdir -p /relocate
+  - /binary_replace.sh -i "/coreutils/usr" -o /relocate
+  - /binary_replace.sh -i "/bash/usr" -o /relocate
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: base/distroless
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /relocate
+  to: /usr
+  before: install
+- image: common/ethtool
+  add: /ethtool
+  to: /usr/bin/ethtool
+  before: install
+- image: common/pwru
+  add: /pwru
+  to: /usr/bin/pwru
+  before: install
+imageSpec:
+  config:
+    env: { "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", "LANG": "C.UTF-8", "LANGUAGE": "C.UTF-8", "LC_ALL": "C.UTF-8" }
+    workingDir: "/"
