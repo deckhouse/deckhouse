@@ -10,6 +10,7 @@ import:
   to: /
   includePaths:
   - containerd
+  - containerd-shim-runc-v1
   - containerd-shim-runc-v2
   - ctr
   - runc

@@ -170,7 +170,6 @@ CentOS7
 ceph
 Ceph
 CEPH
-CephCSIDriver
 CephFS
 certExporter
 certmanager

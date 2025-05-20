@@ -17,8 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"encoding/json"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/api/core/v1"
@@ -31,22 +29,8 @@ type nodeTarget struct {
 	Address string `json:"ipAddress"`
 }
 
-// externalTarget is a piece of configuration for ping exporter. It represents a single site or external host.
-type externalTarget struct {
-	Name string `json:"name,omitempty"`
-	Host string `json:"host,omitempty"`
-}
-
 type targets struct {
-	Cluster  []nodeTarget     `json:"cluster_targets"`
-	External []externalTarget `json:"external_targets"`
-}
-
-func newTargets() *targets {
-	return &targets{
-		Cluster:  make([]nodeTarget, 0),
-		External: make([]externalTarget, 0),
-	}
+	Cluster []nodeTarget `json:"clusterTargets"`
 }
 
 func getAddress(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -59,7 +43,6 @@ func getAddress(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	if node.Spec.Unschedulable {
 		return nil, nil
 	}
-
 	target := nodeTarget{Name: node.Name}
 	for _, address := range node.Status.Addresses {
 		if address.Type == v1.NodeInternalIP {
@@ -73,6 +56,7 @@ func getAddress(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
+	Queue:        "/modules/monitoring-ping/discover_targets",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "addresses",
@@ -81,35 +65,23 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: getAddress,
 		},
 	},
-}, discoverNodes)
+}, updateNodeList)
 
-func discoverNodes(input *go_hook.HookInput) error {
-	const (
-		externalTargetsPath = "monitoringPing.externalTargets"
-		internalTargetsPath = "monitoringPing.internal.targets"
-	)
+func updateNodeList(input *go_hook.HookInput) error {
+	lenSnapshot := len(input.Snapshots["addresses"])
+	nodes := make([]nodeTarget, 0, lenSnapshot)
 
-	combinedTargets := newTargets()
-
-	for _, address := range input.Snapshots["addresses"] {
-		if address == nil {
+	for _, item := range input.Snapshots["addresses"] {
+		if item == nil {
 			continue
 		}
-		convertedAddress := address.(nodeTarget)
-		if convertedAddress.Address == "" {
-			continue
+		nt := item.(nodeTarget)
+		if nt.Address != "" {
+			nodes = append(nodes, nt)
 		}
-		combinedTargets.Cluster = append(combinedTargets.Cluster, convertedAddress)
 	}
 
-	for _, target := range input.Values.Get(externalTargetsPath).Array() {
-		var parsedExternalTarget externalTarget
-		if err := json.Unmarshal([]byte(target.Raw), &parsedExternalTarget); err != nil {
-			return err
-		}
-		combinedTargets.External = append(combinedTargets.External, parsedExternalTarget)
-	}
+	input.Values.Set("monitoringPing.internal.clusterTargets", nodes)
 
-	input.Values.Set(internalTargetsPath, combinedTargets)
 	return nil
 }

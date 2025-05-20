@@ -91,7 +91,7 @@ k8s:
     crictlPatch: 1
     ccm:
       openstack: v1.30.2
-      aws: v1.30.7
+      aws: v1.30.8
       vsphere: v1.30.2
       azure: v1.30.7
       gcp: ccm/v30.1.4
@@ -115,7 +115,7 @@ k8s:
     crictlPatch: 1
     ccm:
       openstack: v1.31.2
-      aws: v1.31.0
+      aws: v1.31.6
       vsphere: v1.31.1
       azure: v1.31.1
       gcp: ccm/v30.1.4
@@ -139,7 +139,7 @@ k8s:
     crictlPatch: 0
     ccm:
       openstack: v1.31.2
-      aws: v1.32.0
+      aws: v1.32.3
       vsphere: v1.32.2
       azure: v1.32.0
       gcp: ccm/v30.1.4

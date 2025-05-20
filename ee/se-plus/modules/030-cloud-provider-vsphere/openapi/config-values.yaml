@@ -1,3 +1,4 @@
+x-config-version: 2
 type: object
 properties:
   host:
@@ -90,11 +91,11 @@ properties:
         - "fast-lun102-7d0bf578"
       compatibilityFlag:
         type: string
-        enum: ["legacy", "migration"]
+        enum: ["Legacy", "Migration"]
         description: |
           A flag allowing the use of the old CSI version:
-            * `legacy` — use the old version of the driver. FCD discs only, no online-resizing;
-            * `migration` — in this case, both drivers will be available in the cluster at the same time. This mode is used to migrate from an old driver.
+            * `Legacy` — use the old version of the driver. FCD discs only, no online-resizing;
+            * `Migration` — in this case, both drivers will be available in the cluster at the same time. This mode is used to migrate from an old driver.
   nsxt:
     type: object
     description: |
