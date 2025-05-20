@@ -485,7 +485,7 @@ spec:
 
 	source := suite.moduleSource("test-source")
 
-	var moduleNames []string
+	moduleNames := make([]string, 0, len(source.Status.AvailableModules))
 	for _, mod := range source.Status.AvailableModules {
 		moduleNames = append(moduleNames, mod.Name)
 	}
