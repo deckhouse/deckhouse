@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
-	"reflect"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -30,7 +29,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimachineryv1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/util/retry"
 
 	crdinstaller "github.com/deckhouse/module-sdk/pkg/crd-installer"
 
@@ -139,48 +137,6 @@ func (cp *CRDsInstaller) DeleteCRDs(ctx context.Context, crdsToDelete []string) 
 
 func (cp *CRDsInstaller) Run(ctx context.Context) error {
 	return cp.installer.Run(ctx)
-}
-
-func (cp *CRDsInstaller) updateOrInsertCRD(ctx context.Context, crd *v1.CustomResourceDefinition) error {
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		existCRD, err := cp.getCRDFromCluster(ctx, crd.GetName())
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				ucrd, err := sdk.ToUnstructured(crd)
-				if err != nil {
-					return err
-				}
-
-				_, err = cp.k8sClient.Dynamic().Resource(crdGVR).Create(ctx, ucrd, apimachineryv1.CreateOptions{})
-				return err
-			}
-
-			return err
-		}
-
-		if existCRD.Spec.Conversion != nil {
-			crd.Spec.Conversion = existCRD.Spec.Conversion
-		}
-
-		if existCRD.GetObjectMeta().GetLabels()["heritage"] == "deckhouse" &&
-			reflect.DeepEqual(existCRD.Spec, crd.Spec) {
-			return nil
-		}
-
-		existCRD.Spec = crd.Spec
-		if len(existCRD.Labels) == 0 {
-			existCRD.Labels = make(map[string]string, 1)
-		}
-		existCRD.Labels["heritage"] = "deckhouse"
-
-		ucrd, err := sdk.ToUnstructured(existCRD)
-		if err != nil {
-			return err
-		}
-
-		_, err = cp.k8sClient.Dynamic().Resource(crdGVR).Update(ctx, ucrd, apimachineryv1.UpdateOptions{})
-		return err
-	})
 }
 
 func (cp *CRDsInstaller) getCRDFromCluster(ctx context.Context, crdName string) (*v1.CustomResourceDefinition, error) {
