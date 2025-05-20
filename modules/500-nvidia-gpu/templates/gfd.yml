@@ -122,6 +122,6 @@ spec:
             path: "/sys"
         - name: available-configs
           configMap:
-            name: modules/500-nvidia-gpu/templates/plugin_config.yaml
+            name: device-plugin-config
         - name: config
           emptyDir: {}
