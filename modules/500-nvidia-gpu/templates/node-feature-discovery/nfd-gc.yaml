@@ -20,7 +20,7 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       containers:
       - name: gc
-        image: "registry.k8s.io/nfd/node-feature-discovery:v0.17.3"
+        image: {{ include "helm_lib_module_image" (list . "nodeFeatureDiscovery") }}
         imagePullPolicy: IfNotPresent
         env:
         - name: NODE_NAME

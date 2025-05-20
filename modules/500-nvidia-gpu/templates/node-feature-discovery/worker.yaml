@@ -21,7 +21,7 @@ spec:
       serviceAccountName: node-feature-discovery-worker
       containers:
       - name: worker
-        image: "registry.k8s.io/nfd/node-feature-discovery:v0.17.3"
+        image: {{ include "helm_lib_module_image" (list . "nodeFeatureDiscovery") }}
         livenessProbe:
           grpc:
             port: 8082
