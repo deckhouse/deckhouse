@@ -157,6 +157,8 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 		Images:        cb.imagesDigests,
 		Proxy:         cb.clusterInputData.Proxy,
 		PackagesProxy: cb.clusterInputData.PackagesProxy,
+
+		StopAdditionalNodeShutdownInhibitor: cb.clusterInputData.StopAdditionalNodeShutdownInhibitor,
 	}
 
 	for _, ng := range cb.clusterInputData.NodeGroups {
@@ -474,6 +476,8 @@ type tplContextCommon struct {
 
 	Proxy         map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
 	PackagesProxy map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
+
+	StopAdditionalNodeShutdownInhibitor *bool `json:"stopAdditionalNodeShutdownInhibitor,omitempty" yaml:"stopAdditionalNodeShutdownInhibitor,omitempty"`
 }
 
 type bundleNGContext struct {
@@ -544,4 +548,6 @@ type inputData struct {
 	AllowedBundles     []string               `json:"allowedBundles" yaml:"allowedBundles"`
 	NodeGroups         []nodeGroup            `json:"nodeGroups" yaml:"nodeGroups"`
 	Freq               interface{}            `json:"NodeStatusUpdateFrequency,omitempty" yaml:"NodeStatusUpdateFrequency,omitempty"`
+
+	StopAdditionalNodeShutdownInhibitor *bool `json:"stopAdditionalNodeShutdownInhibitor,omitempty" yaml:"stopAdditionalNodeShutdownInhibitor,omitempty"`
 }
