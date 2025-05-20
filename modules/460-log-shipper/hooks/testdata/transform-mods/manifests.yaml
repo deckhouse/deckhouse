@@ -26,10 +26,10 @@ spec:
       username: test
       password: test
   transformation:
-  - action: NormalizeLabelKeys
-  - action: EnsureStructuredMessage
-    targetField: text
-  - action: DropLabels
-    labels:
-    - first
-    - .second
+    normalizeLabelKeys: true
+    ensureStructuredMessage:
+      targetField: text
+    dropLabels:
+      labels:
+      - first
+      - .second

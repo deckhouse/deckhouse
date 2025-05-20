@@ -25,61 +25,37 @@ import (
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 )
 
-type module interface {
-	getTransform() apis.LogTransform
-}
-
-func BuildModes(tms []v1alpha1.Transform) ([]apis.LogTransform, error) {
+func BuildModes(transform v1alpha1.Transformation) []apis.LogTransform {
 	transforms := make([]apis.LogTransform, 0)
-	var module module
-	for _, tm := range tms {
-		switch tm.Action {
-		case "NormalizeLabelKeys":
-			module = normalizeLabelKeys{}
-		case "EnsureStructuredMessage":
-			module = ensureStructuredMessage{targetField: tm.TargetField}
-		case "DropLabels":
-			if len(tm.Labels) > 0 {
-				module = dropLabels{labels: tm.Labels}
-			}
-		default:
-			return nil, fmt.Errorf("TransformMod: action %s not found", tm.Action)
-		}
-		lofTransform := module.getTransform()
-		transforms = append(transforms, lofTransform)
+	if transform.NormalizeLabelKeys {
+		transforms = append(transforms, normalizeLabelKeys())
 	}
-	return transforms, nil
+	if transform.EnsureStructuredMessage.TargetField != "" {
+		transforms = append(transforms, ensureStructuredMessage(transform.TargetField))
+	}
+	if len(transform.DropLabels.Labels) > 0 {
+		transforms = append(transforms, dropLabels(transform.DropLabels.Labels))
+	}
+	return transforms
 }
 
-type normalizeLabelKeys struct{}
-
-func (nlk normalizeLabelKeys) getTransform() apis.LogTransform {
-	var vrl string
-	name := "tf_normolazeLabelKeys"
-	vrl = "if exists(.pod_labels) {\n.pod_labels = map_keys(object!(.pod_labels), recursive: true) -> |key| { replace(key, \".\", \"_\")}\n}"
+func normalizeLabelKeys() apis.LogTransform {
+	name := "tf_normalizeLabelKeys"
+	vrl := "if exists(.pod_labels) {\n.pod_labels = map_keys(object!(.pod_labels), recursive: true) -> |key| { replace(key, \".\", \"_\")}\n}"
 	return NewTransformation(name, vrl)
 }
 
-type ensureStructuredMessage struct {
-	targetField string
-}
-
-func (esm ensureStructuredMessage) getTransform() apis.LogTransform {
-	var vrl string
+func ensureStructuredMessage(targetField string) apis.LogTransform {
 	name := "tf_ensureStructuredMessage"
-	vrl = fmt.Sprintf(".message = parse_json(.message) ?? { \"%s\": .message }\n", esm.targetField)
+	vrl := fmt.Sprintf(".message = parse_json(.message) ?? { \"%s\": .message }\n", targetField)
 	return NewTransformation(name, vrl)
 }
 
-type dropLabels struct {
-	labels []string
-}
-
-func (d dropLabels) getTransform() apis.LogTransform {
+func dropLabels(labels []string) apis.LogTransform {
 	var vrl string
-	name := fmt.Sprintf("tf_delete_%s", splitAndRemoveDot(d.labels))
-	labels := checkFixDotPrefix(d.labels)
-	for _, l := range labels {
+	name := fmt.Sprintf("tf_dropLabels")
+	ls := checkFixDotPrefix(labels)
+	for _, l := range ls {
 		vrl = fmt.Sprintf("%sif exists(%s) {\n del(%s)\n}\n", vrl, l, l)
 	}
 	return NewTransformation(name, vrl)
@@ -97,16 +73,6 @@ func NewTransformation(name, vrl string) *DynamicTransform {
 			"drop_on_abort": false,
 		},
 	}
-}
-
-// name transform couldn't have dot
-func splitAndRemoveDot(labels []string) string {
-	var s string
-	for _, l := range labels {
-		l = strings.ReplaceAll(l, ".", "")
-		s = fmt.Sprintf("%s_%s", s, l)
-	}
-	return s
 }
 
 // dot in label prefix need for vector
