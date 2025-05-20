@@ -23,7 +23,6 @@ linters:
     - whitespace
     - unused
     - usestdlibvars
-    - unused
   settings:
     errcheck:
       exclude-functions:
