@@ -416,45 +416,33 @@ spec:
 
                     [Подробнее о путях к полям...](https://vector.dev/docs/reference/configuration/field-path-notation/)
                 transformation:
-                  type: array
                   description: >
                     Список шагов трансформации. Каждый шаг определяет определенное действие и параметры к нему.
-                  items:
-                    oneOf:
-                      - description: "Нормализует имена меток, заменяя точки на подчеркивания"
-                        type: object
-                        required:
-                          - action
-                        properties:
-                          action:
+                  type: object
+                  properties:
+                    normalizeLabelKeys:
+                      description: "Нормализует имена меток, заменяя точки на подчеркивания"
+                      type: boolean
+                    ensureStructuredMessage:
+                      description: "Гарантирует, что поле message содержит JSON-объект"
+                      type: object
+                      required:
+                        - targetField
+                      properties:
+                        targetFild:
+                          description: "Целевое поле, в которое помещается обертка сообщения"
+                          type: string
+                    dropLabels:
+                      description: "Удаляет указанные метки"
+                      type: object
+                      required:
+                        - labels
+                      properties:
+                        lables:
+                          description: "Список меток, которые необходимо удалить"
+                          type: array
+                          items:
                             type: string
-                            enum: ["normalizeLabelKeys"]
-                      - description: "Гарантирует, что поле message содержит JSON-объект"
-                        type: object
-                        required:
-                          - action
-                          - targetField
-                        properties:
-                          action:
-                            type: string
-                            enum: ["ensureStructuredMessage"]
-                          targetField:
-                            type: string
-                            description: "Целевое поле, в которое помещается обертка сообщения"
-                      - description: "Удаляет указанные метки"
-                        type: object
-                        required:
-                          - action
-                          - labels
-                        properties:
-                          action:
-                            type: string
-                            enum: ["dropLabels"]
-                          labels:
-                            type: array
-                            description: "Список меток, которые необходимо удалить"
-                            items:
-                              type: string
                 buffer:
                   description: Параметры буфера.
                   properties:
