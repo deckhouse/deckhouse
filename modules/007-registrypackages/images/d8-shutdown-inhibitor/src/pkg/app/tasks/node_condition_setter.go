@@ -19,6 +19,7 @@ package tasks
 import (
 	"context"
 	"fmt"
+	"os/exec"
 
 	"d8_shutdown_inhibitor/pkg/kubernetes"
 )
@@ -45,7 +46,7 @@ const (
 func (n *NodeConditionSetter) Run(ctx context.Context, errCh chan error) {
 	err := n.patchCondition(ConditionStatusTrue)
 	if err != nil {
-		errCh <- fmt.Errorf("nodeConditionSetter set Node condition: %w", err)
+		errCh <- fmt.Errorf("nodeConditionSetter patch Node to set condition: %w", reformatExitError(err))
 		return
 	}
 	fmt.Printf("nodeConditionSetter(s1): Node condition updated\n")
@@ -59,7 +60,7 @@ func (n *NodeConditionSetter) Run(ctx context.Context, errCh chan error) {
 	}
 
 	err = n.patchCondition(ConditionStatusFalse)
-	fmt.Printf("nodeConditionSetter(s2): failed to unset condition on Node: %v\n", err)
+	fmt.Printf("nodeConditionSetter(s2): failed to unset condition on Node: %v\n", reformatExitError(err))
 }
 
 /**
@@ -82,4 +83,12 @@ func (n *NodeConditionSetter) patchCondition(status string) error {
 	}
 	k := kubernetes.NewDefaultKubectl()
 	return k.PatchCondition("Node", n.NodeName, ConditionType, status, reason, "")
+}
+
+func reformatExitError(err error) error {
+	ee, ok := err.(*exec.ExitError)
+	if ok && len(ee.Stderr) > 0 {
+		return fmt.Errorf("%v: %s", err, string(ee.Stderr))
+	}
+	return err
 }
