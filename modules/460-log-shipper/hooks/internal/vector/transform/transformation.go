@@ -77,7 +77,7 @@ type dropLabels struct {
 
 func (d dropLabels) getTransform() apis.LogTransform {
 	var vrl string
-	name := fmt.Sprintf("tf_delete_%s", splitAndremoveDot(d.labels))
+	name := fmt.Sprintf("tf_delete_%s", splitAndRemoveDot(d.labels))
 	labels := checkFixDotPrefix(d.labels)
 	for _, l := range labels {
 		vrl = fmt.Sprintf("%sif exists(%s) {\n del(%s)\n}\n", vrl, l, l)
@@ -100,7 +100,7 @@ func NewTransformation(name, vrl string) *DynamicTransform {
 }
 
 // name transform couldn't have dot
-func splitAndremoveDot(labels []string) string {
+func splitAndRemoveDot(labels []string) string {
 	var s string
 	for _, l := range labels {
 		l = strings.ReplaceAll(l, ".", "")
