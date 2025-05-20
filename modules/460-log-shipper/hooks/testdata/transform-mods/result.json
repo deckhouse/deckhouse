@@ -8,34 +8,10 @@
     }
   },
   "transforms": {
-    "transform/destination/test-kafka-dest/00_tf_normolazeLabelKeys": {
-      "drop_on_abort": false,
-      "inputs": [
-        "transform/source/test-source/01_clean_up"
-      ],
-      "source": "if exists(.pod_labels) {\n.pod_labels = map_keys(object!(.pod_labels), recursive: true) -\u003e |key| { replace(key, \".\", \"_\")}\n}",
-      "type": "remap"
-    },
-    "transform/destination/test-kafka-dest/01_tf_ensureStructuredMessage": {
-      "drop_on_abort": false,
-      "inputs": [
-        "transform/destination/test-kafka-dest/00_tf_normolazeLabelKeys"
-      ],
-      "source": ".message = parse_json(.message) ?? { \"text\": .message }\n",
-      "type": "remap"
-    },
-    "transform/destination/test-kafka-dest/02_tf_delete__first_second": {
-      "drop_on_abort": false,
-      "inputs": [
-        "transform/destination/test-kafka-dest/01_tf_ensureStructuredMessage"
-      ],
-      "source": "if exists(.first) {\n del(.first)\n}\nif exists(.second) {\n del(.second)\n}\n",
-      "type": "remap"
-    },
     "transform/destination/test-kafka-dest/03_del_parsed_data": {
       "drop_on_abort": false,
       "inputs": [
-        "transform/destination/test-kafka-dest/02_tf_delete__first_second"
+        "transform/source/test-source/01_clean_up"
       ],
       "source": "if exists(.parsed_data) {\n    del(.parsed_data)\n}",
       "type": "remap"

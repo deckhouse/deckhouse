@@ -25,12 +25,3 @@ spec:
       mechanism: PLAIN
       username: test
       password: test
-  transformation:
-  - action: NormalizeLabelKeys
-  - action: EnsureStructuredMessage
-    targetField: text
-  - action: DropLabels
-    labels:
-    - first
-    - .second
-
