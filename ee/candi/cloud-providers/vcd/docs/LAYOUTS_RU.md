@@ -33,5 +33,5 @@ masterNodeGroup:
     template: "catalog/Ubuntu 22.04 Server"
     mainNetwork: internal
     mainNetworkIPAddresses:
-    - 192.168.199.10
+    - 192.168.199.2
 ```

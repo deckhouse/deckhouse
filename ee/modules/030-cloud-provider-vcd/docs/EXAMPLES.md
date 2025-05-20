@@ -2,7 +2,7 @@
 title: "Cloud provider — VMware Cloud Director: examples"
 ---
 
-Below is an example configuration for a VMware Cloud Director cloud provider.
+Below is an example configuration [`VCDInstanceClass`](cr.html#vcdinstanceclass) for ephemeral nodes at VMware Cloud Director cloud provider.
 
 ## An example of the `VCDInstanceClass` custom resource
 
@@ -15,5 +15,5 @@ spec:
   rootDiskSizeGb: 90
   sizingPolicy: payg-4-8
   storageProfile: SSD-dc1-pub1-cl1
-  template: user-123456
+  template: MyOrg/Linux/ubuntu2204-cloud-ova
 ```

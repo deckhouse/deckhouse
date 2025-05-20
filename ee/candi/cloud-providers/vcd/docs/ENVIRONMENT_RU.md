@@ -17,16 +17,13 @@ description: "Подготовка окружения VMware Cloud Director дл
 * _Catalog_
 
 Organization, VirtualDataCenter, StoragePolicy, SizingPolicy, EdgeRouter и Catalog должны быть предоставлены вашим поставщиком услуг VMware Cloud Director.
-Также в тенанте нужно выдать следующие права на изменение параметров ВМ (используйте [инструкцию](https://kb.vmware.com/s/article/92067)):
-
-* _guestinfo.metadata_
-* _guestinfo.metadata.encoding_
-* _guestinfo.userdata_
-* _guestinfo.userdata.encoding_
-* _disk.enableUUID_
-* _guestinfo.hostname_
 
 Network (внутренняя сеть) может быть настроена вашим поставщиком услуг VMware Cloud Director, либо вы можете настроить ее самостоятельно. Далее рассматривается настройка внутренней сети самостоятельно.
+
+Пользователь под которым будет осуществляться доступ к API VMware Cloud Director должен иметь права:
+
+* Роль _Organization Administrator_ с дополнительным правилом `Preserve All ExtraConfig Elements During OVF Import and Export`.
+* Правило `Preserve All ExtraConfig Elements During OVF Import and Export` должно быть продублировано в используемом _Right Bundle_ пользователя.
 
 ### Добавление сети
 
@@ -117,7 +114,7 @@ _Network type_ должен быть _Routed_:
 Входящий трафик необходимо направить на edge router (порты 80, 443) при помощи правил DNAT на выделенный адрес во внутренней сети.
 Этот адрес поднимается при помощи MetalLB в L2 режиме на выделенных frontend-узлах.
 
-### Настройка правила DNAT на edge gateway
+### Настройка правил DNAT/SNAT на edge gateway
 
 Перейдите во вкладку _Networking_ -> _Edge Gateways_, откройте edge gateway:
 
@@ -132,6 +129,12 @@ _Network type_ должен быть _Routed_:
 ![Настройка правил DNAT на edge gateway, шаг 3](../../images/cloud-provider-vcd/edge-gateway-setup/Screenshot3.png)
 
 Первые два правила используются для входящего трафика, а третье — для доступа по SSH к узлу с control plane (без этого правила установка будет невозможна).
+
+Чтобы настроить возможность виртуальным машинам выходить в интернет необходимо настроить правила SNAT, для этого добавьте следующие правила:
+
+![Настройка правил SNAT на edge gateway, шаг 1](../../images/cloud-provider-vcd/edge-gateway-setup/Screenshot4.png)
+
+Данное правило позволит виртуальным машинам из подсети `192.168.199.0/24` выходить в интернет.
 
 ### Настройка firewall
 
@@ -205,20 +208,61 @@ _Network type_ должен быть _Routed_:
 
 ```shell
 echo -e '\n[deployPkg]\nwait-cloudinit-timeout=1800\n' >> /etc/vmware-tools/tools.conf
+echo 'disable_vmware_customization: true' > /etc/cloud/cloud.cfg.d/91_vmware_cust.cfg
+dpkg-reconfigure cloud-init
+```
+
+В появившемся диалоговом окне оставьте галочку только у `OVF: Reads data from OVF transports` и не забудьте пролистать и убрать галочки с нижних пунктов:
+
+![Настройка шаблона, OVF](../../images/cloud-provider-vcd/template/OVF.png)
+
+Выполните оставшиеся команды:
+
+```shell
+truncate -s 0 /etc/machine-id
+rm /var/lib/dbus/machine-id
+ln -s /etc/machine-id /var/lib/dbus/machine-id
+cloud-init clean --logs --seed
 passwd -d ubuntu
 passwd -d root
 rm /home/ubuntu/.ssh/authorized_keys
 history -c
+
 shutdown -P now
 ```
 
-Выключите виртуальную машину и создайте шаблон виртуальной машины:
+Выключите виртуальную машину и удалите все заполненные поля _Guest Properties_:
+
+![Настройка шаблона, Guest Properties 1](../../images/cloud-provider-vcd/template/GuestProperties1.png)
+
+Cоздайте шаблон виртуальной машины:
 
 ![Настройка шаблона, шаг 10](../../images/cloud-provider-vcd/template/Screenshot10.png)
 
 ![Настройка шаблона, шаг 11](../../images/cloud-provider-vcd/template/Screenshot11.png)
 
-После создания шаблона виртуальной машины, обратитесь к поставщику услуг VMware Cloud Director с просьбой включить для шаблона параметр `disk.enableUUID`.
+В созданном шаблоне перейдите во вкладку _Metadata_ и добавьте 6 полей:
+
+* _guestinfo.metadata_
+* _guestinfo.metadata.encoding_
+* _guestinfo.userdata_
+* _guestinfo.userdata.encoding_
+* _disk.enableUUID_
+* _guestinfo.hostname_
+
+![Настройка шаблона, Guest Properties 2](../../images/cloud-provider-vcd/template/GuestProperties2.png)
+
+В панели управления vCenter для шаблона включите параметр `disk.enableUUID`:
+
+![Настройка шаблона, vCenter 1](../../images/cloud-provider-vcd/template/vCenter1.png)
+
+![Настройка шаблона, vCenter 2](../../images/cloud-provider-vcd/template/vCenter2.png)
+
+![Настройка шаблона, vCenter 3](../../images/cloud-provider-vcd/template/vCenter3.png)
+
+![Настройка шаблона, vCenter 4](../../images/cloud-provider-vcd/template/vCenter4.png)
+
+![Настройка шаблона, vCenter 5](../../images/cloud-provider-vcd/template/vCenter5.png)
 
 ## Использование хранилища
 
