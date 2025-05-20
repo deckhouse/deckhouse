@@ -40,21 +40,7 @@
             {% when "not_supported" %}
               {{ not_supported }}
             {% else %}
-              {% assign hint_slug = "now" | date: "%9N" %}
-              <img src="/images/icons/intermediate_v2.svg" table__hint_{{ hint_slug }} aria-expanded="false">
-              <script type="text/javascript">
-              $(document).ready(function () {
-                  tippy('[table__hint_{{ hint_slug }}]', {
-                      interactive: true,
-                      interactiveDebounce: 10,
-                      maxWidth: 600,
-                      theme: 'light',
-                      allowHTML: true,
-                      arrow: false,
-                      content: `{{ feature.restriction_message[edition][page.lang] }}`
-                    });
-              });
-              </script>
+              <img src="/images/icons/intermediate_v2.svg" data-tippy-content="{{ feature.restriction_message[edition][page.lang] | replace: '"', "'" }}" aria-expanded="false">
           {% endcase %}
         </div>
       </td>

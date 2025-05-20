@@ -106,8 +106,8 @@ featureSections:
           ee: partly
         restriction_message:
           ce:
-            en: "The storage must support snapshots"
-            ru: "Хранилище должно поддерживать снимки"
+            en: "The storage must <a terget='_blank' href='https://deckhouse.io/products/kubernetes-platform/?dkp-scheme=data-storage#blocks'>support snapshots</a>"
+            ru: "Хранилище должно <a terget='_blank' href='https://deckhouse.ru/products/kubernetes-platform/?dkp-scheme=data-storage#blocks'>поддерживать снимки</a>"
           ee:
             en: |
                 Available with <a target='_blank' href='https://deckhouse.o/products/kubernetes-platform/pricing/'>restrictions</a>
