@@ -136,11 +136,12 @@ func getKubernetesConfigs() []go_hook.KubernetesConfig {
 	return ret
 }
 
-var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
-	Queue:        "/modules/system-registry/orchestrator",
-	Kubernetes:   getKubernetesConfigs(),
-},
+var _ = sdk.RegisterFunc(
+	&go_hook.HookConfig{
+		OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
+		Queue:        "/modules/system-registry/orchestrator",
+		Kubernetes:   getKubernetesConfigs(),
+	},
 	handle,
 )
 
