@@ -39,6 +39,7 @@ spec:
           effect: NoSchedule
       priorityClassName: system-node-critical
       serviceAccountName: nvidia-gpu-feature-discovery
+      shareProcessNamespace: true
       initContainers:
       - name: gpu-feature-discovery-init
         image: nvcr.io/nvidia/k8s-device-plugin:v0.17.2
