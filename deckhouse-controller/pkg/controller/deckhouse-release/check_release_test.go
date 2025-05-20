@@ -587,7 +587,12 @@ global:
 			"v1.37.0",
 		}, nil)
 
-		suite.setupController("lts-release-channel.yaml", initValues, embeddedMUP)
+		suite.setupController("lts-release-channel.yaml", initValues, &v1alpha1.ModuleUpdatePolicySpec{
+			Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+				Mode: v1alpha1.UpdateModeAuto.String(),
+			},
+			ReleaseChannel: "LTS",
+		})
 		err := suite.ctr.checkDeckhouseRelease(ctx)
 		require.NoError(suite.T(), err)
 	})
