@@ -77,6 +77,39 @@ Example: automatic kubelet version update.
          name: my-class
    ```
 
+### Disruptive updates
+
+Some updates, such as upgrading the `containerd` version or upgrading kubelet across multiple versions,
+require node downtime and may cause brief unavailability of system components (*disruptive updates*).
+The update mode of such cases is controlled by the [`disruptions.approvalMode`](../../../reference/cr/nodegroup/#nodegroup-v1-spec-disruptions-approvalmode) parameter:
+
+- `Manual`: Manual approval mode for disruptive updates.
+  When a disruptive update becomes available, a special alert is triggered.
+
+  To approve the update, add the annotation `update.node.deckhouse.io/disruption-approved=` to each node in the group,
+  as in the following example:
+
+  ```shell
+  sudo -i d8 k annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
+  ```
+
+  > **Important**. In this mode, nodes are not drained automatically.
+  > If needed, perform a manual drain before applying the annotation.
+  >
+  > To avoid issues during drain, always use the `Manual` mode for master node groups.
+
+- `Automatic`: Automatic approval of disruptive updates.
+
+  In this mode, the node is automatically drained by default before the update is applied.
+  You can modify this behavior using the [`disruptions.automatic.drainBeforeApproval`](../../../reference/cr/nodegroup/#nodegroup-v1-spec-disruptions-automatic-drainbeforeapproval) parameter in the node configuration.
+
+- `RollingUpdate`: A mode when a new node is created with updated settings, and the old one is removed.
+  This mode is applicable to cloud nodes only.
+
+  During the update, an additional temporary node is added to the cluster.
+  This can be useful when the cluster lacks enough resources
+  to temporarily handle the workload from the node that is being updated.
+
 ## Node types and addition mechanics
 
 In Deckhouse, nodes are categorized into the following types:
