@@ -19,9 +19,8 @@ package tasks
 import (
 	"context"
 	"fmt"
-	"os/exec"
 
-	"d8_shutdown_inhibitor/pkg/kubernetes"
+	"d8_shutdown_inhibitor/pkg/app/nodecondition"
 )
 
 // NodeConditionSetter set condition on start to prevent shutdown sequence in the kubelet
@@ -37,16 +36,10 @@ func (n *NodeConditionSetter) Name() string {
 	return "nodeConditionSetter"
 }
 
-const (
-	ConditionType        = "GracefulShutdownPostpone"
-	ConditionStatusTrue  = "True"
-	ConditionStatusFalse = "False"
-)
-
 func (n *NodeConditionSetter) Run(ctx context.Context, errCh chan error) {
-	err := n.patchCondition(ConditionStatusTrue)
+	err := nodecondition.GracefulShutdownPostpone().SetOnStart(n.NodeName)
 	if err != nil {
-		errCh <- fmt.Errorf("nodeConditionSetter patch Node to set condition: %w", reformatExitError(err))
+		errCh <- fmt.Errorf("nodeConditionSetter patch Node to set condition: %w", err)
 		return
 	}
 	fmt.Printf("nodeConditionSetter(s1): Node condition updated\n")
@@ -59,36 +52,6 @@ func (n *NodeConditionSetter) Run(ctx context.Context, errCh chan error) {
 		fmt.Printf("nodeConditionSetter(s2): inhibitors unlocked, unset Node condition\n")
 	}
 
-	err = n.patchCondition(ConditionStatusFalse)
-	fmt.Printf("nodeConditionSetter(s2): failed to unset condition on Node: %v\n", reformatExitError(err))
-}
-
-/**
-
-kubectl patch node/static-vm-node-00 --type strategic
--p '{"status":{"conditions":[{"type":"GracefulShutdownPostpone", "status":"True", "reason":"PodsWithLabelAreRunningOnNode"}]}}'
---subresource=status
-
-kubectl patch node/static-vm-node-00 --type strategic
--p '{"status":{"conditions":[{"type":"GracefulShutdownPostpone", "status":"False", "reason":"NoRunningPodsWithLabel"}]}}'
---subresource=status
-*/
-func (n *NodeConditionSetter) patchCondition(status string) error {
-	reason := ""
-	switch status {
-	case ConditionStatusTrue:
-		reason = "PodsWithLabelAreRunningOnNode"
-	case ConditionStatusFalse:
-		reason = "NoRunningPodsWithLabel"
-	}
-	k := kubernetes.NewDefaultKubectl()
-	return k.PatchCondition("Node", n.NodeName, ConditionType, status, reason, "")
-}
-
-func reformatExitError(err error) error {
-	ee, ok := err.(*exec.ExitError)
-	if ok && len(ee.Stderr) > 0 {
-		return fmt.Errorf("%v: %s", err, string(ee.Stderr))
-	}
-	return err
+	err = nodecondition.GracefulShutdownPostpone().UnsetOnUnlock(n.NodeName)
+	fmt.Printf("nodeConditionSetter(s2): failed to unset condition on Node: %v\n", err)
 }

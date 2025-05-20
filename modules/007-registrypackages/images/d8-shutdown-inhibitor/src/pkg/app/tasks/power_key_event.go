@@ -32,7 +32,8 @@ type PowerKeyEvent struct {
 	// PowerKeyPressedCh is a channel to send power key press event.
 	PowerKeyPressedCh  chan<- struct{}
 	UnlockInhibitorsCh <-chan struct{}
-	powerKeyDevices    []inputdev.Device
+
+	powerKeyDevices []inputdev.Device
 }
 
 func (p *PowerKeyEvent) Name() string {

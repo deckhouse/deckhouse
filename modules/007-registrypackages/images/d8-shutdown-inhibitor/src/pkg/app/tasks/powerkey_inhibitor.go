@@ -25,8 +25,9 @@ import (
 
 type PowerKeyInhibitor struct {
 	UnlockInhibitorsCh <-chan struct{}
-	dbusCon            *systemd.DBusCon
-	inhibitLock        systemd.InhibitLock
+
+	dbusCon     *systemd.DBusCon
+	inhibitLock systemd.InhibitLock
 }
 
 func (p *PowerKeyInhibitor) Name() string {

@@ -26,8 +26,9 @@ import (
 type ShutdownInhibitor struct {
 	UnlockInhibitorsCh <-chan struct{}
 	ShutdownSignalCh   chan<- struct{}
-	dbusCon            *systemd.DBusCon
-	inhibitLock        systemd.InhibitLock
+
+	dbusCon     *systemd.DBusCon
+	inhibitLock systemd.InhibitLock
 }
 
 func (s *ShutdownInhibitor) Name() string {

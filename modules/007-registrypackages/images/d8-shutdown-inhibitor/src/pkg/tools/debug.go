@@ -24,7 +24,7 @@ import (
 )
 
 func Run(args []string) bool {
-	if len(args) < 1 {
+	if len(args) < 2 {
 		return false
 	}
 
@@ -33,6 +33,12 @@ func Run(args []string) bool {
 		NodeName()
 	case "node-cordon":
 		NodeCordon()
+	case "node-condition":
+		if len(args) < 3 {
+			fmt.Println("Choose stage: start, pods, or unlock")
+			return false
+		}
+		NodeCondition(args[2])
 	case "list-pods":
 		ListPods(app.InhibitNodeShutdownLabel)
 	case "list-input-devices":
