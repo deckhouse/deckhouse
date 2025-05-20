@@ -12,3 +12,7 @@ properties:
       Флаг отключения `machine-controller-manager` для случаев, когда вносятся потенциально опасные изменения.
 
       > **Внимание!** Используйте только в полном осознании зачем это делается.
+  stopAdditionalNodeShutdownInhibitor:
+    description: |
+      Флаг остановки дополнительного systemd сервиса для предотвращения выключения ноды,
+      если на ней запущены поды с лейблом 'pod.deckhouse.io/inhibit-node-shutdown'.
