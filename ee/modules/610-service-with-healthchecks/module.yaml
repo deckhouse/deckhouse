@@ -1,7 +1,0 @@
-name: service-with-healthchecks
-weight: 610
-namespace: d8-service-with-healthchecks
-description: |
-  Internal LoadBalancer with per-port healthchecks.
-requirements:
-  bootstrapped: true
