@@ -5,6 +5,10 @@ metadata:
   namespace: d8-nvidia-gpu
 data:
   nfd-worker.conf: |-
+    core:
+      labelSources:
+      - "local"
+      - "pci"
     sources:
       pci:
         deviceClassWhitelist:

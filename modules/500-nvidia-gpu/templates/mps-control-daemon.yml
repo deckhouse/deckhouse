@@ -13,7 +13,6 @@ spec:
         app: mps-control-daemon
     spec:
       nodeSelector:
-        nvidia.com/gpu.deploy.device-plugin: "true"
         nvidia.com/mps.capable: "true"
       tolerations:
         - key: nvidia.com/gpu

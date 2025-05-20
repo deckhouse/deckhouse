@@ -12,6 +12,25 @@ spec:
       labels:
         app: nvidia-device-plugin
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: feature.node.kubernetes.io/pci-10de.present
+                    operator: In
+                    values:
+                      - "true"
+              - matchExpressions:
+                  - key: feature.node.kubernetes.io/pci-0302_10de.present
+                    operator: In
+                    values:
+                      - "true"
+              - matchExpressions:
+                  - key: feature.node.kubernetes.io/pci-0300_10de.present
+                    operator: In
+                    values:
+                      - "true"
       priorityClassName: system-node-critical
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
