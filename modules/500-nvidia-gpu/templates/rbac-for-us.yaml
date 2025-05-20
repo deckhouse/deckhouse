@@ -161,6 +161,13 @@ rules:
   verbs:
   - get
 - apiGroups:
+  - topology.node.k8s.io
+  resources:
+  - noderesourcetopologies
+  verbs:
+  - delete
+  - list
+- apiGroups:
   - nfd.k8s-sigs.io
   resources:
   - nodefeatures

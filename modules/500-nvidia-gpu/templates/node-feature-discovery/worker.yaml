@@ -50,6 +50,7 @@ spec:
         - -feature-gates=NodeFeatureGroupAPI=false
         - -metrics=8081
         - -grpc-health=8082
+        - -config=/etc/kubernetes/node-feature-discovery/nfd-worker.conf
         ports:
           - containerPort: 8081
             name: metrics
