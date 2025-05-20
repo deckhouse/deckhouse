@@ -348,25 +348,6 @@ spec:
         - mountPath: /chroot/etc/ingress-controller/geoip/
           name: geoip-data
         {{- end }}
-  {{- else }}
-        - mountPath: /var/lib/nginx/body
-          name: client-body-temp-path
-        - mountPath: /var/lib/nginx/fastcgi
-          name: fastcgi-temp-path
-        - mountPath: /var/lib/nginx/proxy
-          name: proxy-temp-path
-        - mountPath: /var/lib/nginx/scgi
-          name: scgi-temp-path
-        - mountPath: /var/lib/nginx/uwsgi
-          name: uwsgi-temp-path
-        - mountPath: /etc/nginx/ssl/
-          name: secret-nginx-auth-tls
-        - mountPath: /tmp/nginx/
-          name: tmp-nginx
-        - mountPath: /etc/nginx/webhook-ssl/
-          name: webhook-cert
-          readOnly: true
-  {{- end }}
       - image: {{ include "helm_lib_module_image" (list $context "protobufExporter") }}
         name: protobuf-exporter
         resources:
