@@ -258,7 +258,7 @@ In the created template, navigate to the _Metadata_ tab and add 6 fields:
 
 ![Setting up the template, Guest Properties 3](../../images/cloud-provider-vcd/template/GuestProperties3.png)
 
-In the vCenter management panel for the template, enable the `disk.enableUUID` parameter:
+In the vCenter management panel for the template, enable the `disk.EnableUUID` parameter:
 
 ![Setting up the template, vCenter 1](../../images/cloud-provider-vcd/template/vCenter1.png)
 

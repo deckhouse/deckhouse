@@ -258,7 +258,7 @@ Cоздайте шаблон виртуальной машины:
 
 ![Настройка шаблона, Guest Properties 3](../../images/cloud-provider-vcd/template/GuestProperties3.png)
 
-В панели управления vCenter для шаблона включите параметр `disk.enableUUID`:
+В панели управления vCenter для шаблона включите параметр `disk.EnableUUID`:
 
 ![Настройка шаблона, vCenter 1](../../images/cloud-provider-vcd/template/vCenter1.png)
 
