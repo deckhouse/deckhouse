@@ -379,6 +379,14 @@ is used if DECKHOUSE_REGISTRY_HOST is not set.
           git checkout -b "${RELEASE_BRANCH_NAME}"
           git push --force origin "${RELEASE_BRANCH_NAME}"
 
+      - name: Send failure report
+        if: failure()
+        env:
+          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+        run: |
+          WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
+          bash ./.github/scripts/send-report.sh --custom-message "🛑Deploy to channel {!{ .channel }!} failed!🛑\n[URL]($WORKFLOW_URL)"
+
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,final" $workflowName) | strings.Indent 6 }!}
 
 {!{- $envs := yaml `
