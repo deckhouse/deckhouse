@@ -28,8 +28,10 @@ shell:
     yq eval '.requirements.autoK8sVersion = "{{ .defaultKubernetesVersion }}"' -i /deckhouse/release.yaml
     yq eval '.requirements.k8s = "{{.kubernetesVersions | first }}"' -i /deckhouse/release.yaml
 git:
-- add: /release.yaml
-  to: /deckhouse/release.yaml
+- add: /
+  to: /deckhouse
+  includePaths:
+  - release.yaml
   stageDependencies:
     install:
       - '**/*'
