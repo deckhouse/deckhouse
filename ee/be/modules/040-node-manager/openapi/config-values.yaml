@@ -25,3 +25,11 @@ properties:
       Set to 'true' to disable machine-controller-manager in case of potentially cluster-damaging changes.
 
       > **Warning!** Use this flag only if you know what you are doing and clearly understand the consequences.
+  stopAdditionalNodeShutdownInhibitor:
+    type: boolean
+    default: false
+    x-examples:
+      - false
+    description: |
+      Set to 'true' to stop additional systemd service d8-shutdown-inhibitor that prevents node shutdown
+      if Pods with label 'pod.deckhouse.io/inhibit-node-shutdown' are present on Node.
