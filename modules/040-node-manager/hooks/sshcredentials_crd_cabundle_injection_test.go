@@ -389,7 +389,6 @@ spec:
 		})
 		It("Should be a CRD with caBundle injected", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			// Expect(f.KubernetesResource("CustomResourceDefinition", "", "sshcredentials.deckhouse.io").Field(`spec`).Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("CustomResourceDefinition", "", "sshcredentials.deckhouse.io").Field(`spec.conversion.webhook.clientConfig.caBundle`).Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("CustomResourceDefinition", "", "sshcredentials.deckhouse.io").Field(`spec.conversion.webhook.clientConfig.caBundle`).String()).To(Equal("LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJtRENDQVQ2Z0F3SUJBZ0lVQ1hSQU1hMDM0YWhCN2gxbURjWDVIMFQvYlkwd0NnWUlLb1pJemowRUF3SXcKS2pFb01DWUdBMVVFQXhNZlkyRndjeTFqYjI1MGNtOXNiR1Z5TFcxaGJtRm5aWEl0ZDJWaWFHOXZhekFlRncweQpOVEExTURZeE1EUTJNREJhRncwek5UQTFNRFF4TURRMk1EQmFNQ294S0RBbUJnTlZCQU1USDJOaGNITXRZMjl1CmRISnZiR3hsY2kxdFlXNWhaMlZ5TFhkbFltaHZiMnN3V1RBVEJnY3Foa2pPUFFJQkJnZ3Foa2pPUFFNQkJ3TkMKQUFSNjkrUjR6bkg3TWkrZ1JxK1JrM2NIV1liMVpUaUU2VTFJdE9vL3NhNnN5UmtEYTJzVEdYNzdzenJSdzJSbwo2VnhGb083UWtVN3pGRG81QWZzR3ByenpvMEl3UURBT0JnTlZIUThCQWY4RUJBTUNBUVl3RHdZRFZSMFRBUUgvCkJBVXdBd0VCL3pBZEJnTlZIUTRFRmdRVWQ2NmYxbkJEekdmdFZLbTRTWGFsejN2OTV3TXdDZ1lJS29aSXpqMEUKQXdJRFNBQXdSUUloQUw1SjJnaCtvOUtxR2cxN1R2UjJiVHpaMmEzWDh2bE5jMGFNVzYrZlFZU1hBaUFDZXl0YwpFV3JzM3RpdTVDWXozSGtqaTQ5L3ZkSW5qWHJMRmJLNHhMVlR3QT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K"))
 		})
@@ -596,7 +595,6 @@ type: kubernetes.io/tls
 		})
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			// Expect(f.KubernetesResource("CustomResourceDefinition", "", "sshcredentials.deckhouse.io").Field(`spec.conversion.webhook.clientConfig.caBundle`).Exists()).To(BeTrue())
 		})
 	})
 
