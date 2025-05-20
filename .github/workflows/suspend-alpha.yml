@@ -17,7 +17,7 @@
 # limitations under the License.
 
 
-name: 'Suspend the alpha'
+name: 'Suspend alpha'
 
 on:
   workflow_dispatch:
@@ -31,8 +31,8 @@ on:
       comment_id:
         description: 'Id of comment in issue where to put workflow run status'
         required: false
-      suspend_tag:
-        description: 'Set to suspend specified tag'
+      editions:
+        description: 'Comma separated editions to suspend. Example: ee,fe,ce,be,se,se-plus'
         required: false
 
 env:
@@ -133,43 +133,48 @@ jobs:
 
   # </template: git_info_job>
 
-  detect_version:
-    name: Detect version
-    needs:
-      - git_info
+  detect_editions:
+    name: Detect editions
     runs-on: ubuntu-latest
     outputs:
-      version: ${{steps.detect_version.outputs.version}}
+      DEPLOY_CE: ${{steps.detect_editions.outputs.DEPLOY_CE}}
+      DEPLOY_EE: ${{steps.detect_editions.outputs.DEPLOY_EE}}
+      DEPLOY_FE: ${{steps.detect_editions.outputs.DEPLOY_FE}}
+      DEPLOY_BE: ${{steps.detect_editions.outputs.DEPLOY_BE}}
+      DEPLOY_SE: ${{steps.detect_editions.outputs.DEPLOY_SE}}
+      DEPLOY_SE-plus: ${{steps.detect_editions.outputs.DEPLOY_SE-plus}}
     steps:
-      - name: Detect version
-        id: detect_version
+      - name: Detect editions
+        id: detect_editions
         env:
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-          SUSPEND_TAG: ${{ github.event.inputs.suspend_tag }}
+          EDITIONS: ${{ github.event.inputs.editions }}
         run: |
-          if [[ -n ${SUSPEND_TAG} ]] ; then
-            echo "::notice title=Suspend version::Workflow started from '${CI_COMMIT_REF_NAME}', but suspend_tag input is set. Use '${SUSPEND_REVISION}' as suspend version."
-            echo "version=${SUSPEND_TAG}" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          if [[ -n ${CI_COMMIT_TAG} ]] ; then
-            echo "::notice title=Suspend version::Workflow started from tag '${CI_COMMIT_TAG}'. Use it as suspend version."
-            echo "version=${CI_COMMIT_TAG}" >> $GITHUB_OUTPUT
-            exit 0
-          fi
+          echo "Input allowed editions: '${EDITIONS}'"
 
-          echo "::error title=Wrong environment::Seems you try to suspend branch '${CI_COMMIT_REF_NAME}'. Use suspend_tag input or run workflow from tag."
-          exit 1
+          RESTRICTED=no
 
+          for edition in CE EE FE BE SE SE-plus ; do
+            if grep -i ",${edition}," <<<",${EDITIONS}," 2>/dev/null 1>&2 ; then
+              echo "  - enable deploy of ${edition} edition."
+              echo "DEPLOY_${edition}=true" >> $GITHUB_OUTPUT
+              RESTRICTED=yes
+            fi
+          done
+
+          if [[ $RESTRICTED == "no" ]] ; then
+            echo "No restrictions. Enable deploy to all editions."
+            for edition in CE EE FE BE SE SE-plus ; do
+              echo "DEPLOY_${edition}=true" >> $GITHUB_OUTPUT
+            done
+          fi
 
   run_suspend:
-    name: Suspend ${{needs.detect_version.outputs.version}} on alpha channel
+    name: Suspend alpha channel
     environment:
       name: alpha
     needs:
       - git_info
-      - detect_version
+      - detect_editions
     runs-on: [self-hosted, regular]
     steps:
 
@@ -196,7 +201,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           retries: 3
           script: |
-            const name = 'Suspend the alpha';
+            const name = 'Suspend alpha';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -253,10 +258,10 @@ jobs:
 
 
 
-      - name: Publish release images for CE
+      - name: Publish suspend images for CE
+        if: ${{ needs.detect_editions.outputs.DEPLOY_CE == 'true' }}
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          SUSPEND_VERSION: ${{needs.detect_version.outputs.version}}
           WERF_ENV: CE
           SKIP_PUSH_FOR_SUSPEND: ${{secrets.SKIP_PUSH_FOR_SUSPEND}}
         run: |
@@ -294,15 +299,11 @@ jobs:
             echo "::error title=Missed variable::WERF_ENV is not set. Cannot deploy unknown edition, only ce, ee and fe are allowed in inputs."
             shouldExit1=yes
           fi
-          if [[ -z ${SUSPEND_VERSION} ]] ; then
-            echo "::error title=Missed version::Suspend version not detected. Use suspend_tag input or run workflow from tag."
-            shouldExit1=yes
-          fi
           if [[ -n ${shouldExit1} ]] ; then
             exit 1
           fi
 
-          echo "Suspend version '${SUSPEND_VERSION}' for CE edition".
+          echo "Suspend '${RELEASE_CHANNEL}' for CE edition".
 
           # Variables
           #   1. Edition and channel.
@@ -320,21 +321,22 @@ jobs:
           fi
 
           #   3. Build and publish release-channel image to prod registry.
-          SUSPEND_VERSION_IMAGE=${DST_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL}
-          echo "⚓️ 🛠 [$(date -u)] Build 'release-channel suspend' image as '${SUSPEND_VERSION_IMAGE}'."
+          RELEASE_CHANNEL_IMAGE=${DST_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL}
+          echo "⚓️ 🛠 [$(date -u)] Build 'release-channel suspend' image as '${RELEASE_CHANNEL_IMAGE}'."
 
-          echo "{\"version\": \"${SUSPEND_VERSION}\", \"suspend\": true}" > version.json
+          regctl image get-file "${RELEASE_CHANNEL_IMAGE}" version.json | jq '. + {"suspend": true}' > version.json
+
           cat <<EOF >Dockerfile
           FROM scratch
           COPY version.json version.json
           EOF
-          docker build . -t "${SUSPEND_VERSION_IMAGE}"
+          docker build . -t "${RELEASE_CHANNEL_IMAGE}"
 
-          push_rmi 'release-channel suspend' "${SUSPEND_VERSION_IMAGE}"
-      - name: Publish release images for EE
+          push_rmi 'release-channel suspend' "${RELEASE_CHANNEL_IMAGE}"
+      - name: Publish suspend images for EE
+        if: ${{ needs.detect_editions.outputs.DEPLOY_EE == 'true' }}
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          SUSPEND_VERSION: ${{needs.detect_version.outputs.version}}
           WERF_ENV: EE
           SKIP_PUSH_FOR_SUSPEND: ${{secrets.SKIP_PUSH_FOR_SUSPEND}}
         run: |
@@ -372,15 +374,11 @@ jobs:
             echo "::error title=Missed variable::WERF_ENV is not set. Cannot deploy unknown edition, only ce, ee and fe are allowed in inputs."
             shouldExit1=yes
           fi
-          if [[ -z ${SUSPEND_VERSION} ]] ; then
-            echo "::error title=Missed version::Suspend version not detected. Use suspend_tag input or run workflow from tag."
-            shouldExit1=yes
-          fi
           if [[ -n ${shouldExit1} ]] ; then
             exit 1
           fi
 
-          echo "Suspend version '${SUSPEND_VERSION}' for EE edition".
+          echo "Suspend '${RELEASE_CHANNEL}' for EE edition".
 
           # Variables
           #   1. Edition and channel.
@@ -398,21 +396,22 @@ jobs:
           fi
 
           #   3. Build and publish release-channel image to prod registry.
-          SUSPEND_VERSION_IMAGE=${DST_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL}
-          echo "⚓️ 🛠 [$(date -u)] Build 'release-channel suspend' image as '${SUSPEND_VERSION_IMAGE}'."
+          RELEASE_CHANNEL_IMAGE=${DST_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL}
+          echo "⚓️ 🛠 [$(date -u)] Build 'release-channel suspend' image as '${RELEASE_CHANNEL_IMAGE}'."
 
-          echo "{\"version\": \"${SUSPEND_VERSION}\", \"suspend\": true}" > version.json
+          regctl image get-file "${RELEASE_CHANNEL_IMAGE}" version.json | jq '. + {"suspend": true}' > version.json
+
           cat <<EOF >Dockerfile
           FROM scratch
           COPY version.json version.json
           EOF
-          docker build . -t "${SUSPEND_VERSION_IMAGE}"
+          docker build . -t "${RELEASE_CHANNEL_IMAGE}"
 
-          push_rmi 'release-channel suspend' "${SUSPEND_VERSION_IMAGE}"
-      - name: Publish release images for FE
+          push_rmi 'release-channel suspend' "${RELEASE_CHANNEL_IMAGE}"
+      - name: Publish suspend images for FE
+        if: ${{ needs.detect_editions.outputs.DEPLOY_FE == 'true' }}
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          SUSPEND_VERSION: ${{needs.detect_version.outputs.version}}
           WERF_ENV: FE
           SKIP_PUSH_FOR_SUSPEND: ${{secrets.SKIP_PUSH_FOR_SUSPEND}}
         run: |
@@ -450,15 +449,11 @@ jobs:
             echo "::error title=Missed variable::WERF_ENV is not set. Cannot deploy unknown edition, only ce, ee and fe are allowed in inputs."
             shouldExit1=yes
           fi
-          if [[ -z ${SUSPEND_VERSION} ]] ; then
-            echo "::error title=Missed version::Suspend version not detected. Use suspend_tag input or run workflow from tag."
-            shouldExit1=yes
-          fi
           if [[ -n ${shouldExit1} ]] ; then
             exit 1
           fi
 
-          echo "Suspend version '${SUSPEND_VERSION}' for FE edition".
+          echo "Suspend '${RELEASE_CHANNEL}' for FE edition".
 
           # Variables
           #   1. Edition and channel.
@@ -476,21 +471,22 @@ jobs:
           fi
 
           #   3. Build and publish release-channel image to prod registry.
-          SUSPEND_VERSION_IMAGE=${DST_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL}
-          echo "⚓️ 🛠 [$(date -u)] Build 'release-channel suspend' image as '${SUSPEND_VERSION_IMAGE}'."
+          RELEASE_CHANNEL_IMAGE=${DST_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL}
+          echo "⚓️ 🛠 [$(date -u)] Build 'release-channel suspend' image as '${RELEASE_CHANNEL_IMAGE}'."
 
-          echo "{\"version\": \"${SUSPEND_VERSION}\", \"suspend\": true}" > version.json
+          regctl image get-file "${RELEASE_CHANNEL_IMAGE}" version.json | jq '. + {"suspend": true}' > version.json
+
           cat <<EOF >Dockerfile
           FROM scratch
           COPY version.json version.json
           EOF
-          docker build . -t "${SUSPEND_VERSION_IMAGE}"
+          docker build . -t "${RELEASE_CHANNEL_IMAGE}"
 
-          push_rmi 'release-channel suspend' "${SUSPEND_VERSION_IMAGE}"
-      - name: Publish release images for BE
+          push_rmi 'release-channel suspend' "${RELEASE_CHANNEL_IMAGE}"
+      - name: Publish suspend images for BE
+        if: ${{ needs.detect_editions.outputs.DEPLOY_BE == 'true' }}
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          SUSPEND_VERSION: ${{needs.detect_version.outputs.version}}
           WERF_ENV: BE
           SKIP_PUSH_FOR_SUSPEND: ${{secrets.SKIP_PUSH_FOR_SUSPEND}}
         run: |
@@ -528,15 +524,11 @@ jobs:
             echo "::error title=Missed variable::WERF_ENV is not set. Cannot deploy unknown edition, only ce, ee and fe are allowed in inputs."
             shouldExit1=yes
           fi
-          if [[ -z ${SUSPEND_VERSION} ]] ; then
-            echo "::error title=Missed version::Suspend version not detected. Use suspend_tag input or run workflow from tag."
-            shouldExit1=yes
-          fi
           if [[ -n ${shouldExit1} ]] ; then
             exit 1
           fi
 
-          echo "Suspend version '${SUSPEND_VERSION}' for BE edition".
+          echo "Suspend '${RELEASE_CHANNEL}' for BE edition".
 
           # Variables
           #   1. Edition and channel.
@@ -554,21 +546,22 @@ jobs:
           fi
 
           #   3. Build and publish release-channel image to prod registry.
-          SUSPEND_VERSION_IMAGE=${DST_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL}
-          echo "⚓️ 🛠 [$(date -u)] Build 'release-channel suspend' image as '${SUSPEND_VERSION_IMAGE}'."
+          RELEASE_CHANNEL_IMAGE=${DST_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL}
+          echo "⚓️ 🛠 [$(date -u)] Build 'release-channel suspend' image as '${RELEASE_CHANNEL_IMAGE}'."
 
-          echo "{\"version\": \"${SUSPEND_VERSION}\", \"suspend\": true}" > version.json
+          regctl image get-file "${RELEASE_CHANNEL_IMAGE}" version.json | jq '. + {"suspend": true}' > version.json
+
           cat <<EOF >Dockerfile
           FROM scratch
           COPY version.json version.json
           EOF
-          docker build . -t "${SUSPEND_VERSION_IMAGE}"
+          docker build . -t "${RELEASE_CHANNEL_IMAGE}"
 
-          push_rmi 'release-channel suspend' "${SUSPEND_VERSION_IMAGE}"
-      - name: Publish release images for SE
+          push_rmi 'release-channel suspend' "${RELEASE_CHANNEL_IMAGE}"
+      - name: Publish suspend images for SE
+        if: ${{ needs.detect_editions.outputs.DEPLOY_SE == 'true' }}
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          SUSPEND_VERSION: ${{needs.detect_version.outputs.version}}
           WERF_ENV: SE
           SKIP_PUSH_FOR_SUSPEND: ${{secrets.SKIP_PUSH_FOR_SUSPEND}}
         run: |
@@ -606,15 +599,11 @@ jobs:
             echo "::error title=Missed variable::WERF_ENV is not set. Cannot deploy unknown edition, only ce, ee and fe are allowed in inputs."
             shouldExit1=yes
           fi
-          if [[ -z ${SUSPEND_VERSION} ]] ; then
-            echo "::error title=Missed version::Suspend version not detected. Use suspend_tag input or run workflow from tag."
-            shouldExit1=yes
-          fi
           if [[ -n ${shouldExit1} ]] ; then
             exit 1
           fi
 
-          echo "Suspend version '${SUSPEND_VERSION}' for SE edition".
+          echo "Suspend '${RELEASE_CHANNEL}' for SE edition".
 
           # Variables
           #   1. Edition and channel.
@@ -632,21 +621,22 @@ jobs:
           fi
 
           #   3. Build and publish release-channel image to prod registry.
-          SUSPEND_VERSION_IMAGE=${DST_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL}
-          echo "⚓️ 🛠 [$(date -u)] Build 'release-channel suspend' image as '${SUSPEND_VERSION_IMAGE}'."
+          RELEASE_CHANNEL_IMAGE=${DST_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL}
+          echo "⚓️ 🛠 [$(date -u)] Build 'release-channel suspend' image as '${RELEASE_CHANNEL_IMAGE}'."
 
-          echo "{\"version\": \"${SUSPEND_VERSION}\", \"suspend\": true}" > version.json
+          regctl image get-file "${RELEASE_CHANNEL_IMAGE}" version.json | jq '. + {"suspend": true}' > version.json
+
           cat <<EOF >Dockerfile
           FROM scratch
           COPY version.json version.json
           EOF
-          docker build . -t "${SUSPEND_VERSION_IMAGE}"
+          docker build . -t "${RELEASE_CHANNEL_IMAGE}"
 
-          push_rmi 'release-channel suspend' "${SUSPEND_VERSION_IMAGE}"
-      - name: Publish release images for SE-plus
+          push_rmi 'release-channel suspend' "${RELEASE_CHANNEL_IMAGE}"
+      - name: Publish suspend images for SE-plus
+        if: ${{ needs.detect_editions.outputs.DEPLOY_SE-plus == 'true' }}
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          SUSPEND_VERSION: ${{needs.detect_version.outputs.version}}
           WERF_ENV: SE-plus
           SKIP_PUSH_FOR_SUSPEND: ${{secrets.SKIP_PUSH_FOR_SUSPEND}}
         run: |
@@ -684,15 +674,11 @@ jobs:
             echo "::error title=Missed variable::WERF_ENV is not set. Cannot deploy unknown edition, only ce, ee and fe are allowed in inputs."
             shouldExit1=yes
           fi
-          if [[ -z ${SUSPEND_VERSION} ]] ; then
-            echo "::error title=Missed version::Suspend version not detected. Use suspend_tag input or run workflow from tag."
-            shouldExit1=yes
-          fi
           if [[ -n ${shouldExit1} ]] ; then
             exit 1
           fi
 
-          echo "Suspend version '${SUSPEND_VERSION}' for SE-plus edition".
+          echo "Suspend '${RELEASE_CHANNEL}' for SE-plus edition".
 
           # Variables
           #   1. Edition and channel.
@@ -710,17 +696,18 @@ jobs:
           fi
 
           #   3. Build and publish release-channel image to prod registry.
-          SUSPEND_VERSION_IMAGE=${DST_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL}
-          echo "⚓️ 🛠 [$(date -u)] Build 'release-channel suspend' image as '${SUSPEND_VERSION_IMAGE}'."
+          RELEASE_CHANNEL_IMAGE=${DST_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL}
+          echo "⚓️ 🛠 [$(date -u)] Build 'release-channel suspend' image as '${RELEASE_CHANNEL_IMAGE}'."
 
-          echo "{\"version\": \"${SUSPEND_VERSION}\", \"suspend\": true}" > version.json
+          regctl image get-file "${RELEASE_CHANNEL_IMAGE}" version.json | jq '. + {"suspend": true}' > version.json
+
           cat <<EOF >Dockerfile
           FROM scratch
           COPY version.json version.json
           EOF
-          docker build . -t "${SUSPEND_VERSION_IMAGE}"
+          docker build . -t "${RELEASE_CHANNEL_IMAGE}"
 
-          push_rmi 'release-channel suspend' "${SUSPEND_VERSION_IMAGE}"
+          push_rmi 'release-channel suspend' "${RELEASE_CHANNEL_IMAGE}"
 
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -736,7 +723,7 @@ jobs:
           retries: 3
           script: |
             const statusConfig = 'job,final';
-            const name = 'Suspend the alpha';
+            const name = 'Suspend alpha';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
