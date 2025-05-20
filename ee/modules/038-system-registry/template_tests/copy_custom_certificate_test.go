@@ -34,7 +34,8 @@ internal:
     state:
       ingress_enabled: true
       conditions: []
-      mode: "Local"
+      actual_params:
+        mode: "Local"
       target_mode: "Local"
   customCertificateData:
     tls.crt: CRTCRTCRT

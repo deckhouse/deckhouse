@@ -24,6 +24,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/incluster-proxy"
 	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/node-services"
 	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/pki"
+	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/registry-secret"
 	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/registry-service"
 	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/secrets"
 	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/users"
