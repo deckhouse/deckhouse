@@ -30,6 +30,6 @@ spec:
   - action: EnsureStructuredMessage
     targetField: text
   - action: DropLabels
-    labels: 
+    labels:
     - first
-    - .second
+    - second
