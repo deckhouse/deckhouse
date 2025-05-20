@@ -17,7 +17,6 @@
 {{- $inhibitorVersion := "0.1" | replace "." "" }}
 {{- $stopInhibitor := .stopAdditionalNodeShutdownInhibitor }}
 
-
 old_inhibitor_hash=""
 if [ -f "${BB_RP_INSTALLED_PACKAGES_STORE}/{{ $inhibitorPkgName }}/digest" ]; then
   old_inhibitor_hash=$(<"${BB_RP_INSTALLED_PACKAGES_STORE}/{{ $inhibitorPkgName }}/digest")
@@ -44,6 +43,13 @@ if bb-flag? reboot; then
 fi
 
 {{ if $stopInhibitor }}
+# Stop and disable d8-shutdown-inhibitor service. Also cleanup configuration in logind.conf.d.
+
+bb-event-on 'd8-shutdown-inhibitor-cleanup' '_shutdown-inhibitor-cleanup'
+function _shutdown-inhibitor-cleanup() {
+  rm -rf /etc/systemd/logind.conf.d/99-node-d8-shutdown-inhibitor.conf
+  systemctl reload systemd-logind
+}
 
 if systemctl is-enabled "d8-shutdown-inhibitor.service"; then
   bb-log-warning "Deckhouse shutdown inhibitor service is enabled. Disable it..."
@@ -59,6 +65,8 @@ fi
 # Do nothing if already stopped.
 if ! systemctl is-active --quiet "d8-shutdown-inhibitor.service"; then
   bb-log-warning "Deckhouse shutdown inhibitor service is already stopped."
+  # Cleanup logind configuration. Just in case.
+  bb-event-fire 'd8-shutdown-inhibitor-cleanup'
   exit 0
 fi
 
@@ -70,6 +78,9 @@ else
   bb-log-error "Deckhouse shutdown inhibitor has not stopped. Exit"
   exit 1
 fi
+
+# Cleanup logind configuration.
+bb-event-fire 'd8-shutdown-inhibitor-cleanup'
 
 {{ else }}
 
