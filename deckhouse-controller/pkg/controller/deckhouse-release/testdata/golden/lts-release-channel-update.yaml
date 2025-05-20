@@ -1,0 +1,30 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  creationTimestamp: null
+  name: v1.31.0
+  resourceVersion: "999"
+spec:
+  version: v1.31.0
+status:
+  approved: false
+  message: ""
+  phase: Deployed
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  creationTimestamp: null
+  name: v1.37.0
+  resourceVersion: "1000"
+spec:
+  version: v1.37.0
+status:
+  approved: false
+  message: ""
+  phase: Pending
+  transitionTime: "2019-10-17T15:33:00Z"
