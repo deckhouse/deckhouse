@@ -8,9 +8,9 @@ dependencies:
   - type: ImageDigest
     targetEnv: deckhouseImageDigest
 import:
-- image: common/yq4-artifact
-  add: /usr/local/bin/yq
-  to: /usr/local/bin/yq
+- image: tools/yq
+  add: /usr/bin/yq
+  to: /usr/bin/yq
   before: install
 shell:
   install:

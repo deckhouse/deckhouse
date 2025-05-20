@@ -6,6 +6,8 @@ metadata:
   name: basic-auth-proxy
   namespace: d8-{{ .Chart.Name }}
   annotations:
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      {{ include "helm_lib_module_ingress_configuration_snippet" $ | nindent 6 }}
     nginx.ingress.kubernetes.io/rewrite-target: "/$2"
     nginx.ingress.kubernetes.io/proxy-body-size: 10m
   {{- if .Values.userAuthn.publishAPI.whitelistSourceRanges }}

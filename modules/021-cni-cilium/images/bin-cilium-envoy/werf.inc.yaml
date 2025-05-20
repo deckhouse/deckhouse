@@ -1,6 +1,7 @@
 {{- $ciliumProxyRev := "39a2a56bbd5b3a591f69dbca51d3e30ef97e0e51" }}
 {{- $ciliumProxyCacheRev := "v1.29.7-39a2a56bbd5b3a591f69dbca51d3e30ef97e0e51-alt-v1" }}
 {{- $ciliumProxyDepsRev := "v1.29.7-39a2a56bbd5b3a591f69dbca51d3e30ef97e0e51-alt-v1" }}
+{{- $envoySHA := "7ec45b636f1a7ad2d3755a549355e0991ee6196a" }}
 ---
 # #####################################################################
 # Build cilium-envoy binaries
@@ -30,7 +31,25 @@ shell:
   - cd /src/proxy
   - git checkout {{ $ciliumProxyRev }}
   - git apply --verbose /patches/*.patch
-  - rm -rf /src/proxy.git
+  - rm -rf /src/proxy/.git
+  #
+  - git clone {{ $.SOURCE_REPO }}/envoyproxy/envoy.git /src/envoy
+  - cd /src/envoy
+  - git checkout {{ $envoySHA }}
+  - git apply --verbose /src/proxy/patches/*.patch
+  - rm -rf /src/envoy/.git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-basel-artifact
+fromImage: common/src-artifact
+final: false
+shell:
+  install:
+  - mkdir -p /tmp/bazel-cache
+  - git clone --depth 1 --branch {{ $ciliumProxyCacheRev }} {{ $.SOURCE_REPO }}/cilium/proxy-build-cache.git /tmp/bazel-cache && rm -rf /tmp/bazel-cache/.git
+  - chown -R 1337:1337 /tmp/bazel-cache
+  - mkdir -p /tmp/bazel-deps
+  - git clone --depth 1 --branch {{ $ciliumProxyDepsRev }} {{ .SOURCE_REPO }}/cilium/proxy-build-deps.git /tmp/bazel-deps && rm -rf /tmp/bazel-deps/.git
+  - chown -R 1337:1337 /tmp/bazel-deps
 ---
 image: {{ .ModuleName }}/cilium-envoy-artifact
 fromImage: {{ .ModuleName }}/base-cilium-dev
@@ -79,7 +98,7 @@ shell:
   - chmod -R a+w /tmp
   setup:
   # cache
-  - git clone --depth 1 --branch {{ $ciliumProxyCacheRev }} $(cat /run/secrets/SOURCE_REPO)/cilium/proxy-build-cache.git /tmp/bazel-cache 
+  - git clone --depth 1 --branch {{ $ciliumProxyCacheRev }} $(cat /run/secrets/SOURCE_REPO)/cilium/proxy-build-cache.git /tmp/bazel-cache
   - git clone --depth 1 --branch {{ $ciliumProxyDepsRev }} $(cat /run/secrets/SOURCE_REPO)/cilium/proxy-build-deps.git /tmp/bazel-deps
   - chown -R cilium:cilium /tmp/bazel-cache /tmp/bazel-deps /home/cilium/.cache/
 
@@ -98,7 +117,12 @@ shell:
   #
   - cd /cilium/proxy
   - sudo -u cilium echo "{{ $ciliumProxyRev }}" >SOURCE_VERSION
-  - sudo -u cilium sed -i "s,https://github.com,$(cat /run/secrets/SOURCE_REPO)," WORKSPACE
+  - sudo -u cilium sed -i "29,48d" WORKSPACE
+  - sudo -u cilium sed -i '29i local_repository(' WORKSPACE
+  - sudo -u cilium sed -i '30i \    name = "envoy",' WORKSPACE
+  - sudo -u cilium sed -i '31i \    path = "/src/envoy",' WORKSPACE
+  - sudo -u cilium sed -i '32i )' WORKSPACE
+  #
   - sudo -u cilium sed -i 's/$(SUDO) apt info clang-17 || $(call add_clang_apt_source,$(shell lsb_release -cs))/rpm -q clang17.0/' Makefile
   - sudo -u cilium sed -i "/\$(SUDO) apt install -y clang-17 llvm-17-dev lld-17 clang-format-17/d" Makefile
   - sudo -u cilium sed -i '\#"/usr/include"#a \        "/usr/lib/llvm-17.0/lib64/clang/17/include",' bazel/toolchains/BUILD

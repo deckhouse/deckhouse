@@ -532,17 +532,6 @@ alerts:
         Bashible-apiserver has been locked for too long.
       severity: "6"
       markupFormat: markdown
-    - name: D8CephCsiModuleDeprecated
-      sourceFile: modules/031-ceph-csi/monitoring/prometheus-rules/deprecated-module-alert.yaml
-      moduleUrl: 031-ceph-csi
-      module: ceph-csi
-      edition: ce
-      description: |
-        Ceph-csi module is deprecated and will be removed in Deckhouse 1.70! Please, use [csi-ceph](https://deckhouse.io/products/kubernetes-platform/modules/csi-ceph/stable/) module instead.
-      summary: |
-        CephCsi module is deprecated.
-      severity: "5"
-      markupFormat: markdown
     - name: D8CertExporterPodIsNotReady
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/certificates/certificates-exporter-health.yaml
       moduleUrl: 340-extended-monitoring
@@ -4954,19 +4943,6 @@ alerts:
         Not enough disk space to retain logs for 168 hours
       severity: "4"
       markupFormat: markdown
-    - name: MigrationRequiredFromRBDInTreeProvisionerToCSIDriver
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/migration-alerts.tpl
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
-      edition: ce
-      description: |
-        To resolve this issue, migrate volumes to the Ceph CSI driver using the `rbd-in-tree-to-ceph-csi-migration-helper.sh` script available at `https://github.com/deckhouse/deckhouse/blob//modules/031-ceph-csi/tools/rbd-in-tree-to-ceph-csi-migration-helper.sh`.
-
-        For details on volume migration, refer to the migration guide available at `https://github.com/deckhouse/deckhouse/blob//modules/031-ceph-csi/docs/internal/INTREE_MIGRATION.md`.
-      summary: |
-        StorageClass {{ $labels.storageclass }} is using a deprecated RBD provisioner.
-      severity: "9"
-      markupFormat: markdown
     - name: ModuleAtConflict
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
       moduleUrl: 340-monitoring-deckhouse
@@ -5978,7 +5954,7 @@ alerts:
         - Alternatively, check the admission-policy-engine Grafana dashboard.
       summary: |
         At least one object violates the configured cluster operation policies.
-      severity: "7"
+      severity: "3"
       markupFormat: markdown
     - name: PersistentVolumeClaimBytesUsage
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/persistent-volume-claim.yaml
@@ -6082,7 +6058,7 @@ alerts:
         - Alternatively, check the admission-policy-engine Grafana dashboard.
       summary: |
         At least one pod violates the configured cluster pod security standards.
-      severity: "7"
+      severity: "3"
       markupFormat: markdown
     - name: PodStatusIsIncorrect
       sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/pod-status.yaml
@@ -6237,7 +6213,7 @@ alerts:
         - Alternatively, check the admission-policy-engine Grafana dashboard.
       summary: |
         At least one object violates the configured cluster security policies.
-      severity: "7"
+      severity: "3"
       markupFormat: markdown
     - name: StandbyHolderDeploymentReplicasUnavailable
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/standby-deployment-unavailable.yaml
@@ -6474,7 +6450,6 @@ alerts:
       markupFormat: markdown
 modules-having-alerts:
     - admission-policy-engine
-    - ceph-csi
     - cert-manager
     - chrony
     - cloud-provider-yandex
