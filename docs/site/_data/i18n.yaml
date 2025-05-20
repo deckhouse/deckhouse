@@ -89,15 +89,9 @@ common:
   contact_us_button:
     en: Contact us
     ru: Свяжитесь с нами
-  read_only:
-    en: "In read only mode"
-    ru: "В режиме только для чтения"
-  restrictions_and_supported_storage:
-    en: "Available with restrictions. The storage must support snapshots"
-    ru: "Доступно с ограничениями. Хранилище должно поддерживать снимки"
-  supported_storage:
-    en: "The storage must support snapshots"
-    ru: "Хранилище должно поддерживать снимки"
+  features:
+    en: "Features"
+    ru: "Возможности"
   coming_soon:
     en: "coming soon..."
     ru: "скоро..."
