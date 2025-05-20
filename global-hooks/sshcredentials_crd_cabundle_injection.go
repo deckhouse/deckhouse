@@ -44,8 +44,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                         "sshcredentials",
 			ApiVersion:                   "apiextensions.k8s.io/v1",
 			Kind:                         "CustomResourceDefinition",
-			ExecuteHookOnSynchronization: ptr.To(true),
-			ExecuteHookOnEvents:          ptr.To(true),
+			ExecuteHookOnSynchronization: ptr.To(false),
+			ExecuteHookOnEvents:          ptr.To(false),
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"sshcredentials.deckhouse.io"},
 			},
@@ -55,7 +55,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                         "cabundle",
 			ApiVersion:                   "v1",
 			Kind:                         "Secret",
-			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnEvents:          ptr.To(true),
 			ExecuteHookOnSynchronization: ptr.To(false),
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
