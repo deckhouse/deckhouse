@@ -544,6 +544,53 @@ global:
 		err := suite.ctr.checkDeckhouseRelease(ctx)
 		require.NoError(suite.T(), err)
 	})
+
+	suite.Run("Check LTS release channel", func() {
+		dependency.TestDC.CRClient.ImageMock.When("lts").Then(&fake.FakeImage{
+			ManifestStub: ManifestStub,
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{
+					&fakeLayer{},
+					&fakeLayer{FilesContent: map[string]string{
+						"version.json": `{"version":"v1.37.0"}`,
+					}},
+				}, nil
+			},
+		}, nil)
+
+		dependency.TestDC.CRClient.ImageMock.When("v1.31.0").Then(&fake.FakeImage{
+			ManifestStub: ManifestStub,
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{
+					&fakeLayer{},
+					&fakeLayer{FilesContent: map[string]string{
+						"version.json": `{"version":"v1.31.0"}`,
+					}},
+				}, nil
+			},
+		}, nil)
+
+		dependency.TestDC.CRClient.ImageMock.When("v1.37.0").Then(&fake.FakeImage{
+			ManifestStub: ManifestStub,
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{
+					&fakeLayer{},
+					&fakeLayer{FilesContent: map[string]string{
+						"version.json": `{"version":"v1.37.0"}`,
+					}},
+				}, nil
+			},
+		}, nil)
+
+		dependency.TestDC.CRClient.ListTagsMock.Return([]string{
+			"v1.31.0",
+			"v1.37.0",
+		}, nil)
+
+		suite.setupController("lts-release-channel.yaml", initValues, embeddedMUP)
+		err := suite.ctr.checkDeckhouseRelease(ctx)
+		require.NoError(suite.T(), err)
+	})
 }
 
 type fakeLayer struct {
@@ -618,6 +665,7 @@ func TestKebabCase(t *testing.T) {
 		"EarlyAccess": "early-access",
 		"Stable":      "stable",
 		"RockSolid":   "rock-solid",
+		"LTS":         "lts",
 	}
 
 	for original, kebabed := range cases {
