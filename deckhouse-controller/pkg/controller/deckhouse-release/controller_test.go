@@ -1008,6 +1008,21 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			require.NoError(suite.T(), err)
 		})
 	})
+	suite.Run("LTS Release channel", func() {
+		suite.Run("patch update respect window", func() {
+			mup := &v1alpha1.ModuleUpdatePolicySpec{
+				Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+					Mode: "AutoPatch",
+				},
+				ReleaseChannel: "LTS",
+			}
+
+			suite.setupController("lts-release-channel-update.yaml", initValues, mup)
+			dr := suite.getDeckhouseRelease("v1.37.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+		})
+	})
 }
 
 func newDependencyContainer(t *testing.T) *dependency.MockedContainer {
