@@ -20,6 +20,8 @@ Organization, VirtualDataCenter, StoragePolicy, SizingPolicy, EdgeRouter и Cata
 
 Network (внутренняя сеть) может быть настроена вашим поставщиком услуг VMware Cloud Director, либо вы можете настроить ее самостоятельно. Далее рассматривается настройка внутренней сети самостоятельно.
 
+### Права пользователя
+
 Пользователь под которым будет осуществляться доступ к API VMware Cloud Director должен иметь права:
 
 * Роль _Organization Administrator_ с дополнительным правилом `Preserve All ExtraConfig Elements During OVF Import and Export`.
@@ -212,7 +214,7 @@ echo 'disable_vmware_customization: true' > /etc/cloud/cloud.cfg.d/91_vmware_cus
 dpkg-reconfigure cloud-init
 ```
 
-В появившемся диалоговом окне оставьте галочку только у `OVF: Reads data from OVF transports` и не забудьте пролистать и убрать галочки с нижних пунктов:
+В появившемся диалоговом окне оставьте галочку только у `OVF: Reads data from OVF transports`, остальные пункты необходимо отключить:
 
 ![Настройка шаблона, OVF](../../images/cloud-provider-vcd/template/OVF.png)
 
@@ -235,6 +237,8 @@ shutdown -P now
 
 ![Настройка шаблона, Guest Properties 1](../../images/cloud-provider-vcd/template/GuestProperties1.png)
 
+![Настройка шаблона, Guest Properties 5](../../images/cloud-provider-vcd/template/GuestProperties5.png)
+
 Cоздайте шаблон виртуальной машины:
 
 ![Настройка шаблона, шаг 10](../../images/cloud-provider-vcd/template/Screenshot10.png)
@@ -251,6 +255,8 @@ Cоздайте шаблон виртуальной машины:
 * _guestinfo.hostname_
 
 ![Настройка шаблона, Guest Properties 2](../../images/cloud-provider-vcd/template/GuestProperties2.png)
+
+![Настройка шаблона, Guest Properties 3](../../images/cloud-provider-vcd/template/GuestProperties3.png)
 
 В панели управления vCenter для шаблона включите параметр `disk.enableUUID`:
 

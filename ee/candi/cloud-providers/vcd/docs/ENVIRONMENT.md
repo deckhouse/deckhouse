@@ -20,6 +20,8 @@ Organization, VirtualDataCenter, StoragePolicy, SizingPolicy, EdgeRouter, and Ca
 
 Network (internal network) can be configured by your VMware Cloud Director service provider, or you can configure it yourself. Next, we consider setting up the internal network yourself.
 
+### User rights
+
 The user accessing the VMware Cloud Director API must have the following permissions:
 
 * The role of _Organization Administrator_ with the additional permission `Preserve All ExtraConfig Elements During OVF Import and Export`.
@@ -235,6 +237,8 @@ Shut down the virtual machine and clear all populated fields in _Guest Propertie
 
 ![Setting up the template, Guest Properties 1](../../images/cloud-provider-vcd/template/GuestProperties1.png)
 
+![Setting up the template, Guest Properties 5](../../images/cloud-provider-vcd/template/GuestProperties5.png)
+
 Create a virtual machine template:
 
 ![Setting up the template, step 10](../../images/cloud-provider-vcd/template/Screenshot10.png)
@@ -251,6 +255,8 @@ In the created template, navigate to the _Metadata_ tab and add 6 fields:
 * _guestinfo.hostname_
 
 ![Setting up the template, Guest Properties 2](../../images/cloud-provider-vcd/template/GuestProperties2.png)
+
+![Setting up the template, Guest Properties 3](../../images/cloud-provider-vcd/template/GuestProperties3.png)
 
 In the vCenter management panel for the template, enable the `disk.enableUUID` parameter:
 
