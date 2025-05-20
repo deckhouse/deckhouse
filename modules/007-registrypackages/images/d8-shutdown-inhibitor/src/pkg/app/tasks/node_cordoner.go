@@ -39,6 +39,7 @@ func (n *NodeCordoner) Run(ctx context.Context, _ chan error) {
 	select {
 	case <-ctx.Done():
 		fmt.Printf("nodeCordoner: stop on global exit\n")
+		// Return now, cordon is not needed in case of the global stop.
 		return
 	case <-n.ShutdownSignalCh:
 		fmt.Printf("nodeCordoner: catch prepare shutdown signal, cordon node\n")

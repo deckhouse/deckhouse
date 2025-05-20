@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"time"
 
+	"d8_shutdown_inhibitor/pkg/app/nodecondition"
 	"d8_shutdown_inhibitor/pkg/kubernetes"
 	"d8_shutdown_inhibitor/pkg/system"
 )
@@ -32,8 +33,7 @@ type PodObserver struct {
 	WallBroadcastInterval time.Duration
 	PodMatchers           []kubernetes.PodMatcher
 	ShutdownSignalCh      <-chan struct{}
-	//PowerKeyPressedCh <-chan struct{}
-	StopInhibitorsCh chan<- struct{}
+	StopInhibitorsCh      chan<- struct{}
 }
 
 func (p *PodObserver) Name() string {
@@ -79,9 +79,16 @@ func (p *PodObserver) Run(ctx context.Context, errCh chan error) {
 		if lastWall.IsZero() || lastWall.Add(p.WallBroadcastInterval).Before(now) {
 			err = system.WallMessage(wallMessage)
 			if err != nil {
+				// Will retry on next iteration, just log the error.
 				fmt.Printf("podObserver(s2): error sending broadcast message: %v\n", err)
 			}
 			lastWall = now
+		}
+
+		err = nodecondition.GracefulShutdownPostpone().SetPodsArePresent(p.NodeName)
+		if err != nil {
+			// Will retry on next iteration, just log the error.
+			fmt.Printf("podObserver(s2): update Node condition: %v\n", err)
 		}
 
 		// Wait for ticker or global stop.
