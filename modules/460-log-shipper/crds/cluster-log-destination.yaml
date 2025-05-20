@@ -848,7 +848,7 @@ spec:
                       required:
                         - targetField
                       properties:
-                        targetFild:
+                        targetField:
                           description: "The target field into which wrapped string is placed"
                           type: string
                     dropLabels:
@@ -857,7 +857,7 @@ spec:
                       required:
                         - labels
                       properties:
-                        lables:
+                        labels:
                           description: "List of labels to remove"
                           type: array
                           items:

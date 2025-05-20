@@ -429,7 +429,7 @@ spec:
                       required:
                         - targetField
                       properties:
-                        targetFild:
+                        targetField:
                           description: "Целевое поле, в которое помещается обертка сообщения"
                           type: string
                     dropLabels:
@@ -438,7 +438,7 @@ spec:
                       required:
                         - labels
                       properties:
-                        lables:
+                        labels:
                           description: "Список меток, которые необходимо удалить"
                           type: array
                           items:
