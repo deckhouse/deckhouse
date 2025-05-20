@@ -233,6 +233,8 @@ history -c
 shutdown -P now
 ```
 
+### Setting up the template in VCD
+
 Shut down the virtual machine and clear all populated fields in _Guest Properties_:
 
 ![Setting up the template, Guest Properties 1](../../images/cloud-provider-vcd/template/GuestProperties1.png)

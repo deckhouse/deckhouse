@@ -233,6 +233,8 @@ history -c
 shutdown -P now
 ```
 
+### Настройка шаблона в VCD
+
 Выключите виртуальную машину и удалите все заполненные поля _Guest Properties_:
 
 ![Настройка шаблона, Guest Properties 1](../../images/cloud-provider-vcd/template/GuestProperties1.png)
