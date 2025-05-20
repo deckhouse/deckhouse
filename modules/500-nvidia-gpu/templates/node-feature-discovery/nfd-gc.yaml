@@ -28,7 +28,7 @@ spec:
             fieldRef:
               fieldPath: spec.nodeName
         command:
-          - "nfd-gc"
+          - "/nfd-gc"
         args:
           - "-gc-interval=1h"
         resources:

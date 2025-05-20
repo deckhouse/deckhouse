@@ -47,7 +47,7 @@ spec:
             cpu: 5m
             memory: 64Mi
         command:
-        - "nfd-worker"
+        - "/nfd-worker"
         args:
         - -feature-gates=NodeFeatureGroupAPI=false
         - -metrics=8081

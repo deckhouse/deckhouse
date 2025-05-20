@@ -47,7 +47,7 @@ spec:
               fieldRef:
                 fieldPath: spec.nodeName
           command:
-            - "nfd-master"
+            - "/nfd-master"
           resources:
             requests:
               cpu: 100m
