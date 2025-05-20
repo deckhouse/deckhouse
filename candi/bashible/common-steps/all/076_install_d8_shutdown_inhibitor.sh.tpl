@@ -48,7 +48,8 @@ fi
 bb-event-on 'd8-shutdown-inhibitor-cleanup' '_shutdown-inhibitor-cleanup'
 function _shutdown-inhibitor-cleanup() {
   rm -rf /etc/systemd/logind.conf.d/99-node-d8-shutdown-inhibitor.conf
-  systemctl reload systemd-logind
+  # Send SIGHUP to logind to reload its configuration.
+  systemctl -s SIGHUP kill systemd-logind
 }
 
 if systemctl is-enabled "d8-shutdown-inhibitor.service"; then
