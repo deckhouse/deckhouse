@@ -14,9 +14,11 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/bashible"
 	inclusterproxy "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/incluster-proxy"
 	nodeservices "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/node-services"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/pki"
+	registrysecret "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/registry-secret"
 	registryservice "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/registry-service"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/secrets"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/users"
@@ -25,8 +27,8 @@ import (
 )
 
 type State struct {
-	Mode       registry_const.ModeType `json:"mode,omitempty"`
-	TargetMode registry_const.ModeType `json:"target_mode,omitempty"`
+	ActualParams Params                  `json:"actual_params,omitempty"`
+	TargetMode   registry_const.ModeType `json:"target_mode,omitempty"`
 
 	PKI             pki.State            `json:"pki,omitempty"`
 	Secrets         secrets.State        `json:"secrets,omitempty"`
@@ -35,6 +37,7 @@ type State struct {
 	InClusterProxy  inclusterproxy.State `json:"in_cluster_proxy,omitempty"`
 	IngressEnabled  bool                 `json:"ingress_enabled,omitempty"`
 	RegistryService registryservice.Mode `json:"registry_service,omitempty"`
+	Bashible        bashible.State       `json:"bashible,omitempty"`
 
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
@@ -94,7 +97,7 @@ func (state *State) clearConditions() {
 	state.Conditions = nil
 }
 
-func (state *State) process(log go_hook.Logger, inputs Inputs) error {
+func (state *State) process(log go_hook.Logger, patchCollector go_hook.PatchCollector, inputs Inputs) error {
 	switch inputs.Params.Mode {
 	case "":
 		inputs.Params.Mode = registry_const.ModeUnmanaged
@@ -107,7 +110,7 @@ func (state *State) process(log go_hook.Logger, inputs Inputs) error {
 
 		log.Warn(
 			"Mode change",
-			"mode", state.Mode,
+			"mode", state.ActualParams.Mode,
 			"target_mode", state.TargetMode,
 		)
 
@@ -116,22 +119,22 @@ func (state *State) process(log go_hook.Logger, inputs Inputs) error {
 
 	switch state.TargetMode {
 	case registry_const.ModeLocal:
-		return state.transitionToLocal(log, inputs)
+		return state.transitionToLocal(log, patchCollector, inputs)
 	case registry_const.ModeProxy:
-		return state.transitionToProxy(log, inputs)
+		return state.transitionToProxy(log, patchCollector, inputs)
 	case registry_const.ModeDirect:
-		return state.transitionToDirect(log, inputs)
+		return state.transitionToDirect(log, patchCollector, inputs)
 	case registry_const.ModeUnmanaged:
-		return state.transitionToUnmanaged(log, inputs)
+		return state.transitionToUnmanaged(log, patchCollector, inputs)
 	default:
 		return fmt.Errorf("unsupported mode: %v", state.TargetMode)
 	}
 }
 
-func (state *State) transitionToLocal(log go_hook.Logger, inputs Inputs) error {
-	if state.Mode == registry_const.ModeProxy {
+func (state *State) transitionToLocal(log go_hook.Logger, patchCollector go_hook.PatchCollector, inputs Inputs) error {
+	if state.ActualParams.Mode == registry_const.ModeProxy {
 		return ErrTransitionNotSupported{
-			From: state.Mode,
+			From: state.ActualParams.Mode,
 			To:   state.TargetMode,
 		}
 	}
@@ -207,14 +210,58 @@ func (state *State) transitionToLocal(log go_hook.Logger, inputs Inputs) error {
 
 	// TODO: check images in local registry
 
-	// TODO: configure bashible
+	bashibleParam := bashible.Params{
+		Mode:           state.TargetMode,
+		RegistrySecret: inputs.RegistrySecret,
+		ProxyLocal: &bashible.ProxyLocalModeParams{
+			CA:       string(registry_pki.EncodeCertificate(pkiResult.CA.Cert)),
+			Username: state.Users.RO.UserName,
+			Password: state.Users.RO.Password,
+		},
+	}
+	registrySecretParams := registrysecret.Params{
+		RegistrySecret: inputs.RegistrySecret,
+		ManagedMode: &registrysecret.ManagedModeParams{
+			CA:       string(registry_pki.EncodeCertificate(pkiResult.CA.Cert)),
+			Username: state.Users.RO.UserName,
+			Password: state.Users.RO.Password,
+		},
+	}
 
+	// Bashible with actual params
+	processedBashible, err := state.processBashible(bashibleParam, inputs, true)
+	if err != nil {
+		return err
+	}
+	if !processedBashible {
+		state.setReadyCondition(false, inputs)
+		return nil
+	}
+
+	// Registry service
 	state.RegistryService = registryservice.ModeNodeServices
 
-	// TODO: update deckhouse-registry secret
+	// Deckhouse-registry secret
+	processedRegistrySecret, err := registrysecret.Process(registrySecretParams, patchCollector)
+	if err != nil {
+		return err
+	}
+	if !processedRegistrySecret {
+		state.setReadyCondition(false, inputs)
+		return nil
+	}
+
+	// Bashible only input params
+	processedBashible, err = state.processBashible(bashibleParam, inputs, false)
+	if err != nil {
+		return err
+	}
+	if !processedBashible {
+		state.setReadyCondition(false, inputs)
+		return nil
+	}
 
 	// Cleanup
-
 	inClusterProxyReady := state.cleanupInClusterProxy(inputs)
 
 	if !inClusterProxyReady {
@@ -223,16 +270,16 @@ func (state *State) transitionToLocal(log go_hook.Logger, inputs Inputs) error {
 	}
 
 	// All done
-	state.Mode = state.TargetMode
+	state.ActualParams = inputs.Params
 	state.setReadyCondition(true, inputs)
 
 	return nil
 }
 
-func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
-	if state.Mode == registry_const.ModeLocal {
+func (state *State) transitionToProxy(log go_hook.Logger, patchCollector go_hook.PatchCollector, inputs Inputs) error {
+	if state.ActualParams.Mode == registry_const.ModeLocal {
 		return ErrTransitionNotSupported{
-			From: state.Mode,
+			From: state.ActualParams.Mode,
 			To:   state.TargetMode,
 		}
 	}
@@ -318,11 +365,56 @@ func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 
 	// TODO: check images in remote registry via proxy
 
-	// TODO: configure bashible
+	bashibleParam := bashible.Params{
+		Mode:           state.TargetMode,
+		RegistrySecret: inputs.RegistrySecret,
+		ProxyLocal: &bashible.ProxyLocalModeParams{
+			CA:       string(registry_pki.EncodeCertificate(pkiResult.CA.Cert)),
+			Username: state.Users.RO.UserName,
+			Password: state.Users.RO.Password,
+		},
+	}
+	registrySecretParams := registrysecret.Params{
+		RegistrySecret: inputs.RegistrySecret,
+		ManagedMode: &registrysecret.ManagedModeParams{
+			CA:       string(registry_pki.EncodeCertificate(pkiResult.CA.Cert)),
+			Username: state.Users.RO.UserName,
+			Password: state.Users.RO.Password,
+		},
+	}
 
+	// Bashible with actual params
+	processedBashible, err := state.processBashible(bashibleParam, inputs, true)
+	if err != nil {
+		return err
+	}
+	if !processedBashible {
+		state.setReadyCondition(false, inputs)
+		return nil
+	}
+
+	// Registry service
 	state.RegistryService = registryservice.ModeNodeServices
 
-	// TODO: update deckhouse-registry secret
+	// Deckhouse-registry secret
+	processedRegistrySecret, err := registrysecret.Process(registrySecretParams, patchCollector)
+	if err != nil {
+		return err
+	}
+	if !processedRegistrySecret {
+		state.setReadyCondition(false, inputs)
+		return nil
+	}
+
+	// Bashible only input params
+	processedBashible, err = state.processBashible(bashibleParam, inputs, false)
+	if err != nil {
+		return err
+	}
+	if !processedBashible {
+		state.setReadyCondition(false, inputs)
+		return nil
+	}
 
 	// Cleanup
 	inClusterProxyReady := state.cleanupInClusterProxy(inputs)
@@ -343,13 +435,13 @@ func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 	}
 
 	// All done
-	state.Mode = state.TargetMode
+	state.ActualParams = inputs.Params
 	state.setReadyCondition(true, inputs)
 
 	return nil
 }
 
-func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error {
+func (state *State) transitionToDirect(log go_hook.Logger, patchCollector go_hook.PatchCollector, inputs Inputs) error {
 	// PKI
 	pkiResult, err := state.PKI.Process(log)
 	if err != nil {
@@ -420,11 +512,58 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 
 	// TODO: check images in remote registry
 
-	// TODO: configure bashible
+	bashibleParam := bashible.Params{
+		Mode:           state.TargetMode,
+		RegistrySecret: inputs.RegistrySecret,
+		Direct: &bashible.DirectModeParams{
+			ImagesRepo: inputs.Params.ImagesRepo,
+			Scheme:     inputs.Params.Scheme,
+			CA:         inputs.Params.CA,
+			Username:   inputs.Params.UserName,
+			Password:   inputs.Params.Password,
+		},
+	}
+	registrySecretParams := registrysecret.Params{
+		RegistrySecret: inputs.RegistrySecret,
+		ManagedMode: &registrysecret.ManagedModeParams{
+			CA:       string(registry_pki.EncodeCertificate(pkiResult.CA.Cert)),
+			Username: inputs.Params.UserName,
+			Password: inputs.Params.Password,
+		},
+	}
 
+	// Bashible with actual params
+	processedBashible, err := state.processBashible(bashibleParam, inputs, true)
+	if err != nil {
+		return err
+	}
+	if !processedBashible {
+		state.setReadyCondition(false, inputs)
+		return nil
+	}
+
+	// Registry service
 	state.RegistryService = registryservice.ModeInClusterProxy
 
-	// TODO: update deckhouse-registry secret
+	// Deckhouse-registry secret
+	processedRegistrySecret, err := registrysecret.Process(registrySecretParams, patchCollector)
+	if err != nil {
+		return err
+	}
+	if !processedRegistrySecret {
+		state.setReadyCondition(false, inputs)
+		return nil
+	}
+
+	// Bashible only input params
+	processedBashible, err = state.processBashible(bashibleParam, inputs, false)
+	if err != nil {
+		return err
+	}
+	if !processedBashible {
+		state.setReadyCondition(false, inputs)
+		return nil
+	}
 
 	// Cleanup
 	nodeServicesReady, err := state.cleanupNodeServices(inputs)
@@ -442,22 +581,78 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 	state.Users = users.State{}
 
 	// All done
-	state.Mode = state.TargetMode
+	state.ActualParams = inputs.Params
 	state.setReadyCondition(true, inputs)
 
 	return nil
 }
 
-func (state *State) transitionToUnmanaged(log go_hook.Logger, inputs Inputs) error {
+func (state *State) transitionToUnmanaged(log go_hook.Logger, patchCollector go_hook.PatchCollector, inputs Inputs) error {
 	_ = log
+	if state.ActualParams.Mode != registry_const.ModeUnmanaged &&
+		state.ActualParams.Mode != registry_const.ModeProxy &&
+		state.ActualParams.Mode != registry_const.ModeDirect {
+		return ErrTransitionNotSupported{
+			From: state.ActualParams.Mode,
+			To:   state.TargetMode,
+		}
+	}
 
 	// TODO: check images in remote registry
 
-	// TODO: configure bashible
+	// Bashible with actual params
+	if (state.ActualParams.Mode == registry_const.ModeProxy ||
+		state.ActualParams.Mode == registry_const.ModeDirect) &&
+		!state.Bashible.IsStopped() {
+		bashibleParams := bashible.Params{
+			Mode:           state.TargetMode,
+			RegistrySecret: inputs.RegistrySecret,
+			Unmanaged: &bashible.UnmanagedModeParams{
+				ImagesRepo: state.ActualParams.ImagesRepo,
+				Scheme:     state.ActualParams.Scheme,
+				CA:         state.ActualParams.CA,
+				Username:   state.ActualParams.UserName,
+				Password:   state.ActualParams.Password,
+			},
+		}
 
-	// TODO: update deckhouse-registry secret
+		processed, err := state.processBashible(bashibleParams, inputs, true)
+		if err != nil {
+			return err
+		}
+		if !processed {
+			state.setReadyCondition(false, inputs)
+			return nil
+		}
+	}
+
+	// Deckhouse-registry secret
+	if state.ActualParams.Mode == registry_const.ModeProxy ||
+		state.ActualParams.Mode == registry_const.ModeDirect {
+		registrySecretParams := registrysecret.Params{
+			RegistrySecret: inputs.RegistrySecret,
+			UnmanagedMode: &registrysecret.UnmanagedModeParams{
+				ImagesRegistry: state.ActualParams.ImagesRepo,
+				Scheme:         state.ActualParams.Scheme,
+				CA:             state.ActualParams.CA,
+				Username:       state.ActualParams.UserName,
+				Password:       state.ActualParams.Password,
+			},
+		}
+
+		processed, err := registrysecret.Process(registrySecretParams, patchCollector)
+		if err != nil {
+			return err
+		}
+		if !processed {
+			state.setReadyCondition(false, inputs)
+			return nil
+		}
+	}
 
 	// Cleanup
+	bashibleReady := state.cleanupBashible(inputs)
+
 	nodeServicesReady, err := state.cleanupNodeServices(inputs)
 	if err != nil {
 		return fmt.Errorf("cannot cleanup NodeServices: %w", err)
@@ -468,6 +663,10 @@ func (state *State) transitionToUnmanaged(log go_hook.Logger, inputs Inputs) err
 
 	state.IngressEnabled = false
 
+	if !bashibleReady {
+		state.setReadyCondition(false, inputs)
+		return nil
+	}
 	if !nodeServicesReady {
 		state.setReadyCondition(false, inputs)
 		return nil
@@ -482,10 +681,57 @@ func (state *State) transitionToUnmanaged(log go_hook.Logger, inputs Inputs) err
 	state.Users = users.State{}
 
 	// All done
-	state.Mode = state.TargetMode
+	state.ActualParams = inputs.Params
 	state.setReadyCondition(true, inputs)
 
 	return nil
+}
+
+func (state *State) processBashible(params bashible.Params, inputs Inputs, withActual bool) (bool, error) {
+	processResult, err := state.Bashible.Process(params, inputs.Bashible, withActual)
+	if err != nil {
+		return false, fmt.Errorf("cannot process Bashible: %w", err)
+	}
+
+	if !processResult.Ready {
+		state.setCondition(metav1.Condition{
+			Type:               ConditionTypeBashible,
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: inputs.Params.Generation,
+			Reason:             ConditionReasonProcessing,
+			Message:            processResult.Message,
+		})
+		return false, nil
+	}
+
+	state.setCondition(metav1.Condition{
+		Type:               ConditionTypeBashible,
+		Status:             metav1.ConditionTrue,
+		ObservedGeneration: inputs.Params.Generation,
+	})
+	return true, nil
+}
+
+func (state *State) cleanupBashible(inputs Inputs) bool {
+	result := state.Bashible.Stop(inputs.Bashible)
+
+	if !result.Ready {
+		state.setCondition(metav1.Condition{
+			Type:               ConditionTypeBashible,
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: inputs.Params.Generation,
+			Reason:             ConditionReasonProcessing,
+			Message:            result.Message,
+		})
+		return false
+	}
+
+	state.setCondition(metav1.Condition{
+		Type:               ConditionTypeBashible,
+		Status:             metav1.ConditionTrue,
+		ObservedGeneration: inputs.Params.Generation,
+	})
+	return true
 }
 
 func (state *State) cleanupNodeServices(inputs Inputs) (bool, error) {

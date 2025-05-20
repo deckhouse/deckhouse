@@ -40,6 +40,26 @@ properties:
               target_mode:
                 type: string
                 enum: [Unmanaged, Direct, Proxy, Local]
+              actual_params:
+                type: object
+                properties:
+                  generation:
+                    type: integer
+                    format: int64
+                  mode:
+                    type: string
+                  images_repo:
+                    type: string
+                  username:
+                    type: string
+                  password:
+                    type: string
+                  ttl:
+                    type: string
+                  scheme:
+                    type: string
+                  ca:
+                    type: string
               pki:
                 type: object
                 properties:
@@ -75,6 +95,66 @@ properties:
                     <<: *user
                   mirror_pusher:
                     <<: *user
+              bashible:
+                type: object
+                properties:
+                  config:
+                    type: object
+                    default: {}
+                    properties:
+                      actual_params:
+                        type: object
+                        properties:
+                          mode:
+                            type: string
+                          imagesBase:
+                            type: string
+                          masterNodesIPs:
+                            type: array
+                            items:
+                              type: string
+                          proxyLocal:
+                            type: object
+                            properties:
+                              ca:
+                                type: string
+                              username:
+                                type: string
+                              password:
+                                type: string
+                          unmanaged:
+                            type: object
+                            properties:
+                              imagesRepo:
+                                type: string
+                              scheme:
+                                type: string
+                              ca:
+                                type: string
+                              username:
+                                type: string
+                              password:
+                                type: string
+                          direct:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                imagesRepo:
+                                  type: string
+                                scheme:
+                                  type: string
+                                ca:
+                                  type: string
+                                username:
+                                  type: string
+                                password:
+                                  type: string
+                      config:
+                        type: object
+                        default: {}
+                        additionalProperties: true
+                        x-kubernetes-preserve-unknown-fields: true
               in_cluster_proxy:
                 type: object
                 properties:
@@ -131,7 +211,7 @@ properties:
                           additionalProperties: true
                           x-kubernetes-preserve-unknown-fields: true
                         version:
-                         type: string
+                          type: string
               ingress_enabled:
                 type: boolean
               registry_service:
@@ -158,23 +238,3 @@ properties:
                     observedGeneration:
                       format: int64
                       type: integer
-
-      bashible:
-        type: object
-        default: {}
-        properties:
-          input:
-            type: object
-            default: {}
-            additionalProperties: true
-            x-kubernetes-preserve-unknown-fields: true
-          config:
-            type: object
-            default: {}
-            additionalProperties: true
-            x-kubernetes-preserve-unknown-fields: true
-          status:
-            type: object
-            default: {}
-            additionalProperties: true
-            x-kubernetes-preserve-unknown-fields: true

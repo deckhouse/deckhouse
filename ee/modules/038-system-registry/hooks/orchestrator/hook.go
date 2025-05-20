@@ -17,12 +17,14 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers"
+	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/bashible"
 	inclusterproxy "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/incluster-proxy"
 	nodeservices "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/node-services"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/pki"
 	registryservice "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/registry-service"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/users"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
+	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models/deckhouse-registry"
 )
 
 const (
@@ -31,12 +33,14 @@ const (
 
 	configSnapName          = "config"
 	stateSnapName           = "state"
+	registrySecretSnapName  = "registry-secret"
 	pkiSnapName             = "pki"
 	secretsSnapName         = "secrets"
 	usersSnapName           = "users"
 	nodeServicesSnapName    = "node-services"
 	inClusterProxySnapName  = "incluster-proxy"
 	registryServiceSnapName = "registry-service"
+	bashibleSnapName        = "bashible"
 )
 
 func getKubernetesConfigs() []go_hook.KubernetesConfig {
@@ -103,6 +107,31 @@ func getKubernetesConfigs() []go_hook.KubernetesConfig {
 				return stateData, nil
 			},
 		},
+		{
+			Name:              registrySecretSnapName,
+			ApiVersion:        "v1",
+			Kind:              "Secret",
+			NamespaceSelector: helpers.NamespaceSelector,
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"deckhouse-registry"},
+			},
+			FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+				var secret v1core.Secret
+				if err := sdk.FromUnstructured(obj, &secret); err != nil {
+					return nil, fmt.Errorf("failed to convert secret %q to struct: %w", obj.GetName(), err)
+				}
+
+				ret := deckhouse_registry.Secret{
+					Address:        string(secret.Data["address"]),
+					Path:           string(secret.Data["path"]),
+					Scheme:         string(secret.Data["scheme"]),
+					CA:             string(secret.Data["ca"]),
+					ImagesRegistry: string(secret.Data["imagesRegistry"]),
+					DockerConfig:   secret.Data[".dockerconfigjson"],
+				}
+				return ret, nil
+			},
+		},
 		pki.KubernetsConfig(pkiSnapName),
 		users.KubernetsConfig(usersSnapName),
 		registryservice.KubernetsConfig(registryServiceSnapName),
@@ -110,6 +139,7 @@ func getKubernetesConfigs() []go_hook.KubernetesConfig {
 	}
 
 	ret = append(ret, nodeservices.KubernetsConfig(nodeServicesSnapName)...)
+	ret = append(ret, bashible.KubernetesConfig(bashibleSnapName)...)
 	return ret
 }
 
@@ -130,7 +160,7 @@ func handle(input *go_hook.HookInput) error {
 		err    error
 	)
 
-	if values.State.Mode == "" {
+	if values.State.ActualParams.Mode == "" {
 		input.Logger.Info("State not initialized, trying restore from secret")
 
 		stateData, err := helpers.SnapshotToSingle[[]byte](input, stateSnapName)
@@ -147,7 +177,9 @@ func handle(input *go_hook.HookInput) error {
 			)
 
 			values.State = State{
-				Mode: registry_const.ModeUnmanaged,
+				ActualParams: Params{
+					Mode: registry_const.ModeUnmanaged,
+				},
 			}
 		} else {
 			input.Logger.Info("State successfully restored from secret")
@@ -162,6 +194,11 @@ func handle(input *go_hook.HookInput) error {
 		}
 
 		return fmt.Errorf("get Config snapshot error: %w", err)
+	}
+
+	inputs.RegistrySecret, err = helpers.SnapshotToSingle[deckhouse_registry.Secret](input, registrySecretSnapName)
+	if err != nil {
+		return fmt.Errorf("get RegistrySecret snapshot error: %w", err)
 	}
 
 	ingressClientCA, exists := helpers.GetIngressClientCAFromGlobalValues(input)
@@ -195,12 +232,17 @@ func handle(input *go_hook.HookInput) error {
 		return fmt.Errorf("get PKI snapshot error: %w", err)
 	}
 
+	inputs.Bashible, err = bashible.InputsFromSnapshot(input, bashibleSnapName)
+	if err != nil {
+		return fmt.Errorf("get Bashible snapshot error: %w", err)
+	}
+
 	values.Hash, err = helpers.ComputeHash(inputs)
 	if err != nil {
 		return fmt.Errorf("cannot compute inputs hash: %w", err)
 	}
 
-	err = values.State.process(input.Logger, inputs)
+	err = values.State.process(input.Logger, input.PatchCollector, inputs)
 	if err != nil {
 		return fmt.Errorf("cannot process: %w", err)
 	}

@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package orchestrator
 
 import (
+	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/bashible"
 	inclusterproxy "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/incluster-proxy"
 	nodeservices "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/node-services"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/pki"
@@ -13,22 +14,23 @@ import (
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/secrets"
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/users"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
+	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models/deckhouse-registry"
 )
 
 type Params struct {
-	Generation int64
-	Mode       registry_const.ModeType
-	ImagesRepo string
-	UserName   string
-	Password   string
-	TTL        string
-	Scheme     string
-	CA         string
+	Generation int64                   `json:"generation,omitempty"`
+	Mode       registry_const.ModeType `json:"mode,omitempty"`
+	ImagesRepo string                  `json:"images_repo,omitempty"`
+	UserName   string                  `json:"username,omitempty"`
+	Password   string                  `json:"password,omitempty"`
+	TTL        string                  `json:"ttl,omitempty"`
+	Scheme     string                  `json:"scheme,omitempty"`
+	CA         string                  `json:"ca,omitempty"`
 }
 
 type Inputs struct {
-	Params Params
-
+	Params          Params
+	RegistrySecret  deckhouse_registry.Secret
 	IngressClientCA string
 
 	PKI             pki.Inputs
@@ -37,6 +39,7 @@ type Inputs struct {
 	NodeServices    nodeservices.Inputs
 	InClusterProxy  inclusterproxy.Inputs
 	RegistryService registryservice.Inputs
+	Bashible        bashible.Inputs
 }
 
 type Values struct {

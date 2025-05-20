@@ -15,6 +15,7 @@ const (
 	ConditionTypeReady          = "Ready"
 	ConditionTypeNodeServices   = "NodeServices"
 	ConditionTypeInClusterProxy = "InClusterProxy"
+	ConditionTypeBashible       = "Bashible"
 
 	ConditionReasonReady      = "Ready"
 	ConditionReasonProcessing = "Processing"

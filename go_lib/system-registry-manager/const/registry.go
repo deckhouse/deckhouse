@@ -22,9 +22,10 @@ import (
 )
 
 const (
-	Port   = 5001
-	Path   = "/system/deckhouse"
-	Scheme = "https"
+	Port       = 5001
+	Path       = "/system/deckhouse"
+	PathRegexp = "^system/deckhouse"
+	Scheme     = "https"
 )
 
 const (
