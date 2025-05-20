@@ -120,15 +120,8 @@ func getKubernetesConfigs() []go_hook.KubernetesConfig {
 				if err := sdk.FromUnstructured(obj, &secret); err != nil {
 					return nil, fmt.Errorf("failed to convert secret %q to struct: %w", obj.GetName(), err)
 				}
-
-				ret := deckhouse_registry.Secret{
-					Address:        string(secret.Data["address"]),
-					Path:           string(secret.Data["path"]),
-					Scheme:         string(secret.Data["scheme"]),
-					CA:             string(secret.Data["ca"]),
-					ImagesRegistry: string(secret.Data["imagesRegistry"]),
-					DockerConfig:   secret.Data[".dockerconfigjson"],
-				}
+				ret := deckhouse_registry.Config{}
+				ret.FromSecretData(secret.Data)
 				return ret, nil
 			},
 		},
@@ -196,7 +189,7 @@ func handle(input *go_hook.HookInput) error {
 		return fmt.Errorf("get Config snapshot error: %w", err)
 	}
 
-	inputs.RegistrySecret, err = helpers.SnapshotToSingle[deckhouse_registry.Secret](input, registrySecretSnapName)
+	inputs.RegistrySecret, err = helpers.SnapshotToSingle[deckhouse_registry.Config](input, registrySecretSnapName)
 	if err != nil {
 		return fmt.Errorf("get RegistrySecret snapshot error: %w", err)
 	}

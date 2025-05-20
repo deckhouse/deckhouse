@@ -6,7 +6,6 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package deckhouseregistry
 
 import (
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"strings"
@@ -19,7 +18,7 @@ import (
 )
 
 type Params struct {
-	RegistrySecret deckhouse_registry.Secret
+	RegistrySecret deckhouse_registry.Config
 
 	ManagedMode   *ManagedModeParams
 	UnmanagedMode *UnmanagedModeParams
@@ -49,38 +48,31 @@ func Process(params Params, patchCollector go_hook.PatchCollector) (bool, error)
 		return true, nil
 	}
 
-	patchPayload := map[string]interface{}{
-		"data": map[string]string{
-			".dockerconfigjson": base64.StdEncoding.EncodeToString(newSecret.DockerConfig),
-			"address":           base64.StdEncoding.EncodeToString([]byte(newSecret.Address)),
-			"imagesRegistry":    base64.StdEncoding.EncodeToString([]byte(newSecret.ImagesRegistry)),
-			"path":              base64.StdEncoding.EncodeToString([]byte(newSecret.Path)),
-			"ca":                base64.StdEncoding.EncodeToString([]byte(newSecret.CA)),
-			"scheme":            base64.StdEncoding.EncodeToString([]byte(newSecret.Scheme)),
-		},
+	patch := map[string]interface{}{
+		"data": newSecret.ToBase64SecretData(),
 	}
-	patchCollector.PatchWithMerge(patchPayload, "v1", "Secret", "d8-system", "deckhouse-registry")
+	patchCollector.PatchWithMerge(patch, "v1", "Secret", "d8-system", "deckhouse-registry")
 	return false, nil
 }
 
-func buildRegistrySecret(params Params) (deckhouse_registry.Secret, error) {
+func buildRegistrySecret(params Params) (deckhouse_registry.Config, error) {
 	switch {
 	case params.ManagedMode != nil:
 		return buildManagedRegistrySecret(params.ManagedMode)
 	case params.UnmanagedMode != nil:
 		return buildUnmanagedRegistrySecret(params.UnmanagedMode)
 	default:
-		return deckhouse_registry.Secret{}, errors.New("either ManagedMode or UnmanagedMode must be provided")
+		return deckhouse_registry.Config{}, errors.New("either ManagedMode or UnmanagedMode must be provided")
 	}
 }
 
-func buildManagedRegistrySecret(params *ManagedModeParams) (deckhouse_registry.Secret, error) {
+func buildManagedRegistrySecret(params *ManagedModeParams) (deckhouse_registry.Config, error) {
 	dockerCfg, err := helpers.DockerCfgFromCreds(params.Username, params.Password, registry_const.Host)
 	if err != nil {
-		return deckhouse_registry.Secret{}, fmt.Errorf("failed to create Docker config in managed mode: %w", err)
+		return deckhouse_registry.Config{}, fmt.Errorf("failed to create Docker config in managed mode: %w", err)
 	}
 
-	return deckhouse_registry.Secret{
+	return deckhouse_registry.Config{
 		Address:        registry_const.Host,
 		Path:           registry_const.Path,
 		Scheme:         registry_const.Scheme,
@@ -90,15 +82,15 @@ func buildManagedRegistrySecret(params *ManagedModeParams) (deckhouse_registry.S
 	}, nil
 }
 
-func buildUnmanagedRegistrySecret(params *UnmanagedModeParams) (deckhouse_registry.Secret, error) {
+func buildUnmanagedRegistrySecret(params *UnmanagedModeParams) (deckhouse_registry.Config, error) {
 	address, path := getRegistryAddressAndPathFromImagesRepo(params.ImagesRegistry)
 
 	dockerCfg, err := helpers.DockerCfgFromCreds(params.Username, params.Password, address)
 	if err != nil {
-		return deckhouse_registry.Secret{}, fmt.Errorf("failed to create Docker config in unmanaged mode: %w", err)
+		return deckhouse_registry.Config{}, fmt.Errorf("failed to create Docker config in unmanaged mode: %w", err)
 	}
 
-	return deckhouse_registry.Secret{
+	return deckhouse_registry.Config{
 		Address:        address,
 		Path:           path,
 		Scheme:         strings.ToLower(params.Scheme),

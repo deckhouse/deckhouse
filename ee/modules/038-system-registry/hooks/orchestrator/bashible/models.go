@@ -25,7 +25,7 @@ type InputsNodeVersion = string
 
 type Params struct {
 	Mode           registry_const.ModeType
-	RegistrySecret deckhouse_registry.Secret
+	RegistrySecret deckhouse_registry.Config
 
 	ProxyLocal *ProxyLocalModeParams
 	Unmanaged  *UnmanagedModeParams
@@ -302,7 +302,7 @@ func (p *ActualParams) merge(newParams ActualParams) {
 	p.Direct = helpers.DeduplicateSlice(append(p.Direct, newParams.Direct...))
 }
 
-func (p *ActualParams) fromRegistrySecret(registrySecret deckhouse_registry.Secret, masterNodesIPs []string) error {
+func (p *ActualParams) fromRegistrySecret(registrySecret deckhouse_registry.Config, masterNodesIPs []string) error {
 	username, password, err := helpers.CredsFromDockerCfg(
 		registrySecret.DockerConfig,
 		registrySecret.Address,

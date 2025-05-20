@@ -30,7 +30,7 @@ type Params struct {
 
 type Inputs struct {
 	Params          Params
-	RegistrySecret  deckhouse_registry.Secret
+	RegistrySecret  deckhouse_registry.Config
 	IngressClientCA string
 
 	PKI             pki.Inputs
