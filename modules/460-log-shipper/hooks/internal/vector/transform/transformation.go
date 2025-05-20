@@ -40,20 +40,20 @@ func BuildModes(transform v1alpha1.Transformation) []apis.LogTransform {
 }
 
 func normalizeLabelKeys() apis.LogTransform {
-	name := "tf_normalizeLabelKeys"
+	name := "transformation_normalizeLabelKeys"
 	vrl := "if exists(.pod_labels) {\n.pod_labels = map_keys(object!(.pod_labels), recursive: true) -> |key| { replace(key, \".\", \"_\")}\n}"
 	return NewTransformation(name, vrl)
 }
 
 func ensureStructuredMessage(targetField string) apis.LogTransform {
-	name := "tf_ensureStructuredMessage"
+	name := "transformation_ensureStructuredMessage"
 	vrl := fmt.Sprintf(".message = parse_json(.message) ?? { \"%s\": .message }\n", targetField)
 	return NewTransformation(name, vrl)
 }
 
 func dropLabels(labels []string) apis.LogTransform {
 	var vrl string
-	name := fmt.Sprintf("tf_dropLabels")
+	name := "transformation_dropLabels"
 	ls := checkFixDotPrefix(labels)
 	for _, l := range ls {
 		vrl = fmt.Sprintf("%sif exists(%s) {\n del(%s)\n}\n", vrl, l, l)
