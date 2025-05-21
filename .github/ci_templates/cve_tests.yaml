@@ -1,5 +1,14 @@
-{!{ define "cve_scan_deckhouse_images_regular" }!}
-# <template: cve_scan_deckhouse_images_regular>
+{!{ define "cve_scan_deckhouse_images" }!}
+# <template: cve_scan_deckhouse_images>
+- name: Set scan target type
+  run: |
+    if [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref_name }}" == "main" ]; then
+      echo "SCAN_TARGET=only_main" >> $GITHUB_ENV
+    elif [ "${{ github.event_name }}" == "pull_request" ]; then
+      echo "SCAN_TARGET=pr" >> $GITHUB_ENV
+    elif [ "${{ github.event_name }}" != "schedule" ] || [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+      echo "SCAN_TARGET=regular" >> $GITHUB_ENV
+    fi
 - name: Run Deckhouse images CVE tests on ${{env.TAG}}
   env:
     DEFECTDOJO_API_TOKEN: ${{secrets.DEFECTDOJO_API_TOKEN}}
@@ -20,29 +29,7 @@
   run: |
     echo "⚓️ 🏎 Running Deckhouse images CVE tests on ${TAG}..."
     ./.github/scripts/cve_scan.sh -r
-# </template: cve_scan_deckhouse_images_regular>
-{!{- end -}!}
-
-{!{ define "cve_scan_deckhouse_images_pr" }!}
-# <template: cve_scan_deckhouse_images_pr>
-- name: Run Deckhouse images CVE tests on ${{env.TAG}}
-  env:
-    DEFECTDOJO_API_TOKEN: ${{secrets.DEFECTDOJO_API_TOKEN}}
-    DEFECTDOJO_HOST: ${{secrets.DEFECTDOJO_HOST}}
-    DECKHOUSE_PRIVATE_REPO: ${{secrets.DECKHOUSE_PRIVATE_REPO}}
-    DEV_REGISTRY: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
-    DEV_REGISTRY_USER: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
-    DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-    TRIVY_BIN_VERSION: "v0.60.0"
-    TRIVY_PROJECT_ID: "2181"
-    TRIVY_DB_URL: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-db:2
-    TRIVY_JAVA_DB_URL: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-java-db:1
-    TRIVY_POLICY_URL: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-bdu:1
-    SEVERITY: "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
-  run: |
-    echo "⚓️ 🏎 Running Deckhouse images CVE tests on ${TAG}..."
-    ./.github/scripts/cve_scan.sh -p
-# </template: cve_scan_deckhouse_images_pr>
+# </template: cve_scan_deckhouse_images>
 {!{- end -}!}
 
 {!{ define "cve_tests_upload_reports_artifacts" }!}

@@ -1,5 +1,10 @@
 cilium-hubble:
     - version: 2
+cloud-provider-vsphere:
+    - version: 2
+      description:
+        en: If the field `.storageClass.compatibilityFlag` exists, capitalize the field value.
+        ru: Если поле `.storageClass.compatibilityFlag` существует, перепишите значение с заглавной буквы.
 control-plane-manager:
     - version: 2
       description:
@@ -22,6 +27,9 @@ istio:
     - version: 2
 metallb:
     - version: 2
+      description:
+        en: Remove all `addressPool` elements with the `layer2` protocol.
+        ru: Удалите все элементы `addressPool` с протоколом `layer2`.
 monitoring-kubernetes:
     - version: 2
 node-manager:

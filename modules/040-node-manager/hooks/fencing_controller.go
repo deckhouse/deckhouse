@@ -74,11 +74,6 @@ type fencingControllerNodeResult struct {
 	NodeGroupName string
 }
 
-type fencingControllerLeaseResult struct {
-	NodeName  string
-	RenewTime time.Time
-}
-
 func fencingControllerNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var res fencingControllerNodeResult
 

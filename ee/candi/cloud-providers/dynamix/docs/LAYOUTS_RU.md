@@ -5,7 +5,7 @@ description: "Описание схем размещения и взаимоде
 
 ## Standard
 
-![resources](../../images/cloud-provider-dynamix/network/dynamix-standard.svg)
+![resources](../../images/cloud-provider-dynamix/dynamix-standard.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1EqkEFD68b_yR0DeZNwH_2FQ42P2JAv9eUcPwx9JECww/edit --->
 
 Пример конфигурации схемы размещения:

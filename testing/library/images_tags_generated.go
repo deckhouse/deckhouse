@@ -12,9 +12,6 @@ var DefaultImagesDigests = map[string]interface{}{
 	"basicAuth": map[string]interface{}{
 		"nginx": "imageHash-basicAuth-nginx",
 	},
-	"cephCsi": map[string]interface{}{
-		"cephcsi": "imageHash-cephCsi-cephcsi",
-	},
 	"certManager": map[string]interface{}{
 		"certManagerAcmeSolver": "imageHash-certManager-certManagerAcmeSolver",
 		"certManagerCainjector": "imageHash-certManager-certManagerCainjector",
@@ -56,6 +53,12 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cloudControllerManager131": "imageHash-cloudProviderAzure-cloudControllerManager131",
 		"cloudControllerManager132": "imageHash-cloudProviderAzure-cloudControllerManager132",
 		"cloudDataDiscoverer":       "imageHash-cloudProviderAzure-cloudDataDiscoverer",
+	},
+	"cloudProviderDvp": map[string]interface{}{
+		"capdvpControllerManager": "imageHash-cloudProviderDvp-capdvpControllerManager",
+		"cloudControllerManager":  "imageHash-cloudProviderDvp-cloudControllerManager",
+		"cloudDataDiscoverer":     "imageHash-cloudProviderDvp-cloudDataDiscoverer",
+		"dvpCsiDriver":            "imageHash-cloudProviderDvp-dvpCsiDriver",
 	},
 	"cloudProviderDynamix": map[string]interface{}{
 		"capdControllerManager":  "imageHash-cloudProviderDynamix-capdControllerManager",
@@ -249,6 +252,8 @@ var DefaultImagesDigests = map[string]interface{}{
 		"controller110":         "imageHash-ingressNginx-controller110",
 		"controller112":         "imageHash-ingressNginx-controller112",
 		"controller19":          "imageHash-ingressNginx-controller19",
+		"failoverCleaner":       "imageHash-ingressNginx-failoverCleaner",
+		"geoipUpdater":          "imageHash-ingressNginx-geoipUpdater",
 		"kruise":                "imageHash-ingressNginx-kruise",
 		"kruiseStateMetrics":    "imageHash-ingressNginx-kruiseStateMetrics",
 		"kubeRbacProxy":         "imageHash-ingressNginx-kubeRbacProxy",
@@ -450,6 +455,7 @@ var DefaultImagesDigests = map[string]interface{}{
 	"terraformManager": map[string]interface{}{
 		"terraformManagerAws":         "imageHash-terraformManager-terraformManagerAws",
 		"terraformManagerAzure":       "imageHash-terraformManager-terraformManagerAzure",
+		"terraformManagerDvp":         "imageHash-terraformManager-terraformManagerDvp",
 		"terraformManagerDynamix":     "imageHash-terraformManager-terraformManagerDynamix",
 		"terraformManagerGcp":         "imageHash-terraformManager-terraformManagerGcp",
 		"terraformManagerHuaweicloud": "imageHash-terraformManager-terraformManagerHuaweicloud",

@@ -1,5 +1,12 @@
 # Changelog v1.69
 
+## [MALFORMED]
+
+
+ - #12723 unknown section "ceph-csi"
+ - #13174 unknown section "ceph-csi"
+ - #13409 unknown section "ceph-csi"
+
 ## Know before update
 
 
@@ -94,9 +101,11 @@
  - **[cloud-provider-vcd]** Added a patch for `cloud-controller-manager` that ignores a node if `providerID` has the `static://` prefix. [#12556](https://github.com/deckhouse/deckhouse/pull/12556)
  - **[cloud-provider-vcd]** Enabled support for legacy API versions below `37.2`. [#12361](https://github.com/deckhouse/deckhouse/pull/12361)
  - **[cloud-provider-vsphere]** Fixed null StorageClasses in vSphere when StorageClasses are excluded from discovery. [#12597](https://github.com/deckhouse/deckhouse/pull/12597)
+ - **[cloud-provider-yandex]** fix synchronizing TGs [#13521](https://github.com/deckhouse/deckhouse/pull/13521)
  - **[cloud-provider-yandex]** fix WithNATInstance clusters converge [#13189](https://github.com/deckhouse/deckhouse/pull/13189)
  - **[cloud-provider-yandex]** Fixed LoadBalancer service creation in hybrid clusters. [#12491](https://github.com/deckhouse/deckhouse/pull/12491)
  - **[cloud-provider-zvirt]** Fixed zvirt-csi-driver patching (token refresh fix patch). [#12313](https://github.com/deckhouse/deckhouse/pull/12313)
+ - **[cni-cilium]** Fixed race condition when deleting element from ipcache map during VM migration. [#13344](https://github.com/deckhouse/deckhouse/pull/13344)
  - **[control-plane-manager]** Stale service account alert fix. [#13129](https://github.com/deckhouse/deckhouse/pull/13129)
  - **[control-plane-manager]** Fixed `additionalAPIIssuers` and `additionalAPIAudiences` parameters and associated tests. [#12576](https://github.com/deckhouse/deckhouse/pull/12576)
  - **[control-plane-manager]** Fixed `d8-control-plane-manager` containers that were duplicated when updating Kubernetes. [#12561](https://github.com/deckhouse/deckhouse/pull/12561)
@@ -121,9 +130,12 @@
  - **[ingress-nginx]** Fixed security vulnerabilities. [#12449](https://github.com/deckhouse/deckhouse/pull/12449)
  - **[istio]** Added Kubernetes version check in a Helm chart. [#12503](https://github.com/deckhouse/deckhouse/pull/12503)
  - **[istio]** Refactored secure api-proxy for multiclusters to improve reliability. [#12196](https://github.com/deckhouse/deckhouse/pull/12196)
+ - **[kube-dns]** Fixed release upgrade issue with removed d8-kube-dns-redirect service. [#13487](https://github.com/deckhouse/deckhouse/pull/13487)
  - **[kube-dns]** Expanded pattern for `stubZones` to allow underscores (`_`) in domain names. [#13118](https://github.com/deckhouse/deckhouse/pull/13118)
  - **[loki]** fix storage capacity calculator hook for Loki [#13003](https://github.com/deckhouse/deckhouse/pull/13003)
     fixes the bug introduced in v1.69.0
+ - **[metallb]** Fixed IP pool exhaustion on LoadBalancer deletion. [#13352](https://github.com/deckhouse/deckhouse/pull/13352)
+ - **[node-manager]** Revert cluster autoscaler [#13416](https://github.com/deckhouse/deckhouse/pull/13416)
  - **[node-manager]** Autoscaler - remove additional cordon node by mcm provider. [#13391](https://github.com/deckhouse/deckhouse/pull/13391)
  - **[node-manager]** Increase verbosity and revert versions and fix bug with unsupported mcm annotation [#13180](https://github.com/deckhouse/deckhouse/pull/13180)
  - **[node-manager]** Fixed kubeconfig generation for `CAPI`. [#12554](https://github.com/deckhouse/deckhouse/pull/12554)
@@ -151,8 +163,6 @@
  - **[candi]** Fixed the priority for `kubernetes_api_proxy`. [#12678](https://github.com/deckhouse/deckhouse/pull/12678)
  - **[candi]** Bumped patch versions of Kubernetes images: `v1.29.14`, `v1.30.1`, `v1.31.6`, `v1.32.2`. [#12080](https://github.com/deckhouse/deckhouse/pull/12080)
     Kubernetes control plane components and kubelet will restart.
- - **[ceph-csi]** Add "Deprecated" status to module [#13174](https://github.com/deckhouse/deckhouse/pull/13174)
-    low
  - **[cloud-provider-aws]** Added support for switching between different CNIs. [#12355](https://github.com/deckhouse/deckhouse/pull/12355)
  - **[cloud-provider-azure]** Added support for switching between different CNIs. [#12355](https://github.com/deckhouse/deckhouse/pull/12355)
  - **[cloud-provider-gcp]** Added support for switching between different CNIs. [#12355](https://github.com/deckhouse/deckhouse/pull/12355)
