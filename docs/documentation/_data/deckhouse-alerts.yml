@@ -4930,7 +4930,7 @@ alerts:
         A LoadBalancer has not been created.
       severity: "4"
       markupFormat: default
-    - name: LokiRetentionPerionViolation
+    - name: LokiInsufficientDiskForRetention
       sourceFile: modules/462-loki/monitoring/prometheus-rules/alerts.tpl
       moduleUrl: 462-loki
       module: loki

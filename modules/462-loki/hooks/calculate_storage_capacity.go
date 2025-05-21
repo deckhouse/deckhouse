@@ -29,7 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-const maxSpaceUtilization = 0.95
+const maxSpaceUtilization = 0.93
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
@@ -182,7 +182,7 @@ func lokiDisk(input *go_hook.HookInput) error {
 
 	cleanupThreshold = pvcSize - reservedByWALs
 
-	// do not exceed 95% of the PVC size
+	// do not exceed 93% of the PVC size
 	if float64(cleanupThreshold) > float64(pvcSize)*maxSpaceUtilization {
 		cleanupThreshold = uint64(float64(pvcSize) * maxSpaceUtilization)
 	}
