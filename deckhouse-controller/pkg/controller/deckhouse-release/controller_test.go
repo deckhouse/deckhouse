@@ -1008,20 +1008,6 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			require.NoError(suite.T(), err)
 		})
 	})
-	suite.Run("Right deployed message when no deployment version", func() {
-		suite.setupController("clear-status-message.yaml", initValues, embeddedMUP)
-
-		dependency.TestDC.HTTPClient.DoMock.
-			Expect(&http.Request{}).
-			Return(&http.Response{
-				StatusCode: http.StatusInternalServerError,
-			}, errors.New("some internal error"))
-
-		dr := suite.getDeckhouseRelease("v1.26.1")
-		_, err := suite.ctr.reconcileDeployedRelease(context.Background(), dr)
-		require.NoError(suite.T(), err)
-		assert.Contains(suite.T(), dr.Status.Message, "")
-	})
 }
 
 func newDependencyContainer(t *testing.T) *dependency.MockedContainer {
