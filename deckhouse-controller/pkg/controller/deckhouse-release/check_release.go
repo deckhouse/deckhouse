@@ -53,7 +53,7 @@ import (
 )
 
 const (
-	metricUpdatingFailedGroup = "d8_updating_failed"
+	metricUpdatingFailedGroup = "d8_updating_is_failed"
 	serviceName               = "check-release"
 )
 
@@ -497,12 +497,12 @@ func (f *DeckhouseReleaseFetcher) ensureReleases(
 	if err != nil {
 		f.logger.Error("step by step update failed", log.Err(err))
 
-		f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup, "d8_updating_is_failed", 1, metricLabels)
+		f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup, metricUpdatingFailedGroup, 1, metricLabels)
 
 		return nil, fmt.Errorf("get new releases metadata: %w", err)
 	}
 
-	f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup, "d8_updating_is_failed", 0, metricLabels)
+	f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup, metricUpdatingFailedGroup, 0, metricLabels)
 
 	for _, meta := range metas {
 		releaseMetadata = &meta

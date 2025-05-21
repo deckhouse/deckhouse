@@ -430,6 +430,29 @@
 
         To resolve this issue, ensure that the next version of the Deckhouse image is available in the registry.
 
+  - alert: DeckhouseModuleUpdatingFailed
+    expr: max (d8_module_updating_failed) == 1
+    labels:
+      severity_level: "4"
+      tier: cluster
+      d8_module: "{{ $labels.module }}"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: Module update has failed.
+      description: |
+        The '{{ $labels.module }}' Module update has failed.
+
+        Possible reasons:
+
+        - The next minor or patch version of the Module image is not available in the registry.
+        - The Module image is corrupted.
+
+        Current version: {{ $labels.actual_version }}.
+        Failed version: {{ $labels.version }}.
+
+        To resolve this issue, ensure that the next version of the Module image is available in the registry.
+
   - alert: D8DeckhouseWatchErrorOccurred
     expr: increase(deckhouse_kubernetes_client_watch_errors_total[__SCRAPE_INTERVAL_X_2__]) > 0
     for: 1m

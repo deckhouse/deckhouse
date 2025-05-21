@@ -238,17 +238,12 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 		}
 	}
 
-	metricLabels := map[string]string{
-		"module":  f.moduleName,
-		"version": releaseForUpdate.GetVersion().Original(),
-	}
-
 	vers, err := f.getNewVersions(ctx, actual.GetVersion(), newSemver)
 	if err != nil {
 		return fmt.Errorf("get next version: %w", err)
 	}
 
-	f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup, metricUpdatingFailedGroup, 0, metricLabels)
+	f.metricStorage.Grouped().ExpireGroupMetrics(metricUpdatingFailedGroup)
 
 	current := actual.GetVersion()
 	for _, ver := range vers {
@@ -262,7 +257,7 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 
 			// if next version is not in sequence with actual
 			if !isUpdatingSequence(current, ver) {
-				f.logger.Warn("not sequential version", slog.String("previous", actual.GetVersion().Original()), slog.String("next", ver.Original()))
+				f.logger.Warn("not sequential version", slog.String("previous", "v"+actual.GetVersion().String()), slog.String("next", "v"+ver.String()))
 			}
 
 			m, err := f.moduleDownloader.DownloadMetadataByVersion(f.moduleName, "v"+ver.String())
@@ -283,6 +278,15 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 		}()
 		if ensureErr != nil {
 			err = errors.Join(err, ensureErr)
+
+			metricLabels := map[string]string{
+				"module":         f.moduleName,
+				"version":        "v" + ver.String(),
+				"actual_version": "v" + actual.GetVersion().String(),
+			}
+
+			f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup, metricUpdatingFailedGroup, 1, metricLabels)
+
 			continue
 		}
 
@@ -291,8 +295,6 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 
 	if err != nil {
 		f.logger.Error("step by step update failed", log.Err(err))
-
-		f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup, metricUpdatingFailedGroup, 1, metricLabels)
 
 		return fmt.Errorf("step by step update failed: %w", err)
 	}
