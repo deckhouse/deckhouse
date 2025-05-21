@@ -158,6 +158,7 @@ To automatically export cluster objects from an etcd backup, use the script prov
 - Object filter (`grep`). Optionally set a string to filter etcd paths so that only specific resources are exported, such as those by namespace or resource type.
 
 {% offtopic title="Object export script" %}
+
 ```shell
 BACKUP_OUTPUT_DIR="/tmp/etc_restore" # Directory to store exported objects (created automatically).
 ETCD_SNAPSHOT_PATH="./etcd-backup.snapshot" # Path to the etcd snapshot file.
@@ -215,6 +216,7 @@ do
 done
 kubectl delete po etcd-restore --force
 ```
+
 {% endofftopic %}
 
 ## Manual object export
@@ -392,6 +394,7 @@ To simplify cluster recovery after the master node's IP address changes, use the
 3. After running the script, wait for the kubelet to regenerate its certificate with the new IP address. You can verify this in the `/var/lib/kubelet/pki/` directory, where a new certificate should appear.
 
 {% offtopic title="Object Extraction Script" %}
+
 ```shell
 ETCD_SNAPSHOT_PATH="./etcd-backup.snapshot" # Path to the etcd snapshot.
 OLD_IP=10.242.32.34                         # Old master node IP address.
@@ -427,6 +430,7 @@ crictl ps --name 'etcd' -o json | jq -r '.containers[].id' | xargs crictl stop
 systemctl daemon-reload
 systemctl restart kubelet.service
 ```
+
 {% endofftopic %}
 
 ### Manual object restore after changing the IP address

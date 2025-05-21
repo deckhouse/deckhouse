@@ -161,6 +161,7 @@ lang: ru
 - Фильтр отбора объектов (`grep`). При необходимости задайте строку для фильтрации путей в etcd, чтобы выгрузить лишь нужные ресурсы, например по названию пространства имён или типу ресурса.
 
 {% offtopic title="Скрипт выгрузки объектов" %}
+
 ```shell
 BACKUP_OUTPUT_DIR="/tmp/etc_restore" # Путь до директории куда будут выгружены объекты (создастся автоматически).
 ETCD_SNAPSHOT_PATH="./etcd-backup.snapshot" # Путь до резервного снимка (snapshot) etcd.
@@ -218,6 +219,7 @@ do
 done
 kubectl delete po etcd-restore --force
 ```
+
 {% endofftopic %}
 
 ### Ручная выгрузка объектов
@@ -389,6 +391,7 @@ kubectl delete po etcd-restore --force
 1. После выполнения скрипта необходимо дождаться, пока kubelet обновит свой сертификат, учитывающий новый IP-адрес. Проверить это можно в директории `/var/lib/kubelet/pki/`, где должен появиться новый сертификат.
 
 {% offtopic title="Скрипт для выгрузки объектов" %}
+
 ```shell
 ETCD_SNAPSHOT_PATH="./etcd-backup.snapshot" # Путь до резервного снимка (snapshot) etcd.
 OLD_IP=10.242.32.34                         # IP-адрес старого master-узла.
@@ -424,6 +427,7 @@ crictl ps --name 'etcd' -o json | jq -r '.containers[].id' | xargs crictl stop
 systemctl daemon-reload
 systemctl restart kubelet.service
 ```
+
 {% endofftopic %}
 
 ### Ручное восстановление объектов при смене IP-адреса
@@ -665,7 +669,7 @@ d8 backup cluster-config /backup/cluster-config-2025-04-21.tar
 
 ServiceAccount `loki` создаётся автоматически с версии Deckhouse v1.69.0. Однако для работы команды `d8 backup loki` необходимо вручную создать секрет и назначить Role и RoleBinding, если они ещё не заданы.
 
-Примените манифесты перед запуском `d8 backup loki`, чтобы команда корректно получала токен и могла обращаться к Loki API. 
+Примените манифесты перед запуском `d8 backup loki`, чтобы команда корректно получала токен и могла обращаться к Loki API.
 
 Пример манифестов:
 
