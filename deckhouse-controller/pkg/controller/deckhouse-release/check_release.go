@@ -440,7 +440,18 @@ func (f *DeckhouseReleaseFetcher) ensureReleases(
 		notificationShiftTime *metav1.Time
 	)
 
-	if len(releasesInCluster) == 0 || releaseChannel == ltsChannelName {
+	// if release channel is LTS - create release from channel
+	if releaseChannel == ltsChannelName {
+		err := f.createRelease(ctx, releaseMetadata, notificationShiftTime, "lts channel")
+		if err != nil {
+			return nil, fmt.Errorf("create release %s: %w", releaseMetadata.Version, err)
+		}
+
+		return releaseMetadata, nil
+	}
+
+	// if no releases in cluster - create from channel
+	if len(releasesInCluster) == 0 {
 		err := f.createRelease(ctx, releaseMetadata, notificationShiftTime, "no releases in cluster")
 		if err != nil {
 			return nil, fmt.Errorf("create release %s: %w", releaseMetadata.Version, err)
