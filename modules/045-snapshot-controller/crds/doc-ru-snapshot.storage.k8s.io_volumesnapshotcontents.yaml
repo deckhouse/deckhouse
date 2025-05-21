@@ -1,0 +1,186 @@
+spec:
+  versions:
+    - name: v1
+      schema:
+        openAPIV3Schema:
+          description: |
+            VolumeSnapshotContent представляет собой фактический объект "снимка на диске" во внутренней системе хранения.
+          properties:
+            apiVersion:
+              description: |
+                APIVersion определяет версию схемы этого объекта. Серверы могут преобразовывать известные схемы во внутренний формат и отклонять неизвестные. Подробнее: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            kind:
+              description: |
+                Kind — строка, представляющая REST-ресурс, соответствующий объекту. Может быть определён сервером на основе запроса. Не изменяется. Формат CamelCase. Подробнее: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            spec:
+              description: |
+                Определяет свойства VolumeSnapshotContent, созданного подсистемой хранения. Обязательное поле.
+              properties:
+                deletionPolicy:
+                  description: |
+                    Определяет, должен ли VolumeSnapshotContent и соответствующий снимок на хранилище быть удалены при удалении связанного VolumeSnapshot.
+
+                    Поддерживаемые значения:
+                    - `Retain` — снимок сохраняется;
+                    - `Delete` — снимок удаляется.
+
+                    При динамическом создании заполняется CSI-сайдкаром из VolumeSnapshotClass. Для уже существующих снимков необходимо указать вручную.
+                driver:
+                  description: |
+                    Имя CSI-драйвера, использованного для создания снимка. Должно совпадать с именем, возвращаемым CSI методом GetPluginName(). Обязательное поле.
+                source:
+                  description: |
+                    Определяет, создаётся ли снимок динамически или уже существует. Неизменяемое поле. Обязательное.
+                  properties:
+                    snapshotHandle:
+                      description: |
+                        CSI `snapshot_id` для существующего снимка, представленного в Kubernetes. Неизменяемое поле.
+                    volumeHandle:
+                      description: |
+                        CSI `volume_id` тома, из которого должен быть создан снимок. Неизменяемое поле.
+                volumeSnapshotClassName:
+                  description: |
+                    Имя VolumeSnapshotClass, на основе которого был (или будет) создан снимок. После создания не должен использоваться, так как класс может быть удалён или переопределён.
+                volumeSnapshotRef:
+                  description: |
+                    Указывает на объект VolumeSnapshot, с которым связан данный VolumeSnapshotContent. Имя и namespace должны быть заданы для корректной привязки. Неизменяемое поле. Обязательное.
+                  properties:
+                    apiVersion:
+                      description: |
+                        API-версия объекта-ссылки.
+                    fieldPath:
+                      description: |
+                        Если ссылка относится к части объекта, указывается путь к полю в формате JSON/Go, например: `spec.containers[2]`. Поле может измениться в будущем.
+                    kind:
+                      description: |
+                        Тип объекта-ссылки. Подробнее: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                    name:
+                      description: |
+                        Имя объекта-ссылки. Подробнее: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                    namespace:
+                      description: |
+                        Namespace объекта-ссылки. Подробнее: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                    resourceVersion:
+                      description: |
+                        Конкретная resourceVersion объекта, если указана. Подробнее: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                    uid:
+                      description: |
+                        UID объекта-ссылки. Подробнее: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+            status:
+              description: |
+                Представляет текущую информацию о снимке.
+              properties:
+                creationTime:
+                  description: |
+                    Время создания снимка, возвращаемое CSI. Если драйвер не поддерживает, поле может быть пустым. Формат — Unix-время в наносекундах (int64).
+                error:
+                  description: |
+                    Последняя зафиксированная ошибка при создании снимка. Очищается при успешной повторной попытке.
+                  properties:
+                    message:
+                      description: |
+                        Сообщение об ошибке. Может быть записано в логи. Не должно содержать конфиденциальную информацию.
+                    time:
+                      description: |
+                        Время возникновения ошибки.
+                readyToUse:
+                  description: |
+                    Показывает, готов ли снимок к восстановлению. При динамическом создании заполняется CSI-сайдкаром. Если неизвестно, поле отсутствует.
+                restoreSize:
+                  description: |
+                    Полный размер снимка в байтах. Используется при восстановлении: том не должен быть меньше этого размера. Если не задано — размер неизвестен.
+                snapshotHandle:
+                  description: |
+                    CSI `snapshot_id` снимка. Если не указан, значит создание снимка не завершено или завершилось с ошибкой.
+    - name: v1beta1
+      schema:
+        openAPIV3Schema:
+          description: |
+            VolumeSnapshotContent представляет собой фактический объект "снимка на диске" во внутренней системе хранения.
+          properties:
+            apiVersion:
+              description: |
+                APIVersion определяет версию схемы этого объекта. Серверы могут преобразовывать известные схемы во внутренний формат и отклонять неизвестные. Подробнее: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            kind:
+              description: |
+                Kind — строка, представляющая REST-ресурс, соответствующий объекту. Может быть определён сервером на основе запроса. Не изменяется. Формат CamelCase. Подробнее: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            spec:
+              description: |
+                Определяет свойства VolumeSnapshotContent, созданного подсистемой хранения. Обязательное поле.
+              properties:
+                deletionPolicy:
+                  description: |
+                    Определяет, должен ли VolumeSnapshotContent и соответствующий снимок на хранилище быть удалены при удалении связанного VolumeSnapshot.
+
+                    Поддерживаемые значения:
+                    - `Retain` — снимок сохраняется;
+                    - `Delete` — снимок удаляется.
+
+                    При динамическом создании заполняется CSI-сайдкаром из VolumeSnapshotClass. Для уже существующих снимков необходимо указать вручную.
+                driver:
+                  description: |
+                    Имя CSI-драйвера, использованного для создания снимка. Должно совпадать с именем, возвращаемым CSI методом GetPluginName(). Обязательное поле.
+                source:
+                  description: |
+                    Определяет, создаётся ли снимок динамически или уже существует. Неизменяемое поле. Обязательное.
+                  properties:
+                    snapshotHandle:
+                      description: |
+                        CSI `snapshot_id` для существующего снимка, представленного в Kubernetes. Неизменяемое поле.
+                    volumeHandle:
+                      description: |
+                        CSI `volume_id` тома, из которого должен быть создан снимок. Неизменяемое поле.
+                volumeSnapshotClassName:
+                  description: |
+                    Имя VolumeSnapshotClass, на основе которого был (или будет) создан снимок. После создания не должен использоваться, так как класс может быть удалён или переопределён.
+                volumeSnapshotRef:
+                  description: |
+                    Указывает на объект VolumeSnapshot, с которым связан данный VolumeSnapshotContent. Имя и namespace должны быть заданы для корректной привязки. Неизменяемое поле. Обязательное.
+                  properties:
+                    apiVersion:
+                      description: |
+                        API-версия объекта-ссылки.
+                    fieldPath:
+                      description: |
+                        Если ссылка относится к части объекта, указывается путь к полю в формате JSON/Go, например: `spec.containers[2]`. Поле может измениться в будущем.
+                    kind:
+                      description: |
+                        Тип объекта-ссылки. Подробнее: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                    name:
+                      description: |
+                        Имя объекта-ссылки. Подробнее: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                    namespace:
+                      description: |
+                        Namespace объекта-ссылки. Подробнее: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                    resourceVersion:
+                      description: |
+                        Конкретная resourceVersion объекта, если указана. Подробнее: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                    uid:
+                      description: |
+                        UID объекта-ссылки. Подробнее: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+            status:
+              description: |
+                Представляет текущую информацию о снимке.
+              properties:
+                creationTime:
+                  description: |
+                    Время создания снимка, возвращаемое CSI. Если драйвер не поддерживает, поле может быть пустым. Формат — Unix-время в наносекундах (int64).
+                error:
+                  description: |
+                    Последняя зафиксированная ошибка при создании снимка. Очищается при успешной повторной попытке.
+                  properties:
+                    message:
+                      description: |
+                        Сообщение об ошибке. Может быть записано в логи. Не должно содержать конфиденциальную информацию.
+                    time:
+                      description: |
+                        Время возникновения ошибки.
+                readyToUse:
+                  description: |
+                    Показывает, готов ли снимок к восстановлению. При динамическом создании заполняется CSI-сайдкаром. Если неизвестно, поле отсутствует.
+                restoreSize:
+                  description: |
+                    Полный размер снимка в байтах. Используется при восстановлении: том не должен быть меньше этого размера. Если не задано — размер неизвестен.
+                snapshotHandle:
+                  description: |
+                    CSI `snapshot_id` снимка. Если не указан, значит создание снимка не завершено или завершилось с ошибкой.

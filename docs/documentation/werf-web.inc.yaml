@@ -80,6 +80,7 @@ shell:
         done
 
         echo '[] Generating configuration schemas...'
+        export MODULES_DIR=/src/modules
         export MODULES_DIR=modules_en
         bash _tools/modules_generate_configuration.sh
         export MODULES_DIR=modules_ru MODULES_LANG=ru
@@ -98,6 +99,9 @@ shell:
         bash _tools/modules_generate_cr.sh
         export MODULES_DIR=modules_ru
         bash _tools/modules_generate_cr.sh
+
+        mkdir -p _data/schemas/crds/
+        find "/src/modules" -regex '^.*/crds/.*\.yaml$' -exec cp -f {} "_data/schemas/crds/" \;
 
         echo
         echo '[] Preparing OSS license info...'

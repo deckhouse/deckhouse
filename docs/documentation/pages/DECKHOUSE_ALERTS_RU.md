@@ -4,6 +4,8 @@ permalink: ru/alerts.html
 lang: ru
 ---
 
+<!-- mirrored on /admin/configuration/monitoring/alert-settings.html  -->
+
 На странице приведен список всех алертов мониторинга в Deckhouse Kubernetes Platform.
 
 Алерты сгруппированы по модулям. Справа от названия алерта указаны иконки минимальной редакции DKP в которой доступен алерт и уровня критичности алерта (severity).
