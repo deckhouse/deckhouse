@@ -80,34 +80,8 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
-  creationTimestamp: null
-  labels:
-    module: parca
-    modules.deckhouse.io/update-policy: ""
-    release-checksum: 1beb143dffb1b662137094e7faea1e17
-    source: test-source-1
-  name: parca-v1.5.3
-  ownerReferences:
-  - apiVersion: deckhouse.io/v1alpha1
-    controller: true
-    kind: ModuleSource
-    name: test-source-1
-    uid: ""
-  resourceVersion: "1"
-spec:
-  moduleName: parca
-  version: 1.5.3
-  weight: 900
-status:
-  approved: false
-  message: ""
-  pullDuration: 0s
-  size: 0
-  transitionTime: null
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleRelease
-metadata:
+  annotations:
+    modules.deckhouse.io/change-cause: check release (step-by-step)
   creationTimestamp: null
   labels:
     module: parca
@@ -136,6 +110,8 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
+  annotations:
+    modules.deckhouse.io/change-cause: check release (step-by-step)
   creationTimestamp: null
   labels:
     module: parca

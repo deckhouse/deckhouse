@@ -30,62 +30,7 @@ kind: ModuleRelease
 metadata:
   annotations:
     modules.deckhouse.io/apply-now: "true"
-  creationTimestamp: null
-  labels:
-    module: enabledmodule
-    modules.deckhouse.io/update-policy: ""
-    release-checksum: 1beb143dffb1b662137094e7faea1e17
-    source: test-source-1
-  name: enabledmodule-v1.2.4
-  ownerReferences:
-  - apiVersion: deckhouse.io/v1alpha1
-    controller: true
-    kind: ModuleSource
-    name: test-source-1
-    uid: ""
-  resourceVersion: "1"
-spec:
-  moduleName: enabledmodule
-  version: 1.2.4
-  weight: 900
-status:
-  approved: false
-  message: ""
-  pullDuration: 0s
-  size: 0
-  transitionTime: null
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleRelease
-metadata:
-  creationTimestamp: null
-  labels:
-    module: enabledmodule
-    modules.deckhouse.io/update-policy: ""
-    release-checksum: 1beb143dffb1b662137094e7faea1e17
-    source: test-source-1
-  name: enabledmodule-v1.3.2
-  ownerReferences:
-  - apiVersion: deckhouse.io/v1alpha1
-    controller: true
-    kind: ModuleSource
-    name: test-source-1
-    uid: ""
-  resourceVersion: "1"
-spec:
-  moduleName: enabledmodule
-  version: 1.3.2
-  weight: 900
-status:
-  approved: false
-  message: ""
-  pullDuration: 0s
-  size: 0
-  transitionTime: null
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleRelease
-metadata:
+    modules.deckhouse.io/change-cause: check release (no releases in cluster)
   creationTimestamp: null
   labels:
     module: enabledmodule

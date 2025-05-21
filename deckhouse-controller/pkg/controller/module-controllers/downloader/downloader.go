@@ -176,11 +176,6 @@ func (md *ModuleDownloader) DownloadMetadataByVersion(moduleName, moduleVersion 
 	res.ModuleVersion = moduleVersion
 	res.Changelog = changelog
 
-	// module was not updated
-	if moduleVersion == "" {
-		return res, nil
-	}
-
 	img, err := md.fetchImage(moduleName, moduleVersion)
 	if err != nil {
 		return res, err

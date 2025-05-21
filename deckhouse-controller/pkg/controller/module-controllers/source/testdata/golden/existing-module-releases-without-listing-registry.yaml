@@ -106,6 +106,8 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
+  annotations:
+    modules.deckhouse.io/change-cause: check release (from deployed)
   creationTimestamp: null
   labels:
     module: parca

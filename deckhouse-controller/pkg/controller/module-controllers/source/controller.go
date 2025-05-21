@@ -19,12 +19,11 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"path"
 	"sort"
 	"sync"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
+	"github.com/flant/shell-operator/pkg/metric"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -64,19 +63,30 @@ const (
 	cacheSyncTimeout        = 3 * time.Minute
 
 	maxModulesLimit = 1500
+
+	metricUpdatingFailedGroup = "d8_module_updating_failed"
+	serviceName               = "module-source-controller"
 )
 
 var ErrSettingsNotChanged = errors.New("settings not changed")
 
-func RegisterController(runtimeManager manager.Manager, mm moduleManager, dc dependency.Container, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, logger *log.Logger) error {
+func RegisterController(
+	runtimeManager manager.Manager,
+	mm moduleManager,
+	dc dependency.Container,
+	metricStorage metric.Storage,
+	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer,
+	logger *log.Logger,
+) error {
 	r := &reconciler{
 		init:                 new(sync.WaitGroup),
 		client:               runtimeManager.GetClient(),
+		dc:                   dc,
 		logger:               logger,
 		moduleManager:        mm,
+		metricStorage:        metricStorage,
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		embeddedPolicy:       embeddedPolicy,
-		dependencyContainer:  dc,
 	}
 
 	r.init.Add(1)
@@ -133,10 +143,13 @@ func RegisterController(runtimeManager manager.Manager, mm moduleManager, dc dep
 }
 
 type reconciler struct {
-	init                 *sync.WaitGroup
-	client               client.Client
-	logger               *log.Logger
-	dependencyContainer  dependency.Container
+	init   *sync.WaitGroup
+	client client.Client
+	dc     dependency.Container
+	logger *log.Logger
+
+	metricStorage metric.Storage
+
 	embeddedPolicy       *helpers.ModuleUpdatePolicySpecContainer
 	moduleManager        moduleManager
 	downloadedModulesDir string
@@ -200,7 +213,7 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 	opts := utils.GenerateRegistryOptionsFromModuleSource(source, r.clusterUUID, r.logger)
 
 	// create a registry client
-	registryClient, err := r.dependencyContainer.GetRegistryClient(source.Spec.Registry.Repo, opts...)
+	registryClient, err := r.dc.GetRegistryClient(source.Spec.Registry.Repo, opts...)
 	if err != nil {
 		r.logger.Error("failed to get registry client for the module source", slog.String("source_name", source.Name), log.Err(err))
 		if uerr := r.updateModuleSourceStatusMessage(ctx, source, err.Error()); uerr != nil {
@@ -279,11 +292,12 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 	ctx, span := otel.Tracer(controllerName).Start(ctx, "processModules")
 	defer span.End()
 
-	md := downloader.NewModuleDownloader(r.dependencyContainer, r.downloadedModulesDir, source, opts)
+	md := downloader.NewModuleDownloader(r.dc, r.downloadedModulesDir, source, opts)
 	sort.Strings(pulledModules)
 
 	availableModules := make([]v1alpha1.AvailableModule, 0)
 	var pullErrorsExist bool
+
 	for _, moduleName := range pulledModules {
 		if moduleName == "modules" || len(moduleName) > 64 {
 			r.logger.Warn("the module has a forbidden name, skip it", slog.String("name", moduleName))
@@ -357,6 +371,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 
 		// download module metadata from the specified release channel
 		r.logger.Debug("download meta ", slog.String("release_channel", policy.Spec.ReleaseChannel), slog.String("module_name", moduleName), slog.String("module_source", source.Name))
+
 		meta, err := md.DownloadMetadataFromReleaseChannel(ctx, moduleName, policy.Spec.ReleaseChannel, cachedChecksum)
 		if err != nil {
 			if module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) && module.Properties.Source == source.Name {
@@ -364,8 +379,10 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 				availableModule.PullError = err.Error()
 				pullErrorsExist = true
 			}
+
 			availableModule.Version = "unknown"
 			availableModules = append(availableModules, availableModule)
+
 			continue
 		}
 
@@ -382,30 +399,9 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 				return fmt.Errorf("update the '%s' module: %w", moduleName, err)
 			}
 
-			versions, errGet := r.getIntermediateModuleVersions(ctx, source, opts, moduleName, module.GetVersion(), meta.ModuleVersion)
-			if errGet != nil {
-				return fmt.Errorf("get intermediate versions: %w", errGet)
-			}
-
-			for _, v := range versions {
-				r.logger.Debug("ensure module release for module for the module source",
-					slog.String("name", moduleName),
-					slog.String("source_name", source.Name))
-
-				m, err := md.DownloadMetadataByVersion(moduleName, v.Original())
-				if err != nil {
-					r.logger.Error("download metadata", slog.String("module_name", moduleName), log.Err(err))
-
-					continue
-				}
-
-				r.logger.Info("version", slog.String("v", m.ModuleVersion))
-
-				if err = r.ensureModuleRelease(ctx, source.GetUID(), source.Name, moduleName, policy.Name, m); err != nil {
-					r.logger.Error("ensure module release", slog.String("module_name", moduleName), log.Err(err))
-
-					continue
-				}
+			err = r.fetchModuleReleases(ctx, md, moduleName, &meta, source, policy.Name, opts)
+			if err != nil {
+				r.logger.Error("fetch module releases", log.Err(err))
 			}
 		}
 
@@ -423,10 +419,11 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 	// update source status
 	err := ctrlutils.UpdateStatusWithRetry(ctx, r.client, source, func() error {
 		source.Status.Phase = v1alpha1.ModuleSourcePhaseActive
-		source.Status.SyncTime = metav1.NewTime(r.dependencyContainer.GetClock().Now().UTC())
+		source.Status.SyncTime = metav1.NewTime(r.dc.GetClock().Now().UTC())
 		source.Status.AvailableModules = availableModules
 		source.Status.ModulesCount = len(availableModules)
 		source.Status.Message = ""
+
 		if pullErrorsExist {
 			source.Status.Message = v1alpha1.ModuleSourceMessagePullErrors
 		}
@@ -514,99 +511,4 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 	}
 
 	return ctrl.Result{}, nil
-}
-
-// getIntermediateModuleVersions returns a sorted list of versions between currentVersion and targetVersion (including target)
-func (r *reconciler) getIntermediateModuleVersions(
-	ctx context.Context,
-	source *v1alpha1.ModuleSource,
-	opts []cr.Option,
-	moduleName, currentVersionStr, targetVersionStr string,
-) ([]*semver.Version, error) {
-	targetVersion, err := semver.NewVersion(targetVersionStr)
-	if err != nil {
-		return nil, fmt.Errorf("parse target version: %w", err)
-	}
-
-	// if current version is empty, return only target version
-	if currentVersionStr == "" {
-		return []*semver.Version{targetVersion}, nil
-	}
-
-	currentVersion, err := semver.NewVersion(currentVersionStr)
-	if err != nil {
-		return nil, fmt.Errorf("parse current version: %w", err)
-	}
-
-	// if versions they differ only in patch or differ only in one minor version, return only target version
-	if currentVersion.Major() == targetVersion.Major() &&
-		(currentVersion.Minor() == targetVersion.Minor() || currentVersion.IncMinor().Minor() == targetVersion.Minor()) {
-		return []*semver.Version{targetVersion}, nil
-	}
-
-	releases := new(v1alpha1.ModuleReleaseList)
-	if err := r.client.List(ctx, releases, client.MatchingLabels{"module": moduleName}); err != nil {
-		return nil, fmt.Errorf("list releases: %w", err)
-	}
-
-	if len(releases.Items) > 0 {
-		lastRelease := releases.Items[len(releases.Items)-1]
-		lastReleaseVersion, err := semver.NewVersion(lastRelease.Spec.Version)
-		if err != nil {
-			return nil, fmt.Errorf("parse last release version: %w", err)
-		}
-		if lastReleaseVersion.Major() == targetVersion.Major() &&
-			(lastReleaseVersion.Minor() == targetVersion.Minor() || lastReleaseVersion.IncMinor().Minor() == targetVersion.Minor()) {
-			return []*semver.Version{targetVersion}, nil
-		}
-
-		// we need to get all versions what not present in cluster
-		currentVersion = lastReleaseVersion
-	}
-
-	// if versions in cluster are not in the same major version, we need to get all versions
-	registryClient, err := r.dependencyContainer.GetRegistryClient(path.Join(source.Spec.Registry.Repo, moduleName), opts...)
-	if err != nil {
-		return nil, fmt.Errorf("get registry client: %w", err)
-	}
-
-	tags, err := registryClient.ListTags(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("list tags: %w", err)
-	}
-
-	v := &semver.Version{}
-	versions := make([]*semver.Version, 0, len(tags))
-	for _, tag := range tags {
-		v, err = semver.NewVersion(tag)
-		if err == nil {
-			if (v.Compare(currentVersion) > -1) && (v.Compare(targetVersion) < 1) {
-				versions = append(versions, v)
-			}
-		}
-	}
-
-	sort.Sort(semver.Collection(versions))
-
-	return keepLastPatchVersion(versions), nil
-}
-
-// keepLastPatchVersion keeps only the last patch version for each minor version
-// and returns a sorted list of versions
-// e.g. 1.0.0, 1.0.1, 1.1.0, 1.1.1 -> 1.0.1, 1.1.1
-func keepLastPatchVersion(versions []*semver.Version) []*semver.Version {
-	versionsMap := make(map[string]*semver.Version)
-	for _, v := range versions {
-		index := fmt.Sprintf("%d.%d", v.Major(), v.Minor())
-		versionsMap[index] = v
-	}
-
-	result := make([]*semver.Version, 0)
-	for _, v := range versionsMap {
-		result = append(result, v)
-	}
-
-	sort.Sort(semver.Collection(result))
-
-	return result
 }
