@@ -17,11 +17,17 @@ imageSpec:
 git:
   - add: /{{ .ModulePath }}docs/site/backends/docs-builder-template
     to: /app/hugo
+    stageDependencies:
+      install:
+      - '**/*'
 {{ if ne .ModuleName "docs" }}
     excludePaths:
     - config/production/
   - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/modules-docs/hugo.yaml
     to: /app/hugo/config/production/hugo.yaml
+    stageDependencies:
+      install:
+      - '**/*'
 {{ end }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact

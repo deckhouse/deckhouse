@@ -5,6 +5,9 @@ final: false
 git:
 - add: /{{ $.ModulePath }}modules/040-node-manager/images/fencing-agent/src
   to: /src
+  stageDependencies:
+    install:
+    - '**/*'
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 fromImage: builder/golang-alpine

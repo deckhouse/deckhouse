@@ -4,6 +4,9 @@ fromImage: common/distroless
 git:
 - add: /{{ $.ModulePath }}modules/340-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/extended-monitoring.py
   to: /app/extended-monitoring.py
+  stageDependencies:
+    install:
+    - '**/*'
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
   add: /

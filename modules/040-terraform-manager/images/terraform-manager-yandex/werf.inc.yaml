@@ -3,6 +3,9 @@ fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "prov
 git:
 - add: /{{ .ModulePath }}candi/cloud-providers/yandex
   to: /deckhouse/candi/cloud-providers/yandex
+  stageDependencies:
+    install:
+    - '**/*'
 import:
 - image: terraform-provider-yandex
   add: /terraform-provider-yandex
