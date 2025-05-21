@@ -3648,6 +3648,27 @@ alerts:
         Alerting dead man's switch.
       severity: "4"
       markupFormat: default
+    - name: DeckhouseModuleUpdatingFailed
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        The '{{ $labels.module }}' Module update has failed.
+
+        Possible reasons:
+
+        - The next minor or patch version of the Module image is not available in the registry.
+        - The Module image is corrupted.
+
+        Current version: {{ $labels.actual_version }}.
+        Failed version: {{ $labels.version }}.
+
+        To resolve this issue, ensure that the next version of the Module image is available in the registry.
+      summary: |
+        Module update has failed.
+      severity: "4"
+      markupFormat: markdown
     - name: DeckhouseModuleUseEmptyDir
       sourceFile: modules/300-prometheus/monitoring/prometheus-rules/emptydir.yaml
       moduleUrl: 300-prometheus
