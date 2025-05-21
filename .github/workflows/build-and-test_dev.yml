@@ -503,7 +503,7 @@ jobs:
 
       - name: Check generated code
         run: |
-          git diff --exit-code
+          git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
     # </template: go_generate_template>
 
 
