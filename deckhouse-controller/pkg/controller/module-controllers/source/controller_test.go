@@ -113,7 +113,7 @@ func (suite *ControllerTestSuite) setupTestController(raw string, options ...rec
 		client:               suite.client,
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		dc:                   dependency.NewDependencyContainer(),
-		logger:               log.NewLogger(log.Options{}),
+		logger:               log.NewNop(),
 		metricStorage:        metricstorage.NewMetricStorage(context.Background(), "", true, log.NewNop()),
 
 		embeddedPolicy: helpers.NewModuleUpdatePolicySpecContainer(&v1alpha2.ModuleUpdatePolicySpec{
@@ -307,7 +307,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		dc := newMockedContainerWithData(suite.T(),
 			"v1.4.2",
 			[]string{"enabledmodule"},
-			[]string{"v1.2.2", "v1.2.3", "v1.2.4", "v1.3.1", "v1.3.2", "v1.4.1", "v1.4.2", "v1.4.3"})
+			[]string{})
 		suite.setupTestController(string(suite.parseTestdata("without-module-releases.yaml")), withDependencyContainer(dc))
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
 		require.NoError(suite.T(), err)
