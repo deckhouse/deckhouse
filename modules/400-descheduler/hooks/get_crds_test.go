@@ -161,6 +161,7 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("descheduler.internal.deschedulers").String()).To(MatchYAML(`
 - name: test
+  evictLocalStoragePods: false
   strategies:
     lowNodeUtilization:
       enabled: true
@@ -188,6 +189,7 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("descheduler.internal.deschedulers").String()).To(MatchYAML(`
 - name: test
+  evictLocalStoragePods: false
   strategies:
     lowNodeUtilization:
       enabled: true
@@ -234,6 +236,7 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
 			Expect(f.ValuesGet("descheduler.internal.deschedulers").String()).To(MatchYAML(`
 - nodeLabelSelector: node.deckhouse.io/group in (test1,test2)
   name: test3
+  evictLocalStoragePods: false
   strategies:
     highNodeUtilization:
       enabled: true
@@ -257,6 +260,7 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
 			Expect(f.ValuesGet("descheduler.internal.deschedulers").String()).To(MatchYAML(`
 - nodeLabelSelector: node.deckhouse.io/group=test3
   name: test4
+  evictLocalStoragePods: false
   strategies:
     highNodeUtilization:
       enabled: false
@@ -280,6 +284,7 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
 			Expect(f.ValuesGet("descheduler.internal.deschedulers").String()).To(MatchYAML(`
 - nodeLabelSelector: node.deckhouse.io/group in (test1,test2)
   name: test5
+  evictLocalStoragePods: false
   podLabelSelector:
     matchExpressions:
       - key: dbType
