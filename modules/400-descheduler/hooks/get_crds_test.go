@@ -203,6 +203,7 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
         memory: 20
         pods: 30
 - name: test2
+  evictLocalStoragePods: false
   strategies:
     highNodeUtilization:
       enabled: false
