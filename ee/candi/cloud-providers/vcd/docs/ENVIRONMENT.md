@@ -209,6 +209,7 @@ Follow these steps to be able to connect to the virtual machine:
 Log on to the virtual machine over SSH and run the following commands:
 
 ```shell
+rm /etc/netplan/99-netcfg-vmware.yaml
 echo -e '\n[deployPkg]\nwait-cloudinit-timeout=1800\n' >> /etc/vmware-tools/tools.conf
 echo 'disable_vmware_customization: true' > /etc/cloud/cloud.cfg.d/91_vmware_cust.cfg
 dpkg-reconfigure cloud-init

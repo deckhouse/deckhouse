@@ -209,6 +209,7 @@ _Network type_ должен быть _Routed_:
 Войдите на виртуальную машину по SSH и выполните следующие команды:
 
 ```shell
+rm /etc/netplan/99-netcfg-vmware.yaml
 echo -e '\n[deployPkg]\nwait-cloudinit-timeout=1800\n' >> /etc/vmware-tools/tools.conf
 echo 'disable_vmware_customization: true' > /etc/cloud/cloud.cfg.d/91_vmware_cust.cfg
 dpkg-reconfigure cloud-init
