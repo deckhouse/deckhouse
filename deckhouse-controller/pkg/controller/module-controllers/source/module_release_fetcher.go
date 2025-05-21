@@ -197,9 +197,8 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 	defer span.End()
 
 	metricLabels := map[string]string{
-		"module":         f.moduleName,
-		"version":        f.targetReleaseMeta.ModuleVersion,
-		"actual_version": "v" + releaseForUpdate.GetVersion().String(),
+		"module":  f.moduleName,
+		"version": f.targetReleaseMeta.ModuleVersion,
 	}
 
 	if len(releasesInCluster) == 0 {
@@ -214,6 +213,7 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 	}
 
 	// create release if deployed release and new release are in updating sequence
+	metricLabels["actual_version"] = "v" + releaseForUpdate.GetVersion().String()
 	actual := releaseForUpdate
 	if isUpdatingSequence(actual.GetVersion(), newSemver) {
 		err := f.ensureModuleRelease(ctx, f.targetReleaseMeta, "from deployed")
