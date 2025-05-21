@@ -8,17 +8,17 @@ lang: ru
 
 Чтобы настроить доступ, выполните следующие шаги:
 
-1. Включите публикацию Kubernetes API. Для этого отредактируйте настройки модуля `user-authn` (если ресурс ModuleConfig не существует — создайте его):
+1. Включите публикацию Kubernetes API. Для этого установите параметр `publishAPI.enabled: true` в настройках модуля `user-authn` (moduleConfig `user-authn`) или с помощью веб-интерфейса администратора Deckhouse.
 
-   ```console
-   kubectl edit moduleconfig user-authn
-   ```
-
-   Добавьте в раздел `settings`:
-
+   Пример конфигурации модуля:
+   
    ```yaml
-   publishAPI:
+   spec:
      enabled: true
+     version: 2
+     settings:
+       publishAPI:
+         enabled: true
    ```
 
 1. Откройте веб-интерфейс kubeconfig. Веб-интерфейс для генерации kubeconfig в DKP активируется автоматически после включения параметра `publishAPI` в модуле `user-authn`. Этот веб-интерфейс доступен по URL:
