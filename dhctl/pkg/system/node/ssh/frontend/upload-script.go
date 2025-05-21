@@ -30,6 +30,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tar"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
@@ -163,8 +164,7 @@ func (u *UploadScript) ExecuteBundle(ctx context.Context, parentDir, bundleDir s
 	bundleLocalFilepath := filepath.Join(app.TmpDirName, bundleName)
 
 	// tar cpf bundle.tar -C /tmp/dhctl.1231qd23/var/lib bashible
-	tarCmd := exec.CommandContext(ctx, "tar", "cpf", bundleLocalFilepath, "-C", parentDir, bundleDir)
-	err = tarCmd.Run()
+	err = tar.CreateTar(bundleLocalFilepath, parentDir, bundleDir)
 	if err != nil {
 		return nil, fmt.Errorf("tar bundle: %v", err)
 	}
