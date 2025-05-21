@@ -5,17 +5,17 @@ final: false
 import:
 - image: tools/coreutils
   add: /usr
-  to: /coreutils/usr
+  to: /coreutils
   before: install
 - image: tools/bash
   add: /usr
-  to: /bash/usr
+  to: /bash
   before: install
 shell:
   install:
   - mkdir -p /relocate
-  - /binary_replace.sh -i "/coreutils/usr" -o /relocate
-  - /binary_replace.sh -i "/bash/usr" -o /relocate
+  - /binary_replace.sh -i "/coreutils" -o /relocate
+  - /binary_replace.sh -i "/bash" -o /relocate
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: base/distroless
@@ -36,3 +36,4 @@ imageSpec:
   config:
     env: { "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", "LANG": "C.UTF-8", "LANGUAGE": "C.UTF-8", "LC_ALL": "C.UTF-8" }
     workingDir: "/"
+    cmd: ["/usr/bin/bash"]
