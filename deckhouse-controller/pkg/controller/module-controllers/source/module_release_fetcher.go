@@ -196,9 +196,17 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 	ctx, span := otel.Tracer(serviceName).Start(ctx, "ensureReleases")
 	defer span.End()
 
+	metricLabels := map[string]string{
+		"module":         f.moduleName,
+		"version":        f.targetReleaseMeta.ModuleVersion,
+		"actual_version": "v" + releaseForUpdate.GetVersion().String(),
+	}
+
 	if len(releasesInCluster) == 0 {
 		err := f.ensureModuleRelease(ctx, f.targetReleaseMeta, "no releases in cluster")
 		if err != nil {
+			f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup+"-"+strcase.ToKebab(f.moduleName), metricUpdatingFailedGroup, 1, metricLabels)
+
 			return fmt.Errorf("create release %s: %w", f.targetReleaseMeta.ModuleVersion, err)
 		}
 
@@ -210,6 +218,8 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 	if isUpdatingSequence(actual.GetVersion(), newSemver) {
 		err := f.ensureModuleRelease(ctx, f.targetReleaseMeta, "from deployed")
 		if err != nil {
+			f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup+"-"+strcase.ToKebab(f.moduleName), metricUpdatingFailedGroup, 1, metricLabels)
+
 			return fmt.Errorf("create release %s: %w", f.targetReleaseMeta.ModuleVersion, err)
 		}
 
@@ -232,6 +242,8 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 		if isUpdatingSequence(actual.GetVersion(), newSemver) {
 			err := f.ensureModuleRelease(ctx, f.targetReleaseMeta, "from last release in cluster")
 			if err != nil {
+				f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup+"-"+strcase.ToKebab(f.moduleName), metricUpdatingFailedGroup, 1, metricLabels)
+
 				return fmt.Errorf("create release %s: %w", f.targetReleaseMeta.ModuleVersion, err)
 			}
 
@@ -241,10 +253,10 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 
 	vers, err := f.getNewVersions(ctx, actual.GetVersion(), newSemver)
 	if err != nil {
+		f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup+"-"+strcase.ToKebab(f.moduleName), metricUpdatingFailedGroup, 1, metricLabels)
+
 		return fmt.Errorf("get next version: %w", err)
 	}
-
-	f.metricStorage.Grouped().ExpireGroupMetrics(metricUpdatingFailedGroup + "-" + strcase.ToKebab(f.moduleName))
 
 	current := actual.GetVersion()
 	for _, ver := range vers {
