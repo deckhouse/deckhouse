@@ -7,7 +7,7 @@ To synchronize time on Deckhouse cluster nodes,
 DKP uses a built-in solution based on [chrony](https://chrony-project.org/).
 Using the Network Time Protocol (NTP),
 DKP ensures that system clocks on cluster nodes are synchronized with external NTP servers.
-If needed, you can disable the built-in mechanism and use custom NTP daemons.
+If required, you can disable this built-in mechanism and configure custom NTP daemons.
 
 ## Enabling built-in time synchronization
 
@@ -29,7 +29,7 @@ spec:
 EOF
 ```
 
-## Using external NTP daemons
+## Using custom NTP daemons
 
 1. To disable the built-in time synchronization mechanism and use your own NTP daemons on the nodes,
    disable the `chrony` module:
