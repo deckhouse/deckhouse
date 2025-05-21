@@ -213,8 +213,8 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 	}
 
 	// create release if deployed release and new release are in updating sequence
-	metricLabels["actual_version"] = "v" + releaseForUpdate.GetVersion().String()
 	actual := releaseForUpdate
+	metricLabels["actual_version"] = "v" + actual.GetVersion().String()
 	if isUpdatingSequence(actual.GetVersion(), newSemver) {
 		err := f.ensureModuleRelease(ctx, f.targetReleaseMeta, "from deployed")
 		if err != nil {
