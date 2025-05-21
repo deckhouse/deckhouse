@@ -41,21 +41,25 @@ type TaskCalculator struct {
 	listFunc func(ctx context.Context, c client.Client, moduleName string) ([]v1alpha1.Release, error)
 
 	log *log.Logger
+
+	releaseChannel string
 }
 
-func NewDeckhouseReleaseTaskCalculator(k8sclient client.Client, logger *log.Logger) *TaskCalculator {
+func NewDeckhouseReleaseTaskCalculator(k8sclient client.Client, logger *log.Logger, releaseChannel string) *TaskCalculator {
 	return &TaskCalculator{
-		k8sclient: k8sclient,
-		listFunc:  listDeckhouseReleases,
-		log:       logger,
+		k8sclient:      k8sclient,
+		listFunc:       listDeckhouseReleases,
+		log:            logger,
+		releaseChannel: releaseChannel,
 	}
 }
 
-func NewModuleReleaseTaskCalculator(k8sclient client.Client, logger *log.Logger) *TaskCalculator {
+func NewModuleReleaseTaskCalculator(k8sclient client.Client, logger *log.Logger, releaseChannel string) *TaskCalculator {
 	return &TaskCalculator{
-		k8sclient: k8sclient,
-		listFunc:  listModuleReleases,
-		log:       logger,
+		k8sclient:      k8sclient,
+		listFunc:       listModuleReleases,
+		log:            logger,
+		releaseChannel: releaseChannel,
 	}
 }
 
@@ -103,7 +107,7 @@ const ltsReleaseChannel = "lts"
 // calculating flow:
 // 1) find forced release. if current release has a lower version - skip
 // 2) find deployed release. if current release has a lower version - skip
-func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, release v1alpha1.Release, releaseChannel string) (*Task, error) {
+func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, release v1alpha1.Release) (*Task, error) {
 	ctx, span := otel.Tracer(taskCalculatorServiceName).Start(ctx, "calculatePendingReleaseTask")
 	defer span.End()
 
@@ -169,6 +173,7 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 		return a.GetVersion().Compare(b)
 	})
 
+	// max value for release queue depth is 3 due to the alert's logic, having queue depth greater than 3 breaks this logic
 	releaseQueueDepth := min(len(releases)-1-releaseIdx, 3)
 	isLatestRelease := releaseQueueDepth == 0
 	isPatch := true
@@ -203,7 +208,7 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 			// here we have only Deployed phase releases in prevRelease
 			// it must await if deployed release has minor version more than one
 			// and release channel is not LTS
-			if release.GetVersion().Minor()-1 > prevRelease.GetVersion().Minor() && strings.ToLower(releaseChannel) != ltsReleaseChannel {
+			if release.GetVersion().Minor()-1 > prevRelease.GetVersion().Minor() && strings.ToLower(p.releaseChannel) != ltsReleaseChannel {
 				msg := fmt.Sprintf("minor version is greater than deployed %s by one", prevRelease.GetVersion().Original())
 
 				logger.Debug("release awaiting", slog.String("reason", msg))

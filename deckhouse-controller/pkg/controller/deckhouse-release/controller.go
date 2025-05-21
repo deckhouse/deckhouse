@@ -341,9 +341,9 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		r.registrySecret = registrySecret
 	}
 
-	taskCalculator := releaseUpdater.NewDeckhouseReleaseTaskCalculator(r.client, r.logger)
+	taskCalculator := releaseUpdater.NewDeckhouseReleaseTaskCalculator(r.client, r.logger, r.updateSettings.Get().ReleaseChannel)
 
-	task, err := taskCalculator.CalculatePendingReleaseTask(ctx, dr, r.updateSettings.Get().ReleaseChannel)
+	task, err := taskCalculator.CalculatePendingReleaseTask(ctx, dr)
 	if err != nil {
 		return res, err
 	}
