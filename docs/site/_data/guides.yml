@@ -19,3 +19,45 @@
   tags:
     - baremetal
     - production
+- name:
+    ru: "Подготовка к production"
+    en: "Going to Production"
+  link: "production.html"
+  description:
+    ru: Что нужно не забыть и о чем нужно позаботиться при подготовке кластера к работе с реальными нагрузками.
+    en: What needs to be remembered and what should be taken care of when preparing the cluster for work with real workloads.
+  tags:
+    - baremetal
+    - cloud
+    - production
+- name:
+    ru: "Аппаратные требования к узлам кластера на bare metal"
+    en: "Hardware requirements for bare metal cluster nodes"
+  link: "hardware-requirements.html"
+  description:
+    ru: Руководство поможет определить "железо" и рассчитать его параметры, при развертывании Deckhouse Kubernetes Platform на bare metal.
+    en: The guide will help determine the hardware and calculate its parameters when deploying the Deckhouse Kubernetes Platform on bare metal.
+  tags:
+    - baremetal
+    - production
+- name:
+    ru: "Подготовка к production"
+    en: "Going to Production"
+  link: "production.html"
+  description:
+    ru: Что нужно не забыть и о чем нужно позаботиться при подготовке кластера к работе с реальными нагрузками.
+    en: What needs to be remembered and what should be taken care of when preparing the cluster for work with real workloads.
+  tags:
+    - baremetal
+    - cloud
+    - production
+- name:
+    ru: "Аппаратные требования к узлам кластера на bare metal"
+    en: "Hardware requirements for bare metal cluster nodes"
+  link: "hardware-requirements.html"
+  description:
+    ru: Руководство поможет определить "железо" и рассчитать его параметры, при развертывании Deckhouse Kubernetes Platform на bare metal.
+    en: The guide will help determine the hardware and calculate its parameters when deploying the Deckhouse Kubernetes Platform on bare metal.
+  tags:
+    - baremetal
+    - production

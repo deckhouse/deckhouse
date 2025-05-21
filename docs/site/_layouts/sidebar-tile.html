@@ -4,11 +4,11 @@ layout: default
 <!--#include virtual="/includes/banner.html" -->
 <div class="container">
   {%- include nav-breadcrumbs_tile.html %}
-  <div class="layout-sidebar">
-    <div class="layout-sidebar__sidebar">
+  <div class="layout-sidebar layout-sidebar__tile">
+    <div class="layout-sidebar__sidebar layout-sidebar__sidebar--tile">
     </div>
-    <div class="layout-sidebar__content">
-        <h1 class="gadline__title">{{ page.title }}</h1>
+    <div class="layout-sidebar__content layout-sidebar__content--tile">
+        <h1 class="tile__title">{{ page.title }}</h1>
         {{ content }}
     </div>
   </div>

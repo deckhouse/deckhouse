@@ -12,6 +12,10 @@
     //width: 300px;
     width: 297px;
     margin-right: 64px;
+
+      @media screen and (width < 1500px) {
+        margin-right: 54px;
+      }
 }
 
 .breadcrumbs__right {
@@ -313,16 +317,6 @@
     color: #00122c;
     outline: none;
     width: 100%;
-
-    &-tile {
-      min-height: 40px;
-      padding-left: 16px;
-      border-radius: 4px;
-      background-image: url(../images/icons/search_v2.svg);
-      color: $color-text-secondary;
-      letter-spacing: 0.3px;
-      line-height: 24px;
-    }
 }
 
 .search__input:focus, .search__input:active {
@@ -336,6 +330,12 @@
 
   @media screen and (width < 1500px) {
     gap: 54px;
+  }
+
+  &__tile {
+      @media screen and (width < 1100px) {
+          gap: 35px;
+      }
   }
 }
 
@@ -400,6 +400,12 @@
     @media screen and (max-width: 1000px) {
         background: #fff;
         z-index: 1;
+    }
+
+    &--tile {
+      @media screen and (width < 1500px) {
+        max-width: 100%;
+    }
     }
 }
 
@@ -2014,91 +2020,5 @@ select#contact-select {
       transform: rotate(180deg);
     }
   }
-}
-
-.button-tile {
-    flex-direction: column;
-    box-sizing: border-box;
-    gap: 16px;
-    min-width: 320px;
-    max-width: 391px;
-    padding: 24px;
-    border-radius: 4px;
-    transition: box-shadow 0.3s ease, border-left 0.3s ease;
-    border-left: 4px solid transparent;
-    box-shadow: 0px 0px 4px 0px rgba(0, 0, 0, 0.15);
-    cursor: pointer;
-
-    &:hover {
-      box-shadow: 0px 0px 6px 0px rgba(0, 0, 0, 0.08), 0px 4px 16px 0px rgba(0, 0, 0, 0.4);
-      border-left: 4px solid $primary-700;
-    }
-
-    &__title {
-      margin: 0;
-      font-weight: $font-weight-semibold;
-      font-size: 20px;
-      line-height: 100%;
-      color: #2b313b;
-    }
-
-    &__descr {
-      margin: 0;
-      font-weight: $font-weight-regular;
-      font-size: 14px;
-      line-height: 24px;
-      letter-spacing: 0.3px;
-      color: #2B313B;
-    }
-
-    &__time {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-weight: $font-weight-regular;
-      font-size: 14px;
-      line-height: 24px;
-      letter-spacing: 0.3px;
-    }
-
-    &__bottom {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-}
-
-.tile {
-  &__descr {
-    margin: 0;
-    margin-bottom: 40px;
-    font-weight: $font-weight-semibold;
-    font-size: 18px;
-    line-height: 100%;
-    color: $color-text-secondary;
-  }
-
-  &__pagination {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    margin-bottom: 100px;
-    width: 100%;
-    height: 40px;
-    border-radius: 4px;
-    border: 1px solid #BBBBBB;
-    background-color: $color-inverse;
-    cursor: pointer;
-
-    &--descr {
-      font-weight: 500;
-      font-size: 16px;
-      line-height: 24px;
-      letter-spacing: 1%;
-      color: #0D69F2;
-    }
-  }
-
 }
 

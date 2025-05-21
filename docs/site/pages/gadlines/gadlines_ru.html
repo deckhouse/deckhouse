@@ -6,20 +6,23 @@ lang: ru
 toc: false
 ---
 
-<link rel="stylesheet" type="text/css" href='{% css_asset_tag tile-css %}[_assets/css/tile.css]{% endcss_asset_tag %}' />
 <script type="text/javascript" src='{% javascript_asset_tag tile %}[_assets/js/tile.js]{% endjavascript_asset_tag %}'></script>
 
   <p class="tile__descr">Guides, Step-by-Step Walkthroughs, Cheats, FAQs and more</p>
 
   <div class="block__tile">
-    {%- for guides in site.data.guides %}
-      <a class="button-tile" href="{{ guides.link }}">
-        <h2 class="button-tile__title">{{ guides.name.ru }}</h2>
-        <p class="button-tile__descr">{{ guides.description.ru }}</p>
+    {%- for gadlines in site.data.guides %}
+      <a class="button-tile" href="{{ gadlines.link }}">
+        <h2 class="button-tile__title">{{ gadlines.name.ru }}</h2>
+        <p class="button-tile__descr">{{ gadlines.description.ru }}</p>
         <div class="button-tile__bottom">
-          <span class="sidebar__badge--container">
-            <span class="sidebar__badge_v2">{{ guides.tags.ru }}</span>
-          </span>
+          <div class="button-tile__tags">
+            {%- for tags in gadlines.tags %}
+              <span class="sidebar__badge--container">
+                <span class="sidebar__badge_v2">{{ tags }}</span>
+              </span>
+            {% endfor %}
+          </div>
           <div class="button-tile__time">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
               <circle cx="6" cy="6" r="5.25" stroke="#5E6697" stroke-width="1.5"/>
