@@ -84,7 +84,6 @@ type dependencyContainer struct {
 
 	m          sync.RWMutex
 	isTestEnv  *bool
-	httpClient http.Client
 	helmClient clients
 }
 
