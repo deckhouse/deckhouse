@@ -11,8 +11,12 @@ import:
     to: /
     before: install
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-    add: /relocate-lib
-    to: /
+    add: /relocate/lib64
+    to: /lib
+    before: install
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+    add: /relocate/lib64
+    to: /lib64
     before: install
 imageSpec:
   config:
@@ -118,5 +122,4 @@ import:
     before: install
 shell:
   install:
-  - mkdir -p relocate-lib
-  - /binary_replace.sh -i /usr/bin/vector -o /relocate-lib
+  - /binary_replace.sh -i /usr/bin/vector -o /relocate
