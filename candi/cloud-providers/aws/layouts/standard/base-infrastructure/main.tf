@@ -72,7 +72,7 @@ resource "aws_subnet" "kube_internal" {
 }
 
 resource "aws_eip" "natgw" {
-  vpc = true
+  domain = "vpc"
 
   tags = merge(local.tags, {
     Name = "${local.prefix}-natgw"
