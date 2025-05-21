@@ -78,10 +78,6 @@ def get_old_tests():
                     obsolete_tests_counter += 1
                     removed_tests_counter = delete_test(test, removed_tests_counter)
 
-                #if other version - delete as most likely it is from dev branch
-                else:
-                    obsolete_tests_counter += 1
-                    removed_tests_counter = delete_test(test, removed_tests_counter)
     if obsolete_tests_counter > 0:
         print(f'"Obsolete tests were removed: {removed_tests_counter}/{obsolete_tests_counter}')
     else:

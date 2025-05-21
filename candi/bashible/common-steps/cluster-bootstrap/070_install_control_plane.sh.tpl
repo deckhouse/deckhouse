@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+{{ $kubernetesVersion := .kubernetesVersion | toString }}
+{{ $kubeadmDir := ternary "/var/lib/bashible/kubeadm/v1beta4" "/var/lib/bashible/kubeadm/v1beta3" (semverCompare ">=1.31" $kubernetesVersion) }}
+
 check_container_running() {
   local container_name=$1
   local max_retries=20
@@ -38,17 +41,17 @@ check_container_running() {
 check_container_running "kubernetes-api-proxy-reloader"
 check_container_running "kubernetes-api-proxy"
 mkdir -p /etc/kubernetes/deckhouse/kubeadm/patches/
-cp /var/lib/bashible/kubeadm/patches/* /etc/kubernetes/deckhouse/kubeadm/patches/
-kubeadm init phase certs all --config /var/lib/bashible/kubeadm/config.yaml
-kubeadm init phase kubeconfig all --config /var/lib/bashible/kubeadm/config.yaml
-kubeadm init phase etcd local --config /var/lib/bashible/kubeadm/config.yaml
+cp {{ $kubeadmDir}}/patches/* /etc/kubernetes/deckhouse/kubeadm/patches/
+kubeadm init phase certs all --config {{ $kubeadmDir}}/config.yaml
+kubeadm init phase kubeconfig all --config {{ $kubeadmDir}}/config.yaml
+kubeadm init phase etcd local --config {{ $kubeadmDir}}/config.yaml
 check_container_running "etcd"
-kubeadm init phase control-plane all --config /var/lib/bashible/kubeadm/config.yaml
+kubeadm init phase control-plane all --config {{ $kubeadmDir}}/config.yaml
 check_container_running "kube-apiserver"
 check_container_running "healthcheck"
 check_container_running "kube-controller-manager"
 check_container_running "kube-scheduler"
-kubeadm init phase mark-control-plane --config /var/lib/bashible/kubeadm/config.yaml
+kubeadm init phase mark-control-plane --config {{ $kubeadmDir}}/config.yaml
 
 # CIS becnhmark purposes
 chmod 600 /etc/kubernetes/pki/*.{crt,key} /etc/kubernetes/pki/etcd/*.{crt,key}

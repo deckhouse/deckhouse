@@ -1,5 +1,6 @@
 name: documentation
 weight: 810
+stage: "General Availability"
 description: |
   Documentation module
 descriptions:

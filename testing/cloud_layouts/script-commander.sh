@@ -177,14 +177,22 @@ function prepare_environment() {
     ;;
 
   "Azure")
-    # shellcheck disable=SC2016
-    env SUBSCRIPTION_ID="$LAYOUT_AZURE_SUBSCRIPTION_ID" CLIENT_ID="$LAYOUT_AZURE_CLIENT_ID" \
-        CLIENT_SECRET="$LAYOUT_AZURE_CLIENT_SECRET"  TENANT_ID="$LAYOUT_AZURE_TENANT_ID" \
-        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" MASTERS_COUNT="$MASTERS_COUNT" \
-        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${TENANT_ID} ${CLIENT_SECRET} ${CLIENT_ID} ${SUBSCRIPTION_ID} ${MASTERS_COUNT}' \
-        <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
-
     ssh_user="azureuser"
+    cluster_template_id="3900de40-547c-4c62-927c-ef42018d62f4"
+    values="{
+      \"branch\": \"${DEV_BRANCH}\",
+      \"prefix\": \"a${PREFIX}\",
+      \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
+      \"defaultCRI\": \"${CRI}\",
+      \"masterCount\": \"${MASTERS_COUNT}\",
+      \"subscriptionId\": \"${LAYOUT_AZURE_SUBSCRIPTION_ID}\",
+      \"clientId\": \"${LAYOUT_AZURE_CLIENT_ID}\",
+      \"clientSecret\": \"${LAYOUT_AZURE_CLIENT_SECRET}\",
+      \"tenantId\": \"${LAYOUT_AZURE_TENANT_ID}\",
+      \"sshPrivateKey\": \"${SSH_KEY}\",
+      \"sshUser\": \"${ssh_user}\",
+      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\"
+    }"
     ;;
 
   "OpenStack")
@@ -431,7 +439,7 @@ function update_comment() {
   # Check for HTTP errors
   if [[ ${http_code} -ge 400 ]]; then
     echo "Error: Getting comment error ${http_code}" >&2
-    echo "$response" >&2
+    echo "$comment" >&2
     return 1
   fi
 

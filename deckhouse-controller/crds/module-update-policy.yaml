@@ -276,9 +276,7 @@ spec:
 
                         - `Auto` — all updates are applied automatically.
 
-                          Modules minor version updates (release updates, for example, from `v1.26.*` to `v1.27.*`), are applied according to the [update windows](./modules/deckhouse/configuration.html#parameters-update-windows) or (if no update windows are set) as they appear on the corresponding release channel;
-
-                          A patch version update (for example, from `v1.65.1` to `v1.65.4`) is applied according to the [update windows](./modules/deckhouse/configuration.html#parameters-update-windows), if they are set.
+                          Minor version updates (for example, from `v1.26.*` to `v1.27.*`) and patch version updates (for example, from `v1.65.1` to `v1.65.4`) are applied according to the [update windows](./modules/deckhouse/configuration.html#parameters-update-windows) or (if no update windows are set) as they appear on the corresponding release channel.
 
                         - `Manual` — confirmation is required for updating both minor and patch versions.
 

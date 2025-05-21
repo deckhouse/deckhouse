@@ -18,7 +18,6 @@ package v1alpha2
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // +genclient
@@ -80,11 +79,4 @@ type RemovePodsViolatingNodeAffinity struct {
 
 type RemovePodsViolatingInterPodAntiAffinity struct {
 	Enabled bool `json:"enabled" yaml:"enabled"`
-}
-
-type deschedulerKind struct{}
-
-func (f *deschedulerKind) SetGroupVersionKind(_ schema.GroupVersionKind) {}
-func (f *deschedulerKind) GroupVersionKind() schema.GroupVersionKind {
-	return schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "Descheduler"}
 }
