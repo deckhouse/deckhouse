@@ -1501,6 +1501,42 @@ spec:
                   type: integer
                   description: |
                     Maximum duration (in seconds) for which the controller attempts to reschedule pods to a new machine during node draining.
+                gpu:
+                  type: object
+                  description: |
+                    GPU parameters.
+                  properties:
+                    sharing:
+                      type: string
+                      description: |
+                        GPU sharing strategy.
+                      enum:
+                        - mps
+                        - timeSlicing
+                        - mig
+                        - none
+                    mig:
+                      type: object
+                      properties:
+                        partedConfig:
+                          type: string
+                          description: |
+                            Selected parted-config for MIG.
+                          required: true
+                          x-doc-default: all-1g.5gb
+                  oneOf:
+                    - properties:
+                        type:
+                          enum: [Time-slicing]
+                        time-slicing: {}
+                    - properties:
+                        type:
+                          enum: [Mig]
+                        mig: {}
+                    - properties:
+                        type:
+                          enum: [Mps]
+                        mps: {}
                 cri:
                   type: object
                   description: |
