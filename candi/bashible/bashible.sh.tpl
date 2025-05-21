@@ -243,7 +243,7 @@ function main() {
     fi
     chmod +x $BOOTSTRAP_DIR/bashible-new.sh
     export BASHIBLE_SKIP_UPDATE=yes
-    bash --noprofile --norc -c $BOOTSTRAP_DIR/bashible-new.sh --no-lock
+    bash --noprofile --norc -c "$BOOTSTRAP_DIR/bashible-new.sh --no-lock"
 
     # At this step we already know that new version is functional
     mv $BOOTSTRAP_DIR/bashible-new.sh $BOOTSTRAP_DIR/bashible.sh
