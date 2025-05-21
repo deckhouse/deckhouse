@@ -11,8 +11,8 @@ import:
     to: /
     before: install
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-    add: /relocate
-    to: /
+    add: /relocate/lib64
+    to: /lib
     before: install
 imageSpec:
   config:
