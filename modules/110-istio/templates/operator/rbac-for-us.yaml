@@ -23,21 +23,9 @@ rules:
     - list
     - create
     - delete
-  - apiGroups:
-    - networking.k8s.io
-    resources:
-    - ingresses
-    - ingressclasses
-    - ingresses/status
-    verbs:
-    - get
-    - list
-    - watch
-    - create
-    - update
-    - patch
-    - delete
-    - deletecollection
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses", "ingressclasses", "ingresses/status"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"]
   - apiGroups:
     - ""
     resources:
