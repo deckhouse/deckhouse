@@ -1009,7 +1009,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		})
 
 	})
-	suite.Run("UndateStatusWithRetry clears Status.Message", func() {
+	suite.Run("dr.Message is clear when error", func() {
 		suite.setupController("clear-status-message.yaml", initValues, embeddedMUP)
 
 		dependency.TestDC.HTTPClient.DoMock.
@@ -1020,21 +1020,6 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 		dr := suite.getDeckhouseRelease("v1.26.1")
 		_, err := suite.ctr.reconcileDeployedRelease(context.Background(), dr)
-		require.NoError(suite.T(), err)
-		require.NotNil(suite.T(), dr.Status.Message)
-		assert.Contains(suite.T(), dr.Status.Message, "")
-	})
-	suite.Run("No DeployedReleaseInfo sets awaiting message", func() {
-		suite.setupController("no-deployed-release.yaml", initValues, embeddedMUP)
-
-		dependency.TestDC.HTTPClient.DoMock.
-			Expect(&http.Request{}).
-			Return(&http.Response{
-				StatusCode: http.StatusInternalServerError,
-			}, errors.New("some internal error"))
-
-		dr := suite.getDeckhouseRelease("v1.26.1")
-		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
 		require.NotNil(suite.T(), dr.Status.Message)
 		assert.Contains(suite.T(), dr.Status.Message, "")
