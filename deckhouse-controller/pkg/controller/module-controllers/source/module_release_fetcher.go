@@ -25,6 +25,7 @@ import (
 	"sort"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/ettle/strcase"
 	"github.com/flant/shell-operator/pkg/metric"
 	"github.com/jonboulle/clockwork"
 	"go.opentelemetry.io/otel"
@@ -163,7 +164,7 @@ func (f *ModuleReleaseFetcher) fetchModuleReleases(ctx context.Context) error {
 		return fmt.Errorf("parse semver: %w", err)
 	}
 
-	f.metricStorage.Grouped().ExpireGroupMetrics(metricUpdatingFailedGroup)
+	f.metricStorage.Grouped().ExpireGroupMetrics(metricUpdatingFailedGroup + "-" + strcase.ToKebab(f.moduleName))
 
 	// sort releases before
 	sort.Sort(releaseUpdater.ByVersion[*v1alpha1.ModuleRelease](releasesInCluster))
@@ -243,7 +244,7 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 		return fmt.Errorf("get next version: %w", err)
 	}
 
-	f.metricStorage.Grouped().ExpireGroupMetrics(metricUpdatingFailedGroup)
+	f.metricStorage.Grouped().ExpireGroupMetrics(metricUpdatingFailedGroup + "-" + strcase.ToKebab(f.moduleName))
 
 	current := actual.GetVersion()
 	for _, ver := range vers {
@@ -284,7 +285,7 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 				"actual_version": "v" + actual.GetVersion().String(),
 			}
 
-			f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup, metricUpdatingFailedGroup, 1, metricLabels)
+			f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup+"-"+strcase.ToKebab(f.moduleName), metricUpdatingFailedGroup, 1, metricLabels)
 		}
 
 		current = ver
