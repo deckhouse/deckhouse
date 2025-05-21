@@ -1,6 +1,6 @@
 ---
 title: "Обзор"
-permalink: ru/admin/access/authorization.html
+permalink: ru/admin/access/authorization-overview.html
 lang: ru
 ---
 
