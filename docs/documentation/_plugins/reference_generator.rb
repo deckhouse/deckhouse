@@ -43,19 +43,56 @@ module ReferenceGenerator
         'sitemap_include' => false
       }
 
-      self.content = renderD8Section(@referenceData, 1)
+      self.content = renderD8Section(@referenceData, 1, [])
 
       Jekyll::Hooks.trigger :pages, :post_init, self
     end
 
-    def renderD8Section(data, depth)
-      headerLevel = depth + 1
+    def clean_title(title)
+      # Delete everything in brackets (including nested brackets)
+      while title.gsub!(/[\[\(][^\[\]\(\)]*([\[\(][^\[\]\(\)]*[\]\)][^\[\]\(\)]*)*[\]\)]/, ''); end
+      
+      # Delete the word SUBCOMMAND (if the header does not consist only of it)
+      if title != "SUBCOMMAND"
+        title.gsub!(/\bSUBCOMMAND\b/, '')
+      end
+      
+      # Delete enums with | (but keep the text after them)
+      title.gsub!(/(^|\s)([^\s|]+\|)+[^\s|]+(\s|$)/) do |match|
+        # Save spaces and text after the enums
+        match.start_with?(' ') ? ' ' : ''
+      end
+      
+      # Remove the extra spaces
+      title.gsub(/\s+/, ' ').strip
+    end
+
+    def renderD8Section(data, depth, parent_titles)
       result = ""
+
+      # Skip rendering the top-level (d8) header
+      unless depth == 1
+        # Build the full title from parent titles and current name
+        full_title = (parent_titles + [data['name']]).join(' ')
+
+        # Determine header level and style
+        header_tag = depth == 2 ? 'h2' : 'h3'
+        style = depth == 2 ? ' style="text-decoration: underline;"' : ''
+        
+        # Add 'd8' prefix for h3 headers
+        full_title = "d8 #{full_title}" if header_tag == 'h3'
+        
+        # Clean the title
+        cleaned_title = clean_title(full_title)
+        
+        result += %Q(<#{header_tag}#{style}>#{cleaned_title}</#{header_tag}>\n)
+      end
+
+      # Add description after header
       result += "\n" + data['description'] + "\n\n" if data['description']
 
       # Render flags
       if data['flags'] && data['flags'].size > 0
-
         result += '<p>'
 
         if depth == 1
@@ -77,15 +114,13 @@ module ReferenceGenerator
 
       # Render commands
       if data['subcommands'] && data['subcommands'].size > 0
-        data['subcommands'].each do | subcommand |
-          #result += %Q(#{'#' * headerLevel} #{subcommand['name']}#{if subcommand['aliases'] then ' (' + subcommand['aliases'].join(',') + ')' end}\n\n)
-          result += %Q(<h#{headerLevel}>#{subcommand['name']}</h#{headerLevel}>\n)
-          #  result += %Q(#{'#' * headerLevel} #{subcommand}\n\n)
-          result += renderD8Section(subcommand, depth+1)
+        data['subcommands'].each do |subcommand|
+          # Pass current parent titles plus current name (unless it's top level)
+          new_parent_titles = depth == 1 ? [] : parent_titles + [data['name']]
+          result += renderD8Section(subcommand, depth + 1, new_parent_titles)
         end
       end
       result
     end
-
   end
 end
