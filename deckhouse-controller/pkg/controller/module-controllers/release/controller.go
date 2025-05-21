@@ -550,11 +550,11 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 		return res, err
 	}
 
-	taskCalculator := releaseUpdater.NewModuleReleaseTaskCalculator(r.client, r.log)
-
 	// releaseChannel is empty - use the default channel
 	const defaultReleaseChannel = ""
-	task, err := taskCalculator.CalculatePendingReleaseTask(ctx, release, defaultReleaseChannel)
+	taskCalculator := releaseUpdater.NewModuleReleaseTaskCalculator(r.client, r.log, defaultReleaseChannel)
+
+	task, err := taskCalculator.CalculatePendingReleaseTask(ctx, release)
 	if err != nil {
 		return res, err
 	}
