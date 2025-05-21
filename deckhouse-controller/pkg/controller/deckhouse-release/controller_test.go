@@ -1009,7 +1009,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		})
 
 	})
-	suite.Run("dr.Message is clear when error", func() {
+	suite.Run("dr.Message is clear when no deployment", func() {
 		suite.setupController("clear-status-message.yaml", initValues, embeddedMUP)
 
 		dependency.TestDC.HTTPClient.DoMock.
