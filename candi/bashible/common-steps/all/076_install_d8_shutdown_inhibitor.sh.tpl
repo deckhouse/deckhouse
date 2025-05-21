@@ -15,7 +15,13 @@
 {{- $inhibitorPkgName := "d8-shutdown-inhibitor" }}
 {{- $inhibitorIndex := "d8ShutdownInhibitor" }}
 {{- $inhibitorVersion := "0.1" | replace "." "" }}
-{{- $stopInhibitor := .stopAdditionalNodeShutdownInhibitor }}
+{{/* Enable additional inhibitor if graceful shutdown mode is set to 'BlockByPodLabel'. */}}
+{{- $enableInhibitor := false }}
+{{- if (eq .gracefulShutdown.mode "BlockByPodLabel") }}
+{{-   $enableInhibitor = true }}
+{{- end }}
+
+
 
 old_inhibitor_hash=""
 if [ -f "${BB_RP_INSTALLED_PACKAGES_STORE}/{{ $inhibitorPkgName }}/digest" ]; then
@@ -42,8 +48,74 @@ if bb-flag? reboot; then
   exit 0
 fi
 
-{{ if $stopInhibitor }}
-# Stop and disable d8-shutdown-inhibitor service. Also cleanup configuration in logind.conf.d.
+function inhibitor::enable() {
+  if systemctl is-enabled "d8-shutdown-inhibitor.service"; then
+    # Already enabled, do nothing.
+    return 0
+  fi
+
+  bb-log-info "Deckhouse shutdown inhibitor service is disabled. Enable it..."
+  if systemctl enable "d8-shutdown-inhibitor.service"; then
+    bb-log-info "Deckhouse shutdown inhibitor was enabled."
+  else
+    systemctl status "d8-shutdown-inhibitor.service"
+    bb-log-error "Deckhouse shutdown inhibitor has not been enabled."
+  fi
+}
+
+function inhibitor::disable() {
+  if ! systemctl is-enabled "d8-shutdown-inhibitor.service"; then
+    # Already disabled, do nothing.
+    return 0
+  fi
+
+  bb-log-warning "Deckhouse shutdown inhibitor service is enabled. Disable it..."
+  if systemctl disable "d8-shutdown-inhibitor.service"; then
+    bb-log-info "Deckhouse shutdown inhibitor was disabled."
+  else
+    systemctl status "d8-shutdown-inhibitor.service"
+    bb-log-error "Deckhouse shutdown inhibitor has not been disabled."
+  fi
+}
+
+function inhibitor::start() {
+  # Do nothing if already started.
+  if systemctl is-active --quiet "d8-shutdown-inhibitor.service"; then
+    bb-log-warning "Deckhouse shutdown inhibitor service is already running."
+    exit 0
+  fi
+
+  bb-log-warning "Deckhouse shutdown inhibitor service is not running. Starting it..."
+  if systemctl start "d8-shutdown-inhibitor.service"; then
+    bb-log-info "Deckhouse shutdown inhibitor has been started."
+  else
+    systemctl status "d8-shutdown-inhibitor.service"
+    bb-log-error "Deckhouse shutdown inhibitor has not been started. Exit"
+    exit 1
+  fi
+}
+
+function inhibitor::stop() {
+  # Do nothing if already stopped.
+  if ! systemctl is-active --quiet "d8-shutdown-inhibitor.service"; then
+    bb-log-warning "Deckhouse shutdown inhibitor service is already stopped."
+    # Cleanup logind configuration if not done previously.
+    bb-event-fire 'd8-shutdown-inhibitor-cleanup'
+    exit 0
+  fi
+
+  bb-log-warning "Deckhouse shutdown inhibitor service is running. Stop it..."
+  if systemctl stop "d8-shutdown-inhibitor.service"; then
+    bb-log-info "Deckhouse shutdown inhibitor has been stopped."
+  else
+    systemctl status "d8-shutdown-inhibitor.service"
+    bb-log-error "Deckhouse shutdown inhibitor has not been stopped. Exit"
+    exit 1
+  fi
+
+  # Cleanup logind configuration.
+  bb-event-fire 'd8-shutdown-inhibitor-cleanup'
+}
 
 bb-event-on 'd8-shutdown-inhibitor-cleanup' '_shutdown-inhibitor-cleanup'
 function _shutdown-inhibitor-cleanup() {
@@ -52,63 +124,10 @@ function _shutdown-inhibitor-cleanup() {
   systemctl -s SIGHUP kill systemd-logind
 }
 
-if systemctl is-enabled "d8-shutdown-inhibitor.service"; then
-  bb-log-warning "Deckhouse shutdown inhibitor service is enabled. Disable it..."
-  if systemctl disable "d8-shutdown-inhibitor.service"; then
-    bb-log-info "Deckhouse shutdown inhibitor was disabled."
-  else
-    systemctl status "d8-shutdown-inhibitor.service"
-    bb-log-error "Deckhouse shutdown inhibitor has not disabled. Exit"
-    exit 1
-  fi
-fi
-
-# Do nothing if already stopped.
-if ! systemctl is-active --quiet "d8-shutdown-inhibitor.service"; then
-  bb-log-warning "Deckhouse shutdown inhibitor service is already stopped."
-  # Cleanup logind configuration. Just in case.
-  bb-event-fire 'd8-shutdown-inhibitor-cleanup'
-  exit 0
-fi
-
-bb-log-warning "Deckhouse shutdown inhibitor service is running. Stop it..."
-if systemctl stop "d8-shutdown-inhibitor.service"; then
-  bb-log-info "Deckhouse shutdown inhibitor was started."
-else
-  systemctl status "d8-shutdown-inhibitor.service"
-  bb-log-error "Deckhouse shutdown inhibitor has not stopped. Exit"
-  exit 1
-fi
-
-# Cleanup logind configuration.
-bb-event-fire 'd8-shutdown-inhibitor-cleanup'
-
-{{ else }}
-
-if ! systemctl is-enabled "d8-shutdown-inhibitor.service"; then
-  bb-log-warning "Deckhouse shutdown inhibitor service is disabled. Enable it..."
-  if systemctl enable "d8-shutdown-inhibitor.service"; then
-    bb-log-info "Deckhouse shutdown inhibitor was disabled."
-  else
-    systemctl status "d8-shutdown-inhibitor.service"
-    bb-log-error "Deckhouse shutdown inhibitor has not disabled. Exit"
-    exit 1
-  fi
-fi
-
-# Do nothing if already started.
-if systemctl is-active --quiet "d8-shutdown-inhibitor.service"; then
-  bb-log-warning "Deckhouse shutdown inhibitor service is already running."
-  exit 0
-fi
-
-bb-log-warning "Deckhouse shutdown inhibitor service is not running. Starting it..."
-if systemctl start "d8-shutdown-inhibitor.service"; then
-  bb-log-info "Deckhouse shutdown inhibitor has started."
-else
-  systemctl status "d8-shutdown-inhibitor.service"
-  bb-log-error "Deckhouse shutdown inhibitor has not started. Exit"
-  exit 1
-fi
-{{ end }}
-
+{{- if $enableInhibitor }}
+  inhibitor::enable
+  inhibitor::start
+{{- else }}
+  inhibitor::disable
+  inhibitor::stop
+{{- end }}
