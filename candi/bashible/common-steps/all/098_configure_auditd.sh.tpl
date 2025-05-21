@@ -19,13 +19,11 @@ _on_audit_rules_changed() {
 bb-event-on 'containerd-audit-rules-changed' '_on_audit_rules_changed'
 
 if [ -d /etc/audit/rules.d ]; then
-  bb-sync-file /etc/audit/rules.d/containerd.rules - containerd-audit-rules-changed << "EOF"
+  bb-sync-file /etc/audit/rules.d/containerd-deckhouse.rules - containerd-audit-rules-changed << "EOF"
 -w /etc/containerd -p rwxa -k containerd
 -w /var/lib/containerd -p rwxa -k containerd
--w /usr/share/doc/containerd -p rwxa -k containerd
--w /usr/bin/containerd -p rwxa -k containerd
+-w /opt/deckhouse/bin/containerd -p rwxa -k containerd
 -w /run/containerd/containerd.sock -p rwxa -k containerd
--w /run/containerd/debug.sock -p rwxa -k containerd
 EOF
 fi
 
