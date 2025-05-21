@@ -14,6 +14,7 @@ import:
 shell:
   install:
   - mkdir -p /relocate
+  - ls -l /coreutils
   - /binary_replace.sh -i "/coreutils" -o /relocate
   - /binary_replace.sh -i "/bash" -o /relocate
 ---
@@ -32,6 +33,10 @@ import:
   add: /pwru
   to: /usr/bin/pwru
   before: install
+shell:
+  install:
+  - ln -s /usr/bin /bin
+  # - ln -s /usr/sbin /sbin
 imageSpec:
   config:
     env: { "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", "LANG": "C.UTF-8", "LANGUAGE": "C.UTF-8", "LC_ALL": "C.UTF-8" }
