@@ -1021,6 +1021,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			dr := suite.getDeckhouseRelease("v1.37.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
+			dr = suite.getDeckhouseRelease("v1.37.0")
 			_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
 		})
