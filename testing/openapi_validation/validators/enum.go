@@ -58,6 +58,8 @@ var (
 		"candi/openapi/cluster_configuration.yaml": {
 			// vSphere
 			"apiVersions[0].openAPISpec.properties.cloud.properties.provider",
+			// encryptionAlgorithm
+			"apiVersions[0].openAPISpec.properties.encryptionAlgorithm",
 		},
 		"global-hooks/openapi/values.yaml": {
 			// from openapispec
