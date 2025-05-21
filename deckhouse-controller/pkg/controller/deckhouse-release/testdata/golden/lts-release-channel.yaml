@@ -19,7 +19,7 @@ approved: false
 kind: DeckhouseRelease
 metadata:
   annotations:
-    release.deckhouse.io/change-cause: check release (no releases in cluster)
+    release.deckhouse.io/change-cause: check release (lts channel)
     release.deckhouse.io/isUpdating: "false"
     release.deckhouse.io/notified: "false"
   creationTimestamp: null
