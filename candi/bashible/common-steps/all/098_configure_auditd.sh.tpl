@@ -14,25 +14,30 @@
 
 {{- if eq .cri "Containerd" }}
 _on_audit_rules_changed() {
-  bb-flag-set auditd-need-restart
+  bb-flag-set auditd-need-reload
 }
 bb-event-on 'containerd-audit-rules-changed' '_on_audit_rules_changed'
 
 if [ -d /etc/audit/rules.d ]; then
   bb-sync-file /etc/audit/rules.d/containerd-deckhouse.rules - containerd-audit-rules-changed << "EOF"
--w /etc/containerd -p rwxa -k containerd
--w /var/lib/containerd -p rwxa -k containerd
--w /opt/deckhouse/bin/containerd -p rwxa -k containerd
--w /run/containerd/containerd.sock -p rwxa -k containerd
+-a always,exit -F arch=b64 -F dir=/etc/containerd -F perm=wa -k containerd
+-a always,exit -F arch=b32 -F dir=/etc/containerd -F perm=wa -k containerd
+-a always,exit -F arch=b64 -F dir=/var/lib/containerd -F perm=wa -k containerd
+-a always,exit -F arch=b32 -F dir=/var/lib/containerd -F perm=wa -k containerd
+-a always,exit -F arch=b64 -F path=/opt/deckhouse/bin/containerd -F perm=xwa -k containerd
+-a always,exit -F arch=b32 -F path=/opt/deckhouse/bin/containerd -F perm=xwa -k containerd
+-a always,exit -F arch=b64 -F path=/run/containerd/containerd.sock -F perm=rw  -k containerd
+-a always,exit -F arch=b32 -F path=/run/containerd/containerd.sock -F perm=rw  -k containerd
 EOF
 fi
 
-if bb-flag? auditd-need-restart; then
-  bb-log-warning "'auditd-need-restart' flag was set, restarting auditd."
-  if systemctl restart auditd; then
-    bb-flag-unset auditd-need-restart
+if bb-flag? auditd-need-reload; then
+  bb-log-warning "'auditd-need-reload' flag was set"
+  if augenrules --check; then
+    augenrules --load
+    bb-flag-unset auditd-need-reload
   else
-    bb-log-error "failed to restart auditd"
+    bb-log-error "failed to reload auditd rules"
     exit 1
   fi
 fi
