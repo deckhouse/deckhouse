@@ -1009,10 +1009,10 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		})
 	})
 	suite.Run("LTS Release channel", func() {
-		suite.Run("patch update respect window", func() {
+		suite.Run("auto", func() {
 			mup := &v1alpha1.ModuleUpdatePolicySpec{
 				Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
-					Mode: "AutoPatch",
+					Mode: "Auto",
 				},
 				ReleaseChannel: "LTS",
 			}
@@ -1020,6 +1020,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			suite.setupController("lts-release-channel-update.yaml", initValues, mup)
 			dr := suite.getDeckhouseRelease("v1.37.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
 		})
 	})

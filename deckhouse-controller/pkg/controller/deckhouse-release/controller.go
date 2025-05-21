@@ -343,7 +343,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 
 	taskCalculator := releaseUpdater.NewDeckhouseReleaseTaskCalculator(r.client, r.logger)
 
-	task, err := taskCalculator.CalculatePendingReleaseTask(ctx, dr)
+	task, err := taskCalculator.CalculatePendingReleaseTask(ctx, dr, r.updateSettings.Get().ReleaseChannel)
 	if err != nil {
 		return res, err
 	}

@@ -96,12 +96,14 @@ func isPatchRelease(a, b *semver.Version) bool {
 	return false
 }
 
+const ltsReleaseChannel = "lts"
+
 // CalculatePendingReleaseTask calculate task with information about current reconcile
 //
 // calculating flow:
 // 1) find forced release. if current release has a lower version - skip
 // 2) find deployed release. if current release has a lower version - skip
-func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, release v1alpha1.Release) (*Task, error) {
+func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, release v1alpha1.Release, releaseChannel string) (*Task, error) {
 	ctx, span := otel.Tracer(taskCalculatorServiceName).Start(ctx, "calculatePendingReleaseTask")
 	defer span.End()
 
@@ -167,11 +169,7 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 		return a.GetVersion().Compare(b)
 	})
 
-	releaseQueueDepth := len(releases) - 1 - releaseIdx
-	// max value for release queue depth is 3 due to the alert's logic, having queue depth greater than 3 breaks this logic
-	if releaseQueueDepth > 3 {
-		releaseQueueDepth = 3
-	}
+	releaseQueueDepth := min(len(releases)-1-releaseIdx, 3)
 	isLatestRelease := releaseQueueDepth == 0
 	isPatch := true
 
@@ -204,7 +202,8 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 
 			// here we have only Deployed phase releases in prevRelease
 			// it must await if deployed release has minor version more than one
-			if release.GetVersion().Minor()-1 > prevRelease.GetVersion().Minor() {
+			// and release channel is not LTS
+			if release.GetVersion().Minor()-1 > prevRelease.GetVersion().Minor() && strings.ToLower(releaseChannel) != ltsReleaseChannel {
 				msg := fmt.Sprintf("minor version is greater than deployed %s by one", prevRelease.GetVersion().Original())
 
 				logger.Debug("release awaiting", slog.String("reason", msg))
