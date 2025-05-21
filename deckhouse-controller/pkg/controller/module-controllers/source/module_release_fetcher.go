@@ -248,17 +248,9 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 	current := actual.GetVersion()
 	for _, ver := range vers {
 		ensureErr := func() error {
-			defer func() {
-			}()
-
 			f.logger.Debug("ensure module release for module for the module source",
 				slog.String("name", f.moduleName),
 				slog.String("source_name", f.source.Name))
-
-			// if next version is not in sequence with actual
-			if !isUpdatingSequence(current, ver) {
-				f.logger.Warn("not sequential version", slog.String("previous", "v"+actual.GetVersion().String()), slog.String("next", "v"+ver.String()))
-			}
 
 			m, err := f.moduleDownloader.DownloadMetadataByVersion(f.moduleName, "v"+ver.String())
 			if err != nil {
@@ -272,6 +264,13 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 				f.logger.Error("ensure module release", slog.String("module_name", f.moduleName), slog.String("module_version", "v"+ver.String()), log.Err(err))
 
 				return fmt.Errorf("ensure module release: %w", err)
+			}
+
+			// if next version is not in sequence with actual
+			if !isUpdatingSequence(current, ver) {
+				f.logger.Warn("version sequence is broken", slog.String("previous", "v"+current.String()), slog.String("next", "v"+ver.String()))
+
+				return fmt.Errorf("not sequential version: prev 'v%s' next 'v%s'", current.String(), ver.String())
 			}
 
 			return nil
