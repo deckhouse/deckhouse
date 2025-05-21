@@ -328,8 +328,10 @@ func (d *StaticMastersDestroyer) DestroyCluster(ctx context.Context, autoApprove
 	if len(additionalMastersHosts) > 0 {
 		log.DebugF("Found %d additional masters, destroying\n", len(additionalMastersHosts))
 		settings := d.SSHClient.Session().Copy()
-		settings.BastionHost = settings.AvailableHosts()[0].Host
-		settings.BastionPort = settings.Port
+		if settings.BastionHost == "" {
+			settings.BastionHost = settings.AvailableHosts()[0].Host
+			settings.BastionPort = settings.Port
+		}
 
 		for _, host := range additionalMastersHosts {
 			settings.SetAvailableHosts([]session.Host{host})
@@ -352,8 +354,11 @@ func (d *StaticMastersDestroyer) DestroyCluster(ctx context.Context, autoApprove
 	for _, host := range masterHosts {
 		if len(additionalMastersHosts) > 0 {
 			settings := d.SSHClient.Session().Copy()
-			settings.BastionHost = ""
-			settings.BastionPort = ""
+			if settings.BastionHost == settings.AvailableHosts()[0].Host {
+				settings.BastionHost = ""
+				settings.BastionPort = ""
+			}
+
 			settings.SetAvailableHosts([]session.Host{host})
 
 			err := d.switchToNodeuser(settings)
@@ -435,7 +440,6 @@ func (d *ClusterDestroyer) GetMasterNodesIPs(ctx context.Context) ([]NodeIP, err
 				ip.externalIP = addr.Address
 			}
 		}
-
 		nodeIPs = append(nodeIPs, ip)
 	}
 
