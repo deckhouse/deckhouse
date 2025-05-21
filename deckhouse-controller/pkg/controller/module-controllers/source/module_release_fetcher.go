@@ -285,8 +285,6 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 			}
 
 			f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup, metricUpdatingFailedGroup, 1, metricLabels)
-
-			continue
 		}
 
 		current = ver
