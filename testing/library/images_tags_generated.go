@@ -12,9 +12,6 @@ var DefaultImagesDigests = map[string]interface{}{
 	"basicAuth": map[string]interface{}{
 		"nginx": "imageHash-basicAuth-nginx",
 	},
-	"cephCsi": map[string]interface{}{
-		"cephcsi": "imageHash-cephCsi-cephcsi",
-	},
 	"certManager": map[string]interface{}{
 		"certManagerAcmeSolver": "imageHash-certManager-certManagerAcmeSolver",
 		"certManagerCainjector": "imageHash-certManager-certManagerCainjector",
@@ -255,6 +252,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"controller110":         "imageHash-ingressNginx-controller110",
 		"controller112":         "imageHash-ingressNginx-controller112",
 		"controller19":          "imageHash-ingressNginx-controller19",
+		"failoverCleaner":       "imageHash-ingressNginx-failoverCleaner",
 		"kruise":                "imageHash-ingressNginx-kruise",
 		"kruiseStateMetrics":    "imageHash-ingressNginx-kruiseStateMetrics",
 		"kubeRbacProxy":         "imageHash-ingressNginx-kubeRbacProxy",

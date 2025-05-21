@@ -698,7 +698,7 @@ spec:
                 privileged_without_host_devices = false
                 runtime_engine = ""
                 runtime_root = ""
-                runtime_type = "io.containerd.runc.v1"
+                runtime_type = "io.containerd.runc.v2"
                 [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia.options]
                   BinaryName = "/usr/bin/nvidia-container-runtime"
                   SystemdCgroup = false
