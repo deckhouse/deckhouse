@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path"
 	"path/filepath"
@@ -42,6 +43,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	moduletools "github.com/deckhouse/deckhouse/go_lib/module"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -343,6 +345,7 @@ func (md *ModuleDownloader) copyLayersToFS(rootPath string, rc io.ReadCloser) (*
 
 func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(moduleName, releaseChannel, moduleChecksum string) (
 	/* moduleVersion */ string /*newChecksum*/, string /*changelog*/, map[string]any, error) {
+	log.Info("", slog.String("path", path.Join(md.ms.Spec.Registry.Repo, moduleName, "release")), slog.String("releasechannel", releaseChannel))
 	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName, "release"), md.registryOptions...)
 	if err != nil {
 		return "", "", nil, fmt.Errorf("fetch release image error: %v", err)
@@ -376,7 +379,7 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(moduleN
 
 func (md *ModuleDownloader) fetchModuleReleaseMetadataByVersion(moduleName, moduleVersion string) (
 	/* moduleVersion */ string /*newChecksum*/, string /*changelog*/, map[string]any, error) {
-	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName), md.registryOptions...)
+	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName, "release"), md.registryOptions...)
 	if err != nil {
 		return "", "", nil, fmt.Errorf("fetch release image error: %v", err)
 	}
@@ -463,7 +466,7 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadata(img crv1.Image) (ModuleRe
 
 	rc, err := cr.Extract(img)
 	if err != nil {
-		return meta, err
+		return meta, fmt.Errorf("extract: %w", err)
 	}
 	defer rc.Close()
 
@@ -473,13 +476,13 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadata(img crv1.Image) (ModuleRe
 	}
 
 	if err = rr.untarMetadata(rc); err != nil {
-		return meta, err
+		return meta, fmt.Errorf("untar metadata: %w", err)
 	}
 
 	if rr.versionReader.Len() > 0 {
 		err = json.NewDecoder(rr.versionReader).Decode(&meta)
 		if err != nil {
-			return meta, err
+			return meta, fmt.Errorf("json decode: %w", err)
 		}
 	}
 

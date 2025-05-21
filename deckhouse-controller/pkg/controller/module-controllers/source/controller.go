@@ -268,6 +268,7 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 		r.logger.Error("failed to process modules for the module source", slog.String("source_name", source.Name), log.Err(err))
 		return ctrl.Result{}, err
 	}
+
 	r.logger.Debug("module source reconciled", slog.String("source_name", source.Name))
 
 	// everything is ok, check source on the other iterations
@@ -293,6 +294,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			r.logger.Warn("the module has invalid name: must coply with RFC 1123 subdomain format, skip it", slog.String("name", moduleName))
 			continue
 		}
+
 		availableModule := v1alpha1.AvailableModule{Name: moduleName}
 		for _, available := range source.Status.AvailableModules {
 			if available.Name == moduleName {
@@ -352,6 +354,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			slog.String("name", moduleName),
 			slog.String("source_name", source.Name),
 		)
+
 		// download module metadata from the specified release channel
 		r.logger.Debug("download meta ", slog.String("release_channel", policy.Spec.ReleaseChannel), slog.String("module_name", moduleName), slog.String("module_source", source.Name))
 		meta, err := md.DownloadMetadataFromReleaseChannel(ctx, moduleName, policy.Spec.ReleaseChannel, cachedChecksum)
@@ -383,16 +386,25 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			if errGet != nil {
 				return fmt.Errorf("get intermediate versions: %w", errGet)
 			}
+
 			for _, v := range versions {
 				r.logger.Debug("ensure module release for module for the module source",
 					slog.String("name", moduleName),
 					slog.String("source_name", source.Name))
+
 				m, err := md.DownloadMetadataByVersion(moduleName, v.Original())
 				if err != nil {
-					return fmt.Errorf("download metadata for the '%s' module: %w", moduleName, err)
+					r.logger.Error("download metadata", slog.String("module_name", moduleName), log.Err(err))
+
+					continue
 				}
+
+				r.logger.Info("version", slog.String("v", m.ModuleVersion))
+
 				if err = r.ensureModuleRelease(ctx, source.GetUID(), source.Name, moduleName, policy.Name, m); err != nil {
-					return fmt.Errorf("ensure module release for the '%s' module: %w", moduleName, err)
+					r.logger.Error("ensure module release", slog.String("module_name", moduleName), log.Err(err))
+
+					continue
 				}
 			}
 		}
@@ -557,6 +569,7 @@ func (r *reconciler) getIntermediateModuleVersions(
 	if err != nil {
 		return nil, fmt.Errorf("get registry client: %w", err)
 	}
+
 	tags, err := registryClient.ListTags(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list tags: %w", err)
@@ -594,5 +607,6 @@ func keepLastPatchVersion(versions []*semver.Version) []*semver.Version {
 	}
 
 	sort.Sort(semver.Collection(result))
+
 	return result
 }

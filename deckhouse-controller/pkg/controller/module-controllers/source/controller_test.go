@@ -503,24 +503,6 @@ func (suite *ControllerTestSuite) moduleSource(name string) *v1alpha1.ModuleSour
 
 func newMockedContainerWithData(t minimock.Tester, versionInChannel string, modules, tags []string) *dependency.MockedContainer {
 	moduleVersionsMock := cr.NewClientMock(t)
-	if len(tags) > 0 {
-		moduleVersionsMock.ListTagsMock.Return(tags, nil)
-	}
-
-	moduleVersionsMock.ImageMock.Set(func(_ context.Context, imageTag string) (crv1.Image, error) {
-		return &crfake.FakeImage{
-			ManifestStub: manifestStub,
-			LayersStub: func() ([]crv1.Layer, error) {
-				return []crv1.Layer{
-					&utils.FakeLayer{},
-					&utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "` + imageTag + `"}`}},
-				}, nil
-			},
-			DigestStub: func() (crv1.Hash, error) {
-				return crv1.Hash{Algorithm: "sha256"}, nil
-			},
-		}, nil
-	})
 
 	dc := dependency.NewMockedContainer()
 	dc.CRClientMap = map[string]cr.Client{
@@ -528,7 +510,29 @@ func newMockedContainerWithData(t minimock.Tester, versionInChannel string, modu
 	}
 
 	for _, module := range modules {
-		dc.CRClientMap["dev-registry.deckhouse.io/deckhouse/modules/"+module] = moduleVersionsMock
+		if len(tags) > 0 {
+			dc.CRClientMap["dev-registry.deckhouse.io/deckhouse/modules/"+module] = moduleVersionsMock.ListTagsMock.Return(tags, nil)
+		}
+
+		dc.CRClientMap["dev-registry.deckhouse.io/deckhouse/modules/"+module+"/release"] = moduleVersionsMock.ImageMock.Set(func(_ context.Context, imageTag string) (crv1.Image, error) {
+			_, err := semver.NewVersion(imageTag)
+			if err != nil {
+				imageTag = versionInChannel
+			}
+
+			return &crfake.FakeImage{
+				ManifestStub: manifestStub,
+				LayersStub: func() ([]crv1.Layer, error) {
+					return []crv1.Layer{
+						&utils.FakeLayer{},
+						&utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "` + imageTag + `"}`}},
+					}, nil
+				},
+				DigestStub: func() (crv1.Hash, error) {
+					return crv1.Hash{Algorithm: "sha256"}, nil
+				},
+			}, nil
+		})
 	}
 
 	dc.CRClient.ListTagsMock.Return(modules, nil)
