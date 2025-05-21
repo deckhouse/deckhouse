@@ -1007,7 +1007,6 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
 		})
-
 	})
 	suite.Run("dr.Message is clear when no deployment", func() {
 		suite.setupController("clear-status-message.yaml", initValues, embeddedMUP)
