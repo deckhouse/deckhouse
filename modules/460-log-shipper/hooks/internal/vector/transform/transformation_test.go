@@ -26,21 +26,24 @@ import (
 
 var testCases = []struct {
 	name string
-	in   v1alpha1.Transformation
+	in   v1alpha1.Transform
 	out  string
 }{
-	{"fixNestedJson label message", v1alpha1.Transformation{EnsureStructuredMessage: v1alpha1.EnsureStructuredMessage{TargetField: "text"}},
+	{"fixNestedJson label message", v1alpha1.Transform{Action: "EnsureStructuredMessage", TargetField: "text"},
 		".message = parse_json(.message) ?? { \"text\": .message }\n"},
-	{"del", v1alpha1.Transformation{DropLabels: v1alpha1.DropLabels{Labels: []string{"first", "second"}}},
+	{"del", v1alpha1.Transform{Action: "DropLabels", Labels: []string{"first", "second"}},
 		"if exists(.first) {\n del(.first)\n}\nif exists(.second) {\n del(.second)\n}\n"},
-	{"replaceDot", v1alpha1.Transformation{NormalizeLabelKeys: true},
+	{"replaceDot", v1alpha1.Transform{Action: "NormalizeLabelKeys"},
 		"if exists(.pod_labels) {\n.pod_labels = map_keys(object!(.pod_labels), recursive: true) -> |key| { replace(key, \".\", \"_\")}\n}"},
 }
 
 func TestReplaceDot(t *testing.T) {
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
-			tr := BuildModes(test.in)
+			tr, err := BuildModes([]v1alpha1.Transform{test.in})
+			if err != nil {
+				t.Error(err)
+			}
 			assert.Len(t, tr, 1)
 			transform := tr[0].(*DynamicTransform)
 			assert.Equal(t, test.out, transform.DynamicArgsMap["source"].(string))

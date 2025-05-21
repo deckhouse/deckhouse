@@ -68,22 +68,16 @@ type ClusterLogDestinationSpec struct {
 	// Add rateLimit for sink
 	RateLimit RateLimitSpec `json:"rateLimit,omitempty"`
 
-	Buffer         *Buffer `json:"buffer,omitempty"`
-	Transformation `json:"transformation,omitempty"`
-}
-
-type DropLabels struct {
-	Labels []string `json:"labels"`
-}
-type EnsureStructuredMessage struct {
-	TargetField string `json:"targetField"`
+	Buffer         *Buffer     `json:"buffer,omitempty"`
+	Transformation []Transform `json:"transformation,omitempty"`
 }
 
 // Modules labels transformation that users can use
-type Transformation struct {
-	NormalizeLabelKeys      bool `json:"normalizeLabelKeys,omitempty"`
-	EnsureStructuredMessage `json:"ensureStructuredMessage,omitempty"`
-	DropLabels              `json:"dropLabels,omitempty"`
+type Transform struct {
+	// Name module
+	Action      string   `json:"action"`
+	TargetField string   `json:"targetField,omitempty"`
+	Labels      []string `json:"labels,omitempty"`
 }
 
 type ClusterLogDestinationStatus struct {

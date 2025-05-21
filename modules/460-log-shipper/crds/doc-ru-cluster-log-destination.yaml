@@ -9,6 +9,11 @@ spec:
             `metadata.name` задаёт имя upstream'а, который будет использоваться в ресурсе [ClusterLoggingConfig](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterloggingconfig).
           properties:
             spec:
+              x-kubernetes-validations:
+              - rule: "has(self.transformations) ? self.transformations.filter(t, t.action == 'EnsureStructuredMessage').size() <= 1 : true"
+                message: "Только одна трансформация EnsureStructuredMessage разрешена."
+              - rule: "has(self.transformations) ? self.transformations.filter(t, t.action == 'NormalizeLabelKeys').size() <= 1 : true"
+                message: "Только одна трансформация NormalizeLabelKeys разрешена."
               properties:
                 type:
                   description: Возможные бэкенды для сохранения логов.
@@ -415,34 +420,36 @@ spec:
                     - pod_owner.
 
                     [Подробнее о путях к полям...](https://vector.dev/docs/reference/configuration/field-path-notation/)
-                transformation:
+                transformations:
+                  maxItems: 3
                   description: >
                     Список шагов трансформации. Каждый шаг определяет определенное действие и параметры к нему.
-                  type: object
-                  properties:
-                    normalizeLabelKeys:
-                      description: "Нормализует имена меток, заменяя точки на подчеркивания"
-                      type: boolean
-                    ensureStructuredMessage:
-                      description: "Гарантирует, что поле message содержит JSON-объект"
-                      type: object
-                      required:
-                        - targetField
-                      properties:
-                        targetField:
-                          description: "Целевое поле, в которое помещается обертка сообщения"
-                          type: string
-                    dropLabels:
-                      description: "Удаляет указанные метки"
-                      type: object
-                      required:
-                        - labels
-                      properties:
-                        labels:
-                          description: "Список меток, которые необходимо удалить"
-                          type: array
-                          items:
-                            type: string
+                  items:
+                    properties:
+                      action:
+                        enum: ["NormalizeLabelKeys", "EnsureStructuredMessage", "DropLabels"]
+                        description: |
+                           Действия для трансформации
+                           - NormalizeLabelKeys - заменяет в лейбле pod_labels точки на подчеркивания
+                             Пример:
+                               transformation:
+                               - action: NormalizeLabelKays
+                           - EnsureStructuredMessage - проверяет что message содержит json объект если нет упаковывает в json
+                             Привер:
+                               transformation:
+                               - action: EnsureStructuredMessage
+                                 targetField: msg
+                            - DropLabels - удаляет лейблы
+                              Привер:
+                                transformation:
+                                - action: DropLabels
+                                  labels:
+                                  - first
+                                  - second 
+                      targetField:
+                        description: "Целевое поле, в которое помещается обертка сообщения"
+                      labels:
+                        description: "Список меток, которые необходимо удалить"
                 buffer:
                   description: Параметры буфера.
                   properties:

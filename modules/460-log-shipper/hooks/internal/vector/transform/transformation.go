@@ -25,37 +25,61 @@ import (
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 )
 
-func BuildModes(transform v1alpha1.Transformation) []apis.LogTransform {
+type module interface {
+	getTransform(int) apis.LogTransform
+}
+
+func BuildModes(tms []v1alpha1.Transform) ([]apis.LogTransform, error) {
 	transforms := make([]apis.LogTransform, 0)
-	if transform.NormalizeLabelKeys {
-		transforms = append(transforms, normalizeLabelKeys())
+	var module module
+	for i, tm := range tms {
+		switch tm.Action {
+		case "NormalizeLabelKeys":
+			module = normalizeLabelKeys{}
+		case "EnsureStructuredMessage":
+			module = ensureStructuredMessage{targetField: tm.TargetField}
+		case "DropLabels":
+			if len(tm.Labels) > 0 {
+				module = dropLabels{labels: tm.Labels}
+			}
+		default:
+			return nil, fmt.Errorf("TransformMod: action %s not found", tm.Action)
+		}
+		lofTransform := module.getTransform(i)
+		transforms = append(transforms, lofTransform)
 	}
-	if transform.EnsureStructuredMessage.TargetField != "" {
-		transforms = append(transforms, ensureStructuredMessage(transform.TargetField))
-	}
-	if len(transform.DropLabels.Labels) > 0 {
-		transforms = append(transforms, dropLabels(transform.DropLabels.Labels))
-	}
-	return transforms
+	return transforms, nil
 }
 
-func normalizeLabelKeys() apis.LogTransform {
-	name := "transformation_normalizeLabelKeys"
-	vrl := "if exists(.pod_labels) {\n.pod_labels = map_keys(object!(.pod_labels), recursive: true) -> |key| { replace(key, \".\", \"_\")}\n}"
-	return NewTransformation(name, vrl)
-}
+type normalizeLabelKeys struct{}
 
-func ensureStructuredMessage(targetField string) apis.LogTransform {
-	name := "transformation_ensureStructuredMessage"
-	vrl := fmt.Sprintf(".message = parse_json(.message) ?? { \"%s\": .message }\n", targetField)
-	return NewTransformation(name, vrl)
-}
-
-func dropLabels(labels []string) apis.LogTransform {
+func (nlk normalizeLabelKeys) getTransform(number int) apis.LogTransform {
 	var vrl string
-	name := "transformation_dropLabels"
-	ls := checkFixDotPrefix(labels)
-	for _, l := range ls {
+	name := fmt.Sprintf("tf_normalizeLabelKeys_%d", number)
+	vrl = "if exists(.pod_labels) {\n.pod_labels = map_keys(object!(.pod_labels), recursive: true) -> |key| { replace(key, \".\", \"_\")}\n}"
+	return NewTransformation(name, vrl)
+}
+
+type ensureStructuredMessage struct {
+	targetField string
+}
+
+func (esm ensureStructuredMessage) getTransform(number int) apis.LogTransform {
+	var vrl string
+	name := fmt.Sprintf("tf_ensureStructuredMessage_%d", number)
+	vrl = fmt.Sprintf(".message = parse_json(.message) ?? { \"%s\": .message }\n", esm.targetField)
+	return NewTransformation(name, vrl)
+}
+
+type dropLabels struct {
+	labels []string
+}
+
+func (d dropLabels) getTransform(number int) apis.LogTransform {
+	var vrl string
+	name := fmt.Sprintf("tf_delete_%d", number)
+	labels := checkFixDotPrefix(d.labels)
+	for _, l := range labels {
 		vrl = fmt.Sprintf("%sif exists(%s) {\n del(%s)\n}\n", vrl, l, l)
 	}
 	return NewTransformation(name, vrl)

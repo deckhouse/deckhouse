@@ -29,6 +29,11 @@ spec:
           properties:
             spec:
               type: object
+              x-kubernetes-validations:
+              - rule: "has(self.transformations) ? self.transformations.filter(t, t.action == 'EnsureStructuredMessage').size() <= 1 : true"
+                message: "Only one EnsureStructuredMessage transformation is allowed."
+              - rule: "has(self.transformations) ? self.transformations.filter(t, t.action == 'NormalizeLabelKeys').size() <= 1 : true"
+                message: "Only one NormalizeLabelKeys transformation is allowed."
               oneOf:
                 - properties:
                     loki: {}
@@ -834,34 +839,61 @@ spec:
                     anyOf:
                       - pattern: '^[a-zA-Z0-9_\-]+$'
                       - pattern: '^\{\{\ [a-zA-Z0-9\\\-][a-zA-Z0-9\[\]_\\\-\.]+\ \}\}$'
-                transformation:
+                transformations:
+                  maxItems: 3
+                  type: array
                   description: >
                     List of transformation steps. Each step defines a specific action and parameters for it
-                  type: object
-                  properties:
-                    normalizeLabelKeys:
-                      description: "Normalizes names with a dot, replacing dots with underscores"
-                      type: boolean
-                    ensureStructuredMessage:
-                      description: "Ensures that the message field contains a Json object"
-                      type: object
-                      required:
-                        - targetField
-                      properties:
-                        targetField:
-                          description: "The target field into which wrapped string is placed"
+                  items:
+                    type: object
+                    oneOf:
+                      - properties:
+                          action:
+                            enum: ["NormalizeLabelKeys"]
+                        required:
+                          - action
+                      - properties:
+                          action:
+                            enum: ["EnsureStructuredMessage"]
+                        required:
+                          - action
+                          - targetField
+                      - properties:
+                          action:
+                            enum: ["DropLabels"]
+                        required:
+                          - action
+                          - labels      
+                    properties:
+                      action:
+                        type: string
+                        enum: ["NormalizeLabelKeys", "EnsureStructuredMessage", "DropLabels"]
+                        description: |
+                           Transformation action
+                           - NormalizeLabelKeys - replace dot to underscore in the label pod_labels
+                             Example:
+                               transformation:
+                               - action: NormalizeLabelKays
+                           - EnsureStructuredMessage - checked message json if not valid package message in json
+                             Example:
+                               transformation:
+                               - action: EnsureStructuredMessage
+                                 targetField: msg
+                            - DropLabels - delete labels
+                              Example:
+                                transformation:
+                                - action: DropLabels
+                                  labels:
+                                  - first
+                                  - second 
+                      targetField:
+                        type: string
+                        description: "The target field into which wrapped string is placed"
+                      labels:
+                        type: array
+                        description: "List of labels to remove"
+                        items:
                           type: string
-                    dropLabels:
-                      description: "Removes the specified labels"
-                      type: object
-                      required:
-                        - labels
-                      properties:
-                        labels:
-                          description: "List of labels to remove"
-                          type: array
-                          items:
-                            type: string
                 buffer:
                   type: object
                   oneOf:

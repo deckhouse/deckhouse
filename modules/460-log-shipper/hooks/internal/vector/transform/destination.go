@@ -26,9 +26,10 @@ import (
 func CreateLogDestinationTransforms(name string, dest v1alpha1.ClusterLogDestination) ([]apis.LogTransform, error) {
 	var err error
 	transforms := make([]apis.LogTransform, 0)
-	transformation := BuildModes(dest.Spec.Transformation)
-	if len(transformation) > 0 {
-		transforms = append(transforms, transformation...)
+	if len(dest.Spec.Transformation) > 0 {
+		if transforms, err = BuildModes(dest.Spec.Transformation); err != nil {
+			return nil, err
+		}
 	}
 	switch dest.Spec.Type {
 	case v1alpha1.DestElasticsearch, v1alpha1.DestLogstash:
