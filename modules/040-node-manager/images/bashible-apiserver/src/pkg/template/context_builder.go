@@ -158,7 +158,7 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 		Proxy:         cb.clusterInputData.Proxy,
 		PackagesProxy: cb.clusterInputData.PackagesProxy,
 
-		StopAdditionalNodeShutdownInhibitor: cb.clusterInputData.StopAdditionalNodeShutdownInhibitor,
+		GracefulShutdown: cb.clusterInputData.GracefulShutdown,
 	}
 
 	for _, ng := range cb.clusterInputData.NodeGroups {
@@ -477,7 +477,7 @@ type tplContextCommon struct {
 	Proxy         map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
 	PackagesProxy map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
 
-	StopAdditionalNodeShutdownInhibitor *bool `json:"stopAdditionalNodeShutdownInhibitor,omitempty" yaml:"stopAdditionalNodeShutdownInhibitor,omitempty"`
+	GracefulShutdown gracefulShutdown `json:"gracefulShutdown" yaml:"gracefulShutdown"`
 }
 
 type bundleNGContext struct {
@@ -548,6 +548,9 @@ type inputData struct {
 	AllowedBundles     []string               `json:"allowedBundles" yaml:"allowedBundles"`
 	NodeGroups         []nodeGroup            `json:"nodeGroups" yaml:"nodeGroups"`
 	Freq               interface{}            `json:"NodeStatusUpdateFrequency,omitempty" yaml:"NodeStatusUpdateFrequency,omitempty"`
+	GracefulShutdown   gracefulShutdown       `json:"gracefulShutdown" yaml:"gracefulShutdown"`
+}
 
-	StopAdditionalNodeShutdownInhibitor *bool `json:"stopAdditionalNodeShutdownInhibitor,omitempty" yaml:"stopAdditionalNodeShutdownInhibitor,omitempty"`
+type gracefulShutdown struct {
+	Mode string `json:"mode" yaml:"mode"`
 }

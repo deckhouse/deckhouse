@@ -25,12 +25,20 @@ properties:
       Set to 'true' to disable machine-controller-manager in case of potentially cluster-damaging changes.
 
       > **Warning!** Use this flag only if you know why you are doing it and clearly understand the consequences.
-  stopAdditionalNodeShutdownInhibitor:
-    type: boolean
-    default: false
-    x-examples:
-      - false
+  gracefulShutdown:
+    type: object
+    default: {mode: "Default"}
     description: |
-      Set to 'true' to stop additional systemd service d8-shutdown-inhibitor that prevents node shutdown
-      if Pods with label 'pod.deckhouse.io/inhibit-node-shutdown' are present on Node.
-
+      Settings for the graceful shutdown of the Node.
+    properties:
+      mode:
+        type: string
+        x-examples: "BlockByPodLabel"
+        enum:
+        - "BlockByPodLabel"
+        - "Default"
+        default: "Default"
+        description: |
+          Graceful shutdown process mode:
+          * `Default`: use original kubelet mechanism of the graceful shutdown.
+          * `BlockByPodLabel`: block shutdown process until Pods with the label `pod.deckhouse.io/inhibit-node-shutdown` are present on the Node.
