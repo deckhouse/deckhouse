@@ -26,7 +26,7 @@ The automatic secret distribution mechanism is not compatible with the [multiten
 
 Multitenancy mode creates isolated environments for users within projects.
 Automatically distributing secrets to all namespaces may violate this security model.
-If sensitive data appears in a user’s private environment, it could result in a data leak.
+If sensitive data accidentally reaches a user’s isolated environment, it may lead to data exposure.
 
 If you need to provide a shared certificate (for example, a wildcard certificate for an internal environment)
 or a shared registry access token, do not use automatic distribution.
