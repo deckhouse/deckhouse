@@ -99,7 +99,6 @@ func CreateSSHClient(config *config.ConnectionConfig) (node.SSHClient, func() er
 	}
 
 	cleanuper.Add(func() error {
-		sshClient.Stop()
 		return nil
 	})
 
