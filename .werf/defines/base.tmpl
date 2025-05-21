@@ -9,9 +9,9 @@
   add: /tini/tini-static
   to: /usr/bin/tini
   before: setup
-- image: common/semver-artifact
-  add: /usr/local/bin/semver
-  to: /usr/local/bin/semver
+- image: tools/semver
+  add: /usr/bin/semver
+  to: /usr/bin/semver
   before: setup
   {{- range $k8s := $context.k8sVersions }}
     {{- $image_version := printf "%s.%d" $k8s.kubectl (index $context.CandiVersionMap "k8s" $k8s.kubectl "patch") | replace "." "-" }}
@@ -73,13 +73,17 @@
 {{- $context := . -}}
 
 image: common-base
-fromImage: common/alt-p11
+fromImage: builder/alt
 import:
 - image: dev-alt-artifact
   add: /
   to: /
   before: setup
   includePaths:
+  - usr/bin/python*
+  - usr/lib/python*
+  - usr/lib/libc.so
+  - usr/lib/ld-musl-x86_64.so.1
   - usr/lib64/libz.so*
   - usr/lib64/libexpat.so*
   - usr/lib64/libssl.so.*
@@ -88,11 +92,6 @@ import:
   - usr/bin/openssl
   - etc/pki
   - usr/share/ca-certificates/ca-bundle.crt
-  - usr/bin/python3
-  - usr/bin/python3.12
-  - usr/lib/python3
-  - usr/lib64/python3
-  - usr/lib64/python3.12
   - usr/lib64/libffi.so*
   - usr/lib64/libb2.so*
   - usr/share/vim

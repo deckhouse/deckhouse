@@ -230,7 +230,7 @@
   </td>
   <td style="text-align: center; font-weight:bold">{{ k8sItem[0] }}</td>
   <td style="text-align: left">
-    <p>{%- if k8sItem[0] == site.data.version_kubernetes.default %}<strong>{{ site.data.i18n.common['default_version'][page.lang] | capitalize }}.</strong> {% endif %}
+    <p>{%- if k8sItem[1].default %}<strong>{{ site.data.i18n.common['default_version'][page.lang] | capitalize }}.</strong> {% endif %}
     {{ site.data.supported_versions.k8s_statuses[k8sStatus][page.lang] }}</p>
   </td>
 </tr>

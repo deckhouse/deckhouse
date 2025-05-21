@@ -5,7 +5,13 @@ alerts:
       module: node-manager
       edition: ce
       description: |
-        In MachineDeployment `{{ $labels.machine_deployment_name }}` number of unavailable instances is **{{ $value }}**. Take a look and check at the state of the instances in the cluster: `kubectl get instance -l node.deckhouse.io/group={{ $labels.machine_deployment_name }}`
+        The MachineDeployment `{{ $labels.machine_deployment_name }}` has **{{ $value }}** unavailable instances.
+
+        Check the status of the instances in the cluster with the following command:
+
+        ```shell
+        kubectl get instance -l node.deckhouse.io/group={{ $labels.machine_deployment_name }}
+        ```
       summary: |
         There are unavailable instances in the {{ $labels.machine_deployment_name }} MachineDeployment.
       severity: "8"
@@ -206,10 +212,13 @@ alerts:
       module: node-manager
       edition: ce
       description: |
-        Cloud data discoverer finds disks in the cloud for which there is no PersistentVolume in the cluster. You can manually delete these disks from your cloud:
-          ID: {{ $labels.id }}, Name: {{ $labels.name }}
+        The cloud data discoverer has found disks in the cloud that do not have a corresponding PersistentVolume in the cluster.
+
+        You can safely delete these disks manually from your cloud provider:
+
+        ID: {{ $labels.id }}, Name: {{ $labels.name }}
       summary: |
-        Cloud data discoverer finds disks in the cloud for which there is no PersistentVolume in the cluster
+        Cloud data discoverer found orphaned disks in the cloud.
       severity: "6"
       markupFormat: markdown
     - name: CniCiliumNonStandardVXLANPortFound
@@ -257,7 +266,7 @@ alerts:
       severity: "4"
       markupFormat: default
     - name: CronJobAuthenticationFailure
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -274,7 +283,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: CronJobAuthorizationFailure
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -291,7 +300,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: CronJobBadImageFormat
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -339,7 +348,7 @@ alerts:
       severity: "5"
       markupFormat: default
     - name: CronJobImageAbsent
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -387,7 +396,7 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: CronJobRegistryUnavailable
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -419,7 +428,7 @@ alerts:
       severity: "6"
       markupFormat: markdown
     - name: CronJobUnknownError
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -512,21 +521,16 @@ alerts:
       module: node-manager
       edition: ce
       description: |
-        Check bashible-apiserver pods are up-to-date and running `kubectl -n d8-cloud-instance-manager get pods -l app=bashible-apiserver`
+        `Bashible-apiserver` has been locked for an extended period.
+
+        To resolve the issue, check if the `bashible-apiserver` Pods are up-to-date and running:
+
+        ```shell
+        kubectl -n d8-cloud-instance-manager get pods -l app=bashible-apiserver
+        ```
       summary: |
-        Bashible-apiserver is locked for too long
+        Bashible-apiserver has been locked for too long.
       severity: "6"
-      markupFormat: markdown
-    - name: D8CephCsiModuleDeprecated
-      sourceFile: modules/031-ceph-csi/monitoring/prometheus-rules/deprecated-module-alert.yaml
-      moduleUrl: 031-ceph-csi
-      module: ceph-csi
-      edition: ce
-      description: |
-        CephCsi module is deprecated. Please, use [csi-ceph](https://deckhouse.io/products/kubernetes-platform/modules/csi-ceph/stable/) module instead.
-      summary: |
-        CephCsi module is deprecated.
-      severity: "5"
       markupFormat: markdown
     - name: D8CertExporterPodIsNotReady
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/certificates/certificates-exporter-health.yaml
@@ -675,10 +679,13 @@ alerts:
       module: node-manager
       edition: ce
       description: |
-        Cloud data discoverer cannot get data from cloud. See cloud data discoverer logs for more information:
-        `kubectl -n {{ $labels.namespace }} logs deploy/cloud-data-discoverer`
+        Refer to the cloud data discoverer's logs for details:
+
+        ```shell
+        kubectl -n {{ $labels.namespace }} logs deploy/cloud-data-discoverer
+        ```
       summary: |
-        Cloud data discoverer cannot get data from cloud
+        Cloud data discoverer cannot get data from the cloud.
       severity: "6"
       markupFormat: markdown
     - name: D8CloudDataDiscovererSaveError
@@ -687,10 +694,13 @@ alerts:
       module: node-manager
       edition: ce
       description: |
-        Cloud data discoverer cannot save data to k8s resource. See cloud data discoverer logs for more information:
-        `kubectl -n {{ $labels.namespace }} logs deploy/cloud-data-discoverer`
+        Refer to the cloud data discoverer's logs for details:
+
+        ```shell
+        kubectl -n {{ $labels.namespace }} logs deploy/cloud-data-discoverer
+        ```
       summary: |
-        Cloud data discoverer cannot save data to k8s resource
+        Cloud data discoverer cannot save data to a Kubernetes resource.
       severity: "6"
       markupFormat: markdown
     - name: D8ClusterAutoscalerManagerPodIsNotReady
@@ -711,7 +721,11 @@ alerts:
       description: |-
         The {{$labels.pod}} Pod is {{$labels.phase}}.
 
-        Run the following command to check its status: `kubectl -n {{$labels.namespace}} get pods {{$labels.pod}} -o json | jq .status`.
+        To check the Pod's status, run the following command:
+
+        ```shell
+        kubectl -n {{$labels.namespace}} get pods {{$labels.pod}} -o json | jq .status
+        ```
       summary: |
         The cluster-autoscaler Pod is NOT Running.
       severity: "8"
@@ -722,13 +736,18 @@ alerts:
       module: node-manager
       edition: ce
       description: |
-        The number of restarts in the last hour: {{ $value }}.
+        The cluster-autoscaler has restarted {{ $value }} times in the past hour.
 
-        Excessive cluster-autoscaler restarts indicate that something is wrong. Normally, it should be up and running all the time.
+        Frequent restarts may indicate a problem.
+        The cluster-autoscaler is expected to run continuously without interruption.
 
-        Please, refer to the corresponding logs: `kubectl -n d8-cloud-instance-manager logs -f -l app=cluster-autoscaler -c cluster-autoscaler`.
+        Check the logs for details:
+
+        ```shell
+        kubectl -n d8-cloud-instance-manager logs -f -l app=cluster-autoscaler -c cluster-autoscaler
+        ```
       summary: |
-        Too many cluster-autoscaler restarts have been detected.
+        Too many cluster-autoscaler restarts detected.
       severity: "9"
       markupFormat: markdown
     - name: D8ClusterAutoscalerTargetAbsent
@@ -737,16 +756,31 @@ alerts:
       module: node-manager
       edition: ce
       description: |-
-        Cluster-autoscaler automatically scales Nodes in the cluster; its unavailability will result in the inability
-        to add new Nodes if there is a lack of resources to schedule Pods. In addition, the unavailability of cluster-autoscaler
-        may result in over-spending due to provisioned but inactive cloud instances.
+        The cluster-autoscaler automatically scales nodes in the cluster.
+        If it's unavailable, it will be impossible to add new nodes when there's not enough resources for scheduling Pods.
+        It may also lead to unnecessary cloud costs due to unused but still provisioned cloud instances.
 
-        The recommended course of action:
-        1. Check the availability and status of cluster-autoscaler Pods: `kubectl -n d8-cloud-instance-manager get pods -l app=cluster-autoscaler`
-        2. Check whether the cluster-autoscaler deployment is present: `kubectl -n d8-cloud-instance-manager get deploy cluster-autoscaler`
-        3. Check the status of the cluster-autoscaler deployment: `kubectl -n d8-cloud-instance-manager describe deploy cluster-autoscaler`
+        To resolve the issue, follow these steps:
+
+        1. Check availability and status of cluster-autoscaler Pods:
+
+           ```shell
+           kubectl -n d8-cloud-instance-manager get pods -l app=cluster-autoscaler
+           ```
+
+        2. Verify that the cluster-autoscaler Deployment exists:
+
+           ```shell
+           kubectl -n d8-cloud-instance-manager get deploy cluster-autoscaler
+           ```
+
+        3. Check the Deployment's status:
+
+           ```bash
+           kubectl -n d8-cloud-instance-manager describe deploy cluster-autoscaler
+           ```
       summary: |
-        There is no cluster-autoscaler target in Prometheus.
+        Cluster-autoscaler target is missing in Prometheus.
       severity: "8"
       markupFormat: markdown
     - name: D8ClusterAutoscalerTargetDown
@@ -765,11 +799,15 @@ alerts:
       module: node-manager
       edition: ce
       description: |
-        Cluster-autoscaler's scaling attempt resulted in an error from the cloud provider.
+        The cluster-autoscaler encountered multiple errors from the cloud provider when attempting to scale the cluster.
 
-        Please, refer to the corresponding logs: `kubectl -n d8-cloud-instance-manager logs -f -l app=cluster-autoscaler -c cluster-autoscaler`.
+        Check the logs for details:
+
+        ```shell
+        kubectl -n d8-cloud-instance-manager logs -f -l app=cluster-autoscaler -c cluster-autoscaler
+        ```
       summary: |
-        Cluster-autoscaler issues too many errors.
+        Cluster-autoscaler is issuing too many errors.
       severity: "8"
       markupFormat: markdown
     - name: D8CNIEnabledMoreThanOne
@@ -1186,13 +1224,23 @@ alerts:
       module: prometheus
       edition: ce
       description: |-
-        The number of Grafana replicas is less than the specified number.
+        The number of Grafana replicas is lower than the specified number.
 
-        The Deployment is in the MinimumReplicasUnavailable state.
+        The Deployment is in the `MinimumReplicasUnavailable` state.
 
-        Run the following command to check the status of the Deployment: `kubectl -n d8-monitoring get deployment grafana-v10 -o json | jq .status`.
+        Troubleshooting options:
 
-        Run the following command to check the status of the Pods: `kubectl -n d8-monitoring get pods -l app=grafana-v10 -o json | jq '.items[] | {(.metadata.name):.status}'`.
+        - To check the Deployment's status:
+
+          ```shell
+          kubectl -n d8-monitoring get deployment grafana-v10 -o json | jq .status
+          ```
+
+        - To check a Pod's status:
+
+          ```shell
+          kubectl -n d8-monitoring get pods -l app=grafana-v10 -o json | jq '.items[] | {(.metadata.name):.status}'
+          ```
       summary: |
         One or more Grafana Pods are NOT Running.
       severity: "6"
@@ -1203,12 +1251,14 @@ alerts:
       module: prometheus
       edition: ce
       description: |-
-        The `grafana-dashboard-definitions-custom` ConfigMap was found in the `d8-monitoring` namespace. This means that the deprecated method of registering custom dashboards in Grafana is being used.
+        The ConfigMap `grafana-dashboard-definitions-custom` has been found in the `d8-monitoring` namespace.
+        This indicates that a deprecated method for registering custom dashboards in Grafana is used.
 
-        **This method is no longer used!**
-        Please, use the custom [GrafanaDashboardDefinition](https://github.com/deckhouse/deckhouse/blob/main/modules/300-prometheus/docs/internal/GRAFANA_DASHBOARD_DEVELOPMENT.md) resource instead.
+        **This method is no longer supported**.
+
+        Migrate to using the custom [GrafanaDashboardDefinition resource](https://github.com/deckhouse/deckhouse/blob/main/modules/300-prometheus/docs/internal/GRAFANA_DASHBOARD_DEVELOPMENT.md) instead.
       summary: |
-        The deprecated ConfigMap for defining Grafana dashboards is detected.
+        Deprecated ConfigMap for Grafana dashboards detected.
       severity: "9"
       markupFormat: markdown
     - name: D8GrafanaPodIsNotReady
@@ -1227,13 +1277,17 @@ alerts:
       module: prometheus
       edition: ce
       description: |
-        The number of restarts in the last hour: {{ $value }}.
+        Grafana has restarted {{ $value }} times in the last hour.
 
-        Excessive Grafana restarts indicate that something is wrong. Normally, Grafana should be up and running all the time.
+        Frequent restarts indicate a problem. Grafana is expected to run continuously without interruption.
 
-        Please, refer to the corresponding logs: `kubectl -n d8-monitoring logs -f -l app=grafana-v10 -c grafana`.
+        To investigate the issue, check the logs:
+
+        ```shell
+        kubectl -n d8-monitoring logs -f -l app=grafana-v10 -c grafana
+        ```
       summary: |
-        Excessive Grafana restarts are detected.
+        Excessive Grafana restarts detected.
       severity: "9"
       markupFormat: markdown
     - name: D8GrafanaTargetAbsent
@@ -1244,14 +1298,29 @@ alerts:
       description: |-
         Grafana visualizes metrics collected by Prometheus. Grafana is critical for some tasks,
         such as monitoring the state of applications and the cluster as a whole. Additionally,
-        Grafana unavailability can negatively impact users who actively use it in their work.
+        Grafana's unavailability can negatively impact users who actively use it in their work.
 
         The recommended course of action:
-        1. Check the availability and status of Grafana Pods: `kubectl -n d8-monitoring get pods -l app=grafana-v10`;
-        2. Check the availability of the Grafana Deployment: `kubectl -n d8-monitoring get deployment grafana-v10`;
-        3. Examine the status of the Grafana Deployment: `kubectl -n d8-monitoring describe deployment grafana-v10`.
+
+        1. Check the availability and status of Grafana Pods:
+
+           ```shell
+           kubectl -n d8-monitoring get pods -l app=grafana-v10
+           ```
+
+        2. Check the availability of the Grafana Deployment:
+
+           ```shell
+           kubectl -n d8-monitoring get deployment grafana-v10
+           ```
+
+        3. Examine the status of the Grafana Deployment:
+
+           ```shell
+           kubectl -n d8-monitoring describe deployment grafana-v10
+           ```
       summary: |
-        There is no Grafana target in Prometheus.
+        Grafana target is missing in Prometheus.
       severity: "6"
       markupFormat: markdown
     - name: D8GrafanaTargetDown
@@ -1666,6 +1735,24 @@ alerts:
         Detected pods without Istio sidecars but with istio-injection configured.
       severity: "4"
       markupFormat: markdown
+    - name: D8IstioRemoteClusterNotSynced
+      sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/multicluster.yaml
+      moduleUrl: 110-istio
+      module: istio
+      edition: ee
+      description: |
+        The Istio control plane instance `{{$labels.istiod}}` cannot synchronize with the remote cluster `{{$labels.cluster_id}}`.
+
+        Possible causes:
+
+        - The remote cluster is offline.
+        - The remote API endpoint is not reachable.
+        - The remote ServiceAccount token is invalid or expired.
+        - There is a TLS or certificate issue between the clusters.
+      summary: |
+        Istio remote cluster {{$labels.cluster_id}} is not synchronized.
+      severity: "4"
+      markupFormat: markdown
     - name: D8IstioVersionIsIncompatibleWithK8sVersion
       sourceFile: modules/110-istio/monitoring/prometheus-rules/versions.tpl
       moduleUrl: 110-istio
@@ -1902,7 +1989,11 @@ alerts:
       description: |-
         The {{$labels.pod}} Pod is {{$labels.phase}}.
 
-        Run the following command to check the status of the Pod: `kubectl -n {{$labels.namespace}} get pods {{$labels.pod}} -o json | jq .status`.
+        To check the Pod's status, run the following command:
+
+        ```shell
+        kubectl -n {{$labels.namespace}} get pods {{$labels.pod}} -o json | jq .status
+        ```
       summary: |
         The machine-controller-manager Pod is NOT Running.
       severity: "8"
@@ -1913,13 +2004,18 @@ alerts:
       module: node-manager
       edition: ce
       description: |
-        The number of restarts in the last hour: {{ $value }}.
+        The `machine-controller-manager` has restarted {{ $value }} times in the past hour.
 
-        Excessive machine-controller-manager restarts indicate that something is wrong. Normally, it should be up and running all the time.
+        Frequent restarts may indicate a problem.
+        The `machine-controller-manager` is expected to run continuously without interruption.
 
-        Please, refer to the logs: `kubectl -n d8-cloud-instance-manager logs -f -l app=machine-controller-manager -c controller`.
+        Check the logs for details:
+
+        ```shell
+        kubectl -n d8-cloud-instance-manager logs -f -l app=machine-controller-manager -c controller
+        ```
       summary: |
-        The machine-controller-manager module restarts too often.
+        Too many machine-controller-manager restarts detected.
       severity: "9"
       markupFormat: markdown
     - name: D8MachineControllerManagerTargetAbsent
@@ -1928,14 +2024,30 @@ alerts:
       module: node-manager
       edition: ce
       description: |-
-        Machine controller manager manages ephemeral Nodes in the cluster. Its unavailability will result in the inability to add/delete Nodes.
+        `Machine-controller-manager` controls ephemeral nodes in the cluster.
+        If it becomes unavailable, it will be impossible to create or delete nodes in the cluster.
 
-        The recommended course of action:
-        1. Check the availability and status of `machine-controller-manager` Pods: `kubectl -n d8-cloud-instance-manager get pods -l app=machine-controller-manager`;
-        2. Check the availability of the `machine-controller-manager` Deployment: `kubectl -n d8-cloud-instance-manager get deploy machine-controller-manager`;
-        3. Check the status of the `machine-controller-manager` Deployment: `kubectl -n d8-cloud-instance-manager describe deploy machine-controller-manager`.
+        To resolve the issue, follow these steps:
+
+        1. Check availability and status of `machine-controller-manager` Pods:
+
+           ```shell
+           kubectl -n d8-cloud-instance-manager get pods -l app=machine-controller-manager
+           ```
+
+        2. Verify availability of the `machine-controller-manager` Deployment:
+
+           ```shell
+           kubectl -n d8-cloud-instance-manager get deployment machine-controller-manager
+           ```
+
+        3. Check the Deployment’s status:
+
+           ```shell
+           kubectl -n d8-cloud-instance-manager describe deployment machine-controller-manager
+           ```
       summary: |
-        There is no machine-controller-manager target in Prometheus.
+        Machine-controller-manager target is missing in Prometheus.
       severity: "8"
       markupFormat: markdown
     - name: D8MachineControllerManagerTargetDown
@@ -1945,7 +2057,7 @@ alerts:
       edition: ce
       description: ""
       summary: |
-        Prometheus is unable to scrape machine-controller-manager's metrics.
+        Prometheus is unable to scrape the machine-controller-manager's metrics.
       severity: "8"
       markupFormat: markdown
     - name: D8MetallbBGPSessionDown
@@ -2193,12 +2305,9 @@ alerts:
       moduleUrl: 040-node-manager
       module: node-manager
       edition: ce
-      description: |
-        There is a new update for Nodes of the {{ $labels.node_group }} group; Nodes have learned about the update. However, no Node can get approval to start updating.
-
-        Most likely, there is a problem with the `update_approval` hook of the `node-manager` module.
+      description: "There is a new update available for Nodes in the `{{ $labels.node_group }}` NodeGroup.  \nAlthough Nodes have detected the update, none of them have received approval to start the update process.\n\nMost likely, there is a problem with the `update_approval` hook of the `node-manager` module.\n"
       summary: |
-        The {{ $labels.node_group }} node group is not handling the update correctly.
+        NodeGroup {{ $labels.node_group }} is not handling the update correctly.
       severity: "8"
       markupFormat: markdown
     - name: D8NodeHasDeprecatedOSVersion
@@ -2248,15 +2357,9 @@ alerts:
       moduleUrl: 040-node-manager
       module: node-manager
       edition: ce
-      description: |
-        There is a new update for the {{ $labels.node }} Node of the {{ $labels.node_group }} group; the Node has learned about the update, requested and received approval, started the update, ran into a step that causes possible downtime. The update manager (the update_approval hook of node-group module) performed the update, and the Node received downtime approval. However, there is no success message about the update.
-
-        Here is how you can view Bashible logs on the Node:
-        ```shell
-        journalctl -fu bashible
-        ```
+      description: "Node `{{ $labels.node }}` in NodeGroup `{{ $labels.node_group }}` detected a new update, requested and received approval, started the update, and encountered a step that could cause downtime.  \nThe update manager (the `update_approval` hook of the `node-group` module) granted downtime approval, but no success message was received, which indicates that the update has not completed.\n\nTo investigate the details, view Bashible logs on the Node:\n\n```shell\njournalctl -fu bashible\n```\n"
       summary: |
-        The {{ $labels.node }} Node cannot complete the update.
+        Node {{ $labels.node }} cannot complete the update.
       severity: "7"
       markupFormat: markdown
     - name: D8NodeIsNotUpdating
@@ -2265,14 +2368,15 @@ alerts:
       module: node-manager
       edition: ce
       description: |
-        There is a new update for the {{ $labels.node }} Node of the {{ $labels.node_group }} group}; the Node has learned about the update, requested and received approval, but cannot complete the update.
+        Node `{{ $labels.node }}` in NodeGroup `{{ $labels.node_group }}` has detected a new update, requested and received approval, but failed to complete the update.
 
-        Here is how you can view Bashible logs on the Node:
+        To investigate the details, view Bashible logs on the Node:
+
         ```shell
         journalctl -fu bashible
         ```
       summary: |
-        The {{ $labels.node }} Node cannot complete the update.
+        Node {{ $labels.node }} cannot complete the update.
       severity: "8"
       markupFormat: markdown
     - name: D8NodeIsNotUpdating
@@ -2281,26 +2385,32 @@ alerts:
       module: node-manager
       edition: ce
       description: |
-        There is a new update for the {{ $labels.node }} Node of the {{ $labels.node_group }} group but it has not received the update nor trying to.
+        Node `{{ $labels.node }}` in NodeGroup `{{ $labels.node_group }}` has a pending update but it's neither receiving it nor attempting to.
 
-        Most likely Bashible for some reason is not handling the update correctly. At this point, it must add the `update.node.deckhouse.io/waiting-for-approval` annotation to the Node so that it can be approved.
+        Most likely, Bashible is not handling the update correctly.
+        It should annotate the Node with `update.node.deckhouse.io/waiting-for-approval` before the update can proceed.
 
-        You can find out the most current version of the update using this command:
-        ```shell
-        kubectl -n d8-cloud-instance-manager get secret configuration-checksums -o jsonpath={.data.{{ $labels.node_group }}} | base64 -d
-        ```
+        Options to investigate the details:
 
-        Use the following command to find out the version on the Node:
-        ```shell
-        kubectl get node {{ $labels.node }} -o jsonpath='{.metadata.annotations.node\.deckhouse\.io/configuration-checksum}'
-        ```
+        - Check the expected configuration checksum for the NodeGroup:
 
-        Here is how you can view Bashible logs on the Node:
-        ```shell
-        journalctl -fu bashible
-        ```
+          ```shell
+          kubectl -n d8-cloud-instance-manager get secret configuration-checksums -o jsonpath={.data.{{ $labels.node_group }}} | base64 -d
+          ```
+
+        - Check the current configuration checksum on the Node:
+
+          ```shell
+          kubectl get node {{ $labels.node }} -o jsonpath='{.metadata.annotations.node\.deckhouse\.io/configuration-checksum}'
+          ```
+
+        - View Bashible logs on the Node:
+
+          ```shell
+          journalctl -fu bashible
+          ```
       summary: |
-        The {{ $labels.node }} Node does not update.
+        Node {{ $labels.node }} is not updating.
       severity: "9"
       markupFormat: markdown
     - name: D8NodeIsUnmanaged
@@ -2309,10 +2419,9 @@ alerts:
       module: node-manager
       edition: ce
       description: |
-        The {{ $labels.node }} Node is not managed by the [node-manager](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/) module.
+        The {{ $labels.node }} Node is not managed by the [`node-manager`](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/) module.
 
-        The recommended actions are as follows:
-        - Follow these instructions to clean up the node and add it to the cluster: https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster
+        To resolve this issue, follow the [instructions](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster) how to clean up the node and add it to the cluster.
       summary: |
         The {{ $labels.node }} Node is not managed by the node-manager module.
       severity: "9"
@@ -2323,9 +2432,13 @@ alerts:
       module: node-manager
       edition: ce
       description: |
-        There is a new update for the {{ $labels.node }} Node of the {{ $labels.node_group }} group; the Node has learned about the update, requested and received approval, started the update, and ran into a stage that causes possible downtime. For some reason, the Node cannot get that approval (it is issued fully automatically by the `update_approval` hook of the `node-manager`).
+        Node `{{ $labels.node }}` in NodeGroup `{{ $labels.node_group }}` detected a new update, requested and received initial approval, and started the update.
+        However, it reached a stage that could cause downtime and was unable to obtain disruption approval.
+        A disruption approval is normally issued automatically by the `update_approval` hook of the `node-manager` module.
+
+        To resolve this issue, investigate why the approval could not be granted to proceed with the update.
       summary: |
-        The {{ $labels.node }} Node cannot get disruption approval.
+        Node {{ $labels.node }} cannot obtain disruption approval.
       severity: "8"
       markupFormat: markdown
     - name: D8OkmeterAgentPodIsNotReady
@@ -2335,7 +2448,7 @@ alerts:
       edition: ce
       description: ""
       summary: |
-        Okmeter agent is not Ready
+        Okmeter agent is not Ready.
       severity: "6"
       markupFormat: markdown
     - name: D8OldPrometheusCustomTargetFormat
@@ -2383,14 +2496,9 @@ alerts:
       moduleUrl: 040-node-manager
       module: node-manager
       edition: ce
-      description: |
-        There is a new update for Nodes of the {{ $labels.node_group }} group; Nodes have learned about the update. However, {{ $labels.node }} Node cannot be updated.
-
-        Node {{ $labels.node }} has no `node.deckhouse.io/configuration-checksum` annotation.
-        Perhaps the bootstrap process of the Node did not complete correctly. Check the `cloud-init` logs (/var/log/cloud-init-output.log) of the Node.
-        There is probably a problematic NodeGroupConfiguration resource for {{ $labels.node_group }} NodeGroup.
+      description: "There is a new update available for Nodes in the `{{ $labels.node_group }}` NodeGroup.  \nHowever, Node `{{ $labels.node }}` cannot begin the update.\n\nThe Node is missing the `node.deckhouse.io/configuration-checksum` annotation, which may indicate that its bootstrap process did not complete correctly.\n\nTroubleshooting options:\n\n- Check the `cloud-init` log (`/var/log/cloud-init-output.log`) on the node.\n- Check the NodeGroupConfiguration resource associated with the `{{ $labels.node_group }}` NodeGroup for potential issues.\n"
       summary: |
-        The {{ $labels.node }} Node cannot begin the update.
+        Node {{ $labels.node }} cannot begin the update.
       severity: "8"
       markupFormat: markdown
     - name: D8PrometheusLongtermFederationTargetDown
@@ -2398,9 +2506,15 @@ alerts:
       moduleUrl: 300-prometheus
       module: prometheus
       edition: ce
-      description: prometheus-longterm cannot scrape "/federate" endpoint from Prometheus. Check error cause in prometheus-longterm WebUI or logs.
+      description: |-
+        The `prometheus-longterm` instance is unable to scrape the `/federate` endpoint from Prometheus.
+
+        Troubleshooting options:
+
+        - Check the `prometheus-longterm` logs.
+        - Open the corresponding web UI to check scrape errors.
       summary: |
-        prometheus-longterm cannot scrape prometheus.
+        Prometheus-longterm cannot scrape Prometheus.
       severity: "5"
       markupFormat: default
     - name: D8PrometheusLongtermTargetAbsent
@@ -2409,16 +2523,32 @@ alerts:
       module: prometheus
       edition: ce
       description: |-
-        This Prometheus component is only used to display historical data and is not crucial. However, if its unavailability will last long enough, you will not be able to view the statistics.
+        The `prometheus-longterm` component is used to display historical monitoring data and is not crucial.
+        However, its extended downtime may prevent access to statistics.
 
-        Usually, Pods of this type have problems because of disk unavailability (e.g., the disk cannot be mounted to a Node for some reason).
+        This issue is often caused by problems with disk availability. For example, if the disk cannot be mounted to a Node.
 
-        The recommended course of action:
-        1. Take a look at the StatefulSet data: `kubectl -n d8-monitoring describe statefulset prometheus-longterm`;
-        2. Explore its PVC (if used): `kubectl -n d8-monitoring describe pvc prometheus-longterm-db-prometheus-longterm-0`;
-        3. Explore the Pod's state: `kubectl -n d8-monitoring describe pod prometheus-longterm-0`.
+        Troubleshooting steps:
+
+        1. Check the StatefulSet status:
+
+           ```shell
+           kubectl -n d8-monitoring describe statefulset prometheus-longterm
+           ```
+
+        2. Inspect the PersistentVolumeClaim (if used):
+
+           ```shell
+           kubectl -n d8-monitoring describe pvc prometheus-longterm-db-prometheus-longterm-0
+           ```
+
+        3. Inspect the Pod's state:
+
+           ```shell
+           kubectl -n d8-monitoring describe pod prometheus-longterm-0
+           ```
       summary: |
-        There is no prometheus-longterm target in Prometheus.
+        Prometheus-longterm target is missing in Prometheus.
       severity: "7"
       markupFormat: markdown
     - name: D8PrometheusOperatorPodIsNotReady
@@ -2427,12 +2557,23 @@ alerts:
       module: operator-prometheus
       edition: ce
       description: |
-        The new `Prometheus`, `PrometheusRules`, `ServiceMonitor` settings cannot be applied in the cluster; however, all existing and configured components continue to operate correctly.
-        This problem will not affect alerting or monitoring in the short term (a few days).
+        As a result, new `Prometheus`, `PrometheusRules`, and `ServiceMonitor` configurations cannot be applied in the cluster.
+        However, all existing and configured components will continue to operate normally.
+        This problem will not affect alerting or monitoring in the short term (for a few days).
 
-        The recommended course of action:
-        1. Analyze the Deployment info: `kubectl -n d8-operator-prometheus describe deploy prometheus-operator`;
-        2. Examine the status of the Pod and try to figure out why it is not running: `kubectl -n d8-operator-prometheus describe pod -l app=prometheus-operator`.
+        Troubleshooting steps:
+
+        1. Analyze the Deployment details:
+
+           ```shell
+           kubectl -n d8-operator-prometheus describe deployment prometheus-operator
+           ```
+
+        2. Examine the Pod's to determine why it is not running:
+
+           ```shell
+           kubectl -n d8-operator-prometheus describe pod -l app=prometheus-operator
+           ```
       summary: |
         The prometheus-operator Pod is NOT Ready.
       severity: "7"
@@ -2443,12 +2584,23 @@ alerts:
       module: operator-prometheus
       edition: ce
       description: |
-        The new `Prometheus`, `PrometheusRules`, `ServiceMonitor` settings cannot be applied in the cluster; however, all existing and configured components continue to operate correctly.
-        This problem will not affect alerting or monitoring in the short term (a few days).
+        As a result, new `Prometheus`, `PrometheusRules`, and `ServiceMonitor` configurations cannot be applied in the cluster.
+        However, all existing and configured components will continue to operate normally.
+        This problem will not affect alerting or monitoring in the short term (for a few days).
 
-        The recommended course of action:
-        1. Analyze the Deployment info: `kubectl -n d8-operator-prometheus describe deploy prometheus-operator`;
-        2. Examine the status of the Pod and try to figure out why it is not running: `kubectl -n d8-operator-prometheus describe pod -l app=prometheus-operator`.
+        Troubleshooting steps:
+
+        1. Analyze the Deployment details:
+
+           ```shell
+           kubectl -n d8-operator-prometheus describe deployment prometheus-operator
+           ```
+
+        2. Examine the Pod's to determine why it is not running:
+
+           ```shell
+           kubectl -n d8-operator-prometheus describe pod -l app=prometheus-operator
+           ```
       summary: |
         The prometheus-operator Pod is NOT Running.
       severity: "7"
@@ -2459,12 +2611,17 @@ alerts:
       module: operator-prometheus
       edition: ce
       description: |
-        The new `Prometheus`, `PrometheusRules`, `ServiceMonitor` settings cannot be applied in the cluster; however, all existing and configured components continue to operate correctly.
-        This problem will not affect alerting or monitoring in the short term (a few days).
+        As a result, new `Prometheus`, `PrometheusRules`, and `ServiceMonitor` configurations cannot be applied in the cluster.
+        However, all existing and configured components will continue to operate normally.
+        This problem will not affect alerting or monitoring in the short term (for a few days).
 
-        The recommended course of action is to analyze the deployment information: `kubectl -n d8-operator-prometheus describe deploy prometheus-operator`.
+        To resolve the issue, analyze the Deployment details:
+
+        ```shell
+        kubectl -n d8-operator-prometheus describe deployment prometheus-operator
+        ```
       summary: |
-        There is no prometheus-operator target in Prometheus.
+        Prometheus-operator target is missing in Prometheus.
       severity: "7"
       markupFormat: markdown
     - name: D8PrometheusOperatorTargetDown
@@ -2473,14 +2630,25 @@ alerts:
       module: operator-prometheus
       edition: ce
       description: |-
-        The `prometheus-operator` Pod is not available.
+        The `prometheus-operator` Pod is unavailable.
 
-        The new `Prometheus`, `PrometheusRules`, `ServiceMonitor` settings cannot be applied in the cluster; however, all existing and configured components continue to operate correctly.
-        This problem will not affect alerting or monitoring in the short term (a few days).
+        As a result, new `Prometheus`, `PrometheusRules`, and `ServiceMonitor` configurations cannot be applied in the cluster.
+        However, all existing and configured components will continue to operate normally.
+        This problem will not affect alerting or monitoring in the short term (for a few days).
 
-        The recommended course of action:
-        1. Analyze the Deployment info: `kubectl -n d8-operator-prometheus describe deploy prometheus-operator`;
-        2. Examine the status of the Pod and try to figure out why it is not running: `kubectl -n d8-operator-prometheus describe pod -l app=prometheus-operator`.
+        Troubleshooting steps:
+
+        1. Analyze the Deployment details:
+
+           ```shell
+           kubectl -n d8-operator-prometheus describe deployment prometheus-operator
+           ```
+
+        2. Examine the Pod's to determine why it is not running:
+
+           ```shell
+           kubectl -n d8-operator-prometheus describe pod -l app=prometheus-operator
+           ```
       summary: |
         Prometheus is unable to scrape prometheus-operator metrics.
       severity: "8"
@@ -2506,17 +2674,23 @@ alerts:
       module: runtime-audit-engine
       edition: ee
       description: |
-        A number of runtime-audit-engine pods are not scheduled.
-        Security audit is not fully operational.
+        Some `runtime-audit-engine` Pods are not scheduled, meaning the security audit is not fully operational.
 
-        Consider checking state of the d8-runtime-audit-engine/runtime-audit-engine DaemonSet.
-        `kubectl -n d8-runtime-audit-engine get daemonset,pod --selector=app=runtime-audit-engine`
-        Get a list of nodes that have pods in an not Ready state.
-        ```
-        kubectl -n {{$labels.namespace}} get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="{{$labels.daemonset}}")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
-        ```
+        Troubleshooting steps:
+
+        1. Check the status of the DaemonSet `d8-runtime-audit-engine/runtime-audit-engine`:
+
+           ```shell
+           kubectl -n d8-runtime-audit-engine get daemonset,pod --selector=app=runtime-audit-engine
+           ```
+
+        2. Get a list of nodes where Pods are not in the Ready state:
+
+           ```shell
+           kubectl -n {{$labels.namespace}} get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="{{$labels.daemonset}}")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
+           ```
       summary: |
-        Pods of runtime-audit-engine cannot be scheduled in the cluster.
+        Runtime-audit-engine Pods cannot be scheduled.
       severity: "4"
       markupFormat: markdown
     - name: D8SecretCopierDeprecatedLabels
@@ -2525,13 +2699,13 @@ alerts:
       module: secret-copier
       edition: ce
       description: |-
-        The [secrets copier module](https://github.com/deckhouse/deckhouse/tree/main/modules/600-secret-copier/) has changed the service label for the original secrets in the `default` namespace.
+        The [`secret-copier` module](https://github.com/deckhouse/deckhouse/tree/main/modules/600-secret-copier/) has changed its labeling approach for original secrets in the `default` namespace.
 
-        Soon we will abandon the old `antiopa-secret-copier: "yes"` label.
+        The label `antiopa-secret-copier: "yes"` is deprecated and will be removed soon.
 
-        You have to replace the `antiopa-secret-copier: "yes"` label with  `secret-copier.deckhouse.io/enabled: ""` for all secrets that the `secret-copier` module uses in the `default` namespace.
+        To resolve this issue, replace the label `antiopa-secret-copier: "yes"` with `secret-copier.deckhouse.io/enabled: ""` for all secrets used by the `secret-copier` module in the `default` namespace.
       summary: |
-        Obsolete antiopa_secret_copier=yes label has been found.
+        Obsolete antiopa_secret_copier=yes label detected.
       severity: "9"
       markupFormat: markdown
     - name: D8SmokeMiniNotBoundPersistentVolumeClaims
@@ -2540,15 +2714,20 @@ alerts:
       module: upmeter
       edition: ce
       description: |
-        {{ $labels.persistentvolumeclaim }} persistent volume claim status is {{ $labels.phase }}.
+        The PersistentVolumeClaim `{{ $labels.persistentvolumeclaim }}` is in the `{{ $labels.phase }}` phase.
 
-        There is a problem with pv provisioning. Check the status of the pvc o find the problem:
-        `kubectl -n d8-upmeter get pvc {{ $labels.persistentvolumeclaim }}`
+        This indicates a problem with PersistentVolume provisioning.
 
-        If you have no disk provisioning system in the cluster,
-        you can disable ordering volumes for the some-mini through the module settings.
+        To investigate the cause, check the PersistentVolumeClaim phase:
+
+        ```shell
+        kubectl -n d8-upmeter get pvc {{ $labels.persistentvolumeclaim }}
+        ```
+
+        If your cluster doesn't have a disk provisioning system,
+        you can disable volume ordering for `smoke-mini` using the module settings.
       summary: |
-        Smoke-mini has unbound or lost persistent volume claims.
+        Smoke-mini has unbound or lost PersistentVolumeClaims.
       severity: "9"
       markupFormat: markdown
     - name: D8SnapshotControllerPodIsNotReady
@@ -2557,11 +2736,21 @@ alerts:
       module: snapshot-controller
       edition: ce
       description: |
-        The recommended course of action:
-        1. Retrieve details of the Deployment: `kubectl -n d8-snapshot-controller describe deploy snapshot-controller`
-        2. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-snapshot-controller describe pod -l app=snapshot-controller`
+        Troubleshooting steps:
+
+        1. Examine the Deployment's details:
+
+           ```shell
+           kubectl -n d8-snapshot-controller describe deployment snapshot-controller
+           ```
+
+        2. Check the Pod's status to determine the cause why it is not running:
+
+           ```shell
+           kubectl -n d8-snapshot-controller describe pod -l app=snapshot-controller
+           ```
       summary: |
-        The snapshot-controller Pod is NOT Ready.
+        Snapshot-controller Pod is NOT Ready.
       severity: "8"
       markupFormat: markdown
     - name: D8SnapshotControllerPodIsNotRunning
@@ -2570,11 +2759,21 @@ alerts:
       module: snapshot-controller
       edition: ce
       description: |
-        The recommended course of action:
-        1. Retrieve details of the Deployment: `kubectl -n d8-snapshot-controller describe deploy snapshot-controller`
-        2. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-snapshot-controller describe pod -l app=snapshot-controller`
+        Troubleshooting steps:
+
+        1. Examine the Deployment's details:
+
+           ```shell
+           kubectl -n d8-snapshot-controller describe deployment snapshot-controller
+           ```
+
+        2. Check the Pod's status to determine the cause why it is not running:
+
+           ```shell
+           kubectl -n d8-snapshot-controller describe pod -l app=snapshot-controller
+           ```
       summary: |
-        The snapshot-controller Pod is NOT Running.
+        Snapshot-controller Pod is NOT Running.
       severity: "8"
       markupFormat: markdown
     - name: D8SnapshotControllerTargetAbsent
@@ -2583,11 +2782,21 @@ alerts:
       module: snapshot-controller
       edition: ce
       description: |
-        The recommended course of action:
-        1. Check the Pod status: `kubectl -n d8-snapshot-controller get pod -l app=snapshot-controller`
-        2. Or check the Pod logs: `kubectl -n d8-snapshot-controller logs -l app=snapshot-controller -c snapshot-controller`
+        Troubleshooting options:
+
+        - Check the Pod's status:
+
+          ```shell
+          kubectl -n d8-snapshot-controller get pod -l app=snapshot-controller
+          ```
+
+        - Check the Pod's logs:
+
+          ```shell
+          kubectl -n d8-snapshot-controller logs -l app=snapshot-controller -c snapshot-controller
+          ```
       summary: |
-        There is no snapshot-controller target in Prometheus.
+        Snapshot-controller target is missing in Prometheus.
       severity: "8"
       markupFormat: markdown
     - name: D8SnapshotControllerTargetDown
@@ -2596,9 +2805,21 @@ alerts:
       module: snapshot-controller
       edition: ce
       description: |
-        The recommended course of action:
-        1. Check the Pod status: `kubectl -n d8-snapshot-controller get pod -l app=snapshot-controller`
-        2. Or check the Pod logs: `kubectl -n d8-snapshot-controller logs -l app=snapshot-controller -c snapshot-controller`
+        Prometheus is unable to scrape metrics from the `snapshot-controller`.
+
+        Troubleshooting options:
+
+        - Check the Pod's status:
+
+          ```shell
+          kubectl -n d8-snapshot-controller get pod -l app=snapshot-controller
+          ```
+
+        - Check the Pod's logs:
+
+          ```shell
+          kubectl -n d8-snapshot-controller logs -l app=snapshot-controller -c snapshot-controller
+          ```
       summary: |
         Prometheus cannot scrape the snapshot-controller metrics.
       severity: "8"
@@ -2609,11 +2830,21 @@ alerts:
       module: snapshot-controller
       edition: ce
       description: |
-        The recommended course of action:
-        1. Retrieve details of the Deployment: `kubectl -n d8-snapshot-controller describe deploy snapshot-validation-webhook`
-        2. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-snapshot-controller describe pod -l app=snapshot-validation-webhook`
+        Troubleshooting steps:
+
+        1. Examine the Deployment's details:
+
+           ```shell
+           kubectl -n d8-snapshot-controller describe deployment snapshot-validation-webhook
+           ```
+
+        2. Check the Pod's status to determine the cause why it is not running:
+
+           ```shell
+           kubectl -n d8-snapshot-controller describe pod -l app=snapshot-validation-webhook
+           ```
       summary: |
-        The snapshot-validation-webhook Pod is NOT Ready.
+        Snapshot-validation-webhook Pod is NOT Ready.
       severity: "8"
       markupFormat: markdown
     - name: D8SnapshotValidationWebhookPodIsNotRunning
@@ -2622,153 +2853,273 @@ alerts:
       module: snapshot-controller
       edition: ce
       description: |
-        The recommended course of action:
-        1. Retrieve details of the Deployment: `kubectl -n d8-snapshot-controller describe deploy snapshot-validation-webhook`
-        2. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-snapshot-controller describe pod -l app=snapshot-validation-webhook`
+        Troubleshooting steps:
+
+        1. Examine the Deployment's details:
+
+           ```shell
+           kubectl -n d8-snapshot-controller describe deployment snapshot-validation-webhook
+           ```
+
+        2. Check the Pod's status to determine the cause why it is not running:
+
+           ```shell
+           kubectl -n d8-snapshot-controller describe pod -l app=snapshot-validation-webhook
+           ```
       summary: |
-        The snapshot-validation-webhook Pod is NOT Running.
+        Snapshot-validation-webhook Pod is NOT Running.
       severity: "8"
       markupFormat: markdown
     - name: D8TerraformStateExporterClusterStateChanged
-      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-state-exporter.tpl
+      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-manager/terraform-state-exporter.tpl
       moduleUrl: 040-terraform-manager
       module: terraform-manager
       edition: ce
       description: |
-        Real Kubernetes cluster state is `{{ $labels.status }}` comparing to Terraform state.
+        The current Kubernetes cluster state is `{{ $labels.status }}` compared to the Terraform state.
 
-        It's important to make them equal.
-        First, run the `dhctl terraform check` command to check what will change.
-        To converge state of Kubernetes cluster, use `dhctl converge` command.
+        It is important to reconcile the states.
+
+        Troubleshooting steps:
+
+        1. View the differences:
+
+           ```shell
+           dhctl terraform check
+           ```
+
+        2. Apply the necessary changes to bring the cluster in sync:
+
+           ```shell
+           dhctl converge
+           ```
       summary: |
-        Terraform-state-exporter cluster state changed
+        Terraform-state-exporter cluster state change detected.
       severity: "8"
       markupFormat: markdown
     - name: D8TerraformStateExporterClusterStateError
-      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-state-exporter.tpl
+      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-manager/terraform-state-exporter.tpl
       moduleUrl: 040-terraform-manager
       module: terraform-manager
       edition: ce
       description: |
-        Terraform-state-exporter can't check difference between Kubernetes cluster state and Terraform state.
+        The `terraform-state-exporter` can't check difference between the Kubernetes cluster state and the Terraform state.
 
-        Probably, it occurred because Terraform-state-exporter had failed to run terraform with current state and config.
-        First, run the `dhctl terraform check` command to check what will change.
-        To converge state of Kubernetes cluster, use `dhctl converge` command.
+        That was likely caused by `terraform-state-exporter` failing to run Terraform with the current state and configuration.
+
+        Troubleshooting steps:
+
+        1. View the differences:
+
+           ```shell
+           dhctl terraform check
+           ```
+
+        2. Apply the necessary changes to bring the cluster in sync:
+
+           ```shell
+           dhctl converge
+           ```
       summary: |
-        Terraform-state-exporter cluster state error
+        Terraform-state-exporter cluster state error.
       severity: "8"
       markupFormat: markdown
     - name: D8TerraformStateExporterHasErrors
-      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-state-exporter.tpl
+      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-manager/terraform-state-exporter.tpl
       moduleUrl: 040-terraform-manager
       module: terraform-manager
       edition: ce
       description: |
-        Errors occurred while terraform-state-exporter working.
+        Errors occurred during the operation of the `terraform-state-exporter`.
 
-        Check pods logs to get more details: `kubectl -n d8-system logs -l app=terraform-state-exporter -c exporter`
+        To get more details, check the Pod logs:
+
+        ```shell
+        kubectl -n d8-system logs -l app=terraform-state-exporter -c exporter
+        ```
       summary: |
-        Terraform-state-exporter has errors
+        Terraform-state-exporter has encountered errors.
       severity: "8"
       markupFormat: markdown
     - name: D8TerraformStateExporterNodeStateChanged
-      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-state-exporter.tpl
+      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-manager/terraform-state-exporter.tpl
       moduleUrl: 040-terraform-manager
       module: terraform-manager
       edition: ce
       description: |
-        Real Node `{{ $labels.node_group }}/{{ $labels.name }}` state is `{{ $labels.status }}` comparing to Terraform state.
+        The current state of node `{{ $labels.node_group }}/{{ $labels.name }}` is `{{ $labels.status }}` compared to the Terraform state.
 
-        It's important to make them equal.
-        First, run the `dhctl terraform check` command to check what will change.
-        To converge state of Kubernetes cluster, use `dhctl converge` command.
+        It is important to reconcile the states.
+
+        Troubleshooting steps:
+
+        1. View the differences:
+
+           ```shell
+           dhctl terraform check
+           ```
+
+        2. Apply the necessary changes to bring the cluster in sync:
+
+           ```shell
+           dhctl converge
+           ```
       summary: |
-        Terraform-state-exporter node state changed
+        Terraform-state-exporter node state change detected.
       severity: "8"
       markupFormat: markdown
     - name: D8TerraformStateExporterNodeStateError
-      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-state-exporter.tpl
+      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-manager/terraform-state-exporter.tpl
       moduleUrl: 040-terraform-manager
       module: terraform-manager
       edition: ce
       description: |
-        Terraform-state-exporter can't check difference between Node `{{ $labels.node_group }}/{{ $labels.name }}` state and Terraform state.
+        The `terraform-state-exporter` can't check the difference between the node `{{ $labels.node_group }}/{{ $labels.name }}` state and the Terraform state.
 
-        Probably, it occurred because Terraform-manager had failed to run terraform with current state and config.
-        First, run the `dhctl terraform check` command to check what will change.
-        To converge state of Kubernetes cluster, use `dhctl converge` command.
+        Probably, it occurred because `terraform-manager` had failed to run Terraform with the current state and configuration.
+
+        Troubleshooting steps:
+
+        1. View the differences:
+
+           ```shell
+           dhctl terraform check
+           ```
+
+        2. Apply the necessary changes to bring the cluster in sync:
+
+           ```shell
+           dhctl converge
+           ```
       summary: |
-        Terraform-state-exporter node state error
+        Terraform-state-exporter node state error.
       severity: "8"
       markupFormat: markdown
     - name: D8TerraformStateExporterNodeTemplateChanged
-      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-state-exporter.tpl
+      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-manager/terraform-state-exporter.tpl
       moduleUrl: 040-terraform-manager
       module: terraform-manager
       edition: ce
       description: |
-        Terraform-state-exporter found difference between node template from cluster provider configuration and from NodeGroup `{{ $labels.name }}`.
+        The `terraform-state-exporter` has detected a mismatch between the node template in the cluster provider configuration and the one specified in the NodeGroup {{ $labels.name }}`.
+
         Node template is `{{ $labels.status }}`.
 
-        First, run the `dhctl terraform check` command to check what will change.
-        Use `dhctl converge` command or manually adjust NodeGroup settings to fix the issue.
+        Troubleshooting steps:
+
+        1. View the differences:
+
+           ```shell
+           dhctl terraform check
+           ```
+
+        2. Adjust NodeGroup settings to fix the issue or bring the cluster in sync via the following command:
+
+           ```shell
+           dhctl converge
+           ```
       summary: |
-        Terraform-state-exporter node template changed
+        Terraform-state-exporter node template change detected.
       severity: "8"
       markupFormat: markdown
     - name: D8TerraformStateExporterPodIsNotReady
-      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-state-exporter.tpl
+      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-manager/terraform-state-exporter.tpl
       moduleUrl: 040-terraform-manager
       module: terraform-manager
       edition: ce
       description: |
-        Terraform-state-exporter doesn't check the difference between real Kubernetes cluster state and Terraform state.
+        The `terraform-state-exporter` cannot check the difference between the actual Kubernetes cluster state and the Terraform state.
 
-        Pease, check:
-        1. Deployment description: `kubectl -n d8-system describe deploy terraform-state-exporter`
-        2. Pod status: `kubectl -n d8-system describe pod -l app=terraform-state-exporter`
+        To resolve the issue, check the following:
+
+        1. Deployment description:
+
+           ```shell
+           kubectl -n d8-system describe deployment terraform-state-exporter
+           ```
+
+        2. Pod status:
+
+           ```shell
+           kubectl -n d8-system describe pod -l app=terraform-state-exporter
+           ```
       summary: |
-        Pod terraform-state-exporter is not Ready
+        Terraform-state-exporter Pod is not Ready.
       severity: "8"
       markupFormat: markdown
     - name: D8TerraformStateExporterPodIsNotRunning
-      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-state-exporter.tpl
+      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-manager/terraform-state-exporter.tpl
       moduleUrl: 040-terraform-manager
       module: terraform-manager
       edition: ce
       description: |
-        Terraform-state-exporter doesn't check the difference between real Kubernetes cluster state and Terraform state.
+        The `terraform-state-exporter` cannot check the difference between the actual Kubernetes cluster state and the Terraform state.
 
-        Pease, check:
-        1. Deployment description: `kubectl -n d8-system describe deploy terraform-state-exporter`
-        2. Pod status: `kubectl -n d8-system describe pod -l app=terraform-state-exporter`
+        To resolve the issue, check the following:
+
+        1. Deployment description:
+
+           ```shell
+           kubectl -n d8-system describe deployment terraform-state-exporter
+           ```
+
+        2. Pod status:
+
+           ```shell
+           kubectl -n d8-system describe pod -l app=terraform-state-exporter
+           ```
       summary: |
-        Pod terraform-state-exporter is not Running
+        Terraform-state-exporter Pod is not Running.
       severity: "8"
       markupFormat: markdown
     - name: D8TerraformStateExporterTargetAbsent
-      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-state-exporter.tpl
+      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-manager/terraform-state-exporter.tpl
       moduleUrl: 040-terraform-manager
       module: terraform-manager
       edition: ce
       description: |
-        To get more details:
-        Check pods state: `kubectl -n d8-system get pod -l app=terraform-state-exporter` or logs: `kubectl -n d8-system logs -l app=terraform-state-exporter -c exporter`
+        Prometheus cannot find the `terraform-state-exporter` target.
+
+        To investigate the details:
+
+        - Check the Pod status:
+
+          ```shell
+          kubectl -n d8-system get pod -l app=terraform-state-exporter
+          ```
+
+        - Check the container logs:
+
+          ```shell
+          kubectl -n d8-system logs -l app=terraform-state-exporter -c exporter
+          ```
       summary: |
-        Prometheus has no terraform-state-exporter target
+        Terraform-state-exporter target is missing in Prometheus.
       severity: "8"
       markupFormat: markdown
     - name: D8TerraformStateExporterTargetDown
-      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-state-exporter.tpl
+      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-manager/terraform-state-exporter.tpl
       moduleUrl: 040-terraform-manager
       module: terraform-manager
       edition: ce
       description: |
-        To get more details:
-        Check pods state: `kubectl -n d8-system get pod -l app=terraform-state-exporter` or logs: `kubectl -n d8-system logs -l app=terraform-state-exporter -c exporter`
+        Prometheus is unable to scrape metrics from the `terraform-state-exporter`.
+
+        To investigate the details:
+
+        - Check the Pod status:
+
+          ```shell
+          kubectl -n d8-system get pod -l app=terraform-state-exporter
+          ```
+
+        - Check the container logs:
+
+          ```shell
+          kubectl -n d8-system logs -l app=terraform-state-exporter -c exporter
+          ```
       summary: |
-        Prometheus can't scrape terraform-state-exporter
+        Prometheus can't scrape terraform-state-exporter.
       severity: "8"
       markupFormat: markdown
     - name: D8TricksterTargetAbsent
@@ -2777,17 +3128,35 @@ alerts:
       module: prometheus
       edition: ce
       description: |-
-        The following modules use this component:
-        * `prometheus-metrics-adapter` — the unavailability of the component means that HPA (auto scaling) is not running and you cannot view resource consumption using `kubectl`;
-        * `vertical-pod-autoscaler` — this module is quite capable of surviving a short-term unavailability, as VPA looks at the consumption history for 8 days;
-        * `grafana` — by default, all dashboards use Trickster for caching requests to Prometheus. You can retrieve data directly from Prometheus (bypassing the Trickster). However, this may lead to high memory usage by Prometheus and, hence, to its unavailability.
+        The following modules use the Trickster component:
 
-        The recommended course of action:
-        1. Analyze the Deployment information: `kubectl -n d8-monitoring describe deployment trickster`;
-        2. Analyze the Pod information: `kubectl -n d8-monitoring describe pod -l app=trickster`;
-        3. Usually, Trickster is unavailable due to Prometheus-related issues because the Trickster's readinessProbe checks the Prometheus availability. Thus, make sure that Prometheus is running: `kubectl -n d8-monitoring describe pod -l app.kubernetes.io/name=prometheus,prometheus=main`.
+        * `prometheus-metrics-adapter`: Its unavailability means horizontal pod autoscaling (HPA) is not working, and you cannot view resource consumption using `kubectl`.
+        * `vertical-pod-autoscaler`: Short-term unavailability for this module is tolerable, as VPA looks at the consumption history for 8 days.
+        * `grafana`: All dashboards use Trickster by default to cache Prometheus queries. You can retrieve data directly from Prometheus (bypassing the Trickster). However, this may lead to high memory usage by Prometheus and cause unavailability.
+
+        Troubleshooting steps:
+
+        1. Inspect the Deployment's stats:
+
+           ```shell
+           kubectl -n d8-monitoring describe deployment trickster
+           ```
+
+        2. Inspect the Pod's stats:
+
+           ```shell
+           kubectl -n d8-monitoring describe pod -l app=trickster
+           ```
+
+        3. Trickster often becomes unavailable due to Prometheus issues, since its `readinessProbe` depends on Prometheus being accessible.
+
+           Make sure Prometheus is running:
+
+           ```shell
+           kubectl -n d8-monitoring describe pod -l app.kubernetes.io/name=prometheus,prometheus=main
+           ```
       summary: |
-        There is no Trickster target in Prometheus.
+        Trickster target is missing in Prometheus.
       severity: "5"
       markupFormat: markdown
     - name: D8TricksterTargetAbsent
@@ -2796,17 +3165,35 @@ alerts:
       module: prometheus
       edition: ce
       description: |-
-        The following modules use this component:
-        * `prometheus-metrics-adapter` — the unavailability of the component means that HPA (auto scaling) is not running and you cannot view resource consumption using `kubectl`;
-        * `vertical-pod-autoscaler` — this module is quite capable of surviving a short-term unavailability, as VPA looks at the consumption history for 8 days;
-        * `grafana` — by default, all dashboards use Trickster for caching requests to Prometheus. You can retrieve data directly from Prometheus (bypassing the Trickster). However, this may lead to high memory usage by Prometheus and, hence, to unavailability.
+        The following modules use the Trickster component:
 
-        The recommended course of action:
-        1. Analyze the Deployment stats: `kubectl -n d8-monitoring describe deployment trickster`;
-        2. Analyze the Pod stats: `kubectl -n d8-monitoring describe pod -l app=trickster`;
-        3. Usually, Trickster is unavailable due to Prometheus-related issues because the Trickster's readinessProbe checks the Prometheus availability. Thus, make sure that Prometheus is running: `kubectl -n d8-monitoring describe pod -l app.kubernetes.io/name=prometheus,prometheus=main`.
+        * `prometheus-metrics-adapter`: Its unavailability means horizontal pod autoscaling (HPA) is not working, and you cannot view resource consumption using `kubectl`.
+        * `vertical-pod-autoscaler`: Short-term unavailability for this module is tolerable, as VPA looks at the consumption history for 8 days.
+        * `grafana`: All dashboards use Trickster by default to cache Prometheus queries. You can retrieve data directly from Prometheus (bypassing the Trickster). However, this may lead to high memory usage by Prometheus and cause unavailability.
+
+        Troubleshooting steps:
+
+        1. Inspect the Deployment's stats:
+
+           ```shell
+           kubectl -n d8-monitoring describe deployment trickster
+           ```
+
+        2. Inspect the Pod's stats:
+
+           ```shell
+           kubectl -n d8-monitoring describe pod -l app=trickster
+           ```
+
+        3. Trickster often becomes unavailable due to Prometheus issues, since its `readinessProbe` depends on Prometheus being accessible.
+
+           Make sure Prometheus is running:
+
+           ```shell
+           kubectl -n d8-monitoring describe pod -l app.kubernetes.io/name=prometheus,prometheus=main
+           ```
       summary: |
-        There is no Trickster target in Prometheus.
+        Trickster target is missing in Prometheus.
       severity: "5"
       markupFormat: markdown
     - name: D8UpmeterAgentPodIsNotReady
@@ -2816,7 +3203,7 @@ alerts:
       edition: ce
       description: ""
       summary: |
-        Upmeter agent is not Ready
+        Upmeter agent is not Ready.
       severity: "6"
       markupFormat: markdown
     - name: D8UpmeterAgentReplicasUnavailable
@@ -2825,13 +3212,23 @@ alerts:
       module: upmeter
       edition: ce
       description: |-
-        Check DaemonSet status:
-        `kubectl -n d8-upmeter get daemonset upmeter-agent -o json | jq .status`
+        Some `upmeter-agent` Pods are not in the Running state.
 
-        Check the status of its pod:
-        `kubectl -n d8-upmeter get pods -l app=upmeter-agent -o json | jq '.items[] | {(.metadata.name):.status}'`
+        To investigate the details, do the following:
+
+        - Check the DaemonSet status:
+
+          ```shell
+          kubectl -n d8-upmeter get daemonset upmeter-agent -o json | jq .status
+          ```
+
+        - Check the Pod status:
+
+          ```shell
+          kubectl -n d8-upmeter get pods -l app=upmeter-agent -o json | jq '.items[] | {(.metadata.name):.status}'
+          ```
       summary: |
-        One or more Upmeter agent pods is NOT Running
+        One or more upmeter-agent Pods are NOT Running.
       severity: "6"
       markupFormat: markdown
     - name: D8UpmeterDiskUsage
@@ -2840,11 +3237,13 @@ alerts:
       module: upmeter
       edition: ce
       description: |
-        The only way to resolve is to recreate the PVC using the following steps:
+        Disk usage for Upmeter has exceeded 80%.
+
+        The only way to resolve this is to recreate the PersistentVolumeClaim (PVC) in the following steps:
 
         1. Save the PVC data if you need it.
 
-        1. Delete the PVC and restart `upmeter`:
+        1. Delete the PVC and restart the `upmeter` Pod:
 
            ```shell
            kubectl -n d8-upmeter delete persistentvolumeclaim/data-upmeter-0 pod/upmeter-0
@@ -2856,7 +3255,7 @@ alerts:
            kubectl -n d8-upmeter get pvc
            ```
       summary: |
-        Upmeter disk usage is over 80%.
+        Upmeter disk usage exceeds 80%.
       severity: "5"
       markupFormat: markdown
     - name: D8UpmeterProbeGarbageConfigmap
@@ -2865,26 +3264,33 @@ alerts:
       module: upmeter
       edition: ce
       description: |
-        Probe configmaps found.
+        Probe-generated ConfigMaps were found but not cleaned up as expected.
 
-        Upmeter agents should clean ConfigMaps produced by control-plane/basic probe. There should not be more
-        configmaps than master nodes (upmeter-agent is a DaemonSet with master nodeSelector). Also, they should be
-        deleted within seconds.
+        `upmeter-agent` should automatically delete ConfigMaps produced by the `control-plane/basic` probe.
+        There should be no more ConfigMaps than there are master nodes (since `upmeter-agent` runs as a DaemonSet with a master `nodeSelector`), and they should be deleted within seconds.
 
-        This might be an indication of a problem with kube-apiserver. Or, possibly, the configmaps were left by old
-        upmeter-agent pods due to Upmeter update.
+        This may indicate:
 
-        1. Check upmeter-agent logs
+        - A problem with the `kube-apiserver`.
+        - Stale ConfigMaps left by outdated `upmeter-agent` Pods after an Upmeter update.
 
-        `kubectl -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "basic-functionality") | [.time, .level, .msg] | @tsv'`
+        Troubleshooting steps:
 
-        2. Check that control plane is functional.
+        1. Check the `upmeter-agent` logs:
 
-        3. Delete configmaps manually:
+           ```shell
+           kubectl -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "basic-functionality") | [.time, .level, .msg] | @tsv'
+           ```
 
-        `kubectl -n d8-upmeter delete cm -l heritage=upmeter`
+        2. Ensure the control plane is operating normally.
+
+        3. Delete stale ConfigMaps manually:
+
+           ```shell
+           kubectl -n d8-upmeter delete cm -l heritage=upmeter
+           ```
       summary: |
-        Garbage produced by basic probe is not being cleaned.
+        Garbage ConfigMaps from the basic probe are not being cleaned up.
       severity: "9"
       markupFormat: markdown
     - name: D8UpmeterProbeGarbageDeployment
@@ -2893,26 +3299,33 @@ alerts:
       module: upmeter
       edition: ce
       description: |
-        Average probe deployments count per upmeter-agent pod: {{ $value }}.
+        The average number of probe-generated Deployments per `upmeter-agent` Pod is {{ $value }}.
 
-        Upmeter agents should clean Deployments produced by control-plane/controller-manager probe. There should not
-        be more deployments than master nodes (upmeter-agent is a DaemonSet with master nodeSelector).
-        Also, they should be deleted within seconds.
+        `upmeter-agent` should automatically delete Deployments created by the `control-plane/controller-manager` probe.
+        There should not be more Deployments than master nodes (since `upmeter-agent` runs as a DaemonSet with a master `nodeSelector`), and they should be deleted within seconds.
 
-        This might be an indication of a problem with kube-apiserver. Or, possibly, the deployments were left by old
-        upmeter-agent pods due to Upmeter update.
+        This may indicate:
 
-        1. Check upmeter-agent logs
+        - A problem with the `kube-apiserver`.
+        - Stale Deployments left by outdated `upmeter-agent` Pods after an Upmeter update.
 
-        `kubectl -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "controller-manager") | [.time, .level, .msg] | @tsv'`
+        Troubleshooting steps:
 
-        2. Check that control plane is functional, kube-controller-manager in particular.
+        1. Check the `upmeter-agent` logs:
 
-        3. Delete deployments manually:
+           ```shell
+           kubectl -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "controller-manager") | [.time, .level, .msg] | @tsv'
+           ```
 
-        `kubectl -n d8-upmeter delete deploy -l heritage=upmeter`
+        2. Ensure the control plane is operating normally. Pay close attention to `kube-controller-manager`.
+
+        3. Delete stale Deployments manually:
+
+           ```shell
+           kubectl -n d8-upmeter delete deployment -l heritage=upmeter
+           ```
       summary: |
-        Garbage produced by controller-manager probe is not being cleaned.
+        Garbage Deployments from the controller-manager probe are not being cleaned up.
       severity: "9"
       markupFormat: markdown
     - name: D8UpmeterProbeGarbageNamespaces
@@ -2920,25 +3333,9 @@ alerts:
       moduleUrl: 500-upmeter
       module: upmeter
       edition: ce
-      description: |
-        Average probe namespace per upmeter-agent pod: {{ $value }}.
-
-        Upmeter agents should clean namespaces produced by control-plane/namespace probe. There should not be more
-        of these namespaces than master nodes (upmeter-agent is a DaemonSet with master nodeSelector).
-        Also, they should be deleted within seconds.
-
-        This might be an indication of a problem with kube-apiserver. Or, possibly, the namespaces were left
-        by old upmeter-agent pods due to Upmeter update.
-
-        1. Check upmeter-agent logs
-
-        `kubectl -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "namespace") | [.time, .level, .msg] | @tsv'`
-
-        2. Check that control plane is functional.
-
-        3. Delete namespaces manually: `kubectl -n d8-upmeter delete ns -l heritage=upmeter`
+      description: "The average number of probe-created namespaces per `upmeter-agent` Pod is {{ $value }}.\n\n`upmeter-agent` should automatically clean up namespaces created by the `control-plane/namespace` probe.  \nThere should not be more of these namespaces than there are master nodes (since `upmeter-agent` runs as a DaemonSet with a master `nodeSelector`), and they should be deleted within seconds.\n\nThis may indicate:\n\n- A problem with the `kube-apiserver`.\n- Stale namespaces left from older `upmeter-agent` Pods after an Upmeter update.\n\nTroubleshooting steps:\n\n1. Check `upmeter-agent` logs:\n\n   ```shell\n   kubectl -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group==\"control-plane\" and .probe == \"namespace\") | [.time, .level, .msg] | @tsv'\n   ```\n\n2. Ensure the control plane is operating normally.\n\n3. Delete stale namespaces manually:\n\n   ```shell\n   kubectl -n d8-upmeter delete ns -l heritage=upmeter\n   ```\n"
       summary: |
-        Garbage produced by namespace probe is not being cleaned.
+        Garbage namespaces from the namespace probe are not being cleaned up.
       severity: "9"
       markupFormat: markdown
     - name: D8UpmeterProbeGarbagePods
@@ -2946,27 +3343,9 @@ alerts:
       moduleUrl: 500-upmeter
       module: upmeter
       edition: ce
-      description: |
-        Average probe pods count per upmeter-agent pod: {{ $value }}.
-
-        Upmeter agents should clean Pods produced by control-plane/scheduler probe. There should not be more
-        of these pods than master nodes (upmeter-agent is a DaemonSet with master nodeSelector). Also, they should be
-        deleted within seconds.
-
-        This might be an indication of a problem with kube-apiserver. Or, possibly, the pods were left
-        by old upmeter-agent pods due to Upmeter update.
-
-        1. Check upmeter-agent logs
-
-        `kubectl -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "scheduler") | [.time, .level, .msg] | @tsv'`
-
-        2. Check that control plane is functional.
-
-        3. Delete pods manually:
-
-        `kubectl -n d8-upmeter delete po -l upmeter-probe=scheduler`
+      description: "The average number of probe Pods per `upmeter-agent` Pod is {{ $value }}.\n\n`upmeter-agent` should automatically clean up Pods created by the `control-plane/scheduler` probe.  \nThere should not be more of these Pods than there are master nodes (since `upmeter-agent` runs as a DaemonSet with a master `nodeSelector`), and they should be deleted within seconds.\n\nThis may indicate:\n\n- A problem with the `kube-apiserver`.\n- Stale Pods left from old `upmeter-agent` Pods after an Upmeter update.\n\nTroubleshooting steps:\n\n1. Check `upmeter-agent` logs:\n\n   ```shell\n   kubectl -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group==\"control-plane\" and .probe == \"scheduler\") | [.time, .level, .msg] | @tsv'\n   ```\n\n2. Ensure the control plane is operating normally.\n\n3. Delete stale Pods manually:\n\n   ```shell\n   kubectl -n d8-upmeter delete pods -l upmeter-probe=scheduler\n   ```\n"
       summary: |
-        Garbage produced by scheduler probe is not being cleaned.
+        Garbage Pods from the scheduler probe are not being cleaned up.
       severity: "9"
       markupFormat: markdown
     - name: D8UpmeterProbeGarbagePodsFromDeployments
@@ -2975,27 +3354,34 @@ alerts:
       module: upmeter
       edition: ce
       description: |
-        Average probe pods count per upmeter-agent pod: {{ $value }}.
+        The average number of probe Pods per `upmeter-agent` Pod is {{ $value }}.
 
-        Upmeter agents should clean Deployments produced by control-plane/controller-manager probe,
-        and hence kube-controller-manager should clean their pods. There should not be more of these pods than
-        master nodes (upmeter-agent is a DaemonSet with master nodeSelector). Also, they should be
-        deleted within seconds.
+        `upmeter-agent` is expected to clean Deployments created by the `control-plane/controller-manager` probe,
+        and `kube-controller-manager` should remove the associated Pods.
+        There should not be more of these Pods than there are master nodes (since `upmeter-agent` runs as a DaemonSet with a master `nodeSelector`), and the Pods should be deleted within seconds.
 
-        This might be an indication of a problem with kube-apiserver or kube-controller-manager. Or, probably,
-        the pods were left by old upmeter-agent pods due to Upmeter update.
+        This may indicate:
 
-        1. Check upmeter-agent logs
+        - A problem with the `kube-apiserver` or `kube-controller-manager`.
+        - Stale Pods left from outdated `upmeter-agent` Pods after an Upmeter update.
 
-        `kubectl -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "controller-manager") | [.time, .level, .msg] | @tsv'`
+        Troubleshooting steps:
 
-        2. Check that control plane is functional, kube-controller-manager in particular.
+        1. Check the `upmeter-agent` logs:
 
-        3. Delete pods manually:
+           ```shell
+           kubectl -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "controller-manager") | [.time, .level, .msg] | @tsv'
+           ```
 
-        `kubectl -n d8-upmeter delete po -l upmeter-probe=controller-manager`
+        2. Ensure the control plane is operating normally. Pay close attention to `kube-controller-manager`.
+
+        3. Delete stale Pods manually:
+
+           ```shell
+           kubectl -n d8-upmeter delete pods -l upmeter-probe=controller-manager
+           ```
       summary: |
-        Garbage produced by controller-manager probe is not being cleaned.
+        Garbage Pods from the controller-manager probe are not being cleaned up.
       severity: "9"
       markupFormat: markdown
     - name: D8UpmeterProbeGarbageSecretsByCertManager
@@ -3004,29 +3390,34 @@ alerts:
       module: upmeter
       edition: ce
       description: |
-        Probe secrets found.
+        Probe-generated Secrets were found.
 
-        Upmeter agents should clean certificates, and thus secrets produced by cert-manager should clean, too.
-        There should not be more secrets than master nodes (upmeter-agent is a DaemonSet with master nodeSelector).
-        Also, they should be deleted within seconds.
+        `upmeter-agent` should clean up certificates created by the `cert-manager` probe, and `cert-manager` in turn should clean up the associated Secrets.
+        There should not be more of these Secrets than there are master nodes (since `upmeter-agent` runs as a DaemonSet with a master `nodeSelector`), and they should be deleted within seconds.
 
-        This might be an indication of a problem with kube-apiserver, or cert-manager, or upmeter itself.
-        It is also possible, that the secrets were left by old upmeter-agent pods due to Upmeter update.
+        This may indicate:
 
-        1. Check upmeter-agent logs
+        - A problem with `kube-apiserver`, `cert-manager`, or `upmeter`.
+        - Stale Secrets left from older `upmeter-agent` Pods after an Upmeter update.
 
-        `kubectl -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "cert-manager") | [.time, .level, .msg] | @tsv'`
+        Troubleshooting steps:
 
-        2. Check that control plane and cert-manager are functional.
+        1. Check `upmeter-agent` logs:
 
-        3. Delete certificates manually, and secrets, if needed:
+           ```shell
+           kubectl -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "cert-manager") | [.time, .level, .msg] | @tsv'
+           ```
 
-        ```
-        kubectl -n d8-upmeter delete certificate -l upmeter-probe=cert-manager
-        kubectl -n d8-upmeter get secret -ojson | jq -r '.items[] | .metadata.name' | grep upmeter-cm-probe | xargs -n 1 -- kubectl -n d8-upmeter delete secret
-        ```
+        2. Check that the control plane and `cert-manager` are operating normally.
+
+        3. Delete stale certificates and Secrets manually:
+
+           ```shell
+           kubectl -n d8-upmeter delete certificate -l upmeter-probe=cert-manager
+           kubectl -n d8-upmeter get secret -ojson | jq -r '.items[] | .metadata.name' | grep upmeter-cm-probe | xargs -n 1 -- kubectl -n d8-upmeter delete secret
+           ```
       summary: |
-        Garbage produced by cert-manager probe is not being cleaned.
+        Garbage Secrets from the cert-manager probe are not being cleaned up.
       severity: "9"
       markupFormat: markdown
     - name: D8UpmeterServerPodIsNotReady
@@ -3036,7 +3427,7 @@ alerts:
       edition: ce
       description: ""
       summary: |
-        Upmeter server is not Ready
+        Upmeter server is not Ready.
       severity: "6"
       markupFormat: markdown
     - name: D8UpmeterServerPodIsRestartingTooOften
@@ -3045,13 +3436,18 @@ alerts:
       module: upmeter
       edition: ce
       description: |
-        Restarts for the last hour: {{ $value }}.
+        The `upmeter` server has restarted {{ $value }} times in the last hour.
 
-        Upmeter server should not restart too often. It should always be running and collecting episodes.
-        Check its logs to find the problem:
-        `kubectl -n d8-upmeter logs -f upmeter-0 upmeter`
+        Frequent restarts may indicate an issue.
+        It is expected to run continuously and collect availability episodes without interruption.
+
+        To investigate the cause, check the logs:
+
+        ```shell
+        kubectl -n d8-upmeter logs -f upmeter-0 upmeter
+        ```
       summary: |
-        Upmeter server is restarting too often.
+        Upmeter server is restarting too frequently.
       severity: "9"
       markupFormat: markdown
     - name: D8UpmeterServerReplicasUnavailable
@@ -3060,13 +3456,23 @@ alerts:
       module: upmeter
       edition: ce
       description: |-
-        Check StatefulSet status:
-        `kubectl -n d8-upmeter get statefulset upmeter -o json | jq .status`
+        Some `upmeter` Pods are not in the Running state.
 
-        Check the status of its pod:
-        `kubectl -n d8-upmeter get pods upmeter-0 -o json | jq '.items[] | {(.metadata.name):.status}'`
+        To investigate the details, do the following:
+
+        - Check the StatefulSet status:
+
+          ```shell
+          kubectl -n d8-upmeter get statefulset upmeter -o json | jq .status
+          ```
+
+        - Check the Pod status:
+
+          ```shell
+          kubectl -n d8-upmeter get pods upmeter-0 -o json | jq '.items[] | {(.metadata.name):.status}'
+          ```
       summary: |
-        One or more Upmeter server pods is NOT Running
+        One or more Upmeter server Pods are NOT Running.
       severity: "6"
       markupFormat: markdown
     - name: D8UpmeterSmokeMiniMoreThanOnePVxPVC
@@ -3075,16 +3481,24 @@ alerts:
       module: upmeter
       edition: ce
       description: |
-        The number of unnecessary smoke-mini PVs: {{ $value }}.
+        The number of unnecessary `smoke-mini` PersistentVolumes (PVs) is {{ $value }}.
 
-        Smoke-mini PVs should be deleted when released. Probably smoke-mini storage class has Retain policy by default,
-        or there is CSI/cloud issue.
+        These PVs should be deleted automatically when released.
 
-        These PVs have no valuable data on them an should be deleted.
+        Possible causes:
 
-        The list of PVs: `kubectl get pv | grep disk-smoke-mini`.
+        - The `smoke-mini` StorageClass may be set to `Retain` by default.
+        - There may be issues with the CSI driver or cloud storage integration.
+
+        These PVs do not contain valuable data and should be deleted.
+
+        To list all the PVs, run the following command:
+
+        ```shell
+        kubectl get pv | grep disk-smoke-mini
+        ```
       summary: |
-        Unnecessary smoke-mini volumes in cluster
+        Unnecessary smoke-mini PersistentVolumes detected in the cluster.
       severity: "9"
       markupFormat: markdown
     - name: D8UpmeterTooManyHookProbeObjects
@@ -3093,15 +3507,19 @@ alerts:
       module: upmeter
       edition: ce
       description: |
-        Average UpmeterHookProbe count per upmeter-agent pod is {{ $value }}, but should be strictly 1.
+        The average number of `UpmeterHookProbe` objects per `upmeter-agent` Pod is {{ $value }}, but it should always be exactly 1 per agent.
 
-        Some of the objects were left by old upmeter-agent pods due to Upmeter update or downscale.
+        This likely happened because older `upmeter-agent` Pods left behind their `UpmeterHookProbe` objects during an Upmeter update or downscale.
 
-        Leave only newest objects corresponding to upmeter-agent pods, when the reason it investigated.
+        Once the cause has been investigated, remove outdated objects and leave only the ones corresponding to currently running `upmeter-agent` Pods.
 
-        See `kubectl get upmeterhookprobes.deckhouse.io`.
+        To view all `UpmeterHookProbe` objects, run the following command:
+
+        ```shell
+        kubectl get upmeterhookprobes.deckhouse.io
+        ```
       summary: |
-        Too many UpmeterHookProbe objects in cluster
+        Too many UpmeterHookProbe objects in the cluster.
       severity: "9"
       markupFormat: markdown
     - name: D8YandexNatInstanceConnectionsQuotaUtilization
@@ -3115,7 +3533,7 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: DaemonSetAuthenticationFailure
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3132,7 +3550,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: DaemonSetAuthorizationFailure
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3149,7 +3567,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: DaemonSetBadImageFormat
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3166,7 +3584,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: DaemonSetImageAbsent
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3183,7 +3601,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: DaemonSetRegistryUnavailable
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3200,7 +3618,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: DaemonSetUnknownError
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3236,9 +3654,12 @@ alerts:
       module: prometheus
       edition: ce
       description: |
-        Deckhouse module {{ $labels.module_name }} use emptydir as storage.
+        The Deckhouse module `{{ $labels.module_name }}` is using `emptyDir` as its storage.
+
+        If the associated Pod is removed from the node for any reason, the data in the `emptyDir` is deleted permanently.
+        Consider using persistent storage if data durability is critical for the module.
       summary: |
-        Deckhouse module {{ $labels.module_name }} use emptydir as storage.
+        Deckhouse module {{ $labels.module_name }} is using emptyDir for storage.
       severity: "9"
       markupFormat: markdown
     - name: DeckhouseReleaseDisruptionApprovalRequired
@@ -3366,7 +3787,7 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: DeploymentAuthenticationFailure
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3383,7 +3804,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: DeploymentAuthorizationFailure
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3400,7 +3821,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: DeploymentBadImageFormat
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3428,7 +3849,7 @@ alerts:
       severity: "4"
       markupFormat: default
     - name: DeploymentImageAbsent
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3445,7 +3866,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: DeploymentRegistryUnavailable
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3462,7 +3883,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: DeploymentUnknownError
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3512,9 +3933,22 @@ alerts:
       moduleUrl: 040-node-manager
       module: node-manager
       edition: ce
-      description: ""
+      description: |-
+        The Pod {{$labels.pod}} detected that the Pressure Stall Information (PSI) subsystem is unavailable.
+
+        For details, check the logs:
+
+        ```shell
+        kubectl -n d8-cloud-instance-manager logs {{$labels.pod}}
+        ```
+
+        Troubleshooting options:
+
+        - Upgrade the Linux kernel to version 4.20 or higher.
+        - Enable the [Pressure Stall Information](https://docs.kernel.org/accounting/psi.html).
+        - [Disable early OOM](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/configuration.html#parameters-earlyoomenabled).
       summary: |
-        The {{$labels.pod}} Pod has detected unavailable PSI subsystem. Check logs for additional information: kubectl -n d8-cloud-instance-manager logs {{$labels.pod}} Possible actions to resolve the problem: * Upgrade kernel to version 4.20 or higher. * Enable Pressure Stall Information. * Disable early oom.
+        Pod {{$labels.pod}} has detected an unavailable PSI subsystem.
       severity: "8"
       markupFormat: markdown
     - name: EbpfExporterKernelNotSupported
@@ -3630,12 +4064,17 @@ alerts:
       module: prometheus
       edition: ce
       description: |
-        Before updating to Grafana 10, it's required to migrate an outdated alerts from Grafana to the external alertmanager (or exporter-alertmanager stack)
-        To list all deprecated alert rules use the expr `sum by (dashboard, panel, alert_rule) (d8_grafana_dashboards_deprecated_alert_rule) > 0`
+        Before upgrading to Grafana 10, migrate outdated alerts from Grafana to an external alertmanager (or `exporter-alertmanager` stack).
 
-        Attention: The check runs once per hour, so this alert should go out within an hour after deprecated resources migration.
+        To list all deprecated alert rules, use the following expression:
+
+        ```promql
+        sum by (dashboard, panel, alert_rule) (d8_grafana_dashboards_deprecated_alert_rule) > 0
+        ```
+
+        Note that this check runs once per hour, so the alert may take up to an hour to clear after deprecated resources are migrated.
       summary: |
-        Deprecated Grafana alerts have been found.
+        Deprecated Grafana alerts detected.
       severity: "8"
       markupFormat: markdown
     - name: GrafanaDashboardPanelIntervalDeprecated
@@ -3644,12 +4083,17 @@ alerts:
       module: prometheus
       edition: ce
       description: |
-        Before updating to Grafana 10, it's required to rewrite an outdated expressions that uses `$interval_rv`, `interval_sx3` or `interval_sx4` to `$__rate_interval`
-        To list all deprecated panel intervals use the expr `sum by (dashboard, panel, interval) (d8_grafana_dashboards_deprecated_interval) > 0`
+        Before upgrading to Grafana 10, update outdated panel expressions that use `$interval_rv`, `interval_sx3`, or `interval_sx4` to the new variable `$__rate_interval`.
 
-        Attention: The check runs once per hour, so this alert should go out within an hour after deprecated resources migration.
+        To list all deprecated panel intervals, use the following expression:
+
+        ```promql
+        sum by (dashboard, panel, interval) (d8_grafana_dashboards_deprecated_interval) > 0
+        ```
+
+        Note that this check runs once per hour, so the alert may take up to an hour to clear after deprecated intervals are removed.
       summary: |
-        Deprecated Grafana panel intervals have been found.
+        Deprecated Grafana panel intervals detected.
       severity: "8"
       markupFormat: markdown
     - name: GrafanaDashboardPluginsDeprecated
@@ -3658,15 +4102,20 @@ alerts:
       module: prometheus
       edition: ce
       description: |
-        Before updating to Grafana 10, it's required to check if currently installed plugins will work correctly with Grafana 10
-        To list all potentially outdated plugins use the expr `sum by (dashboard, panel, plugin) (d8_grafana_dashboards_deprecated_plugin) > 0`
+        Before upgrading to Grafana 10, make sure that the currently installed plugins will work correctly with Grafana 10.
 
-        Plugin "flant-statusmap-panel" is being deprecated and won't be supported in the near future
-        We recommend you to migrate to the State Timeline plugin: https://grafana.com/docs/grafana/latest/panels-visualizations/visualizations/state-timeline/
+        To list all potentially outdated plugins, use the following expression:
 
-        Attention: The check runs once per hour, so this alert should go out within an hour after deprecated resources migration.
+        ```promql
+        sum by (dashboard, panel, plugin) (d8_grafana_dashboards_deprecated_plugin) > 0
+        ```
+
+        The `flant-statusmap-panel` plugin is deprecated and no longer supported.
+        It's recommended that you migrate to the [state timeline plugin](https://grafana.com/docs/grafana/latest/panels-visualizations/visualizations/state-timeline/) instead.
+
+        Note that this check runs once per hour, so the alert may take up to an hour to clear after deprecated resources are migrated.
       summary: |
-        Deprecated Grafana plugins have been found.
+        Deprecated Grafana plugins detected.
       severity: "8"
       markupFormat: markdown
     - name: HelmReleasesHasResourcesWithDeprecatedVersions
@@ -3790,7 +4239,7 @@ alerts:
       severity: "3"
       markupFormat: default
     - name: K8SKubeletDown
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubelet.tpl
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/kubelet.tpl
       moduleUrl: 340-monitoring-kubernetes
       module: monitoring-kubernetes
       edition: ce
@@ -3800,7 +4249,7 @@ alerts:
       severity: "3"
       markupFormat: default
     - name: K8SKubeletDown
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubelet.tpl
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/kubelet.tpl
       moduleUrl: 340-monitoring-kubernetes
       module: monitoring-kubernetes
       edition: ce
@@ -3810,7 +4259,7 @@ alerts:
       severity: "4"
       markupFormat: default
     - name: K8SKubeletTooManyPods
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubelet.tpl
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/kubelet.tpl
       moduleUrl: 340-monitoring-kubernetes
       module: monitoring-kubernetes
       edition: ce
@@ -3820,7 +4269,7 @@ alerts:
       severity: "7"
       markupFormat: default
     - name: K8SManyNodesNotReady
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubelet.tpl
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/kubelet.tpl
       moduleUrl: 340-monitoring-kubernetes
       module: monitoring-kubernetes
       edition: ce
@@ -3830,7 +4279,7 @@ alerts:
       severity: "3"
       markupFormat: default
     - name: K8SNodeNotReady
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubelet.tpl
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/kubelet.tpl
       moduleUrl: 340-monitoring-kubernetes
       module: monitoring-kubernetes
       edition: ce
@@ -3857,9 +4306,11 @@ alerts:
       moduleUrl: 300-prometheus
       module: prometheus
       edition: ce
-      description: Cluster is running {{ $value }} nodes, close to the maximum amount of {{ print "d8_max_nodes_amount{}" | query | first | value }} nodes.
+      description: |-
+        The cluster is currently running {{ $value }} nodes,
+        which is close to the maximum of {{ print "d8_max_nodes_amount{}" | query | first | value }} allowed nodes.
       summary: |
-        Nodes amount is close to the maximum allowed amount.
+        Node count is approaching the maximum allowed.
       severity: "7"
       markupFormat: default
     - name: KubeEtcdHighFsyncDurations
@@ -4321,7 +4772,7 @@ alerts:
       severity: "6"
       markupFormat: markdown
     - name: KubernetesDnsTargetDown
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/kube-dns.yaml
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/kube-dns.tpl
       moduleUrl: 340-monitoring-kubernetes
       module: monitoring-kubernetes
       edition: ce
@@ -4491,19 +4942,6 @@ alerts:
       summary: |
         Not enough disk space to retain logs for 168 hours
       severity: "4"
-      markupFormat: markdown
-    - name: MigrationRequiredFromRBDInTreeProvisionerToCSIDriver
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/migration-alerts.tpl
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
-      edition: ce
-      description: |
-        To resolve this issue, migrate volumes to the Ceph CSI driver using the `rbd-in-tree-to-ceph-csi-migration-helper.sh` script available at `https://github.com/deckhouse/deckhouse/blob//modules/031-ceph-csi/tools/rbd-in-tree-to-ceph-csi-migration-helper.sh`.
-
-        For details on volume migration, refer to the migration guide available at `https://github.com/deckhouse/deckhouse/blob//modules/031-ceph-csi/docs/internal/INTREE_MIGRATION.md`.
-      summary: |
-        StorageClass {{ $labels.storageclass }} is using a deprecated RBD provisioner.
-      severity: "9"
       markupFormat: markdown
     - name: ModuleAtConflict
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
@@ -5014,11 +5452,12 @@ alerts:
       module: node-manager
       edition: ce
       description: |
-        Internal network CIDRs setting now located in the static cluster configuration.
-        Delete this field from NodeGroup {{ $labels.name }} to fix this alert.
-        Do not worry, it has been already migrated to another place.
+        The `spec.static.internalNetworkCIDRs` field is deprecated and has been moved to the static cluster configuration.
+
+        To resolve this issue, delete the field from NodeGroup {{ $labels.name }}.
+        This is safe, as the setting has already been migrated automatically.
       summary: |
-        NodeGroup {{ $labels.name }} has deprecated filed spec.static.internalNetworkCIDRs
+        NodeGroup {{ $labels.name }} uses deprecated field spec.static.internalNetworkCIDRs.
       severity: "9"
       markupFormat: markdown
     - name: NodeGroupMasterTaintIsAbsent
@@ -5026,19 +5465,9 @@ alerts:
       moduleUrl: 040-node-manager
       module: node-manager
       edition: ce
-      description: |
-        `master` node group has no `node-role.kubernetes.io/control-plane` taint. Probably control-plane nodes are misconfigured
-        and are able to run not only control-plane Pods. Please, add:
-        ```yaml
-          nodeTemplate:
-            taints:
-            - effect: NoSchedule
-              key: node-role.kubernetes.io/control-plane
-        ```
-        to the `master` node group spec.
-        `key: node-role.kubernetes.io/master` taint was deprecated and will have no effect in Kubernetes 1.24+.
+      description: "The `master` NodeGroup doesn't have the `node-role.kubernetes.io/control-plane: NoSchedule` taint.  \nThis may indicate a misconfiguration where control-plane nodes can run non-control-plane Pods.\n\nTo resolve the issue, add the following to the `master` NodeGroup spec:\n\n```yaml\n  nodeTemplate:\n    taints:\n    - effect: NoSchedule\n      key: node-role.kubernetes.io/control-plane\n```\n\nNote that the taint `key: node-role.kubernetes.io/master` is deprecated and has no effect starting from Kubernetes 1.24.\n"
       summary: |
-        The 'master' node group does not contain desired taint.
+        The master NodeGroup is missing the required control-plane taint.
       severity: "4"
       markupFormat: markdown
     - name: NodeGroupNodeWithDeprecatedAvailabilityZone
@@ -5070,28 +5499,49 @@ alerts:
       module: node-manager
       edition: ce
       description: |
-        Probably, machine-controller-manager is unable to create a machine using the cloud provider module. Possible causes:
-          1. Cloud provider limits on available resources;
-          2. No access to the cloud provider API;
-          3. Cloud provider or instance class misconfiguration;
-          4. Problems with bootstrapping the Machine.
+        This probably means that `machine-controller-manager` is unable to create Machines using the cloud provider module.
 
-        The recommended course of action:
-          1. Run `kubectl get ng {{ $labels.node_group }} -o yaml`. In the `.status.lastMachineFailures` field you can find all errors related to the creation of Machines;
-          2. The absence of Machines in the list that have been in Pending status for more than a couple of minutes means that Machines are continuously being created and deleted because of some error:
-          `kubectl -n d8-cloud-instance-manager get machine`;
-          3. Refer to the Machine description if the logs do not include error messages and the Machine continues to be Pending:
-          `kubectl -n d8-cloud-instance-manager get machine <MACHINE_NAME> -o json | jq .status.bootstrapStatus`;
-          4. The output similar to the one below means that you have to use nc to examine the bootstrap logs:
-             ```json
-             {
-               "description": "Use 'nc 192.168.199.158 8000' to get bootstrap logs.",
-               "tcpEndpoint": "192.168.199.158"
-             }
-             ```
-          5. The absence of information about the endpoint for getting logs means that `cloudInit` is not working correctly. This may be due to the incorrect configuration of the instance class for the cloud provider.
+        Possible causes:
+
+        1. Cloud provider resource limits.
+        2. No access to the cloud provider API.
+        3. Misconfiguration of the cloud provider or instance class.
+        4. Problems with bootstrapping the Machine.
+
+        Recommended actions:
+
+        1. Check the status of the NodeGroup:
+
+           ```shell
+           kubectl get ng {{ $labels.node_group }} -o yaml
+           ```
+
+           Look for errors in the `.status.lastMachineFailures` field.
+
+        2. If no Machines stay in the Pending state for more than a couple of minutes, it likely means that Machines are being continuously created and deleted due to an error:
+
+           ```shell
+           kubectl -n d8-cloud-instance-manager get machine
+           ```
+
+        3. If logs don’t show errors, and a Machine continues to be Pending, check its bootstrap status:
+
+           ```shell
+           kubectl -n d8-cloud-instance-manager get machine <MACHINE_NAME> -o json | jq .status.bootstrapStatus
+           ```
+
+        4. If the output looks like the example below, connect via `nc` to examine bootstrap logs:
+
+           ```json
+           {
+             "description": "Use 'nc 192.168.199.158 8000' to get bootstrap logs.",
+             "tcpEndpoint": "192.168.199.158"
+           }
+           ```
+
+          5. If there's no bootstrap log endpoint, `cloudInit` may not be working correctly. This could indicate a misconfigured instance class in the cloud provider.
       summary: |
-        There are no available instances in the {{ $labels.node_group }} node group.
+        NodeGroup {{ $labels.node_group }} has no available instances.
       severity: "7"
       markupFormat: markdown
     - name: NodeGroupReplicasUnavailable
@@ -5100,29 +5550,51 @@ alerts:
       module: node-manager
       edition: ce
       description: |
-        Possibly, autoscaler has provisioned too many Nodes. Take a look at the state of the Machine in the cluster.
-        Probably, machine-controller-manager is unable to create a machine using the cloud provider module. Possible causes:
-          1. Cloud provider limits on available resources;
-          2. No access to the cloud provider API;
-          3. Cloud provider or instance class misconfiguration;
-          4. Problems with bootstrapping the Machine.
+        The number of simultaneously unavailable instances in the {{ $labels.node_group }} NodeGroup exceeds the allowed threshold.
+        This may indicate that the autoscaler has provisioned too many nodes at once. Check the state of the Machine in the cluster.
+        This probably means that `machine-controller-manager` is unable to create Machines using the cloud provider module.
 
-        The recommended course of action:
-          1. Run `kubectl get ng {{ $labels.node_group }} -o yaml`. In the `.status.lastMachineFailures` field you can find all errors related to the creation of Machines;
-          2. The absence of Machines in the list that have been in Pending status for more than a couple of minutes means that Machines are continuously being created and deleted because of some error:
-          `kubectl -n d8-cloud-instance-manager get machine`;
-          3. Refer to the Machine description if the logs do not include error messages and the Machine continues to be Pending:
-          `kubectl -n d8-cloud-instance-manager get machine <MACHINE_NAME> -o json | jq .status.bootstrapStatus`;
-          4. The output similar to the one below means that you have to use nc to examine the bootstrap logs:
-             ```json
-             {
-               "description": "Use 'nc 192.168.199.158 8000' to get bootstrap logs.",
-               "tcpEndpoint": "192.168.199.158"
-             }
-             ```
-          5. The absence of information about the endpoint for getting logs means that `cloudInit` is not working correctly. This may be due to the incorrect configuration of the instance class for the cloud provider.
+        Possible causes:
+
+        1. Cloud provider resource limits.
+        2. No access to the cloud provider API.
+        3. Misconfiguration of the cloud provider or instance class.
+        4. Problems with bootstrapping the Machine.
+
+        Recommended actions:
+
+        1. Check the status of the NodeGroup:
+
+           ```shell
+           kubectl get ng {{ $labels.node_group }} -o yaml
+           ```
+
+           Look for errors in the `.status.lastMachineFailures` field.
+
+        2. If no Machines stay in the Pending state for more than a couple of minutes, it likely means that Machines are being continuously created and deleted due to an error:
+
+           ```shell
+           kubectl -n d8-cloud-instance-manager get machine
+           ```
+
+        3. If logs don’t show errors, and a Machine continues to be Pending, check its bootstrap status:
+
+           ```shell
+           kubectl -n d8-cloud-instance-manager get machine <MACHINE_NAME> -o json | jq .status.bootstrapStatus
+           ```
+
+        4. If the output looks like the example below, connect via `nc` to examine bootstrap logs:
+
+           ```json
+           {
+             "description": "Use 'nc 192.168.199.158 8000' to get bootstrap logs.",
+             "tcpEndpoint": "192.168.199.158"
+           }
+           ```
+
+          5. If there's no bootstrap log endpoint, `cloudInit` may not be working correctly. This could indicate a misconfigured instance class in the cloud provider.
       summary: |
-        The number of simultaneously unavailable instances in the {{ $labels.node_group }} node group exceeds the allowed value.
+        Too many unavailable instances in the {{ $labels.node_group }} NodeGroup.
       severity: "8"
       markupFormat: markdown
     - name: NodeGroupReplicasUnavailable
@@ -5131,29 +5603,50 @@ alerts:
       module: node-manager
       edition: ce
       description: |
-        The number of unavailable instances is {{ $value }}. See the relevant alerts for more information.
-        Probably, machine-controller-manager is unable to create a machine using the cloud provider module. Possible causes:
-          1. Cloud provider limits on available resources;
-          2. No access to the cloud provider API;
-          3. Cloud provider or instance class misconfiguration;
-          4. Problems with bootstrapping the Machine.
+        There are {{ $value }} unavailable instances in the NodeGroup {{ $labels.node_group }}.
+        This probably means that `machine-controller-manager` is unable to create Machines using the cloud provider module.
 
-        The recommended course of action:
-          1. Run `kubectl get ng {{ $labels.node_group }} -o yaml`. In the `.status.lastMachineFailures` field you can find all errors related to the creation of Machines;
-          2. The absence of Machines in the list that have been in Pending status for more than a couple of minutes means that Machines are continuously being created and deleted because of some error:
-          `kubectl -n d8-cloud-instance-manager get machine`;
-          3. Refer to the Machine description if the logs do not include error messages and the Machine continues to be Pending:
-          `kubectl -n d8-cloud-instance-manager get machine <MACHINE_NAME> -o json | jq .status.bootstrapStatus`;
-          4. The output similar to the one below means that you have to use nc to examine the bootstrap logs:
-             ```json
-             {
-               "description": "Use 'nc 192.168.199.158 8000' to get bootstrap logs.",
-               "tcpEndpoint": "192.168.199.158"
-             }
-             ```
-          5. The absence of information about the endpoint for getting logs means that `cloudInit` is not working correctly. This may be due to the incorrect configuration of the instance class for the cloud provider.
+        Possible causes:
+
+        1. Cloud provider resource limits.
+        2. No access to the cloud provider API.
+        3. Misconfiguration of the cloud provider or instance class.
+        4. Problems with bootstrapping the Machine.
+
+        Recommended actions:
+
+        1. Check the status of the NodeGroup:
+
+           ```shell
+           kubectl get ng {{ $labels.node_group }} -o yaml
+           ```
+
+           Look for errors in the `.status.lastMachineFailures` field.
+
+        2. If no Machines stay in the Pending state for more than a couple of minutes, it likely means that Machines are being continuously created and deleted due to an error:
+
+           ```shell
+           kubectl -n d8-cloud-instance-manager get machine
+           ```
+
+        3. If logs don’t show errors, and a Machine continues to be Pending, check its bootstrap status:
+
+           ```shell
+           kubectl -n d8-cloud-instance-manager get machine <MACHINE_NAME> -o json | jq .status.bootstrapStatus
+           ```
+
+        4. If the output looks like the example below, connect via `nc` to examine bootstrap logs:
+
+           ```json
+           {
+             "description": "Use 'nc 192.168.199.158 8000' to get bootstrap logs.",
+             "tcpEndpoint": "192.168.199.158"
+           }
+           ```
+
+          5. If there's no bootstrap log endpoint, `cloudInit` may not be working correctly. This could indicate a misconfigured instance class in the cloud provider.
       summary: |
-        There are unavailable instances in the {{ $labels.node_group }} node group.
+        NodeGroup {{ $labels.node_group }} has unavailable instances.
       severity: "8"
       markupFormat: markdown
     - name: NodePingPacketLoss
@@ -5171,31 +5664,9 @@ alerts:
       moduleUrl: 040-node-manager
       module: node-manager
       edition: ce
-      description: |
-        There is a new update for Nodes and the {{ $labels.node }} Node of the {{ $labels.node_group }} group has learned about the update, requested and received approval, started the update, and ran into a step that causes possible downtime.
-
-        You have to manually approve the disruption since the `Manual` mode is active in the group settings (`disruptions.approvalMode`).
-
-        Grant approval to the Node using the `update.node.deckhouse.io/disruption-approved=` annotation if it is ready for unsafe updates (e.g., drained).
-
-        **Caution!!!** The Node will not be drained automatically since the manual mode is enabled (`disruptions.approvalMode: Manual`).
-
-        **Caution!!!** No need to drain the master node.
-
-        * Use the following commands to drain the Node and grant it update approval:
-          ```shell
-          kubectl drain {{ $labels.node }} --delete-local-data=true --ignore-daemonsets=true --force=true &&
-            kubectl annotate node {{ $labels.node }} update.node.deckhouse.io/disruption-approved=
-          ```
-        * Note that you need to **uncordon the node** after the update is complete (i.e., after removing the `update.node.deckhouse.io/approved` annotation).
-          ```
-          while kubectl get node {{ $labels.node }} -o json | jq -e '.metadata.annotations | has("update.node.deckhouse.io/approved")' > /dev/null; do sleep 1; done
-          kubectl uncordon {{ $labels.node }}
-          ```
-
-        Note that if there are several Nodes in a NodeGroup, you will need to repeat this operation for each Node since only one Node can be updated at a time. Perhaps it makes sense to temporarily enable the automatic disruption approval mode (`disruptions.approvalMode: Automatic`).
+      description: "Node `{{ $labels.node }}` in NodeGroup `{{ $labels.node_group }}` has detected a new update, received initial approval, and started the update.  \nHowever, it encountered a stage that may cause downtime and requires manual disruption approval, because the NodeGroup is configured with `disruptions.approvalMode: Manual`.\n\nTo resolve the issue, ensure the Node is ready for unsafe updates (drained) and grant disruption approval by annotating the Node with `update.node.deckhouse.io/disruption-approved=`.\n\n**Caution**:\n\n- Nodes in manual mode aren't drained automatically.\n- Do not drain master nodes.\n\n1. To drain the Node and grant the update approval, run the following command:\n\n   ```shell\n   kubectl drain {{ $labels.node }} --delete-local-data=true --ignore-daemonsets=true --force=true &&\n     kubectl annotate node {{ $labels.node }} update.node.deckhouse.io/disruption-approved=\n   ```\n\n2. Uncordon the Node once the update is complete and the annotation `update.node.deckhouse.io/approved` is removed:\n\n   ```shell\n   while kubectl get node {{ $labels.node }} -o json | jq -e '.metadata.annotations | has(\"update.node.deckhouse.io/approved\")' > /dev/null; do sleep 1; done\n   kubectl uncordon {{ $labels.node }}\n   ```\n\nIf the NodeGroup has multiple Nodes, repeat this process for each one, since only one Node is updated at a time.\nConsider temporarily switching to automatic disruption approval (`disruptions.approvalMode: Automatic`).\n"
       summary: |
-        The {{ $labels.node }} Node requires disruption approval to proceed with the update
+        Node {{ $labels.node }} requires disruption approval to proceed with the update.
       severity: "8"
       markupFormat: markdown
     - name: NodeStuckInDraining
@@ -5204,13 +5675,17 @@ alerts:
       module: node-manager
       edition: ce
       description: |
-        The {{ $labels.node }} Node of the {{ $labels.node_group }} NodeGroup stuck in draining.
+        Node `{{ $labels.node }}` in NodeGroup `{{ $labels.node_group }}` is stuck in the draining process.
 
-        You can get more info by running: `kubectl -n default get event --field-selector involvedObject.name={{ $labels.node }},reason=DrainFailed --sort-by='.metadata.creationTimestamp'`
+        To get more details, run the following:
 
-        The error message is: {{ $labels.message }}
+        ```shell
+        kubectl -n default get event --field-selector involvedObject.name={{ $labels.node }},reason=DrainFailed --sort-by='.metadata.creationTimestamp'
+        ```
+
+        Error message: {{ $labels.message }}
       summary: |
-        The {{ $labels.node }} Node is stuck in draining.
+        Node {{ $labels.node }} is stuck in draining.
       severity: "6"
       markupFormat: markdown
     - name: NodeStuckInDrainingForDisruptionDuringUpdate
@@ -5218,12 +5693,9 @@ alerts:
       moduleUrl: 040-node-manager
       module: node-manager
       edition: ce
-      description: |
-        There is a new update for the {{ $labels.node }} Node of the {{ $labels.node_group }} NodeGroup. The Node has learned about the update, requested and received approval, started the update, ran into a step that causes possible downtime, and stuck in draining in order to get disruption approval automatically.
-
-        You can get more info by running: `kubectl -n default get event --field-selector involvedObject.name={{ $labels.node }},reason=ScaleDown --sort-by='.metadata.creationTimestamp'`
+      description: "Node `{{ $labels.node }}` in NodeGroup `{{ $labels.node_group }}` has detected a new update, requested and received approval, started the update, and reached a step that could cause downtime.  \nIt is currently stuck in the draining process while waiting for automatic disruption approval.\n\nTo get more details, run the following:\n\n```shell\nkubectl -n default get event --field-selector involvedObject.name={{ $labels.node }},reason=ScaleDown --sort-by='.metadata.creationTimestamp'\n```\n"
       summary: |
-        The {{ $labels.node }} Node is stuck in draining.
+        Node {{ $labels.node }} is stuck in draining.
       severity: "6"
       markupFormat: markdown
     - name: NodeSUnreclaimBytesUsageHigh
@@ -5482,7 +5954,7 @@ alerts:
         - Alternatively, check the admission-policy-engine Grafana dashboard.
       summary: |
         At least one object violates the configured cluster operation policies.
-      severity: "7"
+      severity: "3"
       markupFormat: markdown
     - name: PersistentVolumeClaimBytesUsage
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/persistent-volume-claim.yaml
@@ -5586,7 +6058,7 @@ alerts:
         - Alternatively, check the admission-policy-engine Grafana dashboard.
       summary: |
         At least one pod violates the configured cluster pod security standards.
-      severity: "7"
+      severity: "3"
       markupFormat: markdown
     - name: PodStatusIsIncorrect
       sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/pod-status.yaml
@@ -5627,13 +6099,17 @@ alerts:
       module: prometheus
       edition: ce
       description: |
-        For more information, use the command:
+        Deckhouse has detected that the Prometheus disk is over 95% full.
+
+        To check the current usage, run the following command:
+
         ```shell
         kubectl -n {{ $labels.namespace }} exec -ti {{ $labels.pod_name }} -c prometheus -- df -PBG /prometheus
         ```
-        Consider increasing it https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html#how-to-expand-disk-size
+
+        Consider expanding disk size following the [guide](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html#how-to-expand-disk-size).
       summary: |
-        Prometheus disk is over 95% used.
+        Prometheus disk usage exceeds 95%.
       severity: "4"
       markupFormat: markdown
     - name: PrometheusLongtermRotatingEarlierThanConfiguredRetentionDays
@@ -5642,9 +6118,15 @@ alerts:
       module: prometheus
       edition: ce
       description: |
-        You need to increase the disk size, reduce the number of metrics or decrease `longtermRetentionDays` module parameter.
+        The `prometheus-longterm` instance is rotating data earlier than specified by the `longtermRetentionDays` parameter.
+
+        Troubleshooting options:
+
+        - Increase the Prometheus disk size.
+        - Reduce the number of metrics collected.
+        - Lower the `longtermRetentionDays` parameter in the module configuration.
       summary: |
-        Prometheus-longterm data is being rotated earlier than configured retention days
+        Prometheus-longterm data is rotating earlier than the configured retention period.
       severity: "4"
       markupFormat: markdown
     - name: PrometheusMainRotatingEarlierThanConfiguredRetentionDays
@@ -5653,9 +6135,15 @@ alerts:
       module: prometheus
       edition: ce
       description: |
-        You need to increase the disk size, reduce the number of metrics or decrease `retentionDays` module parameter.
+        The `prometheus-main` instance is rotating data earlier than specified by the `retentionDays` parameter.
+
+        Troubleshooting options:
+
+        - Increase the Prometheus disk size.
+        - Reduce the number of metrics collected.
+        - Lower the `retentionDays` parameter in the module configuration.
       summary: |
-        Prometheus-main data is being rotated earlier than configured retention days
+        Prometheus-main data is rotating earlier than the configured retention period.
       severity: "4"
       markupFormat: markdown
     - name: PrometheusScapeConfigDeclarationDeprecated
@@ -5664,10 +6152,11 @@ alerts:
       module: prometheus
       edition: ce
       description: |-
-        Old way for describing additional scrape config via secrets will be deprecated in prometheus-operator > v0.65.1. Please use CRD ScrapeConfig instead.
-        ```https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/proposals/202212-scrape-config.md```
+        Defining additional scrape configurations using Secrets will be deprecated in `prometheus-operator` versions later than v0.65.1.
+
+        Migrate to using the [ScrapeConfig custom resource](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/proposals/202212-scrape-config.md) instead.
       summary: |
-        AdditionalScrapeConfigs from secrets will be deprecated in soon
+        AdditionalScrapeConfigs from Secrets will be deprecated soon.
       severity: "8"
       markupFormat: markdown
     - name: PrometheusServiceMonitorDeprecated
@@ -5676,10 +6165,13 @@ alerts:
       module: prometheus
       edition: ce
       description: |
-        Kubernetes cluster uses a more advanced network mechanism - EndpointSlice
-        You service monitor `{{ $labels.namespace }}/{{ $labels.name }}` has relabeling with old Endpoint mechanism, starts with `__meta_kubernetes_endpoints_`.
-        This relabeling rule support, based on the `_endpoint_` label, will be remove in the future (Deckhouse release 1.60).
-        Please, migrate to EndpointSlice relabeling rules. To do this, you have modify ServiceMonitor with changing the following labels:
+        The Kubernetes cluster uses the modern `EndpointSlice` network mechanism, but the ServiceMonitor `{{ $labels.namespace }}/{{ $labels.name }}` still uses relabeling rules based on the old `Endpoints` mechanism (starting with `__meta_kubernetes_endpoints_`).
+
+        Support for the old relabeling rules will be removed in a future Deckhouse release (1.60).
+        To avoid issues, update your ServiceMonitor to use `EndpointSlice`-based relabeling.
+
+        Update relabeling rules as follows:
+
         ```shell
         __meta_kubernetes_endpoints_name -> __meta_kubernetes_endpointslice_name
         __meta_kubernetes_endpoints_label_XXX -> __meta_kubernetes_endpointslice_label_XXX
@@ -5694,7 +6186,7 @@ alerts:
         __meta_kubernetes_endpoint_address_target_name -> __meta_kubernetes_endpointslice_address_target_name
         ```
       summary: |
-        Deprecated Prometheus ServiceMonitor has found.
+        Deprecated Prometheus ServiceMonitor detected.
       severity: "8"
       markupFormat: markdown
     - name: SecurityPolicyViolation
@@ -5721,20 +6213,23 @@ alerts:
         - Alternatively, check the admission-policy-engine Grafana dashboard.
       summary: |
         At least one object violates the configured cluster security policies.
-      severity: "7"
+      severity: "3"
       markupFormat: markdown
     - name: StandbyHolderDeploymentReplicasUnavailable
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/standby-deployment-unavailable.yaml
       moduleUrl: 040-node-manager
       module: node-manager
       edition: ce
-      description: Deckhouse has detected that there are no available replicas remaining in Deployment `standby-holder-{{$labels.node_group_name}}` in namespace `d8-cloud-instance-manager`.
+      description: |-
+        Deckhouse has detected that there are no available replicas in the `standby-holder-{{$labels.node_group_name}}` Deployment in the `d8-cloud-instance-manager` namespace.
+
+        Check the Deployment and associated Pods for issues.
       summary: |
-        No available replicas remaining in Deployment standby-holder-{{$labels.node_group_name}} in namespace d8-cloud-instance-manager.
+        No available replicas in Deployment standby-holder-{{$labels.node_group_name}}.
       severity: "5"
       markupFormat: markdown
     - name: StatefulSetAuthenticationFailure
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -5751,7 +6246,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: StatefulSetAuthorizationFailure
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -5768,7 +6263,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: StatefulSetBadImageFormat
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -5785,7 +6280,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: StatefulSetImageAbsent
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -5802,7 +6297,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: StatefulSetRegistryUnavailable
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -5819,7 +6314,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: StatefulSetUnknownError
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -5840,7 +6335,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: StorageClassCloudManual
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/storage-class.tpl
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/storage-class.tpl
       moduleUrl: 340-monitoring-kubernetes
       module: monitoring-kubernetes
       edition: ce
@@ -5854,7 +6349,7 @@ alerts:
       severity: "6"
       markupFormat: markdown
     - name: StorageClassDefaultDuplicate
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/storage-class.tpl
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/storage-class.tpl
       moduleUrl: 340-monitoring-kubernetes
       module: monitoring-kubernetes
       edition: ce
@@ -5871,9 +6366,9 @@ alerts:
       moduleUrl: 300-prometheus
       module: prometheus
       edition: ce
-      description: '{{ $labels.job }} target is down.'
+      description: Deckhouse has detected that the `{{ $labels.job }}` target is is currently unreachable.
       summary: |
-        Target is down
+        A target is down.
       severity: "5"
       markupFormat: default
     - name: TargetDown
@@ -5881,9 +6376,9 @@ alerts:
       moduleUrl: 300-prometheus
       module: prometheus
       edition: ce
-      description: '{{ $labels.job }} target is down.'
+      description: Deckhouse has detected that the `{{ $labels.job }}` target is is currently unreachable.
       summary: |
-        Target is down
+        A target is down.
       severity: "6"
       markupFormat: default
     - name: TargetDown
@@ -5891,9 +6386,9 @@ alerts:
       moduleUrl: 300-prometheus
       module: prometheus
       edition: ce
-      description: '{{ $labels.job }} target is down.'
+      description: Deckhouse has detected that the `{{ $labels.job }}` target is is currently unreachable.
       summary: |
-        Target is down
+        A target is down.
       severity: "7"
       markupFormat: default
     - name: TargetSampleLimitExceeded
@@ -5902,9 +6397,9 @@ alerts:
       module: prometheus
       edition: ce
       description: |
-        Target are down because of a sample limit exceeded.
+        One or more targets are down because the Prometheus sample limit was exceeded during a scrape.
       summary: |
-        Scrapes are exceeding sample limit
+        Scrapes are exceeding the sample limit.
       severity: "6"
       markupFormat: markdown
     - name: TargetSampleLimitExceeded
@@ -5913,9 +6408,9 @@ alerts:
       module: prometheus
       edition: ce
       description: |
-        The target is close to exceeding the sampling limit. less than 10% left to the limit
+        The target is close to exceeding the Prometheus’s sampling limit. Less than 10% of the allowed samples are left.
       summary: |
-        The sampling limit is close.
+        Sampling limit is nearly reached.
       severity: "7"
       markupFormat: markdown
     - name: UnmetCloudConditions
@@ -5936,7 +6431,7 @@ alerts:
       severity: "6"
       markupFormat: markdown
     - name: UnsupportedContainerRuntimeVersion
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/cri-version.tpl
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/cri-version.tpl
       moduleUrl: 340-monitoring-kubernetes
       module: monitoring-kubernetes
       edition: ce
@@ -5955,7 +6450,6 @@ alerts:
       markupFormat: markdown
 modules-having-alerts:
     - admission-policy-engine
-    - ceph-csi
     - cert-manager
     - chrony
     - cloud-provider-yandex

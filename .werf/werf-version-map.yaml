@@ -3,9 +3,9 @@ image: version-map-artifact
 from: {{ .Images.BASE_ALPINE }}
 final: false
 import:
-- image: common/yq4-artifact
-  add: /usr/local/bin/yq
-  to: /usr/local/bin/yq
+- image: tools/yq
+  add: /usr/bin/yq
+  to: /usr/bin/yq
   before: install
 git:
 - add: /

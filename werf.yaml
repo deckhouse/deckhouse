@@ -6,7 +6,7 @@ build:
     author: "Deckhouse Kubernetes Platform <contact@deckhouse.io>"
     clearHistory: true
     config:
-      clearWerfLabels: true
+      keepEssentialWerfLabels: true
       removeLabels:
         - /.*/
 gitWorktree:
@@ -37,7 +37,10 @@ cleanup:
 {{- if not (hasKey $editionsDict .Env) }}
   {{ fail (printf "Editions name not found %v" .Env) }}
 {{- end }}
-
+---
+# Files.Get prefix
+{{- $_ := set . "prefix" "" }}
+{{- $_ := set . "gitPrefix" "" }}
 ---
 # Base Images
 {{- include "parse_base_images_map" . }}
@@ -70,11 +73,11 @@ cleanup:
 # render ssh-static
 {{ include "ssh_static_artifact" (dict "Images" .Images "SOURCE_REPO" .SOURCE_REPO "DistroPackagesProxy" .DistroPackagesProxy) }}
 ---
-{{ include "common_base_image" (dict "Files" .Files "k8sVersions" .k8sVersions "CandiVersionMap" $.CandiVersionMap "prefix" "") }}
+{{ include "common_base_image" (dict "Files" .Files "k8sVersions" .k8sVersions "CandiVersionMap" $.CandiVersionMap "prefix" .prefix) }}
 ---
-{{ include "base_for_go_image" (dict "Files" .Files "k8sVersions" .k8sVersions "CandiVersionMap" $.CandiVersionMap "prefix" "") }}
+{{ include "base_for_go_image" (dict "Files" .Files "k8sVersions" .k8sVersions "CandiVersionMap" $.CandiVersionMap "prefix" .prefix) }}
 ---
-{{ include "dhctl_src_artifact" (dict "gitPrefix" "") }}
+{{ include "dhctl_src_artifact" (dict "gitPrefix" .gitPrefix) }}
 ---
 {{ include "dhctl_artifact" (dict "GOPROXY" .GOPROXY "CI_COMMIT_TAG" .CI_COMMIT_TAG "DEFAULT_KUBERNETES_VERSION" .defaultKubernetesVersion ) }}
 ---

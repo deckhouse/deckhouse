@@ -6,7 +6,7 @@ git:
 import:
   - image: terraform-provider-huaweicloud
     add: /terraform-provider-huaweicloud
-    to: /plugins/registry.terraform.io/{{ .TF.huaweicloud.namespace }}/{{ .TF.huaweicloud.type }}/{{ .TF.huaweicloud.version }}/linux_amd64/terraform-provider-huaweicloud
+    to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "huaweicloud") }}/{{ .TF.huaweicloud.namespace }}/{{ .TF.huaweicloud.type }}/{{ .TF.huaweicloud.version }}/linux_amd64/terraform-provider-huaweicloud
     before: setup
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -31,7 +31,7 @@ shell:
 ---
 image: terraform-provider-huaweicloud
 final: false
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 mount:
 {{ include "mount points for golang builds" . }}
 import:

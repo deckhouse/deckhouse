@@ -89,6 +89,9 @@ common:
   contact_us_button:
     en: Contact us
     ru: Свяжитесь с нами
+  features:
+    en: "Features"
+    ru: "Возможности"
   coming_soon:
     en: "coming soon..."
     ru: "скоро..."

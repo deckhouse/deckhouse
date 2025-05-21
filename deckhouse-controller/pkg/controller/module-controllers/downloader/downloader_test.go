@@ -17,10 +17,11 @@ limitations under the License.
 package downloader
 
 import (
+	"context"
 	"os"
 	"testing"
 
-	v1 "github.com/google/go-containerregistry/pkg/v1"
+	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/fake"
 	"github.com/stretchr/testify/require"
 
@@ -33,19 +34,19 @@ func TestDownloadMetadataFromReleaseChannelError(t *testing.T) {
 	ms := &v1alpha1.ModuleSource{}
 
 	dependency.TestDC.CRClient.ImageMock.When("stable").Then(&fake.FakeImage{
-		ManifestStub: func() (*v1.Manifest, error) {
-			return &v1.Manifest{
+		ManifestStub: func() (*crv1.Manifest, error) {
+			return &crv1.Manifest{
 				SchemaVersion: 2,
-				Layers:        []v1.Descriptor{},
+				Layers:        []crv1.Descriptor{},
 			}, nil
 		},
-		LayersStub: func() ([]v1.Layer, error) {
-			return []v1.Layer{&utils.FakeLayer{}}, nil
+		LayersStub: func() ([]crv1.Layer, error) {
+			return []crv1.Layer{&utils.FakeLayer{}}, nil
 		},
 	}, nil)
 
 	md := NewModuleDownloader(dependency.TestDC, os.TempDir(), ms, nil)
-	_, err := md.DownloadMetadataFromReleaseChannel("commander", "stable", "")
+	_, err := md.DownloadMetadataFromReleaseChannel(context.Background(), "commander", "stable", "")
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "no version found")
 }

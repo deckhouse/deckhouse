@@ -7,7 +7,7 @@ git:
 import:
 - image: terraform-provider-gcp
   add: /terraform-provider-gcp
-  to: /plugins/registry.terraform.io/{{ .TF.gcp.namespace }}/{{ .TF.gcp.type }}/{{ .TF.gcp.version }}/linux_amd64/terraform-provider-google
+  to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "gcp") }}/{{ .TF.gcp.namespace }}/{{ .TF.gcp.type }}/{{ .TF.gcp.version }}/linux_amd64/terraform-provider-google
   before: setup
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -31,7 +31,7 @@ shell:
 ---
 image: terraform-provider-gcp
 final: false
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 mount:
 {{ include "mount points for golang builds" . }}
 import:

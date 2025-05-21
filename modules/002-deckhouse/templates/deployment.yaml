@@ -107,6 +107,9 @@ spec:
 {{- if .Values.deckhouse.tolerations }}
       tolerations:
         {{- .Values.deckhouse.tolerations | toYaml | nindent 8 }}
+        - key: node.deckhouse.io/uninitialized
+          operator: "Exists"
+          effect: "NoSchedule"        
 {{- else }}
       {{- include "helm_lib_tolerations" (tuple . "wildcard") | nindent 6 }}
 {{- end }}
@@ -147,8 +150,16 @@ spec:
           image: "{{ .Values.deckhouse.internal.currentReleaseImageName }}"
           imagePullPolicy: Always
           env:
-# KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT are needed on the bootstrap phase to make Deckhouse work without kube-proxy
-{{- if not .Values.global.clusterIsBootstrapped }}
+{{- if (.Values.global.enabledModules | has "control-plane-manager") }}
+# control-plane is NOT managed by third-party team (EKS/GKP/...)
+  {{- if .Values.global.clusterIsBootstrapped }}
+  # managed by Deckhouse: use API-proxy
+            - name: KUBERNETES_SERVICE_HOST
+              value: 127.0.0.1
+            - name: KUBERNETES_SERVICE_PORT
+              value: "6445"
+  {{- else }}
+  # bootstrap phase: use direct connection
             - name: KUBERNETES_SERVICE_HOST
               valueFrom:
                 fieldRef:
@@ -156,6 +167,7 @@ spec:
                   fieldPath: status.hostIP
             - name: KUBERNETES_SERVICE_PORT
               value: "6443"
+  {{- end }}
 {{- end }}
             - name: LOG_LEVEL
               value: {{ .Values.deckhouse.logLevel }}
@@ -233,6 +245,18 @@ spec:
             - name: ADDON_OPERATOR_SHELL_CHROOT_DIR
               value: "/chroot"
 {{- end }}
+            - name: TRACING_OTLP_ENDPOINT
+              valueFrom: 
+                secretKeyRef:
+                  name: d8-otlp-tracing
+                  key: endpoint
+                  optional: true
+            - name: TRACING_OTLP_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: d8-otlp-tracing
+                  key: token
+                  optional: true
           ports:
             - containerPort: 4222
               name: self

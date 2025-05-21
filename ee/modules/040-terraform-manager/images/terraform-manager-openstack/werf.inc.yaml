@@ -6,7 +6,7 @@ git:
 import:
 - image: terraform-provider-openstack
   add: /terraform-provider-openstack
-  to: /plugins/registry.terraform.io/{{ .TF.openstack.namespace }}/{{ .TF.openstack.type }}/{{ .TF.openstack.version }}/linux_amd64/terraform-provider-openstack
+  to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "openstack") }}/{{ .TF.openstack.namespace }}/{{ .TF.openstack.type }}/{{ .TF.openstack.version }}/linux_amd64/terraform-provider-openstack
   before: setup
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -30,7 +30,7 @@ shell:
 ---
 image: terraform-provider-openstack
 final: false
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 mount:
 {{ include "mount points for golang builds" . }}
 import:

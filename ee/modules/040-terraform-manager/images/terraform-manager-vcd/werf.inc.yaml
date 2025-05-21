@@ -8,7 +8,7 @@ import:
 {{- range $version := .TF.vcd.versions }}
 - image: terraform-provider-vcd-artifact
   add: /terraform-provider-vcd-v{{ $version }}
-  to: /plugins/registry.terraform.io/{{ $.TF.vcd.namespace }}/{{ $.TF.vcd.type }}/{{ $version }}/linux_amd64/terraform-provider-vcd
+  to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" $.TF "providerName" "vcd") }}/{{ $.TF.vcd.namespace }}/{{ $.TF.vcd.type }}/{{ $version }}/linux_amd64/terraform-provider-vcd
   before: setup
 {{- end }}
 ---
@@ -35,7 +35,7 @@ shell:
 ---
 image: terraform-provider-vcd-artifact
 final: false
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 mount:
 {{ include "mount points for golang builds" . }}
 import:

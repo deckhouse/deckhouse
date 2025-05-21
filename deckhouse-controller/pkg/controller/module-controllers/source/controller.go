@@ -23,8 +23,12 @@ import (
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -39,6 +43,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
@@ -184,6 +189,11 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 }
 
 func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.ModuleSource) (ctrl.Result, error) {
+	ctx, span := otel.Tracer(controllerName).Start(ctx, "handleModuleSource")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("source", source.Name))
+
 	// generate options for connecting to the registry
 	opts := utils.GenerateRegistryOptionsFromModuleSource(source, r.clusterUUID, r.logger)
 
@@ -217,6 +227,8 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 		return ctrl.Result{Requeue: true}, nil
 	}
 
+	span.AddEvent("fetch tags from the registry")
+
 	// list available modules(tags) from the registry
 	r.logger.Debug("fetch modules from the module source", slog.String("source_name", source.Name))
 	pulledModules, err := registryClient.ListTags(ctx)
@@ -227,6 +239,9 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 		}
 		return ctrl.Result{RequeueAfter: defaultScanInterval}, nil
 	}
+
+	span.AddEvent("successfully fetched the tags for the registry",
+		trace.WithAttributes(attribute.Int("count", len(pulledModules))))
 
 	// limit pulled module
 	if len(pulledModules) > maxModulesLimit {
@@ -258,6 +273,9 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 }
 
 func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.ModuleSource, opts []cr.Option, pulledModules []string) error {
+	ctx, span := otel.Tracer(controllerName).Start(ctx, "processModules")
+	defer span.End()
+
 	md := downloader.NewModuleDownloader(r.dependencyContainer, r.downloadedModulesDir, source, opts)
 	sort.Strings(pulledModules)
 
@@ -265,10 +283,14 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 	var pullErrorsExist bool
 	for _, moduleName := range pulledModules {
 		if moduleName == "modules" || len(moduleName) > 64 {
-			r.logger.Warn("the modules has a forbidden name, skip it.", slog.String("name", moduleName))
+			r.logger.Warn("the module has a forbidden name, skip it", slog.String("name", moduleName))
 			continue
 		}
 
+		if errs := validation.IsDNS1123Subdomain(moduleName); len(errs) > 0 {
+			r.logger.Warn("the module has invalid name: must coply with RFC 1123 subdomain format, skip it", slog.String("name", moduleName))
+			continue
+		}
 		availableModule := v1alpha1.AvailableModule{Name: moduleName}
 		for _, available := range source.Status.AvailableModules {
 			if available.Name == moduleName {
@@ -279,6 +301,9 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 
 		// clear pull error
 		availableModule.PullError = ""
+
+		// clear overridden
+		availableModule.Overridden = false
 
 		// get update policy
 		policy, err := utils.UpdatePolicy(ctx, r.client, r.embeddedPolicy, moduleName)
@@ -294,35 +319,15 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			return fmt.Errorf("ensure the '%s' module: %w", moduleName, err)
 		}
 
-		if module == nil {
-			availableModules = append(availableModules, availableModule)
-			// skip module
-			continue
-		}
-
 		exists, err := utils.ModulePullOverrideExists(ctx, r.client, moduleName)
 		if err != nil {
 			return fmt.Errorf("get pull override for the '%s' module: %w", moduleName, err)
 		}
+
+		// skip overridden module
 		if exists {
-			// skip overridden module
 			availableModule.Overridden = true
 			availableModules = append(availableModules, availableModule)
-			continue
-		}
-
-		// clear overridden
-		availableModule.Overridden = false
-
-		if module.Properties.Source != source.Name {
-			availableModules = append(availableModules, availableModule)
-			r.logger.Debug("source not active, skip it", slog.String("source_name", source.Name), slog.String("name", moduleName))
-			continue
-		}
-
-		if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
-			availableModules = append(availableModules, availableModule)
-			r.logger.Debug("skip disabled module", slog.String("name", moduleName))
 			continue
 		}
 
@@ -333,63 +338,66 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		if err != nil {
 			return fmt.Errorf("check if the '%s' module has a release: %w", moduleName, err)
 		}
-		if !exists {
-			// if release does not exist, clear checksum to trigger meta downloading
+
+		// if release does not exist or the version is unset, clear checksum to trigger meta downloading
+		if !exists || availableModule.Version == "" {
 			cachedChecksum = ""
 		}
 
-		// download module metadata from the specified release channel
 		r.logger.Debug(
 			"download meta from release channel for module from module source",
 			slog.String("release channel", policy.Spec.ReleaseChannel),
 			slog.String("name", moduleName),
 			slog.String("source_name", source.Name),
 		)
-		meta, err := md.DownloadMetadataFromReleaseChannel(moduleName, policy.Spec.ReleaseChannel, cachedChecksum)
+		// download module metadata from the specified release channel
+		r.logger.Debug("download meta ", slog.String("release_channel", policy.Spec.ReleaseChannel), slog.String("module_name", moduleName), slog.String("module_source", source.Name))
+		meta, err := md.DownloadMetadataFromReleaseChannel(ctx, moduleName, policy.Spec.ReleaseChannel, cachedChecksum)
 		if err != nil {
-			r.logger.Warn("failed to download module", slog.String("name", moduleName), log.Err(err))
-			availableModule.PullError = err.Error()
-			availableModules = append(availableModules, availableModule)
-			pullErrorsExist = true
-			// set the downloading error phase for the module
-			err = utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
-				if module.Status.Phase == v1alpha1.ModulePhaseAvailable || module.Status.Phase == v1alpha1.ModulePhaseConflict {
-					module.Status.Phase = v1alpha1.ModulePhaseDownloadingError
-					module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDownloadingError, err.Error())
-					return true
-				}
-				return false
-			})
-			if err != nil {
-				return fmt.Errorf("update the '%s' module: %w", moduleName, err)
+			if module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) && module.Properties.Source == source.Name {
+				r.logger.Warn("failed to download module", slog.String("name", moduleName), log.Err(err))
+				availableModule.PullError = err.Error()
+				pullErrorsExist = true
 			}
+			availableModule.Version = "unknown"
+			availableModules = append(availableModules, availableModule)
 			continue
 		}
 
-		if availableModule.Checksum != meta.Checksum || (meta.ModuleVersion != "" && !exists) {
-			err = utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
+		if r.needToEnsureRelease(source, module, availableModule, meta, exists) {
+			err = ctrlutils.UpdateStatusWithRetry(ctx, r.client, module, func() error {
 				if module.Status.Phase == v1alpha1.ModulePhaseAvailable || module.Status.Phase == v1alpha1.ModulePhaseConflict {
 					module.Status.Phase = v1alpha1.ModulePhaseDownloading
 					module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDownloading, v1alpha1.ModuleMessageDownloading)
-					return true
 				}
-				return false
+
+				return nil
 			})
 			if err != nil {
 				return fmt.Errorf("update the '%s' module: %w", moduleName, err)
 			}
 
-			r.logger.Debug("ensure module release for module for the module source", slog.String("name", moduleName), slog.String("source_name", source.Name))
+			r.logger.Debug("ensure module release from the source",
+				slog.String("name", moduleName),
+				slog.String("source_name", source.Name))
 			if err = r.ensureModuleRelease(ctx, source.GetUID(), source.Name, moduleName, policy.Name, meta); err != nil {
 				return fmt.Errorf("ensure module release for the '%s' module: %w", moduleName, err)
 			}
+		}
+
+		if meta.Checksum != "" {
 			availableModule.Checksum = meta.Checksum
 		}
+
+		if meta.ModuleVersion != "" {
+			availableModule.Version = meta.ModuleVersion
+		}
+
 		availableModules = append(availableModules, availableModule)
 	}
 
 	// update source status
-	err := utils.UpdateStatus[*v1alpha1.ModuleSource](ctx, r.client, source, func(source *v1alpha1.ModuleSource) bool {
+	err := ctrlutils.UpdateStatusWithRetry(ctx, r.client, source, func() error {
 		source.Status.Phase = v1alpha1.ModuleSourcePhaseActive
 		source.Status.SyncTime = metav1.NewTime(r.dependencyContainer.GetClock().Now().UTC())
 		source.Status.AvailableModules = availableModules
@@ -398,7 +406,8 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		if pullErrorsExist {
 			source.Status.Message = v1alpha1.ModuleSourceMessagePullErrors
 		}
-		return true
+
+		return nil
 	})
 	if err != nil {
 		return fmt.Errorf("update the '%s' module source status: %w", source.Name, err)
@@ -408,8 +417,10 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 	err = utils.Update[*v1alpha1.ModuleSource](ctx, r.client, source, func(source *v1alpha1.ModuleSource) bool {
 		if !controllerutil.ContainsFinalizer(source, v1alpha1.ModuleSourceFinalizerModuleExists) {
 			controllerutil.AddFinalizer(source, v1alpha1.ModuleSourceFinalizerModuleExists)
+
 			return true
 		}
+
 		return false
 	})
 	if err != nil {
