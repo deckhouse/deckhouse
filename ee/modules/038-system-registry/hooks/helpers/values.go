@@ -8,12 +8,13 @@ package helpers
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 )
 
 var (
-	ErrInvalidValue = errors.New("value not found or have invalid type")
+	ErrNoValue = errors.New("value not found")
 )
 
 type valuesAccessor[TValue any] struct {
@@ -53,4 +54,20 @@ func NewValuesAccessor[TValue any](input *go_hook.HookInput, path string) Values
 		input: input,
 		path:  path,
 	}
+}
+
+func GetValue[TValue any](input *go_hook.HookInput, path string) (TValue, error) {
+	var ret TValue
+
+	value := input.Values.Get(path)
+	if !value.Exists() {
+		return ret, ErrNoValue
+	}
+
+	err := json.Unmarshal([]byte(value.Raw), &ret)
+	if err != nil {
+		return ret, fmt.Errorf("cannot unmarshal value: %w", err)
+	}
+
+	return ret, nil
 }

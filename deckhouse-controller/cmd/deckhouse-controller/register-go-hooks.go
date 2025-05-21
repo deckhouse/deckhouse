@@ -19,6 +19,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers"
 	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/https"
+	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/image-checker"
 	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator"
 	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/bashible"
 	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/incluster-proxy"
