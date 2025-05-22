@@ -269,10 +269,12 @@ func routingTablesHandler(input *go_hook.HookInput) error {
 			tmpDRTS.localErrors = append(tmpDRTS.localErrors, fmt.Sprintf("Invalid nodeSelector: %v", err))
 			continue
 		}
+		nodes, err := sdkobjectpatch.UnmarshalToStruct[lib.NodeInfo](input.NewSnapshots, "nodes")
+		if err != nil {
+			return fmt.Errorf("unmarshal to struct: %v", err)
+		}
 
-		for _, nodeiRaw := range input.Snapshots["nodes"] {
-			nodei := nodeiRaw.(lib.NodeInfo)
-
+		for _, nodei := range nodes {
 			if validatedSelector.Matches(labels.Set(nodei.Labels)) {
 				tmpDRTS.AffectedNodeRoutingTables++
 				nrtName := rti.Name + "-" + lib.GenerateShortHash(rti.Name+"#"+nodei.Name)

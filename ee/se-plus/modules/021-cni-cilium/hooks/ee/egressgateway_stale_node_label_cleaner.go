@@ -6,6 +6,9 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package ee
 
 import (
+	"fmt"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 )
@@ -29,12 +32,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleEgressNodeCleanup)
 
 func handleEgressNodeCleanup(input *go_hook.HookInput) error {
+	egressGateways, err := sdkobjectpatch.UnmarshalToStruct[EgressGatewayInfo](input.NewSnapshots, "egressgateways")
+	if err != nil {
+		return fmt.Errorf("unmarshal to struct: %v", err)
+	}
 	// Make maps all NodeSelector's EgressGateway's
-	egressGateways := input.Snapshots["egressgateways"]
 	nodeSelectors := make(map[string]struct{})
 
-	for _, snapshot := range egressGateways {
-		eg := snapshot.(EgressGatewayInfo)
+	for _, eg := range egressGateways {
 		for key := range eg.NodeSelector {
 			nodeSelectors[key] = struct{}{}
 		}
@@ -43,9 +48,11 @@ func handleEgressNodeCleanup(input *go_hook.HookInput) error {
 	// Map for remove labels
 	nodesToUnlabel := make(map[string][]string)
 
-	for _, snapshot := range input.Snapshots["nodes"] {
-		node := snapshot.(NodeInfo)
-
+	nodes, err := sdkobjectpatch.UnmarshalToStruct[NodeInfo](input.NewSnapshots, "nodes")
+	if err != nil {
+		return fmt.Errorf("unmarshal to struct: %v", err)
+	}
+	for _, node := range nodes {
 		// Check if a node matches at least one NodeSelector
 		var hasNodeSelectorLabel bool
 		for key := range nodeSelectors {

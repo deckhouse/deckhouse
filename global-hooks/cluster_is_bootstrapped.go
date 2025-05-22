@@ -17,6 +17,7 @@ package hooks
 import (
 	"os"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -112,27 +113,29 @@ func createBootstrapClusterCm(patchCollector go_hook.PatchCollector) {
 }
 
 func clusterIsBootstrapped(input *go_hook.HookInput) error {
-	isBootstrappedCmSnap := input.Snapshots[isBootstrappedCmSnapName]
-	readyNodesSnap := input.Snapshots[readyNotMasterNodesSnapName]
+	isBootstrappedCmSnap := input.NewSnapshots.Get(isBootstrappedCmSnapName)
 
 	if len(isBootstrappedCmSnap) > 0 {
-		// if we have cm here then set value and return
-		// configmap is source of truth
+		// если есть configmap, ставим флаг и выходим
 		input.Values.Set(clusterBootstrapFlagPath, true)
 		return createBootstrappedFile()
 	}
 
-	// not have `is bootstrap` configmap
-
+	// если configmap нет, но флаг существует — значит configmap удалён, надо создать
 	if input.Values.Exists(clusterBootstrapFlagPath) {
-		// here cm was deleted probably
-		// create it!
 		createBootstrapClusterCm(input.PatchCollector)
 		return createBootstrappedFile()
 	}
 
-	for _, readyRaw := range readyNodesSnap {
-		if readyRaw.(bool) {
+	readyNodes, err := sdkobjectpatch.UnmarshalToStruct[bool](input.NewSnapshots, readyNotMasterNodesSnapName)
+	if err != nil {
+		// Можно залогировать или вернуть ошибку
+		input.Logger.Warnf("failed to unmarshal %q snapshots: %v", readyNotMasterNodesSnapName, err)
+		return nil // или return err, если критично
+	}
+
+	for _, ready := range readyNodes {
+		if ready {
 			createBootstrapClusterCm(input.PatchCollector)
 			input.Values.Set(clusterBootstrapFlagPath, true)
 			if err := createBootstrappedFile(); err != nil {

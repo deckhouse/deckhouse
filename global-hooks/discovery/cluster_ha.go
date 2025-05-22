@@ -42,7 +42,7 @@ func applyMasterNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 }
 
 func isHighAvailabilityCluster(input *go_hook.HookInput) error {
-	masterNodesSnap := input.Snapshots["master_node_names"]
+	masterNodesSnap := input.NewSnapshots.Get("master_node_names")
 
 	mastersCount := len(masterNodesSnap)
 

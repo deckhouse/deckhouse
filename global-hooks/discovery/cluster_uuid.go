@@ -23,6 +23,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/go_lib/filter"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -71,13 +72,16 @@ func createConfigMapWithUUID(patch go_hook.PatchCollector, clusterUUID string) {
 // There is CM kube-system/d8-cluster-uuid with cluster uuid. Hook must store it to `global.discovery.clusterUUID`.
 // Or generate uuid and create CM
 func discoveryClusterUUID(input *go_hook.HookInput) error {
-	uuidSnap := input.Snapshots["cluster_uuid"]
-
 	const valPath = "global.discovery.clusterUUID"
+
+	uuidSnap, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, "cluster_uuid")
+	if err != nil {
+		return err
+	}
 
 	var clusterUUID string
 	if len(uuidSnap) > 0 {
-		clusterUUID = uuidSnap[0].(string)
+		clusterUUID = uuidSnap[0]
 	} else {
 		if uuidFromVals, ok := input.Values.GetOk(valPath); ok {
 			clusterUUID = uuidFromVals.String()

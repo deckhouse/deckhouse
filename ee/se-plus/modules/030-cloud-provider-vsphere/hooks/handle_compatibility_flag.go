@@ -8,6 +8,7 @@ package hooks
 import (
 	"fmt"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	storagev1 "k8s.io/api/storage/v1"
@@ -69,12 +70,12 @@ func handleStorageClasses(input *go_hook.HookInput) error {
 	}
 	input.Values.Set("cloudProviderVsphere.internal.compatibilityFlag", compatibilityFlag)
 
-	snap, ok := input.Snapshots["module_storageclasses"]
-	if !ok {
-		return nil
+	storageClasses, err := sdkobjectpatch.UnmarshalToStruct[StorageClass](input.NewSnapshots, "module_storageclasses")
+	if err != nil {
+		return fmt.Errorf("unmarshal storage classes: %v", err)
 	}
-	for _, s := range snap {
-		sc := s.(StorageClass)
+
+	for _, sc := range storageClasses {
 		switch compatibilityFlag {
 		case "legacy":
 			if sc.Provisioner != modernProvisioner {
@@ -87,6 +88,7 @@ func handleStorageClasses(input *go_hook.HookInput) error {
 			}
 			input.Logger.Infof("Deleting storageclass/%s because modern one will be rolled out", sc.Name)
 		}
+
 		input.PatchCollector.Delete("storage.k8s.io/v1", "StorageClass", "", sc.Name)
 	}
 

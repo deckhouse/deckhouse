@@ -48,7 +48,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 // for verification requests to our custom modules from clients inside cluster,
 // hook must store it to `global.discovery.extensionAPIServerAuthenticationRequestheaderClientCA`.
 func discoveryExtentsionAPIServerCA(input *go_hook.HookInput) error {
-	intervalScrapSnap := input.Snapshots["extension_api_server_authentication"]
+	intervalScrapSnap := input.NewSnapshots.Get("extension_api_server_authentication")
 
 	if len(intervalScrapSnap) == 0 {
 		return fmt.Errorf("extension api server authentication not found")

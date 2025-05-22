@@ -8,6 +8,7 @@ package hooks
 import (
 	"fmt"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	storagev1 "k8s.io/api/storage/v1"
@@ -49,13 +50,15 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleVolumeAttachments)
 
 func handleVolumeAttachments(input *go_hook.HookInput) error {
-	snap := input.Snapshots["finalizers"]
+	snap, err := sdkobjectpatch.UnmarshalToStruct[volumeAttachment](input.NewSnapshots, "finalizers")
+	if err != nil {
+		return fmt.Errorf("unmarshal to struct: %v", err)
+	}
 	if len(snap) == 0 {
 		return nil
 	}
 
-	for _, s := range snap {
-		va := s.(volumeAttachment)
+	for _, va := range snap {
 		if va.Message != "rpc error: code = Unknown desc = No VM found" {
 			continue
 		}

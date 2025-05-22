@@ -24,6 +24,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/filter"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -49,13 +50,20 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 // There is CM d8-monitoring/prometheus-scrape-interval with prometheus scrape interval.
 // Hook must store it to `global.discovery.prometheusScrapeInterval`.
 func discoveryPrometheusScrapeInterval(input *go_hook.HookInput) error {
-	intervalScrapSnap := input.Snapshots["prometheus_scrape_interval"]
+	intervalScrapSnap, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, "prometheus_scrape_interval")
+	if err != nil {
+		return err
+	}
 
 	intervalInSeconds := 30
 	if len(intervalScrapSnap) > 0 {
-		interval, err := time.ParseDuration(intervalScrapSnap[0].(string))
+		interval, err := time.ParseDuration(intervalScrapSnap[0])
 		if err != nil {
-			input.Logger.Warn("Prometheus scrape interval from ConfigMap was ignored. Use default. Cannot parse duration.", slog.Int("default_interval", intervalInSeconds), log.Err(err))
+			input.Logger.Warn(
+				"Prometheus scrape interval from ConfigMap was ignored. Use default. Cannot parse duration.",
+				slog.Int("default_interval", intervalInSeconds),
+				log.Err(err),
+			)
 		} else {
 			intervalInSeconds = int(interval.Seconds())
 		}

@@ -17,6 +17,7 @@ package hooks
 import (
 	"fmt"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -82,11 +83,14 @@ func applyDNSServiceIPFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 //   if there are no more ClusterIP services with same label in namespace
 
 func discoveryDNSAddress(input *go_hook.HookInput) error {
+	services, err := sdkobjectpatch.UnmarshalToStruct[ServiceAddr](input.NewSnapshots, "dns_cluster_ip")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal dns_cluster_ip snapshot: %w", err)
+	}
+
 	dnsAddress := ""
 
-	for _, sRaw := range input.Snapshots["dns_cluster_ip"] {
-		s := sRaw.(ServiceAddr)
-
+	for _, s := range services {
 		if s.ClusterIP == "None" || s.ClusterIP == "" {
 			continue
 		}

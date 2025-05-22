@@ -24,6 +24,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 const (
@@ -90,18 +92,22 @@ func calculateResourcesRequests(input *go_hook.HookInput) error {
 		discoveryMasterNodeMilliCPU int64
 		discoveryMasterNodeMemory   int64
 	)
-	snapshots := input.Snapshots["NodesResources"]
+
+	nodes, err := sdkobjectpatch.UnmarshalToStruct[Node](input.NewSnapshots, "NodesResources")
+	if err != nil {
+		return fmt.Errorf("unmarshal NodesResources snapshots: %v", err)
+	}
 
 	// Managed cloud
-	if len(snapshots) == 0 {
+	if len(nodes) == 0 {
 		return nil
 	}
 
 	// Hardcoded maximum values for master node resources
 	discoveryMasterNodeMilliCPU = hardLimitMilliCPU
 	discoveryMasterNodeMemory = hardLimitMemory
-	for _, snapshot := range snapshots {
-		n := snapshot.(*Node)
+
+	for _, n := range nodes {
 		if n.AllocatableMilliCPU < discoveryMasterNodeMilliCPU && absDiff(n.AllocatableMilliCPU, discoveryMasterNodeMilliCPU) > kubeletResourceReservationCPU {
 			discoveryMasterNodeMilliCPU = n.AllocatableMilliCPU
 		}

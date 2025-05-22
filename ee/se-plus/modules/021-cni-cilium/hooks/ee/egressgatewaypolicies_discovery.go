@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	eeCrd "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/v1alpha1"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -51,15 +52,16 @@ func applyEgressGatewayPolicyFilter(obj *unstructured.Unstructured) (go_hook.Fil
 
 func handleEgressGatewayPolicies(input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire("d8_cni_cilium_egress_gateway_policy")
-	input.Values.Set("cniCilium.internal.egressGatewayPolicies", input.Snapshots["egressgatewaypolicies"])
+	egressGatewayPolicies := input.NewSnapshots.Get("egressgatewaypolicies")
+	input.Values.Set("cniCilium.internal.egressGatewayPolicies", egressGatewayPolicies)
 
 	egressGatewayMap := input.Values.Get("cniCilium.internal.egressGatewaysMap").Map()
 
-	for _, policySnap := range input.Snapshots["egressgatewaypolicies"] {
-		policy, ok := policySnap.(EgressGatewayPolicyInfo)
-		if !ok {
+	for policy, err := range sdkobjectpatch.SnapshotIter[EgressGatewayPolicyInfo](egressGatewayPolicies) {
+		if err != nil {
 			continue
 		}
+
 		if _, exists := egressGatewayMap[policy.EgressGatewayName]; !exists {
 			input.MetricsCollector.Set("d8_cni_cilium_orphan_egress_gateway_policy", 1, map[string]string{"name": policy.Name, "egressgateway": policy.EgressGatewayName}, metrics.WithGroup("d8_cni_cilium_egress_gateway_policy"))
 		}

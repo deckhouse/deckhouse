@@ -15,6 +15,9 @@
 package hooks
 
 import (
+	"fmt"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -40,11 +43,19 @@ var (
 // This hook adds node-role.kubernetes.io/control-plane label to all nodes with
 // node-role.kubernetes.io/master label. And vice versa.
 func applyBothNodeRoles(input *go_hook.HookInput) error {
-	snapshots := input.Snapshots["master_nodes"]
-	snapshots = append(snapshots, input.Snapshots["control_plane_nodes"]...)
+	masters, err := sdkobjectpatch.UnmarshalToStruct[labeledNode](input.NewSnapshots, "master_nodes")
+	if err != nil {
+		return fmt.Errorf("unmarshal master_nodes: %w", err)
+	}
 
-	for _, nodeSnap := range snapshots {
-		node := nodeSnap.(labeledNode)
+	controlPlanes, err := sdkobjectpatch.UnmarshalToStruct[labeledNode](input.NewSnapshots, "control_plane_nodes")
+	if err != nil {
+		return fmt.Errorf("unmarshal control_plane_nodes: %w", err)
+	}
+
+	allNodes := append(masters, controlPlanes...)
+
+	for _, node := range allNodes {
 		if node.MasterLabelExists && node.ControlPlaneLabelExists {
 			continue
 		}

@@ -27,6 +27,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/filter"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 const (
@@ -115,13 +116,13 @@ func applyClusterDomainFromDNSPodFilter(obj *unstructured.Unstructured) (go_hook
 	return filter.GetArgFromUnstructuredPodWithRegexp(obj, clusterDomainFromPodRegexp, 1, "")
 }
 
+// We have a hook for handling clusterConfiguration.
+// During the operation of this hook, there is a blocking check for filling in the clusterDomain field.
+// So now we just need to check that the `clusterConfiguration` is present in the secrets.
+// And if this is the case, then the `global.discovery.clusterDomain` will be filled.
+
 func discoveryClusterDomain(input *go_hook.HookInput) error {
-	// We have a hook for handling clusterConfiguration.
-	// During the operation of this hook, there is a blocking check for filling in the clusterDomain field.
-	// So now we just need to check that the `clusterConfiguration` is present in the secrets.
-	// And if this is the case, then the `global.discovery.clusterDomain` will be filled.
-	currentConfig, ok := input.Snapshots["clusterConfiguration"]
-	if ok && len(currentConfig) > 0 {
+	if len(input.NewSnapshots.Get("clusterConfiguration")) > 0 {
 		return nil
 	}
 
@@ -132,17 +133,22 @@ func discoveryClusterDomain(input *go_hook.HookInput) error {
 
 	clusterDomain := "cluster.local"
 
-	clusterDomainCoreCMSnap := input.Snapshots[clusterDomainCoreCMSnapName]
-	clusterDomainDNSPodsSnap := input.Snapshots[clusterDomainDNSPodsSnapName]
+	coreCM, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, clusterDomainCoreCMSnapName)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal clusterDomainCoreCMSnapName: %w", err)
+	}
 
-	if len(clusterDomainCoreCMSnap) > 0 {
-		domain := clusterDomainCoreCMSnap[0].(string)
-		if domain != "" {
-			clusterDomain = domain
+	dnsPods, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, clusterDomainDNSPodsSnapName)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal clusterDomainDNSPodsSnapName: %w", err)
+	}
+
+	if len(coreCM) > 0 {
+		if coreCM[0] != "" {
+			clusterDomain = coreCM[0]
 		}
-	} else if len(clusterDomainDNSPodsSnap) > 0 {
-		for _, domainRaw := range clusterDomainDNSPodsSnap {
-			domain := domainRaw.(string)
+	} else if len(dnsPods) > 0 {
+		for _, domain := range dnsPods {
 			if domain != "" {
 				clusterDomain = domain
 				break

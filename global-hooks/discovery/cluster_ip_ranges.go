@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/go_lib/filter"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 const (
@@ -155,16 +156,18 @@ func applyServiceSubnetsFilter(obj *unstructured.Unstructured) (go_hook.FilterRe
 }
 
 func getSubnetsFromSnapshots(input *go_hook.HookInput, snapshotsNames ...string) string {
-	subnetsRaw := make([]go_hook.FilterResult, 0)
+	subnets := make([]string, 0)
 	for _, s := range snapshotsNames {
-		subnetsSnap := input.Snapshots[s]
+		subnetsSnap, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, s)
+		if err != nil {
+			continue
+		}
 		if len(subnetsSnap) > 0 {
-			subnetsRaw = append(subnetsRaw, input.Snapshots[s]...)
+			subnets = append(subnets, subnetsSnap...)
 		}
 	}
 
-	for _, subnetRaw := range subnetsRaw {
-		subnet := subnetRaw.(string)
+	for _, subnet := range subnets {
 		if subnet != "" {
 			return subnet
 		}
@@ -174,7 +177,7 @@ func getSubnetsFromSnapshots(input *go_hook.HookInput, snapshotsNames ...string)
 }
 
 func discoveryClusterIPRanges(input *go_hook.HookInput) error {
-	clusterConfigSnap := input.Snapshots[clusterConfigurationSnapName]
+	clusterConfigSnap := input.NewSnapshots.Get(clusterConfigurationSnapName)
 	if len(clusterConfigSnap) > 0 {
 		return nil
 	}

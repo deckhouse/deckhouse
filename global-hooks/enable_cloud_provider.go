@@ -17,6 +17,7 @@ package hooks
 import (
 	"fmt"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -85,12 +86,15 @@ func applyClusterConfigForProviderFilter(obj *unstructured.Unstructured) (go_hoo
 }
 
 func enableCloudProvider(input *go_hook.HookInput) error {
-	cloudConfigSnap := input.Snapshots["cloud_config"]
+	cloudConfigSnap, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, "cloud_config")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal cloud_config snapshot: %w", err)
+	}
 
 	providerNameToEnable := ""
 
 	if len(cloudConfigSnap) > 0 {
-		providerNameToEnable = cloudConfigSnap[0].(string)
+		providerNameToEnable = cloudConfigSnap[0]
 	} else {
 		for providerName, module := range cloudProviderNameToModule {
 			if input.ConfigValues.Exists(module) {

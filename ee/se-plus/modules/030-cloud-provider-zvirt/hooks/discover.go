@@ -23,6 +23,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -78,22 +79,27 @@ func applyStorageClassFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 }
 
 func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
-	if len(input.Snapshots["cloud_provider_discovery_data"]) == 0 {
+	cloudSecrets, err := sdkobjectpatch.UnmarshalToStruct[v1.Secret](input.NewSnapshots, "cloud_provider_discovery_data")
+	if err != nil {
+		return fmt.Errorf("unmarshal to struct: %v", err)
+	}
+
+	if len(cloudSecrets) == 0 {
 		input.Logger.Warn("failed to find secret 'd8-cloud-provider-discovery-data' in namespace 'kube-system'")
 
-		if len(input.Snapshots["storage_classes"]) == 0 {
-			input.Logger.Warn("failed to find storage classes for zvirt provisioner")
+		storageClassesSnaps, err := sdkobjectpatch.UnmarshalToStruct[*storage.StorageClass](input.NewSnapshots, "storage_classes")
+		if err != nil {
+			return fmt.Errorf("unmarshal to struct storage_classes: %v", err)
+		}
 
+		if len(storageClassesSnaps) == 0 {
+			input.Logger.Warn("failed to find storage classes for zvirt provisioner")
 			return nil
 		}
 
-		storageClassesSnapshots := input.Snapshots["storage_classes"]
+		storageClasses := make([]storageClass, 0, len(storageClassesSnaps))
 
-		storageClasses := make([]storageClass, 0, len(storageClassesSnapshots))
-
-		for _, storageClassSnapshot := range storageClassesSnapshots {
-			sc := storageClassSnapshot.(*storage.StorageClass)
-
+		for _, sc := range storageClassesSnaps {
 			allowVolumeExpansion := true
 			if sc.AllowVolumeExpansion != nil {
 				allowVolumeExpansion = *sc.AllowVolumeExpansion
@@ -111,11 +117,11 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	secret := input.Snapshots["cloud_provider_discovery_data"][0].(*v1.Secret)
+	secret := cloudSecrets[0]
 
 	discoveryDataJSON := secret.Data["discovery-data.json"]
 
-	_, err := config.ValidateDiscoveryData(&discoveryDataJSON, []string{"/deckhouse/ee/se-plus/candi/cloud-providers/zvirt/openapi"})
+	_, err = config.ValidateDiscoveryData(&discoveryDataJSON, []string{"/deckhouse/ee/se-plus/candi/cloud-providers/zvirt/openapi"})
 	if err != nil {
 		return fmt.Errorf("failed to validate 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
 	}
@@ -159,16 +165,23 @@ func handleDiscoveryDataVolumeTypes(
 		}
 	}
 
-	storageClassSnapshots := make(map[string]*storage.StorageClass)
-	for _, snapshot := range input.Snapshots["storage_classes"] {
-		s := snapshot.(*storage.StorageClass)
-		storageClassSnapshots[s.Name] = s
+	// Используем UnmarshalToStruct для storage_classes
+	storageClassSnapshots, err := sdkobjectpatch.UnmarshalToStruct[*storage.StorageClass](input.NewSnapshots, "storage_classes")
+	if err != nil {
+		input.Logger.Errorf("failed to unmarshal storage_classes snapshots: %v", err)
+		// на твое усмотрение, можно вернуть ошибку или продолжить с пустым map
+		storageClassSnapshots = nil
 	}
 
-	storageClasses := make([]storageClass, 0, len(storageDomains))
+	storageClassMap := make(map[string]*storage.StorageClass, len(storageClassSnapshots))
+	for _, s := range storageClassSnapshots {
+		storageClassMap[s.Name] = s
+	}
+
+	storageClasses := make([]storageClass, 0, len(storageClassStorageDomain))
 	for name, domain := range storageClassStorageDomain {
 		allowVolumeExpansion := true
-		if s, ok := storageClassSnapshots[name]; ok && s.AllowVolumeExpansion != nil {
+		if s, ok := storageClassMap[name]; ok && s.AllowVolumeExpansion != nil {
 			allowVolumeExpansion = *s.AllowVolumeExpansion
 		}
 		sc := storageClass{
