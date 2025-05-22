@@ -27,7 +27,7 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.35.10"
+  WERF_VERSION: "v2.36.0"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -199,7 +199,7 @@ jobs:
 
       - name: Check generated code
         run: |
-          git diff --exit-code
+          git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
     # </template: go_generate_template>
 
 
@@ -811,7 +811,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images@sha256:7f2838a3779bb9759accba1cbea7ea7aa086cc67ec763718004febb47948570c"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images@sha256:56b70215b98ad0ffd33c01a12b1712dac7334cfbef584cae3415398dc18d9ee5"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'

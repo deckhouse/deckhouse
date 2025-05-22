@@ -17,10 +17,12 @@ limitations under the License.
 package downloader
 
 import (
+	"context"
 	"os"
 	"testing"
 
-	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/gojuno/minimock/v3"
+	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/fake"
 	"github.com/stretchr/testify/require"
 
@@ -32,20 +34,51 @@ import (
 func TestDownloadMetadataFromReleaseChannelError(t *testing.T) {
 	ms := &v1alpha1.ModuleSource{}
 
-	dependency.TestDC.CRClient.ImageMock.When("stable").Then(&fake.FakeImage{
-		ManifestStub: func() (*v1.Manifest, error) {
-			return &v1.Manifest{
+	dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
+		ManifestStub: func() (*crv1.Manifest, error) {
+			return &crv1.Manifest{
 				SchemaVersion: 2,
-				Layers:        []v1.Descriptor{},
+				Layers:        []crv1.Descriptor{},
 			}, nil
 		},
-		LayersStub: func() ([]v1.Layer, error) {
-			return []v1.Layer{&utils.FakeLayer{}}, nil
+		LayersStub: func() ([]crv1.Layer, error) {
+			return []crv1.Layer{&utils.FakeLayer{}}, nil
 		},
 	}, nil)
 
 	md := NewModuleDownloader(dependency.TestDC, os.TempDir(), ms, nil)
-	_, err := md.DownloadMetadataFromReleaseChannel("commander", "stable", "")
+	_, err := md.DownloadMetadataFromReleaseChannel(context.Background(), "commander", "stable", "")
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "no version found")
+}
+
+func TestDownloadMetadataByVersion(t *testing.T) {
+	ms := &v1alpha1.ModuleSource{}
+
+	dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "v1.2.3").Then(&fake.FakeImage{
+		ManifestStub: func() (*crv1.Manifest, error) {
+			return &crv1.Manifest{
+				SchemaVersion: 2,
+				Layers:        []crv1.Descriptor{},
+			}, nil
+		},
+		LayersStub: func() ([]crv1.Layer, error) {
+			return []crv1.Layer{
+				&utils.FakeLayer{},
+				&utils.FakeLayer{
+					FilesContent: map[string]string{
+						"version.json":   `{"version": "v1.2.3"}`,
+						"changelog.yaml": "feat:\n- Added new feature\n",
+					}}}, nil
+		},
+		DigestStub: func() (crv1.Hash, error) {
+			return crv1.Hash{Algorithm: "sha256"}, nil
+		},
+	}, nil)
+
+	md := NewModuleDownloader(dependency.TestDC, os.TempDir(), ms, nil)
+	meta, err := md.DownloadMetadataByVersion("commander", "v1.2.3")
+	require.NoError(t, err)
+	require.Equal(t, "v1.2.3", meta.ModuleVersion)
+	require.Equal(t, map[string]any{"feat": []any{"Added new feature"}}, meta.Changelog)
 }

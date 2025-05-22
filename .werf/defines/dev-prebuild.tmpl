@@ -35,7 +35,7 @@
   add: /out/deckhouse-controller
   to: /usr/bin/caps-deckhouse-controller
   after: install
-- image: common/jq-artifact
+- image: tools/jq
   add: /usr/bin/jq
   to: /usr/bin/jq
   after: setup
@@ -49,7 +49,7 @@
 
 #  render general part of setup script
 # . is dict with keys:
-#   Env - werf env
+#   Env - edition set up from ci
 #   CI_COMMIT_TAG - CI_COMMIT_TAG env
 {{- define "dev_prebuild_setup_script_general_part" }}
 {{- $context := . -}}
@@ -103,4 +103,8 @@ import:
   add: /images_digests.json
   to: /deckhouse/modules/040-node-manager/images_digests.json
   after: setup
+shell:
+  setup:
+  # import all installed libs
+  - ldconfig
 {{- end }}

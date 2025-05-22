@@ -1,5 +1,6 @@
 name: operator-trivy
 weight: 500
+stage: "General Availability"
 subsystems:
   - security
 namespace: d8-operator-trivy

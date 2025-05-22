@@ -1,5 +1,6 @@
 name: multitenancy-manager
 weight: 160
+stage: "Preview"
 subsystems:
   - deckhouse
 namespace: d8-multitenancy-manager

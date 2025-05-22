@@ -26,11 +26,14 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
+	"go.opentelemetry.io/otel"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
+
+const taskCalculatorServiceName = "task-calculator"
 
 type TaskCalculator struct {
 	k8sclient client.Client
@@ -99,6 +102,9 @@ func isPatchRelease(a, b *semver.Version) bool {
 // 1) find forced release. if current release has a lower version - skip
 // 2) find deployed release. if current release has a lower version - skip
 func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, release v1alpha1.Release) (*Task, error) {
+	ctx, span := otel.Tracer(taskCalculatorServiceName).Start(ctx, "calculatePendingReleaseTask")
+	defer span.End()
+
 	logger := p.log.With(slog.String("release", release.GetName()))
 
 	if release.GetPhase() != v1alpha1.DeckhouseReleasePhasePending {
