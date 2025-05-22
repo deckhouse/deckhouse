@@ -29,7 +29,7 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   beforeInstall:
-  - apt-get install -y golang gcc
+  - apt-get install -y golang gcc make
   - find /var/lib/apt/ /var/cache/apt/ -type f -delete
   install:
   - cd /src
