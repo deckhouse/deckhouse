@@ -19,6 +19,7 @@ package tools
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"sort"
 
 	"d8_shutdown_inhibitor/pkg/app/tasks"
@@ -43,6 +44,9 @@ func ListPods(podLabel string) {
 	pods, err := podObserver.ListMatchedPods()
 	if err != nil {
 		fmt.Printf("List matched Pods: %v\n", err)
+		if ee, ok := err.(*exec.ExitError); ok {
+			fmt.Printf("Stderr: %v\n", string(ee.Stderr))
+		}
 	}
 
 	sort.SliceStable(pods, func(i, j int) bool {
