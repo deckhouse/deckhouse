@@ -68,6 +68,9 @@ shell:
   #
   - cp /common/ethtool /relocate/bin/
   - cp /common/pwru /relocate/bin/
+  #
+  - rm -rf /relocate/share/{doc,man}
+  - rm -rf /relocate/share/vim/{doc,tutor}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: base/distroless
@@ -80,8 +83,11 @@ shell:
   install:
   - ln -s /usr/bin /bin
   - ln -s /usr/sbin /sbin
+  - ln -s /usr/lib /lib
+  - ln -s /usr/lib64 /lib64
 imageSpec:
   config:
-    env: { "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", "LANG": "C.UTF-8", "LANGUAGE": "C.UTF-8", "LC_ALL": "C.UTF-8" }
+    env: { "PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "LANG": "C.UTF-8", "LANGUAGE": "C.UTF-8", "LC_ALL": "C.UTF-8" }
     workingDir: "/"
+    user: "root:root"
     cmd: ["/usr/bin/bash"]
