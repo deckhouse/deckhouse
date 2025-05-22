@@ -33,9 +33,8 @@ shell:
      {{- if $previousEditionFile }}
   - cp {{ $edition.versionMapFile }} {{ $tmpEditionFile }}
   - |
-    yq eval-all \
-      'select(fileIndex == 0) * select(fileIndex == 1) | with(.k8s; del(.[] | select(. == null or tag == "!!map" and length == 0)))' \
-      {{ $previousEditionFile }} {{ $tmpEditionFile }} > {{ $curEditionFile }}
+    yq eval-all 'select(fileIndex == 0) * select(fileIndex == 1)' {{ $previousEditionFile }} {{ $tmpEditionFile }} | \
+    yq eval-all 'with(.k8s; del(.[] | select(. == null or tag == "!!map" and length == 0)))' > {{ $curEditionFile }}
       {{- else }}
   - cp {{ $edition.versionMapFile }} {{ $curEditionFile }}
       {{- end }}
