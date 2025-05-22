@@ -106,13 +106,15 @@ featureSections:
           ee: partly
         restriction_message:
           ce:
-            en: "The storage must <a terget='_blank' href='https://deckhouse.io/products/kubernetes-platform/?dkp-scheme=data-storage#blocks'>support snapshots</a>"
-            ru: "Хранилище должно <a terget='_blank' href='https://deckhouse.ru/products/kubernetes-platform/?dkp-scheme=data-storage#blocks'>поддерживать снимки</a>"
-          ee:
             en: |
-                Available with <a target='_blank' href='https://deckhouse.o/products/kubernetes-platform/pricing/'>restrictions</a>
+              Available with <a target='_blank' href='https://deckhouse.o/products/kubernetes-platform/pricing/'>restrictions</a>
             ru: |
               Доступно <a target='_blank' href='https://deckhouse.ru/products/kubernetes-platform/pricing/'>с ограничениями</a>
+          ee:
+            en: |
+              The storage must <a terget='_blank' href='https://deckhouse.io/products/kubernetes-platform/?dkp-scheme=data-storage#blocks'>support snapshots</a>"
+            ru: |
+              Хранилище должно <a terget='_blank' href='https://deckhouse.ru/products/kubernetes-platform/?dkp-scheme=data-storage#blocks'>поддерживать снимки</a>"
       - title:
           ru: Добавление и изменение размеров дисков ВМ без перезагрузки
           en: Adding and changing VM disk sizes without rebooting
