@@ -34,7 +34,7 @@ shell:
   - export CLI_VERSION_PACKAGE=github.com/NVIDIA/k8s-device-plugin/internal/info
   - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64
 {{- range tuple "config-manager" "gpu-feature-discovery" "mps-control-daemon" "nvidia-device-plugin" }}
-  - go build -ldflags "-s -w '-extldflags=-static,-Wl,--export-dynamic -Wl,--unresolved-symbols=ignore-in-object-files' -X ${CLI_VERSION_PACKAGE}.gitCommit=$(cat .GIT_HASH) -X ${CLI_VERSION_PACKAGE}.version={{ $version }}" -o /{{ . }} ./cmd/{{ . }}
+  - go build -ldflags "-s -w '-extldflags=-Wl,--export-dynamic -Wl,--unresolved-symbols=ignore-in-object-files' -X ${CLI_VERSION_PACKAGE}.gitCommit=$(cat .GIT_HASH) -X ${CLI_VERSION_PACKAGE}.version={{ $version }}" -o /{{ . }} ./cmd/{{ . }}
 {{- end }}
   - chown 64535:64535 /config-manager /gpu-feature-discovery /mps-control-daemon /nvidia-device-plugin
   - chmod 0700 /config-manager /gpu-feature-discovery /mps-control-daemon /nvidia-device-plugin
