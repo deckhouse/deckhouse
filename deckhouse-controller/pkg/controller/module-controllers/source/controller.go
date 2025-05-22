@@ -417,6 +417,8 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			if err != nil {
 				r.logger.Error("fetch module releases", log.Err(err))
 				availableModule.PullError = err.Error()
+				// wipe checksum to trigger meta downloading
+				meta.Checksum = ""
 			}
 		}
 
