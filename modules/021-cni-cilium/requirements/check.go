@@ -31,51 +31,63 @@ func init() {
 	requirements.RegisterCheck("cniConfigurationSettled", checkCNIConfigurationSettledFunc)
 }
 
+// checks whether the CNI configuration was successfully settled.
+// If it's "false", the module will not be enabled.
 func checkCNIConfigurationSettledFunc(_ string, getter requirements.ValueGetter) (bool, error) {
-	cniConfigurationSettledStatusRaw, exists := getter.Get("cniConfigurationSettled")
-	if !exists {
+	rawValue, found := getter.Get("cniConfigurationSettled")
+	if !found {
 		return true, nil
 	}
 
-	if cniConfigurationSettledStatus, ok := cniConfigurationSettledStatusRaw.(string); ok {
-		if cniConfigurationSettledStatus == "false" {
-			return false, errors.New(
-				"A problem has been found in the CNI configuration, see ClusterAlerts for details",
-			)
-		}
-	}
-	return true, nil
-}
-
-func checkMinimalKernelVersionFunc(requirementValue string, getter requirements.ValueGetter) (bool, error) {
-	// Minimal version of the Linux kernel on the node in the cluster
-	currentMinimalLinuxKernelVersion, exists := getter.Get("currentMinimalLinuxKernelVersion")
-	if !exists {
-		fmt.Println("[DEBUG] Key 'currentMinimalLinuxKernelVersion' does not exists in requirements")
-		return true, nil
-	}
-	currentMinimalLinuxKernelVersionSemVer, err := semver.NewVersion(strings.Split(currentMinimalLinuxKernelVersion.(string), "-")[0])
-	if err != nil {
-		return false, fmt.Errorf("unable to parse current minimal Linux kernel version: %w", err)
-	}
-
-	// Required minimal Linux kernel version
-	if requirementValue == "" {
-		fmt.Println("[DEBUG] Key 'nodesMinimalLinuxKernelVersion' does not exists in release.yaml")
-		return true, nil
-	}
-	nodesMinimalLinuxKernelVersionSemVer, err := semver.NewVersion(strings.Split(requirementValue, "-")[0])
-	if err != nil {
-		return false, fmt.Errorf("unable to parse current minimal Linux kernel version: %w", err)
-	}
-
-	// Compare versions
-	if currentMinimalLinuxKernelVersionSemVer.LessThan(nodesMinimalLinuxKernelVersionSemVer) {
-		return false, fmt.Errorf(
-			"the current version of the Linux kernel on the cluster nodes is less than %s, which is required by the module",
-			requirementValue,
+	if status, ok := rawValue.(string); ok && status == "false" {
+		return false, errors.New(
+			"a problem has been found in the CNI configuration; see ClusterAlerts for details",
 		)
 	}
 
 	return true, nil
+}
+
+// checks that the current minimal kernel version across cluster nodes
+// satisfies the required constraint declared in release.yaml.
+func checkMinimalKernelVersionFunc(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+	rawCurrentVersion, found := getter.Get("currentMinimalLinuxKernelVersion")
+	if !found {
+		// Key not available; assume requirement passes.
+		return true, nil
+	}
+
+	currentVersionStr, ok := rawCurrentVersion.(string)
+	if !ok {
+		return false, fmt.Errorf("invalid type for current minimal kernel version: %T", rawCurrentVersion)
+	}
+
+	currentSemver, err := parseKernelSemver(currentVersionStr)
+	if err != nil {
+		return false, fmt.Errorf("unable to parse current minimal Linux kernel version: %w", err)
+	}
+
+	if requirementValue == "" {
+		// If the requirement is not set, pass by default.
+		return true, nil
+	}
+
+	requiredSemver, err := parseKernelSemver(requirementValue)
+	if err != nil {
+		return false, fmt.Errorf("unable to parse required minimal Linux kernel version: %w", err)
+	}
+
+	if currentSemver.LessThan(requiredSemver) {
+		return false, fmt.Errorf(
+			"the current Linux kernel version on cluster nodes (%s) is lower than required (%s)",
+			currentSemver, requiredSemver,
+		)
+	}
+
+	return true, nil
+}
+
+func parseKernelSemver(version string) (*semver.Version, error) {
+	base := strings.SplitN(version, "-", 2)[0]
+	return semver.NewVersion(base)
 }

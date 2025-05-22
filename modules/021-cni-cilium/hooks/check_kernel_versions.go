@@ -43,7 +43,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
-// Requirement defines a minimum kernel version constraint for a set of modules
 type nodeConstraint struct {
 	kernelVersionConstraint string
 	modulesListInUse        []string
@@ -73,31 +72,24 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, handleNodes)
 
-// nodeKernelVersion contains node name and kernel version string
 type nodeKernelVersion struct {
 	Name          string
 	KernelVersion string
 }
 
-// filterNodes extracts kernel version and node name from a Node object
 func filterNodes(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var node corev1.Node
-
-	err := sdk.FromUnstructured(obj, &node)
-	if err != nil {
+	if err := sdk.FromUnstructured(obj, &node); err != nil {
 		return nil, err
 	}
-
 	return nodeKernelVersion{
 		Name:          node.Name,
 		KernelVersion: node.Status.NodeInfo.KernelVersion,
 	}, nil
 }
 
-// handleNodes is the main hook logic that checks kernel requirements and emits metrics
 func handleNodes(input *go_hook.HookInput) error {
-	// List of requirements to be checked against node kernel versions.
-	var constraints = []nodeConstraint{
+	constraints := []nodeConstraint{
 		{
 			kernelVersionConstraint: input.Values.Get("cniCilium.internal.minimalRequiredKernelVersionConstraint").String(),
 			modulesListInUse:        []string{"cni-cilium"},
@@ -124,63 +116,48 @@ func handleNodes(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	// Define minimal kernel version in cluster nodes
 	node, err := defineMinimalLinuxKernelVersionNode(nodes)
 	if err != nil {
-		input.Logger.Errorf("failed to define minimal kernel version: %v", err)
+		input.Logger.Errorf("failed to define minimal kernel version node: %v", err)
 		return nil
 	}
 
-	// Set currentMinimalLinuxKernelVersion in requirements to using in check.go
 	requirements.SaveValue("currentMinimalLinuxKernelVersion", node.KernelVersion)
 
 	enabledModules := set.NewFromValues(input.Values, "global.enabledModules")
 
-	// Iterate through all defined kernel requirements
 	for _, constraint := range constraints {
-		check := true
-		for _, m := range constraint.modulesListInUse {
-			if !enabledModules.Has(m) {
-				check = false
-				break
-			}
-		}
-		if !check {
+		if !isConstraintRelevant(&enabledModules, constraint.modulesListInUse) {
 			continue
 		}
 
-		// Parse the kernel version constraint
 		c, err := semver.NewConstraint(constraint.kernelVersionConstraint)
 		if err != nil {
-			return err
+			return fmt.Errorf("invalid kernel version constraint %q: %v", constraint.kernelVersionConstraint, err)
 		}
 
-		// Set minimal required kernel version constraint in .Values
 		input.Values.Set("cniCilium.internal.minimalRequiredKernelVersionConstraint", constraint.kernelVersionConstraint)
 
-		// Check each node's kernel version
 		for _, n := range nodes {
 			node := n.(nodeKernelVersion)
 
-			modulesListInUse := strings.Join(constraint.modulesListInUse, ",")
-
-			// Kernel versions like `5.15.0-52-generic` are considered pre-release in semver,
-			// so we strip the suffix for accurate comparison
-			nodeSemverVersion, err := semver.NewVersion(strings.Split(node.KernelVersion, "-")[0])
+			kernelVerStr := strings.Split(node.KernelVersion, "-")[0]
+			nodeSemverVersion, err := semver.NewVersion(kernelVerStr)
 			if err != nil {
-				input.Logger.Errorf("failed to parse kernel version %s: %v", node.KernelVersion, err)
+				input.Logger.Errorf("failed to parse kernel version %q: %v", node.KernelVersion, err)
 				continue
 			}
 
-			// If node kernel does not satisfy the constraint, emit a metric and log error message
 			if !c.Check(nodeSemverVersion) {
+				modulesList := strings.Join(constraint.modulesListInUse, ",")
+
 				input.MetricsCollector.Set(
 					nodeKernelCheckMetricName,
 					1,
 					map[string]string{
 						"node":            node.Name,
 						"kernel_version":  node.KernelVersion,
-						"affected_module": modulesListInUse,
+						"affected_module": modulesList,
 						"constraint":      constraint.kernelVersionConstraint,
 					},
 					metrics.WithGroup(nodeKernelCheckMetricsGroup),
@@ -191,7 +168,7 @@ func handleNodes(input *go_hook.HookInput) error {
 					slog.String("kernel_version", node.KernelVersion),
 					slog.String("node", node.Name),
 					slog.String("constraint", constraint.kernelVersionConstraint),
-					slog.String("modules", modulesListInUse),
+					slog.String("modules", modulesList),
 				)
 			}
 		}
@@ -201,27 +178,36 @@ func handleNodes(input *go_hook.HookInput) error {
 }
 
 func defineMinimalLinuxKernelVersionNode(nodes []go_hook.FilterResult) (*nodeKernelVersion, error) {
-	minimalLinuxKernelVersionNode := nodeKernelVersion{
-		Name:          "init-value-node",
-		KernelVersion: "99999.99999.99999",
-	}
+	var minimalNode *nodeKernelVersion
+	var minimalVersion *semver.Version
+
 	for _, n := range nodes {
-		node := n.(nodeKernelVersion)
-
-		minimalLinuxKernelVersion, err := semver.NewVersion(strings.Split(minimalLinuxKernelVersionNode.KernelVersion, "-")[0])
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse minimal kernel version %s: %v", minimalLinuxKernelVersionNode.KernelVersion, err)
+		node, ok := n.(nodeKernelVersion)
+		if !ok {
+			return nil, fmt.Errorf("unexpected type: %T", n)
 		}
 
-		nodeKernelVersion, err := semver.NewVersion(strings.Split(node.KernelVersion, "-")[0])
+		kernelVerStr := strings.Split(node.KernelVersion, "-")[0]
+		kernelVer, err := semver.NewVersion(kernelVerStr)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse minimal kernel version %s: %v", node.KernelVersion, err)
+			return nil, fmt.Errorf("failed to parse kernel version %q: %v", node.KernelVersion, err)
 		}
 
-		if nodeKernelVersion.LessThan(minimalLinuxKernelVersion) {
-			minimalLinuxKernelVersionNode = node
+		if minimalVersion == nil || kernelVer.LessThan(minimalVersion) {
+			copied := node
+			minimalNode = &copied
+			minimalVersion = kernelVer
 		}
 	}
 
-	return &minimalLinuxKernelVersionNode, nil
+	return minimalNode, nil
+}
+
+func isConstraintRelevant(enabled *set.Set, modules []string) bool {
+	for _, m := range modules {
+		if !enabled.Has(m) {
+			return false
+		}
+	}
+	return true
 }
