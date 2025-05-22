@@ -431,7 +431,7 @@
         To resolve this issue, ensure that the next version of the Deckhouse image is available in the registry.
 
   - alert: DeckhouseModuleUpdatingFailed
-    expr: max (d8_module_updating_failed) == 1
+    expr: max by(module, actual_version, version) (d8_module_updating_failed) > 0
     labels:
       severity_level: "4"
       tier: cluster
