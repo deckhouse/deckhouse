@@ -3,6 +3,8 @@ fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "prov
 git:
   - add: /{{ .ModulePath }}candi/cloud-providers/dynamix
     to: /deckhouse/candi/cloud-providers/dynamix
+    owner: 64535
+    group: 64535
 import:
   - image: terraform-provider-decort
     add: /terraform-provider-decort
