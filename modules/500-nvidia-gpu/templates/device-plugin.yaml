@@ -3,15 +3,17 @@ kind: DaemonSet
 metadata:
   name: nvidia-device-plugin
   namespace: d8-nvidia-gpu
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu" "component" "nvidia-device-plugin")) | nindent 2 }}
 spec:
   selector:
     matchLabels:
-      app: nvidia-device-plugin
+      component: nvidia-device-plugin
   template:
     metadata:
       labels:
-        app: nvidia-device-plugin
+        component: nvidia-device-plugin
     spec:
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -32,10 +34,8 @@ spec:
                     values:
                       - "true"
       priorityClassName: system-node-critical
-      {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+        - name: deckhouse-registry
       serviceAccountName: nvidia-device-plugin
       shareProcessNamespace: true
       initContainers:
@@ -74,10 +74,9 @@ spec:
             mountPath: /config
       containers:
       - name: nvidia-device-plugin-sidecar
-        image: nvcr.io/nvidia/k8s-device-plugin:v0.17.2
-        command: ["config-manager"]
-        securityContext:
-          privileged: true
+        image: {{ include "helm_lib_module_image" (list . "nvidiaDevicePlugin") }}
+        command: ["/config-manager"]
+        {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 8 }}
         env:
         - name: ONESHOT
           value: "false"
@@ -109,8 +108,8 @@ spec:
           - name: config
             mountPath: /config
       - name: nvidia-device-plugin-ctr
-        image: nvcr.io/nvidia/k8s-device-plugin:v0.17.2
-        command: ["nvidia-device-plugin"]
+        image: {{ include "helm_lib_module_image" (list . "nvidiaDevicePlugin") }}
+        command: ["/nvidia-device-plugin"]
         env:
           - name: MPS_ROOT
             value: "/run/nvidia/mps"

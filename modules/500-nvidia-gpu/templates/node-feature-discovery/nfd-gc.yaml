@@ -3,8 +3,7 @@ kind: Deployment
 metadata:
   name: node-feature-discovery-gc
   namespace: d8-nvidia-gpu
-  labels:
-    role: gc
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu" "role" "gc")) | nindent 2 }}
 spec:
   replicas: 1
   revisionHistoryLimit: 1
@@ -17,7 +16,9 @@ spec:
         role: gc
     spec:
       serviceAccountName: node-feature-discovery-gc
+      priorityClassName: cluster-medium
       dnsPolicy: ClusterFirstWithHostNet
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       containers:
       - name: gc
         image: {{ include "helm_lib_module_image" (list . "nodeFeatureDiscovery") }}

@@ -3,25 +3,28 @@ kind: DaemonSet
 metadata:
   name: mps-control-daemon
   namespace: d8-nvidia-gpu
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu" "component" "mps-control-daemon")) | nindent 2 }}
 spec:
   selector:
     matchLabels:
-     app: mps-control-daemon
+     component: mps-control-daemon
   template:
     metadata:
       labels:
-        app: mps-control-daemon
+        component: mps-control-daemon
     spec:
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
       nodeSelector:
         nvidia.com/mps.capable: "true"
       tolerations:
         - key: nvidia.com/gpu
           operator: Exists
           effect: NoSchedule
-      priorityClassName: system-node-critical
+      priorityClassName: cluster-medium
       serviceAccountName: nvidia-device-plugin
       hostPID: true
       hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       initContainers:
       - name: mps-control-daemon-mounts
         image: nvcr.io/nvidia/k8s-device-plugin:v0.17.2

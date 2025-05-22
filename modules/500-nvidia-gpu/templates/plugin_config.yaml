@@ -5,19 +5,25 @@ metadata:
   namespace: d8-nvidia-gpu
   {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
 data:
-  default: |-
+  Exclusive: |-
     version: v1
     flags:
       migStrategy: none
-  mig-single: |-
+  MPS: |-
     version: v1
     flags:
-      migStrategy: single
-  mig-mixed: |-
+      migStrategy: none
+    sharing:
+      mps:
+        renameByDefault: false
+        resources:
+        - name: nvidia.com/gpu
+          replicas: 4
+  Mig: |-
     version: v1
     flags:
       migStrategy: mixed
-  time-slicing: |-
+  TimeSlicing: |-
     version: v1
     flags:
       migStrategy: none
