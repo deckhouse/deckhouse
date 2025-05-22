@@ -5,7 +5,7 @@ description: Cluster fault tolerance testing
 ---
 
 {% alert level="warning" %}
-Chaos engineering mode can only be enabled for node groups with [`nodeType: CloudEphemeral`](../../reference/cr/nodegroup.html#nodegroup-v1-spec-nodetype).
+Chaos engineering mode can only be enabled for node groups with [`nodeType: CloudEphemeral`](../../reference/cr/nodegroup/#nodegroup-v1-spec-nodetype).
 {% endalert %}
 
 To enable chaos engineering mode for a NodeGroup,
