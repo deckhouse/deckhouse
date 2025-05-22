@@ -12,6 +12,9 @@ config:
       - DISTRO_PACKAGES_PROXY
       - CARGO_PROXY
       - DECKHOUSE_PRIVATE_REPO
+      - COSIGN_LOGIN
+      - COSIGN_PASSWORD
+      - COSIGN_KEY
     allowUncommittedFiles: ["tools/build_includes/*"]
   secrets:
     allowValueIds:
@@ -20,6 +23,9 @@ config:
       - CLOUD_PROVIDERS_SOURCE_REPO
       - CARGO_PROXY
       - DECKHOUSE_PRIVATE_REPO
+      - COSIGN_LOGIN
+      - COSIGN_PASSWORD
+      - COSIGN_KEY
   stapel:
     mount:
       allowBuildDir: true
