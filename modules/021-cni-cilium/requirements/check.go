@@ -59,7 +59,7 @@ func checkMinimalKernelVersionFunc(requirementValue string, getter requirements.
 
 	currentSemver, err := parseKernelSemver(currentVersionStr)
 	if err != nil {
-		return false, fmt.Errorf("unable to parse current minimal Linux kernel version: %w", err)
+		return false, fmt.Errorf("unable to parse current minimal Linux kernel version (%s): %w", currentVersionStr, err)
 	}
 
 	if requirementValue == "" {
@@ -68,7 +68,7 @@ func checkMinimalKernelVersionFunc(requirementValue string, getter requirements.
 
 	requiredSemver, err := parseKernelSemver(requirementValue)
 	if err != nil {
-		return false, fmt.Errorf("unable to parse required minimal Linux kernel version: %w", err)
+		return false, fmt.Errorf("unable to parse required minimal Linux kernel version (%s): %w", requirementValue, err)
 	}
 
 	if currentSemver.LessThan(requiredSemver) {

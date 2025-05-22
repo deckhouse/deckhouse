@@ -136,6 +136,8 @@ func handleNodes(input *go_hook.HookInput) error {
 			return fmt.Errorf("invalid kernel version constraint %q: %v", constraint.kernelVersionConstraint, err)
 		}
 
+		// Values is re-set to update the minimum required Linux kernel version depending on the included modules
+		// The minimum version will later be passed to the cilium agent's cilium initContainer
 		input.Values.Set("cniCilium.internal.minimalRequiredKernelVersionConstraint", constraint.kernelVersionConstraint)
 
 		for _, n := range nodes {
@@ -177,6 +179,7 @@ func handleNodes(input *go_hook.HookInput) error {
 	return nil
 }
 
+// Identify the cluster node (as nodeKernelVersion) with the lowest version of the kernel.
 func defineMinimalLinuxKernelVersionNode(nodes []go_hook.FilterResult) (*nodeKernelVersion, error) {
 	var minimalNode *nodeKernelVersion
 	var minimalVersion *semver.Version
@@ -203,6 +206,7 @@ func defineMinimalLinuxKernelVersionNode(nodes []go_hook.FilterResult) (*nodeKer
 	return minimalNode, nil
 }
 
+// Check that module is constraint relevant
 func isConstraintRelevant(enabled *set.Set, modules []string) bool {
 	for _, m := range modules {
 		if !enabled.Has(m) {
