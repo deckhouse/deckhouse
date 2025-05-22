@@ -30,7 +30,6 @@ type SSHCredentialsSpec struct {
 
 	User          string `json:"user"`
 	PrivateSSHKey string `json:"privateSSHKey"`
-	SudoPassword  string `json:"sudoPassword,omitempty"`
 	// base64 encoded password for user
 	SudoPasswordEncoded string `json:"sudoPasswordEncoded,omitempty"`
 

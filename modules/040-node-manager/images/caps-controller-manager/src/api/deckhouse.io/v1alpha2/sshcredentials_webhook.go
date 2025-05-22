@@ -68,16 +68,11 @@ func (r *SSHCredentials) ValidateCreate() (admission.Warnings, error) {
 	}
 
 	if r.Spec.SudoPasswordEncoded != "" {
-		pass, err := base64.StdEncoding.DecodeString(r.Spec.SudoPasswordEncoded)
+		_, err := base64.StdEncoding.DecodeString(r.Spec.SudoPasswordEncoded)
 		if err != nil {
 			return nil, field.Invalid(field.NewPath("spec", "SudoPasswordEncoded"), "******", "SudoPasswordEncoded must be a valid base64 encoded string")
 		}
 
-		if r.Spec.SudoPassword != "" {
-			if r.Spec.SudoPassword != string(pass) {
-				return nil, field.Invalid(field.NewPath("spec", "SudoPasswordEncoded"), "******", "SudoPasswordEncoded must be a valid base64 encoded SudoPassword string")
-			}
-		}
 	}
 
 	return nil, nil
@@ -98,16 +93,11 @@ func (r *SSHCredentials) ValidateUpdate(old runtime.Object) (admission.Warnings,
 	}
 
 	if r.Spec.SudoPasswordEncoded != "" {
-		pass, err := base64.StdEncoding.DecodeString(r.Spec.SudoPasswordEncoded)
+		_, err := base64.StdEncoding.DecodeString(r.Spec.SudoPasswordEncoded)
 		if err != nil {
 			return nil, field.Invalid(field.NewPath("spec", "SudoPasswordEncoded"), "******", "SudoPasswordEncoded must be a valid base64 encoded string")
 		}
 
-		if r.Spec.SudoPassword != "" {
-			if r.Spec.SudoPassword != string(pass) {
-				return nil, field.Invalid(field.NewPath("spec", "SudoPasswordEncoded"), "******", "SudoPasswordEncoded must be a valid base64 encoded SudoPassword string")
-			}
-		}
 	}
 
 	return nil, nil
