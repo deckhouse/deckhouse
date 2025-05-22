@@ -1041,7 +1041,6 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
 		})
-
 	})
 }
 
