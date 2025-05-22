@@ -11,6 +11,39 @@ import:
   add: /usr
   to: /bash
   before: install
+- image: tools/findutils
+  add: /usr
+  to: /findutils
+  before: install
+- image: tools/gawk
+  add: /usr
+  to: /gawk
+  before: install
+- image: tools/grep
+  add: /usr
+  to: /grep
+  before: install
+- image: tools/jq
+  add: /usr
+  to: /jq
+  before: install
+- image: tools/less
+  add: /usr
+  to: /less
+  before: install
+- image: tools/sed
+  add: /usr
+  to: /sed
+  before: install
+- image: tools/vim
+  add: /usr
+  to: /vim
+  before: install
+- image: libs/openssl
+  add: /usr
+  to: /openssl
+  before: install
+  #
 - image: common/ethtool
   add: /ethtool
   to: /common/ethtool
@@ -24,6 +57,15 @@ shell:
   - mkdir -p /relocate
   - cp -r /coreutils/* /relocate/
   - cp -r /bash/* /relocate/
+  - cp -r /findutils/* /relocate/
+  - cp -r /gawk/* /relocate/
+  - cp -r /grep/* /relocate/
+  - cp -r /jq/* /relocate/
+  - cp -r /less/* /relocate/
+  - cp -r /sed/* /relocate/
+  - cp -r /vim/* /relocate/
+  - cp -r /openssl/* /relocate/
+  #
   - cp /common/ethtool /relocate/bin/
   - cp /common/pwru /relocate/bin/
 ---
@@ -37,7 +79,7 @@ import:
 shell:
   install:
   - ln -s /usr/bin /bin
-  # - ln -s /usr/sbin /sbin
+  - ln -s /usr/sbin /sbin
 imageSpec:
   config:
     env: { "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", "LANG": "C.UTF-8", "LANGUAGE": "C.UTF-8", "LC_ALL": "C.UTF-8" }
