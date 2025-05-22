@@ -3724,7 +3724,14 @@ alerts:
       moduleUrl: 340-monitoring-deckhouse
       module: monitoring-deckhouse
       edition: ce
-      description: "A new Deckhouse release is available but requires manual approval before it can be applied.\n\nTo approve the release, run the following command: \n\n```bash\nkubectl patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{\"approved\": true}'\n```\n"
+      description: |
+        A new Deckhouse release is available but requires manual approval before it can be applied.
+
+        To approve the release, run the following command:
+
+        ```bash
+        kubectl patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{"approved": true}'
+        ```
       summary: |
         A new Deckhouse release is awaiting manual approval.
       severity: "6"
@@ -3734,7 +3741,14 @@ alerts:
       moduleUrl: 340-monitoring-deckhouse
       module: monitoring-deckhouse
       edition: ce
-      description: "A new Deckhouse release is available but requires manual approval before it can be applied.\n\nTo approve the release, run the following command: \n\n```bash\nkubectl patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{\"approved\": true}'\n```\n"
+      description: |
+        A new Deckhouse release is available but requires manual approval before it can be applied.
+
+        To approve the release, run the following command:
+
+        ```bash
+        kubectl patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{"approved": true}'
+        ```
       summary: |
         A new Deckhouse release is awaiting manual approval.
       severity: "9"
