@@ -1032,7 +1032,7 @@ function bootstrap() {
     ssh_bastion_params=""
   fi
 
-  dhctl --do-not-write-debug-log-file bootstrap --resources-timeout="30m" --yes-i-want-to-drop-cache $ssh_bastion_params \
+  DHCTL_DEBUG=yes dhctl --do-not-write-debug-log-file bootstrap --resources-timeout="30m" --yes-i-want-to-drop-cache $ssh_bastion_params \
         --ssh-agent-private-keys "$ssh_private_key_path" --ssh-user "$ssh_user" \
         --config "$cwd/resources.yaml" --config "$cwd/configuration.yaml" | tee -a "$bootstrap_log"
 
