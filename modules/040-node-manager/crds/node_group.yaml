@@ -1517,18 +1517,18 @@ spec:
                         - none
                     mig:
                       type: object
+                      required: [partedConfig]
                       properties:
                         partedConfig:
                           type: string
                           description: |
                             Selected parted-config for MIG.
-                          required: true
                           x-doc-default: all-1g.5gb
                   oneOf:
                     - properties:
                         type:
                           enum: [Time-slicing]
-                        time-slicing: {}
+                        timeSlicing: {}
                     - properties:
                         type:
                           enum: [Mig]

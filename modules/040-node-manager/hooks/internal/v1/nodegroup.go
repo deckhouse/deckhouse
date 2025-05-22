@@ -131,7 +131,7 @@ func (c CRI) IsEmpty() bool {
 }
 
 type Mig struct {
-	// Count of replicas
+	// MIG profiles
 	PartedConfig *string `json:"partedConfig,omitempty"`
 }
 

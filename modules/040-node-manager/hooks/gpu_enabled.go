@@ -17,12 +17,17 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
 const (
@@ -31,7 +36,7 @@ const (
 	ngLabel           = "node.deckhouse.io/group"
 )
 
-// This hook discovers nodegroup names for dynamic probes in upmeter
+// This hook discovers nodegroup GPU sharing type and labels nodes
 var _ = sdk.RegisterFunc(
 	&go_hook.HookConfig{
 		Queue:       "/modules/node-manager",
@@ -43,22 +48,20 @@ var _ = sdk.RegisterFunc(
 				Kind:       "NodeGroup",
 				FilterFunc: filterGPUSpec,
 			},
-			{
-				Name:       "nodes",
-				ApiVersion: "v1",
-				Kind:       "Node",
-			},
 		},
 	},
-	setGPULabel,
-)
+	dependency.WithExternalDependencies(setGPULabel))
 
-type gpuSpecNG struct {
-	Name    string
-	Sharing string
+type nodeGroupInfo struct {
+	Name       string
+	GpuSharing string
 }
 
-// filterGPUSpec returns the name of a nodegroup to consider or emptystring if it should be skipped
+type NodeInfo struct {
+	Name   string
+	Labels map[string]string
+}
+
 func filterGPUSpec(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var nodeGroup ngv1.NodeGroup
 	err := sdk.FromUnstructured(obj, &nodeGroup)
@@ -66,44 +69,47 @@ func filterGPUSpec(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 		return "", err
 	}
 
-	// Filter only GPU node groups
-	if nodeGroup.Spec.GPU.Sharing == "" {
-		return "", nil
-	}
-
-	return nodeGroup, nil
+	return nodeGroupInfo{
+		Name:       nodeGroup.Name,
+		GpuSharing: nodeGroup.Spec.GPU.Sharing,
+	}, nil
 }
 
-// collectDynamicProbeConfig sets names of objects to internal values
-func setGPULabel(input *go_hook.HookInput) error {
-	// Input
+func setGPULabel(input *go_hook.HookInput, dc dependency.Container) error {
+
 	ngs := input.Snapshots["nodegroups"]
-	nodes := input.Snapshots["nodes"]
 
 	for _, ng := range ngs {
-		ngName := ng.(gpuSpecNG).Name
-		sharing := ng.(gpuSpecNG).Sharing
+		var nodes *v1.NodeList
+		ngName := ng.(nodeGroupInfo).Name
+		gpuSharing := ng.(nodeGroupInfo).GpuSharing
+		if gpuSharing == "" {
+			continue
+		}
 		input.Logger.Info("Processing nodegroup %s", ngName)
 
-		for _, node := range nodes {
-			nodeName := node.(*v1.Node).Name
-			node := node.(*v1.Node)
-			if node.Labels[gpuEnabledLabel] == ngName {
-				_, isLabeled := node.Labels[gpuEnabledLabel]
-				if isLabeled {
-					continue
-				}
-				input.Logger.Info("Labeling %s node with %s=%v label", nodeName, devicePluginLabel, sharing)
-				metadata := map[string]interface{}{
-					"metadata": map[string]interface{}{
-						"labels": map[string]interface{}{
-							gpuEnabledLabel:   "",
-							devicePluginLabel: sharing,
-						},
-					},
-				}
-				input.PatchCollector.PatchWithMerge(metadata, "v1", "Node", "", nodeName)
+		kubeClient := dc.MustGetK8sClient()
+
+		nodes, _ = kubeClient.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{
+			LabelSelector: "node.deckhouse.io/group=" + ngName,
+		})
+
+		for _, node := range nodes.Items {
+			if _, ok := node.Labels[gpuEnabledLabel]; ok {
+				continue
 			}
+
+			input.Logger.Info("Labeling %s node with %s=%v label", node.Name, devicePluginLabel, gpuSharing)
+			metadata := map[string]interface{}{
+				"metadata": map[string]interface{}{
+					"labels": map[string]interface{}{
+						gpuEnabledLabel:   "",
+						devicePluginLabel: gpuSharing,
+					},
+				},
+			}
+
+			input.PatchCollector.PatchWithMerge(metadata, "v1", "Node", "", node.Name)
 		}
 	}
 	return nil
