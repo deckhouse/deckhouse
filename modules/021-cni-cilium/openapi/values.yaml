@@ -6,6 +6,12 @@ properties:
     type: object
     default: {}
     properties:
+      minimalRequiredKernelVersionConstraint:
+        type: string
+        description: |
+          The minimal Linux kernel version constraint required for normal operation of the module
+          Constraint example: >= 4.9.17
+        default: ">= 4.9.17"
       mode:
         type: string
         enum: ["Direct", "DirectWithNodeRoutes", "VXLAN"]
@@ -176,8 +182,3 @@ properties:
               type: array
               items:
                 type: string
-      kernelVersionConstraint:
-        type: string
-        default: "4.9.17"
-        description: |
-          The minimal version of the Linux kernel for the normal functioning of the network components of the cluster

@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -61,6 +62,18 @@ status:
   nodeInfo:
     kernelVersion: 5.15.0-10-generic
 `
+		stateNode4 = `
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node-4
+  labels:
+    node.deckhouse.io/group: test
+status:
+  nodeInfo:
+    kernelVersion: 2.0.0-10-generic
+`
 	)
 
 	f := HookExecutionConfigInit(`{"cniCilium": { "internal":{}}}`, `{}`)
@@ -76,34 +89,52 @@ status:
 		})
 	})
 
-	Context("Values cniCilium.internal.kernelVersionConstraint is set when only cni-cilium enabled", func() {
+	Context("Values cniCilium.internal.minimalRequiredKernelVersionConstraint is set when only cni-cilium enabled", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(stateNode1 + stateNode2 + stateNode3))
 			f.ValuesSetFromYaml("global.enabledModules", []byte("[cni-cilium]"))
+			f.ValuesSet("cniCilium.internal.minimalRequiredKernelVersionConstraint", ">= 4.9.17")
+
 			f.RunHook()
 		})
 
 		It("Hook must execute successfully", func() {
-			Expect(f.ValuesGet("cniCilium.internal.kernelVersionConstraint").String()).To(Equal(">= 4.9.17"))
+			Expect(f.ValuesGet("cniCilium.internal.minimalRequiredKernelVersionConstraint").String()).To(Equal(">= 4.9.17"))
 		})
 	})
 
-	Context("Values cniCilium.internal.kernelVersionConstraint is set when cni-cilium,istio,openvpn enabled", func() {
+	Context("Values cniCilium.internal.minimalRequiredKernelVersionConstraint is set when cni-cilium,istio,openvpn enabled", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(stateNode1 + stateNode2 + stateNode3))
 			f.ValuesSetFromYaml("global.enabledModules", []byte("[cni-cilium, istio, openvpn]"))
+			f.ValuesSet("cniCilium.internal.minimalRequiredKernelVersionConstraint", ">= 4.9.17")
+
 			f.RunHook()
 		})
 
 		It("Hook must execute successfully", func() {
-			Expect(f.ValuesGet("cniCilium.internal.kernelVersionConstraint").String()).To(Equal(">= 5.7"))
+			Expect(f.ValuesGet("cniCilium.internal.minimalRequiredKernelVersionConstraint").String()).To(Equal(">= 5.7"))
+		})
+	})
+
+	Context("Finding the minimum kernel version of cluster nodes", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateNode1 + stateNode2 + stateNode3 + stateNode4))
+			f.RunHook()
+		})
+
+		It("Hook must execute successfully", func() {
+			currentMinimalLinuxKernelVersion, _ := requirements.GetValue("currentMinimalLinuxKernelVersion")
+			Expect(currentMinimalLinuxKernelVersion).To(Equal("2.0.0-10-generic"))
 		})
 	})
 
 	Context("Cilium, istio, openvpn modules enabled, nodes with proper kernels", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global.enabledModules", []byte("[cni-cilium, istio, openvpn]"))
+			f.ValuesSet("cniCilium.internal.minimalRequiredKernelVersionConstraint", ">= 4.9.17")
 			f.BindingContexts.Set(f.KubeStateSet(stateNode3))
+
 			f.RunHook()
 		})
 
@@ -114,6 +145,8 @@ status:
 		Context("Cilium, istio, openvpn modules enabled, added node with improper kernel", func() {
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.KubeStateSet(stateNode1 + stateNode2 + stateNode3))
+				f.ValuesSet("cniCilium.internal.minimalRequiredKernelVersionConstraint", ">= 4.9.17")
+
 				f.RunHook()
 			})
 

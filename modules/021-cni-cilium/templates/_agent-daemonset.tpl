@@ -205,7 +205,7 @@ spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       initContainers:
-      {{- include "module_init_container_check_linux_kernel" (tuple $context $context.Values.cniCilium.internal.kernelVersionConstraint) | nindent 6 }}
+      {{- include "module_init_container_check_linux_kernel" (tuple $context $context.Values.cniCilium.internal.minimalRequiredKernelVersionConstraint) | nindent 6 }}
       - name: clearing-unnecessary-iptables
         image: {{ include "helm_lib_module_image" (list $context "agentDistroless") }}
         imagePullPolicy: IfNotPresent

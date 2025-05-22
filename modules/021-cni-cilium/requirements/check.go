@@ -18,30 +18,64 @@ package requirements
 
 import (
 	"errors"
+	"fmt"
+	"strings"
+
+	"github.com/Masterminds/semver/v3"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 )
 
-const (
-	cniConfigurationSettledKey             = "cniConfigurationSettled"
-	cniConfigurationSettledRequirementsKey = "cniConfigurationSettled"
-)
-
 func init() {
-	checkCNIConfigurationSettledFunc := func(_ string, getter requirements.ValueGetter) (bool, error) {
-		cniConfigurationSettledStatusRaw, exists := getter.Get(cniConfigurationSettledKey)
-		if !exists {
-			return true, nil
-		}
+	requirements.RegisterCheck("nodesMinimalLinuxKernelVersion", checkMinimalKernelVersionFunc)
+	requirements.RegisterCheck("cniConfigurationSettled", checkCNIConfigurationSettledFunc)
+}
 
-		if cniConfigurationSettledStatus, ok := cniConfigurationSettledStatusRaw.(string); ok {
-			if cniConfigurationSettledStatus == "false" {
-				return false, errors.New(
-					"A problem has been found in the CNI configuration, see ClusterAlerts for details",
-				)
-			}
-		}
+func checkCNIConfigurationSettledFunc(_ string, getter requirements.ValueGetter) (bool, error) {
+	cniConfigurationSettledStatusRaw, exists := getter.Get("cniConfigurationSettled")
+	if !exists {
 		return true, nil
 	}
-	requirements.RegisterCheck(cniConfigurationSettledRequirementsKey, checkCNIConfigurationSettledFunc)
+
+	if cniConfigurationSettledStatus, ok := cniConfigurationSettledStatusRaw.(string); ok {
+		if cniConfigurationSettledStatus == "false" {
+			return false, errors.New(
+				"A problem has been found in the CNI configuration, see ClusterAlerts for details",
+			)
+		}
+	}
+	return true, nil
+}
+
+func checkMinimalKernelVersionFunc(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+	// Minimal version of the Linux kernel on the node in the cluster
+	currentMinimalLinuxKernelVersion, exists := getter.Get("currentMinimalLinuxKernelVersion")
+	if !exists {
+		fmt.Println("[DEBUG] Key 'currentMinimalLinuxKernelVersion' does not exists in requirements")
+		return true, nil
+	}
+	currentMinimalLinuxKernelVersionSemVer, err := semver.NewVersion(strings.Split(currentMinimalLinuxKernelVersion.(string), "-")[0])
+	if err != nil {
+		return false, fmt.Errorf("unable to parse current minimal Linux kernel version: %w", err)
+	}
+
+	// Required minimal Linux kernel version
+	if requirementValue == "" {
+		fmt.Println("[DEBUG] Key 'nodesMinimalLinuxKernelVersion' does not exists in release.yaml")
+		return true, nil
+	}
+	nodesMinimalLinuxKernelVersionSemVer, err := semver.NewVersion(strings.Split(requirementValue, "-")[0])
+	if err != nil {
+		return false, fmt.Errorf("unable to parse current minimal Linux kernel version: %w", err)
+	}
+
+	// Compare versions
+	if currentMinimalLinuxKernelVersionSemVer.LessThan(nodesMinimalLinuxKernelVersionSemVer) {
+		return false, fmt.Errorf(
+			"the current version of the Linux kernel on the cluster nodes is less than %s, which is required by the module",
+			requirementValue,
+		)
+	}
+
+	return true, nil
 }

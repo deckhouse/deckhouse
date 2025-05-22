@@ -27,6 +27,7 @@ in case of hook failure
 package hooks
 
 import (
+	"fmt"
 	"log/slog"
 	"strings"
 
@@ -38,6 +39,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
@@ -45,26 +47,6 @@ import (
 type nodeConstraint struct {
 	kernelVersionConstraint string
 	modulesListInUse        []string
-}
-
-// List of requirements to be checked against node kernel versions.
-var constraints = []nodeConstraint{
-	{
-		kernelVersionConstraint: ">= 4.9.17",
-		modulesListInUse:        []string{"cni-cilium"},
-	},
-	{
-		kernelVersionConstraint: ">= 5.7",
-		modulesListInUse:        []string{"cni-cilium", "istio"},
-	},
-	{
-		kernelVersionConstraint: ">= 5.7",
-		modulesListInUse:        []string{"cni-cilium", "openvpn"},
-	},
-	{
-		kernelVersionConstraint: ">= 5.7",
-		modulesListInUse:        []string{"cni-cilium", "node-local-dns"},
-	},
 }
 
 const (
@@ -114,6 +96,26 @@ func filterNodes(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 
 // handleNodes is the main hook logic that checks kernel requirements and emits metrics
 func handleNodes(input *go_hook.HookInput) error {
+	// List of requirements to be checked against node kernel versions.
+	var constraints = []nodeConstraint{
+		{
+			kernelVersionConstraint: input.Values.Get("cniCilium.internal.minimalRequiredKernelVersionConstraint").String(),
+			modulesListInUse:        []string{"cni-cilium"},
+		},
+		{
+			kernelVersionConstraint: ">= 5.7",
+			modulesListInUse:        []string{"cni-cilium", "istio"},
+		},
+		{
+			kernelVersionConstraint: ">= 5.7",
+			modulesListInUse:        []string{"cni-cilium", "openvpn"},
+		},
+		{
+			kernelVersionConstraint: ">= 5.7",
+			modulesListInUse:        []string{"cni-cilium", "node-local-dns"},
+		},
+	}
+
 	input.MetricsCollector.Expire(nodeKernelCheckMetricsGroup)
 
 	nodes := input.Snapshots["nodes"]
@@ -121,6 +123,16 @@ func handleNodes(input *go_hook.HookInput) error {
 		input.Logger.Error("no nodes found")
 		return nil
 	}
+
+	// Define minimal kernel version in cluster nodes
+	node, err := defineMinimalLinuxKernelVersionNode(nodes)
+	if err != nil {
+		input.Logger.Errorf("failed to define minimal kernel version: %v", err)
+		return nil
+	}
+
+	// Set currentMinimalLinuxKernelVersion in requirements to using in check.go
+	requirements.SaveValue("currentMinimalLinuxKernelVersion", node.KernelVersion)
 
 	enabledModules := set.NewFromValues(input.Values, "global.enabledModules")
 
@@ -144,7 +156,7 @@ func handleNodes(input *go_hook.HookInput) error {
 		}
 
 		// Set minimal required kernel version constraint in .Values
-		input.Values.Set("cniCilium.internal.kernelVersionConstraint", constraint.kernelVersionConstraint)
+		input.Values.Set("cniCilium.internal.minimalRequiredKernelVersionConstraint", constraint.kernelVersionConstraint)
 
 		// Check each node's kernel version
 		for _, n := range nodes {
@@ -186,4 +198,30 @@ func handleNodes(input *go_hook.HookInput) error {
 	}
 
 	return nil
+}
+
+func defineMinimalLinuxKernelVersionNode(nodes []go_hook.FilterResult) (*nodeKernelVersion, error) {
+	minimalLinuxKernelVersionNode := nodeKernelVersion{
+		Name:          "init-value-node",
+		KernelVersion: "99999.99999.99999",
+	}
+	for _, n := range nodes {
+		node := n.(nodeKernelVersion)
+
+		minimalLinuxKernelVersion, err := semver.NewVersion(strings.Split(minimalLinuxKernelVersionNode.KernelVersion, "-")[0])
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse minimal kernel version %s: %v", minimalLinuxKernelVersionNode.KernelVersion, err)
+		}
+
+		nodeKernelVersion, err := semver.NewVersion(strings.Split(node.KernelVersion, "-")[0])
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse minimal kernel version %s: %v", node.KernelVersion, err)
+		}
+
+		if nodeKernelVersion.LessThan(minimalLinuxKernelVersion) {
+			minimalLinuxKernelVersionNode = node
+		}
+	}
+
+	return &minimalLinuxKernelVersionNode, nil
 }
