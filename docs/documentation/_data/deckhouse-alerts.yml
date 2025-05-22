@@ -3648,7 +3648,7 @@ alerts:
         Alerting dead man's switch.
       severity: "4"
       markupFormat: default
-    - name: DeckhouseModuleUpdatingFailed
+    - name: DeckhouseModuleUpdatingFailedBrokenSequence
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
       moduleUrl: 340-monitoring-deckhouse
       module: monitoring-deckhouse
@@ -3656,7 +3656,6 @@ alerts:
       description: |
         The '{{ $labels.module }}' Module update has failed.
 
-        Possible reasons:
         Current version: {{ $labels.actual_version }}.
         Desired version: {{ $labels.version }}.
 
@@ -3667,7 +3666,27 @@ alerts:
 
         To resolve this issue, ensure that the next version of the '{{ $labels.module }}' Module image between {{ $labels.actual_version }} and {{ $labels.version }} is available in the registry '{{ $labels.registry }}'.
       summary: |
-        Module update has failed.
+        Module update has failed. Updating sequence is broken.
+      severity: "4"
+      markupFormat: markdown
+    - name: DeckhouseModuleUpdatingFailedModuleIsNotValid
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        The '{{ $labels.module }}' Module update has failed.
+
+        Desired version: {{ $labels.version }}.
+
+        Attempt to download interim releases failed.
+
+        Possible reasons:
+         - The Module image is corrupted.
+
+        To resolve this issue, ensure that {{ $labels.version }} image in the registry '{{ $labels.registry }}' is valid .
+      summary: |
+        Module update has failed. Module is not valid.
       severity: "4"
       markupFormat: markdown
     - name: DeckhouseModuleUseEmptyDir

@@ -439,7 +439,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      summary: Module update has failed.
+      summary: Module update has failed. Updating sequence is broken.
       description: |
         The '{{ $labels.module }}' Module update has failed.
 
@@ -462,7 +462,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      summary: Module update has failed.
+      summary: Module update has failed. Module is not valid.
       description: |
         The '{{ $labels.module }}' Module update has failed.
 
