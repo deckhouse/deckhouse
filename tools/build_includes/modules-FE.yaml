@@ -134,11 +134,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/modules/025-static-routing-manager
-  to: /deckhouse/modules/025-static-routing-manager
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /ee/modules/030-cloud-provider-dynamix
   to: /deckhouse/modules/030-cloud-provider-dynamix
   stageDependencies:

@@ -449,9 +449,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"snapshotController":        "imageHash-snapshotController-snapshotController",
 		"snapshotValidationWebhook": "imageHash-snapshotController-snapshotValidationWebhook",
 	},
-	"staticRoutingManager": map[string]interface{}{
-		"agent": "imageHash-staticRoutingManager-agent",
-	},
 	"terraformManager": map[string]interface{}{
 		"terraformManagerAws":         "imageHash-terraformManager-terraformManagerAws",
 		"terraformManagerAzure":       "imageHash-terraformManager-terraformManagerAzure",
