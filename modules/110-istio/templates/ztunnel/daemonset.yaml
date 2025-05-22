@@ -42,7 +42,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: ztunnel-{{ $revision }}
-  namespace: d8-{{ .Chart.Name }}
+  namespace: d8-{{ $.Chart.Name }}
   labels:
     app.kubernetes.io/name: ztunnel
     app.kubernetes.io/instance: {{ $revision }}-ztunnel
@@ -118,9 +118,9 @@ spec:
         - ztunnel
         env:
         - name: CA_ADDRESS
-          value: istiod-{{ $revision }}.{{ .Chart.Name }}.svc:15012
+          value: istiod-{{ $revision }}.{{ $.Chart.Name }}.svc:15012
         - name: XDS_ADDRESS
-          value: istiod-{{ $revision }}.{{ .Chart.Name }}.svc:15012
+          value: istiod-{{ $revision }}.{{ $.Chart.Name }}.svc:15012
         - name: RUST_LOG
           value: info
         - name: RUST_BACKTRACE
