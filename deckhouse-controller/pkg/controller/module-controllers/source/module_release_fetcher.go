@@ -72,6 +72,7 @@ func NewDeckhouseReleaseFetcher(cfg *ModuleReleaseFetcherConfig) *ModuleReleaseF
 		source:            cfg.Source,
 		updatePolicyName:  cfg.UpdatePolicyName,
 		metricStorage:     cfg.MetricStorage,
+		metricGroupName:   metricUpdatingFailed + "_" + strcase.ToSnake(cfg.ModuleName),
 		logger:            cfg.Logger,
 	}
 }
@@ -89,7 +90,8 @@ type ModuleReleaseFetcher struct {
 	source           *v1alpha1.ModuleSource
 	updatePolicyName string
 
-	metricStorage metric.Storage
+	metricStorage   metric.Storage
+	metricGroupName string
 
 	logger *log.Logger
 }
@@ -164,7 +166,7 @@ func (f *ModuleReleaseFetcher) fetchModuleReleases(ctx context.Context) error {
 		return fmt.Errorf("parse semver: %w", err)
 	}
 
-	f.metricStorage.Grouped().ExpireGroupMetrics(metricUpdatingFailedGroup + "-" + strcase.ToKebab(f.moduleName))
+	f.metricStorage.Grouped().ExpireGroupMetrics(f.metricGroupName)
 
 	// sort releases before
 	sort.Sort(releaseUpdater.ByVersion[*v1alpha1.ModuleRelease](releasesInCluster))
@@ -204,7 +206,7 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 	if len(releasesInCluster) == 0 {
 		err := f.ensureModuleRelease(ctx, f.targetReleaseMeta, "no releases in cluster")
 		if err != nil {
-			f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup+"-"+strcase.ToKebab(f.moduleName), metricUpdatingFailedGroup, 1, metricLabels)
+			f.metricStorage.Grouped().GaugeSet(f.metricGroupName, metricUpdatingFailed, 1, metricLabels)
 
 			return fmt.Errorf("create release %s: %w", f.targetReleaseMeta.ModuleVersion, err)
 		}
@@ -218,7 +220,7 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 	if isUpdatingSequence(actual.GetVersion(), newSemver) {
 		err := f.ensureModuleRelease(ctx, f.targetReleaseMeta, "from deployed")
 		if err != nil {
-			f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup+"-"+strcase.ToKebab(f.moduleName), metricUpdatingFailedGroup, 1, metricLabels)
+			f.metricStorage.Grouped().GaugeSet(f.metricGroupName, metricUpdatingFailed, 1, metricLabels)
 
 			return fmt.Errorf("create release %s: %w", f.targetReleaseMeta.ModuleVersion, err)
 		}
@@ -242,7 +244,7 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 		if isUpdatingSequence(actual.GetVersion(), newSemver) {
 			err := f.ensureModuleRelease(ctx, f.targetReleaseMeta, "from last release in cluster")
 			if err != nil {
-				f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup+"-"+strcase.ToKebab(f.moduleName), metricUpdatingFailedGroup, 1, metricLabels)
+				f.metricStorage.Grouped().GaugeSet(f.metricGroupName, metricUpdatingFailed, 1, metricLabels)
 
 				return fmt.Errorf("create release %s: %w", f.targetReleaseMeta.ModuleVersion, err)
 			}
@@ -253,7 +255,7 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 
 	vers, err := f.getNewVersions(ctx, actual.GetVersion(), newSemver)
 	if err != nil {
-		f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup+"-"+strcase.ToKebab(f.moduleName), metricUpdatingFailedGroup, 1, metricLabels)
+		f.metricStorage.Grouped().GaugeSet(f.metricGroupName, metricUpdatingFailed, 1, metricLabels)
 
 		return fmt.Errorf("get next version: %w", err)
 	}
@@ -297,7 +299,7 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 				"actual_version": "v" + actual.GetVersion().String(),
 			}
 
-			f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup+"-"+strcase.ToKebab(f.moduleName), metricUpdatingFailedGroup, 1, metricLabels)
+			f.metricStorage.Grouped().GaugeSet(f.metricGroupName, metricUpdatingFailed, 1, metricLabels)
 		}
 
 		current = ver

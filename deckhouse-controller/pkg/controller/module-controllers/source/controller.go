@@ -64,8 +64,8 @@ const (
 
 	maxModulesLimit = 1500
 
-	metricUpdatingFailedGroup = "d8_module_updating_failed"
-	serviceName               = "module-source-controller"
+	metricUpdatingFailed = "d8_module_updating_failed"
+	serviceName          = "module-source-controller"
 )
 
 var ErrSettingsNotChanged = errors.New("settings not changed")
