@@ -113,5 +113,5 @@ import:
     before: install
 shell:
   install:
-  - /binary_replace.sh -i /vector/usr/bin/vector -o /relocate
+  - /binary_replace.sh -i /relocate/usr/bin/vector -o /relocate
   - cp -pr /etc/pki /relocate/etc
