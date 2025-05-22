@@ -16,7 +16,7 @@ spec:
         role: worker
     spec:
       nodeSelector:
-        node.deckhouse.io/gpu: true
+        node.deckhouse.io/gpu: ""
       dnsPolicy: ClusterFirstWithHostNet
       serviceAccountName: node-feature-discovery-worker
       containers:
