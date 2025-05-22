@@ -199,8 +199,9 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 	defer span.End()
 
 	metricLabels := map[string]string{
-		"module":  f.moduleName,
-		"version": f.targetReleaseMeta.ModuleVersion,
+		"module":   f.moduleName,
+		"version":  f.targetReleaseMeta.ModuleVersion,
+		"registry": f.source.Spec.Registry.Repo,
 	}
 
 	if len(releasesInCluster) == 0 {
@@ -293,11 +294,7 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 		if ensureErr != nil {
 			err = errors.Join(err, ensureErr)
 
-			metricLabels := map[string]string{
-				"module":         f.moduleName,
-				"version":        "v" + ver.String(),
-				"actual_version": "v" + actual.GetVersion().String(),
-			}
+			metricLabels["version"] = "v" + ver.String()
 
 			f.metricStorage.Grouped().GaugeSet(f.metricGroupName, metricUpdatingFailed, 1, metricLabels)
 		}
