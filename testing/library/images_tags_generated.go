@@ -349,6 +349,7 @@ var DefaultImagesDigests = map[string]interface{}{
 	},
 	"nvidiaGpu": map[string]interface{}{
 		"nodeFeatureDiscovery": "imageHash-nvidiaGpu-nodeFeatureDiscovery",
+		"nvidiaDevicePlugin":   "imageHash-nvidiaGpu-nvidiaDevicePlugin",
 	},
 	"openvpn": map[string]interface{}{
 		"easyrsaMigrator": "imageHash-openvpn-easyrsaMigrator",
