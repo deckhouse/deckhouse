@@ -24,7 +24,6 @@ import (
 	. "github.com/onsi/gomega"
 	v1core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
@@ -214,7 +213,7 @@ status:
 		BeforeEach(func() {
 			resources := []string{
 				cniSecretYAML(cni, ``),
-				cniMCYAML(cniName, pointer.Bool(false), v1alpha1.SettingsValues{}),
+				cniMCYAML(cniName, ptr.To(false), v1alpha1.SettingsValues{}),
 				foreignDesiredCM,
 			}
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
@@ -251,7 +250,7 @@ status:
 		BeforeEach(func() {
 			resources := []string{
 				cniSecretYAML(cni, ``),
-				cniMCYAML(cniName, pointer.Bool(true), v1alpha1.SettingsValues{}),
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{}),
 			}
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())

@@ -204,7 +204,7 @@ func routingTablesHandler(input *go_hook.HookInput) error {
 		nrtis := nrtRaw.(SDNInternalNodeRoutingTableInfo)
 		actualNodeRoutingTables[nrtis.Name] = nrtis
 		if _, ok := allNodes[nrtis.NodeName]; !ok && nrtis.IsDeleted {
-			input.Logger.Infof("An orphan NRT %v was found. It will be deleted", nrtis.Name)
+			input.Logger.Info("An orphan NRT was found. It will be deleted", slog.String("name", nrtis.Name))
 			lib.DeleteFinalizer(
 				input,
 				nrtis.Name,
@@ -241,7 +241,7 @@ func routingTablesHandler(input *go_hook.HookInput) error {
 
 		// Generate desired IPRoutingTableID
 		if rti.IPRoutingTableID == 0 {
-			input.Logger.Infof("RoutingTable %v needs to be updated", rti.Name)
+			input.Logger.Info("RoutingTable needs to be updated", slog.String("name", rti.Name))
 			tmpDRTS.IPRoutingTableID, err = idi.pickNextFreeID()
 			if err != nil {
 				input.Logger.Warn("can't pick free ID for RoutingTable", slog.String("name", rti.Name), log.Err(err))
@@ -362,7 +362,7 @@ func routingTablesHandler(input *go_hook.HookInput) error {
 			"status": newStatus,
 		}
 
-		input.PatchCollector.MergePatch(
+		input.PatchCollector.PatchWithMerge(
 			statusPatch,
 			v1alpha1.GroupVersion,
 			v1alpha1.RTKind,

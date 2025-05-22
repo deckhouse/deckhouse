@@ -111,7 +111,7 @@ func systemReserve(input *go_hook.HookInput) error {
 	for _, ngRaw := range ngsSnapshot {
 		ng := ngRaw.(*NodeGroup)
 		skipMigration := ng.ResourceReservationMode != ""
-		input.Logger.Infof("NodeGroupName: %s, KubeletResourceReservationMode: %s, skipMigration: %t", ng.Name, ng.ResourceReservationMode, skipMigration)
+		input.Logger.Info("", slog.String("NodeGroupName", ng.Name), slog.String("KubeletResourceReservationMode", ng.ResourceReservationMode), slog.Bool("skipMigration", skipMigration))
 		if skipMigration {
 			continue
 		}

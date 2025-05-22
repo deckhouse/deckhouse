@@ -20,6 +20,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -114,20 +115,20 @@ func checkServerCertExpiry(input *go_hook.HookInput) error {
 
 	block, _ := pem.Decode(certData)
 	if block == nil || block.Type != "CERTIFICATE" {
-		input.Logger.Errorf("Failed to decode PEM block from tls.crt")
+		input.Logger.Error("Failed to decode PEM block from tls.crt")
 		return nil
 	}
 
 	cert, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
-		input.Logger.Errorf("Failed to parse certificate: %v", err)
+		input.Logger.Error("Failed to parse certificate", log.Err(err))
 		return nil
 	}
 
 	// // Check if cert expires within 6 hours
 	now := time.Now()
 	if cert.NotAfter.Sub(now) <= 6*time.Hour {
-		input.Logger.Infof("Server certificate expired at %s, initiating cleanup and restart", cert.NotAfter)
+		input.Logger.Info("Server certificate expired, initiating cleanup and restart", slog.String("name", cert.NotAfter.String()))
 
 		// Remove openvpn-pki-ca
 		input.PatchCollector.Delete("v1", "Secret", "d8-openvpn", "openvpn-pki-ca")        // Ca cert
@@ -144,7 +145,7 @@ func checkServerCertExpiry(input *go_hook.HookInput) error {
 		for _, snapshot := range snapshotsClients {
 			clientSecretName := snapshot.(string)
 			input.PatchCollector.Delete("v1", "Secret", "d8-openvpn", clientSecretName)
-			input.Logger.Infof("Client secret %s scheduled for deletion", clientSecretName)
+			input.Logger.Info("Client secret scheduled for deletion", slog.String("name", clientSecretName))
 		}
 
 		// Patch spec.template.metadata.annotations for reload SS
@@ -159,10 +160,10 @@ func checkServerCertExpiry(input *go_hook.HookInput) error {
 				},
 			},
 		}
-		input.PatchCollector.MergePatch(patch, "apps/v1", "StatefulSet", "d8-openvpn", "openvpn")
+		input.PatchCollector.PatchWithMerge(patch, "apps/v1", "StatefulSet", "d8-openvpn", "openvpn")
 		input.Logger.Info("StatefulSet openvpn scheduled for restart")
 	} else {
-		input.Logger.Infof("Server certificate is valid until %s", cert.NotAfter)
+		input.Logger.Info("Server certificate is valid until", slog.String("name", cert.NotAfter.String()))
 	}
 
 	return nil

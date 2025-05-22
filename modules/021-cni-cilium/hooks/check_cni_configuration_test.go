@@ -24,7 +24,6 @@ import (
 	. "github.com/onsi/gomega"
 	v1core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
@@ -207,7 +206,7 @@ status:
 			f.ConfigValuesSet("cniCilium.masqueradeMode", "BPF")
 			resources := []string{
 				cniSecretYAML(cni, ``),
-				cniMCYAML(cniName, pointer.Bool(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
 					"tunnelMode":     "VXLAN",
 					"masqueradeMode": "BPF",
 				}),
@@ -234,7 +233,7 @@ status:
 			f.ConfigValuesSet("cniCilium.masqueradeMode", "BPF")
 			resources := []string{
 				cniSecretYAML(cni, `{}`),
-				cniMCYAML(cniName, pointer.Bool(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
 					"tunnelMode":     "VXLAN",
 					"masqueradeMode": "BPF",
 				}),
@@ -262,7 +261,7 @@ status:
 			f.ConfigValuesSet("cniCilium.debugLogging", true)
 			resources := []string{
 				cniSecretYAML(cni, `{"mode": "DirectWithNodeRoutes", "masqueradeMode": "Netfilter"}`),
-				cniMCYAML(cniName, pointer.Bool(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
 					"tunnelMode":   "VXLAN",
 					"bpfLBMode":    "SNAT",
 					"debugLogging": true,
@@ -311,7 +310,7 @@ status:
 			f.ConfigValuesSet("cniCilium.bpfLBMode", "SNAT")
 			resources := []string{
 				cniSecretYAML(cni, `{"mode": "DirectWithNodeRoutes"}`),
-				cniMCYAML(cniName, pointer.Bool(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
 					"tunnelMode": "VXLAN",
 					"bpfLBMode":  "SNAT",
 				}),
@@ -358,7 +357,7 @@ status:
 			f.ConfigValuesSet("cniCilium.bpfLBMode", "SNAT")
 			resources := []string{
 				cniSecretYAML(cni, `{"mode": "DirectWithNodeRoutes"}`),
-				cniMCYAML(cniName, pointer.Bool(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
 					"tunnelMode": "VXLAN",
 					"bpfLBMode":  "SNAT",
 				}),
@@ -405,7 +404,7 @@ status:
 			f.ConfigValuesSet("cniCilium.bpfLBMode", "SNAT")
 			resources := []string{
 				cniSecretYAML(cni, `{"mode": "DirectWithNodeRutes", "masqueradeMode": "Netfilter"}`),
-				cniMCYAML(cniName, pointer.Bool(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
 					"tunnelMode": "VXLAN",
 					"bpfLBMode":  "SNAT",
 				}),
@@ -434,7 +433,7 @@ status:
 			f.ConfigValuesSet("cniCilium.masqueradeMode", "BPF")
 			resources := []string{
 				cniSecretYAML(cni, `{"mode": "VXLAN", "masqueradeMode": "BPF"}`),
-				cniMCYAML(cniName, pointer.Bool(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
 					"tunnelMode":     "VXLAN",
 					"masqueradeMode": "BPF",
 				}),

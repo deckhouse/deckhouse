@@ -19,10 +19,12 @@ package hooks
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	"golang.org/x/exp/slog"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -84,7 +86,7 @@ func discoverAPIEndpointsHandler(input *go_hook.HookInput) error {
 		return errors.New("no kubernetes apiserver endpoints host:port specified")
 	}
 
-	input.Logger.Infof("cluster master addresses: %v", fpp.HostPort)
+	input.Logger.Info("cluster master addresses", slog.String("name", strings.Join(fpp.HostPort, ",")))
 
 	input.Values.Set("kubeProxy.internal.clusterMasterAddresses", fpp.HostPort)
 

@@ -85,7 +85,7 @@ func mirrorProbeValue(input *go_hook.HookInput) error {
 			return err
 		}
 
-		input.PatchCollector.MergePatch(patch, apiVersion, kind, namespace, obj.Name)
+		input.PatchCollector.PatchWithMerge(patch, apiVersion, kind, namespace, obj.Name)
 	}
 
 	return nil

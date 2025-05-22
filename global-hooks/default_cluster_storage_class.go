@@ -58,7 +58,7 @@ func setupDefaultStorageClass(input *go_hook.HookInput, dc dependency.Container)
 	defaultClusterStorageClass := input.Values.Get(paramPath).String()
 
 	if defaultClusterStorageClass == "" {
-		input.Logger.Infof("Parameter `%s` not set. Skipping", paramPath)
+		input.Logger.Info("Parameter not set. Skipping", slog.String("param", paramPath))
 		return nil
 	}
 

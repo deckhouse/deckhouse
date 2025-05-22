@@ -7,6 +7,7 @@ package hooks
 
 import (
 	"fmt"
+	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -80,12 +81,12 @@ func handleStorageClasses(input *go_hook.HookInput) error {
 			if sc.Provisioner != modernProvisioner {
 				continue
 			}
-			input.Logger.Infof("Deleting storageclass/%s because legacy one will be rolled out", sc.Name)
+			input.Logger.Info("Deleting storageclass because legacy one will be rolled out", slog.String("name", sc.Name))
 		default:
 			if sc.Provisioner != legacyProvisioner {
 				continue
 			}
-			input.Logger.Infof("Deleting storageclass/%s because modern one will be rolled out", sc.Name)
+			input.Logger.Info("Deleting storageclass because modern one will be rolled out", slog.String("name", sc.Name))
 		}
 		input.PatchCollector.Delete("storage.k8s.io/v1", "StorageClass", "", sc.Name)
 	}

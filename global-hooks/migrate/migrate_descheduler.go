@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -60,7 +61,7 @@ func deschedulerConfigMigration(input *go_hook.HookInput, dc dependency.Containe
 		return err
 	}
 	if !errors.IsNotFound(err) {
-		input.Logger.Infof("Migration cm %s already exists, skipping migration", migrationCM)
+		input.Logger.Info("Migration cm already exists, skipping migration", slog.String("migrationCM", migrationCM))
 		return nil
 	}
 

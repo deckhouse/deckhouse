@@ -151,7 +151,7 @@ func (configItem *namespaceConfigurationItem) Apply(input *go_hook.HookInput) er
 
 		mergePatch := makePatch(input, &ns, configItem)
 		if mergePatch != nil {
-			input.PatchCollector.MergePatch(mergePatch, "v1", "Namespace", "", ns.Name)
+			input.PatchCollector.PatchWithMerge(mergePatch, "v1", "Namespace", "", ns.Name)
 		}
 	}
 	return nil

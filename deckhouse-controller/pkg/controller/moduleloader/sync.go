@@ -65,7 +65,7 @@ func (l *Loader) deleteStaleModuleReleases(ctx context.Context) error {
 		// handle too long disabled embedded modules
 		if module.DisabledByModuleConfigMoreThan(deleteReleasesAfter) && !module.IsEmbedded() {
 			// delete module releases of a stale module
-			l.logger.Debugf("the %q module disabled too long, delete module releases", module.Name)
+			l.logger.Debug("the module disabled too long, delete module releases", slog.String("name", module.Name))
 			moduleReleases := new(v1alpha1.ModuleReleaseList)
 			if err := l.client.List(ctx, moduleReleases, &client.MatchingLabels{"module": module.Name}); err != nil {
 				return fmt.Errorf("list module releases for the '%s' module: %w", module.Name, err)

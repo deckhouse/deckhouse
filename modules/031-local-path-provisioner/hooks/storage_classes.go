@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"fmt"
+	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -95,7 +96,7 @@ func storageClasses(input *go_hook.HookInput) error {
 		for _, storageClass := range existedStorageClasses {
 			if storageClass.Name == crd.Name {
 				if storageClass.ReclaimPolicy != crd.ReclaimPolicy {
-					input.Logger.Infof("Deleting storageclass/%s because its parameters has been changed", storageClass.Name)
+					input.Logger.Info("Deleting storageclass because its parameters has been changed", slog.String("name", storageClass.Name))
 					input.PatchCollector.Delete("storage.k8s.io/v1", "StorageClass", "", storageClass.Name)
 				}
 				break

@@ -8,6 +8,7 @@ package ee
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
@@ -609,8 +610,8 @@ func dataplaneHandler(input *go_hook.HookInput) error {
 			continue
 		}
 		if candidate.needUpgrade && candidate.isReady && versionMap.IsFullVersionReady(candidate.desiredFullVersion) {
-			input.Logger.Infof("Patch %s '%s' in namespace '%s' with full version '%s'", candidate.kind, candidate.name, candidate.namespace, candidate.desiredFullVersion)
-			input.PatchCollector.MergePatch(fmt.Sprintf(patchTemplate, candidate.desiredFullVersion), "apps/v1", candidate.kind, candidate.namespace, candidate.name)
+			input.Logger.Info("Patch info", slog.String("kind", candidate.kind), slog.String("name", candidate.name), slog.String("namespace", candidate.namespace), slog.String("version", candidate.desiredFullVersion))
+			input.PatchCollector.PatchWithMerge(fmt.Sprintf(patchTemplate, candidate.desiredFullVersion), "apps/v1", candidate.kind, candidate.namespace, candidate.name)
 			// skip this namespace on next iteration
 			ignoredNamespace[candidate.namespace] = struct{}{}
 		}

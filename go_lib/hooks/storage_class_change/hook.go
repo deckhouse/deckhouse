@@ -19,6 +19,7 @@ package storage_class_change
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -267,9 +268,9 @@ func storageClassChangeWithArgs(input *go_hook.HookInput, dc dependency.Containe
 		if err == nil {
 			// if someone deleted pvc then evict the pod.
 			err = kubeClient.CoreV1().Pods(pod.Namespace).Evict(context.TODO(), &v1beta1.Eviction{ObjectMeta: metav1.ObjectMeta{Name: pod.Name}})
-			input.Logger.Infof("evicting Pod %s/%s due to PVC %s stuck in Terminating state", pod.Namespace, pod.Name, pvc.Name)
+			input.Logger.Info("evicting Pod %s/%s due to PVC %s stuck in Terminating state", slog.String("namespace", pod.Namespace), slog.String("POD name", pod.Name), slog.String("PVC name", pvc.Name))
 			if err != nil {
-				input.Logger.Infof("can't Evict Pod %s/%s: %s", pod.Namespace, pod.Name, err)
+				input.Logger.Info("can't Evict Pod", slog.String("namespace", pod.Namespace), slog.String("POD name", pod.Name), log.Err(err))
 			}
 		}
 	}
@@ -286,15 +287,15 @@ func storageClassChangeWithArgs(input *go_hook.HookInput, dc dependency.Containe
 		if wasPvc {
 			for _, obj := range pvcs {
 				pvc := obj.(PVC)
-				input.Logger.Infof("storage class changed, deleting %s/PersistentVolumeClaim/%s", pvc.Namespace, pvc.Name)
+				input.Logger.Info("storage class changed, deleting PersistentVolumeClaim", slog.String("namespace", pvc.Namespace), slog.String("name", pvc.Name))
 				err = kubeClient.CoreV1().PersistentVolumeClaims(pvc.Namespace).Delete(context.TODO(), pvc.Name, metav1.DeleteOptions{})
 				if err != nil {
-					input.Logger.Infof("%v", err)
+					input.Logger.Error("", log.Err(err))
 				}
 			}
 		}
 
-		input.Logger.Infof("storage class changed, deleting %s/%s/%s", args.Namespace, args.ObjectKind, args.ObjectName)
+		input.Logger.Info("storage class changed, deleting", slog.String("namespace", args.Namespace), slog.String("object kind", args.ObjectKind), slog.String("name", args.ObjectName))
 		switch args.ObjectKind {
 		case "Prometheus":
 			err = kubeClient.Dynamic().Resource(schema.GroupVersionResource{Group: "monitoring.coreos.com", Version: "v1", Resource: "prometheuses.monitoring.coreos.com"}).Namespace(args.Namespace).Delete(context.TODO(), args.ObjectName, metav1.DeleteOptions{})

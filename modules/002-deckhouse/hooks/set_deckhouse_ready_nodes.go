@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"fmt"
+	"log/slog"
 	"strconv"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -145,7 +146,7 @@ func setDeckhouseReadyNodes(input *go_hook.HookInput) error {
 	}
 
 	for nodeName, nodeStatus := range deckhouseReadyNodes {
-		input.Logger.Infof("Labeling %s node with %s=%v label", nodeName, deckhouseReadyLabel, nodeStatus)
+		input.Logger.Info("Labeling node with label", slog.String("name", nodeName), slog.String("label", deckhouseReadyLabel), slog.Bool("status", nodeStatus))
 		metadata := map[string]interface{}{
 			"metadata": map[string]interface{}{
 				"labels": map[string]interface{}{
@@ -153,7 +154,7 @@ func setDeckhouseReadyNodes(input *go_hook.HookInput) error {
 				},
 			},
 		}
-		input.PatchCollector.MergePatch(metadata, "v1", "Node", "", nodeName)
+		input.PatchCollector.PatchWithMerge(metadata, "v1", "Node", "", nodeName)
 	}
 
 	return nil
