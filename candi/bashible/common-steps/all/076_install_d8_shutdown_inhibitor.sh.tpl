@@ -17,8 +17,10 @@
 {{- $inhibitorVersion := "0.1" | replace "." "" }}
 {{/* Enable additional inhibitor if graceful shutdown mode is set to 'BlockByPodLabel'. */}}
 {{- $enableInhibitor := false }}
+{{- if hasKey . "gracefulShutdown" }}
 {{- if (eq .gracefulShutdown.mode "BlockByPodLabel") }}
 {{-   $enableInhibitor = true }}
+{{- end }}
 {{- end }}
 
 
