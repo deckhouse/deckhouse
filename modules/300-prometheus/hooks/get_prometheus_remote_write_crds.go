@@ -38,12 +38,15 @@ func filterRemoteWriteCRD(obj *unstructured.Unstructured) (go_hook.FilterResult,
 	if !ok {
 		return nil, fmt.Errorf("prometheusRemoteWrite has no spec field")
 	}
-	ca, ok, err := unstructured.NestedString(obj.Object, "spec", "tlsConfig", "ca")
-	if err == nil && ok {
+	ca, exist, err := unstructured.NestedString(obj.Object, "spec", "tlsConfig", "ca")
+	if err != nil {
+		return new(RemoteWrite), fmt.Errorf("tlsConfig:ca in PremetheusRemoteWrite not string: %v", err)
+	}
+	if exist {
 		roots := x509.NewCertPool()
-		ok := roots.AppendCertsFromPEM([]byte(ca))
-		if !ok {
-			return new(RemoteWrite), fmt.Errorf("tlsConfig:ca in PremetheusRemoteWrite not valid: %v", err)
+		valid := roots.AppendCertsFromPEM([]byte(ca))
+		if !valid {
+			return new(RemoteWrite), fmt.Errorf("tlsConfig:ca in PremetheusRemoteWrite not valid")
 		}
 	}
 	rw := new(RemoteWrite)
