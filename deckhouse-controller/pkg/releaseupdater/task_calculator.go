@@ -208,7 +208,7 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 			// here we have only Deployed phase releases in prevRelease
 			// it must await if deployed release has minor version more than one
 			// and release channel is not LTS
-			if release.GetVersion().Minor()-1 > prevRelease.GetVersion().Minor() && strings.EqualFold(p.releaseChannel, ltsReleaseChannel) {
+			if release.GetVersion().Minor()-1 > prevRelease.GetVersion().Minor() && !strings.EqualFold(p.releaseChannel, ltsReleaseChannel) {
 				msg := fmt.Sprintf("minor version is greater than deployed %s by one", prevRelease.GetVersion().Original())
 
 				logger.Debug("release awaiting", slog.String("reason", msg))
