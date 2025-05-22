@@ -9,7 +9,7 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: {{ $revision }}-ztunnel
+  name: ztunnel
   namespace: d8-{{ .Chart.Name }}
   labels:
     app.kubernetes.io/name: ztunnel
