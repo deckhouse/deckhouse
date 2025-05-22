@@ -443,8 +443,8 @@
       description: |
         The '{{ $labels.module }}' Module update has failed.
 
-        Current version: {{ $labels.actual_version }}
-        Desired version: {{ $labels.version }}
+        Current version: {{ $labels.actual_version }}.
+        Desired version: {{ $labels.version }}.
 
         Attempt to download interim releases failed.
 
@@ -452,8 +452,7 @@
         - The next minor or patch version of the Module image is not available in the registry.
         - The Module image is corrupted.
 
-        To resolve this issue, ensure that the next version of the '{{ $labels.module }}' Module image 
-        between {{ $labels.actual_version }} and {{ $labels.version }} is available in the registry '{{ $labels.registry }}'.
+        To resolve this issue, ensure that the next version of the '{{ $labels.module }}' Module image between {{ $labels.actual_version }} and {{ $labels.version }} is available in the registry '{{ $labels.registry }}'.
 
   - alert: D8DeckhouseWatchErrorOccurred
     expr: increase(deckhouse_kubernetes_client_watch_errors_total[__SCRAPE_INTERVAL_X_2__]) > 0
