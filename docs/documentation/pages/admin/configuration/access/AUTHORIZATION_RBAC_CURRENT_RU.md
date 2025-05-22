@@ -17,8 +17,8 @@ lang: ru
 
 - Реализует role-based-подсистему сквозной авторизации, расширяя функционал стандартного механизма RBAC.
 - Настройка прав доступа происходит с помощью кастомных ресурсов [ClusterAuthorizationRule](../../reference/cr/clusterauthorizationrule/) и [AuthorizationRule](../../reference/cr/authorizationrule/).
-- Управление доступом к инструментам масштабирования (параметр `allowScale` ресурса [ClusterAuthorizationRule](../../reference/cr/clusterauthorizationrule#authorizationrule-v1alpha1-spec-allowscale) или [AuthorizationRule](../../reference/cr/authorizationrule#authorizationrule-v1alpha1-spec-allowscale)).
-- Управление доступом к форвардингу портов (параметр `portForwarding` ресурса [ClusterAuthorizationRule](../../reference/cr/clusterauthorizationrule#authorizationrule-v1alpha1-spec-portforwarding) или [AuthorizationRule](../../reference/cr/authorizationrule#authorizationrule-v1alpha1-spec-portforwarding)).
+- Управление доступом к инструментам масштабирования (параметр `allowScale` ресурса [ClusterAuthorizationRule](../../reference/cr/clusterauthorizationrule#clusterauthorizationrule-v1alpha1-spec-allowscale) или [AuthorizationRule](../../reference/cr/authorizationrule#authorizationrule-v1alpha1-spec-allowscale)).
+- Управление доступом к форвардингу портов (параметр `portForwarding` ресурса [ClusterAuthorizationRule](../../reference/cr/clusterauthorizationrule#clusterauthorizationrule-v1alpha1-spec-portforwarding) или [AuthorizationRule](../../reference/cr/authorizationrule#authorizationrule-v1alpha1-spec-portforwarding)).
 - Управление списком разрешённых пространств имён в формате labelSelector (параметр `namespaceSelector` ресурса [ClusterAuthorizationRule](../../reference/cr/clusterauthorizationrule#clusterauthorizationrule-v1-spec-namespaceselector)).
 
 ## Высокоуровневые роли, используемые для реализации модели
@@ -173,7 +173,7 @@ write:
 ```
 <!-- end user-authz roles placeholder -->
 
-Вы можете получить дополнительный список правил доступа для роли модуля из кластера ([существующие пользовательские правила](#настройка-прав-высокоуровневых-ролей) и нестандартные правила из других модулей Deckhouse) с помощью команды:
+Вы можете получить дополнительный список правил доступа для роли модуля из кластера ([существующие пользовательские правила](../access/granting-rights-to-users-and-servers.html#настройка-прав-высокоуровневых-ролей-текущая-модель) и нестандартные правила из других модулей Deckhouse) с помощью команды:
 
 ```bash
 D8_ROLE_NAME=Editor

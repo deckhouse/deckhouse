@@ -6,10 +6,10 @@ lang: ru
 
 В Kubernetes есть две категории пользователей:
 
-* ServiceAccount'ы, учёт которых ведёт сам Kubernetes через API.
-* Остальные (статические) пользователи, учёт которых ведёт не сам Kubernetes, а некоторый внешний софт, который настраивает администратор кластера. Существует множество механизмов аутентификации и, соответственно, множество способов заводить пользователей. В настоящий момент поддерживаются два способа аутентификации:
-  * через модуль [user-authn](../../reference/mc/user-authn/);
-  * с помощью сертификатов.
+- ServiceAccount'ы, учёт которых ведёт сам Kubernetes через API.
+- Остальные (статические) пользователи, учёт которых ведёт не сам Kubernetes, а некоторый внешний софт, который настраивает администратор кластера. Существует множество механизмов аутентификации и, соответственно, множество способов заводить пользователей. В настоящий момент поддерживаются два способа аутентификации:
+  - через модуль [user-authn](../../reference/mc/user-authn/);
+  - с помощью сертификатов.
 
 При выпуске сертификата для аутентификации нужно указать в нём имя (`CN=<имя>`), необходимое количество групп (`O=<группа>`) и подписать его с помощью корневого CA-кластера. Именно этим механизмом вы аутентифицируетесь в кластере, когда, например, используете kubectl на bastion-узле. Пример выпуска сертификата в разделе [Создание пользователя](#создание-пользователя).
 
@@ -100,7 +100,7 @@ apiVersion: deckhouse.io/v1
    EOF
    ```
 
-2. Дайте необходимые для ServiceAccount права (используя кастомный ресурс [ClusterAuthorizationRule](../../reference/cr/clusterauthorizationrule/)):
+1. Дайте необходимые для ServiceAccount права (используя кастомный ресурс [ClusterAuthorizationRule](../../reference/cr/clusterauthorizationrule/)):
 
    ```shell
    kubectl create -f - <<EOF
@@ -121,7 +121,7 @@ apiVersion: deckhouse.io/v1
 
    Если в конфигурации Deckhouse включён режим мультитенантности (параметр [enableMultiTenancy](../../reference/mc/user-authz/#parameters-enablemultitenancy), доступен только в Enterprise Edition), настройте доступные для ServiceAccount пространства имён (параметр [namespaceSelector](../../reference/cr/clusterauthorizationrule/#clusterauthorizationrule-v1-spec-namespaceselector)).
 
-3. Определите значения переменных (они будут использоваться далее), выполнив следующие команды (**подставьте свои значения**):
+1. Определите значения переменных (они будут использоваться далее), выполнив следующие команды (**подставьте свои значения**):
 
    ```shell
    export CLUSTER_NAME=my-cluster
@@ -130,18 +130,16 @@ apiVersion: deckhouse.io/v1
    export FILE_NAME=kube.config
    ```
 
-4. Сгенерируйте секцию `cluster` в файле конфигурации kubectl:
+1. Сгенерируйте секцию `cluster` в файле конфигурации kubectl. Используйте один из следующих вариантов доступа к API-серверу кластера:
 
-   Используйте один из следующих вариантов доступа к API-серверу кластера:
-
-   * Если есть прямой доступ до API-сервера:
-     1. Получите сертификат CA-кластера Kubernetes:
+   - Если есть прямой доступ к API-серверу:
+     - Получите сертификат CA-кластера Kubernetes:
 
         ```shell
         kubectl get cm kube-root-ca.crt -o jsonpath='{ .data.ca\.crt }' > /tmp/ca.crt
         ```
 
-     2. Сгенерируйте секцию `cluster` (используется IP-адрес API-сервера для доступа):
+     - Сгенерируйте секцию `cluster` (используется IP-адрес API-сервера для доступа):
 
         ```shell
         kubectl config set-cluster $CLUSTER_NAME --embed-certs=true \
@@ -150,13 +148,13 @@ apiVersion: deckhouse.io/v1
           --kubeconfig=$FILE_NAME
         ```
 
-   * Если прямого доступа к API-серверу нет, используйте один следующих вариантов:
-      * включите доступ к API-серверу через Ingress-контроллер (параметр [publishAPI](../../reference/mc/user-authn/#parameters-publishapi)) и укажите адреса, с которых будут идти запросы (параметр [whitelistSourceRanges](../../reference/mc/user-authn/#parameters-publishapi/#parameters-publishapi-whitelistsourceranges));
-      * укажите адреса, с которых будут идти запросы, в отдельном Ingress-контроллере (параметр [acceptRequestsFrom](../../reference/cr/ingressnginxcontroller/#ingressnginxcontroller-v1-spec-acceptrequestsfrom)).
+   - Если прямого доступа к API-серверу нет, используйте один следующих вариантов:
+     - включите доступ к API-серверу через Ingress-контроллер (параметр [publishAPI](../../reference/mc/user-authn/#parameters-publishapi)) и укажите адреса, с которых будут идти запросы (параметр [whitelistSourceRanges](../../reference/mc/user-authn/#parameters-publishapi/#parameters-publishapi-whitelistsourceranges));
+     - укажите адреса, с которых будут идти запросы, в отдельном Ingress-контроллере (параметр [acceptRequestsFrom](../../reference/cr/ingressnginxcontroller/#ingressnginxcontroller-v1-spec-acceptrequestsfrom)).
 
-   * **Если используется непубличный CA:**
+   - **Если используется непубличный CA:**
 
-     1. Получите сертификат CA из секрета с сертификатом, который используется для домена `api.%s`:
+     - Получите сертификат CA из секрета с сертификатом, который используется для домена `api.%s`:
 
         ```shell
         kubectl -n d8-user-authn get secrets -o json \
@@ -165,7 +163,7 @@ apiVersion: deckhouse.io/v1
           | base64 -d > /tmp/ca.crt
         ```
 
-     2. Сгенерируйте секцию `cluster` (используется внешний домен и CA для доступа):
+     - Сгенерируйте секцию `cluster` (используется внешний домен и CA для доступа):
 
         ```shell
         kubectl config set-cluster $CLUSTER_NAME --embed-certs=true \
@@ -174,7 +172,7 @@ apiVersion: deckhouse.io/v1
           --kubeconfig=$FILE_NAME
         ```
 
-   * **Если используется публичный CA.** Сгенерируйте секцию `cluster` (используется внешний домен для доступа):
+   - **Если используется публичный CA.** Сгенерируйте секцию `cluster` (используется внешний домен для доступа):
 
      ```shell
      kubectl config set-cluster $CLUSTER_NAME \
@@ -182,7 +180,7 @@ apiVersion: deckhouse.io/v1
        --kubeconfig=$FILE_NAME
      ```
 
-5. Сгенерируйте секцию `user` с токеном из секрета ServiceAccount в файле конфигурации kubectl:
+1. Сгенерируйте секцию `user` с токеном из секрета ServiceAccount в файле конфигурации kubectl:
 
    ```shell
    kubectl config set-credentials $USER_NAME \
@@ -190,7 +188,7 @@ apiVersion: deckhouse.io/v1
      --kubeconfig=$FILE_NAME
    ```
 
-6. Сгенерируйте контекст в файле конфигурации kubectl:
+1. Сгенерируйте контекст в файле конфигурации kubectl:
 
    ```shell
    kubectl config set-context $CONTEXT_NAME \
@@ -198,7 +196,7 @@ apiVersion: deckhouse.io/v1
      --kubeconfig=$FILE_NAME
    ```
 
-7. Установите сгенерированный контекст как используемый по умолчанию в файле конфигурации kubectl:
+1. Установите сгенерированный контекст как используемый по умолчанию в файле конфигурации kubectl:
 
    ```shell
    kubectl config use-context $CONTEXT_NAME --kubeconfig=$FILE_NAME
@@ -208,8 +206,8 @@ apiVersion: deckhouse.io/v1
 
 ### Создание пользователя
 
-* Получите корневой сертификат кластера (ca.crt и ca.key).
-* Сгенерируйте ключ пользователя:
+- Получите корневой сертификат кластера (ca.crt и ca.key).
+- Сгенерируйте ключ пользователя:
 
   ```shell
   openssl genrsa -out myuser.key 2048
