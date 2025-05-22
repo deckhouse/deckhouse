@@ -27,7 +27,6 @@ properties:
       > **Warning!** Use this flag only if you know what you are doing and clearly understand the consequences.
   gracefulShutdown:
     type: object
-    default: {mode: "Default"}
     description: |
       Settings for the graceful shutdown of the Node.
     properties:
