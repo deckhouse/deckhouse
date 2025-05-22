@@ -28,6 +28,7 @@ import (
 	"path"
 	"regexp"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -441,7 +442,7 @@ func (f *DeckhouseReleaseFetcher) ensureReleases(
 	)
 
 	// if release channel is LTS - create release from channel
-	if releaseChannel == ltsChannelName {
+	if strings.EqualFold(releaseChannel, ltsChannelName) {
 		err := f.createRelease(ctx, releaseMetadata, notificationShiftTime, "lts channel")
 		if err != nil {
 			return nil, fmt.Errorf("create release %s: %w", releaseMetadata.Version, err)
