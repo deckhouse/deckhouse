@@ -365,7 +365,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			cachedChecksum = ""
 		}
 
-		metricModuleGroup := metricModuleUpdatingGroup + "_" + strcase.ToSnake(moduleName)
+		metricModuleGroup := metricModuleUpdatingGroup + "_" + strcase.ToSnake(moduleName) + "_" + strcase.ToSnake(source.GetName())
 		r.metricStorage.Grouped().ExpireGroupMetrics(metricModuleGroup)
 
 		r.logger.Debug(
