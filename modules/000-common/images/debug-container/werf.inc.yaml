@@ -43,6 +43,10 @@ import:
   add: /usr
   to: /openssl
   before: install
+- image: libs/musl
+  add: /usr
+  to: /musl
+  before: install
   #
 - image: common/ethtool
   add: /ethtool
@@ -65,6 +69,7 @@ shell:
   - cp -r /sed/* /relocate/
   - cp -r /vim/* /relocate/
   - cp -r /openssl/* /relocate/
+  - cp -r /musl/* /relocate/
   #
   - cp /common/ethtool /relocate/bin/
   - cp /common/pwru /relocate/bin/
@@ -81,10 +86,10 @@ import:
   before: install
 shell:
   install:
-  - ln -s /usr/bin /bin
-  - ln -s /usr/sbin /sbin
-  - ln -s /usr/lib /lib
-  - ln -s /usr/lib64 /lib64
+  - ln -sf /usr/bin /bin
+  - ln -sf /usr/sbin /sbin
+  - ln -sf /usr/lib /lib
+  - ln -sf /usr/lib64 /lib64
 imageSpec:
   config:
     env: { "PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "LANG": "C.UTF-8", "LANGUAGE": "C.UTF-8", "LC_ALL": "C.UTF-8" }
