@@ -71,13 +71,13 @@ EOF
 
 After creation, the `VirtualMachine` resource can be in the following states:
 
-- `Pending` - waiting for the readiness of all dependent resources required to start the virtual machine.
-- `Starting` - the process of starting the virtual machine is in progress.
-- `Running` - the virtual machine is running.
-- `Stopping` - the process of stopping the virtual machine is in progress.
-- `Stopped` - the virtual machine is stopped.
-- `Terminating` - the virtual machine is being deleted.
-- `Migrating` - the virtual machine is in the process of online migration to another node.
+- `Pending` — waiting for the readiness of all dependent resources required to start the virtual machine.
+- `Starting` — the process of starting the virtual machine is in progress.
+- `Running` — the virtual machine is running.
+- `Stopping` — the process of stopping the virtual machine is in progress.
+- `Stopped` — the virtual machine is stopped.
+- `Terminating` — the virtual machine is being deleted.
+- `Migrating` — the virtual machine is in the process of online migration to another node.
 
 Check the state of the virtual machine after creation:
 
@@ -96,72 +96,72 @@ After creation, the virtual machine will automatically receive an IP address fro
 
 ## Virtual Machine Life Cycle
 
-A virtual machine (VM) goes through several phases in its existence, from creation to deletion. These stages are called phases and reflect the current state of the VM. To understand what is happening with the VM, you should check its status (`.status.phase` field), and for more detailed information - `.status.conditions` block. All the main phases of the VM life cycle, their meaning and peculiarities are described below.
+A virtual machine (VM) goes through several phases in its existence, from creation to deletion. These stages are called phases and reflect the current state of the VM. To understand what is happening with the VM, you should check its status (`.status.phase` field), and for more detailed information — `.status.conditions` block. All the main phases of the VM life cycle, their meaning and peculiarities are described below.
 
 ![Virtual Machine Life Cycle](/../../../../images/virtualization-platform/vm-lifecycle.ru.png)
 
-- `Pending` - waiting for resources to be ready
+- `Pending` — waiting for resources to be ready
 
     A VM has just been created, restarted or started after a shutdown and is waiting for the necessary resources (disks, images, ip addresses, etc.) to be ready.
-    - Possible problems:
-      - Dependent resources are not ready: disks, images, VM classes, secret with initial configuration script, etc.
-    - Diagnostics: In `.status.conditions` you should pay attention to `*Ready` conditions. By them you can determine what is blocking the transition to the next phase, for example, waiting for disks to be ready (BlockDevicesReady) or VM class (VirtualMachineClassReady).
+  - Possible problems:
+    - Dependent resources are not ready: disks, images, VM classes, secret with initial configuration script, etc.
+  - Diagnostics: In `.status.conditions` you should pay attention to `*Ready` conditions. By them you can determine what is blocking the transition to the next phase, for example, waiting for disks to be ready (BlockDevicesReady) or VM class (VirtualMachineClassReady).
 
       ``` bash
       d8 k get vm <vm-name> -o json | jq '.status.conditions[] | select(.type | test(".*Ready"))'
       ```
 
-- `Starting` - starting the virtual machine
+- `Starting` — starting the virtual machine
 
     All dependent VM resources are ready and the system is attempting to start the VM on one of the cluster nodes.
-    - Possible problems:
-      - There is no suitable node to start.
-      - There is not enough CPU or memory on suitable nodes.
-      - Neumspace or project quotas have been exceeded.
-    - Diagnostics:
-      - If the startup is delayed, check `.status.conditions`, the `type: Running` condition
+  - Possible problems:
+    - There is no suitable node to start.
+    - There is not enough CPU or memory on suitable nodes.
+    - Neumspace or project quotas have been exceeded.
+  - Diagnostics:
+    - If the startup is delayed, check `.status.conditions`, the `type: Running` condition
 
       ``` bash
       d8 k get vm <vm-name> -o json | jq '.status.conditions[] | select(.type=="Running")'
       ```
 
-- `Running` - the virtual machine is running
+- `Running` — the virtual machine is running
 
     The VM is successfully started and running.
-    - Features:
-      - When qemu-guest-agent is installed in the guest system, the `AgentReady` condition will be true and `.status.guestOSInfo` will display information about the running guest OS.
-      - The `type: FirmwareUpToDate, status: False` condition informs that the VM firmware needs to be updated.
-      - Condition `type: ConfigurationApplied, status: False` informs that the VM configuration is not applied to the running VM.
-      - The `type: AwaitingRestartToApplyConfiguration, status: True` condition displays information about the need to manually reboot the VM because some configuration changes cannot be applied without rebooting the VM.
-    - Possible problems:
-      - An internal failure in the VM or hypervisor.
-    - Diagnosis:
-      - Check `.status.conditions`, condition `type: Running`.
+  - Features:
+    - When qemu-guest-agent is installed in the guest system, the `AgentReady` condition will be true and `.status.guestOSInfo` will display information about the running guest OS.
+    - The `type: FirmwareUpToDate, status: False` condition informs that the VM firmware needs to be updated.
+    - Condition `type: ConfigurationApplied, status: False` informs that the VM configuration is not applied to the running VM.
+    - The `type: AwaitingRestartToApplyConfiguration, status: True` condition displays information about the need to manually reboot the VM because some configuration changes cannot be applied without rebooting the VM.
+  - Possible problems:
+    - An internal failure in the VM or hypervisor.
+  - Diagnosis:
+    - Check `.status.conditions`, condition `type: Running`.
 
       ``` bash
       d8 k get vm <vm-name> -o json | jq '.status.conditions[] | select(.type=="Running")'
       ```
 
-- `Stopping` - The VM is stopped or rebooted.
+- `Stopping` — The VM is stopped or rebooted.
 
-- `Stopped` - The VM is stopped and is not consuming computational resources
+- `Stopped` — The VM is stopped and is not consuming computational resources
 
-- `Terminating` - the VM is deleted.
+- `Terminating` — the VM is deleted.
 
     This phase is irreversible. All resources associated with the VM are released, but are not automatically deleted.
 
-- `Migrating` - live migration of a VM
+- `Migrating` — live migration of a VM
 
     The VM is migrated to another node in the cluster (live migration).
-    - Features:
-      - VM migration is supported only for non-local disks, the `type: Migratable` condition displays information about whether the VM can migrate or not.
-    - Possible issues:
-      - Incompatibility of processor instructions (when using host or host-passthrough processor types).
-      - Difference in kernel versions on hypervisor nodes.
-      - Not enough CPU or memory on eligible nodes.
-      - Neumspace or project quotas have been exceeded.
-    - Diagnostics:
-      - Check the `.status.conditions` condition `type: Migrating` as well as the `.status.migrationState` block
+  - Features:
+    - VM migration is supported only for non-local disks, the `type: Migratable` condition displays information about whether the VM can migrate or not.
+  - Possible issues:
+    - Incompatibility of processor instructions (when using host or host-passthrough processor types).
+    - Difference in kernel versions on hypervisor nodes.
+    - Not enough CPU or memory on eligible nodes.
+    - Neumspace or project quotas have been exceeded.
+  - Diagnostics:
+    - Check the `.status.conditions` condition `type: Migrating` as well as the `.status.migrationState` block
 
     ```bash
     d8 k get vm <vm-name> -o json | jq '.status | {condition: .conditions[] | select(.type=="Migrating"), migrationState}'
@@ -205,6 +205,7 @@ How will the agent help?
   ```
 
   Sample output (`AGENT` column):
+
   ```console
   NAME     PHASE     CORES   COREFRACTION   MEMORY   NEED RESTART   AGENT   MIGRATABLE   NODE           IPADDRESS    AGE
   fedora   Running   6       5%             8000Mi   False          True    True         virtlab-pt-1   10.66.10.1   5d21h
@@ -725,9 +726,9 @@ EOF
 
 After creating the `VirtualMachineBlockDeviceAttachment`, it can be in the following states:
 
-- `Pending` - waiting for all dependent resources to be ready.
-- `InProgress` - the device attachment process is ongoing.
-- `Attached` - the device is successfully attached.
+- `Pending` — waiting for all dependent resources to be ready.
+- `InProgress` — the device attachment process is ongoing.
+- `Attached` — the device is successfully attached.
 
 Diagnosing problems with a resource is done by analyzing the information in the `.status.conditions` block
 
@@ -847,10 +848,10 @@ AutoConverge is a kind of "insurance" that ensures that the migration completes 
 
 To configure migration behavior, use the  `.spec.liveMigrationPolicy` parameter in the VM configuration. The following options are available:
 
-- `AlwaysSafe` - Migration is performed without slowing down the CPU (AutoConverge is not used). Suitable for cases where maximizing VM performance is important but requires high network bandwidth.
-- `PreferSafe` - (used as the default policy) By default, migration runs without AutoConverge, but CPU slowdown can be enabled manually if the migration fails to complete. This is done by using the VirtualMachineOperation resource with `type=Evict` and `force=true`.
-- `AlwaysForced` - Migration always uses AutoConverge, meaning the CPU is slowed down when necessary. This ensures that the migration completes even if the network is bad, but may degrade VM performance.
-- `PreferForced` - By default migration goes with AutoConverge, but slowdown can be manually disabled via VirtualMachineOperation with the parameter `type=Evict` and `force=false`.
+- `AlwaysSafe` — Migration is performed without slowing down the CPU (AutoConverge is not used). Suitable for cases where maximizing VM performance is important but requires high network bandwidth.
+- `PreferSafe` — (used as the default policy) By default, migration runs without AutoConverge, but CPU slowdown can be enabled manually if the migration fails to complete. This is done by using the VirtualMachineOperation resource with `type=Evict` and `force=true`.
+- `AlwaysForced` — Migration always uses AutoConverge, meaning the CPU is slowed down when necessary. This ensures that the migration completes even if the network is bad, but may degrade VM performance.
+- `PreferForced` — By default migration goes with AutoConverge, but slowdown can be manually disabled via VirtualMachineOperation with the parameter `type=Evict` and `force=false`.
 
 ### Migration Types
 
@@ -874,10 +875,10 @@ The table shows the `VirtualMachineOperations` resource name prefixes with the `
 
 This resource can be in the following states:
 
-- `Pending` - the operation is pending.
-- `InProgress` - live migration is in progress.
-- `Completed` - live migration of the virtual machine has been completed successfully.
-- `Failed` - the live migration of the virtual machine has failed.
+- `Pending` — the operation is pending.
+- `InProgress` — live migration is in progress.
+- `Completed` — live migration of the virtual machine has been completed successfully.
+- `Failed` — the live migration of the virtual machine has failed.
 
 Diagnosing problems with a resource is done by analyzing the information in the `.status.conditions` block.
 
