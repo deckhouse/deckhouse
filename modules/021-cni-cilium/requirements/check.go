@@ -31,8 +31,6 @@ func init() {
 	requirements.RegisterCheck("cniConfigurationSettled", checkCNIConfigurationSettledFunc)
 }
 
-// checks whether the CNI configuration was successfully settled.
-// If it's "false", the module will not be enabled.
 func checkCNIConfigurationSettledFunc(_ string, getter requirements.ValueGetter) (bool, error) {
 	rawValue, found := getter.Get("cniConfigurationSettled")
 	if !found {
@@ -48,12 +46,9 @@ func checkCNIConfigurationSettledFunc(_ string, getter requirements.ValueGetter)
 	return true, nil
 }
 
-// checks that the current minimal kernel version across cluster nodes
-// satisfies the required constraint declared in release.yaml.
 func checkMinimalKernelVersionFunc(requirementValue string, getter requirements.ValueGetter) (bool, error) {
 	rawCurrentVersion, found := getter.Get("currentMinimalLinuxKernelVersion")
 	if !found {
-		// Key not available; assume requirement passes.
 		return true, nil
 	}
 
@@ -68,7 +63,6 @@ func checkMinimalKernelVersionFunc(requirementValue string, getter requirements.
 	}
 
 	if requirementValue == "" {
-		// If the requirement is not set, pass by default.
 		return true, nil
 	}
 
@@ -79,7 +73,7 @@ func checkMinimalKernelVersionFunc(requirementValue string, getter requirements.
 
 	if currentSemver.LessThan(requiredSemver) {
 		return false, fmt.Errorf(
-			"the current Linux kernel version on cluster nodes (%s) is lower than required (%s)",
+			"the current Linux kernel version on cluster nodes (%s) is lower than required version for the module (%s). For more information, please see the `clusteralerts` and the output of `kubectl get nodes -o wide`",
 			currentSemver, requiredSemver,
 		)
 	}
