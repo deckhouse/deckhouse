@@ -1541,19 +1541,19 @@ spec:
                         Without GPU sharing.
                   oneOf:
                     - properties:
-                        type:
+                        sharing:
                           enum: [TimeSlicing]
                         timeSlicing: {}
                     - properties:
-                        type:
+                        sharing:
                           enum: [Mig]
                         mig: {}
                     - properties:
-                        type:
+                        sharing:
                           enum: [Mps]
                         mps: {}
                     - properties:
-                        type:
+                        sharing:
                           enum: [Exclusive]
                         exclusive: {}
                 cri:
