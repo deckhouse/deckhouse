@@ -846,13 +846,13 @@ func (f *DeckhouseReleaseFetcher) GetNewReleasesMetadata(ctx context.Context, ac
 // 1.66.3 (deployed)
 // 1.66.5
 // result will be 1.66.5
-
+//
 // but if we have a new minor version like:
 // 1.66.3 (deployed)
 // 1.66.5
 // 1.67.11
 // result will be 1.67.11
-
+//
 // several patches:
 // 1.66.3 (deployed)
 // 1.66.5
