@@ -28,14 +28,18 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/fsm"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
 func (s *Service) Bootstrap(server pb.DHCTL_BootstrapServer) error {
@@ -222,6 +226,30 @@ func (s *Service) bootstrap(ctx context.Context, request *pb.BootstrapStart, swi
 		return &pb.BootstrapResult{Err: err.Error()}
 	}
 
+	var sshClient node.SSHClient
+	err = log.Process("default", "Preparing SSH client", func() error {
+		connectionConfig, err := config.ParseConnectionConfig(
+			request.ConnectionConfig,
+			s.schemaStore,
+			config.ValidateOptionCommanderMode(request.Options.CommanderMode),
+			config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
+			config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
+		)
+		if err != nil {
+			return fmt.Errorf("parsing connection config: %w", err)
+		}
+
+		sshClient, cleanup, err = helper.CreateSSHClient(connectionConfig)
+		cleanuper.Add(cleanup)
+		if err != nil {
+			return fmt.Errorf("preparing ssh client: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return &pb.BootstrapResult{Err: err.Error()}
+	}
+
 	var commanderUUID uuid.UUID
 	if request.Options.CommanderUuid != "" {
 		commanderUUID, err = uuid.Parse(request.Options.CommanderUuid)
@@ -231,7 +259,7 @@ func (s *Service) bootstrap(ctx context.Context, request *pb.BootstrapStart, swi
 	}
 
 	bootstrapper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-		NodeInterface:              nil,
+		NodeInterface:              ssh.NewNodeInterfaceWrapper(sshClient),
 		InitialState:               initialState,
 		ResetInitialState:          true,
 		DisableBootstrapClearCache: true,
