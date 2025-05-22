@@ -191,6 +191,7 @@ spec:
       maxAllowed:
         cpu: 10m
         memory: 10Mi
+      {{- include "helm_lib_module_container_security_context_run_as_user_deckhouse_pss_restricted" . | nindent 6 }}
     {{- end }}
 {{- end }}
 ---

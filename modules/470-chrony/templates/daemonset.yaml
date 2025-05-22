@@ -215,7 +215,7 @@ spec:
             {{- include "chrony_exporter_resources" . | nindent 12 }}
 {{- end }}
       - name: kube-rbac-proxy
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_run_as_user_deckhouse_pss_restricted" . | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
         args:
         - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4245"
@@ -315,30 +315,7 @@ spec:
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       containers:
       - name: chrony
-        securityContext:
-          capabilities:
-            add:
-            # SYS_TIME: Allows a process to modify the system time.
-            # Chrony is designed to adjust system time.
-            - SYS_TIME
-            # CHOWN: Allows changing the ownership of files and directories.
-            # Chrony can create /var/run/chrony folfer and change its owner.
-            - CHOWN
-            # DAC_OVERRIDE: Allows access to files and directories, even if the process isn't the owner.
-            # /entrypoint can remove /var/run/chrony/chronyd.pid file (UID/GID 64535:64535).
-            - DAC_OVERRIDE
-            # SETGID: Make arbitrary manipulations of process GIDs.
-            # Chrony can change its own process GID on the fly.
-            - SETGID
-            # SETUID: Make arbitrary manipulations of process UIDs.
-            # Chrony can change its own process UID on the fly.
-            - SETUID
-            drop:
-            - ALL
-          readOnlyRootFilesystem: true
-          runAsGroup: 0
-          runAsNonRoot: false
-          runAsUser: 0
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "SYS_TIME" "CHOWN" "DAC_OVERRIDE" "SETGID" "SETUID")) | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "chrony") }}
         env:
         - name: PATH
@@ -385,7 +362,7 @@ spec:
   {{- end }}
       - image: {{ include "helm_lib_module_image" (list . "chronyExporter") }}
         name: chrony-exporter
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
         args:
         - '--web.listen-address=127.0.0.1:4245'
         - '--chrony.address=unix:///var/run/chrony/chronyd.sock'
@@ -412,7 +389,7 @@ spec:
             {{- include "chrony_exporter_resources" . | nindent 12 }}
 {{- end }}
       - name: kube-rbac-proxy
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_run_as_user_deckhouse_pss_restricted" . | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
         args:
         - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4245"

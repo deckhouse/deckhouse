@@ -57,6 +57,7 @@ securityContext:
 {{- define "helm_lib_module_container_security_context_run_as_user_deckhouse_pss_restricted" -}}
 {{- /* Template context with .Values, .Chart, etc */ -}}
 securityContext:
+  readOnlyRootFilesystem: true
   allowPrivilegeEscalation: false
   capabilities:
     drop:
