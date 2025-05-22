@@ -279,6 +279,13 @@
     "external": "true",
     "path": "/products/kubernetes-platform/modules/secrets-store-integration/stable/"
   },
+  "static-routing-manager": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/static-routing-manager/early-access/"
+  },
   "stronghold": {
     "editions": [
       "be",
