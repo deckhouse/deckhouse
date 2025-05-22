@@ -181,7 +181,4 @@ spec:
       - name: tmp
         emptyDir: {}
     {{- end }}
-    {{- end }}
-    {{- end }}
-    {{- end }}
 {{- end }}
