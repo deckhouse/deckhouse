@@ -23,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ettle/strcase"
 	"github.com/flant/shell-operator/pkg/metric"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -64,8 +65,10 @@ const (
 
 	maxModulesLimit = 1500
 
-	metricUpdatingFailed = "d8_module_updating_failed"
-	serviceName          = "module-source-controller"
+	metricUpdatingModuleIsNotValid = "d8_module_updating_module_is_not_valid"
+	metricUpdatingFailed           = "d8_module_updating_broken_sequence"
+	metricModuleUpdatingGroup      = "d8_module_updating_group"
+	serviceName                    = "module-source-controller"
 )
 
 var ErrSettingsNotChanged = errors.New("settings not changed")
@@ -362,6 +365,9 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			cachedChecksum = ""
 		}
 
+		metricModuleGroup := metricModuleUpdatingGroup + "_" + strcase.ToSnake(moduleName)
+		r.metricStorage.Grouped().ExpireGroupMetrics(metricModuleGroup)
+
 		r.logger.Debug(
 			"download meta from release channel for module from module source",
 			slog.String("release channel", policy.Spec.ReleaseChannel),
@@ -383,6 +389,14 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			availableModule.Version = "unknown"
 			availableModules = append(availableModules, availableModule)
 
+			metricLabels := map[string]string{
+				"module":   moduleName,
+				"version":  availableModule.Version,
+				"registry": source.Spec.Registry.Repo,
+			}
+
+			r.metricStorage.Grouped().GaugeSet(metricModuleGroup, metricUpdatingModuleIsNotValid, 1, metricLabels)
+
 			continue
 		}
 
@@ -399,7 +413,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 				return fmt.Errorf("update the '%s' module: %w", moduleName, err)
 			}
 
-			err = r.fetchModuleReleases(ctx, md, moduleName, &meta, source, policy.Name, opts)
+			err = r.fetchModuleReleases(ctx, md, moduleName, &meta, source, policy.Name, metricModuleGroup, opts)
 			if err != nil {
 				r.logger.Error("fetch module releases", log.Err(err))
 				// emptify checksumn to try redownload module

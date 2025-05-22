@@ -25,7 +25,6 @@ import (
 	"sort"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/ettle/strcase"
 	"github.com/flant/shell-operator/pkg/metric"
 	"github.com/jonboulle/clockwork"
 	"go.opentelemetry.io/otel"
@@ -55,7 +54,8 @@ type ModuleReleaseFetcherConfig struct {
 	Source           *v1alpha1.ModuleSource
 	UpdatePolicyName string
 
-	MetricStorage metric.Storage
+	MetricStorage     metric.Storage
+	MetricModuleGroup string
 
 	Logger *log.Logger
 }
@@ -72,7 +72,7 @@ func NewDeckhouseReleaseFetcher(cfg *ModuleReleaseFetcherConfig) *ModuleReleaseF
 		source:            cfg.Source,
 		updatePolicyName:  cfg.UpdatePolicyName,
 		metricStorage:     cfg.MetricStorage,
-		metricGroupName:   metricUpdatingFailed + "_" + strcase.ToSnake(cfg.ModuleName),
+		metricGroupName:   cfg.MetricModuleGroup,
 		logger:            cfg.Logger,
 	}
 }
@@ -104,6 +104,7 @@ func (r *reconciler) fetchModuleReleases(
 	targetReleaseMeta *downloader.ModuleDownloadResult,
 	source *v1alpha1.ModuleSource,
 	updatePolicyName string,
+	metricModuleGroup string,
 	opts []cr.Option,
 ) error {
 	ctx, span := otel.Tracer(serviceName).Start(ctx, "checkDeckhouseRelease")
@@ -126,6 +127,7 @@ func (r *reconciler) fetchModuleReleases(
 		Source:                   source,
 		UpdatePolicyName:         updatePolicyName,
 		MetricStorage:            r.metricStorage,
+		MetricModuleGroup:        metricModuleGroup,
 		Logger:                   r.logger.Named("release-fetcher"),
 	}
 
@@ -166,8 +168,6 @@ func (f *ModuleReleaseFetcher) fetchModuleReleases(ctx context.Context) error {
 		return fmt.Errorf("parse semver: %w", err)
 	}
 
-	f.metricStorage.Grouped().ExpireGroupMetrics(f.metricGroupName)
-
 	// sort releases before
 	sort.Sort(releaseUpdater.ByVersion[*v1alpha1.ModuleRelease](releasesInCluster))
 
@@ -207,8 +207,6 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 	if len(releasesInCluster) == 0 {
 		err := f.ensureModuleRelease(ctx, f.targetReleaseMeta, "no releases in cluster")
 		if err != nil {
-			f.metricStorage.Grouped().GaugeSet(f.metricGroupName, metricUpdatingFailed, 1, metricLabels)
-
 			return fmt.Errorf("create release %s: %w", f.targetReleaseMeta.ModuleVersion, err)
 		}
 
@@ -221,8 +219,6 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 	if isUpdatingSequence(actual.GetVersion(), newSemver) {
 		err := f.ensureModuleRelease(ctx, f.targetReleaseMeta, "from deployed")
 		if err != nil {
-			f.metricStorage.Grouped().GaugeSet(f.metricGroupName, metricUpdatingFailed, 1, metricLabels)
-
 			return fmt.Errorf("create release %s: %w", f.targetReleaseMeta.ModuleVersion, err)
 		}
 
@@ -245,8 +241,6 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 		if isUpdatingSequence(actual.GetVersion(), newSemver) {
 			err := f.ensureModuleRelease(ctx, f.targetReleaseMeta, "from last release in cluster")
 			if err != nil {
-				f.metricStorage.Grouped().GaugeSet(f.metricGroupName, metricUpdatingFailed, 1, metricLabels)
-
 				return fmt.Errorf("create release %s: %w", f.targetReleaseMeta.ModuleVersion, err)
 			}
 
@@ -256,10 +250,10 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 
 	vers, err := f.getNewVersions(ctx, actual.GetVersion(), newSemver)
 	if err != nil {
-		f.metricStorage.Grouped().GaugeSet(f.metricGroupName, metricUpdatingFailed, 1, metricLabels)
-
 		return fmt.Errorf("get next version: %w", err)
 	}
+
+	var ErrModuleIsCorrupted = errors.New("module is corrupted")
 
 	current := actual.GetVersion()
 	for _, ver := range vers {
@@ -272,7 +266,7 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 			if err != nil {
 				f.logger.Error("download metadata by version", slog.String("module_name", f.moduleName), slog.String("module_version", "v"+ver.String()), log.Err(err))
 
-				return fmt.Errorf("download metadata by version: %w", err)
+				return fmt.Errorf("download metadata by version: %w, %w", err, ErrModuleIsCorrupted)
 			}
 
 			err = f.ensureModuleRelease(ctx, &m, "step-by-step")
@@ -296,7 +290,11 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 
 			metricLabels["version"] = "v" + ver.String()
 
-			f.metricStorage.Grouped().GaugeSet(f.metricGroupName, metricUpdatingFailed, 1, metricLabels)
+			if errors.Is(ensureErr, ErrModuleIsCorrupted) {
+				f.metricStorage.Grouped().GaugeSet(f.metricGroupName, metricUpdatingModuleIsNotValid, 1, metricLabels)
+			} else {
+				f.metricStorage.Grouped().GaugeSet(f.metricGroupName, metricUpdatingFailed, 1, metricLabels)
+			}
 		}
 
 		current = ver

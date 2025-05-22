@@ -430,8 +430,8 @@
 
         To resolve this issue, ensure that the next version of the Deckhouse image is available in the registry.
 
-  - alert: DeckhouseModuleUpdatingFailed
-    expr: max by(module, registry, actual_version, version) (d8_module_updating_failed) > 0
+  - alert: DeckhouseModuleUpdatingFailedBrokenSequence
+    expr: max by(module, registry, actual_version, version) (d8_module_updating_broken_sequence) > 0
     labels:
       severity_level: "4"
       tier: cluster
@@ -443,7 +443,6 @@
       description: |
         The '{{ $labels.module }}' Module update has failed.
 
-        Possible reasons:
         Current version: {{ $labels.actual_version }}.
         Desired version: {{ $labels.version }}.
 
@@ -453,6 +452,28 @@
          - The next minor or patch version of the Module image is not available in the registry.
 
         To resolve this issue, ensure that the next version of the '{{ $labels.module }}' Module image between {{ $labels.actual_version }} and {{ $labels.version }} is available in the registry '{{ $labels.registry }}'.
+
+  - alert: DeckhouseModuleUpdatingFailedModuleIsNotValid
+    expr: max by(module, registry, version) (d8_module_updating_module_is_not_valid) > 0
+    labels:
+      severity_level: "4"
+      tier: cluster
+      d8_module: "{{ $labels.module }}"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: Module update has failed.
+      description: |
+        The '{{ $labels.module }}' Module update has failed.
+
+        Desired version: {{ $labels.version }}.
+
+        Attempt to download interim releases failed.
+
+        Possible reasons:
+         - The Module image is corrupted.
+
+        To resolve this issue, ensure that {{ $labels.version }} image in the registry '{{ $labels.registry }}' is valid .
 
   - alert: D8DeckhouseWatchErrorOccurred
     expr: increase(deckhouse_kubernetes_client_watch_errors_total[__SCRAPE_INTERVAL_X_2__]) > 0
