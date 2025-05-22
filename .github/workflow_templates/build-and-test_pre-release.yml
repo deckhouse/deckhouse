@@ -62,6 +62,7 @@ jobs:
 
   build_ee:
     name: Build EE
+    if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
       - go_generate
@@ -74,6 +75,7 @@ jobs:
 
   build_se:
     name: Build SE
+    if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
       - go_generate
@@ -86,6 +88,7 @@ jobs:
 
   build_se_plus:
     name: Build SE-plus
+    if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
       - go_generate
@@ -98,6 +101,7 @@ jobs:
 
   build_be:
     name: Build BE
+    if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
       - go_generate
@@ -110,6 +114,7 @@ jobs:
 
   build_ce:
     name: Build CE
+    if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
       - go_generate

@@ -210,7 +210,7 @@ jobs:
 
       # <template: send_fail_report>
       - name: Send fail report
-        if: failure() || github.repository == 'deckhouse/deckhouse'
+        if: failure()
         env:
           LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
           JOB_NAME: ${{ github.job }}
@@ -544,7 +544,7 @@ jobs:
 
       # <template: send_fail_report>
       - name: Send fail report
-        if: failure() || github.repository == 'deckhouse/deckhouse'
+        if: failure()
         env:
           LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
           JOB_NAME: ${{ github.job }}
@@ -556,6 +556,7 @@ jobs:
 
   build_ee:
     name: Build EE
+    if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
       - go_generate
@@ -825,7 +826,7 @@ jobs:
 
       # <template: send_fail_report>
       - name: Send fail report
-        if: failure() || github.repository == 'deckhouse/deckhouse'
+        if: failure()
         env:
           LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
           JOB_NAME: ${{ github.job }}
@@ -837,6 +838,7 @@ jobs:
 
   build_se:
     name: Build SE
+    if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
       - go_generate
@@ -1106,7 +1108,7 @@ jobs:
 
       # <template: send_fail_report>
       - name: Send fail report
-        if: failure() || github.repository == 'deckhouse/deckhouse'
+        if: failure()
         env:
           LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
           JOB_NAME: ${{ github.job }}
@@ -1118,6 +1120,7 @@ jobs:
 
   build_se_plus:
     name: Build SE-plus
+    if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
       - go_generate
@@ -1387,7 +1390,7 @@ jobs:
 
       # <template: send_fail_report>
       - name: Send fail report
-        if: failure() || github.repository == 'deckhouse/deckhouse'
+        if: failure()
         env:
           LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
           JOB_NAME: ${{ github.job }}
@@ -1399,6 +1402,7 @@ jobs:
 
   build_be:
     name: Build BE
+    if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
       - go_generate
@@ -1668,7 +1672,7 @@ jobs:
 
       # <template: send_fail_report>
       - name: Send fail report
-        if: failure() || github.repository == 'deckhouse/deckhouse'
+        if: failure()
         env:
           LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
           JOB_NAME: ${{ github.job }}
@@ -1680,6 +1684,7 @@ jobs:
 
   build_ce:
     name: Build CE
+    if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
       - go_generate
@@ -1949,7 +1954,7 @@ jobs:
 
       # <template: send_fail_report>
       - name: Send fail report
-        if: failure() || github.repository == 'deckhouse/deckhouse'
+        if: failure()
         env:
           LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
           JOB_NAME: ${{ github.job }}
