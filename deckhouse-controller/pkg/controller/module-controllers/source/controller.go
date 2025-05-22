@@ -416,10 +416,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			err = r.fetchModuleReleases(ctx, md, moduleName, &meta, source, policy.Name, metricModuleGroup, opts)
 			if err != nil {
 				r.logger.Error("fetch module releases", log.Err(err))
-				// wipe checksum to try redownload module
 				availableModule.PullError = err.Error()
-				// TODO: make another mechanism to retry download
-				meta.Checksum = "retry download"
 			}
 		}
 
