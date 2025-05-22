@@ -5,12 +5,13 @@
         {{ $imageSuffix := get $versionInfo "imageSuffix" }}
         {{- $revision := get $versionInfo "revision" }}
         {{- $fullVersion := get $versionInfo "fullVersion" }}
+        {{- $chart := $.Chart.Name }}
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: ztunnel
-  namespace: d8-{{ .Chart.Name }}
+  namespace: d8-{{ $chart }}
   labels:
     app.kubernetes.io/name: ztunnel
     app.kubernetes.io/instance: {{ $revision }}-ztunnel
