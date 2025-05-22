@@ -130,7 +130,7 @@ spec:
         - name: INPOD_ENABLED
           value: "true"
         - name: TERMINATION_GRACE_PERIOD_SECONDS
-          value: "{{ .Values.terminationGracePeriodSeconds }}"
+          value: "{{ $.Values.terminationGracePeriodSeconds }}"
         - name: POD_NAME
           valueFrom:
             fieldRef:
