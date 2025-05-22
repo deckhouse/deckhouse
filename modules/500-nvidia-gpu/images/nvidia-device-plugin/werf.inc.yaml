@@ -1,4 +1,5 @@
 {{ $version := "0.17.2" }}
+{{- $binaries := "/src/bins/config-manager /src/bins/gpu-feature-discovery /src/bins/mps-control-daemon /src/bins/nvidia-device-plugin" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -15,7 +16,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
-fromImage: builder/golang-bookworm-1.24
+fromImage: common/relocate-artifact
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
@@ -28,25 +29,22 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   beforeInstall:
-  - apt-get install gcc
+  - apt-get install -y golang gcc
+  - find /var/lib/apt/ /var/cache/apt/ -type f -delete
   install:
   - cd /src
   - export CLI_VERSION_PACKAGE=github.com/NVIDIA/k8s-device-plugin/internal/info
   - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64
-{{- range tuple "config-manager" "gpu-feature-discovery" "mps-control-daemon" "nvidia-device-plugin" }}
-  - go build -ldflags "-s -w '-extldflags=-Wl,--export-dynamic -Wl,--unresolved-symbols=ignore-in-object-files' -X ${CLI_VERSION_PACKAGE}.gitCommit=$(cat .GIT_HASH) -X ${CLI_VERSION_PACKAGE}.version={{ $version }}" -o /{{ . }} ./cmd/{{ . }}
-{{- end }}
-  - chown 64535:64535 /config-manager /gpu-feature-discovery /mps-control-daemon /nvidia-device-plugin
-  - chmod 0700 /config-manager /gpu-feature-discovery /mps-control-daemon /nvidia-device-plugin
+  - make
+  - cd ./bins
+  - chown 64535:64535 ./config-manager ./gpu-feature-discovery ./mps-control-daemon ./nvidia-device-plugin
+  - chmod 0700 ./config-manager ./gpu-feature-discovery ./mps-control-daemon ./nvidia-device-plugin
+  - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
-  add: /
-  includePaths:
-  - config-manager
-  - gpu-feature-discovery
-  - mps-control-daemon
-  - nvidia-device-plugin
+  add: /relocate
+  to: /
   before: setup
