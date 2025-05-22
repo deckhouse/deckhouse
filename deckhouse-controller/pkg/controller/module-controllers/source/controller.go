@@ -417,8 +417,10 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			if err != nil {
 				r.logger.Error("fetch module releases", log.Err(err))
 				// wipe checksum to try redownload module
-				meta.Checksum = ""
-				availableModule.Checksum = ""
+				availableModule.PullError = err.Error()
+				meta.Checksum = "retry download"
+
+				continue
 			}
 		}
 
