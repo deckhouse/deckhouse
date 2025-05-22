@@ -2332,9 +2332,9 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: D8NodeHasUnmetKernelRequirements
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/kernel-requirements.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/021-cni-cilium/monitoring/prometheus-rules/kernel-requirements.yaml
+      moduleUrl: 021-cni-cilium
+      module: cni-cilium
       edition: ce
       description: |-
         Deckhouse has detected that some nodes don't meet the required kernel constraints.
