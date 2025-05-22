@@ -3662,9 +3662,9 @@ alerts:
         Attempt to download interim releases failed.
 
         Possible reasons:
-         - The next minor or patch version of the Module image is not available in the registry.
+         - The necessary versions of the Module image is not available in the registry.
 
-        To resolve this issue, ensure that the next version of the '{{ $labels.module }}' Module image between {{ $labels.actual_version }} and {{ $labels.version }} is available in the registry '{{ $labels.registry }}'.
+        To resolve this issue, ensure that all minor versions of the '{{ $labels.module }}' Module image between {{ $labels.actual_version }} and {{ $labels.version }} is available in the registry '{{ $labels.registry }}'.
       summary: |
         Module update has failed. Updating sequence is broken.
       severity: "4"
@@ -3678,8 +3678,6 @@ alerts:
         The '{{ $labels.module }}' Module update has failed.
 
         Desired version: {{ $labels.version }}.
-
-        Attempt to download interim releases failed.
 
         Possible reasons:
          - The Module image is corrupted.
