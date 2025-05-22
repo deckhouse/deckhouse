@@ -65,10 +65,10 @@ const (
 
 	maxModulesLimit = 1500
 
-	metricUpdatingModuleIsNotValid = "d8_module_updating_module_is_not_valid"
-	metricUpdatingFailed           = "d8_module_updating_broken_sequence"
-	metricModuleUpdatingGroup      = "d8_module_updating_group"
-	serviceName                    = "module-source-controller"
+	metricUpdatingModuleIsNotValid     = "d8_module_updating_module_is_not_valid"
+	metricUpdatingFailedBrokenSequence = "d8_module_updating_broken_sequence"
+	metricModuleUpdatingGroup          = "d8_module_updating_group"
+	serviceName                        = "module-source-controller"
 )
 
 var ErrSettingsNotChanged = errors.New("settings not changed")
@@ -384,18 +384,18 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 				r.logger.Warn("failed to download module", slog.String("name", moduleName), log.Err(err))
 				availableModule.PullError = err.Error()
 				pullErrorsExist = true
+
+				metricLabels := map[string]string{
+					"module":   moduleName,
+					"version":  availableModule.Version,
+					"registry": source.Spec.Registry.Repo,
+				}
+
+				r.metricStorage.Grouped().GaugeSet(metricModuleGroup, metricUpdatingModuleIsNotValid, 1, metricLabels)
 			}
 
 			availableModule.Version = "unknown"
 			availableModules = append(availableModules, availableModule)
-
-			metricLabels := map[string]string{
-				"module":   moduleName,
-				"version":  availableModule.Version,
-				"registry": source.Spec.Registry.Repo,
-			}
-
-			r.metricStorage.Grouped().GaugeSet(metricModuleGroup, metricUpdatingModuleIsNotValid, 1, metricLabels)
 
 			continue
 		}

@@ -293,7 +293,7 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 			if errors.Is(ensureErr, ErrModuleIsCorrupted) {
 				f.metricStorage.Grouped().GaugeSet(f.metricGroupName, metricUpdatingModuleIsNotValid, 1, metricLabels)
 			} else {
-				f.metricStorage.Grouped().GaugeSet(f.metricGroupName, metricUpdatingFailed, 1, metricLabels)
+				f.metricStorage.Grouped().GaugeSet(f.metricGroupName, metricUpdatingFailedBrokenSequence, 1, metricLabels)
 			}
 		}
 
