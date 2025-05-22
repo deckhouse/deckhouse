@@ -1511,23 +1511,38 @@ spec:
                       description: |
                         GPU sharing strategy.
                       enum:
-                        - mps
-                        - timeSlicing
-                        - mig
-                        - none
+                        - Mps
+                        - TimeSlicing
+                        - Mig
+                        - Exclusive
                     mig:
                       type: object
-                      required: [partedConfig]
                       properties:
                         partedConfig:
                           type: string
                           description: |
                             Selected parted-config for MIG.
                           x-doc-default: all-1g.5gb
+                    mps:
+                      type: object
+                      properties:
+                        replicas:
+                          type: string
+                          description: |
+                            Count of replicas with MPS.
+                          x-doc-default: "4"
+                    timeSlicing:
+                      description: |
+                        Time-slicing parameters.
+                      type: object
+                    exclusive:
+                      type: object
+                      description: |
+                        Without GPU sharing.
                   oneOf:
                     - properties:
                         type:
-                          enum: [Time-slicing]
+                          enum: [TimeSlicing]
                         timeSlicing: {}
                     - properties:
                         type:
@@ -1537,6 +1552,10 @@ spec:
                         type:
                           enum: [Mps]
                         mps: {}
+                    - properties:
+                        type:
+                          enum: [Exclusive]
+                        exclusive: {}
                 cri:
                   type: object
                   description: |
