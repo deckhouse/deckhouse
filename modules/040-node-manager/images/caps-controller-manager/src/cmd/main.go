@@ -149,6 +149,10 @@ func main() {
 		setupLog.Error(err, "unable to create webhook", "webhook", "SSHCredentials")
 		os.Exit(1)
 	}
+	if err = (&deckhousev1alpha1.SSHCredentials{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "SSHCredentials")
+		os.Exit(1)
+	}
 	if err = (&infrav1.StaticMachineTemplate{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "StaticMachineTemplate")
 		os.Exit(1)

@@ -20,8 +20,28 @@ webhooks:
       - apiGroups:
           - deckhouse.io
         apiVersions:
-          - v1alpha1
           - v1alpha2
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - sshcredentials
+    sideEffects: None
+  - admissionReviewVersions:
+      - v1
+    clientConfig:
+      service:
+        namespace: d8-cloud-instance-manager
+        name: caps-controller-manager-webhook-service
+        path: /validate-deckhouse-io-v1alpha1-sshcredentials
+      caBundle: {{ .Values.nodeManager.internal.capsControllerManagerWebhookCert.ca | b64enc }}
+    failurePolicy: Fail
+    name: vsshcredentials.deckhouse.io
+    rules:
+      - apiGroups:
+          - deckhouse.io
+        apiVersions:
+          - v1alpha1
         operations:
           - CREATE
           - UPDATE

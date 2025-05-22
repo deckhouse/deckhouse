@@ -39,7 +39,7 @@ func (r *SSHCredentials) SetupWebhookWithManager(mgr ctrl.Manager) error {
 
 // TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 
-///+kubebuilder:webhook:path=/mutate-deckhouse-io-v1alpha1-sshcredentials,mutating=true,failurePolicy=fail,sideEffects=None,groups=deckhouse.io,resources=sshcredentials,verbs=create;update,versions=v1alpha1,name=msshcredentials.deckhouse.io,admissionReviewVersions=v1
+///+kubebuilder:webhook:path=/mutate-deckhouse-io-v1alpha2-sshcredentials,mutating=true,failurePolicy=fail,sideEffects=None,groups=deckhouse.io,resources=sshcredentials,verbs=create;update,versions=v1alpha2,name=msshcredentials.deckhouse.io,admissionReviewVersions=v1
 
 var _ webhook.Defaulter = &SSHCredentials{}
 
@@ -49,7 +49,7 @@ func (r *SSHCredentials) Default() {
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-//+kubebuilder:webhook:path=/validate-deckhouse-io-v1alpha1-sshcredentials,mutating=false,failurePolicy=fail,sideEffects=None,groups=deckhouse.io,resources=sshcredentials,verbs=create;update,versions=v1alpha1,name=vsshcredentials.deckhouse.io,admissionReviewVersions=v1
+//+kubebuilder:webhook:path=/validate-deckhouse-io-v1alpha2-sshcredentials,mutating=false,failurePolicy=fail,sideEffects=None,groups=deckhouse.io,resources=sshcredentials,verbs=create;update,versions=v1alpha2,name=vsshcredentials.deckhouse.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &SSHCredentials{}
 
