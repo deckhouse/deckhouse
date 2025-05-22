@@ -259,7 +259,7 @@
 {!{ define "send_fail_report" }!}
 # <template: send_fail_report>
 - name: Send fail report
-  if: failure()
+  if: failure() || github.repository == 'deckhouse/deckhouse'
   env:
     LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
     JOB_NAME: ${{ github.job }}
