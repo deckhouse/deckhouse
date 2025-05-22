@@ -419,8 +419,6 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 				// wipe checksum to try redownload module
 				availableModule.PullError = err.Error()
 				meta.Checksum = "retry download"
-
-				continue
 			}
 		}
 
