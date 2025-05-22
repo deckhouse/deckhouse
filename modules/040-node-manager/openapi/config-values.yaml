@@ -32,7 +32,6 @@ properties:
     properties:
       mode:
         type: string
-        x-examples: "BlockByPodLabel"
         enum:
         - "BlockByPodLabel"
         - "Default"
