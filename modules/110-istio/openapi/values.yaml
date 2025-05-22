@@ -59,6 +59,10 @@ properties:
           root:
             type: string
             x-examples: ["---ROOT PEM---"]
+      enableAmbientMode:
+        type: boolean
+        default: false
+        x-examples: [true]
       federations:
         type: array
         default: []
