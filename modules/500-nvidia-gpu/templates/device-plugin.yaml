@@ -40,8 +40,15 @@ spec:
       shareProcessNamespace: true
       initContainers:
       - name: nvidia-device-plugin-init
-        image: nvcr.io/nvidia/k8s-device-plugin:v0.17.2
-        command: ["config-manager"]
+        image: {{ include "helm_lib_module_image" (list . "nvidiaDevicePlugin") }}
+        command: ["/config-manager"]
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+        {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            cpu: 50m
+            memory: 64Mi
+        {{- end }}
         env:
         - name: ONESHOT
           value: "true"
@@ -77,6 +84,13 @@ spec:
         image: {{ include "helm_lib_module_image" (list . "nvidiaDevicePlugin") }}
         command: ["/config-manager"]
         {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 8 }}
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+        {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            cpu: 50m
+            memory: 64Mi
+        {{- end }}
         env:
         - name: ONESHOT
           value: "false"
@@ -148,9 +162,12 @@ spec:
             mountPath: /available-configs
           - name: config
             mountPath: /config
-        {{- with .Values.resources }}
         resources:
-          {{- toYaml . | nindent 10 }}
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+        {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            cpu: 50m
+            memory: 64Mi
         {{- end }}
       volumes:
         - name: device-plugin

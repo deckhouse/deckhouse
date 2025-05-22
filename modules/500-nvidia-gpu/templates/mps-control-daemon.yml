@@ -27,21 +27,31 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       initContainers:
       - name: mps-control-daemon-mounts
-        image: nvcr.io/nvidia/k8s-device-plugin:v0.17.2
-        command: [mps-control-daemon, mount-shm]
+        image: {{ include "helm_lib_module_image" (list . "nvidiaDevicePlugin") }}
+        command: [/mps-control-daemon, mount-shm]
         securityContext:
           privileged: true
         volumeMounts:
         - name: mps-root
           mountPath: /mps
           mountPropagation: Bidirectional
-        {{- with .Values.resources }}
         resources:
-          {{- toYaml . | nindent 12 }}
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+        {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            cpu: 50m
+            memory: 64Mi
         {{- end }}
       - name: mps-control-daemon-init
-        image: nvcr.io/nvidia/k8s-device-plugin:v0.17.2
-        command: ["config-manager"]
+        image: {{ include "helm_lib_module_image" (list . "nvidiaDevicePlugin") }}
+        command: ["/config-manager"]
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+        {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            cpu: 50m
+            memory: 64Mi
+        {{- end }}
         env:
         - name: ONESHOT
           value: "true"
@@ -67,10 +77,17 @@ spec:
           value: ""
       containers:
         - name: mps-config-manager
-          image: nvcr.io/nvidia/k8s-device-plugin:v0.17.2
-          command: ["config-manager"]
+          image: {{ include "helm_lib_module_image" (list . "nvidiaDevicePlugin") }}
+          command: ["/config-manager"]
           securityContext:
             privileged: true
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+              cpu: 50m
+              memory: 64Mi
+          {{- end }}
           env:
           - name: ONESHOT
             value: "false"
@@ -95,8 +112,15 @@ spec:
           - name: PROCESS_TO_SIGNAL
             value: "/usr/bin/mps-control-daemon"
         - name: mps-control-daemon-ctr
-          image: nvcr.io/nvidia/k8s-device-plugin:v0.17.2
-          command: ["mps-control-daemon"]
+          image: {{ include "helm_lib_module_image" (list . "nvidiaDevicePlugin") }}
+          command: ["/mps-control-daemon"]
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+              cpu: 50m
+              memory: 64Mi
+          {{- end }}
           env:
           - name: NODE_NAME
             valueFrom:
@@ -114,10 +138,6 @@ spec:
             mountPath: /dev/shm
           - name: mps-root
             mountPath: /mps
-          {{- with .Values.resources }}
-          resources:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
       volumes:
       - name: mps-root
         hostPath:

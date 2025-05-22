@@ -25,6 +25,8 @@ spec:
         - name: master
           image: {{ include "helm_lib_module_image" (list . "nodeFeatureDiscovery") }}
           imagePullPolicy: IfNotPresent
+          command:
+            - "/nfd-master"
           startupProbe:
             grpc:
               port: 8082
@@ -46,12 +48,13 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: spec.nodeName
-          command:
-            - "/nfd-master"
           resources:
             requests:
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
               cpu: 100m
               memory: 128Mi
+          {{- end }}
           args:
             - "-enable-leader-election"
             - "-feature-gates=NodeFeatureGroupAPI=false"

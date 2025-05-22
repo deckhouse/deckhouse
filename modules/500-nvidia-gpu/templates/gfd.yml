@@ -13,7 +13,7 @@ spec:
       labels:
         component: gpu-feature-discovery
     spec:
-      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -42,8 +42,15 @@ spec:
       shareProcessNamespace: true
       initContainers:
       - name: gpu-feature-discovery-init
-        image: nvcr.io/nvidia/k8s-device-plugin:v0.17.2
-        command: ["config-manager"]
+        image: {{ include "helm_lib_module_image" (list . "nvidiaDevicePlugin") }}
+        command: ["/config-manager"]
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+        {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            cpu: 50m
+            memory: 64Mi
+        {{- end }}
         env:
         - name: ONESHOT
           value: "true"
@@ -67,6 +74,7 @@ spec:
           value: ""
         - name: PROCESS_TO_SIGNAL
           value: ""
+        {{- include "helm_lib_module_container_security_context_privileged" . | nindent 8 }}
         volumeMounts:
           - name: available-configs
             mountPath: /available-configs
@@ -74,8 +82,15 @@ spec:
             mountPath: /config
       containers:
       - name: gpu-feature-discovery-ctr
-        image: nvcr.io/nvidia/k8s-device-plugin:v0.17.2
-        command: ["gpu-feature-discovery"]
+        image: {{ include "helm_lib_module_image" (list . "nvidiaDevicePlugin") }}
+        command: ["/gpu-feature-discovery"]
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+        {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            cpu: 50m
+            memory: 64Mi
+        {{- end }}
         env:
           - name: GFD_SLEEP_INTERVAL
             value: 60s
@@ -89,8 +104,7 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
-        securityContext:
-          privileged: true
+        {{- include "helm_lib_module_container_security_context_privileged" . | nindent 8 }}
         volumeMounts:
           - name: output-dir
             mountPath: "/etc/kubernetes/node-feature-discovery/features.d"
@@ -101,8 +115,15 @@ spec:
           - name: config
             mountPath: /config
       - name: gpu-feature-discovery-sidecar
-        image: nvcr.io/nvidia/k8s-device-plugin:v0.17.2
-        command: ["config-manager"]
+        image: {{ include "helm_lib_module_image" (list . "nvidiaDevicePlugin") }}
+        command: ["/config-manager"]
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+        {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            cpu: 50m
+            memory: 64Mi
+        {{- end }}
         env:
         - name: ONESHOT
           value: "false"
@@ -126,6 +147,7 @@ spec:
           value: "1" # SIGHUP
         - name: PROCESS_TO_SIGNAL
           value: "gpu-feature-discovery"
+        {{- include "helm_lib_module_container_security_context_privileged" . | nindent 8 }}
         volumeMounts:
           - name: available-configs
             mountPath: /available-configs

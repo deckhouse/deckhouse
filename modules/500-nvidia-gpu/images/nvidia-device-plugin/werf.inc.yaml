@@ -44,6 +44,6 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
-  add: /relocate
+  add: /relocate/src
   to: /
   before: setup
