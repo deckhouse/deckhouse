@@ -157,8 +157,6 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 		Images:        cb.imagesDigests,
 		Proxy:         cb.clusterInputData.Proxy,
 		PackagesProxy: cb.clusterInputData.PackagesProxy,
-
-		GracefulShutdown: cb.clusterInputData.GracefulShutdown,
 	}
 
 	for _, ng := range cb.clusterInputData.NodeGroups {
@@ -476,8 +474,6 @@ type tplContextCommon struct {
 
 	Proxy         map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
 	PackagesProxy map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
-
-	GracefulShutdown *gracefulShutdown `json:"gracefulShutdown,omitempty" yaml:"gracefulShutdown,omitempty"`
 }
 
 type bundleNGContext struct {
@@ -548,9 +544,4 @@ type inputData struct {
 	AllowedBundles     []string               `json:"allowedBundles" yaml:"allowedBundles"`
 	NodeGroups         []nodeGroup            `json:"nodeGroups" yaml:"nodeGroups"`
 	Freq               interface{}            `json:"NodeStatusUpdateFrequency,omitempty" yaml:"NodeStatusUpdateFrequency,omitempty"`
-	GracefulShutdown   *gracefulShutdown      `json:"gracefulShutdown,omitempty" yaml:"gracefulShutdown,omitempty"`
-}
-
-type gracefulShutdown struct {
-	Mode string `json:"mode" yaml:"mode"`
 }

@@ -155,10 +155,6 @@ spec:
     nodeGroups:
       {{- $.Values.nodeManager.internal.nodeGroups | toYaml | nindent 6 }}
     nodeStatusUpdateFrequency: {{ $.Values.nodeManager.internal.nodeStatusUpdateFrequency | toYaml | default 0 }}
-    {{- if hasKey $.Values.nodeManager "gracefulShutdown" }}
-    gracefulShutdown:
-     mode: {{ $.Values.nodeManager.gracefulShutdown.mode }}
-    {{- end }}
 {{- end }}
 ---
 apiVersion: v1

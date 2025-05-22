@@ -25,18 +25,3 @@ properties:
       Set to 'true' to disable machine-controller-manager in case of potentially cluster-damaging changes.
 
       > **Warning!** Use this flag only if you know what you are doing and clearly understand the consequences.
-  gracefulShutdown:
-    type: object
-    description: |
-      Settings for the graceful shutdown of the Node.
-    properties:
-      mode:
-        type: string
-        enum:
-          - "BlockByPodLabel"
-          - "Default"
-        default: "Default"
-        description: |
-          Graceful shutdown process mode:
-          * `Default`: use original kubelet mechanism of the graceful shutdown.
-          * `BlockByPodLabel`: block shutdown process until Pods with the label `pod.deckhouse.io/inhibit-node-shutdown` are present on the Node.
