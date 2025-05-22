@@ -546,7 +546,7 @@ global:
 	})
 
 	suite.Run("Check LTS release channel", func() {
-		dependency.TestDC.CRClient.ImageMock.When("lts").Then(&fake.FakeImage{
+		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "lts").Then(&fake.FakeImage{
 			ManifestStub: ManifestStub,
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{
@@ -558,7 +558,7 @@ global:
 			},
 		}, nil)
 
-		dependency.TestDC.CRClient.ImageMock.When("v1.31.0").Then(&fake.FakeImage{
+		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "v1.31.0").Then(&fake.FakeImage{
 			ManifestStub: ManifestStub,
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{
@@ -570,7 +570,7 @@ global:
 			},
 		}, nil)
 
-		dependency.TestDC.CRClient.ImageMock.When("v1.37.0").Then(&fake.FakeImage{
+		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "v1.37.0").Then(&fake.FakeImage{
 			ManifestStub: ManifestStub,
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{
