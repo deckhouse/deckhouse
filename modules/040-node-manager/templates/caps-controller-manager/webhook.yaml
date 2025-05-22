@@ -62,8 +62,28 @@ webhooks:
       - apiGroups:
           - deckhouse.io
         apiVersions:
-          - v1alpha1
           - v1alpha2
+        operations:
+          - UPDATE
+          - DELETE
+        resources:
+          - staticinstances
+    sideEffects: None
+  - admissionReviewVersions:
+      - v1
+    clientConfig:
+      service:
+        namespace: d8-cloud-instance-manager
+        name: caps-controller-manager-webhook-service
+        path: /validate-deckhouse-io-v1alpha1-staticinstance
+      caBundle: {{ .Values.nodeManager.internal.capsControllerManagerWebhookCert.ca | b64enc }}
+    failurePolicy: Fail
+    name: vstaticinstance.deckhouse.io
+    rules:
+      - apiGroups:
+          - deckhouse.io
+        apiVersions:
+          - v1alpha1
         operations:
           - UPDATE
           - DELETE
