@@ -73,7 +73,7 @@ type NodeGroupSpec struct {
 	// CRI parameters. Optional.
 	CRI CRI `json:"cri,omitempty"`
 
-	// CRI parameters. Optional.
+	// GPU parameters. Optional.
 	GPU GPU `json:"gpu,omitempty"`
 
 	// staticInstances. Optional.
