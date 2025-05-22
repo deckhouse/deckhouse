@@ -39,6 +39,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
 type bootstrapParams struct {
@@ -277,7 +278,7 @@ func (s *Service) bootstrap(ctx context.Context, p bootstrapParams) *pb.Bootstra
 	}
 
 	bootstrapper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-		NodeInterface:              nil,
+		NodeInterface:              ssh.NewNodeInterfaceWrapper(sshClient),
 		InitialState:               initialState,
 		ResetInitialState:          true,
 		DisableBootstrapClearCache: true,
