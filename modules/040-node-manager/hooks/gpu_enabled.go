@@ -96,7 +96,11 @@ func setGPULabel(input *go_hook.HookInput, dc dependency.Container) error {
 
 		for _, node := range nodes.Items {
 			if _, ok := node.Labels[gpuEnabledLabel]; ok {
-				continue
+				if sharingType, ok := node.Labels[devicePluginLabel]; ok {
+					if sharingType == gpuSharing {
+						continue
+					}
+				}
 			}
 
 			input.Logger.Info("Labeling %s node with %s=%v label", node.Name, devicePluginLabel, gpuSharing)
