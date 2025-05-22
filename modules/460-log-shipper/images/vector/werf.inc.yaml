@@ -83,7 +83,7 @@ shell:
   - chmod 0755 /vector
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-reloader-artifact
-fromImage: builder/golang-alpine:1.24
+fromImage: builder/golang-alpine-1.24
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
