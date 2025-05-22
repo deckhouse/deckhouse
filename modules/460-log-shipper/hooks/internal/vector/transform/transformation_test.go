@@ -33,6 +33,7 @@ var testCases = []struct {
 		".message = parse_json(.message) ?? { \"text\": .message }\n"},
 	{"del", v1alpha1.Transform{Action: "DropLabels", Labels: []string{"first", "second"}},
 		"if exists(.first) {\n del(.first)\n}\nif exists(.second) {\n del(.second)\n}\n"},
+	// {"delZero", v1alpha1.Transform{Action: "DropLabels", Labels: []string{}}, ""},
 	{"replaceDot", v1alpha1.Transform{Action: "NormalizeLabelKeys"},
 		"if exists(.pod_labels) {\n.pod_labels = map_keys(object!(.pod_labels), recursive: true) -> |key| { replace(key, \".\", \"_\")}\n}"},
 }

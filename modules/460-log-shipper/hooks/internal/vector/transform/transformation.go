@@ -39,15 +39,19 @@ func BuildModes(tms []v1alpha1.Transform) ([]apis.LogTransform, error) {
 		case "EnsureStructuredMessage":
 			module = ensureStructuredMessage{targetField: tm.TargetField}
 		case "DropLabels":
-			if len(tm.Labels) > 0 {
-				module = dropLabels{labels: tm.Labels}
+			fmt.Println("!!!!!!", tm.Labels)
+			if len(tm.Labels) == 0 {
+				continue
 			}
+			module = dropLabels{labels: tm.Labels}
+
 		default:
 			return nil, fmt.Errorf("TransformMod: action %s not found", tm.Action)
 		}
 		lofTransform := module.getTransform(i)
 		transforms = append(transforms, lofTransform)
 	}
+	fmt.Println("END")
 	return transforms, nil
 }
 
