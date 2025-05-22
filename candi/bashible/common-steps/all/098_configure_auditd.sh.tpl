@@ -13,13 +13,20 @@
 # limitations under the License.
 
 {{- if eq .cri "Containerd" }}
+
+bb-event-on 'bb-sync-file-changed' '_on_audit_rules_changed'
 _on_audit_rules_changed() {
-  bb-flag-set auditd-need-reload
+  if augenrules --check; then
+    augenrules --load
+    bb-flag-unset auditd-need-reload
+  else
+    bb-log-error "failed to reload auditd rules"
+    exit 1
+  fi
 }
-bb-event-on 'containerd-audit-rules-changed' '_on_audit_rules_changed'
 
 if [ -d /etc/audit/rules.d ]; then
-  bb-sync-file /etc/audit/rules.d/containerd-deckhouse.rules - containerd-audit-rules-changed << "EOF"
+  bb-sync-file /etc/audit/rules.d/containerd-deckhouse.rules - << "EOF"
 -a always,exit -F arch=b64 -F dir=/etc/containerd -F perm=wa -k containerd
 -a always,exit -F arch=b32 -F dir=/etc/containerd -F perm=wa -k containerd
 -a always,exit -F arch=b64 -F dir=/var/lib/containerd -F perm=wa -k containerd
@@ -31,15 +38,5 @@ if [ -d /etc/audit/rules.d ]; then
 EOF
 fi
 
-if bb-flag? auditd-need-reload; then
-  bb-log-warning "'auditd-need-reload' flag was set"
-  if augenrules --check; then
-    augenrules --load
-    bb-flag-unset auditd-need-reload
-  else
-    bb-log-error "failed to reload auditd rules"
-    exit 1
-  fi
-fi
 {{- end }}
 
