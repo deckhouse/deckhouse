@@ -33,6 +33,7 @@ spec:
 status:
   approved: false
   message: ""
+  phase: Pending
 ---
 apiVersion: deckhouse.io/v1alpha1
 approved: false
@@ -44,3 +45,4 @@ spec:
 status:
   approved: false
   message: ""
+  phase: Pending

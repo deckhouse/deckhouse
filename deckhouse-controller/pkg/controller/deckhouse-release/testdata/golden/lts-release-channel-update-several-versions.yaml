@@ -18,15 +18,19 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
+  annotations:
+    release.deckhouse.io/isUpdating: "true"
+    release.deckhouse.io/notified: "false"
   creationTimestamp: null
   name: v1.65.6
-  resourceVersion: "999"
+  resourceVersion: "1002"
 spec:
   version: v1.65.6
 status:
   approved: false
   message: ""
-  transitionTime: null
+  phase: Superseded
+  transitionTime: "2019-10-17T15:33:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
 approved: false
@@ -37,7 +41,7 @@ metadata:
     release.deckhouse.io/notified: "false"
   creationTimestamp: null
   name: v1.70.7
-  resourceVersion: "1002"
+  resourceVersion: "1001"
 spec:
   version: v1.70.7
 status:
@@ -52,7 +56,7 @@ metadata:
   creationTimestamp: null
   name: deckhouse
   namespace: d8-system
-  resourceVersion: "1000"
+  resourceVersion: "1001"
 spec:
   selector: null
   strategy: {}

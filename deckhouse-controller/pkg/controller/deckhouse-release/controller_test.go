@@ -1036,11 +1036,9 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			}
 
 			suite.setupController("lts-release-channel-update-several-versions.yaml", initValues, mup)
-			// first run - change status to pending
-			dr := suite.getDeckhouseRelease("v1.70.7")
+			dr := suite.getDeckhouseRelease("v1.65.6")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
-			// second run - process pending release
 			dr = suite.getDeckhouseRelease("v1.70.7")
 			_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
