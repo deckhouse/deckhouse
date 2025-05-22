@@ -2,9 +2,9 @@
 title: "Cloud provider — VMware Cloud Director: Примеры"
 ---
 
-Ниже представлен пример конфигурации [`VCDInstanceClass`](cr.html#vcdinstanceclass) для эфемерных узлов cloud-провайдера vCloud Director.
+Ниже представлен пример конфигурации [VCDInstanceClass](cr.html#vcdinstanceclass) для эфемерных узлов cloud-провайдера VMware Cloud Director.
 
-## Пример custom resource `VCDInstanceClass`
+## Пример конфигурации кастомного ресурса VCDInstanceClass
 
 ```yaml
 apiVersion: deckhouse.io/v1
