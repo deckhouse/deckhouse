@@ -19,6 +19,9 @@ from kubernetes import client, config
 import yaml
 import base64
 import inspect
+import urllib3
+
+urllib3.disable_warnings()
 
 GITHUB_TOKEN=os.getenv('GITHUB_TOKEN')
 if (GITHUB_TOKEN == None):
@@ -129,9 +132,11 @@ def collect_released_versions():
 def determine_clusters_need_deploy (kubeconf_name,kubeconf64):
     output_prefix = 'DEPLOY_'
 
+    cfg = client.Configuration()
     try:
         kubeconf = yaml.safe_load(base64.b64decode(kubeconf64).decode('utf-8'))
-        config.load_kube_config_from_dict(kubeconf)
+        config.load_kube_config_from_dict(kubeconf,client_configuration=cfg)
+        cfg.verify_ssl = False
     except Exception as e:
         print(f'::warning file=.github/scripts/python/{os.path.basename(__file__)},line={inspect.currentframe().f_lineno}::Unable to load "{kubeconf_name}". Unable to connect to "{kubeconf_name}". Skipping.')
         write_output(output_prefix+kubeconf_name,'false')
@@ -139,8 +144,10 @@ def determine_clusters_need_deploy (kubeconf_name,kubeconf64):
         return
       
     namespace = os.getenv(f'NAMESPACE_{kubeconf_name}')
+    
+    api_client = client.ApiClient(configuration=cfg)
+    v1 = client.CoreV1Api(api_client)
 
-    v1 = client.CoreV1Api()
     try:
         cm = v1.read_namespaced_config_map(CM_NAME,namespace)
     except Exception as e:
