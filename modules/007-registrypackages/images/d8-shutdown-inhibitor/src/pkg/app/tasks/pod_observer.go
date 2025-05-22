@@ -19,6 +19,7 @@ package tasks
 import (
 	"context"
 	"fmt"
+	"os/exec"
 	"time"
 
 	"d8_shutdown_inhibitor/pkg/app/nodecondition"
@@ -51,6 +52,7 @@ func (p *PodObserver) Run(ctx context.Context, errCh chan error) {
 	select {
 	case <-ctx.Done():
 		fmt.Printf("podObserver(s1): stop on context cancel\n")
+	case <-ctx.Done():
 	case <-p.ShutdownSignalCh:
 		fmt.Printf("podObserver(s1): catch prepare shutdown signal, start pods checker\n")
 	}
@@ -61,42 +63,48 @@ func (p *PodObserver) Run(ctx context.Context, errCh chan error) {
 
 	lastWall := time.Time{}
 	for {
-		matchedPods, err := p.ListMatchedPods()
-		if err != nil {
-			fmt.Printf("podObserver(s2): error listing Pods: %v\n", err)
-			// TODO add maximum retry count.
-			continue
-		}
-		if len(matchedPods) == 0 {
-			fmt.Printf("podObserver(s2): no pods to wait, unlock inhibitors and exit\n")
-			close(p.StopInhibitorsCh)
-			return
-		}
-		fmt.Printf("podObserver(s2): %d pods are still running\n", matchedPods)
-
-		// Reduce wall broadcast messages with longer interval than pods checking interval.
-		now := time.Now()
-		if lastWall.IsZero() || lastWall.Add(p.WallBroadcastInterval).Before(now) {
-			err = system.WallMessage(wallMessage)
-			if err != nil {
-				// Will retry on next iteration, just log the error.
-				fmt.Printf("podObserver(s2): error sending broadcast message: %v\n", err)
-			}
-			lastWall = now
-		}
-
-		err = nodecondition.GracefulShutdownPostpone().SetPodsArePresent(p.NodeName)
-		if err != nil {
-			// Will retry on next iteration, just log the error.
-			fmt.Printf("podObserver(s2): update Node condition: %v\n", err)
-		}
-
-		// Wait for ticker or global stop.
+		// Check for global stop (do it at the beginning so 'continue' work correctly).
 		select {
 		case <-ctx.Done():
+			fmt.Printf("podObserver(s2): stop on context cancel\n")
 			return
-		case <-ticker.C:
+		default:
 		}
+
+		matchedPods, err := p.ListMatchedPods()
+		if err != nil {
+			fmt.Printf("podObserver(s2): list matched Pods: %v\n", err)
+			if ee, ok := err.(*exec.ExitError); ok {
+				fmt.Printf("   stderr: %v\n", string(ee.Stderr))
+			}
+		} else {
+			if len(matchedPods) == 0 {
+				fmt.Printf("podObserver(s2): no pods to wait, unlock inhibitors and exit\n")
+				close(p.StopInhibitorsCh)
+				return
+			}
+			fmt.Printf("podObserver(s2): %d pods are still running\n", len(matchedPods))
+
+			err = nodecondition.GracefulShutdownPostpone().SetPodsArePresent(p.NodeName)
+			if err != nil {
+				// Will retry on next iteration, just log the error.
+				fmt.Printf("podObserver(s2): update Node condition: %v\n", err)
+			}
+
+			// Reduce wall broadcast messages with longer interval than pods checking interval.
+			now := time.Now()
+			if lastWall.IsZero() || lastWall.Add(p.WallBroadcastInterval).Before(now) {
+				err = system.WallMessage(wallMessage)
+				if err != nil {
+					// Will retry on next iteration, just log the error.
+					fmt.Printf("podObserver(s2): error sending broadcast message: %v\n", err)
+				}
+				lastWall = now
+			}
+		}
+
+		// Wait for ticker.
+		<-ticker.C
 	}
 }
 
@@ -108,7 +116,6 @@ func (p *PodObserver) ListMatchedPods() ([]kubernetes.Pod, error) {
 	kubectl := kubernetes.NewDefaultKubectl()
 	podList, err := kubectl.ListPods(p.NodeName)
 	if err != nil {
-		fmt.Printf("list pods: %v\n", err)
 		return nil, err
 	}
 

@@ -37,15 +37,15 @@ func GracefulShutdownPostpone() *gracefulShutdownPostpone {
 type gracefulShutdownPostpone struct{}
 
 func (g *gracefulShutdownPostpone) SetOnStart(nodeName string) error {
-	return patchGracefulShutdownPostponeCondition(nodeName, ReasonOnStart, StatusTrue)
+	return patchGracefulShutdownPostponeCondition(nodeName, StatusTrue, ReasonOnStart)
 }
 
 func (g *gracefulShutdownPostpone) SetPodsArePresent(nodeName string) error {
-	return patchGracefulShutdownPostponeCondition(nodeName, ReasonPodsArePresent, StatusTrue)
+	return patchGracefulShutdownPostponeCondition(nodeName, StatusTrue, ReasonPodsArePresent)
 }
 
 func (g *gracefulShutdownPostpone) UnsetOnUnlock(nodeName string) error {
-	return patchGracefulShutdownPostponeCondition(nodeName, ReasonOnUnlock, StatusFalse)
+	return patchGracefulShutdownPostponeCondition(nodeName, StatusFalse, ReasonOnUnlock)
 }
 
 // patchGracefulShutdownPostponeCondition updates GracefulShutdownPostpone condition.
