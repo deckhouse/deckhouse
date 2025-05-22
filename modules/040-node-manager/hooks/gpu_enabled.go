@@ -86,7 +86,7 @@ func setGPULabel(input *go_hook.HookInput, dc dependency.Container) error {
 		if gpuSharing == "" {
 			continue
 		}
-		input.Logger.Info("Processing nodegroup %s", ngName)
+		input.Logger.Info("Processing GPU nodegroup %s", ngName)
 
 		kubeClient := dc.MustGetK8sClient()
 
