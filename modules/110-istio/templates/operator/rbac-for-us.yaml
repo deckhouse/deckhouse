@@ -5,6 +5,61 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   name: operator
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+# ---
+# apiVersion: rbac.authorization.k8s.io/v1
+# kind: ClusterRole
+# metadata:
+#   name: sail-operator-extra-permissions
+#   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+# rules:
+# - apiGroups:
+#   - multicluster.x-k8s.io
+#   resources:
+#   - serviceexports
+#   - serviceimports
+#   verbs:
+#   - get
+#   - watch
+#   - list
+#   - create
+#   - delete
+# - apiGroups:
+#   - networking.k8s.io
+#   resources:
+#   - ingresses
+#   - ingressclasses
+#   - ingresses/status
+#   verbs:
+#   - get
+#   - list
+#   - watch
+#   - create
+#   - update
+#   - patch
+#   - delete
+#   - deletecollection
+# - apiGroups:
+#   - ""
+#   resources:
+#   - replicationcontrollers
+#   verbs:
+#   - get
+#   - list
+#   - watch
+# - apiGroups:
+#   - networking.x-k8s.io
+#   resources:
+#   - gateways
+#   verbs:
+#   - get
+#   - watch
+#   - list
+# - apiGroups:
+#   - coordination.k8s.io
+#   resources:
+#   - leases
+#   verbs:
+#   - patch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -12,6 +67,90 @@ metadata:
   name: d8:istio:operator
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
+  - apiGroups:
+    - multicluster.x-k8s.io
+    resources:
+    - serviceexports
+    - serviceimports
+    verbs:
+    - get
+    - watch
+    - list
+    - create
+    - delete
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses", "ingressclasses", "ingresses/status"]
+    verbs: ["*"]
+  - apiGroups:
+    - ""
+    resources:
+    - replicationcontrollers
+    verbs:
+    - get
+    - list
+    - watch
+  - apiGroups:
+    - networking.x-k8s.io
+    resources:
+    - gateways
+    verbs:
+    - get
+    - watch
+    - list
+  - apiGroups:
+    - coordination.k8s.io
+    resources:
+    - leases
+    verbs:
+    - patch
+  - apiGroups: ["config.istio.io", "security.istio.io", "networking.istio.io", "authentication.istio.io", "rbac.istio.io", "telemetry.istio.io", "extensions.istio.io"]
+    verbs: ["get", "watch", "list"]
+    resources: ["*"]
+  - apiGroups: ["networking.istio.io"]
+    verbs: [ "get", "watch", "list", "update", "patch", "create", "delete" ]
+    resources: [ "workloadentries" ]
+  - apiGroups: ["networking.istio.io"]
+    verbs: [ "get", "watch", "list", "update", "patch", "create", "delete" ]
+    resources: [ "workloadentries/status",  "serviceentries/status" ]
+  - apiGroups: ["security.istio.io"]
+    verbs: [ "get", "watch", "list", "update", "patch", "create", "delete" ]
+    resources: [ "authorizationpolicies/status" ]
+  - apiGroups: [""]
+    verbs: [ "get", "watch", "list", "update", "patch", "create", "delete" ]
+    resources: [ "services/status" ]
+  - apiGroups: ["apiextensions.k8s.io"]
+    resources: ["customresourcedefinitions"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods", "nodes", "services", "namespaces", "endpoints"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["discovery.k8s.io"]
+    resources: ["endpointslices"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["authentication.k8s.io"]
+    resources: ["tokenreviews"]
+    verbs: ["create"]
+  - apiGroups: ["authorization.k8s.io"]
+    resources: ["subjectaccessreviews"]
+    verbs: ["create"]
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["*"]
+    verbs: ["get", "watch", "list"]
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources:
+    - backendtlspolicies/status
+    - gatewayclasses/status
+    - gateways/status
+    - grpcroutes/status
+    - httproutes/status
+    - referencegrants/status
+    - tcproutes/status
+    - tlsroutes/status
+    - udproutes/status
+    verbs: ["update", "patch"]
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["gatewayclasses"]
+    verbs: ["create", "update", "patch", "delete"]
   # istio groups
   - apiGroups:
       - install.istio.io
@@ -27,6 +166,147 @@ rules:
       - patch
       - delete
       - deletecollection
+  - apiGroups: 
+      - sailoperator.io
+    resources: 
+      - istiocnis
+      - ztunnels
+      - istiorevisions
+      - istiorevisiontags
+      - istios
+    verbs: 
+      - list
+      - watch
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istiorevisions
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istiorevisions/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istiorevisions/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istiorevisiontags
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istiorevisiontags/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istiorevisiontags/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istiocnis
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istiocnis/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istiocnis/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istios
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istios/finalizers
+    verbs:
+     - update
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istios/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - remoteistios
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - remoteistios/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - remoteistios/status
+    verbs:
+      - get
+      - patch
+      - update
   - apiGroups:
       - networking.istio.io
     resources:
@@ -165,6 +445,7 @@ rules:
       - roles
       - rolebindings
     verbs:
+      - create
       - get
       - list
       - watch
@@ -176,6 +457,13 @@ rules:
       - get
       - create
       - update
+  - apiGroups:
+      - ""
+    resources:
+      - resourcequotas
+    verbs:
+      - list
+      - watch
   - apiGroups:
       - ""
     resources:
@@ -213,3 +501,17 @@ roleRef:
   kind: ClusterRole
   name: d8:istio:operator
   apiGroup: rbac.authorization.k8s.io
+# ---
+# kind: ClusterRoleBinding
+# apiVersion: rbac.authorization.k8s.io/v1
+# metadata:
+#   name: sail-operator-extra
+#   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+# subjects:
+#   - kind: ServiceAccount
+#     name: operator
+#     namespace: d8-{{ .Chart.Name }}
+# roleRef:
+#   kind: ClusterRole
+#   name: sail-operator-extra-permissions
+#   apiGroup: rbac.authorization.k8s.io

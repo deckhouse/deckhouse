@@ -44,6 +44,10 @@ type IstioOperatorCrdInfo struct {
 func applyIstioOperatorFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var iop crd.IstioOperator
 
+	if obj == nil {
+		return nil, nil // Skip if CRD isn't available
+	}
+
 	err := sdk.FromUnstructured(obj, &iop)
 	if err != nil {
 		return nil, err
