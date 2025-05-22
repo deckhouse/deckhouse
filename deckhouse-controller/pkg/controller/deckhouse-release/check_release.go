@@ -28,6 +28,7 @@ import (
 	"path"
 	"regexp"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -55,6 +56,7 @@ import (
 const (
 	metricUpdatingFailedGroup = "d8_updating_is_failed"
 	serviceName               = "check-release"
+	ltsChannelName            = "lts"
 )
 
 func (r *deckhouseReleaseReconciler) checkDeckhouseReleaseLoop(ctx context.Context) {
@@ -254,7 +256,7 @@ func (f *DeckhouseReleaseFetcher) fetchDeckhouseRelease(ctx context.Context) err
 	// sort releases before
 	sort.Sort(releaseUpdater.ByVersion[*v1alpha1.DeckhouseRelease](releasesInCluster))
 
-	lastCreatedMeta, err := f.ensureReleases(ctx, imageInfo.Metadata, releaseForUpdate, releasesInCluster, newSemver)
+	lastCreatedMeta, err := f.ensureReleases(ctx, imageInfo.Metadata, f.releaseChannel, releaseForUpdate, releasesInCluster, newSemver)
 	if err != nil {
 		return fmt.Errorf("create releases: %w", err)
 	}
@@ -428,6 +430,7 @@ func (f *DeckhouseReleaseFetcher) restoreCurrentDeployedRelease(ctx context.Cont
 func (f *DeckhouseReleaseFetcher) ensureReleases(
 	ctx context.Context,
 	releaseMetadata *ReleaseMetadata,
+	releaseChannel string,
 	releaseForUpdate *v1alpha1.DeckhouseRelease,
 	releasesInCluster []*v1alpha1.DeckhouseRelease,
 	newSemver *semver.Version) (*ReleaseMetadata, error) {
@@ -438,6 +441,17 @@ func (f *DeckhouseReleaseFetcher) ensureReleases(
 		notificationShiftTime *metav1.Time
 	)
 
+	// if release channel is LTS - create release from channel
+	if strings.EqualFold(releaseChannel, ltsChannelName) {
+		err := f.createRelease(ctx, releaseMetadata, notificationShiftTime, "lts channel")
+		if err != nil {
+			return nil, fmt.Errorf("create release %s: %w", releaseMetadata.Version, err)
+		}
+
+		return releaseMetadata, nil
+	}
+
+	// if no releases in cluster - create from channel
 	if len(releasesInCluster) == 0 {
 		err := f.createRelease(ctx, releaseMetadata, notificationShiftTime, "no releases in cluster")
 		if err != nil {
