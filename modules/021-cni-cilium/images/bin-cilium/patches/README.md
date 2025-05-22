@@ -47,3 +47,6 @@ While we were previously satisfied with the older behavior, the agent is now una
 
 Please remove this change after `CES` becomes Stable. <https://github.com/cilium/cilium/issues/31904#issuecomment-2647858564>
 
+## 009-wireguard-port.patch
+
+Changing the hardcoded wireguard port from 51871 to 4287 (a port within our range).
