@@ -58,10 +58,6 @@ entries:
                         ru: Обзор
                       url: /admin/configuration/access/authentication.html
                     - title:
-                        en: Accessing the Kubernetes API via load balancer
-                        ru: Доступ к Kubernetes API через балансировщик трафика
-                      url: /admin/access/access-k8s-api-loadbalancer.html
-                    - title:
                         en: Integration with external authentication providers
                         ru: Интеграция с внешними провайдерами аутентификации
                       url: /admin/access/external-authentication-providers.html
@@ -69,6 +65,10 @@ entries:
                         en: Local authentication
                         ru: Локальная аутентификация
                       url: /admin/access/local-authentication.html
+                    - title:
+                        en: Accessing the Kubernetes API via load balancer
+                        ru: Доступ к Kubernetes API через балансировщик трафика
+                      url: /admin/access/access-k8s-api-loadbalancer.html
                 - title:
                     en: Authorization
                     ru: Авторизация

@@ -107,7 +107,7 @@ DKP поддерживает подключение следующих внеш�
 
 #### Keycloak
 
-После выбора `realm` для настройки, добавления пользователя в [Users](https://www.keycloak.org/docs/latest/server_admin/index.html#assembly-managing-users_server_administration_guide) и создания клиента в разделе [Clients](https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide) с включенной [аутентификацией](https://www.keycloak.org/docs/latest/server_admin/index.html#capability-config), которая необходима для генерации `clientSecret`, выполните следующие шаги:
+В процессе настройки Keycloak выберите подходящий `realm`, добавьте пользователя в [Users](https://www.keycloak.org/docs/latest/server_admin/index.html#assembly-managing-users_server_administration_guide) и создайте клиент в разделе [Clients](https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide) с включённой [аутентификацией](https://www.keycloak.org/docs/latest/server_admin/index.html#capability-config), необходимой для генерации `clientSecret`. Затем выполните следующие шаги:
 
 - Создайте в разделе [Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes) `scope` с именем `groups`, и назначьте ему предопределенный маппинг `groups` («Client scopes» → «Client scope details» → «Mappers» → «Add predefined mappers»).
 - В созданном ранее клиенте добавьте данный `scope` [во вкладке Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) («Clients → «Client details» → «Client Scopes» → «Add client scope»).
@@ -186,7 +186,7 @@ spec:
     getUserInfo: true
 ```
 
-Пример для Prometheus:
+После подключения провайдера Okta можно задать список групп, пользователи из которых получат доступ к Grafana в составе модуля `prometheus-monitoring`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
