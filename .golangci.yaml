@@ -21,6 +21,7 @@ linters:
     - unconvert
     - unparam
     - whitespace
+    - usestdlibvars
   settings:
     errcheck:
       exclude-functions:
