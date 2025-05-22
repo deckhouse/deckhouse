@@ -238,11 +238,22 @@ func handle(input *go_hook.HookInput) error {
 		return fmt.Errorf("cannot compute inputs hash: %w", err)
 	}
 
-	err = values.State.process(input.Logger, input.PatchCollector, inputs)
+	// Initialize RegistrySecret before processing
+	values.State.RegistrySecret.FromSecret(inputs.RegistrySecret)
+
+	// Process the state and update internal values
+	err = values.State.process(input.Logger, inputs)
 	if err != nil {
 		return fmt.Errorf("cannot process: %w", err)
 	}
-
 	moduleValues.Set(values)
+
+	// Generate expected RegistrySecret. Apply patch to update
+	newRegistrySecret := values.State.RegistrySecret.ToSecret()
+	if !newRegistrySecret.Equal(&inputs.RegistrySecret) {
+		input.PatchCollector.PatchWithMerge(
+			map[string]interface{}{"data": newRegistrySecret.ToBase64SecretData()},
+			"v1", "Secret", "d8-system", "deckhouse-registry")
+	}
 	return nil
 }

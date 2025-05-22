@@ -38,6 +38,7 @@ type State struct {
 	IngressEnabled  bool                 `json:"ingress_enabled,omitempty"`
 	RegistryService registryservice.Mode `json:"registry_service,omitempty"`
 	Bashible        bashible.State       `json:"bashible,omitempty"`
+	RegistrySecret  registrysecret.State `json:"-"`
 
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
@@ -97,7 +98,7 @@ func (state *State) clearConditions() {
 	state.Conditions = nil
 }
 
-func (state *State) process(log go_hook.Logger, patchCollector go_hook.PatchCollector, inputs Inputs) error {
+func (state *State) process(log go_hook.Logger, inputs Inputs) error {
 	switch inputs.Params.Mode {
 	case "":
 		inputs.Params.Mode = registry_const.ModeUnmanaged
@@ -119,19 +120,19 @@ func (state *State) process(log go_hook.Logger, patchCollector go_hook.PatchColl
 
 	switch state.TargetMode {
 	case registry_const.ModeLocal:
-		return state.transitionToLocal(log, patchCollector, inputs)
+		return state.transitionToLocal(log, inputs)
 	case registry_const.ModeProxy:
-		return state.transitionToProxy(log, patchCollector, inputs)
+		return state.transitionToProxy(log, inputs)
 	case registry_const.ModeDirect:
-		return state.transitionToDirect(log, patchCollector, inputs)
+		return state.transitionToDirect(log, inputs)
 	case registry_const.ModeUnmanaged:
-		return state.transitionToUnmanaged(log, patchCollector, inputs)
+		return state.transitionToUnmanaged(log, inputs)
 	default:
 		return fmt.Errorf("unsupported mode: %v", state.TargetMode)
 	}
 }
 
-func (state *State) transitionToLocal(log go_hook.Logger, patchCollector go_hook.PatchCollector, inputs Inputs) error {
+func (state *State) transitionToLocal(log go_hook.Logger, inputs Inputs) error {
 	if state.ActualParams.Mode == registry_const.ModeProxy {
 		return ErrTransitionNotSupported{
 			From: state.ActualParams.Mode,
@@ -242,7 +243,7 @@ func (state *State) transitionToLocal(log go_hook.Logger, patchCollector go_hook
 	state.RegistryService = registryservice.ModeNodeServices
 
 	// Deckhouse-registry secret
-	processedRegistrySecret, err := registrysecret.Process(registrySecretParams, patchCollector)
+	processedRegistrySecret, err := state.RegistrySecret.Process(registrySecretParams)
 	if err != nil {
 		return err
 	}
@@ -276,7 +277,7 @@ func (state *State) transitionToLocal(log go_hook.Logger, patchCollector go_hook
 	return nil
 }
 
-func (state *State) transitionToProxy(log go_hook.Logger, patchCollector go_hook.PatchCollector, inputs Inputs) error {
+func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 	if state.ActualParams.Mode == registry_const.ModeLocal {
 		return ErrTransitionNotSupported{
 			From: state.ActualParams.Mode,
@@ -397,7 +398,7 @@ func (state *State) transitionToProxy(log go_hook.Logger, patchCollector go_hook
 	state.RegistryService = registryservice.ModeNodeServices
 
 	// Deckhouse-registry secret
-	processedRegistrySecret, err := registrysecret.Process(registrySecretParams, patchCollector)
+	processedRegistrySecret, err := state.RegistrySecret.Process(registrySecretParams)
 	if err != nil {
 		return err
 	}
@@ -441,7 +442,7 @@ func (state *State) transitionToProxy(log go_hook.Logger, patchCollector go_hook
 	return nil
 }
 
-func (state *State) transitionToDirect(log go_hook.Logger, patchCollector go_hook.PatchCollector, inputs Inputs) error {
+func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error {
 	// PKI
 	pkiResult, err := state.PKI.Process(log)
 	if err != nil {
@@ -546,7 +547,7 @@ func (state *State) transitionToDirect(log go_hook.Logger, patchCollector go_hoo
 	state.RegistryService = registryservice.ModeInClusterProxy
 
 	// Deckhouse-registry secret
-	processedRegistrySecret, err := registrysecret.Process(registrySecretParams, patchCollector)
+	processedRegistrySecret, err := state.RegistrySecret.Process(registrySecretParams)
 	if err != nil {
 		return err
 	}
@@ -587,7 +588,7 @@ func (state *State) transitionToDirect(log go_hook.Logger, patchCollector go_hoo
 	return nil
 }
 
-func (state *State) transitionToUnmanaged(log go_hook.Logger, patchCollector go_hook.PatchCollector, inputs Inputs) error {
+func (state *State) transitionToUnmanaged(log go_hook.Logger, inputs Inputs) error {
 	_ = log
 	if state.ActualParams.Mode != registry_const.ModeUnmanaged &&
 		state.ActualParams.Mode != registry_const.ModeProxy &&
@@ -640,7 +641,7 @@ func (state *State) transitionToUnmanaged(log go_hook.Logger, patchCollector go_
 			},
 		}
 
-		processed, err := registrysecret.Process(registrySecretParams, patchCollector)
+		processed, err := state.RegistrySecret.Process(registrySecretParams)
 		if err != nil {
 			return err
 		}

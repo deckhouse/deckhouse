@@ -21,12 +21,11 @@ import (
 )
 
 type Config struct {
-	Address        string
-	Path           string
-	Scheme         string
-	CA             string
-	ImagesRegistry string
-	DockerConfig   []byte
+	Address      string
+	Path         string
+	Scheme       string
+	CA           string
+	DockerConfig []byte
 }
 
 func (cfg *Config) Equal(other *Config) bool {
@@ -37,18 +36,16 @@ func (cfg *Config) Equal(other *Config) bool {
 		cfg.Path == other.Path &&
 		cfg.Scheme == other.Scheme &&
 		cfg.CA == other.CA &&
-		cfg.ImagesRegistry == other.ImagesRegistry &&
 		string(cfg.DockerConfig) == string(other.DockerConfig)
 }
 
 func (cfg *Config) FromSecretData(data map[string][]byte) {
 	*cfg = Config{
-		Address:        string(data["address"]),
-		Path:           string(data["path"]),
-		Scheme:         string(data["scheme"]),
-		CA:             string(data["ca"]),
-		ImagesRegistry: string(data["imagesRegistry"]),
-		DockerConfig:   data[".dockerconfigjson"],
+		Address:      string(data["address"]),
+		Path:         string(data["path"]),
+		Scheme:       string(data["scheme"]),
+		CA:           string(data["ca"]),
+		DockerConfig: data[".dockerconfigjson"],
 	}
 }
 
@@ -58,7 +55,6 @@ func (cfg *Config) ToBase64SecretData() map[string]string {
 		"path":              base64.StdEncoding.EncodeToString([]byte(cfg.Path)),
 		"scheme":            base64.StdEncoding.EncodeToString([]byte(cfg.Scheme)),
 		"ca":                base64.StdEncoding.EncodeToString([]byte(cfg.CA)),
-		"imagesRegistry":    base64.StdEncoding.EncodeToString([]byte(cfg.ImagesRegistry)),
 		".dockerconfigjson": base64.StdEncoding.EncodeToString(cfg.DockerConfig),
 	}
 }

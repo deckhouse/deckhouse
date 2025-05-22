@@ -10,8 +10,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
-
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
 	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models/deckhouse-registry"
@@ -38,20 +36,28 @@ type UnmanagedModeParams struct {
 	Password       string
 }
 
-func Process(params Params, patchCollector go_hook.PatchCollector) (bool, error) {
+type State struct {
+	Config deckhouse_registry.Config `json:"-"`
+}
+
+func (s *State) FromSecret(secretConfig deckhouse_registry.Config) {
+	s.Config = secretConfig
+}
+
+func (s *State) ToSecret() deckhouse_registry.Config {
+	return s.Config
+}
+
+func (s *State) Process(params Params) (bool, error) {
 	newSecret, err := buildRegistrySecret(params)
 	if err != nil {
 		return false, fmt.Errorf("cannot build deckhouse-registry secret: %w", err)
 	}
+	s.Config = newSecret
 
 	if newSecret.Equal(&params.RegistrySecret) {
 		return true, nil
 	}
-
-	patch := map[string]interface{}{
-		"data": newSecret.ToBase64SecretData(),
-	}
-	patchCollector.PatchWithMerge(patch, "v1", "Secret", "d8-system", "deckhouse-registry")
 	return false, nil
 }
 
@@ -73,12 +79,11 @@ func buildManagedRegistrySecret(params *ManagedModeParams) (deckhouse_registry.C
 	}
 
 	return deckhouse_registry.Config{
-		Address:        registry_const.Host,
-		Path:           registry_const.Path,
-		Scheme:         registry_const.Scheme,
-		ImagesRegistry: registry_const.HostWithPath,
-		CA:             params.CA,
-		DockerConfig:   dockerCfg,
+		Address:      registry_const.Host,
+		Path:         registry_const.Path,
+		Scheme:       registry_const.Scheme,
+		CA:           params.CA,
+		DockerConfig: dockerCfg,
 	}, nil
 }
 
@@ -91,11 +96,10 @@ func buildUnmanagedRegistrySecret(params *UnmanagedModeParams) (deckhouse_regist
 	}
 
 	return deckhouse_registry.Config{
-		Address:        address,
-		Path:           path,
-		Scheme:         strings.ToLower(params.Scheme),
-		CA:             params.CA,
-		ImagesRegistry: params.ImagesRegistry,
-		DockerConfig:   dockerCfg,
+		Address:      address,
+		Path:         path,
+		Scheme:       strings.ToLower(params.Scheme),
+		CA:           params.CA,
+		DockerConfig: dockerCfg,
 	}, nil
 }

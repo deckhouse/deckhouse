@@ -7,6 +7,7 @@ package bashible
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/helpers"
@@ -125,22 +126,46 @@ func (state *State) Stop(inputs Inputs) Result {
 	if inputs.IsSecretExist {
 		return Result{
 			Ready:   false,
-			Message: "Bashible secret exists. Deleting...",
+			Message: "Bashible Secret exists. Deleting now...",
 		}
 	}
 
-	var msg strings.Builder
-	msg.WriteString("Status:\n")
-	ready := true
+	unreadyNodes := []string{}
 	for nodeName, nodeVersion := range inputs.NodeStatus {
-		nodeReady := nodeVersion == registry_const.UnknownVersion
-		msg.WriteString(fmt.Sprintf(" - node: %q, ready: %t\n", nodeName, nodeReady))
-		ready = ready && nodeReady
+		if nodeVersion != registry_const.UnknownVersion {
+			unreadyNodes = append(unreadyNodes, nodeName)
+		}
+	}
+
+	if len(unreadyNodes) == 0 {
+		return Result{
+			Ready: true,
+			Message: fmt.Sprintf("All %d node(s) have been updated with Unmanaged configuration.",
+				len(inputs.NodeStatus),
+			),
+		}
+	}
+
+	slices.Sort(unreadyNodes)
+
+	builder := new(strings.Builder)
+	fmt.Fprintf(builder, "%d/%d node(s) are ready with Unmanaged configuration.\nWaiting for the following node(s):\n",
+		len(inputs.NodeStatus)-len(unreadyNodes), len(inputs.NodeStatus),
+	)
+
+	const maxShown = 10
+	for i, name := range unreadyNodes {
+		if i == maxShown {
+			fmt.Fprintf(builder, "\t...and %d more\n", len(unreadyNodes)-maxShown)
+			break
+		}
+		version := inputs.NodeStatus[name]
+		fmt.Fprintf(builder, "\t%d. %q (currently running version \"%s\")\n", i+1, name, trimWithEllipsis(version))
 	}
 
 	return Result{
-		Ready:   ready,
-		Message: msg.String(),
+		Ready:   false,
+		Message: builder.String(),
 	}
 }
 
@@ -152,29 +177,53 @@ func (state *State) Process(params Params, inputs Inputs, withActual bool) (Resu
 	if err := state.Config.process(params, inputs, withActual); err != nil {
 		return Result{
 			Ready:   false,
-			Message: "Configuration processing for Bashible failed.",
+			Message: "Failed to process Bashible configuration.",
 		}, fmt.Errorf("cannot process config: %w", err)
 	}
 
 	if !inputs.IsSecretExist {
 		return Result{
 			Ready:   false,
-			Message: "Bashible secret is not deployed. Proceeding...",
+			Message: "Creating Bashible Secret...",
 		}, nil
 	}
 
-	var msg strings.Builder
-	msg.WriteString("Status:\n")
-	ready := true
+	unreadyNodes := []string{}
 	for nodeName, nodeVersion := range inputs.NodeStatus {
-		nodeReady := nodeVersion == state.Config.Config.Version
-		msg.WriteString(fmt.Sprintf(" - node: %q, ready: %t\n", nodeName, nodeReady))
-		ready = ready && nodeReady
+		if nodeVersion != state.Config.Config.Version {
+			unreadyNodes = append(unreadyNodes, nodeName)
+		}
+	}
+
+	if len(unreadyNodes) == 0 {
+		return Result{
+			Ready: true,
+			Message: fmt.Sprintf("All %d node(s) have been updated to registry version: %s.",
+				len(inputs.NodeStatus), trimWithEllipsis(state.Config.Config.Version),
+			),
+		}, nil
+	}
+
+	slices.Sort(unreadyNodes)
+
+	builder := new(strings.Builder)
+	fmt.Fprintf(builder, "%d/%d node(s) have been updated to registry version \"%s\".\nWaiting for the following node(s):\n",
+		len(inputs.NodeStatus)-len(unreadyNodes), len(inputs.NodeStatus), trimWithEllipsis(state.Config.Config.Version),
+	)
+
+	const maxShown = 10
+	for i, name := range unreadyNodes {
+		if i == maxShown {
+			fmt.Fprintf(builder, "\t...and %d more\n", len(unreadyNodes)-maxShown)
+			break
+		}
+		version := inputs.NodeStatus[name]
+		fmt.Fprintf(builder, "\t%d. %q (currently running version \"%s\")\n", i+1, name, trimWithEllipsis(version))
 	}
 
 	return Result{
-		Ready:   ready,
-		Message: msg.String(),
+		Ready:   false,
+		Message: builder.String(),
 	}, nil
 }
 
@@ -430,4 +479,13 @@ func singleCA(s string) []string {
 		return nil
 	}
 	return []string{s}
+}
+
+func trimWithEllipsis(s string) string {
+	const limit = 15
+	runes := []rune(s)
+	if len(runes) <= limit {
+		return s
+	}
+	return string(slices.Clone(runes[:limit])) + "…"
 }
