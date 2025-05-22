@@ -11,7 +11,7 @@ lang: ru
 1. Включите публикацию Kubernetes API. Для этого установите параметр `publishAPI.enabled: true` в настройках модуля `user-authn` (moduleConfig `user-authn`) или с помощью веб-интерфейса администратора Deckhouse.
 
    Пример конфигурации модуля:
-   
+
    ```yaml
    spec:
      enabled: true
