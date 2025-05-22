@@ -558,35 +558,6 @@ global:
 			},
 		}, nil)
 
-		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "v1.31.0").Then(&fake.FakeImage{
-			ManifestStub: ManifestStub,
-			LayersStub: func() ([]v1.Layer, error) {
-				return []v1.Layer{
-					&fakeLayer{},
-					&fakeLayer{FilesContent: map[string]string{
-						"version.json": `{"version":"v1.31.0"}`,
-					}},
-				}, nil
-			},
-		}, nil)
-
-		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "v1.37.0").Then(&fake.FakeImage{
-			ManifestStub: ManifestStub,
-			LayersStub: func() ([]v1.Layer, error) {
-				return []v1.Layer{
-					&fakeLayer{},
-					&fakeLayer{FilesContent: map[string]string{
-						"version.json": `{"version":"v1.37.0"}`,
-					}},
-				}, nil
-			},
-		}, nil)
-
-		dependency.TestDC.CRClient.ListTagsMock.Return([]string{
-			"v1.31.0",
-			"v1.37.0",
-		}, nil)
-
 		suite.setupController("lts-release-channel.yaml", initValues, &v1alpha1.ModuleUpdatePolicySpec{
 			Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
 				Mode: v1alpha1.UpdateModeAuto.String(),
