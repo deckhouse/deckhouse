@@ -402,6 +402,8 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			err = r.fetchModuleReleases(ctx, md, moduleName, &meta, source, policy.Name, opts)
 			if err != nil {
 				r.logger.Error("fetch module releases", log.Err(err))
+				// emptify checksumn to try redownload module
+				meta.Checksum = ""
 			}
 		}
 
