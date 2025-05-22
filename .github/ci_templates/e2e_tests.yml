@@ -692,7 +692,7 @@ check_e2e_labels:
 {!{ if not (has $commanderProviders $provider) }!}
     - name: Save dhctl state
       id: save_failed_cluster_state
-      if: ${{ failure() }}
+      if: ${{ !success() }}
       uses: {!{ index (ds "actions") "actions/upload-artifact" }!}
       with:
         name: failed_cluster_state_{!{ printf "%s_%s_%s" $ctx.provider $ctx.cri $ctx.kubernetesVersionSlug }!}
