@@ -419,7 +419,7 @@ func (ng nodeGroup) CRIType() string {
 
 func (ng nodeGroup) GPUSharingType() string {
 	if gpu, ok := ng["gpu"]; ok {
-		if typ, ok := gpu.(map[string]interface{})["Sharing"]; ok {
+		if typ, ok := gpu.(map[string]interface{})["sharing"]; ok {
 			return typ.(string)
 		}
 	}
