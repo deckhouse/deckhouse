@@ -23,6 +23,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ettle/strcase"
+	"github.com/flant/shell-operator/pkg/metric"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -62,19 +64,32 @@ const (
 	cacheSyncTimeout        = 3 * time.Minute
 
 	maxModulesLimit = 1500
+
+	metricUpdatingModuleIsNotValid     = "d8_module_updating_module_is_not_valid"
+	metricUpdatingFailedBrokenSequence = "d8_module_updating_broken_sequence"
+	metricModuleUpdatingGroup          = "d8_module_updating_group"
+	serviceName                        = "module-source-controller"
 )
 
 var ErrSettingsNotChanged = errors.New("settings not changed")
 
-func RegisterController(runtimeManager manager.Manager, mm moduleManager, dc dependency.Container, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, logger *log.Logger) error {
+func RegisterController(
+	runtimeManager manager.Manager,
+	mm moduleManager,
+	dc dependency.Container,
+	metricStorage metric.Storage,
+	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer,
+	logger *log.Logger,
+) error {
 	r := &reconciler{
 		init:                 new(sync.WaitGroup),
 		client:               runtimeManager.GetClient(),
+		dc:                   dc,
 		logger:               logger,
 		moduleManager:        mm,
+		metricStorage:        metricStorage,
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		embeddedPolicy:       embeddedPolicy,
-		dependencyContainer:  dc,
 	}
 
 	r.init.Add(1)
@@ -131,10 +146,13 @@ func RegisterController(runtimeManager manager.Manager, mm moduleManager, dc dep
 }
 
 type reconciler struct {
-	init                 *sync.WaitGroup
-	client               client.Client
-	logger               *log.Logger
-	dependencyContainer  dependency.Container
+	init   *sync.WaitGroup
+	client client.Client
+	dc     dependency.Container
+	logger *log.Logger
+
+	metricStorage metric.Storage
+
 	embeddedPolicy       *helpers.ModuleUpdatePolicySpecContainer
 	moduleManager        moduleManager
 	downloadedModulesDir string
@@ -198,7 +216,7 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 	opts := utils.GenerateRegistryOptionsFromModuleSource(source, r.clusterUUID, r.logger)
 
 	// create a registry client
-	registryClient, err := r.dependencyContainer.GetRegistryClient(source.Spec.Registry.Repo, opts...)
+	registryClient, err := r.dc.GetRegistryClient(source.Spec.Registry.Repo, opts...)
 	if err != nil {
 		r.logger.Error("failed to get registry client for the module source", slog.String("source_name", source.Name), log.Err(err))
 		if uerr := r.updateModuleSourceStatusMessage(ctx, source, err.Error()); uerr != nil {
@@ -266,6 +284,7 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 		r.logger.Error("failed to process modules for the module source", slog.String("source_name", source.Name), log.Err(err))
 		return ctrl.Result{}, err
 	}
+
 	r.logger.Debug("module source reconciled", slog.String("source_name", source.Name))
 
 	// everything is ok, check source on the other iterations
@@ -276,11 +295,12 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 	ctx, span := otel.Tracer(controllerName).Start(ctx, "processModules")
 	defer span.End()
 
-	md := downloader.NewModuleDownloader(r.dependencyContainer, r.downloadedModulesDir, source, opts)
+	md := downloader.NewModuleDownloader(r.dc, r.downloadedModulesDir, source, opts)
 	sort.Strings(pulledModules)
 
 	availableModules := make([]v1alpha1.AvailableModule, 0)
 	var pullErrorsExist bool
+
 	for _, moduleName := range pulledModules {
 		if moduleName == "modules" || len(moduleName) > 64 {
 			r.logger.Warn("the module has a forbidden name, skip it", slog.String("name", moduleName))
@@ -291,6 +311,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			r.logger.Warn("the module has invalid name: must coply with RFC 1123 subdomain format, skip it", slog.String("name", moduleName))
 			continue
 		}
+
 		availableModule := v1alpha1.AvailableModule{Name: moduleName}
 		for _, available := range source.Status.AvailableModules {
 			if available.Name == moduleName {
@@ -344,23 +365,38 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			cachedChecksum = ""
 		}
 
+		metricModuleGroup := metricModuleUpdatingGroup + "_" + strcase.ToSnake(moduleName) + "_" + strcase.ToSnake(source.GetName())
+		r.metricStorage.Grouped().ExpireGroupMetrics(metricModuleGroup)
+
 		r.logger.Debug(
 			"download meta from release channel for module from module source",
 			slog.String("release channel", policy.Spec.ReleaseChannel),
 			slog.String("name", moduleName),
 			slog.String("source_name", source.Name),
 		)
+
 		// download module metadata from the specified release channel
 		r.logger.Debug("download meta ", slog.String("release_channel", policy.Spec.ReleaseChannel), slog.String("module_name", moduleName), slog.String("module_source", source.Name))
+
 		meta, err := md.DownloadMetadataFromReleaseChannel(ctx, moduleName, policy.Spec.ReleaseChannel, cachedChecksum)
 		if err != nil {
 			if module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) && module.Properties.Source == source.Name {
 				r.logger.Warn("failed to download module", slog.String("name", moduleName), log.Err(err))
 				availableModule.PullError = err.Error()
 				pullErrorsExist = true
+
+				metricLabels := map[string]string{
+					"module":   moduleName,
+					"version":  availableModule.Version,
+					"registry": source.Spec.Registry.Repo,
+				}
+
+				r.metricStorage.Grouped().GaugeSet(metricModuleGroup, metricUpdatingModuleIsNotValid, 1, metricLabels)
 			}
+
 			availableModule.Version = "unknown"
 			availableModules = append(availableModules, availableModule)
+
 			continue
 		}
 
@@ -377,11 +413,12 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 				return fmt.Errorf("update the '%s' module: %w", moduleName, err)
 			}
 
-			r.logger.Debug("ensure module release from the source",
-				slog.String("name", moduleName),
-				slog.String("source_name", source.Name))
-			if err = r.ensureModuleRelease(ctx, source.GetUID(), source.Name, moduleName, policy.Name, meta); err != nil {
-				return fmt.Errorf("ensure module release for the '%s' module: %w", moduleName, err)
+			err = r.fetchModuleReleases(ctx, md, moduleName, &meta, source, policy.Name, metricModuleGroup, opts)
+			if err != nil {
+				r.logger.Error("fetch module releases", log.Err(err))
+				availableModule.PullError = err.Error()
+				// wipe checksum to trigger meta downloading
+				meta.Checksum = ""
 			}
 		}
 
@@ -399,10 +436,11 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 	// update source status
 	err := ctrlutils.UpdateStatusWithRetry(ctx, r.client, source, func() error {
 		source.Status.Phase = v1alpha1.ModuleSourcePhaseActive
-		source.Status.SyncTime = metav1.NewTime(r.dependencyContainer.GetClock().Now().UTC())
+		source.Status.SyncTime = metav1.NewTime(r.dc.GetClock().Now().UTC())
 		source.Status.AvailableModules = availableModules
 		source.Status.ModulesCount = len(availableModules)
 		source.Status.Message = ""
+
 		if pullErrorsExist {
 			source.Status.Message = v1alpha1.ModuleSourceMessagePullErrors
 		}
@@ -414,7 +452,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 	}
 
 	// set finalizer
-	err = utils.Update[*v1alpha1.ModuleSource](ctx, r.client, source, func(source *v1alpha1.ModuleSource) bool {
+	err = utils.Update(ctx, r.client, source, func(source *v1alpha1.ModuleSource) bool {
 		if !controllerutil.ContainsFinalizer(source, v1alpha1.ModuleSourceFinalizerModuleExists) {
 			controllerutil.AddFinalizer(source, v1alpha1.ModuleSourceFinalizerModuleExists)
 
@@ -452,7 +490,7 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 
 			// prevent deletion if there are deployed releases
 			if len(releases.Items) > 0 {
-				err := utils.UpdateStatus[*v1alpha1.ModuleSource](ctx, r.client, source, func(source *v1alpha1.ModuleSource) bool {
+				err := utils.UpdateStatus(ctx, r.client, source, func(source *v1alpha1.ModuleSource) bool {
 					source.Status.Message = "The source contains at least 1 deployed release and cannot be deleted. Please delete target ModuleReleases manually to continue"
 					return true
 				})

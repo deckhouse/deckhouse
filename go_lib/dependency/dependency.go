@@ -266,6 +266,7 @@ type MockedContainer struct {
 	EtcdClient    *etcd.ClientMock
 	K8sClient     k8s.Client
 	CRClient      *cr.ClientMock
+	CRClientMap   map[string]cr.Client
 	VsphereClient *vsphere.ClientMock
 	clock         clockwork.FakeClock
 }
@@ -298,7 +299,13 @@ func (c *MockedContainer) MustGetK8sClient(options ...k8s.Option) k8s.Client {
 	return k
 }
 
-func (c *MockedContainer) GetRegistryClient(_ string, _ ...cr.Option) (cr.Client, error) {
+func (c *MockedContainer) GetRegistryClient(path string, _ ...cr.Option) (cr.Client, error) {
+	if len(c.CRClientMap) > 0 {
+		if client, ok := c.CRClientMap[path]; ok {
+			return client, nil
+		}
+	}
+
 	if c.CRClient != nil {
 		return c.CRClient, nil
 	}
@@ -356,6 +363,7 @@ func NewMockedContainer() *MockedContainer {
 		EtcdClient:    etcd.NewClientMock(ctrl),
 		K8sClient:     fake.NewFakeCluster(k8s.DefaultFakeClusterVersion).Client,
 		CRClient:      cr.NewClientMock(ctrl),
+		CRClientMap:   make(map[string]cr.Client),
 		VsphereClient: vsphere.NewClientMock(ctrl),
 	}
 }
