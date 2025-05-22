@@ -61,26 +61,29 @@ vm-route-forge-829wm                         1/1     Running   0             10m
 vm-route-forge-nq9xr                         1/1     Running   0             10m
 ```
 
-## Parameter description
+### Parameter description
 
-**Enable the module**
+The following are descriptions of the virtualization module parameters.
+
+#### Parameters for enabling/disabling the module
+
 The module state is controlled through the `.spec.enabled` field. Specify:
 
 - `true`: To enable the module.
 - `false`: To disable the module.
 
-**Configuration version**
+#### Configuration version
 
 The `.spec.version` parameter defines the version of the configuration schema. The parameter structure may change between versions. The current values are given in the settings section.
 
-**Deckhouse Virtualization Container Registry (DVCR)**
+#### Deckhouse Virtualization Container Registry (DVCR)
 
 The `.spec.settings.dvcr.storage` block configures a persistent volume for storing images:
 
 - `.spec.settings.dvcr.storage.persistentVolumeClaim.size`: Volume size (for example, `50G`). To expand the storage, increase the value of the parameter.
 - `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName`: StorageClass name (for example, `sds-replicated-thin-r1`).
 
-**Network settings**
+#### Network settings
 
 The `.spec.settings.virtualMachineCIDRs` block specifies subnets in CIDR format (for example, `10.66.10.0/24`). IP addresses for virtual machines are allocated from these ranges automatically or on request.
 
@@ -103,7 +106,7 @@ The subnets in the `.spec.settings.virtualMachineCIDRs` block must not overlap w
 It is forbidden to delete subnets if addresses from them have already been issued to virtual machines.
 {% endalert %}
 
-**Storage class settings for images**
+#### Storage class settings for images
 
 The storage class settings for images are defined in the `.spec.settings.virtualImages` parameter of the module settings.
 
@@ -125,7 +128,7 @@ Where:
 - `allowedStorageClassNames` (optional): A list of the allowed StorageClasses for creating a VirtualImage that can be explicitly specified in the resource specification.
 - `defaultStorageClassName` (optional): The StorageClass used by default when creating a VirtualImage if the `.spec.persistentVolumeClaim.storageClassName` parameter is not set.
 
-**Storage class settings for disks**
+#### Storage class settings for disks
 
 The storage class settings for disks are defined in the `.spec.settings.virtualDisks` parameter of the module settings.
 
