@@ -1,0 +1,5 @@
+linters-settings:
+  conversions:
+    exclude-rules:
+      description:
+        - /global-hooks/openapi/conversions/v2.yaml
