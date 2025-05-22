@@ -110,6 +110,10 @@ entries:
                     ru: Обзор
                   url: /admin/high-reliability-and-availability/
                 - title:
+                    en: Node configuration recommendations
+                    ru: Рекомендации по конфигурации узлов кластера
+                  url: /admin/high-reliability-and-availability/recommendations.html
+                - title:
                     en: Managing HA mode
                     ru: Управление режимом HA
                   url: /admin/high-reliability-and-availability/enable.html
@@ -481,7 +485,7 @@ entries:
             - title:
                 en: Backup and restore
                 ru: Резервное копирование и восстановление
-              url: /admin/configuration/backup/backup-and-restore.html  
+              url: /admin/configuration/backup/backup-and-restore.html
 # ------------- Using -------------
     - title:
         en: Using
