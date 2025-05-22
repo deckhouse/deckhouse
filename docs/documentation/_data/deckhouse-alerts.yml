@@ -3657,14 +3657,15 @@ alerts:
         The '{{ $labels.module }}' Module update has failed.
 
         Possible reasons:
-
-        - The next minor or patch version of the Module image is not available in the registry.
-        - The Module image is corrupted.
-
         Current version: {{ $labels.actual_version }}.
-        Failed version: {{ $labels.version }}.
+        Desired version: {{ $labels.version }}.
 
-        To resolve this issue, ensure that the next version of the Module image is available in the registry.
+        Attempt to download interim releases failed.
+
+        Possible reasons:
+         - The next minor or patch version of the Module image is not available in the registry.
+
+        To resolve this issue, ensure that the next version of the '{{ $labels.module }}' Module image between {{ $labels.actual_version }} and {{ $labels.version }} is available in the registry '{{ $labels.registry }}'.
       summary: |
         Module update has failed.
       severity: "4"
