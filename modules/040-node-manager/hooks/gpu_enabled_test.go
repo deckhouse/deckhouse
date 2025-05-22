@@ -80,7 +80,7 @@ spec:
 `
 )
 
-var _ = FDescribe("Modules :: nodeManager :: hooks :: gpu_enabled ::", func() {
+var _ = Describe("Modules :: nodeManager :: hooks :: gpu_enabled ::", func() {
 	f := HookExecutionConfigInit(`{}`, `{}`)
 	var nodeGroupResource = schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1", Resource: "nodegroups"}
 	f.RegisterCRD(nodeGroupResource.Group, nodeGroupResource.Version, "NodeGroup", false)
