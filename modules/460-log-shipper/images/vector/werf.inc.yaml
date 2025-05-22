@@ -6,7 +6,7 @@ import:
     add: /reloader
     to: /usr/bin/reloader
     before: install
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifcat
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
     add: /relocate
     to: /
     before: install
