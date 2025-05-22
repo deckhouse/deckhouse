@@ -73,7 +73,7 @@ spec:
         prometheus.io/port: "15020"
         prometheus.io/scrape: "true"
     spec:
-      serviceAccountName: {{ include "ztunnel.release-name" . }} ###TODO
+      serviceAccountName: ztunnel
       tolerations:
         - effect: NoSchedule
           operator: Exists
