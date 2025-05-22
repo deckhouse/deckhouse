@@ -237,7 +237,7 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 		r.log.Info("apply new registry settings to the module", slog.String("name", mpo.Name))
 		modulePath := filepath.Join(r.downloadedModulesDir, mpo.Name, downloader.DefaultDevVersion)
 		if err = r.moduleManager.RunModuleWithNewOpenAPISchema(mpo.Name, module.Properties.Source, modulePath); err != nil {
-			r.log.Errorf("failed to run the '%s' module with new OpenAPI schema': %v", mpo.Name, err)
+			r.log.Error("failed to run with new OpenAPI schema", slog.String("name", mpo.Name), log.Err(err))
 			return ctrl.Result{Requeue: true}, nil
 		}
 		// delete annotation and requeue
@@ -247,7 +247,7 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 
 	if needUpdate {
 		if err = r.client.Update(ctx, mpo); err != nil {
-			r.log.Errorf("failed to update the '%s' module pull override: %v", mpo.Name, err)
+			r.log.Error("failed to update the module pull override", slog.String("name", mpo.Name), log.Err(err))
 		}
 		return ctrl.Result{RequeueAfter: 500 * time.Millisecond}, nil
 	}
@@ -255,13 +255,13 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 	source := new(v1alpha1.ModuleSource)
 	if err = r.client.Get(ctx, client.ObjectKey{Name: module.Properties.Source}, source); err != nil {
 		if !apierrors.IsNotFound(err) {
-			r.log.Errorf("failed to get the '%s' module source for the '%s' module pull override: %v", module.Properties.Source, mpo.Name, err)
+			r.log.Error("failed to get the module source for the module pull override", slog.String("source module", module.Properties.Source), slog.String("module", mpo.Name), log.Err(err))
 			return ctrl.Result{}, err
 		}
 		if mpo.Status.Message != v1alpha1.ModulePullOverrideMessageSourceNotFound {
 			mpo.Status.Message = v1alpha1.ModulePullOverrideMessageSourceNotFound
 			if uerr := r.updateModulePullOverrideStatus(ctx, mpo); uerr != nil {
-				r.log.Errorf("failed to update the '%s' module pull override status: %v", mpo.Name, uerr)
+				r.log.Error("failed to update the module pull override status", slog.String("name", mpo.Name), log.Err(uerr))
 				return ctrl.Result{}, uerr
 			}
 		}
@@ -270,14 +270,14 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 
 	tmpDir, err := os.MkdirTemp("", "module*")
 	if err != nil {
-		r.log.Errorf("failed to create temporary directory for the '%s' module pull override: %v", mpo.Name, err)
+		r.log.Error("failed to create temporary directory for the module pull override", slog.String("name", mpo.Name), log.Err(err))
 		return ctrl.Result{}, err
 	}
 
 	// clear temp dir
 	defer func() {
 		if err = os.RemoveAll(tmpDir); err != nil {
-			r.log.Errorf("failed to remove the '%s' old module dir for the '%s' module pull override: %v", tmpDir, mpo.Name, err)
+			r.log.Error("failed to remove the old module dir for the module pull override", slog.String("old module", tmpDir), slog.String("module", mpo.Name), log.Err(err))
 		}
 	}()
 
@@ -289,10 +289,10 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 	if err != nil {
 		mpo.Status.Message = fmt.Sprintf("Download error: %v", err)
 		if uerr := r.updateModulePullOverrideStatus(ctx, mpo); uerr != nil {
-			r.log.Errorf("failed to update the '%s' module pull override status: %v", mpo.Name, uerr)
+			r.log.Error("failed to update the module pull override status", slog.String("name", mpo.Name), log.Err(uerr))
 			return ctrl.Result{}, uerr
 		}
-		r.log.Errorf("failed to download dev image tag for the '%s' module pull override: %v", mpo.Name, err)
+		r.log.Error("failed to download dev image tag for the module pull override", slog.String("name", mpo.Name), log.Err(err))
 		return ctrl.Result{RequeueAfter: mpo.Spec.ScanInterval.Duration}, nil
 	}
 
@@ -302,7 +302,7 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 		if mpo.Status.Message != v1alpha1.ModulePullOverrideMessageReady {
 			mpo.Status.Message = v1alpha1.ModulePullOverrideMessageReady
 			if uerr := r.updateModulePullOverrideStatus(ctx, mpo); uerr != nil {
-				r.log.Errorf("failed to update the '%s' module pull override status: %v", mpo.Name, uerr)
+				r.log.Error("failed to update the module pull override status", slog.String("name", mpo.Name), log.Err(uerr))
 				return ctrl.Result{}, uerr
 			}
 		}
@@ -312,10 +312,10 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 	if moduleDef == nil {
 		mpo.Status.Message = v1alpha1.ModulePullOverrideMessageNoDef
 		if uerr := r.updateModulePullOverrideStatus(ctx, mpo); uerr != nil {
-			r.log.Errorf("failed to update the '%s' module pull override: %v", mpo.Name, uerr)
+			r.log.Error("failed to update the module pull override", slog.String("name", mpo.Name), log.Err(uerr))
 			return ctrl.Result{}, uerr
 		}
-		r.log.Errorf("got an empty module definition for the '%s' module pull override", mpo.Name)
+		r.log.Error("got an empty module definition for the module pull override", slog.String("name", mpo.Name))
 		return ctrl.Result{RequeueAfter: mpo.Spec.ScanInterval.Duration}, nil
 	}
 
@@ -327,21 +327,21 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 	if err = moduleDef.Validate(values, r.log); err != nil {
 		mpo.Status.Message = fmt.Sprintf("Validation error: %v", err)
 		if uerr := r.updateModulePullOverrideStatus(ctx, mpo); uerr != nil {
-			r.log.Errorf("failed to update the '%s' module pull override status: %v", mpo.Name, uerr)
+			r.log.Error("failed to update the module pull override status", slog.String("name", mpo.Name), log.Err(uerr))
 			return ctrl.Result{}, uerr
 		}
-		r.log.Errorf("failed to validate the '%s' module pull override: %v", mpo.Name, err)
+		r.log.Error("failed to validate the module pull override", slog.String("name", mpo.Name), log.Err(err))
 		return ctrl.Result{RequeueAfter: mpo.Spec.ScanInterval.Duration}, nil
 	}
 
 	moduleStorePath := path.Join(r.downloadedModulesDir, moduleDef.Name, downloader.DefaultDevVersion)
 	if err = os.RemoveAll(moduleStorePath); err != nil {
-		r.log.Errorf("failed to remove the '%s' old module dir for the '%s' module pull override: %v", moduleStorePath, mpo.Name, err)
+		r.log.Error("failed to remove the old module dir for the module pull override", slog.String("old dir", moduleStorePath), slog.String("name", mpo.Name), log.Err(err))
 		return ctrl.Result{}, err
 	}
 
 	if err = cp.Copy(tmpDir, r.downloadedModulesDir); err != nil {
-		r.log.Errorf("failed to copy the module from the downloaded module dir for the '%s' module pull override: %v", mpo.Name, err)
+		r.log.Error("failed to copy the module from the downloaded module dir for the module pull override", slog.String("name", mpo.Name), log.Err(err))
 		return ctrl.Result{}, err
 	}
 
@@ -349,10 +349,10 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 	if err = r.enableModule(mpo.Name, symlinkPath); err != nil {
 		mpo.Status.Message = fmt.Sprintf("Enable error: %v", err)
 		if uerr := r.updateModulePullOverrideStatus(ctx, mpo); uerr != nil {
-			r.log.Errorf("failed to update the '%s' module pull override status: %v", mpo.Name, uerr)
+			r.log.Error("failed to update the module pull override status", slog.String("name", mpo.Name), log.Err(uerr))
 			return ctrl.Result{}, uerr
 		}
-		r.log.Errorf("failed to enable the '%s' module: %v", mpo.Name, err)
+		r.log.Error("failed to enable the module", slog.String("name", mpo.Name), log.Err(err))
 		return ctrl.Result{}, err
 	}
 
@@ -373,7 +373,7 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 	mpo.Status.Weight = moduleDef.Weight
 
 	if err = r.updateModulePullOverrideStatus(ctx, mpo); err != nil {
-		r.log.Errorf("failed to update the '%s' module pull override status: %v", mpo.Name, err)
+		r.log.Error("failed to update the module pull override status", slog.String("name", mpo.Name), log.Err(err))
 		return ctrl.Result{}, err
 	}
 
@@ -393,7 +393,7 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 	}
 
 	if err = utils.EnsureModuleDocumentation(ctx, r.client, mpo.Name, module.Properties.Source, mpo.Status.ImageDigest, mpo.Spec.ImageTag, modulePath, ownerRef); err != nil {
-		r.log.Errorf("failed to ensure module documentation for the '%s' module pull override: %v", mpo.Name, err)
+		r.log.Error("failed to ensure module documentation for the module pull override", slog.String("name", mpo.Name), log.Err(err))
 		return ctrl.Result{}, err
 	}
 
@@ -405,12 +405,12 @@ func (r *reconciler) deleteModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 		if mpo.Spec.Rollback {
 			// clear symlink dir
 			if err := os.RemoveAll(path.Join(r.symlinksDir, mpo.Name)); err != nil {
-				r.log.Errorf("failed to remove the '%s' module pull override symlink: %v", mpo.Name, err)
+				r.log.Error("failed to remove the module pull override symlink", slog.String("name", mpo.Name), log.Err(err))
 				return ctrl.Result{}, err
 			}
 			// clear downloaded dir
 			if err := os.RemoveAll(path.Join(r.downloadedModulesDir, mpo.GetModuleName(), downloader.DefaultDevVersion)); err != nil {
-				r.log.Errorf("failed to remove the '%s' module pull override downloaded dir: %v", mpo.Name, err)
+				r.log.Error("failed to remove the module pull override downloaded dir", slog.String("name", mpo.Name), log.Err(err))
 				return ctrl.Result{}, err
 			}
 			// restart deckhouse
@@ -425,12 +425,12 @@ func (r *reconciler) deleteModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 		module := new(v1alpha1.Module)
 		if err := r.client.Get(ctx, client.ObjectKey{Name: mpo.GetName()}, module); err != nil {
 			if !apierrors.IsNotFound(err) {
-				r.log.Errorf("failed to get the '%s' module: %v", mpo.GetName(), err)
+				r.log.Error("failed to get the module", slog.String("name", mpo.GetName()), log.Err(err))
 				return ctrl.Result{Requeue: true}, nil
 			}
 			controllerutil.RemoveFinalizer(mpo, v1alpha1.ModulePullOverrideFinalizer)
 			if err = r.client.Update(ctx, mpo); err != nil {
-				r.log.Errorf("failed to remove finalizer for the '%s' module pull override: %v", mpo.Name, err)
+				r.log.Error("failed to remove finalizer for the module pull override", slog.String("name", mpo.Name), log.Err(err))
 				return ctrl.Result{Requeue: true}, nil
 			}
 			return ctrl.Result{}, nil
@@ -441,13 +441,13 @@ func (r *reconciler) deleteModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 			return true
 		})
 		if err != nil {
-			r.log.Errorf("failed to update the '%s' module status: %v", mpo.Name, err)
+			r.log.Error("failed to update the module status", slog.String("name", mpo.Name), log.Err(err))
 			return ctrl.Result{Requeue: true}, nil
 		}
 
 		controllerutil.RemoveFinalizer(mpo, v1alpha1.ModulePullOverrideFinalizer)
 		if err = r.client.Update(ctx, mpo); err != nil {
-			r.log.Errorf("failed to remove finalizer for the '%s' module pull override: %v", mpo.Name, err)
+			r.log.Error("failed to remove finalizer for the module pull override", slog.String("name", mpo.Name), log.Err(err))
 			return ctrl.Result{Requeue: true}, nil
 		}
 	}

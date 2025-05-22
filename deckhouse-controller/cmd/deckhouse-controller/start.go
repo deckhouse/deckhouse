@@ -225,7 +225,7 @@ func runHAMode(ctx context.Context, operator *addonoperator.AddonOperator, logge
 		<-ctx.Done()
 		logger.Info("Context canceled received")
 		if err := syscall.Kill(1, syscall.SIGUSR2); err != nil {
-			logger.Fatalf("Couldn't shutdown deckhouse: %s\n", err)
+			logger.Fatal("Couldn't shutdown deckhouse", log.Err(err))
 		}
 	}()
 

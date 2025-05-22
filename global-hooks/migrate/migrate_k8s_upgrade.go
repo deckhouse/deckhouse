@@ -23,6 +23,7 @@ package hooks
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -109,7 +110,7 @@ func k8sPostUpgrade(input *go_hook.HookInput, dc dependency.Container) error {
 		kubernetesVersion = config.KubernetesVersion
 	}
 
-	input.Logger.Infof("kubernetesVersion: %s", kubernetesVersion)
+	input.Logger.Info("", slog.String("kubernetesVersion", kubernetesVersion))
 
 	c, err := semver.NewConstraint("< 1.29")
 	if err != nil {
@@ -148,7 +149,7 @@ func k8sPostUpgrade(input *go_hook.HookInput, dc dependency.Container) error {
 		},
 	}
 
-	input.Logger.Infof("create clusterrolebinding: %s", clusterAdminsGroupAndClusterRoleBinding)
+	input.Logger.Info("create clusterrolebinding", slog.String("name", clusterAdminsGroupAndClusterRoleBinding))
 
 	_, err = kubeCl.RbacV1().ClusterRoleBindings().Create(context.TODO(), clusterRoleBinding, metav1.CreateOptions{})
 	if err != nil {

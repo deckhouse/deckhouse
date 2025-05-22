@@ -104,7 +104,7 @@ func changeHostAddressHandler(namespace string, input *go_hook.HookInput) error 
 					},
 				},
 			}
-			input.PatchCollector.MergePatch(patch, "v1", "Pod", namespace, podAddress.Name)
+			input.PatchCollector.PatchWithMerge(patch, "v1", "Pod", namespace, podAddress.Name)
 			continue
 		}
 

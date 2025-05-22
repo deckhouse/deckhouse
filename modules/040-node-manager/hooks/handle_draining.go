@@ -19,6 +19,7 @@ package hooks
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"os"
 	"sync"
 	"time"
@@ -37,6 +38,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain"
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -171,7 +173,7 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 		}
 		err := drain.RunCordonOrUncordon(drainHelper, cordonNode, true)
 		if err != nil {
-			input.Logger.Errorf("Cordon node '%s' failed: %s", dNode.Name, err)
+			input.Logger.Error("Cordon node failed", slog.String("name", dNode.Name), log.Err(err))
 			continue
 		}
 
@@ -204,18 +206,18 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 	var shouldIgnoreErr bool
 	for drainedNode := range drainingNodesC {
 		if drainedNode.Err != nil {
-			input.Logger.Errorf("node %q drain failed: %s", drainedNode.NodeName, drainedNode.Err)
+			input.Logger.Error("node drain failed", slog.String("name", drainedNode.NodeName), log.Err(drainedNode.Err))
 			shouldIgnoreErr = errors.Is(drainedNode.Err, drain.ErrDrainTimeout)
 			event := drainedNode.buildEvent()
 			input.PatchCollector.CreateOrUpdate(event)
 			input.MetricsCollector.Set("d8_node_draining", 1, map[string]string{"node": drainedNode.NodeName, "message": drainedNode.Err.Error()})
 			if shouldIgnoreErr {
-				input.Logger.Errorf("node %q drain error skipped: %s", drainedNode.NodeName, drainedNode.Err)
+				input.Logger.Error("node drain error skipped", slog.String("name", drainedNode.NodeName), log.Err(drainedNode.Err))
 			} else {
 				continue
 			}
 		}
-		input.PatchCollector.MergePatch(newDrainedAnnotationPatch(drainedNode.DrainingSource), "v1", "Node", "", drainedNode.NodeName)
+		input.PatchCollector.PatchWithMerge(newDrainedAnnotationPatch(drainedNode.DrainingSource), "v1", "Node", "", drainedNode.NodeName)
 	}
 
 	return nil
