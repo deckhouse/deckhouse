@@ -31,8 +31,8 @@ spec:
       {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 6 }}
       - containerName: "istio-proxy"
         minAllowed:
-          cpu: 100m
-          memory: 100Mi
+          cpu: 200m
+          memory: 512Mi
         maxAllowed:
           cpu: 400m
           memory: 1024Mi
