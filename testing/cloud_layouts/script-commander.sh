@@ -385,6 +385,18 @@ function wait_upmeter_green() {
 
 }
 
+function check_resources_state_results() {
+  echo "Check applied resource status..."
+  response=$(get_cluster_status)
+  errors=$(yq -r '.resources_state_results.[] | select(.errors) | .errors' <<< "${response}")
+  if [ -n "$variable" ]; then
+    echo "  Errors found:"
+    echo "${errors}"
+    exit 1
+  fi
+  echo "Check applied resource status... Passed"
+}
+
 function change_deckhouse_image() {
   new_image_tag="${1}"
   >&2 echo "Change Deckhouse image to ${new_image_tag}."
@@ -578,6 +590,8 @@ function run-test() {
   done
 
   wait_upmeter_green
+
+  check_resources_state_results
 
   if [[ "$SLEEP_BEFORE_TESTING_CLUSTER_ALERTS" != "" && "$SLEEP_BEFORE_TESTING_CLUSTER_ALERTS" != "0" ]]; then
     echo "Sleeping $SLEEP_BEFORE_TESTING_CLUSTER_ALERTS seconds before check cluster alerts"
