@@ -138,6 +138,13 @@ spec:
               name: cni-net-dir
             - mountPath: /var/run/istio-cni
               name: cni-log-dir
+            {{- if ($.Values.istio.enableAmbientMode) }}
+            - mountPath: /host/proc
+              name: cni-host-procfs
+              readOnly: true 
+            - mountPath: /var/run/ztunnel
+              name: cni-ztunnel-sock-dir
+            {{- end }}
         - name: kube-rbac-proxy
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
           image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
@@ -190,4 +197,14 @@ spec:
             path: /var/run/istio-cni
             type: ""
           name: cni-log-dir
+        {{- if ($.Values.istio.enableAmbientMode) }}
+        - name: cni-host-procfs
+          hostPath:
+            path: /proc
+            type: Directory
+        - name: cni-ztunnel-sock-dir
+          hostPath:
+            path: /var/run/ztunnel
+            type: DirectoryOrCreate
+        {{- end }}
 {{- end }}
