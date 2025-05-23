@@ -98,7 +98,9 @@ jobs:
         branch: chore/k8s-autoupdate
         token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
         base: main
-        labels: e2e/run/yandex-cloud
+        labels: |
+          e2e/run/yandex-cloud
+          security/cve
         milestone: ${{ steps.get_milestone.outputs.milestone }}
         delete-branch: true
     - name: Send success report
