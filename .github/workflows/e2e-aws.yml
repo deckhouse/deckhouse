@@ -204,10 +204,9 @@ jobs:
               const { waitForJobInWorkflowIsCompletedWithSuccess } = require('./.github/scripts/js/validators/validate-job-in-workflow-is-ready')({ github, context, core });
               try {
                 let workflowName = 'Build and test for dev branches';
-                let jobName = 'Build Deckhouse';
+                let jobName = 'Build FE';
                 if (isReleaseBranch(branchName)) {
                   workflowName = 'Build and test for release branches';
-                  jobName = 'Build Deckhouse FE';
                 }
                 if (branchName === 'main') {
                   return true;
