@@ -388,7 +388,7 @@ function wait_upmeter_green() {
 function check_resources_state_results() {
   echo "Check applied resource status..."
   response=$(get_cluster_status)
-  errors=$(yq -r '.resources_state_results.[] | select(.errors) | .errors' <<< "${response}")
+  errors=$(jq -r '.resources_state_results.[] | select(.errors) | .errors' <<< "${response}")
   if [ -n "$variable" ]; then
     echo "  Errors found:"
     echo "${errors}"
