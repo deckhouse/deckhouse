@@ -286,7 +286,7 @@ func (d *Discoverer) getImages(ctx context.Context) ([]v1.DiscoveryDataImage, er
 	images := make([]v1.DiscoveryDataImage, 0, len(standardImages)+len(folderImages))
 
 	for _, image := range standardImages {
-		if !checkImageSupported(image.GetFamily()) {
+		if !checkImageFamilySupported(image.GetFamily()) {
 			continue
 		}
 

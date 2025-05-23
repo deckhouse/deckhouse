@@ -1,52 +1,64 @@
 package yandexcloud
 
-import "strings"
-
-type distroPrefix string
-
-const (
-	ubuntu = distroPrefix("ubuntu")
-	debian = distroPrefix("debian")
-	redos  = distroPrefix("redsoft")
-)
-
-// TODO: add more supportd
-var supportedVersions = map[string]struct{}{
-	// red os
-	"certified-server-7-3": {},
-	"certified-server-8-0": {},
-
-	"standard-server-7-3": {},
-	"standard-server-8-0": {},
-
-	// ubuntu
-	"1804": {},
-	"2004": {},
-	"2204": {},
-	"2404": {},
-
-	// debian
-	"10": {},
-	"11": {},
-	"12": {},
-}
-
-func checkImageSupported(image string) bool {
-	prefix, version, ok := strings.Cut(image, "-")
-	if !ok {
-		return false
-	}
-
-	switch prefix {
-	case string(ubuntu):
-		version, _, _ = strings.Cut(version, "-")
-	case string(redos):
-		version = strings.TrimPrefix(version, "red-os-")
-	default:
-		return false
-	}
-
-	_, found := supportedVersions[version]
+func checkImageFamilySupported(family string) bool {
+	_, found := supportedVersions[family]
 
 	return found
 }
+
+var supportedVersions = map[string]struct{}{
+	"astralinux-alse":                      struct{}{},
+	"astralinux-alse-advanced-18":          struct{}{},
+	"astralinux-alse-base-18":              struct{}{},
+	"astralinux-alse-base-gpu":             struct{}{},
+	"astralinux-alse-orel":                 struct{}{},
+	"basealt-alt":                          struct{}{},
+	"basealt-altserver":                    struct{}{},
+	"basealt-altsp":                        struct{}{},
+	"basealt-altspserver10":                struct{}{},
+	"centos-7":                             struct{}{},
+	"centos-7-gpu":                         struct{}{},
+	"centos-7-grid":                        struct{}{},
+	"centos-7-oslogin":                     struct{}{},
+	"centos-7-vgpu":                        struct{}{},
+	"centos-stream-8":                      struct{}{},
+	"centos-stream-9-oslogin":              struct{}{},
+	"debian-10":                            struct{}{},
+	"debian-10-gpu":                        struct{}{},
+	"debian-11":                            struct{}{},
+	"debian-11-oslogin":                    struct{}{},
+	"debian-12":                            struct{}{},
+	"ntcitrosa-rosachromedesktop":          struct{}{},
+	"ntcitrosa-rosachromeserver":           struct{}{},
+	"opensuse-15-4":                        struct{}{},
+	"redsoft-red-os-certified-server-7-3":  struct{}{},
+	"redsoft-red-os-standard-server-8-0":   struct{}{},
+	"redsoft-red-os-standart-server-7-3":   struct{}{},
+	"rocky-9-oslogin":                      struct{}{},
+	"ubuntu-1804":                          struct{}{},
+	"ubuntu-1804-lts":                      struct{}{},
+	"ubuntu-1804-lts-a100":                 struct{}{},
+	"ubuntu-1804-lts-gpu":                  struct{}{},
+	"ubuntu-1804-lts-grid":                 struct{}{},
+	"ubuntu-1804-lts-ngc":                  struct{}{},
+	"ubuntu-1804-lts-oslogin":              struct{}{},
+	"ubuntu-1804-lts-vgpu":                 struct{}{},
+	"ubuntu-2004-lts":                      struct{}{},
+	"ubuntu-2004-lts-a100":                 struct{}{},
+	"ubuntu-2004-lts-gpu":                  struct{}{},
+	"ubuntu-2004-lts-gpu-cluster":          struct{}{},
+	"ubuntu-2004-lts-oslogin":              struct{}{},
+	"ubuntu-2004-lts-secureboot-cuda-12-2": struct{}{},
+	"ubuntu-2004-lts-vgpu":                 struct{}{},
+	"ubuntu-2204-lts":                      struct{}{},
+	"ubuntu-2204-lts-cuda-11-4":            struct{}{},
+	"ubuntu-2204-lts-cuda-12-2":            struct{}{},
+	"ubuntu-2204-lts-oslogin":              struct{}{},
+	"ubuntu-2204-lts-vgpu-v13":             struct{}{},
+	"ubuntu-2204-lts-vgpu-v15":             struct{}{},
+	"ubuntu-2204-lts-vgpu-v16":             struct{}{},
+	"ubuntu-24-04-lts":                     struct{}{},
+	"ubuntu-2404-lts":                      struct{}{},
+	"ubuntu-2404-lts-oslogin":              struct{}{},
+}
+
