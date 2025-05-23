@@ -148,7 +148,6 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-snapshot-controller:snapshot-controller",
 	"system:serviceaccount:d8-static-routing-manager:agent",
 	"system:serviceaccount:d8-system:d8-kube-dns",
-	"system:serviceaccount:d8-system:deckhouse-tools",
 	"system:serviceaccount:d8-system:documentation",
 	"system:serviceaccount:d8-system:network-policy-engine",
 	"system:serviceaccount:d8-system:terraform-auto-converger",
