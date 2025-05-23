@@ -21,13 +21,12 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
 const (
@@ -76,7 +75,6 @@ func filterGPUSpec(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 }
 
 func setGPULabel(input *go_hook.HookInput, dc dependency.Container) error {
-
 	ngs := input.Snapshots["nodegroups"]
 
 	for _, ng := range ngs {

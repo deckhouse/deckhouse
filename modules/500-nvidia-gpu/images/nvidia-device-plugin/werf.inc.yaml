@@ -30,7 +30,6 @@ secrets:
 shell:
   beforeInstall:
   - apt-get install -y golang gcc make
-  - find /var/lib/apt/ /var/cache/apt/ -type f -delete
   install:
   - cd /src
   - export CLI_VERSION_PACKAGE=github.com/NVIDIA/k8s-device-plugin/internal/info

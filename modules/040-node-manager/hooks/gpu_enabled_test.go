@@ -19,9 +19,9 @@ package hooks
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 const (
