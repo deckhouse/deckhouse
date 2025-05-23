@@ -5,7 +5,7 @@ lang: ru
 ---
 
 Deckhouse Virtualization Platform (DVP) позволяет декларативно создавать, запускать и управлять виртуальными машинами и их ресурсами.
-DVP работает на основе [Deckhouse Kubernetes Platform](https://deckhouse.ru/products/kubernetes-platform/). Для управления ресурсами DKP/DVP используется утилита командной строки [d8](https://deckhouse.ru/documentation/v1/deckhouse-cli/).
+DVP работает на основе [Deckhouse Kubernetes Platform](https://deckhouse.ru/products/kubernetes-platform/). Для управления ресурсами DKP/DVP используется утилита командной строки [d8](https://deckhouse.ru/documentation/v1/deckhouse-cli/), либо графический интерфейс ([console](https://deckhouse.ru/products/virtualization-platform/reference/mc.html#console)), который доступен только в редакции EE.
 
 ## Сценарии использования
 
