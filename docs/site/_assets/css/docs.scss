@@ -12,6 +12,10 @@
     //width: 300px;
     width: 297px;
     margin-right: 64px;
+
+      @media screen and (width < 1500px) {
+        margin-right: 54px;
+      }
 }
 
 .breadcrumbs__right {
@@ -327,6 +331,12 @@
   @media screen and (width < 1500px) {
     gap: 54px;
   }
+
+  &__tile {
+      @media screen and (width < 1100px) {
+          gap: 35px;
+      }
+  }
 }
 
 .layout-sidebar__wrap {
@@ -390,6 +400,12 @@
     @media screen and (max-width: 1000px) {
         background: #fff;
         z-index: 1;
+    }
+
+    &--tile {
+      @media screen and (width < 1500px) {
+        max-width: 100%;
+    }
     }
 }
 

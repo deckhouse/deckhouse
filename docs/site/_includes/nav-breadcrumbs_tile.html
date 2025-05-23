@@ -1,0 +1,50 @@
+<div class="breadcrumbs-container breadcrumbs-container__tile">
+    <div class="breadcrumbs__left">
+        {% if page.search_bage_enabled %}
+            <!--start search-->
+            <div class="search">
+                <form action='{{ "search.html" | prepend: '/documentation/' | prepend: page.product_code | true_relative_url }}' method="get">
+                    <input type="text" class="search__input search__input-tile" id="search-box" name="query" placeholder="{{ site.data.i18n.common.search_placeholder_text_guides[page.lang] }}">
+                </form>
+            </div>
+            <!--end search-->
+            {% endif %}
+            {% unless site.mode == 'module' %}
+            <div id="doc-versions-menu" class="channel-menu submenu-parent">
+                <!-- #include virtual="/includes/channel-menu.html" -->
+            </div>
+        {% endunless %} 
+    </div>
+    <div class="breadcrumbs__right">
+        <ol class="breadcrumbs">
+        <li class="breadcrumbs__item">{{ site.data.i18n.common.platform[page.lang] }}</li>
+        <!--#include virtual="/includes/group-menu.html" -->
+        {%- assign page_url_parts = page.url | split: '/' -%}
+        {%- assign max_ind = page_url_parts.size | minus: 1 -%}
+        {% if max_ind == 1 %}{%- assign max_ind = 2 -%}{% endif %}
+
+        {%- for i in (2..max_ind) %}
+        {%- if forloop.last %}
+        <li class="breadcrumbs__item">{{ page.title }}</li>
+        {% else %}
+        {% unless page_url_parts[i].title %}
+            {% continue %}
+        {% endunless -%}
+        {%- capture current_breadcrumb_url %}{{ next_prepender }}/{{ page_url_parts[i] }}{% endcapture -%}
+        {%- capture next_prepender %}{{ next_prepender }}/{{ page_url_parts[i] }}{% endcapture -%}
+
+        {%- assign breadcrumb = site.data.breadcrumbs[current_breadcrumb_url] %}
+        {%- if breadcrumb %}
+            <li class="breadcrumbs__item">
+                <a href="{{ breadcrumb.url | true_relative_url }}">{%- if breadcrumb.title[page.lang] %}{{ breadcrumb.title[page.lang] }}{% else %}{{ breadcrumb.title }}{% endif -%}</a>
+            </li>
+        {% else %}
+            {%- assign breadcrumb_err = "Check breadcrumbs.yml: " | append: current_breadcrumb_url | append: " not defined" %}
+            {% comment %}{{ breadcrumb_err | raise_error }}{% endcomment %}
+        {%- endif -%}
+        {%- endif -%}
+        {%- endfor %}
+        </ol>
+    </div>
+
+</div>
