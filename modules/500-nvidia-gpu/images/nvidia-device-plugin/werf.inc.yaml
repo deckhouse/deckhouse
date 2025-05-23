@@ -34,8 +34,7 @@ shell:
   - cd /src
   - export CLI_VERSION_PACKAGE=github.com/NVIDIA/k8s-device-plugin/internal/info
   - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64
-  - make
-  - mv ./config-manager ./gpu-feature-discovery ./mps-control-daemon ./nvidia-device-plugin /
+  - make cmds PREFIX=/
   - chmod 0700 /config-manager /gpu-feature-discovery /mps-control-daemon /nvidia-device-plugin
   - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
 ---
