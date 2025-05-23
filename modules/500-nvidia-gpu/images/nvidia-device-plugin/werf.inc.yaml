@@ -50,6 +50,7 @@ import:
     - gpu-feature-discovery
     - mps-control-daemon
     - nvidia-device-plugin
+  before: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /lib64
   includePaths:
