@@ -43,6 +43,7 @@ kind: DaemonSet
 metadata:
   name: ztunnel-{{ $revision }}
   namespace: d8-{{ $.Chart.Name }}
+
   {{- include "helm_lib_module_labels" (list $ (dict 
       "app" "ztunnel"
       "app.kubernetes.io/name" "ztunnel"
@@ -60,6 +61,7 @@ spec:
       app: ztunnel
   template:
     metadata:
+
       {{- include "helm_lib_module_labels" (list $ (dict 
           "app" "ztunnel"
           "sidecar.istio.io/inject" "false"
