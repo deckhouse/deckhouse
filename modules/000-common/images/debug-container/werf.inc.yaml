@@ -86,13 +86,13 @@ import:
   before: install
 shell:
   install:
-  - ln -sf /usr/bin /bin
-  - ln -sf /usr/sbin /sbin
+  # - ln -sf /usr/bin /bin
+  # - ln -sf /usr/sbin /sbin
   - ln -sf /usr/lib /lib
   - ln -sf /usr/lib64 /lib64
 imageSpec:
   config:
     env: { "PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "LANG": "C.UTF-8", "LANGUAGE": "C.UTF-8", "LC_ALL": "C.UTF-8" }
     workingDir: "/"
-    user: "root:root"
+    # user: "root:root"
     cmd: ["/usr/bin/bash"]
