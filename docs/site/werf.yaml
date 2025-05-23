@@ -36,10 +36,11 @@ gitWorktree:
 # Base Images
 {{- include "parse_base_images_map" . }}
 ---
+
 {{- if and (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
 image: site-external-artifacts
 fromCacheVersion: {{ div .Commit.Date.Unix (mul 60 60) }}v1
-from: {{ .Images.BASE_ALPINE }}
+fromImage: builder/alpine
 final: false
 shell:
   install:
@@ -338,7 +339,7 @@ image: web-backend
 imageSpec:
   config:
     workingDir: "/app"
-from: {{ .Images.BASE_ALPINE }}
+fromImage: builder/alpine
 shell:
   install:
   - apk add --no-cache curl jq
@@ -359,7 +360,7 @@ image: web-frontend
 imageSpec:
   config:
     workingDir: "/app"
-from: {{ .Images.BASE_ALPINE }}
+fromImage: builder/alpine
 shell:
   beforeSetup:
   - apk add --no-cache nginx
@@ -404,7 +405,7 @@ git:
       setup: '**/*'
 ---
 image: registry-modules-watcher
-from: {{ .Images.BASE_ALPINE }}
+fromImage: builder/alpine
 imageSpec:
   config:
     workingDir: "/app"
