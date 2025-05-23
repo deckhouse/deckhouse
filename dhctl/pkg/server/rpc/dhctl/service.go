@@ -142,43 +142,21 @@ func startSender[Request, Response proto.Message](
 
 type fsmPhaseSwitcher[T proto.Message, OperationPhaseDataT any] struct {
 	f        *fsm.FiniteStateMachine
-	dataFunc func(
-		completedPhase phases.OperationPhase,
-		completedPhaseState phases.DhctlState,
-		phaseData OperationPhaseDataT,
-		nextPhase phases.OperationPhase,
-		nextPhaseCritical bool,
-	) (T, error)
-	sendCh chan T
-	next   chan error
+	dataFunc func(data phases.OnPhaseFuncData[OperationPhaseDataT]) (T, error)
+	sendCh   chan T
+	next     chan error
 }
 
 func (b *fsmPhaseSwitcher[T, OperationPhaseDataT]) switchPhase(ctx context.Context) func(
-	completedPhase phases.OperationPhase,
-	completedPhaseState phases.DhctlState,
-	phaseData OperationPhaseDataT,
-	nextPhase phases.OperationPhase,
-	nextPhaseCritical bool,
+	onPhaseData phases.OnPhaseFuncData[OperationPhaseDataT],
 ) error {
-	return func(
-		completedPhase phases.OperationPhase,
-		completedPhaseState phases.DhctlState,
-		phaseData OperationPhaseDataT,
-		nextPhase phases.OperationPhase,
-		nextPhaseCritical bool,
-	) error {
+	return func(onPhaseData phases.OnPhaseFuncData[OperationPhaseDataT]) error {
 		err := b.f.Event("wait")
 		if err != nil {
 			return fmt.Errorf("changing state to waiting: %w", err)
 		}
 
-		data, err := b.dataFunc(
-			completedPhase,
-			completedPhaseState,
-			phaseData,
-			nextPhase,
-			nextPhaseCritical,
-		)
+		data, err := b.dataFunc(onPhaseData)
 		if err != nil {
 			return fmt.Errorf("switch phase data func error: %w", err)
 		}
@@ -228,4 +206,43 @@ func panicMessage(ctx context.Context, p any) string {
 		slog.String("stack", stack),
 	)
 	return fmt.Sprintf("panic: %v, %s", p, stack)
+}
+
+type progressTracker[T proto.Message] struct {
+	sendCh   chan T
+	dataFunc func(progress phases.Progress) T
+}
+
+func (p *progressTracker[T]) sendProgress() phases.OnProgressFunc {
+	return func(progress phases.Progress) error {
+		p.sendCh <- p.dataFunc(progress)
+
+		return nil
+	}
+}
+
+func convertProgress(p phases.Progress) *pb.Progress {
+	allPhases := make([]*pb.Progress_PhaseWithSubPhases, 0, len(p.Phases))
+
+	for _, phase := range p.Phases {
+		subPhases := make([]string, 0, len(phase.SubPhases))
+		for _, subPhase := range phase.SubPhases {
+			subPhases = append(subPhases, string(subPhase))
+		}
+
+		allPhases = append(allPhases, &pb.Progress_PhaseWithSubPhases{
+			Phase:     string(phase.Phase),
+			SubPhases: subPhases,
+		})
+	}
+
+	return &pb.Progress{
+		Operation:         string(p.Operation),
+		Progress:          p.Progress,
+		CompletedPhase:    string(p.CompletedPhase),
+		CurrentPhase:      string(p.CurrentPhase),
+		CompletedSubPhase: string(p.CompletedSubPhase),
+		CurrentSubPhase:   string(p.CurrentSubPhase),
+		Phases:            allPhases,
+	}
 }
