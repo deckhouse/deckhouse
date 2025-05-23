@@ -79,21 +79,6 @@ func (state *State) findCondition(conditionType string) *metav1.Condition {
 	return nil
 }
 
-func (state *State) removeCondition(conditionType string) {
-	newConditions := make([]metav1.Condition, 0, len(state.Conditions))
-	for _, c := range state.Conditions {
-		if c.Type != conditionType {
-			newConditions = append(newConditions, c)
-		}
-	}
-	state.Conditions = newConditions
-}
-
-func (state *State) isConditionTrue(conditionType string) bool {
-	condition := state.findCondition(conditionType)
-	return condition != nil && condition.Status == metav1.ConditionTrue
-}
-
 func (state *State) clearConditions() {
 	state.Conditions = nil
 }
