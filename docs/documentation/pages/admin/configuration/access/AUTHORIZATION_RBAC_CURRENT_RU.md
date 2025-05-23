@@ -16,22 +16,24 @@ lang: ru
 Особенности текущей ролевой модели:
 
 - Реализует role-based-подсистему сквозной авторизации, расширяя функционал стандартного механизма RBAC.
-- Настройка прав доступа происходит с помощью кастомных ресурсов [ClusterAuthorizationRule](../../reference/cr/ clusterauthorizationrule/) и [AuthorizationRule](../../reference/cr/authorizationrule/).
-- Управление доступом к инструментам масштабирования (параметр `allowScale` ресурса [ClusterAuthorizationRule] (../../reference/cr/clusterauthorizationrule/) или [AuthorizationRule](../../reference/cr/authorizationrule/)).
-- Управление доступом к форвардингу портов (параметр `portForwarding` ресурса [ClusterAuthorizationRule](../../ reference/cr/clusterauthorizationrule/) или [AuthorizationRule](../../reference/cr/authorizationrule/)).
-- Управление списком разрешённых пространств имён в формате labelSelector (параметр `namespaceSelector` ресурса [ClusterAuthorizationRule](../../reference/cr/clusterauthorizationrule/)).
+- Настройка прав доступа происходит с помощью кастомных ресурсов [ClusterAuthorizationRule](../../reference/cr/clusterauthorizationrule/) и [AuthorizationRule](../../reference/cr/authorizationrule/).
+- Управление доступом к инструментам масштабирования (параметр `allowScale` ресурса [ClusterAuthorizationRule](../../reference/cr/clusterauthorizationrule#clusterauthorizationrule-v1alpha1-spec-allowscale) или [AuthorizationRule](../../reference/cr/authorizationrule#authorizationrule-v1alpha1-spec-allowscale)).
+- Управление доступом к форвардингу портов (параметр `portForwarding` ресурса [ClusterAuthorizationRule](../../reference/cr/clusterauthorizationrule#clusterauthorizationrule-v1alpha1-spec-portforwarding) или [AuthorizationRule](../../reference/cr/authorizationrule#authorizationrule-v1alpha1-spec-portforwarding)).
+- Управление списком разрешённых пространств имён в формате labelSelector (параметр `namespaceSelector` ресурса [ClusterAuthorizationRule](../../reference/cr/clusterauthorizationrule#clusterauthorizationrule-v1-spec-namespaceselector)).
 
 ## Высокоуровневые роли, используемые для реализации модели
 
 Для реализации текущей ролевой модели с помощью модуля [user-authz](../../reference/mc/user-authz/), кроме использования RBAC, можно использовать удобный набор высокоуровневых ролей:
 
-- `User` — позволяет получать информацию обо всех объектах (включая доступ к журналам подов), но не позволяет заходить в контейнеры, читать секреты и выполнять перенаправление портов (port-forward);
-- `PrivilegedUser` — то же самое, что и `User`, но позволяет заходить в контейнеры, читать секреты, а также удалять поды (позволяет инициировать перезапуск пода через его удаление);
-- `Editor` — то же самое, что и `PrivilegedUser`, но предоставляет возможность создавать, изменять и удалять все объекты, которые обычно нужны для прикладных задач;
-- `Admin` — то же самое, что и `Editor`, но позволяет удалять служебные объекты (производные ресурсы, например `ReplicaSet`, `certmanager.k8s.io/challenges` и `certmanager.k8s.io/orders`);
-- `ClusterEditor` — то же самое, что и `Editor`, но позволяет управлять ограниченным набором `cluster-wide`-объектов, которые могут понадобиться для прикладных задач (`ClusterXXXMetric`, `KeepalivedInstance`, `DaemonSet` и т. д). Роль для работы оператора кластера;
-- `ClusterAdmin` — то же самое, что и `ClusterEditor` + `Admin`, но позволяет управлять служебными `cluster-wide`-объектами (производные ресурсы, например `MachineSets`, `Machines`, `OpenstackInstanceClasses` и т. п., а также `ClusterAuthorizationRule`, `ClusterRoleBindings` и `ClusterRole`). Роль для работы администратора кластера. **Важно**, что `ClusterAdmin`, поскольку он уполномочен редактировать `ClusterRoleBindings`, может **сам себе расширить полномочия**;
-- `SuperAdmin` — разрешены любые действия с любыми объектами, при этом ограничения `namespaceSelector` и `limitNamespaces` продолжат работать.
+| Роль             | Примеры доступных действий                                                                                                          | Ограничения                                  |
+|------------------|-------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------|
+| **User**         | Просмотр подов, логов, деплойментов                                                                                                 | Нет доступа к секретам, портам, контейнерам |
+| **PrivilegedUser** | Вход в контейнеры (`kubectl exec`), чтение секретов, удаление подов                                                                 | Не может изменять Deployment/Service        |
+| **Editor**       | Создание/удаление Deployment, Service, ConfigMap                                                                                    | Нет доступа к `ReplicaSet`, `ClusterRoles`  |
+| **Admin**        | Удаление `ReplicaSet`, управление RBAC в namespace                                                                                  | Нет доступа к cluster-wide ресурсам         |
+| **ClusterEditor** | Создание `DaemonSet`, `ClusterRole`, `ClusterXXXMetric`, `KeepalivedInstance` (только тех, что могут понадобиться для прикладных задач) | Не может удалять `MachineSets`              |
+| **ClusterAdmin** | Полный доступ к `ClusterRoleBindings`, `Machines`, `OpenstackInstanceClasses`                                                       | Может повысить свои права                   |
+| **SuperAdmin**   | Любые действия (включая `*` в RBAC), но с учетом `limitNamespaces`                                                                  | Ограничения только через политики кластера  |
 
 {% alert level="warning" %}
 Режим multitenancy (авторизация по пространству имён) в данный момент реализован по временной схеме и **не гарантирует безопасность**.
@@ -171,7 +173,7 @@ write:
 ```
 <!-- end user-authz roles placeholder -->
 
-Вы можете получить дополнительный список правил доступа для роли модуля из кластера ([существующие пользовательские правила](#настройка-прав-высокоуровневых-ролей) и нестандартные правила из других модулей Deckhouse) с помощью команды:
+Вы можете получить дополнительный список правил доступа для роли модуля из кластера ([существующие пользовательские правила](../access/granting-rights-to-users-and-servers.html#настройка-прав-высокоуровневых-ролей-текущая-модель) и нестандартные правила из других модулей Deckhouse) с помощью команды:
 
 ```bash
 D8_ROLE_NAME=Editor
@@ -232,7 +234,7 @@ spec:
 <!-- delete or move to user auth documentation
 ### Настройка `kube-apiserver` для работы в режиме multitenancy
 
-Режим multitenancy, позволяющий ограничивать доступ к пространству имён, включается параметром [enableMultiTenancy](../../reference/mc/user-authz/#parameters-enablemultitenancy) модуля [user-authz](../../reference/mc/user-authz/).
+Режим multitenancy, позволяющий ограничивать доступ к пространству имён, включается параметром [enableMultiTenancy](../../reference/mc/user-authz#parameters-enablemultitenancy) модуля [user-authz](../../reference/mc/user-authz/).
 
 Работа в режиме multitenancy требует включения [плагина авторизации Webhook](https://kubernetes.io/docs/reference/access-authn-authz/webhook/) и выполнения настройки `kube-apiserver`. Все необходимые для работы режима multitenancy действия **выполняются автоматически** модулем [control-plane-manager](../../reference/mc/control-plane-manager/), никаких ручных действий не требуется.
 

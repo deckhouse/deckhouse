@@ -108,7 +108,7 @@ Password security policies (such as complexity requirements, expiration, history
      > **Warning**. When specifying the Redirect URI, substitute the actual `publicDomainTemplate` value without `%s`.  
      For example, if `publicDomainTemplate: '%s.sandbox1.deckhouse-docs.flant.com'` is set,  
      the actual URI would be `https://dex.sandbox20.deckhouse-docs.flant.com/callback`.
-
+     >
      > You can find the Dex address (URI) using the following command:
 
        ```console

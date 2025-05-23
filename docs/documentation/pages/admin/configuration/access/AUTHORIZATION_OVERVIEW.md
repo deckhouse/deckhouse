@@ -1,4 +1,4 @@
 ---
-title: "General information about authorization in Deckhouse Kubernetes Platform"
+title: "Overview"
 permalink: en/admin/access/authorization-overview.html
 ---

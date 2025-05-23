@@ -50,13 +50,25 @@ entries:
                     ru: Подключение
                   url: /admin/connection.html
                 - title:
-                    en: Access to API
-                    ru: TODO Доступ к API
-                  url: /admin/configuration/access/api.html
-                - title:
                     en: Authentication
                     ru: Аутентификация
-                  url: /admin/configuration/access/authentication.html
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Обзор
+                      url: /admin/configuration/access/authentication.html
+                    - title:
+                        en: Integration with external authentication providers
+                        ru: Интеграция с внешними провайдерами аутентификации
+                      url: /admin/access/external-authentication-providers.html
+                    - title:
+                        en: Local authentication
+                        ru: Локальная аутентификация
+                      url: /admin/access/local-authentication.html
+                    - title:
+                        en: Accessing the Kubernetes API via load balancer
+                        ru: Доступ к Kubernetes API через балансировщик трафика
+                      url: /admin/access/access-k8s-api-loadbalancer.html
                 - title:
                     en: Authorization
                     ru: Авторизация
@@ -481,7 +493,7 @@ entries:
             - title:
                 en: Backup and restore
                 ru: Резервное копирование и восстановление
-              url: /admin/configuration/backup/backup-and-restore.html  
+              url: /admin/configuration/backup/backup-and-restore.html
 # ------------- Using -------------
     - title:
         en: Using
@@ -672,6 +684,10 @@ entries:
             en: TODO Installation
             ru: TODO Установка
           url: /architecture/installation.html
+        - title:
+            en: TODO Authentication
+            ru: TODO Аутентификация
+          url: /architecture/access/arch_authentication.html
         - title:
             en: Disaster resistance
             ru: Катастрофоустойчивость
