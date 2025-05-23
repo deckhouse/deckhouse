@@ -7,6 +7,7 @@ package hooks
 
 import (
 	"fmt"
+	"log/slog"
 	"sort"
 	"strings"
 	"time"
@@ -193,7 +194,7 @@ func ipRuleSetsHandler(input *go_hook.HookInput) error {
 		nirs := nirsRaw.(SDNInternalNodeIPRuleSetInfo)
 		actualNodeIPRuleSets[nirs.Name] = nirs
 		if _, ok := allNodes[nirs.NodeName]; !ok && nirs.IsDeleted {
-			input.Logger.Infof("An orphan NIRS %v was found. It will be deleted", nirs.Name)
+			input.Logger.Info("An orphan NIRS was found. It will be deleted", slog.String("name", nirs.Name))
 			lib.DeleteFinalizer(
 				input,
 				nirs.Name,
@@ -346,7 +347,7 @@ func ipRuleSetsHandler(input *go_hook.HookInput) error {
 			"status": newStatus,
 		}
 
-		input.PatchCollector.MergePatch(
+		input.PatchCollector.PatchWithMerge(
 			statusPatch,
 			v1alpha1.GroupVersion,
 			v1alpha1.IRSKind,

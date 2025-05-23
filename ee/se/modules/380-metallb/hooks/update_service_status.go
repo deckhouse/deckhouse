@@ -84,7 +84,7 @@ func handleL2LBServices(input *go_hook.HookInput) error {
 			},
 		}
 
-		input.PatchCollector.MergePatch(patch,
+		input.PatchCollector.PatchWithMerge(patch,
 			"v1",
 			"Service",
 			namespacedName.Namespace,

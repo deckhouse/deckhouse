@@ -294,7 +294,7 @@ func handleEffectiveK8sVersion(input *go_hook.HookInput, dc dependency.Container
 	}
 
 	if patch != nil {
-		input.PatchCollector.MergePatch(patch, "v1", "Secret", "kube-system", "d8-cluster-configuration")
+		input.PatchCollector.PatchWithMerge(patch, "v1", "Secret", "kube-system", "d8-cluster-configuration")
 	}
 
 	if prevEffectiveVersion != "" && prevEffectiveVersion != resultStr {

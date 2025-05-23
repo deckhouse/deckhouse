@@ -92,7 +92,7 @@ func cleanUpReports(input *go_hook.HookInput, dc dependency.Container) error {
 		// cleanup isn't required
 		if !disableSBOM {
 			// remove cleanup label from the namesapce
-			input.PatchCollector.MergePatch(moduleNsPatch, "v1", "Namespace", "", operatorNs)
+			input.PatchCollector.PatchWithMerge(moduleNsPatch, "v1", "Namespace", "", operatorNs)
 			return nil
 		}
 
@@ -122,7 +122,7 @@ func cleanUpReports(input *go_hook.HookInput, dc dependency.Container) error {
 				},
 			},
 		}
-		input.PatchCollector.MergePatch(moduleNsPatch, "v1", "Namespace", "", operatorNs)
+		input.PatchCollector.PatchWithMerge(moduleNsPatch, "v1", "Namespace", "", operatorNs)
 	}
 
 	return nil

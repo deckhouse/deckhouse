@@ -60,7 +60,7 @@ func labelHeritage(input *go_hook.HookInput) error {
 	if len(snap) == 1 {
 		if snap[0] != nil {
 			name := snap[0].(string)
-			input.PatchCollector.MergePatch(nsPatch, "v1", "Namespace", "", name)
+			input.PatchCollector.PatchWithMerge(nsPatch, "v1", "Namespace", "", name)
 		}
 	}
 
