@@ -94,6 +94,10 @@ spec:
         - name: PILOT_HTTP10
           value: "1"
   {{- end }}
+  {{- if ($.Values.istio.enableAmbientMode) }}
+        - name: PILOT_ENABLE_AMBIENT
+          value: "true"
+  {{- end }}
 {{- include "helm_lib_pod_anti_affinity_for_ha" (list $ (dict "app" "istiod" "istio.io/rev" $revision)) | nindent 8 }}
 
     ingressGateways:
