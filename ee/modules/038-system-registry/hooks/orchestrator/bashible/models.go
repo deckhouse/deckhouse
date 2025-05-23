@@ -25,12 +25,27 @@ type Inputs struct {
 type InputsNodeVersion = string
 
 type Params struct {
-	Mode           registry_const.ModeType
+	ModeParams     ModeParams
 	RegistrySecret deckhouse_registry.Config
+}
 
-	ProxyLocal *ProxyLocalModeParams
-	Unmanaged  *UnmanagedModeParams
-	Direct     *DirectModeParams
+type State struct {
+	Config *StateConfig `json:"config,omitempty" yaml:"config,omitempty"`
+}
+
+type StateConfig struct {
+	ActualParams ModeParams `json:"actual_params,omitempty" yaml:"actual_params,omitempty"`
+	Config       Config     `json:"config,omitempty" yaml:"config,omitempty"`
+}
+
+type Config bashible.Config
+
+type ModeParams struct {
+	Mode registry_const.ModeType `json:"mode" yaml:"mode"`
+
+	ProxyLocal *ProxyLocalModeParams `json:"proxy_local,omitempty" yaml:"proxy_local,omitempty"`
+	Unmanaged  *UnmanagedModeParams  `json:"unmanaged,omitempty" yaml:"unmanaged,omitempty"`
+	Direct     *DirectModeParams     `json:"direct,omitempty" yaml:"direct,omitempty"`
 }
 
 type ProxyLocalModeParams struct {
@@ -55,62 +70,6 @@ type DirectModeParams struct {
 	Password   string `json:"password" yaml:"password"`
 }
 
-type State struct {
-	Config *StateConfig `json:"config,omitempty" yaml:"config,omitempty"`
-}
-
-type StateConfig struct {
-	ActualParams ActualParams `json:"actual_params,omitempty" yaml:"actual_params,omitempty"`
-	Config       Config       `json:"config,omitempty" yaml:"config,omitempty"`
-}
-
-type Config bashible.Config
-
-type ActualParams struct {
-	Mode           registry_const.ModeType `json:"mode" yaml:"mode"`
-	ImagesBase     string                  `json:"imagesBase" yaml:"imagesBase"`
-	MasterNodesIPs []string                `json:"masterNodesIPs,omitempty" yaml:"masterNodesIPs,omitempty"`
-
-	// ProxyLocal contains parameters used in Proxy and Local modes.
-	//
-	// These values remain unchanged when switching between Proxy ↔ Local,
-	// unless regenerated due to external events, such as PKI re-issuance.
-	//
-	// For example, if PKI is regenerated:
-	//   1. A new password is generated for the RO user;
-	//   2. A new CA certificate is issued;
-	//   3. The static Pod (registry) is restarted;
-	//   4. Bashible is restarted.
-	//
-	// Since the registry uses the new PKI, old values are no longer usable.
-	// Therefore, maintaining an array of mirror (contained's fallback) (e.g. [old, new]) is unnecessary.
-	// Especially when the first mirror is derived from outdated credentials — it will simply fail.
-	ProxyLocal *ProxyLocalModeParams `json:"proxyLocal,omitempty" yaml:"proxyLocal,omitempty"`
-
-	// Unmanaged contains parameters used in unmanaged registry mode.
-	//
-	// This field is populated only in two cases:
-	//   1. Switching from Unmanaged to another mode — values come from the deckhouse-registry Secret;
-	//   2. Switching from another mode to Unmanaged — values come from previously used ActualParams.
-	//
-	// Since switching from Unmanaged → Unmanaged is not supported, there's no need to maintain a list of values.
-	//
-	// We do not support the case where users manually modify the deckhouse-registry Secret
-	// during transitions between Unmanaged and other modes.
-	Unmanaged *UnmanagedModeParams `json:"unmanaged,omitempty" yaml:"unmanaged,omitempty"`
-
-	// Direct keeps a list of parameter sets used in Direct mode.
-	//
-	// Direct→Direct transitions are allowed and can involve significant changes.
-	// To support mirrors (contained's fallback), we store multiple configurations (old and new).
-	//
-	// Each DirectModeParams entry represents a full, immutable configuration snapshot.
-	// Merging partial changes (e.g. only updating path or credentials) is not supported.
-	// For example, if only the path changes but the user also changes,
-	// that must result in a completely new mirror (contained's fallback).
-	Direct []DirectModeParams `json:"direct,omitempty" yaml:"direct,omitempty"`
-}
-
 type Result struct {
 	Ready   bool
 	Message string
@@ -122,94 +81,135 @@ func (state *State) IsStopped() bool {
 
 func (state *State) Stop(inputs Inputs) Result {
 	state.Config = nil
-
-	if inputs.IsSecretExist {
-		return Result{
-			Ready:   false,
-			Message: "Bashible Secret exists. Deleting now...",
-		}
-	}
-
-	unreadyNodes := []string{}
-	for nodeName, nodeVersion := range inputs.NodeStatus {
-		if nodeVersion != registry_const.UnknownVersion {
-			unreadyNodes = append(unreadyNodes, nodeName)
-		}
-	}
-
-	if len(unreadyNodes) == 0 {
-		return Result{
-			Ready: true,
-			Message: fmt.Sprintf("All %d node(s) have been updated with Unmanaged configuration.",
-				len(inputs.NodeStatus),
-			),
-		}
-	}
-
-	slices.Sort(unreadyNodes)
-
-	builder := new(strings.Builder)
-	fmt.Fprintf(builder, "%d/%d node(s) are ready with Unmanaged configuration.\nWaiting for the following node(s):\n",
-		len(inputs.NodeStatus)-len(unreadyNodes), len(inputs.NodeStatus),
-	)
-
-	const maxShown = 10
-	for i, name := range unreadyNodes {
-		if i == maxShown {
-			fmt.Fprintf(builder, "\t...and %d more\n", len(unreadyNodes)-maxShown)
-			break
-		}
-		version := inputs.NodeStatus[name]
-		fmt.Fprintf(builder, "\t%d. %q (currently running version \"%s\")\n", i+1, name, trimWithEllipsis(version))
-	}
-
-	return Result{
-		Ready:   false,
-		Message: builder.String(),
-	}
+	return processResult(inputs, "Cleanup: switch to Unmanaged mode", registry_const.UnknownVersion, true)
 }
 
-func (state *State) Process(params Params, inputs Inputs, withActual bool) (Result, error) {
+func (state *State) Process(params Params, inputs Inputs, isFirstStage bool) (Result, error) {
+	stageInfo := "Stage 1: apply new configs with existing ones"
+	if !isFirstStage {
+		stageInfo = "Stage 2: apply new configs only, remove old"
+	}
+	resultError := Result{Ready: false, Message: fmt.Sprintf("%s\nFailed to process Bashible configuration.", stageInfo)}
+	resultOk := Result{Ready: true, Message: fmt.Sprintf("%s\nBashible already processed.", stageInfo)}
+
+	switch {
+	case params.ModeParams.Mode == registry_const.ModeUnmanaged &&
+		params.ModeParams.Unmanaged == nil:
+		return resultError, fmt.Errorf("missing unmanaged parameters for mode %s", params.ModeParams.Mode)
+	case (params.ModeParams.Mode == registry_const.ModeLocal ||
+		params.ModeParams.Mode == registry_const.ModeProxy) &&
+		params.ModeParams.ProxyLocal == nil:
+		return resultError, fmt.Errorf("missing proxy/local parameters for mode %s", params.ModeParams.Mode)
+	case params.ModeParams.Mode == registry_const.ModeDirect &&
+		params.ModeParams.Direct == nil:
+		return resultError, fmt.Errorf("missing direct parameters for mode %s", params.ModeParams.Mode)
+	}
+
+	imagesBase := registry_const.HostWithPath
+	if params.ModeParams.Mode == registry_const.ModeUnmanaged {
+		imagesBase = params.ModeParams.Unmanaged.ImagesRepo
+	}
+
+	// Ensure state is initialized
 	if state.Config == nil {
 		state.Config = &StateConfig{}
 	}
 
-	if err := state.Config.process(params, inputs, withActual); err != nil {
-		return Result{
-			Ready:   false,
-			Message: "Failed to process Bashible configuration.",
-		}, fmt.Errorf("cannot process config: %w", err)
+	// First stage + params already contained -> skip (stage already done)
+	if isFirstStage && state.Config.ActualParams.isEqual(params.ModeParams) {
+		return resultOk, nil
 	}
 
-	if !inputs.IsSecretExist {
+	// Init actual params from secret, if empty
+	if state.Config.ActualParams.isEmpty() {
+		if err := state.Config.ActualParams.fromRegistrySecret(params.RegistrySecret); err != nil {
+			return resultError, fmt.Errorf("failed to initialize actual params from secret: %w", err)
+		}
+	}
+
+	config := Config{
+		Mode:           params.ModeParams.Mode,
+		ImagesBase:     imagesBase,
+		Version:        "",                          // by processHash
+		ProxyEndpoints: []string{},                  // by processEndpoints
+		Hosts:          map[string]bashible.Hosts{}, // by processHosts
+		PrepullHosts:   map[string]bashible.Hosts{}, // by processHosts
+	}
+	if isFirstStage {
+		// Current
+		config.processHosts(inputs.MasterNodesIPs, state.Config.ActualParams)
+		// New
+		config.processHosts(inputs.MasterNodesIPs, params.ModeParams)
+		// Endpoints
+		config.processEndpoints(inputs.MasterNodesIPs, state.Config.ActualParams.Mode, params.ModeParams.Mode)
+	} else {
+		// Replace Current by new and process only new hosts
+		state.Config.ActualParams = params.ModeParams
+		config.processHosts(inputs.MasterNodesIPs, state.Config.ActualParams)
+		// Endpoints
+		config.processEndpoints(inputs.MasterNodesIPs, state.Config.ActualParams.Mode)
+	}
+
+	if err := config.processHash(); err != nil {
+		return resultError, err
+	}
+	state.Config.Config = config
+	return processResult(inputs, stageInfo, state.Config.Config.Version, false), nil
+}
+
+func processResult(inputs Inputs, stageInfo, version string, isStop bool) Result {
+	builder := new(strings.Builder)
+	fmt.Fprint(builder, stageInfo+"\n")
+
+	if isStop && inputs.IsSecretExist {
+		fmt.Fprint(builder, "Bashible Secret exists. Deleting now...")
 		return Result{
 			Ready:   false,
-			Message: "Creating Bashible Secret...",
-		}, nil
+			Message: builder.String(),
+		}
+	}
+	if !isStop && !inputs.IsSecretExist {
+		fmt.Fprint(builder, "Creating Bashible Secret...")
+		return Result{
+			Ready:   false,
+			Message: builder.String(),
+		}
 	}
 
 	unreadyNodes := []string{}
 	for nodeName, nodeVersion := range inputs.NodeStatus {
-		if nodeVersion != state.Config.Config.Version {
+		if nodeVersion != version {
 			unreadyNodes = append(unreadyNodes, nodeName)
 		}
 	}
 
 	if len(unreadyNodes) == 0 {
+		if isStop {
+			fmt.Fprintf(builder, "All %d node(s) have been updated with Unmanaged configuration.",
+				len(inputs.NodeStatus),
+			)
+		} else {
+			fmt.Fprintf(builder, "All %d node(s) have been updated to registry version: %s.",
+				len(inputs.NodeStatus), trimWithEllipsis(version),
+			)
+		}
 		return Result{
-			Ready: true,
-			Message: fmt.Sprintf("All %d node(s) have been updated to registry version: %s.",
-				len(inputs.NodeStatus), trimWithEllipsis(state.Config.Config.Version),
-			),
-		}, nil
+			Ready:   true,
+			Message: builder.String(),
+		}
 	}
 
 	slices.Sort(unreadyNodes)
 
-	builder := new(strings.Builder)
-	fmt.Fprintf(builder, "%d/%d node(s) have been updated to registry version \"%s\".\nWaiting for the following node(s):\n",
-		len(inputs.NodeStatus)-len(unreadyNodes), len(inputs.NodeStatus), trimWithEllipsis(state.Config.Config.Version),
-	)
+	if isStop {
+		fmt.Fprintf(builder, "%d/%d node(s) are ready with Unmanaged configuration.\nWaiting for the following node(s):\n",
+			len(inputs.NodeStatus)-len(unreadyNodes), len(inputs.NodeStatus),
+		)
+	} else {
+		fmt.Fprintf(builder, "%d/%d node(s) have been updated to registry version \"%s\".\nWaiting for the following node(s):\n",
+			len(inputs.NodeStatus)-len(unreadyNodes), len(inputs.NodeStatus), trimWithEllipsis(version),
+		)
+	}
 
 	const maxShown = 10
 	for i, name := range unreadyNodes {
@@ -224,156 +224,42 @@ func (state *State) Process(params Params, inputs Inputs, withActual bool) (Resu
 	return Result{
 		Ready:   false,
 		Message: builder.String(),
-	}, nil
+	}
 }
 
-// process builds the Bashible configuration based on the current and new registry parameters.
-//
-// Bashible uses a two-phase rollout process for safe configuration transition:
-//  1. First phase uses withActual = true, to keep old and new registry parameters together.
-//  2. Second phase uses withActual = false, to fully switch to the new configuration.
-//
-// If ActualParams is empty, it is initialized from the deckhouse-registry Secret before processing.
-func (cfg *StateConfig) process(params Params, inputs Inputs, withActual bool) error {
-	switch {
-	case params.Mode == registry_const.ModeUnmanaged &&
-		params.Unmanaged == nil:
-		return fmt.Errorf("missing unmanaged parameters for mode %s", params.Mode)
+func (cfg *Config) processEndpoints(masterNodesIPs []string, modes ...registry_const.ModeType) {
+	cfg.ProxyEndpoints = []string{}
 
-	case (params.Mode == registry_const.ModeLocal ||
-		params.Mode == registry_const.ModeProxy) &&
-		params.ProxyLocal == nil:
-		return fmt.Errorf("missing proxy/local parameters for mode %s", params.Mode)
-
-	case params.Mode == registry_const.ModeDirect &&
-		params.Direct == nil:
-		return fmt.Errorf("missing direct parameters for mode %s", params.Mode)
-	}
-
-	if cfg.ActualParams.isEmpty() {
-		if err := cfg.ActualParams.fromRegistrySecret(params.RegistrySecret, inputs.MasterNodesIPs); err != nil {
-			return err
+	for _, mode := range modes {
+		if mode == registry_const.ModeLocal || mode == registry_const.ModeProxy {
+			cfg.ProxyEndpoints = registry_const.GenerateProxyEndpoints(masterNodesIPs)
+			break
 		}
 	}
-
-	newParams := ActualParams{
-		Mode:           params.Mode,
-		ImagesBase:     registry_const.HostWithPath,
-		MasterNodesIPs: inputs.MasterNodesIPs,
-		ProxyLocal:     params.ProxyLocal,
-		Unmanaged:      params.Unmanaged,
-	}
-
-	if params.Mode == registry_const.ModeUnmanaged {
-		newParams.ImagesBase = params.Unmanaged.ImagesRepo
-	}
-
-	if params.Direct != nil {
-		newParams.Direct = append(newParams.Direct, *params.Direct)
-	}
-
-	if withActual {
-		cfg.ActualParams.merge(newParams)
-	} else {
-		cfg.ActualParams.set(newParams)
-	}
-
-	newCfg, err := cfg.ActualParams.process()
-	if err != nil {
-		return fmt.Errorf("failed to process bashible config: %w", err)
-	}
-
-	cfg.Config = newCfg
-	return nil
 }
 
-func (p *ActualParams) process() (Config, error) {
-	cfg := Config{
-		ImagesBase:   p.ImagesBase,
-		Mode:         p.Mode,
-		Hosts:        make(map[string]bashible.Hosts),
-		PrepullHosts: make(map[string]bashible.Hosts),
-	}
-
-	if p.ProxyLocal != nil {
-		endpoints, hosts, prepull := processProxyLocal(*p.ProxyLocal, p.MasterNodesIPs)
-		cfg.ProxyEndpoints = endpoints
-		cfg.mergeHosts(hosts, prepull)
-	} else {
-		cfg.ProxyEndpoints = []string{}
-	}
-
-	if p.Unmanaged != nil {
-		h := processUnmanaged(*p.Unmanaged)
-		cfg.mergeHosts(h, h)
-	}
-
-	for _, d := range p.Direct {
-		h := processDirect(d)
-		cfg.mergeHosts(h, h)
-	}
-
+func (cfg *Config) processHash() error {
+	cfg.Version = ""
 	hash, err := helpers.ComputeHash(cfg)
 	if err != nil {
-		return cfg, fmt.Errorf("failed to compute config hash: %w", err)
+		return fmt.Errorf("failed to compute config hash: %w", err)
 	}
-
 	cfg.Version = hash
-	return cfg, nil
-}
-
-func (p ActualParams) isEmpty() bool {
-	return p.ProxyLocal == nil && p.Unmanaged == nil && len(p.Direct) == 0
-}
-
-func (p *ActualParams) set(newParams ActualParams) {
-	*p = newParams
-}
-
-func (p *ActualParams) merge(newParams ActualParams) {
-	p.MasterNodesIPs = newParams.MasterNodesIPs
-	p.ImagesBase = newParams.ImagesBase
-	p.Mode = newParams.Mode
-
-	if newParams.ProxyLocal != nil {
-		p.ProxyLocal = &ProxyLocalModeParams{}
-		*p.ProxyLocal = *newParams.ProxyLocal
-	}
-
-	if newParams.Unmanaged != nil {
-		p.Unmanaged = &UnmanagedModeParams{}
-		*p.Unmanaged = *newParams.Unmanaged
-	}
-
-	if p.Direct == nil {
-		p.Direct = []DirectModeParams{}
-	}
-	p.Direct = helpers.DeduplicateSlice(append(p.Direct, newParams.Direct...))
-}
-
-func (p *ActualParams) fromRegistrySecret(registrySecret deckhouse_registry.Config, masterNodesIPs []string) error {
-	username, password, err := helpers.CredsFromDockerCfg(
-		registrySecret.DockerConfig,
-		registrySecret.Address,
-	)
-	if err != nil {
-		return fmt.Errorf("failed to extract credentials from Docker config: %w", err)
-	}
-
-	hostWithPath := registrySecret.Address + registrySecret.Path
-	*p = ActualParams{
-		Mode:           registry_const.ModeUnmanaged,
-		ImagesBase:     hostWithPath,
-		MasterNodesIPs: masterNodesIPs,
-		Unmanaged: &UnmanagedModeParams{
-			ImagesRepo: hostWithPath,
-			Scheme:     strings.ToLower(registrySecret.Scheme),
-			CA:         registrySecret.CA,
-			Username:   username,
-			Password:   password,
-		},
-	}
 	return nil
+}
+
+func (cfg *Config) processHosts(masterNodesIPs []string, modeParams ModeParams) {
+	switch {
+	case modeParams.ProxyLocal != nil:
+		hosts, prepull := processProxyLocal(*modeParams.ProxyLocal, masterNodesIPs)
+		cfg.mergeHosts(hosts, prepull)
+	case modeParams.Unmanaged != nil:
+		h := processUnmanaged(*modeParams.Unmanaged)
+		cfg.mergeHosts(h, h)
+	case modeParams.Direct != nil:
+		h := processDirect(*modeParams.Direct)
+		cfg.mergeHosts(h, h)
+	}
 }
 
 func (cfg *Config) mergeHosts(hosts, prepull map[string]bashible.Hosts) {
@@ -397,6 +283,79 @@ func (cfg *Config) mergeHosts(hosts, prepull map[string]bashible.Hosts) {
 		old.Mirrors = append(old.Mirrors, h.Mirrors...)
 		cfg.PrepullHosts[name] = old
 	}
+}
+
+func (p *ModeParams) fromRegistrySecret(registrySecret deckhouse_registry.Config) error {
+	username, password, err := helpers.CredsFromDockerCfg(
+		registrySecret.DockerConfig,
+		registrySecret.Address,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to extract credentials from Docker config: %w", err)
+	}
+
+	hostWithPath := registrySecret.Address + registrySecret.Path
+	*p = ModeParams{
+		Mode: registry_const.ModeUnmanaged,
+		Unmanaged: &UnmanagedModeParams{
+			ImagesRepo: hostWithPath,
+			Scheme:     strings.ToLower(registrySecret.Scheme),
+			CA:         registrySecret.CA,
+			Username:   username,
+			Password:   password,
+		},
+	}
+	return nil
+}
+
+func (p ModeParams) isEmpty() bool {
+	return p.Mode == ""
+}
+
+func (p ModeParams) isEqual(other ModeParams) bool {
+	if p.Mode != other.Mode {
+		return false
+	}
+	if !p.ProxyLocal.isEqual(other.ProxyLocal) {
+		return false
+	}
+	if !p.Direct.isEqual(other.Direct) {
+		return false
+	}
+	if !p.Unmanaged.isEqual(other.Unmanaged) {
+		return false
+	}
+	return true
+}
+
+func (p *UnmanagedModeParams) isEqual(other *UnmanagedModeParams) bool {
+	switch {
+	case p == nil && other == nil:
+		return true
+	case p != nil && other != nil:
+		return *p == *other
+	}
+	return false
+}
+
+func (p *DirectModeParams) isEqual(other *DirectModeParams) bool {
+	switch {
+	case p == nil && other == nil:
+		return true
+	case p != nil && other != nil:
+		return *p == *other
+	}
+	return false
+}
+
+func (p *ProxyLocalModeParams) isEqual(other *ProxyLocalModeParams) bool {
+	switch {
+	case p == nil && other == nil:
+		return true
+	case p != nil && other != nil:
+		return *p == *other
+	}
+	return false
 }
 
 func processUnmanaged(params UnmanagedModeParams) map[string]bashible.Hosts {
@@ -441,7 +400,7 @@ func processDirect(params DirectModeParams) map[string]bashible.Hosts {
 	}
 }
 
-func processProxyLocal(params ProxyLocalModeParams, masterNodesIPs []string) ([]string, map[string]bashible.Hosts, map[string]bashible.Hosts) {
+func processProxyLocal(params ProxyLocalModeParams, masterNodesIPs []string) (map[string]bashible.Hosts, map[string]bashible.Hosts) {
 	makeMirrors := func(hosts []string) []bashible.MirrorHost {
 		mirrors := make([]bashible.MirrorHost, 0, len(hosts))
 		for _, h := range hosts {
@@ -457,7 +416,6 @@ func processProxyLocal(params ProxyLocalModeParams, masterNodesIPs []string) ([]
 		return mirrors
 	}
 
-	endpoints := registry_const.GenerateProxyEndpoints(masterNodesIPs)
 	ca := singleCA(params.CA)
 	hosts := map[string]bashible.Hosts{
 		registry_const.Host: {
@@ -467,11 +425,12 @@ func processProxyLocal(params ProxyLocalModeParams, masterNodesIPs []string) ([]
 	}
 	prepullHosts := map[string]bashible.Hosts{
 		registry_const.Host: {
-			CA:      ca,
-			Mirrors: makeMirrors(append([]string{registry_const.ProxyHost}, endpoints...)),
+			CA: ca,
+			Mirrors: makeMirrors(append([]string{registry_const.ProxyHost},
+				registry_const.GenerateProxyEndpoints(masterNodesIPs)...)),
 		},
 	}
-	return endpoints, hosts, prepullHosts
+	return hosts, prepullHosts
 }
 
 func singleCA(s string) []string {

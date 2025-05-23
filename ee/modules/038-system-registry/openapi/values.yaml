@@ -105,13 +105,8 @@ properties:
                         properties:
                           mode:
                             type: string
-                          imagesBase:
-                            type: string
-                          masterNodesIPs:
-                            type: array
-                            items:
-                              type: string
-                          proxyLocal:
+                            enum: [Unmanaged, Direct, Proxy, Local]
+                          proxy_local:
                             type: object
                             properties:
                               ca:
@@ -134,20 +129,18 @@ properties:
                               password:
                                 type: string
                           direct:
-                            type: array
-                            items:
-                              type: object
-                              properties:
-                                imagesRepo:
-                                  type: string
-                                scheme:
-                                  type: string
-                                ca:
-                                  type: string
-                                username:
-                                  type: string
-                                password:
-                                  type: string
+                            type: object
+                            properties:
+                              imagesRepo:
+                                type: string
+                              scheme:
+                                type: string
+                              ca:
+                                type: string
+                              username:
+                                type: string
+                              password:
+                                type: string
                       config:
                         type: object
                         default: {}

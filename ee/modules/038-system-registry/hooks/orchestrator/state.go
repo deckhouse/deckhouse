@@ -212,12 +212,14 @@ func (state *State) transitionToLocal(log go_hook.Logger, inputs Inputs) error {
 	// TODO: check images in local registry
 
 	bashibleParam := bashible.Params{
-		Mode:           state.TargetMode,
 		RegistrySecret: inputs.RegistrySecret,
-		ProxyLocal: &bashible.ProxyLocalModeParams{
-			CA:       string(registry_pki.EncodeCertificate(pkiResult.CA.Cert)),
-			Username: state.Users.RO.UserName,
-			Password: state.Users.RO.Password,
+		ModeParams: bashible.ModeParams{
+			Mode: state.TargetMode,
+			ProxyLocal: &bashible.ProxyLocalModeParams{
+				CA:       string(registry_pki.EncodeCertificate(pkiResult.CA.Cert)),
+				Username: state.Users.RO.UserName,
+				Password: state.Users.RO.Password,
+			},
 		},
 	}
 	registrySecretParams := registrysecret.Params{
@@ -230,7 +232,7 @@ func (state *State) transitionToLocal(log go_hook.Logger, inputs Inputs) error {
 	}
 
 	// Bashible with actual params
-	processedBashible, err := state.processBashible(bashibleParam, inputs, true)
+	processedBashible, err := state.processBashibleFirstStage(bashibleParam, inputs)
 	if err != nil {
 		return err
 	}
@@ -253,7 +255,7 @@ func (state *State) transitionToLocal(log go_hook.Logger, inputs Inputs) error {
 	}
 
 	// Bashible only input params
-	processedBashible, err = state.processBashible(bashibleParam, inputs, false)
+	processedBashible, err = state.processBashibleSecondStage(bashibleParam, inputs)
 	if err != nil {
 		return err
 	}
@@ -367,12 +369,14 @@ func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 	// TODO: check images in remote registry via proxy
 
 	bashibleParam := bashible.Params{
-		Mode:           state.TargetMode,
 		RegistrySecret: inputs.RegistrySecret,
-		ProxyLocal: &bashible.ProxyLocalModeParams{
-			CA:       string(registry_pki.EncodeCertificate(pkiResult.CA.Cert)),
-			Username: state.Users.RO.UserName,
-			Password: state.Users.RO.Password,
+		ModeParams: bashible.ModeParams{
+			Mode: state.TargetMode,
+			ProxyLocal: &bashible.ProxyLocalModeParams{
+				CA:       string(registry_pki.EncodeCertificate(pkiResult.CA.Cert)),
+				Username: state.Users.RO.UserName,
+				Password: state.Users.RO.Password,
+			},
 		},
 	}
 	registrySecretParams := registrysecret.Params{
@@ -385,7 +389,7 @@ func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 	}
 
 	// Bashible with actual params
-	processedBashible, err := state.processBashible(bashibleParam, inputs, true)
+	processedBashible, err := state.processBashibleFirstStage(bashibleParam, inputs)
 	if err != nil {
 		return err
 	}
@@ -408,7 +412,7 @@ func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 	}
 
 	// Bashible only input params
-	processedBashible, err = state.processBashible(bashibleParam, inputs, false)
+	processedBashible, err = state.processBashibleSecondStage(bashibleParam, inputs)
 	if err != nil {
 		return err
 	}
@@ -514,14 +518,16 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 	// TODO: check images in remote registry
 
 	bashibleParam := bashible.Params{
-		Mode:           state.TargetMode,
 		RegistrySecret: inputs.RegistrySecret,
-		Direct: &bashible.DirectModeParams{
-			ImagesRepo: inputs.Params.ImagesRepo,
-			Scheme:     inputs.Params.Scheme,
-			CA:         inputs.Params.CA,
-			Username:   inputs.Params.UserName,
-			Password:   inputs.Params.Password,
+		ModeParams: bashible.ModeParams{
+			Mode: state.TargetMode,
+			Direct: &bashible.DirectModeParams{
+				ImagesRepo: inputs.Params.ImagesRepo,
+				Scheme:     inputs.Params.Scheme,
+				CA:         inputs.Params.CA,
+				Username:   inputs.Params.UserName,
+				Password:   inputs.Params.Password,
+			},
 		},
 	}
 	registrySecretParams := registrysecret.Params{
@@ -534,7 +540,7 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 	}
 
 	// Bashible with actual params
-	processedBashible, err := state.processBashible(bashibleParam, inputs, true)
+	processedBashible, err := state.processBashibleFirstStage(bashibleParam, inputs)
 	if err != nil {
 		return err
 	}
@@ -557,7 +563,7 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 	}
 
 	// Bashible only input params
-	processedBashible, err = state.processBashible(bashibleParam, inputs, false)
+	processedBashible, err = state.processBashibleSecondStage(bashibleParam, inputs)
 	if err != nil {
 		return err
 	}
@@ -606,18 +612,20 @@ func (state *State) transitionToUnmanaged(log go_hook.Logger, inputs Inputs) err
 		state.ActualParams.Mode == registry_const.ModeDirect) &&
 		!state.Bashible.IsStopped() {
 		bashibleParams := bashible.Params{
-			Mode:           state.TargetMode,
 			RegistrySecret: inputs.RegistrySecret,
-			Unmanaged: &bashible.UnmanagedModeParams{
-				ImagesRepo: state.ActualParams.ImagesRepo,
-				Scheme:     state.ActualParams.Scheme,
-				CA:         state.ActualParams.CA,
-				Username:   state.ActualParams.UserName,
-				Password:   state.ActualParams.Password,
+			ModeParams: bashible.ModeParams{
+				Mode: state.TargetMode,
+				Unmanaged: &bashible.UnmanagedModeParams{
+					ImagesRepo: state.ActualParams.ImagesRepo,
+					Scheme:     state.ActualParams.Scheme,
+					CA:         state.ActualParams.CA,
+					Username:   state.ActualParams.UserName,
+					Password:   state.ActualParams.Password,
+				},
 			},
 		}
 
-		processed, err := state.processBashible(bashibleParams, inputs, true)
+		processed, err := state.processBashibleFirstStage(bashibleParams, inputs)
 		if err != nil {
 			return err
 		}
@@ -688,8 +696,33 @@ func (state *State) transitionToUnmanaged(log go_hook.Logger, inputs Inputs) err
 	return nil
 }
 
-func (state *State) processBashible(params bashible.Params, inputs Inputs, withActual bool) (bool, error) {
-	processResult, err := state.Bashible.Process(params, inputs.Bashible, withActual)
+func (state *State) processBashibleFirstStage(params bashible.Params, inputs Inputs) (bool, error) {
+	processResult, err := state.Bashible.Process(params, inputs.Bashible, true)
+	if err != nil {
+		return false, fmt.Errorf("cannot process Bashible: %w", err)
+	}
+
+	if !processResult.Ready {
+		state.setCondition(metav1.Condition{
+			Type:               ConditionTypeBashible,
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: inputs.Params.Generation,
+			Reason:             ConditionReasonProcessing,
+			Message:            processResult.Message,
+		})
+		return false, nil
+	}
+
+	state.setCondition(metav1.Condition{
+		Type:               ConditionTypeBashible,
+		Status:             metav1.ConditionTrue,
+		ObservedGeneration: inputs.Params.Generation,
+	})
+	return true, nil
+}
+
+func (state *State) processBashibleSecondStage(params bashible.Params, inputs Inputs) (bool, error) {
+	processResult, err := state.Bashible.Process(params, inputs.Bashible, false)
 	if err != nil {
 		return false, fmt.Errorf("cannot process Bashible: %w", err)
 	}
