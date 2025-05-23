@@ -1,0 +1,20 @@
+candi:
+  features:
+    - summary: Added support for Kubernetes 1.33 and discontinued support for Kubernetes 1.28.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13357
+      impact: >-
+        The minimum supported version of Kubernetes is now 1.29. All control plane components will
+        restart.
+ci:
+  features:
+    - summary: Add automatic vulnerability checks to pull requests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13601
+docs:
+  fixes:
+    - summary: Added link to GS to upload images into private registry.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13585
+loki:
+  fixes:
+    - summary: Lower Loki retention disk threshold to 92%
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13570
+
