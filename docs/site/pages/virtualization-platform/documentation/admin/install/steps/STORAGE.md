@@ -88,7 +88,7 @@ Configuring the storage involves combining the available block devices on the no
            values:
              - "$DEV_NAME"
      # The name of the LVM volume group that will be created from the block devices on the selected node.
-    actualVGNameOnTheNode: "vg-1"
+     actualVGNameOnTheNode: "vg-1"
    EOF
    ```
 

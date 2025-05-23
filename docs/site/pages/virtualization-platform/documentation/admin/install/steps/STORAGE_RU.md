@@ -89,7 +89,7 @@ sudo -i d8 k -n d8-sds-replicated-volume get pod -owide -w
            values:
              - "$DEV_NAME"
      # Имя группы томов LVM, которая будет создана из указанных выше блочных устройств на выбранном узле.
-    actualVGNameOnTheNode: "vg-1"
+     actualVGNameOnTheNode: "vg-1"
    EOF
    ```
 
