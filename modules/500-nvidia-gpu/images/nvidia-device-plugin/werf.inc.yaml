@@ -52,10 +52,14 @@ import:
     - nvidia-device-plugin
   before: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
-  add: /lib64
+  add: /usr/lib64
   includePaths:
     - libc.so.6
     - libresolv.so.2
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /lib64
+  includePaths:
     - ld-linux-x86-64.so.2
   before: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
