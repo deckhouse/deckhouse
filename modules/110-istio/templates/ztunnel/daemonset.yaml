@@ -49,7 +49,7 @@ metadata:
       "app.kubernetes.io/instance" (print $revision "-ztunnel")
       "app.kubernetes.io/version" $fullVersion
       "app.kubernetes.io/part-of" "istio"
-  ) | indent 2 }}
+  )) | indent 2 }}
 spec:
   updateStrategy:
     rollingUpdate:
@@ -68,7 +68,7 @@ spec:
           "app.kubernetes.io/instance" (print $revision "-ztunnel")
           "app.kubernetes.io/version" $fullVersion
           "app.kubernetes.io/part-of" "istio"
-      ) | indent 6 }}
+      )) | indent 6 }}
       annotations:
         sidecar.istio.io/inject: "false"
         istio.io/rev: {{ $revision }}
