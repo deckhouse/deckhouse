@@ -43,12 +43,14 @@ kind: DaemonSet
 metadata:
   name: ztunnel-{{ $revision }}
   namespace: d8-{{ $.Chart.Name }}
-  labels:
-    {{- include "helm_lib_module_labels" (list $ (dict "app" "ztunnel")) | nindent 4 }}
-    app.kubernetes.io/name: ztunnel
-    app.kubernetes.io/instance: {{ $revision }}-ztunnel
-    app.kubernetes.io/version: {{ $fullVersion | quote }}
-    app.kubernetes.io/part-of: "istio"
+  {{- $baseLabels := include "helm_lib_module_labels" (list $ (dict "app" "ztunnel")) | fromYaml }}
+  {{- $customLabels := dict 
+      "app.kubernetes.io/name" "ztunnel"
+      "app.kubernetes.io/instance" (printf "%s-ztunnel" $revision)
+      "app.kubernetes.io/version" $fullVersion
+      "app.kubernetes.io/part-of" "istio"
+  }}
+  {{- merge $baseLabels $customLabels | toYaml | nindent 4 }}
 spec:
   updateStrategy:
     rollingUpdate:
@@ -59,14 +61,16 @@ spec:
       app: ztunnel
   template:
     metadata:
-      labels:
-        {{- include "helm_lib_module_labels" (list $ (dict "app" "ztunnel")) | nindent 4 }}
-        sidecar.istio.io/inject: "false"
-        istio.io/dataplane-mode: none
-        app.kubernetes.io/name: ztunnel
-        app.kubernetes.io/instance: {{ $revision }}-ztunnel
-        app.kubernetes.io/version: {{ $fullVersion | quote }}
-        app.kubernetes.io/part-of: "istio"
+    {{- $baseLabels := include "helm_lib_module_labels" (list $ (dict "app" "ztunnel")) | fromYaml }}
+    {{- $customLabels := dict
+        "sidecar.istio.io/inject" "false"
+        "istio.io/dataplane-mode" "none"
+        "app.kubernetes.io/name" "ztunnel"
+        "app.kubernetes.io/instance" (printf "%s-ztunnel" $revision)
+        "app.kubernetes.io/version" $fullVersion
+        "app.kubernetes.io/part-of" "istio"
+    }}
+    {{- merge $baseLabels $customLabels | toYaml | nindent 4 }}
       annotations:
         sidecar.istio.io/inject: "false"
         istio.io/rev: {{ $revision }}
