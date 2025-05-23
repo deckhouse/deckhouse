@@ -43,7 +43,13 @@ kind: DaemonSet
 metadata:
   name: ztunnel-{{ $revision }}
   namespace: d8-{{ $.Chart.Name }}
-  {{- include "helm_lib_module_labels" (list $ (dict "app" "ztunnel" "app.kubernetes.io/name" "ztunnel" "app.kubernetes.io/instance" $revision"-ztunnel"  "app.kubernetes.io/version" $fullVersion  "app.kubernetes.io/part-of" "istio" )) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict 
+    "app" "ztunnel"
+    "app.kubernetes.io/name" "ztunnel"
+    "app.kubernetes.io/instance" (print $revision "-ztunnel")
+    "app.kubernetes.io/version" $fullVersion
+    "app.kubernetes.io/part-of" "istio"
+  )) | nindent 4 }}
 spec:
   updateStrategy:
     rollingUpdate:
