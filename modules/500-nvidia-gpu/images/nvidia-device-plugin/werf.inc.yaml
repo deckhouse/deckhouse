@@ -58,3 +58,6 @@ import:
     - libresolv.so.2
     - ld-linux-x86-64.so.2
   before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /usr/bin/ldd
+  before: setup
