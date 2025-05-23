@@ -102,7 +102,8 @@ func applyDexAuthenticatorSecretFilter(obj *unstructured.Unstructured) (go_hook.
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/user-authn",
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
+	Queue:        "/modules/user-authn",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "authenticators",
