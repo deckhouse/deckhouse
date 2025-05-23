@@ -123,7 +123,7 @@ cloudProviderVsphere:
 
 	dependency.TestDC.VsphereClient = vsphere.NewClientMock(GinkgoT())
 	var output vsphere.Output
-	_ = json.Unmarshal([]byte(`{"datacenter":"DCTEST","datastores":[{"datastoreType":"DatastoreCluster","name":"test-1-k8s-3cf5ce84","path":"/DCTEST/datastore/test_1_k8s","zones":["ZONE-TEST"]},{"datastoreType":"Datastore","datastoreURL":"ds:///vmfs/volumes/503a9af1-291d17b0-52e0-1d01842f428c/","name":"test-1-lun101-b39d82fa","path":"/DCTEST/datastore/test_1_Lun101","zones":["ZONE-TEST"]},{"datastoreType":"Datastore","datastoreURL":"ds:///vmfs/volumes/55832249-30a68048-496f-33f77fed3c5c/","name":"test-1-lun102-0403073a","path":"/DCTEST/datastore/test_1_Lun102","zones":["ZONE-TEST"]}],"zones":["ZONE-TEST"]}`), &output)
+	_ = json.Unmarshal([]byte(`{"datacenter":"DCTEST","datastores":[{"datastoreType":"DatastoreCluster","name":"test-1-k8s-3cf5ce84","path":"/DCTEST/datastore/test_1_k8s","zones":["ZONE-TEST"]},{"datastoreType":"Datastore","datastoreURL":"ds:///vmfs/volumes/503a9af1-291d17b0-52e0-1d01842f428c/","name":"test-1-LUN101-b39d82fa","path":"/DCTEST/datastore/test_1_Lun101","zones":["ZONE-TEST"]},{"datastoreType":"Datastore","datastoreURL":"ds:///vmfs/volumes/55832249-30a68048-496f-33f77fed3c5c/","name":"test-1-LUN102-0403073a","path":"/DCTEST/datastore/test_1_Lun102","zones":["ZONE-TEST"]}],"zones":["ZONE-TEST"]}`), &output)
 	dependency.TestDC.VsphereClient.GetZonesDatastoresMock.Return(&output, nil)
 
 	Context("Empty cluster", func() {
