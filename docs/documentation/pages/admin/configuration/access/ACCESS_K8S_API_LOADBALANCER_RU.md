@@ -21,7 +21,7 @@ lang: ru
          enabled: true
    ```
 
-1. Откройте веб-интерфейс kubeconfig. Веб-интерфейс для генерации kubeconfig в DKP активируется автоматически после включения параметра `publishAPI` в модуле `user-authn`. Этот веб-интерфейс доступен по URL:
+1. Откройте веб-интерфейс [kubeconfig](../../../user/web/kubeconfig.html). Веб-интерфейс для генерации kubeconfig в DKP активируется автоматически после включения параметра `publishAPI` в модуле `user-authn`. Этот веб-интерфейс доступен по URL:
 
    ```console
    https://kubeconfig.<publicDomainTemplate>

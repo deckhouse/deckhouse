@@ -143,8 +143,7 @@ rules: []
 
 - `rbac.deckhouse.io/use-role: admin` – указывает, какую роль хук должен использовать при создании use-ролей.
 
-- `rbac.deckhouse.io/kind: manage` – определяет, что роль относится к типу `manage`.
-  > Этот лейбл обязателен.
+- `rbac.deckhouse.io/kind: manage` – определяет, что роль относится к типу `manage`. **Этот лейбл обязателен**.
 - `rbac.deckhouse.io/level: subsystem` – указывает, что роль относится к уровню подсистемы и будет обрабатываться соответствующим образом.
 - `rbac.deckhouse.io/subsystem: custom` – задаёт имя подсистемы, за которую отвечает эта роль.
 - `rbac.deckhouse.io/aggregate-to-all-as: manager` - позволяет `manage:all`-роли агрегировать эту роль как `manager`.
@@ -153,19 +152,8 @@ rules: []
 
 Секция `aggregationRule` описывает, какие роли и модули агрегируются в данную роль:
 
-- агрегирует manage-роль из подсистем `deckhouse`, `kubernetes`:
-
-  ```yaml
-  rbac.deckhouse.io/kind: manage
-  rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
-  ```
-
-- агрегирует все правила из модуля user-authn:
-
-  ```yaml
-   rbac.deckhouse.io/kind: manage
-   module: user-authn
-  ```
+- `rbac.deckhouse.io/kind: manage`, `rbac.deckhouse.io/aggregate-to-deckhouse-as: manager` – агрегирует manage-роль из подсистем `deckhouse`, `kubernetes`:
+- `rbac.deckhouse.io/kind: manage`, `module: user-authn` – агрегирует все правила из модуля user-authn:
 
 Таким образом роль получает права от подсистем `deckhouse`, `kubernetes` и от модуля user-authn.
 

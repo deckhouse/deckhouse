@@ -11,7 +11,7 @@ lang: ru
   - через модуль [user-authn](../../reference/mc/user-authn/);
   - с помощью сертификатов.
 
-При выпуске сертификата для аутентификации нужно указать в нём имя (`CN=<имя>`), необходимое количество групп (`O=<группа>`) и подписать его с помощью корневого CA-кластера. Именно этот механизм используется для аутентификации в кластере, когда, например, используется kubectl на bastion-узле. Пример выпуска сертификата в разделе [Создание пользователя](#создание-пользователя).
+При выпуске сертификата для аутентификации нужно указать в нём имя (`CN=<имя>`), необходимое количество групп (`O=<группа>`) и подписать его с помощью корневого CA-кластера. Именно этот механизм используется для аутентификации в кластере, когда, например, используется kubectl на bastion-узле. Пример выпуска сертификата находится в разделе [Создание пользователя](#создание-пользователя).
 
 Пример манифеста для создания статического пользователя:
 
@@ -206,50 +206,50 @@ apiVersion: deckhouse.io/v1
 
 ### Создание пользователя
 
-- Получите корневой сертификат кластера (ca.crt и ca.key).
-- Сгенерируйте ключ пользователя:
+1. Получите корневой сертификат кластера (ca.crt и ca.key).
+1. Сгенерируйте ключ пользователя:
 
-  ```shell
-  openssl genrsa -out myuser.key 2048
-  ```
+   ```shell
+   openssl genrsa -out myuser.key 2048
+   ```
 
-- Создайте CSR с указанием пользователя `myuser`, входящего в группы `mygroup1` и `mygroup2`:
+1. Создайте CSR с указанием пользователя `myuser`, входящего в группы `mygroup1` и `mygroup2`:
 
-  ```shell
-  openssl req -new -key myuser.key -out myuser.csr -subj "/CN=myuser/O=mygroup1/O=mygroup2"
-  ```
+   ```shell
+   openssl req -new -key myuser.key -out myuser.csr -subj "/CN=myuser/O=mygroup1/O=mygroup2"
+   ```
 
-- Подпишите CSR корневым сертификатом кластера:
+1. Подпишите CSR корневым сертификатом кластера:
 
-  ```shell
-  openssl x509 -req -in myuser.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out myuser.crt -days 10
-  ```
+   ```shell
+   openssl x509 -req -in myuser.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out myuser.crt -days 10
+   ```
 
-- Укажите полученный сертификат в файле конфигурации:
+1. Укажите полученный сертификат в файле конфигурации:
 
-  ```shell
-  cat << EOF
-  apiVersion: v1
-  clusters:
-  - cluster:
-      certificate-authority-data: $(cat ca.crt | base64 -w0)
-      server: https://<хост кластера>:6443
-    name: kubernetes
-  contexts:
-  - context:
-      cluster: kubernetes
-      user: myuser
-    name: myuser@kubernetes
-  current-context: myuser@kubernetes
-  kind: Config
-  preferences: {}
-  users:
-  - name: myuser
-    user:
-      client-certificate-data: $(cat myuser.crt | base64 -w0)
-      client-key-data: $(cat myuser.key | base64 -w0)
-  EOF
-  ```
+   ```shell
+   cat << EOF
+   apiVersion: v1
+   clusters:
+   - cluster:
+       certificate-authority-data: $(cat ca.crt | base64 -w0)
+       server: https://<хост кластера>:6443
+     name: kubernetes
+   contexts:
+   - context:
+       cluster: kubernetes
+       user: myuser
+     name: myuser@kubernetes
+   current-context: myuser@kubernetes
+   kind: Config
+   preferences: {}
+   users:
+   - name: myuser
+     user:
+       client-certificate-data: $(cat myuser.crt | base64 -w0)
+       client-key-data: $(cat myuser.key | base64 -w0)
+   EOF
+   ```
 
 ### Предоставление доступа созданному пользователю
 

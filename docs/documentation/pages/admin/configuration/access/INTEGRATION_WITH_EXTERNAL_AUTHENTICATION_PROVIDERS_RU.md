@@ -11,8 +11,9 @@ DKP поддерживает подключение следующих внеш�
 - [OIDC (например, Okta, Keycloak, Gluu, Blitz Identity Provider)](#интеграция-по-oidc-openid-connect);
 - [GitHub](#интеграция-с-github);
 - [GitLab](#интеграция-с-gitlab);
-- [Bitbucket Cloud](#интеграция-с-bitbucket-cloud);
-- [Atlassian Crowd](#интеграция-с-atlassian-crowd).
+- [Atlassian Crowd](#интеграция-с-atlassiancrowd);
+- [Bitbucket Cloud](#интеграция-с-bitbucketcloud).
+
 
 {% alert level="info" %}
 Политика безопасности паролей (требования к сложности, срок действия, история, двухфакторная аутентификация и т.д.) полностью контролируется внешним провайдером аутентификации. Deckhouse не управляет паролями и не вмешивается в реализацию этих политик на стороне провайдера.
@@ -109,9 +110,9 @@ DKP поддерживает подключение следующих внеш�
 
 В процессе настройки Keycloak выберите подходящий `realm`, добавьте пользователя в [Users](https://www.keycloak.org/docs/latest/server_admin/index.html#assembly-managing-users_server_administration_guide) и создайте клиент в разделе [Clients](https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide) с включённой [аутентификацией](https://www.keycloak.org/docs/latest/server_admin/index.html#capability-config), необходимой для генерации `clientSecret`. Затем выполните следующие шаги:
 
-- Создайте в разделе [Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes) `scope` с именем `groups`, и назначьте ему предопределенный маппинг `groups` («Client scopes» → «Client scope details» → «Mappers» → «Add predefined mappers»).
-- В созданном ранее клиенте добавьте данный `scope` [во вкладке Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) («Clients → «Client details» → «Client Scopes» → «Add client scope»).
-- В полях «Valid redirect URIs», «Valid post logout redirect URIs» и «Web origins» [конфигурации клиента](https://www.keycloak.org/docs/latest/server_admin/#general-settings) укажите `https://dex.<publicDomainTemplate>/*`, где `publicDomainTemplate` – это [указанный](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) шаблон DNS-имен кластера в модуле `global`.
+1. Создайте в разделе [Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes) `scope` с именем `groups`, и назначьте ему предопределенный маппинг `groups` («Client scopes» → «Client scope details» → «Mappers» → «Add predefined mappers»).
+1. В созданном ранее клиенте добавьте данный `scope` [во вкладке Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) («Clients → «Client details» → «Client Scopes» → «Add client scope»).
+1. В полях «Valid redirect URIs», «Valid post logout redirect URIs» и «Web origins» [конфигурации клиента](https://www.keycloak.org/docs/latest/server_admin/#general-settings) укажите `https://dex.<publicDomainTemplate>/*`, где `publicDomainTemplate` – это [указанный](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) шаблон DNS-имен кластера в модуле `global`.
 
 Пример настройки провайдера для интеграции с Keycloak:
 
@@ -186,7 +187,7 @@ spec:
     getUserInfo: true
 ```
 
-После включения интеграции с Okta можно  использовать группы пользователей из Okta, для управления правами. Например, можно задать список групп, пользователи из которых получат доступ к Grafana.
+После включения интеграции с Okta можно  использовать группы пользователей из Okta, для управления правами. Например, можно задать список групп, пользователи из которых получат доступ к [Grafana](../../../user/web/grafana.html).
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -288,9 +289,9 @@ spec:
 
 Для этого выполните следующие шаги:
 
-- self-hosted: перейдите в «Admin Area» → «Applications» → «New application» и в качестве «Redirect URI (Callback url)» укажите адрес `https://dex.<publicDomainTemplate>/callback`, а также выберите «scopes»: `read_user`, `openid`;
-- cloud gitlab.com: под главной учетной записью проекта перейдите в «User Settings» → «Applications» → «Add new application» и в качестве «Redirect URI (Callback url)» укажите адрес `https://dex.<publicDomainTemplate>/callback`, а также выберите «scopes»: `read_user`, `openid`;
-- полученные `Application ID` и секрет укажите в ресурсе DexProvider.
+1. self-hosted: перейдите в «Admin Area» → «Applications» → «New application» и в качестве «Redirect URI (Callback url)» укажите адрес `https://dex.<publicDomainTemplate>/callback`, а также выберите «scopes»: `read_user`, `openid`;
+1. cloud gitlab.com: под главной учетной записью проекта перейдите в «User Settings» → «Applications» → «Add new application» и в качестве «Redirect URI (Callback url)» укажите адрес `https://dex.<publicDomainTemplate>/callback`, а также выберите «scopes»: `read_user`, `openid`;
+1. Полученные `Application ID` и секрет укажите в ресурсе DexProvider.
 
 {% alert level="info" %}
 Для GitLab версии 16 и выше включите опцию «Trusted» при создании приложения. Эта опция доступна при создании приложений в «Admin Area» → «Applications». Установка приложения как доверенного позволяет пропустить шаг авторизации для пользователей, что может быть полезно в контролируемых средах.
@@ -321,9 +322,9 @@ spec:
 
 Для этого выполните следующие шаги:
 
-- перейдите в «Applications» → «Add application»;
-- полученные «Application Name» и «Password» укажите в ресурсе DexProvider;
-- при указании групп в ресурсе DexProvider убедитесь, что их названия приведены к нижнему регистру (lowercase). Это необходимо для корректного сопоставления групп между Crowd и Deckhouse.
+1. Перейдите в «Applications» → «Add application»;
+1. Полученные «Application Name» и «Password» укажите в ресурсе DexProvider;
+1. При указании групп в ресурсе DexProvider убедитесь, что их названия приведены к нижнему регистру (lowercase). Это необходимо для корректного сопоставления групп между Crowd и Deckhouse.
 
 Пример настройки провайдера для интеграции с Atlassian Crowd:
 
@@ -351,9 +352,9 @@ spec:
 
 Для этого выполните следующие шаги:
 
-- перейдите в «Personal settings» → «Access management» → «OAuth consumers» → «Add consumer» и в качестве «Callback URL» укажите адрес `https://dex.<publicDomainTemplate>/callback`;
-- разрешите доступ: «Account: Read» → позволяет получать основную информацию о пользователе (например, email, имя пользователя), «Workspace membership → Read»: позволяет получать информацию о членстве пользователя в рабочих пространствах.
-- полученные `Key` и секрет укажите в ресурсе DexProvider.
+1. Перейдите в «Personal settings» → «Access management» → «OAuth consumers» → «Add consumer» и в качестве «Callback URL» укажите адрес `https://dex.<publicDomainTemplate>/callback`;
+1. Разрешите доступ: «Account: Read» → позволяет получать основную информацию о пользователе (например, email, имя пользователя), «Workspace membership → Read»: позволяет получать информацию о членстве пользователя в рабочих пространствах.
+1. Полученные `Key` и секрет укажите в ресурсе DexProvider.
 
 Пример настройки провайдера для интеграции с Bitbucket:
 
