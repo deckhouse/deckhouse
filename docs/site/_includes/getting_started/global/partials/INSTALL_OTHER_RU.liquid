@@ -84,9 +84,9 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 {%- if page.platform_code == "bm-private" %}
 > Если вы устанавливаете Dekhouse Kubernetes Platform в закрытом окружении с доступом к публичному registry Deckhouse через прокси-сервер, укажите в команде запуска контейнера параметры доступа к прокси-серверу:
 > ```text
-> docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" --env HTTP_PROXY="http://proxy.company.tld:8888" --env HTTPS_PROXY="http://proxy.company.tld:8888" --env http_proxy="http://proxy.company.tld:8888" --env https_proxy="http://proxy.company.tld:8888" --env NO_PROXY=".company.tld,192.168.0.0/24" --env no_proxy=".company.tld,192.168.0.0/24" registry.deckhouse.ru/deckhouse/<DKP_REDACTION>/install:stable bash
+> docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" --env HTTP_PROXY="http://proxy.company.tld:8888" --env HTTPS_PROXY="http://proxy.company.tld:8888" --env http_proxy="http://proxy.company.tld:8888" --env https_proxy="http://proxy.company.tld:8888" --env NO_PROXY=".company.tld,192.168.0.0/24" --env no_proxy=".company.tld,192.168.0.0/24" registry.deckhouse.ru/deckhouse/<DKP_EDITION>/install:stable bash
 > ```
-> Не забудьте заменить `<DKP_REDACTION>` на код редакции устанавливаемой версии DKP – `se`, `se-plus` or `ee`.
+> Не забудьте заменить `<DKP_EDITION>` на код редакции устанавливаемой версии DKP – `se`, `se-plus` or `ee`.
 {% endif %}
 </div>
 <div id='block_installer_windows_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }}" markdown="1">
@@ -102,9 +102,9 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 {%- if page.platform_code == "bm-private" %}
 > Если вы устанавливаете Dekhouse Kubernetes Platform в закрытом окружении с доступом к публичному registry Deckhouse через прокси-сервер, укажите в команде запуска контейнера параметры доступа к прокси-серверу:
 > ```text
-> docker run --pull=always -it -v "%cd%\config.yml:/config.yml" -v "%userprofile%\.ssh\:/tmp/.ssh/" --env HTTP_PROXY="http://proxy.company.tld:8888" --env HTTPS_PROXY="http://proxy.company.tld:8888" --env http_proxy="http://proxy.company.tld:8888" --env https_proxy="http://proxy.company.tld:8888" --env NO_PROXY=".company.tld,192.168.0.0/24" --env no_proxy=".company.tld,192.168.0.0/24" registry.deckhouse.ru/deckhouse/<DKP_REDACTION>/install:stable bash
+> docker run --pull=always -it -v "%cd%\config.yml:/config.yml" -v "%userprofile%\.ssh\:/tmp/.ssh/" --env HTTP_PROXY="http://proxy.company.tld:8888" --env HTTPS_PROXY="http://proxy.company.tld:8888" --env http_proxy="http://proxy.company.tld:8888" --env https_proxy="http://proxy.company.tld:8888" --env NO_PROXY=".company.tld,192.168.0.0/24" --env no_proxy=".company.tld,192.168.0.0/24" registry.deckhouse.ru/deckhouse/<DKP_EDITION>/install:stable bash
 > ```
-> Не забудьте заменить `<DKP_REDACTION>` на код редакции устанавливаемой версии DKP – `se`, `se-plus` or `ee`.
+> Не забудьте заменить `<DKP_EDITION>` на код редакции устанавливаемой версии DKP – `se`, `se-plus` or `ee`.
 {% endif %}
 </div>
 {% endif %}
