@@ -11,14 +11,13 @@ kind: ServiceAccount
 metadata:
   name: ztunnel
   namespace: d8-{{ $.Chart.Name }}
-  {{- $baseLabels := include "helm_lib_module_labels" (list $ (dict "app" "ztunnel")) | fromYaml }}
-  {{- $customLabels := dict 
-      "app.kubernetes.io/name" "ztunnel"
-      "app.kubernetes.io/instance" (printf "%s-ztunnel" $revision)
-      "app.kubernetes.io/version" $fullVersion
-      "app.kubernetes.io/part-of" "istio"
-  }}
-  {{- merge $baseLabels $customLabels | toYaml | nindent 4 }}
+  {{- include "helm_lib_module_labels" (list $ (dict 
+    "app" "ztunnel"
+    "app.kubernetes.io/name" "ztunnel"
+    "app.kubernetes.io/instance" (print $revision "-ztunnel")
+    "app.kubernetes.io/version" $fullVersion
+    "app.kubernetes.io/part-of" "istio"
+  )) | nindent 4 }}
 ---
   {{- end }}
 {{- end }}
