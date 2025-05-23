@@ -50,4 +50,10 @@ import:
     - gpu-feature-discovery
     - mps-control-daemon
     - nvidia-device-plugin
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /lib64
+  includePaths:
+    - libc.so.6
+    - libresolv.so.2
+    - ld-linux-x86-64.so.2
   before: setup
