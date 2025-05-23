@@ -41,6 +41,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
+fromCacheVersion: "2025-05-23.00"
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /relocate
