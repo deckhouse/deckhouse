@@ -151,14 +151,14 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 		if !dNode.isDraining() {
 			// If the node became schedulable, but 'drained' annotation is still on it, remove the obsolete annotation
 			if !dNode.Unschedulable && dNode.DrainedSource == "user" {
-				input.PatchCollector.MergePatch(removeDrainedAnnotation, "v1", "Node", "", dNode.Name)
+				input.PatchCollector.PatchWithMerge(removeDrainedAnnotation, "v1", "Node", "", dNode.Name)
 			}
 			continue
 		}
 
 		// If the node is marked for draining while is has been drained, remove the 'drained' annotation
 		if dNode.DrainedSource == "user" {
-			input.PatchCollector.MergePatch(removeDrainedAnnotation, "v1", "Node", "", dNode.Name)
+			input.PatchCollector.PatchWithMerge(removeDrainedAnnotation, "v1", "Node", "", dNode.Name)
 		}
 
 		cordonNode := &corev1.Node{

@@ -167,7 +167,7 @@ func setInstanceClassUsage(input *go_hook.HookInput) error {
 			apiVersion = v
 		}
 
-		input.PatchCollector.MergePatch(statusPatch, apiVersion, ic.Kind, "", ic.Name, object_patch.WithIgnoreMissingObject())
+		input.PatchCollector.PatchWithMerge(statusPatch, apiVersion, ic.Kind, "", ic.Name, object_patch.WithIgnoreMissingObject())
 	}
 
 	return nil

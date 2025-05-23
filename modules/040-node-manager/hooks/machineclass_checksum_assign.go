@@ -117,7 +117,7 @@ func assignMachineClassChecksum(input *go_hook.HookInput) error {
 				},
 			},
 		}
-		input.PatchCollector.MergePatch(patch,
+		input.PatchCollector.PatchWithMerge(patch,
 			apiVersion, kind, namespace, md.Name,
 			object_patch.WithIgnoreMissingObject())
 	}

@@ -59,7 +59,7 @@ func setLeaderLabelToPod(input *go_hook.HookInput, dc dependency.Container) erro
 			},
 		}
 
-		input.PatchCollector.MergePatch(patch, "v1", "Pod", d8Namespace, pod.Name)
+		input.PatchCollector.PatchWithMerge(patch, "v1", "Pod", d8Namespace, pod.Name)
 	}
 
 	return nil

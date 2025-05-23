@@ -183,7 +183,7 @@ func calculateReplicasAndPatchMachineDeployment(
 			},
 		}
 
-		input.PatchCollector.MergePatch(patch, apiGroup, "MachineDeployment", "d8-cloud-instance-manager", md.Name)
+		input.PatchCollector.PatchWithMerge(patch, apiGroup, "MachineDeployment", "d8-cloud-instance-manager", md.Name)
 	}
 }
 
