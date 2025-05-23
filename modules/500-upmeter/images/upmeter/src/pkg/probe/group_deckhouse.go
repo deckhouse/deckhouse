@@ -27,10 +27,11 @@ import (
 	"d8.io/upmeter/pkg/probe/run"
 )
 
-func initDeckhouse(access kubernetes.Access, preflight checker.Doer, logger *logrus.Logger) []runnerConfig {
+func initDeckhouse(access kubernetes.Access, preflight checker.Doer, config ConvergeConfig, logger *logrus.Logger) []runnerConfig {
 	const (
 		groupDeckhouse      = "deckhouse"
 		controlPlaneTimeout = 5 * time.Second
+		period              = 30 * time.Second
 	)
 
 	logEntry := logrus.NewEntry(logger).WithField("group", groupDeckhouse)
@@ -42,7 +43,7 @@ func initDeckhouse(access kubernetes.Access, preflight checker.Doer, logger *log
 			group:  groupDeckhouse,
 			probe:  "cluster-configuration",
 			check:  "_",
-			period: time.Minute,
+			period: period,
 			config: &checker.D8ClusterConfiguration{
 				// deckhouse
 				DeckhouseNamespace:     "d8-system",
@@ -52,14 +53,16 @@ func initDeckhouse(access kubernetes.Access, preflight checker.Doer, logger *log
 				CustomResourceName: run.ID(),
 				Monitor:            monitor,
 
-				Access:           access,
-				PreflightChecker: controlPlanePinger,
+				Access:              access,
+				PreflightChecker:    controlPlanePinger,
+				PodAccessTimeout:    5 * time.Second,
+				ObjectChangeTimeout: 5 * time.Second,
 
-				DeckhouseReadinessTimeout: 20 * time.Minute,
-				PodAccessTimeout:          5 * time.Second,
-				ObjectChangeTimeout:       5 * time.Second,
-
-				Logger: logEntry.WithField("probe", "cluster-configuration"),
+				WindowSize:          config.WindowSize,
+				FreezeThreshold:     config.FreezeThreshold,
+				TaskGrowthThreshold: config.AllowedTasksPerTimeInterval / float64(config.WindowSize*int(period.Seconds())),
+				Logger:              logEntry.WithField("probe", "cluster-configuration"),
+				Period:              period,
 			},
 		},
 	}

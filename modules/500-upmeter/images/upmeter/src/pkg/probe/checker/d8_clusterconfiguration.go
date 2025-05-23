@@ -18,7 +18,10 @@ package checker
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"sync"
 	"time"
 
@@ -35,6 +38,8 @@ import (
 	"d8.io/upmeter/pkg/monitor/hookprobe"
 )
 
+const svcName = "deckhouse-leader"
+
 type D8ClusterConfiguration struct {
 	DeckhouseNamespace        string
 	DeckhouseLabelSelector    string
@@ -50,18 +55,27 @@ type D8ClusterConfiguration struct {
 
 	PodAccessTimeout    time.Duration
 	ObjectChangeTimeout time.Duration
+	WindowSize          int
+	FreezeThreshold     time.Duration
+	TaskGrowthThreshold float64
+	Period              time.Duration
 }
 
-// Verify deckhouse pod is up, and running, and ready
+// Verify deckhouse queue is not stale, and tasks are not growing
 // Set value to CR spec
 // Wait for CR spec to be modified by hook
 func (c *D8ClusterConfiguration) Checker() check.Checker {
+	poll := newPoller(c.Access, c.DeckhouseNamespace, svcName, *newInsecureClient(5 * time.Second))
+
 	checkDeckhouse := withTimeout(
-		&podRunningOrReadyChecker{
-			namespace:        c.DeckhouseNamespace,
-			labelSelector:    c.DeckhouseLabelSelector,
-			readinessTimeout: c.DeckhouseReadinessTimeout,
-			access:           c.Access,
+		&convergeStatusChecker{
+			poller: poll,
+			logger: c.Logger,
+
+			windowSize:          c.WindowSize,
+			period:              c.Period,
+			freezeThreshold:     c.FreezeThreshold,
+			taskGrowthThreshold: c.TaskGrowthThreshold,
 		},
 		c.PodAccessTimeout,
 	)
@@ -90,6 +104,7 @@ func (c *D8ClusterConfiguration) Checker() check.Checker {
 			name:   c.CustomResourceName,
 			getter: objectHandler,
 			logger: c.Logger.WithField("component", "verifier"),
+			poller: poll,
 		},
 		c.ObjectChangeTimeout,
 	)
@@ -243,9 +258,20 @@ type checkMirrorValueChecker struct {
 	name   string
 	getter hookProbeObjectGetter
 	logger *logrus.Entry
+	poller poller
 }
 
 func (c *checkMirrorValueChecker) Check() check.Error {
+	pollResult, err := c.poller.Poll()
+	if err != nil {
+		return err
+	}
+
+	if !pollResult.StartupConvergeDone {
+		c.logger.Debug("converge not done yet, no point in checking mirror value")
+		return nil
+	}
+
 	c.logger.Debug("fetching object")
 
 	obj := c.getter.Get()
@@ -262,4 +288,78 @@ func (c *checkMirrorValueChecker) Check() check.Error {
 		)
 	}
 	return nil
+}
+
+type poller interface {
+	Poll() (*status, check.Error)
+}
+
+type poll struct {
+	access    kubernetes.Access
+	namespace string
+	svcname   string
+	client    http.Client
+}
+
+func newPoller(access kubernetes.Access, namespace string, svcname string, client http.Client) poller {
+	return &poll{
+		access:    access,
+		namespace: namespace,
+		svcname:   svcname,
+		client:    client,
+	}
+}
+
+type status struct {
+	ConvergeInProgress        int  `json:"CONVERGE_IN_PROGRESS"`
+	ConvergeWaitTask          bool `json:"CONVERGE_WAIT_TASK"`
+	StartupConvergeDone       bool `json:"STARTUP_CONVERGE_DONE"`
+	StartupConvergeInProgress int  `json:"STARTUP_CONVERGE_IN_PROGRESS"`
+	StartupConvergeNotStarted bool `json:"STARTUP_CONVERGE_NOT_STARTED"`
+}
+
+func (c *poll) Poll() (*status, check.Error) {
+	url, err := c.extractServiceURL()
+	if err != nil {
+		return nil, check.ErrUnknown("cannot get svc url %s: %v", c.namespace, err)
+	}
+
+	req, err := http.NewRequestWithContext(context.TODO(), http.MethodGet, url, nil)
+	if err != nil {
+		return nil, check.ErrUnknown("error getting deckhouse pod status converge %s: %v", c.namespace, err)
+	}
+
+	resp, err := c.client.Do(req)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		return nil, check.ErrUnknown("failed to get status converge %s: %v", c.namespace, err)
+	}
+
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, check.ErrUnknown("failed to get status converge %s: %v", c.namespace, err)
+	}
+
+	var status status
+	if err := json.Unmarshal(body, &status); err != nil {
+		return nil, check.ErrUnknown("failed unmarshal json %s: %v", c.namespace, err)
+	}
+
+	return &status, nil
+}
+
+func (c *poll) extractServiceURL() (string, error) {
+	service, err := c.access.Kubernetes().CoreV1().Services(c.namespace).Get(context.TODO(), svcName, metav1.GetOptions{})
+	if err != nil {
+		return "", err
+	}
+	var serviceport int32
+	for _, port := range service.Spec.Ports {
+		if port.Name == "self" {
+			serviceport = port.Port
+		}
+	}
+
+	return fmt.Sprintf("http://%s.%s:%d/status/converge?output=json", svcName, c.namespace, serviceport), nil
 }
