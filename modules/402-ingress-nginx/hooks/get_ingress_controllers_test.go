@@ -284,6 +284,33 @@ spec:
 		})
 	})
 
+	var IngressNginxControllerWithDeletionTomeStamp = `
+---
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: test-3
+  deletionTimestamp: "2025-05-26T08:35:00Z"
+  finalizers:
+  - finalizer.ingress-nginx.deckhouse.io
+spec:
+  ingressClass: test
+  inlet: LoadBalancerWithProxyProtocol
+`
+
+	Context("Not include controller with deletion timestamp", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(IngressNginxControllerWithDeletionTomeStamp))
+			f.RunGoHook()
+		})
+
+		It("should controller absent", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers").Array()).Should(BeEmpty())
+		})
+	})
+
+
 	Context("With suspended validation annotation", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
