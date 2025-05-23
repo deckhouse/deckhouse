@@ -6,16 +6,19 @@ source /etc/bashrc.d/bash_completion.sh
 if [ -s /tmp/kubectl_version ]; then
  kubernetes_version="$(cat /tmp/kubectl_version)"
 else
- kubectl_version="1.29"
+ kubectl_version="{{ index (index . 0) "kubectl" }}"
 fi
 
 case "$kubernetes_version" in
-  1.27.* | 1.28.* | 1.29.* )
-    kubectl_version="1.29"
+{{- range . }}
+  {{- $versions := list }}
+  {{- range .version }}
+    {{- $versions = append $versions (printf "%s.*" .) }}
+  {{- end }}
+  {{ join " | " $versions }} )
+    kubectl_version="{{ .kubectl }}"
     ;;
-  1.30.* | 1.31.* | 1.32.* )
-    kubectl_version="1.31"
-    ;;
+{{- end }}
 esac
 
 eval "$(kubectl-${kubectl_version} completion bash)"
