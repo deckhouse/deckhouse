@@ -206,8 +206,8 @@ jobs:
                 let workflowName = 'Build and test for dev branches';
                 let jobName = 'Build Deckhouse';
                 if (isReleaseBranch(branchName)) {
-                  workflowName = 'Build and test for release branches';
-                  jobName = 'Build Deckhouse FE';
+                  workflowName = 'Build and test for release';
+                  jobName = 'Build FE';
                 }
                 if (branchName === 'main') {
                   return true;
