@@ -3,9 +3,9 @@
 ---
 # #####################################################################
 # Final image of cilium-agent (used in helm-templates)
-# Based on https://github.com/cilium/cilium/blob/v1.14.14/images/runtime/Dockerfile
-# and https://github.com/cilium/cilium/blob/v1.14.14/images/runtime/install-runtime-deps.sh
-# and https://github.com/cilium/cilium/blob/v1.14.14/images/cilium/Dockerfile (release stage)
+# Based on https://github.com/cilium/cilium/blob/v1.17.4/images/runtime/Dockerfile
+# and https://github.com/cilium/cilium/blob/v1.17.4/images/runtime/install-runtime-deps.sh
+# and https://github.com/cilium/cilium/blob/v1.17.4/images/cilium/Dockerfile (release stage)
 ---
 # #####################################################################
 # List of binary files used by agent
@@ -52,7 +52,7 @@
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/bin/hubble /etc/bash_completion.d/hubble" }}
 # from cilium-artifact
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/cni-uninstall.sh /init-container.sh /install-plugin.sh" }}
-{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/LICENSE.all /etc/bash_completion.d/cilium" }}
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/LICENSE.all /etc/bash_completion.d/cilium-dbg" }}
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/opt/cni/bin/cilium-cni /usr/bin/cilium*" }}
 # from common/pause
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/pause" }}
@@ -133,10 +133,12 @@ import:
   - init-container.sh
   - install-plugin.sh
   - LICENSE.all
-  - etc/bash_completion.d/cilium
+  - etc/bash_completion.d/cilium-dbg
   - opt/cni/bin/cilium-cni
   - usr/bin/cilium*
   - var/lib/cilium/bpf
+  - usr/bin/hubble
+  - etc/bash_completion.d/hubble
 - image: {{ .ModuleName }}/cilium-envoy-artifact
   add: /tmp/install/usr
   to: /usr
@@ -145,14 +147,6 @@ import:
   - bin/cilium-envoy
   - bin/cilium-envoy-starter
   - lib/libcilium.so
-- image: {{ .ModuleName }}/hubble-artifact
-  add: /hubble
-  to: /usr/bin/hubble
-  before: install
-- image: {{ .ModuleName }}/hubble-artifact
-  add: /bash_completion
-  to: /etc/bash_completion.d/hubble
-  before: install
 - image: common/pause
   add: /pause
   to: /pause
@@ -179,6 +173,9 @@ shell:
   - ln -snf /usr/share/zoneinfo/Etc/UTC /etc/localtime
   - /binary_replace.sh -i "{{ $binariesFromALT }}" -o /relocate
   # copy self built binaries and deps
+  # fix compatibility with the new version of bash_completion
+  - sed -i 's/_get_comp_words_by_ref/_comp_get_words/' /etc/bash_completion.d/cilium-dbg
+  - sed -i 's/_get_comp_words_by_ref/_comp_get_words/' /etc/bash_completion.d/hubble
   - /binary_replace.sh -i "{{ $selfBuiltBinaries }}" -o /relocate
   # additional relocate for iptables
   - |
@@ -251,6 +248,14 @@ import:
   before: install
 imageSpec:
   config:
-    env: { "HUBBLE_SERVER": "unix:///var/run/cilium/hubble.sock", "INITSYSTEM": "SYSTEMD", "HUBBLE_COMPAT": "legacy-json-output", "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", "LANG": "C.UTF-8", "LANGUAGE": "C.UTF-8", "LC_ALL": "C.UTF-8" }
+    env:
+      INITSYSTEM: "SYSTEMD"
+      LD_LIBRARY_PATH: "/lib:/usr/lib"
+      HUBBLE_SERVER: "unix:///var/run/cilium/hubble.sock"
+      HUBBLE_COMPAT: "legacy-json-output"
+      LANG: "C.UTF-8"
+      LANGUAGE: "C.UTF-8"
+      LC_ALL: "C.UTF-8"
+      PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
     workingDir: "/home/cilium"
-    cmd: ["/usr/bin/cilium"]
+    cmd: ["/usr/bin/cilium-dbg"]
