@@ -43,12 +43,11 @@ fi
 cri_config="--container-runtime-endpoint=unix://${cri_socket_path}"
 
 credential_provider_flags=""
-{{- if semverCompare ">=1.28" .kubernetesVersion }}
-    if bb-flag? kubelet-enable-credential-provider; then
-      credential_provider_flags="--image-credential-provider-config=/var/lib/bashible/kubelet-credential-provider-config.yaml --image-credential-provider-bin-dir=/opt/deckhouse/bin"
-      bb-flag-unset kubelet-enable-credential-provider
-    fi
-{{- end }}
+
+if bb-flag? kubelet-enable-credential-provider; then
+  credential_provider_flags="--image-credential-provider-config=/var/lib/bashible/kubelet-credential-provider-config.yaml --image-credential-provider-bin-dir=/opt/deckhouse/bin"
+  bb-flag-unset kubelet-enable-credential-provider
+fi
 
 bb-event-on 'bb-sync-file-changed' '_enable_kubelet_service'
 function _enable_kubelet_service() {
