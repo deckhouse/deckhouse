@@ -33,20 +33,23 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
+	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	oci_tools "github.com/sylabs/oci-tools/pkg/mutate"
+	ocitools "github.com/sylabs/oci-tools/pkg/mutate"
 	"github.com/tidwall/gjson"
+	"go.opentelemetry.io/otel"
 )
 
 //go:generate minimock -i Client -o cr_mock.go
 
 const (
 	defaultTimeout = 120 * time.Second
+
+	tracerName = "container-registry-client"
 )
 
 type Client interface {
-	Image(ctx context.Context, tag string) (v1.Image, error)
+	Image(ctx context.Context, tag string) (crv1.Image, error)
 	Digest(ctx context.Context, tag string) (string, error)
 	ListTags(ctx context.Context) ([]string, error)
 }
@@ -96,7 +99,7 @@ func NewClient(repo string, options ...Option) (Client, error) {
 	return r, nil
 }
 
-func (r *client) Image(ctx context.Context, tag string) (v1.Image, error) {
+func (r *client) Image(ctx context.Context, tag string) (crv1.Image, error) {
 	imageURL := r.registryURL + ":" + tag
 
 	var nameOpts []name.Option
@@ -139,6 +142,9 @@ func (r *client) Image(ctx context.Context, tag string) (v1.Image, error) {
 }
 
 func (r *client) ListTags(ctx context.Context) ([]string, error) {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "ListTags")
+	defer span.End()
+
 	var nameOpts []name.Option
 	if r.options.useHTTP {
 		nameOpts = append(nameOpts, name.Insecure)
@@ -310,8 +316,8 @@ func parse(rawURL string) (*url.URL, error) {
 }
 
 // Extract flattens the image to a single layer and returns ReadCloser for fetching the content
-func Extract(image v1.Image) (io.ReadCloser, error) {
-	flattenedImage, err := oci_tools.Squash(image)
+func Extract(image crv1.Image) (io.ReadCloser, error) {
+	flattenedImage, err := ocitools.Squash(image)
 	if err != nil {
 		return nil, fmt.Errorf("flattening image to a single layer: %w", err)
 	}

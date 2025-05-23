@@ -60,7 +60,7 @@ k8s:
       livenessprobe: v2.15.0
   "1.29":
     status: available
-    patch: 14
+    patch: 15
     bashible: *bashible
     clusterAutoscalerPatch: "2"
     crictlPatch: 0
@@ -85,13 +85,13 @@ k8s:
   "1.30":
     default: true
     status: available
-    patch: 10
+    patch: 12
     bashible: *bashible
     clusterAutoscalerPatch: '2'
     crictlPatch: 1
     ccm:
       openstack: v1.30.2
-      aws: v1.30.7
+      aws: v1.30.8
       vsphere: v1.30.2
       azure: v1.30.7
       gcp: ccm/v30.1.4
@@ -109,13 +109,13 @@ k8s:
       livenessprobe: v2.15.0
   "1.31":
     status: available
-    patch: 6
+    patch: 8
     bashible: *bashible
     clusterAutoscalerPatch: '0'
     crictlPatch: 1
     ccm:
       openstack: v1.31.2
-      aws: v1.31.0
+      aws: v1.31.6
       vsphere: v1.31.1
       azure: v1.31.1
       gcp: ccm/v30.1.4
@@ -133,13 +133,13 @@ k8s:
       livenessprobe: v2.15.0
   "1.32":
     status: preview
-    patch: 2
+    patch: 4
     bashible: *bashible
     clusterAutoscalerPatch: '0'
     crictlPatch: 0
     ccm:
       openstack: v1.31.2
-      aws: v1.32.0
+      aws: v1.32.3
       vsphere: v1.32.2
       azure: v1.32.0
       gcp: ccm/v30.1.4

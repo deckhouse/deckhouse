@@ -1,5 +1,6 @@
 name: user-authz
 weight: 140
+stage: "General Availability"
 namespace: d8-user-authz
 subsystems:
   - security

@@ -71,6 +71,7 @@ apiVersions:
             - "Zvirt"
             - "Dynamix"
             - "Huaweicloud"
+            - "DVP"
           prefix:
             type: string
             description: |
@@ -135,6 +136,31 @@ apiVersions:
         - "1.31"
         - "1.32"
         - "Automatic"
+      encryptionAlgorithm:
+        type: string
+        description: |
+          In Kubernetes version **1.30** and earlier, only the `RSA-2048` algorithm is supported.
+
+          Starting from version **1.31**, kubeadm use the specified asymmetric encryption algorithm
+          when generating keys and certificates for the following control-plane components:
+
+          - `apiserver`
+          - `apiserver-kubelet-client`
+          - `apiserver-etcd-client`
+          - `front-proxy-client`
+          - `etcd-server`
+          - `etcd-peer`
+          - `etcd-healthcheck-client`
+
+          Certificates for the components listed above will be reissued using the selected algorithm and key length.
+
+          > **Warning.** When reissuing certificates, the root certificate (**CA**) is not rotated. The root certificate is created with the selected algorithm only during the initial cluster bootstrap.
+        enum:
+        - "RSA-2048"
+        - "RSA-3072"
+        - "RSA-4096"
+        - "ECDSA-P256"
+        default: "RSA-2048"
       proxy:
         x-doc-d8Editions:
           - be

@@ -14,28 +14,25 @@ lang: ru
 - `settings.virtualMachineCIDRs` — подсети, IP-адреса из которых будут назначаться виртуальным машинам;
 - `settings.dvcr.storage.persistentVolumeClaim.size` — размер дискового пространства для хранения образов виртуальных машин.
 
-Пример конфигурации модуля виртуализации:
+Пример базовой настройки модуля виртуализации:
 
 ```yaml
-sudo -i d8 k create -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: virtualization
 spec:
   enabled: true
+  version: 1
   settings:
     dvcr:
       storage:
         persistentVolumeClaim:
           size: 50G
+          storageClassName: sds-replicated-thin-r1
         type: PersistentVolumeClaim
     virtualMachineCIDRs:
-    - 10.66.10.0/24
-    - 10.66.20.0/24
-    - 10.66.30.0/24
-  version: 1
-EOF
+      - 10.66.10.0/24
 ```
 
 Дождитесь, пока все поды модуля не перейдут в статус `Running`:
@@ -64,3 +61,92 @@ vm-route-forge-288z7                         1/1     Running   0             10m
 vm-route-forge-829wm                         1/1     Running   0             10m
 vm-route-forge-nq9xr                         1/1     Running   0             10m
 ```
+
+### Описание параметров
+
+Ниже представлены описания параметров модуля виртуализации.
+
+#### Параметры для включения/выключения модуля
+
+Управление состоянием модуля осуществляется через поле `.spec.enabled`. Укажите:
+
+- `true` — чтобы включить модуль;
+- `false` — чтобы выключить модуль.
+
+#### Версия конфигурации
+
+Параметр `.spec.version` определяет версию схемы настроек. Структура параметров может меняться между версиями. Актуальные значения приведены в разделе настроек.
+
+#### Параметры для настройки постоянного тома для хранения образов виртуальных машин (DVCR)
+
+Блок `.spec.settings.dvcr.storage` настраивает постоянный том для хранения образов:
+
+- `.spec.settings.dvcr.storage.persistentVolumeClaim.size` — размер тома (например, `50G`). Для расширения хранилища увеличьте значение параметра;
+- `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName` — класс хранения (например, `sds-replicated-thin-r1`).
+
+#### Сетевые настройки
+
+В блоке `.spec.settings.virtualMachineCIDRs` указываются подсети в формате CIDR (например, `10.66.10.0/24`). IP-адреса для виртуальных машин распределяются из этих - диапазонов автоматически или по запросу.
+
+Пример:
+
+```yaml
+spec:
+  settings:
+    virtualMachineCIDRs:
+      - 10.66.10.0/24
+      - 10.66.20.0/24
+      - 10.77.20.0/16
+```
+
+Первый и последний адреса подсети зарезервированы и недоступны для использования.
+
+{% alert level="warning" %}
+Подсети блока `.spec.settings.virtualMachineCIDRs` не должны пересекаться с подсетями узлов кластера, подсетью сервисов или подсетью подов (`podCIDR`).
+
+Запрещено удалять подсети, если адреса из них уже выданы виртуальным машинам.
+{% endalert %}
+
+#### Настройки классов хранения для образов
+
+Настройки классов хранения для образов определяются в параметре `.spec.settings.virtualImages` настроек модуля.
+
+Пример:
+
+```yaml
+spec:
+  ...
+  settings:
+    virtualImages:
+      allowedStorageClassNames:
+      - sc-1
+      - sc-2
+      defaultStorageClassName: sc-1
+```
+
+Здесь:
+
+- `allowedStorageClassNames` (опционально) — это список допустимых StorageClass для создания VirtualImage, которые можно явно указать в спецификации ресурса;
+- `defaultStorageClassName` (опционально) — это StorageClass, используемый по умолчанию при создании VirtualImage, если параметр `.spec.persistentVolumeClaim.storageClassName` не задан.
+
+#### Настройки классов хранения для дисков
+
+Настройки классов хранения для дисков определяются в параметре `.spec.settings.virtualDisks` настроек модуля.
+
+Пример:
+
+```yaml
+spec:
+  ...
+  settings:
+    virtualDisks:
+      allowedStorageClassNames:
+      - sc-1
+      - sc-2
+      defaultStorageClassName: sc-1
+```
+
+Здесь:
+
+- `allowedStorageClassNames` (опционально) — это список допустимых StorageClass для создания VirtualDisk, которые можно явно указать в спецификации ресурса;
+- `defaultStorageClassName` (опционально) — это StorageClass, используемый по умолчанию при создании VirtualDisk, если параметр `.spec.persistentVolumeClaim.storageClassName` не задан.
