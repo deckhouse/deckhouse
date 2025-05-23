@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"unicode"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -35,14 +36,25 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 20},
 }, dependency.WithExternalDependencies(doDiscover))
 
-func filter(arr []vsphere.ZonedDataStore, cond func(vsphere.ZonedDataStore) bool) []vsphere.ZonedDataStore {
-	result := []vsphere.ZonedDataStore{}
-	for _, x := range arr {
-		if cond(x) {
-			result = append(result, x)
+// Get StorageClass name from Volume type name to match Kubernetes restrictions from https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names
+func getStorageClassName(value string) string {
+	mapFn := func(r rune) rune {
+		if r >= 'a' && r <= 'z' ||
+			r >= 'A' && r <= 'Z' ||
+			r >= '0' && r <= '9' ||
+			r == '-' || r == '.' {
+			return unicode.ToLower(r)
+		} else if r == ' ' {
+			return '-'
 		}
+		return rune(-1)
 	}
-	return result
+
+	// a lowercase RFC 1123 subdomain must consist of lower case alphanumeric characters, '-' or '.'
+	value = strings.Map(mapFn, value)
+
+	// must start and end with an alphanumeric character
+	return strings.Trim(value, "-.")
 }
 
 func doDiscover(input *go_hook.HookInput, dc dependency.Container) error {
@@ -97,12 +109,20 @@ func doDiscover(input *go_hook.HookInput, dc dependency.Container) error {
 
 		if len(excludes) > 0 {
 			r := regexp.MustCompile(`^(` + strings.Join(excludes, "|") + `)$`)
+			filteredStorageClasses := []vsphere.ZonedDataStore{}
 
-			storageClasses = filter(storageClasses, func(val vsphere.ZonedDataStore) bool {
-				matched := r.MatchString(val.Name)
-				return !matched
-			})
+			for i := range storageClasses {
+				if !r.MatchString(storageClasses[i].Name) {
+					filteredStorageClasses = append(filteredStorageClasses, storageClasses[i])
+				}
+			}
+
+			storageClasses = filteredStorageClasses
 		}
+	}
+
+	for i := range storageClasses {
+		storageClasses[i].Name = getStorageClassName(storageClasses[i].Name)
 	}
 
 	input.Values.Set("cloudProviderVsphere.internal.storageClasses", storageClasses)
