@@ -103,7 +103,6 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 > ```text
 > docker run --pull=always -it -v "%cd%\config.yml:/config.yml" -v "%userprofile%\.ssh\:/tmp/.ssh/" --env HTTP_PROXY="http://proxy.company.tld:8888" --env HTTPS_PROXY="http://proxy.company.tld:8888" --env http_proxy="http://proxy.company.tld:8888" --env https_proxy="http://proxy.company.tld:8888" --env NO_PROXY=".company.tld,192.168.0.0/24" --env no_proxy=".company.tld,192.168.0.0/24" registry.deckhouse.ru/deckhouse/se-plus/install:stable bash
 > ```
-> Не забудьте заменить `<DKP_EDITION>` на код редакции устанавливаемой версии DKP – `se`, `se-plus` или `ee`.
 {% endif %}
 </div>
 {% endif %}
