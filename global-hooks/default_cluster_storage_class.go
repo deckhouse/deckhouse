@@ -103,7 +103,7 @@ func setupDefaultStorageClass(input *go_hook.HookInput, dc dependency.Container)
 					},
 				}
 
-				input.PatchCollector.MergePatch(patch, "storage.k8s.io/v1", "StorageClass", "", sc.GetName())
+				input.PatchCollector.PatchWithMerge(patch, "storage.k8s.io/v1", "StorageClass", "", sc.GetName())
 			}
 		} else {
 			if isMarkedDefault(&sc) {
@@ -119,7 +119,7 @@ func setupDefaultStorageClass(input *go_hook.HookInput, dc dependency.Container)
 					},
 				}
 
-				input.PatchCollector.MergePatch(patch, "storage.k8s.io/v1", "StorageClass", "", sc.GetName())
+				input.PatchCollector.PatchWithMerge(patch, "storage.k8s.io/v1", "StorageClass", "", sc.GetName())
 			}
 		}
 	}

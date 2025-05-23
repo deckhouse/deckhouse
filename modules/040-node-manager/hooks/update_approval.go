@@ -241,7 +241,7 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 		}
 
 		for approvedNodeName := range approvedNodeNames {
-			input.PatchCollector.MergePatch(approvedPatch, "v1", "Node", "", approvedNodeName)
+			input.PatchCollector.PatchWithMerge(approvedPatch, "v1", "Node", "", approvedNodeName)
 			setNodeStatusesMetrics(input, approvedNodeName, ng.Name, "Approved")
 		}
 
@@ -366,7 +366,7 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 			metricStatus = "DisruptionApproved"
 		}
 
-		input.PatchCollector.MergePatch(patch, "v1", "Node", "", node.Name)
+		input.PatchCollector.PatchWithMerge(patch, "v1", "Node", "", node.Name)
 		setNodeStatusesMetrics(input, node.Name, node.NodeGroup, metricStatus)
 	}
 
@@ -415,7 +415,7 @@ func (ar *updateApprover) processUpdatedNodes(input *go_hook.HookInput) error {
 				"unschedulable": nil,
 			}
 		}
-		input.PatchCollector.MergePatch(patch, "v1", "Node", "", node.Name)
+		input.PatchCollector.PatchWithMerge(patch, "v1", "Node", "", node.Name)
 		setNodeStatusesMetrics(input, node.Name, node.NodeGroup, "UpToDate")
 		ar.finished = true
 	}

@@ -103,7 +103,7 @@ func patchClusterConfiguration(input *go_hook.HookInput) error {
 		},
 	}
 
-	input.PatchCollector.MergePatch(patch, "v1", "Secret", secret.Namespace, secret.Name)
+	input.PatchCollector.PatchWithMerge(patch, "v1", "Secret", secret.Namespace, secret.Name)
 
 	return nil
 }
