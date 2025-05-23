@@ -64,7 +64,6 @@ func applyD8RegistrySecretFilter(obj *unstructured.Unstructured) (go_hook.Filter
 		return nil, err
 	}
 
-	var scheme []byte
 	scheme, ok := secret.Data["scheme"]
 	if !ok {
 		scheme = []byte("https")

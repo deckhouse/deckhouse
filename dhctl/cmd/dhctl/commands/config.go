@@ -26,6 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 )
 
 var (
@@ -55,7 +56,10 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			templateController,
 			templateData,
 			metaConfig.ProviderName,
-			"",
+			infrastructure.DataDevices{
+				KubeDataDevicePath:           "",
+				SystemRegistryDataDevicePath: "",
+			},
 		)
 	}
 

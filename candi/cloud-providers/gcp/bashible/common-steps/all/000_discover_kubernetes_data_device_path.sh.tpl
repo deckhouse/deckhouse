@@ -12,55 +12,57 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if eq .nodeGroup.name "master" }}
-function get_data_device_secret() {
-  secret="d8-masters-kubernetes-data-device-path"
-
-  if [ -f /var/lib/bashible/bootstrap-token ]; then
-    while true; do
-      for server in {{ .normal.apiserverEndpoints | join " " }}; do
-        if d8-curl --connect-timeout 10 -s -f -X GET "https://$server/api/v1/namespaces/d8-system/secrets/$secret" --header "Authorization: Bearer $(</var/lib/bashible/bootstrap-token)" --cacert "$BOOTSTRAP_DIR/ca.crt"
-        then
-          return 0
-        else
-          >&2 echo "failed to get secret $secret from server $server"
-        fi
-      done
-      sleep 10
-    done
-  else
-    >&2 echo "failed to get secret $secret: can't find bootstrap-token"
-    return 1
-  fi
-}
+{{- $nodeTypeList := list "CloudPermanent" }}
+{{- if has .nodeGroup.nodeType $nodeTypeList }}
+  {{- if eq .nodeGroup.name "master" }}
 
 function discover_device_path() {
-  cloud_disk_name="$1"
-  device_name="$(lsblk -lo name,serial | grep "$cloud_disk_name" | cut -d " " -f1)"
-  if [ "$device_name" == "" ]; then
-    >&2 echo "failed to discover kubernetes-data device"
-    return 1
+  local cloud_disk_name="$1"
+
+  # Full device path via /dev/disk/by-id/
+  local device_path="/dev/disk/by-id/google-${cloud_disk_name}"
+
+  # Check if the symbolic link exists
+  if [ ! -e "$device_path" ]; then
+    >&2 echo "Failed to discover device: $device_path not found"
+    exit 1
   fi
-  echo "/dev/$device_name"
+
+  # Resolve the symbolic link to the real path
+  device_path=$(readlink -f "$device_path")
+
+  # Check that the path is resolved and exists
+  if [ -z "$device_path" ] || [ ! -b "$device_path" ]; then
+    >&2 echo "Failed to resolve device path for: $cloud_disk_name"
+    exit 1
+  fi
+
+  # Return the real device path
+  echo "$device_path"
 }
 
+# Skip for
 if [[ "$FIRST_BASHIBLE_RUN" != "yes" ]]; then
-  return 0
+  exit 0
 fi
 
+# Skip for
 if [ -f /var/lib/bashible/kubernetes-data-device-installed ]; then
-  return 0
+  exit 0
 fi
 
-if [ -f /var/lib/bashible/kubernetes_data_device_path ]; then
-  if ! grep "/dev" /var/lib/bashible/kubernetes_data_device_path >/dev/null; then
-    cloud_disk_name="$(cat /var/lib/bashible/kubernetes_data_device_path)"
-  else
-    return 0
-  fi
-else
-  cloud_disk_name="$(get_data_device_secret | jq -re --arg hostname "$(bb-d8-node-name)" '.data[$hostname]' | base64 -d)"
+# Get Kubernetes data device
+CLOUD_DISK_NAME_OR_DATA_DEVICE=$(bb-get-kubernetes-data-device-from-file-or-secret)
+if [ -z "$CLOUD_DISK_NAME_OR_DATA_DEVICE" ]; then
+  >&2 echo "failed to get kubernetes data device path"
+  exit 1
 fi
 
-echo "$(discover_device_path "$cloud_disk_name")" > /var/lib/bashible/kubernetes_data_device_path
-{{- end }}
+if [[ "$CLOUD_DISK_NAME_OR_DATA_DEVICE" != /dev/* ]]; then
+  DATA_DEVICE=$(discover_device_path "$CLOUD_DISK_NAME_OR_DATA_DEVICE")
+  echo "kubernetes-data device: $DATA_DEVICE"
+  echo "$DATA_DEVICE" > /var/lib/bashible/kubernetes_data_device_path
+fi
+
+  {{- end  }}
+{{- end  }}
