@@ -5,7 +5,7 @@ description: "Описание схем размещения и взаимоде
 
 ## Standard
 
-![resources](../../images/cloud-provider-vcd/vcd-standard.png)
+![Схема размещения Standard](../../images/cloud-provider-vcd/vcd-standard.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1aosnFD7AzBgHrQGvxxQHZPfV0PSaTM66A-EPMWgPEqw/edit --->
 
 Пример конфигурации схемы размещения:
@@ -33,5 +33,5 @@ masterNodeGroup:
     template: "catalog/Ubuntu 22.04 Server"
     mainNetwork: internal
     mainNetworkIPAddresses:
-    - 192.168.199.10
+    - 192.168.199.2
 ```
