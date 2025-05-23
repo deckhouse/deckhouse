@@ -7,10 +7,6 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
     {{- $featureGates = list $featureGates "ValidatingAdmissionPolicy=true" | join "," }}
     {{- $featureGates = list $featureGates "AdmissionWebhookMatchConditions=true" | join "," }}
 {{- end }}
-{{- if semverCompare "< 1.28" .clusterConfiguration.kubernetesVersion }}
-    {{- $featureGates = list $featureGates "EndpointSliceTerminatingCondition=true" | join "," }}
-    {{- $featureGates = list $featureGates "InTreePluginRBDUnregister=true" | join "," }}
-{{- end }}
 
 apiVersion: kubeadm.k8s.io/v1beta3
 kind: ClusterConfiguration
@@ -86,9 +82,7 @@ apiServer:
 {{- end }}
     anonymous-auth: "false"
     feature-gates: {{ $featureGates | quote }}
-{{- if semverCompare ">= 1.28" .clusterConfiguration.kubernetesVersion }}
     runtime-config: "admissionregistration.k8s.io/v1beta1=true,admissionregistration.k8s.io/v1alpha1=true"
-{{- end }}
 {{- if hasKey . "arguments" }}
   {{- if hasKey .arguments "defaultUnreachableTolerationSeconds" }}
     default-unreachable-toleration-seconds: {{ .arguments.defaultUnreachableTolerationSeconds | quote }}
