@@ -43,14 +43,13 @@ kind: DaemonSet
 metadata:
   name: ztunnel-{{ $revision }}
   namespace: d8-{{ $.Chart.Name }}
-
   {{- include "helm_lib_module_labels" (list $ (dict 
       "app" "ztunnel"
       "app.kubernetes.io/name" "ztunnel"
       "app.kubernetes.io/instance" (print $revision "-ztunnel")
       "app.kubernetes.io/version" $fullVersion
       "app.kubernetes.io/part-of" "istio"
-  )) | indent 2 }}
+  )) | nindent 2 }}
 spec:
   updateStrategy:
     rollingUpdate:
@@ -61,7 +60,6 @@ spec:
       app: ztunnel
   template:
     metadata:
-
       {{- include "helm_lib_module_labels" (list $ (dict 
           "app" "ztunnel"
           "sidecar.istio.io/inject" "false"
@@ -70,7 +68,7 @@ spec:
           "app.kubernetes.io/instance" (print $revision "-ztunnel")
           "app.kubernetes.io/version" $fullVersion
           "app.kubernetes.io/part-of" "istio"
-      )) | indent 6 }}
+      )) | nindent 6 }}
       annotations:
         sidecar.istio.io/inject: "false"
         istio.io/rev: {{ $revision }}
