@@ -37,7 +37,6 @@ shell:
   - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64
   - make
   - mv ./config-manager ./gpu-feature-discovery ./mps-control-daemon ./nvidia-device-plugin /
-  - chown 64535:64535 /config-manager /gpu-feature-discovery /mps-control-daemon /nvidia-device-plugin
   - chmod 0700 /config-manager /gpu-feature-discovery /mps-control-daemon /nvidia-device-plugin
   - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
 ---
