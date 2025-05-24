@@ -69,7 +69,7 @@ type ensureStructuredMessage struct {
 func (esm ensureStructuredMessage) getTransform(number int) apis.LogTransform {
 	var vrl string
 	name := fmt.Sprintf("tf_ensureStructuredMessage_%d", number)
-	vrl = fmt.Sprintf(".message = parse_json(.message) ?? { \"%s\": .message }\n", esm.targetField)
+	vrl = fmt.Sprintf(".message = parse_json(.message) ?? { \"%s\": .message, \"level\": \"info\", \"name\": \"\", \"time\": \"\"}\n", esm.targetField)
 	return NewTransformation(name, vrl)
 }
 
