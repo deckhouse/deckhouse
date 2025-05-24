@@ -73,6 +73,9 @@ type NodeGroupSpec struct {
 	// CRI parameters. Optional.
 	CRI CRI `json:"cri,omitempty"`
 
+	// GPU parameters. Optional.
+	GPU GPU `json:"gpu,omitempty"`
+
 	// staticInstances. Optional.
 	StaticInstances *StaticInstances `json:"staticInstances,omitempty"`
 
@@ -101,6 +104,14 @@ type NodeGroupSpec struct {
 	Fencing Fencing `json:"fencing,omitempty"`
 }
 
+type GPU struct {
+	// Resources sharing type. mps, timeSlicing, mig or exclusive(without sharing)
+	Sharing string `json:"sharing,omitempty"`
+
+	// MIG parameters.
+	Mig *Mig `json:"mig,omitempty"`
+}
+
 type CRI struct {
 	// Container runtime type. Docker, Containerd or NotManaged
 	Type string `json:"type,omitempty"`
@@ -117,6 +128,11 @@ type CRI struct {
 
 func (c CRI) IsEmpty() bool {
 	return c.Type == "" && c.Containerd == nil && c.Docker == nil
+}
+
+type Mig struct {
+	// MIG profiles
+	PartedConfig *string `json:"partedConfig,omitempty"`
 }
 
 type Containerd struct {
