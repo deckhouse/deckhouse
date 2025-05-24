@@ -25,7 +25,7 @@ spec:
       mechanism: PLAIN
       username: test
       password: test
-  transformation:
+  transformations:
     - action: NormalizeLabelKeys
     - action: EnsureStructuredMessage
       targetField: text
