@@ -21,7 +21,7 @@
       "inputs": [
         "transform/destination/test-kafka-dest/00_tf_normalizeLabelKeys_0"
       ],
-      "source": ".message = parse_json(.message) ?? { \"text\": .message, \"level\": \"info\", \"name\": \"\", \"time\": \"\"}\n",
+      "source": ".message = parse_json(.message) ?? { \"text\": .message }\n",
       "type": "remap"
     },
     "transform/destination/test-kafka-dest/02_tf_delete_2": {

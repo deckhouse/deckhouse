@@ -30,7 +30,7 @@ var testCases = []struct {
 	out  string
 }{
 	{"fixNestedJson label message", v1alpha1.Transform{Action: "EnsureStructuredMessage", TargetField: "text"},
-		".message = parse_json(.message) ?? { \"text\": .message, \"level\": \"info\", \"name\": \"\", \"time\": \"\"}\n"},
+		".message = parse_json(.message) ?? { \"text\": .message }\n"},
 	{"del", v1alpha1.Transform{Action: "DropLabels", Labels: []string{"first", "second"}},
 		"if exists(.first) {\n del(.first)\n}\nif exists(.second) {\n del(.second)\n}\n"},
 	// {"delZero", v1alpha1.Transform{Action: "DropLabels", Labels: []string{}}, ""},
