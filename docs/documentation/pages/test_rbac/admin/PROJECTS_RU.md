@@ -1,6 +1,6 @@
 ---
 title: Проекты
-permalink: ru/test/admin/projects.html
+permalink: ru/test/admin/multitenancy/projects.html
 lang: ru
 ---
 
