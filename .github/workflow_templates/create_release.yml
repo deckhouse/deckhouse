@@ -20,8 +20,6 @@ on:
       tag_name:
         description: 'Tag name for the release (e.g., v1.0.0)'
         required: true
-env:
-  PYTHON_VERSION: '3.9'
 
 jobs:
   create-release:
@@ -44,10 +42,7 @@ jobs:
             dependabot:low
             testing:low
             tools:low
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
+      {!{ tmpl.Exec "python_setup_step" . | strings.Indent 6 }!}
       - name: Install dependencies
         run: pip install requests semver
       - name: Run Python release script

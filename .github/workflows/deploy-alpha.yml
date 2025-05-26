@@ -1388,10 +1388,13 @@ jobs:
 
       # </template: checkout_step>
 
+
+      # <template: python_setup_step>
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v5.6.0
         with:
-          python-version: '3.12.3'
+          python-version: '3.12.8'
+      # </template: python_setup_step>
 
       - name: Install dependencies
         run: pip install ghapi==1.0.6 fastcore==1.7.28 kubernetes==32.0.1

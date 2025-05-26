@@ -49,9 +49,13 @@ jobs:
       uses: actions/checkout@v3.5.2
 
     # </template: checkout_step>
-    - uses: actions/setup-python@v5.6.0
+
+    # <template: python_setup_step>
+    - name: Setup Python
+      uses: actions/setup-python@v5.6.0
       with:
-        python-version: '3.13'
+        python-version: '3.12.8'
+    # </template: python_setup_step>
     - name: Install deps
       run: |
         pip install -r ${SCRIPT_DIR}/requirements.txt
