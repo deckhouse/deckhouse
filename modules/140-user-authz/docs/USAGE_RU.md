@@ -429,7 +429,7 @@ spec:
     openssl x509 -req -in myuser.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out myuser.crt -days 10
     ```
 
-Теперь полученный сертификат можно указывать в конфиг-файле:
+Полученный сертификат необходимо указать в конфигурационном файле:
 
 ```shell
 cat << EOF
@@ -529,7 +529,7 @@ EOF
     kubectl get csr demo-client-cert -ojsonpath="{.status.certificate}" | base64 -d > myuser.crt
     ```
 
-Теперь сертификат можно указывать в конфиг-файле:
+Полученный сертификат необходимо указать в конфигурационном файле:
 
 ```shell
 cat << EOF
