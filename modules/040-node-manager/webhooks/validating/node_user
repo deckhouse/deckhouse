@@ -32,7 +32,8 @@ kubernetes:
       {
         "name": .metadata.name,
         "uid": .spec.uid,
-        "nodeGroups": .spec.nodeGroups
+        "nodeGroups": .spec.nodeGroups,
+        "passwordHash": .spec.passwordHash
       }
 kubernetesValidating:
 - name: nodeuser-unique.deckhouse.io
