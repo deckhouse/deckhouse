@@ -1,5 +1,5 @@
 ---
-title: "Общие сведения об аутентификации"
+title: "Обзор"
 permalink: ru/admin/configuration/access/authentication.html
 lang: ru
 ---
