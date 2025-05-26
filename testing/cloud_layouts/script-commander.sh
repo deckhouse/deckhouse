@@ -336,7 +336,7 @@ function wait_alerts_resolve() {
       echo "Cluster components are not ready. Attempt $i/$iterations failed. Sleep for $sleep_interval seconds..."
       if [[ "$i" -eq "$iterations" ]]; then
         echo "Maximum iterations reached. Cluster components are not ready."
-        exit 1
+        return 1
       fi
     fi
     sleep "$sleep_interval"
@@ -377,7 +377,7 @@ function wait_upmeter_green() {
       echo "  Cluster components are not ready. Attempt $i/$iterations failed. Sleep for $sleep_interval seconds..."
       if [[ "$i" -eq "$iterations" ]]; then
         echo "Maximum iterations reached. Cluster components are not ready."
-        exit 1
+        return 1
       fi
     fi
     sleep "$sleep_interval"
@@ -392,7 +392,7 @@ function check_resources_state_results() {
   if [ -n "$errors" ]; then
     echo "  Errors found:"
     echo "${errors}"
-    exit 1
+    return 1
   fi
   echo "Check applied resource status... Passed"
 }
