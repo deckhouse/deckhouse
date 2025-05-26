@@ -1,4 +1,4 @@
 ---
 title: Overview
-permalink: en/admin/integrations/public/gcp/gcp-overview.html
+permalink: en/admin/integrations/public/gcp/overview.html
 ---

@@ -224,7 +224,7 @@ entries:
                         - title:
                             en: Overview
                             ru: Введение
-                          url: /admin/integrations/public/gcp/gcp-overview.html
+                          url: /admin/integrations/public/gcp/overview.html
                         - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
@@ -283,12 +283,36 @@ entries:
                       url: /admin/integrations/virtualization/overview.html
                     - title:
                         en: Integration with VMware vSphere
-                        ru: TODO Интеграция с VMware vSphere
+                        ru: Интеграция с VMware vSphere
                       folders:
                         - title:
                             en: Overview
                             ru: Обзор
-                          url: /admin/integrations/virtualization/vmware/vmware-overview.html
+                          url: /admin/integrations/virtualization/vmware/overview.html
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/virtualization/vmware/сonnection-and-authorization.html
+                        - title:
+                            en: Configuration and layout scheme
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/virtualization/vmware/сonfiguration-and-layout-scheme.html
+                    - title:
+                        en: Integration with VMware Cloud Director
+                        ru: Интеграция с VMware Cloud Director
+                      folders:
+                        - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/virtualization/vcd/overview.html
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/virtualization/vcd/сonnection-and-authorization.html
+                        - title:
+                            en: Configuration and layout scheme
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/virtualization/vcd/сonfiguration-and-layout-scheme.html
                     - title:
                         en: Integration with RED
                         ru: TODO Интеграция с РЭД виртуализацией
@@ -299,12 +323,20 @@ entries:
                           url: /admin/integrations/virtualization/red/red-overview.html
                     - title:
                         en: Integration with zVirt
-                        ru: TODO Интеграция с zVirt
+                        ru: Интеграция с zVirt
                       folders:
                         - title:
                             en: Overview
                             ru: Обзор
-                          url: /admin/integrations/virtualization/zvirt/zvirt-overview.html
+                          url: /admin/integrations/virtualization/zvirt/overview.html
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/virtualization/zvirt/сonnection-and-authorization.html
+                        - title:
+                            en: Configuration and layout scheme
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/virtualization/zvirt/сonfiguration-and-layout-scheme.html
                 - title:
                     en: Hibrid integration
                     ru: Гибридная интеграция

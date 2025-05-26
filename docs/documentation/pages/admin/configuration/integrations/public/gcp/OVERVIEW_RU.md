@@ -1,6 +1,6 @@
 ---
 title: Обзор
-permalink: ru/admin/integrations/public/gcp/gcp-overview.html
+permalink: ru/admin/integrations/public/gcp/overview.html
 lang: ru
 ---
 
