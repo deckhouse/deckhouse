@@ -211,7 +211,11 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 			// and release channel is not LTS
 			if release.GetVersion().Minor()-1 > prevRelease.GetVersion().Minor() && !strings.EqualFold(p.releaseChannel, ltsReleaseChannel) ||
 				(strings.EqualFold(p.releaseChannel, ltsReleaseChannel) && release.GetVersion().Minor() > prevRelease.GetVersion().Minor()+maxMinorVersionDiffForLTS) {
-				msg := fmt.Sprintf("minor version is greater than deployed %s by one", prevRelease.GetVersion().Original())
+				msg := fmt.Sprintf(
+					"minor version is greater than deployed %s by %d, it's more than acceptable channel limitation",
+					prevRelease.GetVersion().Original(),
+					release.GetVersion().Minor()-prevRelease.GetVersion().Minor(),
+				)
 
 				logger.Debug("release awaiting", slog.String("reason", msg))
 
