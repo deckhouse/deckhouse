@@ -34,11 +34,9 @@ spec:
               - required:
                 - uid
                 - sshPublicKey
-                - passwordHash
               - required:
                 - uid
                 - sshPublicKeys
-                - passwordHash
               properties:
                 uid:
                   type: number
@@ -141,11 +139,9 @@ spec:
               - required:
                 - uid
                 - sshPublicKey
-                - passwordHash
               - required:
                 - uid
                 - sshPublicKeys
-                - passwordHash
               properties:
                 uid:
                   type: number
