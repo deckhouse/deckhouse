@@ -256,7 +256,7 @@ func (f *DeckhouseReleaseFetcher) fetchDeckhouseRelease(ctx context.Context) err
 	// sort releases before
 	sort.Sort(releaseUpdater.ByVersion[*v1alpha1.DeckhouseRelease](releasesInCluster))
 
-	lastCreatedMeta, err := f.ensureReleases(ctx, imageInfo.Metadata, f.releaseChannel, releaseForUpdate, releasesInCluster, newSemver)
+	lastCreatedMeta, err := f.ensureReleases(ctx, imageInfo.Metadata, releaseForUpdate, releasesInCluster, newSemver)
 	if err != nil {
 		return fmt.Errorf("create releases: %w", err)
 	}
@@ -430,7 +430,6 @@ func (f *DeckhouseReleaseFetcher) restoreCurrentDeployedRelease(ctx context.Cont
 func (f *DeckhouseReleaseFetcher) ensureReleases(
 	ctx context.Context,
 	releaseMetadata *ReleaseMetadata,
-	releaseChannel string,
 	releaseForUpdate *v1alpha1.DeckhouseRelease,
 	releasesInCluster []*v1alpha1.DeckhouseRelease,
 	newSemver *semver.Version) (*ReleaseMetadata, error) {
@@ -442,7 +441,7 @@ func (f *DeckhouseReleaseFetcher) ensureReleases(
 	)
 
 	// if release channel is LTS - create release from channel
-	if strings.EqualFold(releaseChannel, ltsChannelName) {
+	if strings.EqualFold(f.releaseChannel, ltsChannelName) {
 		err := f.createRelease(ctx, releaseMetadata, notificationShiftTime, "lts channel")
 		if err != nil {
 			return nil, fmt.Errorf("create release %s: %w", releaseMetadata.Version, err)
