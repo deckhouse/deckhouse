@@ -34,7 +34,7 @@ import (
 
 const (
 	nodesSnapshot            = "nodes"
-	fencingControllerTimeout = time.Duration(120) * time.Second
+	fencingControllerTimeout = time.Duration(60) * time.Second
 )
 
 var maintenanceAnnotations = []string{
