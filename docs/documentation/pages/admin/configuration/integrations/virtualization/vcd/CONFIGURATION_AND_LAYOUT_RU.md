@@ -10,8 +10,8 @@ DKP поддерживает одну схему размещения ресур
 
 ## Standard
 
-![resources](../../../../images/cloud-provider-vcd/vcd-standard.png)
-<!--- Исходник: https://docs.google.com/drawings/d/1aosnFD7AzBgHrQGvxxQHZPfV0PSaTM66A-EPMWgPEqw/edit --->
+![Схема размещения Standard](../../../../images/cloud-provider-vcd/vcd-standard.png)
+<!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11247&t=IvETjbByf1MSQzcm-0 --->
 
 Пример конфигурации схемы размещения:
 
@@ -38,9 +38,8 @@ masterNodeGroup:
     template: "catalog/Ubuntu 22.04 Server"
     mainNetwork: internal
     mainNetworkIPAddresses:
-    - 192.168.199.10
+    - 192.168.199.2
 ```
-
 
 ## Конфигурация
 
@@ -89,6 +88,22 @@ provider:
 ```
 
 Количество и параметры процесса заказа машин в облаке настраиваются в custom resource [`NodeGroup`](../../../configuration/platform-scaling/node-management.html#конфигурация-группы-узлов), в котором также указывается название используемого для этой группы узлов инстанс-класса (параметр `cloudInstances.classReference` NodeGroup). Инстанс-класс для cloud-провайдера vSphere — это custom resource [`VsphereInstanceClass`](cr.html#vsphereinstanceclass), в котором указываются конкретные параметры самих машин.
+
+Ниже представлен пример конфигурации [VCDInstanceClass](cr.html#vcdinstanceclass) для эфемерных узлов cloud-провайдера VMware Cloud Director.
+
+### Пример конфигурации кастомного ресурса VCDInstanceClass
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: VCDInstanceClass
+metadata:
+  name: test
+spec:
+  rootDiskSizeGb: 90
+  sizingPolicy: payg-4-8
+  storageProfile: SSD-dc1-pub1-cl1
+  template: MyOrg/Linux/ubuntu2204-cloud-ova
+```
 
 ### Storage
 
