@@ -235,8 +235,8 @@ deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
 kubectl get deckhousereleases
 ```
 
-{% alert %}
-Patch-релизы (например, обновление на версию `1.30.2` при установленной версии `1.30.1`) устанавливаются без учета режима и окон обновления, то есть при появлении на канале обновления patch-релиза он всегда будет установлен.
+{% alert level="warning" %}
+Начиная с версии DKP 1.70, patch-версии обновлений (например, обновление на версию `1.70.2` при установленной версии `1.70.1`) устанавливаются с учетом окон обновлений. До версии DKP 1.70 patch-версии обновлений устанавливаются без учета режима и окон обновления.
 {% endalert %}
 
 ### Что происходит при смене канала обновлений?
@@ -617,12 +617,6 @@ echo "$MYRESULTSTRING"
    При запуске установщика используйте не официальное публичное хранилище образов Deckhouse, а хранилище в которое ранее были загружены образы Deckhouse. Для примера выше адрес запуска установщика будет иметь вид `corp.company.com:5000/sys/deckhouse/install:stable`, вместо `registry.deckhouse.ru/deckhouse/ee/install:stable`.
 
    В ресурсе [InitConfiguration](installing/configuration.html#initconfiguration) при установке также используйте адрес вашего хранилища и данные авторизации (параметры [imagesRepo](installing/configuration.html#initconfiguration-deckhouse-imagesrepo), [registryDockerCfg](installing/configuration.html#initconfiguration-deckhouse-registrydockercfg) или [шаг 3]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/bm-private/step3.html) руководства по быстрому старту).
-
-   После завершения установки примените сгенерированные во время загрузки манифесты [DeckhouseReleases](cr.html#deckhouserelease) к вашему кластеру, используя [Deckhouse CLI](deckhouse-cli/):
-
-   ```shell
-   d8 k apply -f ./deckhousereleases.yaml
-   ```
 
 ### Как переключить работающий кластер Deckhouse на использование стороннего registry?
 

@@ -158,6 +158,7 @@ spec:
   {{- end }}
 {{- include "helm_lib_priority_class" (tuple $context "system-cluster-critical") | nindent 6 }}
       serviceAccountName: ingress-nginx
+      automountServiceAccountToken: true
       terminationGracePeriodSeconds: 420
   {{- if and (eq $crd.spec.inlet "HostWithFailover") (not $failover) }}
       dnsPolicy: ClusterFirstWithHostNet

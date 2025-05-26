@@ -245,7 +245,7 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 		return nil, fmt.Errorf("register module config controller: %w", err)
 	}
 
-	err = modulesource.RegisterController(runtimeManager, operator.ModuleManager, dc, embeddedPolicy, logger.Named("module-source-controller"))
+	err = modulesource.RegisterController(runtimeManager, operator.ModuleManager, dc, operator.MetricStorage, embeddedPolicy, logger.Named("module-source-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("register module source controller: %w", err)
 	}

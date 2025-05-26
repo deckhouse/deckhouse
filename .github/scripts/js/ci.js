@@ -1488,7 +1488,7 @@ module.exports.runBuildForRelease = async ({ github, context, core }) => {
     return await startWorkflow({ github, context, core, workflow_id: 'build-and-test_release.yml', ref: context.ref });
   }
 
-  if (gitRefInfo.isMain || gitRefInfo.tagVersion) {
+  if (gitRefInfo.tagVersion) {
     // Add a comment on the release issue for main branch
     // and tags with specified version:
     // - find milestone
@@ -1521,6 +1521,6 @@ module.exports.runBuildForRelease = async ({ github, context, core }) => {
   }
 
   return core.setFailed(
-    `Git ref '${context.ref}' is not an auto-build tag or main branch. Ignore running build-and-test_release workflow.`
+    `Git ref '${context.ref}' is not an auto-build tag. Ignore running build-and-test_release workflow.`
   );
 };

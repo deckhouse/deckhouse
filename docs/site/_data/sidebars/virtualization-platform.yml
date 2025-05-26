@@ -65,8 +65,8 @@ entries:
                     ru: Настройка виртуализации
                   url: /virtualization-platform/documentation/admin/install/steps/virtualization.html
                 - title:
-                    en: Set up Ingress and DNS
-                    ru: Настройка Ingress и DNS
+                    en: Other settings
+                    ru: Прочие настройки
                   url: /virtualization-platform/documentation/admin/install/steps/ingress.html
         - title:
             en: Platform configuration
