@@ -397,52 +397,163 @@ spec:
 
 ### Создание пользователя с помощью клиентского сертификата
 
-#### Создание пользователя
+При создании пользователя с помощью клиентского сертификата можно использовать [OpenSSL](#создание-пользователя-с-помощью-сертификата-выпущенного-через-openssl) или [Kubernetes API (объект CertificateSigningRequest)](#создание-пользователя-с-помощью-сертификата-выпущенного-через-kubernetes-api).
 
-* Получите корневой сертификат кластера (ca.crt и ca.key).
-* Сгенерируйте ключ пользователя:
+#### Создание пользователя с помощью сертификата, выпущенного через OpenSSL
 
-  ```shell
-  openssl genrsa -out myuser.key 2048
-  ```
+При использовании этого способа следует учитывать риски безопасности. Например, если выпущенный этим способом клиентский сертификат с ключом будет скомпрометирован, его нельзя будет отозвать. В случае компрометации потребуется убрать все права этого пользователя (это может быть сложно, если пользователь добавлен в какие-нибудь группы: все группы тоже придется удалять).
 
-* Создайте CSR, где укажите, что требуется пользователь `myuser`, который состоит в группах `mygroup1` и `mygroup2`:
+Особенности этого способа:
 
-  ```shell
-  openssl req -new -key myuser.key -out myuser.csr -subj "/CN=myuser/O=mygroup1/O=mygroup2"
-  ```
+- Подразумевает полностью ручной процесс. Для создания пользовательского сертификата нужно вручную генерировать ключ, CSR и подписывать его.
+- Необходим доступ к CA-ключу кластера (ca.key), что влияет на безопасность.
 
-* Подпишите CSR корневым сертификатом кластера:
+Чтобы создать пользователя с помощью клиентского сертификата, выпущенного через OpenSSL, выполните следующие шаги:
 
-  ```shell
-  openssl x509 -req -in myuser.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out myuser.crt -days 10
-  ```
+1. Получите корневой сертификат кластера (ca.crt и ca.key).
+1. Сгенерируйте ключ пользователя:
 
-* Теперь полученный сертификат можно указывать в конфиг-файле:
+    ```shell
+    openssl genrsa -out myuser.key 2048
+    ```
 
-  ```shell
-  cat << EOF
-  apiVersion: v1
-  clusters:
-  - cluster:
-      certificate-authority-data: $(cat ca.crt | base64 -w0)
-      server: https://<хост кластера>:6443
-    name: kubernetes
-  contexts:
-  - context:
-      cluster: kubernetes
-      user: myuser
-    name: myuser@kubernetes
-  current-context: myuser@kubernetes
-  kind: Config
-  preferences: {}
-  users:
-  - name: myuser
-    user:
-      client-certificate-data: $(cat myuser.crt | base64 -w0)
-      client-key-data: $(cat myuser.key | base64 -w0)
-  EOF
-  ```
+1. Создайте CSR, где укажите, что требуется пользователь `myuser`, который состоит в группах `mygroup1` и `mygroup2`:
+
+    ```shell
+    openssl req -new -key myuser.key -out myuser.csr -subj "/CN=myuser/O=mygroup1/O=mygroup2"
+    ```
+
+1. Подпишите CSR корневым сертификатом кластера:
+
+    ```shell
+    openssl x509 -req -in myuser.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out myuser.crt -days 10
+    ```
+
+Теперь полученный сертификат можно указывать в конфиг-файле:
+
+```shell
+cat << EOF
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: $(cat ca.crt | base64 -w0)
+    server: https://<хост кластера>:6443
+  name: kubernetes
+contexts:
+- context:
+    cluster: kubernetes
+    user: myuser
+  name: myuser@kubernetes
+current-context: myuser@kubernetes
+kind: Config
+preferences: {}
+users:
+- name: myuser
+  user:
+    client-certificate-data: $(cat myuser.crt | base64 -w0)
+    client-key-data: $(cat myuser.key | base64 -w0)
+EOF
+```
+
+#### Создание пользователя с помощью сертификата, выпущенного через Kubernetes API
+
+Это более безопасный способ, который хорошо подходит для динамических пользователей (например, для предоставления временного доступа разработчикам).
+
+Его особенности:
+
+- Подписание сертификата через Kubernetes API: CSR отправляется на подпись через API и прямой доступ к ca.key не требуется.
+- Выпускать клиентские сертификаты может не только администратор кластера. Можно назначить право заказа сертификатов определенному пользователю.
+
+Чтобы создать пользователя с помощью клиентского сертификата, выпущенного через Kubernetes API, выполните следующие шаги:
+
+1. Сгенерируйте ключ пользователя:
+
+    ```shell
+    openssl genrsa -out myuser.key 2048
+    ```
+
+2. Создайте CSR, где укажите, что требуется пользователь `myuser`:
+
+    ```shell
+    openssl req -new -key client.key -out myuser.csr
+    ```
+
+3. Создайте манифест объекта CertificateSigningRequest и сохраните его в файл (в этом примере — csr.yaml):
+
+    > В поле `request` укажите содержимое CSR, созданного на предыдущем этапе, закодированное в `Base64`.
+    
+    ```yaml
+    apiVersion: certificates.k8s.io/v1
+    kind: CertificateSigningRequest
+    metadata:
+    name: demo-client-cert
+    spec:
+      request: # CSR в Base64
+      signerName: "kubernetes.io/kube-apiserver-client"
+      expirationSeconds: 7200
+      usages:
+      - "digital signature"
+      - "client auth"
+    ```
+  
+4. Примените манифест, чтобы создать запрос на подпись сертификата:
+  
+    ```shell
+    kubectl apply -f csr.yaml
+    ```
+
+5. Убедитесь, что сертификат подтвержден:
+
+    ```shell
+    kubectl get csr demo-client-cert
+    ```
+
+    Если сертификат подтвержден, в колонке `CONDITION` у него будет значение `Approved,Issued`. Пример вывода:
+
+    ```shell
+    NAME               AGE     SIGNERNAME                            REQUESTOR          REQUESTEDDURATION   CONDITION
+    demo-client-cert   8m24s   kubernetes.io/kube-apiserver-client   kubernetes-admin   120m                Approved,Issued
+    ```
+
+    Если сертификат не подтвердился автоматически, подтвердите его:
+
+    ```shell
+    kubectl certificate approve demo-client-cert
+    ```
+
+    После этого убедитесь, что сертификат подтвержден.
+
+6. Извлеките закодированный сертификат из CSR с именем `demo-client-cert`, декодируйте его из `Base64` и сохраните в файл (в этом примере — myuser.crt), созданный на шаге 2:
+
+    ```shell
+    kubectl get csr demo-client-cert -ojsonpath="{.status.certificate}" | base64 -d > myuser.crt
+    ```
+
+Теперь сертификат можно указывать в конфиг-файле:
+
+```shell
+cat << EOF
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: $(cat ca.crt | base64 -w0)
+    server: https://<хост кластера>:6443
+  name: kubernetes
+contexts:
+- context:
+    cluster: kubernetes
+    user: myuser
+  name: myuser@kubernetes
+current-context: myuser@kubernetes
+kind: Config
+preferences: {}
+users:
+- name: myuser
+  user:
+    client-certificate-data: $(cat myuser.crt | base64 -w0)
+    client-key-data: $(cat myuser.key | base64 -w0)
+EOF
+```
 
 #### Предоставление доступа созданному пользователю
 
