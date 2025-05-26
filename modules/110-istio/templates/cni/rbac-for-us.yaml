@@ -42,7 +42,7 @@ rules:
     verbs:
       - create
 ---
-{{- if $.Values.istio.enableAmbientMod }}
+{{- if $.Values.istio.enableAmbientMode }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
