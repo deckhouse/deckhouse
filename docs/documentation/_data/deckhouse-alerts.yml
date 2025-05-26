@@ -6362,33 +6362,33 @@ alerts:
     severity: undefined
     markupFormat: markdown
 modules-having-alerts:
-  - admission-policy-engine
-  - cert-manager
-  - chrony
-  - cloud-provider-yandex
-  - cni-cilium
-  - control-plane-manager
-  - documentation
-  - extended-monitoring
-  - ingress-nginx
-  - istio
-  - kube-dns
-  - log-shipper
-  - loki
-  - metallb
-  - monitoring-applications
-  - monitoring-custom
-  - monitoring-deckhouse
-  - monitoring-kubernetes
-  - monitoring-kubernetes-control-plane
-  - monitoring-ping
-  - node-manager
-  - okmeter
-  - openvpn
-  - operator-prometheus
-  - prometheus
-  - runtime-audit-engine
-  - secret-copier
-  - terraform-manager
-  - upmeter
-  - user-authn
+- admission-policy-engine
+- cert-manager
+- chrony
+- cloud-provider-yandex
+- cni-cilium
+- control-plane-manager
+- documentation
+- extended-monitoring
+- ingress-nginx
+- istio
+- kube-dns
+- log-shipper
+- loki
+- metallb
+- monitoring-applications
+- monitoring-custom
+- monitoring-deckhouse
+- monitoring-kubernetes
+- monitoring-kubernetes-control-plane
+- monitoring-ping
+- node-manager
+- okmeter
+- openvpn
+- operator-prometheus
+- prometheus
+- runtime-audit-engine
+- secret-copier
+- terraform-manager
+- upmeter
+- user-authn
