@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/modules/031-local-path-provisioner/hooks/internal/v1alpha1"
+	"github.com/deckhouse/module-sdk/pkg"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -55,9 +56,9 @@ func getLPPCRDFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 }
 
 func getLPPCRDsHandler(input *go_hook.HookInput) error {
-	localPathProvisioners := input.Snapshots["lpp"]
+	localPathProvisioners := input.NewSnapshots.Get("lpp")
 	if len(localPathProvisioners) == 0 {
-		localPathProvisioners = make([]go_hook.FilterResult, 0)
+		localPathProvisioners = make([]pkg.Snapshot, 0)
 	}
 
 	input.Values.Set("localPathProvisioner.internal.localPathProvisioners", localPathProvisioners)

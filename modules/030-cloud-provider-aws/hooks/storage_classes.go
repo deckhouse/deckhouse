@@ -21,6 +21,7 @@ import (
 	"regexp"
 	"sort"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/tidwall/gjson"
@@ -156,9 +157,13 @@ func storageClasses(input *go_hook.HookInput) error {
 		input.Values.Set("cloudProviderAws.internal.storageClasses", []StorageClass{})
 	}
 
-	existedStorageClasses := make([]StorageClass, 0, len(input.Snapshots["module_storageclasses"]))
-	for _, v := range input.Snapshots["module_storageclasses"] {
-		sc := v.(*storagev1.StorageClass)
+	rawSCs, err := sdkobjectpatch.UnmarshalToStruct[storagev1.StorageClass](input.NewSnapshots, "module_storageclasses")
+	if err != nil {
+		return fmt.Errorf("unmarshal snapshot module_storageclasses: %w", err)
+	}
+
+	existedStorageClasses := make([]StorageClass, 0, len(rawSCs))
+	for _, sc := range rawSCs {
 		existedStorageClasses = append(existedStorageClasses, StorageClass{
 			Name:       sc.Name,
 			Type:       sc.Parameters["type"],

@@ -19,6 +19,7 @@ package hooks
 import (
 	"fmt"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -65,11 +66,15 @@ func parseDeckhouseImage(input *go_hook.HookInput) error {
 		deckhouseBasePath  = "global.modulesImages.registry.base"
 	)
 
-	deckhouseSnapshot := input.Snapshots["deckhouse"]
-	if len(deckhouseSnapshot) != 1 {
+	deckhouseImages, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, "deckhouse")
+	if err != nil {
+		return err
+	}
+
+	if len(deckhouseImages) != 1 {
 		return fmt.Errorf("deckhouse was not able to find an image of itself")
 	}
-	image := deckhouseSnapshot[0].(string)
+	image := deckhouseImages[0]
 
 	imageRepoTag, err := gcr.NewTag(image)
 	if err != nil {
@@ -85,5 +90,6 @@ func parseDeckhouseImage(input *go_hook.HookInput) error {
 		base := input.Values.Get(deckhouseBasePath).String()
 		input.Values.Set(deckhouseImagePath, fmt.Sprintf("%s:%s", base, tag))
 	}
+
 	return nil
 }

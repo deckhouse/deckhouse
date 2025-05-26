@@ -19,6 +19,8 @@ package hooks
 import (
 	"fmt"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	storagev1 "k8s.io/api/storage/v1"
@@ -131,36 +133,39 @@ func applyStorageclassFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 }
 
 func setInternalValues(input *go_hook.HookInput) error {
+	crs, err := sdkobjectpatch.UnmarshalToStruct[*CephCSIDriver](input.NewSnapshots, "crs")
+	if err != nil {
+		return fmt.Errorf("unmarshal crs: %w", err)
+	}
+
 	values := []InternalValues{}
 	csiConfig := []CSIConfig{}
 
-	crs := input.Snapshots["crs"]
-	for _, cr := range crs {
-		obj := cr.(*CephCSIDriver)
+	for _, obj := range crs {
 		rbdStorageClasses := obj.Spec.Rbd.StorageClasses
-		if len(rbdStorageClasses) > 0 {
-			for _, sc := range rbdStorageClasses {
-				storageClassName := obj.Metadata.Name + "-" + sc.NamePostfix
-				if isStorageClassChanged(input, storageClassName, sc.ReclaimPolicy) {
-					input.PatchCollector.Delete("storage.k8s.io/v1", "StorageClass", "", storageClassName)
-					input.Logger.Infof("ReclaimPolicy changed. StorageClass %s is Deleted.", storageClassName)
-				}
+		for _, sc := range rbdStorageClasses {
+			storageClassName := obj.Metadata.Name + "-" + sc.NamePostfix
+			if isStorageClassChanged(input, storageClassName, sc.ReclaimPolicy) {
+				input.PatchCollector.Delete("storage.k8s.io/v1", "StorageClass", "", storageClassName)
+				input.Logger.Infof("ReclaimPolicy changed. StorageClass %s is Deleted.", storageClassName)
 			}
 		}
 
 		cephFsStorageClasses := obj.Spec.CephFS.StorageClasses
-		if len(cephFsStorageClasses) > 0 {
-			for _, sc := range cephFsStorageClasses {
-				storageClassName := obj.Metadata.Name + "-" + sc.NamePostfix
-				if isStorageClassChanged(input, storageClassName, sc.ReclaimPolicy) {
-					input.PatchCollector.Delete("storage.k8s.io/v1", "StorageClass", "", storageClassName)
-					input.Logger.Infof("ReclaimPolicy changed. StorageClass %s is Deleted.", storageClassName)
-				}
+		for _, sc := range cephFsStorageClasses {
+			storageClassName := obj.Metadata.Name + "-" + sc.NamePostfix
+			if isStorageClassChanged(input, storageClassName, sc.ReclaimPolicy) {
+				input.PatchCollector.Delete("storage.k8s.io/v1", "StorageClass", "", storageClassName)
+				input.Logger.Infof("ReclaimPolicy changed. StorageClass %s is Deleted.", storageClassName)
 			}
 		}
 
 		values = append(values, InternalValues{Name: obj.Metadata.Name, Spec: obj.Spec})
-		csiConfig = append(csiConfig, CSIConfig{ClusterID: obj.Spec.ClusterID, Monitors: obj.Spec.Monitors, CephFS: CSIConfigCephFS{SubvolumeGroup: obj.Spec.CephFS.SubvolumeGroup}})
+		csiConfig = append(csiConfig, CSIConfig{
+			ClusterID: obj.Spec.ClusterID,
+			Monitors:  obj.Spec.Monitors,
+			CephFS:    CSIConfigCephFS{SubvolumeGroup: obj.Spec.CephFS.SubvolumeGroup},
+		})
 	}
 
 	input.Values.Set("cephCsi.internal.crs", values)
@@ -170,9 +175,13 @@ func setInternalValues(input *go_hook.HookInput) error {
 }
 
 func isStorageClassChanged(input *go_hook.HookInput, scName, scReclaimPolicy string) bool {
-	storageClasses := input.Snapshots["scs"]
-	for _, storageClass := range storageClasses {
-		sc := storageClass.(StorageClassFilter)
+	scs, err := sdkobjectpatch.UnmarshalToStruct[StorageClassFilter](input.NewSnapshots, "scs")
+	if err != nil {
+		input.Logger.Error("failed to unmarshal scs snapshot", log.Err(err))
+		return false
+	}
+
+	for _, sc := range scs {
 		if sc.Name == scName {
 			// Annotation check and annotation in templates can be safely removed after release 1.48
 			_, migrationCompleted := sc.Annotations["migration-volume-binding-mode-changed"]
@@ -181,5 +190,6 @@ func isStorageClassChanged(input *go_hook.HookInput, scName, scReclaimPolicy str
 			}
 		}
 	}
+
 	return false
 }

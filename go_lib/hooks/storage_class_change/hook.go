@@ -35,6 +35,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 type Args struct {
@@ -189,10 +190,15 @@ func applyPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 func calculateEffectiveStorageClass(input *go_hook.HookInput, args Args, currentStorageClass string) string {
 	var effectiveStorageClass string
 
-	for _, sc := range input.Snapshots["default_sc"] {
-		if sc.(DefaultStorageClass).IsDefault {
-			effectiveStorageClass = sc.(DefaultStorageClass).Name
-			break
+	defaultSCs, err := sdkobjectpatch.UnmarshalToStruct[DefaultStorageClass](input.NewSnapshots, "default_sc")
+	if err != nil {
+		input.Logger.Warn("Unable to unmarshal default storage classes", log.Err(err))
+	} else {
+		for _, sc := range defaultSCs {
+			if sc.IsDefault {
+				effectiveStorageClass = sc.Name
+				break
+			}
 		}
 	}
 
@@ -248,27 +254,35 @@ func storageClassChangeWithArgs(input *go_hook.HookInput, dc dependency.Containe
 		return err
 	}
 
-	pvcs := input.Snapshots["pvcs"]
-	pods := input.Snapshots["pods"]
+	pvcs, err := sdkobjectpatch.UnmarshalToStruct[PVC](input.NewSnapshots, "pvcs")
+	if err != nil {
+		return fmt.Errorf("cannot unmarshal pvcs snapshot: %w", err)
+	}
+
+	pods, err := sdkobjectpatch.UnmarshalToStruct[Pod](input.NewSnapshots, "pods")
+	if err != nil {
+		return fmt.Errorf("cannot unmarshal pods snapshot: %w", err)
+	}
 
 	findPodByPVCName := func(pvcName string) (Pod, error) {
 		for _, pod := range pods {
-			if pod.(Pod).PVCName == pvcName {
-				return pod.(Pod), nil
+			if pod.PVCName == pvcName {
+				return pod, nil
 			}
 		}
 		return Pod{}, fmt.Errorf("pod with volume name [%s] not found", pvcName)
 	}
 
-	for _, obj := range pvcs {
-		pvc := obj.(PVC)
+	for _, pvc := range pvcs {
 		if !pvc.IsDeleted {
 			continue
 		}
 		pod, err := findPodByPVCName(pvc.Name)
 		if err == nil {
 			// if someone deleted pvc then evict the pod.
-			err = kubeClient.CoreV1().Pods(pod.Namespace).Evict(context.TODO(), &v1beta1.Eviction{ObjectMeta: metav1.ObjectMeta{Name: pod.Name}})
+			err = kubeClient.CoreV1().Pods(pod.Namespace).Evict(context.TODO(), &v1beta1.Eviction{
+				ObjectMeta: metav1.ObjectMeta{Name: pod.Name},
+			})
 			input.Logger.Infof("evicting Pod %s/%s due to PVC %s stuck in Terminating state", pod.Namespace, pod.Name, pvc.Name)
 			if err != nil {
 				input.Logger.Infof("can't Evict Pod %s/%s: %s", pod.Namespace, pod.Name, err)
@@ -278,7 +292,7 @@ func storageClassChangeWithArgs(input *go_hook.HookInput, dc dependency.Containe
 
 	var currentStorageClass string
 	if len(pvcs) > 0 {
-		currentStorageClass = pvcs[0].(PVC).StorageClassName
+		currentStorageClass = pvcs[0].StorageClassName
 	}
 
 	effectiveStorageClass := calculateEffectiveStorageClass(input, args, currentStorageClass)
@@ -286,8 +300,7 @@ func storageClassChangeWithArgs(input *go_hook.HookInput, dc dependency.Containe
 	if !storageClassesAreEqual(currentStorageClass, effectiveStorageClass) {
 		wasPvc := !isEmptyOrFalseStr(currentStorageClass)
 		if wasPvc {
-			for _, obj := range pvcs {
-				pvc := obj.(PVC)
+			for _, pvc := range pvcs {
 				input.Logger.Infof("storage class changed, deleting %s/PersistentVolumeClaim/%s", pvc.Namespace, pvc.Name)
 				err = kubeClient.CoreV1().PersistentVolumeClaims(pvc.Namespace).Delete(context.TODO(), pvc.Name, metav1.DeleteOptions{})
 				if err != nil {
@@ -299,7 +312,9 @@ func storageClassChangeWithArgs(input *go_hook.HookInput, dc dependency.Containe
 		input.Logger.Infof("storage class changed, deleting %s/%s/%s", args.Namespace, args.ObjectKind, args.ObjectName)
 		switch args.ObjectKind {
 		case "Prometheus":
-			err = kubeClient.Dynamic().Resource(schema.GroupVersionResource{Group: "monitoring.coreos.com", Version: "v1", Resource: "prometheuses.monitoring.coreos.com"}).Namespace(args.Namespace).Delete(context.TODO(), args.ObjectName, metav1.DeleteOptions{})
+			err = kubeClient.Dynamic().Resource(schema.GroupVersionResource{
+				Group: "monitoring.coreos.com", Version: "v1", Resource: "prometheuses.monitoring.coreos.com",
+			}).Namespace(args.Namespace).Delete(context.TODO(), args.ObjectName, metav1.DeleteOptions{})
 		case "StatefulSet":
 			err = kubeClient.AppsV1().StatefulSets(args.Namespace).Delete(context.TODO(), args.ObjectName, metav1.DeleteOptions{})
 		default:

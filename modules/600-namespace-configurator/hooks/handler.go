@@ -20,6 +20,7 @@ import (
 	"log/slog"
 	"regexp"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/tidwall/gjson"
@@ -69,14 +70,16 @@ func applyNamespaceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 }
 
 func handleNamespaceConfiguration(input *go_hook.HookInput) error {
-	snap := input.Snapshots["namespaces"]
-	if len(snap) == 0 {
+	namespaces, err := sdkobjectpatch.UnmarshalToStruct[*Namespace](input.NewSnapshots, "namespaces")
+	if err != nil {
+		return err
+	}
+	if len(namespaces) == 0 {
 		input.Logger.Debug("Namespaces not found. Skip")
 		return nil
 	}
 
 	configurations := input.Values.Get("namespaceConfigurator.configurations").Array()
-	var err error
 
 	for _, configuration := range configurations {
 		var configItem namespaceConfigurationItem
@@ -90,6 +93,7 @@ func handleNamespaceConfiguration(input *go_hook.HookInput) error {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -145,11 +149,15 @@ func (configItem *namespaceConfigurationItem) Load(result gjson.Result) error {
 }
 
 func (configItem *namespaceConfigurationItem) Apply(input *go_hook.HookInput) error {
-	for _, s := range input.Snapshots["namespaces"] {
-		ns := s.(Namespace)
+	namespaces, err := sdkobjectpatch.UnmarshalToStruct[*Namespace](input.NewSnapshots, "namespaces")
+	if err != nil {
+		return err
+	}
+
+	for _, ns := range namespaces {
 		input.Logger.Debug("Processing namespace:", ns.Name)
 
-		mergePatch := makePatch(input, &ns, configItem)
+		mergePatch := makePatch(input, ns, configItem)
 		if mergePatch != nil {
 			input.PatchCollector.MergePatch(mergePatch, "v1", "Namespace", "", ns.Name)
 		}

@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/cloudflare/cfssl/csr"
@@ -29,6 +30,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -70,14 +72,16 @@ func filterAdmissionSecret(obj *unstructured.Unstructured) (go_hook.FilterResult
 }
 
 func generateHubbleServerCert(input *go_hook.HookInput) error {
-	snap := input.Snapshots["hubble-server-cert-secret"]
+	certs, err := sdkobjectpatch.UnmarshalToStruct[certificate.Certificate](input.NewSnapshots, "hubble-server-cert-secret")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal hubble-server-cert-secret snapshot: %w", err)
+	}
 
-	if len(snap) > 0 {
-		adm := snap[0].(certificate.Certificate)
+	if len(certs) > 0 {
+		adm := certs[0]
 		input.Values.Set("cniCilium.internal.hubble.certs.server.cert", adm.Cert)
 		input.Values.Set("cniCilium.internal.hubble.certs.server.key", adm.Key)
 		input.Values.Set("cniCilium.internal.hubble.certs.server.ca", adm.CA)
-
 		return nil
 	}
 

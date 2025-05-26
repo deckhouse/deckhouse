@@ -35,6 +35,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 // certificateWaitTimeoutDefault controls default amount of time we wait for certificate
@@ -174,13 +175,16 @@ func certificateHandlerWithRequests(input *go_hook.HookInput, dc dependency.Cont
 		}
 
 		valueName := fmt.Sprintf("%s.%s", request.ModuleName, request.ValueName)
-		if snaps, ok := input.Snapshots["certificateSecrets"]; ok {
+		secrets, err := sdkobjectpatch.UnmarshalToStruct[*CertificateSecret](input.NewSnapshots, "certificateSecrets")
+		if err != nil {
+			return err // или обработка ошибки по контексту
+		}
+		if len(secrets) != 0 {
 			var secret *CertificateSecret
 
-			for _, snap := range snaps {
-				snapSecret := snap.(*CertificateSecret)
-				if snapSecret.Name == request.SecretName {
-					secret = snapSecret
+			for _, secretSnap := range secrets {
+				if secretSnap.Name == request.SecretName {
+					secret = secretSnap
 					break
 				}
 			}

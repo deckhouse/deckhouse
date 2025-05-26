@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
@@ -165,32 +166,27 @@ func setCNIMiscMetricAndReq(input *go_hook.HookInput, miss bool) {
 }
 
 func checkCni(input *go_hook.HookInput) error {
-	// Clear a metrics and reqKey
+	// Clear metrics and reqKey
 	input.MetricsCollector.Expire(checkCNIConfigMetricGroup)
 	requirements.RemoveValue(cniConfigurationSettledKey)
 	needUpdateMC := false
 
-	// Let's check secret.
-	// Secret d8-cni-configuration does not exist or exist but contain nil.
-	// This means that the current CNI module is enabled and configured via mc, nothing to do.
-	if len(input.Snapshots["cni_configuration_secret"]) == 0 || input.Snapshots["cni_configuration_secret"][0] == nil {
+	// Получаем снэпшот cni_configuration_secret через unmarshal
+	cniSecrets, err := sdkobjectpatch.UnmarshalToStruct[cniSecretStruct](input.NewSnapshots, "cni_configuration_secret")
+	if err != nil || len(cniSecrets) == 0 || (cniSecrets[0] == cniSecretStruct{}) {
+		// Если нет секрета или он nil — ничего не делаем, удаляем ConfigMap
 		setCNIMiscMetricAndReq(input, false)
 		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
 		return nil
 	}
 
-	// Secret d8-cni-configuration exist but key "cni" does not equal "simple-bridge".
-	// This means that the current CNI module is enabled and configured via mc, nothing to do.
-	cniSecret := input.Snapshots["cni_configuration_secret"][0].(cniSecretStruct)
+	cniSecret := cniSecrets[0]
 	if cniSecret.cni != cni {
 		setCNIMiscMetricAndReq(input, false)
 		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
 		return nil
 	}
 
-	// Secret d8-cni-configuration exist, key "cni" eq "simple-bridge".
-
-	// Prepare desiredCNIModuleConfig
 	desiredCNIModuleConfig := &v1alpha1.ModuleConfig{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ModuleConfig",
@@ -206,12 +202,11 @@ func checkCni(input *go_hook.HookInput) error {
 		},
 	}
 
-	// Let's check what mc exist and explicitly enabled.
-	if len(input.Snapshots["deckhouse_cni_mc"]) == 0 || input.Snapshots["deckhouse_cni_mc"][0] == nil {
+	cniMCs, err := sdkobjectpatch.UnmarshalToStruct[v1alpha1.ModuleConfig](input.NewSnapshots, "deckhouse_cni_mc")
+	if err != nil || len(cniMCs) == 0 {
 		needUpdateMC = true
 	} else {
-		cniModuleConfig := input.Snapshots["deckhouse_cni_mc"][0].(*v1alpha1.ModuleConfig)
-		desiredCNIModuleConfig.Spec.Settings = cniModuleConfig.DeepCopy().Spec.Settings
+		desiredCNIModuleConfig.Spec.Settings = cniMCs[0].DeepCopy().Spec.Settings
 	}
 
 	if needUpdateMC {
@@ -237,7 +232,6 @@ func checkCni(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	// All configuration settled, nothing to do.
 	setCNIMiscMetricAndReq(input, false)
 	input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
 	return nil

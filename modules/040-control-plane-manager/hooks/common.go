@@ -30,6 +30,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/etcd"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 const (
@@ -44,12 +45,15 @@ type etcdInstance struct {
 }
 
 func getETCDClient(input *go_hook.HookInput, dc dependency.Container, endpoints []string) (etcd.Client, error) {
-	snap := input.Snapshots["etcd-certificate"]
-	if len(snap) == 0 {
+	certs, err := sdkobjectpatch.UnmarshalToStruct[certificate.Certificate](input.NewSnapshots, "etcd-certificate")
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal etcd-certificate: %w", err)
+	}
+	if len(certs) == 0 {
 		return nil, fmt.Errorf("etcd credentials not found")
 	}
 
-	cert := snap[0].(certificate.Certificate)
+	cert := certs[0]
 
 	if cert.CA == "" || cert.Cert == "" || cert.Key == "" {
 		return nil, fmt.Errorf("etcd credentials not found")

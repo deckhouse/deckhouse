@@ -15,6 +15,9 @@
 package hooks
 
 import (
+	"fmt"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -56,13 +59,16 @@ func applyAutoscalerResourcesFilter(obj *unstructured.Unstructured) (go_hook.Fil
 // If there is a Deployment kube-system/cluster-autoscaler in cluster,
 // it must not have section `resources.limits` because extended-monitoring will alert at throttling.
 func removeResourcesLimitsForClusterAutoscaler(input *go_hook.HookInput) error {
-	resourcesSnap := input.Snapshots["cluster_autoscaler_resources"]
+	resourcesSnap, err := sdkobjectpatch.UnmarshalToStruct[corev1.ResourceRequirements](input.NewSnapshots, "cluster_autoscaler_resources")
+	if err != nil {
+		return fmt.Errorf("cannot unmarshal cluster_autoscaler_resources snapshot: %w", err)
+	}
 
 	if len(resourcesSnap) == 0 {
 		return nil
 	}
 
-	resources := resourcesSnap[0].(corev1.ResourceRequirements)
+	resources := resourcesSnap[0]
 	if len(resources.Limits) == 0 {
 		return nil
 	}
@@ -74,6 +80,7 @@ func removeResourcesLimitsForClusterAutoscaler(input *go_hook.HookInput) error {
 			return nil, err
 		}
 
+		// Remove resource limits from the first container
 		depl.Spec.Template.Spec.Containers[0].Resources.Limits = nil
 
 		return sdk.ToUnstructured(&depl)

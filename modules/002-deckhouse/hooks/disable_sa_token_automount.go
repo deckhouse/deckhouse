@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"time"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -91,11 +92,14 @@ func applySAFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 }
 
 func disableDefaultSATokenAutomount(input *go_hook.HookInput) error {
-	sa := input.Snapshots["default-sa"]
+	sas, err := sdkobjectpatch.UnmarshalToStruct[SA](input.NewSnapshots, "default-sa")
+	if err != nil {
+		return err
+	}
 
-	for _, s := range sa {
-		if s.(*SA).AutomountServiceAccountToken {
-			input.PatchCollector.MergePatch(automountPatch, "v1", "ServiceAccount", s.(*SA).Namespace, s.(*SA).Name)
+	for _, sa := range sas {
+		if sa.AutomountServiceAccountToken {
+			input.PatchCollector.MergePatch(automountPatch, "v1", "ServiceAccount", sa.Namespace, sa.Name)
 		}
 	}
 

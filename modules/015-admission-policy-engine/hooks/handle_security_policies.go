@@ -28,6 +28,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/hooks/set_cr_statuses"
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	v1alpha1 "github.com/deckhouse/deckhouse/modules/015-admission-policy-engine/hooks/internal/apis"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -43,17 +44,27 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleSP)
 
 func handleSP(input *go_hook.HookInput) error {
-	result := make([]*securityPolicy, 0)
-	refs := make(map[string]set.Set, 0)
+	securityPolicies, err := sdkobjectpatch.UnmarshalToStruct[securityPolicy](input.NewSnapshots, "security-policies")
+	if err != nil {
+		return err
+	}
 
-	snap := input.Snapshots["security-policies"]
+	refs := make(map[string]set.Set)
 
-	for _, sn := range snap {
-		sp := sn.(*securityPolicy)
+	for _, sp := range securityPolicies {
 		// set observed status
-		input.PatchCollector.PatchWithMutatingFunc(set_cr_statuses.SetObservedStatus(sn, filterSP), "deckhouse.io/v1alpha1", "securitypolicy", "", sp.Metadata.Name, object_patch.WithSubresource("/status"), object_patch.WithIgnoreHookError())
+		input.PatchCollector.PatchWithMutatingFunc(
+			set_cr_statuses.SetObservedStatus(sp, filterSP),
+			"deckhouse.io/v1alpha1",
+			"securitypolicy",
+			"",
+			sp.Metadata.Name,
+			object_patch.WithSubresource("/status"),
+			object_patch.WithIgnoreHookError(),
+		)
+
 		sp.preprocesSecurityPolicy()
-		result = append(result, sp)
+
 		for _, v := range sp.Spec.Policies.VerifyImageSignatures {
 			if keys, ok := refs[v.Reference]; ok {
 				for _, key := range v.PublicKeys {
@@ -66,11 +77,12 @@ func handleSP(input *go_hook.HookInput) error {
 			}
 		}
 	}
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].Metadata.Name < result[j].Metadata.Name
+
+	sort.Slice(securityPolicies, func(i, j int) bool {
+		return securityPolicies[i].Metadata.Name < securityPolicies[j].Metadata.Name
 	})
 
-	input.Values.Set("admissionPolicyEngine.internal.securityPolicies", result)
+	input.Values.Set("admissionPolicyEngine.internal.securityPolicies", securityPolicies)
 
 	imageReferences := make([]ratifyReference, 0, len(refs))
 	for k, v := range refs {

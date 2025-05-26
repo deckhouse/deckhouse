@@ -19,6 +19,7 @@ package hooks
 import (
 	"strings"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
@@ -68,12 +69,18 @@ func actionCode(action string) float64 {
 
 func handleActions(input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire("d8_admission_policy_engine_pss_default_action")
+
 	actions := []string{strings.ToLower(input.Values.Get("admissionPolicyEngine.podSecurityStandards.enforcementAction").String())}
 	input.MetricsCollector.Set("d8_admission_policy_engine_pss_default_action", actionCode(actions[0]), map[string]string{}, metrics.WithGroup("d8_admission_policy_engine_pss_default_action"))
-	labels := input.Snapshots["pss_enforcement_actions"]
+
+	labels, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, "pss_enforcement_actions")
+	if err != nil {
+		input.Logger.Warnf("failed to unmarshal pss_enforcement_actions snapshot: %v", err)
+		return err
+	}
 
 	for _, label := range labels {
-		lbl := strings.ToLower(label.(string))
+		lbl := strings.ToLower(label)
 		if !hasItem(actions, lbl) {
 			actions = append(actions, lbl)
 			// all possible actions were found, it doesn't make sense to proceed
@@ -82,6 +89,7 @@ func handleActions(input *go_hook.HookInput) error {
 			}
 		}
 	}
+
 	input.Values.Set("admissionPolicyEngine.internal.podSecurityStandards.enforcementActions", actions)
 	return nil
 }

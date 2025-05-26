@@ -20,6 +20,7 @@ import (
 	"log/slog"
 	"strings"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
@@ -80,12 +81,18 @@ func getDefaultPolicy(input *go_hook.HookInput) string {
 		return policy
 	}
 
-	// no map found - an old cluster
-	if len(input.Snapshots["install_data"]) == 0 {
+	installDataSlice, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, "install_data")
+	if err != nil {
+		input.Logger.Warnf("failed to unmarshal install_data snapshot: %v", err)
 		return "Privileged"
 	}
 
-	deckhouseVersion := input.Snapshots["install_data"][0].(string)
+	// no map found - an old cluster
+	if len(installDataSlice) == 0 {
+		return "Privileged"
+	}
+
+	deckhouseVersion := installDataSlice[0]
 
 	// no version field found or invalid semver - something went wrong
 	if len(deckhouseVersion) == 0 || !semver.IsValid(deckhouseVersion) {

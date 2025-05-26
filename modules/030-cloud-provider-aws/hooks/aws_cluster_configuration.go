@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/json"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 type InternalValues struct {
@@ -95,11 +96,16 @@ func applyProviderClusterConfigurationSecretFilter(obj *unstructured.Unstructure
 }
 
 func clusterConfiguration(input *go_hook.HookInput) error {
-	if len(input.Snapshots["provider_cluster_configuration"]) == 0 {
-		return fmt.Errorf("%s", "Can't find Secret d8-provider-cluster-configuration in Namespace kube-system")
+	secrets, err := sdkobjectpatch.UnmarshalToStruct[v1.Secret](input.NewSnapshots, "provider_cluster_configuration")
+	if err != nil {
+		return fmt.Errorf("can't unmarshal snapshot provider_cluster_configuration: %w", err)
 	}
 
-	secret := input.Snapshots["provider_cluster_configuration"][0].(*v1.Secret)
+	if len(secrets) == 0 {
+		return fmt.Errorf("can't find Secret d8-provider-cluster-configuration in Namespace kube-system")
+	}
+
+	secret := secrets[0]
 
 	clusterConfiguration := secret.Data["cloud-provider-cluster-configuration.yaml"]
 

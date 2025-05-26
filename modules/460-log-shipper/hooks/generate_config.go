@@ -35,6 +35,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/composer"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 func filterPodLoggingConfig(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -204,19 +205,18 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, generateConfig)
 
-func extractTLSSpecFromSecrets(name string, snapshot []go_hook.FilterResult) (v1alpha1.CommonTLSSpec, error) {
-	for _, secret := range snapshot {
-		s, ok := secret.(*corev1.Secret)
-		if !ok {
+func extractTLSSpecFromSecrets(name string, input *go_hook.HookInput) (v1alpha1.CommonTLSSpec, error) {
+	for secret, err := range sdkobjectpatch.SnapshotIter[*corev1.Secret](input.NewSnapshots.Get("tls-secrets")) {
+		if err != nil {
 			continue
 		}
-		if s.Name == name {
+		if secret.Name == name {
 			return v1alpha1.CommonTLSSpec{
-				CAFile: string(s.Data["ca.pem"]),
+				CAFile: string(secret.Data["ca.pem"]),
 				CommonTLSClientCert: v1alpha1.CommonTLSClientCert{
-					CertFile: string(s.Data["crt.pem"]),
-					KeyFile:  string(s.Data["key.pem"]),
-					KeyPass:  string(s.Data["keyPass"]),
+					CertFile: string(secret.Data["crt.pem"]),
+					KeyFile:  string(secret.Data["key.pem"]),
+					KeyPass:  string(secret.Data["keyPass"]),
 				},
 			}, nil
 		}
@@ -265,56 +265,58 @@ func overrideTLSSpec(source v1alpha1.CommonTLSSpec, dst *v1alpha1.CommonTLSSpec)
 }
 
 func generateConfig(input *go_hook.HookInput) error {
-	if len(input.Snapshots["namespace"]) < 1 {
+	if len(input.NewSnapshots.Get("namespace")) < 1 {
 		// there is no namespace to manipulate the config map, the hook will create it later on afterHelm
 		input.Values.Set("logShipper.internal.activated", false)
 		return nil
 	}
 
-	destSnap := input.Snapshots["cluster_log_destination"]
-	tokenSnap := input.Snapshots["token"]
-	tlsSecretsSnap := input.Snapshots["tls-secrets"]
-
-	var token string
-
-	if len(tokenSnap) > 0 {
-		token = tokenSnap[0].(string)
+	destinations, err := sdkobjectpatch.UnmarshalToStruct[v1alpha1.ClusterLogDestination](input.NewSnapshots, "cluster_log_destination")
+	if err != nil {
+		return fmt.Errorf("unmarshal destinations: %w", err)
 	}
 
-	lokiEndpointSnap := input.Snapshots["loki_endpoint"]
+	tokens, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, "token")
+	if err != nil {
+		return fmt.Errorf("unmarshal token: %w", err)
+	}
 
+	var token string
+	if len(tokens) > 0 {
+		token = tokens[0]
+	}
+
+	lokiEndpoints, err := sdkobjectpatch.UnmarshalToStruct[endpoint](input.NewSnapshots, "loki_endpoint")
+	if err != nil {
+		return fmt.Errorf("unmarshal loki endpoint: %w", err)
+	}
 	var lokiEndpoint endpoint
-
-	if len(lokiEndpointSnap) > 0 {
-		lokiEndpoint = lokiEndpointSnap[0].(endpoint)
+	if len(lokiEndpoints) > 0 {
+		lokiEndpoint = lokiEndpoints[0]
 	}
 
 	clusterDomain := input.Values.Get("global.discovery.clusterDomain").String()
 
-	destinations := make([]v1alpha1.ClusterLogDestination, 0)
-
-	for _, destination := range destSnap {
-		dest := destination.(v1alpha1.ClusterLogDestination)
-
-		destinationTLSSpec, err := getTLSSpec(&dest)
+	for _, destination := range destinations {
+		destinationTLSSpec, err := getTLSSpec(&destination)
 		if err != nil {
 			return errors.Wrap(err, "failed to get tls spec")
 		}
 		if destinationTLSSpec.SecretRef != nil && destinationTLSSpec.SecretRef.Name != "" {
-			secretTLSSpec, err := extractTLSSpecFromSecrets(destinationTLSSpec.SecretRef.Name, tlsSecretsSnap)
+			secretTLSSpec, err := extractTLSSpecFromSecrets(destinationTLSSpec.SecretRef.Name, input)
 			if err != nil {
 				return errors.Wrap(err, "failed to extract tls data from secret")
 			}
 			overrideTLSSpec(secretTLSSpec, destinationTLSSpec)
 		}
 
-		if dest.Spec.Type != "Loki" || token == "" {
-			destinations = append(destinations, dest)
+		if destination.Spec.Type != "Loki" || token == "" {
+			destinations = append(destinations, destination)
 
 			continue
 		}
 
-		d, err := migrateClusterLogDestinationLoki(dest, clusterDomain, lokiEndpoint, token)
+		d, err := migrateClusterLogDestinationLoki(destination, clusterDomain, lokiEndpoint, token)
 		if err != nil {
 			return errors.Wrap(err, "failed to migrate cluster log destination loki")
 		}

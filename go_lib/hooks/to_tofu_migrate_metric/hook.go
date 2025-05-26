@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
@@ -168,8 +169,11 @@ func nodeStateSecretFilter(unstructured *unstructured.Unstructured) (go_hook.Fil
 }
 
 func fireNeedMigrateToOpenTofuMetric(input *go_hook.HookInput) error {
-	clusterStateSnap := input.Snapshots["cluster_state"]
-	if len(clusterStateSnap) == 0 {
+	clusterStates, err := sdkobjectpatch.UnmarshalToStruct[StateClusterResult](input.NewSnapshots, "cluster_state")
+	if err != nil {
+		return fmt.Errorf("cannot unmarshal cluster_state snapshot: %w", err)
+	}
+	if len(clusterStates) == 0 {
 		return fmt.Errorf("no cluster state snapshot found")
 	}
 
@@ -177,8 +181,7 @@ func fireNeedMigrateToOpenTofuMetric(input *go_hook.HookInput) error {
 
 	needMigrate := false
 
-	for _, clusterStateRaw := range clusterStateSnap {
-		clusterState := clusterStateRaw.(*StateClusterResult)
+	for _, clusterState := range clusterStates {
 		if !clusterState.ClusterState {
 			input.Logger.Warnf("Secret %s is not terraform state. Probably you located in test env", clusterState.SecretName)
 			continue
@@ -193,9 +196,13 @@ func fireNeedMigrateToOpenTofuMetric(input *go_hook.HookInput) error {
 		break
 	}
 
+	nodeStates, err := sdkobjectpatch.UnmarshalToStruct[StateNodeResult](input.NewSnapshots, "nodes_state")
+	if err != nil {
+		return fmt.Errorf("cannot unmarshal nodes_state snapshot: %w", err)
+	}
+
 	if !needMigrate {
-		for _, nodeStateSnapshot := range input.Snapshots["nodes_state"] {
-			nodeState := nodeStateSnapshot.(*StateNodeResult)
+		for _, nodeState := range nodeStates {
 			if nodeState.IsBackup {
 				input.Logger.Infof("Node state %s is backup state. Skip", nodeState.SecretName)
 				continue

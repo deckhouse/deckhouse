@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -69,17 +70,23 @@ func mirrorProbeValue(input *go_hook.HookInput) error {
 		namespace  = ""
 	)
 
-	snaps := input.Snapshots["probe_objects"]
-	input.MetricsCollector.Set("d8_upmeter_upmeterhookprobe_count", float64(len(snaps)), nil)
+	// Декодируем снапшот в срез структур probeObject
+	probeObjects, err := sdkobjectpatch.UnmarshalToStruct[probeObject](input.NewSnapshots, "probe_objects")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal probe_objects snapshot: %w", err)
+	}
 
-	for _, raw := range snaps {
-		obj := raw.(probeObject)
+	// Устанавливаем метрику с количеством объектов probe
+	input.MetricsCollector.Set("d8_upmeter_upmeterhookprobe_count", float64(len(probeObjects)), nil)
 
+	// Для каждого объекта создаём и применяем патч с обновлённым полем mirror
+	for _, obj := range probeObjects {
 		patchRaw := map[string]interface{}{
 			"spec": map[string]string{
 				"mirror": obj.Inited,
 			},
 		}
+
 		patch, err := json.Marshal(patchRaw)
 		if err != nil {
 			return err

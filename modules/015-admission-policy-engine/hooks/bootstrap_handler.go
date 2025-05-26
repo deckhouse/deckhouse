@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	"time"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
@@ -69,18 +70,17 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleGatekeeperBootstrap)
 
 func handleGatekeeperBootstrap(input *go_hook.HookInput) error {
-	var bootstrapped bool
-	templates := input.Snapshots["gatekeeper_templates"]
+	templates, err := sdkobjectpatch.UnmarshalToStruct[cTemplate](input.NewSnapshots, "gatekeeper_templates")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal gatekeeper_templates: %w", err)
+	}
 
+	var bootstrapped bool
 	if len(templates) != 0 {
 		existingTemplates := make(map[string]cTemplate, len(templates))
 		bootstrapped = true
 
-		for _, template := range templates {
-			t, ok := template.(cTemplate)
-			if !ok {
-				return fmt.Errorf("Cannot convert ConstraintTemplate")
-			}
+		for _, t := range templates {
 			existingTemplates[t.Name] = cTemplate{
 				Processed: t.Processed,
 				Created:   t.Created,
@@ -122,7 +122,7 @@ func handleGatekeeperBootstrap(input *go_hook.HookInput) error {
 
 	input.MetricsCollector.Expire("d8_admission_policy_engine_not_bootstrapped")
 	if !bootstrapped {
-		input.MetricsCollector.Set("d8_admission_policy_engine_not_bootstrapped", 1, map[string]string{}, metrics.WithGroup("d8_admission_policy_engine_not_bootstrapped"))
+		input.MetricsCollector.Set("d8_admission_policy_engine_not_bootstrapped", 1, nil, metrics.WithGroup("d8_admission_policy_engine_not_bootstrapped"))
 	}
 
 	return nil

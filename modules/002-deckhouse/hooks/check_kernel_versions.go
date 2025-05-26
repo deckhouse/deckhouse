@@ -36,6 +36,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 type nodeKernelVersion struct {
@@ -120,8 +121,11 @@ func handleNodes(input *go_hook.HookInput) error {
 
 	input.MetricsCollector.Expire(nodeKernelCheckMetricsGroup)
 
-	snap := input.Snapshots["nodes"]
-	if len(snap) == 0 {
+	nodes, err := sdkobjectpatch.UnmarshalToStruct[nodeKernelVersion](input.NewSnapshots, "nodes")
+	if err != nil {
+		return fmt.Errorf("cannot unmarshal nodes snapshot: %w", err)
+	}
+	if len(nodes) == 0 {
 		return nil
 	}
 
@@ -145,9 +149,7 @@ func handleNodes(input *go_hook.HookInput) error {
 			return err
 		}
 
-		for _, n := range snap {
-			node := n.(nodeKernelVersion)
-
+		for _, node := range nodes {
 			if !c.Check(node.SemverVersion) {
 				modulesListInUse := strings.Join(constraint.ModulesListInUse, ",")
 				input.MetricsCollector.Set(nodeKernelCheckMetricName, 1, map[string]string{
@@ -156,6 +158,7 @@ func handleNodes(input *go_hook.HookInput) error {
 					"affected_module": modulesListInUse,
 					"constraint":      constraint.KernelVersionConstraint,
 				}, metrics.WithGroup(nodeKernelCheckMetricsGroup))
+
 				input.Logger.Debug(
 					"kernel on node does not satisfy kernel constraint for modules",
 					slog.String("kernel_version", node.KernelVersion),

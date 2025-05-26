@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -68,17 +69,17 @@ func applyKubernetesAPIEndpointsFilter(obj *unstructured.Unstructured) (go_hook.
 }
 
 func discoverAPIEndpointsHandler(input *go_hook.HookInput) error {
-	ep, ok := input.Snapshots["kube_api_ep"]
-	if !ok {
-		return errors.New("no endpoints snapshot")
+	endpoints, err := sdkobjectpatch.UnmarshalToStruct[KubernetesAPIEndpoints](input.NewSnapshots, "kube_api_ep")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal kube_api_ep snapshot: %w", err)
 	}
 
-	if len(ep) == 0 {
+	if len(endpoints) == 0 {
 		input.Logger.Error("kubernetes endpoints not found")
 		return nil
 	}
 
-	fpp := ep[0].(*KubernetesAPIEndpoints)
+	fpp := endpoints[0]
 
 	if len(fpp.HostPort) == 0 {
 		return errors.New("no kubernetes apiserver endpoints host:port specified")

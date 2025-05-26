@@ -17,7 +17,10 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/Masterminds/semver/v3"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -101,12 +104,16 @@ func installDataCMFilter(unstructured *unstructured.Unstructured) (go_hook.Filte
 }
 
 func migrateDiskGBHandler(input *go_hook.HookInput) error {
-	providerConfigSecretSnap := input.Snapshots["provider_configuration"]
-	if len(providerConfigSecretSnap) == 0 {
+	providerSecrets, err := sdkobjectpatch.UnmarshalToStruct[*corev1.Secret](input.NewSnapshots, "provider_configuration")
+	if err != nil {
+		return fmt.Errorf("unmarshal provider_configuration: %w", err)
+	}
+	if len(providerSecrets) == 0 {
 		return nil
 	}
+	providerConfigSecret := providerSecrets[0]
 
-	needMigration, err := needMigrateForDeckhouseInstallVersion(input.Snapshots)
+	needMigration, err := needMigrateForDeckhouseInstallVersion(input)
 	if err != nil {
 		return err
 	}
@@ -115,8 +122,6 @@ func migrateDiskGBHandler(input *go_hook.HookInput) error {
 		input.Logger.Info("Skipping migration diskSizeGB because Deckhouse installation version too ok")
 		return nil
 	}
-
-	providerConfigSecret := providerConfigSecretSnap[0].(*corev1.Secret)
 
 	backupSecret := providerConfigSecret.DeepCopy()
 
@@ -241,16 +246,21 @@ func needMigrateMasterInstanceClass(rawConfig map[string]interface{}) (bool, err
 }
 
 // check install version. if version > 1.62 we do not need migration because right default was set
-func needMigrateForDeckhouseInstallVersion(snaps go_hook.Snapshots) (bool, error) {
-	is := snaps["install_version"]
-	if len(is) == 0 {
+func needMigrateForDeckhouseInstallVersion(input *go_hook.HookInput) (bool, error) {
+	versions, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, "install_version")
+	if err != nil {
+		return false, fmt.Errorf("unmarshal install_version: %w", err)
+	}
+
+	if len(versions) == 0 {
 		// install-data configmap available from 1.55
 		// https://github.com/deckhouse/deckhouse/pull/6522
 		// if cm not found we should try to migration
 		return true, nil
 	}
 
-	versionStr := is[0].(string)
+	versionStr := versions[0]
+
 	// do not migrate for dev build
 	if versionStr == "dev" {
 		return false, nil

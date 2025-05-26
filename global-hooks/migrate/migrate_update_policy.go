@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
@@ -26,6 +28,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 // TODO(ipaqsa): remove it after 1.68
@@ -86,37 +89,50 @@ type filteredModule struct {
 func fireMupAlerts(input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire("d8_update_policy")
 
-	for _, moduleSnapshot := range input.Snapshots["modules"] {
-		if moduleSnapshot == nil {
+	modules, err := sdkobjectpatch.UnmarshalToStruct[*filteredModule](input.NewSnapshots, "modules")
+	if err != nil {
+		return fmt.Errorf("cannot unmarshal modules snapshot: %w", err)
+	}
+
+	policies, err := sdkobjectpatch.UnmarshalToStruct[*filteredMup](input.NewSnapshots, "moduleUpdatePolicies")
+	if err != nil {
+		return fmt.Errorf("cannot unmarshal moduleUpdatePolicies snapshot: %w", err)
+	}
+
+	for _, module := range modules {
+		if module == nil {
 			continue
 		}
 
-		module := moduleSnapshot.(*filteredModule)
+		labelsSet := labels.Set{
+			"module": module.Name,
+			"source": module.Source,
+		}
 
-		var labelsSet labels.Set = map[string]string{"module": module.Name, "source": module.Source}
-
-		for _, policySnapshot := range input.Snapshots["moduleUpdatePolicies"] {
-			if policySnapshot == nil {
+		for _, policy := range policies {
+			if policy == nil {
 				continue
 			}
-
-			policy := policySnapshot.(*filteredMup)
 
 			selector, err := metav1.LabelSelectorAsSelector(policy.LabelSelector)
 			if err != nil {
 				continue
 			}
 
-			if selectorSourceName, exists := selector.RequiresExactMatch("source"); exists && selectorSourceName != module.Source {
+			if source, exists := selector.RequiresExactMatch("source"); exists && source != module.Source {
 				continue
 			}
 
 			if selector.Matches(labelsSet) {
-				input.MetricsCollector.Set("d8_deprecated_update_policy", 1.0, map[string]string{
-					"moduleName":   module.Name,
-					"updatePolicy": policy.Name,
-				}, metrics.WithGroup("d8_update_policy"))
-				continue
+				input.MetricsCollector.Set(
+					"d8_deprecated_update_policy",
+					1.0,
+					map[string]string{
+						"moduleName":   module.Name,
+						"updatePolicy": policy.Name,
+					},
+					metrics.WithGroup("d8_update_policy"),
+				)
 			}
 		}
 	}

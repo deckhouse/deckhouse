@@ -32,6 +32,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 const (
@@ -170,10 +171,14 @@ func checkCni(input *go_hook.HookInput) error {
 	requirements.RemoveValue(cniConfigurationSettledKey)
 	needUpdateMC := false
 
+	cniSecrets, err := sdkobjectpatch.UnmarshalToStruct[*cniSecretStruct](input.NewSnapshots, "cni_configuration_secret")
+	if err != nil {
+		return err
+	}
 	// Let's check secret.
 	// Secret d8-cni-configuration does not exist or exist but contain nil.
 	// This means that the current CNI module is enabled and configured via mc, nothing to do.
-	if len(input.Snapshots["cni_configuration_secret"]) == 0 || input.Snapshots["cni_configuration_secret"][0] == nil {
+	if len(cniSecrets) == 0 || cniSecrets[0] == nil {
 		setCNIMiscMetricAndReq(input, false)
 		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
 		return nil
@@ -181,7 +186,7 @@ func checkCni(input *go_hook.HookInput) error {
 
 	// Secret d8-cni-configuration exist but key "cni" does not equal "cilium".
 	// This means that the current CNI module is enabled and configured via mc, nothing to do.
-	cniSecret := input.Snapshots["cni_configuration_secret"][0].(cniSecretStruct)
+	cniSecret := cniSecrets[0]
 	if cniSecret.cni != cni {
 		setCNIMiscMetricAndReq(input, false)
 		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
@@ -205,12 +210,15 @@ func checkCni(input *go_hook.HookInput) error {
 			Settings: v1alpha1.SettingsValues{},
 		},
 	}
-
+	cniModuleConfigs, err := sdkobjectpatch.UnmarshalToStruct[*v1alpha1.ModuleConfig](input.NewSnapshots, "deckhouse_cni_mc")
+	if err != nil {
+		return err
+	}
 	// Let's check what mc exist and explicitly enabled.
-	if len(input.Snapshots["deckhouse_cni_mc"]) == 0 || input.Snapshots["deckhouse_cni_mc"][0] == nil {
+	if len(cniModuleConfigs) == 0 || cniModuleConfigs[0] == nil {
 		needUpdateMC = true
 	} else {
-		cniModuleConfig := input.Snapshots["deckhouse_cni_mc"][0].(*v1alpha1.ModuleConfig)
+		cniModuleConfig := cniModuleConfigs[0]
 		desiredCNIModuleConfig.Spec.Settings = cniModuleConfig.DeepCopy().Spec.Settings
 	}
 

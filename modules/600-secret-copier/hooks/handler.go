@@ -32,6 +32,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 const (
@@ -149,38 +150,44 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(copierHandler))
 
 func copierHandler(input *go_hook.HookInput, dc dependency.Container) error {
-	secrets, ok := input.Snapshots["secrets"]
-	if !ok {
+	secrets, err := sdkobjectpatch.UnmarshalToStruct[*Secret](input.NewSnapshots, "secrets")
+	if err != nil {
+		return err
+	}
+	if len(secrets) == 0 {
 		input.Logger.Info("No Secrets received, skipping execution")
 		return nil
 	}
-	namespaces, ok := input.Snapshots["namespaces"]
-	if !ok {
+
+	namespaces, err := sdkobjectpatch.UnmarshalToStruct[*Namespace](input.NewSnapshots, "namespaces")
+	if err != nil {
+		return err
+	}
+	if len(namespaces) == 0 {
 		input.Logger.Info("No Namespaces received, skipping execution")
 		return nil
 	}
 
 	k8, err := dc.GetK8sClient()
 	if err != nil {
-		return fmt.Errorf("can't init Kubernetes client: %v", err)
+		return fmt.Errorf("can't init Kubernetes client: %w", err)
 	}
 
 	secretsExists := make(map[string]*Secret)
 	secretsDesired := make(map[string]*Secret)
-	for _, s := range secrets {
-		secret := s.(*Secret)
 
+	for _, secret := range secrets {
 		// Secrets that are not in namespace `default` are existing Secrets.
 		if secret.Namespace != v1.NamespaceDefault {
 			path := SecretPath(secret)
 			secretsExists[path] = secret
 			continue
 		}
+
 		namespaceLabelSelector := namespaceSelector(secret)
 
 		// Secrets in namespace `default` should be propagated to all other namespaces matching the selector.
-		for _, n := range namespaces {
-			namespace := n.(*Namespace)
+		for _, namespace := range namespaces {
 			if namespace.IsTerminating || namespace.Name == v1.NamespaceDefault {
 				continue
 			}
@@ -204,28 +211,24 @@ func copierHandler(input *go_hook.HookInput, dc dependency.Container) error {
 		secretDesired, desired := secretsDesired[path]
 		if !desired {
 			// Secret exists, but not desired - delete it.
-			err := deleteSecret(k8, secretExist)
-			if err != nil {
+			if err := deleteSecret(k8, secretExist); err != nil {
 				return err
 			}
 			continue
 		}
 		if !reflect.DeepEqual(secretDesired, secretExist) {
 			// Secret changed - update it.
-			err = createOrUpdateSecret(k8, secretDesired)
-			if err != nil {
+			if err := createOrUpdateSecret(k8, secretDesired); err != nil {
 				return err
 			}
 		}
 	}
 	for path, secretDesired := range secretsDesired {
-		_, exists := secretsExists[path]
-		if exists {
+		if _, exists := secretsExists[path]; exists {
 			continue
 		}
 		// Secret not exists, create it.
-		err := createOrUpdateSecret(k8, secretDesired)
-		if err != nil {
+		if err := createOrUpdateSecret(k8, secretDesired); err != nil {
 			return err
 		}
 	}

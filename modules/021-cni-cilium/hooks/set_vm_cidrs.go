@@ -54,7 +54,7 @@ func applyVMCIDRsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 }
 
 func applyVMCIDRs(input *go_hook.HookInput) error {
-	snaps := input.Snapshots["vm-cidrs"]
+	snaps := input.NewSnapshots.Get("vm-cidrs")
 	if len(snaps) == 1 && snaps[0] != nil {
 		input.Values.Set("cniCilium.internal.vmCIDRs", snaps[0])
 	}

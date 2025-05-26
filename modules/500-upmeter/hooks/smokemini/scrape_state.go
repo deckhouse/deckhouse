@@ -22,6 +22,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 // Scrape smoke-mini statefulset state before Helm rendering to avoid statefulset re-creation
@@ -53,9 +54,11 @@ func scrapeState(input *go_hook.HookInput) error {
 	}
 
 	const statePath = "upmeter.internal.smokeMini.sts"
-
 	// Parse the state from values
-	statefulSets := snapshot.ParseStatefulSetSlice(input.Snapshots["statefulsets"])
+	statefulSets, err := sdkobjectpatch.UnmarshalToStruct[snapshot.StatefulSet](input.NewSnapshots, "statefulsets")
+	if err != nil {
+		return err
+	}
 	state, err := parseState(input.Values.Get(statePath))
 	if err != nil {
 		return err

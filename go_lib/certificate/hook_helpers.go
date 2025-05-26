@@ -19,6 +19,7 @@ package certificate
 import (
 	"fmt"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/api/core/v1"
@@ -39,21 +40,18 @@ func ApplyCaSelfSignedCertFilter(obj *unstructured.Unstructured) (go_hook.Filter
 }
 
 func GetOrCreateCa(input *go_hook.HookInput, snapshot, cn string) (*Authority, error) {
-	var selfSignedCA Authority
+	caList, err := sdkobjectpatch.UnmarshalToStruct[Authority](input.NewSnapshots, snapshot)
+	if err != nil {
+		return nil, fmt.Errorf("cannot unmarshal %q snapshot: %w", snapshot, err)
+	}
 
-	certs := input.Snapshots[snapshot]
-	if len(certs) == 1 {
-		var ok bool
-		selfSignedCA, ok = certs[0].(Authority)
-		if !ok {
-			return nil, fmt.Errorf("cannot convert sefsigned certificate to certificate authority")
-		}
-	} else {
-		var err error
-		selfSignedCA, err = GenerateCA(input.Logger, cn)
-		if err != nil {
-			return nil, fmt.Errorf("cannot generate selfsigned ca: %v", err)
-		}
+	if len(caList) == 1 {
+		return &caList[0], nil
+	}
+
+	selfSignedCA, err := GenerateCA(input.Logger, cn)
+	if err != nil {
+		return nil, fmt.Errorf("cannot generate self-signed CA: %w", err)
 	}
 
 	return &selfSignedCA, nil

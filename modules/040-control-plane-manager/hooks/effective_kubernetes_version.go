@@ -33,6 +33,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 /*
@@ -227,7 +228,10 @@ func handleEffectiveK8sVersion(input *go_hook.HookInput, dc dependency.Container
 	requirements.SaveValue(minK8sVersionRequirementKey, minNodeVersion.String())
 
 	// process secret snapshot
-	versionsInSecret := ekvProcessSecretSnapshot(input)
+	versionsInSecret, err := ekvProcessSecretSnapshot(input)
+	if err != nil {
+		return err
+	}
 	maxUsedControlPlaneVersion := versionsInSecret.MaxUsed
 	if maxUsedControlPlaneVersion == nil {
 		input.Logger.Warn("deckhouse-managed control plane Pods are not yet deployed, setting max_used_control_plane_version to config_version")
@@ -308,32 +312,32 @@ func handleEffectiveK8sVersion(input *go_hook.HookInput, dc dependency.Container
 // process control plane pods snapshot with annotation, gettings minimum and maximum from control-plane-pods
 // returns minControlPlaneVersion, maxControlPlaneVersion and error
 func ekvProcessPodsSnapshot(input *go_hook.HookInput, dc dependency.Container) (*semver.Version, *semver.Version, error) {
-	snap := input.Snapshots["control_plane_versions"]
+	controlPlaneVersions, err := sdkobjectpatch.UnmarshalToStruct[controlPlanePod](input.NewSnapshots, "control_plane_versions")
+	if err != nil {
+		return nil, nil, fmt.Errorf("unmarshal control_plane_versions: %w", err)
+	}
 
-	controlPlaneVersions := make([]controlPlanePod, 0, len(snap))
 	var apiserverExists bool
-
-	for _, res := range snap {
-		if res == nil {
-			continue // filtered pod could be nil, if it doesnt have necessary annotation
-		}
-		pod := res.(controlPlanePod)
+	for _, pod := range controlPlaneVersions {
 		if strings.Contains(pod.Name, "kube-apiserver") {
 			apiserverExists = true
+			break
 		}
-		controlPlaneVersions = append(controlPlaneVersions, pod)
 	}
 
 	if !apiserverExists {
 		input.Logger.Warn("deckhouse-managed control plane Pods are not yet deployed, setting control_plane_version to version acquired from kubectl version")
+
 		k8sClient, err := dc.GetK8sClient()
 		if err != nil {
 			return nil, nil, err
 		}
+
 		verInfo, err := k8sClient.Discovery().ServerVersion()
 		if err != nil {
 			return nil, nil, err
 		}
+
 		controlPlaneVersions = []controlPlanePod{{
 			Name:       "server_discovery",
 			K8sVersion: fmt.Sprintf("%s.%s.0", verInfo.Major, verInfo.Minor),
@@ -348,6 +352,7 @@ func ekvProcessPodsSnapshot(input *go_hook.HookInput, dc dependency.Container) (
 		}
 		controlPlaneVs[i] = v
 	}
+
 	sort.Sort(semver.Collection(controlPlaneVs))
 
 	return controlPlaneVs[0], controlPlaneVs[len(controlPlaneVs)-1], nil
@@ -355,28 +360,30 @@ func ekvProcessPodsSnapshot(input *go_hook.HookInput, dc dependency.Container) (
 
 // determine minimum and maximum node versions
 func ekvProcessNodeSnapshot(input *go_hook.HookInput) (*semver.Version /*minNodeVersion*/, *semver.Version /*maxNodeVersion*/, error) {
-	snap := input.Snapshots["node_versions"]
-
-	nodeVersions := make([]*semver.Version, 0, len(snap))
-	for _, res := range snap {
-		nodeVersions = append(nodeVersions, res.(*semver.Version))
+	nodeVersions, err := sdkobjectpatch.UnmarshalToStruct[*semver.Version](input.NewSnapshots, "node_versions")
+	if err != nil {
+		return nil, nil, fmt.Errorf("unmarshal node_versions: %w", err)
 	}
 
 	if len(nodeVersions) == 0 {
 		return nil, nil, fmt.Errorf("no Nodes? What are you doing here")
 	}
+
 	sort.Sort(semver.Collection(nodeVersions))
 
 	return nodeVersions[0], nodeVersions[len(nodeVersions)-1], nil
 }
 
 // get semver from secret
-func ekvProcessSecretSnapshot(input *go_hook.HookInput) kubernetesVersionsInSecret {
-	snap := input.Snapshots["max_used_control_plane_version"]
-
-	if len(snap) > 0 && snap[0] != nil {
-		return snap[0].(kubernetesVersionsInSecret)
+func ekvProcessSecretSnapshot(input *go_hook.HookInput) (kubernetesVersionsInSecret, error) {
+	versions, err := sdkobjectpatch.UnmarshalToStruct[kubernetesVersionsInSecret](input.NewSnapshots, "max_used_control_plane_version")
+	if err != nil {
+		return kubernetesVersionsInSecret{}, fmt.Errorf("cannot unmarshal max_used_control_plane_version: %w", err)
 	}
 
-	return kubernetesVersionsInSecret{}
+	if len(versions) > 0 {
+		return versions[0], nil
+	}
+
+	return kubernetesVersionsInSecret{}, nil
 }

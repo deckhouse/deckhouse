@@ -41,7 +41,7 @@ func TestRestoreGeneratedPassword(t *testing.T) {
 		{
 			"generated password",
 			[]sdkpkg.Snapshot{
-				go_hook.Wrapped{
+				&go_hook.Wrapped{
 					Wrapped: map[string][]byte{
 						defaultBasicAuthPlainField: []byte("admin:{PLAIN}" + genPass),
 					},
@@ -53,7 +53,7 @@ func TestRestoreGeneratedPassword(t *testing.T) {
 		{
 			"custom password",
 			[]sdkpkg.Snapshot{
-				go_hook.Wrapped{
+				&go_hook.Wrapped{
 					Wrapped: map[string][]byte{
 						defaultBasicAuthPlainField: []byte("admin:{PLAIN}pass"),
 					},
@@ -65,7 +65,7 @@ func TestRestoreGeneratedPassword(t *testing.T) {
 		{
 			"no PLAIN marker",
 			[]sdkpkg.Snapshot{
-				go_hook.Wrapped{
+				&go_hook.Wrapped{
 					Wrapped: map[string][]byte{
 						defaultBasicAuthPlainField: []byte("admin:pass"),
 					},
@@ -83,7 +83,7 @@ func TestRestoreGeneratedPassword(t *testing.T) {
 		{
 			"empty data",
 			[]sdkpkg.Snapshot{
-				go_hook.Wrapped{
+				&go_hook.Wrapped{
 					Wrapped: map[string][]byte{},
 				},
 			},
@@ -93,7 +93,7 @@ func TestRestoreGeneratedPassword(t *testing.T) {
 		{
 			"multiple fields",
 			[]sdkpkg.Snapshot{
-				go_hook.Wrapped{
+				&go_hook.Wrapped{
 					Wrapped: map[string][]byte{"one": []byte(""), "two": []byte("")},
 				},
 			},

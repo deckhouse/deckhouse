@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/cloudflare/cfssl/csr"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -27,6 +29,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 // Hubble is compiled into cilium agent, that's why we generate certificate for it.
@@ -70,13 +73,15 @@ func filterCASecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 }
 
 func generateHubbleCACert(input *go_hook.HookInput) error {
-	snap := input.Snapshots["ca-cert-secret"]
+	certs, err := sdkobjectpatch.UnmarshalToStruct[certificate.Certificate](input.NewSnapshots, "ca-cert-secret")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal ca-cert-secret snapshot: %w", err)
+	}
 
-	if len(snap) > 0 {
-		adm := snap[0].(certificate.Certificate)
+	if len(certs) > 0 {
+		adm := certs[0]
 		input.Values.Set("cniCilium.internal.hubble.certs.ca.cert", adm.Cert)
 		input.Values.Set("cniCilium.internal.hubble.certs.ca.key", adm.Key)
-
 		return nil
 	}
 

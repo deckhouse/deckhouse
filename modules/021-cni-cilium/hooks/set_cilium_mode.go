@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -79,11 +80,15 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func setCiliumMode(input *go_hook.HookInput) error {
 	// if secret exists, use it
-	cniConfigurationSecrets, ok := input.Snapshots["cni_configuration_secret"]
 
-	if ok && len(cniConfigurationSecrets) > 0 {
-		if cniConfigurationSecrets[0] != nil {
-			ciliumConfig := cniConfigurationSecrets[0].(CiliumConfigStruct)
+	ciliumConfigs, err := sdkobjectpatch.UnmarshalToStruct[*CiliumConfigStruct](input.NewSnapshots, "cni_configuration_secret")
+	if err != nil {
+		return err
+	}
+
+	if len(ciliumConfigs) > 0 {
+		if ciliumConfigs[0] != nil {
+			ciliumConfig := ciliumConfigs[0]
 			if ciliumConfig.Mode != "" {
 				input.Values.Set("cniCilium.internal.mode", ciliumConfig.Mode)
 			}

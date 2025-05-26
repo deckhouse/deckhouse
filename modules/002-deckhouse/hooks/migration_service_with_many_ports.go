@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 type serviceInfo struct {
@@ -64,14 +65,17 @@ func applyServiceFilterHelmFix(obj *unstructured.Unstructured) (go_hook.FilterRe
 }
 
 func patchServiceWithManyPorts(input *go_hook.HookInput) error {
-	serviceSnapshots := input.Snapshots["service_helm_fix"]
-	for _, serviceSnapshot := range serviceSnapshots {
-		serviceInfoObj := serviceSnapshot.(serviceInfo)
+	services, err := sdkobjectpatch.UnmarshalToStruct[serviceInfo](input.NewSnapshots, "service_helm_fix")
+	if err != nil {
+		return err
+	}
+
+	for _, svc := range services {
 		input.PatchCollector.Delete(
 			"v1",
 			"Service",
-			serviceInfoObj.Name,
-			serviceInfoObj.Namespace,
+			svc.Name,
+			svc.Namespace,
 		)
 	}
 	return nil

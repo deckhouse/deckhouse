@@ -17,7 +17,10 @@ limitations under the License.
 package migrate
 
 import (
+	"fmt"
 	"log/slog"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -96,17 +99,20 @@ func filterHasLabelHeritageDeckhouse(secret *unstructured.Unstructured) (go_hook
 }
 
 func removeLabelHeritageDeckhouse(input *go_hook.HookInput) error {
-	removeLabelIfNeed := func(input *go_hook.HookInput, snapSecretName string) {
-		snap := input.Snapshots[snapSecretName]
-
-		if len(snap) == 0 {
-			input.Logger.Debug("Skip removing label 'heritage: deckhouse' - secret not found", slog.String("name", snapSecretName))
-			return
+	removeLabelIfNeed := func(snapSecretName string) error {
+		snapBools, err := sdkobjectpatch.UnmarshalToStruct[bool](input.NewSnapshots, snapSecretName)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal snapshot %q: %w", snapSecretName, err)
 		}
 
-		if !snap[0].(bool) {
+		if len(snapBools) == 0 {
+			input.Logger.Debug("Skip removing label 'heritage: deckhouse' - secret not found", slog.String("name", snapSecretName))
+			return nil
+		}
+
+		if !snapBools[0] {
 			input.Logger.Debug("Skip removing label 'heritage: deckhouse' - label not found", slog.String("name", snapSecretName))
-			return
+			return nil
 		}
 
 		patch := map[string]interface{}{
@@ -119,11 +125,18 @@ func removeLabelHeritageDeckhouse(input *go_hook.HookInput) error {
 
 		input.Logger.Warn("Remove label 'heritage: deckhouse' from secret", slog.String("name", snapSecretName))
 		input.PatchCollector.MergePatch(patch, "v1", "Secret", "kube-system", snapSecretName)
+		return nil
 	}
 
-	removeLabelIfNeed(input, clusterConfiguration)
-	removeLabelIfNeed(input, providerConfiguration)
-	removeLabelIfNeed(input, staticConfiguration)
+	if err := removeLabelIfNeed(clusterConfiguration); err != nil {
+		return err
+	}
+	if err := removeLabelIfNeed(providerConfiguration); err != nil {
+		return err
+	}
+	if err := removeLabelIfNeed(staticConfiguration); err != nil {
+		return err
+	}
 
 	return nil
 }
