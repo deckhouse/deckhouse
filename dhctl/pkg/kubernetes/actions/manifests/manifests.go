@@ -220,9 +220,10 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			},
 		},
 		Spec: apiv1.PodSpec{
-			HostNetwork:        true,
-			DNSPolicy:          apiv1.DNSDefault,
-			ServiceAccountName: "deckhouse",
+			HostNetwork:                  true,
+			DNSPolicy:                    apiv1.DNSDefault,
+			ServiceAccountName:           "deckhouse",
+			AutomountServiceAccountToken: ptr.To(true),
 			SecurityContext: &apiv1.PodSecurityContext{
 				RunAsUser:    ptr.To(int64(0)),
 				RunAsNonRoot: ptr.To(false),
@@ -459,6 +460,7 @@ func DeckhouseServiceAccount() *apiv1.ServiceAccount {
 				"meta.helm.sh/release-namespace": "d8-system",
 			},
 		},
+		AutomountServiceAccountToken: ptr.To(false),
 	}
 }
 

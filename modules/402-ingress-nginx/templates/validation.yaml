@@ -21,9 +21,7 @@ spec:
 {{- $spec :=  printf "%s%s" (lower $inlet | trunc 1)  (substr 1 -1 $inlet) }}
     - expression: '!(has(object.spec.{{ $spec }} ) && object.spec.inlet != "{{ $inlet }}" )'
       reason: Forbidden
-{{- if semverCompare ">= 1.28" $kubernetesVersion }}
       messageExpression: '''parameters "spec.{{ $spec }}" available only for inlet "{{ $inlet }}"'''
-{{- end }}
 {{- end }}
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
@@ -33,7 +31,5 @@ metadata:
   {{- include "helm_lib_module_labels" (list .  ) | nindent 2 }}
 spec:
   policyName: {{ $policyName }}
-{{- if semverCompare ">= 1.28" $kubernetesVersion }}
   validationActions: [Deny]
-{{- end }}
 {{- end }}

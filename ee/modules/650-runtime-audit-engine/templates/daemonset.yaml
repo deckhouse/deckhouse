@@ -62,6 +62,7 @@ spec:
     spec:
       imagePullSecrets:
       - name: deckhouse-registry
+      automountServiceAccountToken: true
       serviceAccountName: {{ $.Chart.Name }}
       {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}

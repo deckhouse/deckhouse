@@ -234,8 +234,8 @@ To get list and status of all releases use the following command:
 kubectl get deckhousereleases
 ```
 
-{% alert %}
-Patch releases (e.g., an update from version `1.30.1` to version `1.30.2`) ignore update windows settings and apply as soon as they are available.
+{% alert level="warning" %}
+Starting from DKP 1.70 patch releases (e.g., an update from version `1.70.1` to version `1.70.2`) are installed taking into account the update windows. Prior to DKP 1.70, patch version updates ignore update windows settings and apply as soon as they are available.
 {% endalert %}
 
 ### What happens when the release channel changes?

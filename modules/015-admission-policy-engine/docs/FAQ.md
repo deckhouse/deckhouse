@@ -88,7 +88,7 @@ To apply only the required security policies without turning off the entire buil
 
 1. Add the `security.deckhouse.io/pod-policy: privileged` label to your namespace in order to disable built-in policies.
 1. Create a SecurityPolicy resource that matches the [baseline](https://kubernetes.io/docs/concepts/security/pod-security-standards/#baseline) or [restricted](https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted) policy while also editing the list of `policies` elements as you see fit.
-1. Add a label to your namespace that matches the `namespaceSelector` in the SecurityPolicy resource. In the examples below, the label is `operation-policy.deckhouse.io/baseline-enabled: "true"` or `operation-policy.deckhouse.io/restricted-enabled: "true"`.
+1. Add a label to your namespace that matches the `namespaceSelector` in the SecurityPolicy resource. In the examples below, the label is `security-policy.deckhouse.io/baseline-enabled: "true"` or `security-policy.deckhouse.io/restricted-enabled: "true"`.
 
 SecurityPolicy that matches baseline standard:
 
@@ -156,7 +156,7 @@ spec:
     namespaceSelector:
       labelSelector:
         matchLabels:
-          operation-policy.deckhouse.io/baseline-enabled: "true"
+          security-policy.deckhouse.io/baseline-enabled: "true"
 ```
 
 `SecurityPolicy` that matches restricted standard:
@@ -224,7 +224,7 @@ spec:
     namespaceSelector:
       labelSelector:
         matchLabels:
-          operation-policy.deckhouse.io/restricted-enabled: "true"
+          security-policy.deckhouse.io/restricted-enabled: "true"
 ```
 
 ## What if there are multiple policies (operational or security) that are applied to the same object?
