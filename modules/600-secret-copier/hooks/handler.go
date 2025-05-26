@@ -65,6 +65,11 @@ func ApplyCopierSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 		return nil, err
 	}
 
+	if secret.ObjectMeta.DeletionTimestamp != nil {
+		// Skip deleted object
+		return nil, nil
+	}
+
 	s := &Secret{
 		Name:        secret.Name,
 		Namespace:   secret.Namespace,
