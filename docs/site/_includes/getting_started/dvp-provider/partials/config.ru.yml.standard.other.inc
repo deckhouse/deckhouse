@@ -13,11 +13,15 @@ cloud:
   # [<ru>] Возможно, захотите изменить.
   prefix: cloud-demo
 # [<en>] Address space of the cluster's Pods.
+# [<en>] must not overlap with the address space of DVP Pods.
 # [<ru>] Адресное пространство Pod’ов кластера.
-podSubnetCIDR: 10.111.0.0/16
+# [<ru>] не должно пересекаться с адресным пространством Pod'ов DVP.
+podSubnetCIDR: 10.112.0.0/16
 # [<en>] Address space of the cluster's services.
+# [<en>] must not overlap with the address space of DVP services.
 # [<ru>] Адресное пространство для service’ов кластера.
-serviceSubnetCIDR: 10.222.0.0/16
+# [<ru>] не должно пересекаться с адресным пространством service'ов DVP.
+serviceSubnetCIDR: 10.223.0.0/16
 kubernetesVersion: "Automatic"
 clusterDomain: "cluster.local"
 ---
@@ -103,47 +107,9 @@ spec:
 apiVersion: deckhouse.io/v1
 kind: DVPClusterConfiguration
 layout: Standard
-standard:
-  # [<en>] Addressing for the internal network of the cluster nodes.
-  # [<ru>] Адресация для внутренней сети узлов кластера.
-  internalNetworkCIDR: 192.168.198.0/24
-  # [<en>] A list of recursive DNS addresses of the internal network.
-  # [<ru>] Список адресов рекурсивных DNS внутренней сети.
-  # [<en>] You might consider changing this.
-  # [<ru>] Возможно, захотите изменить.
-  internalNetworkDNSServers:
-    - 8.8.8.8
-    - 8.8.4.4
-  # [<en>] A flag that determines whether SecurityGroups and AllowedAddressPairs should be configured on internal network ports.
-  # [<ru>] Флаг, который определяет необходимо ли настраивать SecurityGroups и AllowedAddressPairs на портах внутренней сети.
-  internalNetworkSecurity: true
-  # [<en>] Enable Elastic IP for the master nodes.
-  # [<ru>] Включите Elastic IP для master-узлов.
-  enableEIP: true
 masterNodeGroup:
   replicas: 1
-  # [<en>] Disk type array.
-  # [<ru>] Массив используемых типов дисков.
-  volumeTypeMap:
-    # [<en>] <availability zone>: <volume type>
-    # [<ru>] <availability zone>: <volume type>
-    # [<en>] You might consider changing this.
-    # [<ru>] Возможно, захотите изменить.
-    DP1: dp1-high-iops
   instanceClass:
-    # [<en>] Flavor in use.
-    # [<ru>] Используемый flavor.
-    # [<en>] You might consider changing this.
-    # [<ru>] Возможно, захотите изменить.
-    flavorName: Standard-2-8-50
-    # [<en>] VM image in use.
-    # [<ru>] Используемый образ виртуальной машины.
-    # [<en>] You might consider changing this.
-    # [<ru>] Возможно, захотите изменить.
-    imageName: ubuntu-22-04-cloud-amd64
-    # [<en>] Disk size for the root FS.
-    # [<ru>] Размер диска для корневой ФС.
-    rootDiskSize: 50
 # [<en>] Public SSH key for accessing cloud nodes.
 # [<en>] This key will be added to the user on created nodes (the user name depends on the image used).
 # [<ru>] Публичная часть SSH-ключа для доступа к узлам облака.
