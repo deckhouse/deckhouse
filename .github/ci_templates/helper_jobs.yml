@@ -98,16 +98,16 @@ git_info:
 # </template: git_info_job>
 {!{- end -}!}
 
-{!{ define "block-e2e-until-image-is-not-ready" }!}
-# </template: block-e2e-until-image-is-not-ready>
+{!{ define "block-until-image-is-not-ready" }!}
+# </template: block-until-image-is-not-ready>
 {!{- $ctx := . }!}
-block-e2e-until-image-is-not-ready:
-  name: Block e2e until the docker image is not ready
+block-until-image-is-not-ready:
+  name: Block until the docker image is not ready
   runs-on: ubuntu-latest
   steps:
     - uses: {!{ index (ds "actions") "actions/checkout" }!}
-    - name: Block e2e until the docker image is not ready
-      id: block-e2e
+    - name: Block until the docker image is not ready
+      id: block-image-dont-ready
       uses: {!{ index (ds "actions") "actions/github-script" }!}
       with:
         script: |
@@ -149,7 +149,7 @@ block-e2e-until-image-is-not-ready:
             }
           }
 
-# </template: block-e2e-until-image-is-not-ready>
+# </template: block-until-image-is-not-ready>
 {!{- end -}!}
 
 # Check pull request state on push or pull_request_target events:
