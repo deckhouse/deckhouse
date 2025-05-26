@@ -1,64 +1,64 @@
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-final: false
-fromImage: common/src-artifact
-shell:
-  install:
-  - git clone --depth 1 -b v2.2.7 {{ $.SOURCE_REPO }}/acassen/keepalived.git /src
-  - rm -rf /src/.git
+{{- $binaries := "/usr/bin/python3 /lib64/libz.so* /lib64/libexpat.so* /usr/lib64/libffi.so* /lib64/libcrypto.so* /lib64/libssl.so* /usr/lib64/libsqlite3.so* /usr/bin/pip3" }}
 ---
 image: {{ .ModuleName }}/build-keepalived
 final: false
-from: {{ .Images.BASE_ALPINE }}
-import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src
-  to: /src
-  before: install
+from: {{ .Images.BASE_ALPINE_DEV }}
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make autoconf automake build-base linux-headers openssl-dev openssl-libs-static pcre-dev pcre2-dev net-snmp-dev
+    - apk add --no-cache openssh-client
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
-  - cd /src
-  - ./autogen.sh
-  - CFLAGS='-static -s' LDFLAGS=-static ./configure --disable-dynamic-linking --prefix=/usr --exec-prefix=/usr --bindir=/usr/bin --sbindir=/usr/sbin --sysconfdir=/etc --datadir=/usr/share --localstatedir=/var --mandir=/usr/share/man --enable-bfd --enable-snmp --enable-snmp-rfc --enable-nftables --enable-regex --enable-json --enable-vrrp # --enable-libnl-dynamic
-  - make
-  - DESTDIR=/opt/keepalived-static make install
-  - chown -R 64535:64535 /opt/keepalived-static
-  - chmod 0700 /opt/keepalived-static/usr/sbin/keepalived
-  - chmod 0700 /opt/keepalived-static/usr/bin/genhash
-  - mkdir /empty
-  - chmod 755 /empty
+    - mkdir build && cd build
+    - git clone -b v2.2.7 --single-branch --depth=1 {{ $.SOURCE_REPO }}/acassen/keepalived.git ./src
+    - cd ./src
+    - ./autogen.sh
+    - CFLAGS='-static -s' LDFLAGS=-static ./configure --disable-dynamic-linking --prefix=/usr --exec-prefix=/usr --bindir=/usr/bin --sbindir=/usr/sbin --sysconfdir=/etc --datadir=/usr/share --localstatedir=/var --mandir=/usr/share/man --enable-bfd --enable-snmp --enable-snmp-rfc --enable-nftables --enable-regex --enable-json --enable-vrrp # --enable-libnl-dynamic
+    - make
+    - DESTDIR=/opt/keepalived-static make install
+    - chown -R 64535:64535 /opt/keepalived-static
+    - chmod 0700 /opt/keepalived-static/usr/sbin/keepalived
+    - chmod 0700 /opt/keepalived-static/usr/bin/genhash
+---
+image: {{ $.ModuleName }}/python
+final: false
+from: {{ $.Images.BASE_ALT_DEV }}
+shell:
+  install:
+    - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+    - mkdir /empty
+    - chmod 644 /empty
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 git:
-- add: /{{ $.ModulePath }}modules/450-{{ $.ModuleName }}/images/{{ $.ImageName }}/prepare-config.py
-  to: /prepare-config.py
+  - add: /{{ $.ModulePath }}modules/450-{{ $.ModuleName }}/images/{{ $.ImageName }}/prepare-config.py
+    to: /prepare-config.py
 import:
-- image: {{ $.ModuleName }}/build-keepalived
-  add: /opt/keepalived-static/usr/sbin/keepalived
-  to: /usr/sbin/keepalived
-  before: install
-- image: {{ $.ModuleName }}/build-keepalived
-  add: /opt/keepalived-static/usr/bin/genhash
-  to: /usr/bin/genhash
-  before: install
-- image: {{ $.ModuleName }}/build-keepalived
-  add: /empty
-  to: /run
-  before: install
-- image: common/python-static
-  add: /opt/python-static/bin
-  to: /usr/bin
-  before: install
-  includePaths:
-  - python3*
-  - python3
-- image: common/python-static
-  add: /opt/python-static/lib
-  to: /usr/lib
-  before: install
-  includePaths:
-  - python3*
+  - image: {{ $.ModuleName }}/python
+    add: /relocate
+    to: /
+    before: install
+  - image: {{ $.ModuleName }}/python
+    add: /usr/lib64/python3
+    to: /usr/lib64/python3
+    before: install
+  - image: {{ $.ModuleName }}/python
+    add: /usr/local/lib/python3/site-packages
+    to: /usr/local/lib/python3/site-packages
+    before: install
+  - image: {{ $.ModuleName }}/python
+    add: /usr/lib64/python3.9
+    to: /usr/lib64/python3.9
+    before: install
+  - image: {{ $.ModuleName }}/build-keepalived
+    add: /opt/keepalived-static/usr/sbin/keepalived
+    to: /usr/sbin/keepalived
+    before: install
+  - image: {{ $.ModuleName }}/build-keepalived
+    add: /opt/keepalived-static/usr/bin/genhash
+    to: /usr/bin/genhash
+    before: install
+  - image: {{ $.ModuleName }}/python
+    add: /empty
+    to: /run
+    before: setup
