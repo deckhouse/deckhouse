@@ -40,7 +40,7 @@ kind: DaemonSet
 metadata:
   name: istio-cni-node
   namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list $ (dict "app" "istio-cni-node")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "istio-cni-node" "k8s-app" "istio-cni-node")) | nindent 2 }}
 spec:
   revisionHistoryLimit: 2
   selector:
@@ -57,6 +57,7 @@ spec:
         {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
       labels:
         app: istio-cni-node
+        k8s-app: istio-cni-node
         sidecar.istio.io/inject: "false"
     spec:
       imagePullSecrets:
@@ -69,6 +70,10 @@ spec:
             - install-cni
           {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 10 }}
           env:
+            {{- if ($.Values.istio.enableAmbientMode) }}
+            - name: AMBIENT_ENABLED
+              value: "true"
+            {{- end }}
             - name: CNI_NETWORK_CONFIG
               valueFrom:
                 configMapKeyRef:
