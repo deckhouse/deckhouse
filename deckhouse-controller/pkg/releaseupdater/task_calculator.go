@@ -206,16 +206,26 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 			}
 
 			const maxMinorVersionDiffForLTS = 10
+			ltsRelease := strings.EqualFold(p.releaseChannel, ltsReleaseChannel)
 			// here we have only Deployed phase releases in prevRelease
 			// it must await if deployed release has minor version more than one
 			// and release channel is not LTS
-			if release.GetVersion().Minor()-1 > prevRelease.GetVersion().Minor() && !strings.EqualFold(p.releaseChannel, ltsReleaseChannel) ||
-				(strings.EqualFold(p.releaseChannel, ltsReleaseChannel) && release.GetVersion().Minor() > prevRelease.GetVersion().Minor()+maxMinorVersionDiffForLTS) {
+			// or if deployed release has minor version more than acceptable channel limitation
+			// and release channel is LTS
+			if (release.GetVersion().Minor()-1 > prevRelease.GetVersion().Minor() && !ltsRelease) ||
+				(ltsRelease && release.GetVersion().Minor() > prevRelease.GetVersion().Minor()+maxMinorVersionDiffForLTS) {
 				msg := fmt.Sprintf(
-					"minor version is greater than deployed %s by %d, it's more than acceptable channel limitation",
+					"minor version is greater than deployed %s by one",
 					prevRelease.GetVersion().Original(),
-					release.GetVersion().Minor()-prevRelease.GetVersion().Minor(),
 				)
+
+				if ltsRelease {
+					msg = fmt.Sprintf(
+						"minor version is greater than deployed %s by %d, it's more than acceptable channel limitation",
+						prevRelease.GetVersion().Original(),
+						release.GetVersion().Minor()-prevRelease.GetVersion().Minor(),
+					)
+				}
 
 				logger.Debug("release awaiting", slog.String("reason", msg))
 

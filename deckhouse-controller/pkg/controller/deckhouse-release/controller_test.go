@@ -1043,6 +1043,22 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
 		})
+		suite.Run("cannot upgrade", func() {
+			mup := &v1alpha1.ModuleUpdatePolicySpec{
+				Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+					Mode: "Auto",
+				},
+				ReleaseChannel: "LTS",
+			}
+
+			suite.setupController("lts-release-channel-cannot-upgrade.yaml", initValues, mup)
+			dr := suite.getDeckhouseRelease("v1.65.6")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+			dr = suite.getDeckhouseRelease("v1.76.7")
+			_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+		})
 	})
 }
 
