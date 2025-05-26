@@ -25,6 +25,7 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -268,7 +269,10 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			r.logger.Warn("the modules has a forbidden name, skip it.", slog.String("name", moduleName))
 			continue
 		}
-
+		if errs := validation.IsDNS1123Subdomain(moduleName); len(errs) > 0 {
+			r.logger.Warn("the module has invalid name: must coply with RFC 1123 subdomain format, skip it", slog.String("name", moduleName))
+			continue
+		}
 		availableModule := v1alpha1.AvailableModule{Name: moduleName}
 		for _, available := range source.Status.AvailableModules {
 			if available.Name == moduleName {
