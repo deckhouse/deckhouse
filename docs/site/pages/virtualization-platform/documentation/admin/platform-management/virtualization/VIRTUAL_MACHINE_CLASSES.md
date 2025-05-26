@@ -222,8 +222,8 @@ Additional requirements can be specified for each range of cores:
 {% alert level="warning" %}
 For each range of cores, be sure to specify:
 
-- Either memory (or `memoryPerCore`),
-- Either coreFractions,
+- Either `memory` (or `memoryPerCore`).
+- Either `coreFractions`.
 - Or both parameters at the same time.
 {% endalert %}
 

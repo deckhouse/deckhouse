@@ -162,7 +162,7 @@ spec:
 
 - `log-shipper`,
 - `runtime-audit-engine`.
-{% alert level="warning" %}
+{% endalert %}
 
 Чтобы включить аудит событий безопасности, установите параметр `.spec.settings.audit.enabled` настроек модуля  в `true`:
 

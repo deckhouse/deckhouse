@@ -150,7 +150,7 @@ Where:
 - `allowedStorageClassNames` (optional): A list of the allowed StorageClass for creating a VirtualDisk that can be explicitly specified in the resource specification.
 - `defaultStorageClassName` (optional): The StorageClass used by default when creating a VirtualDisk if the `.spec.persistentVolumeClaim.storageClassName` parameter is not specified.
 
-##### Security Event Audit configuration
+##### Security event audit configuration
 
 {% alert level="warning" %}
 Not available in CE edition.
@@ -159,8 +159,8 @@ Not available in CE edition.
 {% alert level="warning" %}
 To set up auditing, the following modules must be enabled:
 
-- `log-shipper`,
-- `runtime-audit-engine`.
+- `log-shipper`
+- `runtime-audit-engine`
 {% endalert %}
 
 To enable security event auditing, set the module’s `.spec.settings.audit.enabled` parameter to `true`:

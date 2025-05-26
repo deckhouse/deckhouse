@@ -120,7 +120,7 @@ For Windows family operating systems, the platform supports initialization with 
 
 - Maximum number of cores supported: `248`.
 - Maximum amount of RAM: `1024 GB`.
-- - The maximum number of block devices to be attached: `16`.
+- Maximum number of block devices to be attached: `16`.
 
 ## Supported storage systems
 
