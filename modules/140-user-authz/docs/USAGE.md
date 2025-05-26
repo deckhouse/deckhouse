@@ -401,7 +401,7 @@ To create a user with a client certificate, you can use either [OpenSSL](#creati
 
 #### Creating a user using a certificate issued via OpenSSL
 
-This approach carries security risks. For example, if a client certificate and its private key are compromised, revocation is not possible. Instead, you’ll have to manually revoke all permissions granted to the user—which can be challenging if the user is part of groups (requiring group deleting as well).
+This approach involves security risks, particularly related to certificate revocation. For example, if a client certificate and its private key are compromised, revocation is not possible. Instead, you’ll have to manually revoke all permissions granted to the user — which may also require removing the user from all related groups.
 
 The features of this method are:
 
@@ -417,7 +417,7 @@ To create a user using a client certificate issued through OpenSSL, follow these
     openssl genrsa -out myuser.key 2048
     ```
 
-3. Create a CSR file and specify in it the username (`myuser`) and groups to which this user belongs (`mygroup1` & `mygroup2`):
+3. Create a CSR file and specify the username in it (`myuser`) and groups to which this user belongs (`mygroup1` and `mygroup2`):
 
     ```shell
     openssl req -new -key myuser.key -out myuser.csr -subj "/CN=myuser/O=mygroup1/O=mygroup2"
@@ -457,12 +457,12 @@ EOF
 
 #### Creating a user by issuing a certificate via the Kubernetes API
 
-This more secure approach is particularly suitable for dynamic users, such as when granting temporary access to developers.
+This is a more secure approach is particularly suitable for dynamic users, such as when granting temporary access to developers.
 
 The features of this method are:
 
-- API-based certificate signing: CSRs are processed through the Kubernetes API without exposing the CA private key (ca.key).
-- Cluster administrators aren't the only ones who can issue client certificates. You can grant certificate request permissions to specific users.
+- API-based certificate signing: CSRs are processed through the Kubernetes API without requiring access to the CA’s private key (ca.key).
+- Cluster administrators aren't the only ones who can issue client certificates. You can delegate certificate request permissions to specific users.
 
 To create a user using a client certificate issued through the Kubernetes API, follow these steps:
 
@@ -502,13 +502,13 @@ To create a user using a client certificate issued through the Kubernetes API, f
     kubectl apply -f csr.yaml
     ```
 
-5. Make sure the certificate is verified:
+5. Check that the certificate has been approved and issued:
 
     ```shell
     kubectl get csr demo-client-cert
     ```
 
-    If the certificate is verified, it will have the value `Approved,Issued` in the `CONDITION` column. Example output:
+    If the certificate is issued, it will have the value `Approved,Issued` in the `CONDITION` column. Example output:
 
     ```shell
     NAME               AGE     SIGNERNAME                            REQUESTOR          REQUESTEDDURATION   CONDITION
@@ -521,7 +521,7 @@ To create a user using a client certificate issued through the Kubernetes API, f
     kubectl certificate approve demo-client-cert
     ```
 
-    After that, make sure that the certificate is verified.
+    Then, confirm that the certificate has been successfully approved.
 
 6. Extract the encoded certificate from the CSR named `demo-client-cert`, decode it from `Base64` and save it to the file (myuser.crt in this example) created in step 2:
 
