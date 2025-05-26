@@ -32,6 +32,9 @@ git:
   to: /deckhouse
   includePaths:
   - release.yaml
+  stageDependencies:
+    install:
+      - '**/*'
 
 ---
 image: release-channel-version

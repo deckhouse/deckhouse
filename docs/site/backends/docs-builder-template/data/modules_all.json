@@ -208,6 +208,13 @@
     "external": "true",
     "path": "/products/kubernetes-platform/modules/secrets-store-integration/stable/"
   },
+  "static-routing-manager": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/static-routing-manager/early-access/"
+  },
   "stronghold": {
     "editionsWithRestrictions": [
       "be",
@@ -239,12 +246,6 @@
     "editionsWithRestrictions": [
       "ce"
     ],
-    "editionsWithRestrictionsComments": {
-      "all": {
-        "en": "Restriction on the VM migration without interruption",
-        "ru": "Ограничение на возможность беспростойной миграции виртуальных машин при изменении конфигурации"
-      }
-    },
     "external": "true",
     "path": "/products/kubernetes-platform/modules/virtualization/stable/"
   }

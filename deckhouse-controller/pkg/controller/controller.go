@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"sync"
 	"time"
@@ -28,6 +29,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/go-logr/logr"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	appsv1 "k8s.io/api/apps/v1"
 	coordv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -98,6 +100,11 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 			return nil, fmt.Errorf("add to scheme: %w", err)
 		}
 	}
+
+	// inject otel tripper
+	operator.KubeClient().RestConfig().Wrap(func(t http.RoundTripper) http.RoundTripper {
+		return otelhttp.NewTransport(t)
+	})
 
 	// Setting the controller-runtime logger to a no-op logger by default,
 	// unless debug mode is enabled. This is because the controller-runtime
@@ -238,7 +245,7 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 		return nil, fmt.Errorf("register module config controller: %w", err)
 	}
 
-	err = modulesource.RegisterController(runtimeManager, operator.ModuleManager, dc, embeddedPolicy, logger.Named("module-source-controller"))
+	err = modulesource.RegisterController(runtimeManager, operator.ModuleManager, dc, operator.MetricStorage, embeddedPolicy, logger.Named("module-source-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("register module source controller: %w", err)
 	}

@@ -8,6 +8,7 @@ import:
   includePaths:
   - usr/bin/
   - usr/share/
+  - lib64/
   before: install
 - image: {{ $.ModuleName }}/falco-falcoctl-artifact
   add: /src/falcoctl

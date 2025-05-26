@@ -77,7 +77,7 @@ func handleStorageClasses(input *go_hook.HookInput) error {
 
 	for _, sc := range storageClasses {
 		switch compatibilityFlag {
-		case "legacy":
+		case "Legacy":
 			if sc.Provisioner != modernProvisioner {
 				continue
 			}

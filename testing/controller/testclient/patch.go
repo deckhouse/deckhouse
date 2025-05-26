@@ -22,7 +22,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/managedfields"
@@ -214,8 +213,6 @@ func (p *smpPatcher) applyPatchToCurrentObject(currentObject runtime.Object) (ru
 type applyPatcher struct {
 	patch        []byte
 	options      *metav1.PatchOptions
-	creature     runtime.ObjectCreater
-	kind         schema.GroupVersionKind
 	fieldManager *managedfields.FieldManager
 }
 

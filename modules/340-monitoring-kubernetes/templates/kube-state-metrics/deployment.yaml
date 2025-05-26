@@ -49,6 +49,7 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
       serviceAccountName: kube-state-metrics
+      automountServiceAccountToken: true
       {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}

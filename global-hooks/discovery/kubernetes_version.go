@@ -185,7 +185,7 @@ func applyServiceAPIServerFilter(obj *unstructured.Unstructured) (go_hook.Filter
 // Therefore, we need to request all api servers, get versions and choice minimal
 func getKubeVersionForServer(endpoint string, cl d8http.Client) (*semver.Version, error) {
 	url := fmt.Sprintf("https://%s/version?timeout=5s", endpoint)
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +201,7 @@ func getKubeVersionForServer(endpoint string, cl d8http.Client) (*semver.Version
 
 	defer res.Body.Close()
 
-	if res.StatusCode != 200 {
+	if res.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("k8s version: incorrect response code: %v", res.Status)
 	}
 

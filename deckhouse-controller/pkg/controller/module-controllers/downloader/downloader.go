@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path"
 	"path/filepath"
@@ -32,6 +33,8 @@ import (
 	"github.com/flant/shell-operator/pkg/utils/measure"
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/iancoleman/strcase"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"gopkg.in/yaml.v3"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -40,11 +43,14 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	moduletools "github.com/deckhouse/deckhouse/go_lib/module"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
 	defaultModuleWeight = 900
 	DefaultDevVersion   = "dev"
+
+	tracerName = "downloader"
 )
 
 type ModuleDownloader struct {
@@ -101,7 +107,10 @@ func (md *ModuleDownloader) DownloadDevImageTag(moduleName, imageTag, checksum s
 	return digest.String(), md.fetchModuleDefinitionFromFS(moduleName, moduleStorePath), nil
 }
 
-func (md *ModuleDownloader) DownloadByModuleVersion(moduleName, moduleVersion string) (*DownloadStatistic, error) {
+func (md *ModuleDownloader) DownloadByModuleVersion(ctx context.Context, moduleName, moduleVersion string) (*DownloadStatistic, error) {
+	_, span := otel.Tracer(tracerName).Start(ctx, "DownloadByModuleVersion")
+	defer span.End()
+
 	if !strings.HasPrefix(moduleVersion, "v") {
 		moduleVersion = "v" + moduleVersion
 	}
@@ -113,7 +122,14 @@ func (md *ModuleDownloader) DownloadByModuleVersion(moduleName, moduleVersion st
 
 // DownloadMetadataFromReleaseChannel downloads only module release image with metadata: version.json, checksum.json(soon)
 // does not fetch and install the desired version on the module, only fetches its module definition
-func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(moduleName, releaseChannel, moduleChecksum string) (ModuleDownloadResult, error) {
+func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(ctx context.Context, moduleName, releaseChannel, moduleChecksum string) (ModuleDownloadResult, error) {
+	_, span := otel.Tracer(tracerName).Start(ctx, "DownloadMetadataFromReleaseChannel")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("module", moduleName))
+	span.SetAttributes(attribute.String("releaseChannel", releaseChannel))
+	span.SetAttributes(attribute.String("moduleChecksum", moduleChecksum))
+
 	var res ModuleDownloadResult
 
 	moduleVersion, checksum, changelog, err := md.fetchModuleReleaseMetadataFromReleaseChannel(moduleName, releaseChannel, moduleChecksum)
@@ -129,6 +145,36 @@ func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(moduleName, relea
 	if moduleVersion == "" {
 		return res, nil
 	}
+
+	img, err := md.fetchImage(moduleName, moduleVersion)
+	if err != nil {
+		return res, err
+	}
+
+	def, err := md.fetchModuleDefinitionFromImage(moduleName, img)
+	if err != nil {
+		return res, err
+	}
+
+	res.ModuleWeight = def.Weight
+	res.ModuleDefinition = def
+
+	return res, nil
+}
+
+// DownloadMetadataByVersion downloads only module release image with metadata: version.json
+// does not fetch and install the desired version on the module, only fetches its module definition
+func (md *ModuleDownloader) DownloadMetadataByVersion(moduleName, moduleVersion string) (ModuleDownloadResult, error) {
+	var res ModuleDownloadResult
+
+	moduleVersion, checksum, changelog, err := md.fetchModuleReleaseMetadataByVersion(moduleName, moduleVersion)
+	if err != nil {
+		return res, err
+	}
+
+	res.Checksum = checksum
+	res.ModuleVersion = moduleVersion
+	res.Changelog = changelog
 
 	img, err := md.fetchImage(moduleName, moduleVersion)
 	if err != nil {
@@ -294,6 +340,7 @@ func (md *ModuleDownloader) copyLayersToFS(rootPath string, rc io.ReadCloser) (*
 
 func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(moduleName, releaseChannel, moduleChecksum string) (
 	/* moduleVersion */ string /*newChecksum*/, string /*changelog*/, map[string]any, error) {
+	log.Info("", slog.String("path", path.Join(md.ms.Spec.Registry.Repo, moduleName, "release")), slog.String("releasechannel", releaseChannel))
 	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName, "release"), md.registryOptions...)
 	if err != nil {
 		return "", "", nil, fmt.Errorf("fetch release image error: %v", err)
@@ -311,6 +358,35 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(moduleN
 
 	if moduleChecksum == digest.String() {
 		return "", moduleChecksum, nil, nil
+	}
+
+	moduleMetadata, err := md.fetchModuleReleaseMetadata(img)
+	if err != nil {
+		return "", digest.String(), nil, fmt.Errorf("fetch release metadata error: %v", err)
+	}
+
+	if moduleMetadata.Version == nil {
+		return "", digest.String(), nil, fmt.Errorf("module %q metadata malformed: no version found", moduleName)
+	}
+
+	return "v" + moduleMetadata.Version.String(), digest.String(), moduleMetadata.Changelog, nil
+}
+
+func (md *ModuleDownloader) fetchModuleReleaseMetadataByVersion(moduleName, moduleVersion string) (
+	/* moduleVersion */ string /*newChecksum*/, string /*changelog*/, map[string]any, error) {
+	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName, "release"), md.registryOptions...)
+	if err != nil {
+		return "", "", nil, fmt.Errorf("fetch release image error: %v", err)
+	}
+
+	img, err := regCli.Image(context.TODO(), moduleVersion)
+	if err != nil {
+		return "", "", nil, fmt.Errorf("fetch image error: %v", err)
+	}
+
+	digest, err := img.Digest()
+	if err != nil {
+		return "", "", nil, fmt.Errorf("fetch digest error: %v", err)
 	}
 
 	moduleMetadata, err := md.fetchModuleReleaseMetadata(img)
@@ -385,7 +461,7 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadata(img crv1.Image) (ModuleRe
 
 	rc, err := cr.Extract(img)
 	if err != nil {
-		return meta, err
+		return meta, fmt.Errorf("extract: %w", err)
 	}
 	defer rc.Close()
 
@@ -395,13 +471,13 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadata(img crv1.Image) (ModuleRe
 	}
 
 	if err = rr.untarMetadata(rc); err != nil {
-		return meta, err
+		return meta, fmt.Errorf("untar metadata: %w", err)
 	}
 
 	if rr.versionReader.Len() > 0 {
 		err = json.NewDecoder(rr.versionReader).Decode(&meta)
 		if err != nil {
-			return meta, err
+			return meta, fmt.Errorf("json decode: %w", err)
 		}
 	}
 
