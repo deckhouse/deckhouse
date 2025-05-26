@@ -1,6 +1,6 @@
 ---
 title: "Редакции платформы"
-permalink: ru/virtualization-platform/documentation/admin/editions.html
+permalink: ru/virtualization-platform/documentation/about/editions.html
 lang: ru
 ---
 
