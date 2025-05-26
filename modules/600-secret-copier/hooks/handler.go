@@ -106,15 +106,16 @@ func ApplyCopierSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 }
 
 func ApplyCopierNamespaceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	// Check if obj has meta DeletionTimestamp
+	if obj.GetDeletionTimestamp() != nil {
+		// Skip deleted object
+		return nil, nil
+	}
+
 	namespace := &v1.Namespace{}
 	err := sdk.FromUnstructured(obj, namespace)
 	if err != nil {
 		return nil, err
-	}
-
-	if namespace.ObjectMeta.DeletionTimestamp != nil {
-		// Skip deleted object
-		return nil, nil
 	}
 
 	n := &Namespace{

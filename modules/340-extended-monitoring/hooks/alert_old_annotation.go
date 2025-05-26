@@ -79,6 +79,11 @@ type ObjectNameNamespaceKind struct {
 }
 
 func applyNameNamespaceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	// Check if obj has meta DeletionTimestamp
+	if obj.GetDeletionTimestamp() != nil {
+		return nil, nil
+	}
+
 	if _, ok := obj.GetAnnotations()[extendedMonitoringAnnotationKey]; !ok {
 		return nil, nil
 	}
