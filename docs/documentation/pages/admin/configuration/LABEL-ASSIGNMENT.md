@@ -17,21 +17,24 @@ without having to manually edit each one.
 
 ## Configuring automatic label and annotation assignment
 
-1. Create a ModuleConfig resource named [`namespace-configurator`](../../reference/mc/namespace-configurator)
-   describing the desired parameters and patterns.
-1. In the `annotations` and `labels` fields, specify the annotations and labels to be applied to namespaces.
+Enable the `namespace-configurator` module:
+
+```shell  
+d8 platform module enable namespace-configurator
+```
+
+Configure automatic label and annotation assignment in ModuleConfig [`namespace-configurator`](../../reference/mc/namespace-configurator):
+
+1. Specify the annotations and labels to be applied to namespaces in the fields `settings.configurations.annotations` and `settings.configurations.labels`, respectively;
 1. Define the matching rules for namespace names:
    - In `includeNames`, list regular expressions for names you want to match.
    - In `excludeNames`, list names that should be excluded.
-1. Apply the configuration using the `d8 k apply` command.
 
 ## Example configuration
 
-The following configuration automatically adds the label `extended-monitoring.deckhouse.io/enabled=true`
-and the annotation `foo=bar` to all namespaces whose names start with `prod-` or `infra-`, except for `infra-test`.
+In the following configuration example, automatic addition of the label `extended-monitoring.deckhouse.io/enabled=true` and the annotation `foo=bar` is configured for all namespaces whose names start with `prod-` or `infra-`, except for `infra-test`:
 
-```shell
-d8 k apply -f - <<EOF
+```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -50,5 +53,4 @@ spec:
       - "^infra"
       excludeNames:
       - "infra-test"
-EOF
 ```

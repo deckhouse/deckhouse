@@ -18,22 +18,23 @@ lang: ru
 
 ## Настройка автоматического назначения лейблов и аннотаций
 
-1. Создайте ресурс ModuleConfig с именем [`namespace-configurator`](../../reference/mc/namespace-configurator),
-   описывающий желаемые параметры и шаблоны.
-1. В полях `annotations` и `labels` перечислите аннотации и лейблы, которые должны применяться к пространствам имён.
-1. Укажите шаблоны названий пространств имён, к которым должны применяться параметры:
+Включите модуль `namespace-configurator`:
+
+```shell  
+d8 platform module enable namespace-configurator
+```
+
+Настройте автоматическое назначение лейблов и аннотаций в ModuleConfig [`namespace-configurator`](../../reference/mc/namespace-configurator):
+1. Перечислите аннотации и лейблы, которые должны применяться к пространствам имён, в полях `settings.configurations.annotations` и `settings.configurations.labels` соответственно;
+1. Укажите шаблоны названий пространств имён, к которым должны применяться настройки:
    - в поле `includeNames` перечислите регулярные выражения, соответствующие нужным названиям;
    - в поле `excludeNames` перечислите те, которые нужно исключить.
-1. Примените созданную конфигурацию командой `d8 k apply`.
 
 ## Пример конфигурации
 
-В следующем примере применяется конфигурация,
-которая автоматически добавляет лейбл `extended-monitoring.deckhouse.io/enabled=true` и аннотацию `foo=bar`
-ко всем пространствам имён, названия которых начинаются с `prod-` или `infra-`, за исключением `infra-test`.
+В следующем примере конфигурации настраивается автоматическое добавление лейбла `extended-monitoring.deckhouse.io/enabled=true` и аннотации `foo=bar` ко всем пространствам имён, названия которых начинаются с `prod-` или `infra-`, за исключением `infra-test`:
 
-```shell
-d8 k apply -f - <<EOF
+```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -52,5 +53,4 @@ spec:
       - "^infra"
       excludeNames:
       - "infra-test"
-EOF
 ```

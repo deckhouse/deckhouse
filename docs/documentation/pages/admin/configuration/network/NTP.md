@@ -11,11 +11,17 @@ If required, you can disable this built-in mechanism and configure custom NTP da
 
 ## Enabling built-in time synchronization
 
-To enable time synchronization with default settings, apply a ModuleConfig resource specifying the list of NTP servers.
-Example configuration using `pool.ntp.org`:
+Enable the chrony module to activate time synchronization:
 
-```shell
-d8 k apply -f - <<EOF
+```shell  
+d8 platform module enable chrony
+```
+
+By default, the time source is the server `pool.ntp.org`. You can specify a list of NTP servers using the `ntpServers` parameter in the configuration of the `chrony` module. 
+
+An example of the module configuration specifying NTP servers:
+
+```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -24,18 +30,18 @@ spec:
   enabled: true
   settings:
     ntpServers:
-      - pool.ntp.org
+      - ntp.ubuntu.com
+      - time.google.com
   version: 1
-EOF
 ```
 
 ## Using custom NTP daemons
 
-1. To disable the built-in time synchronization mechanism and use your own NTP daemons on the nodes,
-   disable the `chrony` module:
+To disable the built-in time synchronization mechanism and use your own NTP daemons on the nodes, follow these steps:
+1. Disable the `chrony` module:
 
    ```shell
-   d8 k -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module disable chrony
+   d8 platform module disable chrony
    ```
 
    If the command is successful, you should see the message confirming that the module has been disabled:
@@ -45,6 +51,7 @@ EOF
    ```
 
 1. Create a [NodeGroupConfiguration](../../reference/cr/nodegroupconfiguration.html) resource to enable the NTP daemons on the nodes.
+
    Example for `systemd-timesyncd`:
 
    ```shell
