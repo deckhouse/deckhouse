@@ -62,6 +62,10 @@ spec:
     spec:
       imagePullSecrets:
       - name: deckhouse-registry
+      {{- if ($.Values.istio.enableAmbientMode) }}
+      hostNetwork: true
+      hostPID: true
+      {{- end }}
       containers:
         - name: install-cni
           args:
@@ -148,6 +152,9 @@ spec:
               readOnly: true 
             - mountPath: /var/run/ztunnel
               name: cni-ztunnel-sock-dir
+            - mountPath: /host/var/run/netns
+              mountPropagation: Bidirectional
+              name: host-netns
             {{- end }}
         - name: kube-rbac-proxy
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
@@ -210,5 +217,9 @@ spec:
           hostPath:
             path: /var/run/ztunnel
             type: DirectoryOrCreate
+        - hostPath:
+            path: /var/run/netns
+            type: DirectoryOrCreate
+          name: host-netns
         {{- end }}
 {{- end }}
