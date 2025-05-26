@@ -150,3 +150,26 @@ spec:
 
 - `allowedStorageClassNames` (опционально) — это список допустимых StorageClass для создания VirtualDisk, которые можно явно указать в спецификации ресурса;
 - `defaultStorageClassName` (опционально) — это StorageClass, используемый по умолчанию при создании VirtualDisk, если параметр `.spec.persistentVolumeClaim.storageClassName` не задан.
+
+#### Настройка аудита событий безопасности
+
+{% alert level="warning" %}
+Недоступно в Community Edition.
+{% endalert %}
+
+{% alert level="warning" %}
+Для активации аудита требуется, чтобы были включены следующие модули:
+
+- `log-shipper`,
+- `runtime-audit-engine`.
+{% endalert %}
+
+Чтобы включить аудит событий безопасности, установите параметр `.spec.settings.audit.enabled` настроек модуля  в `true`:
+
+```yaml
+spec:
+  enabled: true
+  settings:
+    audit:
+      enabled: true
+```
