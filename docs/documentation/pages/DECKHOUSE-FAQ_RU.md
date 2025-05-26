@@ -618,12 +618,6 @@ echo "$MYRESULTSTRING"
 
    В ресурсе [InitConfiguration](installing/configuration.html#initconfiguration) при установке также используйте адрес вашего хранилища и данные авторизации (параметры [imagesRepo](installing/configuration.html#initconfiguration-deckhouse-imagesrepo), [registryDockerCfg](installing/configuration.html#initconfiguration-deckhouse-registrydockercfg) или [шаг 3]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/bm-private/step3.html) руководства по быстрому старту).
 
-   После завершения установки примените сгенерированные во время загрузки манифесты [DeckhouseReleases](cr.html#deckhouserelease) к вашему кластеру, используя [Deckhouse CLI](deckhouse-cli/):
-
-   ```shell
-   d8 k apply -f ./deckhousereleases.yaml
-   ```
-
 ### Как переключить работающий кластер Deckhouse на использование стороннего registry?
 
 {% alert level="warning" %}
