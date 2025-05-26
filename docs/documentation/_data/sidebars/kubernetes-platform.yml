@@ -322,6 +322,10 @@ entries:
                         en: Operation modes of bpfLB for external traffic processing
                         ru: Режимы работы bpfLB для обработки внешнего трафика
                       url: /admin/network/bpflb-external-traffic.html
+                    - title:
+                        en: Synchronizing time on nodes
+                        ru: Синхронизация времени на узлах
+                      url: /admin/network/ntp.html
             - title:
                 en: Storage
                 ru: Хранение
@@ -438,6 +442,10 @@ entries:
                     en: Integration with KUMA and antivirus software
                     ru: Интеграция с KUMA и антивирусным ПО
                   url: /admin/security/kuma-and-av-software.html
+                - title:
+                    en: Distribution of secrets across namespaces
+                    ru: Распространение секретов по пространствам имён
+                  url: /admin/security/secret-distribution.html
             - title:
                 en: Platform monitoring
                 ru: Мониторинг платформы
@@ -494,6 +502,10 @@ entries:
                 en: Backup and restore
                 ru: Резервное копирование и восстановление
               url: /admin/configuration/backup/backup-and-restore.html
+            - title:
+                en: Assigning namespace labels
+                ru: Назначение лейблов пространствам имён
+              url: /admin/configuration/label-assignment.html
 # ------------- Using -------------
     - title:
         en: Using
