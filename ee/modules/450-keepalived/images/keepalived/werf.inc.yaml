@@ -1,16 +1,30 @@
 {{- $binaries := "/usr/bin/python3 /lib64/libz.so* /lib64/libexpat.so* /usr/lib64/libffi.so* /lib64/libcrypto.so* /lib64/libssl.so* /usr/lib64/libsqlite3.so* /usr/bin/pip3" }}
 ---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+secrets:
+  - id: SOURCE_REPO
+    value: {{ .SOURCE_REPO }}
+shell:
+  install:
+    - git clone --depth 1 -b v2.2.7 $(cat /run/secrets/SOURCE_REPO)/acassen/keepalived.git /src
+    - rm -rf /src/.git
+---
 image: {{ .ModuleName }}/build-keepalived
 final: false
-from: {{ .Images.BASE_ALPINE_DEV }}
+from: {{ .Images.BASE_ALPINE }}
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+    add: /src
+    to: /src
+    before: install
 shell:
   beforeInstall:
-    - apk add --no-cache openssh-client
-    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make autoconf automake build-base linux-headers openssl-dev openssl-libs-static pcre-dev pcre2-dev net-snmp-dev
   install:
-    - mkdir build && cd build
-    - git clone -b v2.2.7 --single-branch --depth=1 {{ $.SOURCE_REPO }}/acassen/keepalived.git ./src
-    - cd ./src
+    - cd /src
     - ./autogen.sh
     - CFLAGS='-static -s' LDFLAGS=-static ./configure --disable-dynamic-linking --prefix=/usr --exec-prefix=/usr --bindir=/usr/bin --sbindir=/usr/sbin --sysconfdir=/etc --datadir=/usr/share --localstatedir=/var --mandir=/usr/share/man --enable-bfd --enable-snmp --enable-snmp-rfc --enable-nftables --enable-regex --enable-json --enable-vrrp # --enable-libnl-dynamic
     - make
@@ -18,6 +32,8 @@ shell:
     - chown -R 64535:64535 /opt/keepalived-static
     - chmod 0700 /opt/keepalived-static/usr/sbin/keepalived
     - chmod 0700 /opt/keepalived-static/usr/bin/genhash
+    - mkdir /empty
+    - chmod 755 /empty
 ---
 image: {{ $.ModuleName }}/python
 final: false
