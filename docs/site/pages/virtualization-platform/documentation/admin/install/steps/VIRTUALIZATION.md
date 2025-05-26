@@ -153,7 +153,7 @@ Where:
 ##### Security event audit configuration
 
 {% alert level="warning" %}
-Not available in CE edition.
+Not available in Community Edition.
 {% endalert %}
 
 {% alert level="warning" %}

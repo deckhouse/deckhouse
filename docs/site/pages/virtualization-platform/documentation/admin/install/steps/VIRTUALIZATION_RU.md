@@ -154,7 +154,7 @@ spec:
 #### Настройка аудита событий безопасности
 
 {% alert level="warning" %}
-Недоступно в CE-редакции.
+Недоступно в Community Edition.
 {% endalert %}
 
 {% alert level="warning" %}
