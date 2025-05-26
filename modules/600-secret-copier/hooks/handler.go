@@ -59,15 +59,15 @@ func SecretPath(s *Secret) string {
 }
 
 func ApplyCopierSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	if obj.GetDeletionTimestamp() != nil {
+		// Skip deleted object
+		return nil, nil
+	}
+
 	secret := &v1.Secret{}
 	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
 		return nil, err
-	}
-
-	if secret.ObjectMeta.DeletionTimestamp != nil {
-		// Skip deleted object
-		return nil, nil
 	}
 
 	s := &Secret{
