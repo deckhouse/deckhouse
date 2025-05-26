@@ -8,6 +8,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
+  - mkdir /wheels
   - cd /wheels
   - git init .
   - git remote add origin $(cat /run/secrets/SOURCE_REPO)/python-modules/wheels
