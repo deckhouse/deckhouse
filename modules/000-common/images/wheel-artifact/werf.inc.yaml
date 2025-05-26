@@ -3,9 +3,14 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 final: false
 fromImage: common/src-artifact
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
   - cd /wheels
-  - git reset --hard {{ $commit }}
+  - git init .
+  - git remote add origin $(cat /run/secrets/SOURCE_REPO)/python-modules/wheels
+  - git fetch origin {{ $commit }}
+  - git checkout {{ $commit }}
   - rm -rf /wheels/.git
