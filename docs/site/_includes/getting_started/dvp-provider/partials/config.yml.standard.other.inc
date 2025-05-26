@@ -13,10 +13,14 @@ cloud:
   # [<ru>] Возможно, захотите изменить.
   prefix: cloud-demo
 # [<en>] Address space of the cluster's Pods.
+# [<en>] must not overlap with the address space of DVP Pods.
 # [<ru>] Адресное пространство Pod’ов кластера.
+# [<ru>] не должно пересекаться с адресным пространством Pod'ов DVP.
 podSubnetCIDR: 10.111.0.0/16
 # [<en>] Address space of the cluster's services.
+# [<en>] must not overlap with the address space of DVP services.
 # [<ru>] Адресное пространство для service’ов кластера.
+# [<ru>] не должно пересекаться с адресным пространством service'ов DVP.
 serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "Automatic"
 clusterDomain: "cluster.local"
