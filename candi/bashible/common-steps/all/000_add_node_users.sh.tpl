@@ -184,7 +184,6 @@ function add_sudoer_group() {
     fi
 
     local sudoers_file="${sudoersd_path}/${sudoers_filename}"
-
     if ! getent group $groupname >/dev/null
       then
         groupadd $groupname
