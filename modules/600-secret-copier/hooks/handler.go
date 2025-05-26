@@ -96,6 +96,11 @@ func ApplyCopierNamespaceFilter(obj *unstructured.Unstructured) (go_hook.FilterR
 		return nil, err
 	}
 
+	if namespace.ObjectMeta.DeletionTimestamp != nil {
+		// Skip deleted object
+		return nil, nil
+	}
+
 	n := &Namespace{
 		Name:          namespace.ObjectMeta.Name,
 		Labels:        namespace.Labels,
