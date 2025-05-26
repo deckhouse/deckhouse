@@ -205,29 +205,36 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 				}, nil
 			}
 
-			const maxMinorVersionDiffForLTS = 10
-			ltsRelease := strings.EqualFold(p.releaseChannel, ltsReleaseChannel)
 			// here we have only Deployed phase releases in prevRelease
+			ltsRelease := strings.EqualFold(p.releaseChannel, ltsReleaseChannel)
+
 			// it must await if deployed release has minor version more than one
-			// and release channel is not LTS
-			// or if deployed release has minor version more than acceptable channel limitation
-			// and release channel is LTS
-			if (release.GetVersion().Minor()-1 > prevRelease.GetVersion().Minor() && !ltsRelease) ||
-				(ltsRelease && release.GetVersion().Minor() > prevRelease.GetVersion().Minor()+maxMinorVersionDiffForLTS) {
+			if !ltsRelease && release.GetVersion().Minor()-1 > prevRelease.GetVersion().Minor() {
 				msg := fmt.Sprintf(
 					"minor version is greater than deployed %s by one",
 					prevRelease.GetVersion().Original(),
 				)
 
-				if ltsRelease {
-					msg = fmt.Sprintf(
-						"minor version is greater than deployed %s by %d, it's more than acceptable channel limitation",
-						prevRelease.GetVersion().Original(),
-						release.GetVersion().Minor()-prevRelease.GetVersion().Minor(),
-					)
-				}
+				logger.Debug("release awaiting", slog.String("channel", p.releaseChannel), slog.String("reason", msg))
 
-				logger.Debug("release awaiting", slog.String("reason", msg))
+				return &Task{
+					TaskType:            Await,
+					Message:             msg,
+					DeployedReleaseInfo: deployedReleaseInfo,
+				}, nil
+			}
+
+			const maxMinorVersionDiffForLTS = 10
+
+			// it must await if deployed release has minor version more than acceptable LTS channel limitation
+			if ltsRelease && release.GetVersion().Minor() > prevRelease.GetVersion().Minor()+maxMinorVersionDiffForLTS {
+				msg := fmt.Sprintf(
+					"minor version is greater than deployed %s by %d, it's more than acceptable channel limitation",
+					prevRelease.GetVersion().Original(),
+					release.GetVersion().Minor()-prevRelease.GetVersion().Minor(),
+				)
+
+				logger.Debug("release awaiting", slog.String("channel", p.releaseChannel), slog.String("reason", msg))
 
 				return &Task{
 					TaskType:            Await,
