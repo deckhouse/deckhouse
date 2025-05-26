@@ -220,7 +220,7 @@ Additional requirements can be specified for each range of cores:
 2. Allowed fractions of cores (`coreFractions`) — a list of allowed values (for example, [25, 50, 100] for 25%, 50%, or 100% core usage).
 
 {% alert level="warning" %}
-Important: For each range of cores, be sure to specify:
+For each range of cores, be sure to specify:
 
 - Either memory (or `memoryPerCore`),
 - Either coreFractions,
