@@ -57,7 +57,6 @@ securityContext:
 {{- define "helm_lib_module_container_security_context_run_as_user_deckhouse_pss_restricted" -}}
 {{- /* Template context with .Values, .Chart, etc */ -}}
 securityContext:
-  readOnlyRootFilesystem: true
   allowPrivilegeEscalation: false
   capabilities:
     drop:
@@ -68,6 +67,49 @@ securityContext:
   seccompProfile:
     type: RuntimeDefault
 {{- end }}
+
+
+{{- /* -------------------------------------------------------------
+Usage examples
+---------------
+# default (read-only root FS, no extra caps)
+{{ include "helm_lib_module_container_security_context_deckhouse_pss_restricted_flexible" dict }}
+
+# read/write root FS
+{{ include "helm_lib_module_container_security_context_deckhouse_pss_restricted_flexible" (dict "ro" false) }}
+
+# read-only + extra caps
+{{ include "helm_lib_module_container_security_context_deckhouse_pss_restricted_flexible"
+     (dict "caps" (list "NET_BIND_SERVICE" "SYS_PTRACE")) }}
+
+# read/write + extra caps
+{{ include "helm_lib_module_container_security_context_deckhouse_pss_restricted_flexible"
+     (dict "ro" false "caps" (list "NET_BIND_SERVICE" "SYS_PTRACE")) }}
+----------------------------------------------------------------- */ -}}
+{{- /* SecurityContext for Deckhouse UID/GID 64535, PSS Restricted
+     Optional keys:
+       .ro   – bool, read-only root FS (default true)
+       .caps – []string, capabilities.add (default empty)          */ -}}
+{{- define "helm_lib_module_container_security_context_deckhouse_pss_restricted_flexible" -}}
+{{- $ro   := default true  .ro   -}}
+{{- $caps := default (list) .caps -}}
+
+securityContext:
+  readOnlyRootFilesystem: {{ $ro }}
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+{{- if $caps }}
+    add: {{ $caps | toJson }}
+{{- end }}
+  runAsUser:   64535
+  runAsGroup:  64535
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+{{- end }}
+
 
 {{- /* Usage: {{ include "helm_lib_module_pod_security_context_run_as_user_root" . }} */ -}}
 {{- /* returns PodSecurityContext parameters for Pod with user and group 0 */ -}}
