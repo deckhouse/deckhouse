@@ -239,7 +239,7 @@ func handle(input *go_hook.HookInput) error {
 	}
 
 	// Initialize RegistrySecret before processing
-	values.State.RegistrySecret.FromSecret(inputs.RegistrySecret)
+	values.State.RegistrySecret.Config = inputs.RegistrySecret
 
 	// Process the state and update internal values
 	err = values.State.process(input.Logger, inputs)
@@ -249,7 +249,7 @@ func handle(input *go_hook.HookInput) error {
 	moduleValues.Set(values)
 
 	// Generate expected RegistrySecret. Apply patch to update
-	newRegistrySecret := values.State.RegistrySecret.ToSecret()
+	newRegistrySecret := values.State.RegistrySecret.Config
 	if !newRegistrySecret.Equal(&inputs.RegistrySecret) {
 		input.PatchCollector.PatchWithMerge(
 			map[string]interface{}{"data": newRegistrySecret.ToBase64SecretData()},

@@ -40,14 +40,6 @@ type State struct {
 	Config deckhouse_registry.Config `json:"-"`
 }
 
-func (s *State) FromSecret(secretConfig deckhouse_registry.Config) {
-	s.Config = secretConfig
-}
-
-func (s *State) ToSecret() deckhouse_registry.Config {
-	return s.Config
-}
-
 func (s *State) Process(params Params) (bool, error) {
 	newSecret, err := buildRegistrySecret(params)
 	if err != nil {
