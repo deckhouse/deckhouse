@@ -4,7 +4,7 @@ permalink: ru/user/network/incoming-traffic-processing-alb.html
 lang: ru
 ---
 
-ALB (Application Load Balancer) реализуется посредствам Ingress-ресурсов и Gateway.
+ALB (Application Load Balancer) реализуется посредством Ingress-ресурсов и Gateway.
 ALB позволяет обрабатывать трафик HTTP, HTTPs и gRPC.
 Для публикации приложений используется настроенный администратором Ingress-контроллер.
 Для большинства случаев подходит ingress-nginx, для специфических задач можете использовать istio.
