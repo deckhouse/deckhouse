@@ -21,7 +21,6 @@ from dotmap import DotMap
 import json  # Ensure json is imported for loading binding context
 
 def _prepare_validation_binding_context(binding_context_json, new_spec: dict) -> DotMap:
-    print(binding_context_json)
     ctx_dict = json.loads(binding_context_json)
     ctx = DotMap(ctx_dict)
     ctx.review.request.object.spec = new_spec
@@ -180,6 +179,7 @@ class TestInstanceClassValidationWebhook(unittest.TestCase):
             "name": "new"
         })
         out = hook.testrun(main, [ctx])
+        print(out)
         tests.assert_validation_allowed(self, out, None)
 
     def test_should_deny_invalid_ca(self):
@@ -191,6 +191,7 @@ class TestInstanceClassValidationWebhook(unittest.TestCase):
             "name": "new"
         })
         out = hook.testrun(main, [ctx])
+        print(out)
         expected_error = "Certificate verification failed"
         tests.assert_validation_deny(self, out, expected_error)
 
