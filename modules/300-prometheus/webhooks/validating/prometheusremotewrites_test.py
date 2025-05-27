@@ -179,7 +179,7 @@ class TestInstanceClassValidationWebhook(unittest.TestCase):
             "name": "new"
         })
         out = hook.testrun(main, [ctx])
-        print(out)
+        print("!!!!", out.__dict__)
         tests.assert_validation_allowed(self, out, None)
 
     def test_should_deny_invalid_ca(self):
@@ -191,7 +191,7 @@ class TestInstanceClassValidationWebhook(unittest.TestCase):
             "name": "new"
         })
         out = hook.testrun(main, [ctx])
-        print(out)
+        print("!!!!", out.__dict__)
         expected_error = "Certificate verification failed"
         tests.assert_validation_deny(self, out, expected_error)
 
