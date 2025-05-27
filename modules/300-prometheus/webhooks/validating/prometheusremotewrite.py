@@ -1,9 +1,6 @@
 #!/usr/bin/python3
 from typing import Optional
 
-import cryptography.hazmat
-import cryptography.hazmat.backends
-
 # Copyright 2024 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
