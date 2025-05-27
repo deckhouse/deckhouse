@@ -15,13 +15,11 @@
 package config
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -31,6 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	registry_const "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/const"
 )
 
 type MetaConfig struct {
@@ -41,6 +40,7 @@ type MetaConfig struct {
 	ClusterPrefix        string                 `json:"-"`
 	ClusterDNSAddress    string                 `json:"-"`
 	DeckhouseConfig      DeckhouseClusterConfig `json:"-"`
+	RegistryConfig       RegistryClusterConfig  `json:"-"`
 	MasterNodeGroupSpec  MasterNodeGroupSpec    `json:"-"`
 	TerraNodeGroupSpecs  []TerraNodeGroupSpec   `json:"-"`
 
@@ -48,12 +48,14 @@ type MetaConfig struct {
 	InitClusterConfig map[string]json.RawMessage `json:"-"`
 	ModuleConfigs     []*ModuleConfig            `json:"-"`
 
+	ProviderSecondaryDevicesConfig ProviderSecondaryDevicesConfig `json:"-"`
+
 	ProviderClusterConfig map[string]json.RawMessage `json:"providerClusterConfiguration,omitempty"`
 	StaticClusterConfig   map[string]json.RawMessage `json:"staticClusterConfiguration,omitempty"`
 
 	VersionMap                map[string]interface{} `json:"-"`
 	Images                    imagesDigests          `json:"-"`
-	Registry                  RegistryData           `json:"-"`
+	Registry                  Registry               `json:"-"`
 	UUID                      string                 `json:"clusterUUID,omitempty"`
 	InstallerVersion          string                 `json:"-"`
 	ResourcesYAML             string                 `json:"-"`
@@ -61,14 +63,6 @@ type MetaConfig struct {
 }
 
 type imagesDigests map[string]map[string]interface{}
-
-type RegistryData struct {
-	Address   string `json:"address"`
-	Path      string `json:"path"`
-	Scheme    string `json:"scheme"`
-	CA        string `json:"ca"`
-	DockerCfg string `json:"dockerCfg"`
-}
 
 // Prepare extracts all necessary information from raw json messages to the root structure
 func (m *MetaConfig) Prepare() (*MetaConfig, error) {
@@ -85,26 +79,9 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 	}
 
 	if len(m.InitClusterConfig) > 0 {
-		if err := json.Unmarshal(m.InitClusterConfig["deckhouse"], &m.DeckhouseConfig); err != nil {
-			return nil, fmt.Errorf("unable to unmarshal deckhouse configuration: %v", err)
-		}
-
-		imagesRepo := strings.TrimSpace(m.DeckhouseConfig.ImagesRepo)
-		m.DeckhouseConfig.ImagesRepo = strings.TrimRight(imagesRepo, "/")
-
-		parts := strings.SplitN(m.DeckhouseConfig.ImagesRepo, "/", 2)
-		m.Registry.Address = parts[0]
-		if len(parts) == 2 {
-			m.Registry.Path = fmt.Sprintf("/%s", parts[1])
-		}
-
-		if err := validateRegistryDockerCfg(m.DeckhouseConfig.RegistryDockerCfg, m.Registry.Address); err != nil {
+		if err := m.prepareDataFromInitClusterConfig(); err != nil {
 			return nil, err
 		}
-		m.Registry.DockerCfg = m.DeckhouseConfig.RegistryDockerCfg
-		m.Registry.Scheme = strings.ToLower(m.DeckhouseConfig.RegistryScheme)
-		m.Registry.CA = m.DeckhouseConfig.RegistryCA
-
 	}
 
 	if m.ClusterType != CloudClusterType || len(m.ProviderClusterConfig) == 0 {
@@ -205,62 +182,71 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 			return nil, fmt.Errorf("unable to unmarshal static nodes from provider cluster configuration: %v", err)
 		}
 	}
-
-	m.Registry.DockerCfg = m.DeckhouseConfig.RegistryDockerCfg
-	m.Registry.Scheme = strings.ToLower(m.DeckhouseConfig.RegistryScheme)
-	m.Registry.CA = m.DeckhouseConfig.RegistryCA
-
-	parts := strings.SplitN(m.DeckhouseConfig.ImagesRepo, "/", 2)
-	m.Registry.Address = parts[0]
-	if len(parts) == 2 {
-		m.Registry.Path = fmt.Sprintf("/%s", parts[1])
-	}
-
 	return m, nil
 }
 
-func validateRegistryDockerCfg(cfg string, repo string) error {
-	if cfg == "" {
-		return fmt.Errorf("can't be empty")
+func (m *MetaConfig) prepareDataFromInitClusterConfig() error {
+	// Migrate from old to new init config apiVersion
+	var initCfgApiVersion string
+	if err := json.Unmarshal(m.InitClusterConfig["apiVersion"], &initCfgApiVersion); err != nil {
+		return fmt.Errorf("unable to unmarshal apiVersion for init configuration: %v", err)
 	}
+	if initCfgApiVersion != "deckhouse.io/v2alpha1" {
+		var deckhouseCfgOld DeckhouseClusterConfigOld
+		if err := json.Unmarshal(m.InitClusterConfig["deckhouse"], &deckhouseCfgOld); err != nil {
+			return fmt.Errorf("unable to unmarshal deckhouse configuration: %v", err)
+		} else {
+			m.RegistryConfig = RegistryClusterConfig{
+				Mode: registry_const.ModeDirect,
+				DirectModeProperties: &RegistryDirectModeProperties{
+					ImagesRepo: deckhouseCfgOld.ImagesRepo,
+					DockerCfg:  deckhouseCfgOld.RegistryDockerCfg,
+					CA:         deckhouseCfgOld.RegistryCA,
+					Scheme:     deckhouseCfgOld.RegistryScheme,
+				},
+			}
+			m.DeckhouseConfig = DeckhouseClusterConfig{
+				ReleaseChannel:  deckhouseCfgOld.ReleaseChannel,
+				DevBranch:       deckhouseCfgOld.DevBranch,
+				Bundle:          deckhouseCfgOld.Bundle,
+				LogLevel:        deckhouseCfgOld.LogLevel,
+				ConfigOverrides: deckhouseCfgOld.ConfigOverrides,
+			}
 
-	regcrd, err := base64.StdEncoding.DecodeString(cfg)
-	if err != nil {
-		return fmt.Errorf("unable to decode registryDockerCfg: %w", err)
-	}
-
-	var creds struct {
-		Auths map[string]interface{} `json:"auths"`
-	}
-
-	if err = json.Unmarshal(regcrd, &creds); err != nil {
-		return fmt.Errorf("unable to unmarshal docker credentials: %w", err)
-	}
-
-	// The regexp match string with this pattern:
-	// ^([a-z]|\d)+ - string starts with a [a-z] letter or a number
-	// (\.?|\-?) - next symbol might be '.' or '-' and repeated zero or one times
-	// (([a-z]|\d)+(\.|\-|))* - middle part of string might have [a-z] letters, numbers, '.' or ':',
-	// and moreover '.' or ':' symbols can't be doubled or goes next to each other
-	// ([a-z]|\d+|([a-z]|\d)\:\d+)$ - string might be ended by [a-z] letter or number (if we have single host) or
-	// [a-z] letter or number with ':' symbol, and moreover there might be only numbers after ':' symbol
-	regx, err := regexp.Compile(`^([a-z]|\d)+(\.?|\-?)(([a-z]|\d)+(\.|\-|))*([a-z]|\d+|([a-z]|\d)\:\d+)$`)
-	if err != nil {
-		return fmt.Errorf("unable to compile regexp by pattern: %w", err)
-	}
-
-	for k := range creds.Auths {
-		if !regx.MatchString(k) {
-			return fmt.Errorf("invalid registryDockerCfg. Your auths host \"%s\" should be similar to \"your.private.registry.example.com\"", k)
+			registryAddress, _ := getRegistryAddressAndPathFromImagesRepo(deckhouseCfgOld.ImagesRepo)
+			if err = validateRegistryDockerCfg(deckhouseCfgOld.RegistryDockerCfg, registryAddress); err != nil {
+				return err
+			}
+		}
+	} else {
+		if err := json.Unmarshal(m.InitClusterConfig["deckhouse"], &m.DeckhouseConfig); err != nil {
+			return fmt.Errorf("unable to unmarshal deckhouse configuration: %v", err)
+		}
+		if err := json.Unmarshal(m.InitClusterConfig["registry"], &m.RegistryConfig); err != nil {
+			return fmt.Errorf("unable to unmarshal registry configuration: %v", err)
 		}
 	}
 
-	for k := range creds.Auths {
-		if k == repo {
-			return nil
-		}
+	var err error
+	m.Registry, m.ProviderSecondaryDevicesConfig.RegistryDataDeviceEnable, err = NewRegistryCfg(m.RegistryConfig)
+	return err
+}
+
+// PrepareAfterGlobalCacheInit Some of the information from the metaconfig is used to create a global cache.
+// This function is necessary to initialize the data after creating the global cache
+func (m *MetaConfig) PrepareAfterGlobalCacheInit() error {
+	if len(m.InitClusterConfig) > 0 {
+		return m.Registry.PrepareAfterGlobalCacheInit()
 	}
-	return fmt.Errorf("incorrect registryDockerCfg. It must contain auths host {\"auths\": { \"%s\": {}}}", repo)
+	return nil
+}
+
+func (m *MetaConfig) GetClusterDomain() (string, error) {
+	var clusterDomain string
+	if err := json.Unmarshal(m.ClusterConfig["clusterDomain"], &clusterDomain); err != nil {
+		return clusterDomain, fmt.Errorf("unable to unmarshal clusterDomain from cluster configuration: %v", err)
+	}
+	return clusterDomain, nil
 }
 
 func (m *MetaConfig) GetTerraNodeGroups() []TerraNodeGroupSpec {
@@ -391,7 +377,7 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 		result["nodeIP"] = nodeIP
 	}
 
-	registryData, err := m.ParseRegistryData()
+	registryData, err := m.Registry.KubeadmTemplatesContext()
 	if err != nil {
 		return nil, err
 	}
@@ -444,11 +430,6 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 		nodeGroup["static"] = m.ExtractMasterNodeGroupStaticSettings()
 	}
 
-	registryData, err := m.ParseRegistryData()
-	if err != nil {
-		return nil, err
-	}
-
 	configForBashibleBundleTemplate := make(map[string]interface{})
 	for key, value := range m.VersionMap {
 		configForBashibleBundleTemplate[key] = value
@@ -474,6 +455,12 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 			configForBashibleBundleTemplate["proxy"] = proxyData
 		}
 	}
+
+	registryData, err := m.Registry.BashibleBundleTemplateContext()
+	if err != nil {
+		return nil, err
+	}
+
 	configForBashibleBundleTemplate["registry"] = registryData
 
 	images := m.Images
@@ -494,6 +481,8 @@ func (m *MetaConfig) NodeGroupConfig(nodeGroupName string, nodeIndex int, cloudC
 
 	if nodeGroupName != "master" {
 		result["nodeGroupName"] = nodeGroupName
+	} else {
+		result[RegistryDataDeviceEnableTerraformVar] = m.ProviderSecondaryDevicesConfig.RegistryDataDeviceEnable
 	}
 
 	if len(m.UUID) > 0 {
@@ -547,7 +536,8 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 		out.StaticClusterConfig = config
 	}
 
-	out.Registry = m.Registry
+	out.Registry = m.Registry.DeepCopy()
+	out.ProviderSecondaryDevicesConfig = m.ProviderSecondaryDevicesConfig
 
 	if m.ClusterType != "" {
 		out.ClusterType = m.ClusterType
@@ -596,23 +586,6 @@ func (m *MetaConfig) LoadVersionMap(filename string) error {
 	m.VersionMap = versionMap
 
 	return nil
-}
-
-func (m *MetaConfig) ParseRegistryData() (map[string]interface{}, error) {
-	log.DebugF("registry data: %v\n", m.Registry)
-
-	ret := m.Registry.ConvertToMap()
-
-	if m.Registry.DockerCfg != "" {
-		auth, err := m.Registry.Auth()
-		if err != nil {
-			return nil, err
-		}
-
-		ret["auth"] = auth
-	}
-
-	return ret, nil
 }
 
 func (m *MetaConfig) EnrichProxyData() (map[string]interface{}, error) {
@@ -706,56 +679,6 @@ func (m *MetaConfig) GetReplicasByNodeGroupName(nodeGroupName string) int {
 	}
 
 	return 0
-}
-
-func (r *RegistryData) ConvertToMap() map[string]interface{} {
-	return map[string]interface{}{
-		"address":   r.Address,
-		"path":      r.Path,
-		"scheme":    r.Scheme,
-		"ca":        r.CA,
-		"dockerCfg": r.DockerCfg,
-	}
-}
-
-func (r *RegistryData) Auth() (string, error) {
-	type dockerCfg struct {
-		Auths map[string]struct {
-			Auth     string `json:"auth"`
-			Username string `json:"username"`
-			Password string `json:"password"`
-		} `json:"auths"`
-	}
-
-	var (
-		registryAuth string
-		dc           dockerCfg
-	)
-
-	bytes, err := base64.StdEncoding.DecodeString(r.DockerCfg)
-	if err != nil {
-		return "", fmt.Errorf("cannot base64 decode docker cfg: %v", err)
-	}
-
-	log.DebugF("parse registry data: dockerCfg after base64 decode = %s\n", bytes)
-	err = json.Unmarshal(bytes, &dc)
-	if err != nil {
-		return "", fmt.Errorf("cannot unmarshal docker cfg: %v", err)
-	}
-
-	if registry, ok := dc.Auths[r.Address]; ok {
-		switch {
-		case registry.Auth != "":
-			registryAuth = registry.Auth
-		case registry.Username != "" && registry.Password != "":
-			auth := fmt.Sprintf("%s:%s", registry.Username, registry.Password)
-			registryAuth = base64.StdEncoding.EncodeToString([]byte(auth))
-		default:
-			log.DebugF("auth or username with password not found in dockerCfg %s for %s. Use empty string", bytes, r.Address)
-		}
-	}
-
-	return registryAuth, nil
 }
 
 func getDNSAddress(serviceCIDR string) string {

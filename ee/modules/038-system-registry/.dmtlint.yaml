@@ -1,0 +1,35 @@
+linters-settings:
+  container:
+    exclude-rules:
+      readiness-probe:
+        - kind: DaemonSet
+          name: system-registry-manager
+          container: kube-rbac-proxy
+        - kind: DaemonSet
+          name: system-registry-staticpod-manager
+          container: kube-rbac-proxy
+        - kind: DaemonSet
+          name: system-registry-staticpod-manager
+          container: image-holder-distribution
+        - kind: DaemonSet
+          name: system-registry-staticpod-manager
+          container: image-holder-auth
+        - kind: DaemonSet
+          name: system-registry-staticpod-manager
+          container: image-holder-mirrorer
+      liveness-probe:
+        - kind: DaemonSet
+          name: system-registry-manager
+          container: kube-rbac-proxy
+        - kind: DaemonSet
+          name: system-registry-staticpod-manager
+          container: kube-rbac-proxy
+        - kind: DaemonSet
+          name: system-registry-staticpod-manager
+          container: image-holder-distribution
+        - kind: DaemonSet
+          name: system-registry-staticpod-manager
+          container: image-holder-auth
+        - kind: DaemonSet
+          name: system-registry-staticpod-manager
+          container: image-holder-mirrorer

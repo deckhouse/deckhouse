@@ -150,6 +150,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-system:d8-kube-dns",
 	"system:serviceaccount:d8-system:documentation",
 	"system:serviceaccount:d8-system:network-policy-engine",
+	"system:serviceaccount:d8-system:system-registry",
 	"system:serviceaccount:d8-system:terraform-auto-converger",
 	"system:serviceaccount:d8-system:terraform-state-exporter",
 	"system:serviceaccount:d8-upmeter:smoke-mini",

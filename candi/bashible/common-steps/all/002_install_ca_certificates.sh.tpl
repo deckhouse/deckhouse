@@ -13,15 +13,3 @@
 # limitations under the License.
 
 bb-package-install "d8-ca-updater:{{ .images.registrypackages.d8CaUpdater200225 }}"
-
-REGISTRY_CACERT_PATH="/opt/deckhouse/share/ca-certificates/registry-ca.crt"
-
-{{- if .registry.ca }}
-bb-sync-file $REGISTRY_CACERT_PATH - << "EOF"
-{{ .registry.ca }}
-EOF
-{{- else }}
-if [ -f $REGISTRY_CACERT_PATH ]; then
-  rm -f $REGISTRY_CACERT_PATH
-fi
-{{- end }}
