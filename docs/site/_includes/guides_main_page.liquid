@@ -1,8 +1,36 @@
-<ul>
-  {%- for guide in site.data.guides %}
-    <li>
-      <a href="{{ guide.link }}"><span class="name">{{ guide.name[page.lang] }}</span></a><br />
-      <span>{{ guide.description[page.lang] }}</span> <strong>[{%for tag in guide.tags %}{{ tag }}{% unless forloop.last %}, {% endunless %}{% endfor %}]</strong>
-    </li>
+<script type="text/javascript" src='{% javascript_asset_tag tile %}[_assets/js/tile.js]{% endjavascript_asset_tag %}'></script>
+
+<p class="tile__descr">{{ site.data.i18n.common['guides_intro_message'][page.lang] }}</p>
+
+<div class="block__tile">
+  {%- for guides in site.data.guides %}
+  <a class="button-tile" href="{{ guides.link }}">
+    <h2 class="button-tile__title">{{ guides.name[page.lang] }}</h2>
+    <p class="button-tile__descr">{{ guides.description[page.lang] }}</p>
+    <div class="button-tile__bottom">
+      <div class="button-tile__tags">
+        {%- for tags in guides.tags %}
+        <span class="sidebar__badge--container">
+                <span class="sidebar__badge_v2">{{ tags }}</span>
+              </span>
+        {% endfor %}
+      </div>
+      <div class="button-tile__time">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="6" cy="6" r="5.25" stroke="#5E6697" stroke-width="1.5"/>
+          <path d="M4.25 6H6V3.375" stroke="#5E6697" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <p class="button-tile__descr tile__descr--time">30 min</p>
+      </div>
+    </div>
+  </a>
   {% endfor %}
-</ul>
+</div>
+
+
+<button class="tile__pagination">
+  <p class="tile__pagination--descr">{{ site.data.i18n.common['show_more'][page.lang] }}</p>
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M8 1C8.55229 1 9 1.44772 9 2V7L14 7C14.5523 7 15 7.44772 15 8C15 8.55229 14.5523 9 14 9L9 9L9 14C9 14.5523 8.55229 15 8 15C7.44772 15 7 14.5523 7 14L7 9H2C1.44772 9 1 8.55229 1 8C1 7.44772 1.44772 7 2 7L7 7L7 2C7 1.44772 7.44772 1 8 1Z" fill="#0D69F2"/>
+  </svg>
+</button>
