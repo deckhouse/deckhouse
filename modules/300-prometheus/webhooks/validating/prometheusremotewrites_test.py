@@ -93,7 +93,7 @@ def _prepare_prometheusremotewrites_class_binding_context(new_spec: dict) -> Dot
             }},
             "spec": {{
               "url": "test"
-            }},
+            }}
           }},
           "oldObject": {{
             "apiVersion": "deckhouse.io/v1alpha1",
@@ -128,7 +128,7 @@ def _prepare_prometheusremotewrites_class_binding_context(new_spec: dict) -> Dot
               "tlsConfig": {{
                   "ca": "111"
               }}
-            }},
+            }}
           }},
           "dryRun": false,
           "options": {{
