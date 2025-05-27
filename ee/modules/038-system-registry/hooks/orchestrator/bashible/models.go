@@ -30,12 +30,8 @@ type Params struct {
 }
 
 type State struct {
-	Config *StateConfig `json:"config,omitempty" yaml:"config,omitempty"`
-}
-
-type StateConfig struct {
-	ActualParams ModeParams `json:"actual_params,omitempty" yaml:"actual_params,omitempty"`
-	Config       Config     `json:"config,omitempty" yaml:"config,omitempty"`
+	ActualParams *ModeParams `json:"actual_params,omitempty" yaml:"actual_params,omitempty"`
+	Config       *Config     `json:"config,omitempty" yaml:"config,omitempty"`
 }
 
 type Config bashible.Config
@@ -80,7 +76,7 @@ func (state *State) IsStopped() bool {
 }
 
 func (state *State) Stop(inputs Inputs) Result {
-	state.Config = nil
+	*state = State{}
 	return processResult(inputs, "Cleanup: switch to Unmanaged mode", registry_const.UnknownVersion, true)
 }
 
@@ -110,19 +106,15 @@ func (state *State) Process(params Params, inputs Inputs, isFirstStage bool) (Re
 		imagesBase = params.ModeParams.Unmanaged.ImagesRepo
 	}
 
-	// Ensure state is initialized
-	if state.Config == nil {
-		state.Config = &StateConfig{}
-	}
-
 	// First stage + params already contained -> skip (stage already done)
-	if isFirstStage && state.Config.ActualParams.isEqual(params.ModeParams) {
+	if isFirstStage && state.ActualParams.isEqual(params.ModeParams) {
 		return resultOk, nil
 	}
 
 	// Init actual params from secret, if empty
-	if state.Config.ActualParams.isEmpty() {
-		if err := state.Config.ActualParams.fromRegistrySecret(params.RegistrySecret); err != nil {
+	if state.ActualParams.isEmpty() {
+		state.ActualParams = &ModeParams{}
+		if err := state.ActualParams.fromRegistrySecret(params.RegistrySecret); err != nil {
 			return resultError, fmt.Errorf("failed to initialize actual params from secret: %w", err)
 		}
 	}
@@ -137,24 +129,24 @@ func (state *State) Process(params Params, inputs Inputs, isFirstStage bool) (Re
 	}
 	if isFirstStage {
 		// Current
-		config.processHosts(inputs.MasterNodesIPs, state.Config.ActualParams)
+		config.processHosts(inputs.MasterNodesIPs, *state.ActualParams)
 		// New
 		config.processHosts(inputs.MasterNodesIPs, params.ModeParams)
 		// Endpoints
-		config.processEndpoints(inputs.MasterNodesIPs, state.Config.ActualParams.Mode, params.ModeParams.Mode)
+		config.processEndpoints(inputs.MasterNodesIPs, state.ActualParams.Mode, params.ModeParams.Mode)
 	} else {
 		// Replace Current by new and process only new hosts
-		state.Config.ActualParams = params.ModeParams
-		config.processHosts(inputs.MasterNodesIPs, state.Config.ActualParams)
+		state.ActualParams = &params.ModeParams
+		config.processHosts(inputs.MasterNodesIPs, *state.ActualParams)
 		// Endpoints
-		config.processEndpoints(inputs.MasterNodesIPs, state.Config.ActualParams.Mode)
+		config.processEndpoints(inputs.MasterNodesIPs, state.ActualParams.Mode)
 	}
 
 	if err := config.processHash(); err != nil {
 		return resultError, err
 	}
-	state.Config.Config = config
-	return processResult(inputs, stageInfo, state.Config.Config.Version, false), nil
+	state.Config = &config
+	return processResult(inputs, stageInfo, state.Config.Version, false), nil
 }
 
 func processResult(inputs Inputs, stageInfo, version string, isStop bool) Result {
@@ -308,11 +300,14 @@ func (p *ModeParams) fromRegistrySecret(registrySecret deckhouse_registry.Config
 	return nil
 }
 
-func (p ModeParams) isEmpty() bool {
-	return p.Mode == ""
+func (p *ModeParams) isEmpty() bool {
+	return p == nil || p.Mode == ""
 }
 
-func (p ModeParams) isEqual(other ModeParams) bool {
+func (p *ModeParams) isEqual(other ModeParams) bool {
+	if p == nil {
+		return false
+	}
 	if p.Mode != other.Mode {
 		return false
 	}

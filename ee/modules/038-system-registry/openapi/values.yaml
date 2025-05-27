@@ -96,56 +96,51 @@ properties:
               bashible:
                 type: object
                 properties:
-                  config:
+                  actual_params:
                     type: object
-                    default: {}
                     properties:
-                      actual_params:
+                      mode:
+                        type: string
+                        enum: [Unmanaged, Direct, Proxy, Local]
+                      proxy_local:
                         type: object
                         properties:
-                          mode:
+                          ca:
                             type: string
-                            enum: [Unmanaged, Direct, Proxy, Local]
-                          proxy_local:
-                            type: object
-                            properties:
-                              ca:
-                                type: string
-                              username:
-                                type: string
-                              password:
-                                type: string
-                          unmanaged:
-                            type: object
-                            properties:
-                              imagesRepo:
-                                type: string
-                              scheme:
-                                type: string
-                              ca:
-                                type: string
-                              username:
-                                type: string
-                              password:
-                                type: string
-                          direct:
-                            type: object
-                            properties:
-                              imagesRepo:
-                                type: string
-                              scheme:
-                                type: string
-                              ca:
-                                type: string
-                              username:
-                                type: string
-                              password:
-                                type: string
-                      config:
+                          username:
+                            type: string
+                          password:
+                            type: string
+                      unmanaged:
                         type: object
-                        default: {}
-                        additionalProperties: true
-                        x-kubernetes-preserve-unknown-fields: true
+                        properties:
+                          imagesRepo:
+                            type: string
+                          scheme:
+                            type: string
+                          ca:
+                            type: string
+                          username:
+                            type: string
+                          password:
+                            type: string
+                      direct:
+                        type: object
+                        properties:
+                          imagesRepo:
+                            type: string
+                          scheme:
+                            type: string
+                          ca:
+                            type: string
+                          username:
+                            type: string
+                          password:
+                            type: string
+                  config:
+                    type: object
+                    additionalProperties: true
+                    x-kubernetes-preserve-unknown-fields: true
               in_cluster_proxy:
                 type: object
                 properties:
