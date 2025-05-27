@@ -97,7 +97,7 @@ def _prepare_prometheusremotewrites_class_binding_context(new_spec: dict) -> Dot
           }},
           "oldObject": {{
             "apiVersion": "deckhouse.io/v1alpha1",
-            "kind": "Prometheusremotewrites"
+            "kind": "Prometheusremotewrites",
             "metadata": {{
               "creationTimestamp": "2024-11-22T08:00:33Z",
               "generation": 1,
