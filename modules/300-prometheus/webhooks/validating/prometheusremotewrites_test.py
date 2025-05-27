@@ -146,8 +146,9 @@ def _prepare_prometheusremotewrites_class_binding_context(new_spec: dict) -> Dot
                     "url": "https://test.local"
                 }}
             }}
-        ],
-      "type": "Validating"
+        ]
+    }},
+    "type": "Validating"
     }}
     """
     return _prepare_validation_binding_context(binding_context_json, new_spec)
