@@ -642,6 +642,10 @@ func (state *State) transitionToUnmanaged(log go_hook.Logger, inputs Inputs) err
 
 	// Cleanup (bashible-api-server use deckhouse-registry secret)
 	bashibleReady := state.cleanupBashibleSecondStage(inputs)
+	if !bashibleReady {
+		state.setReadyCondition(false, inputs)
+		return nil
+	}
 
 	nodeServicesReady, err := state.cleanupNodeServices(inputs)
 	if err != nil {
@@ -653,10 +657,6 @@ func (state *State) transitionToUnmanaged(log go_hook.Logger, inputs Inputs) err
 
 	state.IngressEnabled = false
 
-	if !bashibleReady {
-		state.setReadyCondition(false, inputs)
-		return nil
-	}
 	if !nodeServicesReady {
 		state.setReadyCondition(false, inputs)
 		return nil
@@ -686,7 +686,7 @@ func (state *State) processBashibleFirstStage(params bashible.Params, inputs Inp
 
 	if !processResult.Ready {
 		state.setCondition(metav1.Condition{
-			Type:               ConditionTypeBashible,
+			Type:               ConditionTypeBashibleFirstStage,
 			Status:             metav1.ConditionFalse,
 			ObservedGeneration: inputs.Params.Generation,
 			Reason:             ConditionReasonProcessing,
@@ -696,7 +696,7 @@ func (state *State) processBashibleFirstStage(params bashible.Params, inputs Inp
 	}
 
 	state.setCondition(metav1.Condition{
-		Type:               ConditionTypeBashible,
+		Type:               ConditionTypeBashibleFirstStage,
 		Status:             metav1.ConditionTrue,
 		ObservedGeneration: inputs.Params.Generation,
 	})
@@ -711,7 +711,7 @@ func (state *State) processBashibleSecondStage(params bashible.Params, inputs In
 
 	if !processResult.Ready {
 		state.setCondition(metav1.Condition{
-			Type:               ConditionTypeBashible,
+			Type:               ConditionTypeBashibleSecondStage,
 			Status:             metav1.ConditionFalse,
 			ObservedGeneration: inputs.Params.Generation,
 			Reason:             ConditionReasonProcessing,
@@ -721,7 +721,7 @@ func (state *State) processBashibleSecondStage(params bashible.Params, inputs In
 	}
 
 	state.setCondition(metav1.Condition{
-		Type:               ConditionTypeBashible,
+		Type:               ConditionTypeBashibleSecondStage,
 		Status:             metav1.ConditionTrue,
 		ObservedGeneration: inputs.Params.Generation,
 	})
@@ -736,7 +736,7 @@ func (state *State) cleanupBashibleFirstStage(registrySecret deckhouse_registry.
 
 	if !processResult.Ready {
 		state.setCondition(metav1.Condition{
-			Type:               ConditionTypeBashible,
+			Type:               ConditionTypeBashibleFirstStage,
 			Status:             metav1.ConditionFalse,
 			ObservedGeneration: inputs.Params.Generation,
 			Reason:             ConditionReasonProcessing,
@@ -746,7 +746,7 @@ func (state *State) cleanupBashibleFirstStage(registrySecret deckhouse_registry.
 	}
 
 	state.setCondition(metav1.Condition{
-		Type:               ConditionTypeBashible,
+		Type:               ConditionTypeBashibleFirstStage,
 		Status:             metav1.ConditionTrue,
 		ObservedGeneration: inputs.Params.Generation,
 	})
@@ -758,7 +758,7 @@ func (state *State) cleanupBashibleSecondStage(inputs Inputs) bool {
 
 	if !result.Ready {
 		state.setCondition(metav1.Condition{
-			Type:               ConditionTypeBashible,
+			Type:               ConditionTypeBashibleSecondStage,
 			Status:             metav1.ConditionFalse,
 			ObservedGeneration: inputs.Params.Generation,
 			Reason:             ConditionReasonProcessing,
@@ -768,7 +768,7 @@ func (state *State) cleanupBashibleSecondStage(inputs Inputs) bool {
 	}
 
 	state.setCondition(metav1.Condition{
-		Type:               ConditionTypeBashible,
+		Type:               ConditionTypeBashibleSecondStage,
 		Status:             metav1.ConditionTrue,
 		ObservedGeneration: inputs.Params.Generation,
 	})

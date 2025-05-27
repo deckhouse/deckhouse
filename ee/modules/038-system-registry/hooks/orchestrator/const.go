@@ -12,10 +12,11 @@ import (
 )
 
 const (
-	ConditionTypeReady          = "Ready"
-	ConditionTypeNodeServices   = "NodeServices"
-	ConditionTypeInClusterProxy = "InClusterProxy"
-	ConditionTypeBashible       = "Bashible"
+	ConditionTypeReady               = "Ready"
+	ConditionTypeNodeServices        = "NodeServices"
+	ConditionTypeInClusterProxy      = "InClusterProxy"
+	ConditionTypeBashibleFirstStage  = "BashibleStageOne"
+	ConditionTypeBashibleSecondStage = "BashibleStageTwo"
 
 	ConditionReasonReady      = "Ready"
 	ConditionReasonProcessing = "Processing"

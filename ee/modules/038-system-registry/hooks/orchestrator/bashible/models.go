@@ -17,10 +17,10 @@ import (
 )
 
 const (
-	StageProcessFirst  = "Process stage 1: apply new configs with existing ones"
-	StageProcessSecond = "Process stage 2: apply new configs only, remove old if exist"
-	StageCleanupFirst  = "Cleanup stage 1: apply Unmanaged configs with existing ones"
-	StageCleanupSecond = "Cleanup stage 2: cleanup old configs and remove registry-bashible-config secret"
+	StageProcessFirst  = "Apply new config with existing"
+	StageProcessSecond = "Apply new config only, remove old"
+	StageCleanupFirst  = "Apply Unmanaged config with existing"
+	StageCleanupSecond = "Apply Unmanaged config only, remove old"
 )
 
 type Inputs struct {
@@ -454,73 +454,55 @@ func successResult(stageInfo string) Result {
 }
 
 func buildResult(inputs Inputs, isStop bool, version, stageInfo string) Result {
-	builder := new(strings.Builder)
-	fmt.Fprint(builder, stageInfo+"\n")
+	var msg strings.Builder
+	fmt.Fprintln(&msg, stageInfo)
 
 	if isStop && inputs.IsSecretExist {
-		fmt.Fprint(builder, "Bashible Secret exists. Deleting now...")
-		return Result{
-			Ready:   false,
-			Message: builder.String(),
-		}
+		fmt.Fprintln(&msg, "Deleting Bashible Secret...")
+		return Result{Ready: false, Message: msg.String()}
 	}
 	if !isStop && !inputs.IsSecretExist {
-		fmt.Fprint(builder, "Creating Bashible Secret...")
-		return Result{
-			Ready:   false,
-			Message: builder.String(),
+		fmt.Fprintln(&msg, "Creating Bashible Secret...")
+		return Result{Ready: false, Message: msg.String()}
+	}
+
+	var pending []string
+	for name, v := range inputs.NodeStatus {
+		if v != version {
+			pending = append(pending, name)
 		}
 	}
 
-	unreadyNodes := []string{}
-	for nodeName, nodeVersion := range inputs.NodeStatus {
-		if nodeVersion != version {
-			unreadyNodes = append(unreadyNodes, nodeName)
-		}
-	}
+	total := len(inputs.NodeStatus)
+	ready := total - len(pending)
 
-	if len(unreadyNodes) == 0 {
+	if len(pending) == 0 {
 		if isStop {
-			fmt.Fprintf(builder, "All %d node(s) have been updated with Unmanaged configuration.",
-				len(inputs.NodeStatus),
-			)
+			fmt.Fprintf(&msg, "All %d node(s) use the Unmanaged config.\n", total)
 		} else {
-			fmt.Fprintf(builder, "All %d node(s) have been updated to registry version: %s.",
-				len(inputs.NodeStatus), trimWithEllipsis(version),
-			)
+			fmt.Fprintf(&msg, "All %d node(s) updated to version %s.\n", total, trimWithEllipsis(version))
 		}
-		return Result{
-			Ready:   true,
-			Message: builder.String(),
-		}
+		return Result{Ready: true, Message: msg.String()}
 	}
 
-	slices.Sort(unreadyNodes)
+	fmt.Fprintf(&msg, "%d/%d node(s) ready. Waiting:\n", ready, total)
 
-	if isStop {
-		fmt.Fprintf(builder, "%d/%d node(s) are ready with Unmanaged configuration.\nWaiting for the following node(s):\n",
-			len(inputs.NodeStatus)-len(unreadyNodes), len(inputs.NodeStatus),
-		)
-	} else {
-		fmt.Fprintf(builder, "%d/%d node(s) have been updated to registry version \"%s\".\nWaiting for the following node(s):\n",
-			len(inputs.NodeStatus)-len(unreadyNodes), len(inputs.NodeStatus), trimWithEllipsis(version),
-		)
-	}
-
+	slices.Sort(pending)
 	const maxShown = 10
-	for i, name := range unreadyNodes {
+	for i, name := range pending {
 		if i == maxShown {
-			fmt.Fprintf(builder, "\t...and %d more\n", len(unreadyNodes)-maxShown)
+			fmt.Fprintf(&msg, "\t...and %d more\n", len(pending)-maxShown)
 			break
 		}
-		version := inputs.NodeStatus[name]
-		fmt.Fprintf(builder, "\t%d. %q (currently running version \"%s\")\n", i+1, name, trimWithEllipsis(version))
+		currentVersion := inputs.NodeStatus[name]
+		if isStop {
+			fmt.Fprintf(&msg, "\t%d. %s: %q → Unmanaged\n", i+1, name, trimWithEllipsis(currentVersion))
+		} else {
+			fmt.Fprintf(&msg, "\t%d. %s: %q → %q\n", i+1, name, trimWithEllipsis(currentVersion), trimWithEllipsis(version))
+		}
 	}
 
-	return Result{
-		Ready:   false,
-		Message: builder.String(),
-	}
+	return Result{Ready: false, Message: msg.String()}
 }
 
 func deduplicateAndSortCA(sliceCA []string) []string {
