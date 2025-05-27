@@ -33,4 +33,4 @@ properties:
     description: |
       Set to 'true' to disable CAPI in case of potentially cluster-damaging changes.
 
-      > **Warning!** Use this flag only if you know why you are doing it and clearly understand the consequences.
+      > **Warning.** Use this flag only if you know why you are doing it and clearly understand the consequences.
