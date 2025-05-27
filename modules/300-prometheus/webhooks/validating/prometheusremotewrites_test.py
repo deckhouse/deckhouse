@@ -86,7 +86,7 @@ def _prepare_prometheusremotewrites_class_binding_context(new_spec: dict) -> Dot
                   "time": "2025-02-17T16:01:42Z"
                 }}
               ],
-              "name": "{name}",
+              "name": "candi-admins",
               "resourceVersion": "7511300",
               "uid": "92ce2620-847d-4e45-aaa0-c0e314b33142"
             }},
