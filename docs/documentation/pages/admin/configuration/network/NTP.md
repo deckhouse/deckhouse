@@ -17,7 +17,7 @@ Enable the chrony module to activate time synchronization:
 d8 platform module enable chrony
 ```
 
-By default, the time source is the server `pool.ntp.org`. You can specify a list of NTP servers using the `ntpServers` parameter in the configuration of the `chrony` module. 
+By default, the time source is the server `pool.ntp.org`. You can specify a list of NTP servers using the `ntpServers` parameter in the configuration of the `chrony` module.
 
 An example of the module configuration specifying NTP servers:
 

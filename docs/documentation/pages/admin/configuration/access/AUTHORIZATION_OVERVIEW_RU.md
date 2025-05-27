@@ -11,6 +11,4 @@ lang: ru
 - [Текущая](../access/authorization-rbac-current.html). Подсистема сквозной авторизации расширяет стандартный RBAC-механизм за счёт пользовательских ресурсов — [ClusterAuthorizationRule](../../reference/cr/clusterauthorizationrule/) и [AuthorizationRule](../../reference/cr/authorizationrule/).
 - [Экспериментальная](../access/authorization-rbac-experimental.html). Эта модель также предполагает использование стандартного механизма RBAC. Доступ настраивается с помощью создания ресурсов `RoleBinding` или `ClusterRoleBinding`, в которых используются роли, подготовленные модулем [user-authz](../../reference/mc/user-authz/).
 
-Обе модели поддерживаются модулем [user-authz](../../reference/mc/user-authz/).
-
-Выбор модели зависит от требований безопасности и сценариев использования. В этом разделе представлена информация о принципах работы и настройках каждой модели, а также рекомендации по их применению в различных сценариях.
+Обе модели поддерживаются модулем [user-authz](../../reference/mc/user-authz/). Выбор модели зависит от требований безопасности и сценариев использования.
