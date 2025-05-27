@@ -33,7 +33,6 @@ kubernetes:
         "name": .metadata.name,
         "uid": .spec.uid,
         "nodeGroups": .spec.nodeGroups,
-        "passwordHash": .spec.passwordHash
       }
 kubernetesValidating:
 - name: nodeuser-unique.deckhouse.io
@@ -52,6 +51,7 @@ function __main__() {
   uid=$(context::jq -r '.review.request.object.spec.uid')
   nodeGroups=$(context::jq -r '.review.request.object.spec.nodeGroups[]')
   operation=$(context::jq -r '.review.request.operation')
+  passwordHash=$(context::jq -r '.review.request.object.spec.passwordHash')
 
   snapshots=$(context::jq -cr '[.snapshots.nodeUsers[].filterResult]')
   if [ "$operation" = "UPDATE" ]; then
@@ -81,7 +81,7 @@ EOF
     fi
   done
 
-if [ $(jq -cr '[.[] | select(.passwordHash == null or .passwordHash == "")] | length' <<< "$snapshots") -gt 0 ]; then
+if [ -z "$passwordHash" ] || [ "$passwordHash" = "null" ]; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed": true, "warnings": ["Password hash is empty. The user might not be able to log in."] }
 EOF
