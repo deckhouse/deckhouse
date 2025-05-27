@@ -16,6 +16,13 @@ import (
 	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/system-registry-manager/models/deckhouse-registry"
 )
 
+const (
+	StageProcessFirst  = "Process stage 1: apply new configs with existing ones"
+	StageProcessSecond = "Process stage 2: apply new configs only, remove old if exist"
+	StageCleanupFirst  = "Cleanup stage 1: apply Unmanaged configs with existing ones"
+	StageCleanupSecond = "Cleanup stage 2: cleanup old configs and remove registry-bashible-config secret"
+)
+
 type Inputs struct {
 	IsSecretExist  bool
 	MasterNodesIPs []string
@@ -30,8 +37,9 @@ type Params struct {
 }
 
 type State struct {
-	ActualParams *ModeParams `json:"actual_params,omitempty" yaml:"actual_params,omitempty"`
-	Config       *Config     `json:"config,omitempty" yaml:"config,omitempty"`
+	UnmanagedParams *UnmanagedModeParams `json:"unmanaged_params,omitempty" yaml:"unmanaged_params,omitempty"`
+	ActualParams    *ModeParams          `json:"actual_params,omitempty" yaml:"actual_params,omitempty"`
+	Config          *Config              `json:"config,omitempty" yaml:"config,omitempty"`
 }
 
 type Config bashible.Config
@@ -71,34 +79,85 @@ type Result struct {
 	Message string
 }
 
-func (state *State) IsStopped() bool {
-	return state == nil || state.Config == nil
+// ProcessFirstStage applies the new configuration alongside the existing one.
+// Should be used when registry mode or its parameters change (transition phase).
+func (state *State) ProcessFirstStage(params Params, inputs Inputs) (Result, error) {
+	return state.process(params, inputs, true, StageProcessFirst)
 }
 
-func (state *State) Stop(inputs Inputs) Result {
-	*state = State{}
-	return processResult(inputs, "Cleanup: switch to Unmanaged mode", registry_const.UnknownVersion, true)
+// ProcessSecondStage replaces the existing config with the new one.
+// Should be called after successful first stage.
+func (state *State) ProcessSecondStage(params Params, inputs Inputs) (Result, error) {
+	return state.process(params, inputs, false, StageProcessSecond)
 }
 
-func (state *State) Process(params Params, inputs Inputs, isFirstStage bool) (Result, error) {
-	stageInfo := "Stage 1: apply new configs with existing ones"
-	if !isFirstStage {
-		stageInfo = "Stage 2: apply new configs only, remove old"
+// CleanupFirstStage applies the unmanaged configuration in combination with the existing one.
+// Useful to transition from managed to unmanaged mode.
+func (state *State) CleanupFirstStage(registrySecret deckhouse_registry.Config, inputs Inputs) (UnmanagedModeParams, Result, error) {
+	if state.UnmanagedParams == nil {
+		return UnmanagedModeParams{}, failedResult(StageCleanupFirst), fmt.Errorf("unmanaged parameters are not initialized")
 	}
-	resultError := Result{Ready: false, Message: fmt.Sprintf("%s\nFailed to process Bashible configuration.", stageInfo)}
-	resultOk := Result{Ready: true, Message: fmt.Sprintf("%s\nBashible already processed.", stageInfo)}
 
+	params := Params{
+		RegistrySecret: registrySecret,
+		ModeParams: ModeParams{
+			Mode:      registry_const.ModeUnmanaged,
+			Unmanaged: state.UnmanagedParams,
+		},
+	}
+
+	result, err := state.process(params, inputs, true, StageCleanupFirst)
+	return *state.UnmanagedParams, result, err
+}
+
+// CleanupSecondStage resets the internal state and removes any configuration secrets.
+// It is the final cleanup stage when switching away from Managed configurations.
+func (state *State) CleanupSecondStage(inputs Inputs) Result {
+	*state = State{}
+	return buildResult(inputs, true, registry_const.UnknownVersion, StageCleanupSecond)
+}
+
+// IsRunning returns true if there is an active configuration managed by this state.
+func (state *State) IsRunning() bool {
+	return state != nil && state.Config != nil
+}
+
+// process applies the Bashible configuration, based on the provided
+// mode parameters and node input state. It operates in two possible stages:
+//
+// First Stage (isFirstStage == true):
+//   - Used when switching the registry mode (e.g., from proxy to direct).
+//   - Supports dual-configuration:
+//     1. The current configuration (loaded from state or secret).
+//     2. The new configuration (provided via params).
+//   - Ensures safe transition by keeping current config in place while preparing the new one.
+//   - After successful execution, the system is ready to continue to the second stage.
+//
+// Second Stage (isFirstStage == false):
+//   - Used after the first stage has completed successfully.
+//   - Replaces the current configuration with the new one entirely.
+//
+// Usage Rules:
+//   - When the registry mode or mode-specific parameters change:
+//     ==> always run First Stage.
+//   - Else:
+//     ==> run Second Stage.
+//
+// Returns:
+//   - Result: status of configuration (ready or not, message for logging/display).
+//   - error: encountered if parameter validation or processing fails.
+func (state *State) process(params Params, inputs Inputs, isFirstStage bool, stageInfo string) (Result, error) {
 	switch {
 	case params.ModeParams.Mode == registry_const.ModeUnmanaged &&
 		params.ModeParams.Unmanaged == nil:
-		return resultError, fmt.Errorf("missing unmanaged parameters for mode %s", params.ModeParams.Mode)
+		return failedResult(stageInfo), fmt.Errorf("missing unmanaged parameters for mode %s", params.ModeParams.Mode)
 	case (params.ModeParams.Mode == registry_const.ModeLocal ||
 		params.ModeParams.Mode == registry_const.ModeProxy) &&
 		params.ModeParams.ProxyLocal == nil:
-		return resultError, fmt.Errorf("missing proxy/local parameters for mode %s", params.ModeParams.Mode)
+		return failedResult(stageInfo), fmt.Errorf("missing proxy/local parameters for mode %s", params.ModeParams.Mode)
 	case params.ModeParams.Mode == registry_const.ModeDirect &&
 		params.ModeParams.Direct == nil:
-		return resultError, fmt.Errorf("missing direct parameters for mode %s", params.ModeParams.Mode)
+		return failedResult(stageInfo), fmt.Errorf("missing direct parameters for mode %s", params.ModeParams.Mode)
 	}
 
 	imagesBase := registry_const.HostWithPath
@@ -107,15 +166,18 @@ func (state *State) Process(params Params, inputs Inputs, isFirstStage bool) (Re
 	}
 
 	// First stage + params already contained -> skip (stage already done)
-	if isFirstStage && state.ActualParams.isEqual(params.ModeParams) {
-		return resultOk, nil
+	if isFirstStage &&
+		state.ActualParams != nil &&
+		state.ActualParams.isEqual(params.ModeParams) {
+		return successResult(stageInfo), nil
 	}
 
 	// Init actual params from secret, if empty
-	if state.ActualParams.isEmpty() {
+	if state.ActualParams == nil ||
+		state.ActualParams.isEmpty() {
 		state.ActualParams = &ModeParams{}
 		if err := state.ActualParams.fromRegistrySecret(params.RegistrySecret); err != nil {
-			return resultError, fmt.Errorf("failed to initialize actual params from secret: %w", err)
+			return failedResult(stageInfo), fmt.Errorf("failed to initialize actual params from secret: %w", err)
 		}
 	}
 
@@ -143,80 +205,10 @@ func (state *State) Process(params Params, inputs Inputs, isFirstStage bool) (Re
 	}
 
 	if err := config.processHash(); err != nil {
-		return resultError, err
+		return failedResult(stageInfo), err
 	}
 	state.Config = &config
-	return processResult(inputs, stageInfo, state.Config.Version, false), nil
-}
-
-func processResult(inputs Inputs, stageInfo, version string, isStop bool) Result {
-	builder := new(strings.Builder)
-	fmt.Fprint(builder, stageInfo+"\n")
-
-	if isStop && inputs.IsSecretExist {
-		fmt.Fprint(builder, "Bashible Secret exists. Deleting now...")
-		return Result{
-			Ready:   false,
-			Message: builder.String(),
-		}
-	}
-	if !isStop && !inputs.IsSecretExist {
-		fmt.Fprint(builder, "Creating Bashible Secret...")
-		return Result{
-			Ready:   false,
-			Message: builder.String(),
-		}
-	}
-
-	unreadyNodes := []string{}
-	for nodeName, nodeVersion := range inputs.NodeStatus {
-		if nodeVersion != version {
-			unreadyNodes = append(unreadyNodes, nodeName)
-		}
-	}
-
-	if len(unreadyNodes) == 0 {
-		if isStop {
-			fmt.Fprintf(builder, "All %d node(s) have been updated with Unmanaged configuration.",
-				len(inputs.NodeStatus),
-			)
-		} else {
-			fmt.Fprintf(builder, "All %d node(s) have been updated to registry version: %s.",
-				len(inputs.NodeStatus), trimWithEllipsis(version),
-			)
-		}
-		return Result{
-			Ready:   true,
-			Message: builder.String(),
-		}
-	}
-
-	slices.Sort(unreadyNodes)
-
-	if isStop {
-		fmt.Fprintf(builder, "%d/%d node(s) are ready with Unmanaged configuration.\nWaiting for the following node(s):\n",
-			len(inputs.NodeStatus)-len(unreadyNodes), len(inputs.NodeStatus),
-		)
-	} else {
-		fmt.Fprintf(builder, "%d/%d node(s) have been updated to registry version \"%s\".\nWaiting for the following node(s):\n",
-			len(inputs.NodeStatus)-len(unreadyNodes), len(inputs.NodeStatus), trimWithEllipsis(version),
-		)
-	}
-
-	const maxShown = 10
-	for i, name := range unreadyNodes {
-		if i == maxShown {
-			fmt.Fprintf(builder, "\t...and %d more\n", len(unreadyNodes)-maxShown)
-			break
-		}
-		version := inputs.NodeStatus[name]
-		fmt.Fprintf(builder, "\t%d. %q (currently running version \"%s\")\n", i+1, name, trimWithEllipsis(version))
-	}
-
-	return Result{
-		Ready:   false,
-		Message: builder.String(),
-	}
+	return buildResult(inputs, false, state.Config.Version, stageInfo), nil
 }
 
 func (cfg *Config) processEndpoints(masterNodesIPs []string, modes ...registry_const.ModeType) {
@@ -426,6 +418,90 @@ func processProxyLocal(params ProxyLocalModeParams, masterNodesIPs []string) (ma
 		},
 	}
 	return hosts, prepullHosts
+}
+
+func failedResult(stageInfo string) Result {
+	return Result{
+		Ready:   false,
+		Message: fmt.Sprintf("%s\nFailed to process Bashible configuration.", stageInfo),
+	}
+}
+
+func successResult(stageInfo string) Result {
+	return Result{
+		Ready:   true,
+		Message: fmt.Sprintf("%s\nBashible already processed.", stageInfo),
+	}
+}
+
+func buildResult(inputs Inputs, isStop bool, version, stageInfo string) Result {
+	builder := new(strings.Builder)
+	fmt.Fprint(builder, stageInfo+"\n")
+
+	if isStop && inputs.IsSecretExist {
+		fmt.Fprint(builder, "Bashible Secret exists. Deleting now...")
+		return Result{
+			Ready:   false,
+			Message: builder.String(),
+		}
+	}
+	if !isStop && !inputs.IsSecretExist {
+		fmt.Fprint(builder, "Creating Bashible Secret...")
+		return Result{
+			Ready:   false,
+			Message: builder.String(),
+		}
+	}
+
+	unreadyNodes := []string{}
+	for nodeName, nodeVersion := range inputs.NodeStatus {
+		if nodeVersion != version {
+			unreadyNodes = append(unreadyNodes, nodeName)
+		}
+	}
+
+	if len(unreadyNodes) == 0 {
+		if isStop {
+			fmt.Fprintf(builder, "All %d node(s) have been updated with Unmanaged configuration.",
+				len(inputs.NodeStatus),
+			)
+		} else {
+			fmt.Fprintf(builder, "All %d node(s) have been updated to registry version: %s.",
+				len(inputs.NodeStatus), trimWithEllipsis(version),
+			)
+		}
+		return Result{
+			Ready:   true,
+			Message: builder.String(),
+		}
+	}
+
+	slices.Sort(unreadyNodes)
+
+	if isStop {
+		fmt.Fprintf(builder, "%d/%d node(s) are ready with Unmanaged configuration.\nWaiting for the following node(s):\n",
+			len(inputs.NodeStatus)-len(unreadyNodes), len(inputs.NodeStatus),
+		)
+	} else {
+		fmt.Fprintf(builder, "%d/%d node(s) have been updated to registry version \"%s\".\nWaiting for the following node(s):\n",
+			len(inputs.NodeStatus)-len(unreadyNodes), len(inputs.NodeStatus), trimWithEllipsis(version),
+		)
+	}
+
+	const maxShown = 10
+	for i, name := range unreadyNodes {
+		if i == maxShown {
+			fmt.Fprintf(builder, "\t...and %d more\n", len(unreadyNodes)-maxShown)
+			break
+		}
+		version := inputs.NodeStatus[name]
+		fmt.Fprintf(builder, "\t%d. %q (currently running version \"%s\")\n", i+1, name, trimWithEllipsis(version))
+	}
+
+	return Result{
+		Ready:   false,
+		Message: builder.String(),
+	}
 }
 
 func singleCA(s string) []string {

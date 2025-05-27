@@ -37,27 +37,9 @@ properties:
               target_mode:
                 type: string
                 enum: [Unmanaged, Direct, Proxy, Local]
-              actual_params:
-                type: object
-                properties:
-                  mode:
-                    type: string
-                    enum: [Unmanaged, Direct, Proxy, Local]
-                  generation:
-                    type: integer
-                    format: int64
-                  images_repo:
-                    type: string
-                  username:
-                    type: string
-                  password:
-                    type: string
-                  ttl:
-                    type: string
-                  scheme:
-                    type: string
-                  ca:
-                    type: string
+              mode:
+                type: string
+                enum: [Unmanaged, Direct, Proxy, Local]
               pki:
                 type: object
                 properties:
@@ -96,6 +78,19 @@ properties:
               bashible:
                 type: object
                 properties:
+                  unmanaged_params:
+                    type: object
+                    properties:
+                      imagesRepo:
+                        type: string
+                      scheme:
+                        type: string
+                      ca:
+                        type: string
+                      username:
+                        type: string
+                      password:
+                        type: string
                   actual_params:
                     type: object
                     properties:

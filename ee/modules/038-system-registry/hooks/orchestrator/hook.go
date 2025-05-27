@@ -154,7 +154,7 @@ func handle(input *go_hook.HookInput) error {
 		err    error
 	)
 
-	if values.State.ActualParams.Mode == "" {
+	if values.State.Mode == "" {
 		input.Logger.Info("State not initialized, trying restore from secret")
 
 		stateData, err := helpers.SnapshotToSingle[[]byte](input, stateSnapName)
@@ -174,8 +174,8 @@ func handle(input *go_hook.HookInput) error {
 		}
 	}
 
-	if values.State.ActualParams.Mode == "" {
-		values.State.ActualParams.Mode = registry_const.ModeUnmanaged
+	if values.State.Mode == "" {
+		values.State.Mode = registry_const.ModeUnmanaged
 
 		input.Logger.Warn(
 			"State has no mode set, will set to Unmanaged",
