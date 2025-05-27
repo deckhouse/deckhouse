@@ -17,9 +17,9 @@ properties:
       Класс Ingress-контроллера, который используется для Kiali, metadata-exporter и api-proxy.
 
       Опциональный параметр, по умолчанию используется глобальное значение `modules.ingressClass`.
-  enableAmbientMode:
-    description: |
-      Включение компонентов для работы Ambient Mesh.
+  # enableAmbientMode:
+  #   description: |
+  #     Включение компонентов для работы Ambient Mesh.
   federation:
     description: Параметры федерации с другими кластерами.
     properties:
