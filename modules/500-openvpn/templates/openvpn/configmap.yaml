@@ -19,7 +19,7 @@ data:
     client-config-dir /etc/openvpn/ccd
     key-direction 0
     data-ciphers AES-256-GCM:AES-128-GCM:AES-128-CBC
-    data-ciphers-fallback AES-128-CBC:BF-CBC # for getting rid of "Note: --cipher is not set. OpenVPN versions before 2.5 defaulted to BF-CBC as fallback when cipher negotiation failed in this case." error message in logs
+    data-ciphers-fallback AES-128-CBC # for getting rid of "Note: --cipher is not set. OpenVPN versions before 2.5 defaulted to BF-CBC as fallback when cipher negotiation failed in this case." error message in logs 
     keepalive 10 60
     persist-key
     persist-tun
