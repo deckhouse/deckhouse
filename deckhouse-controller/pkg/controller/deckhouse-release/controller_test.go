@@ -73,7 +73,7 @@ var initValues = `{
 	"global": {
 		"clusterIsBootstrapped": true,
 		"clusterConfiguration": {
-			"kubernetesVersion": "1.28"
+			"kubernetesVersion": "1.29"
 		},
 		"modulesImages": {
 			"registry": {
@@ -235,11 +235,11 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
-	suite.Run("Patch out of update window", func() {
+	suite.Run("Patch awaits update window", func() {
 		mup := embeddedMUP.DeepCopy()
 		mup.Update.Windows = update.Windows{{From: "8:00", To: "8:01"}}
 
-		suite.setupController("patch-out-of-update-window.yaml", initValues, mup)
+		suite.setupController("patch-awaits-update-window.yaml", initValues, mup)
 		dr := suite.getDeckhouseRelease("v1.26.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)

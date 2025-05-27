@@ -396,7 +396,7 @@
            ```
 
   - alert: DeckhouseUpdating
-    expr: max (d8_is_updating) == 1
+    expr: max by (deployingRelease) (d8_is_updating) == 1
     labels:
       severity_level: "4"
       tier: cluster
@@ -405,7 +405,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      summary: Deckhouse is being updated.
+      summary: Deckhouse is being updated to {{ $labels.deployingRelease }}.
 
   - alert: DeckhouseUpdatingFailed
     expr: max (d8_updating_is_failed) == 1
@@ -429,6 +429,49 @@
         Current version: {{ $labels.version }}.
 
         To resolve this issue, ensure that the next version of the Deckhouse image is available in the registry.
+
+  - alert: DeckhouseModuleUpdatingFailedBrokenSequence
+    expr: max by(module, registry, actual_version, version) (d8_module_updating_broken_sequence) > 0
+    labels:
+      severity_level: "4"
+      tier: cluster
+      d8_module: "{{ $labels.module }}"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: Module update has failed. Updating sequence is broken.
+      description: |
+        The '{{ $labels.module }}' Module update has failed.
+
+        Current version: {{ $labels.actual_version }}.
+        Desired version: {{ $labels.version }}.
+
+        Attempt to download interim releases failed.
+
+        Possible reasons:
+         - The necessary versions of the Module image is not available in the registry.
+
+        To resolve this issue, ensure that all minor versions of the '{{ $labels.module }}' Module image between {{ $labels.actual_version }} and {{ $labels.version }} is available in the registry '{{ $labels.registry }}'.
+
+  - alert: DeckhouseModuleUpdatingFailedModuleIsNotValid
+    expr: max by(module, registry, version) (d8_module_updating_module_is_not_valid) > 0
+    labels:
+      severity_level: "4"
+      tier: cluster
+      d8_module: "{{ $labels.module }}"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: Module update has failed. Module is not valid.
+      description: |
+        The '{{ $labels.module }}' Module update has failed.
+
+        Desired version: {{ $labels.version }}.
+
+        Possible reasons:
+         - The Module image is corrupted.
+
+        To resolve this issue, ensure that {{ $labels.version }} image in the registry '{{ $labels.registry }}' is valid .
 
   - alert: D8DeckhouseWatchErrorOccurred
     expr: increase(deckhouse_kubernetes_client_watch_errors_total[__SCRAPE_INTERVAL_X_2__]) > 0

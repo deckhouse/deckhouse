@@ -46,11 +46,37 @@ clusterConfiguration:
 discovery:
   clusterMasterCount: 3
   prometheusScrapeInterval: 30
+  kubernetesVersion: "1.29.14"
+  d8SpecificNodeCountByRole:
+    system: 1
+modules:
+  placement: {}
+`
+
+	globalValues2 = `
+deckhouseVersion: test
+enabledModules: ["vertical-pod-autoscaler", "prometheus", "operator-prometheus", "control-plane-manager"]
+clusterConfiguration:
+  apiVersion: deckhouse.io/v1
+  kind: ClusterConfiguration
+  clusterDomain: cluster.local
+  clusterType: Static
+  kubernetesVersion: "Automatic"
+  podSubnetCIDR: 10.111.0.0/16
+  podSubnetNodeCIDRPrefix: "24"
+  serviceSubnetCIDR: 10.222.0.0/16
+discovery:
+  clusterMasterCount: 3
+  prometheusScrapeInterval: 30
   kubernetesVersion: "1.28.10"
   d8SpecificNodeCountByRole:
     system: 1
 modules:
   placement: {}
+`
+
+	clusterIsBootstrapped = `
+clusterIsBootstrapped: true
 `
 
 	moduleValuesForMasterNode = `
@@ -141,8 +167,89 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 			Expect(dp.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: testkey
   operator: Exists
+- key: node.deckhouse.io/uninitialized
+  operator: Exists
+  effect: NoSchedule
 `))
 		})
 	})
 
+	Context("Control-plane is managed by third-party team: use service by default", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("deckhouse", moduleValuesForDeckhouseNode)
+			f.HelmRender()
+		})
+
+		nsName := "d8-system"
+		chartName := "deckhouse"
+
+		It("Everything must render properly", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			dp := f.KubernetesResource("Deployment", nsName, chartName)
+			Expect(dp.Exists()).To(BeTrue())
+			serviceHostValue := dp.Field("spec.template.spec.containers.0.env." +
+				"#(name==\"KUBERNETES_SERVICE_HOST\").value",
+			)
+			Expect(serviceHostValue.Exists()).To(BeFalse())
+			servicePort := dp.Field("spec.template.spec.containers.0.env." +
+				"#(name==\"KUBERNETES_SERVICE_PORT\").value",
+			)
+			Expect(servicePort.Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Managed by Deckhouse: use API-proxy", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues2+clusterIsBootstrapped)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("deckhouse", moduleValuesForDeckhouseNode)
+			f.HelmRender()
+		})
+
+		nsName := "d8-system"
+		chartName := "deckhouse"
+
+		It("Everything must render properly", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			dp := f.KubernetesResource("Deployment", nsName, chartName)
+			Expect(dp.Exists()).To(BeTrue())
+			serviceHostValue := dp.Field("spec.template.spec.containers.0.env." +
+				"#(name==\"KUBERNETES_SERVICE_HOST\").value",
+			).String()
+			Expect(serviceHostValue).To(Equal("127.0.0.1"))
+			servicePort := dp.Field("spec.template.spec.containers.0.env." +
+				"#(name==\"KUBERNETES_SERVICE_PORT\").value",
+			).String()
+			Expect(servicePort).To(Equal("6445"))
+		})
+	})
+
+	Context("Bootstrap phase: use direct connection", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues2)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("deckhouse", moduleValuesForDeckhouseNode)
+			f.HelmRender()
+		})
+
+		nsName := "d8-system"
+		chartName := "deckhouse"
+
+		It("Everything must render properly", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			dp := f.KubernetesResource("Deployment", nsName, chartName)
+			Expect(dp.Exists()).To(BeTrue())
+			serviceHostValue := dp.Field("spec.template.spec.containers.0.env." +
+				"#(name==\"KUBERNETES_SERVICE_HOST\")." +
+				"valueFrom.fieldRef.fieldPath",
+			).String()
+			Expect(serviceHostValue).To(Equal("status.hostIP"))
+			servicePort := dp.Field("spec.template.spec.containers.0.env." +
+				"#(name==\"KUBERNETES_SERVICE_PORT\").value",
+			).String()
+			Expect(servicePort).To(Equal("6443"))
+		})
+	})
 })

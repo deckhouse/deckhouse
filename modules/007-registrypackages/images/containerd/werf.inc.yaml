@@ -1,16 +1,15 @@
-{{- $containerd_version := "1.7.24" }}
+{{- $containerd_version := "1.7.27" }}
 {{- $image_version := $containerd_version | replace "." "-" }}
-{{- $runc_version := "1.2.3" }}
+{{- $runc_version := "1.2.5" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-from: {{ $.Images.BASE_SCRATCH }}
+fromImage: builder/scratch
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
   to: /
   includePaths:
   - containerd
-  - containerd-shim
   - containerd-shim-runc-v1
   - containerd-shim-runc-v2
   - ctr
@@ -42,22 +41,24 @@ git:
   stageDependencies:
     install:
       - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth=1 --branch v{{ $containerd_version }} {{ $.SOURCE_REPO }}/containerd/containerd.git /src/containerd
-  - git clone --depth=1 --branch v{{ $runc_version }} {{ $.SOURCE_REPO }}/opencontainers/runc /src/runc
+  - git clone --depth=1 --branch v{{ $containerd_version }} $(cat /run/secrets/SOURCE_REPO)/containerd/containerd.git /src/containerd
+  - git clone --depth=1 --branch v{{ $runc_version }} $(cat /run/secrets/SOURCE_REPO)/opencontainers/runc /src/runc
   - cd /src/containerd
   - git describe --match 'v[0-9]*' --dirty='.m' --always > VERSION
   - git rev-parse HEAD > REVISION
   - git apply /patches/containerd/*.patch --verbose
   - cd /src/runc
-  - git apply /patches/runc/*.patch --verbose
   - git describe --dirty --long --always > COMMIT
   - rm -rf /src/containerd/.git
   - rm -rf /src/runc/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ $.Images.BASE_GOLANG_23_BULLSEYE }}
+fromImage: builder/golang-bullseye
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
@@ -65,23 +66,22 @@ import:
   to: /src
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
   {{- include "debian packages proxy" . | nindent 2 }}
   - apt-get update && apt-get install libseccomp-dev -y
   install:
-  - export GOPROXY={{ $.GOPROXY }}
   - cd /src/containerd
   - git config --global user.email "builder@deckhouse.io"
-  - go mod download
-  - go mod vendor
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
   - make STATIC=1 VERSION="$(cat VERSION)" REVISION="$(cat REVISION)" all
   - mv bin/* /
   - cd /src/runc
-  - go mod download
-  - go mod vendor
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
   - git config --global user.email "builder@deckhouse.io"
   - make COMMIT="$(cat COMMIT)" static
   - mv runc /runc

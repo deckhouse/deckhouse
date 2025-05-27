@@ -61,7 +61,6 @@ const (
 	ModuleReasonDisabled                    = "Disabled"
 	ModuleReasonConflict                    = "Conflict"
 	ModuleReasonDownloading                 = "Downloading"
-	ModuleReasonDownloadingError            = "DownloadingError"
 	ModuleReasonHookError                   = "HookError"
 	ModuleReasonModuleError                 = "ModuleError"
 	ModuleReasonReconciling                 = "Reconciling"
@@ -156,6 +155,7 @@ type ModuleProperties struct {
 	Subsystems       []string              `json:"subsystems,omitempty"`
 	Version          string                `json:"version,omitempty"`
 	UpdatePolicy     string                `json:"updatePolicy,omitempty"`
+	ExclusiveGroup   string                `json:"exclusiveGroup,omitempty" yaml:"exclusiveGroup,omitempty"`
 	AvailableSources []string              `json:"availableSources,omitempty"`
 	Requirements     *ModuleRequirements   `json:"requirements,omitempty" yaml:"requirements,omitempty"`
 	DisableOptions   *ModuleDisableOptions `json:"disableOptions,omitempty" yaml:"disableOptions,omitempty"`

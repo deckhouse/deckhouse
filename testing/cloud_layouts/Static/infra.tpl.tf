@@ -115,7 +115,7 @@ resource "openstack_networking_router_interface_v2" "router" {
 
 resource "openstack_compute_keypair_v2" "ssh" {
   name = "candi-${PREFIX}-key"
-  public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQClxHb/dtki3ucSBf9Jqx596QJjZd3TPaVncZV/JEyHQVECOFs2vvZ96mYE6MGYvxieT+K/dWSkOtpugHNqzSY0cjKcXr0WpBLNa+Sl4jC9eCEMdf23mHLkZKbdzcR9LB5eX1m6GsOb4sPH3sDcI5BEFfYDIOH423HUfLTQFLDHtuk9bSceGnslZmyTEymw4FCzlcYLb3oJ9SVvVkQ9jgWaJ1XopKIpJhPMw8c6mfipj20gf4webolqFH/43AusC/q2x96CAwLWYIsIPl6YJnVov+8yvSfcOPYVn5VzUaNrWjWEPegHf8wcwLE/QoEX7Xk6z+XoQz72999hV2LmVkecngm31XT20KYm2e6bZpTAayjxo/HznjwSiDvqxWi+lQgIv6uNbbKKBm2kafBPIRvfrNC3m3pS3eCW/nIRoa2D4UYthYPW4dh2BDrFbYhyZro3wzPuHFYuDer9ndqR0eIUaOl391L5aoTSI8D5N1fTLwHJOoqyzN7Y1u2JAki+vIEe7ypLTvmn+lKBS2TZYRnlxmuQZLTa+R0M/JM01nJqdk1rghUQlmNXe+nl53D3WIIjGW0JHH94Wbr57vwYkqXNGREyxU3djGBIu/0biJ6QxuKxD1YigtU7isiQEtWLYU9EDCbq8qWQYiAM2Q3+z6ygSzDFrkuT40UrW6IgwDGzLw== root@3500d8e6274f"
+  public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCxvEtHR2d9rO6F3ooHAWFxIJdMKAgNVGx5cbP3F576ltMsUauBHAC02ti5vCggORHJlq3BmAyrDXLbfDFS+evxL8oOGEVFlp+lHiUSTQZCxAnhJFVkjgJ8poCYno35ZYhlOTZGI6fqIWV2HuHIJSk3fL0rqRwjCVV2pqQniR6SYUNYISN/RmPnchGVFw4mRLo5HxkXHVPBE3OSX7ihODhS09c+8nyErd8iDf8YljFqB8Oepe3f7nwxWQM/mUjsU70hAL4DEuORrtPwSqeLcUrX4uzc3vQFzPR81AdbtAZ8Vh4CbF7v5dLIqKR1AkCGc8nENEGLu/AWbCjyb9epqmbjKpMT+ogyzJZjNlRjJ2PaImIUhGCMQ8wN1W68pB6Kx9rXKYXpK57nwWwbG33JrmMFWZK7Lj4oRNJZjHRRhOGccCT1gXATmTXzCikehBV4KVHfmOjzK1K0lfUb5DihfhXoAQ+YCIwZaUwtL5BBeq6oRuD1UxsNcczfjgZ22bmdDDs= root@04c20a0dffea"
 }
 
 data "openstack_images_image_v2" "astra_image" {
@@ -276,13 +276,9 @@ resource "openstack_compute_instance_v2" "worker" {
   }
 }
 
-resource "openstack_compute_floatingip_v2" "bastion" {
-  pool = data.openstack_networking_network_v2.external.name
-}
-
-resource "openstack_compute_floatingip_associate_v2" "bastion" {
-  floating_ip = openstack_compute_floatingip_v2.bastion.address
-  instance_id = openstack_compute_instance_v2.bastion.id
+resource "openstack_networking_floatingip_v2" "bastion" {
+  port_id             = openstack_networking_port_v2.bastion_internal_without_security.id
+  pool                = "external-network"
 }
 
 output "master_ip_address_for_ssh" {
@@ -306,5 +302,5 @@ output "worker_rosa_ip_address_for_ssh" {
 }
 
 output "bastion_ip_address_for_ssh" {
-  value = openstack_compute_floatingip_v2.bastion.address
+  value = openstack_networking_floatingip_v2.bastion.address
 }

@@ -35,12 +35,13 @@ import (
 )
 
 var (
-	deckhouseDir      = "/deckhouse"
-	candiDir          = deckhouseDir + "/candi"
-	modulesDir        = deckhouseDir + "/modules"
-	globalHooksModule = deckhouseDir + "/global-hooks"
-	versionMap        = candiDir + "/version_map.yml"
-	imagesDigestsJSON = candiDir + "/images_digests.json"
+	deckhouseDir           = "/deckhouse"
+	candiDir               = deckhouseDir + "/candi"
+	modulesDir             = deckhouseDir + "/modules"
+	globalHooksModule      = deckhouseDir + "/global-hooks"
+	versionMap             = candiDir + "/version_map.yml"
+	InfrastructureVersions = candiDir + "/terraform_versions.yml"
+	imagesDigestsJSON      = candiDir + "/images_digests.json"
 
 	// This value is set on the dhctl build in the dhctl/Makefile script.
 	// Do not touch it !!!
@@ -326,8 +327,9 @@ func InitGlobalVars(pwd string) {
 	globalHooksModule = deckhouseDir + "/global-hooks"
 	versionMap = candiDir + "/version_map.yml"
 	imagesDigestsJSON = candiDir + "/images_digests.json"
+	InfrastructureVersions = candiDir + "/terraform_versions.yml"
 }
 
-func getTerraformModulesDir(provider string) string {
+func getInfrastructureModulesDir(provider string) string {
 	return filepath.Join(candiDir, "cloud-providers", provider, "terraform-modules")
 }

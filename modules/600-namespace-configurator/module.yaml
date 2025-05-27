@@ -1,5 +1,6 @@
 name: namespace-configurator
 weight: 600
+stage: "General Availability"
 namespace: d8-system
 requirements:
   bootstrapped: true

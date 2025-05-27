@@ -36,29 +36,33 @@ git:
   stageDependencies:
     install:
       - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $version }} {{ $.SOURCE_REPO }}/vmware/cloud-director-named-disk-csi-driver.git /src
+  - git clone --depth 1 --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/vmware/cloud-director-named-disk-csi-driver.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
   - rm -rf .git vendor
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
   - cd /src
-  - export GOPROXY={{ $.GOPROXY }}
-  - go mod download
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:
   - cd /src
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X github.com/vmware/cloud-director-named-disk-csi-driver/version.Version={{ $version }}" -o bin/cloud-director-named-disk-csi-driver cmd/csi/main.go

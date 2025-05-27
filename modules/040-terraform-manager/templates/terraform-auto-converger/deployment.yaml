@@ -57,7 +57,33 @@ spec:
       {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
+      automountServiceAccountToken: true
       serviceAccountName: terraform-auto-converger
+      {{- if has .Values.global.clusterConfiguration.cloud.provider (list "Yandex" "Zvirt") }}
+      initContainers:
+      - name: to-tofu-migrator
+        {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 8 }}
+        args:
+        - "converge-migration"
+        - "--check-has-terraform-state-before-migrate-to-tofu"
+        - "--do-not-write-debug-log-file"
+        - "--logger-type=json"
+        - "--kube-client-from-cluster"
+        image: {{ include "terraform_manager_image" . }}
+        env:
+        - name: DHCTL_CLI_KUBE_CLIENT_FROM_CLUSTER
+          value: "true"
+        - name: DHCTL_CLI_ALLOWED_COMMANDS
+          value: "converge-migration"
+        - name: DHCTL_CLI_RUNNING_NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" 10 | nindent 12 }}
+            {{- include "converger_resources" . | nindent 12 }}
+      {{- end }}
       containers:
       - name: converger
         {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 8 }}

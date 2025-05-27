@@ -83,7 +83,7 @@ from: istio/proxyv2:1.19.7@sha256:680eac0faff1835f994ba9047750d7cfe989e868324a93
 final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-agent-artifact
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 final: false
 import:
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
@@ -91,8 +91,10 @@ import:
   to: /src/istio
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
@@ -100,9 +102,9 @@ shell:
   install:
   - cd /src/istio/
   - echo {{ $istioVersion }} > version
-  - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64
+  - export GOOS=linux GOARCH=amd64
   - export LDFLAGS='-extldflags -static -s -w'
-  - go mod vendor
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
   - common/scripts/gobuild.sh /src/istio/out/ -tags=agent,disable_pgv /src/istio/pilot/cmd/pilot-agent/
   - strip /src/istio/out/pilot-agent
   - chmod 0555 /src/istio/out/pilot-agent

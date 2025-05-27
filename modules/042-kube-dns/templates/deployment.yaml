@@ -76,6 +76,7 @@ spec:
       - name: deckhouse-registry
       # hardcoded, because kube-dns is a critical component and system-cluster-critical priority class exists by default
       priorityClassName: system-cluster-critical
+      automountServiceAccountToken: true
       serviceAccountName: d8-kube-dns
       {{- include "helm_lib_tolerations" (tuple . "any-node" "with-no-csi") | nindent 6 }}
       containers:

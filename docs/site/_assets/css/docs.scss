@@ -1975,6 +1975,10 @@ select#contact-select {
   }
 }
 
+.tippy-box {
+  min-width: 255px;
+}
+
 .tippy-box[data-theme~='light'] {
   border: 1px solid #C4CAD4;
   background: #EFF3F9;

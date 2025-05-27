@@ -10,16 +10,19 @@ git:
     stageDependencies:
       install:
         - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-    - git clone {{ $.SOURCE_REPO }}/openkruise/kruise-state-metrics.git /src
+    - git clone $(cat /run/secrets/SOURCE_REPO)/openkruise/kruise-state-metrics.git /src
     - cd /src
     - git checkout {{ $commit }}
     - git apply /patches/*.patch --verbose
     - rm -rf ./vendor ./.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -27,13 +30,15 @@ import:
   to: /src
   before: install
 mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   setup:
-    - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - cd /src/
-    - go mod download
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
     - go build -a -o /tmp/kruise-state-metrics main.go
     - chown -R 64535:64535 /tmp/kruise-state-metrics
     - chmod 0700 /tmp/kruise-state-metrics

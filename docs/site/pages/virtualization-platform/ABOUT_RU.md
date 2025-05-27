@@ -9,13 +9,17 @@ DVP работает на основе [Deckhouse Kubernetes Platform](https://d
 
 ## Сценарии использования
 
-- Запуск виртуальных машин с ОС, совместимой с x86_64.
+- Запуск виртуальных машин с x86-64-совместимой ОС.
 
   ![Запуск ВМ](/../../images/virtualization-platform/cases-vms.ru.png)
 
 - Запуск виртуальных машин и контейнеризированных приложений в одном окружении.
 
   ![Запуск ВМ и приложений](../../../images/virtualization-platform/cases-pods-and-vms.ru.png)
+
+- Создание кластеров DKP.
+
+  ![ Создание кластеров DKP](../../../images/virtualization-platform/cases.dkp.ru.png)
 
 > **Внимание** Если вы планируете использовать Deckhouse Virtualization Platform в production-среде, рекомендуется разворачивать её на физических (bare-metal) серверах. Развертывание Deckhouse Virtualization Platform на виртуальных машинах также возможно, но в этом случае необходимо включить вложенную виртуализацию (nested virtualization).
 

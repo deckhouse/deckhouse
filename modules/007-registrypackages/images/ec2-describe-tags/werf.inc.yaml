@@ -10,9 +10,12 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone -b {{ $version }} --depth 1 {{ $.SOURCE_REPO }}/flant/go-ec2-describe-tags.git /src/go-ec2-describe-tags
+  - git clone -b {{ $version }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/flant/go-ec2-describe-tags.git /src/go-ec2-describe-tags
   - rm -rf /src/go-ec2-describe-tags/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
@@ -37,17 +40,19 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
   add: /src
   to: /src
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   setup:
     - cd /src/go-ec2-describe-tags
-    - GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /ec2_describe_tags
+    - GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /ec2_describe_tags
     - mv /src/scripts/* /

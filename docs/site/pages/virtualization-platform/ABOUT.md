@@ -8,13 +8,17 @@ DVP is powered by [Deckhouse Kubernetes Platform](https://deckhouse.io/products/
 
 ## Usage scenarios
 
-- Running virtual machines with an x86_64-compatible OS.
+- Running virtual machines with an x86-64-compatible OS.
 
   ![Launching VM](/../../images/virtualization-platform/cases-vms.png)
 
 - Running virtual machines and containerized applications in the same environment.
 
   ![Launching VMs and applications](/../../images/virtualization-platform/cases-pods-and-vms.png)
+
+- Creation of DKP clusters.
+
+  ![Creation of DKP clusters](/../../images/virtualization-platform/cases.dkp.png)
 
 > **Warning.** If you intend to use Deckhouse Virtualization Platform in a production environment, we recommend deploying it on physical (bare-metal) servers. Deploying Deckhouse Virtualization Platform on virtual machines is also possible, but in this case you must enable nested virtualization.
 
@@ -41,8 +45,8 @@ The following controllers and operators are deployed in the d8-virtualization na
 | `virt-exportproxy-*`          | CORE      | Virtualization core component for disk and image management.                                                                 |
 | `virt-handler-*`              | CORE      | Virtualization core component for disk and image management. Must be present on all cluster nodes where VMs will be started. |
 | `virt-operator-*`             | CORE      | Virtualization core component for disk and image management.                                                                 |
-| `virtualization-api-*`        | API       | API for creating and managing module resources (images, disks, VMs, etc)                                                     |
-| `virtualization-controller-*` | API       | API for creating and managing module resources (images, disks, VMs, etc)                                                     |
+| `virtualization-api-*`        | API       | API for creating and managing module resources (images, disks, VMs, etc.)                                                     |
+| `virtualization-controller-*` | API       | API for creating and managing module resources (images, disks, VMs, etc.)                                                     |
 | `vm-route-forge-*`            | CORE      | Router for configuring routes to VMs. Must be present on all cluster nodes where VMs will be started.                        |
 
 The virtual machine runs inside the pod, which allows you to manage virtual machines as regular Kubernetes resources and utilize all the platform features, including load balancers, network policies, automation tools, etc.

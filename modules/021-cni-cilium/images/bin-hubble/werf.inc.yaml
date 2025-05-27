@@ -16,15 +16,18 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $hubbleVersion }} {{ $.SOURCE_REPO }}/cilium/hubble.git /src/hubble
+  - git clone --depth 1 --branch {{ $hubbleVersion }} $(cat /run/secrets/SOURCE_REPO)/cilium/hubble.git /src/hubble
   - cd /src/hubble
   - git apply --verbose /patches/*.patch
   - rm -rf /src/hubble/.git
 ---
 image: {{ .ModuleName }}/hubble-artifact
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -32,14 +35,16 @@ import:
   to: /src
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache make git bash binutils
   install:
-  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /src/hubble
   - go mod vendor && go mod verify

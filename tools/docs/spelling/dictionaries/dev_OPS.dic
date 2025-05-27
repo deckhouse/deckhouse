@@ -1,4 +1,4 @@
-2409
+2414
 1GB
 2GB
 5XX
@@ -171,7 +171,6 @@ CentOS7
 ceph
 Ceph
 CEPH
-CephCSIDriver
 CephFS
 certExporter
 certmanager
@@ -1009,6 +1008,9 @@ OpenStackClusterConfiguration
 OpenStackEE
 OpenStackInstanceClass
 OpenStackInstanceClasses
+opentofu
+Opentofu
+OpenTofu
 openvpn
 OpenVPN
 openvpn-admin
@@ -1414,6 +1416,7 @@ UI
 uid
 UID
 uncordoned
+unicode
 uninstall
 uninstalling
 Unlabel
@@ -1552,6 +1555,8 @@ YadroStorageConnection
 yaml
 yandex
 Yandex
+Yandex.Cloud
+YandexCloud
 YandexClusterConfiguration
 YandexInstanceClass
 YandexInstanceClasses

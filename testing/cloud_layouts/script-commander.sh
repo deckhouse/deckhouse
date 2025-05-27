@@ -134,37 +134,71 @@ function prepare_environment() {
     SERVICE_ACCOUNT_JSON=$LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON
     ssh_user="redos"
     cluster_template_id="6a47d23a-e16f-4e7a-bf57-a65f7c05e8ae"
+    values="{
+      \"branch\": \"${DEV_BRANCH}\",
+      \"prefix\": \"a${PREFIX}\",
+      \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
+      \"defaultCRI\": \"${CRI}\",
+      \"masterCount\": \"${MASTERS_COUNT}\",
+      \"cloudId\": \"${CLOUD_ID}\",
+      \"folderId\": \"${FOLDER_ID}\",
+      \"serviceAccountJson\": \"${SERVICE_ACCOUNT_JSON}\",
+      \"sshPrivateKey\": \"${SSH_KEY}\",
+      \"sshUser\": \"${ssh_user}\",
+      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\"
+    }"
     ;;
 
   "GCP")
-    # shellcheck disable=SC2016
-    env SERVICE_ACCOUNT_JSON="$(base64 -d <<< "$LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON")" \
-        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" MASTERS_COUNT="$MASTERS_COUNT" \
-        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${SERVICE_ACCOUNT_JSON} ${MASTERS_COUNT}' \
-        <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
-
     ssh_user="user"
+    cluster_template_id="565ed77c-0ae0-4baa-9ece-6603bcf3139a"
+    values="{
+      \"branch\": \"${DEV_BRANCH}\",
+      \"prefix\": \"a${PREFIX}\",
+      \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
+      \"defaultCRI\": \"${CRI}\",
+      \"masterCount\": \"${MASTERS_COUNT}\",
+      \"serviceAccountJson\": \"${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON}\",
+      \"sshPrivateKey\": \"${SSH_KEY}\",
+      \"sshUser\": \"${ssh_user}\",
+      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\"
+    }"
     ;;
 
   "AWS")
-    # shellcheck disable=SC2016
-    env AWS_ACCESS_KEY="$(base64 -d <<< "$LAYOUT_AWS_ACCESS_KEY")" AWS_SECRET_ACCESS_KEY="$(base64 -d <<< "$LAYOUT_AWS_SECRET_ACCESS_KEY")" \
-        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" MASTERS_COUNT="$MASTERS_COUNT" \
-        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${AWS_ACCESS_KEY} ${AWS_SECRET_ACCESS_KEY} ${MASTERS_COUNT}' \
-        <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
-
     ssh_user="ec2-user"
+    cluster_template_id="9b567623-91a9-4493-96de-f5c0b6acacfe"
+    values="{
+      \"branch\": \"${DEV_BRANCH}\",
+      \"prefix\": \"a${PREFIX}\",
+      \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
+      \"defaultCRI\": \"${CRI}\",
+      \"masterCount\": \"${MASTERS_COUNT}\",
+      \"awsAccessKey\": \"${LAYOUT_AWS_ACCESS_KEY}\",
+      \"awsSecretKey\": \"${LAYOUT_AWS_SECRET_ACCESS_KEY}\",
+      \"sshPrivateKey\": \"${SSH_KEY}\",
+      \"sshUser\": \"${ssh_user}\",
+      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\"
+    }"
     ;;
 
   "Azure")
-    # shellcheck disable=SC2016
-    env SUBSCRIPTION_ID="$LAYOUT_AZURE_SUBSCRIPTION_ID" CLIENT_ID="$LAYOUT_AZURE_CLIENT_ID" \
-        CLIENT_SECRET="$LAYOUT_AZURE_CLIENT_SECRET"  TENANT_ID="$LAYOUT_AZURE_TENANT_ID" \
-        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" MASTERS_COUNT="$MASTERS_COUNT" \
-        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${TENANT_ID} ${CLIENT_SECRET} ${CLIENT_ID} ${SUBSCRIPTION_ID} ${MASTERS_COUNT}' \
-        <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
-
     ssh_user="azureuser"
+    cluster_template_id="3900de40-547c-4c62-927c-ef42018d62f4"
+    values="{
+      \"branch\": \"${DEV_BRANCH}\",
+      \"prefix\": \"a${PREFIX}\",
+      \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
+      \"defaultCRI\": \"${CRI}\",
+      \"masterCount\": \"${MASTERS_COUNT}\",
+      \"subscriptionId\": \"${LAYOUT_AZURE_SUBSCRIPTION_ID}\",
+      \"clientId\": \"${LAYOUT_AZURE_CLIENT_ID}\",
+      \"clientSecret\": \"${LAYOUT_AZURE_CLIENT_SECRET}\",
+      \"tenantId\": \"${LAYOUT_AZURE_TENANT_ID}\",
+      \"sshPrivateKey\": \"${SSH_KEY}\",
+      \"sshUser\": \"${ssh_user}\",
+      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\"
+    }"
     ;;
 
   "OpenStack")
@@ -260,7 +294,7 @@ EOF
   ssh_command="ssh -F /tmp/cloud-test-ssh-config -i id_rsa "
 }
 
-function wait_allerts_resolve() {
+function wait_alerts_resolve() {
 
   allow_alerts=(
   "D8DeckhouseIsNotOnReleaseChannel" # Tests may be made on dev branch
@@ -411,7 +445,7 @@ function update_comment() {
   # Check for HTTP errors
   if [[ ${http_code} -ge 400 ]]; then
     echo "Error: Getting comment error ${http_code}" >&2
-    echo "$response" >&2
+    echo "$comment" >&2
     return 1
   fi
 
@@ -457,19 +491,7 @@ function run-test() {
   payload="{
     \"name\": \"${PREFIX}\",
     \"cluster_template_version_id\": \"${cluster_template_version_id}\",
-    \"values\": {
-        \"branch\": \"${DEV_BRANCH}\",
-        \"prefix\": \"a${PREFIX}\",
-        \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
-        \"defaultCRI\": \"${CRI}\",
-        \"masterCount\": \"${MASTERS_COUNT}\",
-        \"cloudId\": \"${CLOUD_ID}\",
-        \"folderId\": \"${FOLDER_ID}\",
-        \"serviceAccountJson\": \"${SERVICE_ACCOUNT_JSON}\",
-        \"sshPrivateKey\": \"${SSH_KEY}\",
-        \"sshUser\": \"${ssh_user}\",
-        \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\"
-    }
+    \"values\": ${values}
   }"
 
   echo "Bootstrap payload: ${payload}"
@@ -556,7 +578,14 @@ function run-test() {
   done
 
   wait_upmeter_green
-  wait_allerts_resolve
+
+  if [[ "$SLEEP_BEFORE_TESTING_CLUSTER_ALERTS" != "" && "$SLEEP_BEFORE_TESTING_CLUSTER_ALERTS" != "0" ]]; then
+    echo "Sleeping $SLEEP_BEFORE_TESTING_CLUSTER_ALERTS seconds before check cluster alerts"
+    sleep "$SLEEP_BEFORE_TESTING_CLUSTER_ALERTS"
+  fi
+
+  wait_alerts_resolve
+
   set_common_ssh_parameters
 
   testScript=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_commander_script.sh")
@@ -568,12 +597,27 @@ function run-test() {
     return 1
   fi
 
+  testOpenvpnReady=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_openvpn_ready.sh")
+
+  test_failed="true"
+    if $ssh_command $ssh_bastion "$ssh_user@$master_ip" \
+      sudo su -c /bin/bash <<<"${testOpenvpnReady}"; then
+      test_failed=""
+    else
+      >&2 echo "OpenVPN test failed for Static provider. Sleeping 30 seconds..."
+      sleep 30
+    fi
+
+    if [[ $test_failed == "true" ]]; then
+      return 1
+    fi
+
   if [[ -n ${SWITCH_TO_IMAGE_TAG} ]]; then
     echo "Starting switch deckhouse image"
     change_deckhouse_image "${SWITCH_TO_IMAGE_TAG}" || return $?
     wait_deckhouse_ready || return $?
     wait_upmeter_green || return $?
-    wait_allerts_resolve || return $?
+    wait_alerts_resolve || return $?
 
     testScript=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_script.sh")
 

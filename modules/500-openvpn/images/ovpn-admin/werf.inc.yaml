@@ -45,10 +45,13 @@ git:
   stageDependencies:
     install:
     - '**/*.patch'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   - cd /src
-  - git clone {{ .SOURCE_REPO }}/palark/ovpn-admin.git .
+  - git clone $(cat /run/secrets/SOURCE_REPO)/palark/ovpn-admin.git .
   - git checkout {{ $gitCommit }}
   - git apply /patches/*.patch --verbose
   - rm -rf .git
@@ -56,20 +59,22 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-backend-artifact
 final: false
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
   - cd /src
-  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-  - go mod tidy
+  - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   - go build -ldflags="-s -w" .
   - chown -R 64535:64535 /src
   - chmod 0755 /src/ovpn-admin

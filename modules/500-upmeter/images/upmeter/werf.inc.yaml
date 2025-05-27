@@ -14,31 +14,35 @@ git:
     - go.sum
     setup:
     - "**/*.go"
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v4.18.2 {{ $.SOURCE_REPO }}/golang-migrate/migrate.git /src/migrate
+  - git clone --depth 1 --branch v4.18.2 $(cat /run/secrets/SOURCE_REPO)/golang-migrate/migrate.git /src/migrate
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
-
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" $ | nindent 2 }}
   - apk add --no-cache gcc musl-dev jq-dev oniguruma-dev curl
   install:
   - cd /src/upmeter
-  - GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -linkmode external -extldflags '-static'" -o /upmeter ./cmd/upmeter
+  - GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -linkmode external -extldflags '-static'" -o /upmeter ./cmd/upmeter
   - cd /src/migrate
-  - GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -linkmode external -extldflags '-static'" -tags 'sqlite3' -o /migrate ./cmd/migrate
+  - GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -linkmode external -extldflags '-static'" -tags 'sqlite3' -o /migrate ./cmd/migrate
   - chown 64535:64535 /migrate /upmeter
   - chmod 0700 /migrate /upmeter
 ---

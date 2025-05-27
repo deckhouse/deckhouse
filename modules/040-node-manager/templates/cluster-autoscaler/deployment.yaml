@@ -9,7 +9,7 @@ memory: 150Mi
 
 {{- define "cluster_autoscaler_provider" }}
   {{- if hasKey $.Values.nodeManager.internal "cloudProvider" }}
-    {{- if or (hasKey $.Values.nodeManager.internal.cloudProvider "vcd") (hasKey $.Values.nodeManager.internal.cloudProvider "zvirt") (hasKey $.Values.nodeManager.internal.cloudProvider "dynamix") (hasKey $.Values.nodeManager.internal.cloudProvider "huaweicloud") }}
+    {{- if or (hasKey $.Values.nodeManager.internal.cloudProvider "vcd") (hasKey $.Values.nodeManager.internal.cloudProvider "zvirt") (hasKey $.Values.nodeManager.internal.cloudProvider "dynamix") (hasKey $.Values.nodeManager.internal.cloudProvider "huaweicloud") (hasKey $.Values.nodeManager.internal.cloudProvider "dvp") }}
 - --cloud-provider=clusterapi
     {{- else }}
 - --cloud-provider=mcm
@@ -93,6 +93,7 @@ spec:
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      automountServiceAccountToken: true
       serviceAccountName: cluster-autoscaler
       terminationGracePeriodSeconds: 5
       imagePullSecrets:
@@ -120,7 +121,7 @@ spec:
         - --balance-similar-node-groups=true
         - --expander=priority,least-waste
         - --max-failing-time=120m
-        - --v=2
+        - --v=5
         env:
         - name: CONTROL_NAMESPACE
           value: d8-cloud-instance-manager

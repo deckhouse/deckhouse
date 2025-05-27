@@ -10,9 +10,12 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch tag-{{ $version }}  {{ $.SOURCE_REPO }}/socat.git /src/socat
+  - git clone --depth 1 --branch tag-{{ $version }}  $(cat /run/secrets/SOURCE_REPO)/socat.git /src/socat
   - rm -rf /src/socat/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}

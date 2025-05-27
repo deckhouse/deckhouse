@@ -235,8 +235,8 @@ deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
 kubectl get deckhousereleases
 ```
 
-{% alert %}
-Patch-релизы (например, обновление на версию `1.30.2` при установленной версии `1.30.1`) устанавливаются без учета режима и окон обновления, то есть при появлении на канале обновления patch-релиза он всегда будет установлен.
+{% alert level="warning" %}
+Начиная с версии DKP 1.70, patch-версии обновлений (например, обновление на версию `1.70.2` при установленной версии `1.70.1`) устанавливаются с учетом окон обновлений. До версии DKP 1.70 patch-версии обновлений устанавливаются без учета режима и окон обновления.
 {% endalert %}
 
 ### Что происходит при смене канала обновлений?
@@ -349,7 +349,7 @@ Queue 'main': length 0, status: 'waiting for task 0s'
 ### Как установить Deckhouse из стороннего registry?
 
 {% alert level="warning" %}
-Доступно только в Enterprise Edition.
+Доступно в следующих редакциях: BE, SE, SE+, EE, CSE Lite (1.67), CSE Pro (1.67).
 {% endalert %}
 
 {% alert level="warning" %}
@@ -441,10 +441,10 @@ echo "$MYRESULTSTRING"
    * `Remote storage` должно иметь значение `https://registry.deckhouse.ru/`.
    * `Auto blocking enabled` и `Not found cache enabled` могут быть выключены для отладки; в противном случае их следует включить.
    * `Maximum Metadata Age` должно быть равно `0`.
-   * Если планируется использовать Deckhouse Enterprise Edition, флажок `Authentication` должен быть включен, а связанные поля должны быть заполнены следующим образом:
+   * Если планируется использовать коммерческую редакцию Deckhouse Kubernetes Platform, флажок `Authentication` должен быть включен, а связанные поля должны быть заполнены следующим образом:
      * `Authentication Type` должно иметь значение `Username`.
      * `Username` должно иметь значение `license-token`.
-     * `Password` должно содержать ключ лицензии Deckhouse Enterprise Edition.
+     * `Password` должно содержать ключ лицензии Deckhouse Kubernetes Platform.
 
     ![Пример настроек репозитория 1](images/registry/nexus/nexus-repo-example-1.png)
     ![Пример настроек репозитория 2](images/registry/nexus/nexus-repo-example-2.png)
@@ -470,7 +470,7 @@ echo "$MYRESULTSTRING"
   * `Provider`: `Docker Registry`.
   * `Name` — укажите любое, на ваше усмотрение.
   * `Endpoint URL`: `https://registry.deckhouse.ru`.
-  * Укажите `Access ID` и `Access Secret` для Deckhouse Enterprise Edition.
+  * Укажите `Access ID` и `Access Secret` (лицензионный ключ для Deckhouse Kubernetes Platform).
 
     ![Настройка Registry](images/registry/harbor/harbor1.png)
 
@@ -618,16 +618,10 @@ echo "$MYRESULTSTRING"
 
    В ресурсе [InitConfiguration](installing/configuration.html#initconfiguration) при установке также используйте адрес вашего хранилища и данные авторизации (параметры [imagesRepo](installing/configuration.html#initconfiguration-deckhouse-imagesrepo), [registryDockerCfg](installing/configuration.html#initconfiguration-deckhouse-registrydockercfg) или [шаг 3]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/bm-private/step3.html) руководства по быстрому старту).
 
-   После завершения установки примените сгенерированные во время загрузки манифесты [DeckhouseReleases](cr.html#deckhouserelease) к вашему кластеру, используя [Deckhouse CLI](deckhouse-cli/):
-
-   ```shell
-   d8 k apply -f ./deckhousereleases.yaml
-   ```
-
 ### Как переключить работающий кластер Deckhouse на использование стороннего registry?
 
 {% alert level="warning" %}
-Использование registry, отличных от `registry.deckhouse.io` и `registry.deckhouse.ru`, доступно только в Enterprise Edition.
+Использование registry, отличных от `registry.deckhouse.io` и `registry.deckhouse.ru`, доступно только в коммерческих редакциях Deckhouse Kubernetes Platform.
 {% endalert %}
 
 Для переключения кластера Deckhouse на использование стороннего registry выполните следующие действия:
@@ -711,7 +705,7 @@ echo "$MYRESULTSTRING"
 ### Использование proxy-сервера
 
 {% alert level="warning" %}
-Доступно только в Enterprise Edition.
+Доступно в следующих редакциях: BE, SE, SE+, EE, CSE Lite (1.67), CSE Pro (1.67).
 {% endalert %}
 
 {% offtopic title="Пример шагов по настройке proxy-сервера на базе Squid..." %}
@@ -861,7 +855,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 ### Как переключить Deckhouse EE на CE?
 
 {% alert level="warning" %}
-Инструкция подразумевает использование публичного адреса container registry: `registry.deckhouse.ru`. Использование registry отличных от `registry.deckhouse.io` и `registry.deckhouse.ru` доступно только в Enterprise Edition.
+Инструкция подразумевает использование публичного адреса container registry: `registry.deckhouse.ru`. Использование registry, отличных от `registry.deckhouse.io` и `registry.deckhouse.ru`, доступно только в коммерческих редакциях Deckhouse Kubernetes Platform.
 
 В Deckhouse CE не поддерживается работа облачных кластеров на OpenStack и VMware vSphere.
 {% endalert %}

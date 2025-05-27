@@ -27,7 +27,7 @@ git:
     - '**/go.sum'
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-basic-auth-proxy-artifact
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-basic-auth-proxy-src-artifact
@@ -35,11 +35,13 @@ import:
   to: /src
   before: install
 mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
-    - export GOPROXY={{ .GOPROXY }}
+    - export GOPROXY=$(cat /run/secrets/GOPROXY)
     - cd /src
     - CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w' -o basic-auth-proxy ./cmd/main.go
     - chown 64535:64535 basic-auth-proxy

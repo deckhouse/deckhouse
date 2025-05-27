@@ -38,13 +38,12 @@ var imagesDigestsJSON = "/deckhouse/candi/images_digests.json"
 const (
 	deckhouseRegistrySecretName = "deckhouse-registry"
 
-	deployTimeEnvVarName        = "KUBERNETES_DEPLOYED"
-	deployServiceHostEnvVarName = "KUBERNETES_SERVICE_HOST"
-	deployServicePortEnvVarName = "KUBERNETES_SERVICE_PORT"
-	deployTimeEnvVarFormat      = time.RFC3339
-	pathSeparator               = ":"
-
-	ConvergeLabel = "dhctl.deckhouse.io/node-for-converge"
+	deployTimeEnvVarName            = "KUBERNETES_DEPLOYED"
+	deployServiceHostEnvVarName     = "KUBERNETES_SERVICE_HOST"
+	deployServicePortEnvVarName     = "KUBERNETES_SERVICE_PORT"
+	deployTimeEnvVarFormat          = time.RFC3339
+	pathSeparator                   = ":"
+	NodeInfrastructureStateLabelKey = "node.deckhouse.io/terraform-state"
 )
 
 type DeckhouseDeploymentParams struct {
@@ -221,9 +220,10 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			},
 		},
 		Spec: apiv1.PodSpec{
-			HostNetwork:        true,
-			DNSPolicy:          apiv1.DNSDefault,
-			ServiceAccountName: "deckhouse",
+			HostNetwork:                  true,
+			DNSPolicy:                    apiv1.DNSDefault,
+			ServiceAccountName:           "deckhouse",
+			AutomountServiceAccountToken: ptr.To(true),
 			SecurityContext: &apiv1.PodSecurityContext{
 				RunAsUser:    ptr.To(int64(0)),
 				RunAsNonRoot: ptr.To(false),
@@ -360,10 +360,6 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			Value: "heritage=deckhouse",
 		},
 		{
-			Name:  "HELM3LIB",
-			Value: "yes",
-		},
-		{
 			Name:  "HELM_HISTORY_MAX",
 			Value: "3",
 		},
@@ -464,6 +460,7 @@ func DeckhouseServiceAccount() *apiv1.ServiceAccount {
 				"meta.helm.sh/release-namespace": "d8-system",
 			},
 		},
+		AutomountServiceAccountToken: ptr.To(false),
 	}
 }
 
@@ -563,11 +560,11 @@ func generateSecret(name, namespace string, data map[string][]byte, labels map[s
 	}
 }
 
-const TerraformClusterStateName = "d8-cluster-terraform-state"
+const InfrastructureClusterStateName = "d8-cluster-terraform-state"
 
-func SecretWithTerraformState(data []byte) *apiv1.Secret {
+func SecretWithInfrastructureState(data []byte) *apiv1.Secret {
 	return generateSecret(
-		TerraformClusterStateName,
+		InfrastructureClusterStateName,
 		"d8-system",
 		map[string][]byte{
 			"cluster-tf-state.json": data,
@@ -578,7 +575,7 @@ func SecretWithTerraformState(data []byte) *apiv1.Secret {
 	)
 }
 
-func PatchWithTerraformState(stateData []byte) interface{} {
+func PatchWithInfrastructureState(stateData []byte) interface{} {
 	return map[string]interface{}{
 		"data": map[string]interface{}{
 			"cluster-tf-state.json": stateData,
@@ -626,29 +623,29 @@ func SecretWithStaticClusterConfig(configData []byte) *apiv1.Secret {
 	)
 }
 
-func SecretNameForNodeTerraformState(nodeName string) string {
+func SecretNameForNodeInfrastructureState(nodeName string) string {
 	return "d8-node-terraform-state-" + nodeName
 }
 
-func SecretWithNodeTerraformState(nodeName, nodeGroup string, data, settings []byte) *apiv1.Secret {
+func SecretWithNodeInfrastructureState(nodeName, nodeGroup string, data, settings []byte) *apiv1.Secret {
 	body := map[string][]byte{"node-tf-state.json": data}
 	if settings != nil {
 		body["node-group-settings.json"] = settings
 	}
 	return generateSecret(
-		SecretNameForNodeTerraformState(nodeName),
+		SecretNameForNodeInfrastructureState(nodeName),
 		"d8-system",
 		body,
 		map[string]string{
-			"node.deckhouse.io/node-group":      nodeGroup,
-			"node.deckhouse.io/node-name":       nodeName,
-			"node.deckhouse.io/terraform-state": "",
-			"heritage":                          "deckhouse",
+			"node.deckhouse.io/node-group":  nodeGroup,
+			"node.deckhouse.io/node-name":   nodeName,
+			NodeInfrastructureStateLabelKey: "",
+			"heritage":                      "deckhouse",
 		},
 	)
 }
 
-func PatchWithNodeTerraformState(stateData []byte) interface{} {
+func PatchWithNodeInfrastructureState(stateData []byte) interface{} {
 	return map[string]interface{}{
 		"data": map[string]interface{}{
 			"node-tf-state.json": stateData,

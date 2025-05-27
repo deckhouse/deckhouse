@@ -38,11 +38,14 @@ git:
   stageDependencies:
     install:
     - '**/*.patch'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --branch {{ $falcoVersion }} --depth 1 {{ .SOURCE_REPO }}/falcosecurity/falco.git /src/falco
-  - git clone --branch {{ $pluginsVersion }} --depth 1 {{ .SOURCE_REPO }}/falcosecurity/plugins.git /src/plugins
-  - git clone --branch v{{ $falcoctlVersion }} --depth 1 {{ .SOURCE_REPO }}/falcosecurity/falcoctl.git /src/falcoctl
+  - git clone --branch {{ $falcoVersion }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/falcosecurity/falco.git /src/falco
+  - git clone --branch {{ $pluginsVersion }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/falcosecurity/plugins.git /src/plugins
+  - git clone --branch v{{ $falcoctlVersion }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/falcosecurity/falcoctl.git /src/falcoctl
   - cd /src/plugins
   - rm -rf shared plugins/cloudtrail plugins/dummy* plugins/gcpaudit plugins/github plugins/k8saudit-* plugins/kafka plugins/okta build docs
   - cd /src/falcoctl
@@ -54,7 +57,7 @@ shell:
   - rm -rf /src/falcoctl/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-falcoctl-artifact
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -62,24 +65,24 @@ import:
   to: /src
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
-- from: tmp_dir
-  to: /root/.cache/go-build
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache make bash
   install:
   - cd /src
-  - export GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-  - go mod download
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   - RELEASE="$(cat RELEASE)" COMMIT="$(cat COMMIT)" make falcoctl
   - chown 64535:64535 falcoctl
   - chmod 0755 falcoctl
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: common/alt-p11-artifact
+fromImage: common/relocate-artifact
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -87,19 +90,17 @@ import:
   to: /src
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
-- fromPath: ~/go-pkg-cache
-  to: /root/go/pkg
-- from: tmp_dir
-  to: /root/.cache/go-build
+{{ include "mount points for golang builds" . }}
 - from: tmp_dir
   to: /src/falco/build
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   beforeInstall:
   {{- include "alt packages proxy" . | nindent 2 }}
   - apt-get install -y git openssl-devel wget clang cmake libelf-devel libbpf-devel bpftool perl-IPC-Cmd gcc12 gcc12-c++ build-essential golang
-  - git config --global url."{{ .SOURCE_REPO }}".insteadOf https://github.com
+  - git config --global url."$(cat /run/secrets/SOURCE_REPO)".insteadOf https://github.com
   - rm -f /usr/bin/clang
   - ln -s /usr/bin/clang-18 /usr/bin/clang
   - rm -f /usr/bin/x86_64-alt-linux-gcc /usr/bin/x86_64-alt-linux-g++
@@ -150,3 +151,5 @@ shell:
   - make
   - cp libk8smeta.so /falco-package/usr/share/falco/plugins
   - make clean
+  - /binary_replace.sh -i "/falco-package/usr/bin/falco" -o /falco-package
+  - rm -rf /falco-package/falco-package

@@ -147,17 +147,17 @@ groups:
     description:
       en: "*kube-router* metrics"
       ru: "Метрики *kube-router*"
-  - ports: "9695"
+  - ports: "4202"
     protocol: TCP
     description:
       en: "*sds-node-configurator* node agent metrics"
       ru: "Метрики агента *sds-node-configurator*"
-  - ports: "3367"
+  - ports: "4214"
     protocol: TCP
     description:
       en: API of the *sds-replicated-volume* module node agent
       ru: API агента модуля *sds-replicated-volume*
-  - ports: "9942"
+  - ports: "4215"
     protocol: TCP
     description:
       en: "*sds-replicated-volume* node agent metrics"
@@ -212,6 +212,11 @@ groups:
     description:
       en: chrony-exporter metrics port
       ru: Метрики chrony-exporter
+  - ports: "4288, 4229"
+    protocol: TCP
+    description:
+      en: "monitoring-ping metrics"
+      ru: "Метрики monitoring-ping"
 
 - group: ExternalToMaster
   description:

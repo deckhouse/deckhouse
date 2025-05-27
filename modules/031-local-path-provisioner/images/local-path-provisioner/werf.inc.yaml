@@ -22,27 +22,32 @@ git:
   stageDependencies:
     install:
     - '**/*.patch'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{$localPathProvisionerVersion}} {{ $.SOURCE_REPO }}/rancher/local-path-provisioner.git /src
+  - git clone --depth 1 --branch v{{$localPathProvisionerVersion}} $(cat /run/secrets/SOURCE_REPO)/rancher/local-path-provisioner.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
   - rm -rf .git vendor
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
 shell:
   install:
   - cd /src
-  - GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-X main.VERSION={{$localPathProvisionerVersion}} -extldflags -static -s -w" -o /local-path-provisioner
+  - GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-X main.VERSION={{$localPathProvisionerVersion}} -extldflags -static -s -w" -o /local-path-provisioner
   - chown -R 64535:64535 /local-path-provisioner
   - chmod 0700 /local-path-provisioner

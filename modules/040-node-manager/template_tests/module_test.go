@@ -681,12 +681,14 @@ spec:
 `
 )
 
-const openstackCIMPath = "/deckhouse/ee/modules/030-cloud-provider-openstack/cloud-instance-manager"
-const openstackCIMSymlink = "/deckhouse/modules/040-node-manager/cloud-providers/openstack"
-const vsphereCIMPath = "/deckhouse/ee/se-plus/modules/030-cloud-provider-vsphere/cloud-instance-manager"
-const vsphereCIMSymlink = "/deckhouse/modules/040-node-manager/cloud-providers/vsphere"
-const vcdCAPIPath = "/deckhouse/ee/modules/030-cloud-provider-vcd/capi"
-const vcdCAPISymlink = "/deckhouse/modules/040-node-manager/capi/vcd"
+const (
+	openstackCIMPath    = "/deckhouse/ee/modules/030-cloud-provider-openstack/cloud-instance-manager"
+	openstackCIMSymlink = "/deckhouse/modules/040-node-manager/cloud-providers/openstack"
+	vsphereCIMPath      = "/deckhouse/ee/se-plus/modules/030-cloud-provider-vsphere/cloud-instance-manager"
+	vsphereCIMSymlink   = "/deckhouse/modules/040-node-manager/cloud-providers/vsphere"
+	vcdCAPIPath         = "/deckhouse/ee/modules/030-cloud-provider-vcd/capi"
+	vcdCAPISymlink      = "/deckhouse/modules/040-node-manager/capi/vcd"
+)
 
 var _ = Describe("Module :: node-manager :: helm template ::", func() {
 	f := SetupHelmConfig(``)
@@ -1853,12 +1855,6 @@ internal:
 					Expect(vcdCluster.Field("spec.site").String()).To(Equal("https://localhost:5000"))
 					Expect(vcdCluster.Field("spec.org").String()).To(Equal("org"))
 					Expect(vcdCluster.Field("spec.ovdc").String()).To(Equal("dc"))
-
-					Expect(vcdCluster.Field("spec.proxyConfigSpec.httpProxy").String()).To(Equal("https://example.com"))
-					Expect(vcdCluster.Field("spec.proxyConfigSpec.httpsProxy").String()).To(Equal("https://example.com"))
-					Expect(vcdCluster.Field("spec.proxyConfigSpec.noProxy").AsStringSlice()).To(Equal([]string{
-						"127.0.0.1", "169.254.169.254", "cluster.local", "10.111.0.0/16", "10.222.0.0/16", "example.com",
-					}))
 				}
 
 				type mdParams struct {
@@ -1920,6 +1916,130 @@ internal:
 				Expect(vcdTemplateWithCatalog.Exists()).To(BeTrue())
 				Expect(vcdTemplateWithCatalog.Field("spec.template.spec.template").String()).To(Equal("Ubuntu"))
 				Expect(vcdTemplateWithCatalog.Field("spec.template.spec.catalog").String()).To(Equal("catalog"))
+			})
+		})
+
+		Context("DVP", func() {
+			const nodeManagerDVP = `
+internal:
+  capiControllerManagerEnabled: true
+  bootstrapTokens:
+    worker: mytoken
+  capiControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  machineDeployments: {}
+  instancePrefix: myprefix
+  clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
+  kubernetesCA: myclusterca
+  cloudProvider:
+    type: dvp
+    machineClassKind: ""
+    capiClusterKind: "DeckhouseCluster"
+    capiClusterAPIVersion: "infrastructure.cluster.x-k8s.io/v1alpha1"
+    capiClusterName: "dvp"
+    capiMachineTemplateKind: "DeckhouseMachineTemplate"
+    capiMachineTemplateAPIVersion: "infrastructure.cluster.x-k8s.io/v1alpha1"
+    dvp: {}
+  nodeGroups:
+    - cloudInstances:
+        classReference:
+          kind: DVPInstanceClass
+          name: worker
+        maxPerZone: 5
+        minPerZone: 4
+        zones:
+          - default
+      cri:
+        type: Containerd
+      instanceClass:
+        rootDisk:
+          image:
+            kind: ClusterVirtualImage
+            name: ubuntu-2204
+          size: 50Gi
+          storageClass: ceph-pool-r2-csi-rbd-immediate
+        virtualMachine:
+          bootloader: EFI
+          cpu:
+            coreFraction: 100%
+            cores: 4
+          memory:
+            size: 8Gi
+      kubelet:
+        containerLogMaxFiles: 4
+        containerLogMaxSize: 50Mi
+        resourceReservation:
+          mode: Auto
+        topologyManager: {}
+      kubernetesVersion: "1.30"
+      manualRolloutID: ""
+      name: worker
+      nodeType: CloudEphemeral
+      updateEpoch: "1746532947"
+`
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSet("global.modulesImages", GetModulesImages())
+				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerDVP)
+				setBashibleAPIServerTLSValues(f)
+				f.HelmRender()
+			})
+			It("Everything must render properly", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				type mdParams struct {
+					name         string
+					templateName string
+				}
+
+				assertMachineDeploymentAndItsDeps := func(f *Config, d mdParams) {
+					md := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", d.name)
+					Expect(md.Exists()).To(BeTrue())
+
+					Expect(md.Field("spec.clusterName").String()).To(Equal("dvp"))
+					Expect(md.Field("spec.template.spec.clusterName").String()).To(Equal("dvp"))
+					Expect(md.Field("spec.template.spec.bootstrap.dataSecretName").String()).To(Equal(d.templateName))
+					Expect(md.Field("spec.template.spec.infrastructureRef.name").String()).To(Equal(d.templateName))
+
+					annotations := md.Field("metadata.annotations").Map()
+					Expect(annotations["cluster.x-k8s.io/cluster-api-autoscaler-node-group-min-size"].String()).To(Equal("4"))
+					Expect(annotations["cluster.x-k8s.io/cluster-api-autoscaler-node-group-max-size"].String()).To(Equal("5"))
+
+					secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", d.templateName)
+					Expect(secret.Exists()).To(BeTrue())
+
+					dvpTemplate := f.KubernetesResource("DeckhouseMachineTemplate", "d8-cloud-instance-manager", d.templateName)
+					Expect(dvpTemplate.Exists()).To(BeTrue())
+
+					Expect(dvpTemplate.Field("spec.template.spec.bootDiskImageRef.kind").String()).To(Equal("ClusterVirtualImage"))
+					Expect(dvpTemplate.Field("spec.template.spec.bootDiskImageRef.name").String()).To(Equal("ubuntu-2204"))
+					Expect(dvpTemplate.Field("spec.template.spec.bootloader").String()).To(Equal("EFI"))
+					Expect(dvpTemplate.Field("spec.template.spec.cpu.cores").String()).To(Equal("4"))
+					Expect(dvpTemplate.Field("spec.template.spec.cpu.cpuFraction").String()).To(Equal("100%"))
+					Expect(dvpTemplate.Field("spec.template.spec.memory").String()).To(Equal("8Gi"))
+					Expect(dvpTemplate.Field("spec.template.spec.rootDiskSize").String()).To(Equal("50Gi"))
+					Expect(dvpTemplate.Field("spec.template.spec.rootDiskStorageClass").String()).To(Equal("ceph-pool-r2-csi-rbd-immediate"))
+					Expect(dvpTemplate.Field("spec.template.spec.vmClassName").String()).To(Equal("generic"))
+
+					Expect(dvpTemplate.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("d6810a4d026957c4c928884a49c27a69f85792fd4de4cb8c88dc9e674e3b982c"), "Prevent checksum changing")
+					Expect(md.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("d6810a4d026957c4c928884a49c27a69f85792fd4de4cb8c88dc9e674e3b982c"), "Prevent checksum changing")
+				}
+
+				registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
+				Expect(registrySecret.Exists()).To(BeTrue())
+
+				assertClusterResources(f, "dvp")
+
+				assertMachineDeploymentAndItsDeps(f, mdParams{
+					name:         "myprefix-worker-8ced91ee",
+					templateName: "worker-71610da1",
+				})
 			})
 		})
 	})

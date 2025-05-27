@@ -31,7 +31,7 @@ version = 2
     enable_selinux = ${enable_selinux}
 EOF
 
-cp -f containerd containerd-shim containerd-shim-runc-v1 containerd-shim-runc-v2 ctr runc /opt/deckhouse/bin
+cp -f containerd containerd-shim-runc-v1 containerd-shim-runc-v2 ctr runc /opt/deckhouse/bin
 
 mkdir -p /lib/systemd/system/
 cp -f containerd.service /lib/systemd/system/containerd-deckhouse.service

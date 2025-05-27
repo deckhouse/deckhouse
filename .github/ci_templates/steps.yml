@@ -254,3 +254,18 @@
     done <<< "$HOST_KEYS"
 # </template: login_git_step>
 {!{- end -}!}
+
+
+{!{ define "send_fail_report" }!}
+# <template: send_fail_report>
+- name: Send fail report
+  if: failure()
+  env:
+    LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+    JOB_NAME: ${{ github.job }}
+    WORKFLOW_NAME: ${{ github.workflow }}
+    WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
+  run: |
+    bash ./.github/scripts/send-report.sh
+# </template: send_fail_report>
+{!{- end -}!}

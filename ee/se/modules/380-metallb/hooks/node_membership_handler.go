@@ -100,10 +100,11 @@ func handleLabelsUpdate(input *go_hook.HookInput) error {
 	}
 
 	for _, node := range nodesToLabel {
-		node.Labels[memberLabelKey] = ""
 		labelsPatch := map[string]any{
 			"metadata": map[string]any{
-				"labels": node.Labels,
+				"labels": map[string]any{
+					memberLabelKey: "",
+				},
 			},
 		}
 		input.PatchCollector.MergePatch(labelsPatch, "v1", "Node", "", node.Name)

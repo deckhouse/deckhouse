@@ -9,15 +9,18 @@ git:
     stageDependencies:
       install:
       - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-    - git clone --depth 1 --branch "v{{ $version }}" {{ $.SOURCE_REPO }}/prometheus/pushgateway.git /src
+    - git clone --depth 1 --branch "v{{ $version }}" $(cat /run/secrets/SOURCE_REPO)/prometheus/pushgateway.git /src
     - cd /src
     - git apply /patches/*.patch --verbose
     - rm -r .git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 final: false
 import:
   - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -29,14 +32,14 @@ import:
     to: /bin/promu
     before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
-- from: tmp_dir
-  to: /root/.cache/go-build
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
     - cd /src/pushgateway
-    - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - /bin/promu build --prefix /src/pushgateway
     - mkdir /empty
     - chown -R 64535:64535 /empty

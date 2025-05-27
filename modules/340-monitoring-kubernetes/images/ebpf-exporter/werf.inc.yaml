@@ -18,18 +18,21 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   - cd /src
-  - git clone --branch=v2.4.2 --depth=1 {{ .SOURCE_REPO }}/cloudflare/ebpf_exporter.git ebpf-exporter
+  - git clone --branch=v2.4.2 --depth=1 $(cat /run/secrets/SOURCE_REPO)/cloudflare/ebpf_exporter.git ebpf-exporter
   - cd ebpf-exporter
   - git apply /patches/*.patch --verbose
   - mkdir -p libbpf
-  - git clone --branch v1.4.2 --depth=1 {{ .SOURCE_REPO }}/libbpf/libbpf.git libbpf
+  - git clone --branch v1.4.2 --depth=1 $(cat /run/secrets/SOURCE_REPO)/libbpf/libbpf.git libbpf
   - rm -rf libbpf/.git .git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}/entrypoint-artifact
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+fromImage: builder/golang-alpine
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -37,18 +40,20 @@ import:
   to: /entrypoint
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
   - cd /entrypoint
-  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - go build -ldflags="-s -w" -o entrypoint main.go
   - chown -R 64535:64535 /entrypoint/
   - chmod 0700 /entrypoint/entrypoint
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ .Images.BASE_GOLANG_23_BOOKWORM }}
+fromImage: builder/golang-bookworm
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -56,8 +61,10 @@ import:
   to: /build
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
   {{- include "debian packages proxy" . | nindent 2 }}
@@ -68,7 +75,7 @@ shell:
   - make -C ./libbpf/src LIBSUBDIR=lib DESTDIR=../dest install install_uapi_headers
   - export CGO_LDFLAGS="-L${BUILD_DIR}/libbpf/dest/usr/lib -l bpf"
   - export CGO_CFLAGS="-I${BUILD_DIR}/libbpf/dest/usr/include"
-  - GOPROXY={{ .GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -o ./ebpf_exporter -v -ldflags=" -extldflags "-static"" ./cmd/ebpf_exporter
+  - GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -o ./ebpf_exporter -v -ldflags=" -extldflags "-static"" ./cmd/ebpf_exporter
   - mkdir -p metrics
   - cp /build/metrics/* ${BUILD_DIR}/metrics
   - make -C metrics clean build

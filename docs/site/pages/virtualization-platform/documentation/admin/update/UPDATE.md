@@ -68,6 +68,18 @@ update:
 
 The platform uses [five release channels](/products/virtualization-platform/documentation/admin/release-channels.html) designed for various environments. Platform components can be updated either automatically or with manual confirmation as updates are released in the respective channels.
 
+{% alert level="warning" %}
+When considering updates, the platform components can be divided into two categories:
+
+- Virtualization resource management components (control plane).
+- Virtualization resource management components ("firmware").
+
+Updating control plane components does not affect the operation of already running virtual machines, but may cause a brief interruption of established VNC/serial port connections while the control plane component is restarted.
+
+Updates to virtual machine firmware during a platform upgrade may require virtual machines to be migrated to the new "firmware" version.
+Migration during the upgrade is performed once, if the migration was unsuccessful, the virtual machine owner will need to perform it themselves by either evict the virtual machine or reboot it.
+{% endalert %}
+
 Information about versions available in release channels can be found at [https://releases.deckhouse.io/](https://releases.deckhouse.io/).
 
 To switch to a different release channel, set the `.spec.settings.releaseChannel` parameter in the `deckhouse` module configuration.

@@ -30,9 +30,24 @@
 {{- end }}
 
 {{- if or (isset $attributes "enum") }}
-<p class="resources__attrs">
-  <span class="resources__attrs_name">{{ T "allowed_values" | humanize }}:</span> <span class="resources__attrs_content"><code>{{ delimit $attributes.enum "</code>, <code>" | safeHTML }}</code></span>
-</p>
+  {{- $enumDescriptions := index $attributes "x-enum-descriptions" }}
+  {{- if and $enumDescriptions (eq (len $attributes.enum) (len $enumDescriptions)) }}
+    <p class="resources__attrs">
+      <span class="resources__attrs_name">{{ T "allowed_values" | humanize }}:</span>
+      <span class="resources__attrs_content">
+        <div style="margin-top: 0; margin-bottom: 0; padding-left: 20px;">
+          {{- range $index, $enumValue := $attributes.enum }}
+            <div style="margin-bottom: 4px;"><code>{{ $enumValue }}</code> — {{ index $enumDescriptions $index }}</div>
+          {{- end }}
+        </div>
+      </span>
+    </p>
+  {{- else }}
+    <p class="resources__attrs">
+      <span class="resources__attrs_name">{{ T "allowed_values" | humanize }}:</span> 
+      <span class="resources__attrs_content"><code>{{ delimit $attributes.enum "</code>, <code>" | safeHTML }}</code></span>
+    </p>
+  {{- end }}
 {{- end }}
 
 {{- if or (isset $attributes "pattern") }}
