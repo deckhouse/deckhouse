@@ -15,7 +15,7 @@ import json
 # limitations under the License.
 
 import unittest
-from instance_class import main
+from prometheusremotewrite import main
 from deckhouse import hook, tests
 from dotmap import DotMap
 import json  # Ensure json is imported for loading binding context
