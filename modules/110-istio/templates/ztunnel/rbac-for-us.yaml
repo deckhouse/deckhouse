@@ -1,4 +1,4 @@
-{{- if and ($.Values.istio.enableAmbientMode) (eq (first $.Values.istio.internal.operatorVersionsToInstall) "1.25") }}
+{{- if and ($.Values.istio.internal.enableAmbientMode) (eq (first $.Values.istio.internal.operatorVersionsToInstall) "1.25") }}
     {{- $versions := .Values.istio.internal.operatorVersionsToInstall }}
     {{- range $version := .Values.istio.internal.operatorVersionsToInstall }}
         {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
