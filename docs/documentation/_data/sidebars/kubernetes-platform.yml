@@ -103,7 +103,7 @@ entries:
                       folders:
                         - title:
                             en: Overview
-                            ru: Введение
+                            ru: Обзор
                           url: /admin/integrations/public/yandex/yandex-overview.html
                         - title:
                             en: Connection and authorization
@@ -191,7 +191,7 @@ entries:
                       folders:
                         - title:
                             en: Overview
-                            ru: Введение
+                            ru: Обзор
                           url: /admin/integrations/public/amazon/amazon-overview.html
                         - title:
                             en: Connection and authorization
@@ -211,11 +211,11 @@ entries:
                           url: /admin/integrations/public/amazon/amazon-services.html
                     - title:
                         en: Integration with Microsoft Azure
-                        ru: TODO Интеграция с Microsoft Azure
+                        ru: Интеграция с Microsoft Azure
                       folders:
                         - title:
                             en: Overview
-                            ru: Введение
+                            ru: Обзор
                           url: /admin/integrations/public/azure/azure-overview.html
                         - title:
                             en: Connection and authorization
@@ -234,12 +234,108 @@ entries:
                             ru: Интеграция с службами Microsoft Azure
                           url: /admin/integrations/public/azure/azure-services.html
                     - title:
+                        en: Integration with Huawei Cloud
+                        ru: Интеграция с Huawei Cloud
+                      folders:
+                        - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/public/huaweicloud/huawei-overview.html
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/public/huaweicloud/huawei-authorization.html
+                        - title:
+                            en: Configuration and layout
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/public/huaweicloud/huawei-layout.html
+                        - title:
+                            en: Storage, balancing and features
+                            ru: Хранилище и балансировка
+                          url: /admin/integrations/public/huaweicloud/huawei-storage.html
+                        - title:
+                            en: Integration with Huawei Cloud
+                            ru: Интеграция с службами Huawei Cloud
+                          url: /admin/integrations/public/huaweicloud/huawei-services.html
+                    - title:
+                        en: Integration with VMware vSphere
+                        ru: Интеграция с VMware vSphere
+                      folders:
+                        - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/public/vsphere/vsphere-overview.html
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/public/vsphere/vsphere-authorization.html
+                        - title:
+                            en: Configuration and layout
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/public/vsphere/vsphere-layout.html
+                        - title:
+                            en: Storage, balancing and features
+                            ru: Хранилище и балансировка
+                          url: /admin/integrations/public/vsphere/vsphere-storage.html
+                        - title:
+                            en: Integration with vSphere
+                            ru: Интеграция с службами vSphere
+                          url: /admin/integrations/public/vsphere/vsphere-services.html
+                    - title:
+                        en: Integration with zVirt
+                        ru: Интеграция с zVirt
+                      folders:
+                        - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/public/zvirt/zvirt-overview.html
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/public/zvirt/zvirt-authorization.html
+                        - title:
+                            en: Configuration and layout
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/public/zvirt/zvirt-layout.html
+                        - title:
+                            en: Storage, balancing and features
+                            ru: Хранилище и балансировка
+                          url: /admin/integrations/public/zvirt/zvirt-storage.html
+                        - title:
+                            en: Integration with zVirt
+                            ru: Интеграция с службами zVirt
+                          url: /admin/integrations/public/zvirt/zvirt-services.html     
+                    - title:
+                        en: Integration with Dynamix
+                        ru: Интеграция с Dynamix
+                      folders:
+                        - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/integrations/public/dynamix/dynamix-overview.html
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/public/dynamix/dynamix-authorization.html
+                        - title:
+                            en: Configuration and layout
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/public/dynamix/dynamix-layout.html
+                        - title:
+                            en: Storage, balancing and features
+                            ru: Хранилище и балансировка
+                          url: /admin/integrations/public/dynamix/dynamix-storage.html
+                        - title:
+                            en: Integration with Dynamix
+                            ru: Интеграция с службами Dynamix
+                          url: /admin/integrations/public/dynamix/dynamix-services.html                 
+                    - title:
                         en: Integration with Google Cloud Platform (GCP)
                         ru: Интеграция с Google Cloud Platform (GCP)
                       folders:
                         - title:
                             en: Overview
-                            ru: Введение
+                            ru: Обзор
                           url: /admin/integrations/public/gcp/overview.html
                         - title:
                             en: Connection and authorization
