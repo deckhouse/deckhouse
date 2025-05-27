@@ -114,19 +114,18 @@ block-until-image-is-not-ready:
           const githubAction = require('./.github/scripts/js/helpers/github-actions')({github, context, core});
           const { isReleaseBranch } = require('./.github/scripts/js/helpers/utils');
 
-          let branchName = context.payload.inputs.ci_commit_ref_name;
-          if (!branchName) {
-            branchName = githubAction.GetBranchNameFromContext(context);
+          let branchName;
+          let prNum;
+
+          if (context.eventName === 'pull_request') {
+            branchName = context.payload.pull_request.head.ref;
+            prNum = context.payload.pull_request.number;
+          } else if (context.eventName === 'workflow_dispatch') {
+            branchName = context.payload.inputs.ci_commit_ref_name;
+            prNum = context.payload.inputs.issue_number;
           }
 
           if (branchName) {
-            let prNum = context.payload.inputs.issue_number;
-            // if the pull request id is not found, search it by the branch name
-            if (!prNum && branchName !== 'main') {
-              const prInfo = await githubAction.GetPullRequestByBranchName(branchName);
-              prNum = prInfo.number;
-            }
-
             let infoText = `Check build workflow is completed for branch: ${branchName}`;
             if (prNum) {
               infoText +=  ` PR: ${context.payload.repository.html_url}/pull/${prNum}`;
@@ -147,6 +146,8 @@ block-until-image-is-not-ready:
             } catch(error) {
               core.setFailed(error);
             }
+          } else {
+            core.setFailed("Branch name not found.");
           }
 
 # </template: block-until-image-is-not-ready>
