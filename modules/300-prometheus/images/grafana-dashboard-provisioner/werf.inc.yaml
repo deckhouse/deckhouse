@@ -13,6 +13,9 @@ import:
 git:
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/hooks
   to: /hooks
+  stageDependencies:
+    install:
+    - '**/*'
 ---
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact

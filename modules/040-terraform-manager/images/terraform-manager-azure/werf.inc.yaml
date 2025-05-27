@@ -3,6 +3,9 @@ fromImage: '{{ include "infrastructure_manager_base_image" (dict "TF" .TF "provi
 git:
 - add: /{{ .ModulePath }}candi/cloud-providers/azure
   to: /deckhouse/candi/cloud-providers/azure
+  stageDependencies:
+    install:
+    - '**/*'
 import:
 - image: terraform-provider-azure
   add: /terraform-provider-azurerm

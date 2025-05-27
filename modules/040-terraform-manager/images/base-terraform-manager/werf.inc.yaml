@@ -21,6 +21,9 @@ git:
   includePaths:
     - "candi/openapi"
     - "candi/terraform_versions.yml"
+  stageDependencies:
+    install:
+    - '**/*'
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-opentofu
 final: false
@@ -48,6 +51,9 @@ git:
   includePaths:
     - "candi/openapi"
     - "candi/terraform_versions.yml"
+  stageDependencies:
+    install:
+    - '**/*'
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-terraform-src-artifact
 final: false

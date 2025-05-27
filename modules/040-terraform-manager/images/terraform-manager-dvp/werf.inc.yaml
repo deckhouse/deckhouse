@@ -3,6 +3,9 @@ fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "prov
 git:
 - add: /{{ .ModulePath }}candi/cloud-providers/dvp
   to: /deckhouse/candi/cloud-providers/dvp
+  stageDependencies:
+    install:
+    - '**/*'
 import:
 - image: terraform-provider-kubernetes
   add: /terraform-provider-kubernetes

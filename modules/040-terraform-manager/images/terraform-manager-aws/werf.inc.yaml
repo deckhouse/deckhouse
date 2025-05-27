@@ -3,6 +3,9 @@ fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "prov
 git:
 - add: /{{ .ModulePath }}candi/cloud-providers/aws
   to: /deckhouse/candi/cloud-providers/aws
+  stageDependencies:
+    install:
+    - '**/*'
 import:
 - image: terraform-provider-aws
   add: /terraform-provider-aws

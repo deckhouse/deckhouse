@@ -44,3 +44,6 @@ git:
   - go.mod
   - go.sum
   - main.go
+  stageDependencies:
+    install:
+    - '**/*'
