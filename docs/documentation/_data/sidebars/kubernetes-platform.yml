@@ -215,8 +215,24 @@ entries:
                       folders:
                         - title:
                             en: Overview
-                            ru: Обзор
+                            ru: Введение
                           url: /admin/integrations/public/azure/azure-overview.html
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/public/azure/azure-authorization.html
+                        - title:
+                            en: Configuration and layout
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/public/azure/azure-layout.html
+                        - title:
+                            en: Storage, balancing and features
+                            ru: Хранилище и балансировка
+                          url: /admin/integrations/public/azure/azure-storage.html
+                        - title:
+                            en: Integration with Microsoft Azure
+                            ru: Интеграция с службами Microsoft Azure
+                          url: /admin/integrations/public/azure/azure-services.html
                     - title:
                         en: Integration with Google Cloud Platform (GCP)
                         ru: Интеграция с Google Cloud Platform (GCP)
