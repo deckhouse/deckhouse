@@ -17,7 +17,8 @@ from typing import Optional
 
 from deckhouse import hook
 from dotmap import DotMap
-import cryptography
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
 
 config = """
 configVersion: v1
@@ -94,7 +95,7 @@ def check_verify_ca_signatures(ctx: DotMap) -> Optional[str]:
     if len(ca) == 0:
         return None
     try:
-        cryptography.x509.load_pem_x509_certificate(ca.encode(), cryptography.hazmat.backends())
+        x509.load_pem_x509_certificate(ca.encode(), default_backend())
         return None
     except Exception as e:
         return f"Certificate verification failed: {e}"
