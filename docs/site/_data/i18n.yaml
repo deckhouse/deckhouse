@@ -227,6 +227,12 @@ common:
   crd_has_no_parameters:
     en: The CRD has no fields for configuration.
     ru: У CRD нет полей для настройки.
+  show_more:
+    en: Show more
+    ru: Показать ещё
+  guides_intro_message:
+    en: Guides, Step-by-Step Walkthroughs, Cheats, FAQs and more
+    ru: Руководства, пошаговые инструкции, читы, часто задаваемые вопросы и&nbsp;многое другое
 
 comparison:
   except_parameters:
