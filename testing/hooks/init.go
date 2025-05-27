@@ -633,7 +633,7 @@ func (hec *HookExecutionConfig) GenerateScheduleContext(crontab string) hookcont
 	if hec.BindingContextController == nil {
 		return SimpleBindingGeneratedBindingContext(Schedule)
 	}
-	contexts, err := hec.BindingContextController.RunSchedule(crontab)
+	contexts, err := hec.BindingContextController.RunSchedule(context.Background(), crontab)
 	if err != nil {
 		panic(err)
 	}
