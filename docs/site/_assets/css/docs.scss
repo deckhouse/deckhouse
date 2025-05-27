@@ -1136,6 +1136,12 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
 .highlight {
     border-radius: 4px;
+  
+    .code__transfer {
+      position: relative;
+      padding-right: 70px;
+      padding-left: 30px;
+    }
 }
 
 .docs div.highlight {
@@ -1579,8 +1585,8 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
 .docs .snippetcut_limited pre.highlight {
   max-height: 200px;
-  display: block; }
-
+  display: block; 
+}
 
 .action-toast {
   display: none;
@@ -2037,30 +2043,47 @@ select#contact-select {
       white-space: pre-wrap;
       overflow-x: auto;
       word-wrap: break-word;
-      user-select: none;
     }
 
     button.wrap__button {
       position: absolute;
-      top: 0.5em;
-      right: 3.5em;
-      background-color: inherit;
-      padding: 5px;
+      top: 10px;
+      right: 41px;
+      padding: 0;
+      border: 0;
+      opacity: 0;
       cursor: pointer;
       z-index: 2;
+      transition: opacity .25s;
+
+      .wrap__icon {
+        width: 25px;
+        height: 23px;
+      }
+
+      &.show {
+        opacity: .75;
+
+        &:hover {
+            opacity: 1;
+        }
+      }
     }
+
+
 
     .code__wrapper {
       display: flex;
     }
 
     .line-number {
+      position: absolute;
+      left: 10px;
       display: inline-block;
-      margin: 0;
-      margin-right: 10px;
       line-height: 22px;
       user-select: none;
       list-style-type: none;
+      color: #444;
 
       li {
         padding: 0;
@@ -2073,4 +2096,3 @@ select#contact-select {
     }
   }
 }
-
