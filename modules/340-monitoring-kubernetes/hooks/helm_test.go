@@ -200,7 +200,6 @@ var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 
 			f.BindingContexts.Set(f.GenerateScheduleContext("0 * * * *"))
 			f.RunGoHook()
-
 		})
 		It("must have metric with deprecated resource", func() {
 			Expect(f).To(ExecuteSuccessfully())
@@ -235,7 +234,6 @@ var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 			Expect(err).To(BeNil())
 			f.BindingContexts.Set(f.GenerateScheduleContext("0 * * * *"))
 			f.RunGoHook()
-
 		})
 		It("must have no metric with deprecated resource", func() {
 			Expect(f).To(ExecuteSuccessfully())
@@ -262,7 +260,6 @@ var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 			Expect(err).To(BeNil())
 			f.BindingContexts.Set(f.GenerateScheduleContext("0 * * * *"))
 			f.RunGoHook()
-
 		})
 		It("Must be valid and have no deprecated resources", func() {
 			Expect(f).To(ExecuteSuccessfully())
@@ -306,7 +303,7 @@ clusterType: Static
 podSubnetCIDR: 10.122.0.0/16
 podSubnetNodeCIDRPrefix: "26"
 serviceSubnetCIDR: 10.213.0.0/16
-kubernetesVersion: "1.28"
+kubernetesVersion: "1.29"
 `
 		stateConcreteVersion = `
 apiVersion: v1
@@ -348,7 +345,7 @@ data:
 			})
 		})
 
-		Context("check for kubernetesVersion: \"1.28\"", func() {
+		Context("check for kubernetesVersion: \"1.29\"", func() {
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.KubeStateSet(stateConcreteVersion))
 				var sec corev1.Secret
@@ -429,7 +426,6 @@ data:
 				Expect(err).To(BeNil())
 
 				f.RunGoHook()
-
 			})
 
 			It("must have autoK8sVersion", func() {
@@ -459,7 +455,6 @@ data:
 			Expect(err).To(BeNil())
 
 			f.RunGoHook()
-
 		})
 
 		It("must be valid and have no deprecated resources", func() {

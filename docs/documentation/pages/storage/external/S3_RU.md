@@ -59,7 +59,7 @@ d8 k get module csi-s3 -w
 Модуль настраивается с помощью манифеста [S3StorageClass](../../../reference/cr/s3storageclass/). Пример конфигурации:
 
 ```yaml
-apiVersion: csi.s3.storage.k8s.io/v1
+apiVersion: storage.deckhouse.io/v1alpha1
 kind: S3StorageClass
 metadata:
   name: example-s3
@@ -70,6 +70,7 @@ spec:
   accessKey: <your-access-key>
   secretKey: <your-secret-key>
   maxCacheSize: 500
+  insecure: false
 ```
 
 Если `bucketName` не указан, для каждого PersistentVolume будет создан отдельный bucket. Если `bucketName` задан, в нем будут создаваться папки под каждый PersistentVolume. Если такого bucket нет, он создастся автоматически.
