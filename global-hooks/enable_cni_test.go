@@ -167,10 +167,55 @@ spec:
 
 		It("Throw the error", func() {
 			Expect(f).ToNot(ExecuteSuccessfully())
-			Expect(f.GoHookError.Error()).To(ContainSubstring("more then one CNI enabled"))
+			Expect(f.GoHookError.Error()).To(ContainSubstring("more than one CNI enabled"))
 			value, exists := requirements.GetValue(cniConfigurationSettledKey)
 			Expect(exists).To(BeTrue())
 			Expect(value).To(BeEquivalentTo("false"))
 		})
 	})
 })
+
+/*
+"policies": {
+            "automountServiceAccountToken": true,
+            "seccompProfiles": {},
+            "verifyImageSignatures": [
+              {
+                "dockerCfg": "zxc=",
+                "reference": "ghcr.io/*",
+                "publicKeys": [
+                  "someKey1",
+                  "someKey2"
+                ]
+              },
+              {
+                "reference": "*",
+                "publicKeys": [
+                  "someKey3"
+                ],
+                "ca": "someCA1"
+              }
+            ]
+          }
+
+"policies": {
+	"seccompProfiles": {},
+	"verifyImageSignatures": [
+		{
+			"publicKeys": [
+				"someKey1",
+				"someKey2"
+			],
+			"reference": "ghcr.io/*",
+			"dockerCfg": "zxc="
+		},
+		{
+			"publicKeys": [
+				"someKey3"
+			],
+			"ca": "someCA1",
+			"reference": "*"
+		}
+	]
+},
+*/

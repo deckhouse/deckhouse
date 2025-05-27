@@ -116,12 +116,10 @@ func clusterIsBootstrapped(input *go_hook.HookInput) error {
 	isBootstrappedCmSnap := input.NewSnapshots.Get(isBootstrappedCmSnapName)
 
 	if len(isBootstrappedCmSnap) > 0 {
-		// если есть configmap, ставим флаг и выходим
 		input.Values.Set(clusterBootstrapFlagPath, true)
 		return createBootstrappedFile()
 	}
 
-	// если configmap нет, но флаг существует — значит configmap удалён, надо создать
 	if input.Values.Exists(clusterBootstrapFlagPath) {
 		createBootstrapClusterCm(input.PatchCollector)
 		return createBootstrappedFile()
@@ -129,9 +127,7 @@ func clusterIsBootstrapped(input *go_hook.HookInput) error {
 
 	readyNodes, err := sdkobjectpatch.UnmarshalToStruct[bool](input.NewSnapshots, readyNotMasterNodesSnapName)
 	if err != nil {
-		// Можно залогировать или вернуть ошибку
-		input.Logger.Warnf("failed to unmarshal %q snapshots: %v", readyNotMasterNodesSnapName, err)
-		return nil // или return err, если критично
+		return err
 	}
 
 	for _, ready := range readyNodes {

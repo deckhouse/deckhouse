@@ -119,7 +119,6 @@ func handleGatekeeperBootstrap(input *go_hook.HookInput) error {
 	}
 
 	input.Values.Set("admissionPolicyEngine.internal.bootstrapped", bootstrapped)
-
 	input.MetricsCollector.Expire("d8_admission_policy_engine_not_bootstrapped")
 	if !bootstrapped {
 		input.MetricsCollector.Set("d8_admission_policy_engine_not_bootstrapped", 1, nil, metrics.WithGroup("d8_admission_policy_engine_not_bootstrapped"))

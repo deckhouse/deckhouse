@@ -92,22 +92,22 @@ func filterTrivyProviderSecret(obj *unstructured.Unstructured) (go_hook.FilterRe
 	return dockerConfigBySecret(secret)
 }
 
-func dockerConfigBySecret(secret *corev1.Secret) (*dockerConfig, error) {
+func dockerConfigBySecret(secret *corev1.Secret) (dockerConfig, error) {
 	if secret.Type != corev1.SecretTypeDockerConfigJson || secret.Data == nil {
-		return nil, nil
+		return dockerConfig{}, nil
 	}
 
 	raw, ok := secret.Data[corev1.DockerConfigJsonKey]
 	if !ok {
-		return nil, nil
+		return dockerConfig{}, nil
 	}
 
 	config := new(dockerConfig)
 	if err := json.Unmarshal(raw, config); err != nil {
-		return nil, fmt.Errorf("unmarshal docker config: %v", err)
+		return dockerConfig{}, fmt.Errorf("unmarshal docker config: %v", err)
 	}
 
-	return config, nil
+	return *config, nil
 }
 
 func handleTrivyProviderSecrets(input *go_hook.HookInput, dc dependency.Container) error {
@@ -117,13 +117,13 @@ func handleTrivyProviderSecrets(input *go_hook.HookInput, dc dependency.Containe
 
 	cfg := valueDockerConfig{Auths: make(map[string]authConfig)}
 
-	authSnaps, err := sdkobjectpatch.UnmarshalToStruct[*dockerConfig](input.NewSnapshots, "trivy_provider_secrets")
+	authSnaps, err := sdkobjectpatch.UnmarshalToStruct[dockerConfig](input.NewSnapshots, "trivy_provider_secrets")
 	if err != nil {
 		return err
 	}
 
 	for _, auth := range authSnaps {
-		if auth == nil || len(auth.Auths) == 0 {
+		if len(auth.Auths) == 0 {
 			continue
 		}
 		for registry, config := range auth.Auths {
@@ -167,15 +167,15 @@ func handleTrivyProviderSecrets(input *go_hook.HookInput, dc dependency.Containe
 	return nil
 }
 
-func dockerConfigByModuleValue(ctx context.Context, cli k8s.Client, value gjson.Result) (*dockerConfig, error) {
+func dockerConfigByModuleValue(ctx context.Context, cli k8s.Client, value gjson.Result) (dockerConfig, error) {
 	name, namespace, err := namespaceNameByModuleValue(value)
 	if err != nil {
-		return nil, fmt.Errorf("get name and namespace from registry secret: %w", err)
+		return dockerConfig{}, fmt.Errorf("get name and namespace from registry secret: %w", err)
 	}
 
 	secret, err := cli.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("get registry secret from namespace '%s': %w", namespace, err)
+		return dockerConfig{}, fmt.Errorf("get registry secret from namespace '%s': %w", namespace, err)
 	}
 
 	return dockerConfigBySecret(secret)

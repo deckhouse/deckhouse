@@ -70,7 +70,7 @@ func applyNamespaceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 }
 
 func handleNamespaceConfiguration(input *go_hook.HookInput) error {
-	namespaces, err := sdkobjectpatch.UnmarshalToStruct[*Namespace](input.NewSnapshots, "namespaces")
+	namespaces, err := sdkobjectpatch.UnmarshalToStruct[Namespace](input.NewSnapshots, "namespaces")
 	if err != nil {
 		return err
 	}
@@ -149,7 +149,7 @@ func (configItem *namespaceConfigurationItem) Load(result gjson.Result) error {
 }
 
 func (configItem *namespaceConfigurationItem) Apply(input *go_hook.HookInput) error {
-	namespaces, err := sdkobjectpatch.UnmarshalToStruct[*Namespace](input.NewSnapshots, "namespaces")
+	namespaces, err := sdkobjectpatch.UnmarshalToStruct[Namespace](input.NewSnapshots, "namespaces")
 	if err != nil {
 		return err
 	}
@@ -165,7 +165,7 @@ func (configItem *namespaceConfigurationItem) Apply(input *go_hook.HookInput) er
 	return nil
 }
 
-func makePatch(input *go_hook.HookInput, ns *Namespace, configItem *namespaceConfigurationItem) interface{} {
+func makePatch(input *go_hook.HookInput, ns Namespace, configItem *namespaceConfigurationItem) interface{} {
 	var newAnnotations = make(map[string]interface{})
 	var newLabels = make(map[string]interface{})
 	var mergePatch interface{}

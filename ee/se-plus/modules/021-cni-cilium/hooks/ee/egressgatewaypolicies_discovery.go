@@ -52,12 +52,15 @@ func applyEgressGatewayPolicyFilter(obj *unstructured.Unstructured) (go_hook.Fil
 
 func handleEgressGatewayPolicies(input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire("d8_cni_cilium_egress_gateway_policy")
-	egressGatewayPolicies := input.NewSnapshots.Get("egressgatewaypolicies")
-	input.Values.Set("cniCilium.internal.egressGatewayPolicies", egressGatewayPolicies)
+	egressGatewayPoliciesSnaps, err := sdkobjectpatch.UnmarshalToStruct[EgressGatewayPolicyInfo](input.NewSnapshots, "egressgatewaypolicies")
+	if err != nil {
+		return err
+	}
+	input.Values.Set("cniCilium.internal.egressGatewayPolicies", egressGatewayPoliciesSnaps)
 
 	egressGatewayMap := input.Values.Get("cniCilium.internal.egressGatewaysMap").Map()
 
-	for policy, err := range sdkobjectpatch.SnapshotIter[EgressGatewayPolicyInfo](egressGatewayPolicies) {
+	for policy, err := range sdkobjectpatch.SnapshotIter[EgressGatewayPolicyInfo](input.NewSnapshots.Get("egressgatewaypolicies")) {
 		if err != nil {
 			continue
 		}

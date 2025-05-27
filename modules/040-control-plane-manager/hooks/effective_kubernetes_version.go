@@ -360,9 +360,13 @@ func ekvProcessPodsSnapshot(input *go_hook.HookInput, dc dependency.Container) (
 
 // determine minimum and maximum node versions
 func ekvProcessNodeSnapshot(input *go_hook.HookInput) (*semver.Version /*minNodeVersion*/, *semver.Version /*maxNodeVersion*/, error) {
-	nodeVersions, err := sdkobjectpatch.UnmarshalToStruct[*semver.Version](input.NewSnapshots, "node_versions")
-	if err != nil {
-		return nil, nil, fmt.Errorf("unmarshal node_versions: %w", err)
+	nodeVersions := make([]*semver.Version, 0, len(input.NewSnapshots.Get("node_versions")))
+	for nodeVersionsSnap, err := range sdkobjectpatch.SnapshotIter[semver.Version](input.NewSnapshots.Get("node_versions")) {
+		if err != nil {
+			return nil, nil, fmt.Errorf("unmarshal node_versions: %w", err)
+		}
+
+		nodeVersions = append(nodeVersions, &nodeVersionsSnap)
 	}
 
 	if len(nodeVersions) == 0 {

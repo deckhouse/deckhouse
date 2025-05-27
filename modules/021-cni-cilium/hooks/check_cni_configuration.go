@@ -170,15 +170,15 @@ func checkCni(input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire(checkCNIConfigMetricGroup)
 	requirements.RemoveValue(cniConfigurationSettledKey)
 	needUpdateMC := false
-
-	cniSecrets, err := sdkobjectpatch.UnmarshalToStruct[*cniSecretStruct](input.NewSnapshots, "cni_configuration_secret")
+	cniSecrets, err := sdkobjectpatch.UnmarshalToStruct[cniSecretStruct](input.NewSnapshots, "cni_configuration_secret")
 	if err != nil {
 		return err
 	}
+
 	// Let's check secret.
 	// Secret d8-cni-configuration does not exist or exist but contain nil.
 	// This means that the current CNI module is enabled and configured via mc, nothing to do.
-	if len(cniSecrets) == 0 || cniSecrets[0] == nil {
+	if len(cniSecrets) == 0 {
 		setCNIMiscMetricAndReq(input, false)
 		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
 		return nil
@@ -210,12 +210,12 @@ func checkCni(input *go_hook.HookInput) error {
 			Settings: v1alpha1.SettingsValues{},
 		},
 	}
-	cniModuleConfigs, err := sdkobjectpatch.UnmarshalToStruct[*v1alpha1.ModuleConfig](input.NewSnapshots, "deckhouse_cni_mc")
+	cniModuleConfigs, err := sdkobjectpatch.UnmarshalToStruct[v1alpha1.ModuleConfig](input.NewSnapshots, "deckhouse_cni_mc")
 	if err != nil {
 		return err
 	}
 	// Let's check what mc exist and explicitly enabled.
-	if len(cniModuleConfigs) == 0 || cniModuleConfigs[0] == nil {
+	if len(cniModuleConfigs) == 0 {
 		needUpdateMC = true
 	} else {
 		cniModuleConfig := cniModuleConfigs[0]

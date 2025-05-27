@@ -69,7 +69,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, clusterConfiguration)
 
 func clusterConfiguration(input *go_hook.HookInput) error {
-	currentConfig, err := sdkobjectpatch.UnmarshalToStruct[*ClusterConfigurationYaml](input.NewSnapshots, "clusterConfiguration")
+	currentConfig, err := sdkobjectpatch.UnmarshalToStruct[ClusterConfigurationYaml](input.NewSnapshots, "clusterConfiguration")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal clusterConfiguration snapshot: %w", err)
 	}

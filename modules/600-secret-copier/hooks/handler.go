@@ -55,7 +55,7 @@ type Namespace struct {
 	IsTerminating bool `json:"is_terminating,omitempty"`
 }
 
-func SecretPath(s *Secret) string {
+func SecretPath(s Secret) string {
 	return fmt.Sprintf("%s/%s", s.Namespace, s.Name)
 }
 
@@ -66,7 +66,7 @@ func ApplyCopierSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 		return nil, err
 	}
 
-	s := &Secret{
+	s := Secret{
 		Name:        secret.Name,
 		Namespace:   secret.Namespace,
 		Annotations: secret.Annotations,
@@ -150,7 +150,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(copierHandler))
 
 func copierHandler(input *go_hook.HookInput, dc dependency.Container) error {
-	secrets, err := sdkobjectpatch.UnmarshalToStruct[*Secret](input.NewSnapshots, "secrets")
+	secrets, err := sdkobjectpatch.UnmarshalToStruct[Secret](input.NewSnapshots, "secrets")
 	if err != nil {
 		return err
 	}
@@ -159,7 +159,7 @@ func copierHandler(input *go_hook.HookInput, dc dependency.Container) error {
 		return nil
 	}
 
-	namespaces, err := sdkobjectpatch.UnmarshalToStruct[*Namespace](input.NewSnapshots, "namespaces")
+	namespaces, err := sdkobjectpatch.UnmarshalToStruct[Namespace](input.NewSnapshots, "namespaces")
 	if err != nil {
 		return err
 	}
@@ -173,8 +173,8 @@ func copierHandler(input *go_hook.HookInput, dc dependency.Container) error {
 		return fmt.Errorf("can't init Kubernetes client: %w", err)
 	}
 
-	secretsExists := make(map[string]*Secret)
-	secretsDesired := make(map[string]*Secret)
+	secretsExists := make(map[string]Secret)
+	secretsDesired := make(map[string]Secret)
 
 	for _, secret := range secrets {
 		// Secrets that are not in namespace `default` are existing Secrets.
@@ -195,7 +195,7 @@ func copierHandler(input *go_hook.HookInput, dc dependency.Container) error {
 			if !namespaceLabelSelector.Matches(namespaceLabels) {
 				continue
 			}
-			secretDesired := &Secret{
+			secretDesired := Secret{
 				Name:      secret.Name,
 				Namespace: namespace.Name,
 				Labels:    secret.Labels,
@@ -237,7 +237,7 @@ func copierHandler(input *go_hook.HookInput, dc dependency.Container) error {
 }
 
 // todo(31337Ghost) consider switching to separate create/update functions after a bug is fixed in shell-operator that causes missing Secrets in snapshots
-func createOrUpdateSecret(k8 k8s.Client, secret *Secret) error {
+func createOrUpdateSecret(k8 k8s.Client, secret Secret) error {
 	_, err := k8.CoreV1().Secrets(secret.Namespace).Get(context.TODO(), secret.Name, metav1.GetOptions{})
 	if errors.IsNotFound(err) {
 		return createSecret(k8, secret)
@@ -248,7 +248,7 @@ func createOrUpdateSecret(k8 k8s.Client, secret *Secret) error {
 	return updateSecret(k8, secret)
 }
 
-func createSecret(k8 k8s.Client, secret *Secret) error {
+func createSecret(k8 k8s.Client, secret Secret) error {
 	s := &v1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -276,7 +276,7 @@ func createSecret(k8 k8s.Client, secret *Secret) error {
 	return nil
 }
 
-func deleteSecret(k8 k8s.Client, secret *Secret) error {
+func deleteSecret(k8 k8s.Client, secret Secret) error {
 	if err := k8.CoreV1().Secrets(secret.Namespace).Delete(context.TODO(), secret.Name, metav1.DeleteOptions{}); err != nil {
 		return formatSecretOperationError(secret, err, "delete")
 	}
@@ -284,8 +284,8 @@ func deleteSecret(k8 k8s.Client, secret *Secret) error {
 	return nil
 }
 
-func updateSecret(k8 k8s.Client, secret *Secret) error {
-	s := &v1.Secret{
+func updateSecret(k8 k8s.Client, secret Secret) error {
+	s := v1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "Secret",
@@ -302,7 +302,7 @@ func updateSecret(k8 k8s.Client, secret *Secret) error {
 		Type: secret.Type,
 	}
 
-	if _, err := k8.CoreV1().Secrets(secret.Namespace).Update(context.TODO(), s, metav1.UpdateOptions{}); err != nil {
+	if _, err := k8.CoreV1().Secrets(secret.Namespace).Update(context.TODO(), &s, metav1.UpdateOptions{}); err != nil {
 		// deleting and create Secret if its validation fails
 		// usually means that we are trying to change an immutable field
 		if errors.IsInvalid(err) {
@@ -322,11 +322,11 @@ func updateSecret(k8 k8s.Client, secret *Secret) error {
 	return nil
 }
 
-func formatSecretOperationError(secret *Secret, err error, op string) error {
+func formatSecretOperationError(secret Secret, err error, op string) error {
 	return fmt.Errorf("can't %s secret object `%s/%s`: %v", op, secret.Namespace, secret.Name, err)
 }
 
-func namespaceSelector(secret *Secret) labels.Selector {
+func namespaceSelector(secret Secret) labels.Selector {
 	v, found := secret.Annotations[secretCopierNamespaceSelectorKey]
 	if !found {
 		return labels.Everything()

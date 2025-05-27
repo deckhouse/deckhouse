@@ -87,7 +87,7 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 	if len(cloudSecrets) == 0 {
 		input.Logger.Warn("failed to find secret 'd8-cloud-provider-discovery-data' in namespace 'kube-system'")
 
-		storageClassesSnaps, err := sdkobjectpatch.UnmarshalToStruct[*storage.StorageClass](input.NewSnapshots, "storage_classes")
+		storageClassesSnaps, err := sdkobjectpatch.UnmarshalToStruct[storage.StorageClass](input.NewSnapshots, "storage_classes")
 		if err != nil {
 			return fmt.Errorf("unmarshal to struct storage_classes: %v", err)
 		}
@@ -165,11 +165,9 @@ func handleDiscoveryDataVolumeTypes(
 		}
 	}
 
-	// Используем UnmarshalToStruct для storage_classes
 	storageClassSnapshots, err := sdkobjectpatch.UnmarshalToStruct[*storage.StorageClass](input.NewSnapshots, "storage_classes")
 	if err != nil {
 		input.Logger.Errorf("failed to unmarshal storage_classes snapshots: %v", err)
-		// на твое усмотрение, можно вернуть ошибку или продолжить с пустым map
 		storageClassSnapshots = nil
 	}
 

@@ -26,6 +26,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -54,8 +55,11 @@ func applyVMCIDRsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 }
 
 func applyVMCIDRs(input *go_hook.HookInput) error {
-	snaps := input.NewSnapshots.Get("vm-cidrs")
-	if len(snaps) == 1 && snaps[0] != nil {
+	snaps, err := sdkobjectpatch.UnmarshalToStruct[[]any](input.NewSnapshots, "vm-cidrs")
+	if err != nil {
+		return err
+	}
+	if len(snaps) == 1 {
 		input.Values.Set("cniCilium.internal.vmCIDRs", snaps[0])
 	}
 	return nil

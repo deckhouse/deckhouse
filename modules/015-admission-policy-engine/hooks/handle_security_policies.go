@@ -44,14 +44,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleSP)
 
 func handleSP(input *go_hook.HookInput) error {
-	securityPolicies, err := sdkobjectpatch.UnmarshalToStruct[securityPolicy](input.NewSnapshots, "security-policies")
+	policies, err := sdkobjectpatch.UnmarshalToStruct[securityPolicy](input.NewSnapshots, "security-policies")
 	if err != nil {
 		return err
 	}
 
 	refs := make(map[string]set.Set)
 
-	for _, sp := range securityPolicies {
+	for i, sp := range policies {
 		// set observed status
 		input.PatchCollector.PatchWithMutatingFunc(
 			set_cr_statuses.SetObservedStatus(sp, filterSP),
@@ -62,8 +62,7 @@ func handleSP(input *go_hook.HookInput) error {
 			object_patch.WithSubresource("/status"),
 			object_patch.WithIgnoreHookError(),
 		)
-
-		sp.preprocesSecurityPolicy()
+		preprocesSecurityPolicy(&policies[i])
 
 		for _, v := range sp.Spec.Policies.VerifyImageSignatures {
 			if keys, ok := refs[v.Reference]; ok {
@@ -78,12 +77,10 @@ func handleSP(input *go_hook.HookInput) error {
 		}
 	}
 
-	sort.Slice(securityPolicies, func(i, j int) bool {
-		return securityPolicies[i].Metadata.Name < securityPolicies[j].Metadata.Name
+	sort.Slice(policies, func(i, j int) bool {
+		return policies[i].Metadata.Name < policies[j].Metadata.Name
 	})
-
-	input.Values.Set("admissionPolicyEngine.internal.securityPolicies", securityPolicies)
-
+	input.Values.Set("admissionPolicyEngine.internal.securityPolicies", policies)
 	imageReferences := make([]ratifyReference, 0, len(refs))
 	for k, v := range refs {
 		imageReferences = append(imageReferences, ratifyReference{
@@ -101,14 +98,13 @@ func handleSP(input *go_hook.HookInput) error {
 }
 
 func filterSP(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var sp securityPolicy
-
+	var sp *securityPolicy
 	err := sdk.FromUnstructured(obj, &sp)
 	if err != nil {
 		return nil, err
 	}
 
-	return &sp, nil
+	return sp, nil
 }
 
 func hasItem(slice []string, value string) bool {
@@ -120,7 +116,7 @@ func hasItem(slice []string, value string) bool {
 	return false
 }
 
-func (sp *securityPolicy) preprocesSecurityPolicy() {
+func preprocesSecurityPolicy(sp *securityPolicy) {
 	// Check if we really need to create a constraint
 	// AllowedCapabilities with 'ALL' and empty RequiredDropCapabilities list result in a sensless constraint
 	if hasItem(sp.Spec.Policies.AllowedCapabilities, "ALL") && len(sp.Spec.Policies.RequiredDropCapabilities) == 0 {

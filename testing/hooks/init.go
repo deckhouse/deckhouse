@@ -634,7 +634,7 @@ func (hec *HookExecutionConfig) GenerateScheduleContext(crontab string) hookcont
 	if hec.BindingContextController == nil {
 		return SimpleBindingGeneratedBindingContext(Schedule)
 	}
-	contexts, err := hec.BindingContextController.RunSchedule(crontab)
+	contexts, err := hec.BindingContextController.RunSchedule(context.TODO(), crontab)
 	if err != nil {
 		panic(err)
 	}
@@ -886,6 +886,9 @@ func (hec *HookExecutionConfig) RunGoHook() {
 	for _, bCtx := range hec.BindingContexts.BindingContexts {
 		for snapBindingName, snaps := range bCtx.Snapshots {
 			for _, snapshot := range snaps {
+				if snapshot.FilterResult == nil {
+					continue
+				}
 				formattedSnapshots[snapBindingName] = append(formattedSnapshots[snapBindingName], snapshot.FilterResult)
 				newformattedSnapshots[snapBindingName] = append(newformattedSnapshots[snapBindingName], &go_hook.Wrapped{Wrapped: snapshot.FilterResult})
 			}

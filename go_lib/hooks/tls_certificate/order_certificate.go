@@ -175,12 +175,12 @@ func certificateHandlerWithRequests(input *go_hook.HookInput, dc dependency.Cont
 		}
 
 		valueName := fmt.Sprintf("%s.%s", request.ModuleName, request.ValueName)
-		secrets, err := sdkobjectpatch.UnmarshalToStruct[*CertificateSecret](input.NewSnapshots, "certificateSecrets")
+		secrets, err := sdkobjectpatch.UnmarshalToStruct[CertificateSecret](input.NewSnapshots, "certificateSecrets")
 		if err != nil {
-			return err // или обработка ошибки по контексту
+			return err
 		}
 		if len(secrets) != 0 {
-			var secret *CertificateSecret
+			var secret CertificateSecret
 
 			for _, secretSnap := range secrets {
 				if secretSnap.Name == request.SecretName {
@@ -189,7 +189,7 @@ func certificateHandlerWithRequests(input *go_hook.HookInput, dc dependency.Cont
 				}
 			}
 
-			if secret != nil && len(secret.Crt) > 0 && len(secret.Key) > 0 {
+			if len(secret.Crt) > 0 && len(secret.Key) > 0 {
 				// Check that certificate is not expired and has the same order request
 				genNew, err := shouldGenerateNewCert(secret.Crt, request, time.Hour*24*15)
 				if err != nil {

@@ -206,7 +206,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, generateConfig)
 
 func extractTLSSpecFromSecrets(name string, input *go_hook.HookInput) (v1alpha1.CommonTLSSpec, error) {
-	for secret, err := range sdkobjectpatch.SnapshotIter[*corev1.Secret](input.NewSnapshots.Get("tls-secrets")) {
+	for secret, err := range sdkobjectpatch.SnapshotIter[corev1.Secret](input.NewSnapshots.Get("tls-secrets")) {
 		if err != nil {
 			continue
 		}

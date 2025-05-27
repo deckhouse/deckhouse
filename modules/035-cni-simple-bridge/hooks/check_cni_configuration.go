@@ -171,10 +171,8 @@ func checkCni(input *go_hook.HookInput) error {
 	requirements.RemoveValue(cniConfigurationSettledKey)
 	needUpdateMC := false
 
-	// Получаем снэпшот cni_configuration_secret через unmarshal
 	cniSecrets, err := sdkobjectpatch.UnmarshalToStruct[cniSecretStruct](input.NewSnapshots, "cni_configuration_secret")
 	if err != nil || len(cniSecrets) == 0 || (cniSecrets[0] == cniSecretStruct{}) {
-		// Если нет секрета или он nil — ничего не делаем, удаляем ConfigMap
 		setCNIMiscMetricAndReq(input, false)
 		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
 		return nil

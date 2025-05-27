@@ -148,7 +148,7 @@ data:
 
 		It("Hook should fail with errors", func() {
 			Expect(a).To(Not(ExecuteSuccessfully()))
-			Expect(a.GoHookError.Error()).Should(ContainSubstring(`Can't find Secret d8-provider-cluster-configuration in Namespace kube-system`))
+			Expect(a.GoHookError.Error()).Should(ContainSubstring(`can't find Secret d8-provider-cluster-configuration in Namespace kube-system`))
 		})
 	})
 

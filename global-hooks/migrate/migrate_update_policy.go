@@ -89,31 +89,23 @@ type filteredModule struct {
 func fireMupAlerts(input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire("d8_update_policy")
 
-	modules, err := sdkobjectpatch.UnmarshalToStruct[*filteredModule](input.NewSnapshots, "modules")
+	modules, err := sdkobjectpatch.UnmarshalToStruct[filteredModule](input.NewSnapshots, "modules")
 	if err != nil {
 		return fmt.Errorf("cannot unmarshal modules snapshot: %w", err)
 	}
 
-	policies, err := sdkobjectpatch.UnmarshalToStruct[*filteredMup](input.NewSnapshots, "moduleUpdatePolicies")
+	policies, err := sdkobjectpatch.UnmarshalToStruct[filteredMup](input.NewSnapshots, "moduleUpdatePolicies")
 	if err != nil {
 		return fmt.Errorf("cannot unmarshal moduleUpdatePolicies snapshot: %w", err)
 	}
 
 	for _, module := range modules {
-		if module == nil {
-			continue
-		}
-
 		labelsSet := labels.Set{
 			"module": module.Name,
 			"source": module.Source,
 		}
 
 		for _, policy := range policies {
-			if policy == nil {
-				continue
-			}
-
 			selector, err := metav1.LabelSelectorAsSelector(policy.LabelSelector)
 			if err != nil {
 				continue

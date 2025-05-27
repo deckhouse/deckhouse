@@ -112,7 +112,7 @@ func installDataCMFilter(unstructured *unstructured.Unstructured) (go_hook.Filte
 }
 
 func migrateDiskGBHandler(input *go_hook.HookInput, hookParams *HookParams) error {
-	providerConfigSecrets, err := sdkobjectpatch.UnmarshalToStruct[*corev1.Secret](input.NewSnapshots, "provider_configuration")
+	providerConfigSecrets, err := sdkobjectpatch.UnmarshalToStruct[corev1.Secret](input.NewSnapshots, "provider_configuration")
 	if err != nil {
 		return fmt.Errorf("unable to parse provider_configuration snapshot: %w", err)
 	}

@@ -104,7 +104,7 @@ func installDataCMFilter(unstructured *unstructured.Unstructured) (go_hook.Filte
 }
 
 func migrateDiskGBHandler(input *go_hook.HookInput) error {
-	providerSecrets, err := sdkobjectpatch.UnmarshalToStruct[*corev1.Secret](input.NewSnapshots, "provider_configuration")
+	providerSecrets, err := sdkobjectpatch.UnmarshalToStruct[corev1.Secret](input.NewSnapshots, "provider_configuration")
 	if err != nil {
 		return fmt.Errorf("unmarshal provider_configuration: %w", err)
 	}
