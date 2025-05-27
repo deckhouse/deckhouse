@@ -437,7 +437,7 @@ apiVersion: v1
 clusters:
 - cluster:
     certificate-authority-data: $(cat ca.crt | base64 -w0)
-    server: https://<хост кластера>:6443
+    server: https://<cluster_host>:6443
   name: kubernetes
 contexts:
 - context:
@@ -481,7 +481,7 @@ To create a user using a client certificate issued through the Kubernetes API, f
 3. Create a manifest for the CertificateSigningRequest object and save it to a file (csr.yaml in this example):
 
     > In the `request` field, specify the contents of the CSR created in the previous step, encoded in `Base64`.
-    
+
     ```yaml
     apiVersion: certificates.k8s.io/v1
     kind: CertificateSigningRequest
@@ -537,7 +537,7 @@ apiVersion: v1
 clusters:
 - cluster:
     certificate-authority-data: $(cat ca.crt | base64 -w0)
-    server: https://<хост кластера>:6443
+    server: https://<cluster_host>:6443
   name: kubernetes
 contexts:
 - context:

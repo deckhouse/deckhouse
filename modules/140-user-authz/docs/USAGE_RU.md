@@ -481,7 +481,7 @@ EOF
 1. Создайте манифест объекта CertificateSigningRequest и сохраните его в файл (в этом примере — csr.yaml):
 
     > В поле `request` укажите содержимое CSR, созданного на предыдущем этапе, закодированное в `Base64`.
-    
+
     ```yaml
     apiVersion: certificates.k8s.io/v1
     kind: CertificateSigningRequest
