@@ -1,5 +1,5 @@
 {{- if (.Values.global.enabledModules | has "operator-prometheus") }}
-{{- if (.Values.istio.enableAmbientMode) }}
+{{- if (.Values.istio.internal.enableAmbientMode) }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
