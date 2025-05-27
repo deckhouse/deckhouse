@@ -1,8 +1,8 @@
 diff --git a/pkg/kubelet/kubelet.go b/pkg/kubelet/kubelet.go
-index 5e7f5360b22..afebe7feaad 100644
+index 71068f0e7ed..43ca30a9127 100644
 --- a/pkg/kubelet/kubelet.go
 +++ b/pkg/kubelet/kubelet.go
-@@ -880,6 +880,7 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
+@@ -1039,6 +1039,7 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
  		NodeRef:                          nodeRef,
  		GetPodsFunc:                      klet.GetActivePods,
  		KillPodFunc:                      killPodNow(klet.podWorkers, kubeDeps.Recorder),
@@ -11,10 +11,10 @@ index 5e7f5360b22..afebe7feaad 100644
  		ShutdownGracePeriodRequested:     kubeCfg.ShutdownGracePeriod.Duration,
  		ShutdownGracePeriodCriticalPods:  kubeCfg.ShutdownGracePeriodCriticalPods.Duration,
 diff --git a/pkg/kubelet/nodeshutdown/nodeshutdown_manager.go b/pkg/kubelet/nodeshutdown/nodeshutdown_manager.go
-index aac590f967d..5f3473950c4 100644
+index 3113c1db779..14f43367489 100644
 --- a/pkg/kubelet/nodeshutdown/nodeshutdown_manager.go
 +++ b/pkg/kubelet/nodeshutdown/nodeshutdown_manager.go
-@@ -44,6 +44,7 @@ type Config struct {
+@@ -56,6 +56,7 @@ type Config struct {
  	NodeRef                          *v1.ObjectReference
  	GetPodsFunc                      eviction.ActivePodsFunc
  	KillPodFunc                      eviction.KillPodFunc
@@ -23,27 +23,35 @@ index aac590f967d..5f3473950c4 100644
  	ShutdownGracePeriodRequested     time.Duration
  	ShutdownGracePeriodCriticalPods  time.Duration
 diff --git a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
-index 8469cecdc0e..9468ddf9787 100644
+index 12dcb66ec77..ad219b7251c 100644
 --- a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
 +++ b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
 @@ -21,6 +21,7 @@ limitations under the License.
  package nodeshutdown
-
+ 
  import (
 +	"context"
  	"fmt"
  	"path/filepath"
- 	"sort"
-@@ -82,6 +83,8 @@ type managerImpl struct {
+ 	"sync"
+@@ -37,6 +38,7 @@ import (
+ 	"k8s.io/kubernetes/pkg/kubelet/metrics"
+ 	"k8s.io/kubernetes/pkg/kubelet/nodeshutdown/systemd"
+ 	"k8s.io/kubernetes/pkg/kubelet/prober"
++	"k8s.io/utils/clock"
+ )
+ 
+ const (
+@@ -69,6 +71,8 @@ type managerImpl struct {
  	dbusCon     dbusInhibiter
  	inhibitLock systemd.InhibitLock
-
+ 
 +	conditionChecker *conditionChecker
 +
  	nodeShuttingDownMutex sync.Mutex
  	nodeShuttingDownNow   bool
-
-@@ -134,6 +137,10 @@ func NewManager(conf *Config) (Manager, lifecycle.PodAdmitHandler) {
+ 	podManager            *podManager
+@@ -105,6 +109,10 @@ func NewManager(conf *Config) Manager {
  			Path: filepath.Join(conf.StateDirectory, localStorageStateFile),
  		},
  	}
@@ -54,19 +62,19 @@ index 8469cecdc0e..9468ddf9787 100644
  	manager.logger.Info("Creating node shutdown manager",
  		"shutdownGracePeriodRequested", conf.ShutdownGracePeriodRequested,
  		"shutdownGracePeriodCriticalPods", conf.ShutdownGracePeriodCriticalPods,
-@@ -239,7 +246,7 @@ func (m *managerImpl) start() (chan struct{}, error) {
+@@ -210,7 +218,7 @@ func (m *managerImpl) start() (chan struct{}, error) {
  		return nil, err
  	}
-
+ 
 -	events, err := m.dbusCon.MonitorShutdown()
 +	dbusEvents, err := m.dbusCon.MonitorShutdown()
  	if err != nil {
  		releaseErr := m.dbusCon.ReleaseInhibitLock(m.inhibitLock)
  		if releaseErr != nil {
-@@ -248,6 +255,30 @@ func (m *managerImpl) start() (chan struct{}, error) {
+@@ -219,6 +227,30 @@ func (m *managerImpl) start() (chan struct{}, error) {
  		return nil, fmt.Errorf("failed to monitor shutdown: %v", err)
  	}
-
+ 
 +	shutdownAfterPostpone := m.conditionChecker.MonitorGracefulShutdownPostpone()
 +
 +	// Set capacity to 2 to not block our sources.
@@ -94,7 +102,7 @@ index 8469cecdc0e..9468ddf9787 100644
  	stop := make(chan struct{})
  	go func() {
  		// Monitor for shutdown events. This follows the logind Inhibit Delay pattern described on https://www.freedesktop.org/wiki/Software/systemd/inhibit/
-@@ -255,10 +286,12 @@ func (m *managerImpl) start() (chan struct{}, error) {
+@@ -226,10 +258,12 @@ func (m *managerImpl) start() (chan struct{}, error) {
  		// 2. When shutdown(true) event is received, process the shutdown and release the inhibit lock.
  		// 3. When shutdown(false) event is received, this indicates a previous shutdown was cancelled. In this case, acquire the inhibit lock again.
  		for {
@@ -108,10 +116,10 @@ index 8469cecdc0e..9468ddf9787 100644
  					close(stop)
  					return
  				}
-@@ -277,6 +310,24 @@ func (m *managerImpl) start() (chan struct{}, error) {
+@@ -248,6 +282,24 @@ func (m *managerImpl) start() (chan struct{}, error) {
  					m.recorder.Event(m.nodeRef, v1.EventTypeNormal, kubeletevents.NodeShutdown, "Shutdown manager detected shutdown cancellation")
  				}
-
+ 
 +				// Check if shutdown is postponed by the condition and prevent setting m.nodeShuttingDownNow=true to keep Ready status for the Node.
 +				if isShuttingDown {
 +					isPostponed, err := m.conditionChecker.IsPostponed()
@@ -133,9 +141,9 @@ index 8469cecdc0e..9468ddf9787 100644
  				m.nodeShuttingDownMutex.Lock()
  				m.nodeShuttingDownNow = isShuttingDown
  				m.nodeShuttingDownMutex.Unlock()
-@@ -491,3 +542,116 @@ type podShutdownGroup struct {
- 	kubeletconfig.ShutdownGracePeriodByPodPriority
- 	Pods []*v1.Pod
+@@ -324,3 +376,116 @@ func (m *managerImpl) processShutdownEvent() error {
+ 
+ 	return m.podManager.killPods(activePods)
  }
 +
 +type conditionChecker struct {
