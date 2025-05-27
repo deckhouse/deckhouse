@@ -1,5 +1,0 @@
-name: static-routing-manager
-weight: 25
-subsystems:
-  - networking
-namespace: d8-static-routing-manager
