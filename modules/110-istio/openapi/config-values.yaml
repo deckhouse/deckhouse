@@ -39,12 +39,12 @@ properties:
     x-examples: [true]
     description: |
       Whether to handle HTTP/1.0 requests in istio-sidecars or deny them with `426 Upgrade Required` response.
-  enableAmbientMode:
-    type: boolean
-    default: false
-    x-examples: [true]
-    description: |
-      Enable components for Ambient Mesh work.
+  # enableAmbientMode:
+  #   type: boolean
+  #   default: false
+  #   x-examples: [true]
+  #   description: |
+  #     Enable components for Ambient Mesh work.
   federation:
     type: object
     x-doc-d8Editions:
