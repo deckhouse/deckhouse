@@ -174,7 +174,7 @@
   - usr/bin/whoami
   - usr/bin/yes
   before: install
-- image: libs/openssl
+- image: tools/openssl
   add: /usr/lib64
   to: /usr/lib
   includePaths:
@@ -183,7 +183,7 @@
   - engines-3
   - ossl-modules
   before: install
-- image: libs/openssl
+- image: tools/openssl
   add: /usr/bin/openssl
   to: /usr/bin/openssl
   before: install
