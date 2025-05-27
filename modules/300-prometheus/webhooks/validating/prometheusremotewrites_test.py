@@ -42,7 +42,7 @@ def _prepare_prometheusremotewrites_class_binding_context(new_spec: dict) -> Dot
           "resource": {{
             "group": "deckhouse.io",
             "version": "v",
-            resources: "prometheusremotewrites"
+            "resources": "prometheusremotewrites"
           }},
           "requestKind": {{
             "group": "deckhouse.io",
@@ -65,7 +65,7 @@ def _prepare_prometheusremotewrites_class_binding_context(new_spec: dict) -> Dot
           }},
           "object": {{
             "apiVersion": "deckhouse.io/v1alpha1",
-            "kind": "Prometheusremotewrites"
+            "kind": "Prometheusremotewrites",
             "metadata": {{
               "creationTimestamp": "2024-11-22T08:00:33Z",
               "generation": 1,
@@ -108,13 +108,13 @@ def _prepare_prometheusremotewrites_class_binding_context(new_spec: dict) -> Dot
                   "fieldsV1": {{
                     "f:spec": {{
                       ".": {{}},
-                      "f:url": "test",
+                      "f:url": {{}},
                       "f:tlsConfig": {{
-                         f:ca": {{}}
+                         "f:ca": {{}}
                       }}
                     }}
                   }},
-                  "manager": "kubectl-client-side-apply",
+                  "manager": "deckhouse-controller",
                   "operation": "Update",
                   "time": "2025-02-17T16:01:42Z"
                 }}
@@ -124,7 +124,7 @@ def _prepare_prometheusremotewrites_class_binding_context(new_spec: dict) -> Dot
               "uid": "92ce2620-847d-4e45-aaa0-c0e314b33142"
             }},
             "spec": {{
-              "url": "https://old.local"
+              "url": "https://old.local",
               "tlsConfig": {{
                   "ca": "111"
               }}
