@@ -113,6 +113,30 @@ func (m *MirrorHost) Validate() error {
 	)
 }
 
+func (m *MirrorHost) IsEqual(other MirrorHost) bool {
+	if m.Host != other.Host || m.Scheme != other.Scheme {
+		return false
+	}
+	if !m.Auth.IsEqual(other.Auth) {
+		return false
+	}
+	if len(m.Rewrites) != len(other.Rewrites) {
+		return false
+	}
+	for i := range m.Rewrites {
+		if m.Rewrites[i] != other.Rewrites[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func (a *Auth) IsEqual(b Auth) bool {
+	return a.Username == b.Username &&
+		a.Password == b.Password &&
+		a.Auth == b.Auth
+}
+
 func ToMap(s interface{}) (map[string]interface{}, error) {
 	jsonData, err := json.Marshal(s)
 	if err != nil {

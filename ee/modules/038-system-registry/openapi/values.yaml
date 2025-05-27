@@ -97,7 +97,16 @@ properties:
                       mode:
                         type: string
                         enum: [Unmanaged, Direct, Proxy, Local]
-                      proxy_local:
+                      proxy:
+                        type: object
+                        properties:
+                          ca:
+                            type: string
+                          username:
+                            type: string
+                          password:
+                            type: string
+                      local:
                         type: object
                         properties:
                           ca:

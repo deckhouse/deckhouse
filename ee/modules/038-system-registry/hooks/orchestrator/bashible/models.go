@@ -45,11 +45,10 @@ type State struct {
 type Config bashible.Config
 
 type ModeParams struct {
-	Mode registry_const.ModeType `json:"mode" yaml:"mode"`
-
-	ProxyLocal *ProxyLocalModeParams `json:"proxy_local,omitempty" yaml:"proxy_local,omitempty"`
-	Unmanaged  *UnmanagedModeParams  `json:"unmanaged,omitempty" yaml:"unmanaged,omitempty"`
-	Direct     *DirectModeParams     `json:"direct,omitempty" yaml:"direct,omitempty"`
+	Proxy     *ProxyLocalModeParams `json:"proxy,omitempty" yaml:"proxy,omitempty"`
+	Local     *ProxyLocalModeParams `json:"local,omitempty" yaml:"local,omitempty"`
+	Direct    *DirectModeParams     `json:"direct,omitempty" yaml:"direct,omitempty"`
+	Unmanaged *UnmanagedModeParams  `json:"unmanaged,omitempty" yaml:"unmanaged,omitempty"`
 }
 
 type ProxyLocalModeParams struct {
@@ -101,7 +100,6 @@ func (state *State) CleanupFirstStage(registrySecret deckhouse_registry.Config, 
 	params := Params{
 		RegistrySecret: registrySecret,
 		ModeParams: ModeParams{
-			Mode:      registry_const.ModeUnmanaged,
 			Unmanaged: state.UnmanagedParams,
 		},
 	}
@@ -147,21 +145,17 @@ func (state *State) IsRunning() bool {
 //   - Result: status of configuration (ready or not, message for logging/display).
 //   - error: encountered if parameter validation or processing fails.
 func (state *State) process(params Params, inputs Inputs, isFirstStage bool, stageInfo string) (Result, error) {
-	switch {
-	case params.ModeParams.Mode == registry_const.ModeUnmanaged &&
-		params.ModeParams.Unmanaged == nil:
-		return failedResult(stageInfo), fmt.Errorf("missing unmanaged parameters for mode %s", params.ModeParams.Mode)
-	case (params.ModeParams.Mode == registry_const.ModeLocal ||
-		params.ModeParams.Mode == registry_const.ModeProxy) &&
-		params.ModeParams.ProxyLocal == nil:
-		return failedResult(stageInfo), fmt.Errorf("missing proxy/local parameters for mode %s", params.ModeParams.Mode)
-	case params.ModeParams.Mode == registry_const.ModeDirect &&
-		params.ModeParams.Direct == nil:
-		return failedResult(stageInfo), fmt.Errorf("missing direct parameters for mode %s", params.ModeParams.Mode)
+	if params.ModeParams.isEmpty() {
+		return failedResult(stageInfo), fmt.Errorf("mode params are empty")
+	}
+
+	mode, err := params.ModeParams.mode()
+	if err != nil {
+		return failedResult(stageInfo), fmt.Errorf("failed to resolve mode: %w", err)
 	}
 
 	imagesBase := registry_const.HostWithPath
-	if params.ModeParams.Mode == registry_const.ModeUnmanaged {
+	if params.ModeParams.Unmanaged != nil {
 		imagesBase = params.ModeParams.Unmanaged.ImagesRepo
 	}
 
@@ -182,7 +176,7 @@ func (state *State) process(params Params, inputs Inputs, isFirstStage bool, sta
 	}
 
 	config := Config{
-		Mode:           params.ModeParams.Mode,
+		Mode:           mode,
 		ImagesBase:     imagesBase,
 		Version:        "",                          // by processHash
 		ProxyEndpoints: []string{},                  // by processEndpoints
@@ -195,13 +189,13 @@ func (state *State) process(params Params, inputs Inputs, isFirstStage bool, sta
 		// New
 		config.processHosts(inputs.MasterNodesIPs, params.ModeParams)
 		// Endpoints
-		config.processEndpoints(inputs.MasterNodesIPs, state.ActualParams.Mode, params.ModeParams.Mode)
+		config.processEndpoints(inputs.MasterNodesIPs, *state.ActualParams, params.ModeParams)
 	} else {
 		// Replace Current by new and process only new hosts
 		state.ActualParams = &params.ModeParams
 		config.processHosts(inputs.MasterNodesIPs, *state.ActualParams)
 		// Endpoints
-		config.processEndpoints(inputs.MasterNodesIPs, state.ActualParams.Mode)
+		config.processEndpoints(inputs.MasterNodesIPs, *state.ActualParams)
 	}
 
 	if err := config.processHash(); err != nil {
@@ -211,11 +205,11 @@ func (state *State) process(params Params, inputs Inputs, isFirstStage bool, sta
 	return buildResult(inputs, false, state.Config.Version, stageInfo), nil
 }
 
-func (cfg *Config) processEndpoints(masterNodesIPs []string, modes ...registry_const.ModeType) {
+func (cfg *Config) processEndpoints(masterNodesIPs []string, params ...ModeParams) {
 	cfg.ProxyEndpoints = []string{}
 
-	for _, mode := range modes {
-		if mode == registry_const.ModeLocal || mode == registry_const.ModeProxy {
+	for _, p := range params {
+		if p.Proxy != nil || p.Local != nil {
 			cfg.ProxyEndpoints = registry_const.GenerateProxyEndpoints(masterNodesIPs)
 			break
 		}
@@ -234,14 +228,17 @@ func (cfg *Config) processHash() error {
 
 func (cfg *Config) processHosts(masterNodesIPs []string, modeParams ModeParams) {
 	switch {
-	case modeParams.ProxyLocal != nil:
-		hosts, prepull := processProxyLocal(*modeParams.ProxyLocal, masterNodesIPs)
+	case modeParams.Proxy != nil:
+		hosts, prepull := processProxyLocal(*modeParams.Proxy, masterNodesIPs)
 		cfg.mergeHosts(hosts, prepull)
-	case modeParams.Unmanaged != nil:
-		h := processUnmanaged(*modeParams.Unmanaged)
-		cfg.mergeHosts(h, h)
+	case modeParams.Local != nil:
+		hosts, prepull := processProxyLocal(*modeParams.Local, masterNodesIPs)
+		cfg.mergeHosts(hosts, prepull)
 	case modeParams.Direct != nil:
 		h := processDirect(*modeParams.Direct)
+		cfg.mergeHosts(h, h)
+	case modeParams.Unmanaged != nil:
+		h := processUnmanaged(*modeParams.Unmanaged)
 		cfg.mergeHosts(h, h)
 	}
 }
@@ -256,15 +253,15 @@ func (cfg *Config) mergeHosts(hosts, prepull map[string]bashible.Hosts) {
 
 	for name, h := range hosts {
 		old := cfg.Hosts[name]
-		old.CA = helpers.DeduplicateAndSortSlice(append(old.CA, h.CA...))
-		old.Mirrors = append(old.Mirrors, h.Mirrors...)
+		old.CA = deduplicateAndSortCA(append(old.CA, h.CA...))
+		old.Mirrors = deduplicateMirrors(append(old.Mirrors, h.Mirrors...))
 		cfg.Hosts[name] = old
 	}
 
 	for name, h := range prepull {
 		old := cfg.PrepullHosts[name]
-		old.CA = helpers.DeduplicateAndSortSlice(append(old.CA, h.CA...))
-		old.Mirrors = append(old.Mirrors, h.Mirrors...)
+		old.CA = deduplicateAndSortCA(append(old.CA, h.CA...))
+		old.Mirrors = deduplicateMirrors(append(old.Mirrors, h.Mirrors...))
 		cfg.PrepullHosts[name] = old
 	}
 }
@@ -280,7 +277,6 @@ func (p *ModeParams) fromRegistrySecret(registrySecret deckhouse_registry.Config
 
 	hostWithPath := registrySecret.Address + registrySecret.Path
 	*p = ModeParams{
-		Mode: registry_const.ModeUnmanaged,
 		Unmanaged: &UnmanagedModeParams{
 			ImagesRepo: hostWithPath,
 			Scheme:     strings.ToLower(registrySecret.Scheme),
@@ -292,18 +288,41 @@ func (p *ModeParams) fromRegistrySecret(registrySecret deckhouse_registry.Config
 	return nil
 }
 
+func (p *ModeParams) mode() (registry_const.ModeType, error) {
+	switch {
+	case p == nil:
+		return "", fmt.Errorf("empty mode params")
+	case p.Proxy != nil:
+		return registry_const.ModeProxy, nil
+	case p.Local != nil:
+		return registry_const.ModeLocal, nil
+	case p.Direct != nil:
+		return registry_const.ModeDirect, nil
+	case p.Unmanaged != nil:
+		return registry_const.ModeUnmanaged, nil
+	default:
+		return "", fmt.Errorf("unknown mode")
+	}
+}
+
 func (p *ModeParams) isEmpty() bool {
-	return p == nil || p.Mode == ""
+	if p == nil {
+		return true
+	}
+	return p.Proxy == nil &&
+		p.Local == nil &&
+		p.Direct == nil &&
+		p.Unmanaged == nil
 }
 
 func (p *ModeParams) isEqual(other ModeParams) bool {
 	if p == nil {
 		return false
 	}
-	if p.Mode != other.Mode {
+	if !p.Proxy.isEqual(other.Proxy) {
 		return false
 	}
-	if !p.ProxyLocal.isEqual(other.ProxyLocal) {
+	if !p.Local.isEqual(other.Local) {
 		return false
 	}
 	if !p.Direct.isEqual(other.Direct) {
@@ -502,6 +521,39 @@ func buildResult(inputs Inputs, isStop bool, version, stageInfo string) Result {
 		Ready:   false,
 		Message: builder.String(),
 	}
+}
+
+func deduplicateAndSortCA(sliceCA []string) []string {
+	seen := make(map[string]struct{}, len(sliceCA))
+	ret := []string{}
+
+	for _, ca := range sliceCA {
+		if _, exists := seen[ca]; exists {
+			continue
+		}
+		seen[ca] = struct{}{}
+		ret = append(ret, ca)
+	}
+	slices.Sort(ret)
+	return ret
+}
+
+func deduplicateMirrors(mirrors []bashible.MirrorHost) []bashible.MirrorHost {
+	ret := []bashible.MirrorHost{}
+
+	for _, newMirror := range mirrors {
+		duplicate := false
+		for _, existingMirror := range ret {
+			if existingMirror.IsEqual(newMirror) {
+				duplicate = true
+				break
+			}
+		}
+		if !duplicate {
+			ret = append(ret, newMirror)
+		}
+	}
+	return ret
 }
 
 func singleCA(s string) []string {

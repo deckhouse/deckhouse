@@ -200,8 +200,7 @@ func (state *State) transitionToLocal(log go_hook.Logger, inputs Inputs) error {
 	bashibleParam := bashible.Params{
 		RegistrySecret: inputs.RegistrySecret,
 		ModeParams: bashible.ModeParams{
-			Mode: registry_const.ModeLocal,
-			ProxyLocal: &bashible.ProxyLocalModeParams{
+			Local: &bashible.ProxyLocalModeParams{
 				CA:       string(registry_pki.EncodeCertificate(pkiResult.CA.Cert)),
 				Username: state.Users.RO.UserName,
 				Password: state.Users.RO.Password,
@@ -358,8 +357,7 @@ func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 	bashibleParam := bashible.Params{
 		RegistrySecret: inputs.RegistrySecret,
 		ModeParams: bashible.ModeParams{
-			Mode: registry_const.ModeProxy,
-			ProxyLocal: &bashible.ProxyLocalModeParams{
+			Proxy: &bashible.ProxyLocalModeParams{
 				CA:       string(registry_pki.EncodeCertificate(pkiResult.CA.Cert)),
 				Username: state.Users.RO.UserName,
 				Password: state.Users.RO.Password,
@@ -514,7 +512,6 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 	bashibleParam := bashible.Params{
 		RegistrySecret: inputs.RegistrySecret,
 		ModeParams: bashible.ModeParams{
-			Mode: registry_const.ModeDirect,
 			Direct: &bashible.DirectModeParams{
 				ImagesRepo: inputs.Params.ImagesRepo,
 				Scheme:     inputs.Params.Scheme,
