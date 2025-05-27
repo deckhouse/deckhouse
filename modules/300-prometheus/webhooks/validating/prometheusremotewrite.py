@@ -18,7 +18,6 @@ from typing import Optional
 from deckhouse import hook
 from dotmap import DotMap
 import cryptography
-from cryptography.exceptions import InvalidKey
 
 config = """
 configVersion: v1
@@ -97,7 +96,7 @@ def check_verify_ca_signatures(ctx: DotMap) -> Optional[str]:
     try:
         cryptography.x509.load_pem_x509_certificate(ca.encode(), cryptography.hazmat.backends())
         return None
-    except (ValueError, InvalidKey) as e:
+    except Exception as e:
         return f"Certificate verification failed: {e}"
     
 if __name__ == "__main__":
