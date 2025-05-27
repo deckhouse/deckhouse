@@ -16,9 +16,9 @@ type NodeServicesConfigModel struct {
 	Config  nodeservices.Config `json:"config"`
 }
 
-func (config NodeServicesConfigModel) Validate() error {
-	return validation.ValidateStruct(&config,
-		validation.Field(&config.Config, validation.Required),
+func (value NodeServicesConfigModel) Validate() error {
+	return validation.ValidateStruct(&value,
+		validation.Field(&value.Config, validation.Required),
 	)
 }
 

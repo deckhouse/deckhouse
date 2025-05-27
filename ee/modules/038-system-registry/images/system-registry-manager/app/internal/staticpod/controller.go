@@ -25,10 +25,13 @@ import (
 var _ reconcile.Reconciler = &servicesController{}
 
 type servicesController struct {
-	Namespace string
-	NodeName  string
-	Client    client.Client
-	Services  *servicesManager
+	Namespace    string
+	NodeName     string
+	PodName      string
+	PodNamespace string
+
+	Client   client.Client
+	Services *servicesManager
 }
 
 func (sc *servicesController) SetupWithManager(_ context.Context, mgr ctrl.Manager) error {
@@ -68,42 +71,25 @@ func (sc *servicesController) SetupWithManager(_ context.Context, mgr ctrl.Manag
 	}
 
 	nodePredicate := predicate.Funcs{
-		GenericFunc: func(e event.TypedGenericEvent[client.Object]) bool {
-			node := e.Object.(*corev1.Node)
-
-			if node.Name != sc.NodeName {
-				return false
-			}
-
-			return hasMasterLabel(node)
+		GenericFunc: func(_ event.TypedGenericEvent[client.Object]) bool {
+			return false
 		},
-		CreateFunc: func(e event.TypedCreateEvent[client.Object]) bool {
-			node := e.Object.(*corev1.Node)
-
-			if node.Name != sc.NodeName {
-				return false
-			}
-
-			return hasMasterLabel(node)
+		CreateFunc: func(_ event.TypedCreateEvent[client.Object]) bool {
+			return false
 		},
 		DeleteFunc: func(e event.TypedDeleteEvent[client.Object]) bool {
 			node := e.Object.(*corev1.Node)
-
-			if node.Name != sc.NodeName {
-				return false
-			}
-
-			return hasMasterLabel(node)
+			return node.Name == sc.NodeName
 		},
 		UpdateFunc: func(e event.TypedUpdateEvent[client.Object]) bool {
-			oldNode := e.ObjectNew.(*corev1.Node)
+			oldNode := e.ObjectOld.(*corev1.Node)
 			newNode := e.ObjectNew.(*corev1.Node)
 
 			if oldNode.Name != sc.NodeName || newNode.Name != sc.NodeName {
 				return false
 			}
 
-			return hasMasterLabel(oldNode) != hasMasterLabel(newNode)
+			return hasMasterLabel(newNode) != hasMasterLabel(oldNode)
 		},
 	}
 
@@ -111,6 +97,32 @@ func (sc *servicesController) SetupWithManager(_ context.Context, mgr ctrl.Manag
 	moduleConfigPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		return obj.GetName() == moduleConfig.GetName()
 	})
+
+	podPredicate := predicate.Funcs{
+		GenericFunc: func(_ event.TypedGenericEvent[client.Object]) bool {
+			return false
+		},
+		CreateFunc: func(_ event.TypedCreateEvent[client.Object]) bool {
+			return false
+		},
+		DeleteFunc: func(_ event.TypedDeleteEvent[client.Object]) bool {
+			return false
+		},
+		UpdateFunc: func(e event.TypedUpdateEvent[client.Object]) bool {
+			oldPod := e.ObjectOld.(*corev1.Pod)
+			newPod := e.ObjectNew.(*corev1.Pod)
+
+			if oldPod.Name != sc.PodName || oldPod.Namespace != sc.PodNamespace {
+				return false
+			}
+
+			if newPod.Name != sc.PodName || newPod.Namespace != sc.PodNamespace {
+				return false
+			}
+
+			return isPodReady(newPod) != isPodReady(oldPod)
+		},
+	}
 
 	err := ctrl.NewControllerManagedBy(mgr).
 		Named(controllerName).
@@ -128,6 +140,11 @@ func (sc *servicesController) SetupWithManager(_ context.Context, mgr ctrl.Manag
 			newConfigHandler("Node"),
 			builder.WithPredicates(nodePredicate),
 		).
+		Watches(
+			&corev1.Pod{},
+			newConfigHandler("Pod"),
+			builder.WithPredicates(podPredicate),
+		).
 		Complete(sc)
 
 	if err != nil {
@@ -140,45 +157,107 @@ func (sc *servicesController) SetupWithManager(_ context.Context, mgr ctrl.Manag
 func (sc *servicesController) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
-	node := corev1.Node{}
+	isMaster, err := sc.checkNode(ctx)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("cannot check node: %w", err)
+	}
+
+	if !isMaster {
+		log.Info("Our Node is not master, stopping services")
+
+		err = sc.stopServices(ctx)
+		if err != nil {
+			err = fmt.Errorf("cannot stop services: %w", err)
+		}
+		return ctrl.Result{}, err
+	}
+
+	moduleEnabled, err := sc.checkModuleEnabled(ctx)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("cannot check module enabled: %w", err)
+	}
+
+	if !moduleEnabled {
+		log.Info("Our Module is not enabled, stopping services")
+
+		err := sc.stopServices(ctx)
+		if err != nil {
+			err = fmt.Errorf("cannot stop services: %w", err)
+		}
+		return ctrl.Result{}, err
+	}
+
+	if !sc.checkPodReady(ctx) {
+		log.Info("Our pod is not ready, skipping reconcile")
+		return ctrl.Result{}, nil
+	}
+
+	if err := sc.processConfig(ctx); err != nil {
+		return ctrl.Result{}, fmt.Errorf("cannot process config: %w", err)
+	}
+
+	return ctrl.Result{}, nil
+}
+
+func (sc *servicesController) checkNode(ctx context.Context) (bool, error) {
+	log := ctrl.LoggerFrom(ctx)
+
+	var node corev1.Node
 	key := types.NamespacedName{Name: sc.NodeName}
+
 	if err := sc.Client.Get(ctx, key, &node); err != nil {
 		if client.IgnoreNotFound(err) == nil {
 			// How?
-			log.Info("Our Node not found, stopping services")
-			return sc.stopServices(ctx)
+			log.Error(err, "Node is not found")
+			return false, nil
 		}
-
-		return ctrl.Result{}, fmt.Errorf("cannot get node: %w", err)
+		return false, fmt.Errorf("cannot get node: %w", err)
 	}
 
-	if !hasMasterLabel(&node) {
-		// Let's race with k8s sheduler
-		log.Info("Our Node is not master, stopping services")
-		return sc.stopServices(ctx)
-	}
+	return hasMasterLabel(&node), nil
+}
 
+func (sc *servicesController) checkModuleEnabled(ctx context.Context) (bool, error) {
 	moduleConfig := getModuleConfigObject()
-	key = types.NamespacedName{Name: moduleConfig.GetName()}
+	key := types.NamespacedName{Name: moduleConfig.GetName()}
+
 	if err := sc.Client.Get(ctx, key, &moduleConfig); err != nil {
-		return ctrl.Result{}, fmt.Errorf("cannot get ModuleConfig: %w", err)
+		if client.IgnoreNotFound(err) == nil {
+			return false, nil
+		}
+		return false, fmt.Errorf("cannot get ModuleConfig: %w", err)
 	}
 
-	moduleEnabled := true
-	if enabled, found, _ := unstructured.NestedBool(moduleConfig.Object, "spec", "enabled"); found {
-		moduleEnabled = enabled
+	enabled, _, _ := unstructured.NestedBool(moduleConfig.Object, "spec", "enabled")
+	return enabled, nil
+}
+
+func (sc *servicesController) checkPodReady(ctx context.Context) bool {
+	log := ctrl.LoggerFrom(ctx)
+
+	var pod corev1.Pod
+	key := types.NamespacedName{Namespace: sc.PodNamespace, Name: sc.PodName}
+
+	if err := sc.Client.Get(ctx, key, &pod); err != nil {
+		log.Error(err, "Cannot get our pod")
+		return false
 	}
-	log = log.WithValues("module_enabled", moduleEnabled)
+
+	return isPodReady(&pod)
+}
+
+func (sc *servicesController) processConfig(ctx context.Context) error {
+	log := ctrl.LoggerFrom(ctx)
 
 	config := corev1.Secret{}
-	key = types.NamespacedName{Name: sc.getConfigSecretName(), Namespace: sc.Namespace}
+	key := types.NamespacedName{Name: sc.getConfigSecretName(), Namespace: sc.Namespace}
 
 	if err := sc.Client.Get(ctx, key, &config); err != nil {
 		if client.IgnoreNotFound(err) == nil {
 			return sc.stopServices(ctx)
 		}
 
-		return ctrl.Result{}, fmt.Errorf("cannot get Config: %w", err)
+		return fmt.Errorf("cannot get Config: %w", err)
 	}
 
 	configModel := NodeServicesConfigModel{
@@ -186,16 +265,16 @@ func (sc *servicesController) Reconcile(ctx context.Context, _ ctrl.Request) (ct
 	}
 
 	if err := yaml.Unmarshal(config.Data["config"], &configModel.Config); err != nil {
-		return ctrl.Result{}, fmt.Errorf("config unmarshal error: %w", err)
+		return fmt.Errorf("config unmarshal error: %w", err)
 	}
 
 	if err := configModel.Validate(); err != nil {
-		return ctrl.Result{}, fmt.Errorf("config validation error: %w", err)
+		return fmt.Errorf("config validation error: %w", err)
 	}
 
 	changes, err := sc.Services.applyConfig(configModel)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("apply services config error: %w", err)
+		return fmt.Errorf("apply services config error: %w", err)
 	}
 
 	if changes.HasChanges() {
@@ -208,16 +287,16 @@ func (sc *servicesController) Reconcile(ctx context.Context, _ ctrl.Request) (ct
 		log.Info("No changes in services configuration required")
 	}
 
-	return ctrl.Result{}, nil
+	return nil
 }
 
-func (sc *servicesController) stopServices(ctx context.Context) (ctrl.Result, error) {
+func (sc *servicesController) stopServices(ctx context.Context) error {
 	log := ctrl.LoggerFrom(ctx)
 
 	changes, err := sc.Services.StopServices()
 
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("stop services error: %w", err)
+		return fmt.Errorf("stop services error: %w", err)
 	}
 
 	if changes.HasChanges() {
@@ -229,7 +308,7 @@ func (sc *servicesController) stopServices(ctx context.Context) (ctrl.Result, er
 		log.Info("All services are stopped already")
 	}
 
-	return reconcile.Result{}, nil
+	return nil
 }
 
 func (sc *servicesController) getConfigSecretName() string {
@@ -248,4 +327,14 @@ func getModuleConfigObject() unstructured.Unstructured {
 	ret.SetName(registryModuleName)
 
 	return ret
+}
+
+func isPodReady(pod *corev1.Pod) bool {
+	for _, cond := range pod.Status.Conditions {
+		if cond.Type == "Ready" {
+			return cond.Status == "True"
+		}
+	}
+
+	return false
 }

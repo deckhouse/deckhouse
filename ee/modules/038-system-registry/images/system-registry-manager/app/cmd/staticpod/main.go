@@ -31,6 +31,12 @@ func main() {
 	settings.NodeName = getEnvOrExit("NODE_NAME")
 	log = log.With("node", settings.NodeName)
 
+	settings.PodName = getEnvOrExit("POD_NAME")
+	log = log.With("pod.name", settings.PodName)
+
+	settings.PodNamespace = getEnvOrExit("POD_NAMESPACE")
+	log = log.With("pod.namespace", settings.PodNamespace)
+
 	settings.ImageAuth = getEnvOrExit("IMAGE_AUTH")
 	settings.ImageDistribution = getEnvOrExit("IMAGE_DISTRIBUTION")
 	settings.ImageMirrorer = getEnvOrExit("IMAGE_MIRRORER")

@@ -12,9 +12,11 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 )
@@ -25,8 +27,11 @@ const (
 )
 
 type AppSettings struct {
-	HostIP            string
-	NodeName          string
+	HostIP       string
+	NodeName     string
+	PodName      string
+	PodNamespace string
+
 	ImageAuth         string
 	ImageDistribution string
 	ImageMirrorer     string
@@ -46,8 +51,7 @@ func Run(ctx context.Context, cfg *rest.Config, settings AppSettings) error {
 		settings: settings,
 	}
 
-	// Set up the manager with leader election and other options
-	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
+	options := ctrl.Options{
 		Metrics: metricsserver.Options{
 			BindAddress: metricsAddr,
 		},
@@ -57,8 +61,18 @@ func Run(ctx context.Context, cfg *rest.Config, settings AppSettings) error {
 			DefaultNamespaces: map[string]cache.Config{
 				namespace: {},
 			},
+			ByObject: map[client.Object]cache.ByObject{
+				&corev1.Pod{}: {
+					Namespaces: map[string]cache.Config{
+						settings.PodNamespace: {},
+					},
+				},
+			},
 		},
-	})
+	}
+
+	// Set up the manager with leader election and other options
+	mgr, err := ctrl.NewManager(cfg, options)
 
 	if err != nil {
 		return fmt.Errorf("unable to set up manager: %w", err)
@@ -72,10 +86,12 @@ func Run(ctx context.Context, cfg *rest.Config, settings AppSettings) error {
 	}
 
 	servicesCtrl := servicesController{
-		Namespace: namespace,
-		Client:    mgr.GetClient(),
-		Services:  services,
-		NodeName:  settings.NodeName,
+		Namespace:    namespace,
+		Client:       mgr.GetClient(),
+		Services:     services,
+		NodeName:     settings.NodeName,
+		PodName:      settings.PodName,
+		PodNamespace: settings.PodNamespace,
 	}
 
 	if err := servicesCtrl.SetupWithManager(ctx, mgr); err != nil {
