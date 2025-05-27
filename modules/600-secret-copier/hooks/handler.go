@@ -59,6 +59,11 @@ func SecretPath(s *Secret) string {
 }
 
 func ApplyCopierSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	if obj.GetDeletionTimestamp() != nil {
+		// Skip deleted object
+		return nil, nil
+	}
+
 	secret := &v1.Secret{}
 	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
@@ -72,6 +77,17 @@ func ApplyCopierSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 		Labels:      secret.Labels,
 		Type:        secret.Type,
 		Data:        secret.Data,
+	}
+
+	// Ensure maps are not nil to avoid panic on delete
+	if s.Labels == nil {
+		s.Labels = make(map[string]string)
+	}
+	if s.Annotations == nil {
+		s.Annotations = make(map[string]string)
+	}
+	if s.Data == nil {
+		s.Data = make(map[string][]byte)
 	}
 
 	if secret.Namespace != v1.NamespaceDefault {
@@ -90,6 +106,12 @@ func ApplyCopierSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 }
 
 func ApplyCopierNamespaceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	// Check if obj has meta DeletionTimestamp
+	if obj.GetDeletionTimestamp() != nil {
+		// Skip deleted object
+		return nil, nil
+	}
+
 	namespace := &v1.Namespace{}
 	err := sdk.FromUnstructured(obj, namespace)
 	if err != nil {
@@ -168,7 +190,10 @@ func copierHandler(input *go_hook.HookInput, dc dependency.Container) error {
 	secretsExists := make(map[string]*Secret)
 	secretsDesired := make(map[string]*Secret)
 	for _, s := range secrets {
-		secret := s.(*Secret)
+		secret, ok := s.(*Secret)
+		if !ok || secret == nil {
+			continue // skip invalid type
+		}
 
 		// Secrets that are not in namespace `default` are existing Secrets.
 		if secret.Namespace != v1.NamespaceDefault {
@@ -180,7 +205,10 @@ func copierHandler(input *go_hook.HookInput, dc dependency.Container) error {
 
 		// Secrets in namespace `default` should be propagated to all other namespaces matching the selector.
 		for _, n := range namespaces {
-			namespace := n.(*Namespace)
+			namespace, ok := n.(*Namespace)
+			if !ok || namespace == nil {
+				continue // skip invalid type
+			}
 			if namespace.IsTerminating || namespace.Name == v1.NamespaceDefault {
 				continue
 			}
@@ -274,11 +302,12 @@ func createSecret(k8 k8s.Client, secret *Secret) error {
 }
 
 func deleteSecret(k8 k8s.Client, secret *Secret) error {
-	if err := k8.CoreV1().Secrets(secret.Namespace).Delete(context.TODO(), secret.Name, metav1.DeleteOptions{}); err != nil {
-		return formatSecretOperationError(secret, err, "delete")
+	err := k8.CoreV1().Secrets(secret.Namespace).Delete(context.TODO(), secret.Name, metav1.DeleteOptions{})
+	if err == nil || errors.IsNotFound(err) {
+		return nil
 	}
 
-	return nil
+	return formatSecretOperationError(secret, err, "delete")
 }
 
 func updateSecret(k8 k8s.Client, secret *Secret) error {
@@ -324,6 +353,9 @@ func formatSecretOperationError(secret *Secret, err error, op string) error {
 }
 
 func namespaceSelector(secret *Secret) labels.Selector {
+	if secret.Annotations == nil {
+		return labels.Everything()
+	}
 	v, found := secret.Annotations[secretCopierNamespaceSelectorKey]
 	if !found {
 		return labels.Everything()
