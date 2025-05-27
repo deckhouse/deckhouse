@@ -231,8 +231,8 @@ common:
     en: Show more
     ru: Показать ещё
   guides_intro_message:
-    en: Guides, Step-by-Step Walkthroughs, Cheats, FAQs and more
-    ru: Руководства, пошаговые инструкции, читы, часто задаваемые вопросы и&nbsp;многое другое
+    en: Guides and Step-by-Step Walkthroughs
+    ru: Руководства и пошаговые инструкции
 
 comparison:
   except_parameters:
