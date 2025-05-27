@@ -1,5 +1,5 @@
 ---
-title: "Обзор"
+title: Обзор
 permalink: ru/architecture/disaster-resistance.html
 lang: ru
 ---
