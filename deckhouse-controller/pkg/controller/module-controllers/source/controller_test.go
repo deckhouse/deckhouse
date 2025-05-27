@@ -22,6 +22,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -448,4 +449,46 @@ func (suite *ControllerTestSuite) moduleSource(name string) *v1alpha1.ModuleSour
 	require.NoError(suite.T(), err)
 
 	return source
+}
+
+func (suite *ControllerTestSuite) TestFilterInvalidModuleNames() {
+	suite.T().Setenv("D8_IS_TESTS_ENVIRONMENT", "false")
+
+	sourceYAML := `
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  name: test-source
+spec:
+  registry:
+    dockerCfg: ""
+    repo: dev-registry.deckhouse.io/deckhouse/modules
+    scheme: HTTPS
+`
+
+	suite.setupTestController(sourceYAML)
+
+	pulledModules := []string{
+		"modules",               // reserved
+		strings.Repeat("a", 65), // too big
+		"invalid_name!",         // invalid RFC1123
+		"Cloud-Provider-AWS",    // invalid RFC1123
+		"-invalid-module",       // invalid RFC1123
+		"invalid_module",        // invalid RFC1123
+		"valid.module",          //  ok
+		"valid-module",          // ok
+		"another-valid-module",  // ok
+	}
+
+	err := suite.r.processModules(context.Background(), suite.moduleSource("test-source"), nil, pulledModules)
+	require.NoError(suite.T(), err)
+
+	source := suite.moduleSource("test-source")
+
+	moduleNames := make([]string, 0, len(source.Status.AvailableModules))
+	for _, mod := range source.Status.AvailableModules {
+		moduleNames = append(moduleNames, mod.Name)
+	}
+
+	assert.ElementsMatch(suite.T(), []string{"valid-module", "valid.module", "another-valid-module"}, moduleNames)
 }
