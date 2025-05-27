@@ -1863,7 +1863,7 @@ alerts:
       description: |-
         The current Kubernetes version `{{ $labels.k8s_version }}` has been deprecated, and support for it will be removed in upcoming releases.
 
-        Please migrate to the next kubernetes version (at least 1.29)
+        Please migrate to the next kubernetes version (at least 1.30)
 
         Check how to update the Kubernetes version in the cluster here - https://deckhouse.io/documentation/deckhouse-faq.html#how-do-i-upgrade-the-kubernetes-version-in-a-cluster
 
@@ -3648,6 +3648,45 @@ alerts:
         Alerting dead man's switch.
       severity: "4"
       markupFormat: default
+    - name: DeckhouseModuleUpdatingFailedBrokenSequence
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        The '{{ $labels.module }}' Module update has failed.
+
+        Current version: {{ $labels.actual_version }}.
+        Desired version: {{ $labels.version }}.
+
+        Attempt to download interim releases failed.
+
+        Possible reasons:
+         - The necessary versions of the Module image is not available in the registry.
+
+        To resolve this issue, ensure that all minor versions of the '{{ $labels.module }}' Module image between {{ $labels.actual_version }} and {{ $labels.version }} is available in the registry '{{ $labels.registry }}'.
+      summary: |
+        Module update has failed. Updating sequence is broken.
+      severity: "4"
+      markupFormat: markdown
+    - name: DeckhouseModuleUpdatingFailedModuleIsNotValid
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        The '{{ $labels.module }}' Module update has failed.
+
+        Desired version: {{ $labels.version }}.
+
+        Possible reasons:
+         - The Module image is corrupted.
+
+        To resolve this issue, ensure that {{ $labels.version }} image in the registry '{{ $labels.registry }}' is valid .
+      summary: |
+        Module update has failed. Module is not valid.
+      severity: "4"
+      markupFormat: markdown
     - name: DeckhouseModuleUseEmptyDir
       sourceFile: modules/300-prometheus/monitoring/prometheus-rules/emptydir.yaml
       moduleUrl: 300-prometheus
@@ -4944,7 +4983,7 @@ alerts:
         A LoadBalancer has not been created.
       severity: "4"
       markupFormat: default
-    - name: LokiRetentionPerionViolation
+    - name: LokiInsufficientDiskForRetention
       sourceFile: modules/462-loki/monitoring/prometheus-rules/alerts.tpl
       moduleUrl: 462-loki
       module: loki

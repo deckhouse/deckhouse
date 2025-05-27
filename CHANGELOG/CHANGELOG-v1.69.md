@@ -134,7 +134,9 @@
  - **[kube-dns]** Expanded pattern for `stubZones` to allow underscores (`_`) in domain names. [#13118](https://github.com/deckhouse/deckhouse/pull/13118)
  - **[loki]** fix storage capacity calculator hook for Loki [#13003](https://github.com/deckhouse/deckhouse/pull/13003)
     fixes the bug introduced in v1.69.0
+ - **[metallb]** Fixed deprecated CRD addresspools.metallb.io deletion. [#13553](https://github.com/deckhouse/deckhouse/pull/13553)
  - **[metallb]** Fixed IP pool exhaustion on LoadBalancer deletion. [#13352](https://github.com/deckhouse/deckhouse/pull/13352)
+ - **[network-gateway]** Fix python path [#13574](https://github.com/deckhouse/deckhouse/pull/13574)
  - **[node-manager]** Revert cluster autoscaler [#13416](https://github.com/deckhouse/deckhouse/pull/13416)
  - **[node-manager]** Autoscaler - remove additional cordon node by mcm provider. [#13391](https://github.com/deckhouse/deckhouse/pull/13391)
  - **[node-manager]** Increase verbosity and revert versions and fix bug with unsupported mcm annotation [#13180](https://github.com/deckhouse/deckhouse/pull/13180)
