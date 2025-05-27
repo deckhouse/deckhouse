@@ -3,7 +3,7 @@ Copyright 2025 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
-package imagechecker
+package checker
 
 import (
 	"fmt"
@@ -31,10 +31,10 @@ const (
 
 var _ = sdk.RegisterFunc(
 	&go_hook.HookConfig{
-		Queue: "/modules/system-registry/image-checker",
+		Queue: "/modules/system-registry/checker",
 		Schedule: []go_hook.ScheduleConfig{
 			{
-				Name:    "image-checker",
+				Name:    "checker",
 				Crontab: "*/10 * * * * *", // every 10 sec
 
 			},
