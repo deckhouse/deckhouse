@@ -21,6 +21,7 @@ from dotmap import DotMap
 import json  # Ensure json is imported for loading binding context
 
 def _prepare_validation_binding_context(binding_context_json, new_spec: dict) -> DotMap:
+    print(binding_context_json)
     ctx_dict = json.loads(binding_context_json)
     ctx = DotMap(ctx_dict)
     ctx.review.request.object.spec = new_spec
@@ -75,7 +76,7 @@ def _prepare_prometheusremotewrites_class_binding_context(new_spec: dict) -> Dot
                   "fieldsV1": {{
                     "f:spec": {{
                       ".": {{}},
-                      "f:url": "test",
+                      "f:url": {{}},
                       "f:tlsConfig": {{
                          f:ca": {{}}
                       }}
