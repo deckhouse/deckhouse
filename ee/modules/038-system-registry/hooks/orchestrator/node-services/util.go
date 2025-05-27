@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package nodeservices
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/orchestrator/users"
@@ -26,4 +27,13 @@ func getRegistryAddressAndPathFromImagesRepo(imgRepo string) (string, string) {
 		return parts[0], ""
 	}
 	return parts[0], "/" + parts[1]
+}
+
+func trimWithEllipsis(value string) string {
+	const limit = 15
+	runes := []rune(value)
+	if len(runes) <= limit {
+		return value
+	}
+	return string(slices.Clone(runes[:limit])) + "…"
 }

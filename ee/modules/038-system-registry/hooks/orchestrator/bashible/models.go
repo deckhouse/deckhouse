@@ -17,10 +17,19 @@ import (
 )
 
 const (
-	StageProcessFirst  = "Apply new config with existing"
-	StageProcessSecond = "Apply new config only, remove old"
-	StageCleanupFirst  = "Apply Unmanaged config with existing"
-	StageCleanupSecond = "Apply Unmanaged config only, remove old"
+	transitionMessage = "Applying configuration to nodes"
+)
+
+var (
+	failedResult = Result{
+		Ready:   false,
+		Message: fmt.Sprintf("%s\nFailed to process Bashible configuration.", transitionMessage),
+	}
+
+	successResult = Result{
+		Ready:   true,
+		Message: fmt.Sprintf("%s\nBashible already processed.", transitionMessage),
+	}
 )
 
 type Inputs struct {
@@ -78,23 +87,25 @@ type Result struct {
 	Message string
 }
 
-// ProcessFirstStage applies the new configuration alongside the existing one.
+type bashibleHosts map[string]bashible.Hosts
+
+// ProcessTransition applies the new configuration alongside the existing one.
 // Should be used when registry mode or its parameters change (transition phase).
-func (state *State) ProcessFirstStage(params Params, inputs Inputs) (Result, error) {
-	return state.process(params, inputs, true, StageProcessFirst)
+func (state *State) ProcessTransition(params Params, inputs Inputs) (Result, error) {
+	return state.process(params, inputs, true)
 }
 
-// ProcessSecondStage replaces the existing config with the new one.
+// FinalizeTransition replaces the existing config with the new one.
 // Should be called after successful first stage.
-func (state *State) ProcessSecondStage(params Params, inputs Inputs) (Result, error) {
-	return state.process(params, inputs, false, StageProcessSecond)
+func (state *State) FinalizeTransition(params Params, inputs Inputs) (Result, error) {
+	return state.process(params, inputs, false)
 }
 
-// CleanupFirstStage applies the unmanaged configuration in combination with the existing one.
+// ProcessUnmanagedTransition applies the unmanaged configuration in combination with the existing one.
 // Useful to transition from managed to unmanaged mode.
-func (state *State) CleanupFirstStage(registrySecret deckhouse_registry.Config, inputs Inputs) (UnmanagedModeParams, Result, error) {
+func (state *State) ProcessUnmanagedTransition(registrySecret deckhouse_registry.Config, inputs Inputs) (UnmanagedModeParams, Result, error) {
 	if state.UnmanagedParams == nil {
-		return UnmanagedModeParams{}, failedResult(StageCleanupFirst), fmt.Errorf("unmanaged parameters are not initialized")
+		return UnmanagedModeParams{}, failedResult, fmt.Errorf("unmanaged parameters are not initialized")
 	}
 
 	params := Params{
@@ -104,15 +115,15 @@ func (state *State) CleanupFirstStage(registrySecret deckhouse_registry.Config, 
 		},
 	}
 
-	result, err := state.process(params, inputs, true, StageCleanupFirst)
+	result, err := state.process(params, inputs, true)
 	return *state.UnmanagedParams, result, err
 }
 
-// CleanupSecondStage resets the internal state and removes any configuration secrets.
+// FinalizeUnmanagedTransition resets the internal state and removes any configuration secrets.
 // It is the final cleanup stage when switching away from Managed configurations.
-func (state *State) CleanupSecondStage(inputs Inputs) Result {
+func (state *State) FinalizeUnmanagedTransition(inputs Inputs) Result {
 	*state = State{}
-	return buildResult(inputs, true, registry_const.UnknownVersion, StageCleanupSecond)
+	return buildResult(inputs, true, registry_const.UnknownVersion)
 }
 
 // IsRunning returns true if there is an active configuration managed by this state.
@@ -123,7 +134,7 @@ func (state *State) IsRunning() bool {
 // process applies the Bashible configuration, based on the provided
 // mode parameters and node input state. It operates in two possible stages:
 //
-// First Stage (isFirstStage == true):
+// Transition Stage (isFirstStage == true):
 //   - Used when switching the registry mode (e.g., from proxy to direct).
 //   - Supports dual-configuration:
 //     1. The current configuration (loaded from state or secret).
@@ -131,7 +142,7 @@ func (state *State) IsRunning() bool {
 //   - Ensures safe transition by keeping current config in place while preparing the new one.
 //   - After successful execution, the system is ready to continue to the second stage.
 //
-// Second Stage (isFirstStage == false):
+// Final Stage (isFirstStage == false):
 //   - Used after the first stage has completed successfully.
 //   - Replaces the current configuration with the new one entirely.
 //
@@ -144,14 +155,14 @@ func (state *State) IsRunning() bool {
 // Returns:
 //   - Result: status of configuration (ready or not, message for logging/display).
 //   - error: encountered if parameter validation or processing fails.
-func (state *State) process(params Params, inputs Inputs, isFirstStage bool, stageInfo string) (Result, error) {
+func (state *State) process(params Params, inputs Inputs, isTransitionStage bool) (Result, error) {
 	if params.ModeParams.isEmpty() {
-		return failedResult(stageInfo), fmt.Errorf("mode params are empty")
+		return failedResult, fmt.Errorf("mode params are empty")
 	}
 
 	mode, err := params.ModeParams.mode()
 	if err != nil {
-		return failedResult(stageInfo), fmt.Errorf("failed to resolve mode: %w", err)
+		return failedResult, fmt.Errorf("failed to resolve mode: %w", err)
 	}
 
 	imagesBase := registry_const.HostWithPath
@@ -160,10 +171,10 @@ func (state *State) process(params Params, inputs Inputs, isFirstStage bool, sta
 	}
 
 	// First stage + params already contained -> skip (stage already done)
-	if isFirstStage &&
+	if isTransitionStage &&
 		state.ActualParams != nil &&
 		state.ActualParams.isEqual(params.ModeParams) {
-		return successResult(stageInfo), nil
+		return successResult, nil
 	}
 
 	// Init actual params from secret, if empty
@@ -171,7 +182,7 @@ func (state *State) process(params Params, inputs Inputs, isFirstStage bool, sta
 		state.ActualParams.isEmpty() {
 		state.ActualParams = &ModeParams{}
 		if err := state.ActualParams.fromRegistrySecret(params.RegistrySecret); err != nil {
-			return failedResult(stageInfo), fmt.Errorf("failed to initialize actual params from secret: %w", err)
+			return failedResult, fmt.Errorf("failed to initialize actual params from secret: %w", err)
 		}
 	}
 
@@ -183,7 +194,7 @@ func (state *State) process(params Params, inputs Inputs, isFirstStage bool, sta
 		Hosts:          map[string]bashible.Hosts{}, // by processHosts
 		PrepullHosts:   map[string]bashible.Hosts{}, // by processHosts
 	}
-	if isFirstStage {
+	if isTransitionStage {
 		// Current
 		config.processHosts(inputs.MasterNodesIPs, *state.ActualParams)
 		// New
@@ -199,10 +210,10 @@ func (state *State) process(params Params, inputs Inputs, isFirstStage bool, sta
 	}
 
 	if err := config.processHash(); err != nil {
-		return failedResult(stageInfo), err
+		return failedResult, err
 	}
 	state.Config = &config
-	return buildResult(inputs, false, state.Config.Version, stageInfo), nil
+	return buildResult(inputs, false, state.Config.Version), nil
 }
 
 func (cfg *Config) processEndpoints(masterNodesIPs []string, params ...ModeParams) {
@@ -243,12 +254,12 @@ func (cfg *Config) processHosts(masterNodesIPs []string, modeParams ModeParams) 
 	}
 }
 
-func (cfg *Config) mergeHosts(hosts, prepull map[string]bashible.Hosts) {
+func (cfg *Config) mergeHosts(hosts, prepull bashibleHosts) {
 	if cfg.Hosts == nil {
-		cfg.Hosts = make(map[string]bashible.Hosts)
+		cfg.Hosts = make(bashibleHosts)
 	}
 	if cfg.PrepullHosts == nil {
-		cfg.PrepullHosts = make(map[string]bashible.Hosts)
+		cfg.PrepullHosts = make(bashibleHosts)
 	}
 
 	for name, h := range hosts {
@@ -364,9 +375,9 @@ func (p *ProxyLocalModeParams) isEqual(other *ProxyLocalModeParams) bool {
 	return false
 }
 
-func processUnmanaged(params UnmanagedModeParams) map[string]bashible.Hosts {
+func processUnmanaged(params UnmanagedModeParams) bashibleHosts {
 	host, _ := getRegistryAddressAndPathFromImagesRepo(params.ImagesRepo)
-	return map[string]bashible.Hosts{
+	return bashibleHosts{
 		host: {
 			CA: singleCA(params.CA),
 			Mirrors: []bashible.MirrorHost{
@@ -383,9 +394,9 @@ func processUnmanaged(params UnmanagedModeParams) map[string]bashible.Hosts {
 	}
 }
 
-func processDirect(params DirectModeParams) map[string]bashible.Hosts {
+func processDirect(params DirectModeParams) bashibleHosts {
 	host, path := getRegistryAddressAndPathFromImagesRepo(params.ImagesRepo)
-	return map[string]bashible.Hosts{
+	return bashibleHosts{
 		registry_const.Host: {
 			CA: singleCA(params.CA),
 			Mirrors: []bashible.MirrorHost{
@@ -406,7 +417,7 @@ func processDirect(params DirectModeParams) map[string]bashible.Hosts {
 	}
 }
 
-func processProxyLocal(params ProxyLocalModeParams, masterNodesIPs []string) (map[string]bashible.Hosts, map[string]bashible.Hosts) {
+func processProxyLocal(params ProxyLocalModeParams, masterNodesIPs []string) (bashibleHosts, bashibleHosts) {
 	makeMirrors := func(hosts []string) []bashible.MirrorHost {
 		mirrors := make([]bashible.MirrorHost, 0, len(hosts))
 		for _, h := range hosts {
@@ -423,13 +434,13 @@ func processProxyLocal(params ProxyLocalModeParams, masterNodesIPs []string) (ma
 	}
 
 	ca := singleCA(params.CA)
-	hosts := map[string]bashible.Hosts{
+	hosts := bashibleHosts{
 		registry_const.Host: {
 			CA:      ca,
 			Mirrors: makeMirrors([]string{registry_const.ProxyHost}),
 		},
 	}
-	prepullHosts := map[string]bashible.Hosts{
+	prepullHosts := bashibleHosts{
 		registry_const.Host: {
 			CA: ca,
 			Mirrors: makeMirrors(append([]string{registry_const.ProxyHost},
@@ -439,30 +450,16 @@ func processProxyLocal(params ProxyLocalModeParams, masterNodesIPs []string) (ma
 	return hosts, prepullHosts
 }
 
-func failedResult(stageInfo string) Result {
-	return Result{
-		Ready:   false,
-		Message: fmt.Sprintf("%s\nFailed to process Bashible configuration.", stageInfo),
-	}
-}
-
-func successResult(stageInfo string) Result {
-	return Result{
-		Ready:   true,
-		Message: fmt.Sprintf("%s\nBashible already processed.", stageInfo),
-	}
-}
-
-func buildResult(inputs Inputs, isStop bool, version, stageInfo string) Result {
+func buildResult(inputs Inputs, isStop bool, version string) Result {
 	var msg strings.Builder
-	fmt.Fprintln(&msg, stageInfo)
+	fmt.Fprintln(&msg, transitionMessage)
 
 	if isStop && inputs.IsSecretExist {
-		fmt.Fprintln(&msg, "Deleting Bashible Secret...")
+		fmt.Fprintln(&msg, "Cleaning Managed configuration...")
 		return Result{Ready: false, Message: msg.String()}
 	}
 	if !isStop && !inputs.IsSecretExist {
-		fmt.Fprintln(&msg, "Creating Bashible Secret...")
+		fmt.Fprintln(&msg, "Creating Managed configuration...")
 		return Result{Ready: false, Message: msg.String()}
 	}
 
@@ -496,20 +493,20 @@ func buildResult(inputs Inputs, isStop bool, version, stageInfo string) Result {
 		}
 		currentVersion := inputs.NodeStatus[name]
 		if isStop {
-			fmt.Fprintf(&msg, "\t%d. %s: %q → Unmanaged\n", i+1, name, trimWithEllipsis(currentVersion))
+			fmt.Fprintf(&msg, "- %s: %q → Unmanaged\n", name, trimWithEllipsis(currentVersion))
 		} else {
-			fmt.Fprintf(&msg, "\t%d. %s: %q → %q\n", i+1, name, trimWithEllipsis(currentVersion), trimWithEllipsis(version))
+			fmt.Fprintf(&msg, "- %s: %q → %q\n", name, trimWithEllipsis(currentVersion), trimWithEllipsis(version))
 		}
 	}
 
 	return Result{Ready: false, Message: msg.String()}
 }
 
-func deduplicateAndSortCA(sliceCA []string) []string {
-	seen := make(map[string]struct{}, len(sliceCA))
+func deduplicateAndSortCA(values []string) []string {
+	seen := make(map[string]struct{}, len(values))
 	ret := []string{}
 
-	for _, ca := range sliceCA {
+	for _, ca := range values {
 		if _, exists := seen[ca]; exists {
 			continue
 		}
@@ -520,10 +517,10 @@ func deduplicateAndSortCA(sliceCA []string) []string {
 	return ret
 }
 
-func deduplicateMirrors(mirrors []bashible.MirrorHost) []bashible.MirrorHost {
+func deduplicateMirrors(values []bashible.MirrorHost) []bashible.MirrorHost {
 	ret := []bashible.MirrorHost{}
 
-	for _, newMirror := range mirrors {
+	for _, newMirror := range values {
 		duplicate := false
 		for _, existingMirror := range ret {
 			if existingMirror.IsEqual(newMirror) {
@@ -538,18 +535,18 @@ func deduplicateMirrors(mirrors []bashible.MirrorHost) []bashible.MirrorHost {
 	return ret
 }
 
-func singleCA(s string) []string {
-	if s == "" {
+func singleCA(value string) []string {
+	if value == "" {
 		return nil
 	}
-	return []string{s}
+	return []string{value}
 }
 
-func trimWithEllipsis(s string) string {
+func trimWithEllipsis(value string) string {
 	const limit = 15
-	runes := []rune(s)
+	runes := []rune(value)
 	if len(runes) <= limit {
-		return s
+		return value
 	}
 	return string(slices.Clone(runes[:limit])) + "…"
 }

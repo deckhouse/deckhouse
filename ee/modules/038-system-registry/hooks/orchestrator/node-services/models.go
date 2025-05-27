@@ -77,11 +77,11 @@ func (result ProcessResult) GetConditionMessage() string {
 	for name, node := range result {
 		switch {
 		case !node.Ready:
-			nodeMessages[name] = "node is not in Ready state"
+			nodeMessages[name] = "node is not Ready"
 		case !node.PodReady:
 			nodeMessages[name] = fmt.Sprintf(
-				"services pod(s) not in Ready state or config version (%v) mismatch",
-				node.ConfigVersion,
+				"services pod(s) is not Ready or config version mismatch (!= %q)",
+				trimWithEllipsis(node.ConfigVersion),
 			)
 		default:
 			continue
@@ -102,7 +102,7 @@ func (result ProcessResult) GetConditionMessage() string {
 
 	builder := new(strings.Builder)
 
-	fmt.Fprintln(builder, "Nodes not ready:")
+	fmt.Fprintf(builder, "%d/%d node(s) ready. Waiting:\n", len(result)-len(nodeNames), len(result))
 
 	for _, name := range nodeNames {
 		fmt.Fprintf(builder, "- %v: %v\n", name, nodeMessages[name])

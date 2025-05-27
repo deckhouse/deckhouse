@@ -12,16 +12,28 @@ import (
 )
 
 const (
-	ConditionTypeReady               = "Ready"
-	ConditionTypeNodeServices        = "NodeServices"
-	ConditionTypeInClusterProxy      = "InClusterProxy"
-	ConditionTypeBashibleFirstStage  = "BashibleStageOne"
-	ConditionTypeBashibleSecondStage = "BashibleStageTwo"
+	ConditionTypeReady                   = "Ready"
+	ConditionTypeNodeServices            = "NodeServicesReady"
+	ConditionTypeNodeServicesCleanup     = "CleanupNodeServices"
+	ConditionTypeInClusterProxy          = "InClusterProxyReady"
+	ConditionTypeInClusterProxyCleanup   = "CleanupInClusterProxy"
+	ConditionTypeBashibleTransitionStage = "TransitionContainerdConfigReady"
+	ConditionTypeBashibleFinalStage      = "FinalContainerdConfigReady"
 
 	ConditionReasonReady      = "Ready"
 	ConditionReasonProcessing = "Processing"
 	ConditionReasonError      = "Error"
 )
+
+var supportedConditions = map[string]struct{}{
+	ConditionTypeReady:                   {},
+	ConditionTypeNodeServices:            {},
+	ConditionTypeNodeServicesCleanup:     {},
+	ConditionTypeInClusterProxy:          {},
+	ConditionTypeInClusterProxyCleanup:   {},
+	ConditionTypeBashibleTransitionStage: {},
+	ConditionTypeBashibleFinalStage:      {},
+}
 
 var _ error = ErrTransitionNotSupported{}
 

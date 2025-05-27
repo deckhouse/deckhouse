@@ -85,7 +85,7 @@ func (state *State) Stop(inputs Inputs) StopResult {
 	if inputs.IsExist {
 		return StopResult{
 			Ready:   false,
-			Message: "Incluster-proxy is active. Stopping now...",
+			Message: "Stopping incluster-proxy...",
 		}
 	}
 	return StopResult{
