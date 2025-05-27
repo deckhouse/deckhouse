@@ -1,6 +1,6 @@
 ---
 title: "ALB в Deckhouse Kubernetes Platform"
-permalink: ru/admin/network/alb-overview.html
+permalink: ru/admin/configuration/network/alb-overview.html
 lang: ru
 ---
 

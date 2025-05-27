@@ -1,6 +1,6 @@
 ---
 title: Certificate management
-permalink: en/admin/security/certificates.html
+permalink: en/admin/configuration/security/certificates.html
 ---
 
 

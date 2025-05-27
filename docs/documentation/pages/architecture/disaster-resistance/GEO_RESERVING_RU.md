@@ -1,6 +1,6 @@
 ---
 title: Георезервирование
-permalink: ru/architecture/geo-reserving.html
+permalink: ru/architecture/disaster-resistance/geo-reserving.html
 lang: ru
 ---
 

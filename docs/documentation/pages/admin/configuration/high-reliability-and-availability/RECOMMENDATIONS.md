@@ -1,6 +1,6 @@
 ---
 title: Recommendations for configuring cluster nodes and preventing overload
-permalink: en/admin/high-reliability-and-availability/recommendations.html
+permalink: en/admin/configuration/high-reliability-and-availability/recommendations.html
 ---
 
 ## Node configuration recommendations

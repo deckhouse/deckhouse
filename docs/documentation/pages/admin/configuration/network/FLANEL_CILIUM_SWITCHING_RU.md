@@ -1,6 +1,6 @@
 ---
 title: "Переключение с CNI flannel на cilium"
-permalink: ru/admin/network/flannel-cilium-switching.html
+permalink: ru/admin/configuration/network/flannel-cilium-switching.html
 lang: ru
 ---
 
@@ -91,15 +91,15 @@ lang: ru
 
 Чтобы убедиться в том, что переключение с CNI flannel на cilium прошло успешно:
 
-1. Проверьте очередь deckhouse:
+1. Проверьте очередь Deckhouse:
 
-   В случае одной мастер ноды:
+   В случае одного master-узла:
 
    ```shell
    kubectl -n d8-system exec -it deploy/deckhouse -c deckhouse -- deckhouse-controller queue list
    ```
 
-   В случае мультимастер инсталляции:
+   В случае мультимастерной инсталляции:
 
    ```shell
    kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list

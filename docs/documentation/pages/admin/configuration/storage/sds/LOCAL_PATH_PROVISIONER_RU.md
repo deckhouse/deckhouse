@@ -1,6 +1,6 @@
 ---
 title: "Локальное хранилище Local Path Provisioner"
-permalink: ru/admin/storage/sds/local-path-provisioner.html
+permalink: ru/admin/configuration/storage/sds/local-path-provisioner.html
 lang: ru
 ---
 

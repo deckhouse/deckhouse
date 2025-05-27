@@ -1,6 +1,6 @@
 ---
 title: Managing HA mode
-permalink: en/admin/high-reliability-and-availability/enable.html
+permalink: en/admin/configuration/high-reliability-and-availability/enable.html
 description: Managing HA mode
 lang: en
 ---

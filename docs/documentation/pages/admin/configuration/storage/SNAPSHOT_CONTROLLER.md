@@ -1,6 +1,6 @@
 ---
 title: "Configuring volume snapshot creation"
-permalink: en/admin/storage/snapshot-controller.html
+permalink: en/admin/configuration/storage/snapshot-controller.html
 ---
 
 Deckhouse Kubernetes Platform supports volume snapshot creation for CSI drivers in a Kubernetes cluster.

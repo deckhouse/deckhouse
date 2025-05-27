@@ -1,6 +1,6 @@
 ---
 title: Аудит событий безопасности
-permalink: ru/admin/security/events/runtime-audit.html
+permalink: ru/admin/configuration/security/events/runtime-audit.html
 lang: ru
 ---
 

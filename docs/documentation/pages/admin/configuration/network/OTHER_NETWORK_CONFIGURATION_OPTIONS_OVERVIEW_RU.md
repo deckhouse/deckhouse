@@ -1,6 +1,6 @@
 ---
 title: "Другие возможности настройки сети"
-permalink: ru/admin/network/other-network-configuration-options-overview.html
+permalink: ru/admin/configuration/network/other-network-configuration-options-overview.html
 lang: ru
 ---
 

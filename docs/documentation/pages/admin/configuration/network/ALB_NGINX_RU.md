@@ -1,6 +1,6 @@
 ---
 title: "ALB средствами NGINX Ingress controller"
-permalink: ru/admin/network/alb-nginx.html
+permalink: ru/admin/configuration/network/alb-nginx.html
 lang: ru
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: "Шифрование трафика между подами"
-permalink: ru/admin/network/encrypting-traffic-pods.html
+permalink: ru/admin/configuration/network/encrypting-traffic-pods.html
 lang: ru
 ---
 

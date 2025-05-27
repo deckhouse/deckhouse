@@ -1,6 +1,6 @@
 ---
 title: "Шифрование трафика между узлами"
-permalink: ru/admin/network/encrypting-traffic-nodes.html
+permalink: ru/admin/configuration/network/encrypting-traffic-nodes.html
 lang: ru
 ---
 

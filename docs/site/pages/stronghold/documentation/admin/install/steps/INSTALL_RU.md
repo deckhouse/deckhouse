@@ -305,7 +305,7 @@ Domain template is '%s.1.2.3.4.sslip.io'.
 
 Описание поддерживаемых систем хранения и инструкция по их подключению приведены в разделе [Настройка хранилищ](../../platform-management/storage/supported-storage.html).
 
-## Установка модуля Сilium
+## Установка модуля cilium
 
 Для получения информации по установке и настройке модуля, обратитесь к разделу [Настройки Cilium](/products/stronghold/reference/mc.html#cni-cilium).
 

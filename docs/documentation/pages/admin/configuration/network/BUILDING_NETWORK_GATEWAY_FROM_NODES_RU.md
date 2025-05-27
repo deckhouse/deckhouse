@@ -1,6 +1,6 @@
 ---
 title: "Постройка сетевого шлюза из Kubernetes-узлов"
-permalink: ru/admin/network/building-network-gateway-from-nodes.html
+permalink: ru/admin/configuration/network/building-network-gateway-from-nodes.html
 lang: ru
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: "Настройка визуализации сетевого стека кластера"
-permalink: ru/admin/network/network-stack-visualization-cilium-hubble.html
+permalink: ru/admin/configuration/network/network-stack-visualization-cilium-hubble.html
 lang: ru
 ---
 

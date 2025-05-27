@@ -1,6 +1,6 @@
 ---
 title: Хаос-инжиниринг
-permalink: ru/admin/high-reliability-and-availability/chaos-engineering.html
+permalink: ru/admin/configuration/high-reliability-and-availability/chaos-engineering.html
 description: Тестирование отказоустойчивости кластера
 lang: ru
 ---

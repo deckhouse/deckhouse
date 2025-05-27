@@ -1,6 +1,6 @@
 ---
 title: "ALB средствами Istio"
-permalink: ru/admin/network/alb-istio.html
+permalink: ru/admin/configuration/network/alb-istio.html
 lang: ru
 ---
 

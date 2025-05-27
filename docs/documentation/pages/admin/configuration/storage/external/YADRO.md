@@ -1,6 +1,6 @@
 ---
 title: "TATLIN.UNIFIED (Yadro) unified storage"
-permalink: en/admin/storage/external/yadro.html
+permalink: en/admin/configuration/storage/external/yadro.html
 d8Revision: ee
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: "Хранилище данных HPE"
-permalink: ru/admin/storage/external/hpe.html
+permalink: ru/admin/configuration/storage/external/hpe.html
 lang: ru
 ---
 

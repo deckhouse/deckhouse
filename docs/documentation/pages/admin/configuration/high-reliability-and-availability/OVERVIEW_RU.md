@@ -1,6 +1,6 @@
 ---
 title: "Обзор"
-permalink: ru/admin/high-reliability-and-availability/
+permalink: ru/admin/configuration/high-reliability-and-availability/
 description: Высокая надежность и доступность
 lang: ru
 ---

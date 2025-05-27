@@ -1,6 +1,6 @@
 ---
 title: Интеграция с KUMA и антивирусным ПО
-permalink: ru/admin/security/kuma-and-av-software.html
+permalink: ru/admin/configuration/security/kuma-and-av-software.html
 lang: ru
 ---
 

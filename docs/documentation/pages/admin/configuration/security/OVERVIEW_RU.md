@@ -1,6 +1,6 @@
 ---
 title: Средства обеспечения безопасности в Deckhouse Kubernetes Platform
-permalink: ru/admin/security/overview.html
+permalink: ru/admin/configuration/security/
 lang: ru
 ---
 

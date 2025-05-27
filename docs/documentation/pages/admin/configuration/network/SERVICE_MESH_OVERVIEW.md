@@ -1,6 +1,6 @@
 ---
-title: "Servise Mesh"
-permalink: en/admin/network/service-mesh-overview.html
+title: "Service Mesh"
+permalink: en/admin/configuration/network/service-mesh-overview.html
 ---
 
-Introduction page about Servise Mesh
+Introduction page about Service Mesh

@@ -1,6 +1,6 @@
 ---
 title: "Federation"
-permalink: en/admin/network/cluster-federation.html
+permalink: en/admin/configuration/network/cluster-federation.html
 ---
 
 ## Federation of Istio funds (Service Mesh)
