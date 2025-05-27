@@ -445,10 +445,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"agent":      "imageHash-serviceWithHealthchecks-agent",
 		"controller": "imageHash-serviceWithHealthchecks-controller",
 	},
-	"snapshotController": map[string]interface{}{
-		"snapshotController":        "imageHash-snapshotController-snapshotController",
-		"snapshotValidationWebhook": "imageHash-snapshotController-snapshotValidationWebhook",
-	},
 	"staticRoutingManager": map[string]interface{}{
 		"agent": "imageHash-staticRoutingManager-agent",
 	},

@@ -455,7 +455,6 @@ Below are some data structures used in the Jekyll projects.
         "sds-replicated-volume",
         "secret-copier",
         "secrets-store-integration",
-        "snapshot-controller",
         "static-routing-manager",
         "stronghold",
         "terraform-manager",

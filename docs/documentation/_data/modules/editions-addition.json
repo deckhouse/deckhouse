@@ -57,7 +57,6 @@
     "registry-packages-proxy",
     "runtime-audit-engine",
     "stronghold",
-    "snapshot-controller",
     "user-authn",
     "user-authn-crd",
     "user-authz"
@@ -116,7 +115,6 @@
     "secret-copier",
     "secrets-store-integration",
     "stronghold",
-    "snapshot-controller",
     "vertical-pod-autoscaler",
     "user-authn",
     "user-authn-crd",
