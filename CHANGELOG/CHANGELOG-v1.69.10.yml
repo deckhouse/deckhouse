@@ -1,0 +1,9 @@
+deckhouse-controller:
+  fixes:
+    - summary: Added validation according to `RFC 1123` for module names added to `ModuleSource`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13644
+docs:
+  fixes:
+    - summary: Fix apiVersion for s3 storageclass
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13619
+
