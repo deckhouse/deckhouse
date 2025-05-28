@@ -12,6 +12,9 @@ lang: ru
 - Master-узлу можно назначить Elastic IP.
 - Узлы, управляемые Cluster API, не имеют публичных IP-адресов.
 
+![Схема размещения Standard](../../../../images/cloud-provider-huawei/huawei-standard.png)
+<!--- Source: https://docs.google.com/drawings/d/1sB_V7NhDiit8Gok2pq_8syQknCdC4GicpG3L2YF5QIU/edit --->
+
 Пример конфигурации:
 
 ```yaml
@@ -47,6 +50,8 @@ masterNodeGroup:
 
 - Используется существующая сеть и подсеть VPC.
 - Виртуальные машины подключаются к заданной подсети.
+
+![Схема размещения VpcPeering](../../../../images/cloud-provider-huawei/huawei-vpc-peering-ru.png)
 
 Пример конфигурации:
 

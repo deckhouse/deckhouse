@@ -4,7 +4,7 @@ permalink: ru/admin/integrations/public/dynamix/dynamix-layout.html
 lang: ru
 ---
 
-Платформа Deckhouse поддерживает две схемы размещения в облаке Базис.DynamiX:
+Платформа Deckhouse поддерживает две схемы размещения в облаке Dynamix:
 
 - Standard — схема с использованием только внешней сети;
 - StandardWithInternalNetwork — схема с внутренней (приватной) сетью и DNS-серверами.
@@ -12,6 +12,11 @@ lang: ru
 Обе схемы позволяют управлять размещением узлов кластера, настройкой сетей, образом ОС и хранилищем данных.
 
 ## Standard
+
+![resources](../../images/cloud-provider-dynamix/dynamix-standard.png)
+<!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11150&t=otZZqfSEFGOobhfi-0 --->
+
+Пример конфигурации схемы размещения:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -39,6 +44,8 @@ masterNodeGroup:
 ```
 
 ## StandardWithInternalNetwork
+
+Пример конфигурации схемы размещения:
 
 ```yaml
 apiVersion: deckhouse.io/v1

@@ -16,6 +16,9 @@ lang: ru
 - Использование различных datastore для дисков и volume’ов;
 - Поддержка подключения сетей, включая дополнительную сетевую изоляцию (например, MetalLB + BGP).
 
+![resources](../../../../images/cloud-provider-vsphere/vsphere-standard.png)
+<!--- Исходник: https://docs.google.com/drawings/d/1QOgPkq_xfBWMMI3SEU4Q9lyZM5mIWWbF_MwVsd06diE/edit --->
+
 Пример конфигурации:
 
 ```yaml

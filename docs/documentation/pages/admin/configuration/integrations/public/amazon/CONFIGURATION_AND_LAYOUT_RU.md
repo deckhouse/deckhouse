@@ -12,7 +12,8 @@ lang: ru
 
 Каждому узлу назначается публичный IP-адрес (Elastic IP), NAT-шлюз не используется. Такая схема обеспечивает прямой доступ к узлам по публичным IP-адресам и позволяет упростить маршрутизацию исходящего трафика.
 
-![Схема размещения Standard в Amazon](../../../../images/cloud-provider-aws/aws-withoutnat.png)
+![resources](../../../../images/cloud-provider-aws/aws-withoutnat.png)
+<!--- Исходник: https://docs.google.com/drawings/d/1JDmeSY12EoZ3zBfanEDY-QvSgLekzw6Tzjj2pgY8giM/edit --->
 
 Пример конфигурации схемы размещения:
 
@@ -62,7 +63,8 @@ tags:
 
 В этой схеме размещения NAT Gateway используется для выхода в интернет, а публичные IP-адреса узлам не присваиваются. Доступ к узлам возможен только через bastion-хост, размещаемый в отдельной подсети.
 
-![Схема размещения Standard в Amazon](../../../../images/cloud-provider-aws/aws-withnat.png)
+![resources](../../../../images/cloud-provider-aws/aws-withnat.png)
+<!--- Исходник: https://docs.google.com/drawings/d/1UPzygO3w8wsRNHEna2uoYB-69qvW6zDYB5s1OumUOes/edit --->
 
 Пример конфигурации схемы размещения:
 

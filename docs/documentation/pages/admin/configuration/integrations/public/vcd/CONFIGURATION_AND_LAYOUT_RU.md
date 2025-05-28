@@ -17,6 +17,9 @@ Deckhouse поддерживает одну схему размещения в V
 - возможность назначить Elastic IP-адреса узлам через внешнюю настройку;
 - использование vApp и сети, заранее настроенных в VMware Cloud Director.
 
+![resources](../../../../images/cloud-provider-vcd/vcd-standard.png)
+<!--- Исходник: https://docs.google.com/drawings/d/1aosnFD7AzBgHrQGvxxQHZPfV0PSaTM66A-EPMWgPEqw/edit --->
+
 Пример конфигурации:
 
 ```yaml
