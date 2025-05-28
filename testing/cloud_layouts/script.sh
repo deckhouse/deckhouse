@@ -464,6 +464,28 @@ function test_requirements() {
   if [ -z "${release:-}" ]; then return 1; fi
   release=${release//\"/\\\"}
 
+  # Get current version from cluster and increment minor version
+  >&2 echo "Getting current DeckhouseRelease version from cluster..."
+  current_version=$(kubectl get deckhousereleases.deckhouse.io -o jsonpath='{.items[?(@.status.phase=="Delivered")].spec.version}' | head -1)
+  if [ -z "${current_version}" ]; then
+    >&2 echo "No DeckhouseRelease with status 'Delivered' found, using default version"
+    next_version="v1.96.3"
+  else
+    >&2 echo "Current delivered version: ${current_version}"
+    # Extract version components (assuming format like v1.96.3)
+    if [[ $current_version =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+      major="${BASH_REMATCH[1]}"
+      minor="${BASH_REMATCH[2]}"
+      patch="${BASH_REMATCH[3]}"
+      # Increment minor version
+      next_minor=$((minor + 1))
+      next_version="v${major}.${next_minor}.${patch}"
+      >&2 echo "Next version will be: ${next_version}"
+    else
+      >&2 echo "Unable to parse version format, using default"
+      next_version="v1.96.3"
+    fi
+  fi
 
   >&2 echo "Run script ... "
 
@@ -507,17 +529,17 @@ spec:
 
 >&2 echo "Apply deckhousereleases ..."
 
-echo 'apiVersion: deckhouse.io/v1alpha1
+echo "apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
   annotations:
-    dryrun: "true"
-  name: v1.96.3
+    dryrun: \"true\"
+  name: ${next_version}
 spec:
-  version: v1.96.3
+  version: ${next_version}
   requirements: {}
-' | \$python_binary -c "
+" | \$python_binary -c "
 import yaml, sys
 
 data = yaml.safe_load(sys.stdin)
