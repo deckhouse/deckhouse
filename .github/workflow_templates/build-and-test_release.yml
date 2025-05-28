@@ -218,7 +218,7 @@ jobs:
 {!{ tmpl.Exec "build_template" (slice $ctx "release") | strings.Indent 4 }!}
 
   analyze_deckhouse:
-    if: ${{ (github.event.inputs.svace_enabled == true) && always() }}
+    if: ${{ (github.event.inputs.svace_enabled == 'true') && always() }}
     name: Deckhouse static analysis
     needs:
       - build_fe
