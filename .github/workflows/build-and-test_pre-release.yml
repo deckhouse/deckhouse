@@ -2076,6 +2076,7 @@ jobs:
       # </template: send_fail_report>
 
   analyze_deckhouse:
+    if: ${{ always() }}
     name: Deckhouse static analysis
     runs-on: [self-hosted]
     needs:
