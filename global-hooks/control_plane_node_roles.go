@@ -52,15 +52,15 @@ func applyBothNodeRoles(input *go_hook.HookInput) error {
 	if err != nil {
 		return fmt.Errorf("unmarshal control_plane_nodes: %w", err)
 	}
-
-	allNodes := append(masters, controlPlanes...)
+	allNodes := masters
+	allNodes = append(allNodes, controlPlanes...)
 
 	for _, node := range allNodes {
 		if node.MasterLabelExists && node.ControlPlaneLabelExists {
 			continue
 		}
 
-		input.PatchCollector.MergePatch(roleLabelsPatch, "v1", "Node", "", node.Name)
+		input.PatchCollector.MergePatch(roleLabelsPatch, "pv1", "Node", "", node.Name)
 	}
 
 	return nil

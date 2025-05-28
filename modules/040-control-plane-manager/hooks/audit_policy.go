@@ -116,6 +116,9 @@ func handleAuditPolicy(input *go_hook.HookInput) error {
 		appendBasicPolicyRules(&policy, extraData)
 	}
 	datas, err := sdkobjectpatch.UnmarshalToStruct[[]byte](input.NewSnapshots, "kube_audit_policy_secret")
+	if err != nil {
+		return err
+	}
 	if input.Values.Get("controlPlaneManager.apiserver.auditPolicyEnabled").Bool() && len(datas) > 0 {
 		data := datas[0]
 		err := appendAdditionalPolicyRules(&policy, &data)
